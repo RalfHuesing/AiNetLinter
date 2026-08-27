@@ -34,31 +34,39 @@ public static class LoadFixtureBuilder
         if (linesPerFile < 3) throw new ArgumentOutOfRangeException(nameof(linesPerFile));
 
         var tempDir = TestTempDirectory.Create($"ainetlinter-load-{SanitizeName(name)}-");
-        var solutionDir = tempDir.DirectoryPath;
-
-        for (var p = 0; p < projectCount; p++)
+        try
         {
-            var projectName = $"Project{p:D3}";
-            var projectDir = Path.Combine(solutionDir, "src", projectName);
-            Directory.CreateDirectory(projectDir);
+            var solutionDir = tempDir.DirectoryPath;
 
-            File.WriteAllText(
-                Path.Combine(projectDir, $"{projectName}.csproj"),
-                BuildCsProj(projectName));
-
-            for (var f = 0; f < filesPerProject; f++)
+            for (var p = 0; p < projectCount; p++)
             {
-                var fileName = $"File{f:D4}.cs";
+                var projectName = $"Project{p:D3}";
+                var projectDir = Path.Combine(solutionDir, "src", projectName);
+                Directory.CreateDirectory(projectDir);
+
                 File.WriteAllText(
-                    Path.Combine(projectDir, fileName),
-                    BuildSourceFile(projectName, f, linesPerFile));
+                    Path.Combine(projectDir, $"{projectName}.csproj"),
+                    BuildCsProj(projectName));
+
+                for (var f = 0; f < filesPerProject; f++)
+                {
+                    var fileName = $"File{f:D4}.cs";
+                    File.WriteAllText(
+                        Path.Combine(projectDir, fileName),
+                        BuildSourceFile(projectName, f, linesPerFile));
+                }
             }
+
+            var solutionPath = Path.Combine(solutionDir, "Synthetic.slnx");
+            File.WriteAllText(solutionPath, BuildSlnx(projectCount));
+
+            return new LoadFixtureHandle(name, tempDir, solutionPath);
         }
-
-        var solutionPath = Path.Combine(solutionDir, "Synthetic.slnx");
-        File.WriteAllText(solutionPath, BuildSlnx(projectCount));
-
-        return new LoadFixtureHandle(name, tempDir, solutionPath);
+        catch
+        {
+            tempDir.Dispose();
+            throw;
+        }
     }
 
     private static string SanitizeName(string name)

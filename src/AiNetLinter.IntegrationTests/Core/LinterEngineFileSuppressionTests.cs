@@ -42,28 +42,36 @@ public sealed class LinterEngineFileSuppressionTests
         };
     }
 
-    private static async Task<Solution> CreateSolutionWithFileOnDiskAsync(string fileName, string content)
+    private static async Task<DiskBackedSolution> CreateSolutionWithFileOnDiskAsync(string fileName, string content)
     {
         var tempDir = TestTempDirectory.Create("ainetlinter-engine-");
-        var filePath = tempDir.CreateFile(fileName, content);
-
         var workspace = new AdhocWorkspace();
-        var projectId = ProjectId.CreateNewId();
-        var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
+        try
+        {
+            var filePath = tempDir.CreateFile(fileName, content);
+            var projectId = ProjectId.CreateNewId();
+            var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
 
-        var projectInfo = ProjectInfo.Create(
-            projectId,
-            VersionStamp.Create(),
-            "TestProject",
-            "TestProject",
-            LanguageNames.CSharp)
-            .WithMetadataReferences(new[] { mscorlib })
-            .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
+            var projectInfo = ProjectInfo.Create(
+                projectId,
+                VersionStamp.Create(),
+                "TestProject",
+                "TestProject",
+                LanguageNames.CSharp)
+                .WithMetadataReferences(new[] { mscorlib })
+                .WithCompilationOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
 
-        var solution = workspace.CurrentSolution.AddProject(projectInfo);
-        var documentId = DocumentId.CreateNewId(projectId);
-        solution = solution.AddDocument(documentId, fileName, content);
-        return solution.WithDocumentFilePath(documentId, filePath);
+            var solution = workspace.CurrentSolution.AddProject(projectInfo);
+            var documentId = DocumentId.CreateNewId(projectId);
+            solution = solution.AddDocument(documentId, fileName, content);
+            return new DiskBackedSolution(tempDir, workspace, solution.WithDocumentFilePath(documentId, filePath));
+        }
+        catch
+        {
+            workspace.Dispose();
+            tempDir.Dispose();
+            throw;
+        }
     }
 
     [Fact]
@@ -87,14 +95,14 @@ public sealed class LinterEngineFileSuppressionTests
             }
             """;
 
-        var solution = await CreateSolutionWithFileOnDiskAsync("ComplexDomainService.cs", sourceClass);
+        using var diskSolution = await CreateSolutionWithFileOnDiskAsync("ComplexDomainService.cs", sourceClass);
         var config = CreateDefaultConfig() with
         {
             Global = new GlobalConfig { EnableTestSentinel = true }
         };
 
         var engine = new LinterEngine(config);
-        var violations = await engine.RunAsync(solution);
+        var violations = await engine.RunAsync(diskSolution.Solution);
 
         Assert.Empty(violations.Where(v => v.RuleName == "StaticTestSentinel"));
     }
@@ -110,15 +118,35 @@ public sealed class LinterEngineFileSuppressionTests
             public sealed class ChildClass : ParentClass {}
             """;
 
-        var solution = await CreateSolutionWithFileOnDiskAsync("Classes.cs", sourceCode);
+        using var diskSolution = await CreateSolutionWithFileOnDiskAsync("Classes.cs", sourceCode);
         var config = CreateDefaultConfig() with
         {
             Metrics = new MetricsConfig { MaxInheritanceDepth = 1 }
         };
 
         var engine = new LinterEngine(config);
-        var violations = await engine.RunAsync(solution);
+        var violations = await engine.RunAsync(diskSolution.Solution);
 
         Assert.Empty(violations.Where(v => v.RuleName == nameof(MetricsConfig.MaxInheritanceDepth)));
+    }
+
+    private sealed class DiskBackedSolution(
+        TestTempDirectory tempDirectory,
+        AdhocWorkspace workspace,
+        Solution solution) : IDisposable
+    {
+        public Solution Solution { get; } = solution;
+
+        public void Dispose()
+        {
+            try
+            {
+                workspace.Dispose();
+            }
+            finally
+            {
+                tempDirectory.Dispose();
+            }
+        }
     }
 }

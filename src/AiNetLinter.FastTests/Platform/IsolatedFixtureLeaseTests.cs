@@ -92,19 +92,27 @@ public sealed class IsolatedFixtureLeaseTests
         {
             const string folderName = "BaselineMini";
             var tempDir = TestTempDirectory.Create("AiNetSyntheticFixture_");
-            var destination = Path.Combine(tempDir.DirectoryPath, "tests", "Fixtures", folderName);
+            try
+            {
+                var destination = Path.Combine(tempDir.DirectoryPath, "tests", "Fixtures", folderName);
 
-            CopyDirectory(Path.Combine(solutionRoot, "tests", "Fixtures", folderName), destination);
+                CopyDirectory(Path.Combine(solutionRoot, "tests", "Fixtures", folderName), destination);
 
-            var binDir = Path.Combine(destination, "bin");
-            Directory.CreateDirectory(binDir);
-            File.WriteAllText(Path.Combine(binDir, "dummy.dll"), "dummy");
+                var binDir = Path.Combine(destination, "bin");
+                Directory.CreateDirectory(binDir);
+                File.WriteAllText(Path.Combine(binDir, "dummy.dll"), "dummy");
 
-            var objDir = Path.Combine(destination, "obj");
-            Directory.CreateDirectory(objDir);
-            File.WriteAllText(Path.Combine(objDir, "dummy.cache"), "dummy");
+                var objDir = Path.Combine(destination, "obj");
+                Directory.CreateDirectory(objDir);
+                File.WriteAllText(Path.Combine(objDir, "dummy.cache"), "dummy");
 
-            return new SyntheticSourceWithBinAndObj(tempDir, folderName);
+                return new SyntheticSourceWithBinAndObj(tempDir, folderName);
+            }
+            catch
+            {
+                tempDir.Dispose();
+                throw;
+            }
         }
 
         public void Dispose() => tempDir.Dispose();

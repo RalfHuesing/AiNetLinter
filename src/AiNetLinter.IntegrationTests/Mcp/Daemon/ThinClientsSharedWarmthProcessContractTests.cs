@@ -187,7 +187,11 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
         try
         {
             using var process = System.Diagnostics.Process.GetProcessById(processId);
-            if (!process.HasExited) process.Kill(entireProcessTree: true);
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+                process.WaitForExit(2000);
+            }
         }
         catch (Exception exception) when (
             exception is ArgumentException

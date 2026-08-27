@@ -143,9 +143,17 @@ internal sealed class ChangeContextMiniWorkspace : IDisposable
     public ChangeContextMiniWorkspace()
     {
         tempDirectory = TestTempDirectory.Create("change-context-scenario-");
-        RootPath = tempDirectory.DirectoryPath;
-        WriteScenarioFiles();
-        InitializeGitRepository();
+        try
+        {
+            RootPath = tempDirectory.DirectoryPath;
+            WriteScenarioFiles();
+            InitializeGitRepository();
+        }
+        catch
+        {
+            tempDirectory.Dispose();
+            throw;
+        }
     }
 
     public string RootPath { get; }

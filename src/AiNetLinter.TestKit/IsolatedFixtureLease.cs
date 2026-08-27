@@ -40,9 +40,16 @@ public sealed class IsolatedFixtureLease : IDisposable
         var sourceRoot = Path.Combine(solutionRoot, "tests", "Fixtures", fixtureFolderName);
         var tempDirectory = TestTempDirectory.Create(tempPrefix);
 
-        CopyDirectory(sourceRoot, tempDirectory.DirectoryPath);
-
-        return new IsolatedFixtureLease(tempDirectory);
+        try
+        {
+            CopyDirectory(sourceRoot, tempDirectory.DirectoryPath);
+            return new IsolatedFixtureLease(tempDirectory);
+        }
+        catch
+        {
+            tempDirectory.Dispose();
+            throw;
+        }
     }
 
     public void Dispose() => tempDir.Dispose();
