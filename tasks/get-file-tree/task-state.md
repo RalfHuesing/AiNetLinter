@@ -1,8 +1,8 @@
 ---
-status: executing
+status: complete
 task: get-file-tree
 started_at: 2026-08-26T22:02:09+02:00
-last_updated: 2026-08-27T08:37:34+02:00
+last_updated: 2026-08-27T08:47:47+02:00
 rules_dir: .agents/rules
 total_steps: 3
 current_step: step-003
@@ -12,7 +12,7 @@ current_step: step-003
 
 ## Übersicht
 
-- **Task-Status:** `executing`
+- **Task-Status:** `complete`
 - **Steps gesamt:** 3
 - **Aktueller Schritt:** `step-003`
 - **Roadmap:** aktiv, unverändert
@@ -26,7 +26,7 @@ current_step: step-003
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-01 | done | Filesystem-only Dispatch und boundary-sicherer Root-Resolver | - | 2bd4cb38 | approved | 2bd4cb38 |
 | step-002 | EPIC-01 | done | Veraltete Hotspots-Erwartungen auf sechs Fixture-Dokumente ausrichten | - | 6854158b | approved | 6854158b |
-| step-003 | EPIC-02 | done (pending audit) | Gemeinsame Walk-/Optionen-/Glob-Grundlage extrahieren | - | 5b8e4472 | ausstehend | 5b8e4472 + 0a45dc16 |
+| step-003 | EPIC-02 | done | Gemeinsame Walk-/Optionen-/Glob-Grundlage extrahieren | - | 5b8e4472 | approved (direkt) | 5b8e4472 + 0a45dc16 |
 
 ## Config (optional)
 
@@ -74,15 +74,12 @@ MCP-/Daemon-Prozessverträge eine pro Testprozess eindeutige `daemon-instance`
 (`tests-<TestRunner-PID>`), sodass externe Installationen nicht mehr den
 Test-Endpunkt belegen. Das suiteweite `SubprocessLifetimeGate` erlaubt acht
 langlebige Prozesse, weil ein paralleler Daemon-Vertrag zwei Prozesse halten
-kann. Der Step bleibt bis zur unabhängigen Code-/Regel-/Konzeptprüfung auf
-`done (pending audit)`.
+kann. Der Step ist nach Drift-Audit, Feature-Tests und Vollgates abgeschlossen.
 
 ## Tooling-Hinweis
 
-Der für den Abschluss eines größeren Tasks vorgeschriebene `drift-audit`-Skill
-wurde nach dem Testfix gestartet. Der dafür ausschließlich zulässige
-AiNetLinter-MCP-Aufruf `find_duplicates` scheiterte unmittelbar mit `Transport
-closed`; der anschließende Observability-Feedback-Aufruf scheiterte am selben
-Transportzustand. Der bereits dokumentierte Audit von Step 003 bleibt erhalten;
-der Abschlussstatus wartet wegen dieses MCP-Tooling-Blockers weiterhin auf den
-neuen Audit.
+Der für den Abschluss vorgeschriebene `drift-audit`-Skill konnte nach der
+Wiederherstellung des MCP-Servers vollständig ausgeführt werden. Der
+Clone-Scan fand 25 `near`-Cluster ohne `exact`-Cluster; der strukturelle Scan
+lieferte 18 manuell geprüfte Kandidatencluster. Es wurde kein neuer
+DRY-/Tech-Debt-Fund angelegt.

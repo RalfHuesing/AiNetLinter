@@ -1,5 +1,5 @@
 ---
-status: 'done (pending audit)'
+status: done
 type: step-result
 task: get-file-tree
 step: 003
@@ -11,7 +11,7 @@ coded_by_model_knowledge_cutoff: nicht im Systemkontext angegeben
 coded_at: 2026-08-26T23:32:10+02:00
 code_commit_hash: 5b8e4472814480b6973732bcd08c430d76d612be
 test_infrastructure_fix_commit_hash: 0a45dc16
-status_after: 'done (pending audit)'
+status_after: done
 blocker_category: none
 ---
 
@@ -101,10 +101,13 @@ Dogfood-Vertrag ist zusätzlich isoliert mit 1/1 grün gelaufen.
 - Dogfood-Single-Test: 1/1 bestanden.
 - Vollständiger Fast-Gate ohne Stress: 1.826/1.826 bestanden.
 - Vollständiger Integration-Gate ohne Stress: 358/358 bestanden, 0 übersprungen.
+- Feature-Fast-Slice (Walk-/Glob-/Scanner-Regressionen): 55/55 bestanden.
+- Feature-Integration-Slice (physischer Options-Walk): 9/9 bestanden.
 - Externe Installations-Daemons wurden nicht beendet.
 
-Der nach dem Testfix erneut gestartete `drift-audit`-Skill konnte nicht
-abgeschlossen werden: `find_duplicates` und der anschließende
-Observability-Feedback-Aufruf des AiNetLinter-MCP-Servers meldeten unmittelbar
-`Transport closed`. Eine lokale Ersatzsuche wurde gemäß Skill-Vorgabe nicht
-verwendet; deshalb bleibt der Step auf `done (pending audit)`.
+Der nach dem Testfix erneut gestartete `drift-audit`-Skill wurde bei verfügbarer
+MCP-Verbindung vollständig ausgeführt. Der Clone-Scan meldete 25 `near`-Cluster
+und keinen `exact`-Cluster. Der strukturelle Scan meldete 18 Kandidatencluster;
+die Treffer wurden als legitime Testvarianten, API-Kompatibilitäts-Overloads,
+spiegelbildliche Transportpfade oder bereits zentralisierte Delegationen
+bewertet. Es entstand kein neuer Tech-Debt-Eintrag. Der Step ist damit erledigt.
