@@ -22,7 +22,7 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
     [Fact]
     public async Task TwoThinClients_ConnectToSameDaemon_AndReuseWarmProjectKey()
     {
-        // Endpunkt-Gate: der echte Daemon bindet den benutzergebundenen Pipe-Namen.
+        // Endpunkt-Gate: der echte Daemon bindet den pro Testprozess isolierten Pipe-Namen.
         var gate = await DaemonProcessContractHarness.AcquireEndpointAsync(CancellationToken.None).ConfigureAwait(false);
         var sharedPid = 0;
         try
@@ -38,17 +38,25 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
             var first = await McpRawWireTestHarness.RunAndCollectWithDiagnosticsAsync(
                 fixture.RootPath,
                 clientFrames,
-                PollDelay,
-                noDaemon: false,
-                daemonIdleExitMinutes: 5,
-                localAppDataOverride: isolatedState.DirectoryPath).ConfigureAwait(false);
+                new McpRawWireRunOptions
+                {
+                    InterFrameDelay = PollDelay,
+                    NoDaemon = false,
+                    DaemonIdleExitMinutes = 5,
+                    LocalAppDataOverride = isolatedState.DirectoryPath,
+                    DaemonInstance = DaemonEndpointJanitor.TestDaemonInstance,
+                }).ConfigureAwait(false);
             var second = await McpRawWireTestHarness.RunAndCollectWithDiagnosticsAsync(
                 fixture.RootPath,
                 CreateClientFrames(primary: false),
-                TimeSpan.FromMilliseconds(400),
-                noDaemon: false,
-                daemonIdleExitMinutes: 5,
-                localAppDataOverride: isolatedState.DirectoryPath).ConfigureAwait(false);
+                new McpRawWireRunOptions
+                {
+                    InterFrameDelay = TimeSpan.FromMilliseconds(400),
+                    NoDaemon = false,
+                    DaemonIdleExitMinutes = 5,
+                    LocalAppDataOverride = isolatedState.DirectoryPath,
+                    DaemonInstance = DaemonEndpointJanitor.TestDaemonInstance,
+                }).ConfigureAwait(false);
 
             Assert.Equal(0, first.ExitCode);
             Assert.Equal(0, second.ExitCode);

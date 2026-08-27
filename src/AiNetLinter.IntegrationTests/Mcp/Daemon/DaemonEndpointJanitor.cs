@@ -11,9 +11,9 @@ using AiNetLinter.Mcp.Daemon;
 namespace AiNetLinter.IntegrationTests.Mcp.Daemon;
 
 /// <summary>
-/// Suite-weites Cleanup/Gating fuer den benutzergebundenen Daemon-Pipe-Endpunkt
-/// (<c>ainetlinter.analyzer.v1.&lt;user&gt;</c>): vor dem ersten Endpunkt-Zugriff eines Testlaufs
-/// werden uebrig gebliebene Daemon-Prozesse eigener Bauart beendet und der Endpunkt per
+/// Suite-weites Cleanup/Gating fuer den pro Testprozess isolierten Daemon-Pipe-Endpunkt
+/// (<c>ainetlinter.analyzer.v1.&lt;user&gt;.&lt;test-instance&gt;</c>): vor dem ersten Endpunkt-Zugriff
+/// eines Testlaufs werden uebrig gebliebene Daemon-Prozesse eigener Bauart beendet und der Endpunkt per
 /// Client-Probe verifiziert. Identifikation ausschliesslich ueber Prozesse, deren Bildpfad
 /// <c>AiNetLinter.exe</c> lautet UND entweder der eigenen Test-AiNetLinter.exe
 /// (<see cref="OwnExecutablePath"/>) entspricht oder unterhalb des Repositories liegt
@@ -34,6 +34,9 @@ internal static class DaemonEndpointJanitor
 
     internal static string OwnExecutablePath =>
         Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
+
+    internal static string TestDaemonInstance =>
+        "tests-" + Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>Build-Ausgaben dieses Repositories (alle Projekt-Bins); Daemons aus
     /// <c>dotnet run</c>/manuellen Gate-Sessions landen hier ebenso wie die Test-Kopie.</summary>
@@ -111,7 +114,7 @@ internal static class DaemonEndpointJanitor
 
             if (DateTime.UtcNow > deadline)
             {
-                return "Der Daemon-Pipe-Endpunkt ainetlinter.analyzer.v1.<Benutzer> bleibt durch einen "
+                return "Der isolierte Daemon-Pipe-Endpunkt ainetlinter.analyzer.v1.<Benutzer>.<Testinstanz> bleibt durch einen "
                     + "nicht identifizierbaren Prozess belegt (kein Prozess der eigenen Test-EXE); "
                     + "Endpunkt-bindende Daemon-Tests werden uebersprungen.";
             }
@@ -214,7 +217,7 @@ internal static class DaemonEndpointJanitor
     {
         using var client = new NamedPipeClientStream(
             ".",
-            DaemonProtocol.GetPipeName(DaemonProtocol.CurrentUserName),
+            DaemonProtocol.GetPipeName(DaemonProtocol.CurrentUserName, TestDaemonInstance),
             PipeDirection.InOut,
             PipeOptions.Asynchronous);
         using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

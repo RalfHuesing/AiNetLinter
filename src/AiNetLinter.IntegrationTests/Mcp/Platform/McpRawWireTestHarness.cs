@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.IntegrationTests.Mcp.Daemon;
 using AiNetLinter.IntegrationTests.Platform;
 namespace AiNetLinter.IntegrationTests.Mcp.Platform;
 
@@ -17,6 +18,15 @@ internal sealed record McpRawWireRunResult(
     IReadOnlyList<string> StdoutLines,
     string StderrText,
     int ExitCode);
+
+internal sealed record McpRawWireRunOptions
+{
+    internal TimeSpan? InterFrameDelay { get; init; }
+    internal bool NoDaemon { get; init; } = true;
+    internal double? DaemonIdleExitMinutes { get; init; }
+    internal string? LocalAppDataOverride { get; init; }
+    internal string? DaemonInstance { get; init; }
+}
 
 internal static class McpRawWireTestHarness
 {
@@ -87,25 +97,21 @@ internal static class McpRawWireTestHarness
     internal static async Task<List<string>> RunAndCollectStdoutAsync(
         string targetDirectory,
         string[] frames,
-        TimeSpan? interFrameDelay = null,
-        bool noDaemon = true)
+        McpRawWireRunOptions? options = null)
     {
         var result = await RunAndCollectWithDiagnosticsAsync(
             targetDirectory,
             frames,
-            interFrameDelay,
-            noDaemon).ConfigureAwait(false);
+            options).ConfigureAwait(false);
         return result.StdoutLines.ToList();
     }
 
     internal static async Task<McpRawWireRunResult> RunAndCollectWithDiagnosticsAsync(
         string targetDirectory,
         string[] frames,
-        TimeSpan? interFrameDelay = null,
-        bool noDaemon = true,
-        double? daemonIdleExitMinutes = null,
-        string? localAppDataOverride = null)
+        McpRawWireRunOptions? options = null)
     {
+        options ??= new McpRawWireRunOptions();
         McpFixtureProjectDefinition.Ensure(targetDirectory);
         using var lease = await SubprocessLifetimeBudget.Shared.AcquireAsync(CancellationToken.None);
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
@@ -116,36 +122,7 @@ internal static class McpRawWireTestHarness
                 "Test laeuft nur nach dotnet build.");
         }
 
-        var psi = new ProcessStartInfo
-        {
-            FileName = exePath,
-            UseShellExecute = false,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-            WorkingDirectory = targetDirectory,
-        };
-        psi.ArgumentList.Add("--mcp-server");
-        // Der Raw-Wire-Harness nutzt bewusst den ThinClient; ein kurzer Idle-Exit
-        // verhindert, dass der testweise Daemon nach dem Prozessende Build-Artefakte sperrt.
-        if (noDaemon)
-        {
-            psi.Environment["AINETLINTER_NO_DAEMON"] = "1";
-        }
-        else
-        {
-            psi.ArgumentList.Add("--mcp-daemon-idle-exit-minutes");
-            psi.ArgumentList.Add((daemonIdleExitMinutes ?? 0.01).ToString(CultureInfo.InvariantCulture));
-        }
-
-        if (localAppDataOverride is not null)
-        {
-            // Isoliert den daemonseitigen MRU-/State-Pfad vom echten Benutzerprofil;
-            // der detached Spawn erbt die Umgebung des Thin-Clients.
-            Directory.CreateDirectory(localAppDataOverride);
-            psi.Environment["LOCALAPPDATA"] = localAppDataOverride;
-        }
+        var psi = CreateProcessStartInfo(exePath, targetDirectory, options);
 
         using var process = Process.Start(psi)
             ?? throw new InvalidOperationException("AiNetLinter-Subprozess konnte nicht gestartet werden.");
@@ -153,18 +130,7 @@ internal static class McpRawWireTestHarness
         var stderrTask = process.StandardError.ReadToEndAsync();
         var expectedResponses = CountExpectedResponses(frames);
         var writer = process.StandardInput;
-        var writerTask = Task.Run(async () =>
-        {
-            foreach (var frame in frames)
-            {
-                await writer.WriteLineAsync(AddProjectRootToToolCall(frame, targetDirectory));
-                await writer.FlushAsync();
-                if (interFrameDelay is { } delay)
-                {
-                    await Task.Delay(delay);
-                }
-            }
-        });
+        var writerTask = WriteFramesAsync(writer, frames, targetDirectory, options.InterFrameDelay);
 
         var observed = new List<string>();
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
@@ -191,6 +157,64 @@ internal static class McpRawWireTestHarness
 
         var (exitCode, stderrText) = await EnsureProcessTerminatedAsync(process, stderrTask).ConfigureAwait(false);
         return new McpRawWireRunResult(observed, stderrText, exitCode);
+    }
+
+    private static ProcessStartInfo CreateProcessStartInfo(
+        string exePath,
+        string targetDirectory,
+        McpRawWireRunOptions options)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = exePath,
+            UseShellExecute = false,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            WorkingDirectory = targetDirectory,
+        };
+        psi.ArgumentList.Add("--mcp-server");
+        // Der Raw-Wire-Harness nutzt bewusst den ThinClient; ein kurzer Idle-Exit
+        // verhindert, dass der testweise Daemon nach dem Prozessende Build-Artefakte sperrt.
+        if (options.NoDaemon)
+        {
+            psi.Environment["AINETLINTER_NO_DAEMON"] = "1";
+        }
+        else
+        {
+            psi.ArgumentList.Add("--mcp-daemon-idle-exit-minutes");
+            psi.ArgumentList.Add((options.DaemonIdleExitMinutes ?? 0.01).ToString(CultureInfo.InvariantCulture));
+            psi.ArgumentList.Add("--daemon-instance");
+            psi.ArgumentList.Add(options.DaemonInstance ?? DaemonEndpointJanitor.TestDaemonInstance);
+        }
+
+        if (options.LocalAppDataOverride is not null)
+        {
+            // Isoliert den daemonseitigen MRU-/State-Pfad vom echten Benutzerprofil;
+            // der detached Spawn erbt die Umgebung des Thin-Clients.
+            Directory.CreateDirectory(options.LocalAppDataOverride);
+            psi.Environment["LOCALAPPDATA"] = options.LocalAppDataOverride;
+        }
+
+        return psi;
+    }
+
+    private static async Task WriteFramesAsync(
+        StreamWriter writer,
+        IEnumerable<string> frames,
+        string targetDirectory,
+        TimeSpan? interFrameDelay)
+    {
+        foreach (var frame in frames)
+        {
+            await writer.WriteLineAsync(AddProjectRootToToolCall(frame, targetDirectory));
+            await writer.FlushAsync();
+            if (interFrameDelay is { } delay)
+            {
+                await Task.Delay(delay);
+            }
+        }
     }
 
     private static int CountExpectedResponses(IEnumerable<string> frames) =>

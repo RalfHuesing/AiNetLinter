@@ -23,7 +23,7 @@ public sealed class ThinClientMcpProcessContractTests
         var lines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
             fixture.RootPath,
             frames,
-            noDaemon: true);
+            new McpRawWireRunOptions { NoDaemon = true });
 
         Assert.NotEmpty(lines);
         Assert.Contains(lines, line => line.Contains("\"jsonrpc\":\"2.0\"", StringComparison.Ordinal));
@@ -32,7 +32,7 @@ public sealed class ThinClientMcpProcessContractTests
     [Fact]
     public async Task NormalMcpServerPath_ConnectsThroughDaemon_AndReportsRuntimeHealth()
     {
-        // Der Thin-Client bindet denselben benutzergebundenen Pipe-Endpunkt wie die
+        // Der Thin-Client bindet denselben pro Testprozess isolierten Pipe-Endpunkt wie die
         // Daemon-Contracts; deshalb ueber dasselbe Endpunkt-Gate laufen (Janitor + Skip).
         // Budget deckt die legitime Wartezeit auf den eigenen Turn ab.
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(240));
@@ -50,7 +50,11 @@ public sealed class ThinClientMcpProcessContractTests
         var lines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
             fixture.RootPath,
             frames,
-            noDaemon: false);
+            new McpRawWireRunOptions
+            {
+                NoDaemon = false,
+                DaemonInstance = DaemonEndpointJanitor.TestDaemonInstance,
+            });
         var response = McpRawWireTestHarness.FindResponse(lines, 2);
         var result = response.GetProperty("result");
         var text = result.GetProperty("content")[0].GetProperty("text").GetString();

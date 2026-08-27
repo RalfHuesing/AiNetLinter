@@ -15,6 +15,8 @@ internal sealed record DaemonProcessSpec(
     int MaxProjects = 1,
     string? DaemonInstance = null)
 {
+    internal string EffectiveDaemonInstance => DaemonInstance ?? DaemonEndpointJanitor.TestDaemonInstance;
+
     internal EffectiveDaemonConfiguration Configuration => new(
         MaxProjects,
         IdleExitMinutes);
@@ -31,7 +33,7 @@ internal static class DaemonProcessContractHarness
     };
 
     /// <summary>
-    /// Vergibt die Endnutzung des benutzergebundenen Daemon-Pipe-Endpunkts exklusiv. Wird das
+    /// Vergibt die Endnutzung des testprozess-isolierten Daemon-Pipe-Endpunkts exklusiv. Wird das
     /// Gate erworben, laeuft suite-weit genau einmal der <see cref="DaemonEndpointJanitor"/>
     /// (Ueberbleibsel der eigenen EXE beenden, Endpunkt-Probe) — innerhalb des Gates, damit nie
     /// ein legitimer, parallel laufender Endpunkt-Nutzer desselben Builds getroffen wird. Bei
@@ -87,7 +89,7 @@ internal static class DaemonProcessContractHarness
 
     internal static Task<DaemonPipeConnection> ConnectWhenReadyAsync(
         CancellationToken cancellationToken) =>
-        ConnectWhenReadyAsync(null, cancellationToken);
+        ConnectWhenReadyAsync(DaemonEndpointJanitor.TestDaemonInstance, cancellationToken);
 
     internal static Task<DaemonPipeConnection> ConnectWhenReadyAsync(
         string? daemonInstance,
@@ -126,7 +128,8 @@ internal static class DaemonProcessContractHarness
         CancellationToken cancellationToken,
         string? daemonInstance)
     {
-        var transport = new DaemonPipeTransport(daemonInstance: daemonInstance);
+        var transport = new DaemonPipeTransport(
+            daemonInstance: daemonInstance ?? DaemonEndpointJanitor.TestDaemonInstance);
         return await transport.ConnectAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -152,11 +155,8 @@ internal static class DaemonProcessContractHarness
         startInfo.ArgumentList.Add(spec.IdleExitMinutes.ToString(CultureInfo.InvariantCulture));
         startInfo.ArgumentList.Add("--mcp-max-projects");
         startInfo.ArgumentList.Add(spec.MaxProjects.ToString(CultureInfo.InvariantCulture));
-        if (spec.DaemonInstance is not null)
-        {
-            startInfo.ArgumentList.Add("--daemon-instance");
-            startInfo.ArgumentList.Add(spec.DaemonInstance);
-        }
+        startInfo.ArgumentList.Add("--daemon-instance");
+        startInfo.ArgumentList.Add(spec.EffectiveDaemonInstance);
         startInfo.Environment["LOCALAPPDATA"] = spec.LocalAppData;
         return startInfo;
     }

@@ -118,7 +118,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
         var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
             fixture.RootPath,
             frames.ToArray(),
-            TimeSpan.FromSeconds(5));
+            new McpRawWireRunOptions { InterFrameDelay = TimeSpan.FromSeconds(5) });
         JsonElement? result = null;
         foreach (var line in observedLines)
         {
@@ -170,7 +170,9 @@ public sealed class McpServerCommandJsonRpcFramingTests
         }
 
         var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
-            fixture.RootPath, frames.ToArray(), TimeSpan.FromSeconds(1));
+            fixture.RootPath,
+            frames.ToArray(),
+            new McpRawWireRunOptions { InterFrameDelay = TimeSpan.FromSeconds(1) });
         JsonElement? response = null;
         foreach (var line in observedLines)
         {

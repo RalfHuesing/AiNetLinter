@@ -38,5 +38,7 @@ internal sealed class SubprocessLifetimeGate
 
 internal static class SubprocessLifetimeBudget
 {
-    internal static SubprocessLifetimeGate Shared { get; } = new(capacity: 4);
+    // xUnit laeuft mit bis zu vier parallelen Testfaellen; Daemon-Vertraege koennen
+    // innerhalb eines Testfalls zwei langlebige Prozesse gleichzeitig halten.
+    internal static SubprocessLifetimeGate Shared { get; } = new(capacity: 8);
 }
