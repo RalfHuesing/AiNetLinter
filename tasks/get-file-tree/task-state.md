@@ -27,7 +27,7 @@ current_step: step-004
 | step-001 | EPIC-01 | done | Filesystem-only Dispatch und boundary-sicherer Root-Resolver | - | 2bd4cb38 | approved | 2bd4cb38 |
 | step-002 | EPIC-01 | done | Veraltete Hotspots-Erwartungen auf sechs Fixture-Dokumente ausrichten | - | 6854158b | approved | 6854158b |
 | step-003 | EPIC-02 | done | Gemeinsame Walk-/Optionen-/Glob-Grundlage extrahieren | - | 5b8e4472 | approved (direkt) | 5b8e4472 + 0a45dc16 |
-| step-004 | EPIC-03/04 | done | Physischer File-Tree-Scan, MCP-Wiring, Audit und Produktdokumentation | - | f4768502ba00 | direkt verifiziert | f4768502ba00 |
+| step-004 | EPIC-03/04 | done | Physischer File-Tree-Scan, MCP-Wiring, Audit und Produktdokumentation | - | e2d797d1ceda | direkt verifiziert | e2d797d1ceda |
 
 ## Config (optional)
 
