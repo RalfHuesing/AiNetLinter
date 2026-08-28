@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T18:21:45+02:00
+last_updated: 2026-08-28T18:34:05+02:00
 rules_dir: .agents/rules
-total_steps: 6
-current_step: step-006
+total_steps: 7
+current_step: step-007
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -14,11 +14,11 @@ current_step: step-006
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 6 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-006` (approved; nächster EPIC-03-Schnitt wird geplant)
+- **Aktueller Schritt:** `step-007` (in_progress; Source-Snapshot-Identität und Registry)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-28T18:21:45+02:00
+- **Zuletzt aktualisiert:** 2026-08-28T18:34:05+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -31,6 +31,7 @@ current_step: step-006
 | step-004 | EPIC-02 | done | Assembly-Session-Fundament korrigieren: Cache, Limits, Referenzen und Identität | step-003 | 639f0fc4 | approved | 639f0fc4 + 07d684ca + f6ba0ed8 |
 | step-005 | EPIC-03 | done | Expliziten External-Source-Mappingvertrag mit strikter Validierung vorbereiten | - | 7d40cacb | issues → step-006 approved | 7d40cacb + b34b2147 + 692412ed |
 | step-006 | EPIC-03 | done | Mapping-Diagnosevertrag und direkte JSON-Regressionen korrigieren | step-005 | c9d71c35 | approved | c9d71c35 + 5d084c9b + 07dc88cf |
+| step-007 | EPIC-03 | in_progress | Source-Snapshot-Identität und residente Registry mit injizierbarem Ergebnis | - | - | - | bc65e87f |
 
 ## Config
 
@@ -99,3 +100,9 @@ Step 006 wurde durch den neuen Kritiker genehmigt (`07dc88cf`). Die Diagnose-
 Fabrik ist zentralisiert, die Duplicate-/Missing-Semantik ist eindeutig und
 die direkten Regressionen sind abgedeckt. EPIC-03 bleibt für den nächsten
 Snapshot-/Registry-/Session-Schnitt offen.
+
+Step 007 ist als nächster kontextbegrenzter EPIC-03-Schnitt aktiviert
+(`bc65e87f`). Er umfasst ausschließlich Source-Snapshot-Identität, eine
+residente In-Memory-Registry mit Leases und das injizierbare Provider-Ergebnis;
+vollständiges Solution-Matching, Session-/MCP-Wiring und Gitea bleiben
+Folgepakete.
