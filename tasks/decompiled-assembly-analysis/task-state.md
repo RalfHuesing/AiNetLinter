@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T12:20:10+02:00
+last_updated: 2026-08-28T12:23:40+02:00
 rules_dir: .agents/rules
-total_steps: 1
-current_step: step-001
+total_steps: 2
+current_step: step-002
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -26,6 +26,7 @@ current_step: step-001
 | Step | Epic | Status | Title | Corrects | Coded | Reviewed | Commit |
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-01 | done (Korrektur ausstehend) | Einheitlichen Analysis-Target-Vertrag und Dispatch umstellen | - | f14ff5c2 | issues | f14ff5c2 |
+| step-002 | EPIC-01 | in_progress | MCP-Workflow-Regel auf den neuen Target-Vertrag synchronisieren | step-001 | - | - | - |
 
 ## Config
 
