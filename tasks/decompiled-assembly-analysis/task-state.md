@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T17:09:39+02:00
+last_updated: 2026-08-28T17:59:52+02:00
 rules_dir: .agents/rules
-total_steps: 4
-current_step: step-004
+total_steps: 6
+current_step: step-006
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,12 +13,12 @@ current_step: step-004
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 4 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-005` (in_progress)
+- **Steps gesamt:** 6 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-006` (in_progress; Korrektur zu Step 005)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-28T17:09:39+02:00
+- **Zuletzt aktualisiert:** 2026-08-28T17:59:52+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -29,7 +29,8 @@ current_step: step-004
 | step-002 | EPIC-01 | done | MCP-Workflow-Regel auf den neuen Target-Vertrag synchronisieren | step-001 | 7cbc6d45 | approved | 7cbc6d45 |
 | step-003 | EPIC-02 | done | Statische Assembly-Session mit Fingerprint, Decompilation und Roslyn-Snapshot | - | 0704b763 | issues → step-004 approved | 0704b763 |
 | step-004 | EPIC-02 | done | Assembly-Session-Fundament korrigieren: Cache, Limits, Referenzen und Identität | step-003 | 639f0fc4 | approved | 639f0fc4 + 07d684ca + f6ba0ed8 |
-| step-005 | EPIC-03 | in_progress | Expliziten External-Source-Mappingvertrag mit strikter Validierung vorbereiten | - | - | - | a71465fa |
+| step-005 | EPIC-03 | issues → step-006 | Expliziten External-Source-Mappingvertrag mit strikter Validierung vorbereiten | - | 7d40cacb | issues | 7d40cacb + b34b2147 + 692412ed |
+| step-006 | EPIC-03 | in_progress | Mapping-Diagnosevertrag und direkte JSON-Regressionen korrigieren | step-005 | - | - | e5d3eb8d |
 
 ## Config
 
@@ -88,3 +89,8 @@ Der erste EPIC-03-Plan wurde vor dem Coder durch das Split-Gate korrigiert:
 Step 005 enthält jetzt nur Mapping/Validierung, Pfadauflösung, Diagnosen,
 Provider-Port und zugehörige Tests/Doku (`a71465fa`). Snapshot-Identität,
 Registry sowie Session-/MCP-Anbindung bleiben ein späteres vertikales Paket.
+
+Der Kritiker fand in Step 005 ein In-Scope-DRY-Duplikat in drei Diagnose-
+Hilfsmethoden sowie eine gekoppelte Ungenauigkeit bei doppelten JSON-Feldern
+und fehlende direkte Regressionstests (`692412ed`). Step 006 bündelt diese
+Befunde als eine kontextbegrenzte Korrekturrunde.
