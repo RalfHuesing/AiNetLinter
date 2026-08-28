@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T00:01:36+02:00
+last_updated: 2026-08-29T00:18:24+02:00
 rules_dir: .agents/rules
-total_steps: 14
-current_step: step-014
+total_steps: 15
+current_step: step-015
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,12 +13,12 @@ current_step: step-014
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 14 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-014` (approved; nächster EPIC-04-Schnitt wird geplant)
+- **Steps gesamt:** 15 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-015` (in_progress; Repository-Akquisition und sichere Staging-Fassade)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T00:01:36+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T00:18:24+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -39,6 +39,7 @@ current_step: step-014
 | step-012 | EPIC-03 | done | Gemeinsame Host-Komposition für direkte Assembly-MCP-Tools verdrahten | - | db386bc4 | issues → step-013 approved | db386bc4 + 12b6dcce + 16ebeda5 |
 | step-013 | EPIC-03 | done | Assembly-Host-Wiring und Session-Lifetime absichern | step-012 | 1cd279f0 | approved | 1cd279f0 + 6ba95124 + 723d2a3b |
 | step-014 | EPIC-04 | done | Injizierbaren External-Source-Port für Gitea-Auth- und Transportfehler schärfen | - | 3f83c5f2 | approved | 3f83c5f2 + 804f00b0 + 0902a7b7 |
+| step-015 | EPIC-04 | in_progress | Repository-Akquisitionsvertrag mit injizierbarem Gitea-Transport und sicherer Staging-Fassade | - | - | - | 1cdd0598 |
 
 ## Config
 
@@ -184,3 +185,12 @@ Step 014 wurde durch den neuen Kritiker genehmigt (`0902a7b7`), ohne neue
 Tech-Debt-Funde. Die typisierte Failure-Grenze ist abgeschlossen; EPIC-04
 bleibt für die echte Repository-Akquisition und atomare Source-of-Truth-
 Veröffentlichung offen.
+
+Step 015 wurde als nächstes größeres, kontextbegrenztes EPIC-04-Paket geplant
+(`1cdd0598`). Es umfasst den injizierbaren `IGiteaRepositoryTransport`, eine
+besitzende und pfadgeschützte initiale Staging-/Clone-Fassade sowie
+deterministische netzwerkfreie Tests. Produktiver Gitea-/Git-/HTTP-Transport,
+Credential-Bindung, Fetch/Refresh, Cache und atomare Source-of-Truth-
+Veröffentlichung bleiben Folgepakete. Der Coder muss die vertragliche Grenze
+beibehalten und DRY-, MagicValues- und DeadCode-Tech-Debt nur passend und
+architektonisch sinnvoll innerhalb dieses Pakets behandeln.
