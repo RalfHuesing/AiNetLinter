@@ -1,8 +1,8 @@
 ---
-status: executing
+status: paused_after_step
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T19:05:30+02:00
+last_updated: 2026-08-28T16:21:43+02:00
 rules_dir: .agents/rules
 total_steps: 4
 current_step: step-004
@@ -12,9 +12,9 @@ current_step: step-004
 
 ## Übersicht
 
-- **Task-Status:** `executing`
+- **Task-Status:** `paused_after_step`
 - **Steps gesamt:** 4 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-004`
+- **Aktueller Schritt:** `step-004` (abgeschlossen, Review ausstehend)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
@@ -28,7 +28,7 @@ current_step: step-004
 | step-001 | EPIC-01 | done | Einheitlichen Analysis-Target-Vertrag und Dispatch umstellen | - | f14ff5c2 | issues → step-002 approved | f14ff5c2 |
 | step-002 | EPIC-01 | done | MCP-Workflow-Regel auf den neuen Target-Vertrag synchronisieren | step-001 | 7cbc6d45 | approved | 7cbc6d45 |
 | step-003 | EPIC-02 | done (Korrektur ausstehend) | Statische Assembly-Session mit Fingerprint, Decompilation und Roslyn-Snapshot | - | 0704b763 | issues → step-004 | 0704b763 |
-| step-004 | EPIC-02 | in_progress | Assembly-Session-Fundament korrigieren: Cache, Limits, Referenzen und Identität | step-003 | 9f934109 | - | 9f934109 |
+| step-004 | EPIC-02 | done (pending audit) | Assembly-Session-Fundament korrigieren: Cache, Limits, Referenzen und Identität | step-003 | 639f0fc4 | nicht ausgeführt (Nutzer-Halt) | 639f0fc4 + 07d684ca |
 
 ## Config
 
@@ -64,6 +64,16 @@ Der vollständige Integration-Gate-Lauf bleibt wegen drei bestehenden
 - `TextOf` in den beiden Wiring-Contract-Testklassen
 - `WaitForConditionAsync` in den beiden Wiring-Contract-Testklassen
 
-Die Nutzerentscheidung liegt vor: Die drei bestehenden DRY-Befunde dürfen im
-laufenden Korrekturpaket behoben werden. Der Task wird mit einem neuen Coder
-fortgesetzt; danach prüft ein neuer Kritiker den vollständigen Gate-Lauf.
+Die Nutzerentscheidung lag vor: Die drei bestehenden DRY-Befunde durften im
+laufenden Korrekturpaket behoben werden. Der neue Coder hat sie zusammen mit
+den übrigen Step-004-Funden behoben; Build und beide vollständigen Nicht-
+Stress-Gates sind grün. Ein Kritikerlauf ist wegen des anschließenden
+Nutzer-Halts noch nicht erfolgt.
+
+## Haltvermerk
+
+Der Nutzer hat angewiesen, unmittelbar nach Abschluss dieses Steps zu stoppen.
+Daher wurden nach dem Coder-Ergebnis kein Kritiker, kein weiterer Step, kein
+Global-Audit und keine `task-summary.md` ausgeführt. Der erledigte Coder-
+Sub-Agent wurde geschlossen; beim Fortsetzen ist für den Kritiker ein neuer
+Sub-Agent zu starten, ohne bestehende Sub-Agenten wiederzuverwenden.
