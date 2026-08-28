@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-28T19:07:06+02:00
+last_updated: 2026-08-28T19:49:38+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -70,18 +70,24 @@ werden an diese Session-Grenze angeschlossen.
   vollständige Source-Solutions unabhängig von Assembly-Aliasen; sie lädt
   keine Solutions und entscheidet kein `Project.AssemblyName`-Matching.
 
-  **Nächster Schnitt / in Arbeit → `step-008`:** Der geplante Resolver soll
-  einen über die Snapshot-Registry geleasten vollständigen Source-Snapshot
-  deterministisch über den expliziten Assembly-Alias und
-  `Project.AssemblyName` matchen. Er liefert einen unveränderlichen Vertrag
-  mit `matched`, `no-match` und `ambiguous`, geordneten Kandidaten sowie
-  sichtbarer Match-Evidence und Confidence. Session-/MCP-Komposition,
-  Provider-Akquisition, Gitea, Netzwerk und transitive Referenzen bleiben
-  außerhalb dieses nächsten Steps.
+  `step-008` ist abgeschlossen und genehmigt. Der Resolver matcht einen
+  expliziten Assembly-Alias deterministisch gegen `Project.AssemblyName` eines
+  über die Snapshot-Registry geleasten, read-only Source-Snapshots und liefert
+  `matched`, `no-match` oder `ambiguous` mit stabiler Evidence und Confidence.
 
-  Die Übergabe des source-backed Ergebnisses an `AssemblyAnalysisSession` und
-  MCP-Dispatch bleibt nach `step-008` ein getrenntes Folgepaket. Die eigentliche
-  Gitea-Akquisition, Authentifizierung, Refresh- und persistente Cache-Semantik
+  **Nächster Schnitt / in Arbeit → `step-009`:** Die
+  `AssemblyAnalysisContextFactory` erhält ein bereits gematchtes Source-
+  Projekt samt kontrolliertem Lease-Kontext und erzeugt daraus den
+  source-backed Assembly-Context. Bei `no-match`, `ambiguous`, unavailable,
+  fehlendem Projekt oder nicht verfügbarer Compilation bleibt die bestehende
+  statische Decompilation der deterministische Fallback. Source-Origin und
+  Decompilation-Hinweis werden dabei eindeutig getrennt; Registry-, Snapshot-
+  und Lease-Ownership bleibt unverändert.
+
+  Provider-/Gitea-Akquisition, Registry-Lookup aus dem MCP-Dispatch,
+  reguläre Tool-/Daemon-Komposition, transitive Referenzen, Refresh und
+  persistenter Cache bleiben nach `step-009` eigenständige Folgepakete. Die
+  eigentliche Gitea-Source-of-Truth, Authentifizierung und Refresh-Semantik
   bleibt vollständig in EPIC-04.
 
 **Zweck:** Eine globale, explizite Mapping-Konfiguration für externe Quellen
