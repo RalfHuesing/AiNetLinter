@@ -1586,6 +1586,46 @@ Unbekannte Schlüssel innerhalb des `Logging`-Abschnitts sind ebenfalls ein hart
 Ein vorhandener `McpCallLogging`-Wert muss JSON-Boolean sein; andere Typen führen zum harten
 Startfehler. Fehlt der Schlüssel, bleibt MCP-Call-Logging aktiviert.
 
+### Expliziter External-Source-Mappingvertrag
+
+Der optionale Abschnitt `ExternalSources` in `appsettings.json` kann eine globale
+Mapping-Datei benennen:
+
+```json
+{
+  "ExternalSources": {
+    "MappingsPath": "config/external-sources.json"
+  }
+}
+```
+
+Ein relativer `MappingsPath` wird gegen das Verzeichnis der gelesenen
+`appsettings.json` aufgelöst; ein absoluter Pfad bleibt absolut. Die Mapping-Datei
+enthält ausschließlich `repositories` mit den Feldern `url`, `solutionPath` und
+`assemblies`:
+
+```json
+{
+  "repositories": [
+    {
+      "url": "https://gitea.example/shared.git",
+      "solutionPath": "src/Shared.slnx",
+      "assemblies": ["Shared.Core.dll"]
+    }
+  ]
+}
+```
+
+`url` muss eine absolute HTTP(S)-URL sein. `solutionPath` ist repository-relativ,
+wird mit `/` normalisiert und muss auf `.sln` oder `.slnx` enden; seine Existenz
+wird in diesem Konfigurationsschritt nicht geprüft. Assembly-Namen werden getrimmt,
+case-insensitiv verglichen und um ein optionales `.dll`-Suffix normalisiert.
+Unbekannte Felder, ungültiges JSON, ungültige Pfade sowie leere, doppelte oder
+mehrdeutige Assembly-Einträge liefern sichtbare strukturierte Diagnosen. Fehlt der
+optionale Abschnitt, bleibt die Mapping-Konfiguration leer. `ainetlinter.project.json`
+und `rules.json` erhalten keine External-Source-Felder; `.csproj`, Commit und Branch
+sind keine Bestandteile dieses Vertrags.
+
 ### MCP-Tool-Call-Logging
 
 Bei aktiviertem `Logging:McpCallLogging` schreibt der tatsächliche MCP-SDK-Server nach jedem

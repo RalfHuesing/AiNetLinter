@@ -2,7 +2,7 @@
 task: decompiled-assembly-analysis
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-28T14:37:34+02:00
+last_updated: 2026-08-28T17:31:00+02:00
 ---
 
 # CodeMap: decompiled-assembly-analysis
@@ -47,6 +47,7 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 ## Konfiguration und bestehender Cache
 
 - **`src/AiNetLinter/Configuration/`** — enthält die strikte rules-/Projektkonfiguration und ist der Integrationspunkt für globale externe Source-Mappings.
+- **`src/AiNetLinter/Configuration/ExternalSourceConfiguration.cs`, `ExternalSourceConfigurationLoader.cs` und `ExternalSourceMappingValidator.cs`** — enthalten den unveränderlichen External-Source-Mappingvertrag, den fokussierten appsettings-Loader und die zugehörige JSON-/Pfad-/Assembly-Validierung.
 - **`src/AiNetLinter/Cache/AnalysisCacheManager.cs`** — enthält den bestehenden Batch-Analysecache, der vom neuen externen Session-/Decompilation-Cache getrennt bleiben muss.
 - **`appsettings.json`** — enthält die aktuelle Logging-Konfiguration und ist der projektweite Einstiegspunkt für optionale externe Analyseeinstellungen.
 - **`ainetlinter.project.json`** — definiert den bestehenden projektgebundenen Solution-/Rules-Vertrag, der für reine Assembly-Ziele nicht erforderlich werden soll.
@@ -55,6 +56,7 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 
 - **`src/AiNetLinter.FastTests/Mcp/Projects/`** — enthält schnelle Tests für Projekt-Registry, Leases, Ladebarrieren und Eviction.
 - **`src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/`** — enthält schnelle Assembly-Toolregressionen sowie Session-, Cache-, Grenzwert- und Snapshot-Tests.
+- **`src/AiNetLinter.FastTests/Configuration/ExternalSourceConfigurationLoaderTests.cs` und `Mcp/Assemblies/ExternalSourceProviderContractTests.cs`** — enthalten die netzwerkfreien Loader-, Validierungs- und Provider-Vertragstests des Mapping-Schnitts.
 - **`src/AiNetLinter.FastTests/Mcp/`** — enthält weitere schnelle MCP-Vertrags-, Result- und Tooltests für Regressionen.
 - **`src/AiNetLinter.IntegrationTests/Architecture/McpProcessArchitectureGuardTests.cs`** — enthält den freien Architekturquellscan mit dem zentralen Generated-/bin-Ausschluss für Cachequellen (zuletzt: step-004).
 - **`src/AiNetLinter.IntegrationTests/Platform/LoadedFixtureTests.cs`** — enthält den geladenen Fixture-/Source-Katalogscan mit dem zentralen Generated-/bin-Ausschluss (zuletzt: step-004).
