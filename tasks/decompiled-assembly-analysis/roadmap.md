@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-28T22:00:54+02:00
+last_updated: 2026-08-29T00:12:40+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -99,23 +99,39 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
   den transparenten Wechsel auf Decompilation, ohne lokale Arbeitskopien zur
   Source-of-Truth zu machen.
 
-  **Nächster Schnitt → `step-014`:** Der bestehende injizierbare
-  `IExternalSourceProvider`-Port erhält eine typisierte Auth-/Transport-/
-  Fehlersemantik mit deterministischen Test-Doubles. Der Schnitt ändert das
-  öffentliche Mapping-JSON nicht, führt keine Credential-Konfiguration ein
-  und implementiert keinen Netzwerk- oder Git-Client; erwartete Providerfehler
-  werden als nicht-quellfähige Ergebnisse mit stabilen Diagnosen modelliert,
-  Cancellation bleibt echte Cancellation.
+  **Abschluss des Vorgängers `step-014`:** Der bestehende injizierbare
+  `IExternalSourceProvider`-Port besitzt nun eine typisierte Auth-/Transport-
+  und Fehlersemantik mit deterministischen Test-Doubles. Der Schnitt änderte
+  das öffentliche Mapping-JSON nicht, führte keine Credential-Konfiguration
+  ein und implementierte keinen Netzwerk- oder Git-Client; erwartete
+  Providerfehler werden als nicht-quellfähige Ergebnisse mit stabilen
+  Diagnosen modelliert, Cancellation bleibt echte Cancellation.
+
+  **Nächster Schnitt → `step-015`:** Ein zusammenhängendes
+  Repository-Akquisitionspaket definiert den injizierbaren
+  `IGiteaRepositoryTransport`-Vertrag und eine sichere
+  `ExternalSourceRepositoryAcquirer`-Staging-/Clone-Fassade. Der Transport
+  bleibt im Step ein Port mit deterministischem Doppel; echte
+  Netzwerk-/Gitea-/Git-Ausführung, Credential-Bindung und produktive
+  Adapterimplementierung werden nicht ausgeführt bzw. nicht vorweggenommen.
+  Die Fassade begrenzt jeden neuen Checkout auf eine kontrollierte
+  Staging-Wurzel, prüft den Solution-Pfad und räumt bei Fehler/Cancellation
+  ihren Besitz auf.
 
   **Vertikale Folgepaket-Grenzen:**
 
   - Provider-Port, Auth-/Fehlervertrag und deterministische Doubles — `step-014`.
-  - Repository-Akquisition, Credential-Bindung, Default-Branch und
-    Clone/Fetch/Refresh — nachgelagerter eigener Schnitt.
-  - Atomare Veröffentlichung, Cache-/Manifest-Integrität und korrupte
-    Snapshots — nachgelagerter eigener Schnitt.
-  - Source-of-Truth, dirty/unbuilt Checkout-Abgrenzung und transparente
-    Fallback-/Health-Semantik — nachgelagerter eigener Schnitt.
+  - Akquisitionsvertrag, kontrollierte initiale Clone-/Staging-Fassade und
+    deterministische netzwerkfreie Tests — `step-015`.
+  - Produktiver Gitea-/Git-/HTTP-Transport, Credential-Bindung,
+    Default-Branch- und echte Clone-/Fetch-Semantik — nachgelagerter eigener
+    Schnitt.
+  - Refresh, persistenter Repository-Cache, Cache-/Manifest-Integrität,
+    korrupte Snapshots und atomare Source-of-Truth-Veröffentlichung —
+    nachgelagerter eigener Schnitt.
+  - Snapshot-/Workspace-Materialisierung, dirty/unbuilt Checkout-Abgrenzung
+    und transparente Fallback-/Health-Semantik — nachgelagerter eigener
+    Schnitt.
 
   Diese Grenzen bleiben sequenzielle vertikale Pakete; EPIC-04 wird nicht als
   monolithischer Gitea-Featureblock und nicht als Mini-Sweep umgesetzt.
