@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T19:12:29+02:00
+last_updated: 2026-08-28T19:39:46+02:00
 rules_dir: .agents/rules
 total_steps: 8
 current_step: step-008
@@ -13,12 +13,12 @@ current_step: step-008
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 7 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-008` (in_progress; deterministische Source-Match-Auflösung)
+- **Steps gesamt:** 8 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-008` (approved; nächster EPIC-03-Schnitt wird geplant)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-28T19:12:29+02:00
+- **Zuletzt aktualisiert:** 2026-08-28T19:39:46+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -32,7 +32,7 @@ current_step: step-008
 | step-005 | EPIC-03 | done | Expliziten External-Source-Mappingvertrag mit strikter Validierung vorbereiten | - | 7d40cacb | issues → step-006 approved | 7d40cacb + b34b2147 + 692412ed |
 | step-006 | EPIC-03 | done | Mapping-Diagnosevertrag und direkte JSON-Regressionen korrigieren | step-005 | c9d71c35 | approved | c9d71c35 + 5d084c9b + 07dc88cf |
 | step-007 | EPIC-03 | done | Source-Snapshot-Identität und residente Registry mit injizierbarem Ergebnis | - | cbd79a51 | approved | cbd79a51 + 1c3d2b3c + 7da30606 |
-| step-008 | EPIC-03 | in_progress | Deterministische Source-Match-Auflösung über Project.AssemblyName | - | - | - | cf93b2fa |
+| step-008 | EPIC-03 | done | Deterministische Source-Match-Auflösung über Project.AssemblyName | - | 9511b8f2 | approved | 9511b8f2 + c2ac1473 + a2062fb7 |
 
 ## Config
 
@@ -118,3 +118,8 @@ Step 008 ist als nächster kontextbegrenzter EPIC-03-Schnitt aktiviert
 expliziten Assembly-Alias zu `Project.AssemblyName` innerhalb eines geleasten
 Source-Snapshots mit `matched`/`no-match`/`ambiguous`, Evidence und Confidence.
 Session-/MCP-Wiring, Gitea und transitive Referenzen bleiben Folgepakete.
+
+Step 008 wurde durch den neuen Kritiker genehmigt (`a2062fb7`). Der bestehende
+Exact-DRY-Fund zur Drive-Path-Prüfung bleibt als `TD-001` im Tech-Debt-Index
+offen, weil die gemeinsame Ablage zwei bereits abgeschlossene Vertragsgrenzen
+berühren würde und aktuell kein sicherer Auto-Fix ist.
