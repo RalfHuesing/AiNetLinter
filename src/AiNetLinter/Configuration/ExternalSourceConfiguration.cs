@@ -113,6 +113,15 @@ internal static class ExternalSourceConfigurationDiagnosticCodes
     internal const string NetworkUnavailable = "external-source-network-unavailable";
     internal const string Timeout = "external-source-timeout";
     internal const string InvalidResponse = "external-source-invalid-response";
+    internal const string RepositoryMappingInvalid = "external-source-repository-mapping-invalid";
+    internal const string RepositoryStagingRootInvalid = "external-source-repository-staging-root-invalid";
+    internal const string RepositoryCheckoutPathInvalid = "external-source-repository-checkout-path-invalid";
+    internal const string RepositoryCheckoutInvalid = "external-source-repository-checkout-invalid";
+    internal const string RepositorySolutionPathInvalid = "external-source-repository-solution-path-invalid";
+    internal const string RepositorySolutionInvalid = "external-source-repository-solution-invalid";
+    internal const string RepositoryTransportResultInvalid = "external-source-repository-transport-result-invalid";
+    internal const string RepositoryTransportFailed = "external-source-repository-transport-failed";
+    internal const string RepositoryCleanupFailed = "external-source-repository-cleanup-failed";
 }
 
 internal static class ExternalSourceJsonValidation

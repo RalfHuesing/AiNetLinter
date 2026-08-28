@@ -1,0 +1,415 @@
+#nullable enable
+
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using AiNetLinter.Configuration;
+
+namespace AiNetLinter.Mcp.Assemblies;
+
+internal sealed class ExternalSourceRepositoryAcquirer
+{
+    private const string CheckoutDirectoryPrefix = "checkout-";
+    private const int CheckoutPathCreationAttempts = 4;
+
+    private readonly IGiteaRepositoryTransport transport;
+    private readonly string stagingRoot;
+
+    internal ExternalSourceRepositoryAcquirer(
+        IGiteaRepositoryTransport transport,
+        string stagingRoot)
+    {
+        ArgumentNullException.ThrowIfNull(transport);
+
+        this.transport = transport;
+        this.stagingRoot = CanonicalizeStagingRoot(stagingRoot)
+            ?? throw new ArgumentException(
+                "Die Staging-Wurzel muss ein absoluter, gültiger Pfad sein.",
+                nameof(stagingRoot));
+    }
+
+    internal async Task<ExternalSourceRepositoryAcquisitionResult> AcquireAsync(
+        ExternalSourceMapping mapping,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(mapping);
+
+        if (!TryValidateMapping(mapping, out var solutionPath, out var mappingFailure))
+        {
+            return mappingFailure!;
+        }
+
+        if (!TryPrepareStagingRoot(out var stagingFailure))
+        {
+            return stagingFailure!;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!TryCreateCheckoutPath(out var checkoutPath, out var checkoutFailure))
+        {
+            return checkoutFailure!;
+        }
+
+        var transportResult = await ExecuteTransportAsync(
+            mapping,
+            checkoutPath!,
+            cancellationToken).ConfigureAwait(false);
+
+        if (transportResult is null)
+        {
+            return FailAfterCleanup(
+                checkoutPath!,
+                ExternalSourceProviderFailureKind.InvalidResponse,
+                [CreateDiagnostic(
+                    ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportResultInvalid,
+                    "Der Repository-Transport hat kein Ergebnis geliefert.")]);
+        }
+
+        if (!transportResult.IsAvailable)
+        {
+            return FailAfterCleanup(
+                checkoutPath!,
+                transportResult.FailureKind,
+                transportResult.Diagnostics);
+        }
+
+        if (!TryValidateCheckout(
+                checkoutPath!,
+                solutionPath!,
+                transportResult,
+                out var solutionAbsolutePath,
+                out var checkoutFailureResult))
+        {
+            return FailAfterCleanup(
+                checkoutPath!,
+                ExternalSourceProviderFailureKind.InvalidResponse,
+                checkoutFailureResult!);
+        }
+
+        var checkout = new ExternalSourceCheckoutHandle(
+            stagingRoot,
+            checkoutPath!,
+            solutionAbsolutePath!,
+            transportResult.LoadedRevision!);
+        return ExternalSourceRepositoryAcquisitionResult.Success(
+            checkout,
+            transportResult.Diagnostics);
+    }
+
+    private async Task<ExternalSourceRepositoryTransportResult?> ExecuteTransportAsync(
+        ExternalSourceMapping mapping,
+        string checkoutPath,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await transport.CloneDefaultBranchAsync(
+                mapping,
+                checkoutPath,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            ExternalSourceRepositoryPathGuard.TryDeleteOwnedCheckout(stagingRoot, checkoutPath);
+            throw;
+        }
+        catch (Exception exception) when (IsTransportException(exception))
+        {
+            return new ExternalSourceRepositoryTransportResult(
+                isAvailable: false,
+                loadedRevision: null,
+                diagnostics: [CreateDiagnostic(
+                    ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportFailed,
+                    "Die Repository-Akquisition ist fehlgeschlagen.")],
+                failureKind: ExternalSourceProviderFailureKind.InvalidResponse);
+        }
+    }
+
+    private static bool TryValidateMapping(
+        ExternalSourceMapping mapping,
+        out string? solutionPath,
+        out ExternalSourceRepositoryAcquisitionResult? failure)
+    {
+        solutionPath = null;
+        failure = null;
+        if (!IsSupportedRepositoryUrl(mapping.Url))
+        {
+            failure = InvalidResult(
+                ExternalSourceConfigurationDiagnosticCodes.RepositoryMappingInvalid,
+                "Die Repository-Zuordnung enthält keine unterstützte HTTP(S)-URL.");
+            return false;
+        }
+
+        if (!TryNormalizeSolutionPath(mapping.SolutionPath, out solutionPath))
+        {
+            failure = InvalidResult(
+                ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionPathInvalid,
+                "Der konfigurierte Solution-Pfad ist kein sicherer repository-relativer .sln- oder .slnx-Pfad.");
+            return false;
+        }
+
+        foreach (var assembly in mapping.Assemblies)
+        {
+            if (string.IsNullOrWhiteSpace(assembly))
+            {
+                failure = InvalidResult(
+                    ExternalSourceConfigurationDiagnosticCodes.RepositoryMappingInvalid,
+                    "Die Repository-Zuordnung enthält einen leeren Assembly-Alias.");
+                return false;
+            }
+        }
+
+        if (mapping.Assemblies.IsDefaultOrEmpty)
+        {
+            failure = InvalidResult(
+                ExternalSourceConfigurationDiagnosticCodes.RepositoryMappingInvalid,
+                "Die Repository-Zuordnung enthält keine Assembly-Aliase.");
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryPrepareStagingRoot(out ExternalSourceRepositoryAcquisitionResult? failure)
+    {
+        failure = null;
+        try
+        {
+            if (File.Exists(stagingRoot)
+                || ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(stagingRoot))
+            {
+                failure = InvalidResult(
+                    ExternalSourceConfigurationDiagnosticCodes.RepositoryStagingRootInvalid,
+                    "Die kontrollierte Staging-Wurzel ist keine sichere Verzeichniswurzel.");
+                return false;
+            }
+
+            Directory.CreateDirectory(stagingRoot);
+            if (File.Exists(stagingRoot)
+                || ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(stagingRoot))
+            {
+                failure = InvalidResult(
+                    ExternalSourceConfigurationDiagnosticCodes.RepositoryStagingRootInvalid,
+                    "Die kontrollierte Staging-Wurzel konnte nicht sicher verifiziert werden.");
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception exception) when (IsFileSystemException(exception))
+        {
+            failure = InvalidResult(
+                ExternalSourceConfigurationDiagnosticCodes.RepositoryStagingRootInvalid,
+                $"Die kontrollierte Staging-Wurzel konnte nicht vorbereitet werden: {exception.Message}");
+            return false;
+        }
+    }
+
+    private bool TryCreateCheckoutPath(
+        out string? checkoutPath,
+        out ExternalSourceRepositoryAcquisitionResult? failure)
+    {
+        checkoutPath = null;
+        failure = null;
+        for (var attempt = 0; attempt < CheckoutPathCreationAttempts; attempt++)
+        {
+            var candidate = Path.Combine(
+                stagingRoot,
+                CheckoutDirectoryPrefix + Guid.NewGuid().ToString("N"));
+            if (!ExternalSourceRepositoryPathGuard.IsDescendantPath(stagingRoot, candidate))
+            {
+                continue;
+            }
+
+            if (!Directory.Exists(candidate) && !File.Exists(candidate))
+            {
+                checkoutPath = candidate;
+                return true;
+            }
+        }
+
+        failure = InvalidResult(
+            ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutPathInvalid,
+            "Es konnte kein freier Checkout-Pfad innerhalb der Staging-Wurzel reserviert werden.");
+        return false;
+    }
+
+    private bool TryValidateCheckout(
+        string checkoutPath,
+        string solutionPath,
+        ExternalSourceRepositoryTransportResult transportResult,
+        out string? solutionAbsolutePath,
+        out ImmutableArray<ExternalSourceConfigurationDiagnostic>? failure)
+    {
+        solutionAbsolutePath = null;
+        failure = null;
+        if (string.IsNullOrWhiteSpace(transportResult.LoadedRevision))
+        {
+            failure = [CreateDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportResultInvalid,
+                "Der Repository-Transport hat keine geladene Revision geliefert.")];
+            return false;
+        }
+
+        if (!Directory.Exists(checkoutPath)
+            || !ExternalSourceRepositoryPathGuard.IsDescendantPath(stagingRoot, checkoutPath)
+            || ExternalSourceRepositoryPathGuard.ContainsReparsePointInTree(checkoutPath))
+        {
+            failure = [CreateDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutInvalid,
+                "Der Repository-Transport hat keinen sicheren Checkout innerhalb der Staging-Wurzel erzeugt.")];
+            return false;
+        }
+
+        try
+        {
+            solutionAbsolutePath = Path.GetFullPath(Path.Combine(checkoutPath, solutionPath));
+        }
+        catch (Exception exception) when (IsFileSystemException(exception))
+        {
+            failure = [CreateDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionPathInvalid,
+                $"Der Solution-Pfad konnte nicht aufgelöst werden: {exception.Message}")];
+            return false;
+        }
+
+        if (!ExternalSourceRepositoryPathGuard.IsDescendantPath(checkoutPath, solutionAbsolutePath)
+            || !ExternalSourceRepositoryPathGuard.IsDescendantPath(stagingRoot, solutionAbsolutePath)
+            || !File.Exists(solutionAbsolutePath)
+            || ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(solutionAbsolutePath))
+        {
+            failure = [CreateDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionInvalid,
+                "Die konfigurierte Solution liegt nicht als sichere Datei im Checkout vor.")];
+            return false;
+        }
+
+        return true;
+    }
+
+    private ExternalSourceRepositoryAcquisitionResult FailAfterCleanup(
+        string checkoutPath,
+        ExternalSourceProviderFailureKind failureKind,
+        IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics)
+    {
+        var resultDiagnostics = new List<ExternalSourceConfigurationDiagnostic>(diagnostics);
+        if (!ExternalSourceRepositoryPathGuard.TryDeleteOwnedCheckout(stagingRoot, checkoutPath))
+        {
+            resultDiagnostics.Add(CreateDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.RepositoryCleanupFailed,
+                "Der eigene unvollständige Checkout konnte nicht vollständig bereinigt werden."));
+        }
+
+        return ExternalSourceRepositoryAcquisitionResult.Failure(failureKind, resultDiagnostics);
+    }
+
+    private static ExternalSourceRepositoryAcquisitionResult InvalidResult(
+        string code,
+        string message) =>
+        ExternalSourceRepositoryAcquisitionResult.Failure(
+            ExternalSourceProviderFailureKind.InvalidResponse,
+            [CreateDiagnostic(code, message)]);
+
+    private static ExternalSourceConfigurationDiagnostic CreateDiagnostic(
+        string code,
+        string message) =>
+        ExternalSourceConfigurationDiagnostic.CreateError(
+            code,
+            message,
+            nameof(ExternalSourceRepositoryAcquirer),
+            "$repository");
+
+    private static bool TryNormalizeSolutionPath(string value, out string? normalizedPath)
+    {
+        normalizedPath = null;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var path = value.Trim().Replace('\\', '/');
+        if (Path.IsPathRooted(path)
+            || path.StartsWith("/", StringComparison.Ordinal)
+            || ExternalSourcePathRules.IsDriveQualified(path))
+        {
+            return false;
+        }
+
+        var segments = new List<string>();
+        foreach (var segment in path.Split('/', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (segment is ".")
+            {
+                continue;
+            }
+
+            if (segment is ".."
+                || segment.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                return false;
+            }
+
+            segments.Add(segment);
+        }
+
+        if (segments.Count == 0)
+        {
+            return false;
+        }
+
+        normalizedPath = string.Join(Path.DirectorySeparatorChar.ToString(), segments);
+        return normalizedPath.EndsWith(".sln", StringComparison.OrdinalIgnoreCase)
+            || normalizedPath.EndsWith(".slnx", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? CanonicalizeStagingRoot(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value) || !Path.IsPathFullyQualified(value.Trim()))
+        {
+            return null;
+        }
+
+        try
+        {
+            var fullPath = Path.GetFullPath(value.Trim());
+            var pathRoot = Path.GetPathRoot(fullPath);
+            if (string.IsNullOrEmpty(pathRoot))
+            {
+                return null;
+            }
+
+            return string.Equals(fullPath, pathRoot, StringComparison.OrdinalIgnoreCase)
+                ? pathRoot
+                : fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+        catch (Exception exception) when (IsFileSystemException(exception))
+        {
+            return null;
+        }
+    }
+
+    private static bool IsSupportedRepositoryUrl(string value)
+    {
+        return Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)
+            && uri is not null
+            && uri.Host.Length > 0
+            && uri.UserInfo.Length == 0
+            && uri.Scheme is "http" or "https";
+    }
+
+    internal static bool IsReparsePointAttribute(FileAttributes attributes) =>
+        ExternalSourceRepositoryPathGuard.IsReparsePointAttribute(attributes);
+
+    private static bool IsFileSystemException(Exception exception) =>
+        exception is ArgumentException
+            or IOException
+            or UnauthorizedAccessException
+            or NotSupportedException;
+
+    private static bool IsTransportException(Exception exception) =>
+        IsFileSystemException(exception) || exception is InvalidOperationException;
+
+}

@@ -222,7 +222,7 @@ internal static class ExternalSourceMappingValidator
     private static string? NormalizeSolutionPath(string value, ExternalSourceValidationContext context)
     {
         var path = value.Replace('\\', '/');
-        if (path.Length == 0 || Path.IsPathRooted(path) || path.StartsWith("/", StringComparison.Ordinal) || IsDriveQualified(path))
+        if (path.Length == 0 || Path.IsPathRooted(path) || path.StartsWith("/", StringComparison.Ordinal) || ExternalSourcePathRules.IsDriveQualified(path))
         {
             AddInvalidSolutionPath(value, context);
             return null;
@@ -370,9 +370,6 @@ internal static class ExternalSourceMappingValidator
 
         return assembly;
     }
-
-    private static bool IsDriveQualified(string value) =>
-        value.Length >= 2 && char.IsLetter(value[0]) && value[1] == ':';
 
     private static void AddInvalidSolutionPath(
         string value,

@@ -84,7 +84,7 @@ internal sealed record SourceSnapshotIdentity
         if (path.Length == 0
             || Path.IsPathRooted(path)
             || path.StartsWith("/", StringComparison.Ordinal)
-            || IsDriveQualified(path))
+            || ExternalSourcePathRules.IsDriveQualified(path))
         {
             throw new ArgumentException(
                 "Der Solution-Pfad muss repository-relativ sein.",
@@ -154,8 +154,6 @@ internal sealed record SourceSnapshotIdentity
         return string.Join(StableValueSeparator, parts);
     }
 
-    private static bool IsDriveQualified(string value) =>
-        value.Length >= 2 && char.IsLetter(value[0]) && value[1] == ':';
 }
 
 internal sealed class ExternalSourceSnapshot : IDisposable
