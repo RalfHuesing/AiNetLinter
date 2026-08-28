@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-28T19:49:38+02:00
+last_updated: 2026-08-28T20:33:36+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -75,20 +75,29 @@ werden an diese Session-Grenze angeschlossen.
   über die Snapshot-Registry geleasten, read-only Source-Snapshots und liefert
   `matched`, `no-match` oder `ambiguous` mit stabiler Evidence und Confidence.
 
-  **Nächster Schnitt / in Arbeit → `step-009`:** Die
-  `AssemblyAnalysisContextFactory` erhält ein bereits gematchtes Source-
-  Projekt samt kontrolliertem Lease-Kontext und erzeugt daraus den
-  source-backed Assembly-Context. Bei `no-match`, `ambiguous`, unavailable,
-  fehlendem Projekt oder nicht verfügbarer Compilation bleibt die bestehende
-  statische Decompilation der deterministische Fallback. Source-Origin und
-  Decompilation-Hinweis werden dabei eindeutig getrennt; Registry-, Snapshot-
-  und Lease-Ownership bleibt unverändert.
+  **Abgeschlossen durch `step-009`:** Die genehmigte Factory-Projektion
+  verwendet ein bereits gematchtes Source-Projekt mit kontrolliertem
+  Lease-Kontext als source-backed Assembly-Context. Bei `no-match`,
+  `ambiguous`, unavailable, fehlendem Projekt oder nicht verfügbarer
+  Compilation bleibt die bestehende statische Decompilation der
+  deterministische Fallback. Source-Origin und Decompilation-Hinweis sind
+  dabei getrennt; Registry-, Snapshot- und Lease-Ownership bleibt unverändert.
 
-  Provider-/Gitea-Akquisition, Registry-Lookup aus dem MCP-Dispatch,
-  reguläre Tool-/Daemon-Komposition, transitive Referenzen, Refresh und
-  persistenter Cache bleiben nach `step-009` eigenständige Folgepakete. Die
-  eigentliche Gitea-Source-of-Truth, Authentifizierung und Refresh-Semantik
-  bleibt vollständig in EPIC-04.
+  **Nächster Schnitt / in Arbeit → `step-010`:** Ein injizierbarer
+  `AssemblySourceSelectionOrchestrator` komponiert den bestehenden Loader-
+  Result, Provider-Port, `SourceSnapshotRegistry.Acquire`, statische
+  Assembly-Identität und den genehmigten Match-/Selection-Vertrag. Ein
+  disposable Support-Scope hält die Source-Lease bis nach der bestehenden
+  Factory und dem Result-Builder; direkte Support-Regressionen prüfen
+  source-backed und den unveränderten Decompilation-Fallback.
+
+  Der Split-Gate-Schnitt umfasst bewusst weder
+  `AssemblyAnalysisToolRegistrations`/`AnalysisToolCall` noch die gemeinsame
+  Provider-/Registry-Ownership in Stdio- und Daemon-Host. Diese MCP-/Daemon-
+  Komposition, die beiden konkreten Toolpfade, transitive Referenzen, Refresh
+  und persistenter Cache bleiben eigenständige Folgepakete. Die eigentliche
+  Gitea-Source-of-Truth, Authentifizierung und Refresh-Semantik bleibt
+  vollständig in EPIC-04.
 
 **Zweck:** Eine globale, explizite Mapping-Konfiguration für externe Quellen
 einführen und daraus vollständige Solution-Snapshots, den passenden
