@@ -23,7 +23,7 @@ internal static class ExternalSourceConfigurationLoader
         if (canonicalPath is null)
         {
             return ExternalSourceConfigurationLoadResult.Failure(
-                [Diagnostic(
+                [ExternalSourceConfigurationDiagnostic.CreateError(
                     ExternalSourceConfigurationDiagnosticCodes.SettingsPathInvalid,
                     "Der Pfad der appsettings.json konnte nicht kanonisiert werden.",
                     settingsPath ?? AppSettingsFileName,
@@ -53,7 +53,7 @@ internal static class ExternalSourceConfigurationLoader
         catch (JsonException exception)
         {
             return ExternalSourceConfigurationLoadResult.Failure(
-                [Diagnostic(
+                [ExternalSourceConfigurationDiagnostic.CreateError(
                     ExternalSourceConfigurationDiagnosticCodes.SettingsJsonInvalid,
                     $"appsettings.json ist kein gültiges JSON: {exception.Message}",
                     settingsPath,
@@ -66,30 +66,33 @@ internal static class ExternalSourceConfigurationLoader
         if (root.ValueKind is not JsonValueKind.Object)
         {
             return ExternalSourceConfigurationLoadResult.Failure(
-                [Diagnostic(
+                [ExternalSourceConfigurationDiagnostic.CreateError(
                     ExternalSourceConfigurationDiagnosticCodes.SettingsRootInvalid,
                     "appsettings.json muss ein JSON-Objekt sein.",
                     settingsPath,
                     "$")]);
         }
 
-        var sectionDiagnostics = new List<ExternalSourceConfigurationDiagnostic>();
-        var sectionQuery = new ExternalSourceJsonPropertyQuery(
+        var rootValidation = ExternalSourceJsonValidation.InspectObject(
             root,
-            ExternalSourcesSectionName,
             settingsPath,
             "$");
-        if (!ExternalSourceJsonValidation.TryGetUniqueProperty(sectionQuery, sectionDiagnostics, out var section))
+        var sectionProperty = rootValidation.GetProperty(ExternalSourcesSectionName);
+        if (sectionProperty.Status is ExternalSourceJsonPropertyStatus.Missing)
         {
-            return sectionDiagnostics.Count == 0
-                ? ExternalSourceConfigurationLoadResult.Success(ExternalSourceConfiguration.Empty)
-                : ExternalSourceConfigurationLoadResult.Failure(sectionDiagnostics);
+            return ExternalSourceConfigurationLoadResult.Success(ExternalSourceConfiguration.Empty);
         }
 
+        if (sectionProperty.Status is ExternalSourceJsonPropertyStatus.Duplicate)
+        {
+            return ExternalSourceConfigurationLoadResult.Failure(rootValidation.Diagnostics);
+        }
+
+        var section = sectionProperty.Value;
         if (section.ValueKind is not JsonValueKind.Object)
         {
             return ExternalSourceConfigurationLoadResult.Failure(
-                [Diagnostic(
+                [ExternalSourceConfigurationDiagnostic.CreateError(
                     ExternalSourceConfigurationDiagnosticCodes.ExternalSourcesSectionInvalid,
                     $"Der Abschnitt '{ExternalSourcesSectionName}' muss ein JSON-Objekt sein.",
                     settingsPath,
@@ -103,39 +106,33 @@ internal static class ExternalSourceConfigurationLoader
         JsonElement section,
         string settingsPath)
     {
-        var fieldDiagnostics = ExternalSourceJsonValidation.ValidateKnownFields(
+        var validation = ExternalSourceJsonValidation.InspectObject(
             section,
             settingsPath,
             "$.ExternalSources",
-            MappingsPathName);
-        if (fieldDiagnostics.Count > 0)
+            [MappingsPathName]);
+        if (!validation.Diagnostics.IsEmpty)
         {
-            return ExternalSourceConfigurationLoadResult.Failure(fieldDiagnostics);
+            return ExternalSourceConfigurationLoadResult.Failure(validation.Diagnostics);
         }
 
-        var propertyDiagnostics = new List<ExternalSourceConfigurationDiagnostic>();
-        var propertyQuery = new ExternalSourceJsonPropertyQuery(
-            section,
-            MappingsPathName,
-            settingsPath,
-            "$.ExternalSources");
-        if (!ExternalSourceJsonValidation.TryGetUniqueProperty(propertyQuery, propertyDiagnostics, out var pathElement))
+        var pathProperty = validation.GetProperty(MappingsPathName);
+        if (pathProperty.Status is ExternalSourceJsonPropertyStatus.Missing)
         {
-            return propertyDiagnostics.Count > 0
-                ? ExternalSourceConfigurationLoadResult.Failure(propertyDiagnostics)
-                : ExternalSourceConfigurationLoadResult.Failure(
-                    [Diagnostic(
-                        ExternalSourceConfigurationDiagnosticCodes.MappingsPathMissing,
-                        $"'{ExternalSourcesSectionName}:{MappingsPathName}' ist erforderlich, wenn der Abschnitt vorhanden ist.",
-                        settingsPath,
-                        "$.ExternalSources")]);
+            return ExternalSourceConfigurationLoadResult.Failure(
+                [ExternalSourceConfigurationDiagnostic.CreateError(
+                    ExternalSourceConfigurationDiagnosticCodes.MappingsPathMissing,
+                    $"'{ExternalSourcesSectionName}:{MappingsPathName}' ist erforderlich, wenn der Abschnitt vorhanden ist.",
+                    settingsPath,
+                    "$.ExternalSources")]);
         }
 
+        var pathElement = pathProperty.Value;
         if (pathElement.ValueKind is not JsonValueKind.String
             || string.IsNullOrWhiteSpace(pathElement.GetString()))
         {
             return ExternalSourceConfigurationLoadResult.Failure(
-                [Diagnostic(
+                [ExternalSourceConfigurationDiagnostic.CreateError(
                     ExternalSourceConfigurationDiagnosticCodes.MappingsPathInvalid,
                     $"'{ExternalSourcesSectionName}:{MappingsPathName}' muss ein nichtleerer String sein.",
                     settingsPath,
@@ -146,7 +143,7 @@ internal static class ExternalSourceConfigurationLoader
         if (mappingsPath is null)
         {
             return ExternalSourceConfigurationLoadResult.Failure(
-                [Diagnostic(
+                [ExternalSourceConfigurationDiagnostic.CreateError(
                     ExternalSourceConfigurationDiagnosticCodes.MappingsPathInvalid,
                     $"'{ExternalSourcesSectionName}:{MappingsPathName}' ist kein gültiger Dateipfad.",
                     settingsPath,
@@ -161,7 +158,7 @@ internal static class ExternalSourceConfigurationLoader
         if (!File.Exists(mappingsPath))
         {
             return ExternalSourceConfigurationLoadResult.Failure(
-                [Diagnostic(
+                [ExternalSourceConfigurationDiagnostic.CreateError(
                     ExternalSourceConfigurationDiagnosticCodes.MappingsPathInvalid,
                     $"Die externe Mapping-Datei wurde nicht gefunden: '{mappingsPath}'.",
                     mappingsPath,
@@ -181,7 +178,7 @@ internal static class ExternalSourceConfigurationLoader
         catch (JsonException exception)
         {
             return ExternalSourceConfigurationLoadResult.Failure(
-                [Diagnostic(
+                [ExternalSourceConfigurationDiagnostic.CreateError(
                     ExternalSourceConfigurationDiagnosticCodes.MappingsJsonInvalid,
                     $"Die Mapping-Datei ist kein gültiges JSON: {exception.Message}",
                     mappingsPath,
@@ -237,7 +234,7 @@ internal static class ExternalSourceConfigurationLoader
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or NotSupportedException)
         {
             content = null;
-            diagnostic = Diagnostic(
+            diagnostic = ExternalSourceConfigurationDiagnostic.CreateError(
                 isSettingsFile
                     ? ExternalSourceConfigurationDiagnosticCodes.SettingsReadFailed
                     : ExternalSourceConfigurationDiagnosticCodes.MappingsReadFailed,
@@ -247,11 +244,4 @@ internal static class ExternalSourceConfigurationLoader
             return false;
         }
     }
-
-    private static ExternalSourceConfigurationDiagnostic Diagnostic(
-        string code,
-        string message,
-        string sourcePath,
-        string jsonPath) =>
-        new(code, message, "error", $"{sourcePath} ({jsonPath})");
 }

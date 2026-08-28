@@ -19,7 +19,7 @@ internal static class ExternalSourceMappingValidator
         var diagnostics = new List<ExternalSourceConfigurationDiagnostic>();
         if (root.ValueKind is not JsonValueKind.Object)
         {
-            diagnostics.Add(Diagnostic(
+            diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
                 ExternalSourceConfigurationDiagnosticCodes.MappingsRootInvalid,
                 "Die Mapping-Datei muss ein JSON-Objekt sein.",
                 sourcePath,
@@ -27,26 +27,32 @@ internal static class ExternalSourceMappingValidator
             return ExternalSourceConfigurationLoadResult.Failure(diagnostics);
         }
 
-        diagnostics.AddRange(ExternalSourceJsonValidation.ValidateKnownFields(
+        var rootValidation = ExternalSourceJsonValidation.InspectObject(
             root,
             sourcePath,
             "$",
-            RepositoriesName));
+            [RepositoriesName]);
+        diagnostics.AddRange(rootValidation.Diagnostics);
 
-        var propertyQuery = new ExternalSourceJsonPropertyQuery(root, RepositoriesName, sourcePath, "$");
-        if (!ExternalSourceJsonValidation.TryGetUniqueProperty(propertyQuery, diagnostics, out var repositories))
+        var repositoriesProperty = rootValidation.GetProperty(RepositoriesName);
+        if (repositoriesProperty.Status is not ExternalSourceJsonPropertyStatus.Unique)
         {
-            diagnostics.Add(Diagnostic(
-                ExternalSourceConfigurationDiagnosticCodes.RequiredFieldMissing,
-                $"Das erforderliche Feld '{RepositoriesName}' fehlt.",
-                sourcePath,
-                "$"));
+            if (repositoriesProperty.Status is ExternalSourceJsonPropertyStatus.Missing)
+            {
+                diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
+                    ExternalSourceConfigurationDiagnosticCodes.RequiredFieldMissing,
+                    $"Das erforderliche Feld '{RepositoriesName}' fehlt.",
+                    sourcePath,
+                    "$"));
+            }
+
             return ExternalSourceConfigurationLoadResult.Failure(diagnostics);
         }
 
+        var repositories = repositoriesProperty.Value;
         if (repositories.ValueKind is not JsonValueKind.Array)
         {
-            diagnostics.Add(Diagnostic(
+            diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
                 ExternalSourceConfigurationDiagnosticCodes.InvalidFieldType,
                 $"Das Feld '{RepositoriesName}' muss ein JSON-Array sein.",
                 sourcePath,
@@ -92,7 +98,7 @@ internal static class ExternalSourceMappingValidator
         var repositoryPath = $"$.repositories[{index}]";
         if (repository.ValueKind is not JsonValueKind.Object)
         {
-            diagnostics.Add(Diagnostic(
+            diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
                 ExternalSourceConfigurationDiagnosticCodes.InvalidFieldType,
                 "Jeder Repository-Eintrag muss ein JSON-Objekt sein.",
                 sourcePath,
@@ -101,30 +107,30 @@ internal static class ExternalSourceMappingValidator
         }
 
         var initialDiagnosticCount = diagnostics.Count;
-        diagnostics.AddRange(ExternalSourceJsonValidation.ValidateKnownFields(
+        var validation = ExternalSourceJsonValidation.InspectObject(
             repository,
             sourcePath,
             repositoryPath,
-            UrlName,
-            SolutionPathName,
-            AssembliesName));
+            [UrlName, SolutionPathName, AssembliesName]);
+        diagnostics.AddRange(validation.Diagnostics);
 
         var context = new ExternalSourceValidationContext(sourcePath, repositoryPath, diagnostics);
-        var hasUrl = TryReadRequiredString(repository, UrlName, context, out var url);
-        var hasSolutionPath = TryReadRequiredString(repository, SolutionPathName, context, out var solutionPath);
-        var assembliesQuery = new ExternalSourceJsonPropertyQuery(
-            repository,
-            AssembliesName,
-            sourcePath,
-            repositoryPath);
-        var hasAssemblies = ExternalSourceJsonValidation.TryGetUniqueProperty(
-            assembliesQuery,
-            diagnostics,
-            out var assembliesElement);
+        var hasUrl = TryReadRequiredString(validation, UrlName, context, out var url);
+        var hasSolutionPath = TryReadRequiredString(validation, SolutionPathName, context, out var solutionPath);
+        var assembliesProperty = validation.GetProperty(AssembliesName);
+        var hasAssemblies = assembliesProperty.Status is ExternalSourceJsonPropertyStatus.Unique;
+        if (assembliesProperty.Status is ExternalSourceJsonPropertyStatus.Missing)
+        {
+            diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
+                ExternalSourceConfigurationDiagnosticCodes.RequiredFieldMissing,
+                $"Das erforderliche Feld '{AssembliesName}' fehlt.",
+                sourcePath,
+                repositoryPath));
+        }
 
         var normalizedUrl = hasUrl ? NormalizeUrl(url!, context) : null;
         var normalizedSolutionPath = hasSolutionPath ? NormalizeSolutionPath(solutionPath!, context) : null;
-        var normalizedAssemblies = hasAssemblies ? NormalizeAssemblies(assembliesElement, context) : null;
+        var normalizedAssemblies = hasAssemblies ? NormalizeAssemblies(assembliesProperty.Value, context) : null;
 
         return diagnostics.Count == initialDiagnosticCount
             && normalizedUrl is not null
@@ -145,7 +151,7 @@ internal static class ExternalSourceMappingValidator
         {
             if (assemblyOwners.TryGetValue(assembly, out var ownerIndex))
             {
-                diagnostics.Add(Diagnostic(
+                diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
                     ExternalSourceConfigurationDiagnosticCodes.AmbiguousAssembly,
                     $"Die Assembly '{assembly}' ist bereits im Repository-Eintrag {ownerIndex} gemappt und dadurch mehrdeutig.",
                     sourcePath,
@@ -158,22 +164,18 @@ internal static class ExternalSourceMappingValidator
     }
 
     private static bool TryReadRequiredString(
-        JsonElement objectElement,
+        ExternalSourceJsonObjectValidation validation,
         string propertyName,
         ExternalSourceValidationContext context,
         out string? value)
     {
         value = null;
-        var query = new ExternalSourceJsonPropertyQuery(
-            objectElement,
-            propertyName,
-            context.SourcePath,
-            context.ObjectPath);
-        if (!ExternalSourceJsonValidation.TryGetUniqueProperty(query, context.Diagnostics, out var property))
+        var propertyValidation = validation.GetProperty(propertyName);
+        if (propertyValidation.Status is not ExternalSourceJsonPropertyStatus.Unique)
         {
-            if (!objectElement.TryGetProperty(propertyName, out _))
+            if (propertyValidation.Status is ExternalSourceJsonPropertyStatus.Missing)
             {
-                context.Diagnostics.Add(Diagnostic(
+                context.Diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
                     ExternalSourceConfigurationDiagnosticCodes.RequiredFieldMissing,
                     $"Das erforderliche Feld '{propertyName}' fehlt.",
                     context.SourcePath,
@@ -183,10 +185,11 @@ internal static class ExternalSourceMappingValidator
             return false;
         }
 
+        var property = propertyValidation.Value;
         if (property.ValueKind is not JsonValueKind.String
             || string.IsNullOrWhiteSpace(property.GetString()))
         {
-            context.Diagnostics.Add(Diagnostic(
+            context.Diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
                 ExternalSourceConfigurationDiagnosticCodes.InvalidFieldType,
                 $"Das Feld '{propertyName}' muss ein nichtleerer String sein.",
                 context.SourcePath,
@@ -205,7 +208,7 @@ internal static class ExternalSourceMappingValidator
             || uri.Host.Length == 0
             || (uri.Scheme is not ("http" or "https")))
         {
-            context.Diagnostics.Add(Diagnostic(
+            context.Diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
                 ExternalSourceConfigurationDiagnosticCodes.UrlInvalid,
                 $"Die Repository-URL muss eine absolute HTTP(S)-URL sein: '{value}'.",
                 context.SourcePath,
@@ -286,7 +289,7 @@ internal static class ExternalSourceMappingValidator
     {
         if (element.ValueKind is not JsonValueKind.Array)
         {
-            context.Diagnostics.Add(Diagnostic(
+            context.Diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
                 ExternalSourceConfigurationDiagnosticCodes.AssemblyListInvalid,
                 $"Das Feld '{AssembliesName}' muss ein nichtleeres JSON-Array sein.",
                 context.SourcePath,
@@ -306,7 +309,7 @@ internal static class ExternalSourceMappingValidator
 
             if (!seen.Add(assembly))
             {
-                context.Diagnostics.Add(Diagnostic(
+                context.Diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
                     ExternalSourceConfigurationDiagnosticCodes.DuplicateAssembly,
                     $"Der Assembly-Name '{assembly}' ist innerhalb des Repository-Eintrags doppelt vorhanden.",
                     context.SourcePath,
@@ -319,7 +322,7 @@ internal static class ExternalSourceMappingValidator
 
         if (element.GetArrayLength() == 0)
         {
-            context.Diagnostics.Add(Diagnostic(
+            context.Diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
                 ExternalSourceConfigurationDiagnosticCodes.AssemblyListInvalid,
                 $"Das Feld '{AssembliesName}' darf nicht leer sein.",
                 context.SourcePath,
@@ -338,7 +341,7 @@ internal static class ExternalSourceMappingValidator
         if (element.ValueKind is not JsonValueKind.String
             || string.IsNullOrWhiteSpace(element.GetString()))
         {
-            context.Diagnostics.Add(Diagnostic(
+            context.Diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
                 ExternalSourceConfigurationDiagnosticCodes.AssemblyNameInvalid,
                 "Jeder Assembly-Name muss ein nichtleerer String sein.",
                 context.SourcePath,
@@ -357,7 +360,7 @@ internal static class ExternalSourceMappingValidator
             || assembly.Contains('\\', StringComparison.Ordinal)
             || assembly.Contains('\0', StringComparison.Ordinal))
         {
-            context.Diagnostics.Add(Diagnostic(
+            context.Diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
                 ExternalSourceConfigurationDiagnosticCodes.AssemblyNameInvalid,
                 "Ein Assembly-Name darf kein leerer Wert und kein Pfad sein.",
                 context.SourcePath,
@@ -374,18 +377,11 @@ internal static class ExternalSourceMappingValidator
     private static void AddInvalidSolutionPath(
         string value,
         ExternalSourceValidationContext context) =>
-        context.Diagnostics.Add(Diagnostic(
+        context.Diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
             ExternalSourceConfigurationDiagnosticCodes.SolutionPathInvalid,
             $"Der Solution-Pfad muss repository-relativ sein, darf nicht aus dem Repository ausbrechen und muss auf .sln oder .slnx enden: '{value}'.",
             context.SourcePath,
             context.ObjectPath + "." + SolutionPathName));
-
-    private static ExternalSourceConfigurationDiagnostic Diagnostic(
-        string code,
-        string message,
-        string sourcePath,
-        string jsonPath) =>
-        new(code, message, "error", $"{sourcePath} ({jsonPath})");
 
     private sealed record ExternalSourceValidationContext(
         string SourcePath,

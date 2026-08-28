@@ -37,6 +37,23 @@ public sealed class ExternalSourceConfigurationLoaderTests
     }
 
     [Fact]
+    public void Load_DefektesAppSettingsJson_LiefertSettingsJsonDiagnose()
+    {
+        using var tempDir = TestTempDirectory.Create("external-source-settings-json-");
+        var settingsPath = tempDir.CreateFile("appsettings.json", "{ \"ExternalSources\": ");
+
+        var result = ExternalSourceConfigurationLoader.Load(settingsPath);
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Configuration);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(ExternalSourceConfigurationDiagnosticCodes.SettingsJsonInvalid, diagnostic.Code);
+        Assert.Equal("error", diagnostic.Severity);
+        Assert.Contains(settingsPath, diagnostic.Location, StringComparison.Ordinal);
+        Assert.Contains("($)", diagnostic.Location, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Load_RelativerMappingsPath_WirdGegenSettingsVerzeichnisAufgeloest()
     {
         using var tempDir = TestTempDirectory.Create("external-source-relative-path-");
@@ -95,6 +112,44 @@ public sealed class ExternalSourceConfigurationLoaderTests
         Assert.False(result.Succeeded);
         Assert.Null(result.Configuration);
         AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.MappingsJsonInvalid, mappingsPath);
+    }
+
+    [Fact]
+    public void Load_DoppelteRepositoriesProperty_LiefertGenauEineDuplicateDiagnose()
+    {
+        using var tempDir = TestTempDirectory.Create("external-source-duplicate-property-");
+        var mappingsPath = tempDir.CreateFile(
+            "mappings.json",
+            "{ \"repositories\": [], \"repositories\": [] }");
+        var settingsPath = WriteSettings(tempDir, mappingsPath);
+
+        var result = ExternalSourceConfigurationLoader.Load(settingsPath);
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Configuration);
+        Assert.Single(result.Diagnostics, diagnostic =>
+            diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.DuplicateField
+            && diagnostic.Location.Contains("$.repositories", StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RequiredFieldMissing);
+    }
+
+    [Fact]
+    public void Load_FehlendesRepositoriesProperty_LiefertRequiredDiagnose()
+    {
+        using var tempDir = TestTempDirectory.Create("external-source-required-property-");
+        var mappingsPath = tempDir.CreateFile("mappings.json", "{}");
+        var settingsPath = WriteSettings(tempDir, mappingsPath);
+
+        var result = ExternalSourceConfigurationLoader.Load(settingsPath);
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Configuration);
+        AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.RequiredFieldMissing, "($)");
+        Assert.DoesNotContain(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.DuplicateField);
     }
 
     [Fact]
@@ -169,6 +224,24 @@ public sealed class ExternalSourceConfigurationLoaderTests
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.DuplicateAssembly);
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.AmbiguousAssembly);
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.AssemblyListInvalid);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Load_LeererOderWhitespaceAssemblyName_LiefertAssemblyNameDiagnose(string assemblyName)
+    {
+        using var tempDir = TestTempDirectory.Create("external-source-assembly-name-invalid-");
+        var mappingsPath = tempDir.CreateFile(
+            "mappings.json",
+            $$"""{ "repositories": [{ "url": "https://gitea.example/shared.git", "solutionPath": "src/Shared.slnx", "assemblies": [{{JsonSerializer.Serialize(assemblyName)}}] }] }""");
+        var settingsPath = WriteSettings(tempDir, mappingsPath);
+
+        var result = ExternalSourceConfigurationLoader.Load(settingsPath);
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Configuration);
+        AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.AssemblyNameInvalid, "repositories[0].assemblies[0]");
     }
 
     [Fact]

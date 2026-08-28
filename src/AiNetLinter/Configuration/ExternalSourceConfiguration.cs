@@ -50,6 +50,12 @@ internal sealed record ExternalSourceConfigurationDiagnostic(
     string Severity,
     string Location)
 {
+    internal static ExternalSourceConfigurationDiagnostic CreateError(
+        string code,
+        string message,
+        string sourcePath,
+        string jsonPath) =>
+        new(code, message, "error", $"{sourcePath} ({jsonPath})");
 }
 
 internal sealed record ExternalSourceConfigurationLoadResult
@@ -105,80 +111,73 @@ internal static class ExternalSourceConfigurationDiagnosticCodes
 
 internal static class ExternalSourceJsonValidation
 {
-    internal static List<ExternalSourceConfigurationDiagnostic> ValidateKnownFields(
+    internal static ExternalSourceJsonObjectValidation InspectObject(
         JsonElement objectElement,
         string sourcePath,
         string jsonPath,
-        params string[] allowedNames)
+        string[]? allowedNames = null)
     {
         var diagnostics = new List<ExternalSourceConfigurationDiagnostic>();
+        var properties = new Dictionary<string, ExternalSourceJsonPropertyValidation>(StringComparer.Ordinal);
         var seen = new HashSet<string>(StringComparer.Ordinal);
+        var allowed = allowedNames is null
+            ? null
+            : new HashSet<string>(allowedNames, StringComparer.Ordinal);
 
         foreach (var property in objectElement.EnumerateObject())
         {
             var propertyPath = jsonPath + "." + property.Name;
             if (!seen.Add(property.Name))
             {
-                diagnostics.Add(Diagnostic(
-                    ExternalSourceConfigurationDiagnosticCodes.DuplicateField,
-                    $"Das Feld '{property.Name}' ist doppelt vorhanden.",
-                    sourcePath,
-                    propertyPath));
+                if (properties[property.Name].Status is not ExternalSourceJsonPropertyStatus.Duplicate)
+                {
+                    properties[property.Name] = new(
+                        ExternalSourceJsonPropertyStatus.Duplicate,
+                        default);
+                    diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
+                        ExternalSourceConfigurationDiagnosticCodes.DuplicateField,
+                        $"Das Feld '{property.Name}' ist doppelt vorhanden.",
+                        sourcePath,
+                        propertyPath));
+                }
             }
-            else if (!allowedNames.Contains(property.Name, StringComparer.Ordinal))
+            else
             {
-                diagnostics.Add(Diagnostic(
-                    ExternalSourceConfigurationDiagnosticCodes.UnknownField,
-                    $"Unbekanntes Feld '{property.Name}'.",
-                    sourcePath,
-                    propertyPath));
+                properties.Add(
+                    property.Name,
+                    new(ExternalSourceJsonPropertyStatus.Unique, property.Value));
+                if (allowed is not null && !allowed.Contains(property.Name))
+                {
+                    diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
+                        ExternalSourceConfigurationDiagnosticCodes.UnknownField,
+                        $"Unbekanntes Feld '{property.Name}'.",
+                        sourcePath,
+                        propertyPath));
+                }
             }
         }
 
-        return diagnostics;
+        return new(properties.ToImmutableDictionary(StringComparer.Ordinal), diagnostics.ToImmutableArray());
     }
-
-    internal static bool TryGetUniqueProperty(
-        ExternalSourceJsonPropertyQuery query,
-        List<ExternalSourceConfigurationDiagnostic> diagnostics,
-        out JsonElement value)
-    {
-        value = default;
-        var found = false;
-        foreach (var property in query.ObjectElement.EnumerateObject())
-        {
-            if (!string.Equals(property.Name, query.PropertyName, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            if (found)
-            {
-                diagnostics.Add(Diagnostic(
-                    ExternalSourceConfigurationDiagnosticCodes.DuplicateField,
-                    $"Das Feld '{query.PropertyName}' ist doppelt vorhanden.",
-                    query.SourcePath,
-                    query.JsonPath + "." + query.PropertyName));
-                return false;
-            }
-
-            found = true;
-            value = property.Value;
-        }
-
-        return found;
-    }
-
-    private static ExternalSourceConfigurationDiagnostic Diagnostic(
-        string code,
-        string message,
-        string sourcePath,
-        string jsonPath) =>
-        new(code, message, "error", $"{sourcePath} ({jsonPath})");
 }
 
-internal sealed record ExternalSourceJsonPropertyQuery(
-    JsonElement ObjectElement,
-    string PropertyName,
-    string SourcePath,
-    string JsonPath);
+internal enum ExternalSourceJsonPropertyStatus
+{
+    Missing,
+    Unique,
+    Duplicate
+}
+
+internal sealed record ExternalSourceJsonPropertyValidation(
+    ExternalSourceJsonPropertyStatus Status,
+    JsonElement Value);
+
+internal sealed record ExternalSourceJsonObjectValidation(
+    ImmutableDictionary<string, ExternalSourceJsonPropertyValidation> Properties,
+    ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics)
+{
+    internal ExternalSourceJsonPropertyValidation GetProperty(string propertyName) =>
+        Properties.TryGetValue(propertyName, out var property)
+            ? property
+            : new(ExternalSourceJsonPropertyStatus.Missing, default);
+}
