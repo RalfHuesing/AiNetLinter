@@ -13,35 +13,136 @@ namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
 internal static class AssemblyAnalysisContextFactory
 {
-    internal static async Task<(AssemblyContext? Context, string? Error)> CreateAsync(
+    internal static Task<(AssemblyContext? Context, string? Error)> CreateAsync(
         string assemblyPath,
         Solution? consumerSolution,
         string? receiverType,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken) =>
+        CreateAsync(new AssemblyAnalysisContextRequest(
+            assemblyPath,
+            consumerSolution,
+            receiverType,
+            null,
+            cancellationToken));
+
+    internal static async Task<(AssemblyContext? Context, string? Error)> CreateAsync(
+        AssemblyAnalysisContextRequest request)
     {
-        await using var session = new AssemblyAnalysisSession(assemblyPath);
-        var refresh = await session.RefreshAsync(cancellationToken).ConfigureAwait(false);
-        var generation = session.CurrentGeneration;
-        if (generation is null)
+        ArgumentNullException.ThrowIfNull(request);
+
+        var context = await TryCreateSourceBackedContextAsync(request).ConfigureAwait(false);
+        if (context is null)
         {
-            return (null, FormatFailure(refresh.Diagnostics));
+            await using var session = new AssemblyAnalysisSession(request.AssemblyPath);
+            var refresh = await session.RefreshAsync(request.CancellationToken).ConfigureAwait(false);
+            var generation = session.CurrentGeneration;
+            if (generation is null)
+            {
+                return (null, FormatFailure(refresh.Diagnostics));
+            }
+
+            var diagnostics = generation.Diagnostics.Select(diagnostic => diagnostic.Message).ToList();
+            context = new AssemblyContext(
+                generation.Snapshot.Compilation.Assembly,
+                generation.Identity,
+                generation.References,
+                DistinctDiagnostics(diagnostics),
+                generation.Snapshot.Compilation,
+                null,
+                null,
+                generation.Origin,
+                generation.Number,
+                generation.Status);
         }
 
-        var diagnostics = generation.Diagnostics.Select(diagnostic => diagnostic.Message).ToList();
-        var consumer = consumerSolution is null
+        var contextDiagnostics = context.Diagnostics.ToList();
+        var consumer = request.ConsumerSolution is null
             ? new ConsumerSelection(null, null)
-            : await FindConsumerReceiverAsync(consumerSolution, receiverType, diagnostics, cancellationToken).ConfigureAwait(false);
-        return (new AssemblyContext(
-            generation.Snapshot.Compilation.Assembly,
-            generation.Identity,
-            generation.References,
+            : await FindConsumerReceiverAsync(request.ConsumerSolution, request.ReceiverType, contextDiagnostics, request.CancellationToken).ConfigureAwait(false);
+        return (context with
+        {
+            Diagnostics = DistinctDiagnostics(contextDiagnostics),
+            Receiver = consumer.Receiver,
+            ConsumerProject = consumer.ProjectName,
+        }, null);
+    }
+
+    private static async Task<AssemblyContext?> TryCreateSourceBackedContextAsync(
+        AssemblyAnalysisContextRequest request)
+    {
+        var selection = request.SourceSelection;
+        if (!IsSourceSelectionUsable(selection)
+            || request.CancellationToken.IsCancellationRequested
+            || !AssemblyFingerprintCalculator.TryCreate(request.AssemblyPath, out var fingerprint, out _))
+        {
+            return null;
+        }
+
+        var references = new AssemblyReferenceResolver().Resolve(fingerprint!.CanonicalPath);
+        if (references.Identity is null) return null;
+
+        var snapshot = selection!.SourceLease.Snapshot;
+        var candidate = selection.MatchResult.MatchedCandidate!;
+        var project = snapshot.Solution.GetProject(candidate.ProjectId);
+        if (project is null) return null;
+
+        Compilation? compilation;
+        try
+        {
+            compilation = await project.GetCompilationAsync(request.CancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return null;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or ArgumentException or NotSupportedException)
+        {
+            return null;
+        }
+
+        if (compilation is null || compilation.Assembly is null) return null;
+
+        var diagnostics = references.Diagnostics
+            .Select(diagnostic => diagnostic.Message)
+            .ToList();
+        var status = references.Diagnostics.Count == 0
+            ? AssemblySessionStatus.Complete
+            : AssemblySessionStatus.Partial;
+        var origin = new AssemblyOrigin(
+            "source-backed",
+            fingerprint.CanonicalPath,
+            fingerprint.Sha256,
+            string.Empty,
+            "high",
+            snapshot.Identity,
+            project.FilePath);
+        return new AssemblyContext(
+            compilation.Assembly,
+            references.Identity,
+            references.References,
             DistinctDiagnostics(diagnostics),
-            generation.Snapshot.Compilation,
-            consumer.Receiver,
-            consumer.ProjectName,
-            generation.Origin,
-            generation.Number,
-            generation.Status), null);
+            compilation,
+            null,
+            null,
+            origin,
+            0,
+            status);
+    }
+
+    private static bool IsSourceSelectionUsable(AssemblySourceSelection? selection)
+    {
+        if (selection is null || selection.SourceLease.IsDisposed) return false;
+
+        var snapshot = selection.SourceLease.Snapshot;
+        var match = selection.MatchResult;
+        return !snapshot.IsDisposed
+            && match.State == ExternalSourceMatchState.Matched
+            && match.MatchedCandidate is not null
+            && match.SourceSnapshotIdentity is not null
+            && string.Equals(
+                match.SourceSnapshotIdentity.StableValue,
+                snapshot.Identity.StableValue,
+                StringComparison.Ordinal);
     }
 
     private static async Task<ConsumerSelection> FindConsumerReceiverAsync(

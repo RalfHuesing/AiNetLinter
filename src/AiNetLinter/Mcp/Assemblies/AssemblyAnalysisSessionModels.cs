@@ -21,9 +21,13 @@ internal sealed record AssemblyOrigin(
     string CanonicalPath,
     string ContentHash,
     string GeneratedDocumentPath,
-    string Confidence)
+    string Confidence,
+    SourceSnapshotIdentity? SourceSnapshotIdentity = null,
+    string? SourceProjectPath = null)
 {
     internal string Kind => OriginKind;
+
+    internal bool IsDecompiled => string.Equals(OriginKind, "decompiled", StringComparison.Ordinal);
 }
 
 internal sealed record AssemblyDecompilationOptions(

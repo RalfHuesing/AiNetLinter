@@ -122,6 +122,8 @@ internal sealed class SourceSnapshotLease : IDisposable
 
     internal ExternalSourceSnapshot Snapshot => snapshot;
 
+    internal bool IsDisposed => Volatile.Read(ref disposed) != 0;
+
     public void Dispose()
     {
         if (Interlocked.Exchange(ref disposed, 1) != 0)

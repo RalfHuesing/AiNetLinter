@@ -55,8 +55,7 @@ internal static class FindAssemblyExtensionsTool
         builder.AppendLine($"Vollständigkeit: `{payload.Completeness}`");
         if (payload.Origin is { } origin)
         {
-            builder.AppendLine($"Herkunft: `{origin.OriginKind}` — `{origin.GeneratedDocumentPath}`");
-            builder.AppendLine("Hinweis: Der angeforderte Code wurde dekompiliert und kann von der Originalquelle abweichen.");
+            AssemblyAnalysisOriginText.Append(builder, origin);
         }
         if (payload.ConsumerProject is not null)
         {

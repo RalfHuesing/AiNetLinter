@@ -79,8 +79,7 @@ internal static class InspectAssemblyTool
         builder.AppendLine($"Vollständigkeit: `{payload.Completeness}`");
         if (payload.Origin is { } origin)
         {
-            builder.AppendLine($"Herkunft: `{origin.OriginKind}` — `{origin.GeneratedDocumentPath}`");
-            builder.AppendLine("Hinweis: Der angeforderte Code wurde dekompiliert und kann von der Originalquelle abweichen.");
+            AssemblyAnalysisOriginText.Append(builder, origin);
         }
         builder.AppendLine();
         if (payload.Identity is { } identity)

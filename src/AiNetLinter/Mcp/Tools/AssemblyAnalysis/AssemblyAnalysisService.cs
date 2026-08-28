@@ -70,6 +70,10 @@ internal static class AssemblyAnalysisService
         return await AssemblyAnalysisContextFactory.CreateAsync(assemblyPath, consumerSolution, receiverType, ct);
     }
 
+    internal static Task<(AssemblyContext? Context, string? Error)> CreateContextAsync(
+        AssemblyAnalysisContextRequest request) =>
+        AssemblyAnalysisContextFactory.CreateAsync(request);
+
     internal static AssemblyTypeSelection Inspect(
         AssemblyContext context,
         AssemblyInspectionOptions options)
