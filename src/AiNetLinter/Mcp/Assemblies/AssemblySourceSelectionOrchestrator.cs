@@ -68,7 +68,9 @@ internal sealed class AssemblySourceSelectionOrchestrator
         var providerResult = await provider.ResolveAsync(mapping, cancellationToken).ConfigureAwait(false);
         if (!providerResult.IsAvailable || providerResult.SourceSnapshot is null)
         {
-            return CreateScope(providerDiagnostics: providerResult.Diagnostics);
+            return CreateScope(
+                providerResult.FailureKind,
+                providerResult.Diagnostics);
         }
 
         SourceSnapshotLease lease;
@@ -100,12 +102,14 @@ internal sealed class AssemblySourceSelectionOrchestrator
     }
 
     private AssemblySourceSelectionScope CreateScope(
+        ExternalSourceProviderFailureKind providerFailureKind = ExternalSourceProviderFailureKind.None,
         IEnumerable<ExternalSourceConfigurationDiagnostic>? providerDiagnostics = null) =>
         new(
             null,
             configurationResult.Diagnostics,
             providerDiagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>(),
-            null);
+            null,
+            providerFailureKind);
 }
 
 internal sealed class AssemblySourceSelectionScope : IDisposable
@@ -116,7 +120,8 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
         AssemblySourceSelection? selection,
         IEnumerable<ExternalSourceConfigurationDiagnostic> loaderDiagnostics,
         IEnumerable<ExternalSourceConfigurationDiagnostic> providerDiagnostics,
-        SourceSnapshotLease? lease)
+        SourceSnapshotLease? lease,
+        ExternalSourceProviderFailureKind providerFailureKind = ExternalSourceProviderFailureKind.None)
     {
         ArgumentNullException.ThrowIfNull(loaderDiagnostics);
         ArgumentNullException.ThrowIfNull(providerDiagnostics);
@@ -124,6 +129,7 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
         Selection = selection;
         LoaderDiagnostics = loaderDiagnostics.ToImmutableArray();
         ProviderDiagnostics = providerDiagnostics.ToImmutableArray();
+        ProviderFailureKind = providerFailureKind;
         Diagnostics = LoaderDiagnostics
             .AddRange(ProviderDiagnostics)
             .Distinct()
@@ -136,6 +142,8 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> LoaderDiagnostics { get; }
 
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> ProviderDiagnostics { get; }
+
+    internal ExternalSourceProviderFailureKind ProviderFailureKind { get; }
 
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics { get; }
 

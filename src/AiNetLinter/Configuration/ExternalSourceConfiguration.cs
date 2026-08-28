@@ -107,6 +107,12 @@ internal static class ExternalSourceConfigurationDiagnosticCodes
     internal const string DuplicateAssembly = "external-source-duplicate-assembly";
     internal const string AmbiguousAssembly = "external-source-ambiguous-assembly";
     internal const string ProviderUnavailable = "external-source-provider-unavailable";
+    internal const string AuthenticationRequired = "external-source-authentication-required";
+    internal const string AccessDenied = "external-source-access-denied";
+    internal const string RepositoryNotFound = "external-source-repository-not-found";
+    internal const string NetworkUnavailable = "external-source-network-unavailable";
+    internal const string Timeout = "external-source-timeout";
+    internal const string InvalidResponse = "external-source-invalid-response";
 }
 
 internal static class ExternalSourceJsonValidation

@@ -28,6 +28,7 @@ public sealed class ExternalSourceProviderContractTests
         Assert.Same(mapping, provider.Mapping);
         Assert.Equal(cancellation.Token, provider.CancellationToken);
         Assert.True(result.IsAvailable);
+        Assert.Equal(ExternalSourceProviderFailureKind.None, result.FailureKind);
         Assert.Empty(result.Diagnostics);
         Assert.Null(result.SourceSnapshot);
     }
@@ -56,10 +57,47 @@ public sealed class ExternalSourceProviderContractTests
         var result = await provider.ResolveAsync(mapping);
 
         Assert.True(result.IsAvailable);
+        Assert.Equal(ExternalSourceProviderFailureKind.None, result.FailureKind);
         Assert.Same(snapshot, result.SourceSnapshot);
         Assert.Equal(identity, result.SourceSnapshot!.Identity);
         Assert.Same(solution, result.SourceSnapshot.Solution);
         Assert.Equal([expectedDiagnostic], result.Diagnostics);
+        Assert.False(snapshot.IsDisposed);
+    }
+
+    [Theory]
+    [InlineData((int)ExternalSourceProviderFailureKind.ProviderUnavailable, ExternalSourceConfigurationDiagnosticCodes.ProviderUnavailable)]
+    [InlineData((int)ExternalSourceProviderFailureKind.AuthenticationRequired, ExternalSourceConfigurationDiagnosticCodes.AuthenticationRequired)]
+    [InlineData((int)ExternalSourceProviderFailureKind.AccessDenied, ExternalSourceConfigurationDiagnosticCodes.AccessDenied)]
+    [InlineData((int)ExternalSourceProviderFailureKind.RepositoryNotFound, ExternalSourceConfigurationDiagnosticCodes.RepositoryNotFound)]
+    [InlineData((int)ExternalSourceProviderFailureKind.NetworkUnavailable, ExternalSourceConfigurationDiagnosticCodes.NetworkUnavailable)]
+    [InlineData((int)ExternalSourceProviderFailureKind.Timeout, ExternalSourceConfigurationDiagnosticCodes.Timeout)]
+    [InlineData((int)ExternalSourceProviderFailureKind.InvalidResponse, ExternalSourceConfigurationDiagnosticCodes.InvalidResponse)]
+    public async Task ResolveAsync_FakeProviderTransportiertTypisiertenFehlerOhneSnapshot(
+        int failureKindValue,
+        string diagnosticCode)
+    {
+        var failureKind = (ExternalSourceProviderFailureKind)failureKindValue;
+        var mapping = new ExternalSourceMapping(
+            "https://gitea.example/shared.git",
+            "src/Shared.slnx",
+            ["Foo"]);
+        var diagnostic = new ExternalSourceConfigurationDiagnostic(
+            diagnosticCode,
+            "Testdiagnose",
+            "warning",
+            "test");
+        var provider = new RecordingProvider(new ExternalSourceProviderResult(
+            isAvailable: false,
+            diagnostics: [diagnostic],
+            failureKind: failureKind));
+
+        var result = await provider.ResolveAsync(mapping);
+
+        Assert.False(result.IsAvailable);
+        Assert.Equal(failureKind, result.FailureKind);
+        Assert.Null(result.SourceSnapshot);
+        Assert.Equal([diagnostic], result.Diagnostics);
     }
 
     [Fact]
@@ -82,6 +120,26 @@ public sealed class ExternalSourceProviderContractTests
     }
 
     [Fact]
+    public void ProviderResult_LegacyUnavailableConstructorUsesProviderUnavailable()
+    {
+        var result = new ExternalSourceProviderResult(
+            isAvailable: false,
+            diagnostics: System.Array.Empty<ExternalSourceConfigurationDiagnostic>());
+
+        Assert.Equal(ExternalSourceProviderFailureKind.ProviderUnavailable, result.FailureKind);
+        Assert.Null(result.SourceSnapshot);
+    }
+
+    [Fact]
+    public void ProviderResult_RejectsFailureKindForAvailableProvider()
+    {
+        Assert.Throws<ArgumentException>(() => new ExternalSourceProviderResult(
+            isAvailable: true,
+            diagnostics: System.Array.Empty<ExternalSourceConfigurationDiagnostic>(),
+            failureKind: ExternalSourceProviderFailureKind.Timeout));
+    }
+
+    [Fact]
     public async Task ResolveAsync_UnavailableProvider_LiefertSichtbarenZustandOhneSourceSemantik()
     {
         var mapping = new ExternalSourceMapping(
@@ -92,6 +150,7 @@ public sealed class ExternalSourceProviderContractTests
         var result = await new UnavailableExternalSourceProvider().ResolveAsync(mapping);
 
         Assert.False(result.IsAvailable);
+        Assert.Equal(ExternalSourceProviderFailureKind.ProviderUnavailable, result.FailureKind);
         Assert.Null(result.SourceSnapshot);
         var diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(ExternalSourceConfigurationDiagnosticCodes.ProviderUnavailable, diagnostic.Code);

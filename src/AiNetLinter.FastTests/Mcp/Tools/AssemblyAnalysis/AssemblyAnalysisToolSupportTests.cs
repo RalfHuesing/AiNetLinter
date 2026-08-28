@@ -59,6 +59,7 @@ public sealed class AssemblyAnalysisToolSupportTests
         Assert.NotNull(context);
         Assert.NotNull(observedScope);
         Assert.Equal(ExternalSourceMatchState.Matched, observedScope!.Selection!.MatchResult.State);
+        Assert.Equal(ExternalSourceProviderFailureKind.None, observedScope.ProviderFailureKind);
         Assert.True(observedScope.Selection.SourceLease.IsDisposed);
         Assert.Equal("TargetAssembly", context!.Identity?.Name);
         Assert.NotNull(context.Compilation.GetTypeByMetadataName("Source.SourceOnly"));
@@ -150,9 +151,19 @@ public sealed class AssemblyAnalysisToolSupportTests
         Assert.Equal(0, registry.ResidentCount);
     }
 
-    [Fact]
-    public async Task ExecuteAsync_UnavailableProviderPreservesDiagnosticsAndFallsBack()
+    [Theory]
+    [InlineData((int)ExternalSourceProviderFailureKind.ProviderUnavailable, ExternalSourceConfigurationDiagnosticCodes.ProviderUnavailable)]
+    [InlineData((int)ExternalSourceProviderFailureKind.AuthenticationRequired, ExternalSourceConfigurationDiagnosticCodes.AuthenticationRequired)]
+    [InlineData((int)ExternalSourceProviderFailureKind.AccessDenied, ExternalSourceConfigurationDiagnosticCodes.AccessDenied)]
+    [InlineData((int)ExternalSourceProviderFailureKind.RepositoryNotFound, ExternalSourceConfigurationDiagnosticCodes.RepositoryNotFound)]
+    [InlineData((int)ExternalSourceProviderFailureKind.NetworkUnavailable, ExternalSourceConfigurationDiagnosticCodes.NetworkUnavailable)]
+    [InlineData((int)ExternalSourceProviderFailureKind.Timeout, ExternalSourceConfigurationDiagnosticCodes.Timeout)]
+    [InlineData((int)ExternalSourceProviderFailureKind.InvalidResponse, ExternalSourceConfigurationDiagnosticCodes.InvalidResponse)]
+    public async Task ExecuteAsync_TypedProviderFailurePreservesDiagnosticsAndFallsBack(
+        int failureKindValue,
+        string diagnosticCode)
     {
+        var failureKind = (ExternalSourceProviderFailureKind)failureKindValue;
         using var temp = TestTempDirectory.Create("assembly-source-unavailable-");
         var assemblyPath = AssemblyTestHelper.EmitAssembly(
             temp,
@@ -160,21 +171,29 @@ public sealed class AssemblyAnalysisToolSupportTests
             "namespace Target; public sealed class TargetOnly { }");
         using var registry = new SourceSnapshotRegistry();
         var diagnostic = new ExternalSourceConfigurationDiagnostic(
-            ExternalSourceConfigurationDiagnosticCodes.ProviderUnavailable,
+            diagnosticCode,
             "Provider nicht verfügbar",
             "warning",
             "https://gitea.example/shared.git");
-        var provider = new RecordingProvider(new ExternalSourceProviderResult(false, [diagnostic]));
+        var provider = new RecordingProvider(new ExternalSourceProviderResult(
+            isAvailable: false,
+            diagnostics: [diagnostic],
+            failureKind: failureKind));
         var orchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], provider, registry);
         AssemblyContext? context = null;
+        AssemblySourceSelectionScope? observedScope = null;
         var result = await AssemblyAnalysisToolSupport.ExecuteAsync(
             CreateParameters(assemblyPath, observed => context = observed),
-            orchestrator);
+            orchestrator,
+            scope => observedScope = scope);
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(context);
         Assert.Equal("decompiled", context!.Origin.OriginKind);
         Assert.Contains(context.Diagnostics, message => message.Contains(diagnostic.Code, StringComparison.Ordinal));
         Assert.Contains(context.Diagnostics, message => message.Contains(diagnostic.Message, StringComparison.Ordinal));
+        Assert.NotNull(observedScope);
+        Assert.Equal(failureKind, observedScope!.ProviderFailureKind);
+        Assert.Null(observedScope.Selection);
         Assert.Equal(1, provider.CallCount);
         Assert.Equal(0, registry.ResidentCount);
     }

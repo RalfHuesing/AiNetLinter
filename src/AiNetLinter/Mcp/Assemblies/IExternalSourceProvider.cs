@@ -9,6 +9,18 @@ using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Mcp.Assemblies;
 
+internal enum ExternalSourceProviderFailureKind
+{
+    None,
+    ProviderUnavailable,
+    AuthenticationRequired,
+    AccessDenied,
+    RepositoryNotFound,
+    NetworkUnavailable,
+    Timeout,
+    InvalidResponse,
+}
+
 internal interface IExternalSourceProvider
 {
     ValueTask<ExternalSourceProviderResult> ResolveAsync(
@@ -21,9 +33,15 @@ internal sealed record ExternalSourceProviderResult
     internal ExternalSourceProviderResult(
         bool isAvailable,
         IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics,
-        ExternalSourceSnapshot? sourceSnapshot = null)
+        ExternalSourceSnapshot? sourceSnapshot = null,
+        ExternalSourceProviderFailureKind failureKind = ExternalSourceProviderFailureKind.None)
     {
         ArgumentNullException.ThrowIfNull(diagnostics);
+        if (!Enum.IsDefined(failureKind))
+        {
+            throw new ArgumentOutOfRangeException(nameof(failureKind));
+        }
+
         if (!isAvailable && sourceSnapshot is not null)
         {
             throw new ArgumentException(
@@ -31,12 +49,24 @@ internal sealed record ExternalSourceProviderResult
                 nameof(sourceSnapshot));
         }
 
+        if (isAvailable && failureKind is not ExternalSourceProviderFailureKind.None)
+        {
+            throw new ArgumentException(
+                "Ein verfügbares Provider-Ergebnis darf keinen Fehlerzustand transportieren.",
+                nameof(failureKind));
+        }
+
         IsAvailable = isAvailable;
+        FailureKind = isAvailable || failureKind is not ExternalSourceProviderFailureKind.None
+            ? failureKind
+            : ExternalSourceProviderFailureKind.ProviderUnavailable;
         Diagnostics = diagnostics.ToImmutableArray();
         SourceSnapshot = sourceSnapshot;
     }
 
     internal bool IsAvailable { get; }
+
+    internal ExternalSourceProviderFailureKind FailureKind { get; }
 
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics { get; }
 
