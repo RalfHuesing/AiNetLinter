@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T21:22:34+02:00
+last_updated: 2026-08-28T21:49:33+02:00
 rules_dir: .agents/rules
 total_steps: 11
 current_step: step-011
@@ -14,11 +14,11 @@ current_step: step-011
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 11 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-011` (in_progress; Korrektur zu Step 010)
+- **Aktueller Schritt:** `step-011` (approved; nächster EPIC-03-Schnitt wird geplant)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-28T21:22:34+02:00
+- **Zuletzt aktualisiert:** 2026-08-28T21:49:33+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -34,8 +34,8 @@ current_step: step-011
 | step-007 | EPIC-03 | done | Source-Snapshot-Identität und residente Registry mit injizierbarem Ergebnis | - | cbd79a51 | approved | cbd79a51 + 1c3d2b3c + 7da30606 |
 | step-008 | EPIC-03 | done | Deterministische Source-Match-Auflösung über Project.AssemblyName | - | 9511b8f2 | approved | 9511b8f2 + c2ac1473 + a2062fb7 |
 | step-009 | EPIC-03 | done | Source-backed Assembly-Context mit deterministischem Decompilation-Fallback verbinden | - | d2814147 | approved | d2814147 + 60c60e52 + aa900d52 |
-| step-010 | EPIC-03 | issues → step-011 | Provider-/Registry-Selection für direkte Assembly-Tool-Unterstützung komponieren | - | 28b7b76d | issues | 28b7b76d + 410550b4 + a92787eb |
-| step-011 | EPIC-03 | in_progress | Support-/Lease-Regressionen und Orchestrator-Testzuordnung korrigieren | step-010 | - | - | e9dd13ef |
+| step-010 | EPIC-03 | done | Provider-/Registry-Selection für direkte Assembly-Tool-Unterstützung komponieren | - | 28b7b76d | issues → step-011 approved | 28b7b76d + 410550b4 + a92787eb |
+| step-011 | EPIC-03 | done | Support-/Lease-Regressionen und Orchestrator-Testzuordnung korrigieren | step-010 | 6e38b4c2 | approved | 6e38b4c2 + d035772c + 65f1c564 |
 
 ## Config
 
@@ -148,3 +148,9 @@ Der Kritiker fand in Step 010 zwei In-Scope-Abnahmelücken (`a92787eb`): die
 fehlende statische Testzuordnung des Orchestrators und fehlende direkte Tests
 der Support-/Lease-Grenze für Matched, NoMatch, Ambiguous und Fehlerpfade.
 Step 011 bündelt diese Korrekturen als ein kontextbegrenztes Testpaket.
+
+Step 011 wurde durch den neuen Kritiker genehmigt (`65f1c564`). Die direkte
+Support-/Lease-Grenze ist mit den geforderten Zuständen abgedeckt und der
+StaticTestSentinel ist über `@covers` erfüllt. `TD-004` dokumentiert den
+verbleibenden gemeinsamen Snapshot-Testfixture-Builder als architektonische
+Testinfrastruktur-Folgeprüfung.
