@@ -2,16 +2,15 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
@@ -28,10 +27,10 @@ public sealed class AssemblyAnalysisContextFactoryTests
             "TargetAssembly",
             "namespace Target; public sealed class TargetOnly { }");
         var mapping = CreateMapping("https://gitea.example/source.git", "src/Source.slnx", ["TargetAssembly"]);
-        using var snapshot = CreateSnapshot(
+        using var snapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
             temp.DirectoryPath,
             mapping,
-            new SourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
+            new ExternalSourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
         using var registry = new SourceSnapshotRegistry();
         using var lease = registry.Acquire(snapshot);
 
@@ -74,10 +73,10 @@ public sealed class AssemblyAnalysisContextFactoryTests
             "TargetAssembly",
             "namespace Target; public sealed class TargetOnly { }");
         var noMatchMapping = CreateMapping("https://gitea.example/no-match.git", "src/NoMatch.slnx", ["OtherAssembly"]);
-        using var noMatchSnapshot = CreateSnapshot(
+        using var noMatchSnapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
             temp.DirectoryPath,
             noMatchMapping,
-            new SourceProjectSpec("NoMatchProject", "TargetAssembly", "namespace Source; public sealed class NoMatchOnly { }"));
+            new ExternalSourceProjectSpec("NoMatchProject", "TargetAssembly", "namespace Source; public sealed class NoMatchOnly { }"));
         using var noMatchRegistry = new SourceSnapshotRegistry();
         using var noMatchLease = noMatchRegistry.Acquire(noMatchSnapshot);
         var noMatch = AssemblySourceMatchResolver.Resolve(noMatchLease, noMatchMapping, "TargetAssembly");
@@ -93,11 +92,11 @@ public sealed class AssemblyAnalysisContextFactoryTests
         AssertDecompiledFallback(noMatchResult, "Source.NoMatchOnly");
 
         var ambiguousMapping = CreateMapping("https://gitea.example/ambiguous.git", "src/Ambiguous.slnx", ["TargetAssembly"]);
-        using var ambiguousSnapshot = CreateSnapshot(
+        using var ambiguousSnapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
             temp.DirectoryPath,
             ambiguousMapping,
-            new SourceProjectSpec("Zeta", "TargetAssembly", "namespace Source; public sealed class ZetaOnly { }"),
-            new SourceProjectSpec("Alpha", "TargetAssembly", "namespace Source; public sealed class AlphaOnly { }"));
+            new ExternalSourceProjectSpec("Zeta", "TargetAssembly", "namespace Source; public sealed class ZetaOnly { }"),
+            new ExternalSourceProjectSpec("Alpha", "TargetAssembly", "namespace Source; public sealed class AlphaOnly { }"));
         using var ambiguousRegistry = new SourceSnapshotRegistry();
         using var ambiguousLease = ambiguousRegistry.Acquire(ambiguousSnapshot);
         var ambiguous = AssemblySourceMatchResolver.Resolve(ambiguousLease, ambiguousMapping, "TargetAssembly");
@@ -141,14 +140,14 @@ public sealed class AssemblyAnalysisContextFactoryTests
             "namespace Target; public sealed class TargetOnly { }");
         var mapping = CreateMapping("https://gitea.example/source.git", "src/Source.slnx", ["TargetAssembly"]);
         var foreignMapping = CreateMapping("https://gitea.example/foreign.git", "src/Source.slnx", ["TargetAssembly"]);
-        using var sourceSnapshot = CreateSnapshot(
+        using var sourceSnapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
             temp.DirectoryPath,
             mapping,
-            new SourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
-        using var foreignSnapshot = CreateSnapshot(
+            new ExternalSourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
+        using var foreignSnapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
             temp.DirectoryPath,
             foreignMapping,
-            new SourceProjectSpec("ForeignProject", "TargetAssembly", "namespace Foreign; public sealed class ForeignOnly { }"));
+            new ExternalSourceProjectSpec("ForeignProject", "TargetAssembly", "namespace Foreign; public sealed class ForeignOnly { }"));
         using var sourceRegistry = new SourceSnapshotRegistry();
         using var foreignRegistry = new SourceSnapshotRegistry();
         using var sourceLease = sourceRegistry.Acquire(sourceSnapshot);
@@ -168,10 +167,10 @@ public sealed class AssemblyAnalysisContextFactoryTests
             CancellationToken.None));
         AssertDecompiledFallback(disposedLeaseResult, "Source.SourceOnly");
 
-        using var secondSourceSnapshot = CreateSnapshot(
+        using var secondSourceSnapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
             temp.DirectoryPath,
             mapping,
-            new SourceProjectSpec("SecondSourceProject", "TargetAssembly", "namespace Source; public sealed class SecondSourceOnly { }"));
+            new ExternalSourceProjectSpec("SecondSourceProject", "TargetAssembly", "namespace Source; public sealed class SecondSourceOnly { }"));
         using var secondRegistry = new SourceSnapshotRegistry();
         using var secondLease = secondRegistry.Acquire(secondSourceSnapshot);
         var secondMatch = AssemblySourceMatchResolver.Resolve(secondLease, mapping, "TargetAssembly");
@@ -200,10 +199,10 @@ public sealed class AssemblyAnalysisContextFactoryTests
             "TargetAssembly",
             "namespace Target; public sealed class TargetOnly { }");
         var mapping = CreateMapping("https://gitea.example/source.git", "src/Source.slnx", ["TargetAssembly"]);
-        using var snapshot = CreateSnapshot(
+        using var snapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
             temp.DirectoryPath,
             mapping,
-            new SourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
+            new ExternalSourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
         var registry = new SourceSnapshotRegistry();
         var lease = registry.Acquire(snapshot);
 
@@ -268,48 +267,4 @@ public sealed class AssemblyAnalysisContextFactoryTests
         IReadOnlyList<string> assemblies) =>
         new(url, solutionPath, assemblies);
 
-    private static ExternalSourceSnapshot CreateSnapshot(
-        string rootPath,
-        ExternalSourceMapping mapping,
-        params SourceProjectSpec[] projectSpecs)
-    {
-        var workspace = new AdhocWorkspace();
-        var solutionPath = Path.Combine(rootPath, "ExternalSource.slnx");
-        var solution = workspace.AddSolution(SolutionInfo.Create(
-            SolutionId.CreateNewId(),
-            VersionStamp.Create(),
-            filePath: solutionPath));
-        var solutionDirectory = Path.GetDirectoryName(solutionPath)!;
-
-        foreach (var spec in projectSpecs)
-        {
-            var projectId = ProjectId.CreateNewId(spec.Name);
-            var projectDirectory = Path.Combine(solutionDirectory, spec.Name);
-            var projectPath = Path.Combine(projectDirectory, spec.Name + ".csproj");
-            var projectInfo = ProjectInfo.Create(
-                    projectId,
-                    VersionStamp.Create(),
-                    spec.Name,
-                    spec.AssemblyName,
-                    LanguageNames.CSharp,
-                    filePath: projectPath)
-                .WithMetadataReferences(RoslynTestSolutionFactory.CoreReferences)
-                .WithCompilationOptions(new CSharpCompilationOptions(
-                    OutputKind.DynamicallyLinkedLibrary,
-                    nullableContextOptions: NullableContextOptions.Enable));
-            solution = solution.AddProject(projectInfo);
-            solution = solution.AddDocument(
-                DocumentId.CreateNewId(projectId),
-                "Source.cs",
-                spec.Source,
-                filePath: Path.Combine(projectDirectory, "Source.cs"));
-        }
-
-        return new ExternalSourceSnapshot(
-            SourceSnapshotIdentity.Create(mapping, "revision-1"),
-            solution,
-            workspace);
-    }
-
-    private sealed record SourceProjectSpec(string Name, string AssemblyName, string Source);
 }

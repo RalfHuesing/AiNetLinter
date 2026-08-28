@@ -2,16 +2,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.TestKit;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -30,10 +28,10 @@ public sealed class AssemblyAnalysisToolSupportTests
             "TargetAssembly",
             "namespace Target; public sealed class TargetOnly { }");
         var mapping = CreateMapping(["TargetAssembly"]);
-        using var snapshot = CreateSnapshot(
+        using var snapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
             temp.DirectoryPath,
             mapping,
-            new SourceProjectSpec(
+            new ExternalSourceProjectSpec(
                 "SourceProject",
                 "TargetAssembly",
                 "namespace Source; public sealed class SourceOnly { }"));
@@ -81,14 +79,14 @@ public sealed class AssemblyAnalysisToolSupportTests
             "TargetAssembly",
             "namespace Target; public sealed class TargetOnly { }");
         var mapping = CreateMapping(["TargetAssembly"]);
-        using var firstSnapshot = CreateSnapshot(
+        using var firstSnapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
             temp.DirectoryPath,
             mapping,
-            new SourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
-        using var duplicateSnapshot = CreateSnapshot(
+            new ExternalSourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
+        using var duplicateSnapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
             temp.DirectoryPath,
             mapping,
-            new SourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
+            new ExternalSourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
         using var registry = new SourceSnapshotRegistry();
         var provider = new RecordingProvider(
             new ExternalSourceProviderResult(true, [], firstSnapshot),
@@ -210,10 +208,10 @@ public sealed class AssemblyAnalysisToolSupportTests
         Assert.Contains(invalidContext.Diagnostics, message => message.Contains(loaderDiagnostic.Code, StringComparison.Ordinal));
         Assert.Equal(0, invalidProvider.CallCount);
         var mapping = CreateMapping(["TargetAssembly"]);
-        using var noMatchSnapshot = CreateSnapshot(
+        using var noMatchSnapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
             temp.DirectoryPath,
             mapping,
-            new SourceProjectSpec("SourceProject", "OtherAssembly", "namespace Source; public sealed class OtherOnly { }"));
+            new ExternalSourceProjectSpec("SourceProject", "OtherAssembly", "namespace Source; public sealed class OtherOnly { }"));
         using var noMatchRegistry = new SourceSnapshotRegistry();
         var noMatchProvider = new RecordingProvider(new ExternalSourceProviderResult(true, [], noMatchSnapshot));
         var noMatchOrchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], noMatchProvider, noMatchRegistry);
@@ -236,11 +234,11 @@ public sealed class AssemblyAnalysisToolSupportTests
         Assert.NotNull(noMatchScope);
         Assert.True(noMatchScope!.Selection!.SourceLease.IsDisposed);
         noMatchScope.Dispose();
-        using var ambiguousSnapshot = CreateSnapshot(
+        using var ambiguousSnapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
             temp.DirectoryPath,
             mapping,
-            new SourceProjectSpec("Zeta", "TargetAssembly", "namespace Source; public sealed class ZetaOnly { }"),
-            new SourceProjectSpec("Alpha", "TargetAssembly", "namespace Source; public sealed class AlphaOnly { }"));
+            new ExternalSourceProjectSpec("Zeta", "TargetAssembly", "namespace Source; public sealed class ZetaOnly { }"),
+            new ExternalSourceProjectSpec("Alpha", "TargetAssembly", "namespace Source; public sealed class AlphaOnly { }"));
         using var ambiguousRegistry = new SourceSnapshotRegistry();
         var ambiguousProvider = new RecordingProvider(new ExternalSourceProviderResult(true, [], ambiguousSnapshot));
         var ambiguousOrchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], ambiguousProvider, ambiguousRegistry);
@@ -275,10 +273,10 @@ public sealed class AssemblyAnalysisToolSupportTests
             "TargetAssembly",
             "namespace Target; public sealed class TargetOnly { }");
         var mapping = CreateMapping(["TargetAssembly"]);
-        using var snapshot = CreateSnapshot(
+        using var snapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
             temp.DirectoryPath,
             mapping,
-            new SourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
+            new ExternalSourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
         using var registry = new SourceSnapshotRegistry();
         using var cancellation = new CancellationTokenSource();
         var provider = new RecordingProvider((_, token) =>
@@ -318,10 +316,10 @@ public sealed class AssemblyAnalysisToolSupportTests
             "TargetAssembly",
             "namespace Target; public sealed class TargetOnly { }");
         var mapping = CreateMapping(["TargetAssembly"]);
-        using var snapshot = CreateSnapshot(
+        using var snapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
             temp.DirectoryPath,
             mapping,
-            new SourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
+            new ExternalSourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
         using var registry = new SourceSnapshotRegistry();
         var provider = new RecordingProvider(new ExternalSourceProviderResult(true, [], snapshot));
         var orchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], provider, registry);
@@ -414,51 +412,6 @@ public sealed class AssemblyAnalysisToolSupportTests
 
     private static ExternalSourceMapping CreateMapping(IReadOnlyList<string> assemblies) =>
         new("https://gitea.example/shared.git", "src/Shared.slnx", assemblies);
-
-    private static ExternalSourceSnapshot CreateSnapshot(
-        string rootPath,
-        ExternalSourceMapping mapping,
-        params SourceProjectSpec[] projectSpecs)
-    {
-        var workspace = new AdhocWorkspace();
-        var solutionPath = Path.Combine(rootPath, "ExternalSource.slnx");
-        var solution = workspace.AddSolution(SolutionInfo.Create(
-            SolutionId.CreateNewId(),
-            VersionStamp.Create(),
-            filePath: solutionPath));
-        var solutionDirectory = Path.GetDirectoryName(solutionPath)!;
-
-        foreach (var spec in projectSpecs)
-        {
-            var projectId = ProjectId.CreateNewId(spec.Name);
-            var projectDirectory = Path.Combine(solutionDirectory, spec.Name);
-            var projectPath = Path.Combine(projectDirectory, spec.Name + ".csproj");
-            var projectInfo = ProjectInfo.Create(
-                    projectId,
-                    VersionStamp.Create(),
-                    spec.Name,
-                    spec.AssemblyName,
-                    LanguageNames.CSharp,
-                    filePath: projectPath)
-                .WithMetadataReferences(RoslynTestSolutionFactory.CoreReferences)
-                .WithCompilationOptions(new CSharpCompilationOptions(
-                    OutputKind.DynamicallyLinkedLibrary,
-                    nullableContextOptions: NullableContextOptions.Enable));
-            solution = solution.AddProject(projectInfo);
-            solution = solution.AddDocument(
-                DocumentId.CreateNewId(projectId),
-                "Source.cs",
-                spec.Source,
-                filePath: Path.Combine(projectDirectory, "Source.cs"));
-        }
-
-        return new ExternalSourceSnapshot(
-            SourceSnapshotIdentity.Create(mapping, "revision-1"),
-            solution,
-            workspace);
-    }
-
-    private sealed record SourceProjectSpec(string Name, string AssemblyName, string Source);
 
     private sealed class RecordingProvider : IExternalSourceProvider
     {
