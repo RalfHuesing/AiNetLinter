@@ -1,6 +1,7 @@
 #nullable enable
 
 using AiNetLinter.FastTests.Fixtures;
+using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Daemon;
 
 namespace AiNetLinter.FastTests.Mcp.Daemon;
@@ -14,8 +15,9 @@ public sealed class DaemonHostMcpContractTests
     {
         await using var registry = ProjectWiringFixtures.CreateLoadedRegistry(TimeProvider.System);
         await using var connection = new DaemonPipeConnection(new MemoryStream());
+        using var composition = AssemblyAnalysisHostComposition.Create();
 
-        await DaemonHostCommand.RunMcpSessionAsync(connection, registry);
+        await DaemonHostCommand.RunMcpSessionAsync(connection, registry, composition);
 
         Assert.False(connection.CancellationToken.IsCancellationRequested);
     }

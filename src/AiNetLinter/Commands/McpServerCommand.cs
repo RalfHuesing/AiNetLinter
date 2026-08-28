@@ -8,6 +8,7 @@ using AiNetLinter.Cli;
 using AiNetLinter.Configuration;
 using AiNetLinter.Logging;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Lifetime;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
@@ -51,6 +52,7 @@ internal static class McpServerCommand
             Clock: TimeProvider.System,
             MaxProjects: args.McpMaxProjects ?? ProjectRegistryDefaults.MaxProjects,
             IdleTtl: args.McpProjectTtlMinutes is { } minutes ? TimeSpan.FromMinutes((double)minutes) : default));
+        using var assemblyComposition = AssemblyAnalysisHostComposition.Create();
 
         var services = new ServiceCollection();
         var serverBuilder = services.AddMcpServer();
@@ -64,7 +66,9 @@ internal static class McpServerCommand
             Version = McpServerOptionsFactory.GetServerVersion(),
         };
         serverOptions.ServerInstructions = ServerInstructions.Text;
-        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(registry);
+        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(
+            registry,
+            assemblyComposition: assemblyComposition);
         serverOptions.ResourceCollection = McpServerOptionsFactory.BuildResourceCollection(registry);
 
         var transport = new StdioServerTransport(serverOptions);

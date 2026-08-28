@@ -21,44 +21,61 @@ internal static class InspectAssemblyTool
         CancellationToken ct)
     {
         return await AssemblyAnalysisToolSupport.ExecuteAsync(
-            new AssemblyToolExecutionParameters(
-                state,
-                arguments.AssemblyPath,
-                null,
-                AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, 1, AssemblyAnalysisService.MaxResults),
-                ct,
-                (fullPath, context, maxResults) =>
-                {
-                    var selection = AssemblyAnalysisService.Inspect(
-                        context,
-                        new AssemblyInspectionOptions(
-                            arguments.Namespace,
-                            arguments.TypeName,
-                            arguments.MemberName,
-                            arguments.PublicOnly,
-                            arguments.ExactTypeName,
-                            arguments.MemberNames,
-                            maxResults,
-                            AssemblyAnalysisService.NormalizeLimit(arguments.MaxMembers, AssemblyAnalysisService.DefaultMaxMembers, AssemblyAnalysisService.MaxMembers)));
-                    var completeness = context.Diagnostics.Count == 0
-                        ? context.Status.ToCompletenessLabel()
-                        : AssemblySessionStatus.Partial.ToCompletenessLabel();
-                    var payload = new InspectAssemblyPayload(
-                        fullPath,
-                        context.Identity,
-                        selection.Namespaces,
-                        context.References,
-                        selection.Items,
-                        context.Diagnostics,
-                        completeness,
-                        selection.Truncated,
-                        selection.Total,
-                        context.Origin,
-                        context.Generation,
-                        context.Status.ToString().ToLowerInvariant());
-                    return McpToolResults.Text(FormatText(payload, arguments.PublicOnly), payload);
-                }));
+            CreateParameters(state, arguments, ct));
     }
+
+    internal static async Task<CallToolResult> ExecuteAsync(
+        McpCodeGraphServer? state,
+        InspectAssemblyArguments arguments,
+        CancellationToken ct,
+        AssemblySourceSelectionOrchestrator orchestrator)
+    {
+        return await AssemblyAnalysisToolSupport.ExecuteAsync(
+            CreateParameters(state, arguments, ct),
+            orchestrator);
+    }
+
+    private static AssemblyToolExecutionParameters CreateParameters(
+        McpCodeGraphServer? state,
+        InspectAssemblyArguments arguments,
+        CancellationToken ct) =>
+        new(
+            state,
+            arguments.AssemblyPath,
+            null,
+            AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, 1, AssemblyAnalysisService.MaxResults),
+            ct,
+            (fullPath, context, maxResults) =>
+            {
+                var selection = AssemblyAnalysisService.Inspect(
+                    context,
+                    new AssemblyInspectionOptions(
+                        arguments.Namespace,
+                        arguments.TypeName,
+                        arguments.MemberName,
+                        arguments.PublicOnly,
+                        arguments.ExactTypeName,
+                        arguments.MemberNames,
+                        maxResults,
+                        AssemblyAnalysisService.NormalizeLimit(arguments.MaxMembers, AssemblyAnalysisService.DefaultMaxMembers, AssemblyAnalysisService.MaxMembers)));
+                var completeness = context.Diagnostics.Count == 0
+                    ? context.Status.ToCompletenessLabel()
+                    : AssemblySessionStatus.Partial.ToCompletenessLabel();
+                var payload = new InspectAssemblyPayload(
+                    fullPath,
+                    context.Identity,
+                    selection.Namespaces,
+                    context.References,
+                    selection.Items,
+                    context.Diagnostics,
+                    completeness,
+                    selection.Truncated,
+                    selection.Total,
+                    context.Origin,
+                    context.Generation,
+                    context.Status.ToString().ToLowerInvariant());
+                return McpToolResults.Text(FormatText(payload, arguments.PublicOnly), payload);
+            });
 
     private static string FormatText(InspectAssemblyPayload payload, bool publicOnly)
     {

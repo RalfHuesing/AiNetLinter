@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Reflection;
+using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Registration;
 using ModelContextProtocol.Server;
@@ -21,19 +22,21 @@ internal static class McpServerOptionsFactory
 
     /// <summary>
     /// Baut die vollstaendigen Server-Optionen inkl. aller registrierten Tools. Die Lambdas
-    /// erreichen die residenten Instanzen ausschliesslich ueber die <paramref name="registry"/>
-    /// (Lease je Project-Target) — kein DI-Container (Architektur-Verbot, siehe
+    /// erreichen die residenten Projektinstanzen ausschliesslich ueber die <paramref name="registry"/>
+    /// (Lease je Project-Target); Assembly-Analyse verwendet optional die explizite
+    /// hostlebenslange Composition — kein DI-Container (Architektur-Verbot, siehe
     /// <c>AiNetLinterRichtlinien.mdc</c> §2). Die <c>initialize</c>-Handshake-Instructions
     /// kommen aus <see cref="ServerInstructions.Text"/> (Single-Source-of-Truth, siehe dort).
     /// </summary>
     internal static McpServerOptions Create(
         ProjectRegistry registry,
-        Daemon.DaemonRuntimeContext? runtimeContext = null)
+        Daemon.DaemonRuntimeContext? runtimeContext = null,
+        AssemblyAnalysisHostComposition? assemblyComposition = null)
     {
         return new McpServerOptionsBuilder()
             .WithServerVersion(GetServerVersion())
             .WithServerInstructions(ServerInstructions.Text)
-            .WithToolCollection(BuildToolCollection(registry, runtimeContext))
+            .WithToolCollection(BuildToolCollection(registry, runtimeContext, assemblyComposition))
             .WithResourceCollection(BuildResourceCollection(registry))
             .Build();
     }
@@ -49,12 +52,13 @@ internal static class McpServerOptionsFactory
 
     internal static McpServerPrimitiveCollection<McpServerTool> BuildToolCollection(
         ProjectRegistry registry,
-        Daemon.DaemonRuntimeContext? runtimeContext = null)
+        Daemon.DaemonRuntimeContext? runtimeContext = null,
+        AssemblyAnalysisHostComposition? assemblyComposition = null)
     {
         var tools = new McpServerPrimitiveCollection<McpServerTool>();
 
         SymbolGraphToolRegistrations.Register(tools, registry);
-        AssemblyAnalysisToolRegistrations.Register(tools, registry);
+        AssemblyAnalysisToolRegistrations.Register(tools, registry, assemblyComposition);
         FileStructureToolRegistrations.Register(tools, registry);
         AnalysisToolRegistrations.Register(tools, registry);
         SymbolBodyToolRegistrations.Register(tools, registry);

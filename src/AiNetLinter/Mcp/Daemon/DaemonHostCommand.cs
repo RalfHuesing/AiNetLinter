@@ -3,6 +3,7 @@
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
 using AiNetLinter.Logging;
+using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +41,7 @@ internal static class DaemonHostCommand
             TimeProvider.System,
             maxProjects,
             args.McpProjectTtlMinutes is { } ttl ? TimeSpan.FromMinutes((double)ttl) : default));
+        using var assemblyComposition = AssemblyAnalysisHostComposition.Create();
         var registry = new DaemonRegistryAdapter(projectRegistry);
         var host = new DaemonHost(new DaemonHostOptions(
             registry,
@@ -49,7 +51,7 @@ internal static class DaemonHostCommand
             TimeSpan.FromMinutes((double)idleMinutes),
             new EffectiveDaemonConfiguration(maxProjects, idleMinutes),
             daemonConsole,
-            SessionRunner: CreateSessionRunner(projectRegistry)));
+            SessionRunner: CreateSessionRunner(projectRegistry, assemblyComposition)));
 
         await using var activeHost = host;
         Log.Information("Daemon: Host startet (IdleExit={IdleExitMinutes} Min, MaxProjects={MaxProjects})", idleMinutes, maxProjects);
@@ -59,12 +61,14 @@ internal static class DaemonHostCommand
     }
 
     private static Func<DaemonPipeConnection, Task> CreateSessionRunner(
-        ProjectRegistry registry) =>
-        connection => RunMcpSessionAsync(connection, registry);
+        ProjectRegistry registry,
+        AssemblyAnalysisHostComposition assemblyComposition) =>
+        connection => RunMcpSessionAsync(connection, registry, assemblyComposition);
 
     internal static async Task RunMcpSessionAsync(
         DaemonPipeConnection connection,
-        ProjectRegistry registry)
+        ProjectRegistry registry,
+        AssemblyAnalysisHostComposition assemblyComposition)
     {
         var services = new ServiceCollection();
         var runtimeContext = connection.RuntimeContext;
@@ -79,7 +83,10 @@ internal static class DaemonHostCommand
             Version = McpServerOptionsFactory.GetServerVersion(),
         };
         serverOptions.ServerInstructions = ServerInstructions.Text;
-        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(registry, runtimeContext);
+        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(
+            registry,
+            runtimeContext,
+            assemblyComposition);
         serverOptions.ResourceCollection = McpServerOptionsFactory.BuildResourceCollection(registry);
 
         var transport = new StreamServerTransport(connection.Stream, connection.Stream);

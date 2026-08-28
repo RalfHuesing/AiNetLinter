@@ -10,6 +10,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.FastTests.Mcp.Projects;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
@@ -35,7 +36,10 @@ public sealed class WiringContractTests
     [Fact]
     public void ToolCollection_FreezesInventoryAndProjectRootContract()
     {
-        var options = McpServerOptionsFactory.Create(ProjectRegistryFixture.CreateInspectionRegistry());
+        using var composition = AssemblyAnalysisHostComposition.Create();
+        var options = McpServerOptionsFactory.Create(
+            ProjectRegistryFixture.CreateInspectionRegistry(),
+            assemblyComposition: composition);
         var tools = options.ToolCollection!.ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool);
         Assert.Equal(29, tools.Count);
         foreach (var tool in tools.Values)

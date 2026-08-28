@@ -66,6 +66,20 @@ public sealed class McpServerAllToolsE2ETests
         Assert.Contains("API-Typen:", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Öffentliche API-Typen:", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Öffentliche Namespaces:", textContent.Text, StringComparison.Ordinal);
+
+        var extensions = await _fixture.Client.CallToolAsync(
+            "find_assembly_extensions",
+            new Dictionary<string, object?>
+            {
+                ["targetType"] = "assembly",
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["maxResults"] = 10
+            });
+        Assert.NotEqual(true, extensions.IsError);
+        Assert.Contains(
+            "Assembly-Extensions:",
+            Assert.IsType<TextContentBlock>(Assert.Single(extensions.Content)).Text,
+            StringComparison.Ordinal);
     }
 
     [Fact]

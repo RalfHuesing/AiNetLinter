@@ -3,9 +3,11 @@
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp.Registration;
@@ -14,15 +16,17 @@ internal static class AssemblyAnalysisToolRegistrations
 {
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        ProjectRegistry registry,
+        AssemblyAnalysisHostComposition? composition = null)
     {
-        AddInspectAssembly(tools, registry);
-        AddFindAssemblyExtensions(tools, registry);
+        AddInspectAssembly(tools, registry, composition);
+        AddFindAssemblyExtensions(tools, registry, composition);
     }
 
     private static void AddInspectAssembly(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        ProjectRegistry registry,
+        AssemblyAnalysisHostComposition? composition)
     {
         tools.Add(McpServerTool.Create(
             async (
@@ -41,11 +45,30 @@ internal static class AssemblyAnalysisToolRegistrations
                     registry,
                     targetType,
                     targetPath,
-                    assemblyPath => InspectAssemblyTool.ExecuteAsync(
-                        null,
-                        new InspectAssemblyArguments(assemblyPath, @namespace, typeName, memberName, publicOnly, maxResults, exactTypeName, memberNames, maxMembers),
-                        ct)),
+                    assemblyPath => ExecuteInspectAssemblyAsync(
+                        new InspectAssemblyArguments(
+                            assemblyPath,
+                            @namespace,
+                            typeName,
+                            memberName,
+                            publicOnly,
+                            maxResults,
+                            exactTypeName,
+                            memberNames,
+                            maxMembers),
+                        ct,
+                        composition)),
             McpToolRegistrationOptions.AssemblyTool("inspect_assembly", InspectAssemblyDescription)));
+    }
+
+    private static Task<CallToolResult> ExecuteInspectAssemblyAsync(
+        InspectAssemblyArguments arguments,
+        CancellationToken ct,
+        AssemblyAnalysisHostComposition? composition)
+    {
+        return composition is null
+            ? InspectAssemblyTool.ExecuteAsync(null, arguments, ct)
+            : InspectAssemblyTool.ExecuteAsync(null, arguments, ct, composition.Orchestrator);
     }
 
     private const string InspectAssemblyDescription =
@@ -59,13 +82,15 @@ internal static class AssemblyAnalysisToolRegistrations
         "maxMembers begrenzt Member je Typ (Default 100, Maximum 1000). Identität, " +
         "Referenzen, Typen, Methoden, Properties, Felder, Events, Attribute und Diagnosen " +
         "werden ausgegeben; Methoden und Indexer liefern zusätzlich strukturierte " +
-        "Parameterdaten. Bei " +
+        "Parameterdaten. Eine verfügbare explizite Source-Zuordnung wird source-backed " +
+        "genutzt; ohne Zuordnung oder verfügbaren Provider greift die statische Decompilation. Bei " +
         "fehlenden Abhängigkeiten lautet completeness partial. " +
         "Die DLL wird weder geladen noch ausgeführt.";
 
     private static void AddFindAssemblyExtensions(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        ProjectRegistry registry,
+        AssemblyAnalysisHostComposition? composition)
     {
         tools.Add(McpServerTool.Create(
             async (
@@ -80,11 +105,35 @@ internal static class AssemblyAnalysisToolRegistrations
                     registry,
                     targetType,
                     targetPath,
-                    assemblyPath => FindAssemblyExtensionsTool.ExecuteAsync(
-                        null,
-                        new FindAssemblyExtensionsArguments(assemblyPath, receiverType, extensionName, @namespace, maxResults),
-                        ct)),
+                    assemblyPath => ExecuteFindAssemblyExtensionsAsync(
+                        assemblyPath,
+                        receiverType,
+                        extensionName,
+                        @namespace,
+                        maxResults,
+                        ct,
+                        composition)),
             McpToolRegistrationOptions.AssemblyTool("find_assembly_extensions", FindAssemblyExtensionsDescription)));
+    }
+
+    private static Task<CallToolResult> ExecuteFindAssemblyExtensionsAsync(
+        string assemblyPath,
+        string? receiverType,
+        string? extensionName,
+        string? @namespace,
+        int maxResults,
+        CancellationToken ct,
+        AssemblyAnalysisHostComposition? composition)
+    {
+        var arguments = new FindAssemblyExtensionsArguments(
+            assemblyPath,
+            receiverType,
+            extensionName,
+            @namespace,
+            maxResults);
+        return composition is null
+            ? FindAssemblyExtensionsTool.ExecuteAsync(null, arguments, ct)
+            : FindAssemblyExtensionsTool.ExecuteAsync(null, arguments, ct, composition.Orchestrator);
     }
 
     private const string FindAssemblyExtensionsDescription =
@@ -94,6 +143,8 @@ internal static class AssemblyAnalysisToolRegistrations
         "receiverType grenzt den gewünschten Empfänger-Typ ein; ohne Consumer-Projekt " +
         "wird seine Roslyn-Anwendbarkeit als not_decidable ausgewiesen. extensionName und namespace filtern, " +
         "Generics, Constraints und Konvertierungen werden dabei metadata-only berücksichtigt. " +
+        "Eine verfügbare explizite Source-Zuordnung wird source-backed genutzt; sonst greift " +
+        "die statische Decompilation. " +
         "maxResults begrenzt deterministisch (Default 100, Maximum 1000). Die Antwort trennt " +
         "applicable, not_applicable und not_decidable und markiert fehlende Abhängigkeiten " +
         "mit completeness partial. Methoden liefern zusätzlich strukturierte Parameterdaten. " +

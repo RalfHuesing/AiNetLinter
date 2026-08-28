@@ -1,5 +1,7 @@
 #nullable enable
 
+using System.Collections.Generic;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Daemon;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
@@ -47,6 +49,38 @@ public sealed class DaemonHostMcpProcessContractTests
 
             Assert.Contains(tools, tool => tool.Name == "find_symbol");
             Assert.Contains(tools, tool => tool.Name == "get_violations");
+
+            var inspect = await client.CallToolAsync(
+                "inspect_assembly",
+                new Dictionary<string, object?>
+                {
+                    ["targetType"] = "assembly",
+                    ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                    ["typeName"] = nameof(McpCodeGraphServer),
+                    ["exactTypeName"] = true,
+                    ["maxMembers"] = 10
+                },
+                cancellationToken: cancellation.Token);
+            Assert.NotEqual(true, inspect.IsError);
+            Assert.Contains(
+                "Herkunft: `decompiled`",
+                Assert.IsType<TextContentBlock>(Assert.Single(inspect.Content)).Text,
+                StringComparison.Ordinal);
+
+            var extensions = await client.CallToolAsync(
+                "find_assembly_extensions",
+                new Dictionary<string, object?>
+                {
+                    ["targetType"] = "assembly",
+                    ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                    ["maxResults"] = 10
+                },
+                cancellationToken: cancellation.Token);
+            Assert.NotEqual(true, extensions.IsError);
+            Assert.Contains(
+                "Assembly-Extensions:",
+                Assert.IsType<TextContentBlock>(Assert.Single(extensions.Content)).Text,
+                StringComparison.Ordinal);
         }
 
         var result = await daemon.WaitForExitAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(false);
