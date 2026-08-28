@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T19:54:45+02:00
+last_updated: 2026-08-28T20:24:00+02:00
 rules_dir: .agents/rules
 total_steps: 9
 current_step: step-009
@@ -13,12 +13,12 @@ current_step: step-009
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 8 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-009` (in_progress; Source-backed Context und Decompilation-Fallback)
+- **Steps gesamt:** 9 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-009` (approved; nächster EPIC-03-Schnitt wird geplant)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-28T19:54:45+02:00
+- **Zuletzt aktualisiert:** 2026-08-28T20:24:00+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -33,7 +33,7 @@ current_step: step-009
 | step-006 | EPIC-03 | done | Mapping-Diagnosevertrag und direkte JSON-Regressionen korrigieren | step-005 | c9d71c35 | approved | c9d71c35 + 5d084c9b + 07dc88cf |
 | step-007 | EPIC-03 | done | Source-Snapshot-Identität und residente Registry mit injizierbarem Ergebnis | - | cbd79a51 | approved | cbd79a51 + 1c3d2b3c + 7da30606 |
 | step-008 | EPIC-03 | done | Deterministische Source-Match-Auflösung über Project.AssemblyName | - | 9511b8f2 | approved | 9511b8f2 + c2ac1473 + a2062fb7 |
-| step-009 | EPIC-03 | in_progress | Source-backed Assembly-Context mit deterministischem Decompilation-Fallback verbinden | - | - | - | 22490501 |
+| step-009 | EPIC-03 | done | Source-backed Assembly-Context mit deterministischem Decompilation-Fallback verbinden | - | d2814147 | approved | d2814147 + 60c60e52 + aa900d52 |
 
 ## Config
 
@@ -131,3 +131,8 @@ mit dem Assembly-Context und erhält bei `no-match`, `ambiguous`,
 `unavailable` oder nicht nutzbarem Source-Projekt den bestehenden statischen
 Decompilation-Fallback. Provider-Akquisition und MCP-Registrierung bleiben
 Folgepakete.
+
+Step 009 wurde durch den neuen Kritiker genehmigt (`aa900d52`). Die Source-
+Fallback-Grenze ist damit abgeschlossen. `TD-002` (zentralisierte Origin-
+Werte) und `TD-003` (Prüfung des internen Origin-Alias) sind als bewusst
+architektonische Folgeprüfungen im Tech-Debt-Index dokumentiert.
