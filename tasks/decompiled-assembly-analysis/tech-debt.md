@@ -2,7 +2,7 @@
 task: decompiled-assembly-analysis
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-28T19:37:58+02:00
+last_updated: 2026-08-28T20:22:04+02:00
 ---
 
 # Tech-Debt-Log: decompiled-assembly-analysis
@@ -15,6 +15,8 @@ Duplikationsbeobachtungen außerhalb des jeweiligen Step-Scopes.
 | ID | Bereich / Datei | Priorität | Auto-Fixable | Kurzfassung |
 |---|---|---|---|---|
 | TD-001 | `ExternalSourceMappingValidator` / `SourceSnapshotIdentity` | niedrig | nein | Identische private Drive-Path-Prüfung ist über zwei Vertragsgrenzen dupliziert. |
+| TD-002 | `AssemblyOrigin` / `AssemblyAnalysisContextFactory` | niedrig | nein | Origin-Kind-Werte sind als untypisierte Zeichenketten verteilt; der neue `source-backed`-Wert ist nicht zentralisiert. |
+| TD-003 | `AssemblyOrigin.Kind` | niedrig | nein | Interne Alias-Property ist im statischen Lösungsscope unreferenziert; mögliche Vertrags-/Serializer-Nutzung vor Entfernung prüfen. |
 
 ## Einträge
 
@@ -26,4 +28,24 @@ Duplikationsbeobachtungen außerhalb des jeweiligen Step-Scopes.
 - **Warum nicht sofort gefixt:** Die Methoden liegen außerhalb des Resolvercodes und in den bereits abgeschlossenen Konfigurations- bzw. Snapshot-Identitätsverträgen. Eine gemeinsame Ablage würde mindestens beide Vertragsgrenzen und wahrscheinlich die bestehende `PathNormalizer`-API berühren.
 - **Vorschlag:** Bei einer ohnehin anstehenden, vertraglich passenden Pfadnormalisierung prüfen, ob ein gemeinsamer interner Helper ohne neue öffentliche API und ohne Semantikänderung fachlich sinnvoll ist.
 - **Auto-Fixable:** nein — die geeignete gemeinsame Ablage und der zulässige Vertragszuschnitt erfordern Architektur-Ermessen.
+- **Status:** offen
+
+### TD-002 — Origin-Kind-Werte typisieren oder zentralisieren [Priorität: niedrig] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-009 (Kritiker-Review vom 2026-08-28)
+- **Ort:** `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs:112`; verwandte Werte in `src/AiNetLinter/Mcp/Assemblies/AssemblyAnalysisSession.cs:410`, `src/AiNetLinter/Mcp/Assemblies/AssemblyRoslynWorkspaceFactory.cs:47` und `src/AiNetLinter/Mcp/Assemblies/AssemblyAnalysisSessionModels.cs:30`
+- **Befund:** Der Magic-Value-Audit findet den neu eingeführten Origin-Wert `"source-backed"` einmalig. Die parallele Decompilation-Kennung ist ebenfalls als Literal in mehreren Assembly-Pfaden und als Vergleich in `IsDecompiled` hinterlegt.
+- **Warum nicht sofort gefixt:** Origin-Werte sind ein bestehender maschinenlesbarer/formatierter Vertrag. Eine Umstellung auf gemeinsame Konstanten oder ein Enum muss die bestehenden Wire-/Textwerte und spätere weitere Herkunftstypen berücksichtigen und gehört nicht in diesen Review.
+- **Vorschlag:** Bei der nächsten Origin-Vertragserweiterung eine zentrale, typgesicherte Herkunftsrepräsentation mit unveränderten serialisierten Werten einführen.
+- **Auto-Fixable:** nein — die geeignete Form und der Wire-Vertrag erfordern Architektur-Ermessen.
+- **Status:** offen
+
+### TD-003 — Unreferenzierte `AssemblyOrigin.Kind`-Property prüfen [Priorität: niedrig] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-009 (Kritiker-Review vom 2026-08-28)
+- **Ort:** `src/AiNetLinter/Mcp/Assemblies/AssemblyAnalysisSessionModels.cs:28`
+- **Befund:** Der Dead-Code-Audit meldet die interne Alias-Property `Kind` mit Low Confidence als unreferenziert. Die neue Herkunftsausgabe verwendet `OriginKind` beziehungsweise `IsDecompiled`; die Property ist nicht Teil der Step-009-Änderung.
+- **Warum nicht sofort gefixt:** Der statische Audit kann interne Vertrags-, Serializer- oder `InternalsVisibleTo`-Nutzung nicht vollständig ausschließen. Die Property liegt außerdem außerhalb des eigentlichen Source-/Fallback-Vertrags.
+- **Vorschlag:** Bei einer gezielten Origin-Modellbereinigung Referenz-/Serialisierungsbedarf bestätigen und die Property anschließend entfernen oder bewusst als Kompatibilitätsalias behalten.
+- **Auto-Fixable:** nein — vor einer Entfernung ist eine Vertragsentscheidung erforderlich.
 - **Status:** offen
