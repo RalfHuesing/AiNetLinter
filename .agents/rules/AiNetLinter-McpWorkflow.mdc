@@ -21,8 +21,18 @@ aber nicht die semantische MCP-Abfrage.
 
 ## Standard
 
-- Für jeden projektbezogenen MCP-Tool-Aufruf den absoluten `projectRoot`
-  mitsenden. `get_server_health` darf ohne Projektfilter verwendet werden.
+- Jeder zielgebundene MCP-Tool-Aufruf erhält `targetType` (`project` oder
+  `assembly`) und den absoluten `targetPath`. `targetType=project` adressiert
+  den Projektroot; `targetType=assembly` ist nur für die spezialisierten
+  Assembly-Tools verfügbar.
+- `get_server_health` ist die einzige Ausnahme mit einem optionalen Target:
+  `targetType` und `targetPath` müssen paarweise angegeben werden; ohne Target
+  aggregiert das Tool den Serverzustand. `report_observability_feedback` ist
+  nicht zielgebunden und erhält keinen Target-Block.
+- Das Query-Argument wird ausschließlich in den Resource-URIs
+  `ainetlinter://overview{?projectRoot}` und
+  `ainetlinter://rules{?projectRoot}` verwendet; dort ist es absolut und
+  URL-kodiert anzugeben.
 - Die aktuellen Tool- und Parameterschemas aus der MCP-Tooldefinition verwenden
   (typischerweise über `tools/list` bereitgestellt); diese Regel dupliziert keine
   Toolschemas.
@@ -53,11 +63,12 @@ Roslyn-Solutionindexes. Danach sind `get_index_scope` (Indexabdeckung),
 Arbeit, Konfiguration und exakte Textarbeit erlaubt. Sie ersetzen bei
 C#-Symbol-, Referenz- und Impact-Fragen nicht die semantische MCP-Analyse.
 
-Für beide Assembly-Tools ist `assemblyPath` ein absoluter, lokaler DLL-Pfad;
-`projectRoot` ist optional und liefert den Consumer-Kontext. Die Analyse ist
-metadata-only und führt die DLL nicht aus. Bei `inspect_assembly` zuerst die
-öffentliche API untersuchen; `find_assembly_extensions` prüft klassische C#-
-Extensions und kann mit `receiverType` die Roslyn-Anwendbarkeit bewerten.
+Für beide Assembly-Tools sind `targetType: "assembly"` und `targetPath` mit
+einem absoluten, lokalen DLL-Pfad Pflicht. Die Spezialtools arbeiten
+metadata-only, benötigen kein Consumer-Projekt und laden oder führen die DLL
+nicht aus. Bei `inspect_assembly` zuerst die öffentliche API untersuchen;
+`find_assembly_extensions` prüft klassische C#-Extensions und weist ohne
+Consumer-Projekt die Roslyn-Anwendbarkeit als `not_decidable` aus.
 `completeness` sowie Trunkierungsangaben beachten.
 
 Bei `PROJECT_NOT_INITIALIZED` oder `RULES_INVALID` nicht ungefragt eine
