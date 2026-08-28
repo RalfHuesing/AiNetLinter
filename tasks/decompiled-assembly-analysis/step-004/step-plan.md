@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: blocked
 type: step-plan
 task: decompiled-assembly-analysis
 step: 004

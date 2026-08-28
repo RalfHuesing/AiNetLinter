@@ -2,7 +2,7 @@
 task: decompiled-assembly-analysis
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-28T13:25:47+02:00
+last_updated: 2026-08-28T14:37:34+02:00
 ---
 
 # CodeMap: decompiled-assembly-analysis
@@ -27,7 +27,7 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 
 ## Assembly-, Roslyn- und Referenzanalyse
 
-- **`src/AiNetLinter/Mcp/Assemblies/`** — enthält Fingerprint-/Cache-/Decompilation-/Referenzresolver-Primitiven, die statische Assembly-Sessions in readonly Roslyn-Snapshots überführen.
+- **`src/AiNetLinter/Mcp/Assemblies/`** — enthält Session-, immutable Generation-/Pointer-Cache-, typisierte Manifest-, Budget-, Workspace- und PE-Referenzbausteine für readonly Roslyn-Snapshots.
 - **`src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/`** — enthält die Assembly-Analyse, deren Kontextfabrik die statische Session sowie die bestehenden MCP-Tools und DTOs verbindet.
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/`** — enthält Symbolsuche, Referenzen und Strukturabfragen als zentrale Roslyn-Konsumenten für beide Target-Arten.
 - **`src/AiNetLinter/Mcp/Tools/Analysis/`** — enthält allgemeine Analysewerkzeuge, deren Dispatch und Herkunftssemantik erweitert werden müssen.
@@ -55,6 +55,8 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 - **`src/AiNetLinter.FastTests/Mcp/Projects/`** — enthält schnelle Tests für Projekt-Registry, Leases, Ladebarrieren und Eviction.
 - **`src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/`** — enthält schnelle Assembly-Toolregressionen sowie Session-, Cache-, Grenzwert- und Snapshot-Tests.
 - **`src/AiNetLinter.FastTests/Mcp/`** — enthält weitere schnelle MCP-Vertrags-, Result- und Tooltests für Regressionen.
+- **`src/AiNetLinter.IntegrationTests/Architecture/McpProcessArchitectureGuardTests.cs`** — enthält den freien Architekturquellscan mit dem zentralen Generated-/bin-Ausschluss für Cachequellen (zuletzt: step-004).
+- **`src/AiNetLinter.IntegrationTests/Platform/LoadedFixtureTests.cs`** — enthält den geladenen Fixture-/Source-Katalogscan mit dem zentralen Generated-/bin-Ausschluss (zuletzt: step-004).
 - **`src/AiNetLinter.IntegrationTests/Mcp/`** — enthält MCP-Daemon-, Host-, Staleness-, Tool- und End-to-End-Tests für echte Projekt-/Serverabläufe.
 - **`src/AiNetLinter.TestKit/Mcp/`** — enthält wiederverwendbare MCP-, Roslyn-, Fixture- und temporäre Dateisystem-Hilfen für isolierte externe Analyse-Tests.
 - **`src/AiNetLinter.TestKit/RoslynTestSolutionFactory.cs`, `TestTempDirectory.cs` und `ProjectRegistryFixture.cs`** — liefern die vorhandene Adhoc-Roslyn-/Referenz-, Repo-Temp- und Registry-Testinfrastruktur für Assembly-Sessions.
