@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T23:38:45+02:00
+last_updated: 2026-08-29T00:01:36+02:00
 rules_dir: .agents/rules
 total_steps: 14
 current_step: step-014
@@ -13,12 +13,12 @@ current_step: step-014
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 13 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-014` (in_progress; Gitea-Provider-Port und Fehlersemantik)
+- **Steps gesamt:** 14 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-014` (approved; nächster EPIC-04-Schnitt wird geplant)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-28T23:38:45+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T00:01:36+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -38,7 +38,7 @@ current_step: step-014
 | step-011 | EPIC-03 | done | Support-/Lease-Regressionen und Orchestrator-Testzuordnung korrigieren | step-010 | 6e38b4c2 | approved | 6e38b4c2 + d035772c + 65f1c564 |
 | step-012 | EPIC-03 | done | Gemeinsame Host-Komposition für direkte Assembly-MCP-Tools verdrahten | - | db386bc4 | issues → step-013 approved | db386bc4 + 12b6dcce + 16ebeda5 |
 | step-013 | EPIC-03 | done | Assembly-Host-Wiring und Session-Lifetime absichern | step-012 | 1cd279f0 | approved | 1cd279f0 + 6ba95124 + 723d2a3b |
-| step-014 | EPIC-04 | in_progress | Injizierbaren External-Source-Port für Gitea-Auth- und Transportfehler schärfen | - | - | - | e40bef38 |
+| step-014 | EPIC-04 | done | Injizierbaren External-Source-Port für Gitea-Auth- und Transportfehler schärfen | - | 3f83c5f2 | approved | 3f83c5f2 + 804f00b0 + 0902a7b7 |
 
 ## Config
 
@@ -179,3 +179,8 @@ Roadmap markiert. Step 014 ist als erster kontextbegrenzter EPIC-04-Schnitt
 aktiviert (`e40bef38`): typisierte Gitea-nahe Auth-/Transportfehler am
 bestehenden Provider-Port und deterministische Test-Doubles; echte
 Akquisition, Clone/Fetch/Refresh und Source-of-Truth bleiben Folgepakete.
+
+Step 014 wurde durch den neuen Kritiker genehmigt (`0902a7b7`), ohne neue
+Tech-Debt-Funde. Die typisierte Failure-Grenze ist abgeschlossen; EPIC-04
+bleibt für die echte Repository-Akquisition und atomare Source-of-Truth-
+Veröffentlichung offen.
