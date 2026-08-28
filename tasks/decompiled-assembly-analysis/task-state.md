@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T22:54:12+02:00
+last_updated: 2026-08-28T23:22:14+02:00
 rules_dir: .agents/rules
 total_steps: 13
 current_step: step-013
@@ -14,11 +14,11 @@ current_step: step-013
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 13 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-013` (in_progress; Korrektur zu Step 012)
+- **Aktueller Schritt:** `step-013` (approved; nächster EPIC-03-Schnitt wird geplant)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-28T22:54:12+02:00
+- **Zuletzt aktualisiert:** 2026-08-28T23:22:14+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -36,8 +36,8 @@ current_step: step-013
 | step-009 | EPIC-03 | done | Source-backed Assembly-Context mit deterministischem Decompilation-Fallback verbinden | - | d2814147 | approved | d2814147 + 60c60e52 + aa900d52 |
 | step-010 | EPIC-03 | done | Provider-/Registry-Selection für direkte Assembly-Tool-Unterstützung komponieren | - | 28b7b76d | issues → step-011 approved | 28b7b76d + 410550b4 + a92787eb |
 | step-011 | EPIC-03 | done | Support-/Lease-Regressionen und Orchestrator-Testzuordnung korrigieren | step-010 | 6e38b4c2 | approved | 6e38b4c2 + d035772c + 65f1c564 |
-| step-012 | EPIC-03 | issues → step-013 | Gemeinsame Host-Komposition für direkte Assembly-MCP-Tools verdrahten | - | db386bc4 | issues | db386bc4 + 12b6dcce + 16ebeda5 |
-| step-013 | EPIC-03 | in_progress | Assembly-Host-Wiring und Session-Lifetime absichern | step-012 | - | - | 102b9331 |
+| step-012 | EPIC-03 | done | Gemeinsame Host-Komposition für direkte Assembly-MCP-Tools verdrahten | - | db386bc4 | issues → step-013 approved | db386bc4 + 12b6dcce + 16ebeda5 |
+| step-013 | EPIC-03 | done | Assembly-Host-Wiring und Session-Lifetime absichern | step-012 | 1cd279f0 | approved | 1cd279f0 + 6ba95124 + 723d2a3b |
 
 ## Config
 
@@ -167,3 +167,8 @@ Der Kritiker fand in Step 012 zwei In-Scope-Wiring-Lücken (`16ebeda5`): der
 registrierte source-backed Callback und die Mehrfach-Session-Lifetime der
 Daemon-Composition waren nicht direkt nachgewiesen. Step 013 bündelt diese
 Regressionen als kontextbegrenzte Korrekturrunde.
+
+Step 013 wurde durch den neuen Kritiker genehmigt (`723d2a3b`). Der echte
+registrierte Callback ist source-backed verifiziert, dieselbe Daemon-
+Composition überlebt mehrere Sessions und wird erst am Hostende freigegeben;
+`TD-004` ist durch die gemeinsame Testfabrik erledigt.
