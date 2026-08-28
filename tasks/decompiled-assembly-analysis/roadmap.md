@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-28T12:49:00+02:00
+last_updated: 2026-08-28T16:53:38+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -33,7 +33,15 @@ Kompatibilitäts- und Fehlermodell-Entscheidungen aus Konzept Phase 1.
 
   Startpunkt; Grundlage für alle folgenden Epics.
 
-- [ ] **EPIC-02 — Residente Assembly-Sessions mit statischer Decompilation** —
+- [x] **EPIC-02 — Residente Assembly-Sessions mit statischer Decompilation** —
+
+  **Abschlussnachweis:** `step-003` hat das statische Assembly-Session-
+  Fundament implementiert (`step-003/step-result.md`, Code-Commit
+  `0704b763`). Die genehmigte Korrektur `step-004` hat die sechs Review-
+  Findings zu Cache-/Manifest-Integrität, Limits, Referenzen, Identität,
+  Generated-Source-Scans und gebündeltem Tech-Debt behoben
+  (`step-004/step-result.md`, Code-Commit `639f0fc47c8f90897db12c868ecd1295f608ad1a`;
+  genehmigt durch `step-004/step-review.md`).
 
 **Zweck:** Unbekannte DLLs ohne Projektdefinition dauerhaft analysierbar machen:
 mit eigener Assembly-Session, Fingerprint- und Generationsidentität,
@@ -47,6 +55,11 @@ werden an diese Session-Grenze angeschlossen.
   Abhängigkeit: EPIC-01.
 
 - [ ] **EPIC-03 — Explizite externe Source-Solutions und Snapshot-Auflösung** —
+
+  **Nächster Umsetzungsschritt:** `step-005` bündelt Mapping-Vertrag,
+  Snapshot-Identität, Validierung, readonly Source-Registry und die gemeinsame
+  Assembly-/Projekt-Session-Anbindung. Die eigentliche Gitea-Akquisition bleibt
+  EPIC-04.
 
 **Zweck:** Eine globale, explizite Mapping-Konfiguration für externe Quellen
 einführen und daraus vollständige Solution-Snapshots, den passenden
