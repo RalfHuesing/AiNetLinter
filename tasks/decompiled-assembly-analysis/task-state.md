@@ -1,8 +1,8 @@
 ---
-status: paused_after_step
+status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T16:21:43+02:00
+last_updated: 2026-08-28T16:42:56+02:00
 rules_dir: .agents/rules
 total_steps: 4
 current_step: step-004
@@ -12,13 +12,13 @@ current_step: step-004
 
 ## Übersicht
 
-- **Task-Status:** `paused_after_step`
+- **Task-Status:** `executing`
 - **Steps gesamt:** 4 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-004` (abgeschlossen, Review ausstehend)
+- **Aktueller Schritt:** `step-004` (approved; nächster Epic wird geplant)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-28T19:05:30+02:00
+- **Zuletzt aktualisiert:** 2026-08-28T16:42:56+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -27,8 +27,8 @@ current_step: step-004
 |------|------|--------|-------|----------|-------|----------|--------|
 | step-001 | EPIC-01 | done | Einheitlichen Analysis-Target-Vertrag und Dispatch umstellen | - | f14ff5c2 | issues → step-002 approved | f14ff5c2 |
 | step-002 | EPIC-01 | done | MCP-Workflow-Regel auf den neuen Target-Vertrag synchronisieren | step-001 | 7cbc6d45 | approved | 7cbc6d45 |
-| step-003 | EPIC-02 | done (Korrektur ausstehend) | Statische Assembly-Session mit Fingerprint, Decompilation und Roslyn-Snapshot | - | 0704b763 | issues → step-004 | 0704b763 |
-| step-004 | EPIC-02 | done (pending audit) | Assembly-Session-Fundament korrigieren: Cache, Limits, Referenzen und Identität | step-003 | 639f0fc4 | nicht ausgeführt (Nutzer-Halt) | 639f0fc4 + 07d684ca |
+| step-003 | EPIC-02 | done | Statische Assembly-Session mit Fingerprint, Decompilation und Roslyn-Snapshot | - | 0704b763 | issues → step-004 approved | 0704b763 |
+| step-004 | EPIC-02 | done | Assembly-Session-Fundament korrigieren: Cache, Limits, Referenzen und Identität | step-003 | 639f0fc4 | approved | 639f0fc4 + 07d684ca + f6ba0ed8 |
 
 ## Config
 
@@ -70,10 +70,15 @@ den übrigen Step-004-Funden behoben; Build und beide vollständigen Nicht-
 Stress-Gates sind grün. Ein Kritikerlauf ist wegen des anschließenden
 Nutzer-Halts noch nicht erfolgt.
 
-## Haltvermerk
+## Haltvermerk (erledigt)
 
-Der Nutzer hat angewiesen, unmittelbar nach Abschluss dieses Steps zu stoppen.
-Daher wurden nach dem Coder-Ergebnis kein Kritiker, kein weiterer Step, kein
-Global-Audit und keine `task-summary.md` ausgeführt. Der erledigte Coder-
-Sub-Agent wurde geschlossen; beim Fortsetzen ist für den Kritiker ein neuer
-Sub-Agent zu starten, ohne bestehende Sub-Agenten wiederzuverwenden.
+Der Nutzer hatte angewiesen, unmittelbar nach Abschluss dieses Steps zu
+stoppen. Der Coder wurde geschlossen; zu diesem Zeitpunkt wurden Kritiker,
+weitere Steps, Global-Audit und `task-summary.md` nicht ausgeführt.
+
+## Wiederaufnahme
+
+Auf Nutzeranweisung wurde der Task am 2026-08-28T16:42:56+02:00 fortgesetzt.
+Ein neuer Kritiker prüfte Step 004 und genehmigte ihn (`f6ba0ed8`); dieser
+Sub-Agent wurde anschließend geschlossen. Für jeden weiteren Rollenaufruf
+wird erneut ein neuer Sub-Agent gestartet.
