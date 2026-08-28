@@ -28,6 +28,7 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 ## Assembly-, Roslyn- und Referenzanalyse
 
 - **`src/AiNetLinter/Mcp/Assemblies/`** — enthält Session-, immutable Generation-/Pointer-Cache-, typisierte Manifest-, Budget-, Workspace- und PE-Referenzbausteine für readonly Roslyn-Snapshots.
+- **`src/AiNetLinter/Mcp/Assemblies/AssemblyCacheContract.cs`, `AssemblyDiagnosticCodes.cs`, `AssemblySessionStatusExtensions.cs` und `AssemblyCacheCleanup.cs`** — bündeln Cache-Wirewerte, Assembly-Diagnosecodes, Statusmapping und sichere Bereinigungshilfen.
 - **`src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/`** — enthält die Assembly-Analyse, deren Kontextfabrik die statische Session sowie die bestehenden MCP-Tools und DTOs verbindet.
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/`** — enthält Symbolsuche, Referenzen und Strukturabfragen als zentrale Roslyn-Konsumenten für beide Target-Arten.
 - **`src/AiNetLinter/Mcp/Tools/Analysis/`** — enthält allgemeine Analysewerkzeuge, deren Dispatch und Herkunftssemantik erweitert werden müssen.
@@ -60,6 +61,7 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 - **`src/AiNetLinter.IntegrationTests/Mcp/`** — enthält MCP-Daemon-, Host-, Staleness-, Tool- und End-to-End-Tests für echte Projekt-/Serverabläufe.
 - **`src/AiNetLinter.TestKit/Mcp/`** — enthält wiederverwendbare MCP-, Roslyn-, Fixture- und temporäre Dateisystem-Hilfen für isolierte externe Analyse-Tests.
 - **`src/AiNetLinter.TestKit/RoslynTestSolutionFactory.cs`, `TestTempDirectory.cs` und `ProjectRegistryFixture.cs`** — liefern die vorhandene Adhoc-Roslyn-/Referenz-, Repo-Temp- und Registry-Testinfrastruktur für Assembly-Sessions.
+- **`src/AiNetLinter.TestKit/AssemblyTestHelper.cs`, `McpTestResultText.cs` und `TestWaiter.cs`** — enthalten gemeinsame Assembly-Emission, MCP-Text- und Condition-Wait-Helfer für FastTests.
 
 ## Dokumentation und Agentenverträge
 
