@@ -1,5 +1,5 @@
 ---
-status: done (pending audit)
+status: done
 type: step-plan
 task: decompiled-assembly-analysis
 step: 002
@@ -85,4 +85,3 @@ Registrierungen, damit Agenten daraus gültige Tool-Aufrufe ableiten.
 ## Bekannte Ausnahmen
 
 - Keine.
-
