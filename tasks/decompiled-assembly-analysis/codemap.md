@@ -2,7 +2,7 @@
 task: decompiled-assembly-analysis
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-28T11:11:40+02:00
+last_updated: 2026-08-28T11:58:00+02:00
 ---
 
 # CodeMap: decompiled-assembly-analysis
@@ -13,6 +13,7 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 
 ## MCP-Ziel- und Session-Infrastruktur
 
+- **`src/AiNetLinter/Mcp/AnalysisTarget.cs`, `AnalysisTargetResolver.cs` und `AnalysisToolCall.cs`** — enthalten den unveränderlichen Target-Request, die strikte Projekt-/Assembly-Pfadauflösung und die gemeinsame Dispatch-Grenze vor Registry-Lease oder Assembly-Metadatenadapter.
 - **`src/AiNetLinter/Mcp/Projects/`** — enthält Projektdefinition, projektbezogene Registry, Leases, Creation Barrier, TTL/LRU-Eviction und Snapshot-Zustand als Ausgangspunkt für die gemeinsame Analyse-Registry.
 - **`src/AiNetLinter/Mcp/McpCodeGraphServer.cs`** — enthält die residente projektbasierte Roslyn-/MSBuild-Session mit Lade-, Health-, Staleness- und Refresh-Lifecycle.
 - **`src/AiNetLinter/Mcp/McpCodeGraphServerOptions.cs`** — bündelt Konfiguration und Hooks für die bestehende Projekt-Session und deren readonly Snapshot-Modus.
