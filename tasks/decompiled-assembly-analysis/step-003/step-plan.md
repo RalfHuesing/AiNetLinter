@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: done (pending audit)
 type: step-plan
 task: decompiled-assembly-analysis
 step: 003

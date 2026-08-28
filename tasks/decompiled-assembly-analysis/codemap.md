@@ -2,7 +2,7 @@
 task: decompiled-assembly-analysis
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-28T12:49:00+02:00
+last_updated: 2026-08-28T13:25:47+02:00
 ---
 
 # CodeMap: decompiled-assembly-analysis
@@ -27,7 +27,8 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 
 ## Assembly-, Roslyn- und Referenzanalyse
 
-- **`src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/`** — enthält die aktuelle metadata-only Assembly-Analyse, Kontext-/Referenzauflösung und Assembly-spezifischen MCP-Tools.
+- **`src/AiNetLinter/Mcp/Assemblies/`** — enthält Fingerprint-/Cache-/Decompilation-/Referenzresolver-Primitiven, die statische Assembly-Sessions in readonly Roslyn-Snapshots überführen.
+- **`src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/`** — enthält die Assembly-Analyse, deren Kontextfabrik die statische Session sowie die bestehenden MCP-Tools und DTOs verbindet.
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/`** — enthält Symbolsuche, Referenzen und Strukturabfragen als zentrale Roslyn-Konsumenten für beide Target-Arten.
 - **`src/AiNetLinter/Mcp/Tools/Analysis/`** — enthält allgemeine Analysewerkzeuge, deren Dispatch und Herkunftssemantik erweitert werden müssen.
 - **`src/AiNetLinter/Mcp/Tools/FileStructure/`** — enthält Datei-/Dokumentstrukturabfragen für generierte und quellbasierte Roslyn-Dokumente.
@@ -51,7 +52,7 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 ## Tests und Test-Infrastruktur
 
 - **`src/AiNetLinter.FastTests/Mcp/Projects/`** — enthält schnelle Tests für Projekt-Registry, Leases, Ladebarrieren und Eviction.
-- **`src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/`** — enthält die aktuellen schnellen Assembly-Metadaten-Tooltests und den Ausgangspunkt für Session-/Decompilation-Tests.
+- **`src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/`** — enthält schnelle Assembly-Toolregressionen sowie Session-, Cache-, Grenzwert- und Snapshot-Tests.
 - **`src/AiNetLinter.FastTests/Mcp/`** — enthält weitere schnelle MCP-Vertrags-, Result- und Tooltests für Regressionen.
 - **`src/AiNetLinter.IntegrationTests/Mcp/`** — enthält MCP-Daemon-, Host-, Staleness-, Tool- und End-to-End-Tests für echte Projekt-/Serverabläufe.
 - **`src/AiNetLinter.TestKit/Mcp/`** — enthält wiederverwendbare MCP-, Roslyn-, Fixture- und temporäre Dateisystem-Hilfen für isolierte externe Analyse-Tests.
