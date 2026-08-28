@@ -54,75 +54,40 @@ werden an diese Session-Grenze angeschlossen.
 
   Abhängigkeit: EPIC-01.
 
-- [ ] **EPIC-03 — Explizite externe Source-Solutions und Snapshot-Auflösung** —
+- [x] **EPIC-03 — Explizite externe Source-Solutions und Snapshot-Auflösung** —
+  abgeschlossen durch die genehmigten Steps `step-005` bis `step-013`.
 
-  **Split-Gate-Aufteilung:** `step-005` war ausschließlich der große,
-  kontextbegrenzte Mapping-/Validierungsschnitt: globaler Mapping-Vertrag,
-  strikte Diagnose- und Pfadauflösung, ein injizierbarer Provider-Port sowie
-  die dafür nötigen Unit-/Component-/Vertragstests und minimale
-  Konfigurationsdokumentation. Die Korrekturrunde `step-006` ist genehmigt
-  (`step-006/step-review.md`); EPIC-03 bleibt offen.
+  **Abschlussnachweis:** `step-005`/`step-006` liefern den globalen,
+  strikt validierten Mapping-Vertrag, Pfadauflösung, Diagnosen und den
+  injizierbaren Provider-Port. `step-007` liefert die Snapshot-Identität,
+  residente Registry und Leases; `step-008` das deterministische
+  `Project.AssemblyName`-Matching mit `matched`, `no-match` und `ambiguous`.
+  `step-009` verbindet das gematchte Source-Projekt mit der Factory und hält
+  die statische Decompilation als deterministischen Fallback. `step-010` und
+  die genehmigte Korrektur `step-011` komponieren Provider, Registry,
+  Selection, Lease-Lifetime und Support-Fallback. `step-012` und die genehmigte
+  Korrektur `step-013` schließen die gemeinsame Host-Komposition, das direkte
+  registrierte Wiring sowie die geteilte Lifetime über mehrere Daemon-Sessions;
+  der Nachweis liegt in den jeweiligen Result-/Review-Dateien.
 
-  `step-007` hat als vertikalen Schnitt nur die Source-Snapshot-Identität für
-  Repository, tatsächlich geladene Revision und Solution-Pfad, eine residente
-  in-memory Snapshot-Registry mit Leases sowie das injizierbare Provider-
-  Ergebnis umgesetzt und wurde genehmigt. Die Registry dedupliziert
-  vollständige Source-Solutions unabhängig von Assembly-Aliasen; sie lädt
-  keine Solutions und entscheidet kein `Project.AssemblyName`-Matching.
+  **Fachliche Grenze:** EPIC-03 ist damit innerhalb seines Ziels der
+  expliziten Source-Auflösung abgeschlossen. Die noch nicht implementierte
+  konkrete Gitea-Akquisition — Authentifizierung, Netzwerk-/Git-Semantik,
+  Clone/Fetch/Refresh, atomare Snapshot-Veröffentlichung und die
+  Source-of-Truth-Regeln für dirty/unbuilt Checkouts — gehört vollständig zu
+  EPIC-04 und ist kein offener EPIC-03-Rest. `TD-004` ist durch `step-013`
+  erledigt; `TD-001` bis `TD-003` bleiben als nicht direkt zu diesem Abschluss
+  gehöriger Tech-Debt offen.
 
-  `step-008` ist abgeschlossen und genehmigt. Der Resolver matcht einen
-  expliziten Assembly-Alias deterministisch gegen `Project.AssemblyName` eines
-  über die Snapshot-Registry geleasten, read-only Source-Snapshots und liefert
-  `matched`, `no-match` oder `ambiguous` mit stabiler Evidence und Confidence.
+  **Zweck:** Eine globale, explizite Mapping-Konfiguration für externe Quellen
+  einführen und daraus vollständige Solution-Snapshots, den passenden
+  AssemblyName/Projektkandidaten sowie Evidenz und Confidence ableiten. Der
+  Cluster umfasst getrennte Source-Registrierung und -Caches, gemeinsame
+  Snapshot-Identität, Alias-Wiederverwendung zwischen direkter DLL-Analyse und
+  Referenzauflösung sowie readonly-fähige Quell-Sessions; bei fehlender oder
+  mehrdeutiger Zuordnung bleibt die Decompilation der definierte Fallback.
 
-  **Abgeschlossen durch `step-009`:** Die genehmigte Factory-Projektion
-  verwendet ein bereits gematchtes Source-Projekt mit kontrolliertem
-  Lease-Kontext als source-backed Assembly-Context. Bei `no-match`,
-  `ambiguous`, unavailable, fehlendem Projekt oder nicht verfügbarer
-  Compilation bleibt die bestehende statische Decompilation der
-  deterministische Fallback. Source-Origin und Decompilation-Hinweis sind
-  dabei getrennt; Registry-, Snapshot- und Lease-Ownership bleibt unverändert.
-
-  **Abgeschlossen durch `step-010` und Korrektur `step-011`:**
-  `AssemblySourceSelectionOrchestrator` und der gemeinsame Support-Overload
-  komponieren Loader-Result, Provider-Port, `SourceSnapshotRegistry.Acquire`,
-  statische Assembly-Identität und den genehmigten Match-/Selection-Vertrag.
-  Der disposable Support-Scope hält die Source-Lease bis nach Factory und
-  Result-Builder. `step-011` hat die Lease-, Cancellation- und Result-Builder-
-  Regressionen ergänzt und wurde genehmigt; Source-backed und der
-  unveränderte Decompilation-Fallback sind damit an der gemeinsamen
-  Support-Grenze gesichert.
-
-  **Nächster Schnitt → `step-012`:** Eine gemeinsame
-  `AssemblyAnalysisHostComposition` übernimmt die explizite Host-Lifetime für
-  Loader-Result, Provider, `SourceSnapshotRegistry` und Orchestrator. Der
-  direkte Registration-Adapter führt diese Instanz ausschließlich über
-  `AssemblyAnalysisToolRegistrations` und die beiden Assembly-Tool-Wrapper an
-  den vorhandenen `AssemblyAnalysisToolSupport`-Overload. Stdio verwendet eine
-  Instanz pro MCP-Serverlauf, der Daemon eine Instanz pro Daemonlauf und teilt
-  sie über seine Sessions.
-
-  Der Split-Gate-Schnitt umfasst einen primären Host-Composition-Vertrag, einen
-  eng gekoppelten direkten Registration-Adapter, drei Schichten, acht
-  Akzeptanzkriterien und zwölf `read_first`-Dateien. `AnalysisToolCall` bleibt
-  unverändert, weil es den kanonischen Assembly-Callback bereits liefert;
-  Projekt-Tools, weitere MCP-Registrierungen, transitive Referenzen, Refresh
-  und persistenter Cache bleiben außen. TD-001 bis TD-004 werden nicht künstlich
-  bearbeitet: keiner ist im geplanten Consumer-Schnitt direkt und sicher zu
-  beheben. Die eigentliche Gitea-Source-of-Truth, Authentifizierung und
-  Refresh-Semantik bleibt vollständig in EPIC-04.
-
-**Zweck:** Eine globale, explizite Mapping-Konfiguration für externe Quellen
-einführen und daraus vollständige Solution-Snapshots, den passenden
-AssemblyName/Projektkandidaten sowie Evidenz und Confidence ableiten. Der
-Cluster umfasst getrennte Source-Registrierung und -Caches, gemeinsame
-Snapshot-Identität, Alias-Wiederverwendung zwischen direkter DLL-Analyse und
-Referenzauflösung sowie readonly-fähige Quell-Sessions; bei fehlender oder
-mehrdeutiger Zuordnung bleibt die Decompilation der definierte Fallback.
-
-  Abhängigkeit: EPIC-01 und EPIC-02; Umsetzung absichtlich in mindestens zwei
-  vertikale Schnitte geteilt (`step-005` Mapping/Validierung, späterer Step
-  Snapshot/Session).
+  Abhängigkeit: EPIC-01 und EPIC-02.
 
 - [ ] **EPIC-04 — Gitea-Source-of-Truth, Refresh und Fehlersemantik** —
 
@@ -131,8 +96,29 @@ Repository-URL, geladenem Commit, Solution-Pfad und Projektzuordnung laden und
 aktualisieren. Der Cluster behandelt Authentifizierung, Default-Branch-
 Refresh, lokale Cache-/Temp-Verzeichnisse, Cancellation, Netzwerk- und
 Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
-den transparenten Wechsel auf Decompilation, ohne lokale Arbeitskopien zur
-Source-of-Truth zu machen.
+  den transparenten Wechsel auf Decompilation, ohne lokale Arbeitskopien zur
+  Source-of-Truth zu machen.
+
+  **Nächster Schnitt → `step-014`:** Der bestehende injizierbare
+  `IExternalSourceProvider`-Port erhält eine typisierte Auth-/Transport-/
+  Fehlersemantik mit deterministischen Test-Doubles. Der Schnitt ändert das
+  öffentliche Mapping-JSON nicht, führt keine Credential-Konfiguration ein
+  und implementiert keinen Netzwerk- oder Git-Client; erwartete Providerfehler
+  werden als nicht-quellfähige Ergebnisse mit stabilen Diagnosen modelliert,
+  Cancellation bleibt echte Cancellation.
+
+  **Vertikale Folgepaket-Grenzen:**
+
+  - Provider-Port, Auth-/Fehlervertrag und deterministische Doubles — `step-014`.
+  - Repository-Akquisition, Credential-Bindung, Default-Branch und
+    Clone/Fetch/Refresh — nachgelagerter eigener Schnitt.
+  - Atomare Veröffentlichung, Cache-/Manifest-Integrität und korrupte
+    Snapshots — nachgelagerter eigener Schnitt.
+  - Source-of-Truth, dirty/unbuilt Checkout-Abgrenzung und transparente
+    Fallback-/Health-Semantik — nachgelagerter eigener Schnitt.
+
+  Diese Grenzen bleiben sequenzielle vertikale Pakete; EPIC-04 wird nicht als
+  monolithischer Gitea-Featureblock und nicht als Mini-Sweep umgesetzt.
 
   Abhängigkeit: EPIC-03.
 
