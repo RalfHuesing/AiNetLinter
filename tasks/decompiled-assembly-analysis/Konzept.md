@@ -1316,6 +1316,53 @@ Die Registrierungsbeschreibungen müssen den Agenten ausdrücklich sagen:
 
 ## Teststrategie für die spätere Umsetzung
 
+### Testarchitektur, DRY und Laufzeit
+
+Die Tests prüfen die neue AiNetLinter-Funktionalität, nicht die Test-Suites der
+externen Projekte. Alle neuen Resolver-, Session-, Mapping- und Antwortverträge
+erhalten Tests; ein fremdes Projekt wird dafür weder restauriert noch ausgeführt.
+
+Die Testpyramide bleibt an der bestehenden Repository-Struktur ausgerichtet:
+
+1. **FastTests (Unit):** reine Regeln für Target-Parsing, Mapping, Assembly-/Source-
+   Identität, Fingerprints, Cache-Keys, Origin-Hinweise und Fehlerzustände. Diese Tests
+   verwenden keine Prozesse, kein Netzwerk, kein Gitea und keinen NuGet-Restore.
+2. **FastTests (Component):** kleine deklarative Roslyn-Solutions und synthetische
+   Assembly-Szenarien über das vorhandene `AiNetLinter.TestKit`, insbesondere
+   `RoslynTestSolutionFactory` und `PreparedSolutionFixture`. Ein gemeinsames
+   `foo -> bar -> third-party`-Szenario deckt source-backed, dekompilierten und fehlenden
+   Referenzkontext ab, statt für jede Testklasse eigene Fixtures zu bauen.
+3. **Integration/MCP:** wenige repräsentative Tests mit Datei-I/O, lokalem Git-Test-
+   Provider und MCP-Host. Ein Szenario verifiziert jeweils den echten End-to-End-
+   Vertrag; nicht jede Tool-/Quellenkombination wird als vollständiger Prozesslauf
+   vervielfacht.
+4. **Performance/Stress:** gezielte Mess- und Nebenläufigkeitstests bleiben separat
+   markiert. Hohe parallele Last gehört ausschließlich in `Stress` und nicht in den
+   normalen Abschlusslauf.
+
+Gemeinsame Testdaten und Aufbaupfade werden zentral im TestKit gehalten. Tests dürfen
+die gleiche unveränderliche Fixture-Solution wiederverwenden, müssen für mutierende
+Varianten aber einen eigenen Snapshot anlegen. Kleine deterministische Test-Assemblies
+stehen stellvertretend für NuGet-Pakete wie MudBlazor; echte Paket-Restores, große
+Third-Party-Binaries und externe Netzwerk-Repositories gehören nicht in die normale
+Testsuite.
+
+Jeder teure oder externe Schritt erhält einen injizierbaren Test-Doppelgänger und eine
+endliche Cancellation-/Timeout-Grenze. Git-Clone/Fetch, Decompiler-Aufruf, Solution-
+Load und transitive Referenzauflösung werden über Zähler oder aufgezeichnete Aufrufe
+prüfbar gemacht. So testen wir deterministisch, dass ein gemeinsamer Source-Snapshot
+nicht mehrfach geladen und eine DLL nicht mehrfach dekompiliert wird, ohne auf lange
+Wartezeiten oder fragile Zeitmessungen angewiesen zu sein. Absolute Laufzeitgrenzen
+dienen nur als großzügige Regression-Sicherung; die primären Performance-Verträge
+sind begrenzte Arbeit, Wiederverwendung und keine unkontrollierte Vervielfachung.
+
+Neue Tests dürfen keine unbounded Retries, Sleeps, Netzwerkzugriffe oder impliziten
+Paket-/Solution-Restores enthalten. Ein kompletter Testfall muss mit kleinem Fixture
+und begrenztem Timeout laufen. Ein gezielter Performance-Test darf länger dauern,
+bleibt aber messbar und klar von den normalen Unit-/Component-Läufen getrennt. Der
+Abschlusslauf hält die bestehenden Projektvorgaben ein: FastTests und IntegrationTests
+ohne `Stress` müssen vollständig und in vertretbarer Zeit ausführbar bleiben.
+
 ### Unit-/Component-Tests
 
 - Target-Parsing: gültige und ungültige Kombinationen, absoluter Pfad, falsche DLL-
