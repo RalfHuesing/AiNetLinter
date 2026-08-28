@@ -23,6 +23,11 @@ internal sealed class AssemblyRoslynWorkspaceFactory
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (request.Documents.Count == 0)
+        {
+            throw new InvalidOperationException("Der synthetische Roslyn-Snapshot benötigt mindestens ein Dokument.");
+        }
+
         var workspace = new AdhocWorkspace();
         var projectId = ProjectId.CreateNewId("decompiled-assembly");
         var references = request.MetadataReferences
@@ -56,13 +61,21 @@ internal sealed class AssemblyRoslynWorkspaceFactory
 
         var project = solution.GetProject(projectId)
             ?? throw new InvalidOperationException("Das synthetische Assembly-Projekt konnte nicht erzeugt werden.");
+        var projectDocuments = project.Documents.ToList();
+        if (projectDocuments.Count != request.Documents.Count
+            || projectDocuments.Any(document => string.IsNullOrWhiteSpace(document.FilePath)))
+        {
+            workspace.Dispose();
+            throw new InvalidOperationException("Der Roslyn-Snapshot enthält nicht alle erwarteten Dokumente.");
+        }
+
         var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("Die synthetische Assembly-Compilation konnte nicht erzeugt werden.");
         return new AssemblyRoslynSnapshot(
             solution,
             projectId,
             compilation,
-            project.Documents.ToList(),
+            projectDocuments,
             origins,
             workspace);
     }

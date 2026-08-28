@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using AiNetLinter.Baseline;
 using AiNetLinter.TestKit;
 using Xunit;
 
@@ -23,6 +24,7 @@ public sealed class McpProcessArchitectureGuardTests
 
         var integrationDirectory = Path.Combine(root, "src", "AiNetLinter.IntegrationTests");
         var sources = Directory.EnumerateFiles(integrationDirectory, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !FileSystemExclusionHelpers.IsGeneratedPath(path))
             .Where(path => !path.EndsWith("McpProcessArchitectureGuardTests.cs", StringComparison.Ordinal))
             .Select(path => (Path: path, Text: File.ReadAllText(path)))
             .ToList();

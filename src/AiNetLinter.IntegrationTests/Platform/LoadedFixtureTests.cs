@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Baseline;
 using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Platform;
@@ -94,6 +95,7 @@ public sealed class LoadedFixtureTests
         const string LoadCall = "SourceFileCatalog." + "LoadAsync(";
 
         var callers = Directory.EnumerateFiles(integrationTestPath, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !FileSystemExclusionHelpers.IsGeneratedPath(path))
             .Where(path => File.ReadAllText(path).Contains(LoadCall, StringComparison.Ordinal))
             .Select(path => Path.GetRelativePath(integrationTestPath, path).Replace('\\', '/'))
             .OrderBy(p => p)

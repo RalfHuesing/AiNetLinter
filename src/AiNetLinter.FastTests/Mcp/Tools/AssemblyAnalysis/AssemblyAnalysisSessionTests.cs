@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies;
@@ -14,6 +15,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 
 [Trait("Category", "Component")]
 // @covers AssemblyDecompilationAdapter
+// @covers AssemblyDecompilationCache
 // @covers AssemblyReferenceResolver
 // @covers AssemblyRoslynWorkspaceFactory
 public sealed class AssemblyAnalysisSessionTests
@@ -84,10 +86,18 @@ public sealed class AssemblyAnalysisSessionTests
         }
 
         var manifestPath = Assert.Single(Directory.EnumerateFiles(cacheRoot, "manifest.json", SearchOption.AllDirectories));
+        var pointerPath = Assert.Single(Directory.EnumerateFiles(cacheRoot, "current.json", SearchOption.AllDirectories));
+        using var pointer = JsonDocument.Parse(File.ReadAllText(pointerPath));
+        var generationPath = Path.Combine(Path.GetDirectoryName(pointerPath)!, pointer.RootElement.GetProperty("generation").GetString()!);
+        Assert.Equal(Path.GetDirectoryName(manifestPath), generationPath, StringComparer.OrdinalIgnoreCase);
         var manifest = File.ReadAllText(manifestPath);
+        using var manifestDocument = JsonDocument.Parse(manifest);
+        Assert.Equal(
+            new[] { "assemblyIdentity", "cacheKey", "cacheSchemaVersion", "complete", "createdUtc", "decompilerVersion", "encoding", "errors", "generatedFiles", "lastAccessUtc", "length", "mtimeUtc", "optionsIdentity", "originalPath", "references", "sha256", "status", "unresolvedReferences", "warnings", "canonicalPath" }.OrderBy(value => value),
+            manifestDocument.RootElement.EnumerateObject().Select(property => property.Name).OrderBy(value => value));
         Assert.Contains("\"status\": \"complete\"", manifest, StringComparison.Ordinal);
         Assert.Contains("generatedFiles", manifest, StringComparison.Ordinal);
-        Assert.Contains("assembly-cache-v1", manifest, StringComparison.Ordinal);
+        Assert.Contains("assembly-cache-v2", manifest, StringComparison.Ordinal);
 
         await using var second = new AssemblyAnalysisSession(assemblyPath, cacheRoot: cacheRoot);
         var cached = await second.RefreshAsync();
@@ -116,7 +126,7 @@ public sealed class AssemblyAnalysisSessionTests
 
         Assert.Equal(AssemblySessionStatus.Complete, refreshed.Status);
         Assert.Contains(Directory.EnumerateFiles(cacheRoot, "manifest.json", SearchOption.AllDirectories), path =>
-            File.ReadAllText(path).Contains("assembly-cache-v1", StringComparison.Ordinal));
+            File.ReadAllText(path).Contains("assembly-cache-v2", StringComparison.Ordinal));
         Assert.Empty(Directory.EnumerateDirectories(cacheRoot, "*.retired-*", SearchOption.AllDirectories));
     }
 
@@ -198,6 +208,53 @@ public sealed class AssemblyAnalysisSessionTests
         Assert.NotNull(session.CurrentGeneration);
         Assert.Equal(initialGeneration.Number, session.CurrentGeneration!.Number);
         Assert.Contains(failedRefresh.Diagnostics, diagnostic => diagnostic.Code == "assembly-fingerprint-failed");
+    }
+
+    [Fact]
+    public async Task RefreshAsync_BudgetsNestedTypeTreesWithoutWholeModuleFallback()
+    {
+        using var temp = TestTempDirectory.Create("assembly-session-nested-limits-");
+        var assemblyPath = EmitAssembly(temp, "NestedLimitProbe", """
+            namespace Probe;
+            public sealed class First
+            {
+                public int Value { get; set; }
+                public event System.EventHandler? Changed;
+                public void Execute() { Changed?.Invoke(this, System.EventArgs.Empty); }
+                public sealed class Nested { public int NestedValue; }
+            }
+            public sealed class Second { public int Value => 2; }
+            """);
+
+        await using var typeLimited = new AssemblyAnalysisSession(
+            assemblyPath,
+            new AssemblyDecompilationOptions(MaxTypes: 1),
+            temp.GetPath("type-cache"));
+        var typeResult = await typeLimited.RefreshAsync();
+
+        Assert.Equal(AssemblySessionStatus.Partial, typeResult.Status);
+        Assert.NotNull(typeLimited.CurrentGeneration);
+        Assert.Contains(typeResult.Diagnostics, diagnostic => diagnostic.Code == "assembly-type-limit");
+        Assert.DoesNotContain(Directory.Exists(temp.GetPath("type-cache"))
+            ? Directory.EnumerateFiles(temp.GetPath("type-cache"), "*.cs", SearchOption.AllDirectories)
+            : [],
+            path => File.ReadAllText(path).Contains("First", StringComparison.Ordinal));
+
+        await using var memberLimited = new AssemblyAnalysisSession(
+            assemblyPath,
+            new AssemblyDecompilationOptions(MaxMembers: 1),
+            temp.GetPath("member-cache"));
+        var memberResult = await memberLimited.RefreshAsync();
+        Assert.Equal(AssemblySessionStatus.Failed, memberResult.Status);
+        Assert.Contains(memberResult.Diagnostics, diagnostic => diagnostic.Code == "assembly-member-limit");
+
+        await using var complexityLimited = new AssemblyAnalysisSession(
+            assemblyPath,
+            new AssemblyDecompilationOptions(MaxComplexity: 1),
+            temp.GetPath("complexity-cache"));
+        var complexityResult = await complexityLimited.RefreshAsync();
+        Assert.Equal(AssemblySessionStatus.Failed, complexityResult.Status);
+        Assert.Contains(complexityResult.Diagnostics, diagnostic => diagnostic.Code == "assembly-complexity-limit");
     }
 
     private static string EmitAssembly(TestTempDirectory temp, string name, string source, params string[] additionalReferences)

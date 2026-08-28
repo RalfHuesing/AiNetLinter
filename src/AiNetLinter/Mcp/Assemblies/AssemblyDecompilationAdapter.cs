@@ -23,9 +23,13 @@ internal sealed class AssemblyDecompilationAdapter
         try
         {
             var selection = SelectTypes(ReadTopLevelTypes(request.AssemblyPath, deadline.Token), request.Options);
+            if (selection.Types.Count == 0)
+            {
+                return Task.FromResult(new DecompilationResult([], selection.Diagnostics, false));
+            }
+
             var decompiler = CreateDecompiler(request.AssemblyPath, references, deadline.Token);
             var documents = DecompileTypes(decompiler, selection.Types, request.Options, deadline.Token, selection.Diagnostics);
-            AddModuleDocumentIfRequired(decompiler, request.Options, selection, documents, deadline.Token);
             return Task.FromResult(new DecompilationResult(documents, selection.Diagnostics, selection.Diagnostics.Count == 0));
         }
         catch (OperationCanceledException)
@@ -59,16 +63,20 @@ internal sealed class AssemblyDecompilationAdapter
             {
                 var source = decompiler.DecompileTypesAsString([type.Handle]);
                 cancellationToken.ThrowIfCancellationRequested();
+                if (string.IsNullOrWhiteSpace(source))
+                {
+                    diagnostics.Add(new("assembly-type-decompilation-empty", $"Typ '{type.MetadataName}' erzeugte keinen Quelltext."));
+                    continue;
+                }
+
                 if (source.Length > options.MaxDocumentCharacters)
                 {
-                    diagnostics.Add(new(
-                        "assembly-document-size-limit",
-                        $"Der dekompilierte Typ '{type.MetadataName}' überschreitet die Dokumentgrenze."));
+                    diagnostics.Add(new("assembly-document-size-limit", $"Der dekompilierte Typ '{type.MetadataName}' überschreitet die Dokumentgrenze."));
                     continue;
                 }
 
                 documents.Add(new DecompiledDocument(
-                    $"source/{documents.Count:D5}-{Sanitize(type.MetadataName)}.cs",
+                    $"source/{documents.Count:D5}-{AssemblyDecompilationCache.SanitizeFileName(type.MetadataName)}.cs",
                     type.MetadataName,
                     source,
                     $"0x{MetadataTokens.GetToken(type.Handle):X8}"));
@@ -79,9 +87,7 @@ internal sealed class AssemblyDecompilationAdapter
             }
             catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or IOException or ICSharpCode.Decompiler.DecompilerException)
             {
-                diagnostics.Add(new(
-                    "assembly-type-decompilation-failed",
-                    $"Typ '{type.MetadataName}' konnte nicht dekompiliert werden: {ex.Message}"));
+                diagnostics.Add(new("assembly-type-decompilation-failed", $"Typ '{type.MetadataName}' konnte nicht dekompiliert werden: {ex.Message}"));
             }
         }
 
@@ -105,17 +111,6 @@ internal sealed class AssemblyDecompilationAdapter
         };
     }
 
-    private static string DecompileModule(
-        ICSharpCode.Decompiler.CSharp.CSharpDecompiler decompiler,
-        AssemblyDecompilationOptions options,
-        CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        var source = decompiler.DecompileWholeModuleAsString();
-        cancellationToken.ThrowIfCancellationRequested();
-        return source.Length <= options.MaxDocumentCharacters ? source : string.Empty;
-    }
-
     private static IReadOnlyList<TypeDefinitionInfo> ReadTopLevelTypes(
         string assemblyPath,
         CancellationToken cancellationToken)
@@ -134,82 +129,98 @@ internal sealed class AssemblyDecompilationAdapter
             if (name == "<Module>") continue;
             var namespaceName = definition.Namespace.IsNil ? string.Empty : reader.GetString(definition.Namespace);
             var metadataName = string.IsNullOrEmpty(namespaceName) ? name : namespaceName + "." + name;
-            result.Add(new TypeDefinitionInfo(handle, metadataName, definition.GetMethods().Count() + definition.GetFields().Count()));
+            result.Add(ReadTypeTree(reader, handle, metadataName, cancellationToken));
         }
 
         return result;
     }
+
+    private static TypeDefinitionInfo ReadTypeTree(
+        MetadataReader reader,
+        TypeDefinitionHandle handle,
+        string metadataName,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var definition = reader.GetTypeDefinition(handle);
+        var children = definition.GetNestedTypes()
+            .Select(nestedHandle =>
+            {
+                var nested = reader.GetTypeDefinition(nestedHandle);
+                return ReadTypeTree(reader, nestedHandle, metadataName + "." + reader.GetString(nested.Name), cancellationToken);
+            })
+            .ToList();
+        var ownMemberCount = CountMembers(definition);
+        return new TypeDefinitionInfo(
+            handle,
+            metadataName,
+            1 + children.Sum(child => child.TypeCount),
+            ownMemberCount + children.Sum(child => child.MemberCount),
+            1 + ownMemberCount + children.Sum(child => child.ComplexityCost));
+    }
+
+    private static int CountMembers(TypeDefinition definition) =>
+        definition.GetMethods().Count()
+        + definition.GetFields().Count()
+        + definition.GetProperties().Count()
+        + definition.GetEvents().Count();
 
     private static TypeSelection SelectTypes(
         IReadOnlyList<TypeDefinitionInfo> types,
         AssemblyDecompilationOptions options)
     {
         var diagnostics = new List<AssemblySessionDiagnostic>();
-        var allowedTypes = types.Take(options.MaxTypes).ToList();
-        if (allowedTypes.Count < types.Count)
-        {
-            diagnostics.Add(new("assembly-type-limit", $"Die Decompilation wurde auf {options.MaxTypes} Typen begrenzt."));
-        }
-
-        var complexity = types.Sum(type => type.MemberCount);
-        if (complexity > options.MaxComplexity)
-        {
-            allowedTypes = ApplyMemberLimit(allowedTypes, options.MaxComplexity);
-            diagnostics.Add(new("assembly-complexity-limit", $"Die Assembly überschreitet die Komplexitätsgrenze ({complexity} von {options.MaxComplexity} Membern)."));
-        }
-
-        if (allowedTypes.Sum(type => type.MemberCount) > options.MaxMembers)
-        {
-            allowedTypes = ApplyMemberLimit(allowedTypes, options.MaxMembers);
-            diagnostics.Add(new("assembly-member-limit", $"Die Decompilation wurde auf {options.MaxMembers} Member begrenzt."));
-        }
-
-        return new TypeSelection(allowedTypes, diagnostics);
-    }
-
-    private static List<TypeDefinitionInfo> ApplyMemberLimit(
-        IReadOnlyList<TypeDefinitionInfo> types,
-        int limit)
-    {
-        var result = new List<TypeDefinitionInfo>();
-        var memberCount = 0;
+        var selected = new List<TypeDefinitionInfo>();
+        var typeBudget = options.MaxTypes;
+        var memberBudget = options.MaxMembers;
+        var complexityBudget = options.MaxComplexity;
         foreach (var type in types)
         {
-            if (memberCount + type.MemberCount > limit) break;
-            result.Add(type);
-            memberCount += type.MemberCount;
+            var rejection = GetLimitDiagnostic(type, typeBudget, memberBudget, complexityBudget);
+            if (rejection is not null)
+            {
+                diagnostics.Add(rejection);
+                continue;
+            }
+
+            selected.Add(type);
+            typeBudget -= type.TypeCount;
+            memberBudget -= type.MemberCount;
+            complexityBudget -= type.ComplexityCost;
         }
 
-        return result;
+        return new TypeSelection(selected, diagnostics);
     }
 
-    private static void AddModuleDocumentIfRequired(
-        ICSharpCode.Decompiler.CSharp.CSharpDecompiler decompiler,
-        AssemblyDecompilationOptions options,
-        TypeSelection selection,
-        ICollection<DecompiledDocument> documents,
-        CancellationToken cancellationToken)
+    private static AssemblySessionDiagnostic? GetLimitDiagnostic(
+        TypeDefinitionInfo type,
+        int typeBudget,
+        int memberBudget,
+        int complexityBudget)
     {
-        if (documents.Count != 0 || selection.Types.Count != 0) return;
-        var source = DecompileModule(decompiler, options, cancellationToken);
-        if (!string.IsNullOrWhiteSpace(source)) documents.Add(new DecompiledDocument("source/00000-assembly.cs", "assembly", source));
-    }
-
-    private static string Sanitize(string value)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        var builder = new System.Text.StringBuilder(value.Length);
-        foreach (var character in value)
+        if (type.TypeCount > typeBudget)
         {
-            builder.Append(invalid.Contains(character) || character is '.' or '+' or '`' ? '_' : character);
+            return new("assembly-type-limit", $"Typbaum '{type.MetadataName}' benötigt {type.TypeCount} von {typeBudget} verbleibenden Typbudgets.");
         }
 
-        return builder.Length == 0 ? "assembly" : builder.ToString();
+        if (type.MemberCount > memberBudget)
+        {
+            return new("assembly-member-limit", $"Typbaum '{type.MetadataName}' benötigt {type.MemberCount} von {memberBudget} verbleibenden Memberbudgets.");
+        }
+
+        return type.ComplexityCost > complexityBudget
+            ? new AssemblySessionDiagnostic("assembly-complexity-limit", $"Typbaum '{type.MetadataName}' benötigt Komplexitätskosten {type.ComplexityCost} von {complexityBudget} verbleibenden Kosten.")
+            : null;
     }
 
     private sealed record TypeSelection(
         IReadOnlyList<TypeDefinitionInfo> Types,
         List<AssemblySessionDiagnostic> Diagnostics);
 
-    private sealed record TypeDefinitionInfo(TypeDefinitionHandle Handle, string MetadataName, int MemberCount);
+    private sealed record TypeDefinitionInfo(
+        TypeDefinitionHandle Handle,
+        string MetadataName,
+        int TypeCount,
+        int MemberCount,
+        int ComplexityCost);
 }

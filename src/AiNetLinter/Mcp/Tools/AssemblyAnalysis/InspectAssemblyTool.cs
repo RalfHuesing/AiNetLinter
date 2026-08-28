@@ -98,7 +98,8 @@ internal static class InspectAssemblyTool
         builder.AppendLine($"Referenzen: {references.Count}");
         foreach (var reference in references)
         {
-            builder.AppendLine($"- {reference.Name}, Version {reference.Version} ({(reference.Resolved ? "aufgelöst" : "nicht aufgelöst")})");
+            var path = reference.ResolvedPath is null ? string.Empty : $", Pfad `{reference.ResolvedPath}`";
+            builder.AppendLine($"- {reference.Name}, Version {reference.Version} ({(reference.Resolved ? "aufgelöst" : "nicht aufgelöst")}{path})");
         }
 
         builder.AppendLine();

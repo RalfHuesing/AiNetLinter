@@ -31,10 +31,9 @@ internal static class AssemblyAnalysisContextFactory
         var consumer = consumerSolution is null
             ? new ConsumerSelection(null, null)
             : await FindConsumerReceiverAsync(consumerSolution, receiverType, diagnostics, cancellationToken).ConfigureAwait(false);
-        var identity = generation.Snapshot.Compilation.Assembly.Identity;
         return (new AssemblyContext(
             generation.Snapshot.Compilation.Assembly,
-            ToIdentityDto(identity),
+            generation.Identity,
             generation.References,
             DistinctDiagnostics(diagnostics),
             generation.Snapshot.Compilation,
@@ -89,13 +88,6 @@ internal static class AssemblyAnalysisContextFactory
                     normalized,
                     StringComparison.Ordinal));
     }
-
-    private static AssemblyIdentityDto ToIdentityDto(Microsoft.CodeAnalysis.AssemblyIdentity identity) =>
-        new(
-            identity.Name,
-            identity.Version.ToString(),
-            string.IsNullOrEmpty(identity.CultureName) ? "neutral" : identity.CultureName,
-            identity.PublicKeyToken.IsDefaultOrEmpty ? string.Empty : Convert.ToHexString(identity.PublicKeyToken.ToArray()));
 
     private static string FormatFailure(IReadOnlyList<AssemblySessionDiagnostic> diagnostics) =>
         diagnostics.Count == 0

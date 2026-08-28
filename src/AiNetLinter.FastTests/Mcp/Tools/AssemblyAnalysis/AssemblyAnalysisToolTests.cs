@@ -245,7 +245,66 @@ public sealed class AssemblyAnalysisToolTests
 
         Assert.Equal("complete", payload.Completeness);
         Assert.DoesNotContain(payload.Diagnostics, diagnostic => diagnostic.Contains("ConsumerDependency", StringComparison.Ordinal));
-        Assert.Contains(payload.References, reference => reference.Name == "ConsumerDependency" && reference.Resolved);
+        var dependency = Assert.Single(payload.References, reference => reference.Name == "ConsumerDependency");
+        Assert.True(dependency.Resolved);
+        Assert.Equal(dependency.ResolvedPath, Path.GetFullPath(dependency.ResolvedPath!));
+        Assert.Contains(dependency.ResolvedPath!, TextOf(result), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InspectAssembly_UsesPeAssemblyIdentityInPayloadAndText()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-identity-");
+        var assemblyPath = EmitAssembly(temp, "VersionedProbe", """
+            using System.Reflection;
+            [assembly: AssemblyVersion("7.8.9.10")]
+            namespace Probe;
+            public sealed class Value { public int Number => 1; }
+            """);
+
+        var result = await InspectAssemblyTool.ExecuteAsync(
+            null,
+            new InspectAssemblyArguments(assemblyPath, null, "Value", null, true, 100),
+            CancellationToken.None);
+        var payload = Deserialize<InspectAssemblyPayload>(result);
+
+        Assert.Equal("7.8.9.10", payload.Identity?.Version);
+        Assert.Contains("Version 7.8.9.10", TextOf(result), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InspectAssembly_RejectsSameNameDependencyWithWrongVersion()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-reference-identity-");
+        var dependencyPath = EmitAssembly(temp, "VersionedDependency", """
+            using System.Reflection;
+            [assembly: AssemblyVersion("1.0.0.0")]
+            namespace Dependency;
+            public sealed class Value { }
+            """);
+        var assemblyPath = EmitAssembly(
+            temp,
+            "ReferenceIdentityProbe",
+            "namespace Probe; public sealed class UsesDependency { public Dependency.Value Value { get; } = new(); }",
+            dependencyPath);
+        EmitAssembly(temp, "VersionedDependency", """
+            using System.Reflection;
+            [assembly: AssemblyVersion("2.0.0.0")]
+            namespace Dependency;
+            public sealed class Value { }
+            """);
+
+        var result = await InspectAssemblyTool.ExecuteAsync(
+            null,
+            new InspectAssemblyArguments(assemblyPath, null, null, null, true, 100),
+            CancellationToken.None);
+        var payload = Deserialize<InspectAssemblyPayload>(result);
+        var dependency = Assert.Single(payload.References, reference => reference.Name == "VersionedDependency");
+
+        Assert.False(dependency.Resolved);
+        Assert.Null(dependency.ResolvedPath);
+        Assert.Contains(payload.Diagnostics, diagnostic => diagnostic.Contains("Identitätsgleich", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("nicht aufgelöst", TextOf(result), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -282,7 +341,7 @@ public sealed class AssemblyAnalysisToolTests
 
     private static T Deserialize<T>(CallToolResult result)
     {
-        Assert.NotNull(result.StructuredContent);
+        Assert.True(result.StructuredContent.HasValue, TextOf(result));
         return JsonSerializer.Deserialize<T>(result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
     }
 

@@ -37,7 +37,7 @@ internal sealed record AssemblyDecompilationOptions(
     string CacheSchemaVersion = AssemblyDecompilationOptions.CurrentCacheSchemaVersion)
 {
     internal const string CurrentDecompilerVersion = "10.0.1.8346";
-    internal const string CurrentCacheSchemaVersion = "assembly-cache-v1";
+    internal const string CurrentCacheSchemaVersion = "assembly-cache-v2";
 
     internal static AssemblyDecompilationOptions Default => new();
 
@@ -144,6 +144,7 @@ internal sealed record AssemblySessionGeneration(
     long Number,
     AssemblyFingerprint Fingerprint,
     AssemblyDecompilationCacheKey CacheKey,
+    AssemblyIdentityDto Identity,
     AssemblySessionStatus Status,
     AssemblyRoslynSnapshot Snapshot,
     IReadOnlyList<AssemblyReferenceDto> References,
@@ -173,26 +174,65 @@ internal sealed record CachedDecompilationGeneration(
     AssemblyDecompilationManifest Manifest,
     IReadOnlyList<DecompiledDocument> Documents);
 
+internal sealed record AssemblyCacheReadRequest(
+    AssemblyDecompilationCacheKey Key,
+    AssemblyFingerprint Fingerprint,
+    AssemblyReferenceResolution References);
+
+internal sealed record AssemblyGenerationBuildRequest(
+    AssemblyFingerprint Fingerprint,
+    AssemblyDecompilationCacheKey Key,
+    AssemblyReferenceResolution References,
+    IReadOnlyList<DecompiledDocument> Documents,
+    AssemblySessionStatus Status,
+    IReadOnlyList<AssemblySessionDiagnostic> Diagnostics,
+    AssemblyCachePublishRequest? PublishRequest = null);
+
+internal sealed record AssemblyManifestInput
+{
+    internal required string CacheKey { get; init; }
+    internal required string CanonicalPath { get; init; }
+    internal required string OriginalPath { get; init; }
+    internal required long Length { get; init; }
+    internal required DateTime MtimeUtc { get; init; }
+    internal required string Sha256 { get; init; }
+}
+
+internal sealed record AssemblyManifestReferences
+{
+    internal required AssemblyIdentityDto? AssemblyIdentity { get; init; }
+    internal required IReadOnlyList<AssemblyReferenceDto> References { get; init; }
+}
+
+internal sealed record AssemblyManifestFormat
+{
+    internal required string DecompilerVersion { get; init; }
+    internal required string OptionsIdentity { get; init; }
+    internal required string CacheSchemaVersion { get; init; }
+    internal required IReadOnlyList<string> GeneratedFiles { get; init; }
+    internal required string Encoding { get; init; }
+}
+
+internal sealed record AssemblyManifestDiagnostics
+{
+    internal required IReadOnlyList<string> Warnings { get; init; }
+    internal required IReadOnlyList<string> Errors { get; init; }
+    internal required IReadOnlyList<string> UnresolvedReferences { get; init; }
+}
+
+internal sealed record AssemblyManifestStatus
+{
+    internal required DateTime CreatedUtc { get; init; }
+    internal required DateTime LastAccessUtc { get; init; }
+    internal required string Status { get; init; }
+    internal required bool Complete { get; init; }
+}
+
 internal sealed record AssemblyDecompilationManifest
 {
-    public required string CacheKey { get; init; }
-    public required string CanonicalPath { get; init; }
-    public required string OriginalPath { get; init; }
-    public required long Length { get; init; }
-    public required DateTime MtimeUtc { get; init; }
-    public required string Sha256 { get; init; }
-    public AssemblyIdentityDto? AssemblyIdentity { get; init; }
-    public IReadOnlyList<AssemblyReferenceDto> References { get; init; } = [];
-    public required string DecompilerVersion { get; init; }
-    public required string OptionsIdentity { get; init; }
-    public required string CacheSchemaVersion { get; init; }
-    public IReadOnlyList<string> GeneratedFiles { get; init; } = [];
-    public string Encoding { get; init; } = "utf-8";
-    public IReadOnlyList<string> Warnings { get; init; } = [];
-    public IReadOnlyList<string> Errors { get; init; } = [];
-    public IReadOnlyList<string> UnresolvedReferences { get; init; } = [];
-    public DateTime CreatedUtc { get; init; }
-    public DateTime LastAccessUtc { get; init; }
-    public required string Status { get; init; }
-    public bool Complete { get; init; }
+    internal required AssemblyManifestInput Input { get; init; }
+    internal required AssemblyManifestReferences References { get; init; }
+    internal required AssemblyManifestFormat Format { get; init; }
+    internal required AssemblyManifestDiagnostics Diagnostics { get; init; }
+    internal required AssemblyManifestStatus Status { get; init; }
 }
