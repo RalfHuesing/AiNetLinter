@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T00:18:24+02:00
+last_updated: 2026-08-29T01:07:39+02:00
 rules_dir: .agents/rules
 total_steps: 15
 current_step: step-015
@@ -18,7 +18,7 @@ current_step: step-015
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T00:18:24+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T01:07:39+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -39,7 +39,7 @@ current_step: step-015
 | step-012 | EPIC-03 | done | Gemeinsame Host-Komposition für direkte Assembly-MCP-Tools verdrahten | - | db386bc4 | issues → step-013 approved | db386bc4 + 12b6dcce + 16ebeda5 |
 | step-013 | EPIC-03 | done | Assembly-Host-Wiring und Session-Lifetime absichern | step-012 | 1cd279f0 | approved | 1cd279f0 + 6ba95124 + 723d2a3b |
 | step-014 | EPIC-04 | done | Injizierbaren External-Source-Port für Gitea-Auth- und Transportfehler schärfen | - | 3f83c5f2 | approved | 3f83c5f2 + 804f00b0 + 0902a7b7 |
-| step-015 | EPIC-04 | in_progress | Repository-Akquisitionsvertrag mit injizierbarem Gitea-Transport und sicherer Staging-Fassade | - | - | - | 1cdd0598 |
+| step-015 | EPIC-04 | issues | Repository-Akquisitionsvertrag mit injizierbarem Gitea-Transport und sicherer Staging-Fassade | - | 3bd71a73 | issues → step-016 | 3bd71a73 + 966ed66a + b1dac89b |
 
 ## Config
 
@@ -194,3 +194,12 @@ Credential-Bindung, Fetch/Refresh, Cache und atomare Source-of-Truth-
 Veröffentlichung bleiben Folgepakete. Der Coder muss die vertragliche Grenze
 beibehalten und DRY-, MagicValues- und DeadCode-Tech-Debt nur passend und
 architektonisch sinnvoll innerhalb dieses Pakets behandeln.
+
+Der Kritiker hat Step 015 mit `b1dac89b` nicht genehmigt. Die Korrektur wird
+als ein gebündelter Step 016 geplant: typed Ausnahmeabbildung mit sicherem
+Cleanup, nachgelagerte Cancellation-Prüfung, Diagnose-Redaktion,
+belastbarere Ownership-/Reparse-Sicherung und Zentralisierung des
+Dateisystem-Exception-Helpers. Die fünf Findings bilden gemeinsam die
+Sicherheits- und Besitzgrenze der Akquisitionsfassade; es wird kein
+unabhängiger Mini-Sweep daraus. Die grünen Gesamt-Gates bleiben als
+Ausgangsnachweis dokumentiert.
