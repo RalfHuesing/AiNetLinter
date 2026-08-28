@@ -1,8 +1,8 @@
 ---
-status: blocked
+status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T18:52:10+02:00
+last_updated: 2026-08-28T19:05:30+02:00
 rules_dir: .agents/rules
 total_steps: 4
 current_step: step-004
@@ -12,13 +12,13 @@ current_step: step-004
 
 ## Übersicht
 
-- **Task-Status:** `blocked`
-- **Steps gesamt:** 1 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-001`
+- **Task-Status:** `executing`
+- **Steps gesamt:** 4 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-004`
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-28T11:06:28+02:00
+- **Zuletzt aktualisiert:** 2026-08-28T19:05:30+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -28,7 +28,7 @@ current_step: step-004
 | step-001 | EPIC-01 | done | Einheitlichen Analysis-Target-Vertrag und Dispatch umstellen | - | f14ff5c2 | issues → step-002 approved | f14ff5c2 |
 | step-002 | EPIC-01 | done | MCP-Workflow-Regel auf den neuen Target-Vertrag synchronisieren | step-001 | 7cbc6d45 | approved | 7cbc6d45 |
 | step-003 | EPIC-02 | done (Korrektur ausstehend) | Statische Assembly-Session mit Fingerprint, Decompilation und Roslyn-Snapshot | - | 0704b763 | issues → step-004 | 0704b763 |
-| step-004 | EPIC-02 | blocked | Assembly-Session-Fundament korrigieren: Cache, Limits, Referenzen und Identität | step-003 | 9f934109 | blocked | 9f934109 |
+| step-004 | EPIC-02 | in_progress | Assembly-Session-Fundament korrigieren: Cache, Limits, Referenzen und Identität | step-003 | 9f934109 | - | 9f934109 |
 
 ## Config
 
@@ -50,9 +50,11 @@ model_kritiker: nicht festgelegt
 - Korrektur-Kettenbudget: maximal 3 Korrekturen pro Kette.
 - Weicher Check-in: bei jedem 40. Step vor dem nächsten Step.
 - Ein `blocked`-Step pausiert den Loop zur Nutzerklärung.
-- Tech-Debt löst keinen automatischen Step oder Abbruch aus.
+- DRY-, MagicValues- und DeadCode-Tech-Debt wird in diesem Task proaktiv,
+  architektonisch sinnvoll und automatisch an größere laufende Pakete
+  angehängt; kein künstlicher Einzel-Sweep.
 
-## Blocker
+## Aufgelöster Blocker-Kontext
 
 Der vollständige Integration-Gate-Lauf bleibt wegen drei bestehenden
 `DuplicateCode`-Befunden in Testdateien außerhalb des Step-Scopes blockiert:
@@ -62,7 +64,6 @@ Der vollständige Integration-Gate-Lauf bleibt wegen drei bestehenden
 - `TextOf` in den beiden Wiring-Contract-Testklassen
 - `WaitForConditionAsync` in den beiden Wiring-Contract-Testklassen
 
-Nutzerentscheidung erforderlich: Entweder den Scope ausdrücklich erweitern,
-um diese Test-Duplikate zu bereinigen bzw. regelkonform zu unterdrücken, oder
-eine dokumentierte Gate-Baseline-Ausnahme freigeben. Ohne diese Entscheidung
-wird kein weiterer Agent gestartet.
+Die Nutzerentscheidung liegt vor: Die drei bestehenden DRY-Befunde dürfen im
+laufenden Korrekturpaket behoben werden. Der Task wird mit einem neuen Coder
+fortgesetzt; danach prüft ein neuer Kritiker den vollständigen Gate-Lauf.

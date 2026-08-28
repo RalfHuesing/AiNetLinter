@@ -38,3 +38,8 @@ werden kann.
 - Erledigte Sub-Agenten nach ihrem Abschluss entfernen/schließen.
 - Diese Agenten-Lifecycle-Regel gilt zusätzlich zur seriellen Ausführung und
   wird zusammen mit dieser Dokumentation committed.
+- Nutzerpräzisierung: DRY-, MagicValues- und DeadCode-Funde gelten in diesem
+  Task als Tech-Debt und sollen proaktiv, architektonisch sinnvoll und
+  automatisch in größeren ohnehin laufenden Codepaketen mitbehoben werden.
+  Keine künstlichen Einzel-Sweeps oder Mini-Pakete erzeugen; die Änderungen
+  bleiben durch Planer und Kritiker prüfbar.
