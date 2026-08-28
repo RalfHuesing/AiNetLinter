@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-28T11:11:40+02:00
+last_updated: 2026-08-28T12:49:00+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -22,7 +22,7 @@ Runtime-Laden oder Ausführen fremder Assemblies.
 
 ## Epics
 
-- [ ] **EPIC-01 — Einheitlicher Analyse-Target-Vertrag und gemeinsame Dispatch-Grenze** —
+- [x] **EPIC-01 — Einheitlicher Analyse-Target-Vertrag und gemeinsame Dispatch-Grenze** — abgeschlossen durch `step-001` (Implementierung) und die genehmigte Korrektur `step-002` (Regel-/Dokumentationssynchronisation).
 
 **Zweck:** Den MCP-Vertrag auf `targetType` (`project`/`assembly`) und
 `targetPath` vereinheitlichen und eine gemeinsame, erweiterbare Dispatch- und

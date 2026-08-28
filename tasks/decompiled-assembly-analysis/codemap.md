@@ -2,7 +2,7 @@
 task: decompiled-assembly-analysis
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-28T11:58:00+02:00
+last_updated: 2026-08-28T12:49:00+02:00
 ---
 
 # CodeMap: decompiled-assembly-analysis
@@ -23,6 +23,7 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 - **`src/AiNetLinter/Mcp/Registration/`** — enthält die Registrierungen und Tool-Schemas, die auf den neuen Target-Vertrag ausgerichtet werden müssen.
 - **`src/AiNetLinter/Mcp/ServerInstructions.cs`** — enthält die globalen MCP-Instruktionen zur Projektziel- und Tool-Aufrufsemantik.
 - **`src/AiNetLinter/Mcp/McpToolResults.cs`** — enthält gemeinsame MCP-Ergebnis-, Warnungs- und Fehlerdarstellung für Herkunft und Ladezustände.
+- **`src/AiNetLinter/Commands/McpServerCommand.cs` und `src/AiNetLinter/Mcp/Daemon/DaemonHostCommand.cs`** — komponieren die residente Projekt-Registry und bauen die MCP-Tool-Collections für Stdio- bzw. Daemon-Sessions.
 
 ## Assembly-, Roslyn- und Referenzanalyse
 
@@ -38,6 +39,7 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 - **`src/AiNetLinter/Mcp/Tools/ServerMaintenance/`** — enthält Health-, Reload- und Maintenance-Abfragen für getrennte Session-Kapazitäten.
 - **`src/AiNetLinter/Baseline/SourceFileCatalog.cs`** — stellt den aktuellen Roslyn-Solution-/Dokumentkatalog für projektbasierte Sessions bereit.
 - **`src/AiNetLinter/Baseline/SourceFileCatalogLoader.cs`** — lädt Solutions über MSBuildWorkspace und bildet die Basis für externe Source-Snapshot-Lader.
+- **`Directory.Packages.props` und `src/AiNetLinter/AiNetLinter.csproj`** — zentrale Paketversionen und Runtime-Projekt, an denen die statische Decompiler-Abhängigkeit und ihre Auslieferung angebunden werden.
 
 ## Konfiguration und bestehender Cache
 
@@ -53,6 +55,7 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 - **`src/AiNetLinter.FastTests/Mcp/`** — enthält weitere schnelle MCP-Vertrags-, Result- und Tooltests für Regressionen.
 - **`src/AiNetLinter.IntegrationTests/Mcp/`** — enthält MCP-Daemon-, Host-, Staleness-, Tool- und End-to-End-Tests für echte Projekt-/Serverabläufe.
 - **`src/AiNetLinter.TestKit/Mcp/`** — enthält wiederverwendbare MCP-, Roslyn-, Fixture- und temporäre Dateisystem-Hilfen für isolierte externe Analyse-Tests.
+- **`src/AiNetLinter.TestKit/RoslynTestSolutionFactory.cs`, `TestTempDirectory.cs` und `ProjectRegistryFixture.cs`** — liefern die vorhandene Adhoc-Roslyn-/Referenz-, Repo-Temp- und Registry-Testinfrastruktur für Assembly-Sessions.
 
 ## Dokumentation und Agentenverträge
 
