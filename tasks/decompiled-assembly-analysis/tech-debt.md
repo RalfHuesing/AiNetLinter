@@ -2,7 +2,7 @@
 task: decompiled-assembly-analysis
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-28T20:22:04+02:00
+last_updated: 2026-08-28T21:47:07+02:00
 ---
 
 # Tech-Debt-Log: decompiled-assembly-analysis
@@ -17,6 +17,7 @@ Duplikationsbeobachtungen außerhalb des jeweiligen Step-Scopes.
 | TD-001 | `ExternalSourceMappingValidator` / `SourceSnapshotIdentity` | niedrig | nein | Identische private Drive-Path-Prüfung ist über zwei Vertragsgrenzen dupliziert. |
 | TD-002 | `AssemblyOrigin` / `AssemblyAnalysisContextFactory` | niedrig | nein | Origin-Kind-Werte sind als untypisierte Zeichenketten verteilt; der neue `source-backed`-Wert ist nicht zentralisiert. |
 | TD-003 | `AssemblyOrigin.Kind` | niedrig | nein | Interne Alias-Property ist im statischen Lösungsscope unreferenziert; mögliche Vertrags-/Serializer-Nutzung vor Entfernung prüfen. |
+| TD-004 | `AssemblyAnalysisContextFactoryTests` / `AssemblyAnalysisToolSupportTests` | niedrig | nein | Identischer privater `CreateSnapshot`-Testfixture-Builder ist über zwei Testklassen dupliziert. |
 
 ## Einträge
 
@@ -48,4 +49,14 @@ Duplikationsbeobachtungen außerhalb des jeweiligen Step-Scopes.
 - **Warum nicht sofort gefixt:** Der statische Audit kann interne Vertrags-, Serializer- oder `InternalsVisibleTo`-Nutzung nicht vollständig ausschließen. Die Property liegt außerdem außerhalb des eigentlichen Source-/Fallback-Vertrags.
 - **Vorschlag:** Bei einer gezielten Origin-Modellbereinigung Referenz-/Serialisierungsbedarf bestätigen und die Property anschließend entfernen oder bewusst als Kompatibilitätsalias behalten.
 - **Auto-Fixable:** nein — vor einer Entfernung ist eine Vertragsentscheidung erforderlich.
+- **Status:** offen
+
+### TD-004 — Gemeinsamen Snapshot-Testfixture-Builder prüfen [Priorität: niedrig] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-011 (Kritiker-Review vom 2026-08-28)
+- **Ort:** `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactoryTests.cs:271-312`; `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolSupportTests.cs:418-459`
+- **Befund:** Der begrenzte `find_duplicates`-Audit findet einen exakten 227-Token-Klon von `CreateSnapshot`, einschließlich der AdhocWorkspace-/Solution-/Project-/Document-Erzeugung und der Snapshot-Identität. Beide privaten Kopien verwenden jeweils einen eigenen verschachtelten `SourceProjectSpec`-Typ.
+- **Warum nicht sofort gefixt:** Die Konsolidierung liegt außerhalb des Support-/Lease-Korrekturvertrags und würde eine gemeinsame Fixture-Schnittstelle im Testpaket oder TestKit sowie die Zusammenführung der beiden verschachtelten Spec-Typen erfordern.
+- **Vorschlag:** Bei einer ohnehin anstehenden Testinfrastruktur-Bereinigung einen gemeinsamen, ownership-sicheren Adhoc-Snapshot-Builder mit einer klaren Spec-Repräsentation extrahieren; die bestehenden Tests sollen ihre Registry-/Snapshot-Dispose-Aussagen behalten.
+- **Auto-Fixable:** nein — die gemeinsame Ablage und der Fixture-Vertrag erfordern Architektur-Ermessen.
 - **Status:** offen
