@@ -9,7 +9,6 @@ open_questions:
   - ILSpy-/ICSharpCode.Decompiler-Version und Wiederverwendung des vorhandenen manuellen Decompilers
   - Exakter Regel-/Config-Vertrag fuer Lint-Tools auf dekompilierten Assemblies
   - Verbindliches Schema fuer explizite Gitea-Mappings, Aktualisierung und Authentifizierung
-  - Ob ein lokaler, eventuell dirty/unbuilt Source-Checkout spaeter als ausdruecklicher Sondermodus zugelassen wird
   - Sichtbarkeit und Suchscope der vollstaendigen Source-Solution bei einem Assembly-Target
   - Alias-/Lease-Modell fuer direkte DLL-Targets, Projektabhaengigkeiten und gemeinsame Source-Snapshots
 ---
@@ -497,9 +496,9 @@ Aktuell keine unentschiedenen Nice-to-Have-Punkte.
 - Behauptung, dass der erzeugte C#-Code mit der Originalquelle identisch ist.
 - Git-Diff-Analysen für externe Quellen, insbesondere dekompilierte Assemblies; der
   Git-Diff-Workflow bleibt dem aktuell bearbeiteten Projekt vorbehalten.
-- Tests externer Projekte als Pflichtfunktion. Falls eine vollständige Source-Solution
-  Tests einfach mitliefert, darf das später zusätzlich nutzbar werden, ist aber kein
-  Grund für einen externen Consumer-/Testkontext.
+- Ausführung oder Analyse der Tests eines externen Projekts als Bestandteil des
+  Nachschlage-Workflows. Die neuen AiNetLinter-Funktionen selbst erhalten selbstverständlich
+  vollständige Unit-, Component- und Integrationstests.
 - Automatische Synchronisation oder Zusammenführung verschiedener Branches, Dirty-
   Checkouts und ungebauter Arbeitsstände.
 - Automatisches Aufräumen persistierter externer Cache-Einträge.
@@ -997,6 +996,32 @@ fehlende Referenzen bleiben sichtbare `partial`-/External-Nodes statt stiller
 Phantomsymbole. Ein vollständiger, beliebig tiefer Call-Graph über alle denkbaren
 Runtime-Bindings ist nicht versprochen.
 
+### NuGet-Pakete
+
+NuGet-Pakete sind in diesem Modell kein eigener Analysepfad, sondern normale externe
+Assemblies. Für ein lokal vorhandenes Paket wie `MudBlazor.dll` gilt daher:
+
+- Ohne passenden Eintrag in der globalen Mapping-Datei wird die DLL statisch
+  dekompiliert.
+- Mit einem expliziten Gitea-Mapping für `MudBlazor.dll` wird die konfigurierte
+  Solution geladen und das passende Projekt automatisch über `AssemblyName` ermittelt;
+  ein `.csproj` muss nicht gepflegt werden.
+- Die `PackageReference` in Projekt A allein ist noch kein Source-Mapping. Sie sagt,
+  welche DLL verwendet wird, aber nicht, welches Repository die passende Originalquelle
+  liefert.
+- Assembly-Identität, Version und Target-Framework dienen zur Plausibilisierung. Passt
+  der geladene Gitea-Stand nicht zur DLL oder kann er nicht aktualisiert werden, wird
+  nicht still falscher Quellcode verwendet, sondern auf Decompilation bzw. `partial`
+  zurückgefallen.
+- Referenziert das Paket weitere Assemblies, greift derselbe rekursive Resolver auch
+  für diese Abhängigkeiten. Ein NuGet-Paket kann damit auf eine weitere source-backed
+  oder dekompilierte externe Quelle zeigen.
+
+Der NuGet-Paketname muss für das Grundmapping nicht separat gepflegt werden; maßgeblich
+ist die tatsächlich analysierte Assembly. Nur wenn gleiche AssemblyNames aus mehreren
+Versionen oder Repositories unterschieden werden müssen, sind zusätzliche optionale
+Selektoren wie Version oder Target-Framework sinnvoll.
+
 ## Staleness und atomarer Session-Wechsel
 
 Die Assembly-Session benötigt eine eigene Variante des bestehenden Datei-Zustands:
@@ -1045,7 +1070,7 @@ Consumer-Kontexte:
 | `dependency_graph` | Projekt-/Dateiabhängigkeiten | Abhängigkeiten der Source-Solution und ihrer aufgelösten externen Referenzen | dekompilierte Dokumente und rekursiv aufgelöste Assembly-Referenzen |
 | Metriken | Quellcode-Documents | Source-Dokumente, als `origin=source-backed` markiert | dekompilierte Documents, als `origin=decompiled` markiert |
 | `get_violations`, `pattern_detect` | Projektregeln aus der Projektconfig | nur, wenn Regeln/Config der Source-Solution belastbar verfügbar sind | nur mit explizitem Assembly-Regelprofil; sonst bewusst nicht umgesetzt |
-| Testkontext | Tests der aktuellen Solution | optional, falls ohne separaten Consumer-Kontext verfügbar; keine Pflicht | nicht erforderlich und standardmäßig nicht verfügbar |
+| Testkontext | Tests der aktuellen Solution | Test-Dokumente dürfen mit der Solution geladen werden; Tests des externen Projekts werden nicht automatisch ausgeführt | nicht erforderlich und standardmäßig nicht verfügbar |
 | Git-/Change-Impact | Git-Diff und Solution-Kontext | bewusst nicht umgesetzt für externe Quellen | bewusst nicht umgesetzt |
 | `safeguard` | Quality Gate der aktuellen Solution | nur bei explizitem, später festzulegendem externem Scanvertrag | nur bei explizitem Assembly-Scanvertrag; sonst bewusst nicht umgesetzt |
 
@@ -1302,6 +1327,9 @@ Die Registrierungsbeschreibungen müssen den Agenten ausdrücklich sagen:
   denselben Source-Snapshot und materialisieren Core nicht doppelt.
 - Der Pfad der globalen Mapping-Datei wird aus `appsettings.json` gelesen; die
   Mapping-Einträge benötigen keine redundanten `.csproj`-Pfade.
+- Ein NuGet-Assembly ohne Mapping wird dekompiliert; mit explizitem Gitea-Mapping wird
+  die passende Source-Solution verwendet. Eine bloße `PackageReference` reicht nicht
+  als Mapping.
 - Ein Repository-/Solution-Eintrag ohne eindeutige Auflösung eines `AssemblyName` wird
   nicht still als Originalquelle behandelt; der intern geladene Source-Stand wird
   gespeichert.
@@ -1358,6 +1386,8 @@ Der Task ist fachlich erfüllt, wenn:
   erforderlich ist; das Löschen alter Cache-Einträge bleibt manuell;
 - eine Assembly bei nachgewiesenem Match aus dem zugehörigen Quellcode und sonst aus
   einer statischen Dekompilation analysiert wird;
+- NuGet-Assemblies ohne Mapping dekompiliert und mit explizitem Gitea-Mapping wie jede
+  andere externe Assembly source-backed analysiert werden;
 - ein Repository mit mehreren DLL-Projekten über konkrete Source-Projekte und
   Versionen eindeutig aufgelöst werden kann, wobei die Projektpfade aus der Solution
   stammen und nicht separat gepflegt werden;
