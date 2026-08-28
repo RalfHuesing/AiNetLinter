@@ -12,9 +12,6 @@ namespace AiNetLinter.Mcp.Assemblies;
 
 internal sealed class ExternalSourceRepositoryAcquirer
 {
-    private const string CheckoutDirectoryPrefix = "checkout-";
-    private const int CheckoutPathCreationAttempts = 4;
-
     private readonly IGiteaRepositoryTransport transport;
     private readonly string stagingRoot;
 
@@ -36,7 +33,6 @@ internal sealed class ExternalSourceRepositoryAcquirer
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(mapping);
-
         if (!TryValidateMapping(mapping, out var solutionPath, out var mappingFailure))
         {
             return mappingFailure!;
@@ -48,20 +44,65 @@ internal sealed class ExternalSourceRepositoryAcquirer
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        if (!TryCreateCheckoutPath(out var checkoutPath, out var checkoutFailure))
+        if (!ExternalSourceRepositoryCheckoutReservation.TryCreate(
+                stagingRoot,
+                out var ownership,
+                out var checkoutFailure))
         {
             return checkoutFailure!;
         }
 
-        var transportResult = await ExecuteTransportAsync(
+        return await AcquireReservedCheckoutAsync(
             mapping,
-            checkoutPath!,
+            solutionPath!,
+            ownership!,
             cancellationToken).ConfigureAwait(false);
+    }
 
+    private async Task<ExternalSourceRepositoryAcquisitionResult> AcquireReservedCheckoutAsync(
+        ExternalSourceMapping mapping,
+        string solutionPath,
+        ExternalSourceCheckoutOwnership ownership,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!ExternalSourceRepositoryPathGuard.IsOwnedCheckout(ownership))
+            {
+                return FailAfterCleanup(
+                    ownership,
+                    ExternalSourceProviderFailureKind.InvalidResponse,
+                    [CreateDiagnostic(
+                        ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutInvalid,
+                        "Der reservierte Checkout konnte vor dem Transport nicht verifiziert werden.")]);
+            }
+
+            var transportResult = await ExecuteTransportAsync(
+                mapping,
+                ownership.CheckoutPath,
+                cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return CompleteTransportResult(
+                ownership,
+                solutionPath,
+                transportResult);
+        }
+        catch (OperationCanceledException)
+        {
+            ownership.TryCleanup();
+            throw;
+        }
+    }
+
+    private ExternalSourceRepositoryAcquisitionResult CompleteTransportResult(
+        ExternalSourceCheckoutOwnership ownership,
+        string solutionPath,
+        ExternalSourceRepositoryTransportResult? transportResult)
+    {
         if (transportResult is null)
         {
             return FailAfterCleanup(
-                checkoutPath!,
+                ownership,
                 ExternalSourceProviderFailureKind.InvalidResponse,
                 [CreateDiagnostic(
                     ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportResultInvalid,
@@ -71,27 +112,26 @@ internal sealed class ExternalSourceRepositoryAcquirer
         if (!transportResult.IsAvailable)
         {
             return FailAfterCleanup(
-                checkoutPath!,
+                ownership,
                 transportResult.FailureKind,
                 transportResult.Diagnostics);
         }
 
         if (!TryValidateCheckout(
-                checkoutPath!,
-                solutionPath!,
+                ownership,
+                solutionPath,
                 transportResult,
                 out var solutionAbsolutePath,
-                out var checkoutFailureResult))
+                out var checkoutFailure))
         {
             return FailAfterCleanup(
-                checkoutPath!,
+                ownership,
                 ExternalSourceProviderFailureKind.InvalidResponse,
-                checkoutFailureResult!);
+                checkoutFailure!);
         }
 
         var checkout = new ExternalSourceCheckoutHandle(
-            stagingRoot,
-            checkoutPath!,
+            ownership,
             solutionAbsolutePath!,
             transportResult.LoadedRevision!);
         return ExternalSourceRepositoryAcquisitionResult.Success(
@@ -113,10 +153,9 @@ internal sealed class ExternalSourceRepositoryAcquirer
         }
         catch (OperationCanceledException)
         {
-            ExternalSourceRepositoryPathGuard.TryDeleteOwnedCheckout(stagingRoot, checkoutPath);
             throw;
         }
-        catch (Exception exception) when (IsTransportException(exception))
+        catch (Exception exception)
         {
             return new ExternalSourceRepositoryTransportResult(
                 isAvailable: false,
@@ -124,7 +163,7 @@ internal sealed class ExternalSourceRepositoryAcquirer
                 diagnostics: [CreateDiagnostic(
                     ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportFailed,
                     "Die Repository-Akquisition ist fehlgeschlagen.")],
-                failureKind: ExternalSourceProviderFailureKind.InvalidResponse);
+                failureKind: ExternalSourceRepositoryFailurePolicy.ClassifyTransportException(exception));
         }
     }
 
@@ -179,7 +218,8 @@ internal sealed class ExternalSourceRepositoryAcquirer
         try
         {
             if (File.Exists(stagingRoot)
-                || ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(stagingRoot))
+                || Directory.Exists(stagingRoot)
+                    && ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(stagingRoot))
             {
                 failure = InvalidResult(
                     ExternalSourceConfigurationDiagnosticCodes.RepositoryStagingRootInvalid,
@@ -188,7 +228,7 @@ internal sealed class ExternalSourceRepositoryAcquirer
             }
 
             Directory.CreateDirectory(stagingRoot);
-            if (File.Exists(stagingRoot)
+            if (!Directory.Exists(stagingRoot)
                 || ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(stagingRoot))
             {
                 failure = InvalidResult(
@@ -199,46 +239,18 @@ internal sealed class ExternalSourceRepositoryAcquirer
 
             return true;
         }
-        catch (Exception exception) when (IsFileSystemException(exception))
+        catch (Exception exception) when (
+            ExternalSourceRepositoryFailurePolicy.IsFileSystemException(exception))
         {
             failure = InvalidResult(
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryStagingRootInvalid,
-                $"Die kontrollierte Staging-Wurzel konnte nicht vorbereitet werden: {exception.Message}");
+                "Die kontrollierte Staging-Wurzel konnte nicht vorbereitet werden.");
             return false;
         }
     }
 
-    private bool TryCreateCheckoutPath(
-        out string? checkoutPath,
-        out ExternalSourceRepositoryAcquisitionResult? failure)
-    {
-        checkoutPath = null;
-        failure = null;
-        for (var attempt = 0; attempt < CheckoutPathCreationAttempts; attempt++)
-        {
-            var candidate = Path.Combine(
-                stagingRoot,
-                CheckoutDirectoryPrefix + Guid.NewGuid().ToString("N"));
-            if (!ExternalSourceRepositoryPathGuard.IsDescendantPath(stagingRoot, candidate))
-            {
-                continue;
-            }
-
-            if (!Directory.Exists(candidate) && !File.Exists(candidate))
-            {
-                checkoutPath = candidate;
-                return true;
-            }
-        }
-
-        failure = InvalidResult(
-            ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutPathInvalid,
-            "Es konnte kein freier Checkout-Pfad innerhalb der Staging-Wurzel reserviert werden.");
-        return false;
-    }
-
     private bool TryValidateCheckout(
-        string checkoutPath,
+        ExternalSourceCheckoutOwnership ownership,
         string solutionPath,
         ExternalSourceRepositoryTransportResult transportResult,
         out string? solutionAbsolutePath,
@@ -254,9 +266,8 @@ internal sealed class ExternalSourceRepositoryAcquirer
             return false;
         }
 
-        if (!Directory.Exists(checkoutPath)
-            || !ExternalSourceRepositoryPathGuard.IsDescendantPath(stagingRoot, checkoutPath)
-            || ExternalSourceRepositoryPathGuard.ContainsReparsePointInTree(checkoutPath))
+        if (!ExternalSourceRepositoryPathGuard.IsOwnedCheckout(ownership)
+            || ExternalSourceRepositoryPathGuard.ContainsReparsePointInTree(ownership.CheckoutPath))
         {
             failure = [CreateDiagnostic(
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutInvalid,
@@ -266,18 +277,23 @@ internal sealed class ExternalSourceRepositoryAcquirer
 
         try
         {
-            solutionAbsolutePath = Path.GetFullPath(Path.Combine(checkoutPath, solutionPath));
+            solutionAbsolutePath = Path.GetFullPath(Path.Combine(ownership.CheckoutPath, solutionPath));
         }
-        catch (Exception exception) when (IsFileSystemException(exception))
+        catch (Exception exception) when (
+            ExternalSourceRepositoryFailurePolicy.IsFileSystemException(exception))
         {
             failure = [CreateDiagnostic(
                 ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionPathInvalid,
-                $"Der Solution-Pfad konnte nicht aufgelöst werden: {exception.Message}")];
+                "Der Solution-Pfad konnte nicht aufgelöst werden.")];
             return false;
         }
 
-        if (!ExternalSourceRepositoryPathGuard.IsDescendantPath(checkoutPath, solutionAbsolutePath)
-            || !ExternalSourceRepositoryPathGuard.IsDescendantPath(stagingRoot, solutionAbsolutePath)
+        if (!ExternalSourceRepositoryPathGuard.IsDescendantPath(
+                ownership.CheckoutPath,
+                solutionAbsolutePath)
+            || !ExternalSourceRepositoryPathGuard.IsDescendantPath(
+                stagingRoot,
+                solutionAbsolutePath)
             || !File.Exists(solutionAbsolutePath)
             || ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(solutionAbsolutePath))
         {
@@ -290,13 +306,13 @@ internal sealed class ExternalSourceRepositoryAcquirer
         return true;
     }
 
-    private ExternalSourceRepositoryAcquisitionResult FailAfterCleanup(
-        string checkoutPath,
+    private static ExternalSourceRepositoryAcquisitionResult FailAfterCleanup(
+        ExternalSourceCheckoutOwnership ownership,
         ExternalSourceProviderFailureKind failureKind,
         IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics)
     {
         var resultDiagnostics = new List<ExternalSourceConfigurationDiagnostic>(diagnostics);
-        if (!ExternalSourceRepositoryPathGuard.TryDeleteOwnedCheckout(stagingRoot, checkoutPath))
+        if (!ownership.TryCleanup())
         {
             resultDiagnostics.Add(CreateDiagnostic(
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryCleanupFailed,
@@ -385,31 +401,21 @@ internal sealed class ExternalSourceRepositoryAcquirer
                 ? pathRoot
                 : fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         }
-        catch (Exception exception) when (IsFileSystemException(exception))
+        catch (Exception exception) when (
+            ExternalSourceRepositoryFailurePolicy.IsFileSystemException(exception))
         {
             return null;
         }
     }
 
-    private static bool IsSupportedRepositoryUrl(string value)
-    {
-        return Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)
-            && uri is not null
-            && uri.Host.Length > 0
-            && uri.UserInfo.Length == 0
-            && uri.Scheme is "http" or "https";
-    }
+    private static bool IsSupportedRepositoryUrl(string value) =>
+        !string.IsNullOrWhiteSpace(value)
+        && Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)
+        && uri is not null
+        && uri.Host.Length > 0
+        && uri.UserInfo.Length == 0
+        && uri.Scheme is "http" or "https";
 
     internal static bool IsReparsePointAttribute(FileAttributes attributes) =>
         ExternalSourceRepositoryPathGuard.IsReparsePointAttribute(attributes);
-
-    private static bool IsFileSystemException(Exception exception) =>
-        exception is ArgumentException
-            or IOException
-            or UnauthorizedAccessException
-            or NotSupportedException;
-
-    private static bool IsTransportException(Exception exception) =>
-        IsFileSystemException(exception) || exception is InvalidOperationException;
-
 }

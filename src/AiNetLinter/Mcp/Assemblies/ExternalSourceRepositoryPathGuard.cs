@@ -10,30 +10,49 @@ internal static class ExternalSourceRepositoryPathGuard
 {
     internal static bool IsDescendantPath(string root, string candidate)
     {
-        var rootPrefix = root.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
-            || root.EndsWith(Path.AltDirectorySeparatorChar.ToString(), StringComparison.Ordinal)
-            ? root
-            : root + Path.DirectorySeparatorChar;
-        var fullCandidate = Path.GetFullPath(candidate);
-        return !string.Equals(root, fullCandidate, StringComparison.OrdinalIgnoreCase)
-            && fullCandidate.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase);
+        try
+        {
+            var fullRoot = Path.GetFullPath(root);
+            var fullCandidate = Path.GetFullPath(candidate);
+            var rootPrefix = fullRoot.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+                || fullRoot.EndsWith(Path.AltDirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+                ? fullRoot
+                : fullRoot + Path.DirectorySeparatorChar;
+
+            return !string.Equals(fullRoot, fullCandidate, StringComparison.OrdinalIgnoreCase)
+                && fullCandidate.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception exception) when (
+            ExternalSourceRepositoryFailurePolicy.IsFileSystemException(exception))
+        {
+            return false;
+        }
     }
 
     internal static bool ContainsReparsePointOnPath(string path)
     {
         try
         {
-            for (var current = new DirectoryInfo(path); current is not null; current = current.Parent)
+            var current = Path.GetFullPath(path);
+            while (current is not null)
             {
-                if (current.Exists && current.Attributes.HasFlag(FileAttributes.ReparsePoint))
+                if (!TryGetAttributes(current, out var attributes, out var exists) || !exists)
                 {
                     return true;
                 }
+
+                if (IsReparsePointAttribute(attributes))
+                {
+                    return true;
+                }
+
+                current = Directory.GetParent(current)?.FullName;
             }
 
             return false;
         }
-        catch (Exception exception) when (IsFileSystemException(exception))
+        catch (Exception exception) when (
+            ExternalSourceRepositoryFailurePolicy.IsFileSystemException(exception))
         {
             return true;
         }
@@ -45,28 +64,7 @@ internal static class ExternalSourceRepositoryPathGuard
         pending.Push(root);
         while (pending.Count > 0)
         {
-            var directory = pending.Pop();
-            if (HasReparsePoint(directory))
-            {
-                return true;
-            }
-
-            try
-            {
-                foreach (var entry in Directory.EnumerateFileSystemEntries(directory))
-                {
-                    if (HasReparsePoint(entry))
-                    {
-                        return true;
-                    }
-
-                    if (Directory.Exists(entry))
-                    {
-                        pending.Push(entry);
-                    }
-                }
-            }
-            catch (Exception exception) when (IsFileSystemException(exception))
+            if (!TryInspectDirectory(pending.Pop(), pending))
             {
                 return true;
             }
@@ -75,18 +73,66 @@ internal static class ExternalSourceRepositoryPathGuard
         return false;
     }
 
+    private static bool TryInspectDirectory(string directory, Stack<string> pending)
+    {
+        if (!TryGetAttributes(directory, out var directoryAttributes, out var directoryExists)
+            || !directoryExists
+            || IsReparsePointAttribute(directoryAttributes))
+        {
+            return false;
+        }
+
+        try
+        {
+            foreach (var entry in Directory.EnumerateFileSystemEntries(directory))
+            {
+                if (!TryGetAttributes(entry, out var attributes, out var exists)
+                    || !exists
+                    || IsReparsePointAttribute(attributes))
+                {
+                    return false;
+                }
+
+                if (attributes.HasFlag(FileAttributes.Directory))
+                {
+                    pending.Push(entry);
+                }
+            }
+
+            return true;
+        }
+        catch (Exception exception) when (
+            ExternalSourceRepositoryFailurePolicy.IsFileSystemException(exception))
+        {
+            return false;
+        }
+    }
+
     internal static bool IsReparsePointAttribute(FileAttributes attributes) =>
         attributes.HasFlag(FileAttributes.ReparsePoint);
 
-    internal static bool TryDeleteOwnedCheckout(string stagingRoot, string checkoutPath)
+    internal static bool IsOwnedCheckout(ExternalSourceCheckoutOwnership ownership)
     {
+        ArgumentNullException.ThrowIfNull(ownership);
+        return IsDescendantPath(ownership.StagingRoot, ownership.CheckoutPath)
+            && !ContainsReparsePointOnPath(ownership.StagingRoot)
+            && !ContainsReparsePointOnPath(ownership.CheckoutPath)
+            && !ContainsReparsePointOnPath(ownership.OwnershipMarkerPath)
+            && TryGetAttributes(ownership.CheckoutPath, out var attributes, out var exists)
+            && exists
+            && attributes.HasFlag(FileAttributes.Directory)
+            && ownership.HasValidToken();
+    }
+
+    internal static bool TryDeleteOwnedCheckout(ExternalSourceCheckoutOwnership ownership)
+    {
+        ArgumentNullException.ThrowIfNull(ownership);
         try
         {
-            return IsDescendantPath(stagingRoot, checkoutPath)
-                && !ContainsReparsePointOnPath(stagingRoot)
-                && TryDeleteEntry(checkoutPath);
+            return IsOwnedCheckout(ownership) && TryDeleteEntry(ownership.CheckoutPath);
         }
-        catch (Exception exception) when (IsFileSystemException(exception))
+        catch (Exception exception) when (
+            ExternalSourceRepositoryFailurePolicy.IsFileSystemException(exception))
         {
             return false;
         }
@@ -94,18 +140,22 @@ internal static class ExternalSourceRepositoryPathGuard
 
     private static bool TryDeleteEntry(string path)
     {
-        var isReparsePoint = HasReparsePoint(path);
-        if (!Directory.Exists(path) && !File.Exists(path) && !isReparsePoint)
+        if (!TryGetAttributes(path, out var attributes, out var exists))
+        {
+            return false;
+        }
+
+        if (!exists)
         {
             return true;
         }
 
-        if (isReparsePoint)
+        if (IsReparsePointAttribute(attributes))
         {
-            return TryDeleteReparsePoint(path);
+            return TryDeleteReparsePoint(path, attributes);
         }
 
-        if (Directory.Exists(path))
+        if (attributes.HasFlag(FileAttributes.Directory))
         {
             foreach (var entry in Directory.EnumerateFileSystemEntries(path))
             {
@@ -116,40 +166,56 @@ internal static class ExternalSourceRepositoryPathGuard
             }
 
             Directory.Delete(path);
-            return !Directory.Exists(path);
+            return TryGetAttributes(path, out _, out var stillExists) && !stillExists;
         }
 
         File.Delete(path);
-        return !File.Exists(path);
+        return TryGetAttributes(path, out _, out var fileStillExists) && !fileStillExists;
     }
 
-    private static bool TryDeleteReparsePoint(string path)
+    private static bool TryDeleteReparsePoint(string path, FileAttributes attributes)
     {
-        if (Directory.Exists(path))
+        if (attributes.HasFlag(FileAttributes.Directory))
         {
             Directory.Delete(path);
-            return !Directory.Exists(path);
+        }
+        else
+        {
+            File.Delete(path);
         }
 
-        File.Delete(path);
-        return !File.Exists(path);
+        return TryGetAttributes(path, out _, out var stillExists) && !stillExists;
     }
 
-    private static bool HasReparsePoint(string path)
+    private static bool TryGetAttributes(
+        string path,
+        out FileAttributes attributes,
+        out bool exists)
     {
         try
         {
-            return IsReparsePointAttribute(File.GetAttributes(path));
-        }
-        catch (Exception exception) when (IsFileSystemException(exception))
-        {
+            attributes = File.GetAttributes(path);
+            exists = true;
             return true;
         }
+        catch (FileNotFoundException)
+        {
+            attributes = default;
+            exists = false;
+            return true;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            attributes = default;
+            exists = false;
+            return true;
+        }
+        catch (Exception exception) when (
+            ExternalSourceRepositoryFailurePolicy.IsFileSystemException(exception))
+        {
+            attributes = default;
+            exists = false;
+            return false;
+        }
     }
-
-    private static bool IsFileSystemException(Exception exception) =>
-        exception is ArgumentException
-            or IOException
-            or UnauthorizedAccessException
-            or NotSupportedException;
 }

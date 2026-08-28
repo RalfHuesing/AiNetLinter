@@ -3,6 +3,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
@@ -39,7 +41,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
         Assert.True(File.Exists(checkout.SolutionPath));
         Assert.Equal(Path.Combine(checkout.CheckoutPath, "BaselineMini.slnx"), checkout.SolutionPath);
         Assert.StartsWith(staging.DirectoryPath + Path.DirectorySeparatorChar, checkout.CheckoutPath, StringComparison.OrdinalIgnoreCase);
-        Assert.False(transport.DestinationExistedAtCall);
+        Assert.True(transport.DestinationHadNoWorkingTreeEntriesAtCall);
         Assert.Same(mapping, transport.Mapping);
 
         checkout.Dispose();
@@ -48,6 +50,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
         Assert.True(File.Exists(foreignFile));
         Assert.False(Directory.Exists(checkout.CheckoutPath));
         Assert.True(checkout.IsDisposed);
+        Assert.Equal(ExternalSourceCheckoutCleanupState.Succeeded, checkout.CleanupState);
     }
 
     [Theory]
@@ -80,7 +83,10 @@ public sealed class ExternalSourceRepositoryAcquirerTests
         Assert.Equal((ExternalSourceProviderFailureKind)failureKindValue, result.FailureKind);
         Assert.Null(result.Checkout);
         Assert.Null(result.LoadedRevision);
-        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "transport-warning");
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportFailed);
+        Assert.All(result.Diagnostics, AssertSafeTransportDiagnostic);
         Assert.False(Directory.Exists(transport.DestinationPath));
     }
 
@@ -127,6 +133,202 @@ public sealed class ExternalSourceRepositoryAcquirerTests
         Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Message.Contains("secret", StringComparison.Ordinal));
         Assert.False(Directory.Exists(transport.DestinationPath));
     }
+    [Fact]
+    public async Task AcquireAsync_HttpTransportException_MapsToNetworkFailureAndCleansOwnCheckout()
+    {
+        await AssertTransportExceptionMapsAsync(
+            new HttpRequestException("https://user:secret@example.test/repository"),
+            ExternalSourceProviderFailureKind.NetworkUnavailable);
+    }
+    [Fact]
+    public async Task AcquireAsync_TimeoutTransportException_MapsToTimeoutFailureAndCleansOwnCheckout()
+    {
+        await AssertTransportExceptionMapsAsync(
+            new TimeoutException("Bearer secret-token"),
+            ExternalSourceProviderFailureKind.Timeout);
+    }
+    [Fact]
+    public async Task AcquireAsync_AccessTransportException_MapsToAccessDeniedAndCleansOwnCheckout()
+    {
+        await AssertTransportExceptionMapsAsync(
+            new UnauthorizedAccessException("password=secret"),
+            ExternalSourceProviderFailureKind.AccessDenied);
+    }
+    [Fact]
+    public async Task AcquireAsync_UnknownTransportException_MapsToInvalidResponseAndCleansOwnCheckout()
+    {
+        await AssertTransportExceptionMapsAsync(
+            new InvalidDataException("exception detail with token=secret"),
+            ExternalSourceProviderFailureKind.InvalidResponse);
+    }
+    [Fact]
+    public async Task AcquireAsync_CancellationAfterTransportSuccess_RethrowsAndCleansOwnCheckout()
+    {
+        using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "BaselineMini");
+        using var staging = TestTempDirectory.Create("external-source-acquirer-cancel-after-success-");
+        using var cancellation = new CancellationTokenSource();
+        var transport = new RecordingTransport((_, destination, _) =>
+        {
+            CopySolution(fixture.RootPath, destination);
+            cancellation.Cancel();
+            return Success("revision-42");
+        });
+        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            acquirer.AcquireAsync(CreateMapping(), cancellation.Token));
+
+        Assert.Equal(cancellation.Token, exception.CancellationToken);
+        Assert.False(Directory.Exists(transport.DestinationPath));
+    }
+    [Fact]
+    public void TransportResult_RedactsUntrustedDiagnosticsToSafeContract()
+    {
+        const string secret = "https://user:password@example.test/repository Bearer token-value";
+        var result = new ExternalSourceRepositoryTransportResult(
+            isAvailable: false,
+            loadedRevision: null,
+            diagnostics: [new(
+                "diagnostic-code=" + secret,
+                "exception detail " + secret,
+                "warning",
+                secret)],
+            failureKind: ExternalSourceProviderFailureKind.InvalidResponse);
+
+        Assert.Single(result.Diagnostics);
+        Assert.Equal(
+            ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportFailed,
+            result.Diagnostics[0].Code);
+        AssertSafeTransportDiagnostic(result.Diagnostics[0]);
+        Assert.DoesNotContain(secret, result.Diagnostics[0].Code, StringComparison.Ordinal);
+        Assert.DoesNotContain(secret, result.Diagnostics[0].Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(secret, result.Diagnostics[0].Location, StringComparison.Ordinal);
+    }
+    [Fact]
+    public async Task AcquireAsync_TransportReplacesCheckout_DoesNotDeleteForeignTree()
+    {
+        using var staging = TestTempDirectory.Create("external-source-acquirer-replacement-");
+        var movedCheckout = Path.Combine(staging.DirectoryPath, "foreign-checkout");
+        var transport = new RecordingTransport((_, destination, _) =>
+        {
+            Directory.Move(destination, movedCheckout);
+            Directory.CreateDirectory(destination);
+            File.WriteAllText(Path.Combine(destination, "foreign.txt"), "must remain");
+            return Success("revision-42");
+        });
+        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+
+        var result = await acquirer.AcquireAsync(CreateMapping());
+
+        Assert.False(result.IsAvailable);
+        Assert.Equal(ExternalSourceProviderFailureKind.InvalidResponse, result.FailureKind);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutInvalid);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryCleanupFailed);
+        Assert.True(Directory.Exists(movedCheckout));
+        Assert.Equal("must remain", File.ReadAllText(Path.Combine(transport.DestinationPath!, "foreign.txt")));
+    }
+    [Fact]
+    public async Task AcquireAsync_ActualReparseEntry_IsRejectedAndExternalSentinelRemains()
+    {
+        using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "BaselineMini");
+        using var staging = TestTempDirectory.Create("external-source-acquirer-reparse-");
+        var sentinelDirectory = staging.CreateSubdirectory("external-sentinel");
+        var sentinel = staging.CreateFile("external-sentinel/keep.txt", "keep");
+        var linkPath = Path.Combine("target", "external-link");
+        var transport = new RecordingTransport((_, destination, _) =>
+        {
+            CopySolution(fixture.RootPath, destination);
+            Directory.CreateDirectory(Path.Combine(destination, "target"));
+            Directory.CreateSymbolicLink(Path.Combine(destination, linkPath), sentinelDirectory);
+            return Success("revision-42");
+        });
+        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+
+        var result = await acquirer.AcquireAsync(CreateMapping());
+
+        Assert.False(result.IsAvailable);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutInvalid);
+        Assert.True(File.Exists(sentinel));
+        Assert.Equal("keep", File.ReadAllText(sentinel));
+        Assert.False(Directory.Exists(Path.Combine(transport.DestinationPath!, linkPath)));
+    }
+
+    [Fact]
+    public async Task CheckoutHandle_DisposeReportsLostOwnershipAndRemainsIdempotent()
+    {
+        using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "BaselineMini");
+        using var staging = TestTempDirectory.Create("external-source-acquirer-cleanup-state-");
+        var transport = new RecordingTransport((_, destination, _) =>
+        {
+            CopySolution(fixture.RootPath, destination);
+            return Success("revision-42");
+        });
+        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var result = await acquirer.AcquireAsync(CreateMapping());
+        var checkout = Assert.IsType<ExternalSourceCheckoutHandle>(result.Checkout);
+
+        File.Delete(Path.Combine(
+            checkout.CheckoutPath,
+            ExternalSourceCheckoutOwnership.OwnershipMarkerFileName));
+        checkout.Dispose();
+
+        Assert.Equal(
+            ExternalSourceCheckoutCleanupState.RepositoryCleanupFailed,
+            checkout.CleanupState);
+        Assert.True(Directory.Exists(checkout.CheckoutPath));
+        checkout.Dispose();
+        Assert.Equal(
+            ExternalSourceCheckoutCleanupState.RepositoryCleanupFailed,
+            checkout.CleanupState);
+    }
+
+    private async Task AssertTransportExceptionMapsAsync(
+        Exception exception,
+        ExternalSourceProviderFailureKind expectedFailureKind)
+    {
+        using var staging = TestTempDirectory.Create("external-source-acquirer-exception-");
+        var transport = new RecordingTransport((_, destination, _) =>
+        {
+            Directory.CreateDirectory(destination);
+            File.WriteAllText(Path.Combine(destination, "partial.txt"), "partial");
+            throw exception;
+        });
+        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+
+        var result = await acquirer.AcquireAsync(CreateMapping());
+
+        Assert.False(result.IsAvailable);
+        Assert.Equal(expectedFailureKind, result.FailureKind);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportFailed);
+        Assert.All(result.Diagnostics, AssertSafeTransportDiagnostic);
+        Assert.False(Directory.Exists(transport.DestinationPath));
+    }
+
+    private static void AssertSafeTransportDiagnostic(
+        ExternalSourceConfigurationDiagnostic diagnostic)
+    {
+        Assert.Contains(
+            diagnostic.Severity,
+            new[] { "warning", "error" });
+        Assert.Equal("$repository", diagnostic.Location);
+        Assert.DoesNotContain("secret", diagnostic.Code, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("secret", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("secret", diagnostic.Location, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("password", diagnostic.Code, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("password", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("password", diagnostic.Location, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Bearer", diagnostic.Code, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Bearer", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Bearer", diagnostic.Location, StringComparison.OrdinalIgnoreCase);
+    }
 
     [Theory]
     [InlineData("../BaselineMini.slnx")]
@@ -163,7 +365,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
         Assert.Equal(ExternalSourceProviderFailureKind.InvalidResponse, result.FailureKind);
         Assert.Contains(
             result.Diagnostics,
-            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutInvalid);
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionInvalid);
         Assert.False(Directory.Exists(transport.DestinationPath));
     }
 
@@ -272,7 +474,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
 
         internal string? DestinationPath { get; private set; }
 
-        internal bool DestinationExistedAtCall { get; private set; }
+        internal bool DestinationHadNoWorkingTreeEntriesAtCall { get; private set; }
 
         internal CancellationToken CancellationToken { get; private set; }
 
@@ -284,7 +486,12 @@ public sealed class ExternalSourceRepositoryAcquirerTests
             CallCount++;
             Mapping = mapping;
             DestinationPath = destinationPath;
-            DestinationExistedAtCall = Directory.Exists(destinationPath) || File.Exists(destinationPath);
+            DestinationHadNoWorkingTreeEntriesAtCall = Directory.Exists(destinationPath)
+                && Directory.EnumerateFileSystemEntries(destinationPath).All(path =>
+                    string.Equals(
+                        Path.GetFileName(path),
+                        ExternalSourceCheckoutOwnership.OwnershipMarkerFileName,
+                        StringComparison.Ordinal));
             CancellationToken = cancellationToken;
             return ValueTask.FromResult(operation(mapping, destinationPath, cancellationToken));
         }

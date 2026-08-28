@@ -57,7 +57,10 @@ internal sealed record ExternalSourceRepositoryTransportResult
         FailureKind = isAvailable || failureKind is not ExternalSourceProviderFailureKind.None
             ? failureKind
             : ExternalSourceProviderFailureKind.ProviderUnavailable;
-        Diagnostics = diagnostics.ToImmutableArray();
+        Diagnostics = ExternalSourceRepositoryFailurePolicy.ProjectTransportDiagnostics(
+            diagnostics,
+            isAvailable,
+            FailureKind);
     }
 
     internal bool IsAvailable { get; }
