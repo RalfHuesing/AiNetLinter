@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T22:09:33+02:00
+last_updated: 2026-08-28T22:54:12+02:00
 rules_dir: .agents/rules
-total_steps: 12
-current_step: step-012
+total_steps: 13
+current_step: step-013
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,12 +13,12 @@ current_step: step-012
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 11 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-012` (in_progress; gemeinsame Host-Komposition für direkte Assembly-MCP-Tools)
+- **Steps gesamt:** 13 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-013` (in_progress; Korrektur zu Step 012)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-28T22:09:33+02:00
+- **Zuletzt aktualisiert:** 2026-08-28T22:54:12+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -36,7 +36,8 @@ current_step: step-012
 | step-009 | EPIC-03 | done | Source-backed Assembly-Context mit deterministischem Decompilation-Fallback verbinden | - | d2814147 | approved | d2814147 + 60c60e52 + aa900d52 |
 | step-010 | EPIC-03 | done | Provider-/Registry-Selection für direkte Assembly-Tool-Unterstützung komponieren | - | 28b7b76d | issues → step-011 approved | 28b7b76d + 410550b4 + a92787eb |
 | step-011 | EPIC-03 | done | Support-/Lease-Regressionen und Orchestrator-Testzuordnung korrigieren | step-010 | 6e38b4c2 | approved | 6e38b4c2 + d035772c + 65f1c564 |
-| step-012 | EPIC-03 | in_progress | Gemeinsame Host-Komposition für direkte Assembly-MCP-Tools verdrahten | - | - | - | 352a8115 |
+| step-012 | EPIC-03 | issues → step-013 | Gemeinsame Host-Komposition für direkte Assembly-MCP-Tools verdrahten | - | db386bc4 | issues | db386bc4 + 12b6dcce + 16ebeda5 |
+| step-013 | EPIC-03 | in_progress | Assembly-Host-Wiring und Session-Lifetime absichern | step-012 | - | - | 102b9331 |
 
 ## Config
 
@@ -161,3 +162,8 @@ Step 012 ist als nächster kontextbegrenzter EPIC-03-Schnitt aktiviert
 Provider, Snapshot-Registry und Orchestrator an die beiden direkten Assembly-
 MCP-Tools; `AnalysisToolCall`, weitere Hostpfade, Gitea, Netzwerk und
 transitive Referenzen bleiben gemäß Plan außerhalb.
+
+Der Kritiker fand in Step 012 zwei In-Scope-Wiring-Lücken (`16ebeda5`): der
+registrierte source-backed Callback und die Mehrfach-Session-Lifetime der
+Daemon-Composition waren nicht direkt nachgewiesen. Step 013 bündelt diese
+Regressionen als kontextbegrenzte Korrekturrunde.
