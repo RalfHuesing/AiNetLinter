@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-28T20:33:36+02:00
+last_updated: 2026-08-28T22:00:54+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -83,21 +83,34 @@ werden an diese Session-Grenze angeschlossen.
   deterministische Fallback. Source-Origin und Decompilation-Hinweis sind
   dabei getrennt; Registry-, Snapshot- und Lease-Ownership bleibt unverändert.
 
-  **Nächster Schnitt / in Arbeit → `step-010`:** Ein injizierbarer
-  `AssemblySourceSelectionOrchestrator` komponiert den bestehenden Loader-
-  Result, Provider-Port, `SourceSnapshotRegistry.Acquire`, statische
-  Assembly-Identität und den genehmigten Match-/Selection-Vertrag. Ein
-  disposable Support-Scope hält die Source-Lease bis nach der bestehenden
-  Factory und dem Result-Builder; direkte Support-Regressionen prüfen
-  source-backed und den unveränderten Decompilation-Fallback.
+  **Abgeschlossen durch `step-010` und Korrektur `step-011`:**
+  `AssemblySourceSelectionOrchestrator` und der gemeinsame Support-Overload
+  komponieren Loader-Result, Provider-Port, `SourceSnapshotRegistry.Acquire`,
+  statische Assembly-Identität und den genehmigten Match-/Selection-Vertrag.
+  Der disposable Support-Scope hält die Source-Lease bis nach Factory und
+  Result-Builder. `step-011` hat die Lease-, Cancellation- und Result-Builder-
+  Regressionen ergänzt und wurde genehmigt; Source-backed und der
+  unveränderte Decompilation-Fallback sind damit an der gemeinsamen
+  Support-Grenze gesichert.
 
-  Der Split-Gate-Schnitt umfasst bewusst weder
-  `AssemblyAnalysisToolRegistrations`/`AnalysisToolCall` noch die gemeinsame
-  Provider-/Registry-Ownership in Stdio- und Daemon-Host. Diese MCP-/Daemon-
-  Komposition, die beiden konkreten Toolpfade, transitive Referenzen, Refresh
-  und persistenter Cache bleiben eigenständige Folgepakete. Die eigentliche
-  Gitea-Source-of-Truth, Authentifizierung und Refresh-Semantik bleibt
-  vollständig in EPIC-04.
+  **Nächster Schnitt → `step-012`:** Eine gemeinsame
+  `AssemblyAnalysisHostComposition` übernimmt die explizite Host-Lifetime für
+  Loader-Result, Provider, `SourceSnapshotRegistry` und Orchestrator. Der
+  direkte Registration-Adapter führt diese Instanz ausschließlich über
+  `AssemblyAnalysisToolRegistrations` und die beiden Assembly-Tool-Wrapper an
+  den vorhandenen `AssemblyAnalysisToolSupport`-Overload. Stdio verwendet eine
+  Instanz pro MCP-Serverlauf, der Daemon eine Instanz pro Daemonlauf und teilt
+  sie über seine Sessions.
+
+  Der Split-Gate-Schnitt umfasst einen primären Host-Composition-Vertrag, einen
+  eng gekoppelten direkten Registration-Adapter, drei Schichten, acht
+  Akzeptanzkriterien und zwölf `read_first`-Dateien. `AnalysisToolCall` bleibt
+  unverändert, weil es den kanonischen Assembly-Callback bereits liefert;
+  Projekt-Tools, weitere MCP-Registrierungen, transitive Referenzen, Refresh
+  und persistenter Cache bleiben außen. TD-001 bis TD-004 werden nicht künstlich
+  bearbeitet: keiner ist im geplanten Consumer-Schnitt direkt und sicher zu
+  beheben. Die eigentliche Gitea-Source-of-Truth, Authentifizierung und
+  Refresh-Semantik bleibt vollständig in EPIC-04.
 
 **Zweck:** Eine globale, explizite Mapping-Konfiguration für externe Quellen
 einführen und daraus vollständige Solution-Snapshots, den passenden
