@@ -4,477 +4,357 @@ type: step-plan
 task: decompiled-assembly-analysis
 step: 005
 corrects: null
-title: "Explizite Source-Solutions und Snapshot-Auflösung: Mapping, Identität und Session-Anbindung"
+title: "Expliziten External-Source-Mappingvertrag mit strikter Validierung vorbereiten"
 epic: EPIC-03
-estimated_risk: high
+estimated_risk: medium
 step_type: single
 items: []
 created_by: planer
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
-created_at: 2026-08-28T16:53:38+02:00
+created_at: 2026-08-28T17:15:00+02:00
 related_to: [step-004]
+context_budget:
+  read_first:
+    - "appsettings.json"
+    - "src/AiNetLinter/Logging/LoggingConfigLoader.cs"
+    - "src/AiNetLinter/Configuration/ConfigLoader.cs"
+    - "src/AiNetLinter/Mcp/Projects/ProjectDefinitionLoader.cs"
+    - "src/AiNetLinter/Mcp/Assemblies/AssemblyAnalysisSessionModels.cs"
+    - "src/AiNetLinter/Mcp/Assemblies/AssemblyDiagnosticCodes.cs"
+    - "src/AiNetLinter.FastTests/Logging/LoggingConfigLoaderTests.cs"
+    - "src/AiNetLinter.FastTests/Mcp/Projects/ProjectDefinitionLoaderTests.cs"
+    - "src/AiNetLinter.FastTests/Mcp/AnalysisToolCallTests.cs"
+    - "src/AiNetLinter.TestKit/TestTempDirectory.cs"
+    - "Docs/configuration.md"
+    - "tasks/decompiled-assembly-analysis/codemap.md"
+  read_on_demand:
+    - "src/AiNetLinter/Mcp/Assemblies/AssemblyAnalysisSession.cs — nur zur Prüfung, dass der neue Vertrag keine Session-/Cache-Grenze vorwegnimmt"
+    - "src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs — nur zur späteren Übergabegrenze, nicht zur Änderung"
+    - "src/AiNetLinter/Mcp/AnalysisToolCall.cs — nur zur Scope-Abgrenzung gegen Session-/MCP-Wiring"
+    - "src/AiNetLinter/Mcp/McpServerOptionsFactory.cs, src/AiNetLinter/Commands/McpServerCommand.cs und src/AiNetLinter/Mcp/Daemon/DaemonHostCommand.cs — nur falls der Loader-Aufrufpunkt für eine spätere Verdrahtung dokumentiert werden muss"
+    - "src/AiNetLinter/Baseline/SourceFileCatalog.cs und SourceFileCatalogLoader.cs — nicht für den Mapping-Loader, nur bei einer unbeabsichtigten Roslyn-Abhängigkeit"
+    - "src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisSessionTests.cs und src/AiNetLinter.IntegrationTests/Mcp/ — nur für bestehende Testkonventionen; keine Session-/MCP-Tests in diesem Step"
+  out_of_scope:
+    - "Source-Snapshot-Identität, Revision/Commit-Modelle, SourceSnapshotRegistry, Source-Cache, Lease-, TTL-, Generation- und Disposal-Semantik"
+    - "Direkte Source-Match-Auflösung über vollständige .sln/.slnx-Solutions, Project.AssemblyName-Auswahl, .csproj-Ableitung und Roslyn-Solution-Loading"
+    - "AssemblyAnalysisSession, AssemblyAnalysisContextFactory, AssemblyAnalysisService, AnalysisToolCall, MCP-Registrierungen sowie Stdio-/Daemon- und Projekt-Session-Wiring"
+    - "Gitea-Clone/Fetch, Authentifizierung, Branch-Refresh, Netzwerk, atomare Snapshot-Akquisition und produktive Source-of-Truth aus EPIC-04"
+    - "Transitive Referenzen, gemeinsame Capability-Matrix, finale Agentenregel-/API-/Integrationsdokumentation, README-/rules.json-Synchronisation und Abschluss-Audit"
+    - "Erweiterung von ainetlinter.project.json, Änderung des bestehenden Batch-Analysecaches sowie Assembly.Load, Reflection-Ausführung oder AssemblyLoadContext"
 ---
 
-# Step 005: Explizite Source-Solutions und Snapshot-Auflösung: Mapping, Identität und Session-Anbindung
+# Step 005: Expliziten External-Source-Mappingvertrag mit strikter Validierung vorbereiten
 
 ## Bezug
 
 - **Task:** `decompiled-assembly-analysis`
-- **Epic:** `EPIC-03` aus `roadmap.md` — explizite externe Source-Solutions
-  und deterministische Snapshot-Auflösung als nächster offener Baustein nach
-  dem abgeschlossenen EPIC-02-Fundament.
-- **Konzept-Referenz:** `Konzept.md` §§ „Gitea-Register und wartungsarmes
-  Mapping“, „Source-Auflösung vor der Dekompilation“, „Fingerprint und
-  Cache-Key“, „Assembly-Session“, Phase 3 sowie die Teststrategie und
-  Definition of Done für Mapping und Source-Snapshots.
+- **Epic:** `EPIC-03` aus `roadmap.md` — ausschließlich der erste
+  Mapping-/Validierungsschnitt; EPIC-03 bleibt danach offen.
+- **Konzept-Referenz:** `Konzept.md` „Gitea-Register und wartungsarmes
+  Mapping“, „Source-Auflösung vor der Dekompilation“ (nur die explizite
+  Konfigurationsgrenze), Phase 3 und die Mapping-bezogene Teststrategie.
+- **Split-Gate:** Der Step enthält genau einen primären Fachvertrag, höchstens
+  drei Schichten und höchstens acht Akzeptanzkriterien. Der Provider-Port ist
+  ein Adapter dieses Mapping-/Diagnosevertrags, kein zweiter Source-Snapshot-
+  oder Sessionvertrag.
 
 ## Aktueller Projektzustand (JIT-Kontext)
 
-EPIC-02 ist durch `step-003` und die genehmigte Korrektur `step-004` im Code
-vorhanden: `AssemblyAnalysisSession` liest PE-Metadaten metadata-only, erzeugt
-immutable Decompilation-Generationen, validiert und veröffentlicht den
-Assembly-Cache atomar, transportiert die echte PE-Identität und liefert
-synthetische Roslyn-Snapshots. `AssemblyAnalysisContextFactory` und die
-Assembly-Tools konsumieren diesen Vertrag weiterhin ohne Runtime-Laden.
+`step-003` und `step-004` haben das EPIC-02-Fundament mit metadata-only
+Assembly-Session, Decompilation-Generationen, Cache-Validierung, Referenz-
+diagnosen und synthetischem Roslyn-Snapshot abgeschlossen. `AssemblyAnalysisSession`
+und `AssemblyAnalysisContextFactory` sind damit bestehende Grenzen, die dieser
+Step nicht erweitert.
 
-Die Source-Seite existiert dagegen noch nicht. `AnalysisToolCall` dispatcht
-Assembly-Ziele nur über einen Pfad-Callback, und
-`AssemblyAnalysisToolSupport`/`AssemblyAnalysisContextFactory` erzeugen die
-Assembly-Session aktuell pro Aufruf. Die MCP-Komposition in
-`McpServerOptionsFactory`, `McpServerCommand` und `DaemonHostCommand` kennt nur
-die bestehende `ProjectRegistry`; eine gemeinsame Source-Registry oder ein
-Source-Resolver wird weder für direkte DLL-Ziele noch für Nachschlageaufrufe
-aus einem Projekt übergeben.
+Die Konfiguration ist aktuell getrennt: `ConfigLoader` lädt `rules.json`,
+`ProjectDefinitionLoader` validiert und löst die beiden Pfade von
+`ainetlinter.project.json` relativ zur Definitionsdatei auf, und
+`LoggingConfigLoader` liest aus dem optionalen `appsettings.json` nur Logging.
+Der neue Loader soll diese Zuständigkeiten nicht vermischen. Seine eigenen
+Result-/Diagnosewerte müssen wie beim Projekt-Loader explizit bleiben, damit
+ungültige Mappings nicht als stiller Fallback oder scheinbar gültige Quelle
+weitergereicht werden.
 
-Die Konfiguration ist ebenfalls noch getrennt: `ConfigLoader` liest
-`rules.json`, `ProjectDefinitionLoader` liest ausschließlich den Vertrag aus
-`ainetlinter.project.json`, und `LoggingConfigLoader` verarbeitet aus
-`appsettings.json` nur den `Logging`-Abschnitt. `SourceFileCatalog` und
-`SourceFileCatalogLoader` bieten bereits den wiederverwendbaren MSBuild-/Roslyn-
-Ladepfad für eine vollständige Solution. Die vorhandene
-`RoslynTestSolutionFactory`, `TestTempDirectory`- und MCP-TestKit-Infrastruktur
-eignet sich für injizierbare, netzwerkfreie Source-Snapshot-Doubles.
-
-Es gibt keinen relevanten `tech-debt.md`-Index. DRY-, MagicValues- und
-DeadCode-Funde, die beim Anfassen dieser Konfigurations-, Registry- oder
-Session-Grenze tatsächlich auftreten, werden innerhalb dieses Pakets in die
-jeweilige Architekturänderung integriert; ein separater Sweep oder ein neuer
-Tech-Debt-Step wird nicht erzeugt.
+Die vorhandenen Unit-Testmuster und `TestTempDirectory` reichen für JSON-/Pfad-
+und Provider-Vertragstests aus. Eine vollständige Test-Solution, ein
+`SourceFileCatalog` oder ein MCP-Host sind für diesen Mapping-Schnitt nicht
+erforderlich.
 
 ## Intention
 
-Nach diesem Step entscheidet die Assembly-Session zuerst über einen expliziten,
-validierten Source-Match und verwendet nur bei fehlendem, nicht verfügbarem oder
-mehrdeutigem Match die bestehende statische Decompilation. Ein vollständig
-geladener externer Source-Stand besitzt eine stabile Identität, wird als
-readonly Snapshot in einer getrennten Registry dedupliziert und kann von einem
-direkten DLL-Target sowie einem Projektkontext gemeinsam verwendet werden.
+Nach diesem Step gibt es einen unveränderlichen, streng validierten Vertrag für
+die globale External-Source-Mapping-Datei und deren Pfad aus `appsettings.json`.
+Fehler, Mehrdeutigkeiten und nicht unterstützte Felder werden als strukturierte,
+sichtbare Diagnosen erhalten; ein fehlendes optionales Mapping bleibt der normale
+„kein Mapping“-Zustand. Ein kleiner injizierbarer Provider-Port kann diesen
+validierten Vertrag übernehmen und den Zustand „Provider nicht verfügbar“ ohne
+Netzwerk liefern, damit der spätere Snapshot-/Session-Step darauf aufsetzt.
 
-Die Provider-Grenze ist so vorbereitet, dass EPIC-04 später Gitea-Akquisition
-ergänzen kann, ohne Mapping-, Snapshot- oder Roslyn-Verträge erneut zu bauen.
-Alle neuen Pfade bleiben metadata-only bzw. read-only und sind über
-deterministische Test-Doubles ohne Netzwerk überprüfbar.
+## Kontext-Handoff
 
-## Große Paketgrenzen
+### Invarianten
 
-Der Step ist ein zusammenhängendes High-Risk-Paket mit einem fachlichen
-Vertrag. Die folgenden Grenzen sind Teil desselben Steps und dürfen nicht in
-künstliche Mini-Steps aufgeteilt werden:
+- `ainetlinter.project.json` bleibt unverändert und enthält keine externen
+  Mappings.
+- Die einzige Benutzerzuordnung ist explizit: keine Repository-Discovery aus
+  DLL- oder Repositorynamen und keine automatische `.csproj`-Auswahl.
+- `ExternalSources:MappingsPath` wird deterministisch relativ zum Verzeichnis
+  der gelesenen `appsettings.json` aufgelöst; absolute Pfade bleiben absolut.
+- `solutionPath` bleibt ein normalisierter, repository-relativer `.sln`- oder
+  `.slnx`-Pfad. Seine Existenz und sein Inhalt werden hier nicht geprüft, weil
+  das erst am Provider-/Snapshot-Grenzübergang möglich ist.
+- Assembly-Namen werden für Vergleiche ohne optionales `.dll`-Suffix und
+  case-insensitive normalisiert. Doppelte oder über Repository-Einträge hinweg
+  mehrdeutige Namen sind Fehler, niemals Zufallsauswahl.
+- Ungültige explizite Konfiguration wird nicht an den Provider weitergegeben;
+  Diagnosen enthalten mindestens Code, Schweregrad, Nachricht und Fundstelle.
+- Der Provider-Port kennt in diesem Step weder `Solution`, `Project`, Revision,
+  Snapshot-Key, Cache, Lease noch Session; er erhält nur einen validierten
+  Mapping-Eintrag und kann einen sichtbaren Verfügbarkeits-/Fehlerzustand liefern.
+- Keine Assembly wird geladen oder ausgeführt; es gibt keinen Netzwerkzugriff,
+  keine Reflection-Ausführung und keinen `AssemblyLoadContext`.
 
-1. **Mapping- und Konfigurationsvertrag:** globale Mapping-Datei, strikte
-   Validierung, Pfadauflösung und sichtbare Konfigurationsdiagnosen.
-2. **Source-Match, Identität und Cache:** explizite Kandidatenauswahl aus einer
-   vollständigen Solution, geladene Revision, Source-Snapshot-Key,
-   Match-Evidenz/Confidence sowie getrennte Registry-/Cache-Lebensdauer.
-3. **Session- und MCP-Anbindung:** ein gemeinsamer Resolver-/Registry-Kontext
-   für direkte Assembly-Targets und Projekt-Nachschlagepfade, readonly Source-
-   Sessions und sicherer Decompilation-Fallback.
-4. **TestKit, Verträge und minimale Doku:** wiederverwendbare Fixtures,
-   Unit-/Component-/repräsentative MCP-Tests, Konfigurationsdokumentation und
-   die vorgeschriebenen Nicht-Stress-Gates.
+### Relevante MCP-Symbole
 
-## Nicht-Ziele
+Semantische Einstiegsanker für den Coder/Kritiker:
 
-- Keine Gitea-Implementierung: kein Clone, Fetch, Branch-Refresh,
-  Authentifizierungs- oder Netzwerkcode. Es entsteht nur die injizierbare
-  Provider-Schnittstelle sowie ein expliziter „nicht verfügbar“-Pfad; die
-  produktive Gitea-Akquisition gehört zu `EPIC-04`.
-- Keine transitive Referenzauflösung, keine rekursive Source-/Decompilation-
-  Matrix und keine gemeinsame Tool-Capability-Matrix; diese gehören zu
-  `EPIC-05`. In diesem Step werden nur der direkte Assembly-Match und die
-  bestehende unmittelbare Consumer-Anbindung verdrahtet.
-- Kein Abschluss-Audit, kein projektweiter DRY-/Duplikat-/MagicValues-/DeadCode-
-  Sweep und keine finale Dokumentations- oder Agentenregel-Synchronisation;
-  diese gehören zu `EPIC-06`. Opportunistische Funde in den bearbeiteten
-  Paketen werden davon abweichend direkt mitbehoben.
-- Keine Erweiterung von `ainetlinter.project.json` um externe Mappings, keine
-  automatische Repository-Discovery anhand von DLL- oder Repositorynamen und
-  keine Nutzung lokaler dirty/unbuilt Checkouts als Source-of-Truth.
-- Kein externes Projekt wird restauriert, getestet, ausgeführt oder verändert.
-  Kein `Assembly.Load`, keine Reflection-Ausführung und keine
-  `AssemblyLoadContext`-Nutzung.
-- Keine neue allgemeine DI-/Plugin-Infrastruktur und keine Änderung am
-  bestehenden Batch-Analysecache.
+- `T:AiNetLinter.Logging.LoggingConfigLoader` — bestehendes
+  `appsettings.json`-Lade- und Pfadpattern.
+- `M:AiNetLinter.Mcp.Projects.ProjectDefinitionLoader.Load(System.String)~AiNetLinter.Mcp.Projects.ProjectDefinitionLoadResult` — bestehendes
+  Result-/Diagnosepattern mit relativer Pfadauflösung.
+- `M:AiNetLinter.Configuration.ConfigLoader.TryLoadConfig(System.String,System.Boolean)~AiNetLinter.Configuration.Config.Config` — bestehende
+  `rules.json`-Grenze, die nicht um ExternalSources erweitert werden darf.
+- `T:AiNetLinter.Mcp.Assemblies.AssemblyAnalysisSessionOptions` und
+  `T:AiNetLinter.Mcp.Assemblies.AssemblyAnalysisSession` — bestehende
+  EPIC-02-Grenze, die erst im Folge-Step Source-Ergebnisse konsumiert.
+- `T:AiNetLinter.Mcp.AnalysisToolCall` — bestehende Dispatch-Grenze, die in
+  diesem Step unverändert bleibt.
+
+### Sicherer Einstiegspunkt
+
+Zuerst die Records für Mapping, normalisierte Werte, Diagnose und
+`ExternalSourceConfigurationLoadResult` unter
+`src/AiNetLinter/Configuration/` anlegen und die Validierungsregeln als reine,
+deterministische Funktionen festlegen. Danach Loader-Tests mit
+`TestTempDirectory` schreiben. Erst wenn dieser Vertrag stabil ist, den
+minimalen Provider-Port samt `UnavailableExternalSourceProvider` und dessen
+Vertragstest ergänzen. Nicht in `AssemblyAnalysisSession`,
+`AnalysisToolCall` oder MCP-Komposition einsteigen.
 
 ## Konkrete Änderungen
 
-### Paket 1 — Globalen Mapping- und Konfigurationsvertrag einführen
+### Schicht 1 — Mapping-/Konfigurationsvertrag und Validierung
 
 #### `src/AiNetLinter/Configuration/ExternalSourceConfiguration.cs`
 
-- **Was:** Interne immutable Records für `ExternalSources`-Optionen und
-  Mapping-Einträge einführen. Der erste Vertrag umfasst den Pfad zur globalen
-  Mapping-Datei (`MappingsPath`) und den separaten Source-Cache-Root
-  (`CacheRoot`). Mapping-Einträge enthalten ausschließlich Repository-URL,
-  Solution-Pfad und `assemblies` mit DLL-/Assembly-Namen; Commit, Branch und
-  `.csproj`-Pfade sind kein Benutzerfeld.
-- **Warum:** Externe Quellen müssen global und unabhängig vom aktuellen
-  `ainetlinter.project.json`-Target beschrieben werden. Der Vertrag verhindert
-  redundante Projektpfade und lässt mehrere Assembly-Projekte derselben
-  Solution auf einen Snapshot zeigen.
+- **Was:** Interne immutable Records für `ExternalSourceConfiguration`,
+  `ExternalSourceMapping`, normalisierte Assembly-Namen und
+  `ExternalSourceConfigurationDiagnostic` definieren. Das Benutzerformat
+  enthält nur `ExternalSources:MappingsPath` sowie pro Mapping `url`,
+  `solutionPath` und `assemblies`; Commit, Branch, `.csproj`, Cache-Root und
+  Refresh-Intervall gehören nicht hinein.
+- **Was:** Einen expliziten Load-Result-Typ mit gültiger Konfiguration und
+  strukturierter Diagnose-Liste vorsehen. Ein Mapping-Dokument mit einem
+  Validierungsfehler wird als nicht verwendbar markiert; ein fehlender
+  optionaler Abschnitt ergibt eine leere Konfiguration ohne Fehlerdiagnose.
+- **Warum:** Der Fachvertrag bleibt klein, unveränderlich und kann später von
+  Resolver und Provider konsumiert werden, ohne Logging-, Rules- oder
+  Sessionmodelle zu vermischen.
 
-#### `src/AiNetLinter/Configuration/ExternalSourceConfigurationLoader.cs` und
-`src/AiNetLinter/Configuration/ExternalSourceMappingValidator.cs`
+#### `src/AiNetLinter/Configuration/ExternalSourceConfigurationLoader.cs`
 
-- **Was:** Einen fokussierten `System.Text.Json`-Lade-/Validierungspfad für den
-  `ExternalSources`-Abschnitt aus `appsettings.json` und die referenzierte
-  Mapping-Datei ergänzen. Relative Pfade werden deterministisch relativ zum
-  Konfigurations-/Anwendungsstandort aufgelöst; absolute Pfade bleiben erlaubt.
-  URL, Solution-Endung (`.sln`/`.slnx`), nichtleere Assembly-Namen und
-  Normalisierung eines optionalen `.dll`-Suffixes werden strikt geprüft.
-- **Was:** Doppelte Assembly-Einträge, leere Listen, doppelte Einträge in einem
-  Repository und syntaktisch ungültige Pfade/URLs als strukturierte,
-  sichtbare Konfigurationsdiagnosen liefern. Ein Assembly-Name, der in mehreren
-  Repository-Einträgen vorkommt, wird als mehrdeutig behandelt und nie
-  zufällig ausgewählt. Die Existenz des Solution-Pfads wird erst am
-  Provider-/Snapshot-Grenzübergang geprüft, weil der Provider den geladenen
-  Source-Stand liefert.
-- **Warum:** Fehlende Mappings sind ein normaler Fallback, fehlerhafte oder
-  mehrdeutige explizite Mappings müssen dagegen nachvollziehbar sein. Der
-  Loader darf keine Gitea-Suche und keine implizite `.csproj`-Auswahl
-  einführen. `RefreshIntervalMinutes` bleibt bis zur Gitea-Phase außerhalb
-  dieses Vertrags.
+- **Was:** `appsettings.json` und die referenzierte Mapping-Datei über einen
+  fokussierten `System.Text.Json`-Pfad laden. Der Loader akzeptiert einen
+  expliziten Settings-Pfad für Tests, kanonisiert ihn und löst relative
+  `MappingsPath`-Werte gegen dessen Verzeichnis auf; ein absoluter Pfad bleibt
+  unverändert.
+- **Was:** Fehlende `appsettings.json` bzw. fehlender optionaler
+  `ExternalSources`-Abschnitt liefern eine leere Konfiguration. Ein explizit
+  gesetzter, fehlender oder nicht lesbarer Mapping-Pfad sowie ungültiges JSON
+  liefern strukturierte Fehlerdiagnosen statt Exception-basiertem oder
+  stillem Ignorieren.
+- **Warum:** Der Loader ist unabhängig testbar und führt keine MCP- oder
+  Session-Komposition ein. Die Pfadbasis ist reproduzierbar und nicht vom
+  zufälligen aktuellen Arbeitsverzeichnis abhängig.
 
-#### `src/AiNetLinter/Logging/LoggingConfigLoader.cs`,
-`src/AiNetLinter/Commands/McpServerCommand.cs` und
-`src/AiNetLinter/Mcp/Daemon/DaemonHostCommand.cs`
+#### `src/AiNetLinter/Configuration/ExternalSourceMappingValidator.cs`
 
-- **Was:** Den neuen Loader neben dem bestehenden Logging-Loader in die
-  MCP-Komposition aufnehmen, ohne Logging-Schlüssel oder `ConfigLoader` für
-  `rules.json` umzudeuten. Fehlende optionale ExternalSources-Konfiguration
-  ergibt eine leere Mapping-Konfiguration; eine formal fehlerhafte Datei wird
-  als sichtbarer Server-/Session-Zustand an den Resolver weitergereicht.
-- **Warum:** Stdio- und Daemon-Start müssen denselben globalen Mapping-Vertrag
-  und denselben Source-Registry-Kontext verwenden. Ein zweiter Parser für
-  Logging oder eine Aufblähung von `GlobalConfig` würde die vorhandenen
-  Zuständigkeitsgrenzen und Public-Member-Grenzen verschlechtern.
+- **Was:** Mapping-Einträge strikt prüfen: absolute HTTP(S)-Repository-URL,
+  repository-relativer `.sln`-/`.slnx`-Pfad ohne `..`-Escape, nichtleere
+  Assembly-Liste, nichtleere Assembly-Namen, optionales `.dll`-Suffix,
+  case-insensitive Duplikate und unbekannte Felder.
+- **Was:** Doppelte Namen innerhalb eines Eintrags und Mehrdeutigkeiten über
+  mehrere Repository-Einträge mit stabilen Diagnosecodes markieren. Der
+  Validator prüft nicht die Existenz oder den Inhalt der Solution und liest
+  keine `.csproj`-Dateien.
+- **Warum:** Explizite, fehlerhafte Konfiguration darf später nicht als
+  source-backed Beweis verwendet werden; fehlende Mappings bleiben dagegen
+  ein normaler Fallback-Fall.
 
-### Paket 2 — Source-Match, Snapshot-Identität und getrennten Cache bauen
+### Schicht 2 — Injizierbarer Provider-Port und Adapter
 
-#### `src/AiNetLinter/Mcp/Assemblies/AssemblySourceModels.cs`
+#### `src/AiNetLinter/Mcp/Assemblies/IExternalSourceProvider.cs` und
+`src/AiNetLinter/Mcp/Assemblies/UnavailableExternalSourceProvider.cs`
 
-- **Was:** Interne Value-Modelle für Mapping-Match, Evidence/Confidence,
-  geladenen Source-Stand und Snapshot-Identität einführen. Der kanonische
-  `ExternalSourceSnapshotKey` besteht mindestens aus kanonischer Repository-
-  URL, tatsächlich geladener Revision und kanonischem Solution-Pfad. Die
-  Zuordnung zum Source-Projekt und `AssemblyName` bleibt ein Match innerhalb
-  des Snapshot-Kontexts; sie darf den gemeinsamen Snapshot-Key nicht für
-  direkte und indirekte Aliase duplizieren.
-- **Was:** Die PE-Assembly-Identität und die Source-Match-Diagnosen getrennt
-  transportieren. Ein Branch- oder Repositoryname allein ist keine Identität;
-  eine fehlende geladene Revision darf keinen `source-backed`-Snapshot
-  erzeugen. Evidence/Confidence markieren mindestens explizites Mapping,
-  exakten `Project.AssemblyName`-Treffer und sichtbare Metadaten-Mismatches.
-- **Warum:** Der Source-Code bleibt nur dann belastbar, wenn sein tatsächlicher
-  Stand und das konkrete Projekt nachvollziehbar sind. Das DLL-Ziel bleibt
-  die Target-Identität, auch wenn die Roslyn-Dokumente aus dem Source-Snapshot
-  stammen.
+- **Was:** Einen kleinen internen `IExternalSourceProvider`-Port definieren,
+  der ausschließlich einen bereits validierten `ExternalSourceMapping`-
+  Vertrag entgegennimmt und ein Ergebnis aus Verfügbarkeit plus Diagnosen
+  zurückgibt. Die Antwort enthält bewusst noch keine `Solution`, kein
+  `Project`, keine Revision und keinen Snapshot-Key.
+- **Was:** Einen deterministischen `UnavailableExternalSourceProvider` als
+  Produktionsdefault/Adapter ergänzen. Er führt kein Netzwerk aus und meldet
+  „Provider nicht verfügbar“ sichtbar; vorhandene Konfigurationsdiagnosen
+  werden nicht überschrieben.
+- **Warum:** EPIC-04 kann später die Gitea-Akquisition hinter derselben
+  injizierbaren Grenze ergänzen. Der Step baut dafür nur den Adapter-Port und
+  verschiebt die eigentliche Source-Akquisition ausdrücklich nach EPIC-04.
 
-#### `src/AiNetLinter/Mcp/Assemblies/AssemblySourceResolver.cs`
+### Schicht 3 — Tests und minimale Konfigurationsdokumentation
 
-- **Was:** Einen Resolver vor der Decompilation einführen. Er liest zunächst
-  die statisch ermittelte Assembly-Identität, sucht ausschließlich passende
-  explizite Mapping-Einträge und fordert über eine kleine interne
-  `IExternalSourceSnapshotProvider`-Grenze eine vollständige Solution mit
-  geladenem Revisionsnachweis an. Aus den tatsächlich geladenen Roslyn-
-  Projekten wird über `Project.AssemblyName` genau ein Source-Projekt
-  ausgewählt; `.csproj`-Pfade werden nur aus der Solution abgeleitet.
-- **Was:** Für keinen Eintrag, Provider-Nichtverfügbarkeit, fehlende Revision,
-  keinen AssemblyName-Treffer oder mehrere Treffer einen sichtbaren
-  `no-match`/`ambiguous`/`unavailable`-Zustand liefern und anschließend den
-  bestehenden Decompilation-Fallback ermöglichen. Ein expliziter Match mit
-  widersprechender PE-Metadatenplausibilität wird nicht still als Originalquelle
-  ausgegeben.
-- **Warum:** Explizite Konfiguration ist die einzige Quelle der Repository-
-  Auswahl. Die Metadaten dürfen die Auswahl plausibilisieren, aber kein
-  unbekanntes Repository entdecken.
+#### `src/AiNetLinter.FastTests/Configuration/ExternalSourceConfigurationLoaderTests.cs`
 
-#### `src/AiNetLinter/Mcp/Assemblies/SourceSnapshotRegistry.cs` und
-`src/AiNetLinter/Mcp/Assemblies/SourceSnapshotCache.cs`
+- **Was:** Unit-/Component-Tests für leere optionale Konfiguration, relative
+  und absolute `MappingsPath`-Auflösung, fehlende Mapping-Datei, defektes JSON,
+  unbekannte Felder, URL-/Solution-Pfad-Validierung, `.dll`-Normalisierung,
+  leere/duplizierte/mehrdeutige Assembly-Einträge und stabile Diagnosen
+  ergänzen.
+- **Was:** Reale kleine JSON-Dateien ausschließlich unter
+  `TestTempDirectory` verwenden; `ainetlinter.project.json` und der bestehende
+  Rules-Loader bleiben unverändert. Die Tests prüfen, dass ein invalides
+  Mapping nicht als verwendbare Konfiguration zurückkehrt.
 
-- **Was:** Eine von `ProjectRegistry` und `AssemblyDecompilationCache` getrennte
-  Registry/Cache-Grenze implementieren. Ein Snapshot wird unter seinem
-  kanonischen Key nur einmal materialisiert; parallele Aufrufer erhalten
-  begrenzte Leases auf denselben immutable, readonly `SourceFileCatalog`-/
-  `Solution`-Stand. Die Registry verwaltet Snapshot-Lebensdauer und sichere
-  Freigabe, ohne den Projekt- oder Batch-Cache zu verallgemeinern.
-- **Was:** Den persistenten Source-Cache-Vertrag mit
-  `source/<repository-key>/<revision>/<solution>` und einem typisierten
-  Manifest für URL, Revision, Solution-Pfad, `AssemblyName -> Project` sowie
-  Snapshot-Status festlegen. Nur vollständig materialisierte und validierte
-  Provider-Ergebnisse dürfen sichtbar werden; unvollständige Einträge werden
-  nicht als Source-backed verwendet. Die Akquisition/Refresh-Entscheidung
-  selbst bleibt beim Provider aus EPIC-04.
-- **Warum:** Direkte DLL-Targets und Projekt-Nachschlagepfade müssen denselben
-  Source-Stand wiederverwenden, ohne die Source-Solution in den aktuellen
-  Projektkontext zu kopieren oder mutierbar zu machen.
+#### `src/AiNetLinter.FastTests/Mcp/Assemblies/ExternalSourceProviderContractTests.cs`
 
-#### `src/AiNetLinter/Baseline/SourceFileCatalog.cs` und
-`src/AiNetLinter/Baseline/SourceFileCatalogLoader.cs`
+- **Was:** Einen Fake-Provider injizieren und prüfen, dass nur validierte
+  Mapping-Werte übergeben werden, Cancellation weitergereicht wird und der
+  `UnavailableExternalSourceProvider` ohne Netzwerk einen sichtbaren Zustand
+  liefert. Es gibt keinen Roslyn-/Solution- oder MCP-Host-Aufbau.
+- **Was:** Contract-Assertions auf die Abwesenheit von Snapshot-/Revision-/
+  Sessionfeldern im Port-Ergebnis sowie auf die unveränderte Decompilation-
+  Sicherheitsgrenze beschränken.
 
-- **Was:** Den vorhandenen vollständigen Solution-Ladepfad wiederverwenden und
-  für `ExternalSourceSnapshot` so kapseln, dass Workspace-/Solution-Ownership,
-  readonly Nutzung und Disposal eindeutig beim Snapshot-Lease liegen. Keine
-  zweite MSBuild-/Adhoc-Laderoutine bauen.
-- **Warum:** Die Source-Solution ist der gemeinsame Snapshot-Kontext; das
-  ausgewählte Projekt ist nur die Assembly-Zuordnung darin. So bleiben
-  Dokument- und Roslyn-Semantik konsistent mit dem bestehenden Projektpfad.
+#### `Docs/configuration.md`
 
-### Paket 3 — Assembly-Session und MCP-Komposition an den Source-Vertrag anbinden
+- **Was:** Minimal den implementierten Konfigurationsvertrag für
+  `ExternalSources:MappingsPath`, die Mapping-Felder `url`, `solutionPath`
+  und `assemblies`, die Pfadbasis, `.dll`-Normalisierung und sichtbare
+  Validierungsdiagnosen dokumentieren. Festhalten, dass `.csproj`, Commit,
+  Branch und automatische Repository-Suche keine Mapping-Felder sind.
+- **Was:** Keine Aussage über bereits wirksame Source-Snapshots, vollständige
+  Solution-Matches, Session-/MCP-Routing oder Gitea-Akquisition aufnehmen;
+  diese Verträge werden erst nach den Folge-Steps dokumentiert.
 
-#### `src/AiNetLinter/Mcp/Assemblies/AssemblyAnalysisSessionModels.cs` und
-`src/AiNetLinter/Mcp/Assemblies/AssemblyAnalysisSession.cs`
+## Ausdrückliche Folge-Abgrenzung
 
-- **Was:** `AssemblyAnalysisSessionOptions`/Generation um den optionalen
-  Source-Resolver- und Snapshot-Kontext erweitern. Der Refresh liest die
-  PE-Identität zuerst, versucht danach einen verifizierten Source-Match und
-  erzeugt bei Erfolg eine `source-backed`-Generation aus dem ausgewählten
-  Roslyn-Projekt der vollständigen Solution. Die PE-Identität, Match-Evidence,
-  Revision und Status bleiben im Generation-/Origin-Vertrag sichtbar.
-- **Was:** Nur bei erfolgreicher, vollständiger Source-Snapshot-Validierung die
-  Decompilation überspringen. Bei fehlendem, mehrdeutigem, nicht verfügbarem
-  oder nicht plausibilisiertem Match den bestehenden `decompiled`-Pfad mit
-  sichtbarer Diagnose verwenden. Source- und Decompilation-Cache bleiben
-  getrennt; ein Source-Fehler darf keinen fremden oder alten Source-Stand als
-  aktuell ausgeben.
-- **Warum:** Die Auswahlentscheidung gehört vor den bestehenden Decompiler,
-  ohne den bewährten EPIC-02-Fallback oder die statische Sicherheitsgrenze zu
-  umgehen.
+Der spätere EPIC-03-Folge-Step übernimmt als eigenes vertikales Paket:
 
-#### `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs`,
-`AssemblyAnalysisToolSupport.cs` und `AssemblyAnalysisService.cs`
+- Source-Snapshot-Identität aus Repository, tatsächlich geladener Revision und
+  Solution-Pfad;
+- SourceSnapshotRegistry/-Cache, readonly Snapshot-Leases und gemeinsame
+  Wiederverwendung zwischen direkten DLL-Aliasen und Consumer-Aufrufen;
+- Auflösung des passenden Source-Projekts aus einer vollständig geladenen
+  `.sln`/`.slnx` über `Project.AssemblyName`, einschließlich Match-Evidence,
+  Confidence und Source-/Decompilation-Fallback;
+- Anpassung von `AssemblyAnalysisSession`, Assembly-Kontextfabrik,
+  `AnalysisToolCall`, MCP-Registrierungen sowie Stdio-/Daemon-Komposition.
 
-- **Was:** Die Kontextfabrik auf den gemeinsamen Resolver-/Registry-Kontext
-  umstellen und source-backed sowie decompiled Snapshots in denselben
-  `AssemblyContext`-/MCP-Ergebnisvertrag überführen. Für den Source-Pfad wird
-  das konkrete Projekt innerhalb der vollständigen Solution adressiert; der
-  Consumer-Kontext bleibt fachlich getrennt und wird nicht zur externen
-  Source-of-Truth.
-- **Was:** Direkte DLL-Aufrufe und projektbezogene Nachschlageaufrufe auf den
-  identischen `ExternalSourceSnapshotKey` führen. Ein zweiter Provider-Load
-  oder eine zweite Materialisierung desselben Snapshot-Keys ist im normalen
-  Aliasfall ausgeschlossen.
-- **Warum:** Alle bestehenden Assembly-spezifischen Tools sollen die Herkunft
-  und den Zustand einheitlich sehen, ohne EPIC-05 vorwegzunehmen oder eine
-  zweite Roslyn-Toolfamilie zu bauen.
-
-#### `src/AiNetLinter/Mcp/AnalysisToolCall.cs`,
-`src/AiNetLinter/Mcp/Registration/AssemblyAnalysisToolRegistrations.cs`,
-`src/AiNetLinter/Mcp/McpServerOptionsFactory.cs` und
-`src/AiNetLinter/Mcp/McpCodeGraphServerOptions.cs`
-
-- **Was:** Den gemeinsamen Source-Resolver/Registry-Kontext über die
-  bestehende Dispatch- und Server-Composition an Assembly-Tools und residente
-  Projekt-Sessions weiterreichen. `ProjectRegistry` bleibt die projektbezogene
-  Registry; die neue Source-Registry wird nicht als versteckter globaler
-  Singleton eingeführt, sondern pro Server-Lebensdauer erzeugt und explizit
-  an die Closures/Optionen gebunden.
-- **Was:** Stdio- und Daemon-Pfade identisch verdrahten und den Default-
-  Provider als „nicht verfügbar“ behandeln, bis EPIC-04 die Gitea-Akquisition
-  liefert. Test-Kompositionen müssen einen Fake-Provider injizieren können.
-- **Warum:** Nur eine gemeinsam komponierte Registry garantiert Alias-
-  Wiederverwendung über direkte und projektbezogene Aufrufe; getrennte
-  Registries würden denselben Source-Stand mehrfach laden.
-
-### Paket 4 — TestKit, Tests und minimale Vertragsdokumentation
-
-#### `src/AiNetLinter.TestKit/Mcp/ExternalSourceSnapshotFixture.cs` sowie
-`RoslynTestSolutionFactory.cs`/`ProjectRegistryFixture.cs`
-
-- **Was:** Eine zentrale Fixture für eine vollständige, kleine deklarative
-  Solution mit mindestens zwei unterschiedlichen `AssemblyName`s, einem
-  expliziten Mapping, einer geladenen Test-Revision, Fake-Provider,
-  Provider-Aufrufzähler und readonly Snapshot-Lease ergänzen. Die Fixture
-  verwendet `TestTempDirectory` und vorhandene Roslyn-/MCP-Helfer; kein
-  Netzwerk, Prozessstart, Restore oder fremder Projekt-Testlauf.
-- **Warum:** Resolver-, Registry- und Alias-Tests müssen denselben
-  unveränderlichen Teststand wiederverwenden und dürfen keine duplizierten
-  Ad-hoc-Solution-Builder erzeugen.
-
-#### `src/AiNetLinter.FastTests/Configuration/` und
-`src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/`
-
-- **Was:** Unit-Tests für `appsettings`-Pfade, Mapping-Schema,
-  `.dll`-Normalisierung, URL-/Solution-Validierung, doppelte/mehrdeutige
-  Einträge, fehlende Mapping-Treffer und das unveränderte
-  `ainetlinter.project.json` ergänzen.
-- **Was:** Component-Tests für `AssemblyName`-Auflösung aus einer vollständigen
-  Fake-Solution, abweichendes Projekt-/DLL-Naming, Source-Mismatch,
-  Provider-Nichtverfügbarkeit, Source-/Decompilation-Fallback,
-  Snapshot-Key-Gleichheit/-Verschiedenheit, atomare Source-Cache-Adoption,
-  readonly Verhalten und genau einen Provider-/Materialisierungsaufruf bei
-  direktem Target plus Consumer-Alias schreiben.
-- **Was:** Prüfen, dass ein gültiger Source-Match keine Decompilation aufruft,
-  die PE-Target-Identität erhalten bleibt und Origin/Revision/Evidence im
-  bestehenden Resultat sichtbar sind. Keine Tests für transitive Referenzen
-  oder die spätere Capability-Matrix aufnehmen.
-
-#### `src/AiNetLinter.IntegrationTests/Mcp/` und bestehende MCP-Testfixtures
-
-- **Was:** Wenige repräsentative In-Process-/MCP-Host-Tests ergänzen, die eine
-  Mapping-Datei aus einem `TestTempDirectory` laden und den Fake-Provider über
-  die Server-Options injizieren. Ein Test deckt direkte DLL-Analyse und
-  project-based Consumer-Lookup gegen denselben Snapshot ab; ein zweiter den
-  konservativen Fallback ohne Provider/Mapping.
-- **Warum:** Die echte Stdio-/Daemon-Komposition muss den gemeinsamen Registry-
-  Lebenszyklus beweisen, ohne Gitea oder unbounded Sleeps einzuführen.
-
-#### `Docs/configuration.md`, `Docs/integration.md`, `Docs/agent-api.md` und
-`README.md`
-
-- **Was:** Nur die jetzt implementierten Mapping-/Snapshot-/Fallback-
-  Vertragsflächen dokumentieren: globaler Mapping-Pfad aus `appsettings.json`,
-  Repository-/Solution-/Assembly-Schema, keine `.csproj`-Pfade, sichtbare
-  Source-/Decompilation-Herkunft und die Gitea-Provider-Grenze. Die umfassende
-  finale Capability-Matrix, Agentenregel- und Roadmap-Synchronisation bleibt
-  EPIC-06.
-- **Warum:** Konfigurations- und MCP-Vertragsänderungen dürfen nicht nur im
-  Code existieren; zugleich wird die finale Gesamtdokumentation nicht
-  vorgezogen.
+Dieser Step darf dafür nur die Eingangsform und den injizierbaren Port stabil
+machen. Er implementiert keine vollständige EPIC-03-Umsetzung. Die Gitea-
+Akquisition, Authentifizierung, Refresh- und Fehlersemantik bleibt vollständig
+in EPIC-04.
 
 ## Tests
 
-- [ ] `dotnet test src/AiNetLinter.FastTests --filter Category=Unit` während
-  der Iteration für Mapping-, Identity- und Fehlervertragsänderungen.
-- [ ] Unit: gültige/ungültige `ExternalSources`-Konfiguration, relative und
-  absolute Pfade, strikte Mapping-Validierung, keine `.csproj`-Felder,
-  Duplikat-/Ambiguitätsdiagnosen und stabile AssemblyName-Normalisierung.
-- [ ] Component: vollständige Fake-Solution mit mehreren Assembly-Projekten,
-  exakter `Project.AssemblyName`-Auflösung, Source-Mismatch, fehlender
-  Revision, Provider-Nichtverfügbarkeit und Decompilation-Fallback.
-- [ ] Component: gleicher Snapshot-Key für direkte DLL und Consumer-Alias,
-  ein Provider-/Materialisierungsaufruf, unterschiedliche Keys für andere
-  Revision/Solution/Repository und readonly-/Lease-/Disposal-Semantik.
-- [ ] Integration/MCP: Stdio-/Daemon-Komposition mit injiziertem Fake-Provider,
-  sichtbare Origin-/Confidence-/Revision-Felder und unveränderte
-  projektbezogene Registry-Semantik.
-- [ ] `dotnet clean` vor dem Abschlusslauf, um alte Build-/Cacheartefakte aus
-  dem Gate auszuschließen.
-- [ ] `dotnet build` — null Warnungen und null Fehler bei
-  `TreatWarningsAsErrors`.
-- [ ] `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` —
-  vollständiger Unit-/Component-Lauf grün.
-- [ ] `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`
-  — vollständiger Integration-/Dogfood-/Performance-Lauf grün; `Stress`
-  bleibt ausgeschlossen.
-- [ ] Keine `Assembly.Load`-, Reflection- oder `AssemblyLoadContext`-Nutzung;
-  kein Netzwerk- oder externer Projekt-Testlauf in den neuen Tests.
+- Unit: reine Validatorfälle für Schema, URL, repository-relative
+  Solution-Pfade, Assembly-Normalisierung, unbekannte Felder und Duplikate.
+- Component: Loader mit temporärer `appsettings.json` und Mapping-Datei für
+  relative/absolute Pfade, leere optionale Konfiguration und sichtbare Fehler.
+- Vertrags-Test: Fake-/Unavailable-Provider mit validiertem Mapping,
+  Cancellation und „nicht verfügbar“ ohne Netzwerk oder Solution-Load.
+- Bestehende schnelle Regressionen für `LoggingConfigLoader`,
+  `ProjectDefinitionLoader`, `AnalysisToolCall` und EPIC-02-Assembly-Session
+  bleiben unverändert; nur bei einer echten Regression werden sie gezielt
+  ausgeführt.
+- Abschluss-Verifikation nach Implementierung: `dotnet build`,
+  `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` und
+  `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`;
+  `Stress` bleibt ausgeschlossen.
 
-## Definition of Done
+## Definition of Done / Akzeptanzkriterien
 
-- [ ] EPIC-03-Paket implementiert einen strikten globalen Mapping-Vertrag über
-  `appsettings.json`; `ainetlinter.project.json` bleibt auf das aktuelle
-  Projekt-Target beschränkt.
-- [ ] Der Resolver wählt ausschließlich explizite Mappings, leitet das
-  konkrete Source-Projekt aus der vollständigen Solution über
-  `Project.AssemblyName` ab und behandelt keinen/mehrere Treffer konservativ
-  mit sichtbarer Diagnose.
-- [ ] Source-Snapshot-Identität enthält kanonische Repository-URL, tatsächlich
-  geladenen Revisionsnachweis und Solution-Pfad; Projekt-/Assembly-Match,
-  Evidence und Confidence sind nachvollziehbar.
-- [ ] Source-Registry und Source-Cache sind von `ProjectRegistry` und
-  `AssemblyDecompilationCache` getrennt. Identische Snapshot-Keys werden nur
-  einmal materialisiert und readonly über direkte sowie Consumer-Aliase geteilt.
-- [ ] Ein verifizierter Source-Match verwendet den Source-Roslyn-Stand und
-  überspringt Decompilation; alle anderen Fälle behalten den bestehenden
-  statischen Decompilation-Fallback und sichtbare Zustände.
-- [ ] Stdio- und Daemon-Komposition verwenden denselben explizit gebundenen
-  Source-Kontext; kein versteckter globaler Singleton und keine neue DI-
-  Infrastruktur.
-- [ ] Gitea-Akquisition, Refresh, Authentifizierung, transitive Referenzmatrix
-  und Abschluss-Audit sind nicht Bestandteil dieses Steps und bleiben für die
-  vorgesehenen Epics sichtbar offen.
-- [ ] Alle genannten Unit-, Component- und repräsentativen MCP-Tests sowie
-  `dotnet build` und beide vollständigen Nicht-Stress-Testcommands sind grün.
-- [ ] Der ausführende Coder erstellt einen deutschen Conventional-Commit im
-  Imperativ mit dem Task-Suffix `[decompiled-assembly-analysis]`; Code, Tests
-  und die minimal erforderliche Vertragsdokumentation gehören in den
-  ausführenden Step-Commit.
-- [ ] Nach Ausführung werden `step-005/step-result.md` geschrieben und der
-  Step-Status gemäß Drift-Loop aktualisiert; `task-state.md` wird erst durch
-  den Orchestrator nach Prüfung geändert.
+- [ ] Ein unveränderlicher External-Source-Mappingvertrag liest ausschließlich
+  `MappingsPath`, `url`, `solutionPath` und `assemblies`; `project.json`,
+  `.csproj`, Commit und Branch werden nicht erweitert.
+- [ ] Relative Settings-Pfade werden deterministisch gegen das Verzeichnis
+  der gelesenen `appsettings.json` aufgelöst; repository-relative
+  Solution-Pfade werden normalisiert und nicht aus dem aktuellen Arbeits-
+  verzeichnis oder fremden Dateien abgeleitet.
+- [ ] Ungültige URLs, Solution-Endungen, Pfad-Escapes, leere Listen, leere
+  Namen, unbekannte Felder sowie interne/übergreifende Duplikate führen zu
+  stabilen sichtbaren Diagnosen und nie zu Zufallsauswahl.
+- [ ] Fehlende optionale ExternalSources-Konfiguration liefert eine leere
+  Mapping-Konfiguration; ein explizit fehlerhafter Pfad oder ein fehlerhaftes
+  Mapping wird nicht als gültiger Provider-Eingang verwendet.
+- [ ] Der injizierbare Provider-Port und der Unavailable-Adapter transportieren
+  ausschließlich validierte Mappings sowie Verfügbarkeit/Diagnosen und
+  enthalten noch keine Snapshot-, Revision-, Solution- oder Sessionsemantik.
+- [ ] Unit-, Component- und Provider-Vertragstests laufen deterministisch mit
+  `TestTempDirectory`, ohne Netzwerk, Restore, Fremdprojekt, MCP-Host oder
+  Assembly-Ausführung.
+- [ ] `Docs/configuration.md` beschreibt nur den in diesem Step implementierten
+  Mapping-/Validierungsvertrag; Snapshot-, Session-, MCP- und Gitea-Aussagen
+  bleiben den Folge-Epics vorbehalten.
+- [ ] `dotnet build` sowie beide vollständigen Nicht-Stress-Testläufe sind
+  grün; kein `Assembly.Load`, keine Reflection-Ausführung und kein
+  `AssemblyLoadContext` wird eingeführt.
 
 ## Rules-Refs
 
 - `.agents/rules/AiNetLinter-McpWorkflow.mdc#Verbindliche Priorität` und
-  `#Werkzeugwahl` — C#-Semantik, Referenzen, Impact und Codeverständnis zuerst
-  über AiNetLinter-MCP mit absolutem `projectRoot`; Assembly-Analyse bleibt
-  metadata-only.
+  `#Werkzeugwahl` — C#-Semantik zuerst über MCP mit absolutem
+  `projectRoot`; `rg` bleibt auf Text-/Diff-Arbeit beschränkt.
 - `.agents/rules/AiNetLinterRichtlinien.mdc#2 Architektur-Verbote` — keine
-  Runtime-Ladung, Reflection, `AssemblyLoadContext`, Plugin-/DI-Ausweitung;
-  externe Quellen bleiben read-only.
+  Runtime-Ladung, Reflection, `AssemblyLoadContext`, Plugin- oder DI-
+  Infrastruktur; Projektvertrag und universelle Pfadauflösung bleiben
+  generisch.
 - `.agents/rules/AiNetLinterRichtlinien.mdc#3 Windows-Umgebung & Tool-Regeln`
-  — Windows-kompatible Pfadauflösung, sichere Cache-/Temp-Grenzen und
-  bestehende TestTempDirectory-/PowerShell-Muster.
+  — PowerShell-kompatible Pfade, bestehende Loader-Patterns und
+  `TestTempDirectory` verwenden.
 - `.agents/rules/AiNetLinterRichtlinien.mdc#4 Updates & Tests` — xUnit-v3-
-  Tests, Dokumentationspflicht bei Konfigurationsänderungen, vollständige
-  Nicht-Stress-Gates und keine unbounded Retries/Sleeps.
+  Tests, deterministische Test-Doubles, vollständige Nicht-Stress-Gates und
+  Dokumentationspflicht bei Konfigurationsänderungen.
 - `.agents/rules/AiNetLinterRichtlinien.mdc#5 Qualitätsdrift-Prävention` —
-  Zero-Warning-Gate, explizite Fehlerzustände, DRY-/MagicValues-/DeadCode-
-  Funde opportunistisch im betroffenen Paket beheben und kein künstlicher
-  Einzel-Sweep.
-- `.agents/rules/AiNetLinter.mdc#Kurz-Stil` und `#Grenzwerte` — immutable
-  Records, kurze fokussierte Methoden sowie Public-Member-, Methoden- und
-  Komplexitätsgrenzen für Config-/Resolver-/Registry-Verträge.
-- `.agents/Agent-Scaffolding/dev-loop/drift-loop/spec.md#10.2` und `#10.6` —
-  ein großer, in sich geschlossener Single-Step; keine Mini-Batches für
-  mittel-/hoch-riskante Vertragsänderungen, `related_to` bleibt ein Pointer.
+  Result-/Diagnosemuster, Zero-Warning-Gate und DRY-/MagicValues-/DeadCode-
+  Funde nur opportunistisch im betroffenen Mapping-/Validierungspaket.
+- `.agents/Agent-Scaffolding/dev-loop/drift-loop/spec.md#10.2`, `#10.6`
+  und `#10.7` — ein vertikaler Step innerhalb eines Epics, kein High-Risk-
+  Multi-Vertragspaket, Pointer-Referenzen und vollständige Planinhalte ohne
+  Template-Platzhalter.
 
 ## Bekannte Ausnahmen
 
-- Ohne EPIC-04-Provider kann die Produktionskomposition in diesem Step keinen
-  echten Gitea-Stand laden. Der Default muss deshalb einen sichtbaren
-  „Provider nicht verfügbar“-Zustand und den bestehenden Decompilation-
-  Fallback liefern; die Source-backed-Integration wird über einen injizierten
-  Test-Provider verifiziert.
-- Persistierte Source-Snapshots werden in diesem Step nur über ihre
-  Identitäts-/Validierungsgrenze abgesichert. Automatisches Refresh,
-  Authentifizierung und Aufräumen alter Einträge bleiben bewusst außerhalb.
-
-## Code-Skizze (optional)
-
-```text
-PEReader / AssemblyIdentity
-        -> explizite Mapping-Datei aus appsettings.json
-        -> Provider-Port liefert vollständige Solution + geladene Revision
-        -> Project.AssemblyName -> genau ein Source-Projekt
-        -> ExternalSourceSnapshotKey(URL + Revision + Solution)
-        -> SourceSnapshotRegistry (ein readonly Snapshot, mehrere Aliase)
-        -> source-backed AssemblyGeneration
-        -> bei no-match/ambiguous/unavailable: bestehende Decompilation
-```
+- Der Default-Provider bleibt bis EPIC-04 absichtlich nicht verfügbar. Das ist
+  kein fehlender Test, sondern der explizite Adaptervertrag; Tests injizieren
+  einen Fake ohne Netzwerk.
+- Die Existenz und Projektzuordnung von `solutionPath` kann erst geprüft
+  werden, wenn der spätere Provider einen Source-Stand liefert. Dieser Step
+  prüft deshalb nur den repository-relativen Pfad und seine Endung.
 
 ## Notes
 
-Der tatsächliche Codeabgleich erfolgte für die C#-Semantik über den
-AiNetLinter-MCP mit `projectRoot`
-`C:\Daten\Entwicklung\Ralf\AiNetLinter`; Textsuche diente nur zur Ergänzung
-der Fundstellen. Die bestehende CodeMap deckt die betroffenen
-Konfigurations-, Assembly-, Roslyn-, MCP- und TestKit-Bereiche bereits ab und
-wird deshalb nicht mit spekulativen zukünftigen Dateien erweitert.
-
-`step-003` und `step-004` bilden gemeinsam das abgeschlossene EPIC-02-
-Fundament. Dieser Step erweitert es um die Source-Herkunftsentscheidung und
-Snapshot-Wiederverwendung, ersetzt aber weder die genehmigten EPIC-02-
-Entscheidungen noch die späteren Gitea-/Transitivitäts-/Abschluss-Epics.
+- DRY-, MagicValues- und DeadCode-Funde werden nicht als eigener Sweep geplant.
+  Nur ein Fund, der direkt im neuen Mapping-/Validierungscode liegt und ohne
+  zusätzliche Vertragsgrenze architektonisch sinnvoll bereinigt werden kann,
+  wird im selben Step mitgeführt.
+- `SourceFileCatalog`, `AssemblyAnalysisSession`, `AnalysisToolCall` und die
+  bestehende `ProjectRegistry` sind Handoff-/Abgrenzungsanker, keine neuen
+  Änderungsziele dieses Steps.
+- Für C#-Semantik wurden die vorhandenen Typen und Aufrufer über den
+  AiNetLinter-MCP gegen das absolute Projektroot
+  `C:\Daten\Entwicklung\Ralf\AiNetLinter` geprüft; Textsuche diente nur der
+  exakten Dateikontextprüfung.
+- Der Coder erstellt den Implementierungscommit in einem deutschen
+  Conventional-Commit im Imperativ mit dem Suffix
+  `[decompiled-assembly-analysis]`; der Plan selbst wird vom Orchestrator
+  separat als Planung committed.

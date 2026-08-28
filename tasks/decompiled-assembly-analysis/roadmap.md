@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-28T16:53:38+02:00
+last_updated: 2026-08-28T17:15:00+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -56,10 +56,18 @@ werden an diese Session-Grenze angeschlossen.
 
 - [ ] **EPIC-03 — Explizite externe Source-Solutions und Snapshot-Auflösung** —
 
-  **Nächster Umsetzungsschritt:** `step-005` bündelt Mapping-Vertrag,
-  Snapshot-Identität, Validierung, readonly Source-Registry und die gemeinsame
-  Assembly-/Projekt-Session-Anbindung. Die eigentliche Gitea-Akquisition bleibt
-  EPIC-04.
+  **Split-Gate-Aufteilung:** `step-005` ist ausschließlich der große,
+  kontextbegrenzte Mapping-/Validierungsschnitt: globaler Mapping-Vertrag,
+  strikte Diagnose- und Pfadauflösung, ein injizierbarer Provider-Port sowie
+  die dafür nötigen Unit-/Component-/Vertragstests und minimale
+  Konfigurationsdokumentation. EPIC-03 bleibt danach offen.
+
+  Ein späterer Folge-Step übernimmt den getrennten Snapshot-/Session-Schnitt:
+  Source-Snapshot-Identität und Registry, direkte Source-Match-Auflösung über
+  vollständig geladene Solutions sowie die Assembly-Session-/MCP-Anbindung.
+  Dieser Folge-Step darf die Eingangsform und den Provider-Port aus `step-005`
+  konsumieren, erweitert aber nicht rückwirkend den Mapping-Schnitt. Die
+  eigentliche Gitea-Akquisition bleibt in EPIC-04.
 
 **Zweck:** Eine globale, explizite Mapping-Konfiguration für externe Quellen
 einführen und daraus vollständige Solution-Snapshots, den passenden
@@ -69,7 +77,9 @@ Snapshot-Identität, Alias-Wiederverwendung zwischen direkter DLL-Analyse und
 Referenzauflösung sowie readonly-fähige Quell-Sessions; bei fehlender oder
 mehrdeutiger Zuordnung bleibt die Decompilation der definierte Fallback.
 
-  Abhängigkeit: EPIC-01 und EPIC-02.
+  Abhängigkeit: EPIC-01 und EPIC-02; Umsetzung absichtlich in mindestens zwei
+  vertikale Schnitte geteilt (`step-005` Mapping/Validierung, späterer Step
+  Snapshot/Session).
 
 - [ ] **EPIC-04 — Gitea-Source-of-Truth, Refresh und Fehlersemantik** —
 
