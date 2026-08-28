@@ -40,6 +40,7 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 - **`src/AiNetLinter/Mcp/Tools/ServerMaintenance/`** — enthält Health-, Reload- und Maintenance-Abfragen für getrennte Session-Kapazitäten.
 - **`src/AiNetLinter/Baseline/SourceFileCatalog.cs`** — stellt den aktuellen Roslyn-Solution-/Dokumentkatalog für projektbasierte Sessions bereit.
 - **`src/AiNetLinter/Baseline/SourceFileCatalogLoader.cs`** — lädt Solutions über MSBuildWorkspace und bildet die Basis für externe Source-Snapshot-Lader.
+- **`src/AiNetLinter/Baseline/FileSystemExclusionHelpers.cs`** — bündelt die zentralen `obj`-/`bin`-/Worktree-Ausschlüsse für freie Dateisystem-Scans, die die Integration-Gates vor generierten Assembly-Cachequellen schützen.
 - **`Directory.Packages.props` und `src/AiNetLinter/AiNetLinter.csproj`** — zentrale Paketversionen und Runtime-Projekt, an denen die statische Decompiler-Abhängigkeit und ihre Auslieferung angebunden werden.
 
 ## Konfiguration und bestehender Cache
