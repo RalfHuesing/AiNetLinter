@@ -1,5 +1,5 @@
 ---
-status: planned
+status: done (pending audit)
 type: step-plan
 task: decompiled-assembly-analysis
 step: 013
