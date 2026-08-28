@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T21:49:33+02:00
+last_updated: 2026-08-28T22:09:33+02:00
 rules_dir: .agents/rules
-total_steps: 11
-current_step: step-011
+total_steps: 12
+current_step: step-012
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -14,11 +14,11 @@ current_step: step-011
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 11 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-011` (approved; nächster EPIC-03-Schnitt wird geplant)
+- **Aktueller Schritt:** `step-012` (in_progress; gemeinsame Host-Komposition für direkte Assembly-MCP-Tools)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-28T21:49:33+02:00
+- **Zuletzt aktualisiert:** 2026-08-28T22:09:33+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -36,6 +36,7 @@ current_step: step-011
 | step-009 | EPIC-03 | done | Source-backed Assembly-Context mit deterministischem Decompilation-Fallback verbinden | - | d2814147 | approved | d2814147 + 60c60e52 + aa900d52 |
 | step-010 | EPIC-03 | done | Provider-/Registry-Selection für direkte Assembly-Tool-Unterstützung komponieren | - | 28b7b76d | issues → step-011 approved | 28b7b76d + 410550b4 + a92787eb |
 | step-011 | EPIC-03 | done | Support-/Lease-Regressionen und Orchestrator-Testzuordnung korrigieren | step-010 | 6e38b4c2 | approved | 6e38b4c2 + d035772c + 65f1c564 |
+| step-012 | EPIC-03 | in_progress | Gemeinsame Host-Komposition für direkte Assembly-MCP-Tools verdrahten | - | - | - | 352a8115 |
 
 ## Config
 
@@ -154,3 +155,9 @@ Support-/Lease-Grenze ist mit den geforderten Zuständen abgedeckt und der
 StaticTestSentinel ist über `@covers` erfüllt. `TD-004` dokumentiert den
 verbleibenden gemeinsamen Snapshot-Testfixture-Builder als architektonische
 Testinfrastruktur-Folgeprüfung.
+
+Step 012 ist als nächster kontextbegrenzter EPIC-03-Schnitt aktiviert
+(`352a8115`). Er verdrahtet eine hostlebenslange Composition für Loader,
+Provider, Snapshot-Registry und Orchestrator an die beiden direkten Assembly-
+MCP-Tools; `AnalysisToolCall`, weitere Hostpfade, Gitea, Netzwerk und
+transitive Referenzen bleiben gemäß Plan außerhalb.
