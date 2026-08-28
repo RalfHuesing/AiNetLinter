@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-28T17:15:00+02:00
+last_updated: 2026-08-28T18:31:00+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -56,18 +56,25 @@ werden an diese Session-Grenze angeschlossen.
 
 - [ ] **EPIC-03 — Explizite externe Source-Solutions und Snapshot-Auflösung** —
 
-  **Split-Gate-Aufteilung:** `step-005` ist ausschließlich der große,
+  **Split-Gate-Aufteilung:** `step-005` war ausschließlich der große,
   kontextbegrenzte Mapping-/Validierungsschnitt: globaler Mapping-Vertrag,
   strikte Diagnose- und Pfadauflösung, ein injizierbarer Provider-Port sowie
   die dafür nötigen Unit-/Component-/Vertragstests und minimale
-  Konfigurationsdokumentation. EPIC-03 bleibt danach offen.
+  Konfigurationsdokumentation. Die Korrekturrunde `step-006` ist genehmigt
+  (`step-006/step-review.md`); EPIC-03 bleibt offen.
 
-  Ein späterer Folge-Step übernimmt den getrennten Snapshot-/Session-Schnitt:
-  Source-Snapshot-Identität und Registry, direkte Source-Match-Auflösung über
-  vollständig geladene Solutions sowie die Assembly-Session-/MCP-Anbindung.
-  Dieser Folge-Step darf die Eingangsform und den Provider-Port aus `step-005`
-  konsumieren, erweitert aber nicht rückwirkend den Mapping-Schnitt. Die
-  eigentliche Gitea-Akquisition bleibt in EPIC-04.
+  `step-007` nimmt als nächsten vertikalen Schnitt nur die
+  Source-Snapshot-Identität für Repository, tatsächlich geladene Revision und
+  Solution-Pfad, eine residente in-memory Snapshot-Registry mit Leases sowie
+  das injizierbare Provider-Ergebnis auf. Die Registry dedupliziert vollständige
+  Source-Solutions unabhängig von Assembly-Aliasen; sie lädt noch keine
+  Solutions und entscheidet kein `Project.AssemblyName`-Matching.
+
+  Vollständige Solution-/Project-Match-Auflösung und die Übergabe des
+  source-backed Ergebnisses an `AssemblyAnalysisSession` und MCP-Dispatch
+  bleiben getrennte Folgepakete. Die eigentliche Gitea-Akquisition,
+  Authentifizierung, Refresh- und persistente Cache-Semantik bleibt vollständig
+  in EPIC-04.
 
 **Zweck:** Eine globale, explizite Mapping-Konfiguration für externe Quellen
 einführen und daraus vollständige Solution-Snapshots, den passenden
