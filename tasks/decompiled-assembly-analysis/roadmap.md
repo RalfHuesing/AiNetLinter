@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-28T18:31:00+02:00
+last_updated: 2026-08-28T19:07:06+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -63,18 +63,26 @@ werden an diese Session-Grenze angeschlossen.
   Konfigurationsdokumentation. Die Korrekturrunde `step-006` ist genehmigt
   (`step-006/step-review.md`); EPIC-03 bleibt offen.
 
-  `step-007` nimmt als nächsten vertikalen Schnitt nur die
-  Source-Snapshot-Identität für Repository, tatsächlich geladene Revision und
-  Solution-Pfad, eine residente in-memory Snapshot-Registry mit Leases sowie
-  das injizierbare Provider-Ergebnis auf. Die Registry dedupliziert vollständige
-  Source-Solutions unabhängig von Assembly-Aliasen; sie lädt noch keine
-  Solutions und entscheidet kein `Project.AssemblyName`-Matching.
+  `step-007` hat als vertikalen Schnitt nur die Source-Snapshot-Identität für
+  Repository, tatsächlich geladene Revision und Solution-Pfad, eine residente
+  in-memory Snapshot-Registry mit Leases sowie das injizierbare Provider-
+  Ergebnis umgesetzt und wurde genehmigt. Die Registry dedupliziert
+  vollständige Source-Solutions unabhängig von Assembly-Aliasen; sie lädt
+  keine Solutions und entscheidet kein `Project.AssemblyName`-Matching.
 
-  Vollständige Solution-/Project-Match-Auflösung und die Übergabe des
-  source-backed Ergebnisses an `AssemblyAnalysisSession` und MCP-Dispatch
-  bleiben getrennte Folgepakete. Die eigentliche Gitea-Akquisition,
-  Authentifizierung, Refresh- und persistente Cache-Semantik bleibt vollständig
-  in EPIC-04.
+  **Nächster Schnitt / in Arbeit → `step-008`:** Der geplante Resolver soll
+  einen über die Snapshot-Registry geleasten vollständigen Source-Snapshot
+  deterministisch über den expliziten Assembly-Alias und
+  `Project.AssemblyName` matchen. Er liefert einen unveränderlichen Vertrag
+  mit `matched`, `no-match` und `ambiguous`, geordneten Kandidaten sowie
+  sichtbarer Match-Evidence und Confidence. Session-/MCP-Komposition,
+  Provider-Akquisition, Gitea, Netzwerk und transitive Referenzen bleiben
+  außerhalb dieses nächsten Steps.
+
+  Die Übergabe des source-backed Ergebnisses an `AssemblyAnalysisSession` und
+  MCP-Dispatch bleibt nach `step-008` ein getrenntes Folgepaket. Die eigentliche
+  Gitea-Akquisition, Authentifizierung, Refresh- und persistente Cache-Semantik
+  bleibt vollständig in EPIC-04.
 
 **Zweck:** Eine globale, explizite Mapping-Konfiguration für externe Quellen
 einführen und daraus vollständige Solution-Snapshots, den passenden
