@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T16:42:56+02:00
+last_updated: 2026-08-28T17:09:39+02:00
 rules_dir: .agents/rules
 total_steps: 4
 current_step: step-004
@@ -14,11 +14,11 @@ current_step: step-004
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 4 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-004` (approved; nächster Epic wird geplant)
+- **Aktueller Schritt:** `step-005` (in_progress)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-28T16:42:56+02:00
+- **Zuletzt aktualisiert:** 2026-08-28T17:09:39+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -29,6 +29,7 @@ current_step: step-004
 | step-002 | EPIC-01 | done | MCP-Workflow-Regel auf den neuen Target-Vertrag synchronisieren | step-001 | 7cbc6d45 | approved | 7cbc6d45 |
 | step-003 | EPIC-02 | done | Statische Assembly-Session mit Fingerprint, Decompilation und Roslyn-Snapshot | - | 0704b763 | issues → step-004 approved | 0704b763 |
 | step-004 | EPIC-02 | done | Assembly-Session-Fundament korrigieren: Cache, Limits, Referenzen und Identität | step-003 | 639f0fc4 | approved | 639f0fc4 + 07d684ca + f6ba0ed8 |
+| step-005 | EPIC-03 | in_progress | Expliziten External-Source-Mappingvertrag mit strikter Validierung vorbereiten | - | - | - | a71465fa |
 
 ## Config
 
@@ -82,3 +83,8 @@ Auf Nutzeranweisung wurde der Task am 2026-08-28T16:42:56+02:00 fortgesetzt.
 Ein neuer Kritiker prüfte Step 004 und genehmigte ihn (`f6ba0ed8`); dieser
 Sub-Agent wurde anschließend geschlossen. Für jeden weiteren Rollenaufruf
 wird erneut ein neuer Sub-Agent gestartet.
+
+Der erste EPIC-03-Plan wurde vor dem Coder durch das Split-Gate korrigiert:
+Step 005 enthält jetzt nur Mapping/Validierung, Pfadauflösung, Diagnosen,
+Provider-Port und zugehörige Tests/Doku (`a71465fa`). Snapshot-Identität,
+Registry sowie Session-/MCP-Anbindung bleiben ein späteres vertikales Paket.
