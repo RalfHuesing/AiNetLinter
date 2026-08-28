@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T19:39:46+02:00
+last_updated: 2026-08-28T19:54:45+02:00
 rules_dir: .agents/rules
-total_steps: 8
-current_step: step-008
+total_steps: 9
+current_step: step-009
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -14,11 +14,11 @@ current_step: step-008
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 8 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-008` (approved; nächster EPIC-03-Schnitt wird geplant)
+- **Aktueller Schritt:** `step-009` (in_progress; Source-backed Context und Decompilation-Fallback)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-28T19:39:46+02:00
+- **Zuletzt aktualisiert:** 2026-08-28T19:54:45+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -33,6 +33,7 @@ current_step: step-008
 | step-006 | EPIC-03 | done | Mapping-Diagnosevertrag und direkte JSON-Regressionen korrigieren | step-005 | c9d71c35 | approved | c9d71c35 + 5d084c9b + 07dc88cf |
 | step-007 | EPIC-03 | done | Source-Snapshot-Identität und residente Registry mit injizierbarem Ergebnis | - | cbd79a51 | approved | cbd79a51 + 1c3d2b3c + 7da30606 |
 | step-008 | EPIC-03 | done | Deterministische Source-Match-Auflösung über Project.AssemblyName | - | 9511b8f2 | approved | 9511b8f2 + c2ac1473 + a2062fb7 |
+| step-009 | EPIC-03 | in_progress | Source-backed Assembly-Context mit deterministischem Decompilation-Fallback verbinden | - | - | - | 22490501 |
 
 ## Config
 
@@ -123,3 +124,10 @@ Step 008 wurde durch den neuen Kritiker genehmigt (`a2062fb7`). Der bestehende
 Exact-DRY-Fund zur Drive-Path-Prüfung bleibt als `TD-001` im Tech-Debt-Index
 offen, weil die gemeinsame Ablage zwei bereits abgeschlossene Vertragsgrenzen
 berühren würde und aktuell kein sicherer Auto-Fix ist.
+
+Step 009 ist als nächster kontextbegrenzter EPIC-03-Schnitt aktiviert
+(`22490501`). Er verbindet ein bereits gematchtes, geleastes Source-Projekt
+mit dem Assembly-Context und erhält bei `no-match`, `ambiguous`,
+`unavailable` oder nicht nutzbarem Source-Projekt den bestehenden statischen
+Decompilation-Fallback. Provider-Akquisition und MCP-Registrierung bleiben
+Folgepakete.
