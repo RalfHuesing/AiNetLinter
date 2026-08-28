@@ -32,7 +32,8 @@ internal static class AssemblyAnalysisToolSupport
 
     internal static async Task<CallToolResult> ExecuteAsync(
         AssemblyToolExecutionParameters parameters,
-        AssemblySourceSelectionOrchestrator orchestrator)
+        AssemblySourceSelectionOrchestrator orchestrator,
+        Action<AssemblySourceSelectionScope>? observeScope = null)
     {
         ArgumentNullException.ThrowIfNull(orchestrator);
 
@@ -48,6 +49,7 @@ internal static class AssemblyAnalysisToolSupport
         using var source = await orchestrator.ResolveAsync(
             fullPath!,
             parameters.CancellationToken).ConfigureAwait(false);
+        observeScope?.Invoke(source);
         var (context, error) = await AssemblyAnalysisService.CreateContextAsync(
             new AssemblyAnalysisContextRequest(
                 fullPath!,
