@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-28T18:58:39+02:00
+last_updated: 2026-08-28T19:12:29+02:00
 rules_dir: .agents/rules
-total_steps: 7
-current_step: step-007
+total_steps: 8
+current_step: step-008
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -14,11 +14,11 @@ current_step: step-007
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 7 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-007` (approved; nächster EPIC-03-Schnitt wird geplant)
+- **Aktueller Schritt:** `step-008` (in_progress; deterministische Source-Match-Auflösung)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-28T18:58:39+02:00
+- **Zuletzt aktualisiert:** 2026-08-28T19:12:29+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -32,6 +32,7 @@ current_step: step-007
 | step-005 | EPIC-03 | done | Expliziten External-Source-Mappingvertrag mit strikter Validierung vorbereiten | - | 7d40cacb | issues → step-006 approved | 7d40cacb + b34b2147 + 692412ed |
 | step-006 | EPIC-03 | done | Mapping-Diagnosevertrag und direkte JSON-Regressionen korrigieren | step-005 | c9d71c35 | approved | c9d71c35 + 5d084c9b + 07dc88cf |
 | step-007 | EPIC-03 | done | Source-Snapshot-Identität und residente Registry mit injizierbarem Ergebnis | - | cbd79a51 | approved | cbd79a51 + 1c3d2b3c + 7da30606 |
+| step-008 | EPIC-03 | in_progress | Deterministische Source-Match-Auflösung über Project.AssemblyName | - | - | - | cf93b2fa |
 
 ## Config
 
@@ -111,3 +112,9 @@ Step 007 wurde durch den neuen Kritiker genehmigt (`7da30606`), ohne Findings
 oder neue Tech-Debt-Einträge. Die Snapshot-Identitäts- und Registry-Grenze ist
 damit abgeschlossen; EPIC-03 bleibt für Source-Matching und die spätere
 Session-/MCP-Anbindung offen.
+
+Step 008 ist als nächster kontextbegrenzter EPIC-03-Schnitt aktiviert
+(`cf93b2fa`). Er umfasst ausschließlich die deterministische Zuordnung eines
+expliziten Assembly-Alias zu `Project.AssemblyName` innerhalb eines geleasten
+Source-Snapshots mit `matched`/`no-match`/`ambiguous`, Evidence und Confidence.
+Session-/MCP-Wiring, Gitea und transitive Referenzen bleiben Folgepakete.
