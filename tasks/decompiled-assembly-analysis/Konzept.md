@@ -2,22 +2,23 @@
 status: draft
 type: konzept
 project_kind: brownfield
-estimated_scope: epic
+estimated_scope: large
 rules_dir: .agents/rules
-last_updated: 2026-08-26
+last_updated: 2026-08-28
 open_questions:
   - ILSpy-/ICSharpCode.Decompiler-Version und Wiederverwendung des vorhandenen manuellen Decompilers
   - Exakter Regel-/Config-Vertrag fuer Lint-Tools auf dekompilierten Assemblies
   - Verbindliches Modell fuer Assembly-zu-Quellcode-Matches inklusive Versions-/Commit-Nachweis
   - Aufteilung zwischen projektlokaler Konfiguration und globalem Source-/Repository-Register
-  - Gitea-Discovery, Klonen, Authentifizierung und Cache-Lebenszyklus fuer bekannte Quellcode-Repositories
-  - Identitaet und Freigabepolicy fuer gemeinsame Source-Snapshots bei dirty/unbuilt Arbeitsstaenden
-  - Alias-/Lease-Modell fuer direkte DLL-Targets, Projektabhaengigkeiten und gemeinsame Roslyn-Snapshots
+  - Konkretes Schema fuer explizite Gitea-Mappings, Klonen, Authentifizierung und Cache-Lebenszyklus
+  - Umgang mit lokalen, eventuell dirty/unbuilt Source-Checkouts gegenueber der Gitea-Source-of-Truth
+  - Sichtbarkeit und Suchscope der vollstaendigen Source-Solution bei einem Assembly-Target
+  - Alias-/Lease-Modell fuer direkte DLL-Targets, Projektabhaengigkeiten und gemeinsame Source-Snapshots
 ---
 
 # Konzept: Einheitliches Roslyn-Analyseziel für Projekte und dekompilierte Assemblies
 
-## Intention
+## Ziel (Was)
 
 AiNetLinter soll eine lokale .NET-DLL für die semantische Analyse so behandeln können
 wie das Quellcodeprojekt, aus dem sie entstanden ist. Bei einem Quellcodeprojekt lädt
@@ -49,22 +50,47 @@ Dekompilation müssen als solche erkennbar sein und bei unvollständiger
 Abhängigkeitsauflösung oder problematischer Decompilation einen partiellen Zustand
 melden.
 
+## Warum / Kontext
+
+Der primäre Arbeitskontext ist ein aktuell bearbeitetes Projekt A. Eine von A
+referenzierte DLL ist ein externes Nachschlageziel: AiNetLinter soll erklären können,
+wie die DLL funktioniert, damit der Agent in A korrekt weiterprogrammieren kann.
+Externe Quellen werden in diesem Task niemals verändert oder zurückgeschrieben.
+
+„Extern“ bedeutet dabei nicht zwingend Drittanbieter. Auch eine eigene DLL mit
+vorhandenem Quellcode oder eine gemeinsam verwendete Shared-Library ist extern, sobald
+sie außerhalb des aktuell bearbeiteten Projektroots liegt. Das parallele Bearbeiten
+eines solchen Quellprojekts durch einen weiteren Agenten ist möglich, aber nicht der
+primäre Workflow und wird nicht als Multi-Branch-Synchronisation modelliert.
+
+## Zielplattformen / Technischer Rahmen
+
+- .NET 10, C# und Roslyn im bestehenden lokalen AiNetLinter-MCP-Daemon.
+- Windows als Laufzeitumgebung; Projekt- und Assemblypfade sind lokale absolute Pfade.
+- Der bestehende Projekt-Session-/Lease-/TTL-Lebenszyklus wird weiterverwendet und nur
+  um externe Assembly-/Source-Sessions ergänzt.
+- Externe DLLs werden statisch über PE-Metadaten, Referenzen und Decompilation
+  analysiert; sie werden niemals geladen oder ausgeführt.
+- Ein explizites Source-Mapping kann auf einen lokalen Checkout oder auf einen
+  reproduzierbaren Gitea-Commit zeigen. Gitea wird nicht anhand von DLL-Namen durchsucht.
+
 ## Draft-Ergänzung: Drei Quellen, ein Roslyn-/MCP-Kern
 
 Die wichtige architektonische Trennung ist nicht „Projektanalyse oder
 Assemblyanalyse“, sondern **Herkunft der Analysequelle** vor dem gemeinsamen
 Roslyn-Kern. Für die Analyse gibt es drei relevante Eingangspfade:
 
-1. **Quellcode des aktuell analysierten Projekts:** Der MCP erhält einen
-   Projektroot, lädt die konfigurierte Solution und verwendet deren Documents.
-2. **Bekannter Quellcode zu einer Assembly:** Die DLL ist das Analyseziel, aber ihre
-   passende Source-Solution oder ihr passendes Repository ist bekannt. In diesem Fall
-   wird der Quellcode verwendet; eine Dekompilation wäre für diesen Pfad unnötig und
-   möglicherweise irreführend.
-3. **Assembly ohne belastbaren Source-Match:** Die DLL wird statisch dekompiliert und
-   als synthetisches Roslyn-Project bereitgestellt.
+1. **Quellcode des aktuell bearbeiteten Projekts:** Der MCP erhält einen
+   Projektroot, lädt die konfigurierte Solution und verwendet deren Documents. Das
+   ist der aktive Programmier- und Änderungscontext des Agenten.
+2. **Bekannter externer Quellcode zu einer Assembly:** Die DLL ist das
+   Nachschlageziel, aber ihre passende Source-Solution oder ihr passendes Repository
+   ist explizit bekannt. In diesem Fall wird der Quellcode read-only verwendet; eine
+   Dekompilation wäre für diesen Pfad unnötig und möglicherweise irreführend.
+3. **Externe Assembly ohne Source-Zuordnung:** Die DLL wird statisch dekompiliert und
+   als synthetisches Roslyn-Project read-only bereitgestellt.
 
-„Fremde DLL“ bedeutet dabei zunächst nur „liegt außerhalb des aktuell analysierten
+„Externe DLL“ bedeutet dabei zunächst nur „liegt außerhalb des aktuell bearbeiteten
 Projektroots“. Sie kann aus einem Drittanbieter stammen oder eine eigene, gemeinsam
 verwendete Assembly wie `core.dll` sein. Eigentum ist kein ausreichendes Kriterium für
 die Wahl des Analysepfads; entscheidend sind Verfügbarkeit und Nachweis der passenden
@@ -83,6 +109,22 @@ Pfade liefern eine gemeinsame Analysequelle mit Solution-/Project-/Document-Sich
 SemanticModels, Symbolen und Origin-Metadaten. Unterschiede wie „Originalquelle“
 gegen „dekompiliert“ bleiben Metadaten und Vertrauenszustand, nicht drei getrennte
 Implementierungen der Roslyn-Abfragen.
+
+### Arbeitskontext und Cache-Grenze
+
+Ein MCP-Aufruf aus Projekt A darf ein externes Assembly-Target als Nachschlageziel
+adressieren. Das externe Target ist dabei nicht automatisch ein zweiter Consumer- oder
+Änderungskontext für A. Projekt A und die externe Quelle bleiben getrennte Sessions;
+geteilt werden darf die eindeutig identifizierte Source-Snapshot-Repräsentation.
+
+Die reale lokale Identität beginnt beim kanonisierten absoluten DLL-Pfad bzw. beim
+kanonisierten Projektroot. Für gemeinsam verwendeten Quellcode kommt die konkrete
+Source-Snapshot-Identität hinzu. Derselbe externe Quellstand soll unabhängig davon
+wiederverwendet werden, ob er direkt über eine DLL oder als Referenz-/Nachschlagequelle
+entdeckt wurde. Eine parallele Änderung durch einen weiteren Agenten ist kein eigener
+Branch-Vertrag. Eine veraltete residente Session soll möglichst über Pfad-/Datei- oder
+Snapshot-Prüfung erkannt werden; ein Neustart des lokalen MCP-Daemons bleibt ein
+zulässiger manueller Fallback für seltene Sonderfälle.
 
 ### Analyseziel und Quellenherkunft getrennt halten
 
@@ -118,6 +160,12 @@ ein sinnvoller Kandidat sein, beweist aber weder das richtige Projekt noch die r
 Version. Die Auflösung sollte Signale mit unterschiedlicher Verlässlichkeit sammeln
 und im Ergebnis offenlegen:
 
+Für eine externe `source-backed`-Analyse ist eine explizite lokale oder globale
+Zuordnung erforderlich. Automatische Signale dürfen diese Zuordnung plausibilisieren
+oder einen Mismatch melden, aber keinen unbekannten Source-Checkout und kein Gitea-
+Repository eigenständig als Originalquelle auswählen. Ohne explizite Zuordnung bleibt
+die DLL der Decompilationspfad.
+
 - **Starke Signale:** nachweisbare SourceLink-/Repository-Metadaten, ein passender
   Commit oder Tag, ein zur DLL passender PDB-/Build-Bezug sowie ein expliziter
   Mapping-Eintrag.
@@ -136,24 +184,33 @@ Policy eine explizite Bestätigung, oder es wird auf Dekompilation zurückgefall
 
 ### Lokale Quellen, Gitea und Konfigurationsvarianten
 
-Grundsätzlich kommen drei Konfigurationsorte infrage:
+Für externe Source-Zuordnungen kommen zwei Konfigurationsorte infrage; automatische
+Kandidaten dürfen nur ergänzende Evidenz liefern:
 
 1. **Projektlokale Definition:** `ainetlinter.project.json` kann Overrides und
-   projektspezifische Zuordnungen enthalten. Das ist verständlich, führt aber bei N
-   Projekten und gemeinsam genutzten X DLLs schnell zu Wiederholungen.
+   projektspezifische Zuordnungen enthalten. Das ist für einen einzelnen Arbeitskontext
+   verständlich, führt aber bei N Projekten und gemeinsam genutzten DLLs schnell zu
+   Wiederholungen.
 2. **Globales Source-/Repository-Register:** Eine globale Konfiguration kann
-   Repository-URLs, lokale Checkouts, Gitea-Repositories, zulässige Clone-Ziele und
-   Assembly-/Projekt-Mappings einmalig beschreiben. Mehrere Projektroots können dann
-   auf dieselbe `core`-Quelle verweisen.
-3. **Automatische Ermittlung:** Lokale Output-Strukturen, PDB-/SourceLink-Daten und
-   Assembly-Metadaten können Kandidaten liefern. Ein Gitea-Klon sollte nur erfolgen,
-   wenn ein kanonisches Repository oder ein expliziter Mapping-Eintrag bekannt ist;
-   ein blindes Suchen oder Klonen anhand eines DLL-Namens wäre nicht deterministisch.
+   Repository-URLs, lokale Checkouts, zulässige Clone-Ziele und Assembly-/Projekt-
+   Mappings einmalig beschreiben. Mehrere Projektroots können dann auf dieselbe
+   externe Source-Solution zeigen.
 
-Als Arbeitsrichtung bietet sich daher eine **Schichtung** an: automatische und
-explizite Treffer werden zuerst geprüft, projektlokale Regeln überschreiben bei Bedarf
-ein globales Register, und das globale Register hält die wiederverwendbaren
-Repository-/Gitea-Beziehungen. Der genaue Dateiname, das Schema und die Priorität sind
+   Ein Eintrag muss ein Repository mehreren erzeugten DLLs zuordnen können. Dafür
+   reicht `Repository -> DLL` nicht: erforderlich ist mindestens die Kombination aus
+   Repository, konkretem Source-Projekt bzw. Projektpfad und AssemblyName. Die
+   vollständige Solution ist der bevorzugte Snapshot-/Cache-Kontext; das ausgewählte
+   Source-Projekt bleibt die fachliche Assembly-Zuordnung.
+
+   Automatische lokale Signale wie Output-Struktur, PDB-/SourceLink-Daten und
+   Assembly-Metadaten dürfen einen expliziten Eintrag unterstützen, aber keine
+   unbekannte Gitea-Suche auslösen. Für eine DLL ohne konfigurierte Source-Zuordnung
+   ist die Dekompilation der normale und deterministische Pfad.
+
+Als Arbeitsrichtung bietet sich daher eine **Schichtung** an: explizite lokale
+Overrides überschreiben bei Bedarf das globale Register; das globale Register hält die
+wiederverwendbaren Repository-/Gitea-Beziehungen. Automatische Signale entscheiden
+allein keinen Source-Match. Der genaue Dateiname, das Schema und die Priorität sind
 noch offen. Wichtig ist, dass die Zuordnung nicht N-mal in den Projekten dupliziert
 werden muss.
 
@@ -169,7 +226,9 @@ Ich würde die Entscheidung vorerst so festhalten: `targetType` beschreibt das
 Analyseziel, eine separate Source-Auflösung beschreibt die Herkunft. Ein globales
 Register ist für die N/X-Überlappung die geeignetere Basis; `ainetlinter.project.json`
 sollte nur lokale Overrides und Kontext enthalten. Gitea sollte als reproduzierbare
-Quelle mit URL und Commit behandelt werden, nicht als freies Suchsystem.
+Quelle mit URL und Commit behandelt werden, nicht als freies Suchsystem. Ein Gitea-
+Repository wird dabei als Source-Solution-Snapshot behandelt, aus dem mehrere
+Assembly-Projekte adressiert werden können.
 
 Die sichere Fallback-Regel lautet: **verifizierter Source-Match vor Dekompilation,
 sonst Dekompilation**. Ein nicht verifizierter Match ist kein Gewinn, wenn dadurch eine
@@ -185,27 +244,29 @@ Konfigurationsentscheidung.
 
 ### `projektA` und `core.dll` gleichzeitig bearbeiten
 
-Ein typischer Fall ist:
+Der primäre Fall ist nicht die gleichzeitige Bearbeitung beider Quellen, sondern das
+Nachschlagen aus `projektA`:
 
 ```text
 Agent 1: projektA.exe analysieren oder ändern
-Agent 2: core.dll / Core-Quellcode analysieren oder ändern
+Agent 1: core.dll oder deren Quellcode read-only nachschlagen
+optional Agent 2: Core-Quellcode separat bearbeiten
 ```
 
 Wenn beide Aufrufe dieselbe Core-Quellversion meinen, sollte `core.dll` im Daemon
-nicht zweimal als voneinander unabhängige Roslyn-Welt materialisiert werden. Dafür
-reicht ein Registry-Key aus dem DLL-Pfad nicht aus. Zusätzlich braucht es eine
-kanonische Source-Snapshot-Identität, beispielsweise:
+nicht zweimal als voneinander unabhängige Roslyn-Welt materialisiert werden. Für die
+optionale parallele Bearbeitung reicht ein Registry-Key aus dem DLL-Pfad nicht aus.
+Zusätzlich braucht es eine kanonische Source-Snapshot-Identität, beispielsweise:
 
 ```text
 Repository-URL + Commit/Tag + Source-Project-Pfad + Target-Framework + Source-Hash
 ```
 
 Die direkte Analyse von `core.dll` und die Auflösung von `core.dll` aus `projektA`
-werden dann als zwei Target-Aliase auf denselben Source-Snapshot geführt. Die
-Roslyn-Dokumente und SemanticModels der Core-Quelle können geteilt werden. Der
-Consumer-Kontext von `projektA` bleibt trotzdem separat, weil dort zusätzlich die
-Abhängigkeiten, Konfiguration und Fragen des Projekts A gelten.
+werden dann als zwei Target-Aliase auf denselben Source-Snapshot geführt. Source-
+Documents bzw. deren Materialisierung sollen geteilt werden; eine gemeinsame
+SemanticModel-Instanz ist keine fachliche Voraussetzung, weil sie an die jeweilige
+Compilation gebunden sein kann. Der Consumer-Kontext von `projektA` bleibt separat.
 
 Das ist eine wichtige Präzisierung von „einmal im Daemon“: Nicht zwingend die
 vollständige `projektA`-Session und die vollständige Core-Session sind identisch,
@@ -244,13 +305,14 @@ Heuristiken „lösen“.
 
 Als praktische Arbeitsregel bietet sich an:
 
-- Der kanonische, zwischen Projekten teilbare Source-Snapshot ist ein sauberer,
-  synchronisierter Commit.
-- Ein dirty oder nicht gebauter Checkout ist ein lokaler, instabiler Arbeitsstand und
-  darf nicht still mit einer DLL oder einer anderen Session vereinigt werden.
-- Wenn ein Agent diesen Zustand trotzdem analysiert, muss die Antwort den dirty bzw.
-  nicht verifizierten Ursprung sichtbar machen; ein Fehlschlag oder Fallback auf die
-  tatsächliche DLL-Decompilation ist akzeptabel.
+- Der kanonische, zwischen Projekten teilbare Source-Snapshot soll ein sauberer,
+  synchronisierter Commit aus dem konfigurierten Gitea-Repository sein.
+- Ob ein explizit konfigurierter lokaler Checkout mit dirty/unbuilt Zustand als
+  read-only Nachschlagequelle zugelassen wird oder auf den letzten Commit bzw. die
+  DLL-Decompilation fällt, ist noch festzulegen.
+- Wenn ein nicht verifizierter Zustand analysiert wird, muss die Antwort dessen
+  Herkunft sichtbar machen. Ein Neustart des lokalen MCP-Daemons bleibt ein zulässiger
+  manueller Fallback, soll aber nicht der normale Cache-Vertrag sein.
 
 Damit wird nicht verhindert, dass parallel an `core.dll` gearbeitet wird. Es wird nur
 vermieden, dass der Daemon aus einem zufälligen gemeinsamen Buildoutput eine falsche
@@ -262,16 +324,16 @@ anderen Projekten wiederverwenden.
 
 Wenn `projektA` eine eigene `foo.dll` referenziert, deren Quellcode lokal gerade nicht
 vorhanden ist, kann die Source-Auflösung über das globale Repository-Register den
-passenden Gitea-Eintrag verwenden. Der Quellcode wird dann als definierter Snapshot
-bereitgestellt und in derselben Source-/Roslyn-Registry wiederverwendet wie bei einer
-direkten Analyse von `foo.dll`.
+passenden Gitea-Eintrag verwenden. Der Quellcode wird dann als definierter vollständiger
+Solution-Snapshot bereitgestellt und in derselben Source-Registry wiederverwendet wie
+bei einer direkten Analyse von `foo.dll`.
 
 Gitea ist dabei die gemeinsame Quelle für den Quellcode, aber ein Repositoryname
-allein beweist noch nicht, welche DLL-Version dazugehört. Nach Möglichkeit müssen
-Commit/Tag oder ein anderer reproduzierbarer Versionsbezug mitgeführt werden. Falls
-der Arbeitsprozess diese Verbindung bewusst über synchronisierte Commits herstellt,
-ist das eine zulässige organisatorische Vereinfachung; technisch sollte die Antwort
-die verbleibende Sicherheit trotzdem als `confidence` ausweisen.
+allein beweist noch nicht, welches der enthaltenen Source-Projekte und welche
+DLL-Version dazugehört. Repository, Commit/Tag, konkreter Projektpfad und
+AssemblyName müssen deshalb gemeinsam auflösbar sein. Der Arbeitsprozess darf die
+Verbindung über synchronisierte Commits vereinfachen; technisch bleibt die Evidenz in
+der Antwort sichtbar.
 
 ### Branches als bewusste Grenze
 
@@ -321,31 +383,41 @@ Die Wire-API bleibt bewusst flach, weil sie für MCP-Tool-Schemas und Agenten le
 lesbar ist. Intern wird sie sofort in einen unveränderlichen `AnalysisTarget`-Record
 überführt. Es wird keine Migrationserkennung und kein dualer Dispatch eingeführt.
 
-## Befund im aktuellen AiNetLinter
+## Wo im Projekt
 
-Der aktuelle MCP-Daemon hält pro kanonisiertem `projectRoot` einen residenten Key im
-`ProjectRegistry`. Ein `ProjectLease` schützt den Zugriff; `McpCodeGraphServer` hält
-die geladene Roslyn-Solution, den `SourceFileCatalog` und den Staleness-Zustand. Die
-Solution wird bei Zugriff über mtime/hash-basierte Dokumentprüfungen inkrementell
-aktualisiert. TTL, LRU-Druck, Creation Barriers und In-Flight-Leases sind bereits Teil
-des Projektlebenszyklus.
+- `src/AiNetLinter/Mcp/Projects/ProjectRegistry.cs` — bestehender Registry-, Lease-,
+  TTL-, LRU- und Creation-Barrier-Anker für residente Projekt-Sessions.
+- `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` — bestehende Roslyn-Solution-Session und
+  Datei-Staleness-Anker.
+- `src/AiNetLinter/Mcp/Projects/ProjectToolCall.cs` — bestehende gemeinsame Target-
+  Guard-/Lease-Grenze der projektgebundenen MCP-Tools.
+- `src/AiNetLinter/Mcp/Registration/` — MCP-Toolregistrierungen und aktuelle
+  `projectRoot`-Schemas, die auf den neuen Target-Vertrag geprüft werden müssen.
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/` — bestehender metadata-only Assembly-
+  Pfad, der zur externen Assembly-Session und Source-Auflösung erweitert wird.
+- `src/AiNetLinter/Configuration/` sowie `ainetlinter.project.json` — vorhandene
+  Konfigurationsgrenzen für projektlokale Source-Overrides.
+- `Docs/agent-api.md`, `Docs/integration.md`, `Docs/configuration.md`, `README.md` und
+  `Docs/ROADMAP.md` — zu aktualisierende MCP-, Konfigurations- und Statusdokumentation.
 
-Der aktuelle Assembly-Bereich unter
-`src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/` arbeitet dagegen anders:
+## Entdeckte Mängel/Redundanzen
 
-- `AssemblyAnalysisContextFactory` liest PE-Metadaten und baut eine
-  `CSharpCompilation` aus MetadataReferences.
-- `InspectAssemblyTool` und `FindAssemblyExtensionsTool` erhalten heute
-  `assemblyPath` und optional `projectRoot`.
-- Die DLL wird metadata-only untersucht; es existiert kein dekompiliertes C#-Document,
-  kein langlebiges Assembly-Roslyn-Project und kein Assembly-Eintrag im Daemon-Registry-
-  Lifecycle.
-- Bei Consumer-Analysen kann der bestehende Code eine Compilation aus einer geladenen
-  Solution verwenden. Das ist ein spezieller Pfad, keine allgemeine Target-Abstraktion.
-
-Der neue Task ersetzt diesen Unterschied auf der Session-Ebene. Die vorhandene
-metadata-only Auflösung bleibt als Bestandteil der Assembly-Session nützlich, darf
-aber nicht länger das primäre Modell für Assembly-Tools sein.
+- **Assembly-Pfad ohne residente Source-Sicht**
+  - **Gefunden:** `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/` arbeitet aktuell
+    metadata-only; es gibt dort keine langlebige dekompilierte Roslyn-Session.
+  - **Bezug:** Lücke zum Ziel dieses Konzepts, kein zusätzlicher Regelverstoß.
+  - **Vorschlag:** Bestehenden metadata-only Pfad als Bestandteil der gemeinsamen
+    Assembly-Session wiederverwenden und nicht daneben einen zweiten MCP-Analysepfad
+    aufbauen.
+  - **Entscheidung:** übernommen ins Scope.
+- **Vorhandener Projekt-Lifecycle**
+  - **Gefunden:** `ProjectRegistry`, `ProjectToolCall` und `McpCodeGraphServer` bilden
+    bereits die relevante Lease-/Session-Infrastruktur.
+  - **Bezug:** Architekturregel Einfachheit vor Abstraktion; kein paralleler
+    Assembly-spezifischer Lifecycle ohne Wiederverwendung.
+  - **Vorschlag:** Gemeinsame Registry-/Lease-Grundlagen generalisieren, aber Projekt-
+    und externe Source-Sessions wegen ihrer unterschiedlichen Semantik getrennt halten.
+  - **Entscheidung:** übernommen ins Scope.
 
 ## Scope
 
@@ -357,6 +429,16 @@ aber nicht länger das primäre Modell für Assembly-Tools sein.
 - `targetType=project` routet zur bestehenden Solution-/Projekt-Session.
 - `targetType=assembly` routet zu einer langlebigen Assembly-Session mit vorgelagerter
   Source-Auflösung und Dekompilations-Fallback.
+- Externe Assembly- und Source-Targets sind read-only Nachschlageziele und verändern
+  weder Projekt A noch die externe Quelle.
+- Bekannte externe Quellen werden ausschließlich über explizite lokale oder globale
+  Mappings aufgelöst; es gibt keine Suche in Gitea anhand von DLL- oder Repositorynamen.
+- Ein Mapping kann eine vollständige Source-Solution mit mehreren Source-Projekten und
+  mehreren erzeugten DLLs beschreiben; die Zuordnung berücksichtigt Repository,
+  Version, Source-Projekt und AssemblyName.
+- Die vollständige, eindeutig versionierte Source-Solution ist der bevorzugte Snapshot-
+  und Cache-Kontext. Das konkrete Source-Projekt wird als Assembly-Zuordnung kenntlich
+  gemacht.
 - Deterministischer Source-Match mit Assembly-/Projektidentität, Quellcodeversion und
   sichtbarer Match-Confidence.
 - Gemeinsame Source-Snapshot-Registry, damit mehrere Target-Aliase denselben
@@ -378,17 +460,44 @@ aber nicht länger das primäre Modell für Assembly-Tools sein.
 - Separate Kapazitätsgrenzen für Projekt-Sessions und Assembly-Sessions.
 - Concurrent-Load-, Refresh-, Eviction- und Cache-Korruptions-Tests.
 
-### Bewusst nicht im ersten Umfang
+### Nice-to-Have (Zwischenspeicher — aktuell leer)
+
+Aktuell keine unentschiedenen Nice-to-Have-Punkte.
+
+### Non-Goals (bewusst NICHT Teil davon)
 
 - Rekonstruktion des originalen Buildprozesses oder der ursprünglichen Projektdateien.
 - Ausführung von Code aus der DLL.
 - Änderung oder Rückschreiben von dekompiliertem Code in die Assembly.
 - Automatische Ermittlung eines Consumer-Projekts als versteckter zweiter Target-Kontext.
+- Automatische Suche oder Discovery von Repositories in Gitea.
 - Vollständige Wiederherstellung von PDB-, SourceLink- oder Originaldateinamen-Garantien.
 - Behauptung, dass der erzeugte C#-Code mit der Originalquelle identisch ist.
-- Projektweite Git-Diff-Analysen für eine standalone Assembly.
-- Testzuordnung zu Tests, die nicht Bestandteil der Assembly-Session sind.
+- Git-Diff-Analysen für externe Quellen, insbesondere dekompilierte Assemblies; der
+  Git-Diff-Workflow bleibt dem aktuell bearbeiteten Projekt vorbehalten.
+- Tests externer Projekte als Pflichtfunktion. Falls eine vollständige Source-Solution
+  Tests einfach mitliefert, darf das später zusätzlich nutzbar werden, ist aber kein
+  Grund für einen externen Consumer-/Testkontext.
+- Automatische Synchronisation oder Zusammenführung verschiedener Branches, Dirty-
+  Checkouts und ungebauter Arbeitsstände.
 - Ein allumfassender abstrakter Framework-Layer für beliebige zukünftige Artefakte.
+
+## Verworfene Alternativen
+
+- **Freie Gitea-Discovery anhand von DLL- oder Repositorynamen:** verworfen, weil ein
+  Repository mehrere Projekte und DLLs enthalten kann und die Zuordnung dadurch nicht
+  reproduzierbar wäre.
+- **Repository als alleinige Assembly-Zuordnung:** verworfen, weil zusätzlich das
+  konkrete Source-Projekt, AssemblyName und die Version benötigt werden.
+- **Externer Consumer als versteckter zweiter Target-Kontext:** verworfen, weil der
+  primäre Workflow das read-only Nachschlagen einer externen Quelle aus Projekt A ist.
+- **Branches als eigene Cache-Identität und automatische Zusammenführung:** verworfen,
+  weil der normale Workflow über synchronisierte Commits läuft und Multi-Branch-
+  Koordination nicht erforderlich ist.
+- **Separate metadata-only Assembly-Toolwelt:** verworfen, weil Assemblys in denselben
+  Roslyn-/MCP-Kern wie Projektquellen gelangen sollen.
+- **Legacy- und neuer Target-Vertrag parallel:** verworfen; der MCP-Schnitt soll nach
+  der Umstellung eindeutig bleiben.
 
 ## Target-Vertrag
 
@@ -601,18 +710,20 @@ Die Registry für Target-Leases und die Registry für Source-Snapshots sollten d
 konzeptionell getrennt bleiben. Mehrere Targets können auf denselben
 Source-Snapshot-Key zeigen, während ihre Consumer-Kontexte unterschiedliche Leases
 erhalten. Für eine source-backed `core.dll` ist das die Grundlage dafür, dass ein
-direkter Assembly-Aufruf und die Auflösung aus `projektA` dieselben Core-Documents und
-SemanticModels wiederverwenden können.
+direkter Assembly-Aufruf und die Auflösung aus `projektA` dieselben Core-Documents bzw.
+deren Materialisierung wiederverwenden können. Eine gemeinsame SemanticModel-Instanz
+ist wegen ihrer Bindung an eine konkrete Compilation keine fachliche Zusage.
 
 ## Assembly-Session
 
 ### Source-Auflösung vor der Dekompilation
 
 Die Assembly-Session liest zunächst die Identität und die Referenzen der DLL und
-übergibt das Artefakt an einen `AssemblySourceResolver`. Dieser Resolver kombiniert
-explizite Mappings, globale Repository-Einträge, lokale Checkouts und aus der Assembly
-ableitbare Metadaten. Er liefert nicht nur einen Pfad, sondern auch die Begründung und
-die Versionssicherheit des Treffers.
+übergibt das Artefakt an einen `AssemblySourceResolver`. Dieser Resolver verwendet
+zuerst explizite lokale oder globale Mappings. Er kann lokale Checkouts und aus der
+Assembly ableitbare Metadaten als Evidenz einbeziehen, darf aber kein Repository in
+Gitea selbstständig suchen. Er liefert nicht nur einen Pfad, sondern auch die
+Begründung und die Versionssicherheit des Treffers.
 
 Ein gültiger `source-backed`-Treffer muss mindestens auf ein konkretes Source-Project
 oder eine klar abgrenzbare Source-Solution sowie auf eine nachvollziehbare
@@ -629,9 +740,11 @@ verifizierten Treffer wird der bestehende Decompilation-Plan verwendet und die
 Antwort markiert den Ursprung als `decompiled`.
 
 Ein globaler Source-Eintrag sollte von mehreren Projektroots referenziert werden
-können. Wiederverwendung darf aber nicht zu Versionsverwechslungen führen: Der
-Cache-/Snapshot-Schlüssel muss Repository/URL und Commit bzw. Tag enthalten; für
-unterschiedliche Core-Versionen entstehen unterschiedliche Source-Snapshots.
+können. Er beschreibt deshalb eine Source-Solution bzw. ein Repository mit Commit oder
+Tag und die darin enthaltenen Assembly-Projekte. Wiederverwendung darf aber nicht zu
+Versionsverwechslungen führen: Der Cache-/Snapshot-Schlüssel muss Repository/URL und
+Commit bzw. Tag enthalten; für unterschiedliche Core-Versionen entstehen
+unterschiedliche Source-Snapshots.
 
 ### Fingerprint und Cache-Key
 
@@ -801,23 +914,28 @@ Antwort trägt analog zum bestehenden degradierten Solution-Zustand eine Warnung
 
 Der gemeinsame Kern soll für beide Target-Arten dieselben `Solution`-/`Project`-/
 `Document`-/`SemanticModel`-Pipelines verwenden. Die Bedeutung einzelner Tools hat
-aber eine explizite Grenze:
+aber abhängig von der Quellenherkunft eine explizite Grenze. Für jedes bestehende Tool
+wird im Umsetzungsplan festgehalten, ob es für Projektquellen, externe Source-Solutions
+und externe dekompilierte Assemblies unterstützt, eingeschränkt unterstützt oder
+bewusst nicht umgesetzt wird. „Alle Features“ bedeutet damit vollständige Abdeckung
+der sinnvollen Fälle, nicht künstliche Gleichheit für fehlende Git-, Test- oder
+Consumer-Kontexte:
 
-| Toolgruppe | `project` | `assembly` |
-|---|---|---|
-| `find_symbol`, Skeleton, Klassenstruktur | vollständige Solution-/Projektansicht | dekompilierte Typen und Member, inklusive interner Typen sofern erzeugt |
-| `get_symbol_body` | Original-Source-Body | dekompilierter Body mit Origin-Hinweis |
-| `find_references`, `get_call_tree` | Solution-Graph | Graph innerhalb der Assembly; externe Ziele nur als Metadaten-/External-Nodes |
-| `dependency_graph` | Projekt-/Dateiabhängigkeiten | dekompilierte Dokumente und Assembly-Referenzen |
-| Metriken | Quellcode-Documents | dekompilierte Documents, als `origin=decompiled` markiert |
-| `get_violations`, `pattern_detect` | Projektregeln aus der Projektconfig | nur mit explizitem Assembly-Regelprofil oder klar ausgewiesenem Default |
-| Testkontext | Tests der geladenen Solution | `not_available`, sofern kein Test-Target Bestandteil der Session ist |
-| Git-/Change-Impact | Git-Diff und Solution-Kontext | `not_available` für standalone DLLs; kein erfundener Diff |
-| `safeguard` | Quality Gate der Solution | nur, wenn ein definierter Assembly-Scanvertrag existiert |
+| Toolgruppe | aktuelles `project` | externe Source-Solution | externe dekompilierte Assembly |
+|---|---|---|---|
+| `find_symbol`, Skeleton, Klassenstruktur | vollständige Solution-/Projektansicht | Source-Dokumente der gematchten vollständigen Solution, mit ausgewähltem Assembly-Projekt | dekompilierte Typen und Member, inklusive interner Typen sofern erzeugt |
+| `get_symbol_body` | Original-Source-Body | Original-Source-Body mit Source-Origin | dekompilierter Body mit Origin-Hinweis |
+| `find_references`, `get_call_tree` | Solution-Graph | Graph der verfügbaren Source-Solution; genauer Scope wird festgelegt | Graph innerhalb der dekompilierten Assembly; externe Ziele nur als Metadaten-/External-Nodes |
+| `dependency_graph` | Projekt-/Dateiabhängigkeiten | Abhängigkeiten der verfügbaren Source-Solution | dekompilierte Dokumente und Assembly-Referenzen |
+| Metriken | Quellcode-Documents | Source-Dokumente, als `origin=source-backed` markiert | dekompilierte Documents, als `origin=decompiled` markiert |
+| `get_violations`, `pattern_detect` | Projektregeln aus der Projektconfig | nur, wenn Regeln/Config der Source-Solution belastbar verfügbar sind | nur mit explizitem Assembly-Regelprofil; sonst bewusst nicht umgesetzt |
+| Testkontext | Tests der aktuellen Solution | optional, falls ohne separaten Consumer-Kontext verfügbar; keine Pflicht | nicht erforderlich und standardmäßig nicht verfügbar |
+| Git-/Change-Impact | Git-Diff und Solution-Kontext | bewusst nicht umgesetzt für externe Quellen | bewusst nicht umgesetzt |
+| `safeguard` | Quality Gate der aktuellen Solution | nur bei explizitem, später festzulegendem externem Scanvertrag | nur bei explizitem Assembly-Scanvertrag; sonst bewusst nicht umgesetzt |
 
 „Gleich funktionieren“ bedeutet damit: Die Kernabfragen verwenden denselben Roslyn-
-Codepfad und dieselben Symbol-/Result-Modelle. Es bedeutet nicht, dass eine DLL
-nachträglich Git-Historie, Tests oder ursprüngliche Projektregeln besitzt.
+Codepfad und dieselben Symbol-/Result-Modelle. Es bedeutet nicht, dass eine externe
+DLL nachträglich Git-Historie, Tests oder ursprüngliche Projektregeln besitzt.
 
 ### Symbolidentität und Origin
 
@@ -973,74 +1091,57 @@ Die Registrierungsbeschreibungen müssen den Agenten ausdrücklich sagen:
 
 ## Implementierungsplan
 
-### Schritt 1: Target-Vertrag und zentrale Dispatch-Grenze
+### Phase 1: Einheitlicher Target-Vertrag und Projektregression
 
-- `AnalysisTargetKind`, `AnalysisTargetRequest` und `AnalysisTargetResolver` einführen.
-- `targetType`/`targetPath` in allen betroffenen MCP-Tool-Schemas verbindlich machen.
-- `projectRoot` aus den Tool-Signaturen entfernen.
-- `ProjectToolCall` zu `AnalysisToolCall` umbauen oder als allgemeine Dispatchklasse
-  ersetzen.
-- Projekt-Target zunächst fachlich unverändert über die bestehende
-  `ProjectDefinitionLoader`-/`ProjectRegistry`-Logik laden.
-- Alle vorhandenen Wiring-, Schema- und E2E-Tests auf den neuen Vertrag umstellen.
+- `targetType`/`targetPath` als einheitlichen MCP-Target-Vertrag einführen und den
+  bisherigen Projektpfad fachlich unverändert weiterführen.
+- Den bestehenden Registry-/Lease-Lifecycle wiederverwenden, ohne Projekt- und
+  Assembly-Semantik in einer unklaren Universal-Session zu vermischen.
+- Alle betroffenen Toolregistrierungen und bestehenden Projekt-E2E-Tests auf den
+  neuen Vertrag umstellen.
 
-### Schritt 2: Gemeinsame Session-Sicht
+### Phase 2: Nutzbarer Decompilationspfad für unbekannte DLLs
 
-- Gemeinsame `IAnalysisSession`-/Lease-Sicht mit minimaler Oberfläche einführen.
-- Bestehenden `McpCodeGraphServer` als Project-Session adaptieren.
-- Scanner und Resolver, die heute konkret `McpCodeGraphServer` erwarten, auf die
-  gemeinsame Session-Sicht oder einen kleinen `AnalysisSessionContext` umstellen.
-- Keine doppelte projekt- und assemblyspezifische Implementierung derselben Roslyn-
-  Symbol-/Referenzlogik erzeugen.
+- Eine residente Assembly-Session mit Fingerprint, Decompilation, Referenzdiagnosen,
+  Origin-Mapping und atomarem Refresh ergänzen.
+- Unbekannte DLLs ohne `ainetlinter.project.json` als synthetisches Roslyn-Project
+  bereitstellen; ein fehlender Source-Match ist dabei der normale Fallback.
+- Zuerst die Nachschlagefunktionen für Symbole, Struktur, Bodies, Referenzen,
+  Call-Trees, Dependency-Graph und Metriken anbinden.
+- `inspect_assembly` und `find_assembly_extensions` in denselben Sessionpfad
+  überführen, ohne ihren sinnvollen Assembly-spezifischen Output zu verlieren.
 
-### Schritt 3: Source-Match, Repository-Register und persistente Snapshots
+### Phase 3: Explizite lokale Source-Solutions
 
-- Pfad-, Existenz-, DLL- und Fingerprint-Validierung zentralisieren.
-- Projektlokale Overrides und ein globales Source-/Repository-Register als Schichtung
-  festlegen.
-- Assembly-/Projekt-Mappings mit Repository, konkretem Source-Project und
-  Commit-/Tag-Identität modellieren.
-- Lokale Checkouts wiederverwenden und Gitea-Repositories nur über kanonische,
-  konfigurierte Einträge klonen.
-- Source-Snapshot-Cache und Decompilation-Cache voneinander unterscheiden.
-- SHA-256, Decompiler-Version, Optionen und Cache-Schema in den Cache-Key aufnehmen.
-- Repository-/Commit-Identität in den Source-Snapshot-Key aufnehmen.
-- Atomare Erstellung, Wiederverwendung, beschädigte Einträge und Cancellation testen.
+- Projektlokale Overrides und ein globales Source-Register als klar geschichtete
+  Konfiguration festlegen.
+- Mappings für Repository/Source-Solution, konkretes Source-Projekt, AssemblyName und
+  Source-Version definieren; ein Repository muss mehrere DLL-Projekte abbilden können.
+- Eine vollständige, eindeutig versionierte Source-Solution als wiederverwendbaren
+  Snapshot materialisieren und das ausgewählte Assembly-Projekt darin kenntlich machen.
+- Direkte Assembly-Targets und Nachschlageaufrufe aus Projekt A auf denselben
+  Source-Snapshot führen, ohne Projekt A zum externen Änderungscontext zu machen.
 
-### Schritt 4: Langlebige Assembly-Session
+### Phase 4: Gitea als konfigurierte Source-of-Truth
 
-- `AssemblyAnalysisSession` mit Load-State, Last-Good-State, Diagnostics und Dispose
-  implementieren.
-- Creation Barrier und Assembly-Lease in die Analysis-Registry integrieren.
-- Separate TTL-/LRU-/Kapazitätswerte für Assemblys vorsehen.
-- `get_server_health` um Target-Art, Cache-Key, Hash, Decompilerstatus und Warnungen
-  erweitern.
+- Gitea nur über explizite Repository-/Commit-/Projekt-Mappings verwenden; keine
+  Discovery und kein Klonen anhand von DLL-Namen.
+- Vorhandene lokale Checkouts wiederverwenden, ansonsten den konfigurierten Commit in
+  einen kontrollierten Source-Snapshot-Cache holen.
+- Authentifizierung, Clone-Ziel, Cancellation, beschädigte Snapshots und fehlenden
+  Netzwerkzugriff als sichtbare Zustände mit Decompilations-Fallback behandeln.
+- Die noch offene Policy für dirty/unbuilt lokale Checkouts festlegen und testen.
 
-### Schritt 5: Source-Auflösung, Decompilation und synthetisches Roslyn-Project
+### Phase 5: Vollständige sinnvolle Tool-Abdeckung
 
-- Verifizierten Source-Match in das passende Source-Project bzw. die Source-Solution
-  überführen.
-- Bei fehlendem Match den ILSpy-/Decompiler-Adapter mit statischem Resolver und
-  Timeout integrieren.
-- Decompilierte Documents und Origin-Map erzeugen.
-- `AdhocWorkspace`-Project mit deterministischen Parse-/Compilation-Optionen aufbauen.
-- Framework- und Assembly-Referenzen mit der vorhandenen metadata-only Logik verbinden.
-- Source-Match-, Decompiler- und Compilation-Diagnosen in einen gemeinsamen Status
-  sowie `origin`-/`confidence`-Metadaten überführen.
+- Für jedes bestehende MCP-Tool die Capability-Matrix aus diesem Konzept umsetzen.
+- Für externe Quellen ohne sinnvollen Kontext, insbesondere Git-Diff, keine
+  Scheinimplementierung bauen; stattdessen einen dokumentierten Nicht-Umsetzungs-
+  Vertrag verwenden.
+- Regeln, Violations, Audits, Testkontext und Quality Gates nur dort aktivieren, wo
+  Source-/Regelkontext fachlich belastbar vorhanden ist.
 
-### Schritt 6: Gemeinsame Toolpfade aktivieren
-
-- Zuerst `find_symbol`, `get_file_skeleton`, `get_class_structure`, `get_symbol_body`,
-  `find_references`, `get_call_tree`, `dependency_graph` und Metriken auf Assembly-
-  Sessions ausführen.
-- Bestehende `inspect_assembly`- und `find_assembly_extensions`-Funktionen auf die
-  gemeinsame Session umstellen.
-- Symbolidentitäten, Generated Paths und Origin-Metadaten in die vorhandenen Result-
-  Modelle integrieren.
-- Danach gezielt Regeln, Violations, Dead Code und Pattern-Tools für Assemblys
-  aktivieren oder mit einem klaren `not_available`-/`context_required`-Vertrag versehen.
-
-### Schritt 7: Dokumentation und Abschlussverifikation
+### Phase 6: Dokumentation und Abschlussverifikation
 
 - `Docs/agent-api.md`, `Docs/integration.md`, `Docs/configuration.md`, `README.md`,
   `Docs/ROADMAP.md` und ggf. `Docs/rationale.md` gegen den implementierten Vertrag
@@ -1064,8 +1165,12 @@ Die Registrierungsbeschreibungen müssen den Agenten ausdrücklich sagen:
   denselben Source-Snapshot und materialisieren Core nicht doppelt.
 - Projektlokale Overrides und globale Source-Einträge werden mit definierter Priorität
   ausgewertet; mehrere Projektroots können denselben Core-Source-Snapshot verwenden.
-- Ein Repository-Treffer ohne konkretes Source-Project oder ohne Versionsnachweis wird
-  nicht still als Originalquelle behandelt.
+- Ein Repository-Treffer ohne konkretes Source-Project, AssemblyName oder
+  Versionsnachweis wird nicht still als Originalquelle behandelt.
+- Ein Repository mit mehreren DLL-Projekten löst zwei konfigurierte Assemblys auf die
+  richtigen unterschiedlichen Source-Projekte derselben Solution auf.
+- Externe Source-Snapshots und dekompilierte Documents bleiben read-only; kein Tool
+  verändert die externe Quelle oder die untersuchte DLL.
 - Fingerprint erkennt DLL-Änderung, mtime-only Änderung und identische Bytes.
 - Cache-Key ändert sich bei Decompiler-/Schema-Version, nicht bei bloßer Cache-Lesung.
 - Source-Snapshot-Key unterscheidet Repository-/Commit-Versionen derselben Assembly.
@@ -1083,8 +1188,8 @@ Die Registrierungsbeschreibungen müssen den Agenten ausdrücklich sagen:
   und dekompiliert nicht.
 - Mehrere Projekte können eine gemeinsame Core-Quelle referenzieren, ohne die
   Source-Version eines anderen Projekts zu überschreiben.
-- Direkte DLL-Targets und abhängige Projekt-Targets teilen bei identischer
-  Source-Snapshot-Identität die zugrunde liegende Roslyn-Repräsentation.
+- Direkte DLL-Targets und Nachschlageaufrufe aus `projektA` teilen bei identischer
+  Source-Snapshot-Identität die zugrunde liegende Source-/Document-Repräsentation.
 - Ein konfiguriertes Gitea-Repository kann reproduzierbar über URL und Commit als
   Source-Snapshot bereitgestellt werden.
 - Zwei parallele Erstaufrufe erzeugen nur eine Assembly-Session.
@@ -1093,6 +1198,9 @@ Die Registrierungsbeschreibungen müssen den Agenten ausdrücklich sagen:
 - Assembly-Session kann per TTL/LRU entfernt und aus dem Cache erneut aufgebaut werden.
 - Health listet Projekt- und Assembly-Sessions getrennt.
 - Tool-Responses markieren dekompilierte Herkunft und partielle Referenzen.
+- Die Capability-Matrix ist für alle bestehenden Tools umgesetzt; fachlich nicht
+  sinnvolle Fälle wie Git-Diff auf externe Quellen liefern einen dokumentierten
+  Nicht-Umsetzungs-Vertrag statt einer Scheinanalyse.
 - Projekt-Tools mit `targetType=project` und Assembly-Tools mit `targetType=assembly`
   werden über denselben MCP-Dispatch verifiziert.
 - Bestehende Stress-Tests bleiben ausdrücklich außerhalb der normalen Abschlussläufe.
@@ -1105,8 +1213,11 @@ Der Task ist fachlich erfüllt, wenn:
 - dafür keine Projektdefinition und keine manuelle Cachepflege erforderlich ist;
 - eine Assembly bei nachgewiesenem Match aus dem zugehörigen Quellcode und sonst aus
   einer statischen Dekompilation analysiert wird;
+- ein Repository mit mehreren DLL-Projekten über konkrete Source-Projekte und
+  Versionen eindeutig aufgelöst werden kann;
 - identische Source-Snapshots über mehrere Target-Aliase nur einmal materialisiert
-  werden, während Consumer-Kontexte getrennt bleiben;
+  werden, während der Arbeitscontext von Projekt A getrennt bleibt;
+- externe Source-Snapshots und dekompilierte Documents read-only bleiben;
 - Assembly-/Repository-Matches die konkrete Source-Projekt- und Versionsidentität
   berücksichtigen und ihre Evidenz offenlegen;
 - dieselben zentralen Roslyn-Funktionen für Project- und Assembly-Targets arbeiten;
@@ -1118,6 +1229,8 @@ Der Task ist fachlich erfüllt, wenn:
 - Project- und Assembly-Sessions getrennte Lebensdauer-/Kapazitätsbudgets besitzen;
 - Symbol-, Body-, Referenz- und Call-Tree-Antworten ihre dekompilierte Herkunft erkennen
   lassen;
+- die Capability-Matrix alle sinnvollen Tool-/Quellenkombinationen abdeckt und
+  fachlich unpassende Kombinationen ausdrücklich als nicht umgesetzt dokumentiert sind;
 - der harte MCP-Vertrag vollständig dokumentiert, getestet und ohne Legacy-Parameter
   implementiert ist.
 
@@ -1147,3 +1260,16 @@ Der Task ist fachlich erfüllt, wenn:
   Target-Hash und Origin müssen deshalb Teil der Folgeabfrage-Semantik sein.
 - **Architekturdrift:** Die gemeinsame Session-Oberfläche soll klein bleiben. Sie darf
   nicht zu einer neuen Plugin-Architektur oder einem dynamischen Ladeframework werden.
+
+## Offene Punkte
+
+- Welche ILSpy-/ICSharpCode.Decompiler-Version und welche vorhandene manuelle
+  Decompiler-Logik wird verwendet?
+- Wie sieht das verbindliche lokale/globale Mapping-Schema einschließlich Priorität,
+  Gitea-Authentifizierung und Cachepfad aus?
+- Wird ein explizit konfigurierter lokaler Dirty-/unbuilt-Checkout direkt als
+  read-only Quelle verwendet oder nur der letzte Commit bzw. die DLL-Decompilation?
+- Wird bei einer gematchten vollständigen Source-Solution standardmäßig solutionweit
+  oder nur im ausgewählten Source-Projekt gesucht?
+- Welche Regel-/Audit-Tools erhalten für externe Source-Solutions bzw. dekompilierte
+  Assemblies einen sinnvollen Vertrag und welche bleiben bewusst nicht umgesetzt?
