@@ -9,6 +9,7 @@ using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
 using AiNetLinter.TestKit;
+using static AiNetLinter.TestKit.McpTestResultText;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -58,7 +59,7 @@ public sealed class WiringFilesystemContractTests
         var console = new RecordingLintConsole();
         var faultingServer = OverviewTestServers.FaultingLoadServer(console);
         await using var registry = ProjectRegistryFixture.Create(_ => ProjectInstanceCreation.Resident(faultingServer));
-        await WaitForConditionAsync(() => faultingServer.LoadState == ServerLoadState.LoadFailed, TimeSpan.FromSeconds(15));
+        await TestWaiter.WaitForConditionAsync(() => faultingServer.LoadState == ServerLoadState.LoadFailed, TimeSpan.FromSeconds(15));
         var result = await AnalysisToolCall.ExecuteFilesystemAsync(
             registry,
             new AnalysisTargetRequest("project", root),
@@ -119,20 +120,4 @@ public sealed class WiringFilesystemContractTests
         return McpToolResults.Text("ok");
     }
 
-    private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout)
-    {
-        var deadline = DateTime.UtcNow + timeout;
-        while (DateTime.UtcNow < deadline)
-        {
-            if (condition()) return;
-            await Task.Delay(20);
-        }
-
-        Assert.True(condition(), "Bedingung wurde nicht innerhalb des Zeitlimits erfuellt.");
-    }
-
-    private static string TextOf(CallToolResult result) =>
-        result.Content is { Count: > 0 } && result.Content[0] is TextContentBlock text
-            ? text.Text ?? string.Empty
-            : string.Empty;
 }

@@ -29,10 +29,8 @@ internal sealed class AssemblyRoslynWorkspaceFactory
         }
 
         var workspace = new AdhocWorkspace();
-        var projectId = ProjectId.CreateNewId("decompiled-assembly");
-        var references = request.MetadataReferences
-            .Where(reference => !IsTargetReference(reference, request.AssemblyPath))
-            .ToImmutableArray();
+        var projectId = ProjectId.CreateNewId(AssemblyCacheContract.SyntheticProjectName);
+        var references = EnsureCoreLibraryReference(request);
         var projectInfo = CreateProjectInfo(projectId, assemblyName, request, references);
         var solution = workspace.AddProject(projectInfo).Solution;
         var origins = new Dictionary<DocumentId, AssemblyOrigin>();
@@ -61,13 +59,7 @@ internal sealed class AssemblyRoslynWorkspaceFactory
 
         var project = solution.GetProject(projectId)
             ?? throw new InvalidOperationException("Das synthetische Assembly-Projekt konnte nicht erzeugt werden.");
-        var projectDocuments = project.Documents.ToList();
-        if (projectDocuments.Count != request.Documents.Count
-            || projectDocuments.Any(document => string.IsNullOrWhiteSpace(document.FilePath)))
-        {
-            workspace.Dispose();
-            throw new InvalidOperationException("Der Roslyn-Snapshot enthält nicht alle erwarteten Dokumente.");
-        }
+        var projectDocuments = ValidateDocuments(project, request, workspace);
 
         var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException("Die synthetische Assembly-Compilation konnte nicht erzeugt werden.");
@@ -78,6 +70,34 @@ internal sealed class AssemblyRoslynWorkspaceFactory
             projectDocuments,
             origins,
             workspace);
+    }
+
+    private static ImmutableArray<MetadataReference> EnsureCoreLibraryReference(AssemblyWorkspaceRequest request)
+    {
+        var references = request.MetadataReferences
+            .Where(reference => !IsTargetReference(reference, request.AssemblyPath))
+            .ToImmutableArray();
+        var coreLibraryPath = typeof(object).Assembly.Location;
+        return references.Any(reference => reference is PortableExecutableReference portable
+                && string.Equals(portable.FilePath, coreLibraryPath, StringComparison.OrdinalIgnoreCase))
+            ? references
+            : references.Add(MetadataReference.CreateFromFile(coreLibraryPath));
+    }
+
+    private static IReadOnlyList<Document> ValidateDocuments(
+        Project project,
+        AssemblyWorkspaceRequest request,
+        AdhocWorkspace workspace)
+    {
+        var documents = project.Documents.ToList();
+        if (documents.Count != request.Documents.Count
+            || documents.Any(document => string.IsNullOrWhiteSpace(document.FilePath)))
+        {
+            workspace.Dispose();
+            throw new InvalidOperationException("Der Roslyn-Snapshot enthält nicht alle erwarteten Dokumente.");
+        }
+
+        return documents;
     }
 
     private static ProjectInfo CreateProjectInfo(

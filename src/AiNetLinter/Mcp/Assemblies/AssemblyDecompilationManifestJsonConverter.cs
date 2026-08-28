@@ -12,10 +12,26 @@ internal sealed class AssemblyDecompilationManifestJsonConverter : JsonConverter
 {
     private static readonly string[] ManifestProperties =
     [
-        "cacheKey", "canonicalPath", "originalPath", "length", "mtimeUtc", "sha256",
-        "assemblyIdentity", "references", "decompilerVersion", "optionsIdentity",
-        "cacheSchemaVersion", "generatedFiles", "encoding", "warnings", "errors",
-        "unresolvedReferences", "createdUtc", "lastAccessUtc", "status", "complete",
+        JsonPropertyName(nameof(AssemblyManifestInput.CacheKey)),
+        JsonPropertyName(nameof(AssemblyManifestInput.CanonicalPath)),
+        JsonPropertyName(nameof(AssemblyManifestInput.OriginalPath)),
+        JsonPropertyName(nameof(AssemblyManifestInput.Length)),
+        JsonPropertyName(nameof(AssemblyManifestInput.MtimeUtc)),
+        JsonPropertyName(nameof(AssemblyManifestInput.Sha256)),
+        JsonPropertyName(nameof(AssemblyManifestReferences.AssemblyIdentity)),
+        JsonPropertyName(nameof(AssemblyManifestReferences.References)),
+        JsonPropertyName(nameof(AssemblyManifestFormat.DecompilerVersion)),
+        JsonPropertyName(nameof(AssemblyManifestFormat.OptionsIdentity)),
+        JsonPropertyName(nameof(AssemblyManifestFormat.CacheSchemaVersion)),
+        JsonPropertyName(nameof(AssemblyManifestFormat.GeneratedFiles)),
+        JsonPropertyName(nameof(AssemblyManifestFormat.Encoding)),
+        JsonPropertyName(nameof(AssemblyManifestDiagnostics.Warnings)),
+        JsonPropertyName(nameof(AssemblyManifestDiagnostics.Errors)),
+        JsonPropertyName(nameof(AssemblyManifestDiagnostics.UnresolvedReferences)),
+        JsonPropertyName(nameof(AssemblyManifestStatus.CreatedUtc)),
+        JsonPropertyName(nameof(AssemblyManifestStatus.LastAccessUtc)),
+        JsonPropertyName(nameof(AssemblyManifestStatus.Status)),
+        JsonPropertyName(nameof(AssemblyManifestStatus.Complete)),
     ];
 
     public override AssemblyDecompilationManifest Read(
@@ -29,38 +45,38 @@ internal sealed class AssemblyDecompilationManifestJsonConverter : JsonConverter
         {
             Input = new AssemblyManifestInput
             {
-                CacheKey = ReadString(properties, "cacheKey"),
-                CanonicalPath = ReadString(properties, "canonicalPath"),
-                OriginalPath = ReadString(properties, "originalPath"),
-                Length = ReadInt64(properties, "length"),
-                MtimeUtc = ReadDateTime(properties, "mtimeUtc"),
-                Sha256 = ReadString(properties, "sha256"),
+                CacheKey = ReadString(properties, JsonPropertyName(nameof(AssemblyManifestInput.CacheKey))),
+                CanonicalPath = ReadString(properties, JsonPropertyName(nameof(AssemblyManifestInput.CanonicalPath))),
+                OriginalPath = ReadString(properties, JsonPropertyName(nameof(AssemblyManifestInput.OriginalPath))),
+                Length = ReadInt64(properties, JsonPropertyName(nameof(AssemblyManifestInput.Length))),
+                MtimeUtc = ReadDateTime(properties, JsonPropertyName(nameof(AssemblyManifestInput.MtimeUtc))),
+                Sha256 = ReadString(properties, JsonPropertyName(nameof(AssemblyManifestInput.Sha256))),
             },
             References = new AssemblyManifestReferences
             {
-                AssemblyIdentity = ReadIdentity(properties, "assemblyIdentity"),
-                References = ReadReferences(properties, "references"),
+                AssemblyIdentity = ReadIdentity(properties, JsonPropertyName(nameof(AssemblyManifestReferences.AssemblyIdentity))),
+                References = ReadReferences(properties, JsonPropertyName(nameof(AssemblyManifestReferences.References))),
             },
             Format = new AssemblyManifestFormat
             {
-                DecompilerVersion = ReadString(properties, "decompilerVersion"),
-                OptionsIdentity = ReadString(properties, "optionsIdentity"),
-                CacheSchemaVersion = ReadString(properties, "cacheSchemaVersion"),
-                GeneratedFiles = ReadStringArray(properties, "generatedFiles"),
-                Encoding = ReadString(properties, "encoding"),
+                DecompilerVersion = ReadString(properties, JsonPropertyName(nameof(AssemblyManifestFormat.DecompilerVersion))),
+                OptionsIdentity = ReadString(properties, JsonPropertyName(nameof(AssemblyManifestFormat.OptionsIdentity))),
+                CacheSchemaVersion = ReadString(properties, JsonPropertyName(nameof(AssemblyManifestFormat.CacheSchemaVersion))),
+                GeneratedFiles = ReadStringArray(properties, JsonPropertyName(nameof(AssemblyManifestFormat.GeneratedFiles))),
+                Encoding = ReadString(properties, JsonPropertyName(nameof(AssemblyManifestFormat.Encoding))),
             },
             Diagnostics = new AssemblyManifestDiagnostics
             {
-                Warnings = ReadStringArray(properties, "warnings"),
-                Errors = ReadStringArray(properties, "errors"),
-                UnresolvedReferences = ReadStringArray(properties, "unresolvedReferences"),
+                Warnings = ReadStringArray(properties, JsonPropertyName(nameof(AssemblyManifestDiagnostics.Warnings))),
+                Errors = ReadStringArray(properties, JsonPropertyName(nameof(AssemblyManifestDiagnostics.Errors))),
+                UnresolvedReferences = ReadStringArray(properties, JsonPropertyName(nameof(AssemblyManifestDiagnostics.UnresolvedReferences))),
             },
             Status = new AssemblyManifestStatus
             {
-                CreatedUtc = ReadDateTime(properties, "createdUtc"),
-                LastAccessUtc = ReadDateTime(properties, "lastAccessUtc"),
-                Status = ReadString(properties, "status"),
-                Complete = ReadBoolean(properties, "complete"),
+                CreatedUtc = ReadDateTime(properties, JsonPropertyName(nameof(AssemblyManifestStatus.CreatedUtc))),
+                LastAccessUtc = ReadDateTime(properties, JsonPropertyName(nameof(AssemblyManifestStatus.LastAccessUtc))),
+                Status = ReadString(properties, JsonPropertyName(nameof(AssemblyManifestStatus.Status))),
+                Complete = ReadBoolean(properties, JsonPropertyName(nameof(AssemblyManifestStatus.Complete))),
             },
         };
     }
@@ -71,28 +87,31 @@ internal sealed class AssemblyDecompilationManifestJsonConverter : JsonConverter
         JsonSerializerOptions options)
     {
         writer.WriteStartObject();
-        writer.WriteString("cacheKey", value.Input.CacheKey);
-        writer.WriteString("canonicalPath", value.Input.CanonicalPath);
-        writer.WriteString("originalPath", value.Input.OriginalPath);
-        writer.WriteNumber("length", value.Input.Length);
-        writer.WriteString("mtimeUtc", value.Input.MtimeUtc);
-        writer.WriteString("sha256", value.Input.Sha256);
-        WriteIdentity(writer, "assemblyIdentity", value.References.AssemblyIdentity);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyManifestInput.CacheKey)), value.Input.CacheKey);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyManifestInput.CanonicalPath)), value.Input.CanonicalPath);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyManifestInput.OriginalPath)), value.Input.OriginalPath);
+        writer.WriteNumber(JsonPropertyName(nameof(AssemblyManifestInput.Length)), value.Input.Length);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyManifestInput.MtimeUtc)), value.Input.MtimeUtc);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyManifestInput.Sha256)), value.Input.Sha256);
+        WriteIdentity(writer, JsonPropertyName(nameof(AssemblyManifestReferences.AssemblyIdentity)), value.References.AssemblyIdentity);
         WriteReferences(writer, value.References.References);
-        writer.WriteString("decompilerVersion", value.Format.DecompilerVersion);
-        writer.WriteString("optionsIdentity", value.Format.OptionsIdentity);
-        writer.WriteString("cacheSchemaVersion", value.Format.CacheSchemaVersion);
-        WriteStrings(writer, "generatedFiles", value.Format.GeneratedFiles);
-        writer.WriteString("encoding", value.Format.Encoding);
-        WriteStrings(writer, "warnings", value.Diagnostics.Warnings);
-        WriteStrings(writer, "errors", value.Diagnostics.Errors);
-        WriteStrings(writer, "unresolvedReferences", value.Diagnostics.UnresolvedReferences);
-        writer.WriteString("createdUtc", value.Status.CreatedUtc);
-        writer.WriteString("lastAccessUtc", value.Status.LastAccessUtc);
-        writer.WriteString("status", value.Status.Status);
-        writer.WriteBoolean("complete", value.Status.Complete);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyManifestFormat.DecompilerVersion)), value.Format.DecompilerVersion);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyManifestFormat.OptionsIdentity)), value.Format.OptionsIdentity);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyManifestFormat.CacheSchemaVersion)), value.Format.CacheSchemaVersion);
+        WriteStrings(writer, JsonPropertyName(nameof(AssemblyManifestFormat.GeneratedFiles)), value.Format.GeneratedFiles);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyManifestFormat.Encoding)), value.Format.Encoding);
+        WriteStrings(writer, JsonPropertyName(nameof(AssemblyManifestDiagnostics.Warnings)), value.Diagnostics.Warnings);
+        WriteStrings(writer, JsonPropertyName(nameof(AssemblyManifestDiagnostics.Errors)), value.Diagnostics.Errors);
+        WriteStrings(writer, JsonPropertyName(nameof(AssemblyManifestDiagnostics.UnresolvedReferences)), value.Diagnostics.UnresolvedReferences);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyManifestStatus.CreatedUtc)), value.Status.CreatedUtc);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyManifestStatus.LastAccessUtc)), value.Status.LastAccessUtc);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyManifestStatus.Status)), value.Status.Status);
+        writer.WriteBoolean(JsonPropertyName(nameof(AssemblyManifestStatus.Complete)), value.Status.Complete);
         writer.WriteEndObject();
     }
+
+    private static string JsonPropertyName(string propertyName) =>
+        JsonNamingPolicy.CamelCase.ConvertName(propertyName);
 
     private static Dictionary<string, JsonElement> ReadProperties(
         JsonElement root,
@@ -204,12 +223,20 @@ internal sealed class AssemblyDecompilationManifestJsonConverter : JsonConverter
     {
         var value = properties[name];
         if (value.ValueKind == JsonValueKind.Null) return null;
-        var identity = ReadProperties(value, ["name", "version", "culture", "publicKeyToken"], "Assembly-Identität");
+        var identity = ReadProperties(
+            value,
+            [
+                JsonPropertyName(nameof(AssemblyIdentityDto.Name)),
+                JsonPropertyName(nameof(AssemblyIdentityDto.Version)),
+                JsonPropertyName(nameof(AssemblyIdentityDto.Culture)),
+                JsonPropertyName(nameof(AssemblyIdentityDto.PublicKeyToken)),
+            ],
+            "Assembly-Identität");
         return new AssemblyIdentityDto(
-            ReadString(identity, "name"),
-            ReadString(identity, "version"),
-            ReadString(identity, "culture"),
-            ReadString(identity, "publicKeyToken"));
+            ReadString(identity, JsonPropertyName(nameof(AssemblyIdentityDto.Name))),
+            ReadString(identity, JsonPropertyName(nameof(AssemblyIdentityDto.Version))),
+            ReadString(identity, JsonPropertyName(nameof(AssemblyIdentityDto.Culture))),
+            ReadString(identity, JsonPropertyName(nameof(AssemblyIdentityDto.PublicKeyToken))));
     }
 
     private static IReadOnlyList<AssemblyReferenceDto> ReadReferences(
@@ -225,18 +252,28 @@ internal sealed class AssemblyDecompilationManifestJsonConverter : JsonConverter
         var result = new List<AssemblyReferenceDto>();
         foreach (var item in value.EnumerateArray())
         {
-            var reference = ReadProperties(item, ["name", "version", "culture", "resolved", "resolvedPath"], "Assembly-Referenz");
-            var resolvedPath = reference["resolvedPath"].ValueKind switch
+            var reference = ReadProperties(
+                item,
+                [
+                    JsonPropertyName(nameof(AssemblyReferenceDto.Name)),
+                    JsonPropertyName(nameof(AssemblyReferenceDto.Version)),
+                    JsonPropertyName(nameof(AssemblyReferenceDto.Culture)),
+                    JsonPropertyName(nameof(AssemblyReferenceDto.Resolved)),
+                    JsonPropertyName(nameof(AssemblyReferenceDto.ResolvedPath)),
+                ],
+                "Assembly-Referenz");
+            var resolvedPathName = JsonPropertyName(nameof(AssemblyReferenceDto.ResolvedPath));
+            var resolvedPath = reference[resolvedPathName].ValueKind switch
             {
                 JsonValueKind.Null => null,
-                JsonValueKind.String => reference["resolvedPath"].GetString(),
-                _ => throw new JsonException("Das Referenzfeld 'resolvedPath' muss ein String oder null sein."),
+                JsonValueKind.String => reference[resolvedPathName].GetString(),
+                _ => throw new JsonException($"Das Referenzfeld '{resolvedPathName}' muss ein String oder null sein."),
             };
             result.Add(new AssemblyReferenceDto(
-                ReadString(reference, "name"),
-                ReadString(reference, "version"),
-                ReadString(reference, "culture"),
-                ReadBoolean(reference, "resolved"),
+                ReadString(reference, JsonPropertyName(nameof(AssemblyReferenceDto.Name))),
+                ReadString(reference, JsonPropertyName(nameof(AssemblyReferenceDto.Version))),
+                ReadString(reference, JsonPropertyName(nameof(AssemblyReferenceDto.Culture))),
+                ReadBoolean(reference, JsonPropertyName(nameof(AssemblyReferenceDto.Resolved))),
                 resolvedPath));
         }
 
@@ -253,25 +290,31 @@ internal sealed class AssemblyDecompilationManifestJsonConverter : JsonConverter
         }
 
         writer.WriteStartObject();
-        writer.WriteString("name", identity.Name);
-        writer.WriteString("version", identity.Version);
-        writer.WriteString("culture", identity.Culture);
-        writer.WriteString("publicKeyToken", identity.PublicKeyToken);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyIdentityDto.Name)), identity.Name);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyIdentityDto.Version)), identity.Version);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyIdentityDto.Culture)), identity.Culture);
+        writer.WriteString(JsonPropertyName(nameof(AssemblyIdentityDto.PublicKeyToken)), identity.PublicKeyToken);
         writer.WriteEndObject();
     }
 
     private static void WriteReferences(Utf8JsonWriter writer, IReadOnlyList<AssemblyReferenceDto> references)
     {
-        writer.WriteStartArray("references");
+        writer.WriteStartArray(JsonPropertyName(nameof(AssemblyManifestReferences.References)));
         foreach (var reference in references)
         {
             writer.WriteStartObject();
-            writer.WriteString("name", reference.Name);
-            writer.WriteString("version", reference.Version);
-            writer.WriteString("culture", reference.Culture);
-            writer.WriteBoolean("resolved", reference.Resolved);
-            if (reference.ResolvedPath is null) writer.WriteNull("resolvedPath");
-            else writer.WriteString("resolvedPath", reference.ResolvedPath);
+            writer.WriteString(JsonPropertyName(nameof(AssemblyReferenceDto.Name)), reference.Name);
+            writer.WriteString(JsonPropertyName(nameof(AssemblyReferenceDto.Version)), reference.Version);
+            writer.WriteString(JsonPropertyName(nameof(AssemblyReferenceDto.Culture)), reference.Culture);
+            writer.WriteBoolean(JsonPropertyName(nameof(AssemblyReferenceDto.Resolved)), reference.Resolved);
+            if (reference.ResolvedPath is null)
+            {
+                writer.WriteNull(JsonPropertyName(nameof(AssemblyReferenceDto.ResolvedPath)));
+            }
+            else
+            {
+                writer.WriteString(JsonPropertyName(nameof(AssemblyReferenceDto.ResolvedPath)), reference.ResolvedPath);
+            }
             writer.WriteEndObject();
         }
 

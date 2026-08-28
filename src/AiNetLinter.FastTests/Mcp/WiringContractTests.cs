@@ -15,6 +15,7 @@ using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
 using AiNetLinter.Output;
 using AiNetLinter.TestKit;
+using static AiNetLinter.TestKit.McpTestResultText;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -306,7 +307,7 @@ public sealed class WiringContractTests
                 return Task.FromResult<SourceFileCatalog?>(CreateCatalog());
             },
         });
-        await WaitForConditionAsync(() => server.LoadState == ServerLoadState.Loaded, TimeSpan.FromSeconds(15));
+        await TestWaiter.WaitForConditionAsync(() => server.LoadState == ServerLoadState.Loaded, TimeSpan.FromSeconds(15));
         await using var registry = ProjectRegistryFixture.Create(_ => ProjectInstanceCreation.Resident(server));
         var healthy = await AnalysisToolCall.ExecuteAsync(
             registry,
@@ -411,22 +412,8 @@ public sealed class WiringContractTests
         return required.EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray();
     }
 
-    private static string TextOf(CallToolResult result) =>
-        result.Content is { Count: > 0 } && result.Content[0] is TextContentBlock text ? text.Text ?? string.Empty : string.Empty;
-
     private static SourceFileCatalog CreateCatalog() =>
         new(WiringScenario.Solution, hasLoadingErrors: false);
-
-    private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout)
-    {
-        var deadline = DateTime.UtcNow + timeout;
-        while (DateTime.UtcNow < deadline)
-        {
-            if (condition()) return;
-            await Task.Delay(20);
-        }
-        Assert.True(condition(), "Bedingung wurde nicht innerhalb des Zeitlimits erfuellt.");
-    }
 
     private static class WiringScenario
     {

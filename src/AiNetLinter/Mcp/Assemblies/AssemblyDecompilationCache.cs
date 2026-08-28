@@ -10,9 +10,6 @@ namespace AiNetLinter.Mcp.Assemblies;
 
 internal sealed class AssemblyDecompilationCache
 {
-    private const string ManifestFileName = "manifest.json";
-    private const string CurrentPointerFileName = "current.json";
-    private const string SourceDirectoryName = "source";
     private const int PointerPublishAttempts = 3;
     private static readonly UTF8Encoding Utf8 = new(false, true);
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -48,7 +45,7 @@ internal sealed class AssemblyDecompilationCache
         generation = null;
         diagnostic = null;
         var entryDirectory = GetEntryDirectory(request.Key);
-        var pointerPath = Path.Combine(entryDirectory, CurrentPointerFileName);
+        var pointerPath = Path.Combine(entryDirectory, AssemblyCacheContract.CurrentPointerFileName);
         if (!File.Exists(pointerPath)) return false;
 
         try
@@ -60,7 +57,7 @@ internal sealed class AssemblyDecompilationCache
         catch (Exception ex) when (IsCacheInputException(ex))
         {
             diagnostic = new(
-                "assembly-cache-invalid",
+                AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCacheReadRequest)),
                 $"Der aktuelle Assembly-Cacheeintrag ist ungültig und wird verworfen: {ex.Message}",
                 "warning");
             return false;
@@ -70,10 +67,11 @@ internal sealed class AssemblyDecompilationCache
     internal AssemblyCachePublishResult Publish(AssemblyCachePublishRequest request)
     {
         var entryDirectory = GetEntryDirectory(request.CacheKey);
-        var generationDirectory = Path.Combine(entryDirectory, "generation-" + Guid.NewGuid().ToString("N"));
+        var generationDirectory = Path.Combine(entryDirectory, AssemblyCacheContract.GenerationDirectoryPrefix + Guid.NewGuid().ToString("N"));
         var isPublished = false;
         try
         {
+            ValidatePublishRequest(request);
             Directory.CreateDirectory(entryDirectory);
             WriteGeneration(generationDirectory, request);
             _ = ReadGeneration(generationDirectory, request.CacheKey, request.Fingerprint, request.References);
@@ -97,11 +95,11 @@ internal sealed class AssemblyDecompilationCache
             return new AssemblyCachePublishResult(
                 false,
                 null,
-                new("assembly-cache-publish-failed", $"Assembly-Cachegeneration konnte nicht veröffentlicht werden: {ex.Message}", "error"));
+                new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCachePublishRequest)), $"Assembly-Cachegeneration konnte nicht veröffentlicht werden: {ex.Message}", "error"));
         }
         finally
         {
-            if (!isPublished) TryDeleteDirectory(generationDirectory);
+            if (!isPublished) AssemblyCacheCleanup.TryDeleteDirectory(generationDirectory);
         }
     }
 
@@ -110,9 +108,31 @@ internal sealed class AssemblyDecompilationCache
         Directory.CreateDirectory(generationDirectory);
         var generatedFiles = WriteDocuments(generationDirectory, request.Decompilation.Documents);
         var manifest = CreateManifest(request, generatedFiles);
-        var manifestPath = Path.Combine(generationDirectory, ManifestFileName);
+        var manifestPath = Path.Combine(generationDirectory, AssemblyCacheContract.ManifestFileName);
         WriteTextAtomically(manifestPath, JsonSerializer.Serialize(manifest, JsonOptions));
     }
+
+    private static void ValidatePublishRequest(AssemblyCachePublishRequest request)
+    {
+        if (request.Status is AssemblySessionStatus.Loading or AssemblySessionStatus.Failed)
+        {
+            throw new InvalidDataException("Nur analysierbare Assembly-Zustände dürfen im Cache veröffentlicht werden.");
+        }
+
+        if (request.Decompilation.Documents.Count == 0)
+        {
+            throw new InvalidDataException("Eine veröffentlichte Assembly-Generation benötigt mindestens ein Dokument.");
+        }
+
+        if (request.Status != AssemblySessionStatus.Complete) return;
+        if (!request.Decompilation.IsComplete
+            || request.Decompilation.Diagnostics.Any(diagnostic => !IsWarning(diagnostic))
+            || request.References.References.Any(reference => !reference.Resolved))
+        {
+            throw new InvalidDataException("Eine vollständige Assembly-Generation darf keine Fehler oder ungelösten Referenzen enthalten.");
+        }
+    }
+
     private bool TryPublishPointer(
         string entryDirectory,
         string generationDirectory,
@@ -120,7 +140,7 @@ internal sealed class AssemblyDecompilationCache
         out AssemblySessionDiagnostic? diagnostic)
     {
         diagnostic = null;
-        var pointerPath = Path.Combine(entryDirectory, CurrentPointerFileName);
+        var pointerPath = Path.Combine(entryDirectory, AssemblyCacheContract.CurrentPointerFileName);
         var generationName = Path.GetFileName(generationDirectory);
         for (var attempt = 0; attempt < PointerPublishAttempts; attempt++)
         {
@@ -131,7 +151,7 @@ internal sealed class AssemblyDecompilationCache
             diagnostic = attemptResult.Diagnostic;
         }
 
-        diagnostic ??= new("assembly-cache-publish-failed", "Current-Pointer konnte nach begrenzten Versuchen nicht validiert veröffentlicht werden.", "error");
+        diagnostic ??= new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCachePublishRequest)), "Current-Pointer konnte nach begrenzten Versuchen nicht validiert veröffentlicht werden.", "error");
         return false;
     }
     private PointerPublishAttempt PublishPointerAttempt(
@@ -145,16 +165,16 @@ internal sealed class AssemblyDecompilationCache
             WritePointer(temporaryPointer, generationName);
             ReplacePointer(pointerPath, temporaryPointer);
             var succeeded = TryRead(readRequest, out _, out _);
-            return new PointerPublishAttempt(succeeded, succeeded ? null : new("assembly-cache-pointer-race", "Der neu veröffentlichte Current-Pointer konnte nicht erneut validiert werden.", "warning"));
+            return new PointerPublishAttempt(succeeded, succeeded ? null : new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCacheContract.CurrentPointerFileName)), "Der neu veröffentlichte Current-Pointer konnte nicht erneut validiert werden.", "warning"));
         }
         catch (IOException ex)
         {
-            var diagnostic = new AssemblySessionDiagnostic("assembly-cache-pointer-race", $"Current-Pointer konnte nicht ersetzt werden: {ex.Message}", "warning");
+            var diagnostic = new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCacheContract.CurrentPointerFileName)), $"Current-Pointer konnte nicht ersetzt werden: {ex.Message}", "warning");
             return new(TryRead(readRequest, out _, out _), diagnostic);
         }
         finally
         {
-            TryDeleteFile(temporaryPointer);
+            AssemblyCacheCleanup.TryDeleteFile(temporaryPointer);
         }
     }
     private static void ReplacePointer(string pointerPath, string temporaryPointer)
@@ -168,12 +188,12 @@ internal sealed class AssemblyDecompilationCache
         if (File.Exists(pointerPath)) return;
         File.Move(temporaryPointer, pointerPath);
     }
-    private static void WritePointer(string path, string generationName)
+    private static void WritePointer(string path, string generation)
     {
-        using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough);
+        using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, AssemblyCacheContract.FileBufferSize, FileOptions.WriteThrough);
         using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
         writer.WriteStartObject();
-        writer.WriteString("generation", generationName);
+        writer.WriteString(nameof(generation), generation);
         writer.WriteEndObject();
         writer.Flush();
         stream.Flush(flushToDisk: true);
@@ -187,7 +207,7 @@ internal sealed class AssemblyDecompilationCache
         string? generation = null;
         foreach (var property in root.EnumerateObject())
         {
-            if (!string.Equals(property.Name, "generation", StringComparison.Ordinal) || generation is not null)
+            if (!string.Equals(property.Name, nameof(generation), StringComparison.Ordinal) || generation is not null)
             {
                 throw new InvalidDataException("Der Current-Pointer enthält unerwartete oder doppelte Felder.");
             }
@@ -221,7 +241,7 @@ internal sealed class AssemblyDecompilationCache
         AssemblyFingerprint fingerprint,
         AssemblyReferenceResolution references)
     {
-        var manifestPath = ResolveSafePath(generationDirectory, ManifestFileName);
+        var manifestPath = ResolveSafePath(generationDirectory, AssemblyCacheContract.ManifestFileName);
         var manifest = JsonSerializer.Deserialize<AssemblyDecompilationManifest>(File.ReadAllText(manifestPath, Utf8), JsonOptions)
             ?? throw new InvalidDataException("Das Cachemanifest ist leer.");
         if (!IsManifestCompatible(manifest, key, fingerprint, references))
@@ -246,15 +266,17 @@ internal sealed class AssemblyDecompilationCache
             && IsReferencesCompatible(manifest.References, manifest.Diagnostics, references);
     }
 
-    private static bool IsStatusCompatible(AssemblyManifestStatus status, AssemblyManifestDiagnostics diagnostics) =>
-        status.Status is "complete" or "partial" or "degraded"
-        && status.Complete == string.Equals(status.Status, "complete", StringComparison.Ordinal)
-        && (!status.Complete || (diagnostics.Errors.Count == 0 && diagnostics.UnresolvedReferences.Count == 0))
-        && AreMessagesValid(diagnostics.Warnings)
-        && AreMessagesValid(diagnostics.Errors)
-        && AreMessagesValid(diagnostics.UnresolvedReferences)
-        && status.CreatedUtc != default
-        && status.LastAccessUtc != default;
+    private static bool IsStatusCompatible(AssemblyManifestStatus status, AssemblyManifestDiagnostics diagnostics)
+    {
+        if (!AssemblySessionStatusExtensions.TryParsePersisted(status.Status, out var parsed)) return false;
+        return status.Complete == (parsed == AssemblySessionStatus.Complete)
+            && (!status.Complete || (diagnostics.Errors.Count == 0 && diagnostics.UnresolvedReferences.Count == 0))
+            && AreMessagesValid(diagnostics.Warnings)
+            && AreMessagesValid(diagnostics.Errors)
+            && AreMessagesValid(diagnostics.UnresolvedReferences)
+            && status.CreatedUtc != default
+            && status.LastAccessUtc != default;
+    }
 
     private static bool AreMessagesValid(IReadOnlyList<string> messages) =>
         messages.All(message => !string.IsNullOrWhiteSpace(message));
@@ -277,7 +299,7 @@ internal sealed class AssemblyDecompilationCache
         string.Equals(format.DecompilerVersion, key.DecompilerVersion, StringComparison.Ordinal)
         && string.Equals(format.OptionsIdentity, key.OptionsIdentity, StringComparison.Ordinal)
         && string.Equals(format.CacheSchemaVersion, key.CacheSchemaVersion, StringComparison.Ordinal)
-        && string.Equals(format.Encoding, "utf-8", StringComparison.OrdinalIgnoreCase);
+        && string.Equals(format.Encoding, AssemblyCacheContract.Utf8EncodingName, StringComparison.OrdinalIgnoreCase);
 
     private static bool IsReferencesCompatible(
         AssemblyManifestReferences manifestReferences,
@@ -319,7 +341,7 @@ internal sealed class AssemblyDecompilationCache
 
     private static void ValidateSourceFileSet(string generationDirectory, HashSet<string> expected)
     {
-        var sourceDirectory = ResolveSafePath(generationDirectory, SourceDirectoryName);
+        var sourceDirectory = ResolveSafePath(generationDirectory, AssemblyCacheContract.SourceDirectoryName);
         if (!Directory.Exists(sourceDirectory)) throw new InvalidDataException("Das Cacheverzeichnis 'source' fehlt.");
         var actual = Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories)
             .Select(path => NormalizeSourcePath(Path.GetRelativePath(generationDirectory, path)))
@@ -335,7 +357,7 @@ internal sealed class AssemblyDecompilationCache
         foreach (var (document, index) in documents.Select((value, index) => (value, index)))
         {
             if (string.IsNullOrWhiteSpace(document.CSharpSource)) throw new InvalidDataException("Eine dekompilierte Dokumenteinheit ist leer.");
-            var relativePath = $"{SourceDirectoryName}/{index:D5}-{SanitizeFileName(document.TypeMetadataName)}.cs";
+            var relativePath = $"{AssemblyCacheContract.SourceDirectoryName}/{index:D5}-{SanitizeFileName(document.TypeMetadataName)}.cs";
             var fullPath = ResolveSafePath(generationDirectory, relativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
             WriteTextAtomically(fullPath, document.CSharpSource);
@@ -370,7 +392,7 @@ internal sealed class AssemblyDecompilationCache
                 OptionsIdentity = request.CacheKey.OptionsIdentity,
                 CacheSchemaVersion = request.CacheKey.CacheSchemaVersion,
                 GeneratedFiles = generatedFiles,
-                Encoding = "utf-8",
+                Encoding = AssemblyCacheContract.Utf8EncodingName,
             },
             Diagnostics = new AssemblyManifestDiagnostics
             {
@@ -382,7 +404,7 @@ internal sealed class AssemblyDecompilationCache
             {
                 CreatedUtc = DateTime.UtcNow,
                 LastAccessUtc = DateTime.UtcNow,
-                Status = request.Status.ToString().ToLowerInvariant(),
+                Status = request.Status.ToWireValue(),
                 Complete = request.Status == AssemblySessionStatus.Complete,
             },
         };
@@ -414,7 +436,7 @@ internal sealed class AssemblyDecompilationCache
             || normalized.StartsWith("../", StringComparison.Ordinal)
             || normalized.Contains("/../", StringComparison.Ordinal)
             || normalized.EndsWith("/..", StringComparison.Ordinal)
-            || !normalized.StartsWith(SourceDirectoryName + "/", StringComparison.OrdinalIgnoreCase)
+            || !normalized.StartsWith(AssemblyCacheContract.SourceDirectoryName + "/", StringComparison.OrdinalIgnoreCase)
             || !normalized.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException("Das Manifest enthält einen unsicheren oder ungültigen Dokumentpfad.");
@@ -437,7 +459,7 @@ internal sealed class AssemblyDecompilationCache
 
     private static void WriteTextAtomically(string path, string value)
     {
-        using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough);
+        using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, AssemblyCacheContract.FileBufferSize, FileOptions.WriteThrough);
         using var writer = new StreamWriter(stream, Utf8, leaveOpen: true);
         writer.Write(value);
         writer.Flush();
@@ -473,27 +495,4 @@ internal sealed class AssemblyDecompilationCache
 
     private sealed record PointerPublishAttempt(bool Succeeded, AssemblySessionDiagnostic? Diagnostic);
 
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path)) File.Delete(path);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            System.Diagnostics.Debug.WriteLine($"Assembly-Cache-Tempdatei konnte nicht entfernt werden: {ex.Message}");
-        }
-    }
-
-    private static void TryDeleteDirectory(string directory)
-    {
-        try
-        {
-            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            System.Diagnostics.Debug.WriteLine($"Assembly-Cache-Generation konnte nicht entfernt werden: {ex.Message}");
-        }
-    }
 }

@@ -29,7 +29,9 @@ internal static class FindAssemblyExtensionsTool
                     var selection = AssemblyAnalysisService.FindExtensions(
                         context,
                         new AssemblyExtensionSearchOptions(arguments.ExtensionName, arguments.Namespace, maxResults));
-                    var completeness = context.Diagnostics.Count == 0 ? StatusLabel(context.Status) : "partial";
+                    var completeness = context.Diagnostics.Count == 0
+                        ? context.Status.ToCompletenessLabel()
+                        : AssemblySessionStatus.Partial.ToCompletenessLabel();
                     var payload = new FindAssemblyExtensionsPayload(
                         fullPath,
                         selection.Items,
@@ -84,12 +86,4 @@ internal static class FindAssemblyExtensionsTool
         return builder.ToString().TrimEnd();
     }
 
-    private static string StatusLabel(AssemblySessionStatus status) =>
-        status switch
-        {
-            AssemblySessionStatus.Complete => "complete",
-            AssemblySessionStatus.Degraded => "degraded",
-            AssemblySessionStatus.Partial => "partial",
-            _ => "failed",
-        };
 }

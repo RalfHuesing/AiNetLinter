@@ -40,7 +40,9 @@ internal static class InspectAssemblyTool
                             arguments.MemberNames,
                             maxResults,
                             AssemblyAnalysisService.NormalizeLimit(arguments.MaxMembers, AssemblyAnalysisService.DefaultMaxMembers, AssemblyAnalysisService.MaxMembers)));
-                    var completeness = context.Diagnostics.Count == 0 ? StatusLabel(context.Status) : "partial";
+                    var completeness = context.Diagnostics.Count == 0
+                        ? context.Status.ToCompletenessLabel()
+                        : AssemblySessionStatus.Partial.ToCompletenessLabel();
                     var payload = new InspectAssemblyPayload(
                         fullPath,
                         context.Identity,
@@ -131,12 +133,4 @@ internal static class InspectAssemblyTool
         foreach (var diagnostic in diagnostics) builder.AppendLine($"- {diagnostic}");
     }
 
-    private static string StatusLabel(AssemblySessionStatus status) =>
-        status switch
-        {
-            AssemblySessionStatus.Complete => "complete",
-            AssemblySessionStatus.Degraded => "degraded",
-            AssemblySessionStatus.Partial => "partial",
-            _ => "failed",
-        };
 }

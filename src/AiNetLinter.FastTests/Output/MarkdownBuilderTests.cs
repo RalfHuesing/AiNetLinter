@@ -9,10 +9,6 @@ namespace AiNetLinter.FastTests.Output;
 [Trait("Category", "Unit")]
 public sealed class MarkdownBuilderTests
 {
-    // StaticTestSentinel-Coverage-Referenz: die folgenden Typen sind im Testprojekt abgedeckt.
-    // @covers MarkdownTableBuilder
-    // @covers MarkdownBuilder
-    private static readonly System.Type _ = typeof(MarkdownTableBuilder);
     [Fact]
     public void EscapeCell_Pipe_WirdEscaped()
     {

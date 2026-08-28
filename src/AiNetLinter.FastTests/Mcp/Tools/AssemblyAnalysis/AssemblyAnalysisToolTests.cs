@@ -11,8 +11,6 @@ using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.TestKit;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -25,7 +23,7 @@ public sealed class AssemblyAnalysisToolTests
     public async Task InspectAssembly_ReturnsPublicApiWithOverloadsGenericsAndAttributes()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-");
-        var assemblyPath = EmitAssembly(temp, "ApiProbe", """
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "ApiProbe", """
             using System;
             namespace Probe.Api;
             [Obsolete]
@@ -66,7 +64,7 @@ public sealed class AssemblyAnalysisToolTests
     public async Task InspectAssembly_SupportsExactTypeMultipleMemberFiltersAndParameterDetails()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-");
-        var assemblyPath = EmitAssembly(temp, "FilterProbe", """
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "FilterProbe", """
             namespace Probe.Api;
             public sealed class PublicApi
             {
@@ -136,7 +134,7 @@ public sealed class AssemblyAnalysisToolTests
     public async Task InspectAssembly_UsesResultLimitAndIgnoresUnrelatedInvalidDlls()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-");
-        var assemblyPath = EmitAssembly(temp, "LimitedProbe", """
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "LimitedProbe", """
             namespace Probe;
             public sealed class First { }
             public sealed class Second { }
@@ -171,7 +169,7 @@ public sealed class AssemblyAnalysisToolTests
     public async Task FindAssemblyExtensions_UsesRoslynExtensionMarkerAndFilters()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-");
-        var assemblyPath = EmitAssembly(temp, "ExtensionsProbe", """
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "ExtensionsProbe", """
             namespace Probe.Extensions;
             public static class Extensions
             {
@@ -196,7 +194,7 @@ public sealed class AssemblyAnalysisToolTests
     public async Task FindAssemblyExtensions_UsesConsumerCompilationForApplicability()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-");
-        var assemblyPath = EmitAssembly(temp, "ConsumerExtensions", """
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "ConsumerExtensions", """
             namespace Probe.Extensions;
             public static class Extensions
             {
@@ -225,8 +223,8 @@ public sealed class AssemblyAnalysisToolTests
     public async Task InspectAssembly_WithConsumerSolution_ResolvesAssemblyDirectoryDependencies()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-");
-        var dependencyPath = EmitAssembly(temp, "ConsumerDependency", "namespace Dependency; public sealed class Value { }");
-        var assemblyPath = EmitAssembly(
+        var dependencyPath = AssemblyTestHelper.EmitAssembly(temp, "ConsumerDependency", "namespace Dependency; public sealed class Value { }");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
             temp,
             "ConsumerTarget",
             "namespace Target; public sealed class UsesDependency { public Dependency.Value Value { get; } = new(); }",
@@ -255,7 +253,7 @@ public sealed class AssemblyAnalysisToolTests
     public async Task InspectAssembly_UsesPeAssemblyIdentityInPayloadAndText()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-identity-");
-        var assemblyPath = EmitAssembly(temp, "VersionedProbe", """
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "VersionedProbe", """
             using System.Reflection;
             [assembly: AssemblyVersion("7.8.9.10")]
             namespace Probe;
@@ -276,18 +274,18 @@ public sealed class AssemblyAnalysisToolTests
     public async Task InspectAssembly_RejectsSameNameDependencyWithWrongVersion()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-reference-identity-");
-        var dependencyPath = EmitAssembly(temp, "VersionedDependency", """
+        var dependencyPath = AssemblyTestHelper.EmitAssembly(temp, "VersionedDependency", """
             using System.Reflection;
             [assembly: AssemblyVersion("1.0.0.0")]
             namespace Dependency;
             public sealed class Value { }
             """);
-        var assemblyPath = EmitAssembly(
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
             temp,
             "ReferenceIdentityProbe",
             "namespace Probe; public sealed class UsesDependency { public Dependency.Value Value { get; } = new(); }",
             dependencyPath);
-        EmitAssembly(temp, "VersionedDependency", """
+        AssemblyTestHelper.EmitAssembly(temp, "VersionedDependency", """
             using System.Reflection;
             [assembly: AssemblyVersion("2.0.0.0")]
             namespace Dependency;
@@ -311,8 +309,8 @@ public sealed class AssemblyAnalysisToolTests
     public async Task InspectAssembly_MissingDependencyMarksPartialResult()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-");
-        var dependencyPath = EmitAssembly(temp, "MissingDependency", "namespace Missing; public sealed class DependencyType { }");
-        var assemblyPath = EmitAssembly(temp, "PartialProbe", "namespace Probe; public sealed class UsesMissing { public Missing.DependencyType Value { get; } = new(); }", dependencyPath);
+        var dependencyPath = AssemblyTestHelper.EmitAssembly(temp, "MissingDependency", "namespace Missing; public sealed class DependencyType { }");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "PartialProbe", "namespace Probe; public sealed class UsesMissing { public Missing.DependencyType Value { get; } = new(); }", dependencyPath);
         File.Delete(dependencyPath);
 
         var result = await InspectAssemblyTool.ExecuteAsync(null, new InspectAssemblyArguments(assemblyPath, null, null, null, true, 100), CancellationToken.None);
@@ -321,22 +319,6 @@ public sealed class AssemblyAnalysisToolTests
         Assert.Equal("partial", payload.Completeness);
         Assert.Contains(payload.Diagnostics, diagnostic => diagnostic.Contains("MissingDependency", StringComparison.Ordinal));
         Assert.Contains("partial", TextOf(result), StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string EmitAssembly(TestTempDirectory temp, string name, string source, params string[] additionalReferences)
-    {
-        var outputPath = temp.GetPath(name + ".dll");
-        var references = RoslynTestSolutionFactory.CoreReferences
-            .Concat(additionalReferences.Select(path => MetadataReference.CreateFromFile(path)))
-            .ToArray();
-        var compilation = CSharpCompilation.Create(
-            name,
-            [CSharpSyntaxTree.ParseText(source)],
-            references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-        var emit = compilation.Emit(outputPath);
-        Assert.True(emit.Success, string.Join(Environment.NewLine, emit.Diagnostics));
-        return outputPath;
     }
 
     private static T Deserialize<T>(CallToolResult result)

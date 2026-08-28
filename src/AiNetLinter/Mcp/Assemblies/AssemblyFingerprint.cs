@@ -33,7 +33,7 @@ internal static class AssemblyFingerprintCalculator
         diagnostic = null;
         if (string.IsNullOrWhiteSpace(assemblyPath))
         {
-            diagnostic = new("assembly-path-missing", "Der Assembly-Pfad fehlt oder ist leer.", "error");
+            diagnostic = new(AssemblyDiagnosticCodes.For(nameof(AssemblyFingerprintCalculator), nameof(AssemblyFingerprintCalculator.Canonicalize)), "Der Assembly-Pfad fehlt oder ist leer.", "error");
             return false;
         }
 
@@ -44,7 +44,7 @@ internal static class AssemblyFingerprintCalculator
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
-            diagnostic = new("assembly-fingerprint-failed", $"Assembly-Fingerprint konnte nicht berechnet werden: {ex.Message}", "error");
+            diagnostic = new(AssemblyDiagnosticCodes.For(nameof(AssemblyFingerprintCalculator), nameof(AssemblyFingerprintCalculator.TryCreate)), $"Assembly-Fingerprint konnte nicht berechnet werden: {ex.Message}", "error");
             return false;
         }
     }

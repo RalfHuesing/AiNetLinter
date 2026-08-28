@@ -9,6 +9,8 @@ using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace AiNetLinter.Mcp.Assemblies;
 
@@ -36,14 +38,14 @@ internal sealed class AssemblyDecompilationAdapter
         {
             return Task.FromResult(new DecompilationResult(
                 [],
-                [new AssemblySessionDiagnostic("assembly-decompilation-cancelled", "Die Decompilation wurde wegen Cancellation oder Deadline abgebrochen.", "error")],
+                    [new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(OperationCanceledException)), "Die Decompilation wurde wegen Cancellation oder Deadline abgebrochen.", "error")],
                 false));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException or ArgumentException or ICSharpCode.Decompiler.DecompilerException)
         {
             return Task.FromResult(new DecompilationResult(
                 [],
-                [new AssemblySessionDiagnostic("assembly-decompilation-failed", $"Decompilation fehlgeschlagen: {ex.Message}", "error")],
+                [new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(AssemblyDecompilationOptions)), $"Decompilation fehlgeschlagen: {ex.Message}", "error")],
                 false));
         }
     }
@@ -65,13 +67,29 @@ internal sealed class AssemblyDecompilationAdapter
                 cancellationToken.ThrowIfCancellationRequested();
                 if (string.IsNullOrWhiteSpace(source))
                 {
-                    diagnostics.Add(new("assembly-type-decompilation-empty", $"Typ '{type.MetadataName}' erzeugte keinen Quelltext."));
+                    diagnostics.Add(new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompiledDocument.CSharpSource)), $"Typ '{type.MetadataName}' erzeugte keinen Quelltext."));
                     continue;
                 }
 
+                source = RemoveCompilerGeneratedNestedTypes(source);
+                source = RemoveCompilerGeneratedStateMachineAttributes(source);
+
                 if (source.Length > options.MaxDocumentCharacters)
                 {
-                    diagnostics.Add(new("assembly-document-size-limit", $"Der dekompilierte Typ '{type.MetadataName}' überschreitet die Dokumentgrenze."));
+                    diagnostics.Add(new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(AssemblyDecompilationOptions.MaxDocumentCharacters)), $"Der dekompilierte Typ '{type.MetadataName}' überschreitet die Dokumentgrenze."));
+                    continue;
+                }
+
+                var syntaxDiagnostics = Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(source)
+                    .GetDiagnostics()
+                    .Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+                    .Take(3)
+                    .ToList();
+                if (syntaxDiagnostics.Count > 0)
+                {
+                    diagnostics.Add(new(
+                        AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompiledDocument.GeneratedPath)),
+                        $"Typ '{type.MetadataName}' erzeugte nicht parsbaren C#-Quelltext: {string.Join("; ", syntaxDiagnostics.Select(diagnostic => diagnostic.Id + " " + diagnostic.GetMessage()))}."));
                     continue;
                 }
 
@@ -87,11 +105,172 @@ internal sealed class AssemblyDecompilationAdapter
             }
             catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or IOException or ICSharpCode.Decompiler.DecompilerException)
             {
-                diagnostics.Add(new("assembly-type-decompilation-failed", $"Typ '{type.MetadataName}' konnte nicht dekompiliert werden: {ex.Message}"));
+                diagnostics.Add(new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompiledDocument.GeneratedPath)), $"Typ '{type.MetadataName}' konnte nicht dekompiliert werden: {ex.Message}"));
             }
         }
 
         return documents;
+    }
+
+    private static string RemoveCompilerGeneratedNestedTypes(string source)
+    {
+        while (true)
+        {
+            var typeStart = FindCompilerGeneratedTypeStart(source);
+            if (typeStart < 0) return source;
+
+            var openingBrace = source.IndexOf('{', typeStart);
+            var closingBrace = openingBrace < 0 ? -1 : FindMatchingBrace(source, openingBrace);
+            if (closingBrace < 0) return source;
+            source = source.Remove(typeStart, closingBrace - typeStart);
+        }
+    }
+
+    private static int FindCompilerGeneratedTypeStart(string source)
+    {
+        var markers = new[] { "class <", "struct <", "interface <", "record <", "delegate <", "enum <" };
+        var markerIndex = markers
+            .Select(marker => source.IndexOf(marker, StringComparison.Ordinal))
+            .Where(index => index >= 0)
+            .DefaultIfEmpty(-1)
+            .Min();
+        if (markerIndex < 0) return -1;
+
+        var lineStart = source.LastIndexOf('\n', markerIndex) + 1;
+        var attributeStart = lineStart;
+        while (attributeStart > 0)
+        {
+            var previousLineEnd = attributeStart - 1;
+            var previousLineStart = source.LastIndexOf('\n', Math.Max(0, previousLineEnd - 1)) + 1;
+            var previousLine = source[previousLineStart..previousLineEnd].Trim();
+            if (!previousLine.StartsWith("[", StringComparison.Ordinal)
+                || !previousLine.Contains("CompilerGenerated", StringComparison.Ordinal))
+            {
+                break;
+            }
+
+            attributeStart = previousLineStart;
+        }
+
+        return attributeStart;
+    }
+
+    private static string RemoveCompilerGeneratedStateMachineAttributes(string source) =>
+        string.Join(
+            Environment.NewLine,
+            source.Split(Environment.NewLine)
+                .Where(line => !line.Contains("[AsyncStateMachine(", StringComparison.Ordinal)
+                    && !line.Contains("[IteratorStateMachine(", StringComparison.Ordinal)));
+
+    private static int FindMatchingBrace(string source, int openingBrace)
+    {
+        var depth = 0;
+        var state = new BraceScannerState();
+        for (var index = openingBrace; index < source.Length; index++)
+        {
+            if (SkipIgnoredCharacter(source, ref index, ref state)) continue;
+
+            var character = source[index];
+            if (character == '{') depth++;
+            else if (character == '}' && --depth == 0) return index + 1;
+        }
+
+        return -1;
+    }
+
+    private static bool SkipIgnoredCharacter(string source, ref int index, ref BraceScannerState state) =>
+        SkipLineComment(source, ref index, ref state)
+        || SkipBlockComment(source, ref index, ref state)
+        || SkipString(source, ref index, ref state)
+        || SkipCharacter(source, ref index, ref state)
+        || EnterIgnoredRegion(source, ref index, ref state);
+
+    private static bool SkipLineComment(string source, ref int index, ref BraceScannerState state)
+    {
+        if (!state.InLineComment) return false;
+        if (source[index] is '\r' or '\n') state.InLineComment = false;
+        return true;
+    }
+
+    private static bool SkipBlockComment(string source, ref int index, ref BraceScannerState state)
+    {
+        if (!state.InBlockComment) return false;
+        if (source[index] == '*' && index + 1 < source.Length && source[index + 1] == '/')
+        {
+            state.InBlockComment = false;
+            index++;
+        }
+
+        return true;
+    }
+
+    private static bool SkipString(string source, ref int index, ref BraceScannerState state)
+    {
+        if (!state.InString) return false;
+        if (state.IsVerbatimString)
+        {
+            if (source[index] == '"')
+            {
+                if (index + 1 < source.Length && source[index + 1] == '"') index++;
+                else state.InString = false;
+            }
+        }
+        else if (source[index] == '\\') index++;
+        else if (source[index] == '"') state.InString = false;
+
+        return true;
+    }
+
+    private static bool SkipCharacter(string source, ref int index, ref BraceScannerState state)
+    {
+        if (!state.InCharacter) return false;
+        if (source[index] == '\\') index++;
+        else if (source[index] == '\'') state.InCharacter = false;
+        return true;
+    }
+
+    private static bool EnterIgnoredRegion(string source, ref int index, ref BraceScannerState state)
+    {
+        if (source[index] == '/' && index + 1 < source.Length)
+        {
+            if (source[index + 1] == '/')
+            {
+                state.InLineComment = true;
+                index++;
+                return true;
+            }
+
+            if (source[index + 1] == '*')
+            {
+                state.InBlockComment = true;
+                index++;
+                return true;
+            }
+        }
+
+        if (source[index] == '"')
+        {
+            state.InString = true;
+            state.IsVerbatimString = index > 0 && source[index - 1] == '@';
+            return true;
+        }
+
+        if (source[index] == '\'')
+        {
+            state.InCharacter = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    private struct BraceScannerState
+    {
+        internal bool InString;
+        internal bool IsVerbatimString;
+        internal bool InCharacter;
+        internal bool InLineComment;
+        internal bool InBlockComment;
     }
 
     private static ICSharpCode.Decompiler.CSharp.CSharpDecompiler CreateDecompiler(
@@ -101,9 +280,16 @@ internal sealed class AssemblyDecompilationAdapter
     {
         var settings = new ICSharpCode.Decompiler.DecompilerSettings
         {
-            DecompileMemberBodies = true,
+            DecompileMemberBodies = false,
             ShowXmlDocumentation = false,
             UseDebugSymbols = false,
+            RequiredMembers = false,
+            AsyncAwait = true,
+            AsyncEnumerator = true,
+            AnonymousMethods = true,
+            AnonymousTypes = true,
+            LocalFunctions = true,
+            YieldReturn = true,
         };
         return new ICSharpCode.Decompiler.CSharp.CSharpDecompiler(assemblyPath, references.DecompilerResolver, settings)
         {
@@ -126,7 +312,7 @@ internal sealed class AssemblyDecompilationAdapter
             var definition = reader.GetTypeDefinition(handle);
             if (!definition.GetDeclaringType().IsNil) continue;
             var name = reader.GetString(definition.Name);
-            if (name == "<Module>") continue;
+            if (name == "<Module>" || name.StartsWith("<", StringComparison.Ordinal)) continue;
             var namespaceName = definition.Namespace.IsNil ? string.Empty : reader.GetString(definition.Namespace);
             var metadataName = string.IsNullOrEmpty(namespaceName) ? name : namespaceName + "." + name;
             result.Add(ReadTypeTree(reader, handle, metadataName, cancellationToken));
@@ -200,16 +386,16 @@ internal sealed class AssemblyDecompilationAdapter
     {
         if (type.TypeCount > typeBudget)
         {
-            return new("assembly-type-limit", $"Typbaum '{type.MetadataName}' benötigt {type.TypeCount} von {typeBudget} verbleibenden Typbudgets.");
+            return new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(AssemblyDecompilationOptions.MaxTypes)), $"Typbaum '{type.MetadataName}' benötigt {type.TypeCount} von {typeBudget} verbleibenden Typbudgets.");
         }
 
         if (type.MemberCount > memberBudget)
         {
-            return new("assembly-member-limit", $"Typbaum '{type.MetadataName}' benötigt {type.MemberCount} von {memberBudget} verbleibenden Memberbudgets.");
+            return new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(AssemblyDecompilationOptions.MaxMembers)), $"Typbaum '{type.MetadataName}' benötigt {type.MemberCount} von {memberBudget} verbleibenden Memberbudgets.");
         }
 
         return type.ComplexityCost > complexityBudget
-            ? new AssemblySessionDiagnostic("assembly-complexity-limit", $"Typbaum '{type.MetadataName}' benötigt Komplexitätskosten {type.ComplexityCost} von {complexityBudget} verbleibenden Kosten.")
+            ? new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(AssemblyDecompilationOptions.MaxComplexity)), $"Typbaum '{type.MetadataName}' benötigt Komplexitätskosten {type.ComplexityCost} von {complexityBudget} verbleibenden Kosten.")
             : null;
     }
 

@@ -8,8 +8,6 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 
 namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 
@@ -24,7 +22,7 @@ public sealed class AssemblyAnalysisSessionTests
     public async Task RefreshAsync_ReusesGenerationWhenOnlyMtimeChanges()
     {
         using var temp = TestTempDirectory.Create("assembly-session-fingerprint-");
-        var assemblyPath = EmitAssembly(temp, "MtimeProbe", "namespace Probe; public sealed class Value { public int Number => 1; }");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "MtimeProbe", "namespace Probe; public sealed class Value { public int Number => 1; }");
         var cacheRoot = temp.GetPath("cache");
         await using var session = new AssemblyAnalysisSession(assemblyPath, cacheRoot: cacheRoot);
 
@@ -48,7 +46,7 @@ public sealed class AssemblyAnalysisSessionTests
     public async Task RefreshAsync_ChangesGenerationForChangedBytesAndKeepsOldLeaseReadable()
     {
         using var temp = TestTempDirectory.Create("assembly-session-generation-");
-        var assemblyPath = EmitAssembly(temp, "GenerationProbe", "namespace Probe; public sealed class First { public int Value => 1; }");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "GenerationProbe", "namespace Probe; public sealed class First { public int Value => 1; }");
         await using var session = new AssemblyAnalysisSession(assemblyPath, cacheRoot: temp.GetPath("cache"));
 
         await session.RefreshAsync();
@@ -58,7 +56,7 @@ public sealed class AssemblyAnalysisSessionTests
         var oldGeneration = oldLease.Generation.Number;
         var oldText = await Assert.Single(oldLease.Snapshot.Documents).GetTextAsync();
 
-        EmitAssembly(temp, "GenerationProbe", "namespace Probe; public sealed class Second { public int Value => 2; }");
+        AssemblyTestHelper.EmitAssembly(temp, "GenerationProbe", "namespace Probe; public sealed class Second { public int Value => 2; }");
         var refreshed = await session.RefreshAsync();
         var currentSnapshot = session.CurrentGeneration;
         Assert.NotNull(currentSnapshot);
@@ -77,7 +75,7 @@ public sealed class AssemblyAnalysisSessionTests
     public async Task RefreshAsync_PublishesManifestAndNewSessionReadsTheCache()
     {
         using var temp = TestTempDirectory.Create("assembly-session-cache-");
-        var assemblyPath = EmitAssembly(temp, "CacheProbe", "namespace Probe; public sealed class Cached { public string Name => \"cached\"; }");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "CacheProbe", "namespace Probe; public sealed class Cached { public string Name => \"cached\"; }");
         var cacheRoot = temp.GetPath("cache");
         await using (var first = new AssemblyAnalysisSession(assemblyPath, cacheRoot: cacheRoot))
         {
@@ -112,19 +110,20 @@ public sealed class AssemblyAnalysisSessionTests
     public async Task RefreshAsync_ReplacesIncompatibleManifestBeforePublishingNewGeneration()
     {
         using var temp = TestTempDirectory.Create("assembly-session-manifest-");
-        var assemblyPath = EmitAssembly(temp, "ManifestProbe", "namespace Probe; public sealed class Stable { }");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "ManifestProbe", "namespace Probe; public sealed class Stable { }");
         var cacheRoot = temp.GetPath("cache");
         await using (var session = new AssemblyAnalysisSession(assemblyPath, cacheRoot: cacheRoot))
         {
             await session.RefreshAsync();
         }
         var manifestPath = Assert.Single(Directory.EnumerateFiles(cacheRoot, "manifest.json", SearchOption.AllDirectories));
-        File.WriteAllText(manifestPath, File.ReadAllText(manifestPath).Replace("assembly-cache-v1", "wrong-schema", StringComparison.Ordinal));
+        File.WriteAllText(manifestPath, File.ReadAllText(manifestPath).Replace("assembly-cache-v2", "wrong-schema", StringComparison.Ordinal));
 
         await using var refreshedSession = new AssemblyAnalysisSession(assemblyPath, cacheRoot: cacheRoot);
         var refreshed = await refreshedSession.RefreshAsync();
 
         Assert.Equal(AssemblySessionStatus.Complete, refreshed.Status);
+        Assert.Contains(refreshed.Diagnostics, diagnostic => diagnostic.Code == "assembly-cache-invalid");
         Assert.Contains(Directory.EnumerateFiles(cacheRoot, "manifest.json", SearchOption.AllDirectories), path =>
             File.ReadAllText(path).Contains("assembly-cache-v2", StringComparison.Ordinal));
         Assert.Empty(Directory.EnumerateDirectories(cacheRoot, "*.retired-*", SearchOption.AllDirectories));
@@ -134,8 +133,8 @@ public sealed class AssemblyAnalysisSessionTests
     public async Task RefreshAsync_MissingReferenceIsVisibleAsPartialWithoutLoadingTargetAssembly()
     {
         using var temp = TestTempDirectory.Create("assembly-session-partial-");
-        var dependencyPath = EmitAssembly(temp, "SessionDependency", "namespace Dependency; public sealed class Value { }");
-        var assemblyPath = EmitAssembly(
+        var dependencyPath = AssemblyTestHelper.EmitAssembly(temp, "SessionDependency", "namespace Dependency; public sealed class Value { }");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
             temp,
             "SessionTarget",
             "namespace Probe; public sealed class UsesDependency { public Dependency.Value Value { get; } = new(); }",
@@ -157,7 +156,7 @@ public sealed class AssemblyAnalysisSessionTests
     public async Task RefreshAsync_RejectsOversizedAssemblyBeforeDecompilationAndDoesNotPublishCache()
     {
         using var temp = TestTempDirectory.Create("assembly-session-limits-");
-        var assemblyPath = EmitAssembly(temp, "LimitProbe", "namespace Probe; public sealed class Value { }");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "LimitProbe", "namespace Probe; public sealed class Value { }");
         var options = new AssemblyDecompilationOptions(MaxAssemblyBytes: 1);
         var cacheRoot = temp.GetPath("cache");
         await using var session = new AssemblyAnalysisSession(assemblyPath, options, cacheRoot);
@@ -174,7 +173,7 @@ public sealed class AssemblyAnalysisSessionTests
     public async Task RefreshAsync_CancellationFailsWithoutPublishingPartialGeneration()
     {
         using var temp = TestTempDirectory.Create("assembly-session-cancel-");
-        var assemblyPath = EmitAssembly(temp, "CancelProbe", "namespace Probe; public sealed class Value { }");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "CancelProbe", "namespace Probe; public sealed class Value { }");
         var cacheRoot = temp.GetPath("cache");
         await using var session = new AssemblyAnalysisSession(assemblyPath, cacheRoot: cacheRoot);
         using var cancellation = new CancellationTokenSource();
@@ -193,7 +192,7 @@ public sealed class AssemblyAnalysisSessionTests
     public async Task RefreshAsync_PreservesLastGoodSnapshotAsDegradedAfterRefreshFailure()
     {
         using var temp = TestTempDirectory.Create("assembly-session-degraded-");
-        var assemblyPath = EmitAssembly(temp, "DegradedProbe", "namespace Probe; public sealed class Value { }");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "DegradedProbe", "namespace Probe; public sealed class Value { }");
         await using var session = new AssemblyAnalysisSession(assemblyPath, cacheRoot: temp.GetPath("cache"));
         var initial = await session.RefreshAsync();
         var initialGeneration = session.CurrentGeneration;
@@ -214,7 +213,7 @@ public sealed class AssemblyAnalysisSessionTests
     public async Task RefreshAsync_BudgetsNestedTypeTreesWithoutWholeModuleFallback()
     {
         using var temp = TestTempDirectory.Create("assembly-session-nested-limits-");
-        var assemblyPath = EmitAssembly(temp, "NestedLimitProbe", """
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "NestedLimitProbe", """
             namespace Probe;
             public sealed class First
             {
@@ -257,19 +256,4 @@ public sealed class AssemblyAnalysisSessionTests
         Assert.Contains(complexityResult.Diagnostics, diagnostic => diagnostic.Code == "assembly-complexity-limit");
     }
 
-    private static string EmitAssembly(TestTempDirectory temp, string name, string source, params string[] additionalReferences)
-    {
-        var outputPath = temp.GetPath(name + ".dll");
-        var references = RoslynTestSolutionFactory.CoreReferences
-            .Concat(additionalReferences.Select(path => MetadataReference.CreateFromFile(path)))
-            .ToArray();
-        var compilation = CSharpCompilation.Create(
-            name,
-            [CSharpSyntaxTree.ParseText(source)],
-            references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-        var emit = compilation.Emit(outputPath);
-        Assert.True(emit.Success, string.Join(Environment.NewLine, emit.Diagnostics));
-        return outputPath;
-    }
 }

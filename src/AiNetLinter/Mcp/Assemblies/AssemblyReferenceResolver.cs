@@ -23,7 +23,7 @@ internal sealed class AssemblyReferenceResolver
             using var peReader = new PEReader(stream);
             if (!peReader.HasMetadata)
             {
-                return FailedResolution("assembly-metadata-missing", "Die Datei enthält keine .NET-Metadaten.", canonicalPath);
+                return FailedResolution(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolver.Resolve)), "Die Datei enthält keine .NET-Metadaten.", canonicalPath);
             }
 
             var metadata = ReadMetadata(peReader.GetMetadataReader());
@@ -39,7 +39,7 @@ internal sealed class AssemblyReferenceResolver
                 if (!resolved && path is not null)
                 {
                     diagnostics.Add(new(
-                        "assembly-reference-metadata-failed",
+                        AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolution.MetadataReferences)),
                         $"Referenz '{candidate.Reference.Name}' wurde nach Identitätsprüfung nicht als MetadataReference eingebunden: {path}.",
                         "warning"));
                 }
@@ -61,7 +61,7 @@ internal sealed class AssemblyReferenceResolver
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException or ArgumentException)
         {
-            return FailedResolution("assembly-metadata-read-failed", $"Assembly-Metadaten konnten nicht gelesen werden: {ex.Message}", canonicalPath);
+            return FailedResolution(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolution.Identity)), $"Assembly-Metadaten konnten nicht gelesen werden: {ex.Message}", canonicalPath);
         }
     }
 
@@ -78,7 +78,7 @@ internal sealed class AssemblyReferenceResolver
             if (path is null)
             {
                 diagnostics.Add(new(
-                    "assembly-reference-unresolved",
+                    AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceDto.Resolved)),
                     $"Abhängigkeit nicht auflösbar: {reference.Name}, Version {reference.Version}, Kultur {reference.Culture}.",
                     "warning"));
             }
@@ -107,7 +107,7 @@ internal sealed class AssemblyReferenceResolver
         if (mismatches.Count > 0)
         {
             diagnostics.Add(new(
-                "assembly-reference-identity-mismatch",
+                AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceDto.Version)),
                 $"Kein identitätsgleicher Kandidat für '{reference.Name}' gefunden. Erwartet: Version {reference.Version}, Kultur {reference.Culture}; geprüft: {string.Join(", ", mismatches.Take(5))}.",
                 "warning"));
         }
@@ -133,7 +133,7 @@ internal sealed class AssemblyReferenceResolver
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
             {
                 diagnostics.Add(new(
-                    "assembly-reference-enumeration-failed",
+                    AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceDto.Name)),
                     $"Lokale Referenzen konnten nicht enumeriert werden: {directory}: {ex.Message}",
                     "warning"));
             }
@@ -161,7 +161,7 @@ internal sealed class AssemblyReferenceResolver
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or ArgumentException or InvalidOperationException)
             {
-                diagnostics.Add(new("assembly-reference-invalid", $"Referenz konnte nicht geladen werden: {path}: {ex.Message}", "warning"));
+                diagnostics.Add(new(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(Microsoft.CodeAnalysis.MetadataReference)), $"Referenz konnte nicht geladen werden: {path}: {ex.Message}", "warning"));
             }
         }
 
@@ -183,7 +183,7 @@ internal sealed class AssemblyReferenceResolver
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException or ArgumentException)
         {
-            diagnostics.Add(new("assembly-reference-candidate-invalid", $"Referenzkandidat konnte nicht statisch geprüft werden: {path}: {ex.Message}", "warning"));
+            diagnostics.Add(new(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyIdentityDto)), $"Referenzkandidat konnte nicht statisch geprüft werden: {path}: {ex.Message}", "warning"));
             identity = null!;
             return false;
         }

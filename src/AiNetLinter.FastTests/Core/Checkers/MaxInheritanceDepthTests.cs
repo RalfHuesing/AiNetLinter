@@ -37,25 +37,6 @@ public sealed class MaxInheritanceDepthTests
         };
     }
 
-    private static (SyntaxTree, SemanticModel) GetSemanticContext(string source)
-    {
-        var tree = CSharpSyntaxTree.ParseText(source);
-        var mscorlib = MetadataReference.CreateFromFile(typeof(object).Assembly.Location);
-        var compilation = CSharpCompilation.Create("TestAssembly")
-            .AddSyntaxTrees(tree)
-            .AddReferences(mscorlib)
-            .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-        
-        var errors = compilation.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
-        if (errors.Any())
-        {
-            throw new System.Exception("Compilation errors: " + string.Join("\n", errors.Select(e => e.ToString())));
-        }
-
-        var semanticModel = compilation.GetSemanticModel(tree);
-        return (tree, semanticModel);
-    }
-
     private static Solution CreateAdhocSolution(params (string fileName, string content)[] files)
     {
         var workspace = new AdhocWorkspace();

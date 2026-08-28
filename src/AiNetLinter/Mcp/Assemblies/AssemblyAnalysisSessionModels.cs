@@ -37,7 +37,7 @@ internal sealed record AssemblyDecompilationOptions(
     string CacheSchemaVersion = AssemblyDecompilationOptions.CurrentCacheSchemaVersion)
 {
     internal const string CurrentDecompilerVersion = "10.0.1.8346";
-    internal const string CurrentCacheSchemaVersion = "assembly-cache-v2";
+    internal const string CurrentCacheSchemaVersion = AssemblyCacheContract.CacheSchemaVersion;
 
     internal static AssemblyDecompilationOptions Default => new();
 
