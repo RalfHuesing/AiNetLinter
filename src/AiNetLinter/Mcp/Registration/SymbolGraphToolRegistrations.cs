@@ -18,8 +18,8 @@ namespace AiNetLinter.Mcp.Registration;
 /// der von <see cref="McpServerOptionsFactory"/> aufgebauten Tool-Collection. Aus
 /// <see cref="McpServerOptionsFactory"/> ausgelagert, damit dessen eigener <c>AIContextFootprint</c>
 /// (siehe <c>AiNetLinter.mdc</c>) nicht mit jedem neu registrierten Tool waechst. Jedes Lambda ist
-/// projektgebunden: <c>projectRoot</c> ist Pflicht und adressiert den Lease-geschuetzten
-/// Registry-Key (<see cref="ProjectToolCall"/>).
+/// zielgebunden: <c>targetType</c> und <c>targetPath</c> sind Pflicht und werden am gemeinsamen
+/// <see cref="AnalysisToolCall"/> validiert.
 /// </summary>
 internal static class SymbolGraphToolRegistrations
 {
@@ -45,10 +45,11 @@ internal static class SymbolGraphToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string[]? namePatterns = null, string? kind = null, int maxResults = 50, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, string[]? namePatterns = null, string? kind = null, int maxResults = 50, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => FindSymbolTool.ExecuteAsync(lease.Server, namePatterns, kind, maxResults, ct)),
             McpToolRegistrationOptions.ReadOnlyTool("find_symbol", FindSymbolDescription)));
     }
@@ -65,10 +66,11 @@ internal static class SymbolGraphToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => FindReferencesTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, depth, ct)),
             McpToolRegistrationOptions.ReadOnlyTool("find_references", FindReferencesDescription)));
     }
@@ -87,10 +89,11 @@ internal static class SymbolGraphToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction), ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_call_tree", GetCallTreeDescription)));
     }
@@ -109,14 +112,15 @@ internal static class SymbolGraphToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? gitRef = null, string? symbolIdentifier = null, int maxResults = 50, int depth = 1,
+            async (string targetType, string targetPath, string? gitRef = null, string? symbolIdentifier = null, int maxResults = 50, int depth = 1,
                 string? detailLevel = null,
                 int maxChangedSymbols = ChangeContextContract.DefaultMaxChangedSymbols,
                 int maxTestsPerSymbol = ChangeContextContract.DefaultMaxTestsPerSymbol,
                 CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => GetImpactTool.ExecuteAsync(
                         lease.Server,
                         new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
@@ -145,10 +149,11 @@ internal static class SymbolGraphToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? symbolIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, string? symbolIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_type_hierarchy", GetTypeHierarchyDescription)));
     }
@@ -165,11 +170,12 @@ internal static class SymbolGraphToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? filePath = null, string? symbolIdentifier = null, string? direction = null,
+            async (string targetType, string targetPath, string? filePath = null, string? symbolIdentifier = null, string? direction = null,
                 int depth = 1, int maxResults = 50, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => DependencyGraphTool.ExecuteAsync(lease.Server, new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults), ct)),
             McpToolRegistrationOptions.ReadOnlyTool("dependency_graph", DependencyGraphDescription)));
     }

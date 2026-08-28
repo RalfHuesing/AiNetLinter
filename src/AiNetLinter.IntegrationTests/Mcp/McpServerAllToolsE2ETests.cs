@@ -47,7 +47,8 @@ public sealed class McpServerAllToolsE2ETests
             "inspect_assembly",
             new Dictionary<string, object?>
             {
-                ["assemblyPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["targetType"] = "assembly",
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
                 ["typeName"] = nameof(McpCodeGraphServer),
                 ["publicOnly"] = false,
                 ["exactTypeName"] = true,
@@ -65,6 +66,34 @@ public sealed class McpServerAllToolsE2ETests
         Assert.Contains("API-Typen:", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Öffentliche API-Typen:", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Öffentliche Namespaces:", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetServerHealth_UsesAggregateProjectAndAssemblyTargetVariants()
+    {
+        var host = await _fixture.GetHostAsync();
+        var aggregate = await _fixture.Client.CallToolAsync("get_server_health");
+        Assert.NotEqual(true, aggregate.IsError);
+
+        var project = await _fixture.Client.CallToolAsync(
+            "get_server_health",
+            new Dictionary<string, object?>
+            {
+                ["targetType"] = "project",
+                ["targetPath"] = host.TargetPath,
+            });
+        Assert.NotEqual(true, project.IsError);
+        Assert.Contains(host.TargetPath, Assert.IsType<TextContentBlock>(Assert.Single(project.Content)).Text, StringComparison.OrdinalIgnoreCase);
+
+        var assembly = await _fixture.Client.CallToolAsync(
+            "get_server_health",
+            new Dictionary<string, object?>
+            {
+                ["targetType"] = "assembly",
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+            });
+        Assert.NotEqual(true, assembly.IsError);
+        Assert.Contains("ASSEMBLY_TARGET_UNSUPPORTED", Assert.IsType<TextContentBlock>(Assert.Single(assembly.Content)).Text, StringComparison.Ordinal);
     }
 
     [Fact]

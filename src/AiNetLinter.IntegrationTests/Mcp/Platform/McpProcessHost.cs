@@ -14,7 +14,10 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.IntegrationTests.Mcp.Platform;
 
-internal sealed record McpProcessTarget(string RootPath, IDisposable? Owner = null);
+internal sealed record McpProcessTarget(
+    string RootPath,
+    IDisposable? Owner = null,
+    string TargetType = "project");
 
 internal sealed class McpProcessHost : IAsyncDisposable
 {
@@ -91,14 +94,7 @@ internal sealed class McpProcessHost : IAsyncDisposable
         TimeSpan? timeout = null,
         CancellationToken cancellationToken = default)
     {
-        var effectiveArguments = arguments is null
-            ? new Dictionary<string, object?> { ["projectRoot"] = target.RootPath }
-            : arguments.ContainsKey("projectRoot")
-                ? arguments
-                : new Dictionary<string, object?>(arguments)
-                {
-                    ["projectRoot"] = target.RootPath,
-                };
+        var effectiveArguments = BuildEffectiveArguments(toolName, arguments);
 
         for (var attempt = 0; attempt < LoadingRetryCount; attempt++)
         {
@@ -131,6 +127,8 @@ internal sealed class McpProcessHost : IAsyncDisposable
         CancellationToken cancellationToken = default) =>
         client.ListResourceTemplatesAsync(cancellationToken: cancellationToken);
 
+    internal string TargetPath => target.RootPath;
+
     public ValueTask<ReadResourceResult> ReadResourceAsync(
         string uri,
         CancellationToken cancellationToken = default) =>
@@ -144,6 +142,25 @@ internal sealed class McpProcessHost : IAsyncDisposable
             target.Owner?.Dispose();
             lease.Dispose();
         }
+    }
+
+    private Dictionary<string, object?> BuildEffectiveArguments(
+        string toolName,
+        IReadOnlyDictionary<string, object?>? arguments)
+    {
+        if (toolName is "get_server_health" or "report_observability_feedback")
+        {
+            return arguments is null
+                ? new Dictionary<string, object?>()
+                : new Dictionary<string, object?>(arguments);
+        }
+
+        var effective = arguments is null
+            ? new Dictionary<string, object?>()
+            : new Dictionary<string, object?>(arguments);
+        effective.TryAdd("targetType", target.TargetType);
+        effective.TryAdd("targetPath", target.RootPath);
+        return effective;
     }
 
     private static bool IsLoadingResponse(CallToolResult result) =>

@@ -118,7 +118,7 @@ internal static class CliOptionFactory
 
     internal static Option<bool> CreateMcpServerOption() => new(McpServer)
     {
-        Description = "Startet einen stdio-basierten MCP-Server ohne eigenen Projektbezug: Jeder Tool-Aufruf adressiert per projectRoot einen Projekt-Key aus der Definitionsdatei ainetlinter.project.json im Projektroot.",
+        Description = "Startet einen stdio-basierten MCP-Server ohne eigenen Projektbezug: Jeder zielgebundene Tool-Aufruf adressiert per targetType und absolutem targetPath ein Projekt oder eine lokale Assembly.",
     };
 
     internal static Option<bool> CreateDaemonStartOption() => new(DaemonStart)

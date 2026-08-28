@@ -90,8 +90,9 @@ Die ID wird invariant in Kleinbuchstaben normalisiert; `BETA` und `beta`
 verwenden deshalb denselben Named-Pipe-Endpunkt. Ohne ID bleibt der bisherige
 Named-Pipe-Endpunkt unverändert.
 
-Jeder projektbezogene Tool-Aufruf erhält einen absoluten `projectRoot`. Im
-Projektroot liegt die Definition der Solution und Regeldatei:
+Jeder zielgebundene Tool-Aufruf erhält `targetType` (`project` oder `assembly`)
+und den absoluten `targetPath`. Bei `targetType=project` liegt im adressierten
+Projektroot die Definition der Solution und Regeldatei:
 
 ```json
 {
@@ -128,9 +129,9 @@ Prozesses. Verwende diesen absoluten `command`-Pfad, wenn der MCP-Host
 Registrierung, Projektvertrag und Tool-vs.-Textsuche: [Docs/integration.md](Docs/integration.md#mcp-server-registrieren).
 
 Für externe lokale DLLs stehen `inspect_assembly` und `find_assembly_extensions` bereit. Beide
-akzeptieren einen absoluten `assemblyPath` und führen die Assembly nicht aus. `projectRoot`
-ist optional; mit `receiverType` prüft die Extension-Suche die tatsächliche Roslyn-
-Anwendbarkeit im geladenen Consumer-Projekt. `inspect_assembly` kann mit
+verwenden `targetType=assembly` und einen absoluten `targetPath` auf eine vorhandene `.dll`;
+die Assembly wird nicht ausgeführt. Ein Consumer-Projekt ist für diesen Assembly-Zweig in
+diesem Vertrag nicht Teil des Aufrufs. `inspect_assembly` kann mit
 `exactTypeName`, `memberNames` und `maxMembers` große oder mehrdeutige APIs gezielt
 einschränken und liefert bei Methoden und Indexern zusätzlich strukturierte Parameterdaten.
 Unaufgelöste Abhängigkeiten werden als `partial` gekennzeichnet.

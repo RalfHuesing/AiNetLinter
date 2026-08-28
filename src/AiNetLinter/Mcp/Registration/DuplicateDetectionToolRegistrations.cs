@@ -19,7 +19,7 @@ namespace AiNetLinter.Mcp.Registration;
 /// Symbolgraph-Tools teilt — es nutzt ausschliesslich die eigenstaendige
 /// <see cref="AiNetLinter.Core.DuplicateDetection.DuplicateDetectionEngine"/> (Core/DuplicateDetection/, auch
 /// vom Linter-Checker <c>DuplicateCodeChecker</c> genutzt). Das Lambda ist projektgebunden:
-/// <c>projectRoot</c> ist Pflicht und adressiert den Lease-geschuetzten Registry-Key.
+/// <c>targetType</c> und <c>targetPath</c> sind Pflicht und adressieren den gemeinsamen Dispatch.
 /// </summary>
 internal static class DuplicateDetectionToolRegistrations
 {
@@ -28,13 +28,14 @@ internal static class DuplicateDetectionToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, int? minTokens = null, string? similarityThreshold = null, bool? normalizeIdentifiers = null,
+            async (string targetType, string targetPath, int? minTokens = null, string? similarityThreshold = null, bool? normalizeIdentifiers = null,
                 string? scopeDir = null, int? maxResults = null, string? mode = null, string? helperSymbol = null,
                 string? scopeType = null,
                 CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease =>
                     {
                         var input = new DuplicateDetectionInput(

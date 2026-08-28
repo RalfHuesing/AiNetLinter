@@ -21,9 +21,9 @@ namespace AiNetLinter.Commands;
 
 /// <summary>
 /// Startet einen stdio-basierten MCP-Server ohne eigenen Projektbezug in der Client-Konfiguration:
-/// Jeder Tool-/Resource-Aufruf adressiert per absolutem <c>projectRoot</c> einen Lease-geschuetzten
-/// Key der <see cref="ProjectRegistry"/>, dessen Instanzen lazy aus einer Definitionsdatei
-/// (<c>ainetlinter.project.json</c> im Projektroot) entstehen. Laeuft, bis der Client die
+/// Jeder zielgebundene Tool-Aufruf adressiert per <c>targetType</c> und absolutem <c>targetPath</c>
+/// ein Projekt oder eine lokale Assembly; projektbezogene Keys bleiben Lease-geschuetzt und werden lazy aus einer
+/// Definitionsdatei (<c>ainetlinter.project.json</c> im Projektroot) erzeugt. Laeuft, bis der Client die
 /// Verbindung trennt oder das Cancellation-Token signalisiert wird.
 /// </summary>
 internal static class McpServerCommand

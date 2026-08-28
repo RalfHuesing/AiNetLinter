@@ -52,10 +52,11 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? scopeFilter = null, int maxResults = GetViolationsScanner.DefaultMaxResults, int contextLines = 2, bool includeSnippet = false, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, string? scopeFilter = null, int maxResults = GetViolationsScanner.DefaultMaxResults, int contextLines = 2, bool includeSnippet = false, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => GetViolationsTool.ExecuteAsync(lease.Server, new GetViolationsToolExecutionOptions(scopeFilter, maxResults, contextLines, includeSnippet), ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_violations", GetViolationsDescription)));
     }
@@ -71,10 +72,11 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? scopeFilter = null, double minScore = SafeguardScanner.DefaultMinScoreThreshold, int maxViolations = SafeguardScanner.DefaultMaxRemediationEntries, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, string? scopeFilter = null, double minScore = SafeguardScanner.DefaultMinScoreThreshold, int maxViolations = SafeguardScanner.DefaultMaxRemediationEntries, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => SafeguardTool.ExecuteAsync(lease.Server, scopeFilter, minScore, maxViolations, ct)),
             McpToolRegistrationOptions.ReadOnlyTool("safeguard", SafeguardDescription)));
     }
@@ -92,7 +94,8 @@ internal static class AnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (
-                string projectRoot,
+                string targetType,
+                string targetPath,
                 string? pattern = null,
                 bool isRegex = false,
                 int maxResults = 50,
@@ -104,9 +107,10 @@ internal static class AnalysisToolRegistrations
                 string[]? excludePatterns = null,
                 bool enrichCSharp = false,
                 CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => SearchPatternTool.ExecuteAsync(
                         lease.Server,
                         new SearchPatternToolArguments(
@@ -139,10 +143,11 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? root = null, string? mode = null, int depth = 1, int topN = 10, string? fileFilter = null, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, string? root = null, string? mode = null, int depth = 1, int topN = 10, string? fileFilter = null, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => MetricsTreeTool.ExecuteAsync(lease.Server, new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter), ct)),
             McpToolRegistrationOptions.ReadOnlyTool("metrics_tree", MetricsTreeDescription)));
     }
@@ -159,10 +164,11 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string[]? symbolIdentifiers = null, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, string[]? symbolIdentifiers = null, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => MetricsLookupTool.ExecuteAsync(lease.Server, symbolIdentifiers, ct)),
             McpToolRegistrationOptions.ReadOnlyTool("metrics_lookup", MetricsLookupDescription)));
     }
@@ -180,10 +186,11 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string[]? patterns = null, string? scopeFilter = null, int maxResultsPerPattern = PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, string[]? patterns = null, string? scopeFilter = null, int maxResultsPerPattern = PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => PatternDetectTool.ExecuteAsync(lease.Server, patterns, scopeFilter, maxResultsPerPattern, ct)),
             McpToolRegistrationOptions.ReadOnlyTool("pattern_detect", PatternDetectDescription)));
     }
@@ -203,7 +210,8 @@ internal static class AnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (
-                string projectRoot,
+                string targetType,
+                string targetPath,
                 string? scopeFilter = null,
                 string? valueType = "all",
                 string? categoryFilter = "all",
@@ -214,9 +222,10 @@ internal static class AnalysisToolRegistrations
                 bool includeSuppressed = false,
                 bool changedOnly = false,
                 CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease =>
                     {
                         var effective = new FindMagicValuesToolArgs(
@@ -254,7 +263,8 @@ internal static class AnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (
-                string projectRoot,
+                string targetType,
+                string targetPath,
                 string? accessibility = "private_internal",
                 string? confidence = "both",
                 string? kind = "all",
@@ -263,9 +273,10 @@ internal static class AnalysisToolRegistrations
                 string? mode = "members",
                 int maxResults = 50,
                 CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease =>
                     {
                         var effective = new FindDeadCodeToolArgs(
@@ -295,10 +306,11 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? symbolIdentifier = null, string? symbol = null, bool includeCallers = true, bool includeTests = true, bool includeMetrics = true, bool includeViolations = true, int maxCallers = 10, int maxTests = 10, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, bool includeCallers = true, bool includeTests = true, bool includeMetrics = true, bool includeViolations = true, int maxCallers = 10, int maxTests = 10, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => GetFeatureContextTool.ExecuteAsync(lease.Server, new FeatureContextOptions(symbol, symbolIdentifier, includeCallers, includeTests, includeMetrics, includeViolations, maxCallers, maxTests), ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_feature_context", GetFeatureContextDescription)));
     }
@@ -315,10 +327,11 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? symbol = null, string? symbolIdentifier = null, int maxResults = 30, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, string? symbol = null, string? symbolIdentifier = null, int maxResults = 30, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => GetTestContextTool.ExecuteAsync(lease.Server, new TestContextOptions(symbol, symbolIdentifier, maxResults), ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_test_context", GetTestContextDescription)));
     }

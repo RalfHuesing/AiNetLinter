@@ -208,7 +208,7 @@ internal static class McpRawWireTestHarness
     {
         foreach (var frame in frames)
         {
-            await writer.WriteLineAsync(AddProjectRootToToolCall(frame, targetDirectory));
+            await writer.WriteLineAsync(AddTargetToToolCall(frame, targetDirectory));
             await writer.FlushAsync();
             if (interFrameDelay is { } delay)
             {
@@ -220,7 +220,7 @@ internal static class McpRawWireTestHarness
     private static int CountExpectedResponses(IEnumerable<string> frames) =>
         frames.Count(frame => frame.Contains("\"id\":", StringComparison.Ordinal));
 
-    private static string AddProjectRootToToolCall(string frame, string projectRoot)
+    private static string AddTargetToToolCall(string frame, string targetPath)
     {
         try
         {
@@ -229,13 +229,15 @@ internal static class McpRawWireTestHarness
                 return frame;
 
             var parameters = root["params"]?.AsObject();
-            if (string.Equals(parameters?["name"]?.GetValue<string>(), "get_server_health", StringComparison.Ordinal))
+            var toolName = parameters?["name"]?.GetValue<string>();
+            if (toolName is "get_server_health" or "report_observability_feedback")
                 return frame;
 
             var arguments = parameters?["arguments"]?.AsObject();
-            if (arguments is null || arguments.ContainsKey("projectRoot")) return frame;
+            if (arguments is null || arguments.ContainsKey("targetType") || arguments.ContainsKey("targetPath")) return frame;
 
-            arguments["projectRoot"] = projectRoot;
+            arguments["targetType"] = "project";
+            arguments["targetPath"] = targetPath;
             return root.ToJsonString();
         }
         catch (JsonException)

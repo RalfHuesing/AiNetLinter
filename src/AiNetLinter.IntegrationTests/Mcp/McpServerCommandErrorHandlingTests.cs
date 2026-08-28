@@ -67,7 +67,8 @@ public sealed class McpServerCommandErrorHandlingTests
                 new Dictionary<string, object?>
                 {
                     ["namePatterns"] = new[] { "Anything" },
-                    ["projectRoot"] = tempDir,
+                    ["targetType"] = "project",
+                    ["targetPath"] = tempDir,
                 },
                 cts.Token);
 
@@ -114,7 +115,8 @@ public sealed class McpServerCommandErrorHandlingTests
             new Dictionary<string, object?>
             {
                 ["filePaths"] = new[] { "src/CompileErrorMini/BrokenClassA.cs" },
-                ["projectRoot"] = fixture.RootPath,
+                ["targetType"] = "project",
+                ["targetPath"] = fixture.RootPath,
             },
             cts.Token);
 

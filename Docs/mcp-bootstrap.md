@@ -44,7 +44,7 @@ Wiederherstellung einer fehlenden Projektinitialisierung gelesen.
    Die Instanz-ID wird invariant in Kleinbuchstaben normalisiert; `BETA` und
    `beta` adressieren daher dieselbe Windows-Instanz.
 6. Prüfe die Einrichtung mit `get_server_health` oder einem kleinen
-   semantischen Tool-Aufruf gegen den absoluten Projektroot.
+   semantischen Tool-Aufruf gegen einen vollständigen Projekt-Target-Block.
 
 Bei mehreren Solutions oder mehreren nicht eindeutig zuordenbaren
 Regeldateien die Auswahl vor dem Schreiben klären. Nach erfolgreicher
@@ -60,7 +60,9 @@ PATH-basierten Beispiel oben portabel.
 
 ## MCP-Projektvertrag
 
-Jeder projektbezogene Tool-Aufruf erhält den absoluten `projectRoot`. Im
-adressierten Projektroot muss `ainetlinter.project.json` liegen. Fehlt die
-Datei oder ist sie ungültig, liefert der Server `PROJECT_NOT_INITIALIZED` bzw.
-`RULES_INVALID` mit einem konkreten Wiederherstellungshinweis.
+Jeder zielgebundene Tool-Aufruf erhält `targetType` (`project` oder `assembly`)
+und den absoluten `targetPath`. Bei `targetType=project` muss im adressierten
+Projektroot `ainetlinter.project.json` liegen. Fehlt die Datei oder ist sie
+ungültig, liefert der Server `PROJECT_NOT_INITIALIZED` bzw. `RULES_INVALID` mit
+einem konkreten Wiederherstellungshinweis. `targetType=assembly` ist für die
+spezialisierten Assembly-Tools auf eine vorhandene lokale `.dll` begrenzt.

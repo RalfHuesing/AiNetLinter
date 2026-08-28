@@ -22,7 +22,7 @@ internal static class McpServerOptionsFactory
     /// <summary>
     /// Baut die vollstaendigen Server-Optionen inkl. aller registrierten Tools. Die Lambdas
     /// erreichen die residenten Instanzen ausschliesslich ueber die <paramref name="registry"/>
-    /// (Lease je projectRoot) — kein DI-Container (Architektur-Verbot, siehe
+    /// (Lease je Project-Target) — kein DI-Container (Architektur-Verbot, siehe
     /// <c>AiNetLinterRichtlinien.mdc</c> §2). Die <c>initialize</c>-Handshake-Instructions
     /// kommen aus <see cref="ServerInstructions.Text"/> (Single-Source-of-Truth, siehe dort).
     /// </summary>

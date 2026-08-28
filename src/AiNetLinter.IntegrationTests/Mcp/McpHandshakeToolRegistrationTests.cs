@@ -55,7 +55,7 @@ public sealed class McpHandshakeToolRegistrationTests
         Assert.Contains(tools, t => t.Name == "get_file_tree");
 
         var fileTree = Assert.Single(tools, t => t.Name == "get_file_tree");
-        Assert.Contains("root, fileFilter und excludePatterns sind relativ zu projectRoot", fileTree.Description, StringComparison.Ordinal);
+        Assert.Contains("root, fileFilter und excludePatterns sind relativ zu targetPath", fileTree.Description, StringComparison.Ordinal);
         Assert.Contains("sortBy ist path (Default), size_desc oder extension", fileTree.Description, StringComparison.Ordinal);
         Assert.Contains("structuredContent liegt unter fileTree", fileTree.Description, StringComparison.Ordinal);
     }

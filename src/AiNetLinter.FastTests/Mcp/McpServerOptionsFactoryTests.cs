@@ -10,19 +10,20 @@ namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
 /// Tests fuer <see cref="McpServerOptionsFactory"/>: zentraler Instructions-Vertrag
-/// (projectRoot-Pflicht + kompakter Bootstrap-Verweis) inkl. UTF8-Budget und
+/// (Target-Pflicht + kompakter Bootstrap-Verweis) inkl. UTF8-Budget und
 /// Toolbestands-Paritaet.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class McpServerOptionsFactoryTests
 {
     [Fact]
-    public void Create_ServerInstructionsCarriesProjectRootContract()
+    public void Create_ServerInstructionsCarriesAnalysisTargetContract()
     {
         var options = McpServerOptionsFactory.Create(ProjectRegistryFixture.CreateInspectionRegistry());
 
         Assert.False(string.IsNullOrEmpty(options.ServerInstructions));
-        Assert.Contains("projectRoot", options.ServerInstructions, StringComparison.Ordinal);
+        Assert.Contains("targetType", options.ServerInstructions, StringComparison.Ordinal);
+        Assert.Contains("targetPath", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".cs", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains("search_pattern", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".js", options.ServerInstructions, StringComparison.Ordinal);

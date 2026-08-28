@@ -12,8 +12,8 @@ namespace AiNetLinter.FastTests.Mcp;
 [Trait("Category", "Unit")]
 public sealed class McpServerCommandTests
 {
-    // Harter Cut: im MCP-Modus traegt jeder Aufruf seinen Projektbezug selbst (projectRoot +
-    // Definitionsdatei); --path/--config sind harte Startfehler.
+    // Harter Cut: im MCP-Modus traegt jeder zielgebundene Aufruf seinen Target-Bezug selbst
+    // (targetType + targetPath); --path/--config sind harte Startfehler.
 
     [Fact]
     public void Validate_McpServerWithPath_IsHardError()

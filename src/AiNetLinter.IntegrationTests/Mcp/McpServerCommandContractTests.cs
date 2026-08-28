@@ -61,10 +61,11 @@ public sealed class McpServerCommandContractTests
         initial.Lease!.Dispose();
         scenario.ArmReleaseHook();
 
-        var loading = await ProjectToolCall.ExecuteAsync(
+        var loading = await AnalysisToolCall.ExecuteAsync(
             scenario.Registry,
-            scenario.Root,
-            _ => Task.FromResult(McpToolResults.Text("unerwartet geladen")));
+            new AnalysisTargetRequest("project", scenario.Root),
+            new AnalysisToolDispatch(
+                ProjectCall: _ => Task.FromResult(McpToolResults.Text("unerwartet geladen"))));
         Assert.Contains("laedt die Solution noch", Assert.IsType<TextContentBlock>(Assert.Single(loading.Content)).Text, StringComparison.Ordinal);
         var originalException = await scenario.LoadFailure.Task.WaitAsync(TimeSpan.FromSeconds(10));
         await scenario.LoadFinished.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -378,10 +379,11 @@ public sealed class McpServerCommandContractTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         while (true)
         {
-            var result = await ProjectToolCall.ExecuteAsync(
+            var result = await AnalysisToolCall.ExecuteAsync(
                 scenario.Registry,
-                scenario.Root,
-                _ => Task.FromResult(McpToolResults.Text("unerwartet geladen")));
+                new AnalysisTargetRequest("project", scenario.Root),
+                new AnalysisToolDispatch(
+                    ProjectCall: _ => Task.FromResult(McpToolResults.Text("unerwartet geladen"))));
             var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
             if (text.Contains("PROJECT_LOAD_FAILED", StringComparison.Ordinal)) return result;
 

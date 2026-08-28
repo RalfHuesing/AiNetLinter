@@ -21,9 +21,9 @@ using Xunit;
 namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
-/// Vertragstests des Registry-Wirings: eingefrorener 29er-Toolbestand mit projectRoot-Pflicht
-/// (einzige Ausnahme: get_server_health-Filter optional),
-/// Defense-in-Depth-Guards am ProjectToolCall, Lease-Lifetime ueber den gesamten Tool-Call,
+/// Vertragstests des Registry-Wirings: eingefrorener 29er-Toolbestand mit Target-Vertrag
+/// (get_server_health und Feedback bleiben ausgenommen),
+/// Defense-in-Depth-Guards am AnalysisToolCall, Lease-Lifetime ueber den gesamten Tool-Call,
 /// RULES_INVALID statt Default-Fallback, Health-Aggregation je Key, Overview-Template-Aufloesung,
 /// zweistufiger Zustandsvertrag (PROJECT_LOAD_FAILED, [WARN]-Kopf, Heilung) und das
 /// ServerInstructions-Budget.
@@ -40,14 +40,26 @@ public sealed class WiringContractTests
         foreach (var tool in tools.Values)
         {
             var required = GetRequiredProperties(tool.InputSchema);
-            if (tool.Name is "get_server_health" or "report_observability_feedback" or "inspect_assembly" or "find_assembly_extensions")
+            if (tool.Name == "report_observability_feedback")
             {
-                Assert.DoesNotContain("projectRoot", required);
+                Assert.DoesNotContain("targetType", tool.InputSchema.ToString(), StringComparison.Ordinal);
+                Assert.DoesNotContain("targetPath", tool.InputSchema.ToString(), StringComparison.Ordinal);
                 Assert.Contains("\"projectRoot\"", tool.InputSchema.ToString(), StringComparison.Ordinal);
+            }
+            else if (tool.Name == "get_server_health")
+            {
+                Assert.DoesNotContain("targetType", required);
+                Assert.DoesNotContain("targetPath", required);
+                Assert.Contains("\"targetType\"", tool.InputSchema.ToString(), StringComparison.Ordinal);
+                Assert.Contains("\"targetPath\"", tool.InputSchema.ToString(), StringComparison.Ordinal);
+                Assert.DoesNotContain("projectRoot", tool.InputSchema.ToString(), StringComparison.Ordinal);
             }
             else
             {
-                Assert.Contains("projectRoot", required);
+                Assert.Contains("targetType", required);
+                Assert.Contains("targetPath", required);
+                Assert.DoesNotContain("projectRoot", tool.InputSchema.ToString(), StringComparison.Ordinal);
+                Assert.DoesNotContain("assemblyPath", tool.InputSchema.ToString(), StringComparison.Ordinal);
             }
         }
     }
@@ -116,88 +128,33 @@ public sealed class WiringContractTests
     }
 
     [Fact]
-    public async Task ProjectToolCall_MissingProjectRoot_ReturnsRequiredGuardWithoutLease()
+    public async Task AnalysisToolCall_MissingTarget_ReturnsRequiredGuardWithoutLease()
     {
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
-        var missing = await ProjectToolCall.ExecuteAsync(registry, null, _ => throw new InvalidOperationException("darf nicht erreicht werden"));
-        Assert.True(missing.IsError);
-        Assert.Contains("[ERROR]: PROJECT_ROOT_REQUIRED", TextOf(missing), StringComparison.Ordinal);
-        var blank = await ProjectToolCall.ExecuteAsync(registry, "   ", _ => throw new InvalidOperationException("darf nicht erreicht werden"));
-        Assert.True(blank.IsError);
-        Assert.Contains("[ERROR]: PROJECT_ROOT_REQUIRED", TextOf(blank), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task ProjectToolCall_RelativeProjectRoot_ReturnsInvalidGuard()
-    {
-        await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
-        var result = await ProjectToolCall.ExecuteAsync(
+        var missing = await AnalysisToolCall.ExecuteAsync(
             registry,
-            "relativ/projekt",
-            _ => throw new InvalidOperationException("darf nicht erreicht werden"));
-        Assert.True(result.IsError);
-        Assert.Contains("[ERROR]: PROJECT_ROOT_INVALID", TextOf(result), StringComparison.Ordinal);
+            new AnalysisTargetRequest(null, null),
+            new AnalysisToolDispatch(ProjectCall: _ => throw new InvalidOperationException("darf nicht erreicht werden")));
+        Assert.NotEqual(true, missing.IsError);
+        Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(missing), StringComparison.Ordinal);
+        var blank = await AnalysisToolCall.ExecuteAsync(
+            registry,
+            new AnalysisTargetRequest("project", "   "),
+            new AnalysisToolDispatch(ProjectCall: _ => throw new InvalidOperationException("darf nicht erreicht werden")));
+        Assert.NotEqual(true, blank.IsError);
+        Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(blank), StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task FilesystemDispatch_MissingOrRelativeProjectRoot_ReturnsExistingGuardWithoutLease()
+    public async Task AnalysisToolCall_RelativeTargetPath_ReturnsInvalidGuard()
     {
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
-        foreach (var (root, code) in new (string? Root, string Code)[]
-        {
-            (null, ProjectErrorCodes.ProjectRootRequired),
-            ("   ", ProjectErrorCodes.ProjectRootRequired),
-            ("relativ/projekt", ProjectErrorCodes.ProjectRootInvalid),
-        })
-        {
-            var result = await ProjectToolCall.ExecuteFilesystemAsync(registry, root, ThrowingFilesystemCallback);
-            Assert.True(result.IsError);
-            Assert.Contains($"[ERROR]: {code}", TextOf(result), StringComparison.Ordinal);
-        }
-        Assert.Empty(registry.Snapshots());
-    }
-    [Fact]
-    public async Task FilesystemDispatch_InvokesCallbackWhileServerIsLoading()
-    {
-        using var tempDir = TestTempDirectory.Create("wiring-filesystem-loading-");
-        var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
-        var pendingServer = OverviewTestServers.PendingLoadServer();
-        await using var registry = ProjectRegistryFixture.Create(_ => ProjectInstanceCreation.Resident(pendingServer));
-        var result = await ProjectToolCall.ExecuteFilesystemAsync(
-            registry, root, lease => AssertFilesystemCallback(lease, ServerLoadState.Loading, root));
+        var result = await AnalysisToolCall.ExecuteAsync(
+            registry,
+            new AnalysisTargetRequest("project", "relativ/projekt"),
+            new AnalysisToolDispatch(ProjectCall: _ => throw new InvalidOperationException("darf nicht erreicht werden")));
         Assert.NotEqual(true, result.IsError);
-        Assert.Equal("physisch", TextOf(result));
-    }
-
-    [Fact]
-    public async Task FilesystemDispatch_InvokesCallbackAfterLoadFailure()
-    {
-        using var tempDir = TestTempDirectory.Create("wiring-filesystem-failed-");
-        var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
-        var console = new RecordingLintConsole();
-        var faultingServer = OverviewTestServers.FaultingLoadServer(console);
-        await using var registry = ProjectRegistryFixture.Create(_ => ProjectInstanceCreation.Resident(faultingServer));
-        await WaitForConditionAsync(() => faultingServer.LoadState == ServerLoadState.LoadFailed, TimeSpan.FromSeconds(15));
-        var result = await ProjectToolCall.ExecuteFilesystemAsync(
-            registry, root, lease => AssertFilesystemCallback(lease, ServerLoadState.LoadFailed));
-        Assert.NotEqual(true, result.IsError);
-        Assert.Equal("physisch", TextOf(result));
-        Assert.DoesNotContain(ProjectErrorCodes.ProjectLoadFailed, TextOf(result), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task FilesystemDispatch_HoldsLeaseUntilCallbackCompletes()
-    {
-        using var tempDir = TestTempDirectory.Create("wiring-filesystem-lease-");
-        var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
-        var clock = new FakeClock();
-        await using var registry = ProjectWiringFixtures.CreateLoadedRegistry(clock);
-        var result = await ProjectToolCall.ExecuteFilesystemAsync(
-            registry, root, _ => HoldFilesystemLeaseAsync(registry, root, clock)).WaitAsync(TimeSpan.FromSeconds(15));
-        Assert.Equal("ok", TextOf(result));
-        clock.AdvanceMinutes(60);
-        await registry.RunEvictionTickAsync();
-        Assert.Null(registry.FindSnapshot(root));
+        Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(result), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -205,7 +162,8 @@ public sealed class WiringContractTests
     {
         var byteCount = System.Text.Encoding.UTF8.GetByteCount(ServerInstructions.Text);
         Assert.True(byteCount <= ServerInstructions.MaxUtf8Bytes, $"Instructions-Budget gerissen: {byteCount} > {ServerInstructions.MaxUtf8Bytes}");
-        Assert.Contains("projectRoot", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("targetType", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("targetPath", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("ainetlinter://agent-guide", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("get_server_health", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("ainetlinter.project.json", ServerInstructions.Text, StringComparison.Ordinal);
@@ -275,7 +233,10 @@ public sealed class WiringContractTests
         var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
         var clock = new FakeClock();
         await using var registry = ProjectWiringFixtures.CreateLoadedRegistry(clock);
-        var callTask = ProjectToolCall.ExecuteAsync(registry, root, async _ =>
+        var callTask = AnalysisToolCall.ExecuteAsync(
+            registry,
+            new AnalysisTargetRequest("project", root),
+            new AnalysisToolDispatch(ProjectCall: async _ =>
         {
             clock.AdvanceMinutes(60);
             await registry.RunEvictionTickAsync();
@@ -283,7 +244,7 @@ public sealed class WiringContractTests
             Assert.NotNull(registry.FindSnapshot(root));
             await Task.Delay(50);
             return McpToolResults.Text("ok");
-        });
+        }));
         var result = await callTask.WaitAsync(TimeSpan.FromSeconds(15));
         Assert.Equal("ok", TextOf(result));
         // Erst nach Abschluss des Calls darf der Key raeumbar sein.
@@ -304,10 +265,10 @@ public sealed class WiringContractTests
         var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(15);
         while (failedText is null && DateTime.UtcNow < deadline)
         {
-            var result = await ProjectToolCall.ExecuteAsync(
+            var result = await AnalysisToolCall.ExecuteAsync(
                 registry,
-                root,
-                _ => Task.FromResult(McpToolResults.Text("sollte nie erreicht werden")));
+                new AnalysisTargetRequest("project", root),
+                new AnalysisToolDispatch(ProjectCall: _ => Task.FromResult(McpToolResults.Text("sollte nie erreicht werden"))));
             var text = TextOf(result);
             if (text.Contains(ProjectErrorCodes.ProjectLoadFailed, StringComparison.Ordinal))
             {
@@ -347,16 +308,19 @@ public sealed class WiringContractTests
         });
         await WaitForConditionAsync(() => server.LoadState == ServerLoadState.Loaded, TimeSpan.FromSeconds(15));
         await using var registry = ProjectRegistryFixture.Create(_ => ProjectInstanceCreation.Resident(server));
-        var healthy = await ProjectToolCall.ExecuteAsync(registry, root, _ => Task.FromResult(McpToolResults.Text("kernantwort")));
+        var healthy = await AnalysisToolCall.ExecuteAsync(
+            registry,
+            new AnalysisTargetRequest("project", root),
+            new AnalysisToolDispatch(ProjectCall: _ => Task.FromResult(McpToolResults.Text("kernantwort"))));
         Assert.False(TextOf(healthy).StartsWith("[WARN]", StringComparison.Ordinal));
         Assert.False(await server.ReloadSolutionAsync(CancellationToken.None));
         Assert.True(server.HasDegradedAnswerState);
         Assert.NotNull(server.LastGoodStateUtc);
         Assert.Contains("Simulierter Refresh-Fehler", server.LastLoadError, StringComparison.Ordinal);
-        var degraded = await ProjectToolCall.ExecuteAsync(
+        var degraded = await AnalysisToolCall.ExecuteAsync(
             registry,
-            root,
-            _ => Task.FromResult(McpToolResults.Text("kernantwort", new { value = "payload" })));
+            new AnalysisTargetRequest("project", root),
+            new AnalysisToolDispatch(ProjectCall: _ => Task.FromResult(McpToolResults.Text("kernantwort", new { value = "payload" }))));
         var degradedText = TextOf(degraded);
         Assert.StartsWith("[WARN]", degradedText, StringComparison.Ordinal);
         Assert.Contains("letzten guten Solution-Stand", degradedText, StringComparison.Ordinal);
@@ -365,7 +329,10 @@ public sealed class WiringContractTests
         Assert.Equal("payload", degraded.StructuredContent!.Value.GetProperty("value").GetString());
         Assert.True(await server.ReloadSolutionAsync(CancellationToken.None));
         Assert.False(server.HasDegradedAnswerState);
-        var healed = await ProjectToolCall.ExecuteAsync(registry, root, _ => Task.FromResult(McpToolResults.Text("kernantwort")));
+        var healed = await AnalysisToolCall.ExecuteAsync(
+            registry,
+            new AnalysisTargetRequest("project", root),
+            new AnalysisToolDispatch(ProjectCall: _ => Task.FromResult(McpToolResults.Text("kernantwort"))));
         Assert.StartsWith("kernantwort", TextOf(healed), StringComparison.Ordinal);
     }
 
@@ -431,36 +398,6 @@ public sealed class WiringContractTests
         var leaseResult = registry.Lease(root);
         Assert.True(leaseResult.Succeeded);
         leaseResult.Lease!.Dispose();
-    }
-
-    private static Task<CallToolResult> ThrowingFilesystemCallback(ProjectLease _) =>
-        throw new InvalidOperationException("darf nicht erreicht werden");
-
-    private static Task<CallToolResult> AssertFilesystemCallback(
-        ProjectLease lease, ServerLoadState expectedState, string? expectedRoot = null)
-    {
-        Assert.Equal(expectedState, lease.Server.LoadState);
-        if (expectedRoot is not null)
-        {
-            var canonicalRoot = Path.GetFullPath(expectedRoot)
-                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            Assert.Equal(canonicalRoot, lease.RootPath);
-        }
-        if (expectedState == ServerLoadState.LoadFailed)
-        {
-            Assert.False(lease.LoadFailedResponseEmitted);
-        }
-        return Task.FromResult(McpToolResults.Text("physisch"));
-    }
-
-    private static async Task<CallToolResult> HoldFilesystemLeaseAsync(
-        ProjectRegistry registry, string root, FakeClock clock)
-    {
-        clock.AdvanceMinutes(60);
-        await registry.RunEvictionTickAsync();
-        Assert.NotNull(registry.FindSnapshot(root));
-        await Task.Delay(50);
-        return McpToolResults.Text("ok");
     }
 
     private static string[] GetRequiredProperties(JsonElement inputSchema)

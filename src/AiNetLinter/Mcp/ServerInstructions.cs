@@ -15,9 +15,11 @@ internal static class ServerInstructions
 
     /// <summary>Globale Regeln fuer MCP-Discovery; tool-spezifische Details stehen in <c>tools/list</c>.</summary>
     internal const string Text =
-        "AiNetLinter analysiert .NET-Solutions mit Roslyn. JEDEM Tool-Aufruf ist projectRoot " +
-        "beizufuegen: ein absoluter Projektroot-Pfad. Einzige Ausnahme: der optionale " +
-        "get_server_health-Filter.\n\n" +
+        "AiNetLinter analysiert .NET-Solutions mit Roslyn. JEDEM zielgebundenen Tool-Aufruf " +
+        "sind targetType und targetPath beizufuegen: targetType='project' fuer eine Source-" +
+        "Solution oder targetType='assembly' fuer eine lokale DLL; targetPath ist absolut. " +
+        "get_server_health darf ohne Ziel aggregieren, report_observability_feedback bleibt " +
+        "nicht zielgebunden.\n\n" +
         "Neue Integration nur bei ausdruecklichem Auftrag: ainetlinter://agent-guide lesen; " +
         "den Projektstatus danach ueber ainetlinter://overview?projectRoot=<url-encoded> pruefen. " +
         "PROJECT_NOT_INITIALIZED und RULES_INVALID bleiben deterministische Fehler.\n\n" +

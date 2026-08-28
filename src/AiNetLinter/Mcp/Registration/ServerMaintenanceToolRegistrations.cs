@@ -25,7 +25,7 @@ internal static class ServerMaintenanceToolRegistrations
     /// Fuegt <paramref name="tools"/> die Wartungs-Tools hinzu. Tools erreichen die residente
     /// Instanz ihres Keys per Lease-Closure - kein DI-Container (siehe
     /// <c>AiNetLinterRichtlinien.mdc</c> §2). Einzige Pflicht-Ausnahme: <c>get_server_health</c>
-    /// nimmt <c>projectRoot</c> optional (Filter) und aggregiert ohne Filter ueber alle Keys.
+    /// nimmt ein optionales, paarweise zu validierendes Target und aggregiert ohne Target ueber alle Keys.
     /// </summary>
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -42,10 +42,11 @@ internal static class ServerMaintenanceToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? configPath = null, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, string? configPath = null, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => ReloadConfigTool.ExecuteAsync(lease.Server, lease.Definition.RulesPath, configPath, ct)),
             McpToolRegistrationOptions.ReloadConfigTool("reload_config", ReloadConfigDescription)));
     }
@@ -63,19 +64,40 @@ internal static class ServerMaintenanceToolRegistrations
         Daemon.DaemonRuntimeContext? runtimeContext)
     {
         tools.Add(McpServerTool.Create(
-            async (string? projectRoot = null, CancellationToken ct = default) =>
-                await GetServerHealthTool.ExecuteAsync(
+            async (string? targetType = null, string? targetPath = null, CancellationToken ct = default) =>
+            {
+                var resolution = AnalysisTargetResolver.ResolveOptional(
+                    new AnalysisTargetRequest(targetType, targetPath));
+                if (resolution.Error is not null)
+                {
+                    return resolution.Error;
+                }
+
+                if (resolution.Target is null)
+                {
+                    return await GetServerHealthTool.ExecuteAsync(
+                        registry,
+                        new GetServerHealthOptions(RuntimeContext: runtimeContext));
+                }
+
+                if (resolution.Target.TargetType == AnalysisTargetType.Assembly)
+                {
+                    return AnalysisToolCall.UnsupportedAssemblyTarget();
+                }
+
+                return await GetServerHealthTool.ExecuteAsync(
                     registry,
-                    new GetServerHealthOptions(projectRoot, runtimeContext)),
-            McpToolRegistrationOptions.ReadOnlyTool("get_server_health", GetServerHealthDescription)));
+                    new GetServerHealthOptions(resolution.Target.CanonicalPath, runtimeContext));
+            },
+            McpToolRegistrationOptions.ServerHealthTool("get_server_health", GetServerHealthDescription)));
     }
 
     private const string GetServerHealthDescription =
         "Wann nutzen: pruefen, ob der Server laeuft und welche Projekte resident sind. Ohne " +
-        "projectRoot: ein Abschnitt pro geladenem Key (Root, Solution, rules.json, LastUsedUtc, " +
+        "targetType und targetPath: ein Abschnitt pro geladenem Key (Root, Solution, rules.json, LastUsedUtc, " +
         "LoadState, RefreshCount, Staleness, Uptime, LastGoodStateUtc/LastLoadError). Mit " +
-        "projectRoot: nur dieser Key (absoluter Pfad, " +
-        "Pflichtformat wie bei allen Tools).";
+        "targetType='project' und absolutem targetPath: nur dieser Key. targetType='assembly' " +
+        "wird bis zur Assembly-Registry als noch nicht unterstuetzt gemeldet.";
 
     private static void AddReportObservabilityFeedback(McpServerPrimitiveCollection<McpServerTool> tools)
     {

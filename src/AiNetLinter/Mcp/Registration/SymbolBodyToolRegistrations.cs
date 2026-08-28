@@ -16,7 +16,7 @@ namespace AiNetLinter.Mcp.Registration;
 /// an ihrem 2850-PathOverride haengt und ein zusaetzliches Tool in derselben Klasse das
 /// verbleibende Sicherheits-Polster gegen weitere Erweiterungen aufgebraucht haette. Bewusst
 /// duenner Dispatch auf <see cref="GetSymbolBodyTool.ExecuteAsync"/> ueber den
-/// projektgebundenen Lease-Weg (<see cref="ProjectToolCall"/>). Kein DI-Container
+/// zielgebundenen Dispatch-Weg (<see cref="AnalysisToolCall"/>). Kein DI-Container
 /// (Architektur-Verbot, siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
 /// </summary>
 internal static class SymbolBodyToolRegistrations
@@ -33,10 +33,11 @@ internal static class SymbolBodyToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string[]? symbolIdentifiers = null, int maxBodyLines = 80, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, string[]? symbolIdentifiers = null, int maxBodyLines = 80, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, symbolIdentifiers, maxBodyLines, ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_symbol_body", GetSymbolBodyDescription)));
     }

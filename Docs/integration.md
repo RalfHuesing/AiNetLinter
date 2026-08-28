@@ -286,7 +286,7 @@ auf 32 Zeichen begrenzt. Sie wird invariant in Kleinbuchstaben normalisiert;
 `BETA` und `beta` verwenden deshalb denselben Endpunkt, dasselbe Startup-Gate
 und dieselbe MRU-State-Datei.
 
-Der Pfad zur `ainetlinter`-Exe wird vom MCP-Host über `PATH` aufgelöst (oder über den host-spezifischen Wrapper wie `.cursor/mcp.json` / `.mcp.json`). **Kein expliziter `--path`- oder `--config`-Parameter nötig** — jeder Tool-Aufruf adressiert sein Projekt über den absoluten `projectRoot`.
+Der Pfad zur `ainetlinter`-Exe wird vom MCP-Host über `PATH` aufgelöst (oder über den host-spezifischen Wrapper wie `.cursor/mcp.json` / `.mcp.json`). **Kein expliziter `--path`- oder `--config`-Parameter nötig** — jeder zielgebundene Tool-Aufruf adressiert ein Projekt oder eine Assembly über `targetType` und den absoluten `targetPath`.
 
 Die laufend erzeugte Ausgabe von `ainetlinter://agent-guide` und
 `ainetlinter --docs mcp-bootstrap` enthält zusätzlich einen
@@ -308,9 +308,12 @@ Im adressierten Projektroot liegt `ainetlinter.project.json`:
 
 `solution` und `rules` sind Pflichtfelder. Relative Pfade werden relativ zur
 Definitionsdatei aufgelöst; eine Nachbarsuche oder ein Default-Fallback findet
-im Registry-Pfad nicht statt. Analyse-, Wartungs- und Audit-Tools erwarten
-`projectRoot` als Pflichtparameter. `get_server_health` darf den Parameter als
-optionalen Filter weglassen und aggregiert ohne Filter alle residenten Keys.
+im Registry-Pfad nicht statt. Zielgebundene Analyse-, Wartungs- und Audit-Tools
+erwarten `targetType` und `targetPath` als Pflichtparameter. `targetType=project`
+adressiert dabei den Projektroot; `targetType=assembly` ist nur für die
+spezialisierten Assembly-Tools verfügbar. `get_server_health` akzeptiert keinen
+Target-Block für die Aggregation, optional einen vollständigen Projekt-Target-Block
+und meldet Assembly-Targets als nicht unterstützt.
 
 Für Legacy-MCP wird der Server über `initialize` ausgehandelt. Clients der Protokollversion `2026-07-28` verwenden stattdessen `server/discover` ohne separaten `initialized`-Schritt. Dieser Request trägt unter `params._meta` die Protokollversion, Client-Info und Client-Capabilities; dieselben Metadaten gehören auch in nachfolgende Requests wie `tools/list`.
 
@@ -406,7 +409,8 @@ Die Option ist nur für den MCP-Modus relevant. Der Watchdog prüft den Parent-P
 ### cwd-Verhalten
 
 Der MCP-Server benötigt für projektgebundene Aufrufe keinen Projektbezug im
-Host-`cwd`. Der Projektroot wird als absoluter `projectRoot` je Aufruf übergeben;
+Host-`cwd`. Das Projekt wird als `targetType=project` mit absolutem `targetPath`
+je Aufruf übergeben;
 die Definitionsdatei löst `solution` und `rules` relativ zu sich selbst auf.
 Damit können mehrere Projekt-Keys in einer Serverinstanz resident sein.
 
@@ -436,7 +440,7 @@ relative Pfade, Verzeichnis-/Extension-Aggregation und sichtbare
 Completeness-/Trunkierungsangaben auch für Dateien außerhalb des
 Roslyn-Solutionindexes. `view=files` eignet sich als Folgeaufruf, wenn Pfade an
 `search_pattern` oder `get_file_skeleton` weitergegeben werden sollen. Ein
-valider `projectRoot` genügt auch während eines laufenden oder fehlgeschlagenen
+Ein valider Projekt-Target-Block genügt auch während eines laufenden oder fehlgeschlagenen
 Solution-Loads, weil die Enumeration unabhängig vom Roslyn-Snapshot arbeitet.
 
 Für die anschließende semantische Analyse sollten Agent-Loops folgende Reihenfolge einhalten:

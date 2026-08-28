@@ -18,8 +18,8 @@ namespace AiNetLinter.Mcp.Registration;
 /// <c>get_violations</c>, <c>search_pattern</c> und <c>metrics_tree</c> sind in eine
 /// eigene <see cref="AnalysisToolRegistrations"/>-Klasse ausgelagert, weil ihr <c>LinterEngine</c>-
 /// bzw. Roslyn-Syntax-Pull-in den Footprint dieser Klasse ueber das 2500-Limit getrieben hat/haette.
-/// Alle Lambdas sind projektgebunden: <c>projectRoot</c> ist Pflicht und adressiert den
-/// Lease-geschuetzten Registry-Key (<see cref="ProjectToolCall"/>).
+/// Alle Lambdas sind zielgebunden: <c>targetType</c> und <c>targetPath</c> sind Pflicht und
+/// werden am gemeinsamen <see cref="AnalysisToolCall"/> validiert.
 /// </summary>
 internal static class FileStructureToolRegistrations
 {
@@ -46,7 +46,8 @@ internal static class FileStructureToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (
-                string projectRoot,
+                string targetType,
+                string targetPath,
                 string? root = null,
                 string view = "tree",
                 string[]? includeExtensions = null,
@@ -59,11 +60,11 @@ internal static class FileStructureToolRegistrations
                 bool includeMetadata = true,
                 bool includeLineCount = false,
                 CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteFilesystemAsync(
+                await AnalysisToolCall.ExecuteFilesystemAsync(
                     registry,
-                    projectRoot,
-                    _ => GetFileTreeTool.ExecuteAsync(
-                        projectRoot,
+                    new AnalysisTargetRequest(targetType, targetPath),
+                    lease => GetFileTreeTool.ExecuteAsync(
+                        lease.RootPath,
                         new GetFileTreeInput(
                             root ?? ".",
                             view,
@@ -83,7 +84,7 @@ internal static class FileStructureToolRegistrations
     private const string GetFileTreeDescription =
         "Wann nutzen: physische Dateilandkarte eines registrierten Projektroots als ersten " +
         "Discovery-Schritt fuer Agenten. root, fileFilter und excludePatterns sind relativ zu " +
-        "projectRoot; fileFilter ist ein Pfad-Glob, keine Inhaltssuche. view ist summary, tree " +
+        "targetPath; fileFilter ist ein Pfad-Glob, keine Inhaltssuche. view ist summary, tree " +
         "(Default) oder files. includeExtensions akzeptiert Extensionen wie .cs oder * und " +
         "wird mit fileFilter kombiniert. maxDepth und treeDepth liegen zwischen 0 und 32, " +
         "treeDepth steuert nur die Baumdarstellung, maxResults liegt zwischen 1 und 2000 und " +
@@ -97,15 +98,16 @@ internal static class FileStructureToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? project = null, string? namespacePrefix = null,
+            async (string targetType, string targetPath, string? project = null, string? namespacePrefix = null,
                 int depth = GetNamespaceTreeTool.DefaultDepth,
                 bool includeTypes = true,
                 string? kind = "all",
                 int maxResults = GetNamespaceTreeTool.DefaultMaxResults,
                 CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease =>
                     {
                         var input = new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults);
@@ -126,12 +128,13 @@ internal static class FileStructureToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? symbolIdentifier = null, string? sortBy = "lines",
+            async (string targetType, string targetPath, string? symbolIdentifier = null, string? sortBy = "lines",
                 int maxMembers = GetClassStructureTool.DefaultMaxMembers,
                 CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => GetClassStructureTool.ExecuteAsync(lease.Server, symbolIdentifier, sortBy, maxMembers, ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_class_structure", GetClassStructureDescription)));
     }
@@ -150,10 +153,11 @@ internal static class FileStructureToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string[]? filePaths = null, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, string[]? filePaths = null, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_file_skeleton", GetFileSkeletonDescription)));
     }
@@ -168,10 +172,11 @@ internal static class FileStructureToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => GetIndexScopeTool.ExecuteAsync(lease.Server, ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_index_scope", GetIndexScopeDescription)));
     }
@@ -186,10 +191,11 @@ internal static class FileStructureToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string projectRoot, string? scopeFilter = null, CancellationToken ct = default) =>
-                await ProjectToolCall.ExecuteAsync(
+            async (string targetType, string targetPath, string? scopeFilter = null, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteAsync(
                     registry,
-                    projectRoot,
+                    targetType,
+                    targetPath,
                     lease => GetHotspotsTool.ExecuteAsync(lease.Server, scopeFilter, ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_hotspots", GetHotspotsDescription)));
     }
