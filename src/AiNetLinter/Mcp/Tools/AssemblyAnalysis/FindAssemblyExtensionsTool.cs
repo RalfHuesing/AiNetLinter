@@ -4,6 +4,7 @@ using System;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp;
 using ModelContextProtocol.Protocol;
 
@@ -28,7 +29,7 @@ internal static class FindAssemblyExtensionsTool
                     var selection = AssemblyAnalysisService.FindExtensions(
                         context,
                         new AssemblyExtensionSearchOptions(arguments.ExtensionName, arguments.Namespace, maxResults));
-                    var completeness = context.Diagnostics.Count == 0 ? "complete" : "partial";
+                    var completeness = context.Diagnostics.Count == 0 ? StatusLabel(context.Status) : "partial";
                     var payload = new FindAssemblyExtensionsPayload(
                         fullPath,
                         selection.Items,
@@ -37,7 +38,10 @@ internal static class FindAssemblyExtensionsTool
                         selection.Truncated,
                         selection.Total,
                         context.ConsumerProject,
-                        arguments.ReceiverType);
+                        arguments.ReceiverType,
+                        context.Origin,
+                        context.Generation,
+                        context.Status.ToString().ToLowerInvariant());
                     return McpToolResults.Text(FormatText(payload), payload);
                 }));
     }
@@ -47,6 +51,11 @@ internal static class FindAssemblyExtensionsTool
         var builder = new StringBuilder();
         builder.AppendLine($"Assembly-Extensions: {payload.TotalExtensions}{(payload.Truncated ? " (gekürzt)" : string.Empty)}");
         builder.AppendLine($"Vollständigkeit: `{payload.Completeness}`");
+        if (payload.Origin is { } origin)
+        {
+            builder.AppendLine($"Herkunft: `{origin.OriginKind}` — `{origin.GeneratedDocumentPath}`");
+            builder.AppendLine("Hinweis: Der angeforderte Code wurde dekompiliert und kann von der Originalquelle abweichen.");
+        }
         if (payload.ConsumerProject is not null)
         {
             builder.AppendLine($"Consumer: `{payload.ConsumerProject}`");
@@ -74,4 +83,13 @@ internal static class FindAssemblyExtensionsTool
 
         return builder.ToString().TrimEnd();
     }
+
+    private static string StatusLabel(AssemblySessionStatus status) =>
+        status switch
+        {
+            AssemblySessionStatus.Complete => "complete",
+            AssemblySessionStatus.Degraded => "degraded",
+            AssemblySessionStatus.Partial => "partial",
+            _ => "failed",
+        };
 }

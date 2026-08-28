@@ -57,6 +57,9 @@ public sealed class AssemblyAnalysisToolTests
         Assert.Contains(type.Members, member => member.Name == "Echo" && member.GenericParameters.Contains("T") && member.Constraints.Any(constraint => constraint.StartsWith("T:", StringComparison.Ordinal)));
         Assert.Contains(type.Attributes, attribute => attribute.Contains("Obsolete", StringComparison.Ordinal));
         Assert.Equal("complete", payload.Completeness);
+        Assert.Equal("decompiled", payload.Origin?.OriginKind);
+        Assert.NotNull(payload.Origin);
+        Assert.Contains("source", payload.Origin!.GeneratedDocumentPath, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

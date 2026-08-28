@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using AiNetLinter.Mcp.Assemblies;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
@@ -109,7 +110,10 @@ internal sealed record InspectAssemblyPayload(
     IReadOnlyList<string> Diagnostics,
     string Completeness,
     bool Truncated,
-    int TotalTypes);
+    int TotalTypes,
+    AssemblyOrigin? Origin = null,
+    long Generation = 0,
+    string SessionStatus = "complete");
 
 internal sealed record FindAssemblyExtensionsPayload(
     string AssemblyPath,
@@ -119,4 +123,7 @@ internal sealed record FindAssemblyExtensionsPayload(
     bool Truncated,
     int TotalExtensions,
     string? ConsumerProject,
-    string? ReceiverType);
+    string? ReceiverType,
+    AssemblyOrigin? Origin = null,
+    long Generation = 0,
+    string SessionStatus = "complete");

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -357,4 +358,7 @@ internal sealed record AssemblyContext(
     IReadOnlyList<string> Diagnostics,
     Compilation Compilation,
     ITypeSymbol? Receiver,
-    string? ConsumerProject);
+    string? ConsumerProject,
+    AssemblyOrigin Origin,
+    long Generation,
+    AssemblySessionStatus Status);

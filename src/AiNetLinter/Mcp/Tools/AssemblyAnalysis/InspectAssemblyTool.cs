@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
@@ -39,7 +40,7 @@ internal static class InspectAssemblyTool
                             arguments.MemberNames,
                             maxResults,
                             AssemblyAnalysisService.NormalizeLimit(arguments.MaxMembers, AssemblyAnalysisService.DefaultMaxMembers, AssemblyAnalysisService.MaxMembers)));
-                    var completeness = context.Diagnostics.Count == 0 ? "complete" : "partial";
+                    var completeness = context.Diagnostics.Count == 0 ? StatusLabel(context.Status) : "partial";
                     var payload = new InspectAssemblyPayload(
                         fullPath,
                         context.Identity,
@@ -49,7 +50,10 @@ internal static class InspectAssemblyTool
                         context.Diagnostics,
                         completeness,
                         selection.Truncated,
-                        selection.Total);
+                        selection.Total,
+                        context.Origin,
+                        context.Generation,
+                        context.Status.ToString().ToLowerInvariant());
                     return McpToolResults.Text(FormatText(payload, arguments.PublicOnly), payload);
                 }));
     }
@@ -71,6 +75,11 @@ internal static class InspectAssemblyTool
         builder.AppendLine($"Assembly: `{payload.Identity?.Name ?? "unbekannt"}`");
         builder.AppendLine($"Pfad: `{payload.AssemblyPath}`");
         builder.AppendLine($"Vollständigkeit: `{payload.Completeness}`");
+        if (payload.Origin is { } origin)
+        {
+            builder.AppendLine($"Herkunft: `{origin.OriginKind}` — `{origin.GeneratedDocumentPath}`");
+            builder.AppendLine("Hinweis: Der angeforderte Code wurde dekompiliert und kann von der Originalquelle abweichen.");
+        }
         builder.AppendLine();
         if (payload.Identity is { } identity)
         {
@@ -120,4 +129,13 @@ internal static class InspectAssemblyTool
         builder.AppendLine("Diagnosen:");
         foreach (var diagnostic in diagnostics) builder.AppendLine($"- {diagnostic}");
     }
+
+    private static string StatusLabel(AssemblySessionStatus status) =>
+        status switch
+        {
+            AssemblySessionStatus.Complete => "complete",
+            AssemblySessionStatus.Degraded => "degraded",
+            AssemblySessionStatus.Partial => "partial",
+            _ => "failed",
+        };
 }
