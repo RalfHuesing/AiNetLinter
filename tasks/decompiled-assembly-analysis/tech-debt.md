@@ -2,7 +2,7 @@
 task: decompiled-assembly-analysis
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-28T21:47:07+02:00
+last_updated: 2026-08-28T23:20:00+02:00
 ---
 
 # Tech-Debt-Log: decompiled-assembly-analysis
@@ -56,7 +56,7 @@ Duplikationsbeobachtungen außerhalb des jeweiligen Step-Scopes.
 - **Gefunden in:** step-011 (Kritiker-Review vom 2026-08-28)
 - **Ort:** `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactoryTests.cs:271-312`; `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolSupportTests.cs:418-459`
 - **Befund:** Der begrenzte `find_duplicates`-Audit findet einen exakten 227-Token-Klon von `CreateSnapshot`, einschließlich der AdhocWorkspace-/Solution-/Project-/Document-Erzeugung und der Snapshot-Identität. Beide privaten Kopien verwenden jeweils einen eigenen verschachtelten `SourceProjectSpec`-Typ.
-- **Warum nicht sofort gefixt:** Die Konsolidierung liegt außerhalb des Support-/Lease-Korrekturvertrags und würde eine gemeinsame Fixture-Schnittstelle im Testpaket oder TestKit sowie die Zusammenführung der beiden verschachtelten Spec-Typen erfordern.
-- **Vorschlag:** Bei einer ohnehin anstehenden Testinfrastruktur-Bereinigung einen gemeinsamen, ownership-sicheren Adhoc-Snapshot-Builder mit einer klaren Spec-Repräsentation extrahieren; die bestehenden Tests sollen ihre Registry-/Snapshot-Dispose-Aussagen behalten.
+- **Umsetzung:** In step-013 wurde `ExternalSourceSnapshotTestFactory` als gemeinsame test-only Hilfe eingeführt; `AssemblyAnalysisContextFactoryTests` und `AssemblyAnalysisToolSupportTests` verwenden nun diese eine `CreateSnapshot`-Implementierung und die gemeinsame `ExternalSourceProjectSpec`.
+- **Ownership-Nachweis:** Die betroffenen Tests behalten ihre expliziten Lease-, Registry- und Snapshot-Dispose-Aussagen; die Factory übernimmt keine zusätzliche Ownership über den erzeugten Snapshot hinaus.
 - **Auto-Fixable:** nein — die gemeinsame Ablage und der Fixture-Vertrag erfordern Architektur-Ermessen.
-- **Status:** offen
+- **Status:** erledigt in step-013 (`1cd279f0ae7a683484cd21a32157a88b84313e95`)
