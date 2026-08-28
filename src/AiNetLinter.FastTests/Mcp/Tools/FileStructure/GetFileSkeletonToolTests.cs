@@ -78,6 +78,7 @@ public sealed class GetFileSkeletonToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Greet", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Greeter", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Erzeugt:", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Caller", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("OtherCaller", textContent.Text, StringComparison.Ordinal);
     }

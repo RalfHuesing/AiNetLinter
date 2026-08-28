@@ -110,7 +110,7 @@ internal static class GetFileSkeletonTool
         }
         else
         {
-            var content = SkeletonMarkdownRenderer.Render(types, path, DateTimeOffset.Now);
+            var content = SkeletonMarkdownRenderer.Render(types, path);
             mb.Line(content.TrimEnd());
         }
 

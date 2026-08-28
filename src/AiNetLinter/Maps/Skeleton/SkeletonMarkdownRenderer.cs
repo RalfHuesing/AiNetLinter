@@ -14,14 +14,12 @@ internal static class SkeletonMarkdownRenderer
 {
     internal static string Render(
         IReadOnlyList<SkeletonTypeInfo> types,
-        string solutionPath,
-        DateTimeOffset generatedAt)
+        string solutionPath)
     {
         var sb = new StringBuilder();
         sb.AppendLine("# AiNetLinter — Skeleton Map");
         sb.AppendLine();
-        sb.AppendLine($"> Erzeugt: {generatedAt:yyyy-MM-dd HH:mm}"
-            + $" | Typen: {types.Count}"
+        sb.AppendLine($"> Typen: {types.Count}"
             + $" | Member: {types.Sum(t => t.Members.Count)}"
             + $" | Pfad: {solutionPath.Replace('\\', '/')}");
         sb.AppendLine();
