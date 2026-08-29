@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-30T01:00:00+02:00
+last_updated: 2026-08-30T01:35:00+02:00
 rules_dir: .agents/rules
-total_steps: 33
-current_step: step-033
+total_steps: 34
+current_step: step-034
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,14 +13,14 @@ current_step: step-033
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 33 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-033` (`issues`; konfigurierbare
-  Cache-Root-/Refresh-Policy bis zur Fresh/Stale-Konstruktion, mit
-  verpflichtender Evidenzkorrektur für `step-032`)
+- **Steps gesamt:** 34 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-034` (`planned/in_progress`; strikter
+  CacheRoot-Vertrag und fail-closed Konfigurationsweitergabe bis zum
+  Assembly-Tool, als Korrektur von `step-033`)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-30T01:00:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-30T01:35:00+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -60,6 +60,7 @@ current_step: step-033
 | step-031 | EPIC-04 | done | Step-030-Gatebefunde und Nachweise korrigieren | step-030 | 552ef4d4 + 1d15a5b4 | approved | 552ef4d4 + 1d15a5b4 + d8cff007 |
 | step-032 | EPIC-04 | issues | Validated Refresh/Fetch in neue Cache-Generation | - | 59d979b7 | issues → step-033 | 59d979b7 + a16a421c |
 | step-033 | EPIC-04 | issues | Konfigurierbare Cache-Root-/Refresh-Policy mit Fresh/Stale-Vertrag und Step-032-Evidenzabschluss | step-032 | 0c6ab50e + c6787c12 | issues → step-034 | 0c6ab50e + c6787c12 + d57f5aab |
+| step-034 | EPIC-04 | planned/in_progress | Strikter CacheRoot-Vertrag und fail-closed Konfigurationsweitergabe bis zum Assembly-Tool | step-033 | - | - | 6ebbc7c1 |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -642,6 +643,20 @@ Tests, Coder- oder Kritikerarbeit ausgeführt. Der nächste sichere
 Health-/degraded-/Dirty-/Unbuilt-Policy sowie Retention/GC/Invalidierung
 bleiben eigenständige Folgepakete; Roadmap- und Statuspflege nach dem
 Coder-Ergebnis verbleiben beim Orchestrator.
+
+### Step-034-Planung (2026-08-30)
+
+Ein neuer Planer-Agent wurde gestartet und nach Abschluss geschlossen;
+kein bestehender Agent wurde wiederverwendet. Step 034 ist mit Plan
+`6ebbc7c1` auf `planned/in_progress` gesetzt. Das größere vertikale Paket
+verbindet die strikte rohe CacheRoot-/Optionsvalidierung mit der terminalen,
+fail-closed Weitergabe eines Config-Failures bis zum Assembly-Tool sowie
+adversarialen lokalen Pfad- und End-to-End-Regressionen. Die gültige
+Refresh-/Factory-/Policy-Verdrahtung und die gewöhnlichen statischen
+Decompilation-Fallbacks bleiben erhalten; Host-/MCP-Wiring, Health/Degraded,
+Dirty/Unbuilt und Retention/GC bleiben außerhalb. Der nächste sichere
+Übergabepunkt ist ein neuer Coder-Agent mit
+`tasks/decompiled-assembly-analysis/step-034/step-plan.md`.
 
 ### Wiederaufnahme nach Step-033-Review (2026-08-30)
 
