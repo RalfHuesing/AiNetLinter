@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T05:48:25+02:00
+last_updated: 2026-08-29T06:36:41+02:00
 rules_dir: .agents/rules
 total_steps: 18
 current_step: step-018
@@ -14,11 +14,11 @@ current_step: step-018
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 18 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-018` (in_progress; repository-spezifischer Capability-Fallback)
+- **Aktueller Schritt:** `step-018` (approved; nächster EPIC-04-Schnitt wird geplant)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T05:48:25+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T06:36:41+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -42,7 +42,7 @@ current_step: step-018
 | step-015 | EPIC-04 | issues | Repository-Akquisitionsvertrag mit injizierbarem Gitea-Transport und sicherer Staging-Fassade | - | 3bd71a73 | issues → step-016 | 3bd71a73 + 966ed66a + b1dac89b |
 | step-016 | EPIC-04 | blocked | Repository-Akquisitionsgrenze sicher korrigieren | step-015 | 4f49c0bd | blocked → step-017 | 4f49c0bd + b755c955 + 3be96cf1 |
 | step-017 | EPIC-04 | blocked | Cancellation-Cleanup und Reparse-Capability-Gate | step-016 | 5d48472c | blocked → privileged rerun | 5d48472c + c7c21e84 + d7757f8f |
-| step-018 | EPIC-04 | in_progress | Repository-spezifische Capability-Nichtverfügbarkeit zum Decompilation-Fallback | step-017 | - | - | 374ae403 |
+| step-018 | EPIC-04 | done | Repository-spezifische Capability-Nichtverfügbarkeit zum Decompilation-Fallback | step-017 | 2b95b3aa | approved | 2b95b3aa + 03589c9e + 784167d8 |
 
 ## Config
 
@@ -263,3 +263,11 @@ mit geheimnisfreiem `RepositoryCapabilityUnavailable`-Diagnosecode in den
 bestehenden Decompilation-Fallback. Eine globale Capability-Sperre sowie
 Systemprivilegienänderungen bleiben ausgeschlossen; erfolgreiches
 Acquirer-/Snapshot-Wiring folgt separat.
+
+Step 018 wurde durch den neuen Kritiker mit `784167d8` genehmigt. Die
+Nutzerentscheidung ist damit umgesetzt: `ERROR_PRIVILEGE_NOT_HELD (1314)`
+und tatsächlich erkannte Reparse-Checkouts werden repository-spezifisch als
+`ProviderUnavailable` mit `RepositoryCapabilityUnavailable` projiziert; der
+statische Decompilation-Fallback bleibt aktiv. Normale Repositories werden
+nicht global gesperrt. Der transparente lokale Symlink-Skip bleibt als nicht
+ausgeführter Sicherheitsnachweis dokumentiert, ist aber kein Laufzeitblocker.
