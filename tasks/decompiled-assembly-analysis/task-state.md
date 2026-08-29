@@ -18,7 +18,7 @@ current_step: step-024
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T12:45:15+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T13:00:00+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
