@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T10:29:47+02:00
+last_updated: 2026-08-29T10:44:30+02:00
 rules_dir: .agents/rules
-total_steps: 21
-current_step: step-021
+total_steps: 22
+current_step: step-022
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,12 +13,12 @@ current_step: step-021
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 21 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-021` (issues; native Cleanup-Fehlerprüfung und bounded Test-Finally)
+- **Steps gesamt:** 22 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-022` (in_progress; native Cleanup-Statusprüfung und bounded Test-Finally)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T10:29:47+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T10:44:30+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -46,6 +46,7 @@ current_step: step-021
 | step-019 | EPIC-04 | issues | Produktiven Git-over-HTTP-Transport mit injizierbarer Authentifizierung für den Default-Branch-Clone bauen | - | b8fb5471 | issues → step-020 | b8fb5471 + 195f29f4 + e5b3f7e3 |
 | step-020 | EPIC-04 | issues | Git-Prozesslebenszyklus und statusbewusste Fehlerklassifikation korrigieren | step-019 | 2c2a2c01 | issues → step-021 | 2c2a2c01 + 446d5ff2 + cbb49754 |
 | step-021 | EPIC-04 | issues | Git-Prozessbaum- und Timeout-Cleanup-Races korrigieren | step-020 | 51060014 | issues → step-022 | 51060014 + 59c63a3a + f80e5f45 |
+| step-022 | EPIC-04 | in_progress | Native Startfehler und Test-Cleanup fail-closed absichern | step-021 | - | - | b4d78edb |
 
 ## Config
 
