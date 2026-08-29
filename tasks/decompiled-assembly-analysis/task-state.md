@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T18:44:16+02:00
+last_updated: 2026-08-29T19:35:41+02:00
 rules_dir: .agents/rules
 total_steps: 28
 current_step: step-028
@@ -14,13 +14,12 @@ current_step: step-028
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 28 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-028` (planned/in_progress; Korrektur von
-  `step-027` für deterministische Lock-/Interleaving- und bounded
-  Read-back-Nachweise)
+- **Aktueller Schritt:** `step-028` (done; deterministische Lock-/Interleaving-
+  und bounded Read-back-Nachweise ergänzt)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T18:44:16+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T19:35:41+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -54,7 +53,7 @@ current_step: step-028
 | step-025 | EPIC-04 | done | Registry-/Snapshot-Lifetime und exception-sicheres Multi-Owner-Cleanup korrigieren | step-024 | 74fc0056 | approved | 74fc0056 + acdfe70e |
 | step-026 | EPIC-04 | issues | Persistente Repository-Cache-Generation aus erfolgreichem Clone atomar veröffentlichen | - | da9882f4 | issues → step-027 | da9882f4 + 8a87f06a |
 | step-027 | EPIC-04 | issues | Fail-closeden Generation-Publish und Testisolation korrigieren | step-026 | c5d64c42 | issues → step-028 | c5d64c42 + 732737dd |
-| step-028 | EPIC-04 | planned/in_progress | Deterministische Read-back- und Lock-Lifetime-Nachweise ergänzen | step-027 | - | ausstehend | - |
+| step-028 | EPIC-04 | done | Deterministische Read-back- und Lock-Lifetime-Nachweise ergänzen | step-027 | 83e52560 | approved | 83e52560 + d3d17fe1 |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -446,3 +445,13 @@ Manifest- und Inventargrenzen (Oversize, ungültiges UTF-8, Trunkierung,
 Wachstum, unbekannte/doppelte Felder und Limits). Diese beiden eng gekoppelten
 Testlücken werden als ein Step-028-Korrekturpaket geschlossen; Produktions-
 und Scope-Grenzen bleiben unverändert.
+
+Step 028 wurde durch den neuen Kritiker mit `d3d17fe1` genehmigt. Der
+Race-Nachweis erzwingt die kritische A/B-Interleaving-Reihenfolge determinis-
+tisch über TCS/Semaphore ohne Sleeps; die Read-back-Matrix prüft Pointer,
+Manifest und Inventory gegen Oversize, ungültiges UTF-8, Trunkierung,
+Wachstum/TOCTOU, unbekannte/doppelte Felder und alle relevanten Limits.
+Gültige Current-Einträge bleiben in den Negativfällen unverändert. Es wurden
+keine neuen Tech-Debt-Funde aufgenommen; Build und beide vollständigen
+Nicht-Stress-Gates sind grün, der echte Symlink-/Reparse-Test bleibt
+transparent wegen Win32 1314 übersprungen.
