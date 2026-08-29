@@ -15,7 +15,9 @@ internal interface IExternalSourceRepositoryCacheWriter
         CancellationToken cancellationToken = default);
 }
 
-internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSourceRepositoryCacheWriter
+internal sealed class LocalExternalSourceRepositoryCacheWriter :
+    IExternalSourceRepositoryCacheWriter,
+    IExternalSourceRepositoryCacheReader
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> Locks = new(StringComparer.OrdinalIgnoreCase);
     private readonly string cacheRoot;
@@ -267,6 +269,12 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
             },
             out result,
             out diagnostic);
+
+    bool IExternalSourceRepositoryCacheReader.TryReadCurrent(
+        ExternalSourceRepositoryCacheKey key,
+        out ExternalSourceRepositoryCacheReadResult? result,
+        out ExternalSourceConfigurationDiagnostic? diagnostic) =>
+        TryReadCurrent(key, out result, out diagnostic);
 
     internal bool TryReadCurrent(
         ExternalSourceRepositoryCacheReadRequest request,

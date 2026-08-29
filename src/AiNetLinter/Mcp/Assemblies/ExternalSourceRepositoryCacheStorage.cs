@@ -165,7 +165,7 @@ internal static class ExternalSourceRepositoryCacheStorage
         totalBytes += length;
     }
 
-    private static ExternalSourceRepositoryCacheFileEntry CopyFile(
+    internal static ExternalSourceRepositoryCacheFileEntry CopyFile(
         string sourcePath,
         string destinationPath,
         string relativePath,

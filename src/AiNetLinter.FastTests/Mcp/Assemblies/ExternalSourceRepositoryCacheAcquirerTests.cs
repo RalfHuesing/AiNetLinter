@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
@@ -95,5 +96,381 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
 
         Assert.False(result.IsAvailable);
         Assert.Null(writer.Request);
+    }
+
+    [Fact]
+    public async Task Acquirer_ValidCacheHitCreatesIndependentCheckoutWithoutTransportOrPublish()
+    {
+        using var source = SourceFixture.Create(Revision);
+        using var cache = TestTempDirectory.Create("external-source-cache-reuse-hit-");
+        using var staging = TestTempDirectory.Create("external-source-cache-reuse-staging-");
+        var writer = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+        var published = await writer.PublishAsync(source.Request);
+        Assert.True(published.Succeeded);
+
+        var transport = new ExternalSourceRecordingTransport((_, _, _) =>
+            throw new InvalidOperationException("Der Cache-Hit darf keinen Transport aufrufen."));
+        var acquirer = new ExternalSourceRepositoryAcquirer(
+            transport,
+            staging.DirectoryPath,
+            cacheWriter: writer,
+            cacheReader: writer);
+
+        var result = await acquirer.AcquireAsync(CreateMapping());
+
+        Assert.True(result.IsAvailable);
+        Assert.Equal(Revision, result.LoadedRevision);
+        Assert.Equal(0, transport.CallCount);
+        var checkout = Assert.IsType<ExternalSourceCheckoutHandle>(result.Checkout);
+        Assert.NotEqual(published.GenerationPath, checkout.CheckoutPath);
+        Assert.True(File.Exists(Path.Combine(
+            checkout.CheckoutPath,
+            ExternalSourceCheckoutOwnership.OwnershipMarkerFileName)));
+        Assert.Equal(
+            Path.Combine(checkout.CheckoutPath, SolutionPath.Replace('/', Path.DirectorySeparatorChar)),
+            checkout.SolutionPath);
+        checkout.Dispose();
+        Assert.False(Directory.Exists(checkout.CheckoutPath));
+        Assert.True(Directory.Exists(published.GenerationPath));
+        Assert.True(writer.TryReadCurrent(source.Key, out _, out var diagnostic));
+        Assert.Null(diagnostic);
+    }
+
+    [Fact]
+    public async Task CacheReuse_ValidCurrentReturnsRequestOwnedCheckout()
+    {
+        using var source = SourceFixture.Create(Revision);
+        using var cache = TestTempDirectory.Create("external-source-cache-reuse-direct-");
+        using var staging = TestTempDirectory.Create("external-source-cache-reuse-direct-staging-");
+        var writer = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+        Assert.True((await writer.PublishAsync(source.Request)).Succeeded);
+        var reuse = new ExternalSourceRepositoryCacheReuse(
+            staging.DirectoryPath,
+            writer,
+            Serilog.Log.Logger);
+
+        var result = reuse.TryAcquire(
+            source.Key.CanonicalRepositoryUrl,
+            source.Key.SolutionPath,
+            CancellationToken.None);
+
+        Assert.NotNull(typeof(ExternalSourceRepositoryCacheReuse));
+        var checkoutResult = Assert.IsType<ExternalSourceRepositoryAcquisitionResult>(result);
+        var checkout = Assert.IsType<ExternalSourceCheckoutHandle>(checkoutResult.Checkout);
+        Assert.Equal(Revision, checkoutResult.LoadedRevision);
+        Assert.NotEqual(source.CheckoutPath, checkout.CheckoutPath);
+        checkout.Dispose();
+        Assert.False(Directory.Exists(checkout.CheckoutPath));
+    }
+
+    [Theory]
+    [InlineData("url")]
+    [InlineData("solution")]
+    [InlineData("revision")]
+    [InlineData("inventory")]
+    public async Task Acquirer_InvalidCacheIdentityFallsBackToClone(string mutation)
+    {
+        using var source = SourceFixture.Create(Revision);
+        using var cache = TestTempDirectory.Create("external-source-cache-reuse-invalid-");
+        using var staging = TestTempDirectory.Create("external-source-cache-reuse-invalid-staging-");
+        var writer = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+        var published = await writer.PublishAsync(source.Request);
+        Assert.True(published.Succeeded);
+        MutateCache(mutation, published.GenerationPath!, source.Key);
+
+        var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
+        {
+            Directory.CreateDirectory(Path.Combine(destination, "src"));
+            File.WriteAllText(
+                Path.Combine(destination, SolutionPath.Replace('/', Path.DirectorySeparatorChar)),
+                "solution");
+            return ExternalSourceRepositoryTransportResult.Success(Revision);
+        });
+        var acquirer = new ExternalSourceRepositoryAcquirer(
+            transport,
+            staging.DirectoryPath,
+            cacheWriter: writer,
+            cacheReader: writer);
+
+        var result = await acquirer.AcquireAsync(CreateMapping());
+
+        Assert.True(result.IsAvailable);
+        Assert.Equal(1, transport.CallCount);
+        var checkout = Assert.IsType<ExternalSourceCheckoutHandle>(result.Checkout);
+        checkout.Dispose();
+        Assert.False(Directory.Exists(checkout.CheckoutPath));
+    }
+
+    [Fact]
+    public async Task Acquirer_MissingCurrentFallsBackToClone()
+    {
+        using var source = SourceFixture.Create(Revision);
+        using var cache = TestTempDirectory.Create("external-source-cache-reuse-missing-");
+        using var staging = TestTempDirectory.Create("external-source-cache-reuse-missing-staging-");
+        var writer = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+        var published = await writer.PublishAsync(source.Request);
+        Assert.True(published.Succeeded);
+        File.Delete(Path.Combine(
+            writer.GetEntryDirectory(source.Key),
+            ExternalSourceRepositoryCacheContract.CurrentPointerFileName));
+
+        var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
+        {
+            Directory.CreateDirectory(Path.Combine(destination, "src"));
+            File.WriteAllText(
+                Path.Combine(destination, SolutionPath.Replace('/', Path.DirectorySeparatorChar)),
+                "solution");
+            return ExternalSourceRepositoryTransportResult.Success(Revision);
+        });
+        var acquirer = new ExternalSourceRepositoryAcquirer(
+            transport,
+            staging.DirectoryPath,
+            cacheWriter: writer,
+            cacheReader: writer);
+
+        var result = await acquirer.AcquireAsync(CreateMapping());
+
+        Assert.True(result.IsAvailable);
+        Assert.Equal(1, transport.CallCount);
+        var checkout = Assert.IsType<ExternalSourceCheckoutHandle>(result.Checkout);
+        checkout.Dispose();
+    }
+
+    [Theory]
+    [InlineData("pointer")]
+    [InlineData("manifest")]
+    [InlineData("inventory")]
+    [InlineData("content")]
+    public async Task Acquirer_MissingCacheArtifactFallsBackToClone(string artifact)
+    {
+        using var source = SourceFixture.Create(Revision);
+        using var cache = TestTempDirectory.Create("external-source-cache-reuse-missing-artifact-");
+        using var staging = TestTempDirectory.Create("external-source-cache-reuse-missing-artifact-staging-");
+        var writer = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+        var published = await writer.PublishAsync(source.Request);
+        Assert.True(published.Succeeded);
+        var generationPath = published.GenerationPath!;
+        var artifactPath = artifact switch
+        {
+            "pointer" => Path.Combine(
+                writer.GetEntryDirectory(source.Key),
+                ExternalSourceRepositoryCacheContract.CurrentPointerFileName),
+            "manifest" => Path.Combine(
+                generationPath,
+                ExternalSourceRepositoryCacheContract.ManifestFileName),
+            "inventory" => Path.Combine(
+                generationPath,
+                ExternalSourceRepositoryCacheContract.InventoryFileName),
+            "content" => Path.Combine(
+                generationPath,
+                ExternalSourceRepositoryCacheContract.ContentDirectoryName,
+                source.Request.SolutionPath.Replace('/', Path.DirectorySeparatorChar)),
+            _ => throw new ArgumentException("Unbekanntes Cache-Artefakt.", nameof(artifact)),
+        };
+        File.Delete(artifactPath);
+
+        var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
+        {
+            Directory.CreateDirectory(Path.Combine(destination, "src"));
+            File.WriteAllText(
+                Path.Combine(destination, SolutionPath.Replace('/', Path.DirectorySeparatorChar)),
+                "solution");
+            return ExternalSourceRepositoryTransportResult.Success(Revision);
+        });
+        var acquirer = new ExternalSourceRepositoryAcquirer(
+            transport,
+            staging.DirectoryPath,
+            cacheWriter: writer,
+            cacheReader: writer);
+
+        var result = await acquirer.AcquireAsync(CreateMapping());
+
+        Assert.True(result.IsAvailable);
+        Assert.Equal(1, transport.CallCount);
+        var checkout = Assert.IsType<ExternalSourceCheckoutHandle>(result.Checkout);
+        checkout.Dispose();
+        Assert.True(Directory.Exists(generationPath));
+    }
+
+    [Fact]
+    public async Task Acquirer_MaterializationFailureCleansLeaseAndFallsBack()
+    {
+        using var source = SourceFixture.Create(Revision);
+        using var cache = TestTempDirectory.Create("external-source-cache-reuse-materialize-");
+        using var staging = TestTempDirectory.Create("external-source-cache-reuse-materialize-staging-");
+        var localReader = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+        var published = await localReader.PublishAsync(source.Request);
+        Assert.True(published.Succeeded);
+        var read = Assert.IsType<ExternalSourceRepositoryCacheReadResult>(
+            ReadCurrent(localReader, source.Key));
+        var tamperedManifest = new ExternalSourceRepositoryCacheManifest(
+            read.Manifest.CacheSchemaVersion,
+            read.Manifest.CacheKey,
+            read.Manifest.CanonicalRepositoryUrl,
+            read.Manifest.SolutionPath,
+            read.Manifest.LoadedRevision,
+            read.Manifest.GenerationName,
+            read.Manifest.CreatedUtc,
+            read.Manifest.Files.Select((file, index) => index == 0
+                ? file with { ContentHash = new string('0', file.ContentHash.Length) }
+                : file).ToArray());
+        var reader = new FixedCacheReader(new(
+            tamperedManifest,
+            read.GenerationPath));
+        var writer = new RecordingCacheWriter();
+        var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
+        {
+            Directory.CreateDirectory(Path.Combine(destination, "src"));
+            File.WriteAllText(
+                Path.Combine(destination, SolutionPath.Replace('/', Path.DirectorySeparatorChar)),
+                "solution");
+            return ExternalSourceRepositoryTransportResult.Success(Revision);
+        });
+        var acquirer = new ExternalSourceRepositoryAcquirer(
+            transport,
+            staging.DirectoryPath,
+            cacheWriter: writer,
+            cacheReader: reader);
+
+        var result = await acquirer.AcquireAsync(CreateMapping());
+
+        Assert.True(result.IsAvailable);
+        Assert.Equal(1, transport.CallCount);
+        var checkout = Assert.IsType<ExternalSourceCheckoutHandle>(result.Checkout);
+        checkout.Dispose();
+        Assert.False(Directory.Exists(checkout.CheckoutPath));
+        Assert.True(localReader.TryReadCurrent(source.Key, out var current, out var diagnostic));
+        Assert.Null(diagnostic);
+        Assert.Equal(read.Manifest.GenerationName, current!.Manifest.GenerationName);
+    }
+
+    [Fact]
+    public async Task Acquirer_CacheHitCancellationRethrowsWithoutClone()
+    {
+        using var source = SourceFixture.Create(Revision);
+        using var cache = TestTempDirectory.Create("external-source-cache-reuse-cancel-");
+        using var staging = TestTempDirectory.Create("external-source-cache-reuse-cancel-staging-");
+        var localReader = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+        Assert.True((await localReader.PublishAsync(source.Request)).Succeeded);
+        using var cancellation = new CancellationTokenSource();
+        var reader = new CancellingCacheReader(localReader, cancellation);
+        var transport = new ExternalSourceRecordingTransport((_, _, _) =>
+            throw new InvalidOperationException("Cancellation darf nicht in Clone umgedeutet werden."));
+        var acquirer = new ExternalSourceRepositoryAcquirer(
+            transport,
+            staging.DirectoryPath,
+            cacheWriter: localReader,
+            cacheReader: reader);
+
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            acquirer.AcquireAsync(CreateMapping(), cancellation.Token));
+
+        Assert.Equal(cancellation.Token, exception.CancellationToken);
+        Assert.Equal(0, transport.CallCount);
+        Assert.Empty(Directory.EnumerateDirectories(staging.DirectoryPath, "checkout-*"));
+    }
+
+    [Fact]
+    public async Task Acquirer_ConcurrentCacheHitsCreateIndependentLeases()
+    {
+        using var source = SourceFixture.Create(Revision);
+        using var cache = TestTempDirectory.Create("external-source-cache-reuse-concurrent-");
+        using var staging = TestTempDirectory.Create("external-source-cache-reuse-concurrent-staging-");
+        var writer = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+        var published = await writer.PublishAsync(source.Request);
+        Assert.True(published.Succeeded);
+        var transport = new ExternalSourceRecordingTransport((_, _, _) =>
+            throw new InvalidOperationException("Concurrent Cache-Hits dürfen keinen Transport aufrufen."));
+        var acquirer = new ExternalSourceRepositoryAcquirer(
+            transport,
+            staging.DirectoryPath,
+            cacheWriter: writer,
+            cacheReader: writer);
+
+        var results = await Task.WhenAll(
+            Enumerable.Range(0, 4).Select(_ => acquirer.AcquireAsync(CreateMapping())));
+
+        Assert.All(results, result => Assert.True(result.IsAvailable));
+        var checkouts = results.Select(result => Assert.IsType<ExternalSourceCheckoutHandle>(result.Checkout)).ToArray();
+        Assert.Equal(4, checkouts.Select(checkout => checkout.CheckoutPath).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Equal(0, transport.CallCount);
+        foreach (var checkout in checkouts)
+        {
+            checkout.Dispose();
+        }
+
+        Assert.True(Directory.Exists(published.GenerationPath));
+        Assert.True(writer.TryReadCurrent(source.Key, out _, out var diagnostic));
+        Assert.Null(diagnostic);
+    }
+
+    private static void MutateCache(
+        string mutation,
+        string generationPath,
+        ExternalSourceRepositoryCacheKey key)
+    {
+        var manifestPath = Path.Combine(
+            generationPath,
+            ExternalSourceRepositoryCacheContract.ManifestFileName);
+        var inventoryPath = Path.Combine(
+            generationPath,
+            ExternalSourceRepositoryCacheContract.InventoryFileName);
+        var value = File.ReadAllText(mutation == "inventory" ? inventoryPath : manifestPath);
+        value = mutation switch
+        {
+            "url" => value.Replace(
+                "https://gitea.example/shared.git",
+                "https://gitea.example/other.git",
+                StringComparison.Ordinal),
+            "solution" => value.Replace(SolutionPath, "src/Other.slnx", StringComparison.Ordinal),
+            "revision" => value.Replace(Revision, "invalid-revision", StringComparison.Ordinal),
+            "inventory" => value.Replace(key.StableValue, new string('a', 64), StringComparison.Ordinal),
+            _ => throw new ArgumentException("Unbekannte Cache-Mutation.", nameof(mutation)),
+        };
+        File.WriteAllText(mutation == "inventory" ? inventoryPath : manifestPath, value);
+    }
+
+    private sealed class FixedCacheReader : IExternalSourceRepositoryCacheReader
+    {
+        private readonly ExternalSourceRepositoryCacheReadResult result;
+
+        internal FixedCacheReader(ExternalSourceRepositoryCacheReadResult result)
+        {
+            this.result = result;
+        }
+
+        public bool TryReadCurrent(
+            ExternalSourceRepositoryCacheKey key,
+            out ExternalSourceRepositoryCacheReadResult? result,
+            out ExternalSourceConfigurationDiagnostic? diagnostic)
+        {
+            result = this.result;
+            diagnostic = null;
+            return true;
+        }
+    }
+
+    private sealed class CancellingCacheReader : IExternalSourceRepositoryCacheReader
+    {
+        private readonly IExternalSourceRepositoryCacheReader inner;
+        private readonly CancellationTokenSource cancellation;
+
+        internal CancellingCacheReader(
+            IExternalSourceRepositoryCacheReader inner,
+            CancellationTokenSource cancellation)
+        {
+            this.inner = inner;
+            this.cancellation = cancellation;
+        }
+
+        public bool TryReadCurrent(
+            ExternalSourceRepositoryCacheKey key,
+            out ExternalSourceRepositoryCacheReadResult? result,
+            out ExternalSourceConfigurationDiagnostic? diagnostic)
+        {
+            var success = inner.TryReadCurrent(key, out result, out diagnostic);
+            cancellation.Cancel();
+            return success;
+        }
     }
 }

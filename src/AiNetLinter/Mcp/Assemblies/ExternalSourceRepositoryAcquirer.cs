@@ -17,12 +17,14 @@ internal sealed class ExternalSourceRepositoryAcquirer
     private readonly string stagingRoot;
     private readonly ILogger logger;
     private readonly IExternalSourceRepositoryCacheWriter cacheWriter;
+    private readonly ExternalSourceRepositoryCacheReuse cacheReuse;
 
     internal ExternalSourceRepositoryAcquirer(
         IGiteaRepositoryTransport transport,
         string stagingRoot,
         ILogger? logger = null,
-        IExternalSourceRepositoryCacheWriter? cacheWriter = null)
+        IExternalSourceRepositoryCacheWriter? cacheWriter = null,
+        IExternalSourceRepositoryCacheReader? cacheReader = null)
     {
         ArgumentNullException.ThrowIfNull(transport);
 
@@ -33,6 +35,10 @@ internal sealed class ExternalSourceRepositoryAcquirer
                 nameof(stagingRoot));
         this.logger = logger ?? Log.Logger;
         this.cacheWriter = cacheWriter ?? new LocalExternalSourceRepositoryCacheWriter();
+        cacheReuse = new ExternalSourceRepositoryCacheReuse(
+            this.stagingRoot,
+            cacheReader ?? this.cacheWriter as IExternalSourceRepositoryCacheReader,
+            this.logger);
     }
 
     internal async Task<ExternalSourceRepositoryAcquisitionResult> AcquireAsync(
@@ -51,6 +57,15 @@ internal sealed class ExternalSourceRepositoryAcquirer
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        var cacheResult = cacheReuse.TryAcquire(
+            mapping.Url,
+            solutionPath!,
+            cancellationToken);
+        if (cacheResult is not null)
+        {
+            return cacheResult;
+        }
+
         if (!ExternalSourceRepositoryCheckoutReservation.TryCreate(
                 stagingRoot,
                 out var ownership,
@@ -472,25 +487,4 @@ internal sealed class ExternalSourceRepositoryAcquirer
     internal static bool IsReparsePointAttribute(FileAttributes attributes) =>
         ExternalSourceRepositoryPathGuard.IsReparsePointAttribute(attributes);
 
-    private sealed record CheckoutValidationResult(
-        string? SolutionPath,
-        ExternalSourceProviderFailureKind FailureKind,
-        ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics)
-    {
-        internal bool IsValid => SolutionPath is not null;
-
-        internal static CheckoutValidationResult Success(string solutionPath) =>
-            new(
-                solutionPath,
-                ExternalSourceProviderFailureKind.None,
-                ImmutableArray<ExternalSourceConfigurationDiagnostic>.Empty);
-
-        internal static CheckoutValidationResult Failure(
-            ExternalSourceProviderFailureKind failureKind,
-            IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics) =>
-            new(
-                null,
-                failureKind,
-                diagnostics.ToImmutableArray());
-    }
 }
