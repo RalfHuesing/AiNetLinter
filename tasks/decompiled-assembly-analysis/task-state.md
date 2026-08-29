@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T01:21:54+02:00
+last_updated: 2026-08-29T02:13:17+02:00
 rules_dir: .agents/rules
 total_steps: 16
 current_step: step-016
@@ -14,11 +14,11 @@ current_step: step-016
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 16 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-016` (in_progress; Sicherheits- und Besitzgrenze der Akquisitionsfassade korrigieren)
+- **Aktueller Schritt:** `step-016` (blocked; Windows-Symlink-Berechtigung und verbleibende Cleanup-Beobachtbarkeit)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T01:21:54+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T02:13:17+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -40,7 +40,7 @@ current_step: step-016
 | step-013 | EPIC-03 | done | Assembly-Host-Wiring und Session-Lifetime absichern | step-012 | 1cd279f0 | approved | 1cd279f0 + 6ba95124 + 723d2a3b |
 | step-014 | EPIC-04 | done | Injizierbaren External-Source-Port für Gitea-Auth- und Transportfehler schärfen | - | 3f83c5f2 | approved | 3f83c5f2 + 804f00b0 + 0902a7b7 |
 | step-015 | EPIC-04 | issues | Repository-Akquisitionsvertrag mit injizierbarem Gitea-Transport und sicherer Staging-Fassade | - | 3bd71a73 | issues → step-016 | 3bd71a73 + 966ed66a + b1dac89b |
-| step-016 | EPIC-04 | in_progress | Repository-Akquisitionsgrenze sicher korrigieren | step-015 | - | - | 5aca2bd8 |
+| step-016 | EPIC-04 | blocked | Repository-Akquisitionsgrenze sicher korrigieren | step-015 | 4f49c0bd | blocked → step-017 | 4f49c0bd + b755c955 + 3be96cf1 |
 
 ## Config
 
@@ -211,3 +211,12 @@ typisierte Ausnahmeabbildung, Cancellation, geheimnisfreie Diagnosen,
 Ownership-/Reparse-/Cleanup-Sicherung, direkte Windows-Regressionen und
 DRY-Zentralisierung. Ein unabhängiger Tech-Debt-Sweep sowie externe Adapter,
 Cache, Refresh und Snapshot-Lifecycle bleiben ausgeschlossen.
+
+Der neue Kritiker bestätigt Step 016 mit `3be96cf1` weiterhin als `blocked`:
+Der echte Symlink-/Reparse-Test kann ohne `SeCreateSymbolicLinkPrivilege`
+oder Developer Mode nicht ausgeführt werden, wodurch das vollständige
+FastTests-Gate rot bleibt. Zusätzlich verwirft der Cancellation-Pfad noch
+den Cleanup-Status. Der Blocker wird nicht durch Attributsimulation,
+Privilegienänderung oder eine abgeschwächte Assertion umgangen; ein
+Folgeplan muss die Cleanup-Beobachtbarkeit korrigieren und die echte
+Reparse-Regression unter berechtigter Umgebung unverändert erhalten.
