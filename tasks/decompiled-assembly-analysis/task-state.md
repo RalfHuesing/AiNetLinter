@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T21:42:17+02:00
+last_updated: 2026-08-29T21:56:07+02:00
 rules_dir: .agents/rules
-total_steps: 30
-current_step: step-030
+total_steps: 31
+current_step: step-031
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,9 +13,9 @@ current_step: step-030
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 30 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-030` (issues; Korrektur von `step-029` für
-  Result-/Audit-Nachweis und Publish-/Current-Assertions)
+- **Steps gesamt:** 31 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-031` (planned/in_progress; Korrektur von
+  `step-030` für Teststruktur, Integrations-Gate und Result-/Audit-Evidenz)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
@@ -56,6 +56,7 @@ current_step: step-030
 | step-028 | EPIC-04 | done | Deterministische Read-back- und Lock-Lifetime-Nachweise ergänzen | step-027 | 83e52560 | approved | 83e52560 + d3d17fe1 |
 | step-029 | EPIC-04 | issues | Cache-backed Initial Acquisition aus validierter Generation | - | 82692da0 | issues → step-030 | 82692da0 + c0abdcdf |
 | step-030 | EPIC-04 | issues | Cache-Reuse-Nachweise und Step-029-Result korrigieren | step-029 | e9bf8025 | issues → step-031 | e9bf8025 + 2510db5e |
+| step-031 | EPIC-04 | in_progress | Step-030-Gatebefunde und Nachweise korrigieren | step-030 | - | - | - |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -532,3 +533,40 @@ Bestanden, 2 Fehler, 370 gesamt. Step 029 und Step 030 enthalten zusätzlich
 falsche Testzahlen sowie unzutreffende Violations-/Safeguard-Werte. Step 031
 bündelt Testdatei-Regel, Integrationsfehler und Result-/Audit-Korrektur in
 einem Qualitätspaket; es wird nicht in einzelne Mini-Steps zerlegt.
+
+### Wiederaufnahme nach Step-030-Review (2026-08-29)
+
+Auf Nutzeranweisung wurde Step 031 als neuer, größerer Korrektur-Step mit
+`corrects: step-030` geplant und auf `planned/in_progress` gesetzt. Der
+primäre Vertrag ist der reproduzierbare grüne Quality-Gate-Nachweis für den
+genehmigten Cache-Reuse-Vertrag. Die drei gekoppelten Schichten sind die
+regelkonforme Teststruktur, die konkrete Ursache der zwei roten
+Integrationstests und die wahrheitsgemäße Result-/Audit-Evidenz.
+
+Der vollständige Nicht-Stress-Integration-Lauf aus dem Step-030-Review
+steht bei 368 bestanden, 0 Skips, 2 Fehlern und 370 gesamt. Ein fokussierter
+TRX-Lauf reproduzierte genau diese beiden Fehler:
+
+- `CliRepositoryDogfoodTests.RunLinterCli_OnWholeSolution_ReturnsSuccess`
+  scheitert am Exit-Code 1, weil die geänderte
+  `ExternalSourceRepositoryCacheAcquirerTests.cs` 501 statt höchstens 500
+  vom Linter gezählte Zeilen hat.
+- `McpLiveRepositoryTests.LiveDogfood_Safeguard_ReturnsResults` scheitert
+  am ausgegebenen Score `2,652253349573691` unter dem unveränderten Korridor
+  `>= 5,0`; der aktuelle Violationszustand enthält denselben neuen
+  `MaxLineCount`-Befund neben drei bestehenden Struktur-/Footprint-Befunden.
+
+Die minimale Korrektur ist eine thematische Entzerrung: Die drei
+Cache-Hit-/Reuse-Tests gehen in eine eigene nicht-partielle Testklasse,
+bereits vorhandene Fixture-, Reader-/Writer-Double- und Assertion-Logik
+wird einmalig in cache-spezifischem Test-Support geteilt. Die bestehende
+Partialklasse erhält keine weitere Datei; Produktionscode, Regeln,
+Assertions und Filtersemantik bleiben unangetastet. Eine externe Blockade
+ist derzeit nicht nachgewiesen.
+
+Nach der neuen Verifikation müssen `step-029/step-result.md` und
+`step-030/step-result.md` ausschließlich die tatsächlich ausgeführten
+Zahlen, Fehler, Skips und scoped MCP-Audits ausweisen. `roadmap.md` und
+`tech-debt.md` bleiben im Fix-Modus unverändert. Der nächste sichere
+Übergabepunkt ist ein neuer Coder-Agent mit
+`tasks/decompiled-assembly-analysis/step-031/step-plan.md`.
