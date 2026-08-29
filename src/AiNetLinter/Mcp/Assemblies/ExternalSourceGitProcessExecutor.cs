@@ -18,11 +18,28 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
 
     private const int OutputReadBufferSize = 4096;
     private static readonly TimeSpan ProcessTerminationTimeout = TimeSpan.FromSeconds(5);
-    private static readonly object CleanupFailureDataKey = new();
 
-    public async Task<ExternalSourceGitProcessResult> ExecuteAsync(
+    public Task<ExternalSourceGitProcessResult> ExecuteAsync(
         ExternalSourceGitProcessRequest request,
         CancellationToken cancellationToken = default)
+        => ExecuteAsyncCore(
+            request,
+            cancellationToken,
+            ExternalSourceGitProcessNativeOperations.Runtime);
+
+    internal Task<ExternalSourceGitProcessResult> ExecuteWithNativeOperationsAsync(
+        ExternalSourceGitProcessRequest request,
+        ExternalSourceGitProcessNativeOperations operations,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(operations);
+        return ExecuteAsyncCore(request, cancellationToken, operations);
+    }
+
+    private static async Task<ExternalSourceGitProcessResult> ExecuteAsyncCore(
+        ExternalSourceGitProcessRequest request,
+        CancellationToken cancellationToken,
+        ExternalSourceGitProcessNativeOperations operations)
     {
         ArgumentNullException.ThrowIfNull(request);
         using var timeoutSource = new CancellationTokenSource(request.Timeout);
@@ -33,7 +50,7 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
         ExternalSourceGitProcessTreeScope? scope = null;
         try
         {
-            scope = ExternalSourceGitProcessTreeScope.Start(startInfo);
+            scope = ExternalSourceGitProcessTreeScope.Start(startInfo, operations);
             return await ExecuteStartedProcessAsync(
                     scope,
                     timeoutSource,
@@ -160,7 +177,9 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
             .ConfigureAwait(false);
         if (cleanup.Failure is not null)
         {
-            AttachCleanupFailure(primaryException, cleanup.Failure);
+            ExternalSourceGitProcessStartFailureCleanup.AttachCleanupFailure(
+                primaryException,
+                cleanup.Failure);
         }
 
         ExceptionDispatchInfo.Capture(primaryException).Throw();
@@ -354,18 +373,6 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
             1 => failures.First(),
             _ => new AggregateException("Die Prozessbereinigung ist fehlgeschlagen.", failures),
         };
-
-    private static void AttachCleanupFailure(Exception primary, Exception cleanupFailure)
-    {
-        try
-        {
-            primary.Data[CleanupFailureDataKey] = cleanupFailure;
-        }
-        catch (Exception attachFailure)
-        {
-            throw new AggregateException(primary, cleanupFailure, attachFailure);
-        }
-    }
 
     private static void ObserveCompletion<T>(Task<T> task)
     {

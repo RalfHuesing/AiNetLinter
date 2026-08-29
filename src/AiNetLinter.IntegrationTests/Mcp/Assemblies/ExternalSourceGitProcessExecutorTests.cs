@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -17,6 +18,9 @@ namespace AiNetLinter.IntegrationTests.Mcp.Assemblies;
 public sealed class ExternalSourceGitProcessExecutorTests
 {
     private static readonly SemaphoreSlim EnvironmentLock = new(1, 1);
+    private static readonly TimeSpan ProcessObservationTimeout = TimeSpan.FromSeconds(10);
+    private const int AccessDeniedErrorCode = 5;
+    private const uint WaitFailedStatus = uint.MaxValue;
 
     [Fact]
     public async Task ExecuteAsync_UsesRealProcessStartInfoAndIsolatesEnvironment()
@@ -113,7 +117,7 @@ public sealed class ExternalSourceGitProcessExecutorTests
         }
         finally
         {
-            TerminateProcesses(started.ProcessIds);
+            await TerminateProcessesAsync(started.ProcessIds);
         }
     }
 
@@ -139,7 +143,77 @@ public sealed class ExternalSourceGitProcessExecutorTests
         }
         finally
         {
-            TerminateProcesses(started.ProcessIds);
+            await TerminateProcessesAsync(started.ProcessIds);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PostCreateOwnershipFailureUsesBoundedFallback()
+    {
+        using var temp = TestTempDirectory.Create("git-process-start-failure-");
+        var markerPath = temp.GetPath("start-marker.txt");
+        var scriptPath = temp.CreateFile("start-marker.ps1", StartMarkerScript);
+        var request = new ExternalSourceGitProcessRequest(
+            "pwsh",
+            ["-NoLogo", "-NoProfile", "-NonInteractive", "-File", scriptPath, markerPath],
+            temp.DirectoryPath,
+            TimeSpan.FromSeconds(15),
+            new Dictionary<string, string>());
+        var assignCalls = 0;
+        var terminateCalls = 0;
+        var waitCalls = 0;
+        var forcedWaitFailures = 0;
+        var observedProcessId = 0;
+        var runtimeOperations = ExternalSourceGitProcessNativeOperations.Runtime;
+        var operations = new ExternalSourceGitProcessNativeOperations(
+            (_, _) =>
+            {
+                Interlocked.Increment(ref assignCalls);
+                return new(false, AccessDeniedErrorCode);
+            },
+            (_, _) =>
+            {
+                Interlocked.Increment(ref terminateCalls);
+                return new(false, AccessDeniedErrorCode);
+            },
+            (handle, milliseconds) =>
+            {
+                Interlocked.Increment(ref waitCalls);
+                if (Interlocked.CompareExchange(ref forcedWaitFailures, 1, 0) == 0)
+                {
+                    return new(WaitFailedStatus, AccessDeniedErrorCode);
+                }
+
+                return runtimeOperations.WaitForSingleObject(handle, milliseconds);
+            },
+            processInformation =>
+                Volatile.Write(
+                    ref observedProcessId,
+                    checked((int)processInformation.processId)));
+
+        try
+        {
+            var exception = await Assert.ThrowsAsync<Win32Exception>(() =>
+                new ExternalSourceGitProcessExecutor().ExecuteWithNativeOperationsAsync(
+                    request,
+                    operations));
+
+            Assert.Contains("AssignProcessToJobObject", exception.Message, StringComparison.Ordinal);
+            Assert.True(observedProcessId > 0);
+            Assert.True(assignCalls > 0);
+            Assert.True(terminateCalls > 0);
+            Assert.True(waitCalls >= 2);
+            Assert.True(exception.Data.Values.Cast<object>().Any(value => value is Exception));
+            await WaitForProcessesToExitAsync([observedProcessId]);
+            Assert.False(IsProcessRunning(observedProcessId));
+            Assert.False(File.Exists(markerPath));
+        }
+        finally
+        {
+            if (observedProcessId > 0)
+            {
+                await TerminateProcessesAsync([observedProcessId]);
+            }
         }
     }
 
@@ -185,7 +259,7 @@ public sealed class ExternalSourceGitProcessExecutorTests
         {
             await TestWaiter.WaitForConditionAsync(
                 () => TryReadProcessIds(markerPath, out processIds),
-                TimeSpan.FromSeconds(10));
+                ProcessObservationTimeout);
         }
         catch
         {
@@ -202,8 +276,8 @@ public sealed class ExternalSourceGitProcessExecutorTests
 
     private static async Task WaitForProcessesToExitAsync(int[] processIds) =>
         await TestWaiter.WaitForConditionAsync(
-            () => !IsProcessRunning(processIds[0]) && !IsProcessRunning(processIds[1]),
-            TimeSpan.FromSeconds(10));
+            () => AllProcessesHaveExited(processIds),
+            ProcessObservationTimeout);
 
     private static bool TryReadProcessIds(string markerPath, out int[]? processIds)
     {
@@ -253,26 +327,79 @@ public sealed class ExternalSourceGitProcessExecutorTests
         }
     }
 
-    private static void TerminateProcesses(IEnumerable<int> processIds)
+    private static async Task TerminateProcessesAsync(IEnumerable<int> processIds)
     {
-        foreach (var processId in processIds)
+        var knownProcessIds = processIds.Distinct().ToArray();
+        var failures = new List<Exception>();
+        foreach (var processId in knownProcessIds)
+        {
+            TryTerminateProcess(processId, failures);
+        }
+
+        try
+        {
+            await WaitForProcessesToExitAsync(knownProcessIds);
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+
+        foreach (var processId in knownProcessIds)
         {
             try
             {
-                using var process = Process.GetProcessById(processId);
-                if (!process.HasExited)
+                if (IsProcessRunning(processId))
                 {
-                    process.Kill(entireProcessTree: true);
+                    failures.Add(new InvalidOperationException(
+                        $"Der Testprozess {processId} ist nach dem Cleanup noch aktiv."));
                 }
             }
-            catch (ArgumentException)
+            catch (Exception exception)
             {
-                continue;
+                failures.Add(exception);
             }
-            catch (InvalidOperationException)
+        }
+
+        if (failures.Count > 0)
+        {
+            throw new AggregateException(
+                "Die Testprozess-Bereinigung konnte das Ende nicht nachweisen.",
+                failures);
+        }
+    }
+
+    private static bool AllProcessesHaveExited(IEnumerable<int> processIds)
+    {
+        foreach (var processId in processIds)
+        {
+            if (IsProcessRunning(processId))
             {
-                continue;
+                return false;
             }
+        }
+
+        return true;
+    }
+
+    private static void TryTerminateProcess(int processId, ICollection<Exception> failures)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            process.Kill(entireProcessTree: true);
+        }
+        catch (ArgumentException)
+        {
+            Debug.WriteLine($"Testprozess {processId} war beim Cleanup bereits beendet.");
+        }
+        catch (InvalidOperationException)
+        {
+            Debug.WriteLine($"Testprozess {processId} war beim Cleanup bereits beendet.");
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
         }
     }
 

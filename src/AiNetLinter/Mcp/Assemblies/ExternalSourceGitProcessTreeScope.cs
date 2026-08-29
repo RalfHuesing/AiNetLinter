@@ -28,8 +28,10 @@ internal sealed class ExternalSourceGitProcessTreeScope : IDisposable
 
     internal StreamReader StandardError => standardError;
 
-    internal static ExternalSourceGitProcessTreeScope Start(ProcessStartInfo startInfo) =>
-        new(ExternalSourceGitProcessLauncher.Start(startInfo));
+    internal static ExternalSourceGitProcessTreeScope Start(
+        ProcessStartInfo startInfo,
+        ExternalSourceGitProcessNativeOperations operations) =>
+        new(ExternalSourceGitProcessLauncher.Start(startInfo, operations));
 
     internal bool TryTerminate(ICollection<Exception> failures) =>
         ExternalSourceGitProcessLauncher.TryTerminate(job, failures);

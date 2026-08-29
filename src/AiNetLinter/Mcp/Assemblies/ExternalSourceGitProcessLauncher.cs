@@ -4,9 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.IO.Pipes;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
@@ -20,34 +20,39 @@ internal static class ExternalSourceGitProcessLauncher
     private const uint CreateSuspended = 0x00000004;
     private const uint CreateUnicodeEnvironment = 0x00000400;
     private const uint ExtendedStartupInfoPresent = 0x00080000;
-    private const uint ProcessTerminateExitCode = 1;
-    private const uint ProcessWaitTimeoutMilliseconds = 5000;
     private const uint JobObjectExtendedLimitInformationClass = 9;
     private const uint JobObjectLimitKillOnJobClose = 0x00002000;
     private const uint ProcThreadAttributeHandleList = 0x00020002;
     private const uint StartupInfoUseStandardHandles = 0x00000100;
-    private const uint GenericRead = 0x80000000;
-    private const uint FileShareRead = 0x00000001;
-    private const uint FileShareWrite = 0x00000002;
-    private const uint OpenExisting = 3;
-    private const uint FileAttributeNormal = 0x00000080;
-    private const uint HandleFlagInherit = 0x00000001;
 
-    internal static ExternalSourceGitProcessLaunch Start(ProcessStartInfo startInfo)
+    internal static ExternalSourceGitProcessLaunch Start(
+        ProcessStartInfo startInfo,
+        ExternalSourceGitProcessNativeOperations operations)
     {
         ArgumentNullException.ThrowIfNull(startInfo);
+        ArgumentNullException.ThrowIfNull(operations);
         ValidateStartInfo(startInfo);
         var resources = CreateResources();
         try
         {
-            var launch = LaunchProcess(startInfo, resources);
+            var launch = LaunchProcess(startInfo, resources, operations);
             resources.OwnershipTransferred = true;
             return launch;
         }
-        catch
+        catch (Exception primaryException)
         {
-            resources.Dispose();
-            throw;
+            try
+            {
+                resources.Dispose();
+            }
+            catch (Exception cleanupException)
+            {
+                throw new AggregateException(primaryException, cleanupException);
+            }
+
+            ExceptionDispatchInfo.Capture(primaryException).Throw();
+            throw new InvalidOperationException(
+                "Die primäre Prozessstart-Exception konnte nicht erneut ausgelöst werden.");
         }
     }
 
@@ -68,12 +73,9 @@ internal static class ExternalSourceGitProcessLauncher
             }
 
             var error = Marshal.GetLastWin32Error();
-            if (error == 0)
-            {
-                return true;
-            }
-
-            failures.Add(new Win32Exception(error));
+            failures.Add(new Win32Exception(
+                error == 0 ? ErrorGenFailure : error,
+                "TerminateJobObject konnte den Git-Prozessbaum nicht beenden."));
             return false;
         }
         catch (Exception exception) when (IsExpectedProcessException(exception))
@@ -109,31 +111,47 @@ internal static class ExternalSourceGitProcessLauncher
             resources.ErrorPipe = new AnonymousPipeServerStream(
                 PipeDirection.In,
                 HandleInheritability.Inheritable);
-            var outputHandle = ParseHandle(resources.OutputPipe.GetClientHandleAsString());
-            var errorHandle = ParseHandle(resources.ErrorPipe.GetClientHandleAsString());
-            EnsureInheritable(outputHandle);
-            EnsureInheritable(errorHandle);
+            var outputHandle = ExternalSourceGitProcessLauncherNativeHelpers.ParseHandle(
+                resources.OutputPipe.GetClientHandleAsString());
+            var errorHandle = ExternalSourceGitProcessLauncherNativeHelpers.ParseHandle(
+                resources.ErrorPipe.GetClientHandleAsString());
+            ExternalSourceGitProcessLauncherNativeHelpers.EnsureInheritable(outputHandle);
+            ExternalSourceGitProcessLauncherNativeHelpers.EnsureInheritable(errorHandle);
             resources.InheritedHandles = [outputHandle, errorHandle];
-            resources.InputHandle = CreateStandardInputHandle();
+            resources.InputHandle =
+                ExternalSourceGitProcessLauncherNativeHelpers.CreateStandardInputHandle();
             resources.InheritedHandles.Add(resources.InputHandle);
             return resources;
         }
-        catch
+        catch (Exception primaryException)
         {
-            resources.Dispose();
-            throw;
+            try
+            {
+                resources.Dispose();
+            }
+            catch (Exception cleanupException)
+            {
+                throw new AggregateException(primaryException, cleanupException);
+            }
+
+            ExceptionDispatchInfo.Capture(primaryException).Throw();
+            throw new InvalidOperationException(
+                "Die primäre Startressourcen-Exception konnte nicht erneut ausgelöst werden.");
         }
     }
 
     private static ExternalSourceGitProcessLaunch LaunchProcess(
         ProcessStartInfo startInfo,
-        ExternalSourceGitProcessStartupResources resources)
+        ExternalSourceGitProcessStartupResources resources,
+        ExternalSourceGitProcessNativeOperations operations)
     {
-        var environmentBlock = CreateEnvironmentBlock(startInfo);
+        var environmentBlock = ExternalSourceGitProcessLauncherNativeHelpers
+            .CreateEnvironmentBlock(startInfo);
         ProcessInformation processInformation = default;
         try
         {
-            var commandLine = CreateCommandLine(startInfo);
+            var commandLine = ExternalSourceGitProcessLauncherNativeHelpers
+                .CreateCommandLine(startInfo);
             var startupInfo = CreateStartupInfo(resources);
             try
             {
@@ -142,6 +160,7 @@ internal static class ExternalSourceGitProcessLauncher
                     commandLine,
                     environmentBlock,
                     ref startupInfo);
+                operations.ProcessCreated?.Invoke(processInformation);
             }
             finally
             {
@@ -149,27 +168,40 @@ internal static class ExternalSourceGitProcessLauncher
                 Marshal.FreeHGlobal(startupInfo.lpAttributeList);
             }
 
-            AssignProcessToJob(resources.Job, processInformation.hProcess);
+            AssignProcessToJob(resources.Job, processInformation.hProcess, operations);
             ResumeProcess(processInformation.hThread);
 
             resources.OutputPipe.DisposeLocalCopyOfClientHandle();
             resources.ErrorPipe.DisposeLocalCopyOfClientHandle();
-            CloseHandle(resources.InputHandle);
+            ExternalSourceGitProcessLauncherNativeHelpers.CloseHandleOrThrow(
+                resources.InputHandle,
+                "Standard-Input-Handle");
             resources.InputHandle = IntPtr.Zero;
-            CloseHandle(processInformation.hThread);
+            ExternalSourceGitProcessLauncherNativeHelpers.CloseHandleOrThrow(
+                processInformation.hThread,
+                "Thread-Handle");
             processInformation.hThread = IntPtr.Zero;
             var process = Process.GetProcessById(checked((int)processInformation.processId));
-            CloseHandle(processInformation.hProcess);
+            ExternalSourceGitProcessLauncherNativeHelpers.CloseHandleOrThrow(
+                processInformation.hProcess,
+                "Prozess-Handle");
             processInformation.hProcess = IntPtr.Zero;
             var stdout = new StreamReader(resources.OutputPipe);
             var stderr = new StreamReader(resources.ErrorPipe);
             return new(process, resources.Job, stdout, stderr);
         }
-        catch
+        catch (Exception primaryException)
         {
-            TerminateCreatedProcess(ref processInformation);
-            CloseProcessInformation(ref processInformation);
-            throw;
+            var failures = new List<Exception>();
+            ExternalSourceGitProcessStartFailureCleanup.Cleanup(
+                ref processInformation,
+                operations,
+                failures);
+            ExternalSourceGitProcessStartFailureCleanup.RethrowWithCleanup(
+                primaryException,
+                failures);
+            throw new InvalidOperationException(
+                "Die primäre Prozessstart-Exception konnte nicht erneut ausgelöst werden.");
         }
         finally
         {
@@ -305,11 +337,15 @@ internal static class ExternalSourceGitProcessLauncher
 
     private static void AssignProcessToJob(
         ExternalSourceGitProcessNativeJob job,
-        IntPtr processHandle)
+        IntPtr processHandle,
+        ExternalSourceGitProcessNativeOperations operations)
     {
-        if (!AssignProcessToJobObject(job, processHandle))
+        var result = operations.AssignProcessToJobObject(job, processHandle);
+        if (!result.Succeeded)
         {
-            throw new Win32Exception(Marshal.GetLastWin32Error());
+            throw ExternalSourceGitProcessStartFailureCleanup.CreateNativeFailure(
+                result.LastError,
+                "AssignProcessToJobObject konnte den Git-Prozess nicht übernehmen.");
         }
     }
 
@@ -319,127 +355,6 @@ internal static class ExternalSourceGitProcessLauncher
         {
             throw new Win32Exception(Marshal.GetLastWin32Error());
         }
-    }
-
-    private static void TerminateCreatedProcess(ref ProcessInformation processInformation)
-    {
-        if (!IsUsableHandle(processInformation.hProcess))
-        {
-            return;
-        }
-
-        TerminateProcess(processInformation.hProcess, ProcessTerminateExitCode);
-        WaitForSingleObject(processInformation.hProcess, ProcessWaitTimeoutMilliseconds);
-    }
-
-    private static IntPtr CreateEnvironmentBlock(ProcessStartInfo startInfo)
-    {
-        var entries = new List<string>();
-        foreach (var variable in startInfo.Environment)
-        {
-            entries.Add(variable.Key + "=" + variable.Value);
-        }
-
-        entries.Sort(StringComparer.OrdinalIgnoreCase);
-        var block = string.Join('\0', entries) + "\0\0";
-        return Marshal.StringToHGlobalUni(block);
-    }
-
-    private static StringBuilder CreateCommandLine(ProcessStartInfo startInfo)
-    {
-        var commandLine = new StringBuilder(QuoteArgument(startInfo.FileName));
-        foreach (var argument in startInfo.ArgumentList)
-        {
-            commandLine.Append(' ');
-            commandLine.Append(QuoteArgument(argument));
-        }
-
-        return commandLine;
-    }
-
-    private static string QuoteArgument(string argument)
-    {
-        var quoted = new StringBuilder(argument.Length + 2);
-        var backslashes = 0;
-        quoted.Append('"');
-        foreach (var character in argument)
-        {
-            if (character == '\\')
-            {
-                backslashes++;
-                continue;
-            }
-
-            if (character == '"')
-            {
-                quoted.Append('\\', backslashes * 2 + 1);
-                quoted.Append('"');
-                backslashes = 0;
-                continue;
-            }
-
-            quoted.Append('\\', backslashes);
-            quoted.Append(character);
-            backslashes = 0;
-        }
-
-        quoted.Append('\\', backslashes * 2);
-        quoted.Append('"');
-        return quoted.ToString();
-    }
-
-    private static IntPtr CreateStandardInputHandle()
-    {
-        var attributes = new SecurityAttributes
-        {
-            Length = Marshal.SizeOf<SecurityAttributes>(),
-            InheritHandle = true,
-        };
-        var handle = CreateFile(
-            "NUL",
-            GenericRead,
-            FileShareRead | FileShareWrite,
-            ref attributes,
-            OpenExisting,
-            FileAttributeNormal,
-            IntPtr.Zero);
-        if (!IsUsableHandle(handle))
-        {
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-        }
-
-        try
-        {
-            EnsureInheritable(handle);
-            return handle;
-        }
-        catch
-        {
-            CloseHandle(handle);
-            throw;
-        }
-    }
-
-    private static IntPtr ParseHandle(string handle) =>
-        new(long.Parse(handle, CultureInfo.InvariantCulture));
-
-    private static bool IsUsableHandle(IntPtr handle) =>
-        handle != IntPtr.Zero && handle != new IntPtr(-1);
-
-    private static void EnsureInheritable(IntPtr handle)
-    {
-        if (!SetHandleInformation(handle, HandleFlagInherit, HandleFlagInherit))
-        {
-            throw new Win32Exception(Marshal.GetLastWin32Error());
-        }
-    }
-
-    private static void CloseProcessInformation(ref ProcessInformation processInformation)
-    {
-        CloseHandle(processInformation.hThread);
-        CloseHandle(processInformation.hProcess);
-        processInformation.hThread = IntPtr.Zero;
-        processInformation.hProcess = IntPtr.Zero;
     }
 
     private static void DeleteAttributeList(IntPtr attributeList)

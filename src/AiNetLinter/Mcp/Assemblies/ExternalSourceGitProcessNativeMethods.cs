@@ -8,6 +8,8 @@ namespace AiNetLinter.Mcp.Assemblies;
 
 internal static class ExternalSourceGitProcessNativeMethods
 {
+    internal const int ErrorGenFailure = 31;
+
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     internal static extern IntPtr CreateJobObject(IntPtr jobAttributes, string? name);
 
