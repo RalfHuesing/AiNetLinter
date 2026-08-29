@@ -107,7 +107,7 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
   Providerfehler werden als nicht-quellfähige Ergebnisse mit stabilen
   Diagnosen modelliert, Cancellation bleibt echte Cancellation.
 
-  **Nächster Schnitt → `step-015`:** Ein zusammenhängendes
+  **Vorgänger-Schnitt → `step-015`:** Ein zusammenhängendes
   Repository-Akquisitionspaket definiert den injizierbaren
   `IGiteaRepositoryTransport`-Vertrag und eine sichere
   `ExternalSourceRepositoryAcquirer`-Staging-/Clone-Fassade. Der Transport
@@ -117,6 +117,15 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
   Die Fassade begrenzt jeden neuen Checkout auf eine kontrollierte
   Staging-Wurzel, prüft den Solution-Pfad und räumt bei Fehler/Cancellation
   ihren Besitz auf.
+
+  **Nächster wirksamer Schnitt → `step-018`:** Die
+  repository-spezifische Capability-Nichtverfügbarkeit für
+  ERROR_PRIVILEGE_NOT_HELD (1314) und tatsächlich erkannte Reparse-
+  Checkouts wird typed als ProviderUnavailable durch die bestehende
+  Provider-/Orchestrator-Kette zum statischen Decompilation-Fallback
+  geführt. Normale Repositories bleiben nutzbar; vollständige
+  Snapshot-/Workspace-Materialisierung und produktives Provider-Wiring
+  bleiben Folgepakete.
 
   **Vertikale Folgepaket-Grenzen:**
 
