@@ -41,7 +41,7 @@ internal static class ExternalSourceRepositoryCacheReader
             return false;
         }
 
-        var generationName = ReadPointer(pointerPath);
+        var generationName = ReadPointer(pointerPath, request.OpenReadStream);
         result = ReadGeneration(request, generationName);
         return true;
     }
@@ -63,9 +63,11 @@ internal static class ExternalSourceRepositoryCacheReader
         string? generationName = null)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var name = generationName ?? ReadPointer(Path.Combine(
-            request.EntryDirectory,
-            ExternalSourceRepositoryCacheContract.CurrentPointerFileName));
+        var name = generationName ?? ReadPointer(
+            Path.Combine(
+                request.EntryDirectory,
+                ExternalSourceRepositoryCacheContract.CurrentPointerFileName),
+            request.OpenReadStream);
         if (!ExternalSourceRepositoryCacheContract.IsSafeGenerationName(name))
         {
             throw new InvalidDataException("Die Cachegeneration hat keinen sicheren Namen.");
@@ -84,12 +86,14 @@ internal static class ExternalSourceRepositoryCacheReader
         var manifestPath = ExternalSourceRepositoryCacheStorage.ResolveSafePath(
             generationDirectory,
             ExternalSourceRepositoryCacheContract.ManifestFileName);
-        var manifest = ReadManifest(manifestPath);
+        var manifest = ReadManifest(manifestPath, request.OpenReadStream);
         ValidateManifestIdentity(request, name, manifest);
         var inventoryPath = ExternalSourceRepositoryCacheStorage.ResolveSafePath(
             generationDirectory,
             ExternalSourceRepositoryCacheContract.InventoryFileName);
-        var inventory = ExternalSourceRepositoryCacheReadSupport.ReadInventory(inventoryPath);
+        var inventory = ExternalSourceRepositoryCacheReadSupport.ReadInventory(
+            inventoryPath,
+            request.OpenReadStream);
         ExternalSourceRepositoryCacheReadSupport.ValidateInventory(
             new ExternalSourceRepositoryCacheInventoryValidationParameters
             {
@@ -121,12 +125,15 @@ internal static class ExternalSourceRepositoryCacheReader
         }
     }
 
-    private static string ReadPointer(string pointerPath)
+    private static string ReadPointer(
+        string pointerPath,
+        Func<string, Stream>? openReadStream = null)
     {
         ExternalSourceRepositoryCacheStorage.EnsureRegularFile(pointerPath);
         var json = ExternalSourceRepositoryCacheReadSupport.ReadBoundedText(
             pointerPath,
-            ExternalSourceRepositoryCacheContract.MaxPointerJsonBytes);
+            ExternalSourceRepositoryCacheContract.MaxPointerJsonBytes,
+            openReadStream);
         using var document = JsonDocument.Parse(json, new JsonDocumentOptions
         {
             AllowTrailingCommas = false,
@@ -163,12 +170,15 @@ internal static class ExternalSourceRepositoryCacheReader
         return generation;
     }
 
-    private static ExternalSourceRepositoryCacheManifest ReadManifest(string manifestPath)
+    private static ExternalSourceRepositoryCacheManifest ReadManifest(
+        string manifestPath,
+        Func<string, Stream>? openReadStream = null)
     {
         ExternalSourceRepositoryCacheStorage.EnsureRegularFile(manifestPath);
         var json = ExternalSourceRepositoryCacheReadSupport.ReadBoundedText(
             manifestPath,
-            ExternalSourceRepositoryCacheContract.MaxManifestJsonBytes);
+            ExternalSourceRepositoryCacheContract.MaxManifestJsonBytes,
+            openReadStream);
         using var document = JsonDocument.Parse(json, new JsonDocumentOptions
         {
             AllowTrailingCommas = false,

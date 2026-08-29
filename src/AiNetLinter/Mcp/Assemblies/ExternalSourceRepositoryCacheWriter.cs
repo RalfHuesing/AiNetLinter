@@ -19,11 +19,8 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> Locks = new(StringComparer.OrdinalIgnoreCase);
     private readonly string cacheRoot;
-    private readonly Action? afterPointerPublished;
 
-    internal LocalExternalSourceRepositoryCacheWriter(
-        string? cacheRoot = null,
-        Action? afterPointerPublished = null)
+    internal LocalExternalSourceRepositoryCacheWriter(string? cacheRoot = null)
     {
         var configuredRoot = cacheRoot
             ?? System.IO.Path.Combine(AppContext.BaseDirectory, "cache", "source");
@@ -31,7 +28,6 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
             ?? throw new ArgumentException(
                 "Die Cache-Wurzel muss ein absoluter, gültiger Pfad sein.",
                 nameof(cacheRoot));
-        this.afterPointerPublished = afterPointerPublished;
     }
 
     internal string GetEntryDirectory(ExternalSourceRepositoryCacheKey key)
@@ -40,9 +36,21 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
         return System.IO.Path.Combine(cacheRoot, key.StableValue);
     }
 
-    public async Task<ExternalSourceRepositoryCachePublishResult> PublishAsync(
+    public Task<ExternalSourceRepositoryCachePublishResult> PublishAsync(
         ExternalSourceRepositoryCachePublishRequest request,
         CancellationToken cancellationToken = default)
+        => PublishAsyncCore(request, cancellationToken, null);
+
+    internal Task<ExternalSourceRepositoryCachePublishResult> PublishAsync(
+        ExternalSourceRepositoryCachePublishRequest request,
+        CancellationToken cancellationToken,
+        ExternalSourceRepositoryCachePublishTestSeam? testSeam)
+        => PublishAsyncCore(request, cancellationToken, testSeam);
+
+    private async Task<ExternalSourceRepositoryCachePublishResult> PublishAsyncCore(
+        ExternalSourceRepositoryCachePublishRequest request,
+        CancellationToken cancellationToken,
+        ExternalSourceRepositoryCachePublishTestSeam? testSeam)
     {
         ArgumentNullException.ThrowIfNull(request);
         if (!TryValidateRequest(request, out var key, out var failure))
@@ -68,7 +76,11 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
         {
             lockLease = await AcquireLockAsync(entryDirectory, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
-            var result = PublishGeneration(context, cancellationToken);
+            var result = await PublishGeneration(
+                    context,
+                    cancellationToken,
+                    testSeam)
+                .ConfigureAwait(false);
             published = result.Succeeded;
             return result;
         }
@@ -86,14 +98,20 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
         }
         finally
         {
-            FinalizePublish(context, published, lockLease);
+            await FinalizePublishAsync(
+                    context,
+                    published,
+                    lockLease,
+                    testSeam?.AfterLeaseReleasedAsync)
+                .ConfigureAwait(false);
         }
     }
 
-    private static void FinalizePublish(
+    private static async Task FinalizePublishAsync(
         PublishContext context,
         bool published,
-        CacheKeyLockLease? lockLease)
+        CacheKeyLockLease? lockLease,
+        Func<Task>? afterLeaseReleasedAsync)
     {
         try
         {
@@ -115,12 +133,14 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
         finally
         {
             lockLease?.Dispose();
+            await InvokeTestHookAsync(afterLeaseReleasedAsync).ConfigureAwait(false);
         }
     }
 
-    private ExternalSourceRepositoryCachePublishResult PublishGeneration(
+    private async Task<ExternalSourceRepositoryCachePublishResult> PublishGeneration(
         PublishContext context,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ExternalSourceRepositoryCachePublishTestSeam? testSeam)
     {
         ExternalSourceRepositoryCacheStorage.PrepareDirectory(cacheRoot);
         ExternalSourceRepositoryCacheStorage.PrepareEntryDirectory(
@@ -148,6 +168,7 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
             context.GenerationDirectory,
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
+        await InvokeTestHookAsync(testSeam?.BeforePointerPublishedAsync).ConfigureAwait(false);
         if (!ExternalSourceRepositoryCacheStorage.TryPublishPointer(
                 context.EntryDirectory,
                 context.GenerationName,
@@ -158,7 +179,7 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
         }
 
         context.PointerPublished = true;
-        afterPointerPublished?.Invoke();
+        await InvokeTestHookAsync(testSeam?.AfterPointerPublishedAsync).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
         if (!TryValidatePublishedGeneration(
                 context.Request,
@@ -333,6 +354,9 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
         ExternalSourceRepositoryCachePublishFailureKind failureKind) =>
         ExternalSourceRepositoryCachePublishResult.Failure(failureKind);
 
+    private static Task InvokeTestHookAsync(Func<Task>? hook) =>
+        hook?.Invoke() ?? Task.CompletedTask;
+
     private sealed class PublishContext
     {
         internal ExternalSourceRepositoryCachePublishRequest Request { get; init; } = null!;
@@ -364,4 +388,13 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
             gate.Release();
         }
     }
+}
+
+internal sealed class ExternalSourceRepositoryCachePublishTestSeam
+{
+    internal Func<Task>? BeforePointerPublishedAsync { get; init; }
+
+    internal Func<Task>? AfterPointerPublishedAsync { get; init; }
+
+    internal Func<Task>? AfterLeaseReleasedAsync { get; init; }
 }

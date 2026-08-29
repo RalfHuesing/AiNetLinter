@@ -15,12 +15,15 @@ internal static class ExternalSourceRepositoryCacheReadSupport
 {
     private static readonly UTF8Encoding Utf8 = new(false, true);
 
-    internal static ExternalSourceRepositoryCacheInventory ReadInventory(string inventoryPath)
+    internal static ExternalSourceRepositoryCacheInventory ReadInventory(
+        string inventoryPath,
+        Func<string, Stream>? openReadStream = null)
     {
         ExternalSourceRepositoryCacheStorage.EnsureRegularFile(inventoryPath);
         var json = ReadBoundedText(
             inventoryPath,
-            ExternalSourceRepositoryCacheContract.MaxInventoryJsonBytes);
+            ExternalSourceRepositoryCacheContract.MaxInventoryJsonBytes,
+            openReadStream);
         using var document = JsonDocument.Parse(json, new JsonDocumentOptions
         {
             AllowTrailingCommas = false,
@@ -175,10 +178,13 @@ internal static class ExternalSourceRepositoryCacheReadSupport
         }
     }
 
-    internal static string ReadBoundedText(string path, int maxBytes)
+    internal static string ReadBoundedText(
+        string path,
+        int maxBytes,
+        Func<string, Stream>? openReadStream = null)
     {
         ExternalSourceRepositoryCacheStorage.EnsureRegularFile(path);
-        using var stream = new FileStream(
+        using var stream = openReadStream?.Invoke(path) ?? new FileStream(
             path,
             FileMode.Open,
             FileAccess.Read,

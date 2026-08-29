@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Mcp.Assemblies;
@@ -232,6 +233,8 @@ internal sealed class ExternalSourceRepositoryCacheReadRequest
     internal string? ExpectedRevision { get; init; }
 
     internal string? ExpectedSolutionPath { get; init; }
+
+    internal Func<string, Stream>? OpenReadStream { get; init; }
 }
 
 internal sealed record ExternalSourceRepositoryCacheReadResult(
