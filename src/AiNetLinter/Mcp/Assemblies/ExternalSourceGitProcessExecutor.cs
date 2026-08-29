@@ -273,7 +273,11 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
             await GetCompletedOutputAsync(execution.StandardOutput).ConfigureAwait(false),
             await GetCompletedOutputAsync(execution.StandardError).ConfigureAwait(false));
         scope.Dispose(failures);
-        return new(output, CombineFailures(failures));
+        return new(
+            output,
+            ExternalSourceGitProcessCleanupHelpers.CombineFailures(
+                failures,
+                "Die Prozessbereinigung ist fehlgeschlagen."));
     }
 
     private static void TryCancelOutput(
@@ -365,14 +369,6 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
 
         return await output.ConfigureAwait(false);
     }
-
-    private static Exception? CombineFailures(ICollection<Exception> failures) =>
-        failures.Count switch
-        {
-            0 => null,
-            1 => failures.First(),
-            _ => new AggregateException("Die Prozessbereinigung ist fehlgeschlagen.", failures),
-        };
 
     private static void ObserveCompletion<T>(Task<T> task)
     {

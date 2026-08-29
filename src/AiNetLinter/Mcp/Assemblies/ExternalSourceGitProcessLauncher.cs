@@ -9,6 +9,7 @@ using System.IO.Pipes;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using static AiNetLinter.Mcp.Assemblies.ExternalSourceGitProcessNativeMethods;
 
@@ -32,7 +33,7 @@ internal static class ExternalSourceGitProcessLauncher
         ArgumentNullException.ThrowIfNull(startInfo);
         ArgumentNullException.ThrowIfNull(operations);
         ValidateStartInfo(startInfo);
-        var resources = CreateResources();
+        var resources = CreateResources(operations);
         try
         {
             var launch = LaunchProcess(startInfo, resources, operations);
@@ -58,6 +59,7 @@ internal static class ExternalSourceGitProcessLauncher
 
     internal static bool TryTerminate(
         ExternalSourceGitProcessNativeJob job,
+        ExternalSourceGitProcessNativeOperations operations,
         ICollection<Exception> failures)
     {
         try
@@ -67,14 +69,14 @@ internal static class ExternalSourceGitProcessLauncher
                 return false;
             }
 
-            if (TerminateJobObject(job, 1))
+            var termination = operations.TerminateJobObject(job, 1);
+            if (termination.Succeeded)
             {
-                return true;
+                return TryWaitForJobEnd(job, operations, failures);
             }
 
-            var error = Marshal.GetLastWin32Error();
             failures.Add(new Win32Exception(
-                error == 0 ? ErrorGenFailure : error,
+                termination.LastError == 0 ? ErrorGenFailure : termination.LastError,
                 "TerminateJobObject konnte den Git-Prozessbaum nicht beenden."));
             return false;
         }
@@ -85,7 +87,24 @@ internal static class ExternalSourceGitProcessLauncher
         }
     }
 
-    internal static bool CloseNativeHandle(IntPtr handle) => CloseHandle(handle);
+    private static bool TryWaitForJobEnd(
+        ExternalSourceGitProcessNativeJob job,
+        ExternalSourceGitProcessNativeOperations operations,
+        ICollection<Exception> failures)
+    {
+        if (job.IsInvalid || job.IsClosed)
+        {
+            failures.Add(new InvalidOperationException(
+                "Das Job-Handle war für den abschließenden Baum-Wait nicht verfügbar."));
+            return false;
+        }
+
+        return ExternalSourceGitProcessStartFailureCleanup.TryWaitForProcessEnd(
+            job.DangerousGetHandle(),
+            operations,
+            failures,
+            "Job");
+    }
 
     private static void ValidateStartInfo(ProcessStartInfo startInfo)
     {
@@ -97,11 +116,12 @@ internal static class ExternalSourceGitProcessLauncher
         }
     }
 
-    private static ExternalSourceGitProcessStartupResources CreateResources()
+    private static ExternalSourceGitProcessStartupResources CreateResources(
+        ExternalSourceGitProcessNativeOperations operations)
     {
         var resources = new ExternalSourceGitProcessStartupResources
         {
-            Job = CreateJob(),
+            Job = CreateJob(operations.CloseHandle),
         };
         try
         {
@@ -148,6 +168,7 @@ internal static class ExternalSourceGitProcessLauncher
         var environmentBlock = ExternalSourceGitProcessLauncherNativeHelpers
             .CreateEnvironmentBlock(startInfo);
         ProcessInformation processInformation = default;
+        var lifecycle = ExternalSourceGitProcessStartLifecycle.CreatedSuspended;
         try
         {
             var commandLine = ExternalSourceGitProcessLauncherNativeHelpers
@@ -169,7 +190,10 @@ internal static class ExternalSourceGitProcessLauncher
             }
 
             AssignProcessToJob(resources.Job, processInformation.hProcess, operations);
+            lifecycle = ExternalSourceGitProcessStartLifecycle.Assigned;
             ResumeProcess(processInformation.hThread);
+            lifecycle = ExternalSourceGitProcessStartLifecycle.Resumed;
+            operations.ProcessResumed?.Invoke(processInformation);
 
             resources.OutputPipe.DisposeLocalCopyOfClientHandle();
             resources.ErrorPipe.DisposeLocalCopyOfClientHandle();
@@ -195,6 +219,7 @@ internal static class ExternalSourceGitProcessLauncher
             var failures = new List<Exception>();
             ExternalSourceGitProcessStartFailureCleanup.Cleanup(
                 ref processInformation,
+                new ExternalSourceGitProcessStartCleanupContext(resources.Job, lifecycle),
                 operations,
                 failures);
             ExternalSourceGitProcessStartFailureCleanup.RethrowWithCleanup(
@@ -279,7 +304,8 @@ internal static class ExternalSourceGitProcessLauncher
         }
     }
 
-    private static ExternalSourceGitProcessNativeJob CreateJob()
+    private static ExternalSourceGitProcessNativeJob CreateJob(
+        Func<IntPtr, ExternalSourceGitProcessNativeBooleanResult> closeHandle)
     {
         var handle = CreateJobObject(IntPtr.Zero, null);
         if (handle == IntPtr.Zero)
@@ -287,7 +313,7 @@ internal static class ExternalSourceGitProcessLauncher
             throw new Win32Exception(Marshal.GetLastWin32Error());
         }
 
-        var job = new ExternalSourceGitProcessNativeJob(handle);
+        var job = new ExternalSourceGitProcessNativeJob(handle, closeHandle);
         var limits = new JobObjectExtendedLimitInformation
         {
             BasicLimitInformation = new JobObjectBasicLimitInformation
@@ -301,8 +327,12 @@ internal static class ExternalSourceGitProcessLauncher
                 ref limits,
                 Marshal.SizeOf<JobObjectExtendedLimitInformation>()))
         {
-            job.Dispose();
-            throw new Win32Exception(Marshal.GetLastWin32Error());
+            var primaryException = new Win32Exception(Marshal.GetLastWin32Error());
+            var failures = new List<Exception>();
+            job.Close(failures);
+            ExternalSourceGitProcessStartFailureCleanup.RethrowWithCleanup(
+                primaryException,
+                failures);
         }
 
         return job;
@@ -381,12 +411,78 @@ internal sealed record ExternalSourceGitProcessLaunch(
 
 internal sealed class ExternalSourceGitProcessNativeJob : SafeHandleZeroOrMinusOneIsInvalid
 {
-    internal ExternalSourceGitProcessNativeJob(IntPtr handle)
+    private readonly Func<IntPtr, ExternalSourceGitProcessNativeBooleanResult> closeHandle;
+    private int closeAttempted;
+    private int closeFailureReported;
+    private int closeSucceeded;
+    private int closeError;
+    private Exception? closeException;
+
+    internal ExternalSourceGitProcessNativeJob(
+        IntPtr handle,
+        Func<IntPtr, ExternalSourceGitProcessNativeBooleanResult> closeHandle)
         : base(ownsHandle: true)
     {
+        ArgumentNullException.ThrowIfNull(closeHandle);
+        this.closeHandle = closeHandle;
         SetHandle(handle);
     }
 
-    protected override bool ReleaseHandle() =>
-        ExternalSourceGitProcessLauncher.CloseNativeHandle(handle);
+    internal void Close(ICollection<Exception> failures)
+    {
+        try
+        {
+            Dispose();
+        }
+        catch (Exception exception)
+        {
+            if (Interlocked.Exchange(ref closeFailureReported, 1) == 0)
+            {
+                failures.Add(exception);
+            }
+
+            return;
+        }
+
+        if (Interlocked.Exchange(ref closeFailureReported, 1) != 0)
+        {
+            return;
+        }
+
+        if (Volatile.Read(ref closeSucceeded) == 0)
+        {
+            failures.Add(
+                closeException
+                ?? ExternalSourceGitProcessStartFailureCleanup.CreateNativeFailure(
+                    Volatile.Read(ref closeError),
+                    "Das Job-Handle konnte nicht geschlossen werden."));
+        }
+    }
+
+    protected override bool ReleaseHandle()
+    {
+        if (Interlocked.Exchange(ref closeAttempted, 1) != 0)
+        {
+            return Volatile.Read(ref closeSucceeded) != 0;
+        }
+
+        if (!ExternalSourceGitProcessCleanupHelpers.IsUsableHandle(handle))
+        {
+            Volatile.Write(ref closeSucceeded, 1);
+            return true;
+        }
+
+        try
+        {
+            var result = closeHandle(handle);
+            Volatile.Write(ref closeError, result.LastError);
+            Volatile.Write(ref closeSucceeded, result.Succeeded ? 1 : 0);
+            return result.Succeeded;
+        }
+        catch (Exception exception)
+        {
+            closeException = exception;
+            return false;
+        }
+    }
 }

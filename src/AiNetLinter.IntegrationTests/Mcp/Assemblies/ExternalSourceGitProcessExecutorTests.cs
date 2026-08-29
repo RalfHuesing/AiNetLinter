@@ -3,22 +3,21 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.TestKit;
 using Xunit;
+using static AiNetLinter.IntegrationTests.Mcp.Assemblies.ExternalSourceGitProcessTestSupport;
 
 namespace AiNetLinter.IntegrationTests.Mcp.Assemblies;
 
 [Trait("Category", "Integration")]
 // @covers ExternalSourceGitProcessExecutor
+// @covers ExternalSourceGitProcessNativeJob
 public sealed class ExternalSourceGitProcessExecutorTests
 {
     private static readonly SemaphoreSlim EnvironmentLock = new(1, 1);
-    private static readonly TimeSpan ProcessObservationTimeout = TimeSpan.FromSeconds(10);
     private const int AccessDeniedErrorCode = 5;
     private const uint WaitFailedStatus = uint.MaxValue;
 
@@ -27,7 +26,9 @@ public sealed class ExternalSourceGitProcessExecutorTests
     {
         using var temp = TestTempDirectory.Create("git-process-real-probe-");
         var workingDirectory = temp.CreateSubdirectory("working directory");
-        var scriptPath = temp.CreateFile("probe.ps1", ProbeScript);
+        var scriptPath = temp.CreateFile(
+            "probe.ps1",
+            ExternalSourceGitProcessTestScripts.ProbeScript);
         var argument = "argument with spaces & $() 'quotes'";
         var inheritedName = "GIT_AINETLINTER_INHERITED";
         var explicitName = "GIT_AINETLINTER_EXPLICIT";
@@ -82,7 +83,9 @@ public sealed class ExternalSourceGitProcessExecutorTests
     public async Task ExecuteAsync_BoundsCapturedOutputAndMarksTruncation()
     {
         using var temp = TestTempDirectory.Create("git-process-output-limit-");
-        var scriptPath = temp.CreateFile("probe.ps1", ProbeScript);
+        var scriptPath = temp.CreateFile(
+            "probe.ps1",
+            ExternalSourceGitProcessTestScripts.ProbeScript);
         var request = new ExternalSourceGitProcessRequest(
             "pwsh",
             ["-NoLogo", "-NoProfile", "-NonInteractive", "-File", scriptPath, "large", "unused"],
@@ -152,7 +155,9 @@ public sealed class ExternalSourceGitProcessExecutorTests
     {
         using var temp = TestTempDirectory.Create("git-process-start-failure-");
         var markerPath = temp.GetPath("start-marker.txt");
-        var scriptPath = temp.CreateFile("start-marker.ps1", StartMarkerScript);
+        var scriptPath = temp.CreateFile(
+            "start-marker.ps1",
+            ExternalSourceGitProcessTestScripts.StartMarkerScript);
         var request = new ExternalSourceGitProcessRequest(
             "pwsh",
             ["-NoLogo", "-NoProfile", "-NonInteractive", "-File", scriptPath, markerPath],
@@ -218,11 +223,122 @@ public sealed class ExternalSourceGitProcessExecutorTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ResumedParentExitRequiresJobProofAndReportsCloseFailure()
+    {
+        using var temp = TestTempDirectory.Create("git-process-resumed-tree-");
+        var scriptPath = CreateProcessTreeScripts(temp);
+        var markerPath = temp.GetPath("resumed-pids.txt");
+        var request = CreateProcessTreeRequest(scriptPath, temp.DirectoryPath, markerPath, 15_000);
+        var runtimeOperations = ExternalSourceGitProcessNativeOperations.Runtime;
+        var observedProcessId = 0;
+        var closeCalls = 0;
+        var operations = new ExternalSourceGitProcessNativeOperations(
+            (job, handle) => runtimeOperations.AssignProcessToJobObject(job, handle),
+            (handle, exitCode) => runtimeOperations.TerminateProcess(handle, exitCode),
+            (_, _) => new(WaitFailedStatus, AccessDeniedErrorCode),
+            processInformation =>
+                Volatile.Write(
+                    ref observedProcessId,
+                    checked((int)processInformation.processId))
+        )
+        {
+            ProcessResumed = processInformation =>
+            {
+                var parentWait = runtimeOperations.WaitForSingleObject(
+                    processInformation.hProcess,
+                    5_000);
+                Assert.Equal(0u, parentWait.Status);
+                throw new InvalidOperationException("Erzwungener Post-Create-Fehler.");
+            },
+            TerminateJobObject = (_, _) => new(false, AccessDeniedErrorCode),
+            CloseHandle = handle =>
+            {
+                Interlocked.Increment(ref closeCalls);
+                runtimeOperations.CloseHandle(handle);
+                return new(false, AccessDeniedErrorCode);
+            },
+        };
+
+        var processIds = Array.Empty<int>();
+        try
+        {
+            var exception = await Assert.ThrowsAsync<AggregateException>(() =>
+                new ExternalSourceGitProcessExecutor().ExecuteWithNativeOperationsAsync(
+                    request,
+                    operations));
+
+            Assert.True(observedProcessId > 0);
+            processIds = await ReadProcessIdsAfterFailureAsync(markerPath);
+            Assert.Equal(2, processIds.Length);
+            Assert.Contains(observedProcessId, processIds);
+            Assert.Contains(
+                exception.Flatten().InnerExceptions,
+                failure => failure is InvalidOperationException
+                    && failure.Message.Contains("Post-Create-Fehler", StringComparison.Ordinal));
+            Assert.Contains(
+                exception.Flatten().InnerExceptions,
+                failure => failure is Win32Exception
+                    && failure.Message.Contains("Job-Handle", StringComparison.Ordinal));
+            Assert.Equal(1, closeCalls);
+            await WaitForProcessesToExitAsync(processIds);
+            Assert.All(processIds, processId => Assert.False(IsProcessRunning(processId)));
+        }
+        finally
+        {
+            await TerminateProcessesAsync(
+                processIds.Length > 0 ? processIds : [observedProcessId]);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_TreeScopeCloseFailureIsVisibleAfterRealTreeCleanup()
+    {
+        using var temp = TestTempDirectory.Create("git-process-tree-close-failure-");
+        var scriptPath = CreateProcessTreeScripts(temp);
+        var markerPath = temp.GetPath("close-failure-pids.txt");
+        var request = CreateProcessTreeRequest(scriptPath, temp.DirectoryPath, markerPath, 2_000);
+        var runtimeOperations = ExternalSourceGitProcessNativeOperations.Runtime;
+        var closeCalls = 0;
+        var operations = new ExternalSourceGitProcessNativeOperations(
+            (job, handle) => runtimeOperations.AssignProcessToJobObject(job, handle),
+            (handle, exitCode) => runtimeOperations.TerminateProcess(handle, exitCode),
+            (handle, milliseconds) => runtimeOperations.WaitForSingleObject(handle, milliseconds))
+        {
+            CloseHandle = handle =>
+            {
+                Interlocked.Increment(ref closeCalls);
+                runtimeOperations.CloseHandle(handle);
+                return new(false, AccessDeniedErrorCode);
+            },
+        };
+        var started = await StartAndReadProcessIdsAsync(request, markerPath, operations: operations);
+
+        try
+        {
+            var exception = await Assert.ThrowsAsync<TimeoutException>(() =>
+                started.Operation.WaitAsync(TimeSpan.FromSeconds(15)));
+
+            Assert.True(
+                exception.ToString().Contains("Job-Handle", StringComparison.Ordinal),
+                exception.ToString());
+            Assert.Equal(1, closeCalls);
+            await WaitForProcessesToExitAsync(started.ProcessIds);
+            Assert.All(started.ProcessIds, processId => Assert.False(IsProcessRunning(processId)));
+        }
+        finally
+        {
+            await TerminateProcessesAsync(started.ProcessIds);
+        }
+    }
+
+    [Fact]
     public async Task ExecuteAsync_RejectsUnrepresentableTimeoutBeforeProcessStart()
     {
         using var temp = TestTempDirectory.Create("git-process-timeout-preflight-");
         var markerPath = temp.GetPath("start-marker.txt");
-        var scriptPath = temp.CreateFile("start-marker.ps1", StartMarkerScript);
+        var scriptPath = temp.CreateFile(
+            "start-marker.ps1",
+            ExternalSourceGitProcessTestScripts.StartMarkerScript);
         var request = new ExternalSourceGitProcessRequest(
             "pwsh",
             ["-NoLogo", "-NoProfile", "-NonInteractive", "-File", scriptPath, markerPath],
@@ -236,238 +352,4 @@ public sealed class ExternalSourceGitProcessExecutorTests
         Assert.False(File.Exists(markerPath));
     }
 
-    private static ExternalSourceGitProcessRequest CreateProcessTreeRequest(
-        string scriptPath,
-        string workingDirectory,
-        string markerPath,
-        int timeoutMilliseconds) =>
-        new(
-            "pwsh",
-            ["-NoLogo", "-NoProfile", "-NonInteractive", "-File", scriptPath, "tree", markerPath],
-            workingDirectory,
-            TimeSpan.FromMilliseconds(timeoutMilliseconds),
-            new Dictionary<string, string>());
-
-    private static async Task<(Task<ExternalSourceGitProcessResult> Operation, int[] ProcessIds)> StartAndReadProcessIdsAsync(
-        ExternalSourceGitProcessRequest request,
-        string markerPath,
-        CancellationToken cancellationToken = default)
-    {
-        var operation = new ExternalSourceGitProcessExecutor().ExecuteAsync(request, cancellationToken);
-        int[]? processIds = null;
-        try
-        {
-            await TestWaiter.WaitForConditionAsync(
-                () => TryReadProcessIds(markerPath, out processIds),
-                ProcessObservationTimeout);
-        }
-        catch
-        {
-            if (operation.IsFaulted)
-            {
-                await operation;
-            }
-
-            throw;
-        }
-        Assert.NotNull(processIds);
-        return (operation, processIds!);
-    }
-
-    private static async Task WaitForProcessesToExitAsync(int[] processIds) =>
-        await TestWaiter.WaitForConditionAsync(
-            () => AllProcessesHaveExited(processIds),
-            ProcessObservationTimeout);
-
-    private static bool TryReadProcessIds(string markerPath, out int[]? processIds)
-    {
-        processIds = null;
-        try
-        {
-            if (!File.Exists(markerPath))
-            {
-                return false;
-            }
-
-            var lines = File.ReadAllLines(markerPath);
-            if (lines.Length < 2
-                || !int.TryParse(lines[0], out var parentId)
-                || !int.TryParse(lines[1], out var childId))
-            {
-                return false;
-            }
-
-            processIds = [parentId, childId];
-            return true;
-        }
-        catch (IOException)
-        {
-            return false;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return false;
-        }
-    }
-
-    private static bool IsProcessRunning(int processId)
-    {
-        try
-        {
-            using var process = Process.GetProcessById(processId);
-            return !process.HasExited;
-        }
-        catch (ArgumentException)
-        {
-            return false;
-        }
-        catch (InvalidOperationException)
-        {
-            return false;
-        }
-    }
-
-    private static async Task TerminateProcessesAsync(IEnumerable<int> processIds)
-    {
-        var knownProcessIds = processIds.Distinct().ToArray();
-        var failures = new List<Exception>();
-        foreach (var processId in knownProcessIds)
-        {
-            TryTerminateProcess(processId, failures);
-        }
-
-        try
-        {
-            await WaitForProcessesToExitAsync(knownProcessIds);
-        }
-        catch (Exception exception)
-        {
-            failures.Add(exception);
-        }
-
-        foreach (var processId in knownProcessIds)
-        {
-            try
-            {
-                if (IsProcessRunning(processId))
-                {
-                    failures.Add(new InvalidOperationException(
-                        $"Der Testprozess {processId} ist nach dem Cleanup noch aktiv."));
-                }
-            }
-            catch (Exception exception)
-            {
-                failures.Add(exception);
-            }
-        }
-
-        if (failures.Count > 0)
-        {
-            throw new AggregateException(
-                "Die Testprozess-Bereinigung konnte das Ende nicht nachweisen.",
-                failures);
-        }
-    }
-
-    private static bool AllProcessesHaveExited(IEnumerable<int> processIds)
-    {
-        foreach (var processId in processIds)
-        {
-            if (IsProcessRunning(processId))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static void TryTerminateProcess(int processId, ICollection<Exception> failures)
-    {
-        try
-        {
-            using var process = Process.GetProcessById(processId);
-            process.Kill(entireProcessTree: true);
-        }
-        catch (ArgumentException)
-        {
-            Debug.WriteLine($"Testprozess {processId} war beim Cleanup bereits beendet.");
-        }
-        catch (InvalidOperationException)
-        {
-            Debug.WriteLine($"Testprozess {processId} war beim Cleanup bereits beendet.");
-        }
-        catch (Exception exception)
-        {
-            failures.Add(exception);
-        }
-    }
-
-    private static bool ReadBooleanMarker(string output, string markerName)
-    {
-        var prefix = markerName + "=";
-        foreach (var line in output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
-        {
-            if (line.StartsWith(prefix, StringComparison.Ordinal))
-            {
-                return bool.Parse(line[prefix.Length..].Trim());
-            }
-        }
-
-        throw new InvalidOperationException($"Marker fehlt: {markerName}");
-    }
-
-    private static string CreateProcessTreeScripts(TestTempDirectory temp)
-    {
-        temp.CreateFile("grandchild.ps1", GrandchildScript);
-        return temp.CreateFile("tree.ps1", ProcessTreeScript);
-    }
-
-    private const string ProbeScript = """
-        param([string]$Mode)
-        Write-Output "ARG=$($args[0])"
-        Write-Output "WORKING=$((Get-Location).Path)"
-        Write-Output "GIT_INHERITED=$($env:GIT_AINETLINTER_INHERITED)"
-        Write-Output "GIT_EXPLICIT=$($env:GIT_AINETLINTER_EXPLICIT)"
-        Write-Output "REQUEST_MARKER=$($env:AINETLINTER_TEST_MARKER)"
-        Write-Output "STDIN_REDIRECTED=$([Console]::IsInputRedirected)"
-        [Console]::Error.WriteLine("STDERR=stderr-marker")
-        if ($Mode -eq "large") {
-            [Console]::WriteLine(("o" * 100000))
-            [Console]::Error.WriteLine(("e" * 100000))
-        }
-        """;
-
-    private const string ProcessTreeScript = """
-        param([string]$Mode, [string]$MarkerPath)
-        if ($Mode -ne "tree") { exit 2 }
-        $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
-        $startInfo.FileName = "pwsh"
-        $startInfo.UseShellExecute = $false
-        $startInfo.CreateNoWindow = $true
-        $startInfo.RedirectStandardInput = $false
-        $startInfo.RedirectStandardOutput = $false
-        $startInfo.RedirectStandardError = $false
-        $startInfo.ArgumentList.Add("-NoLogo")
-        $startInfo.ArgumentList.Add("-NoProfile")
-        $startInfo.ArgumentList.Add("-NonInteractive")
-        $startInfo.ArgumentList.Add("-File")
-        $startInfo.ArgumentList.Add((Join-Path $PSScriptRoot "grandchild.ps1"))
-        $grandchild = [System.Diagnostics.Process]::Start($startInfo)
-        "$PID`n$($grandchild.Id)" | Set-Content -LiteralPath $MarkerPath
-        exit 0
-        """;
-
-    private const string GrandchildScript = """
-        while ($true) {
-            [Console]::Out.WriteLine("grandchild-output")
-            [Console]::Error.WriteLine("grandchild-error")
-            Start-Sleep -Milliseconds 10
-        }
-        """;
-
-    private const string StartMarkerScript = """
-        param([string]$MarkerPath)
-        Set-Content -LiteralPath $MarkerPath -Value "started"
-        """;
 }

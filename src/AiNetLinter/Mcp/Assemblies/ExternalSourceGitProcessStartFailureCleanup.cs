@@ -18,6 +18,17 @@ internal readonly record struct ExternalSourceGitProcessNativeWaitResult(
     uint Status,
     int LastError);
 
+internal enum ExternalSourceGitProcessStartLifecycle
+{
+    CreatedSuspended,
+    Assigned,
+    Resumed,
+}
+
+internal readonly record struct ExternalSourceGitProcessStartCleanupContext(
+    ExternalSourceGitProcessNativeJob Job,
+    ExternalSourceGitProcessStartLifecycle Lifecycle);
+
 internal sealed class ExternalSourceGitProcessNativeOperations
 {
     internal ExternalSourceGitProcessNativeOperations(
@@ -50,6 +61,16 @@ internal sealed class ExternalSourceGitProcessNativeOperations
     }
 
     internal Action<ProcessInformation>? ProcessCreated { get; }
+
+    internal Action<ProcessInformation>? ProcessResumed { get; init; }
+
+    internal Func<ExternalSourceGitProcessNativeJob, uint, ExternalSourceGitProcessNativeBooleanResult>
+        TerminateJobObject { get; init; } = (job, exitCode) => InvokeBoolean(
+            () => ExternalSourceGitProcessNativeMethods.TerminateJobObject(job, exitCode));
+
+    internal Func<IntPtr, ExternalSourceGitProcessNativeBooleanResult> CloseHandle { get; init; } =
+        handle => InvokeBoolean(
+            () => ExternalSourceGitProcessNativeMethods.CloseHandle(handle));
 
     internal static ExternalSourceGitProcessNativeOperations Runtime { get; } =
         new(
@@ -95,43 +116,17 @@ internal static class ExternalSourceGitProcessStartFailureCleanup
 
     internal static void Cleanup(
         ref ProcessInformation processInformation,
+        ExternalSourceGitProcessStartCleanupContext context,
         ExternalSourceGitProcessNativeOperations operations,
         ICollection<Exception> failures)
     {
-        if (!IsUsableHandle(processInformation.hProcess))
-        {
-            CloseProcessInformation(ref processInformation, failures);
-            return;
-        }
-
-        var nativeEndProven = TryTerminateAndWait(
-            processInformation.hProcess,
-            operations,
-            failures);
-        var fallbackEndProven = false;
-        if (!nativeEndProven)
-        {
-            fallbackEndProven = TryManagedFallback(
-                processInformation.processId,
-                failures);
-        }
-
-        var finalNativeEndProven = TryWaitForProcessEnd(
-            processInformation.hProcess,
-            operations,
-            failures,
-            "abschließende");
-        if (!finalNativeEndProven && !fallbackEndProven)
-        {
-            fallbackEndProven = TryManagedFallback(
-                processInformation.processId,
-                failures);
-        }
-
-        if (!finalNativeEndProven && !fallbackEndProven)
+        var treeEndProven = context.Lifecycle == ExternalSourceGitProcessStartLifecycle.CreatedSuspended
+            ? TryUnassignedProcessCleanup(ref processInformation, operations, failures)
+            : TryAssignedProcessCleanup(ref processInformation, context, operations, failures);
+        if (!treeEndProven)
         {
             failures.Add(new InvalidOperationException(
-                "Das Ende des erzeugten Git-Prozesses konnte nicht nachgewiesen werden."));
+                "Das Ende des erzeugten Git-Prozessbaums konnte nicht nachgewiesen werden."));
         }
 
         CloseProcessInformation(ref processInformation, failures);
@@ -141,7 +136,9 @@ internal static class ExternalSourceGitProcessStartFailureCleanup
         Exception primaryException,
         ICollection<Exception> failures)
     {
-        var cleanupFailure = CombineFailures(failures);
+        var cleanupFailure = ExternalSourceGitProcessCleanupHelpers.CombineFailures(
+            failures,
+            "Die Prozessstartbereinigung ist fehlgeschlagen.");
         if (cleanupFailure is not null)
         {
             AttachCleanupFailure(primaryException, cleanupFailure);
@@ -195,7 +192,78 @@ internal static class ExternalSourceGitProcessStartFailureCleanup
             "erster");
     }
 
-    private static bool TryWaitForProcessEnd(
+    private static bool TryUnassignedProcessCleanup(
+        ref ProcessInformation processInformation,
+        ExternalSourceGitProcessNativeOperations operations,
+        ICollection<Exception> failures)
+    {
+        if (!ExternalSourceGitProcessCleanupHelpers.IsUsableHandle(processInformation.hProcess))
+        {
+            return TryManagedFallback(
+                processInformation.processId,
+                ExternalSourceGitProcessStartLifecycle.CreatedSuspended,
+                failures);
+        }
+
+        var nativeEndProven = TryTerminateAndWait(
+            processInformation.hProcess,
+            operations,
+            failures);
+        var fallbackEndProven = nativeEndProven
+            || TryManagedFallback(
+                processInformation.processId,
+                ExternalSourceGitProcessStartLifecycle.CreatedSuspended,
+                failures);
+        var finalNativeEndProven = TryWaitForProcessEnd(
+            processInformation.hProcess,
+            operations,
+            failures,
+            "abschließende");
+        if (!finalNativeEndProven && !fallbackEndProven)
+        {
+            fallbackEndProven = TryManagedFallback(
+                processInformation.processId,
+                ExternalSourceGitProcessStartLifecycle.CreatedSuspended,
+                failures);
+        }
+
+        return finalNativeEndProven || fallbackEndProven;
+    }
+
+    private static bool TryAssignedProcessCleanup(
+        ref ProcessInformation processInformation,
+        ExternalSourceGitProcessStartCleanupContext context,
+        ExternalSourceGitProcessNativeOperations operations,
+        ICollection<Exception> failures)
+    {
+        var jobEndProven = ExternalSourceGitProcessLauncher.TryTerminate(
+            context.Job,
+            operations,
+            failures);
+        if (!ExternalSourceGitProcessCleanupHelpers.IsUsableHandle(processInformation.hProcess))
+        {
+            failures.Add(new InvalidOperationException(
+                "Der native Prozess-Handle fehlte beim Cleanup des zugeordneten Git-Prozessbaums."));
+            return false;
+        }
+
+        var processEndProven = TryWaitForProcessEnd(
+            processInformation.hProcess,
+            operations,
+            failures,
+            "abschließende");
+        if (!jobEndProven || !processEndProven)
+        {
+            TryManagedFallback(
+                processInformation.processId,
+                context.Lifecycle,
+                failures);
+        }
+
+        return jobEndProven && processEndProven;
+    }
+
+    internal static bool TryWaitForProcessEnd(
         IntPtr processHandle,
         ExternalSourceGitProcessNativeOperations operations,
         ICollection<Exception> failures,
@@ -254,8 +322,16 @@ internal static class ExternalSourceGitProcessStartFailureCleanup
 
     private static bool TryManagedFallback(
         uint processId,
+        ExternalSourceGitProcessStartLifecycle lifecycle,
         ICollection<Exception> failures)
     {
+        if (lifecycle != ExternalSourceGitProcessStartLifecycle.CreatedSuspended)
+        {
+            failures.Add(new InvalidOperationException(
+                "Der PID-Fallback darf einen zugeordneten oder resumierten Prozessbaum nicht als Parent-only-Ende bestätigen."));
+            return false;
+        }
+
         if (processId == 0)
         {
             failures.Add(new InvalidOperationException(
@@ -263,6 +339,13 @@ internal static class ExternalSourceGitProcessStartFailureCleanup
             return false;
         }
 
+        return TryManagedPidFallback(processId, failures);
+    }
+
+    private static bool TryManagedPidFallback(
+        uint processId,
+        ICollection<Exception> failures)
+    {
         Process? process = null;
         try
         {
@@ -302,6 +385,9 @@ internal static class ExternalSourceGitProcessStartFailureCleanup
         {
             Debug.WriteLine(
                 $"Der bekannte Prozess {processId} war beim Fallback bereits beendet: {exception.Message}");
+            failures.Add(new InvalidOperationException(
+                "Der bekannte Git-Prozess konnte beim PID-Fallback nicht mehr als beendet nachgewiesen werden.",
+                exception));
             return false;
         }
         catch (Exception exception)
@@ -336,7 +422,7 @@ internal static class ExternalSourceGitProcessStartFailureCleanup
         string handleName,
         ICollection<Exception> failures)
     {
-        if (!IsUsableHandle(handle))
+        if (!ExternalSourceGitProcessCleanupHelpers.IsUsableHandle(handle))
         {
             return;
         }
@@ -361,14 +447,4 @@ internal static class ExternalSourceGitProcessStartFailureCleanup
             errorCode == 0 ? ErrorGenFailure : errorCode,
             message);
 
-    private static Exception? CombineFailures(ICollection<Exception> failures) =>
-        failures.Count switch
-        {
-            0 => null,
-            1 => failures.First(),
-            _ => new AggregateException("Die Prozessstartbereinigung ist fehlgeschlagen.", failures),
-        };
-
-    private static bool IsUsableHandle(IntPtr handle) =>
-        handle != IntPtr.Zero && handle != new IntPtr(-1);
 }

@@ -61,7 +61,7 @@ internal static class ExternalSourceGitProcessLauncherNativeHelpers
             OpenExisting,
             FileAttributeNormal,
             IntPtr.Zero);
-        if (!IsUsableHandle(handle))
+        if (!ExternalSourceGitProcessCleanupHelpers.IsUsableHandle(handle))
         {
             throw new Win32Exception(Marshal.GetLastWin32Error());
         }
@@ -91,9 +91,6 @@ internal static class ExternalSourceGitProcessLauncherNativeHelpers
     internal static IntPtr ParseHandle(string handle) =>
         new(long.Parse(handle, CultureInfo.InvariantCulture));
 
-    internal static bool IsUsableHandle(IntPtr handle) =>
-        handle != IntPtr.Zero && handle != new IntPtr(-1);
-
     internal static void EnsureInheritable(IntPtr handle)
     {
         if (!SetHandleInformation(handle, HandleFlagInherit, HandleFlagInherit))
@@ -104,7 +101,7 @@ internal static class ExternalSourceGitProcessLauncherNativeHelpers
 
     internal static void CloseHandleOrThrow(IntPtr handle, string handleName)
     {
-        if (!IsUsableHandle(handle))
+        if (!ExternalSourceGitProcessCleanupHelpers.IsUsableHandle(handle))
         {
             return;
         }

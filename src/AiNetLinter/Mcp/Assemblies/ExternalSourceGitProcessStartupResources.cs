@@ -39,7 +39,7 @@ internal sealed class ExternalSourceGitProcessStartupResources : IDisposable
         TryCleanup(CloseInputHandle, failures);
         TryCleanup(() => ErrorPipe?.Dispose(), failures);
         TryCleanup(() => OutputPipe?.Dispose(), failures);
-        TryCleanup(() => Job?.Dispose(), failures);
+        TryCleanup(() => Job?.Close(failures), failures);
 
         if (failures.Count > 0)
         {
@@ -51,19 +51,19 @@ internal sealed class ExternalSourceGitProcessStartupResources : IDisposable
 
     private void CloseInputHandle()
     {
-        if (!IsUsableHandle(InputHandle))
+        var handle = InputHandle;
+        InputHandle = IntPtr.Zero;
+        if (!ExternalSourceGitProcessCleanupHelpers.IsUsableHandle(handle))
         {
             return;
         }
 
-        if (!CloseHandle(InputHandle))
+        if (!CloseHandle(handle))
         {
             throw ExternalSourceGitProcessStartFailureCleanup.CreateNativeFailure(
                 Marshal.GetLastWin32Error(),
                 "Der Standard-Input-Handle konnte nicht geschlossen werden.");
         }
-
-        InputHandle = IntPtr.Zero;
     }
 
     private static void TryCleanup(Action cleanup, ICollection<Exception> failures)
@@ -78,6 +78,4 @@ internal sealed class ExternalSourceGitProcessStartupResources : IDisposable
         }
     }
 
-    private static bool IsUsableHandle(IntPtr handle) =>
-        handle != IntPtr.Zero && handle != new IntPtr(-1);
 }
