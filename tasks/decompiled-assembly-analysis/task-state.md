@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T22:56:09+02:00
+last_updated: 2026-08-30T00:11:37+02:00
 rules_dir: .agents/rules
 total_steps: 32
 current_step: step-032
@@ -14,12 +14,12 @@ current_step: step-032
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 32 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-032` (planned/in_progress; Refresh-/Fetch-
-  Vertrag und atomare neue Cache-Generation geplant)
+- **Aktueller Schritt:** `step-032` (issues; Refresh-/Fetch-Vertrag und
+  atomare neue Cache-Generation, Audit-Nachweis korrigieren)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T22:56:09+02:00
+- **Zuletzt aktualisiert:** 2026-08-30T00:11:37+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -57,7 +57,7 @@ current_step: step-032
 | step-029 | EPIC-04 | issues | Cache-backed Initial Acquisition aus validierter Generation | - | 82692da0 | issues → step-030 | 82692da0 + c0abdcdf |
 | step-030 | EPIC-04 | issues | Cache-Reuse-Nachweise und Step-029-Result korrigieren | step-029 | e9bf8025 | issues → step-031 | e9bf8025 + 2510db5e |
 | step-031 | EPIC-04 | done | Step-030-Gatebefunde und Nachweise korrigieren | step-030 | 552ef4d4 + 1d15a5b4 | approved | 552ef4d4 + 1d15a5b4 + d8cff007 |
-| step-032 | EPIC-04 | planned/in_progress | Validated Refresh/Fetch in neue Cache-Generation | - | - | - | - |
+| step-032 | EPIC-04 | issues | Validated Refresh/Fetch in neue Cache-Generation | - | 59d979b7 | issues → Folgepaket | 59d979b7 + a16a421c |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -600,3 +600,13 @@ Der nächste sichere Übergabepunkt ist ein neuer Coder-Agent mit
 Konfiguration, Retention/GC/Invalidierung, Dirty-/Unbuilt- und
 Health-/degraded-Policy sowie Host-/MCP-Wiring sind ausdrücklich spätere,
 eigenständige Verträge.
+
+Der Kritiker hat Step 032 mit `a16a421c` nicht freigegeben. Die
+Refresh-/Fetch-, Generation-, Pointer-, Ownership- und Cleanup-Logik ist
+fachlich erfüllt; die im Step-Result dokumentierten MCP-/Safeguard-/DRY- und
+Magic-Values-Nachweise sind jedoch am geprüften Commit nicht vollständig
+reproduzierbar (u. a. Safeguard 5,83/10 bei Threshold 8,00, 369 Produktions-
+und 140 Testmethoden sowie ein bestehender breiter Assemblies-Befund). Die
+Evidenzkorrektur wird mit dem nächsten größeren Cache-/Refresh-Folgepaket
+gebündelt, nicht als isolierter Mini-Step. Kein neuer Tech-Debt-Fund wurde
+aufgenommen.
