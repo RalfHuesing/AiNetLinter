@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T06:36:41+02:00
+last_updated: 2026-08-29T06:55:28+02:00
 rules_dir: .agents/rules
-total_steps: 18
-current_step: step-018
+total_steps: 19
+current_step: step-019
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,12 +13,12 @@ current_step: step-018
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 18 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-018` (approved; nächster EPIC-04-Schnitt wird geplant)
+- **Steps gesamt:** 19 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-019` (in_progress; produktiver Git-over-HTTP-Transport mit injizierbarer Authentifizierung)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T06:36:41+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T06:55:28+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -43,6 +43,7 @@ current_step: step-018
 | step-016 | EPIC-04 | blocked | Repository-Akquisitionsgrenze sicher korrigieren | step-015 | 4f49c0bd | blocked → step-017 | 4f49c0bd + b755c955 + 3be96cf1 |
 | step-017 | EPIC-04 | blocked | Cancellation-Cleanup und Reparse-Capability-Gate | step-016 | 5d48472c | blocked → privileged rerun | 5d48472c + c7c21e84 + d7757f8f |
 | step-018 | EPIC-04 | done | Repository-spezifische Capability-Nichtverfügbarkeit zum Decompilation-Fallback | step-017 | 2b95b3aa | approved | 2b95b3aa + 03589c9e + 784167d8 |
+| step-019 | EPIC-04 | in_progress | Produktiven Git-over-HTTP-Transport mit injizierbarer Authentifizierung für den Default-Branch-Clone bauen | - | - | - | d8a2797c |
 
 ## Config
 
@@ -271,3 +272,11 @@ und tatsächlich erkannte Reparse-Checkouts werden repository-spezifisch als
 statische Decompilation-Fallback bleibt aktiv. Normale Repositories werden
 nicht global gesperrt. Der transparente lokale Symlink-Skip bleibt als nicht
 ausgeführter Sicherheitsnachweis dokumentiert, ist aber kein Laufzeitblocker.
+
+Step 019 ist als nächster kontextbegrenzter EPIC-04-Schnitt aktiviert
+(`d8a2797c`). Er umfasst den produktiven, injizierbaren Git-over-HTTP-
+Transport für einen initialen Default-Branch-Clone, sichere Laufzeit-
+Credential-Auflösung, typisierte Prozess-/Auth-/Transportfehler,
+Cancellation und deterministische netzwerkfreie Tests. Refresh, Fetch,
+persistenten Cache, atomare Source-of-Truth-Veröffentlichung und Provider-/
+Snapshot-Erfolg-Wiring bleiben Folgepakete.
