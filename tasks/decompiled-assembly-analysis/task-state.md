@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T21:13:53+02:00
+last_updated: 2026-08-29T21:42:17+02:00
 rules_dir: .agents/rules
 total_steps: 30
 current_step: step-030
@@ -14,12 +14,12 @@ current_step: step-030
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 30 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-030` (`planned/in_progress`; Korrektur von
-  `step-029` für Result-/Audit-Nachweis und Publish-/Current-Assertions)
+- **Aktueller Schritt:** `step-030` (issues; Korrektur von `step-029` für
+  Result-/Audit-Nachweis und Publish-/Current-Assertions)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T21:13:53+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T21:42:17+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -55,7 +55,7 @@ current_step: step-030
 | step-027 | EPIC-04 | issues | Fail-closeden Generation-Publish und Testisolation korrigieren | step-026 | c5d64c42 | issues → step-028 | c5d64c42 + 732737dd |
 | step-028 | EPIC-04 | done | Deterministische Read-back- und Lock-Lifetime-Nachweise ergänzen | step-027 | 83e52560 | approved | 83e52560 + d3d17fe1 |
 | step-029 | EPIC-04 | issues | Cache-backed Initial Acquisition aus validierter Generation | - | 82692da0 | issues → step-030 | 82692da0 + c0abdcdf |
-| step-030 | EPIC-04 | planned/in_progress | Cache-Reuse-Nachweise und Step-029-Result korrigieren | step-029 | - | - | - |
+| step-030 | EPIC-04 | issues | Cache-Reuse-Nachweise und Step-029-Result korrigieren | step-029 | e9bf8025 | issues → step-031 | e9bf8025 + 2510db5e |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -523,3 +523,12 @@ Invalidierung, dirty/unbuilt/Health/degraded, Host-/MCP-Wiring,
 Provider-/Snapshot-/Registry-Neudesign und EPIC-05 sind als Folgepakete
 herausgelöst. TD-001 bis TD-003 bleiben unverändert. Der Plan enthält keine
 Produktionsänderung und keine vorweggenommene Coder-/Kritikerarbeit.
+
+Der Kritiker hat Step 030 mit `2510db5e` nicht freigegeben. Die Reuse-
+Assertions sind fachlich erfüllt, aber die Abschlussverifikation ist rot:
+`ExternalSourceRepositoryCacheAcquirerTests.cs` überschreitet mit 501 Zeilen
+die Regelgrenze von 500, und der tatsächliche Integration-Lauf meldete 368
+Bestanden, 2 Fehler, 370 gesamt. Step 029 und Step 030 enthalten zusätzlich
+falsche Testzahlen sowie unzutreffende Violations-/Safeguard-Werte. Step 031
+bündelt Testdatei-Regel, Integrationsfehler und Result-/Audit-Korrektur in
+einem Qualitätspaket; es wird nicht in einzelne Mini-Steps zerlegt.
