@@ -55,7 +55,7 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(mapping);
-        if (!IsSupportedRepositoryUrl(mapping.Url))
+        if (!ExternalSourceRepositoryUrlPolicy.TryNormalize(mapping.Url, out var repositoryUrl))
         {
             return Failure(
                 ExternalSourceProviderFailureKind.InvalidResponse,
@@ -76,7 +76,7 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
             credential = await ResolveCredentialAsync(mapping, cancellationToken)
                 .ConfigureAwait(false);
             var cloneResult = await ExecuteCloneAsync(
-                    mapping,
+                    repositoryUrl!,
                     destinationPath,
                     credential,
                     cancellationToken)
@@ -122,7 +122,7 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
     }
 
     private async Task<ExternalSourceRepositoryTransportResult?> ExecuteCloneAsync(
-        ExternalSourceMapping mapping,
+        string repositoryUrl,
         string destinationPath,
         ExternalSourceCredential? credential,
         CancellationToken cancellationToken)
@@ -134,7 +134,7 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
                 "--single-branch",
                 "--no-tags",
                 "--",
-                mapping.Url.Trim(),
+                repositoryUrl,
                 CloneDirectoryName,
             ],
             destinationPath,
@@ -176,7 +176,7 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
         }
 
         return TryParseRevision(processResult.StandardOutput, out var revision)
-            ? Success(revision!)
+            ? ExternalSourceRepositoryTransportResult.Success(revision!)
             : Failure(
                 ExternalSourceProviderFailureKind.InvalidResponse,
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportResultInvalid);
@@ -285,16 +285,6 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
         && !ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(destinationPath)
         && !ExternalSourceRepositoryPathGuard.ContainsActualReparsePointInTree(destinationPath);
 
-    private static bool IsSupportedRepositoryUrl(string value) =>
-        !string.IsNullOrWhiteSpace(value)
-        && Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)
-        && uri is not null
-        && uri.Host.Length > 0
-        && uri.UserInfo.Length == 0
-        && uri.Query.Length == 0
-        && uri.Fragment.Length == 0
-        && uri.Scheme is "http" or "https";
-
     private static bool TryParseRevision(string output, out string? revision)
     {
         revision = output.Trim();
@@ -334,9 +324,4 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
                 "$repository")],
             failureKind: failureKind);
 
-    private static ExternalSourceRepositoryTransportResult Success(string revision) =>
-        new(
-            isAvailable: true,
-            loadedRevision: revision,
-            diagnostics: Array.Empty<ExternalSourceConfigurationDiagnostic>());
 }

@@ -70,4 +70,10 @@ internal sealed record ExternalSourceRepositoryTransportResult
     internal ExternalSourceProviderFailureKind FailureKind { get; }
 
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics { get; }
+
+    internal static ExternalSourceRepositoryTransportResult Success(string revision) =>
+        new(
+            isAvailable: true,
+            loadedRevision: revision,
+            diagnostics: Array.Empty<ExternalSourceConfigurationDiagnostic>());
 }

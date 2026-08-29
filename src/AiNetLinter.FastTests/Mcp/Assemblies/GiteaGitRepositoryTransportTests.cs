@@ -12,7 +12,6 @@ using Xunit;
 namespace AiNetLinter.FastTests.Mcp.Assemblies;
 
 [Trait("Category", "Component")]
-// @covers ExternalSourceGitProcessExecutor
 public sealed class GiteaGitRepositoryTransportTests
 {
     private const string Revision = "0123456789abcdef0123456789abcdef01234567";
@@ -94,20 +93,33 @@ public sealed class GiteaGitRepositoryTransportTests
     }
 
     [Theory]
-    [InlineData("fatal: repository not found", (int)ExternalSourceProviderFailureKind.RepositoryNotFound)]
-    [InlineData("fatal: could not read Username: terminal prompts disabled", (int)ExternalSourceProviderFailureKind.AuthenticationRequired)]
-    [InlineData("fatal: 403 forbidden", (int)ExternalSourceProviderFailureKind.AccessDenied)]
-    [InlineData("fatal: unable to access: Could not resolve host", (int)ExternalSourceProviderFailureKind.NetworkUnavailable)]
-    [InlineData("fatal: protocol error", (int)ExternalSourceProviderFailureKind.InvalidResponse)]
+    [InlineData("fatal: unable to access 'https://gitea.example/shared.git': The requested URL returned error: 400", false, (int)ExternalSourceProviderFailureKind.InvalidResponse)]
+    [InlineData("fatal: unable to access 'https://gitea.example/shared.git': The requested URL returned error: 401", false, (int)ExternalSourceProviderFailureKind.AuthenticationRequired)]
+    [InlineData("fatal: unable to access 'https://gitea.example/shared.git': The requested URL returned error: 401", true, (int)ExternalSourceProviderFailureKind.AccessDenied)]
+    [InlineData("fatal: unable to access 'https://gitea.example/shared.git': The requested URL returned error: 403", false, (int)ExternalSourceProviderFailureKind.AccessDenied)]
+    [InlineData("fatal: unable to access 'https://gitea.example/shared.git': The requested URL returned error: 404", false, (int)ExternalSourceProviderFailureKind.RepositoryNotFound)]
+    [InlineData("fatal: unable to access 'https://gitea.example/shared.git': The requested URL returned error: 500", false, (int)ExternalSourceProviderFailureKind.InvalidResponse)]
+    [InlineData("fatal: unable to access 'https://gitea.example/shared.git': The requested URL returned error: 401\nrepository not found", false, (int)ExternalSourceProviderFailureKind.AuthenticationRequired)]
+    [InlineData("fatal: repository not found", false, (int)ExternalSourceProviderFailureKind.InvalidResponse)]
+    [InlineData("fatal: 403 forbidden", false, (int)ExternalSourceProviderFailureKind.InvalidResponse)]
+    [InlineData("fatal: unable to access: Could not resolve host", false, (int)ExternalSourceProviderFailureKind.InvalidResponse)]
+    [InlineData("fatal: unable to access 'https://gitea.example/shared.git': Could not resolve host: gitea.example", false, (int)ExternalSourceProviderFailureKind.NetworkUnavailable)]
+    [InlineData("fatal: protocol error", false, (int)ExternalSourceProviderFailureKind.InvalidResponse)]
+    [InlineData("fatal: Die angeforderte Antwort ist ungültig.", false, (int)ExternalSourceProviderFailureKind.InvalidResponse)]
+    [InlineData("unbekannte Transportausgabe 404", false, (int)ExternalSourceProviderFailureKind.InvalidResponse)]
     public async Task CloneDefaultBranchAsync_MapsExitOutputToTypedFailure(
         string errorOutput,
+        bool hasCredential,
         int expectedFailureKindValue)
     {
         using var temp = TestTempDirectory.Create("gitea-transport-failure-");
         var destination = temp.CreateSubdirectory("checkout");
         var executor = new RecordingGitExecutor((_, _) =>
             Task.FromResult(new ExternalSourceGitProcessResult(128, string.Empty, errorOutput)));
-        var transport = new GiteaGitRepositoryTransport(processExecutor: executor);
+        var resolver = hasCredential
+            ? new RecordingCredentialResolver(new ExternalSourceCredential("build-user", CredentialSecret))
+            : null;
+        var transport = new GiteaGitRepositoryTransport(resolver, executor);
 
         var result = await transport.CloneDefaultBranchAsync(CreateMapping(), destination);
 
@@ -131,7 +143,7 @@ public sealed class GiteaGitRepositoryTransportTests
                 exitCode: -1,
                 standardOutput: string.Empty,
                 standardError: "secret timeout output",
-                wasTimedOut: true)));
+                new ExternalSourceGitProcessResultOptions { WasTimedOut = true })));
         var transport = new GiteaGitRepositoryTransport(processExecutor: executor);
 
         var result = await transport.CloneDefaultBranchAsync(CreateMapping(), destination);
@@ -245,7 +257,7 @@ public sealed class GiteaGitRepositoryTransportTests
         var result = await acquirer.AcquireAsync(CreateMapping());
 
         Assert.False(result.IsAvailable);
-        Assert.Equal(ExternalSourceProviderFailureKind.RepositoryNotFound, result.FailureKind);
+        Assert.Equal(ExternalSourceProviderFailureKind.InvalidResponse, result.FailureKind);
         Assert.Null(result.Checkout);
         Assert.Empty(Directory.EnumerateDirectories(temp.DirectoryPath, "checkout-*"));
     }

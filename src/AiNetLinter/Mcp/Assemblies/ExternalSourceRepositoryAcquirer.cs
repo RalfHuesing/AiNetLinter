@@ -183,7 +183,7 @@ internal sealed class ExternalSourceRepositoryAcquirer
     {
         solutionPath = null;
         failure = null;
-        if (!IsSupportedRepositoryUrl(mapping.Url))
+        if (!ExternalSourceRepositoryUrlPolicy.TryNormalize(mapping.Url, out _))
         {
             failure = InvalidResult(
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryMappingInvalid,
@@ -454,14 +454,6 @@ internal sealed class ExternalSourceRepositoryAcquirer
             return null;
         }
     }
-
-    private static bool IsSupportedRepositoryUrl(string value) =>
-        !string.IsNullOrWhiteSpace(value)
-        && Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)
-        && uri is not null
-        && uri.Host.Length > 0
-        && uri.UserInfo.Length == 0
-        && uri.Scheme is "http" or "https";
 
     internal static bool IsReparsePointAttribute(FileAttributes attributes) =>
         ExternalSourceRepositoryPathGuard.IsReparsePointAttribute(attributes);

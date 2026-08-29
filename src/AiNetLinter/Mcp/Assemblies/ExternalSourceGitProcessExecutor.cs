@@ -2,95 +2,22 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.ExceptionServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace AiNetLinter.Mcp.Assemblies;
 
-internal sealed class ExternalSourceGitProcessRequest
-{
-    internal ExternalSourceGitProcessRequest(
-        string fileName,
-        IEnumerable<string> arguments,
-        string workingDirectory,
-        TimeSpan timeout,
-        IReadOnlyDictionary<string, string> environment)
-    {
-        if (string.IsNullOrWhiteSpace(fileName))
-        {
-            throw new ArgumentException("Der Prozessname darf nicht leer sein.", nameof(fileName));
-        }
-
-        ArgumentNullException.ThrowIfNull(arguments);
-        if (string.IsNullOrWhiteSpace(workingDirectory))
-        {
-            throw new ArgumentException(
-                "Das Prozess-Arbeitsverzeichnis darf nicht leer sein.",
-                nameof(workingDirectory));
-        }
-
-        if (timeout <= TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(timeout));
-        }
-
-        ArgumentNullException.ThrowIfNull(environment);
-        FileName = fileName;
-        Arguments = arguments.ToImmutableArray();
-        WorkingDirectory = workingDirectory;
-        Timeout = timeout;
-        Environment = environment.ToImmutableDictionary(StringComparer.Ordinal);
-    }
-
-    internal string FileName { get; }
-
-    internal ImmutableArray<string> Arguments { get; }
-
-    internal string WorkingDirectory { get; }
-
-    internal TimeSpan Timeout { get; }
-
-    internal ImmutableDictionary<string, string> Environment { get; }
-}
-
-internal sealed class ExternalSourceGitProcessResult
-{
-    internal ExternalSourceGitProcessResult(
-        int exitCode,
-        string standardOutput,
-        string standardError,
-        bool wasTimedOut = false)
-    {
-        ArgumentNullException.ThrowIfNull(standardOutput);
-        ArgumentNullException.ThrowIfNull(standardError);
-        ExitCode = exitCode;
-        StandardOutput = standardOutput;
-        StandardError = standardError;
-        WasTimedOut = wasTimedOut;
-    }
-
-    internal int ExitCode { get; }
-
-    internal string StandardOutput { get; }
-
-    internal string StandardError { get; }
-
-    internal bool WasTimedOut { get; }
-}
-
-internal interface IExternalSourceGitProcessExecutor
-{
-    Task<ExternalSourceGitProcessResult> ExecuteAsync(
-        ExternalSourceGitProcessRequest request,
-        CancellationToken cancellationToken = default);
-}
-
 internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProcessExecutor
 {
+    internal const int OutputCaptureLimit = 64 * 1024;
+
+    private const int OutputReadBufferSize = 4096;
     private static readonly TimeSpan ProcessTerminationTimeout = TimeSpan.FromSeconds(5);
+    private static readonly object CleanupFailureDataKey = new();
 
     public async Task<ExternalSourceGitProcessResult> ExecuteAsync(
         ExternalSourceGitProcessRequest request,
@@ -106,54 +33,326 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
             throw new InvalidOperationException("Der Git-Prozess konnte nicht gestartet werden.");
         }
 
-        var standardOutput = process.StandardOutput.ReadToEndAsync();
-        var standardError = process.StandardError.ReadToEndAsync();
+        return await ExecuteStartedProcessAsync(process, request, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static async Task<ExternalSourceGitProcessResult> ExecuteStartedProcessAsync(
+        Process process,
+        ExternalSourceGitProcessRequest request,
+        CancellationToken cancellationToken)
+    {
         using var timeoutSource = new CancellationTokenSource(request.Timeout);
         using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
             timeoutSource.Token);
+        var execution = new ProcessExecutionState();
         try
         {
+            execution.StartOutputReaders(process, linkedCancellation.Token);
             await process.WaitForExitAsync(linkedCancellation.Token).ConfigureAwait(false);
-            var output = await Task.WhenAll(standardOutput, standardError).ConfigureAwait(false);
+            var output = await WaitForOutputAsync(execution).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             return new ExternalSourceGitProcessResult(
                 process.ExitCode,
-                output[0],
-                output[1]);
+                output.StandardOutput.Text,
+                output.StandardError.Text,
+                new ExternalSourceGitProcessResultOptions
+                {
+                    StandardOutputTruncated = output.StandardOutput.IsTruncated,
+                    StandardErrorTruncated = output.StandardError.IsTruncated,
+                });
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            var aborted = await AbortProcessAsync(process).ConfigureAwait(false);
-            if (!aborted)
-            {
-                throw new OperationCanceledException(
-                    "Der Git-Prozess konnte nicht kontrolliert beendet werden.",
-                    new InvalidOperationException("Die Prozessbeendigung wurde vom Betriebssystem abgelehnt."),
-                    cancellationToken);
-            }
-
-            await Task.WhenAll(standardOutput, standardError).ConfigureAwait(false);
-            throw new OperationCanceledException(cancellationToken);
+            return await CompleteCallerCancellationAsync(
+                    process,
+                    execution,
+                    linkedCancellation,
+                    cancellationToken)
+                .ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (timeoutSource.IsCancellationRequested)
         {
-            var aborted = await AbortProcessAsync(process).ConfigureAwait(false);
-            if (!aborted)
-            {
-                throw new TimeoutException("Der Git-Prozess konnte nicht kontrolliert beendet werden.");
-            }
-
-            var output = await Task.WhenAll(standardOutput, standardError).ConfigureAwait(false);
-            return new ExternalSourceGitProcessResult(
-                exitCode: -1,
-                output[0],
-                output[1],
-                wasTimedOut: true);
+            return await CompleteTimeoutAsync(process, execution, linkedCancellation)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            return await RethrowPrimaryFailureAsync(
+                    process,
+                    execution,
+                    linkedCancellation,
+                    exception)
+                .ConfigureAwait(false);
         }
     }
 
-    private static ProcessStartInfo CreateStartInfo(ExternalSourceGitProcessRequest request)
+    private static async Task<ExternalSourceGitProcessResult> CompleteCallerCancellationAsync(
+        Process process,
+        ProcessExecutionState execution,
+        CancellationTokenSource cancellation,
+        CancellationToken callerToken)
+    {
+        var cleanup = await CleanupProcessAsync(process, execution, cancellation)
+            .ConfigureAwait(false);
+        if (cleanup.Failure is not null)
+        {
+            throw new OperationCanceledException(
+                "Der Git-Prozess konnte nicht kontrolliert beendet werden.",
+                cleanup.Failure,
+                callerToken);
+        }
+
+        throw new OperationCanceledException(callerToken);
+    }
+
+    private static async Task<ExternalSourceGitProcessResult> CompleteTimeoutAsync(
+        Process process,
+        ProcessExecutionState execution,
+        CancellationTokenSource cancellation)
+    {
+        var cleanup = await CleanupProcessAsync(process, execution, cancellation)
+            .ConfigureAwait(false);
+        if (cleanup.Failure is not null)
+        {
+            throw new TimeoutException(
+                "Der Git-Prozess konnte nicht kontrolliert beendet werden.",
+                cleanup.Failure);
+        }
+
+        return new ExternalSourceGitProcessResult(
+            exitCode: -1,
+            cleanup.Output.StandardOutput.Text,
+            cleanup.Output.StandardError.Text,
+            new ExternalSourceGitProcessResultOptions
+            {
+                WasTimedOut = true,
+                StandardOutputTruncated = cleanup.Output.StandardOutput.IsTruncated,
+                StandardErrorTruncated = cleanup.Output.StandardError.IsTruncated,
+            });
+    }
+
+    private static async Task<ExternalSourceGitProcessResult> RethrowPrimaryFailureAsync(
+        Process process,
+        ProcessExecutionState execution,
+        CancellationTokenSource cancellation,
+        Exception primaryException)
+    {
+        var cleanup = await CleanupProcessAsync(
+                process,
+                execution,
+                cancellation)
+            .ConfigureAwait(false);
+        if (cleanup.Failure is not null)
+        {
+            AttachCleanupFailure(primaryException, cleanup.Failure);
+        }
+
+        ExceptionDispatchInfo.Capture(primaryException).Throw();
+        throw new InvalidOperationException("Der Git-Prozess ist ohne Ergebnis beendet worden.");
+    }
+
+    private static async Task<ProcessOutput> WaitForOutputAsync(ProcessExecutionState execution)
+    {
+        var output = Task.WhenAll(execution.StandardOutput, execution.StandardError);
+        try
+        {
+            var captured = await output.WaitAsync(ProcessTerminationTimeout).ConfigureAwait(false);
+            return new(captured[0], captured[1]);
+        }
+        catch
+        {
+            ObserveCompletion(output);
+            throw;
+        }
+    }
+
+    private static async Task<ProcessOutputCapture> ReadOutputAsync(
+        StreamReader reader,
+        CancellationToken cancellationToken)
+    {
+        var buffer = new char[OutputReadBufferSize];
+        var captured = new StringBuilder();
+        var isTruncated = false;
+        try
+        {
+            while (true)
+            {
+                var readCount = await reader.ReadAsync(buffer.AsMemory(), cancellationToken)
+                    .ConfigureAwait(false);
+                if (readCount == 0)
+                {
+                    break;
+                }
+
+                var remaining = OutputCaptureLimit - captured.Length;
+                var captureCount = Math.Min(remaining, readCount);
+                if (captureCount > 0)
+                {
+                    captured.Append(buffer, 0, captureCount);
+                }
+
+                if (captureCount < readCount)
+                {
+                    isTruncated = true;
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            isTruncated |= captured.Length >= OutputCaptureLimit;
+        }
+
+        return new(captured.ToString(), isTruncated);
+    }
+
+    private static async Task<ProcessCleanupResult> CleanupProcessAsync(
+        Process process,
+        ProcessExecutionState execution,
+        CancellationTokenSource cancellation)
+    {
+        var failures = new List<Exception>();
+        TryCancelOutput(cancellation, failures);
+        if (!TryKillProcessTree(process))
+        {
+            failures.Add(new InvalidOperationException(
+                "Der Git-Prozessbaum konnte nicht beendet werden."));
+        }
+
+        using var cleanupTimeout = new CancellationTokenSource(ProcessTerminationTimeout);
+        CloseOutputStreams(process, failures);
+        await WaitForProcessExitAsync(process, cleanupTimeout.Token, failures)
+            .ConfigureAwait(false);
+        await WaitForReadersAsync(execution, cleanupTimeout.Token, failures)
+            .ConfigureAwait(false);
+        var output = new ProcessOutput(
+            await GetCompletedOutputAsync(execution.StandardOutput).ConfigureAwait(false),
+            await GetCompletedOutputAsync(execution.StandardError).ConfigureAwait(false));
+        return new(output, CombineFailures(failures));
+    }
+
+    private static void TryCancelOutput(
+        CancellationTokenSource cancellation,
+        ICollection<Exception> failures)
+    {
+        try
+        {
+            cancellation.Cancel();
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+    }
+
+    private static void CloseOutputStreams(Process process, ICollection<Exception> failures)
+    {
+        try
+        {
+            process.StandardOutput.Close();
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+
+        try
+        {
+            process.StandardError.Close();
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+    }
+
+    private static async Task WaitForProcessExitAsync(
+        Process process,
+        CancellationToken cancellationToken,
+        ICollection<Exception> failures)
+    {
+        try
+        {
+            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            if (!TryGetHasExited(process, out var hasExited) || !hasExited)
+            {
+                failures.Add(new TimeoutException(
+                    "Der Git-Prozess wurde innerhalb der Cleanup-Grenze nicht beendet."));
+            }
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+    }
+
+    private static async Task WaitForReadersAsync(
+        ProcessExecutionState execution,
+        CancellationToken cancellationToken,
+        ICollection<Exception> failures)
+    {
+        var readers = Task.WhenAll(execution.StandardOutput, execution.StandardError);
+        try
+        {
+            await readers.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            ObserveCompletion(readers);
+            failures.Add(new TimeoutException(
+                "Die Git-Ausgabepipes wurden innerhalb der Cleanup-Grenze nicht geschlossen."));
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+    }
+
+    private static async Task<ProcessOutputCapture> GetCompletedOutputAsync(
+        Task<ProcessOutputCapture> output)
+    {
+        if (!output.IsCompletedSuccessfully)
+        {
+            return ProcessOutputCapture.Empty;
+        }
+
+        return await output.ConfigureAwait(false);
+    }
+
+    private static Exception? CombineFailures(ICollection<Exception> failures) =>
+        failures.Count switch
+        {
+            0 => null,
+            1 => failures.First(),
+            _ => new AggregateException("Die Prozessbereinigung ist fehlgeschlagen.", failures),
+        };
+
+    private static void AttachCleanupFailure(Exception primary, Exception cleanupFailure)
+    {
+        try
+        {
+            primary.Data[CleanupFailureDataKey] = cleanupFailure;
+        }
+        catch (Exception attachFailure)
+        {
+            throw new AggregateException(primary, cleanupFailure, attachFailure);
+        }
+    }
+
+    private static void ObserveCompletion<T>(Task<T> task)
+    {
+        _ = task.ContinueWith(
+            completed => _ = completed.Exception,
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+    }
+
+    internal static ProcessStartInfo CreateStartInfo(ExternalSourceGitProcessRequest request)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -196,42 +395,67 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
         }
     }
 
-    private static async Task<bool> AbortProcessAsync(Process process)
-    {
-        if (!TryKillProcessTree(process))
-        {
-            return false;
-        }
-
-        using var terminationTimeout = new CancellationTokenSource(ProcessTerminationTimeout);
-        try
-        {
-            await process.WaitForExitAsync(terminationTimeout.Token).ConfigureAwait(false);
-            return process.HasExited;
-        }
-        catch (OperationCanceledException)
-        {
-            return process.HasExited;
-        }
-    }
-
     private static bool TryKillProcessTree(Process process)
     {
         try
         {
-            if (!process.HasExited)
+            if (TryGetHasExited(process, out var hasExited) && hasExited)
             {
-                process.Kill(entireProcessTree: true);
+                return true;
             }
 
+            process.Kill(entireProcessTree: true);
             return true;
         }
-        catch (Exception exception) when (
-            exception is InvalidOperationException
-            or Win32Exception
-            or NotSupportedException)
+        catch (Exception exception) when (IsExpectedProcessException(exception))
         {
-            return process.HasExited;
+            return TryGetHasExited(process, out var hasExited) && hasExited;
         }
     }
+
+    private static bool TryGetHasExited(Process process, out bool hasExited)
+    {
+        try
+        {
+            hasExited = process.HasExited;
+            return true;
+        }
+        catch (Exception exception) when (IsExpectedProcessException(exception))
+        {
+            hasExited = false;
+            return false;
+        }
+    }
+
+    private static bool IsExpectedProcessException(Exception exception) =>
+        exception is InvalidOperationException
+            or ObjectDisposedException
+            or Win32Exception
+            or NotSupportedException;
+
+    private sealed class ProcessExecutionState
+    {
+        internal Task<ProcessOutputCapture> StandardOutput { get; private set; } =
+            Task.FromResult(ProcessOutputCapture.Empty);
+
+        internal Task<ProcessOutputCapture> StandardError { get; private set; } =
+            Task.FromResult(ProcessOutputCapture.Empty);
+
+        internal void StartOutputReaders(Process process, CancellationToken cancellationToken)
+        {
+            StandardOutput = ReadOutputAsync(process.StandardOutput, cancellationToken);
+            StandardError = ReadOutputAsync(process.StandardError, cancellationToken);
+        }
+    }
+
+    private sealed record ProcessOutputCapture(string Text, bool IsTruncated)
+    {
+        internal static ProcessOutputCapture Empty { get; } = new(string.Empty, false);
+    }
+
+    private sealed record ProcessOutput(
+        ProcessOutputCapture StandardOutput,
+        ProcessOutputCapture StandardError);
+
+    private sealed record ProcessCleanupResult(ProcessOutput Output, Exception? Failure);
 }
