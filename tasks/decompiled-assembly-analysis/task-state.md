@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T21:56:07+02:00
+last_updated: 2026-08-29T22:43:50+02:00
 rules_dir: .agents/rules
 total_steps: 31
 current_step: step-031
@@ -14,12 +14,12 @@ current_step: step-031
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 31 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-031` (planned/in_progress; Korrektur von
-  `step-030` für Teststruktur, Integrations-Gate und Result-/Audit-Evidenz)
+- **Aktueller Schritt:** `step-031` (done; Teststruktur, Integrations-Gate
+  und Result-/Audit-Evidenz korrigiert)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T21:42:17+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T22:43:50+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -56,7 +56,7 @@ current_step: step-031
 | step-028 | EPIC-04 | done | Deterministische Read-back- und Lock-Lifetime-Nachweise ergänzen | step-027 | 83e52560 | approved | 83e52560 + d3d17fe1 |
 | step-029 | EPIC-04 | issues | Cache-backed Initial Acquisition aus validierter Generation | - | 82692da0 | issues → step-030 | 82692da0 + c0abdcdf |
 | step-030 | EPIC-04 | issues | Cache-Reuse-Nachweise und Step-029-Result korrigieren | step-029 | e9bf8025 | issues → step-031 | e9bf8025 + 2510db5e |
-| step-031 | EPIC-04 | in_progress | Step-030-Gatebefunde und Nachweise korrigieren | step-030 | - | - | - |
+| step-031 | EPIC-04 | done | Step-030-Gatebefunde und Nachweise korrigieren | step-030 | 552ef4d4 + 1d15a5b4 | approved | 552ef4d4 + 1d15a5b4 + d8cff007 |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -570,3 +570,11 @@ Zahlen, Fehler, Skips und scoped MCP-Audits ausweisen. `roadmap.md` und
 `tech-debt.md` bleiben im Fix-Modus unverändert. Der nächste sichere
 Übergabepunkt ist ein neuer Coder-Agent mit
 `tasks/decompiled-assembly-analysis/step-031/step-plan.md`.
+
+Step 031 wurde durch den neuen Kritiker mit `d8cff007` genehmigt. Die
+Cache-Reuse-Teststruktur liegt vollständig unter der MaxLineCount-500-Grenze
+(Maximum 487), die beiden zuvor roten Integration-Gates und der vollständige
+Integration-Lauf sind grün (370/370), und Step-029/030/031 dokumentieren nur
+reale Test-, Skip- und scoped Auditwerte. Der einmalige unabhängige
+ExternalSourceGitProcessExecutor-Timeout ist transparent als solcher
+dokumentiert; es wurden keine neuen Tech-Debt-Funde aufgenommen.
