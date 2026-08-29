@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T09:15:42+02:00
+last_updated: 2026-08-29T10:29:47+02:00
 rules_dir: .agents/rules
 total_steps: 21
 current_step: step-021
@@ -14,11 +14,11 @@ current_step: step-021
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 21 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-021` (in_progress; Prozessbaum- und Timeout-Cleanup-Races korrigieren)
+- **Aktueller Schritt:** `step-021` (issues; native Cleanup-Fehlerprüfung und bounded Test-Finally)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T09:15:42+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T10:29:47+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -45,7 +45,7 @@ current_step: step-021
 | step-018 | EPIC-04 | done | Repository-spezifische Capability-Nichtverfügbarkeit zum Decompilation-Fallback | step-017 | 2b95b3aa | approved | 2b95b3aa + 03589c9e + 784167d8 |
 | step-019 | EPIC-04 | issues | Produktiven Git-over-HTTP-Transport mit injizierbarer Authentifizierung für den Default-Branch-Clone bauen | - | b8fb5471 | issues → step-020 | b8fb5471 + 195f29f4 + e5b3f7e3 |
 | step-020 | EPIC-04 | issues | Git-Prozesslebenszyklus und statusbewusste Fehlerklassifikation korrigieren | step-019 | 2c2a2c01 | issues → step-021 | 2c2a2c01 + 446d5ff2 + cbb49754 |
-| step-021 | EPIC-04 | in_progress | Git-Prozessbaum- und Timeout-Cleanup-Races korrigieren | step-020 | - | - | 626f0eb0 |
+| step-021 | EPIC-04 | issues | Git-Prozessbaum- und Timeout-Cleanup-Races korrigieren | step-020 | 51060014 | issues → step-022 | 51060014 + 59c63a3a + f80e5f45 |
 
 ## Config
 
@@ -305,3 +305,11 @@ offenem Prozessbaum sowie ein Timeout-CTS-Fenster nach `Process.Start()`,
 das einen gestarteten Prozess zurücklassen könnte. `TD-005` wurde im Review
 als erledigt bestätigt; die Fehlerklassifikation und der 1314-/Reparse-
 Fallback bleiben unverändert.
+
+Der Kritiker hat Step 021 mit `f80e5f45` nicht freigegeben. Die ursprünglichen
+Races sind behoben, aber zwei Restbefunde werden in Step 022 gebündelt:
+native Ergebnisse von `TerminateProcess`/`WaitForSingleObject` müssen
+fail-closed geprüft und Cleanup-Fehler unter Erhalt der Primär-Exception
+sichtbar gemacht werden; außerdem muss das Integration-Test-`finally` das
+bounded Ende von Parent und Grandchild verifizieren. Keine neue fachliche
+Grenze und kein separater Mini-Sweep.
