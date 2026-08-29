@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T15:31:12+02:00
+last_updated: 2026-08-29T17:14:07+02:00
 rules_dir: .agents/rules
 total_steps: 26
 current_step: step-026
@@ -14,12 +14,12 @@ current_step: step-026
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 26 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-026` (planned; persistente Repository-Cache-
-  Generation aus erfolgreichem Clone mit Manifest und atomarem Current-Pointer)
+- **Aktueller Schritt:** `step-026` (issues; persistente Repository-Cache-
+  Generation aus erfolgreichem Clone, Korrektur erforderlich)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T15:14:17+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T17:14:07+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -51,7 +51,7 @@ current_step: step-026
 | step-023 | EPIC-04 | done | Prozessbaum-Fallback und Handle-Cleanup vollständig fail-closed schließen | step-022 | d1b633d0 | approved | d1b633d0 + 5b22d16a + 30b13647 |
 | step-024 | EPIC-04 | issues | Erfolgreiches Acquirer→Snapshot-/Workspace-Wiring mit besitzgebundener Lifetime | - | 428cc4b3 | issues → step-025 | 428cc4b3 + f781b127 + 3e726048 |
 | step-025 | EPIC-04 | done | Registry-/Snapshot-Lifetime und exception-sicheres Multi-Owner-Cleanup korrigieren | step-024 | 74fc0056 | approved | 74fc0056 + acdfe70e |
-| step-026 | EPIC-04 | planned | Persistente Repository-Cache-Generation aus erfolgreichem Clone atomar veröffentlichen | - | - | - | - |
+| step-026 | EPIC-04 | issues | Persistente Repository-Cache-Generation aus erfolgreichem Clone atomar veröffentlichen | - | da9882f4 | issues → step-027 | da9882f4 + 8a87f06a |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -382,3 +382,15 @@ zwei Snapshots, erfolgreichen Cleanup des zweiten Besitzers und einen
 bounded/idempotenten Folge-Dispose. Es wurden keine neuen Tech-Debt-Funde
 aufgenommen; Build und beide vollständigen Nicht-Stress-Gates sind grün, der
 echte Symlink-/Reparse-Test bleibt transparent wegen Win32 1314 übersprungen.
+
+Der Kritiker hat Step 026 mit `8a87f06a` nicht freigegeben. Drei zusammen-
+gehörige Befunde bleiben innerhalb der Write-through-Publish-Grenze: Das
+Same-Key-Lock schützt Rollback und Cleanup nicht vollständig gegen
+konkurrierende Publishes; die Read-back-Validierung akzeptiert in einem
+verkürzten Manifest-/Content-Fall unzulässige Daten und ist an einzelnen
+TOCTOU-Größenprüfungen nicht ausreichend bounded; außerdem schreibt der
+Default-Writer in Tests unter `AppContext.BaseDirectory` persistente
+Generationen und verletzt dadurch Testisolation. Step 027 bündelt genau diese
+Lock-/Cleanup-, unabhängige Manifestvalidierungs- und isolierte Writer-
+Korrekturen; Provider-/Snapshot-/Refresh-/Transport-/Native-Grenzen bleiben
+unverändert.
