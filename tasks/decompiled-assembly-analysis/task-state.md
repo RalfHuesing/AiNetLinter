@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T09:04:40+02:00
+last_updated: 2026-08-29T09:15:42+02:00
 rules_dir: .agents/rules
-total_steps: 20
-current_step: step-020
+total_steps: 21
+current_step: step-021
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,12 +13,12 @@ current_step: step-020
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 20 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-020` (issues; verbleibende Prozessbaum- und Timeout-Cleanup-Races)
+- **Steps gesamt:** 21 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-021` (in_progress; Prozessbaum- und Timeout-Cleanup-Races korrigieren)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T09:04:40+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T09:15:42+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -45,6 +45,7 @@ current_step: step-020
 | step-018 | EPIC-04 | done | Repository-spezifische Capability-Nichtverfügbarkeit zum Decompilation-Fallback | step-017 | 2b95b3aa | approved | 2b95b3aa + 03589c9e + 784167d8 |
 | step-019 | EPIC-04 | issues | Produktiven Git-over-HTTP-Transport mit injizierbarer Authentifizierung für den Default-Branch-Clone bauen | - | b8fb5471 | issues → step-020 | b8fb5471 + 195f29f4 + e5b3f7e3 |
 | step-020 | EPIC-04 | issues | Git-Prozesslebenszyklus und statusbewusste Fehlerklassifikation korrigieren | step-019 | 2c2a2c01 | issues → step-021 | 2c2a2c01 + 446d5ff2 + cbb49754 |
+| step-021 | EPIC-04 | in_progress | Git-Prozessbaum- und Timeout-Cleanup-Races korrigieren | step-020 | - | - | 626f0eb0 |
 
 ## Config
 
@@ -289,6 +290,13 @@ Real-Executor-Nachweis für `ProcessStartInfo`/Umgebungsisolation/Termination
 sowie strukturierte, statusbewusste HTTP-/Git-Fehlerklassifikation. Der neue
 DRY-Fund ist als `TD-005` dokumentiert; Refresh, Cache und Source-of-Truth
 bleiben außerhalb dieser Korrektur.
+
+Step 021 ist als kontextbegrenzte Korrekturrunde aktiviert (`626f0eb0`). Das
+Paket schließt die Prozessbesitzgrenze gegen Parent-exit-/Grandchild-Pipe-
+Races und stellt die Timeout-/Linked-CTS vor `Process.Start()` bereit. Direkte
+lokale Child-/Grandchild-Regressionen sichern die Grenze; HTTP-/Git-
+Klassifikation, Credentials, 1314-/Reparse-Fallback und alle späteren
+Refresh-/Cache-/Snapshot-Verträge bleiben unverändert.
 
 Der Kritiker hat Step 020 mit `cbb49754` nicht freigegeben. Die beiden
 kritischen Befunde liegen an derselben Prozessbesitzgrenze und werden in
