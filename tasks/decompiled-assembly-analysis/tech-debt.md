@@ -2,7 +2,7 @@
 task: decompiled-assembly-analysis
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-28T23:20:00+02:00
+last_updated: 2026-08-29T07:44:34+02:00
 ---
 
 # Tech-Debt-Log: decompiled-assembly-analysis
@@ -18,6 +18,7 @@ Duplikationsbeobachtungen außerhalb des jeweiligen Step-Scopes.
 | TD-002 | `AssemblyOrigin` / `AssemblyAnalysisContextFactory` | niedrig | nein | Origin-Kind-Werte sind als untypisierte Zeichenketten verteilt; der neue `source-backed`-Wert ist nicht zentralisiert. |
 | TD-003 | `AssemblyOrigin.Kind` | niedrig | nein | Interne Alias-Property ist im statischen Lösungsscope unreferenziert; mögliche Vertrags-/Serializer-Nutzung vor Entfernung prüfen. |
 | TD-004 | `AssemblyAnalysisContextFactoryTests` / `AssemblyAnalysisToolSupportTests` | niedrig | nein | Identischer privater `CreateSnapshot`-Testfixture-Builder ist über zwei Testklassen dupliziert. |
+| TD-005 | `GiteaGitRepositoryTransport` / `ExternalSourceRepositoryAcquirer` | niedrig | nein | Repository-URL-Prüfung und erfolgreicher Transport-Result-Builder sind über Vertrags-/Testgrenzen dupliziert. |
 
 ## Einträge
 
@@ -60,3 +61,13 @@ Duplikationsbeobachtungen außerhalb des jeweiligen Step-Scopes.
 - **Ownership-Nachweis:** Die betroffenen Tests behalten ihre expliziten Lease-, Registry- und Snapshot-Dispose-Aussagen; die Factory übernimmt keine zusätzliche Ownership über den erzeugten Snapshot hinaus.
 - **Auto-Fixable:** nein — die gemeinsame Ablage und der Fixture-Vertrag erfordern Architektur-Ermessen.
 - **Status:** erledigt in step-013 (`1cd279f0ae7a683484cd21a32157a88b84313e95`)
+
+### TD-005 — Repository-URL-Prüfung und Result-Builder zusammenführen [Priorität: niedrig] [Auto-Fixable: nein]
+
+- **Gefunden in:** step-019 (Kritiker-Review vom 2026-08-29)
+- **Ort:** `src/AiNetLinter/Mcp/Assemblies/ExternalSourceRepositoryAcquirer.cs:458-464`; `src/AiNetLinter/Mcp/Assemblies/GiteaGitRepositoryTransport.cs:288-296`; der identische `Success`-Builder zusätzlich in `src/AiNetLinter.FastTests/Mcp/Assemblies/ExternalSourceRepositoryAcquirerTests.cs:453-457`
+- **Befund:** Der solutionweite DRY-Audit mit `minTokens=20` findet den exakten `Success`-Builder zwischen Produktions- und Testcode. Im Step-019-Produktionsscope findet der tokenbasierte Audit außerdem den nahe Klon der URL-Prüfung; der strukturelle Audit bewertet beide URL-Methoden als exakten Kandidaten. Die Implementierungen sind bereits semantisch auseinander gelaufen: Der Transport lehnt Query und Fragment ab, der Acquirer derzeit nicht.
+- **Warum nicht sofort gefixt:** Dieser Kritiker-Durchgang ist auf Review-Dokumentation begrenzt und darf keine Produktionsfixes vorwegnehmen. Eine gemeinsame URL-Regel muss die beiden Vertragsgrenzen und die strengere Sicherheitssemantik festlegen; ein gemeinsamer Result-Builder müsste zusätzlich die test-only Grenze und die bestehende Transport-Result-API entscheiden.
+- **Vorschlag:** Bei der nächsten Änderung am Repository-Akquisitionsvertrag eine gemeinsame interne URL-Policy mit explizitem Query-/Fragment-Vertrag sowie eine geeignete Result-Fabrik prüfen. Danach die Acquirer- und Transporttests gegen dieselbe Policy ausrichten.
+- **Auto-Fixable:** nein — die Vertragsangleichung und die zulässige gemeinsame Ablage erfordern Architektur-Ermessen.
+- **Status:** offen
