@@ -104,36 +104,34 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
         using var source = SourceFixture.Create(Revision);
         using var cache = TestTempDirectory.Create("external-source-cache-reuse-hit-");
         using var staging = TestTempDirectory.Create("external-source-cache-reuse-staging-");
-        var writer = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
-        var published = await writer.PublishAsync(source.Request);
+        var cachePublisher = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+        var published = await cachePublisher.PublishAsync(source.Request);
         Assert.True(published.Succeeded);
-
+        var cacheReader = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+        var cacheWriter = new RecordingCacheWriter();
+        var currentGenerationBefore = ReadCurrentGenerationName(cacheReader, source.Key);
         var transport = new ExternalSourceRecordingTransport((_, _, _) =>
             throw new InvalidOperationException("Der Cache-Hit darf keinen Transport aufrufen."));
         var acquirer = new ExternalSourceRepositoryAcquirer(
             transport,
             staging.DirectoryPath,
-            cacheWriter: writer,
-            cacheReader: writer);
+            cacheWriter: cacheWriter,
+            cacheReader: cacheReader);
 
         var result = await acquirer.AcquireAsync(CreateMapping());
 
         Assert.True(result.IsAvailable);
         Assert.Equal(Revision, result.LoadedRevision);
         Assert.Equal(0, transport.CallCount);
+        Assert.Null(cacheWriter.Request);
+        Assert.Equal(currentGenerationBefore, ReadCurrentGenerationName(cacheReader, source.Key));
         var checkout = Assert.IsType<ExternalSourceCheckoutHandle>(result.Checkout);
-        Assert.NotEqual(published.GenerationPath, checkout.CheckoutPath);
-        Assert.True(File.Exists(Path.Combine(
-            checkout.CheckoutPath,
-            ExternalSourceCheckoutOwnership.OwnershipMarkerFileName)));
-        Assert.Equal(
-            Path.Combine(checkout.CheckoutPath, SolutionPath.Replace('/', Path.DirectorySeparatorChar)),
-            checkout.SolutionPath);
+        AssertRequestOwnedCheckout(checkout, published.GenerationPath);
         checkout.Dispose();
         Assert.False(Directory.Exists(checkout.CheckoutPath));
         Assert.True(Directory.Exists(published.GenerationPath));
-        Assert.True(writer.TryReadCurrent(source.Key, out _, out var diagnostic));
-        Assert.Null(diagnostic);
+        Assert.Equal(currentGenerationBefore, ReadCurrentGenerationName(cacheReader, source.Key));
+        Assert.Null(cacheWriter.Request);
     }
 
     [Fact]
@@ -142,25 +140,30 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
         using var source = SourceFixture.Create(Revision);
         using var cache = TestTempDirectory.Create("external-source-cache-reuse-direct-");
         using var staging = TestTempDirectory.Create("external-source-cache-reuse-direct-staging-");
-        var writer = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
-        Assert.True((await writer.PublishAsync(source.Request)).Succeeded);
+        var cachePublisher = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+        var published = await cachePublisher.PublishAsync(source.Request);
+        Assert.True(published.Succeeded);
+        var cacheReader = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+        var currentGenerationBefore = ReadCurrentGenerationName(cacheReader, source.Key);
         var reuse = new ExternalSourceRepositoryCacheReuse(
             staging.DirectoryPath,
-            writer,
+            cacheReader,
             Serilog.Log.Logger);
 
         var result = reuse.TryAcquire(
             source.Key.CanonicalRepositoryUrl,
             source.Key.SolutionPath,
             CancellationToken.None);
-
         Assert.NotNull(typeof(ExternalSourceRepositoryCacheReuse));
         var checkoutResult = Assert.IsType<ExternalSourceRepositoryAcquisitionResult>(result);
         var checkout = Assert.IsType<ExternalSourceCheckoutHandle>(checkoutResult.Checkout);
         Assert.Equal(Revision, checkoutResult.LoadedRevision);
-        Assert.NotEqual(source.CheckoutPath, checkout.CheckoutPath);
+        AssertRequestOwnedCheckout(checkout, published.GenerationPath);
+        Assert.Equal(currentGenerationBefore, ReadCurrentGenerationName(cacheReader, source.Key));
         checkout.Dispose();
         Assert.False(Directory.Exists(checkout.CheckoutPath));
+        Assert.True(Directory.Exists(published.GenerationPath));
+        Assert.Equal(currentGenerationBefore, ReadCurrentGenerationName(cacheReader, source.Key));
     }
 
     [Theory]
@@ -376,32 +379,39 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
         using var source = SourceFixture.Create(Revision);
         using var cache = TestTempDirectory.Create("external-source-cache-reuse-concurrent-");
         using var staging = TestTempDirectory.Create("external-source-cache-reuse-concurrent-staging-");
-        var writer = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
-        var published = await writer.PublishAsync(source.Request);
+        var cachePublisher = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+        var published = await cachePublisher.PublishAsync(source.Request);
         Assert.True(published.Succeeded);
+        var cacheReader = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+        var cacheWriter = new RecordingCacheWriter();
+        var currentGenerationBefore = ReadCurrentGenerationName(cacheReader, source.Key);
         var transport = new ExternalSourceRecordingTransport((_, _, _) =>
             throw new InvalidOperationException("Concurrent Cache-Hits dürfen keinen Transport aufrufen."));
         var acquirer = new ExternalSourceRepositoryAcquirer(
             transport,
             staging.DirectoryPath,
-            cacheWriter: writer,
-            cacheReader: writer);
+            cacheWriter: cacheWriter,
+            cacheReader: cacheReader);
 
         var results = await Task.WhenAll(
             Enumerable.Range(0, 4).Select(_ => acquirer.AcquireAsync(CreateMapping())));
-
         Assert.All(results, result => Assert.True(result.IsAvailable));
         var checkouts = results.Select(result => Assert.IsType<ExternalSourceCheckoutHandle>(result.Checkout)).ToArray();
         Assert.Equal(4, checkouts.Select(checkout => checkout.CheckoutPath).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.All(checkouts, checkout => AssertRequestOwnedCheckout(checkout, published.GenerationPath));
         Assert.Equal(0, transport.CallCount);
+        Assert.Null(cacheWriter.Request);
+        Assert.Equal(currentGenerationBefore, ReadCurrentGenerationName(cacheReader, source.Key));
         foreach (var checkout in checkouts)
         {
             checkout.Dispose();
+            Assert.False(Directory.Exists(checkout.CheckoutPath));
         }
 
         Assert.True(Directory.Exists(published.GenerationPath));
-        Assert.True(writer.TryReadCurrent(source.Key, out _, out var diagnostic));
-        Assert.Null(diagnostic);
+        Assert.Empty(Directory.EnumerateDirectories(staging.DirectoryPath, "checkout-*"));
+        Assert.Equal(currentGenerationBefore, ReadCurrentGenerationName(cacheReader, source.Key));
+        Assert.Null(cacheWriter.Request);
     }
 
     private static void MutateCache(
@@ -428,6 +438,20 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
             _ => throw new ArgumentException("Unbekannte Cache-Mutation.", nameof(mutation)),
         };
         File.WriteAllText(mutation == "inventory" ? inventoryPath : manifestPath, value);
+    }
+
+    private static string ReadCurrentGenerationName(IExternalSourceRepositoryCacheReader cacheReader, ExternalSourceRepositoryCacheKey key)
+    {
+        Assert.True(cacheReader.TryReadCurrent(key, out var current, out var diagnostic));
+        Assert.Null(diagnostic);
+        return current!.Manifest.GenerationName;
+    }
+
+    private static void AssertRequestOwnedCheckout(ExternalSourceCheckoutHandle checkout, string? persistentGenerationPath)
+    {
+        Assert.NotEqual(persistentGenerationPath, checkout.CheckoutPath);
+        Assert.True(File.Exists(Path.Combine(checkout.CheckoutPath, ExternalSourceCheckoutOwnership.OwnershipMarkerFileName)));
+        Assert.Equal(Path.Combine(checkout.CheckoutPath, SolutionPath.Replace('/', Path.DirectorySeparatorChar)), checkout.SolutionPath);
     }
 
     private sealed class FixedCacheReader : IExternalSourceRepositoryCacheReader

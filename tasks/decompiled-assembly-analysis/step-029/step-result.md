@@ -8,7 +8,7 @@ step_type: single
 coded_by: coder
 coded_by_model: gpt-5
 coded_at: 2026-08-29
-code_commit_hash: siehe Abschluss-Commit
+code_commit_hash: 82692da054136dd39f6a37d110926bb95b5d796c
 status_after: done (pending audit)
 blocker_category: n/a
 ---
@@ -39,6 +39,14 @@ partieller eigener Checkout nicht sicher bereinigt werden, endet der Vorgang
 fail-closed mit der bestehenden typed Cleanup-Failure-Semantik; der persistente
 Current bleibt unangetastet. Cancellation wird nicht als Cache-Miss
 interpretiert, sondern unverändert weitergereicht.
+
+Die Nachweiskorrektur aus Step 030 verwendet für die validen Reuse-Hits einen
+separaten lokalen Publisher und Reader auf demselben isolierten Cache-Root
+sowie in den Acquirer-Tests einen `RecordingCacheWriter`. Vor dem Hit wird
+`Current.Manifest.GenerationName` konkret gesnapshotet; nach Hit, Dispose und
+im Parallelfall wird derselbe Wert wieder gelesen. `cacheWriter.Request` bleibt
+`null`, `transport.CallCount` bleibt `0`, und der request-owned Checkout bleibt
+vom persistenten `GenerationPath` getrennt und wird unabhängig bereinigt.
 
 Es wurden weder Fetch, Refresh, Policy/Intervall, Cache-Konfiguration,
 Retention/GC, Telemetrie, Host-/MCP-Wiring, Provider-/Snapshot-/Registry-
@@ -112,51 +120,58 @@ und führt keine globale Synchronisations- oder Refresh-Policy ein.
 
 | Lauf | Ergebnis |
 |---|---:|
-| Fokussierter Reuse-/Acquirer-/Cache-/Cancellation-Filter | 89 bestanden, 2 Skips, 91 gesamt |
+| `dotnet test src/AiNetLinter.FastTests --filter "FullyQualifiedName~ExternalSourceRepositoryCacheAcquirerTests|FullyQualifiedName~ExternalSourceRepositoryAcquirerTests|FullyQualifiedName~ExternalSourceRepositoryCancellationTests"` | 34 bestanden, 1 Skip, 35 gesamt, 0 Fehler |
 | `dotnet build` | 0 Warnungen, 0 Fehler |
-| `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` | 2.056 bestanden, 2 Skips, 2.058 gesamt |
-| `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` | 370 bestanden, 0 Skips, 370 gesamt |
+| `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` | 2.060 bestanden, 2 Skips, 2.062 gesamt, 0 Fehler |
+| `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` | 370 bestanden, 0 Skips, 370 gesamt, 0 Fehler |
 | Stress-Kategorie | nicht ausgeführt |
 
-Die beiden FastTests-Skips sind die bekannten echten Windows-
-Reparse-/Symlink-Prüfungen mit Win32 `ERROR_PRIVILEGE_NOT_HELD` (1314). Es
-wurden keine neuen Testhosts, Prozesse, Temp-Verzeichnisse oder Cache-Leases
-zurückgelassen. Nach den Läufen waren keine `testhost.exe`-/
-`vstest.console.exe`- oder Test-`dotnet.exe`-Prozesse aktiv; das Repository-
-Temp-Verzeichnis enthielt keine Testverzeichnisse. Ein bereits vorhandener
-Default-Cache-Rest unter `src/AiNetLinter.FastTests/bin/Debug/net10.0/cache/source`
-mit neun Dateien wurde nur inspiziert und nicht gelöscht.
+Der Fokus-Skip ist
+`ExternalSourceRepositoryAcquirerTests.AcquireAsync_ActualReparseEntry_IsRejectedAndExternalSentinelRemains`;
+beim Erzeugen des echten Symlinks fehlte `ERROR_PRIVILEGE_NOT_HELD` / Win32
+1314. Der zusätzliche Fast-Gate-Skip ist
+`ExternalSourceRepositoryCacheWriterTests.PublishAsync_ActualReparseEntryFailsClosed`;
+auch hier verhinderte `ERROR_PRIVILEGE_NOT_HELD` / Win32 1314 die echte
+Reparse-Erzeugung. Beide Fälle sind echte, capabilitybedingte Reparse-/Symlink-
+Skips; es wurde kein Fake-Reparse verwendet. Nach den Läufen waren keine
+`testhost.exe`-/`vstest.console.exe`- oder Test-`dotnet.exe`-Prozesse aktiv.
+Das Repository-Temp-Verzeichnis enthielt keine neuen Testverzeichnisse. Ein
+bereits vorhandener Default-Cache-Rest unter
+`src/AiNetLinter.FastTests/bin/Debug/net10.0/cache/source` mit neun Dateien
+wurde nur inspiziert und nicht gelöscht.
 
 ## MCP-, DRY-, MagicValues- und DeadCode-Befunde
 
-- Semantische MCP-Abfragen wurden mit absolutem
-  `projectRoot=C:/Daten/Entwicklung/Ralf/AiNetLinter` ausgeführt: Feature-
-  Kontext, Symbol-Bodies, References, Impact, Test-Kontext, Violations und
-  Safeguard für Acquirer, Cache-Reader/-Writer/-Storage, Reservation,
-  PathGuard und die betroffenen Tests.
-- Der scoped `get_violations`-Lauf meldete nach der Auslagerung 0 Violations.
-  Der Acquirer liegt bei 490 Zeilen; der StaticTestSentinel für den neuen
-  Reuse-Typ ist durch den direkten Reuse-Test ebenfalls erfüllt.
-- Der vorgeschriebene solutionweite Drift-Audit lief mit
-  `find_duplicates(mode=clone, scopeDir=src, minTokens=20)`. In den scoped
-  Cache-Produktions- und Testbereichen gab es keine exact/near-Cluster. Ein
-  fuzzy Produktions-Treffer betrifft den bewusst getrennten Assembly-Cache-
-  `WritePointer`; ein fuzzy Test-Treffer betrifft zwei unterschiedliche
-  Fallback-Szenarien. Kein Reuse-bezogenes DRY-Refactoring ist erforderlich.
-  Der zusätzliche structural-Scan lieferte nur Prüfungsempfehlungen, keine
-  Violations; ähnliche Reader-Validierer und der Assembly-Cache bleiben wegen
-  der Out-of-Scope-Grenzen getrennt.
-- `find_magic_values` für die vier neuen Produktionsdateien meldete 0 Treffer.
-  Die einzeln geprüften bestehenden Acquirer-/Writer-Dateien meldeten je einen
-  bereits vorhandenen Localization-Kandidaten; es entstand kein neuer
-  Produktions-Magic-Value. Der breitere ExternalSourceRepository-Testscope
-  enthält die erwarteten Fixture-Präfixe, URLs und Security-Testwerte.
-- `find_dead_code` mit `scopeFilter=ExternalSourceRepository` und Tests meldete
-  0 unreferenzierte Symbole im Scope.
-- `safeguard` meldete Score 5,65/10 und drei bestehende Befunde außerhalb des
-  geänderten Codes: zu viele Einträge in `src/AiNetLinter/Mcp/Assemblies`, das
-  bestehende `DaemonHostCommand`-Footprint und zu viele Einträge im
-  Task-Verzeichnis. Der neue Reuse-StaticTestSentinel ist kein Befund mehr.
+- Alle folgenden C#-Semantik- und Audit-Aufrufe verwendeten das absolute
+  `projectRoot=C:/Daten/Entwicklung/Ralf/AiNetLinter`; `rg` wurde nur für
+  Text-/Dateisuche eingesetzt.
+- `get_violations(scopeFilter="ExternalSourceRepository")`: 0 Violations in
+  24 Dateien.
+- `safeguard(scopeFilter="ExternalSourceRepository")`: 5,79/10, FAIL bei
+  Threshold 8,00; die drei bestehenden Befunde liegen außerhalb des
+  Reuse-Codes (`src/AiNetLinter/Mcp/Assemblies` mit zu vielen Einträgen,
+  `DaemonHostCommand`-Footprint und `tasks/decompiled-assembly-analysis` mit
+  zu vielen Einträgen). Kein neuer Reuse-Befund.
+- `find_duplicates(mode="clone", minTokens=20, similarityThreshold="near",
+  scopeDir="src/AiNetLinter/Mcp/Assemblies", scopeType="production")`:
+  0 Cluster bei 350 gescannten Methoden.
+- Derselbe scoped Aufruf mit
+  `scopeDir="src/AiNetLinter.FastTests/Mcp/Assemblies", scopeType="tests"`:
+  0 Cluster bei 124 gescannten Methoden. Es wurde kein solutionweiter
+  DRY-/Structural-/Refactoring-Drift-Sweep dokumentiert oder durchgeführt.
+- `find_magic_values(scopeFilter="src/AiNetLinter/Mcp/Assemblies/ExternalSourceRepository",
+  includeTests=false)`: 7 bestehende Werte im begrenzten Produktionsscope;
+  kein neuer produktiver Reuse-Wert.
+- `find_magic_values(scopeFilter="src/AiNetLinter.FastTests/Mcp/Assemblies/ExternalSourceRepositoryCacheAcquirerTests.cs",
+  includeTests=true)`: 34 absichtliche Fixture-/Fallwerte in der betroffenen
+  Cache-Acquirer-Testdatei.
+- `find_dead_code(scopeFilter="ExternalSourceRepository", includeTests=true,
+  mode="members")`: 0 unreferenzierte Symbole bei 24 Dokumenten und 55
+  Symbolen.
+- Die direkten MCP-Prüfungen umfassten Feature-Kontext für Acquirer und
+  Local-Writer, Bodies der drei betroffenen Tests, References/Impact für
+  `IExternalSourceRepositoryCacheReader.TryReadCurrent` sowie Test-Kontext
+  für den Acquirer; die Abfragen blieben auf diesen Scope begrenzt.
 
 ## Offene Risiken
 
