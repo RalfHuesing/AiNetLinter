@@ -127,22 +127,21 @@ internal sealed class ExternalSourceRepositoryAcquirer
                 transportResult.Diagnostics);
         }
 
-        if (!TryValidateCheckout(
-                ownership,
-                solutionPath,
-                transportResult,
-                out var solutionAbsolutePath,
-                out var checkoutFailure))
+        var checkoutValidation = ValidateCheckout(
+            ownership,
+            solutionPath,
+            transportResult);
+        if (!checkoutValidation.IsValid)
         {
             return FailAfterCleanup(
                 ownership,
-                ExternalSourceProviderFailureKind.InvalidResponse,
-                checkoutFailure!);
+                checkoutValidation.FailureKind,
+                checkoutValidation.Diagnostics);
         }
 
         var checkout = new ExternalSourceCheckoutHandle(
             ownership,
-            solutionAbsolutePath!,
+            checkoutValidation.SolutionPath!,
             transportResult.LoadedRevision!);
         return ExternalSourceRepositoryAcquisitionResult.Success(
             checkout,
@@ -171,7 +170,7 @@ internal sealed class ExternalSourceRepositoryAcquirer
                 isAvailable: false,
                 loadedRevision: null,
                 diagnostics: [CreateDiagnostic(
-                    ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportFailed,
+                    ExternalSourceRepositoryFailurePolicy.GetTransportDiagnosticCode(exception),
                     "Die Repository-Akquisition ist fehlgeschlagen.")],
                 failureKind: ExternalSourceRepositoryFailurePolicy.ClassifyTransportException(exception));
         }
@@ -259,32 +258,24 @@ internal sealed class ExternalSourceRepositoryAcquirer
         }
     }
 
-    private bool TryValidateCheckout(
+    private CheckoutValidationResult ValidateCheckout(
         ExternalSourceCheckoutOwnership ownership,
         string solutionPath,
-        ExternalSourceRepositoryTransportResult transportResult,
-        out string? solutionAbsolutePath,
-        out ImmutableArray<ExternalSourceConfigurationDiagnostic>? failure)
+        ExternalSourceRepositoryTransportResult transportResult)
     {
-        solutionAbsolutePath = null;
-        failure = null;
-        if (string.IsNullOrWhiteSpace(transportResult.LoadedRevision))
+        if (!HasValidLoadedRevision(transportResult, out var revisionFailure))
         {
-            failure = [CreateDiagnostic(
-                ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportResultInvalid,
-                "Der Repository-Transport hat keine geladene Revision geliefert.")];
-            return false;
+            return CheckoutValidationResult.Failure(
+                ExternalSourceProviderFailureKind.InvalidResponse,
+                revisionFailure!);
         }
 
-        if (!ExternalSourceRepositoryPathGuard.IsOwnedCheckout(ownership)
-            || ExternalSourceRepositoryPathGuard.ContainsReparsePointInTree(ownership.CheckoutPath))
+        if (TryGetCheckoutPathFailure(ownership, out var pathFailure))
         {
-            failure = [CreateDiagnostic(
-                ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutInvalid,
-                "Der Repository-Transport hat keinen sicheren Checkout innerhalb der Staging-Wurzel erzeugt.")];
-            return false;
+            return pathFailure!;
         }
 
+        string solutionAbsolutePath;
         try
         {
             solutionAbsolutePath = Path.GetFullPath(Path.Combine(ownership.CheckoutPath, solutionPath));
@@ -292,10 +283,11 @@ internal sealed class ExternalSourceRepositoryAcquirer
         catch (Exception exception) when (
             ExternalSourceRepositoryFailurePolicy.IsFileSystemException(exception))
         {
-            failure = [CreateDiagnostic(
-                ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionPathInvalid,
-                "Der Solution-Pfad konnte nicht aufgelöst werden.")];
-            return false;
+            return CheckoutValidationResult.Failure(
+                ExternalSourceProviderFailureKind.InvalidResponse,
+                [CreateDiagnostic(
+                    ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionPathInvalid,
+                    "Der Solution-Pfad konnte nicht aufgelöst werden.")]);
         }
 
         if (!ExternalSourceRepositoryPathGuard.IsDescendantPath(
@@ -307,13 +299,58 @@ internal sealed class ExternalSourceRepositoryAcquirer
             || !File.Exists(solutionAbsolutePath)
             || ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(solutionAbsolutePath))
         {
-            failure = [CreateDiagnostic(
-                ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionInvalid,
-                "Die konfigurierte Solution liegt nicht als sichere Datei im Checkout vor.")];
-            return false;
+            return CheckoutValidationResult.Failure(
+                ExternalSourceProviderFailureKind.InvalidResponse,
+                [CreateDiagnostic(
+                    ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionInvalid,
+                    "Die konfigurierte Solution liegt nicht als sichere Datei im Checkout vor.")]);
         }
 
-        return true;
+        return CheckoutValidationResult.Success(solutionAbsolutePath);
+    }
+
+    private static bool HasValidLoadedRevision(
+        ExternalSourceRepositoryTransportResult transportResult,
+        out ImmutableArray<ExternalSourceConfigurationDiagnostic>? failure)
+    {
+        failure = string.IsNullOrWhiteSpace(transportResult.LoadedRevision)
+            ? [CreateDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportResultInvalid,
+                "Der Repository-Transport hat keine geladene Revision geliefert.")]
+            : null;
+        return failure is null;
+    }
+
+    private static bool TryGetCheckoutPathFailure(
+        ExternalSourceCheckoutOwnership ownership,
+        out CheckoutValidationResult? failure)
+    {
+        failure = null;
+        if (ExternalSourceRepositoryPathGuard.ContainsActualReparsePointOnPath(
+                ownership.CheckoutPath)
+            || ExternalSourceRepositoryPathGuard.ContainsActualReparsePointInTree(
+                ownership.CheckoutPath))
+        {
+            failure = CheckoutValidationResult.Failure(
+                ExternalSourceProviderFailureKind.ProviderUnavailable,
+                [CreateDiagnostic(
+                    ExternalSourceConfigurationDiagnosticCodes.RepositoryCapabilityUnavailable,
+                    "Der Repository-Checkout benötigt eine nicht verfügbare lokale Capability.")]);
+            return true;
+        }
+
+        if (!ExternalSourceRepositoryPathGuard.IsOwnedCheckout(ownership)
+            || ExternalSourceRepositoryPathGuard.ContainsReparsePointInTree(ownership.CheckoutPath))
+        {
+            failure = CheckoutValidationResult.Failure(
+                ExternalSourceProviderFailureKind.InvalidResponse,
+                [CreateDiagnostic(
+                    ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutInvalid,
+                    "Der Repository-Transport hat keinen sicheren Checkout innerhalb der Staging-Wurzel erzeugt.")]);
+            return true;
+        }
+
+        return false;
     }
 
     private static ExternalSourceRepositoryAcquisitionResult FailAfterCleanup(
@@ -428,4 +465,26 @@ internal sealed class ExternalSourceRepositoryAcquirer
 
     internal static bool IsReparsePointAttribute(FileAttributes attributes) =>
         ExternalSourceRepositoryPathGuard.IsReparsePointAttribute(attributes);
+
+    private sealed record CheckoutValidationResult(
+        string? SolutionPath,
+        ExternalSourceProviderFailureKind FailureKind,
+        ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics)
+    {
+        internal bool IsValid => SolutionPath is not null;
+
+        internal static CheckoutValidationResult Success(string solutionPath) =>
+            new(
+                solutionPath,
+                ExternalSourceProviderFailureKind.None,
+                ImmutableArray<ExternalSourceConfigurationDiagnostic>.Empty);
+
+        internal static CheckoutValidationResult Failure(
+            ExternalSourceProviderFailureKind failureKind,
+            IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics) =>
+            new(
+                null,
+                failureKind,
+                diagnostics.ToImmutableArray());
+    }
 }

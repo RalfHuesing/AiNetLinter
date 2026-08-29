@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.TestKit;
 using Serilog.Core;
 using Serilog.Events;
@@ -32,9 +33,6 @@ internal sealed class ExternalSourceRepositoryTestLogSink : ILogEventSink
 /// </summary>
 internal static class WindowsReparseCapabilityGate
 {
-    private const int ErrorPrivilegeNotHeld = 1314;
-    private const int Win32ErrorMask = 0xFFFF;
-
     internal static void Require()
     {
         using var preflight = TestTempDirectory.Create("external-source-reparse-capability-");
@@ -48,7 +46,8 @@ internal static class WindowsReparseCapabilityGate
                 Directory.CreateSymbolicLink(linkPath, targetPath);
                 linkCreated = true;
             }
-            catch (Exception exception) when (IsPrivilegeNotHeld(exception))
+            catch (Exception exception) when (
+                ExternalSourceRepositoryFailurePolicy.IsPrivilegeNotHeld(exception))
             {
                 Assert.Skip(
                     "Der Testhost meldet ERROR_PRIVILEGE_NOT_HELD (1314) für "
@@ -71,7 +70,4 @@ internal static class WindowsReparseCapabilityGate
         }
     }
 
-    private static bool IsPrivilegeNotHeld(Exception exception) =>
-        OperatingSystem.IsWindows()
-        && (exception.HResult & Win32ErrorMask) == ErrorPrivilegeNotHeld;
 }

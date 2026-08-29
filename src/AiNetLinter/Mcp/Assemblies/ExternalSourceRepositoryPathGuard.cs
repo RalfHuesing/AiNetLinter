@@ -31,55 +31,80 @@ internal static class ExternalSourceRepositoryPathGuard
 
     internal static bool ContainsReparsePointOnPath(string path)
     {
+        return InspectReparsePointOnPath(path) is not ReparsePointInspection.Safe;
+    }
+
+    internal static bool ContainsActualReparsePointOnPath(string path)
+    {
+        return InspectReparsePointOnPath(path) is ReparsePointInspection.Found;
+    }
+
+    private static ReparsePointInspection InspectReparsePointOnPath(string path)
+    {
         try
         {
-            var current = Path.GetFullPath(path);
+            string? current = Path.GetFullPath(path);
             while (current is not null)
             {
                 if (!TryGetAttributes(current, out var attributes, out var exists) || !exists)
                 {
-                    return true;
+                    return ReparsePointInspection.Unavailable;
                 }
 
                 if (IsReparsePointAttribute(attributes))
                 {
-                    return true;
+                    return ReparsePointInspection.Found;
                 }
 
                 current = Directory.GetParent(current)?.FullName;
             }
 
-            return false;
+            return ReparsePointInspection.Safe;
         }
         catch (Exception exception) when (
             ExternalSourceRepositoryFailurePolicy.IsFileSystemException(exception))
         {
-            return true;
+            return ReparsePointInspection.Unavailable;
         }
     }
 
     internal static bool ContainsReparsePointInTree(string root)
     {
+        return InspectReparsePointInTree(root) is not ReparsePointInspection.Safe;
+    }
+
+    internal static bool ContainsActualReparsePointInTree(string root)
+    {
+        return InspectReparsePointInTree(root) is ReparsePointInspection.Found;
+    }
+
+    private static ReparsePointInspection InspectReparsePointInTree(string root)
+    {
         var pending = new Stack<string>();
         pending.Push(root);
         while (pending.Count > 0)
         {
-            if (!TryInspectDirectory(pending.Pop(), pending))
+            var inspection = InspectDirectory(pending.Pop(), pending);
+            if (inspection is not ReparsePointInspection.Safe)
             {
-                return true;
+                return inspection;
             }
         }
 
-        return false;
+        return ReparsePointInspection.Safe;
     }
 
-    private static bool TryInspectDirectory(string directory, Stack<string> pending)
+    private static ReparsePointInspection InspectDirectory(
+        string directory,
+        Stack<string> pending)
     {
         if (!TryGetAttributes(directory, out var directoryAttributes, out var directoryExists)
             || !directoryExists
             || IsReparsePointAttribute(directoryAttributes))
         {
-            return false;
+            return !directoryExists
+                ? ReparsePointInspection.Unavailable
+                : ReparsePointInspection.Found;
         }
 
         try
@@ -90,7 +115,9 @@ internal static class ExternalSourceRepositoryPathGuard
                     || !exists
                     || IsReparsePointAttribute(attributes))
                 {
-                    return false;
+                    return !exists
+                        ? ReparsePointInspection.Unavailable
+                        : ReparsePointInspection.Found;
                 }
 
                 if (attributes.HasFlag(FileAttributes.Directory))
@@ -99,12 +126,12 @@ internal static class ExternalSourceRepositoryPathGuard
                 }
             }
 
-            return true;
+            return ReparsePointInspection.Safe;
         }
         catch (Exception exception) when (
             ExternalSourceRepositoryFailurePolicy.IsFileSystemException(exception))
         {
-            return false;
+            return ReparsePointInspection.Unavailable;
         }
     }
 
@@ -217,5 +244,12 @@ internal static class ExternalSourceRepositoryPathGuard
             exists = false;
             return false;
         }
+    }
+
+    private enum ReparsePointInspection
+    {
+        Safe,
+        Found,
+        Unavailable,
     }
 }

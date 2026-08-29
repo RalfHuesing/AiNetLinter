@@ -1,9 +1,8 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,7 +23,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
         using var staging = TestTempDirectory.Create("external-source-acquirer-success-");
         var foreignFile = staging.CreateFile("foreign/keep.txt", "keep");
         var mapping = CreateMapping();
-        var transport = new RecordingTransport((_, destination, _) =>
+        var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
         {
             CopySolution(fixture.RootPath, destination);
             return Success("revision-42");
@@ -64,7 +63,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
         int failureKindValue)
     {
         using var staging = TestTempDirectory.Create("external-source-acquirer-failure-");
-        var transport = new RecordingTransport((_, destination, _) =>
+        var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
         {
             Directory.CreateDirectory(destination);
             File.WriteAllText(Path.Combine(destination, "partial.txt"), "partial");
@@ -94,7 +93,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
     {
         using var staging = TestTempDirectory.Create("external-source-acquirer-cancel-");
         using var cancellation = new CancellationTokenSource();
-        var transport = new RecordingTransport((_, destination, token) =>
+        var transport = new ExternalSourceRecordingTransport((_, destination, token) =>
         {
             Directory.CreateDirectory(destination);
             cancellation.Cancel();
@@ -114,7 +113,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
     public async Task AcquireAsync_TransportError_ReturnsTypedFailureAndCleansOwnCheckout()
     {
         using var staging = TestTempDirectory.Create("external-source-acquirer-error-");
-        var transport = new RecordingTransport((_, destination, _) =>
+        var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
         {
             Directory.CreateDirectory(destination);
             File.WriteAllText(Path.Combine(destination, "partial.txt"), "partial");
@@ -161,12 +160,20 @@ public sealed class ExternalSourceRepositoryAcquirerTests
             ExternalSourceProviderFailureKind.InvalidResponse);
     }
     [Fact]
+    public async Task AcquireAsync_PrivilegeNotHeld_MapsToRepositoryCapabilityFailure()
+    {
+        await AssertTransportExceptionMapsAsync(
+            new Win32Exception(ExternalSourceRepositoryFailurePolicy.ErrorPrivilegeNotHeld),
+            ExternalSourceProviderFailureKind.ProviderUnavailable,
+            ExternalSourceConfigurationDiagnosticCodes.RepositoryCapabilityUnavailable);
+    }
+    [Fact]
     public async Task AcquireAsync_CancellationAfterTransportSuccess_RethrowsAndCleansOwnCheckout()
     {
         using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "BaselineMini");
         using var staging = TestTempDirectory.Create("external-source-acquirer-cancel-after-success-");
         using var cancellation = new CancellationTokenSource();
-        var transport = new RecordingTransport((_, destination, _) =>
+        var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
         {
             CopySolution(fixture.RootPath, destination);
             cancellation.Cancel();
@@ -208,7 +215,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
     {
         using var staging = TestTempDirectory.Create("external-source-acquirer-replacement-");
         var movedCheckout = Path.Combine(staging.DirectoryPath, "foreign-checkout");
-        var transport = new RecordingTransport((_, destination, _) =>
+        var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
         {
             Directory.Move(destination, movedCheckout);
             Directory.CreateDirectory(destination);
@@ -239,7 +246,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
         var sentinelDirectory = staging.CreateSubdirectory("external-sentinel");
         var sentinel = staging.CreateFile("external-sentinel/keep.txt", "keep");
         var linkPath = Path.Combine("target", "external-link");
-        var transport = new RecordingTransport((_, destination, _) =>
+        var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
         {
             CopySolution(fixture.RootPath, destination);
             Directory.CreateDirectory(Path.Combine(destination, "target"));
@@ -251,9 +258,10 @@ public sealed class ExternalSourceRepositoryAcquirerTests
         var result = await acquirer.AcquireAsync(CreateMapping());
 
         Assert.False(result.IsAvailable);
+        Assert.Equal(ExternalSourceProviderFailureKind.ProviderUnavailable, result.FailureKind);
         Assert.Contains(
             result.Diagnostics,
-            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutInvalid);
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryCapabilityUnavailable);
         Assert.True(File.Exists(sentinel));
         Assert.Equal("keep", File.ReadAllText(sentinel));
         Assert.False(Directory.Exists(Path.Combine(transport.DestinationPath!, linkPath)));
@@ -264,7 +272,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
     {
         using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "BaselineMini");
         using var staging = TestTempDirectory.Create("external-source-acquirer-cleanup-state-");
-        var transport = new RecordingTransport((_, destination, _) =>
+        var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
         {
             CopySolution(fixture.RootPath, destination);
             return Success("revision-42");
@@ -290,10 +298,11 @@ public sealed class ExternalSourceRepositoryAcquirerTests
 
     private async Task AssertTransportExceptionMapsAsync(
         Exception exception,
-        ExternalSourceProviderFailureKind expectedFailureKind)
+        ExternalSourceProviderFailureKind expectedFailureKind,
+        string expectedDiagnosticCode = ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportFailed)
     {
         using var staging = TestTempDirectory.Create("external-source-acquirer-exception-");
-        var transport = new RecordingTransport((_, destination, _) =>
+        var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
         {
             Directory.CreateDirectory(destination);
             File.WriteAllText(Path.Combine(destination, "partial.txt"), "partial");
@@ -307,7 +316,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
         Assert.Equal(expectedFailureKind, result.FailureKind);
         Assert.Contains(
             result.Diagnostics,
-            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportFailed);
+            diagnostic => diagnostic.Code == expectedDiagnosticCode);
         Assert.All(result.Diagnostics, AssertSafeTransportDiagnostic);
         Assert.False(Directory.Exists(transport.DestinationPath));
     }
@@ -338,7 +347,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
     public async Task AcquireAsync_UnsafeSolutionPath_IsRejectedBeforeTransport(string solutionPath)
     {
         using var staging = TestTempDirectory.Create("external-source-acquirer-path-");
-        var transport = new RecordingTransport((_, _, _) => Success("unused"));
+        var transport = new ExternalSourceRecordingTransport((_, _, _) => Success("unused"));
         var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
 
         var result = await acquirer.AcquireAsync(CreateMapping(solutionPath));
@@ -356,7 +365,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
     public async Task AcquireAsync_TransportResultWithoutCheckout_IsRejectedAndCleaned()
     {
         using var staging = TestTempDirectory.Create("external-source-acquirer-invalid-result-");
-        var transport = new RecordingTransport((_, _, _) => Success("unused"));
+        var transport = new ExternalSourceRecordingTransport((_, _, _) => Success("unused"));
         var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
 
         var result = await acquirer.AcquireAsync(CreateMapping());
@@ -373,7 +382,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
     public async Task AcquireAsync_MissingSolution_IsRejectedAndCleansCheckout()
     {
         using var staging = TestTempDirectory.Create("external-source-acquirer-solution-");
-        var transport = new RecordingTransport((_, destination, _) =>
+        var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
         {
             Directory.CreateDirectory(destination);
             return Success("revision-42");
@@ -394,7 +403,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
     public async Task AcquireAsync_RejectsMappingWithCredentialsWithoutExposingUrl()
     {
         using var staging = TestTempDirectory.Create("external-source-acquirer-credentials-");
-        var transport = new RecordingTransport((_, _, _) => Success("unused"));
+        var transport = new ExternalSourceRecordingTransport((_, _, _) => Success("unused"));
         var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
         var mapping = new ExternalSourceMapping(
             "https://user:secret@gitea.example/shared.git",
@@ -411,7 +420,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
     [Fact]
     public void Constructor_RejectsRelativeStagingRoot()
     {
-        var transport = new RecordingTransport((_, _, _) => Success("unused"));
+        var transport = new ExternalSourceRecordingTransport((_, _, _) => Success("unused"));
 
         Assert.Throws<ArgumentException>(() =>
             new ExternalSourceRepositoryAcquirer(transport, "relative-staging-root"));
@@ -458,42 +467,4 @@ public sealed class ExternalSourceRepositoryAcquirerTests
             Path.Combine(destination, "BaselineMini.slnx"));
     }
 
-    private sealed class RecordingTransport : IGiteaRepositoryTransport
-    {
-        private readonly Func<ExternalSourceMapping, string, CancellationToken, ExternalSourceRepositoryTransportResult> operation;
-
-        internal RecordingTransport(
-            Func<ExternalSourceMapping, string, CancellationToken, ExternalSourceRepositoryTransportResult> operation)
-        {
-            this.operation = operation;
-        }
-
-        internal int CallCount { get; private set; }
-
-        internal ExternalSourceMapping? Mapping { get; private set; }
-
-        internal string? DestinationPath { get; private set; }
-
-        internal bool DestinationHadNoWorkingTreeEntriesAtCall { get; private set; }
-
-        internal CancellationToken CancellationToken { get; private set; }
-
-        public ValueTask<ExternalSourceRepositoryTransportResult> CloneDefaultBranchAsync(
-            ExternalSourceMapping mapping,
-            string destinationPath,
-            CancellationToken cancellationToken = default)
-        {
-            CallCount++;
-            Mapping = mapping;
-            DestinationPath = destinationPath;
-            DestinationHadNoWorkingTreeEntriesAtCall = Directory.Exists(destinationPath)
-                && Directory.EnumerateFileSystemEntries(destinationPath).All(path =>
-                    string.Equals(
-                        Path.GetFileName(path),
-                        ExternalSourceCheckoutOwnership.OwnershipMarkerFileName,
-                        StringComparison.Ordinal));
-            CancellationToken = cancellationToken;
-            return ValueTask.FromResult(operation(mapping, destinationPath, cancellationToken));
-        }
-    }
 }

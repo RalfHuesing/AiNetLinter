@@ -10,6 +10,7 @@ using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Assemblies;
 
+// @covers ExternalSourceProviderFailureProjection
 [Trait("Category", "Unit")]
 public sealed class ExternalSourceProviderContractTests
 {
@@ -137,6 +138,32 @@ public sealed class ExternalSourceProviderContractTests
             isAvailable: true,
             diagnostics: System.Array.Empty<ExternalSourceConfigurationDiagnostic>(),
             failureKind: ExternalSourceProviderFailureKind.Timeout));
+    }
+
+    [Fact]
+    public void FailureProjection_ProjectsCapabilityFailureWithoutSecrets()
+    {
+        const string secret = "https://user:password@example.test/repository Bearer token";
+        var acquisition = ExternalSourceRepositoryAcquisitionResult.Failure(
+            ExternalSourceProviderFailureKind.ProviderUnavailable,
+            [new ExternalSourceConfigurationDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.RepositoryCapabilityUnavailable,
+                "exception detail " + secret,
+                "warning",
+                secret)]);
+
+        var result = ExternalSourceProviderFailureProjection.FromUnavailableAcquisition(acquisition);
+
+        Assert.False(result.IsAvailable);
+        Assert.Equal(ExternalSourceProviderFailureKind.ProviderUnavailable, result.FailureKind);
+        Assert.Null(result.SourceSnapshot);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(
+            ExternalSourceConfigurationDiagnosticCodes.RepositoryCapabilityUnavailable,
+            diagnostic.Code);
+        Assert.DoesNotContain(secret, diagnostic.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(secret, diagnostic.Location, StringComparison.Ordinal);
+        Assert.Equal("$repository", diagnostic.Location);
     }
 
     [Fact]

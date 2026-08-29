@@ -1,8 +1,10 @@
 #nullable enable
 
 using System;
+using System.ComponentModel;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Net.Http;
 using AiNetLinter.Configuration;
 
@@ -10,6 +12,9 @@ namespace AiNetLinter.Mcp.Assemblies;
 
 internal static class ExternalSourceRepositoryFailurePolicy
 {
+    internal const int ErrorPrivilegeNotHeld = 1314;
+
+    private const int Win32ErrorMask = 0xFFFF;
     private const string SafeTransportLocation = "$repository";
     private const string SafeWarningSeverity = "warning";
     private const string SafeErrorSeverity = "error";
@@ -20,15 +25,43 @@ internal static class ExternalSourceRepositoryFailurePolicy
             or UnauthorizedAccessException
             or NotSupportedException;
 
+    internal static bool IsPrivilegeNotHeld(Exception exception)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return false;
+        }
+
+        if (exception is Win32Exception win32Exception)
+        {
+            return win32Exception.NativeErrorCode == ErrorPrivilegeNotHeld;
+        }
+
+        return exception is IOException or UnauthorizedAccessException
+            && (exception.HResult & Win32ErrorMask) == ErrorPrivilegeNotHeld;
+    }
+
     internal static ExternalSourceProviderFailureKind ClassifyTransportException(
-        Exception exception) =>
-        exception switch
+        Exception exception)
+    {
+        if (IsPrivilegeNotHeld(exception))
+        {
+            return ExternalSourceProviderFailureKind.ProviderUnavailable;
+        }
+
+        return exception switch
         {
             HttpRequestException => ExternalSourceProviderFailureKind.NetworkUnavailable,
             TimeoutException => ExternalSourceProviderFailureKind.Timeout,
             UnauthorizedAccessException => ExternalSourceProviderFailureKind.AccessDenied,
             _ => ExternalSourceProviderFailureKind.InvalidResponse,
         };
+    }
+
+    internal static string GetTransportDiagnosticCode(Exception exception) =>
+        IsPrivilegeNotHeld(exception)
+            ? ExternalSourceConfigurationDiagnosticCodes.RepositoryCapabilityUnavailable
+            : ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportFailed;
 
     internal static ImmutableArray<ExternalSourceConfigurationDiagnostic>
         ProjectTransportDiagnostics(
@@ -91,6 +124,7 @@ internal static class ExternalSourceRepositoryFailurePolicy
             ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionInvalid => code,
             ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportResultInvalid => code,
             ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportFailed => code,
+            ExternalSourceConfigurationDiagnosticCodes.RepositoryCapabilityUnavailable => code,
             ExternalSourceConfigurationDiagnosticCodes.RepositoryCleanupFailed => code,
             _ => ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportFailed,
         };
@@ -144,6 +178,8 @@ internal static class ExternalSourceRepositoryFailurePolicy
                 "Die konfigurierte Solution ist ungültig.",
             ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportResultInvalid =>
                 "Das Repository-Transportergebnis ist ungültig.",
+            ExternalSourceConfigurationDiagnosticCodes.RepositoryCapabilityUnavailable =>
+                "Die Repository-Capability ist für diese Source nicht verfügbar.",
             ExternalSourceConfigurationDiagnosticCodes.RepositoryCleanupFailed =>
                 "Der Repository-Checkout konnte nicht sicher bereinigt werden.",
             _ => "Die Repository-Akquisition ist fehlgeschlagen.",

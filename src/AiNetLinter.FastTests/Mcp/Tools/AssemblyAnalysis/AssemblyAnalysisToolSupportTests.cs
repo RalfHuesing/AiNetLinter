@@ -36,7 +36,7 @@ public sealed class AssemblyAnalysisToolSupportTests
                 "TargetAssembly",
                 "namespace Source; public sealed class SourceOnly { }"));
         using var registry = new SourceSnapshotRegistry();
-        var provider = new RecordingProvider(new ExternalSourceProviderResult(
+        var provider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(
             true,
             [new ExternalSourceConfigurationDiagnostic("provider-info", "Quelle bereit", "info", "provider")],
             snapshot));
@@ -89,7 +89,7 @@ public sealed class AssemblyAnalysisToolSupportTests
             mapping,
             new ExternalSourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
         using var registry = new SourceSnapshotRegistry();
-        var provider = new RecordingProvider(
+        var provider = new AssemblyAnalysisRecordingProvider(
             new ExternalSourceProviderResult(true, [], firstSnapshot),
             new ExternalSourceProviderResult(true, [], duplicateSnapshot));
         var orchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], provider, registry);
@@ -137,7 +137,7 @@ public sealed class AssemblyAnalysisToolSupportTests
             "TargetAssembly",
             "namespace Target; public sealed class TargetOnly { }");
         using var registry = new SourceSnapshotRegistry();
-        var provider = new RecordingProvider(new ExternalSourceProviderResult(true, []));
+        var provider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(true, []));
         var orchestrator = CreateConfiguredOrchestrator(temp, ["OtherAssembly"], provider, registry);
         AssemblyContext? context = null;
         var result = await AssemblyAnalysisToolSupport.ExecuteAsync(
@@ -175,7 +175,7 @@ public sealed class AssemblyAnalysisToolSupportTests
             "Provider nicht verfügbar",
             "warning",
             "https://gitea.example/shared.git");
-        var provider = new RecordingProvider(new ExternalSourceProviderResult(
+        var provider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(
             isAvailable: false,
             diagnostics: [diagnostic],
             failureKind: failureKind));
@@ -199,6 +199,47 @@ public sealed class AssemblyAnalysisToolSupportTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_AcquisitionCapabilityFailureProjectsAndFallsBack()
+    {
+        using var temp = TestTempDirectory.Create("assembly-source-capability-failure-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "TargetAssembly",
+            "namespace Target; public sealed class TargetOnly { }");
+        var acquisition = ExternalSourceRepositoryAcquisitionResult.Failure(
+            ExternalSourceProviderFailureKind.ProviderUnavailable,
+            [new ExternalSourceConfigurationDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.RepositoryCapabilityUnavailable,
+                "Lokale Capability nicht verfügbar.",
+                "error",
+                "$repository")]);
+        using var registry = new SourceSnapshotRegistry();
+        var provider = new AssemblyAnalysisAcquisitionFailureProvider(acquisition);
+        var orchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], provider, registry);
+        AssemblyContext? context = null;
+        AssemblySourceSelectionScope? scope = null;
+
+        var result = await AssemblyAnalysisToolSupport.ExecuteAsync(
+            CreateParameters(assemblyPath, observed => context = observed),
+            orchestrator,
+            observed => scope = observed);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(context);
+        Assert.Equal("decompiled", context!.Origin.OriginKind);
+        Assert.NotNull(context.Compilation.GetTypeByMetadataName("Target.TargetOnly"));
+        Assert.NotNull(scope);
+        Assert.Null(scope!.Selection);
+        Assert.Equal(
+            ExternalSourceProviderFailureKind.ProviderUnavailable,
+            scope.ProviderFailureKind);
+        Assert.Contains(
+            scope.Diagnostics,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryCapabilityUnavailable);
+        Assert.Equal(0, registry.ResidentCount);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_InvalidConfigurationOrUnusableMatchFallsBackDeterministically()
     {
         using var temp = TestTempDirectory.Create("assembly-source-fallback-");
@@ -212,7 +253,7 @@ public sealed class AssemblyAnalysisToolSupportTests
             "error",
             "settings");
         using var invalidRegistry = new SourceSnapshotRegistry();
-        var invalidProvider = new RecordingProvider(new ExternalSourceProviderResult(true, []));
+        var invalidProvider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(true, []));
         var invalidOrchestrator = new AssemblySourceSelectionOrchestrator(
             ExternalSourceConfigurationLoadResult.Failure([loaderDiagnostic]),
             invalidProvider,
@@ -232,7 +273,7 @@ public sealed class AssemblyAnalysisToolSupportTests
             mapping,
             new ExternalSourceProjectSpec("SourceProject", "OtherAssembly", "namespace Source; public sealed class OtherOnly { }"));
         using var noMatchRegistry = new SourceSnapshotRegistry();
-        var noMatchProvider = new RecordingProvider(new ExternalSourceProviderResult(true, [], noMatchSnapshot));
+        var noMatchProvider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(true, [], noMatchSnapshot));
         var noMatchOrchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], noMatchProvider, noMatchRegistry);
         AssemblySourceSelectionScope? noMatchScope = null;
         AssemblyContext? noMatchContext = null;
@@ -259,7 +300,7 @@ public sealed class AssemblyAnalysisToolSupportTests
             new ExternalSourceProjectSpec("Zeta", "TargetAssembly", "namespace Source; public sealed class ZetaOnly { }"),
             new ExternalSourceProjectSpec("Alpha", "TargetAssembly", "namespace Source; public sealed class AlphaOnly { }"));
         using var ambiguousRegistry = new SourceSnapshotRegistry();
-        var ambiguousProvider = new RecordingProvider(new ExternalSourceProviderResult(true, [], ambiguousSnapshot));
+        var ambiguousProvider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(true, [], ambiguousSnapshot));
         var ambiguousOrchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], ambiguousProvider, ambiguousRegistry);
         AssemblySourceSelectionScope? ambiguousScope = null;
         AssemblyContext? ambiguousContext = null;
@@ -298,7 +339,7 @@ public sealed class AssemblyAnalysisToolSupportTests
             new ExternalSourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
         using var registry = new SourceSnapshotRegistry();
         using var cancellation = new CancellationTokenSource();
-        var provider = new RecordingProvider((_, token) =>
+        var provider = new AssemblyAnalysisRecordingProvider((_, token) =>
         {
             var result = new ExternalSourceProviderResult(true, [], snapshot);
             cancellation.Cancel();
@@ -340,7 +381,7 @@ public sealed class AssemblyAnalysisToolSupportTests
             mapping,
             new ExternalSourceProjectSpec("SourceProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
         using var registry = new SourceSnapshotRegistry();
-        var provider = new RecordingProvider(new ExternalSourceProviderResult(true, [], snapshot));
+        var provider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(true, [], snapshot));
         var orchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], provider, registry);
         AssemblySourceSelectionScope? observedScope = null;
         const string builderError = "Result-Builder fehlgeschlagen";
@@ -378,7 +419,7 @@ public sealed class AssemblyAnalysisToolSupportTests
             "namespace Target; public sealed class TargetOnly { }");
         using var registry = new SourceSnapshotRegistry();
         using var cancellation = new CancellationTokenSource();
-        var provider = new RecordingProvider((_, token) => throw new OperationCanceledException(token));
+        var provider = new AssemblyAnalysisRecordingProvider((_, token) => throw new OperationCanceledException(token));
         var orchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], provider, registry);
         await Assert.ThrowsAsync<OperationCanceledException>(async () =>
             await orchestrator.ResolveAsync(assemblyPath, cancellation.Token));
@@ -432,40 +473,4 @@ public sealed class AssemblyAnalysisToolSupportTests
     private static ExternalSourceMapping CreateMapping(IReadOnlyList<string> assemblies) =>
         new("https://gitea.example/shared.git", "src/Shared.slnx", assemblies);
 
-    private sealed class RecordingProvider : IExternalSourceProvider
-    {
-        private readonly Queue<ExternalSourceProviderResult>? results;
-        private readonly Func<ExternalSourceMapping, CancellationToken, ExternalSourceProviderResult>? callback;
-
-        internal RecordingProvider(params ExternalSourceProviderResult[] results)
-        {
-            this.results = new Queue<ExternalSourceProviderResult>(results);
-        }
-
-        internal RecordingProvider(Func<ExternalSourceMapping, CancellationToken, ExternalSourceProviderResult> callback)
-        {
-            this.callback = callback;
-        }
-
-        internal int CallCount { get; private set; }
-
-        internal ExternalSourceMapping? Mapping { get; private set; }
-
-        internal CancellationToken CancellationToken { get; private set; }
-
-        public ValueTask<ExternalSourceProviderResult> ResolveAsync(
-            ExternalSourceMapping mapping,
-            CancellationToken cancellationToken = default)
-        {
-            CallCount++;
-            Mapping = mapping;
-            CancellationToken = cancellationToken;
-            if (callback is not null)
-            {
-                return ValueTask.FromResult(callback(mapping, cancellationToken));
-            }
-
-            return ValueTask.FromResult(results!.Dequeue());
-        }
-    }
 }

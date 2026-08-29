@@ -121,6 +121,7 @@ internal static class ExternalSourceConfigurationDiagnosticCodes
     internal const string RepositorySolutionInvalid = "external-source-repository-solution-invalid";
     internal const string RepositoryTransportResultInvalid = "external-source-repository-transport-result-invalid";
     internal const string RepositoryTransportFailed = "external-source-repository-transport-failed";
+    internal const string RepositoryCapabilityUnavailable = "external-source-repository-capability-unavailable";
     internal const string RepositoryCleanupFailed = "external-source-repository-cleanup-failed";
 }
 
