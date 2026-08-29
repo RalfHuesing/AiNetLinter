@@ -2,7 +2,7 @@
 task: decompiled-assembly-analysis
 type: tech-debt-log
 maintained_by: kritiker
-last_updated: 2026-08-29T07:44:34+02:00
+last_updated: 2026-08-29T09:01:53+02:00
 ---
 
 # Tech-Debt-Log: decompiled-assembly-analysis
@@ -67,7 +67,9 @@ Duplikationsbeobachtungen außerhalb des jeweiligen Step-Scopes.
 - **Gefunden in:** step-019 (Kritiker-Review vom 2026-08-29)
 - **Ort:** `src/AiNetLinter/Mcp/Assemblies/ExternalSourceRepositoryAcquirer.cs:458-464`; `src/AiNetLinter/Mcp/Assemblies/GiteaGitRepositoryTransport.cs:288-296`; der identische `Success`-Builder zusätzlich in `src/AiNetLinter.FastTests/Mcp/Assemblies/ExternalSourceRepositoryAcquirerTests.cs:453-457`
 - **Befund:** Der solutionweite DRY-Audit mit `minTokens=20` findet den exakten `Success`-Builder zwischen Produktions- und Testcode. Im Step-019-Produktionsscope findet der tokenbasierte Audit außerdem den nahe Klon der URL-Prüfung; der strukturelle Audit bewertet beide URL-Methoden als exakten Kandidaten. Die Implementierungen sind bereits semantisch auseinander gelaufen: Der Transport lehnt Query und Fragment ab, der Acquirer derzeit nicht.
-- **Warum nicht sofort gefixt:** Dieser Kritiker-Durchgang ist auf Review-Dokumentation begrenzt und darf keine Produktionsfixes vorwegnehmen. Eine gemeinsame URL-Regel muss die beiden Vertragsgrenzen und die strengere Sicherheitssemantik festlegen; ein gemeinsamer Result-Builder müsste zusätzlich die test-only Grenze und die bestehende Transport-Result-API entscheiden.
-- **Vorschlag:** Bei der nächsten Änderung am Repository-Akquisitionsvertrag eine gemeinsame interne URL-Policy mit explizitem Query-/Fragment-Vertrag sowie eine geeignete Result-Fabrik prüfen. Danach die Acquirer- und Transporttests gegen dieselbe Policy ausrichten.
+- **Umsetzung:** In step-020 wurden eine gemeinsame interne URL-Policy mit
+  explizitem Ausschluss von Userinfo, Query und Fragment sowie die gemeinsame
+  `ExternalSourceRepositoryTransportResult.Success`-Fabrik eingeführt. Acquirer,
+  Transport und Testverbraucher verwenden nun dieselben Verträge.
 - **Auto-Fixable:** nein — die Vertragsangleichung und die zulässige gemeinsame Ablage erfordern Architektur-Ermessen.
-- **Status:** offen
+- **Status:** erledigt in step-020 (`2c2a2c01666e370694bc78f7b748d5a988219b4e`)
