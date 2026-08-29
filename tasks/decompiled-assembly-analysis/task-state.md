@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T14:14:42+02:00
+last_updated: 2026-08-29T15:03:31+02:00
 rules_dir: .agents/rules
 total_steps: 25
 current_step: step-025
@@ -14,11 +14,11 @@ current_step: step-025
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 25 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-025` (planned/in_progress; Korrektur zu `step-024`, MAJOR-001 im Registry-Cleanup)
+- **Aktueller Schritt:** `step-025` (done; Registry-/Snapshot-Multi-Owner-Cleanup korrigiert)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T14:14:42+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T15:03:31+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -49,7 +49,7 @@ current_step: step-025
 | step-022 | EPIC-04 | issues | Native Startfehler und Test-Cleanup fail-closed absichern | step-021 | 872b4855 | issues → step-023 | 872b4855 + f5063d5a + fc061950 |
 | step-023 | EPIC-04 | done | Prozessbaum-Fallback und Handle-Cleanup vollständig fail-closed schließen | step-022 | d1b633d0 | approved | d1b633d0 + 5b22d16a + 30b13647 |
 | step-024 | EPIC-04 | issues | Erfolgreiches Acquirer→Snapshot-/Workspace-Wiring mit besitzgebundener Lifetime | - | 428cc4b3 | issues → step-025 | 428cc4b3 + f781b127 + 3e726048 |
-| step-025 | EPIC-04 | planned/in_progress | Registry-/Snapshot-Lifetime und exception-sicheres Multi-Owner-Cleanup korrigieren | step-024 | - | ausstehend | - |
+| step-025 | EPIC-04 | done | Registry-/Snapshot-Lifetime und exception-sicheres Multi-Owner-Cleanup korrigieren | step-024 | 74fc0056 | approved | 74fc0056 + acdfe70e |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -356,3 +356,12 @@ und Checkout-Besitz könnten dadurch leaken und ein Retry ist verhindert. Das
 wird als ein zusammenhängendes Ownership-Korrekturpaket mit aggregiertem
 Cleanup-Fehlerpfad und deterministischer Regression behoben. Die übrigen
 Provider-, Materializer-, Fallback-, Test- und Scope-Grenzen bleiben erhalten.
+
+Step 025 wurde durch den neuen Kritiker mit `acdfe70e` genehmigt. Die Registry
+entnimmt ihre Snapshots terminal unter Lock, entsorgt alle Besitzer außerhalb
+des Locks trotz Einzel-Exceptions in deterministischer Reihenfolge und gibt
+Einzel- bzw. Mehrfachfehler sichtbar weiter. Der Regressionstest bestätigt
+zwei Snapshots, erfolgreichen Cleanup des zweiten Besitzers und einen
+bounded/idempotenten Folge-Dispose. Es wurden keine neuen Tech-Debt-Funde
+aufgenommen; Build und beide vollständigen Nicht-Stress-Gates sind grün, der
+echte Symlink-/Reparse-Test bleibt transparent wegen Win32 1314 übersprungen.
