@@ -16,11 +16,13 @@ internal sealed class ExternalSourceRepositoryAcquirer
     private readonly IGiteaRepositoryTransport transport;
     private readonly string stagingRoot;
     private readonly ILogger logger;
+    private readonly IExternalSourceRepositoryCacheWriter cacheWriter;
 
     internal ExternalSourceRepositoryAcquirer(
         IGiteaRepositoryTransport transport,
         string stagingRoot,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        IExternalSourceRepositoryCacheWriter? cacheWriter = null)
     {
         ArgumentNullException.ThrowIfNull(transport);
 
@@ -30,6 +32,7 @@ internal sealed class ExternalSourceRepositoryAcquirer
                 "Die Staging-Wurzel muss ein absoluter, gültiger Pfad sein.",
                 nameof(stagingRoot));
         this.logger = logger ?? Log.Logger;
+        this.cacheWriter = cacheWriter ?? new LocalExternalSourceRepositoryCacheWriter();
     }
 
     internal async Task<ExternalSourceRepositoryAcquisitionResult> AcquireAsync(
@@ -86,10 +89,12 @@ internal sealed class ExternalSourceRepositoryAcquirer
                 ownership.CheckoutPath,
                 cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
-            return CompleteTransportResult(
+            return await CompleteTransportResultAsync(
                 ownership,
                 solutionPath,
-                transportResult);
+                transportResult,
+                mapping,
+                cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -104,10 +109,12 @@ internal sealed class ExternalSourceRepositoryAcquirer
         }
     }
 
-    private ExternalSourceRepositoryAcquisitionResult CompleteTransportResult(
+    private async Task<ExternalSourceRepositoryAcquisitionResult> CompleteTransportResultAsync(
         ExternalSourceCheckoutOwnership ownership,
         string solutionPath,
-        ExternalSourceRepositoryTransportResult? transportResult)
+        ExternalSourceRepositoryTransportResult? transportResult,
+        ExternalSourceMapping mapping,
+        CancellationToken cancellationToken)
     {
         if (transportResult is null)
         {
@@ -143,9 +150,77 @@ internal sealed class ExternalSourceRepositoryAcquirer
             ownership,
             checkoutValidation.SolutionPath!,
             transportResult.LoadedRevision!);
-        return ExternalSourceRepositoryAcquisitionResult.Success(
-            checkout,
-            transportResult.Diagnostics);
+
+        return await PublishCacheAndCreateResultAsync(
+                mapping,
+                solutionPath,
+                ownership,
+                checkout,
+                transportResult,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private async Task<ExternalSourceRepositoryAcquisitionResult> PublishCacheAndCreateResultAsync(
+        ExternalSourceMapping mapping,
+        string solutionPath,
+        ExternalSourceCheckoutOwnership ownership,
+        ExternalSourceCheckoutHandle checkout,
+        ExternalSourceRepositoryTransportResult transportResult,
+        CancellationToken cancellationToken)
+    {
+        if (!ExternalSourceRepositoryCacheKey.TryCreate(mapping.Url, solutionPath, out var cacheKey))
+        {
+            return FailAfterCleanup(
+                ownership,
+                ExternalSourceProviderFailureKind.InvalidResponse,
+                [CreateDiagnostic(
+                    ExternalSourceConfigurationDiagnosticCodes.RepositoryMappingInvalid,
+                    "Die validierte Repository-Identität konnte nicht erzeugt werden.")]);
+        }
+
+        var request = new ExternalSourceRepositoryCachePublishRequest
+        {
+            Mapping = mapping,
+            Checkout = checkout,
+            CheckoutOwnership = ownership,
+            CacheKey = cacheKey!,
+            SolutionPath = solutionPath,
+            LoadedRevision = transportResult.LoadedRevision!,
+        };
+        var cacheResult = await PublishCacheAsync(request, cancellationToken).ConfigureAwait(false);
+        if (cacheResult.FailureKind is ExternalSourceRepositoryCachePublishFailureKind.Cancelled
+            && cancellationToken.IsCancellationRequested)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        var diagnostics = new List<ExternalSourceConfigurationDiagnostic>(transportResult.Diagnostics);
+        if (!cacheResult.Succeeded)
+        {
+            diagnostics.AddRange(cacheResult.Diagnostics);
+        }
+
+        return ExternalSourceRepositoryAcquisitionResult.Success(checkout, diagnostics);
+    }
+
+    private async Task<ExternalSourceRepositoryCachePublishResult> PublishCacheAsync(
+        ExternalSourceRepositoryCachePublishRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await cacheWriter.PublishAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return ExternalSourceRepositoryCachePublishResult.Failure(
+                ExternalSourceRepositoryCachePublishFailureKind.WriteFailed);
+        }
     }
 
     private async Task<ExternalSourceRepositoryTransportResult?> ExecuteTransportAsync(
@@ -191,13 +266,19 @@ internal sealed class ExternalSourceRepositoryAcquirer
             return false;
         }
 
-        if (!TryNormalizeSolutionPath(mapping.SolutionPath, out solutionPath))
+        if (!ExternalSourceRepositoryCacheKey.TryNormalizeSolutionPath(
+                mapping.SolutionPath,
+                out var normalizedSolutionPath))
         {
             failure = InvalidResult(
                 ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionPathInvalid,
                 "Der konfigurierte Solution-Pfad ist kein sicherer repository-relativer .sln- oder .slnx-Pfad.");
             return false;
         }
+
+        solutionPath = normalizedSolutionPath!.Replace(
+            '/',
+            Path.DirectorySeparatorChar);
 
         foreach (var assembly in mapping.Assemblies)
         {
@@ -385,75 +466,8 @@ internal sealed class ExternalSourceRepositoryAcquirer
             nameof(ExternalSourceRepositoryAcquirer),
             "$repository");
 
-    private static bool TryNormalizeSolutionPath(string value, out string? normalizedPath)
-    {
-        normalizedPath = null;
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        var path = value.Trim().Replace('\\', '/');
-        if (Path.IsPathRooted(path)
-            || path.StartsWith("/", StringComparison.Ordinal)
-            || ExternalSourcePathRules.IsDriveQualified(path))
-        {
-            return false;
-        }
-
-        var segments = new List<string>();
-        foreach (var segment in path.Split('/', StringSplitOptions.RemoveEmptyEntries))
-        {
-            if (segment is ".")
-            {
-                continue;
-            }
-
-            if (segment is ".."
-                || segment.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-            {
-                return false;
-            }
-
-            segments.Add(segment);
-        }
-
-        if (segments.Count == 0)
-        {
-            return false;
-        }
-
-        normalizedPath = string.Join(Path.DirectorySeparatorChar.ToString(), segments);
-        return normalizedPath.EndsWith(".sln", StringComparison.OrdinalIgnoreCase)
-            || normalizedPath.EndsWith(".slnx", StringComparison.OrdinalIgnoreCase);
-    }
-
     private static string? CanonicalizeStagingRoot(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value) || !Path.IsPathFullyQualified(value.Trim()))
-        {
-            return null;
-        }
-
-        try
-        {
-            var fullPath = Path.GetFullPath(value.Trim());
-            var pathRoot = Path.GetPathRoot(fullPath);
-            if (string.IsNullOrEmpty(pathRoot))
-            {
-                return null;
-            }
-
-            return string.Equals(fullPath, pathRoot, StringComparison.OrdinalIgnoreCase)
-                ? pathRoot
-                : fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        }
-        catch (Exception exception) when (
-            ExternalSourceRepositoryFailurePolicy.IsFileSystemException(exception))
-        {
-            return null;
-        }
-    }
+        => ExternalSourceRepositoryCacheContract.TryCanonicalizeAbsoluteRoot(value);
 
     internal static bool IsReparsePointAttribute(FileAttributes attributes) =>
         ExternalSourceRepositoryPathGuard.IsReparsePointAttribute(attributes);
