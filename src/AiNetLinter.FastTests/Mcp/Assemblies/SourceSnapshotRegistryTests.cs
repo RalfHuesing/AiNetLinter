@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
 using Microsoft.CodeAnalysis;
@@ -11,6 +12,9 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies;
 [Trait("Category", "Unit")]
 public sealed class SourceSnapshotRegistryTests
 {
+    private const string FirstSnapshotLabel = "alpha";
+    private const string SecondSnapshotLabel = "omega";
+
     [Fact]
     public void Acquire_DeduplicatesAssemblyAliasesAndDisposesOnlyDuplicateOwner()
     {
@@ -87,15 +91,120 @@ public sealed class SourceSnapshotRegistryTests
 
     }
 
+    [Fact]
+    public void Dispose_ContinuesAfterSnapshotFailureAndDoesNotRetryOnSecondCall()
+    {
+        var disposeOrder = new List<string>();
+        var firstMapping = new ExternalSourceMapping(
+            "https://gitea.example/shared.git",
+            "src/Alpha.slnx",
+            ["First"]);
+        var secondMapping = new ExternalSourceMapping(
+            firstMapping.Url,
+            "src/Omega.slnx",
+            ["Second"]);
+        var firstOwner = new TrackingCheckoutOwner(FirstSnapshotLabel, disposeOrder, throws: true);
+        var secondOwner = new TrackingCheckoutOwner(SecondSnapshotLabel, disposeOrder, throws: false);
+        using var firstSnapshot = CreateSnapshot(firstMapping, "revision-1", firstOwner);
+        using var secondSnapshot = CreateSnapshot(secondMapping, "revision-1", secondOwner);
+        using var registry = new SourceSnapshotRegistry();
+        using var secondLease = registry.Acquire(secondSnapshot);
+        using var firstLease = registry.Acquire(firstSnapshot);
+        Assert.True(
+            string.CompareOrdinal(
+                firstSnapshot.Identity.StableValue,
+                secondSnapshot.Identity.StableValue) < 0,
+            $"first={firstSnapshot.Identity.StableValue}; second={secondSnapshot.Identity.StableValue}");
+
+        var failure = Assert.Throws<InvalidOperationException>(() => registry.Dispose());
+
+        Assert.Equal(FirstSnapshotLabel, failure.Message);
+        Assert.Equal([FirstSnapshotLabel, SecondSnapshotLabel], disposeOrder);
+        Assert.True(firstSnapshot.IsDisposed);
+        Assert.True(secondSnapshot.IsDisposed);
+        Assert.Equal(0, registry.ResidentCount);
+        Assert.Equal(1, firstOwner.DisposeCount);
+        Assert.Equal(1, secondOwner.DisposeCount);
+
+        registry.Dispose();
+
+        Assert.Equal(1, firstOwner.DisposeCount);
+        Assert.Equal(1, secondOwner.DisposeCount);
+        Assert.Equal(0, registry.ResidentCount);
+
+        firstSnapshot.Dispose();
+        secondSnapshot.Dispose();
+    }
+
+    [Fact]
+    public void Dispose_AggregatesMultipleSnapshotFailuresInStableIdentityOrder()
+    {
+        var disposeOrder = new List<string>();
+        var firstMapping = new ExternalSourceMapping(
+            "https://gitea.example/shared.git",
+            "src/Alpha.slnx",
+            ["First"]);
+        var secondMapping = new ExternalSourceMapping(
+            firstMapping.Url,
+            "src/Omega.slnx",
+            ["Second"]);
+        var firstOwner = new TrackingCheckoutOwner(FirstSnapshotLabel, disposeOrder, throws: true);
+        var secondOwner = new TrackingCheckoutOwner(SecondSnapshotLabel, disposeOrder, throws: true);
+        using var firstSnapshot = CreateSnapshot(firstMapping, "revision-1", firstOwner);
+        using var secondSnapshot = CreateSnapshot(secondMapping, "revision-1", secondOwner);
+        using var registry = new SourceSnapshotRegistry();
+        using var secondLease = registry.Acquire(secondSnapshot);
+        using var firstLease = registry.Acquire(firstSnapshot);
+
+        var failure = Assert.Throws<AggregateException>(() => registry.Dispose());
+
+        Assert.Collection(
+            failure.InnerExceptions,
+            first => Assert.Equal(FirstSnapshotLabel, first.Message),
+            second => Assert.Equal(SecondSnapshotLabel, second.Message));
+        Assert.Equal([FirstSnapshotLabel, SecondSnapshotLabel], disposeOrder);
+        Assert.Equal(1, firstOwner.DisposeCount);
+        Assert.Equal(1, secondOwner.DisposeCount);
+
+        registry.Dispose();
+
+        Assert.Equal(1, firstOwner.DisposeCount);
+        Assert.Equal(1, secondOwner.DisposeCount);
+        Assert.Equal(0, registry.ResidentCount);
+
+        firstSnapshot.Dispose();
+        secondSnapshot.Dispose();
+    }
+
     private static ExternalSourceSnapshot CreateSnapshot(
         ExternalSourceMapping mapping,
-        string revision)
+        string revision,
+        IExternalSourceCheckoutOwner? checkoutOwner = null)
     {
         var workspace = new AdhocWorkspace();
         return new(
             SourceSnapshotIdentity.Create(mapping, revision),
             workspace.CurrentSolution,
-            workspace);
+            workspace,
+            checkoutOwner);
+    }
+
+    private sealed class TrackingCheckoutOwner(
+        string name,
+        List<string> disposeOrder,
+        bool throws) : IExternalSourceCheckoutOwner
+    {
+        internal int DisposeCount { get; private set; }
+
+        public void Dispose()
+        {
+            DisposeCount++;
+            disposeOrder.Add(name);
+            if (throws)
+            {
+                throw new InvalidOperationException(name);
+            }
+        }
     }
 }
 

@@ -72,10 +72,23 @@ internal sealed class SourceSnapshotRegistry : IDisposable
             snapshots.Clear();
         }
 
+        remaining.Sort(static (left, right) =>
+            string.CompareOrdinal(left.Identity.StableValue, right.Identity.StableValue));
+
+        var failures = new List<Exception>();
         foreach (var snapshot in remaining)
         {
-            snapshot.Dispose();
+            try
+            {
+                snapshot.Dispose();
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+            }
         }
+
+        DisposeFailureAggregator.ThrowIfAny(failures);
     }
 
     internal void Release(ExternalSourceSnapshot snapshot)

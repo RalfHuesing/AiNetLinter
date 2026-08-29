@@ -156,6 +156,15 @@ internal sealed record SourceSnapshotIdentity
     }
 
 }
+internal static class DisposeFailureAggregator
+{
+    internal static void ThrowIfAny(List<Exception> failures)
+    {
+        if (failures.Count == 0) return;
+        if (failures.Count == 1) ExceptionDispatchInfo.Capture(failures[0]).Throw();
+        throw new AggregateException(failures);
+    }
+}
 
 internal sealed class ExternalSourceSnapshot : IDisposable
 {
@@ -195,46 +204,25 @@ internal sealed class ExternalSourceSnapshot : IDisposable
             return;
         }
 
-        Exception? workspaceFailure = null;
+        var failures = new List<Exception>();
         try
         {
             workspace.Dispose();
         }
         catch (Exception exception)
         {
-            workspaceFailure = exception;
+            failures.Add(exception);
         }
 
-        Exception? checkoutFailure = null;
         try
         {
             checkoutOwner?.Dispose();
         }
         catch (Exception exception)
         {
-            checkoutFailure = exception;
+            failures.Add(exception);
         }
 
-        ThrowDisposeFailures(workspaceFailure, checkoutFailure);
-    }
-
-    private static void ThrowDisposeFailures(
-        Exception? workspaceFailure,
-        Exception? checkoutFailure)
-    {
-        if (workspaceFailure is not null && checkoutFailure is not null)
-        {
-            throw new AggregateException(workspaceFailure, checkoutFailure);
-        }
-
-        if (workspaceFailure is not null)
-        {
-            ExceptionDispatchInfo.Capture(workspaceFailure).Throw();
-        }
-
-        if (checkoutFailure is not null)
-        {
-            ExceptionDispatchInfo.Capture(checkoutFailure).Throw();
-        }
+        DisposeFailureAggregator.ThrowIfAny(failures);
     }
 }
