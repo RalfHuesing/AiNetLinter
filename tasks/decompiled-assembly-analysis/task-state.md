@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T08:07:12+02:00
+last_updated: 2026-08-29T09:04:40+02:00
 rules_dir: .agents/rules
 total_steps: 20
 current_step: step-020
@@ -14,11 +14,11 @@ current_step: step-020
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 20 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-020` (in_progress; Git-Prozesslebenszyklus und statusbewusste Fehlerklassifikation korrigieren)
+- **Aktueller Schritt:** `step-020` (issues; verbleibende Prozessbaum- und Timeout-Cleanup-Races)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T08:07:12+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T09:04:40+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -44,7 +44,7 @@ current_step: step-020
 | step-017 | EPIC-04 | blocked | Cancellation-Cleanup und Reparse-Capability-Gate | step-016 | 5d48472c | blocked → privileged rerun | 5d48472c + c7c21e84 + d7757f8f |
 | step-018 | EPIC-04 | done | Repository-spezifische Capability-Nichtverfügbarkeit zum Decompilation-Fallback | step-017 | 2b95b3aa | approved | 2b95b3aa + 03589c9e + 784167d8 |
 | step-019 | EPIC-04 | issues | Produktiven Git-over-HTTP-Transport mit injizierbarer Authentifizierung für den Default-Branch-Clone bauen | - | b8fb5471 | issues → step-020 | b8fb5471 + 195f29f4 + e5b3f7e3 |
-| step-020 | EPIC-04 | in_progress | Git-Prozesslebenszyklus und statusbewusste Fehlerklassifikation korrigieren | step-019 | - | - | 54071a73 |
+| step-020 | EPIC-04 | issues | Git-Prozesslebenszyklus und statusbewusste Fehlerklassifikation korrigieren | step-019 | 2c2a2c01 | issues → step-021 | 2c2a2c01 + 446d5ff2 + cbb49754 |
 
 ## Config
 
@@ -289,3 +289,11 @@ Real-Executor-Nachweis für `ProcessStartInfo`/Umgebungsisolation/Termination
 sowie strukturierte, statusbewusste HTTP-/Git-Fehlerklassifikation. Der neue
 DRY-Fund ist als `TD-005` dokumentiert; Refresh, Cache und Source-of-Truth
 bleiben außerhalb dieser Korrektur.
+
+Der Kritiker hat Step 020 mit `cbb49754` nicht freigegeben. Die beiden
+kritischen Befunde liegen an derselben Prozessbesitzgrenze und werden in
+Step 021 gebündelt: ein Parent-exit-/Grandchild-Pipe-Race mit möglichem
+offenem Prozessbaum sowie ein Timeout-CTS-Fenster nach `Process.Start()`,
+das einen gestarteten Prozess zurücklassen könnte. `TD-005` wurde im Review
+als erledigt bestätigt; die Fehlerklassifikation und der 1314-/Reparse-
+Fallback bleiben unverändert.
