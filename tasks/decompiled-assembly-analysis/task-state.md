@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T20:50:48+02:00
+last_updated: 2026-08-29T20:58:02+02:00
 rules_dir: .agents/rules
-total_steps: 29
-current_step: step-029
+total_steps: 30
+current_step: step-030
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,9 +13,9 @@ current_step: step-029
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 29 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-029` (issues; cache-backed Initial Acquisition
-  aus validierter persistenter Generation, Nachweiskorrektur erforderlich)
+- **Steps gesamt:** 30 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-030` (`planned/in_progress`; Korrektur von
+  `step-029` für Result-/Audit-Nachweis und Publish-/Current-Assertions)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
@@ -55,6 +55,7 @@ current_step: step-029
 | step-027 | EPIC-04 | issues | Fail-closeden Generation-Publish und Testisolation korrigieren | step-026 | c5d64c42 | issues → step-028 | c5d64c42 + 732737dd |
 | step-028 | EPIC-04 | done | Deterministische Read-back- und Lock-Lifetime-Nachweise ergänzen | step-027 | 83e52560 | approved | 83e52560 + d3d17fe1 |
 | step-029 | EPIC-04 | issues | Cache-backed Initial Acquisition aus validierter Generation | - | 82692da0 | issues → step-030 | 82692da0 + c0abdcdf |
+| step-030 | EPIC-04 | planned/in_progress | Cache-Reuse-Nachweise und Step-029-Result korrigieren | step-029 | - | - | - |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -481,6 +482,28 @@ solutionweiten Audit-Claim. Zusätzlich beweisen zwei Reuse-Tests weder den
 konkreten Publish-Aufruf noch den unveränderten Current-Generation-Namen vor
 und nach dem Reuse. Step 030 bündelt die Result-Korrektur und diese konkreten
 Publish-/Current-Assertions als ein Nachweispaket.
+
+### Wiederaufnahme nach Step-029-Review (2026-08-29)
+
+Step 030 ist als neuer, flacher Korrektur-Step mit `corrects: step-029`
+geplant und auf `planned/in_progress` gesetzt. Er bleibt auf einen primären
+Cache-Reuse-/Ownership-Nachweis mit drei gekoppelten Schichten begrenzt:
+Result-/Audit-Korrektur, Recording-Reader-/Writer-/Current-Snapshot-
+Assertions sowie lokale Reuse-/Fallback-Regressionen. Die vorhandenen
+Acquirer-Seams für getrennten `cacheWriter` und `cacheReader` reichen aus;
+eine Produktionsänderung ist nicht geplant.
+
+Der Coder muss den initialen Publish-Erfolg explizit prüfen, anschließend
+einen separaten Reader und in den Acquirer-Hit-Tests den vorhandenen
+`RecordingCacheWriter` verwenden. `Request` muss leer und der Transport-
+CallCount null bleiben. Der konkrete Current-Generation-Name wird vor dem
+Reuse sowie nach Single-Hit, Handle-Dispose und parallelen Hits identisch
+assertiert; der request-owned Checkout bleibt vom persistenten
+`published.GenerationPath` getrennt. `step-029/step-result.md` wird auf den
+geprüften Commit `82692da054136dd39f6a37d110926bb95b5d796c`, die realen
+34/1/35-, 2060/2/2062- und 370/0/370-Stände, die beiden konkreten
+Win32-1314-Skips und ausschließlich tatsächlich ausgeführte scoped Audits
+korrigiert. `roadmap.md` bleibt im Fix-Modus unverändert.
 
 Refresh/Fetch und Refresh-Policy, Cache-Konfiguration, Retention/GC/
 Invalidierung, dirty/unbuilt/Health/degraded, Host-/MCP-Wiring,
