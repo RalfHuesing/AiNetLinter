@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T17:14:07+02:00
+last_updated: 2026-08-29T17:25:29+02:00
 rules_dir: .agents/rules
-total_steps: 26
-current_step: step-026
+total_steps: 27
+current_step: step-027
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,13 +13,14 @@ current_step: step-026
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 26 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-026` (issues; persistente Repository-Cache-
-  Generation aus erfolgreichem Clone, Korrektur erforderlich)
+- **Steps gesamt:** 27 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-027` (planned/in_progress; Korrektur von
+  `step-026` für Lock-/Rollback-Lifetime, fail-closed Read-back und
+  Testisolation)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T17:14:07+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T17:25:29+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -52,6 +53,7 @@ current_step: step-026
 | step-024 | EPIC-04 | issues | Erfolgreiches Acquirer→Snapshot-/Workspace-Wiring mit besitzgebundener Lifetime | - | 428cc4b3 | issues → step-025 | 428cc4b3 + f781b127 + 3e726048 |
 | step-025 | EPIC-04 | done | Registry-/Snapshot-Lifetime und exception-sicheres Multi-Owner-Cleanup korrigieren | step-024 | 74fc0056 | approved | 74fc0056 + acdfe70e |
 | step-026 | EPIC-04 | issues | Persistente Repository-Cache-Generation aus erfolgreichem Clone atomar veröffentlichen | - | da9882f4 | issues → step-027 | da9882f4 + 8a87f06a |
+| step-027 | EPIC-04 | in_progress | Fail-closeden Generation-Publish und Testisolation korrigieren | step-026 | - | planned → coder → critic | - |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -83,6 +85,24 @@ Refresh-Policy und neue Generation bei fälliger Aktualisierung folgen erst
 danach. CacheRoot-/Refresh-Konfiguration, Host-/MCP-Wiring,
 Dirty-/Health-Policy, transitive Referenzen, Retention/GC und EPIC-05 bleiben
 ebenfalls außerhalb dieses Steps.
+
+### Wiederaufnahme nach Step-026-Review (2026-08-29)
+
+Der Kritiker-Review `8a87f06a` hat Step 026 als `issues` zurückgegeben.
+Die drei MAJOR-Findings betreffen die unvollständige Same-Key-Sperrlifetime
+für Rollback/Cleanup, eine nicht vollständig fail-closed/bounded
+Read-back-Prüfung sowie persistente Default-Writer-Ausgaben in Tests.
+
+Auf Nutzeranweisung wurde Step 027 als zusammenhängendes Korrekturpaket
+mit `corrects: step-026` geplant und aktiviert. Sein primärer Vertrag ist
+ein fail-closed und isolierter atomarer Generation-Publish unter
+Synchronisierung des Cache-Keys. Die drei gekoppelten Schichten sind
+Lock-/Rollback-Lifetime, unabhängige bounded Manifest-/Content-Prüfung und
+der testisolierte Writer-Anschluss.
+
+Step 027 steht damit auf `planned/in_progress`; der nächste sichere
+Übergabepunkt ist ein neuer Coder-Agent. Es gibt keine Produktionsänderung
+aus diesem Planer-Schritt, keinen Roadmap-Bedarf und keinen Push.
 
 ## Config
 
