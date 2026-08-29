@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-29T22:56:09+02:00
+last_updated: 2026-08-30T00:30:00+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -170,16 +170,24 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
     Materialisierungsfehler weiterhin den bestehenden Clone-/Write-through-
     Pfad; der persistente Generation-Pfad wird nie als Request-Handle
     weitergereicht. Review `d8cff007` genehmigte Step 031.
-  - **Aktiver nächster Schnitt → `step-032` (planned/in_progress):**
-    Ein gemeinsamer Refresh-/Fetch-Vertrag entscheidet anhand der validierten
+  - **`step-032` — fachlich umgesetzt, aber mit `issues`:**
+    Der gemeinsame Refresh-/Fetch-Vertrag entscheidet anhand der validierten
     Generation und einer injizierten Policy über Current oder Staleness,
     materialisiert einen neuen request-eigenen Checkout, aktualisiert ihn
     über den bestehenden sicheren Git-Prozesspfad und veröffentlicht eine
     neue Generation mit atomarem Current-Pointer. Fällige Aktualisierungs-
     fehler geben den alten Snapshot nicht still als aktuell aus; die statische
-    Decompilation bleibt der Fallback.
-  - CacheRoot-/Refresh-Konfiguration über `appsettings.json` wird mit dem
-    späteren Konfigurationsvertrag entschieden, nicht in Step 032.
+    Decompilation bleibt der Fallback. Review `a16a421c` beanstandete nicht
+    diese Logik, sondern die am geprüften Commit nicht reproduzierbaren
+    Audit-/MCP-/Safeguard-/DRY-/Magic-Values-Nachweise.
+  - **Aktiver nächster Schnitt → `step-033` (planned/in_progress):**
+    Ein einziger Cache-Konfigurationsvertrag führt strikt validiertes
+    `ExternalSources:CacheRoot` und `ExternalSources:RefreshIntervalMinutes`
+    bis zur bestehenden Writer-/Refresh-Policy-Konstruktion und der
+    deterministischen Fresh/Stale-Entscheidung. Die Step-032-Evidenzkorrektur
+    ist darin ein verpflichtender Abschlussnachweis für denselben Cache-/
+    Refresh-Kontext, kein eigener Audit-only-Step. Host-/MCP-Wiring wird nicht
+    vorgezogen.
   - Dirty/unbuilt Checkout-Abgrenzung und transparente Fallback-/Health-
     Semantik bleiben nach diesen Cache-Verträgen ein eigener Source-Policy-
     Schnitt; Step 024/025 markieren nur den erfolgreichen Workspace-Aufbau und
@@ -192,7 +200,9 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
     sie werden nicht rückwirkend um Refresh erweitert.
   - Refresh/Fetch, Refresh-Intervall-Entscheidung und atomarer Wechsel auf
     eine neue Generation sind in `step-032` als ein vertikaler Vertrag
-    gebündelt. Die öffentliche Cache-Konfiguration folgt separat.
+    gebündelt. `step-033` ergänzt die strikt validierte öffentliche
+    CacheRoot-/Refresh-Konfiguration und korrigiert verpflichtend die
+    Step-032-Evidenz; der Refresh-Algorithmus wird nicht erneut geöffnet.
   - Dirty/unbuilt lokale Checkouts sowie Health-/degraded-Fallback-Policy
     bleiben nach den Cache-Reuse-/Refresh-Verträgen ein eigener Source-
     Policy-Schnitt.

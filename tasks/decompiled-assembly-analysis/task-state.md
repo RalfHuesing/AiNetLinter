@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-30T00:11:37+02:00
+last_updated: 2026-08-30T00:30:00+02:00
 rules_dir: .agents/rules
-total_steps: 32
-current_step: step-032
+total_steps: 33
+current_step: step-033
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,13 +13,14 @@ current_step: step-032
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 32 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-032` (issues; Refresh-/Fetch-Vertrag und
-  atomare neue Cache-Generation, Audit-Nachweis korrigieren)
+- **Steps gesamt:** 33 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-033` (`planned/in_progress`; konfigurierbare
+  Cache-Root-/Refresh-Policy bis zur Fresh/Stale-Konstruktion, mit
+  verpflichtender Evidenzkorrektur für `step-032`)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-30T00:11:37+02:00
+- **Zuletzt aktualisiert:** 2026-08-30T00:30:00+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -57,7 +58,8 @@ current_step: step-032
 | step-029 | EPIC-04 | issues | Cache-backed Initial Acquisition aus validierter Generation | - | 82692da0 | issues → step-030 | 82692da0 + c0abdcdf |
 | step-030 | EPIC-04 | issues | Cache-Reuse-Nachweise und Step-029-Result korrigieren | step-029 | e9bf8025 | issues → step-031 | e9bf8025 + 2510db5e |
 | step-031 | EPIC-04 | done | Step-030-Gatebefunde und Nachweise korrigieren | step-030 | 552ef4d4 + 1d15a5b4 | approved | 552ef4d4 + 1d15a5b4 + d8cff007 |
-| step-032 | EPIC-04 | issues | Validated Refresh/Fetch in neue Cache-Generation | - | 59d979b7 | issues → Folgepaket | 59d979b7 + a16a421c |
+| step-032 | EPIC-04 | issues | Validated Refresh/Fetch in neue Cache-Generation | - | 59d979b7 | issues → step-033 | 59d979b7 + a16a421c |
+| step-033 | EPIC-04 | planned/in_progress | Konfigurierbare Cache-Root-/Refresh-Policy mit Fresh/Stale-Vertrag und Step-032-Evidenzabschluss | step-032 | - | - | - |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -610,3 +612,33 @@ und 140 Testmethoden sowie ein bestehender breiter Assemblies-Befund). Die
 Evidenzkorrektur wird mit dem nächsten größeren Cache-/Refresh-Folgepaket
 gebündelt, nicht als isolierter Mini-Step. Kein neuer Tech-Debt-Fund wurde
 aufgenommen.
+
+### Wiederaufnahme nach Step-032-Review (2026-08-30)
+
+Auf Nutzeranweisung wurde ein neuer Planer-Agent gestartet; kein bestehender
+Agent wurde wiederverwendet. Step 033 ist als größerer EPIC-04-Folge-Step auf
+`planned/in_progress` gesetzt und trägt `corrects: step-032`. Der primäre
+funktionale Vertrag ist die strikt validierte
+`ExternalSources:CacheRoot`-/`RefreshIntervalMinutes`-Konfiguration bis zur
+bestehenden Cache-Writer-/Refresh-Policy-Konstruktion und der deterministischen
+Fresh/Stale-Entscheidung. Defaults, Source-of-Truth, Generation-, Pointer-,
+Ownership-, HTTP-/Git-/Credentials-, Process-/Native- und statische
+Decompilation-Invarianten bleiben erhalten.
+
+`corrects: step-032` bezieht sich ausschließlich auf den MAJOR-Befund aus
+Review `a16a421c`: Die Step-032-MCP-/Safeguard-/DRY-/Magic-Values-Evidenz muss
+für den geprüften Commit reproduzierbar berichtigt werden. Refresh-/Fetch-,
+Generation-, Pointer- und Cleanup-Logik werden nicht erneut geöffnet. Die
+Evidenzkorrektur wird als verpflichtender Abschlussnachweis in das größere
+Cache-/Refresh-Paket integriert, damit kein Audit-only-Mini-Step entsteht.
+Der Kontext bleibt durch einen Primärvertrag, drei gekoppelte Schichten,
+höchstens acht Abnahmekriterien, höchstens zehn `read_first`-Dateien und
+`max_initial_files: 12` begrenzt.
+
+Im Planer-Schritt wurden keine Produktionsänderungen vorgenommen und keine
+Tests, Coder- oder Kritikerarbeit ausgeführt. Der nächste sichere
+Übergabepunkt ist ein neuer Coder-Agent mit
+`tasks/decompiled-assembly-analysis/step-033/step-plan.md`. Host-/MCP-Wiring,
+Health-/degraded-/Dirty-/Unbuilt-Policy sowie Retention/GC/Invalidierung
+bleiben eigenständige Folgepakete; Roadmap- und Statuspflege nach dem
+Coder-Ergebnis verbleiben beim Orchestrator.
