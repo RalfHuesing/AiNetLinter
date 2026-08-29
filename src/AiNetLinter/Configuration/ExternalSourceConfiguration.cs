@@ -3,20 +3,59 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 
 namespace AiNetLinter.Configuration;
 
+internal sealed record ExternalSourceCacheOptions
+{
+    internal const long DefaultRefreshIntervalMinutes = 60;
+    internal const string DefaultCacheDirectoryName = "cache";
+    internal static readonly long MaxRefreshIntervalMinutes =
+        TimeSpan.MaxValue.Ticks / TimeSpan.TicksPerMinute;
+    internal static readonly TimeSpan DefaultRefreshInterval =
+        TimeSpan.FromMinutes(DefaultRefreshIntervalMinutes);
+
+    internal ExternalSourceCacheOptions(string cacheRoot, TimeSpan refreshInterval)
+    {
+        ArgumentNullException.ThrowIfNull(cacheRoot);
+        CacheRoot = ExternalSourceConfigurationPath.TryCanonicalizeAbsoluteRoot(cacheRoot)
+            ?? throw new ArgumentException(
+                "Die externe Cache-Wurzel muss ein absoluter, gültiger Pfad sein.",
+                nameof(cacheRoot));
+        if (refreshInterval <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(refreshInterval));
+        }
+
+        RefreshInterval = refreshInterval;
+    }
+
+    internal string CacheRoot { get; }
+
+    internal TimeSpan RefreshInterval { get; }
+
+    internal static ExternalSourceCacheOptions Default => new(
+        Path.Combine(AppContext.BaseDirectory, DefaultCacheDirectoryName),
+        DefaultRefreshInterval);
+}
+
 internal sealed record ExternalSourceConfiguration
 {
-    internal ExternalSourceConfiguration(IEnumerable<ExternalSourceMapping> mappings)
+    internal ExternalSourceConfiguration(
+        IEnumerable<ExternalSourceMapping> mappings,
+        ExternalSourceCacheOptions? cacheOptions = null)
     {
         ArgumentNullException.ThrowIfNull(mappings);
         Mappings = mappings.ToImmutableArray();
+        CacheOptions = cacheOptions ?? ExternalSourceCacheOptions.Default;
     }
 
     internal ImmutableArray<ExternalSourceMapping> Mappings { get; }
+
+    internal ExternalSourceCacheOptions CacheOptions { get; }
 
     internal bool IsEmpty => Mappings.IsEmpty;
 
@@ -100,6 +139,8 @@ internal static class ExternalSourceConfigurationDiagnosticCodes
     internal const string InvalidFieldType = "external-source-invalid-field-type";
     internal const string UnknownField = "external-source-unknown-field";
     internal const string DuplicateField = "external-source-duplicate-field";
+    internal const string CacheRootInvalid = "external-source-cache-root-invalid";
+    internal const string RefreshIntervalInvalid = "external-source-refresh-interval-invalid";
     internal const string UrlInvalid = "external-source-url-invalid";
     internal const string SolutionPathInvalid = "external-source-solution-path-invalid";
     internal const string AssemblyListInvalid = "external-source-assembly-list-invalid";
@@ -123,6 +164,88 @@ internal static class ExternalSourceConfigurationDiagnosticCodes
     internal const string RepositoryTransportFailed = "external-source-repository-transport-failed";
     internal const string RepositoryCapabilityUnavailable = "external-source-repository-capability-unavailable";
     internal const string RepositoryCleanupFailed = "external-source-repository-cleanup-failed";
+}
+
+internal static class ExternalSourceConfigurationPath
+{
+    internal static string? TryResolveCacheRoot(string settingsPath, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        if (trimmed.Contains("://", StringComparison.Ordinal)
+            || ContainsUnsafeSegments(trimmed))
+        {
+            return null;
+        }
+
+        try
+        {
+            var candidate = Path.IsPathFullyQualified(trimmed)
+                ? trimmed
+                : Path.Combine(
+                    Path.GetDirectoryName(settingsPath) ?? AppContext.BaseDirectory,
+                    trimmed);
+            return TryCanonicalizeAbsoluteRoot(candidate);
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or IOException or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    internal static string? TryCanonicalizeAbsoluteRoot(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)
+            || !Path.IsPathFullyQualified(value.Trim()))
+        {
+            return null;
+        }
+
+        try
+        {
+            var fullPath = Path.GetFullPath(value.Trim());
+            var pathRoot = Path.GetPathRoot(fullPath);
+            if (string.IsNullOrEmpty(pathRoot))
+            {
+                return null;
+            }
+
+            return string.Equals(fullPath, pathRoot, StringComparison.OrdinalIgnoreCase)
+                ? pathRoot
+                : fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or IOException or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    private static bool ContainsUnsafeSegments(string value)
+    {
+        var normalized = value.Replace('\\', '/');
+        var segmentStart = Path.IsPathFullyQualified(value)
+            && normalized.Length >= 2
+            && normalized[1] == ':'
+            ? 2
+            : 0;
+        foreach (var segment in normalized[segmentStart..].Split(
+                     '/',
+                     StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (segment is "." or "..")
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }
 
 internal static class ExternalSourceJsonValidation

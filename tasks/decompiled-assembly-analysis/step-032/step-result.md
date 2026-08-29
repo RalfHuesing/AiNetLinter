@@ -85,22 +85,32 @@ blieben unangetastet und wurden nicht gelöscht.
   0 Violations; der Acquirer liegt mit 484 gemeldeten Zeilen/445 Codezeilen
   ebenfalls unter der Grenze und hat 0 Violations. Der scoped
   `get_violations`-Lauf meldet 0 Violations.
-- Scoped `find_duplicates` meldet 0 Produktionscluster bei 368 Methoden und 0
+- Scoped `find_duplicates` meldet 0 Produktionscluster bei 369 Methoden und 0
   Testcluster bei 140 Methoden. Die frühere lokale Duplizierung der Cleanup-
   Projektion wurde durch Wiederverwendung des bestehenden Acquirer-Helfers
   beseitigt; kein globales Refactoring wurde vorgenommen.
-- `find_magic_values` über den geänderten ExternalSource-Scope meldet 9
-  erwartete Kandidaten in 9 Vorkommen: Test-/Temp-Identifier, vorhandene
-  Fehlermeldungen, bestehende Cache-/Git-Konstanten und der neue benannte
-  `CurrentChanged`-Diagnosecode. Keine Secrets wurden eingeführt oder in
-  Pfade/Keys/Manifest/Diagnosen geschrieben; kein globaler Magic-Value-Sweep.
+- Ein changed-only-`find_magic_values`-Wert wird nicht behauptet: Der geprüfte
+  Commit wurde aus sauberem `HEAD` ohne reproduzierbaren Git-Diff abgefragt und
+  der exakte Dateisatz dieses Laufs ist nicht überliefert. Der frühere Wert 9
+  wird deshalb entfernt. Ein separater breiter
+  `ExternalSourceRepository`-Scope umfasste 151 Kandidaten inklusive Tests und
+  ist nicht als changed-only-Ergebnis zu interpretieren. Keine Secrets wurden
+  eingeführt oder in Pfade/Keys/Manifest/Diagnosen geschrieben; kein globaler
+  Magic-Value-Sweep.
 - `find_dead_code` meldet 0 High-Confidence-Treffer bei 67 Symbolen in 29
   Dokumenten.
-- Der scoped `safeguard`-Lauf bleibt wegen drei Bestandsbefunden FAIL
-  (Score 5,87/10): 56 Einträge im bestehenden Assemblies-Ordner, 40 Einträge
-  im bestehenden Task-Ordner und der bestehende DaemonHost-Footprint
-  2.975 > 2.500. Diese Befunde liegen außerhalb des Step-032-Scope und wurden
-  nicht verändert.
+- Der breite `safeguard`-Lauf mit `projectRoot=C:/Daten/Entwicklung/Ralf/AiNetLinter`
+  bleibt bei Threshold `8,00` mit Score `5,83/10` **FAIL** und drei
+  Bestandsbefunden: dem bestehenden `MaxDirectoryChildren`-Befund im
+  Assemblies-Ordner (56 Einträge), 40 Einträge im bestehenden Task-Ordner und
+  dem bestehenden DaemonHost-Footprint `2.975 > 2.500`. Diese Befunde liegen
+  außerhalb des Step-032-Scope und wurden nicht verändert. Der enge
+  `ExternalSourceRepository`-Violations-Scope meldet davon getrennt `0`.
+- `get_impact` lieferte am geprüften sauberen `HEAD` einen leeren Git-Diff,
+  obwohl das Repository vorhanden ist. Dieser Observability-Befund wurde als
+  Low-Severity-Feedback protokolliert; der leere Diff wird nicht als
+  semantischer Impact-Nachweis verwendet. Symbolbasierte Feature-/Dependency-
+  Abfragen dienten als Ersatz.
 
 ## Offene Risiken / Folgearbeit
 

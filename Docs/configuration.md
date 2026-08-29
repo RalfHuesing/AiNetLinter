@@ -1594,7 +1594,9 @@ Mapping-Datei benennen:
 ```json
 {
   "ExternalSources": {
-    "MappingsPath": "config/external-sources.json"
+    "MappingsPath": "config/external-sources.json",
+    "CacheRoot": "cache",
+    "RefreshIntervalMinutes": 60
   }
 }
 ```
@@ -1625,6 +1627,23 @@ mehrdeutige Assembly-Einträge liefern sichtbare strukturierte Diagnosen. Fehlt 
 optionale Abschnitt, bleibt die Mapping-Konfiguration leer. `ainetlinter.project.json`
 und `rules.json` erhalten keine External-Source-Felder; `.csproj`, Commit und Branch
 sind keine Bestandteile dieses Vertrags.
+
+`CacheRoot` und `RefreshIntervalMinutes` sind optionale Felder des Abschnitts.
+Fehlen sie, gilt als Cache-Elternwurzel `<AppContext.BaseDirectory>/cache` und als
+Refresh-Intervall `60` Minuten. Relative `CacheRoot`-Pfade werden gegen das
+Verzeichnis der gelesenen `appsettings.json` aufgelöst; absolute Pfade werden
+kanonisiert. Der externe Repository-Cache liegt anschließend ausschließlich unter
+`<CacheRoot>/source`, getrennt vom bestehenden Batch-Cache. Leere Pfade,
+Pfade mit unsicheren `.`-/`..`-Segmenten oder URI-artige Werte werden abgelehnt;
+die vorhandenen Reparse- und Besitzprüfungen entscheiden weiterhin beim Cachezugriff
+über die Dateisystemsicherheit.
+
+`RefreshIntervalMinutes` akzeptiert ausschließlich positive JSON-Ganzzahlen bis
+zur unterstützten ganzminütigen `TimeSpan`-Grenze. Strings, Boolean- oder
+Bruchwerte, `null`, `0`, negative Werte und Überläufe führen zu einer strukturierten
+Konfigurationsdiagnose. Ein explizit ungültiges Feld aktiviert nicht stillschweigend
+den Default; der gesamte `ExternalSources`-Load schlägt fehl. Unbekannte oder
+doppelte Felder bleiben ebenfalls harte Fehler.
 
 ### MCP-Tool-Call-Logging
 

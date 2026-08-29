@@ -13,6 +13,8 @@ internal static class ExternalSourceConfigurationLoader
 
     private const string ExternalSourcesSectionName = "ExternalSources";
     private const string MappingsPathName = "MappingsPath";
+    private const string CacheRootName = "CacheRoot";
+    private const string RefreshIntervalMinutesName = "RefreshIntervalMinutes";
 
     internal static ExternalSourceConfigurationLoadResult Load() =>
         Load(Path.Combine(AppContext.BaseDirectory, AppSettingsFileName));
@@ -110,48 +112,201 @@ internal static class ExternalSourceConfigurationLoader
             section,
             settingsPath,
             "$.ExternalSources",
-            [MappingsPathName]);
+            [MappingsPathName, CacheRootName, RefreshIntervalMinutesName]);
         if (!validation.Diagnostics.IsEmpty)
         {
             return ExternalSourceConfigurationLoadResult.Failure(validation.Diagnostics);
         }
 
+        if (!TryReadCacheOptions(
+                validation,
+                settingsPath,
+                out var cacheOptions,
+                out var cacheDiagnostic))
+        {
+            return ExternalSourceConfigurationLoadResult.Failure([cacheDiagnostic!]);
+        }
+
+        if (!TryResolveMappingsPath(
+                validation,
+                settingsPath,
+                out var mappingsPath,
+                out var mappingsDiagnostic))
+        {
+            return ExternalSourceConfigurationLoadResult.Failure([mappingsDiagnostic!]);
+        }
+
+        var mappingsResult = LoadMappingsFile(mappingsPath!);
+        if (!mappingsResult.Succeeded)
+        {
+            return mappingsResult;
+        }
+
+        return ExternalSourceConfigurationLoadResult.Success(
+            new ExternalSourceConfiguration(
+                mappingsResult.Configuration!.Mappings,
+                cacheOptions));
+    }
+
+    private static bool TryResolveMappingsPath(
+        ExternalSourceJsonObjectValidation validation,
+        string settingsPath,
+        out string? mappingsPath,
+        out ExternalSourceConfigurationDiagnostic? diagnostic)
+    {
+        mappingsPath = null;
+        diagnostic = null;
         var pathProperty = validation.GetProperty(MappingsPathName);
         if (pathProperty.Status is ExternalSourceJsonPropertyStatus.Missing)
         {
-            return ExternalSourceConfigurationLoadResult.Failure(
-                [ExternalSourceConfigurationDiagnostic.CreateError(
-                    ExternalSourceConfigurationDiagnosticCodes.MappingsPathMissing,
-                    $"'{ExternalSourcesSectionName}:{MappingsPathName}' ist erforderlich, wenn der Abschnitt vorhanden ist.",
-                    settingsPath,
-                    "$.ExternalSources")]);
+            diagnostic = ExternalSourceConfigurationDiagnostic.CreateError(
+                ExternalSourceConfigurationDiagnosticCodes.MappingsPathMissing,
+                $"'{ExternalSourcesSectionName}:{MappingsPathName}' ist erforderlich, wenn der Abschnitt vorhanden ist.",
+                settingsPath,
+                "$.ExternalSources");
+            return false;
         }
 
         var pathElement = pathProperty.Value;
         if (pathElement.ValueKind is not JsonValueKind.String
             || string.IsNullOrWhiteSpace(pathElement.GetString()))
         {
-            return ExternalSourceConfigurationLoadResult.Failure(
-                [ExternalSourceConfigurationDiagnostic.CreateError(
-                    ExternalSourceConfigurationDiagnosticCodes.MappingsPathInvalid,
-                    $"'{ExternalSourcesSectionName}:{MappingsPathName}' muss ein nichtleerer String sein.",
-                    settingsPath,
-                    "$.ExternalSources.MappingsPath")]);
+            diagnostic = ExternalSourceConfigurationDiagnostic.CreateError(
+                ExternalSourceConfigurationDiagnosticCodes.MappingsPathInvalid,
+                $"'{ExternalSourcesSectionName}:{MappingsPathName}' muss ein nichtleerer String sein.",
+                settingsPath,
+                "$.ExternalSources.MappingsPath");
+            return false;
         }
 
-        var mappingsPath = ResolveMappingsPath(settingsPath, pathElement.GetString()!.Trim());
-        if (mappingsPath is null)
+        mappingsPath = ResolveMappingsPath(settingsPath, pathElement.GetString()!.Trim());
+        if (mappingsPath is not null)
         {
-            return ExternalSourceConfigurationLoadResult.Failure(
-                [ExternalSourceConfigurationDiagnostic.CreateError(
-                    ExternalSourceConfigurationDiagnosticCodes.MappingsPathInvalid,
-                    $"'{ExternalSourcesSectionName}:{MappingsPathName}' ist kein gültiger Dateipfad.",
-                    settingsPath,
-                    "$.ExternalSources.MappingsPath")]);
+            return true;
         }
 
-        return LoadMappingsFile(mappingsPath);
+        diagnostic = ExternalSourceConfigurationDiagnostic.CreateError(
+            ExternalSourceConfigurationDiagnosticCodes.MappingsPathInvalid,
+            $"'{ExternalSourcesSectionName}:{MappingsPathName}' ist kein gültiger Dateipfad.",
+            settingsPath,
+            "$.ExternalSources.MappingsPath");
+        return false;
     }
+
+    private static bool TryReadCacheOptions(
+        ExternalSourceJsonObjectValidation validation,
+        string settingsPath,
+        out ExternalSourceCacheOptions? cacheOptions,
+        out ExternalSourceConfigurationDiagnostic? diagnostic)
+    {
+        cacheOptions = ExternalSourceCacheOptions.Default;
+        diagnostic = null;
+        var cacheRootProperty = validation.GetProperty(CacheRootName);
+        var intervalProperty = validation.GetProperty(RefreshIntervalMinutesName);
+        if (!TryReadCacheRoot(
+                cacheRootProperty,
+                settingsPath,
+                out var cacheRoot,
+                out diagnostic)
+            || !TryReadRefreshInterval(
+                intervalProperty,
+                settingsPath,
+                out var refreshInterval,
+                out diagnostic))
+        {
+            return false;
+        }
+
+        cacheOptions = new ExternalSourceCacheOptions(cacheRoot!, refreshInterval);
+        return true;
+    }
+
+    private static bool TryReadCacheRoot(
+        ExternalSourceJsonPropertyValidation property,
+        string settingsPath,
+        out string? cacheRoot,
+        out ExternalSourceConfigurationDiagnostic? diagnostic)
+    {
+        cacheRoot = ExternalSourceCacheOptions.Default.CacheRoot;
+        diagnostic = null;
+        if (property.Status is ExternalSourceJsonPropertyStatus.Missing)
+        {
+            return true;
+        }
+
+        if (property.Value.ValueKind is not JsonValueKind.String
+            || string.IsNullOrWhiteSpace(property.Value.GetString())
+            || ExternalSourceConfigurationPath.TryResolveCacheRoot(
+                settingsPath,
+                property.Value.GetString()!.Trim()) is not { } resolvedRoot)
+        {
+            diagnostic = CreateCacheDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.CacheRootInvalid,
+                "'ExternalSources:CacheRoot' muss ein sicherer, nichtleerer Pfad sein.",
+                settingsPath,
+                "$.ExternalSources.CacheRoot");
+            return false;
+        }
+
+        cacheRoot = resolvedRoot;
+        return true;
+    }
+
+    private static bool TryReadRefreshInterval(
+        ExternalSourceJsonPropertyValidation property,
+        string settingsPath,
+        out TimeSpan refreshInterval,
+        out ExternalSourceConfigurationDiagnostic? diagnostic)
+    {
+        refreshInterval = ExternalSourceCacheOptions.DefaultRefreshInterval;
+        diagnostic = null;
+        if (property.Status is ExternalSourceJsonPropertyStatus.Missing)
+        {
+            return true;
+        }
+
+        if (property.Value.ValueKind is not JsonValueKind.Number
+            || !IsIntegralJsonNumber(property.Value)
+            || !property.Value.TryGetInt64(out var minutes))
+        {
+            diagnostic = CreateCacheDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.InvalidFieldType,
+                "'ExternalSources:RefreshIntervalMinutes' muss eine positive ganze Zahl sein.",
+                settingsPath,
+                "$.ExternalSources.RefreshIntervalMinutes");
+            return false;
+        }
+
+        if (minutes <= 0 || minutes > ExternalSourceCacheOptions.MaxRefreshIntervalMinutes)
+        {
+            diagnostic = CreateCacheDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.RefreshIntervalInvalid,
+                "'ExternalSources:RefreshIntervalMinutes' liegt außerhalb des zulässigen positiven Bereichs.",
+                settingsPath,
+                "$.ExternalSources.RefreshIntervalMinutes");
+            return false;
+        }
+
+        refreshInterval = TimeSpan.FromTicks(minutes * TimeSpan.TicksPerMinute);
+        return true;
+    }
+
+    private static bool IsIntegralJsonNumber(JsonElement value)
+    {
+        var rawValue = value.GetRawText();
+        return rawValue.IndexOfAny(['.', 'e', 'E']) < 0;
+    }
+
+    private static ExternalSourceConfigurationDiagnostic CreateCacheDiagnostic(
+        string code,
+        string message,
+        string settingsPath,
+        string jsonPath) =>
+        ExternalSourceConfigurationDiagnostic.CreateError(
+            code,
+            message,
+            settingsPath,
+            jsonPath);
 
     private static ExternalSourceConfigurationLoadResult LoadMappingsFile(string mappingsPath)
     {

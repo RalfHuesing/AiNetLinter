@@ -1,12 +1,14 @@
 #nullable enable
 
 using System;
+using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Mcp.Assemblies;
 
 internal sealed class ExternalSourceRepositoryCacheRefreshPolicy
 {
-    internal static readonly TimeSpan DefaultRefreshInterval = TimeSpan.FromMinutes(60);
+    internal static readonly TimeSpan DefaultRefreshInterval =
+        ExternalSourceCacheOptions.DefaultRefreshInterval;
 
     private readonly TimeProvider timeProvider;
 

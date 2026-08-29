@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Mcp.Assemblies;
 
@@ -11,6 +12,7 @@ internal static class ExternalSourceRepositoryCacheContract
 {
     internal const string CacheSchemaVersion = "external-source-repository-cache-v1";
     internal const string ContentDirectoryName = "content";
+    internal const string SourceDirectoryName = "source";
     internal const string ManifestFileName = "manifest.json";
     internal const string InventoryFileName = "inventory.json";
     internal const string CurrentPointerFileName = "current";
@@ -94,32 +96,7 @@ internal static class ExternalSourceRepositoryCacheContract
     }
 
     internal static string? TryCanonicalizeAbsoluteRoot(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value)
-            || !Path.IsPathFullyQualified(value.Trim()))
-        {
-            return null;
-        }
-
-        try
-        {
-            var fullPath = Path.GetFullPath(value.Trim());
-            var pathRoot = Path.GetPathRoot(fullPath);
-            if (string.IsNullOrEmpty(pathRoot))
-            {
-                return null;
-            }
-
-            return string.Equals(fullPath, pathRoot, StringComparison.OrdinalIgnoreCase)
-                ? pathRoot
-                : fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        }
-        catch (Exception exception) when (
-            ExternalSourceRepositoryFailurePolicy.IsFileSystemException(exception))
-        {
-            return null;
-        }
-    }
+        => ExternalSourceConfigurationPath.TryCanonicalizeAbsoluteRoot(value);
 
     internal static bool IsSafeGenerationName(string value)
     {

@@ -25,7 +25,8 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter :
     internal LocalExternalSourceRepositoryCacheWriter(string? cacheRoot = null)
     {
         var configuredRoot = cacheRoot
-            ?? System.IO.Path.Combine(AppContext.BaseDirectory, "cache", "source");
+            ?? ExternalSourceRepositoryCacheOptionsFactory.Create(
+                ExternalSourceCacheOptions.Default).SourceRoot;
         this.cacheRoot = ExternalSourceRepositoryCacheContract.TryCanonicalizeAbsoluteRoot(configuredRoot)
             ?? throw new ArgumentException(
                 "Die Cache-Wurzel muss ein absoluter, gültiger Pfad sein.",

@@ -32,7 +32,9 @@ internal sealed class ExternalSourceRepositoryAcquirer
                 "Die Staging-Wurzel muss ein absoluter, gültiger Pfad sein.",
                 nameof(stagingRoot));
         this.logger = logger ?? Log.Logger;
-        this.cacheWriter = cacheWriter ?? new LocalExternalSourceRepositoryCacheWriter();
+        var cacheConstruction = ExternalSourceRepositoryCacheOptionsFactory.Create(
+            ExternalSourceCacheOptions.Default);
+        this.cacheWriter = cacheWriter ?? cacheConstruction.CreateWriter();
         var effectiveCacheReader = cacheReader ?? this.cacheWriter as IExternalSourceRepositoryCacheReader;
         var cacheReuse = new ExternalSourceRepositoryCacheReuse(
             this.stagingRoot,
@@ -46,11 +48,12 @@ internal sealed class ExternalSourceRepositoryAcquirer
                 Reader = effectiveCacheReader,
                 CacheReuse = cacheReuse,
                 Logger = this.logger,
-                Policy = refreshPolicy ?? new ExternalSourceRepositoryCacheRefreshPolicy(),
+                Policy = refreshPolicy ?? cacheConstruction.CreateRefreshPolicy(),
                 ValidateCheckout = ValidateCheckout,
                 PublishCache = PublishCacheAsync,
             });
     }
+
     internal async Task<ExternalSourceRepositoryAcquisitionResult> AcquireAsync(
         ExternalSourceMapping mapping,
         CancellationToken cancellationToken = default)

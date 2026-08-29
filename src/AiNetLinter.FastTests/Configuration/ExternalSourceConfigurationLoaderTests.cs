@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using AiNetLinter.Configuration;
@@ -21,6 +22,7 @@ public sealed class ExternalSourceConfigurationLoaderTests
         Assert.True(result.Succeeded);
         Assert.True(result.Configuration!.IsEmpty);
         Assert.Empty(result.Diagnostics);
+        AssertDefaultCacheOptions(result.Configuration);
     }
 
     [Fact]
@@ -34,6 +36,7 @@ public sealed class ExternalSourceConfigurationLoaderTests
         Assert.True(result.Succeeded);
         Assert.True(result.Configuration!.IsEmpty);
         Assert.Empty(result.Diagnostics);
+        AssertDefaultCacheOptions(result.Configuration);
     }
 
     [Fact]
@@ -81,6 +84,140 @@ public sealed class ExternalSourceConfigurationLoaderTests
 
         AssertSingleMapping(result);
         Assert.True(result.Succeeded);
+    }
+
+    [Fact]
+    public void Load_RelativerCacheRoot_WirdGegenSettingsVerzeichnisAufgeloest()
+    {
+        using var tempDir = TestTempDirectory.Create("external-source-cache-root-relative-");
+        var mappingsPath = tempDir.CreateFile("config/mappings.json", ValidMappings("Foo"));
+        var settingsPath = WriteSettings(
+            tempDir,
+            mappingsPath,
+            JsonSerializer.Serialize("cache-root"),
+            "15",
+            "config/appsettings.json");
+
+        var result = ExternalSourceConfigurationLoader.Load(settingsPath);
+
+        AssertSingleMapping(result);
+        Assert.Equal(
+            Path.GetFullPath(Path.Combine(Path.GetDirectoryName(settingsPath)!, "cache-root")),
+            result.Configuration!.CacheOptions.CacheRoot);
+        Assert.Equal(TimeSpan.FromMinutes(15), result.Configuration.CacheOptions.RefreshInterval);
+    }
+
+    [Fact]
+    public void Load_AbsoluterCacheRoot_BleibtKanonischAbsolut()
+    {
+        using var tempDir = TestTempDirectory.Create("external-source-cache-root-absolute-");
+        var mappingsPath = tempDir.CreateFile("mappings.json", ValidMappings("Foo"));
+        var cacheRoot = tempDir.GetPath("absolute-cache-root");
+        var settingsPath = WriteSettings(
+            tempDir,
+            mappingsPath,
+            JsonSerializer.Serialize(cacheRoot),
+            "60");
+
+        var result = ExternalSourceConfigurationLoader.Load(settingsPath);
+
+        AssertSingleMapping(result);
+        Assert.Equal(Path.GetFullPath(cacheRoot), result.Configuration!.CacheOptions.CacheRoot);
+        Assert.Equal(ExternalSourceCacheOptions.DefaultRefreshInterval, result.Configuration.CacheOptions.RefreshInterval);
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("\"\"")]
+    [InlineData("\"   \\t\"")]
+    [InlineData("\"../outside\"")]
+    [InlineData("\"./cache\"")]
+    [InlineData("\"https://user:secret@example.invalid/cache\"")]
+    public void Load_UngueltigerCacheRoot_LiefertFailClosedDiagnose(string cacheRootJson)
+    {
+        using var tempDir = TestTempDirectory.Create("external-source-cache-root-invalid-");
+        var mappingsPath = tempDir.CreateFile("mappings.json", ValidMappings("Foo"));
+        var settingsPath = WriteSettings(tempDir, mappingsPath, cacheRootJson);
+
+        var result = ExternalSourceConfigurationLoader.Load(settingsPath);
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Configuration);
+        AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.CacheRootInvalid, "CacheRoot");
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Message.Contains("secret", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Load_DoppelteOderUnbekannteCacheFelder_LiefertStrukturierteDiagnose()
+    {
+        using var tempDir = TestTempDirectory.Create("external-source-cache-fields-invalid-");
+        var mappingsPath = tempDir.CreateFile("mappings.json", ValidMappings("Foo"));
+        var settingsPath = tempDir.CreateFile(
+            "appsettings.json",
+            $$"""{ "ExternalSources": { "MappingsPath": {{JsonSerializer.Serialize(mappingsPath)}}, "CacheRoot": "cache", "CacheRoot": "other", "Unexpected": true } }""");
+
+        var result = ExternalSourceConfigurationLoader.Load(settingsPath);
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Configuration);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.DuplicateField);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.UnknownField);
+    }
+
+    [Theory]
+    [InlineData("1")]
+    [InlineData("60")]
+    public void Load_GueltigesRefreshInterval_WirdAlsTimeSpanGespeichert(string refreshIntervalJson)
+    {
+        using var tempDir = TestTempDirectory.Create("external-source-refresh-interval-valid-");
+        var mappingsPath = tempDir.CreateFile("mappings.json", ValidMappings("Foo"));
+        var settingsPath = WriteSettings(tempDir, mappingsPath, null, refreshIntervalJson);
+
+        var result = ExternalSourceConfigurationLoader.Load(settingsPath);
+
+        AssertSingleMapping(result);
+        Assert.Equal(
+            TimeSpan.FromMinutes(long.Parse(refreshIntervalJson)),
+            result.Configuration!.CacheOptions.RefreshInterval);
+    }
+
+    [Fact]
+    public void Load_MaximalesGanzesRefreshInterval_WirdAkzeptiert()
+    {
+        using var tempDir = TestTempDirectory.Create("external-source-refresh-interval-max-");
+        var mappingsPath = tempDir.CreateFile("mappings.json", ValidMappings("Foo"));
+        var maxMinutes = ExternalSourceCacheOptions.MaxRefreshIntervalMinutes;
+        var settingsPath = WriteSettings(tempDir, mappingsPath, null, maxMinutes.ToString());
+
+        var result = ExternalSourceConfigurationLoader.Load(settingsPath);
+
+        AssertSingleMapping(result);
+        Assert.Equal(
+            TimeSpan.FromTicks(maxMinutes * TimeSpan.TicksPerMinute),
+            result.Configuration!.CacheOptions.RefreshInterval);
+    }
+
+    [Theory]
+    [InlineData("null", "external-source-invalid-field-type")]
+    [InlineData("true", "external-source-invalid-field-type")]
+    [InlineData("\"60\"", "external-source-invalid-field-type")]
+    [InlineData("60.5", "external-source-invalid-field-type")]
+    [InlineData("0", "external-source-refresh-interval-invalid")]
+    [InlineData("-1", "external-source-refresh-interval-invalid")]
+    [InlineData("9223372036854775807", "external-source-refresh-interval-invalid")]
+    public void Load_UngueltigesRefreshInterval_LiefertFailClosedDiagnose(
+        string refreshIntervalJson,
+        string code)
+    {
+        using var tempDir = TestTempDirectory.Create("external-source-refresh-interval-invalid-");
+        var mappingsPath = tempDir.CreateFile("mappings.json", ValidMappings("Foo"));
+        var settingsPath = WriteSettings(tempDir, mappingsPath, null, refreshIntervalJson);
+
+        var result = ExternalSourceConfigurationLoader.Load(settingsPath);
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Configuration);
+        AssertDiagnosis(result, code, "RefreshIntervalMinutes");
     }
 
     [Fact]
@@ -279,10 +416,28 @@ public sealed class ExternalSourceConfigurationLoaderTests
         return Assert.Single(result.Configuration!.Mappings);
     }
 
-    private static string WriteSettings(TestTempDirectory tempDir, string mappingsPath) =>
-        tempDir.CreateFile(
-            "appsettings.json",
-            $$"""{ "ExternalSources": { "MappingsPath": {{JsonSerializer.Serialize(mappingsPath)}} } }""");
+    private static string WriteSettings(
+        TestTempDirectory tempDir,
+        string mappingsPath,
+        string? cacheRootJson = null,
+        string? refreshIntervalJson = null,
+        string relativePath = "appsettings.json")
+    {
+        var fields = $"\"MappingsPath\": {JsonSerializer.Serialize(mappingsPath)}";
+        if (cacheRootJson is not null)
+        {
+            fields += $", \"CacheRoot\": {cacheRootJson}";
+        }
+
+        if (refreshIntervalJson is not null)
+        {
+            fields += $", \"RefreshIntervalMinutes\": {refreshIntervalJson}";
+        }
+
+        return tempDir.CreateFile(
+            relativePath,
+            $$"""{ "ExternalSources": { {{fields}} } }""");
+    }
 
     private static string ValidMappings(string assembly) =>
         $$"""{ "repositories": [{ "url": "https://gitea.example/shared.git", "solutionPath": "src/Shared.slnx", "assemblies": [{{JsonSerializer.Serialize(assembly)}}] }] }""";
@@ -296,5 +451,17 @@ public sealed class ExternalSourceConfigurationLoaderTests
             diagnostic.Code == code
             && diagnostic.Severity == "error"
             && diagnostic.Location.Contains(locationPart, StringComparison.Ordinal));
+    }
+
+    private static void AssertDefaultCacheOptions(ExternalSourceConfiguration configuration)
+    {
+        Assert.Equal(
+            Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory,
+                ExternalSourceCacheOptions.DefaultCacheDirectoryName)),
+            configuration.CacheOptions.CacheRoot);
+        Assert.Equal(
+            ExternalSourceCacheOptions.DefaultRefreshInterval,
+            configuration.CacheOptions.RefreshInterval);
     }
 }
