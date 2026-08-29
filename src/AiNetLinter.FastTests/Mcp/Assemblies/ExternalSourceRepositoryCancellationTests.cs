@@ -33,7 +33,8 @@ public sealed class ExternalSourceRepositoryCancellationTests
         var acquirer = new ExternalSourceRepositoryAcquirer(
             transport,
             staging.DirectoryPath,
-            logger);
+            logger,
+            new LocalExternalSourceRepositoryCacheWriter(staging.DirectoryPath));
 
         var exception = await Assert.ThrowsAsync<OperationCanceledException>(() =>
             acquirer.AcquireAsync(mapping, cancellation.Token));

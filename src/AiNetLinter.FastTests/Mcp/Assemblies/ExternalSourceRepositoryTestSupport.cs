@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.TestKit;
+using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using Xunit;
@@ -25,6 +26,19 @@ internal sealed class ExternalSourceRepositoryTestLogSink : ILogEventSink
     {
         events.Enqueue(logEvent);
     }
+}
+
+internal static class ExternalSourceRepositoryTestFactory
+{
+    internal static ExternalSourceRepositoryAcquirer CreateAcquirer(
+        IGiteaRepositoryTransport transport,
+        TestTempDirectory temp,
+        ILogger? logger = null) =>
+        new(
+            transport,
+            temp.DirectoryPath,
+            logger,
+            new LocalExternalSourceRepositoryCacheWriter(temp.DirectoryPath));
 }
 
 /// <summary>

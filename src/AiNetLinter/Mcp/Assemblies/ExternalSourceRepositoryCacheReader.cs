@@ -4,18 +4,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
-using System.Threading;
 using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Mcp.Assemblies;
 
 internal static class ExternalSourceRepositoryCacheReader
 {
-    private static readonly UTF8Encoding Utf8 = new(false, true);
-
     internal static bool TryReadCurrent(
         ExternalSourceRepositoryCacheReadRequest request,
         out ExternalSourceRepositoryCacheReadResult? result)
@@ -51,6 +46,18 @@ internal static class ExternalSourceRepositoryCacheReader
         return true;
     }
 
+    internal static bool TryReadPointer(string pointerPath, out string? generationName)
+    {
+        generationName = null;
+        if (!File.Exists(pointerPath))
+        {
+            return false;
+        }
+
+        generationName = ReadPointer(pointerPath);
+        return true;
+    }
+
     internal static ExternalSourceRepositoryCacheReadResult ReadGeneration(
         ExternalSourceRepositoryCacheReadRequest request,
         string? generationName = null)
@@ -73,12 +80,25 @@ internal static class ExternalSourceRepositoryCacheReader
             throw new InvalidDataException("Die Cachegeneration enthält einen Reparse-Punkt.");
         }
 
+        ExternalSourceRepositoryCacheReadSupport.ValidateGenerationLayout(generationDirectory);
         var manifestPath = ExternalSourceRepositoryCacheStorage.ResolveSafePath(
             generationDirectory,
             ExternalSourceRepositoryCacheContract.ManifestFileName);
         var manifest = ReadManifest(manifestPath);
         ValidateManifestIdentity(request, name, manifest);
-        ValidateInventory(generationDirectory, manifest.Files);
+        var inventoryPath = ExternalSourceRepositoryCacheStorage.ResolveSafePath(
+            generationDirectory,
+            ExternalSourceRepositoryCacheContract.InventoryFileName);
+        var inventory = ExternalSourceRepositoryCacheReadSupport.ReadInventory(inventoryPath);
+        ExternalSourceRepositoryCacheReadSupport.ValidateInventory(
+            new ExternalSourceRepositoryCacheInventoryValidationParameters
+            {
+                Request = request,
+                GenerationName = name,
+                GenerationDirectory = generationDirectory,
+                Manifest = manifest,
+                Inventory = inventory,
+            });
         return new ExternalSourceRepositoryCacheReadResult(manifest, generationDirectory);
     }
 
@@ -104,14 +124,14 @@ internal static class ExternalSourceRepositoryCacheReader
     private static string ReadPointer(string pointerPath)
     {
         ExternalSourceRepositoryCacheStorage.EnsureRegularFile(pointerPath);
-        var json = ReadBoundedText(
+        var json = ExternalSourceRepositoryCacheReadSupport.ReadBoundedText(
             pointerPath,
             ExternalSourceRepositoryCacheContract.MaxPointerJsonBytes);
         using var document = JsonDocument.Parse(json, new JsonDocumentOptions
         {
             AllowTrailingCommas = false,
             CommentHandling = JsonCommentHandling.Disallow,
-            MaxDepth = 8,
+            MaxDepth = ExternalSourceRepositoryCacheContract.MaxPointerJsonDepth,
         });
         if (document.RootElement.ValueKind != JsonValueKind.Object)
         {
@@ -131,7 +151,7 @@ internal static class ExternalSourceRepositoryCacheReader
                 throw new InvalidDataException("Der Current-Pointer enthält ein ungültiges Feld.");
             }
 
-            generation = ReadString(property.Value);
+            generation = ExternalSourceRepositoryCacheReadSupport.ReadString(property.Value);
         }
 
         if (generation is null
@@ -140,20 +160,20 @@ internal static class ExternalSourceRepositoryCacheReader
             throw new InvalidDataException("Der Current-Pointer enthält eine ungültige Generation.");
         }
 
-        return generation!;
+        return generation;
     }
 
     private static ExternalSourceRepositoryCacheManifest ReadManifest(string manifestPath)
     {
         ExternalSourceRepositoryCacheStorage.EnsureRegularFile(manifestPath);
-        var json = ReadBoundedText(
+        var json = ExternalSourceRepositoryCacheReadSupport.ReadBoundedText(
             manifestPath,
             ExternalSourceRepositoryCacheContract.MaxManifestJsonBytes);
         using var document = JsonDocument.Parse(json, new JsonDocumentOptions
         {
             AllowTrailingCommas = false,
             CommentHandling = JsonCommentHandling.Disallow,
-            MaxDepth = 16,
+            MaxDepth = ExternalSourceRepositoryCacheContract.MaxManifestJsonDepth,
         });
         if (document.RootElement.ValueKind != JsonValueKind.Object)
         {
@@ -186,14 +206,14 @@ internal static class ExternalSourceRepositoryCacheReader
 
             switch (property.Name)
             {
-                case "cacheSchemaVersion": values.SchemaVersion = ReadString(property.Value); break;
-                case "cacheKey": values.CacheKey = ReadString(property.Value); break;
-                case "canonicalRepositoryUrl": values.RepositoryUrl = ReadString(property.Value); break;
-                case "solutionPath": values.SolutionPath = ReadString(property.Value); break;
-                case "loadedRevision": values.Revision = ReadString(property.Value); break;
-                case "generationName": values.GenerationName = ReadString(property.Value); break;
+                case "cacheSchemaVersion": values.SchemaVersion = ExternalSourceRepositoryCacheReadSupport.ReadString(property.Value); break;
+                case "cacheKey": values.CacheKey = ExternalSourceRepositoryCacheReadSupport.ReadString(property.Value); break;
+                case "canonicalRepositoryUrl": values.RepositoryUrl = ExternalSourceRepositoryCacheReadSupport.ReadString(property.Value); break;
+                case "solutionPath": values.SolutionPath = ExternalSourceRepositoryCacheReadSupport.ReadString(property.Value); break;
+                case "loadedRevision": values.Revision = ExternalSourceRepositoryCacheReadSupport.ReadString(property.Value); break;
+                case "generationName": values.GenerationName = ExternalSourceRepositoryCacheReadSupport.ReadString(property.Value); break;
                 case "createdUtc": values.CreatedUtc = property.Value.GetDateTime(); break;
-                case "files": values.Files = ReadFiles(property.Value); break;
+                case "files": values.Files = ExternalSourceRepositoryCacheReadSupport.ReadFiles(property.Value); break;
                 default: throw new InvalidDataException("Das Cachemanifest enthält ein unbekanntes Feld.");
             }
         }
@@ -256,172 +276,6 @@ internal static class ExternalSourceRepositoryCacheReader
         }
     }
 
-    private static IReadOnlyList<ExternalSourceRepositoryCacheFileEntry> ReadFiles(JsonElement value)
-    {
-        if (value.ValueKind != JsonValueKind.Array
-            || value.GetArrayLength() > ExternalSourceRepositoryCacheContract.MaxInventoryEntries)
-        {
-            throw new InvalidDataException("Das Cachemanifest enthält ein unbegrenztes Datei-Inventar.");
-        }
-
-        var files = new List<ExternalSourceRepositoryCacheFileEntry>(value.GetArrayLength());
-        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var totalBytes = 0L;
-        foreach (var item in value.EnumerateArray())
-        {
-            var file = ReadFile(item);
-            if (!paths.Add(file.RelativePath)
-                || totalBytes > ExternalSourceRepositoryCacheContract.MaxInventoryBytes - file.Length)
-            {
-                throw new InvalidDataException("Das Cacheinventar enthält einen ungültigen oder doppelten Pfad.");
-            }
-
-            totalBytes += file.Length;
-            files.Add(file);
-        }
-
-        return files;
-    }
-
-    private static ExternalSourceRepositoryCacheFileEntry ReadFile(JsonElement item)
-    {
-        var values = ReadFileProperties(item);
-        ValidateFileValues(values);
-        return new ExternalSourceRepositoryCacheFileEntry(
-            values.Path!,
-            values.Length,
-            values.Hash!);
-    }
-
-    private static FileValues ReadFileProperties(JsonElement item)
-    {
-        if (item.ValueKind != JsonValueKind.Object)
-        {
-            throw new InvalidDataException("Das Cacheinventar enthält einen ungültigen Eintrag.");
-        }
-
-        var values = new FileValues();
-        var names = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var property in item.EnumerateObject())
-        {
-            if (!names.Add(property.Name))
-            {
-                throw new InvalidDataException("Das Cacheinventar enthält doppelte Felder.");
-            }
-
-            switch (property.Name)
-            {
-                case "relativePath": values.Path = ReadString(property.Value); break;
-                case "length": values.Length = property.Value.GetInt64(); break;
-                case "contentHash": values.Hash = ReadString(property.Value); break;
-                default: throw new InvalidDataException("Das Cacheinventar enthält ein unbekanntes Feld.");
-            }
-        }
-
-        return values;
-    }
-
-    private static void ValidateFileValues(FileValues values)
-    {
-        if (values.Path is null
-            || !ExternalSourceRepositoryCacheContract.TryNormalizeRelativeFilePath(
-                values.Path,
-                out var normalizedPath)
-            || !string.Equals(values.Path, normalizedPath, StringComparison.Ordinal)
-            || string.Equals(
-                Path.GetFileName(values.Path),
-                ExternalSourceCheckoutOwnership.OwnershipMarkerFileName,
-                StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidDataException("Das Cacheinventar enthält einen unsicheren Pfad.");
-        }
-
-        if (values.Length < 0 || values.Length > ExternalSourceRepositoryCacheContract.MaxFileLength)
-        {
-            throw new InvalidDataException("Das Cacheinventar enthält eine ungültige Dateilänge.");
-        }
-
-        if (values.Hash is null
-            || values.Hash.Length != 64
-            || values.Hash.Any(character => !ExternalSourceRepositoryCacheContract.IsLowerHexDigit(character)))
-        {
-            throw new InvalidDataException("Das Cacheinventar enthält einen ungültigen Inhaltshash.");
-        }
-    }
-
-    private static void ValidateInventory(
-        string generationDirectory,
-        IReadOnlyList<ExternalSourceRepositoryCacheFileEntry> expectedFiles)
-    {
-        var contentDirectory = ExternalSourceRepositoryCacheStorage.ResolveSafePath(
-            generationDirectory,
-            ExternalSourceRepositoryCacheContract.ContentDirectoryName);
-        ExternalSourceRepositoryCacheStorage.EnsureSafeDirectory(contentDirectory);
-        var actualPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var expected = expectedFiles.ToDictionary(file => file.RelativePath, StringComparer.OrdinalIgnoreCase);
-        ExternalSourceRepositoryCacheStorage.WalkFiles(
-            contentDirectory,
-            (filePath, relativePath) =>
-            {
-                if (!actualPaths.Add(relativePath)
-                    || !expected.TryGetValue(relativePath, out var expectedFile))
-                {
-                    throw new InvalidDataException("Cacheinventar und Inhalt stimmen nicht überein.");
-                }
-
-                ValidateFileHash(filePath, expectedFile);
-            },
-            skipOwnershipMarkers: false,
-            CancellationToken.None);
-        if (actualPaths.Count != expected.Count || !actualPaths.SetEquals(expected.Keys))
-        {
-            throw new InvalidDataException("Cacheinventar und Inhalt stimmen nicht überein.");
-        }
-    }
-
-    private static void ValidateFileHash(
-        string filePath,
-        ExternalSourceRepositoryCacheFileEntry expected)
-    {
-        using var stream = new FileStream(
-            filePath,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read,
-            ExternalSourceRepositoryCacheContract.FileBufferSize,
-            FileOptions.SequentialScan);
-        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        var buffer = new byte[ExternalSourceRepositoryCacheContract.FileBufferSize];
-        var length = 0L;
-        int read;
-        while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
-        {
-            length = checked(length + read);
-            hash.AppendData(buffer, 0, read);
-        }
-
-        var contentHash = Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
-        if (length != expected.Length || !string.Equals(contentHash, expected.ContentHash, StringComparison.Ordinal))
-        {
-            throw new InvalidDataException("Eine Cachedatei weicht vom Manifest ab.");
-        }
-    }
-
-    private static string ReadBoundedText(string path, int maxBytes)
-    {
-        if (new FileInfo(path).Length > maxBytes)
-        {
-            throw new InvalidDataException("Die Cachemetadaten überschreiten das Größenlimit.");
-        }
-
-        return File.ReadAllText(path, Utf8);
-    }
-
-    private static string ReadString(JsonElement value) =>
-        value.ValueKind == JsonValueKind.String
-            ? value.GetString() ?? throw new InvalidDataException("Cachemetadaten enthalten einen leeren String.")
-            : throw new InvalidDataException("Cachemetadaten enthalten keinen String.");
-
     private sealed class ManifestValues
     {
         internal string? SchemaVersion { get; set; }
@@ -432,12 +286,5 @@ internal static class ExternalSourceRepositoryCacheReader
         internal string? GenerationName { get; set; }
         internal DateTime CreatedUtc { get; set; }
         internal IReadOnlyList<ExternalSourceRepositoryCacheFileEntry>? Files { get; set; }
-    }
-
-    private sealed class FileValues
-    {
-        internal string? Path { get; set; }
-        internal long Length { get; set; } = -1;
-        internal string? Hash { get; set; }
     }
 }

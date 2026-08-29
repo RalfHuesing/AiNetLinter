@@ -72,6 +72,9 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
         Assert.True(File.Exists(Path.Combine(
             result.GenerationPath!,
             ExternalSourceRepositoryCacheContract.ManifestFileName)));
+        Assert.True(File.Exists(Path.Combine(
+            result.GenerationPath!,
+            ExternalSourceRepositoryCacheContract.InventoryFileName)));
 
         Assert.True(writer.TryReadCurrent(
             new ExternalSourceRepositoryCacheReadRequest

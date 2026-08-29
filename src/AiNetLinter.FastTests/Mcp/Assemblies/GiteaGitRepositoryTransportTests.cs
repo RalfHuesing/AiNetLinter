@@ -252,7 +252,7 @@ public sealed class GiteaGitRepositoryTransportTests
                 standardError: "fatal: repository not found"));
         });
         var transport = new GiteaGitRepositoryTransport(processExecutor: executor);
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, temp.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, temp);
 
         var result = await acquirer.AcquireAsync(CreateMapping());
 

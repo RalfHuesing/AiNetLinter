@@ -32,7 +32,9 @@ internal static class ExternalSourceRepositoryCacheStorage
                 var destinationDirectory = Path.GetDirectoryName(destinationPath)!;
                 Directory.CreateDirectory(destinationDirectory);
                 EnsureSafeDirectory(destinationDirectory);
-                files.Add(CopyFile(sourcePath, destinationPath, relativePath, cancellationToken));
+                var file = CopyFile(sourcePath, destinationPath, relativePath, cancellationToken);
+                files.Add(file);
+                return file.Length;
             },
             skipOwnershipMarkers: true,
             cancellationToken);
@@ -43,7 +45,7 @@ internal static class ExternalSourceRepositoryCacheStorage
 
     internal static void WalkFiles(
         string sourceRoot,
-        Action<string, string> onFile,
+        Func<string, string, long> onFile,
         bool skipOwnershipMarkers,
         CancellationToken cancellationToken)
     {
@@ -63,7 +65,7 @@ internal static class ExternalSourceRepositoryCacheStorage
     private static void WalkDirectory(
         string sourceRoot,
         string currentDirectory,
-        Action<string, string> onFile,
+        Func<string, string, long> onFile,
         bool skipOwnershipMarkers,
         ref int fileCount,
         ref long totalBytes,
@@ -88,7 +90,7 @@ internal static class ExternalSourceRepositoryCacheStorage
     private static void VisitEntry(
         string sourceRoot,
         string entry,
-        Action<string, string> onFile,
+        Func<string, string, long> onFile,
         bool skipOwnershipMarkers,
         ref int fileCount,
         ref long totalBytes,
@@ -142,13 +144,18 @@ internal static class ExternalSourceRepositoryCacheStorage
     private static void AddFile(
         string filePath,
         string relativePath,
-        Action<string, string> onFile,
+        Func<string, string, long> onFile,
         ref int fileCount,
         ref long totalBytes)
     {
-        var length = new FileInfo(filePath).Length;
-        if (length > ExternalSourceRepositoryCacheContract.MaxFileLength
-            || fileCount >= ExternalSourceRepositoryCacheContract.MaxInventoryEntries
+        if (fileCount >= ExternalSourceRepositoryCacheContract.MaxInventoryEntries)
+        {
+            throw new InvalidDataException("Der Source-Checkout überschreitet das Cache-Limit.");
+        }
+
+        var length = onFile(filePath, relativePath);
+        if (length < 0
+            || length > ExternalSourceRepositoryCacheContract.MaxFileLength
             || totalBytes > ExternalSourceRepositoryCacheContract.MaxInventoryBytes - length)
         {
             throw new InvalidDataException("Der Source-Checkout überschreitet das Cache-Limit.");
@@ -156,7 +163,6 @@ internal static class ExternalSourceRepositoryCacheStorage
 
         fileCount++;
         totalBytes += length;
-        onFile(filePath, relativePath);
     }
 
     private static ExternalSourceRepositoryCacheFileEntry CopyFile(
@@ -170,6 +176,8 @@ internal static class ExternalSourceRepositoryCacheStorage
             throw new IOException("Die Cachegeneration enthält bereits einen Zielpfad.");
         }
 
+        EnsureRegularFile(sourcePath);
+
         using var source = new FileStream(
             sourcePath,
             FileMode.Open,
@@ -177,6 +185,11 @@ internal static class ExternalSourceRepositoryCacheStorage
             FileShare.Read,
             ExternalSourceRepositoryCacheContract.FileBufferSize,
             FileOptions.SequentialScan);
+        if (source.Length > ExternalSourceRepositoryCacheContract.MaxFileLength)
+        {
+            throw new InvalidDataException("Eine Datei überschreitet das Cache-Limit.");
+        }
+
         using var destination = new FileStream(
             destinationPath,
             FileMode.CreateNew,
@@ -185,21 +198,12 @@ internal static class ExternalSourceRepositoryCacheStorage
             ExternalSourceRepositoryCacheContract.FileBufferSize,
             FileOptions.SequentialScan | FileOptions.WriteThrough);
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        var buffer = new byte[ExternalSourceRepositoryCacheContract.FileBufferSize];
-        var length = 0L;
-        int read;
-        while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            destination.Write(buffer, 0, read);
-            hash.AppendData(buffer, 0, read);
-            length = checked(length + read);
-        }
+        var length = CopyBoundedFile(source, destination, hash, cancellationToken);
 
         destination.Flush(flushToDisk: true);
-        if (length > ExternalSourceRepositoryCacheContract.MaxFileLength)
+        if (source.Length != length)
         {
-            throw new InvalidDataException("Eine Datei überschreitet das Cache-Limit.");
+            throw new InvalidDataException("Eine Datei wurde während des Kopierens verändert.");
         }
 
         return new(
@@ -208,31 +212,40 @@ internal static class ExternalSourceRepositoryCacheStorage
             Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant());
     }
 
-    internal static void WriteManifest(
-        string generationDirectory,
-        ExternalSourceRepositoryCacheManifest manifest)
+    private static long CopyBoundedFile(
+        FileStream source,
+        FileStream destination,
+        IncrementalHash hash,
+        CancellationToken cancellationToken)
     {
-        var manifestPath = ResolveSafePath(
-            generationDirectory,
-            ExternalSourceRepositoryCacheContract.ManifestFileName);
-        using var stream = new FileStream(
-            manifestPath,
-            FileMode.CreateNew,
-            FileAccess.Write,
-            FileShare.None,
-            ExternalSourceRepositoryCacheContract.FileBufferSize,
-            FileOptions.WriteThrough);
-        JsonSerializer.Serialize(stream, manifest, new JsonSerializerOptions
+        var buffer = new byte[ExternalSourceRepositoryCacheContract.FileBufferSize];
+        var length = 0L;
+        while (true)
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true,
-        });
-        stream.Flush(flushToDisk: true);
+            var remaining = ExternalSourceRepositoryCacheContract.MaxFileLength - length;
+            var readCount = (int)Math.Min(buffer.Length, remaining + 1);
+            var read = source.Read(buffer, 0, readCount);
+            if (read == 0)
+            {
+                return length;
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            if (read > remaining)
+            {
+                throw new InvalidDataException("Eine Datei überschreitet das Cache-Limit.");
+            }
+
+            destination.Write(buffer, 0, read);
+            hash.AppendData(buffer, 0, read);
+            length = checked(length + read);
+        }
     }
 
     internal static bool TryPublishPointer(
         string entryDirectory,
         string generationName,
+        string? expectedCurrentGeneration,
         out ExternalSourceRepositoryCachePublishResult? failure)
     {
         failure = null;
@@ -245,6 +258,17 @@ internal static class ExternalSourceRepositoryCacheStorage
             WritePointer(temporaryPointer, generationName);
             if (File.Exists(pointerPath))
             {
+                if (!ExternalSourceRepositoryCacheReader.TryReadPointer(
+                        pointerPath,
+                        out var currentGeneration)
+                    || !string.Equals(
+                        currentGeneration,
+                        expectedCurrentGeneration,
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidDataException("Der Current-Pointer hat nicht den erwarteten Generationstand.");
+                }
+
                 if (ContainsReparsePoint(pointerPath))
                 {
                     throw new InvalidDataException("Der Current-Pointer ist unsicher.");
@@ -254,7 +278,8 @@ internal static class ExternalSourceRepositoryCacheStorage
             }
             else
             {
-                if (Directory.Exists(pointerPath))
+                if (expectedCurrentGeneration is not null
+                    || Directory.Exists(pointerPath))
                 {
                     throw new IOException("Der Current-Pointer ist kein Dateipfad.");
                 }
@@ -264,7 +289,7 @@ internal static class ExternalSourceRepositoryCacheStorage
 
             return true;
         }
-        catch (Exception exception) when (IsCacheException(exception))
+        catch (Exception ignored) when (IsCacheException(ignored))
         {
             failure = ExternalSourceRepositoryCachePublishResult.Failure(
                 ExternalSourceRepositoryCachePublishFailureKind.PointerPublishFailed);
@@ -272,24 +297,46 @@ internal static class ExternalSourceRepositoryCacheStorage
         }
         finally
         {
-            TryDeleteFile(temporaryPointer);
+            ExternalSourceRepositoryCacheCleanup.TryDeleteFile(temporaryPointer);
         }
     }
 
     internal static void RestorePreviousCurrent(
         string entryDirectory,
+        string failedGeneration,
         string? previousGeneration)
     {
-        var pointerPath = Path.Combine(
-            entryDirectory,
-            ExternalSourceRepositoryCacheContract.CurrentPointerFileName);
-        if (previousGeneration is null)
+        try
         {
-            TryDeleteFile(pointerPath);
-            return;
-        }
+            var pointerPath = Path.Combine(
+                entryDirectory,
+                ExternalSourceRepositoryCacheContract.CurrentPointerFileName);
+            if (!ExternalSourceRepositoryCacheReader.TryReadPointer(
+                    pointerPath,
+                    out var currentGeneration)
+                || !string.Equals(
+                    currentGeneration,
+                    failedGeneration,
+                    StringComparison.Ordinal))
+            {
+                return;
+            }
 
-        _ = TryPublishPointer(entryDirectory, previousGeneration, out _);
+            if (previousGeneration is null)
+            {
+                ExternalSourceRepositoryCacheCleanup.TryDeleteFile(pointerPath);
+                return;
+            }
+
+            _ = TryPublishPointer(
+                entryDirectory,
+                previousGeneration,
+                failedGeneration,
+                out _);
+        }
+        catch (Exception ignored) when (IsCacheException(ignored))
+        {
+        }
     }
 
     internal static void PrepareDirectory(string directory)
@@ -382,8 +429,11 @@ internal static class ExternalSourceRepositoryCacheStorage
     {
         try
         {
+            var generationName = Path.GetFileName(generationDirectory);
             if (Directory.Exists(generationDirectory)
                 && ExternalSourceRepositoryPathGuard.IsDescendantPath(entryDirectory, generationDirectory)
+                && IsSafeGenerationName(generationName)
+                && !IsCurrentGeneration(entryDirectory, generationName)
                 && !ContainsReparsePoint(generationDirectory)
                 && !ExternalSourceRepositoryPathGuard.ContainsReparsePointInTree(generationDirectory))
             {
@@ -394,6 +444,21 @@ internal static class ExternalSourceRepositoryCacheStorage
         {
         }
     }
+
+    private static bool IsCurrentGeneration(string entryDirectory, string generationName)
+    {
+        var pointerPath = Path.Combine(
+            entryDirectory,
+            ExternalSourceRepositoryCacheContract.CurrentPointerFileName);
+        return ExternalSourceRepositoryCacheReader.TryReadPointer(
+            pointerPath,
+            out var currentGeneration)
+            && string.Equals(currentGeneration, generationName, StringComparison.Ordinal);
+    }
+
+    private static bool IsSafeGenerationName(string? value) =>
+        value is not null
+        && ExternalSourceRepositoryCacheContract.IsSafeGenerationName(value);
 
     internal static bool IsCacheException(Exception exception) =>
         exception is IOException
@@ -428,19 +493,6 @@ internal static class ExternalSourceRepositoryCacheStorage
         stream.Flush(flushToDisk: true);
     }
 
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path) && !ContainsReparsePoint(path))
-            {
-                File.Delete(path);
-            }
-        }
-        catch (Exception ignored) when (IsCacheException(ignored))
-        {
-        }
-    }
 }
 
 internal sealed class ExternalSourceRepositoryCacheUnsafeSourceException : Exception;

@@ -83,7 +83,7 @@ public sealed class GiteaExternalSourceProviderTests
                     "$repository")],
                 failureKind: ExternalSourceProviderFailureKind.ProviderUnavailable);
         });
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
         var materializer = new RecordingMaterializer((_, _, _) =>
             throw new InvalidOperationException("must not be called"));
         var provider = new GiteaExternalSourceProvider(acquirer, materializer);
@@ -181,7 +181,7 @@ public sealed class GiteaExternalSourceProviderTests
                 destination);
             return ExternalSourceRepositoryTransportResult.Success("revision-42");
         });
-        return new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        return ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
     }
 
     private static ExternalSourceMapping CreateMapping(

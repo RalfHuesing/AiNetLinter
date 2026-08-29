@@ -135,6 +135,15 @@ internal sealed record ExternalSourceRepositoryCacheManifest(
     DateTime CreatedUtc,
     IReadOnlyList<ExternalSourceRepositoryCacheFileEntry> Files);
 
+internal sealed record ExternalSourceRepositoryCacheInventory(
+    string CacheSchemaVersion,
+    string CacheKey,
+    string SolutionPath,
+    string GenerationName,
+    int FileCount,
+    long TotalBytes,
+    IReadOnlyList<ExternalSourceRepositoryCacheFileEntry> Files);
+
 internal sealed class ExternalSourceRepositoryCachePublishRequest
 {
     internal ExternalSourceMapping Mapping { get; init; } = null!;

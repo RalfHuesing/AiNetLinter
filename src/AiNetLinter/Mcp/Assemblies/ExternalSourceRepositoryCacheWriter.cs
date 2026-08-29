@@ -19,8 +19,11 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> Locks = new(StringComparer.OrdinalIgnoreCase);
     private readonly string cacheRoot;
+    private readonly Action? afterPointerPublished;
 
-    internal LocalExternalSourceRepositoryCacheWriter(string? cacheRoot = null)
+    internal LocalExternalSourceRepositoryCacheWriter(
+        string? cacheRoot = null,
+        Action? afterPointerPublished = null)
     {
         var configuredRoot = cacheRoot
             ?? System.IO.Path.Combine(AppContext.BaseDirectory, "cache", "source");
@@ -28,6 +31,7 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
             ?? throw new ArgumentException(
                 "Die Cache-Wurzel muss ein absoluter, gültiger Pfad sein.",
                 nameof(cacheRoot));
+        this.afterPointerPublished = afterPointerPublished;
     }
 
     internal string GetEntryDirectory(ExternalSourceRepositoryCacheKey key)
@@ -82,20 +86,35 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
         }
         finally
         {
-            lockLease?.Dispose();
+            FinalizePublish(context, published, lockLease);
+        }
+    }
+
+    private static void FinalizePublish(
+        PublishContext context,
+        bool published,
+        CacheKeyLockLease? lockLease)
+    {
+        try
+        {
             if (!published)
             {
                 if (context.PointerPublished)
                 {
                     ExternalSourceRepositoryCacheStorage.RestorePreviousCurrent(
-                        entryDirectory,
+                        context.EntryDirectory,
+                        context.GenerationName,
                         context.PreviousGeneration);
                 }
 
                 ExternalSourceRepositoryCacheStorage.TryDeleteGeneration(
-                    entryDirectory,
-                    generationDirectory);
+                    context.EntryDirectory,
+                    context.GenerationDirectory);
             }
+        }
+        finally
+        {
+            lockLease?.Dispose();
         }
     }
 
@@ -132,19 +151,20 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
         if (!ExternalSourceRepositoryCacheStorage.TryPublishPointer(
                 context.EntryDirectory,
                 context.GenerationName,
+                previous,
                 out var pointerFailure))
         {
             return pointerFailure!;
         }
 
         context.PointerPublished = true;
+        afterPointerPublished?.Invoke();
         cancellationToken.ThrowIfCancellationRequested();
         if (!TryValidatePublishedGeneration(
                 context.Request,
                 context.Key,
                 context.EntryDirectory,
-                context.GenerationName,
-                previous))
+                context.GenerationName))
         {
             return ExternalSourceRepositoryCachePublishResult.Failure(
                 ExternalSourceRepositoryCachePublishFailureKind.ManifestInvalid);
@@ -176,7 +196,12 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
             System.IO.Path.GetFileName(generationDirectory),
             DateTime.UtcNow,
             files);
-        ExternalSourceRepositoryCacheStorage.WriteManifest(generationDirectory, manifest);
+        ExternalSourceRepositoryCacheMetadataStorage.WriteManifest(generationDirectory, manifest);
+        ExternalSourceRepositoryCacheMetadataStorage.WriteInventory(
+            generationDirectory,
+            key,
+            manifest.GenerationName,
+            files);
         ReadGeneration(new ExternalSourceRepositoryCacheReadRequest
         {
             Key = key,
@@ -190,8 +215,7 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
         ExternalSourceRepositoryCachePublishRequest request,
         ExternalSourceRepositoryCacheKey key,
         string entryDirectory,
-        string generationName,
-        string? previousGeneration)
+        string generationName)
     {
         try
         {
@@ -206,7 +230,6 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter : IExternalSource
         }
         catch (Exception exception) when (ExternalSourceRepositoryCacheStorage.IsCacheException(exception))
         {
-            ExternalSourceRepositoryCacheStorage.RestorePreviousCurrent(entryDirectory, previousGeneration);
             return false;
         }
     }

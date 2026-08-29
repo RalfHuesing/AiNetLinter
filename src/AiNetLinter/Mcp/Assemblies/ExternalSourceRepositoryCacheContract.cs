@@ -12,6 +12,7 @@ internal static class ExternalSourceRepositoryCacheContract
     internal const string CacheSchemaVersion = "external-source-repository-cache-v1";
     internal const string ContentDirectoryName = "content";
     internal const string ManifestFileName = "manifest.json";
+    internal const string InventoryFileName = "inventory.json";
     internal const string CurrentPointerFileName = "current";
     internal const string GenerationDirectoryPrefix = "generation-";
     internal const string PointerGenerationPropertyName = "generation";
@@ -22,6 +23,10 @@ internal static class ExternalSourceRepositoryCacheContract
     internal const int MaxSchemaVersionLength = 128;
     internal const int MaxPointerJsonBytes = 4096;
     internal const int MaxManifestJsonBytes = 16 * 1024 * 1024;
+    internal const int MaxInventoryJsonBytes = 16 * 1024 * 1024;
+    internal const int MaxPointerJsonDepth = 8;
+    internal const int MaxManifestJsonDepth = 16;
+    internal const int MaxInventoryJsonDepth = 16;
     internal const int MaxRelativePathLength = 1024;
     internal const int MaxRevisionLength = 128;
     internal const int MaxInventoryEntries = 10000;

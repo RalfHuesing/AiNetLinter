@@ -30,7 +30,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
                 destination);
             return ExternalSourceRepositoryTransportResult.Success("revision-42");
         });
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
         var result = await acquirer.AcquireAsync(mapping);
 
         Assert.True(result.IsAvailable);
@@ -75,7 +75,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
                 diagnostics: [Diagnostic("transport-warning")],
                 failureKind: (ExternalSourceProviderFailureKind)failureKindValue);
         });
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
 
         var result = await acquirer.AcquireAsync(CreateMapping());
 
@@ -101,7 +101,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
             cancellation.Cancel();
             throw new OperationCanceledException(token);
         });
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
 
         var exception = await Assert.ThrowsAsync<OperationCanceledException>(() =>
             acquirer.AcquireAsync(CreateMapping(), cancellation.Token));
@@ -121,7 +121,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
             File.WriteAllText(Path.Combine(destination, "partial.txt"), "partial");
             throw new InvalidOperationException("secret transport detail");
         });
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
 
         var result = await acquirer.AcquireAsync(CreateMapping());
 
@@ -183,7 +183,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
             cancellation.Cancel();
             return ExternalSourceRepositoryTransportResult.Success("revision-42");
         });
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
 
         var exception = await Assert.ThrowsAsync<OperationCanceledException>(() =>
             acquirer.AcquireAsync(CreateMapping(), cancellation.Token));
@@ -226,7 +226,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
             File.WriteAllText(Path.Combine(destination, "foreign.txt"), "must remain");
             return ExternalSourceRepositoryTransportResult.Success("revision-42");
         });
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
 
         var result = await acquirer.AcquireAsync(CreateMapping());
 
@@ -259,7 +259,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
             Directory.CreateSymbolicLink(Path.Combine(destination, linkPath), sentinelDirectory);
             return ExternalSourceRepositoryTransportResult.Success("revision-42");
         });
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
 
         var result = await acquirer.AcquireAsync(CreateMapping());
 
@@ -285,7 +285,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
                 destination);
             return ExternalSourceRepositoryTransportResult.Success("revision-42");
         });
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
         var result = await acquirer.AcquireAsync(CreateMapping());
         var checkout = Assert.IsType<ExternalSourceCheckoutHandle>(result.Checkout);
 
@@ -316,7 +316,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
             File.WriteAllText(Path.Combine(destination, "partial.txt"), "partial");
             throw exception;
         });
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
 
         var result = await acquirer.AcquireAsync(CreateMapping());
 
@@ -356,7 +356,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
     {
         using var staging = TestTempDirectory.Create("external-source-acquirer-path-");
         var transport = new ExternalSourceRecordingTransport((_, _, _) => ExternalSourceRepositoryTransportResult.Success("unused"));
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
 
         var result = await acquirer.AcquireAsync(CreateMapping(solutionPath));
 
@@ -374,7 +374,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
     {
         using var staging = TestTempDirectory.Create("external-source-acquirer-invalid-result-");
         var transport = new ExternalSourceRecordingTransport((_, _, _) => ExternalSourceRepositoryTransportResult.Success("unused"));
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
 
         var result = await acquirer.AcquireAsync(CreateMapping());
 
@@ -395,7 +395,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
             Directory.CreateDirectory(destination);
             return ExternalSourceRepositoryTransportResult.Success("revision-42");
         });
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
 
         var result = await acquirer.AcquireAsync(CreateMapping());
 
@@ -412,7 +412,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
     {
         using var staging = TestTempDirectory.Create("external-source-acquirer-credentials-");
         var transport = new ExternalSourceRecordingTransport((_, _, _) => ExternalSourceRepositoryTransportResult.Success("unused"));
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
         var mapping = new ExternalSourceMapping(
             "https://user:secret@gitea.example/shared.git",
             "BaselineMini.slnx",
@@ -435,7 +435,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
         using var staging = TestTempDirectory.Create("external-source-acquirer-url-policy-");
         var transport = new ExternalSourceRecordingTransport((_, _, _) =>
             ExternalSourceRepositoryTransportResult.Success("unused"));
-        var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
         var mapping = new ExternalSourceMapping(url, "BaselineMini.slnx", ["BaselineMini"]);
 
         var result = await acquirer.AcquireAsync(mapping);
