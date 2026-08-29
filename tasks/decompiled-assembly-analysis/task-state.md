@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T19:35:41+02:00
+last_updated: 2026-08-29T19:46:48+02:00
 rules_dir: .agents/rules
-total_steps: 28
-current_step: step-028
+total_steps: 29
+current_step: step-029
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,13 +13,13 @@ current_step: step-028
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 28 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-028` (done; deterministische Lock-/Interleaving-
-  und bounded Read-back-Nachweise ergänzt)
+- **Steps gesamt:** 29 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-029` (planned/in_progress; cache-backed Initial
+  Acquisition aus validierter persistenter Generation)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T19:35:41+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T19:46:48+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -54,6 +54,7 @@ current_step: step-028
 | step-026 | EPIC-04 | issues | Persistente Repository-Cache-Generation aus erfolgreichem Clone atomar veröffentlichen | - | da9882f4 | issues → step-027 | da9882f4 + 8a87f06a |
 | step-027 | EPIC-04 | issues | Fail-closeden Generation-Publish und Testisolation korrigieren | step-026 | c5d64c42 | issues → step-028 | c5d64c42 + 732737dd |
 | step-028 | EPIC-04 | done | Deterministische Read-back- und Lock-Lifetime-Nachweise ergänzen | step-027 | 83e52560 | approved | 83e52560 + d3d17fe1 |
+| step-029 | EPIC-04 | in_progress | Cache-backed Initial Acquisition aus validierter Generation | - | - | - | - |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -455,3 +456,26 @@ Gültige Current-Einträge bleiben in den Negativfällen unverändert. Es wurden
 keine neuen Tech-Debt-Funde aufgenommen; Build und beide vollständigen
 Nicht-Stress-Gates sind grün, der echte Symlink-/Reparse-Test bleibt
 transparent wegen Win32 1314 übersprungen.
+
+## Wiederaufnahme nach Step-028-Review (2026-08-29)
+
+Step 028 ist genehmigt und bleibt der abgeschlossene technische Vorgänger.
+Es gab keine Produktionsänderung nach seinem Abschluss, keinen neuen
+Testlauf und keine Coder-/Kritikerarbeit in dieser Planer-Wiederaufnahme.
+`step-029/step-plan.md` ist deshalb als `planned/in_progress` eingetragen;
+der nächste sichere Übergabepunkt ist ein neuer Coder-Agent.
+
+Step 029 bearbeitet als genau einen primären Vertrag die cache-backed Initial
+Acquisition aus einer strikt validierten persistenten Generation. Die drei
+gekoppelten Schichten sind Current-/Manifest-/Inventory-Read und Validierung,
+frische request-owned Checkout-Lease mit Materialisierung sowie
+Acquirer-Auswahl mit Clone-/Write-through-Fallback und Tests. Die bestehende
+Generation bleibt cache-eigen; Snapshot-/Workspace-Ownership, Registry-
+Cleanup und der Write-through-Publish-Vertrag aus Steps 024 bis 028 werden
+nicht neu entworfen.
+
+Refresh/Fetch und Refresh-Policy, Cache-Konfiguration, Retention/GC/
+Invalidierung, dirty/unbuilt/Health/degraded, Host-/MCP-Wiring,
+Provider-/Snapshot-/Registry-Neudesign und EPIC-05 sind als Folgepakete
+herausgelöst. TD-001 bis TD-003 bleiben unverändert. Der Plan enthält keine
+Produktionsänderung und keine vorweggenommene Coder-/Kritikerarbeit.

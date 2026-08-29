@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-29T15:31:12+02:00
+last_updated: 2026-08-29T19:46:48+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -149,23 +149,31 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
     nach der Registry-Korrektur in `step-025` genehmigt; der Snapshot
     übernimmt den Checkout-Besitz bis zur Registry-/Snapshot-Lifetime,
     ohne Host-Wiring.
-  - **Aktiver nächster Schnitt → `step-026` (planned):**
-    persistente Repository-Cache-Identität, Manifest und Generation aus einem
-    bestehenden erfolgreichen Clone-/Acquirer-Ergebnis sowie atomare
-    Veröffentlichung des validierten `current`-Pointers über einen
-    injizierbaren lokalen Generation-Writer. Der request-eigene Checkout bleibt
-    beim Acquirer; der persistente Generation-Ordner bleibt cache-eigen. Es
-    gibt in diesem Step weder Current-Reuse noch Fetch/Refresh, keine neue
-    Cache-Konfiguration und keine Erweiterung des getrennten
-    Assembly-Decompilation-Caches.
-  - **Folgepaket 1:** Cache-backed Initial Acquisition/Reuse mit validiertem
-    Current-Pointer, Manifest-/Inhaltsprüfung und neuem besitzbaren
-    Request-Checkout aus einer veröffentlichten Generation.
-  - **Folgepaket 2:** eigener Refresh-/Fetch-Vertrag mit Refresh-Policy,
+  - **Abgeschlossene Cache-Publish-Schnitte → `step-026` bis `step-028`:**
+    `step-026` führte persistente Repository-Cache-Identität, Manifest,
+    Inventory und Generation aus einem erfolgreichen Clone-/Acquirer-Ergebnis
+    sowie die atomare Veröffentlichung des validierten `current`-Pointers
+    über den lokalen Generation-Writer ein. `step-027` korrigierte Lock-
+    Lifetime, unabhängige bounded Read-back-Validierung und Testisolation;
+    `step-028` schloss den deterministischen A/B-Race-Nachweis und die
+    vollständige Pointer-/Manifest-/Inventory-Malformed-Matrix. Der
+    request-eigene Checkout blieb beim Acquirer, der persistente
+    Generation-Ordner cache-eigen. Current-Reuse, Fetch/Refresh und neue
+    Cache-Konfiguration waren in diesen drei Steps nicht enthalten.
+  - **Aktiver nächster Schnitt → `step-029` (planned/in_progress):**
+    Cache-backed Initial Acquisition/Reuse mit strikt validiertem
+    Current-Pointer, unabhängig geprüftem Manifest/Inventory/Inhalt und einem
+    neuen besitzbaren Request-Checkout aus einer gültigen persistenten
+    Generation. Der Acquirer verwendet bei Miss, Invalidität oder kontrolliertem
+    Materialisierungsfehler weiterhin den bestehenden Clone-/Write-through-
+    Pfad; der persistente Generation-Pfad wird nie als Request-Handle
+    weitergereicht.
+  - **Folgepaket 1 nach `step-029`:** eigener Refresh-/Fetch-Vertrag mit
+    Refresh-Policy,
     neuer Generation und der Semantik fehlgeschlagener fälliger Aktualisierung;
-    er baut auf dem Writer und dem Reuse-Vertrag auf.
+    er baut auf dem Write-through- und Reuse-Vertrag auf.
   - CacheRoot-/Refresh-Konfiguration über `appsettings.json` wird mit dem
-    späteren Reuse-/Refresh-Vertrag entschieden, nicht in Step 026.
+    späteren Reuse-/Refresh-Vertrag entschieden, nicht in Steps 026 bis 029.
   - Dirty/unbuilt Checkout-Abgrenzung und transparente Fallback-/Health-
     Semantik bleiben nach diesen Cache-Verträgen ein eigener Source-Policy-
     Schnitt; Step 024/025 markieren nur den erfolgreichen Workspace-Aufbau und
@@ -173,9 +181,9 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
 
   **Nachgelagerte Folgepakete:**
 
-  - Cache-Reuse und Request-Checkout aus einer validierten Generation folgen
-    nach Step 026; sie werden nicht in den Write-through-Publish-Vertrag
-    hineingezogen.
+  - Cache-Reuse und Request-Checkout aus einer validierten Generation sind in
+    `step-029` auf den Initial-Acquisition-Vertrag begrenzt; sie werden nicht
+    um Refresh oder neue Generationen erweitert.
   - Refresh/Fetch, Refresh-Intervall und atomarer Wechsel auf eine neue
     Generation folgen erst nach dem Reuse-Vertrag; Staleness wird nicht im
     Write-through-Step geraten.
