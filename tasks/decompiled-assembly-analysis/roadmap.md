@@ -145,14 +145,15 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
     Default-Branch- und echte initiale Clone-Semantik — `step-019`; Fetch und
     Refresh bleiben ausgenommen.
   - Erfolgreiches Acquirer→Snapshot-/Workspace-Wiring mit unveränderter
-    repository-spezifischer 1314-/Reparse-Fallback-Regel — nachgelagerter
-    eigener Schnitt.
+    repository-spezifischer 1314-/Reparse-Fallback-Regel — `step-024`
+    (planned/in_progress); der Snapshot übernimmt den Checkout-Besitz bis
+    zur Registry-/Snapshot-Lifetime, ohne Host-Wiring.
   - Refresh, persistenter Repository-Cache, Cache-/Manifest-Integrität,
     korrupte Snapshots und atomare Source-of-Truth-Veröffentlichung —
     nachgelagerter eigener Schnitt.
-  - Snapshot-/Workspace-Materialisierung, dirty/unbuilt Checkout-Abgrenzung
-    und transparente Fallback-/Health-Semantik — nachgelagerter eigener
-    Schnitt.
+  - Dirty/unbuilt Checkout-Abgrenzung und transparente Fallback-/Health-
+    Semantik — nachgelagerter eigener Schnitt; Step 024 markiert nur den
+    erfolgreichen Workspace-Aufbau und führt keine neue Health-Policy ein.
 
   Diese Grenzen bleiben sequenzielle vertikale Pakete; EPIC-04 wird nicht als
   monolithischer Gitea-Featureblock und nicht als Mini-Sweep umgesetzt.

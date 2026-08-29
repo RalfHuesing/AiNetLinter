@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T12:45:15+02:00
+last_updated: 2026-08-29T13:00:00+02:00
 rules_dir: .agents/rules
-total_steps: 23
-current_step: step-023
+total_steps: 24
+current_step: step-024
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,8 +13,8 @@ current_step: step-023
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 23 (regulär + Korrekturen; nächster Schritt wird geplant)
-- **Aktueller Schritt:** `step-023` (done; Prozessbaum-Fallback, Handle-Cleanup und DRY zentralisieren)
+- **Steps gesamt:** 24 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-024` (planned/in_progress; Acquirer→Snapshot-/Workspace-Wiring)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
@@ -48,6 +48,17 @@ current_step: step-023
 | step-021 | EPIC-04 | issues | Git-Prozessbaum- und Timeout-Cleanup-Races korrigieren | step-020 | 51060014 | issues → step-022 | 51060014 + 59c63a3a + f80e5f45 |
 | step-022 | EPIC-04 | issues | Native Startfehler und Test-Cleanup fail-closed absichern | step-021 | 872b4855 | issues → step-023 | 872b4855 + f5063d5a + fc061950 |
 | step-023 | EPIC-04 | done | Prozessbaum-Fallback und Handle-Cleanup vollständig fail-closed schließen | step-022 | d1b633d0 | approved | d1b633d0 + 5b22d16a + 30b13647 |
+| step-024 | EPIC-04 | in_progress | Erfolgreiches Acquirer→Snapshot-/Workspace-Wiring mit besitzgebundener Lifetime | - | - | pending | - |
+
+## Aktueller Wiederaufnahmevermerk
+
+Step 023 ist durch Review `30b13647` genehmigt. Step 024 ist als
+`planned/in_progress` aufgenommen: Der Coder darf ausschließlich den
+Provider-Erfolgspfad vom bestehenden Acquirer zu einem revisions-
+gebundenen Snapshot/Workspace samt Owner-Lifetime und lokalen,
+netzwerkfreien Tests bearbeiten. Refresh, persistenter Cache, atomare
+Source-of-Truth, Host-Wiring und die Step-018/019/023-Invarianten bleiben
+ausdrücklich Folge- bzw. unveränderte Verträge.
 
 ## Config
 
