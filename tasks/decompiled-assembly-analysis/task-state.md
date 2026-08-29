@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T19:46:48+02:00
+last_updated: 2026-08-29T20:50:48+02:00
 rules_dir: .agents/rules
 total_steps: 29
 current_step: step-029
@@ -14,12 +14,12 @@ current_step: step-029
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 29 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-029` (planned/in_progress; cache-backed Initial
-  Acquisition aus validierter persistenter Generation)
+- **Aktueller Schritt:** `step-029` (issues; cache-backed Initial Acquisition
+  aus validierter persistenter Generation, Nachweiskorrektur erforderlich)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T19:46:48+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T20:50:48+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -54,7 +54,7 @@ current_step: step-029
 | step-026 | EPIC-04 | issues | Persistente Repository-Cache-Generation aus erfolgreichem Clone atomar veröffentlichen | - | da9882f4 | issues → step-027 | da9882f4 + 8a87f06a |
 | step-027 | EPIC-04 | issues | Fail-closeden Generation-Publish und Testisolation korrigieren | step-026 | c5d64c42 | issues → step-028 | c5d64c42 + 732737dd |
 | step-028 | EPIC-04 | done | Deterministische Read-back- und Lock-Lifetime-Nachweise ergänzen | step-027 | 83e52560 | approved | 83e52560 + d3d17fe1 |
-| step-029 | EPIC-04 | in_progress | Cache-backed Initial Acquisition aus validierter Generation | - | - | - | - |
+| step-029 | EPIC-04 | issues | Cache-backed Initial Acquisition aus validierter Generation | - | 82692da0 | issues → step-030 | 82692da0 + c0abdcdf |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -473,6 +473,14 @@ Acquirer-Auswahl mit Clone-/Write-through-Fallback und Tests. Die bestehende
 Generation bleibt cache-eigen; Snapshot-/Workspace-Ownership, Registry-
 Cleanup und der Write-through-Publish-Vertrag aus Steps 024 bis 028 werden
 nicht neu entworfen.
+
+Der Kritiker hat Step 029 mit `c0abdcdf` nicht freigegeben. Die Reuse-Logik
+selbst erfüllt die Ownership-, Validierungs- und Fallback-Grenzen; das
+Step-Result enthält jedoch falsche Testzahlen und einen nicht zulässigen
+solutionweiten Audit-Claim. Zusätzlich beweisen zwei Reuse-Tests weder den
+konkreten Publish-Aufruf noch den unveränderten Current-Generation-Namen vor
+und nach dem Reuse. Step 030 bündelt die Result-Korrektur und diese konkreten
+Publish-/Current-Assertions als ein Nachweispaket.
 
 Refresh/Fetch und Refresh-Policy, Cache-Konfiguration, Retention/GC/
 Invalidierung, dirty/unbuilt/Health/degraded, Host-/MCP-Wiring,
