@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T03:01:35+02:00
+last_updated: 2026-08-29T05:29:19+02:00
 rules_dir: .agents/rules
 total_steps: 17
 current_step: step-017
@@ -18,7 +18,7 @@ current_step: step-017
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T03:01:35+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T05:29:19+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -245,3 +245,12 @@ diesem Host übersprungen; FastTests sind daher 1.966 bestanden plus 1 Skip,
 Integration 360/360. Vor der Task-Fortsetzung ist ein privilegierter Lauf
 ohne Skip unter Developer Mode oder `SeCreateSymbolicLinkPrivilege`
 erforderlich.
+
+Nutzerentscheidung zur Fortsetzung: Fehlende Symlink-Capability soll nicht
+global alle externen Repositories sperren. `ERROR_PRIVILEGE_NOT_HELD (1314)`
+oder ein tatsächlich erkannter Reparse-Checkout soll repository-spezifisch
+als nicht verfügbare Source behandelt werden; der bestehende statische
+Decompilation-Fallback soll greifen. Repositories ohne Reparse-Anforderung
+sollen normal weiterlaufen. Diese Änderung wird in einem neuen vertikalen
+Folge-Step geplant; der echte privilegierte Reparse-Test bleibt als separater
+Sicherheitsnachweis erhalten.
