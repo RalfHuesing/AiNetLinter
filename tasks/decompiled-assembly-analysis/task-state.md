@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T02:13:17+02:00
+last_updated: 2026-08-29T02:32:00+02:00
 rules_dir: .agents/rules
-total_steps: 16
-current_step: step-016
+total_steps: 17
+current_step: step-017
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,12 +13,12 @@ current_step: step-016
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 16 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-016` (blocked; Windows-Symlink-Berechtigung und verbleibende Cleanup-Beobachtbarkeit)
+- **Steps gesamt:** 17 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-017` (in_progress; Cancellation-Cleanup und Reparse-Capability-Gate)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T02:13:17+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T02:32:00+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -41,6 +41,7 @@ current_step: step-016
 | step-014 | EPIC-04 | done | Injizierbaren External-Source-Port für Gitea-Auth- und Transportfehler schärfen | - | 3f83c5f2 | approved | 3f83c5f2 + 804f00b0 + 0902a7b7 |
 | step-015 | EPIC-04 | issues | Repository-Akquisitionsvertrag mit injizierbarem Gitea-Transport und sicherer Staging-Fassade | - | 3bd71a73 | issues → step-016 | 3bd71a73 + 966ed66a + b1dac89b |
 | step-016 | EPIC-04 | blocked | Repository-Akquisitionsgrenze sicher korrigieren | step-015 | 4f49c0bd | blocked → step-017 | 4f49c0bd + b755c955 + 3be96cf1 |
+| step-017 | EPIC-04 | in_progress | Cancellation-Cleanup und Reparse-Capability-Gate | step-016 | - | - | 8bfb0974 |
 
 ## Config
 
@@ -220,3 +221,10 @@ den Cleanup-Status. Der Blocker wird nicht durch Attributsimulation,
 Privilegienänderung oder eine abgeschwächte Assertion umgangen; ein
 Folgeplan muss die Cleanup-Beobachtbarkeit korrigieren und die echte
 Reparse-Regression unter berechtigter Umgebung unverändert erhalten.
+
+Step 017 ist als nächste kontextbegrenzte Folgekorrektur aktiviert
+(`8bfb0974`). Es behandelt ausschließlich die Cleanup-Statusweitergabe im
+Cancellation-Pfad und ein test-only Capability-Gate, das nur Win32 1314
+überspringen darf. Der echte Symlink-/Reparse-Test bleibt unverändert und
+muss unter berechtigter Umgebung ohne Skip bestehen; Privilegienänderungen,
+Fake-Reparse-Assertions und weitere EPIC-04-Verträge bleiben ausgeschlossen.
