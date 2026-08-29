@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T20:58:02+02:00
+last_updated: 2026-08-29T21:13:53+02:00
 rules_dir: .agents/rules
 total_steps: 30
 current_step: step-030
@@ -19,7 +19,7 @@ current_step: step-030
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T20:50:48+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T21:13:53+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -447,6 +447,19 @@ Manifest- und Inventargrenzen (Oversize, ungültiges UTF-8, Trunkierung,
 Wachstum, unbekannte/doppelte Felder und Limits). Diese beiden eng gekoppelten
 Testlücken werden als ein Step-028-Korrekturpaket geschlossen; Produktions-
 und Scope-Grenzen bleiben unverändert.
+
+## Laufender Nutzerhinweis zur Paketgröße und Task-Dauer (2026-08-29)
+
+Der Nutzer hat wegen der inzwischen nahezu 30 Stunden laufenden Task-Dauer
+klargestellt, dass die Folge-Steps größer geschnitten werden müssen. Künftige
+Kritiker-Findings, Testlücken und passendes Tech-Debt werden deshalb in das
+größtmögliche noch kontextstabile vertikale Paket gebündelt. Resultat- oder
+Einzel-Assertion-Korrekturen erhalten keinen eigenen Mini-Step, wenn sie mit
+dem betroffenen Produktionsvertrag und dessen Regressionen zusammen erledigt
+werden können. Die Context-Grenzen bleiben ein Compact-Schutz, keine
+Zielgröße. Frische Sub-Agenten und das Schließen erledigter Agenten bleiben
+unverändert verpflichtend; der laufende Step-030-Coder wird nicht
+unterbrochen.
 
 Step 028 wurde durch den neuen Kritiker mit `d3d17fe1` genehmigt. Der
 Race-Nachweis erzwingt die kritische A/B-Interleaving-Reihenfolge determinis-

@@ -13,6 +13,18 @@ größere vertikale Pakete innerhalb eines Epics interpretiert. Ein Agentenlauf
 soll nicht gleichzeitig mehrere eigenständige Fachverträge, komplette
 Lifecycle-Modelle und alle Folge-Epics bearbeiten.
 
+Die Paketgröße ist dabei ein Ziel und nicht nur eine Obergrenze: Korrektur-
+Findings mit gemeinsamer Ownership-, Sicherheits-, Vertrags- oder Testgrenze
+werden in einem größeren vertikalen Folgepaket gebündelt. Ein einzelnes
+Resultat-, Assertion- oder Testdetail darf keinen eigenen Step erzeugen, wenn
+es sinnvoll mit dem betroffenen Produktionsvertrag verifiziert werden kann.
+Die Split-Gate-Grenzen dienen ausschließlich dazu, Context-Window-Compact vor
+dem eigentlichen Arbeitsbeginn zu verhindern. Nach nahezu 30 Stunden Task-
+Laufzeit wird dieser Grundsatz ausdrücklich priorisiert: pro Step eine
+vollständige zusammenhängende Änderungskette mit Implementierung, Regressionen
+und Nachweis; neue Mini-Schritte nur bei einem tatsächlich eigenständigen
+Vertrag oder einer externen Blockade.
+
 ## Split-Gate vor dem Coder
 
 Der Planer teilt einen Step vor dem Coder, wenn mindestens eine Grenze
@@ -62,3 +74,14 @@ denselben Rollenabschnitt. Kein bestehender Sub-Agent wird wiederverwendet.
 Der jeweilige Planer prüft diese Schnittlinie gegen den tatsächlichen Code und
 darf sie begründet anpassen. Ein vollständiger Epic-Umbau bleibt jedoch ein
 Signal zum Splitten, nicht zum Erhöhen des Kontextbudgets.
+
+## Laufender Nutzerhinweis zur Loop-Dauer (2026-08-29)
+
+Der Nutzer hat klargestellt, dass die bisherige Folge vieler kleiner
+Korrektur-Steps zu lange dauert. Für die Fortsetzung werden daher Findings
+vom Kritiker, Tech-Debt sowie die zugehörigen Regressionen proaktiv in das
+größtmögliche noch kontextstabile Paket aufgenommen. Vor jedem neuen Coder-
+Start muss der Planer begründen, warum ein Paket nicht weiter mit dem
+vorherigen/folgenden Vertrag gebündelt werden kann. Der Orchestrator startet
+weiterhin immer frische Sub-Agenten, schließt erledigte Agenten und lässt
+keinen laufenden Agenten für eine Paketverkleinerung fallen.
