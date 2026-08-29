@@ -103,5 +103,11 @@ public sealed class ExternalSourceRepositoryCancellationTests
             ThrownException = new OperationCanceledException(ExceptionText, cancellationToken);
             throw ThrownException;
         }
+
+        public ValueTask<ExternalSourceRepositoryTransportResult> FetchDefaultBranchAsync(
+            ExternalSourceMapping mapping,
+            string destinationPath,
+            CancellationToken cancellationToken = default) =>
+            CloneDefaultBranchAsync(mapping, destinationPath, cancellationToken);
     }
 }

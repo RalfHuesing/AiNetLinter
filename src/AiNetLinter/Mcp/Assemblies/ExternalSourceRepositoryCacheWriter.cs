@@ -151,17 +151,10 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter :
         ExternalSourceRepositoryCacheStorage.ValidateSourceCheckout(
             context.Request,
             context.Key);
-        var previous = TryReadCurrent(
-            new ExternalSourceRepositoryCacheReadRequest
-            {
-                Key = context.Key,
-                EntryDirectory = context.EntryDirectory,
-            },
-            out var previousCurrent,
-            out _)
-            ? previousCurrent!.Manifest.GenerationName
-            : null;
-        context.PreviousGeneration = previous;
+        if (!TryPrepareCurrentGeneration(context, out var currentFailure))
+        {
+            return currentFailure!;
+        }
 
         System.IO.Directory.CreateDirectory(context.GenerationDirectory);
         WriteGeneration(
@@ -174,7 +167,7 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter :
         if (!ExternalSourceRepositoryCacheStorage.TryPublishPointer(
                 context.EntryDirectory,
                 context.GenerationName,
-                previous,
+                context.Request.ExpectedCurrentGeneration ?? context.PreviousGeneration,
                 out var pointerFailure))
         {
             return pointerFailure!;
@@ -197,6 +190,36 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter :
             context.Key,
             context.GenerationName,
             context.GenerationDirectory);
+    }
+
+    private bool TryPrepareCurrentGeneration(
+        PublishContext context,
+        out ExternalSourceRepositoryCachePublishResult? failure)
+    {
+        var hasCurrent = TryReadCurrent(
+            new ExternalSourceRepositoryCacheReadRequest
+            {
+                Key = context.Key,
+                EntryDirectory = context.EntryDirectory,
+            },
+            out var previousCurrent,
+            out _);
+        context.PreviousGeneration = hasCurrent
+            ? previousCurrent!.Manifest.GenerationName
+            : null;
+        failure = null;
+        if (context.Request.ExpectedCurrentGeneration is not null
+            && !string.Equals(
+                context.PreviousGeneration,
+                context.Request.ExpectedCurrentGeneration,
+                StringComparison.Ordinal))
+        {
+            failure = ExternalSourceRepositoryCachePublishResult.Failure(
+                ExternalSourceRepositoryCachePublishFailureKind.CurrentChanged);
+            return false;
+        }
+
+        return true;
     }
 
     private void WriteGeneration(
@@ -327,17 +350,7 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter :
     {
         key = null;
         failure = null;
-        if (request.Mapping is null
-            || request.Checkout is null
-            || request.CheckoutOwnership is null
-            || request.CacheKey is null
-            || !ExternalSourceRepositoryCacheKey.TryCreate(
-                request.Mapping.Url,
-                request.SolutionPath,
-                out key)
-            || !string.Equals(key!.StableValue, request.CacheKey.StableValue, StringComparison.Ordinal)
-            || !string.Equals(request.LoadedRevision, request.Checkout.LoadedRevision, StringComparison.Ordinal)
-            || !ExternalSourceRepositoryCacheKey.IsSafeRevision(request.LoadedRevision))
+        if (!TryValidateRequestIdentity(request, out key))
         {
             failure = ExternalSourceRepositoryCachePublishResult.Failure(
                 ExternalSourceRepositoryCachePublishFailureKind.InvalidRequest);
@@ -356,6 +369,35 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter :
         }
 
         return true;
+    }
+
+    private static bool TryValidateRequestIdentity(
+        ExternalSourceRepositoryCachePublishRequest request,
+        out ExternalSourceRepositoryCacheKey? key)
+    {
+        key = null;
+        if (request.Mapping is null
+            || request.Checkout is null
+            || request.CheckoutOwnership is null
+            || request.CacheKey is null)
+        {
+            return false;
+        }
+
+        if (!ExternalSourceRepositoryCacheKey.TryCreate(
+                request.Mapping.Url,
+                request.SolutionPath,
+                out key))
+        {
+            return false;
+        }
+
+        return string.Equals(key!.StableValue, request.CacheKey.StableValue, StringComparison.Ordinal)
+            && string.Equals(request.LoadedRevision, request.Checkout.LoadedRevision, StringComparison.Ordinal)
+            && ExternalSourceRepositoryCacheKey.IsSafeRevision(request.LoadedRevision)
+            && (request.ExpectedCurrentGeneration is null
+                || ExternalSourceRepositoryCacheContract.IsSafeGenerationName(
+                    request.ExpectedCurrentGeneration));
     }
 
     private static ExternalSourceRepositoryCachePublishResult CreateFailure(

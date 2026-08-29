@@ -10,7 +10,6 @@ using System.Threading;
 using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Mcp.Assemblies;
-
 internal static class ExternalSourceRepositoryCacheStorage
 {
     internal static IReadOnlyList<ExternalSourceRepositoryCacheFileEntry> CopySource(
@@ -42,7 +41,6 @@ internal static class ExternalSourceRepositoryCacheStorage
             StringComparer.Ordinal.Compare(left.RelativePath, right.RelativePath));
         return files;
     }
-
     internal static void WalkFiles(
         string sourceRoot,
         Func<string, string, long> onFile,
@@ -61,7 +59,6 @@ internal static class ExternalSourceRepositoryCacheStorage
             ref totalBytes,
             cancellationToken);
     }
-
     private static void WalkDirectory(
         string sourceRoot,
         string currentDirectory,
@@ -86,7 +83,6 @@ internal static class ExternalSourceRepositoryCacheStorage
                 cancellationToken);
         }
     }
-
     private static void VisitEntry(
         string sourceRoot,
         string entry,
@@ -104,12 +100,10 @@ internal static class ExternalSourceRepositoryCacheStorage
         {
             throw new InvalidDataException("Der Source-Checkout enthält einen unsicheren Pfad.");
         }
-
         if (ContainsReparsePoint(entry))
         {
             throw new InvalidDataException("Der Source-Checkout enthält einen Reparse-Punkt.");
         }
-
         if (skipOwnershipMarkers
             && string.Equals(
                 Path.GetFileName(normalizedPath),
@@ -119,7 +113,6 @@ internal static class ExternalSourceRepositoryCacheStorage
         {
             return;
         }
-
         if (Directory.Exists(entry))
         {
             WalkDirectory(
@@ -132,12 +125,10 @@ internal static class ExternalSourceRepositoryCacheStorage
                 cancellationToken);
             return;
         }
-
         if (!File.Exists(entry))
         {
             throw new InvalidDataException("Der Source-Checkout enthält einen unbekannten Dateisystemeintrag.");
         }
-
         AddFile(entry, normalizedPath!, onFile, ref fileCount, ref totalBytes);
     }
 
@@ -152,7 +143,6 @@ internal static class ExternalSourceRepositoryCacheStorage
         {
             throw new InvalidDataException("Der Source-Checkout überschreitet das Cache-Limit.");
         }
-
         var length = onFile(filePath, relativePath);
         if (length < 0
             || length > ExternalSourceRepositoryCacheContract.MaxFileLength
@@ -160,7 +150,6 @@ internal static class ExternalSourceRepositoryCacheStorage
         {
             throw new InvalidDataException("Der Source-Checkout überschreitet das Cache-Limit.");
         }
-
         fileCount++;
         totalBytes += length;
     }
@@ -177,7 +166,6 @@ internal static class ExternalSourceRepositoryCacheStorage
         }
 
         EnsureRegularFile(sourcePath);
-
         using var source = new FileStream(
             sourcePath,
             FileMode.Open,
@@ -189,7 +177,6 @@ internal static class ExternalSourceRepositoryCacheStorage
         {
             throw new InvalidDataException("Eine Datei überschreitet das Cache-Limit.");
         }
-
         using var destination = new FileStream(
             destinationPath,
             FileMode.CreateNew,
@@ -258,15 +245,13 @@ internal static class ExternalSourceRepositoryCacheStorage
             WritePointer(temporaryPointer, generationName);
             if (File.Exists(pointerPath))
             {
-                if (!ExternalSourceRepositoryCacheReader.TryReadPointer(
-                        pointerPath,
-                        out var currentGeneration)
-                    || !string.Equals(
-                        currentGeneration,
-                        expectedCurrentGeneration,
-                        StringComparison.Ordinal))
+                if (!HasExpectedCurrentPointer(pointerPath, expectedCurrentGeneration))
                 {
-                    throw new InvalidDataException("Der Current-Pointer hat nicht den erwarteten Generationstand.");
+                    failure = ExternalSourceRepositoryCachePublishResult.Failure(
+                        expectedCurrentGeneration is null
+                            ? ExternalSourceRepositoryCachePublishFailureKind.PointerPublishFailed
+                            : ExternalSourceRepositoryCachePublishFailureKind.CurrentChanged);
+                    return false;
                 }
 
                 if (ContainsReparsePoint(pointerPath))
@@ -278,8 +263,14 @@ internal static class ExternalSourceRepositoryCacheStorage
             }
             else
             {
-                if (expectedCurrentGeneration is not null
-                    || Directory.Exists(pointerPath))
+                if (expectedCurrentGeneration is not null)
+                {
+                    failure = ExternalSourceRepositoryCachePublishResult.Failure(
+                        ExternalSourceRepositoryCachePublishFailureKind.CurrentChanged);
+                    return false;
+                }
+
+                if (Directory.Exists(pointerPath))
                 {
                     throw new IOException("Der Current-Pointer ist kein Dateipfad.");
                 }
@@ -301,6 +292,16 @@ internal static class ExternalSourceRepositoryCacheStorage
         }
     }
 
+    private static bool HasExpectedCurrentPointer(
+        string pointerPath,
+        string? expectedCurrentGeneration) =>
+        ExternalSourceRepositoryCacheReader.TryReadPointer(
+            pointerPath,
+            out var currentGeneration)
+        && string.Equals(
+            currentGeneration,
+            expectedCurrentGeneration,
+            StringComparison.Ordinal);
     internal static void RestorePreviousCurrent(
         string entryDirectory,
         string failedGeneration,

@@ -158,6 +158,8 @@ internal sealed class ExternalSourceRepositoryCachePublishRequest
     internal string SolutionPath { get; init; } = string.Empty;
 
     internal string LoadedRevision { get; init; } = string.Empty;
+
+    internal string? ExpectedCurrentGeneration { get; init; }
 }
 
 internal enum ExternalSourceRepositoryCachePublishFailureKind
@@ -169,6 +171,7 @@ internal enum ExternalSourceRepositoryCachePublishFailureKind
     PointerPublishFailed,
     WriteFailed,
     Cancelled,
+    CurrentChanged,
 }
 
 internal sealed record ExternalSourceRepositoryCachePublishResult
@@ -214,14 +217,25 @@ internal sealed record ExternalSourceRepositoryCachePublishResult
         Failure(
             failureKind,
             [new(
-                failureKind is ExternalSourceRepositoryCachePublishFailureKind.Cancelled
-                    ? ExternalSourceRepositoryCacheContract.PublishCancelledDiagnosticCode
-                    : ExternalSourceRepositoryCacheContract.PublishFailedDiagnosticCode,
+                GetFailureDiagnosticCode(failureKind),
                 failureKind is ExternalSourceRepositoryCachePublishFailureKind.Cancelled
                     ? "Die Veröffentlichung des Repository-Caches wurde abgebrochen."
+                    : failureKind is ExternalSourceRepositoryCachePublishFailureKind.CurrentChanged
+                        ? "Der aktuelle Repository-Cache hat sich während der Veröffentlichung geändert."
                     : "Die Repository-Cachegeneration konnte nicht veröffentlicht werden.",
                 "warning",
                 "$repository-cache")]);
+
+    private static string GetFailureDiagnosticCode(
+        ExternalSourceRepositoryCachePublishFailureKind failureKind) =>
+        failureKind switch
+        {
+            ExternalSourceRepositoryCachePublishFailureKind.Cancelled =>
+                ExternalSourceRepositoryCacheContract.PublishCancelledDiagnosticCode,
+            ExternalSourceRepositoryCachePublishFailureKind.CurrentChanged =>
+                ExternalSourceRepositoryCacheContract.CurrentChangedDiagnosticCode,
+            _ => ExternalSourceRepositoryCacheContract.PublishFailedDiagnosticCode,
+        };
 }
 
 internal sealed class ExternalSourceRepositoryCacheReadRequest

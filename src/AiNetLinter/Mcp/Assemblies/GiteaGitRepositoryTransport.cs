@@ -108,6 +108,71 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
         }
     }
 
+    public async ValueTask<ExternalSourceRepositoryTransportResult> FetchDefaultBranchAsync(
+        ExternalSourceMapping mapping,
+        string destinationPath,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(mapping);
+        if (!ExternalSourceRepositoryUrlPolicy.TryNormalize(mapping.Url, out _))
+        {
+            return Failure(
+                ExternalSourceProviderFailureKind.InvalidResponse,
+                ExternalSourceConfigurationDiagnosticCodes.RepositoryMappingInvalid);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!IsValidFetchDestination(destinationPath))
+        {
+            return Failure(
+                ExternalSourceProviderFailureKind.InvalidResponse,
+                ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutPathInvalid);
+        }
+
+        ExternalSourceCredential? credential = null;
+        try
+        {
+            credential = await ResolveCredentialAsync(mapping, cancellationToken)
+                .ConfigureAwait(false);
+            var fetchResult = await ExecuteFetchAsync(
+                    destinationPath,
+                    credential,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (fetchResult is not null)
+            {
+                return fetchResult;
+            }
+
+            credential?.Dispose();
+            credential = null;
+            var resetResult = await ExecuteResetAsync(destinationPath, cancellationToken)
+                .ConfigureAwait(false);
+            if (resetResult is not null)
+            {
+                return resetResult;
+            }
+
+            return await ExecuteHeadAsync(destinationPath, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            var failureKind = ExternalSourceRepositoryFailurePolicy.ClassifyTransportException(exception);
+            return Failure(
+                failureKind,
+                ExternalSourceRepositoryFailurePolicy.GetTransportDiagnosticCode(exception));
+        }
+        finally
+        {
+            credential?.Dispose();
+        }
+    }
+
     private async Task<ExternalSourceCredential?> ResolveCredentialAsync(
         ExternalSourceMapping mapping,
         CancellationToken cancellationToken)
@@ -154,6 +219,39 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
             : Failure(
                 ExternalSourceProviderFailureKind.InvalidResponse,
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutInvalid);
+    }
+
+    private async Task<ExternalSourceRepositoryTransportResult?> ExecuteFetchAsync(
+        string destinationPath,
+        ExternalSourceCredential? credential,
+        CancellationToken cancellationToken)
+    {
+        var request = new ExternalSourceGitProcessRequest(
+            GitCommand,
+            ["fetch", "--no-tags", "origin"],
+            destinationPath,
+            processTimeout,
+            CreateEnvironment(credential));
+        var processResult = await processExecutor.ExecuteAsync(request, cancellationToken)
+            .ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return CreateProcessFailure(processResult, credential is not null);
+    }
+
+    private async Task<ExternalSourceRepositoryTransportResult?> ExecuteResetAsync(
+        string destinationPath,
+        CancellationToken cancellationToken)
+    {
+        var request = new ExternalSourceGitProcessRequest(
+            GitCommand,
+            ["reset", "--hard", "origin/HEAD"],
+            destinationPath,
+            processTimeout,
+            CreateEnvironment(credential: null));
+        var processResult = await processExecutor.ExecuteAsync(request, cancellationToken)
+            .ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        return CreateProcessFailure(processResult, hasCredential: false);
     }
 
     private async Task<ExternalSourceRepositoryTransportResult> ExecuteHeadAsync(
@@ -284,6 +382,12 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
         && Directory.Exists(destinationPath)
         && !ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(destinationPath)
         && !ExternalSourceRepositoryPathGuard.ContainsActualReparsePointInTree(destinationPath);
+
+    private static bool IsValidFetchDestination(string destinationPath) =>
+        IsValidDestination(destinationPath)
+        && Directory.Exists(Path.Combine(destinationPath, ".git"))
+        && !ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(
+            Path.Combine(destinationPath, ".git"));
 
     private static bool TryParseRevision(string output, out string? revision)
     {

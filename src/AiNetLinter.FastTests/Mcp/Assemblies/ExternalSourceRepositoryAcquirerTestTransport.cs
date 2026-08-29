@@ -13,11 +13,14 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies;
 internal sealed class ExternalSourceRecordingTransport : IGiteaRepositoryTransport
 {
     private readonly Func<ExternalSourceMapping, string, CancellationToken, ExternalSourceRepositoryTransportResult> operation;
+    private readonly Func<ExternalSourceMapping, string, CancellationToken, ExternalSourceRepositoryTransportResult> fetchOperation;
 
     internal ExternalSourceRecordingTransport(
-        Func<ExternalSourceMapping, string, CancellationToken, ExternalSourceRepositoryTransportResult> operation)
+        Func<ExternalSourceMapping, string, CancellationToken, ExternalSourceRepositoryTransportResult> operation,
+        Func<ExternalSourceMapping, string, CancellationToken, ExternalSourceRepositoryTransportResult>? fetchOperation = null)
     {
         this.operation = operation;
+        this.fetchOperation = fetchOperation ?? operation;
     }
 
     internal int CallCount { get; private set; }
@@ -29,6 +32,14 @@ internal sealed class ExternalSourceRecordingTransport : IGiteaRepositoryTranspo
     internal bool DestinationHadNoWorkingTreeEntriesAtCall { get; private set; }
 
     internal CancellationToken CancellationToken { get; private set; }
+
+    internal int FetchCallCount { get; private set; }
+
+    internal ExternalSourceMapping? FetchMapping { get; private set; }
+
+    internal string? FetchDestinationPath { get; private set; }
+
+    internal CancellationToken FetchCancellationToken { get; private set; }
 
     public ValueTask<ExternalSourceRepositoryTransportResult> CloneDefaultBranchAsync(
         ExternalSourceMapping mapping,
@@ -46,5 +57,17 @@ internal sealed class ExternalSourceRecordingTransport : IGiteaRepositoryTranspo
                     StringComparison.Ordinal));
         CancellationToken = cancellationToken;
         return ValueTask.FromResult(operation(mapping, destinationPath, cancellationToken));
+    }
+
+    public ValueTask<ExternalSourceRepositoryTransportResult> FetchDefaultBranchAsync(
+        ExternalSourceMapping mapping,
+        string destinationPath,
+        CancellationToken cancellationToken = default)
+    {
+        FetchCallCount++;
+        FetchMapping = mapping;
+        FetchDestinationPath = destinationPath;
+        FetchCancellationToken = cancellationToken;
+        return ValueTask.FromResult(fetchOperation(mapping, destinationPath, cancellationToken));
     }
 }

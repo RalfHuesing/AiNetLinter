@@ -18,6 +18,7 @@ internal static class ExternalSourceRepositoryCacheContract
     internal const string PointerGenerationPropertyName = "generation";
     internal const string PublishFailedDiagnosticCode = "external-source-repository-cache-publish-failed";
     internal const string PublishCancelledDiagnosticCode = "external-source-repository-cache-publish-cancelled";
+    internal const string CurrentChangedDiagnosticCode = "external-source-repository-cache-current-changed";
     internal const int FileBufferSize = 81920;
     internal const int MaxRepositoryUrlLength = 2048;
     internal const int MaxSchemaVersionLength = 128;

@@ -92,6 +92,95 @@ public sealed class GiteaGitRepositoryTransportTests
         Assert.DoesNotContain(UsernameEnvironmentVariable, environment.Keys);
     }
 
+    [Fact]
+    public async Task FetchDefaultBranchAsync_UsesRemoteHeadAndCredentialIsolation()
+    {
+        using var temp = TestTempDirectory.Create("gitea-transport-fetch-");
+        var destination = temp.CreateSubdirectory("checkout");
+        Directory.CreateDirectory(Path.Combine(destination, ".git"));
+        var credential = new ExternalSourceCredential("build-user", CredentialSecret);
+        var resolver = new RecordingCredentialResolver(credential);
+        var executor = new RecordingGitExecutor((request, _) =>
+        {
+            return Task.FromResult(request.Arguments[0] switch
+            {
+                "fetch" => CompletedProcess(),
+                "reset" => CompletedProcess(),
+                _ => CompletedProcess(Revision + Environment.NewLine),
+            });
+        });
+        var transport = new GiteaGitRepositoryTransport(resolver, executor);
+
+        var result = await transport.FetchDefaultBranchAsync(CreateMapping(), destination);
+
+        Assert.True(result.IsAvailable);
+        Assert.Equal(Revision, result.LoadedRevision);
+        Assert.Equal(3, executor.Requests.Count);
+        var fetchRequest = executor.Requests[0];
+        Assert.Equal(["fetch", "--no-tags", "origin"], fetchRequest.Arguments);
+        Assert.Equal(destination, fetchRequest.WorkingDirectory);
+        Assert.Equal(CredentialSecret, fetchRequest.Environment[SecretEnvironmentVariable]);
+        Assert.DoesNotContain(CredentialSecret, string.Join(" ", fetchRequest.Arguments));
+
+        var resetRequest = executor.Requests[1];
+        Assert.Equal(["reset", "--hard", "origin/HEAD"], resetRequest.Arguments);
+        Assert.DoesNotContain(SecretEnvironmentVariable, resetRequest.Environment.Keys);
+        Assert.DoesNotContain(UsernameEnvironmentVariable, resetRequest.Environment.Keys);
+
+        Assert.Equal(["rev-parse", "--verify", "HEAD"], executor.Requests[2].Arguments);
+        Assert.Throws<ObjectDisposedException>(() => _ = credential.Secret);
+    }
+
+    [Fact]
+    public async Task FetchDefaultBranchAsync_RejectsInvalidHeadRevision()
+    {
+        using var temp = TestTempDirectory.Create("gitea-transport-fetch-revision-");
+        var destination = temp.CreateSubdirectory("checkout");
+        Directory.CreateDirectory(Path.Combine(destination, ".git"));
+        var executor = new RecordingGitExecutor((request, _) =>
+            Task.FromResult(request.Arguments[0] is "rev-parse"
+                ? CompletedProcess("not-a-git-revision")
+                : CompletedProcess()));
+        var transport = new GiteaGitRepositoryTransport(processExecutor: executor);
+
+        var result = await transport.FetchDefaultBranchAsync(CreateMapping(), destination);
+
+        Assert.False(result.IsAvailable);
+        Assert.Equal(ExternalSourceProviderFailureKind.InvalidResponse, result.FailureKind);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportResultInvalid);
+        Assert.Equal(3, executor.Requests.Count);
+    }
+
+    [Fact]
+    public async Task FetchDefaultBranchAsync_CancellationKeepsCallerToken()
+    {
+        using var temp = TestTempDirectory.Create("gitea-transport-fetch-cancel-");
+        var destination = temp.CreateSubdirectory("checkout");
+        Directory.CreateDirectory(Path.Combine(destination, ".git"));
+        using var cancellation = new CancellationTokenSource();
+        var resolver = new RecordingCredentialResolver(null);
+        var executor = new RecordingGitExecutor(async (_, token) =>
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, token);
+            return CompletedProcess();
+        });
+        var transport = new GiteaGitRepositoryTransport(resolver, executor);
+        var operation = transport.FetchDefaultBranchAsync(
+            CreateMapping(),
+            destination,
+            cancellation.Token).AsTask();
+        cancellation.Cancel();
+
+        var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => operation);
+
+        Assert.Equal(cancellation.Token, exception.CancellationToken);
+        Assert.Equal(cancellation.Token, resolver.CancellationToken);
+        Assert.Equal(cancellation.Token, executor.LastCancellationToken);
+        Assert.Single(executor.Requests);
+    }
+
     [Theory]
     [InlineData("fatal: unable to access 'https://gitea.example/shared.git': The requested URL returned error: 400", false, (int)ExternalSourceProviderFailureKind.InvalidResponse)]
     [InlineData("fatal: unable to access 'https://gitea.example/shared.git': The requested URL returned error: 401", false, (int)ExternalSourceProviderFailureKind.AuthenticationRequired)]

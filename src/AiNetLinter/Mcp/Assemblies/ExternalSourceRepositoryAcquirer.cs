@@ -10,24 +10,22 @@ using AiNetLinter.Configuration;
 using Serilog;
 
 namespace AiNetLinter.Mcp.Assemblies;
-
 internal sealed class ExternalSourceRepositoryAcquirer
 {
     private readonly IGiteaRepositoryTransport transport;
     private readonly string stagingRoot;
     private readonly ILogger logger;
     private readonly IExternalSourceRepositoryCacheWriter cacheWriter;
-    private readonly ExternalSourceRepositoryCacheReuse cacheReuse;
-
+    private readonly ExternalSourceRepositoryCacheRefresh cacheRefresh;
     internal ExternalSourceRepositoryAcquirer(
         IGiteaRepositoryTransport transport,
         string stagingRoot,
         ILogger? logger = null,
         IExternalSourceRepositoryCacheWriter? cacheWriter = null,
-        IExternalSourceRepositoryCacheReader? cacheReader = null)
+        IExternalSourceRepositoryCacheReader? cacheReader = null,
+        ExternalSourceRepositoryCacheRefreshPolicy? refreshPolicy = null)
     {
         ArgumentNullException.ThrowIfNull(transport);
-
         this.transport = transport;
         this.stagingRoot = CanonicalizeStagingRoot(stagingRoot)
             ?? throw new ArgumentException(
@@ -35,12 +33,24 @@ internal sealed class ExternalSourceRepositoryAcquirer
                 nameof(stagingRoot));
         this.logger = logger ?? Log.Logger;
         this.cacheWriter = cacheWriter ?? new LocalExternalSourceRepositoryCacheWriter();
-        cacheReuse = new ExternalSourceRepositoryCacheReuse(
+        var effectiveCacheReader = cacheReader ?? this.cacheWriter as IExternalSourceRepositoryCacheReader;
+        var cacheReuse = new ExternalSourceRepositoryCacheReuse(
             this.stagingRoot,
-            cacheReader ?? this.cacheWriter as IExternalSourceRepositoryCacheReader,
+            effectiveCacheReader,
             this.logger);
+        cacheRefresh = new ExternalSourceRepositoryCacheRefresh(
+            new ExternalSourceRepositoryCacheRefreshContext
+            {
+                Transport = transport,
+                StagingRoot = this.stagingRoot,
+                Reader = effectiveCacheReader,
+                CacheReuse = cacheReuse,
+                Logger = this.logger,
+                Policy = refreshPolicy ?? new ExternalSourceRepositoryCacheRefreshPolicy(),
+                ValidateCheckout = ValidateCheckout,
+                PublishCache = PublishCacheAsync,
+            });
     }
-
     internal async Task<ExternalSourceRepositoryAcquisitionResult> AcquireAsync(
         ExternalSourceMapping mapping,
         CancellationToken cancellationToken = default)
@@ -50,22 +60,19 @@ internal sealed class ExternalSourceRepositoryAcquirer
         {
             return mappingFailure!;
         }
-
         if (!TryPrepareStagingRoot(out var stagingFailure))
         {
             return stagingFailure!;
         }
-
         cancellationToken.ThrowIfCancellationRequested();
-        var cacheResult = cacheReuse.TryAcquire(
-            mapping.Url,
+        var cacheResult = await cacheRefresh.TryAcquireAsync(
+            mapping,
             solutionPath!,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
         if (cacheResult is not null)
         {
             return cacheResult;
         }
-
         if (!ExternalSourceRepositoryCheckoutReservation.TryCreate(
                 stagingRoot,
                 out var ownership,
@@ -73,7 +80,6 @@ internal sealed class ExternalSourceRepositoryAcquirer
         {
             return checkoutFailure!;
         }
-
         return await AcquireReservedCheckoutAsync(
             mapping,
             solutionPath!,
@@ -449,7 +455,7 @@ internal sealed class ExternalSourceRepositoryAcquirer
         return false;
     }
 
-    private static ExternalSourceRepositoryAcquisitionResult FailAfterCleanup(
+    internal static ExternalSourceRepositoryAcquisitionResult FailAfterCleanup(
         ExternalSourceCheckoutOwnership ownership,
         ExternalSourceProviderFailureKind failureKind,
         IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics)

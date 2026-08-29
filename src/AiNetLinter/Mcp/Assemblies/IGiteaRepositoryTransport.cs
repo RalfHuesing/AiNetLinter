@@ -15,6 +15,11 @@ internal interface IGiteaRepositoryTransport
         ExternalSourceMapping mapping,
         string destinationPath,
         CancellationToken cancellationToken = default);
+
+    ValueTask<ExternalSourceRepositoryTransportResult> FetchDefaultBranchAsync(
+        ExternalSourceMapping mapping,
+        string destinationPath,
+        CancellationToken cancellationToken = default);
 }
 
 internal sealed record ExternalSourceRepositoryTransportResult
