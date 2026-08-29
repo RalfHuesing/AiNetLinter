@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T02:49:11+02:00
+last_updated: 2026-08-29T03:01:35+02:00
 rules_dir: .agents/rules
 total_steps: 17
 current_step: step-017
@@ -18,7 +18,7 @@ current_step: step-017
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T02:49:11+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T03:01:35+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -41,7 +41,7 @@ current_step: step-017
 | step-014 | EPIC-04 | done | Injizierbaren External-Source-Port für Gitea-Auth- und Transportfehler schärfen | - | 3f83c5f2 | approved | 3f83c5f2 + 804f00b0 + 0902a7b7 |
 | step-015 | EPIC-04 | issues | Repository-Akquisitionsvertrag mit injizierbarem Gitea-Transport und sicherer Staging-Fassade | - | 3bd71a73 | issues → step-016 | 3bd71a73 + 966ed66a + b1dac89b |
 | step-016 | EPIC-04 | blocked | Repository-Akquisitionsgrenze sicher korrigieren | step-015 | 4f49c0bd | blocked → step-017 | 4f49c0bd + b755c955 + 3be96cf1 |
-| step-017 | EPIC-04 | blocked | Cancellation-Cleanup und Reparse-Capability-Gate | step-016 | 5d48472c | blocked → privileged rerun | 5d48472c + c7c21e84 |
+| step-017 | EPIC-04 | blocked | Cancellation-Cleanup und Reparse-Capability-Gate | step-016 | 5d48472c | blocked → privileged rerun | 5d48472c + c7c21e84 + d7757f8f |
 
 ## Config
 
@@ -236,3 +236,12 @@ expliziten Win32-1314-Skip; der Skip ist kein Sicherheitsnachweis. Die
 Cancellation-Cleanup-Weitergabe ist korrigiert. Der nächste zulässige Schritt
 ist ein neuer Kritikerlauf unter einer Umgebung mit Developer Mode oder
 `SeCreateSymbolicLinkPrivilege`, ohne Code-Abschwächung.
+
+Der Kritiker bestätigt Step 017 mit `d7757f8f` inhaltlich, aber weiterhin als
+`blocked`: Cleanup-Logging, unveränderte Cancellation-/Token-Weitergabe,
+geheimnisfreie Diagnosen und das ausschließlich auf Win32 1314 begrenzte
+Capability-Gate sind korrekt. Der echte Symlink-/Reparse-Test wurde auf
+diesem Host übersprungen; FastTests sind daher 1.966 bestanden plus 1 Skip,
+Integration 360/360. Vor der Task-Fortsetzung ist ein privilegierter Lauf
+ohne Skip unter Developer Mode oder `SeCreateSymbolicLinkPrivilege`
+erforderlich.
