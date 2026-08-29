@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-29T00:12:40+02:00
+last_updated: 2026-08-29T06:50:19+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -118,7 +118,7 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
   Staging-Wurzel, prüft den Solution-Pfad und räumt bei Fehler/Cancellation
   ihren Besitz auf.
 
-  **Nächster wirksamer Schnitt → `step-018`:** Die
+  **Abgeschlossener Schnitt → `step-018`:** Die
   repository-spezifische Capability-Nichtverfügbarkeit für
   ERROR_PRIVILEGE_NOT_HELD (1314) und tatsächlich erkannte Reparse-
   Checkouts wird typed als ProviderUnavailable durch die bestehende
@@ -127,14 +127,26 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
   Snapshot-/Workspace-Materialisierung und produktives Provider-Wiring
   bleiben Folgepakete.
 
+  **Nächster wirksamer Schnitt → `step-019`:** Ein produktiver,
+  injizierbarer Git-over-HTTP(S)-Transport führt den initialen Clone des
+  Default-Branch-Zustands aus und ermittelt die geladene HEAD-Revision.
+  Laufzeit-Credentials werden über einen flüchtigen Resolver gebunden und
+  geheimnisfrei über den Child-Process-Kanal verwendet. Das bestehende
+  Acquirer-Ergebnis wird damit produktiv befüllbar, aber noch nicht an
+  Provider, Snapshot oder Host verdrahtet. Der Step enthält keine echte
+  Netzwerkverifikation in Tests.
+
   **Vertikale Folgepaket-Grenzen:**
 
   - Provider-Port, Auth-/Fehlervertrag und deterministische Doubles — `step-014`.
   - Akquisitionsvertrag, kontrollierte initiale Clone-/Staging-Fassade und
     deterministische netzwerkfreie Tests — `step-015`.
   - Produktiver Gitea-/Git-/HTTP-Transport, Credential-Bindung,
-    Default-Branch- und echte Clone-/Fetch-Semantik — nachgelagerter eigener
-    Schnitt.
+    Default-Branch- und echte initiale Clone-Semantik — `step-019`; Fetch und
+    Refresh bleiben ausgenommen.
+  - Erfolgreiches Acquirer→Snapshot-/Workspace-Wiring mit unveränderter
+    repository-spezifischer 1314-/Reparse-Fallback-Regel — nachgelagerter
+    eigener Schnitt.
   - Refresh, persistenter Repository-Cache, Cache-/Manifest-Integrität,
     korrupte Snapshots und atomare Source-of-Truth-Veröffentlichung —
     nachgelagerter eigener Schnitt.
