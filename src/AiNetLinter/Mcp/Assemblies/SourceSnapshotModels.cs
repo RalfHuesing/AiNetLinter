@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using AiNetLinter.Configuration;
 using Microsoft.CodeAnalysis;
@@ -159,12 +160,14 @@ internal sealed record SourceSnapshotIdentity
 internal sealed class ExternalSourceSnapshot : IDisposable
 {
     private readonly Workspace workspace;
+    private readonly IExternalSourceCheckoutOwner? checkoutOwner;
     private int disposed;
 
     internal ExternalSourceSnapshot(
         SourceSnapshotIdentity identity,
         Solution solution,
-        Workspace workspace)
+        Workspace workspace,
+        IExternalSourceCheckoutOwner? checkoutOwner = null)
     {
         ArgumentNullException.ThrowIfNull(identity);
         ArgumentNullException.ThrowIfNull(solution);
@@ -173,6 +176,7 @@ internal sealed class ExternalSourceSnapshot : IDisposable
         Identity = identity;
         Solution = solution;
         this.workspace = workspace;
+        this.checkoutOwner = checkoutOwner;
     }
 
     internal SourceSnapshotIdentity Identity { get; }
@@ -181,6 +185,9 @@ internal sealed class ExternalSourceSnapshot : IDisposable
 
     internal bool IsDisposed => Volatile.Read(ref disposed) != 0;
 
+    internal bool OwnsCheckout(IExternalSourceCheckoutOwner checkout) =>
+        ReferenceEquals(checkoutOwner, checkout);
+
     public void Dispose()
     {
         if (Interlocked.Exchange(ref disposed, 1) != 0)
@@ -188,6 +195,46 @@ internal sealed class ExternalSourceSnapshot : IDisposable
             return;
         }
 
-        workspace.Dispose();
+        Exception? workspaceFailure = null;
+        try
+        {
+            workspace.Dispose();
+        }
+        catch (Exception exception)
+        {
+            workspaceFailure = exception;
+        }
+
+        Exception? checkoutFailure = null;
+        try
+        {
+            checkoutOwner?.Dispose();
+        }
+        catch (Exception exception)
+        {
+            checkoutFailure = exception;
+        }
+
+        ThrowDisposeFailures(workspaceFailure, checkoutFailure);
+    }
+
+    private static void ThrowDisposeFailures(
+        Exception? workspaceFailure,
+        Exception? checkoutFailure)
+    {
+        if (workspaceFailure is not null && checkoutFailure is not null)
+        {
+            throw new AggregateException(workspaceFailure, checkoutFailure);
+        }
+
+        if (workspaceFailure is not null)
+        {
+            ExceptionDispatchInfo.Capture(workspaceFailure).Throw();
+        }
+
+        if (checkoutFailure is not null)
+        {
+            ExceptionDispatchInfo.Capture(checkoutFailure).Throw();
+        }
     }
 }

@@ -60,7 +60,7 @@ internal sealed class ExternalSourceCheckoutOwnership
         ExternalSourceRepositoryPathGuard.TryDeleteOwnedCheckout(this);
 }
 
-internal sealed class ExternalSourceCheckoutHandle : IDisposable
+internal sealed class ExternalSourceCheckoutHandle : IExternalSourceCheckoutOwner
 {
     private readonly ExternalSourceCheckoutOwnership ownership;
     private int disposed;

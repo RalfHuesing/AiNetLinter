@@ -17,6 +17,14 @@ internal static class ExternalSourceSnapshotTestFactory
         string rootPath,
         ExternalSourceMapping mapping,
         params ExternalSourceProjectSpec[] projectSpecs)
+        => CreateSnapshot(rootPath, mapping, "revision-1", null, projectSpecs);
+
+    internal static ExternalSourceSnapshot CreateSnapshot(
+        string rootPath,
+        ExternalSourceMapping mapping,
+        string loadedRevision,
+        ExternalSourceCheckoutHandle? checkoutOwner,
+        params ExternalSourceProjectSpec[] projectSpecs)
     {
         var workspace = new AdhocWorkspace();
         var solutionPath = Path.Combine(rootPath, "ExternalSource.slnx");
@@ -51,8 +59,9 @@ internal static class ExternalSourceSnapshotTestFactory
         }
 
         return new ExternalSourceSnapshot(
-            SourceSnapshotIdentity.Create(mapping, "revision-1"),
+            SourceSnapshotIdentity.Create(mapping, loadedRevision),
             solution,
-            workspace);
+            workspace,
+            checkoutOwner);
     }
 }

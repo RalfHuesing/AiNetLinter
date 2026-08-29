@@ -71,3 +71,14 @@ internal static class WindowsReparseCapabilityGate
     }
 
 }
+
+internal static class ExternalSourceRepositoryFixtureOperations
+{
+    internal static void CopyBaselineMiniSolution(string sourceRoot, string destination)
+    {
+        Directory.CreateDirectory(destination);
+        File.Copy(
+            Path.Combine(sourceRoot, "BaselineMini.slnx"),
+            Path.Combine(destination, "BaselineMini.slnx"));
+    }
+}

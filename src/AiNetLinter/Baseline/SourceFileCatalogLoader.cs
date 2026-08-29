@@ -19,9 +19,7 @@ internal static class SourceFileCatalogLoader
     internal static async Task<SourceFileCatalog> LoadAsync(string path, CancellationToken cancellationToken)
     {
         var solutionPath = FindSolutionFile(path);
-        RegisterMSBuild();
-
-        var workspace = MSBuildWorkspace.Create(LinterEngine.CreateWorkspaceProperties());
+        var workspace = CreateMSBuildWorkspace();
         var diagnostics = new ConcurrentBag<string>();
         workspace.RegisterWorkspaceFailedHandler(e => diagnostics.Add(e.Diagnostic.Message));
 
@@ -44,6 +42,15 @@ internal static class SourceFileCatalogLoader
             workspace.Dispose();
             throw;
         }
+    }
+
+    /// <summary>
+    /// Erzeugt den zentral registrierten Design-Time-MSBuild-Workspace.
+    /// </summary>
+    internal static MSBuildWorkspace CreateMSBuildWorkspace()
+    {
+        RegisterMSBuild();
+        return MSBuildWorkspace.Create(LinterEngine.CreateWorkspaceProperties());
     }
 
     private static void RegisterMSBuild()

@@ -25,7 +25,9 @@ public sealed class ExternalSourceRepositoryAcquirerTests
         var mapping = CreateMapping();
         var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
         {
-            CopySolution(fixture.RootPath, destination);
+            ExternalSourceRepositoryFixtureOperations.CopyBaselineMiniSolution(
+                fixture.RootPath,
+                destination);
             return ExternalSourceRepositoryTransportResult.Success("revision-42");
         });
         var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
@@ -175,7 +177,9 @@ public sealed class ExternalSourceRepositoryAcquirerTests
         using var cancellation = new CancellationTokenSource();
         var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
         {
-            CopySolution(fixture.RootPath, destination);
+            ExternalSourceRepositoryFixtureOperations.CopyBaselineMiniSolution(
+                fixture.RootPath,
+                destination);
             cancellation.Cancel();
             return ExternalSourceRepositoryTransportResult.Success("revision-42");
         });
@@ -248,7 +252,9 @@ public sealed class ExternalSourceRepositoryAcquirerTests
         var linkPath = Path.Combine("target", "external-link");
         var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
         {
-            CopySolution(fixture.RootPath, destination);
+            ExternalSourceRepositoryFixtureOperations.CopyBaselineMiniSolution(
+                fixture.RootPath,
+                destination);
             Directory.CreateDirectory(Path.Combine(destination, "target"));
             Directory.CreateSymbolicLink(Path.Combine(destination, linkPath), sentinelDirectory);
             return ExternalSourceRepositoryTransportResult.Success("revision-42");
@@ -274,7 +280,9 @@ public sealed class ExternalSourceRepositoryAcquirerTests
         using var staging = TestTempDirectory.Create("external-source-acquirer-cleanup-state-");
         var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
         {
-            CopySolution(fixture.RootPath, destination);
+            ExternalSourceRepositoryFixtureOperations.CopyBaselineMiniSolution(
+                fixture.RootPath,
+                destination);
             return ExternalSourceRepositoryTransportResult.Success("revision-42");
         });
         var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
@@ -475,13 +483,5 @@ public sealed class ExternalSourceRepositoryAcquirerTests
 
     private static ExternalSourceConfigurationDiagnostic Diagnostic(string code) =>
         new(code, "Testdiagnose", "warning", "test");
-
-    private static void CopySolution(string sourceRoot, string destination)
-    {
-        Directory.CreateDirectory(destination);
-        File.Copy(
-            Path.Combine(sourceRoot, "BaselineMini.slnx"),
-            Path.Combine(destination, "BaselineMini.slnx"));
-    }
 
 }
