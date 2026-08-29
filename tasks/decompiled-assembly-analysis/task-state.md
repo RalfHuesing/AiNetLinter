@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T10:44:30+02:00
+last_updated: 2026-08-29T11:36:42+02:00
 rules_dir: .agents/rules
 total_steps: 22
 current_step: step-022
@@ -14,11 +14,11 @@ current_step: step-022
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 22 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-022` (in_progress; native Cleanup-Statusprüfung und bounded Test-Finally)
+- **Aktueller Schritt:** `step-022` (issues; Fallback-Grandchild-Nachweis, Handle-Close und In-Scope-DRY)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T10:44:30+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T11:36:42+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -46,7 +46,7 @@ current_step: step-022
 | step-019 | EPIC-04 | issues | Produktiven Git-over-HTTP-Transport mit injizierbarer Authentifizierung für den Default-Branch-Clone bauen | - | b8fb5471 | issues → step-020 | b8fb5471 + 195f29f4 + e5b3f7e3 |
 | step-020 | EPIC-04 | issues | Git-Prozesslebenszyklus und statusbewusste Fehlerklassifikation korrigieren | step-019 | 2c2a2c01 | issues → step-021 | 2c2a2c01 + 446d5ff2 + cbb49754 |
 | step-021 | EPIC-04 | issues | Git-Prozessbaum- und Timeout-Cleanup-Races korrigieren | step-020 | 51060014 | issues → step-022 | 51060014 + 59c63a3a + f80e5f45 |
-| step-022 | EPIC-04 | in_progress | Native Startfehler und Test-Cleanup fail-closed absichern | step-021 | - | - | b4d78edb |
+| step-022 | EPIC-04 | issues | Native Startfehler und Test-Cleanup fail-closed absichern | step-021 | 872b4855 | issues → step-023 | 872b4855 + f5063d5a + fc061950 |
 
 ## Config
 
@@ -314,3 +314,10 @@ fail-closed geprüft und Cleanup-Fehler unter Erhalt der Primär-Exception
 sichtbar gemacht werden; außerdem muss das Integration-Test-`finally` das
 bounded Ende von Parent und Grandchild verifizieren. Keine neue fachliche
 Grenze und kein separater Mini-Sweep.
+Der Kritiker hat Step 022 mit `fc061950` nicht freigegeben. Step 023 bündelt
+die drei Befunde an derselben Prozessbesitzgrenze: `TryManagedFallback` darf
+einen beendeten Parent nicht ohne Grandchild-Nachweis als Erfolg akzeptieren,
+`SafeHandle.ReleaseHandle` muss `CloseHandle`-Fehler sichtbar behandeln, und
+die In-Scope-Duplikate `IsUsableHandle`/`CombineFailures` müssen zentralisiert
+werden. Die bestehenden Tests, HTTP-/Git-Klassifikation und Reparse-
+Fallbacksemantik bleiben erhalten.
