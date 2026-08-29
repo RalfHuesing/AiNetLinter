@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T15:03:31+02:00
+last_updated: 2026-08-29T15:14:17+02:00
 rules_dir: .agents/rules
-total_steps: 25
-current_step: step-025
+total_steps: 26
+current_step: step-026
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,12 +13,13 @@ current_step: step-025
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 25 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-025` (done; Registry-/Snapshot-Multi-Owner-Cleanup korrigiert)
+- **Steps gesamt:** 26 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-026` (planned/in_progress; persistenter
+  Repository-Cache mit Refresh/Fetch und atomarer Veröffentlichung)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T15:03:31+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T15:14:17+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -50,22 +51,28 @@ current_step: step-025
 | step-023 | EPIC-04 | done | Prozessbaum-Fallback und Handle-Cleanup vollständig fail-closed schließen | step-022 | d1b633d0 | approved | d1b633d0 + 5b22d16a + 30b13647 |
 | step-024 | EPIC-04 | issues | Erfolgreiches Acquirer→Snapshot-/Workspace-Wiring mit besitzgebundener Lifetime | - | 428cc4b3 | issues → step-025 | 428cc4b3 + f781b127 + 3e726048 |
 | step-025 | EPIC-04 | done | Registry-/Snapshot-Lifetime und exception-sicheres Multi-Owner-Cleanup korrigieren | step-024 | 74fc0056 | approved | 74fc0056 + acdfe70e |
+| step-026 | EPIC-04 | in_progress | Persistenten Repository-Cache mit Refresh/Fetch und atomarer Veröffentlichung bauen | - | - | - | - |
 
 ## Aktueller Wiederaufnahmevermerk
 
-Step 024 wurde durch Review `3e726048` nicht freigegeben. Der Befund
-`MAJOR-001` betrifft ausschließlich `SourceSnapshotRegistry.Dispose()`:
-Nach der ersten Snapshot-Dispose-Exception werden weitere Snapshots nicht
-mehr entsorgt, obwohl das Registry-Dispose-Flag bereits gesetzt ist.
+Step 024 wurde durch Review `3e726048` zunächst nicht freigegeben. Der
+Befund `MAJOR-001` betraf ausschließlich `SourceSnapshotRegistry.Dispose()`:
+Nach der ersten Snapshot-Dispose-Exception wurden weitere Snapshots nicht
+mehr entsorgt, obwohl das Registry-Dispose-Flag bereits gesetzt war.
 
-Auf Nutzeranweisung wird der Task bei `step-025` fortgesetzt. Step 025 ist
-als `planned/in_progress` aktiviert und korrigiert innerhalb derselben
-EPIC-04-Ownership-Grenze den vollständigen Registry-Durchlauf, die
-deterministische Fehleraggregation/-weitergabe und die lokale Regression
-mit mindestens zwei Snapshots. Step 025 referenziert `corrects: step-024`;
-Provider-/Materializer-Wiring, Refresh, Cache, Manifest, atomare
-Source-of-Truth, Host-Wiring, Transport-/Native-Prozesspfad und EPIC-05
-bleiben außerhalb des Korrekturpakets.
+Step 025 wurde deshalb als Korrektur mit `corrects: step-024` aufgenommen
+und ist mit Review `acdfe70e` genehmigt. Der vollständige Registry-Durchlauf,
+die deterministische Fehleraggregation/-weitergabe und die Regression mit
+mehreren Snapshots sind damit abgeschlossen; Step 025 wird nicht erneut
+geöffnet.
+
+Auf Nutzeranweisung ist jetzt Step 026 als `planned/in_progress` aktiviert.
+Er behandelt als nächsten größeren, kontextbegrenzten EPIC-04-Schnitt den
+persistenten Repository-Cache mit Refresh/Fetch, Manifest-/Generationen-
+Integrität und atomarer Source-of-Truth-Veröffentlichung. Snapshot-/
+Workspace-Ownership und Registry-Cleanup aus Steps 024/025 bleiben die
+Anschlussgrenze. Host-/MCP-Wiring, Dirty-/Health-Policy, transitive
+Referenzen und EPIC-05 bleiben Folgepakete.
 
 ## Config
 

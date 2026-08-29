@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-29T06:50:19+02:00
+last_updated: 2026-08-29T15:14:17+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -145,15 +145,31 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
     Default-Branch- und echte initiale Clone-Semantik — `step-019`; Fetch und
     Refresh bleiben ausgenommen.
   - Erfolgreiches Acquirer→Snapshot-/Workspace-Wiring mit unveränderter
-    repository-spezifischer 1314-/Reparse-Fallback-Regel — `step-024`
-    (planned/in_progress); der Snapshot übernimmt den Checkout-Besitz bis
-    zur Registry-/Snapshot-Lifetime, ohne Host-Wiring.
-  - Refresh, persistenter Repository-Cache, Cache-/Manifest-Integrität,
-    korrupte Snapshots und atomare Source-of-Truth-Veröffentlichung —
-    nachgelagerter eigener Schnitt.
+    repository-spezifischer 1314-/Reparse-Fallback-Regel — `step-024`,
+    nach der Registry-Korrektur in `step-025` genehmigt; der Snapshot
+    übernimmt den Checkout-Besitz bis zur Registry-/Snapshot-Lifetime,
+    ohne Host-Wiring.
+  - **Aktiver nächster Schnitt → `step-026` (planned/in_progress):**
+    persistenter Repository-Cache mit deterministischem Refresh/Fetch,
+    Cache-/Manifest-Integrität, Generationen und atomarer
+    Source-of-Truth-Veröffentlichung. Der primäre Vertrag liefert einen
+    revisionsgebundenen, validierten Request-Checkout; die persistente
+    Generation bleibt cache-eigen und wird nicht durch Snapshot-/Registry-
+    Cleanup gelöscht. Der getrennte Assembly-Decompilation-Cache dient
+    höchstens als Pointer-/Manifest-Referenz und wird nicht erweitert.
   - Dirty/unbuilt Checkout-Abgrenzung und transparente Fallback-/Health-
     Semantik — nachgelagerter eigener Schnitt; Step 024 markiert nur den
     erfolgreichen Workspace-Aufbau und führt keine neue Health-Policy ein.
+
+  **Nachgelagerte Folgepakete:**
+
+  - Dirty/unbuilt lokale Checkouts sowie Health-/degraded-Fallback-Policy
+    bleiben nach Step 026 ein eigener Source-Policy-Schnitt.
+  - Host-Komposition, produktives Provider-/MCP-Wiring und eine gemeinsame
+    Capability-Matrix bleiben außerhalb der Cache-Grenze.
+  - Transitive Referenzen und gemeinsame Tool-Capabilities bleiben EPIC-05.
+  - Retention, Garbage Collection, explizite Cache-Invalidierung und
+    Telemetrie werden erst nach dem sicheren Cache-Vertrag geplant.
 
   Diese Grenzen bleiben sequenzielle vertikale Pakete; EPIC-04 wird nicht als
   monolithischer Gitea-Featureblock und nicht als Mini-Sweep umgesetzt.
