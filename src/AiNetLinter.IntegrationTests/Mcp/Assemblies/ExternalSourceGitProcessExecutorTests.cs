@@ -143,6 +143,25 @@ public sealed class ExternalSourceGitProcessExecutorTests
         }
     }
 
+    [Fact]
+    public async Task ExecuteAsync_RejectsUnrepresentableTimeoutBeforeProcessStart()
+    {
+        using var temp = TestTempDirectory.Create("git-process-timeout-preflight-");
+        var markerPath = temp.GetPath("start-marker.txt");
+        var scriptPath = temp.CreateFile("start-marker.ps1", StartMarkerScript);
+        var request = new ExternalSourceGitProcessRequest(
+            "pwsh",
+            ["-NoLogo", "-NoProfile", "-NonInteractive", "-File", scriptPath, markerPath],
+            temp.DirectoryPath,
+            TimeSpan.FromMilliseconds((double)uint.MaxValue + 1),
+            new Dictionary<string, string>());
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            new ExternalSourceGitProcessExecutor().ExecuteAsync(request));
+
+        Assert.False(File.Exists(markerPath));
+    }
+
     private static ExternalSourceGitProcessRequest CreateProcessTreeRequest(
         string scriptPath,
         string workingDirectory,
@@ -162,9 +181,21 @@ public sealed class ExternalSourceGitProcessExecutorTests
     {
         var operation = new ExternalSourceGitProcessExecutor().ExecuteAsync(request, cancellationToken);
         int[]? processIds = null;
-        await TestWaiter.WaitForConditionAsync(
-            () => TryReadProcessIds(markerPath, out processIds),
-            TimeSpan.FromSeconds(10));
+        try
+        {
+            await TestWaiter.WaitForConditionAsync(
+                () => TryReadProcessIds(markerPath, out processIds),
+                TimeSpan.FromSeconds(10));
+        }
+        catch
+        {
+            if (operation.IsFaulted)
+            {
+                await operation;
+            }
+
+            throw;
+        }
         Assert.NotNull(processIds);
         return (operation, processIds!);
     }
@@ -297,7 +328,7 @@ public sealed class ExternalSourceGitProcessExecutorTests
         $startInfo.ArgumentList.Add((Join-Path $PSScriptRoot "grandchild.ps1"))
         $grandchild = [System.Diagnostics.Process]::Start($startInfo)
         "$PID`n$($grandchild.Id)" | Set-Content -LiteralPath $MarkerPath
-        while ($true) { Start-Sleep -Milliseconds 100 }
+        exit 0
         """;
 
     private const string GrandchildScript = """
@@ -306,5 +337,10 @@ public sealed class ExternalSourceGitProcessExecutorTests
             [Console]::Error.WriteLine("grandchild-error")
             Start-Sleep -Milliseconds 10
         }
+        """;
+
+    private const string StartMarkerScript = """
+        param([string]$MarkerPath)
+        Set-Content -LiteralPath $MarkerPath -Value "started"
         """;
 }

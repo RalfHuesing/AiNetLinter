@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
@@ -24,37 +25,50 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        using var process = new Process
-        {
-            StartInfo = CreateStartInfo(request),
-        };
-        if (!process.Start())
-        {
-            throw new InvalidOperationException("Der Git-Prozess konnte nicht gestartet werden.");
-        }
-
-        return await ExecuteStartedProcessAsync(process, request, cancellationToken)
-            .ConfigureAwait(false);
-    }
-
-    private static async Task<ExternalSourceGitProcessResult> ExecuteStartedProcessAsync(
-        Process process,
-        ExternalSourceGitProcessRequest request,
-        CancellationToken cancellationToken)
-    {
         using var timeoutSource = new CancellationTokenSource(request.Timeout);
         using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
             timeoutSource.Token);
+        var startInfo = CreateStartInfo(request);
+        ExternalSourceGitProcessTreeScope? scope = null;
+        try
+        {
+            scope = ExternalSourceGitProcessTreeScope.Start(startInfo);
+            return await ExecuteStartedProcessAsync(
+                    scope,
+                    timeoutSource,
+                    linkedCancellation,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            scope?.Dispose();
+        }
+    }
+
+    private static async Task<ExternalSourceGitProcessResult> ExecuteStartedProcessAsync(
+        ExternalSourceGitProcessTreeScope scope,
+        CancellationTokenSource timeoutSource,
+        CancellationTokenSource linkedCancellation,
+        CancellationToken cancellationToken)
+    {
         var execution = new ProcessExecutionState();
         try
         {
-            execution.StartOutputReaders(process, linkedCancellation.Token);
-            await process.WaitForExitAsync(linkedCancellation.Token).ConfigureAwait(false);
-            var output = await WaitForOutputAsync(execution).ConfigureAwait(false);
+            execution.StartOutputReaders(scope, linkedCancellation.Token);
+            await scope.Process.WaitForExitAsync(linkedCancellation.Token).ConfigureAwait(false);
+            var output = await WaitForOutputAsync(execution, linkedCancellation.Token)
+                .ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
+            if (timeoutSource.IsCancellationRequested)
+            {
+                return await CompleteTimeoutAsync(scope, execution, linkedCancellation)
+                    .ConfigureAwait(false);
+            }
+
             return new ExternalSourceGitProcessResult(
-                process.ExitCode,
+                scope.Process.ExitCode,
                 output.StandardOutput.Text,
                 output.StandardError.Text,
                 new ExternalSourceGitProcessResultOptions
@@ -66,7 +80,7 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             return await CompleteCallerCancellationAsync(
-                    process,
+                    scope,
                     execution,
                     linkedCancellation,
                     cancellationToken)
@@ -74,13 +88,13 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
         }
         catch (OperationCanceledException) when (timeoutSource.IsCancellationRequested)
         {
-            return await CompleteTimeoutAsync(process, execution, linkedCancellation)
+            return await CompleteTimeoutAsync(scope, execution, linkedCancellation)
                 .ConfigureAwait(false);
         }
         catch (Exception exception)
         {
             return await RethrowPrimaryFailureAsync(
-                    process,
+                    scope,
                     execution,
                     linkedCancellation,
                     exception)
@@ -89,12 +103,12 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
     }
 
     private static async Task<ExternalSourceGitProcessResult> CompleteCallerCancellationAsync(
-        Process process,
+        ExternalSourceGitProcessTreeScope scope,
         ProcessExecutionState execution,
         CancellationTokenSource cancellation,
         CancellationToken callerToken)
     {
-        var cleanup = await CleanupProcessAsync(process, execution, cancellation)
+        var cleanup = await CleanupProcessAsync(scope, execution, cancellation)
             .ConfigureAwait(false);
         if (cleanup.Failure is not null)
         {
@@ -108,11 +122,11 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
     }
 
     private static async Task<ExternalSourceGitProcessResult> CompleteTimeoutAsync(
-        Process process,
+        ExternalSourceGitProcessTreeScope scope,
         ProcessExecutionState execution,
         CancellationTokenSource cancellation)
     {
-        var cleanup = await CleanupProcessAsync(process, execution, cancellation)
+        var cleanup = await CleanupProcessAsync(scope, execution, cancellation)
             .ConfigureAwait(false);
         if (cleanup.Failure is not null)
         {
@@ -134,13 +148,13 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
     }
 
     private static async Task<ExternalSourceGitProcessResult> RethrowPrimaryFailureAsync(
-        Process process,
+        ExternalSourceGitProcessTreeScope scope,
         ProcessExecutionState execution,
         CancellationTokenSource cancellation,
         Exception primaryException)
     {
         var cleanup = await CleanupProcessAsync(
-                process,
+                scope,
                 execution,
                 cancellation)
             .ConfigureAwait(false);
@@ -153,12 +167,16 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
         throw new InvalidOperationException("Der Git-Prozess ist ohne Ergebnis beendet worden.");
     }
 
-    private static async Task<ProcessOutput> WaitForOutputAsync(ProcessExecutionState execution)
+    private static async Task<ProcessOutput> WaitForOutputAsync(
+        ProcessExecutionState execution,
+        CancellationToken cancellationToken)
     {
         var output = Task.WhenAll(execution.StandardOutput, execution.StandardError);
         try
         {
-            var captured = await output.WaitAsync(ProcessTerminationTimeout).ConfigureAwait(false);
+            var captured = await output
+                .WaitAsync(ProcessTerminationTimeout, cancellationToken)
+                .ConfigureAwait(false);
             return new(captured[0], captured[1]);
         }
         catch
@@ -203,32 +221,39 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
         {
             isTruncated |= captured.Length >= OutputCaptureLimit;
         }
+        catch (Exception exception) when (
+            cancellationToken.IsCancellationRequested
+            && exception is ObjectDisposedException or IOException)
+        {
+            isTruncated |= captured.Length >= OutputCaptureLimit;
+        }
 
         return new(captured.ToString(), isTruncated);
     }
 
     private static async Task<ProcessCleanupResult> CleanupProcessAsync(
-        Process process,
+        ExternalSourceGitProcessTreeScope scope,
         ProcessExecutionState execution,
         CancellationTokenSource cancellation)
     {
         var failures = new List<Exception>();
         TryCancelOutput(cancellation, failures);
-        if (!TryKillProcessTree(process))
+        if (!scope.TryTerminate(failures))
         {
             failures.Add(new InvalidOperationException(
                 "Der Git-Prozessbaum konnte nicht beendet werden."));
         }
 
         using var cleanupTimeout = new CancellationTokenSource(ProcessTerminationTimeout);
-        CloseOutputStreams(process, failures);
-        await WaitForProcessExitAsync(process, cleanupTimeout.Token, failures)
+        scope.CloseOutputStreams(failures);
+        await WaitForProcessExitAsync(scope.Process, cleanupTimeout.Token, failures)
             .ConfigureAwait(false);
         await WaitForReadersAsync(execution, cleanupTimeout.Token, failures)
             .ConfigureAwait(false);
         var output = new ProcessOutput(
             await GetCompletedOutputAsync(execution.StandardOutput).ConfigureAwait(false),
             await GetCompletedOutputAsync(execution.StandardError).ConfigureAwait(false));
+        scope.Dispose(failures);
         return new(output, CombineFailures(failures));
     }
 
@@ -239,27 +264,6 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
         try
         {
             cancellation.Cancel();
-        }
-        catch (Exception exception)
-        {
-            failures.Add(exception);
-        }
-    }
-
-    private static void CloseOutputStreams(Process process, ICollection<Exception> failures)
-    {
-        try
-        {
-            process.StandardOutput.Close();
-        }
-        catch (Exception exception)
-        {
-            failures.Add(exception);
-        }
-
-        try
-        {
-            process.StandardError.Close();
         }
         catch (Exception exception)
         {
@@ -287,6 +291,26 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
         catch (Exception exception)
         {
             failures.Add(exception);
+        }
+    }
+
+    private static bool TryGetHasExited(Process process, out bool hasExited)
+    {
+        try
+        {
+            hasExited = process.HasExited;
+            return true;
+        }
+        catch (Exception exception) when (
+            exception is InvalidOperationException or ObjectDisposedException)
+        {
+            hasExited = true;
+            return true;
+        }
+        catch (Win32Exception)
+        {
+            hasExited = false;
+            return false;
         }
     }
 
@@ -395,44 +419,6 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
         }
     }
 
-    private static bool TryKillProcessTree(Process process)
-    {
-        try
-        {
-            if (TryGetHasExited(process, out var hasExited) && hasExited)
-            {
-                return true;
-            }
-
-            process.Kill(entireProcessTree: true);
-            return true;
-        }
-        catch (Exception exception) when (IsExpectedProcessException(exception))
-        {
-            return TryGetHasExited(process, out var hasExited) && hasExited;
-        }
-    }
-
-    private static bool TryGetHasExited(Process process, out bool hasExited)
-    {
-        try
-        {
-            hasExited = process.HasExited;
-            return true;
-        }
-        catch (Exception exception) when (IsExpectedProcessException(exception))
-        {
-            hasExited = false;
-            return false;
-        }
-    }
-
-    private static bool IsExpectedProcessException(Exception exception) =>
-        exception is InvalidOperationException
-            or ObjectDisposedException
-            or Win32Exception
-            or NotSupportedException;
-
     private sealed class ProcessExecutionState
     {
         internal Task<ProcessOutputCapture> StandardOutput { get; private set; } =
@@ -441,10 +427,12 @@ internal sealed class ExternalSourceGitProcessExecutor : IExternalSourceGitProce
         internal Task<ProcessOutputCapture> StandardError { get; private set; } =
             Task.FromResult(ProcessOutputCapture.Empty);
 
-        internal void StartOutputReaders(Process process, CancellationToken cancellationToken)
+        internal void StartOutputReaders(
+            ExternalSourceGitProcessTreeScope scope,
+            CancellationToken cancellationToken)
         {
-            StandardOutput = ReadOutputAsync(process.StandardOutput, cancellationToken);
-            StandardError = ReadOutputAsync(process.StandardError, cancellationToken);
+            StandardOutput = ReadOutputAsync(scope.StandardOutput, cancellationToken);
+            StandardError = ReadOutputAsync(scope.StandardError, cancellationToken);
         }
     }
 
