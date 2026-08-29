@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T14:10:37+02:00
+last_updated: 2026-08-29T14:14:42+02:00
 rules_dir: .agents/rules
-total_steps: 24
-current_step: step-024
+total_steps: 25
+current_step: step-025
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,12 +13,12 @@ current_step: step-024
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 24 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-024` (issues; Acquirer→Snapshot-/Workspace-Wiring, Korrektur erforderlich)
+- **Steps gesamt:** 25 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-025` (planned/in_progress; Korrektur zu `step-024`, MAJOR-001 im Registry-Cleanup)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T14:10:37+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T14:14:42+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -48,17 +48,24 @@ current_step: step-024
 | step-021 | EPIC-04 | issues | Git-Prozessbaum- und Timeout-Cleanup-Races korrigieren | step-020 | 51060014 | issues → step-022 | 51060014 + 59c63a3a + f80e5f45 |
 | step-022 | EPIC-04 | issues | Native Startfehler und Test-Cleanup fail-closed absichern | step-021 | 872b4855 | issues → step-023 | 872b4855 + f5063d5a + fc061950 |
 | step-023 | EPIC-04 | done | Prozessbaum-Fallback und Handle-Cleanup vollständig fail-closed schließen | step-022 | d1b633d0 | approved | d1b633d0 + 5b22d16a + 30b13647 |
-| step-024 | EPIC-04 | issues | Erfolgreiches Acquirer→Snapshot-/Workspace-Wiring mit besitzgebundener Lifetime | - | 428cc4b3 | issues → Korrekturpaket | 428cc4b3 + f781b127 + 3e726048 |
+| step-024 | EPIC-04 | issues | Erfolgreiches Acquirer→Snapshot-/Workspace-Wiring mit besitzgebundener Lifetime | - | 428cc4b3 | issues → step-025 | 428cc4b3 + f781b127 + 3e726048 |
+| step-025 | EPIC-04 | planned/in_progress | Registry-/Snapshot-Lifetime und exception-sicheres Multi-Owner-Cleanup korrigieren | step-024 | - | ausstehend | - |
 
 ## Aktueller Wiederaufnahmevermerk
 
-Step 023 ist durch Review `30b13647` genehmigt. Step 024 ist als
-`planned/in_progress` aufgenommen: Der Coder darf ausschließlich den
-Provider-Erfolgspfad vom bestehenden Acquirer zu einem revisions-
-gebundenen Snapshot/Workspace samt Owner-Lifetime und lokalen,
-netzwerkfreien Tests bearbeiten. Refresh, persistenter Cache, atomare
-Source-of-Truth, Host-Wiring und die Step-018/019/023-Invarianten bleiben
-ausdrücklich Folge- bzw. unveränderte Verträge.
+Step 024 wurde durch Review `3e726048` nicht freigegeben. Der Befund
+`MAJOR-001` betrifft ausschließlich `SourceSnapshotRegistry.Dispose()`:
+Nach der ersten Snapshot-Dispose-Exception werden weitere Snapshots nicht
+mehr entsorgt, obwohl das Registry-Dispose-Flag bereits gesetzt ist.
+
+Auf Nutzeranweisung wird der Task bei `step-025` fortgesetzt. Step 025 ist
+als `planned/in_progress` aktiviert und korrigiert innerhalb derselben
+EPIC-04-Ownership-Grenze den vollständigen Registry-Durchlauf, die
+deterministische Fehleraggregation/-weitergabe und die lokale Regression
+mit mindestens zwei Snapshots. Step 025 referenziert `corrects: step-024`;
+Provider-/Materializer-Wiring, Refresh, Cache, Manifest, atomare
+Source-of-Truth, Host-Wiring, Transport-/Native-Prozesspfad und EPIC-05
+bleiben außerhalb des Korrekturpakets.
 
 ## Config
 
