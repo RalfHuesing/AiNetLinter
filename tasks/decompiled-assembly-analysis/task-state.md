@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T11:58:28+02:00
+last_updated: 2026-08-29T12:45:15+02:00
 rules_dir: .agents/rules
 total_steps: 23
 current_step: step-023
@@ -13,12 +13,12 @@ current_step: step-023
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 23 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-023` (in_progress; Prozessbaum-Fallback, Handle-Cleanup und DRY zentralisieren)
+- **Steps gesamt:** 23 (regulär + Korrekturen; nächster Schritt wird geplant)
+- **Aktueller Schritt:** `step-023` (done; Prozessbaum-Fallback, Handle-Cleanup und DRY zentralisieren)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T11:58:28+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T12:45:15+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -47,7 +47,7 @@ current_step: step-023
 | step-020 | EPIC-04 | issues | Git-Prozesslebenszyklus und statusbewusste Fehlerklassifikation korrigieren | step-019 | 2c2a2c01 | issues → step-021 | 2c2a2c01 + 446d5ff2 + cbb49754 |
 | step-021 | EPIC-04 | issues | Git-Prozessbaum- und Timeout-Cleanup-Races korrigieren | step-020 | 51060014 | issues → step-022 | 51060014 + 59c63a3a + f80e5f45 |
 | step-022 | EPIC-04 | issues | Native Startfehler und Test-Cleanup fail-closed absichern | step-021 | 872b4855 | issues → step-023 | 872b4855 + f5063d5a + fc061950 |
-| step-023 | EPIC-04 | in_progress | Prozessbaum-Fallback und Handle-Cleanup vollständig fail-closed schließen | step-022 | - | - | c2b1b86d |
+| step-023 | EPIC-04 | done | Prozessbaum-Fallback und Handle-Cleanup vollständig fail-closed schließen | step-022 | d1b633d0 | approved | d1b633d0 + 5b22d16a + 30b13647 |
 
 ## Config
 
@@ -322,3 +322,11 @@ einen beendeten Parent nicht ohne Grandchild-Nachweis als Erfolg akzeptieren,
 die In-Scope-Duplikate `IsUsableHandle`/`CombineFailures` müssen zentralisiert
 werden. Die bestehenden Tests, HTTP-/Git-Klassifikation und Reparse-
 Fallbacksemantik bleiben erhalten.
+
+Step 023 wurde durch den neuen Kritiker mit `30b13647` genehmigt. Die
+Prozessbaum-/Job-Lifetime ist fail-closed bounded abgesichert, Parent-Exit wird
+nicht ohne Grandchild-Nachweis als Erfolg akzeptiert, Handle-Cleanup bleibt
+idempotent und sichtbar, und die In-Scope-DRY-Helfer sind zentralisiert. Es
+wurden keine neuen Tech-Debt-Funde aufgenommen. Build, fokussierte Tests sowie
+beide vollständigen Nicht-Stress-Gates sind grün; der echte Symlink-/Reparse-
+Test bleibt auf diesem Host transparent wegen Win32 1314 übersprungen.
