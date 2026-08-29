@@ -7,6 +7,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using Serilog;
 
 namespace AiNetLinter.Mcp.Assemblies;
 
@@ -14,10 +15,12 @@ internal sealed class ExternalSourceRepositoryAcquirer
 {
     private readonly IGiteaRepositoryTransport transport;
     private readonly string stagingRoot;
+    private readonly ILogger logger;
 
     internal ExternalSourceRepositoryAcquirer(
         IGiteaRepositoryTransport transport,
-        string stagingRoot)
+        string stagingRoot,
+        ILogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(transport);
 
@@ -26,6 +29,7 @@ internal sealed class ExternalSourceRepositoryAcquirer
             ?? throw new ArgumentException(
                 "Die Staging-Wurzel muss ein absoluter, gültiger Pfad sein.",
                 nameof(stagingRoot));
+        this.logger = logger ?? Log.Logger;
     }
 
     internal async Task<ExternalSourceRepositoryAcquisitionResult> AcquireAsync(
@@ -89,7 +93,13 @@ internal sealed class ExternalSourceRepositoryAcquirer
         }
         catch (OperationCanceledException)
         {
-            ownership.TryCleanup();
+            if (!ownership.TryCleanup())
+            {
+                logger.Warning(
+                    "Externer Repository-Checkout konnte nach Cancellation nicht bereinigt werden. Code={Code}",
+                    ExternalSourceConfigurationDiagnosticCodes.RepositoryCleanupFailed);
+            }
+
             throw;
         }
     }

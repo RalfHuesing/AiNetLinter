@@ -30,7 +30,6 @@ public sealed class ExternalSourceRepositoryAcquirerTests
             return Success("revision-42");
         });
         var acquirer = new ExternalSourceRepositoryAcquirer(transport, staging.DirectoryPath);
-
         var result = await acquirer.AcquireAsync(mapping);
 
         Assert.True(result.IsAvailable);
@@ -234,6 +233,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
     [Fact]
     public async Task AcquireAsync_ActualReparseEntry_IsRejectedAndExternalSentinelRemains()
     {
+        WindowsReparseCapabilityGate.Require();
         using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "BaselineMini");
         using var staging = TestTempDirectory.Create("external-source-acquirer-reparse-");
         var sentinelDirectory = staging.CreateSubdirectory("external-sentinel");
