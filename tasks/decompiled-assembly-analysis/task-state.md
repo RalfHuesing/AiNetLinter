@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T06:55:28+02:00
+last_updated: 2026-08-29T07:50:40+02:00
 rules_dir: .agents/rules
 total_steps: 19
 current_step: step-019
@@ -14,11 +14,11 @@ current_step: step-019
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 19 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-019` (in_progress; produktiver Git-over-HTTP-Transport mit injizierbarer Authentifizierung)
+- **Aktueller Schritt:** `step-019` (issues; Prozesslebenszyklus, Real-Executor-Nachweis und HTTP-Fehlerklassifikation)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T06:55:28+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T07:50:40+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -43,7 +43,7 @@ current_step: step-019
 | step-016 | EPIC-04 | blocked | Repository-Akquisitionsgrenze sicher korrigieren | step-015 | 4f49c0bd | blocked → step-017 | 4f49c0bd + b755c955 + 3be96cf1 |
 | step-017 | EPIC-04 | blocked | Cancellation-Cleanup und Reparse-Capability-Gate | step-016 | 5d48472c | blocked → privileged rerun | 5d48472c + c7c21e84 + d7757f8f |
 | step-018 | EPIC-04 | done | Repository-spezifische Capability-Nichtverfügbarkeit zum Decompilation-Fallback | step-017 | 2b95b3aa | approved | 2b95b3aa + 03589c9e + 784167d8 |
-| step-019 | EPIC-04 | in_progress | Produktiven Git-over-HTTP-Transport mit injizierbarer Authentifizierung für den Default-Branch-Clone bauen | - | - | - | d8a2797c |
+| step-019 | EPIC-04 | issues | Produktiven Git-over-HTTP-Transport mit injizierbarer Authentifizierung für den Default-Branch-Clone bauen | - | b8fb5471 | issues → step-020 | b8fb5471 + 195f29f4 + e5b3f7e3 |
 
 ## Config
 
@@ -280,3 +280,11 @@ Credential-Auflösung, typisierte Prozess-/Auth-/Transportfehler,
 Cancellation und deterministische netzwerkfreie Tests. Refresh, Fetch,
 persistenten Cache, atomare Source-of-Truth-Veröffentlichung und Provider-/
 Snapshot-Erfolg-Wiring bleiben Folgepakete.
+
+Der Kritiker hat Step 019 mit `e5b3f7e3` nicht freigegeben. Die drei
+zusammengehörigen Findings werden in Step 020 gebündelt: bounded und
+ausnahmesicherer Git-Prozesslebenszyklus mit Prozessbaum-Abbruch, direkter
+Real-Executor-Nachweis für `ProcessStartInfo`/Umgebungsisolation/Termination
+sowie strukturierte, statusbewusste HTTP-/Git-Fehlerklassifikation. Der neue
+DRY-Fund ist als `TD-005` dokumentiert; Refresh, Cache und Source-of-Truth
+bleiben außerhalb dieser Korrektur.
