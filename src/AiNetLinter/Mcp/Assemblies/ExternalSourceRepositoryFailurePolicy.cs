@@ -63,6 +63,60 @@ internal static class ExternalSourceRepositoryFailurePolicy
             ? ExternalSourceConfigurationDiagnosticCodes.RepositoryCapabilityUnavailable
             : ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportFailed;
 
+    internal static ExternalSourceProviderFailureKind ClassifyGitProcessFailure(
+        ExternalSourceGitProcessResult processResult,
+        bool hasCredential)
+    {
+        ArgumentNullException.ThrowIfNull(processResult);
+        if (processResult.WasTimedOut)
+        {
+            return ExternalSourceProviderFailureKind.Timeout;
+        }
+
+        var output = processResult.StandardError + "\n" + processResult.StandardOutput;
+        if (ContainsAny(output, "repository not found", "404", "not found"))
+        {
+            return ExternalSourceProviderFailureKind.RepositoryNotFound;
+        }
+
+        if (ContainsAny(
+                output,
+                "could not read Username",
+                "terminal prompts disabled",
+                "authentication required",
+                "authentication failed",
+                "http basic: access denied",
+                "401"))
+        {
+            return hasCredential
+                ? ExternalSourceProviderFailureKind.AccessDenied
+                : ExternalSourceProviderFailureKind.AuthenticationRequired;
+        }
+
+        if (ContainsAny(output, "access denied", "permission denied", "forbidden", "403"))
+        {
+            return ExternalSourceProviderFailureKind.AccessDenied;
+        }
+
+        if (ContainsAny(
+                output,
+                "could not resolve host",
+                "failed to connect",
+                "connection refused",
+                "network is unreachable",
+                "unable to access",
+                "connection timed out"))
+        {
+            return ExternalSourceProviderFailureKind.NetworkUnavailable;
+        }
+
+        return ExternalSourceProviderFailureKind.InvalidResponse;
+    }
+
+    internal static string GetFailureDiagnosticCode(
+        ExternalSourceProviderFailureKind failureKind) =>
+        FailureKindToCode(failureKind);
+
     internal static ImmutableArray<ExternalSourceConfigurationDiagnostic>
         ProjectTransportDiagnostics(
             IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics,
@@ -128,6 +182,19 @@ internal static class ExternalSourceRepositoryFailurePolicy
             ExternalSourceConfigurationDiagnosticCodes.RepositoryCleanupFailed => code,
             _ => ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportFailed,
         };
+
+    private static bool ContainsAny(string value, params string[] markers)
+    {
+        foreach (var marker in markers)
+        {
+            if (value.Contains(marker, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static string FailureKindToCode(ExternalSourceProviderFailureKind failureKind) =>
         failureKind switch
