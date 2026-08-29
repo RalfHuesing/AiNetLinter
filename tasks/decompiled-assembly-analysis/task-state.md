@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-30T00:30:00+02:00
+last_updated: 2026-08-30T01:00:00+02:00
 rules_dir: .agents/rules
 total_steps: 33
 current_step: step-033
@@ -14,13 +14,13 @@ current_step: step-033
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 33 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-033` (`planned/in_progress`; konfigurierbare
+- **Aktueller Schritt:** `step-033` (`issues`; konfigurierbare
   Cache-Root-/Refresh-Policy bis zur Fresh/Stale-Konstruktion, mit
   verpflichtender Evidenzkorrektur für `step-032`)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-30T00:30:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-30T01:00:00+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -59,7 +59,7 @@ current_step: step-033
 | step-030 | EPIC-04 | issues | Cache-Reuse-Nachweise und Step-029-Result korrigieren | step-029 | e9bf8025 | issues → step-031 | e9bf8025 + 2510db5e |
 | step-031 | EPIC-04 | done | Step-030-Gatebefunde und Nachweise korrigieren | step-030 | 552ef4d4 + 1d15a5b4 | approved | 552ef4d4 + 1d15a5b4 + d8cff007 |
 | step-032 | EPIC-04 | issues | Validated Refresh/Fetch in neue Cache-Generation | - | 59d979b7 | issues → step-033 | 59d979b7 + a16a421c |
-| step-033 | EPIC-04 | planned/in_progress | Konfigurierbare Cache-Root-/Refresh-Policy mit Fresh/Stale-Vertrag und Step-032-Evidenzabschluss | step-032 | - | - | - |
+| step-033 | EPIC-04 | issues | Konfigurierbare Cache-Root-/Refresh-Policy mit Fresh/Stale-Vertrag und Step-032-Evidenzabschluss | step-032 | 0c6ab50e + c6787c12 | issues → step-034 | 0c6ab50e + c6787c12 + d57f5aab |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -642,3 +642,26 @@ Tests, Coder- oder Kritikerarbeit ausgeführt. Der nächste sichere
 Health-/degraded-/Dirty-/Unbuilt-Policy sowie Retention/GC/Invalidierung
 bleiben eigenständige Folgepakete; Roadmap- und Statuspflege nach dem
 Coder-Ergebnis verbleiben beim Orchestrator.
+
+### Wiederaufnahme nach Step-033-Review (2026-08-30)
+
+Der neue Kritiker hat Step 033 mit `d57f5aab` nicht freigegeben. Zwei
+zusammengehörige MAJOR-Befunde bleiben offen: Die rohe `CacheRoot`-
+Validierung akzeptiert weiterhin URI-/Credential-artige und reservierte
+Segmentformen, obwohl die Dokumentation deren Ablehnung behauptet. Außerdem
+kann ein fehlgeschlagener Config-Load über den bestehenden
+`AssemblyAnalysisToolSupport`-/Orchestrator-Pfad noch als erfolgreicher
+Decompilation-Fallback enden; der bestehende Test schreibt dieses Verhalten
+fälschlich fest.
+
+Step 034 muss deshalb als größeres gemeinsames Korrekturpaket geplant werden:
+strikte rohe CacheRoot-/Optionsvalidierung, fail-closed Weitergabe bis zum
+Tool-Ergebnis und lokale adversariale sowie End-to-End-Regressionstests. Die
+erfüllte RefreshInterval-/Factory-/Policy-Verdrahtung, die korrigierte
+Step-032-Evidenz und die bestehenden Green-Gates bleiben erhalten. Kein
+Audit-only- oder Einzel-Assertion-Step wird daraus abgeleitet; der
+Tech-Debt-Grundsatz für Dry/MagicValues/DeadCode bleibt innerhalb dieses
+Pakets aktiv. Review-Gates: Build grün, Fast Nicht-Stress 2091 bestanden plus
+2 bekannte Reparse-Skips, Integration Nicht-Stress 370/370, Stress nicht
+ausgeführt; aktueller breiter Safeguard 5,80/10 bei Threshold 8,00 bleibt
+ehrlich als FAIL dokumentiert.
