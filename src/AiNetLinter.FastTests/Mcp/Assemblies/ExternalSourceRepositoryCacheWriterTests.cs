@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -10,6 +9,8 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.TestKit;
 using Xunit;
+using static AiNetLinter.FastTests.Mcp.Assemblies.ExternalSourceRepositoryCacheTestAssertions;
+using static AiNetLinter.FastTests.Mcp.Assemblies.ExternalSourceRepositoryCacheTestData;
 
 namespace AiNetLinter.FastTests.Mcp.Assemblies;
 
@@ -18,11 +19,6 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies;
 [Trait("Category", "Component")]
 public sealed partial class ExternalSourceRepositoryCacheWriterTests
 {
-    private const string RepositoryUrl = "https://gitea.example/shared.git";
-    private const string Revision = "0123456789abcdef0123456789abcdef01234567";
-    private const string OtherRevision = "fedcba9876543210fedcba9876543210fedcba98";
-    private const string SolutionPath = "src/BaselineMini.slnx";
-
     [Fact]
     public void CacheKey_IsDeterministicAndCredentialFree()
     {
@@ -391,108 +387,4 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
         }
     }
 
-    private static ExternalSourceRepositoryCacheReadResult? ReadCurrent(
-        LocalExternalSourceRepositoryCacheWriter writer,
-        ExternalSourceRepositoryCacheKey key)
-    {
-        Assert.True(writer.TryReadCurrent(key, out var result, out var diagnostic));
-        Assert.Null(diagnostic);
-        return result;
-    }
-
-    private static ExternalSourceMapping CreateMapping() =>
-        new(RepositoryUrl, SolutionPath, ["BaselineMini"]);
-
-    private sealed class RecordingCacheWriter : IExternalSourceRepositoryCacheWriter
-    {
-        internal ExternalSourceRepositoryCachePublishRequest? Request { get; private set; }
-
-        internal bool ReturnFailure { get; init; }
-
-        public Task<ExternalSourceRepositoryCachePublishResult> PublishAsync(
-            ExternalSourceRepositoryCachePublishRequest request,
-            CancellationToken cancellationToken = default)
-        {
-            Request = request;
-            return Task.FromResult(ReturnFailure
-                ? ExternalSourceRepositoryCachePublishResult.Failure(
-                    ExternalSourceRepositoryCachePublishFailureKind.WriteFailed)
-                : ExternalSourceRepositoryCachePublishResult.Success(
-                    request.CacheKey,
-                    "generation-00000000000000000000000000000000",
-                    "cache-generation"));
-        }
-    }
-
-    private sealed class SourceFixture : IDisposable
-    {
-        private readonly TestTempDirectory temp;
-
-        private SourceFixture(
-            TestTempDirectory temp,
-            ExternalSourceCheckoutHandle handle,
-            ExternalSourceRepositoryCacheKey key,
-            ExternalSourceRepositoryCachePublishRequest request,
-            string checkoutPath)
-        {
-            this.temp = temp;
-            Handle = handle;
-            Key = key;
-            Request = request;
-            CheckoutPath = checkoutPath;
-        }
-
-        internal ExternalSourceCheckoutHandle Handle { get; }
-
-        internal ExternalSourceRepositoryCacheKey Key { get; }
-
-        internal ExternalSourceRepositoryCachePublishRequest Request { get; }
-
-        internal string CheckoutPath { get; }
-
-        internal static SourceFixture Create(string revision)
-        {
-            var temp = TestTempDirectory.Create("external-source-cache-fixture-");
-            var checkoutPath = temp.CreateSubdirectory("checkout");
-            temp.CreateFile("checkout/src/BaselineMini.slnx", "solution");
-            temp.CreateFile("checkout/src/Program.cs", "class Program { }");
-            temp.CreateFile("checkout/.git/config", "[core]\n	repositoryformatversion = 0");
-            var markerValue = "cache-test-marker";
-            temp.CreateFile(
-                "checkout/" + ExternalSourceCheckoutOwnership.OwnershipMarkerFileName,
-                markerValue);
-            var ownership = new ExternalSourceCheckoutOwnership(
-                temp.DirectoryPath,
-                checkoutPath,
-                markerValue);
-            var handle = new ExternalSourceCheckoutHandle(
-                ownership,
-                Path.Combine(checkoutPath, "src", "BaselineMini.slnx"),
-                revision);
-            Assert.True(ExternalSourceRepositoryCacheKey.TryCreate(
-                RepositoryUrl,
-                SolutionPath,
-                out var key));
-            var mapping = new ExternalSourceMapping(
-                RepositoryUrl,
-                SolutionPath,
-                ["BaselineMini"]);
-            var request = new ExternalSourceRepositoryCachePublishRequest
-            {
-                Mapping = mapping,
-                Checkout = handle,
-                CheckoutOwnership = ownership,
-                CacheKey = key!,
-                SolutionPath = SolutionPath,
-                LoadedRevision = revision,
-            };
-            return new(temp, handle, key!, request, checkoutPath);
-        }
-
-        public void Dispose()
-        {
-            Handle.Dispose();
-            temp.Dispose();
-        }
-    }
 }

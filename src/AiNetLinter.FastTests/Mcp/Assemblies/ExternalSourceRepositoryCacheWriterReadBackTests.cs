@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.TestKit;
 using Xunit;
+using static AiNetLinter.FastTests.Mcp.Assemblies.ExternalSourceRepositoryCacheTestAssertions;
+using static AiNetLinter.FastTests.Mcp.Assemblies.ExternalSourceRepositoryCacheTestData;
 
 namespace AiNetLinter.FastTests.Mcp.Assemblies;
 
