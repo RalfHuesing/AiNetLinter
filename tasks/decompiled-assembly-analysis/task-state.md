@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T17:25:29+02:00
+last_updated: 2026-08-29T18:31:39+02:00
 rules_dir: .agents/rules
 total_steps: 27
 current_step: step-027
@@ -14,13 +14,12 @@ current_step: step-027
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 27 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-027` (planned/in_progress; Korrektur von
-  `step-026` für Lock-/Rollback-Lifetime, fail-closed Read-back und
-  Testisolation)
+- **Aktueller Schritt:** `step-027` (issues; Korrektur von `step-026` für
+  Lock-/Rollback-Lifetime, fail-closed Read-back und Testisolation)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T17:25:29+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T18:31:39+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -53,7 +52,7 @@ current_step: step-027
 | step-024 | EPIC-04 | issues | Erfolgreiches Acquirer→Snapshot-/Workspace-Wiring mit besitzgebundener Lifetime | - | 428cc4b3 | issues → step-025 | 428cc4b3 + f781b127 + 3e726048 |
 | step-025 | EPIC-04 | done | Registry-/Snapshot-Lifetime und exception-sicheres Multi-Owner-Cleanup korrigieren | step-024 | 74fc0056 | approved | 74fc0056 + acdfe70e |
 | step-026 | EPIC-04 | issues | Persistente Repository-Cache-Generation aus erfolgreichem Clone atomar veröffentlichen | - | da9882f4 | issues → step-027 | da9882f4 + 8a87f06a |
-| step-027 | EPIC-04 | in_progress | Fail-closeden Generation-Publish und Testisolation korrigieren | step-026 | - | planned → coder → critic | - |
+| step-027 | EPIC-04 | issues | Fail-closeden Generation-Publish und Testisolation korrigieren | step-026 | c5d64c42 | issues → step-028 | c5d64c42 + 732737dd |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -414,3 +413,13 @@ Generationen und verletzt dadurch Testisolation. Step 027 bündelt genau diese
 Lock-/Cleanup-, unabhängige Manifestvalidierungs- und isolierte Writer-
 Korrekturen; Provider-/Snapshot-/Refresh-/Transport-/Native-Grenzen bleiben
 unverändert.
+
+Der Kritiker hat Step 027 mit `732737dd` nicht freigegeben. Die Produktions-
+korrekturen für Lock-Lifetime, generation-aware Rollback, unabhängige bounded
+Read-back-Prüfung und Runtime-/Test-Writer-Isolation sind erfüllt. Es fehlen
+jedoch ein deterministisch erzwungener A/B-Race-Test für die kritische
+Interleaving-Reihenfolge sowie eine vollständige Testmatrix für Pointer-,
+Manifest- und Inventargrenzen (Oversize, ungültiges UTF-8, Trunkierung,
+Wachstum, unbekannte/doppelte Felder und Limits). Diese beiden eng gekoppelten
+Testlücken werden als ein Step-028-Korrekturpaket geschlossen; Produktions-
+und Scope-Grenzen bleiben unverändert.
