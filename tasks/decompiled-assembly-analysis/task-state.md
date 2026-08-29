@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T22:43:50+02:00
+last_updated: 2026-08-29T22:56:09+02:00
 rules_dir: .agents/rules
-total_steps: 31
-current_step: step-031
+total_steps: 32
+current_step: step-032
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,13 +13,13 @@ current_step: step-031
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 31 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-031` (done; Teststruktur, Integrations-Gate
-  und Result-/Audit-Evidenz korrigiert)
+- **Steps gesamt:** 32 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-032` (planned/in_progress; Refresh-/Fetch-
+  Vertrag und atomare neue Cache-Generation geplant)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T22:43:50+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T22:56:09+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -57,6 +57,7 @@ current_step: step-031
 | step-029 | EPIC-04 | issues | Cache-backed Initial Acquisition aus validierter Generation | - | 82692da0 | issues → step-030 | 82692da0 + c0abdcdf |
 | step-030 | EPIC-04 | issues | Cache-Reuse-Nachweise und Step-029-Result korrigieren | step-029 | e9bf8025 | issues → step-031 | e9bf8025 + 2510db5e |
 | step-031 | EPIC-04 | done | Step-030-Gatebefunde und Nachweise korrigieren | step-030 | 552ef4d4 + 1d15a5b4 | approved | 552ef4d4 + 1d15a5b4 + d8cff007 |
+| step-032 | EPIC-04 | planned/in_progress | Validated Refresh/Fetch in neue Cache-Generation | - | - | - | - |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -578,3 +579,24 @@ Integration-Lauf sind grün (370/370), und Step-029/030/031 dokumentieren nur
 reale Test-, Skip- und scoped Auditwerte. Der einmalige unabhängige
 ExternalSourceGitProcessExecutor-Timeout ist transparent als solcher
 dokumentiert; es wurden keine neuen Tech-Debt-Funde aufgenommen.
+
+### Wiederaufnahme nach Step-031-Review (2026-08-29)
+
+Step 031 ist mit `d8cff007` genehmigt. Der validierte Current-Reuse-Vertrag,
+seine request-eigene Checkout-Lifetime und die zugehörigen Build-, FastTest-
+und Integration-Gates werden nicht erneut geöffnet. In dieser Planer-
+Wiederaufnahme gab es keine Produktionsänderung, keinen Testlauf und keine
+Coder-/Kritikerarbeit.
+
+Step 032 ist als nächster neuer EPIC-04-Step auf `planned/in_progress`
+gesetzt. Sein einziger primärer Vertrag ist die Staleness-Entscheidung plus
+der sichere Fetch in einen neuen request-eigenen Checkout und die atomare
+Veröffentlichung einer neuen Cache-Generation. Die Refresh-/Policy-Logik,
+der injizierte Fetch-/Transport-Port und die Generation-/Rollback-Integration
+bleiben bewusst ein gemeinsames größeres Paket.
+
+Der nächste sichere Übergabepunkt ist ein neuer Coder-Agent mit
+`tasks/decompiled-assembly-analysis/step-032/step-plan.md`. Cache-
+Konfiguration, Retention/GC/Invalidierung, Dirty-/Unbuilt- und
+Health-/degraded-Policy sowie Host-/MCP-Wiring sind ausdrücklich spätere,
+eigenständige Verträge.

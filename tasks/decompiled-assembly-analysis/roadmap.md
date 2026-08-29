@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-29T19:46:48+02:00
+last_updated: 2026-08-29T22:56:09+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -160,20 +160,26 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
     request-eigene Checkout blieb beim Acquirer, der persistente
     Generation-Ordner cache-eigen. Current-Reuse, Fetch/Refresh und neue
     Cache-Konfiguration waren in diesen drei Steps nicht enthalten.
-  - **Aktiver nächster Schnitt → `step-029` (planned/in_progress):**
+  - **Abgeschlossene Current-Reuse-Schnitte → `step-029` bis `step-031`:**
     Cache-backed Initial Acquisition/Reuse mit strikt validiertem
     Current-Pointer, unabhängig geprüftem Manifest/Inventory/Inhalt und einem
     neuen besitzbaren Request-Checkout aus einer gültigen persistenten
-    Generation. Der Acquirer verwendet bei Miss, Invalidität oder kontrolliertem
+    Generation. Step 030 und Step 031 korrigierten die konkreten
+    Reuse-/Current-/Publish-Nachweise sowie die grünen Quality-Gates. Der
+    Acquirer verwendet bei Miss, Invalidität oder kontrolliertem
     Materialisierungsfehler weiterhin den bestehenden Clone-/Write-through-
     Pfad; der persistente Generation-Pfad wird nie als Request-Handle
-    weitergereicht.
-  - **Folgepaket 1 nach `step-029`:** eigener Refresh-/Fetch-Vertrag mit
-    Refresh-Policy,
-    neuer Generation und der Semantik fehlgeschlagener fälliger Aktualisierung;
-    er baut auf dem Write-through- und Reuse-Vertrag auf.
+    weitergereicht. Review `d8cff007` genehmigte Step 031.
+  - **Aktiver nächster Schnitt → `step-032` (planned/in_progress):**
+    Ein gemeinsamer Refresh-/Fetch-Vertrag entscheidet anhand der validierten
+    Generation und einer injizierten Policy über Current oder Staleness,
+    materialisiert einen neuen request-eigenen Checkout, aktualisiert ihn
+    über den bestehenden sicheren Git-Prozesspfad und veröffentlicht eine
+    neue Generation mit atomarem Current-Pointer. Fällige Aktualisierungs-
+    fehler geben den alten Snapshot nicht still als aktuell aus; die statische
+    Decompilation bleibt der Fallback.
   - CacheRoot-/Refresh-Konfiguration über `appsettings.json` wird mit dem
-    späteren Reuse-/Refresh-Vertrag entschieden, nicht in Steps 026 bis 029.
+    späteren Konfigurationsvertrag entschieden, nicht in Step 032.
   - Dirty/unbuilt Checkout-Abgrenzung und transparente Fallback-/Health-
     Semantik bleiben nach diesen Cache-Verträgen ein eigener Source-Policy-
     Schnitt; Step 024/025 markieren nur den erfolgreichen Workspace-Aufbau und
@@ -182,11 +188,11 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
   **Nachgelagerte Folgepakete:**
 
   - Cache-Reuse und Request-Checkout aus einer validierten Generation sind in
-    `step-029` auf den Initial-Acquisition-Vertrag begrenzt; sie werden nicht
-    um Refresh oder neue Generationen erweitert.
-  - Refresh/Fetch, Refresh-Intervall und atomarer Wechsel auf eine neue
-    Generation folgen erst nach dem Reuse-Vertrag; Staleness wird nicht im
-    Write-through-Step geraten.
+    `step-029` bis `step-031` auf den Initial-Acquisition-Vertrag begrenzt;
+    sie werden nicht rückwirkend um Refresh erweitert.
+  - Refresh/Fetch, Refresh-Intervall-Entscheidung und atomarer Wechsel auf
+    eine neue Generation sind in `step-032` als ein vertikaler Vertrag
+    gebündelt. Die öffentliche Cache-Konfiguration folgt separat.
   - Dirty/unbuilt lokale Checkouts sowie Health-/degraded-Fallback-Policy
     bleiben nach den Cache-Reuse-/Refresh-Verträgen ein eigener Source-
     Policy-Schnitt.
