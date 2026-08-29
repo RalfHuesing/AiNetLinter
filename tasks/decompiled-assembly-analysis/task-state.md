@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T18:31:39+02:00
+last_updated: 2026-08-29T18:44:16+02:00
 rules_dir: .agents/rules
-total_steps: 27
-current_step: step-027
+total_steps: 28
+current_step: step-028
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,13 +13,14 @@ current_step: step-027
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 27 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-027` (issues; Korrektur von `step-026` für
-  Lock-/Rollback-Lifetime, fail-closed Read-back und Testisolation)
+- **Steps gesamt:** 28 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-028` (planned/in_progress; Korrektur von
+  `step-027` für deterministische Lock-/Interleaving- und bounded
+  Read-back-Nachweise)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T18:31:39+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T18:44:16+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -53,6 +54,7 @@ current_step: step-027
 | step-025 | EPIC-04 | done | Registry-/Snapshot-Lifetime und exception-sicheres Multi-Owner-Cleanup korrigieren | step-024 | 74fc0056 | approved | 74fc0056 + acdfe70e |
 | step-026 | EPIC-04 | issues | Persistente Repository-Cache-Generation aus erfolgreichem Clone atomar veröffentlichen | - | da9882f4 | issues → step-027 | da9882f4 + 8a87f06a |
 | step-027 | EPIC-04 | issues | Fail-closeden Generation-Publish und Testisolation korrigieren | step-026 | c5d64c42 | issues → step-028 | c5d64c42 + 732737dd |
+| step-028 | EPIC-04 | planned/in_progress | Deterministische Read-back- und Lock-Lifetime-Nachweise ergänzen | step-027 | - | ausstehend | - |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -99,9 +101,30 @@ Synchronisierung des Cache-Keys. Die drei gekoppelten Schichten sind
 Lock-/Rollback-Lifetime, unabhängige bounded Manifest-/Content-Prüfung und
 der testisolierte Writer-Anschluss.
 
-Step 027 steht damit auf `planned/in_progress`; der nächste sichere
-Übergabepunkt ist ein neuer Coder-Agent. Es gibt keine Produktionsänderung
-aus diesem Planer-Schritt, keinen Roadmap-Bedarf und keinen Push.
+Step 027 wurde umgesetzt, aber im Review `732737dd` wegen zweier MAJOR-
+Nachweislücken nicht freigegeben: Der A/B-Race-Test erzwingt die kritische
+Interleaving-Reihenfolge nicht, und die bounded Manifest-/Inventar-Matrix
+deckt die geforderten malformed-input- und Inventar-Limitfälle nicht
+vollständig ab. Die Produktions-Lock-/Rollback- und Read-back-Korrekturen
+bleiben erhalten; Step 027 wird nicht erneut geöffnet.
+
+### Wiederaufnahme nach Step-027-Review (2026-08-29)
+
+Auf Nutzeranweisung wurde Step 028 als einzelner Korrektur-Step mit
+`corrects: step-027` geplant und auf `planned/in_progress` gesetzt. Der
+primäre Vertrag ist der deterministische Nachweis von atomic Generation
+Publish unter adversarial bounded Read-back. Das Paket enthält höchstens
+drei gekoppelte Schichten: einen internen TCS-/Semaphore-Test-Seam für die
+Lock-/Interleaving-Grenze, die Manifest-/Inventar-Malformed-Input-Matrix
+und die Wiederverwendung der bestehenden lokalen Fixtures/Assertions.
+
+Der Coder darf die Produktionslogik aus Step 027 nicht neu gestalten. Eine
+interne, per Read-Aufruf isolierte Stream-Seam ist nur zulässig, wenn der
+Growth-Fall ohne sie nicht deterministisch nachweisbar ist; Runtime-Default,
+Fail-closed-Semantik und In-Process-Lock-Grenze bleiben unverändert. Die
+Roadmap wird im Fix-Modus nicht geändert. Es gibt in diesem Planer-Schritt
+keine Tests oder Produktionsänderungen; nächster sicherer Übergabepunkt ist
+ein neuer Coder-Agent.
 
 ## Config
 
