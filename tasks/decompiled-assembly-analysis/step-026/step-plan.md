@@ -4,7 +4,7 @@ type: step-plan
 task: decompiled-assembly-analysis
 step: 026
 corrects: null
-title: "Persistenten Repository-Cache mit Refresh/Fetch und atomarer Veröffentlichung"
+title: "Persistente Repository-Cache-Generation aus erfolgreichem Clone atomar veröffentlichen"
 epic: EPIC-04
 estimated_risk: high
 step_type: single
@@ -12,7 +12,7 @@ items: []
 created_by: planer
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
-created_at: 2026-08-29T15:14:17+02:00
+created_at: 2026-08-29T15:31:12+02:00
 related_to:
   - ../step-025/step-plan.md
   - ../step-025/step-result.md
@@ -24,334 +24,347 @@ related_to:
   - ../codemap.md
 ---
 
-# Step 026: Persistenter Repository-Cache und atomare Veröffentlichung
+# Step 026: Persistente Repository-Cache-Generation atomar veröffentlichen
 
-## Bezug und Split-Gate
+## Split-Gate-Entscheidung
+
+Der bisherige Step-026-Plan wird **nicht freigegeben**. Er bündelt Cache-
+Konfiguration, Cache-Identität/Manifest, Refresh-/Fetch-Transport, Generationen,
+Integritätsprüfung, atomaren Current-Pointer, Konkurrenzsynchronisation und
+den besitzgebundenen Request-Checkout. Das sind im tatsächlichen Code mehr als
+ein schwergewichtiger Primärvertrag und mehr als drei gekoppelte Schichten.
+
+Die Überarbeitung erfolgt ausdrücklich wegen Context-Stabilität. Das Paket
+bleibt ein substantieller vertikaler Produktbaustein, aber ein neuer Coder soll
+es in einem stabilen Kontext beginnen und fertigstellen können. Gewählt wird
+Kandidat A:
+
+> Ein injizierter lokaler Repository-Cache-Generation-Writer bildet aus einem
+> erfolgreichen bestehenden Clone-/Acquirer-Ergebnis einen credentialfreien
+> Cache-Key, schreibt Manifest und vollständige Generation in isoliertes
+> Staging und veröffentlicht den validierten Generation-Namen atomar als
+> `current`. Der request-eigene Checkout bleibt Eigentum des bestehenden
+> Acquirers und wird nicht in den persistenten Cachebesitz umgewandelt.
+
+Dieser Vertrag liefert sofort einen persistenten, prüfbaren Source-Snapshot für
+spätere Wiederverwendung. Er entscheidet jedoch noch nicht, wann ein Current-
+Eintrag wiederverwendet oder aktualisiert wird.
+
+## Herausgelöste Folgepakete
+
+- **Cache-backed Initial Acquisition/Reuse:** validierten `current`-Pointer
+  lesen, Manifest und Inhalt prüfen und daraus einen neuen, besitzbaren
+  Request-Checkout ableiten. Der persistente Generation-Ordner darf niemals an
+  `ExternalSourceCheckoutHandle` übergeben werden. Dieses Paket folgt auf die
+  hier veröffentlichte Generation.
+- **Refresh/Fetch:** eigener Transportvertrag für Fetch/Refresh des Default-
+  Branches, Refresh-Intervall, neue Generation und die Semantik eines
+  fehlgeschlagenen fälligen Refreshes. Der bestehende Transport bleibt in
+  diesem Step ausschließlich bei `CloneDefaultBranchAsync`.
+- **Cache-Konfiguration:** `CacheRoot`, Refresh-Policy und die Bindung an
+  `appsettings.json` werden zusammen mit dem späteren Reuse-/Refresh-Vertrag
+  entschieden. Step 026 verwendet nur einen injizierten Cache-Root mit einem
+  deterministischen Default; es verändert keinen öffentlichen Konfigurations-
+  oder Credential-Vertrag.
+- **Dirty/unbuilt, Health und degraded-Fallback:** eigener Source-Policy-
+  Schnitt nach der Cache-Reuse-/Refresh-Semantik.
+- **Host-/MCP-Wiring, Capability-Matrix, transitive Referenzen, Retention,
+  Garbage Collection, explizite Invalidierung und Telemetrie:** bleiben
+  nachgelagerte Pakete; EPIC-05 wird nicht vorgezogen.
+
+## Bezug
 
 - **Task:** `decompiled-assembly-analysis`
 - **Epic:** `EPIC-04` — Gitea-Source-of-Truth, Refresh und
   Fehlersemantik.
-- **Voraussetzung:** `step-024` ist nach der Korrektur in `step-025`
-  genehmigt. Acquirer→Snapshot-/Workspace-Ownership und Registry-/
-  Multi-Owner-Cleanup werden nicht erneut geöffnet.
-- **Konzept-Referenz:** `Konzept.md`, insbesondere die Abschnitte zu
-  Source-of-Truth, Cache-Identität, Refresh, Manifest, Generationen sowie
-  atomarem Session-/Quellenwechsel.
-
-Der eine primäre Vertrag für diesen Step lautet:
-
-> Eine explizit gemappte externe Quelle wird über einen persistenten,
-> manifest-validierten Repository-Cache akquiriert oder aktualisiert. Die
-> Operation liefert nur einen an eine tatsächlich geladene Revision
-> gebundenen, validierten und für den bestehenden Snapshot-Owner
-> besitzbaren Checkout. Ein Cache-Refresh wird vollständig in einer neuen
-> Generation vorbereitet und erst nach erfolgreicher Integritätsprüfung als
-> aktuelle Source-of-Truth veröffentlicht.
-
-Refresh/Fetch, Cache-/Manifest-Integrität, Generationen und atomare
-Veröffentlichung gehören hier zusammen: Ein persistenter Cache ohne
-Revisionsmanifest oder atomare Veröffentlichung könnte eine halbfertige
-oder falsch als aktuell markierte Quelle ausliefern. Die atomare
-Veröffentlichung ist dabei eine Sicherheits- und Konsistenzgarantie des
-primären Akquisitionsvertrags, kein zweiter unabhängiger Featureblock.
-
-Das Split-Gate ist erfüllt:
-
-- **Ein primärer Vertrag:** cache-gestützte, revisionsgebundene
-  `AcquireOrRefresh`-Akquisition.
-- **Drei gekoppelte Schichten:** Cache-Identität/Manifest, Refresh-/Fetch-
-  Port mit Acquirer-Orchestrierung sowie Generation-/Pointer-
-  Veröffentlichung mit besitzgebundenem Request-Checkout.
-- **Acht Abnahmekriterien:** genau acht Kriterien sind unten definiert.
-- **Höchstens zwölf `read_first`-Dateien:** genau zwölf zentrale Dateien
-  sind im Kontextbudget festgelegt.
-- **Kein Mini-Sweep und kein monolithischer Block:** Host-Wiring,
-  Capability-Matrix, transitive Referenzen, Dirty-/Health-Policy und
-  EPIC-05 bleiben eigenständige Folgepakete.
+- **Voraussetzung:** `step-024` ist nach der genehmigten Korrektur in
+  `step-025` abgeschlossen. Die Snapshot-/Workspace-Ownership und das
+  exception-sichere Registry-Cleanup werden nicht erneut geöffnet.
+- **Konzept-Referenz:** `Konzept.md`, Abschnitte „Gitea als gemeinsame
+  Wahrheit“, „Fingerprint und Cache-Key“, „Staleness und atomarer
+  Session-Wechsel“ sowie die Cache-/Source-of-Truth-Leitplanken.
 
 ## Tatsächlicher Projektzustand (JIT-Kontext)
 
-Der MCP-Kontext mit absolutem `projectRoot`
-`C:/Daten/Entwicklung/Ralf/AiNetLinter` ergibt:
+Die MCP-Abfragen wurden mit dem absoluten `projectRoot`
+`C:/Daten/Entwicklung/Ralf/AiNetLinter` ausgeführt.
 
-- `ExternalSourceRepositoryAcquirer.AcquireAsync` reserviert derzeit bei
-  jedem Aufruf eine neue kontrollierte Staging-Wurzel und ruft den
-  injizierten Transport auf. Ein persistenter Repository-Cache oder eine
-  Refresh-Entscheidung ist dort nicht vorhanden.
-- `IGiteaRepositoryTransport` besitzt aktuell nur
-  `CloneDefaultBranchAsync`. `GiteaGitRepositoryTransport` kapselt bereits
-  URL-Normalisierung, Credential-Lifetime, Child-Process-Ausführung,
-  HEAD-Ermittlung und typisierte Fehler. Der neue Refresh-/Fetch-Port muss
-  diese Invarianten wiederverwenden und darf keinen unkontrollierten
-  In-Place-Refresh des veröffentlichten Cache-Eintrags einführen.
-- `ExternalSourceRepositoryAcquisitionResult` und der bestehende
-  `ExternalSourceRepositoryCheckoutReservation` bilden die geeignete
-  Übergabe an den Snapshot-Pfad. Ein Snapshot darf keinen persistenten
-  Cache-Ordner als löschbaren Einzelbesitz erhalten. Entweder wird ein
-  kontrollierter Request-Checkout aus der veröffentlichten Generation
-  abgeleitet oder es wird ein gleichwertiger, explizit freizugebender Lease-
-  Owner eingeführt; die bestehende Snapshot-/Workspace-Ownership-Grenze
-  bleibt dabei unverändert.
-- `ExternalSourceConfiguration` und
-  `ExternalSourceConfigurationLoader` kennen derzeit die Mappings, aber
-  keine Cache-Wurzel und keine Refresh-Policy. Eine Konfigurationserweiterung
-  ist Teil des Cache-Vertrags und muss strikt validiert sowie dokumentiert
-  werden; keine Credential-Konfiguration wird neu erfunden.
-- `AssemblyDecompilationCache` besitzt bereits ein getrenntes
-  `current.json`-/Generation-/Manifest-Muster mit atomarem Pointer und
-  beschädigungsresistenter Veröffentlichung. Dieses Muster dient als
-  Referenz. Der Assembly-Cache wird weder als Repository-Cache missbraucht
-  noch in diesem Step erweitert.
-- `SourceSnapshotRegistry.Dispose()` und die Multi-Owner-Fehleraggregation
-  sind durch `step-025` genehmigt. Der neue Cache muss deren Eigentumsgrenze
-  bedienen, nicht Registry-Cleanup oder Snapshot-Dispose verändern.
+- `ExternalSourceRepositoryAcquirer` umfasst 469 semantisch erfasste Zeilen;
+  `AcquireAsync` hat 30 Zeilen und 33 transitive Aufrufstellen in sieben
+  Dateien. Der Acquirer reserviert einen neuen Checkout, ruft den Transport
+  auf, prüft die geladene Revision und gibt einen
+  `ExternalSourceCheckoutHandle` zurück.
+- `IGiteaRepositoryTransport` hat aktuell genau einen Vertrag:
+  `CloneDefaultBranchAsync`. `GiteaGitRepositoryTransport.CloneDefaultBranchAsync`
+  umfasst 58 Zeilen; der Transport-Typ hat 22 direkte/transitive relevante
+  Dateien und 116 Treffer. Ein Fetch-/Refresh-Port wäre daher ein neuer
+  schwergewichtiger Vertrag mit Prozess-, Credential- und Fehlerkopplung.
+- `ExternalSourceRepositoryAcquisitionResult` kann nur einen
+  `ExternalSourceCheckoutHandle` als erfolgreichen Besitz ausgeben. Der
+  bestehende Handle räumt seinen request-eigenen Checkout. Ein persistenter
+  Generation-Pfad darf deshalb nicht als dieser Handle weitergereicht werden.
+- `ExternalSourceRepositoryCheckoutReservation` (156 Zeilen) und
+  `ExternalSourceRepositoryPathGuard` (247 Zeilen) enthalten bereits die
+  Marker-, Root-, Reparse- und Cleanup-Gates. Der neue Writer verwendet diese
+  Verträge und dupliziert keinen Besitz- oder Pfad-Guard.
+- `GiteaExternalSourceProvider` konsumiert das Acquirer-Ergebnis; der
+  Snapshot-Materializer erwartet weiterhin einen besitzbaren Checkout. Der
+  Provider-/Snapshot-Vertrag muss für diesen Step unverändert bleiben.
+- `ExternalSourceConfiguration` hat 71 semantische Treffer in sieben
+  Dateien; `ExternalSourceConfigurationLoader` wird aus zehn Dateien mit
+  37 Aufrufstellen erreicht. Eine Erweiterung um CacheRoot und RefreshPolicy
+  würde damit einen eigenen Konfigurationsvertrag bilden und bleibt bewusst
+  draußen.
+- `AssemblyDecompilationCache` ist mit 488 Zeilen, `Publish` (38 Zeilen),
+  `TryRead` (26 Zeilen) und `TryPublishPointer` (21 Zeilen) ein brauchbares
+  Verhaltensreferenzmuster. `AssemblyCacheContract` und der Assembly-Cache
+  werden nicht erweitert und nicht als Repository-Cache-Contract verwendet;
+  Assembly- und Repository-Identität bleiben getrennt.
 
-Die semantische Impact-Prüfung zeigt die Acquirer-Abhängigkeiten in
-`GiteaExternalSourceProvider`, den Acquirer-Tests sowie den bestehenden
-Path-Guard-, Failure-Policy- und Transport-Verträgen. Der Assemblies-Bereich
-hat keinen exakten Produktions-Duplikatcluster und keinen hochsicheren
-Dead-Code-Fund. Der einzige Magic-Values-Fund ist die bereits bestehende,
-zweifach vorkommende User-Exception-Nachricht in
-`ExternalSourceGitProcessLauncher`; sie ist nicht Teil dieses Cache-Vertrags.
+Diese Befunde bestätigen, dass der frühere Gesamtblock zu breit war. Ein
+Fetch-/Refresh-Port würde gleichzeitig Transport, Acquirer, Credential-/Git-
+Prozesssemantik und Generation-Publish ändern. Ein Reuse-Paket würde zusätzlich
+Copy-/Lease-/Checkout-Ownership benötigen. Der hier gewählte Write-through-
+Schnitt kann dagegen unterhalb des Host-/MCP-Wirings an den vorhandenen
+Erfolgsweg angeschlossen werden.
 
 ## Intention
 
-Step 026 schließt die bisher offene Lücke zwischen dem produktiven
-Default-Branch-Clone und einer wiederverwendbaren Source-of-Truth:
+Nach diesem Step erzeugt ein erfolgreicher bestehender Repository-Clone eine
+persistente, revisionsgebundene Cache-Generation. Manifest, Datei-Inventar,
+Cache-Key und `current`-Pointer werden in isoliertem Staging aufgebaut und
+erst nach einem Read-back der Integrität veröffentlicht.
 
-1. Eine Cache-Identität wird aus kanonischer Repository-URL, Solution-Pfad
-   und Cache-Schema gebildet; die geladene Revision bleibt ein Ergebnis und
-   wird nicht aus der Konfiguration geraten.
-2. Ein gültiger, nicht abgelaufener Current-Eintrag wird ohne Transport-
-   aufruf wiederverwendet. Bei fehlendem, abgelaufenem oder ungültigem
-   Eintrag wird Clone bzw. Fetch/Refresh in einer isolierten Zielgeneration
-   ausgeführt.
-3. Manifest, Solution-Pfad, geladene Revision und kontrollierte Pfade
-   werden vor der Veröffentlichung geprüft. Erst danach wird der Current-
-   Pointer atomar gewechselt; der bestehende Snapshot erhält weiterhin nur
-   einen request-eigenen, freigebbaren Checkout.
+Der Acquirer behält seinen bisherigen request-eigenen Checkout und alle
+Transport-, Cancellation-, Credential-, Prozess-, 1314- und Reparse-
+Semantiken. Ein Cache-Schreibfehler darf den bereits verfügbaren Checkout nicht
+entziehen; er bleibt als typisierte Cache-Warnung sichtbar und lässt den alten
+Current-Eintrag unverändert.
 
 ## Scope
 
-### Schicht 1: Cache-Identität, Konfiguration und Manifest
+### Schicht 1: Cache-Key und Manifestmodell
 
-- Einen internen, strikt validierten Cache-Vertrag für Root, Refresh-
-  Intervall, Cache-Schema, kanonische URL, Solution-Pfad und Status
-  definieren. Cache-Schlüssel enthalten keine Credentials und dürfen keine
-  beliebigen Pfadsegmente aus der URL ungeprüft übernehmen.
-- Die Konfiguration so erweitern, dass Cache-Root und Refresh-Policy
-  deterministisch aus dem bestehenden `ExternalSources`-Bereich kommen.
-  Relative Pfade werden kontrolliert aufgelöst; ungültige oder unsichere
-  Werte werden als bestehende typed Configuration-/Provider-Diagnose
-  sichtbar, nicht stillschweigend korrigiert.
-- Pro Cache-Key ein Manifest mit kanonischer URL, geladener Revision,
-  Solution-Pfad, Cache-Schema, Erstellungs-/Refresh-Zeitpunkt und
-  Integritätsstatus führen. Ein Manifest allein ohne validierten Inhalt ist
-  nicht ausreichend.
-- Generationen unter einer kontrollierten Cache-Wurzel getrennt halten.
-  Beschädigte, unvollständige, fremde oder nicht zum Pointer passende
-  Generationen werden nicht als aktuell verwendet.
+- Führe einen internen `ExternalSourceRepositoryCacheKey` ein, der aus der
+  bereits normalisierten Repository-URL, dem sicheren repository-relativen
+  Solution-Pfad und einer eigenen Cache-Schema-Version gebildet wird.
+- Der physische Entry-Pfad verwendet ausschließlich einen deterministischen
+  sicheren Hash-/Segmentwert. Credentials, URL-Userinfo und ungeprüfte URL-
+  oder Solution-Pfadsegmente dürfen nicht in den Cache-Pfad gelangen.
+- Führe ein internes
+  `ExternalSourceRepositoryCacheManifest` mit Cache-Key, kanonischer URL,
+  Solution-Pfad, tatsächlich geladener Revision, Generation-Name,
+  Erstellungszeitpunkt und vollständigem relativen Datei-Inventar aus
+  Dateipfad, Länge und Inhaltshash ein.
+- Das Manifest erhält nur den Status eines vollständig geschriebenen und
+  validierten Clones. Refresh-Zeitfenster, `nextRefresh`, degraded/Health und
+  alte Generationen als Reuse-Entscheidung gehören nicht in dieses Modell.
 
-### Schicht 2: Refresh-/Fetch-Port und Acquirer-Orchestrierung
+### Schicht 2: Lokaler Generation-Writer und atomarer `current`
 
-- Den bestehenden injizierten Git-Transport um einen klaren
-  Refresh-/Fetch-Vorgang ergänzen oder einen gleichwertigen, typisierten
-  Port einführen. Der Port arbeitet ausschließlich auf einer isolierten
-  Staging-/Zielgeneration; `current` wird nie direkt verändert.
-- Beim Cache-Miss initial klonen, bei gültigem und abgelaufenem Eintrag
-  aktualisieren. Die Entscheidung ist deterministisch und begrenzt:
-  kein unbounded retry, kein Sleep und kein stilles Wiederverwenden eines
-  fehlgeschlagenen Refreshs als aktuelle Quelle.
-- Die bestehende Credential-Auflösung, Git-Argument-/Prozessbaum-
-  Semantik, Cancellation, HTTP-/Git-Fehlerklassifikation und Cleanup-
-  Garantien wiederverwenden. 1314-/Reparse-Erkennung bleibt
-  repository-spezifisch und führt weiterhin typed zum vorhandenen
-  Decompilation-Fallback.
-- Aus einer veröffentlichten Generation einen kontrollierten
-  Request-Checkout für `ExternalSourceRepositoryAcquisitionResult`
-  ableiten oder einen Lease-Owner mit exakt gleicher Snapshot-Lifetime
-  einsetzen. Der persistente Cache-Eintrag bleibt cache-eigen und wird
-  nicht vom Snapshot gelöscht.
+- Führe genau einen injizierbaren Port
+  `IExternalSourceRepositoryCacheWriter` mit einem typisierten Publish-
+  Request/Result ein. Der Request stammt aus einem validierten Acquirer-
+  Ergebnis und referenziert nicht-besitzübernehmend den vorhandenen
+  `ExternalSourceCheckoutHandle` sowie Mapping, Solution-Pfad und geladene
+  Revision.
+- Der konkrete Writer normalisiert einen injizierten Cache-Root, reserviert
+  unter dem Entry-Pfad eine neue `generation-*`-Stagingdirectory, prüft den
+  besitzten Source-Checkout und kopiert dessen Repository-Inhalt ohne den
+  request-eigenen Ownership-Marker. Reparse-Punkte oder unsichere Pfade führen
+  fail-closed zum typisierten Publish-Fehler.
+- Der Writer schreibt zuerst Inhalt und Manifest, liest die Generation wieder
+  ein und verifiziert Cache-Key, Revision, Solution-Pfad, Datei-Inventar und
+  kontrollierte Pfade. Der `current`-Pointer enthält nur einen sicheren
+  Generation-Namen; Pointer und Manifest werden gegenseitig geprüft.
+- Der Pointer wird über temporäre Datei und atomare Replace-/Move-Semantik
+  veröffentlicht. Bis zum erfolgreichen Read-back bleibt ein vorheriger
+  Current-Eintrag unverändert. Bei Fehler oder Cancellation werden nur die
+  unpublizierte Generation und temporäre Pointer-Dateien bereinigt.
+- Gleichzeitige Publishes werden über eine lokale, pro Cache-Key begrenzte
+  Synchronisationsgrenze serialisiert. Es gibt keinen globalen Host-/Registry-
+  Lock und keinen neuen Cross-Process-Lifetime-Vertrag.
 
-### Schicht 3: Integritätsprüfung und atomare Source-of-Truth
+### Schicht 3: Write-through-Anschluss am Acquirer
 
-- Neue Generationen ausschließlich vollständig und validiert veröffentlichen:
-  Inhalt, Manifest, Revision, Solution-Pfad, Cache-Key und kontrollierte
-  Pfade müssen zusammenpassen.
-- Den atomaren Current-Pointer nach dem vorhandenen, getrennten
-  Generationen-Muster modellieren. Ein Prozessabbruch, Cancellation,
-  Transportfehler oder Integritätsfehler darf keinen halben Eintrag als
-  current sichtbar machen.
-- Bei Refresh-Fehlern bleibt eine zuvor veröffentlichte Generation als
-  nicht aktualisierte Historie/Diagnose erhalten, wird aber nicht als
-  erfolgreich aktualisierte aktuelle Revision behauptet. Der Aufrufer
-  erhält den typed Fehler bzw. den bestehenden Decompilation-Fallback.
-- Gleichzeitige Zugriffe pro Cache-Key dürfen keinen konkurrierenden
-  Pointer-Wechsel oder doppelte, unberechenbare Veröffentlichung erzeugen.
-  Die Synchronisationsgrenze bleibt lokal beim Cache und wird nicht zu
-  einer globalen Host-/Registry-Lifetime umgebaut.
+- Erweitere `ExternalSourceRepositoryAcquirer` um den injizierbaren Writer,
+  mit einem deterministischen lokalen Default unter
+  `AppContext.BaseDirectory/cache/source`, ohne `appsettings.json` oder
+  Credential-Konfiguration zu verändern.
+- Rufe den Writer nur nach erfolgreicher Transport- und Checkout-Validierung
+  auf, bevor der erfolgreiche Acquirer-Result endgültig zurückgegeben wird.
+  Der Writer erhält keinen Besitzübergang: der Acquirer-Handle bleibt für den
+  Snapshot zuständig, die Generation bleibt cache-eigen.
+- Ein erfolgreicher Publish ergänzt höchstens die bestehenden Diagnosen.
+  Ein Publish-Fehler lässt den gültigen request-eigenen Acquirer-Erfolg
+  bestehen, macht die Cache-Warnung sichtbar und löscht weder Checkout noch
+  einen zuvor veröffentlichten Current-Eintrag.
+- `IGiteaRepositoryTransport`, `GiteaGitRepositoryTransport`,
+  `GiteaExternalSourceProvider`, `ExternalSourceSnapshotMaterializer`,
+  `SourceSnapshotRegistry` und das Host-Wiring bleiben fachlich unverändert.
 
 ## Out-of-Scope
 
-- Keine Änderung an `SourceSnapshotRegistry`,
-  `ExternalSourceSnapshot.Dispose()` oder der durch Step 024/025
-  genehmigten Workspace-/Checkout-Ownership- und Cleanup-Semantik.
-- Keine Host-Komposition, MCP-Tool-Wiring, Capability-Matrix oder
-  transitive Referenzauflösung; keine EPIC-05-Ausweitung. Eine bestehende
-  Provider-Schnittstelle darf nur so weit berührt werden, wie sie den
-  neuen cache-gestützten Acquirer-Vertrag zwingend konsumieren muss.
-- Keine Erweiterung des getrennten Assembly-Decompilation-Caches und keine
-  Vermischung von Assembly-Fingerprint, Decompiler-Generation und
-  Repository-Generation.
-- Keine Dirty-/unbuilt-Checkout-Policy, keine neue Health-/degraded-
-  Strategie und kein lokaler Checkout als konkurrierende Source-of-Truth.
-  Der bereits vorhandene typed Fallback bei nicht verfügbarer externer
-  Quelle bleibt lediglich erhalten.
-- Keine tatsächlichen Remote-, Gitea- oder Git-Netzwerkzugriffe in Tests.
-  Test-Doubles und lokale Fixtures dürfen keine echten Clone-/Fetch-
-  Prozesse starten, keine Credentials benötigen und keine unbounded
-  Retries/Sleeps verwenden.
-- Keine Assembly.Load-, AssemblyLoadContext- oder Reflection-Ausführung;
-  die Decompilation bleibt statisch.
-- Kein allgemeiner Dry-/MagicValues-/DeadCode-Sweep. `TD-001` bis `TD-003`
-  bleiben unangetastet, solange die Cache-Implementierung keinen direkten
-  Bezug zu Drive-Path-Duplikation, Origin-Typisierung oder
-  `AssemblyOrigin.Kind` herstellt.
-
-## Architekturgrenze
-
-Die Cache-Grenze liegt zwischen dem Gitea-Transport und der bestehenden
-Acquirer→Snapshot-Übergabe:
-
-```text
-Mapping + Cache-Optionen
-        |
-        v
-Cache-Identity / Manifest / Generation-Pointer
-        |
-        +-- miss/expired --> isoliertes Clone/Fetch-Staging
-        |                         |
-        |                         v
-        |                 validieren und atomar publishen
-        |
-        +-- valid current --> kontrollierten Request-Checkout ableiten
-                                  |
-                                  v
-                         bestehender Snapshot-/Workspace-Owner
-```
-
-Der Cache besitzt seine persistente Generation. Der Snapshot besitzt wie
-bisher seinen Request-Checkout und Workspace. Kein Cache-Pfad wird als
-globaler Registry-Besitz eingeführt. Der Source-of-Truth-Status ist immer
-an Manifest, Pointer, Inhalt und tatsächlich geladene Revision gebunden.
-Provider-/Host-Entscheidungen oberhalb dieser Grenze bleiben unverändert.
-
-## Kontextbudget
-
-### `read_first` (12 Dateien)
-
-1. `tasks/decompiled-assembly-analysis/step-025/step-result.md`
-2. `tasks/decompiled-assembly-analysis/step-025/step-review.md`
-3. `tasks/decompiled-assembly-analysis/roadmap.md`
-4. `tasks/decompiled-assembly-analysis/follow-up-strategy.md`
-5. `tasks/decompiled-assembly-analysis/Konzept.md`
-6. `tasks/decompiled-assembly-analysis/tech-debt.md`
-7. `src/AiNetLinter/Mcp/Assemblies/ExternalSourceRepositoryAcquirer.cs`
-8. `src/AiNetLinter/Mcp/Assemblies/ExternalSourceRepositoryAcquisitionModels.cs`
-9. `src/AiNetLinter/Mcp/Assemblies/IGiteaRepositoryTransport.cs`
-10. `src/AiNetLinter/Mcp/Assemblies/GiteaGitRepositoryTransport.cs`
-11. `src/AiNetLinter/Configuration/ExternalSourceConfiguration.cs`
-12. `src/AiNetLinter/Configuration/ExternalSourceConfigurationLoader.cs`
-
-### `read_on_demand`
-
-- `ExternalSourceRepositoryCheckoutReservation.cs`,
-  `ExternalSourceRepositoryPathGuard.cs` und
-  `ExternalSourceRepositoryFailurePolicy.cs` für kontrollierte Root-,
-  Reparse-, 1314- und Cleanup-Gates.
-- `GiteaExternalSourceProvider.cs`,
-  `ExternalSourceSnapshotMaterializer.cs`, `SourceSnapshotModels.cs` und
-  `SourceSnapshotRegistry.cs` nur zur Anschluss- und Ownership-Prüfung;
-  die Registry selbst bleibt unverändert.
-- `AssemblyDecompilationCache.cs` und `AssemblyCacheContract.cs` als
-  Referenz für Pointer-/Manifest-/Generationen- und Retry-Semantik; keine
-  direkte Wiederverwendung eines Assembly-Cache-Contracts.
-- `ExternalSourceRepositoryAcquirerTests.cs`,
-  `ExternalSourceRepositoryAcquirerTestTransport.cs`,
-  `ExternalSourceRepositoryTestSupport.cs`,
-  `ExternalSourceRepositoryCancellationTests.cs`,
-  `GiteaGitRepositoryTransportTests.cs`,
-  `GiteaExternalSourceProviderTests.cs` und
-  `ExternalSourceProviderContractTests.cs` für vorhandene Doubles,
-  Fixtures, Cancellation- und Fehlerassertions.
-- `Docs/configuration.md`, `README.md` und die einschlägigen
-  Appsettings-Fixtures, falls die gewählte Cache-Option öffentlich
-  konfigurierbar wird.
-
-### `out_of_scope`
-
-- Der übrige Host-/MCP-/EPIC-05-Baum sowie nicht direkt referenzierte
-  Assembly-Analyse- und Decompilation-Dateien.
-- Vollständige Roadmap-/Dokumentationssweeps ohne Bezug zum neuen
-  Konfigurations- oder Cache-Vertrag.
-- Unveränderte Step-024/025-Historie und bereits genehmigte Cleanup-
-  Verträge.
+- Kein Lesen oder Wiederverwenden eines bestehenden Current-Eintrags als
+  Acquisition-Erfolg; das ist das nachgelagerte Cache-Reuse-Paket.
+- Kein `Fetch`, kein Refresh-Intervall, kein Default-Branch-Refresh, keine
+  neue Transportmethode und keine Entscheidung „stale versus current“.
+- Keine Erweiterung von `ExternalSourceConfiguration`,
+  `ExternalSourceConfigurationLoader`, `appsettings.json`,
+  `Docs/configuration.md` oder Credential-Schemata.
+- Keine Änderung an `ExternalSourceCheckoutHandle`,
+  `ExternalSourceRepositoryCheckoutReservation`, `ExternalSourceSnapshot`,
+  `SourceSnapshotRegistry` oder deren Cleanup-/Ownership-Semantik.
+- Kein Host-/MCP-Wiring, keine Toolregistrierung, keine Capability-Matrix,
+  keine transitive Referenzauflösung und keine EPIC-05-Arbeit.
+- Keine Dirty-/unbuilt-Checkout-Policy, kein Health-/degraded-Fallback und
+  keine neue Fallback-Entscheidung. Der bestehende typed Provider-/
+  Decompilation-Fallback bleibt unangetastet.
+- Keine Retention, Garbage Collection, manuelle Invalidierungs-API oder
+  Telemetrie.
+- Kein Assembly-Cache-Umbau und keine gemeinsame Cache-Basisklasse nur wegen
+  ähnlicher Pointer-/Manifest-Form.
+- Keine echten Remote-/Gitea-/Git-Prozesse in Tests, keine Credentials,
+  keine Netzwerkzugriffe, keine unbounded Retries oder Sleeps.
+- Keine `Assembly.Load`, kein `AssemblyLoadContext` und keine Reflection-
+  Ausführung.
+- Kein allgemeiner DRY-, Magic-Values- oder Dead-Code-Sweep. `TD-001` bis
+  `TD-003` bleiben unangetastet.
 
 ## Abnahmekriterien
 
-1. **Cache-Identität und Konfiguration:** Für URL, Solution-Pfad,
-   Cache-Schema, Root und Refresh-Policy existiert ein strikt validierter,
-   credential-freier Vertrag; ungültige Werte werden typed diagnostiziert.
-2. **Cache-Miss:** Ein fehlender oder unbrauchbarer Cache-Eintrag wird
-   ausschließlich in kontrolliertem Staging geklont, auf geladene Revision
-   und Solution-Pfad geprüft und als vollständige Generation bereitgestellt.
-3. **Reuse und Refresh:** Ein gültiger, nicht abgelaufener Current-Eintrag
-   wird ohne Transportaufruf wiederverwendet; ein abgelaufener Eintrag
-   führt deterministisch zu Fetch/Refresh oder einem initialen Clone.
-4. **Manifest- und Generationsintegrität:** Pointer, Manifest, Cache-Key,
-   Revision, Solution-Pfad und Inhalt müssen zusammenpassen; beschädigte,
-   unvollständige oder fremde Generationen werden nicht adoptiert.
-5. **Atomare Veröffentlichung:** Der Current-Pointer wechselt erst nach
-   vollständiger Validierung. Fehler, Cancellation und Prozessabbruch
-   hinterlassen keinen halben Current-Eintrag und behaupten keinen
-   fehlgeschlagenen Refresh als aktuell.
-6. **Bestehende Fehler- und Sicherheitsinvarianten:** Auth-, HTTP-, Git-,
-   Timeout-, Prozessbaum-, Handle-, Native-, 1314- und Reparse-Semantik
-   sowie typed Decompilation-Fallback bleiben erhalten; Secrets gelangen
-   weder in Manifest noch Prozessargumente.
-7. **Ownership-Anschluss:** Der Snapshot erhält weiterhin einen
-   besitzgebundenen Request-Checkout und Workspace; persistente
-   Generationen werden nicht durch Snapshot- oder Registry-Cleanup gelöscht.
-   Parallelzugriffe je Cache-Key bleiben konsistent.
-8. **Deterministische Verifikation:** Neue und geänderte Verträge sind mit
-   lokalen Test-Doubles/Fixtures für Miss, Reuse, Refresh, Revisionwechsel,
-   Korruption, atomaren Fehlschlag, Cancellation und Cleanup abgedeckt;
-   Tests führen weder Remote-/Gitea-/Git-Netzwerk noch unbounded Retries aus.
+1. **Credentialfreier Key:** Gleiche normalisierte URL, gleicher Solution-
+   Pfad und gleiche Schema-Version erzeugen denselben Key; Credentials,
+   Userinfo und ungeprüfte Pfadsegmente erscheinen weder im Key noch im
+   physischen Cache-Pfad.
+2. **Vollständige Generation:** Ein gültiger erfolgreicher Clone wird in
+   isoliertem Staging als neue Generation mit vorhandenem Solution-Pfad,
+   geladenem Revisionstext und vollständigem Datei-Inventar materialisiert;
+   der Ownership-Marker des Request-Checkouts wird nicht persistent kopiert.
+3. **Manifest-Integrität:** Der Read-back verwirft Generationen bei falschem
+   Key, falscher Revision, falschem Solution-Pfad, fehlenden/zusätzlichen
+   Dateien, Hash-/Längenabweichung oder unsicheren/reparse-betroffenen
+   Pfaden.
+4. **Atomarer Pointer:** `current` verweist erst nach vollständigem Write und
+   erfolgreicher Validierung auf die neue Generation. Ein Fehler, eine
+   Cancellation oder ein Prozessabbruch hinterlässt keinen halben Pointer;
+   ein vorheriger gültiger Current-Eintrag bleibt erhalten.
+5. **Lokale Konkurrenz:** Zwei gleichzeitige Publishes desselben Cache-Keys
+   erzeugen keine Pointer-/Manifest-Kreuzung und keinen sichtbaren halben
+   Current-Eintrag; die Synchronisation bleibt auf diesen Cache-Key begrenzt.
+6. **Ownership-Anschluss:** Der Acquirer ruft den Writer nur für ein gültiges
+   erfolgreiches Transport-Ergebnis auf. Der Snapshot-Checkout bleibt
+   request-eigen und entsorgbar; der persistente Generation-Pfad wird weder
+   vom Checkout-Handle noch vom Registry-Cleanup gelöscht.
+7. **Fehlerkompatibilität:** Bestehende Clone-, Revision-, Cancellation-,
+   Credential-, HTTP-/Git-, Prozessbaum-, Handle-, Native-, 1314- und
+   Reparse-Semantik bleibt erhalten. Ein Cache-Publish-Fehler ist sichtbar,
+   entzieht aber keinen ansonsten gültigen Acquirer-Erfolg.
+8. **Deterministische Verifikation:** Die neuen Writer-/Acquirer-Tests
+   decken Key, vollständige Generation, Manifestfehler, Pointerfehler,
+   erfolglosen Publish, parallele Publishes, Ownership und Cleanup ab und
+   verwenden ausschließlich lokale TestTempDirectory-Fixtures sowie
+   injizierte Doubles.
+
+## Kontextbudget und Handoff
+
+```yaml
+context_budget:
+  max_initial_files: 12
+  max_read_first_files: 10
+  read_first:
+    - tasks/decompiled-assembly-analysis/step-025/step-result.md
+    - tasks/decompiled-assembly-analysis/step-025/step-review.md
+    - tasks/decompiled-assembly-analysis/codemap.md
+    - src/AiNetLinter/Mcp/Assemblies/ExternalSourceRepositoryAcquirer.cs
+    - src/AiNetLinter/Mcp/Assemblies/ExternalSourceRepositoryAcquisitionModels.cs
+    - src/AiNetLinter/Mcp/Assemblies/IGiteaRepositoryTransport.cs
+    - src/AiNetLinter/Mcp/Assemblies/ExternalSourceRepositoryCheckoutReservation.cs
+    - src/AiNetLinter/Mcp/Assemblies/ExternalSourceRepositoryPathGuard.cs
+    - src/AiNetLinter.FastTests/Mcp/Assemblies/ExternalSourceRepositoryAcquirerTests.cs
+    - src/AiNetLinter.FastTests/Mcp/Assemblies/ExternalSourceRepositoryAcquirerTestTransport.cs
+  read_on_demand:
+    - src/AiNetLinter/Mcp/Assemblies/ExternalSourceRepositoryFailurePolicy.cs
+    - src/AiNetLinter/Mcp/Assemblies/GiteaGitRepositoryTransport.cs
+    - src/AiNetLinter/Mcp/Assemblies/GiteaExternalSourceProvider.cs
+    - src/AiNetLinter.FastTests/Mcp/Assemblies/ExternalSourceRepositoryTestSupport.cs
+    - src/AiNetLinter.FastTests/Mcp/Assemblies/ExternalSourceRepositoryCancellationTests.cs
+    - src/AiNetLinter.FastTests/Mcp/Assemblies/GiteaGitRepositoryTransportTests.cs
+    - src/AiNetLinter/Mcp/Assemblies/AssemblyDecompilationCache.cs
+    - src/AiNetLinter/Mcp/Assemblies/AssemblyCacheContract.cs
+    - src/AiNetLinter/Mcp/Assemblies/SourceSnapshotModels.cs
+    - src/AiNetLinter/Mcp/Assemblies/SourceSnapshotRegistry.cs
+  out_of_scope:
+    - src/AiNetLinter/Configuration/ExternalSourceConfiguration.cs
+    - src/AiNetLinter/Configuration/ExternalSourceConfigurationLoader.cs
+    - src/AiNetLinter/Mcp/Registration/
+    - src/AiNetLinter/Mcp/Daemon/
+    - src/AiNetLinter/Mcp/Tools/
+    - EPIC-05 und transitive Referenzauflösung
+    - Retention, GC, Health, Dirty/unbuilt und externe Prozess-/Native-Helfer
+```
+
+Der Coder liest zuerst dieses Handoff, den Step-Plan, Step-025-Result/Review,
+die CodeMap und die zehn `read_first`-Dateien. Die vollständige Solution wird
+nicht pauschal geladen. Neue Dateien sind ausschließlich der Cache-Contract,
+Cache-Modelle, konkrete Generation-Writer und die zugehörigen lokalen Tests;
+die exakten Dateinamen dürfen nur innerhalb dieses Vertrags gewählt werden.
+
+Sicherer Einstiegspunkt:
+
+1. `get_feature_context` für
+   `ExternalSourceRepositoryAcquirer.AcquireAsync`,
+   `CompleteTransportResult` und `ExternalSourceRepositoryAcquisitionResult.Success`
+   ausführen; anschließend `get_symbol_body` für die relevanten Methoden.
+2. `get_impact`/`find_references` für Acquirer, Constructor und
+   `IGiteaRepositoryTransport.CloneDefaultBranchAsync` sowie
+   `dependency_graph` für Acquirer und neue Cache-Modelle verwenden. Vorhandene
+   `PathGuard`-/Reservation-Methoden nur wiederverwenden.
+3. Den Cache-Contract und den Writer mit injiziertem Root/Writer anlegen; dann
+   den Publish-Hook ausschließlich hinter erfolgreicher Checkout-Validierung
+   einfügen. Keine neue Transportmethode und kein Host-Wiring anlegen.
+4. Erst danach die Writer-Tests und die gezielte Acquirer-Regression ergänzen.
+   Bei Context-Compact vor dem Result-Bericht den laufenden Coder schließen und
+   einen neuen Coder mit genau diesem Plan/Handoff und dem aktuellen Diff
+   starten; keinen bestehenden Sub-Agenten wiederverwenden.
+
+Invarianten für die Implementierung:
+
+- Persistent Cache-Generation und request-eigener Checkout sind zwei
+  verschiedene Owner. Der Cache darf keinen Snapshot-/Registry-Cleanup-Pfad
+  besitzen.
+- `current` ist ein sicherer Pointer auf eine bereits validierte Generation,
+  nie der Transport-/Refresh-Status und nie eine Cache-Reuse-Entscheidung.
+- Der bestehende Transport liefert weiterhin den tatsächlichen Revisionstext;
+  der Writer darf keine Revision aus URL, Branchname oder Dateiname erraten.
+- Cache-Fehler sind sichtbar, aber fail-open gegenüber einem bereits gültigen
+  request-eigenen Acquirer-Erfolg; kein alter Current-Eintrag wird als frisch
+  aktualisiert behauptet.
 
 ## Tests
 
-Der Coder ergänzt ausschließlich lokale, deterministische Regressionen in
-den vorhandenen FastTests-/TestKit-Grenzen. Die Test-Doubles sollen Clone,
-Fetch, Revision, Manifestfehler, Cancellation, 1314/Reparse und typed
-Providerfehler steuern können, ohne einen Git-Prozess zu starten.
+Der Planer führt keine Tests aus. Der Coder ergänzt bzw. erweitert nur lokale
+FastTests mit `TestTempDirectory` und deterministischen Doubles:
 
-Mindestens folgende Verhaltensgruppen sind abzudecken:
+- `ExternalSourceRepositoryCacheWriterTests`: Key-Normalisierung ohne
+  Credentials, sichere Entry-/Generation-Pfade, vollständige Kopie ohne
+  Ownership-Marker, Manifest-/Datei-Inventar und validierter Pointer.
+- Fehlerregressionen für fehlende Solution, unsicheren/reparse-betroffenen
+  Inhalt, beschädigtes Manifest, falschen Key, falsche Revision, unvollständige
+  Generation sowie fehlgeschlagenes Pointer-Publish; der alte Current-Eintrag
+  und das Staging-Cleanup werden geprüft.
+- Eine bounded lokale Parallel-Regression für zwei Publishes desselben Keys
+  prüft Pointer-/Manifest-Konsistenz, ohne Stress-Kategorie, Sleep oder
+  Netzwerk.
+- `ExternalSourceRepositoryAcquirerTests`: Writer wird nach gültigem
+  Clone-Ergebnis aufgerufen, erhält Revision und eine nicht-besitzübernehmende
+  Referenz auf den `ExternalSourceCheckoutHandle`; Writer-Fehler bleiben als
+  Diagnose sichtbar und der request-eigene Handle bleibt erfolgreich
+  entsorgbar.
+- Bestehende Acquirer-, Cancellation-, Provider- und Snapshot-Tests bleiben
+  grün; Registry-/Snapshot-Lifetime aus Step 025 wird nicht neu implementiert.
 
-- Cache-Miss und Wiederverwendung eines gültigen Current-Eintrags,
-  einschließlich Transport-Aufrufzähler.
-- Refresh nach Ablauf, neue geladene Revision und atomarer Pointerwechsel.
-- Beschädigtes Manifest, fehlende Solution, falscher Cache-Key,
-  unvollständige Generation und fehlgeschlagene Veröffentlichung.
-- Refresh-Fehler und Cancellation: kein halbfertiger Current-Eintrag,
-  korrekte typed Diagnose/Fallback und vollständiges Staging-Cleanup.
-- Request-Checkout versus persistente Generation: Snapshot-Dispose darf
-  nicht den Cache löschen; bestehende Registry-Multi-Owner-Tests bleiben
-  unverändert grün.
-- konkurrierende Zugriffe auf denselben Cache-Key mit deterministischer
-  Veröffentlichung.
-
-Der Coder führt danach den projektspezifischen Build sowie beide
-Abschlussläufe ohne `Stress` aus:
+Abschlussbefehle des Coders:
 
 ```text
 dotnet build
@@ -359,171 +372,145 @@ dotnet test src/AiNetLinter.FastTests --filter Category!=Stress
 dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress
 ```
 
-Der Planer führt diese Tests in diesem Planungsschritt nicht aus.
+Stress wird nicht automatisch ausgeführt. Neue Lasttests gehören nur bei
+echter absichtlicher Lastprüfung in `Category=Stress`; der bounded Zwei-Publish-
+Test ist kein solcher Test.
 
-## MCP-, DRY-, MagicValues- und DeadCode-Plan
+## MCP-, DRY-, MagicValues- und DeadCode-Disposition
 
-### MCP-Semantik
+### MCP
 
-- Vor Änderungen `get_feature_context` und `get_symbol_body` für Acquirer,
-  Transport, Konfiguration, Path-Guard und Provider-/Materializer-Anschluss
-  erneut prüfen; der absolute `projectRoot` bleibt bei jedem Aufruf
-  `C:/Daten/Entwicklung/Ralf/AiNetLinter`.
-- Vor Portänderungen `find_references` und `get_impact` für
-  `IGiteaRepositoryTransport`, `CloneDefaultBranchAsync`, den neuen
-  Refresh-/Fetch-Vertrag, `ExternalSourceRepositoryAcquirer.AcquireAsync`
-  und `ExternalSourceConfigurationLoader.Load` ausführen.
-- `dependency_graph` auf Acquirer und Cache-Symbole nutzen, um keine
-  implizite Host-, Registry- oder Test-Fixture-Abhängigkeit zu übersehen.
-  Nach der Implementierung `safeguard`/`get_violations` auf den geänderten
-  Bereichen sowie die betroffenen Testprojekte prüfen.
-- `rg` bleibt auf Textdateien, Konfigurationsschlüssel und verbotene
-  Ausführungsmuster begrenzt; C#-Symbolfragen werden nicht durch Textsuche
-  ersetzt.
+- Vor Edits: `get_feature_context`/`get_symbol_body` für Acquirer, Result-
+  Factory, Checkout-Ownership und PathGuard; `get_impact`/`find_references`
+  für Acquirer und Clone-Port; `dependency_graph` für die tatsächliche
+  Anschlussgrenze. Jeder Aufruf nutzt den absoluten
+  `projectRoot=C:/Daten/Entwicklung/Ralf/AiNetLinter`.
+- Nach Edits: `get_impact` und `get_violations` für den Writer, Acquirer-
+  Hook und Testconsumer; `safeguard` nur als gezieltes Assemblies-Scope-Gate.
+  Keine semantische C#-Frage wird durch `rg` ersetzt.
 
-### DRY-Plan und Tech-Debt-Disposition
+### DRY / Drift
 
-- `find_duplicates` nur auf den tatsächlich geänderten externen
-  Repository-/Configuration-Bereich und die zugehörigen Tests anwenden.
-  Der aktuelle Exact-Scan des Assemblies-Produktionsbereichs zeigt keinen
-  Duplikatcluster; das rechtfertigt keinen globalen Refactoring-Sweep.
-- Pointer-/Manifest-Logik nicht neben dem Assembly-Cache kopieren, sondern
-  einen kleinen, externen Cache-Contract mit klarer Verantwortung bilden.
-  Vorhandene Path-Guard-, Failure-Policy-, Reservation- und Test-Helper-
-  Verträge wiederverwenden.
-- `TD-001` bis `TD-003` bleiben offen. Eine Aufnahme ist nur zulässig, wenn
-  die neue Cache-Identität unmittelbar dieselbe Drive-Path- oder
-  Origin-Typisierung betrifft; dann als eigener, begründeter Teil des
-  betroffenen Vertrags und nicht als Sweep.
+Der ausgeführte solutionweite `find_duplicates`-Scan mit `scopeDir=src` und
+`minTokens=20` fand ein Exact-Cluster außerhalb dieses Steps:
+`FindAssemblyExtensionsTool.ExecuteAsync` und
+`InspectAssemblyTool.ExecuteAsync`. Der Assemblies-Produktionsscope allein
+hat mit 270 gescannten Methoden null Clone-Cluster. Der strukturelle Scan
+meldete 16 Kandidaten; die relevanten Assembly-Kandidaten
+`AssemblyAnalysisSession.DetermineStatus`/`ResolveManifestStatus` (Score
+0,8046) und `GiteaGitRepositoryTransport.Failure`/
+`ExternalSourceRepositoryTransportResult.Success` (Score 0,9080) haben
+unterschiedliche Verträge und werden nicht mechanisch zusammengelegt.
 
-### MagicValues-Plan
+Disposition: Kein globaler Sweep und keine Änderung an den außerhalb des
+Scopes liegenden Tool-Klonen. Der neue Writer darf den Assembly-Cache nicht
+kopieren, sondern bildet einen eigenen Repository-Contract, weil Manifest-
+Identität und Ownership verschieden sind. Die beiden außerhalb liegenden
+Exact-/Structural-Befunde bleiben als explizite Folgeprüfung dokumentiert;
+`tech-debt.md` wird gemäß dem erlaubten-Dateien-Gate in diesem Planungsauftrag
+nicht geändert.
 
-- Cache-Schema, Pointer-/Manifest-Dateinamen, Statuswerte und
-  Refresh-Grenzen zentral als Contract-/Value-Object-Konstanten oder
-  validierte Optionen modellieren. Keine verstreuten Stringvergleiche oder
-  unbenannten Zeit-/Retry-Literale.
-- Der bestehende lokalisierungsverdächtige Fehlertext in
-  `ExternalSourceGitProcessLauncher` wird nicht künstlich in diesen Step
-  gezogen. Nach der Änderung nur `find_magic_values` auf dem geänderten
-  Scope ausführen.
+Nach der Implementierung führt der Coder den scoped Exact-/Near- und den
+relevanten Structural-Scan für den geänderten Repository-/Testbereich erneut
+aus. Neue echte Duplikate werden im selben Vertrag konsolidiert; ein Befund,
+der ein anderes Epic oder eine neue Vertragsentscheidung erfordert, wird nur
+als Tech-Debt gemeldet, nicht in einen Sweep gezogen.
 
-### DeadCode-Plan
+### Magic Values
 
-- Neue Cache-/Fetch-Symbole müssen durch Acquirer, Provider oder Tests
-  tatsächlich referenziert sein; unbenutzte Alternativports werden nicht
-  als Vorrat angelegt.
-- `find_dead_code` mit hoher Konfidenz auf dem geänderten Produktions- und
-  Testscope ausführen. Der aktuelle Scope-Scan enthält keinen hochsicheren
-  Dead-Code-Fund; öffentliche/serializer-/DI-gebundene Kandidaten werden
-  nicht heuristisch entfernt.
+Der aktuelle Assemblies-Magic-Value-Scan zeigt 99 bestehende Vorkommen, davon
+61 Constant-Kandidaten, aber keinen Cache-spezifischen Config-Kandidaten.
+Neue Cache-Schema-, Pointer-, Manifest-, Generation- und Statuswerte werden
+ausschließlich in einem eigenen `ExternalSourceRepositoryCacheContract`
+zentralisiert. Keine verstreuten Dateinamen, Hash-/Encodingwerte oder
+unbenannten Retry-/Timeout-Literale; bestehende Git-Prozess- und
+Lokalisierungstexte bleiben außerhalb.
 
-## Kandidatenbewertung und Folgepakete
+### Dead Code
 
-### Zusammengelegte Kandidaten
+Der aktuelle Assemblies-Scope meldet 36 Low-Confidence-Kandidaten und null
+High-Confidence-Kandidaten. Der Coder lässt keine Alternativports oder
+unreferenzierten Cache-Factories liegen und stellt sicher, dass Writer,
+Models und Contract durch Acquirer bzw. Tests referenziert sind. Danach wird
+`find_dead_code` mit hoher Konfidenz auf dem geänderten Production-/Testscope
+ausgeführt; bestehende Low-Confidence-Funde werden nicht heuristisch entfernt.
 
-- **Refresh/Fetch + persistenter Repository-Cache:** gehören zusammen,
-  weil Refresh ohne persistente Identität keinen Wiederverwendungsnutzen
-  und der Cache ohne Aktualisierungsvertrag keine Source-of-Truth-Semantik
-  besitzt.
-- **Cache-/Manifest-Integrität + Generationen:** gehören zusammen, weil
-  eine Generation erst durch ihr passendes Manifest und ihre Revision
-  identifizierbar und prüfbar ist.
-- **Atomare Source-of-Truth-Veröffentlichung:** gehört als Commit-/Safety-
-  Teilvertrag dazu, weil Cache und Refresh sonst halbfertige oder falsch
-  aktuelle Inhalte publizieren könnten.
+## Risiken und Gegenmaßnahmen
 
-### Abgetrennte Kandidaten
-
-- Dirty/unbuilt lokale Checkouts, Health-/degraded-Policy und feinere
-  Fallback-Auswahl bleiben der nächste Source-Policy-Schnitt. Step 026
-  reicht dafür nur typed Refreshfehler bzw. den vorhandenen Fallback weiter.
-- Host-Komposition und produktives Provider-Wiring bleiben getrennt, weil
-  der Cache-Vertrag unterhalb der Host-/MCP-Grenze testbar ist und Step 024
-  ausdrücklich kein Host-Wiring eingeführt hat.
-- Transitive Referenzen und Capability-Matrix bleiben EPIC-05.
-- Eine spätere Cache-Wartung (Retention, Garbage Collection, explizite
-  Cache-Invalidierung und Telemetrie) bleibt nachgelagert, sofern sie nicht
-  für die sichere atomare Veröffentlichung zwingend erforderlich ist.
-
-## Risiken
-
-- **In-Place-Fetch:** Ein Fetch direkt in `current` würde den atomaren
-  Vertrag brechen. Der Coder muss Fetch auf einer isolierten neuen
-  Generation ausführen und erst danach den Pointer wechseln.
-- **Ownership-Verwechslung:** Gibt der Cache seinen persistenten Ordner an
-  den Snapshot weiter, löscht Snapshot-Cleanup die Source-of-Truth. Der
-  Request-Checkout/Lease-Anschluss muss durch Tests nachgewiesen werden.
-- **Stale-as-current:** Bei Refreshfehlern darf der alte Eintrag nicht mit
-  neuer Refresh-Zeit oder neuer Revision als erfolgreich aktualisiert
-  erscheinen. Fehlerstatus und Fallback müssen sichtbar bleiben.
-- **Windows-Pfade und Reparse:** Cache-Root, Generation und abgeleiteter
-  Checkout brauchen dieselben kontrollierten Path-/Reparse-/1314-Gates wie
-  der bestehende Acquirer.
-- **Credential-/Prozessleck:** Der neue Fetch-Pfad kann bestehende
-  Prozess-, Handle- und Credential-Cleanup-Invarianten nicht verkürzen.
-  Dafür sind Impact-Prüfung und lokale Failure-Doubles verpflichtend.
-- **Konfigurationsdrift:** Neue Cache-Optionen müssen Loader, Validierung,
-  Fixtures und `Docs/configuration.md` gemeinsam ändern; sonst bleibt die
-  Laufzeitsemantik nicht reproduzierbar.
+- **Ownership-Verwechslung:** Der Writer kopiert aus dem validierten
+  request-eigenen Checkout, übernimmt ihn aber nicht. Tests entsorgen den
+  Handle und prüfen, dass die veröffentlichte Generation bestehen bleibt.
+- **Halber Current:** Manifest und Inhalt werden vor Pointer-Publish gelesen
+  und geprüft; temporäre Pointer werden bei Fehlern entfernt, der alte Pointer
+  bleibt unverändert.
+- **Unsichere Kopie/Reparse:** Bestehende PathGuard-/Ownership-Methoden werden
+  wiederverwendet; Reparse oder Pfadausbruch führt zu keinem Publish.
+- **Stale-as-current:** Dieser Step führt kein Refresh aus und setzt keine
+  Refresh-Zeit. Er veröffentlicht nur die tatsächlich vom bestehenden
+  Transport gemeldete Revision; Staleness entscheidet erst das Folgepaket.
+- **Cache-Schreibfehler:** Der gültige Acquirer-Erfolg bleibt nutzbar, die
+  Diagnose bleibt sichtbar und kein alter Current-Eintrag wird überschrieben.
+- **Konfigurationsdrift:** Es gibt in diesem Step bewusst keine öffentliche
+  Cache-Konfiguration. Der Default/Injection-Punkt wird im späteren
+  Cache-Konfigurationsvertrag ersetzt oder bestätigt.
+- **Assembly-Cache-Drift:** `AssemblyDecompilationCache` dient nur als
+  on-demand Referenz; keine gemeinsame Basisklasse und kein gemeinsames
+  Manifestmodell werden eingeführt.
 
 ## Definition of Done
 
-- Die acht Abnahmekriterien sind durch Code und lokale deterministische
-  Tests erfüllt.
-- Der neue primäre Vertrag ist auf höchstens drei gekoppelte Schichten
-  begrenzt; keine Host-/MCP-/EPIC-05-Ausweitung ist enthalten.
-- Snapshot-/Workspace-Ownership, Registry-Cleanup, 1314-/Reparse-Fallback,
-  HTTP-/Git-/Credential-/Prozessbaum-/Handle-/Native-Invarianten und die
-  statische Decompilation bleiben erhalten.
-- Bei einer Konfigurationsänderung sind `Docs/configuration.md`,
-  betroffene Appsettings-Beispiele und die präzise EPIC-04-Roadmap-
-  Abgrenzung synchronisiert.
-- MCP-Impact-/Violations-Checks, der scoped DRY-/MagicValues-/DeadCode-
-  Nachweis und die vorhandenen Test-Fixtures sind dokumentiert.
-- `dotnet build` sowie beide projektweiten Testläufe mit
-  `Category!=Stress` sind grün; Stress wird nicht automatisch ausgeführt.
-- Der Coder erstellt nur die vereinbarten Produktions-/Test-/Dokument-
-  änderungen und übergibt danach einen nachvollziehbaren Step-Result-
-  Bericht. Push, Host-Wiring und Folgepakete bleiben aus.
+- Die acht Abnahmekriterien sind durch Produktionscode und lokale Tests
+  nachgewiesen.
+- Der Scope enthält genau einen primären Write-through-Cache-Publish-
+  Vertrag mit drei unmittelbar gekoppelten Schichten; Reuse und Refresh/
+  Fetch sind nicht enthalten.
+- Acquirer-, Transport-, Credential-, Cancellation-, Prozessbaum-,
+  1314-/Reparse- sowie Snapshot-/Registry-Ownership-Invarianten bleiben
+  erhalten.
+- `get_impact`, `get_violations`, scoped `find_duplicates`,
+  `find_magic_values` und `find_dead_code` sind für den geänderten Scope
+  dokumentiert; es gibt keinen unbegründeten globalen Sweep.
+- `dotnet build` sowie beide projektweiten `Category!=Stress`-Testläufe sind
+  grün; Stress wird nicht automatisch ausgeführt.
+- Keine Änderung an Host-/MCP-Wiring, Configuration-Loader,
+  `IGiteaRepositoryTransport`, Assembly-Cache, Snapshot-Registry oder
+  EPIC-05.
+- Der Coder schreibt `step-026/step-result.md`, setzt den Planstatus erst
+  nach seiner Implementierung auf `done (pending audit)`, erstellt seinen
+  deutschen Conventional Commit mit Suffix
+  `[decompiled-assembly-analysis]` und pusht nicht.
 
-## Coder-Hand-off
+## Rules-Refs
 
-Arbeite ausschließlich im Repository
-`C:/Daten/Entwicklung/Ralf/AiNetLinter` und lies zuerst die zwölf
-`read_first`-Dateien dieses Plans. Starte die Implementierung an
-`ExternalSourceRepositoryAcquirer`, `IGiteaRepositoryTransport` und der
-Configuration-Loader-Grenze. Nutze vor jeder C#-Änderung AiNetLinter-MCP
-mit absolutem `projectRoot`; ermittle danach per References/Impact alle
-Verbraucher des Transport- und Acquirer-Vertrags.
+- `.agents/rules/AiNetLinter.mdc` — nullable C#, kurze Methoden, kleine
+  Kopplung, keine dynamische Ausführung und zentrale Konstanten.
+- `.agents/rules/AiNetLinterRichtlinien.mdc#2` — keine
+  AssemblyLoadContext-/Reflection-Ausführung und keine repo-spezifischen
+  Produktionshardcodings; der Default-Cachepfad ist EXE-relativ und kein
+  Repository-Pfad.
+- `.agents/rules/AiNetLinterRichtlinien.mdc#4` — xUnit-v3-Tests,
+  `TestTempDirectory`, keine Ad-hoc-Tempverzeichnisse und finale
+  Nicht-Stress-Gates.
+- `.agents/rules/AiNetLinterRichtlinien.mdc#5` — Zero-Warning-, DRY-,
+  Magic-Values- und Dead-Code-Disposition.
+- `.agents/rules/AiNetLinter-McpWorkflow.mdc` — semantische MCP-Abfragen mit
+  absolutem `projectRoot` vor C#-Änderungen; `rg` bleibt Textsuche.
+- `tasks/decompiled-assembly-analysis/follow-up-strategy.md` — Split-Gate
+  für Vertrag, Schichten, Kriterien und initialen Leseumfang.
 
-Implementiere genau den einen primären Vertrag: cache-gestützte
-`AcquireOrRefresh`-Akquisition mit gültigem Current-Reuse, isoliertem
-Clone/Fetch-Refresh, Manifest-/Generationsprüfung und atomarem Pointer-
-Publish. Ein Refresh darf den veröffentlichten Current-Eintrag nie in
-Place mutieren. Liefere an den bestehenden Snapshot-Pfad weiterhin einen
-kontrollierten, besitzbaren Request-Checkout; ändere Registry, Snapshot-
-Dispose und Workspace-Lifetime nicht.
+## Bekannte Ausnahmen
 
-Übernimm Path-Guard, Reservation, Failure-Policy, Credential-,
-Cancellation-, Prozessbaum-, Handle-, Native- und typed 1314-/Reparse-
-Semantik. Schreibe ausschließlich netzwerkfreie Tests mit vorhandenen
-Doubles/Fixtures; kein echter Git-/Gitea-/Remote-Zugriff, kein
-Assembly.Load/ALC/Reflection und keine unbounded Retries/Sleeps.
-
-Halte Host-/MCP-Wiring, transitive Referenzen, EPIC-05 und Dirty-/Health-
-Policy für Folgepakete zurück. Führe nach der Implementierung MCP-
-Violations/Impact sowie die scoped DRY-/MagicValues-/DeadCode-Prüfungen
-aus und aktualisiere nur bei direktem Konfigurationsbezug die zugehörige
-Dokumentation. Verifiziere mit `dotnet build` und beiden
-`Category!=Stress`-Abschlussläufen. Übergib anschließend den Coder-Result-
-Bericht mit geänderten Dateien, Kriterienstatus, Testausgaben,
-Invarianten-Nachweis, Rest-Risiken und Folgepaket-Empfehlung an den
-Kritiker; kein Push.
+- Keine Testausnahme ist geplant. Ein echter Reparse-/Symlink-Fall darf nur
+  nach der bestehenden Step-017/018-Regel repository-spezifisch wegen
+  Win32-1314 transparent behandelt werden; dieser Step erzeugt keine neue
+  Capability-Ausnahme und simuliert keine Berechtigung.
 
 ## Notes
 
-- Dieser Plan ist eine neue Step-026-Planung und korrigiert keinen
-  bestehenden Step. Die Wiederaufnahme-Korrektur von Step 025 ist mit
-  Review `acdfe70e` abgeschlossen.
-- Der Planer hat keine Produktionsänderung vorgenommen und keine Tests,
-  Coder- oder Kritikerarbeit ausgeführt.
+- Diese Datei ist die revidierte Step-026-Planung und kein Korrektur-Step.
+  Step 025 bleibt mit Review `acdfe70e` abgeschlossen.
+- Die Überarbeitung ist ein Context-Stabilitäts-Split, kein Verkleinern zu
+  einem Mini-Sweep. Der Writer veröffentlicht einen echten persistenten
+  Generation-Stand aus dem produktiven Clone-/Acquirer-Erfolg.
+- Keine Produktionsänderung, kein Testlauf und keine Coder-/Kritikerarbeit
+  wurde durch diese Planung ausgeführt.

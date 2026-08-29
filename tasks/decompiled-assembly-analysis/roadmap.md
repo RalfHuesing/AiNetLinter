@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-29T15:14:17+02:00
+last_updated: 2026-08-29T15:31:12+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -149,22 +149,39 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
     nach der Registry-Korrektur in `step-025` genehmigt; der Snapshot
     übernimmt den Checkout-Besitz bis zur Registry-/Snapshot-Lifetime,
     ohne Host-Wiring.
-  - **Aktiver nächster Schnitt → `step-026` (planned/in_progress):**
-    persistenter Repository-Cache mit deterministischem Refresh/Fetch,
-    Cache-/Manifest-Integrität, Generationen und atomarer
-    Source-of-Truth-Veröffentlichung. Der primäre Vertrag liefert einen
-    revisionsgebundenen, validierten Request-Checkout; die persistente
-    Generation bleibt cache-eigen und wird nicht durch Snapshot-/Registry-
-    Cleanup gelöscht. Der getrennte Assembly-Decompilation-Cache dient
-    höchstens als Pointer-/Manifest-Referenz und wird nicht erweitert.
+  - **Aktiver nächster Schnitt → `step-026` (planned):**
+    persistente Repository-Cache-Identität, Manifest und Generation aus einem
+    bestehenden erfolgreichen Clone-/Acquirer-Ergebnis sowie atomare
+    Veröffentlichung des validierten `current`-Pointers über einen
+    injizierbaren lokalen Generation-Writer. Der request-eigene Checkout bleibt
+    beim Acquirer; der persistente Generation-Ordner bleibt cache-eigen. Es
+    gibt in diesem Step weder Current-Reuse noch Fetch/Refresh, keine neue
+    Cache-Konfiguration und keine Erweiterung des getrennten
+    Assembly-Decompilation-Caches.
+  - **Folgepaket 1:** Cache-backed Initial Acquisition/Reuse mit validiertem
+    Current-Pointer, Manifest-/Inhaltsprüfung und neuem besitzbaren
+    Request-Checkout aus einer veröffentlichten Generation.
+  - **Folgepaket 2:** eigener Refresh-/Fetch-Vertrag mit Refresh-Policy,
+    neuer Generation und der Semantik fehlgeschlagener fälliger Aktualisierung;
+    er baut auf dem Writer und dem Reuse-Vertrag auf.
+  - CacheRoot-/Refresh-Konfiguration über `appsettings.json` wird mit dem
+    späteren Reuse-/Refresh-Vertrag entschieden, nicht in Step 026.
   - Dirty/unbuilt Checkout-Abgrenzung und transparente Fallback-/Health-
-    Semantik — nachgelagerter eigener Schnitt; Step 024 markiert nur den
-    erfolgreichen Workspace-Aufbau und führt keine neue Health-Policy ein.
+    Semantik bleiben nach diesen Cache-Verträgen ein eigener Source-Policy-
+    Schnitt; Step 024/025 markieren nur den erfolgreichen Workspace-Aufbau und
+    die besitzgebundene Cleanup-Grenze.
 
   **Nachgelagerte Folgepakete:**
 
+  - Cache-Reuse und Request-Checkout aus einer validierten Generation folgen
+    nach Step 026; sie werden nicht in den Write-through-Publish-Vertrag
+    hineingezogen.
+  - Refresh/Fetch, Refresh-Intervall und atomarer Wechsel auf eine neue
+    Generation folgen erst nach dem Reuse-Vertrag; Staleness wird nicht im
+    Write-through-Step geraten.
   - Dirty/unbuilt lokale Checkouts sowie Health-/degraded-Fallback-Policy
-    bleiben nach Step 026 ein eigener Source-Policy-Schnitt.
+    bleiben nach den Cache-Reuse-/Refresh-Verträgen ein eigener Source-
+    Policy-Schnitt.
   - Host-Komposition, produktives Provider-/MCP-Wiring und eine gemeinsame
     Capability-Matrix bleiben außerhalb der Cache-Grenze.
   - Transitive Referenzen und gemeinsame Tool-Capabilities bleiben EPIC-05.
@@ -172,7 +189,8 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
     Telemetrie werden erst nach dem sicheren Cache-Vertrag geplant.
 
   Diese Grenzen bleiben sequenzielle vertikale Pakete; EPIC-04 wird nicht als
-  monolithischer Gitea-Featureblock und nicht als Mini-Sweep umgesetzt.
+  monolithischer Gitea-Featureblock und nicht als Mini-Sweep umgesetzt. Die
+  Aufteilung von Step 026 erfolgte ausdrücklich zur Context-Stabilität.
 
   Abhängigkeit: EPIC-03.
 

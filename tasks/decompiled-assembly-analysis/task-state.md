@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T15:14:17+02:00
+last_updated: 2026-08-29T15:31:12+02:00
 rules_dir: .agents/rules
 total_steps: 26
 current_step: step-026
@@ -14,8 +14,8 @@ current_step: step-026
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 26 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-026` (planned/in_progress; persistenter
-  Repository-Cache mit Refresh/Fetch und atomarer Veröffentlichung)
+- **Aktueller Schritt:** `step-026` (planned; persistente Repository-Cache-
+  Generation aus erfolgreichem Clone mit Manifest und atomarem Current-Pointer)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
@@ -51,7 +51,7 @@ current_step: step-026
 | step-023 | EPIC-04 | done | Prozessbaum-Fallback und Handle-Cleanup vollständig fail-closed schließen | step-022 | d1b633d0 | approved | d1b633d0 + 5b22d16a + 30b13647 |
 | step-024 | EPIC-04 | issues | Erfolgreiches Acquirer→Snapshot-/Workspace-Wiring mit besitzgebundener Lifetime | - | 428cc4b3 | issues → step-025 | 428cc4b3 + f781b127 + 3e726048 |
 | step-025 | EPIC-04 | done | Registry-/Snapshot-Lifetime und exception-sicheres Multi-Owner-Cleanup korrigieren | step-024 | 74fc0056 | approved | 74fc0056 + acdfe70e |
-| step-026 | EPIC-04 | in_progress | Persistenten Repository-Cache mit Refresh/Fetch und atomarer Veröffentlichung bauen | - | - | - | - |
+| step-026 | EPIC-04 | planned | Persistente Repository-Cache-Generation aus erfolgreichem Clone atomar veröffentlichen | - | - | - | - |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -66,13 +66,23 @@ die deterministische Fehleraggregation/-weitergabe und die Regression mit
 mehreren Snapshots sind damit abgeschlossen; Step 025 wird nicht erneut
 geöffnet.
 
-Auf Nutzeranweisung ist jetzt Step 026 als `planned/in_progress` aktiviert.
-Er behandelt als nächsten größeren, kontextbegrenzten EPIC-04-Schnitt den
-persistenten Repository-Cache mit Refresh/Fetch, Manifest-/Generationen-
-Integrität und atomarer Source-of-Truth-Veröffentlichung. Snapshot-/
-Workspace-Ownership und Registry-Cleanup aus Steps 024/025 bleiben die
-Anschlussgrenze. Host-/MCP-Wiring, Dirty-/Health-Policy, transitive
-Referenzen und EPIC-05 bleiben Folgepakete.
+Auf Nutzeranweisung wurde Step 026 vor dem Coder einem strengen Split-Gate
+unterzogen. Der bisherige Gesamtblock war wegen Cache-Konfiguration,
+Cache-Identität/Manifest, Refresh-/Fetch-Transport, Generationen,
+Integritätsprüfung, atomarem Pointer und Konkurrenzsynchronisation fachlich
+zu breit für einen stabilen Agentenkontext. Der revidierte Step 026 behandelt
+nur die persistente Cache-Key-/Manifest-/Generation-Erzeugung und atomare
+Current-Veröffentlichung aus dem bestehenden erfolgreichen Clone-/Acquirer-
+Ergebnis über einen injizierbaren lokalen Writer. Der request-eigene Checkout
+bleibt beim Acquirer; Snapshot-/Workspace-Ownership und Registry-Cleanup aus
+Steps 024/025 bleiben die Anschlussgrenze.
+
+Cache-backed Initial Acquisition/Reuse mit validiertem Current-Pointer und
+neuem Request-Checkout ist ein eigenes Folgepaket. Fetch/Refresh,
+Refresh-Policy und neue Generation bei fälliger Aktualisierung folgen erst
+danach. CacheRoot-/Refresh-Konfiguration, Host-/MCP-Wiring,
+Dirty-/Health-Policy, transitive Referenzen, Retention/GC und EPIC-05 bleiben
+ebenfalls außerhalb dieses Steps.
 
 ## Config
 
