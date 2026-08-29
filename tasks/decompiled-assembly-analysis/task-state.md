@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-29T11:36:42+02:00
+last_updated: 2026-08-29T11:58:28+02:00
 rules_dir: .agents/rules
-total_steps: 22
-current_step: step-022
+total_steps: 23
+current_step: step-023
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,12 +13,12 @@ current_step: step-022
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 22 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-022` (issues; Fallback-Grandchild-Nachweis, Handle-Close und In-Scope-DRY)
+- **Steps gesamt:** 23 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-023` (in_progress; Prozessbaum-Fallback, Handle-Cleanup und DRY zentralisieren)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-29T11:36:42+02:00
+- **Zuletzt aktualisiert:** 2026-08-29T11:58:28+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -47,6 +47,7 @@ current_step: step-022
 | step-020 | EPIC-04 | issues | Git-Prozesslebenszyklus und statusbewusste Fehlerklassifikation korrigieren | step-019 | 2c2a2c01 | issues → step-021 | 2c2a2c01 + 446d5ff2 + cbb49754 |
 | step-021 | EPIC-04 | issues | Git-Prozessbaum- und Timeout-Cleanup-Races korrigieren | step-020 | 51060014 | issues → step-022 | 51060014 + 59c63a3a + f80e5f45 |
 | step-022 | EPIC-04 | issues | Native Startfehler und Test-Cleanup fail-closed absichern | step-021 | 872b4855 | issues → step-023 | 872b4855 + f5063d5a + fc061950 |
+| step-023 | EPIC-04 | in_progress | Prozessbaum-Fallback und Handle-Cleanup vollständig fail-closed schließen | step-022 | - | - | c2b1b86d |
 
 ## Config
 
