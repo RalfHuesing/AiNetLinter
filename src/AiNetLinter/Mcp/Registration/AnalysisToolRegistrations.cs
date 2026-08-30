@@ -64,9 +64,9 @@ internal static class AnalysisToolRegistrations
 
     private const string GetViolationsDescription =
         "Wann nutzen: aktuelle Lint-Regelverstoesse der Solution abfragen — nach jedem Edit " +
-        "erneut aufrufbar, kein Disk-Cache. scopeFilter (Projekt-Name oder Pfad-Substring) " +
-        "grenzt auf einen Teilbereich ein, maxResults begrenzt die Trefferliste (Default 50). " +
-        "includeSnippet=true gibt den relevanten Quellcode-Ausschnitt mit (contextLines 0-5, Default 2).";
+        "erneut aufrufbar, kein Disk-Cache. scopeFilter: Projekt-Name oder Pfad-Substring zur " +
+        "Eingrenzung, maxResults: Begrenzung der Trefferliste (Default 50). " +
+        "includeSnippet=true gibt den Quellcode-Ausschnitt mit (contextLines 0-5, Default 2).";
 
     private static void AddSafeguard(
         McpServerPrimitiveCollection<McpServerTool> tools,
