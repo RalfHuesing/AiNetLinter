@@ -1184,6 +1184,24 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
   Korrekturrunde für die Statusprojektion starten; die installierte
   MCP-Registry nur mit lokaler, nachvollziehbarer Voraussetzung aktualisieren.
 
+## 2026-08-30 — Epic 4 Korrekturrunde 1 Implementierer gestartet
+
+- Run-ID: `resume-2026-08-30-epic-4-correction-1`
+- Epic: 4 — Capability-Matrix, Host-Integration und End-to-End-Verträge
+- Rolle: Implementierer
+- Subagent-ID: `01a05441-2304-7412-a1bf-c57242cf4ec6`
+- Diff-Baseline: `20ab5611`
+- Status: `running`
+- Korrekturscope: `Partiality-Status-Consistency` zentral beheben und den
+  echten Dispatcher-/Toolpfad mit gezielten negativen Diagnosetests absichern.
+- Externer P1-Befund: lokale MCP-Registry `1.0.154` und fehlende in
+  `.mcp.json` referenzierte Binary read-only prüfen; keine externe Installation
+  eigenmächtig überschreiben.
+- Freshness-Regel: erfolgreiche Nachweise werden nicht redundant wiederholt;
+  nach der letzten Codeänderung folgen die aktualisierten Qualitätschecks und
+  der letzte gezielte `get_violations`-Check.
+- Code-Map: vor Recherche zu lesen und nach Änderungen direkt zu aktualisieren.
+
 ## 2026-08-30 — Epic 4 Review abgeschlossen
 
 - Run-ID: `resume-2026-08-30-epic-4-review`
