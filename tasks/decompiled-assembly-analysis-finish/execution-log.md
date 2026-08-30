@@ -827,6 +827,77 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
 - `code-map.md` ist zuerst zu lesen und gegen Working Tree/MCP zu verifizieren;
   nur konkrete Navigationsfehler dürfen dort korrigiert werden.
 
+## 2026-08-30 — Epic 3 Korrekturrunde 3 Review abgeschlossen
+
+- Run-ID: `resume-2026-08-30-epic-3-correction-3-review`
+- Epic: 3 — Transitive Assembly-Referenzen und getrennte externe Ressourcen
+- Rolle: Reviewer
+- Subagent-ID: `01a053fd-1808-7c92-a6ef-fcb467c66340`
+- Diff-Baseline: `20027f1c`; seit diesem Checkpoint wurden keine
+  Produktions- oder Testdateien geändert.
+- Status: `completed`; Urteil: `approved`.
+- Vollständiger Reviewerbericht:
+
+  Der P1 ist behoben. In `SourceSnapshotRegistry.cs:155-177` wird der
+  Lease-Zähler unter `gate` atomar dekrementiert; bei terminalem
+  Registry-Dispose und `LeaseCount == 0` wird der Eintrag dort entfernt. Die
+  Snapshot-Bereinigung erfolgt anschließend außerhalb des Locks in Zeile 175.
+
+  Der deterministische Test `SourceSnapshotRegistryTests.cs:75-107` deckt den
+  geforderten Ablauf ab:
+
+  1. Resident-Lease zählt 1.
+  2. Duplicate-Acquire erhöht auf 2.
+  3. Duplicate-Dispose ruft terminales `Registry.Dispose()` auf.
+  4. Original-Lease wird freigegeben.
+  5. Fehlgeschlagenes Duplicate-Dispose rollt zurück.
+  6. `ResidentCount == 0`, Resident-Snapshot und beide Ownership-Objekte
+     werden genau einmal disposed.
+
+  Der Commit-Diff `20027f1c^..20027f1c` enthält nur die erwarteten Änderungen
+  in `SourceSnapshotRegistry.cs` und `SourceSnapshotRegistryTests.cs` sowie
+  Task-Artefakte. Seit `20027f1c` wurden keine Produktions- oder Testdateien
+  geändert. Die Code-Map ist mit `code-map.md:54-65` korrekt und erforderte
+  keine Änderung.
+
+  MCP-first-Prüfungen mit absolutem `projectRoot` bestätigten:
+
+  - Symbol-, Feature-, Klassenstruktur- und Body-Abfragen für Registry,
+    Cleanup, Rollback und Regressionstest.
+  - Referenzabfragen: `ReleaseResidentLease` wird nur aus
+    `CleanupFailedAcquire` aufgerufen.
+  - Dependency-Graph und Impact gegen `20027f1c^`: zwei C#-Dateien, vier
+    geänderte Symbole, `0` Violations.
+  - Snapshot-, Resource- und Lease-Dispose-Semantik einschließlich Ownership
+    und Idempotenz.
+  - Die Installation akzeptiert weiterhin ausschließlich `projectRoot`;
+    `targetType`/`targetPath` wurden nicht fälschlich verwendet.
+  - Code-Map-Pfade und Symbole stimmen mit Working Tree und MCP überein.
+
+  Gezielt wiederholt wurde ausschließlich der gemeldete fehlgeschlagene
+  Daemon-Test:
+
+  `DaemonHostMcpContractTests.RunMcpSessionAsync_RegisteredAssemblyToolsReuseCompositionAcrossSessions`
+
+  Ergebnis: weiterhin Fehler in `DaemonHostMcpContractTests.cs:90`,
+  `composition.Sessions.ResidentCount`: erwartet `1`, tatsächlich `2`. Die
+  benachbarte Snapshot-Registry-Assertion in Zeile 89 ist nicht betroffen. Der
+  Test ist gegenüber `20027f1c` unverändert und betrifft die bereits
+  bewertete Assembly-Session-/Transitivroute, nicht den aktuellen
+  Rollback-Pfad. Disposition: `accepted-deferred`, kein neuer P1 dieser
+  Runde.
+
+  Die gemeldete parallele Integration-Git-Prozessstörung wurde nicht erneut
+  ausgeführt: Der Implementierernachweis enthält bereits eine erfolgreiche
+  isolierte Wiederholung, und der aktuelle Diff berührt weder Git-Prozesscode
+  noch diesen Lifecyclepfad. Die frische Regression `9/9`, der Build `0/0` und
+  `get_violations: 0` wurden gemäß Review-Regel nicht redundant wiederholt.
+
+- Nächste Aktion: diesen genehmigten Reviewstand sichern, Epic 3 in der
+  Roadmap schließen und anschließend mit Epic 4 fortfahren; der Daemon-Gate-
+  Befund bleibt als `accepted-deferred` dokumentiert und wird am
+  Gesamtabschluss erneut bewertet.
+
 ## 2026-08-30 — Epic 3 Korrekturrunde 3 Implementierer abgeschlossen
 
 - Run-ID: `resume-2026-08-30-epic-3-correction-3`

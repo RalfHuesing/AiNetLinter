@@ -102,6 +102,22 @@ Bericht festgehalten.
   duplizieren.
 - Log-Anker: `execution-log.md` — Epic-3-Korrekturrunde-2-Review
 
+## TD-010 — Daemon-Session-ResidentCount deterministisch machen
+
+- Schweregrad: P2
+- Scope: `DaemonHostMcpContractTests.RunMcpSessionAsync_RegisteredAssemblyToolsReuseCompositionAcrossSessions`
+- Evidenz: Der unabhängige Korrekturrunden-3-Review wiederholte den zuvor
+  fehlgeschlagenen Test gezielt; `composition.Sessions.ResidentCount` erwartete
+  `1`, erhielt `2`. Die benachbarte Snapshot-Registry-Assertion war grün,
+  der Testcode unverändert und der Befund betrifft die bereits bewertete
+  Assembly-Session-/Transitivroute, nicht den aktuellen Snapshot-Rollback.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: im Gesamtabschluss die Session-Resident-Buchhaltung über
+  mehrere MCP-Sitzungen reproduzieren und entscheiden, ob der Testvertrag
+  oder die Registry-Lebenszeit korrigiert werden muss; nicht durch blinde
+  Wiederholungen kaschieren.
+- Log-Anker: `execution-log.md` — Epic-3-Korrekturrunde-3-Review
+
 ## TD-005 — Source-Ressourcen vor Materialisierung budgetieren
 
 - Schweregrad: P2
