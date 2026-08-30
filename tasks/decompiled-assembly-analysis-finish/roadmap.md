@@ -1,9 +1,19 @@
 # Ausführungs-Roadmap: Einheitlicher Roslyn-Analysepfad
 
-status: executing
+status: blocked
 current_epic: 1
 last_commit: none
-blocker: none
+blocker: "Epic 1 nach fünf Korrekturrunden nicht freigegeben: Cancellation wird in AssemblyAnalysisSession/Registry als Failure statt als OperationCanceledException weitergegeben; get_type_hierarchy reicht AssemblySymbolIdentity nicht an den Resolver weiter."
+correction_round: 5
+cycle_state: blocked
+recent_finding_signatures:
+  - Registry-Generation-Retry: Datei-Churn darf keinen veralteten Fingerprint wiederverwenden
+  - Assembly-Symbolidentität: Folgeabfragen müssen Hash und Generation validieren
+  - Registration-Footprint: geänderte Toolregistrierungen müssen unter dem Kontextlimit bleiben
+  - Assembly-Generation-Lifetime: Generationen müssen über Registry-Ersetzungen hinweg monoton eindeutig bleiben
+  - Globaler-Footprint: Assembly-Registrierung, Dispatch und Optionsfabrik überschreiten ihre Kontextlimits
+  - Cancellation-Propagation: Cancellation muss nach best-effort-Cleanup weitergegeben werden
+  - Type-Hierarchy-Identity: get_type_hierarchy muss AssemblySymbolIdentity an den Resolver weiterreichen
 
 Diese Roadmap ist der einzige dauerhafte Ausführungs- und Resume-Stand für den
 autonomen Lauf. Sie leitet die Reihenfolge aus dem freigegebenen Konzept ab;
