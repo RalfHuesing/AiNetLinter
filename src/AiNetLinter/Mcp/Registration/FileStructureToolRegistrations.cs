@@ -126,9 +126,10 @@ internal static class FileStructureToolRegistrations
     private static readonly string GetNamespaceTreeDescription =
         "Wann nutzen: hierarchische semantische Exploration einer C#-Codebase (Solution -> Projekte " +
         "-> Namespaces -> Typen) nach dem Progressive-Disclosure-Prinzip. Ohne Parameter: Projekt-" +
-        "Uebersicht. project: Namespaces eines Projekts. namespacePrefix: Einstiegspunkt fuer " +
-        "Drilldown. depth: 1-3 Namespace-Ebenen. includeTypes: Typen ausgeben oder nur Sub-Namespaces. " +
-        "kind: class/interface/record/struct/enum/all. maxResults: Obergrenze (Default 50, Cap 200).";
+        "Uebersicht. project: Namespaces eines Projekts filtern. namespacePrefix: Einstiegspunkt fuer " +
+        "Drilldown. depth: 1-3 Namespace-Ebenen (Default 1). includeTypes: Typen ausgeben (Default true) " +
+        "oder nur Sub-Namespaces. kind: class/interface/record/struct/enum/all (Default all). " +
+        "maxResults: Obergrenze der Eintraege (Default 50, Cap 200).";
 
     private static void AddGetClassStructure(
         McpServerPrimitiveCollection<McpServerTool> tools,
