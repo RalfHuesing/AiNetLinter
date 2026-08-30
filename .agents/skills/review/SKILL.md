@@ -12,12 +12,29 @@ gedacht. Er bewertet, ob die Änderung im unterstützten AiNetLinter-
 Betriebsmodell produktionssicher ist. Er ist kein allgemeiner Architektur-
 Rundumsweep und erzeugt keine automatische Korrekturschleife.
 
+Der Review setzt keinen vorgelagerten Scout voraus. Er prüft den vom
+Implementierer dokumentierten MCP-first-Kontext, die konstante Code-Map und
+die Verifikation als Teil desselben Arbeitsablaufs.
+
 ## Kontext und Regeln
 
 - Lies `AGENTS.md` sowie die relevanten Dateien unter `.agents/rules/`.
-- Lies die task-lokale `code-map.md` vor der eigenen Recherche. Nutze sie als
-  Navigationshilfe, verifiziere ihre Angaben aber gegen den aktuellen Working
-  Tree und passende MCP-Abfragen.
+- Lies die task-lokale `code-map.md` vor der eigenen Recherche. Sie ist in jedem
+  Task-Durchlauf vorhanden und verwendet diese Grundstruktur:
+
+  ```markdown
+  ## Primäre Einstiegspunkte
+  ## Betroffene Dateien und Symbole
+  ## Aufrufer und Abhängigkeiten
+  ## Relevante Tests, Konfiguration und Dokumentation
+  ## Invarianten, Risiken und Unsicherheiten
+  ## Verifikation
+  ```
+
+  Nutze sie als Navigationshilfe, verifiziere ihre Angaben aber gegen den
+  aktuellen Working Tree und passende MCP-Abfragen. Fehlt die Map oder eine
+  Grundüberschrift, melde das als konkreten Workflow-Befund; lege als Reviewer
+  keine weiteren Task-Artefakte an.
 - Lies `.agents/rules/AiNetLinter-McpWorkflow.mdc` vor semantischen C#-
   Abfragen. Verwende für Symbole, Referenzen, Impact und Violations zuerst
   das passende AiNetLinter-MCP-Tool mit aktuellem Schema,

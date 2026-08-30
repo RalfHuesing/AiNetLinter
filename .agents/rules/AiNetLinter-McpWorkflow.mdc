@@ -50,6 +50,21 @@ aber nicht die semantische MCP-Abfrage.
   Unterpfaden vorbehalten (z. B. `root="src/MeinModul"`). Für C#-Code-Suchen
   direkt `find_symbol` oder `get_feature_context` verwenden.
 
+## MCP-first-Kontextphase
+
+Jeder Task mit C#-Semantik durchläuft eine MCP-first-Kontextphase innerhalb des
+bestehenden Implementierungsablaufs. Die Phase beginnt bei einem bekannten
+Symbol mit `get_feature_context`; ist der Einstiegspunkt unbekannt, wird er
+zuerst mit `find_symbol` lokalisiert. Weitere Abfragen schließen ausschließlich
+konkret sichtbare Lücken, etwa bei Implementierungsinhalt, Aufrufern,
+Abhängigkeiten, Tests oder Violations.
+
+Der Implementierer entscheidet anhand der sichtbaren Befunde, wann der Kontext
+ausreicht. Es gibt weder einen vorgelagerten Scout noch eine feste Mindestzahl
+oder starre Reihenfolge von MCP-Aufrufen. Relevante Befunde, Trunkierungen und
+Unsicherheiten werden knapp in der task-lokalen `code-map.md` festgehalten;
+vollständige Tool-Rohantworten gehören nicht in die Map.
+
 ## Werkzeugwahl
 
 | Anliegen | Zuerst verwenden |

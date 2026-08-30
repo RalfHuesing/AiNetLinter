@@ -41,6 +41,11 @@ für die Umsetzung, nachdem ein Konzept bei Bedarf separat mit dem
   zugeordnet: Der Commit-Scope ist der stabile Name des Task-Verzeichnisses,
   und das Subject beschreibt die fachliche Aktion statt nur eine Epic- oder
   Rundennummer.
+- Jeder Task folgt derselben Grundfolge: Code-Map lesen oder initialisieren,
+  MCP-first-Kontext aufnehmen, implementieren oder diagnostizieren,
+  verifizieren und übergeben. Die konkrete MCP-Werkzeugwahl innerhalb dieser
+  Kontextphase entscheidet der Implementierer anhand der sichtbaren Evidenz;
+  es gibt keine Scout-Phase und keine feste Aufrufzahl.
 - Es gibt keine Step-Dateien, keinen `task-state.md`, keine künstlichen
   Übergabearchive und keine Planer-Schleife pro Detailstep.
 - Es gibt keine automatischen Nutzer-Check-ins zwischen Epics. Frage nur bei
@@ -212,8 +217,24 @@ nachträgliche Extraktion aus dem kompletten Log:
 ## Task-lokale Code-Map
 
 `code-map.md` wird vor dem ersten Rollenaufruf angelegt und gemeinsam mit dem
-Planungs-Checkpoint committed. Sie enthält nur den für den Task relevanten
-Navigationskontext:
+Planungs-Checkpoint committed. Sie ist in jedem Task-Durchlauf vorhanden und
+enthält nur den relevanten, verifizierten Navigationskontext. Verwende immer
+diese Grundstruktur:
+
+```markdown
+## Primäre Einstiegspunkte
+## Betroffene Dateien und Symbole
+## Aufrufer und Abhängigkeiten
+## Relevante Tests, Konfiguration und Dokumentation
+## Invarianten, Risiken und Unsicherheiten
+## Verifikation
+```
+
+Auch bei einer kleinen Aufgabe bleiben die Überschriften bestehen; nicht
+betroffene Bereiche werden knapp gekennzeichnet. Die Map ist ein
+Arbeitsgedächtnis und keine Source of Truth.
+
+Sie enthält insbesondere:
 
 - primärer Einstiegspunkt und fachlicher Ablauf;
 - betroffene Produktionsdateien und zentrale Symbole mit direkten Aufrufern
@@ -224,14 +245,14 @@ Navigationskontext:
 Erzeuge keine Vollinventur und kopiere keine Agentenberichte in die Karte. Der
 Orchestrator legt zunächst nur ein minimales Gerüst aus Task, Primäraufgabe und
 bekannten Startpunkten an. Der erste Implementierer ergänzt daraus mit seiner
-Recherche die relevanten Produktions-, Test- und Dokumentationsbeziehungen.
-Jeder Implementierer aktualisiert die Karte nach seinen Codeänderungen direkt
-im Working Tree; Umbenennungen, Verschiebungen und entfallene Symbole werden
-entfernt. Reviewer und Audit verifizieren die Karte gegen ihren Scope und
-korrigieren ausschließlich konkrete Navigationsfehler. Alle Rollen melden die
-Kartenänderung beziehungsweise die unveränderte Verifikation im Hand-off; der
-Orchestrator prüft und committed sie, führt aber keine doppelte Tiefenanalyse
-durch.
+MCP-first-Kontextphase die relevanten Produktions-, Test- und
+Dokumentationsbeziehungen. Jeder Implementierer aktualisiert die Karte nach
+seiner Kontextaufnahme und nach Codeänderungen direkt im Working Tree;
+Umbenennungen, Verschiebungen und entfallene Symbole werden entfernt. Reviewer
+und Audit verifizieren die Karte gegen ihren Scope und korrigieren
+ausschließlich konkrete Navigationsfehler. Alle Rollen melden den Kartenstand
+beziehungsweise die unveränderte Verifikation im Hand-off; der Orchestrator
+prüft und committed sie, führt aber keine doppelte Tiefenanalyse durch.
 
 ## Wiederverwendung von Verifikationsnachweisen
 

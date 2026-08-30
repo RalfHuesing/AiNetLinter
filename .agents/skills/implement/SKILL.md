@@ -22,6 +22,10 @@ es nur, wenn der Nutzer sie ausdrücklich verlangt.
   als Navigationshilfe und verifiziere jeden relevanten Pfad, jedes Symbol und
   jede Beziehung gegen den aktuellen Working Tree und die vorgeschriebenen
   MCP-Abfragen.
+- Jeder Task durchläuft dieselbe Phasenfolge: Code-Map lesen oder mit der
+  Standardstruktur initialisieren, MCP-first-Kontext aufnehmen, implementieren
+  oder diagnostizieren, verifizieren und übergeben. Es gibt keinen
+  vorgelagerten Scout und keine feste Mindestzahl von MCP-Aufrufen.
 - Lies `.agents/rules/AiNetLinter-McpWorkflow.mdc` vor semantischen Fragen zu
   C# und halte dessen MCP-first-Regel ein. Verwende aktuelle Toolschemas,
   `targetType` und den absoluten `targetPath`; `rg` ergänzt die semantische
@@ -36,17 +40,35 @@ es nur, wenn der Nutzer sie ausdrücklich verlangt.
 
 ## Vorgehen
 
-1. Verstehe Ziel, betroffene Bereiche, Muss-Kriterien und Non-Goals. Lies den
-   relevanten Code und suche vorhandene Patterns, Helfer, Aufrufer und Tests.
-2. Forme daraus ein zusammenhängendes, vertikal testbares Paket. Teile nur,
+1. Lies oder initialisiere die task-lokale `code-map.md` mit dieser festen
+   Grundstruktur:
+
+   ```markdown
+   ## Primäre Einstiegspunkte
+   ## Betroffene Dateien und Symbole
+   ## Aufrufer und Abhängigkeiten
+   ## Relevante Tests, Konfiguration und Dokumentation
+   ## Invarianten, Risiken und Unsicherheiten
+   ## Verifikation
+   ```
+
+   Vermerke auch bei kleinen Aufgaben knapp, welche Bereiche nicht betroffen
+   oder nicht geprüft sind.
+2. Verstehe Ziel, betroffene Bereiche, Muss-Kriterien und Non-Goals. Starte
+   die MCP-first-Kontextphase: Für ein bekanntes C#-Symbol verwende
+   `get_feature_context`; bei einem unbekannten Einstiegspunkt lokalisiere ihn
+   zuerst mit `find_symbol`. Ergänze nur bei einer konkret sichtbaren Lücke
+   weitere MCP-Abfragen. Der Implementierer entscheidet anhand der Befunde,
+   wann der Kontext ausreicht.
+3. Forme daraus ein zusammenhängendes, vertikal testbares Paket. Teile nur,
    wenn ein anderer Fachvertrag, ein unabhängiger Risikobereich oder ein
    echter Kontext-/Komplexitätsgrund das erfordert. Erzeuge keine künstlichen
    Mini-Pakete für einzelne Assertions, Dokumentationszeilen oder triviale
    Helper.
-3. Implementiere direkt und fokussiert. Keine ungeplanten Generalisierungen,
+4. Implementiere direkt und fokussiert. Keine ungeplanten Generalisierungen,
    globalen Refactorings oder neuen Abstraktionen nur wegen einer zufälligen
    Ähnlichkeit.
-4. Führe während der Arbeit gezielte Tests und Analysen aus. Bei einer
+5. Führe während der Arbeit gezielte Tests und Analysen aus. Bei einer
    eigenständigen Aufgabe müssen vor dem finalen Hand-off die in `AGENTS.md`
    vorgeschriebenen Build- und Nicht-Stress-Test-Gates ausgeführt werden,
    sofern der Nutzer nicht ausdrücklich nur eine Analyse oder einen Entwurf
@@ -56,7 +78,7 @@ es nur, wenn der Nutzer sie ausdrücklich verlangt.
    dem letzten Codezustand. Explizite konzeptspezifische Prüfungen dürfen in
    keinem Modus still entfallen. Schließe jede ausgeführte Prüfung mit einem
    konkreten Verifikationsnachweis ab.
-5. Prüfe selbst gegen Ziel, Muss-Kriterien, Non-Goals, relevante Rules und die
+6. Prüfe selbst gegen Ziel, Muss-Kriterien, Non-Goals, relevante Rules und die
    tatsächlichen unterstützten Betriebsannahmen. Berichte Abweichungen offen.
 
 ## Gezielter Qualitätscheck
@@ -112,12 +134,23 @@ benenne das vor der Umsetzung.
 
 ## Code-Map-Pflege
 
-Aktualisiere `code-map.md` direkt im Task-Verzeichnis, sobald sich durch deine
-Recherche oder Implementierung relevante Dateien, Symbole, Aufrufer, Tests,
-Konfiguration oder Dokumentation ändern. Entferne veraltete Pfade und
-Beziehungen. Halte die Karte kompakt und taskbezogen; führe keine
-Repository-Vollinventur durch. Wenn sich nichts geändert hat, verifiziere das
-im Hand-off ausdrücklich.
+`code-map.md` ist in jedem Task-Durchlauf vorhanden und bleibt kompakt sowie
+taskbezogen. Verwende immer diese Überschriften:
+
+```markdown
+## Primäre Einstiegspunkte
+## Betroffene Dateien und Symbole
+## Aufrufer und Abhängigkeiten
+## Relevante Tests, Konfiguration und Dokumentation
+## Invarianten, Risiken und Unsicherheiten
+## Verifikation
+```
+
+Aktualisiere sie nach der Kontextaufnahme und nach relevanten Änderungen.
+Entferne veraltete Pfade und Beziehungen, markiere Trunkierungen sowie
+Unsicherheiten und kopiere keine vollständigen Tool-Rohantworten oder
+Agentenberichte hinein. Vor dem Hand-off verifizierst du den aktuellen
+Kartenstand gegen Working Tree und MCP ausdrücklich.
 
 ## Qualitätsmaßstab und Stoppregel
 
@@ -159,9 +192,9 @@ vollständigen aktuellen Arbeitsstand mit seinem ehrlichen Nachweis, damit der
 Orchestrator ihn als Zwischenstand sichern und gezielt reviewen lassen kann.
 
 Ein weiterer Agent erhält keinen künstlichen Step-Archivbestand. Übergib kurz:
-geänderte Dateien und Symbole, vorgenommene oder nicht erforderliche Code-Map-
-Änderungen, getroffene Entscheidungen, ausgeführte Prüfungen, offene Risiken
-und den nächsten sinnvollen Einstiegspunkt. Der weitere Agent prüft den
+geänderte Dateien und Symbole, den aktuellen Code-Map-Stand, getroffene
+Entscheidungen, ausgeführte Prüfungen, offene Risiken und den nächsten
+sinnvollen Einstiegspunkt. Der weitere Agent prüft den
 tatsächlichen Code und Diff selbst. In einem
 orchestrierten Epic gehören die finalen solutionweiten Gates nicht in den
 einzelnen Implementierer-Hand-off, sondern in den Abschluss des
