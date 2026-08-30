@@ -791,3 +791,22 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
 
 - Nächste Aktion: nach Checkpoint und Tech-Debt-Triage eine neue frische
   Korrekturrunde 3 ausschließlich für den Snapshot-Dispose-Race starten.
+
+## 2026-08-30 — Epic 3 Korrekturrunde 3 Implementierer gestartet
+
+- Run-ID: `resume-2026-08-30-epic-3-correction-3`
+- Epic: 3 — Transitive Assembly-Referenzen und getrennte externe Ressourcen
+- Rolle: Implementierer
+- Subagent-ID: `01a053ef-772a-7673-a8db-c6ca9b88c155`
+- Diff-Baseline: `b2c546f8`
+- Status: `running`
+- Korrekturauftrag: ausschließlich den belegten Snapshot-Dispose-Race
+  beheben, bei dem ein fehlgeschlagenes Duplicate-Dispose nach terminalem
+  Registry-Dispose einen Snapshot mit Null-Lease resident lässt.
+- Die ursprüngliche Transitiv-Route gilt als behoben. Die P2-Befunde zu
+  Extensions-Diagnosen und negativer Route-Testabdeckung bleiben
+  `accepted-deferred` für Epic 4.
+- Freshness-Regel: bestehende erfolgreiche Nachweise werden nicht bloß zur
+  Bestätigung wiederholt; der Implementierer liefert gezielte Regression,
+  Qualitätschecks und den letzten `get_violations`-Nachweis nach seiner
+  letzten Codeänderung.
