@@ -148,7 +148,7 @@ internal static class SymbolGraphToolRegistrations
         "ODER symbolIdentifier (Format wie find_references) angeben, nie beide. " +
         "detailLevel: 'callers' [Default] oder 'change-context' (nur im Git-Diff-Modus zulaessig: " +
         "liefert geaenderte Symbole, Call-Sites, zugeordnete Tests, diffbezogene Violations und dotnet test Filter). " +
-        "maxResults: Limit der Trefferliste (Default 50). depth: Traversierungstiefe im Symbol-Branch (Default 1, hard cap 3). " +
+        "maxResults: Limit der Trefferliste (Default 50). depth: Traversierungstiefe im Symbol-Branch (Default 1, hard cap 3, hart begrenzt auf 200 besuchte Knoten). " +
         "maxChangedSymbols: Begrenzung geaenderter Symbole im change-context (Default 20, Cap 100). " +
         "maxTestsPerSymbol: Begrenzung der Tests je Symbol (Default 10, Cap 50).";
 

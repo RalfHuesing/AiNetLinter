@@ -257,7 +257,7 @@ internal static class AnalysisToolRegistrations
         "'enum_candidates', 'nameof_candidates', 'localization_candidates', 'standard_candidates', 'security_candidates'). " +
         "minOccurrences: Mindestvorkommen (Default 1), maxResults: Begrenzung (Default 50). " +
         "ignoreNumbers: projektspezifische Ignorier-Zahlen. includeTests: Tests einbeziehen (Default false). " +
-        "includeSuppressed: unterdrueckte Fundstellen einbeziehen (Default false). " +
+        "includeSuppressed: Fundstellen mit '// ainetlinter-disable MagicValues' einbeziehen (Default false). " +
         "changedOnly: Git-Diff-Einschraenkung auf geaenderte Dateien (Default false). " +
         "scopeFilter: Projekt-Name oder Pfad-Substring zur Eingrenzung.";
 

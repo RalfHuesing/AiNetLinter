@@ -8,12 +8,12 @@ internal static class McpToolRegistrationOptions
 {
     private const string ProjectTargetContract =
         " Zielvertrag: targetType='project' und targetPath als absoluter, kanonischer Projektpfad. " +
-        "Assembly-Ziele sind fuer dieses Tool ausdruecklich unsupported.";
+        "Assembly-Ziele sind für dieses Tool ausdrücklich unsupported.";
     private const string ReadOnlyTargetContract =
         " Zielvertrag: targetType='project' mit absolutem, kanonischem Projektpfad oder " +
         "targetType='assembly' mit absolutem, existierendem .dll-Pfad. Assembly-Antworten " +
-        "laufen ueber dieselbe read-only Session und weisen Herkunft, Snapshot/Generation, " +
-        "Status und Vollstaendigkeit aus.";
+        "laufen über dieselbe read-only Session und weisen Herkunft, Snapshot/Generation, " +
+        "Status und Vollständigkeit aus.";
     private const string AssemblyTargetContract =
         " Zielvertrag: targetType='assembly' und targetPath als absoluter, existierender .dll-Pfad.";
 
