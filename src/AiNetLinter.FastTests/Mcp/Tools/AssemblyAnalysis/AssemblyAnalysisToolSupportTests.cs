@@ -265,7 +265,7 @@ public sealed class AssemblyAnalysisToolSupportTests
             CreateParameters(assemblyPath, observed => invalidContext = observed),
             invalidOrchestrator,
             scope => invalidScope = scope);
-        Assert.NotEqual(true, invalidResult.IsError);
+        Assert.False(invalidResult.IsError);
         Assert.Null(invalidContext);
         Assert.NotNull(invalidScope);
         Assert.True(invalidScope!.IsDisposed);

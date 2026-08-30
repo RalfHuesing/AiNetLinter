@@ -75,7 +75,7 @@ internal sealed class AssemblySourceSelectionOrchestrator
             var selection = AssemblySourceSelection.Create(lease, match);
             return new AssemblySourceSelectionScope(
                 selection,
-                configurationResult.Diagnostics,
+                configurationResult,
                 providerResult.Diagnostics,
                 lease);
         }
@@ -91,7 +91,7 @@ internal sealed class AssemblySourceSelectionOrchestrator
         IEnumerable<ExternalSourceConfigurationDiagnostic>? providerDiagnostics = null) =>
         new(
             null,
-            configurationResult.Diagnostics,
+            configurationResult,
             providerDiagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>(),
             null,
             providerFailureKind);
@@ -104,16 +104,17 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
 
     internal AssemblySourceSelectionScope(
         AssemblySourceSelection? selection,
-        IEnumerable<ExternalSourceConfigurationDiagnostic> loaderDiagnostics,
+        ExternalSourceConfigurationLoadResult configurationResult,
         IEnumerable<ExternalSourceConfigurationDiagnostic> providerDiagnostics,
         SourceSnapshotLease? lease,
         ExternalSourceProviderFailureKind providerFailureKind = ExternalSourceProviderFailureKind.None)
     {
-        ArgumentNullException.ThrowIfNull(loaderDiagnostics);
+        ArgumentNullException.ThrowIfNull(configurationResult);
         ArgumentNullException.ThrowIfNull(providerDiagnostics);
 
         Selection = selection;
-        LoaderDiagnostics = loaderDiagnostics.ToImmutableArray();
+        this.configurationResult = configurationResult;
+        LoaderDiagnostics = configurationResult.Diagnostics;
         ProviderDiagnostics = providerDiagnostics.ToImmutableArray();
         ProviderFailureKind = providerFailureKind;
         Diagnostics = LoaderDiagnostics
@@ -127,11 +128,11 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
 
     internal AssemblySourceSelectionStatus Status =>
         Selection is not null ? (AssemblySourceSelectionStatus)Selection.MatchResult.State :
-        ProviderFailureKind is not ExternalSourceProviderFailureKind.None
+        !configurationResult.Succeeded
+            ? AssemblySourceSelectionStatus.ConfigurationFailure
+            : ProviderFailureKind is not ExternalSourceProviderFailureKind.None
             ? AssemblySourceSelectionStatus.ProviderUnavailable
-            : LoaderDiagnostics.IsEmpty
-                ? AssemblySourceSelectionStatus.NoMatch
-                : AssemblySourceSelectionStatus.ConfigurationFailure;
+            : AssemblySourceSelectionStatus.NoMatch;
 
     internal bool IsDisposed => Volatile.Read(ref disposed) != 0;
 
@@ -142,6 +143,8 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
     internal ExternalSourceProviderFailureKind ProviderFailureKind { get; }
 
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics { get; }
+
+    private readonly ExternalSourceConfigurationLoadResult configurationResult;
 
     public void Dispose()
     {

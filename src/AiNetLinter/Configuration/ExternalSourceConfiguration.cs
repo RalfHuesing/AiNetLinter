@@ -246,18 +246,22 @@ internal static class ExternalSourceConfigurationPath
 
     private static bool HasSafeRawSyntax(string normalized)
     {
+        var isUncPath = normalized.StartsWith("//", StringComparison.Ordinal);
         if (IsDevicePath(normalized)
             || normalized.IndexOf('?') >= 0
             || normalized.IndexOf('#') >= 0
-            || (normalized.StartsWith("//", StringComparison.Ordinal)
-                && normalized.IndexOf('@') >= 0)
+            || (isUncPath
+                && (normalized.IndexOf('@') >= 0
+                    || normalized[2..].Split(
+                        '/',
+                        StringSplitOptions.RemoveEmptyEntries).Length < 2))
             || !HasValidColonUsage(normalized))
         {
             return false;
         }
 
         return !normalized.StartsWith("/", StringComparison.Ordinal)
-            || normalized.StartsWith("//", StringComparison.Ordinal);
+            || isUncPath;
     }
 
     private static bool HasSafeRawSegments(string normalized)
