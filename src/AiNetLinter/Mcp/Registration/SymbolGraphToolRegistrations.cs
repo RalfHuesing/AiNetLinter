@@ -144,19 +144,13 @@ internal static class SymbolGraphToolRegistrations
 
     private const string GetImpactDescription =
         "Wann nutzen: pruefen, was eine geplante oder bereits gemachte Aenderung betrifft. " +
-        "Ohne Parameter: uncommittete lokale Aenderungen (Default). Sonst gitRef (Commit-Ref) " +
-        "ODER symbolIdentifier angeben, nie beide — Identifikator-Format wie find_references. " +
-        "detailLevel: 'callers' (Default) oder 'change-context'. change-context ist nur im " +
-        "Git-Diff-Modus zulaessig und nie zusammen mit symbolIdentifier (fuer den Kontext eines " +
-        "einzelnen Symbols get_feature_context nutzen) und liefert ein strukturiertes Objekt mit " +
-        "geaenderten Dateien/Symbolen, Call-Sites, statisch zugeordneten Tests, diffbezogenen " +
-        "Violations und empfohlenen dotnet test-Befehlen; maxChangedSymbols (Default 20, Cap 100) " +
-        "kappt die geaenderten Symbole deterministisch VOR Call-Site-/Test-/Violation-Analyse, " +
-        "maxTestsPerSymbol (Default 10, Cap 50) die Testmethoden je Symbol, maxResults kappet nur " +
-        "die Text-Topliste. depth wirkt nur im Symbol-Branch und ist im gesamten Git-Branch " +
-        "(callers UND change-context) wirkungslos; im Symbol-Branch liefert depth (Default 1, " +
-        "hard cap 3) dieselbe structuredContent.callSites/completeness-Struktur wie " +
-        "find_references; die Traversierung ist hart auf 200 besuchte Knoten begrenzt.";
+        "Ohne gitRef/symbolIdentifier: uncommittete lokale Aenderungen (Default). Sonst gitRef (Commit-Ref) " +
+        "ODER symbolIdentifier (Format wie find_references) angeben, nie beide. " +
+        "detailLevel: 'callers' [Default] oder 'change-context' (nur im Git-Diff-Modus zulaessig: " +
+        "liefert geaenderte Symbole, Call-Sites, zugeordnete Tests, diffbezogene Violations und dotnet test Filter). " +
+        "maxResults: Limit der Trefferliste (Default 50). depth: Traversierungstiefe im Symbol-Branch (Default 1, hard cap 3). " +
+        "maxChangedSymbols: Begrenzung geaenderter Symbole im change-context (Default 20, Cap 100). " +
+        "maxTestsPerSymbol: Begrenzung der Tests je Symbol (Default 10, Cap 50).";
 
     private static void AddGetTypeHierarchy(
         McpServerPrimitiveCollection<McpServerTool> tools,
