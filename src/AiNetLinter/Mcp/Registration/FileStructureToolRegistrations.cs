@@ -195,9 +195,9 @@ internal static class FileStructureToolRegistrations
     }
 
     private const string GetIndexScopeDescription =
-        "Wann nutzen: als ersten Call vor find_symbol/search_pattern — Dateityp-" +
+        "Wann nutzen: als ersten Discovery-Call vor find_symbol/search_pattern — Dateityp-" +
         "Aufschluesselung der Solution (.cs vom Symbolgraph abgedeckt, .css/.html/.js/.razor/" +
-        ".xaml nicht, jeweils mit Anzahl).";
+        ".xaml nicht abgedeckt, jeweils mit Dateianzahl).";
 
     private static void AddGetHotspots(
         McpServerPrimitiveCollection<McpServerTool> tools,
