@@ -24,7 +24,7 @@ Dieses Konzept ersetzt deshalb den verpflichtenden Scout durch einen MCP-first-W
 
 Damit wird nicht die Kontextarbeit abgeschafft, sondern ihr Ort und ihre Ausführung verändert: vom separaten Recherche-Agenten in einen verifizierbaren, adaptiven Arbeitsablauf des Agents, der die Änderung letztlich verantwortet.
 
-## Vorläufige Architekturentscheidung
+## Architekturentscheidung im Draft
 
 Der verpflichtende Scout-zu-Implementierer-Handoff wird verworfen. Der Standardpfad ist ein einzelner Implementierer mit einer festen Phasenfolge und abgestufter Kontextaufnahme innerhalb der MCP-Phase:
 
@@ -34,6 +34,7 @@ Der verpflichtende Scout-zu-Implementierer-Handoff wird verworfen. Der Standardp
 4. Nur erkannte Lücken mit `get_symbol_body`, `find_references`, `get_impact`, `dependency_graph`, `get_test_context` oder passenden Violation-Abfragen schließen.
 5. Die wesentlichen Befunde in einer kleinen, standardisierten `code-map.md` persistieren; bei einfachen Aufgaben genügt eine minimale Ausfüllung der Struktur.
 6. Ändern, anschließend betroffene Regeln/Tests und den Build gemäß Projektregeln verifizieren.
+7. Der Implementierer entscheidet anhand der sichtbaren Evidenz, wann der Kontext ausreicht; der Orchestrator erzwingt keine starre Mindestzahl oder feste Sequenz von MCP-Aufrufen.
 
 Ein zusätzlicher Scout kann später als gezielte Optimierung untersucht werden, ist aber weder Architekturvoraussetzung noch Standardverhalten. Insbesondere soll kein zweiter LLM-Agent eingeführt werden, nur weil Recherche als eigener Prozessschritt benannt wurde.
 
@@ -114,6 +115,8 @@ Der Agent beginnt mit der kleinsten ausreichenden Abfrage. Für ein bekanntes Sy
 - unklare Regelkonformität: `get_violations` oder passender Violation-Filter.
 
 Die Recherche endet, wenn die Änderungshypothese, betroffene Abhängigkeiten, relevante Tests und wesentliche Risiken hinreichend belegt sind. Es gibt keine fixe Mindestzahl von Tools und keine pauschale Voll-Repository-Kartierung.
+
+Die Abschlussentscheidung trifft der Implementierer anhand dieser Evidenz. Der Orchestrator erzwingt nur die Phasenfolge und die Verifikation, nicht eine künstliche Zahl von MCP-Aufrufen.
 
 ### Phase 3: Standardisiertes Arbeitsgedächtnis
 
@@ -238,7 +241,7 @@ Zu erfassende lokale Metriken:
 
 ## Offene Punkte
 
-1. **Kontext-Abschluss:** Soll der Implementierer nach `get_feature_context` selbst anhand sichtbarer Evidenz entscheiden, ob der Kontext ausreicht? Empfehlung: ja; der Orchestrator soll keine starre Toolsequenz erzwingen.
+Keine fachlich blockierenden Punkte. Detailentscheidungen zur konkreten Ausgestaltung einzelner MCP-Abfragen können innerhalb der festen Kontextphase getroffen werden.
 
 ## Verworfen / bewusst nicht festgeschrieben
 
@@ -253,6 +256,7 @@ Zu erfassende lokale Metriken:
 ## Arbeitsgedächtnis
 
 - Die fachliche Zielrichtung wurde geändert: Nicht „Scout verbessern“, sondern den gesamten Kontextworkflow MCP-first und adaptiv machen.
+- Der Nutzer hat bestätigt, dass der Implementierer anhand sichtbarer Evidenz selbst entscheidet, wann der Kontext ausreicht; es gibt keine starre Toolsequenz.
 - Der AiNetLinter-MCP bietet bereits einen passenden Einstieg: `get_feature_context` bündelt Deklaration, Metriken, Aufrufer, statische Tests und Violations.
 - Eine lokale Probe mit `AiNetLinter.Mcp.AnalysisToolCall` bestätigte diese fünf strukturierten Dimensionen; die begrenzte Aufruferausgabe wurde als Trunkierung sichtbar.
 - Bestehende Orchestrator-/Implementierer-Regeln unterstützen bereits MCP-first-Prüfung, Fallbacks und eine task-lokale `code-map.md`; das Konzept verschiebt sie von Scout-Handoff zu einem konstanten, kleinen Arbeitsgedächtnis ohne Aktivierungszweig.
