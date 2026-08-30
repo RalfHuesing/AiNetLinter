@@ -2,7 +2,7 @@
 task: decompiled-assembly-analysis
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-30T02:15:46+02:00
+last_updated: 2026-08-30T03:14:33+02:00
 ---
 
 # CodeMap: decompiled-assembly-analysis
