@@ -43,7 +43,8 @@ public sealed class ExternalSourceRepositoryCacheConfigurationTests
         Assert.True(initial.Succeeded);
         var transport = new ExternalSourceRecordingTransport(
             (_, _, _) => throw new InvalidOperationException("Clone darf beim Refresh nicht aufgerufen werden."),
-            (_, _, _) => ExternalSourceRepositoryTransportResult.Success(
+            (_, destination, _) => ExternalSourceRepositoryTestTransportResults.Success(
+                destination,
                 ExternalSourceRepositoryCacheTestData.OtherRevision));
         using var staging = TestTempDirectory.Create("external-source-cache-options-staging-");
         var acquirer = ExternalSourceRepositoryAcquirerFactory.CreateConfigured(

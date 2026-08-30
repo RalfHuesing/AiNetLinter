@@ -56,6 +56,12 @@ internal sealed class ExternalSourceCheckoutAttestation
             return ExternalSourceCheckoutVerification.Unverified;
         }
 
+        using var materializationUse = checkout.TryAcquireMaterializationUse(cancellationToken);
+        if (materializationUse is null)
+        {
+            return ExternalSourceCheckoutVerification.Unverified;
+        }
+
         return await attestation.VerifyAsync(
                 checkout.Ownership,
                 cancellationToken)

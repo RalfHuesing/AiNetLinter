@@ -27,7 +27,7 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
             File.WriteAllText(
                 Path.Combine(destination, SolutionPath.Replace('/', Path.DirectorySeparatorChar)),
                 "solution");
-            return ExternalSourceRepositoryTransportResult.Success(Revision);
+            return ExternalSourceRepositoryTestTransportResults.Success(destination, Revision);
         });
         var acquirer = new ExternalSourceRepositoryAcquirer(
             transport,
@@ -58,7 +58,7 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
             File.WriteAllText(
                 Path.Combine(destination, SolutionPath.Replace('/', Path.DirectorySeparatorChar)),
                 "solution");
-            return ExternalSourceRepositoryTransportResult.Success(Revision);
+            return ExternalSourceRepositoryTestTransportResults.Success(destination, Revision);
         });
         var acquirer = new ExternalSourceRepositoryAcquirer(
             transport,
@@ -121,7 +121,7 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
             File.WriteAllText(
                 Path.Combine(destination, SolutionPath.Replace('/', Path.DirectorySeparatorChar)),
                 "solution");
-            return ExternalSourceRepositoryTransportResult.Success(Revision);
+            return ExternalSourceRepositoryTestTransportResults.Success(destination, Revision);
         });
         var acquirer = new ExternalSourceRepositoryAcquirer(
             transport,
@@ -157,7 +157,7 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
             File.WriteAllText(
                 Path.Combine(destination, SolutionPath.Replace('/', Path.DirectorySeparatorChar)),
                 "solution");
-            return ExternalSourceRepositoryTransportResult.Success(Revision);
+            return ExternalSourceRepositoryTestTransportResults.Success(destination, Revision);
         });
         var acquirer = new ExternalSourceRepositoryAcquirer(
             transport,
@@ -212,7 +212,7 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
             File.WriteAllText(
                 Path.Combine(destination, SolutionPath.Replace('/', Path.DirectorySeparatorChar)),
                 "solution");
-            return ExternalSourceRepositoryTransportResult.Success(Revision);
+            return ExternalSourceRepositoryTestTransportResults.Success(destination, Revision);
         });
         var acquirer = new ExternalSourceRepositoryAcquirer(
             transport,
@@ -261,7 +261,7 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
             File.WriteAllText(
                 Path.Combine(destination, SolutionPath.Replace('/', Path.DirectorySeparatorChar)),
                 "solution");
-            return ExternalSourceRepositoryTransportResult.Success(Revision);
+            return ExternalSourceRepositoryTestTransportResults.Success(destination, Revision);
         });
         var acquirer = new ExternalSourceRepositoryAcquirer(
             transport,

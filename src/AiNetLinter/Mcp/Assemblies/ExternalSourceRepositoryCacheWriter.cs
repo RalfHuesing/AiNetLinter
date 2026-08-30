@@ -15,7 +15,7 @@ internal interface IExternalSourceRepositoryCacheWriter
         CancellationToken cancellationToken = default);
 }
 
-internal sealed class LocalExternalSourceRepositoryCacheWriter :
+internal sealed partial class LocalExternalSourceRepositoryCacheWriter :
     IExternalSourceRepositoryCacheWriter,
     IExternalSourceRepositoryCacheReader
 {
@@ -61,24 +61,20 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter :
             return failure!;
         }
 
-        var entryDirectory = GetEntryDirectory(key!);
-        var generationName = ExternalSourceRepositoryCacheContract.GenerationDirectoryPrefix
-            + Guid.NewGuid().ToString("N");
-        var generationDirectory = System.IO.Path.Combine(entryDirectory, generationName);
-        var context = new PublishContext
-        {
-            Request = request,
-            Key = key!,
-            EntryDirectory = entryDirectory,
-            GenerationName = generationName,
-            GenerationDirectory = generationDirectory,
-        };
+        var context = CreatePublishContext(request, key!);
         var published = false;
         CacheKeyLockLease? lockLease = null;
+        ExternalSourceCheckoutMaterializationUse? materializationUse = null;
         try
         {
-            lockLease = await AcquireLockAsync(entryDirectory, cancellationToken).ConfigureAwait(false);
+            lockLease = await AcquireLockAsync(context.EntryDirectory, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
+            materializationUse = context.Request.Checkout.TryAcquireMaterializationUse(cancellationToken);
+            if (materializationUse is null)
+            {
+                return CreateFailure(ExternalSourceRepositoryCachePublishFailureKind.UnsafeSource);
+            }
+
             var result = await PublishGeneration(
                     context,
                     cancellationToken,
@@ -103,43 +99,32 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter :
         }
         finally
         {
-            await FinalizePublishAsync(
-                    context,
-                    published,
-                    lockLease,
-                    testSeam?.AfterLeaseReleasedAsync)
+            await ExternalSourceRepositoryCachePublishLifecycle.FinalizeAndReleaseSourceAsync(
+                    () => FinalizePublishAsync(
+                        context,
+                        published,
+                        lockLease,
+                        testSeam?.AfterLeaseReleasedAsync),
+                    materializationUse)
                 .ConfigureAwait(false);
         }
     }
 
-    private static async Task FinalizePublishAsync(
-        PublishContext context,
-        bool published,
-        CacheKeyLockLease? lockLease,
-        Func<Task>? afterLeaseReleasedAsync)
+    private PublishContext CreatePublishContext(
+        ExternalSourceRepositoryCachePublishRequest request,
+        ExternalSourceRepositoryCacheKey key)
     {
-        try
+        var entryDirectory = GetEntryDirectory(key);
+        var generationName = ExternalSourceRepositoryCacheContract.GenerationDirectoryPrefix
+            + Guid.NewGuid().ToString("N");
+        return new PublishContext
         {
-            if (!published)
-            {
-                if (context.PointerPublished)
-                {
-                    ExternalSourceRepositoryCacheStorage.RestorePreviousCurrent(
-                        context.EntryDirectory,
-                        context.GenerationName,
-                        context.PreviousGeneration);
-                }
-
-                ExternalSourceRepositoryCacheStorage.TryDeleteGeneration(
-                    context.EntryDirectory,
-                    context.GenerationDirectory);
-            }
-        }
-        finally
-        {
-            lockLease?.Dispose();
-            await InvokeTestHookAsync(afterLeaseReleasedAsync).ConfigureAwait(false);
-        }
+            Request = request,
+            Key = key,
+            EntryDirectory = entryDirectory,
+            GenerationName = generationName,
+            GenerationDirectory = System.IO.Path.Combine(entryDirectory, generationName),
+        };
     }
 
     private async Task<ExternalSourceRepositoryCachePublishResult> PublishGeneration(

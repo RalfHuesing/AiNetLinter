@@ -63,6 +63,9 @@ internal sealed class ExternalSourceCheckoutOwnership
 internal sealed class ExternalSourceCheckoutHandle : IExternalSourceCheckoutOwner
 {
     private readonly ExternalSourceCheckoutOwnership ownership;
+    private readonly object lifecycleGate = new();
+    private ExternalSourceCheckoutMaterializationLease? materializationLease;
+    private int activeMaterializationUses;
     private int disposed;
     private int cleanupState;
 
@@ -106,19 +109,84 @@ internal sealed class ExternalSourceCheckoutHandle : IExternalSourceCheckoutOwne
     internal ExternalSourceCheckoutCleanupState CleanupState =>
         (ExternalSourceCheckoutCleanupState)Volatile.Read(ref cleanupState);
 
+    internal ExternalSourceCheckoutMaterializationUse? TryAcquireMaterializationUse(
+        CancellationToken cancellationToken)
+    {
+        lock (lifecycleGate)
+        {
+            if (Volatile.Read(ref disposed) != 0)
+            {
+                return null;
+            }
+
+            if (materializationLease is null
+                && !ExternalSourceCheckoutMaterializationLease.TryAcquire(
+                    ownership,
+                    cancellationToken,
+                    out materializationLease))
+            {
+                return null;
+            }
+
+            activeMaterializationUses++;
+            return new ExternalSourceCheckoutMaterializationUse(ReleaseMaterializationUse);
+        }
+    }
+
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref disposed, 1) != 0)
+        ExternalSourceCheckoutMaterializationLease? leaseToRelease = null;
+        lock (lifecycleGate)
         {
-            return;
+            if (Interlocked.Exchange(ref disposed, 1) != 0)
+            {
+                return;
+            }
+
+            if (activeMaterializationUses == 0)
+            {
+                leaseToRelease = materializationLease;
+                materializationLease = null;
+            }
         }
 
+        leaseToRelease?.Dispose();
         var cleanupSucceeded = ownership.TryCleanup();
         Volatile.Write(
             ref cleanupState,
             (int)(cleanupSucceeded
                 ? ExternalSourceCheckoutCleanupState.Succeeded
                 : ExternalSourceCheckoutCleanupState.RepositoryCleanupFailed));
+    }
+
+    private void ReleaseMaterializationUse()
+    {
+        ExternalSourceCheckoutMaterializationLease? leaseToRelease = null;
+        lock (lifecycleGate)
+        {
+            if (activeMaterializationUses == 0)
+            {
+                return;
+            }
+
+            activeMaterializationUses--;
+            if (activeMaterializationUses == 0 && Volatile.Read(ref disposed) != 0)
+            {
+                leaseToRelease = materializationLease;
+                materializationLease = null;
+            }
+        }
+
+        if (leaseToRelease is not null)
+        {
+            leaseToRelease.Dispose();
+            var cleanupSucceeded = ownership.TryCleanup();
+            Volatile.Write(
+                ref cleanupState,
+                (int)(cleanupSucceeded
+                    ? ExternalSourceCheckoutCleanupState.Succeeded
+                    : ExternalSourceCheckoutCleanupState.RepositoryCleanupFailed));
+        }
     }
 }
 

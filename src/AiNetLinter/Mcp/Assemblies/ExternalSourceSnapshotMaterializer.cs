@@ -26,11 +26,42 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
             throw new ExternalSourceSnapshotMaterializationException();
         }
 
-        await VerifyCheckoutAsync(checkout, cancellationToken).ConfigureAwait(false);
+        var materializationUse = checkout.TryAcquireMaterializationUse(cancellationToken);
+        if (materializationUse is null)
+        {
+            throw new ExternalSourceSnapshotMaterializationException();
+        }
 
+        ExternalSourceSnapshot? snapshot = null;
+        try
+        {
+            snapshot = await MaterializeWithLeaseAsync(
+                    mapping,
+                    checkout,
+                    materializationUse,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            return snapshot;
+        }
+        finally
+        {
+            if (snapshot is null)
+            {
+                materializationUse.Dispose();
+            }
+        }
+    }
+
+    private static async ValueTask<ExternalSourceSnapshot> MaterializeWithLeaseAsync(
+        ExternalSourceMapping mapping,
+        ExternalSourceCheckoutHandle checkout,
+        ExternalSourceCheckoutMaterializationUse materializationUse,
+        CancellationToken cancellationToken)
+    {
         MSBuildWorkspace? workspace = null;
         try
         {
+            await VerifyCheckoutAsync(checkout, cancellationToken).ConfigureAwait(false);
             workspace = SourceFileCatalogLoader.CreateMSBuildWorkspace();
             var workspaceFailed = 0;
             workspace.RegisterWorkspaceFailedHandler(_ => Interlocked.Exchange(ref workspaceFailed, 1));
@@ -39,19 +70,18 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
                 checkout.SolutionPath,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
-
             if (Volatile.Read(ref workspaceFailed) != 0 || !solution.Projects.Any())
             {
                 throw new ExternalSourceSnapshotMaterializationException();
             }
 
             await VerifyCheckoutAsync(checkout, cancellationToken).ConfigureAwait(false);
-
             var snapshot = new ExternalSourceSnapshot(
                 SourceSnapshotIdentity.Create(mapping, checkout.LoadedRevision),
                 solution,
                 workspace,
-                checkout);
+                checkout,
+                materializationUse);
             workspace = null;
             return snapshot;
         }

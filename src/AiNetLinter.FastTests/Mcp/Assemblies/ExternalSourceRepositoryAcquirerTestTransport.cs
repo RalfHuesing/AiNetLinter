@@ -56,9 +56,7 @@ internal sealed class ExternalSourceRecordingTransport : IGiteaRepositoryTranspo
                     ExternalSourceCheckoutOwnership.OwnershipMarkerFileName,
                     StringComparison.Ordinal));
         CancellationToken = cancellationToken;
-        return ValueTask.FromResult(AttachTestAttestation(
-            operation(mapping, destinationPath, cancellationToken),
-            destinationPath));
+        return ValueTask.FromResult(operation(mapping, destinationPath, cancellationToken));
     }
 
     public ValueTask<ExternalSourceRepositoryTransportResult> FetchDefaultBranchAsync(
@@ -70,22 +68,6 @@ internal sealed class ExternalSourceRecordingTransport : IGiteaRepositoryTranspo
         FetchMapping = mapping;
         FetchDestinationPath = destinationPath;
         FetchCancellationToken = cancellationToken;
-        return ValueTask.FromResult(AttachTestAttestation(
-            fetchOperation(mapping, destinationPath, cancellationToken),
-            destinationPath));
+        return ValueTask.FromResult(fetchOperation(mapping, destinationPath, cancellationToken));
     }
-
-    private static ExternalSourceRepositoryTransportResult AttachTestAttestation(
-        ExternalSourceRepositoryTransportResult result,
-        string destinationPath) =>
-        result.IsAvailable
-            && result.CheckoutAttestation is null
-            && result.LoadedRevision is not null
-            ? result with
-            {
-                CheckoutAttestation = ExternalSourceCheckoutAttestation.ForTesting(
-                    destinationPath,
-                    result.LoadedRevision),
-            }
-            : result;
 }

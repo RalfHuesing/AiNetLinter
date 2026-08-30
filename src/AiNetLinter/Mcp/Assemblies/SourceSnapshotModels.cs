@@ -170,13 +170,15 @@ internal sealed class ExternalSourceSnapshot : IDisposable
 {
     private readonly Workspace workspace;
     private readonly IExternalSourceCheckoutOwner? checkoutOwner;
+    private readonly ExternalSourceCheckoutMaterializationUse? materializationUse;
     private int disposed;
 
     internal ExternalSourceSnapshot(
         SourceSnapshotIdentity identity,
         Solution solution,
         Workspace workspace,
-        IExternalSourceCheckoutOwner? checkoutOwner = null)
+        IExternalSourceCheckoutOwner? checkoutOwner = null,
+        ExternalSourceCheckoutMaterializationUse? materializationUse = null)
     {
         ArgumentNullException.ThrowIfNull(identity);
         ArgumentNullException.ThrowIfNull(solution);
@@ -186,6 +188,7 @@ internal sealed class ExternalSourceSnapshot : IDisposable
         Solution = solution;
         this.workspace = workspace;
         this.checkoutOwner = checkoutOwner;
+        this.materializationUse = materializationUse;
     }
 
     internal SourceSnapshotIdentity Identity { get; }
@@ -217,6 +220,15 @@ internal sealed class ExternalSourceSnapshot : IDisposable
         try
         {
             checkoutOwner?.Dispose();
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+
+        try
+        {
+            materializationUse?.Dispose();
         }
         catch (Exception exception)
         {

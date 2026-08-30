@@ -13,22 +13,65 @@ using Xunit;
 namespace AiNetLinter.FastTests.Mcp.Assemblies;
 
 // @covers ExternalSourceCheckoutAttestation
+// @covers ExternalSourceCheckoutHandle
 [Trait("Category", "Component")]
 public sealed class ExternalSourceRepositoryCheckoutAttestationTests
 {
     [Fact]
-    public async Task CachePublish_MutationBeforePointerPublishFailsClosed()
+    public async Task Acquirer_MissingProductionAttestation_IsRejectedAndCleaned()
+    {
+        using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "BaselineMini");
+        using var staging = TestTempDirectory.Create("external-source-acquirer-missing-attestation-");
+        var transport = new ExternalSourceRecordingTransport((_, destination, _) =>
+        {
+            ExternalSourceRepositoryFixtureOperations.CopyBaselineMiniSolution(
+                fixture.RootPath,
+                destination);
+            return ExternalSourceRepositoryTransportResult.Success(
+                ExternalSourceRepositoryCacheTestData.Revision);
+        });
+        var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
+
+        var result = await acquirer.AcquireAsync(ExternalSourceRepositoryCacheTestData.CreateMapping());
+
+        Assert.False(result.IsAvailable);
+        Assert.Equal(ExternalSourceProviderFailureKind.InvalidResponse, result.FailureKind);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutUnverified);
+        Assert.False(Directory.Exists(transport.DestinationPath));
+    }
+
+    [Fact]
+    public async Task CachePublish_MaterializationLeaseBlocksMutationUntilPublishCompletes()
     {
         using var source = SourceFixture.Create(ExternalSourceRepositoryCacheTestData.Revision);
         using var cache = TestTempDirectory.Create("external-source-attestation-race-cache-");
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var verificationStarted = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseVerification = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
         var sourceFile = Path.Combine(source.CheckoutPath, "src", "Program.cs");
+        var verificationCount = 0;
         var attestation = ExternalSourceCheckoutAttestation.ForTesting(
             source.CheckoutPath,
             ExternalSourceRepositoryCacheTestData.Revision,
-            (_, _) => new ValueTask<ExternalSourceCheckoutVerification>(
-                string.Equals(File.ReadAllText(sourceFile), "class Program { }", StringComparison.Ordinal)
+            async (_, cancellationToken) =>
+            {
+                if (Interlocked.Increment(ref verificationCount) == 1)
+                {
+                    verificationStarted.TrySetResult(true);
+                    await releaseVerification.Task.WaitAsync(cancellationToken);
+                }
+
+                return string.Equals(
+                        File.ReadAllText(sourceFile),
+                        "class Program { }",
+                        StringComparison.Ordinal)
                     ? ExternalSourceCheckoutVerification.Clean
-                    : ExternalSourceCheckoutVerification.Unverified));
+                    : ExternalSourceCheckoutVerification.Unverified;
+            });
         using var handle = new ExternalSourceCheckoutHandle(
             source.Handle.Ownership,
             source.Handle.SolutionPath,
@@ -45,22 +88,25 @@ public sealed class ExternalSourceRepositoryCheckoutAttestationTests
         };
         var writer = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
 
-        var result = await writer.PublishAsync(
-            request,
-            CancellationToken.None,
-            testSeam: new ExternalSourceRepositoryCachePublishTestSeam
-            {
-                BeforePointerPublishedAsync = () =>
-                {
-                    File.WriteAllText(sourceFile, "class Program { static int Changed => 1; }");
-                    return Task.CompletedTask;
-                },
-            });
+        var publish = writer.PublishAsync(request, timeout.Token);
+        await verificationStarted.Task.WaitAsync(timeout.Token);
 
-        Assert.False(result.Succeeded);
-        Assert.Equal(ExternalSourceRepositoryCachePublishFailureKind.UnsafeSource, result.FailureKind);
-        Assert.Equal(ExternalSourceCheckoutTrust.Unverified, result.CheckoutTrust);
-        Assert.False(writer.TryReadCurrent(source.Key, out _, out _));
+        var mutationBlocked = false;
+        try
+        {
+            File.WriteAllText(sourceFile, "class Program { static int Changed => 1; }");
+        }
+        catch (IOException)
+        {
+            mutationBlocked = true;
+        }
+
+        releaseVerification.TrySetResult(true);
+        var result = await publish;
+
+        Assert.True(mutationBlocked);
+        Assert.True(result.Succeeded);
+        Assert.True(writer.TryReadCurrent(source.Key, out _, out _));
         Assert.True(File.Exists(sourceFile));
     }
 

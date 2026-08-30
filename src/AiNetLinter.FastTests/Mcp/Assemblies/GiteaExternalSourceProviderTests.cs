@@ -182,7 +182,7 @@ public sealed class GiteaExternalSourceProviderTests
             ExternalSourceRepositoryFixtureOperations.CopyBaselineMiniSolution(
                 fixture.RootPath,
                 destination);
-            return ExternalSourceRepositoryTransportResult.Success(Revision);
+            return ExternalSourceRepositoryTestTransportResults.Success(destination, Revision);
         });
         return ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
     }

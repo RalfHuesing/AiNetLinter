@@ -23,6 +23,10 @@ public sealed class GiteaGitRepositoryCheckoutStatusTests
     [InlineData("ZZ unknown-status", 0, (int)ExternalSourceCheckoutTrust.Unverified, "external-source-repository-checkout-unverified")]
     [InlineData("?! unknown-status", 0, (int)ExternalSourceCheckoutTrust.Unverified, "external-source-repository-checkout-unverified")]
     [InlineData("", 1, (int)ExternalSourceCheckoutTrust.Unverified, "external-source-repository-checkout-unverified")]
+    [InlineData("\n", 0, (int)ExternalSourceCheckoutTrust.Unverified, "external-source-repository-checkout-unverified")]
+    [InlineData("\n?? .ainetlinter-owner", 0, (int)ExternalSourceCheckoutTrust.Unverified, "external-source-repository-checkout-unverified")]
+    [InlineData("?? .ainetlinter-owner\n\n", 0, (int)ExternalSourceCheckoutTrust.Unverified, "external-source-repository-checkout-unverified")]
+    [InlineData(" M tracked.cs\nmalformed", 0, (int)ExternalSourceCheckoutTrust.Unverified, "external-source-repository-checkout-unverified")]
     public async Task FetchDefaultBranchAsync_RejectsDirtyOrUnverifiedCheckoutBeforeMutation(
         string statusOutput,
         int statusExitCode,
@@ -57,6 +61,33 @@ public sealed class GiteaGitRepositoryCheckoutStatusTests
             executor.Requests[0].Arguments);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("?? .ainetlinter-owner")]
+    [InlineData("?? .ainetlinter-owner\r\n?? .ainetlinter-owner\r\n")]
+    public async Task FetchDefaultBranchAsync_AcceptsCompleteCleanStatusRecords(string statusOutput)
+    {
+        using var temp = TestTempDirectory.Create("gitea-transport-status-clean-");
+        var destination = temp.CreateSubdirectory("checkout");
+        Directory.CreateDirectory(Path.Combine(destination, ".git"));
+        var executor = new RecordingGitExecutor((request, _) =>
+            Task.FromResult(request.Arguments[0] is "status"
+                ? CompletedProcess(statusOutput)
+                : request.Arguments[0] is "rev-parse"
+                    ? CompletedProcess(ValidRevision)
+                    : CompletedProcess()));
+        var transport = new GiteaGitRepositoryTransport(processExecutor: executor);
+
+        var result = await transport.FetchDefaultBranchAsync(CreateMapping(), destination);
+
+        Assert.True(result.IsAvailable);
+        Assert.Equal(ExternalSourceCheckoutTrust.Clean, result.CheckoutTrust);
+        Assert.Equal(ExternalSourceRepositoryHealth.Verified, result.Health);
+        Assert.Equal(ValidRevision, result.LoadedRevision);
+        Assert.NotNull(result.CheckoutAttestation);
+        Assert.Equal(5, executor.Requests.Count);
+    }
+
     [Fact]
     public async Task FetchDefaultBranchAsync_RejectsCheckoutThatBecomesDirtyAfterRefresh()
     {
@@ -86,6 +117,7 @@ public sealed class GiteaGitRepositoryCheckoutStatusTests
     }
 
     private const string MappingUrl = "https://gitea.example/shared.git";
+    private const string ValidRevision = "0123456789abcdef0123456789abcdef01234567";
 
     private static ExternalSourceMapping CreateMapping() =>
         new(MappingUrl, "BaselineMini.slnx", ["BaselineMini"]);

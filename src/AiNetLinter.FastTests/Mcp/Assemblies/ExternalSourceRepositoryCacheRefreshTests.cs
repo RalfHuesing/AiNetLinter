@@ -86,8 +86,7 @@ public sealed class ExternalSourceRepositoryCacheRefreshTests
                 File.WriteAllText(
                     Path.Combine(destination, "src", "Program.cs"),
                     "class Program { static int Refreshed => 1; }");
-                return ExternalSourceRepositoryTransportResult.Success(
-                    ExternalSourceRepositoryCacheTestData.OtherRevision);
+                return ExternalSourceRepositoryTestTransportResults.Success(destination, ExternalSourceRepositoryCacheTestData.OtherRevision);
             });
         var acquirer = new ExternalSourceRepositoryAcquirer(
             transport,
@@ -189,8 +188,7 @@ public sealed class ExternalSourceRepositoryCacheRefreshTests
         var recordingWriter = new RecordingCacheWriter { ReturnFailure = true };
         var transport = new ExternalSourceRecordingTransport(
             (_, _, _) => throw new InvalidOperationException("Clone darf beim Refresh nicht aufgerufen werden."),
-            (_, _, _) => ExternalSourceRepositoryTransportResult.Success(
-                ExternalSourceRepositoryCacheTestData.OtherRevision));
+            (_, destination, _) => ExternalSourceRepositoryTestTransportResults.Success(destination, ExternalSourceRepositoryCacheTestData.OtherRevision));
         var acquirer = CreateStaleAcquirer(
             transport,
             recordingWriter,
@@ -236,8 +234,7 @@ public sealed class ExternalSourceRepositoryCacheRefreshTests
             (_, destination, _) =>
             {
                 File.Delete(Path.Combine(destination, "src", "BaselineMini.slnx"));
-                return ExternalSourceRepositoryTransportResult.Success(
-                    ExternalSourceRepositoryCacheTestData.OtherRevision);
+                return ExternalSourceRepositoryTestTransportResults.Success(destination, ExternalSourceRepositoryCacheTestData.OtherRevision);
             });
         var acquirer = CreateStaleAcquirer(
             transport,

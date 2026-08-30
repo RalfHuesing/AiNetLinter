@@ -73,32 +73,69 @@ internal static class ExternalSourceRepositoryCheckoutStatus
 
     private static ExternalSourceCheckoutTrust? AssessStatus(string statusOutput)
     {
-        foreach (var line in statusOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        if (statusOutput.Length == 0)
         {
-            var normalizedLine = line.TrimEnd('\r');
-            if (normalizedLine.Length < 3
-                || !IsStatusCode(normalizedLine[0])
-                || !IsStatusCode(normalizedLine[1])
-                || !IsValidStatusPair(normalizedLine[0], normalizedLine[1])
-                || normalizedLine[2] is not ' ')
+            return null;
+        }
+
+        var records = statusOutput.Split('\n');
+        var recordCount = records.Length - (records[^1].Length == 0 ? 1 : 0);
+        if (recordCount == 0)
+        {
+            return ExternalSourceCheckoutTrust.Unverified;
+        }
+
+        var hasDirtyRecord = false;
+        for (var index = 0; index < recordCount; index++)
+        {
+            if (!TryNormalizeStatusRecord(records[index], out var normalizedLine)
+                || !IsValidStatusRecord(normalizedLine))
             {
                 return ExternalSourceCheckoutTrust.Unverified;
             }
 
-            if (normalizedLine.StartsWith(UntrackedStatusPrefix, StringComparison.Ordinal)
-                && string.Equals(
-                    normalizedLine[3..],
-                    ExternalSourceCheckoutOwnership.OwnershipMarkerFileName,
-                    StringComparison.Ordinal))
+            if (IsOwnershipMarkerRecord(normalizedLine))
             {
                 continue;
             }
 
-            return ExternalSourceCheckoutTrust.Dirty;
+            hasDirtyRecord = true;
         }
 
-        return null;
+        return hasDirtyRecord
+            ? ExternalSourceCheckoutTrust.Dirty
+            : null;
     }
+
+    private static bool TryNormalizeStatusRecord(string record, out string normalizedRecord)
+    {
+        var carriageReturnIndex = record.IndexOf('\r');
+        if (carriageReturnIndex >= 0 && carriageReturnIndex != record.Length - 1)
+        {
+            normalizedRecord = string.Empty;
+            return false;
+        }
+
+        normalizedRecord = carriageReturnIndex >= 0
+            && carriageReturnIndex == record.Length - 1
+            ? record[..^1]
+            : record;
+        return true;
+    }
+
+    private static bool IsValidStatusRecord(string record) =>
+        record.Length >= 3
+        && IsStatusCode(record[0])
+        && IsStatusCode(record[1])
+        && IsValidStatusPair(record[0], record[1])
+        && record[2] is ' ';
+
+    private static bool IsOwnershipMarkerRecord(string record) =>
+        record.StartsWith(UntrackedStatusPrefix, StringComparison.Ordinal)
+        && string.Equals(
+            record[3..],
+            ExternalSourceCheckoutOwnership.OwnershipMarkerFileName,
+            StringComparison.Ordinal);
 
     private static bool IsStatusCode(char value) =>
         value is ' ' or 'M' or 'A' or 'D' or 'R' or 'C' or 'U' or 'T' or '?' or '!';
