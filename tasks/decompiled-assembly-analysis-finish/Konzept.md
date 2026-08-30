@@ -38,6 +38,14 @@ Die bestehende Implementierung verfügt bereits über:
 - spezialisierte Assembly-Tools. Allgemeine Tool-Aufrufe werden für
   Assembly-Ziele derzeit noch als nicht unterstützt zurückgewiesen.
 
+Das Betriebsmodell ist ein einzelner lokaler MCP-Daemon. Er verwaltet maximal
+vier gleichzeitig residente Benutzer-Repositories beziehungsweise
+Projektkontexte. Externe Quellen sind davon getrennt: Sie können in beliebiger
+Anzahl logisch für Analysen hinzugenommen werden, ohne einen der vier
+Benutzer-Kontexte zu ersetzen. Eine externe Quelle ist entweder eine DLL, die
+statisch decompiliert wird, oder eine konfigurierte Git-/Gitea-Quelle, aus der
+bei ausreichendem Trust ein Source-backed-Snapshot entsteht.
+
 Maßgebliche aktuelle Bereiche sind:
 
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/`
@@ -67,10 +75,11 @@ Der Scope bleibt auf ein zusammenhängendes Abschlussvorhaben begrenzt:
    unverified und darf nicht als Source-backed-Quelle weiterverwendet werden.
 
 3. Der produktive Host-Vertrag für externe Quellen und die
-   Assembly-Tool-Fähigkeiten werden verbindlich festgelegt. Die aktuelle
-   Host-Komposition verwendet standardmäßig noch einen nicht verfügbaren
-   Provider; die getestete Source-Acquisition ist daher nicht automatisch ein
-   Beleg für eine produktiv erreichbare externe Quelle.
+   Assembly-Tool-Fähigkeiten werden verbindlich festgelegt. Der einzelne
+   lokale MCP-Daemon muss konfigurierte Git-/Gitea-Quellen selbstständig über
+   den produktiven Provider anfordern können. Öffentliche Quellen benötigen
+   dabei keine persistierten Credentials; private Quellen dürfen nur über eine
+   ausdrücklich definierte Credential-Auflösungsgrenze ergänzt werden.
 
 4. Für Assembly-Ziele wird die empfohlene begrenzte Capability-Grenze
    verwendet: statische Struktur-, Symbol-, Referenz-, Aufruf- und
@@ -82,6 +91,12 @@ Der Scope bleibt auf ein zusammenhängendes Abschlussvorhaben begrenzt:
 
 5. Die daraus entstehenden Benutzer- und Integrationsverträge werden in den
    vorhandenen Dokumentations- und Tool-Beschreibungsstellen nachgezogen.
+
+6. Die Trennung zwischen maximal vier residenten Benutzer-Kontexten und einer
+   beliebigen Anzahl externer Assembly-Quellen wird im Host-, Registry- und
+   Lifecycle-Vertrag sichtbar gemacht. Die Vierergrenze darf externe Quellen
+   nicht versehentlich begrenzen; für externe Quellen gelten weiterhin
+   explizite Ressourcen-, Ownership- und Lebenszeitregeln.
 
 Die folgenden Punkte gehören ausdrücklich nicht automatisch zum Startumfang:
 transitive Abhängigkeitsauflösung, vollständige Unterstützung aller allgemeinen
@@ -100,11 +115,17 @@ als spätere Abhängigkeiten oder bewusste Grenzen dokumentiert.
 - Eine Source-backed-Analyse darf nur mit einer erfolgreich attestierten,
   besessenen und lebenszeitlich noch gültigen Quelle entstehen.
 - Es wird kein Assembly-Code geladen, reflektiert oder ausgeführt.
-- Der produktive Host-Vertrag benennt eindeutig, ob und unter welchen
-  Bedingungen externe Quellen standardmäßig erreichbar sind. Credentials
-  bleiben außerhalb von Konzept, Diagnosen und normaler Konfiguration; falls
-  Credentials unterstützt werden, erfolgt die Auflösung über eine getrennte,
-  injizierbare Grenze.
+- Ein einzelner lokaler MCP-Daemon verwaltet höchstens vier residente
+  Benutzer-Repositories beziehungsweise Projektkontexte.
+- Externe DLL- und Git-/Gitea-Quellen sind unabhängig von dieser Vierergrenze
+  in beliebiger Anzahl logisch nutzbar. Eine künstliche Begrenzung auf vier
+  externe Quellen ist nicht zulässig; konkrete Ressourcenlimits müssen separat
+  und sichtbar behandelt werden.
+- Der produktive Host-Vertrag benennt eindeutig, wie konfigurierte externe
+  Git-/Gitea-Quellen standardmäßig erreichbar sind. Öffentliche Quellen werden
+  vom lokalen Default-Host direkt unterstützt. Private Quellen benötigen eine
+  getrennte, injizierbare Credential-Auflösung; Credentials bleiben außerhalb
+  von Konzept, Diagnosen und normaler Konfiguration.
 - Assembly-Tools melden ihre tatsächliche Capability und Partialität
   maschinenlesbar oder in einer gleichwertig eindeutigen Diagnose. Ein nicht
   unterstützter Aufruf darf nicht wie ein leerer oder erfolgreicher Befund
@@ -130,8 +151,17 @@ als spätere Abhängigkeiten oder bewusste Grenzen dokumentiert.
 - Ein Snapshot kann die Quelle nur innerhalb der vorgesehenen Lease-Lebenszeit
   verwenden; nach Freigabe der Lease ist keine Source-backed-Nutzung mehr
   möglich.
-- Der endgültige Host-Entscheid ist durch einen deterministischen Test für
-  Default-Komposition und durch einen Test für injizierte Provider abgedeckt.
+- Der einzelne lokale MCP-Daemon verwaltet höchstens vier residente
+  Benutzer-Kontexte; die Lebenszeit- oder Kapazitätsentscheidung für einen
+  fünften Kontext ist eindeutig diagnostiziert.
+- Mindestens eine DLL-Quelle und mehrere konfigurierte Git-/Gitea-Quellen
+  können unabhängig von der Vierergrenze als externe Analysequellen behandelt
+  werden. Ein Ressourcenmangel führt zu einer sichtbaren, kontrollierten
+  Nichtverfügbarkeit und nicht zu einer stillen Überschreibung eines aktiven
+  Kontextes.
+- Die Default-Komposition des lokalen Hosts verwendet für konfigurierte
+  öffentliche Git-/Gitea-Quellen den produktiven Provider; ein separater Test
+  deckt zusätzlich die injizierte Provider-Komposition ab.
 - Für jede freigeschaltete Assembly-Capability existieren ein positiver Fall,
   ein nicht verfügbarer oder partieller Fall und ein klarer Fallback- oder
   Fehlerfall.
@@ -174,11 +204,18 @@ Die Host- und Capability-Entscheidung betrifft insbesondere:
 
 - `AssemblyAnalysisHostComposition` sowie die produktiven MCP- und Daemon-
   Einstiegspunkte;
+- die Resident-Registry und ihre Grenze von höchstens vier
+  Benutzer-Projektkontexten;
 - `AssemblySourceSelectionOrchestrator`, Provider und Acquirer;
 - `AnalysisToolCall`, `AnalysisTargetResolver` und die spezialisierten
   Assembly-Registrierungen;
 - die Assembly-Analyse-Modelle für Origin, Partialität, Diagnose und
   Referenzauflösung.
+
+Die externe Quellenverwaltung darf nicht an die Resident-Registry gekoppelt
+werden. DLL-Decompilation und konfigurierte Git-/Gitea-Quellen erhalten eigene
+request- beziehungsweise snapshotbezogene Lebenszyklen und können in
+beliebiger Anzahl logisch adressiert werden.
 
 Die Implementierung muss die bestehenden Namespace- und Architekturgrenzen
 beibehalten. Gemeinsame Pfad-, URL-, Status- und Trust-Regeln gehören an ihre
@@ -236,6 +273,11 @@ ergibt, ist dieses als separates Sicherheitsvorhaben zu behandeln.
   Ein fehlgeschlagener Refresh darf den letzten gültigen Zustand verwenden,
   sofern dessen Trust und Manifest weiterhin gültig sind; andernfalls wird der
   externe Pfad als nicht verfügbar behandelt.
+- Die Vierergrenze gilt nur für residente Benutzer-Repositories. Externe
+  Quellen werden über eigene, begrenzte Request-, Checkout- und Snapshot-
+  Lebenszyklen verwaltet. Bei erschöpften lokalen Ressourcen wird der konkrete
+  externe Vorgang kontrolliert abgewiesen oder degradiert; aktive Quellen
+  werden nicht stillschweigend für einen anderen Vorgang überschrieben.
 
 ## Verifikation und Dokumentationspflichten
 
@@ -246,6 +288,12 @@ Fast- und Integration-Tests ohne Stress-Kategorie, der fehler- und
 warnungsfreie Build sowie die MCP-Safeguard-/Violation-Prüfungen. Die im
 aktuellen Umfeld nicht verfügbare Windows-Reparse-Berechtigung darf dabei nicht
 als stillschweigend bestandener Produktionsnachweis gelten.
+
+Zusätzlich wird die Ein-Daemon-Komposition geprüft: vier residente
+Benutzer-Kontexte bleiben innerhalb ihrer Grenze, während mehrere externe
+DLL- und Git-/Gitea-Quellen unabhängig davon adressierbar sind. Die Prüfung
+deckt auch die kontrollierte Reaktion auf erschöpfte Ressourcen und die
+Freigabe nicht mehr verwendeter Quellen ab.
 
 Bei Änderungen an öffentlichem Tool-Vertrag, Host-Konfiguration,
 CLI-Optionen oder `rules.json` werden mindestens `README.md` und
@@ -258,9 +306,13 @@ Agenten-Regelsynchronisation gemäß Projektregeln ausgeführt.
 - Der aktuelle Codebestand und die aktuellen Projektregeln sind die
   maßgebliche technische Grundlage.
 - Das primäre Betriebsziel ist ein lokal beim Entwickler laufender
-  MCP-Server.
+  einzelner MCP-Daemon mit höchstens vier residenten Benutzer-
+  Projektkontexten.
 - Der Startumfang soll klein genug bleiben, um Trust-Korrekturen und einen
   klaren Produktvertrag ohne parallele Großbaustellen abzuschließen.
+- Externe DLL- und Git-/Gitea-Quellen sind logisch nicht auf vier Einträge
+  begrenzt; ihre tatsächliche Nutzung bleibt durch explizite lokale
+  Ressourcen- und Lebenszeitgrenzen bestimmt.
 - Öffentliche Repository-Quellen können grundsätzlich ohne persistierte
   Credentials funktionieren. Private Quellen benötigen eine explizite,
   getrennte Credential-Resolver-Entscheidung.
@@ -271,23 +323,27 @@ Agenten-Regelsynchronisation gemäß Projektregeln ausgeführt.
   Referenz-, Aufruf- und Metrikabfragen. Eine transitive
   Abhängigkeitsauflösung wird nur nach separater Scope-Entscheidung begonnen.
 
-## Offene Fragen, die den Start blockieren
+## Offene Fragen und spätere Teilbereichsentscheidungen
 
-1. Wenn ein Entwickler ein Assembly analysiert und dafür ein passendes
-   externes Repository gemappt ist: Soll der normal gestartete lokale
-   MCP-Server dieses Repository selbstständig abrufen und als Source-backed-
-   Quelle verwenden, oder soll die externe Quelle weiterhin nur dann genutzt
-   werden, wenn ein Provider ausdrücklich verdrahtet wurde? Die Empfehlung ist,
-   öffentliche Repositories im normalen lokalen Host direkt zu unterstützen
-   und private Repositories nur über eine optionale, injizierbare
-   Credential-Auflösung zu ergänzen. Credentials sollen nicht in normaler
-   Konfiguration oder Diagnosen gespeichert werden.
+Für den Startumfang bestehen nach den getroffenen Entscheidungen keine
+blockierenden Scope-Fragen mehr. Festgelegt ist, dass der einzelne lokale
+MCP-Daemon konfigurierte öffentliche Git-/Gitea-Quellen selbstständig nutzen
+kann. Private Quellen benötigen eine getrennte, injizierbare
+Credential-Auflösung; Credentials werden nicht in normaler Konfiguration oder
+Diagnosen gespeichert.
 
-Die Capability-Auswahl und das begrenzte lokale Bedrohungsmodell sind damit
-entschieden. Detailentscheidungen zu transitiven Referenzen, Origin-
-Alias-Bereinigung, einer zentralen Origin-String-Konvention und Cache-
-Retention können als nachgelagerte Teilbereichsentscheidungen behandelt
-werden.
+Die folgenden Fragen blockieren den Start nicht und werden nur im jeweils
+betroffenen Teilbereich entschieden:
+
+1. Welche konkreten Sicherheits- und Ressourcenlimits gelten pro externer
+   Quelle bei vielen gleichzeitig angeforderten DLL- oder Git-/Gitea-Quellen,
+   insbesondere für Cache, Disk, Parallelität und Idle-Lebenszeit?
+2. Welche Form soll die spätere transitive Referenzauflösung mit ihren
+   Grenzen für Tiefe, Größe und fehlende Abhängigkeiten annehmen?
+3. Welche weiteren Tool-Familien sollen nach der Kernmenge einen eigenen
+   Assembly-Capability-Vertrag erhalten?
+4. Besteht ein nachweisbarer Kompatibilitätsnutzen für die Bereinigung des
+   internen Origin-Alias oder für eine zentrale Origin-Textkonvention?
 
 ## Spätere Annahmen und Abhängigkeiten
 
@@ -308,11 +364,30 @@ werden.
 
 ## Arbeitsgedächtnis (nur Draft)
 
+### Bestätigte Entscheidungen
+
+- Die Assembly-Kernmenge umfasst statische Struktur-, Symbol-, Referenz-,
+  Aufruf- und Metrikabfragen.
+- Es gibt einen lokal beim Entwickler laufenden MCP-Daemon.
+- Dieser Daemon verwaltet höchstens vier residente Benutzer-Repositories bzw.
+  Projektkontexte.
+- Externe Quellen sind davon unabhängig und können logisch in beliebiger
+  Anzahl hinzukommen. Sie sind entweder DLLs für statische Decompilation oder
+  konfigurierte Git-/Gitea-Quellen für Source-backed-Analyse.
+- Konfigurierte öffentliche Git-/Gitea-Quellen sollen vom Default-Host
+  selbstständig genutzt werden. Private Quellen bleiben an eine separate,
+  injizierbare Credential-Auflösung gebunden.
+- Das begrenzte lokale Bedrohungsmodell gilt; eine vollständige
+  Namespace-Sperre gegen gleichberechtigte Prozesse ist kein Muss.
+
 ### Geprüfte Evidenz
 
 - Die aktuelle Assembly-Analyse umfasst 68 Produktionsdateien im Bereich
   `Mcp/Assemblies`; der aktuelle MCP-Violation- und Dead-Code-Abgleich ergab
   dort keine Befunde.
+- Die Resident-Registry ist auf höchstens vier residente Projekt-Keys
+  ausgelegt. Diese Grenze darf nicht als Obergrenze für externe Quellen
+  wiederverwendet werden.
 - `ExternalSourcePathRules.IsDriveQualified` wird gemeinsam verwendet; die
   frühere Duplikationsannahme ist daher erledigt.
 - Der Origin-Alias `AssemblyOrigin.Kind` hat aktuell keine produktiven
@@ -341,7 +416,7 @@ werden.
 **Weiterhin relevant und für den Scope vorgesehen:**
 
 - Statusparser-Grenzfall und vollständige Lease-Bereinigung;
-- expliziter Default-Host-/Provider-Vertrag;
+- Umsetzung des bestätigten Default-Host-/Provider-Vertrags;
 - die bestätigte begrenzte Assembly-Kernmenge und eindeutige
   Partialitätsdiagnose;
 - abschließende Dokumentation und deterministische Verifikation.
@@ -365,7 +440,7 @@ werden.
 
 **Ungeklärt und einem Teilbereich zuzuordnen:**
 
-- Default-Verhalten und Credential-Grenze des produktiven Source-Providers;
+- konkrete Credential- und Ressourcenlimits für viele externe Quellen;
 - Umfang und Grenzen einer späteren transitiven Referenzauflösung;
 - Kompatibilitätsbedarf des Origin-Alias und der Origin-Textkonvention.
 
@@ -380,10 +455,11 @@ werden.
 
 ### Übergabestatus
 
-Bestätigt sind die begrenzte Assembly-Kernmenge und das lokale
-Entwickler-Betriebsmodell mit begrenztem Bedrohungsmodell. Der Entwurf ist
-noch nicht startbereit. Nach Beantwortung der verbleibenden Provider-Frage
-wird der Draft bereinigt, auf die bestätigten Muss-Kriterien
-zugeschnitten und dem Nutzer ausdrücklich zur Freigabe vorgelegt. Erst danach
+Die fachlichen Startentscheidungen sind getroffen: begrenzte
+Assembly-Kernmenge, ein lokaler MCP-Daemon, höchstens vier residente
+Benutzer-Kontexte und beliebig viele logisch getrennte externe Quellen. Der
+Entwurf bleibt bis zur ausdrücklichen Nutzerfreigabe auf `status: draft`.
+Vor der Freigabe wird nur noch geprüft, ob die Formulierungen den bestätigten
+Scope widerspruchsfrei und selbstständig verständlich abbilden. Erst danach
 kommt eine Umstellung auf `status: ready` in Betracht. Ein Orchestrator wird
 nicht automatisch gestartet.
