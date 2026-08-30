@@ -9,3 +9,22 @@ Historische Übergaben und neue actionable P2/P3-Befunde werden nach dem
 jeweiligen Rollenbericht mit Evidenz, Disposition und Log-Anker ergänzt;
 unbelegte oder rein kosmetische Vorschläge bleiben ausschließlich im
 Ausführungsprotokoll.
+
+## TD-EPIC-A-001 — `MaxDirectoryChildren` im Core-Scope
+
+- Schweregrad: P2/P3
+- Beschreibung: Der neue `SolutionDocumentPathResolver` erhöht die Zahl der
+  Einträge im betroffenen Core-Verzeichnis auf 31 und löst damit die
+  `MaxDirectoryChildren`-Strukturregel aus.
+- Fundstelle/Scope: `src/AiNetLinter/Core/`; neuer Resolver neben den bereits
+  vorhandenen Core-Dateien.
+- Evidenz: letzter gezielter `get_violations`-Check nach der letzten
+  Codeänderung meldete genau 1 Befund; Testscope meldete 0 Violations.
+- Disposition: `accepted-deferred`
+- Risiko: rein strukturell; kein beobachtetes Funktions- oder Sicherheitsrisiko
+  im EPIC-A-Vertrag.
+- Nächster Schritt: Bei einer passenden Folgeänderung den Resolver in einen
+  fachlich geeigneten Unterordner gruppieren und anschließend Impact,
+  `get_violations` und betroffene Tests erneut prüfen.
+- Log-Anker: `execution-log.md`, completed EPIC-A Implementierer-
+  Fortsetzung vom 2026-08-31.

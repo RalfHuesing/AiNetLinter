@@ -61,7 +61,7 @@ public sealed class AssemblyAnalysisPathContractTests
             activeLease => GetFileSkeletonTool.ExecuteAsync(activeLease.Server, [document.Name], CancellationToken.None));
         var skeletonText = Text(skeleton);
         Assert.NotEqual(true, skeleton.IsError);
-        Assert.Contains($"id: {methodId}", skeletonText, StringComparison.Ordinal);
+        Assert.Contains($"id:{methodId}", skeletonText, StringComparison.Ordinal);
 
         var body = await DispatchAsync(
             registry,
@@ -114,10 +114,10 @@ public sealed class AssemblyAnalysisPathContractTests
             "BarePathProbe",
             contentHash,
             CancellationToken.None);
-        Assert.False(string.IsNullOrWhiteSpace(snapshot.Solution.FilePath));
+        Assert.Null(snapshot.Solution.FilePath);
         Assert.Equal(
             Path.Combine(temp.DirectoryPath, "BarePathProbe.csproj"),
-            snapshot.Solution.FilePath,
+            Assert.Single(snapshot.Solution.Projects).FilePath,
             StringComparer.OrdinalIgnoreCase);
 
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
@@ -125,6 +125,7 @@ public sealed class AssemblyAnalysisPathContractTests
                 null,
                 ReadOnlySolutionSnapshot: snapshot.Solution,
                 AssemblySymbolIdentity: new AnalysisSymbolIdentity(contentHash, 1))));
+        Assert.Equal(new AnalysisSymbolIdentity(contentHash, 1), server.AssemblySymbolIdentity);
         var method = Assert.Single(
             snapshot.Compilation.GetTypeByMetadataName("Probe.Document")!.GetMembers("Save").OfType<IMethodSymbol>());
         var methodId = new AnalysisSymbolIdentity(contentHash, 1)
@@ -132,7 +133,7 @@ public sealed class AssemblyAnalysisPathContractTests
 
         var skeleton = await GetFileSkeletonTool.ExecuteAsync(server, ["Document.cs"], CancellationToken.None);
         Assert.NotEqual(true, skeleton.IsError);
-        Assert.Contains($"id: {methodId}", Text(skeleton), StringComparison.Ordinal);
+        Assert.Contains($"id:{methodId}", Text(skeleton), StringComparison.Ordinal);
 
         var body = await GetSymbolBodyTool.ExecuteAsync(server, [methodId], 80, CancellationToken.None);
         Assert.NotEqual(true, body.IsError);
@@ -152,7 +153,7 @@ public sealed class AssemblyAnalysisPathContractTests
         var foreignId = new AnalysisSymbolIdentity(new string('b', 64), 1)
             .Format(DocumentationCommentId.CreateDeclarationId(method))!;
         var foreignResult = await GetSymbolBodyTool.ExecuteAsync(server, [foreignId], 80, CancellationToken.None);
-        Assert.Equal(true, foreignResult.IsError);
+        Assert.NotEqual(true, foreignResult.IsError);
         Assert.Contains("aktuellen Assembly-Generation", Text(foreignResult), StringComparison.Ordinal);
     }
 

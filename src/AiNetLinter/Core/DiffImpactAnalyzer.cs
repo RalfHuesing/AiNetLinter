@@ -298,47 +298,7 @@ public sealed class DiffImpactAnalyzer
     /// (MCP) fuer die positionsbasierte Symbolaufloesung wiederverwendet.
     /// </summary>
     internal static Document? FindDocumentByPath(Solution solution, string filePath)
-    {
-        if (string.IsNullOrWhiteSpace(filePath)) return null;
-
-        foreach (var project in solution.Projects)
-        {
-            var doc = project.Documents.FirstOrDefault(d => PathsEquivalent(solution, d.FilePath, filePath));
-            if (doc != null) return doc;
-        }
-        return null;
-    }
-
-    private static bool PathsEquivalent(Solution solution, string? left, string right)
-    {
-        var leftPaths = GetPathVariants(solution, left).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return GetPathVariants(solution, right).Any(leftPaths.Contains);
-    }
-
-    private static IEnumerable<string> GetPathVariants(Solution solution, string? path)
-    {
-        if (string.IsNullOrWhiteSpace(path)) yield break;
-
-        var solutionDir = Path.GetDirectoryName(solution.FilePath ?? string.Empty) ?? string.Empty;
-        foreach (var candidate in new[] { path, Path.Combine(solutionDir, path) })
-        {
-            if (TryGetFullPath(candidate, out var fullPath)) yield return fullPath;
-        }
-    }
-
-    private static bool TryGetFullPath(string path, out string fullPath)
-    {
-        try
-        {
-            fullPath = Path.GetFullPath(path);
-            return true;
-        }
-        catch (ArgumentException)
-        {
-            fullPath = string.Empty;
-            return false;
-        }
-    }
+        => SolutionDocumentPathResolver.Find(solution, filePath);
 
     private static async Task<List<ChangedSymbolMatch>> GetChangedSymbolsFromHunksAsync(
         Solution solution, string repoRoot, Dictionary<string, List<HunkRange>> hunks, DiffSymbolScope scope)

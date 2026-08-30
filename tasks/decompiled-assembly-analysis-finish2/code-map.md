@@ -30,16 +30,21 @@
   `src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs` werden nur angepasst,
   wenn der Assembly-Kontext dort nachweisbar falsch behandelt wird.
 - Für EPIC-A konkret bestätigt: `DiffImpactAnalyzer.FindDocumentByPath` ist
-  die gemeinsame Dokumentauflösung für `get_file_skeleton`,
+  über `SolutionDocumentPathResolver` die gemeinsame Dokumentauflösung für `get_file_skeleton`,
   `get_symbol_body`, Dependency- und Referenzpfade; die direkte
   `Path.GetRelativePath`-Nutzung liegt in
   `CallGraphTreeBuilder.FormatPath` und
   `DependencyGraphScanner.ToRelativePath`.
+- `SolutionDocumentPathResolver` vergleicht zuerst sichere absolute/relative
+  Pfadvarianten und erlaubt danach ausschließlich bei eindeutigem Treffer den
+  reinen Dokument-Basename (`Document.Name`). Mehrdeutige Basenames liefern
+  keinen stillschweigend falschen Treffer.
 - `AssemblyRoslynWorkspaceFactory.CreateProjectInfo` konstruiert den
   synthetischen Projektpfad aus dem ersten generierten Dokument und ist damit
   die relevante Fallback-Stelle für ein Dokument ohne physisches Verzeichnis.
-- Implementiert: `FindDocumentByPath` vergleicht sichere Pfadvarianten (CWD,
-  Solution-Verzeichnis und absolute Formen); `GetFileSkeletonTool`,
+- Implementiert: `FindDocumentByPath` delegiert die sichere Auflösung (CWD,
+  Solution-Verzeichnis, absolute Formen und eindeutiger Basename) an den neuen
+  Resolver; `GetFileSkeletonTool`,
   `DependencyGraphTool`, `FindReferencesTool` und der Dependency-Scanner
   nutzen den logischen Eingabepfad. `CallGraphTreeBuilder`,
   `GetSymbolBodyTool` und `DependencyGraphScanner` verwenden für Ausgaben
@@ -91,22 +96,48 @@
 - Stable Symbol IDs und Assembly-Identität müssen aus demselben Snapshotvertrag
   in Datei-, Symbol-, Hierarchie- und Körperantworten stammen; fremde IDs sind
   fachliche Eingabefehler, keine interne Ausnahme.
-- Die Dateiadressierung generierter Dokumente ist durch die Variantenauflösung
-  zentral behoben; der Workspace-Fallback deckt zusätzlich bare generierte
-  Dateinamen ohne physisches Verzeichnis ab.
+- Die Dateiadressierung generierter Dokumente ist durch die Varianten- und
+  eindeutige Basename-Auflösung zentral behoben; der Workspace-Fallback deckt
+  zusätzlich bare generierte Dateinamen ohne physisches Verzeichnis ab.
 - Parametermethoden werden weiterhin über Roslyn-Dokumentations-IDs aufgelöst;
   EPIC-A-Tests müssen die Signatur `Save(bool)` und die Assembly-ID-Kohärenz
   über Skeleton/Body schützen.
-- MCP-Reproduktion: `inspect_assembly` meldet `generatedPath=source/...`,
-  aber `get_file_skeleton` mit `source/...` und mit dem ausgegebenen
-  Dateinamen antwortet derzeit kontrolliert `RESOURCE_NOT_FOUND`; die
-  exakte Pfadvergleichslogik in `FindDocumentByPath` berücksichtigt keine
-  äquivalenten relativen/absoluten Formen.
+- MCP-/Test-Reproduktion: Der Route-Test meldete mit `document.Name` bei einem
+  generierten `source/...`-Pfad zunächst `RESOURCE_NOT_FOUND`; der neue Resolver
+  löst den eindeutigen Basename jetzt auf. `AdhocWorkspace` lässt
+  `Solution.FilePath` erwartungsgemäß `null`; der synthetische `Project.FilePath`
+  wird aus dem Assembly-Verzeichnis beziehungsweise dem generierten Dokument-
+  Verzeichnis gebildet und ist der relevante Fallback.
+- Die Stable-ID-Regression war zusätzlich eine Format-Assertion: der bestehende
+  Skeleton-Vertrag rendert `id:<stable-id>` ohne Leerzeichen, während Bodies
+  `id: \`<stable-id>\`` ausgeben. Die IDs selbst sind über Skeleton/Body und
+  `AssemblySymbolIdentity(ContentHash, Generation)` kohärent.
 - MCP-Kontext der konkreten Änderungsstellen: `FindDocumentByPath` (7
   Aufrufer, 7 statisch zugeordnete Tests), `FormatPath` (3 interne Aufrufer,
   keine statische Testzuordnung), `ToRelativePath` (6 interne Aufrufer, 15
   Scanner-Tests) und `CreateProjectInfo` (1 Aufrufer, 13 Session-Tests);
-  alle vier Dateien meldeten 0 Violations.
+  `FormatPath`, `ToRelativePath` und `CreateProjectInfo` meldeten 0 Violations;
+  `DiffImpactAnalyzer.cs` hatte im Zwischenstand einen `MaxLineCount`-Befund,
+  der durch die Extraktion in `SolutionDocumentPathResolver.cs` nicht mehr auf
+  dem Diff-Hotspot liegt.
+- Nach der Korrektur erneut ausgeführt: `find_symbol` für
+  `SolutionDocumentPathResolver`, `get_feature_context` für
+  `SolutionDocumentPathResolver.Find` (vollständig, 0 Datei-/Symbolviolations),
+  `find_references` für `DiffImpactAnalyzer.FindDocumentByPath` (7 Call-Sites,
+  vollständig), `get_impact` mit `detailLevel=change-context` (3 geänderte
+  Symbole, 7 Call-Sites, 4 Testzuordnungen, 0 Violations) und
+  `dependency_graph` für den absoluten `DiffImpactAnalyzer.cs`-Pfad (beide
+  Richtungen, vollständig; Resolver als ausgehende Abhängigkeit sichtbar).
+- Abschluss-Audit im betroffenen Produktionsscope `src/AiNetLinter`:
+  `find_duplicates` fand 10 begrenzte Clone-Cluster; der einzige exakte
+  Assembly-Cluster betrifft `InspectAssemblyTool`/`FindAssemblyExtensionsTool`
+  und liegt außerhalb dieser EPIC-A-Pfadkorrektur. Die übrigen Near-/Fuzzy-
+  Kandidaten wurden wegen unterschiedlicher Verantwortung oder fehlender
+  sicherer scope-naher Korrektur deferred. `find_dead_code` fand 0 High-/Low-
+  Confidence-Kandidaten. `find_magic_values` markierte bestehende
+  Wire-/Trust-Strings (`source-backed`, `verified-clean`) und Standardpuffer-
+  größen; keine sichere, verhaltensneutrale EPIC-A-Zentralisierung wurde
+  vorgenommen.
 
 ## Verifikation
 
@@ -129,7 +160,10 @@
   geändertem Scope.
 - Epic-spezifisch gezielte xUnit-v3-Testfilter ausführen; solutionweite Gates
   bleiben dem Orchestrator vorbehalten.
-- Nach den Codeänderungen zu verifizieren: die neue Assembly-Pfad-/ID-
-  Regression sowie bestehende Assembly-, Call-Tree-, Dependency-Graph- und
-  File-Skeleton-Komponententests. Der abschließende codebezogene MCP-Check
-  bleibt `get_violations` und wird nach diesem Check nicht mehr geändert.
+- Nach den Codeänderungen verifiziert: die neue Assembly-Pfad-/ID-Regression
+  (`AssemblyAnalysisPathContractTests`, 2/2) sowie Assembly-, Call-Tree-,
+  Dependency-Graph-, Stable-ID-, Symbol-Body- und File-Skeleton-Komponenten-
+  tests (jeweils grün; vollständige Befunde im Hand-off). Die ausstehenden
+  DRY-/Dead-Code-/Magic-Value-Audits und der abschließende codebezogene
+  `get_violations`-Check folgen nach allen Änderungen; danach wird kein Code
+  mehr geändert.

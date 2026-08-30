@@ -4,9 +4,18 @@ status: executing
 current_epic: EPIC-A
 correction_round: 0
 cycle_state: normal
-last_commit: be662cc8
+last_commit: dbae9265
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
+
+## Aktueller Rollenlauf
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- Rolle: frischer EPIC-A-Implementierer zur Behebung der offenen
+  Pfad-/Stable-ID-Regressionen
+- diff-baseline: `dbae9265`
+- Warteverhalten: Timeout-Rückgaben beenden den Agenten nicht; der Lauf endet
+  erst mit einem echten terminalen Status.
 
 ## EPIC-A — Stabile In-Memory- und Dateipfade
 

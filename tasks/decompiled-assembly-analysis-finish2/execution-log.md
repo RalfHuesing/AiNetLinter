@@ -119,3 +119,86 @@
 - nächste Aktion: Checkpoint committen, danach EPIC-A mit frischem
   Implementierer fortsetzen; erst nach dessen echtem terminalen Hand-off folgt
   der unabhängige Review.
+
+## 2026-08-31 — running / EPIC-A / Implementierer-Fortsetzung
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: wird nach dem Spawn ergänzt
+- diff-baseline: `dbae9265`
+- scope: Offene EPIC-A-Regressionen beheben, ohne den bestehenden unreviewten
+  Pfad-/ID-Stand zurückzunehmen; danach vollständiger EPIC-A-Hand-off mit
+  frischem MCP-/Test-/Violations-Nachweis.
+- warteverhalten: Der Orchestrator beendet diesen Agenten nicht wegen
+  Zeitbedarf oder abgelaufener Wartefenster; nur ein echter terminaler Status
+  beendet den Rollenaufruf.
+
+## 2026-08-31 — completed / EPIC-A / Implementierer-Fortsetzung
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a054da-b66f-77b2-9024-687f8663dd70`
+- diff-baseline: `dbae9265`
+- status: erfolgreich implementiert und terminal übergeben; kein Commit durch
+  den Agenten.
+- vollständiger finaler Agentenbericht:
+
+  > EPIC-A ist im Working Tree korrigiert und terminal übergeben; kein Commit
+  > erstellt.
+  >
+  > Geändert:
+  >
+  > - `src/AiNetLinter/Core/DiffImpactAnalyzer.cs:300` delegiert an den neuen
+  >   `src/AiNetLinter/Core/SolutionDocumentPathResolver.cs:16`.
+  > - Generierte Dokumente werden über sichere Pfadvarianten oder eindeutigem
+  >   Basename aufgelöst.
+  > - `Solution.FilePath == null` wird für `AdhocWorkspace` korrekt als
+  >   erwartetes Verhalten getestet; `Project.FilePath` bleibt der relevante
+  >   Fallback.
+  > - Stable-ID-Test nutzt den bestehenden Skeleton-Vertrag `id:<id>`.
+  > - Fremde Stable IDs bleiben fachlich kontrollierte recoverable Fehler
+  >   (`IsError=false`).
+  > - `tasks/decompiled-assembly-analysis-finish2/code-map.md` aktualisiert.
+  > - Vorhandene Änderungen an `execution-log.md` und `roadmap.md` bewahrt.
+  >
+  > Verifikation:
+  >
+  > - MCP `get_feature_context`, `get_symbol_body`, `find_symbol`,
+  >   `find_references`, `get_impact`, `dependency_graph` mit
+  >   `targetType=project` und absolutem Projektpfad.
+  > - `find_references`: 7 Call-Sites, vollständig.
+  > - `get_impact(detailLevel=change-context)`: 3 geänderte Symbole,
+  >   7 Call-Sites, 4 Testzuordnungen.
+  > - `find_duplicates`: 10 Cluster, keine sichere EPIC-A-Korrektur.
+  > - `find_dead_code`: 0 Befunde.
+  > - `find_magic_values`: bestehende Wire-/Trust-Strings und
+  >   Standardpufferwerte, keine sichere Zentralisierung.
+  > - Build: 0 Warnungen, 0 Fehler.
+  > - FastTests `Category!=Stress`: 2.233 bestanden, 2 übersprungen.
+  > - IntegrationTests `Category!=Stress`: 369 bestanden, 2 nicht kausale
+  >   Dokumentationsvertragsfehler.
+  > - Assembly-Health-E2E: 3/3 bestanden.
+  > - EPIC-A-Fokustests einschließlich Assembly-, Skeleton-, Body-, Resolver-,
+  >   Call-Tree-, Dependency-Graph- und Diff-Impact-Tests: grün.
+  >
+  > Letzter codebezogener Prüfschritt:
+  >
+  > - `get_violations`, Produktionsscope `src/AiNetLinter/Core`: 1 P2/P3-
+  >   Befund `MaxDirectoryChildren` (31 statt 30 Einträge durch den neuen
+  >   Resolver).
+  > - Testscope: 0 Violations.
+  > - Danach keine Codeänderung mehr.
+  >
+  > Offene Tech Debt: `MaxDirectoryChildren` — `accepted-deferred`, rein
+  > strukturell ohne Funktionsrisiko; bei Gelegenheit Resolver in einen
+  > passenden Unterordner gruppieren. Integration-Dokumentationsfehler bleiben
+  > außerhalb des EPIC-A-Scope.
+- geänderte Bereiche: Pfadauflösung in `DiffImpactAnalyzer`, neuer
+  `SolutionDocumentPathResolver`, Assembly-/Symbol-/Skeleton-Regressionen und
+  aktualisierte Code-Map.
+- Review-Hinweis: Nach diesem Hand-off wurden keine Produktions- oder
+  Testdateien verändert; der Nachweis ist für den unabhängigen Review frisch.
+- Tech-Debt-Triage: P2/P3 `MaxDirectoryChildren` als `accepted-deferred`
+  aufgenommen; die zwei nicht kausalen Integrations-Dokumentationsfehler sind
+  mangels konkreter Evidenz zunächst im Log vermerkt und nicht dem EPIC-A-
+  Codebefund zugerechnet.
+- nächste Aktion: Implementierungs-Checkpoint committen, dann einen frischen
+  unabhängigen Reviewer auf den Diff seit `dbae9265` ansetzen.
