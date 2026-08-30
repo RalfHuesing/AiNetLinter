@@ -129,7 +129,10 @@ Bestätigung des Nutzers.
 Arbeite die offenen Epics strikt nacheinander ab:
 
 1. Setze das nächste Epic in `roadmap.md` auf `in_progress` und ermittle den
-   aktuellen Diff-Baselinepunkt.
+   aktuellen Diff-Baselinepunkt. Stelle vor der Delegation sicher, dass das
+   Epic ein sinnvoller, reviewbarer und commitbarer fachlicher Checkpoint ist;
+   teile es bei unabhängigen Teilverträgen einmalig vor dem Start, aber nicht
+   in künstliche Detailsteps.
 2. Starte genau einen Implementierer-Subagenten mit dem Nutzerauftrag,
    `Konzept.md`, der relevanten Roadmap und `.agents/skills/implement/SKILL.md`.
    Der Implementierer bearbeitet das gesamte Epic als zusammenhängendes Paket,
@@ -147,8 +150,9 @@ Arbeite die offenen Epics strikt nacheinander ab:
    es gibt keinen stillen weiteren Versuch.
 6. Setze ein genehmigtes Epic auf `done`, aktualisiere die Roadmap knapp und
    committe den vollständigen Epic-Stand einschließlich Code, Tests,
-   Produktdokumentation und Roadmap. Das ist ein fachlicher Checkpoint, kein
-   eigener Dokumentations- oder Step-Commit.
+   Produktdokumentation und Roadmap. Dieser Commit wird ausschließlich vom
+   Orchestrator nach dem Review erstellt. Er ist ein fachlicher Checkpoint,
+   kein eigener Dokumentations- oder Step-Commit.
 7. Fahre ohne Nutzer-Check-in mit dem nächsten offenen Epic fort. Wenn die
    Umsetzung eine Konzeptentscheidung oder eine wesentliche Scope-Erweiterung
    voraussetzt, stoppe stattdessen mit einer konkreten Frage.
@@ -168,7 +172,8 @@ Für einen verständlichen kleinen oder mittleren Auftrag ohne großes Konzept:
    blockieren den Abschluss nicht.
 4. Führe bei einer nicht-trivialen Änderung einmal den `audit`-Skill aus.
 5. Verifiziere den finalen Stand und committe die auftragsbezogenen Dateien
-   einmal.
+   einmal. Auch hier committen Rollen-Subagenten nicht selbst; der
+   Orchestrator erstellt den geprüften Abschluss-Commit.
 
 ## Abschluss-Audit
 
@@ -190,6 +195,11 @@ Implementierer-Korrektur mit anschließendem Review auslösen. Danach endet der
 automatische Lauf auch bei einem offenen Befund; es startet keine neue
 unbegrenzte Kette.
 
+Hat der Audit Änderungen verursacht, erstellt der Orchestrator nach dem
+fokussierten Review einen eigenen Audit-Checkpoint-Commit. Änderungen aus
+notwendigen Gate-Korrekturen werden nach ihrer begrenzten Review ebenfalls
+sofort committed. Kein Rollen-Subagent committet selbst.
+
 ## Verifikation und Commitregeln
 
 - Führe nach jedem Epic bzw. jeder Korrektur gezielte Verifikation aus, aber
@@ -209,6 +219,15 @@ unbegrenzte Kette.
   Evidenz berichtet.
 - Stage ausschließlich die zum Auftrag gehörenden Dateien. Bewahre
   unzusammenhängende Nutzeränderungen und führe keinen Push aus.
+- Committe beim Start einer neuen Ausführung die neu erzeugte `roadmap.md`
+  einmalig als Planungs-Checkpoint, bevor der erste Implementierer startet.
+  Committe danach jedes genehmigte Epic sowie genehmigte Audit-/Gate-
+  Korrekturen separat. Stage dabei nur auftragsbezogene Dateien bzw. eindeutige
+  auftragsbezogene Hunks; bei einer unklaren Überschneidung mit Nutzer-
+  Änderungen stoppe statt fremde Arbeit mitzunehmen.
+- Der Implementierer, Reviewer und Audit erstellen niemals eigene Commits.
+  Der Orchestrator ist der einzige Commit-Besitzer dieses Workflows und schreibt
+  keine Commit-Historie um.
 - Verwende deutsche Conventional-Commits im Imperativ und schreibe keine
   Commit-Historie um.
 

@@ -83,7 +83,9 @@ Gib zuerst ein klares Urteil: `approved`, `issues` oder `blocked`.
 - `blocked`: nur wenn eine Nutzerentscheidung, fehlende Infrastruktur oder
   ein nicht auflösbarer Widerspruch tatsächlich notwendig ist.
 
-Ändere keinen Code und lege keine Task-/Step-Dateien an, sofern der Nutzer
-nicht ausdrücklich darum bittet. Schlage keinen vollständigen Umbau vor,
+Ändere keinen Code, erstelle keinen Commit und lege keine Task-/Step-Dateien
+an, sofern der Nutzer nicht ausdrücklich darum bittet. In einem orchestrierten
+Workflow liefert der Reviewer ausschließlich sein Urteil; der Orchestrator
+entscheidet über Korrektur und Commit. Schlage keinen vollständigen Umbau vor,
 wenn ein begrenzter Fix genügt. Nach einer Korrektur prüfe die betroffene
 Invariante erneut; starte nicht selbständig weitere Review-Runden.

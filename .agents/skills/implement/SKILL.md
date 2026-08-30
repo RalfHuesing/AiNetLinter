@@ -121,6 +121,14 @@ orchestrierten Epic gehören die finalen solutionweiten Gates nicht in den
 einzelnen Implementierer-Hand-off, sondern in den Abschluss des
 Orchestrators.
 
+Wenn dieser Skill als Implementierer-Rolle vom Orchestrator aufgerufen wird,
+erstelle oder ändere keinen Git-Commit. Liefere den vollständigen Epic-Stand im
+Working Tree; erst der Orchestrator committen ihn nach einem `approved` des
+unabhängigen Reviews. Dadurch bleibt der Commit ein geprüfter fachlicher
+Checkpoint und nicht ein unreviewter Zwischenstand. Bei direkter Nutzung ohne
+Orchestrator gilt eine Commit-Anweisung des Nutzers; ohne eine solche Anweisung
+entscheidet der aufrufende Workflow.
+
 ## Abschlussmeldung
 
 Berichte knapp: Ergebnis, wichtige Designentscheidungen, geänderte Bereiche,
