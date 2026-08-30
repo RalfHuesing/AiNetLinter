@@ -201,11 +201,11 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string DependencyGraphDescription =
-        "Wann nutzen: welche Dateien/Typen von einer Datei oder einem Typ abhaengen (echte " +
-        "SemanticModel-Typreferenzen, nicht nur using-Direktiven) — beantwortet 'wer haengt von X " +
+        "Wann nutzen: Ermitteln, welche Dateien/Typen von einer Datei oder einem Typ abhaengen " +
+        "(echte SemanticModel-Typreferenzen, nicht nur using-Direktiven) — beantwortet 'wer haengt von X " +
         "ab' direkt statt mehrerer find_references-Umwege. filePath (ganze Datei) ODER " +
         "symbolIdentifier (ein Typ, engerer Scope) angeben, nie beide — symbolIdentifier-Format wie " +
-        "find_references. direction: \"incoming\", \"outgoing\" oder \"both\" (Default). depth " +
-        "(Default 1, hard cap 3) traversiert transitiv auf Datei-Ebene, hart begrenzt auf 150 " +
-        "besuchte Dateien. maxResults begrenzt die angezeigten Kanten (Default 50).";
+        "find_references. direction: \"incoming\", \"outgoing\" oder \"both\" (Default). depth: " +
+        "Traversierungstiefe (Default 1, hard cap 3, max. 150 besuchte Dateien). maxResults: " +
+        "Begrenzung der angezeigten Kanten (Default 50).";
 }
