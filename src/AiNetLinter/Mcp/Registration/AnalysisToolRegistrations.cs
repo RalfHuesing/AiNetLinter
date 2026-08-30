@@ -301,10 +301,10 @@ internal static class AnalysisToolRegistrations
         "Wann nutzen: Solution nach unreferenziertem/totem Code durchleuchten — findet ungenutzte " +
         "Typen, Methoden, Properties, Felder und Events mit Vertrauensstufen (high fuer direkt " +
         "entfernbaren privaten/internen Code, low fuer Public-API/Framework-Kandidaten). " +
-        "accessibility (Default 'private_internal': all, private, internal, public, private_internal), " +
-        "confidence (Default 'both': both, high, low), kind (Default 'all': all, type, class, method, " +
-        "field, property, event, delegate), scopeFilter (Projekt-Name oder Pfad-Substring), " +
-        "includeTests (Default false), mode (Default 'members': members, locals, both), maxResults (Default 50).";
+        "accessibility: 'private_internal' [Default], 'all', 'private', 'internal', 'public'. " +
+        "confidence: 'both' [Default], 'high', 'low'. kind: 'all' [Default], 'type', 'class', 'method', " +
+        "'field', 'property', 'event', 'delegate'. scopeFilter: Projekt-Name oder Pfad-Substring. " +
+        "includeTests: Tests einbeziehen (Default false). mode: 'members' [Default], 'locals', 'both'. maxResults: Begrenzung (Default 50).";
 
     private static void AddGetFeatureContext(
         McpServerPrimitiveCollection<McpServerTool> tools,
