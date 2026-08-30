@@ -10,11 +10,11 @@ namespace AiNetLinter.Mcp.Assemblies;
 
 internal sealed class GiteaExternalSourceProvider : IExternalSourceProvider
 {
-    private readonly ExternalSourceRepositoryAcquirer acquirer;
+    private readonly IExternalSourceRepositoryAcquirer acquirer;
     private readonly IExternalSourceSnapshotMaterializer materializer;
 
     internal GiteaExternalSourceProvider(
-        ExternalSourceRepositoryAcquirer acquirer,
+        IExternalSourceRepositoryAcquirer acquirer,
         IExternalSourceSnapshotMaterializer materializer)
     {
         ArgumentNullException.ThrowIfNull(acquirer);
@@ -117,7 +117,8 @@ internal sealed class GiteaExternalSourceProvider : IExternalSourceProvider
                 diagnostics,
                 isAvailable: false,
                 ExternalSourceProviderFailureKind.InvalidResponse),
-            failureKind: ExternalSourceProviderFailureKind.InvalidResponse);
+            state: ExternalSourceRepositoryResultState.Create(
+                ExternalSourceProviderFailureKind.InvalidResponse));
     }
 
     private static void DisposeFailedResources(

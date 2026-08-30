@@ -166,6 +166,9 @@ internal static class ExternalSourceConfigurationDiagnosticCodes
     internal const string RepositoryTransportFailed = "external-source-repository-transport-failed";
     internal const string RepositoryCapabilityUnavailable = "external-source-repository-capability-unavailable";
     internal const string RepositoryCleanupFailed = "external-source-repository-cleanup-failed";
+    internal const string RepositoryCheckoutDirty = "external-source-repository-checkout-dirty";
+    internal const string RepositoryCheckoutUnverified = "external-source-repository-checkout-unverified";
+    internal const string RepositoryRefreshDegraded = "external-source-repository-refresh-degraded";
 }
 
 internal static class ExternalSourceConfigurationPath

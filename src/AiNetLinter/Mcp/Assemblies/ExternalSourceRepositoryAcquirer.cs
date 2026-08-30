@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,7 +9,8 @@ using AiNetLinter.Configuration;
 using Serilog;
 
 namespace AiNetLinter.Mcp.Assemblies;
-internal sealed class ExternalSourceRepositoryAcquirer
+
+internal sealed class ExternalSourceRepositoryAcquirer : IExternalSourceRepositoryAcquirer
 {
     private readonly IGiteaRepositoryTransport transport;
     private readonly string stagingRoot;
@@ -90,6 +90,11 @@ internal sealed class ExternalSourceRepositoryAcquirer
             cancellationToken).ConfigureAwait(false);
     }
 
+    Task<ExternalSourceRepositoryAcquisitionResult> IExternalSourceRepositoryAcquirer.AcquireAsync(
+        ExternalSourceMapping mapping,
+        CancellationToken cancellationToken) =>
+        AcquireAsync(mapping, cancellationToken);
+
     private async Task<ExternalSourceRepositoryAcquisitionResult> AcquireReservedCheckoutAsync(
         ExternalSourceMapping mapping,
         string solutionPath,
@@ -100,7 +105,7 @@ internal sealed class ExternalSourceRepositoryAcquirer
         {
             if (!ExternalSourceRepositoryPathGuard.IsOwnedCheckout(ownership))
             {
-                return FailAfterCleanup(
+                return ExternalSourceRepositorySourcePolicy.FailureAfterCleanup(
                     ownership,
                     ExternalSourceProviderFailureKind.InvalidResponse,
                     [CreateDiagnostic(
@@ -142,7 +147,7 @@ internal sealed class ExternalSourceRepositoryAcquirer
     {
         if (transportResult is null)
         {
-            return FailAfterCleanup(
+            return ExternalSourceRepositorySourcePolicy.FailureAfterCleanup(
                 ownership,
                 ExternalSourceProviderFailureKind.InvalidResponse,
                 [CreateDiagnostic(
@@ -152,7 +157,7 @@ internal sealed class ExternalSourceRepositoryAcquirer
 
         if (!transportResult.IsAvailable)
         {
-            return FailAfterCleanup(
+            return ExternalSourceRepositorySourcePolicy.FailureAfterCleanup(
                 ownership,
                 transportResult.FailureKind,
                 transportResult.Diagnostics);
@@ -164,7 +169,7 @@ internal sealed class ExternalSourceRepositoryAcquirer
             transportResult);
         if (!checkoutValidation.IsValid)
         {
-            return FailAfterCleanup(
+            return ExternalSourceRepositorySourcePolicy.FailureAfterCleanup(
                 ownership,
                 checkoutValidation.FailureKind,
                 checkoutValidation.Diagnostics);
@@ -195,7 +200,7 @@ internal sealed class ExternalSourceRepositoryAcquirer
     {
         if (!ExternalSourceRepositoryCacheKey.TryCreate(mapping.Url, solutionPath, out var cacheKey))
         {
-            return FailAfterCleanup(
+            return ExternalSourceRepositorySourcePolicy.FailureAfterCleanup(
                 ownership,
                 ExternalSourceProviderFailureKind.InvalidResponse,
                 [CreateDiagnostic(
@@ -271,7 +276,8 @@ internal sealed class ExternalSourceRepositoryAcquirer
                 diagnostics: [CreateDiagnostic(
                     ExternalSourceRepositoryFailurePolicy.GetTransportDiagnosticCode(exception),
                     "Die Repository-Akquisition ist fehlgeschlagen.")],
-                failureKind: ExternalSourceRepositoryFailurePolicy.ClassifyTransportException(exception));
+                state: ExternalSourceRepositoryResultState.Create(
+                    ExternalSourceRepositoryFailurePolicy.ClassifyTransportException(exception)));
         }
     }
 
@@ -368,11 +374,13 @@ internal sealed class ExternalSourceRepositoryAcquirer
         string solutionPath,
         ExternalSourceRepositoryTransportResult transportResult)
     {
-        if (!HasValidLoadedRevision(transportResult, out var revisionFailure))
+        if (!ExternalSourceRepositorySourcePolicy.IsVerifiedTransport(transportResult))
         {
             return CheckoutValidationResult.Failure(
                 ExternalSourceProviderFailureKind.InvalidResponse,
-                revisionFailure!);
+                [CreateDiagnostic(
+                    ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutUnverified,
+                    "Der Repository-Transport hat keinen cleanen, verifizierten Checkout geliefert.")]);
         }
 
         if (TryGetCheckoutPathFailure(ownership, out var pathFailure))
@@ -414,18 +422,6 @@ internal sealed class ExternalSourceRepositoryAcquirer
         return CheckoutValidationResult.Success(solutionAbsolutePath);
     }
 
-    private static bool HasValidLoadedRevision(
-        ExternalSourceRepositoryTransportResult transportResult,
-        out ImmutableArray<ExternalSourceConfigurationDiagnostic>? failure)
-    {
-        failure = string.IsNullOrWhiteSpace(transportResult.LoadedRevision)
-            ? [CreateDiagnostic(
-                ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportResultInvalid,
-                "Der Repository-Transport hat keine geladene Revision geliefert.")]
-            : null;
-        return failure is null;
-    }
-
     private static bool TryGetCheckoutPathFailure(
         ExternalSourceCheckoutOwnership ownership,
         out CheckoutValidationResult? failure)
@@ -456,22 +452,6 @@ internal sealed class ExternalSourceRepositoryAcquirer
         }
 
         return false;
-    }
-
-    internal static ExternalSourceRepositoryAcquisitionResult FailAfterCleanup(
-        ExternalSourceCheckoutOwnership ownership,
-        ExternalSourceProviderFailureKind failureKind,
-        IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics)
-    {
-        var resultDiagnostics = new List<ExternalSourceConfigurationDiagnostic>(diagnostics);
-        if (!ownership.TryCleanup())
-        {
-            resultDiagnostics.Add(CreateDiagnostic(
-                ExternalSourceConfigurationDiagnosticCodes.RepositoryCleanupFailed,
-                "Der eigene unvollständige Checkout konnte nicht vollständig bereinigt werden."));
-        }
-
-        return ExternalSourceRepositoryAcquisitionResult.Failure(failureKind, resultDiagnostics);
     }
 
     private static ExternalSourceRepositoryAcquisitionResult InvalidResult(

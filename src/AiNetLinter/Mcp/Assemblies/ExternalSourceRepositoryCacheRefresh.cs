@@ -90,11 +90,17 @@ internal sealed class ExternalSourceRepositoryCacheRefresh
                 out var reservationFailure)
             || ownership is null)
         {
-            return reservationFailure ?? ExternalSourceRepositoryAcquisitionResult.Failure(
-                ExternalSourceProviderFailureKind.InvalidResponse,
-                [CreateDiagnostic(
-                    ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutPathInvalid,
-                    "Der fällige Repository-Refresh konnte keinen sicheren Checkout reservieren.")]);
+            return reservationFailure is null
+                ? ExternalSourceRepositorySourcePolicy.CreateRefreshFailure(
+                    ExternalSourceProviderFailureKind.InvalidResponse,
+                    [CreateDiagnostic(
+                        ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutPathInvalid,
+                        "Der fällige Repository-Refresh konnte keinen sicheren Checkout reservieren.")],
+                    readResult.Manifest.LoadedRevision)
+                : ExternalSourceRepositorySourcePolicy.CreateRefreshFailure(
+                    reservationFailure.FailureKind,
+                    reservationFailure.Diagnostics,
+                    readResult.Manifest.LoadedRevision);
         }
 
         return await RefreshReservedCheckoutAsync(
@@ -156,12 +162,13 @@ internal sealed class ExternalSourceRepositoryCacheRefresh
         }
         catch (Exception exception) when (ExternalSourceRepositoryCacheStorage.IsCacheException(exception))
         {
-            return ExternalSourceRepositoryAcquirer.FailAfterCleanup(
+            return ExternalSourceRepositorySourcePolicy.FailureAfterCleanup(
                 ownership,
                 ExternalSourceProviderFailureKind.InvalidResponse,
                 [CreateDiagnostic(
                     ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutInvalid,
-                    "Der fällige Repository-Refresh konnte nicht validiert werden.")]);
+                    "Der fällige Repository-Refresh konnte nicht validiert werden.")],
+                readResult.Manifest.LoadedRevision);
         }
     }
 
@@ -174,12 +181,13 @@ internal sealed class ExternalSourceRepositoryCacheRefresh
     {
         if (!ExternalSourceRepositoryPathGuard.IsOwnedCheckout(ownership))
         {
-            return RefreshPreparation.Failed(ExternalSourceRepositoryAcquirer.FailAfterCleanup(
+            return RefreshPreparation.Failed(ExternalSourceRepositorySourcePolicy.FailureAfterCleanup(
                 ownership,
                 ExternalSourceProviderFailureKind.InvalidResponse,
                 [CreateDiagnostic(
                     ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutInvalid,
-                    "Der reservierte Refresh-Checkout konnte vor dem Fetch nicht verifiziert werden.")]));
+                    "Der reservierte Refresh-Checkout konnte vor dem Fetch nicht verifiziert werden.")],
+                readResult.Manifest.LoadedRevision));
         }
 
         _ = ExternalSourceRepositoryCacheMaterializer.Materialize(
@@ -195,19 +203,32 @@ internal sealed class ExternalSourceRepositoryCacheRefresh
         cancellationToken.ThrowIfCancellationRequested();
         if (!transportResult.IsAvailable)
         {
-            return RefreshPreparation.Failed(ExternalSourceRepositoryAcquirer.FailAfterCleanup(
+            return RefreshPreparation.Failed(ExternalSourceRepositorySourcePolicy.FailureAfterCleanup(
                 ownership,
                 transportResult.FailureKind,
-                transportResult.Diagnostics));
+                transportResult.Diagnostics,
+                readResult.Manifest.LoadedRevision));
+        }
+
+        if (!ExternalSourceRepositorySourcePolicy.IsVerifiedTransport(transportResult))
+        {
+            return RefreshPreparation.Failed(ExternalSourceRepositorySourcePolicy.FailureAfterCleanup(
+                ownership,
+                ExternalSourceProviderFailureKind.InvalidResponse,
+                [CreateDiagnostic(
+                    ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutUnverified,
+                    "Der Repository-Transport hat keinen cleanen, verifizierten Checkout geliefert.")],
+                readResult.Manifest.LoadedRevision));
         }
 
         var validation = validateCheckout(ownership, solutionPath, transportResult);
         return validation.IsValid
             ? RefreshPreparation.Succeeded(transportResult, validation)
-            : RefreshPreparation.Failed(ExternalSourceRepositoryAcquirer.FailAfterCleanup(
+            : RefreshPreparation.Failed(ExternalSourceRepositorySourcePolicy.FailureAfterCleanup(
                 ownership,
                 validation.FailureKind,
-                validation.Diagnostics));
+                validation.Diagnostics,
+                readResult.Manifest.LoadedRevision));
     }
 
     private async Task<ExternalSourceRepositoryAcquisitionResult> PublishRefreshedCheckoutAsync(
@@ -232,6 +253,7 @@ internal sealed class ExternalSourceRepositoryCacheRefresh
         return CompleteFailedPublish(
             parameters.Mapping,
             parameters.SolutionPath,
+            parameters.ReadResult,
             checkout,
             publishResult,
             cancellationToken);
@@ -254,6 +276,7 @@ internal sealed class ExternalSourceRepositoryCacheRefresh
     private ExternalSourceRepositoryAcquisitionResult CompleteFailedPublish(
         ExternalSourceMapping mapping,
         string solutionPath,
+        ExternalSourceRepositoryCacheReadResult readResult,
         ExternalSourceCheckoutHandle checkout,
         ExternalSourceRepositoryCachePublishResult publishResult,
         CancellationToken cancellationToken)
@@ -287,9 +310,10 @@ internal sealed class ExternalSourceRepositoryCacheRefresh
             }
         }
 
-        return ExternalSourceRepositoryAcquisitionResult.Failure(
+        return ExternalSourceRepositorySourcePolicy.CreateRefreshFailure(
             ExternalSourceProviderFailureKind.InvalidResponse,
-            diagnostics);
+            diagnostics,
+            readResult.Manifest.LoadedRevision);
     }
 
     private async Task<ExternalSourceRepositoryTransportResult> ExecuteFetchAsync(
@@ -317,7 +341,8 @@ internal sealed class ExternalSourceRepositoryCacheRefresh
                 diagnostics: [CreateDiagnostic(
                     ExternalSourceRepositoryFailurePolicy.GetTransportDiagnosticCode(exception),
                     "Die Repository-Aktualisierung ist fehlgeschlagen.")],
-                failureKind: ExternalSourceRepositoryFailurePolicy.ClassifyTransportException(exception));
+                state: ExternalSourceRepositoryResultState.Create(
+                    ExternalSourceRepositoryFailurePolicy.ClassifyTransportException(exception)));
         }
     }
 
@@ -335,7 +360,8 @@ internal sealed class ExternalSourceRepositoryCacheRefresh
             return null;
         }
 
-        return cacheReuse.TryAcquire(mapping.Url, solutionPath, cancellationToken);
+        var reuse = cacheReuse.TryAcquire(mapping.Url, solutionPath, cancellationToken);
+        return reuse is { IsAvailable: true } ? reuse : null;
     }
 
     private static ExternalSourceConfigurationDiagnostic CreateDiagnostic(

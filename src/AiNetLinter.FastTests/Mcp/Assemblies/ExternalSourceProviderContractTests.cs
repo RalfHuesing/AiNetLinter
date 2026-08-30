@@ -28,8 +28,8 @@ public sealed class ExternalSourceProviderContractTests
 
         Assert.Same(mapping, provider.Mapping);
         Assert.Equal(cancellation.Token, provider.CancellationToken);
-        Assert.True(result.IsAvailable);
-        Assert.Equal(ExternalSourceProviderFailureKind.None, result.FailureKind);
+        Assert.False(result.IsAvailable);
+        Assert.Equal(ExternalSourceProviderFailureKind.ProviderUnavailable, result.FailureKind);
         Assert.Empty(result.Diagnostics);
         Assert.Null(result.SourceSnapshot);
     }
@@ -91,7 +91,7 @@ public sealed class ExternalSourceProviderContractTests
         var provider = new RecordingProvider(new ExternalSourceProviderResult(
             isAvailable: false,
             diagnostics: [diagnostic],
-            failureKind: failureKind));
+            state: ExternalSourceRepositoryResultState.Create(failureKind)));
 
         var result = await provider.ResolveAsync(mapping);
 
@@ -137,7 +137,8 @@ public sealed class ExternalSourceProviderContractTests
         Assert.Throws<ArgumentException>(() => new ExternalSourceProviderResult(
             isAvailable: true,
             diagnostics: System.Array.Empty<ExternalSourceConfigurationDiagnostic>(),
-            failureKind: ExternalSourceProviderFailureKind.Timeout));
+            state: ExternalSourceRepositoryResultState.Create(
+                ExternalSourceProviderFailureKind.Timeout)));
     }
 
     [Fact]
@@ -167,6 +168,53 @@ public sealed class ExternalSourceProviderContractTests
     }
 
     [Fact]
+    public void FailureProjection_PreservesDegradedLastGoodWithoutSnapshot()
+    {
+        const string lastGoodRevision = "0123456789abcdef0123456789abcdef01234567";
+        var acquisition = ExternalSourceRepositoryAcquisitionResult.Failure(
+            ExternalSourceProviderFailureKind.NetworkUnavailable,
+            [new ExternalSourceConfigurationDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.NetworkUnavailable,
+                "Refresh fehlgeschlagen",
+                "error",
+                "$repository")],
+            ExternalSourceRepositoryHealth.Degraded,
+            lastGoodRevision);
+
+        var result = ExternalSourceProviderFailureProjection.FromUnavailableAcquisition(acquisition);
+
+        Assert.False(result.IsAvailable);
+        Assert.Equal(ExternalSourceRepositoryHealth.Degraded, result.Health);
+        Assert.Equal(lastGoodRevision, result.LastGoodRevision);
+        Assert.Null(result.SourceSnapshot);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryRefreshDegraded);
+    }
+
+    [Fact]
+    public void FailureWithoutLastGoodRemainsUnavailable()
+    {
+        var acquisition = ExternalSourceRepositoryAcquisitionResult.Failure(
+            ExternalSourceProviderFailureKind.NetworkUnavailable,
+            [new ExternalSourceConfigurationDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.NetworkUnavailable,
+                "Refresh fehlgeschlagen",
+                "error",
+                "$repository")]);
+
+        Assert.False(acquisition.IsAvailable);
+        Assert.Equal(ExternalSourceRepositoryHealth.Unavailable, acquisition.Health);
+        Assert.Null(acquisition.LastGoodRevision);
+
+        var result = ExternalSourceProviderFailureProjection.FromUnavailableAcquisition(acquisition);
+
+        Assert.Equal(ExternalSourceRepositoryHealth.Unavailable, result.Health);
+        Assert.Null(result.LastGoodRevision);
+        Assert.Null(result.SourceSnapshot);
+    }
+
+    [Fact]
     public async Task ResolveAsync_UnavailableProvider_LiefertSichtbarenZustandOhneSourceSemantik()
     {
         var mapping = new ExternalSourceMapping(
@@ -182,7 +230,7 @@ public sealed class ExternalSourceProviderContractTests
         var diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(ExternalSourceConfigurationDiagnosticCodes.ProviderUnavailable, diagnostic.Code);
         Assert.Equal("warning", diagnostic.Severity);
-        Assert.Contains(mapping.Url, diagnostic.Location);
+        Assert.Equal("$repository", diagnostic.Location);
     }
 
     [Fact]
@@ -206,7 +254,7 @@ public sealed class ExternalSourceProviderContractTests
         internal RecordingProvider(ExternalSourceProviderResult? result = null)
         {
             this.result = result ?? new ExternalSourceProviderResult(
-                isAvailable: true,
+                isAvailable: false,
                 diagnostics: System.Array.Empty<ExternalSourceConfigurationDiagnostic>());
         }
 

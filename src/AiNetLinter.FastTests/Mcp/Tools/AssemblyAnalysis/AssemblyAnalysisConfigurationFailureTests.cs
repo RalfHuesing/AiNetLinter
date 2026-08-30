@@ -79,7 +79,7 @@ public sealed class AssemblyAnalysisConfigurationFailureTests
             temp,
             "TargetAssembly",
             "namespace Target; public sealed class TargetOnly { }");
-        var provider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(true, []));
+        var provider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(false, []));
         using var registry = new SourceSnapshotRegistry();
         var orchestrator = new AssemblySourceSelectionOrchestrator(
             ExternalSourceConfigurationLoadResult.Failure([]),

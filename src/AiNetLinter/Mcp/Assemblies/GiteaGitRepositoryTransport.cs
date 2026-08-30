@@ -70,42 +70,12 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutPathInvalid);
         }
 
-        ExternalSourceCredential? credential = null;
-        try
-        {
-            credential = await ResolveCredentialAsync(mapping, cancellationToken)
-                .ConfigureAwait(false);
-            var cloneResult = await ExecuteCloneAsync(
-                    repositoryUrl!,
-                    destinationPath,
-                    credential,
-                    cancellationToken)
-                .ConfigureAwait(false);
-            if (cloneResult is not null)
-            {
-                return cloneResult;
-            }
-
-            credential?.Dispose();
-            credential = null;
-            return await ExecuteHeadAsync(destinationPath, cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            var failureKind = ExternalSourceRepositoryFailurePolicy.ClassifyTransportException(exception);
-            return Failure(
-                failureKind,
-                ExternalSourceRepositoryFailurePolicy.GetTransportDiagnosticCode(exception));
-        }
-        finally
-        {
-            credential?.Dispose();
-        }
+        return await ExecuteCloneWorkflowAsync(
+                mapping,
+                repositoryUrl!,
+                destinationPath,
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public async ValueTask<ExternalSourceRepositoryTransportResult> FetchDefaultBranchAsync(
@@ -129,31 +99,38 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutPathInvalid);
         }
 
+        return await ExecuteFetchWorkflowAsync(
+                mapping,
+                destinationPath,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private async Task<ExternalSourceRepositoryTransportResult> ExecuteCloneWorkflowAsync(
+        ExternalSourceMapping mapping,
+        string repositoryUrl,
+        string destinationPath,
+        CancellationToken cancellationToken)
+    {
         ExternalSourceCredential? credential = null;
         try
         {
             credential = await ResolveCredentialAsync(mapping, cancellationToken)
                 .ConfigureAwait(false);
-            var fetchResult = await ExecuteFetchAsync(
+            var cloneResult = await ExecuteCloneAsync(
+                    repositoryUrl,
                     destinationPath,
                     credential,
                     cancellationToken)
                 .ConfigureAwait(false);
-            if (fetchResult is not null)
+            if (cloneResult is not null)
             {
-                return fetchResult;
+                return cloneResult;
             }
 
             credential?.Dispose();
             credential = null;
-            var resetResult = await ExecuteResetAsync(destinationPath, cancellationToken)
-                .ConfigureAwait(false);
-            if (resetResult is not null)
-            {
-                return resetResult;
-            }
-
-            return await ExecuteHeadAsync(destinationPath, cancellationToken)
+            return await ExecuteVerifiedHeadAsync(destinationPath, cancellationToken)
                 .ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -171,6 +148,79 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
         {
             credential?.Dispose();
         }
+    }
+
+    private async Task<ExternalSourceRepositoryTransportResult> ExecuteFetchWorkflowAsync(
+        ExternalSourceMapping mapping,
+        string destinationPath,
+        CancellationToken cancellationToken)
+    {
+        ExternalSourceCredential? credential = null;
+        try
+        {
+            var statusFailure = await ExecuteStatusAsync(destinationPath, cancellationToken)
+                .ConfigureAwait(false);
+            if (statusFailure is not null) return statusFailure;
+            credential = await ResolveCredentialAsync(mapping, cancellationToken)
+                .ConfigureAwait(false);
+            var fetchResult = await ExecuteFetchAsync(
+                    destinationPath,
+                    credential,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (fetchResult is not null)
+            {
+                return fetchResult;
+            }
+
+            credential?.Dispose();
+            credential = null;
+            var resetResult = await ExecuteResetAsync(destinationPath, cancellationToken).ConfigureAwait(false);
+            if (resetResult is not null) return resetResult;
+            var refreshedStatusFailure = await ExecuteStatusAsync(destinationPath, cancellationToken)
+                .ConfigureAwait(false);
+            if (refreshedStatusFailure is not null)
+            {
+                return refreshedStatusFailure;
+            }
+
+            return await ExecuteHeadAsync(destinationPath, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            var failureKind = ExternalSourceRepositoryFailurePolicy.ClassifyTransportException(exception);
+            return Failure(
+                failureKind,
+                ExternalSourceRepositoryFailurePolicy.GetTransportDiagnosticCode(exception));
+        }
+        finally
+        {
+            credential?.Dispose();
+        }
+    }
+
+    private async Task<ExternalSourceRepositoryTransportResult?> ExecuteStatusAsync(
+        string destinationPath,
+        CancellationToken cancellationToken) =>
+        await ExternalSourceRepositoryCheckoutStatus.ExecuteAsync(
+                processExecutor,
+                destinationPath,
+                processTimeout,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+    private async Task<ExternalSourceRepositoryTransportResult> ExecuteVerifiedHeadAsync(
+        string destinationPath,
+        CancellationToken cancellationToken)
+    {
+        var statusFailure = await ExecuteStatusAsync(destinationPath, cancellationToken)
+            .ConfigureAwait(false);
+        return statusFailure
+            ?? await ExecuteHeadAsync(destinationPath, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<ExternalSourceCredential?> ResolveCredentialAsync(
@@ -417,7 +467,8 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
 
     private static ExternalSourceRepositoryTransportResult Failure(
         ExternalSourceProviderFailureKind failureKind,
-        string diagnosticCode) =>
+        string diagnosticCode,
+        ExternalSourceCheckoutTrust checkoutTrust = ExternalSourceCheckoutTrust.Unverified) =>
         new(
             isAvailable: false,
             loadedRevision: null,
@@ -426,6 +477,7 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
                 "Die Repository-Akquisition ist fehlgeschlagen.",
                 nameof(GiteaGitRepositoryTransport),
                 "$repository")],
-            failureKind: failureKind);
+            checkoutTrust: checkoutTrust,
+            state: ExternalSourceRepositoryResultState.Create(failureKind));
 
 }

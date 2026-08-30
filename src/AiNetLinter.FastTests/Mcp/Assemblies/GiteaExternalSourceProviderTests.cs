@@ -15,6 +15,8 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies;
 [Trait("Category", "Component")]
 public sealed class GiteaExternalSourceProviderTests
 {
+    private const string Revision = "0123456789abcdef0123456789abcdef01234567";
+
     [Fact]
     public async Task ResolveAsync_Success_TransfersCheckoutOwnershipAndIdentity()
     {
@@ -41,10 +43,10 @@ public sealed class GiteaExternalSourceProviderTests
         Assert.Equal(ExternalSourceProviderFailureKind.None, result.FailureKind);
         var snapshot = Assert.IsType<ExternalSourceSnapshot>(result.SourceSnapshot);
         Assert.Equal("https://gitea.example/shared.git", snapshot.Identity.RepositoryUrl);
-        Assert.Equal("revision-42", snapshot.Identity.LoadedRevision);
+        Assert.Equal(Revision, snapshot.Identity.LoadedRevision);
         Assert.Equal("BaselineMini.slnx", snapshot.Identity.SolutionPath);
         Assert.Equal(
-            SourceSnapshotIdentity.Create(mapping, "revision-42"),
+            SourceSnapshotIdentity.Create(mapping, Revision),
             snapshot.Identity);
         Assert.Same(mapping, transport.Mapping);
         Assert.Equal(cancellation.Token, transport.CancellationToken);
@@ -81,7 +83,8 @@ public sealed class GiteaExternalSourceProviderTests
                     "unsafe diagnostic",
                     "error",
                     "$repository")],
-                failureKind: ExternalSourceProviderFailureKind.ProviderUnavailable);
+                state: ExternalSourceRepositoryResultState.Create(
+                    ExternalSourceProviderFailureKind.ProviderUnavailable));
         });
         var acquirer = ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
         var materializer = new RecordingMaterializer((_, _, _) =>
@@ -153,7 +156,7 @@ public sealed class GiteaExternalSourceProviderTests
             ValueTask.FromResult(ExternalSourceSnapshotTestFactory.CreateSnapshot(
                 staging.DirectoryPath,
                 requestMapping,
-                "revision-42",
+                Revision,
                 null,
                 new ExternalSourceProjectSpec(
                     "BaselineMini",
@@ -179,7 +182,7 @@ public sealed class GiteaExternalSourceProviderTests
             ExternalSourceRepositoryFixtureOperations.CopyBaselineMiniSolution(
                 fixture.RootPath,
                 destination);
-            return ExternalSourceRepositoryTransportResult.Success("revision-42");
+            return ExternalSourceRepositoryTransportResult.Success(Revision);
         });
         return ExternalSourceRepositoryTestFactory.CreateAcquirer(transport, staging);
     }

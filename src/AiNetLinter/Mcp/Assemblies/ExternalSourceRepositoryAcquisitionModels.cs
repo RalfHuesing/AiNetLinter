@@ -110,14 +110,26 @@ internal sealed record ExternalSourceRepositoryAcquisitionResult
         bool isAvailable,
         ExternalSourceCheckoutHandle? checkout,
         string? loadedRevision,
-        ExternalSourceProviderFailureKind failureKind,
-        IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics)
+        IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics,
+        ExternalSourceRepositoryResultState state)
     {
+        ArgumentNullException.ThrowIfNull(state);
         IsAvailable = isAvailable;
         Checkout = checkout;
         LoadedRevision = loadedRevision;
-        FailureKind = failureKind;
-        Diagnostics = diagnostics.ToImmutableArray();
+        FailureKind = state.FailureKind;
+        var validatedState = ExternalSourceRepositorySourcePolicy.ValidateResultState(isAvailable, state);
+        Health = validatedState.Health;
+        LastGoodRevision = validatedState.LastGoodRevision;
+        CheckoutTrust = isAvailable
+            ? ExternalSourceCheckoutTrust.Clean
+            : ExternalSourceCheckoutTrust.Unverified;
+        Diagnostics = isAvailable
+            ? diagnostics.ToImmutableArray()
+            : ExternalSourceRepositorySourcePolicy.ProjectFailureDiagnostics(
+                diagnostics,
+                Health,
+                FailureKind);
     }
 
     internal bool IsAvailable { get; }
@@ -128,27 +140,51 @@ internal sealed record ExternalSourceRepositoryAcquisitionResult
 
     internal ExternalSourceProviderFailureKind FailureKind { get; }
 
+    internal ExternalSourceCheckoutTrust CheckoutTrust { get; }
+
+    internal ExternalSourceRepositoryHealth Health { get; }
+
+    internal string? LastGoodRevision { get; }
+
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics { get; }
 
     internal static ExternalSourceRepositoryAcquisitionResult Success(
         ExternalSourceCheckoutHandle checkout,
-        IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics) =>
-        new(
+        IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics)
+    {
+        ArgumentNullException.ThrowIfNull(checkout);
+        if (!ExternalSourceRepositoryCacheKey.IsSafeRevision(checkout.LoadedRevision))
+        {
+            throw new ArgumentException(
+                // ainetlinter-disable MagicValues — interner Vertragsfehler, keine lokalisierbare Nutzermeldung.
+                "Ein verifiziertes Akquisitionsergebnis benötigt eine sichere Revision.",
+                nameof(checkout));
+        }
+
+        return new(
             true,
             checkout,
             checkout.LoadedRevision,
-            ExternalSourceProviderFailureKind.None,
-            diagnostics);
+            diagnostics,
+            ExternalSourceRepositoryResultState.Create(
+                ExternalSourceProviderFailureKind.None,
+                ExternalSourceRepositoryHealth.Verified));
+    }
 
     internal static ExternalSourceRepositoryAcquisitionResult Failure(
         ExternalSourceProviderFailureKind failureKind,
-        IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics) =>
+        IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics,
+        ExternalSourceRepositoryHealth health = ExternalSourceRepositoryHealth.Unavailable,
+        string? lastGoodRevision = null) =>
         new(
             false,
             null,
             null,
-            failureKind is ExternalSourceProviderFailureKind.None
-                ? ExternalSourceProviderFailureKind.InvalidResponse
-                : failureKind,
-            diagnostics);
+            diagnostics,
+            ExternalSourceRepositoryResultState.Create(
+                failureKind is ExternalSourceProviderFailureKind.None
+                    ? ExternalSourceProviderFailureKind.InvalidResponse
+                    : failureKind,
+                health,
+                lastGoodRevision));
 }

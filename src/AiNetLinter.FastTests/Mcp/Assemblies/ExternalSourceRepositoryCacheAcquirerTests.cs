@@ -87,7 +87,8 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
                 isAvailable: false,
                 loadedRevision: null,
                 diagnostics: Array.Empty<ExternalSourceConfigurationDiagnostic>(),
-                failureKind: ExternalSourceProviderFailureKind.NetworkUnavailable));
+                state: ExternalSourceRepositoryResultState.Create(
+                    ExternalSourceProviderFailureKind.NetworkUnavailable)));
         var acquirer = new ExternalSourceRepositoryAcquirer(
             transport,
             staging.DirectoryPath,

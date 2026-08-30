@@ -20,10 +20,11 @@ internal sealed class UnavailableExternalSourceProvider : IExternalSourceProvide
             ExternalSourceConfigurationDiagnosticCodes.ProviderUnavailable,
             "Der externe Source-Provider ist nicht verfügbar.",
             "warning",
-            mapping.Url);
+            "$repository");
         return ValueTask.FromResult(new ExternalSourceProviderResult(
             isAvailable: false,
             diagnostics: [diagnostic],
-            failureKind: ExternalSourceProviderFailureKind.ProviderUnavailable));
+            state: ExternalSourceRepositoryResultState.Create(
+                ExternalSourceProviderFailureKind.ProviderUnavailable)));
     }
 }

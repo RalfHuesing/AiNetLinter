@@ -180,6 +180,12 @@ internal static class ExternalSourceRepositoryFailurePolicy
             ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportFailed => code,
             ExternalSourceConfigurationDiagnosticCodes.RepositoryCapabilityUnavailable => code,
             ExternalSourceConfigurationDiagnosticCodes.RepositoryCleanupFailed => code,
+            ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutDirty => code,
+            ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutUnverified => code,
+            ExternalSourceConfigurationDiagnosticCodes.RepositoryRefreshDegraded => code,
+            ExternalSourceRepositoryCacheContract.PublishFailedDiagnosticCode => code,
+            ExternalSourceRepositoryCacheContract.PublishCancelledDiagnosticCode => code,
+            ExternalSourceRepositoryCacheContract.CurrentChangedDiagnosticCode => code,
             _ => ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportFailed,
         };
 
@@ -379,6 +385,18 @@ internal static class ExternalSourceRepositoryFailurePolicy
                 "Die Repository-Capability ist für diese Source nicht verfügbar.",
             ExternalSourceConfigurationDiagnosticCodes.RepositoryCleanupFailed =>
                 "Der Repository-Checkout konnte nicht sicher bereinigt werden.",
+            ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutDirty =>
+                "Der Repository-Checkout enthält nicht veröffentlichte Änderungen.",
+            ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutUnverified =>
+                "Der Repository-Checkout konnte nicht als sauber verifiziert werden.",
+            ExternalSourceConfigurationDiagnosticCodes.RepositoryRefreshDegraded =>
+                "Der letzte verifizierte Repository-Stand bleibt nur als Last-good-Nachweis verfügbar.",
+            ExternalSourceRepositoryCacheContract.PublishFailedDiagnosticCode =>
+                "Die Repository-Cachegeneration konnte nicht veröffentlicht werden.",
+            ExternalSourceRepositoryCacheContract.PublishCancelledDiagnosticCode =>
+                "Die Veröffentlichung der Repository-Cachegeneration wurde abgebrochen.",
+            ExternalSourceRepositoryCacheContract.CurrentChangedDiagnosticCode =>
+                "Der aktuelle Repository-Cache hat sich während der Veröffentlichung geändert.",
             _ => "Die Repository-Akquisition ist fehlgeschlagen.",
         };
 }

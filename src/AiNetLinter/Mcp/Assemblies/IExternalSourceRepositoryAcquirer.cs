@@ -6,9 +6,9 @@ using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Mcp.Assemblies;
 
-internal interface IExternalSourceProvider
+internal interface IExternalSourceRepositoryAcquirer
 {
-    ValueTask<ExternalSourceProviderResult> ResolveAsync(
+    Task<ExternalSourceRepositoryAcquisitionResult> AcquireAsync(
         ExternalSourceMapping mapping,
         CancellationToken cancellationToken = default);
 }

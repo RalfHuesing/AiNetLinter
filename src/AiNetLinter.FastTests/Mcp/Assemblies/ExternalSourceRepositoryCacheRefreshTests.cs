@@ -149,7 +149,8 @@ public sealed class ExternalSourceRepositoryCacheRefreshTests
                 diagnostics: [ExternalSourceConfigurationDiagnostic.CreateError(
                     ExternalSourceConfigurationDiagnosticCodes.NetworkUnavailable,
                     "Netzwerkfehler", "Test", "$repository")],
-                failureKind: ExternalSourceProviderFailureKind.NetworkUnavailable));
+                state: ExternalSourceRepositoryResultState.Create(
+                    ExternalSourceProviderFailureKind.NetworkUnavailable)));
         var acquirer = CreateStaleAcquirer(
             transport,
             writer,
@@ -160,6 +161,11 @@ public sealed class ExternalSourceRepositoryCacheRefreshTests
 
         Assert.False(result.IsAvailable);
         Assert.Equal(ExternalSourceProviderFailureKind.NetworkUnavailable, result.FailureKind);
+        Assert.Equal(ExternalSourceRepositoryHealth.Degraded, result.Health);
+        Assert.Equal(ExternalSourceRepositoryCacheTestData.Revision, result.LastGoodRevision);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryRefreshDegraded);
         Assert.Equal(oldGeneration, ExternalSourceRepositoryCacheTestAssertions.ReadCurrentGenerationName(
             writer,
             source.Key));
@@ -196,6 +202,11 @@ public sealed class ExternalSourceRepositoryCacheRefreshTests
 
         Assert.False(result.IsAvailable);
         Assert.Equal(ExternalSourceProviderFailureKind.InvalidResponse, result.FailureKind);
+        Assert.Equal(ExternalSourceRepositoryHealth.Degraded, result.Health);
+        Assert.Equal(ExternalSourceRepositoryCacheTestData.Revision, result.LastGoodRevision);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryRefreshDegraded);
         Assert.Equal(
             ExternalSourceRepositoryCacheTestData.OtherRevision,
             recordingWriter.Request!.LoadedRevision);
@@ -238,6 +249,11 @@ public sealed class ExternalSourceRepositoryCacheRefreshTests
 
         Assert.False(result.IsAvailable);
         Assert.Equal(ExternalSourceProviderFailureKind.InvalidResponse, result.FailureKind);
+        Assert.Equal(ExternalSourceRepositoryHealth.Degraded, result.Health);
+        Assert.Equal(ExternalSourceRepositoryCacheTestData.Revision, result.LastGoodRevision);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryRefreshDegraded);
         Assert.Equal(oldGeneration, ExternalSourceRepositoryCacheTestAssertions.ReadCurrentGenerationName(
             writer,
             source.Key));
@@ -306,6 +322,11 @@ public sealed class ExternalSourceRepositoryCacheRefreshTests
 
         Assert.False(result.IsAvailable);
         Assert.Equal(ExternalSourceProviderFailureKind.InvalidResponse, result.FailureKind);
+        Assert.Equal(ExternalSourceRepositoryHealth.Degraded, result.Health);
+        Assert.Equal(ExternalSourceRepositoryCacheTestData.Revision, result.LastGoodRevision);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryRefreshDegraded);
         Assert.Contains(
             result.Diagnostics,
             diagnostic => diagnostic.Code == ExternalSourceRepositoryCacheContract.CurrentChangedDiagnosticCode);
@@ -319,6 +340,40 @@ public sealed class ExternalSourceRepositoryCacheRefreshTests
         Assert.Empty(Directory.EnumerateDirectories(stagingRoot.DirectoryPath, "checkout-*"));
     }
 
+    [Fact]
+    public async Task StaleCurrent_CurrentChangedRaceReusesFreshGeneration()
+    {
+        using var source = SourceFixture.Create(ExternalSourceRepositoryCacheTestData.Revision);
+        using var cacheRoot = TestTempDirectory.Create("external-source-refresh-race-reuse-cache-");
+        using var stagingRoot = TestTempDirectory.Create("external-source-refresh-race-reuse-staging-");
+        var writer = new LocalExternalSourceRepositoryCacheWriter(cacheRoot.DirectoryPath);
+        var initial = await writer.PublishAsync(source.Request);
+        Assert.True(initial.Succeeded);
+        var transport = new RaceRefreshTransport(writer);
+        var timeProvider = new SequenceTimeProvider(
+            DateTimeOffset.UtcNow.AddHours(2),
+            DateTimeOffset.UtcNow.AddMinutes(1));
+        var acquirer = CreateStaleAcquirer(
+            transport,
+            writer,
+            stagingRoot,
+            DateTimeOffset.UtcNow,
+            writer,
+            timeProvider);
+
+        var result = await acquirer.AcquireAsync(ExternalSourceRepositoryCacheTestData.CreateMapping());
+
+        Assert.True(result.IsAvailable);
+        Assert.Equal(ExternalSourceRepositoryCacheTestData.OtherRevision, result.LoadedRevision);
+        Assert.Equal(ExternalSourceRepositoryHealth.Verified, result.Health);
+        Assert.Equal(1, transport.FetchCallCount);
+        var current = ExternalSourceRepositoryCacheTestAssertions.ReadCurrent(writer, source.Key)!;
+        Assert.Equal(2, ExternalSourceRepositoryCacheReadBackTestSupport.CountGenerations(
+            Path.GetDirectoryName(current.GenerationPath)!));
+        result.Checkout!.Dispose();
+        Assert.Empty(Directory.EnumerateDirectories(stagingRoot.DirectoryPath, "checkout-*"));
+    }
+
     private static ExternalSourceRecordingTransport CreateUnexpectedTransport() =>
         new(
             (_, _, _) => throw new InvalidOperationException("Der Transport darf beim Current-Reuse nicht aufgerufen werden."));
@@ -328,14 +383,15 @@ public sealed class ExternalSourceRepositoryCacheRefreshTests
         IExternalSourceRepositoryCacheWriter cacheWriter,
         TestTempDirectory stagingRoot,
         DateTimeOffset now,
-        IExternalSourceRepositoryCacheReader? cacheReader = null) =>
+        IExternalSourceRepositoryCacheReader? cacheReader = null,
+        TimeProvider? timeProvider = null) =>
         new(
             transport,
             stagingRoot.DirectoryPath,
             cacheWriter: cacheWriter,
             cacheReader: cacheReader ?? cacheWriter as IExternalSourceRepositoryCacheReader,
             refreshPolicy: new ExternalSourceRepositoryCacheRefreshPolicy(
-                new FixedTimeProvider(now)));
+                timeProvider ?? new FixedTimeProvider(now)));
 
     private static ExternalSourceRepositoryCacheManifest CreateManifest(DateTime createdUtc) =>
         new(
@@ -358,6 +414,23 @@ public sealed class ExternalSourceRepositoryCacheRefreshTests
         }
 
         public override DateTimeOffset GetUtcNow() => utcNow;
+    }
+
+    private sealed class SequenceTimeProvider : TimeProvider
+    {
+        private readonly DateTimeOffset[] values;
+        private int index;
+
+        internal SequenceTimeProvider(params DateTimeOffset[] values)
+        {
+            this.values = values;
+        }
+
+        public override DateTimeOffset GetUtcNow()
+        {
+            var currentIndex = Interlocked.Increment(ref index) - 1;
+            return values[Math.Min(currentIndex, values.Length - 1)];
+        }
     }
 
     private sealed class CancellingRefreshTransport : IGiteaRepositoryTransport

@@ -10,7 +10,15 @@ using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Mcp.Assemblies;
 
-internal enum AssemblySourceSelectionStatus { Matched, NoMatch, Ambiguous, ProviderUnavailable, ConfigurationFailure }
+internal enum AssemblySourceSelectionStatus
+{
+    Matched,
+    NoMatch,
+    Ambiguous,
+    ProviderUnavailable,
+    ProviderDegraded,
+    ConfigurationFailure,
+}
 
 internal sealed class AssemblySourceSelectionOrchestrator
 {
@@ -60,7 +68,13 @@ internal sealed class AssemblySourceSelectionOrchestrator
         var mapping = mappings[0];
         var providerResult = await provider.ResolveAsync(mapping, cancellationToken).ConfigureAwait(false);
         if (!providerResult.IsAvailable || providerResult.SourceSnapshot is null)
-            return CreateScope(providerResult.FailureKind, providerResult.Diagnostics);
+        {
+            return CreateScope(
+                providerResult.FailureKind,
+                providerResult.Diagnostics,
+                providerResult.Health,
+                providerResult.LastGoodRevision);
+        }
 
         SourceSnapshotLease lease;
         try
@@ -77,7 +91,11 @@ internal sealed class AssemblySourceSelectionOrchestrator
                 selection,
                 configurationResult,
                 providerResult.Diagnostics,
-                lease);
+                lease,
+                ExternalSourceRepositoryResultState.Create(
+                    ExternalSourceProviderFailureKind.None,
+                    providerResult.Health,
+                    providerResult.LastGoodRevision));
         }
         catch
         {
@@ -88,13 +106,18 @@ internal sealed class AssemblySourceSelectionOrchestrator
 
     private AssemblySourceSelectionScope CreateScope(
         ExternalSourceProviderFailureKind providerFailureKind = ExternalSourceProviderFailureKind.None,
-        IEnumerable<ExternalSourceConfigurationDiagnostic>? providerDiagnostics = null) =>
+        IEnumerable<ExternalSourceConfigurationDiagnostic>? providerDiagnostics = null,
+        ExternalSourceRepositoryHealth? providerHealth = null,
+        string? lastGoodRevision = null) =>
         new(
             null,
             configurationResult,
             providerDiagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>(),
             null,
-            providerFailureKind);
+            ExternalSourceRepositoryResultState.Create(
+                providerFailureKind,
+                providerHealth,
+                lastGoodRevision));
 }
 
 internal sealed class AssemblySourceSelectionScope : IDisposable
@@ -107,16 +130,22 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
         ExternalSourceConfigurationLoadResult configurationResult,
         IEnumerable<ExternalSourceConfigurationDiagnostic> providerDiagnostics,
         SourceSnapshotLease? lease,
-        ExternalSourceProviderFailureKind providerFailureKind = ExternalSourceProviderFailureKind.None)
+        ExternalSourceRepositoryResultState? state = null)
     {
         ArgumentNullException.ThrowIfNull(configurationResult);
         ArgumentNullException.ThrowIfNull(providerDiagnostics);
+        state ??= ExternalSourceRepositoryResultState.Create();
 
         Selection = selection;
         this.configurationResult = configurationResult;
         LoaderDiagnostics = configurationResult.Diagnostics;
         ProviderDiagnostics = providerDiagnostics.ToImmutableArray();
-        ProviderFailureKind = providerFailureKind;
+        ProviderFailureKind = state.FailureKind;
+        ProviderHealth = ExternalSourceRepositorySourcePolicy.ResolveHealth(
+            selection is not null,
+            state.Health,
+            state.LastGoodRevision);
+        LastGoodRevision = ExternalSourceRepositorySourcePolicy.NormalizeLastGoodRevision(state.LastGoodRevision);
         Diagnostics = LoaderDiagnostics
             .AddRange(ProviderDiagnostics)
             .Distinct()
@@ -130,6 +159,8 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
         Selection is not null ? (AssemblySourceSelectionStatus)Selection.MatchResult.State :
         !configurationResult.Succeeded
             ? AssemblySourceSelectionStatus.ConfigurationFailure
+            : ProviderHealth is ExternalSourceRepositoryHealth.Degraded
+            ? AssemblySourceSelectionStatus.ProviderDegraded
             : ProviderFailureKind is not ExternalSourceProviderFailureKind.None
             ? AssemblySourceSelectionStatus.ProviderUnavailable
             : AssemblySourceSelectionStatus.NoMatch;
@@ -141,6 +172,10 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> ProviderDiagnostics { get; }
 
     internal ExternalSourceProviderFailureKind ProviderFailureKind { get; }
+
+    internal ExternalSourceRepositoryHealth ProviderHealth { get; }
+
+    internal string? LastGoodRevision { get; }
 
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics { get; }
 

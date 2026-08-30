@@ -34,7 +34,9 @@ public sealed class GiteaGitRepositoryTransportTests
                 return Task.FromResult(CompletedProcess());
             }
 
-            return Task.FromResult(CompletedProcess(Revision + Environment.NewLine));
+            return Task.FromResult(request.Arguments[0] is "status"
+                ? CompletedProcess("?? .ainetlinter-owner\n")
+                : CompletedProcess(Revision + Environment.NewLine));
         });
         var transport = new GiteaGitRepositoryTransport(resolver, executor);
 
@@ -42,7 +44,7 @@ public sealed class GiteaGitRepositoryTransportTests
 
         Assert.True(result.IsAvailable);
         Assert.Equal(Revision, result.LoadedRevision);
-        Assert.Equal(2, executor.Requests.Count);
+        Assert.Equal(3, executor.Requests.Count);
         var cloneRequest = executor.Requests[0];
         Assert.Equal("git", cloneRequest.FileName);
         Assert.Equal(
@@ -57,7 +59,12 @@ public sealed class GiteaGitRepositoryTransportTests
         Assert.False(resolver.CancellationToken.CanBeCanceled);
         Assert.Throws<ObjectDisposedException>(() => _ = credential.Secret);
 
-        var headRequest = executor.Requests[1];
+        var statusRequest = executor.Requests[1];
+        Assert.Equal(["status", "--porcelain=v1", "--untracked-files=all"], statusRequest.Arguments);
+        Assert.DoesNotContain(SecretEnvironmentVariable, statusRequest.Environment.Keys);
+        Assert.DoesNotContain(UsernameEnvironmentVariable, statusRequest.Environment.Keys);
+
+        var headRequest = executor.Requests[2];
         Assert.Equal(["rev-parse", "--verify", "HEAD"], headRequest.Arguments);
         Assert.DoesNotContain(SecretEnvironmentVariable, headRequest.Environment.Keys);
         Assert.DoesNotContain(UsernameEnvironmentVariable, headRequest.Environment.Keys);
@@ -76,7 +83,7 @@ public sealed class GiteaGitRepositoryTransportTests
             }
 
             return Task.FromResult(CompletedProcess(
-                request.Arguments[0] is "clone" ? string.Empty : Revision));
+                request.Arguments[0] is "clone" or "status" ? string.Empty : Revision));
         });
         var transport = new GiteaGitRepositoryTransport(processExecutor: executor);
 
@@ -104,6 +111,7 @@ public sealed class GiteaGitRepositoryTransportTests
         {
             return Task.FromResult(request.Arguments[0] switch
             {
+                "status" => CompletedProcess(),
                 "fetch" => CompletedProcess(),
                 "reset" => CompletedProcess(),
                 _ => CompletedProcess(Revision + Environment.NewLine),
@@ -115,19 +123,27 @@ public sealed class GiteaGitRepositoryTransportTests
 
         Assert.True(result.IsAvailable);
         Assert.Equal(Revision, result.LoadedRevision);
-        Assert.Equal(3, executor.Requests.Count);
-        var fetchRequest = executor.Requests[0];
+        Assert.Equal(5, executor.Requests.Count);
+        var initialStatusRequest = executor.Requests[0];
+        Assert.Equal(["status", "--porcelain=v1", "--untracked-files=all"], initialStatusRequest.Arguments);
+        Assert.DoesNotContain(SecretEnvironmentVariable, initialStatusRequest.Environment.Keys);
+
+        var fetchRequest = executor.Requests[1];
         Assert.Equal(["fetch", "--no-tags", "origin"], fetchRequest.Arguments);
         Assert.Equal(destination, fetchRequest.WorkingDirectory);
         Assert.Equal(CredentialSecret, fetchRequest.Environment[SecretEnvironmentVariable]);
         Assert.DoesNotContain(CredentialSecret, string.Join(" ", fetchRequest.Arguments));
 
-        var resetRequest = executor.Requests[1];
+        var resetRequest = executor.Requests[2];
         Assert.Equal(["reset", "--hard", "origin/HEAD"], resetRequest.Arguments);
         Assert.DoesNotContain(SecretEnvironmentVariable, resetRequest.Environment.Keys);
         Assert.DoesNotContain(UsernameEnvironmentVariable, resetRequest.Environment.Keys);
 
-        Assert.Equal(["rev-parse", "--verify", "HEAD"], executor.Requests[2].Arguments);
+        var refreshedStatusRequest = executor.Requests[3];
+        Assert.Equal(["status", "--porcelain=v1", "--untracked-files=all"], refreshedStatusRequest.Arguments);
+        Assert.DoesNotContain(SecretEnvironmentVariable, refreshedStatusRequest.Environment.Keys);
+
+        Assert.Equal(["rev-parse", "--verify", "HEAD"], executor.Requests[4].Arguments);
         Assert.Throws<ObjectDisposedException>(() => _ = credential.Secret);
     }
 
@@ -150,7 +166,7 @@ public sealed class GiteaGitRepositoryTransportTests
         Assert.Contains(
             result.Diagnostics,
             diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportResultInvalid);
-        Assert.Equal(3, executor.Requests.Count);
+        Assert.Equal(5, executor.Requests.Count);
     }
 
     [Fact]
@@ -161,8 +177,13 @@ public sealed class GiteaGitRepositoryTransportTests
         Directory.CreateDirectory(Path.Combine(destination, ".git"));
         using var cancellation = new CancellationTokenSource();
         var resolver = new RecordingCredentialResolver(null);
-        var executor = new RecordingGitExecutor(async (_, token) =>
+        var executor = new RecordingGitExecutor(async (request, token) =>
         {
+            if (request.Arguments[0] is "status")
+            {
+                return CompletedProcess();
+            }
+
             await Task.Delay(Timeout.InfiniteTimeSpan, token);
             return CompletedProcess();
         });
@@ -178,7 +199,7 @@ public sealed class GiteaGitRepositoryTransportTests
         Assert.Equal(cancellation.Token, exception.CancellationToken);
         Assert.Equal(cancellation.Token, resolver.CancellationToken);
         Assert.Equal(cancellation.Token, executor.LastCancellationToken);
-        Assert.Single(executor.Requests);
+        Assert.Equal(2, executor.Requests.Count);
     }
 
     [Theory]
@@ -281,7 +302,9 @@ public sealed class GiteaGitRepositoryTransportTests
                 return Task.FromResult(CompletedProcess());
             }
 
-            return Task.FromResult(CompletedProcess("not-a-git-revision"));
+            return Task.FromResult(request.Arguments[0] is "status"
+                ? CompletedProcess()
+                : CompletedProcess("not-a-git-revision"));
         });
         var transport = new GiteaGitRepositoryTransport(processExecutor: executor);
 

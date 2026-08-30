@@ -137,7 +137,7 @@ public sealed class AssemblyAnalysisToolSupportTests
             "TargetAssembly",
             "namespace Target; public sealed class TargetOnly { }");
         using var registry = new SourceSnapshotRegistry();
-        var provider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(true, []));
+        var provider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(false, []));
         var orchestrator = CreateConfiguredOrchestrator(temp, ["OtherAssembly"], provider, registry);
         AssemblyContext? context = null;
         var result = await AssemblyAnalysisToolSupport.ExecuteAsync(
@@ -178,7 +178,7 @@ public sealed class AssemblyAnalysisToolSupportTests
         var provider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(
             isAvailable: false,
             diagnostics: [diagnostic],
-            failureKind: failureKind));
+            state: ExternalSourceRepositoryResultState.Create(failureKind)));
         var orchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], provider, registry);
         AssemblyContext? context = null;
         AssemblySourceSelectionScope? observedScope = null;
@@ -253,7 +253,7 @@ public sealed class AssemblyAnalysisToolSupportTests
             "error",
             "settings");
         using var invalidRegistry = new SourceSnapshotRegistry();
-        var invalidProvider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(true, []));
+        var invalidProvider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(false, []));
         var invalidOrchestrator = new AssemblySourceSelectionOrchestrator(
             ExternalSourceConfigurationLoadResult.Failure([loaderDiagnostic]),
             invalidProvider,

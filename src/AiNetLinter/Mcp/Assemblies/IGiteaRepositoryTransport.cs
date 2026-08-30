@@ -28,44 +28,71 @@ internal sealed record ExternalSourceRepositoryTransportResult
         bool isAvailable,
         string? loadedRevision,
         IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics,
-        ExternalSourceProviderFailureKind failureKind = ExternalSourceProviderFailureKind.None)
+        ExternalSourceCheckoutTrust? checkoutTrust = null,
+        ExternalSourceRepositoryResultState? state = null)
     {
         ArgumentNullException.ThrowIfNull(diagnostics);
-        if (!Enum.IsDefined(failureKind))
-        {
-            throw new ArgumentOutOfRangeException(nameof(failureKind));
-        }
+        state ??= ExternalSourceRepositoryResultState.Create();
+        var validatedState = ExternalSourceRepositorySourcePolicy.ValidateResultState(isAvailable, state);
 
         if (isAvailable && string.IsNullOrWhiteSpace(loadedRevision))
         {
             throw new ArgumentException(
+                // ainetlinter-disable MagicValues — interner Vertragsfehler, keine lokalisierbare Nutzermeldung.
                 "Ein verfügbares Akquisitionsergebnis benötigt eine geladene Revision.",
+                nameof(loadedRevision));
+        }
+
+        if (isAvailable
+            && loadedRevision is not null
+            && !ExternalSourceRepositoryCacheKey.IsSafeRevision(loadedRevision.Trim()))
+        {
+            throw new ArgumentException(
+                // ainetlinter-disable MagicValues — interner Vertragsfehler, keine lokalisierbare Nutzermeldung.
+                "Ein verfügbares Akquisitionsergebnis benötigt eine sichere Revision.",
                 nameof(loadedRevision));
         }
 
         if (!isAvailable && !string.IsNullOrWhiteSpace(loadedRevision))
         {
             throw new ArgumentException(
+                // ainetlinter-disable MagicValues — interner Vertragsfehler, keine lokalisierbare Nutzermeldung.
                 "Ein nicht verfügbares Akquisitionsergebnis darf keine Revision tragen.",
                 nameof(loadedRevision));
         }
 
-        if (isAvailable && failureKind is not ExternalSourceProviderFailureKind.None)
+        if (isAvailable && state.FailureKind is not ExternalSourceProviderFailureKind.None)
         {
             throw new ArgumentException(
+                // ainetlinter-disable MagicValues — interner Vertragsfehler, keine lokalisierbare Nutzermeldung.
                 "Ein verfügbares Akquisitionsergebnis darf keinen Fehlerzustand tragen.",
-                nameof(failureKind));
+                nameof(state));
         }
 
         IsAvailable = isAvailable;
         LoadedRevision = string.IsNullOrWhiteSpace(loadedRevision) ? null : loadedRevision.Trim();
-        FailureKind = isAvailable || failureKind is not ExternalSourceProviderFailureKind.None
-            ? failureKind
+        FailureKind = isAvailable || state.FailureKind is not ExternalSourceProviderFailureKind.None
+            ? state.FailureKind
             : ExternalSourceProviderFailureKind.ProviderUnavailable;
-        Diagnostics = ExternalSourceRepositoryFailurePolicy.ProjectTransportDiagnostics(
-            diagnostics,
-            isAvailable,
-            FailureKind);
+        CheckoutTrust = isAvailable
+            ? checkoutTrust ?? ExternalSourceCheckoutTrust.Clean
+            : checkoutTrust ?? ExternalSourceCheckoutTrust.Unverified;
+        Health = validatedState.Health;
+        LastGoodRevision = validatedState.LastGoodRevision;
+        if (Health is ExternalSourceRepositoryHealth.Verified
+            && CheckoutTrust is not ExternalSourceCheckoutTrust.Clean)
+        {
+            throw new ArgumentException(
+                // ainetlinter-disable MagicValues — interner Vertragsfehler, keine lokalisierbare Nutzermeldung.
+                "Ein verifiziertes Transportergebnis benötigt einen cleanen Checkout.",
+                nameof(checkoutTrust));
+        }
+        Diagnostics = isAvailable
+            ? diagnostics.ToImmutableArray()
+            : ExternalSourceRepositorySourcePolicy.ProjectFailureDiagnostics(
+                diagnostics,
+                Health,
+                FailureKind);
     }
 
     internal bool IsAvailable { get; }
@@ -73,6 +100,12 @@ internal sealed record ExternalSourceRepositoryTransportResult
     internal string? LoadedRevision { get; }
 
     internal ExternalSourceProviderFailureKind FailureKind { get; }
+
+    internal ExternalSourceCheckoutTrust CheckoutTrust { get; }
+
+    internal ExternalSourceRepositoryHealth Health { get; }
+
+    internal string? LastGoodRevision { get; }
 
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics { get; }
 
