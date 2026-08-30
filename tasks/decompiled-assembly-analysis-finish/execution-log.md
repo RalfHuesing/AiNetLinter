@@ -557,3 +557,14 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
 - Freshness-Regel: erfolgreiche vorhandene Checks werden nicht ohne Anlass
   wiederholt; neue Checks müssen nach den letzten Codeänderungen den
   Korrekturscope gezielt abdecken.
+
+## 2026-08-30 — Architekturhinweis für spätere Rollen
+
+- In einzelnen Verzeichnissen können sinnvolle Dateianzahlgrenzen erreicht
+  werden. Falls eine solche Grenze durch den Task berührt oder überschritten
+  wird, soll die zuständige Rolle ein sauberes, fachlich begründetes
+  Refactoring in Unterverzeichnisse mit konsistenten Namespace-Anpassungen
+  prüfen und bei Bedarf scopeübergreifend umsetzen. Der Hinweis ist kein
+  Anlass für einen vorsorglichen globalen Cleanup; maßgeblich sind die
+  konkrete Grenze, die betroffene fachliche Einheit und der aktuelle Task-
+  Scope.
