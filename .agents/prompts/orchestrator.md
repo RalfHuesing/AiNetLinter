@@ -58,6 +58,26 @@ den manuellen Konzept-Task.
    Detailentscheidungen dürfen als begrenzte Annahme oder als spätere offene
    Frage in der Roadmap stehen.
 
+## Subagent-Lebenszyklus
+
+Delegiere über die im verwendeten Agentenwerkzeug verfügbare Subagent-Funktion.
+Wenn keine unabhängige Delegation möglich ist, behaupte keinen unabhängigen
+Review, sondern melde diese Einschränkung.
+
+- Jeder Rollenaufruf ist eine frische, unabhängige Subagent-Conversation mit
+  neuem Kontext und dem aktuellen Working Tree.
+- Warte das vollständige terminale Ergebnis ab, bevor du irgendetwas am
+  Working Tree veranlasst oder die nächste Rolle startest.
+- Beende jeden eigenen Subagent-Task nach dem terminalen Ergebnis und entferne
+  ihn aus der aktiven Task-Liste. Wenn das Werkzeug kein Löschen unterstützt,
+  archiviere ihn. Fremde Nutzer-Tasks dürfen nicht verändert werden.
+- Verwende niemals einen alten Implementierer für eine Korrektur, einen alten
+  Reviewer für das nächste Epic oder einen alten Audit für einen neuen Lauf.
+  Korrekturen und Resumes erhalten jeweils neue Subagenten.
+- Wenn ein eigener alter Task derselben Ausführung noch läuft oder nicht sauber
+  beendet werden kann, starte keinen weiteren Subagenten und stoppe mit einer
+  konkreten Meldung.
+
 ## Großkonzept-Modus: einmalige Roadmap
 
 Die Roadmap ist eine grobe Makroplanung, keine neue Drift-Loop-Spezifikation.
