@@ -811,6 +811,22 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
   Qualitätschecks und den letzten `get_violations`-Nachweis nach seiner
   letzten Codeänderung.
 
+## 2026-08-30 — Epic 3 Korrekturrunde 3 Review gestartet
+
+- Run-ID: `resume-2026-08-30-epic-3-correction-3-review`
+- Epic: 3 — Transitive Assembly-Referenzen und getrennte externe Ressourcen
+- Rolle: Reviewer
+- Subagent-ID: `01a053fd-1808-7c92-a6ef-fcb467c66340`
+- Diff-Baseline: `20027f1c`
+- Status: `running`
+- Prüfauftrag: unabhängige Prüfung des Snapshot-Dispose-Race-Fixes und der
+  deterministischen Regression; den gemeldeten FastTests-Daemon-Gate-Fehler
+  `ResidentCount 2 statt 1` als konkrete Gegenhypothese bewerten.
+- Die erfolgreiche gezielte Regression `9/9`, der Build `0/0` und der letzte
+  `get_violations`-Nachweis werden nicht bloß zur Bestätigung wiederholt.
+- `code-map.md` ist zuerst zu lesen und gegen Working Tree/MCP zu verifizieren;
+  nur konkrete Navigationsfehler dürfen dort korrigiert werden.
+
 ## 2026-08-30 — Epic 3 Korrekturrunde 3 Implementierer abgeschlossen
 
 - Run-ID: `resume-2026-08-30-epic-3-correction-3`

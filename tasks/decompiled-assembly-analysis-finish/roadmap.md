@@ -2,8 +2,8 @@
 
 status: executing
 current_epic: 3
-last_commit: b2c546f8
-blocker: Review ausstehend; ein FastTests-Daemon-Gate mit ResidentCount 2 statt 1 ist ungeklärt
+last_commit: 20027f1c
+blocker: Review ausstehend; der FastTests-Daemon-Gate-Befund bleibt zu bewerten
 correction_round: 3
 cycle_state: active
 recent_finding_signatures:
