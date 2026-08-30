@@ -1095,6 +1095,101 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
 - Epic: 4 — Capability-Matrix, Host-Integration und End-to-End-Verträge
 - Rolle: Reviewer
 - Subagent-ID: `01a0542b-96ce-72b0-babb-343679718fd9`
+- Diff-Baseline: `b506de44`; gegenüber dem Implementierungscheckpoint waren
+  nur bereits protokollierte Task-Dokumente geändert, kein Produktionscode.
+- Status: `completed`; Urteil: `issues`.
+- Vollständiger Reviewerbericht:
+
+  Der Working Tree ist sauber; gegen `b506de44` gibt es nur bereits
+  protokollierte Task-Dokumente. Für die verlangte Epic-4-Prüfung wurde deshalb
+  die Implementierung `b506de44^..b506de44` auditiert. Keine Dateien wurden
+  geändert, kein Commit erstellt.
+
+  ### P1 — Partialitätsstatus widersprüchlich
+
+  Die Expansion-Diagnosen werden gesammelt, aber der gemeinsame Metadatenblock
+  übernimmt weiterhin den Root-Status:
+
+  - `AssemblyAnalysisResponse.cs:33` setzt `analysis.status` aus
+    `context.Status`.
+  - `AssemblyAnalysisResponse.cs:34` setzt `analysis.completeness` ebenfalls
+    aus dem Root-Kontext.
+  - Gleichzeitig werden Expansion-Diagnosen ab `AssemblyAnalysisResponse.cs:19`
+    ergänzt.
+  - Die Spezialpayloads setzen korrekt `completeness=partial` in
+    `InspectAssemblyTool.cs:80` und `FindAssemblyExtensionsTool.cs:75`,
+    behalten aber `sessionStatus=complete`.
+
+  Damit kann dieselbe Antwort gleichzeitig `partial` im Payload und `complete`
+  im gemeinsamen Header/`analysis` melden. Die neuen Tests prüfen die
+  Partialpayload, aber nicht `analysis.status`/`analysis.completeness`
+  (`AssemblyAnalysisDispatcherCapabilityTests.cs:41`).
+
+  Disposition: blockierend für den Statusvertrag. Effektiven Status zentral
+  berechnen und in allen Payloads/Metadaten verwenden.
+
+  ### P1 — Installierte MCP-Registry ist nicht der Epic-4-Vertrag
+
+  Die aktuelle installierte Registry liefert zwar 29 Toolnamen, aber:
+
+  - gemeinsame Tools akzeptieren nur `projectRoot`, nicht `targetType`/
+    `targetPath`;
+  - `inspect_assembly` und `find_assembly_extensions` verwenden `assemblyPath`;
+  - `get_server_health` akzeptiert nur `projectRoot`;
+  - der aktuelle Health-Aufruf meldete Version `1.0.154` und ausschließlich
+    eine Projektliste, keine `Assembly-Sessions`.
+
+  Das ist in `code-map.md:188` dokumentiert, aber weiterhin ein Deployment-
+  Freigabeblocker: Die installierte MCP-Instanz kann Epic 4 nicht tatsächlich
+  anbieten. Die Source-Registrierung und lokale E2E-Wiring-Prüfung sind davon
+  getrennt korrekt.
+
+  ### P2 — `get_file_tree` verliert den kanonischen Unsupported-Pfad
+
+  `AnalysisToolCall.cs:89` ruft bei einem Assembly-Ziel
+  `UnsupportedAssemblyTarget()` ohne Pfad auf. Die übrigen projektgebundenen
+  Routen verwenden den pfadbezogenen Pfad. Der Fehler bleibt fail-closed, ist
+  aber inkonsistent mit dem dokumentierten pfadbezogenen Unsupported-Vertrag.
+
+  Disposition: `fix-now` empfohlen, im Orchestrator als nicht blockierender
+  Tech-Debt-Kandidat für den nächsten passenden Integrations-/Dokuabschnitt
+  geführt.
+
+  ### Verifikation und Kriterien
+
+  - Capability-Matrix: Source vollständig `11 project|assembly + 14
+    project-only + 2 assembly-only + 2 Spezialfälle = 29`; aktuelle
+    installierte Schemas jedoch abweichend.
+  - Dispatcher/Default-Daemon/Health: Source-Wiring korrekt in
+    `McpServerCommand.cs:70` und `DaemonHostCommand.cs:43`; beide übergeben
+    dieselbe Assembly-Registry.
+  - Origin, Snapshot, Hash, Generation, Status und Diagnosen: Felder vorhanden;
+    Partial-Status ist inkonsistent wie oben beschrieben.
+  - Extensions-Diagnosen: Payload und `analysis.diagnostics` enthalten
+    Expansion-/Child-Lease-Diagnosen.
+  - Missing/Cycle/Node-Limit: Dispatcher-/Inspect-Tests vorhanden und
+    fachlich korrekt; die gemeinsame `analysis`-Statusprojektion fehlt.
+  - TD-010: erfüllt; Projekt-Registry `1` und Assembly-Registry `2` in
+    `DaemonHostMcpContractTests.cs:89`.
+  - Code-Map: zuerst gelesen; alle aufgeführten Pfade, Symbole, Aufrufer und
+    Testbeziehungen wurden per Working Tree und MCP bestätigt. Kein
+    Navigationsfehler, daher keine Änderung.
+  - Source-Docs/Legacy-Parameter: konsistent mit dem neuen Vertrag; die
+    installierte Registry bleibt die dokumentierte externe Abweichung.
+
+  Die frischen Implementierer-Tests, der Build und die Audits wurden wegen
+  fehlender Codeänderungen danach nicht redundant wiederholt.
+
+- Nächste Aktion: nach Checkpoint und Infrastrukturprüfung eine frische
+  Korrekturrunde für die Statusprojektion starten; die installierte
+  MCP-Registry nur mit lokaler, nachvollziehbarer Voraussetzung aktualisieren.
+
+## 2026-08-30 — Epic 4 Review abgeschlossen
+
+- Run-ID: `resume-2026-08-30-epic-4-review`
+- Epic: 4 — Capability-Matrix, Host-Integration und End-to-End-Verträge
+- Rolle: Reviewer
+- Subagent-ID: `01a0542b-96ce-72b0-babb-343679718fd9`
 - Diff-Baseline: `b506de44`; im aktuellen Working Tree waren gegenüber dem
   Implementierungscheckpoint nur bereits protokollierte Task-Dokumente
   geändert, kein Produktionscode.
