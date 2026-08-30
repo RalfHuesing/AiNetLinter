@@ -253,16 +253,14 @@ internal static class AnalysisToolRegistrations
     private const string FindMagicValuesDescription =
         "Wann nutzen: On-Demand-Audit nach Magic Values (Strings, Zahlen, URLs, Pfaden, " +
         "Timeouts, Format-Strings, Schwellwerten, HTTP-Statuscodes) in C#-Quellcode. " +
-        "valueType (Default 'all': strings, numbers, all) filtert nach Literal-Datentyp, " +
-        "categoryFilter (Default 'all': config_candidates, constant_candidates, " +
-        "enum_candidates, nameof_candidates, localization_candidates, standard_candidates, " +
-        "security_candidates) filtert nach fachlichem Refactoring-Ziel, " +
-        "minOccurrences (Default 1 — auch Einzelvorkommen), maxResults (Default 50), " +
-        "ignoreNumbers (optional) ergaenzt die Trivial-Liste um projektspezifische Zahlen, " +
-        "includeTests (Default false), includeSuppressed (Default false; steuert, ob Fundstellen " +
-        "mit '// ainetlinter-disable MagicValues'-Kommentar unterdrueckt werden), changedOnly " +
-        "(Default false; schraenkt den Scan ueber Git-Diff auf geaenderte Dateien im Repository ein), " +
-        "scopeFilter (Projekt-Name oder Pfad-Substring).";
+        "valueType: Literal-Filter ('all' [Default], 'strings', 'numbers'). " +
+        "categoryFilter: Refactoring-Kategorie ('all' [Default], 'config_candidates', 'constant_candidates', " +
+        "'enum_candidates', 'nameof_candidates', 'localization_candidates', 'standard_candidates', 'security_candidates'). " +
+        "minOccurrences: Mindestvorkommen (Default 1), maxResults: Begrenzung (Default 50). " +
+        "ignoreNumbers: projektspezifische Ignorier-Zahlen. includeTests: Tests einbeziehen (Default false). " +
+        "includeSuppressed: unterdrueckte Fundstellen einbeziehen (Default false). " +
+        "changedOnly: Git-Diff-Einschraenkung auf geaenderte Dateien (Default false). " +
+        "scopeFilter: Projekt-Name oder Pfad-Substring zur Eingrenzung.";
 
     private static void AddFindDeadCode(
         McpServerPrimitiveCollection<McpServerTool> tools,
