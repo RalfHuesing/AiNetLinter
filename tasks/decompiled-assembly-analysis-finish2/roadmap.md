@@ -4,7 +4,7 @@ status: executing
 current_epic: EPIC-A
 correction_round: 1
 cycle_state: normal
-last_commit: 4d5c8106
+last_commit: 8a85c12a
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
@@ -48,9 +48,24 @@ tech_debt: siehe tech-debt.md
 
 - Ergebnis: `SolutionDocumentPathResolver` und `DocumentContext` liegen unter
   `src/AiNetLinter/Core/Documents`; Core hat wieder 30 direkte Einträge.
-- Status: Review ausstehend.
+- Status: done.
 - Verifikation: 90/90 fokussierte Tests bestanden; `get_violations` im
   Produktionsscope 0.
+
+## EPIC-A-Abschluss
+
+- Ergebnis: `approved` nach Korrekturrunde 1.
+- Review: `CORE-DIRECT-CHILDREN-LIMIT` behoben; keine offenen P0/P1- oder
+  neuen P2/P3-Findings.
+- Abschluss-Checkpoint: folgt mit dem aktuellen Log-/Roadmap-/Code-Map-Stand.
+
+## Aktueller Rollenlauf
+
+- Rolle: frischer Folge-Reviewer für EPIC-A nach Korrekturrunde 1
+- diff-baseline: `264332b9`
+- Korrekturstand: `8a85c12a`
+- Prüffokus: P1 `CORE-DIRECT-CHILDREN-LIMIT`, Namespace-/Dateiverlagerung,
+  Assembly-Pfad- und Stable-ID-Verträge.
 
 ## EPIC-A — Stabile In-Memory- und Dateipfade
 

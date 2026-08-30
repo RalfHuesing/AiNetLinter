@@ -34,12 +34,13 @@
   interne `DocumentContext` verwenden dort den Namespace
   `AiNetLinter.Core.Documents`; `DiffImpactAnalyzer` bleibt unter
   `src/AiNetLinter/Core/DiffImpactAnalyzer.cs` im Namespace `AiNetLinter.Core`.
-- Für EPIC-A konkret bestätigt: `DiffImpactAnalyzer.FindDocumentByPath` ist
-  über `SolutionDocumentPathResolver` die gemeinsame Dokumentauflösung für `get_file_skeleton`,
-  `get_symbol_body`, Dependency- und Referenzpfade. Die relative Ausgabe-
-  normalisierung in `CallGraphTreeBuilder.FormatPath` und
-  `DependencyGraphScanner.ToRelativePath` erfolgt über
-  `PathNormalizer.ToRelative`; dort wird keine direkte
+- Für EPIC-A konkret bestätigt: `DiffImpactAnalyzer.FindDocumentByPath` delegiert
+  über `SolutionDocumentPathResolver` die Dokumentauflösung für `get_file_skeleton`,
+  `dependency_graph` und dateibasierte `find_references`-Pfade. `get_symbol_body`
+  löst Symbole separat über den Identifier-Resolver auf; seine relative Ausgabe
+  sowie die Ausgaben von `CallGraphTreeBuilder.FormatPath` und
+  `DependencyGraphScanner.ToRelativePath` verwenden `PathNormalizer.ToRelative`;
+  dort wird keine direkte
   `Path.GetRelativePath`-Nutzung mehr angenommen.
 - `SolutionDocumentPathResolver` vergleicht zuerst sichere absolute/relative
   Pfadvarianten und erlaubt danach ausschließlich bei eindeutigem Treffer den
@@ -122,7 +123,7 @@
   `id: \`<stable-id>\`` ausgeben. Die IDs selbst sind über Skeleton/Body und
   `AssemblySymbolIdentity(ContentHash, Generation)` kohärent.
 - MCP-Kontext der konkreten Änderungsstellen: `FindDocumentByPath` (7
-  Aufrufer, 7 statisch zugeordnete Tests), `FormatPath` (3 interne Aufrufer,
+  Aufrufer, 9 statisch zugeordnete Tests in 2 Dateien), `FormatPath` (3 interne Aufrufer,
   keine statische Testzuordnung), `ToRelativePath` (6 interne Aufrufer, 15
   Scanner-Tests) und `CreateProjectInfo` (1 Aufrufer, 13 Session-Tests);
   `FormatPath`, `ToRelativePath` und `CreateProjectInfo` meldeten 0 Violations;
@@ -172,8 +173,8 @@
 - Nach den letzten Codeänderungen verifiziert: die neue Assembly-Pfad-/ID-Regression
   (`AssemblyAnalysisPathContractTests`, 2/2) sowie Assembly-, Call-Tree-,
   Dependency-Graph-, Stable-ID-, Symbol-Body- und File-Skeleton-Komponenten-
-  tests (jeweils grün; vollständige Befunde im Hand-off). Der abschließende
-  `get_violations`-Check meldete genau einen strukturellen
-  `MaxDirectoryChildren`-Befund (31 statt 30) im Produktionsscope; dieser ist
-  als `accepted-deferred`-Tech-Debt dokumentiert. Danach wurde kein Code mehr
+  tests (jeweils grün; vollständige Befunde im Hand-off). Der letzte
+  `get_violations`-Check im Produktionsscope `src/AiNetLinter/Core` meldete
+  0 Violations; der zuvor offene `MaxDirectoryChildren`-Befund ist durch die
+  Verlagerung nach `Core/Documents` behoben. Danach wurde kein Code mehr
   geändert.

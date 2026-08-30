@@ -345,3 +345,57 @@
   actionable P2/P3-Befund.
 - nächste Aktion: Korrektur-Checkpoint committen, danach frischen Folge-Review
   für den EPIC-A-Diff starten.
+
+## 2026-08-31 — running / EPIC-A / Folge-Reviewer nach Korrekturrunde 1
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a05505-4ceb-74b3-9883-b9a7e6d30ef1`
+- diff-baseline: `264332b9`
+- scope: Korrektur des P1 `CORE-DIRECT-CHILDREN-LIMIT` und erneute
+  unabhängige Prüfung des gesamten EPIC-A-Diffs.
+- erwarteter Hand-off: `approved`, sofern kein belegter P0/P1 verbleibt;
+  erfolgreiche frische Korrekturchecks nicht ohne Gegenhypothese wiederholen.
+- warteverhalten: Der Reviewer läuft bis zu einem echten terminalen Status;
+  Polling-Timeouts führen nicht zu einem Interrupt.
+
+## 2026-08-31 — completed / EPIC-A / Folge-Reviewer nach Korrekturrunde 1
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a05505-4ceb-74b3-9883-b9a7e6d30ef1`
+- diff-baseline: `264332b9`
+- status: `approved`; kein Produktions-/Testcode und kein Commit erstellt;
+  veraltete Navigationsfakten in `code-map.md` korrigiert.
+- vollständiger finaler Agentenbericht:
+
+  > approved
+  >
+  > EPIC-A ist nach Korrekturrunde 1 freigabefähig:
+  >
+  > - `CORE-DIRECT-CHILDREN-LIMIT`: behoben;
+  >   `src/AiNetLinter/Core` hat 30 direkte Einträge bei Grenzwert 30.
+  > - Resolver und `DocumentContext` liegen konsistent unter
+  >   `src/AiNetLinter/Core/Documents`; Namespace- und Aufruferprüfung per
+  >   MCP vollständig.
+  > - Leere In-Memory-Pfade, generierte Dokumente, `get_file_skeleton`,
+  >   `Document.Save(bool)`, Stable IDs, Assembly-Identität und fremde IDs sind
+  >   durch den aktuellen Code und die fokussierten Regressionen belegt.
+  > - Assembly-/Projekt-Trennung bleibt erhalten; der Diff seit `264332b9`
+  >   enthält nur EPIC-A-Code/Testbereiche und Task-Dokumentation.
+  > - Frischer Nachweis: 90/90 fokussierte Tests bestanden,
+  >   `get_violations` im Core-Scope: 0. Diese Checks wurden gemäß
+  >   Review-Vorgabe nicht wiederholt.
+  >
+  > Korrigiert wurden ausschließlich veraltete Fakten in `code-map.md`:
+  >
+  > - Resolver nicht länger fälschlich `get_symbol_body` zugerechnet.
+  > - `FindDocumentByPath`: 9 statt 7 zugeordnete Tests.
+  > - alter 31/30-`MaxDirectoryChildren`-Befund auf behoben/0 Violations
+  >   aktualisiert.
+  >
+  > Keine offenen P0/P1- oder neuen P2/P3-Findings. Kein Produktions-/Testcode
+  >   geändert, kein Commit erstellt.
+- Urteil: `approved`; EPIC-A auf `done` gesetzt.
+- Tech-Debt-Triage: `TD-EPIC-A-001` bleibt mit Disposition `fixed`; keine
+  offenen actionable P2/P3 aus EPIC-A.
+- nächste Aktion: EPIC-A-Abschluss-Checkpoint committen; danach EPIC-B
+  starten.
