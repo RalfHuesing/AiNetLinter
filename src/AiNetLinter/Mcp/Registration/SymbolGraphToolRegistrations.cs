@@ -89,6 +89,7 @@ internal static class SymbolGraphToolRegistrations
         "symbolIdentifier: \"M:Namespace.Klasse.Methode\" oder \"Datei.cs:42:10\" oder " +
         "\"Datei.cs:42\" (Zeile ohne Spalte — bei mehreren Symbolen auf der Zeile liefert das " +
         "Ergebnis eine Kandidatenliste statt eines Treffers) oder \"Klasse.Methode\". " +
+        "maxResults: Begrenzung der Trefferliste (Default 50). " +
         "depth (Default 1, hard cap 3) liefert immer structuredContent.callSites plus " +
         "completeness mit Tiefe, Herkunft und getrennten Trunkierungsgruenden; die " +
         "Traversierung ist hart auf 200 besuchte Knoten begrenzt.";
@@ -96,7 +97,6 @@ internal static class SymbolGraphToolRegistrations
     private static void AddGetCallTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
         AnalysisToolRoute targetRoute)
-    {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
