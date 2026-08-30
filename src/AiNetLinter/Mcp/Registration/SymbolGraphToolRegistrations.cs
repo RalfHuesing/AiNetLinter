@@ -97,6 +97,7 @@ internal static class SymbolGraphToolRegistrations
     private static void AddGetCallTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
         AnalysisToolRoute targetRoute)
+    {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
@@ -112,12 +113,12 @@ internal static class SymbolGraphToolRegistrations
 
     private const string GetCallTreeDescription =
         "Wann nutzen: echten Aufrufer- oder Aufgerufene-Baum eines C#-Symbols sehen (wer ruft " +
-        "dieses Symbol auf bzw. wen ruft es auf), " +
-        "transitiv, als Eltern-Kind-Struktur statt flacher Liste). symbolIdentifier wie " +
-        "find_references. depth Default 2 (hard cap 5). format: \"ascii\" (Default) oder " +
-        "\"mermaid\" (flowchart TD). direction: \"incoming\" (Default), \"outgoing\" oder " +
-        "\"both\". topN (Default 10) begrenzt Fan-Out pro Ebene, Traversierung hart begrenzt " +
-        "auf 250 Knoten.";
+        "dieses Symbol auf bzw. wen ruft es auf), transitiv als Eltern-Kind-Struktur. " +
+        "symbolIdentifier: Format wie find_references (\"M:Namespace.Klasse.Methode\", \"Datei.cs:Zeile:Spalte\", \"Klasse.Methode\"). " +
+        "depth: Traversierungstiefe (Default 2, hard cap 5). format: \"ascii\" (Default) oder " +
+        "\"mermaid\" (flowchart TD). direction: \"incoming\" (Default: wer ruft das Symbol auf), " +
+        "\"outgoing\" (wen ruft das Symbol auf) oder \"both\" (beide Richtungen abwechselnd). " +
+        "topN: Fan-Out-Begrenzung pro Ebene (Default 10). Traversierung ist hart auf 250 Knoten begrenzt.";
 
     private static void AddGetImpact(
         McpServerPrimitiveCollection<McpServerTool> tools,
