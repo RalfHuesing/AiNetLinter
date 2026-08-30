@@ -161,8 +161,8 @@ internal static class AnalysisToolRegistrations
         "Wann nutzen: Verzeichnishierarchie einer unbekannten/grossen Codebase Ebene fuer Ebene " +
         "erkunden statt Komplett-Dump zu lesen — aggregierte Werte pro Knoten + sortierte " +
         "Top-N-Kinder. mode: code_size, comment_density, violation_density, complexity. " +
-        "root grenzt auf einen Teilbaum ein (Default: Solution-Root), depth (1-5) begrenzt die " +
-        "Baumtiefe, top_n die sichtbaren Kinder pro Ebene, file_filter (Regex) auf den Pfad.";
+        "root: Teilbaum-Eingrenzung (Default: Root), depth: Baumtiefe (1-5, Default 1), " +
+        "topN: sichtbare Kinder pro Ebene (Default 10), fileFilter: Regex-Filter auf den Pfad.";
 
     private static void AddMetricsLookup(
         McpServerPrimitiveCollection<McpServerTool> tools,
