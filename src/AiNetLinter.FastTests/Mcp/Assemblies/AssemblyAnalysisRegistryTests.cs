@@ -32,14 +32,67 @@ public sealed class AssemblyAnalysisRegistryTests
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
-        var canceled = await registry.LeaseAsync(assemblyPath, cancellation.Token);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => registry.LeaseAsync(assemblyPath, cancellation.Token));
 
-        Assert.Null(canceled.Lease);
-        Assert.NotNull(canceled.Error);
         var successful = await registry.LeaseAsync(assemblyPath);
         Assert.NotNull(successful.Lease);
         Assert.Equal(1, registry.ResidentCount);
         successful.Lease!.Dispose();
+    }
+
+    [Fact]
+    public async Task LeaseAsync_ConcurrentWaiters_CancelledWaiterThrowsWhileOtherCompletes()
+    {
+        using var temp = TestTempDirectory.Create("assembly-registry-concurrent-cancel-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "RegistryConcurrentCancel",
+            "namespace Probe; public sealed class Value { public int X => 1; }");
+        await using var registry = new AssemblyAnalysisRegistry();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        var cancelledTask = registry.LeaseAsync(assemblyPath, cancellation.Token);
+        var successTask = registry.LeaseAsync(assemblyPath, CancellationToken.None);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => cancelledTask);
+        var successful = await successTask;
+
+        Assert.NotNull(successful.Lease);
+        Assert.Equal(1, registry.ResidentCount);
+        successful.Lease!.Dispose();
+    }
+
+    [Fact]
+    public async Task LeaseAsync_InternalCreationAbortRemovesEntryAndSubsequentAttemptSucceeds()
+    {
+        using var temp = TestTempDirectory.Create("assembly-registry-internal-cancel-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "RegistryInternalCancel",
+            "namespace Probe; public sealed class Value { }");
+        var attempts = 0;
+        var orchestrator = new TestRegistrySourceResolver((_, _) =>
+        {
+            if (Interlocked.Increment(ref attempts) == 1)
+            {
+                throw new OperationCanceledException("internal creation aborted");
+            }
+            return Task.FromResult(new AssemblySourceResolution(null, null, []));
+        });
+        await using var registry = new AssemblyAnalysisRegistry(orchestrator);
+
+        var failed = await registry.LeaseAsync(assemblyPath, CancellationToken.None);
+
+        Assert.Null(failed.Lease);
+        Assert.NotNull(failed.Error);
+        Assert.Contains("abgebrochen", Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(failed.Error!.Content)).Text);
+
+        var retry = await registry.LeaseAsync(assemblyPath, CancellationToken.None);
+        Assert.NotNull(retry.Lease);
+        Assert.Equal(1, registry.ResidentCount);
+        retry.Lease!.Dispose();
     }
 
     [Fact]
@@ -291,6 +344,13 @@ public sealed class AssemblyAnalysisRegistryTests
             DisposeCount++;
             if (throws) throw new InvalidOperationException("lifetime");
         }
+    }
+
+    private sealed class TestRegistrySourceResolver(
+        Func<string, CancellationToken, Task<AssemblySourceResolution>> resolveFunc) : IAssemblySourceResolver
+    {
+        public Task<AssemblySourceResolution> ResolveForRegistryAsync(string assemblyPath, CancellationToken cancellationToken) =>
+            resolveFunc(assemblyPath, cancellationToken);
     }
 
 }

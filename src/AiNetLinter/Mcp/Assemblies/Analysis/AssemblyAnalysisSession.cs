@@ -70,14 +70,7 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
 
     internal async Task<AssemblySessionRefreshResult> RefreshAsync(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            await refreshGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            return FailureResultSingle(new(AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSession), nameof(AssemblyAnalysisSession.RefreshAsync)), "Der Assembly-Refresh wurde vor dem Aufbau einer neuen Generation abgebrochen.", AssemblyDiagnosticSeverity.Error));
-        }
+        await refreshGate.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
@@ -231,9 +224,10 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
         AssemblySessionStatus status,
         CancellationToken cancellationToken)
     {
+        AssemblyRoslynSnapshot? snapshot = null;
         try
         {
-            var snapshot = await workspaceFactory.CreateAsync(
+            snapshot = await workspaceFactory.CreateAsync(
                 new AssemblyWorkspaceRequest(fingerprint.CanonicalPath, fingerprint, documents, references.MetadataReferences, status),
                 references.Identity!.Name,
                 fingerprint.Sha256,
@@ -249,10 +243,12 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
-            return new WorkspaceCreationResult(null, [new(AssemblyDiagnosticCodes.For(nameof(AssemblyRoslynWorkspaceFactory), nameof(AssemblySessionStatus.Loading)), "Der Roslyn-Snapshot wurde wegen Cancellation abgebrochen.", AssemblyDiagnosticSeverity.Error)]);
+            snapshot?.Dispose();
+            throw;
         }
         catch (InvalidOperationException ex)
         {
+            snapshot?.Dispose();
             return new WorkspaceCreationResult(null, [new(AssemblyDiagnosticCodes.For(nameof(AssemblyRoslynWorkspaceFactory), nameof(AssemblySessionStatus.Failed)), $"Roslyn-Snapshot konnte nicht erzeugt werden: {ex.Message}", AssemblyDiagnosticSeverity.Error)]);
         }
     }

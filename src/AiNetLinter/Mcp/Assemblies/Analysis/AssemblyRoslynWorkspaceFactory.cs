@@ -29,47 +29,54 @@ internal sealed class AssemblyRoslynWorkspaceFactory
         }
 
         var workspace = new AdhocWorkspace();
-        var projectId = ProjectId.CreateNewId(AssemblyCacheContract.SyntheticProjectName);
-        var references = EnsureCoreLibraryReference(request);
-        var projectInfo = CreateProjectInfo(projectId, assemblyName, request, references);
-        var solution = workspace.AddProject(projectInfo).Solution;
-        var origins = new Dictionary<DocumentId, AssemblyOrigin>();
-        foreach (var document in request.Documents)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var documentId = DocumentId.CreateNewId(projectId);
-            solution = solution.AddDocument(
-                documentId,
-                Path.GetFileName(document.GeneratedPath),
-                SourceText.From(document.CSharpSource, Encoding.UTF8),
-                filePath: document.GeneratedPath);
-            origins[documentId] = new AssemblyOrigin(
-                "decompiled",
-                request.Fingerprint.CanonicalPath,
-                contentHash,
-                document.GeneratedPath,
-                request.Status == AssemblySessionStatus.Complete ? "high" : "medium");
-        }
+            var projectId = ProjectId.CreateNewId(AssemblyCacheContract.SyntheticProjectName);
+            var references = EnsureCoreLibraryReference(request);
+            var projectInfo = CreateProjectInfo(projectId, assemblyName, request, references);
+            var solution = workspace.AddProject(projectInfo).Solution;
+            var origins = new Dictionary<DocumentId, AssemblyOrigin>();
+            foreach (var document in request.Documents)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var documentId = DocumentId.CreateNewId(projectId);
+                solution = solution.AddDocument(
+                    documentId,
+                    Path.GetFileName(document.GeneratedPath),
+                    SourceText.From(document.CSharpSource, Encoding.UTF8),
+                    filePath: document.GeneratedPath);
+                origins[documentId] = new AssemblyOrigin(
+                    "decompiled",
+                    request.Fingerprint.CanonicalPath,
+                    contentHash,
+                    document.GeneratedPath,
+                    request.Status == AssemblySessionStatus.Complete ? "high" : "medium");
+            }
 
-        if (!workspace.TryApplyChanges(solution))
+            if (!workspace.TryApplyChanges(solution))
+            {
+                throw new InvalidOperationException("Der synthetische Roslyn-Snapshot konnte nicht veröffentlicht werden.");
+            }
+
+            var project = solution.GetProject(projectId)
+                ?? throw new InvalidOperationException("Das synthetische Assembly-Projekt konnte nicht erzeugt werden.");
+            var projectDocuments = ValidateDocuments(project, request, workspace);
+
+            var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException("Die synthetische Assembly-Compilation konnte nicht erzeugt werden.");
+            return new AssemblyRoslynSnapshot(
+                solution,
+                projectId,
+                compilation,
+                projectDocuments,
+                origins,
+                workspace);
+        }
+        catch
         {
             workspace.Dispose();
-            throw new InvalidOperationException("Der synthetische Roslyn-Snapshot konnte nicht veröffentlicht werden.");
+            throw;
         }
-
-        var project = solution.GetProject(projectId)
-            ?? throw new InvalidOperationException("Das synthetische Assembly-Projekt konnte nicht erzeugt werden.");
-        var projectDocuments = ValidateDocuments(project, request, workspace);
-
-        var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException("Die synthetische Assembly-Compilation konnte nicht erzeugt werden.");
-        return new AssemblyRoslynSnapshot(
-            solution,
-            projectId,
-            compilation,
-            projectDocuments,
-            origins,
-            workspace);
     }
 
     private static ImmutableArray<MetadataReference> EnsureCoreLibraryReference(AssemblyWorkspaceRequest request)

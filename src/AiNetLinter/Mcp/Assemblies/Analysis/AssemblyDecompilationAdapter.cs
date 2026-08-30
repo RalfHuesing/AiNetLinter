@@ -34,11 +34,15 @@ internal sealed class AssemblyDecompilationAdapter
             var documents = DecompileTypes(decompiler, selection.Types, request.Options, deadline.Token, selection.Diagnostics);
             return Task.FromResult(new DecompilationResult(documents, selection.Diagnostics, selection.Diagnostics.Count == 0));
         }
+        catch (OperationCanceledException) when (request.CancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (OperationCanceledException)
         {
             return Task.FromResult(new DecompilationResult(
                 [],
-                    [new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(OperationCanceledException)), "Die Decompilation wurde wegen Cancellation oder Deadline abgebrochen.", AssemblyDiagnosticSeverity.Error)],
+                [new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(OperationCanceledException)), "Die Decompilation wurde wegen Cancellation oder Deadline abgebrochen.", AssemblyDiagnosticSeverity.Error)],
                 false));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException or ArgumentException or ICSharpCode.Decompiler.DecompilerException)

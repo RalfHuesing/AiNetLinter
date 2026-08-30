@@ -354,13 +354,10 @@ public sealed class AssemblyAnalysisToolSupportTests
         var orchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], provider, registry);
         AssemblySourceSelectionScope? observedScope = null;
         var builderCalled = false;
-        var result = await AssemblyAnalysisToolSupport.ExecuteAsync(
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => AssemblyAnalysisToolSupport.ExecuteAsync(
             CreateParameters(assemblyPath, _ => builderCalled = true, cancellation.Token),
             orchestrator,
-            scope => observedScope = scope);
-        Assert.True(result.IsError);
-        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("Assembly-Refresh wurde", text.Text, StringComparison.Ordinal);
+            scope => observedScope = scope));
         Assert.False(builderCalled);
         Assert.NotNull(observedScope);
         Assert.Equal(ExternalSourceMatchState.Matched, observedScope!.Selection!.MatchResult.State);

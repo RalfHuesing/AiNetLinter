@@ -55,6 +55,8 @@ internal sealed class AssemblyAnalysisRegistry : IAsyncDisposable
         var canonicalPath = Path.GetFullPath(assemblyPath);
         for (var retry = 0; retry <= MaxFingerprintRetries; retry++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (!TryCreateFingerprint(canonicalPath, out var fingerprint, out var fingerprintDiagnostic))
             {
                 return Failure(fingerprintDiagnostic?.Message ?? "Assembly-Fingerprint konnte nicht berechnet werden.");
@@ -125,9 +127,9 @@ internal sealed class AssemblyAnalysisRegistry : IAsyncDisposable
         {
             entry = await creation.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested && !creation.Task.IsCanceled)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            return new(Failure("Die Assembly-Analyse wurde abgebrochen.", isError: false), false);
+            throw;
         }
         catch (OperationCanceledException)
         {

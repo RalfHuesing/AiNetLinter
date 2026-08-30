@@ -170,7 +170,7 @@ public sealed class AssemblyAnalysisSessionTests
     }
 
     [Fact]
-    public async Task RefreshAsync_CancellationFailsWithoutPublishingPartialGeneration()
+    public async Task RefreshAsync_CancellationThrowsAndDoesNotPublishPartialGeneration()
     {
         using var temp = TestTempDirectory.Create("assembly-session-cancel-");
         var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "CancelProbe", "namespace Probe; public sealed class Value { }");
@@ -179,13 +179,36 @@ public sealed class AssemblyAnalysisSessionTests
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
-        var result = await session.RefreshAsync(cancellation.Token);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => session.RefreshAsync(cancellation.Token));
 
-        Assert.Equal(AssemblySessionStatus.Failed, result.Status);
         Assert.Null(session.CurrentGeneration);
         Assert.Empty(Directory.Exists(cacheRoot)
             ? Directory.EnumerateFiles(cacheRoot, "manifest.json", SearchOption.AllDirectories)
             : []);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_SubsequentRefreshAfterCancellation_Succeeds()
+    {
+        using var temp = TestTempDirectory.Create("assembly-session-cancel-retry-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "CancelRetryProbe", "namespace Probe; public sealed class Value { public int Number => 42; }");
+        var cacheRoot = temp.GetPath("cache");
+        await using var session = new AssemblyAnalysisSession(assemblyPath, cacheRoot: cacheRoot);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => session.RefreshAsync(cancellation.Token));
+
+        Assert.Null(session.CurrentGeneration);
+
+        var result = await session.RefreshAsync(CancellationToken.None);
+
+        Assert.Equal(AssemblySessionStatus.Complete, result.Status);
+        Assert.NotNull(session.CurrentGeneration);
+        Assert.Equal(AssemblySessionStatus.Complete, session.State.Status);
+        Assert.NotEmpty(Directory.EnumerateFiles(cacheRoot, "manifest.json", SearchOption.AllDirectories));
     }
 
     [Fact]
