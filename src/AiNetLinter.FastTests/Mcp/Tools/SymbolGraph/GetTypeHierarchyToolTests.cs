@@ -4,10 +4,14 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
+using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Assemblies.Analysis;
+using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
-using AiNetLinter.FastTests.Fixtures;
+using AiNetLinter.TestKit;
+using static AiNetLinter.TestKit.McpTestResultText;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -197,5 +201,100 @@ public sealed class GetTypeHierarchyToolTests
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
         Assert.Contains("Compile-Fehler", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteRouted_AssemblyAndProjectRoutes_ValidateAssemblySymbolIdentityAndAllowProjectSymbols()
+    {
+        using var temp = TestTempDirectory.Create("get-type-hierarchy-route-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "HierarchyProbe",
+            "namespace Probe; public interface IService { } public class Service : IService { }");
+
+        await using var assemblyRegistry = new AssemblyAnalysisRegistry();
+        await using var projectRegistry = ProjectWiringFixtures.CreateLoadedRegistry();
+        var targetRoute = AnalysisToolCall.CreateTargetRoute(
+            ProjectAnalysisDispatcher.CreateRoute(projectRegistry),
+            AssemblyAnalysisDispatcher.CreateRoute(assemblyRegistry));
+
+        // 1. Aktuelle verpackte Assembly-ID auf Assembly-Ziel ist erfolgreich
+        var firstLeaseResult = await assemblyRegistry.LeaseAsync(assemblyPath);
+        Assert.NotNull(firstLeaseResult.Lease);
+        using var firstLease = firstLeaseResult.Lease!;
+        var serviceSymbol = firstLease.Context.Compilation.GetTypeByMetadataName("Probe.Service")!;
+        var currentAssemblySymbolId = CallGraphTraversal.GetStableSymbolId(serviceSymbol, firstLease.Server.AssemblySymbolIdentity);
+        Assert.StartsWith("assembly:", currentAssemblySymbolId, StringComparison.Ordinal);
+
+        var assemblyCallResult = await AnalysisToolCall.ExecuteRouted(
+            targetRoute,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest("assembly", assemblyPath),
+                new AnalysisToolDispatch(
+                    ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default),
+                    AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default))));
+
+        Assert.NotEqual(true, assemblyCallResult.IsError);
+        var assemblyText = TextOf(assemblyCallResult);
+        Assert.Contains("IService", assemblyText, StringComparison.Ordinal);
+        Assert.Contains("Probe.IService", assemblyText, StringComparison.Ordinal);
+
+        // 2. Generationenwechsel ueber A -> B -> A
+        AssemblyTestHelper.EmitAssembly(
+            temp,
+            "HierarchyProbe",
+            "namespace Probe; public interface IOther { } public class Other : IOther { }");
+        var secondLeaseResult = await assemblyRegistry.LeaseAsync(assemblyPath);
+        secondLeaseResult.Lease!.Dispose();
+
+        AssemblyTestHelper.EmitAssembly(
+            temp,
+            "HierarchyProbe",
+            "namespace Probe; public interface IService { } public class Service : IService { }");
+        var thirdLeaseResult = await assemblyRegistry.LeaseAsync(assemblyPath);
+        thirdLeaseResult.Lease!.Dispose();
+
+        // 3. Alte Assembly-ID nach Generationwechsel wird als stale abgelehnt
+        var staleCallResult = await AnalysisToolCall.ExecuteRouted(
+            targetRoute,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest("assembly", assemblyPath),
+                new AnalysisToolDispatch(
+                    ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default),
+                    AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default))));
+
+        Assert.NotEqual(true, staleCallResult.IsError);
+        var staleText = TextOf(staleCallResult);
+        Assert.Contains("INVALID_ARGUMENT", staleText, StringComparison.Ordinal);
+        Assert.Contains("aktuellen Assembly-Generation", staleText, StringComparison.Ordinal);
+
+        // 4. Unverpackte ID auf Assembly-Ziel wird ebenfalls abgelehnt (keine Umgehung der Generation-Pruefung)
+        var unwrappedCallResult = await AnalysisToolCall.ExecuteRouted(
+            targetRoute,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest("assembly", assemblyPath),
+                new AnalysisToolDispatch(
+                    ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, "T:Probe.Service", GetTypeHierarchyTool.DefaultMaxResults, default),
+                    AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, "T:Probe.Service", GetTypeHierarchyTool.DefaultMaxResults, default))));
+
+        Assert.NotEqual(true, unwrappedCallResult.IsError);
+        var unwrappedText = TextOf(unwrappedCallResult);
+        Assert.Contains("INVALID_ARGUMENT", unwrappedText, StringComparison.Ordinal);
+        Assert.Contains("aktuellen Assembly-Generation", unwrappedText, StringComparison.Ordinal);
+
+        // 5. Projekt-ID auf Projekt-Ziel bleibt weiterhin erfolgreich
+        var projectRoot = ProjectRegistryFixture.CreateProjectRoot(temp, "probe-proj");
+        var projectCallResult = await AnalysisToolCall.ExecuteRouted(
+            targetRoute,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest("project", projectRoot),
+                new AnalysisToolDispatch(
+                    ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, "BaseGreeting", GetTypeHierarchyTool.DefaultMaxResults, default),
+                    AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, "BaseGreeting", GetTypeHierarchyTool.DefaultMaxResults, default))));
+
+        Assert.NotEqual(true, projectCallResult.IsError);
+        var projectText = TextOf(projectCallResult);
+        Assert.Contains("IGreeting", projectText, StringComparison.Ordinal);
+        Assert.Contains("SpecialGreeting", projectText, StringComparison.Ordinal);
     }
 }

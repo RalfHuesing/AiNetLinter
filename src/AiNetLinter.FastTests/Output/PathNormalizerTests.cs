@@ -40,6 +40,16 @@ public sealed class PathNormalizerTests
     }
 
     [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ToRelative_ReturnsFileNameWhenOutputRootIsNullOrEmpty(string outputRoot)
+    {
+        var absolute = Path.GetFullPath(@"C:\Projects\MyApp\src\Foo.cs");
+
+        Assert.Equal("Foo.cs", PathNormalizer.ToRelative(outputRoot, absolute));
+    }
+
+    [Theory]
     [InlineData("src/AiNetLinter.Tests/Foo.cs", true)]
     [InlineData("src\\AiNetLinter.Tests\\Foo.cs", true)]
     [InlineData("src/AiNetLinter.FastTests/Foo.cs", true)]

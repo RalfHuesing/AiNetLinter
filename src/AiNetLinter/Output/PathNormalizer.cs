@@ -16,6 +16,11 @@ public static class PathNormalizer
             return string.Empty;
         }
 
+        if (string.IsNullOrWhiteSpace(outputRoot))
+        {
+            return Path.GetFileName(absoluteFilePath);
+        }
+
         var normalizedRoot = Path.GetFullPath(outputRoot);
         var normalizedFile = Path.GetFullPath(absoluteFilePath);
 

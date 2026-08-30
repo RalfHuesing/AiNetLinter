@@ -35,7 +35,8 @@ internal static class GetTypeHierarchyTool
                 hint: "symbolIdentifier angeben: \"T:Namespace.Klasse\", \"Datei.cs:10:5\" oder \"Klasse\".");
         }
 
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, symbolIdentifier, ct);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
+            solution, symbolIdentifier, ct, state.AssemblySymbolIdentity);
         if (error is not null) return error;
 
         if (symbol is not INamedTypeSymbol type)

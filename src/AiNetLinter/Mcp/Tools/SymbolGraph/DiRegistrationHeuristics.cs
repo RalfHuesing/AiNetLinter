@@ -6,6 +6,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 
@@ -132,7 +133,7 @@ internal static class DiRegistrationHeuristics
         public void RecordHit(Match match, string typeArg, string lifestyle)
         {
             var line = Text.Lines.GetLinePosition(match.Index).Line + 1;
-            var relativePath = Path.GetRelativePath(Init.OutputRoot, Init.FilePath).Replace('\\', '/');
+            var relativePath = PathNormalizer.ToRelative(Init.OutputRoot, Init.FilePath);
             var snippet = match.Value.Trim();
             Hits.Add($"{lifestyle}: {typeArg.Trim()} ({relativePath}:{line}) — {snippet}");
         }
