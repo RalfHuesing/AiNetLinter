@@ -342,7 +342,8 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string GetTestContextDescription =
-        "Wann nutzen: Test-Dateien, Test-Klassen und Test-Methoden fuer ein gegebenes Produktions-Symbol (Klasse, Methode, Datei.cs:Zeile) abfragen. " +
-        "symbol (oder symbolIdentifier) spezifiziert das Ziel-Symbol, maxResults (Default 30) begrenzt die Anzahl Testdateien. " +
-        "Liefert statische Zuordnungsgruende, Test-Kategorien (Unit/Integration), kopierbare dotnet test Filterbefehle und einen Hinweis, wenn keine Tests statisch zugeordnet wurden.";
+        "Wann nutzen: Test-Dateien, Test-Klassen und Test-Methoden fuer ein gegebenes Produktions-Symbol " +
+        "(Klasse, Methode, Datei.cs:Zeile oder DocCommentId) abfragen. symbol (oder symbolIdentifier): Ziel-Symbol, " +
+        "maxResults: Begrenzung der Testdateien (Default 30). Liefert statische Zuordnungsgruende, Test-Kategorien " +
+        "(Unit/Integration), kopierbare dotnet test Filterbefehle und Hinweis bei fehlender Zuordnung.";
 }
