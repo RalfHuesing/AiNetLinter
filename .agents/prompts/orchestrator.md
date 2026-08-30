@@ -117,9 +117,11 @@ nicht von den Rollen-Subagenten, gepflegt:
 - Unmittelbar nach dem terminalen Ergebnis wird vor jeder weiteren Aktion ein
   Abschluss-, Fehler- oder Abbruch-Eintrag ergänzt. Er enthält den vollständigen
   finalen Agentenbericht, Urteil, Findings, geänderte Bereiche, ausgeführte
-  Prüfungen, Risiken und die nächste Aktion. Vollständige unstrukturierte
-  Tooltranskripte werden nicht angehängt; Secrets dürfen niemals protokolliert
-  werden.
+  Prüfungen, Risiken und die nächste Aktion. Verifikationsnachweise werden je
+  Prüfung mit Check/Tool, Scope/Target, Ergebnis und dem Hinweis erfasst, dass
+  sie nach der letzten Codeänderung ausgeführt wurde. Vollständige
+  unstrukturierte Tooltranskripte werden nicht angehängt; Secrets dürfen
+  niemals protokolliert werden.
 - Bei einem Resume wird ein `running`-Eintrag ohne Abschluss anhand der
   Task-Liste und des Working Trees als `interrupted` oder `unknown` markiert.
   Der alte eigene Subagent wird beendet/archiviert, bevor ein frischer gestartet
@@ -151,6 +153,31 @@ nachträgliche Extraktion aus dem kompletten Log:
 - Beim nächsten Epic werden nur die Roadmap-Zusammenfassung und verknüpfte
   Log-Einträge übergeben. Der gesamte historische Log wird nicht als
   Übergabearchiv an jeden Subagenten kopiert.
+
+## Wiederverwendung von Verifikationsnachweisen
+
+Der Implementierer ist für die routinemäßigen, zum Epic passenden Tests und
+MCP-Prüfungen vor seinem Hand-off verantwortlich. Der Orchestrator übergibt
+dem Reviewer den aktuellen Implementiererbericht samt Verifikationsnachweis
+und dem zugehörigen Log-Eintrag.
+
+Der Reviewer prüft den Nachweis zuerst gegen den tatsächlichen Diff:
+
+- Check oder Tool, Scope/Target und Ergebnis müssen konkret benannt sein.
+- Die Prüfung muss nach der letzten Codeänderung erfolgt sein und ihr Scope
+  muss das Epic abdecken.
+- Zwischen Implementierer-Hand-off und Review darf kein Produktions- oder
+  Testcode geändert werden. Roadmap- und Log-Updates sind davon ausgenommen.
+- Ist der Nachweis vollständig, erfolgreich und frisch, wird derselbe Check
+  nicht allein zur Bestätigung wiederholt. Der Reviewer prüft weiterhin den
+  Diff und die fachliche Logik unabhängig.
+- Fehlt der Nachweis, ist er fehlgeschlagen, unvollständig, veraltet, scope-
+  fremd oder gibt es eine konkrete Gegenhypothese, führt der Reviewer nur die
+  betroffene Prüfung gezielt erneut aus und begründet dies im Bericht.
+- Jede Wiederholung wird mit Anlass und Ergebnis im `execution-log.md`
+  festgehalten. Die vollständigen Abschluss-Gates und expliziten finalen
+  Konzeptprüfungen führt der Orchestrator nur am vorgesehenen Gesamtabschluss
+  aus, nicht nach jedem Epic durch jede Rolle.
 
 ## Großkonzept-Modus: einmalige Roadmap
 
@@ -229,11 +256,14 @@ Arbeite die offenen Epics strikt nacheinander ab:
 2. Starte genau einen Implementierer-Subagenten mit dem Nutzerauftrag,
    `Konzept.md`, der relevanten Roadmap und `.agents/skills/implement/SKILL.md`.
    Der Implementierer bearbeitet das gesamte Epic als zusammenhängendes Paket,
-   nutzt AiNetLinter-MCP bei C#-Semantik, ergänzt nötige Tests/Dokumentation
-   und committet nicht selbst.
+   nutzt AiNetLinter-MCP bei C#-Semantik, ergänzt nötige Tests/Dokumentation,
+   erstellt einen vollständigen Verifikationsnachweis und committet nicht
+   selbst.
 3. Starte danach genau einen unabhängigen Reviewer-Subagenten mit dem Diff
    seit dem Baselinepunkt, dem Epic-Kontext und
-   `.agents/skills/review/SKILL.md`. Der Reviewer ändert keinen Code.
+   `.agents/skills/review/SKILL.md` sowie dem Implementiererbericht und dessen
+   Verifikationsnachweis. Der Reviewer ändert keinen Code und wiederholt
+   erfolgreiche frische Checks nicht ohne konkreten Anlass.
 4. Bei `approved` ist das Epic abgeschlossen. Bei `issues` werden nur
    belegte P0/P1-Findings an den Implementierer zur Korrektur übergeben;
    danach folgt erneut ein Review. P2/P3-Findings werden dokumentiert, lösen
@@ -261,7 +291,8 @@ Git-Historie fortgesetzt werden. Ein Resume mit `roadmap.md` im Status
 Für einen verständlichen kleinen oder mittleren Auftrag ohne großes Konzept:
 
 1. Starte einen Implementierer mit `.agents/skills/implement/SKILL.md`.
-2. Starte danach einen unabhängigen Reviewer mit `.agents/skills/review/SKILL.md`.
+2. Starte danach einen unabhängigen Reviewer mit `.agents/skills/review/SKILL.md`
+   und dem Implementiererbericht samt Verifikationsnachweis.
 3. Bearbeite nur P0/P1-Findings in höchstens zehn Korrekturrunden; P2/P3
    blockieren den Abschluss nicht. Der Zykluswächter kann den Lauf vorher
    stoppen.
@@ -299,6 +330,10 @@ sofort committed. Kein Rollen-Subagent committet selbst.
 
 - Führe nach jedem Epic bzw. jeder Korrektur gezielte Verifikation aus, aber
   nicht jedes Mal die gesamte Testsuite.
+- Der Implementierer führt die für das Epic erforderlichen routinemäßigen
+  Checks vor dem Hand-off aus. Der Reviewer wertet deren frischen Nachweis
+  zuerst aus und wiederholt identische erfolgreiche Checks nur bei fehlendem,
+  unvollständigem, veraltetem oder widerlegtem Nachweis.
 - Nach dem letzten Codezustand gelten die Abschluss-Gates aus `AGENTS.md`:
   `dotnet build`, die vollständigen Nicht-Stress-Tests von
   `src/AiNetLinter.FastTests` und `src/AiNetLinter.IntegrationTests`.

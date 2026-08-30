@@ -50,7 +50,8 @@ es nur, wenn der Nutzer sie ausdrücklich verlangt.
    aufgerufen, führst du die für dieses Epic nötige gezielte Verifikation aus;
    die vollständigen Abschluss-Gates koordiniert der Orchestrator einmal nach
    dem letzten Codezustand. Explizite konzeptspezifische Prüfungen dürfen in
-   keinem Modus still entfallen.
+   keinem Modus still entfallen. Schließe jede ausgeführte Prüfung mit einem
+   konkreten Verifikationsnachweis ab.
 5. Prüfe selbst gegen Ziel, Muss-Kriterien, Non-Goals, relevante Rules und die
    tatsächlichen unterstützten Betriebsannahmen. Berichte Abweichungen offen.
 
@@ -112,6 +113,22 @@ Logik.
   Evidenz und Empfehlung an den Nutzer melden.
 
 ## Hand-off
+
+### Verifikationsnachweis
+
+Vor dem Hand-off führe die für den aktuellen Scope erforderlichen Tests und
+MCP-Prüfungen aus. Liste jede tatsächlich ausgeführte Prüfung einzeln mit
+folgendem Nachweis auf:
+
+- Check oder Tool und vollständige relevante Parameter beziehungsweise Filter;
+- Scope/Target;
+- Ergebnis und wesentliche Fehlermeldung oder Befundzusammenfassung;
+- ausdrücklicher Hinweis, dass die Prüfung nach der letzten Codeänderung
+  ausgeführt wurde.
+
+Behaupte keine Prüfung als erfolgreich, die nicht ausgeführt wurde. Kennzeichne
+fehlende, übersprungene, fehlgeschlagene oder wegen fehlender Capability nicht
+ausführbare Prüfungen ausdrücklich und nenne die Konsequenz.
 
 Ein weiterer Agent erhält keinen künstlichen Step-Archivbestand. Übergib kurz:
 geänderte Dateien und Symbole, getroffene Entscheidungen, ausgeführte

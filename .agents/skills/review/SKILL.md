@@ -20,9 +20,10 @@ Rundumsweep und erzeugt keine automatische Korrekturschleife.
   das passende AiNetLinter-MCP-Tool mit aktuellem Schema,
   `targetType` und absolutem `targetPath`; nutze `rg` nur ergänzend für
   konkrete Text- und Diff-Arbeit.
-- Prüfe den tatsächlichen aktuellen Diff und den umgebenden Code. Verlasse
-  dich nicht allein auf eine Beschreibung, einen Agentenbericht oder eine
-  Testzahl.
+- Prüfe den tatsächlichen aktuellen Diff und den umgebenden Code. Werte einen
+  übergebenen Verifikationsnachweis zuerst auf Vollständigkeit, Scope,
+  Ergebnis und Frische aus; vertraue ihm nicht blind, aber wiederhole die
+  Prüfung auch nicht automatisch.
 - Prüfe nur die Nutzeranforderung, den vereinbarten Scope, relevante Rules,
   betroffene Aufrufer und die direkt nötigen Regressionen. Ein umfassender
   globaler Audit ist nur bei ausdrücklichem Auftrag oder echtem Abschluss-
@@ -51,6 +52,24 @@ gegen Angreifer- oder Mehrprozess-Szenarien, die der Task nicht unterstützt.
 4. **Integration:** Sind Aufrufer, Toolvertrag, Origin-/Fehlerstatus,
    Ownership und Dokumentation konsistent, soweit sie durch den Diff berührt
    werden?
+
+## Verifikationsnachweise
+
+Wenn der Orchestrator einen Implementiererbericht mitgibt, prüfe den darin
+enthaltenen Nachweis gegen den aktuellen Diff:
+
+- Check/Tool, Scope/Target und Ergebnis müssen konkret benannt sein.
+- Die Prüfung muss nach der letzten Codeänderung erfolgt sein. In einem
+  sequenziellen Orchestrator-Lauf gilt ein Nachweis als frisch, wenn zwischen
+  Hand-off und Review kein Produktions- oder Testcode geändert wurde.
+- Ist der Nachweis vollständig, erfolgreich, passend und frisch, wiederhole
+  denselben Test oder dieselbe MCP-Prüfung nicht lediglich zur Bestätigung.
+- Führe eine Prüfung nur erneut aus, wenn der Nachweis fehlt, fehlgeschlagen
+  oder unvollständig ist, der Scope nicht passt, danach Code geändert wurde
+  oder eine konkrete fachliche Gegenhypothese besteht.
+- Bei einer Wiederholung nenne im Ergebnis den konkreten Anlass, den exakten
+  Scope und das Ergebnis. Eigene notwendige MCP-Abfragen zur unabhängigen
+  Beurteilung von Symbolen, Referenzen oder Logik sind davon unberührt.
 
 Nutze für jeden Befund konkrete Datei-/Zeilenangaben, reproduzierbare
 Begründung und eine klare Korrekturempfehlung. Trenne echte Fehlfunktion von
