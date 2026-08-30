@@ -259,6 +259,29 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
 - Nächste Aktion: Reviewstand als Checkpoint committen, danach gezielte
   Korrektur mit frischem Implementierer und anschließendem frischem Review.
 
+## 2026-08-30 — Epic 3 Korrekturrunde 1 gestartet
+
+- Run-ID: `resume-2026-08-30-epic-3-correction-1`
+- Epic: 3 — Transitive Assembly-Referenzen und getrennte externe Ressourcen
+- Rolle: Implementierer
+- Subagent-ID: `01a05366-bbc6-76c0-b369-6fa29c8566bf`
+- Diff-Baseline: `d7ffdaa6`
+- Status: `running`
+- Korrektursignaturen: `Transitive-Reference-Session-Expansion`,
+  `External-Source-Resource-Lifecycle`
+- Die neue Regel zur Wiederverwendung frischer Verifikationsnachweise wurde
+  übergeben; nur echte P1-Lücken sollen neu geprüft werden.
+
+## 2026-08-30 — Tech-Debt-Register initialisiert
+
+- Aufgrund der aktualisierten Orchestrator-Regeln wurde die genau eine
+  task-lokale `tech-debt.md` angelegt.
+- Übernommen wurden ausschließlich drei nicht blockierende, bereits belegte
+  Deferred-Befunde: Windows-Git-Prozess-Tests, unveränderter ProjectRegistry-
+  FastTest und sieben diagnostische Magic-Value-Kandidaten.
+- P1-Befunde verbleiben ausschließlich als Review-/Blocker-Einträge und wurden
+  nicht in Tech Debt umetikettiert.
+
 ## 2026-08-30 — Epic 2 Implementierer abgeschlossen
 
 - Subagent-ID: `01a05331-c495-7630-936c-130c7303219a`
