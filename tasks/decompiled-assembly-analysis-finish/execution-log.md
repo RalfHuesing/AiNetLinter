@@ -1067,3 +1067,24 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
 - Nächste Aktion: aktuellen auftragsbezogenen Code-, Test-, Dokumentations-
   und Code-Map-Stand als Orchestrator-Checkpoint committen und anschließend
   unabhängig reviewen.
+
+## 2026-08-30 — Epic 4 Review gestartet
+
+- Run-ID: `resume-2026-08-30-epic-4-review`
+- Epic: 4 — Capability-Matrix, Host-Integration und End-to-End-Verträge
+- Rolle: Reviewer
+- Subagent-ID: `01a0542b-96ce-72b0-babb-343679718fd9`
+- Diff-Baseline: `b506de44`
+- Status: `running`
+- Prüfauftrag: unabhängige Prüfung der 29er-Capability-Matrix, des
+  Dispatcher-/Default-Daemon-/Bootstrap-/Health-Wirings, der sichtbaren
+  Partial-/Diagnoseverträge, der Extensions-Diagnosen, der negativen
+  Dispatcher-Routen, der Legacy-Parametergrenze und der Test-/Dokumentations-
+  Konsistenz.
+- `code-map.md` ist zuerst zu lesen und gegen Working Tree sowie MCP zu
+  verifizieren; konkrete Navigationsfehler dürfen ausschließlich dort
+  korrigiert werden.
+- Frische Implementierer-Nachweise (gezielte Fast-/Integration-Tests,
+  Build 0/0, Qualitätschecks und letzter `get_violations`) werden nicht bloß
+  zur Bestätigung wiederholt. Nur konkrete Gegenhypothesen oder fehlende
+  Abdeckung rechtfertigen gezielte Wiederholungen.
