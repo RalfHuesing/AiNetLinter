@@ -60,20 +60,20 @@ internal static class AssemblyAnalysisToolRegistrations
     }
 
     private const string InspectAssemblyDescription =
-        "Wann nutzen: öffentliche API einer exakt angegebenen lokalen .NET-DLL metadata-only " +
-        "über Roslyn untersuchen. targetType='assembly' und targetPath mit absolutem DLL-Pfad " +
+        "Wann nutzen: oeffentliche API einer exakt angegebenen lokalen .NET-DLL metadata-only " +
+        "ueber Roslyn untersuchen. targetType='assembly' und targetPath mit absolutem DLL-Pfad " +
         "sind Pflicht; ein Consumer-Projekt wird in diesem Dispatch-Schritt nicht verwendet. " +
-        "namespace, typeName und memberName filtern, publicOnly ist standardmäßig true, " +
-        "exactTypeName schaltet für typeName von Teiltext- auf Exaktsuche um, memberNames " +
-        "ergänzt den bestehenden Teiltextfilter memberName um eine exakte OR-Auswahl, " +
-        "maxResults begrenzt Typen deterministisch (Default 100, Maximum 1000), " +
-        "maxMembers begrenzt Member je Typ (Default 100, Maximum 1000). Identität, " +
+        "namespace, typeName und memberName filtern, publicOnly ist standardmaessig true, " +
+        "exactTypeName schaltet fuer typeName von Teiltext- auf Exaktsuche um, memberNames " +
+        "ergaenzt den Teiltextfilter memberName um eine exakte OR-Auswahl, " +
+        "maxResults begrenzt Typen (Default 100, Maximum 1000), " +
+        "maxMembers begrenzt Member je Typ (Default 100, Maximum 1000). Identitaet, " +
         "Referenzen, Typen, Methoden, Properties, Felder, Events, Attribute und Diagnosen " +
-        "werden ausgegeben; Methoden und Indexer liefern zusätzlich strukturierte " +
-        "Parameterdaten. Eine verfügbare explizite Source-Zuordnung wird source-backed " +
-        "genutzt; ohne Zuordnung oder verfügbaren Provider greift die statische Decompilation. Bei " +
-        "fehlenden Abhängigkeiten lautet completeness partial. " +
-        "Die DLL wird weder geladen noch ausgeführt.";
+        "werden ausgegeben; Methoden und Indexer liefern zusaetzlich strukturierte " +
+        "Parameterdaten. Eine verfuegbare explizite Source-Zuordnung wird source-backed " +
+        "genutzt; ohne Zuordnung oder verfuegbaren Provider greift die statische Decompilation. Bei " +
+        "fehlenden Abhaengigkeiten lautet completeness partial. " +
+        "Die DLL wird weder geladen noch ausgefuehrt.";
 
     private static void AddFindAssemblyExtensions(
         McpServerPrimitiveCollection<McpServerTool> tools,
