@@ -126,7 +126,7 @@ Die produktive Testsuite ist auf `src/AiNetLinter.FastTests` (`Unit`/`Component`
 
 - Bei größeren oder unklaren Vorhaben zuerst den manuellen Konzept-Task mit `.agents/skills/concept-planner/SKILL.md` abschließen (`Konzept.md` mit `status: ready`); danach den autonomen Orchestrator verwenden.
 - Für zusammenhängende Features, Refactorings und andere mehrstufige Aufgaben: den manuellen Orchestrator-Prompt `.agents/prompts/orchestrator.md` verwenden.
-- Vor Abschluss eines Epics oder eines größeren Tasks: `.agents/skills/audit/SKILL.md` einmal ausführen (DRY-, Refactoring-Drift-, Dead-Code- und Magic-Value-Audit über die passenden MCP-Tools). Für einzelne Steps innerhalb eines Tasks ist die Ausführung optional.
+- Vor Abschluss eines größeren Tasks: `.agents/skills/audit/SKILL.md` einmal ausführen (DRY-, Refactoring-Drift-, Dead-Code- und Magic-Value-Audit über die passenden MCP-Tools). Innerhalb eines Epics ist er nur auf ausdrücklichen Auftrag oder bei einer eigenständigen Lieferung erforderlich.
 
 ---
 
