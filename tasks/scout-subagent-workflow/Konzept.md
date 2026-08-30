@@ -6,251 +6,254 @@ estimated_scope: medium
 rules_dir: .agents/rules
 ---
 
-# Konzept: Bedingter Scout-Subagent für verifizierbaren Recherche-Handoff
+# Konzept: MCP-first-Kontextworkflow für fokussierte Implementierung
 
-## Ziel und Nutzen
+## Ziel und Einordnung
 
-In komplexen, semantisch anspruchsvollen Codebasen (insbesondere bei Roslyn-basierten Analysen, Typgraphen und Assembly-Strukturen) kann die vorbereitende Recherche – bestehend aus MCP-Abfragen, AST-Dumps, Referenzsuchen und Datei-Inspektionen – einen großen Teil des Kontextfensters belegen. Ein monolithischer Ablauf, in dem derselbe Agent erst recherchiert und anschließend implementiert, erhöht dadurch das Risiko von Attention Dilution und veralteten Rechercheannahmen.
+Der ursprüngliche Vorschlag war ein verpflichtender Scout-Subagent, der vor dem Implementierer eine Recherche und eine `code-map.md` erzeugt. Die fachliche Richtung ist sinnvoll — vor Änderungen soll der Agent den relevanten Kontext strukturiert und überprüfbar ermitteln. Ein dauerhaft vorgeschalteter zweiter Agent ist dafür aber nicht erforderlich und erhöht Prozess-, Token- und Koordinationsaufwand.
 
-Dieses Konzept führt eine dedizierte **Scout-Rolle** (`scout`-Skill) als isolierten Subagenten in den AiNetLinter-Workflow ein:
+Dieses Konzept ersetzt deshalb den verpflichtenden Scout durch einen MCP-first-Workflow im bestehenden Implementierungsablauf:
 
-1. **Kontext-Isolation:** Der Scout führt die semantische Tiefenrecherche in einer eigenen, unabhängigen Subagent-Conversation durch. Rohdaten, JSON-Payloads und explorative Fehlversuche werden nicht als Übergabearchiv an den Implementierer kopiert.
-2. **Kuratierter Wissenstransfer über `code-map.md`:** Der Scout verdichtet seine Erkenntnisse präzise und quellenbezogen in die task-lokale `code-map.md` (Navigationsanker, exakte Symbol-Signaturen, betroffene Dateien, Aufruferbeziehungen, Invarianten und zugehörige Tests). Die Karte bleibt eine Navigationshilfe und wird vom Implementierer gegen Working Tree und MCP verifiziert.
-3. **Fokussierter Implementierer:** Der Implementierer-Subagent erhält nur den für das Epic erforderlichen Übergabekontext, liest die `code-map.md` als Einstiegspunkt und darf bei Lücken gezielte eigene Recherche ausführen. Seine Implementierungslogik und Verifikation bleiben von der vollständigen Scout-Recherche getrennt.
+- Der Implementierer ordnet den Auftrag zunächst als lokal/eindeutig, semantisch oder mehrstufig ein.
+- Bei C#-Fragen verwendet er zuerst den AiNetLinter-MCP für zielgerichtete Kontextabfragen.
+- `get_feature_context` ist der bevorzugte One-Shot-Einstieg für bekannte Symbole; `find_symbol` dient der Lokalisierung unbekannter Einstiegspunkte.
+- Weitere MCP-Abfragen werden nur bei konkreten Informationslücken nachgezogen.
+- Eine kompakte `code-map.md` entsteht nur bei mittleren/großen, mehrstufigen oder unterbrochenen Vorhaben. Sie ist ein Arbeitsgedächtnis, keine zusätzliche Wahrheitsschicht.
+- Nach der Änderung folgen MCP- und Test-Verifikation im bestehenden Lifecycle.
 
-Der erwartete Nutzen ist eine klarere Rollentrennung und ein kleinerer Übergabekontext bei komplexen Refactorings. Eine Qualitäts- oder Token-Verbesserung wird nicht als unbelegte Garantie vorausgesetzt, sondern anhand der Verifikationskriterien geprüft.
+Damit wird nicht die Kontextarbeit abgeschafft, sondern ihr Ort und ihre Ausführung verändert: vom separaten Recherche-Agenten in einen verifizierbaren, adaptiven Arbeitsablauf des Agents, der die Änderung letztlich verantwortet.
 
-## Vorläufiges Urteil aus der Forschung
+## Vorläufige Architekturentscheidung
 
-Die Grundidee ist **nicht unsinnig**, aber die starke Form „vor jedem komplexen Task einen zusätzlichen LLM-Scout einsetzen“ ist wissenschaftlich nicht ausreichend begründet. Der belastbare Kern ist ein **verifizierbarer, begrenzter Recherche-Handoff**: Repository-Exploration, Kontextauswahl, Unsicherheiten und Arbeitsstand werden aus dem Implementierungskontext herausgehalten und als kompakte, überprüfbare Arbeitsgrundlage übergeben.
+Der verpflichtende Scout-zu-Implementierer-Handoff wird verworfen. Der Standardpfad ist ein einzelner Implementierer mit abgestufter Kontextaufnahme:
 
-Ob dieser Handoff durch einen separaten Scout, durch einen einzelnen Agenten mit aktivem Context-Workspace oder durch deterministische semantische Retrieval-Schritte erzeugt wird, ist eine offene empirische Designentscheidung. Das Vorhaben sollte deshalb zunächst als **bedingter Pilot mit Single-Agent-Baseline** umgesetzt werden. Ohne positiven Nachweis bei Qualität und Gesamtkosten darf der Scout nicht zum Default werden.
+1. Auftrag klassifizieren: lokaler Text-/Konfigurationsfall, bekannte C#-Struktur, unbekannte C#-Struktur oder mehrstufiges Vorhaben.
+2. Bei bekanntem Symbol `get_feature_context` mit `targetType: project` und absolutem `targetPath` aufrufen.
+3. Bei unbekanntem Symbol zunächst `find_symbol` verwenden und danach den relevanten Feature-Kontext laden.
+4. Nur erkannte Lücken mit `get_symbol_body`, `find_references`, `get_impact`, `dependency_graph`, `get_test_context` oder passenden Violation-Abfragen schließen.
+5. Für komplexe Vorhaben die wesentlichen Befunde in einer kleinen `code-map.md` persistieren.
+6. Ändern, anschließend betroffene Regeln/Tests und den Build gemäß Projektregeln verifizieren.
 
-## Forschungsabgleich (Stand: 30.08.2026)
+Ein zusätzlicher Scout kann später als gezielte Optimierung untersucht werden, ist aber weder Architekturvoraussetzung noch Standardverhalten. Insbesondere soll kein zweiter LLM-Agent eingeführt werden, nur weil Recherche als eigener Prozessschritt benannt wurde.
 
-| Befund | Aussage für dieses Konzept |
-| --- | --- |
-| Kontextmanagement ist ein reales Problem: *Context as a Tool* beschreibt bei append-only Verläufen Kontextwachstum, semantische Drift und nachlassendes Reasoning; ein strukturierter, aktiv gepflegter Context-Workspace verbessert in der Studie die Langhorizont-Verarbeitung. ([Quelle](https://arxiv.org/abs/2512.22087)) | Unterstützt `code-map.md` bzw. einen begrenzten Kontext-Workspace. Es beweist nicht, dass dafür ein zweiter Subagent erforderlich ist. |
-| Repository-Exploration ist eine eigenständige, messbare Fähigkeit: *SWE-Explore* trennt sie von Patch-Synthese und bewertet Coverage, Ranking und Context-Effizienz; diese Größen verfolgen dort das nachgelagerte Reparaturverhalten. ([Quelle](https://arxiv.org/abs/2606.07297)) | Unterstützt die Trennung von Recherche und Implementierung sowie die Messung der Kartenqualität. Die Karte muss möglichst line-/symbolnah und priorisiert sein, nicht nur eine Dateiliste. |
-| Ein einfacher, hierarchischer Ansatz (*Agentless*) lokalisiert Dateien, Klassen/Funktionen und Editierstellen ohne komplexe Agentenschleife und reduziert dabei den Kontext deutlich. ([Quelle](https://arxiv.org/abs/2407.01489)) | Warnung vor unnötiger Multi-Agent-Komplexität. Deterministische oder semantische Retrieval-Schritte sind eine ernsthafte, wahrscheinlich günstigere Baseline. |
-| Rollenbasierte Multi-Agent-Systeme können durch SOPs und Zwischenprüfungen kohärenter werden (*MetaGPT*), nennen aber auch Kaskadenfehler durch naive Agentenketten. ([Quelle](https://arxiv.org/abs/2308.00352)) | Ein Scout kann helfen, aber ein falscher Handoff kann den Implementierer ankern. Evidenz, Unsicherheit, Verifikation und Fallback sind zwingend. |
-| Prozessqualität wird zunehmend separat bewertet: *ProcCtrlBench* erfasst unter anderem Interpretierbarkeit, Unterbrechbarkeit, Korrigierbarkeit, Reversibilität und die Rückgabe von Kontrolle. ([Quelle](https://arxiv.org/abs/2605.20251)) | Der Workflow braucht nachvollziehbare Übergaben, Ownership, Abbruch- und Rückfallsemantik; der Endtest allein reicht nicht. |
-| In gemeinsam veränderten Arbeitsbereichen verschlechtern konfliktäre User-Edits die Lösungsrate in *SWE-Touch* im Mittel um 7,7 Prozentpunkte. ([Quelle](https://arxiv.org/abs/2608.02499)) | Ein Git-Diff nachträglich zu prüfen genügt bei echter Nebenläufigkeit nicht. Für den Scout braucht es exklusive Workspace-Ownership oder einen Lease; sonst muss die Phase ausfallen. |
-| *Coding Agents Don't Know When to Act* findet bei 35–65 % der Fälle unerwünschte Änderungen, obwohl keine Änderung nötig wäre. ([Quelle](https://arxiv.org/abs/2605.07769)) | „Skip“ und „No-op“ müssen explizite erfolgreiche Ergebnisse sein, nicht nur Sonderfälle der Promptlogik. |
-| Bei Whole-Repository-Migrationen bestehen Verhaltenskorrektheit und tatsächliche Migration getrennt; in *SWE Refactor Bench* bestehen nur 5,4 % der Läufe alle drei Prüfphasen. ([Quelle](https://arxiv.org/abs/2608.23564)) | Für Refactorings müssen neben Tests auch Scope-/Migrationsvollständigkeit und unabhängige Architekturprüfungen gemessen werden. |
-| Benchmarkwerte sind nicht automatisch belastbar: OpenAI berichtet 2026 über Testfehler und Kontamination in SWE-bench Verified und empfiehlt für aktuelle Vergleiche SWE-bench Pro. ([Quelle](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/)) | Der Pilot darf sich nicht auf einen einzelnen öffentlichen Benchmark oder reine Passraten stützen. Frische, repräsentative AiNetLinter-Aufgaben und Prozessmetriken sind notwendig. |
+## Warum das kein Verzicht auf Exploration ist
 
-## Architekturentscheidung (vorläufig)
+Aktuelle Arbeiten zur agentischen Softwareentwicklung stützen vor allem drei Prinzipien:
 
-Der Scout wird nicht als pauschale Pflichtphase angenommen. Die bevorzugte Reihenfolge für die Umsetzung lautet:
+1. Kontext muss begrenzt, strukturiert und auf die Aufgabe bezogen sein.
+2. Exploration ist dann wertvoll, wenn sie nachweisbar die nachgelagerte Änderung verbessert.
+3. Agentische Prozesse brauchen sichtbare Stop-, Übergabe- und Korrekturmöglichkeiten.
 
-1. **Single-Agent-Baseline:** Der bestehende Implementierer erhält einen begrenzten, aktiv gepflegten Kontext-Workspace beziehungsweise eine Code-Map und verifiziert ihn selbst.
-2. **Bedingter Scout:** Nur wenn die Recherche den erwarteten Implementierungsaufwand dominiert, mehrere semantische Grenzen überschreitet oder der Scope unbekannt ist, wird ein frischer Scout vorgeschaltet.
-3. **Deterministische Unterstützung:** Skeletons, Symbolsuche, Referenzgraphen und hierarchische Lokalisierung werden gegenüber zusätzlicher LLM-Prosa bevorzugt, wenn sie dieselbe Information belastbarer und günstiger liefern.
-4. **Keine Parallel-Scouts im selben Working Tree:** Ein gemeinsamer Arbeitsbereich erhält genau einen aktiven Besitzer. Bei Änderungen durch einen anderen Agenten oder Benutzer wird der Scout nicht gestartet beziehungsweise sofort angehalten; fremde Änderungen werden nicht zurückgesetzt.
+Daraus folgt nicht automatisch, dass ein separater Scout besser ist. Ein Scout kann Exploration kapseln, aber auch eine zusätzliche Übergabe- und Stale-Context-Grenze erzeugen. Im AiNetLinter-Projekt existiert bereits ein semantisches Werkzeug, das genau die relevanten Kontextdimensionen liefern kann. Die naheliegende Primärhypothese ist daher: erst den bestehenden Agenten mit diesem Werkzeug gut führen; erst bei gemessenen Engpässen eine zusätzliche Rolle einführen.
 
-Der eigentliche Erfolgskandidat ist somit nicht „mehr Agenten“, sondern **weniger ungeprüfte Kontextübergabe bei nachweisbar geringerer Gesamtlast**.
+## Forschungsabgleich
 
-## Alternativen und Trade-offs
+| Befund | Relevanz für AiNetLinter | Konsequenz |
+|---|---|---|
+| [Context as a Tool](https://arxiv.org/abs/2512.22087) beschreibt Context Explosion und Semantic Drift und empfiehlt einen strukturierten, externen Kontextarbeitsbereich. | Unbegrenzte Roh-Recherche ist riskant; ein kleines, aktualisierbares Arbeitsgedächtnis ist sinnvoll. | `code-map.md` nur bei echtem Persistenzbedarf, kompakt und evidenzbasiert führen. |
+| [SWE-Explore](https://arxiv.org/abs/2606.07297) trennt Repository-Exploration und Patch-Synthese und bewertet Exploration über Coverage, Ranking, Kontext-Effizienz und Downstream-Repair. | Exploration ist eine relevante Funktion, aber die Trennung muss ihren Zusatznutzen zeigen. | MCP-Kontextaufnahme als messbare Phase behalten; Scout nicht als unbelegte Pflichtarchitektur festschreiben. |
+| [Agentless](https://arxiv.org/abs/2407.01489) zeigt, dass hierarchische Lokalisierung und Reparatur mit geringerer Agentenkomplexität leistungsfähig sein können. | Ein einfacherer Ablauf kann ausreichend und robuster sein. | Single-Agent-Baseline mit gezielter Lokalisierung priorisieren. |
+| [MetaGPT](https://arxiv.org/abs/2308.00352) zeigt den möglichen Nutzen klarer Rollen und SOPs, weist aber implizit auf die Kosten von Übergaben und Kaskaden hin. | Rollen helfen nur bei klarer Verantwortungsgrenze und echtem Parallel-/Spezialisierungsnutzen. | Kein Scout allein wegen einer Rollenbezeichnung; Handoff muss einen messbaren Vorteil liefern. |
+| [ProcCtrlBench](https://arxiv.org/abs/2605.20251) betrachtet agentische Prozesse unter anderem nach Interpretierbarkeit, Unterbrechbarkeit, Korrigierbarkeit und Rückgabe der Kontrolle. | Ein komplexer Workflow muss kontrollierbar und abbrechbar bleiben. | Stop-/Fallback-/Resume-Regeln explizit machen; kein unkontrolliertes Rechercheketten-Verhalten. |
+| [SWE-Touch](https://arxiv.org/abs/2608.02499) berichtet bei gemeinsam veränderter Arbeitsumgebung schlechtere Auflösungsraten und häufige externe Änderungen. | Ein Scout-Handoff im selben Working Tree wäre besonders stale- und konfliktanfällig. | Eine aktive Ownership je Working Tree; externe Änderungen erkennen und neu baselinen, niemals überschreiben. |
+| [Coding Agents Don’t Know When to Act](https://arxiv.org/abs/2605.07769) zeigt unnötige Änderungen bei No-Change-Aufgaben. | Exploration darf nicht automatisch in Aktion oder neue Dateien münden. | Explizite No-op-/Skip-Entscheidung und Änderungsrecht erst nach ausreichender Evidenz. |
+| [SWE Refactor Bench](https://arxiv.org/abs/2608.23564) trennt Verhaltenserhalt von vollständiger Migrationsabdeckung und zeigt geringe End-to-End-Erfolgsraten komplexer Refactorings. | Kontextqualität allein garantiert keine vollständige Änderung. | Verifikation muss Verhalten und Scope-/Abdeckungs-Vollständigkeit getrennt prüfen. |
+| [OpenAI: Why we no longer evaluate SWE-bench Verified](https://openai.com/index/why-we-no-longer-evaluate-swe-bench-verified/) warnt vor Testproblemen und Contamination in einem verbreiteten Benchmark. | Agentenprozessentscheidungen dürfen nicht mit einer einzelnen Benchmarkzahl begründet werden. | Lokale, reproduzierbare Projektmetriken und Failure-Analysen verwenden. |
 
-| Variante | Vorteil | Hauptrisiko | Vorläufige Einordnung |
-| --- | --- | --- | --- |
-| Einzelagent mit Context-Workspace | Geringste Latenz, kein Handoff zwischen Modellen | Langer Verlauf kann erneut anwachsen oder driften | Pflicht-Baseline |
-| Scout → Implementierer | Klare Kontextgrenze und eigene Rechercheperspektive | Zusätzliche Kosten, Anchoring, fehlerhafte/zu grobe Karte | Experimentelle Option |
-| Deterministisches Retrieval → Implementierer | Reproduzierbar, günstig, weniger Halluzinationen | Erkennt semantische Invarianten und Risiken nur begrenzt | Starke Vergleichsvariante |
-| Mehrere parallele Scouts | Diversität und mögliche Redundanz | Merge-/Ownership-Konflikte, höhere Kosten, widersprüchliche Karten | Für diesen Workflow verwerfen |
+Die Forschung ist heterogen und teilweise sehr aktuell; sie beweist nicht, dass ein MCP-first-Workflow für AiNetLinter besser ist. Sie stützt aber die Designentscheidung, zunächst Kontextqualität, Begrenzung, Verifikation und Kontrollierbarkeit zu optimieren und den Scout nur als spätere Vergleichsvariante zu behandeln.
 
-## Pilot- und Entscheidungslogik
+## Lokale Fähigkeit des AiNetLinter-MCP
 
-Vor einer dauerhaften Integration werden mindestens drei Varianten auf einer
-geschichteten, repräsentativen Menge frischer AiNetLinter-Aufgaben verglichen:
+Der entscheidende projektspezifische Punkt ist, dass AiNetLinter bereits eine zusammengesetzte semantische Exploration anbietet. `get_feature_context` bündelt für ein C#-Symbol:
 
-- Single-Agent-Baseline ohne Scout;
-- Single-Agent mit begrenztem Context-Workspace beziehungsweise Code-Map;
-- Scout → Implementierer mit identischem Modell, identischen Tools und identischem fachlichem Auftrag.
+- Deklaration und Position,
+- Metriken und Budget-/Footprint-Informationen,
+- direkte Aufrufer,
+- statische Testzuordnung,
+- relevante Linter-Verstöße.
 
-Die Auswertung erfasst nicht nur den finalen Build-/Testausgang, sondern auch
-Gesamttoken und Kosten, Wall-Clock-Zeit, MCP-/Tool-Aufwand, korrekte
-Symbol-/Zeilenlokalisierung, Kartenpräzision und -recall, fehlerhafte oder
-veraltete Handoff-Angaben, Fallback-Rate, Korrekturschleifen, P0/P1-Findings,
-No-op-/Skip-Entscheidungen und unerlaubte Working-Tree-Änderungen. Die
-Varianten werden mit frischen Sessions und getrennten Workspaces ausgeführt;
-der Auftrag beziehungsweise die Aufgabenreihenfolge darf die Ergebnisse nicht
-systematisch verzerren.
+Die aktuelle Tool-Semantik verlangt für projektgebundene Abfragen `targetType: project` und einen absoluten `targetPath`. Ergebnisgrößen können über Parameter wie `maxCallers` und `maxTests` begrenzt werden; abgeschnittene Ergebnisse müssen als Unsicherheit behandelt und bei Bedarf gezielt vertieft werden.
 
-Der Scout wird nur dann als Standardphase übernommen, wenn er gegenüber der
-einfachsten gleichwertigen Variante einen nachweisbaren Netto-Nutzen liefert:
-keine Verschlechterung der fachlichen Korrektheit, keine unvertretbare
-Kosten-/Latenzerhöhung und weniger relevante Recherchedrift beziehungsweise
-Nacharbeit. Andernfalls bleibt die Code-Map als Single-Agent- oder
-deterministisches Retrieval-Artefakt bestehen und der Scout wird verworfen.
+Eine lokale MCP-Probe gegen `AiNetLinter.Mcp.AnalysisToolCall` lieferte genau diese fünf strukturierten Dimensionen. Die Aufruferliste wurde bei der gesetzten Grenze explizit als abgeschnitten ausgewiesen, die Testzuordnung enthielt drei Tests und die Violation-Abfrage keine Befunde. Das ist die praktische Evidenz, dass der Agent den relevanten Kontext bereits zielgerichtet und mit sichtbaren Grenzen ermitteln kann, ohne zunächst einen weiteren Agenten zu starten.
 
----
+## Soll-Workflow
 
-## Betroffene Projektbereiche und bestehende Strukturen
-
-- **`.agents/skills/scout/SKILL.md` (Neu):** Rollenbeschreibung und Handlungsanweisungen für den Scout-Subagenten (MCP-first-Recherche, präzise Pflege der `code-map.md`, kein Produktions-/Testcode).
-- **`.agents/prompts/orchestrator.md` (Erweiterung):** Integration der Scout-Phase in den sequentiellen Epic-Ablauf, einschließlich Aktivierungsentscheidung, Diff-Schutz und Checkpoint-Sicherung.
-- **`.agents/skills/implement/SKILL.md` (Präzisierung):** Implementierer nutzt die `code-map.md` als verifizierbaren Einstiegspunkt; ergänzende MCP-Abfragen bleiben bei Lücken ausdrücklich erlaubt.
-- **Task-lokales Artefakt (`code-map.md`):** Der Orchestrator legt vor dem ersten Rollenaufruf ein minimales Gerüst an. Scout, Implementierer, Reviewer und Audit pflegen dieselbe Karte gemäß dem bestehenden Orchestrator-Vertrag; es wird keine zweite Rechercheablage eingeführt.
-
----
-
-## Muss-Kriterien und Akzeptanzkriterien
-
-1. **Getrennte Recherche und Übergabe:**
-   - Der Scout wird als frischer, unabhängiger Subagent und strikt nacheinander vor dem Implementierer des betreffenden Epics aufgerufen.
-   - Der Implementierer erhält keinen vollständigen Scout-Thread, keine unstrukturierten Tooltranskripte und kein Recherche-Dump-Archiv, sondern die aktuelle `code-map.md`, den Epic-Kontext, die für seine Rolle nötigen Regeln und einen knappen Hand-off.
-2. **Keine Code-Modifikationen durch den Scout:**
-   - Vor dem Scout-Aufruf wird der auftragsbezogene Working-Tree-Baselinepunkt festgehalten.
-   - Nach dem Scout-Aufruf darf gegenüber dieser Baseline ausschließlich die task-lokale `code-map.md` geändert sein. Bei weiteren Änderungen stoppt der Orchestrator mit einem konkreten Befund und überschreibt oder verwirft keine fremden Änderungen.
-   - Der Scout verändert zu keinem Zeitpunkt Produktionscode, Testcode, Projektdateien oder globale Konfigurationen. Das Schreibverbot ist eine Workflow-Grenze; eine echte Betriebssystem-Sandbox ist damit nicht zugesichert.
-3. **Präzise, quellenbezogene Strukturierung:**
-   - Der Scout dokumentiert konkrete relative Dateipfade, exakte Symbol-Identitäten oder Fundstellen, Signaturen beziehungsweise Typinformationen, relevante Aufrufer/Abhängigkeiten, Invarianten, Tests und Unsicherheiten.
-   - Die Karte enthält keine seitenlangen Codekopien und behauptet keine Beziehung ohne passende MCP- oder Dateievidenz. Unvollständige oder nicht entscheidbare Ergebnisse werden sichtbar markiert.
-4. **Pragmatische Skip-Regel (Kein künstlicher Overhead):**
-   - Bei einfachen, lokal begrenzten Aufgaben (z. B. Ein-Datei-Fixes, kleine Dokumentationsanpassungen) wird der Scout übersprungen, sofern kein semantischer Recherchebedarf besteht.
-   - Für komplexe Epics mit unbekannten Codebereichen, Architektur-Refactorings oder semantischen C#/Assembly-Fragen wird der Scout eingesetzt, sofern die Aktivierungsentscheidung dies begründet.
-5. **Anti-Pollution-Grenze (Keine Step-Dateien, kein Grep-Ballast):**
-   - Der Scout erzeugt **keine separaten Step-Dateien, Recherche-Dumps oder Unterverzeichnisse**.
-   - Die gesamte Recherche wird ausschließlich **in-place in die genau eine task-lokale `code-map.md`** synchronisiert.
-   - Dadurch werden historische Recherche-Dumps und veraltete Code-Zitate nicht als zusätzliche Task-Artefakte weitergereicht.
-6. **Konformität mit dem AiNetLinter-MCP-Vertrag:**
-   - Der Scout arbeitet strikt nach `.agents/rules/AiNetLinter-McpWorkflow.mdc` (MCP-first für semantische C#-Abfragen, `targetType=project|assembly`, token-schonende Parameter für `get_file_tree`).
-7. **Graceful Fallback für den Implementierer:**
-   - Sollte eine Information in `code-map.md` fehlen oder fehlerhaft sein, darf der Implementierer weiterhin selbstständig gezielte MCP- oder Leseabfragen ausführen. Er ist niemals blind an den Scout gebunden.
-8. **Lebenszeit und Staleness der Karte:**
-   - Vor jeder Verwendung prüft die nachfolgende Rolle die relevanten Kartenangaben gegen den aktuellen Working Tree.
-   - Nach Codeänderungen aktualisiert der Implementierer die betroffenen Kartenabschnitte; Reviewer und Audit entfernen oder korrigieren nachweislich veraltete Navigationsangaben.
-
----
-
-## Non-Goals und Scope-Grenzen
-
-- **Keine neuen Zwischenformate oder Step-Archive:** Es werden keine neuen Step-, JSON- oder Cache-Dateien angelegt. Historische Dumps werden nicht als Task-Artefakte im Dateisystem belassen.
-- **Keine Code-Kopien in `code-map.md`:** `code-map.md` enthält nur kompakte, quellenbezogene Navigationsdaten, keine seitenlangen Code-Duplikate.
-- **Kein interaktiver Nutzer-Dialog durch den Scout:** Der Scout agiert vollautonom im Hintergrund und stellt keine Zwischenfragen an den Benutzer.
-- **Keine Vorab-Code-Generierung (No Drafting):** Der Scout erzeugt keine Code-Snippets, Patches oder Pseudo-Implementierungen. Das Design und die Codierung liegen zu 100 % beim Implementierer.
-- **Kein Ersatz für bestehende Rollen:** Der Scout ersetzt weder den `concept-planner` (fachliche Verträge), noch den `implement`-Skill (Code), noch den `review`-Skill (unabhängige Prüfung), noch den `audit`-Skill (Qualitäts-Gates).
-
----
-
-## Rollen- und Interaktionsmodell
-
-```
-                  ┌─────────────────────────────────────────┐
-                  │              Orchestrator               │
-                  └───────────────────┬─────────────────────┘
-                                      │
-           1. Startet Scout-Subagent  │ (bei komplexen Epics / unklarem Scope)
-                                      ▼
-                  ┌─────────────────────────────────────────┐
-                  │              Scout-Rolle                │
-                  │  - Führt bedarfsgerechte MCP-Analyse aus │
-                  │  - Isoliertes Kontextfenster            │
-                  │  - Schreibt nur die Code-Map             │
-                  └───────────────────┬─────────────────────┘
-                                      │
-                       2. Aktualisiert│ code-map.md
-                                      ▼
-                  ┌─────────────────────────────────────────┐
-                  │          task-lokale code-map.md        │
-                  │  - Exakte Symbole & Dateipfade          │
-                  │  - Call-Trees, Abhängigkeiten, Tests   │
-                  │  - Relevante Invarianten                │
-                  └───────────────────┬─────────────────────┘
-                                      │
-      3. Startet Implementierer mit   │
-         kuratiertem Epic-Kontext     ▼
-                  ┌─────────────────────────────────────────┐
-                  │          Implementierer-Rolle           │
-                  │  - Liest Konzept + code-map.md          │
-                  │  - Verifiziert und ergänzt Recherche    │
-                  │  - Volle Aufmerksamkeit auf Logik/Tests │
-                  │  - Führt get_violations & Tests aus     │
-                  └─────────────────────────────────────────┘
+```text
+Auftrag
+  -> Einordnung (lokal / semantisch / mehrstufig / No-op möglich)
+  -> MCP-first-Kontextaufnahme
+       bekanntes Symbol: get_feature_context
+       unbekanntes Symbol: find_symbol -> get_feature_context
+       Lücken: gezielte Spezialabfragen
+  -> optional kompakte code-map.md bei Komplexität oder Resume
+  -> Implementierung oder begründeter No-op
+  -> get_violations + relevante Tests + Build
+  -> Review / Übergabe mit Evidenz und offenen Unsicherheiten
 ```
 
-### 1. Scout-Subagent (`.agents/skills/scout/SKILL.md`)
-- **Input:** Task-Pfad, Primäraufgabe, Epics aus `Konzept.md` / `roadmap.md`, initiales `code-map.md`-Gerüst.
-- **Ablauf:**
-  1. Liest den Scout-Skill, die relevanten Regeln, das Konzept, den Epic-Kontext und die vorhandene `code-map.md`.
-  2. Identifiziert Einstiegspunkte mit `find_symbol`, `get_feature_context` oder — bei einer lokalen DLL — `inspect_assembly`.
-  3. Ermittelt Aufrufer und Abhängigkeiten mit `find_references`, `get_call_tree` und/oder `dependency_graph`.
-  4. Identifiziert zugehörige Tests mit `get_test_context` und prüft relevante Dokumentations-/Konfigurationsbereiche ergänzend per gezielter Textsuche.
-  5. Extrahiert nur belegte Invarianten, Architekturvorgaben, Risiken und offene technische Unsicherheiten.
-  6. Aktualisiert ausschließlich die strukturierte Navigation in `code-map.md` und entfernt dadurch veraltete Einträge.
-  7. Beendet die Session mit einem kurzen Hand-off-Bericht: geänderte Karte, erkannte Zieldateien/Symbole, Unsicherheiten und ausgeführte Prüfungen.
+### Phase 1: Einordnung
 
-### 2. Implementierer-Subagent (`.agents/skills/implement/SKILL.md`)
-- **Input:** Task-Pfad, Zielauftrag, `Konzept.md`, die kuratierte `code-map.md`.
-- **Ablauf:** Startet als frischer Subagent mit dem Epic-Kontext. Verifiziert die in `code-map.md` ausgewiesenen Einstiegspunkte, liest die tatsächlich relevanten Dateien, ergänzt bei Lücken gezielte Recherche, schreibt Code und führt Tests sowie gezielte MCP-Prüfungen (`get_violations`) aus.
+Der Agent entscheidet vor der Recherche:
 
-### 3. Orchestrator-Steuerung (`.agents/prompts/orchestrator.md`)
-- Vor dem Scout-Aufruf legt der Orchestrator die Aktivierungsentscheidung und den Diff-Baselinepunkt fest.
-- Nach Abschluss des Scouts prüft der Orchestrator den zulässigen Diff, protokolliert den Hand-off und sichert die `code-map.md` in einem taskbezogenen Checkpoint.
-- Danach ruft er den Implementierer auf; Scout und Implementierer laufen niemals parallel im selben Working Tree.
+- Ist die Aufgabe rein textuell oder konfigurationsbezogen?
+- Gibt es ein bekanntes C#-Symbol oder muss es lokalisiert werden?
+- Berührt die Änderung mehrere Komponenten, Verträge, Tests oder Dokumentationspflichten?
+- Ist ein No-op oder eine reine Diagnose plausibel?
+- Gibt es bereits Änderungen eines anderen Agents im Working Tree?
 
----
+Für einfache lokale Aufgaben ist keine künstliche semantische Recherche und keine `code-map.md` erforderlich.
 
-## Betriebs- und Bedrohungsmodell
+### Phase 2: Gezielte Kontextaufnahme
 
-- **Betriebsmodell:** Lokaler Entwickler-Agenten-Workflow im Rahmen der bestehenden AiNetLinter-Toolchain.
-- **Kontext-Hygiene:** Der Scout soll den Übergabekontext auf belegte Navigationsdaten begrenzen und explorative Rohdaten im eigenen Subagent-Thread belassen.
-- **Betriebsgrenze:** Der Scout darf im Workflow nur die task-lokale `code-map.md` schreiben. Diese Grenze wird über Rollenauftrag, Baseline-/Diff-Prüfung und Checkpoint gesteuert, nicht als vollständige Sicherheits-Sandbox behauptet.
-- **Nebenläufigkeit:** Der Scout wird nur bei stabilem, eindeutig abgegrenztem Working-Tree-Baselinepunkt gestartet. Fremde oder parallel entstehende Änderungen werden nicht überschrieben, automatisch zurückgesetzt oder in den Scout-Commit aufgenommen.
-- **Fehlersemantik:** Fehlende MCP-Fähigkeit, unvollständige Ergebnisse oder eine nicht zulässige Dateiveränderung werden im Hand-off sichtbar gemeldet; der Orchestrator stoppt vor dem Implementierer oder überspringt den Scout mit dokumentierter Begründung.
+Der Agent beginnt mit der kleinsten ausreichenden Abfrage. Für ein bekanntes Symbol ist `get_feature_context` der bevorzugte Einstieg. Bei unbekannten Symbolen oder unscharfen Anforderungen wird zunächst lokalisiert. Spezialabfragen werden nur auf Basis einer konkreten Lücke ausgeführt:
 
----
+- fehlender Implementierungsinhalt: `get_symbol_body`,
+- unklare Auswirkungen: `find_references`, `get_impact`, `dependency_graph`,
+- unklare Testabdeckung: `get_test_context`,
+- unklare Regelkonformität: `get_violations` oder passender Violation-Filter.
 
-## Verifikation und Qualitätskriterien
+Die Recherche endet, wenn die Änderungshypothese, betroffene Abhängigkeiten, relevante Tests und wesentliche Risiken hinreichend belegt sind. Es gibt keine fixe Mindestzahl von Tools und keine pauschale Voll-Repository-Kartierung.
 
-1. **Übergabe-Isolation:** An einem repräsentativen komplexen Epic wird nachgewiesen, dass Scout und Implementierer frische, getrennte Subagent-Sessions verwenden und der Implementierer keinen vollständigen Scout-Thread oder Tooltranskript erhält. Eine konkrete Tokenquote ist nur ein optionaler Messwert, falls die Plattform belastbare Zähler bereitstellt.
-2. **Zulässiger Diff:** Der Orchestrator erkennt nach einem Scout-Lauf jede Änderung außerhalb der task-lokalen `code-map.md`, ohne fremde Änderungen zu überschreiben oder zu committen.
-3. **Qualität der `code-map.md`:** Die Karte enthält die vereinbarten Pflichtabschnitte, konkrete Pfade/Symbole, Evidenz beziehungsweise Unsicherheiten sowie relevante Tests und ist gegen den aktuellen Code verifizierbar.
-4. **Fallback und Staleness:** Ein absichtlich unvollständiger Kartenabschnitt führt dazu, dass der Implementierer gezielt nachrecherchiert und die Karte aktualisiert; veraltete Einträge werden entfernt.
-5. **Skip-Verhalten:** Ein trivialer Task durchläuft keine Scout-Phase; die Entscheidung und ihre Begründung sind im Orchestrator-Log beziehungsweise Checkpoint nachvollziehbar.
-6. **Konsistenzprüfungen:** Markdown-/Pfadkonsistenz, Einhaltung von `AGENTS.md` und `.agents/rules/` sowie — falls durch die Umsetzung C# oder Tests geändert werden — die dort vorgeschriebenen Build- und Nicht-Stress-Test-Gates werden geprüft.
+### Phase 3: Optionales Arbeitsgedächtnis
 
----
+Für mittlere/große, mehrstufige oder unterbrochene Aufgaben darf der Agent eine kompakte `code-map.md` im Task-Verzeichnis führen. Sie enthält ausschließlich verifizierte, für die laufende Änderung relevante Informationen:
 
-## Offene Punkte und Entscheidungsbedarf
+```markdown
+## Primäre Einstiegspunkte
+## Betroffene Dateien und Symbole
+## Aufrufer und Abhängigkeiten
+## Relevante Tests, Konfiguration und Dokumentation
+## Invarianten, Risiken und Unsicherheiten
+## Verifikation
+```
 
-1. **Grundsatzentscheidung — Empfehlung: als bedingten Pilot weiterverfolgen.** Soll das Vorhaben ausdrücklich als A/B-Pilot für einen verifizierbaren Recherche-Handoff fortgeführt werden, statt den separaten Scout bereits als Zielarchitektur festzuschreiben? Die Forschung stützt Kontextmanagement und Repository-Exploration, aber nicht die Notwendigkeit eines zweiten LLM-Agenten.
-2. **Technische Variante — Empfehlung: drei Varianten vergleichen.** Soll der Pilot Single-Agent mit Context-Workspace, deterministisches Retrieval und Scout → Implementierer unter gleichen Bedingungen vergleichen? Ohne diese Baseline wäre ein möglicher Nutzen des Scouts nicht von allgemeinem Retrieval- oder Prompting-Gewinn zu trennen.
-3. **Granularität des Aufrufs — Empfehlung: pro Epic mit Scope-Prüfung.** Falls der Scout den Pilot besteht: Soll er einmalig pro Task vor dem ersten Epic laufen, oder vor jedem Epic, das neue beziehungsweise veränderte Codebereiche untersucht? Für einen Lauf pro Epic sprechen die Staleness-Regeln; bei mehreren Epics im selben unveränderten Bereich kann die Roadmap den Scout begründet überspringen.
-4. **Schema der `code-map.md` — Empfehlung: verbindliche Minimalstruktur.** Falls der Handoff weiterverfolgt wird: Soll die Karte feste Pflichtabschnitte wie `## Primäre Einstiegspunkte`, `## Betroffene Dateien und Symbole`, `## Aufrufer und Abhängigkeiten`, `## Relevante Tests`, `## Invarianten, Risiken und Unsicherheiten` sowie `## Verifikation` erhalten? Die Inhalte sollten kompakt bleiben, aber die Abschnitte würden Übergabe und Review prüfbarer machen.
-5. **Aktivierung — Empfehlung: explizite Roadmap-Entscheidung mit Heuristik.** Falls der Scout den Pilot besteht: Soll der Orchestrator pro Epic einen sichtbaren Modus `required`, `optional` oder `skip` führen, wobei `estimated_scope` nur als Hinweis dient? Eine reine Scope-Automatik wäre zu grob; eine explizite Epic-Entscheidung bleibt nachvollziehbar und erlaubt eine begründete Ausnahme.
+Regeln für die Map:
 
----
+- keine vollständigen Tool-Rohantworten oder Transkripte,
+- jede wesentliche Aussage auf Datei/Symbol/Toolbefund zurückführen,
+- Trunkierung und Unsicherheit sichtbar markieren,
+- nach relevanten Änderungen aktualisieren oder als veraltet markieren,
+- niemals als alleinige Wahrheit verwenden; vor Änderung gegen Working Tree und MCP prüfen.
 
-## Arbeitsgedächtnis (nur Draft)
+### Phase 4: Implementierung und Fallback
 
-### Bestätigte Entscheidungen
-- **Trennung von Recherche und Coden:** Recherche wird in einen isolierten Subagenten (`scout`) ausgelagert, um den Implementierer vor Kontext-Verschmutzung zu schützen.
-- **Austauschformat:** Kein neues Datei-Format; wir nutzen und stärken die bereits im Orchestrator spezifizierte task-lokale `code-map.md`. Der Orchestrator legt das Gerüst an; sie muss nicht vorab im Task-Verzeichnis existieren.
-- **Anti-Pollution & Single-File-In-Place-Prinzip:** Keine Step-Dateien oder Recherche-Unterordner. Es existiert immer nur genau eine `code-map.md`, die in-place aktualisiert wird. Damit werden Dateileichen und irreführende Treffer bei späteren `rg`/`grep`-Suchen komplett verhindert.
-- **Pragmatismus:** Bei Trivial-Tasks bleibt der Scout optional / überspringbar.
-- **Karte ist nicht Source of Truth:** Jede Rolle verifiziert relevante Kartenangaben gegen Working Tree und MCP; der Implementierer bleibt bei Lücken handlungsfähig.
-- **Schreibgrenze als Workflow-Vertrag:** Nach dem Scout darf gegenüber der Baseline nur `code-map.md` verändert sein. Fremde Änderungen werden nicht überschrieben oder automatisch bereinigt.
-- **Vorläufiges Forschungsurteil:** Der Bedarf an Kontextmanagement und fokussierter Repository-Exploration ist plausibel; ein separater Scout ist nur eine zu prüfende Implementierungsvariante und kein bestätigter Default.
-- **Pilot statt voreilige Standardisierung:** Vor einer dauerhaften Skill-/Orchestrator-Integration müssen Single-Agent-Context-Workspace, deterministisches Retrieval und Scout → Implementierer unter vergleichbaren Bedingungen gegeneinander evaluiert werden.
-- **Prozessqualität als Erfolgskriterium:** Bewertung umfasst neben fachlicher Korrektheit auch Handoff-Fehler, Staleness, Kosten, Latenz, Fallbacks, Korrekturschleifen, No-op-Entscheidungen und Workspace-Ownership.
+Der Agent implementiert erst nach einer nachvollziehbaren Änderungshypothese. Falls MCP nicht verfügbar, unvollständig oder widersprüchlich ist, nutzt er die zulässigen lokalen Fallbacks (`rg`, Dateien, Build/Test) und dokumentiert die Einschränkung. Der Workflow darf nicht in einer endlosen Recherche-Schleife hängen.
 
-### Geprüfte Evidenz und Konsequenzen
-- `.agents/prompts/orchestrator.md` sieht bereits genau eine task-lokale `code-map.md` vor, die vor dem ersten Rollenaufruf als minimales Gerüst angelegt und von Rollen gepflegt wird. Das Konzept baut darauf auf, führt aber keinen zweiten Ablageort ein.
-- `.agents/skills/implement/SKILL.md` verpflichtet den Implementierer bereits zum Lesen und Verifizieren der Karte, erlaubt ergänzende MCP-Recherche und verlangt nach Codeänderungen gezielte Verifikation. Die Scout-Erweiterung darf diesen Fallback nicht einschränken.
-- Im Zielverzeichnis existiert derzeit nur `Konzept.md`; eine `code-map.md` wird erst im späteren Orchestrator-Lauf erzeugt.
-- Ein Rollenprompt allein erzwingt keine echte Dateisystem-Sandbox. Die Umsetzung benötigt daher mindestens Baseline-/Diff-Prüfung und darf bei unerlaubten Änderungen keine fremden Änderungen zurücksetzen.
-- Aktuelle Forschung trennt zunehmend Repository-Exploration und Prozessqualität vom finalen Pass/Fail-Ergebnis; der Pilot soll diese Zwischenmetriken instrumentieren, ohne öffentliche Benchmarkwerte als alleinige Wahrheit zu verwenden.
-- Forschungsbefunde zu Multi-Agenten sind aufgaben- und benchmarkabhängig. Positive Ergebnisse zu Rollen/SOPs existieren, aber auch Kaskadenfehler, Anchoring und zusätzliche Kommunikationskosten; für dieses konkrete C#/Roslyn-Workflowdesign liegt kein direkter Wirksamkeitsnachweis vor.
-- Bei parallelen Änderungen im selben Working Tree reicht ein nachträglicher Diff nicht zuverlässig zur Attribution. Exklusive Ownership beziehungsweise ein Lease ist Voraussetzung; andernfalls ist `skip` das sichere Verhalten.
+Bei fehlender Evidenz wird die Änderung eingegrenzt, als Diagnose beendet oder als Rückfrage eskaliert. Bei einer No-op-Aufgabe wird keine Scheindatei und kein unnötiger Code erzeugt.
 
-### Relevante Dateien
-- `.agents/prompts/orchestrator.md`
-- `.agents/skills/implement/SKILL.md`
-- `.agents/skills/concept-planner/SKILL.md`
-- `.agents/rules/AiNetLinter-McpWorkflow.mdc`
+### Phase 5: Verifikation
 
-### Nächster Planungsschritt
-- Zuerst ist die Grundsatzfrage zu beantworten, ob der Scout als bedingter, instrumentierter Pilot gegen einfachere Varianten geprüft werden soll. Erst danach werden Aufrufgranularität, Kartenformat und Aktivierungsmodus endgültig festgelegt.
+Nach der letzten Codeänderung wird der relevante MCP-Violation-Stand erneut geprüft. Danach folgen die für den Änderungsumfang passenden Tests und der Build. Für C#- oder Teständerungen gelten die Projektvorgaben für die vollständigen Nicht-Stress-Läufe; reine Konzept-/Agentendokumentation benötigt keine Produktbuilds.
+
+Bei Refactorings werden zwei Fragen getrennt beantwortet:
+
+1. Ist das beobachtbare Verhalten weiterhin korrekt?
+2. Sind alle vom Auftrag erfassten Stellen, Referenzen, Tests und Dokumentationspflichten abgedeckt?
+
+### Phase 6: Ownership, Resume und Übergabe
+
+Ein Working Tree hat zu einem Zeitpunkt genau einen aktiven schreibenden Owner. Erkennt der Agent während der Arbeit fremde Änderungen oder einen neuen Ausgangszustand, pausiert er die betroffene Änderung, beschreibt die Abweichung und erstellt eine neue Kontext-Baseline. Er verwendet weder `git reset --hard` noch pauschales Zurücksetzen oder Überschreiben.
+
+Bei Resume liest der Agent zuerst die aktuelle Konzept-/Map-Datei und prüft danach die veränderlichen Befunde erneut. Die Übergabe enthält Änderungshypothese, bearbeitete Dateien, Verifikation, offene Unsicherheiten und einen möglichen nächsten Schritt.
+
+## Betroffene Artefakte und Änderungsumfang
+
+Voraussichtlich anzupassen sind:
+
+- `.agents/prompts/orchestrator.md`: Scout-Phase und Scout-Handoff entfernen; Einordnung, MCP-first-Kontextvertrag, optionales Arbeitsgedächtnis, Fallback und Ownership-Regeln ergänzen.
+- `.agents/skills/implement/SKILL.md`: `get_feature_context`/`find_symbol` als abgestufte Standardroute beschreiben; `code-map.md` als optional und nicht-autoritativ behandeln.
+- `.agents/skills/review/SKILL.md`: Aktualität der Kontextnotizen und MCP-Verifikation prüfen; keine Scout-Ausgabe voraussetzen.
+- `.agents/rules/AiNetLinter-McpWorkflow.mdc`: nur ergänzen, falls die konkreten Ziel-/Fallback-/Trunkierungsregeln dort noch nicht eindeutig genug sind.
+- Task-lokale `code-map.md`: nur bei einem passenden komplexen Vorhaben erzeugen, nicht als globales Pflichtartefakt.
+
+Ausdrücklich nicht vorgesehen:
+
+- keine neue `.agents/skills/scout/SKILL.md`,
+- kein zweiter Standard-Agent nur für Recherche,
+- keine Änderung am MCP-Protokoll oder an Produkt-/CLI-Funktionalität,
+- keine parallele Schreibarbeit mehrerer Rollen im selben Working Tree.
+
+## Muss-Kriterien
+
+1. Der Standardworkflow enthält keine verpflichtende Scout-Rolle und keinen Scout-Handoff.
+2. C#-Kontext wird MCP-first ermittelt: unbekannte Symbole werden lokalisiert, bekannte Symbole über `get_feature_context` erkundet.
+3. Projektgebundene MCP-Aufrufe verwenden den korrekten Projekttyp und einen absoluten Projektpfad.
+4. Weitere Abfragen sind lückenorientiert und begrenzt; Trunkierung, Widersprüche und Unsicherheit bleiben sichtbar.
+5. `code-map.md` ist nur bei Komplexität oder Resume erforderlich und bleibt kompakt, aktuell und nicht-autoritativ.
+6. Es existieren nachvollziehbare lokale Fallbacks und ein Abbruchpfad gegen Recherche-Schleifen.
+7. No-op-/Skip-Entscheidungen sind zulässig und erzeugen keine künstlichen Änderungen.
+8. Nach Änderungen werden Violations, relevante Tests und — gemäß Projektregeln — der Build verifiziert.
+9. Fremde Working-Tree-Änderungen werden geschützt; Ownership und Re-Baselining sind explizit.
+10. Die Wirksamkeit wird über lokale Workflow-Metriken und Fehleranalysen bewertet, nicht über eine einzelne Benchmarkzahl.
+
+## Nicht-Ziele
+
+- keine Pflicht, jede Aufgabe durch ein vollständiges Repository-Mapping zu schicken,
+- keine festen Tool- oder Tokenquoten unabhängig von der Aufgabe,
+- keine Garantie, dass MCP-Kontext allein korrekte Implementierungen erzeugt,
+- keine automatische Übernahme unbestätigter Map-Inhalte,
+- keine Ausweitung auf parallele Agentenkoordination im selben Working Tree,
+- keine Produktänderung an AiNetLinter selbst im Rahmen dieses Konzeptes.
+
+## Betriebs- und Risikoperspektive
+
+Der Workflow läuft im bestehenden lokalen Agenten-/Repository-Kontext. MCP-Abfragen sind lesende Kontextoperationen; Änderungen bleiben dem bestehenden Implementierungs- und Reviewprozess unterworfen.
+
+Wesentliche Risiken und Gegenmaßnahmen:
+
+- **Zu wenig Kontext:** gezielte Spezialabfrage, sichtbare Unsicherheit, Review und Tests.
+- **Zu viel Kontext:** kleine Einstiegsabfrage, harte Ergebnisgrenzen, keine Rohtranskripte.
+- **Stale `code-map.md`:** Aktualitätskennzeichnung und MCP-Recheck vor Änderungen.
+- **MCP-Ausfall:** lokaler Fallback und dokumentierte Einschränkung.
+- **Recherche-Schleife:** Abschlusskriterium, Zeit-/Umfangsgrenze und Eskalation.
+- **Fremde Änderungen:** aktive Ownership, Pause und Re-Baselining; kein Reset/Overwrite.
+- **Kaskadierende Agentenfehler:** ein verantwortlicher Implementierer und überprüfbare Übergabepunkte.
+- **Unnötige Aktion bei Diagnose/No-op:** explizite Skip-Entscheidung.
+
+## Geplante Verifikation des Konzepts
+
+Vor einer Freigabe als `ready` soll der Workflow an repräsentativen Fällen geprüft werden:
+
+1. **Einfache lokale Änderung:** keine Scout-Rolle, keine unnötige `code-map.md`, begrenzte Toolkette.
+2. **Bekannte C#-Struktur:** `get_feature_context` liefert die Startbasis; nur echte Lücken lösen Folgeabfragen aus.
+3. **Unbekannte C#-Struktur:** `find_symbol` führt zu einem fokussierten Feature-Kontext statt zu Vollscan.
+4. **Mehrstufiges Refactoring:** Map enthält nur relevante Einstiegspunkte, Abhängigkeiten, Tests, Risiken und Verifikation.
+5. **Unvollständige MCP-Antwort:** Trunkierung wird erkannt; der Agent vertieft, begrenzt oder eskaliert.
+6. **MCP-Ausfall:** Fallback funktioniert, ohne falsche Sicherheit zu behaupten.
+7. **No-op-Aufgabe:** Agent beendet ohne Scheincode oder künstliche Dokumentationsänderung.
+8. **Fremde Working-Tree-Änderung:** Agent pausiert/re-baselined und verändert keine fremden Dateien.
+
+Zu erfassende lokale Metriken:
+
+- Zeit bis zur belastbaren Änderungshypothese,
+- Anzahl und Typ der MCP-Aufrufe,
+- geschätzter Kontext-/Tokenumfang,
+- Anzahl der Fallbacks, Trunkierungen und widersprüchlichen Befunde,
+- erzeugte/aktualisierte Maps und Map-Fehler,
+- unnötige Änderungen bei No-op-Fällen,
+- relevante P0/P1-Befunde und Testfehler,
+- nachgelagerte Korrekturschleifen und Vollständigkeit komplexer Refactorings.
+
+## Offene Punkte
+
+1. **Aktivierung der `code-map.md`:** Soll sie ausschließlich bei semantischen Mehrkomponenten-/Resume-Aufgaben entstehen? Empfehlung: ja; einfache lokale Aufgaben bleiben map-frei.
+2. **Kontext-Abschluss:** Soll der Implementierer nach `get_feature_context` selbst anhand sichtbarer Evidenz entscheiden, ob der Kontext ausreicht? Empfehlung: ja; der Orchestrator soll keine starre Toolsequenz erzwingen.
+
+## Verworfen / bewusst nicht festgeschrieben
+
+- verpflichtender Scout-Subagent vor jedem Implementierer,
+- pauschaler Parallel-Scout,
+- feste Mindest-/Höchstzahl an Tools oder Tokens,
+- vollständige Repository-Karte als Pflicht,
+- `code-map.md` als autoritative Quelle,
+- Erfolgsmessung nur über einen externen Benchmark,
+- Bearbeitung fremder Working-Tree-Änderungen durch Reset oder Überschreiben.
+
+## Arbeitsgedächtnis
+
+- Die fachliche Zielrichtung wurde geändert: Nicht „Scout verbessern“, sondern den gesamten Kontextworkflow MCP-first und adaptiv machen.
+- Der AiNetLinter-MCP bietet bereits einen passenden Einstieg: `get_feature_context` bündelt Deklaration, Metriken, Aufrufer, statische Tests und Violations.
+- Eine lokale Probe mit `AiNetLinter.Mcp.AnalysisToolCall` bestätigte diese fünf strukturierten Dimensionen; die begrenzte Aufruferausgabe wurde als Trunkierung sichtbar.
+- Bestehende Orchestrator-/Implementierer-Regeln unterstützen bereits MCP-first-Prüfung, Fallbacks und eine task-lokale `code-map.md`; das Konzept verschiebt sie von Pflicht/Scout zu bedingtem Arbeitsgedächtnis.
+- Die Forschung rechtfertigt fokussierte Exploration und strukturiertes Kontextmanagement, aber nicht die pauschale Einführung eines zweiten Recherche-Agenten.
+- Der Draft bleibt bis zur expliziten Freigabe `status: draft`; erst danach darf ein Implementierungs-/Orchestrator-Task gestartet werden.
