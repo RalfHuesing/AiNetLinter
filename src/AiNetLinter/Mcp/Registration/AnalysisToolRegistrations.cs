@@ -188,7 +188,7 @@ internal static class AnalysisToolRegistrations
         "fuer ein oder mehrere C#-Symbole (Batch-Support in 1 Turn) abrufen. " +
         "symbolIdentifiers: Array von Symbol-IDs (auch fuer genau ein Symbol): " +
         "DocCommentId (\"M:Namespace.Class.Method\"), \"Datei.cs:Zeile:Spalte\", " +
-        "\"Datei.cs:Zeile\" oder qualifizierter Name.";
+        "\"Datei.cs:Zeile\" oder qualifizierter Name. Liefert MetricsLookupBatchDto in structuredContent.";
 
     private static void AddPatternDetect(
         McpServerPrimitiveCollection<McpServerTool> tools,
