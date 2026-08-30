@@ -18,7 +18,7 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 /// Target-Key; parallele Erstzugriffe teilen die Creation-Task und erhalten
 /// anschliessend eigene, read-only Leases auf denselben Roslyn-Snapshot.
 /// </summary>
-internal sealed class AssemblyAnalysisRegistry : IAsyncDisposable
+internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
 {
     internal const int MaxFingerprintRetries = 3;
 
@@ -28,19 +28,66 @@ internal sealed class AssemblyAnalysisRegistry : IAsyncDisposable
     private readonly List<Task> retiredEntries = [];
     private readonly IAssemblySourceResolver? sourceOrchestrator;
     private readonly Func<string, AssemblyFingerprint>? fingerprintFactory;
+    private readonly AssemblyAnalysisResourceBudget resourceBudget;
     private int disposed;
 
     internal AssemblyAnalysisRegistry(
         IAssemblySourceResolver? sourceOrchestrator = null,
-        Func<string, AssemblyFingerprint>? fingerprintFactory = null)
+        Func<string, AssemblyFingerprint>? fingerprintFactory = null,
+        ExternalResourceRegistry? resourceRegistry = null)
     {
         this.sourceOrchestrator = sourceOrchestrator;
         this.fingerprintFactory = fingerprintFactory;
+        resourceBudget = new(resourceRegistry);
     }
 
     internal int ResidentCount
     {
         get { lock (gate) return entries.Count; }
+    }
+
+    int IAssemblyAnalysisRegistry.ResidentCount => ResidentCount;
+
+    Task<AssemblyAnalysisLeaseResult> IAssemblyAnalysisRegistry.LeaseAsync(
+        string assemblyPath,
+        CancellationToken cancellationToken) => LeaseAsync(assemblyPath, cancellationToken);
+
+    internal ExternalResourceHealthSnapshot? ResourceHealth => resourceBudget.Health;
+
+    internal async Task<int> RunEvictionTickAsync()
+    {
+        var retirements = new List<Task>();
+        var now = DateTime.UtcNow;
+        AssemblyAnalysisRegistryEntryCreation[] candidates;
+        lock (gate)
+        {
+            if (Volatile.Read(ref disposed) != 0) return 0;
+            candidates = entries.Values
+                .Where(creation => creation.Task.IsCompletedSuccessfully)
+                .ToArray();
+        }
+
+        foreach (var creation in candidates)
+        {
+            var entry = await creation.Task.ConfigureAwait(false);
+            if (!entry.IsIdle(now, resourceBudget.IdleTtl))
+            {
+                continue;
+            }
+
+            lock (gate)
+            {
+                var key = entries.FirstOrDefault(pair => ReferenceEquals(pair.Value, creation)).Key;
+                if (key is null || !entries.Remove(key)) continue;
+                var retirement = RetireEntryAsync(creation);
+                retiredEntries.Add(retirement);
+                retirements.Add(retirement);
+            }
+        }
+
+        foreach (var retirement in retirements) await retirement.ConfigureAwait(false);
+        resourceBudget.EvictIdle();
+        return retirements.Count;
     }
 
     internal async Task<AssemblyAnalysisLeaseResult> LeaseAsync(
@@ -52,6 +99,7 @@ internal sealed class AssemblyAnalysisRegistry : IAsyncDisposable
             return Failure("Die Assembly-Registry wurde bereits beendet.");
         }
 
+        await RunEvictionTickAsync().ConfigureAwait(false);
         var canonicalPath = Path.GetFullPath(assemblyPath);
         for (var retry = 0; retry <= MaxFingerprintRetries; retry++)
         {
@@ -197,94 +245,33 @@ internal sealed class AssemblyAnalysisRegistry : IAsyncDisposable
             retiredEntries.Clear();
         }
 
-        CancelCreations(pending, failures);
-        await DisposeRetiredEntriesAsync(retired, failures).ConfigureAwait(false);
-        await DisposeEntriesAsync(pending, failures).ConfigureAwait(false);
+        AssemblyAnalysisRegistryDisposal.CancelCreations(pending, failures);
+        await AssemblyAnalysisRegistryDisposal.DisposeRetiredEntriesAsync(retired, failures).ConfigureAwait(false);
+        await AssemblyAnalysisRegistryDisposal.DisposeEntriesAsync(pending, failures).ConfigureAwait(false);
 
         DisposeFailureAggregator.ThrowIfAny(failures);
-    }
-
-    private static void CancelCreations(
-        IEnumerable<AssemblyAnalysisRegistryEntryCreation> creations,
-        List<Exception> failures)
-    {
-        foreach (var creation in creations)
-        {
-            try
-            {
-                creation.CancellationSource.Cancel();
-            }
-            catch (ObjectDisposedException)
-            {
-                Log.Debug("Assembly-Registry-Creation war beim Beenden bereits freigegeben.");
-            }
-            catch (Exception exception)
-            {
-                failures.Add(exception);
-                Log.Warning(exception, "Assembly-Registry-Cancellation einer Creation fehlgeschlagen.");
-            }
-        }
-    }
-
-    private static async Task DisposeRetiredEntriesAsync(
-        IEnumerable<Task> retirements,
-        List<Exception> failures)
-    {
-        foreach (var retirement in retirements)
-        {
-            try
-            {
-                await retirement.ConfigureAwait(false);
-            }
-            catch (Exception exception)
-            {
-                failures.Add(exception);
-                Log.Warning(exception, "Assembly-Registry-retired Entry konnte nicht vollständig freigegeben werden.");
-            }
-        }
-    }
-
-    private static async Task DisposeEntriesAsync(
-        IEnumerable<AssemblyAnalysisRegistryEntryCreation> creations,
-        List<Exception> failures)
-    {
-        foreach (var creation in creations)
-        {
-            try
-            {
-                var entry = await creation.Task.ConfigureAwait(false);
-                await entry.DisposeAsync().ConfigureAwait(false);
-            }
-            catch (OperationCanceledException exception)
-            {
-                Log.Debug(exception, "Assembly-Registry-Creation wurde beim Beenden abgebrochen.");
-            }
-            catch (Exception exception)
-            {
-                failures.Add(exception);
-                Log.Warning(exception, "Assembly-Registry-Entry konnte beim Beenden nicht vollständig freigegeben werden.");
-            }
-            finally
-            {
-                creation.DisposeCancellationSource();
-            }
-        }
     }
 
     private async Task<AssemblyAnalysisEntry> CreateEntryAsync(
         string canonicalPath,
         long targetGeneration,
-        CancellationToken creationToken)
+        CancellationToken creationToken,
+        ExternalResourceLease? resourceLease)
     {
         IDisposable? sourceScope = null;
         AssemblyAnalysisSession? session = null;
+        ExternalResourceOperationLease? operation = null;
+        var resourceTransferred = false;
         try
         {
-            var sourceAttempt = await TryCreateSourceEntryAsync(canonicalPath, targetGeneration, creationToken).ConfigureAwait(false);
+            operation = resourceBudget.BeginOperation(creationToken);
+
+            var sourceAttempt = await TryCreateSourceEntryAsync(canonicalPath, targetGeneration, creationToken, resourceLease).ConfigureAwait(false);
             sourceScope = sourceAttempt.Scope;
             if (sourceAttempt.Entry is not null)
             {
                 sourceScope = null;
+                resourceTransferred = true;
                 return sourceAttempt.Entry;
             }
 
@@ -303,20 +290,24 @@ internal sealed class AssemblyAnalysisRegistry : IAsyncDisposable
             {
                 Diagnostics = CombineContextDiagnostics(context.Diagnostics, sourceAttempt.Diagnostics),
             };
-            var fallbackEntry = AssemblyAnalysisEntry.Create(
+            var fallbackEntry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
                 canonicalPath,
                 sessionGeneration.Snapshot.Solution,
                 context,
-                session);
+                session,
+                resourceLease));
+            resourceTransferred = true;
             session = null;
             return fallbackEntry;
         }
         finally
         {
-            TryDispose(sourceScope, "Source-Selection-Scope");
+            operation?.Dispose();
+            if (!resourceTransferred) resourceLease?.Dispose();
+            AssemblyAnalysisRegistryDisposal.TryDispose(sourceScope, "Source-Selection-Scope");
             if (session is not null)
             {
-                await TryDisposeAsync(session, "Assembly-Session").ConfigureAwait(false);
+                await AssemblyAnalysisRegistryDisposal.TryDisposeAsync(session, "Assembly-Session").ConfigureAwait(false);
             }
         }
     }
@@ -328,9 +319,21 @@ internal sealed class AssemblyAnalysisRegistry : IAsyncDisposable
             : 1;
         nextGenerations[canonicalPath] = generation;
         var creationLifetime = new CancellationTokenSource();
+        var resourceAcquisition = resourceBudget.Acquire(canonicalPath);
+        var resourceLease = resourceAcquisition.Lease;
+        if (resourceBudget.IsEnabled && resourceLease is null)
+        {
+            var failed = Task.FromException<AssemblyAnalysisEntry>(
+                new ExternalResourceCapacityException(
+                    resourceAcquisition.FailureReason ?? "Externe Ressourcen sind nicht verfügbar."));
+            var rejected = new AssemblyAnalysisRegistryEntryCreation(creationLifetime, failed);
+            ObserveCreation(canonicalPath, rejected);
+            return rejected;
+        }
+
         var creation = new AssemblyAnalysisRegistryEntryCreation(
             creationLifetime,
-            CreateEntryAsync(canonicalPath, generation, creationLifetime.Token));
+            CreateEntryAsync(canonicalPath, generation, creationLifetime.Token, resourceLease));
         ObserveCreation(canonicalPath, creation);
         return creation;
     }
@@ -355,7 +358,8 @@ internal sealed class AssemblyAnalysisRegistry : IAsyncDisposable
     private async Task<SourceEntryAttempt> TryCreateSourceEntryAsync(
         string canonicalPath,
         long generation,
-        CancellationToken creationToken)
+        CancellationToken creationToken,
+        ExternalResourceLease? resourceLease)
     {
         if (sourceOrchestrator is null) return SourceEntryAttempt.None;
 
@@ -383,16 +387,17 @@ internal sealed class AssemblyAnalysisRegistry : IAsyncDisposable
                     .Take(100)
                     .ToList(),
             };
-            var entry = AssemblyAnalysisEntry.Create(
+            var entry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
                 canonicalPath,
                 resolution.Selection.SourceLease.Snapshot.Solution,
                 context,
-                resolution.Lifetime);
+                resolution.Lifetime,
+                resourceLease));
             return new(entry, null, diagnostics);
         }
         catch
         {
-            TryDispose(resolution.Lifetime, "Source-Selection-Scope nach Creation-Fehler");
+            AssemblyAnalysisRegistryDisposal.TryDispose(resolution.Lifetime, "Source-Selection-Scope nach Creation-Fehler");
             throw;
         }
     }
@@ -439,30 +444,6 @@ internal sealed class AssemblyAnalysisRegistry : IAsyncDisposable
         IReadOnlyList<string> source) =>
         context.Concat(source).Distinct(StringComparer.Ordinal).Take(100).ToList();
 
-    private static void TryDispose(IDisposable? disposable, string resource)
-    {
-        try
-        {
-            disposable?.Dispose();
-        }
-        catch (Exception exception)
-        {
-            Log.Warning(exception, "Assembly-Registry-Cleanup fehlgeschlagen: Ressource={Resource}", resource);
-        }
-    }
-
-    private static async ValueTask TryDisposeAsync(IAsyncDisposable disposable, string resource)
-    {
-        try
-        {
-            await disposable.DisposeAsync().ConfigureAwait(false);
-        }
-        catch (Exception exception)
-        {
-            Log.Warning(exception, "Assembly-Registry-Cleanup fehlgeschlagen: Ressource={Resource}", resource);
-        }
-    }
-
     private sealed record SourceEntryAttempt(
         AssemblyAnalysisEntry? Entry,
         IDisposable? Scope,
@@ -479,4 +460,5 @@ internal sealed class AssemblyAnalysisRegistry : IAsyncDisposable
         new(null, isError
             ? McpToolResults.Error(LinterErrorCodes.AnalysisFailed, message)
             : McpToolResults.Recoverable(LinterErrorCodes.AnalysisFailed, message));
+
 }

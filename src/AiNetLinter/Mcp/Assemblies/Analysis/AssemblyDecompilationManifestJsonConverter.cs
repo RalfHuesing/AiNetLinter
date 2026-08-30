@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -252,15 +253,23 @@ internal sealed class AssemblyDecompilationManifestJsonConverter : JsonConverter
         var result = new List<AssemblyReferenceDto>();
         foreach (var item in value.EnumerateArray())
         {
+            var referencePropertyNames = item.EnumerateObject().Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
+            var optionalNames = new[]
+            {
+                JsonPropertyName(nameof(AssemblyReferenceDto.ResolutionState)),
+                JsonPropertyName(nameof(AssemblyReferenceDto.Depth)),
+                JsonPropertyName(nameof(AssemblyReferenceDto.Diagnostic)),
+            };
             var reference = ReadProperties(
                 item,
-                [
+                new[]
+                {
                     JsonPropertyName(nameof(AssemblyReferenceDto.Name)),
                     JsonPropertyName(nameof(AssemblyReferenceDto.Version)),
                     JsonPropertyName(nameof(AssemblyReferenceDto.Culture)),
                     JsonPropertyName(nameof(AssemblyReferenceDto.Resolved)),
                     JsonPropertyName(nameof(AssemblyReferenceDto.ResolvedPath)),
-                ],
+                }.Concat(optionalNames.Where(referencePropertyNames.Contains)).ToList(),
                 "Assembly-Referenz");
             var resolvedPathName = JsonPropertyName(nameof(AssemblyReferenceDto.ResolvedPath));
             var resolvedPath = reference[resolvedPathName].ValueKind switch
@@ -274,10 +283,30 @@ internal sealed class AssemblyDecompilationManifestJsonConverter : JsonConverter
                 ReadString(reference, JsonPropertyName(nameof(AssemblyReferenceDto.Version))),
                 ReadString(reference, JsonPropertyName(nameof(AssemblyReferenceDto.Culture))),
                 ReadBoolean(reference, JsonPropertyName(nameof(AssemblyReferenceDto.Resolved))),
-                resolvedPath));
+                resolvedPath,
+                ReadOptionalString(reference, JsonPropertyName(nameof(AssemblyReferenceDto.ResolutionState))) ?? (resolvedPath is null ? "missing" : "resolved"),
+                ReadOptionalInt32(reference, JsonPropertyName(nameof(AssemblyReferenceDto.Depth))),
+                ReadOptionalString(reference, JsonPropertyName(nameof(AssemblyReferenceDto.Diagnostic)))));
         }
 
         return result;
+    }
+
+    private static string? ReadOptionalString(IReadOnlyDictionary<string, JsonElement> properties, string name)
+    {
+        if (!properties.TryGetValue(name, out var value)) return null;
+        if (value.ValueKind == JsonValueKind.Null) return null;
+        return value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : throw new JsonException($"Das optionale Manifestfeld '{name}' muss ein String oder null sein.");
+    }
+
+    private static int ReadOptionalInt32(IReadOnlyDictionary<string, JsonElement> properties, string name)
+    {
+        if (!properties.TryGetValue(name, out var value)) return 1;
+        return value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number)
+            ? number
+            : throw new JsonException($"Das optionale Manifestfeld '{name}' muss eine ganze Zahl sein.");
     }
 
     private static void WriteIdentity(Utf8JsonWriter writer, string name, AssemblyIdentityDto? identity)
@@ -314,6 +343,16 @@ internal sealed class AssemblyDecompilationManifestJsonConverter : JsonConverter
             else
             {
                 writer.WriteString(JsonPropertyName(nameof(AssemblyReferenceDto.ResolvedPath)), reference.ResolvedPath);
+            }
+            writer.WriteString(JsonPropertyName(nameof(AssemblyReferenceDto.ResolutionState)), reference.ResolutionState);
+            writer.WriteNumber(JsonPropertyName(nameof(AssemblyReferenceDto.Depth)), reference.Depth);
+            if (reference.Diagnostic is null)
+            {
+                writer.WriteNull(JsonPropertyName(nameof(AssemblyReferenceDto.Diagnostic)));
+            }
+            else
+            {
+                writer.WriteString(JsonPropertyName(nameof(AssemblyReferenceDto.Diagnostic)), reference.Diagnostic);
             }
             writer.WriteEndObject();
         }

@@ -151,6 +151,52 @@ weiter.
 - Erwartete nächste Aktion: terminalen Implementiererbericht abwarten, danach
   den Subagenten archivieren und einen frischen unabhängigen Reviewer starten.
 
+## 2026-08-30 — Epic 3 Implementierer abgeschlossen
+
+- Subagent-ID: `01a05340-c106-7281-a1c0-ee18baf54b11`
+- Status: `completed`, noch ohne Review
+- Geänderte Bereiche: transitive PE-Metadatenreferenzen, Missing-/Cycle- /
+  Version-/Partialzustände, bounded TPA-/Framework-Referenzgraph,
+  ExternalResourceRegistry mit Budgets/Health/TTL/LRU/Leases, Creation Barrier,
+  Generationen-/mtime-Reuse, Registry-Disposal sowie zugehörige Assembly-,
+  Registry- und Resource-Tests.
+
+### Verifikationsnachweis nach der letzten Codeänderung
+
+- `dotnet build`: 0 Warnungen, 0 Fehler.
+- `dotnet build AiNetLinter.slnx --no-restore`: erfolgreich.
+- Gezielte Epic-3-FastTests mit Assembly-, Registry-, Wiring- und Resource-
+  Scopes: 49/49 bestanden.
+- `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`:
+  372/372 bestanden.
+- `git --no-pager diff --check`: sauber; nur bekannte CRLF-Hinweise.
+- MCP `get_impact` im Änderungs-Kontext: 0 Violations.
+- MCP `get_violations` für `src/AiNetLinter/Mcp`: 0.
+- MCP `safeguard` für `src/AiNetLinter/Mcp`: 10/10.
+- MCP `find_duplicates`: keine Cluster.
+- MCP `find_dead_code`: kein High-Confidence-Dead-Code.
+- MCP `find_magic_values`: 7 diagnostische/Identifier-Kandidaten; keine
+  sichere scope-nahe Korrektur.
+- Refactoring-Drift wurde nicht breit ausgeführt, da keine konkrete
+  Helper-Klon-Hypothese bestand.
+
+### Offener Gate-Befund
+
+Der vollständige FastTests-Lauf
+`dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` meldete
+2216/2219 erfolgreiche Tests und scheiterte an einem bestehenden,
+nicht von Epic 3 geänderten `ProjectRegistryTests`-Test; zwei bekannte
+Reparse-Tests wurden übersprungen. Der fremde ProjectRegistry-Scope wurde
+nicht verändert. Dieser Nachweis ist für den Review verfügbar und wird nicht
+ohne konkrete Gegenhypothese erneut ausgeführt.
+
+### Nächste Aktion
+
+Der Implementierungsstand wird jetzt als unreviewter Epic-3-Checkpoint
+gesichert. Danach folgt genau ein frischer unabhängiger Reviewer; er wertet
+diesen Nachweis zuerst gegen den tatsächlichen Diff aus und wiederholt nur
+fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
+
 ## 2026-08-30 — Epic 2 Implementierer abgeschlossen
 
 - Subagent-ID: `01a05331-c495-7630-936c-130c7303219a`
@@ -184,3 +230,14 @@ weiter.
   Epic-2-Diffs und als Test-/Umgebungsinfrastruktur eingeordnet.
 - Nächste Aktion: Epic 2 als `done` markieren, den vollständigen Epic-Stand
   committen und danach Epic 3 mit frischen Rollen starten.
+
+## 2026-08-30 — Epic 3 Implementierer gestartet
+
+- Run-ID: `resume-2026-08-30-epic-3`
+- Epic: 3 — Transitive Assembly-Referenzen und getrennte externe Ressourcen
+- Rolle: Implementierer
+- Subagent-ID: `01a05340-c106-7281-a1c0-ee18baf54b11`
+- Diff-Baseline: `2b76b113`
+- Status: `running`
+- Erwartete nächste Aktion: terminalen Implementiererbericht abwarten, danach
+  den Subagenten archivieren und einen frischen unabhängigen Reviewer starten.

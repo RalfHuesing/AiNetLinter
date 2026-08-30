@@ -14,9 +14,10 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
 {
     private readonly SourceSnapshotRegistry registry;
+    private readonly ExternalResourceRegistry resources;
     private readonly IAssemblySourceSelectionResolver orchestrator;
     private readonly IAssemblySourceResolver registryResolver;
-    private readonly AssemblyAnalysisRegistry sessions;
+    private readonly IAssemblyAnalysisRegistry sessions;
     private readonly object lifecycleGate = new();
     private Task? disposalTask;
     private int disposed;
@@ -24,18 +25,20 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
     private AssemblyAnalysisHostComposition(
         ExternalSourceConfigurationLoadResult configurationResult,
         IExternalSourceProvider provider,
-        SourceSnapshotRegistry registry)
+        SourceSnapshotRegistry registry,
+        ExternalResourceRegistry resources)
     {
         ConfigurationResult = configurationResult;
         Provider = provider;
         this.registry = registry;
+        this.resources = resources;
         var sourceOrchestrator = new AssemblySourceSelectionOrchestrator(
             configurationResult,
             provider,
             registry);
         orchestrator = sourceOrchestrator;
         registryResolver = sourceOrchestrator;
-        sessions = new AssemblyAnalysisRegistry(registryResolver);
+        sessions = new AssemblyAnalysisRegistry(registryResolver, resourceRegistry: resources);
     }
 
     internal ExternalSourceConfigurationLoadResult ConfigurationResult { get; }
@@ -44,7 +47,9 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
 
     internal SourceSnapshotRegistry Registry => registry;
 
-    internal AssemblyAnalysisRegistry Sessions
+    internal ExternalResourceRegistry Resources => resources;
+
+    internal IAssemblyAnalysisRegistry Sessions
     {
         get
         {
@@ -74,7 +79,8 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
             configurationResult,
             credentialResolver);
         var registry = new SourceSnapshotRegistry();
-        return new AssemblyAnalysisHostComposition(configurationResult, sourceProvider, registry);
+        var resources = new ExternalResourceRegistry();
+        return new AssemblyAnalysisHostComposition(configurationResult, sourceProvider, registry, resources);
     }
 
     private static IExternalSourceProvider CreateDefaultProvider(
@@ -125,6 +131,15 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
         try
         {
             registry.Dispose();
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+
+        try
+        {
+            resources.Dispose();
         }
         catch (Exception exception)
         {

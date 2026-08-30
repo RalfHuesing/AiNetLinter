@@ -408,7 +408,6 @@ internal sealed class AssemblyDecompilationCache
                 Complete = request.Status == AssemblySessionStatus.Complete,
             },
         };
-
     private static bool ReferencesEqual(
         IReadOnlyList<AiNetLinter.Mcp.Tools.AssemblyAnalysis.AssemblyReferenceDto> expected,
         IReadOnlyList<AiNetLinter.Mcp.Tools.AssemblyAnalysis.AssemblyReferenceDto> actual) =>
@@ -418,7 +417,10 @@ internal sealed class AssemblyDecompilationCache
             && string.Equals(pair.First.Version, pair.Second.Version, StringComparison.Ordinal)
             && string.Equals(pair.First.Culture, pair.Second.Culture, StringComparison.OrdinalIgnoreCase)
             && pair.First.Resolved == pair.Second.Resolved
-            && string.Equals(pair.First.ResolvedPath, pair.Second.ResolvedPath, StringComparison.OrdinalIgnoreCase));
+            && string.Equals(pair.First.ResolvedPath, pair.Second.ResolvedPath, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(pair.First.ResolutionState, pair.Second.ResolutionState, StringComparison.Ordinal)
+            && pair.First.Depth == pair.Second.Depth
+            && string.Equals(pair.First.Diagnostic, pair.Second.Diagnostic, StringComparison.Ordinal));
 
     private static bool IdentityEquals(
         AiNetLinter.Mcp.Tools.AssemblyAnalysis.AssemblyIdentityDto? expected,
@@ -494,5 +496,4 @@ internal sealed class AssemblyDecompilationCache
         exception is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException;
 
     private sealed record PointerPublishAttempt(bool Succeeded, AssemblySessionDiagnostic? Diagnostic);
-
 }

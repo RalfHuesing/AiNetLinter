@@ -60,7 +60,10 @@ internal sealed record AssemblyReferenceDto(
     string Version,
     string Culture,
     bool Resolved,
-    string? ResolvedPath = null);
+    string? ResolvedPath = null,
+    string ResolutionState = "resolved",
+    int Depth = 1,
+    string? Diagnostic = null);
 
 internal sealed record AssemblyMemberDto(
     string Kind,

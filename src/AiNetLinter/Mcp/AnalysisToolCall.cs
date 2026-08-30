@@ -111,7 +111,7 @@ internal static class ProjectAnalysisDispatcher
 
 internal static class AssemblyAnalysisDispatcher
 {
-    internal static AnalysisToolRoute CreateRoute(AssemblyAnalysisRegistry? assemblyRegistry) => request =>
+    internal static AnalysisToolRoute CreateRoute(IAssemblyAnalysisRegistry? assemblyRegistry) => request =>
         request.Dispatch.AssemblySessionCall is null
             ? Task.FromResult(UnsupportedAssemblyTarget())
             : ExecuteAsync(
@@ -121,7 +121,7 @@ internal static class AssemblyAnalysisDispatcher
                 request.CancellationToken);
 
     internal static async Task<CallToolResult> ExecuteAsync(
-        AssemblyAnalysisRegistry? assemblyRegistry,
+        IAssemblyAnalysisRegistry? assemblyRegistry,
         AnalysisTargetRequest request,
         Func<AssemblyAnalysisLease, Task<CallToolResult>> assemblyCall,
         CancellationToken cancellationToken = default)

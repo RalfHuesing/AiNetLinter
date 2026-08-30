@@ -321,6 +321,86 @@ public sealed class AssemblyAnalysisToolTests
         Assert.Contains("partial", TextOf(result), StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void ReferenceResolver_TraversesLocalMetadataReferencesTransitivelyAndDeduplicates()
+    {
+        using var temp = TestTempDirectory.Create("assembly-reference-transitive-");
+        var leafPath = AssemblyTestHelper.EmitAssembly(temp, "ReferenceLeaf", "namespace Probe; public sealed class Leaf { }");
+        var middlePath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ReferenceMiddle",
+            "namespace Probe; public sealed class Middle { public Leaf Value { get; } = new(); }",
+            leafPath);
+        var rootPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ReferenceRoot",
+            "namespace Probe; public sealed class Root { public Middle Value { get; } = new(); }",
+            middlePath,
+            leafPath);
+
+        var resolution = new AssemblyReferenceResolver().Resolve(rootPath);
+
+        var middle = Assert.Single(resolution.References, reference => reference.Name == "ReferenceMiddle");
+        var leaf = Assert.Single(resolution.References, reference => reference.Name == "ReferenceLeaf");
+        Assert.True(middle.Resolved);
+        Assert.True(leaf.Resolved);
+        Assert.Equal(1, middle.Depth);
+        Assert.Equal(2, leaf.Depth);
+        Assert.Equal(2, resolution.References.Count(reference => reference.ResolvedPath is not null && reference.Name is "ReferenceMiddle" or "ReferenceLeaf"));
+        Assert.Contains(resolution.MetadataReferences, reference => reference.Display?.EndsWith("ReferenceLeaf.dll", StringComparison.OrdinalIgnoreCase) == true);
+    }
+
+    [Fact]
+    public void ReferenceResolver_ReportsMissingTransitiveReferenceAsVisiblePartialState()
+    {
+        using var temp = TestTempDirectory.Create("assembly-reference-missing-transitive-");
+        var leafPath = AssemblyTestHelper.EmitAssembly(temp, "MissingLeaf", "namespace Probe; public sealed class Leaf { }");
+        var middlePath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "MissingMiddle",
+            "namespace Probe; public sealed class Middle { public Leaf Value { get; } = new(); }",
+            leafPath);
+        var rootPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "MissingRoot",
+            "namespace Probe; public sealed class Root { public Middle Value { get; } = new(); }",
+            middlePath);
+        File.Delete(leafPath);
+
+        var resolution = new AssemblyReferenceResolver().Resolve(rootPath);
+
+        var missing = Assert.Single(resolution.References, reference => reference.Name == "MissingLeaf");
+        Assert.False(missing.Resolved);
+        Assert.Equal("missing", missing.ResolutionState);
+        Assert.Equal(2, missing.Depth);
+        Assert.Contains(resolution.Diagnostics, diagnostic => diagnostic.Message.Contains("MissingLeaf", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ReferenceResolver_ReportsCyclesWithoutRecursingUnboundedly()
+    {
+        using var temp = TestTempDirectory.Create("assembly-reference-cycle-");
+        var firstPath = AssemblyTestHelper.EmitAssembly(temp, "CycleFirst", "namespace Probe; public sealed class First { }");
+        var secondPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "CycleSecond",
+            "namespace Probe; public sealed class Second { public First Value { get; } = new(); }",
+            firstPath);
+        AssemblyTestHelper.EmitAssembly(
+            temp,
+            "CycleFirst",
+            "namespace Probe; public sealed class First { public Second Value { get; } = new(); }",
+            secondPath);
+
+        var resolution = new AssemblyReferenceResolver().Resolve(firstPath);
+
+        var cycle = Assert.Single(resolution.References, reference => reference.Name == "CycleFirst");
+        Assert.Equal("cycle", cycle.ResolutionState);
+        Assert.True(cycle.Resolved);
+        Assert.Contains(resolution.Diagnostics, diagnostic => diagnostic.Code == "assembly-reference-cycle");
+        Assert.True(resolution.References.Count < AssemblyReferenceResolver.MaxReferenceNodes);
+    }
+
     private static T Deserialize<T>(CallToolResult result)
     {
         Assert.True(result.StructuredContent.HasValue, TextOf(result));

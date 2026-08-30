@@ -14,6 +14,9 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
 internal sealed class AssemblyReferenceResolver
 {
+    internal const int MaxReferenceDepth = 8;
+    internal const int MaxReferenceNodes = 128;
+
     internal AssemblyReferenceResolution Resolve(string assemblyPath)
     {
         var canonicalPath = AssemblyFingerprintCalculator.Canonicalize(assemblyPath);
@@ -25,31 +28,11 @@ internal sealed class AssemblyReferenceResolver
             {
                 return FailedResolution(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolver.Resolve)), "Die Datei enthält keine .NET-Metadaten.", canonicalPath);
             }
-
-            var metadata = ReadMetadata(peReader.GetMetadataReader());
             var diagnostics = new List<AssemblySessionDiagnostic>();
-            var candidatePaths = ResolveReferenceCandidates(metadata.References, Path.GetDirectoryName(canonicalPath), GetTrustedPlatformAssemblyPaths(), diagnostics);
-            var allPaths = new List<string> { canonicalPath };
-            allPaths.AddRange(candidatePaths.Where(candidate => candidate.Path is not null).Select(candidate => candidate.Path!));
-            var metadataResult = CreateMetadataReferences(allPaths, diagnostics);
-            var references = candidatePaths.Select(candidate =>
-            {
-                var path = candidate.Path;
-                var resolved = path is not null && metadataResult.SuccessfulPaths.Contains(path);
-                if (!resolved && path is not null)
-                {
-                    diagnostics.Add(new(
-                        AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolution.MetadataReferences)),
-                        $"Referenz '{candidate.Reference.Name}' wurde nach Identitätsprüfung nicht als MetadataReference eingebunden: {path}.",
-                        AssemblyDiagnosticSeverity.Warning));
-                }
-
-                return candidate.Reference with
-                {
-                    Resolved = resolved,
-                    ResolvedPath = resolved ? path : null,
-                };
-            }).ToList();
+            var metadata = ReadMetadata(peReader.GetMetadataReader());
+            var graph = BuildReferenceGraph(canonicalPath, metadata, diagnostics);
+            var metadataResult = CreateMetadataReferences(graph.Paths, diagnostics);
+            var references = graph.References.Select(reference => NormalizeReference(reference, metadataResult.SuccessfulPaths)).ToList();
             var decompilerResolver = new ICSharpCode.Decompiler.Metadata.UniversalAssemblyResolver(
                 canonicalPath,
                 false,
@@ -65,31 +48,125 @@ internal sealed class AssemblyReferenceResolver
         }
     }
 
-    private static IReadOnlyList<ReferenceCandidate> ResolveReferenceCandidates(
-        IReadOnlyList<AssemblyReferenceDto> references,
-        string? directory,
-        IReadOnlyList<string> trustedPlatformAssemblies,
+    private static ReferenceGraph BuildReferenceGraph(
+        string canonicalPath,
+        AssemblyMetadata metadata,
         ICollection<AssemblySessionDiagnostic> diagnostics)
     {
-        var resolved = new List<ReferenceCandidate>(references.Count);
-        foreach (var reference in references)
-        {
-            var path = FindReferencePath(reference, directory, trustedPlatformAssemblies, diagnostics);
-            if (path is null)
-            {
-                diagnostics.Add(new(
-                    AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceDto.Resolved)),
-                    $"Abhängigkeit nicht auflösbar: {reference.Name}, Version {reference.Version}, Kultur {reference.Culture}.",
-                    AssemblyDiagnosticSeverity.Warning));
-            }
-
-            resolved.Add(new ReferenceCandidate(reference, path));
-        }
-
-        return resolved;
+        var trustedPaths = GetTrustedPlatformAssemblyPaths();
+        var graph = new ReferenceGraph(canonicalPath, metadata);
+        VisitNode(canonicalPath, trustedPaths, graph, diagnostics);
+        return graph;
     }
 
-    private static string? FindReferencePath(
+    private static void VisitNode(
+        string path,
+        IReadOnlyList<string> trustedPaths,
+        ReferenceGraph graph,
+        ICollection<AssemblySessionDiagnostic> diagnostics)
+    {
+        if (graph.Visited.Count >= MaxReferenceNodes) return;
+        var node = graph.Nodes[path];
+        foreach (var reference in node.Metadata.References)
+        {
+            var resolution = FindReferencePath(reference, Path.GetDirectoryName(node.Path), trustedPaths, diagnostics);
+            var candidate = CreateCandidate(node, reference, resolution, graph, diagnostics);
+            if (!graph.TryAdd(candidate)) continue;
+            if (candidate.ResolutionState is not "resolved" || candidate.ResolvedPath is null) continue;
+            if (trustedPaths.Contains(candidate.ResolvedPath, StringComparer.OrdinalIgnoreCase))
+            {
+                graph.AddPath(candidate.ResolvedPath);
+                continue;
+            }
+
+            VisitChild(candidate, node, trustedPaths, graph, diagnostics);
+        }
+    }
+
+    private static void VisitChild(
+        AssemblyReferenceDto candidate,
+        ReferenceNode parent,
+        IReadOnlyList<string> trustedPaths,
+        ReferenceGraph graph,
+        ICollection<AssemblySessionDiagnostic> diagnostics)
+    {
+        if (graph.Visited.Count >= MaxReferenceNodes)
+        {
+            diagnostics.Add(new("assembly-reference-boundary", $"Die Referenzauflösung erreicht die Begrenzung von {MaxReferenceNodes} Assemblies.", AssemblyDiagnosticSeverity.Warning));
+            return;
+        }
+
+        if (!TryReadMetadata(candidate.ResolvedPath!, out var metadata, diagnostics))
+        {
+            graph.ReplaceLast(candidate with
+            {
+                Resolved = false,
+                ResolvedPath = null,
+                ResolutionState = "invalid",
+                Diagnostic = $"Metadaten von '{candidate.ResolvedPath}' konnten nicht gelesen werden.",
+            });
+            return;
+        }
+
+        graph.AddPath(candidate.ResolvedPath!);
+        var ancestors = new HashSet<string>(parent.Ancestors, StringComparer.OrdinalIgnoreCase) { candidate.ResolvedPath! };
+        graph.Nodes.Add(candidate.ResolvedPath!, new ReferenceNode(candidate.ResolvedPath!, metadata, candidate.Depth, ancestors));
+        VisitNode(candidate.ResolvedPath!, trustedPaths, graph, diagnostics);
+    }
+
+    private static AssemblyReferenceDto CreateCandidate(
+        ReferenceNode node,
+        AssemblyReferenceDto reference,
+        ReferencePathResolution resolution,
+        ReferenceGraph graph,
+        ICollection<AssemblySessionDiagnostic> diagnostics)
+    {
+        var state = DetermineState(node, resolution, graph);
+        var diagnostic = resolution.Diagnostic;
+        if (state is "depth_limit" or "cycle")
+        {
+            diagnostic = state switch
+            {
+                "depth_limit" => $"Referenz '{reference.Name}' überschreitet die maximale Referenztiefe {MaxReferenceDepth}.",
+                "cycle" => $"Zyklische Referenz erkannt: '{reference.Name}' verweist auf '{resolution.Path}'.",
+                _ => null,
+            };
+            diagnostics.Add(new(state == "cycle" ? "assembly-reference-cycle" : "assembly-reference-boundary", diagnostic!, AssemblyDiagnosticSeverity.Warning));
+        }
+
+        return reference with
+        {
+            Resolved = resolution.Path is not null && state is ("resolved" or "cycle" or "deduplicated"),
+            ResolvedPath = resolution.Path,
+            ResolutionState = state,
+            Depth = node.Depth + 1,
+            Diagnostic = diagnostic,
+        };
+    }
+
+    private static string DetermineState(ReferenceNode node, ReferencePathResolution resolution, ReferenceGraph graph) =>
+        resolution.Path is null
+            ? resolution.State
+            : node.Depth >= MaxReferenceDepth
+                ? "depth_limit"
+                : node.Ancestors.Contains(resolution.Path)
+                    ? "cycle"
+                    : graph.Visited.Contains(resolution.Path)
+                        ? "deduplicated"
+                        : "resolved";
+
+    private static AssemblyReferenceDto NormalizeReference(
+        AssemblyReferenceDto reference,
+        IReadOnlySet<string> successfulPaths) =>
+        reference with
+        {
+            Resolved = reference.Resolved && reference.ResolvedPath is not null && successfulPaths.Contains(reference.ResolvedPath),
+            ResolvedPath = reference.Resolved && reference.ResolvedPath is not null && successfulPaths.Contains(reference.ResolvedPath)
+                ? reference.ResolvedPath
+                : null,
+        };
+
+    private static ReferencePathResolution FindReferencePath(
         AssemblyReferenceDto reference,
         string? directory,
         IReadOnlyList<string> trustedPlatformAssemblies,
@@ -100,19 +177,50 @@ internal sealed class AssemblyReferenceResolver
         foreach (var candidate in candidates)
         {
             if (!TryReadIdentity(candidate, out var identity, diagnostics)) continue;
-            if (IdentityMatches(reference, identity)) return candidate;
+            if (IdentityMatches(reference, identity)) return new(candidate, "resolved", null);
             mismatches.Add($"{candidate} ({identity.Version}, {identity.Culture})");
         }
 
         if (mismatches.Count > 0)
         {
+            var diagnostic = $"Kein identitätsgleicher Kandidat für '{reference.Name}' gefunden. Erwartet: Version {reference.Version}, Kultur {reference.Culture}; geprüft: {string.Join(", ", mismatches.Take(5))}.";
             diagnostics.Add(new(
                 AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceDto.Version)),
-                $"Kein identitätsgleicher Kandidat für '{reference.Name}' gefunden. Erwartet: Version {reference.Version}, Kultur {reference.Culture}; geprüft: {string.Join(", ", mismatches.Take(5))}.",
+                diagnostic,
                 AssemblyDiagnosticSeverity.Warning));
+            return new(null, "version_mismatch", diagnostic);
         }
 
-        return null;
+        var missing = $"Abhängigkeit nicht auflösbar: {reference.Name}, Version {reference.Version}, Kultur {reference.Culture}.";
+        diagnostics.Add(new(
+            AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceDto.Resolved)),
+            missing,
+            AssemblyDiagnosticSeverity.Warning));
+        return new(null, "missing", missing);
+    }
+
+    private static bool TryReadMetadata(
+        string path,
+        out AssemblyMetadata metadata,
+        ICollection<AssemblySessionDiagnostic> diagnostics)
+    {
+        try
+        {
+            using var stream = File.OpenRead(path);
+            using var peReader = new PEReader(stream);
+            if (!peReader.HasMetadata) throw new BadImageFormatException("Keine .NET-Metadaten vorhanden.");
+            metadata = ReadMetadata(peReader.GetMetadataReader());
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException or ArgumentException)
+        {
+            diagnostics.Add(new(
+                AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyIdentityDto)),
+                $"Referenzkandidat konnte nicht statisch geprüft werden: {path}: {ex.Message}",
+                AssemblyDiagnosticSeverity.Warning));
+            metadata = null!;
+            return false;
+        }
     }
 
     private static IReadOnlyList<string> EnumerateCandidatePaths(
@@ -252,7 +360,51 @@ internal sealed class AssemblyReferenceResolver
 
     private sealed record AssemblyMetadata(AssemblyIdentityDto Identity, IReadOnlyList<AssemblyReferenceDto> References);
 
-    private sealed record ReferenceCandidate(AssemblyReferenceDto Reference, string? Path);
+    private sealed record ReferenceNode(
+        string Path,
+        AssemblyMetadata Metadata,
+        int Depth,
+        HashSet<string> Ancestors);
+
+    private sealed class ReferenceGraph
+    {
+        private readonly HashSet<string> edgeKeys = new(StringComparer.OrdinalIgnoreCase);
+
+        internal ReferenceGraph(string canonicalPath, AssemblyMetadata metadata)
+        {
+            Paths = [canonicalPath];
+            Visited = new(StringComparer.OrdinalIgnoreCase) { canonicalPath };
+            Nodes = new(StringComparer.OrdinalIgnoreCase)
+            {
+                [canonicalPath] = new ReferenceNode(canonicalPath, metadata, 0, [canonicalPath]),
+            };
+        }
+
+        internal List<AssemblyReferenceDto> References { get; } = [];
+        internal List<string> Paths { get; }
+        internal HashSet<string> Visited { get; }
+        internal Dictionary<string, ReferenceNode> Nodes { get; }
+
+        internal void AddPath(string path)
+        {
+            if (Visited.Add(path)) Paths.Add(path);
+        }
+
+        internal bool TryAdd(AssemblyReferenceDto candidate)
+        {
+            var key = string.Join("|", candidate.Name, candidate.Version, candidate.Culture, candidate.ResolvedPath ?? candidate.ResolutionState);
+            if (!edgeKeys.Add(key)) return false;
+            References.Add(candidate);
+            return true;
+        }
+
+        internal void ReplaceLast(AssemblyReferenceDto candidate) => References[^1] = candidate;
+    }
+
+    private sealed record ReferencePathResolution(
+        string? Path,
+        string State,
+        string? Diagnostic);
 
     private sealed record MetadataReferenceResult(
         IReadOnlyList<MetadataReference> References,

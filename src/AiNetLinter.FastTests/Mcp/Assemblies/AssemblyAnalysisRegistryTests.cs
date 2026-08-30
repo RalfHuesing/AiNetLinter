@@ -225,6 +225,27 @@ public sealed class AssemblyAnalysisRegistryTests
     }
 
     [Fact]
+    public async Task LeaseAsync_ExternalCapacityIsSeparateAndVisibleWithoutEvictingActiveLease()
+    {
+        using var temp = TestTempDirectory.Create("assembly-registry-capacity-");
+        var firstPath = AssemblyTestHelper.EmitAssembly(temp, "CapacityFirst", "namespace Probe; public sealed class First { }");
+        var secondPath = AssemblyTestHelper.EmitAssembly(temp, "CapacitySecond", "namespace Probe; public sealed class Second { }");
+        using var resources = new ExternalResourceRegistry(new ExternalResourceRegistryOptions(MaxResidentResources: 1));
+        await using var registry = new AssemblyAnalysisRegistry(resourceRegistry: resources);
+
+        var first = await registry.LeaseAsync(firstPath);
+        var rejected = await registry.LeaseAsync(secondPath);
+
+        Assert.NotNull(first.Lease);
+        Assert.Null(rejected.Lease);
+        Assert.Contains("Ressourcen", Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(rejected.Error!.Content)).Text, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(ExternalResourceHealth.CapacityExceeded, resources.Health.Health);
+        Assert.Equal(1, registry.ResidentCount);
+
+        first.Lease!.Dispose();
+    }
+
+    [Fact]
     public async Task LeaseAsync_StableChurnStopsAfterBoundedFingerprintRetries()
     {
         using var temp = TestTempDirectory.Create("assembly-registry-churn-");
@@ -274,11 +295,11 @@ public sealed class AssemblyAnalysisRegistryTests
             "namespace EntryTest; public sealed class Value { }");
         var context = await CreateContextAsync(solution.Solution);
         var lifetime = new TrackingLifetime();
-        var entry = AssemblyAnalysisEntry.Create(
+        var entry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
             "entry-test.dll",
             solution.Solution,
             context,
-            lifetime);
+            lifetime));
 
         Assert.True(entry.TryAcquireLease(out var lease));
         var firstDispose = entry.DisposeAsync().AsTask();
@@ -302,11 +323,11 @@ public sealed class AssemblyAnalysisRegistryTests
             "namespace EntryTest; public sealed class Value { }");
         var context = await CreateContextAsync(solution.Solution);
         var lifetime = new TrackingLifetime(throws: true);
-        var entry = AssemblyAnalysisEntry.Create(
+        var entry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
             "entry-failure-test.dll",
             solution.Solution,
             context,
-            lifetime);
+            lifetime));
 
         var failure = await Assert.ThrowsAsync<InvalidOperationException>(
             () => entry.DisposeAsync().AsTask());
