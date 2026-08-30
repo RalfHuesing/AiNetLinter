@@ -264,3 +264,84 @@
   Register erhalten.
 - nächste Aktion: Review-Checkpoint committen, danach genau einen frischen
   Korrektur-Implementierer starten.
+
+## 2026-08-31 — running / EPIC-A / Korrektur-Implementierer Runde 1
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a054fb-32d3-77d1-9b46-0d1861488b06`
+- diff-baseline: `4d5c8106`
+- scope: P1 `CORE-DIRECT-CHILDREN-LIMIT`; den neuen
+  `SolutionDocumentPathResolver` scope-nah verschieben/organisieren oder
+  gleichwertig korrigieren, ohne EPIC-A-Verhalten zu verändern.
+- erwarteter Hand-off: vollständiger Korrekturbericht mit MCP-first-Kontext,
+  fokussierten Tests, Qualitätschecks und letztem `get_violations`-Nachweis;
+  kein Commit durch die Rolle.
+- warteverhalten: Timeout-Rückgaben sind keine Abbruchsgründe. Der Agent wird
+  bis zum echten terminalen Status laufen gelassen.
+
+## 2026-08-31 — completed / EPIC-A / Korrektur-Implementierer Runde 1
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a054fb-32d3-77d1-9b46-0d1861488b06`
+- diff-baseline: `4d5c8106`
+- status: erfolgreich; P1 behoben, kein Commit durch den Agenten.
+- vollständiger finaler Agentenbericht:
+
+  > EPIC-A-Korrektur Runde 1 ist abgeschlossen. Der P1-Befund
+  > `CORE-DIRECT-CHILDREN-LIMIT` ist behoben.
+  >
+  > - `Core` hat wieder 30 direkte Einträge.
+  > - `SolutionDocumentPathResolver.cs` und `DocumentContext.cs` liegen unter
+  >   `src/AiNetLinter/Core/Documents`.
+  > - Fachliche Logik, Assembly-Pfad-, Skeleton-, Parameter- und Stable-ID-
+  >   Verträge blieben unverändert.
+  > - `DiffImpactAnalyzer` behält Pfad und öffentlichen Namespace.
+  > - Kein Commit, keine DLL-Ausführung, keine externen Änderungen.
+  >
+  > MCP-Aufrufe, jeweils mit `targetType=project` und absolutem Projektroot:
+  >
+  > - `find_symbol`: Resolver, `DiffImpactAnalyzer`, `DocumentContext`,
+  >   `PathNormalizer`; Symbole lokalisiert.
+  > - `get_feature_context`: Resolver, `FindDocumentByPath`, `DocumentContext`;
+  >   Aufrufer, Tests und Metriken geprüft.
+  > - `get_symbol_body`: Resolver-Implementierung gelesen; ein unqualifizierter
+  >   Methoden-Identifier wurde kontrolliert als `SYMBOL_NOT_FOUND` korrigiert.
+  > - `find_references`: `FindDocumentByPath` vollständig mit 7 Aufrufern;
+  >   `DocumentContext` mit 3 Aufrufen.
+  > - `get_test_context`: 9 zugeordnete Tests, empfohlener EPIC-A-Filter
+  >   bestätigt.
+  > - `dependency_graph`: Resolver ohne ausgehende, mit `DiffImpactAnalyzer`
+  >   als eingehender Abhängigkeit.
+  > - `get_impact(detailLevel=change-context)`: 4 geänderte Dateien, keine
+  >   zusätzlichen geänderten Symbole/Violations.
+  > - `get_file_tree`: Core-Landkarte und Assembly-Testbereich vollständig;
+  >   final `Core/Documents` mit 2 Dateien.
+  > - Zwischenprüfung des ersten Verlagerungsansatzes:
+  >   `EnforceNamespaceDirectoryMapping` erkannt und behoben.
+  > - `find_duplicates`: 0 Cluster.
+  > - `find_dead_code`: 0 Befunde.
+  > - `find_magic_values`: 0 Befunde.
+  > - Letzter codebezogener Schritt: `get_violations`, Scope
+  >   `src/AiNetLinter/Core`: 0 Violations.
+  >
+  > Tests:
+  >
+  > `dotnet test src/AiNetLinter.FastTests --filter
+  > "FullyQualifiedName~AssemblyAnalysis|FullyQualifiedName~DiffImpactAnalyzer"`
+  >
+  > Ergebnis: 90/90 bestanden, 0 fehlgeschlagen, 0 übersprungen.
+  >
+  > Die `code-map.md` enthält die verifizierten neuen Pfade, Namespaces und
+  > Aufrufer. Keine neuen Task-/Step-Dateien wurden erstellt.
+  >
+  > Offene P2/P3-Tech-Debt: kein neuer Befund. Die zuvor dokumentierten,
+  > nicht kausalen Integrations-Dokumentationsfehler bleiben außerhalb dieses
+  > Scopes bestehen; `TD-EPIC-A-001` ist behoben.
+- geänderte Bereiche: Dateiorganisation unter `src/AiNetLinter/Core/Documents`
+  und zugehörige Code-Map.
+- Review-Hinweis: Nach dem Korrektur-Hand-off kein Produktions-/Testcode
+  geändert; der `get_violations`- und Testnachweis ist frisch.
+- Tech-Debt-Triage: `TD-EPIC-A-001` auf `fixed` gesetzt; kein neuer
+  actionable P2/P3-Befund.
+- nächste Aktion: Korrektur-Checkpoint committen, danach frischen Folge-Review
+  für den EPIC-A-Diff starten.

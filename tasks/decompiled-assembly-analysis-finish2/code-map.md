@@ -29,6 +29,11 @@
   `src/AiNetLinter/Mcp/Tools/DependencyGraph/` sowie
   `src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs` werden nur angepasst,
   wenn der Assembly-Kontext dort nachweisbar falsch behandelt wird.
+- Der dokumentbezogene Infrastruktur-Bereich liegt unter
+  `src/AiNetLinter/Core/Documents/`: `SolutionDocumentPathResolver` und das
+  interne `DocumentContext` verwenden dort den Namespace
+  `AiNetLinter.Core.Documents`; `DiffImpactAnalyzer` bleibt unter
+  `src/AiNetLinter/Core/DiffImpactAnalyzer.cs` im Namespace `AiNetLinter.Core`.
 - Für EPIC-A konkret bestätigt: `DiffImpactAnalyzer.FindDocumentByPath` ist
   über `SolutionDocumentPathResolver` die gemeinsame Dokumentauflösung für `get_file_skeleton`,
   `get_symbol_body`, Dependency- und Referenzpfade. Die relative Ausgabe-
@@ -66,6 +71,9 @@
   Symbol-/Call-Tree-Navigation verwendet; die gemeinsame Datei-/Projekttool-
   Schicht muss `DocumentId`, `SyntaxTree` und `relativeTo` ohne physische
   Dateibasis tolerieren.
+- `LinterEngine` verwendet `AiNetLinter.Core.Documents.DocumentContext` an den
+  drei verifizierten bisherigen Erzeugungs-/Verwendungsstellen; die
+  Namespace-Anpassung ändert nur die interne Dateiorganisation.
 - `AssemblyAnalysisSession` hängt an Decompilation-Cache, Snapshot-Lease und
   `AssemblyReferenceResolver`; Projekt- und Assembly-Sessions bleiben getrennt.
 
@@ -118,7 +126,7 @@
   keine statische Testzuordnung), `ToRelativePath` (6 interne Aufrufer, 15
   Scanner-Tests) und `CreateProjectInfo` (1 Aufrufer, 13 Session-Tests);
   `FormatPath`, `ToRelativePath` und `CreateProjectInfo` meldeten 0 Violations;
-  `DiffImpactAnalyzer.cs` hatte im Zwischenstand einen `MaxLineCount`-Befund,
+  `src/AiNetLinter/Core/DiffImpactAnalyzer.cs` hatte im Zwischenstand einen `MaxLineCount`-Befund,
   der durch die Extraktion in `SolutionDocumentPathResolver.cs` nicht mehr auf
   dem Diff-Hotspot liegt.
 - Nach der Korrektur erneut ausgeführt: `find_symbol` für
@@ -127,7 +135,7 @@
   `find_references` für `DiffImpactAnalyzer.FindDocumentByPath` (7 Call-Sites,
   vollständig), `get_impact` mit `detailLevel=change-context` (3 geänderte
   Symbole, 7 Call-Sites, 4 Testzuordnungen, 0 Violations) und
-  `dependency_graph` für den absoluten `DiffImpactAnalyzer.cs`-Pfad (beide
+  `dependency_graph` für den absoluten `src/AiNetLinter/Core/Documents/SolutionDocumentPathResolver.cs`-Pfad (beide
   Richtungen, vollständig; Resolver als ausgehende Abhängigkeit sichtbar).
 - Abschluss-Audit im betroffenen Produktionsscope `src/AiNetLinter`:
   `find_duplicates` fand 10 begrenzte Clone-Cluster; der einzige exakte

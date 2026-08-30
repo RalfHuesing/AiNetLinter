@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Core;
+namespace AiNetLinter.Core.Documents;
 
 /// <summary>
 /// Loest Dokumentpfade fuer physische und generierte Roslyn-Dokumente auf.

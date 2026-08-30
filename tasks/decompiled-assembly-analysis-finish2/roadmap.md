@@ -4,7 +4,7 @@ status: executing
 current_epic: EPIC-A
 correction_round: 1
 cycle_state: normal
-last_commit: d29af3d4
+last_commit: 4d5c8106
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
@@ -35,6 +35,22 @@ tech_debt: siehe tech-debt.md
   Produktions-Regelverstoß.
 - Begrenzung: erste von höchstens fünf EPIC-A-Korrekturrunden; nach dem Fix
   folgt genau ein frischer Review.
+
+## Aktueller Rollenlauf
+
+- Rolle: frischer Korrektur-Implementierer, EPIC-A Korrekturrunde 1
+- diff-baseline: `4d5c8106`
+- Ursache: `CORE-DIRECT-CHILDREN-LIMIT` (31 direkte Core-Einträge statt 30)
+- erwarteter Ausgang: scope-nahe P1-Bereinigung ohne fachliche Regression,
+  danach gezielte Tests und letzter `get_violations`-Nachweis.
+
+## Korrekturrunde 1 — Implementierung abgeschlossen
+
+- Ergebnis: `SolutionDocumentPathResolver` und `DocumentContext` liegen unter
+  `src/AiNetLinter/Core/Documents`; Core hat wieder 30 direkte Einträge.
+- Status: Review ausstehend.
+- Verifikation: 90/90 fokussierte Tests bestanden; `get_violations` im
+  Produktionsscope 0.
 
 ## EPIC-A — Stabile In-Memory- und Dateipfade
 

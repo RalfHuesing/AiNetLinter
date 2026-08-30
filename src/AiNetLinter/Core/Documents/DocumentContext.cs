@@ -3,7 +3,7 @@
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Configuration;
 
-namespace AiNetLinter.Core;
+namespace AiNetLinter.Core.Documents;
 
 /// <summary>
 /// Kontextinformationen für das zu analysierende Dokument.

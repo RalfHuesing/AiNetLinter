@@ -13,6 +13,7 @@ using AiNetLinter.Output;
 using AiNetLinter.Suppression;
 using AiNetLinter.Metrics;
 using AiNetLinter.Cache;
+using AiNetLinter.Core.Documents;
 
 [assembly: InternalsVisibleTo("AiNetLinter.FastTests")]
 [assembly: InternalsVisibleTo("AiNetLinter.IntegrationTests")]

@@ -20,12 +20,10 @@ Ausführungsprotokoll.
   vorhandenen Core-Dateien.
 - Evidenz: letzter gezielter `get_violations`-Check nach der letzten
   Codeänderung meldete genau 1 Befund; Testscope meldete 0 Violations.
-- Disposition: `fix-now`
-- Risiko: konkreter aktiver Produktions-Regelverstoß; EPIC-A ist bis zur
-  Bereinigung nicht freigabefähig, auch wenn kein fachliches Laufzeitrisiko
-  beobachtet wurde.
-- Nächster Schritt: Resolver in einen fachlich geeigneten Unterordner
-  gruppieren oder eine gleichwertige scope-nahe Korrektur vornehmen und danach
-  Impact, `get_violations` und betroffene Tests erneut prüfen.
-- Log-Anker: `execution-log.md`, completed EPIC-A Implementierer-
-  Fortsetzung vom 2026-08-31.
+- Disposition: `fixed`
+- Risiko: behoben; `src/AiNetLinter/Core` liegt wieder beim aktiven Grenzwert
+  von 30 direkten Einträgen.
+- Nächster Schritt: keine weitere Maßnahme für diesen Befund; die korrigierte
+  Dateiorganisation im Folge-Review verifizieren.
+- Log-Anker: `execution-log.md`, completed EPIC-A Korrektur-
+  Implementierer Runde 1 vom 2026-08-31.
