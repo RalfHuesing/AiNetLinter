@@ -415,3 +415,20 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
 
 - Nächste Aktion: diesen vollständigen Stand als Orchestrator-Checkpoint
   committen und danach einen frischen unabhängigen Reviewer starten.
+
+## 2026-08-30 — Epic 3 Korrekturrunde 1 Review gestartet
+
+- Run-ID: `resume-2026-08-30-epic-3-correction-1-review`
+- Epic: 3 — Transitive Assembly-Referenzen und getrennte externe Ressourcen
+- Rolle: Reviewer
+- Subagent-ID: `01a05381-9148-7a00-920e-599d745e3cb3`
+- Diff-Baseline: `eb1727b8`
+- Status: `running`
+- Prüfauftrag: unabhängige Prüfung der beiden vorherigen P1-Signaturen
+  `Transitive-Reference-Session-Expansion` und
+  `External-Source-Resource-Lifecycle` einschließlich tatsächlicher
+  Routenwirksamkeit, Leases, Budgets, Lifecycle-Races und Testabdeckung.
+- Freshness-Regel: die erfolgreichen Nachweise aus der abgeschlossenen
+  Implementierung werden nicht bloß zur Bestätigung wiederholt; erneute
+  Prüfungen sind nur bei konkreter Gegenhypothese oder unklarem Nachweis
+  zulässig.
