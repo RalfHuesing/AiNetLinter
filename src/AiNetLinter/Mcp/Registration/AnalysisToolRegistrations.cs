@@ -187,6 +187,7 @@ internal static class AnalysisToolRegistrations
         "symbolIdentifiers: Array von Symbol-IDs (auch fuer genau ein Symbol): " +
         "DocCommentId (\"M:Namespace.Class.Method\"), \"Datei.cs:Zeile:Spalte\", " +
         "\"Datei.cs:Zeile\" oder qualifizierter Name. Liefert MetricsLookupBatchDto in structuredContent.";
+    }
 
     private static void AddPatternDetect(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -206,10 +207,9 @@ internal static class AnalysisToolRegistrations
         "Wann nutzen: Solution-weite Audit-Suche nach Code-Patterns (God-Classes, async-void, " +
         "lange Methoden, Public-API ohne Doc, leere Catch-Bloecke, Feature-Envy/Middle-Man) " +
         "statt der flachen Datei-Liste von get_violations — nach Pattern-Kategorie gruppiert. " +
-        "patterns (Default: alle 6) grenzt auf Pattern-IDs ein (god-class, async-void, " +
-        "long-method, public-without-doc, empty-catch, feature-envy), scopeFilter " +
-        "(Projekt-Name oder Pfad-Substring) grenzt auf einen Teilbereich ein, " +
-        "maxResultsPerPattern begrenzt die Trefferliste je Pattern (Default 20).";
+        "patterns: Pattern-IDs (Default alle 6: god-class, async-void, long-method, public-without-doc, " +
+        "empty-catch, feature-envy). scopeFilter: Projekt-Name oder Pfad-Substring zur Eingrenzung, " +
+        "maxResultsPerPattern: Begrenzung der Trefferliste je Pattern (Default 20).";
 
     private static void AddFindMagicValues(
         McpServerPrimitiveCollection<McpServerTool> tools,
