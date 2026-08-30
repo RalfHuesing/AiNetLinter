@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-30T02:45:00+02:00
+last_updated: 2026-08-30T02:47:07+02:00
 rules_dir: .agents/rules
-total_steps: 34
-current_step: step-034
+total_steps: 35
+current_step: step-035
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,10 +13,10 @@ current_step: step-034
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 34 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-034` (`issues`; strikter
-  CacheRoot-Vertrag und fail-closed Konfigurationsweitergabe bis zum
-  Assembly-Tool, als Korrektur von `step-033`)
+- **Steps gesamt:** 35 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-035` (`planned/in_progress`; expliziter,
+  diagnoseunabhängiger ConfigurationFailure bis zum Assembly-Tool, als
+  Korrektur von `step-034`)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
@@ -61,6 +61,7 @@ current_step: step-034
 | step-032 | EPIC-04 | issues | Validated Refresh/Fetch in neue Cache-Generation | - | 59d979b7 | issues → step-033 | 59d979b7 + a16a421c |
 | step-033 | EPIC-04 | issues | Konfigurierbare Cache-Root-/Refresh-Policy mit Fresh/Stale-Vertrag und Step-032-Evidenzabschluss | step-032 | 0c6ab50e + c6787c12 | issues → step-034 | 0c6ab50e + c6787c12 + d57f5aab |
 | step-034 | EPIC-04 | issues | Strikter CacheRoot-Vertrag und fail-closed Konfigurationsweitergabe bis zum Assembly-Tool | step-033 | fcad25e5 + 1dd59128 | issues → step-035 | fcad25e5 + 1dd59128 + ff5fb2e5 |
+| step-035 | EPIC-04 | planned/in_progress | ConfigurationFailure unabhängig von Diagnosen terminal bis zum Assembly-Tool propagieren | step-034 | - | - | - |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -701,3 +702,26 @@ ehrliche Safeguard-FAIL bleiben als Regressionen erhalten. Der Kritiker
 meldete Build grün, Fast Nicht-Stress 2123 bestanden plus 2 Skips,
 Integration Nicht-Stress 370/370, Stress nicht ausgeführt und keine Leaks;
 `tech-debt.md` blieb unverändert.
+
+### Step-035-Planung (2026-08-30)
+
+Ein neuer Planer-Agent wurde gestartet und nach Abschluss geschlossen; kein
+bestehender Agent wurde wiederverwendet. Step 035 ist als größeres
+Korrekturpaket mit `corrects: step-034` auf `planned/in_progress` gesetzt.
+Der eine Primärvertrag ist die diagnoseunabhängige Terminalität eines
+expliziten Config-Failures bis zum Assembly-Tool; die direkt gekoppelten
+Schichten sind der immutable Selection-Statusmarker, die bestehende
+Recoverable-/`IsError=false`-Resultatgrenze sowie die adversariale URI-/UNC-
+und End-to-End-Testmatrix. `Failure([])` darf nicht als `NoMatch` in die
+statische Decompilation fallen; `Success(ExternalSourceConfiguration.Empty)`
+und die positiven NoMatch-, Ambiguous-, ProviderUnavailable- und Capability-
+Fallbacks bleiben erhalten.
+
+Der Plan begrenzt den initialen Kontext auf zehn `read_first`-Dateien und
+zwölf Dateien einschließlich `read_on_demand`. Es gibt keine Roadmap-Änderung,
+keine Step-034-Evidenz-Neubewertung außer direkten Resultatassertions, keine
+globale `McpToolResults`-Änderung, keinen Stress-Test und keine Erweiterung
+von Host-/MCP-Wiring, Health/Degraded, Dirty/Unbuilt, Retention/GC, Refresh/
+Fetch, Reparse oder EPIC-05. Der nächste sichere Übergabepunkt ist ein neuer
+Coder-Agent mit `tasks/decompiled-assembly-analysis/step-035/step-plan.md`;
+nach dessen Abschluss wird er geschlossen und ein frischer Kritiker gestartet.
