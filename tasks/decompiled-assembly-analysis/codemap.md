@@ -2,7 +2,7 @@
 task: decompiled-assembly-analysis
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-30T03:14:33+02:00
+last_updated: 2026-08-30T05:03:00+02:00
 ---
 
 # CodeMap: decompiled-assembly-analysis
@@ -28,6 +28,11 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 ## Assembly-, Roslyn- und Referenzanalyse
 
 - **`src/AiNetLinter/Mcp/Assemblies/`** — enthält Session-, immutable Generation-/Pointer-Cache-, typisierte Manifest-, Budget-, Workspace- und PE-Referenzbausteine für readonly Roslyn-Snapshots.
+- **`ExternalSourceRepositoryResultState.cs`, `ExternalSourceRepositorySourcePolicy.cs` und `ExternalSourceProviderResult.cs`** — definieren den immutable Source-Health-/Checkout-Trust-Vertrag (`Verified`/`Degraded`/`Unavailable` sowie `Clean`/`Dirty`/`Unverified`), validieren sichere Last-good-Revisionen und projizieren secret-freie Fehlerdiagnosen.
+- **`IExternalSourceProvider.cs` und `IExternalSourceRepositoryAcquirer.cs`** — halten die schmalen Provider-/Acquirer-Grenzen getrennt von den Resultatimplementierungen und begrenzen den transitiven AI-Context-Footprint der Assembly-Komposition.
+- **`GiteaGitRepositoryTransport.cs` und `ExternalSourceRepositoryCheckoutStatus.cs`** — kapseln isolierte Clone-/Fetch-/Reset-/HEAD-Aktionen und den nicht-interaktiven Clean-/Dirty-/Unverified-Git-Status vor und nach mutierenden Refresh-Schritten.
+- **`ExternalSourceRepositoryAcquirer.cs` und `ExternalSourceRepositoryCacheRefresh.cs`** — erzwingen Ownership, sichere Revision/Solution und Trust vor Source-/Cache-Veröffentlichung; propagieren bei stale Fehlern Last-good als sichtbares degraded Metadatum und halten CurrentChanged-Reuse getrennt vom Fallback.
+- **`GiteaExternalSourceProvider.cs` und `AssemblySourceSelectionOrchestrator.cs`** — materialisieren nur verifizierte Snapshots, geben `ProviderDegraded` ohne Snapshot an die Selection weiter und lassen den statischen Decompilation-Fallback offen.
 - **`src/AiNetLinter/Mcp/Assemblies/AssemblySourceSelectionOrchestrator.cs`** — hält Loader-Diagnosen als expliziten `ConfigurationFailure`-Status von No-Match-, Ambiguous- und Provider-Fallbacks getrennt und verwaltet Selection-Lease/Scope-Lifecycle.
 - **`src/AiNetLinter/Mcp/Assemblies/AssemblyCacheContract.cs`, `AssemblyDiagnosticCodes.cs`, `AssemblySessionStatusExtensions.cs` und `AssemblyCacheCleanup.cs`** — bündeln Cache-Wirewerte, Assembly-Diagnosecodes, Statusmapping und sichere Bereinigungshilfen.
 - **`src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/`** — enthält die Assembly-Analyse, deren Kontextfabrik die statische Session sowie die bestehenden MCP-Tools und DTOs verbindet.
@@ -60,6 +65,8 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 - **`src/AiNetLinter.FastTests/Mcp/Projects/`** — enthält schnelle Tests für Projekt-Registry, Leases, Ladebarrieren und Eviction.
 - **`src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/`** — enthält schnelle Assembly-Toolregressionen sowie Session-, Cache-, Grenzwert- und Snapshot-Tests.
 - **`src/AiNetLinter.FastTests/Configuration/ExternalSourceConfigurationLoaderTests.cs` und `Mcp/Assemblies/ExternalSourceProviderContractTests.cs`** — enthalten die netzwerkfreien Loader-, Validierungs- und Provider-Vertragstests des Mapping-Schnitts.
+- **`src/AiNetLinter.FastTests/Mcp/Assemblies/GiteaGitRepositoryCheckoutStatusTests.cs` und `ExternalSourceRepositoryCacheRefreshTests.cs`** — decken Clean-/Dirty-/Unverified-Gates, Credential-Isolation, Last-good/Degraded/Unavailable, Cleanup und CurrentChanged-Reuse mit lokalen Fakes und `TestTempDirectory` ab.
+- **`src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolSupportDegradedTests.cs`** — bestätigt, dass `ProviderDegraded` keinen stale Source-Match oder Registry-Lease erzeugt und der statische Decompilation-Fallback mit sicherer Diagnose erhalten bleibt.
 - **`src/AiNetLinter.FastTests/Mcp/`** — enthält weitere schnelle MCP-Vertrags-, Result- und Tooltests für Regressionen.
 - **`src/AiNetLinter.IntegrationTests/Architecture/McpProcessArchitectureGuardTests.cs`** — enthält den freien Architekturquellscan mit dem zentralen Generated-/bin-Ausschluss für Cachequellen (zuletzt: step-004).
 - **`src/AiNetLinter.IntegrationTests/Platform/LoadedFixtureTests.cs`** — enthält den geladenen Fixture-/Source-Katalogscan mit dem zentralen Generated-/bin-Ausschluss (zuletzt: step-004).
