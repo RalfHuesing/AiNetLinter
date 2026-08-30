@@ -1,5 +1,5 @@
 ---
-status: draft
+status: ready
 type: konzept
 project_kind: brownfield
 estimated_scope: large
@@ -526,8 +526,6 @@ Die Dokumentationspflicht umfasst nach Umsetzung mindestens:
   Entscheidungs- und Arbeitsablauf;
 - `.agents/rules/AiNetLinter.mdc` nur über die vorgeschriebene Generierung,
   falls `rules.json` geändert wird;
-- `Docs/ROADMAP.md` nur als bestehende Projektdokumentation, falls der
-  implementierte Meilenstein dort synchronisiert werden muss.
 
 Die Dokumentation muss den Target-Vertrag, die drei Quellpfade, das Mapping-
 Schema, Source-of-Truth, Commit-/Snapshot-Identität, Cache-/Refresh-Vertrag,
@@ -647,62 +645,3 @@ Implementierung entschieden, umgesetzt, getestet und dokumentiert werden:
 Diese Punkte sind keine optionalen Nachfolgevorhaben. Sie sind begrenzte
 Detailentscheidungen innerhalb des vollständigen Tasks und müssen in dessen
 Code, Tests und Dokumentation sichtbar abgeschlossen werden.
-
-## Bewertung der geprüften Punkte
-
-**Weiterhin relevant und vollständig umzusetzen:**
-
-- gemeinsamer Target-/Roslyn-/MCP-Kern für Projektquelle, gemappte
-  Source-Solution und Decompilation;
-- Default-Host-Provider, Git-/Gitea-Source-of-Truth, Authentifizierung,
-  Refresh, Cache, atomare Generationen und Fallbacks;
-- vier residente Benutzer-Kontexte getrennt von beliebig vielen externen
-  DLL-/Source-Sessions;
-- Source-Match, AssemblyName-/Solution-Auflösung, Snapshot-Identität und
-  Alias-Sharing;
-- transitive Referenzen, Deduplizierung, Zyklen und Missing-Reference-
-  Zustände;
-- Capability-Matrix, Origin-/Confidence-/Partialitätsantworten und
-  assembly-spezifische Tools im gemeinsamen Sessionpfad;
-- Lone-CR-Korrektur, vollständiges Lease-/Cleanup-Verhalten und Generation-
-  Attestation;
-- vollständige Dokumentation, Bootstrap-/Toolbeschreibungen, Regelabgleich und
-  Abschlussverifikation.
-
-**Bereits umgesetzt und als Basis zu erhalten:**
-
-- Target-Basis und grundlegender gemeinsamer Dispatch;
-- statische Decompilation, Fingerprint, Cache-Grundlage und direkte
-  Referenzauflösung;
-- Mapping, Source-Selection, Gitea-Transport, Acquisition, Cache-Reuse,
-  Refresh, Attestation und Snapshot-Lebenszeit als vorhandene Bausteine;
-- fail-closed-Konfigurationspfad und Erhalt der Dirty-Trust-Semantik;
-- zentrale Pfad-, URL- und Test-Snapshot-Hilfen.
-
-**Veraltet oder nicht mehr als offene Grundlage zu behandeln:**
-
-- die grundsätzliche Auswahl der Decompiler-Bibliothek;
-- die grundlegende Mapping-, Source-Selection-, Cache- oder Attestation-
-  Architektur;
-- die Duplikationsannahme bei der zentralen Pfadprüfung;
-- kleinteilige Implementierungsabfolgen und frühere Statusstände.
-
-**Bewusst nicht als vergessene Lücke übernommen:**
-
-- Runtime-/Reflection-Loading;
-- freie Gitea-Discovery;
-- lokaler dirty-/unbuilt-Checkout als versteckte Source-of-Truth;
-- automatische Branch-Zusammenführung;
-- vollständige Namespace-Sperre gegen gleichberechtigte Prozesse;
-- automatische persistente Cache-Garbage-Collection;
-- externe Testausführung und fachlich unpassende Git-Diff-/Quality-Gate-
-  Scheinimplementierungen.
-
-## Übergabestatus
-
-Der Draft bildet nun den vollständigen fachlichen Abschlussumfang einschließlich
-der bislang offenen technischen und dokumentarischen Themen ab. Er bleibt bis
-zur ausdrücklichen Nutzerfreigabe auf `status: draft`. Vor der Freigabe wird
-das Draft-Arbeitsgedächtnis entfernt; nur dauerhafte Anforderungen,
-Annahmen, Grenzen und verbindliche Detailentscheidungen bleiben erhalten.
-Ein Orchestrator wird nicht automatisch gestartet.
