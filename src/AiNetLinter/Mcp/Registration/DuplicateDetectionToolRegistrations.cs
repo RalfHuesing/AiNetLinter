@@ -46,29 +46,12 @@ internal static class DuplicateDetectionToolRegistrations
     }
 
     private const string FindDuplicatesDescription =
-        "Wann nutzen: Solution-weite DRY-Audit-Suche nach Code-Duplikaten (Token-basiertes " +
-        "Clone-Detection, Jaccard-N-Gram, Method-Granularitaet). mode='clone' (Default): findet " +
-        "z. B. mehrfach separat instanziierte, eigentlich identische Objekt-Initialisierungen, die " +
-        "zentralisiert werden sollten. Ergebnis als Cluster (transitiv aehnliche Methoden), nicht " +
-        "als isolierte Paare. minTokens (Default aus rules.json, 30) filtert triviale Methoden. " +
-        "similarityThreshold: 'exact' (>=0.95, fast identisch), 'near' (>=0.80) oder 'fuzzy' " +
-        "(>=0.65, Default — niedrigste noch angezeigte Stufe). normalizeIdentifiers (Default " +
-        "false) schaltet Erkennung umbenannter Klone an (Identifier/Literale werden vor dem " +
-        "Vergleich normalisiert). scopeDir grenzt auf einen Teilbereich ein (Default " +
-        "Solution-Root). scopeType ('all' [Default], 'production', 'tests') filtert nach " +
-        "Produktions- oder Test-Code. maxResults begrenzt die gezeigten Cluster/Kandidaten (Default 20). " +
-        "mode='refactoring-drift': findet Methoden, die einen bereits existierenden Helper " +
-        "(helperSymbol, Pflicht bei diesem mode — Format wie find_references: " +
-        "Datei:Zeile:Spalte, stabile DocumentationCommentId oder qualifizierter Name) strukturell " +
-        "nachbauen statt ihn aufzurufen ('absence-of-calls'-Heuristik). Ergebnis als Kandidaten, " +
-        "nicht als Verstoesse (hoeheres False-Positive-Budget als mode='clone' — strukturelle " +
-        "Aehnlichkeit ist nicht zwingend Drift). similarityThreshold wird in diesem Modus ignoriert " +
-        "(fester near-Schwellwert aus rules.json). " +
-        "mode='structural': findet semantisch aehnliche Hilfsmethoden anhand eines Roslyn-" +
-        "Strukturprofils und Cosine-Similarity (Typ-4/Intended-Duplication, unabhaengige " +
-        "Namens-/Literal-Varianten). Ergebnis als manuell zu pruefende Kandidatencluster, " +
-        "keine automatische DuplicateCode-Violation. similarityThreshold filtert exact/near/fuzzy " +
-        "ueber eigene Cosine-Schwellwerte aus rules.json (StructuralDuplicate*Threshold), nicht " +
-        "ueber die Jaccard-DuplicateCode-Schwellwerte. helperSymbol wird in diesem Modus ignoriert. " +
-        "Kleine Helper oft nur mit minTokens unter dem Lint-Default 30 sichtbar.";
+        "Wann nutzen: Solution-weite DRY-Audit-Suche nach Code-Duplikaten (Token-basierte " +
+        "Clone-Detection, Jaccard-N-Gram, Method-Granularitaet). mode: 'clone' [Default] (findet transitiv " +
+        "aehnliche Methodencluster), 'refactoring-drift' (findet Methoden, die helperSymbol nachbauen statt es aufzurufen), " +
+        "'structural' (semantisch aehnliche Hilfsmethoden per Roslyn-Strukturprofil & Cosine-Similarity). " +
+        "helperSymbol: Ziel-Helper (Pflicht bei mode='refactoring-drift': Datei:Zeile:Spalte, DocCommentId oder Name). " +
+        "minTokens: Mindest-Tokens (Default aus rules.json, 30). similarityThreshold: 'exact' (>=0.95), 'near' (>=0.80), " +
+        "'fuzzy' (>=0.65 [Default]). normalizeIdentifiers: Klone mit umbenannten Variablen erkennen (Default false). " +
+        "scopeDir: Verzeichnispfad zur Eingrenzung. scopeType: 'all' [Default], 'production', 'tests'. maxResults: Begrenzung (Default 20).";
 }
