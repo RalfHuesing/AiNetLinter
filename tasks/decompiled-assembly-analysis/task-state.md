@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-30T09:10:00+02:00
+last_updated: 2026-08-30T05:41:51+02:00
 rules_dir: .agents/rules
-total_steps: 36
-current_step: step-036
+total_steps: 37
+current_step: step-037
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,10 +13,9 @@ current_step: step-036
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 36 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-036` (`issues`; Gitea-
-  Source-of-Truth mit Clean-Checkout und transparentem degraded Refresh-
-  Vertrag)
+- **Steps gesamt:** 37 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-037` (`in_progress`; Verifizierten Checkout
+  bis Materialisierung und Publish fail-closed binden)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
@@ -63,6 +62,7 @@ current_step: step-036
 | step-034 | EPIC-04 | issues | Strikter CacheRoot-Vertrag und fail-closed Konfigurationsweitergabe bis zum Assembly-Tool | step-033 | fcad25e5 + 1dd59128 | issues → step-035 | fcad25e5 + 1dd59128 + ff5fb2e5 |
 | step-035 | EPIC-04 | done | ConfigurationFailure unabhängig von Diagnosen terminal bis zum Assembly-Tool propagieren | step-034 | 5c830e44 + 8182b992 | approved | 5c830e44 + 8182b992 + c4ee413c |
 | step-036 | EPIC-04 | issues | Gitea-Source-of-Truth mit Clean-Checkout und transparentem degraded Refresh-Vertrag absichern | - | 377b5360 + 39fb9fba | issues → step-037 | 377b5360 + 39fb9fba + c7efaae4 |
+| step-037 | EPIC-04 | in_progress | Verifizierten Checkout bis Materialisierung und Publish fail-closed binden | step-036 | - | - | - |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -794,3 +794,21 @@ CurrentChanged, Cleanup, positive Fallbacks und die vorhandenen 1314-Skips
 bleiben regressionsgeschützt. Der Kritiker bestätigte Build sowie Fast
 2.165 bestanden plus 2 bekannte Skips und Integration 370/370, Stress nicht
 ausgeführt, ohne Leaks.
+
+### Step-037-Planung und Aktivierung (2026-08-30)
+
+Der neue Step-037-Plan wurde als einzelnes Korrekturpaket mit einem
+Primärvertrag und drei gekoppelten Schichten aktiviert. Er begrenzt den
+Coder-Kontext auf maximal zwölf initiale Dateien, zehn `read_first`-Dateien
+und acht Abnahmekriterien. Der Plan umfasst Git-Ignore-/Status-Semantik,
+die Trust-Bindung bis Cache- und Workspace-Materialisierung sowie die
+typisierte Propagation durch Acquirer, Provider und Selection. Er fordert
+deterministische lokale Regressionen für Mutation/TOCTOU, Cleanup,
+Cancellation, Last-good/Degraded, CurrentChanged und positive Fallbacks.
+
+Der Planer hat keine Produktionsänderungen, Tests oder Coder-/Kritikerarbeit
+ausgeführt. Da es sich um eine Fix-Mode-Korrektur handelt, bleibt
+`roadmap.md` unverändert. Der sichere nächste Übergabepunkt ist ein frischer
+Coder auf `main`, der ausschließlich
+`tasks/decompiled-assembly-analysis/step-037/step-plan.md` als Startvertrag
+übernimmt, danach geschlossen und durch einen neuen Kritiker ersetzt wird.
