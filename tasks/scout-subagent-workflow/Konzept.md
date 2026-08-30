@@ -45,16 +45,21 @@ Der Nutzen liegt in einer höheren Implementierungsqualität, weniger Syntax- un
 4. **Pragmatische Skip-Regel (Kein künstlicher Overhead):**
    - Bei einfachen, lokal begrenzten Aufgaben (z. B. Ein-Datei-Fixes, kleine Dokumentationsanpassungen) kann der Orchestrator oder Nutzer den Scout überspringen.
    - Der Scout ist primär für mehrstufige Epics, unbekannte Codebereiche, Architektur-Refactorings und semantische C#/Assembly-Analysen vorgesehen.
-5. **Konformität mit dem AiNetLinter-MCP-Vertrag:**
+5. **Anti-Pollution-Garantie (Keine Step-Dateien, kein Grep-Ballast):**
+   - Der Scout erzeugt **keine separaten Step-Dateien, Recherche-Dumps oder Unterverzeichnisse**.
+   - Die gesamte Recherche wird ausschließlich **in-place in die genau eine task-lokale `code-map.md`** synchronisiert.
+   - Dadurch wird verhindert, dass spätere `rg`/`grep`-Abfragen von Agenten durch historische Recherche-Dumps und veraltete Code-Zitate verwirrt werden.
+6. **Konformität mit dem AiNetLinter-MCP-Vertrag:**
    - Der Scout arbeitet strikt nach `.agents/rules/AiNetLinter-McpWorkflow.mdc` (MCP-first für semantische C#-Abfragen, `targetType=project|assembly`, token-schonende Parameter für `get_file_tree`).
-6. **Graceful Fallback für den Implementierer:**
+7. **Graceful Fallback für den Implementierer:**
    - Sollte eine Information in `code-map.md` fehlen oder fehlerhaft sein, darf der Implementierer weiterhin selbstständig gezielte MCP- oder Leseabfragen ausführen. Er ist niemals blind an den Scout gebunden.
 
 ---
 
 ## Non-Goals und Scope-Grenzen
 
-- **Keine neuen Zwischenformate:** Es werden keine neuen Step-, JSON- oder Cache-Dateien erfunden (`code-map.md` bleibt das alleinige Navigationsartefakt).
+- **Keine neuen Zwischenformate oder Step-Archive:** Es werden keine neuen Step-, JSON- oder Cache-Dateien angelegt. Historische Dumps werden nicht als Dateileichen im Dateisystem belassen.
+- **Keine Code-Kopien in `code-map.md`:** `code-map.md` enthält nur Symbol-IDs, Pfade, Signaturen, Invarianten und Referenzen – niemals seitenlange Code-Duplikate, die bei Textsuchen stören.
 - **Kein interaktiver Nutzer-Dialog durch den Scout:** Der Scout agiert vollautonom im Hintergrund und stellt keine Zwischenfragen an den Benutzer.
 - **Keine Vorab-Code-Generierung (No Drafting):** Der Scout erzeugt keine Code-Snippets, Patches oder Pseudo-Implementierungen. Das Design und die Codierung liegen zu 100 % beim Implementierer.
 - **Kein Ersatz für bestehende Rollen:** Der Scout ersetzt weder den `concept-planner` (fachliche Verträge), noch den `implement`-Skill (Code), noch den `review`-Skill (unabhängige Prüfung), noch den `audit`-Skill (Qualitäts-Gates).
@@ -138,6 +143,7 @@ Der Nutzen liegt in einer höheren Implementierungsqualität, weniger Syntax- un
 ### Bestätigte Entscheidungen
 - **Trennung von Recherche und Coden:** Recherche wird in einen isolierten Subagenten (`scout`) ausgelagert, um den Implementierer vor Kontext-Verschmutzung zu schützen.
 - **Austauschformat:** Kein neues Datei-Format; wir nutzen und stärken die bereits im Orchestrator spezifizierte `code-map.md`.
+- **Anti-Pollution & Single-File-In-Place-Prinzip:** Keine Step-Dateien oder Recherche-Unterordner. Es existiert immer nur genau eine `code-map.md`, die in-place aktualisiert wird. Damit werden Dateileichen und irreführende Treffer bei späteren `rg`/`grep`-Suchen komplett verhindert.
 - **Pragmatismus:** Bei Trivial-Tasks bleibt der Scout optional / überspringbar.
 
 ### Relevante Dateien
