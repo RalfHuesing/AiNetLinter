@@ -125,10 +125,43 @@ gelesen.
   `current_epic`, letzten Commit und einen konkreten Blocker enthalten, aber
   keine Detailprotokolle oder Kritikerhistorien. Halte dort zusätzlich nur die
   knappe Abschluss-Checkliste der aus `Konzept.md` übernommenen Pflicht-
-  verifikationen und deren Erledigungsstatus fest.
+  verifikationen und deren Erledigungsstatus fest. Für die Zyklus- und
+  Budgetsteuerung sind außerdem `correction_round`, höchstens drei knappe
+  `recent_finding_signatures` und ein `cycle_state` zulässig; vollständige
+  Reviewtexte gehören nicht in die Roadmap.
 
 Nach der Roadmap-Erzeugung beginnt die autonome Abarbeitung ohne weitere
 Bestätigung des Nutzers.
+
+## Korrektur- und Zyklusbudget
+
+Eine Korrekturrunde beginnt erst nach dem initialen Review mit mindestens einem
+belegten P0/P1-Befund und besteht aus genau einem frischen Implementierer sowie
+dem anschließenden frischen Review. Mehrere Findings desselben Reviews zählen
+nicht als mehrere Runden.
+
+- Im normalen Aufgabenmodus gelten höchstens zehn Korrekturrunden für den
+  gesamten Task.
+- Im Großkonzept-Modus gelten höchstens fünf Korrekturrunden pro Epic.
+- Nach Änderungen des Abschluss-Audits gelten höchstens zwei zusätzliche
+  Korrekturrunden.
+- Nach einem fehlgeschlagenen Abschluss-Gate gelten höchstens drei zusätzliche
+  Korrekturrunden mit gezielter Verifikation und Review.
+
+Das Budget ist eine Sicherheitsgrenze und kein Ziel. Vor jeder weiteren Runde
+gruppiert der Orchestrator die Befunde nach technischer Ursache und bildet eine
+knappe, stabile Signatur aus betroffener Invariante, Bereich/Symbol und
+Fehlerbild. Bei keiner erkennbaren Verbesserung derselben Ursache oder bei
+einem Muster wie A → B → A wird der Lauf sofort auf `blocked` gesetzt und der
+Nutzer mit Evidenz und einer konkreten Entscheidungsfrage eingebunden. Der
+Orchestrator verbraucht in diesem Fall nicht das restliche Budget durch weitere
+Versuche.
+
+Bei Budgetende gilt dasselbe Verhalten: kein stiller weiterer Versuch, kein
+Commit eines nicht genehmigten Epic-Stands und eine konkrete Meldung an den
+Nutzer. Bei einem Großkonzept werden `correction_round`, bis zu drei aktuelle
+Ursachensignaturen und `cycle_state` in der Roadmap aktualisiert; ein Resume
+setzt Budget und Zyklusprüfung fort, statt sie zurückzusetzen.
 
 ## Epic-Ablauf
 
@@ -151,9 +184,10 @@ Arbeite die offenen Epics strikt nacheinander ab:
    belegte P0/P1-Findings an den Implementierer zur Korrektur übergeben;
    danach folgt erneut ein Review. P2/P3-Findings werden dokumentiert, lösen
    aber keine Korrekturschleife aus.
-5. Es gibt höchstens zwei Korrekturrunden pro Epic. Bei `blocked` pausiert der
-   gesamte Lauf und fragt den Nutzer. Nach dem Limit bleibt der Befund offen;
-   es gibt keinen stillen weiteren Versuch.
+5. Prüfe vor jedem weiteren Versuch das Korrekturbudget und den Zykluswächter.
+   Bei Budgetende, wiederholter technischer Ursache oder einem Muster wie
+   A → B → A setze das Epic auf `blocked`, halte den konkreten Zustand knapp
+   fest und frage den Nutzer. Es gibt keinen stillen weiteren Versuch.
 6. Setze ein genehmigtes Epic auf `done`, aktualisiere die Roadmap knapp und
    committe den vollständigen Epic-Stand einschließlich Code, Tests,
    Produktdokumentation und Roadmap. Dieser Commit wird ausschließlich vom
@@ -174,8 +208,9 @@ Für einen verständlichen kleinen oder mittleren Auftrag ohne großes Konzept:
 
 1. Starte einen Implementierer mit `.agents/skills/implement/SKILL.md`.
 2. Starte danach einen unabhängigen Reviewer mit `.agents/skills/review/SKILL.md`.
-3. Bearbeite nur P0/P1-Findings in höchstens zwei Korrekturrunden; P2/P3
-   blockieren den Abschluss nicht.
+3. Bearbeite nur P0/P1-Findings in höchstens zehn Korrekturrunden; P2/P3
+   blockieren den Abschluss nicht. Der Zykluswächter kann den Lauf vorher
+   stoppen.
 4. Führe bei einer nicht-trivialen Änderung einmal den `audit`-Skill aus.
 5. Verifiziere den finalen Stand und committe die auftragsbezogenen Dateien
    einmal. Auch hier committen Rollen-Subagenten nicht selbst; der
@@ -195,11 +230,11 @@ Er ersetzt keine ausdrücklich im Konzept geforderten `safeguard`-,
 `get_violations`- oder sonstigen MCP-/Testprüfungen; diese werden als eigene
 Abschlussverifikation ausgeführt.
 
-Wenn der Audit Code verändert hat, folgt genau ein fokussierter Review des
-Audit-Diffs. Ein dabei gefundenes P0/P1-Problem darf höchstens eine letzte
-Implementierer-Korrektur mit anschließendem Review auslösen. Danach endet der
-automatische Lauf auch bei einem offenen Befund; es startet keine neue
-unbegrenzte Kette.
+Wenn der Audit Code verändert hat, folgt ein fokussierter Review des
+Audit-Diffs. Dabei gefundene P0/P1-Probleme dürfen höchstens zwei frische
+Implementierer-Korrekturen mit jeweils anschließendem Review auslösen. Auch
+hier greift der Zykluswächter; bei Budgetende oder einem erkannten Zyklus endet
+der automatische Lauf mit einer konkreten Nutzerfrage.
 
 Hat der Audit Änderungen verursacht, erstellt der Orchestrator nach dem
 fokussierten Review einen eigenen Audit-Checkpoint-Commit. Änderungen aus
@@ -220,9 +255,10 @@ sofort committed. Kein Rollen-Subagent committet selbst.
   Kann eine Pflichtprüfung wegen fehlender Fähigkeit oder Infrastruktur nicht
   ausgeführt werden, stoppe mit konkreter Evidenz oder behandle sie gemäß dem
   im Konzept definierten Fallback; verschweige sie nicht.
-- Ein echter P0/P1-Fehler aus einem Gate wird innerhalb des begrenzten
-  Korrekturbudgets behandelt. Reine Umgebungs-/Infrastrukturfehler werden mit
-  Evidenz berichtet.
+- Ein echter P0/P1-Fehler aus einem Abschluss-Gate darf höchstens drei frische
+  Korrekturrunden mit gezielter Verifikation und Review auslösen. Der
+  Zykluswächter gilt auch hier. Reine Umgebungs-/Infrastrukturfehler werden
+  mit Evidenz berichtet und nicht durch Wiederholungen kaschiert.
 - Stage ausschließlich die zum Auftrag gehörenden Dateien. Bewahre
   unzusammenhängende Nutzeränderungen und führe keinen Push aus.
 - Committe beim Start einer neuen Ausführung die neu erzeugte `roadmap.md`

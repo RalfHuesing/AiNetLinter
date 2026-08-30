@@ -72,6 +72,14 @@ Nur P0/P1 sind blockierende Findings. Eine explizite Projektregel oder ein
 explizites Muss-Kriterium wird nicht als P2 heruntergestuft; begründe die
 Einstufung konkret.
 
+Bei `issues` gruppiere Findings nach technischer Ursache statt nach einzelnen
+Symptomen. Gib für jede Ursache eine kurze, stabile Ursachensignatur aus
+betroffener Invariante, Bereich oder Symbol und Fehlerbild an. Verwende bei
+einem Folge-Review eine bereits übergebene Signatur wieder, wenn es dieselbe
+Ursache ist, und kennzeichne nachvollziehbar, wenn sie sich fachlich geändert
+hat. Die Signatur dient der Zykluserkennung; sie ist kein künstlicher Task-
+oder Step-Bezeichner.
+
 ## Ergebnis
 
 Gib zuerst ein klares Urteil: `approved`, `issues` oder `blocked`.
