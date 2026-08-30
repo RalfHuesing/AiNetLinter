@@ -23,6 +23,10 @@ für die Umsetzung, nachdem ein Konzept bei Bedarf separat mit dem
 - Für jeden orchestrierten Task gibt es zusätzlich genau ein
   `execution-log.md` im Task-Verzeichnis. Es ist ein dauerhaftes
   Ereignis-/Feedbackprotokoll, keine Step-Datei und kein zweiter Task-State.
+- Jeder terminale Rollenbericht wird zusammen mit dem aktuellen auftrags-
+  bezogenen Arbeitsstand sofort als Git-Checkpoint gesichert, bevor die nächste
+  Rolle oder eine weitere Orchestrator-Aktion beginnt. Das gilt auch bei
+  fehlgeschlagenen Checks, offenen Findings, Abbruch oder `blocked`.
 - Es gibt keine Step-Dateien, keinen `task-state.md`, keine künstlichen
   Übergabearchive und keine Planer-Schleife pro Detailstep.
 - Es gibt keine automatischen Nutzer-Check-ins zwischen Epics. Frage nur bei
@@ -122,6 +126,14 @@ nicht von den Rollen-Subagenten, gepflegt:
   sie nach der letzten Codeänderung ausgeführt wurde. Vollständige
   unstrukturierte Tooltranskripte werden nicht angehängt; Secrets dürfen
   niemals protokolliert werden.
+- Synchronisiere diesen Eintrag sofort auf die Festplatte und erstelle danach
+  einen Checkpoint-Commit, bevor Review, Korrektur, Audit, Blockierung oder
+  sonstige weitere Entscheidungen beginnen. Bei einem Implementierer enthält
+  der Checkpoint den aktuellen auftragsbezogenen Code-, Test- und
+  Dokumentationsstand sowie Roadmap und Log — unabhängig davon, ob der Stand
+  bereits reviewed ist oder Findings beziehungsweise fehlgeschlagene Checks
+  enthält. Bei einem Reviewer oder Audit ohne Codeänderung werden mindestens
+  die zugehörigen Log-/Roadmap-Änderungen committed.
 - Bei einem Resume wird ein `running`-Eintrag ohne Abschluss anhand der
   Task-Liste und des Working Trees als `interrupted` oder `unknown` markiert.
   Der alte eigene Subagent wird beendet/archiviert, bevor ein frischer gestartet
@@ -238,9 +250,11 @@ Nutzer mit Evidenz und einer konkreten Entscheidungsfrage eingebunden. Der
 Orchestrator verbraucht in diesem Fall nicht das restliche Budget durch weitere
 Versuche.
 
-Bei Budgetende gilt dasselbe Verhalten: kein stiller weiterer Versuch, kein
-Commit eines nicht genehmigten Epic-Stands und eine konkrete Meldung an den
-Nutzer. Bei einem Großkonzept werden `correction_round`, bis zu drei aktuelle
+Bei Budgetende gilt dasselbe Verhalten: kein stiller weiterer Versuch. Der
+bereits nach dem letzten Rollenbericht gesicherte Zwischenstand bleibt als
+unreviewter oder nicht vollständig genehmigter Checkpoint erhalten; er wird
+nicht als `done` ausgegeben. Der Orchestrator meldet den konkreten Zustand und
+fragt den Nutzer. Bei einem Großkonzept werden `correction_round`, bis zu drei aktuelle
 Ursachensignaturen und `cycle_state` in der Roadmap aktualisiert; ein Resume
 setzt Budget und Zyklusprüfung fort, statt sie zurückzusetzen.
 
@@ -258,7 +272,9 @@ Arbeite die offenen Epics strikt nacheinander ab:
    Der Implementierer bearbeitet das gesamte Epic als zusammenhängendes Paket,
    nutzt AiNetLinter-MCP bei C#-Semantik, ergänzt nötige Tests/Dokumentation,
    erstellt einen vollständigen Verifikationsnachweis und committet nicht
-   selbst.
+   selbst. Nach seinem terminalen Ergebnis persistiert und committet der
+   Orchestrator den Implementierungs-Checkpoint sofort, auch bei Findings oder
+   fehlgeschlagenen Prüfungen, bevor der Reviewer startet.
 3. Starte danach genau einen unabhängigen Reviewer-Subagenten mit dem Diff
    seit dem Baselinepunkt, dem Epic-Kontext und
    `.agents/skills/review/SKILL.md` sowie dem Implementiererbericht und dessen
@@ -273,10 +289,11 @@ Arbeite die offenen Epics strikt nacheinander ab:
    A → B → A setze das Epic auf `blocked`, halte den konkreten Zustand knapp
    fest und frage den Nutzer. Es gibt keinen stillen weiteren Versuch.
 6. Setze ein genehmigtes Epic auf `done`, aktualisiere die Roadmap knapp und
-   committe den vollständigen Epic-Stand einschließlich Code, Tests,
-   Produktdokumentation und Roadmap. Dieser Commit wird ausschließlich vom
-   Orchestrator nach dem Review erstellt. Er ist ein fachlicher Checkpoint,
-   kein eigener Dokumentations- oder Step-Commit.
+   erstelle einen Abschluss-Checkpoint-Commit. Der aktuelle Code-, Test- und
+   Dokumentationsstand ist bereits nach dem Implementiererbericht gesichert;
+   der Abschluss-Checkpoint enthält deshalb mindestens die Review-/Roadmap-
+   Entscheidung und das Log und nimmt unveränderte Dateien nicht künstlich
+   erneut auf. Jeder Commit wird ausschließlich vom Orchestrator erstellt.
 7. Fahre ohne Nutzer-Check-in mit dem nächsten offenen Epic fort. Wenn die
    Umsetzung eine Konzeptentscheidung oder eine wesentliche Scope-Erweiterung
    voraussetzt, stoppe stattdessen mit einer konkreten Frage.
@@ -297,9 +314,12 @@ Für einen verständlichen kleinen oder mittleren Auftrag ohne großes Konzept:
    blockieren den Abschluss nicht. Der Zykluswächter kann den Lauf vorher
    stoppen.
 4. Führe bei einer nicht-trivialen Änderung einmal den `audit`-Skill aus.
-5. Verifiziere den finalen Stand und committe die auftragsbezogenen Dateien
-   einmal. Auch hier committen Rollen-Subagenten nicht selbst; der
-   Orchestrator erstellt den geprüften Abschluss-Commit.
+5. Verifiziere den finalen Stand und erstelle den Abschluss-Checkpoint. Die
+   Implementierungs-, Review-, Korrektur- und Auditberichte wurden bereits
+   jeweils unmittelbar committed; der Abschluss-Checkpoint enthält den
+   finalen Status und alle seit dem letzten Checkpoint entstandenen
+   auftragsbezogenen Änderungen. Auch hier committen Rollen-Subagenten nicht
+   selbst; der Orchestrator ist der Commit-Besitzer.
 
 ## Abschluss-Audit
 
@@ -321,10 +341,12 @@ Implementierer-Korrekturen mit jeweils anschließendem Review auslösen. Auch
 hier greift der Zykluswächter; bei Budgetende oder einem erkannten Zyklus endet
 der automatische Lauf mit einer konkreten Nutzerfrage.
 
-Hat der Audit Änderungen verursacht, erstellt der Orchestrator nach dem
-fokussierten Review einen eigenen Audit-Checkpoint-Commit. Änderungen aus
-notwendigen Gate-Korrekturen werden nach ihrer begrenzten Review ebenfalls
-sofort committed. Kein Rollen-Subagent committet selbst.
+Nach jedem terminalen Audit-Ergebnis ist dessen Bericht samt aktuellem
+Arbeitsstand bereits als Checkpoint committed. Hat der Audit Änderungen
+verursacht, folgt nach dem fokussierten Review zusätzlich ein Audit-
+Abschluss-Checkpoint; Änderungen aus notwendigen Gate-Korrekturen werden nach
+dem jeweiligen Implementiererbericht ebenfalls sofort committed. Kein
+Rollen-Subagent committet selbst.
 
 ## Verifikation und Commitregeln
 
@@ -352,11 +374,17 @@ sofort committed. Kein Rollen-Subagent committet selbst.
   unzusammenhängende Nutzeränderungen und führe keinen Push aus.
 - Committe beim Start einer neuen Ausführung die neu erzeugte `roadmap.md`
   und `execution-log.md` einmalig als Planungs-Checkpoint, bevor der erste
-  Implementierer startet. Committe danach jedes genehmigte Epic sowie
-  genehmigte Audit-/Gate-Korrekturen separat. Stage dabei nur auftragsbezogene
-  Dateien beziehungsweise eindeutige auftragsbezogene Hunks; bei einer
-  unklaren Überschneidung mit Nutzer-Änderungen stoppe statt fremde Arbeit
-  mitzunehmen.
+  Implementierer startet. Erstelle danach nach jedem terminalen Rollenbericht
+  sofort einen Checkpoint-Commit, bevor die nächste Rolle oder eine weitere
+  Workflow-Entscheidung beginnt. Implementierer-Checkpoint-Commits enthalten
+  den aktuellen auftragsbezogenen Code-, Test- und Dokumentationsstand sowie
+  Roadmap und Log — auch bei offenen Findings, roten Checks oder `blocked`.
+  Reviewer-/Audit-Checkpoint-Commits sichern mindestens deren Bericht und den
+  zugehörigen Roadmap-/Log-Stand. Nach `approved` folgt ein separater
+  Abschluss-Checkpoint; unveränderte Code-Dateien werden nicht künstlich
+  dupliziert. Stage dabei nur auftragsbezogene Dateien beziehungsweise
+  eindeutige auftragsbezogene Hunks; bei einer unklaren Überschneidung mit
+  Nutzer-Änderungen stoppe statt fremde Arbeit mitzunehmen.
 - Der Implementierer, Reviewer und Audit erstellen niemals eigene Commits.
   Der Orchestrator ist der einzige Commit-Besitzer dieses Workflows und schreibt
   keine Commit-Historie um.

@@ -128,7 +128,10 @@ folgendem Nachweis auf:
 
 Behaupte keine Prüfung als erfolgreich, die nicht ausgeführt wurde. Kennzeichne
 fehlende, übersprungene, fehlgeschlagene oder wegen fehlender Capability nicht
-ausführbare Prüfungen ausdrücklich und nenne die Konsequenz.
+ausführbare Prüfungen ausdrücklich und nenne die Konsequenz. Ein fehlgeschlagener
+Check oder ein offener P0/P1-Befund verhindert den Hand-off nicht: Übergib den
+vollständigen aktuellen Arbeitsstand mit seinem ehrlichen Nachweis, damit der
+Orchestrator ihn als Zwischenstand sichern und gezielt reviewen lassen kann.
 
 Ein weiterer Agent erhält keinen künstlichen Step-Archivbestand. Übergib kurz:
 geänderte Dateien und Symbole, getroffene Entscheidungen, ausgeführte
@@ -140,11 +143,14 @@ Orchestrators.
 
 Wenn dieser Skill als Implementierer-Rolle vom Orchestrator aufgerufen wird,
 erstelle oder ändere keinen Git-Commit. Liefere den vollständigen Epic-Stand im
-Working Tree; erst der Orchestrator committen ihn nach einem `approved` des
-unabhängigen Reviews. Dadurch bleibt der Commit ein geprüfter fachlicher
-Checkpoint und nicht ein unreviewter Zwischenstand. Bei direkter Nutzung ohne
-Orchestrator gilt eine Commit-Anweisung des Nutzers; ohne eine solche Anweisung
-entscheidet der aufrufende Workflow.
+Working Tree; der Orchestrator sichert ihn unmittelbar nach deinem terminalen
+Hand-off in einem eigenen Implementierungs-Checkpoint, auch ohne vorheriges
+`approved` des unabhängigen Reviews. Dieser Commit dokumentiert bewusst einen
+unreviewten Zwischenstand und darf offene Findings, rote Checks oder Risiken
+enthalten. Nach Review und eventuellen Korrekturen erstellt der Orchestrator
+weitere Status-/Abschluss-Checkpoints. Bei direkter Nutzung ohne Orchestrator
+gilt eine Commit-Anweisung des Nutzers; ohne eine solche Anweisung entscheidet
+der aufrufende Workflow.
 
 ## Abschlussmeldung
 
