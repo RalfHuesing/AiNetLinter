@@ -1,11 +1,12 @@
 # Ausführungs-Roadmap: Einheitlicher Roslyn-Analysepfad
 
-status: executing
+status: paused
 current_epic: 4
-last_commit: 5687e985
+last_commit: 9b942124
 blocker: none
 correction_round: 1
-cycle_state: active
+cycle_state: paused
+stop_reason: Nutzeranweisung — nach dem Epic-4-Reviewer stoppen
 recent_finding_signatures:
   - Unsupported-Path-Consistency: get_file_tree verliert beim Assembly-Ziel den Zielpfad
   - Safeguard-TestFile-Size: tasknahe MCP-Testdateien überschreiten die MaxLineCount-Grenze
@@ -90,7 +91,7 @@ fachliche Muss-Kriterien und Non-Goals bleiben unverändert.
   Default-Host; keine Legacy-Parameter oder widersprüchlichen Toolverträge.
 - Verifikation: Wiring-, Host-, MCP-E2E- und Capability-Tests sowie passende
   `safeguard`-/`get_violations`-Abfragen.
-- Status: in_progress
+- Status: done
 
 ## Epic 5: Dokumentation und Abschluss-Gates
 

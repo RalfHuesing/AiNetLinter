@@ -1512,3 +1512,60 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
 - Orchestrator-Checkpoint: `5687e985` — Implementierungsstand, Code-Map,
   Tech-Debt-Triage und vollständiger Rollenbericht unmittelbar nach dem
   terminalen Implementierergebnis gesichert.
+
+## 2026-08-30 — Epic 4 Review abgeschlossen
+
+- Run-ID: `resume-2026-08-30-epic-4-review`
+- Epic: 4 — Capability-Matrix, Host-Integration und End-to-End-Verträge
+- Rolle: Reviewer
+- Subagent-ID: `01a05493-1f91-7820-b295-6112f22149b2`
+- Diff-Baseline: `5378facb`; Implementierungscheckpoint `5687e985`,
+  Statuscheckpoint `9b942124`
+- Urteil: `approved`; kein belegter P0/P1-Befund.
+- TD-011 ist erfüllt: `AnalysisToolCall.cs` übergibt beim Assembly-
+  Unsupported-Fall den kanonischen Pfad; `FileStructureToolRegistrations.cs`
+  verwendet diesen Dispatcher. `WiringFilesystemContractTests.cs` prüft den
+  echten Wiring-/Dispatcher-Pfad mit nichtkanonischem Eingabepfad,
+  `ASSEMBLY_TARGET_UNSUPPORTED`, kanonischem Pfad und ohne Projekt-Lease.
+- Die Testaufteilung ist fachlich und namespace-kompatibel. Der unabhängige
+  Baseline-Vergleich ergibt 12 alte Wiring-Tests als 9 Projekt-/Lifecycle- plus
+  3 Tool-Collection-Tests; die vier vorhandenen Filesystem-Tests blieben
+  erhalten und der TD-011-Test kam hinzu. Bei den E2E-Tests bleiben 33 von 34
+  Methoden; entfernt wurde ausschließlich der redundante Test
+  `FindSymbol_MissingNamePattern_ReturnsRecoverableInvalidArgument`. Die vier
+  Klassen verwenden weiterhin die gemeinsame Assembly-Fixture ohne neue
+  `[Collection]`-Serialisierung.
+- Die Footprint-Splits bewahren die relevanten Semantiken. Die Registry-Fabrik
+  hält Resource-Operation, Transfer-Flags und Cleanup; die Source-Project-
+  Fabrik bewahrt Sibling-Lease und Fehlerbereinigung. Die MCP-Abfragen
+  bestätigten erwartete Aufrufer und keine neuen Datei-Verstöße.
+- Der verbleibende `AssemblyAnalysisRegistry`-Footprint ist als
+  `accepted-deferred` begründet: aktueller MCP-Nachweis meldet nur diesen einen
+  Verstoß (`3594 > 2500`) mit produktiven Abhängigkeiten zu
+  `McpCodeGraphServer`, `ExternalResourceRegistry` und
+  `ExternalResourceLease`; ein weiterer Facade-Schnitt würde Ownership-/
+  Middleman-Drift erzeugen.
+- Die Code-Map ist navigierbar korrekt. 56 referenzierte `src/`-Pfade existieren;
+  MCP bestätigte Dispatcher-, Expander-, Factory-, Health- und Host-
+  Beziehungen. Keine Korrektur erforderlich.
+- Die No-Execution-Grenze ist erfüllt: relevante Pfade verwenden
+  `PEReader`/`MetadataReader`; es gibt dort kein `Assembly.Load` oder
+  `AssemblyLoadContext`. Die einzige Testdatei-Schreiboperation erzeugt eine
+  synthetische `sample.dll`; fremde oder untersuchte Assemblies wurden nicht
+  ausgeführt oder verändert.
+- Die vollständigen Build-/51-Fast-/33-Integration-/Audit-Nachweise wurden
+  wegen des frischen und unveränderten Produktions-/Teststands nicht redundant
+  wiederholt. Nach dem Implementierungscheckpoint änderten sich nur
+  `execution-log.md` und `roadmap.md`; der Arbeitsbaum war sauber.
+- Nicht-blockierende P3-Hinweise: Der Implementiererbericht zählt die alten
+  Wiring-/Filesystem-Tests ungenau (unabhängig 16 alt, 17 aktuell); zusätzlich
+  meldete `git diff --check` einige Leerzeilen am Dateiende. Kein funktionales
+  Risiko; keine Tech-Debt-Aufnahme und keine Korrekturrunde.
+- Tech-Debt-Triage: TD-011 wurde auf `fixed` fortgeschrieben; TD-007 bleibt
+  für den Registry-Footprint `accepted-deferred`. Die P3-Hinweise sind
+  kosmetisch beziehungsweise berichtskorrigierend und verbleiben nur hier im
+  Ereignisprotokoll.
+- Entscheidung des Orchestrators: Epic 4 auf `done` gesetzt und der Lauf auf
+  Nutzeranweisung nach dem Reviewer pausiert. Epic 5, Abschluss-Audit,
+  konzeptspezifische Gesamtprüfungen und die vollständigen Abschluss-Gates
+  wurden bewusst nicht gestartet.
