@@ -1,115 +1,69 @@
 ---
 name: drift-audit
-description: Fuenf-Schritte-Playbook, um vor Epic-Abschluss aktiv nach DRY-Verstoessen (Code-Duplikation), Refactoring-Drift und semantisch aehnlichen Hilfsmethoden zu suchen. Nutzt ausschliesslich das projekteigene MCP-Tool find_duplicates.
+description: Prüfe vor dem Abschluss größerer AiNetLinter-Änderungen gezielt auf relevante Code-Duplikation und Refactoring-Drift mit dem projektspezifischen find_duplicates-MCP-Tool.
 ---
 
-# Skill: Drift-Audit
+# Drift-Audit in AiNetLinter
 
 ## Zweck
 
-Code-Duplikation entsteht bei autonomer agentischer Entwicklung häufig, weil eine
-bereits existierende Lösung nicht wiedergefunden wird — keine einzelne Lint-Regel
-fängt das, weil es erst im Vergleich über die ganze Codebase sichtbar wird. Dieser
-Skill leitet gezielt an, mit `find_duplicates` aktiv danach zu suchen, statt darauf zu
-warten, dass es zufällig auffällt.
+Dieser Skill ist ein optionaler, fokussierter Abschlusscheck. Er soll relevante
+Duplikation im geänderten Bereich sichtbar machen, nicht jede strukturelle
+Ähnlichkeit in einen Refactoring-Auftrag verwandeln.
 
-**Cadence:** Vor Abschluss eines Epics oder eines größeren Tasks einmal ausführen.
-Für einzelne Steps innerhalb eines Tasks ist die Ausführung optional.
+Nicht bei jedem Commit oder kleinen Fix ausführen. Sinnvoll ist er einmal vor
+dem Abschluss eines größeren Features, eines größeren Refactorings oder eines
+fachlich zusammenhängenden Pakets, wenn mehrere ähnliche Pfade berührt wurden.
 
-## Voraussetzung
+## Verbindliche Projektregeln
 
-Der MCP-Server `ainetlinter` ist verbunden (`.mcp.json`, siehe AGENTS.md §1) und hat
-eine Solution geladen. Kein separates Setup nötig — `find_duplicates` ist eines der
-registrierten MCP-Tools.
+- Lies `AGENTS.md` und die relevanten Dateien unter `.agents/rules/`.
+- Lies `.agents/rules/AiNetLinter-McpWorkflow.mdc` vor der MCP-Abfrage.
+- Für den zielgebundenen `find_duplicates`-Aufruf das aktuelle Toolschema,
+  `targetType=project` und den absoluten `targetPath` verwenden. Nicht auf
+  veraltete Parameterannahmen aus diesem Skill vertrauen.
+- `find_duplicates` ist die primäre Quelle für diesen Audit. Semantische
+  Fragen zu Aufrufern oder Symbolen anschließend mit `find_references` oder
+  einem passenden MCP-Tool prüfen.
 
-## Schritt 1 — Solution-weiter Scan
+## Audit
 
-Rufe `find_duplicates` mit `scopeDir="src"` und `minTokens=20` auf (niedriger als der
-Lint-Default 30 aus `rules.json`, damit dieser Audit gründlicher sucht als das
-automatische Lint-Gate):
+1. Beginne mit dem durch den aktuellen Diff betroffenen Produktions- und
+   Testbereich. Ein solutionweiter Scan ist nur bei einem großen Abschluss-
+   audit oder ausdrücklichem Auftrag angemessen.
+2. Prüfe zuerst `exact`-Treffer. Vergleiche Signaturen, Aufrufer, Ownership,
+   Fehlersemantik und fachliche Verantwortung, bevor du eine Konsolidierung
+   empfiehlst.
+3. Behandle `near`- und `structural`-Treffer ausschließlich als Kandidaten.
+   Unterschiedliche Eingaben, Verträge oder bewusst getrennte Lebenszyklen
+   sind ausreichende Gründe für legitime Ähnlichkeit.
+4. Verwende einen Refactoring-Drift-Check für einen konkreten bestehenden
+   Helper nur dann, wenn der erste Audit einen plausiblen Nachbau zeigt.
+   Führe keinen breiten Suchlauf ohne konkrete Hypothese aus.
 
-```
-find_duplicates(scopeDir="src", minTokens=20)
-```
+Verwende für den Aufruf ausschließlich die aktuelle MCP-Tooldefinition und
+erfinde keine konkreten Toolparameter aus diesem Dokument.
 
-Ergebnis ist eine nach `exact`/`near`/`fuzzy` gestaffelte Cluster-Liste (transitiv
-ähnliche Methoden, keine isolierten Paare). `fuzzy`-Cluster bewusst nicht Teil dieses
-Audits — zu viel Rauschen für eine manuelle Durchsicht, das deckt das automatische
-Lint-Gate (`DuplicateCodeChecker`) ohnehin nicht ab.
+## Triage
 
-## Schritt 2 — Pro `exact`-Cluster entscheiden
+- **Fix jetzt:** kleine, risikoarme Konsolidierung mit identischem Vertrag und
+  klarer gemeinsamer Ownership.
+- **Berichten:** Konsolidierung braucht Architekturentscheidung, erweitert den
+  Scope, verändert Fehler-/Lebenszeitsemantik oder ist nicht eindeutig besser.
+- **Verwerfen:** legitime Ähnlichkeit mit kurzer Begründung.
 
-Für jeden Cluster mit `bucket=exact` (Jaccard-Score ≥ 0.95, praktisch identischer
-Code):
+Ein Audit-Fund erzeugt keinen eigenen Task, keinen Step und keine automatische
+Korrekturschleife. Der Skill ändert keinen Code. Wenn der Nutzer keinen
+separaten Auftrag erteilt, bleibt es bei einer knappen Empfehlung im
+Abschlussbericht.
 
-- **Konsolidieren jetzt**, wenn die Extraktion in eine gemeinsame Methode/Klasse
-  klein und risikoarm ist (wenige Aufrufstellen, keine divergierenden
-  Zukunftspläne für die Cluster-Mitglieder).
-- **Tech-Debt-Eintrag anlegen**, wenn die Konsolidierung den aktuellen Task-Scope
-  sprengen würde oder architektonisches Ermessen braucht, das über eine mechanische
-  Extraktion hinausgeht.
+## Ergebnis
 
-Keine dritte Option "ignorieren" ohne Begründung — ein `exact`-Cluster ist per
-Definition nahezu identischer Code, das Vorkommen selbst ist bereits der Befund.
+Berichte nur entscheidungsrelevante Treffer: Bereich, konkrete Fundstellen,
+Ähnlichkeitstyp, fachliche Bewertung, Risiko und Empfehlung. Keine ausführliche
+Clusterabschrift und keine globale Tech-Debt-Datei nur wegen dieses Audits.
 
-## Schritt 3 — Pro `near`-Cluster prüfen
-
-Für jeden Cluster mit `bucket=near` (Score 0.80–0.95): strukturelle Ähnlichkeit ist
-hier nicht automatisch Duplikation — 50 strukturell ähnliche, aber fachlich
-unterschiedliche `Dispose()`-Implementierungen wären ein falsches Positiv. Sieh dir
-1–2 Beispiel-Mitglieder des Clusters an (Datei:Zeile aus der Antwort), dann
-entscheide wie in Schritt 2 (konsolidieren/Tech-Debt) oder verwirf den Cluster als
-legitime, nur zufällig ähnliche Methoden.
-
-## Schritt 4 — Optional: Refactoring-Drift-Check für auffällige Helper
-
-Fällt dir in Schritt 1–3 ein Helper auf, der eigentlich zentral genutzt werden
-sollte (z. B. eine Options-Builder-Methode, ein zentraler Validator), aber in einem
-der Cluster mehrfach inline nachgebaut statt aufgerufen wird: prüfe gezielt, ob es
-noch weitere, bislang unentdeckte Nachbau-Stellen gibt:
-
-```
-find_duplicates(mode="refactoring-drift", helperSymbol="<qualifizierter Name oder Datei:Zeile:Spalte des Helpers>")
-```
-
-`helperSymbol` akzeptiert dasselbe Format wie bei `find_references`/`get_impact`
-(stabile DocumentationCommentId, `Datei:Zeile:Spalte` oder qualifizierter Name). Das
-Ergebnis listet Methoden, die strukturell ähnlich zum Helper sind, ihn aber
-nachweislich nicht aufrufen — explizit als **Kandidaten**, nicht als Verstöße
-(False-Positive-Budget höher als bei Schritt 1–3, strukturelle Ähnlichkeit bedeutet
-nicht zwingend Drift). Jeden Kandidaten manuell prüfen, bevor er auf den Helper
-umgestellt wird.
-
-## Schritt 4 — Struktureller Scan (Typ-4/Intended Duplication)
-
-Für semantisch ähnliche Hilfsmethoden mit unterschiedlichen Namen und Literalen
-(z. B. mehrere unabhängig entstandene Typ-/Accessibility-Mapper), die vom tokenbasierten
-Scan in Schritt 1 nicht erfasst werden:
-
-```
-find_duplicates(mode="structural", scopeDir="src", minTokens=10)
-```
-
-Der `structural`-Modus analysiert Roslyn-Strukturprofile (normalisierte Return-/Parameter-Typen,
-Kontrollfluss-Form, Zieltypen in switch-/Pattern-Ausdrücken, Verhaltensmarker) und berechnet
-Cosine-Similarity — deterministisch, ohne externe Abhängigkeiten.
-
-**Triage-Pflicht:** Jeder Treffer ist eine Prüfungsempfehlung, keine automatische Violation.
-Vor jeder Konsolidierung:
-1. Signaturen und Parameterlisten vergleichen — abweichende Eingabetypen bedeuten unterschiedliche Absicht.
-2. Aufruforte der Kandidaten prüfen (`find_references`) — gemeinsame Aufrufer sprechen für Konsolidierung.
-3. Verhalten nachweislich prüfen — score ≥ 0.90 (exact-Bucket) allein reicht nicht.
-
-Kein automatisches Umschreiben auf Basis des Scores.
-
-## Was dieser Skill nicht tut
-
-- Kein automatisches Umschreiben von Code — jeder Fund wird von dir bewertet, nicht
-  automatisch behoben.
-- Kein Ersatz für `DuplicateCodeChecker` (das Lint-Gate mit `minTokens=30` aus
-  `rules.json`) — dieser Skill ist eine zusätzliche, gründlichere manuelle Runde,
-  kein Ersatz dafür.
-- Keine Naming-Drift-Erkennung (unterschiedlich benannte, aber strukturell ähnliche
-  Bezeichner) — nicht Teil von `find_duplicates`, aktuell zurückgestellt.
-- `mode=structural` erzeugt **keine automatischen Lint-Violations** — Kandidatencluster
-  sind Prüfempfehlungen und fließen nicht in `DuplicateCodeChecker`/`safeguard` ein.
+Der Audit ist nicht das automatische Lint-Gate und ersetzt keine gezielte
+MCP-Impact-/Violations-Prüfung. Er blockiert den Abschluss nur, wenn der
+Nutzer dies ausdrücklich als Qualitätskriterium festgelegt hat oder die
+Duplikation ein konkretes P0/P1-Produktionsrisiko erzeugt.
