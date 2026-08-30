@@ -1,8 +1,8 @@
 # Ausführungs-Roadmap: Einheitlicher Roslyn-Analysepfad
 
 status: executing
-current_epic: 2
-last_commit: ee743610
+current_epic: 3
+last_commit: a8071f5f
 blocker: none
 correction_round: 0
 cycle_state: active
@@ -57,7 +57,7 @@ fachliche Muss-Kriterien und Non-Goals bleiben unverändert.
   bleiben gültig; keine Quelle wird verändert oder ausgeführt.
 - Verifikation: Mapping-/Fingerprint-/Parser-/Attestation-/Lease-Unit-Tests,
   lokale Git-Testprovider-Integration und gezielte MCP-Violation-Prüfung.
-- Status: in_progress
+- Status: done
 
 ## Epic 3: Transitive Assembly-Referenzen und getrennte externe Ressourcen
 
@@ -76,7 +76,7 @@ fachliche Muss-Kriterien und Non-Goals bleiben unverändert.
   Ressourcenengpässe und keine fremde Test-/Assembly-Ausführung.
 - Verifikation: FastTests für Graph-/Grenzfälle und Integrationstests für
   Registry, Health, Parallelität, Refresh und Cross-Target-Lebenszeit.
-- Status: open
+- Status: in_progress
 
 ## Epic 4: Capability-Matrix, Host-Integration und End-to-End-Verträge
 

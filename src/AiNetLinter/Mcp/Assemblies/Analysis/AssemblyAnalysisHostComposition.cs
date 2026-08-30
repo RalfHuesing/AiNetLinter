@@ -2,9 +2,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
@@ -64,12 +66,36 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
 
     internal static AssemblyAnalysisHostComposition Create(
         string? settingsPath = null,
-        IExternalSourceProvider? provider = null)
+        IExternalSourceProvider? provider = null,
+        IExternalSourceCredentialResolver? credentialResolver = null)
     {
         var configurationResult = ExternalSourceConfigurationLoader.Load(settingsPath);
-        var sourceProvider = provider ?? new UnavailableExternalSourceProvider();
+        var sourceProvider = provider ?? CreateDefaultProvider(
+            configurationResult,
+            credentialResolver);
         var registry = new SourceSnapshotRegistry();
         return new AssemblyAnalysisHostComposition(configurationResult, sourceProvider, registry);
+    }
+
+    private static IExternalSourceProvider CreateDefaultProvider(
+        ExternalSourceConfigurationLoadResult configurationResult,
+        IExternalSourceCredentialResolver? credentialResolver)
+    {
+        var cacheOptions = configurationResult.Configuration?.CacheOptions
+            ?? ExternalSourceCacheOptions.Default;
+        var cacheConstruction = ExternalSourceRepositoryCacheOptionsFactory.Create(cacheOptions);
+        var stagingRoot = Path.Combine(
+            cacheConstruction.CacheRoot,
+            ExternalSourceRepositoryCacheContract.CheckoutDirectoryName);
+        var transport = new GiteaGitRepositoryTransport(credentialResolver);
+        var acquirer = ExternalSourceRepositoryAcquirerFactory.CreateConfigured(
+            transport,
+            stagingRoot,
+            cacheOptions,
+            cacheConstruction.CreateRefreshPolicy());
+        return new GiteaExternalSourceProvider(
+            acquirer,
+            new ExternalSourceSnapshotMaterializer());
     }
 
     public ValueTask DisposeAsync() => new(StartDispose());

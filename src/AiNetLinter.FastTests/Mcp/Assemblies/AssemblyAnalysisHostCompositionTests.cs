@@ -2,6 +2,7 @@
 
 using System;
 using System.IO;
+using System.Text.Json;
 using System.Threading;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
@@ -29,7 +30,9 @@ public sealed class AssemblyAnalysisHostCompositionTests
         var settingsPath = temp.CreateFile(
             "appsettings.json",
             "{ \"ExternalSources\": { \"MappingsPath\": \"mappings.json\" } }");
-        await using var composition = AssemblyAnalysisHostComposition.Create(settingsPath);
+        await using var composition = AssemblyAnalysisHostComposition.Create(
+            settingsPath,
+            new UnavailableExternalSourceProvider());
 
         var inspect = await InspectAssemblyTool.ExecuteAsync(
             null,
@@ -60,6 +63,26 @@ public sealed class AssemblyAnalysisHostCompositionTests
         Assert.IsType<UnavailableExternalSourceProvider>(composition.Provider);
         Assert.True(composition.ConfigurationResult.Succeeded);
         Assert.Equal(0, composition.Registry.ResidentCount);
+    }
+
+    [Fact]
+    public async Task Composition_DefaultProviderUsesConfiguredCacheWithoutNetworkAccess()
+    {
+        using var temp = TestTempDirectory.Create("assembly-host-composition-default-provider-");
+        var mappingsPath = temp.CreateFile(
+            "mappings.json",
+            "{ \"repositories\": [{ \"url\": \"https://gitea.example/shared.git\", \"solutionPath\": \"src/Shared.slnx\", \"assemblies\": [\"Shared\"] }] }");
+        var settingsPath = temp.CreateFile(
+            "appsettings.json",
+            "{ \"ExternalSources\": { \"MappingsPath\": "
+                + JsonSerializer.Serialize(mappingsPath)
+                + ", \"CacheRoot\": \"cache\" } }");
+
+        await using var composition = AssemblyAnalysisHostComposition.Create(settingsPath);
+
+        Assert.True(composition.ConfigurationResult.Succeeded);
+        Assert.IsType<GiteaExternalSourceProvider>(composition.Provider);
+        Assert.False(composition.IsDisposed);
     }
 
     [Fact]

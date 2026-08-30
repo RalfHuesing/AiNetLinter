@@ -139,3 +139,48 @@ oder rückwirkend umetikettiert. Für das nun gestartete Epic 2 beginnt ein neue
 Korrekturzähler bei `0`. Vor dem nächsten Implementierer sind Roadmap und dieses
 Ereignis committed; Epic 2 läuft mit frischen, strikt sequenziellen Rollen
 weiter.
+
+## 2026-08-30 — Epic 2 Implementierer gestartet
+
+- Run-ID: `resume-2026-08-30-epic-2`
+- Epic: 2 — Externe Source-of-Truth, Trust, Attestation und Cachegenerationen
+- Rolle: Implementierer
+- Subagent-ID: `01a05331-c495-7630-936c-130c7303219a`
+- Diff-Baseline: `a8071f5f`
+- Status: `running`
+- Erwartete nächste Aktion: terminalen Implementiererbericht abwarten, danach
+  den Subagenten archivieren und einen frischen unabhängigen Reviewer starten.
+
+## 2026-08-30 — Epic 2 Implementierer abgeschlossen
+
+- Subagent-ID: `01a05331-c495-7630-936c-130c7303219a`
+- Status: `completed`
+- Geänderte Bereiche: produktive Gitea/Git-Default-Komposition,
+  injizierbarer Credential-Resolver, konfigurierte Cache-/Checkout-Pfade,
+  zentrale Cache-Konstante und Host-Kompositionstests.
+- Implementiererbericht: Build erfolgreich; relevante FastTests 244 bestanden,
+  2 übersprungen; relevante IntegrationTests 11 bestanden; `git diff --check`
+  sauber; `get_violations` 0; `safeguard` 10/10; keine Assemblies ausgeführt
+  und keine externen Repositories verändert.
+- Nicht abgeschlossen: vollständige Nicht-Stress-Abschlussgates und
+  unabhängiges Epic-Review.
+- Nächste Aktion: frischen unabhängigen Reviewer für Epic 2 starten.
+
+## 2026-08-30 — Epic 2 Review abgeschlossen
+
+- Subagent-ID: `01a0533a-8492-7170-9f9d-e89c9dbae6f7`
+- Status: `completed`, Urteil: `approved`
+- Geprüfter Scope: produktive Gitea/Git-Default-Komposition,
+  Provider-Priorität, Credential-Resolver-Grenze, Cache-/Checkout-Pfade und
+  Regressionen zu Epic 1.
+- MCP: `get_file_tree`, `get_feature_context`, `get_impact`,
+  `get_violations`, `safeguard`, `metrics_lookup`; 0 Violations, safeguard
+  10/10, Footprints unter den Limits.
+- Verifikation: Build erfolgreich, relevante FastTests 75/75 und relevante
+  IntegrationTests 84/84 bestanden, `git diff --check` sauber.
+- Ein breiterer Lauf hatte zwei Fehler in unveränderten
+  `ExternalSourceGitProcessExecutorTests` wegen Windows-Zugriffsrechten bzw.
+  Prozess-Timeouts. Disposition: `accepted-deferred`, da außerhalb des
+  Epic-2-Diffs und als Test-/Umgebungsinfrastruktur eingeordnet.
+- Nächste Aktion: Epic 2 als `done` markieren, den vollständigen Epic-Stand
+  committen und danach Epic 3 mit frischen Rollen starten.

@@ -13,6 +13,7 @@ internal static class ExternalSourceRepositoryCacheContract
     internal const string CacheSchemaVersion = "external-source-repository-cache-v1";
     internal const string ContentDirectoryName = "content";
     internal const string SourceDirectoryName = "source";
+    internal const string CheckoutDirectoryName = "checkouts";
     internal const string ManifestFileName = "manifest.json";
     internal const string InventoryFileName = "inventory.json";
     internal const string CurrentPointerFileName = "current";
