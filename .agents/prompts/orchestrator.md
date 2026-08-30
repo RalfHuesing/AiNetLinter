@@ -31,6 +31,10 @@ für die Umsetzung, nachdem ein Konzept bei Bedarf separat mit dem
   bezogenen Arbeitsstand sofort als Git-Checkpoint gesichert, bevor die nächste
   Rolle oder eine weitere Orchestrator-Aktion beginnt. Das gilt auch bei
   fehlgeschlagenen Checks, offenen Findings, Abbruch oder `blocked`.
+- Jeder Commit dieses Workflows ist eindeutig dem Task und der Primäraufgabe
+  zugeordnet: Der Commit-Scope ist der stabile Name des Task-Verzeichnisses,
+  und das Subject beschreibt die fachliche Aktion statt nur eine Epic- oder
+  Rundennummer.
 - Es gibt keine Step-Dateien, keinen `task-state.md`, keine künstlichen
   Übergabearchive und keine Planer-Schleife pro Detailstep.
 - Es gibt keine automatischen Nutzer-Check-ins zwischen Epics. Frage nur bei
@@ -67,14 +71,18 @@ den manuellen Konzept-Task.
    Task-Verzeichnis für `roadmap.md`, `execution-log.md` und `tech-debt.md`
    angegeben haben. Ohne eindeutig ermittelbaren Pfad stoppe vor der
    Delegation und frage danach; erfinde keinen Ablageort.
-4. Prüfe vor der Delegation den Working-Tree-Status. Unzusammenhängende
+4. Leite aus Nutzerauftrag und Konzept eine kurze, stabile Primäraufgabe ab
+   und halte sie im initialen Roadmap-/Log-Checkpoint fest. Verwende diese
+   Bezeichnung für alle Commit-Subjects derselben Ausführung; ersetze sie
+   nicht durch bloße Epic-, Rollen- oder Rundennamen.
+5. Prüfe vor der Delegation den Working-Tree-Status. Unzusammenhängende
    vorhandene Änderungen gehören dem Nutzer und dürfen weder überschrieben
    noch in einen Commit aufgenommen werden.
-5. Lies offene Konzeptfragen und behandle sie pragmatisch: Eine Frage blockiert
+6. Lies offene Konzeptfragen und behandle sie pragmatisch: Eine Frage blockiert
    nur das Epic, für das sie tatsächlich entscheidend ist. Spätere
    Detailentscheidungen dürfen als begrenzte Annahme oder als spätere offene
    Frage in der Roadmap stehen.
-6. Prüfe vor dem ersten Epic, dass ein großes Konzept tatsächlich freigegeben
+7. Prüfe vor dem ersten Epic, dass ein großes Konzept tatsächlich freigegeben
    ist und Ziel, Muss-/Akzeptanzkriterien, Non-Goals, Betriebsmodell,
    Fehlersemantik und Verifikation enthält. Extrahiere außerdem jede explizit
    geforderte konzeptspezifische Prüfung in eine knappe Abschluss-Checkliste.
@@ -314,8 +322,8 @@ Arbeite die offenen Epics strikt nacheinander ab:
    Umsetzung eine Konzeptentscheidung oder eine wesentliche Scope-Erweiterung
    voraussetzt, stoppe stattdessen mit einer konkreten Frage.
 
-Durch die Epic-Commits kann ein unterbrochener Lauf anhand der Roadmap und der
-Git-Historie fortgesetzt werden. Ein Resume mit `roadmap.md` im Status
+Durch die task-eindeutigen Checkpoint-Commits kann ein unterbrochener Lauf anhand
+der Roadmap und der Git-Historie fortgesetzt werden. Ein Resume mit `roadmap.md` im Status
 `executing` läuft automatisch beim ersten offenen Epic weiter. Ein Status
 `blocked` wartet auf die Nutzerentscheidung.
 
@@ -401,6 +409,16 @@ Rollen-Subagent committet selbst.
   nicht künstlich dupliziert. Stage dabei nur auftragsbezogene Dateien
   beziehungsweise eindeutige auftragsbezogene Hunks; bei einer unklaren
   Überschneidung mit Nutzer-Änderungen stoppe statt fremde Arbeit mitzunehmen.
+- Verwende für jeden Commit das Format
+  `<type>(<task-verzeichnisname>): <fachliche Aktion zur Primäraufgabe>`.
+  Der Scope ist der stabile Name des konkreten Task-Verzeichnisses, nicht nur
+  `epic`, `review`, `audit` oder `checkpoint`. Ergänze im Commit-Body die
+  relative Task-Verzeichnisangabe und eine kurze Zeile `Aufgabe: <Primäraufgabe>`.
+  Das gilt auch für reine Log-/Roadmap-/Tech-Debt-Commits. Ein Subject wie
+  `Epic 3 umgesetzt`, `Korrektur #2`, `Review abgeschlossen` oder
+  `Checkpoint gespeichert` ohne Task-Scope und fachliche Aktion ist verboten.
+  Beispiele: `feat(beispiel-task): Implementiere die Ressourcenverwaltung`,
+  `docs(beispiel-task): Protokolliere den Review zur Ressourcenverwaltung`.
 - Der Implementierer, Reviewer und Audit erstellen niemals eigene Commits.
   Der Orchestrator ist der einzige Commit-Besitzer dieses Workflows und schreibt
   keine Commit-Historie um.
