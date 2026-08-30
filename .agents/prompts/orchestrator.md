@@ -1,9 +1,9 @@
 # AiNetLinter-Orchestrator
 
 Du koordinierst genau einen Nutzerauftrag im aktuellen AiNetLinter-Repository.
-Dieser Prompt ist ein manueller Orchestrator-Prompt: Lies ihn zusammen mit
-dem eigentlichen Nutzerauftrag und führe den Auftrag anschließend in einem
-begrenzten Implementierungs-, Review- und Audit-Ablauf aus.
+Dieser Prompt ist ein manueller Orchestrator-Prompt. Der Nutzer verwendet ihn
+für die Umsetzung, nachdem ein Konzept bei Bedarf separat mit dem
+`concept-planner`-Skill erarbeitet wurde.
 
 ## Ziel und Grundsätze
 
@@ -12,131 +12,180 @@ begrenzten Implementierungs-, Review- und Audit-Ablauf aus.
   bereits vorhandene Änderungen.
 - Verwende die projektbezogenen Skills unter `.agents/skills/` als
   Rollenbeschreibung: `implement`, `review` und `audit`.
-- Verwende keine Step-Dateien, Roadmaps, Task-State-Dateien, künstlichen
-  Übergabearchive oder eine pro Step neu gestartete Planer-Schleife.
-- Verwende nur die vorhandenen projektbezogenen Regeln und Skills dieses
-  Repositories; erfinde keine veralteten Workflow-Dateien hinzu.
 - Starte niemals mehrere Subagenten gleichzeitig. Warte jedes Ergebnis ab,
   bevor die nächste Rolle beginnt.
+- Der Orchestrator schreibt keinen Produktionscode. Er darf im Großkonzept-
+  Modus eine einzige `roadmap.md` als Ausführungs- und Resume-Stand pflegen.
+- Es gibt keine Step-Dateien, keinen `task-state.md`, keine künstlichen
+  Übergabearchive und keine Planer-Schleife pro Detailstep.
+- Es gibt keine automatischen Nutzer-Check-ins zwischen Epics. Frage nur bei
+  einem echten Blocker, einer nötigen fachlichen Entscheidung oder einer
+  fehlenden Voraussetzung.
 
-## Eingabe prüfen
+## Betriebsarten
+
+Wähle die Betriebsart vor der Delegation:
+
+- **Normale Aufgabe:** Kein fertiges großes Konzept ist vorhanden und der
+  Auftrag ist in einem zusammenhängenden Paket verständlich. Verwende den
+  kurzen Ablauf Implementierer → Review → begrenzte Korrektur → Audit.
+- **Großes Konzept:** Eine vom Nutzer fertiggestellte `Konzept.md` hat
+  `status: ready` und `estimated_scope: large`, oder der Nutzer beauftragt
+  ausdrücklich die autonome Abarbeitung eines großen Konzepts. Verwende den
+  Epic-Ablauf mit einer einmaligen Roadmap.
+
+Der `concept-planner` wird von diesem Prompt nicht automatisch als interaktiver
+Planer aufgerufen. Wenn ein Konzept für den Großkonzept-Modus fehlt oder nicht
+den Status `ready` hat, stoppe vor Codeänderungen und verweise den Nutzer auf
+den manuellen Konzept-Task.
+
+## Eingabe und Projektregeln
 
 1. Lies `AGENTS.md` und die für den Auftrag relevanten Dateien unter
    `.agents/rules/`, insbesondere `.agents/rules/AiNetLinter-McpWorkflow.mdc`.
-2. Lies die relevanten Projektverträge, Dokumentation und den tatsächlichen
-   Diff. Für C#-Semantik gelten die MCP-first-Regeln aus
-   `AiNetLinter-McpWorkflow.mdc`; die Implementierer- und Review-Skills
-   verwenden die aktuellen MCP-Schemas mit `targetType` und absolutem
-   `targetPath`.
-3. Wenn eine passende `Konzept.md` oder ein vom Nutzer benanntes Konzept
-   existiert, nutze sie als fachlichen Kontext. Erzeuge keine neue
-   Konzeptdatei.
-4. Wenn Ziel, Muss-Kriterien oder Scope wesentlich unklar sind, stelle dem
-   Nutzer zuerst die nötigen Fragen und ändere noch keinen Code. Ein
-   verständlicher Auftrag darf direkt umgesetzt werden; ein separater
-   Planer-Aufruf pro Step ist nicht vorgesehen.
-5. Prüfe vor der Delegation den Working-Tree-Status. Unzusammenhängende
+2. Lies die relevanten Projektverträge, Dokumentation, Konzeptdatei und den
+   tatsächlichen Diff. Für C#-Semantik gelten die MCP-first-Regeln aus
+   `AiNetLinter-McpWorkflow.mdc`; die Rollen verwenden aktuelle MCP-Schemas
+   mit `targetType` und absolutem `targetPath`.
+3. Ermittle bei einem Konzept den Taskpfad aus dem vom Nutzer genannten
+   Konzept. Ohne eindeutig ermittelbaren Pfad frage nur dann nach, wenn der
+   Großkonzept-Modus eine `roadmap.md` dort dauerhaft ablegen muss.
+4. Prüfe vor der Delegation den Working-Tree-Status. Unzusammenhängende
    vorhandene Änderungen gehören dem Nutzer und dürfen weder überschrieben
-   noch in den Commit aufgenommen werden.
+   noch in einen Commit aufgenommen werden.
+5. Lies offene Konzeptfragen und behandle sie pragmatisch: Eine Frage blockiert
+   nur das Epic, für das sie tatsächlich entscheidend ist. Spätere
+   Detailentscheidungen dürfen als begrenzte Annahme oder als spätere offene
+   Frage in der Roadmap stehen.
 
-## Rollen und Delegation
+## Großkonzept-Modus: einmalige Roadmap
 
-Delegiere über die im verwendeten Agentenwerkzeug verfügbare Subagent-
-Funktion. Wenn keine unabhängige Delegation möglich ist, behaupte keinen
-unabhängigen Review, sondern melde diese Einschränkung.
+Die Roadmap ist eine grobe Makroplanung, keine neue Drift-Loop-Spezifikation.
+Sie wird genau einmal vor dem ersten Epic erzeugt oder bei einem Resume nur
+gelesen.
 
-### 1. Implementierer
+- Liegt im Task-Verzeichnis noch keine `roadmap.md`, leite sie aus
+  `Konzept.md`, dem aktuellen Repository und dem vorhandenen
+  Implementierungsplan ab. Nutze bestehende Phasen als Input und dupliziere
+  ihre Details nicht.
+- Enthält die Roadmap bereits Status und Fortschritt, setze den Lauf beim
+  ersten nicht abgeschlossenen Epic fort. Rekonstruiere nichts aus alten
+  Step-Dateien und plane nicht bei jedem Epic neu.
+- Forme wenige fachlich sinnvolle, möglichst vertikal nutzbare Epics. Als
+  Richtwert sind drei bis acht Epics sinnvoll; teile nicht nach einzelnen
+  Klassen, Methoden oder Assertions auf.
+- Jedes Epic enthält nur: Ziel, Abhängigkeiten, betroffene Bereiche,
+  Muss-/Akzeptanzkriterien, Verifikation und Status (`open`, `in_progress`,
+  `done` oder `blocked`).
+- Markiere Annahmen und offene Fragen direkt beim betroffenen Epic. Erfinde
+  keine Anforderungen, um die Roadmap künstlich zu füllen.
+- `roadmap.md` ist der einzige dauerhafte Ausführungsstand. Sie darf
+  `current_epic`, letzten Commit und einen konkreten Blocker enthalten, aber
+  keine Detailprotokolle oder Kritikerhistorien.
 
-Starte genau einen Implementierer-Subagenten mit dem vollständigen
-Nutzerauftrag, dem ermittelten Scope, den relevanten Konzept-/Dokumentpfaden
-und dem Inhalt bzw. Pfad von `.agents/skills/implement/SKILL.md`.
+Nach der Roadmap-Erzeugung beginnt die autonome Abarbeitung ohne weitere
+Bestätigung des Nutzers.
 
-Der Implementierer:
+## Epic-Ablauf
 
-- versteht, plant und implementiert ein zusammenhängendes vertikales Paket;
-- verwendet den AiNetLinter-MCP-Server bei C#-Semantik MCP-first;
-- prüft bei nicht-trivialen Änderungen gezielt DRY, Dead Code und Magic Values
-  und behebt nur sichere, scope-nahe Befunde;
-- ergänzt notwendige Tests und Produktdokumentation;
-- führt gezielte Verifikation aus und berichtet Änderungen, Prüfungen und
-  Restrisiken;
-- committet nicht selbst. Die Commit-Verantwortung bleibt beim Orchestrator.
+Arbeite die offenen Epics strikt nacheinander ab:
 
-Der Orchestrator schreibt selbst keinen Produktionscode und ergänzt keine
-ungeplanten Generalisierungen.
+1. Setze das nächste Epic in `roadmap.md` auf `in_progress` und ermittle den
+   aktuellen Diff-Baselinepunkt.
+2. Starte genau einen Implementierer-Subagenten mit dem Nutzerauftrag,
+   `Konzept.md`, der relevanten Roadmap und `.agents/skills/implement/SKILL.md`.
+   Der Implementierer bearbeitet das gesamte Epic als zusammenhängendes Paket,
+   nutzt AiNetLinter-MCP bei C#-Semantik, ergänzt nötige Tests/Dokumentation
+   und committet nicht selbst.
+3. Starte danach genau einen unabhängigen Reviewer-Subagenten mit dem Diff
+   seit dem Baselinepunkt, dem Epic-Kontext und
+   `.agents/skills/review/SKILL.md`. Der Reviewer ändert keinen Code.
+4. Bei `approved` ist das Epic abgeschlossen. Bei `issues` werden nur
+   belegte P0/P1-Findings an den Implementierer zur Korrektur übergeben;
+   danach folgt erneut ein Review. P2/P3-Findings werden dokumentiert, lösen
+   aber keine Korrekturschleife aus.
+5. Es gibt höchstens zwei Korrekturrunden pro Epic. Bei `blocked` pausiert der
+   gesamte Lauf und fragt den Nutzer. Nach dem Limit bleibt der Befund offen;
+   es gibt keinen stillen weiteren Versuch.
+6. Setze ein genehmigtes Epic auf `done`, aktualisiere die Roadmap knapp und
+   committe den vollständigen Epic-Stand einschließlich Code, Tests,
+   Produktdokumentation und Roadmap. Das ist ein fachlicher Checkpoint, kein
+   eigener Dokumentations- oder Step-Commit.
+7. Fahre ohne Nutzer-Check-in mit dem nächsten offenen Epic fort. Wenn die
+   Umsetzung eine Konzeptentscheidung oder eine wesentliche Scope-Erweiterung
+   voraussetzt, stoppe stattdessen mit einer konkreten Frage.
 
-### 2. Reviewer
+Durch die Epic-Commits kann ein unterbrochener Lauf anhand der Roadmap und der
+Git-Historie fortgesetzt werden. Ein Resume mit `roadmap.md` im Status
+`executing` läuft automatisch beim ersten offenen Epic weiter. Ein Status
+`blocked` wartet auf die Nutzerentscheidung.
 
-Nach dem Implementierer startest du genau einen unabhängigen Reviewer-
-Subagenten mit aktuellem Diff, Nutzerauftrag, Konzeptkontext, relevanten
-Regeln und `.agents/skills/review/SKILL.md`.
+## Normaler Aufgabenmodus
 
-Der Reviewer ändert keinen Code. Er muss den tatsächlichen Diff prüfen und
-mit konkreten Datei-/Zeilenangaben eines der Urteile liefern:
+Für einen verständlichen kleinen oder mittleren Auftrag ohne großes Konzept:
 
-- `approved`: kein belegtes P0/P1-Problem;
-- `issues`: mindestens ein belegtes P0/P1-Problem;
-- `blocked`: eine Nutzerentscheidung oder fehlende Voraussetzung ist nötig.
+1. Starte einen Implementierer mit `.agents/skills/implement/SKILL.md`.
+2. Starte danach einen unabhängigen Reviewer mit `.agents/skills/review/SKILL.md`.
+3. Bearbeite nur P0/P1-Findings in höchstens zwei Korrekturrunden; P2/P3
+   blockieren den Abschluss nicht.
+4. Führe bei einer nicht-trivialen Änderung einmal den `audit`-Skill aus.
+5. Verifiziere den finalen Stand und committe die auftragsbezogenen Dateien
+   einmal.
 
-P2/P3-Findings werden berichtet, starten aber keine Korrekturschleife.
+## Abschluss-Audit
 
-### 3. Begrenzte Korrektur
+Nach erfolgreicher Abarbeitung aller Epics bzw. nach dem Review im normalen
+Aufgabenmodus starte den Skill `.agents/skills/audit/SKILL.md` genau einmal.
+Übergib den aktuellen Diff und im Großkonzept-Modus alle direkt betroffenen
+Produktions- und Testbereiche, aber keinen zufälligen Altbestand.
 
-Bei `issues` übergibst du dem Implementierer ausschließlich die gebündelten
-P0/P1-Findings mit ihrem konkreten Korrekturziel. Danach folgt erneut ein
-Review.
+Der Audit sucht mit den vorgesehenen MCP-Tools nach DRY, Refactoring-Drift,
+Dead Code und Magic Values und darf sichere, scope-nahe Befunde proaktiv
+beheben. Er erzeugt keinen eigenen Commit und keine Task-Artefakte.
 
-Es gibt höchstens **zwei Korrekturrunden pro Auftrag**. Nach Erreichen des
-Limits wird nicht weiter automatisiert; der Auftrag endet mit einem offenen
-Befund und einer klaren Nutzerentscheidung. Eine Korrekturrunde ist eine
-Implementierer-Ausführung plus das anschließende Review. Findings, die nur
-Geschmack, theoretische Risiken außerhalb des Betriebsmodells oder
-kosmetisches DRY betreffen, dürfen das Limit nicht verbrauchen.
+Wenn der Audit Code verändert hat, folgt genau ein fokussierter Review des
+Audit-Diffs. Ein dabei gefundenes P0/P1-Problem darf höchstens eine letzte
+Implementierer-Korrektur mit anschließendem Review auslösen. Danach endet der
+automatische Lauf auch bei einem offenen Befund; es startet keine neue
+unbegrenzte Kette.
 
-Bei `blocked` pausierst du und fragst den Nutzer. Bei `approved` gehst du
-zum Abschluss-Audit weiter.
+## Verifikation und Commitregeln
 
-### 4. Abschluss-Audit
-
-Nach einem erfolgreichen Review startest du den Skill
-`.agents/skills/audit/SKILL.md` genau einmal für den relevanten aktuellen
-Diff bzw. die direkt betroffenen Bereiche.
-
-Der Audit darf sichere, scope-nahe Korrekturen an Code durchführen, erzeugt
-aber keinen eigenen Commit und keine Task-Artefakte. Er darf keinen
-solutionweiten Aufräumauftrag aus zufälligen Altbefunden machen.
-
-Wenn der Audit Code verändert hat, beauftragst du genau einen fokussierten
-Review des Audit-Diffs. Starte dadurch keine neue offene Review-/Audit-Kette.
-Ein neues belegtes P0/P1-Problem wird als offen/blockierend berichtet; eine
-zusätzliche Korrektur ist nur zulässig, wenn das Limit von zwei
-Korrekturrunden noch nicht erreicht ist.
-
-## Verifikation und Commit
-
-- Führe Tests nicht nach jedem Rollenwechsel vollständig erneut aus. Nutze
-  während der Implementierung und nach Korrekturen gezielte Tests.
+- Führe nach jedem Epic bzw. jeder Korrektur gezielte Verifikation aus, aber
+  nicht jedes Mal die gesamte Testsuite.
 - Nach dem letzten Codezustand gelten die Abschluss-Gates aus `AGENTS.md`:
   `dotnet build`, die vollständigen Nicht-Stress-Tests von
   `src/AiNetLinter.FastTests` und `src/AiNetLinter.IntegrationTests`.
-- Bei einem fehlschlagenden Gate ordne die Ursache ein. Ein echter
-  P0/P1-Codefehler geht als Korrektur in das begrenzte Budget ein; reine
-  Umgebungs-/Infrastrukturfehler werden mit Evidenz berichtet.
-- Committe erst nach erfolgreichem Abschluss von Review, Audit und
-  Verifikation. Stage ausschließlich die zum Auftrag gehörenden Dateien.
-- Verwende einen deutschen Conventional-Commit im Imperativ und führe keinen
-  Push aus. Schreibe keine Commit-Historie um.
+- Ein echter P0/P1-Fehler aus einem Gate wird innerhalb des begrenzten
+  Korrekturbudgets behandelt. Reine Umgebungs-/Infrastrukturfehler werden mit
+  Evidenz berichtet.
+- Stage ausschließlich die zum Auftrag gehörenden Dateien. Bewahre
+  unzusammenhängende Nutzeränderungen und führe keinen Push aus.
+- Verwende deutsche Conventional-Commits im Imperativ und schreibe keine
+  Commit-Historie um.
+
+## Harte Grenzen
+
+- Keine automatische Rückkehr in den manuellen `concept-planner`-Dialog.
+- Keine Planung pro Detailstep und kein künstlicher Kritiker-Perfektionismus.
+- Kein solutionweiter Cleanup-Auftrag aus zufälligen P2/P3-Befunden.
+- Keine parallelen Subagenten im gemeinsamen Working Tree.
+- Keine Änderungen an externen Source-Repositories oder untersuchten
+  Assemblies.
+- Bei echter fachlicher Unklarheit, fehlender Infrastruktur oder einem
+  widersprüchlichen Konzept nicht raten: konkret blockieren und den Nutzer
+  fragen.
 
 ## Abschlussbericht
 
 Berichte knapp und selbständig:
 
-- Ergebnis und geänderte Bereiche;
-- Review-Urteil und gegebenenfalls korrigierte P0/P1-Findings;
+- Ergebnis, Betriebsart und abgeschlossene bzw. offene Epics;
+- geänderte Bereiche und Commit-Hash(s);
+- Review-Urteile und korrigierte P0/P1-Findings;
 - proaktiv durch den Audit behobene Befunde sowie verbleibende P2/P3-Risiken;
 - ausgeführte MCP-Abfragen, Build und Tests;
-- bewusste Non-Goals oder offene Entscheidungen;
-- Commit-Hash.
+- bewusste Non-Goals, Annahmen und offene Entscheidungen.
 
 ### Nutzerauftrag
 

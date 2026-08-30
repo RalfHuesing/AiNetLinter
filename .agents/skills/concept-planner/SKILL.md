@@ -7,13 +7,16 @@ description: Schärfe ein neues AiNetLinter-Vorhaben interaktiv zu einem umsetzb
 
 ## Zweck
 
-Verwende diesen Skill vor größeren oder noch unklaren Vorhaben. Er führt ein
-Sparring mit dem Nutzer, untersucht den vorhandenen Projektkontext und formt
-die Idee schrittweise zu einem belastbaren `Konzept.md`.
+Verwende diesen Skill als manuellen Vorbereitungs-Task vor größeren oder noch
+unklaren Vorhaben. Er führt ein Sparring mit dem Nutzer, untersucht den
+vorhandenen Projektkontext und formt die Idee schrittweise zu einem belastbaren
+`Konzept.md`.
 
-Er ist kein Implementierungsworkflow, kein Orchestrator und kein Ersatz für
-den Implementierungs- oder Review-Skill. Während der Klärungsphase werden
-keine Code-, Build- oder Teständerungen vorgenommen.
+Er ist kein autonomer Implementierungsworkflow, kein Orchestrator und kein
+Ersatz für den Implementierungs- oder Review-Skill. Der Nutzer entscheidet,
+wann das fertige Konzept an `.agents/prompts/orchestrator.md` übergeben wird.
+Während der Klärungsphase werden keine Code-, Build- oder Teständerungen
+vorgenommen.
 
 ## Projektkontext und Regeln
 
@@ -79,11 +82,16 @@ neuen Task verwende die im Repository übliche Konzeptdatei, bevorzugt
 Während des Sparrings schreibst du die Konzeptdatei erst nach ausdrücklicher
 Bestätigung eines abgestimmten Zwischenstands. Danach darfst du sie iterativ
 aktualisieren, wenn der Nutzer die jeweilige Entscheidung bestätigt. Setze
-den Status erst auf `ready`, wenn alle für den aktuellen Scope notwendigen
-Entscheidungen getroffen sind; bewusst zurückgestellte Erweiterungen bleiben
-als solche gekennzeichnet.
+den Status erst auf `ready`, wenn die für den Start des aktuellen Scopes
+notwendigen Entscheidungen getroffen sind. Bei großen Vorhaben müssen spätere
+Detailentscheidungen nicht vorab geklärt sein: Ordne sie als spätere Annahme,
+Abhängigkeit oder offene Frage einem sinnvollen Teilbereich zu und blockiere
+nicht das gesamte Vorhaben ohne konkreten Grund. Bewusst zurückgestellte
+Erweiterungen bleiben als solche gekennzeichnet.
 
-Erzeuge keine Roadmap, Step-Dateien, Task-State-Dateien oder Codeänderungen.
-Beende mit einer kompakten Zusammenfassung der Entscheidung und einer klaren
-Empfehlung, ob das Vorhaben jetzt an den Implementierungs-Skill übergeben
-werden kann.
+Erzeuge in diesem manuellen Skill keine Roadmap, Step-Dateien oder
+Task-State-Dateien und ändere keinen Code. Beende mit einer kompakten
+Zusammenfassung der Entscheidung und der klaren Aussage, ob das Konzept jetzt
+an den autonomen Orchestrator übergeben werden kann. Der Orchestrator leitet
+für ein großes `ready`-Konzept anschließend selbst einmalig eine
+Epic-Roadmap ab.
