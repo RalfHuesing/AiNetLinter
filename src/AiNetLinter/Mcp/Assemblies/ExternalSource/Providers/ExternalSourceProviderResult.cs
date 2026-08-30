@@ -80,6 +80,8 @@ internal sealed record ExternalSourceProviderResult
 
     internal ExternalSourceSnapshot? SourceSnapshot { get; }
 
+    internal bool IsAttested => SourceSnapshot?.IsAttested == true;
+
     internal ExternalSourceRepositoryResultState ToResultState() =>
         ExternalSourceRepositoryResultState.Create(
             FailureKind,

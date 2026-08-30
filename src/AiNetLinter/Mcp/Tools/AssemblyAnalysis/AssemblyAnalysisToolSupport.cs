@@ -32,7 +32,7 @@ internal static class AssemblyAnalysisToolSupport
 
     internal static async Task<CallToolResult> ExecuteAsync(
         AssemblyToolExecutionParameters parameters,
-        AssemblySourceSelectionOrchestrator orchestrator,
+        IAssemblySourceSelectionResolver orchestrator,
         Action<AssemblySourceSelectionScope>? observeScope = null)
     {
         ArgumentNullException.ThrowIfNull(orchestrator);
@@ -132,7 +132,7 @@ internal static class AssemblyAnalysisToolSupport
         return true;
     }
 
-    private static IReadOnlyList<string> FormatExternalDiagnostics(
+    internal static IReadOnlyList<string> FormatExternalDiagnostics(
         IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics) =>
         diagnostics
             .Where(diagnostic => !string.IsNullOrWhiteSpace(diagnostic.Message))

@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 namespace AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
@@ -64,12 +65,14 @@ internal sealed class SourceSnapshotRegistry : IDisposable
         lock (gate)
         {
             remaining = new List<ExternalSourceSnapshot>(snapshots.Count);
-            foreach (var entry in snapshots.Values)
+            foreach (var pair in snapshots.ToList())
             {
-                remaining.Add(entry.Snapshot);
+                if (pair.Value.LeaseCount == 0)
+                {
+                    remaining.Add(pair.Value.Snapshot);
+                    snapshots.Remove(pair.Key);
+                }
             }
-
-            snapshots.Clear();
         }
 
         remaining.Sort(static (left, right) =>
@@ -93,6 +96,7 @@ internal sealed class SourceSnapshotRegistry : IDisposable
 
     internal void Release(ExternalSourceSnapshot snapshot)
     {
+        ExternalSourceSnapshot? snapshotToDispose = null;
         lock (gate)
         {
             if (snapshots.TryGetValue(snapshot.Identity.StableValue, out var entry)
@@ -100,8 +104,15 @@ internal sealed class SourceSnapshotRegistry : IDisposable
                 && entry.LeaseCount > 0)
             {
                 entry.LeaseCount--;
+                if (Volatile.Read(ref disposed) != 0 && entry.LeaseCount == 0)
+                {
+                    snapshots.Remove(snapshot.Identity.StableValue);
+                    snapshotToDispose = snapshot;
+                }
             }
         }
+
+        snapshotToDispose?.Dispose();
     }
 
     private void ThrowIfDisposed()

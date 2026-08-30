@@ -23,7 +23,8 @@ internal sealed record AssemblyOrigin(
     string GeneratedDocumentPath,
     string Confidence,
     SourceSnapshotIdentity? SourceSnapshotIdentity = null,
-    string? SourceProjectPath = null)
+    string? SourceProjectPath = null,
+    string Trust = "untrusted")
 {
     internal string Kind => OriginKind;
 
@@ -153,7 +154,10 @@ internal sealed record AssemblySessionGeneration(
     AssemblyRoslynSnapshot Snapshot,
     IReadOnlyList<AssemblyReferenceDto> References,
     IReadOnlyList<AssemblySessionDiagnostic> Diagnostics,
-    AssemblyOrigin Origin);
+    AssemblyOrigin Origin)
+{
+    internal int ActiveLeaseCount { get; set; }
+}
 
 internal sealed record AssemblySessionState(
     AssemblySessionStatus Status,
@@ -172,7 +176,8 @@ internal sealed record AssemblySessionRefreshResult(
 internal sealed record AssemblyAnalysisSessionOptions(
     string AssemblyPath,
     AssemblyDecompilationOptions? Decompilation = null,
-    string? CacheRoot = null);
+    string? CacheRoot = null,
+    long GenerationStart = 0);
 
 internal sealed record CachedDecompilationGeneration(
     AssemblyDecompilationManifest Manifest,

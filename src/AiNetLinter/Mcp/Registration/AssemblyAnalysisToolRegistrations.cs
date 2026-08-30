@@ -3,8 +3,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
-using AiNetLinter.Mcp.Assemblies;
-using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using ModelContextProtocol.Protocol;
@@ -16,17 +15,15 @@ internal static class AssemblyAnalysisToolRegistrations
 {
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        Func<string?, string?, Func<string, Task<CallToolResult>>, Task<CallToolResult>> executeAssembly,
-        AssemblyAnalysisHostComposition? composition = null)
+        AnalysisToolRoute assemblyRoute)
     {
-        AddInspectAssembly(tools, executeAssembly, composition);
-        AddFindAssemblyExtensions(tools, executeAssembly, composition);
+        AddInspectAssembly(tools, assemblyRoute);
+        AddFindAssemblyExtensions(tools, assemblyRoute);
     }
 
     private static void AddInspectAssembly(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        Func<string?, string?, Func<string, Task<CallToolResult>>, Task<CallToolResult>> executeAssembly,
-        AssemblyAnalysisHostComposition? composition)
+        AnalysisToolRoute assemblyRoute)
     {
         tools.Add(McpServerTool.Create(
             async (
@@ -41,33 +38,25 @@ internal static class AssemblyAnalysisToolRegistrations
                 string[]? memberNames = null,
                 int maxMembers = AssemblyAnalysisService.DefaultMaxMembers,
                 CancellationToken ct = default) =>
-                await executeAssembly(
-                    targetType,
-                    targetPath,
-                    assemblyPath => ExecuteInspectAssemblyAsync(
-                        new InspectAssemblyArguments(
-                            assemblyPath,
-                            @namespace,
-                            typeName,
-                            memberName,
-                            publicOnly,
-                            maxResults,
-                            exactTypeName,
-                            memberNames,
-                            maxMembers),
-                        ct,
-                        composition)),
+                await AnalysisToolCall.ExecuteRouted(
+                    assemblyRoute,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(
+                            AssemblySessionCall: lease => InspectAssemblyTool.ExecuteAsync(
+                                lease,
+                                new InspectAssemblyArguments(
+                                    lease.CanonicalPath,
+                                    @namespace,
+                                    typeName,
+                                    memberName,
+                                    publicOnly,
+                                    maxResults,
+                                    exactTypeName,
+                                    memberNames,
+                                    maxMembers))),
+                        ct)),
             McpToolRegistrationOptions.AssemblyTool("inspect_assembly", InspectAssemblyDescription)));
-    }
-
-    private static Task<CallToolResult> ExecuteInspectAssemblyAsync(
-        InspectAssemblyArguments arguments,
-        CancellationToken ct,
-        AssemblyAnalysisHostComposition? composition)
-    {
-        return composition is null
-            ? InspectAssemblyTool.ExecuteAsync(null, arguments, ct)
-            : InspectAssemblyTool.ExecuteAsync(null, arguments, ct, composition.Orchestrator);
     }
 
     private const string InspectAssemblyDescription =
@@ -88,8 +77,7 @@ internal static class AssemblyAnalysisToolRegistrations
 
     private static void AddFindAssemblyExtensions(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        Func<string?, string?, Func<string, Task<CallToolResult>>, Task<CallToolResult>> executeAssembly,
-        AssemblyAnalysisHostComposition? composition)
+        AnalysisToolRoute assemblyRoute)
     {
         tools.Add(McpServerTool.Create(
             async (
@@ -100,38 +88,21 @@ internal static class AssemblyAnalysisToolRegistrations
                 string? @namespace = null,
                 int maxResults = AssemblyAnalysisService.DefaultMaxResults,
                 CancellationToken ct = default) =>
-                await executeAssembly(
-                    targetType,
-                    targetPath,
-                    assemblyPath => ExecuteFindAssemblyExtensionsAsync(
-                        assemblyPath,
-                        receiverType,
-                        extensionName,
-                        @namespace,
-                        maxResults,
-                        ct,
-                        composition)),
+                await AnalysisToolCall.ExecuteRouted(
+                    assemblyRoute,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(
+                            AssemblySessionCall: lease => FindAssemblyExtensionsTool.ExecuteAsync(
+                                lease,
+                                new FindAssemblyExtensionsArguments(
+                                    lease.CanonicalPath,
+                                    receiverType,
+                                    extensionName,
+                                    @namespace,
+                                    maxResults))),
+                        ct)),
             McpToolRegistrationOptions.AssemblyTool("find_assembly_extensions", FindAssemblyExtensionsDescription)));
-    }
-
-    private static Task<CallToolResult> ExecuteFindAssemblyExtensionsAsync(
-        string assemblyPath,
-        string? receiverType,
-        string? extensionName,
-        string? @namespace,
-        int maxResults,
-        CancellationToken ct,
-        AssemblyAnalysisHostComposition? composition)
-    {
-        var arguments = new FindAssemblyExtensionsArguments(
-            assemblyPath,
-            receiverType,
-            extensionName,
-            @namespace,
-            maxResults);
-        return composition is null
-            ? FindAssemblyExtensionsTool.ExecuteAsync(null, arguments, ct)
-            : FindAssemblyExtensionsTool.ExecuteAsync(null, arguments, ct, composition.Orchestrator);
     }
 
     private const string FindAssemblyExtensionsDescription =

@@ -41,18 +41,7 @@ internal static class AssemblyAnalysisContextFactory
                 return (null, FormatFailure(refresh.Diagnostics));
             }
 
-            var diagnostics = generation.Diagnostics.Select(diagnostic => diagnostic.Message).ToList();
-            context = new AssemblyContext(
-                generation.Snapshot.Compilation.Assembly,
-                generation.Identity,
-                generation.References,
-                DistinctDiagnostics(diagnostics),
-                generation.Snapshot.Compilation,
-                null,
-                null,
-                generation.Origin,
-                generation.Number,
-                generation.Status);
+            context = FromGeneration(generation);
         }
 
         var contextDiagnostics = context.Diagnostics.ToList();
@@ -66,6 +55,19 @@ internal static class AssemblyAnalysisContextFactory
             ConsumerProject = consumer.ProjectName,
         }, null);
     }
+
+    internal static AssemblyContext FromGeneration(AssemblySessionGeneration generation) =>
+        new(
+            generation.Snapshot.Compilation.Assembly,
+            generation.Identity,
+            generation.References,
+            DistinctDiagnostics(generation.Diagnostics.Select(diagnostic => diagnostic.Message)),
+            generation.Snapshot.Compilation,
+            null,
+            null,
+            generation.Origin,
+            generation.Number,
+            generation.Status);
 
     private static async Task<AssemblyContext?> TryCreateSourceBackedContextAsync(
         AssemblyAnalysisContextRequest request)
@@ -91,10 +93,6 @@ internal static class AssemblyAnalysisContextFactory
         {
             compilation = await project.GetCompilationAsync(request.CancellationToken).ConfigureAwait(false);
         }
-        catch (OperationCanceledException)
-        {
-            return null;
-        }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or ArgumentException or NotSupportedException)
         {
             return null;
@@ -115,7 +113,8 @@ internal static class AssemblyAnalysisContextFactory
             string.Empty,
             "high",
             snapshot.Identity,
-            project.FilePath);
+            project.FilePath,
+            "verified-clean");
         return new AssemblyContext(
             compilation.Assembly,
             references.Identity,
@@ -136,6 +135,9 @@ internal static class AssemblyAnalysisContextFactory
         var snapshot = selection.SourceLease.Snapshot;
         var match = selection.MatchResult;
         return !snapshot.IsDisposed
+            && selection.IsAttested
+            && selection.ProviderHealth is ExternalSourceRepositoryHealth.Verified
+            && selection.CheckoutTrust is ExternalSourceCheckoutTrust.Clean
             && match.State == ExternalSourceMatchState.Matched
             && match.MatchedCandidate is not null
             && match.SourceSnapshotIdentity is not null

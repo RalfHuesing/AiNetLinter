@@ -2,6 +2,7 @@
 
 using System;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Projects;
 using ModelContextProtocol.Protocol;
 
@@ -28,4 +29,5 @@ internal sealed record AnalysisTargetResolution(
 
 internal sealed record AnalysisToolDispatch(
     Func<ProjectLease, Task<CallToolResult>>? ProjectCall = null,
-    Func<string, Task<CallToolResult>>? AssemblyCall = null);
+    Func<string, Task<CallToolResult>>? AssemblyCall = null,
+    Func<AssemblyAnalysisLease, Task<CallToolResult>>? AssemblySessionCall = null);

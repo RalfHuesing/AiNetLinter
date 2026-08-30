@@ -13,11 +13,12 @@ internal static class AssemblyAnalysisOriginText
         if (origin.IsDecompiled)
         {
             builder.AppendLine($"Herkunft: `{origin.OriginKind}` — `{origin.GeneratedDocumentPath}`");
+            builder.AppendLine($"Confidence: `{origin.Confidence}`, Trust: `{origin.Trust}`, Hash: `{origin.ContentHash}`");
             builder.AppendLine("Hinweis: Der angeforderte Code wurde dekompiliert und kann von der Originalquelle abweichen.");
             return;
         }
 
-        builder.AppendLine($"Herkunft: `{origin.OriginKind}`");
+        builder.AppendLine($"Herkunft: `{origin.OriginKind}`, Confidence: `{origin.Confidence}`, Trust: `{origin.Trust}`, Hash: `{origin.ContentHash}`");
         if (!string.IsNullOrWhiteSpace(origin.SourceProjectPath))
         {
             builder.AppendLine($"Source-Projekt: `{origin.SourceProjectPath}`");

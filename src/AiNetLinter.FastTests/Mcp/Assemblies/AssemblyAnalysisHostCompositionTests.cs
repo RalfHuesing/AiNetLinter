@@ -29,7 +29,7 @@ public sealed class AssemblyAnalysisHostCompositionTests
         var settingsPath = temp.CreateFile(
             "appsettings.json",
             "{ \"ExternalSources\": { \"MappingsPath\": \"mappings.json\" } }");
-        using var composition = AssemblyAnalysisHostComposition.Create(settingsPath);
+        await using var composition = AssemblyAnalysisHostComposition.Create(settingsPath);
 
         var inspect = await InspectAssemblyTool.ExecuteAsync(
             null,
@@ -63,7 +63,7 @@ public sealed class AssemblyAnalysisHostCompositionTests
     }
 
     [Fact]
-    public void Dispose_ReleasesTheHostOwnedRegistryOnceAndClosesOrchestratorAccess()
+    public async Task Dispose_ReleasesTheHostOwnedRegistryOnceAndClosesOrchestratorAccess()
     {
         using var temp = TestTempDirectory.Create("assembly-host-composition-lifetime-");
         var mapping = new ExternalSourceMapping(
@@ -79,7 +79,7 @@ public sealed class AssemblyAnalysisHostCompositionTests
             SourceSnapshotIdentity.Create(mapping, "revision-1"),
             solution,
             workspace);
-        using var composition = AssemblyAnalysisHostComposition.Create(
+        await using var composition = AssemblyAnalysisHostComposition.Create(
             temp.GetPath("missing-appsettings.json"));
         using var lease = composition.Registry.Acquire(snapshot);
 
@@ -88,8 +88,8 @@ public sealed class AssemblyAnalysisHostCompositionTests
         Assert.True(lease.IsDisposed);
         Assert.Equal(1, composition.Registry.ResidentCount);
 
-        composition.Dispose();
-        composition.Dispose();
+        await composition.DisposeAsync();
+        await composition.DisposeAsync();
 
         Assert.True(composition.IsDisposed);
         Assert.Equal(0, composition.Registry.ResidentCount);

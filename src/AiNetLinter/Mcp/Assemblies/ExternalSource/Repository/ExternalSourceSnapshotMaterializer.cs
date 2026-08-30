@@ -80,8 +80,10 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
                 SourceSnapshotIdentity.Create(mapping, checkout.LoadedRevision),
                 solution,
                 workspace,
-                checkout,
-                materializationUse);
+                new ExternalSourceSnapshotOwnership(
+                    checkout,
+                    materializationUse,
+                    IsAttested: true));
             workspace = null;
             return snapshot;
         }

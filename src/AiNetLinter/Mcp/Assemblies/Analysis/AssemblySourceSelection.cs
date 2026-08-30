@@ -2,6 +2,7 @@
 
 using System;
 using System.Threading;
+using AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
@@ -10,20 +11,33 @@ internal sealed record AssemblySourceSelection
 {
     private AssemblySourceSelection(
         SourceSnapshotLease sourceLease,
-        ExternalSourceMatchResult matchResult)
+        ExternalSourceMatchResult matchResult,
+        ExternalSourceRepositoryHealth providerHealth,
+        ExternalSourceCheckoutTrust checkoutTrust,
+        bool isAttested)
     {
         SourceLease = sourceLease;
         MatchResult = matchResult;
+        ProviderHealth = providerHealth;
+        CheckoutTrust = checkoutTrust;
+        IsAttested = isAttested;
     }
 
     internal SourceSnapshotLease SourceLease { get; }
 
     internal ExternalSourceMatchResult MatchResult { get; }
 
-    internal static AssemblySourceSelection? Create(
-        SourceSnapshotLease sourceLease,
-        ExternalSourceMatchResult matchResult)
+    internal ExternalSourceRepositoryHealth ProviderHealth { get; }
+
+    internal ExternalSourceCheckoutTrust CheckoutTrust { get; }
+
+    internal bool IsAttested { get; }
+
+    internal static AssemblySourceSelection? Create(AssemblySourceSelectionParameters parameters)
     {
+        ArgumentNullException.ThrowIfNull(parameters);
+        var sourceLease = parameters.SourceLease;
+        var matchResult = parameters.MatchResult;
         ArgumentNullException.ThrowIfNull(sourceLease);
         ArgumentNullException.ThrowIfNull(matchResult);
 
@@ -45,9 +59,21 @@ internal sealed record AssemblySourceSelection
             return null;
         }
 
-        return new AssemblySourceSelection(sourceLease, matchResult);
+        return new AssemblySourceSelection(
+            sourceLease,
+            matchResult,
+            parameters.ProviderHealth,
+            parameters.CheckoutTrust,
+            parameters.IsAttested ?? sourceLease.Snapshot.IsAttested);
     }
 }
+
+internal sealed record AssemblySourceSelectionParameters(
+    SourceSnapshotLease SourceLease,
+    ExternalSourceMatchResult MatchResult,
+    ExternalSourceRepositoryHealth ProviderHealth = ExternalSourceRepositoryHealth.Verified,
+    ExternalSourceCheckoutTrust CheckoutTrust = ExternalSourceCheckoutTrust.Clean,
+    bool? IsAttested = null);
 
 internal sealed record AssemblyAnalysisContextRequest(
     string AssemblyPath,

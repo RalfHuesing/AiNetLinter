@@ -20,7 +20,8 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
     private readonly AssemblyReferenceResolver referenceResolver = new();
     private readonly AssemblyDecompilationAdapter decompilationAdapter = new();
     private readonly AssemblyRoslynWorkspaceFactory workspaceFactory = new();
-    private readonly List<AssemblyRoslynSnapshot> snapshots = [];
+    private readonly List<AssemblySessionGeneration> generations = [];
+    private readonly TaskCompletionSource<object?> leasesDrained = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private AssemblySessionGeneration? current;
     private AssemblySessionState state;
     private long nextGeneration;
@@ -37,6 +38,7 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
         sessionOptions = options;
         decompilationOptions = options.Decompilation ?? AssemblyDecompilationOptions.Default;
         cache = new AssemblyDecompilationCache(options.CacheRoot);
+        nextGeneration = options.GenerationStart;
         state = new AssemblySessionState(AssemblySessionStatus.Loading, null, null, null, [], DateTime.UtcNow);
     }
 
@@ -58,7 +60,12 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
 
     internal AssemblyAnalysisSnapshotLease? AcquireSnapshot()
     {
-        lock (gate) return current is null ? null : new AssemblyAnalysisSnapshotLease(current);
+        lock (gate)
+        {
+            if (disposed || current is null) return null;
+            current.ActiveLeaseCount++;
+            return new AssemblyAnalysisSnapshotLease(this, current);
+        }
     }
 
     internal async Task<AssemblySessionRefreshResult> RefreshAsync(CancellationToken cancellationToken = default)
@@ -84,25 +91,30 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
 
     public void Dispose()
     {
-        List<AssemblyRoslynSnapshot> snapshots;
+        List<AssemblyRoslynSnapshot> snapshotsToDispose;
         lock (gate)
         {
             if (disposed) return;
             disposed = true;
-            snapshots = this.snapshots.ToList();
             current = null;
             state = state with { Status = AssemblySessionStatus.Failed, CurrentGeneration = null, UpdatedUtc = DateTime.UtcNow };
+            snapshotsToDispose = generations
+                .Where(generation => generation.ActiveLeaseCount == 0)
+                .Select(generation => generation.Snapshot)
+                .ToList();
+            generations.RemoveAll(generation => generation.ActiveLeaseCount == 0);
+            if (generations.Count == 0) leasesDrained.TrySetResult(null);
         }
 
-        foreach (var snapshot in snapshots) snapshot.Dispose();
+        foreach (var snapshot in snapshotsToDispose) snapshot.Dispose();
         refreshGate.Dispose();
         GC.SuppressFinalize(this);
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         Dispose();
-        return ValueTask.CompletedTask;
+        await leasesDrained.Task.ConfigureAwait(false);
     }
 
     private async Task<AssemblySessionRefreshResult> RefreshCoreAsync(CancellationToken cancellationToken)
@@ -273,6 +285,7 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
 
     private AssemblySessionRefreshResult InstallGeneration(AssemblySessionGeneration generation)
     {
+        AssemblyRoslynSnapshot? retiredSnapshot = null;
         lock (gate)
         {
             if (disposed)
@@ -290,7 +303,16 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
             }
 
             current = generation;
-            snapshots.Add(generation.Snapshot);
+            generations.Add(generation);
+            if (generations.Count > 1)
+            {
+                var previous = generations[^2];
+                if (previous.ActiveLeaseCount == 0)
+                {
+                    generations.Remove(previous);
+                    retiredSnapshot = previous.Snapshot;
+                }
+            }
             state = new AssemblySessionState(
                 generation.Status,
                 generation.Number,
@@ -298,8 +320,10 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
                 generation.Fingerprint,
                 generation.Diagnostics,
                 DateTime.UtcNow);
-            return new AssemblySessionRefreshResult(generation.Status, generation.Number, false, generation.Diagnostics);
         }
+
+        retiredSnapshot?.Dispose();
+        return new AssemblySessionRefreshResult(generation.Status, generation.Number, false, generation.Diagnostics);
     }
 
     private bool TryReadCache(
@@ -360,6 +384,29 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
         lock (gate) return disposed;
     }
 
+    internal void ReleaseSnapshot(AssemblySessionGeneration generation)
+    {
+        AssemblyRoslynSnapshot? snapshotToDispose = null;
+        lock (gate)
+        {
+            if (generation.ActiveLeaseCount == 0) return;
+            generation.ActiveLeaseCount--;
+            if (generation.ActiveLeaseCount == 0
+                && !ReferenceEquals(current, generation)
+                && generations.Remove(generation))
+            {
+                snapshotToDispose = generation.Snapshot;
+            }
+
+            if (disposed && generations.Count == 0)
+            {
+                leasesDrained.TrySetResult(null);
+            }
+        }
+
+        snapshotToDispose?.Dispose();
+    }
+
     private bool ValidateOptions(out AssemblySessionDiagnostic? diagnostic)
     {
         if (decompilationOptions.MaxAssemblyBytes > 0 && decompilationOptions.MaxTypes > 0 && decompilationOptions.MaxMembers > 0 && decompilationOptions.MaxDocumentCharacters > 0 && decompilationOptions.MaxComplexity > 0)
@@ -414,16 +461,27 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
 
 internal sealed class AssemblyAnalysisSnapshotLease : IDisposable
 {
+    private readonly AssemblyAnalysisSession session;
+    private readonly AssemblySessionGeneration generation;
     private int disposed;
 
-    internal AssemblyAnalysisSnapshotLease(AssemblySessionGeneration generation)
+    internal AssemblyAnalysisSnapshotLease(
+        AssemblyAnalysisSession session,
+        AssemblySessionGeneration generation)
     {
-        Generation = generation;
+        this.session = session;
+        this.generation = generation;
     }
 
-    internal AssemblySessionGeneration Generation { get; }
+    internal AssemblySessionGeneration Generation => generation;
 
-    internal AssemblyRoslynSnapshot Snapshot => Generation.Snapshot;
+    internal AssemblyRoslynSnapshot Snapshot => generation.Snapshot;
 
-    public void Dispose() => Interlocked.Exchange(ref disposed, 1);
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref disposed, 1) == 0)
+        {
+            session.ReleaseSnapshot(generation);
+        }
+    }
 }

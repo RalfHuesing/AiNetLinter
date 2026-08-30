@@ -116,10 +116,18 @@ public sealed class SourceSnapshotRegistryTests
                 secondSnapshot.Identity.StableValue) < 0,
             $"first={firstSnapshot.Identity.StableValue}; second={secondSnapshot.Identity.StableValue}");
 
-        var failure = Assert.Throws<InvalidOperationException>(() => registry.Dispose());
+        registry.Dispose();
+
+        Assert.Empty(disposeOrder);
+        Assert.False(firstSnapshot.IsDisposed);
+        Assert.False(secondSnapshot.IsDisposed);
+        Assert.Equal(2, registry.ResidentCount);
+
+        secondLease.Dispose();
+        var failure = Assert.Throws<InvalidOperationException>(() => firstLease.Dispose());
 
         Assert.Equal(FirstSnapshotLabel, failure.Message);
-        Assert.Equal([FirstSnapshotLabel, SecondSnapshotLabel], disposeOrder);
+        Assert.Equal([SecondSnapshotLabel, FirstSnapshotLabel], disposeOrder);
         Assert.True(firstSnapshot.IsDisposed);
         Assert.True(secondSnapshot.IsDisposed);
         Assert.Equal(0, registry.ResidentCount);
@@ -137,7 +145,7 @@ public sealed class SourceSnapshotRegistryTests
     }
 
     [Fact]
-    public void Dispose_AggregatesMultipleSnapshotFailuresInStableIdentityOrder()
+    public void Dispose_DrainsActiveLeasesAndReportsEachSnapshotFailure()
     {
         var disposeOrder = new List<string>();
         var firstMapping = new ExternalSourceMapping(
@@ -156,13 +164,15 @@ public sealed class SourceSnapshotRegistryTests
         using var secondLease = registry.Acquire(secondSnapshot);
         using var firstLease = registry.Acquire(firstSnapshot);
 
-        var failure = Assert.Throws<AggregateException>(() => registry.Dispose());
+        registry.Dispose();
 
-        Assert.Collection(
-            failure.InnerExceptions,
-            first => Assert.Equal(FirstSnapshotLabel, first.Message),
-            second => Assert.Equal(SecondSnapshotLabel, second.Message));
-        Assert.Equal([FirstSnapshotLabel, SecondSnapshotLabel], disposeOrder);
+        Assert.Equal(2, registry.ResidentCount);
+        var secondFailure = Assert.Throws<InvalidOperationException>(() => secondLease.Dispose());
+        var firstFailure = Assert.Throws<InvalidOperationException>(() => firstLease.Dispose());
+
+        Assert.Equal(SecondSnapshotLabel, secondFailure.Message);
+        Assert.Equal(FirstSnapshotLabel, firstFailure.Message);
+        Assert.Equal([SecondSnapshotLabel, FirstSnapshotLabel], disposeOrder);
         Assert.Equal(1, firstOwner.DisposeCount);
         Assert.Equal(1, secondOwner.DisposeCount);
 
@@ -186,7 +196,7 @@ public sealed class SourceSnapshotRegistryTests
             SourceSnapshotIdentity.Create(mapping, revision),
             workspace.CurrentSolution,
             workspace,
-            checkoutOwner);
+            new ExternalSourceSnapshotOwnership(checkoutOwner));
     }
 
     private sealed class TrackingCheckoutOwner(

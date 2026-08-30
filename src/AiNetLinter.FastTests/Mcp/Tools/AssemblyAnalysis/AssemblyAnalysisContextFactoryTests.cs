@@ -35,7 +35,7 @@ public sealed class AssemblyAnalysisContextFactoryTests
         using var lease = registry.Acquire(snapshot);
 
         var match = AssemblySourceMatchResolver.Resolve(lease, mapping, "TargetAssembly.dll");
-        var selection = AssemblySourceSelection.Create(lease, match);
+        var selection = AssemblySourceSelection.Create(new(lease, match));
         Assert.NotNull(selection);
 
         var result = await AssemblyAnalysisContextFactory.CreateAsync(new AssemblyAnalysisContextRequest(
@@ -80,7 +80,7 @@ public sealed class AssemblyAnalysisContextFactoryTests
         using var noMatchRegistry = new SourceSnapshotRegistry();
         using var noMatchLease = noMatchRegistry.Acquire(noMatchSnapshot);
         var noMatch = AssemblySourceMatchResolver.Resolve(noMatchLease, noMatchMapping, "TargetAssembly");
-        var noMatchSelection = AssemblySourceSelection.Create(noMatchLease, noMatch);
+        var noMatchSelection = AssemblySourceSelection.Create(new(noMatchLease, noMatch));
         Assert.NotNull(noMatchSelection);
 
         var noMatchResult = await AssemblyAnalysisContextFactory.CreateAsync(new AssemblyAnalysisContextRequest(
@@ -100,7 +100,7 @@ public sealed class AssemblyAnalysisContextFactoryTests
         using var ambiguousRegistry = new SourceSnapshotRegistry();
         using var ambiguousLease = ambiguousRegistry.Acquire(ambiguousSnapshot);
         var ambiguous = AssemblySourceMatchResolver.Resolve(ambiguousLease, ambiguousMapping, "TargetAssembly");
-        var ambiguousSelection = AssemblySourceSelection.Create(ambiguousLease, ambiguous);
+        var ambiguousSelection = AssemblySourceSelection.Create(new(ambiguousLease, ambiguous));
         Assert.NotNull(ambiguousSelection);
 
         var ambiguousResult = await AssemblyAnalysisContextFactory.CreateAsync(new AssemblyAnalysisContextRequest(
@@ -154,9 +154,9 @@ public sealed class AssemblyAnalysisContextFactoryTests
         using var foreignLease = foreignRegistry.Acquire(foreignSnapshot);
 
         var sourceMatch = AssemblySourceMatchResolver.Resolve(sourceLease, mapping, "TargetAssembly");
-        Assert.Null(AssemblySourceSelection.Create(foreignLease, sourceMatch));
+        Assert.Null(AssemblySourceSelection.Create(new(foreignLease, sourceMatch)));
 
-        var disposedLeaseSelection = AssemblySourceSelection.Create(sourceLease, sourceMatch);
+        var disposedLeaseSelection = AssemblySourceSelection.Create(new(sourceLease, sourceMatch));
         Assert.NotNull(disposedLeaseSelection);
         sourceLease.Dispose();
         var disposedLeaseResult = await AssemblyAnalysisContextFactory.CreateAsync(new AssemblyAnalysisContextRequest(
@@ -178,7 +178,7 @@ public sealed class AssemblyAnalysisContextFactoryTests
         {
             MatchedCandidate = secondMatch.MatchedCandidate! with { ProjectId = ProjectId.CreateNewId("MissingProject") }
         };
-        var missingProjectSelection = AssemblySourceSelection.Create(secondLease, missingProjectMatch);
+        var missingProjectSelection = AssemblySourceSelection.Create(new(secondLease, missingProjectMatch));
         Assert.NotNull(missingProjectSelection);
 
         var missingProjectResult = await AssemblyAnalysisContextFactory.CreateAsync(new AssemblyAnalysisContextRequest(
@@ -207,7 +207,7 @@ public sealed class AssemblyAnalysisContextFactoryTests
         var lease = registry.Acquire(snapshot);
 
         var match = AssemblySourceMatchResolver.Resolve(lease, mapping, "TargetAssembly");
-        var selection = AssemblySourceSelection.Create(lease, match);
+        var selection = AssemblySourceSelection.Create(new(lease, match));
         Assert.NotNull(selection);
         var sourceResult = await AssemblyAnalysisContextFactory.CreateAsync(new AssemblyAnalysisContextRequest(
             assemblyPath,
@@ -220,7 +220,7 @@ public sealed class AssemblyAnalysisContextFactoryTests
 
         var noMatchMapping = CreateMapping("https://gitea.example/source.git", "src/Source.slnx", ["OtherAssembly"]);
         var noMatch = AssemblySourceMatchResolver.Resolve(lease, noMatchMapping, "TargetAssembly");
-        var noMatchSelection = AssemblySourceSelection.Create(lease, noMatch);
+        var noMatchSelection = AssemblySourceSelection.Create(new(lease, noMatch));
         Assert.NotNull(noMatchSelection);
         var fallbackResult = await AssemblyAnalysisContextFactory.CreateAsync(new AssemblyAnalysisContextRequest(
             assemblyPath,
@@ -236,8 +236,9 @@ public sealed class AssemblyAnalysisContextFactoryTests
 
         registry.Dispose();
         registry.Dispose();
-        Assert.True(snapshot.IsDisposed);
+        Assert.False(snapshot.IsDisposed);
         lease.Dispose();
+        Assert.True(snapshot.IsDisposed);
     }
 
     private static AssemblyContext AssertContext((AssemblyContext? Context, string? Error) result)

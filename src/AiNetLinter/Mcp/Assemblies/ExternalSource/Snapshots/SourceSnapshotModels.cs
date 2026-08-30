@@ -166,6 +166,11 @@ internal static class DisposeFailureAggregator
     }
 }
 
+internal sealed record ExternalSourceSnapshotOwnership(
+    IExternalSourceCheckoutOwner? CheckoutOwner = null,
+    ExternalSourceCheckoutMaterializationUse? MaterializationUse = null,
+    bool IsAttested = false);
+
 internal sealed class ExternalSourceSnapshot : IDisposable
 {
     private readonly Workspace workspace;
@@ -177,8 +182,7 @@ internal sealed class ExternalSourceSnapshot : IDisposable
         SourceSnapshotIdentity identity,
         Solution solution,
         Workspace workspace,
-        IExternalSourceCheckoutOwner? checkoutOwner = null,
-        ExternalSourceCheckoutMaterializationUse? materializationUse = null)
+        ExternalSourceSnapshotOwnership? ownership = null)
     {
         ArgumentNullException.ThrowIfNull(identity);
         ArgumentNullException.ThrowIfNull(solution);
@@ -187,8 +191,9 @@ internal sealed class ExternalSourceSnapshot : IDisposable
         Identity = identity;
         Solution = solution;
         this.workspace = workspace;
-        this.checkoutOwner = checkoutOwner;
-        this.materializationUse = materializationUse;
+        checkoutOwner = ownership?.CheckoutOwner;
+        materializationUse = ownership?.MaterializationUse;
+        IsAttested = ownership?.IsAttested == true;
     }
 
     internal SourceSnapshotIdentity Identity { get; }
@@ -196,6 +201,8 @@ internal sealed class ExternalSourceSnapshot : IDisposable
     internal Solution Solution { get; }
 
     internal bool IsDisposed => Volatile.Read(ref disposed) != 0;
+
+    internal bool IsAttested { get; }
 
     internal bool OwnsCheckout(IExternalSourceCheckoutOwner checkout) =>
         ReferenceEquals(checkoutOwner, checkout);

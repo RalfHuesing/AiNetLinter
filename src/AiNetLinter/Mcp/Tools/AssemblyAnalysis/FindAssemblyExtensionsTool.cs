@@ -21,11 +21,17 @@ internal static class FindAssemblyExtensionsTool
             CreateParameters(state, arguments, ct));
     }
 
+    // ainetlinter-disable DuplicateCode — der direkte Adapter bindet einen fachlich eigenen Payload-Builder.
+    internal static Task<CallToolResult> ExecuteAsync(
+        AssemblyAnalysisLease lease,
+        FindAssemblyExtensionsArguments arguments) =>
+        Task.FromResult(BuildResult(lease.CanonicalPath, lease.Context, arguments, AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, 1, AssemblyAnalysisService.MaxResults)));
+
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer? state,
         FindAssemblyExtensionsArguments arguments,
         CancellationToken ct,
-        AssemblySourceSelectionOrchestrator orchestrator)
+        IAssemblySourceSelectionResolver orchestrator)
     {
         return await AssemblyAnalysisToolSupport.ExecuteAsync(
             CreateParameters(state, arguments, ct),
@@ -42,28 +48,34 @@ internal static class FindAssemblyExtensionsTool
             arguments.ReceiverType,
             AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, 1, AssemblyAnalysisService.MaxResults),
             ct,
-            (fullPath, context, maxResults) =>
-            {
-                var selection = AssemblyAnalysisService.FindExtensions(
-                    context,
-                    new AssemblyExtensionSearchOptions(arguments.ExtensionName, arguments.Namespace, maxResults));
-                var completeness = context.Diagnostics.Count == 0
-                    ? context.Status.ToCompletenessLabel()
-                    : AssemblySessionStatus.Partial.ToCompletenessLabel();
-                var payload = new FindAssemblyExtensionsPayload(
-                    fullPath,
-                    selection.Items,
-                    context.Diagnostics,
-                    completeness,
-                    selection.Truncated,
-                    selection.Total,
-                    context.ConsumerProject,
-                    arguments.ReceiverType,
-                    context.Origin,
-                    context.Generation,
-                    context.Status.ToString().ToLowerInvariant());
-                return McpToolResults.Text(FormatText(payload), payload);
-            });
+            (fullPath, context, maxResults) => BuildResult(fullPath, context, arguments, maxResults));
+
+    private static CallToolResult BuildResult(
+        string fullPath,
+        AssemblyContext context,
+        FindAssemblyExtensionsArguments arguments,
+        int maxResults)
+    {
+        var selection = AssemblyAnalysisService.FindExtensions(
+            context,
+            new AssemblyExtensionSearchOptions(arguments.ExtensionName, arguments.Namespace, maxResults));
+        var completeness = context.Diagnostics.Count == 0
+            ? context.Status.ToCompletenessLabel()
+            : AssemblySessionStatus.Partial.ToCompletenessLabel();
+        var payload = new FindAssemblyExtensionsPayload(
+            fullPath,
+            selection.Items,
+            context.Diagnostics,
+            completeness,
+            selection.Truncated,
+            selection.Total,
+            context.ConsumerProject,
+            arguments.ReceiverType,
+            context.Origin,
+            context.Generation,
+            context.Status.ToString().ToLowerInvariant());
+        return McpToolResults.Text(FormatText(payload), payload);
+    }
 
     private static string FormatText(FindAssemblyExtensionsPayload payload)
     {

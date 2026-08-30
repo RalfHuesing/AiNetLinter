@@ -58,7 +58,11 @@ public sealed class GiteaExternalSourceProviderTests
         using var lease = registry.Acquire(snapshot);
         Assert.Equal(1, registry.ResidentCount);
         registry.Dispose();
+        Assert.False(snapshot.IsDisposed);
+        Assert.Equal(1, registry.ResidentCount);
 
+        lease.Dispose();
+        Assert.True(snapshot.IsDisposed);
         snapshot.Dispose();
         snapshot.Dispose();
 

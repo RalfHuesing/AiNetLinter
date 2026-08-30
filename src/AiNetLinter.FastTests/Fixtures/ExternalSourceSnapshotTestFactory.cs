@@ -62,6 +62,8 @@ internal static class ExternalSourceSnapshotTestFactory
             SourceSnapshotIdentity.Create(mapping, loadedRevision),
             solution,
             workspace,
-            checkoutOwner);
+            new ExternalSourceSnapshotOwnership(
+                checkoutOwner,
+                IsAttested: true));
     }
 }

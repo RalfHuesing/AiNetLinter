@@ -24,11 +24,17 @@ internal static class InspectAssemblyTool
             CreateParameters(state, arguments, ct));
     }
 
+    // ainetlinter-disable DuplicateCode — der direkte Adapter bindet einen fachlich eigenen Payload-Builder.
+    internal static Task<CallToolResult> ExecuteAsync(
+        AssemblyAnalysisLease lease,
+        InspectAssemblyArguments arguments) =>
+        Task.FromResult(BuildResult(lease.CanonicalPath, lease.Context, arguments, AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, 1, AssemblyAnalysisService.MaxResults)));
+
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer? state,
         InspectAssemblyArguments arguments,
         CancellationToken ct,
-        AssemblySourceSelectionOrchestrator orchestrator)
+        IAssemblySourceSelectionResolver orchestrator)
     {
         return await AssemblyAnalysisToolSupport.ExecuteAsync(
             CreateParameters(state, arguments, ct),
@@ -45,37 +51,43 @@ internal static class InspectAssemblyTool
             null,
             AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, 1, AssemblyAnalysisService.MaxResults),
             ct,
-            (fullPath, context, maxResults) =>
-            {
-                var selection = AssemblyAnalysisService.Inspect(
-                    context,
-                    new AssemblyInspectionOptions(
-                        arguments.Namespace,
-                        arguments.TypeName,
-                        arguments.MemberName,
-                        arguments.PublicOnly,
-                        arguments.ExactTypeName,
-                        arguments.MemberNames,
-                        maxResults,
-                        AssemblyAnalysisService.NormalizeLimit(arguments.MaxMembers, AssemblyAnalysisService.DefaultMaxMembers, AssemblyAnalysisService.MaxMembers)));
-                var completeness = context.Diagnostics.Count == 0
-                    ? context.Status.ToCompletenessLabel()
-                    : AssemblySessionStatus.Partial.ToCompletenessLabel();
-                var payload = new InspectAssemblyPayload(
-                    fullPath,
-                    context.Identity,
-                    selection.Namespaces,
-                    context.References,
-                    selection.Items,
-                    context.Diagnostics,
-                    completeness,
-                    selection.Truncated,
-                    selection.Total,
-                    context.Origin,
-                    context.Generation,
-                    context.Status.ToString().ToLowerInvariant());
-                return McpToolResults.Text(FormatText(payload, arguments.PublicOnly), payload);
-            });
+            (fullPath, context, maxResults) => BuildResult(fullPath, context, arguments, maxResults));
+
+    private static CallToolResult BuildResult(
+        string fullPath,
+        AssemblyContext context,
+        InspectAssemblyArguments arguments,
+        int maxResults)
+    {
+        var selection = AssemblyAnalysisService.Inspect(
+            context,
+            new AssemblyInspectionOptions(
+                arguments.Namespace,
+                arguments.TypeName,
+                arguments.MemberName,
+                arguments.PublicOnly,
+                arguments.ExactTypeName,
+                arguments.MemberNames,
+                maxResults,
+                AssemblyAnalysisService.NormalizeLimit(arguments.MaxMembers, AssemblyAnalysisService.DefaultMaxMembers, AssemblyAnalysisService.MaxMembers)));
+        var completeness = context.Diagnostics.Count == 0
+            ? context.Status.ToCompletenessLabel()
+            : AssemblySessionStatus.Partial.ToCompletenessLabel();
+        var payload = new InspectAssemblyPayload(
+            fullPath,
+            context.Identity,
+            selection.Namespaces,
+            context.References,
+            selection.Items,
+            context.Diagnostics,
+            completeness,
+            selection.Truncated,
+            selection.Total,
+            context.Origin,
+            context.Generation,
+            context.Status.ToString().ToLowerInvariant());
+        return McpToolResults.Text(FormatText(payload, arguments.PublicOnly), payload);
+    }
 
     private static string FormatText(InspectAssemblyPayload payload, bool publicOnly)
     {

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using Serilog;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
@@ -20,7 +21,7 @@ internal enum AssemblySourceSelectionStatus
     ConfigurationFailure,
 }
 
-internal sealed class AssemblySourceSelectionOrchestrator
+internal sealed class AssemblySourceSelectionOrchestrator : IAssemblySourceResolver, IAssemblySourceSelectionResolver
 {
     private readonly ExternalSourceConfigurationLoadResult configurationResult;
     private readonly IExternalSourceProvider provider;
@@ -51,27 +52,27 @@ internal sealed class AssemblySourceSelectionOrchestrator
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(assemblyPath);
-
         if (!configurationResult.Succeeded) return CreateScope();
 
-        var resolution = new AssemblyReferenceResolver().Resolve(assemblyPath);
-        var assemblyName = resolution.Identity?.Name?.Trim();
+        var assemblyName = ResolveAssemblyName(assemblyPath);
         if (string.IsNullOrWhiteSpace(assemblyName)) return CreateScope();
 
-        var mappings = configurationResult.Configuration!.Mappings
-            .Where(mapping => mapping.Assemblies.Any(alias =>
-                string.Equals(alias.Trim(), assemblyName, StringComparison.OrdinalIgnoreCase)))
-            .ToList();
+        var mappings = FindMappings(assemblyName);
         if (mappings.Count != 1) return CreateScope();
 
         cancellationToken.ThrowIfCancellationRequested();
-        var mapping = mappings[0];
-        var providerResult = await provider.ResolveAsync(mapping, cancellationToken).ConfigureAwait(false);
+        var providerResult = await provider.ResolveAsync(mappings[0], cancellationToken).ConfigureAwait(false);
         if (!providerResult.IsAvailable || providerResult.SourceSnapshot is null)
         {
+            DisposeSnapshotBestEffort(providerResult.SourceSnapshot, "nicht verfügbaren Provider-Snapshot");
             return CreateScope(
                 providerResult.Diagnostics,
                 providerResult.ToResultState());
+        }
+
+        if (!IsTrusted(providerResult))
+        {
+            return RejectUntrustedSnapshot(providerResult);
         }
 
         SourceSnapshotLease lease;
@@ -79,12 +80,22 @@ internal sealed class AssemblySourceSelectionOrchestrator
         {
             lease = registry.Acquire(providerResult.SourceSnapshot);
         }
-        catch { providerResult.SourceSnapshot.Dispose(); throw; }
+        catch
+        {
+            DisposeSnapshotBestEffort(providerResult.SourceSnapshot, "Snapshot nach Registry-Fehler");
+            throw;
+        }
 
         try
         {
-            var match = AssemblySourceMatchResolver.Resolve(lease, mapping, assemblyName);
-            var selection = AssemblySourceSelection.Create(lease, match);
+            var match = AssemblySourceMatchResolver.Resolve(lease, mappings[0], assemblyName);
+            var selection = AssemblySourceSelection.Create(
+                new AssemblySourceSelectionParameters(
+                    lease,
+                    match,
+                    providerResult.Health,
+                    providerResult.CheckoutTrust,
+                    providerResult.IsAttested));
             return new AssemblySourceSelectionScope(
                 selection,
                 configurationResult,
@@ -99,6 +110,50 @@ internal sealed class AssemblySourceSelectionOrchestrator
         }
     }
 
+    async Task<AssemblySourceResolution> IAssemblySourceResolver.ResolveForRegistryAsync(
+        string assemblyPath,
+        CancellationToken cancellationToken)
+    {
+        var scope = await ResolveAsync(assemblyPath, cancellationToken).ConfigureAwait(false);
+        return new(scope.Selection, scope, scope.Diagnostics);
+    }
+
+    Task<AssemblySourceSelectionScope> IAssemblySourceSelectionResolver.ResolveAsync(
+        string assemblyPath,
+        CancellationToken cancellationToken) =>
+        ResolveAsync(assemblyPath, cancellationToken);
+
+    private string? ResolveAssemblyName(string assemblyPath) =>
+        new AssemblyReferenceResolver().Resolve(assemblyPath).Identity?.Name?.Trim();
+
+    private IReadOnlyList<ExternalSourceMapping> FindMappings(string assemblyName) =>
+        configurationResult.Configuration!.Mappings
+            .Where(mapping => mapping.Assemblies.Any(alias =>
+                string.Equals(alias.Trim(), assemblyName, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+    private static bool IsTrusted(ExternalSourceProviderResult providerResult) =>
+        providerResult.IsAttested
+        && providerResult.Health is ExternalSourceRepositoryHealth.Verified
+        && providerResult.CheckoutTrust is ExternalSourceCheckoutTrust.Clean;
+
+    private AssemblySourceSelectionScope RejectUntrustedSnapshot(ExternalSourceProviderResult providerResult)
+    {
+        DisposeSnapshotBestEffort(providerResult.SourceSnapshot, "unverifizierten Source-Snapshot");
+        var diagnostics = providerResult.Diagnostics
+            .Append(new ExternalSourceConfigurationDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutUnverified,
+                "Der Source-Snapshot ist nicht als clean, verifiziert und attestiert ausgewiesen; die Assembly wird decompiliert.",
+                "warning",
+                "$repository"));
+        return CreateScope(
+            diagnostics,
+            ExternalSourceRepositoryResultState.Create(
+                ExternalSourceProviderFailureKind.InvalidResponse,
+                ExternalSourceRepositoryHealth.Unavailable,
+                checkoutTrust: ExternalSourceCheckoutTrust.Unverified));
+    }
+
     private AssemblySourceSelectionScope CreateScope(
         IEnumerable<ExternalSourceConfigurationDiagnostic>? providerDiagnostics = null,
         ExternalSourceRepositoryResultState? state = null) =>
@@ -108,6 +163,18 @@ internal sealed class AssemblySourceSelectionOrchestrator
             providerDiagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>(),
             null,
             state ?? ExternalSourceRepositoryResultState.Create());
+
+    private static void DisposeSnapshotBestEffort(ExternalSourceSnapshot? snapshot, string reason)
+    {
+        try
+        {
+            snapshot?.Dispose();
+        }
+        catch (Exception exception)
+        {
+            Log.Warning(exception, "External-Source-Snapshot konnte nicht vollständig freigegeben werden: Grund={Reason}", reason);
+        }
+    }
 }
 
 internal sealed class AssemblySourceSelectionScope : IDisposable

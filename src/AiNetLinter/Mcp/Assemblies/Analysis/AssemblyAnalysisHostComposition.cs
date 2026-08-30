@@ -1,15 +1,22 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
-internal sealed class AssemblyAnalysisHostComposition : IDisposable
+internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
 {
     private readonly SourceSnapshotRegistry registry;
-    private readonly AssemblySourceSelectionOrchestrator orchestrator;
+    private readonly IAssemblySourceSelectionResolver orchestrator;
+    private readonly IAssemblySourceResolver registryResolver;
+    private readonly AssemblyAnalysisRegistry sessions;
+    private readonly object lifecycleGate = new();
+    private Task? disposalTask;
     private int disposed;
 
     private AssemblyAnalysisHostComposition(
@@ -20,10 +27,13 @@ internal sealed class AssemblyAnalysisHostComposition : IDisposable
         ConfigurationResult = configurationResult;
         Provider = provider;
         this.registry = registry;
-        orchestrator = new AssemblySourceSelectionOrchestrator(
+        var sourceOrchestrator = new AssemblySourceSelectionOrchestrator(
             configurationResult,
             provider,
             registry);
+        orchestrator = sourceOrchestrator;
+        registryResolver = sourceOrchestrator;
+        sessions = new AssemblyAnalysisRegistry(registryResolver);
     }
 
     internal ExternalSourceConfigurationLoadResult ConfigurationResult { get; }
@@ -32,7 +42,16 @@ internal sealed class AssemblyAnalysisHostComposition : IDisposable
 
     internal SourceSnapshotRegistry Registry => registry;
 
-    internal AssemblySourceSelectionOrchestrator Orchestrator
+    internal AssemblyAnalysisRegistry Sessions
+    {
+        get
+        {
+            ThrowIfDisposed();
+            return sessions;
+        }
+    }
+
+    internal IAssemblySourceSelectionResolver Orchestrator
     {
         get
         {
@@ -53,14 +72,40 @@ internal sealed class AssemblyAnalysisHostComposition : IDisposable
         return new AssemblyAnalysisHostComposition(configurationResult, sourceProvider, registry);
     }
 
-    public void Dispose()
+    public ValueTask DisposeAsync() => new(StartDispose());
+
+    private Task StartDispose()
     {
-        if (Interlocked.Exchange(ref disposed, 1) != 0)
+        lock (lifecycleGate)
         {
-            return;
+            disposalTask ??= DisposeCoreAsync();
+            return disposalTask;
+        }
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        Interlocked.Exchange(ref disposed, 1);
+        var failures = new List<Exception>();
+        try
+        {
+            await sessions.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
         }
 
-        registry.Dispose();
+        try
+        {
+            registry.Dispose();
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+
+        DisposeFailureAggregator.ThrowIfAny(failures);
     }
 
     private void ThrowIfDisposed()
