@@ -11,10 +11,8 @@ Dieser Skill ist der Standard für Feature-Implementierungen, Fehlerbehebungen
 und Refactorings in diesem Repository. Ein Agent übernimmt Verständnis,
 Planung, Umsetzung und Selbstprüfung in einer zusammenhängenden Session.
 
-Der externe Ordner `.agents/Agent-Scaffolding/` und der dort beschriebene
-`drift-loop` werden nicht automatisch verwendet. Mehrstufige Orchestrierung,
-Step-Dateien und separate Planer-/Coder-Zyklen gibt es nur, wenn der Nutzer sie
-ausdrücklich verlangt.
+Mehrstufige Orchestrierung, Step-Dateien und separate Planer-/Coder-Zyklen gibt
+es nur, wenn der Nutzer sie ausdrücklich verlangt.
 
 ## Verbindliche Projektregeln
 
@@ -50,6 +48,25 @@ ausdrücklich verlangt.
    ausdrücklich nur eine Analyse oder einen Entwurf verlangt.
 5. Prüfe selbst gegen Ziel, Muss-Kriterien, Non-Goals, relevante Rules und die
    tatsächlichen unterstützten Betriebsannahmen. Berichte Abweichungen offen.
+
+## Gezielter Qualitätscheck
+
+Bei einer nicht-trivialen Codeänderung prüfe vor dem Hand-off den betroffenen
+Bereich mit den verfügbaren AiNetLinter-MCP-Tools auf `find_duplicates`,
+`find_dead_code` und `find_magic_values`. Lies dafür zuerst
+`.agents/rules/AiNetLinter-McpWorkflow.mdc` und verwende die aktuellen
+Toolschemas, `targetType=project` und den absoluten `targetPath`.
+
+Behebe sichere, hochkonfidente und scope-nahe Befunde proaktiv, wenn die
+Korrektur verhaltensneutral bleibt und keine Architekturentscheidung erfordert:
+beispielsweise einen exakten Helper-Klon, eindeutig unreferenzierten privaten
+Code oder einen wiederholten fachlichen Wert mit klarer gemeinsamer Identität.
+Prüfe vor dem Entfernen von Code Referenzen und mögliche indirekte Nutzung über
+Serialisierung, Reflection oder Tests.
+
+Kein breiter Cleanup-Sweep wegen einer einzelnen Ähnlichkeit. Unklare,
+architekturabhängige oder außerhalb des geänderten Bereichs liegende Befunde
+werden für den separaten Abschluss-Audit bzw. den Nutzerbericht notiert.
 
 ## Standard-Betriebsmodell
 

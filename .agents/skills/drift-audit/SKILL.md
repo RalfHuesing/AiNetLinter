@@ -7,9 +7,11 @@ description: Prüfe vor dem Abschluss größerer AiNetLinter-Änderungen gezielt
 
 ## Zweck
 
-Dieser Skill ist ein optionaler, fokussierter Abschlusscheck. Er soll relevante
-Duplikation im geänderten Bereich sichtbar machen, nicht jede strukturelle
-Ähnlichkeit in einen Refactoring-Auftrag verwandeln.
+Dieser Skill ist ein optionaler, fokussierter Duplicate-only-Check. Er soll
+relevante Duplikation im geänderten Bereich sichtbar machen, nicht jede
+strukturelle Ähnlichkeit in einen Refactoring-Auftrag verwandeln. Für den
+umfassenden Abschlusscheck einschließlich Dead Code und Magic Values ist der
+Skill `audit` zuständig.
 
 Nicht bei jedem Commit oder kleinen Fix ausführen. Sinnvoll ist er einmal vor
 dem Abschluss eines größeren Features, eines größeren Refactorings oder eines
