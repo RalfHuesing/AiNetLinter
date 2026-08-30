@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-30T05:30:00+02:00
+last_updated: 2026-08-30T09:10:00+02:00
 rules_dir: .agents/rules
 total_steps: 36
 current_step: step-036
@@ -14,13 +14,13 @@ current_step: step-036
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 36 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-036` (`planned/in_progress`; Gitea-
+- **Aktueller Schritt:** `step-036` (`issues`; Gitea-
   Source-of-Truth mit Clean-Checkout und transparentem degraded Refresh-
   Vertrag)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-30T05:30:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-30T09:10:00+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -62,7 +62,7 @@ current_step: step-036
 | step-033 | EPIC-04 | issues | Konfigurierbare Cache-Root-/Refresh-Policy mit Fresh/Stale-Vertrag und Step-032-Evidenzabschluss | step-032 | 0c6ab50e + c6787c12 | issues → step-034 | 0c6ab50e + c6787c12 + d57f5aab |
 | step-034 | EPIC-04 | issues | Strikter CacheRoot-Vertrag und fail-closed Konfigurationsweitergabe bis zum Assembly-Tool | step-033 | fcad25e5 + 1dd59128 | issues → step-035 | fcad25e5 + 1dd59128 + ff5fb2e5 |
 | step-035 | EPIC-04 | done | ConfigurationFailure unabhängig von Diagnosen terminal bis zum Assembly-Tool propagieren | step-034 | 5c830e44 + 8182b992 | approved | 5c830e44 + 8182b992 + c4ee413c |
-| step-036 | EPIC-04 | planned/in_progress | Gitea-Source-of-Truth mit Clean-Checkout und transparentem degraded Refresh-Vertrag absichern | - | - | - | - |
+| step-036 | EPIC-04 | issues | Gitea-Source-of-Truth mit Clean-Checkout und transparentem degraded Refresh-Vertrag absichern | - | 377b5360 + 39fb9fba | issues → step-037 | 377b5360 + 39fb9fba + c7efaae4 |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -775,3 +775,22 @@ Tests, Coder- oder Kritikerarbeit ausgeführt. Der nächste sichere
 Übergabepunkt ist ein frischer Coder-Agent mit
 `tasks/decompiled-assembly-analysis/step-036/step-plan.md`; nach seinem
 Abschluss wird er geschlossen und ein neuer, separater Kritiker gestartet.
+
+### Wiederaufnahme nach Step-036-Review (2026-08-30)
+
+Der frische Kritiker hat Step 036 mit `c7efaae4` nicht freigegeben. Zwei
+zusammengehörige MAJOR-Befunde verletzen die neue Checkout-Trust-Grenze:
+Ignorierte lokale Dateien passieren das Clean-Gate und können in Cache oder
+Snapshot gelangen; außerdem besteht zwischen Git-Verifikation und
+Materialisierung ein ungeschütztes TOCTOU-Fenster. Als direkt gekoppelter
+MINOR-Befund wird `Dirty` im Acquirer zu `Unverified` abgeschwächt, wodurch
+die typisierte Trust-Semantik an einer Ownership-Grenze verloren geht.
+
+Diese Befunde werden als ein größeres Step-037-Korrekturpaket gebündelt,
+nicht als Status- oder Audit-only-Mini-Step. Das Paket muss Ignore-/Status-
+Semantik, atomare Verifikation bis Materialisierung und die eindeutige
+Dirty-Klassifikation gemeinsam korrigieren; Last-good/Degraded,
+CurrentChanged, Cleanup, positive Fallbacks und die vorhandenen 1314-Skips
+bleiben regressionsgeschützt. Der Kritiker bestätigte Build sowie Fast
+2.165 bestanden plus 2 bekannte Skips und Integration 370/370, Stress nicht
+ausgeführt, ohne Leaks.
