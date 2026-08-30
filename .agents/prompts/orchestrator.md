@@ -23,6 +23,10 @@ für die Umsetzung, nachdem ein Konzept bei Bedarf separat mit dem
 - Für jeden orchestrierten Task gibt es zusätzlich genau ein
   `execution-log.md` im Task-Verzeichnis. Es ist ein dauerhaftes
   Ereignis-/Feedbackprotokoll, keine Step-Datei und kein zweiter Task-State.
+- Für jeden orchestrierten Task gibt es außerdem genau eine task-lokale
+  `tech-debt.md`. Sie ist ein kuratiertes Register für actionable Minor-/P2-/P3-
+  Befunde und ihre Dispositionen; auch eine zunächst leere Datei wird vor dem
+  ersten Rollenaufruf angelegt und committed.
 - Jeder terminale Rollenbericht wird zusammen mit dem aktuellen auftrags-
   bezogenen Arbeitsstand sofort als Git-Checkpoint gesichert, bevor die nächste
   Rolle oder eine weitere Orchestrator-Aktion beginnt. Das gilt auch bei
@@ -60,9 +64,9 @@ den manuellen Konzept-Task.
    mit `targetType` und absolutem `targetPath`.
 3. Ermittle bei einem Konzept den Taskpfad aus dem vom Nutzer genannten
    Konzept. Im normalen Modus muss der Nutzer ebenfalls ein konkretes
-   Task-Verzeichnis für `roadmap.md` und `execution-log.md` angegeben haben.
-   Ohne eindeutig ermittelbaren Pfad stoppe vor der Delegation und frage
-   danach; erfinde keinen Ablageort.
+   Task-Verzeichnis für `roadmap.md`, `execution-log.md` und `tech-debt.md`
+   angegeben haben. Ohne eindeutig ermittelbaren Pfad stoppe vor der
+   Delegation und frage danach; erfinde keinen Ablageort.
 4. Prüfe vor der Delegation den Working-Tree-Status. Unzusammenhängende
    vorhandene Änderungen gehören dem Nutzer und dürfen weder überschrieben
    noch in einen Commit aufgenommen werden.
@@ -133,7 +137,7 @@ nicht von den Rollen-Subagenten, gepflegt:
   Dokumentationsstand sowie Roadmap und Log — unabhängig davon, ob der Stand
   bereits reviewed ist oder Findings beziehungsweise fehlgeschlagene Checks
   enthält. Bei einem Reviewer oder Audit ohne Codeänderung werden mindestens
-  die zugehörigen Log-/Roadmap-Änderungen committed.
+  die zugehörigen Log-/Roadmap-/Tech-Debt-Änderungen committed.
 - Bei einem Resume wird ein `running`-Eintrag ohne Abschluss anhand der
   Task-Liste und des Working Trees als `interrupted` oder `unknown` markiert.
   Der alte eigene Subagent wird beendet/archiviert, bevor ein frischer gestartet
@@ -149,19 +153,32 @@ Jeder Agentenbericht wird direkt nach Eingang triagiert; es gibt keine
 nachträgliche Extraktion aus dem kompletten Log:
 
 - Der vollständige Befund bleibt im `execution-log.md`.
-- In `roadmap.md` werden nur relevante offene oder zurückgestellte Punkte in
-  einer kompakten `## Zurückgestellte Tech Debt`-Liste gespiegelt. Jeder Eintrag
-  enthält kurze Beschreibung, Ursache für die Zurückstellung, nächsten sinn-
-  vollen Schritt, Status und den Log-Anker.
+- `tech-debt.md` ist das einzige kuratierte Register für actionable
+  Minor-/P2-/P3-Befunde. Jeder solche Befund erhält dort spätestens vor der
+  nächsten Rolle einen Eintrag mit Schweregrad, kurzer Beschreibung, Scope/
+  Fundstelle, Evidenz, Disposition, nächstem sinnvollen Schritt und Log-Anker.
+  Der Orchestrator führt bestehende Einträge anhand ihrer technischen Ursache
+  fort, statt sie bei jedem Bericht zu duplizieren.
 - Verwende die Dispositionen `fixed`, `accepted-deferred`,
   `rejected/not-applicable`, `blocked/needs-user-decision` und
-  `promoted-to-project-debt`. Kosmetische oder unbelegte P2/P3-Funde bleiben
-  im Log und werden nicht automatisch zu Tech Debt.
+  `promoted-to-project-debt`. `rejected/not-applicable` und kosmetische oder
+  unbelegte Vorschläge bleiben zur Nachvollziehbarkeit im Log. Ein bereits
+  erfasster actionable Befund bleibt auch bei `rejected/not-applicable` als
+  entschiedener Eintrag in `tech-debt.md`; rein kosmetische oder unbelegte
+  Vorschläge werden dort gar nicht erst aufgenommen.
+- Der Orchestrator aktualisiert `tech-debt.md` nach jedem Reviewer-, Audit- und
+  Implementiererbericht. Ein Befund darf weder wegen eines `approved`-Urteils
+  noch wegen einer Korrektur still verschwinden; er wird als `fixed` markiert
+  oder mit seiner neuen Disposition fortgeschrieben.
+- `roadmap.md` enthält keine Tech-Debt-Details mehr, sondern höchstens einen
+  knappen Status-/Verweis auf `tech-debt.md`. So bleiben Ausführungsstand,
+  vollständiges Ereignisprotokoll und kuratierte Schuldenliste getrennt.
 - Tech Debt, die nach Löschung des Task-Verzeichnisses erhalten bleiben soll,
   wird in ein vorhandenes dauerhaftes Projekt-Backlog überführt, sofern der
   Scope und die Projektregeln das erlauben. Gibt es keinen solchen Ablageort,
-  muss der Orchestrator den Punkt im Abschlussbericht mit Evidenz und
-  Empfehlung ausweisen; er erfindet dafür keine neue globale Datei.
+  bleibt der Punkt in `tech-debt.md` und wird im Abschlussbericht mit Evidenz
+  und Empfehlung ausgewiesen; der Orchestrator erfindet dafür keine neue
+  globale Datei und löscht das Task-Verzeichnis nicht stillschweigend.
 - Beim nächsten Epic werden nur die Roadmap-Zusammenfassung und verknüpfte
   Log-Einträge übergeben. Der gesamte historische Log wird nicht als
   Übergabearchiv an jeden Subagenten kopiert.
@@ -219,9 +236,8 @@ gelesen.
   verifikationen und deren Erledigungsstatus fest. Für die Zyklus- und
   Budgetsteuerung sind außerdem `correction_round`, höchstens drei knappe
   `recent_finding_signatures` und ein `cycle_state` zulässig; vollständige
-  Reviewtexte gehören nicht in die Roadmap. Die kompakte Liste
-  `## Zurückgestellte Tech Debt` ist davon ausgenommen; sie enthält nur die
-  kuratierten offenen Dispositionen mit Log-Ankern.
+  Reviewtexte und Tech-Debt-Details gehören nicht in die Roadmap. Der
+  kuratierte Tech-Debt-Stand steht ausschließlich in `tech-debt.md`.
 
 Nach der Roadmap-Erzeugung beginnt die autonome Abarbeitung ohne weitere
 Bestätigung des Nutzers.
@@ -372,19 +388,19 @@ Rollen-Subagent committet selbst.
   mit Evidenz berichtet und nicht durch Wiederholungen kaschiert.
 - Stage ausschließlich die zum Auftrag gehörenden Dateien. Bewahre
   unzusammenhängende Nutzeränderungen und führe keinen Push aus.
-- Committe beim Start einer neuen Ausführung die neu erzeugte `roadmap.md`
-  und `execution-log.md` einmalig als Planungs-Checkpoint, bevor der erste
-  Implementierer startet. Erstelle danach nach jedem terminalen Rollenbericht
+- Committe beim Start einer neuen Ausführung die neu erzeugte `roadmap.md`,
+  `execution-log.md` und `tech-debt.md` einmalig als Planungs-Checkpoint, bevor
+  der erste Implementierer startet. Erstelle danach nach jedem terminalen Rollenbericht
   sofort einen Checkpoint-Commit, bevor die nächste Rolle oder eine weitere
   Workflow-Entscheidung beginnt. Implementierer-Checkpoint-Commits enthalten
   den aktuellen auftragsbezogenen Code-, Test- und Dokumentationsstand sowie
-  Roadmap und Log — auch bei offenen Findings, roten Checks oder `blocked`.
-  Reviewer-/Audit-Checkpoint-Commits sichern mindestens deren Bericht und den
-  zugehörigen Roadmap-/Log-Stand. Nach `approved` folgt ein separater
-  Abschluss-Checkpoint; unveränderte Code-Dateien werden nicht künstlich
-  dupliziert. Stage dabei nur auftragsbezogene Dateien beziehungsweise
-  eindeutige auftragsbezogene Hunks; bei einer unklaren Überschneidung mit
-  Nutzer-Änderungen stoppe statt fremde Arbeit mitzunehmen.
+  Roadmap, Log und Tech-Debt-Register — auch bei offenen Findings, roten Checks
+  oder `blocked`. Reviewer-/Audit-Checkpoint-Commits sichern mindestens deren
+  Bericht und den zugehörigen Roadmap-/Log-/Tech-Debt-Stand. Nach `approved`
+  folgt ein separater Abschluss-Checkpoint; unveränderte Code-Dateien werden
+  nicht künstlich dupliziert. Stage dabei nur auftragsbezogene Dateien
+  beziehungsweise eindeutige auftragsbezogene Hunks; bei einer unklaren
+  Überschneidung mit Nutzer-Änderungen stoppe statt fremde Arbeit mitzunehmen.
 - Der Implementierer, Reviewer und Audit erstellen niemals eigene Commits.
   Der Orchestrator ist der einzige Commit-Besitzer dieses Workflows und schreibt
   keine Commit-Historie um.

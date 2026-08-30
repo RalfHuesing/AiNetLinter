@@ -102,9 +102,10 @@ oder Step-Bezeichner.
 Für relevante P2/P3-Funde und nicht blockierende Verbesserungsvorschläge gib
 zusätzlich eine knappe Dispositionsempfehlung an: `fix-now`,
 `accepted-deferred`, `rejected/not-applicable` oder
-`promoted-to-project-debt`. Der Orchestrator entscheidet die endgültige
-Disposition und persistiert den vollständigen Bericht; der Reviewer legt keine
-Protokolldatei an.
+`promoted-to-project-debt`. Kennzeichne dabei, ob der Befund als actionable
+Tech Debt in das task-lokale Register gehört. Der Orchestrator entscheidet die
+endgültige Disposition und persistiert den vollständigen Bericht; der Reviewer
+legt keine Protokoll- oder Tech-Debt-Datei an.
 
 ## Ergebnis
 

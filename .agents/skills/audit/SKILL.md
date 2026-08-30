@@ -112,5 +112,7 @@ entscheidungsrelevante Befunde mit Kategorie, Fundstellen, Evidenz, Risiko und
 Empfehlung sowie einer passenden Disposition (`fixed`, `accepted-deferred`,
 `rejected/not-applicable`, `blocked/needs-user-decision` oder
 `promoted-to-project-debt`). Führe außerdem die tatsächlich ausgeführten
-MCP-Abfragen und Tests auf. Der Orchestrator persistiert den vollständigen
-Auditbericht; der Audit legt keine eigene Protokolldatei an.
+MCP-Abfragen und Tests auf. Kennzeichne bei nicht blockierenden P2/P3-Funden,
+ob sie als actionable Tech Debt in das task-lokale Register gehören. Der
+Orchestrator persistiert den vollständigen Auditbericht und aktualisiert das
+Register; der Audit legt keine eigene Protokoll- oder Tech-Debt-Datei an.
