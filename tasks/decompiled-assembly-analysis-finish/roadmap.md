@@ -3,13 +3,13 @@
 status: executing
 current_epic: 4
 last_commit: b506de44
-blocker: none; TD-010 bleibt für die Gesamtabschluss-Gates zu bewerten
-correction_round: 0
+blocker: Epic 4 benötigt Korrekturrunde 1; installierte MCP-Registry ist als Voraussetzung zu prüfen
+correction_round: 1
 cycle_state: active
 recent_finding_signatures:
-  - Extensions-Diagnostic-Propagation: find_assembly_extensions übernimmt Expansion-Diagnosen noch nicht
-  - Negative-Route-Evidence: Missing/Cycle/Limit sind noch nicht über den vollständigen Dispatcher-/Tool-Antwortpfad nachgewiesen
-  - Daemon-Session-ResidentCount: eine unveränderte Daemon-Assertion meldet 2 statt 1 Resident-Kontext
+  - Partiality-Status-Consistency: gemeinsamer analysis-Header übernimmt Root-complete trotz Partial-Payload
+  - Installed-MCP-Schema-Drift: lokale Registry 1.0.154 bietet nicht targetType/targetPath und Assembly-Sessions
+  - Unsupported-Path-Consistency: get_file_tree verliert beim Assembly-Ziel den Zielpfad
 
 Diese Roadmap ist der einzige dauerhafte Ausführungs- und Resume-Stand für den
 autonomen Lauf. Sie leitet die Reihenfolge aus dem freigegebenen Konzept ab;

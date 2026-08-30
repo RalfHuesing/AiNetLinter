@@ -115,6 +115,21 @@ Bericht festgehalten.
   Resident-Assertions als konsistente Verträge weiterverwenden.
 - Log-Anker: `execution-log.md` — Epic-3-Korrekturrunde-3-Review
 
+## TD-011 — Pfadbezogenen Unsupported-Status für get_file_tree nutzen
+
+- Schweregrad: P2
+- Scope: `AnalysisToolCall`, `get_file_tree`-Assembly-Route
+- Evidenz: Der unabhängige Epic-4-Review stellte fest, dass die Assembly-
+  Route `UnsupportedAssemblyTarget()` ohne Zielpfad verwendet, während die
+  übrigen projektgebundenen Routen den pfadbezogenen Status liefern. Die
+  Antwort bleibt fail-closed, ist aber nicht vollständig konsistent zum
+  dokumentierten Unsupported-Vertrag.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: im nächsten passenden Capability-/Dokumentationsabschnitt
+  den kanonischen pfadbezogenen Unsupported-Builder verwenden und einen
+  gezielten Route-Test ergänzen, ohne bestehende Resolver-Tests zu duplizieren.
+- Log-Anker: `execution-log.md` — Epic-4-Review
+
 ## TD-005 — Source-Ressourcen vor Materialisierung budgetieren
 
 - Schweregrad: P2
