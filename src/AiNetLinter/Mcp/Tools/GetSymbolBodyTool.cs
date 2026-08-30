@@ -151,7 +151,7 @@ internal static class GetSymbolBodyTool
     {
         var path = symbol.Locations.FirstOrDefault(l => l.IsInSource)?.SourceTree?.FilePath;
         if (string.IsNullOrEmpty(path)) return symbol.ToDisplayString();
-        return Path.GetRelativePath(outputRoot, path).Replace('\\', '/');
+        return PathNormalizer.ToRelative(outputRoot, path);
     }
 
     private static string ExtractSymbolBody(ISymbol symbol, int maxBodyLines, string outputRoot)

@@ -24,7 +24,7 @@ tech_debt: siehe tech-debt.md
   kontrolliert als fachlicher Fehler ausgegeben.
 - Verifikation: fokussierte Assembly-/Symbolgraph-Tests, synthetische Fixture,
   gezielter `get_violations`-Nachweis.
-- Status: open
+- Status: in_progress
 
 ## EPIC-B — Begrenzte Diagnostik und Antwortverträge
 
@@ -116,4 +116,3 @@ tech_debt: siehe tech-debt.md
 - [ ] `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`
 - [ ] Synthetische Assembly-Live-Szenarien wiederholt
 - [ ] Gezielter MCP-Abschluss-Audit ausgeführt
-

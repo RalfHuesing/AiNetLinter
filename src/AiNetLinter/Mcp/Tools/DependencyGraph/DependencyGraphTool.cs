@@ -81,12 +81,12 @@ internal static class DependencyGraphTool
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var absolutePath = Path.GetFullPath(Path.Combine(solutionDir, input.FilePath!));
-        var document = DiffImpactAnalyzer.FindDocumentByPath(solution, absolutePath);
+        var document = DiffImpactAnalyzer.FindDocumentByPath(solution, input.FilePath!);
         if (document is null) return McpToolResults.FileNotFound(input.FilePath!);
 
         var request = new DependencyGraphScanRequest(solution, includeOutgoing, includeIncoming, input.Depth, input.MaxResults);
         var result = await DependencyGraphScanner.ScanFileAsync(document, request, ct);
-        var relativePath = PathNormalizer.ToRelative(solutionDir, absolutePath);
+        var relativePath = PathNormalizer.ToRelative(solutionDir, document.FilePath ?? absolutePath);
         var target = new DependencyGraphTarget("file", relativePath, null);
         return await BuildResponseAsync(solution, target, result, ct);
     }

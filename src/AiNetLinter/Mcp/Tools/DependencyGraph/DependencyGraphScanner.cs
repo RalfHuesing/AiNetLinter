@@ -328,15 +328,11 @@ internal static class DependencyGraphScanner
     {
         if (string.IsNullOrEmpty(absolutePath)) return absolutePath;
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-        return Path.GetRelativePath(solutionDir, absolutePath).Replace('\\', '/');
+        return PathNormalizer.ToRelative(solutionDir, absolutePath);
     }
 
     private static Document? ResolveDocumentByRelativePath(Solution solution, string relativePath)
-    {
-        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var absolutePath = Path.GetFullPath(Path.Combine(solutionDir, relativePath));
-        return DiffImpactAnalyzer.FindDocumentByPath(solution, absolutePath);
-    }
+        => DiffImpactAnalyzer.FindDocumentByPath(solution, relativePath);
 
     private static void AddEdge(Dictionary<string, EdgeAccumulator> edges, string file, string typeName)
     {

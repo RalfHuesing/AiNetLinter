@@ -138,9 +138,7 @@ internal static class FindReferencesTool
     private static async Task<(SyntaxNode? Root, SourceText? Text, SemanticModel? SemanticModel, CallToolResult? Error)>
         ResolveDocumentForLineAsync(Solution solution, string identifier, string path, int line, CancellationToken ct)
     {
-        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var absolutePath = Path.GetFullPath(Path.Combine(solutionDir, path));
-        var document = DiffImpactAnalyzer.FindDocumentByPath(solution, absolutePath);
+        var document = DiffImpactAnalyzer.FindDocumentByPath(solution, path);
         if (document is null) return (null, null, null, McpToolResults.SymbolNotFound(identifier));
 
         var root = await document.GetSyntaxRootAsync(ct);

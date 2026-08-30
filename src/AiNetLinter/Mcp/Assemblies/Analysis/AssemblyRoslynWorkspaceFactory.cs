@@ -113,9 +113,15 @@ internal sealed class AssemblyRoslynWorkspaceFactory
         AssemblyWorkspaceRequest request,
         ImmutableArray<MetadataReference> references)
     {
-        var generatedProjectPath = Path.Combine(
-            Path.GetDirectoryName(request.Documents.FirstOrDefault()?.GeneratedPath ?? request.AssemblyPath)!,
-            assemblyName + ".csproj");
+        var generatedDocumentPath = request.Documents.FirstOrDefault()?.GeneratedPath;
+        var generatedProjectDirectory = Path.GetDirectoryName(generatedDocumentPath ?? string.Empty);
+        if (string.IsNullOrWhiteSpace(generatedProjectDirectory))
+        {
+            generatedProjectDirectory = Path.GetDirectoryName(Path.GetFullPath(request.AssemblyPath));
+        }
+
+        generatedProjectDirectory ??= AppContext.BaseDirectory;
+        var generatedProjectPath = Path.Combine(generatedProjectDirectory, assemblyName + ".csproj");
         return ProjectInfo.Create(
                 projectId,
                 VersionStamp.Create(),

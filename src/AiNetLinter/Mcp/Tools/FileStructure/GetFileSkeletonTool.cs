@@ -88,7 +88,7 @@ internal static class GetFileSkeletonTool
         var totalCount = request.TotalCount;
         var assemblyIdentity = request.AssemblyIdentity;
         var absolutePath = Path.GetFullPath(Path.Combine(solutionDir, path));
-        var document = DiffImpactAnalyzer.FindDocumentByPath(solution, absolutePath);
+        var document = DiffImpactAnalyzer.FindDocumentByPath(solution, path);
 
         if (document is null)
         {

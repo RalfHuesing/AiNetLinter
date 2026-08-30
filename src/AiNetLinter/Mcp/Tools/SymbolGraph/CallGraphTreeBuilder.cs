@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
 
@@ -274,7 +275,7 @@ internal static class CallGraphTreeBuilder
     private static string FormatPath(Location location, Solution solution)
     {
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-        return Path.GetRelativePath(outputRoot, location.SourceTree!.FilePath).Replace('\\', '/');
+        return PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath);
     }
 
     private static MetricsTreeNode ToMetricsTreeNode(CallTreeBuilderNode node) =>
