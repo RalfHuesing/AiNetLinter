@@ -2,8 +2,8 @@
 
 ## 1. Kontext & Testaufbau
 - **Test-Datum:** 2026-08-30
-- **Getestete DLL:** `C:\Program Files (x86)\Sage\Sage 100\9.0\Shared\Sagede.OfficeLine.CloudStorage.dll`
-- **Modus:** Live-MCP-Aufrufe über Daemon (`1.0.154`) mit `targetType: "assembly"` und `targetPath: "..."`
+- **Getestete DLL:** `C:\ThirdParty\Assemblies\External.CloudStorage.dll` (externe Fremd-Assembly)
+- **Modus:** Live-MCP-Aufrufe über Daemon mit `targetType: "assembly"` und `targetPath: "..."`
 - **Ziel:** Verifikation der statischen Dekompilation, Referenz-Auflösung, Typ-Extraktion und MCP-Tool-Antworten unter realen Produktionsbedingungen (ohne Quellcode-Projekt).
 
 ---
@@ -24,9 +24,9 @@
 ### BEF-01: Massive Context-Bloat durch transitive Referenz-Diagnosen in `inspect_assembly`
 - **Symptom:** Der Aufruf von `inspect_assembly` lieferte eine Antwort mit **643 KB** und **1.611 Zeilen** (~140.000 bis 160.000 Tokens).
 - **Ursache:** 
-  1. `Sagede.OfficeLine.CloudStorage.dll` besitzt 158 direkte/transitive Abhängigkeiten.
+  1. Die untersuchte Fremd-Assembly besitzt 158 direkte/transitive Abhängigkeiten.
   2. Der `AssemblyReferenceSessionExpander` traversiert bis zu 128 Knoten (im Test 1.323 besuchte Kanten).
-  3. Bei der Text-Generierung in `InspectAssemblyTool` / `FindAssemblyExtensionsTool` werden sämtliche gesammelten Diagnosen aller dekompilierten Kind-Sessions ungekappt in den MCP-Text ausgegeben (z. B. 4.600 Roslyn-Meldungen zu `System.CodeDom` aus `System.dll`, hunderte Meldungen aus `ADODB.dll`, `Newtonsoft.Json.dll` etc.).
+  3. Bei der Text-Generierung in `InspectAssemblyTool` / `FindAssemblyExtensionsTool` werden sämtliche gesammelten Diagnosen aller dekompilierten Kind-Sessions ungekappt in den MCP-Text ausgegeben (z. B. 4.600 Roslyn-Meldungen zu `System.CodeDom` aus `System.dll`, hunderte Meldungen aus Third-Party-DLLs etc.).
   4. Die eigentliche Nutzlast (die 3 Typen der Ziel-DLL) machte lediglich **12 Zeilen** am Ende des Texts aus.
 - **Auswirkung auf KI-Agenten:**
   - Verstopft fast das gesamte LLM-Kontextfenster in einem einzigen Turn.
@@ -40,10 +40,10 @@
 ---
 
 ### BEF-02: Pfad-Fehler in `get_symbol_body` bei dekompilierten DLLs
-- **Symptom:** `get_symbol_body` für `Sagede.OfficeLine.CloudStorage.CloudStorageDropbox` schlägt fehl mit:
+- **Symptom:** `get_symbol_body` für `ThirdParty.CloudStorage.CloudStorageProvider` schlägt fehl mit:
   ```text
   [ERROR]: WORKSPACE_DIAGNOSTIC: Unerwarteter Fehler in get_symbol_body: The path is empty. (Parameter 'relativeTo')
-    context: Sagede.OfficeLine.CloudStorage.CloudStorageDropbox
+    context: ThirdParty.CloudStorage.CloudStorageProvider
   ```
 - **Ursache:**
   - `GetSymbolBodyTool` setzt intern voraus, dass jedes Quelltext-Dokument einen relativen Pfad zum Projektroot (`RootPath`) besitzt (`Path.GetRelativePath(rootPath, docPath)`).
@@ -55,7 +55,7 @@
 ---
 
 ### BEF-03: `get_file_skeleton` löst synthetische Decompiler-Dateinamen nicht auf
-- **Symptom:** `get_file_skeleton(filePaths: ["00000-Sagede_OfficeLine_CloudStorage_CloudStorageDropbox.cs"])` meldet:
+- **Symptom:** `get_file_skeleton(filePaths: ["00000-ThirdParty_CloudStorage_CloudStorageProvider.cs"])` meldet:
   ```text
   [ERROR]: RESOURCE_NOT_FOUND: Datei '00000-...' nicht in der Solution gefunden.
   ```
@@ -68,7 +68,7 @@
 ---
 
 ### BEF-04: Erfolgreich verifizierte Funktionen (Positiv-Befunde)
-Folgende Kernkomponenten haben im Live-Test gegen Sage 100 DLLs hervorragend funktioniert:
+Folgende Kernkomponenten haben im Live-Test gegen externe Fremd-DLLs hervorragend funktioniert:
 
 1. **Sicherheit & Isolation (Zero-Execution):**
    - Die externe DLL wurde weder geladen (`Assembly.Load`) noch ausgeführt. Die Dekompilation und Roslyn-Workspace-Erstellung lief rein isoliert ab.

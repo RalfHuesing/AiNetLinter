@@ -1,10 +1,10 @@
-# Analyse: Ablauf beim Speichern eines Beleges (BelegEngine)
+# Analyse: Ablauf beim Speichern eines Beleges (DocumentEngine)
 
 ## 1. Übersicht
-- **Ziel-Assembly:** `Sagede.OfficeLine.Wawi.BelegEngine.dll`
-- **Kern-Klasse:** `Sagede.OfficeLine.Wawi.BelegEngine.Beleg`
-- **Daten-Schicht:** `Sagede.OfficeLine.Wawi.BelegEngine.BelegData`
-- **Haupteinstiegspunkt:** `Beleg.Save(bool abbruchBeiWarnung)` bzw. `Beleg.SaveIntern(bool)`
+- **Ziel-Assembly:** `ThirdParty.ERP.DocumentEngine.dll`
+- **Kern-Klasse:** `ThirdParty.ERP.DocumentEngine.Document`
+- **Daten-Schicht:** `ThirdParty.ERP.DocumentEngine.DocumentData`
+- **Haupteinstiegspunkt:** `Document.Save(bool abbruchBeiWarnung)` bzw. `Document.SaveIntern(bool)`
 
 ---
 
@@ -18,9 +18,9 @@ Der Speichervorgang eines Beleges gliedert sich in **6 chronologische Phasen**:
 ├─────────────────────────────────────────────────────────────┤
 │ 2. Speicherstatus-Ermittlung (SaveModeCommit & Events)      │
 ├─────────────────────────────────────────────────────────────┤
-│ 3. Persistierung Kopf & Positionen (BelegData.Insert*)      │
+│ 3. Persistierung Kopf & Positionen (DocumentData.Insert*)   │
 ├─────────────────────────────────────────────────────────────┤
-│ 4. Lagerbuchungen & Disposition (LagerJob & Verursacher)    │
+│ 4. Lagerbuchungen & Disposition (WarehouseJob & Verursacher)│
 ├─────────────────────────────────────────────────────────────┤
 │ 5. Statistiken, Historie & Vorgangsfortschreibung           │
 ├─────────────────────────────────────────────────────────────┤
@@ -31,21 +31,21 @@ Der Speichervorgang eines Beleges gliedert sich in **6 chronologische Phasen**:
 ---
 
 ### Phase 1: Validierung & Vorprüfungen
-1. **Struktur- & Pflichtfeldvalidierung (`Beleg.Validate()`, `ValidateObjects()`):**
+1. **Struktur- & Pflichtfeldvalidierung (`Document.Validate()`, `ValidateObjects()`):**
    - Prüft Adressbeziehungen (A0 Rechnungsempfänger, A1 Lieferadresse, A2–A4 abweichende Adressen).
    - Validiert Besteuerungsart (`_besteuerung`), Währungskurse (`_fremdwaehrungskurs`), Belegjahr und Buchungsperiode.
    - Validiert alle untergeordneten Auflistungen:
-     - Positionen (`BelegPositionCollection`)
-     - Stücklistenelemente (`BelegStueckliste.ValidateObjects()`)
-     - Zuschläge (`BelegZuschlag.ValidateObjects()`)
-     - Staffelrabatte (`BelegStaffelrabatt.ValidateObjects()`)
+     - Positionen (`DocumentPositionCollection`)
+     - Stücklistenelemente (`DocumentStueckliste.ValidateObjects()`)
+     - Zuschläge (`DocumentZuschlag.ValidateObjects()`)
+     - Staffelrabatte (`DocumentStaffelrabatt.ValidateObjects()`)
      - Zahlungskonditionen (`CalcAndValidateZDKs()`)
-2. **Customizing / DCM-Hooks (`DcmContextBelegValidate`, `DcmContextBelegBeforeSave`):**
-   - Feuert DCM-Ereignisse zur kundenindividuellen Vorvalidierung vor dem eigentlichen Schreibzugriff.
+2. **Customizing / Hook-Events (`DcmContextBelegValidate`, `DcmContextBelegBeforeSave`):**
+   - Feuert Customizing-Ereignisse zur kundenindividuellen Vorvalidierung vor dem eigentlichen Schreibzugriff.
 3. **Workflow- & Budgetprüfungen:**
    - Evaluierung von Workflow-Regeln (`WorkflowRule`, `WorkflowCondition`).
    - Kreditlimitprüfung (`_kreditlimitKonto`), Liefersperren (`_hatLiefersperreKonto`).
-   - Im Einkauf: Budgetüberwachung (`BelegBudget`, Event `QuestionBudget`). Bei Überschreitung automatisches Parken (`_ekIstGeparktWegenBudget`).
+   - Im Einkauf: Budgetüberwachung (`DocumentBudget`, Event `QuestionBudget`). Bei Überschreitung automatisches Parken (`_ekIstGeparktWegenBudget`).
 
 ---
 
@@ -59,15 +59,15 @@ Der Speichervorgang eines Beleges gliedert sich in **6 chronologische Phasen**:
 
 ---
 
-### Phase 3: Persistierung der Belegdaten (Datenbank-Schicht `BelegData`)
-1. **Belegkopf (`SaveBelegkopf` -> `BelegData.InsertBeleg`):**
+### Phase 3: Persistierung der Belegdaten (Datenbank-Schicht `DocumentData`)
+1. **Belegkopf (`SaveBelegkopf` -> `DocumentData.InsertBeleg`):**
    - Nummernvergabe/Aktualisierung (`_belegnummer`, `_handle`, `_vorgangsHandle`).
    - Speichert Nettobetrag, Steuerbetrag, Bruttobetrag, Skontofähigkeit, Rabatte (1–3), Kopftexte und Metadaten.
    - Projektbelege: Speichert Zusatzdaten via `InsertBelegProjekt` und `InsertProjektInfo`.
    - Schlussrechnungen: Speichert Rechnungsblöcke via `SaveSchlussrechnung` und `InsertRechnungsblock`.
-2. **Positionen & Stücklisten (`SavePositionen` -> `BelegData.InsertPosition`):**
+2. **Positionen & Stücklisten (`SavePositionen` -> `DocumentData.InsertPosition`):**
    - Schreibt alle Belegpositionen (Mengen, Einzel-/Gesamtpreise, Rabatte, Erlöskonten).
-   - Schreibt Stücklistenstrukturen (`BelegData.InsertStuecklistenelement`).
+   - Schreibt Stücklistenstrukturen (`DocumentData.InsertStuecklistenelement`).
    - Schreibt Lieferinformationen (`InsertLieferinformation`).
    - Schreibt Lagerplätze, Chargen- und Seriennummernzuordnungen (`InsertLagerplatz`, `InsertLagerplatzCharge`, `InsertLagerplatzSeriennummer`).
    - Verarbeitet Rahmenvertrags-Zuordnungen (`SavePositionRahmenvertragZuordnung`, `InsertRAVZuordnung`).
@@ -85,7 +85,7 @@ Der Speichervorgang eines Beleges gliedert sich in **6 chronologische Phasen**:
    - Führt je nach Belegart die physikalische Lagerbewegung aus (Zugang/Abgang über `_lagerbewegungsartPositiveMenge` / `_lagerbewegungsartNegativeMenge`).
    - Erstellt Lagerbewegungsprotokolle (`_datumLagerbewegungsprotokoll`).
    - Prüft Sperrlager und Bestandsgrenzen.
-2. **Dispositionsfortschreibung (`BelegData.InsertUpdateDispositionsVerursacher`):**
+2. **Dispositionsfortschreibung (`DocumentData.InsertUpdateDispositionsVerursacher`):**
    - Aktualisiert Bedarfsverursacher und Verursacherketten.
    - Erstellt/löscht Dispositionsartikel (`InsertDispoArtikel`, `DeleteDispoArtikel`).
 
@@ -93,7 +93,7 @@ Der Speichervorgang eines Beleges gliedert sich in **6 chronologische Phasen**:
 
 ### Phase 5: Statistiken, Historie & Vorgänge
 1. **Statistik-Aktualisierung (`StatistikUpdate` / `_hatStatistikLauf`):**
-   - Schreibt Hauptstatistik (`BelegData.InsertStatistikMain`).
+   - Schreibt Hauptstatistik (`DocumentData.InsertStatistikMain`).
    - Schreibt Kunden-/Lieferantenumsätze (`InsertStatistikKonto`, `InsertStatistikKontoGruppe`).
    - Schreibt Vertreterprovisionen (`InsertStatistikVertreter`, `_vkProvision`).
 2. **Vorgangs-Statusmengen:**
@@ -104,9 +104,9 @@ Der Speichervorgang eines Beleges gliedert sich in **6 chronologische Phasen**:
 ---
 
 ### Phase 6: Rechnungswesen & Abschluss
-1. **FIBU / Offene Posten Übergabe (`BelegReweInterface`, `BudgetueberwachungSaveRewe`):**
+1. **FIBU / Offene Posten Übergabe (`DocumentReweInterface`, `BudgetueberwachungSaveRewe`):**
    - Bereitet Buchungssätze und OP-Einträge für das Rechnungswesen vor (`DcmContextBeforeReweUebergabe`, `DcmContextReweUebergabe`).
-2. **Transaktionsabschluss (`BelegData.CommitQry`):**
+2. **Transaktionsabschluss (`DocumentData.CommitQry`):**
    - Führt den finalen Commit der temporär gepufferten Abfragen und Tabellenoperationen aus.
 3. **Aufräumarbeiten & PopSaveStatus:**
    - Rücksetzen von temporären Handles und Aktualisieren der `_belegRowVersion`.
