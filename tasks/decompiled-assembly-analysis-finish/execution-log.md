@@ -916,6 +916,25 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
   `2`; der gezielte Wiederholungstest blieb rot und ist für die finalen Gates
   erneut zu bewerten.
 
+## 2026-08-30 — Epic 4 Implementierer gestartet
+
+- Run-ID: `resume-2026-08-30-epic-4`
+- Epic: 4 — Capability-Matrix, Host-Integration und End-to-End-Verträge
+- Rolle: Implementierer
+- Subagent-ID: `01a05406-c394-7e83-99d3-93654a795e8d`
+- Diff-Baseline: `e0c5e0eb`
+- Status: `running`
+- Korrektur-/Übergabescope: `TD-008` Expansion-Diagnosen im
+  `find_assembly_extensions`-Ergebnis, `TD-009` negative Dispatcher-/Tool-
+  Routen und gezielte Bewertung von `TD-010`.
+- Muss-Scope: vollständige Capability-Matrix, konsistente Host-/Bootstrap-
+  Komposition, Origin-/Statuspayloads, inspect/find-extensions über den
+  gemeinsamen Sessionpfad und keine Legacy-Parameter.
+- Freshness-Regel: bestehende erfolgreiche Checks werden nicht bloß zur
+  Bestätigung wiederholt; neue Verifikation deckt nur den aktuellen Epic-
+  Scope ab. Der letzte codebezogene Schritt muss `get_violations` sein.
+- Code-Map: vor Recherche zu lesen und nach Änderungen direkt zu pflegen.
+
 ## 2026-08-30 — Epic 3 Korrekturrunde 3 Implementierer abgeschlossen
 
 - Run-ID: `resume-2026-08-30-epic-3-correction-3`
