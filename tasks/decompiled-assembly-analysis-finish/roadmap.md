@@ -1,15 +1,15 @@
 # Ausführungs-Roadmap: Einheitlicher Roslyn-Analysepfad
 
 status: executing
-current_epic: 3
-last_commit: 20027f1c
-blocker: Review ausstehend; der FastTests-Daemon-Gate-Befund bleibt zu bewerten
-correction_round: 3
+current_epic: 4
+last_commit: 43906e48
+blocker: none; TD-010 bleibt für die Gesamtabschluss-Gates zu bewerten
+correction_round: 0
 cycle_state: active
 recent_finding_signatures:
-  - Snapshot-Dispose-Race: Rollback nach terminalem Registry-Dispose lässt einen Snapshot mit Null-Lease resident
   - Extensions-Diagnostic-Propagation: find_assembly_extensions übernimmt Expansion-Diagnosen noch nicht
   - Negative-Route-Evidence: Missing/Cycle/Limit sind noch nicht über den vollständigen Dispatcher-/Tool-Antwortpfad nachgewiesen
+  - Daemon-Session-ResidentCount: eine unveränderte Daemon-Assertion meldet 2 statt 1 Resident-Kontext
 
 Diese Roadmap ist der einzige dauerhafte Ausführungs- und Resume-Stand für den
 autonomen Lauf. Sie leitet die Reihenfolge aus dem freigegebenen Konzept ab;
@@ -72,7 +72,7 @@ fachliche Muss-Kriterien und Non-Goals bleiben unverändert.
   Ressourcenengpässe und keine fremde Test-/Assembly-Ausführung.
 - Verifikation: FastTests für Graph-/Grenzfälle und Integrationstests für
   Registry, Health, Parallelität, Refresh und Cross-Target-Lebenszeit.
-- Status: in_progress
+- Status: done
 
 ## Epic 4: Capability-Matrix, Host-Integration und End-to-End-Verträge
 
@@ -90,7 +90,7 @@ fachliche Muss-Kriterien und Non-Goals bleiben unverändert.
   Default-Host; keine Legacy-Parameter oder widersprüchlichen Toolverträge.
 - Verifikation: Wiring-, Host-, MCP-E2E- und Capability-Tests sowie passende
   `safeguard`-/`get_violations`-Abfragen.
-- Status: open
+- Status: in_progress
 
 ## Epic 5: Dokumentation und Abschluss-Gates
 
@@ -118,8 +118,8 @@ fachliche Muss-Kriterien und Non-Goals bleiben unverändert.
 - [ ] unbekannte absolute DLL direkt ohne Projektdefinition analysierbar
 - [ ] source-backed Match, Decompilation-Fallback und Origin/Trust/Status sichtbar
 - [ ] Mapping, AssemblyName, Solution, Commit und Cachegenerationen eindeutig
-- [ ] direkte/transitive Referenzen metadata-only, dedupliziert und begrenzt
-- [ ] vier Projektkontexte getrennt von externen Ressourcen mit sichtbaren Limits
+- [x] direkte/transitive Referenzen metadata-only, dedupliziert und begrenzt
+- [x] vier Projektkontexte getrennt von externen Ressourcen mit sichtbaren Limits
 - [ ] gemeinsamer Roslyn-/MCP-Kern und vollständige Capability-Matrix
 - [ ] Spezialtools, Bootstrap und Toolbeschreibungen konsistent
 - [ ] Attestation, Parser, Cancellation, InvalidData und Cleanup fail-closed

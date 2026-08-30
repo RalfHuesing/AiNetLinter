@@ -898,6 +898,24 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
   Befund bleibt als `accepted-deferred` dokumentiert und wird am
   Gesamtabschluss erneut bewertet.
 
+## 2026-08-30 — Epic 3 abgeschlossen, Epic 4 eröffnet
+
+- Epic 3 — Transitive Assembly-Referenzen und getrennte externe Ressourcen:
+  `done` nach genehmigtem Korrekturrunden-3-Review.
+- Reviewurteil: `approved`; beide ursprünglichen P1-Ursachen sind behoben:
+  produktive transitive Dispatcher-/Source-Project-Expansion und leak-freier
+  Snapshot-Rollback nach terminalem Dispose.
+- Abschluss-Checkpoint vor dem nächsten Epic: `43906e48`.
+- Epic 4 — Capability-Matrix, Host-Integration und End-to-End-Verträge:
+  `in_progress`.
+- Offene nicht blockierende Übergaben an Epic 4: Expansion-Diagnosen im
+  `find_assembly_extensions`-Ergebnis und negative Missing-/Cycle-/Limit-
+  Nachweise über den vollständigen Dispatcher-/Tool-Antwortpfad.
+- Gesamtabschluss-Risiko: `TD-010` mit unveränderter
+  `DaemonHostMcpContractTests`-Assertion `ResidentCount` erwartet `1`, erhält
+  `2`; der gezielte Wiederholungstest blieb rot und ist für die finalen Gates
+  erneut zu bewerten.
+
 ## 2026-08-30 — Epic 3 Korrekturrunde 3 Implementierer abgeschlossen
 
 - Run-ID: `resume-2026-08-30-epic-3-correction-3`
