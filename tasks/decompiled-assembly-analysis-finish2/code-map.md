@@ -31,10 +31,11 @@
   wenn der Assembly-Kontext dort nachweisbar falsch behandelt wird.
 - Für EPIC-A konkret bestätigt: `DiffImpactAnalyzer.FindDocumentByPath` ist
   über `SolutionDocumentPathResolver` die gemeinsame Dokumentauflösung für `get_file_skeleton`,
-  `get_symbol_body`, Dependency- und Referenzpfade; die direkte
-  `Path.GetRelativePath`-Nutzung liegt in
-  `CallGraphTreeBuilder.FormatPath` und
-  `DependencyGraphScanner.ToRelativePath`.
+  `get_symbol_body`, Dependency- und Referenzpfade. Die relative Ausgabe-
+  normalisierung in `CallGraphTreeBuilder.FormatPath` und
+  `DependencyGraphScanner.ToRelativePath` erfolgt über
+  `PathNormalizer.ToRelative`; dort wird keine direkte
+  `Path.GetRelativePath`-Nutzung mehr angenommen.
 - `SolutionDocumentPathResolver` vergleicht zuerst sichere absolute/relative
   Pfadvarianten und erlaubt danach ausschließlich bei eindeutigem Treffer den
   reinen Dokument-Basename (`Document.Name`). Mehrdeutige Basenames liefern
@@ -154,16 +155,17 @@
   Callers/Tests/Metriken/Violations. Alle Ergebnisse waren vollständig;
   `get_feature_context` mit vollständigen Signaturtexten war erwartungsgemäß
   `SYMBOL_NOT_FOUND` und wurde auf die qualifizierten Methodennamen korrigiert.
-- Vor Hand-off: `find_duplicates`, `find_dead_code`, `find_magic_values` für
-  den geänderten Projektbereich; danach als letzter codebezogener Check
-  `get_violations` mit `targetType=project`, absolutem Projektroot und
+- Durchgeführt: `find_duplicates`, `find_dead_code`, `find_magic_values` für
+  den geänderten Projektbereich sowie anschließend als letzter codebezogener
+  Check `get_violations` mit `targetType=project`, absolutem Projektroot und
   geändertem Scope.
-- Epic-spezifisch gezielte xUnit-v3-Testfilter ausführen; solutionweite Gates
+- Durchgeführt: EPIC-spezifische xUnit-v3-Testfilter; solutionweite Gates
   bleiben dem Orchestrator vorbehalten.
-- Nach den Codeänderungen verifiziert: die neue Assembly-Pfad-/ID-Regression
+- Nach den letzten Codeänderungen verifiziert: die neue Assembly-Pfad-/ID-Regression
   (`AssemblyAnalysisPathContractTests`, 2/2) sowie Assembly-, Call-Tree-,
   Dependency-Graph-, Stable-ID-, Symbol-Body- und File-Skeleton-Komponenten-
-  tests (jeweils grün; vollständige Befunde im Hand-off). Die ausstehenden
-  DRY-/Dead-Code-/Magic-Value-Audits und der abschließende codebezogene
-  `get_violations`-Check folgen nach allen Änderungen; danach wird kein Code
-  mehr geändert.
+  tests (jeweils grün; vollständige Befunde im Hand-off). Der abschließende
+  `get_violations`-Check meldete genau einen strukturellen
+  `MaxDirectoryChildren`-Befund (31 statt 30) im Produktionsscope; dieser ist
+  als `accepted-deferred`-Tech-Debt dokumentiert. Danach wurde kein Code mehr
+  geändert.

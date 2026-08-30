@@ -202,3 +202,65 @@
   Codebefund zugerechnet.
 - nächste Aktion: Implementierungs-Checkpoint committen, dann einen frischen
   unabhängigen Reviewer auf den Diff seit `dbae9265` ansetzen.
+
+## 2026-08-31 — running / EPIC-A / Reviewer
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a054ec-889a-74b2-a2fa-738fa14a8b99`
+- diff-baseline: `264332b9`
+- scope: Unabhängige Prüfung des gesamten EPIC-A-Diffs, der
+  Pfad-/Stable-ID-Muss-Kriterien, der Regressionen, Code-Map und des frischen
+  Implementierer-Verifikationsnachweises.
+- erwarteter Hand-off: klares Urteil `approved`, `issues` oder `blocked`; nur
+  konkrete Navigationskorrekturen direkt in `code-map.md`, kein Produktionscode
+  und kein Commit.
+
+## 2026-08-31 — completed / EPIC-A / Reviewer
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a054ec-889a-74b2-a2fa-738fa14a8b99`
+- diff-baseline: `264332b9`
+- status: `issues`; kein Produktions-/Testcode und kein Commit erstellt;
+  konkrete Navigationsfakten in `code-map.md` korrigiert.
+- vollständiger finaler Agentenbericht:
+
+  > issues
+  >
+  > EPIC-A ist fachlich weitgehend erfüllt, aber nicht freigabefähig wegen
+  > eines belegten P1-Regelverstoßes.
+  >
+  > - Pfadauflösung für leere physische Basis-/`relativeTo`-Pfade: erfüllt.
+  >   Gemeinsame Auflösung über `SolutionDocumentPathResolver`; relative
+  >   Ausgabe über `PathNormalizer`.
+  > - Generierte Dokumente und `Document.Save(bool)`: durch Regressionstests
+  >   abgedeckt und erfolgreich.
+  > - Stable Symbol IDs, Assembly-Identität sowie fremde/ungültige IDs:
+  >   konsistent und kontrolliert recoverable.
+  > - Aufrufer, Assembly-/Projekt-Trennung und MCP-Routing: gezielt geprüft;
+  >   keine belegte EPIC-A-Fehlfunktion.
+  > - Implementierer-Nachweis: frisch, da seit dem Hand-off kein Produktions-
+  >   oder Testcode geändert wurde. Der Bericht nennt allerdings zwei nicht
+  >   kausale Integrations-Dokumentationsfehler; diese werden nicht EPIC-A
+  >   zugerechnet.
+  >
+  > Blockierender Befund:
+  >
+  > - P1 — `CORE-DIRECT-CHILDREN-LIMIT`: `src/AiNetLinter/Core` enthält nun 31
+  >   direkte Einträge statt des aktiven Grenzwerts 30 aus `rules.json:173`.
+  >   Verursacht durch `SolutionDocumentPathResolver.cs`.
+  > - Der Implementierer hat dies als P2/P3 deferred klassifiziert. Das wird
+  >   nicht übernommen: Ein konkreter Produktions-Regelverstoß ist gemäß
+  >   Review-Regel P1.
+  > - Disposition: `fix-now`; actionable Tech Debt: ja. Das bestehende
+  >   `TD-EPIC-A-001` reicht für ein `approved` nicht aus.
+  >
+  > Die veralteten Aussagen in `code-map.md` wurden ausschließlich dort
+  > korrigiert. Kein Produktions-/Testcode und kein Commit wurden erstellt.
+  > EPIC-B bis E bleiben außerhalb des Reviews.
+- Urteil: EPIC-A bleibt `in_progress`; der P1-Befund wird in
+  Korrekturrunde 1 behoben.
+- Tech-Debt-Triage: `TD-EPIC-A-001` von `accepted-deferred` auf
+  `fix-now`/P1 fortgeschrieben; der vollständige Befund bleibt hier und im
+  Register erhalten.
+- nächste Aktion: Review-Checkpoint committen, danach genau einen frischen
+  Korrektur-Implementierer starten.

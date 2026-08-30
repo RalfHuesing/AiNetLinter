@@ -2,9 +2,9 @@
 
 status: executing
 current_epic: EPIC-A
-correction_round: 0
+correction_round: 1
 cycle_state: normal
-last_commit: dbae9265
+last_commit: d29af3d4
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
@@ -16,6 +16,25 @@ tech_debt: siehe tech-debt.md
 - diff-baseline: `dbae9265`
 - Warteverhalten: Timeout-Rückgaben beenden den Agenten nicht; der Lauf endet
   erst mit einem echten terminalen Status.
+
+## Aktueller Rollenlauf
+
+- Rolle: unabhängiger Reviewer für EPIC-A
+- diff-baseline: `264332b9`
+- Implementiererbericht: completed EPIC-A Implementierer-Fortsetzung im
+  `execution-log.md`
+- Verifikation: Implementierer-Nachweis frisch; Review wiederholt erfolgreiche
+  Checks nur bei konkreter Gegenhypothese.
+
+## EPIC-A-Korrekturrunde 1
+
+- Ursache: `CORE-DIRECT-CHILDREN-LIMIT` — neuer Resolver verletzt den aktiven
+  Produktionsgrenzwert für direkte Core-Kinder.
+- Status: offen; frischer Implementierer erforderlich.
+- Disposition: `fix-now`; keine Deferred-Disposition für einen konkreten
+  Produktions-Regelverstoß.
+- Begrenzung: erste von höchstens fünf EPIC-A-Korrekturrunden; nach dem Fix
+  folgt genau ein frischer Review.
 
 ## EPIC-A — Stabile In-Memory- und Dateipfade
 
