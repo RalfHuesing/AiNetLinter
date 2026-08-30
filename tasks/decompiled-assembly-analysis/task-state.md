@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-30T02:47:07+02:00
+last_updated: 2026-08-30T05:20:00+02:00
 rules_dir: .agents/rules
 total_steps: 35
 current_step: step-035
@@ -14,13 +14,13 @@ current_step: step-035
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 35 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-035` (`planned/in_progress`; expliziter,
+- **Aktueller Schritt:** `step-035` (`done`; expliziter,
   diagnoseunabhängiger ConfigurationFailure bis zum Assembly-Tool, als
   Korrektur von `step-034`)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-30T02:45:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-30T05:20:00+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -61,7 +61,7 @@ current_step: step-035
 | step-032 | EPIC-04 | issues | Validated Refresh/Fetch in neue Cache-Generation | - | 59d979b7 | issues → step-033 | 59d979b7 + a16a421c |
 | step-033 | EPIC-04 | issues | Konfigurierbare Cache-Root-/Refresh-Policy mit Fresh/Stale-Vertrag und Step-032-Evidenzabschluss | step-032 | 0c6ab50e + c6787c12 | issues → step-034 | 0c6ab50e + c6787c12 + d57f5aab |
 | step-034 | EPIC-04 | issues | Strikter CacheRoot-Vertrag und fail-closed Konfigurationsweitergabe bis zum Assembly-Tool | step-033 | fcad25e5 + 1dd59128 | issues → step-035 | fcad25e5 + 1dd59128 + ff5fb2e5 |
-| step-035 | EPIC-04 | planned/in_progress | ConfigurationFailure unabhängig von Diagnosen terminal bis zum Assembly-Tool propagieren | step-034 | - | - | - |
+| step-035 | EPIC-04 | done | ConfigurationFailure unabhängig von Diagnosen terminal bis zum Assembly-Tool propagieren | step-034 | 5c830e44 + 8182b992 | approved | 5c830e44 + 8182b992 + c4ee413c |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -725,3 +725,21 @@ von Host-/MCP-Wiring, Health/Degraded, Dirty/Unbuilt, Retention/GC, Refresh/
 Fetch, Reparse oder EPIC-05. Der nächste sichere Übergabepunkt ist ein neuer
 Coder-Agent mit `tasks/decompiled-assembly-analysis/step-035/step-plan.md`;
 nach dessen Abschluss wird er geschlossen und ein frischer Kritiker gestartet.
+
+### Step-035-Abschluss (2026-08-30)
+
+Step 035 wurde durch den frischen Coder in `5c830e44` implementiert und mit
+`8182b992` dokumentiert. Der frische Kritiker hat ihn mit `c4ee413c`
+genehmigt; alle beteiligten Sub-Agenten wurden danach geschlossen. Der
+diagnoseunabhängige terminale `ConfigurationFailure` ist bis zum
+Assembly-Tool abgesichert, die positiven statischen Fallbacks bleiben
+erhalten, und die URI-/UNC-/Device-/Reserved-Matrix sowie die strukturierte
+`IsError=false`-Resultatpolicy sind regressionsgeprüft.
+
+Die Abschlussverifikation ist grün: Build ohne Warnungen/Fehler, FastTests
+2.158 bestanden plus 2 bekannte Win32-1314-Reparse-Skips, IntegrationTests
+370 bestanden, Stress nicht ausgeführt und keine Test-/Temp-Leaks. Der
+Safeguard wurde sowohl mit Threshold 5 als PASS `5,66/10` als auch mit dem
+unveränderten Threshold 8 als FAIL `5,66/10` dokumentiert; die bestehende
+Baseline-Schuld wurde nicht schöngeschrieben. Scoped Tech-Debt erzeugte
+keine neuen direkt zu behebenden Findings.
