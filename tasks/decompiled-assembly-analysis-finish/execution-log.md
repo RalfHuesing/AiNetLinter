@@ -539,3 +539,21 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
 - Nächste Aktion: Nach Checkpoint und Tech-Debt-Triage startet eine neue,
   frische Korrekturrunde 2 für die beiden P1-Ursachen innerhalb des
   Epic-3-Korrekturbudgets.
+
+## 2026-08-30 — Epic 3 Korrekturrunde 2 Implementierer gestartet
+
+- Run-ID: `resume-2026-08-30-epic-3-correction-2`
+- Epic: 3 — Transitive Assembly-Referenzen und getrennte externe Ressourcen
+- Rolle: Implementierer
+- Subagent-ID: `01a05398-072b-76e3-9e3e-969a0f3f56cd`
+- Diff-Baseline: `46e76037`
+- Status: `running`
+- Korrekturauftrag: ausschließlich die beiden P1-Ursachen
+  `Transitive-Reference-Session-Expansion` und
+  `External-Source-Resource-Lifecycle` beheben, einschließlich eines echten
+  Dispatcher-/Tool-Routen-Tests und des Duplicate-Rollback-Regressionstests.
+- Bereits triagierte P2-Kandidaten bleiben `accepted-deferred` in
+  `tech-debt.md` und sind nicht Teil dieser Korrekturschleife.
+- Freshness-Regel: erfolgreiche vorhandene Checks werden nicht ohne Anlass
+  wiederholt; neue Checks müssen nach den letzten Codeänderungen den
+  Korrekturscope gezielt abdecken.
