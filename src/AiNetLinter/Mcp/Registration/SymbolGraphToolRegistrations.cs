@@ -176,11 +176,11 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string GetTypeHierarchyDescription =
-        "Wann nutzen: Vererbungs-/Interface-Baum eines C#-Typs sehen (Basisklassen, " +
-        "Interfaces, abgeleitete/implementierende Typen, heuristische DI-Registrierungen). " +
-        "symbolIdentifier: \"T:Namespace.Klasse\" oder \"Datei.cs:10:5\" oder \"Datei.cs:10\" " +
-        "(Zeile ohne Spalte, siehe find_references) oder \"Klasse\". " +
-        "maxResults begrenzt die abgeleiteten/implementierenden Typen (Default 50).";
+        "Wann nutzen: Vererbungs- und Interface-Hierarchie eines C#-Typs analysieren (Basisklassen, " +
+        "implementierte Interfaces, abgeleitete/implementierende Typen, heuristische DI-Registrierungen). " +
+        "symbolIdentifier: \"T:Namespace.Klasse\", \"Datei.cs:10:5\", \"Datei.cs:10\" " +
+        "(Zeile ohne Spalte) oder \"Klasse\". maxResults: Begrenzung der abgeleiteten/implementierenden " +
+        "Typen (Default 50).";
 
     private static void AddDependencyGraph(
         McpServerPrimitiveCollection<McpServerTool> tools,
