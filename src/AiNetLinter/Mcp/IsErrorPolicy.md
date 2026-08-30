@@ -18,6 +18,7 @@ erwartbare Bedingung stattdessen `IsError=false` mit einer Handlungsanleitung im
 | `SYMBOL_NOT_FOUND` (Identifikator loest zu keinem Symbol auf) | **false** | Erwartbar (Tippfehler, falscher Scope) und direkt behebbar — Hint verweist auf `find_symbol`. |
 | `AMBIGUOUS_SYMBOL` (Identifikator loest zu mehreren Symbolen auf) | **false** | Erwartbar bei kurzen/ueberladenen Namen — die mitgelieferte Kandidatenliste ist selbst die Handlungsanleitung (Identifikator praezisieren). |
 | `INVALID_ARGUMENT` (leeres/fehlendes Pflichtfeld — auch bei falsch benanntem Parameter im JSON-RPC-Aufruf —, unbekannter `kind`-Filter, ungueltige Regex, gegenseitig exklusive Parameter beide gesetzt, Identifikator loest zu falschem Symbol-Kind auf) | **false** | Nutzer-/Agentenfehler bei den Argumenten, kein Tool-Ausfall — der Hint nennt die korrekte Form. Pflicht-Identifikator-/Pattern-Parameter sind dafuer auf SDK-Ebene als optional (Default `null`) deklariert (siehe `McpServerTool.Create`-Delegates in `*ToolRegistrations.cs`), damit ein fehlender/falsch benannter Parameter nicht schon an der SDK-Argument-Bindung mit einer rohen Fehlermeldung scheitert, bevor der Tool-Code die explizite `null`/leer-Pruefung ausfuehrt. |
+| Explizit ungültige `ExternalSources`-Konfiguration (z. B. `CacheRootInvalid`) | **false** | Die Konfiguration ist korrigierbar, darf aber nicht als leerer Source-Scope oder erfolgreicher Fallback kaschiert werden. Das Resultat enthält den strukturierten Diagnosecode und eine sichere Korrektur-Anleitung. |
 | `RESOURCE_NOT_FOUND` (Dateipfad matcht kein Dokument in der Solution) | **false** | Pfadfehler ist erwartbar (Tippfehler, falscher Separator) — Hint verweist auf Pfad-Konvention und `find_symbol` zur Orientierung. |
 | `ANALYSIS_FAILED` bei nicht aufloesender `gitRef` (`get_impact`) | **false** | Ein falscher/erfundener Git-Ref ist ein behebbarer Nutzereingabe-Fehler (Tippfehler, falscher Branch-Name) — Hint verweist auf `git log`/`git branch` oder den Aufruf ohne `gitRef`. |
 | Leere Treffermenge (0 Aufrufstellen, 0 Violations, Scope-Filter matched keine Datei, 0 Symbole gefunden) | **false** | Ein vollstaendiges, definitives "nichts gefunden" ist kein Fehler — der Text sagt das explizit statt einer generischen leeren Antwort. |
@@ -68,8 +69,9 @@ korrigiert auf `Error(...)` mit Retry-once-Hinweis, siehe `GetViolationsScanner.
 ## Verwendung
 
 - `McpToolResults.Error(...)` — nur fuer die drei `isError=true`-Kategorien oben.
-- `McpToolResults.Recoverable(...)` — fuer alle anderen strukturierten `[ERROR]:`-Texte; identisches
-  Format wie `Error(...)`, aber `IsError=false`.
+- `McpToolResults.Recoverable(...)` — fuer alle anderen strukturierten `[ERROR]:`-Texte einschließlich
+  korrigierbarer `ExternalSources`-Konfigurationsfehler; identisches Format wie `Error(...)`, aber
+  `IsError=false`.
 - `McpToolResults.SolutionNotLoaded()`, `SymbolNotFound(...)`, `AmbiguousSymbol(...)`,
   `InvalidArgument(...)`, `FileNotFound(...)`, `CompilationError(...)` — vordefinierte Kurzformen,
   die die richtige Wahl bereits treffen (siehe XML-Doc auf der jeweiligen Methode in

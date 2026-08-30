@@ -240,7 +240,7 @@ internal static class ExternalSourceConfigurationLoader
                 settingsPath,
                 property.Value.GetString()!.Trim()) is not { } resolvedRoot)
         {
-            diagnostic = CreateCacheDiagnostic(
+            diagnostic = ExternalSourceConfigurationDiagnostic.CreateError(
                 ExternalSourceConfigurationDiagnosticCodes.CacheRootInvalid,
                 "'ExternalSources:CacheRoot' muss ein sicherer, nichtleerer Pfad sein.",
                 settingsPath,
@@ -269,7 +269,7 @@ internal static class ExternalSourceConfigurationLoader
             || !IsIntegralJsonNumber(property.Value)
             || !property.Value.TryGetInt64(out var minutes))
         {
-            diagnostic = CreateCacheDiagnostic(
+            diagnostic = ExternalSourceConfigurationDiagnostic.CreateError(
                 ExternalSourceConfigurationDiagnosticCodes.InvalidFieldType,
                 "'ExternalSources:RefreshIntervalMinutes' muss eine positive ganze Zahl sein.",
                 settingsPath,
@@ -279,7 +279,7 @@ internal static class ExternalSourceConfigurationLoader
 
         if (minutes <= 0 || minutes > ExternalSourceCacheOptions.MaxRefreshIntervalMinutes)
         {
-            diagnostic = CreateCacheDiagnostic(
+            diagnostic = ExternalSourceConfigurationDiagnostic.CreateError(
                 ExternalSourceConfigurationDiagnosticCodes.RefreshIntervalInvalid,
                 "'ExternalSources:RefreshIntervalMinutes' liegt außerhalb des zulässigen positiven Bereichs.",
                 settingsPath,
@@ -296,17 +296,6 @@ internal static class ExternalSourceConfigurationLoader
         var rawValue = value.GetRawText();
         return rawValue.IndexOfAny(['.', 'e', 'E']) < 0;
     }
-
-    private static ExternalSourceConfigurationDiagnostic CreateCacheDiagnostic(
-        string code,
-        string message,
-        string settingsPath,
-        string jsonPath) =>
-        ExternalSourceConfigurationDiagnostic.CreateError(
-            code,
-            message,
-            settingsPath,
-            jsonPath);
 
     private static ExternalSourceConfigurationLoadResult LoadMappingsFile(string mappingsPath)
     {

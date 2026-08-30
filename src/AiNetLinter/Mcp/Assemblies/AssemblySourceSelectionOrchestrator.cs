@@ -10,6 +10,8 @@ using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Mcp.Assemblies;
 
+internal enum AssemblySourceSelectionStatus { Matched, NoMatch, Ambiguous, ProviderUnavailable, ConfigurationFailure }
+
 internal sealed class AssemblySourceSelectionOrchestrator
 {
     private readonly ExternalSourceConfigurationLoadResult configurationResult;
@@ -42,47 +44,30 @@ internal sealed class AssemblySourceSelectionOrchestrator
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(assemblyPath);
 
-        if (!configurationResult.Succeeded)
-        {
-            return CreateScope();
-        }
+        if (!configurationResult.Succeeded) return CreateScope();
 
         var resolution = new AssemblyReferenceResolver().Resolve(assemblyPath);
         var assemblyName = resolution.Identity?.Name?.Trim();
-        if (string.IsNullOrWhiteSpace(assemblyName))
-        {
-            return CreateScope();
-        }
+        if (string.IsNullOrWhiteSpace(assemblyName)) return CreateScope();
 
         var mappings = configurationResult.Configuration!.Mappings
             .Where(mapping => mapping.Assemblies.Any(alias =>
                 string.Equals(alias.Trim(), assemblyName, StringComparison.OrdinalIgnoreCase)))
             .ToList();
-        if (mappings.Count != 1)
-        {
-            return CreateScope();
-        }
+        if (mappings.Count != 1) return CreateScope();
 
         cancellationToken.ThrowIfCancellationRequested();
         var mapping = mappings[0];
         var providerResult = await provider.ResolveAsync(mapping, cancellationToken).ConfigureAwait(false);
         if (!providerResult.IsAvailable || providerResult.SourceSnapshot is null)
-        {
-            return CreateScope(
-                providerResult.FailureKind,
-                providerResult.Diagnostics);
-        }
+            return CreateScope(providerResult.FailureKind, providerResult.Diagnostics);
 
         SourceSnapshotLease lease;
         try
         {
             lease = registry.Acquire(providerResult.SourceSnapshot);
         }
-        catch
-        {
-            providerResult.SourceSnapshot.Dispose();
-            throw;
-        }
+        catch { providerResult.SourceSnapshot.Dispose(); throw; }
 
         try
         {
@@ -115,6 +100,7 @@ internal sealed class AssemblySourceSelectionOrchestrator
 internal sealed class AssemblySourceSelectionScope : IDisposable
 {
     private SourceSnapshotLease? lease;
+    private int disposed;
 
     internal AssemblySourceSelectionScope(
         AssemblySourceSelection? selection,
@@ -139,6 +125,16 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
 
     internal AssemblySourceSelection? Selection { get; }
 
+    internal AssemblySourceSelectionStatus Status =>
+        Selection is not null ? (AssemblySourceSelectionStatus)Selection.MatchResult.State :
+        ProviderFailureKind is not ExternalSourceProviderFailureKind.None
+            ? AssemblySourceSelectionStatus.ProviderUnavailable
+            : LoaderDiagnostics.IsEmpty
+                ? AssemblySourceSelectionStatus.NoMatch
+                : AssemblySourceSelectionStatus.ConfigurationFailure;
+
+    internal bool IsDisposed => Volatile.Read(ref disposed) != 0;
+
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> LoaderDiagnostics { get; }
 
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> ProviderDiagnostics { get; }
@@ -149,6 +145,6 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
 
     public void Dispose()
     {
-        Interlocked.Exchange(ref lease, null)?.Dispose();
+        if (Interlocked.Exchange(ref disposed, 1) == 0) Interlocked.Exchange(ref lease, null)?.Dispose();
     }
 }

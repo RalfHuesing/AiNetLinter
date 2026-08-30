@@ -25,10 +25,10 @@ internal static class ExternalSourceRepositoryCacheOptionsFactory
         ExternalSourceCacheOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        var cacheRoot = ExternalSourceRepositoryCacheContract.TryCanonicalizeAbsoluteRoot(
+        var cacheRoot = ExternalSourceConfigurationPath.TryCanonicalizeCacheRoot(
             options.CacheRoot)
             ?? throw new ArgumentException(
-                "Die externe Cache-Wurzel muss ein absoluter, gültiger Pfad sein.",
+                ExternalSourceCacheOptions.InvalidCacheRootMessage,
                 nameof(options));
         var sourceRoot = ExternalSourceRepositoryCacheContract.TryCanonicalizeAbsoluteRoot(
             Path.Combine(cacheRoot, ExternalSourceRepositoryCacheContract.SourceDirectoryName))

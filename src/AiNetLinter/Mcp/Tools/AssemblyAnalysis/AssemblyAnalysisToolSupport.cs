@@ -50,6 +50,11 @@ internal static class AssemblyAnalysisToolSupport
             fullPath!,
             parameters.CancellationToken).ConfigureAwait(false);
         observeScope?.Invoke(source);
+        if (source.Status is AssemblySourceSelectionStatus.ConfigurationFailure)
+        {
+            return CreateConfigurationFailureResult(source, fullPath!);
+        }
+
         var (context, error) = await AssemblyAnalysisService.CreateContextAsync(
             new AssemblyAnalysisContextRequest(
                 fullPath!,
@@ -136,6 +141,20 @@ internal static class AssemblyAnalysisToolSupport
             .Distinct(StringComparer.Ordinal)
             .Take(100)
             .ToList();
+
+    private static CallToolResult CreateConfigurationFailureResult(
+        AssemblySourceSelectionScope source,
+        string assemblyPath)
+    {
+        var diagnostics = FormatExternalDiagnostics(source.Diagnostics);
+        var code = source.Diagnostics.FirstOrDefault()?.Code
+            ?? ExternalSourceConfigurationDiagnosticCodes.ExternalSourcesSectionInvalid;
+        return McpToolResults.Recoverable(
+            code,
+            AppendDiagnostics("Die externe Source-Konfiguration ist ungültig.", diagnostics),
+            context: assemblyPath,
+            hint: "ExternalSources-Konfiguration korrigieren und erneut versuchen.");
+    }
 
     private static string AppendDiagnostics(string message, IReadOnlyList<string> diagnostics) =>
         diagnostics.Count == 0

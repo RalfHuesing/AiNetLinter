@@ -240,7 +240,7 @@ public sealed class AssemblyAnalysisToolSupportTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_InvalidConfigurationOrUnusableMatchFallsBackDeterministically()
+    public async Task ExecuteAsync_InvalidConfigurationStopsBeforeFallback_AndUnusableMatchFallsBackDeterministically()
     {
         using var temp = TestTempDirectory.Create("assembly-source-fallback-");
         var assemblyPath = AssemblyTestHelper.EmitAssembly(
@@ -259,13 +259,19 @@ public sealed class AssemblyAnalysisToolSupportTests
             invalidProvider,
             invalidRegistry);
         AssemblyContext? invalidContext = null;
+        AssemblySourceSelectionScope? invalidScope = null;
 
-        await AssemblyAnalysisToolSupport.ExecuteAsync(
+        var invalidResult = await AssemblyAnalysisToolSupport.ExecuteAsync(
             CreateParameters(assemblyPath, observed => invalidContext = observed),
-            invalidOrchestrator);
-        Assert.NotNull(invalidContext);
-        Assert.Equal("decompiled", invalidContext!.Origin.OriginKind);
-        Assert.Contains(invalidContext.Diagnostics, message => message.Contains(loaderDiagnostic.Code, StringComparison.Ordinal));
+            invalidOrchestrator,
+            scope => invalidScope = scope);
+        Assert.NotEqual(true, invalidResult.IsError);
+        Assert.Null(invalidContext);
+        Assert.NotNull(invalidScope);
+        Assert.True(invalidScope!.IsDisposed);
+        Assert.Equal(AssemblySourceSelectionStatus.ConfigurationFailure, invalidScope.Status);
+        var invalidText = Assert.IsType<TextContentBlock>(Assert.Single(invalidResult.Content)).Text;
+        Assert.Contains(loaderDiagnostic.Code, invalidText, StringComparison.Ordinal);
         Assert.Equal(0, invalidProvider.CallCount);
         var mapping = CreateMapping(["TargetAssembly"]);
         using var noMatchSnapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(

@@ -11,6 +11,8 @@ namespace AiNetLinter.Configuration;
 
 internal sealed record ExternalSourceCacheOptions
 {
+    internal const string InvalidCacheRootMessage =
+        "Die externe Cache-Wurzel muss ein absoluter, gültiger Pfad sein.";
     internal const long DefaultRefreshIntervalMinutes = 60;
     internal const string DefaultCacheDirectoryName = "cache";
     internal static readonly long MaxRefreshIntervalMinutes =
@@ -21,9 +23,9 @@ internal sealed record ExternalSourceCacheOptions
     internal ExternalSourceCacheOptions(string cacheRoot, TimeSpan refreshInterval)
     {
         ArgumentNullException.ThrowIfNull(cacheRoot);
-        CacheRoot = ExternalSourceConfigurationPath.TryCanonicalizeAbsoluteRoot(cacheRoot)
+        CacheRoot = ExternalSourceConfigurationPath.TryCanonicalizeCacheRoot(cacheRoot)
             ?? throw new ArgumentException(
-                "Die externe Cache-Wurzel muss ein absoluter, gültiger Pfad sein.",
+                InvalidCacheRootMessage,
                 nameof(cacheRoot));
         if (refreshInterval <= TimeSpan.Zero)
         {
@@ -170,18 +172,12 @@ internal static class ExternalSourceConfigurationPath
 {
     internal static string? TryResolveCacheRoot(string settingsPath, string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (!IsSafeRawCacheRoot(value))
         {
             return null;
         }
 
         var trimmed = value.Trim();
-        if (trimmed.Contains("://", StringComparison.Ordinal)
-            || ContainsUnsafeSegments(trimmed))
-        {
-            return null;
-        }
-
         try
         {
             var candidate = Path.IsPathFullyQualified(trimmed)
@@ -196,6 +192,17 @@ internal static class ExternalSourceConfigurationPath
         {
             return null;
         }
+    }
+
+    internal static string? TryCanonicalizeCacheRoot(string value)
+    {
+        if (!IsSafeRawCacheRoot(value)
+            || !Path.IsPathFullyQualified(value.Trim()))
+        {
+            return null;
+        }
+
+        return TryCanonicalizeAbsoluteRoot(value);
     }
 
     internal static string? TryCanonicalizeAbsoluteRoot(string value)
@@ -226,26 +233,103 @@ internal static class ExternalSourceConfigurationPath
         }
     }
 
-    private static bool ContainsUnsafeSegments(string value)
+    private static bool IsSafeRawCacheRoot(string value)
     {
-        var normalized = value.Replace('\\', '/');
-        var segmentStart = Path.IsPathFullyQualified(value)
-            && normalized.Length >= 2
-            && normalized[1] == ':'
-            ? 2
-            : 0;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var normalized = value.Trim().Replace('\\', '/');
+        return HasSafeRawSyntax(normalized) && HasSafeRawSegments(normalized);
+    }
+
+    private static bool HasSafeRawSyntax(string normalized)
+    {
+        if (IsDevicePath(normalized)
+            || normalized.IndexOf('?') >= 0
+            || normalized.IndexOf('#') >= 0
+            || (normalized.StartsWith("//", StringComparison.Ordinal)
+                && normalized.IndexOf('@') >= 0)
+            || !HasValidColonUsage(normalized))
+        {
+            return false;
+        }
+
+        return !normalized.StartsWith("/", StringComparison.Ordinal)
+            || normalized.StartsWith("//", StringComparison.Ordinal);
+    }
+
+    private static bool HasSafeRawSegments(string normalized)
+    {
+        var segmentStart = IsDrivePath(normalized) ? 2 : 0;
         foreach (var segment in normalized[segmentStart..].Split(
                      '/',
                      StringSplitOptions.RemoveEmptyEntries))
         {
-            if (segment is "." or "..")
+            if (IsUnsafeRawSegment(segment))
             {
-                return true;
+                return false;
             }
         }
 
-        return false;
+        return true;
     }
+
+    private static bool IsUnsafeRawSegment(string segment) =>
+        segment is "." or ".."
+        || IsReservedDeviceName(segment)
+        || segment.EndsWith(' ')
+        || segment.EndsWith('.')
+        || segment.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0;
+
+    private static bool HasValidColonUsage(string normalized)
+    {
+        var isDrivePath = IsDrivePath(normalized);
+        for (var index = 0; index < normalized.Length; index++)
+        {
+            if (normalized[index] == ':'
+                && !(isDrivePath && index == 1))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsDrivePath(string normalized) =>
+        normalized.Length >= 3
+        && IsAsciiLetter(normalized[0])
+        && normalized[1] == ':'
+        && normalized[2] == '/';
+
+    private static bool IsAsciiLetter(char value) =>
+        value is >= 'A' and <= 'Z' or >= 'a' and <= 'z';
+
+    private static bool IsDevicePath(string normalized) =>
+        normalized.StartsWith("//./", StringComparison.OrdinalIgnoreCase)
+        || normalized.StartsWith("//?/", StringComparison.OrdinalIgnoreCase)
+        || normalized.StartsWith("/device/", StringComparison.OrdinalIgnoreCase)
+        || normalized.StartsWith("/??/", StringComparison.OrdinalIgnoreCase)
+        || normalized.StartsWith("/globalroot/", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsReservedDeviceName(string segment)
+    {
+        var extensionIndex = segment.IndexOf('.');
+        var name = extensionIndex < 0 ? segment : segment[..extensionIndex];
+        return name.Equals("CON", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("PRN", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("AUX", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("NUL", StringComparison.OrdinalIgnoreCase)
+            || IsNumberedDeviceName(name, "COM")
+            || IsNumberedDeviceName(name, "LPT");
+    }
+
+    private static bool IsNumberedDeviceName(string value, string prefix) =>
+        value.Length == prefix.Length + 1
+        && value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+        && value[^1] is >= '1' and <= '9';
 }
 
 internal static class ExternalSourceJsonValidation
