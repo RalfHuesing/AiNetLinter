@@ -2,13 +2,14 @@
 
 status: executing
 current_epic: 3
-last_commit: a8071f5f
-blocker: none
-correction_round: 1
+last_commit: ebf51167
+blocker: Epic 3 benötigt Korrekturrunde 2 für zwei verbleibende P1-Ursachen
+correction_round: 2
 cycle_state: active
 recent_finding_signatures:
-  - Transitive-Reference-Session-Expansion: erreichbare Referenzen werden noch nicht als eigene Analyseziele geroutet
-  - External-Source-Resource-Lifecycle: Source-Snapshot-Sessions verwenden noch kein unabhängiges Ressourcenregister
+  - Transitive-Reference-Session-Expansion: transitive Ziele und Source-backed ProjectReferences sind im realen Toolpfad nicht wirksam
+  - External-Source-Resource-Lifecycle: Duplicate-Rollback kann einen Phantom-Lease im Snapshot hinterlassen
+  - Snapshot-Route-Test-Evidence: vorhandener Test beweist keinen echten Dispatcher-/Tool-E2E-Pfad
 
 Diese Roadmap ist der einzige dauerhafte Ausführungs- und Resume-Stand für den
 autonomen Lauf. Sie leitet die Reihenfolge aus dem freigegebenen Konzept ab;
