@@ -1202,6 +1202,22 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
   der letzte gezielte `get_violations`-Check.
 - Code-Map: vor Recherche zu lesen und nach Änderungen direkt zu aktualisieren.
 
+## 2026-08-30 — Epic 4 Korrekturrunde 1 Review gestartet
+
+- Run-ID: `resume-2026-08-30-epic-4-correction-1-review`
+- Epic: 4 — Capability-Matrix, Host-Integration und End-to-End-Verträge
+- Rolle: Reviewer
+- Subagent-ID: `01a0544c-efad-7953-87e0-3341b2d46ea7`
+- Diff-Baseline: `d6cd4c58`
+- Status: `running`
+- Prüfauftrag: Partiality-Statusprojektion über alle Antwortkanäle,
+  `.mcp.json`-Bootstrap und die verbleibende externe Registry-Voraussetzung;
+  P2 `get_file_tree` nur als Risiko bewerten.
+- Die frischen Implementierer-Checks werden nicht redundant wiederholt;
+  Wiederholung nur bei konkreter Gegenhypothese oder fehlendem Nachweis.
+- Code-Map: zuerst verifizieren; nur konkrete Navigationsfehler dürfen direkt
+  in `code-map.md` korrigiert werden.
+
 ## 2026-08-30 — Epic 4 Korrekturrunde 1 Implementierer abgeschlossen
 
 - Run-ID: `resume-2026-08-30-epic-4-correction-1`

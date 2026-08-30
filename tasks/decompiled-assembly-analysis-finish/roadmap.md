@@ -2,8 +2,8 @@
 
 status: executing
 current_epic: 4
-last_commit: b506de44
-blocker: Epic 4 benötigt Korrekturrunde 1; installierte MCP-Registry ist als Voraussetzung zu prüfen
+last_commit: d6cd4c58
+blocker: Review der Epic-4-Statuskorrektur; laufende MCP-Registry bleibt externe Voraussetzung
 correction_round: 1
 cycle_state: active
 recent_finding_signatures:
