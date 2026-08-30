@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-30T05:20:00+02:00
+last_updated: 2026-08-30T05:30:00+02:00
 rules_dir: .agents/rules
-total_steps: 35
-current_step: step-035
+total_steps: 36
+current_step: step-036
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,14 +13,14 @@ current_step: step-035
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 35 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-035` (`done`; expliziter,
-  diagnoseunabhängiger ConfigurationFailure bis zum Assembly-Tool, als
-  Korrektur von `step-034`)
+- **Steps gesamt:** 36 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-036` (`planned/in_progress`; Gitea-
+  Source-of-Truth mit Clean-Checkout und transparentem degraded Refresh-
+  Vertrag)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-30T05:20:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-30T05:30:00+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -62,6 +62,7 @@ current_step: step-035
 | step-033 | EPIC-04 | issues | Konfigurierbare Cache-Root-/Refresh-Policy mit Fresh/Stale-Vertrag und Step-032-Evidenzabschluss | step-032 | 0c6ab50e + c6787c12 | issues → step-034 | 0c6ab50e + c6787c12 + d57f5aab |
 | step-034 | EPIC-04 | issues | Strikter CacheRoot-Vertrag und fail-closed Konfigurationsweitergabe bis zum Assembly-Tool | step-033 | fcad25e5 + 1dd59128 | issues → step-035 | fcad25e5 + 1dd59128 + ff5fb2e5 |
 | step-035 | EPIC-04 | done | ConfigurationFailure unabhängig von Diagnosen terminal bis zum Assembly-Tool propagieren | step-034 | 5c830e44 + 8182b992 | approved | 5c830e44 + 8182b992 + c4ee413c |
+| step-036 | EPIC-04 | planned/in_progress | Gitea-Source-of-Truth mit Clean-Checkout und transparentem degraded Refresh-Vertrag absichern | - | - | - | - |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -743,3 +744,34 @@ Safeguard wurde sowohl mit Threshold 5 als PASS `5,66/10` als auch mit dem
 unveränderten Threshold 8 als FAIL `5,66/10` dokumentiert; die bestehende
 Baseline-Schuld wurde nicht schöngeschrieben. Scoped Tech-Debt erzeugte
 keine neuen direkt zu behebenden Findings.
+
+### Step-036-Planung (2026-08-30)
+
+Ein neuer Planer-Agent wurde gestartet und nach Abschluss geschlossen; kein
+bestehender Agent wurde wiederverwendet. Step 036 ist als neuer größerer
+EPIC-04-Source-Policy-Step auf `planned/in_progress` gesetzt. Sein
+Primärvertrag verbindet die Clean-/Dirty-/Unverified-Grenze des bereits
+besitzgeschützten Gitea-Staging-Checkouts mit einer transparenten
+`Verified`-/`Degraded`-/`Unavailable`-Refresh- und Provider-Semantik.
+
+Der Step prüft keinen lokalen Checkout als konkurrierende Source of Truth und
+führt keinen heuristischen Unbuilt-/Binary-Fingerprint-Modus ein. Ein
+fehlgeschlagener stale Refresh darf den validierten alten `current`-Stand nur
+als Last-good-Nachweis unter `Degraded` führen; er darf keinen stale Snapshot
+als aktuell registrieren. Der statische Decompilation-Fallback bleibt aktiv,
+`ConfigurationFailure` bleibt terminal und die bestehende Cache-/Pointer-/
+Ownership-/Cleanup-/Cancellation-/1314-/Reparse-Semantik bleibt erhalten.
+
+Host-/MCP-Health-Wiring, Retention/GC/Invalidierung, Telemetrie, transitive
+Referenzen und EPIC-05 sind ausdrücklich außerhalb. Der initiale Kontext ist
+auf zehn `read_first`-Dateien und zwölf Dateien einschließlich
+`read_on_demand` begrenzt. Der scoped Assemblies-Audit ergab keine
+Duplikat-Cluster und keinen hochkonfidenten Dead Code; die 109 breiten
+Magic-Value-Treffer werden nicht global bearbeitet. `TD-001` bis `TD-003`
+bleiben unverändert.
+
+Im Planer-Schritt wurden keine Produktionsänderungen vorgenommen und keine
+Tests, Coder- oder Kritikerarbeit ausgeführt. Der nächste sichere
+Übergabepunkt ist ein frischer Coder-Agent mit
+`tasks/decompiled-assembly-analysis/step-036/step-plan.md`; nach seinem
+Abschluss wird er geschlossen und ein neuer, separater Kritiker gestartet.

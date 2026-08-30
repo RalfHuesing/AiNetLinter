@@ -3,7 +3,7 @@ status: active
 task: decompiled-assembly-analysis
 derived_from: Konzept.md
 created_at: 2026-08-28T11:11:40+02:00
-last_updated: 2026-08-30T00:30:00+02:00
+last_updated: 2026-08-30T05:30:00+02:00
 created_by_model: gpt-5 (Codex)
 created_by_model_knowledge_cutoff: nicht angegeben
 ---
@@ -180,18 +180,30 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
     Decompilation bleibt der Fallback. Review `a16a421c` beanstandete nicht
     diese Logik, sondern die am geprüften Commit nicht reproduzierbaren
     Audit-/MCP-/Safeguard-/DRY-/Magic-Values-Nachweise.
-  - **Aktiver nächster Schnitt → `step-033` (planned/in_progress):**
-    Ein einziger Cache-Konfigurationsvertrag führt strikt validiertes
-    `ExternalSources:CacheRoot` und `ExternalSources:RefreshIntervalMinutes`
-    bis zur bestehenden Writer-/Refresh-Policy-Konstruktion und der
-    deterministischen Fresh/Stale-Entscheidung. Die Step-032-Evidenzkorrektur
-    ist darin ein verpflichtender Abschlussnachweis für denselben Cache-/
-    Refresh-Kontext, kein eigener Audit-only-Step. Host-/MCP-Wiring wird nicht
-    vorgezogen.
-  - Dirty/unbuilt Checkout-Abgrenzung und transparente Fallback-/Health-
-    Semantik bleiben nach diesen Cache-Verträgen ein eigener Source-Policy-
-    Schnitt; Step 024/025 markieren nur den erfolgreichen Workspace-Aufbau und
-    die besitzgebundene Cleanup-Grenze.
+  - **Abgeschlossene Cache-Konfigurations-/Failure-Schnitte → `step-033` bis
+    `step-035`:** `step-033` führte die strikt validierte
+    `ExternalSources:CacheRoot`-/`RefreshIntervalMinutes`-Konfiguration bis
+    zur bestehenden Writer-/Refresh-Policy-Konstruktion und korrigierte die
+    Step-032-Evidenz. `step-034` schärfte die rohe CacheRoot-/Options-
+    Validierung und die fail-closed Weitergabe bis zum Assembly-Tool.
+    `step-035` machte `ConfigurationFailure` unabhängig von der
+    Diagnosenanzahl terminal und schloss die URI-/UNC-/Device-/Reserved-
+    Matrix sowie die explizite `Recoverable`-/`IsError=false`-Regression.
+    Die drei Steps sind durch `d57f5aab`, `ff5fb2e5` und `c4ee413c`
+    dokumentiert; der finale Step-035-Nachweis steht in
+    `step-035/step-result.md`.
+  - **Aktiver nächster Schnitt → `step-036` (planned/in_progress):**
+    Ein zusammenhängender Source-Policy-Vertrag verbindet den bereits
+    besitzgeschützten Gitea-Staging-Checkout mit expliziter
+    `Verified`-/`Degraded`-/`Unavailable`-Healthsemantik. Nur ein sauber
+    verifizierter Checkout mit nachgewiesener Commit-Revision darf Snapshot
+    oder Cachegeneration liefern. Scheitert ein stale Refresh, bleibt ein
+    validierter alter `current`-Stand ausschließlich als Last-good-Nachweis
+    sichtbar; er wird nicht still als aktuell analysiert. Der statische
+    Decompilation-Fallback bleibt erhalten. Ein lokaler Dirty-/Unbuilt-Stand
+    erhält keinen alternativen Source-of-Truth-Pfad; heuristische
+    Binary-/Build-Fingerprint-Prüfungen sind nicht Teil dieses Steps.
+    Host-/MCP-Health-Wiring wird nicht vorgezogen.
 
   **Nachgelagerte Folgepakete:**
 
@@ -204,8 +216,8 @@ Korruptionsfehler, dirty/unbuilt lokale Checkouts, atomare Veröffentlichung und
     CacheRoot-/Refresh-Konfiguration und korrigiert verpflichtend die
     Step-032-Evidenz; der Refresh-Algorithmus wird nicht erneut geöffnet.
   - Dirty/unbuilt lokale Checkouts sowie Health-/degraded-Fallback-Policy
-    bleiben nach den Cache-Reuse-/Refresh-Verträgen ein eigener Source-
-    Policy-Schnitt.
+    werden im aktiven Source-Policy-Schnitt `step-036` gemeinsam behandelt;
+    ein echter Local-Origin-/Build-Fingerprint-Vertrag bleibt später.
   - Host-Komposition, produktives Provider-/MCP-Wiring und eine gemeinsame
     Capability-Matrix bleiben außerhalb der Cache-Grenze.
   - Transitive Referenzen und gemeinsame Tool-Capabilities bleiben EPIC-05.
