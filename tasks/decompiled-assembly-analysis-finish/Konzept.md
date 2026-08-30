@@ -13,32 +13,31 @@ rules_dir: .agents/rules
 AiNetLinter soll ein Assembly-Target so in die semantische MCP-Analyse
 einbinden, dass ein Agent dieselben sinnvollen Roslyn-Nachschlagefunktionen
 verwenden kann wie für ein aktuell bearbeitetes Projekt. Das Assembly-Artefakt
-ist dabei nur das Analyseziel. Die Herkunft der dafür verwendeten Roslyn-Quelle
-wird separat aufgelöst:
+ist nur das Analyseziel. Die Herkunft der dafür verwendeten Roslyn-Quelle wird
+separat aufgelöst:
 
 1. Quellcode des aktuell bearbeiteten Projekts;
 2. eine explizit zugeordnete externe Source-Solution;
 3. eine statisch aus der DLL erzeugte, synthetische Roslyn-Quelle.
 
-Ein Assembly-Target verwendet zuerst eine verlässlich zugeordnete und attestierte
-Source-Solution, sofern eine solche über das globale externe Mapping konfiguriert
-und erreichbar ist. Andernfalls wird die DLL statisch decompiliert. Beide Pfade
-enden in derselben Roslyn-/MCP-Analyseschicht. Ein Agent soll daher eine spontan
-entdeckte DLL direkt adressieren können, ohne eine Projektdefinition für die DLL
-anzulegen oder manuelle Cachepflege zu benötigen.
+Ein Assembly-Target prüft zuerst eine verlässlich zugeordnete und attestierte
+Source-Solution. Nur wenn kein belastbarer Match verfügbar ist, wird die DLL
+decompiliert. Beide Pfade enden in derselben Roslyn-/MCP-Analyseschicht. Ein
+Agent kann eine spontan entdeckte DLL direkt adressieren, ohne dafür eine
+Projektdefinition oder manuelle Cachepflege anzulegen.
 
 Der Nutzen liegt im sicheren Nachschlagen externer Abhängigkeiten aus einem
 aktuell bearbeiteten Projekt heraus. Der Agent erhält Antworten zu Symbolen,
-Bodies, Struktur, Referenzen, Aufrufbäumen, Dependency Graphs und Metriken,
-ohne dass externe Quellen verändert werden oder fremder Code im MCP-Prozess
-ausgeführt wird. Eine Decompilation bleibt als solche erkennbar; fehlende
-Referenzen, Mismatch, Decompilergrenzen und degradierte Zustände werden nicht
-als vollständige Originalquelle ausgegeben.
+Bodies, Struktur, Referenzen, Aufrufbäumen, Dependency Graphs und Metriken.
+Externe Quellen werden nicht verändert, und fremder Code wird im MCP-Prozess
+weder geladen noch ausgeführt. Eine Decompilation bleibt als solche erkennbar;
+fehlende Referenzen, Source-Mismatch, Decompilergrenzen und degradierte
+Zustände werden nicht als vollständige Originalquelle ausgegeben.
 
 ## Fachliches Laufzeitmodell
 
-Es gibt genau einen lokal beim Entwickler laufenden MCP-Daemon. Dieser Daemon
-verwaltet die aktuell bearbeiteten Benutzer-Repositories beziehungsweise
+Es gibt genau einen lokal beim Entwickler laufenden MCP-Daemon. Er verwaltet
+die aktuell bearbeiteten Benutzer-Repositories beziehungsweise
 Projektkontexte. Für diese residente Projektklasse gilt die bestehende Grenze
 von maximal vier aktiven Kontexten.
 
@@ -48,23 +47,24 @@ Benutzer-Kontexte. Es können logisch beliebig viele externe Quellen hinzukommen
 - eine lokale DLL wird statisch als externe Assembly decompiliert;
 - eine explizit konfigurierte Git-/Gitea-Quelle wird als read-only
   Source-Solution-Snapshot geladen und für zugeordnete Assemblies verwendet;
-- weitere DLL- und Source-Solution-Sessions besitzen eigene Leases,
-  Lebensdauern und Ressourcenbudgets.
+- transitiv erreichbare externe DLLs und Source-Solutions werden bei Bedarf
+  über denselben Resolver ergänzt.
 
-„Beliebig viele“ bedeutet dabei, dass die Vierergrenze der Benutzer-Repositories
-nicht als Obergrenze für externe Quellen wiederverwendet werden darf. Physische
-Grenzen für Speicher, Disk, Parallelität oder aktive externe Sessions müssen
-separat, explizit und diagnostizierbar behandelt werden.
+Die Vierergrenze darf nicht als Obergrenze für externe Quellen wiederverwendet
+werden. Physische Grenzen für Speicher, Disk, Parallelität oder gleichzeitig
+residente externe Sessions müssen separat, explizit und diagnostizierbar sein.
+Ein externes Snapshot- oder Assembly-Limit darf niemals still einen aktiven
+Benutzer-Projektkontext verdrängen.
 
 Der aktuell bearbeitete Projektkontext und eine externe Analysequelle bleiben
-fachlich getrennt. Die externe Quelle ist ein read-only Nachschlageziel und kein
-versteckter zweiter Consumer- oder Änderungskontext. Eine gemeinsame, eindeutig
-identifizierte Source-Snapshot-Repräsentation darf von mehreren Target-Aliassen
-und mehreren Benutzer-Projektkontexten wiederverwendet werden.
+fachlich getrennt. Die externe Quelle ist ein read-only Nachschlageziel und
+kein versteckter zweiter Consumer- oder Änderungskontext. Eine gemeinsame,
+eindeutig identifizierte Source-Snapshot-Repräsentation darf von mehreren
+Target-Aliassen und mehreren Benutzer-Projektkontexten wiederverwendet werden.
 
-## Aktueller Stand
+## Aktueller Stand und Abschlussbedarf
 
-Die aktuelle Implementierung besitzt bereits eine belastbare Grundlage für:
+Die aktuelle Implementierung besitzt bereits eine umfangreiche Grundlage für:
 
 - `targetType`-/`targetPath`-Auflösung und gemeinsamen Lease-Dispatch;
 - statische PE-/Metadatenanalyse, Decompilation, Fingerprint und
@@ -76,247 +76,384 @@ Die aktuelle Implementierung besitzt bereits eine belastbare Grundlage für:
 - Source-backed-Analyse oder statische Decompilation als Fallback;
 - spezialisierte Assembly-Tools.
 
-Noch nicht als vollständiges Zielbild abgeschlossen sind insbesondere:
+Der Abschlussbedarf dieses Konzepts umfasst deshalb die vollständige
+End-to-End-Integration und die noch nicht belastbar abgeschlossenen Teile:
 
-- die produktive Default-Komposition des externen Source-Providers im einzelnen
-  MCP-Daemon;
-- die vollständige gemeinsame Toolroute für die sinnvollen Roslyn-Abfragen eines
-  Assembly-Targets;
-- die bedarfsgesteuerte transitive Auflösung externer Assembly-Referenzen;
-- die explizite Trennung der vier residenten Projektkontexte von beliebig vielen
-  externen Source-/Assembly-Sessions in allen Registry-, Health- und
-  Ressourcenverträgen;
-- die letzten konkreten Trust- und Lease-Fehlerpfade;
-- die abschließende Capability-, Origin-, Partialitäts- und
-  Dokumentationsbeschreibung.
+- produktive Default-Komposition des Gitea-Source-Providers im MCP-Daemon;
+- vollständige gemeinsame Toolroute und Capability-Matrix für sinnvolle
+  Roslyn-Abfragen auf Assembly-Zielen;
+- bedarfsgesteuerte transitive Referenzauflösung mit Deduplizierung,
+  Zyklus- und Missing-Reference-Semantik;
+- getrennte Registry-, Health-, Kapazitäts- und Lebenszeitverträge für vier
+  Benutzer-Kontexte und beliebig viele externe Quellen;
+- abschließende Trust-, Attestation-, Statusparser- und Lease-Korrekturen;
+- vollständige API-, Konfigurations-, Integrations-, Architektur-,
+  Agentenregel- und Tooldokumentation;
+- vollständige Verifikation gemäß den aktuellen Projektregeln.
 
-Der aktuelle Code ist die maßgebliche Wahrheit. Die bereits vorhandenen
-Source-, Cache- und Attestation-Bausteine werden weiterverwendet; das Konzept
-verlangt keine neue parallele Decompiler- oder Repository-Architektur.
+Der aktuelle Codebestand und die aktuellen Projektregeln sind maßgeblich. Die
+vorhandenen Source-, Cache- und Attestation-Bausteine werden weiterverwendet;
+es entsteht keine parallele Decompiler- oder Repository-Architektur.
 
-## Aktueller Scope
+## Vollständiger Umsetzungsumfang
 
 ### Einheitlicher Target- und Session-Vertrag
 
 - Alle sinnvollen Roslyn-orientierten MCP-Abfragen verwenden den harten
   Target-Vertrag `targetType` plus `targetPath`.
 - `targetType=project` adressiert ein aktuell bearbeitetes Projektroot und
-  verwendet weiterhin dessen `ainetlinter.project.json` mit Solution und Regeln.
+  verwendet dessen `ainetlinter.project.json` mit Solution und Regeln.
 - `targetType=assembly` adressiert eine einzelne existierende DLL und benötigt
   keine `ainetlinter.project.json`.
-- Die Target-Auflösung und der Lease-Lifecycle liegen zentral; einzelne Tools
-  verzweigen nicht eigenständig zwischen Projekt- und Assemblypfaden.
-- `get_server_health` bleibt ein Maintenance-Tool ohne Pflicht-Target und kann
-  zusätzlich gezielt Projekt-, Source-Solution- und Assembly-Sessions ausweisen.
+- Absolute Pfade werden vor dem Registry-Zugriff validiert und kanonisiert.
+- Legacy-Parameter wie parallele `projectRoot`-/`assemblyPath`-Kombinationen
+  bleiben nicht als zweiter MCP-Vertrag bestehen.
+- Target-Auflösung, Session-Erzeugung und Lease-Lifecycle liegen zentral.
+  Einzelne Toolregistrierungen verzweigen nicht selbst zwischen Projekt- und
+  Assemblypfaden.
+- `get_server_health` bleibt ein Maintenance-Tool ohne Pflicht-Target und
+  weist Projekt-, Source-Solution- und Assembly-Sessions getrennt aus. Mit
+  einem Target kann es genau diese Session gezielt anzeigen.
 
-### Drei Quellpfade, ein Roslyn-/MCP-Kern
+### Drei Quellpfade, ein gemeinsamer Roslyn-/MCP-Kern
 
 Die Quellenherkunft wird vor der gemeinsamen Roslyn-Schicht entschieden:
 
-1. Projektquelle des aktuell bearbeiteten Projekts mit dessen Solution,
-   Documents und Regeln.
-2. Externe Source-Solution aus einem expliziten Git-/Gitea-Mapping. Die
-   vollständige Solution ist der gemeinsame Snapshot; das zugeordnete
-   Source-Projekt wird daraus über Assembly-Identität ermittelt.
-3. Externe DLL ohne verifizierten Source-Match. Sie wird statisch decompiliert
-   und als synthetisches read-only Roslyn-Project materialisiert.
+1. **Aktuelles Projekt:** konfigurierte Solution, Documents und Regeln des
+   aktuell bearbeiteten Projektroots.
+2. **Bekannte externe Quelle:** explizit gemappte Git-/Gitea-Repository- und
+   Source-Solution. Die vollständige Solution wird als Snapshot geladen; das
+   zugeordnete Source-Projekt wird daraus über Assembly-Identität ermittelt.
+3. **Unbekannte externe DLL:** statische Decompilation und Materialisierung
+   als synthetisches read-only Roslyn-Project.
 
-Der gemeinsame Teil liefert Solution-/Project-/Document-Sicht, SyntaxTrees,
-SemanticModels, Symbole, Referenzen, Origin-Metadaten und den einheitlichen
+Alle drei Pfade liefern Solution-/Project-/Document-Sicht, SyntaxTrees,
+SemanticModels, Symbole, Referenzen und Origin-Metadaten an denselben
 Tool-Dispatch. „Originalquelle“ und „dekompiliert“ sind Herkunfts- und
-Vertrauensmetadaten, keine drei voneinander unabhängigen Toolimplementierungen.
+Vertrauensmetadaten, keine separaten Toolwelten.
 
-### Explizite Source-Auflösung
+Die Auflösung des Source-Projekts für eine DLL ist kein versteckter Consumer-
+Kontext. Die Frage, in welchem Benutzer-Projekt eine DLL verwendet wird, bleibt
+eine separate, explizite Cross-Target-Abfrage.
 
-- Eine globale externe Mapping-Datei ist die einzige vorgesehene automatische
-  Source-Zuordnung für bekannte externe Assemblies.
-- `ainetlinter.project.json` bleibt auf den aktuell bearbeiteten Projektkontext
-  beschränkt und wird für eine DLL nicht vorausgesetzt.
-- Gitea wird nicht nach DLL- oder Repositorynamen durchsucht. Ohne explizites
-  Mapping bleibt die DLL im Decompilationspfad.
-- Ein Mapping benennt Repository-URL, Solution-Pfad und die bekannten DLL- oder
-  Assembly-Namen. Einzelne `.csproj`-Pfade werden nicht redundant gepflegt;
-  das Assembly-Projekt wird aus der geladenen Solution abgeleitet.
-- Ein Repository kann mehrere Solutions, Source-Projekte und erzeugte DLLs
-  enthalten. Repository, tatsächlich geladener Commit, Solution-Pfad,
-  Source-Projekt und AssemblyName müssen eindeutig zusammenpassen.
-- Der lokale Clone ist ein interner Cache der konfigurierten Gitea-Quelle und
-  keine konkurrierende Source-of-Truth.
-- Lokale dirty-, uncommitted- oder unbuilt-Checkouts werden nicht still als
-  alternative Quelle verwendet. Ein späterer ausdrücklich aktivierter
-  Local-Checkout-Modus wäre eine eigene Erweiterung.
+### Explizites Mapping und Gitea-Source-of-Truth
 
-### Gemeinsame Source-Snapshots und Referenzen
+- Eine globale Mapping-Datei ist die einzige automatische Source-Zuordnung für
+  bekannte externe Assemblies.
+- Ihr Pfad wird über die externe Konfiguration, beispielsweise
+  `ExternalSources:MappingsPath` in `appsettings.json`, bestimmt.
+- Ein Eintrag enthält konzeptionell Repository-URL, Solution-Pfad und ein
+  `assemblies`-Array mit DLL- oder Assembly-Namen:
 
-- Eine kanonische Source-Snapshot-Identität umfasst mindestens Repository,
-  tatsächlich geladenen Commit, Solution-Pfad, Source-Projekt und
-  AssemblyName.
-- Direkter Assembly-Aufruf und Nachschlageauflösung aus einem Projekt können
-  auf denselben verifizierten Source-Snapshot zeigen, ohne den Consumer-Kontext
-  des Projekts zu teilen.
-- Die gleiche Source-Solution oder DLL darf bei mehreren Target-Aliassen nicht
-  unnötig mehrfach materialisiert werden.
-- Direkte Referenzen werden weiterhin metadata-only ermittelt.
-- Referenzen wie `foo.dll -> bar.dll` werden bei Bedarf rekursiv über denselben
-  Resolver als Source-backed- oder Decompilation-Quelle nachgeladen.
-- Kanonische DLL- und Source-Snapshot-Identitäten verhindern Zyklen und doppelte
-  Materialisierung. Nicht erreichbare Ziele bleiben sichtbare
-  `partial`-/External-Nodes und werden nicht durch Phantomsymbole ersetzt.
-- Die transitive Auflösung bleibt best effort, bedarfsgesteuert und durch lokale
-  DLLs, explizite Mappings, Decompilergrenzen sowie Tiefe-, Größen- und
-  Ressourcenlimits begrenzt. Ein beliebig vollständiger Runtime-Call-Graph ist
-  kein Ziel.
+  ```json
+  {
+    "repositories": [
+      {
+        "url": "https://gitea.example/shared.git",
+        "solutionPath": "src/Shared.slnx",
+        "assemblies": ["Foo.dll", "Bar.dll"]
+      }
+    ]
+  }
+  ```
 
-### Sinnvolle Assembly-Capabilities
+- Einzelne `.csproj`-Pfade werden nicht redundant gepflegt. Die konfigurierte
+  `.sln`/`.slnx` wird geladen; daraus werden Projekte, `AssemblyName` und die
+  Projektstruktur bestimmt.
+- Repository, Solution-Pfad, Source-Projekt, AssemblyName und tatsächlich
+  geladener Commit müssen eindeutig zusammenpassen. Keine oder mehrere
+  Auflösungen ergeben einen sichtbaren Konfigurations-/Matchfehler.
+- Gitea wird nicht nach DLL- oder Repositorynamen durchsucht. Ein schwaches
+  Namenssignal darf einen expliziten Eintrag plausibilisieren, aber kein
+  unbekanntes Repository selbst auswählen.
+- Der beim Aktualisieren geladene Commit wird intern als Snapshot-Identität
+  gespeichert; ein Commit muss in der ersten Benutzerkonfiguration nicht
+  manuell eingetragen werden.
+- Ein lokaler Clone ist ausschließlich interner Cache. Ein lokaler dirty-,
+  uncommitted- oder unbuilt-Checkout wird nicht still als Source-of-Truth
+  verwendet.
+- Änderungen sollen über committen, nach Gitea synchronisieren und anschließendes
+  Refresh in den normalen gemeinsamen Arbeitsablauf gelangen. Branches sind
+  keine eigene Analyseidentität und werden nicht automatisch zusammengeführt.
 
-Die Kernabfragen verwenden denselben Roslyn-Codepfad für Projekt- und
-Assembly-Ziele:
+### Source-Match und Evidenz
 
-- Symbolsuche, Skeleton und Klassen-/Strukturansicht;
-- `get_symbol_body` für Original- oder dekompilierten Body;
-- Referenzen und Call Trees innerhalb der verfügbaren Source-/Decompilation-
-  Graphen;
-- Dependency Graph einschließlich aufgelöster externer Referenzen;
-- Metriken über die tatsächlich verfügbaren Documents.
+- Explizites Mapping ist für eine `source-backed`-Analyse erforderlich.
+- Starke Signale sind ein expliziter Mapping-Eintrag, nachweisbare
+  SourceLink-/Repository-Metadaten, passender PDB-/Build-Bezug sowie
+  Assembly-/Projektidentität.
+- Mittlere Signale sind AssemblyName, Ziel-Framework, Projektpfad,
+  Output-Verzeichnis und Build-Metadaten.
+- Schwache Signale sind Repositoryname, DLL-Dateiname oder Namenskonventionen.
+- Ein Repositoryname allein beweist weder das richtige Projekt noch die
+  richtige Version.
+- Die Antwort legt die verwendete Evidenz, Confidence, den geladenen Commit und
+  das ausgewählte Source-Projekt offen.
+- Bei Mismatch, unklarer Version oder nicht belegtem Match wird nicht still
+  falscher Quellcode als Originalquelle ausgegeben; die DLL bleibt im
+  Decompilations- oder sichtbaren Partial-/Fehlerpfad.
 
-Für jede weitere Toolfamilie wird eine Capability-Matrix geführt. Regeln,
-Violations, Audits, Testkontext, Git-Diff und Change-Impact werden nur dort
-angeboten, wo der jeweilige Source-, Regel-, Test- oder Consumer-Kontext
-fachlich vorhanden und ausdrücklich beschrieben ist. Ein nicht sinnvoller
-Fall liefert eine eindeutige Nichtunterstützungs- oder Partialitätsdiagnose,
-keinen leeren Erfolg und keine Scheinanalyse.
+### Statische Decompilation und synthetisches Roslyn-Project
+
+- Die vorhandene `ICSharpCode.Decompiler`-Integration wird über eine kleine
+  Adaptergrenze genutzt; die aktuelle Paketversion `10.0.1.8346` und Optionen
+  sind Teil der Cache-Identität.
+- Decompilerdetails bleiben aus MCP-Toolregistrierungen und zentraler
+  Roslyn-Logik herausgekapselt.
+- Die Assembly-Session erzeugt ein `AdhocWorkspace`-Project ohne `.csproj`.
+- Moderne C#-Parse- und Compilation-Optionen werden so gesetzt, dass erzeugte
+  Quellen analysierbar sind.
+- Documents werden vorzugsweise auf Typ- oder sinnvoller Decompiler-Einheit
+  aufgeteilt; ein einzelner riesiger Quelltext ist zu vermeiden.
+- Decompiler-Warnungen, Obfuscation, fehlende PDBs, dynamische Reflection und
+  nicht rekonstruierbare Konstrukte führen zu sichtbarer Partialität oder
+  Diagnose, nicht zu stillen Leertreffern.
+- DLL, PDB, `.deps.json` und benachbarte Referenzen werden als untrusted input
+  behandelt.
+
+### Direkte und transitive Referenzauflösung
+
+Die Referenzauflösung bleibt metadata-only, deterministisch und best effort:
+
+1. Target-Assembly und ihre PE-Metadaten;
+2. referenzierte DLLs aus dem Zielverzeichnis;
+3. Framework-Assemblies aus Trusted Platform Assemblies oder passend
+   ermitteltem Target Framework;
+4. optionale maschinenlesbare Dependency-Informationen wie `.deps.json`, wenn
+   sie ohne Codeausführung auswertbar sind.
+
+Für eine Referenzkette wie `foo.dll -> bar.dll` gilt:
+
+- direkte Referenzen werden aus Metadaten und verfügbaren Dependency-
+  Informationen ermittelt;
+- jede erreichbare externe Referenz wird über denselben Source-Resolver als
+  gemappte Source-Solution oder statische Decompilation behandelt;
+- derselbe kanonische DLL-Pfad oder Source-Snapshot wird nur einmal geladen;
+- Zyklen, bereits besuchte Identitäten, fehlende Dateien und nicht auflösbare
+  Versionen werden dedupliziert beziehungsweise als sichtbare
+  `partial`-/External-Nodes ausgegeben;
+- für Source-Projekte innerhalb derselben vollständigen Solution wird die
+  vorhandene Projektstruktur verwendet;
+- der Resolver arbeitet bedarfsgesteuert und lädt keine vollständige, beliebig
+  tiefe Welt ohne konkreten Analysebedarf;
+- ein vollständiger Runtime-Call-Graph über dynamische Bindings ist nicht
+  versprochen.
+
+NuGet-Assemblies sind normale externe Assemblies: ohne Mapping werden sie
+decompiliert, mit explizitem Mapping source-backed analysiert. Eine
+`PackageReference` allein ist kein Source-Mapping.
+
+### Fingerprint, Cache und atomare Generationen
+
+Decompilations- und Source-Solution-Cache bleiben getrennte Identitäten:
+
+- DLL-Key: kanonischer DLL-Pfad, SHA-256, Decompiler-Version, Optionen und
+  Manifest-Schema;
+- Source-Key: kanonische Repository-URL, geladener Commit und Solution-Pfad;
+- mtime und Dateigröße sind nur Vorprüfungen;
+- gleicher Inhalt trotz neuer mtime darf wiederverwendet werden;
+- neuer Hash oder relevante Options-/Schemaänderung erzeugt eine neue
+  Generation.
+
+Der externe Cache liegt in einem eigenen konfigurierbaren Cache-Root und nicht
+im fremden Projekt. `ExternalSources:CacheRoot` und
+`ExternalSources:RefreshIntervalMinutes` werden strikt validiert. Ein Manifest
+enthält mindestens Pfad, Größe, mtime, Hash, Assembly-Identität, Referenzen,
+Decompiler-/Schema-Information, erzeugte Dateien, Warnungen,
+Referenzdiagnosen, Erstellungs-/Zugriffszeit und den Zustand
+`complete`/`partial`/`failed`. Ein Source-Solution-Manifest enthält zusätzlich
+Repository, Commit, Solution-Pfad, `AssemblyName`-zu-Source-Projekt und
+Refreshdaten.
+
+Cachegenerationen werden in temporären Verzeichnissen aufgebaut, unabhängig
+validiert und atomar über einen `current`-Pointer veröffentlicht. Beschädigte,
+unvollständige oder manipulierte Generationen werden nicht adoptiert. Laufende
+Leases dürfen auf einer alten Generation fertig werden.
+
+Beim ersten Zugriff auf ein gemapptes Repository und nach Ablauf des
+Refresh-Intervalls wird der konfigurierte Standard-Branch aktualisiert. Ein
+fehlgeschlagener fälliger Refresh behauptet den alten Stand nicht still als
+aktuell. Ein validierter letzter guter Stand darf nur sichtbar degradiert oder
+diagnostisch erhalten bleiben; der Assembly-Pfad fällt deterministisch auf
+Decompilation oder einen sichtbaren Fehler zurück.
+
+Persistente externe Cache-Einträge werden nicht automatisch gelöscht. Aktive
+Workspaces, Leases und temporäre Checkouts werden dagegen vollständig
+freigegeben.
+
+### Gemeinsame Registry, Sessions und Lifetime
+
+- Eine zentrale Target-/Lease-Grenze koordiniert Projekt- und externe Sessions,
+  ohne ihre fachlichen Semantiken zu vermischen.
+- Die vier `targetType=project`-Kontexte sind die einzige Klasse, die gegen die
+  bestehende `MaxProjects`-Grenze zählt.
+- Externe Source-Solutions und Assembly-Sessions besitzen getrennte Registry-,
+  Health-, Ressourcen- und TTL-/LRU-Sichten. Sie zählen nicht gegen
+  `MaxProjects`.
+- Mehrere Target-Aliasse dürfen denselben Source-Snapshot teilen, erhalten aber
+  eigene Consumer-/Target-Leases.
+- Mehrere parallele Erstzugriffe teilen eine Creation Barrier und laden oder
+  decompilieren dieselbe Identität nicht unkontrolliert mehrfach.
+- Eine source-backed `core.dll` kann sowohl direkt als auch aus einem anderen
+  Benutzer-Projekt heraus auf denselben Snapshot zeigen. Die SemanticModel-
+  Instanz muss wegen ihrer Compilationbindung nicht geteilt werden; die
+  Source-/Document-Repräsentation soll jedoch dedupliziert werden.
+- Externe Ressourcenlimits, falls für Disk, Speicher, Parallelität oder Anzahl
+  nötig, werden unabhängig von den vier Benutzer-Kontexten konfiguriert und
+  bei Erreichen sichtbar als Nichtverfügbarkeit oder Degradation gemeldet.
+
+### Trust, Attestation und Materialization
+
+- Nur ein besessener, sauberer und erfolgreich attestierter Checkout darf als
+  reguläre Source-backed-Quelle verwendet werden.
+- `Clean`, `Dirty` und `Unverified` behalten ihre Bedeutung über Transport,
+  Acquisition, Cache, Provider und Snapshot hinweg. `Dirty` und `Unverified`
+  werden nicht zu `Clean` umgedeutet.
+- Attestation wird vor Materialisierung, vor Cache-Veröffentlichung, vor
+  Pointer-Wechsel und nach den relevanten Kopier-/Publish-Schritten geprüft.
+- Cache-Reuse und Refresh binden die Nutzung der geprüften Generation an einen
+  request-eigenen Checkout beziehungsweise eine Materialization-Use-Lease.
+  Eine Generation darf während Kopie, Attestation und Workspace-Aufbau nicht
+  unbemerkt mutieren oder freigegeben werden.
+- Eine Materialization-Lease schützt die benötigten Dateien und Handles über
+  Attestation, Kopie und Snapshot-Erzeugung bis zum Ende der Nutzung.
+- Der Statusparser verwirft einen Lone-CR-Datensatz; gültige CRLF-Daten bleiben
+  gültig.
+- Cancellation, InvalidData, Fehler beim Öffnen und Fehler beim Aufräumen
+  schließen bereits erworbene Handles vollständig best effort; Cancellation
+  wird anschließend weitergegeben.
+- Ein einzelner Dispose-Fehler darf die Bereinigung der übrigen Ressourcen
+  nicht verhindern. Cleanup-Fehler bleiben diagnostisch sichtbar.
+- Eine vollständige Namespace-Sperre gegen einen gleichberechtigten,
+  konkurrierenden Prozess ist unter dem vereinbarten lokalen Bedrohungsmodell
+  kein Muss. Ownership, Pfadregeln, Attestation und fail-closed-Verhalten
+  bleiben verpflichtend.
+
+### Roslyn-Parität und Capability-Matrix
+
+„Gemeinsam“ bedeutet denselben zentralen Roslyn-/MCP-Codepfad und dieselben
+Resultmodelle, nicht künstliche Gleichheit für fehlende Kontexte:
+
+| Toolgruppe | Aktuelles Projekt | Externe Source-Solution | Externe dekompilierte Assembly |
+|---|---|---|---|
+| Symbolsuche, Skeleton, Klassenstruktur | vollständige Solution-/Projektansicht | vollständige gemappte Solution mit ausgewähltem Assembly-Projekt | dekompilierte Typen und Member |
+| `get_symbol_body` | Original-Source-Body | Source-Body mit Origin | dekompilierter Body mit Hinweis |
+| `find_references`, `get_call_tree` | Solution-Graph | verfügbare Source-Solution und auflösbare externe Ziele | Decompilation-Graph und auflösbare externe Nodes |
+| `dependency_graph` | Projekt-/Dateiabhängigkeiten | Solution-Abhängigkeiten und externe Referenzen | rekursiv aufgelöste Assembly-Referenzen |
+| Metriken | Source-Dokumentsicht | Source-Dokumente mit `source-backed`-Origin | dekompilierte Documents mit `decompiled`-Origin |
+| `get_violations`, `pattern_detect` | Regeln aus Projektkonfiguration | nur mit ausdrücklich belastbarer Source-/Regelkonfiguration | nur mit explizitem Assembly-Regelprofil, sonst unsupported |
+| Testkontext | aktuelle Solution | höchstens read-only geladene Testdokumente, keine Fremdtestausführung | standardmäßig nicht verfügbar |
+| Git-/Change-Impact | Git-Diff und Projektkontext | unsupported für externe Quellen | unsupported |
+| `safeguard` und Audits | aktueller Quality-/Regelkontext | nur mit eigenem explizitem Scanvertrag | nur mit eigenem explizitem Scanvertrag |
+
+Nicht unterstützte Kombinationen liefern einen eindeutigen Unsupported- oder
+Partialitätsvertrag, keinen leeren Erfolg. Die Capability-Matrix wird für alle
+im MCP vorhandenen Toolfamilien vollständig und nutzerverständlich
+dokumentiert.
 
 Assembly-spezifische Werkzeuge wie `inspect_assembly` und
-`find_assembly_extensions` behalten ihren sinnvollen Assembly-Output, verwenden
-aber denselben Assembly-Session-Dispatcher und dieselben Herkunftsmetadaten.
-Ein Consumer-Projekt wird nicht als versteckter zweiter Target-Parameter
-eingeführt; Cross-Target-Fragen bleiben explizite spätere Abfragen.
+`find_assembly_extensions` behalten ihren speziellen Output, verwenden aber
+denselben Assembly-Session-Dispatcher. Ein optionaler Consumer-Kontext wird
+nicht als versteckter zweiter Root weitergeführt.
 
-### Origin, Fingerprint und Generationen
+### Origin, Symbolidentität und Antworten
 
-- Jede Antwort kann zwischen `source-backed` und `decompiled` unterscheiden
-  und legt Source-Pfad, Assembly-Hash, Source-Snapshot beziehungsweise
-  generierten Pfad und Confidence offen.
-- Decompilierte Bodies erhalten einen standardisierten Hinweis, dass sie von
-  der Originalquelle abweichen können.
-- Der Decompilation-Key umfasst kanonischen DLL-Pfad, SHA-256 der DLL-Bytes,
-  Decompiler-Version, Optionen und Manifest-Schema.
-- Der Source-Key umfasst kanonische Repository-URL, tatsächlich geladenen
-  Commit und Solution-Pfad.
-- mtime und Dateigröße dürfen nur als Vorprüfung dienen. Ein neuer Hash erzeugt
-  eine neue Generation; ein gleicher Hash darf trotz neuer mtime wiederverwendet
-  werden.
-- Generationen werden vollständig und atomar aufgebaut. Laufende Leases dürfen
-  auf einer alten Generation fertig werden; halbfertige Quellen gelangen nicht
-  in die sichtbare Roslyn-Solution.
-
-### Daemon-, Registry- und Ressourcenmodell
-
-- Die bestehende Vierergrenze zählt ausschließlich residente
-  `targetType=project`-Kontexte für aktuell bearbeitete Projektroots.
-- Externe Source-Solution- und Assembly-Sessions zählen nicht gegen diese
-  Grenze und werden in separaten Registry-/Health-Kategorien geführt.
-- Externe Quellen können logisch in beliebiger Anzahl adressiert werden. Falls
-  harte Limits für gleichzeitig residente Source-Solutions oder Assemblies
-  erforderlich sind, werden sie separat konfiguriert, diagnostiziert und mit
-  eigenen TTL-/LRU-/Lease-Regeln versehen.
-- Persistente externe Cache-Einträge werden in diesem Vorhaben nicht automatisch
-  gelöscht. In-Memory-Leases, aktive Workspaces und temporäre Checkouts müssen
-  hingegen vollständig und sicher freigegeben werden.
-- Mehrere gleichzeitige Erstzugriffe auf dieselbe DLL oder denselben
-  Source-Snapshot teilen eine Creation Barrier und erzeugen keine unkontrollierte
-  Vervielfachung.
+- Jede externe Antwort weist mindestens `origin`, Source-Pfad, Assembly-Hash,
+  Source-Snapshot/Commit, generierten Pfad und Confidence aus.
+- Decompilierte Bodies enthalten einen kurzen standardisierten Hinweis auf die
+  mögliche Abweichung von der Originalquelle.
+- Symbolidentitäten verwenden Target-/Generationsherkunft, beispielsweise
+  `assembly:<sha256>:M:Vendor.Service.Save`, und werden nicht allein über einen
+  flüchtigen Cachepfad identifiziert.
+- Folgeabfragen berücksichtigen Assembly-Hash und Generation, damit eine
+  veraltete Symbol-ID nicht blind auf eine neue DLL angewendet wird.
+- `complete`, `partial`, `degraded` und `failed` werden von `origin` und Trust
+  getrennt ausgewiesen.
+- Origin-Bezeichnungen werden an einer zentralen Konvention ausgerichtet. Der
+  interne `AssemblyOrigin.Kind`-Alias wird entweder kompatibilitätssicher
+  entfernt oder bewusst beibehalten und dokumentiert; eine unbewiesene
+  Löschung ist nicht zulässig.
 
 ## Muss-Kriterien
 
-- Der MCP-Daemon verwendet einen einheitlichen `targetType`-/`targetPath`-
-  Vertrag für Projekt- und Assembly-Ziele.
-- Eine unbekannte absolute DLL kann ohne `ainetlinter.project.json` analysiert
-  werden.
-- Ein Assembly-Target wird zuerst gegen explizite Source-Mappings geprüft und
-  nur bei fehlendem verifiziertem Match statisch decompiliert.
-- Externe Quellen bleiben read-only; weder die untersuchte DLL noch ein
-  externer Source-Checkout wird durch Analysewerkzeuge verändert.
-- Source-Solution, Source-Projekt und Assembly-Zuordnung sind eindeutig und
-  verwenden den tatsächlich geladenen Commit als interne Snapshot-Identität.
-- Direkte und transitiv erreichbare externe Referenzen werden bedarfsgesteuert
-  über denselben Source-/Decompilation-Resolver behandelt und dedupliziert.
+- Das gesamte Zielbild ist über einen einzigen lokalen MCP-Daemon erreichbar.
+- Höchstens vier residente Benutzer-Projektkontexte zählen gegen
+  `MaxProjects`; externe Quellen zählen nicht dagegen und sind logisch nicht
+  auf vier begrenzt.
+- Eine unbekannte absolute DLL kann ohne `ainetlinter.project.json` direkt über
+  `targetType=assembly` analysiert werden.
+- Ein explizit gemapptes und attestiertes Git-/Gitea-Source-Snapshot gewinnt
+  gegen Decompilation; ohne belastbaren Match greift der transparente
+  Decompilationspfad.
+- Mapping, Source-Projekt, AssemblyName, Commit und Solution-Pfad werden
+  eindeutig validiert; Gitea-Discovery bleibt ausgeschlossen.
+- Direkte und transitive externe Referenzen werden metadata-only,
+  bedarfsgesteuert, dedupliziert und mit sichtbaren Missing-/Cycle-/Partial-
+  Zuständen aufgelöst.
+- Mehrere Target-Aliasse teilen identische Source-Snapshots, ohne Consumer-
+  oder Target-Leases unzulässig zu vermischen.
 - Die Kernabfragen für Symbole, Bodies, Struktur, Referenzen, Call Trees,
   Dependency Graphs und Metriken verwenden denselben Roslyn-/MCP-Kern.
-- Capability, Origin, Confidence und Partialität sind für jede externe Antwort
-  eindeutig erkennbar. Nicht sinnvolle Tool-/Quellenkombinationen werden
-  ausdrücklich als nicht unterstützt ausgewiesen.
-- Ein einzelner lokaler MCP-Daemon verwaltet höchstens vier residente
-  Benutzer-Projektkontexte. Externe DLL- und Git-/Gitea-Quellen verbrauchen
-  diese Plätze nicht und sind logisch nicht auf vier Einträge begrenzt.
-- `Clean`, `Dirty` und `Unverified` werden über Transport, Acquisition, Cache,
-  Provider und Snapshot erhalten. Dirty oder Unverified werden nie als Clean
-  ausgegeben.
-- Statusparser und Materialization-Lease sind bei Lone-CR, Cancellation,
-  invaliden Inventaren, Öffnungsfehlern und Aufräumfehlern fail-closed und
+- Die vollständige Capability-Matrix für alle vorhandenen Toolfamilien weist
+  supported, partial und unsupported fachlich korrekt aus.
+- Source-, Decompilation-, Trust-, Generation-, Ownership- und
+  Snapshot-Lebenszeit bleiben in Antworten und Diagnosen erkennbar.
+- Cache, Refresh, Manifest, Pointer und Generationen sind hashgeprüft,
+  atomar, versioniert und gegen halbfertige Veröffentlichung geschützt.
+- Statusparser, Attestation und Materialization-Lease sind bei allen
+  festgelegten Fehler- und Cancellation-Pfaden fail-closed und
   ressourcensicher.
-- Kein Assembly-Code wird geladen, reflektiert oder ausgeführt. PEReader,
-  Decompiler und Roslyn-MetadataReferences bleiben statische Verfahren.
+- Kein Assembly-Code wird geladen, reflektiert oder ausgeführt.
 - Der lokale Default-Host kann konfigurierte öffentliche Git-/Gitea-Quellen
-  über den produktiven Provider verwenden. Private Quellen benötigen eine
-  getrennte, injizierbare Credential-Auflösung; Geheimnisse erscheinen nicht
-  in Konzepten, Diagnosen oder normalen Konfigurationswerten.
-- Konfigurierte Quelle, Fallback, Fehlerzustand, Ownership, Generation und
-  Snapshot-Lebenszeit sind dokumentiert.
+  verwenden. Private Quellen werden nur über eine getrennte, injizierbare
+  Credential-Auflösung ergänzt; Geheimnisse erscheinen nicht in Diagnosen,
+  Manifesten oder Konzeptdaten.
+- Externe Quellen und generierte Documents bleiben read-only.
+- Persistente Cache-Bereinigung, lokale Branch-Zusammenführung und fremde
+  Testausführung bleiben außerhalb des Funktionsvertrags.
 
 ## Akzeptanzkriterien
 
-- Ein Agent kann eine unbekannte DLL mit `targetType=assembly` direkt über MCP
-  analysieren, ohne eine Projektdefinition für diese DLL anzulegen.
-- Eine gemappte Git-/Gitea-Quelle verwendet nach erfolgreicher Prüfung die
-  passende Source-Solution und decompiliert das zugeordnete Assembly-Target
-  nicht zusätzlich. Ohne belastbaren Match wird die DLL transparent
-  decompiliert.
-- Ein Repository mit mehreren DLL-Projekten löst die konfigurierten
-  Assembly-Namen auf die korrekten Source-Projekte derselben Solution auf;
-  unklare oder mehrdeutige Zuordnungen werden nicht still akzeptiert.
-- Ein direkter Assembly-Aufruf und ein Nachschlageaufruf aus einem
-  Benutzer-Projekt teilen bei identischer Source-Snapshot-Identität die
-  zugrunde liegende Source-/Document-Repräsentation, behalten aber getrennte
-  Consumer- und Target-Leases.
-- Eine transitive Referenz `foo.dll -> bar.dll` kann `bar.dll` als Source-
-  backed- oder Decompilation-Quelle laden. Bereits geladene Quellen werden
-  wiederverwendet; Zyklen und fehlende Referenzen werden sichtbar behandelt.
-- Mehrere parallele Erstzugriffe auf denselben Target- oder Snapshot-Key führen
-  nicht zu mehrfacher Decompilation oder mehrfacher Source-Solution-
-  Materialisierung.
-- Der Binary-Fingerprint erkennt geänderte Bytes, mtime-only-Änderungen und
-  identische Bytes korrekt. Neue Generationen werden atomar veröffentlicht;
-  laufende alte Leases bleiben gültig.
-- Ein abgelaufener oder fehlgeschlagener externer Refresh gibt einen alten
-  Stand nicht still als aktuell aus. Ein letzter guter Stand bleibt höchstens
-  als sichtbarer degradierter Zustand erhalten; die angefragte DLL kann
-  deterministisch auf Decompilation zurückfallen.
-- Ein Statusdatensatz mit Lone-CR wird abgelehnt, während gültige CRLF-Daten
-  unverändert funktionieren.
-- Cancellation, invalides Inventar, Fehler beim Öffnen und Fehler beim
-  Aufräumen hinterlassen keine bereits erworbenen Materialization-Handles oder
-  temporären Checkout-Ressourcen.
-- Vier residente Benutzer-Projektkontexte bleiben innerhalb ihrer Grenze,
-  während mehrere externe DLL- und Git-/Gitea-Quellen unabhängig davon
-  adressierbar sind. Ein Ressourcenmangel führt zu einer sichtbaren,
-  kontrollierten Nichtverfügbarkeit und nicht zur stillen Überschreibung eines
-  aktiven Kontexts.
-- Für jede Kern-Capability existieren positive, fehlende/partielle und nicht
-  unterstützte Fälle. Tool-Antworten unterscheiden Projektquelle,
-  Source-backed-Quelle und Decompilation.
-- Der lokale Default-Host verwendet für eine konfigurierte öffentliche
-  Git-/Gitea-Quelle den produktiven Provider. Die Provider-Injektion bleibt für
-  deterministische Tests möglich.
-- `README.md`, `Docs/configuration.md`, `Docs/integration.md`,
-  `Docs/agent-api.md` und die relevanten Toolbeschreibungen spiegeln nach der
-  Umsetzung den tatsächlichen Vertrag wider. Widersprüchliche Legacy-
-  Parameter oder Capability-Aussagen bleiben nicht bestehen.
-- Vor Abschluss der späteren Implementierung sind die projektweit
-  vorgeschriebenen Build-, Fast-Test- und Integration-Test-Läufe ohne
-  Stress-Kategorie, MCP-Safeguard-/Violation-Prüfungen und der gezielte
-  DRY-/Drift-Audit erfolgreich. Diese Läufe werden in diesem
-  Konzeptierungsdurchlauf nicht ausgeführt.
+- Ein unbekannter DLL-Pfad funktioniert ohne Projektdefinition und liefert eine
+  residente, statische Roslyn-Analyse mit Origin und Zustand.
+- Ein gemapptes Repository mit mehreren DLL-Projekten wird über Solution und
+  `AssemblyName` eindeutig aufgelöst; Mehrdeutigkeit wird nicht still gewählt.
+- Eine gemappte Quelle wird nicht zusätzlich decompiliert; eine nicht gemappte
+  oder nicht belastbar passende DLL fällt auf Decompilation zurück.
+- Direkte Analyse und Analyse derselben externen Assembly aus einem
+  Benutzer-Projekt teilen den identischen Source-Snapshot, bleiben aber
+  getrennte Consumer-/Target-Kontexte.
+- `foo.dll -> bar.dll` lädt `bar.dll` bei Bedarf source-backed oder decompiliert,
+  dedupliziert bereits geladene Quellen und meldet fehlende oder zyklische
+  Referenzen sichtbar.
+- Mehrere parallele Erstzugriffe erzeugen nur eine relevante Session,
+  Source-Solution-Materialisierung oder Decompilation.
+- Eine geänderte DLL erzeugt eine neue Generation; laufende alte Leases bleiben
+  gültig. mtime-only-Änderungen lösen keine unnötige Decompilation aus.
+- Ein fälliger, fehlgeschlagener Gitea-Refresh gibt den alten Stand nicht still
+  als aktuell aus. Der Zustand ist degraded oder fällt auf Decompilation/
+  Fehler zurück.
+- Statusparser-Tests weisen Lone-CR als ungültig und gültiges CRLF als gültig
+  nach.
+- Cancellation-, InvalidData-, Öffnungs- und Dispose-Fehlertests weisen nach,
+  dass keine bereits erworbenen Handles oder temporären Checkouts verbleiben.
+- Vier Benutzer-Projektkontexte werden getrennt von mehreren externen DLL- und
+  Git-/Gitea-Quellen verwaltet; Ressourcenengpässe werden sichtbar und ohne
+  stillen Kontextverlust behandelt.
+- Für jede Capability-Matrix-Zeile gibt es positive, partielle und fachlich
+  nicht unterstützte Tests beziehungsweise einen begründeten Vertrag.
+- Toolantworten unterscheiden Projektquelle, Source-backed-Quelle und
+  Decompilation sowie `complete`, `partial`, `degraded` und `failed`.
+- `inspect_assembly` und `find_assembly_extensions` verwenden den gemeinsamen
+  Sessionpfad ohne Verlust ihres speziellen Outputs.
+- Keine Testausführung lädt die untersuchte oder eine fremde Assembly in den
+  MCP-Prozess.
+- Dokumentation und MCP-Toolbeschreibungen enthalten den finalen Target-,
+  Source-, Cache-, Trust-, Capability- und Fallback-Vertrag ohne Legacy-
+  Parameter oder widersprüchliche Aussagen.
+- Vor Abschluss sind Build, vollständige Fast- und Integration-Tests ohne
+  `Stress`, MCP-Safeguard-/Violation-Prüfungen und der projektinterne
+  DRY-/Drift-/Dead-Code-/Magic-Value-Audit erfolgreich.
 
 ## Non-Goals und bewusste Grenzen
 
@@ -324,33 +461,31 @@ eingeführt; Cross-Target-Fragen bleiben explizite spätere Abfragen.
   und kein `AssemblyLoadContext`.
 - Keine Rekonstruktion des ursprünglichen Buildprozesses, der ursprünglichen
   Projektdateien, PDB-Garantien oder SourceLink-Gleichheit.
-- Keine automatische Suche oder Discovery von Gitea-Repositories anhand von
-  DLL- oder Repositorynamen.
-- Kein versteckter Consumer- oder Änderungskontext für eine externe Quelle und
-  keine automatische Ermittlung, in welchem Benutzer-Projekt eine DLL
-  verwendet wird.
+- Keine freie Gitea-Discovery, kein Repository-Matching allein nach Namen und
+  keine automatische Auswahl unbekannter Source-Repositories.
+- Kein versteckter Consumer- oder Änderungskontext für externe Quellen und
+  keine automatische Ermittlung des Benutzer-Projekts, in dem eine DLL genutzt
+  wird.
 - Keine automatische Nutzung lokaler dirty-, uncommitted- oder unbuilt-
   Checkouts als alternative Source-of-Truth.
-- Keine automatische Branch-Zusammenführung oder Multi-Branch-Synchronisation.
+- Keine automatische Branch-Zusammenführung oder Multi-Branch-
+  Synchronisation.
 - Kein Git-Diff-, Change-Impact-, externer Testausführungs- oder allgemeiner
-  Quality-Gate-Vertrag für externe Quellen, solange dafür kein eigener
-  fachlicher Kontext ausdrücklich definiert ist.
-- Keine pauschale Freischaltung sämtlicher Regel-, Audit-, Test-, Dead-Code-,
-  Duplicate- oder Pattern-Tools. Nicht sinnvolle Fälle werden als solche
-  dokumentiert.
+  Quality-Gate-Vertrag für externe Quellen ohne eigenen expliziten Kontext.
+- Keine pauschale Gleichbehandlung von Regel-, Audit-, Test-, Dead-Code-,
+  Duplicate- oder Pattern-Tools ohne fachlich belastbare Quelle und Vertrag.
 - Keine vollständige Namespace-Immutability oder Garantie gegen einen
-  bösartigen lokalen Administrator beziehungsweise einen konkurrierenden
-  Prozess mit denselben lokalen Rechten.
+  bösartigen lokalen Administrator beziehungsweise konkurrierende Prozesse
+  mit denselben lokalen Rechten.
 - Keine privilegierte Windows-Reparse-Umgebung als allgemeine Start- oder
   CI-Voraussetzung.
-- Keine automatische Garbage-Collection persistierter externer Cache-Einträge
-  in diesem Vorhaben.
-- Keine neue allgemeine Plugin- oder Artefakt-Framework-Schicht nur für die
-  Vereinheitlichung.
-- Keine Roadmap, keine Step-Dateien und kein zusätzlicher Task-State als
-  Bestandteil dieses Konzeptierungs- und Implementierungsvorhabens.
+- Keine automatische Garbage-Collection oder umfassende Retention-Architektur
+  für persistierte externe Cache-Einträge.
+- Keine neue allgemeine Plugin- oder Artefakt-Framework-Schicht.
+- Keine Erstellung einer separaten Roadmap, von Step-Dateien oder eines
+  zusätzlichen Task-States für dieses Vorhaben.
 
-## Betroffene Projektbereiche
+## Betroffene Projektbereiche und Dokumente
 
 Die zentrale Target-, Session- und Toolroute betrifft insbesondere:
 
@@ -361,8 +496,7 @@ Die zentrale Target-, Session- und Toolroute betrifft insbesondere:
 - `src/AiNetLinter/Mcp/Assemblies/ExternalSource/Repository/`;
 - `src/AiNetLinter/Mcp/Assemblies/ExternalSource/Providers/`;
 - `src/AiNetLinter/Mcp/Assemblies/ExternalSource/Snapshots/`;
-- die Projekt-Registry, Source-Snapshot-Registry, Assembly-Session-Registry
-  und Health-Ausgabe;
+- Registry-, Health-, Lease- und Snapshot-Lifecycle;
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysisHostComposition.cs`;
 - `src/AiNetLinter/Cli/McpServerCommand.cs` und
   `src/AiNetLinter/Cli/DaemonHostCommand.cs`.
@@ -377,279 +511,198 @@ Die externe Quellenverwaltung betrifft Mapping-Konfiguration,
 Materialization-Lease, Cache-Reuse, Cache-Refresh, Cache-Writer und
 Snapshot-Materializer.
 
-Die öffentliche Beschreibung betrifft mindestens `README.md`,
-`Docs/configuration.md`, `Docs/integration.md`, `Docs/agent-api.md` und die
-MCP-Toolbeschreibungen. Änderungen an CLI- oder Regelverträgen ziehen die
-jeweiligen Projekt-Synchronisationspflichten nach sich.
+Die Dokumentationspflicht umfasst nach Umsetzung mindestens:
+
+- `README.md`;
+- `Docs/agent-api.md`;
+- `Docs/integration.md`;
+- `Docs/configuration.md`;
+- `Docs/ROADMAP.md` als bestehende Projektdokumentation, sofern der
+  implementierte Meilenstein dort synchronisiert werden muss;
+- `Docs/rationale.md` und sonstige relevante Architektur-/Rationale-
+  Dokumentation;
+- alle MCP-Toolbeschreibungen und den MCP-Bootstrap;
+- `.agents/rules/AiNetLinter-McpWorkflow.mdc` für den finalen
+  Entscheidungs- und Arbeitsablauf;
+- `.agents/rules/AiNetLinter.mdc` nur über die vorgeschriebene Generierung,
+  falls `rules.json` geändert wird;
+- `Docs/ROADMAP.md` nur als bestehende Projektdokumentation, falls der
+  implementierte Meilenstein dort synchronisiert werden muss.
+
+Die Dokumentation muss den Target-Vertrag, die drei Quellpfade, das Mapping-
+Schema, Source-of-Truth, Commit-/Snapshot-Identität, Cache-/Refresh-Vertrag,
+vier Benutzer-Kontexte, externe Quellen, transitive Referenzen,
+Capability-Matrix, Origin/Confidence, Trust-/Partialitätszustände,
+No-Execution-Grenze, Fallbacks, Sicherheitsgrenzen und bekannte Nicht-
+Unterstützungen erklären.
 
 ## Betriebs- und Bedrohungsmodell
 
 Der MCP-Daemon läuft lokal beim Entwickler und bedient den aktiven
-Projektkontext sowie read-only externe Nachschlagequellen. Der Entwickler kann
-bis zu vier Benutzer-Repositories als residente Projektkontexte offen haben.
-Externe DLLs und konfigurierte Git-/Gitea-Quellen liegen außerhalb dieser
-Projektklasse und dürfen in beliebiger logischer Anzahl adressiert werden.
+Projektkontext sowie read-only externe Nachschlagequellen. Bis zu vier
+Benutzer-Repositories sind residente Projektkontexte. Externe DLLs,
+Source-Solutions und transitiv geladene Referenzen sind davon getrennt und
+logisch nicht auf vier Einträge begrenzt.
 
 Remote-Repository-Inhalte, DLLs, PDBs, `.deps.json` und benachbarte Referenzen
-sind untrusted input. Der Dienst schützt insbesondere vor:
+sind untrusted input. Das System schützt insbesondere vor falschen,
+beschädigten, unvollständigen oder nachträglich veränderten Snapshots,
+gefährlichen Pfaden, Reparse-/Link-Ausweichungen, falscher Source-Zuordnung,
+stiller Versionsvermischung, unvollständiger Cache-Veröffentlichung und
+unbeabsichtigter Codeausführung.
 
-- falschen, beschädigten, unvollständigen oder nachträglich veränderten
-  Source-Snapshots;
-- gefährlichen Pfaden, Reparse-/Link-Ausweichungen und unkontrollierten
-  Schreibzielen;
-- falscher Zuordnung von DLL, Repository, Source-Projekt oder Commit;
-- Veröffentlichung unvollständiger Cache-Generationen;
-- stiller Vermischung verschiedener Assembly- oder Source-Versionen;
-- unbeabsichtigter Ausführung oder dynamischem Laden fremden Codes;
-- versehentlicher Preisgabe von Credentials in Logs, Diagnosen, Argumenten,
-  Cachemanifesten oder Konzeptdaten.
-
-Das Modell garantiert keine vollständige Abwehr gegen einen bösartigen lokalen
-Administrator oder einen konkurrierenden Prozess mit denselben lokalen Rechten.
-Die zugesicherte Grenze ist stattdessen: explizite Ownership- und Attestation-
-Prüfung, sichere Pfadregeln, fail-closed bei unklarer Integrität und sichtbare
-Degradation bei fehlender Quelle. Eine stärkere Namespace-Sperre wäre ein
-separates Sicherheitsvorhaben.
+Credentials werden nur flüchtig über eine getrennte Resolvergrenze gebunden und
+niemals in Diagnosen, Prozessargumenten, Cachemanifesten oder Konzeptdaten
+persistiert. Eine vollständige Abwehr gegen einen bösartigen lokalen
+Administrator oder einen gleichberechtigten konkurrierenden Prozess ist nicht
+Teil des Modells.
 
 ## Fehler-, Fallback- und Lebenszeitsemantik
 
-### Quellenentscheidung
+- Ungültige Konfiguration endet terminal und wird nicht durch Decompilation
+  kaschiert.
+- Fehlendes Mapping, nicht erreichbare optionale Quelle oder fehlender
+  belastbarer Match führen grundsätzlich zur statischen Decompilation, sofern
+  die DLL selbst analysierbar ist.
+- Ein invalidierter oder widersprüchlicher Source-Stand darf nicht als
+  Source-backed-Erfolg weitergereicht werden.
+- Nur `Clean` und attestierte Source-Snapshots werden regulär source-backed
+  verwendet. `Dirty` bleibt sichtbar; `Unverified` bleibt unverified.
+- Decompiler-, Referenz-, Netzwerk-, Authentifizierungs-, Cache- und
+  Ressourcenfehler werden als `partial`, `degraded`, `failed`, unsupported
+  oder terminaler Konfigurationsfehler klassifiziert.
+- Cancellation wird nach best-effort-Cleanup weitergegeben.
+- Request-, Checkout-, Snapshot- und Workspace-Leases bleiben verschachtelt
+  nachvollziehbar. Keine Lease wird vor dem Ende der abhängigen Nutzung
+  freigegeben.
+- Cachegenerationswechsel sind atomar. Laufende alte Leases bleiben gültig;
+  neue Aufrufe sehen nur vollständige Generationen.
+- Ein letzter guter Stand darf nach einem fälligen Refresh-Fehler nur als
+  sichtbar degradierter Nachweis dienen, nicht als still aktuelle Quelle.
+- Bei erschöpften externen Ressourcen wird der konkrete Vorgang kontrolliert
+  abgewiesen oder degradiert; aktive Benutzer- oder externe Kontexte werden
+  nicht still überschrieben.
 
-- Ein valides Mapping mit attestiertem, passendem Source-Snapshot gewinnt gegen
-  Decompilation.
-- Ohne verifizierten Match wird die DLL statisch decompiliert.
-- Ein unklarer, dirty oder unverified Source-Stand darf nicht als bestätigte
-  Originalquelle ausgegeben werden.
-- Ungültige oder widersprüchliche Konfiguration endet mit einem sichtbaren
-  Konfigurationsfehler und wird nicht durch eine scheinbar erfolgreiche
-  Decompilation kaschiert.
+## Verifikation und Abschluss
 
-### Zustände und Antworten
+Die Verifikation erfolgt mit vorhandener Testinfrastruktur und injizierbaren
+Test-Doubles:
 
-Die Analyseantwort unterscheidet mindestens:
+- FastTests/Unit für Target-Parsing, Mapping, Identitäten, Fingerprints,
+  Cache-Keys, Origin, Zustände, Parser und Lease-Cleanup;
+- FastTests/Component für deklarative Roslyn-Solutions, synthetische DLLs,
+  Source-backed-/Decompilation-Pfade und gemeinsame Fixtures;
+- Integration/MCP für echten Datei-I/O-, lokalen Git-Test-Provider-, Host-,
+  Refresh-, Snapshot- und Cross-Target-Vertrag;
+- Performance-/Stress-Tests separat, hohe Last ausschließlich unter `Stress`.
 
-- `complete`: angeforderte Quelle und benötigte Referenzen sind vollständig
-  analysierbar;
-- `partial`: Roslyn-Quelle ist vorhanden, aber Referenzen oder Teilbereiche
-  fehlen;
-- `degraded`: ein letzter guter oder eingeschränkter Zustand wird sichtbar,
-  ohne ihn als aktuelle Originalquelle zu behaupten;
-- `failed`: es gibt keinen analysierbaren Roslyn-Stand.
+Tests restaurieren, laden oder führen keine fremden Projekte oder Assemblies
+aus. Netzwerk- und privilegierte Reparse-Tests werden deterministisch über
+Doubles oder capability-gesteuert ergänzt. Neue Tests enthalten keine
+unbounded Retries, Sleeps, impliziten Restores oder unkontrollierten
+Netzwerkzugriffe.
 
-Zusätzlich bleiben `origin` und Trust getrennt sichtbar: `project`,
-`source-backed` oder `decompiled` beschreiben die Herkunft; `Clean`, `Dirty`
-und `Unverified` beschreiben deren Vertrauenszustand. Nur ein ausreichend
-attestierter Clean-Stand darf regulär als Source-backed verwendet werden.
+Der Abschluss erfordert `dotnet build`, vollständige Fast- und
+Integration-Testläufe mit `Category!=Stress`, passende MCP-Safeguard- und
+Violation-Prüfungen sowie den projektinternen Audit auf DRY,
+Refactoring-Drift, Dead Code und Magic Values. Diese Befehle werden im
+Konzeptierungsdurchlauf nicht ausgeführt.
 
-### Externe Refreshes und Fallback
+## Annahmen
 
-- Ein vorhandener Source-Snapshot darf innerhalb seines gültigen
-  Refresh-Intervalls wiederverwendet werden.
-- Beim ersten Zugriff oder nach Ablauf wird die konfigurierte Git-/Gitea-Quelle
-  gegen den Standard-Branch aktualisiert. Der tatsächlich geladene Commit wird
-  zur Snapshot-Identität.
-- Schlägt ein fälliger Refresh fehl, wird der alte Stand nicht still als aktuell
-  behauptet. Er kann als degradierter Diagnosezustand erhalten bleiben; die
-  angefragte DLL fällt deterministisch auf Decompilation oder einen sichtbaren
-  Fehler zurück.
-- Ein nicht verfügbarer optionaler Source-Match darf den Assembly-Fallback
-  verwenden. Ein invalidierter oder widersprüchlicher Zustand darf nicht in
-  einen erfolgreichen Source-backed-Zustand umgedeutet werden.
+- .NET 10, C#, Roslyn und Windows mit lokalen absoluten Projekt- und
+  Assemblypfaden bilden die Laufzeitbasis.
+- Ein einzelner MCP-Daemon läuft lokal beim Entwickler.
+- Die maximale Zahl von vier residenten Benutzer-Projektkontexten ist von
+  externen Source-/Assembly-Sessions getrennt.
+- Externe Quellen sind read-only und logisch beliebig zahlreich; ihre konkrete
+  Nutzung unterliegt sichtbaren Ressourcen- und Lebenszeitregeln.
+- `ainetlinter.project.json` gilt für das aktuelle Projekt, nicht als Pflicht
+  für eine externe DLL.
+- Nur explizite Git-/Gitea-Mappings können eine Source-backed-Quelle auswählen.
+- Öffentliche Quellen funktionieren ohne persistierte Credentials; private
+  Quellen verwenden eine injizierbare Resolvergrenze.
+- Der Standard-Branch und der tatsächlich geladene Commit bilden den
+  reproduzierbaren Source-Snapshot.
+- Direkte und transitive Referenzen werden best effort, metadata-only und
+  bedarfsgesteuert behandelt.
 
-### Ownership, Lease und Cancellation
+## Verbindliche Detailentscheidungen innerhalb des Tasks
 
-- Request-, Checkout-, Snapshot- und Workspace-Lebenszeiten bleiben getrennt,
-  aber verschachtelt nachvollziehbar.
-- Eine Materialization-Lease hält die benötigten Handles von der Attestation
-  über Kopie und Snapshot-Erzeugung bis zum Ende der Nutzung.
-- Snapshot und Workspace dürfen ihre Lease nicht vorzeitig freigeben.
-- Bei Cancellation, invaliden Daten, Fehlern beim Öffnen oder Fehlern beim
-  Aufräumen werden bereits erworbene Ressourcen best effort vollständig
-  geschlossen; Cancellation wird anschließend weitergegeben.
-- Ein Fehler beim Aufräumen darf keine ungültige Quelle in einen Erfolg
-  umwandeln und wird diagnostisch sichtbar.
-- Cache-Generationen werden temporär aufgebaut, manifest- und hashgeprüft und
-  erst vollständig atomar veröffentlicht.
-- Externe Quellen werden nicht stillschweigend für andere aktive Vorgänge
-  überschrieben. Bei erschöpften Ressourcen wird der konkrete Vorgang
-  kontrolliert abgewiesen oder degradiert.
+Die folgenden Punkte dürfen nicht verloren gehen oder still entfallen. Sie
+blockieren nicht den Konzeptstart, müssen aber vor Abschluss der jeweiligen
+Implementierung entschieden, umgesetzt, getestet und dokumentiert werden:
 
-## Verifikation und Dokumentationspflichten
+- konkrete externe Ressourcenbudgets und TTL-/LRU-Regeln neben der
+  Vierergrenze;
+- konkrete Credential-Resolver-Anbindung für private Git-/Gitea-Quellen;
+- endgültige Property-Namen und strikte Validierung des Mapping-Schemas;
+- Default-Suchscope in einer vollständigen gematchten Source-Solution;
+- Tiefe-, Größen-, Zyklus- und Abbruchgrenzen der transitiven Auflösung;
+- genaue Test-/Regel-/Audit-/Safeguard-Capabilities je Quellenherkunft;
+- endgültige Origin-String-Konvention und sichere Behandlung des internen
+  Origin-Alias;
+- konkrete Decompiler-Optionen, Document-Aufteilung und Manifestdetails.
 
-Die spätere Implementierung verwendet zuerst deterministische Unit- und
-Component-Tests für Target-Vertrag, Mapping, Source-/DLL-Identität, Fingerprint,
-Cache-Key, Capability, Origin, Statusparser und Lease-Cleanup. Teure oder
-externe Schritte erhalten injizierbare Test-Doppelgänger mit endlicher
-Cancellation-/Timeout-Grenze.
+Diese Punkte sind keine optionalen Nachfolgevorhaben. Sie sind begrenzte
+Detailentscheidungen innerhalb des vollständigen Tasks und müssen in dessen
+Code, Tests und Dokumentation sichtbar abgeschlossen werden.
 
-Repräsentative Integration-/MCP-Tests decken mindestens ab:
+## Bewertung der geprüften Punkte
 
-- unbekannte DLL ohne Projektdefinition;
-- gemappte Source-Solution versus Decompilation-Fallback;
-- mehrere Assemblys aus einer Source-Solution;
-- direkte und transitive Referenzen mit Deduplizierung;
-- gemeinsame Source-Snapshot-Nutzung aus mehreren Target-Aliassen;
-- vier residente Benutzer-Kontexte getrennt von mehreren externen Quellen;
-- Default-Host mit öffentlicher Git-/Gitea-Quelle und injiziertem Provider;
-- atomaren Refresh, alte laufende Leases und fehlerhafte Cache-Generationen;
-- Trust-, Partialitäts-, Cancellation- und Cleanup-Verträge.
+**Weiterhin relevant und vollständig umzusetzen:**
 
-Kein Test restauriert oder führt ein fremdes Projekt aus. Externe Netzwerk-
-und privilegierte Reparse-Umgebungen sind keine Voraussetzung für die normale
-Testpyramide; capability-gesteuerte Nachweise bleiben ergänzend. Hohe
-Nebenläufigkeitslast gehört ausschließlich in `Stress`.
+- gemeinsamer Target-/Roslyn-/MCP-Kern für Projektquelle, gemappte
+  Source-Solution und Decompilation;
+- Default-Host-Provider, Git-/Gitea-Source-of-Truth, Authentifizierung,
+  Refresh, Cache, atomare Generationen und Fallbacks;
+- vier residente Benutzer-Kontexte getrennt von beliebig vielen externen
+  DLL-/Source-Sessions;
+- Source-Match, AssemblyName-/Solution-Auflösung, Snapshot-Identität und
+  Alias-Sharing;
+- transitive Referenzen, Deduplizierung, Zyklen und Missing-Reference-
+  Zustände;
+- Capability-Matrix, Origin-/Confidence-/Partialitätsantworten und
+  assembly-spezifische Tools im gemeinsamen Sessionpfad;
+- Lone-CR-Korrektur, vollständiges Lease-/Cleanup-Verhalten und Generation-
+  Attestation;
+- vollständige Dokumentation, Bootstrap-/Toolbeschreibungen, Regelabgleich und
+  Abschlussverifikation.
 
-Vor Abschluss der späteren Implementierung gelten die Projektvorgaben:
+**Bereits umgesetzt und als Basis zu erhalten:**
 
-- vollständiger Build ohne Warnungen;
-- vollständige Fast- und Integration-Testläufe ohne `Stress`;
-- MCP-Safeguard-/Violation-Prüfungen;
-- gezielter DRY-, Refactoring-Drift-, Dead-Code- und Magic-Value-Audit.
-
-## Spätere Annahmen und Abhängigkeiten
-
-- Ein späteres Ressourcen-Epic kann eigene `MaxSourceSolutions`- und
-  `MaxAssemblies`-Budgets sowie getrennte TTL-/LRU-Regeln festlegen, ohne die
-  Vierergrenze der Benutzer-Projektkontexte zu verändern.
-- Ein späteres Referenz-Epic kann die transitive Closure erweitern, solange
-  statisches No-Execution, Deduplizierung, sichtbare Partialität und endliche
-  Ressourcenlimits erhalten bleiben.
-- Ein späteres Capability-Epic kann weitere Toolfamilien aufnehmen, ohne
-  fachlich fehlende Git-, Test-, Regel- oder Consumer-Kontexte zu simulieren.
-- Ein späterer Local-Checkout-Modus müsste eigenen Origin-, Trust- und
-  Synchronisationsregeln folgen und darf Gitea nicht still verdrängen.
-- Ein stärkeres Multi-Process- oder Namespace-Sicherheitsmodell wäre ein
-  separates Sicherheits-/Betriebs-Epic.
-
-## Offene Fragen und spätere Teilbereichsentscheidungen
-
-Für den Startumfang bestehen nach den getroffenen Entscheidungen keine
-blockierenden Scope-Fragen mehr. Die folgenden Fragen werden erst im jeweils
-betroffenen Teilbereich entschieden:
-
-1. Welche konkreten Ressourcenlimits gelten zusätzlich zur unbegrenzten
-   logischen Anzahl externer Quellen, insbesondere für gleichzeitig residente
-   Source-Solutions, Assembly-Sessions, Disk, Parallelität und Idle-TTL?
-2. Wie wird die Credential-Auflösung für private Git-/Gitea-Quellen konkret an
-   die lokale Umgebung angebunden, ohne Geheimnisse in Konfiguration,
-   Diagnosen oder Cachemanifesten zu persistieren?
-3. Soll eine gematchte vollständige Source-Solution bei einer Suche
-   standardmäßig solutionweit oder zunächst nur im ausgewählten
-   Source-Projekt durchsucht werden, sofern der jeweilige Toolvertrag beides
-   zulässt?
-4. Welche zusätzlichen Toolfamilien erhalten nach der Kernmenge einen eigenen
-   Assembly-Capability-Vertrag, insbesondere für Regel-, Audit-, Test- und
-   Quality-Gate-Kontext?
-5. Welche genauen Tiefe-, Größen- und Abbruchgrenzen gelten für transitive
-   Referenzauflösung und rekursive externe Source-Snapshots?
-6. Welcher nachweisbare Kompatibilitätsnutzen besteht für die spätere
-   Bereinigung interner Origin-Aliase oder die Zentralisierung von
-   Origin-Bezeichnungen?
-
-## Arbeitsgedächtnis (nur Draft)
-
-### Korrigierte Zielinterpretation
-
-Der zentrale Zweck ist die Fertigstellung eines einheitlichen MCP-/Roslyn-
-Analysepfads für Projektquellen, bekannte externe Source-Solutions und
-unbekannte DLLs. Der Schwerpunkt ist nicht nur die Reparatur von Trust- und
-Lease-Grenzfällen. Diese sind notwendige Abschlussarbeiten innerhalb eines
-größeren Vertrages für Target-Auflösung, Source-Herkunft, Snapshot-Sharing,
-transitive Referenzen und sinnvolle Tool-Parität.
-
-### Bestätigte Nutzerentscheidungen
-
-- Die sinnvolle Assembly-Kernmenge umfasst Symbol-, Body-, Struktur-,
-  Referenz-, Call-Tree-, Dependency-Graph- und Metrikabfragen.
-- Es gibt einen lokal beim Entwickler laufenden MCP-Daemon.
-- Dieser Daemon verwaltet maximal vier residente Benutzer-Repositories bzw.
-  Projektkontexte.
-- Externe Quellen sind davon unabhängig und können logisch in beliebiger
-  Anzahl hinzukommen.
-- Externe Quellen sind entweder DLLs für statische Decompilation oder
-  konfigurierte Git-/Gitea-Quellen für Source-backed-Analyse.
-- Der lokale Default-Host soll konfigurierte öffentliche Git-/Gitea-Quellen
-  selbstständig verwenden. Private Quellen bleiben an eine separate,
-  injizierbare Credential-Auflösung gebunden.
-- Das begrenzte lokale Bedrohungsmodell gilt; eine vollständige
-  Namespace-Sperre gegen gleichberechtigte Prozesse ist kein Muss.
-
-### Geprüfte aktuelle Evidenz
-
-- Die aktuelle Assembly-Analyse umfasst 68 Produktionsdateien; der aktuelle
-  MCP-Violation- und Dead-Code-Abgleich ergab dort keine Befunde.
-- Die Resident-Registry ist auf höchstens vier residente Projekt-Keys
-  ausgelegt; diese Grenze darf nicht als Obergrenze für externe Quellen
-  wiederverwendet werden.
-- Statische Decompilation, direkte Referenzauflösung, Mapping, Gitea-
-  Acquisition, Cache-Reuse, Cache-Refresh, Attestation und Snapshot-Lebenszeit
-  sind bereits als Bausteine vorhanden.
-- `AssemblyReferenceResolver` löst derzeit direkte Metadaten-Referenzen auf;
-  eine transitive Closure ist noch nicht vorhanden.
-- Die produktiven Host-Einstiegspunkte erzeugen derzeit standardmäßig eine
-  `UnavailableExternalSourceProvider`-Komposition; Provider-Injektion ist in
-  Kompositions- und Testpfaden möglich.
-- Allgemeine Assembly-Toolaufrufe sind noch nicht in der gewünschten
-  Capability-Parität freigeschaltet.
-- Der Statusparser hat noch einen Lone-CR-Grenzfall. Die Lease-Erzeugung hat
-  bei Cancellation, invaliden Eingaben und einzelnen Dispose-Fehlern noch
-  keinen vollständig geschlossenen Cleanup-Pfad.
-- Die zentrale Pfadprüfung ist bereits gemeinsam verwendet; eine frühere
-  Duplikationsannahme ist erledigt.
-- Der interne `AssemblyOrigin.Kind`-Alias hat keine produktiven Referenzen;
-  seine Bereinigung ist kein Startkriterium.
-
-### Bewertung der geprüften Kandidaten
-
-**Weiterhin relevant und im Scope:**
-
-- gemeinsamer Target-/Roslyn-/MCP-Kern für die drei Quellpfade;
-- externe Source-Snapshot-Identität, Alias-Sharing und getrennte
-  Benutzer-/Quellen-Lebensdauer;
-- transitive, bedarfsgesteuerte Referenzauflösung;
-- sinnvolle Kern-Capability-Matrix und sichtbare Origin-/Partialitätsverträge;
-- Default-Provider-Komposition für konfigurierte öffentliche Quellen;
-- Lone-CR-Korrektur und vollständige Lease-Bereinigung;
-- Dokumentation und gezielte Abschlussverifikation.
-
-**Bereits umgesetzt:**
-
-- statische Analyse ohne Runtime-Loading;
-- Decompilation, Fingerprint, Cache-Grundlage und direkte Referenzauflösung;
-- Target-Basis, Mapping, Source-Selection, Gitea-Transport, Acquisition,
-  Cache-Reuse, Refresh, Attestation und Snapshot-Lebenszeit;
-- fail-closed-Konfiguration und Erhalt der Dirty-Trust-Semantik;
+- Target-Basis und grundlegender gemeinsamer Dispatch;
+- statische Decompilation, Fingerprint, Cache-Grundlage und direkte
+  Referenzauflösung;
+- Mapping, Source-Selection, Gitea-Transport, Acquisition, Cache-Reuse,
+  Refresh, Attestation und Snapshot-Lebenszeit als vorhandene Bausteine;
+- fail-closed-Konfigurationspfad und Erhalt der Dirty-Trust-Semantik;
 - zentrale Pfad-, URL- und Test-Snapshot-Hilfen.
 
-**Veraltet:**
+**Veraltet oder nicht mehr als offene Grundlage zu behandeln:**
 
-- die Annahme, Decompiler-Version, grundlegende Mapping- und Cacheverträge
-  oder die erste Attestation-Architektur seien noch grundsätzlich offen;
-- kleinteilige Implementierungsabfolgen und historische Statusstände;
-- die Annahme, die gemeinsame Pfadprüfung sei noch doppelt implementiert.
+- die grundsätzliche Auswahl der Decompiler-Bibliothek;
+- die grundlegende Mapping-, Source-Selection-, Cache- oder Attestation-
+  Architektur;
+- die Duplikationsannahme bei der zentralen Pfadprüfung;
+- kleinteilige Implementierungsabfolgen und frühere Statusstände.
 
-**Ungeklärt und einem späteren Teilbereich zuzuordnen:**
-
-- konkrete externe Ressourcenlimits und Credential-Adapter;
-- solutionweite versus ausgewählte Source-Projekt-Suche;
-- zusätzliche Toolfamilien jenseits der Kernabfragen;
-- Tiefe- und Größenlimits der transitiven Referenzauflösung;
-- Kompatibilitätsnutzen interner Origin-Bereinigung.
-
-**Overkill oder bewusst nicht übernehmen:**
+**Bewusst nicht als vergessene Lücke übernommen:**
 
 - Runtime-/Reflection-Loading;
-- Gitea-Discovery, automatische Branch-Zusammenführung und lokaler dirty-
-  Checkout als versteckte Source-of-Truth;
-- vollständige Namespace-Immutability gegen gleichberechtigte Prozesse;
-- privilegierte Pflichtumgebungen, externe Netzwerkpflichtläufe und pauschale
-  Freischaltung fachlich unpassender Tools;
-- automatische persistente Cache-Garbage-Collection ohne konkreten Vertrag.
+- freie Gitea-Discovery;
+- lokaler dirty-/unbuilt-Checkout als versteckte Source-of-Truth;
+- automatische Branch-Zusammenführung;
+- vollständige Namespace-Sperre gegen gleichberechtigte Prozesse;
+- automatische persistente Cache-Garbage-Collection;
+- externe Testausführung und fachlich unpassende Git-Diff-/Quality-Gate-
+  Scheinimplementierungen.
 
-### Übergabestatus
+## Übergabestatus
 
-Der Scope ist nach der Nutzerklärung fachlich ausreichend bestimmt, bleibt aber
-bis zur ausdrücklichen Freigabe auf `status: draft`. Vor der Freigabe wird der
-Arbeitsgedächtnisabschnitt entfernt und nur belastbare Anforderungen,
-Annahmen, Grenzen und spätere Abhängigkeiten bleiben im eigentlichen Konzept.
+Der Draft bildet nun den vollständigen fachlichen Abschlussumfang einschließlich
+der bislang offenen technischen und dokumentarischen Themen ab. Er bleibt bis
+zur ausdrücklichen Nutzerfreigabe auf `status: draft`. Vor der Freigabe wird
+das Draft-Arbeitsgedächtnis entfernt; nur dauerhafte Anforderungen,
+Annahmen, Grenzen und verbindliche Detailentscheidungen bleiben erhalten.
 Ein Orchestrator wird nicht automatisch gestartet.
