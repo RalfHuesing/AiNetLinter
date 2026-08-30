@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
+using Serilog;
 
 namespace AiNetLinter.Cache;
 
@@ -145,7 +146,7 @@ internal sealed class AnalysisCacheManager
         }
         catch (Exception ignored)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to read cache file: {ignored.Message}");
+            Log.Debug(ignored, "Analyse-Cache-Datei konnte nicht gelesen werden (Pfad={CachePath})", path);
             return null;
         }
     }

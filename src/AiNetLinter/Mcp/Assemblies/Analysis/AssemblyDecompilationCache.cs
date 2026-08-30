@@ -26,7 +26,7 @@ internal sealed class AssemblyDecompilationCache
 
     internal AssemblyDecompilationCache(string? cacheRoot = null)
     {
-        RootPath = Path.GetFullPath(cacheRoot ?? Path.Combine(AppContext.BaseDirectory, "cache", "assembly"));
+        RootPath = AssemblyCacheContract.ResolveRootPath(cacheRoot);
     }
     internal string RootPath { get; }
 
@@ -59,7 +59,7 @@ internal sealed class AssemblyDecompilationCache
             diagnostic = new(
                 AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCacheReadRequest)),
                 $"Der aktuelle Assembly-Cacheeintrag ist ungültig und wird verworfen: {ex.Message}",
-                "warning");
+                AssemblyDiagnosticSeverity.Warning);
             return false;
         }
     }
@@ -95,11 +95,11 @@ internal sealed class AssemblyDecompilationCache
             return new AssemblyCachePublishResult(
                 false,
                 null,
-                new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCachePublishRequest)), $"Assembly-Cachegeneration konnte nicht veröffentlicht werden: {ex.Message}", "error"));
+                new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCachePublishRequest)), $"Assembly-Cachegeneration konnte nicht veröffentlicht werden: {ex.Message}", AssemblyDiagnosticSeverity.Error));
         }
         finally
         {
-            if (!isPublished) AssemblyCacheCleanup.TryDeleteDirectory(generationDirectory);
+            if (!isPublished) AssemblyCacheCleanup.DeleteDirectory(generationDirectory);
         }
     }
 
@@ -151,7 +151,7 @@ internal sealed class AssemblyDecompilationCache
             diagnostic = attemptResult.Diagnostic;
         }
 
-        diagnostic ??= new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCachePublishRequest)), "Current-Pointer konnte nach begrenzten Versuchen nicht validiert veröffentlicht werden.", "error");
+        diagnostic ??= new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCachePublishRequest)), "Current-Pointer konnte nach begrenzten Versuchen nicht validiert veröffentlicht werden.", AssemblyDiagnosticSeverity.Error);
         return false;
     }
     private PointerPublishAttempt PublishPointerAttempt(
@@ -165,16 +165,16 @@ internal sealed class AssemblyDecompilationCache
             WritePointer(temporaryPointer, generationName);
             ReplacePointer(pointerPath, temporaryPointer);
             var succeeded = TryRead(readRequest, out _, out _);
-            return new PointerPublishAttempt(succeeded, succeeded ? null : new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCacheContract.CurrentPointerFileName)), "Der neu veröffentlichte Current-Pointer konnte nicht erneut validiert werden.", "warning"));
+            return new PointerPublishAttempt(succeeded, succeeded ? null : new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCacheContract.CurrentPointerFileName)), "Der neu veröffentlichte Current-Pointer konnte nicht erneut validiert werden.", AssemblyDiagnosticSeverity.Warning));
         }
         catch (IOException ex)
         {
-            var diagnostic = new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCacheContract.CurrentPointerFileName)), $"Current-Pointer konnte nicht ersetzt werden: {ex.Message}", "warning");
+            var diagnostic = new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCacheContract.CurrentPointerFileName)), $"Current-Pointer konnte nicht ersetzt werden: {ex.Message}", AssemblyDiagnosticSeverity.Warning);
             return new(TryRead(readRequest, out _, out _), diagnostic);
         }
         finally
         {
-            AssemblyCacheCleanup.TryDeleteFile(temporaryPointer);
+            AssemblyCacheCleanup.DeleteFile(temporaryPointer);
         }
     }
     private static void ReplacePointer(string pointerPath, string temporaryPointer)
@@ -485,7 +485,7 @@ internal sealed class AssemblyDecompilationCache
     }
 
     private static bool IsWarning(AssemblySessionDiagnostic diagnostic) =>
-        !string.Equals(diagnostic.Severity, "error", StringComparison.OrdinalIgnoreCase);
+        diagnostic.Severity == AssemblyDiagnosticSeverity.Warning;
 
     private static bool IsCacheInputException(Exception exception) =>
         exception is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException or InvalidDataException or ArgumentException or NotSupportedException;

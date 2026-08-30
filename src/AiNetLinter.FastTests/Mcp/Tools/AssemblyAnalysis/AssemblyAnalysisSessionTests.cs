@@ -256,4 +256,37 @@ public sealed class AssemblyAnalysisSessionTests
         Assert.Contains(complexityResult.Diagnostics, diagnostic => diagnostic.Code == "assembly-complexity-limit");
     }
 
+    [Theory]
+    [InlineData(AssemblyDiagnosticSeverityExtensions.WarningWireValue)]
+    [InlineData(AssemblyDiagnosticSeverityExtensions.ErrorWireValue)]
+    public void AssemblySessionDiagnostic_UsesTypedSeverityAndWireValues(string wireValue)
+    {
+        Assert.True(AssemblyDiagnosticSeverityExtensions.TryParseWireValue(wireValue, out var severity));
+        var diagnostic = new AssemblySessionDiagnostic("assembly-test", "Testdiagnose", severity);
+
+        Assert.Equal(severity, diagnostic.Severity);
+        Assert.Equal(wireValue, severity.ToWireValue());
+        Assert.True(AssemblyDiagnosticSeverityExtensions.TryParseWireValue(wireValue.ToUpperInvariant(), out var parsed));
+        Assert.Equal(severity, parsed);
+    }
+
+    [Fact]
+    public void AssemblyDiagnosticSeverity_WireParserRejectsUnknownValues()
+    {
+        Assert.False(AssemblyDiagnosticSeverityExtensions.TryParseWireValue("fatal", out _));
+    }
+
+    [Fact]
+    public void AssemblyDecompilationCache_DefaultRootUsesCacheContractPolicy()
+    {
+        var cache = new AssemblyDecompilationCache();
+        var expected = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            AssemblyCacheContract.DefaultCacheDirectoryName,
+            AssemblyCacheContract.DefaultAssemblyCacheDirectoryName));
+
+        Assert.Equal(expected, AssemblyCacheContract.ResolveRootPath(null));
+        Assert.Equal(expected, cache.RootPath);
+    }
+
 }

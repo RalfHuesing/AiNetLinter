@@ -69,7 +69,7 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            return FailureResultSingle(new(AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSession), nameof(AssemblyAnalysisSession.RefreshAsync)), "Der Assembly-Refresh wurde vor dem Aufbau einer neuen Generation abgebrochen.", "error"));
+            return FailureResultSingle(new(AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSession), nameof(AssemblyAnalysisSession.RefreshAsync)), "Der Assembly-Refresh wurde vor dem Aufbau einer neuen Generation abgebrochen.", AssemblyDiagnosticSeverity.Error));
         }
 
         try
@@ -107,7 +107,7 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
 
     private async Task<AssemblySessionRefreshResult> RefreshCoreAsync(CancellationToken cancellationToken)
     {
-        if (IsDisposed()) return FailureResultSingle(new(AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSession), nameof(AssemblyAnalysisSession.Dispose)), "Die Assembly-Session wurde bereits beendet.", "error"));
+        if (IsDisposed()) return FailureResultSingle(new(AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSession), nameof(AssemblyAnalysisSession.Dispose)), "Die Assembly-Session wurde bereits beendet.", AssemblyDiagnosticSeverity.Error));
         if (!ValidateOptions(out var optionsDiagnostic)) return FailureResultSingle(optionsDiagnostic!);
         if (!AssemblyFingerprintCalculator.TryCreate(sessionOptions.AssemblyPath, out var fingerprint, out var fingerprintDiagnostic))
         {
@@ -116,7 +116,7 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
 
         if (fingerprint!.Length > decompilationOptions.MaxAssemblyBytes)
         {
-            return FailureResultSingle(new(AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSession), nameof(AssemblyFingerprint.Length)), $"Die Assembly überschreitet die Dateigrößenbegrenzung ({fingerprint.Length} von {decompilationOptions.MaxAssemblyBytes} Bytes).", "error"));
+            return FailureResultSingle(new(AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSession), nameof(AssemblyFingerprint.Length)), $"Die Assembly überschreitet die Dateigrößenbegrenzung ({fingerprint.Length} von {decompilationOptions.MaxAssemblyBytes} Bytes).", AssemblyDiagnosticSeverity.Error));
         }
 
         if (TryReuseCurrent(fingerprint, out var reused)) return reused;
@@ -227,7 +227,7 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
                 fingerprint.Sha256,
                 cancellationToken).ConfigureAwait(false);
             var diagnostics = ValidateCompilation(snapshot.Compilation, cancellationToken);
-            if (diagnostics.Any(diagnostic => string.Equals(diagnostic.Severity, "error", StringComparison.OrdinalIgnoreCase)))
+            if (diagnostics.Any(diagnostic => diagnostic.Severity == AssemblyDiagnosticSeverity.Error))
             {
                 snapshot.Dispose();
                 return new WorkspaceCreationResult(null, diagnostics);
@@ -237,11 +237,11 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
         }
         catch (OperationCanceledException)
         {
-            return new WorkspaceCreationResult(null, [new(AssemblyDiagnosticCodes.For(nameof(AssemblyRoslynWorkspaceFactory), nameof(AssemblySessionStatus.Loading)), "Der Roslyn-Snapshot wurde wegen Cancellation abgebrochen.", "error")]);
+            return new WorkspaceCreationResult(null, [new(AssemblyDiagnosticCodes.For(nameof(AssemblyRoslynWorkspaceFactory), nameof(AssemblySessionStatus.Loading)), "Der Roslyn-Snapshot wurde wegen Cancellation abgebrochen.", AssemblyDiagnosticSeverity.Error)]);
         }
         catch (InvalidOperationException ex)
         {
-            return new WorkspaceCreationResult(null, [new(AssemblyDiagnosticCodes.For(nameof(AssemblyRoslynWorkspaceFactory), nameof(AssemblySessionStatus.Failed)), $"Roslyn-Snapshot konnte nicht erzeugt werden: {ex.Message}", "error")]);
+            return new WorkspaceCreationResult(null, [new(AssemblyDiagnosticCodes.For(nameof(AssemblyRoslynWorkspaceFactory), nameof(AssemblySessionStatus.Failed)), $"Roslyn-Snapshot konnte nicht erzeugt werden: {ex.Message}", AssemblyDiagnosticSeverity.Error)]);
         }
     }
 
@@ -263,7 +263,7 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
             .ToList();
         if (syntaxErrors.Count > 0)
         {
-            return [new(AssemblyDiagnosticCodes.For(nameof(AssemblyRoslynWorkspaceFactory), nameof(AssemblyRoslynSnapshot.Compilation)), $"Die synthetische Compilation enthält nicht parsbaren Quelltext: {string.Join("; ", syntaxErrors.Select(diagnostic => diagnostic.Id + " " + diagnostic.GetMessage()))}", "error")];
+            return [new(AssemblyDiagnosticCodes.For(nameof(AssemblyRoslynWorkspaceFactory), nameof(AssemblyRoslynSnapshot.Compilation)), $"Die synthetische Compilation enthält nicht parsbaren Quelltext: {string.Join("; ", syntaxErrors.Select(diagnostic => diagnostic.Id + " " + diagnostic.GetMessage()))}", AssemblyDiagnosticSeverity.Error)];
         }
 
         return [new(
@@ -278,7 +278,7 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
             if (disposed)
             {
                 generation.Snapshot.Dispose();
-                var diagnostic = new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSession), nameof(AssemblyAnalysisSession.Dispose)), "Die Assembly-Session wurde während des Aufbaus beendet.", "error");
+                var diagnostic = new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSession), nameof(AssemblyAnalysisSession.Dispose)), "Die Assembly-Session wurde während des Aufbaus beendet.", AssemblyDiagnosticSeverity.Error);
                 state = state with
                 {
                     Status = AssemblySessionStatus.Failed,
@@ -368,7 +368,7 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
             return true;
         }
 
-        diagnostic = new(AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSessionOptions), nameof(AssemblyAnalysisSessionOptions.CacheRoot)), "Die Assembly-Decompilation-Optionen enthalten ungültige Größen- oder Komplexitätsgrenzen.", "error");
+        diagnostic = new(AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSessionOptions), nameof(AssemblyAnalysisSessionOptions.CacheRoot)), "Die Assembly-Decompilation-Optionen enthalten ungültige Größen- oder Komplexitätsgrenzen.", AssemblyDiagnosticSeverity.Error);
         return false;
     }
 
@@ -379,13 +379,13 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
         string status,
         IReadOnlyList<AssemblySessionDiagnostic> referenceDiagnostics,
         IReadOnlyList<AssemblySessionDiagnostic> manifestDiagnostics) =>
-        referenceDiagnostics.Count > 0 || manifestDiagnostics.Any(diagnostic => diagnostic.Severity == "error")
+        referenceDiagnostics.Count > 0 || manifestDiagnostics.Any(diagnostic => diagnostic.Severity == AssemblyDiagnosticSeverity.Error)
             ? AssemblySessionStatus.Partial
             : AssemblySessionStatusExtensions.TryParsePersisted(status, out var parsed) ? parsed : AssemblySessionStatus.Partial;
 
     private static IReadOnlyList<AssemblySessionDiagnostic> ManifestDiagnostics(AssemblyDecompilationManifest manifest) =>
         manifest.Diagnostics.Warnings.Select(message => new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationManifest), nameof(AssemblyDecompilationManifest.Diagnostics)), message))
-            .Concat(manifest.Diagnostics.Errors.Select(message => new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationManifest), nameof(AssemblyDecompilationManifest.Status)), message, "error")))
+            .Concat(manifest.Diagnostics.Errors.Select(message => new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationManifest), nameof(AssemblyDecompilationManifest.Status)), message, AssemblyDiagnosticSeverity.Error)))
             .ToList();
 
     private static IReadOnlyList<AssemblySessionDiagnostic> CombineDiagnostics(params IEnumerable<AssemblySessionDiagnostic>[] groups) =>
@@ -394,13 +394,13 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
     private static IReadOnlyList<AssemblySessionDiagnostic> OptionalDiagnostic(AssemblySessionDiagnostic? diagnostic) => diagnostic is null ? [] : [diagnostic];
 
     private static IReadOnlyList<AssemblySessionDiagnostic> EnsureDiagnostic(IReadOnlyList<AssemblySessionDiagnostic> diagnostics, string code, string message) =>
-        diagnostics.Count == 0 ? [new AssemblySessionDiagnostic(code, message, "error")] : diagnostics;
+        diagnostics.Count == 0 ? [new AssemblySessionDiagnostic(code, message, AssemblyDiagnosticSeverity.Error)] : diagnostics;
 
     private static IReadOnlyList<AssemblySessionDiagnostic> DistinctDiagnostics(IEnumerable<AssemblySessionDiagnostic> diagnostics) =>
         diagnostics.Where(diagnostic => !string.IsNullOrWhiteSpace(diagnostic.Message))
             .GroupBy(diagnostic => diagnostic.Code + "|" + diagnostic.Message, StringComparer.Ordinal)
             .Select(group => group.First())
-            .OrderBy(diagnostic => string.Equals(diagnostic.Severity, "error", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .OrderBy(diagnostic => diagnostic.Severity == AssemblyDiagnosticSeverity.Error ? 0 : 1)
             .ThenBy(diagnostic => diagnostic.Code, StringComparer.Ordinal)
             .ThenBy(diagnostic => diagnostic.Message, StringComparer.Ordinal)
             .Take(100)

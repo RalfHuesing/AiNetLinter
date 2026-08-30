@@ -1,5 +1,8 @@
 #nullable enable
 
+using System;
+using System.IO;
+
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
 internal static class AssemblyCacheContract
@@ -12,4 +15,12 @@ internal static class AssemblyCacheContract
     internal const string CacheSchemaVersion = "assembly-cache-v2";
     internal const string SyntheticProjectName = "decompiled-assembly";
     internal const int FileBufferSize = 4096;
+    internal const string DefaultCacheDirectoryName = "cache";
+    internal const string DefaultAssemblyCacheDirectoryName = "assembly";
+
+    internal static string ResolveRootPath(string? configuredRoot) =>
+        Path.GetFullPath(configuredRoot ?? Path.Combine(
+            AppContext.BaseDirectory,
+            DefaultCacheDirectoryName,
+            DefaultAssemblyCacheDirectoryName));
 }

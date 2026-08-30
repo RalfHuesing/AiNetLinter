@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -13,6 +12,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using Serilog;
 
 namespace AiNetLinter.Mcp.Tools.Analysis;
 
@@ -122,7 +122,7 @@ internal static class SearchPatternRoslynEnricher
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            Trace.WriteLine($"[WARN] Roslyn-Snapshot fuer search_pattern nicht verfuegbar: {exception.Message}");
+            Log.Warning(exception, "Roslyn-Snapshot fuer search_pattern nicht verfuegbar (Datei={FilePath})", document.FilePath);
             return SearchPatternRoslynSnapshot.Unavailable;
         }
     }

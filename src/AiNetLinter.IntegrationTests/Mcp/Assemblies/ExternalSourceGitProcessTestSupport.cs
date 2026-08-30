@@ -216,11 +216,11 @@ internal static class ExternalSourceGitProcessTestSupport
         }
         catch (ArgumentException)
         {
-            Debug.WriteLine($"Testprozess {processId} war beim Cleanup bereits beendet.");
+            // Der Testprozess kann zwischen der Abfrage und dem Kill beendet worden sein.
         }
         catch (InvalidOperationException)
         {
-            Debug.WriteLine($"Testprozess {processId} war beim Cleanup bereits beendet.");
+            // Der Testprozess kann zwischen der Abfrage und dem Kill beendet worden sein.
         }
         catch (Exception exception)
         {

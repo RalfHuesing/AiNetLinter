@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using AiNetLinter.Output;
+using Serilog;
 
 namespace AiNetLinter.Configuration;
 
@@ -81,7 +82,7 @@ public static class ConfigLoader
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to load config: {ex.Message}");
+            Log.Error(ex, "Konfigurationsdatei konnte nicht geladen werden (Pfad={ConfigPath})", configPath);
             return null;
         }
     }

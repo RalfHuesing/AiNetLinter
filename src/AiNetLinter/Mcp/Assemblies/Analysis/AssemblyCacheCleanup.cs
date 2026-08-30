@@ -2,12 +2,13 @@
 
 using System;
 using System.IO;
+using Serilog;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
 internal static class AssemblyCacheCleanup
 {
-    internal static void TryDeleteFile(string path)
+    internal static void DeleteFile(string path)
     {
         try
         {
@@ -15,11 +16,11 @@ internal static class AssemblyCacheCleanup
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            System.Diagnostics.Debug.WriteLine($"Assembly-Cache-Tempdatei konnte nicht entfernt werden: {ex.Message}");
+            Log.Warning(ex, "Assembly-Cache-Cleanup fehlgeschlagen: Art={CleanupKind}, Pfad={Path}", "Datei", path);
         }
     }
 
-    internal static void TryDeleteDirectory(string directory)
+    internal static void DeleteDirectory(string directory)
     {
         try
         {
@@ -27,7 +28,7 @@ internal static class AssemblyCacheCleanup
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            System.Diagnostics.Debug.WriteLine($"Assembly-Cache-Generation konnte nicht entfernt werden: {ex.Message}");
+            Log.Warning(ex, "Assembly-Cache-Cleanup fehlgeschlagen: Art={CleanupKind}, Pfad={Path}", "Verzeichnis", directory);
         }
     }
 }

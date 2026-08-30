@@ -38,14 +38,14 @@ internal sealed class AssemblyDecompilationAdapter
         {
             return Task.FromResult(new DecompilationResult(
                 [],
-                    [new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(OperationCanceledException)), "Die Decompilation wurde wegen Cancellation oder Deadline abgebrochen.", "error")],
+                    [new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(OperationCanceledException)), "Die Decompilation wurde wegen Cancellation oder Deadline abgebrochen.", AssemblyDiagnosticSeverity.Error)],
                 false));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException or ArgumentException or ICSharpCode.Decompiler.DecompilerException)
         {
             return Task.FromResult(new DecompilationResult(
                 [],
-                [new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(AssemblyDecompilationOptions)), $"Decompilation fehlgeschlagen: {ex.Message}", "error")],
+                [new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(AssemblyDecompilationOptions)), $"Decompilation fehlgeschlagen: {ex.Message}", AssemblyDiagnosticSeverity.Error)],
                 false));
         }
     }

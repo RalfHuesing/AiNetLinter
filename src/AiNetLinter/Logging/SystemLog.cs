@@ -31,9 +31,24 @@ internal static class SystemLog
 
     private const string LogFileName = "ainetlinter-.log";
 
-    internal static LoggingConfig Config { get; private set; } = LoggingConfig.CreateDefault();
+    private static LoggingConfig config = LoggingConfig.CreateDefault();
+    private static bool initialized;
 
-    internal static bool IsInitialized { get; private set; }
+    internal static LoggingConfig Config
+    {
+        get
+        {
+            lock (Gate) return config;
+        }
+    }
+
+    internal static bool IsInitialized
+    {
+        get
+        {
+            lock (Gate) return initialized;
+        }
+    }
 
     /// <summary>
     /// Initialisiert den statischen Root-Logger. Genau einmal prozessweit; weitere
@@ -41,50 +56,64 @@ internal static class SystemLog
     /// </summary>
     internal static void Initialize(string processRole)
     {
-        var alreadyInitialized = false;
         lock (Gate)
         {
-            if (IsInitialized)
+            if (initialized) return;
+
+            LoggingConfig loadedConfig;
+            try
             {
-                alreadyInitialized = true;
+                loadedConfig = LoggingConfigLoader.Load();
             }
-            else
+            catch (Exception exception)
             {
-                IsInitialized = true;
+                var fallbackConfig = LoggingConfig.CreateDefault();
+                config = fallbackConfig;
+                var fallbackLogger = CreateRootLogger(fallbackConfig, processRole);
+                try
+                {
+                    fallbackLogger.Fatal(exception, "System-Logging: Konfiguration defekt - Abbruch ({ProcessRole})", processRole);
+                }
+                finally
+                {
+                    (fallbackLogger as IDisposable)?.Dispose();
+                }
+
+                throw;
             }
+
+            var logger = CreateRootLogger(loadedConfig, processRole);
+            config = loadedConfig;
+            Log.Logger = logger;
+
+            logger.ForContext("ProcessRole", processRole).Information(
+                "System-Logging initialisiert (Level={MinimumLevel}, Verzeichnis={Directory}, BehalteneDateien={RetainedFileCount})",
+                loadedConfig.MinimumLevel,
+                loadedConfig.ResolveDirectory(),
+                loadedConfig.RetainedFileCount);
+            WriteProcessStartLog(logger, processRole);
+            initialized = true;
         }
+    }
 
-        if (alreadyInitialized) return;
-
-        LoggingConfig config;
-        try
-        {
-            config = LoggingConfigLoader.Load();
-        }
-        catch (Exception exception)
-        {
-            config = LoggingConfig.CreateDefault();
-            Config = config;
-            ConfigureRoot(config, processRole);
-            Log.Fatal(exception, "System-Logging: Konfiguration defekt - Abbruch ({ProcessRole})", processRole);
-            throw;
-        }
-
-        Config = config;
-        ConfigureRoot(config, processRole);
-
-        Log.ForContext("ProcessRole", processRole).Information(
-            "System-Logging initialisiert (Level={MinimumLevel}, Verzeichnis={Directory}, BehalteneDateien={RetainedFileCount})",
-            config.MinimumLevel,
-            config.ResolveDirectory(),
-            config.RetainedFileCount);
-        Log.ForContext("ProcessRole", processRole).Information(
-            "Prozess gestartet: PID={Pid}, Rolle={ProcessRole}, Version={Version}, Args={Args}",
-            Environment.ProcessId,
+    internal static void WriteProcessStartLog(ILogger logger, string processRole)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        var diagnostics = GetProcessStartDiagnostics();
+        logger.ForContext("ProcessRole", processRole).Information(
+            "Prozess gestartet: PID={Pid}, Rolle={ProcessRole}, Version={Version}, Executable={Executable}, ArgumentCount={ArgumentCount}",
+            diagnostics.ProcessId,
             processRole,
             Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unbekannt",
-            Environment.CommandLine);
+            diagnostics.ProcessPath,
+            diagnostics.ArgumentCount);
     }
+
+    internal static (int ProcessId, string ProcessPath, int ArgumentCount) GetProcessStartDiagnostics() =>
+        new(
+            Environment.ProcessId,
+            Environment.ProcessPath ?? "unbekannt",
+            Math.Max(0, Environment.GetCommandLineArgs().Length - 1));
 
     /// <summary>Spiegelt eine Diagnosezeile der Konsole ([WARN]/[ERROR]/[FATAL]/[INFO]) ins Log.</summary>
     internal static void WriteConsoleMirror(string message)
@@ -108,10 +137,10 @@ internal static class SystemLog
         return null;
     }
 
-    private static void ConfigureRoot(LoggingConfig config, string processRole)
+    private static ILogger CreateRootLogger(LoggingConfig config, string processRole)
     {
         var levelSwitch = new Serilog.Core.LoggingLevelSwitch(LevelMap[config.MinimumLevel]);
-        var logger = new LoggerConfiguration()
+        return new LoggerConfiguration()
             .MinimumLevel.ControlledBy(levelSwitch)
             .Enrich.WithProperty("ProcessRole", processRole)
             .Enrich.WithProperty("Pid", Environment.ProcessId)
@@ -122,6 +151,6 @@ internal static class SystemLog
                 shared: true,
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{ProcessRole}] {Message:lj}{NewLine}{Exception}")
             .CreateLogger();
-        Log.Logger = logger;
     }
+
 }

@@ -41,7 +41,7 @@ internal sealed class AssemblyReferenceResolver
                     diagnostics.Add(new(
                         AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolution.MetadataReferences)),
                         $"Referenz '{candidate.Reference.Name}' wurde nach Identitätsprüfung nicht als MetadataReference eingebunden: {path}.",
-                        "warning"));
+                        AssemblyDiagnosticSeverity.Warning));
                 }
 
                 return candidate.Reference with
@@ -80,7 +80,7 @@ internal sealed class AssemblyReferenceResolver
                 diagnostics.Add(new(
                     AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceDto.Resolved)),
                     $"Abhängigkeit nicht auflösbar: {reference.Name}, Version {reference.Version}, Kultur {reference.Culture}.",
-                    "warning"));
+                    AssemblyDiagnosticSeverity.Warning));
             }
 
             resolved.Add(new ReferenceCandidate(reference, path));
@@ -109,7 +109,7 @@ internal sealed class AssemblyReferenceResolver
             diagnostics.Add(new(
                 AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceDto.Version)),
                 $"Kein identitätsgleicher Kandidat für '{reference.Name}' gefunden. Erwartet: Version {reference.Version}, Kultur {reference.Culture}; geprüft: {string.Join(", ", mismatches.Take(5))}.",
-                "warning"));
+                AssemblyDiagnosticSeverity.Warning));
         }
 
         return null;
@@ -135,7 +135,7 @@ internal sealed class AssemblyReferenceResolver
                 diagnostics.Add(new(
                     AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceDto.Name)),
                     $"Lokale Referenzen konnten nicht enumeriert werden: {directory}: {ex.Message}",
-                    "warning"));
+                    AssemblyDiagnosticSeverity.Warning));
             }
         }
 
@@ -161,7 +161,7 @@ internal sealed class AssemblyReferenceResolver
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or ArgumentException or InvalidOperationException)
             {
-                diagnostics.Add(new(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(Microsoft.CodeAnalysis.MetadataReference)), $"Referenz konnte nicht geladen werden: {path}: {ex.Message}", "warning"));
+                diagnostics.Add(new(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(Microsoft.CodeAnalysis.MetadataReference)), $"Referenz konnte nicht geladen werden: {path}: {ex.Message}", AssemblyDiagnosticSeverity.Warning));
             }
         }
 
@@ -183,7 +183,7 @@ internal sealed class AssemblyReferenceResolver
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException or ArgumentException)
         {
-            diagnostics.Add(new(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyIdentityDto)), $"Referenzkandidat konnte nicht statisch geprüft werden: {path}: {ex.Message}", "warning"));
+            diagnostics.Add(new(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyIdentityDto)), $"Referenzkandidat konnte nicht statisch geprüft werden: {path}: {ex.Message}", AssemblyDiagnosticSeverity.Warning));
             identity = null!;
             return false;
         }
@@ -242,7 +242,7 @@ internal sealed class AssemblyReferenceResolver
             null,
             PEStreamOptions.PrefetchEntireImage,
             MetadataReaderOptions.None);
-        return new AssemblyReferenceResolution(null, [], [], [new AssemblySessionDiagnostic(code, message, "error")], resolver);
+        return new AssemblyReferenceResolution(null, [], [], [new AssemblySessionDiagnostic(code, message, AssemblyDiagnosticSeverity.Error)], resolver);
     }
 
     private static IReadOnlyList<string> GetTrustedPlatformAssemblyPaths() =>

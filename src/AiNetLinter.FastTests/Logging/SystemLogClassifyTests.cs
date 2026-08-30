@@ -1,8 +1,13 @@
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using AiNetLinter.Logging;
 using ModelContextProtocol.Protocol;
+using Serilog;
+using Serilog.Core;
+using Serilog.Events;
+using System.Threading;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Logging;
@@ -154,6 +159,67 @@ public sealed class SystemLogClassifyTests
         Assert.Contains("10", formatted);
     }
 
+    [Fact]
+    public void ClassifyException_ErwarteteCancellation_WirdNichtAlsToolExceptionKlassifiziert()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        var details = McpCallLoggingFilter.ClassifyException(
+            new OperationCanceledException(cancellation.Token),
+            requestCancellationRequested: true);
+
+        Assert.Equal(McpCallStatus.Canceled, details.Status);
+        Assert.Null(details.ErrorCode);
+        Assert.Null(details.ErrorMessage);
+    }
+
+    [Fact]
+    public void WriteProcessStartLog_SchreibtNurProzessmetadatenOhneRohesCommandLine()
+    {
+        var sink = new CapturingLogSink();
+        using var logger = new LoggerConfiguration()
+            .MinimumLevel.Verbose()
+            .WriteTo.Sink(sink)
+            .CreateLogger();
+
+        SystemLog.WriteProcessStartLog(logger, "test");
+
+        var logEvent = Assert.Single(sink.Events);
+        var diagnostics = SystemLog.GetProcessStartDiagnostics();
+        Assert.Equal(LogEventLevel.Information, logEvent.Level);
+        Assert.Equal(diagnostics.ProcessId, GetScalar<int>(logEvent, "Pid"));
+        Assert.Equal(diagnostics.ArgumentCount, GetScalar<int>(logEvent, "ArgumentCount"));
+        Assert.Equal(diagnostics.ProcessPath, GetScalar<string>(logEvent, "Executable"));
+        Assert.DoesNotContain("Args", logEvent.Properties.Keys, StringComparer.Ordinal);
+        Assert.DoesNotContain(Environment.CommandLine, logEvent.RenderMessage(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WriteCompletedCall_Canceled_LoggtInformationOhneToolExceptionCode()
+    {
+        var sink = new CapturingLogSink();
+        using var logger = new LoggerConfiguration()
+            .MinimumLevel.Verbose()
+            .WriteTo.Sink(sink)
+            .CreateLogger();
+
+        McpCallLoggingFilter.WriteCompletedCall(
+            logger,
+            new CallLogContext(
+                "test_tool",
+                "{}",
+                4,
+                new McpCallDetails(McpCallStatus.Canceled),
+                null));
+
+        var logEvent = Assert.Single(sink.Events);
+        Assert.Equal(LogEventLevel.Information, logEvent.Level);
+        Assert.Contains("[CANCELED]", logEvent.RenderMessage(), StringComparison.Ordinal);
+        Assert.DoesNotContain(McpCallLoggingFilter.ExceptionErrorCode, logEvent.RenderMessage(), StringComparison.Ordinal);
+        Assert.Null(logEvent.Exception);
+    }
+
     [Theory]
     [InlineData("[WARN]: Irgendwas ist aufgefallen", Serilog.Events.LogEventLevel.Warning)]
     [InlineData("[ERROR]: SOLUTION_NOT_FOUND: fehlt", Serilog.Events.LogEventLevel.Error)]
@@ -171,5 +237,22 @@ public sealed class SystemLogClassifyTests
     public void Classify_OhneDiagnosePraefix_Null(string message)
     {
         Assert.Null(SystemLog.Classify(message));
+    }
+
+    private sealed class CapturingLogSink : ILogEventSink
+    {
+        private readonly List<LogEvent> events = [];
+
+        internal IReadOnlyList<LogEvent> Events => events;
+
+        public void Emit(LogEvent logEvent) => events.Add(logEvent);
+    }
+
+    private static T GetScalar<T>(LogEvent logEvent, string propertyName)
+    {
+        Assert.True(logEvent.Properties.TryGetValue(propertyName, out var property));
+        return Assert.IsType<ScalarValue>(property).Value is T value
+            ? value
+            : throw new Xunit.Sdk.XunitException($"Property '{propertyName}' hat den falschen Typ.");
     }
 }

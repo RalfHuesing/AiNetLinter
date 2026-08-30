@@ -357,11 +357,10 @@ internal static class ExternalSourceGitProcessStartFailureCleanup
                 {
                     process.Kill(entireProcessTree: true);
                 }
-                catch (InvalidOperationException exception)
+                catch (InvalidOperationException ignored)
                 {
                     // Der Prozess kann zwischen HasExited und Kill beendet worden sein.
-                    Debug.WriteLine(
-                        $"Der bekannte Prozess {processId} war vor dem Fallback-Kill bereits beendet: {exception.Message}");
+                    _ = ignored;
                 }
             }
 
@@ -383,8 +382,6 @@ internal static class ExternalSourceGitProcessStartFailureCleanup
         }
         catch (ArgumentException exception)
         {
-            Debug.WriteLine(
-                $"Der bekannte Prozess {processId} war beim Fallback bereits beendet: {exception.Message}");
             failures.Add(new InvalidOperationException(
                 "Der bekannte Git-Prozess konnte beim PID-Fallback nicht mehr als beendet nachgewiesen werden.",
                 exception));

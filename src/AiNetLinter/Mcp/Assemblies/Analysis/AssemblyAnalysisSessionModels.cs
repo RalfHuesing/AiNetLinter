@@ -86,7 +86,7 @@ internal sealed record AssemblyDecompilationCacheKey(
 internal sealed record AssemblySessionDiagnostic(
     string Code,
     string Message,
-    string Severity = "warning");
+    AssemblyDiagnosticSeverity Severity = AssemblyDiagnosticSeverity.Warning);
 
 internal sealed record DecompiledDocument(
     string GeneratedPath,

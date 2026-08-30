@@ -23,6 +23,7 @@ internal enum McpCallStatus
     RecoverableError,
     ProtocolError,
     Loading,
+    Canceled,
     Exception,
 }
 
@@ -102,17 +103,25 @@ internal static class McpCallLoggingFilter
                 }
                 catch (Exception ex)
                 {
-                    details = new McpCallDetails(McpCallStatus.Exception, ExceptionErrorCode, ex.Message);
+                    details = ClassifyException(ex, cancellationToken.IsCancellationRequested);
                     var logContext = new CallLogContext(
                         context.Params.Name,
                         argumentsJson,
                         stopwatch.ElapsedMilliseconds,
                         details,
                         connectionId);
-                    WriteCompletedCall(logContext, ex);
+                    WriteCompletedCall(logContext, details.Status == McpCallStatus.Exception ? ex : null);
                     throw;
                 }
             }));
+    }
+
+    internal static McpCallDetails ClassifyException(Exception exception, bool requestCancellationRequested)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        return exception is OperationCanceledException && requestCancellationRequested
+            ? new McpCallDetails(McpCallStatus.Canceled)
+            : new McpCallDetails(McpCallStatus.Exception, ExceptionErrorCode, exception.Message);
     }
 
     /// <summary>
@@ -279,34 +288,42 @@ internal static class McpCallLoggingFilter
         return false;
     }
 
-    private static void WriteCompletedCall(CallLogContext context, Exception? exception = null)
+    private static void WriteCompletedCall(CallLogContext context, Exception? exception = null) =>
+        WriteCompletedCall(Log.Logger, context, exception);
+
+    internal static void WriteCompletedCall(ILogger logger, CallLogContext context, Exception? exception = null)
     {
-        var logger = context.ConnectionId is { } id
-            ? Log.ForContext("ConnectionId", id)
-            : Log.Logger;
+        ArgumentNullException.ThrowIfNull(logger);
+        var contextualLogger = context.ConnectionId is { } id
+            ? logger.ForContext(nameof(CallLogContext.ConnectionId), id)
+            : logger;
 
         switch (context.Details.Status)
         {
             case McpCallStatus.RecoverableError:
-                LogRecoverableError(logger, context);
+                LogRecoverableError(contextualLogger, context);
                 break;
 
             case McpCallStatus.ProtocolError:
             case McpCallStatus.Exception:
-                LogProtocolError(logger, context, exception);
+                LogProtocolError(contextualLogger, context, exception);
                 break;
 
             case McpCallStatus.Empty:
-                LogStatus(logger, "[EMPTY]", context);
+                LogStatus(contextualLogger, "[EMPTY]", context);
                 break;
 
             case McpCallStatus.Loading:
-                LogStatus(logger, "[LOADING]", context);
+                LogStatus(contextualLogger, "[LOADING]", context);
+                break;
+
+            case McpCallStatus.Canceled:
+                LogStatus(contextualLogger, "[CANCELED]", context);
                 break;
 
             case McpCallStatus.Success:
             default:
-                LogStatus(logger, "[SUCCESS]", context);
+                LogStatus(contextualLogger, "[SUCCESS]", context);
                 break;
         }
     }
