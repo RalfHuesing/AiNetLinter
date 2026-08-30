@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -123,66 +124,17 @@ internal sealed partial class AssemblyAnalysisRegistry
 
             creation = new AssemblyAnalysisRegistryEntryCreation(
                 creationLifetime,
-                CreateSourceProjectEntryAsync(
-                    key,
-                    generation,
-                    creationLifetime.Token,
-                    resourceAcquisition.Lease,
-                    parentSelection,
-                    project));
+                sourceProjectEntryFactory.CreateAsync(
+                    new AssemblyAnalysisSourceProjectEntryCreationParameters(
+                        key,
+                        generation,
+                        creationLifetime.Token,
+                        resourceAcquisition.Lease,
+                        parentSelection,
+                        project)));
             entries.Add(key, creation);
             ObserveCreation(key, creation);
             return creation;
-        }
-    }
-
-    private async Task<AssemblyAnalysisEntry> CreateSourceProjectEntryAsync(
-        string key,
-        long generation,
-        CancellationToken creationToken,
-        ExternalResourceLease? resourceLease,
-        AssemblySourceSelection parentSelection,
-        Project project)
-    {
-        ExternalResourceOperationLease? operation = null;
-        SourceSnapshotLease? projectLease = null;
-        var resourceTransferred = false;
-        var sourceTransferred = false;
-        try
-        {
-            operation = resourceBudget.BeginOperation(creationToken);
-            projectLease = parentSelection.SourceLease.AcquireSibling();
-            var selection = parentSelection.ForProject(projectLease, project)
-                ?? throw new InvalidOperationException("Source-Project-Selection konnte nicht erzeugt werden.");
-            var targetPath = project.FilePath ?? key;
-            var sourceResult = await AssemblyAnalysisContextFactory.CreateSourceProjectContextAsync(
-                targetPath,
-                project,
-                selection,
-                creationToken).ConfigureAwait(false);
-            if (sourceResult.Context is null)
-            {
-                throw new InvalidOperationException(sourceResult.Error ?? "Source-Project-Context konnte nicht erzeugt werden.");
-            }
-
-            var context = sourceResult.Context with { Generation = generation };
-            var entry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
-                targetPath,
-                parentSelection.SourceLease.Snapshot.Solution,
-                context,
-                projectLease,
-                resourceLease,
-                CreateReferenceLeaseFactory(selection)));
-            resourceTransferred = true;
-            sourceTransferred = true;
-            projectLease = null;
-            return entry;
-        }
-        finally
-        {
-            operation?.Dispose();
-            if (!resourceTransferred) resourceLease?.Dispose();
-            if (!sourceTransferred) projectLease?.Dispose();
         }
     }
 

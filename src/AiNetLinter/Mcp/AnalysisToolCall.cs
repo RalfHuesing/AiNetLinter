@@ -86,7 +86,7 @@ internal static class ProjectAnalysisDispatcher
 
         if (resolution.Target!.TargetType == AnalysisTargetType.Assembly)
         {
-            return UnsupportedAssemblyTarget();
+            return UnsupportedAssemblyTarget(resolution.Target.CanonicalPath);
         }
 
         return await ProjectToolCall.ExecuteFilesystemAsync(

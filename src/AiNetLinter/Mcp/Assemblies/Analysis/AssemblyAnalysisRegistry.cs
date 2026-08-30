@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -28,9 +29,10 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
     private readonly Dictionary<string, AssemblyAnalysisRegistryEntryCreation> entries = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, long> nextGenerations = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<Task> retiredEntries = [];
-    private readonly IAssemblySourceResolver? sourceOrchestrator;
     private readonly Func<string, AssemblyFingerprint>? fingerprintFactory;
     private readonly AssemblyAnalysisResourceBudget resourceBudget;
+    private readonly AssemblyAnalysisRegistryEntryFactory entryFactory;
+    private readonly AssemblyAnalysisSourceProjectEntryFactory sourceProjectEntryFactory;
     private int disposed;
 
     internal AssemblyAnalysisRegistry(
@@ -38,9 +40,10 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         Func<string, AssemblyFingerprint>? fingerprintFactory = null,
         ExternalResourceRegistry? resourceRegistry = null)
     {
-        this.sourceOrchestrator = sourceOrchestrator;
         this.fingerprintFactory = fingerprintFactory;
         resourceBudget = new(resourceRegistry);
+        entryFactory = new(sourceOrchestrator, resourceBudget, CreateReferenceLeaseFactory);
+        sourceProjectEntryFactory = new(resourceBudget, CreateReferenceLeaseFactory);
     }
 
     internal int ResidentCount
@@ -278,67 +281,6 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         DisposeFailureAggregator.ThrowIfAny(failures);
     }
 
-    private async Task<AssemblyAnalysisEntry> CreateEntryAsync(
-        string canonicalPath,
-        long targetGeneration,
-        CancellationToken creationToken,
-        ExternalResourceLease? resourceLease)
-    {
-        IDisposable? sourceScope = null;
-        AssemblyAnalysisSession? session = null;
-        ExternalResourceOperationLease? operation = null;
-        var resourceTransferred = false;
-        try
-        {
-            operation = resourceBudget.BeginOperation(creationToken);
-
-            var sourceAttempt = await TryCreateSourceEntryAsync(canonicalPath, targetGeneration, creationToken, resourceLease).ConfigureAwait(false);
-            sourceScope = sourceAttempt.Scope;
-            if (sourceAttempt.Entry is not null)
-            {
-                sourceScope = null;
-                resourceTransferred = true;
-                return sourceAttempt.Entry;
-            }
-
-            session = new AssemblyAnalysisSession(new AssemblyAnalysisSessionOptions(
-                canonicalPath,
-                GenerationStart: targetGeneration - 1));
-            var refresh = await session.RefreshAsync(creationToken).ConfigureAwait(false);
-            var sessionGeneration = session.CurrentGeneration;
-            if (sessionGeneration is null)
-            {
-                throw new InvalidOperationException(string.Join(" ", refresh.Diagnostics));
-            }
-
-            var context = AssemblyAnalysisContextFactory.FromGeneration(sessionGeneration);
-            context = context with
-            {
-                Diagnostics = CombineContextDiagnostics(context.Diagnostics, sourceAttempt.Diagnostics),
-            };
-            var fallbackEntry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
-                canonicalPath,
-                sessionGeneration.Snapshot.Solution,
-                context,
-                session,
-                resourceLease,
-                CreateReferenceLeaseFactory(sourceAttempt.Selection)));
-            resourceTransferred = true;
-            session = null;
-            return fallbackEntry;
-        }
-        finally
-        {
-            operation?.Dispose();
-            if (!resourceTransferred) resourceLease?.Dispose();
-            AssemblyAnalysisRegistryDisposal.TryDispose(sourceScope, "Source-Selection-Scope");
-            if (session is not null)
-            {
-                await AssemblyAnalysisRegistryDisposal.TryDisposeAsync(session, "Assembly-Session").ConfigureAwait(false);
-            }
-        }
-    }
-
     private AssemblyAnalysisRegistryEntryCreation CreateEntry(string canonicalPath)
     {
         var generation = nextGenerations.TryGetValue(canonicalPath, out var previous)
@@ -360,7 +302,7 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
 
         var creation = new AssemblyAnalysisRegistryEntryCreation(
             creationLifetime,
-            CreateEntryAsync(canonicalPath, generation, creationLifetime.Token, resourceLease));
+            entryFactory.CreateAsync(canonicalPath, generation, creationLifetime.Token, resourceLease));
         ObserveCreation(canonicalPath, creation);
         return creation;
     }
@@ -379,54 +321,6 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         finally
         {
             creation.DisposeCancellationSource();
-        }
-    }
-
-    private async Task<(AssemblyAnalysisEntry? Entry, IDisposable? Scope, IReadOnlyList<string> Diagnostics, AssemblySourceSelection? Selection)> TryCreateSourceEntryAsync(
-        string canonicalPath,
-        long generation,
-        CancellationToken creationToken,
-        ExternalResourceLease? resourceLease)
-    {
-        if (sourceOrchestrator is null) return (null, null, Array.Empty<string>(), null);
-
-        var resolution = await sourceOrchestrator.ResolveForRegistryAsync(canonicalPath, creationToken).ConfigureAwait(false);
-        var diagnostics = AssemblyAnalysisToolSupport.FormatExternalDiagnostics(resolution.Diagnostics).ToArray();
-        if (resolution.Selection is null) return (null, resolution.Lifetime, diagnostics, null);
-
-        try
-        {
-            var sourceResult = await AssemblyAnalysisContextFactory.CreateAsync(
-                new AssemblyAnalysisContextRequest(
-                    canonicalPath,
-                    ConsumerSolution: null,
-                    ReceiverType: null,
-                    resolution.Selection,
-                    creationToken)).ConfigureAwait(false);
-            if (sourceResult.Context is null) return (null, resolution.Lifetime, diagnostics, null);
-
-            var context = sourceResult.Context with
-            {
-                Generation = generation,
-                Diagnostics = sourceResult.Context.Diagnostics
-                    .Concat(diagnostics)
-                    .Distinct(StringComparer.Ordinal)
-                    .Take(100)
-                    .ToList(),
-            };
-            var entry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
-                canonicalPath,
-                resolution.Selection.SourceLease.Snapshot.Solution,
-                context,
-                resolution.Lifetime,
-                resourceLease,
-                CreateReferenceLeaseFactory(resolution.Selection)));
-            return (entry, null, diagnostics, resolution.Selection);
-        }
-        catch
-        {
-            AssemblyAnalysisRegistryDisposal.TryDispose(resolution.Lifetime, "Source-Selection-Scope nach Creation-Fehler");
-            throw;
         }
     }
 
@@ -466,11 +360,6 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
             }
         }
     }
-
-    private static IReadOnlyList<string> CombineContextDiagnostics(
-        IReadOnlyList<string> context,
-        IReadOnlyList<string> source) =>
-        context.Concat(source).Distinct(StringComparer.Ordinal).Take(100).ToList();
 
     private static AssemblyAnalysisLeaseResult Failure(string message, bool isError = true) =>
         new(null, isError

@@ -36,6 +36,27 @@ public sealed class WiringFilesystemContractTests
     }
 
     [Fact]
+    public async Task FilesystemDispatch_AssemblyTargetReturnsUnsupportedWithCanonicalPath()
+    {
+        using var tempDir = TestTempDirectory.Create("wiring-filesystem-assembly-");
+        var assemblyPath = Path.Combine(tempDir.DirectoryPath, ".", "sample.dll");
+        var canonicalPath = Path.GetFullPath(assemblyPath);
+        File.WriteAllBytes(canonicalPath, [0]);
+        await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+
+        var result = await ProjectAnalysisDispatcher.ExecuteFilesystemAsync(
+            registry,
+            new AnalysisTargetRequest("assembly", assemblyPath),
+            ThrowingFilesystemCallback);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = TextOf(result);
+        Assert.Contains("ASSEMBLY_TARGET_UNSUPPORTED", text, StringComparison.Ordinal);
+        Assert.Contains(canonicalPath, text, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(registry.Snapshots());
+    }
+
+    [Fact]
     public async Task FilesystemDispatch_InvokesCallbackWhileServerIsLoading()
     {
         using var tempDir = TestTempDirectory.Create("wiring-filesystem-loading-");

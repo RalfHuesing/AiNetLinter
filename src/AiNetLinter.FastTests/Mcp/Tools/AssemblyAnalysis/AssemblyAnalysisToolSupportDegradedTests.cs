@@ -48,7 +48,7 @@ public sealed class AssemblyAnalysisToolSupportDegradedTests
         AssemblyContext? context = null;
         AssemblySourceSelectionScope? scope = null;
 
-        var result = await AssemblyAnalysisToolSupport.ExecuteAsync(
+        var result = await AssemblyAnalysisSourceToolSupport.ExecuteAsync(
             new AssemblyToolExecutionParameters(
                 null,
                 assemblyPath,

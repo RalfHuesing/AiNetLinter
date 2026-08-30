@@ -1455,3 +1455,56 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
   `cycle_state: active`; die vorhandene Korrekturrunde bleibt erhalten.
 - Nächste Aktion: frischen Epic-4-Implementierer auf die verbleibenden
   tasknahen Regel-/Capability-Befunde ansetzen; danach unabhängiger Review.
+
+## 2026-08-30 — Epic 4 Implementierung abgeschlossen
+
+- Run-ID: `resume-2026-08-30-epic-4-implement`
+- Epic: 4 — Capability-Matrix, Host-Integration und End-to-End-Verträge
+- Rolle: Implementierer
+- Subagent-ID: `01a0545f-5957-7bf0-bb60-a634ec0d6287`
+- Diff-Baseline: `5378facb`
+- Status: `completed`; kein Commit durch den Implementierer.
+- Ergebnis und Änderungen:
+  - TD-011 behoben: `ExecuteFilesystemAsync` übergibt beim Assembly-
+    Unsupported-Ergebnis nun den kanonischen Zielpfad. Der Regressionstest
+    liegt in `WiringFilesystemContractTests.cs`.
+  - `WiringContractTests.cs` wurde sauber in drei Dateien unter `Mcp/Wiring/`
+    aufgeteilt; alle 15 ursprünglichen Tests bleiben erhalten.
+  - `McpServerAllToolsE2ETests.cs` wurde in vier fachliche Testklassen unter
+    `Mcp/Tools/` aufgeteilt. Ein redundanter Missing-Argument-Test entfiel;
+    33 eindeutige Tests bleiben. Testparallelität wurde nicht verändert.
+  - Kleine Footprint-Splits liegen in den Registry-Entry-/Source-Project-
+    Factories unter `Analysis/Factories/`, in
+    `AssemblyAnalysisDiagnostics.cs`, in Source-/Configuration-Support und
+    in `GetServerHealthResponseBuilder.cs`.
+  - `code-map.md` wurde aktualisiert; `roadmap.md`, `execution-log.md`,
+    `task-state.md` und Step-Dateien wurden nicht verändert.
+- Verifikation nach der letzten Codeänderung:
+  - `dotnet build --no-restore`: erfolgreich, 0 Warnungen, 0 Fehler.
+  - Gezielte FastTests mit Assembly-, Wiring- und Registry-Filtern: 51/51
+    erfolgreich.
+  - Gezielte IntegrationTests mit den vier neuen E2E-Klassen: 33/33
+    erfolgreich.
+  - `find_duplicates(targetType=project, targetPath=<RepoRoot>)`: Produktion
+    1 absichtliches Adapter-Duplikat; Fast-/Integration-Testscope 0; keine
+    sichere Zentralisierung.
+  - `find_dead_code(targetType=project, targetPath=<RepoRoot>)`: Produktion
+    40 LOW-Kandidaten, 0 HIGH; Fast-/Integration-Testscope 0.
+    `ResourceHealth` bleibt wegen möglicher interner Diagnose-/indirekter
+    Bindung erhalten.
+  - `find_magic_values(targetType=project, targetPath=<RepoRoot>)`:
+    Produktion 0; Testfunde ausschließlich Fixture-/Identifier-Werte.
+  - `safeguard(targetType=project, targetPath=<RepoRoot>)`: alle drei Scopes
+    PASS; verbleibend ausschließlich `AssemblyAnalysisRegistry` mit
+    `3594 > 2500`.
+  - Finaler `get_violations(targetType=project, targetPath=<RepoRoot>)` als
+    letzter codebezogener MCP-Schritt: Produktion genau 1 Warnung
+    (`AIContextFootprint` Registry), Fast und Integration 0.
+- Offener Befund: `AssemblyAnalysisRegistry` bleibt `accepted-deferred`.
+  Der Footprint hängt an `McpCodeGraphServer`, `ExternalResourceRegistry`
+  und `ExternalResourceLease`; ein Facade-Experiment erzeugte Middleman- und
+  weiteren Footprint-Drift. Ein weiterer Split ist nicht sicher scope-nah.
+- Non-Goals: kein externes Assembly ausgeführt, kein externes Repository
+  verändert.
+- Nächste Aktion: Implementierungsstand sofort checkpointen und unabhängig
+  reviewen; danach bei Genehmigung Epic 4 schließen.

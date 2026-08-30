@@ -40,9 +40,10 @@ Abschlussverifikation fertigstellen.
   Textkanal.
 - `AssemblyAnalysisRegistry.TryLeaseCurrentAsync` hinterlegt pro Entry eine
   `AssemblyReferenceLeaseFactory`. `LeaseReferencedAsync` routet physische
-  Ziele und Source-Project-Ziele; die Source-Project-Erzeugung liegt in
-  `AssemblyAnalysisRegistry.SourceProjects.cs` und nutzt dieselben Entry-,
-  CreationBarrier-, Resource-Budget- und Disposal-Pfade.
+  Ziele und Source-Project-Ziele; die Entry-Erzeugung liegt in
+  `AssemblyAnalysisRegistryEntryFactory` bzw. `AssemblyAnalysisSourceProjectEntryFactory`,
+  während `AssemblyAnalysisRegistry.SourceProjects.cs` weiterhin die
+  Registry-Lifecycle- und Health-Pfade hält.
 - `AssemblyReferenceResolver.ResolveSourceProjectReferences` delegiert an
   `References/SourceProjectReferenceGraph`. Der Graph traversiert ausschließlich
   Projekte der gemappten Snapshot-Solution und macht Missing, Cycle, Dedup,
@@ -72,10 +73,10 @@ Abschlussverifikation fertigstellen.
   `McpServerToolCollectionFactory.Build` und
   `ServerMaintenanceToolRegistrations.Register` halten diese Composition
   optional testbar, im lokalen Default-Host aber vollständig verdrahtet.
-- `AssemblyAnalysisDispatcher.CreateRoute` validiert auch bei einer
-  unsupported Assembly-Fähigkeit den Target-Pfad und erzeugt den strukturierten
-  `ASSEMBLY_TARGET_UNSUPPORTED`-Status mit kanonischem Pfad statt einer
-  pfadlosen Erfolgssimulation. `AssemblyReferenceSessionExpander` projiziert
+- `ProjectAnalysisDispatcher.ExecuteFilesystemAsync` validiert auch beim
+  unsupported Assembly-Dateisystempfad den Target-Pfad und erzeugt den
+  `ASSEMBLY_TARGET_UNSUPPORTED`-Status mit kanonischem Pfad; der Regressionstest
+  liegt in `WiringFilesystemContractTests`. `AssemblyReferenceSessionExpander` projiziert
   Missing/Cycle/Node-Limit nun zusätzlich in die gemeinsame Diagnose- und
   Completeness-Liste.
 - `FindAssemblyExtensionsTool.ExecuteAsync(AssemblyAnalysisLease, ...)` reicht
@@ -90,10 +91,14 @@ Abschlussverifikation fertigstellen.
   `OriginKind` erhalten.
 - `IAssemblyAnalysisRegistry.SnapshotsAsync` und die Health-Snapshot-Methoden in
   `AssemblyAnalysisRegistry.SourceProjects.cs` liefern die residente
-  Assembly-/Source-Project-Sicht. `get_server_health` aggregiert Projekt- und
+ Assembly-/Source-Project-Sicht. `get_server_health` aggregiert Projekt- und
   Assembly-Sessions
   getrennt; ein Assembly-Target lädt/zeigt gezielt eine Session über dieselbe
   Registry und trägt Origin, Snapshot, Hash, Generation, Status und Diagnosen.
+- `AssemblyAnalysisSourceToolSupport` kapselt den source-backed Ausführungspfad;
+  `AssemblyAnalysisSourceConfigurationSupport` hält nur Konfigurationsfehler-
+  und Diagnoseformatierung. `GetServerHealthResponseBuilder` trennt die
+  Antwort-/Textprojektion vom Target-Routing in `GetServerHealthTool`.
 - `DaemonHostMcpContractTests` behandelt source-backed Root plus Source-Project
   Child als zwei stabile Resident-Sessions; die Resident-Buchhaltung wird nicht
   durch Wiederholungen kaschiert.
@@ -126,6 +131,9 @@ Produktionspfad:
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisEntry.cs`
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisRegistry.cs`
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisRegistry.SourceProjects.cs`
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/Factories/AssemblyAnalysisRegistryEntryFactory.cs`
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/Factories/AssemblyAnalysisSourceProjectEntryFactory.cs`
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisDiagnostics.cs`
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisSessionModels.cs`
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyReferenceResolver.cs`
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySourceSelection.cs`
@@ -138,11 +146,14 @@ Produktionspfad:
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySessionStatusExtensions.cs`
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs`
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisModels.cs`
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisSourceToolSupport.cs`
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisSourceConfigurationSupport.cs`
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/FindAssemblyExtensionsTool.cs`
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/InspectAssemblyTool.cs`
 - `src/AiNetLinter/Mcp/Tools/McpToolRegistrationOptions.cs`
 - `src/AiNetLinter/Mcp/Tools/ServerMaintenance/GetServerHealthModels.cs`
 - `src/AiNetLinter/Mcp/Tools/ServerMaintenance/GetServerHealthTool.cs`
+- `src/AiNetLinter/Mcp/Tools/ServerMaintenance/GetServerHealthResponseBuilder.cs`
 - `src/AiNetLinter/Mcp/Registration/AnalysisToolRegistrations.cs`
 - `src/AiNetLinter/Mcp/Registration/FileStructureToolRegistrations.cs`
 - `src/AiNetLinter/Mcp/Registration/SymbolGraphToolRegistrations.cs`
@@ -162,10 +173,15 @@ Test-/Fixturepfad:
 - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRouteTests.cs`
 - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisDispatcherCapabilityTests.cs`
 - `src/AiNetLinter.FastTests/Mcp/Daemon/DaemonHostMcpContractTests.cs`
-- `src/AiNetLinter.FastTests/Mcp/WiringContractTests.cs`
+- `src/AiNetLinter.FastTests/Mcp/Wiring/WiringToolCollectionContractTests.cs`
+- `src/AiNetLinter.FastTests/Mcp/Wiring/WiringProjectContractTests.cs`
+- `src/AiNetLinter.FastTests/Mcp/WiringFilesystemContractTests.cs`
 - `src/AiNetLinter.FastTests/Mcp/McpAgentGuideRegistrationTests.cs`
 - `src/AiNetLinter.FastTests/Mcp/Assemblies/SourceSnapshotRegistryTests.cs`
-- `src/AiNetLinter.IntegrationTests/Mcp/McpServerAllToolsE2ETests.cs`
+- `src/AiNetLinter.IntegrationTests/Mcp/Tools/McpServerToolBehaviorE2ETests.cs`
+- `src/AiNetLinter.IntegrationTests/Mcp/Tools/McpServerArgumentValidationE2ETests.cs`
+- `src/AiNetLinter.IntegrationTests/Mcp/Tools/McpServerToolContractE2ETests.cs`
+- `src/AiNetLinter.IntegrationTests/Mcp/Tools/McpServerAssemblyHealthE2ETests.cs`
 
 ## Verifizierte Tests und vorhandene Nachweise
 
@@ -184,13 +200,13 @@ Test-/Fixturepfad:
   Node-Limit über den produktiven Dispatcher-/Inspect-Route nach und prüft
   separat, dass ein fehlgeschlagener Child-Lease in `find_assembly_extensions`
   als Diagnose und `partial` erscheint.
-- `WiringContractTests.ToolCollection_AdvertisesCompleteProjectAssemblyCapabilityMatrix`
+- `WiringToolCollectionContractTests.ToolCollection_AdvertisesCompleteProjectAssemblyCapabilityMatrix`
   prüft die Capability-Klassen in `tools/list` für alle 29 Tools einschließlich
   project-only, common read-only und Assembly-only.
 - `DaemonHostMcpContractTests.RunMcpSessionAsync_RegisteredAssemblyToolsReuseCompositionAcrossSessions`
   prüft die gemeinsame Host-Composition über zwei MCP-Sessions und den stabilen
   Resident-Count von Root plus Source-Project-Child.
-- `McpServerAllToolsE2ETests.GetServerHealth_UsesAggregateProjectAndAssemblyTargetVariants`
+- `McpServerAssemblyHealthE2ETests.GetServerHealth_UsesAggregateProjectAndAssemblyTargetVariants`
   prüft Aggregate, geladenen Projekt-Key und gezielten Assembly-Health-Call über
   den lokalen In-Proc-Default-Host.
 - `McpAgentGuideRegistrationTests.BuildResource_IsReadableWithoutProjectAndContainsIntegrationContract`
@@ -202,16 +218,19 @@ Test-/Fixturepfad:
   bestehende Nachweise für Lease-, Graph-, Resolver-, Budget-, Health-, TTL/LRU-,
   CreationBarrier- und Cancellation-Verträge wiederverwendet.
 
-Die aktuell installierte MCP-Tool-Registry akzeptiert für diese Installation
-nur das Pflichtfeld `projectRoot` (absolut); die Workflow-Regel und die aktuelle
-Quellregistrierung verwenden zusätzlich `targetType=project|assembly` und
-`targetPath`. Die tatsächlichen semantischen MCP-Abfragen wurden deshalb mit
-`projectRoot=C:\\Daten\\Entwicklung\\Ralf\\AiNetLinter` und passenden
-`scopeFilter`-Werten protokolliert; die Schemaabweichung bleibt ein
-Installations-/Deployment-Risiko und ist kein zusätzlicher Source-Vertrag.
-Der laufende Daemon meldete dabei Version 1.0.154; ein Neustart oder
-Deployment der MCP-Installation ist erforderlich, bevor die neuen
-`targetType`/`targetPath`- und Assembly-Session-Verträge live nutzbar sind.
+Die Live-MCP-Tool-Registry ist für dieses Projekt geladen und akzeptiert die
+aktuellen zielgebundenen Aufrufe mit `targetType=project|assembly` und absolutem
+`targetPath`; `get_server_health` meldet den geladenen Projekt-Key bei Version
+1.0.154. Die semantischen Status- und Footprint-Aussagen dieser Karte stammen
+aus diesen aktuellen Projekt-Snapshots.
+
+Epic-4-Randbefunde: `AssemblyAnalysisToolSupport`, `AssemblyAnalysisSourceToolSupport`
+und `GetServerHealthTool` liegen nach den kleinen Facade-/Builder-Splits unter
+dem AIContextFootprint-Limit. `AssemblyAnalysisRegistry` bleibt mit 3594 > 2500
+accepted-deferred: sein Lease-Vertrag zieht `AssemblyAnalysisLeaseResult` mit
+dem produktiven `McpCodeGraphServer`-/Resource-Lifecycle ein; ein experimenteller
+Store-Facade-Schnitt erzeugte stattdessen einen Middle-Man und einen weiteren
+Footprint-Verstoß. Die fachlich klaren Entry-Factories bleiben aktiv.
 
 ## Epic-Zuordnung
 

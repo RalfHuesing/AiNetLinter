@@ -44,7 +44,7 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         using var cancellation = new CancellationTokenSource();
         AssemblyContext? context = null;
         AssemblySourceSelectionScope? observedScope = null;
-        var result = await AssemblyAnalysisToolSupport.ExecuteAsync(
+        var result = await AssemblyAnalysisSourceToolSupport.ExecuteAsync(
             CreateParameters(
                 assemblyPath,
                 observed =>
@@ -94,7 +94,7 @@ public sealed partial class AssemblyAnalysisToolSupportTests
             new ExternalSourceProviderResult(true, [], duplicateSnapshot));
         var orchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], provider, registry);
         AssemblySourceSelectionScope? firstScope = null;
-        var firstResult = await AssemblyAnalysisToolSupport.ExecuteAsync(
+        var firstResult = await AssemblyAnalysisSourceToolSupport.ExecuteAsync(
             CreateParameters(
                 assemblyPath,
                 _ => AssertLiveSelection(firstScope, ExternalSourceMatchState.Matched)),
@@ -107,7 +107,7 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         Assert.True(firstSelection.SourceLease.IsDisposed);
         Assert.Equal(1, registry.ResidentCount);
         AssemblySourceSelectionScope? secondScope = null;
-        var secondResult = await AssemblyAnalysisToolSupport.ExecuteAsync(
+        var secondResult = await AssemblyAnalysisSourceToolSupport.ExecuteAsync(
             CreateParameters(
                 assemblyPath,
                 _ => AssertLiveSelection(secondScope, ExternalSourceMatchState.Matched)),
@@ -140,7 +140,7 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         var provider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(false, []));
         var orchestrator = CreateConfiguredOrchestrator(temp, ["OtherAssembly"], provider, registry);
         AssemblyContext? context = null;
-        var result = await AssemblyAnalysisToolSupport.ExecuteAsync(
+        var result = await AssemblyAnalysisSourceToolSupport.ExecuteAsync(
             CreateParameters(assemblyPath, observed => context = observed),
             orchestrator);
         Assert.NotEqual(true, result.IsError);
@@ -182,7 +182,7 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         var orchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], provider, registry);
         AssemblyContext? context = null;
         AssemblySourceSelectionScope? observedScope = null;
-        var result = await AssemblyAnalysisToolSupport.ExecuteAsync(
+        var result = await AssemblyAnalysisSourceToolSupport.ExecuteAsync(
             CreateParameters(assemblyPath, observed => context = observed),
             orchestrator,
             scope => observedScope = scope);
@@ -219,7 +219,7 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         AssemblyContext? context = null;
         AssemblySourceSelectionScope? scope = null;
 
-        var result = await AssemblyAnalysisToolSupport.ExecuteAsync(
+        var result = await AssemblyAnalysisSourceToolSupport.ExecuteAsync(
             CreateParameters(assemblyPath, observed => context = observed),
             orchestrator,
             observed => scope = observed);
@@ -261,7 +261,7 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         AssemblyContext? invalidContext = null;
         AssemblySourceSelectionScope? invalidScope = null;
 
-        var invalidResult = await AssemblyAnalysisToolSupport.ExecuteAsync(
+        var invalidResult = await AssemblyAnalysisSourceToolSupport.ExecuteAsync(
             CreateParameters(assemblyPath, observed => invalidContext = observed),
             invalidOrchestrator,
             scope => invalidScope = scope);
@@ -283,7 +283,7 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         var noMatchOrchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], noMatchProvider, noMatchRegistry);
         AssemblySourceSelectionScope? noMatchScope = null;
         AssemblyContext? noMatchContext = null;
-        await AssemblyAnalysisToolSupport.ExecuteAsync(
+        await AssemblyAnalysisSourceToolSupport.ExecuteAsync(
             CreateParameters(
                 assemblyPath,
                 observed =>
@@ -310,7 +310,7 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         var ambiguousOrchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], ambiguousProvider, ambiguousRegistry);
         AssemblySourceSelectionScope? ambiguousScope = null;
         AssemblyContext? ambiguousContext = null;
-        await AssemblyAnalysisToolSupport.ExecuteAsync(
+        await AssemblyAnalysisSourceToolSupport.ExecuteAsync(
             CreateParameters(
                 assemblyPath,
                 observed =>
@@ -354,7 +354,7 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         var orchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], provider, registry);
         AssemblySourceSelectionScope? observedScope = null;
         var builderCalled = false;
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => AssemblyAnalysisToolSupport.ExecuteAsync(
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => AssemblyAnalysisSourceToolSupport.ExecuteAsync(
             CreateParameters(assemblyPath, _ => builderCalled = true, cancellation.Token),
             orchestrator,
             scope => observedScope = scope));
@@ -389,7 +389,7 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         AssemblySourceSelectionScope? observedScope = null;
         const string builderError = "Result-Builder fehlgeschlagen";
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            AssemblyAnalysisToolSupport.ExecuteAsync(
+            AssemblyAnalysisSourceToolSupport.ExecuteAsync(
                 CreateParameters(
                     assemblyPath,
                     _ => { },

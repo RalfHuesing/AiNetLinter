@@ -63,16 +63,18 @@ Bericht festgehalten.
 ## TD-007 — Assembly-Analyse-Footprint weiter aufteilen
 
 - Schweregrad: P2
-- Scope: `AssemblyAnalysisRegistry`, `AssemblyAnalysisToolSupport`
-- Evidenz: Der Korrekturrunden-2-Implementierer meldet im letzten gezielten
-  Safeguard-/MCP-Nachweis weiterhin zentrale `AIContextFootprint`-Warnungen
-  für diese beiden Verantwortungsbereiche. Ein Split wäre ein separates
-  Refactoring und ist für die beiden behobenen P1-Ursachen nicht erforderlich.
+- Scope: `AssemblyAnalysisRegistry`
+- Evidenz: Der Epic-4-Implementierer hat `AssemblyAnalysisToolSupport`, die
+  Source-/Configuration-Supportpfade und `GetServerHealthTool` mit kleinen
+  Factory-/Facade-Splits unter das `AIContextFootprint`-Limit gebracht. Die
+  Registry bleibt im aktuellen MCP-Nachweis mit `3594 > 2500` auffällig; ihr
+  Lease-Vertrag zieht `McpCodeGraphServer`, `ExternalResourceRegistry` und
+  `ExternalResourceLease` in den transitiven Kontext.
 - Disposition: `accepted-deferred`
-- Nächster Schritt: in einem eigenständigen Verantwortlichkeits-Refactoring
-  prüfen, ob Registry-, Route- und Tool-Support-Kontext ohne Vertragsdrift
-  weiter zerlegt werden können; dabei Safeguard und get_violations erneut
-  bewerten.
+- Nächster Schritt: nur in einem eigenständigen Verantwortlichkeits-
+  Refactoring prüfen, ob der Registry-Kontext ohne Middleman, Vertragsdrift
+  oder neue Footprint-Verstöße weiter zerlegt werden kann; dabei Safeguard und
+  get_violations erneut bewerten.
 - Log-Anker: `execution-log.md` — Epic-3-Korrekturrunde-2-Implementierer
   abgeschlossen
 
@@ -124,26 +126,10 @@ Bericht festgehalten.
   übrigen projektgebundenen Routen den pfadbezogenen Status liefern. Die
   Antwort bleibt fail-closed, ist aber nicht vollständig konsistent zum
   dokumentierten Unsupported-Vertrag.
-- Disposition: `accepted-deferred`
-- Nächster Schritt: im nächsten passenden Capability-/Dokumentationsabschnitt
-  den kanonischen pfadbezogenen Unsupported-Builder verwenden und einen
-  gezielten Route-Test ergänzen, ohne bestehende Resolver-Tests zu duplizieren.
-- Log-Anker: `execution-log.md` — Epic-4-Review
-
-## TD-011 — Pfadbezogenen Unsupported-Status für get_file_tree nutzen
-
-- Schweregrad: P2
-- Scope: `AnalysisToolCall`, `get_file_tree`-Assembly-Route
-- Evidenz: Der unabhängige Epic-4-Review stellte fest, dass die Assembly-
-  Route `UnsupportedAssemblyTarget()` ohne Zielpfad verwendet, während die
-  übrigen projektgebundenen Routen den pfadbezogenen Status liefern. Die
-  Antwort bleibt fail-closed, ist aber nicht vollständig konsistent zum
-  dokumentierten Unsupported-Vertrag.
-- Disposition: `accepted-deferred`
-- Nächster Schritt: im nächsten passenden Capability-/Dokumentationsabschnitt
-  den kanonischen pfadbezogenen Unsupported-Builder verwenden und einen
-  gezielten Route-Test ergänzen, ohne bestehende Resolver-Tests zu duplizieren.
-- Log-Anker: `execution-log.md` — Epic-4-Review
+- Disposition: `fixed`
+- Nächster Schritt: im Abschluss-Review und bei den Abschluss-Gates die
+  kanonische Pfadprojektion und den gezielten Route-Test weiterverwenden.
+- Log-Anker: `execution-log.md` — Epic-4-Implementierung
 
 ## TD-005 — Source-Ressourcen vor Materialisierung budgetieren
 

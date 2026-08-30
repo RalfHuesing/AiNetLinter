@@ -40,7 +40,7 @@ internal static class FindAssemblyExtensionsTool
         CancellationToken ct,
         IAssemblySourceSelectionResolver orchestrator)
     {
-        return await AssemblyAnalysisToolSupport.ExecuteAsync(
+        return await AssemblyAnalysisSourceToolSupport.ExecuteAsync(
             CreateParameters(state, arguments, ct),
             orchestrator);
     }

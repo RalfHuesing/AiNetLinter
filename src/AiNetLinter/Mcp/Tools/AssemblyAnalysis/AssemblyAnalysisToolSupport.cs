@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -28,56 +29,6 @@ internal static class AssemblyAnalysisToolSupport
         }
 
         return parameters.BuildResult(preparation.FullPath!, preparation.Context!, parameters.MaxResults);
-    }
-
-    internal static async Task<CallToolResult> ExecuteAsync(
-        AssemblyToolExecutionParameters parameters,
-        IAssemblySourceSelectionResolver orchestrator,
-        Action<AssemblySourceSelectionScope>? observeScope = null)
-    {
-        ArgumentNullException.ThrowIfNull(orchestrator);
-
-        if (!TryPrepareInput(
-                parameters.State,
-                parameters.AssemblyPath,
-                out var fullPath,
-                out var inputError))
-        {
-            return inputError!;
-        }
-
-        using var source = await orchestrator.ResolveAsync(
-            fullPath!,
-            parameters.CancellationToken).ConfigureAwait(false);
-        observeScope?.Invoke(source);
-        if (source.Status is AssemblySourceSelectionStatus.ConfigurationFailure)
-        {
-            return CreateConfigurationFailureResult(source, fullPath!);
-        }
-
-        var (context, error) = await AssemblyAnalysisService.CreateContextAsync(
-            new AssemblyAnalysisContextRequest(
-                fullPath!,
-                parameters.State?.GetCurrentSolution(),
-                parameters.ReceiverType,
-                source.Selection,
-                parameters.CancellationToken)).ConfigureAwait(false);
-        if (context is null)
-        {
-            var diagnosticText = FormatExternalDiagnostics(source.Diagnostics);
-            return McpToolResults.CompilationError(
-                AppendDiagnostics(error ?? "Assembly konnte nicht analysiert werden.", diagnosticText),
-                fullPath);
-        }
-
-        var diagnostics = context.Diagnostics
-            .Concat(FormatExternalDiagnostics(source.Diagnostics))
-            .Where(diagnostic => !string.IsNullOrWhiteSpace(diagnostic))
-            .Distinct(StringComparer.Ordinal)
-            .Take(100)
-            .ToList();
-        var enrichedContext = context with { Diagnostics = diagnostics };
-        return parameters.BuildResult(fullPath!, enrichedContext, parameters.MaxResults);
     }
 
     internal static async Task<AssemblyToolPreparation> PrepareAsync(
@@ -106,7 +57,7 @@ internal static class AssemblyAnalysisToolSupport
         return new(fullPath, context, null);
     }
 
-    private static bool TryPrepareInput(
+    internal static bool TryPrepareInput(
         McpCodeGraphServer? state,
         string? assemblyPath,
         out string? fullPath,
@@ -132,34 +83,6 @@ internal static class AssemblyAnalysisToolSupport
         return true;
     }
 
-    internal static IReadOnlyList<string> FormatExternalDiagnostics(
-        IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics) =>
-        diagnostics
-            .Where(diagnostic => !string.IsNullOrWhiteSpace(diagnostic.Message))
-            .Select(diagnostic =>
-                $"External-Source-Diagnose [{diagnostic.Severity}] {diagnostic.Code}: {diagnostic.Message} ({diagnostic.Location})")
-            .Distinct(StringComparer.Ordinal)
-            .Take(100)
-            .ToList();
-
-    private static CallToolResult CreateConfigurationFailureResult(
-        AssemblySourceSelectionScope source,
-        string assemblyPath)
-    {
-        var diagnostics = FormatExternalDiagnostics(source.Diagnostics);
-        var code = source.Diagnostics.FirstOrDefault()?.Code
-            ?? ExternalSourceConfigurationDiagnosticCodes.ExternalSourcesSectionInvalid;
-        return McpToolResults.Recoverable(
-            code,
-            AppendDiagnostics("Die externe Source-Konfiguration ist ungültig.", diagnostics),
-            context: assemblyPath,
-            hint: "ExternalSources-Konfiguration korrigieren und erneut versuchen.");
-    }
-
-    private static string AppendDiagnostics(string message, IReadOnlyList<string> diagnostics) =>
-        diagnostics.Count == 0
-            ? message
-            : $"{message} {string.Join(" ", diagnostics)}";
 }
 
 internal sealed record AssemblyToolPreparation(

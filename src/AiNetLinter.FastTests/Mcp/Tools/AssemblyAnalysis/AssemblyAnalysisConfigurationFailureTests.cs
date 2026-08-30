@@ -38,7 +38,7 @@ public sealed class AssemblyAnalysisConfigurationFailureTests
         AssemblySourceSelectionScope? observedScope = null;
         var builderCalled = false;
 
-        var result = await AssemblyAnalysisToolSupport.ExecuteAsync(
+        var result = await AssemblyAnalysisSourceToolSupport.ExecuteAsync(
             new AssemblyToolExecutionParameters(
                 null,
                 assemblyPath,
@@ -88,7 +88,7 @@ public sealed class AssemblyAnalysisConfigurationFailureTests
         AssemblySourceSelectionScope? observedScope = null;
         var builderCalled = false;
 
-        var result = await AssemblyAnalysisToolSupport.ExecuteAsync(
+        var result = await AssemblyAnalysisSourceToolSupport.ExecuteAsync(
             new AssemblyToolExecutionParameters(
                 null,
                 assemblyPath,

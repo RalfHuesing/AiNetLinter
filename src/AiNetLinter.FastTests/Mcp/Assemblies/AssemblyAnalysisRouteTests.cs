@@ -21,6 +21,7 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies;
 // @covers AssemblyAnalysisRegistry
 // @covers AssemblyAnalysisLease
 // @covers AssemblyReferenceSessionExpander
+// @covers AssemblyAnalysisSourceProjectEntryFactory
 public sealed class AssemblyAnalysisRouteTests
 {
     [Fact]
