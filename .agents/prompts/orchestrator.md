@@ -30,7 +30,9 @@ für die Umsetzung, nachdem ein Konzept bei Bedarf separat mit dem
 - Für jeden orchestrierten Task gibt es außerdem genau eine task-lokale
   `code-map.md`. Sie ist eine kompakte Navigationshilfe für die betroffenen
   Dateien, Symbole, Aufrufer, Tests und Dokumentationsbereiche — keine
-  vollständige Repository-Dokumentation.
+  vollständige Repository-Dokumentation. Der Orchestrator legt nur das
+  initiale Gerüst an; die fachliche Pflege erfolgt durch die Rollen, die den
+  Code untersuchen oder ändern.
 - Jeder terminale Rollenbericht wird zusammen mit dem aktuellen auftrags-
   bezogenen Arbeitsstand sofort als Git-Checkpoint gesichert, bevor die nächste
   Rolle oder eine weitere Orchestrator-Aktion beginnt. Das gilt auch bei
@@ -152,15 +154,16 @@ nicht von den Rollen-Subagenten, gepflegt:
   einen Checkpoint-Commit, bevor Review, Korrektur, Audit, Blockierung oder
   sonstige weitere Entscheidungen beginnen. Bei einem Implementierer enthält
   der Checkpoint den aktuellen auftragsbezogenen Code-, Test- und
-  Dokumentationsstand sowie Roadmap und Log — unabhängig davon, ob der Stand
-  bereits reviewed ist oder Findings beziehungsweise fehlgeschlagene Checks
-  enthält. Bei einem Reviewer oder Audit ohne Codeänderung werden mindestens
+  Dokumentationsstand sowie Roadmap, Log und Code-Map — unabhängig davon, ob
+  der Stand bereits reviewed ist oder Findings beziehungsweise fehlgeschlagene
+  Checks enthält. Bei einem Reviewer oder Audit ohne Codeänderung werden mindestens
   die zugehörigen Log-/Roadmap-/Tech-Debt-/Code-Map-Änderungen committed.
-- Prüfe bei jedem Rollenbericht, ob sich Dateien, Symbole,
-  Aufrufer, Tests oder relevante Dokumentationsbereiche geändert haben. Über-
-  nimm die gemeldeten Änderungen nach kurzer Verifikation in `code-map.md`;
-  entferne veraltete Einträge und halte die Karte vor dem Checkpoint aktuell.
-  Meldet der Agent keine Änderung, wird die Karte nicht künstlich erweitert.
+- Prüfe bei jedem Rollenbericht, ob die Rolle die betroffenen Dateien, Symbole,
+  Aufrufer, Tests oder relevanten Dokumentationsbereiche in `code-map.md`
+  aktualisiert beziehungsweise als unverändert verifiziert hat. Entferne
+  veraltete Einträge vor dem Checkpoint. Der Orchestrator führt dabei keine
+  erneute Tiefenrecherche durch; fehlt eine notwendige Kartenaktualisierung,
+  ergänzt er nur die minimal erforderliche Metadatenkorrektur.
 - Bei einem Resume wird ein `running`-Eintrag ohne Abschluss anhand der
   Task-Liste und des Working Trees als `interrupted` oder `unknown` markiert.
   Der alte eigene Subagent wird beendet/archiviert, bevor ein frischer gestartet
@@ -219,24 +222,26 @@ Navigationskontext:
 - Zuordnung zu Epics sowie bekannte Such- und Prüfstartpunkte.
 
 Erzeuge keine Vollinventur und kopiere keine Agentenberichte in die Karte. Der
-erste Stand darf aus Konzept, Roadmap, `get_file_tree` und gezielten MCP-
-Abfragen abgeleitet werden. Nach jedem Implementierungs- oder Auditbericht
-aktualisiert der Orchestrator nur veränderte oder neu entdeckte Beziehungen.
-Umbenennungen, Verschiebungen und entfallene Symbole werden entfernt. Jeder
-Subagent prüft die Karte gegen den aktuellen Working Tree, identifiziert
-veraltete Hinweise über seine regulären MCP-Abfragen und meldet die nötigen
-Kartenänderungen im Hand-off; der Orchestrator aktualisiert die Karte und der
-Subagent legt keine eigene Task-Artefaktdatei an.
-Fehlt die Karte oder ist sie offensichtlich veraltet, wird sie vor der
-fachlichen Arbeit knapp repariert und nicht als Grund für eine neue
-Planungs-/Review-Schleife verwendet.
+Orchestrator legt zunächst nur ein minimales Gerüst aus Task, Primäraufgabe und
+bekannten Startpunkten an. Der erste Implementierer ergänzt daraus mit seiner
+Recherche die relevanten Produktions-, Test- und Dokumentationsbeziehungen.
+Jeder Implementierer aktualisiert die Karte nach seinen Codeänderungen direkt
+im Working Tree; Umbenennungen, Verschiebungen und entfallene Symbole werden
+entfernt. Reviewer und Audit verifizieren die Karte gegen ihren Scope und
+korrigieren ausschließlich konkrete Navigationsfehler. Alle Rollen melden die
+Kartenänderung beziehungsweise die unveränderte Verifikation im Hand-off; der
+Orchestrator prüft und committed sie, führt aber keine doppelte Tiefenanalyse
+durch.
 
 ## Wiederverwendung von Verifikationsnachweisen
 
 Der Implementierer ist für die routinemäßigen, zum Epic passenden Tests und
-MCP-Prüfungen vor seinem Hand-off verantwortlich. Der Orchestrator übergibt
-dem Reviewer den aktuellen Implementiererbericht samt Verifikationsnachweis
-und dem zugehörigen Log-Eintrag.
+MCP-Prüfungen vor seinem Hand-off verantwortlich. Dazu gehört nach seiner
+letzten Codeänderung immer ein gezielter `get_violations`-Check. Relevante
+Verstöße behebt der Implementierer direkt und führt den betroffenen Check
+danach erneut aus; der abschließende Nachweis gehört in seinen Hand-off. Der
+Orchestrator übergibt dem Reviewer den aktuellen Implementiererbericht samt
+Verifikationsnachweis und dem zugehörigen Log-Eintrag.
 
 Der Reviewer prüft den Nachweis zuerst gegen den tatsächlichen Diff:
 
@@ -336,14 +341,16 @@ Arbeite die offenen Epics strikt nacheinander ab:
    `.agents/skills/implement/SKILL.md`.
    Der Implementierer bearbeitet das gesamte Epic als zusammenhängendes Paket,
    nutzt AiNetLinter-MCP bei C#-Semantik, ergänzt nötige Tests/Dokumentation,
-   erstellt einen vollständigen Verifikationsnachweis und committet nicht
-   selbst. Nach seinem terminalen Ergebnis persistiert und committet der
+   aktualisiert `code-map.md`, erstellt einen vollständigen
+   Verifikationsnachweis und committet nicht selbst. Nach seinem terminalen
+   Ergebnis persistiert und committet der
    Orchestrator den Implementierungs-Checkpoint sofort, auch bei Findings oder
    fehlgeschlagenen Prüfungen, bevor der Reviewer startet.
 3. Starte danach genau einen unabhängigen Reviewer-Subagenten mit dem Diff
    seit dem Baselinepunkt, dem Epic-Kontext, `code-map.md` und
    `.agents/skills/review/SKILL.md` sowie dem Implementiererbericht und dessen
-   Verifikationsnachweis. Der Reviewer ändert keinen Code und wiederholt
+   Verifikationsnachweis. Der Reviewer ändert keinen Produktionscode, prüft
+   und korrigiert bei Bedarf ausschließlich die `code-map.md` und wiederholt
    erfolgreiche frische Checks nicht ohne konkreten Anlass.
 4. Bei `approved` ist das Epic abgeschlossen. Bei `issues` werden nur
    belegte P0/P1-Findings an den Implementierer zur Korrektur übergeben;
@@ -397,7 +404,9 @@ betroffenen Produktions- und Testbereiche, aber keinen zufälligen Altbestand.
 
 Der Audit sucht mit den vorgesehenen MCP-Tools nach DRY, Refactoring-Drift,
 Dead Code und Magic Values und darf sichere, scope-nahe Befunde proaktiv
-beheben. Er erzeugt keinen eigenen Commit und keine Task-Artefakte.
+beheben. Wenn er Code ändert, aktualisiert er auch `code-map.md` und führt
+danach einen gezielten `get_violations`-Check für seinen Änderungsbereich aus.
+Er erzeugt keinen eigenen Commit und keine anderen Task-Artefakte.
 Er ersetzt keine ausdrücklich im Konzept geforderten `safeguard`-,
 `get_violations`- oder sonstigen MCP-/Testprüfungen; diese werden als eigene
 Abschlussverifikation ausgeführt.
@@ -420,8 +429,9 @@ Rollen-Subagent committet selbst.
 - Führe nach jedem Epic bzw. jeder Korrektur gezielte Verifikation aus, aber
   nicht jedes Mal die gesamte Testsuite.
 - Der Implementierer führt die für das Epic erforderlichen routinemäßigen
-  Checks vor dem Hand-off aus. Der Reviewer wertet deren frischen Nachweis
-  zuerst aus und wiederholt identische erfolgreiche Checks nur bei fehlendem,
+  Checks einschließlich eines gezielten `get_violations`-Checks nach der
+  letzten Codeänderung vor dem Hand-off aus. Der Reviewer wertet deren frischen
+  Nachweis zuerst aus und wiederholt identische erfolgreiche Checks nur bei fehlendem,
   unvollständigem, veraltetem oder widerlegtem Nachweis.
 - Nach dem letzten Codezustand gelten die Abschluss-Gates aus `AGENTS.md`:
   `dotnet build`, die vollständigen Nicht-Stress-Tests von

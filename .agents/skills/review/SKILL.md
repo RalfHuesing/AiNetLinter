@@ -15,9 +15,9 @@ Rundumsweep und erzeugt keine automatische Korrekturschleife.
 ## Kontext und Regeln
 
 - Lies `AGENTS.md` sowie die relevanten Dateien unter `.agents/rules/`.
-- Lies die task-lokale `code-map.md`, sofern sie übergeben wird, vor der
-  eigenen Recherche. Nutze sie als Navigationshilfe, verifiziere ihre Angaben
-  aber gegen den aktuellen Working Tree und passende MCP-Abfragen.
+- Lies die task-lokale `code-map.md` vor der eigenen Recherche. Nutze sie als
+  Navigationshilfe, verifiziere ihre Angaben aber gegen den aktuellen Working
+  Tree und passende MCP-Abfragen.
 - Lies `.agents/rules/AiNetLinter-McpWorkflow.mdc` vor semantischen C#-
   Abfragen. Verwende für Symbole, Referenzen, Impact und Violations zuerst
   das passende AiNetLinter-MCP-Tool mit aktuellem Schema,
@@ -66,7 +66,8 @@ enthaltenen Nachweis gegen den aktuellen Diff:
   sequenziellen Orchestrator-Lauf gilt ein Nachweis als frisch, wenn zwischen
   Hand-off und Review kein Produktions- oder Testcode geändert wurde.
 - Ist der Nachweis vollständig, erfolgreich, passend und frisch, wiederhole
-  denselben Test oder dieselbe MCP-Prüfung nicht lediglich zur Bestätigung.
+  denselben Test oder dieselbe MCP-Prüfung — ausdrücklich auch einen
+  `get_violations`-Check — nicht lediglich zur Bestätigung.
 - Führe eine Prüfung nur erneut aus, wenn der Nachweis fehlt, fehlgeschlagen
   oder unvollständig ist, der Scope nicht passt, danach Code geändert wurde
   oder eine konkrete fachliche Gegenhypothese besteht.
@@ -77,8 +78,8 @@ enthaltenen Nachweis gegen den aktuellen Diff:
 Nutze für jeden Befund konkrete Datei-/Zeilenangaben, reproduzierbare
 Begründung und eine klare Korrekturempfehlung. Trenne echte Fehlfunktion von
 nicht bewiesener zusätzlicher Absicherung. Melde veraltete oder fehlende
-Code-Map-Einträge im Ergebnis und nenne die nötige Aktualisierung; lege die
-Karte nicht selbst als Task-Artefakt an.
+Code-Map-Einträge im Ergebnis und korrigiere die betroffenen Navigationsdaten
+direkt in `code-map.md`; andere Task-Artefakte legt der Reviewer nicht an.
 
 ## Priorisierung
 
@@ -123,9 +124,11 @@ Gib zuerst ein klares Urteil: `approved`, `issues` oder `blocked`.
 - `blocked`: nur wenn eine Nutzerentscheidung, fehlende Infrastruktur oder
   ein nicht auflösbarer Widerspruch tatsächlich notwendig ist.
 
-Ändere keinen Code, erstelle keinen Commit und lege keine Task-/Step-Dateien
-an, sofern der Nutzer nicht ausdrücklich darum bittet. In einem orchestrierten
-Workflow liefert der Reviewer ausschließlich sein Urteil; der Orchestrator
-entscheidet über Korrektur und Commit. Schlage keinen vollständigen Umbau vor,
-wenn ein begrenzter Fix genügt. Nach einer Korrektur prüfe die betroffene
-Invariante erneut; starte nicht selbständig weitere Review-Runden.
+Ändere keinen Produktionscode und erstelle keinen Commit. Die einzige
+zulässige Task-Artefaktänderung ist die direkte Korrektur konkreter Fakten in
+`code-map.md`; andere Task-/Step-Dateien legt der Reviewer nicht an. In einem
+orchestrierten Workflow liefert der Reviewer sein Urteil und die Map-Änderung;
+der Orchestrator entscheidet über Korrektur und Commit. Schlage keinen
+vollständigen Umbau vor, wenn ein begrenzter Fix genügt. Nach einer Korrektur
+prüfe die betroffene Invariante erneut; starte nicht selbständig weitere
+Review-Runden.

@@ -21,9 +21,10 @@ und Review einmal am Ende eines Tasks aufrufen.
 - Lies `AGENTS.md` und die relevanten Dateien unter `.agents/rules/`.
 - Lies `.agents/rules/AiNetLinter-McpWorkflow.mdc` vor jeder semantischen
   C#-Analyse.
-- Lies die task-lokale `code-map.md`, sofern sie übergeben wird, vor dem Audit.
-  Verwende sie als Navigationshilfe, verifiziere sie aber gegen Working Tree
-  und passende MCP-Abfragen und melde veraltete Einträge im Ergebnis.
+- Lies die task-lokale `code-map.md` vor dem Audit. Verwende sie als
+  Navigationshilfe, verifiziere sie aber gegen Working Tree und passende
+  MCP-Abfragen und aktualisiere konkrete veraltete Einträge direkt in der
+  Karte.
 - Verwende für `find_duplicates`, `find_dead_code` und `find_magic_values` die
   aktuellen MCP-Toolschemas mit `targetType=project` und dem absoluten
   `targetPath`. `rg` ergänzt nur konkrete Textarbeit und ersetzt die
@@ -66,11 +67,13 @@ Verifikationspflichten und werden nicht durch diesen Audit ersetzt.
    bewusst einmalige Testdaten und unterschiedliche Wire-Verträge werden
    nicht pauschal zentralisiert.
 4. Nach jeder Änderung prüfe die betroffenen Aufrufer und die direkte
-   Invariante erneut. Führe gezielte Tests aus. Bei einem eigenständigen
-   Audit-Task gelten vor dem finalen Hand-off die Build-/Test-Gates aus
-   `AGENTS.md`; innerhalb eines Orchestrator-Laufs koordiniert dieser die
-   vollständigen Abschluss-Gates nach dem Audit. Explizite
-   konzeptspezifische Prüfungen bleiben zusätzlich erforderlich.
+   Invariante erneut, aktualisiere `code-map.md` und führe einen gezielten
+   `get_violations`-Check für den geänderten Bereich aus. Behebe relevante
+   eigene Violations direkt und wiederhole den Check nach der Änderung. Bei
+   einem eigenständigen Audit-Task gelten vor dem finalen Hand-off die
+   Build-/Test-Gates aus `AGENTS.md`; innerhalb eines Orchestrator-Laufs
+   koordiniert dieser die vollständigen Abschluss-Gates nach dem Audit.
+   Explizite konzeptspezifische Prüfungen bleiben zusätzlich erforderlich.
 
 ## Proaktive Korrekturen
 
@@ -103,8 +106,9 @@ neu sichtbaren P2-/P3-Befunds. Sobald ein Fund Architekturentscheidungen,
 größeren Scope oder ein anderes Betriebsmodell erfordert, stoppt der Audit an
 dieser Stelle und berichtet ihn zur Nutzerentscheidung.
 
-Der Audit ändert keine Task-/Step-Dateien und erzeugt keinen eigenen Task oder
-Commit. Wenn er vom Orchestrator aufgerufen wird, bleiben Codeänderungen im
+Der Audit ändert keine Task-/Step-Dateien außer der vorgesehenen
+`code-map.md` und erzeugt keinen eigenen Task oder Commit. Wenn er vom
+Orchestrator aufgerufen wird, bleiben Code- und Code-Map-Änderungen im
 aktuellen Arbeitsstand; der aufrufende Workflow entscheidet über Commit und
 weitere Verifikation.
 
@@ -117,5 +121,5 @@ Empfehlung sowie einer passenden Disposition (`fixed`, `accepted-deferred`,
 `promoted-to-project-debt`). Führe außerdem die tatsächlich ausgeführten
 MCP-Abfragen und Tests auf. Kennzeichne bei nicht blockierenden P2/P3-Funden,
 ob sie als actionable Tech Debt in das task-lokale Register gehören. Der
-Orchestrator persistiert den vollständigen Auditbericht und aktualisiert das
-Register; der Audit legt keine eigene Protokoll- oder Tech-Debt-Datei an.
+Orchestrator persistiert den vollständigen Auditbericht und das Register; der
+Audit legt keine eigene Protokoll- oder Tech-Debt-Datei an.

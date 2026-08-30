@@ -18,10 +18,10 @@ es nur, wenn der Nutzer sie ausdrücklich verlangt.
 
 - Lies `AGENTS.md` und die für die Aufgabe relevanten Dateien unter
   `.agents/rules/`.
-- Lies die task-lokale `code-map.md`, sofern der Orchestrator sie übergibt,
-  vor der eigenen Recherche. Verwende sie als Navigationshilfe und verifiziere
-  jeden relevanten Pfad, jedes Symbol und jede Beziehung gegen den aktuellen
-  Working Tree und die vorgeschriebenen MCP-Abfragen.
+- Lies die task-lokale `code-map.md` vor der eigenen Recherche. Verwende sie
+  als Navigationshilfe und verifiziere jeden relevanten Pfad, jedes Symbol und
+  jede Beziehung gegen den aktuellen Working Tree und die vorgeschriebenen
+  MCP-Abfragen.
 - Lies `.agents/rules/AiNetLinter-McpWorkflow.mdc` vor semantischen Fragen zu
   C# und halte dessen MCP-first-Regel ein. Verwende aktuelle Toolschemas,
   `targetType` und den absoluten `targetPath`; `rg` ergänzt die semantische
@@ -61,6 +61,18 @@ es nur, wenn der Nutzer sie ausdrücklich verlangt.
 
 ## Gezielter Qualitätscheck
 
+Vor dem Hand-off führe nach der letzten Codeänderung immer einen gezielten
+`get_violations`-Check für den aktuellen Änderungsbereich aus. Verwende das
+aktuelle MCP-Schema mit `targetType=project` und absolutem `targetPath` sowie
+dem darin vorgesehenen Scope für die Änderung. Behebe relevante eigene
+Violations direkt und führe den betroffenen Check nach jeder solchen Änderung
+erneut aus. Führe diesen Check erst aus, nachdem der folgende DRY-, Dead-Code-
+und Magic-Values-Check sowie alle daraus entstehenden Korrekturen abgeschlossen
+  sind. Wenn eine Violation nicht sicher im aktuellen Scope behoben werden kann,
+  übergib sie mit Evidenz und Konsequenz; verschweige sie nicht und behaupte
+  keinen grünen Check. Dieser Check ist der letzte codebezogene Prüfschritt: Jede spätere
+Codeänderung macht den Nachweis ungültig und verlangt eine erneute Ausführung.
+
 Bei einer nicht-trivialen Codeänderung prüfe vor dem Hand-off den betroffenen
 Bereich mit den verfügbaren AiNetLinter-MCP-Tools auf `find_duplicates`,
 `find_dead_code` und `find_magic_values`. Lies dafür zuerst
@@ -97,6 +109,15 @@ MCP-Stdio-Server auf dem Entwicklerrechner:
 Erfinde keine stärkeren Garantien als dieses Modell oder die Aufgabe verlangt.
 Wenn eine Anforderung ein anderes Betriebs- oder Bedrohungsmodell voraussetzt,
 benenne das vor der Umsetzung.
+
+## Code-Map-Pflege
+
+Aktualisiere `code-map.md` direkt im Task-Verzeichnis, sobald sich durch deine
+Recherche oder Implementierung relevante Dateien, Symbole, Aufrufer, Tests,
+Konfiguration oder Dokumentation ändern. Entferne veraltete Pfade und
+Beziehungen. Halte die Karte kompakt und taskbezogen; führe keine
+Repository-Vollinventur durch. Wenn sich nichts geändert hat, verifiziere das
+im Hand-off ausdrücklich.
 
 ## Qualitätsmaßstab und Stoppregel
 
@@ -138,10 +159,10 @@ vollständigen aktuellen Arbeitsstand mit seinem ehrlichen Nachweis, damit der
 Orchestrator ihn als Zwischenstand sichern und gezielt reviewen lassen kann.
 
 Ein weiterer Agent erhält keinen künstlichen Step-Archivbestand. Übergib kurz:
-geänderte Dateien und Symbole, nötige Code-Map-Änderungen, getroffene
-Entscheidungen, ausgeführte Prüfungen, offene Risiken und den nächsten
-sinnvollen Einstiegspunkt. Der
-weitere Agent prüft den tatsächlichen Code und Diff selbst. In einem
+geänderte Dateien und Symbole, vorgenommene oder nicht erforderliche Code-Map-
+Änderungen, getroffene Entscheidungen, ausgeführte Prüfungen, offene Risiken
+und den nächsten sinnvollen Einstiegspunkt. Der weitere Agent prüft den
+tatsächlichen Code und Diff selbst. In einem
 orchestrierten Epic gehören die finalen solutionweiten Gates nicht in den
 einzelnen Implementierer-Hand-off, sondern in den Abschluss des
 Orchestrators.
@@ -163,6 +184,8 @@ Berichte knapp: Ergebnis, wichtige Designentscheidungen, geänderte Bereiche,
 Build-/Testbefunde, bekannte Restrisiken, offene Tech Debt mit einer passenden
 Disposition (`accepted-deferred`, `rejected/not-applicable` oder
 `promoted-to-project-debt`) und ob etwas bewusst nicht umgesetzt wurde. Der
-Orchestrator persistiert den Bericht in `execution-log.md`; schreibe selbst
-keine `roadmap.md`, `execution-log.md`, `task-state.md` oder Step-Dateien,
-sofern der Nutzer das nicht ausdrücklich verlangt.
+Orchestrator persistiert den Bericht in `execution-log.md`; `code-map.md` ist
+die ausdrücklich vorgesehene Task-Artefakt-Ausnahme und wird von dir
+aktualisiert. Schreibe selbst keine `roadmap.md`, `execution-log.md`,
+`task-state.md` oder sonstigen Step-Dateien, sofern der Nutzer das nicht
+ausdrücklich verlangt.
