@@ -1429,3 +1429,29 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
 - Nächste Aktion: nach Checkpoint und Infrastrukturprüfung eine frische
   Korrekturrunde für die Statusprojektion starten; die installierte MCP-
   Registry nur mit lokaler, nachvollziehbarer Voraussetzung aktualisieren.
+
+## 2026-08-30 — Resume nach aktualisierter Live-MCP-Registry
+
+- Run-ID: `resume-2026-08-30-live-mcp`
+- Epic: 4 — Capability-Matrix, Host-Integration und End-to-End-Verträge
+- Rolle: Orchestrator-Resume
+- Ausgangscommit: `f9031c6e`
+- Die laufende Registry verwendet weiterhin Version/Daemon `1.0.154`, stellt
+  aber jetzt das aktuelle MCP-Schema mit `targetType`/`targetPath` und den
+  Assembly-Tools bereit. `get_server_health` meldete den Projekt-Key
+  `C:\\Daten\\Entwicklung\\Ralf\\AiNetLinter` mit `LoadState: Loaded`.
+  Der externe Deployment-/Restart-Blocker ist damit aufgelöst; es wurde keine
+  globale Installation und kein externes Repository verändert.
+- MCP-Prüfungen gegen `targetType=project` und absoluten
+  `targetPath=C:\\Daten\\Entwicklung\\Ralf\\AiNetLinter`:
+  `get_violations(scopeFilter=src/AiNetLinter/Mcp)` meldete drei bestehende
+  `AIContextFootprint`-Warnungen; `safeguard(scopeFilter=src/AiNetLinter/Mcp)`
+  schlug mit fünf Befunden fehl, darunter zwei tasknahe
+  `MaxLineCount`-Fehler in `WiringContractTests.cs` und
+  `McpServerAllToolsE2ETests.cs` sowie dieselben drei Footprint-Warnungen.
+  Diese Prüfungen erfolgten nach dem letzten Code-Commit und sind der
+  Ausgangspunkt für die gezielte Epic-4-Fortsetzung.
+- Entscheidung: Roadmap von `blocked` auf `executing`, `blocker: none`,
+  `cycle_state: active`; die vorhandene Korrekturrunde bleibt erhalten.
+- Nächste Aktion: frischen Epic-4-Implementierer auf die verbleibenden
+  tasknahen Regel-/Capability-Befunde ansetzen; danach unabhängiger Review.

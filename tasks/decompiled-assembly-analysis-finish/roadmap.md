@@ -1,15 +1,15 @@
 # Ausführungs-Roadmap: Einheitlicher Roslyn-Analysepfad
 
-status: blocked
+status: executing
 current_epic: 4
-last_commit: d6cd4c58
-blocker: Live-MCP-Registry 1.0.154 benötigt externen Publish/Restart für targetType/targetPath und Assembly-Sessions
+last_commit: f9031c6e
+blocker: none
 correction_round: 1
-cycle_state: blocked
+cycle_state: active
 recent_finding_signatures:
-  - Partiality-Status-Consistency: gemeinsamer analysis-Header übernimmt Root-complete trotz Partial-Payload
-  - Installed-MCP-Schema-Drift: lokale Registry 1.0.154 bietet nicht targetType/targetPath und Assembly-Sessions
   - Unsupported-Path-Consistency: get_file_tree verliert beim Assembly-Ziel den Zielpfad
+  - Safeguard-TestFile-Size: tasknahe MCP-Testdateien überschreiten die MaxLineCount-Grenze
+  - AIContextFootprint-Scope: drei Assembly-/Health-Symbole überschreiten den Footprint-Schwellwert
 
 Diese Roadmap ist der einzige dauerhafte Ausführungs- und Resume-Stand für den
 autonomen Lauf. Sie leitet die Reihenfolge aus dem freigegebenen Konzept ab;
