@@ -72,11 +72,13 @@ Der Scope bleibt auf ein zusammenhängendes Abschlussvorhaben begrenzt:
    Provider; die getestete Source-Acquisition ist daher nicht automatisch ein
    Beleg für eine produktiv erreichbare externe Quelle.
 
-4. Für Assembly-Ziele wird eine begrenzte, explizite Capability-Grenze
-   definiert. Die Grenze muss zwischen unterstützten statischen Kernfähigkeiten,
+4. Für Assembly-Ziele wird die empfohlene begrenzte Capability-Grenze
+   verwendet: statische Struktur-, Symbol-, Referenz-, Aufruf- und
+   Metrikabfragen bilden die Kernmenge. Regel-, Diff-, Test-, Dead-Code-,
+   Duplicate- und Pattern-Fähigkeiten werden nicht pauschal freigeschaltet.
+   Die Grenze muss zwischen unterstützten statischen Kernfähigkeiten,
    teilweise verfügbaren Ergebnissen und bewusst nicht unterstützten Tools
-   unterscheiden. Eine Freischaltung erfolgt nur für Tools, deren Datenmodell
-   und Fallback-Verhalten belastbar beschrieben werden können.
+   unterscheiden.
 
 5. Die daraus entstehenden Benutzer- und Integrationsverträge werden in den
    vorhandenen Dokumentations- und Tool-Beschreibungsstellen nachgezogen.
@@ -107,6 +109,9 @@ als spätere Abhängigkeiten oder bewusste Grenzen dokumentiert.
   maschinenlesbar oder in einer gleichwertig eindeutigen Diagnose. Ein nicht
   unterstützter Aufruf darf nicht wie ein leerer oder erfolgreicher Befund
   aussehen.
+- Die Assembly-Kernmenge umfasst zunächst statische Struktur-, Symbol-,
+  Referenz-, Aufruf- und Metrikabfragen. Weitere allgemeine Tools benötigen
+  eine eigene Scope-Entscheidung.
 - Source-Fallback, Fehlerzustand, Ownership und Snapshot-Lebenszeit sind für
   jeden unterstützten Pfad dokumentiert.
 - Änderungen an CLI-, Regel- oder Konfigurationsverträgen führen zu den dafür
@@ -145,8 +150,9 @@ als spätere Abhängigkeiten oder bewusste Grenzen dokumentiert.
 - Keine automatische Implementierung transitive Referenzauflösung in diesem
   Scope. Direkte Metadaten-Referenzen bleiben die belastbare Ausgangsbasis;
   die Erweiterung wird als eigenes Teilvorhaben behandelt.
-- Keine pauschale Freischaltung aller allgemeinen Analyse-, Regel-, Diff-,
-  Test-, Dead-Code-, Duplicate- oder Pattern-Tools für Assembly-Ziele.
+- Keine pauschale Freischaltung der allgemeinen Analyse-, Regel-, Diff-, Test-,
+  Dead-Code-, Duplicate- oder Pattern-Tools für Assembly-Ziele über die
+  beschlossene Kernmenge hinaus.
 - Keine Verteidigung gegen einen bösartigen lokalen Administrator und keine
   vollständige Synchronisationsgarantie gegen konkurrierende Prozesse mit
   denselben lokalen Rechten.
@@ -181,12 +187,13 @@ neu codiert werden.
 
 ## Betriebs- und Bedrohungsmodell
 
-Der Dienst läuft als lokaler MCP-/Daemon-Prozess in einer Entwickler- oder
-CI-Umgebung. Er verarbeitet lokale Assembly-Dateien und optional Inhalte aus
-externen Repository-Quellen. Remote-Inhalte und Repository-Zustände werden als
-untrusted behandelt. Lokale Checkout-Verzeichnisse, Cache-Generationen,
-Ownership-Marker und Attestations sind Integritätsgrenzen, keine
-Vertrauensbeweise allein durch ihre Existenz.
+Der Dienst läuft grundsätzlich als lokaler MCP-/Daemon-Prozess beim Entwickler.
+Eine spätere Nutzung in CI kann dieselben Verträge verwenden, ist aber kein
+zusätzliches Bedrohungsmodell für den Start. Der Dienst verarbeitet lokale
+Assembly-Dateien und optional Inhalte aus externen Repository-Quellen.
+Remote-Inhalte und Repository-Zustände werden als untrusted behandelt. Lokale
+Checkout-Verzeichnisse, Cache-Generationen, Ownership-Marker und Attestations
+sind Integritätsgrenzen, keine Vertrauensbeweise allein durch ihre Existenz.
 
 Das System schützt insbesondere vor:
 
@@ -250,6 +257,8 @@ Agenten-Regelsynchronisation gemäß Projektregeln ausgeführt.
 
 - Der aktuelle Codebestand und die aktuellen Projektregeln sind die
   maßgebliche technische Grundlage.
+- Das primäre Betriebsziel ist ein lokal beim Entwickler laufender
+  MCP-Server.
 - Der Startumfang soll klein genug bleiben, um Trust-Korrekturen und einen
   klaren Produktvertrag ohne parallele Großbaustellen abzuschließen.
 - Öffentliche Repository-Quellen können grundsätzlich ohne persistierte
@@ -258,32 +267,24 @@ Agenten-Regelsynchronisation gemäß Projektregeln ausgeführt.
 - Deterministische Tests mit injizierten Transporten und Providern sind für
   die meisten Verträge ausreichend; reale externe Netzwerk- und privilegierte
   Umgebungen sind ergänzende Nachweise.
-- Die direkte Referenzauflösung ist für den Start ausreichend. Eine transitive
+- Die beschlossene Assembly-Kernmenge umfasst statische Struktur-, Symbol-,
+  Referenz-, Aufruf- und Metrikabfragen. Eine transitive
   Abhängigkeitsauflösung wird nur nach separater Scope-Entscheidung begonnen.
 
 ## Offene Fragen, die den Start blockieren
 
-1. Welche konkreten Assembly-Capabilities sollen im aktuellen Vorhaben als
-   nutzbare Kernmenge gelten? Empfohlen ist eine begrenzte Auswahl statischer
-   Struktur-, Symbol-, Referenz-, Aufruf- und Metrikabfragen; Regel-, Diff-,
-   Test-, Dead-Code-, Duplicate- und Pattern-Fähigkeiten sollten zunächst
-   ausgeschlossen oder separat spezifiziert werden.
+1. Wenn ein Entwickler ein Assembly analysiert und dafür ein passendes
+   externes Repository gemappt ist: Soll der normal gestartete lokale
+   MCP-Server dieses Repository selbstständig abrufen und als Source-backed-
+   Quelle verwenden, oder soll die externe Quelle weiterhin nur dann genutzt
+   werden, wenn ein Provider ausdrücklich verdrahtet wurde? Die Empfehlung ist,
+   öffentliche Repositories im normalen lokalen Host direkt zu unterstützen
+   und private Repositories nur über eine optionale, injizierbare
+   Credential-Auflösung zu ergänzen. Credentials sollen nicht in normaler
+   Konfiguration oder Diagnosen gespeichert werden.
 
-2. Soll die Default-Komposition des produktiven MCP-/Daemon-Hosts tatsächlich
-   einen funktionsfähigen externen Source-Provider verwenden? Falls ja, soll
-   der Startumfang öffentliche Quellen direkt unterstützen und private Quellen
-   nur über einen injizierbaren Credential-Resolver ergänzen, oder gilt die
-   externe Source-Auflösung zunächst weiterhin nur als explizit konfigurierbare
-   bzw. nachgelagerte Fähigkeit?
-
-3. Soll das begrenzte Bedrohungsmodell ohne vollständige Namespace-Sperre
-   gelten, oder ist der Schutz gegen konkurrierende Prozesse mit denselben
-   lokalen Rechten ein Muss-Kriterium? Die Empfehlung für dieses Vorhaben ist
-   das begrenzte Modell mit strikter Attestation, Ownership-Prüfung,
-   fail-closed-Verhalten und vollständiger Lease-Bereinigung.
-
-Diese Fragen müssen vor dem Start des aktuellen Implementierungsumfangs
-beantwortet werden. Detailentscheidungen zu transitive Referenzen, Origin-
+Die Capability-Auswahl und das begrenzte lokale Bedrohungsmodell sind damit
+entschieden. Detailentscheidungen zu transitiven Referenzen, Origin-
 Alias-Bereinigung, einer zentralen Origin-String-Konvention und Cache-
 Retention können als nachgelagerte Teilbereichsentscheidungen behandelt
 werden.
@@ -341,7 +342,8 @@ werden.
 
 - Statusparser-Grenzfall und vollständige Lease-Bereinigung;
 - expliziter Default-Host-/Provider-Vertrag;
-- begrenzte Assembly-Capability und eindeutige Partialitätsdiagnose;
+- die bestätigte begrenzte Assembly-Kernmenge und eindeutige
+  Partialitätsdiagnose;
 - abschließende Dokumentation und deterministische Verifikation.
 
 **Bereits umgesetzt:**
@@ -363,9 +365,7 @@ werden.
 
 **Ungeklärt und einem Teilbereich zuzuordnen:**
 
-- genaue Kernmenge der allgemeinen Assembly-Tools;
 - Default-Verhalten und Credential-Grenze des produktiven Source-Providers;
-- Stärke des Multi-Process-/Namespace-Bedrohungsmodells;
 - Umfang und Grenzen einer späteren transitiven Referenzauflösung;
 - Kompatibilitätsbedarf des Origin-Alias und der Origin-Textkonvention.
 
@@ -380,8 +380,10 @@ werden.
 
 ### Übergabestatus
 
-Der Entwurf ist noch nicht startbereit. Nach Beantwortung der drei offenen
-Scope-Fragen wird der Draft bereinigt, auf die bestätigten Muss-Kriterien
+Bestätigt sind die begrenzte Assembly-Kernmenge und das lokale
+Entwickler-Betriebsmodell mit begrenztem Bedrohungsmodell. Der Entwurf ist
+noch nicht startbereit. Nach Beantwortung der verbleibenden Provider-Frage
+wird der Draft bereinigt, auf die bestätigten Muss-Kriterien
 zugeschnitten und dem Nutzer ausdrücklich zur Freigabe vorgelegt. Erst danach
 kommt eine Umstellung auf `status: ready` in Betracht. Ein Orchestrator wird
 nicht automatisch gestartet.
