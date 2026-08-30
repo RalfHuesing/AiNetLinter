@@ -70,10 +70,8 @@ internal sealed class AssemblySourceSelectionOrchestrator
         if (!providerResult.IsAvailable || providerResult.SourceSnapshot is null)
         {
             return CreateScope(
-                providerResult.FailureKind,
                 providerResult.Diagnostics,
-                providerResult.Health,
-                providerResult.LastGoodRevision);
+                providerResult.ToResultState());
         }
 
         SourceSnapshotLease lease;
@@ -92,10 +90,7 @@ internal sealed class AssemblySourceSelectionOrchestrator
                 configurationResult,
                 providerResult.Diagnostics,
                 lease,
-                ExternalSourceRepositoryResultState.Create(
-                    ExternalSourceProviderFailureKind.None,
-                    providerResult.Health,
-                    providerResult.LastGoodRevision));
+                providerResult.ToResultState());
         }
         catch
         {
@@ -105,19 +100,14 @@ internal sealed class AssemblySourceSelectionOrchestrator
     }
 
     private AssemblySourceSelectionScope CreateScope(
-        ExternalSourceProviderFailureKind providerFailureKind = ExternalSourceProviderFailureKind.None,
         IEnumerable<ExternalSourceConfigurationDiagnostic>? providerDiagnostics = null,
-        ExternalSourceRepositoryHealth? providerHealth = null,
-        string? lastGoodRevision = null) =>
+        ExternalSourceRepositoryResultState? state = null) =>
         new(
             null,
             configurationResult,
             providerDiagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>(),
             null,
-            ExternalSourceRepositoryResultState.Create(
-                providerFailureKind,
-                providerHealth,
-                lastGoodRevision));
+            state ?? ExternalSourceRepositoryResultState.Create());
 }
 
 internal sealed class AssemblySourceSelectionScope : IDisposable
@@ -145,6 +135,10 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
             selection is not null,
             state.Health,
             state.LastGoodRevision);
+        ProviderCheckoutTrust = state.CheckoutTrust
+            ?? (selection is not null
+                ? ExternalSourceCheckoutTrust.Clean
+                : ExternalSourceCheckoutTrust.Unverified);
         LastGoodRevision = ExternalSourceRepositorySourcePolicy.NormalizeLastGoodRevision(state.LastGoodRevision);
         Diagnostics = LoaderDiagnostics
             .AddRange(ProviderDiagnostics)
@@ -174,6 +168,8 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
     internal ExternalSourceProviderFailureKind ProviderFailureKind { get; }
 
     internal ExternalSourceRepositoryHealth ProviderHealth { get; }
+
+    internal ExternalSourceCheckoutTrust ProviderCheckoutTrust { get; }
 
     internal string? LastGoodRevision { get; }
 

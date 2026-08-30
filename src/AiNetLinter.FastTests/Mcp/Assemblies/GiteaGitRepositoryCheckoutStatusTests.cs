@@ -16,6 +16,12 @@ public sealed class GiteaGitRepositoryCheckoutStatusTests
 {
     [Theory]
     [InlineData(" M BaselineMini.slnx", 0, (int)ExternalSourceCheckoutTrust.Dirty, "external-source-repository-checkout-dirty")]
+    [InlineData("!! ignored.txt", 0, (int)ExternalSourceCheckoutTrust.Dirty, "external-source-repository-checkout-dirty")]
+    [InlineData("?? untracked.txt", 0, (int)ExternalSourceCheckoutTrust.Dirty, "external-source-repository-checkout-dirty")]
+    [InlineData("??", 0, (int)ExternalSourceCheckoutTrust.Unverified, "external-source-repository-checkout-unverified")]
+    [InlineData("malformed status", 0, (int)ExternalSourceCheckoutTrust.Unverified, "external-source-repository-checkout-unverified")]
+    [InlineData("ZZ unknown-status", 0, (int)ExternalSourceCheckoutTrust.Unverified, "external-source-repository-checkout-unverified")]
+    [InlineData("?! unknown-status", 0, (int)ExternalSourceCheckoutTrust.Unverified, "external-source-repository-checkout-unverified")]
     [InlineData("", 1, (int)ExternalSourceCheckoutTrust.Unverified, "external-source-repository-checkout-unverified")]
     public async Task FetchDefaultBranchAsync_RejectsDirtyOrUnverifiedCheckoutBeforeMutation(
         string statusOutput,
@@ -46,6 +52,9 @@ public sealed class GiteaGitRepositoryCheckoutStatusTests
             string.Join(" ", result.Diagnostics),
             StringComparison.Ordinal);
         Assert.Single(executor.Requests);
+        Assert.Equal(
+            ["status", "--porcelain=v1", "--untracked-files=all", "--ignored=all"],
+            executor.Requests[0].Arguments);
     }
 
     [Fact]

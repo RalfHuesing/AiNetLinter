@@ -58,6 +58,16 @@ internal static class ExternalSourceRepositoryCacheTestAssertions
     }
 }
 
+internal static class ExternalSourceRepositoryTestTransportResults
+{
+    internal static ExternalSourceRepositoryTransportResult Success(
+        string checkoutPath,
+        string revision) =>
+        ExternalSourceRepositoryTransportResult.Success(
+            revision,
+            ExternalSourceCheckoutAttestation.ForTesting(checkoutPath, revision));
+}
+
 internal sealed class RecordingCacheWriter : IExternalSourceRepositoryCacheWriter
 {
     internal ExternalSourceRepositoryCachePublishRequest? Request { get; private set; }
@@ -167,7 +177,8 @@ internal sealed class SourceFixture : IDisposable
         var handle = new ExternalSourceCheckoutHandle(
             ownership,
             Path.Combine(checkoutPath, "src", "BaselineMini.slnx"),
-            revision);
+            revision,
+            ExternalSourceCheckoutAttestation.ForTesting(checkoutPath, revision));
         Assert.True(ExternalSourceRepositoryCacheKey.TryCreate(
             ExternalSourceRepositoryCacheTestData.RepositoryUrl,
             ExternalSourceRepositoryCacheTestData.SolutionPath,

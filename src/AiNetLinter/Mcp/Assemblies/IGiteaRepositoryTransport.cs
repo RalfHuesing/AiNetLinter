@@ -33,7 +33,12 @@ internal sealed record ExternalSourceRepositoryTransportResult
     {
         ArgumentNullException.ThrowIfNull(diagnostics);
         state ??= ExternalSourceRepositoryResultState.Create();
-        var validatedState = ExternalSourceRepositorySourcePolicy.ValidateResultState(isAvailable, state);
+        var effectiveState = checkoutTrust.HasValue
+            ? state with { CheckoutTrust = checkoutTrust }
+            : state;
+        var validatedState = ExternalSourceRepositorySourcePolicy.ValidateResultState(
+            isAvailable,
+            effectiveState);
 
         if (isAvailable && string.IsNullOrWhiteSpace(loadedRevision))
         {
@@ -74,9 +79,7 @@ internal sealed record ExternalSourceRepositoryTransportResult
         FailureKind = isAvailable || state.FailureKind is not ExternalSourceProviderFailureKind.None
             ? state.FailureKind
             : ExternalSourceProviderFailureKind.ProviderUnavailable;
-        CheckoutTrust = isAvailable
-            ? checkoutTrust ?? ExternalSourceCheckoutTrust.Clean
-            : checkoutTrust ?? ExternalSourceCheckoutTrust.Unverified;
+        CheckoutTrust = validatedState.CheckoutTrust;
         Health = validatedState.Health;
         LastGoodRevision = validatedState.LastGoodRevision;
         if (Health is ExternalSourceRepositoryHealth.Verified
@@ -103,15 +106,22 @@ internal sealed record ExternalSourceRepositoryTransportResult
 
     internal ExternalSourceCheckoutTrust CheckoutTrust { get; }
 
+    internal ExternalSourceCheckoutAttestation? CheckoutAttestation { get; init; }
+
     internal ExternalSourceRepositoryHealth Health { get; }
 
     internal string? LastGoodRevision { get; }
 
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics { get; }
 
-    internal static ExternalSourceRepositoryTransportResult Success(string revision) =>
+    internal static ExternalSourceRepositoryTransportResult Success(
+        string revision,
+        ExternalSourceCheckoutAttestation? checkoutAttestation = null) =>
         new(
             isAvailable: true,
             loadedRevision: revision,
-            diagnostics: Array.Empty<ExternalSourceConfigurationDiagnostic>());
+            diagnostics: Array.Empty<ExternalSourceConfigurationDiagnostic>())
+        {
+            CheckoutAttestation = checkoutAttestation,
+        };
 }

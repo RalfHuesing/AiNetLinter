@@ -158,9 +158,12 @@ internal sealed class ExternalSourceRepositoryAcquirer : IExternalSourceReposito
         if (!transportResult.IsAvailable)
         {
             return ExternalSourceRepositorySourcePolicy.FailureAfterCleanup(
-                ownership,
-                transportResult.FailureKind,
-                transportResult.Diagnostics);
+                new ExternalSourceRepositoryFailureAfterCleanupParameters(
+                    ownership,
+                    transportResult.FailureKind,
+                    transportResult.Diagnostics,
+                    null,
+                    transportResult.CheckoutTrust));
         }
 
         var checkoutValidation = ValidateCheckout(
@@ -178,7 +181,8 @@ internal sealed class ExternalSourceRepositoryAcquirer : IExternalSourceReposito
         var checkout = new ExternalSourceCheckoutHandle(
             ownership,
             checkoutValidation.SolutionPath!,
-            transportResult.LoadedRevision!);
+            transportResult.LoadedRevision!,
+            transportResult.CheckoutAttestation);
 
         return await PublishCacheAndCreateResultAsync(
                 mapping,
@@ -228,6 +232,17 @@ internal sealed class ExternalSourceRepositoryAcquirer : IExternalSourceReposito
         if (!cacheResult.Succeeded)
         {
             diagnostics.AddRange(cacheResult.Diagnostics);
+        }
+
+        if (cacheResult.FailureKind is ExternalSourceRepositoryCachePublishFailureKind.UnsafeSource)
+        {
+            return ExternalSourceRepositorySourcePolicy.FailureAfterCleanup(
+                new ExternalSourceRepositoryFailureAfterCleanupParameters(
+                    ownership,
+                    ExternalSourceProviderFailureKind.InvalidResponse,
+                    diagnostics,
+                    null,
+                    cacheResult.CheckoutTrust));
         }
 
         return ExternalSourceRepositoryAcquisitionResult.Success(checkout, diagnostics);

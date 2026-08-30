@@ -44,33 +44,27 @@ internal sealed class GiteaExternalSourceProvider : IExternalSourceProvider
                 return ExternalSourceProviderFailureProjection.FromUnavailableAcquisition(acquisition);
             }
 
-            checkout = acquisition.Checkout;
-            if (checkout is null
-                || checkout.IsDisposed
-                || string.IsNullOrWhiteSpace(acquisition.LoadedRevision)
-                || !string.Equals(
-                    acquisition.LoadedRevision,
-                    checkout.LoadedRevision,
-                    StringComparison.Ordinal))
+            if (!TryGetCheckout(acquisition, out checkout))
             {
-                return CreateMaterializationFailure(snapshot: null, checkout: checkout);
+                return CreateMaterializationFailure(
+                    snapshot: null,
+                    checkout: checkout,
+                    checkoutTrust: acquisition.CheckoutTrust is ExternalSourceCheckoutTrust.Dirty
+                        ? ExternalSourceCheckoutTrust.Dirty
+                        : ExternalSourceCheckoutTrust.Unverified);
             }
 
-            snapshot = await materializer.MaterializeAsync(
-                mapping,
-                checkout,
-                cancellationToken).ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
+            snapshot = await MaterializeVerifiedAsync(
+                    mapping,
+                    checkout!,
+                    cancellationToken)
+                .ConfigureAwait(false);
 
-            var expectedIdentity = SourceSnapshotIdentity.Create(
-                mapping,
-                checkout.LoadedRevision);
-            if (snapshot is null
-                || snapshot.IsDisposed
-                || !snapshot.OwnsCheckout(checkout)
-                || !Equals(snapshot.Identity, expectedIdentity))
+            if (!IsValidSnapshot(snapshot, mapping, checkout!))
             {
-                return CreateMaterializationFailure(snapshot, checkout);
+                return CreateMaterializationFailure(
+                    snapshot,
+                    checkout);
             }
 
             return new ExternalSourceProviderResult(
@@ -83,15 +77,83 @@ internal sealed class GiteaExternalSourceProvider : IExternalSourceProvider
             DisposeFailedResources(snapshot, checkout);
             throw;
         }
+        catch (ExternalSourceSnapshotMaterializationException exception)
+        {
+            return CreateMaterializationFailure(
+                snapshot,
+                checkout,
+                exception.CheckoutTrust);
+        }
         catch (Exception)
         {
             return CreateMaterializationFailure(snapshot, checkout);
         }
     }
 
+    private async ValueTask<ExternalSourceSnapshot> MaterializeVerifiedAsync(
+        ExternalSourceMapping mapping,
+        ExternalSourceCheckoutHandle checkout,
+        CancellationToken cancellationToken)
+    {
+        ExternalSourceSnapshot? snapshot = null;
+        try
+        {
+            snapshot = await materializer.MaterializeAsync(
+                    mapping,
+                    checkout,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            var verification = await ExternalSourceCheckoutAttestation.VerifyCheckoutAsync(
+                    checkout,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            if (!verification.IsVerified)
+            {
+                throw new ExternalSourceSnapshotMaterializationException(verification.Trust);
+            }
+
+            return snapshot;
+        }
+        catch
+        {
+            DisposeFailedResources(snapshot, null);
+            throw;
+        }
+    }
+
+    private static bool TryGetCheckout(
+        ExternalSourceRepositoryAcquisitionResult acquisition,
+        out ExternalSourceCheckoutHandle? checkout)
+    {
+        checkout = acquisition.Checkout;
+        return checkout is not null
+            && !checkout.IsDisposed
+            && !string.IsNullOrWhiteSpace(acquisition.LoadedRevision)
+            && string.Equals(
+                acquisition.LoadedRevision,
+                checkout.LoadedRevision,
+                StringComparison.Ordinal);
+    }
+
+    private static bool IsValidSnapshot(
+        ExternalSourceSnapshot? snapshot,
+        ExternalSourceMapping mapping,
+        ExternalSourceCheckoutHandle checkout)
+    {
+        var expectedIdentity = SourceSnapshotIdentity.Create(
+            mapping,
+            checkout.LoadedRevision);
+        return snapshot is not null
+            && !snapshot.IsDisposed
+            && snapshot.OwnsCheckout(checkout)
+            && Equals(snapshot.Identity, expectedIdentity);
+    }
+
     private static ExternalSourceProviderResult CreateMaterializationFailure(
         ExternalSourceSnapshot? snapshot,
-        ExternalSourceCheckoutHandle? checkout = null)
+        ExternalSourceCheckoutHandle? checkout = null,
+        ExternalSourceCheckoutTrust checkoutTrust = ExternalSourceCheckoutTrust.Unverified)
     {
         var diagnostics = new List<ExternalSourceConfigurationDiagnostic>
         {
@@ -118,7 +180,8 @@ internal sealed class GiteaExternalSourceProvider : IExternalSourceProvider
                 isAvailable: false,
                 ExternalSourceProviderFailureKind.InvalidResponse),
             state: ExternalSourceRepositoryResultState.Create(
-                ExternalSourceProviderFailureKind.InvalidResponse));
+                ExternalSourceProviderFailureKind.InvalidResponse,
+                checkoutTrust: checkoutTrust));
     }
 
     private static void DisposeFailedResources(

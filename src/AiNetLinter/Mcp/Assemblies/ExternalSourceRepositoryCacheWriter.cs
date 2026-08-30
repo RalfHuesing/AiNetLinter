@@ -91,9 +91,11 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter :
         {
             return CreateFailure(ExternalSourceRepositoryCachePublishFailureKind.Cancelled);
         }
-        catch (ExternalSourceRepositoryCacheUnsafeSourceException)
+        catch (ExternalSourceRepositoryCacheUnsafeSourceException exception)
         {
-            return CreateFailure(ExternalSourceRepositoryCachePublishFailureKind.UnsafeSource);
+            return CreateFailure(
+                ExternalSourceRepositoryCachePublishFailureKind.UnsafeSource,
+                exception.CheckoutTrust);
         }
         catch (Exception exception) when (ExternalSourceRepositoryCacheStorage.IsCacheException(exception))
         {
@@ -149,6 +151,8 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter :
         ExternalSourceRepositoryCacheStorage.PrepareEntryDirectory(
             cacheRoot,
             context.EntryDirectory);
+        await VerifyCheckoutAttestationAsync(context.Request, cancellationToken)
+            .ConfigureAwait(false);
         ExternalSourceRepositoryCacheStorage.ValidateSourceCheckout(
             context.Request,
             context.Key);
@@ -165,6 +169,8 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter :
             cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         await InvokeTestHookAsync(testSeam?.BeforePointerPublishedAsync).ConfigureAwait(false);
+        await VerifyCheckoutAttestationAsync(context.Request, cancellationToken)
+            .ConfigureAwait(false);
         if (!ExternalSourceRepositoryCacheStorage.TryPublishPointer(
                 context.EntryDirectory,
                 context.GenerationName,
@@ -177,6 +183,8 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter :
         context.PointerPublished = true;
         await InvokeTestHookAsync(testSeam?.AfterPointerPublishedAsync).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
+        await VerifyCheckoutAttestationAsync(context.Request, cancellationToken)
+            .ConfigureAwait(false);
         if (!TryValidatePublishedGeneration(
                 context.Request,
                 context.Key,
@@ -369,6 +377,17 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter :
             return false;
         }
 
+        if (request.Checkout.CheckoutAttestation is null
+            || !string.Equals(
+                request.Checkout.CheckoutAttestation.ExpectedRevision,
+                request.LoadedRevision,
+                StringComparison.Ordinal))
+        {
+            failure = ExternalSourceRepositoryCachePublishResult.Failure(
+                ExternalSourceRepositoryCachePublishFailureKind.UnsafeSource);
+            return false;
+        }
+
         return true;
     }
 
@@ -401,9 +420,24 @@ internal sealed class LocalExternalSourceRepositoryCacheWriter :
                     request.ExpectedCurrentGeneration));
     }
 
+    private static async Task VerifyCheckoutAttestationAsync(
+        ExternalSourceRepositoryCachePublishRequest request,
+        CancellationToken cancellationToken)
+    {
+        var verification = await ExternalSourceCheckoutAttestation.VerifyCheckoutAsync(
+                request.Checkout,
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (!verification.IsVerified)
+        {
+            throw new ExternalSourceRepositoryCacheUnsafeSourceException(verification.Trust);
+        }
+    }
+
     private static ExternalSourceRepositoryCachePublishResult CreateFailure(
-        ExternalSourceRepositoryCachePublishFailureKind failureKind) =>
-        ExternalSourceRepositoryCachePublishResult.Failure(failureKind);
+        ExternalSourceRepositoryCachePublishFailureKind failureKind,
+        ExternalSourceCheckoutTrust checkoutTrust = ExternalSourceCheckoutTrust.Unverified) =>
+        ExternalSourceRepositoryCachePublishResult.Failure(failureKind, [], checkoutTrust);
 
     private static Task InvokeTestHookAsync(Func<Task>? hook) =>
         hook?.Invoke() ?? Task.CompletedTask;

@@ -24,14 +24,18 @@ internal sealed record ExternalSourceRepositoryResultState
 
     internal string? LastGoodRevision { get; init; }
 
+    internal ExternalSourceCheckoutTrust? CheckoutTrust { get; init; }
+
     internal static ExternalSourceRepositoryResultState Create(
         ExternalSourceProviderFailureKind failureKind = ExternalSourceProviderFailureKind.None,
         ExternalSourceRepositoryHealth? health = null,
-        string? lastGoodRevision = null) =>
+        string? lastGoodRevision = null,
+        ExternalSourceCheckoutTrust? checkoutTrust = null) =>
         new()
         {
             FailureKind = failureKind,
             Health = health,
             LastGoodRevision = lastGoodRevision,
+            CheckoutTrust = checkoutTrust,
         };
 }

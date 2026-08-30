@@ -495,5 +495,3 @@ internal static class ExternalSourceRepositoryCacheStorage
     }
 
 }
-
-internal sealed class ExternalSourceRepositoryCacheUnsafeSourceException : Exception;

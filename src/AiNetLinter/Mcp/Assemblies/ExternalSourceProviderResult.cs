@@ -61,6 +61,7 @@ internal sealed record ExternalSourceProviderResult
             : ExternalSourceProviderFailureKind.ProviderUnavailable;
         Health = validatedState.Health;
         LastGoodRevision = validatedState.LastGoodRevision;
+        CheckoutTrust = validatedState.CheckoutTrust;
         Diagnostics = diagnostics.ToImmutableArray();
         SourceSnapshot = sourceSnapshot;
     }
@@ -73,9 +74,18 @@ internal sealed record ExternalSourceProviderResult
 
     internal string? LastGoodRevision { get; }
 
+    internal ExternalSourceCheckoutTrust CheckoutTrust { get; }
+
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics { get; }
 
     internal ExternalSourceSnapshot? SourceSnapshot { get; }
+
+    internal ExternalSourceRepositoryResultState ToResultState() =>
+        ExternalSourceRepositoryResultState.Create(
+            FailureKind,
+            Health,
+            LastGoodRevision,
+            CheckoutTrust);
 }
 
 internal static class ExternalSourceProviderFailureProjection
@@ -95,6 +105,7 @@ internal static class ExternalSourceProviderFailureProjection
             state: ExternalSourceRepositoryResultState.Create(
                 acquisition.FailureKind,
                 acquisition.Health,
-                acquisition.LastGoodRevision));
+                acquisition.LastGoodRevision,
+                acquisition.CheckoutTrust));
     }
 }

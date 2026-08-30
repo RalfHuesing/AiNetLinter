@@ -454,7 +454,8 @@ public sealed class ExternalSourceRepositoryCacheRefreshTests
             FetchCallCount++;
             FetchStarted.TrySetResult(true);
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
-            return ExternalSourceRepositoryTransportResult.Success(
+            return ExternalSourceRepositoryTestTransportResults.Success(
+                destinationPath,
                 ExternalSourceRepositoryCacheTestData.OtherRevision);
         }
     }
@@ -489,7 +490,8 @@ public sealed class ExternalSourceRepositoryCacheRefreshTests
             var publish = await writer.PublishAsync(competingSource.Request, cancellationToken);
             Assert.True(publish.Succeeded);
             RaceRevision = competingSource.Request.LoadedRevision;
-            return ExternalSourceRepositoryTransportResult.Success(
+            return ExternalSourceRepositoryTestTransportResults.Success(
+                destinationPath,
                 ExternalSourceRepositoryCacheTestData.OtherRevision);
         }
     }

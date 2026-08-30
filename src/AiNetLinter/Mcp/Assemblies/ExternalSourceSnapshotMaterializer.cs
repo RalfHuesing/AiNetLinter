@@ -26,6 +26,8 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
             throw new ExternalSourceSnapshotMaterializationException();
         }
 
+        await VerifyCheckoutAsync(checkout, cancellationToken).ConfigureAwait(false);
+
         MSBuildWorkspace? workspace = null;
         try
         {
@@ -42,6 +44,8 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
             {
                 throw new ExternalSourceSnapshotMaterializationException();
             }
+
+            await VerifyCheckoutAsync(checkout, cancellationToken).ConfigureAwait(false);
 
             var snapshot = new ExternalSourceSnapshot(
                 SourceSnapshotIdentity.Create(mapping, checkout.LoadedRevision),
@@ -68,6 +72,20 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
         }
     }
 
+    private static async ValueTask VerifyCheckoutAsync(
+        ExternalSourceCheckoutHandle checkout,
+        CancellationToken cancellationToken)
+    {
+        var verification = await ExternalSourceCheckoutAttestation.VerifyCheckoutAsync(
+                checkout,
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (!verification.IsVerified)
+        {
+            throw new ExternalSourceSnapshotMaterializationException(verification.Trust);
+        }
+    }
+
     private static void DisposeWorkspace(MSBuildWorkspace? workspace)
     {
         try
@@ -84,8 +102,12 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
 
 internal sealed class ExternalSourceSnapshotMaterializationException : Exception
 {
-    internal ExternalSourceSnapshotMaterializationException()
+    internal ExternalSourceSnapshotMaterializationException(
+        ExternalSourceCheckoutTrust checkoutTrust = ExternalSourceCheckoutTrust.Unverified)
         : base("Die externe Source-Solution konnte nicht vollständig materialisiert werden.")
     {
+        CheckoutTrust = ExternalSourceRepositorySourcePolicy.NormalizeFailureTrust(checkoutTrust);
     }
+
+    internal ExternalSourceCheckoutTrust CheckoutTrust { get; }
 }

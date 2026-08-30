@@ -69,19 +69,37 @@ internal sealed class ExternalSourceCheckoutHandle : IExternalSourceCheckoutOwne
     internal ExternalSourceCheckoutHandle(
         ExternalSourceCheckoutOwnership ownership,
         string solutionPath,
-        string loadedRevision)
+        string loadedRevision,
+        ExternalSourceCheckoutAttestation? checkoutAttestation = null)
     {
         ArgumentNullException.ThrowIfNull(ownership);
         this.ownership = ownership;
         SolutionPath = solutionPath;
         LoadedRevision = loadedRevision;
+        if (checkoutAttestation is not null
+            && !string.Equals(
+                checkoutAttestation.ExpectedRevision,
+                loadedRevision,
+                StringComparison.Ordinal))
+        {
+            throw new ArgumentException(
+                // ainetlinter-disable MagicValues — interner Vertragsfehler, keine lokalisierbare Nutzermeldung.
+                "Die Checkout-Attestation gehört nicht zur geladenen Revision.",
+                nameof(checkoutAttestation));
+        }
+
+        CheckoutAttestation = checkoutAttestation;
     }
 
     internal string CheckoutPath => ownership.CheckoutPath;
 
+    internal ExternalSourceCheckoutOwnership Ownership => ownership;
+
     internal string SolutionPath { get; }
 
     internal string LoadedRevision { get; }
+
+    internal ExternalSourceCheckoutAttestation? CheckoutAttestation { get; }
 
     internal bool IsDisposed => Volatile.Read(ref disposed) != 0;
 
@@ -104,6 +122,13 @@ internal sealed class ExternalSourceCheckoutHandle : IExternalSourceCheckoutOwne
     }
 }
 
+internal sealed record ExternalSourceRepositoryAcquisitionFailureParameters(
+    ExternalSourceProviderFailureKind FailureKind,
+    IEnumerable<ExternalSourceConfigurationDiagnostic> Diagnostics,
+    ExternalSourceRepositoryHealth Health,
+    string? LastGoodRevision,
+    ExternalSourceCheckoutTrust CheckoutTrust);
+
 internal sealed record ExternalSourceRepositoryAcquisitionResult
 {
     private ExternalSourceRepositoryAcquisitionResult(
@@ -121,9 +146,7 @@ internal sealed record ExternalSourceRepositoryAcquisitionResult
         var validatedState = ExternalSourceRepositorySourcePolicy.ValidateResultState(isAvailable, state);
         Health = validatedState.Health;
         LastGoodRevision = validatedState.LastGoodRevision;
-        CheckoutTrust = isAvailable
-            ? ExternalSourceCheckoutTrust.Clean
-            : ExternalSourceCheckoutTrust.Unverified;
+        CheckoutTrust = validatedState.CheckoutTrust;
         Diagnostics = isAvailable
             ? diagnostics.ToImmutableArray()
             : ExternalSourceRepositorySourcePolicy.ProjectFailureDiagnostics(
@@ -153,6 +176,14 @@ internal sealed record ExternalSourceRepositoryAcquisitionResult
         IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics)
     {
         ArgumentNullException.ThrowIfNull(checkout);
+        if (checkout.CheckoutAttestation is null)
+        {
+            throw new ArgumentException(
+                // ainetlinter-disable MagicValues — interner Vertragsfehler, keine lokalisierbare Nutzermeldung.
+                "Ein verifiziertes Akquisitionsergebnis benötigt eine Checkout-Attestation.",
+                nameof(checkout));
+        }
+
         if (!ExternalSourceRepositoryCacheKey.IsSafeRevision(checkout.LoadedRevision))
         {
             throw new ArgumentException(
@@ -168,7 +199,8 @@ internal sealed record ExternalSourceRepositoryAcquisitionResult
             diagnostics,
             ExternalSourceRepositoryResultState.Create(
                 ExternalSourceProviderFailureKind.None,
-                ExternalSourceRepositoryHealth.Verified));
+                ExternalSourceRepositoryHealth.Verified,
+                checkoutTrust: ExternalSourceCheckoutTrust.Clean));
     }
 
     internal static ExternalSourceRepositoryAcquisitionResult Failure(
@@ -176,15 +208,25 @@ internal sealed record ExternalSourceRepositoryAcquisitionResult
         IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics,
         ExternalSourceRepositoryHealth health = ExternalSourceRepositoryHealth.Unavailable,
         string? lastGoodRevision = null) =>
-        new(
-            false,
-            null,
-            null,
+        Failure(new ExternalSourceRepositoryAcquisitionFailureParameters(
+            failureKind,
             diagnostics,
-            ExternalSourceRepositoryResultState.Create(
-                failureKind is ExternalSourceProviderFailureKind.None
-                    ? ExternalSourceProviderFailureKind.InvalidResponse
-                    : failureKind,
-                health,
-                lastGoodRevision));
+            health,
+            lastGoodRevision,
+            ExternalSourceCheckoutTrust.Unverified));
+
+    internal static ExternalSourceRepositoryAcquisitionResult Failure(
+        ExternalSourceRepositoryAcquisitionFailureParameters parameters)
+        => new(
+        false,
+        null,
+        null,
+        parameters.Diagnostics,
+        ExternalSourceRepositoryResultState.Create(
+            parameters.FailureKind is ExternalSourceProviderFailureKind.None
+                ? ExternalSourceProviderFailureKind.InvalidResponse
+                : parameters.FailureKind,
+            parameters.Health,
+            parameters.LastGoodRevision,
+            parameters.CheckoutTrust));
 }

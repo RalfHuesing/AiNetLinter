@@ -204,10 +204,12 @@ internal sealed class ExternalSourceRepositoryCacheRefresh
         if (!transportResult.IsAvailable)
         {
             return RefreshPreparation.Failed(ExternalSourceRepositorySourcePolicy.FailureAfterCleanup(
-                ownership,
-                transportResult.FailureKind,
-                transportResult.Diagnostics,
-                readResult.Manifest.LoadedRevision));
+                new ExternalSourceRepositoryFailureAfterCleanupParameters(
+                    ownership,
+                    transportResult.FailureKind,
+                    transportResult.Diagnostics,
+                    readResult.Manifest.LoadedRevision,
+                    transportResult.CheckoutTrust)));
         }
 
         if (!ExternalSourceRepositorySourcePolicy.IsVerifiedTransport(transportResult))
@@ -238,7 +240,8 @@ internal sealed class ExternalSourceRepositoryCacheRefresh
         var checkout = new ExternalSourceCheckoutHandle(
             parameters.Ownership,
             parameters.ValidatedSolutionPath,
-            parameters.TransportResult.LoadedRevision!);
+            parameters.TransportResult.LoadedRevision!,
+            parameters.TransportResult.CheckoutAttestation);
         var publishResult = await publishCache(
                 CreatePublishRequest(parameters, checkout),
                 cancellationToken)
@@ -313,7 +316,8 @@ internal sealed class ExternalSourceRepositoryCacheRefresh
         return ExternalSourceRepositorySourcePolicy.CreateRefreshFailure(
             ExternalSourceProviderFailureKind.InvalidResponse,
             diagnostics,
-            readResult.Manifest.LoadedRevision);
+            readResult.Manifest.LoadedRevision,
+            publishResult.CheckoutTrust);
     }
 
     private async Task<ExternalSourceRepositoryTransportResult> ExecuteFetchAsync(

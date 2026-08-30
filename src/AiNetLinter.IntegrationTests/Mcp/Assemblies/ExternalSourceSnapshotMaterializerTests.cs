@@ -32,7 +32,10 @@ public sealed class ExternalSourceSnapshotMaterializerTests
         var checkout = new ExternalSourceCheckoutHandle(
             ownership,
             Path.Combine(checkoutPath, "BaselineMini.slnx"),
-            "revision-42");
+            "0123456789abcdef0123456789abcdef01234567",
+            ExternalSourceCheckoutAttestation.ForTesting(
+                checkoutPath,
+                "0123456789abcdef0123456789abcdef01234567"));
         var mapping = new ExternalSourceMapping(
             "HTTPS://GITEA.EXAMPLE/shared.git",
             @".\BaselineMini.slnx",
@@ -42,7 +45,7 @@ public sealed class ExternalSourceSnapshotMaterializerTests
         var snapshot = await materializer.MaterializeAsync(mapping, checkout);
 
         Assert.Equal("https://gitea.example/shared.git", snapshot.Identity.RepositoryUrl);
-        Assert.Equal("revision-42", snapshot.Identity.LoadedRevision);
+        Assert.Equal("0123456789abcdef0123456789abcdef01234567", snapshot.Identity.LoadedRevision);
         Assert.Equal("BaselineMini.slnx", snapshot.Identity.SolutionPath);
         var project = Assert.Single(snapshot.Solution.Projects);
         Assert.Equal("BaselineMini", project.AssemblyName);
@@ -73,7 +76,10 @@ public sealed class ExternalSourceSnapshotMaterializerTests
         var checkout = new ExternalSourceCheckoutHandle(
             ownership,
             Path.Combine(checkoutPath, "Missing.slnx"),
-            "revision-42");
+            "0123456789abcdef0123456789abcdef01234567",
+            ExternalSourceCheckoutAttestation.ForTesting(
+                checkoutPath,
+                "0123456789abcdef0123456789abcdef01234567"));
         var mapping = new ExternalSourceMapping(
             "https://gitea.example/shared.git",
             "Missing.slnx",

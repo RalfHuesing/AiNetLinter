@@ -44,6 +44,8 @@ public sealed class GiteaGitRepositoryTransportTests
 
         Assert.True(result.IsAvailable);
         Assert.Equal(Revision, result.LoadedRevision);
+        Assert.Equal(ExternalSourceCheckoutTrust.Clean, result.CheckoutTrust);
+        Assert.NotNull(result.CheckoutAttestation);
         Assert.Equal(3, executor.Requests.Count);
         var cloneRequest = executor.Requests[0];
         Assert.Equal("git", cloneRequest.FileName);
@@ -60,7 +62,7 @@ public sealed class GiteaGitRepositoryTransportTests
         Assert.Throws<ObjectDisposedException>(() => _ = credential.Secret);
 
         var statusRequest = executor.Requests[1];
-        Assert.Equal(["status", "--porcelain=v1", "--untracked-files=all"], statusRequest.Arguments);
+        Assert.Equal(["status", "--porcelain=v1", "--untracked-files=all", "--ignored=all"], statusRequest.Arguments);
         Assert.DoesNotContain(SecretEnvironmentVariable, statusRequest.Environment.Keys);
         Assert.DoesNotContain(UsernameEnvironmentVariable, statusRequest.Environment.Keys);
 
@@ -125,7 +127,7 @@ public sealed class GiteaGitRepositoryTransportTests
         Assert.Equal(Revision, result.LoadedRevision);
         Assert.Equal(5, executor.Requests.Count);
         var initialStatusRequest = executor.Requests[0];
-        Assert.Equal(["status", "--porcelain=v1", "--untracked-files=all"], initialStatusRequest.Arguments);
+        Assert.Equal(["status", "--porcelain=v1", "--untracked-files=all", "--ignored=all"], initialStatusRequest.Arguments);
         Assert.DoesNotContain(SecretEnvironmentVariable, initialStatusRequest.Environment.Keys);
 
         var fetchRequest = executor.Requests[1];
@@ -140,7 +142,7 @@ public sealed class GiteaGitRepositoryTransportTests
         Assert.DoesNotContain(UsernameEnvironmentVariable, resetRequest.Environment.Keys);
 
         var refreshedStatusRequest = executor.Requests[3];
-        Assert.Equal(["status", "--porcelain=v1", "--untracked-files=all"], refreshedStatusRequest.Arguments);
+        Assert.Equal(["status", "--porcelain=v1", "--untracked-files=all", "--ignored=all"], refreshedStatusRequest.Arguments);
         Assert.DoesNotContain(SecretEnvironmentVariable, refreshedStatusRequest.Environment.Keys);
 
         Assert.Equal(["rev-parse", "--verify", "HEAD"], executor.Requests[4].Arguments);

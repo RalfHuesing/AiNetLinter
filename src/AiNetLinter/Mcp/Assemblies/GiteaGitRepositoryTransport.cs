@@ -324,7 +324,12 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
         }
 
         return TryParseRevision(processResult.StandardOutput, out var revision)
-            ? ExternalSourceRepositoryTransportResult.Success(revision!)
+            ? ExternalSourceRepositoryTransportResult.Success(
+                revision!,
+                ExternalSourceCheckoutAttestation.FromTransport(
+                    destinationPath,
+                    revision!,
+                    ExecuteVerifiedHeadAsync))
             : Failure(
                 ExternalSourceProviderFailureKind.InvalidResponse,
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportResultInvalid);

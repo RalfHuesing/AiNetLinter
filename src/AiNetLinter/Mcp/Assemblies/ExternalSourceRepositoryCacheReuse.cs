@@ -88,10 +88,7 @@ internal sealed class ExternalSourceRepositoryCacheReuse
                 ownership,
                 cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            checkout = new ExternalSourceCheckoutHandle(
-                ownership,
-                solutionPath,
-                readResult.Manifest.LoadedRevision);
+            checkout = CreateCheckout(readResult, ownership, solutionPath);
             return true;
         }
         catch (OperationCanceledException)
@@ -121,4 +118,16 @@ internal sealed class ExternalSourceRepositoryCacheReuse
 
     private static bool Cleanup(ExternalSourceCheckoutOwnership? ownership) =>
         ownership?.TryCleanup() ?? true;
+
+    private static ExternalSourceCheckoutHandle CreateCheckout(
+        ExternalSourceRepositoryCacheReadResult readResult,
+        ExternalSourceCheckoutOwnership ownership,
+        string solutionPath) =>
+        new(
+            ownership,
+            solutionPath,
+            readResult.Manifest.LoadedRevision,
+            ExternalSourceCheckoutAttestation.FromCache(
+                ownership.CheckoutPath,
+                readResult.Manifest));
 }

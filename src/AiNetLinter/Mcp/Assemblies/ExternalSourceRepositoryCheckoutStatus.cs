@@ -17,6 +17,8 @@ internal static class ExternalSourceRepositoryCheckoutStatus
     private const string StatusPorcelainOption = "--porcelain=v1";
     // ainetlinter-disable MagicValues — feste Git-Status-Schnittstelle.
     private const string StatusUntrackedOption = "--untracked-files=all";
+    // ainetlinter-disable MagicValues — feste Git-Status-Schnittstelle.
+    private const string StatusIgnoredOption = "--ignored=all";
     // ainetlinter-disable MagicValues — festes Git-Status-Präfix.
     private const string UntrackedStatusPrefix = "?? ";
     // ainetlinter-disable MagicValues — feste nicht-interaktive Git-Umgebung.
@@ -40,7 +42,7 @@ internal static class ExternalSourceRepositoryCheckoutStatus
     {
         var request = new ExternalSourceGitProcessRequest(
             GitCommand,
-            [StatusCommand, StatusPorcelainOption, StatusUntrackedOption],
+            [StatusCommand, StatusPorcelainOption, StatusUntrackedOption, StatusIgnoredOption],
             destinationPath,
             processTimeout,
             CreateEnvironment());
@@ -59,32 +61,52 @@ internal static class ExternalSourceRepositoryCheckoutStatus
                 ExternalSourceCheckoutTrust.Unverified);
         }
 
-        return HasUnexpectedChanges(processResult.StandardOutput)
-            ? Failure(
-                ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutDirty,
-                ExternalSourceCheckoutTrust.Dirty)
-            : null;
+        var checkoutTrust = AssessStatus(processResult.StandardOutput);
+        return checkoutTrust is null
+            ? null
+            : Failure(
+                checkoutTrust is ExternalSourceCheckoutTrust.Dirty
+                    ? ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutDirty
+                    : ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutUnverified,
+                checkoutTrust.Value);
     }
 
-    private static bool HasUnexpectedChanges(string statusOutput)
+    private static ExternalSourceCheckoutTrust? AssessStatus(string statusOutput)
     {
         foreach (var line in statusOutput.Split('\n', StringSplitOptions.RemoveEmptyEntries))
         {
             var normalizedLine = line.TrimEnd('\r');
+            if (normalizedLine.Length < 3
+                || !IsStatusCode(normalizedLine[0])
+                || !IsStatusCode(normalizedLine[1])
+                || !IsValidStatusPair(normalizedLine[0], normalizedLine[1])
+                || normalizedLine[2] is not ' ')
+            {
+                return ExternalSourceCheckoutTrust.Unverified;
+            }
+
             if (normalizedLine.StartsWith(UntrackedStatusPrefix, StringComparison.Ordinal)
                 && string.Equals(
-                    normalizedLine[3..].Trim(),
+                    normalizedLine[3..],
                     ExternalSourceCheckoutOwnership.OwnershipMarkerFileName,
                     StringComparison.Ordinal))
             {
                 continue;
             }
 
-            return true;
+            return ExternalSourceCheckoutTrust.Dirty;
         }
 
-        return false;
+        return null;
     }
+
+    private static bool IsStatusCode(char value) =>
+        value is ' ' or 'M' or 'A' or 'D' or 'R' or 'C' or 'U' or 'T' or '?' or '!';
+
+    private static bool IsValidStatusPair(char first, char second) =>
+        first is '?' or '!'
+            ? first == second
+            : second is not '?' and not '!';
 
     private static ExternalSourceRepositoryTransportResult Failure(
         string diagnosticCode,

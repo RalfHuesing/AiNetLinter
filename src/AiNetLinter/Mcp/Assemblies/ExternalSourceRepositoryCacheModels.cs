@@ -188,6 +188,8 @@ internal sealed record ExternalSourceRepositoryCachePublishResult
 
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics { get; init; }
 
+    internal ExternalSourceCheckoutTrust CheckoutTrust { get; init; }
+
     internal static ExternalSourceRepositoryCachePublishResult Success(
         ExternalSourceRepositoryCacheKey cacheKey,
         string generationName,
@@ -200,16 +202,19 @@ internal sealed record ExternalSourceRepositoryCachePublishResult
             GenerationName = generationName,
             GenerationPath = generationPath,
             Diagnostics = ImmutableArray<ExternalSourceConfigurationDiagnostic>.Empty,
+            CheckoutTrust = ExternalSourceCheckoutTrust.Clean,
         };
 
     internal static ExternalSourceRepositoryCachePublishResult Failure(
         ExternalSourceRepositoryCachePublishFailureKind failureKind,
-        IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics) =>
+        IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics,
+        ExternalSourceCheckoutTrust checkoutTrust = ExternalSourceCheckoutTrust.Unverified) =>
         new()
         {
             Succeeded = false,
             FailureKind = failureKind,
             Diagnostics = ImmutableArray.CreateRange(diagnostics),
+            CheckoutTrust = checkoutTrust,
         };
 
     internal static ExternalSourceRepositoryCachePublishResult Failure(

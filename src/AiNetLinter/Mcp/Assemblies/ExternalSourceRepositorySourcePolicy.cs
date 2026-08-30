@@ -8,8 +8,21 @@ using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Mcp.Assemblies;
 
+internal sealed record ExternalSourceRepositoryFailureAfterCleanupParameters(
+    ExternalSourceCheckoutOwnership Ownership,
+    ExternalSourceProviderFailureKind FailureKind,
+    IEnumerable<ExternalSourceConfigurationDiagnostic> Diagnostics,
+    string? LastGoodRevision,
+    ExternalSourceCheckoutTrust CheckoutTrust);
+
 internal static class ExternalSourceRepositorySourcePolicy
 {
+    internal static ExternalSourceCheckoutTrust NormalizeFailureTrust(
+        ExternalSourceCheckoutTrust checkoutTrust) =>
+        checkoutTrust is ExternalSourceCheckoutTrust.Dirty
+            ? checkoutTrust
+            : ExternalSourceCheckoutTrust.Unverified;
+
     internal static string? NormalizeLastGoodRevision(string? revision)
     {
         if (string.IsNullOrWhiteSpace(revision))
@@ -42,7 +55,10 @@ internal static class ExternalSourceRepositorySourcePolicy
         return health;
     }
 
-    internal static (ExternalSourceRepositoryHealth Health, string? LastGoodRevision) ValidateResultState(
+    internal static (
+        ExternalSourceRepositoryHealth Health,
+        string? LastGoodRevision,
+        ExternalSourceCheckoutTrust CheckoutTrust) ValidateResultState(
         bool isAvailable,
         ExternalSourceRepositoryResultState state)
     {
@@ -53,9 +69,15 @@ internal static class ExternalSourceRepositorySourcePolicy
         }
 
         var lastGoodRevision = NormalizeLastGoodRevision(state.LastGoodRevision);
+        var checkoutTrust = state.CheckoutTrust
+            ?? (isAvailable
+                ? ExternalSourceCheckoutTrust.Clean
+                : ExternalSourceCheckoutTrust.Unverified);
+        ValidateCheckoutTrust(isAvailable, checkoutTrust);
         return (
             ResolveHealth(isAvailable, state.Health, lastGoodRevision),
-            lastGoodRevision);
+            lastGoodRevision,
+            checkoutTrust);
     }
 
     internal static bool IsVerifiedTransport(
@@ -63,6 +85,7 @@ internal static class ExternalSourceRepositorySourcePolicy
         result.IsAvailable
         && result.Health is ExternalSourceRepositoryHealth.Verified
         && result.CheckoutTrust is ExternalSourceCheckoutTrust.Clean
+        && result.CheckoutAttestation is not null
         && result.LoadedRevision is not null
         && ExternalSourceRepositoryCacheKey.IsSafeRevision(result.LoadedRevision);
 
@@ -93,22 +116,35 @@ internal static class ExternalSourceRepositorySourcePolicy
     internal static ExternalSourceRepositoryAcquisitionResult CreateRefreshFailure(
         ExternalSourceProviderFailureKind failureKind,
         IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics,
-        string? lastGoodRevision) =>
+        string? lastGoodRevision,
+        ExternalSourceCheckoutTrust checkoutTrust = ExternalSourceCheckoutTrust.Unverified) =>
         ExternalSourceRepositoryAcquisitionResult.Failure(
-            failureKind,
-            diagnostics,
-            ResolveFailureHealth(lastGoodRevision),
-            NormalizeLastGoodRevision(lastGoodRevision));
+            new ExternalSourceRepositoryAcquisitionFailureParameters(
+                failureKind,
+                diagnostics,
+                ResolveFailureHealth(lastGoodRevision),
+                NormalizeLastGoodRevision(lastGoodRevision),
+                checkoutTrust));
 
     internal static ExternalSourceRepositoryAcquisitionResult FailureAfterCleanup(
         ExternalSourceCheckoutOwnership ownership,
         ExternalSourceProviderFailureKind failureKind,
         IEnumerable<ExternalSourceConfigurationDiagnostic> diagnostics,
-        string? lastGoodRevision = null)
+        string? lastGoodRevision = null) =>
+        FailureAfterCleanup(new ExternalSourceRepositoryFailureAfterCleanupParameters(
+            ownership,
+            failureKind,
+            diagnostics,
+            lastGoodRevision,
+            ExternalSourceCheckoutTrust.Unverified));
+
+    internal static ExternalSourceRepositoryAcquisitionResult FailureAfterCleanup(
+        ExternalSourceRepositoryFailureAfterCleanupParameters parameters)
     {
-        ArgumentNullException.ThrowIfNull(ownership);
-        var resultDiagnostics = new List<ExternalSourceConfigurationDiagnostic>(diagnostics);
-        if (!ownership.TryCleanup())
+        ArgumentNullException.ThrowIfNull(parameters);
+        ArgumentNullException.ThrowIfNull(parameters.Ownership);
+        var resultDiagnostics = new List<ExternalSourceConfigurationDiagnostic>(parameters.Diagnostics);
+        if (!parameters.Ownership.TryCleanup())
         {
             resultDiagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryCleanupFailed,
@@ -117,7 +153,11 @@ internal static class ExternalSourceRepositorySourcePolicy
                 "$repository"));
         }
 
-        return CreateRefreshFailure(failureKind, resultDiagnostics, lastGoodRevision);
+        return CreateRefreshFailure(
+            parameters.FailureKind,
+            resultDiagnostics,
+            parameters.LastGoodRevision,
+            parameters.CheckoutTrust);
     }
 
     private static ExternalSourceRepositoryHealth ResolveFailureHealth(
@@ -140,6 +180,21 @@ internal static class ExternalSourceRepositorySourcePolicy
         if (!Enum.IsDefined(health))
         {
             throw new ArgumentOutOfRangeException(nameof(requestedHealth));
+        }
+    }
+
+    private static void ValidateCheckoutTrust(
+        bool isAvailable,
+        ExternalSourceCheckoutTrust checkoutTrust)
+    {
+        if (!Enum.IsDefined(checkoutTrust)
+            || isAvailable && checkoutTrust is not ExternalSourceCheckoutTrust.Clean
+            || !isAvailable && checkoutTrust is ExternalSourceCheckoutTrust.Clean)
+        {
+            throw new ArgumentException(
+                // ainetlinter-disable MagicValues — interner Vertragsfehler, keine lokalisierbare Nutzermeldung.
+                "Der Checkout-Trustzustand stimmt nicht mit der Verfügbarkeit überein.",
+                nameof(checkoutTrust));
         }
     }
 
