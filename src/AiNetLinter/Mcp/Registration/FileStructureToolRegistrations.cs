@@ -179,7 +179,7 @@ internal static class FileStructureToolRegistrations
     }
 
     private const string GetFileSkeletonDescription =
-        "Wann nutzen: Ueberblick ueber Typen/Signaturen einer oder mehrerer C#-Dateien (Batch in 1 Turn) " +
+        "Wann nutzen: Ueberblick ueber Typen und Signaturen einer oder mehrerer C#-Dateien (Batch in 1 Turn) " +
         "ohne die Bodies zu lesen — jede Signatur traegt eine stabile id: fuer einen Folge-Call an get_symbol_body. " +
         "filePaths: Array von Dateipfaden (auch fuer genau eine Datei), relativ oder absolut.";
 
