@@ -364,7 +364,7 @@ identisch), `near` (≥ `DuplicateCodeNearThreshold`, sehr ähnlich) und `fuzzy`
 (`DuplicateCode`, Severity `info` — Kandidaten-Befund, kein hartes Anti-Pattern) — `near`/`fuzzy`
 wären zu viel Rauschen für automatisches Lint (Live-Dogfood-Befund 2026-08-11: `near`-Cluster
 allein erzeugten auf diesem Repo ~23 Einzel-Funde), bleiben aber über das MCP-Tool
-`find_duplicates` und den Skill `.agents/skills/drift-audit/SKILL.md` voll einsehbar. Pro Cluster
+`find_duplicates` und den Skill `.agents/skills/audit/SKILL.md` voll einsehbar. Pro Cluster
 wird genau **ein** Regelverstoß gemeldet (repräsentatives Mitglied, analog dem
 `MaxPartialClassFiles`-Muster) — `Details` listet trotzdem alle beteiligten Methoden vollständig,
 nicht eine Violation pro Mitglied.

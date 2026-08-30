@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Führe am Ende größerer AiNetLinter-Aufgaben einen gezielten MCP-Audit auf DRY, Dead Code und Magic Values durch und behebe sichere, scope-nahe Befunde proaktiv.
+description: Führe am Ende größerer AiNetLinter-Aufgaben einen gezielten MCP-Audit auf DRY, Refactoring-Drift, Dead Code und Magic Values durch und behebe sichere, scope-nahe Befunde proaktiv.
 ---
 
 # Qualitäts-Audit in AiNetLinter
@@ -9,7 +9,7 @@ description: Führe am Ende größerer AiNetLinter-Aufgaben einen gezielten MCP-
 
 Dieser Skill ist ein unabhängiger Abschlusscheck für größere Features,
 Refactorings und zusammenhängende Codepakete. Er sucht mit dem AiNetLinter-
-MCP-Server nach Code-Duplikation, totem Code und Magic Values und behebt
+MCP-Server nach Code-Duplikation, Refactoring-Drift, totem Code und Magic Values und behebt
 eindeutige, risikoarme Befunde direkt im aktuellen Arbeitsstand.
 
 Der Audit wird nicht bei jedem kleinen Fix und nicht als endlose
@@ -43,9 +43,12 @@ weil sie im globalen Scan sichtbar werden.
 
 ## Audit-Reihenfolge
 
-1. **DRY:** Rufe `find_duplicates` auf. Prüfe exakte Treffer zuerst; `near`-
-   und strukturelle Treffer sind nur Kandidaten. Vergleiche Signaturen,
-   Aufrufer, Ownership, Fehlersemantik und fachliche Verantwortung.
+1. **DRY und Refactoring-Drift:** Rufe `find_duplicates` auf. Prüfe exakte
+   Treffer zuerst; `near`- und strukturelle Treffer sind nur Kandidaten.
+   Vergleiche Signaturen, Aufrufer, Ownership, Fehlersemantik und fachliche
+   Verantwortung. Verwende `mode="refactoring-drift"` nur bei einer konkreten
+   Hypothese, dass ein bestehender Helper in einem betroffenen Pfad nachgebaut
+   wurde; führe keinen breiten Drift-Suchlauf ohne solchen Hinweis aus.
 2. **Dead Code:** Rufe `find_dead_code` auf. Bestätige einen Fund mit
    `find_references` oder einem passenden MCP-Impact-Tool. Berücksichtige
    öffentliche bzw. interne Verträge, Reflection, Serialisierung,

@@ -593,9 +593,10 @@ Code-Clone-Detection (CCFinder/Jaccard-N-Gram-Ansatz, Method-Granularitaet, sieh
   waeren aber zu viel Rauschen fuer automatisches Lint (Live-Dogfood-Befund: `near` allein erzeugte
   ~23 Einzel-Funde auf diesem Repo). Respektiert die dateiweite `// ainetlinter-disable
   DuplicateCode`-Suppression-Konvention ueber alle Cluster-Mitglieder.
-- [x] **Self-Audit-Skill** `.agents/skills/drift-audit/SKILL.md` (Idee F, projekteigen, nicht Teil
-  des generischen `Agent-Scaffolding`-Pakets) — Vier-Schritte-Playbook (+ struktureller Scan-Schritt
-  fuer Typ-4-Kandidaten), Cadence pro Epic verpflichtend / pro Step optional (Hinweis in `AGENTS.md`).
+- [x] **Self-Audit-Skill** `.agents/skills/audit/SKILL.md` (Idee F, projekteigen, nicht Teil
+  des generischen `Agent-Scaffolding`-Pakets) — konsolidierter Abschlusscheck für DRY,
+  Refactoring-Drift, Dead Code und Magic Values; Cadence pro Epic verpflichtend / pro Step
+  optional (Hinweis in `AGENTS.md`).
 - [x] `rules.json`-Config (`Global.DuplicateCode*`, 9 Keys + `StructuralDuplicate*Threshold`, 3 Keys)
   + `RuleRegistry`-Eintrag (`--list-rules`/`--describe-rule`/`--search-rules`).
 - [x] 75+ neue Unit-/Integrationstests (Engine, Checker, Tool, Refactoring-Drift, Suppression,

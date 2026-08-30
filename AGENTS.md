@@ -125,7 +125,7 @@ Die produktive Testsuite ist auf `src/AiNetLinter.FastTests` (`Unit`/`Component`
 ## 5. Dev-Loop & Task-Orchestration
 
 - Für mehrstufige Aufgaben (Audits, Refactorings, Features): siehe `.agents/Agent-Scaffolding/dev-loop/README.md`.
-- Vor Abschluss eines Epics oder eines größeren Tasks: `.agents/skills/drift-audit/SKILL.md` einmal ausführen (DRY-Audit über `find_duplicates`). Für einzelne Steps innerhalb eines Tasks ist die Ausführung optional.
+- Vor Abschluss eines Epics oder eines größeren Tasks: `.agents/skills/audit/SKILL.md` einmal ausführen (DRY-, Refactoring-Drift-, Dead-Code- und Magic-Value-Audit über die passenden MCP-Tools). Für einzelne Steps innerhalb eines Tasks ist die Ausführung optional.
 
 ---
 
