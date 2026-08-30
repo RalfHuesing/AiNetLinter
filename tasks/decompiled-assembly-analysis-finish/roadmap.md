@@ -1,11 +1,11 @@
 # Ausführungs-Roadmap: Einheitlicher Roslyn-Analysepfad
 
-status: executing
+status: blocked
 current_epic: 4
 last_commit: d6cd4c58
-blocker: Review der Epic-4-Statuskorrektur; laufende MCP-Registry bleibt externe Voraussetzung
+blocker: Live-MCP-Registry 1.0.154 benötigt externen Publish/Restart für targetType/targetPath und Assembly-Sessions
 correction_round: 1
-cycle_state: active
+cycle_state: blocked
 recent_finding_signatures:
   - Partiality-Status-Consistency: gemeinsamer analysis-Header übernimmt Root-complete trotz Partial-Payload
   - Installed-MCP-Schema-Drift: lokale Registry 1.0.154 bietet nicht targetType/targetPath und Assembly-Sessions

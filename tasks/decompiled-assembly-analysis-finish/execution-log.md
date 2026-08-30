@@ -1218,6 +1218,55 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
 - Code-Map: zuerst verifizieren; nur konkrete Navigationsfehler dürfen direkt
   in `code-map.md` korrigiert werden.
 
+## 2026-08-30 — Epic 4 Korrekturrunde 1 Review abgeschlossen
+
+- Run-ID: `resume-2026-08-30-epic-4-correction-1-review`
+- Epic: 4 — Capability-Matrix, Host-Integration und End-to-End-Verträge
+- Rolle: Reviewer
+- Subagent-ID: `01a0544c-efad-7953-87e0-3341b2d46ea7`
+- Diff-Baseline: `d6cd4c58`; gegenüber diesem Checkpoint waren nur
+  Task-Dokumente geändert, kein Produktionscode.
+- Status: `completed`; Urteil: `blocked` für die Live-Abnahme, Quellkorrektur
+  fachlich approved.
+- Vollständiger Reviewerbericht:
+
+  `P1 Partiality-Status-Consistency`: Kein Befund. `ExpandReferencesAsync`
+  läuft im echten Dispatcherpfad; `ResolveEffectiveStatus` wird zentral von
+  gemeinsamer Analyse-Metadatenbildung sowie Inspect-/Extensions-Payloads
+  verwendet. Der Textheader erhält denselben effektiven Status und dieselbe
+  Completeness. Die vier Fehlerfälle werden durch Dispatcher-Tests über alle
+  Statuskanäle geprüft. Relevante Stellen:
+  `AnalysisToolCall.cs:170`, `AssemblyAnalysisResponse.cs:19`,
+  `AssemblySessionStatusExtensions.cs:10`.
+
+  `P1 Installed-MCP-Schema-Drift`: `.mcp.json` ist gültig und nicht-invasiv
+  auf source-lokales `dotnet run` umgestellt. `ainetlinter.project.json`,
+  `AiNetLinter.slnx` und `rules.json` existieren. Die laufende Registry meldet
+  per `get_server_health` jedoch weiterhin Version `1.0.154`, Daemon-Modus und
+  nur das geladene `projectRoot`-Projekt; der aktuelle
+  `targetType`-/`targetPath`-/Assembly-Session-Vertrag ist dort nicht live
+  verfügbar. Ein externer Publish/Restart bleibt daher erforderlich und wurde
+  richtigerweise nicht ausgeführt. Die Voraussetzung ist nachvollziehbar
+  dokumentiert in `roadmap.md:6` und `code-map.md:205`.
+
+  P2 `get_file_tree`-Unsupported-Pfad: als bekanntes, nicht blockierendes
+  Risiko belassen; nicht geändert.
+
+  Die `code-map.md` wurde über `get_file_tree`, `get_feature_context`,
+  `find_symbol` und `find_references` gegen Working Tree und MCP verifiziert.
+  Keine konkreten Navigationsfehler, daher keine Änderung.
+
+  Die gemeldeten frischen Checks wurden nicht redundant wiederholt: FastTests
+  4/4, Wiring/Bootstrap 24/24, Daemon 1/1, Health-E2E 1/1, Build 0/0. Kein
+  Assembly-Laden oder -Ausführen, keine externe Änderung, kein Commit. Der
+  aktuelle Diff gegenüber `d6cd4c58` enthält ausschließlich Task-Dokumentation;
+  die produktive Korrektur liegt vollständig in `d6cd4c58`.
+
+- Nächste Aktion: Reviewstand als Checkpoint sichern und wegen der fehlenden
+  Live-MCP-Voraussetzung auf `blocked` setzen; nach lokalem Publish/Restart
+  kann der Lauf mit Epic 4 Abschluss, Epic 5, Audit und den finalen Gates
+  fortgesetzt werden.
+
 ## 2026-08-30 — Epic 4 Korrekturrunde 1 Implementierer abgeschlossen
 
 - Run-ID: `resume-2026-08-30-epic-4-correction-1`
