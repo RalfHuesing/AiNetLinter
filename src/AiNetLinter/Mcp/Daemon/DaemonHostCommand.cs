@@ -45,7 +45,8 @@ internal static class DaemonHostCommand
                 AnalysisToolCall.CreateTargetRoute(
                     ProjectAnalysisDispatcher.CreateRoute(projectRegistry),
                     AssemblyAnalysisDispatcher.CreateRoute(assemblyComposition.Sessions)),
-                runtimeContext),
+                runtimeContext,
+                assemblyComposition.Sessions),
             () => McpServerResourceCollectionFactory.Build(projectRegistry));
         var registry = new DaemonRegistryAdapter(projectRegistry);
         var host = new DaemonHost(new DaemonHostOptions(

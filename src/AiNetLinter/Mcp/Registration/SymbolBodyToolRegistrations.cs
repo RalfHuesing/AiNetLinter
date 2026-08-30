@@ -41,7 +41,7 @@ internal static class SymbolBodyToolRegistrations
                             ProjectCall: lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, symbolIdentifiers, maxBodyLines, ct),
                             AssemblySessionCall: lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, symbolIdentifiers, maxBodyLines, ct)),
                         ct)),
-            McpToolRegistrationOptions.ReadOnlyTool("get_symbol_body", GetSymbolBodyDescription)));
+            McpToolRegistrationOptions.TargetedReadOnlyTool("get_symbol_body", GetSymbolBodyDescription)));
     }
 
     private const string GetSymbolBodyDescription =

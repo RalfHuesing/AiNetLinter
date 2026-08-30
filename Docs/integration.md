@@ -310,10 +310,12 @@ Im adressierten Projektroot liegt `ainetlinter.project.json`:
 Definitionsdatei aufgelöst; eine Nachbarsuche oder ein Default-Fallback findet
 im Registry-Pfad nicht statt. Zielgebundene Analyse-, Wartungs- und Audit-Tools
 erwarten `targetType` und `targetPath` als Pflichtparameter. `targetType=project`
-adressiert dabei den Projektroot; `targetType=assembly` ist nur für die
-spezialisierten Assembly-Tools verfügbar. `get_server_health` akzeptiert keinen
-Target-Block für die Aggregation, optional einen vollständigen Projekt-Target-Block
-und meldet Assembly-Targets als nicht unterstützt.
+adressiert dabei den Projektroot; `targetType=assembly` ist für die in
+`tools/list` als Assembly-fähig beschriebenen read-only Symbol-, Struktur- und
+Metrikabfragen sowie für die spezialisierten Assembly-Tools verfügbar. Projekt-
+only-Tools weisen Assembly-Ziele ausdrücklich als unsupported aus. `get_server_health`
+akzeptiert keinen Target-Block für die Aggregation, optional einen vollständigen
+Projekt- oder Assembly-Target-Block und liefert getrennte Session-Abschnitte.
 
 Für Legacy-MCP wird der Server über `initialize` ausgehandelt. Clients der Protokollversion `2026-07-28` verwenden stattdessen `server/discover` ohne separaten `initialized`-Schritt. Dieser Request trägt unter `params._meta` die Protokollversion, Client-Info und Client-Capabilities; dieselben Metadaten gehören auch in nachfolgende Requests wie `tools/list`.
 

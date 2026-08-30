@@ -114,12 +114,26 @@ internal static class AssemblyAnalysisDispatcher
 {
     internal static AnalysisToolRoute CreateRoute(IAssemblyAnalysisRegistry? assemblyRegistry) => request =>
         request.Dispatch.AssemblySessionCall is null
-            ? Task.FromResult(UnsupportedAssemblyTarget())
+            ? UnsupportedRouteAsync(request)
             : ExecuteAsync(
                 assemblyRegistry,
                 request.Target,
                 request.Dispatch.AssemblySessionCall,
                 request.CancellationToken);
+
+    private static Task<CallToolResult> UnsupportedRouteAsync(AnalysisToolCallRequest request)
+    {
+        var resolution = AnalysisTargetResolver.Resolve(request.Target);
+        if (resolution.Error is not null)
+        {
+            return Task.FromResult(resolution.Error);
+        }
+
+        var result = resolution.Target!.TargetType == AnalysisTargetType.Assembly
+            ? UnsupportedAssemblyTarget(resolution.Target.CanonicalPath)
+            : UnsupportedProjectTarget();
+        return Task.FromResult(result);
+    }
 
     internal static async Task<CallToolResult> ExecuteAsync(
         IAssemblyAnalysisRegistry? assemblyRegistry,

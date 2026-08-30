@@ -64,5 +64,11 @@ Jeder zielgebundene Tool-Aufruf erhält `targetType` (`project` oder `assembly`)
 und den absoluten `targetPath`. Bei `targetType=project` muss im adressierten
 Projektroot `ainetlinter.project.json` liegen. Fehlt die Datei oder ist sie
 ungültig, liefert der Server `PROJECT_NOT_INITIALIZED` bzw. `RULES_INVALID` mit
-einem konkreten Wiederherstellungshinweis. `targetType=assembly` ist für die
-spezialisierten Assembly-Tools auf eine vorhandene lokale `.dll` begrenzt.
+einem konkreten Wiederherstellungshinweis. `tools/list` weist je Tool aus, ob
+der gemeinsame read-only Projekt-/Assembly-Sessionpfad, nur der Projektpfad
+oder nur der Assemblypfad unterstützt wird. Symbolgraph-, Struktur- und
+Metrikabfragen verwenden für Assemblys eine source-backed oder dekompilierte
+read-only Session; Regeln, Audits, Dateisuche, Tests und Git-Impact bleiben
+projektgebunden. `get_server_health` kann ohne Target aggregieren oder gezielt
+eine Projekt- bzw. Assembly-Session anzeigen. Target-Aufrufe verwenden keine
+Legacy-Parameter wie `projectRoot` oder `assemblyPath`.

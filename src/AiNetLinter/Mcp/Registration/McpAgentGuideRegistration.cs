@@ -30,7 +30,7 @@ internal static class McpAgentGuideRegistration
             {
                 UriTemplate = Uri,
                 Name = "agent-guide",
-                Description = "Onboarding für die AiNetLinter-MCP-Integration; ohne projectRoot lesbar.",
+                Description = "Onboarding für die AiNetLinter-MCP-Integration; ohne Target lesbar.",
                 MimeType = "text/markdown",
             }));
     }

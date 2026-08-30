@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 
 namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 
@@ -31,13 +32,31 @@ internal sealed record ProjectHealthEntry(
     string? LastLoadError);
 
 /// <summary>
+/// Zustand einer residenten Assembly- oder Source-Project-Session. Die Herkunfts- und
+/// Snapshot-Felder entsprechen dem Metadata-Vertrag der Assembly-Tools.
+/// </summary>
+internal sealed record AssemblyHealthEntry(
+    string TargetPath,
+    string LoadState,
+    string? OriginKind,
+    string? SourceProjectPath,
+    SourceSnapshotIdentity? SourceSnapshot,
+    string? ContentHash,
+    string? GeneratedDocumentPath,
+    string? Confidence,
+    string? Trust,
+    long? Generation,
+    IReadOnlyList<string>? Diagnostics);
+
+/// <summary>
 /// StructuredContent-Payload fuer <c>get_server_health</c>: ein Eintrag je residentem
 /// Projekt-Key und optional die Laufzeitdaten des Daemons.
 /// </summary>
 internal sealed record ServerHealthAggregatePayload(
     string Version,
     IReadOnlyList<ProjectHealthEntry> Projects,
-    DaemonHealthPayload? Daemon = null);
+    DaemonHealthPayload? Daemon = null,
+    IReadOnlyList<AssemblyHealthEntry>? Assemblies = null);
 
 internal sealed record DaemonHealthPayload(
     string Mode,

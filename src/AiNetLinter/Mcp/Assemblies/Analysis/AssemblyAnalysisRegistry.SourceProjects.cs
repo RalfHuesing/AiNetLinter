@@ -190,4 +190,61 @@ internal sealed partial class AssemblyAnalysisRegistry
         AssemblySourceSelection selection,
         Project project) =>
         $"source:{selection.SourceLease.Snapshot.Identity.StableValue}:{project.Id}";
+
+    Task<IReadOnlyList<AssemblyAnalysisHealthSnapshot>> IAssemblyAnalysisRegistry.SnapshotsAsync() =>
+        SnapshotsAsync();
+
+    internal async Task<IReadOnlyList<AssemblyAnalysisHealthSnapshot>> SnapshotsAsync()
+    {
+        KeyValuePair<string, AssemblyAnalysisRegistryEntryCreation>[] current;
+        lock (gate)
+        {
+            current = [.. entries];
+        }
+
+        var snapshots = await Task.WhenAll(
+            current.Select(pair => CreateHealthSnapshotAsync(pair.Key, pair.Value))).ConfigureAwait(false);
+        return snapshots
+            .OrderBy(snapshot => snapshot.TargetPath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static async Task<AssemblyAnalysisHealthSnapshot> CreateHealthSnapshotAsync(
+        string key,
+        AssemblyAnalysisRegistryEntryCreation creation)
+    {
+        if (!creation.Task.IsCompleted)
+        {
+            return new(key, "loading");
+        }
+
+        if (creation.Task.IsFaulted)
+        {
+            var exception = creation.Task.Exception?.GetBaseException();
+            return new(
+                key,
+                "failed",
+                Diagnostics: exception is null ? Array.Empty<string>() : [exception.Message]);
+        }
+
+        if (creation.Task.IsCanceled)
+        {
+            return new(key, "failed", Diagnostics: ["Die Assembly-Session wurde abgebrochen."]);
+        }
+
+        var entry = await creation.Task.ConfigureAwait(false);
+        var context = entry.Context;
+        return new(
+            entry.CanonicalPath,
+            context.Status.ToWireValue(),
+            context.Origin.OriginKind,
+            context.Origin.SourceProjectPath,
+            context.Origin.SourceSnapshotIdentity,
+            context.Origin.ContentHash,
+            context.Origin.GeneratedDocumentPath,
+            context.Origin.Confidence,
+            context.Origin.Trust,
+            context.Generation,
+            context.Diagnostics);
+    }
 }

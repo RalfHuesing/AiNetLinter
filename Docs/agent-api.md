@@ -302,10 +302,40 @@ auf 26.887 UTF-8-Bytes (Delta +6.051 Bytes, Baseline-Messung 2026-08-20; Messung
 Für jedes zielgebundene Tool sind `targetType` und der absolute `targetPath`
 Pflichtparameter; die folgenden Zeilen listen die jeweiligen fachlichen
 Zusatzparameter. `targetType=project` adressiert einen Projektroot und
-`targetType=assembly` eine vorhandene lokale `.dll`. Die Assembly-Tools sind die
-spezialisierte Ausnahme für Assembly-Targets. `get_server_health` kann ohne Target
-aggregieren oder einen vollständigen Projekt-Target-Block erhalten; Feedback bleibt
-nicht zielgebunden.
+`targetType=assembly` eine vorhandene lokale `.dll`. `tools/list` weist explizit
+aus, ob ein Tool beide Target-Arten, nur Projekte oder nur Assemblys unterstützt.
+`get_server_health` kann ohne Target aggregieren oder einen vollständigen Projekt-
+oder Assembly-Target-Block erhalten; Feedback bleibt nicht zielgebunden.
+
+### Capability-Matrix und gemeinsame Session
+
+Alle Assembly-fähigen Abfragen verwenden denselben Target-Resolver, die gemeinsame
+Assembly-Registry und denselben read-only Roslyn-Snapshot wie `inspect_assembly`.
+Eine source-backed Assembly-Session stammt aus einer explizit gemappten Source-
+Solution; ohne verwendbare Zuordnung liefert die Registry eine dekompilierte
+Session. Beide Varianten kennzeichnen `origin`, `sourcePath`/Snapshot, Assembly-
+Hash, `generatedPath`, Confidence, Trust, Generation, Status, Vollständigkeit und
+Diagnosen. Die Assembly wird nicht geladen oder ausgeführt.
+
+| MCP-Familie | Projekt | source-backed Assembly | dekompilierte Assembly | Grenze |
+| :--- | :---: | :---: | :---: | :--- |
+| `find_symbol`, `get_namespace_tree`, `get_file_skeleton`, `get_class_structure` | supported | supported | supported | read-only Symbol-/Struktur-Snapshot |
+| `get_symbol_body`, `find_references`, `get_call_tree`, `get_type_hierarchy`, `dependency_graph` | supported | supported | supported | nur statisch auflösbare Nodes; Diagnosen bleiben sichtbar |
+| `metrics_tree`, `metrics_lookup` | supported | supported | supported | berechnet auf dem jeweiligen Snapshot |
+| `inspect_assembly`, `find_assembly_extensions` | n/a | supported | supported | Assembly-Target-only; Extensions ohne Consumer ggf. `not_decidable` |
+| `get_file_tree`, `get_index_scope`, `get_hotspots` | supported | unsupported | unsupported | physischer Projekt-Dateibestand |
+| `get_violations`, `safeguard`, `pattern_detect`, `find_magic_values`, `find_dead_code` | supported | unsupported | unsupported | Regeln/Audits gelten nur für den Projekt-Key |
+| `get_feature_context`, `get_test_context` | supported | unsupported | unsupported | Testbezug ist statische Zuordnung; keine Testausführung |
+| `get_impact` | supported | unsupported | unsupported | Git-/Change-Impact bezieht sich nur auf den aktuellen Projektcheckout |
+| `find_duplicates`, `search_pattern` | supported | unsupported | unsupported | Audit-/Dateisuche bleibt projektgebunden |
+| `reload_config` | supported | unsupported | unsupported | lädt nur die Projekt-Regelkonfiguration neu |
+| `get_server_health` | supported | supported | supported | ohne Target getrennte Projekt-/Assembly-Session-Listen; Target lädt/zeigt genau eine Session |
+| `report_observability_feedback` | unbound | unbound | unbound | kein Target-Vertrag; `projectRoot` ist nur optionaler Feedback-Kontext |
+
+`unsupported` ist ein expliziter Capability-Status und keine leere erfolgreiche
+Antwort. `get_violations`/`safeguard` führen weder fremde Regeln noch Tests aus;
+`get_test_context` und `get_impact` liefern statische bzw. Git-basierte Hinweise.
+Source-backed Checkout-/Snapshot-Erzeugung und Decompilation bleiben read-only.
 
 | Tool | Input | Output | C#-only | Trunkierung |
 | :--- | :--- | :--- | :--- | :---: |
@@ -335,7 +365,7 @@ nicht zielgebunden.
 | `get_symbol_body` | `symbolIdentifiers` (Array stabiler IDs/Namen/Dateizeilen fuer Batch in 1 Turn; auch fuer genau ein Symbol), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body bzw. -Bodies, getrennt durch Divider, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator | ja | nein (Body) |
 | `search_pattern` | `pattern` (Text oder Regex), `isRegex?` (Default `false` = case-insensitive Substring), `maxResults?` (Default 50), `maxFiles?`, `contextLines?`, `maxResponseBytes?`, `scope?`, `includePatterns?`, `excludePatterns?`, `enrichCSharp?` (Default `false`) | Treffer im Dateibestand (alle Dateitypen) mit Match-Bereichen, optionalem Kontext und `completeness`; bei `enrichCSharp=true` zusätzlich `semantic` für sichtbare Treffer geladener C#-Dokumente | nein (Fallback) | ja |
 | `reload_config` | `targetType="project"`, `targetPath` (Pflicht, absoluter Projektroot), `configPath?` (optional, Override für diesen Key) | Liest standardmäßig die `rules`-Datei des adressierten Keys neu ein; ein expliziter `configPath` ist ein Hot-Swap-Override. Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
-| `get_server_health` | kein Target (Aggregation) oder `targetType="project"` plus vollständiger `targetPath` (optionaler Key-Filter) | Health je Projekt-Key oder als Aggregation: LoadState, Solution/Config-Quelle, LastUsedUtc, Uptime, Refresh-/Staleness-Werte und LastGoodState/LastLoadError; Assembly-Targets werden als nicht unterstützt gemeldet | nein | nein |
+| `get_server_health` | kein Target (Aggregation) oder `targetType="project"`/`targetType="assembly"` plus vollständiger `targetPath` (optionaler Session-Filter) | getrennte Health-Listen für Projekt-Keys und residente Assembly-/Source-Project-Sessions; Target lädt bzw. zeigt genau eine Session mit Origin, Snapshot, Hash, Generation, Status und Diagnosen | nein | nein |
 | `report_observability_feedback` | `feedbackType` (Pflicht), `title` (Pflicht), `description` (Pflicht), `relatedTool?`, `severity?` (Default `medium`), `expectedBehavior?`, `actualBehavior?`, `additionalContext?`, `projectRoot?` | Schreibt Fehlerberichte, unerwartete Ausgaben, False Positives oder Feature-Wünsche von KI-Agenten unbeschränkt ins System-Log zur Analyse (nicht für normale Leermengen wie nicht existierende Symbole); liefert Bestätigung und typisiertes DTO | ja | nein |
 | `find_duplicates` | `mode?` (`clone` Default, `refactoring-drift` oder `structural`), `scopeType?` (`all` Default, `production`, `tests`), `minTokens?` (Default aus `rules.json`, 30), `similarityThreshold?` (`exact`/`near`/`fuzzy`, Default `fuzzy` — niedrigste noch angezeigte Stufe, bei `mode=clone` und `mode=structural`), `normalizeIdentifiers?` (Default `false`, nur `mode=clone`), `scopeDir?` (Default Solution-Root), `maxResults?` (Default 20), `helperSymbol?` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte, stabile DocumentationCommentId oder qualifizierter Name wie bei `find_references`; Pflicht bei `mode=refactoring-drift`, bei `mode=structural` ignoriert) | `mode=clone`: Token-basierte Code-Clone-Detection (Jaccard-N-Gram, Method-Granularität) als transitiv gruppierte Cluster (nicht isolierte Paare), gestaffelt nach exact/near/fuzzy-Ähnlichkeit (inkl. Top-Cluster-Übersicht bei >20 Treffern). `mode=refactoring-drift`: Methoden, die den per `helperSymbol` angegebenen Helper strukturell nachbauen statt ihn aufzurufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005) — als Kandidaten (nicht Verstöße) gelistet, siehe Detail-Abschnitt unten. `mode=structural`: Erkennt semantisch ähnliche Hilfsmethoden anhand eines Roslyn-Strukturprofils und Cosine-Similarity (Typ-4/Intended Duplication), liefert manuell zu prüfende Kandidatencluster mit Strukturprofil-Kurzfassung — keine automatische `DuplicateCode`-Violation, eigene Cosine-Schwellwerte aus `rules.json` (`StructuralDuplicate*Threshold`) | ja | ja |
 

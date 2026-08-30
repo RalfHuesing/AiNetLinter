@@ -71,7 +71,8 @@ internal static class McpServerCommand
             registry,
             AnalysisToolCall.CreateTargetRoute(
                 ProjectAnalysisDispatcher.CreateRoute(registry),
-                AssemblyAnalysisDispatcher.CreateRoute(assemblyComposition.Sessions)));
+                AssemblyAnalysisDispatcher.CreateRoute(assemblyComposition.Sessions)),
+            assemblyRegistry: assemblyComposition.Sessions);
         serverOptions.ResourceCollection = McpServerResourceCollectionFactory.Build(registry);
 
         var transport = new StdioServerTransport(serverOptions);

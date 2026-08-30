@@ -120,7 +120,7 @@ internal static class FileStructureToolRegistrations
                                 new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults),
                                 ct)),
                         ct)),
-            McpToolRegistrationOptions.ReadOnlyTool("get_namespace_tree", GetNamespaceTreeDescription)));
+            McpToolRegistrationOptions.TargetedReadOnlyTool("get_namespace_tree", GetNamespaceTreeDescription)));
     }
 
     private static readonly string GetNamespaceTreeDescription =
@@ -147,7 +147,7 @@ internal static class FileStructureToolRegistrations
                             ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, symbolIdentifier, sortBy, maxMembers, ct),
                             AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, symbolIdentifier, sortBy, maxMembers, ct)),
                         ct)),
-            McpToolRegistrationOptions.ReadOnlyTool("get_class_structure", GetClassStructureDescription)));
+            McpToolRegistrationOptions.TargetedReadOnlyTool("get_class_structure", GetClassStructureDescription)));
     }
 
     private static readonly string GetClassStructureDescription =
@@ -174,7 +174,7 @@ internal static class FileStructureToolRegistrations
                             ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, ct),
                             AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, ct)),
                         ct)),
-            McpToolRegistrationOptions.ReadOnlyTool("get_file_skeleton", GetFileSkeletonDescription)));
+            McpToolRegistrationOptions.TargetedReadOnlyTool("get_file_skeleton", GetFileSkeletonDescription)));
     }
 
     private const string GetFileSkeletonDescription =

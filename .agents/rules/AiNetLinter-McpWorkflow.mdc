@@ -23,11 +23,14 @@ aber nicht die semantische MCP-Abfrage.
 
 - Jeder zielgebundene MCP-Tool-Aufruf erhält `targetType` (`project` oder
   `assembly`) und den absoluten `targetPath`. `targetType=project` adressiert
-  den Projektroot; `targetType=assembly` ist nur für die spezialisierten
-  Assembly-Tools verfügbar.
+  den Projektroot. `tools/list` weist je Tool aus, ob der gemeinsame read-only
+  Projekt-/Assembly-Sessionpfad, nur der Projektpfad oder nur der Assemblypfad
+  unterstützt wird; Symbolgraph, Struktur und Metriken können Assemblys über
+  source-backed oder dekompilierte Sessions abfragen.
 - `get_server_health` ist die einzige Ausnahme mit einem optionalen Target:
   `targetType` und `targetPath` müssen paarweise angegeben werden; ohne Target
-  aggregiert das Tool den Serverzustand. `report_observability_feedback` ist
+  aggregiert das Tool getrennte Projekt- und Assembly-Sessions. Regeln, Audits,
+  Dateisuche, Tests und Git-Impact bleiben projektgebunden; `report_observability_feedback` ist
   nicht zielgebunden und erhält keinen Target-Block.
 - Das Query-Argument wird ausschließlich in den Resource-URIs
   `ainetlinter://overview{?projectRoot}` und
@@ -80,6 +83,9 @@ nicht aus. Bei `inspect_assembly` zuerst die öffentliche API untersuchen;
 `find_assembly_extensions` prüft klassische C#-Extensions und weist ohne
 Consumer-Projekt die Roslyn-Anwendbarkeit als `not_decidable` aus.
 `completeness` sowie Trunkierungsangaben beachten.
+
+Target-Aufrufe verwenden keine Legacy-Pfadparameter; historische Query-
+Parameter bleiben ausschließlich den projektbezogenen Resource-URIs vorbehalten.
 
 Bei `PROJECT_NOT_INITIALIZED` oder `RULES_INVALID` nicht ungefragt eine
 Projektintegration durchführen. Nur bei einem ausdrücklichen

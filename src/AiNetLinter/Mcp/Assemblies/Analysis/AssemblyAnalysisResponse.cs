@@ -16,6 +16,11 @@ internal static class AssemblyAnalysisResponse
     internal static CallToolResult Enrich(CallToolResult result, AssemblyAnalysisLease lease)
     {
         var origin = lease.Context.Origin;
+        var diagnostics = lease.Context.Diagnostics
+            .Concat(lease.ReferenceExpansionDiagnostics)
+            .Distinct(StringComparer.Ordinal)
+            .Take(100)
+            .ToList();
         var metadata = new AssemblyResponseMetadata(
             lease.CanonicalPath,
             origin.OriginKind,
@@ -27,7 +32,8 @@ internal static class AssemblyAnalysisResponse
             lease.Context.Generation,
             lease.Context.Status.ToWireValue(),
             lease.Context.Status.ToCompletenessLabel(),
-            lease.Context.Diagnostics);
+            diagnostics,
+            origin.SourceSnapshotIdentity);
 
         var content = result.Content
             .Select(block => block is TextContentBlock text
@@ -70,8 +76,12 @@ internal static class AssemblyAnalysisResponse
 
     private static string FormatHeader(AssemblyResponseMetadata metadata) =>
         $"[ASSEMBLY] targetType=assembly; targetPath={metadata.TargetPath}; origin={metadata.Origin}; " +
+        $"sourcePath={metadata.SourcePath ?? "none"}; snapshot={FormatSnapshot(metadata.SourceSnapshot)}; " +
         $"confidence={metadata.Confidence}; trust={metadata.Trust}; generation={metadata.Generation}; " +
         $"status={metadata.Status}; completeness={metadata.Completeness}\n\n";
+
+    private static string FormatSnapshot(SourceSnapshotIdentity? snapshot) =>
+        snapshot is null ? "none" : $"{snapshot.RepositoryUrl}@{snapshot.LoadedRevision}";
 
     private sealed record AssemblyResponseMetadata(
         string TargetPath,
@@ -84,7 +94,8 @@ internal static class AssemblyAnalysisResponse
         long Generation,
         string Status,
         string Completeness,
-        IReadOnlyList<string> Diagnostics)
+        IReadOnlyList<string> Diagnostics,
+        SourceSnapshotIdentity? SourceSnapshot)
     {
         public string TargetType => "assembly";
     }

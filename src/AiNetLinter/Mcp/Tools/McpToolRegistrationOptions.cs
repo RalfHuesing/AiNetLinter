@@ -7,7 +7,13 @@ namespace AiNetLinter.Mcp.Tools;
 internal static class McpToolRegistrationOptions
 {
     private const string ProjectTargetContract =
-        " Zielvertrag: targetType='project' und targetPath als absoluter, kanonischer Projektpfad.";
+        " Zielvertrag: targetType='project' und targetPath als absoluter, kanonischer Projektpfad. " +
+        "Assembly-Ziele sind für dieses Tool ausdrücklich unsupported.";
+    private const string ReadOnlyTargetContract =
+        " Zielvertrag: targetType='project' mit absolutem, kanonischem Projektpfad oder " +
+        "targetType='assembly' mit absolutem, existierendem .dll-Pfad. Assembly-Antworten " +
+        "laufen über dieselbe read-only Session und weisen Herkunft, Snapshot/Generation, " +
+        "Status und Vollständigkeit aus.";
     private const string AssemblyTargetContract =
         " Zielvertrag: targetType='assembly' und targetPath als absoluter, existierender .dll-Pfad.";
 
@@ -31,6 +37,9 @@ internal static class McpToolRegistrationOptions
 
     internal static McpServerToolCreateOptions ReadOnlyTool(string name, string description) =>
         Create(name, description + ProjectTargetContract, ReadOnlyValues);
+
+    internal static McpServerToolCreateOptions TargetedReadOnlyTool(string name, string description) =>
+        Create(name, description + ReadOnlyTargetContract, ReadOnlyValues);
 
     internal static McpServerToolCreateOptions ReloadConfigTool(string name, string description) =>
         Create(name, description + ProjectTargetContract, ReloadConfigValues);

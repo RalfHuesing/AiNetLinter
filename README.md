@@ -91,8 +91,12 @@ verwenden deshalb denselben Named-Pipe-Endpunkt. Ohne ID bleibt der bisherige
 Named-Pipe-Endpunkt unverändert.
 
 Jeder zielgebundene Tool-Aufruf erhält `targetType` (`project` oder `assembly`)
-und den absoluten `targetPath`. Bei `targetType=project` liegt im adressierten
-Projektroot die Definition der Solution und Regeldatei:
+und den absoluten `targetPath`. Die konkrete Capability-Matrix steht in
+`tools/list` und in [Docs/agent-api.md](Docs/agent-api.md#mcp-server-modus):
+Read-only Symbol-/Struktur-/Metrikabfragen teilen sich den Projekt-/Assembly-
+Sessionpfad, während Regeln, Audits, Dateisuche und Git-Impact projektgebunden
+bleiben. Bei `targetType=project` liegt im adressierten Projektroot die Definition
+der Solution und Regeldatei:
 
 ```json
 {

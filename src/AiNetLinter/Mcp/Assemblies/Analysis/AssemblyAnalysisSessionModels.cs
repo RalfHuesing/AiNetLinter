@@ -26,6 +26,7 @@ internal sealed record AssemblyOrigin(
     string? SourceProjectPath = null,
     string Trust = "untrusted")
 {
+    /// <summary>Interner Kompatibilitätsalias; im MCP-Payload ist <see cref="OriginKind"/> maßgeblich.</summary>
     internal string Kind => OriginKind;
 
     internal bool IsDecompiled => string.Equals(OriginKind, "decompiled", StringComparison.Ordinal);
@@ -179,6 +180,19 @@ internal sealed record AssemblySessionState(
     AssemblyFingerprint? Fingerprint,
     IReadOnlyList<AssemblySessionDiagnostic> Diagnostics,
     DateTime UpdatedUtc);
+
+internal sealed record AssemblyAnalysisHealthSnapshot(
+    string TargetPath,
+    string LoadState,
+    string? OriginKind = null,
+    string? SourceProjectPath = null,
+    SourceSnapshotIdentity? SourceSnapshot = null,
+    string? ContentHash = null,
+    string? GeneratedDocumentPath = null,
+    string? Confidence = null,
+    string? Trust = null,
+    long? Generation = null,
+    IReadOnlyList<string>? Diagnostics = null);
 
 internal sealed record AssemblySessionRefreshResult(
     AssemblySessionStatus Status,

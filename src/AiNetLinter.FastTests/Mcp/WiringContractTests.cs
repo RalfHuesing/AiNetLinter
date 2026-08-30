@@ -76,6 +76,59 @@ public sealed class WiringContractTests
     }
 
     [Fact]
+    public async Task ToolCollection_AdvertisesCompleteProjectAssemblyCapabilityMatrix()
+    {
+        await using var composition = AssemblyAnalysisHostComposition.Create();
+        await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        var tools = McpServerToolCollectionFactory.Build(
+                registry,
+                AnalysisToolCall.CreateTargetRoute(
+                    ProjectAnalysisDispatcher.CreateRoute(registry),
+                    AssemblyAnalysisDispatcher.CreateRoute(composition.Sessions)),
+                assemblyRegistry: composition.Sessions)
+            .ToDictionary(tool => tool.ProtocolTool.Name, tool => tool.ProtocolTool);
+
+        var projectAndAssembly = new[]
+        {
+            "dependency_graph", "find_references", "find_symbol", "get_call_tree",
+            "get_class_structure", "get_file_skeleton", "get_namespace_tree", "get_symbol_body",
+            "get_type_hierarchy", "metrics_lookup", "metrics_tree",
+        };
+        var projectOnly = new[]
+        {
+            "find_dead_code", "find_duplicates", "find_magic_values", "get_feature_context",
+            "get_file_tree", "get_hotspots", "get_impact", "get_index_scope", "get_test_context",
+            "get_violations", "pattern_detect", "reload_config", "safeguard", "search_pattern",
+        };
+
+        foreach (var name in projectAndAssembly)
+        {
+            var description = tools[name].Description;
+            Assert.Contains("targetType='project'", description, StringComparison.Ordinal);
+            Assert.Contains("targetType='assembly'", description, StringComparison.Ordinal);
+            Assert.Contains("Snapshot/Generation", description, StringComparison.Ordinal);
+            Assert.DoesNotContain("ausdrücklich unsupported", description, StringComparison.Ordinal);
+        }
+
+        foreach (var name in projectOnly)
+        {
+            var description = tools[name].Description;
+            Assert.Contains("targetType='project'", description, StringComparison.Ordinal);
+            Assert.Contains("ausdrücklich unsupported", description, StringComparison.Ordinal);
+        }
+
+        foreach (var name in new[] { "inspect_assembly", "find_assembly_extensions" })
+        {
+            var description = tools[name].Description;
+            Assert.Contains("targetType='assembly'", description, StringComparison.Ordinal);
+            Assert.DoesNotContain("targetType='project'", description, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("Projekt- und Assembly-Sessions", tools["get_server_health"].Description, StringComparison.Ordinal);
+        Assert.Contains("targetType='assembly'", tools["get_server_health"].Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ToolCollection_ClassifiesEveryRegisteredToolWithExplicitAnnotations()
     {
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();

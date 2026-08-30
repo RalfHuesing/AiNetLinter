@@ -55,7 +55,7 @@ internal static class SymbolGraphToolRegistrations
                             ProjectCall: lease => FindSymbolTool.ExecuteAsync(lease.Server, namePatterns, kind, maxResults, ct),
                             AssemblySessionCall: lease => FindSymbolTool.ExecuteAsync(lease.Server, namePatterns, kind, maxResults, ct)),
                         ct)),
-            McpToolRegistrationOptions.ReadOnlyTool("find_symbol", FindSymbolDescription)));
+            McpToolRegistrationOptions.TargetedReadOnlyTool("find_symbol", FindSymbolDescription)));
     }
 
     private const string FindSymbolDescription =
@@ -79,7 +79,7 @@ internal static class SymbolGraphToolRegistrations
                             ProjectCall: lease => FindReferencesTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, depth, ct),
                             AssemblySessionCall: lease => FindReferencesTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, depth, ct)),
                         ct)),
-            McpToolRegistrationOptions.ReadOnlyTool("find_references", FindReferencesDescription)));
+            McpToolRegistrationOptions.TargetedReadOnlyTool("find_references", FindReferencesDescription)));
     }
 
     private const string FindReferencesDescription =
@@ -105,7 +105,7 @@ internal static class SymbolGraphToolRegistrations
                             ProjectCall: lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction), ct),
                             AssemblySessionCall: lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction), ct)),
                         ct)),
-            McpToolRegistrationOptions.ReadOnlyTool("get_call_tree", GetCallTreeDescription)));
+            McpToolRegistrationOptions.TargetedReadOnlyTool("get_call_tree", GetCallTreeDescription)));
     }
 
     private const string GetCallTreeDescription =
@@ -169,7 +169,7 @@ internal static class SymbolGraphToolRegistrations
                             ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct),
                             AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct)),
                         ct)),
-            McpToolRegistrationOptions.ReadOnlyTool("get_type_hierarchy", GetTypeHierarchyDescription)));
+            McpToolRegistrationOptions.TargetedReadOnlyTool("get_type_hierarchy", GetTypeHierarchyDescription)));
     }
 
     private const string GetTypeHierarchyDescription =
@@ -194,7 +194,7 @@ internal static class SymbolGraphToolRegistrations
                             ProjectCall: lease => DependencyGraphTool.ExecuteAsync(lease.Server, new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults), ct),
                             AssemblySessionCall: lease => DependencyGraphTool.ExecuteAsync(lease.Server, new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults), ct)),
                         ct)),
-            McpToolRegistrationOptions.ReadOnlyTool("dependency_graph", DependencyGraphDescription)));
+            McpToolRegistrationOptions.TargetedReadOnlyTool("dependency_graph", DependencyGraphDescription)));
     }
 
     private const string DependencyGraphDescription =

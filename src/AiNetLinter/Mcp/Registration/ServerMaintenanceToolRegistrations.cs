@@ -4,6 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
@@ -30,10 +31,11 @@ internal static class ServerMaintenanceToolRegistrations
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
         ProjectRegistry registry,
-        Daemon.DaemonRuntimeContext? runtimeContext = null)
+        Daemon.DaemonRuntimeContext? runtimeContext = null,
+        IAssemblyAnalysisRegistry? assemblyRegistry = null)
     {
         AddReloadConfig(tools, registry);
-        AddGetServerHealth(tools, registry, runtimeContext);
+        AddGetServerHealth(tools, registry, runtimeContext, assemblyRegistry);
         AddReportObservabilityFeedback(tools);
     }
 
@@ -61,7 +63,8 @@ internal static class ServerMaintenanceToolRegistrations
     private static void AddGetServerHealth(
         McpServerPrimitiveCollection<McpServerTool> tools,
         ProjectRegistry registry,
-        Daemon.DaemonRuntimeContext? runtimeContext)
+        Daemon.DaemonRuntimeContext? runtimeContext,
+        IAssemblyAnalysisRegistry? assemblyRegistry)
     {
         tools.Add(McpServerTool.Create(
             async (string? targetType = null, string? targetPath = null, CancellationToken ct = default) =>
@@ -77,27 +80,35 @@ internal static class ServerMaintenanceToolRegistrations
                 {
                     return await GetServerHealthTool.ExecuteAsync(
                         registry,
+                        assemblyRegistry,
                         new GetServerHealthOptions(RuntimeContext: runtimeContext));
                 }
 
                 if (resolution.Target.TargetType == AnalysisTargetType.Assembly)
                 {
-                    return AssemblyAnalysisDispatcher.UnsupportedAssemblyTarget();
+                    return await GetServerHealthTool.ExecuteAsync(
+                        registry,
+                        assemblyRegistry,
+                        new GetServerHealthOptions(AssemblyPath: resolution.Target.CanonicalPath, RuntimeContext: runtimeContext),
+                        ct);
                 }
 
                 return await GetServerHealthTool.ExecuteAsync(
                     registry,
-                    new GetServerHealthOptions(resolution.Target.CanonicalPath, runtimeContext));
+                    assemblyRegistry,
+                    new GetServerHealthOptions(ProjectRoot: resolution.Target.CanonicalPath, RuntimeContext: runtimeContext),
+                    ct);
             },
             McpToolRegistrationOptions.ServerHealthTool("get_server_health", GetServerHealthDescription)));
     }
 
     private const string GetServerHealthDescription =
-        "Wann nutzen: pruefen, ob der Server laeuft und welche Projekte resident sind. Ohne " +
-        "targetType und targetPath: ein Abschnitt pro geladenem Key (Root, Solution, rules.json, LastUsedUtc, " +
-        "LoadState, RefreshCount, Staleness, Uptime, LastGoodStateUtc/LastLoadError). Mit " +
-        "targetType='project' und absolutem targetPath: nur dieser Key. targetType='assembly' " +
-        "wird bis zur Assembly-Registry als noch nicht unterstuetzt gemeldet.";
+        "Wann nutzen: pruefen, ob der Server laeuft und welche Projekt- und Assembly-Sessions " +
+        "resident sind. Ohne targetType und targetPath: getrennte Abschnitte fuer alle Projekt-Keys " +
+        "und Assembly-Sessions. Mit targetType='project' und absolutem targetPath: nur dieser Key. " +
+        "Mit targetType='assembly' und absolutem, existierendem .dll-Pfad: diese Assembly-Session " +
+        "gezielt laden und ihren Origin-/Snapshot-/Generation-/Status-Vertrag ausgeben. " +
+        "targetType und targetPath muessen paarweise gesetzt oder beide weggelassen werden.";
 
     private static void AddReportObservabilityFeedback(McpServerPrimitiveCollection<McpServerTool> tools)
     {

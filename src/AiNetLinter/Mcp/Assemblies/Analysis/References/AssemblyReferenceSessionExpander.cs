@@ -62,15 +62,20 @@ internal sealed class AssemblyReferenceSessionExpander(
     private bool TryAddUnresolved(AssemblyReferenceDto reference)
     {
         if (reference.Resolved) return false;
-        AddSession(reference, reference.ResolutionState, AssemblyAnalysisLease.DiagnosticOf(reference));
+        var referenceDiagnostics = AssemblyAnalysisLease.DiagnosticOf(reference).DefaultIfEmpty(
+            $"Die Referenz '{reference.Name}' ist nicht auflösbar.").ToList();
+        AddSession(reference, reference.ResolutionState, referenceDiagnostics);
+        diagnostics.AddRange(referenceDiagnostics);
         return true;
     }
 
     private bool TryAddTerminal(AssemblyReferenceDto reference)
     {
         if (reference.ResolutionState is not ("cycle" or "depth_limit" or "node_limit")) return false;
-        AddSession(reference, reference.ResolutionState, AssemblyAnalysisLease.DiagnosticOf(reference));
-        diagnostics.AddRange(AssemblyAnalysisLease.DiagnosticOf(reference));
+        var referenceDiagnostics = AssemblyAnalysisLease.DiagnosticOf(reference).DefaultIfEmpty(
+            $"Die Referenz-Session für '{reference.Name}' wurde wegen {reference.ResolutionState} beendet.").ToList();
+        AddSession(reference, reference.ResolutionState, referenceDiagnostics);
+        diagnostics.AddRange(referenceDiagnostics);
         return true;
     }
 

@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Linq;
 using System.Text;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using System.Threading;
@@ -26,7 +27,12 @@ internal static class FindAssemblyExtensionsTool
     internal static Task<CallToolResult> ExecuteAsync(
         AssemblyAnalysisLease lease,
         FindAssemblyExtensionsArguments arguments) =>
-        Task.FromResult(BuildResult(lease.CanonicalPath, lease.Context, arguments, AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, 1, AssemblyAnalysisService.MaxResults)));
+        Task.FromResult(BuildResult(
+            lease.CanonicalPath,
+            lease.Context,
+            arguments,
+            AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, 1, AssemblyAnalysisService.MaxResults),
+            lease));
 
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer? state,
@@ -55,18 +61,24 @@ internal static class FindAssemblyExtensionsTool
         string fullPath,
         AssemblyContext context,
         FindAssemblyExtensionsArguments arguments,
-        int maxResults)
+        int maxResults,
+        AssemblyAnalysisLease? lease = null)
     {
         var selection = AssemblyAnalysisService.FindExtensions(
             context,
             new AssemblyExtensionSearchOptions(arguments.ExtensionName, arguments.Namespace, maxResults));
-        var completeness = context.Diagnostics.Count == 0
+        var diagnostics = context.Diagnostics
+            .Concat(lease?.ReferenceExpansionDiagnostics ?? Array.Empty<string>())
+            .Distinct(StringComparer.Ordinal)
+            .Take(100)
+            .ToList();
+        var completeness = diagnostics.Count == 0
             ? context.Status.ToCompletenessLabel()
             : AssemblySessionStatus.Partial.ToCompletenessLabel();
         var payload = new FindAssemblyExtensionsPayload(
             fullPath,
             selection.Items,
-            context.Diagnostics,
+            diagnostics,
             completeness,
             selection.Truncated,
             selection.Total,

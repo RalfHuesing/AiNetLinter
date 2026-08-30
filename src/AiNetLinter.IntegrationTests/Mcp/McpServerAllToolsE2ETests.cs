@@ -89,6 +89,15 @@ public sealed class McpServerAllToolsE2ETests
         var aggregate = await _fixture.Client.CallToolAsync("get_server_health");
         Assert.NotEqual(true, aggregate.IsError);
 
+        await _fixture.Client.CallToolAsync(
+            "find_symbol",
+            new Dictionary<string, object?>
+            {
+                ["targetType"] = "project",
+                ["targetPath"] = host.TargetPath,
+                ["namePatterns"] = new[] { "Greeter" },
+            });
+
         var project = await _fixture.Client.CallToolAsync(
             "get_server_health",
             new Dictionary<string, object?>
@@ -96,7 +105,9 @@ public sealed class McpServerAllToolsE2ETests
                 ["targetType"] = "project",
                 ["targetPath"] = host.TargetPath,
             });
-        Assert.NotEqual(true, project.IsError);
+        Assert.False(
+            project.IsError == true,
+            string.Join("\n", project.Content.OfType<TextContentBlock>().Select(block => block.Text)));
         Assert.Contains(host.TargetPath, Assert.IsType<TextContentBlock>(Assert.Single(project.Content)).Text, StringComparison.OrdinalIgnoreCase);
 
         var assembly = await _fixture.Client.CallToolAsync(
@@ -106,8 +117,14 @@ public sealed class McpServerAllToolsE2ETests
                 ["targetType"] = "assembly",
                 ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
             });
-        Assert.NotEqual(true, assembly.IsError);
-        Assert.Contains("ASSEMBLY_TARGET_UNSUPPORTED", Assert.IsType<TextContentBlock>(Assert.Single(assembly.Content)).Text, StringComparison.Ordinal);
+        Assert.False(
+            assembly.IsError == true,
+            string.Join("\n", assembly.Content.OfType<TextContentBlock>().Select(block => block.Text)));
+        var assemblyText = Assert.IsType<TextContentBlock>(Assert.Single(assembly.Content)).Text;
+        Assert.Contains("Assembly-Sessions (1)", assemblyText, StringComparison.Ordinal);
+        Assert.Contains("Origin:", assemblyText, StringComparison.Ordinal);
+        Assert.NotNull(assembly.StructuredContent);
+        Assert.Single(assembly.StructuredContent!.Value.GetProperty("assemblies").EnumerateArray());
     }
 
     [Fact]

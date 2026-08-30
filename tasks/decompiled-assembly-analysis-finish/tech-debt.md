@@ -83,10 +83,9 @@ Bericht festgehalten.
 - Evidenz: Der unabhängige Epic-3-Review stellte fest, dass das Tool nur aus
   `lease.Context` baut und Expansion-Diagnosen nicht übernimmt; ein
   fehlgeschlagener Child-Lease kann dadurch als `complete` erscheinen.
-- Disposition: `accepted-deferred`
-- Nächster Schritt: im Capability-/Tool-Integrations-Epic den Extensions-
-  Antwortvertrag an den gemeinsamen Expansion-Diagnosenpfad anschließen oder
-  Root-only-Semantik ausdrücklich und konsistent ausweisen.
+- Disposition: `fixed`
+- Nächster Schritt: im Review und im Abschluss-Gate die gemeinsame
+  Diagnoseprojektion regressionsfrei bestätigen.
 - Log-Anker: `execution-log.md` — Epic-3-Korrekturrunde-2-Review
 
 ## TD-009 — Negative Expansion-Routen über den Dispatcher testen
@@ -96,10 +95,10 @@ Bericht festgehalten.
 - Evidenz: Der unabhängige Epic-3-Review bestätigte erfolgreiche physische
   und Source-Project-Expansion, aber Missing-/Cycle-/Limit-Fälle nur auf
   Resolver-Ebene statt im vollständigen Dispatcher-/Tool-Antwortpfad.
-- Disposition: `accepted-deferred`
-- Nächster Schritt: im Capability-/E2E-Epic je relevante Fehlerklasse einen
-  gezielten Route-Nachweis ergänzen, ohne die vorhandenen Resolver-Tests zu
-  duplizieren.
+- Disposition: `fixed`
+- Nächster Schritt: die neuen Dispatcher-/Tool-Routentests im Abschluss-Gate
+  als frischen Nachweis weiterverwenden; keine Resolver-Testduplikate
+  ergänzen.
 - Log-Anker: `execution-log.md` — Epic-3-Korrekturrunde-2-Review
 
 ## TD-010 — Daemon-Session-ResidentCount deterministisch machen
@@ -111,11 +110,9 @@ Bericht festgehalten.
   `1`, erhielt `2`. Die benachbarte Snapshot-Registry-Assertion war grün,
   der Testcode unverändert und der Befund betrifft die bereits bewertete
   Assembly-Session-/Transitivroute, nicht den aktuellen Snapshot-Rollback.
-- Disposition: `accepted-deferred`
-- Nächster Schritt: im Gesamtabschluss die Session-Resident-Buchhaltung über
-  mehrere MCP-Sitzungen reproduzieren und entscheiden, ob der Testvertrag
-  oder die Registry-Lebenszeit korrigiert werden muss; nicht durch blinde
-  Wiederholungen kaschieren.
+- Disposition: `fixed`
+- Nächster Schritt: im Gesamtabschluss die getrennten Projekt- und Assembly-
+  Resident-Assertions als konsistente Verträge weiterverwenden.
 - Log-Anker: `execution-log.md` — Epic-3-Korrekturrunde-3-Review
 
 ## TD-005 — Source-Ressourcen vor Materialisierung budgetieren

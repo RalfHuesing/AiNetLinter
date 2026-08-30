@@ -87,7 +87,9 @@ public sealed class DaemonHostMcpContractTests
             Assert.False(composition.IsDisposed);
             Assert.Same(hostRegistry, composition.Registry);
             Assert.Equal(1, composition.Registry.ResidentCount);
-            Assert.Equal(1, composition.Sessions.ResidentCount);
+            // Die source-backed Expansion hält Root-Assembly und Source-Project als getrennte
+            // read-only Sessions resident; der Wert muss zwischen den Daemon-Sessions stabil sein.
+            Assert.Equal(2, composition.Sessions.ResidentCount);
             Assert.False(snapshot.IsDisposed);
         }
 

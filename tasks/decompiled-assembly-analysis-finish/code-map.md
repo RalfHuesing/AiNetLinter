@@ -58,6 +58,42 @@ Abschlussverifikation fertigstellen.
   fallenden Eintrag außerhalb des Locks; `SourceSnapshotLease.AcquireSibling`
   bewahrt den unabhängigen Snapshot-Lease-Pfad für Source-Project-Kinder.
 
+## Epic 4: Capability-Matrix und Host-Vertrag
+
+- `McpToolRegistrationOptions.TargetedReadOnlyTool` beschreibt den gemeinsamen
+  `project|assembly`-Vertrag für Symbolgraph, Struktur, Body und Metriken. Die
+  bisherigen `ReadOnlyTool`-Registrierungen bleiben für projektgebundene Regeln,
+  Audits, Dateisuche, Test-/Change-Impact und Config-Reload ausdrücklich
+  `project-only`; `AssemblyTool` bleibt auf die beiden spezialisierten
+  Assembly-Familien begrenzt.
+- `McpServerCommand.RunAsync` und `DaemonHostCommand.RunAsync` übergeben dieselbe
+  `AssemblyAnalysisHostComposition.Sessions` sowohl an den gemeinsamen
+  `AnalysisToolCall`-Target-Dispatcher als auch an die Health-Registrierung.
+  `McpServerToolCollectionFactory.Build` und
+  `ServerMaintenanceToolRegistrations.Register` halten diese Composition
+  optional testbar, im lokalen Default-Host aber vollständig verdrahtet.
+- `AssemblyAnalysisDispatcher.CreateRoute` validiert auch bei einer
+  unsupported Assembly-Fähigkeit den Target-Pfad und erzeugt den strukturierten
+  `ASSEMBLY_TARGET_UNSUPPORTED`-Status mit kanonischem Pfad statt einer
+  pfadlosen Erfolgssimulation. `AssemblyReferenceSessionExpander` projiziert
+  Missing/Cycle/Node-Limit nun zusätzlich in die gemeinsame Diagnose- und
+  Completeness-Liste.
+- `FindAssemblyExtensionsTool.ExecuteAsync(AssemblyAnalysisLease, ...)` reicht
+  die `ReferenceExpansionDiagnostics` wie `InspectAssemblyTool` in Payload und
+  Status weiter. `AssemblyAnalysisResponse.Enrich` verwendet denselben
+  Diagnosebestand für `analysis`, einschließlich Source-Snapshot und Revision.
+  `AssemblyOrigin.Kind` bleibt als dokumentierter interner Alias zu
+  `OriginKind` erhalten.
+- `IAssemblyAnalysisRegistry.SnapshotsAsync` und die Health-Snapshot-Methoden in
+  `AssemblyAnalysisRegistry.SourceProjects.cs` liefern die residente
+  Assembly-/Source-Project-Sicht. `get_server_health` aggregiert Projekt- und
+  Assembly-Sessions
+  getrennt; ein Assembly-Target lädt/zeigt gezielt eine Session über dieselbe
+  Registry und trägt Origin, Snapshot, Hash, Generation, Status und Diagnosen.
+- `DaemonHostMcpContractTests` behandelt source-backed Root plus Source-Project
+  Child als zwei stabile Resident-Sessions; die Resident-Buchhaltung wird nicht
+  durch Wiederholungen kaschiert.
+
 ## Korrekturrunde 3: terminale Snapshot-Rollback-Bereinigung
 
 - `SourceSnapshotRegistry.ReleaseResidentLease` übernimmt für den Rollback-
@@ -83,17 +119,36 @@ Produktionspfad:
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/References/SourceProjectReferenceGraph.cs`
 - `src/AiNetLinter/Mcp/Assemblies/ExternalSource/Snapshots/SourceSnapshotRegistry.cs`
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs`
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySessionStatusExtensions.cs`
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs`
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisModels.cs`
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/FindAssemblyExtensionsTool.cs`
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/InspectAssemblyTool.cs`
+- `src/AiNetLinter/Mcp/Tools/McpToolRegistrationOptions.cs`
+- `src/AiNetLinter/Mcp/Tools/ServerMaintenance/GetServerHealthModels.cs`
+- `src/AiNetLinter/Mcp/Tools/ServerMaintenance/GetServerHealthTool.cs`
+- `src/AiNetLinter/Mcp/Registration/AnalysisToolRegistrations.cs`
+- `src/AiNetLinter/Mcp/Registration/FileStructureToolRegistrations.cs`
+- `src/AiNetLinter/Mcp/Registration/SymbolGraphToolRegistrations.cs`
+- `src/AiNetLinter/Mcp/Registration/SymbolBodyToolRegistrations.cs`
+- `src/AiNetLinter/Mcp/Registration/ServerMaintenanceToolRegistrations.cs`
+- `src/AiNetLinter/Mcp/Composition/McpServerToolCollectionFactory.cs`
+- `src/AiNetLinter/Commands/McpServerCommand.cs`
+- `src/AiNetLinter/Mcp/Daemon/DaemonHostCommand.cs`
+- `src/AiNetLinter/Mcp/Registration/McpAgentGuideRegistration.cs`
+- `.agents/rules/AiNetLinter-McpWorkflow.mdc`
 
 Test-/Fixturepfad:
 
 - `src/AiNetLinter.FastTests/Fixtures/ExternalSourceSnapshotTestFactory.cs`
 - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRegistryTests.cs`
 - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRouteTests.cs`
+- `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisDispatcherCapabilityTests.cs`
+- `src/AiNetLinter.FastTests/Mcp/Daemon/DaemonHostMcpContractTests.cs`
+- `src/AiNetLinter.FastTests/Mcp/WiringContractTests.cs`
+- `src/AiNetLinter.FastTests/Mcp/McpAgentGuideRegistrationTests.cs`
 - `src/AiNetLinter.FastTests/Mcp/Assemblies/SourceSnapshotRegistryTests.cs`
+- `src/AiNetLinter.IntegrationTests/Mcp/McpServerAllToolsE2ETests.cs`
 
 ## Verifizierte Tests und vorhandene Nachweise
 
@@ -108,19 +163,35 @@ Test-/Fixturepfad:
 - `SourceSnapshotRegistryTests.Acquire_FailedDuplicateDisposeAfterTerminalReleaseDisposesResidentSnapshot`
   erzwingt das terminale Interleaving `Registry.Dispose` → Original-Lease →
   Rollback und prüft die vollständige Resident-/Snapshot-/Checkout-Bereinigung.
+- `AssemblyAnalysisDispatcherCapabilityTests` weist Missing, Cycle und
+  Node-Limit über den produktiven Dispatcher-/Inspect-Route nach und prüft
+  separat, dass ein fehlgeschlagener Child-Lease in `find_assembly_extensions`
+  als Diagnose und `partial` erscheint.
+- `WiringContractTests.ToolCollection_AdvertisesCompleteProjectAssemblyCapabilityMatrix`
+  prüft die Capability-Klassen in `tools/list` für alle 29 Tools einschließlich
+  project-only, common read-only und Assembly-only.
+- `DaemonHostMcpContractTests.RunMcpSessionAsync_RegisteredAssemblyToolsReuseCompositionAcrossSessions`
+  prüft die gemeinsame Host-Composition über zwei MCP-Sessions und den stabilen
+  Resident-Count von Root plus Source-Project-Child.
+- `McpServerAllToolsE2ETests.GetServerHealth_UsesAggregateProjectAndAssemblyTargetVariants`
+  prüft Aggregate, geladenen Projekt-Key und gezielten Assembly-Health-Call über
+  den lokalen In-Proc-Default-Host.
+- `McpAgentGuideRegistrationTests.BuildResource_IsReadableWithoutProjectAndContainsIntegrationContract`
+  prüft, dass der einmalige Bootstrap die gemeinsame Target-Matrix, den lokalen
+  Default-Host und die Legacy-Parameter-Grenze an den dauerhaften Workflow anhängt.
 - Bereits vorhandene `AssemblyAnalysisRegistryTests`,
   `AssemblyAnalysisContextFactoryTests`, `AssemblyAnalysisToolTests`,
   `SourceSnapshotRegistryTests` und `ExternalResourceRegistryTests` wurden als
   bestehende Nachweise für Lease-, Graph-, Resolver-, Budget-, Health-, TTL/LRU-,
   CreationBarrier- und Cancellation-Verträge wiederverwendet.
 
-Die aktuelle MCP-Tool-Registry akzeptiert für diese Installation nur das
-Pflichtfeld `projectRoot` (absolut); die Workflow-Regel nennt zusätzlich
-`targetType=project`/`targetPath`. Die tatsächlichen Abfragen wurden daher mit
+Die aktuell installierte MCP-Tool-Registry akzeptiert für diese Installation
+nur das Pflichtfeld `projectRoot` (absolut); die Workflow-Regel und die aktuelle
+Quellregistrierung verwenden zusätzlich `targetType=project|assembly` und
+`targetPath`. Die tatsächlichen semantischen MCP-Abfragen wurden deshalb mit
 `projectRoot=C:\\Daten\\Entwicklung\\Ralf\\AiNetLinter` und passenden
-`scopeFilter`-Werten protokolliert. Nach den letzten Codeänderungen wurde der
-gezielte Violations-Check erneut als abschließender codebezogener MCP-Schritt
-ausgeführt.
+`scopeFilter`-Werten protokolliert; die Schemaabweichung bleibt ein
+Installations-/Deployment-Risiko und ist kein zusätzlicher Source-Vertrag.
 
 ## Epic-Zuordnung
 
@@ -136,5 +207,6 @@ ausgeführt.
   `get_impact`, `get_violations`, `safeguard`.
 - Qualitätsaudit: `find_duplicates`, `find_dead_code`, `find_magic_values`.
 - Abschlussdokumente: `README.md`, `Docs/agent-api.md`,
-  `Docs/integration.md`, `Docs/configuration.md`, `Docs/ROADMAP.md`,
-  `Docs/rationale.md`.
+  `Docs/integration.md`, `Docs/mcp-bootstrap.md`, `Docs/configuration.md`, `Docs/ROADMAP.md`,
+  `Docs/rationale.md`; Epic 4 aktualisiert bereits die Capability-/Health-
+  Abschnitte in `README.md`, `Docs/agent-api.md` und `Docs/integration.md`.

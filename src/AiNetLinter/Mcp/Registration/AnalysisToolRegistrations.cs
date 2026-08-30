@@ -154,7 +154,7 @@ internal static class AnalysisToolRegistrations
                             ProjectCall: lease => MetricsTreeTool.ExecuteAsync(lease.Server, new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter), ct),
                             AssemblySessionCall: assemblyLease => MetricsTreeTool.ExecuteAsync(assemblyLease.Server, new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter), ct)),
                         ct)),
-            McpToolRegistrationOptions.ReadOnlyTool("metrics_tree", MetricsTreeDescription)));
+            McpToolRegistrationOptions.TargetedReadOnlyTool("metrics_tree", MetricsTreeDescription)));
     }
 
     private const string MetricsTreeDescription =
@@ -179,7 +179,7 @@ internal static class AnalysisToolRegistrations
                             ProjectCall: lease => MetricsLookupTool.ExecuteAsync(lease.Server, symbolIdentifiers, ct),
                             AssemblySessionCall: lease => MetricsLookupTool.ExecuteAsync(lease.Server, symbolIdentifiers, ct)),
                         ct)),
-            McpToolRegistrationOptions.ReadOnlyTool("metrics_lookup", MetricsLookupDescription)));
+            McpToolRegistrationOptions.TargetedReadOnlyTool("metrics_lookup", MetricsLookupDescription)));
     }
 
     private const string MetricsLookupDescription =

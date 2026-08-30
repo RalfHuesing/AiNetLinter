@@ -983,3 +983,87 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
 
 - Nächste Aktion: aktuellen Code-, Test-, Log-, Tech-Debt- und Code-Map-Stand
   als Orchestrator-Checkpoint committen und den P1-Fix unabhängig reviewen.
+
+## 2026-08-30 — Epic 4 Implementierer abgeschlossen
+
+- Run-ID: `resume-2026-08-30-epic-4`
+- Epic: 4 — Capability-Matrix, Host-Integration und End-to-End-Verträge
+- Rolle: Implementierer
+- Subagent-ID: `01a05406-c394-7e83-99d3-93654a795e8d`
+- Diff-Baseline: `e0c5e0eb`
+- Status: `completed`, kein Commit durch den Implementierer.
+- Vollständiger Implementiererbericht:
+
+  Epic 4 ist gegen Baseline `e0c5e0eb` implementiert. Kein Commit und keine
+  Änderungen an `roadmap.md`, `execution-log.md` oder `tech-debt.md` durch den
+  Implementierer.
+
+  Wesentliche Wirkung:
+
+  - Vollständige Capability-Matrix für 29 MCP-Tools:
+    - `project|assembly`: Symbolgraph, Symbol-Body, Struktur und Metriken.
+    - `assembly-only`: `inspect_assembly`, `find_assembly_extensions`.
+    - `project-only`: Regeln, Audits, Datei-/Test-/Impact-Suche,
+      Config-Reload.
+    - Unsupported-Ziele liefern strukturierte, pfadbezogene Statusantworten.
+  - Dispatcher, Default-Daemon, Bootstrap und Health verwenden dieselbe
+    Assembly-Registry.
+  - `get_server_health` liefert getrennte Projekt- und Assembly-Sessionlisten
+    mit Origin, Snapshot, Hash, Generation, Status und Diagnosen.
+  - Missing/Cycle/Node-Limit werden im Dispatcher-/Toolpfad als `partial` und
+    diagnostiziert sichtbar.
+  - `find_assembly_extensions` übernimmt Expansion- und Child-Lease-
+    Diagnosen; fehlerhafte Kinder erscheinen nicht mehr als vollständiger
+    Erfolg.
+  - TD-010 ist geklärt: Source-backed Root plus Source-Project-Child sind
+    zwei residente Assembly-Sessions; die Projekt-Registry bleibt bei einem
+    Resident.
+  - `AssemblyOrigin.Kind` bleibt als dokumentierter Kompatibilitätsalias
+    erhalten.
+  - Legacy-Zielparameter wurden nicht in den Quellvertrag aufgenommen.
+
+  Betroffene Bereiche:
+
+  - `src/AiNetLinter/Mcp/AnalysisToolCall.cs`, Toolregistrierungen und
+    `src/AiNetLinter/Mcp/Tools/McpToolRegistrationOptions.cs`
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisRegistry.cs`
+    und `AssemblyAnalysisRegistry.SourceProjects.cs`
+  - `AssemblyReferenceSessionExpander`, `AssemblyAnalysisResponse`,
+    Session-/Health-Modelle
+  - `GetServerHealthTool`, Host-/Bootstrap-Komposition und Daemon-Commands
+  - Assembly-Dispatcher-, Wiring-, Daemon- und E2E-Tests
+  - `tasks/decompiled-assembly-analysis-finish/code-map.md` aktualisiert;
+    veraltete Beziehungen entfernt bzw. korrigiert.
+  - Dokumentation in `README.md`, `Docs/agent-api.md`, `Docs/integration.md`,
+    `Docs/mcp-bootstrap.md` und `.agents/rules/AiNetLinter-McpWorkflow.mdc`.
+
+  Verifikation:
+
+  - Gezielte FastTests nach letzter Codeänderung: `7` bestanden.
+  - Gezielte IntegrationTests nach letzter Codeänderung: `5` bestanden.
+  - `dotnet build --no-restore`: `0` Warnungen, `0` Fehler.
+  - MCP-Audit auf `src/AiNetLinter/Mcp`:
+    - `find_duplicates`: 1.304 Methoden, acht bestehende Cluster; kein
+      sicherer neuer Fix.
+    - `find_dead_code`: 40 bestehende Low-Befunde, keine neuen Scope-Befunde.
+    - `find_magic_values`: keine neuen Scope-Befunde.
+  - Finaler `get_violations` mit absolutem `projectRoot` und Scope
+    `src/AiNetLinter/Mcp`: drei bestehende `AIContextFootprint`-Warnungen;
+    die neu entstandene Partial-Class-Warnung wurde behoben.
+  - Die installierte MCP-Registry akzeptiert weiterhin nur absolutes
+    `projectRoot` (Version `1.0.154`); die aktuelle Quellregistrierung und
+    Dokumentation nutzt zusätzlich `targetType` und `targetPath`. Diese
+    Deployment-/Installationsabweichung ist dokumentiert.
+
+  Deferred/Risiken:
+
+  - Die drei bestehenden Footprint-Warnungen wurden nicht durch riskantes
+    globales Refactoring verändert.
+  - Der Orchestrator muss noch die vollständigen Non-Stress-Abschlussgates
+    über beide Testprojekte ausführen.
+  - Für die sichtbare `targetType`-/`targetPath`-Semantik ist eine
+    Aktualisierung der installierten MCP-Binary/Registry erforderlich.
+
+- Nächste Aktion: aktuellen auftragsbezogenen Code-, Test-, Dokumentations-
+  und Code-Map-Stand als Orchestrator-Checkpoint committen und anschließend
+  unabhängig reviewen.
