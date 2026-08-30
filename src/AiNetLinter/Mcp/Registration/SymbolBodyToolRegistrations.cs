@@ -45,8 +45,8 @@ internal static class SymbolBodyToolRegistrations
     }
 
     private const string GetSymbolBodyDescription =
-        "Wann nutzen: Source-Body eines oder mehrerer C#-Symbole lesen (Batch-Support fuer 1 Turn). " +
-        "symbolIdentifiers: Array von Symbol-IDs (auch fuer genau ein Symbol): \"M:Namespace.Klasse.Methode\" " +
-        "oder \"Datei.cs:42:10\" oder \"Datei.cs:42\" oder \"Klasse.Methode\". " +
-        "Hart gekappt bei maxBodyLines je Symbol (Default 80).";
+        "Wann nutzen: Source-Body eines oder mehrerer C#-Symbole lesen (Batch-Support in 1 Turn). " +
+        "symbolIdentifiers: Array von Symbol-IDs (auch fuer genau ein Symbol): \"M:Namespace.Klasse.Methode\", " +
+        "\"Datei.cs:Zeile:Spalte\", \"Datei.cs:Zeile\" oder \"Klasse.Methode\". " +
+        "maxBodyLines: Begrenzung der Zeilenanzahl je Symbol-Body (Default 80).";
 }
