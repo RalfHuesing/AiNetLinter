@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-30T11:10:00+02:00
+last_updated: 2026-08-30T07:10:56+02:00
 rules_dir: .agents/rules
-total_steps: 37
-current_step: step-037
+total_steps: 38
+current_step: step-038
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -13,13 +13,13 @@ current_step: step-037
 ## Übersicht
 
 - **Task-Status:** `executing`
-- **Steps gesamt:** 37 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-037` (`issues`; Verifizierten Checkout
-  bis Materialisierung und Publish fail-closed binden)
+- **Steps gesamt:** 38 (regulär + Korrekturen)
+- **Aktueller Schritt:** `step-038` (`open`; Checkout-Trust-Attestation bis
+  Materialisierung und Publish unveränderlich und lock-gebunden absichern)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-30T09:10:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-30T07:10:56+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -63,6 +63,7 @@ current_step: step-037
 | step-035 | EPIC-04 | done | ConfigurationFailure unabhängig von Diagnosen terminal bis zum Assembly-Tool propagieren | step-034 | 5c830e44 + 8182b992 | approved | 5c830e44 + 8182b992 + c4ee413c |
 | step-036 | EPIC-04 | issues | Gitea-Source-of-Truth mit Clean-Checkout und transparentem degraded Refresh-Vertrag absichern | - | 377b5360 + 39fb9fba | issues → step-037 | 377b5360 + 39fb9fba + c7efaae4 |
 | step-037 | EPIC-04 | issues | Verifizierten Checkout bis Materialisierung und Publish fail-closed binden | step-036 | 093f9d7a + 04e37bea | issues → step-038 | 093f9d7a + 04e37bea + 078c3e15 |
+| step-038 | EPIC-04 | open | Checkout-Trust-Attestation bis Materialisierung und Publish unveränderlich und lock-gebunden absichern | step-037 | - | - | - |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -834,3 +835,22 @@ Degraded-, CurrentChanged-, Cleanup-/Cancellation- und Fallback-Verträge
 bleiben erhalten. Der Kritiker bestätigte Build, Fast 2.174 bestanden plus
 2 bekannte 1314-Skips, Integration 370/370, Stress nicht ausgeführt,
 keine Leaks sowie keine neuen Tech-Debt-Einträge.
+
+### Step-038-Planung und Aktivierung (2026-08-30)
+
+Diese frische Planer-Session hat Step 038 als ein großes Korrekturpaket mit
+einem Primärvertrag und drei gekoppelten Schichten aktiviert: fail-closed
+Statusgrammar und unveränderliche Attestation, exklusive Ownership-/Lock-
+Bindung durch Cache-Copy/Manifest/Readback/Publish und Workspace-Open sowie
+typisierte Propagation mit einer unverfälschten Test-Transport-Fassade.
+Deterministische Race-, Parser-, Transport- und Propagation-Regressionen sind
+vorgegeben; Dirty/ignored/untracked/unverified bleiben typisiert.
+
+Der Plan begrenzt `read_first` auf zehn Dateien und `max_initial_files` auf
+zwölf Dateien, nennt die aktuellen Produktions- und Testgrenzen sowie die
+MCP-Symbolgrenzen und führt keinen globalen Audit durch. Die `roadmap.md`
+bleibt im Fix-Mode unverändert. Diese Planer-Session hat keine
+Produktionsänderungen, Tests oder Coder-/Kritikerarbeit ausgeführt. Der
+sichere nächste Übergabepunkt ist ein frischer Coder auf `main` mit
+`tasks/decompiled-assembly-analysis/step-038/step-plan.md`; danach wird der
+Coder geschlossen und ein neuer, separater Kritiker gestartet.
