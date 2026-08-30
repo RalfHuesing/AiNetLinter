@@ -115,3 +115,27 @@ unverändert bleiben.
 3. Bei autorisierter Fortsetzung: frischen Implementierer und danach frischen
    Reviewer starten, die beiden P1s gezielt testen, anschließend die
    vollständigen Abschluss-Gates erneut ausführen.
+
+## 2026-08-30 — Blocker durch gezielten Follow-up behoben
+
+- Der Nutzer hat drei Feedback-Dateien aus frischen, sequenziellen Chats
+  bereitgestellt: zwei Implementierungsberichte und einen unabhängigen
+  Reviewbericht.
+- `feedback-P1-Cancellation-Fix.md` dokumentiert die Weitergabe von
+  `OperationCanceledException`, Cleanup und Shared-Creation-Verhalten.
+- `feedback-P1-Fix-get_type_hierarchy.md` dokumentiert die Durchreichung von
+  `AssemblySymbolIdentity`, den A→B→A-Test und die unveränderten Projekt-IDs.
+- `feedback-review-P1-fixes.md` enthält das unabhängige Urteil `approved`.
+- Die Fixes sind in `148ac0c3` und `b1a461f3` committed; die Feedback-Dateien
+  sind in `cc860c1f` und `ee743610` committed.
+- Build, gezielte Tests, `safeguard` 10/10 und `get_violations` 0 sind für den
+  Follow-up-Scope dokumentiert.
+
+### Resume-Entscheidung
+
+Der fachliche Blocker von Epic 1 ist geschlossen. Die historische Grenze von
+fünf Korrekturrunden bleibt nachvollziehbar erhalten; sie wird nicht gelöscht
+oder rückwirkend umetikettiert. Für das nun gestartete Epic 2 beginnt ein neuer
+Korrekturzähler bei `0`. Vor dem nächsten Implementierer sind Roadmap und dieses
+Ereignis committed; Epic 2 läuft mit frischen, strikt sequenziellen Rollen
+weiter.

@@ -1,11 +1,11 @@
 # Ausführungs-Roadmap: Einheitlicher Roslyn-Analysepfad
 
-status: blocked
-current_epic: 1
-last_commit: none
-blocker: "Epic 1 nach fünf Korrekturrunden nicht freigegeben: Cancellation wird in AssemblyAnalysisSession/Registry als Failure statt als OperationCanceledException weitergegeben; get_type_hierarchy reicht AssemblySymbolIdentity nicht an den Resolver weiter."
-correction_round: 5
-cycle_state: blocked
+status: executing
+current_epic: 2
+last_commit: ee743610
+blocker: none
+correction_round: 0
+cycle_state: active
 recent_finding_signatures:
   - Registry-Generation-Retry: Datei-Churn darf keinen veralteten Fingerprint wiederverwenden
   - Assembly-Symbolidentität: Folgeabfragen müssen Hash und Generation validieren
@@ -38,7 +38,7 @@ fachliche Muss-Kriterien und Non-Goals bleiben unverändert.
 - Verifikation: gezielte FastTests/Component und MCP-Wiring-/Host-Tests,
   `get_impact`, `get_violations` und die relevanten Assembly-/Target-MCP-
   Abfragen mit aktuellem Schema.
-- Status: in_progress
+- Status: done
 
 ## Epic 2: Externe Source-of-Truth, Trust, Attestation und Cachegenerationen
 
@@ -57,7 +57,7 @@ fachliche Muss-Kriterien und Non-Goals bleiben unverändert.
   bleiben gültig; keine Quelle wird verändert oder ausgeführt.
 - Verifikation: Mapping-/Fingerprint-/Parser-/Attestation-/Lease-Unit-Tests,
   lokale Git-Testprovider-Integration und gezielte MCP-Violation-Prüfung.
-- Status: open
+- Status: in_progress
 
 ## Epic 3: Transitive Assembly-Referenzen und getrennte externe Ressourcen
 
