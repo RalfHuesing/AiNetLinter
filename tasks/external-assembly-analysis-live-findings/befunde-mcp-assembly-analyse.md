@@ -8,7 +8,7 @@ Dieses Dokument fasst die technischen Schwachstellen, Fehler und Performance-Pro
 
 | ID | Priorität | Betroffenes Tool / Komponente | Problem | Ursache & Empfohlene Behebung |
 |:---|:---|:---|:---|:---|
-| **BEF-01** | **P0 (Blocker)** | `AssemblyAnalysisRegistry` / Store | **Totalausfall durch Ressourcen-Erschöpfung:** `ANALYSIS_FAILED: Das externe Ressourcenlimit ist ausgeschöpft (32 Einträge)`. | Transitive Kind-Sessions füllen die 32 globalen Registry-Slots. Es fehlt ein automatisches **LRU-Eviction-Verfahren**, das alte Sessions freigibt, sobald das Limit erreicht wird. |
+| **BEF-01** | **P0 (Blocker)** | `ExternalResourceRegistry` / `AssemblyAnalysisRegistry` | **Totalausfall durch Ressourcen-Erschöpfung:** `ANALYSIS_FAILED: Das externe Ressourcenlimit ist ausgeschöpft (32 Einträge)`. | Grenze ist hardcodiert in `ExternalResourceRegistryDefaults.MaxResidentResources = 32`. **Lösung:** Wert konfigurierbar machen (`--mcp-max-assemblies`, Settings) + echtes LRU-Verfahren (`EvictLeastRecentlyUsed`) statt hartem Abbruch. |
 | **BEF-02** | **P1 (Kritisch)** | `inspect_assembly`, `find_assembly_extensions` | **Token-Explosion / 643 KB Output:** Ungefilterte Ausgabe aller transitiven Referenz-Diagnosen (1.300+ Knoten). | Im Textoutput nur Root-Assembly-Diagnosen ausgeben. Transitive Diagnosen als 1-Zeilen-Metrik zusammenfassen. |
 | **BEF-03** | **P1 (Kritisch)** | `get_call_tree`, `get_symbol_body`, `dependency_graph` | **Crash bei Assembly-Zielen:** `ArgumentException: The path is empty. (Parameter 'relativeTo')`. | Bei dekompilierten In-Memory-Dokumenten existiert kein physischer Solution-Root. `Path.GetRelativePath` muss für Assembly-Sessions abgesichert oder übersprungen werden. |
 | **BEF-04** | **P2 (Feature)** | `find_symbol`, `get_call_tree` | **Fehlende Cross-Assembly Typauflösung:** Keine Möglichkeit abzufragen, in welcher referenzierten DLL ein externer Typ (z. B. `LagerJob`) definiert ist. | Parameter `includeReferences: bool` für `find_symbol` bzw. transitives Call-Tracing über Assembly-Grenzen hinweg. |
@@ -24,21 +24,18 @@ Dieses Dokument fasst die technischen Schwachstellen, Fehler und Performance-Pro
 
 ## Detaillierte Fehleranalyse
 
-### 1. Blocker: Ressourcenlimit-Erschöpfung in `AssemblyAnalysisRegistry`
-- **Reproduktion:**
-  1. `inspect_assembly` auf DLL A mit vielen Referenzen (z. B. `CloudStorage.dll`).
-  2. `inspect_assembly` auf DLL B mit vielen Referenzen (z. B. `BelegEngine.dll`).
-  3. Versuch, eine 3. DLL (z. B. `LagerEngine.dll`) zu öffnen.
-- **Fehlermeldung:**
-  ```text
-  [ERROR]: ANALYSIS_FAILED: Assembly-Session konnte nicht aufgebaut werden:
-  Das externe Ressourcenlimit ist ausgeschöpft (32 Einträge).
-  ```
-- **Ursache:**
-  Der `ExternalResourceRegistry` bzw. Store verwaltet maximal 32 Slots. Bei der rekursiven Referenzauflösung registriert jede gefundene Child-DLL einen Eintrag. Sobald 32 Slots belegt sind, blockiert jede weitere Analyse dauerhaft, bis der Server neugestartet wird.
-- **Lösung:**
-  1. **LRU-Eviction:** Wenn das Limit von 32 erreicht ist, automatisch die am längsten nicht verwendeten Sessions verwerfen (`EvictLeastRecentlyUsed`).
-  2. **Child-Lease Scoping:** Referenz-Sessions nicht als eigenständige Top-Level-Registry-Einträge blockieren lassen.
+### 1. Blocker: Ressourcenlimit-Erschöpfung in `ExternalResourceRegistry`
+- **Fundstelle im Code:**
+  [`ExternalResourceRegistryDefaults.MaxResidentResources = 32`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/ExternalResourceRegistry.cs#L15)
+  in `ExternalResourceRegistry.cs`.
+- **Aktueller Zustand:**
+  Der Wert 32 ist **fest im C#-Code hardcodiert** und wird beim Initialisieren von `AssemblyAnalysisHostComposition` ohne Konfigurationsoptionen instanziiert.
+- **Problem:**
+  Es gibt nur eine zeitbasierte 45-Minuten-Idle-TTL (`EvictExpiredNoLock`). Bei `TryAcquire` wird bei 32 Einträgen sofort `CapacityExceeded` ausgelöst, statt eine ungenutzte Session per LRU zu verdrängen.
+- **Empfohlene Lösung:**
+  1. **Konfigurierbarkeit:** CLI-Option `--mcp-max-assemblies <n>` (analog zu `--mcp-max-projects 4`) und Support in Settings/`rules.json`.
+  2. **Automatisches LRU-Eviction (`EvictLeastRecentlyUsed`):** Wenn das Limit erreicht ist, automatisch die am längsten ungenutzte Session verdrängen.
+  3. **Sub-Scoping:** Transitive Referenzen aus einer Root-Analyse als Child-Ressourcen führen.
 
 ---
 

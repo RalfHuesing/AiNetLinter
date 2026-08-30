@@ -27,17 +27,25 @@
   [ERROR]: ANALYSIS_FAILED: Assembly-Session konnte nicht aufgebaut werden:
   Das externe Ressourcenlimit ist ausgeschöpft (32 Einträge).
   ```
-- **Ursache:** Die vorherigen Analysen von `CloudStorage.dll` und `BelegEngine.dll` haben über die transitive Referenzauflösung alle 32 Slots der `AssemblyAnalysisRegistry` gefüllt. Da kein LRU-Cache (Least Recently Used) existiert, ist der Server für jede weitere neue DLL dauerhaft blockiert!
+- **Ursprung des Limits:**
+  - Definiert in [`ExternalResourceRegistryDefaults.MaxResidentResources = 32`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/ExternalResourceRegistry.cs#L15) in `ExternalResourceRegistry.cs`.
+  - Aktuell **hardcodiert** als Default und nicht über CLI oder Konfiguration anpassbar.
+  - Das Register prüft nur eine zeitbasierte 45-Minuten-Idle-TTL (`EvictExpiredNoLock`). Bei `TryAcquire` wird bei Erreichen von 32 Einträgen sofort `CapacityExceeded` geworfen, statt den ältesten ungenutzten Eintrag (LRU) freizugeben.
 
 ---
 
 ## 3. Identifizierte Anforderungen & Lösungsansätze
 
-### 1. LRU-Eviction & Child-Session Lifecycle (Dringend)
-- **Problem:** Transitive Kind-Sessions belegen vollwertige Registry-Slots und blockieren neue Analysen.
-- **Lösung:**
-  - Kind-Sessions sollten an die Lebensdauer der Root-Lease gebunden sein oder in einem separaten Cache-Pool laufen.
-  - Die `AssemblyAnalysisRegistry` muss ein **automatisches LRU-Verfahren** implementieren: Wenn 32 Einträge erreicht sind, werden die am längsten ungenutzten Sessions freigegeben (`EvictLeastRecentlyUsed`), statt neue Anfragen mit `ANALYSIS_FAILED` abzuweisen.
+### 1. Behebung des 32er-Limits: Konfigurierbarkeit + Echtes LRU-Eviction (Dringend)
+1. **Konfigurierbarkeit (CLI / Settings):**
+   - Einführung von `--mcp-max-assemblies <n>` (analog zu `--mcp-max-projects 4`) und `--mcp-assembly-ttl-minutes <min>` beim Serverstart.
+   - Optional konfigurierbar in `ainetlinter.settings.json` / `rules.json`.
+2. **Automatisches LRU-Eviction bei Kapazitätsgrenze (`EvictLeastRecentlyUsed`):**
+   - Wenn `entries.Count >= MaxResidentResources`, darf `TryAcquire` nicht fehlschlagen, sondern muss den am längsten nicht genutzten Eintrag mit `LeaseCount == 0` verdrängen und dessen Ressourcen freigeben.
+3. **Child-Session Lifecycle / Sub-Scoping:**
+   - Kind-Sessions aus transitiven Referenzen sollten als abhängige Sub-Ressourcen des Root-Leases geführt werden, damit sie nicht unbemerkt die globalen Registry-Slots für neue Root-Abfragen blockieren.
+
+---
 
 ### 2. Cross-Assembly Symbolsuche (`searchReferencedAssemblies`)
 - **Anforderung:** In `find_symbol` einen optionalen Parameter `includeReferences: bool` (Default `false`) ergänzen.
@@ -47,10 +55,14 @@
   -> Sagede.OfficeLine.Wawi.LagerEngine.dll (Typ: Sagede.OfficeLine.Wawi.LagerEngine.LagerJob)
   ```
 
+---
+
 ### 3. Cross-Assembly Call-Tree Traversal
 - **Anforderung:** Wenn `get_call_tree` (nach Behebung des `relativeTo`-Bugs) aufgerufen wird, soll es über Assembly-Grenzen hinweg Aufrufe in referenzierte DLLs anzeigen können.
 - **Nutzen:** Ein Agent kann direkt sehen:
   `Beleg.Save` -> `Beleg.SavePositionen` -> `LagerJob.Execute()` (in `LagerEngine.dll`).
+
+---
 
 ### 4. Health-Check Diagnose-Kappung
 - **Problem:** `get_server_health` lieferte bei 32 residenten Sessions **289 KB Text** (~70.000 Tokens), weil für jede Session hunderte Decompiler-Diagnosen ungefiltert mitgedumpt wurden.
