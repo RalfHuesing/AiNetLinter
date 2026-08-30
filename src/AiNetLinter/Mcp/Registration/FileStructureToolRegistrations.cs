@@ -154,11 +154,11 @@ internal static class FileStructureToolRegistrations
     private static readonly string GetClassStructureDescription =
         "Wann nutzen: Tabellarische Uebersicht ueber alle Member einer Klasse/eines Typs inkl. " +
         "Kind, Name, Visibility, Start-/End-Zeile, Zeilenanzahl und Signatur (z. B. zur Analyse " +
-        "vor Refactorings oder zur Identifikation langer Member). symbolIdentifier (Pflicht): " +
-        "Typname, File:Line:Col oder DocCommentId. sortBy: 'lines' (Default), 'kind', 'name'. " +
-        "maxMembers: Token-Budget-Limit (Default 50, Cap " +
-        + GetClassStructureTool.MaxMembersCap + "); bei Ueberschreitung Truncation-Meta-Zeile " +
-        "und TotalMemberCount vs. ShownMemberCount im StructuredContent.";
+        "vor Refactorings oder zur Identifikation langer Member; bei Records inkl. Primary-Constructor-Parametern). " +
+        "symbolIdentifier (Pflicht): Typname, Datei.cs:Zeile:Spalte oder DocCommentId. " +
+        "sortBy: 'lines' (Default), 'kind', 'name'. maxMembers: Begrenzung der sichtbaren Member " +
+        "(Default 50, Cap " + GetClassStructureTool.MaxMembersCap + "); bei Ueberschreitung " +
+        "Truncation-Meta-Zeile und TotalMemberCount vs. ShownMemberCount im structuredContent.";
 
     private static void AddGetFileSkeleton(
         McpServerPrimitiveCollection<McpServerTool> tools,
