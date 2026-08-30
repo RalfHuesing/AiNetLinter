@@ -2,10 +2,10 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-30T07:10:56+02:00
+last_updated: 2026-08-30T10:45:00+02:00
 rules_dir: .agents/rules
-total_steps: 38
-current_step: step-038
+total_steps: 39
+current_step: step-039
 ---
 
 # Task State: decompiled-assembly-analysis
@@ -14,12 +14,13 @@ current_step: step-038
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 38 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-038` (`open`; Checkout-Trust-Attestation bis
-  Materialisierung und Publish unveränderlich und lock-gebunden absichern)
+- **Aktueller Schritt:** `step-039` (`planned/in_progress`; Korrektur der
+  Checkout-Trust-Attestation, Statusgrammar, Lease-Bindung und
+  Dirty-Propagation aus `step-038`)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-30T07:10:56+02:00
+- **Zuletzt aktualisiert:** 2026-08-30T10:45:00+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -63,7 +64,8 @@ current_step: step-038
 | step-035 | EPIC-04 | done | ConfigurationFailure unabhängig von Diagnosen terminal bis zum Assembly-Tool propagieren | step-034 | 5c830e44 + 8182b992 | approved | 5c830e44 + 8182b992 + c4ee413c |
 | step-036 | EPIC-04 | issues | Gitea-Source-of-Truth mit Clean-Checkout und transparentem degraded Refresh-Vertrag absichern | - | 377b5360 + 39fb9fba | issues → step-037 | 377b5360 + 39fb9fba + c7efaae4 |
 | step-037 | EPIC-04 | issues | Verifizierten Checkout bis Materialisierung und Publish fail-closed binden | step-036 | 093f9d7a + 04e37bea | issues → step-038 | 093f9d7a + 04e37bea + 078c3e15 |
-| step-038 | EPIC-04 | open | Checkout-Trust-Attestation bis Materialisierung und Publish unveränderlich und lock-gebunden absichern | step-037 | - | - | - |
+| step-038 | EPIC-04 | issues | Checkout-Trust-Attestation bis Materialisierung und Publish unveränderlich und lock-gebunden absichern | step-037 | 170b446c + c1efb9ed | issues → step-039 | 170b446c + c1efb9ed + f635bc24 |
+| step-039 | EPIC-04 | planned/in_progress | Checkout-Trust-Attestation, Statusgrammar, Lease-Bindung und Dirty-Propagation korrigieren | step-038 | - | - | - |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -854,3 +856,23 @@ Produktionsänderungen, Tests oder Coder-/Kritikerarbeit ausgeführt. Der
 sichere nächste Übergabepunkt ist ein frischer Coder auf `main` mit
 `tasks/decompiled-assembly-analysis/step-038/step-plan.md`; danach wird der
 Coder geschlossen und ein neuer, separater Kritiker gestartet.
+
+### Wiederaufnahme nach Step-038-Review (2026-08-30)
+
+Der frische Kritiker hat Step 038 mit `f635bc24` nicht freigegeben. Vier
+MAJOR-Befunde gehören zur selben Checkout-Trust-Grenze: Die Statusgrammar
+hat eine Lone-CR-Lücke, ein neuer Datei-Namespace ist ungeschützt, die
+Lease-Bindung fehlt bei Refresh/Reuse, und Cancellation/InvalidData können
+partielle Lease-Leaks hinterlassen. Zusätzlich wird `Dirty` in verfügbaren
+Transportpfaden zu `Unverified` abgeschwächt. Der Kritiker bestätigte, dass
+die Test-Fassade, positive Pfade und bestehende Lock-Fälle erhalten sind,
+meldete aber einen bestehenden Test-Temp-Orphan und fehlende testhost-
+Prozesse als Umgebungsbefund.
+
+Diese Befunde werden als ein größeres Step-039-Korrekturpaket gebündelt,
+nicht als Audit-only-, Parser- oder Lease-Mini-Step. Es muss Lone-CR und
+ungeschützte Dateinamen fail-closed behandeln, Lease-Bindung über Refresh/
+Reuse sowie vollständiges Cancellation-/InvalidData-Cleanup herstellen und
+Dirty typisiert bis zur Providergrenze erhalten. Step 038 bleibt bis zur
+Freigabe offen; der nächste sichere Übergabepunkt ist ein frischer Planer
+für dieses gemeinsame Paket.
