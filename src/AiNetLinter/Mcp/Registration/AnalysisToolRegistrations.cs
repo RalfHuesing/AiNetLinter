@@ -131,13 +131,11 @@ internal static class AnalysisToolRegistrations
 
     private const string SearchPatternDescription =
         "Wann nutzen: Fallback fuer Namen/Strings ausserhalb des C#-Symbolgraphs (z. B. " +
-        "JS-Funktion, Razor-Komponente, WPF-Element) oder allgemeine Textsuche. isRegex=true " +
-        "fuer Regex statt case-insensitive Substring. maxFiles, contextLines und " +
-        "maxResponseBytes begrenzen die strukturierte Nutzlast; scope, includePatterns und " +
-        "excludePatterns steuern den solution-relativen Scope. enrichCSharp=true reichert " +
-        "sichtbare Treffer geladener C#-Dokumente opt-in an; Snapshot-Grenzen, mehrdeutige " +
-        "oder nicht verfuegbare Aufloesungen bleiben als ambiguous/unavailable im semantic-Feld " +
-        "sichtbar. Legacy-Text bleibt erhalten.";
+        "JS-Funktionen, Razor-Komponenten, WPF-Elemente, Config-Eintraege) oder allgemeine Textsuche. " +
+        "pattern: Suchtext oder Regex. isRegex=true fuer Regex statt case-insensitive Substring (Default false). " +
+        "maxResults: Treffer-Limit (Default 50). maxFiles, contextLines und maxResponseBytes begrenzen " +
+        "die strukturierte Nutzlast. scope, includePatterns und excludePatterns steuern den Scope. " +
+        "enrichCSharp=true reichert sichtbare C#-Treffer opt-in semantisch an (semantic-Feld).";
 
     private static void AddMetricsTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
