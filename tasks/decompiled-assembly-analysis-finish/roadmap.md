@@ -2,8 +2,8 @@
 
 status: executing
 current_epic: 3
-last_commit: ebf51167
-blocker: Epic 3 benötigt Korrekturrunde 2 für zwei verbleibende P1-Ursachen
+last_commit: c613d09d
+blocker: Review der Korrekturrunde 2 von Epic 3 ausstehend
 correction_round: 2
 cycle_state: active
 recent_finding_signatures:

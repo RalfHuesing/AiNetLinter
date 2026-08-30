@@ -671,3 +671,21 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
 - Nächste Aktion: aktuellen auftragsbezogenen Code-, Test-, Log- und
   Code-Map-Stand als Orchestrator-Checkpoint committen und danach einen
   frischen unabhängigen Reviewer starten.
+
+## 2026-08-30 — Epic 3 Korrekturrunde 2 Review gestartet
+
+- Run-ID: `resume-2026-08-30-epic-3-correction-2-review`
+- Epic: 3 — Transitive Assembly-Referenzen und getrennte externe Ressourcen
+- Rolle: Reviewer
+- Subagent-ID: `01a053dd-18ee-70a1-bfc0-782247f593ad`
+- Diff-Baseline: `c613d09d`
+- Status: `running`
+- Prüfauftrag: unabhängige Prüfung der korrigierten Dispatcher-/Tool-
+  Expansion, Source-backed ProjectReference-Auflösung und des
+  Duplicate-Dispose-Lease-Rollbacks.
+- Die aktualisierte `code-map.md` ist als Navigationshilfe zu lesen und gegen
+  Working Tree und MCP zu verifizieren; sie ist keine Source of Truth.
+- Die frischen Implementierer-Nachweise (Build `--no-restore` 0/0,
+  fokussierte Tests 40/40 und letzter `get_violations`-Check) werden nicht
+  bloß zur Bestätigung wiederholt. Nur konkrete Gegenhypothesen oder fehlende
+  Abdeckung rechtfertigen eine gezielte Wiederholung.
