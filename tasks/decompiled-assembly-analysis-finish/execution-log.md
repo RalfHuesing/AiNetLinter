@@ -432,3 +432,110 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
   Implementierung werden nicht bloß zur Bestätigung wiederholt; erneute
   Prüfungen sind nur bei konkreter Gegenhypothese oder unklarem Nachweis
   zulässig.
+
+## 2026-08-30 — Epic 3 Korrekturrunde 1 Review abgeschlossen
+
+- Run-ID: `resume-2026-08-30-epic-3-correction-1-review`
+- Epic: 3 — Transitive Assembly-Referenzen und getrennte externe Ressourcen
+- Rolle: Reviewer
+- Subagent-ID: `01a05381-9148-7a00-920e-599d745e3cb3`
+- Diff-Baseline: `eb1727b8`; seit dem Implementierer-Checkpoint waren nur
+  `execution-log.md`-Einträge ergänzt worden, Produktions- und Testcode waren
+  unverändert.
+- Status: `completed`; Urteil: `blocked`.
+- Vollständiger Reviewerbericht:
+
+  Epic 3 ist gegen `eb1727b8` nicht freigabefähig. Der aktuelle Diff
+  gegenüber diesem Commit betrifft nur `execution-log.md`; Produktions- und
+  Testcode entsprechen dem geprüften Stand. Zwei P1-Signaturen bleiben
+  bestehen.
+
+  1. P1 — `Transitive-Reference-Session-Expansion`
+
+  `LeaseReferenceAsync` existiert zwar in
+  `AssemblyAnalysisEntry.cs:228` und wird in
+  `AssemblyAnalysisRegistry.cs:214` mit einem Registry-Lease hinterlegt. Der
+  tatsächliche Dispatcher-/Toolpfad ruft diese Methode aber nicht auf:
+
+  - `AnalysisToolCall.cs:114` dispatcht nur den Assembly-Callback.
+  - `InspectAssemblyTool.cs:28` serialisiert lediglich `Context.References`.
+  - Der statische Aufrufnachweis findet außer der internen Factory-Verknüpfung
+    nur die Tests.
+
+  Der angebliche E2E-Test `AssemblyAnalysisRegistryTests.cs:152` erstellt
+  außerdem ein Registry-Objekt ohne Source-Resolver und analysiert den Child
+  anschließend durch einen separaten manuellen Dispatcher-Aufruf. Das beweist
+  keine transitive Expansion über den realen gemeinsamen Route-Pfad.
+
+  Zusätzlich kann der Source-Pfad Source-Projekt-Referenzen nicht auflösen:
+  `AssemblyAnalysisContextFactory.cs:83` ruft den Resolver nur mit dem
+  DLL-Pfad auf; `AssemblyReferenceResolver.cs:226` durchsucht nur das
+  DLL-Verzeichnis und Trusted Platform Assemblies. Eine `Foo -> Bar`-
+  Projekt-Referenz innerhalb einer gemappten Solution ohne vorhandene
+  `bar.dll` neben `foo.dll` bleibt damit `missing` und wird von
+  `LeaseReferenceAsync` abgewiesen.
+
+  Verletzt sind Konzept Zeilen 225–238 sowie Akzeptanzkriterien 426–428 und
+  447–448.
+
+  2. P1 — `External-Source-Resource-Lifecycle`: fehlerhafter
+  Duplicate-Rollback
+
+  In `SourceSnapshotRegistry.cs:88–107` wird bei einem Duplicate-Acquire
+  `resident.LeaseCount` erhöht. Wenn anschließend das Dispose des
+  Duplicate-Snapshots fehlschlägt, führt `SourceSnapshotRegistry.cs:127–148`
+  zwar das externe Resource-Lease zurück, reduziert aber den Snapshot-
+  `LeaseCount` nicht.
+
+  Folge: Der residente Snapshot behält einen Phantom-Lease. Die spätere
+  Freigabe des echten Leases reicht nicht auf null;
+  `SourceSnapshotRegistry.Dispose:169–180` überspringt den Eintrag dauerhaft.
+  Workspace, Checkout und Snapshot können dadurch nach Registry-Dispose
+  verbleiben.
+
+  Der vorhandene Duplicate-Test `SourceSnapshotRegistryTests.cs:19–42` deckt
+  nur den erfolgreichen Dispose-Pfad ab, nicht diesen Fehlerfall. Das
+  verletzt insbesondere das Cleanup-Kriterium Konzept Zeilen 438–439.
+
+  Nicht blockierende Deferred-Kandidaten:
+
+  - P2, `accepted-deferred`: `SourceSnapshotRegistry.EvictIdle:202–214`
+    entfernt Ressourcen vor der Snapshot-Sperre. Parallel kann `Acquire`
+    einen Lease erwerben, bevor der Snapshot anschließend trotzdem entfernt
+    und disposed wird. Aktuell wurde kein produktiver Aufrufer von `EvictIdle`
+    gefunden.
+  - P2, `accepted-deferred`: Source-Ressourcen werden erst nach vollständiger
+    Materialisierung budgetiert (`ExternalSourceSnapshotMaterializer.cs:78–89`);
+    bei Schätzfehlern fällt `SourceSnapshotModels.cs:203–205` auf `1,1` zurück.
+    Das schützt keine transienten Disk-/Memory-Spitzen.
+  - P2, `accepted-deferred`: Die Creation Barrier verwendet das Token des
+    ersten Aufrufers (`AssemblySourceSelectionOrchestrator.cs:151–177`);
+    `Cancel` beendet nur den Completion-Task bei Zeile 357. Der Test
+    `AssemblyAnalysisToolSupportCreationBarrierTests.cs:14–53` deckt nur den
+    erfolgreichen Join ab.
+
+  Muss-Kriterien-Abgleich:
+
+  | Kriterium | Urteil |
+  |---|---|
+  | Deduplizierung, Tiefen-/Knoten-Bounds, sichtbare Resolverzustände | überwiegend erfüllt |
+  | Eigene Leases für transitive Ziele | API vorhanden, Route nicht wirksam integriert |
+  | Source-backed `ProjectReference` innerhalb derselben Solution | nicht erfüllt |
+  | Tatsächlicher Route-/E2E-Nachweis | nicht erfüllt |
+  | Unabhängiges Source-Resource-Registry vom Assembly-Budget | strukturell erfüllt |
+  | TTL/LRU/Health/Parallelitätsbudgets | grundsätzlich vorhanden |
+  | Fehlerfester Snapshot-Lease-/Dispose-Lifecycle | nicht erfüllt |
+  | Keine Verdrängung der vier `MaxProjects`-Kontexte | erfüllt |
+
+  Verifikation: Die maßgeblichen sechs Dateien wurden vollständig gelesen.
+  Verwendet wurden MCP `get_file_tree`, `get_feature_context`,
+  `get_class_structure`, `get_symbol_body`, `get_test_context` und
+  `dependency_graph` mit absolutem `projectRoot`. Die frischen
+  Implementierer-Nachweise aus `execution-log.md` — Build 0/0, fokussierte
+  Tests 36/36, Host-/Provider-Tests 8/8, Safeguard 8,82 — wurden gemäß
+  Auftrag nicht wiederholt. Es wurden keine Assemblies ausgeführt, keine
+  Korrekturen implementiert und keine Task-Dateien verändert.
+
+- Nächste Aktion: Nach Checkpoint und Tech-Debt-Triage startet eine neue,
+  frische Korrekturrunde 2 für die beiden P1-Ursachen innerhalb des
+  Epic-3-Korrekturbudgets.

@@ -42,3 +42,44 @@ Bericht festgehalten.
   Identifier und Wire-Verträge nicht pauschal zentralisieren.
 - Log-Anker: `execution-log.md` — Epic-3-Implementierer abgeschlossen und
   Epic-3-Review abgeschlossen
+
+## TD-004 — Snapshot-Eviction unter konkurrierendem Acquire serialisieren
+
+- Schweregrad: P2
+- Scope: `SourceSnapshotRegistry.EvictIdle`
+- Evidenz: Der unabhängige Epic-3-Review stellte fest, dass Ressourcen vor
+  der Snapshot-Sperre entfernt werden; ein paralleles `Acquire` kann dadurch
+  einen Lease erwerben, bevor der Snapshot trotzdem entfernt und disposed
+  wird. Aktuell wurde kein produktiver Aufrufer gefunden.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: bei einer späteren Lifecycle-Härtung Eviction und Acquire
+  unter einer gemeinsamen Ownership-/Lease-Entscheidung serialisieren und
+  einen Race-Test ergänzen.
+- Log-Anker: `execution-log.md` — Epic-3-Korrekturrunde-1-Review
+
+## TD-005 — Source-Ressourcen vor Materialisierung budgetieren
+
+- Schweregrad: P2
+- Scope: `ExternalSourceSnapshotMaterializer`, `SourceSnapshotModels`
+- Evidenz: Der unabhängige Epic-3-Review stellte fest, dass Source-Ressourcen
+  erst nach vollständiger Materialisierung budgetiert werden und ein
+  Schätzfehler auf `1,1` zurückfällt; transiente Disk-/Memory-Spitzen sind
+  dadurch nicht geschützt.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: eine belastbare Vorab-Schätzung oder reservierbare
+  Streaming-/Rollback-Budgets definieren, ohne die Snapshot-Semantik zu
+  verändern.
+- Log-Anker: `execution-log.md` — Epic-3-Korrekturrunde-1-Review
+
+## TD-006 — Creation-Barrier-Cancellation mit Consumer-Semantik absichern
+
+- Schweregrad: P2
+- Scope: `AssemblySourceSelectionOrchestrator` Creation Barrier
+- Evidenz: Der unabhängige Epic-3-Review stellte fest, dass die Barrier das
+  Token des ersten Aufrufers verwendet; dessen Cancellation beendet nur den
+  Completion-Task. Der vorhandene Test deckt ausschließlich den erfolgreichen
+  Join ab.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: Cancellation-/Abbruchsemantik für den Produzenten und
+  wartende Consumer explizit festlegen und mit einem gezielten Test absichern.
+- Log-Anker: `execution-log.md` — Epic-3-Korrekturrunde-1-Review
