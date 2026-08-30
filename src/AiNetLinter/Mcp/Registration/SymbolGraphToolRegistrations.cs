@@ -61,9 +61,11 @@ internal static class SymbolGraphToolRegistrations
     private const string FindSymbolDescription =
         "Wann nutzen: Fundstelle(n) von C#-Symbolen per Namens-Substring finden, wenn der " +
         "exakte Ort unbekannt ist. namePatterns: Array von Namens-Mustern (auch fuer genau einen Namen; " +
-        "Batch loest N sequentielle Calls ab, max. 10 pro Call). Beispiel: namePatterns: [\"Greeter\"], " +
-        "kind: \"Class\" oder \"record\" (auch Methoden, Properties und Interfaces). Bei 0 C#-Treffern " +
-        "Hinweis auf Textfunde in Nicht-C#-Dateien.";
+        "Batch loest N sequentielle Calls ab, max. 10 pro Call, z. B. namePatterns: [\"Greeter\"]). " +
+        "kind: optionaler Typfilter (Class, Record, Method, Property, Interface, Struct, Enum; " +
+        "deutsche und englische Werte). maxResults: Begrenzung der Trefferliste (Default 50). " +
+        "Bei 0 C#-Treffern Hinweis auf Textfunde in Nicht-C#-Dateien (Fallback search_pattern). " +
+        "Liefert strukturierte FindSymbolBatchDto in structuredContent.";
 
     private static void AddFindReferences(
         McpServerPrimitiveCollection<McpServerTool> tools,
