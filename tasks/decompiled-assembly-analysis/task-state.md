@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-30T05:41:51+02:00
+last_updated: 2026-08-30T11:10:00+02:00
 rules_dir: .agents/rules
 total_steps: 37
 current_step: step-037
@@ -14,7 +14,7 @@ current_step: step-037
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 37 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-037` (`in_progress`; Verifizierten Checkout
+- **Aktueller Schritt:** `step-037` (`issues`; Verifizierten Checkout
   bis Materialisierung und Publish fail-closed binden)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
@@ -62,7 +62,7 @@ current_step: step-037
 | step-034 | EPIC-04 | issues | Strikter CacheRoot-Vertrag und fail-closed Konfigurationsweitergabe bis zum Assembly-Tool | step-033 | fcad25e5 + 1dd59128 | issues → step-035 | fcad25e5 + 1dd59128 + ff5fb2e5 |
 | step-035 | EPIC-04 | done | ConfigurationFailure unabhängig von Diagnosen terminal bis zum Assembly-Tool propagieren | step-034 | 5c830e44 + 8182b992 | approved | 5c830e44 + 8182b992 + c4ee413c |
 | step-036 | EPIC-04 | issues | Gitea-Source-of-Truth mit Clean-Checkout und transparentem degraded Refresh-Vertrag absichern | - | 377b5360 + 39fb9fba | issues → step-037 | 377b5360 + 39fb9fba + c7efaae4 |
-| step-037 | EPIC-04 | in_progress | Verifizierten Checkout bis Materialisierung und Publish fail-closed binden | step-036 | - | - | - |
+| step-037 | EPIC-04 | issues | Verifizierten Checkout bis Materialisierung und Publish fail-closed binden | step-036 | 093f9d7a + 04e37bea | issues → step-038 | 093f9d7a + 04e37bea + 078c3e15 |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -812,3 +812,25 @@ ausgeführt. Da es sich um eine Fix-Mode-Korrektur handelt, bleibt
 Coder auf `main`, der ausschließlich
 `tasks/decompiled-assembly-analysis/step-037/step-plan.md` als Startvertrag
 übernimmt, danach geschlossen und durch einen neuen Kritiker ersetzt wird.
+
+### Wiederaufnahme nach Step-037-Review (2026-08-30)
+
+Der frische Kritiker hat Step 037 mit `078c3e15` nicht freigegeben. Zwei
+MAJOR-Befunde betreffen denselben sicherheitskritischen Vertrag: Der
+Statusparser akzeptiert leere Records, wodurch ein nicht sauber bewerteter
+Checkout als clean durchgehen kann; außerdem bindet der TOCTOU-Schutz den
+Inhalt nicht exklusiv bis Copy/Open/Publish. Ein direkt gekoppelter MINOR-
+Befund ist die Test-Transport-Fassade, die fehlende Attestations automatisch
+per `ForTesting` ergänzt und damit den Produktionsvertrag im Test verdecken
+kann.
+
+Diese Befunde werden als ein größeres Step-038-Korrekturpaket gebündelt,
+nicht als Audit-only- oder Assertion-Mini-Step. Der nächste Step muss den
+Statusparser fail-closed machen, die Attestation bis zur tatsächlichen
+Materialisierung/Publizierung in einer belastbaren Ownership-/Lock-Grenze
+halten und die Test-Fassade so ändern, dass sie keine fehlende
+Produktionsattestation ergänzt. Positive Clean-/Verified-, Last-good/
+Degraded-, CurrentChanged-, Cleanup-/Cancellation- und Fallback-Verträge
+bleiben erhalten. Der Kritiker bestätigte Build, Fast 2.174 bestanden plus
+2 bekannte 1314-Skips, Integration 370/370, Stress nicht ausgeführt,
+keine Leaks sowie keine neuen Tech-Debt-Einträge.
