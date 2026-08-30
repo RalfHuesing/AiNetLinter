@@ -810,3 +810,52 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
   Bestätigung wiederholt; der Implementierer liefert gezielte Regression,
   Qualitätschecks und den letzten `get_violations`-Nachweis nach seiner
   letzten Codeänderung.
+
+## 2026-08-30 — Epic 3 Korrekturrunde 3 Implementierer abgeschlossen
+
+- Run-ID: `resume-2026-08-30-epic-3-correction-3`
+- Epic: 3 — Transitive Assembly-Referenzen und getrennte externe Ressourcen
+- Rolle: Implementierer
+- Subagent-ID: `01a053ef-772a-7673-a8db-c6ca9b88c155`
+- Diff-Baseline: `b2c546f8`
+- Status: `completed`; P1 nach Implementiererurteil behoben, kein Commit
+  durch den Implementierer.
+- Vollständiger Implementiererbericht:
+
+  Geändert:
+
+  - `SourceSnapshotRegistry.cs:127`: Rollback entfernt terminale
+    Null-Lease-Einträge atomar und entsorgt Snapshots außerhalb des Locks.
+  - `SourceSnapshotRegistryTests.cs:75`: genau ein deterministischer
+    Interleaving-Regressionstest ergänzt.
+  - `code-map.md:55` aktualisiert.
+
+  Verifikation:
+
+  - Regressionstest: `9/9` bestanden.
+  - Build: `0` Warnungen, `0` Fehler.
+  - `find_duplicates`: keine Cluster.
+  - `find_dead_code`: `0` Befunde.
+  - `find_magic_values`: nur Test-Fixture-Literale; `accepted-deferred`, nicht
+    scope-relevant.
+  - Finaler `get_violations` nach letzter Codeänderung: `0` Verstöße in zwei
+    Dateien.
+  - MCP-Installation akzeptiert weiterhin nur `projectRoot`;
+    `targetType`/`targetPath` wurden dokumentiert und konnten nicht verwendet
+    werden.
+  - Vollständige FastTests: ein unabhängiger Daemon-Test fehlgeschlagen
+    (`ResidentCount` `2` statt `1`).
+  - Vollständige IntegrationTests: ein paralleler Git-Prozess-Test mit Timeout
+    fehlgeschlagen; isolierter Wiederholungstest bestanden.
+  - Keine Änderungen an Roadmap, Execution-Log oder Tech-Debt; keine
+    Transitive-Reference- oder P2-Änderungen.
+
+  Commit-Vorschlag:
+  `fix(decompiled-assembly-analysis-finish): Bereinige terminale
+  Snapshot-Rollback-Leases`
+
+  Aufgabe: Behebe den Snapshot-Dispose-Race im fehlgeschlagenen
+  Duplicate-Acquire-Rollback.
+
+- Nächste Aktion: aktuellen Code-, Test-, Log-, Tech-Debt- und Code-Map-Stand
+  als Orchestrator-Checkpoint committen und den P1-Fix unabhängig reviewen.

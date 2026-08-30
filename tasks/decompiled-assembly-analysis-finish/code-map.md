@@ -53,8 +53,17 @@ Abschlussverifikation fertigstellen.
   child-spezifische Selection mit eigenem `SourceSnapshotLease`.
 - `SourceSnapshotRegistry.Acquire` → `CleanupFailedAcquire` →
   `ReleaseResidentLease` rollt bei fehlgeschlagenem Duplicate-Dispose den
-  erfolgreichen Resident-Lease-Inkrement zurück. `SourceSnapshotLease.AcquireSibling`
+  erfolgreichen Resident-Lease-Inkrement zurück. Nach terminalem Registry-
+  Dispose entfernt und entsorgt `ReleaseResidentLease` einen dabei auf null
+  fallenden Eintrag außerhalb des Locks; `SourceSnapshotLease.AcquireSibling`
   bewahrt den unabhängigen Snapshot-Lease-Pfad für Source-Project-Kinder.
+
+## Korrekturrunde 3: terminale Snapshot-Rollback-Bereinigung
+
+- `SourceSnapshotRegistry.ReleaseResidentLease` übernimmt für den Rollback-
+  Pfad die terminale Null-Lease-Bereinigung des normalen `Release`-Pfads und
+  sammelt Snapshot-/Workspace-/Checkout-Dispose-Fehler in der laufenden
+  Acquire-Fehlerliste.
 
 ## Betroffene Dateien
 
@@ -96,6 +105,9 @@ Test-/Fixturepfad:
   Source-Origin.
 - `SourceSnapshotRegistryTests.Acquire_FailedDuplicateDisposeRollsBackResidentSnapshotLease`
   deckt ausschließlich den belegten Duplicate-Acquire-/Dispose-Fehlerpfad ab.
+- `SourceSnapshotRegistryTests.Acquire_FailedDuplicateDisposeAfterTerminalReleaseDisposesResidentSnapshot`
+  erzwingt das terminale Interleaving `Registry.Dispose` → Original-Lease →
+  Rollback und prüft die vollständige Resident-/Snapshot-/Checkout-Bereinigung.
 - Bereits vorhandene `AssemblyAnalysisRegistryTests`,
   `AssemblyAnalysisContextFactoryTests`, `AssemblyAnalysisToolTests`,
   `SourceSnapshotRegistryTests` und `ExternalResourceRegistryTests` wurden als

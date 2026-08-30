@@ -133,7 +133,7 @@ internal sealed class SourceSnapshotRegistry : IDisposable
         {
             if (resolution.Entry is not null)
             {
-                ReleaseResidentLease(resolution.Entry);
+                ReleaseResidentLease(resolution.Entry, failures);
             }
 
             return;
@@ -152,8 +152,9 @@ internal sealed class SourceSnapshotRegistry : IDisposable
         AddDisposeFailure(failures, resolution.Entry.Snapshot);
     }
 
-    private void ReleaseResidentLease(SourceSnapshotEntry entry)
+    private void ReleaseResidentLease(SourceSnapshotEntry entry, List<Exception> failures)
     {
+        SourceSnapshotEntry? entryToDispose = null;
         lock (gate)
         {
             if (snapshots.TryGetValue(entry.ResourceIdentity, out var resident)
@@ -161,7 +162,17 @@ internal sealed class SourceSnapshotRegistry : IDisposable
                 && resident.LeaseCount > 0)
             {
                 resident.LeaseCount--;
+                if (Volatile.Read(ref disposed) != 0 && resident.LeaseCount == 0)
+                {
+                    snapshots.Remove(entry.ResourceIdentity);
+                    entryToDispose = resident;
+                }
             }
+        }
+
+        if (entryToDispose is not null)
+        {
+            failures.AddRange(DisposeEntries([entryToDispose]));
         }
     }
 

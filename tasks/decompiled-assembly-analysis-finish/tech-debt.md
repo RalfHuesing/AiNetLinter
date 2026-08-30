@@ -10,13 +10,16 @@ Bericht festgehalten.
 - Schweregrad: P2
 - Scope: `ExternalSourceGitProcessExecutorTests`
 - Evidenz: breiterer Epic-2-Integrationslauf mit zwei Fehlern wegen
-  Windows-Zugriffsrechten bzw. Prozess-Timeouts; Test-/Produktionsbereich lag
-  außerhalb des Epic-2-Diffs.
+  Windows-Zugriffsrechten bzw. Prozess-Timeouts; im Epic-3-Korrekturlauf trat
+  derselbe parallele Git-Prozess-Timeout erneut auf, während der isolierte
+  Wiederholungstest bestand. Test-/Produktionsbereich lag außerhalb des
+  jeweiligen Feature-Diffs.
 - Disposition: `accepted-deferred`
 - Nächster Schritt: Testumgebung und Prozessberechtigungen isoliert prüfen und
   den Git-Prozess-Test deterministisch machen, ohne den Assembly-Analyse-Scope
   auszuweiten.
-- Log-Anker: `execution-log.md` — Epic-2-Review abgeschlossen
+- Log-Anker: `execution-log.md` — Epic-2-Review abgeschlossen und
+  Epic-3-Korrekturrunde-3-Implementierer abgeschlossen
 
 ## TD-002 — Bestehenden ProjectRegistry-FastTest prüfen
 

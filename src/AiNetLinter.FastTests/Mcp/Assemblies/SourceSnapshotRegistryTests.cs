@@ -72,6 +72,41 @@ public sealed class SourceSnapshotRegistryTests
     }
 
     [Fact]
+    public void Acquire_FailedDuplicateDisposeAfterTerminalReleaseDisposesResidentSnapshot()
+    {
+        var mapping = new ExternalSourceMapping(
+            "https://gitea.example/shared.git",
+            "src/Shared.slnx",
+            ["Shared"]);
+        var duplicateMapping = new ExternalSourceMapping(
+            "HTTPS://GITEA.EXAMPLE/shared.git",
+            mapping.SolutionPath,
+            mapping.Assemblies);
+        var residentOwner = new TrackingCheckoutOwner("resident", [], throws: false);
+        using var residentSnapshot = CreateSnapshot(mapping, "revision-1", residentOwner);
+        using var registry = new SourceSnapshotRegistry();
+        using var residentLease = registry.Acquire(residentSnapshot);
+        var duplicateOwner = new TrackingCheckoutOwner(
+            "duplicate",
+            [],
+            throws: true,
+            onDispose: () =>
+            {
+                registry.Dispose();
+                residentLease.Dispose();
+            });
+        using var duplicateSnapshot = CreateSnapshot(duplicateMapping, "revision-1", duplicateOwner);
+
+        var failure = Assert.Throws<InvalidOperationException>(() => registry.Acquire(duplicateSnapshot));
+
+        Assert.Equal("duplicate", failure.Message);
+        Assert.Equal(0, registry.ResidentCount);
+        Assert.True(residentSnapshot.IsDisposed);
+        Assert.Equal(1, residentOwner.DisposeCount);
+        Assert.Equal(1, duplicateOwner.DisposeCount);
+    }
+
+    [Fact]
     public void Acquire_SeparatesRevisionAndSolutionPath()
     {
         var mapping = new ExternalSourceMapping(
@@ -291,7 +326,8 @@ public sealed class SourceSnapshotRegistryTests
     private sealed class TrackingCheckoutOwner(
         string name,
         List<string> disposeOrder,
-        bool throws) : IExternalSourceCheckoutOwner
+        bool throws,
+        Action? onDispose = null) : IExternalSourceCheckoutOwner
     {
         internal int DisposeCount { get; private set; }
 
@@ -299,6 +335,7 @@ public sealed class SourceSnapshotRegistryTests
         {
             DisposeCount++;
             disposeOrder.Add(name);
+            onDispose?.Invoke();
             if (throws)
             {
                 throw new InvalidOperationException(name);

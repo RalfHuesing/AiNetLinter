@@ -2,8 +2,8 @@
 
 status: executing
 current_epic: 3
-last_commit: c613d09d
-blocker: Epic 3 benötigt Korrekturrunde 3 für den Snapshot-Dispose-Race
+last_commit: b2c546f8
+blocker: Review ausstehend; ein FastTests-Daemon-Gate mit ResidentCount 2 statt 1 ist ungeklärt
 correction_round: 3
 cycle_state: active
 recent_finding_signatures:
