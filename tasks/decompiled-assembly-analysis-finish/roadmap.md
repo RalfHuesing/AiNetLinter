@@ -4,16 +4,11 @@ status: executing
 current_epic: 3
 last_commit: a8071f5f
 blocker: none
-correction_round: 0
+correction_round: 1
 cycle_state: active
 recent_finding_signatures:
-  - Registry-Generation-Retry: Datei-Churn darf keinen veralteten Fingerprint wiederverwenden
-  - Assembly-Symbolidentität: Folgeabfragen müssen Hash und Generation validieren
-  - Registration-Footprint: geänderte Toolregistrierungen müssen unter dem Kontextlimit bleiben
-  - Assembly-Generation-Lifetime: Generationen müssen über Registry-Ersetzungen hinweg monoton eindeutig bleiben
-  - Globaler-Footprint: Assembly-Registrierung, Dispatch und Optionsfabrik überschreiten ihre Kontextlimits
-  - Cancellation-Propagation: Cancellation muss nach best-effort-Cleanup weitergegeben werden
-  - Type-Hierarchy-Identity: get_type_hierarchy muss AssemblySymbolIdentity an den Resolver weiterreichen
+  - Transitive-Reference-Session-Expansion: erreichbare Referenzen werden noch nicht als eigene Analyseziele geroutet
+  - External-Source-Resource-Lifecycle: Source-Snapshot-Sessions verwenden noch kein unabhängiges Ressourcenregister
 
 Diese Roadmap ist der einzige dauerhafte Ausführungs- und Resume-Stand für den
 autonomen Lauf. Sie leitet die Reihenfolge aus dem freigegebenen Konzept ab;

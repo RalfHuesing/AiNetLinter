@@ -197,6 +197,68 @@ gesichert. Danach folgt genau ein frischer unabhängiger Reviewer; er wertet
 diesen Nachweis zuerst gegen den tatsächlichen Diff aus und wiederholt nur
 fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
 
+## 2026-08-30 — Epic 3 Reviewer gestartet
+
+- Run-ID: `resume-2026-08-30-epic-3-review`
+- Epic: 3 — Transitive Assembly-Referenzen und getrennte externe Ressourcen
+- Rolle: Reviewer
+- Subagent-ID: `01a05360-0cf4-74b2-8743-84bf720392b9`
+- Diff-Baseline: `944d583c`
+- Status: `running`
+- Verifikationsnachweise werden gemäß aktualisiertem Review-Skill zuerst auf
+  Scope, Frische und Vollständigkeit geprüft; erfolgreiche identische Checks
+  werden nicht ohne konkreten Anlass wiederholt.
+
+## 2026-08-30 — Epic 3 Review abgeschlossen
+
+- Subagent-ID: `01a05360-0cf4-74b2-8743-84bf720392b9`
+- Status: `completed`, Urteil: `issues`
+- Review-Baseline: `944d583c` gegen `2b76b113`; seit dem Implementierer-
+  Checkpoint wurde kein Produktions- oder Testcode geändert.
+
+### P1 — Transitive-Reference-Session-Expansion
+
+- Stellen: `AssemblyReferenceResolver.cs:51`,
+  `AssemblyAnalysisSession.cs:135`, `AssemblyDecompilationAdapter.cs:27`.
+- Der Resolver entdeckt transitive DLLs und erzeugt MetadataReferences, aber
+  Session- und Decompilation-Pfad verarbeiten weiterhin nur die Root-Assembly.
+- Dadurch wird `foo.dll -> bar.dll` zwar angezeigt, `bar.dll` aber nicht über
+  denselben Source-backed-/Decompilation-Pfad als eigenes Analyseziel
+  bedarfsgesteuert verfügbar.
+- Erforderlich: transitive Nodes über gemeinsame Assembly-/Source-Sessions
+  mit eigenen Consumer-Leases, Deduplizierung, Bounds und sichtbaren
+  Partial-/Missing-Zuständen anbinden; Route-/E2E-Test ergänzen.
+
+### P1 — External-Source-Resource-Lifecycle
+
+- Stellen: `AssemblyAnalysisHostComposition.cs:16`,
+  `AssemblyAnalysisResourceBudget.cs:9`,
+  `SourceSnapshotRegistry.cs:10`.
+- `ExternalResourceRegistry` wird bisher nur von `AssemblyAnalysisRegistry`
+  verwendet. `SourceSnapshotRegistry` besitzt weder unabhängige
+  Disk-/Memory-/Parallelitätsbudgets noch Health, TTL/LRU oder Creation
+  Barrier.
+- Dadurch ist der externe Ressourcen-/Lebenszeitvertrag für Source-Snapshot-
+  Sessions nicht nachgewiesen, obwohl diese nicht gegen `MaxProjects=4` zählen
+  sollen.
+- Erforderlich: eigener budgetierter Source-Snapshot-Registrypfad oder ein
+  nachweisbar gleichwertiger durchgereichter Vertrag; Tests für Capacity,
+  TTL/LRU, Health, parallele Erstzugriffe und aktive Leases ergänzen.
+
+### Review-Verifikation
+
+- Erfolgreiche Implementierer-Nachweise für Build, IntegrationTests,
+  `safeguard`, `get_violations` und `git diff --check` wurden nicht wiederholt,
+  weil sie frisch, vollständig und unverändert waren.
+- Unabhängig abgefragt: `get_file_tree`, `get_feature_context`,
+  `get_class_structure`, `dependency_graph`, `find_references`,
+  `get_test_context`.
+- Nicht blockierend: unveränderter `ProjectRegistryTests`-Fehler bleibt
+  `accepted-deferred`; diagnostische Magic Values bleiben
+  `accepted-deferred`; kein konkreter Refactoring-Drift-Fund.
+- Nächste Aktion: Reviewstand als Checkpoint committen, danach gezielte
+  Korrektur mit frischem Implementierer und anschließendem frischem Review.
+
 ## 2026-08-30 — Epic 2 Implementierer abgeschlossen
 
 - Subagent-ID: `01a05331-c495-7630-936c-130c7303219a`
