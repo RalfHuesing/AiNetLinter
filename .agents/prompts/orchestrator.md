@@ -75,6 +75,12 @@ Delegiere über die im verwendeten Agentenwerkzeug verfügbare Subagent-Funktion
 Wenn keine unabhängige Delegation möglich ist, behaupte keinen unabhängigen
 Review, sondern melde diese Einschränkung.
 
+Jeder Rollenauftrag weist den frischen Subagenten ausdrücklich an, den
+übergebenen Rollen-Skill vollständig zu lesen und dessen Regel- und
+MCP-Vorgaben selbstständig einzuhalten. Der Subagent darf sich nicht darauf
+verlassen, dass der Orchestrator Regeln bereits für ihn gelesen oder
+ausgeführt hat.
+
 - Jeder Rollenaufruf ist eine frische, unabhängige Subagent-Conversation mit
   neuem Kontext und dem aktuellen Working Tree.
 - Warte das vollständige terminale Ergebnis ab, bevor du irgendetwas am
