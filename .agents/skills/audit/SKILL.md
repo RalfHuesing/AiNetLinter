@@ -109,4 +109,8 @@ weitere Verifikation.
 
 Berichte zuerst, was proaktiv behoben wurde. Danach folgen verbleibende
 entscheidungsrelevante Befunde mit Kategorie, Fundstellen, Evidenz, Risiko und
-Empfehlung sowie die tatsächlich ausgeführten MCP-Abfragen und Tests.
+Empfehlung sowie einer passenden Disposition (`fixed`, `accepted-deferred`,
+`rejected/not-applicable`, `blocked/needs-user-decision` oder
+`promoted-to-project-debt`). Führe außerdem die tatsächlich ausgeführten
+MCP-Abfragen und Tests auf. Der Orchestrator persistiert den vollständigen
+Auditbericht; der Audit legt keine eigene Protokolldatei an.

@@ -132,6 +132,9 @@ entscheidet der aufrufende Workflow.
 ## Abschlussmeldung
 
 Berichte knapp: Ergebnis, wichtige Designentscheidungen, geänderte Bereiche,
-Build-/Testbefunde, bekannte Restrisiken und ob etwas bewusst nicht umgesetzt
-wurde. Schreibe keine `roadmap.md`, `task-state.md` oder Step-Dateien, sofern
-der Nutzer das nicht ausdrücklich verlangt.
+Build-/Testbefunde, bekannte Restrisiken, offene Tech Debt mit einer passenden
+Disposition (`accepted-deferred`, `rejected/not-applicable` oder
+`promoted-to-project-debt`) und ob etwas bewusst nicht umgesetzt wurde. Der
+Orchestrator persistiert den Bericht in `execution-log.md`; schreibe selbst
+keine `roadmap.md`, `execution-log.md`, `task-state.md` oder Step-Dateien,
+sofern der Nutzer das nicht ausdrücklich verlangt.

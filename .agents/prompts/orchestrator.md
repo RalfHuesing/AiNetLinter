@@ -20,6 +20,9 @@ für die Umsetzung, nachdem ein Konzept bei Bedarf separat mit dem
   bevor die nächste Rolle beginnt.
 - Der Orchestrator schreibt keinen Produktionscode. Er darf im Großkonzept-
   Modus eine einzige `roadmap.md` als Ausführungs- und Resume-Stand pflegen.
+- Für jeden orchestrierten Task gibt es zusätzlich genau ein
+  `execution-log.md` im Task-Verzeichnis. Es ist ein dauerhaftes
+  Ereignis-/Feedbackprotokoll, keine Step-Datei und kein zweiter Task-State.
 - Es gibt keine Step-Dateien, keinen `task-state.md`, keine künstlichen
   Übergabearchive und keine Planer-Schleife pro Detailstep.
 - Es gibt keine automatischen Nutzer-Check-ins zwischen Epics. Frage nur bei
@@ -52,8 +55,10 @@ den manuellen Konzept-Task.
    `AiNetLinter-McpWorkflow.mdc`; die Rollen verwenden aktuelle MCP-Schemas
    mit `targetType` und absolutem `targetPath`.
 3. Ermittle bei einem Konzept den Taskpfad aus dem vom Nutzer genannten
-   Konzept. Ohne eindeutig ermittelbaren Pfad frage nur dann nach, wenn der
-   Großkonzept-Modus eine `roadmap.md` dort dauerhaft ablegen muss.
+   Konzept. Im normalen Modus muss der Nutzer ebenfalls ein konkretes
+   Task-Verzeichnis für `roadmap.md` und `execution-log.md` angegeben haben.
+   Ohne eindeutig ermittelbaren Pfad stoppe vor der Delegation und frage
+   danach; erfinde keinen Ablageort.
 4. Prüfe vor der Delegation den Working-Tree-Status. Unzusammenhängende
    vorhandene Änderungen gehören dem Nutzer und dürfen weder überschrieben
    noch in einen Commit aufgenommen werden.
@@ -100,6 +105,53 @@ ausgeführt hat.
   Einen noch laufenden eigenen Alt-Task beendest du vor einer neuen Delegation;
   gelingt das nicht, stoppst du. Fremde Nutzer-Tasks bleiben unberührt.
 
+## Persistenz von Agentenfeedback
+
+Der Orchestrator schreibt im konkreten Task-Verzeichnis genau eine
+`execution-log.md`. Das Protokoll ist append-only und wird vom Orchestrator,
+nicht von den Rollen-Subagenten, gepflegt:
+
+- Vor jedem Rollenaufruf wird ein kurzer `running`-Eintrag mit Run-ID, Epic,
+  Rolle, Subagent-ID und Diff-Baseline geschrieben und auf die Festplatte
+  synchronisiert.
+- Unmittelbar nach dem terminalen Ergebnis wird vor jeder weiteren Aktion ein
+  Abschluss-, Fehler- oder Abbruch-Eintrag ergänzt. Er enthält den vollständigen
+  finalen Agentenbericht, Urteil, Findings, geänderte Bereiche, ausgeführte
+  Prüfungen, Risiken und die nächste Aktion. Vollständige unstrukturierte
+  Tooltranskripte werden nicht angehängt; Secrets dürfen niemals protokolliert
+  werden.
+- Bei einem Resume wird ein `running`-Eintrag ohne Abschluss anhand der
+  Task-Liste und des Working Trees als `interrupted` oder `unknown` markiert.
+  Der alte eigene Subagent wird beendet/archiviert, bevor ein frischer gestartet
+  wird. Das Ereignis und die Entscheidung werden zuerst protokolliert.
+- Lies beim Resume zuerst `roadmap.md` und danach nur die für das aktuelle Epic
+  relevanten beziehungsweise letzten Log-Einträge. Lade nicht den gesamten Log
+  in den Kontext, sofern das nicht für eine konkrete Rekonstruktion notwendig
+  ist.
+
+## Tech-Debt-Triage
+
+Jeder Agentenbericht wird direkt nach Eingang triagiert; es gibt keine
+nachträgliche Extraktion aus dem kompletten Log:
+
+- Der vollständige Befund bleibt im `execution-log.md`.
+- In `roadmap.md` werden nur relevante offene oder zurückgestellte Punkte in
+  einer kompakten `## Zurückgestellte Tech Debt`-Liste gespiegelt. Jeder Eintrag
+  enthält kurze Beschreibung, Ursache für die Zurückstellung, nächsten sinn-
+  vollen Schritt, Status und den Log-Anker.
+- Verwende die Dispositionen `fixed`, `accepted-deferred`,
+  `rejected/not-applicable`, `blocked/needs-user-decision` und
+  `promoted-to-project-debt`. Kosmetische oder unbelegte P2/P3-Funde bleiben
+  im Log und werden nicht automatisch zu Tech Debt.
+- Tech Debt, die nach Löschung des Task-Verzeichnisses erhalten bleiben soll,
+  wird in ein vorhandenes dauerhaftes Projekt-Backlog überführt, sofern der
+  Scope und die Projektregeln das erlauben. Gibt es keinen solchen Ablageort,
+  muss der Orchestrator den Punkt im Abschlussbericht mit Evidenz und
+  Empfehlung ausweisen; er erfindet dafür keine neue globale Datei.
+- Beim nächsten Epic werden nur die Roadmap-Zusammenfassung und verknüpfte
+  Log-Einträge übergeben. Der gesamte historische Log wird nicht als
+  Übergabearchiv an jeden Subagenten kopiert.
+
 ## Großkonzept-Modus: einmalige Roadmap
 
 Die Roadmap ist eine grobe Makroplanung, keine neue Drift-Loop-Spezifikation.
@@ -128,7 +180,9 @@ gelesen.
   verifikationen und deren Erledigungsstatus fest. Für die Zyklus- und
   Budgetsteuerung sind außerdem `correction_round`, höchstens drei knappe
   `recent_finding_signatures` und ein `cycle_state` zulässig; vollständige
-  Reviewtexte gehören nicht in die Roadmap.
+  Reviewtexte gehören nicht in die Roadmap. Die kompakte Liste
+  `## Zurückgestellte Tech Debt` ist davon ausgenommen; sie enthält nur die
+  kuratierten offenen Dispositionen mit Log-Ankern.
 
 Nach der Roadmap-Erzeugung beginnt die autonome Abarbeitung ohne weitere
 Bestätigung des Nutzers.
@@ -262,11 +316,12 @@ sofort committed. Kein Rollen-Subagent committet selbst.
 - Stage ausschließlich die zum Auftrag gehörenden Dateien. Bewahre
   unzusammenhängende Nutzeränderungen und führe keinen Push aus.
 - Committe beim Start einer neuen Ausführung die neu erzeugte `roadmap.md`
-  einmalig als Planungs-Checkpoint, bevor der erste Implementierer startet.
-  Committe danach jedes genehmigte Epic sowie genehmigte Audit-/Gate-
-  Korrekturen separat. Stage dabei nur auftragsbezogene Dateien bzw. eindeutige
-  auftragsbezogene Hunks; bei einer unklaren Überschneidung mit Nutzer-
-  Änderungen stoppe statt fremde Arbeit mitzunehmen.
+  und `execution-log.md` einmalig als Planungs-Checkpoint, bevor der erste
+  Implementierer startet. Committe danach jedes genehmigte Epic sowie
+  genehmigte Audit-/Gate-Korrekturen separat. Stage dabei nur auftragsbezogene
+  Dateien beziehungsweise eindeutige auftragsbezogene Hunks; bei einer
+  unklaren Überschneidung mit Nutzer-Änderungen stoppe statt fremde Arbeit
+  mitzunehmen.
 - Der Implementierer, Reviewer und Audit erstellen niemals eigene Commits.
   Der Orchestrator ist der einzige Commit-Besitzer dieses Workflows und schreibt
   keine Commit-Historie um.

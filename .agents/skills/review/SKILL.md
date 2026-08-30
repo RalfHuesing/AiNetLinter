@@ -80,6 +80,13 @@ Ursache ist, und kennzeichne nachvollziehbar, wenn sie sich fachlich geändert
 hat. Die Signatur dient der Zykluserkennung; sie ist kein künstlicher Task-
 oder Step-Bezeichner.
 
+Für relevante P2/P3-Funde und nicht blockierende Verbesserungsvorschläge gib
+zusätzlich eine knappe Dispositionsempfehlung an: `fix-now`,
+`accepted-deferred`, `rejected/not-applicable` oder
+`promoted-to-project-debt`. Der Orchestrator entscheidet die endgültige
+Disposition und persistiert den vollständigen Bericht; der Reviewer legt keine
+Protokolldatei an.
+
 ## Ergebnis
 
 Gib zuerst ein klares Urteil: `approved`, `issues` oder `blocked`.
