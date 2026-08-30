@@ -2,7 +2,7 @@
 task: decompiled-assembly-analysis
 type: codemap
 maintained_by: planer, coder, kritiker
-last_updated: 2026-08-28T17:31:00+02:00
+last_updated: 2026-08-30T02:15:46+02:00
 ---
 
 # CodeMap: decompiled-assembly-analysis
@@ -28,8 +28,10 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 ## Assembly-, Roslyn- und Referenzanalyse
 
 - **`src/AiNetLinter/Mcp/Assemblies/`** — enthält Session-, immutable Generation-/Pointer-Cache-, typisierte Manifest-, Budget-, Workspace- und PE-Referenzbausteine für readonly Roslyn-Snapshots.
+- **`src/AiNetLinter/Mcp/Assemblies/AssemblySourceSelectionOrchestrator.cs`** — hält Loader-Diagnosen als expliziten `ConfigurationFailure`-Status von No-Match-, Ambiguous- und Provider-Fallbacks getrennt und verwaltet Selection-Lease/Scope-Lifecycle.
 - **`src/AiNetLinter/Mcp/Assemblies/AssemblyCacheContract.cs`, `AssemblyDiagnosticCodes.cs`, `AssemblySessionStatusExtensions.cs` und `AssemblyCacheCleanup.cs`** — bündeln Cache-Wirewerte, Assembly-Diagnosecodes, Statusmapping und sichere Bereinigungshilfen.
 - **`src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/`** — enthält die Assembly-Analyse, deren Kontextfabrik die statische Session sowie die bestehenden MCP-Tools und DTOs verbindet.
+- **`src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolSupport.cs`** — beendet einen terminalen Konfigurationsfehler vor `CreateContextAsync` als policy-konformes, secret-freies Recoverable-Resultat ohne Decompilation-/Build-Payload.
 - **`src/AiNetLinter/Mcp/Tools/SymbolGraph/`** — enthält Symbolsuche, Referenzen und Strukturabfragen als zentrale Roslyn-Konsumenten für beide Target-Arten.
 - **`src/AiNetLinter/Mcp/Tools/Analysis/`** — enthält allgemeine Analysewerkzeuge, deren Dispatch und Herkunftssemantik erweitert werden müssen.
 - **`src/AiNetLinter/Mcp/Tools/FileStructure/`** — enthält Datei-/Dokumentstrukturabfragen für generierte und quellbasierte Roslyn-Dokumente.
@@ -48,6 +50,7 @@ werden im jeweiligen Step-Plan bzw. Step-Ergebnis festgehalten.
 
 - **`src/AiNetLinter/Configuration/`** — enthält die strikte rules-/Projektkonfiguration und ist der Integrationspunkt für globale externe Source-Mappings.
 - **`src/AiNetLinter/Configuration/ExternalSourceConfiguration.cs`, `ExternalSourceConfigurationLoader.cs` und `ExternalSourceMappingValidator.cs`** — enthalten den unveränderlichen External-Source-Mappingvertrag, den fokussierten appsettings-Loader und die zugehörige JSON-/Pfad-/Assembly-Validierung.
+- **`ExternalSourceConfigurationPath` und `ExternalSourceCacheOptions`** — erzwingen am Loader-, direkten Options- und Cache-Fabrik-Rand dieselbe strikte Roh-`CacheRoot`-Semantik für relative, Laufwerks- und UNC-Pfade sowie URI-/Credential-/Device-/reservierte/Dot-Segment-Ablehnungen.
 - **`src/AiNetLinter/Cache/AnalysisCacheManager.cs`** — enthält den bestehenden Batch-Analysecache, der vom neuen externen Session-/Decompilation-Cache getrennt bleiben muss.
 - **`appsettings.json`** — enthält die aktuelle Logging-Konfiguration und ist der projektweite Einstiegspunkt für optionale externe Analyseeinstellungen.
 - **`ainetlinter.project.json`** — definiert den bestehenden projektgebundenen Solution-/Rules-Vertrag, der für reine Assembly-Ziele nicht erforderlich werden soll.
