@@ -8,7 +8,7 @@ Dieses Dokument fasst die technischen Schwachstellen, Fehler und Performance-Pro
 
 | ID | Priorität | Betroffenes Tool / Komponente | Problem | Ursache & Empfohlene Behebung |
 |:---|:---|:---|:---|:---|
-| **BEF-01** | **P0 (Blocker)** | `ExternalResourceRegistry` / `AssemblyAnalysisRegistry` | **Totalausfall durch Ressourcen-Erschöpfung:** `ANALYSIS_FAILED: Das externe Ressourcenlimit ist ausgeschöpft (32 Einträge)`. | Grenze ist hardcodiert in `ExternalResourceRegistryDefaults.MaxResidentResources = 32`. **Lösung:** Wert konfigurierbar machen (`--mcp-max-assemblies`, Settings) + echtes LRU-Verfahren (`EvictLeastRecentlyUsed`) statt hartem Abbruch. |
+| **BEF-01** | **P0 (Blocker)** | `ExternalResourceRegistry` / `AssemblyAnalysisRegistry` | **Totalausfall durch Ressourcen-Erschöpfung:** `ANALYSIS_FAILED: Das externe Ressourcenlimit ist ausgeschöpft (32 Einträge)`. | Grenzen sind hardcodiert (`MaxResidentResources = 32`, `IdleTtl = 45min`). **Lösung:** Vollständige Konfigurierbarkeit über `appsettings.json` + CLI-Overrides + automatisches **LRU-Eviction** (`EvictLeastRecentlyUsed`). |
 | **BEF-02** | **P1 (Kritisch)** | `inspect_assembly`, `find_assembly_extensions` | **Token-Explosion / 643 KB Output:** Ungefilterte Ausgabe aller transitiven Referenz-Diagnosen (1.300+ Knoten). | Im Textoutput nur Root-Assembly-Diagnosen ausgeben. Transitive Diagnosen als 1-Zeilen-Metrik zusammenfassen. |
 | **BEF-03** | **P1 (Kritisch)** | `get_call_tree`, `get_symbol_body`, `dependency_graph` | **Crash bei Assembly-Zielen:** `ArgumentException: The path is empty. (Parameter 'relativeTo')`. | Bei dekompilierten In-Memory-Dokumenten existiert kein physischer Solution-Root. `Path.GetRelativePath` muss für Assembly-Sessions abgesichert oder übersprungen werden. |
 | **BEF-04** | **P2 (Feature)** | `find_symbol`, `get_call_tree` | **Fehlende Cross-Assembly Typauflösung:** Keine Möglichkeit abzufragen, in welcher referenzierten DLL ein externer Typ (z. B. `LagerJob`) definiert ist. | Parameter `includeReferences: bool` für `find_symbol` bzw. transitives Call-Tracing über Assembly-Grenzen hinweg. |
@@ -27,15 +27,33 @@ Dieses Dokument fasst die technischen Schwachstellen, Fehler und Performance-Pro
 ### 1. Blocker: Ressourcenlimit-Erschöpfung in `ExternalResourceRegistry`
 - **Fundstelle im Code:**
   [`ExternalResourceRegistryDefaults.MaxResidentResources = 32`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/ExternalResourceRegistry.cs#L15)
+  [`ExternalResourceRegistryDefaults.IdleTtl = 45min`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/ExternalResourceRegistry.cs#L16)
   in `ExternalResourceRegistry.cs`.
 - **Aktueller Zustand:**
-  Der Wert 32 ist **fest im C#-Code hardcodiert** und wird beim Initialisieren von `AssemblyAnalysisHostComposition` ohne Konfigurationsoptionen instanziiert.
+  Die Parameter (32 Ressourcen, 45 Minuten TTL, 512 MB Disk/Memory, 4 parallele Ops) sind fest im Code hardcodiert. `AssemblyAnalysisHostComposition` instanziiert die Registry ohne Übergabe von Optionen.
 - **Problem:**
   Es gibt nur eine zeitbasierte 45-Minuten-Idle-TTL (`EvictExpiredNoLock`). Bei `TryAcquire` wird bei 32 Einträgen sofort `CapacityExceeded` ausgelöst, statt eine ungenutzte Session per LRU zu verdrängen.
 - **Empfohlene Lösung:**
-  1. **Konfigurierbarkeit:** CLI-Option `--mcp-max-assemblies <n>` (analog zu `--mcp-max-projects 4`) und Support in Settings/`rules.json`.
-  2. **Automatisches LRU-Eviction (`EvictLeastRecentlyUsed`):** Wenn das Limit erreicht ist, automatisch die am längsten ungenutzte Session verdrängen.
-  3. **Sub-Scoping:** Transitive Referenzen aus einer Root-Analyse als Child-Ressourcen führen.
+  1. **Konfigurierbarkeit über `appsettings.json`:**
+     Alle Server- und Registry-Parameter sollen über die bestehende `appsettings.json`-Infrastruktur konfigurierbar sein:
+     ```json
+     {
+       "McpServer": {
+         "ProjectTtlMinutes": 45,
+         "MaxProjects": 4,
+         "AssemblyAnalysis": {
+           "IdleTtlMinutes": 45,
+           "MaxResidentResources": 64,
+           "MaxDiskBytesMb": 1024,
+           "MaxMemoryBytesMb": 1024,
+           "MaxParallelOperations": 4
+         }
+       }
+     }
+     ```
+  2. **CLI-Overrides:** `--mcp-max-assemblies <n>` und `--mcp-assembly-ttl-minutes <min>`.
+  3. **Automatisches LRU-Eviction (`EvictLeastRecentlyUsed`):** Wenn das Limit erreicht ist, automatisch die am längsten ungenutzte Session mit `LeaseCount == 0` verdrängen.
+  4. **Sub-Scoping:** Transitive Referenzen aus einer Root-Analyse als Child-Ressourcen führen.
 
 ---
 

@@ -28,18 +28,33 @@
   Das externe Ressourcenlimit ist ausgeschöpft (32 Einträge).
   ```
 - **Ursprung des Limits:**
-  - Definiert in [`ExternalResourceRegistryDefaults.MaxResidentResources = 32`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/ExternalResourceRegistry.cs#L15) in `ExternalResourceRegistry.cs`.
-  - Aktuell **hardcodiert** als Default und nicht über CLI oder Konfiguration anpassbar.
+  - Definiert in [`ExternalResourceRegistryDefaults.MaxResidentResources = 32`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/ExternalResourceRegistry.cs#L15) und `IdleTtl = 45min`.
+  - Aktuell **hardcodiert** als Default und nicht über `appsettings.json` oder CLI anpassbar.
   - Das Register prüft nur eine zeitbasierte 45-Minuten-Idle-TTL (`EvictExpiredNoLock`). Bei `TryAcquire` wird bei Erreichen von 32 Einträgen sofort `CapacityExceeded` geworfen, statt den ältesten ungenutzten Eintrag (LRU) freizugeben.
 
 ---
 
 ## 3. Identifizierte Anforderungen & Lösungsansätze
 
-### 1. Behebung des 32er-Limits: Konfigurierbarkeit + Echtes LRU-Eviction (Dringend)
-1. **Konfigurierbarkeit (CLI / Settings):**
-   - Einführung von `--mcp-max-assemblies <n>` (analog zu `--mcp-max-projects 4`) und `--mcp-assembly-ttl-minutes <min>` beim Serverstart.
-   - Optional konfigurierbar in `ainetlinter.settings.json` / `rules.json`.
+### 1. Behebung des 32er-Limits: Konfigurierbarkeit per `appsettings.json` + Echtes LRU-Eviction (Dringend)
+1. **Konfigurierbarkeit über `appsettings.json`:**
+   - Grundsätzlich sollten alle Lifecycle- und Kapazitätswerte (`IdleTtlMinutes`, `MaxResidentResources`, `MaxDiskBytesMb`, `MaxMemoryBytesMb`, `MaxParallelOperations`) in `appsettings.json` definierbar sein:
+     ```json
+     {
+       "McpServer": {
+         "ProjectTtlMinutes": 45,
+         "MaxProjects": 4,
+         "AssemblyAnalysis": {
+           "IdleTtlMinutes": 45,
+           "MaxResidentResources": 64,
+           "MaxDiskBytesMb": 1024,
+           "MaxMemoryBytesMb": 1024,
+           "MaxParallelOperations": 4
+         }
+       }
+     }
+     ```
+   - Mit CLI-Overrides: `--mcp-max-assemblies <n>` und `--mcp-assembly-ttl-minutes <min>`.
 2. **Automatisches LRU-Eviction bei Kapazitätsgrenze (`EvictLeastRecentlyUsed`):**
    - Wenn `entries.Count >= MaxResidentResources`, darf `TryAcquire` nicht fehlschlagen, sondern muss den am längsten nicht genutzten Eintrag mit `LeaseCount == 0` verdrängen und dessen Ressourcen freigeben.
 3. **Child-Session Lifecycle / Sub-Scoping:**
