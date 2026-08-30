@@ -17,7 +17,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 
 // @covers AssemblySourceSelectionOrchestrator
 [Trait("Category", "Component")]
-public sealed class AssemblyAnalysisToolSupportTests
+public sealed partial class AssemblyAnalysisToolSupportTests
 {
     [Fact]
     public async Task ExecuteAsync_WithConfiguredMappingPassesMatchedSelectionToFactory()

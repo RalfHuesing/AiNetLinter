@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.ExceptionServices;
 using System.Threading;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Configuration;
 using Microsoft.CodeAnalysis;
 
@@ -169,7 +170,42 @@ internal static class DisposeFailureAggregator
 internal sealed record ExternalSourceSnapshotOwnership(
     IExternalSourceCheckoutOwner? CheckoutOwner = null,
     ExternalSourceCheckoutMaterializationUse? MaterializationUse = null,
-    bool IsAttested = false);
+    bool IsAttested = false,
+    ExternalSourceSnapshotResourceUsage? ResourceUsage = null);
+
+internal sealed record ExternalSourceSnapshotResourceUsage(long DiskBytes, long MemoryBytes)
+{
+    internal static ExternalSourceSnapshotResourceUsage Estimate(Solution solution)
+    {
+        ArgumentNullException.ThrowIfNull(solution);
+        var projectCount = Math.Max(1, solution.ProjectIds.Count);
+        return new(projectCount, projectCount);
+    }
+
+    internal static ExternalSourceSnapshotResourceUsage EstimateCheckout(string checkoutPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(checkoutPath);
+        try
+        {
+            long totalBytes = 0;
+            foreach (var path in Directory.EnumerateFiles(checkoutPath, "*", SearchOption.AllDirectories))
+            {
+                totalBytes = checked(totalBytes + new FileInfo(path).Length);
+                if (totalBytes > ExternalResourceRegistryDefaults.MaxDiskBytes)
+                {
+                    return new(totalBytes, totalBytes);
+                }
+            }
+
+            var boundedBytes = Math.Max(1, totalBytes);
+            return new(boundedBytes, boundedBytes);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            return new(1, 1);
+        }
+    }
+}
 
 internal sealed class ExternalSourceSnapshot : IDisposable
 {
@@ -194,6 +230,7 @@ internal sealed class ExternalSourceSnapshot : IDisposable
         checkoutOwner = ownership?.CheckoutOwner;
         materializationUse = ownership?.MaterializationUse;
         IsAttested = ownership?.IsAttested == true;
+        ResourceUsage = ownership?.ResourceUsage ?? ExternalSourceSnapshotResourceUsage.Estimate(solution);
     }
 
     internal SourceSnapshotIdentity Identity { get; }
@@ -203,6 +240,8 @@ internal sealed class ExternalSourceSnapshot : IDisposable
     internal bool IsDisposed => Volatile.Read(ref disposed) != 0;
 
     internal bool IsAttested { get; }
+
+    internal ExternalSourceSnapshotResourceUsage ResourceUsage { get; }
 
     internal bool OwnsCheckout(IExternalSourceCheckoutOwner checkout) =>
         ReferenceEquals(checkoutOwner, checkout);

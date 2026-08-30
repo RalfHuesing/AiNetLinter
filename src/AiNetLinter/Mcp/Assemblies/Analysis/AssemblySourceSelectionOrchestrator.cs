@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 using Serilog;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
@@ -26,6 +27,9 @@ internal sealed class AssemblySourceSelectionOrchestrator : IAssemblySourceResol
     private readonly ExternalSourceConfigurationLoadResult configurationResult;
     private readonly IExternalSourceProvider provider;
     private readonly SourceSnapshotRegistry registry;
+    private readonly Lock creationGate = new();
+    private readonly Dictionary<string, SharedProviderCreation> creations = new(StringComparer.Ordinal);
+    private int disposed;
 
     internal AssemblySourceSelectionOrchestrator(
         ExternalSourceConfigurationLoadResult configurationResult,
@@ -61,10 +65,10 @@ internal sealed class AssemblySourceSelectionOrchestrator : IAssemblySourceResol
         if (mappings.Count != 1) return CreateScope();
 
         cancellationToken.ThrowIfCancellationRequested();
-        var providerResult = await provider.ResolveAsync(mappings[0], cancellationToken).ConfigureAwait(false);
+        using var providerLease = await LeaseProviderResultAsync(mappings[0], cancellationToken).ConfigureAwait(false);
+        var providerResult = providerLease.Result;
         if (!providerResult.IsAvailable || providerResult.SourceSnapshot is null)
         {
-            DisposeSnapshotBestEffort(providerResult.SourceSnapshot, "nicht verfügbaren Provider-Snapshot");
             return CreateScope(
                 providerResult.Diagnostics,
                 providerResult.ToResultState());
@@ -79,6 +83,7 @@ internal sealed class AssemblySourceSelectionOrchestrator : IAssemblySourceResol
         try
         {
             lease = registry.Acquire(providerResult.SourceSnapshot);
+            providerLease.AcceptSnapshot();
         }
         catch
         {
@@ -123,6 +128,128 @@ internal sealed class AssemblySourceSelectionOrchestrator : IAssemblySourceResol
         CancellationToken cancellationToken) =>
         ResolveAsync(assemblyPath, cancellationToken);
 
+    internal void Dispose()
+    {
+        if (Interlocked.Exchange(ref disposed, 1) != 0)
+        {
+            return;
+        }
+
+        SharedProviderCreation[] pending;
+        lock (creationGate)
+        {
+            pending = creations.Values.ToArray();
+            creations.Clear();
+        }
+
+        foreach (var creation in pending)
+        {
+            creation.Cancel();
+        }
+    }
+
+    private async Task<SharedProviderResultLease> LeaseProviderResultAsync(
+        ExternalSourceMapping mapping,
+        CancellationToken cancellationToken)
+    {
+        ThrowIfDisposed();
+        var key = CreateCreationKey(mapping);
+        SharedProviderCreation creation;
+        lock (creationGate)
+        {
+            ThrowIfDisposed();
+            if (!creations.TryGetValue(key, out creation!))
+            {
+                creation = new SharedProviderCreation(cancellationToken);
+                creations.Add(key, creation);
+                creation.AddWaiter();
+                _ = RunProviderCreationAsync(key, mapping, creation);
+            }
+            else
+            {
+                creation.AddWaiter();
+            }
+        }
+
+        try
+        {
+            var result = await creation.Completion.Task
+                .WaitAsync(cancellationToken)
+                .ConfigureAwait(false);
+            return new SharedProviderResultLease(creation, result);
+        }
+        catch
+        {
+            creation.ReleaseWaiter(accepted: false);
+            throw;
+        }
+    }
+
+    private async Task RunProviderCreationAsync(
+        string key,
+        ExternalSourceMapping mapping,
+        SharedProviderCreation creation)
+    {
+        try
+        {
+            using var operation = registry.BeginOperation(creation.CreationToken);
+            var result = await provider.ResolveAsync(mapping, creation.CreationToken)
+                .ConfigureAwait(false);
+            if (!creation.TrySetResult(result))
+            {
+                DisposeSnapshotBestEffort(result.SourceSnapshot, "Provider-Creation nach Orchestrator-Dispose");
+            }
+        }
+        catch (OperationCanceledException exception) when (
+            exception.CancellationToken.IsCancellationRequested
+            || creation.CreationToken.IsCancellationRequested)
+        {
+            creation.Completion.TrySetCanceled(exception.CancellationToken);
+        }
+        catch (OperationCanceledException exception)
+        {
+            creation.Completion.TrySetException(exception);
+        }
+        catch (Exception exception)
+        {
+            creation.Completion.TrySetException(exception);
+        }
+        finally
+        {
+            lock (creationGate)
+            {
+                if (creations.TryGetValue(key, out var current)
+                    && ReferenceEquals(current, creation))
+                {
+                    creations.Remove(key);
+                }
+            }
+
+            creation.Complete();
+        }
+    }
+
+    private static string CreateCreationKey(ExternalSourceMapping mapping)
+    {
+        if (ExternalSourceRepositoryCacheKey.TryCreate(
+                mapping.Url,
+                mapping.SolutionPath,
+                out var cacheKey))
+        {
+            return cacheKey!.StableValue;
+        }
+
+        return string.Concat(mapping.Url.Trim(), "|", mapping.SolutionPath.Trim());
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (Volatile.Read(ref disposed) != 0)
+        {
+            throw new ObjectDisposedException(nameof(AssemblySourceSelectionOrchestrator));
+        }
+    }
+
     private string? ResolveAssemblyName(string assemblyPath) =>
         new AssemblyReferenceResolver().Resolve(assemblyPath).Identity?.Name?.Trim();
 
@@ -139,7 +266,6 @@ internal sealed class AssemblySourceSelectionOrchestrator : IAssemblySourceResol
 
     private AssemblySourceSelectionScope RejectUntrustedSnapshot(ExternalSourceProviderResult providerResult)
     {
-        DisposeSnapshotBestEffort(providerResult.SourceSnapshot, "unverifizierten Source-Snapshot");
         var diagnostics = providerResult.Diagnostics
             .Append(new ExternalSourceConfigurationDiagnostic(
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutUnverified,
@@ -173,6 +299,101 @@ internal sealed class AssemblySourceSelectionOrchestrator : IAssemblySourceResol
         catch (Exception exception)
         {
             Log.Warning(exception, "External-Source-Snapshot konnte nicht vollständig freigegeben werden: Grund={Reason}", reason);
+        }
+    }
+
+    private sealed class SharedProviderCreation
+    {
+        internal SharedProviderCreation(CancellationToken creationToken) => CreationToken = creationToken;
+
+        internal CancellationToken CreationToken { get; }
+
+        internal readonly TaskCompletionSource<ExternalSourceProviderResult> Completion =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private ExternalSourceProviderResult? completedResult;
+        private int waiters;
+        private int completed;
+        private int snapshotAccepted;
+
+        internal void AddWaiter() => Interlocked.Increment(ref waiters);
+
+        internal bool TrySetResult(ExternalSourceProviderResult result)
+        {
+            if (!Completion.TrySetResult(result))
+            {
+                return false;
+            }
+
+            completedResult = result;
+            return true;
+        }
+
+        internal void ReleaseWaiter(bool accepted)
+        {
+            if (accepted)
+            {
+                Interlocked.Exchange(ref snapshotAccepted, 1);
+            }
+
+            if (Interlocked.Decrement(ref waiters) == 0
+                && Volatile.Read(ref completed) != 0
+                && Volatile.Read(ref snapshotAccepted) == 0)
+            {
+                DisposeResultSnapshot();
+            }
+        }
+
+        internal void Complete()
+        {
+            Interlocked.Exchange(ref completed, 1);
+            if (Volatile.Read(ref waiters) == 0
+                && Volatile.Read(ref snapshotAccepted) == 0)
+            {
+                DisposeResultSnapshot();
+            }
+
+        }
+
+        internal void Cancel() => Completion.TrySetCanceled();
+
+        private void DisposeResultSnapshot()
+        {
+            var result = Volatile.Read(ref completedResult);
+            if (result is null)
+            {
+                return;
+            }
+
+            DisposeSnapshotBestEffort(
+                result.SourceSnapshot,
+                "Provider-Creation ohne Consumer-Lease");
+        }
+    }
+
+    private sealed class SharedProviderResultLease : IDisposable
+    {
+        private readonly SharedProviderCreation creation;
+        private int accepted;
+        private int disposed;
+
+        internal SharedProviderResultLease(
+            SharedProviderCreation creation,
+            ExternalSourceProviderResult result)
+        {
+            this.creation = creation;
+            Result = result;
+        }
+
+        internal ExternalSourceProviderResult Result { get; }
+
+        internal void AcceptSnapshot() => Interlocked.Exchange(ref accepted, 1);
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref disposed, 1) == 0)
+            {
+                creation.ReleaseWaiter(Volatile.Read(ref accepted) != 0);
+            }
         }
     }
 }

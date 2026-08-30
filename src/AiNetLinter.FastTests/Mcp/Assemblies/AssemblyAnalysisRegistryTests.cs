@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -112,6 +113,83 @@ public sealed class AssemblyAnalysisRegistryTests
         Assert.Single(results.Select(result => result.Lease!.Server).Distinct());
         Assert.Equal(1, registry.ResidentCount);
         foreach (var result in results) result.Lease!.Dispose();
+    }
+
+    [Fact]
+    public async Task LeaseReferenceAsync_ExpandsResolvedNodeOnDemandWithIndependentLease()
+    {
+        using var temp = TestTempDirectory.Create("assembly-registry-reference-target-");
+        var dependencyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ReferenceTarget",
+            "namespace Probe; public sealed class DependencyType { public int Value => 1; }");
+        var rootPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ReferenceRoot",
+            "namespace Probe; public sealed class Root { public DependencyType Value { get; } = new(); }",
+            dependencyPath);
+        await using var registry = new AssemblyAnalysisRegistry();
+
+        var rootResult = await registry.LeaseAsync(rootPath);
+        using var rootLease = rootResult.Lease!;
+        var reference = Assert.Single(rootLease.Context.References, item => item.Name == "ReferenceTarget");
+
+        var dependencyResult = await rootLease.LeaseReferenceAsync(reference);
+
+        Assert.NotNull(dependencyResult.Lease);
+        using var dependencyLease = dependencyResult.Lease!;
+        Assert.NotSame(rootLease.Server, dependencyLease.Server);
+        Assert.NotNull(dependencyLease.Context.Compilation.GetTypeByMetadataName("Probe.DependencyType"));
+        Assert.Equal(2, registry.ResidentCount);
+
+        var fabricatedReference = reference with { ResolvedPath = temp.GetPath("not-a-reference.dll") };
+        var rejected = await rootLease.LeaseReferenceAsync(fabricatedReference);
+        Assert.Null(rejected.Lease);
+        Assert.NotNull(rejected.Error);
+    }
+
+    [Fact]
+    public async Task AssemblyRoute_ResolvesRootReferenceAndAllowsLazyTransitiveTarget()
+    {
+        using var temp = TestTempDirectory.Create("assembly-route-reference-target-");
+        var dependencyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "RoutedReferenceTarget",
+            "namespace Probe; public sealed class DependencyType { public int Value => 1; }");
+        var rootPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "RoutedReferenceRoot",
+            "namespace Probe; public sealed class Root { public DependencyType Value { get; } = new(); }",
+            dependencyPath);
+        await using var registry = new AssemblyAnalysisRegistry();
+
+        var rootResult = await AssemblyAnalysisDispatcher.ExecuteAsync(
+            registry,
+            new AnalysisTargetRequest("assembly", rootPath),
+            lease => InspectAssemblyTool.ExecuteAsync(
+                lease.Server,
+                new InspectAssemblyArguments(lease.CanonicalPath, null, null, null, true, 100),
+                CancellationToken.None),
+            CancellationToken.None);
+        Assert.NotNull(rootResult.StructuredContent);
+        var reference = Assert.Single(
+            rootResult.StructuredContent!.Value.GetProperty("references").EnumerateArray(),
+            item => item.GetProperty("name").GetString() == "RoutedReferenceTarget");
+        var resolvedPath = reference.GetProperty("resolvedPath").GetString();
+        Assert.Equal(Path.GetFullPath(dependencyPath), resolvedPath, StringComparer.OrdinalIgnoreCase);
+
+        var dependencyResult = await AssemblyAnalysisDispatcher.ExecuteAsync(
+            registry,
+            new AnalysisTargetRequest("assembly", resolvedPath),
+            lease => InspectAssemblyTool.ExecuteAsync(
+                lease.Server,
+                new InspectAssemblyArguments(lease.CanonicalPath, "Probe", "DependencyType", null, true, 100, true),
+                CancellationToken.None),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, dependencyResult.IsError);
+        Assert.Contains("DependencyType", Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(dependencyResult.Content)).Text, StringComparison.Ordinal);
+        Assert.Equal(2, registry.ResidentCount);
     }
 
     [Fact]

@@ -83,7 +83,8 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
                 new ExternalSourceSnapshotOwnership(
                     checkout,
                     materializationUse,
-                    IsAttested: true));
+                    IsAttested: true,
+                    ResourceUsage: ExternalSourceSnapshotResourceUsage.EstimateCheckout(checkout.CheckoutPath)));
             workspace = null;
             return snapshot;
         }

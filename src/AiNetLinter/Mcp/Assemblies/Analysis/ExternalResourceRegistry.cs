@@ -102,6 +102,12 @@ internal sealed class ExternalResourceRegistry : IDisposable
 
     internal ExternalResourceAcquireResult TryAcquire(ExternalResourceRequest request)
     {
+        return TryAcquireWithEvictions(request).Result;
+    }
+
+    internal (ExternalResourceAcquireResult Result, IReadOnlyList<string> EvictedIdentities)
+        TryAcquireWithEvictions(ExternalResourceRequest request)
+    {
         ArgumentNullException.ThrowIfNull(request);
         if (string.IsNullOrWhiteSpace(request.Identity)) throw new ArgumentException("Die Ressourcenidentität darf nicht leer sein.", nameof(request));
         if (request.DiskBytes < 0) throw new ArgumentOutOfRangeException(nameof(request));
@@ -109,9 +115,10 @@ internal sealed class ExternalResourceRegistry : IDisposable
 
         lock (gate)
         {
+            var evicted = new List<string>();
             if (Volatile.Read(ref disposed) != 0)
             {
-                return FailureNoLock(ExternalResourceHealth.Disposed, "Das externe Ressourcenregister wurde bereits beendet.");
+                return (FailureNoLock(ExternalResourceHealth.Disposed, "Das externe Ressourcenregister wurde bereits beendet."), evicted);
             }
 
             if (entries.TryGetValue(request.Identity, out var resident))
@@ -119,20 +126,20 @@ internal sealed class ExternalResourceRegistry : IDisposable
                 resident.LeaseCount++;
                 resident.LastUsedUtc = UtcNowNoLock();
                 ClearFailureNoLock();
-                return new(new ExternalResourceLease(this, request.Identity), CreateHealthNoLock(ExternalResourceHealth.Healthy), null);
+                return (new(new ExternalResourceLease(this, request.Identity), CreateHealthNoLock(ExternalResourceHealth.Healthy), null), evicted);
             }
 
-            EvictExpiredNoLock(UtcNowNoLock());
-            EvictLeastRecentlyUsedNoLock(request);
+            EvictExpiredNoLock(UtcNowNoLock(), evicted);
+            EvictLeastRecentlyUsedNoLock(request, evicted);
             var reason = CapacityReasonNoLock(request);
             if (reason is not null)
             {
-                return FailureNoLock(ExternalResourceHealth.CapacityExceeded, reason);
+                return (FailureNoLock(ExternalResourceHealth.CapacityExceeded, reason), evicted);
             }
 
             entries.Add(request.Identity, new ResourceEntry(request.DiskBytes, request.MemoryBytes, UtcNowNoLock()));
             ClearFailureNoLock();
-            return new(new ExternalResourceLease(this, request.Identity), CreateHealthNoLock(ExternalResourceHealth.Healthy), null);
+            return (new(new ExternalResourceLease(this, request.Identity), CreateHealthNoLock(ExternalResourceHealth.Healthy), null), evicted);
         }
     }
 
@@ -173,10 +180,17 @@ internal sealed class ExternalResourceRegistry : IDisposable
 
     internal int EvictIdle()
     {
+        return EvictIdleIdentities().Count;
+    }
+
+    internal IReadOnlyList<string> EvictIdleIdentities()
+    {
         lock (gate)
         {
-            if (Volatile.Read(ref disposed) != 0) return 0;
-            return EvictExpiredNoLock(UtcNowNoLock());
+            if (Volatile.Read(ref disposed) != 0) return Array.Empty<string>();
+            var evicted = new List<string>();
+            EvictExpiredNoLock(UtcNowNoLock(), evicted);
+            return evicted;
         }
     }
 
@@ -203,6 +217,19 @@ internal sealed class ExternalResourceRegistry : IDisposable
             {
                 entries.Remove(identity);
             }
+        }
+    }
+
+    internal bool Remove(string identity)
+    {
+        lock (gate)
+        {
+            if (!entries.TryGetValue(identity, out var entry) || entry.LeaseCount != 0)
+            {
+                return false;
+            }
+
+            return entries.Remove(identity);
         }
     }
 
@@ -237,7 +264,7 @@ internal sealed class ExternalResourceRegistry : IDisposable
         lastFailureReason = null;
     }
 
-    private void EvictLeastRecentlyUsedNoLock(ExternalResourceRequest request)
+    private void EvictLeastRecentlyUsedNoLock(ExternalResourceRequest request, ICollection<string> evicted)
     {
         while (CapacityReasonNoLock(request) is not null)
         {
@@ -248,6 +275,7 @@ internal sealed class ExternalResourceRegistry : IDisposable
                 .FirstOrDefault();
             if (victim.Key is null) return;
             entries.Remove(victim.Key);
+            evicted.Add(victim.Key);
         }
     }
 
@@ -268,14 +296,17 @@ internal sealed class ExternalResourceRegistry : IDisposable
             : null;
     }
 
-    private int EvictExpiredNoLock(DateTime now)
+    private void EvictExpiredNoLock(DateTime now, ICollection<string> evicted)
     {
         var expired = entries
             .Where(pair => pair.Value.LeaseCount == 0 && now - pair.Value.LastUsedUtc > idleTtl)
             .Select(pair => pair.Key)
             .ToList();
-        foreach (var identity in expired) entries.Remove(identity);
-        return expired.Count;
+        foreach (var identity in expired)
+        {
+            entries.Remove(identity);
+            evicted.Add(identity);
+        }
     }
 
     private ExternalResourceHealthSnapshot CreateHealthNoLock(ExternalResourceHealth health)

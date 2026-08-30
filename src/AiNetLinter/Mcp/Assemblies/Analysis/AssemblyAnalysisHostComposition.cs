@@ -15,6 +15,8 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
 {
     private readonly SourceSnapshotRegistry registry;
     private readonly ExternalResourceRegistry resources;
+    private readonly ExternalResourceRegistry sourceResources;
+    private readonly AssemblySourceSelectionOrchestrator sourceOrchestrator;
     private readonly IAssemblySourceSelectionResolver orchestrator;
     private readonly IAssemblySourceResolver registryResolver;
     private readonly IAssemblyAnalysisRegistry sessions;
@@ -26,16 +28,19 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
         ExternalSourceConfigurationLoadResult configurationResult,
         IExternalSourceProvider provider,
         SourceSnapshotRegistry registry,
-        ExternalResourceRegistry resources)
+        ExternalResourceRegistry resources,
+        ExternalResourceRegistry sourceResources)
     {
         ConfigurationResult = configurationResult;
         Provider = provider;
         this.registry = registry;
         this.resources = resources;
+        this.sourceResources = sourceResources;
         var sourceOrchestrator = new AssemblySourceSelectionOrchestrator(
             configurationResult,
             provider,
             registry);
+        this.sourceOrchestrator = sourceOrchestrator;
         orchestrator = sourceOrchestrator;
         registryResolver = sourceOrchestrator;
         sessions = new AssemblyAnalysisRegistry(registryResolver, resourceRegistry: resources);
@@ -48,6 +53,8 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
     internal SourceSnapshotRegistry Registry => registry;
 
     internal ExternalResourceRegistry Resources => resources;
+
+    internal ExternalResourceRegistry SourceResources => sourceResources;
 
     internal IAssemblyAnalysisRegistry Sessions
     {
@@ -78,9 +85,10 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
         var sourceProvider = provider ?? CreateDefaultProvider(
             configurationResult,
             credentialResolver);
-        var registry = new SourceSnapshotRegistry();
+        var sourceResources = new ExternalResourceRegistry();
+        var registry = new SourceSnapshotRegistry(sourceResources);
         var resources = new ExternalResourceRegistry();
-        return new AssemblyAnalysisHostComposition(configurationResult, sourceProvider, registry, resources);
+        return new AssemblyAnalysisHostComposition(configurationResult, sourceProvider, registry, resources, sourceResources);
     }
 
     private static IExternalSourceProvider CreateDefaultProvider(
@@ -130,7 +138,25 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
 
         try
         {
+            sourceOrchestrator.Dispose();
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+
+        try
+        {
             registry.Dispose();
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+
+        try
+        {
+            sourceResources.Dispose();
         }
         catch (Exception exception)
         {

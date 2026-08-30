@@ -326,3 +326,92 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
 - Status: `running`
 - Erwartete nächste Aktion: terminalen Implementiererbericht abwarten, danach
   den Subagenten archivieren und einen frischen unabhängigen Reviewer starten.
+
+## 2026-08-30 — Epic 3 Korrekturrunde 1 Implementierer abgeschlossen
+
+- Run-ID: `resume-2026-08-30-epic-3-correction-1`
+- Epic: 3 — Transitive Assembly-Referenzen und getrennte externe Ressourcen
+- Rolle: Implementierer
+- Subagent-ID: `01a05366-bbc6-76c0-b369-6fa29c8566bf`
+- Diff-Baseline: `d7ffdaa6`
+- Status: `completed`, kein Commit durch den Implementierer.
+- Vollständiger Implementiererbericht:
+
+  Korrekturrunde 1 von Epic 3 ist implementiert und übergabefertig. Kein
+  Commit wurde erstellt; `roadmap.md` und `execution-log.md` blieben
+  unverändert.
+
+  Umgesetzt:
+
+  - Transitive Referenzen werden über `AssemblyAnalysisRegistry` lazy mit
+    eigenen Leases aufgelöst.
+  - Gemeinsamer Source-Selection-Pfad inklusive Creation Barrier für
+    parallele Erstzugriffe.
+  - Deduplizierung, Bounds und sichtbare Fehlerzustände bleiben erhalten.
+  - `SourceSnapshotRegistry` besitzt jetzt einen unabhängigen
+    `ExternalResourceRegistry`-Lifecyclepfad.
+  - Separate Disk-/Memory-/Resident-/Parallelitätsbudgets für
+    Source-Snapshots.
+  - TTL/LRU, Health, Eviction, Cancellation, Dispose und aktive Leases
+    abgesichert.
+  - Source-Resource-Budget im Host getrennt vom Assembly-Resource-Budget.
+  - Fehlerhafte Duplikat-/Eviction-Dispose-Pfade korrigiert.
+  - Fokussierte Tests ergänzt, ohne bestehende Resolver-/Graph-/Lease-Tests
+    zu duplizieren.
+
+  Geänderte Dateien:
+
+  - `AssemblyAnalysisEntry.cs`
+  - `AssemblyAnalysisRegistry.cs`
+  - `AssemblySourceSelectionOrchestrator.cs`
+  - `AssemblyAnalysisHostComposition.cs`
+  - `ExternalResourceRegistry.cs`
+  - `SourceSnapshotRegistry.cs`
+  - `SourceSnapshotModels.cs`
+  - `ExternalSourceSnapshotMaterializer.cs`
+  - bestehende Registry-/Snapshot-Tests
+  - neuer Creation-Barrier-Test
+
+  Verifikation nach letzter Codeänderung:
+
+  - `dotnet build`: erfolgreich, 0 Warnungen, 0 Fehler
+  - Fokussierte FastTests: Filter
+    `FullyQualifiedName~AssemblyAnalysisToolSupportTests|FullyQualifiedName~SourceSnapshotRegistryTests|FullyQualifiedName~AssemblyAnalysisRegistryTests`,
+    36/36 bestanden
+  - Host-/Provider-Tests: Filter
+    `FullyQualifiedName~AssemblyAnalysisHostCompositionTests|FullyQualifiedName~GiteaExternalSourceProviderTests`,
+    8/8 bestanden
+  - `git diff --check`: sauber
+
+  Finale MCP-Abfragen mit absolutem `projectRoot`:
+
+  - `get_impact(detailLevel=change-context, maxChangedSymbols=100,
+    maxTestsPerSymbol=20, maxResults=200)`: 11 geänderte Dateien, 87
+    Symbole, nicht vollständig testassoziiert wegen MCP-Limit.
+  - `get_violations(scopeFilter=src/AiNetLinter/Mcp/Assemblies,
+    includeSnippet=false, contextLines=0, maxResults=100)`: 0 Verstöße.
+  - `safeguard(..., minScore=8, maxViolations=100)`: 8,82/10, PASS.
+  - `find_duplicates(scopeDir=src/AiNetLinter/Mcp/Assemblies,
+    scopeType=production, similarityThreshold=exact, maxResults=50)`: 0
+    Cluster.
+  - `find_dead_code(accessibility=private_internal, confidence=both, kind=all,
+    mode=members, includeTests=false)`: 38 Treffer, alle Low-Confidence,
+    keine High-Confidence-Treffer.
+  - `find_magic_values(scopeFilter=..., changedOnly=true, includeTests=false,
+    includeSuppressed=false)`: 9 bestehende Vertrags-/Meldungskandidaten.
+
+  Offene Punkte/Risiken:
+
+  - Fresh Review und abschließender Audit durch unabhängige Rollen stehen
+    noch aus.
+  - Die vollständigen finalen Läufe `dotnet test ... FastTests
+    --filter Category!=Stress` und `dotnet test ... IntegrationTests
+    --filter Category!=Stress` wurden gemäß der neuen Regel nicht erneut
+    ausgeführt; vorhandene Nachweise waren älter als die letzte Codeänderung.
+    Das muss der Orchestrator vor Abschluss durchführen.
+  - Der MCP-Safeguard meldet weiterhin nur den bekannten
+    `AIContextFootprint`-Warnhinweis in `AssemblyAnalysisToolSupport`.
+  - Keine Commits durch diesen Implementierer.
+
+- Nächste Aktion: diesen vollständigen Stand als Orchestrator-Checkpoint
+  committen und danach einen frischen unabhängigen Reviewer starten.

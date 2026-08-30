@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using Microsoft.CodeAnalysis;
 using Xunit;
 
@@ -186,6 +187,64 @@ public sealed class SourceSnapshotRegistryTests
         secondSnapshot.Dispose();
     }
 
+    [Fact]
+    public void Acquire_UsesIndependentResourceBudgetAndDisposesEvictedSnapshot()
+    {
+        using var resources = new ExternalResourceRegistry(new ExternalResourceRegistryOptions(MaxResidentResources: 1));
+        using var registry = new SourceSnapshotRegistry(resources);
+        var first = CreateSnapshot(
+            new ExternalSourceMapping("https://gitea.example/shared.git", "src/First.slnx", ["First"]),
+            "revision-1");
+        var second = CreateSnapshot(
+            new ExternalSourceMapping("https://gitea.example/shared.git", "src/Second.slnx", ["Second"]),
+            "revision-1");
+
+        using (var firstLease = registry.Acquire(first))
+        {
+            firstLease.Dispose();
+        }
+
+        using var secondLease = registry.Acquire(second);
+
+        Assert.True(first.IsDisposed);
+        Assert.False(second.IsDisposed);
+        Assert.Equal(1, registry.ResidentCount);
+        Assert.Equal(1, registry.Health.ResidentResources);
+
+        first.Dispose();
+        second.Dispose();
+    }
+
+    [Fact]
+    public void EvictIdle_DisposesReleasedSnapshotButPreservesActiveLease()
+    {
+        var clock = new ManualTimeProvider(DateTimeOffset.UtcNow);
+        using var resources = new ExternalResourceRegistry(new ExternalResourceRegistryOptions(
+            IdleTtl: TimeSpan.FromMinutes(1),
+            Clock: clock));
+        using var registry = new SourceSnapshotRegistry(resources);
+        var released = CreateSnapshot(
+            new ExternalSourceMapping("https://gitea.example/shared.git", "src/Released.slnx", ["Released"]),
+            "revision-1");
+        var active = CreateSnapshot(
+            new ExternalSourceMapping("https://gitea.example/shared.git", "src/Active.slnx", ["Active"]),
+            "revision-1");
+        using var releasedLease = registry.Acquire(released);
+        releasedLease.Dispose();
+        using var activeLease = registry.Acquire(active);
+
+        clock.Advance(TimeSpan.FromMinutes(2));
+
+        Assert.Equal(1, registry.EvictIdle());
+        Assert.True(released.IsDisposed);
+        Assert.False(active.IsDisposed);
+        Assert.Equal(1, registry.ResidentCount);
+
+        activeLease.Dispose();
+        released.Dispose();
+        active.Dispose();
+    }
+
     private static ExternalSourceSnapshot CreateSnapshot(
         ExternalSourceMapping mapping,
         string revision,
@@ -215,6 +274,15 @@ public sealed class SourceSnapshotRegistryTests
                 throw new InvalidOperationException(name);
             }
         }
+    }
+
+    private sealed class ManualTimeProvider(DateTimeOffset initial) : TimeProvider
+    {
+        private DateTimeOffset utcNow = initial;
+
+        internal void Advance(TimeSpan value) => utcNow += value;
+
+        public override DateTimeOffset GetUtcNow() => utcNow;
     }
 }
 

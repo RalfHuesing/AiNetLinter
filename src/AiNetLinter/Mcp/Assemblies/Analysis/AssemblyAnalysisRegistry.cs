@@ -211,10 +211,18 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
                 return new(null, true);
             }
 
-            return entry.TryAcquireLease(out var lease)
+            return entry.TryAcquireLease(LeaseReferencedAsync, out var lease)
                 ? new(new(lease, null), false)
                 : new(Failure("Die Assembly-Session wird bereits beendet."), false);
         }
+    }
+
+    private Task<AssemblyAnalysisLeaseResult> LeaseReferencedAsync(
+        AssemblyReferenceDto reference,
+        CancellationToken cancellationToken)
+    {
+        var path = reference.ResolvedPath!;
+        return LeaseAsync(path, cancellationToken);
     }
 
     private AssemblyAnalysisRegistryEntryCreation? GetOrCreateEntry(string canonicalPath)
