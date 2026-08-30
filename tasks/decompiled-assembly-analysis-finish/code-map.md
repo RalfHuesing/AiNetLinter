@@ -82,6 +82,10 @@ Abschlussverifikation fertigstellen.
   die `ReferenceExpansionDiagnostics` wie `InspectAssemblyTool` in Payload und
   Status weiter. `AssemblyAnalysisResponse.Enrich` verwendet denselben
   Diagnosebestand für `analysis`, einschließlich Source-Snapshot und Revision.
+  `AssemblySessionStatusExtensions.ResolveEffectiveStatus` hebt einen
+  vollständigen Root bei Expansion-Diagnosen zentral auf `partial`; Spezial-
+  payload, gemeinsamer `analysis`-Block und Textheader verwenden denselben
+  effektiven Status.
   `AssemblyOrigin.Kind` bleibt als dokumentierter interner Alias zu
   `OriginKind` erhalten.
 - `IAssemblyAnalysisRegistry.SnapshotsAsync` und die Health-Snapshot-Methoden in
@@ -93,6 +97,18 @@ Abschlussverifikation fertigstellen.
 - `DaemonHostMcpContractTests` behandelt source-backed Root plus Source-Project
   Child als zwei stabile Resident-Sessions; die Resident-Buchhaltung wird nicht
   durch Wiederholungen kaschiert.
+
+## Korrekturrunde 1: Partiality-Statuskonsistenz und lokaler Bootstrap
+
+- `AssemblyAnalysisDispatcherCapabilityTests` prüft die bereits vorhandenen
+  echten Dispatcher-/Inspect-/Extensions-Pfade für Missing, Cycle, Node-Limit
+  und Child-Lease-Fehler jetzt über alle Statuskanäle: Spezialpayload,
+  gemeinsamer `analysis`-Block und Textantwort müssen jeweils `partial`
+  ausweisen.
+- `.mcp.json` startet den Repository-Quellstand über `dotnet run` und verweist
+  nicht mehr auf das fehlende externe Release-Verzeichnis. Die laufende
+  installierte Registry bleibt davon unberührt; ihr `projectRoot`-only-Schema
+  und Versionstand sind eine externe Neustart-/Deployment-Voraussetzung.
 
 ## Korrekturrunde 3: terminale Snapshot-Rollback-Bereinigung
 
@@ -137,6 +153,7 @@ Produktionspfad:
 - `src/AiNetLinter/Mcp/Daemon/DaemonHostCommand.cs`
 - `src/AiNetLinter/Mcp/Registration/McpAgentGuideRegistration.cs`
 - `.agents/rules/AiNetLinter-McpWorkflow.mdc`
+- `.mcp.json`
 
 Test-/Fixturepfad:
 
@@ -192,6 +209,9 @@ Quellregistrierung verwenden zusätzlich `targetType=project|assembly` und
 `projectRoot=C:\\Daten\\Entwicklung\\Ralf\\AiNetLinter` und passenden
 `scopeFilter`-Werten protokolliert; die Schemaabweichung bleibt ein
 Installations-/Deployment-Risiko und ist kein zusätzlicher Source-Vertrag.
+Der laufende Daemon meldete dabei Version 1.0.154; ein Neustart oder
+Deployment der MCP-Installation ist erforderlich, bevor die neuen
+`targetType`/`targetPath`- und Assembly-Session-Verträge live nutzbar sind.
 
 ## Epic-Zuordnung
 

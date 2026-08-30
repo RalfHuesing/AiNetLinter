@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "ainetlinter": {
-      "command": "C:/Daten/AiNetLinter-win-x64/AiNetLinter.exe",
-      "args": ["--mcp-server"]
+      "command": "dotnet",
+      "args": ["run", "--project", "src/AiNetLinter/AiNetLinter.csproj", "--", "--mcp-server"]
     }
   }
 }

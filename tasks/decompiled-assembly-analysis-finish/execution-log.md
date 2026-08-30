@@ -1202,6 +1202,73 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
   der letzte gezielte `get_violations`-Check.
 - Code-Map: vor Recherche zu lesen und nach Änderungen direkt zu aktualisieren.
 
+## 2026-08-30 — Epic 4 Korrekturrunde 1 Implementierer abgeschlossen
+
+- Run-ID: `resume-2026-08-30-epic-4-correction-1`
+- Epic: 4 — Capability-Matrix, Host-Integration und End-to-End-Verträge
+- Rolle: Implementierer
+- Subagent-ID: `01a05441-2304-7412-a1bf-c57242cf4ec6`
+- Diff-Baseline: `20ab5611`
+- Status: `completed`; Partiality-P1 laut Implementierer behoben, kein
+  Commit durch den Implementierer.
+- Vollständiger Implementiererbericht:
+
+  Änderungen:
+
+  - Zentraler `ResolveEffectiveStatus`: `complete` plus
+    Expansiondiagnosen wird konsistent zu `partial`.
+  - Gemeinsame Metadaten, Spezialpayloads und Textheader verwenden denselben
+    effektiven Status.
+  - Bestehende Dispatcher-Tests decken Missing, Cycle, Node-Limit und
+    Child-Lease-Fehler jetzt über alle Statuskanäle ab.
+  - `.mcp.json` verweist nicht mehr auf das fehlende externe Binary, sondern
+    auf den source-lokalen `dotnet run`-Bootstrap.
+  - `tasks/decompiled-assembly-analysis-finish/code-map.md` aktualisiert.
+  - `roadmap.md`, `execution-log.md` und `tech-debt.md` blieben unverändert.
+
+  Verifikation:
+
+  - `dotnet build --no-restore`: erfolgreich, `0` Warnungen, `0` Fehler.
+  - `AssemblyAnalysisDispatcherCapabilityTests`: `4/4` erfolgreich.
+  - Wiring-/Bootstrap-FastTests: `24/24` erfolgreich.
+  - Daemon-Composition-Test: `1/1` erfolgreich.
+  - MCP-Health-E2E-Test: `1/1` erfolgreich.
+  - `find_duplicates`: nur bekannte/unterdrückte oder außerhalb des Scopes
+    liegende Duplikatkandidaten.
+  - `find_dead_code`: `0` Befunde.
+  - `find_magic_values`: bestehender breiter MCP-Bestand, kein sicherer
+    scope-naher Befund.
+  - Letzter codebezogener Check: `get_violations` mit absolutem
+    `projectRoot`; nur bestehende `AIContextFootprint`-Warnungen in
+    unveränderten Dateien.
+
+  MCP-/Bootstrap-Evidenz:
+
+  - Laufende Registry: Version/Daemon `1.0.154`, weiterhin `projectRoot`-only;
+    `targetType`/`targetPath` und Assembly-Sessions sind live noch nicht
+    verfügbar.
+  - `.mcp.json` ist gültiges JSON; Quellprojekt, Solution und Regeln
+    existieren.
+  - Externes `C:\Daten\AiNetLinter-win-x64\AiNetLinter.exe` und Release-
+    Publish fehlen.
+  - `scripts/deploy-local.ps1` beschreibt den lokalen Publish-Weg, wurde aber
+    nicht ausgeführt.
+  - Konsequenz: Die laufende MCP-Installation benötigt externen Neustart bzw.
+    Deployment der aktuellen Binary. Keine globale Installation und kein
+    externes Repository wurden verändert.
+  - Die Tests analysierten synthetische DLLs metadata-only; untersuchte
+    Assemblies wurden nicht geladen oder ausgeführt.
+
+  Die vollständigen Nicht-Stress-Testgates bleiben beim Orchestrator.
+
+  Commit-Vorschlag des Implementierers:
+  `fix(decompiled-assembly-analysis-finish): Statuskonsistenz für partielle
+  Assembly-Expansion herstellen`
+
+- Nächste Aktion: aktuellen Code-, Test-, Bootstrap-, Dokumentations- und
+  Code-Map-Stand als Orchestrator-Checkpoint committen und unabhängig reviewen;
+  externe MCP-Neustart-/Deployment-Voraussetzung separat bewerten.
+
 ## 2026-08-30 — Epic 4 Review abgeschlossen
 
 - Run-ID: `resume-2026-08-30-epic-4-review`

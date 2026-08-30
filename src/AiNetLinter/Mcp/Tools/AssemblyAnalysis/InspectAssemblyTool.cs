@@ -77,9 +77,7 @@ internal static class InspectAssemblyTool
             .Distinct(StringComparer.Ordinal)
             .Take(100)
             .ToList();
-        var completeness = diagnostics.Count == 0
-            ? context.Status.ToCompletenessLabel()
-            : AssemblySessionStatus.Partial.ToCompletenessLabel();
+        var effectiveStatus = context.Status.ResolveEffectiveStatus(diagnostics);
         var payload = new InspectAssemblyPayload(
             fullPath,
             context.Identity,
@@ -87,12 +85,12 @@ internal static class InspectAssemblyTool
             context.References,
             selection.Items,
             diagnostics,
-            completeness,
+            effectiveStatus.ToCompletenessLabel(),
             selection.Truncated,
             selection.Total,
             context.Origin,
             context.Generation,
-            context.Status.ToString().ToLowerInvariant(),
+            effectiveStatus.ToWireValue(),
             CreateReferenceSessions(lease));
         return McpToolResults.Text(FormatText(payload, arguments.PublicOnly), payload);
     }

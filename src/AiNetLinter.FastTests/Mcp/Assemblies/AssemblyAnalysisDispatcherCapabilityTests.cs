@@ -39,7 +39,7 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
         var result = await fixture.ExecuteInspectAsync();
 
         var payload = Structured(result);
-        Assert.Equal("partial", payload.GetProperty("completeness").GetString());
+        AssertPartialStatusConsistency(result);
         Assert.Contains("missing-route-diagnostic", Diagnostics(payload));
         var session = Assert.Single(payload.GetProperty("referenceSessions").EnumerateArray());
         Assert.Equal("missing", session.GetProperty("sessionStatus").GetString());
@@ -63,7 +63,7 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
         var result = await fixture.ExecuteInspectAsync();
 
         var payload = Structured(result);
-        Assert.Equal("partial", payload.GetProperty("completeness").GetString());
+        AssertPartialStatusConsistency(result);
         Assert.Contains("cycle-route-diagnostic", Diagnostics(payload));
         var session = Assert.Single(payload.GetProperty("referenceSessions").EnumerateArray());
         Assert.Equal("cycle", session.GetProperty("sessionStatus").GetString());
@@ -87,7 +87,7 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
         var result = await fixture.ExecuteInspectAsync();
 
         var payload = Structured(result);
-        Assert.Equal("partial", payload.GetProperty("completeness").GetString());
+        AssertPartialStatusConsistency(result);
         Assert.Equal(AssemblyReferenceResolver.MaxReferenceNodes + 1, payload.GetProperty("referenceSessions").GetArrayLength());
         Assert.Contains(Diagnostics(payload), diagnostic => diagnostic.Contains("Begrenzung von", StringComparison.Ordinal));
         Assert.Contains(
@@ -110,7 +110,7 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
         var result = await fixture.ExecuteExtensionsAsync();
 
         var payload = Structured(result);
-        Assert.Equal("partial", payload.GetProperty("completeness").GetString());
+        AssertPartialStatusConsistency(result);
         Assert.Contains(Diagnostics(payload), diagnostic => diagnostic.Contains("FailedExtensionDependency", StringComparison.Ordinal));
         Assert.Equal("assembly", payload.GetProperty("analysis").GetProperty("targetType").GetString());
         Assert.Equal("decompiled", payload.GetProperty("analysis").GetProperty("origin").GetString());
@@ -136,6 +136,22 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
 
     private static IReadOnlyList<string> Diagnostics(System.Text.Json.JsonElement payload) =>
         payload.GetProperty("diagnostics").EnumerateArray().Select(item => item.GetString()!).ToArray();
+
+    private static void AssertPartialStatusConsistency(CallToolResult result)
+    {
+        var payload = Structured(result);
+        Assert.Equal("partial", payload.GetProperty("sessionStatus").GetString());
+        Assert.Equal("partial", payload.GetProperty("completeness").GetString());
+
+        var analysis = payload.GetProperty("analysis");
+        Assert.Equal("partial", analysis.GetProperty("status").GetString());
+        Assert.Equal("partial", analysis.GetProperty("completeness").GetString());
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("status=partial", text, StringComparison.Ordinal);
+        Assert.Contains("completeness=partial", text, StringComparison.Ordinal);
+        Assert.Contains("Vollständigkeit: `partial`", text, StringComparison.Ordinal);
+    }
 
     private sealed class SyntheticAssemblyFixture : IAsyncDisposable
     {

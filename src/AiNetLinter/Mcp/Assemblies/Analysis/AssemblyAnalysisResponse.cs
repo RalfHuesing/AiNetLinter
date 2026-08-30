@@ -21,6 +21,7 @@ internal static class AssemblyAnalysisResponse
             .Distinct(StringComparer.Ordinal)
             .Take(100)
             .ToList();
+        var effectiveStatus = lease.Context.Status.ResolveEffectiveStatus(diagnostics);
         var metadata = new AssemblyResponseMetadata(
             lease.CanonicalPath,
             origin.OriginKind,
@@ -30,8 +31,8 @@ internal static class AssemblyAnalysisResponse
             origin.Confidence,
             origin.Trust,
             lease.Context.Generation,
-            lease.Context.Status.ToWireValue(),
-            lease.Context.Status.ToCompletenessLabel(),
+            effectiveStatus.ToWireValue(),
+            effectiveStatus.ToCompletenessLabel(),
             diagnostics,
             origin.SourceSnapshotIdentity);
 

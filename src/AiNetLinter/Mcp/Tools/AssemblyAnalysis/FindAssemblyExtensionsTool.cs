@@ -72,21 +72,19 @@ internal static class FindAssemblyExtensionsTool
             .Distinct(StringComparer.Ordinal)
             .Take(100)
             .ToList();
-        var completeness = diagnostics.Count == 0
-            ? context.Status.ToCompletenessLabel()
-            : AssemblySessionStatus.Partial.ToCompletenessLabel();
+        var effectiveStatus = context.Status.ResolveEffectiveStatus(diagnostics);
         var payload = new FindAssemblyExtensionsPayload(
             fullPath,
             selection.Items,
             diagnostics,
-            completeness,
+            effectiveStatus.ToCompletenessLabel(),
             selection.Truncated,
             selection.Total,
             context.ConsumerProject,
             arguments.ReceiverType,
             context.Origin,
             context.Generation,
-            context.Status.ToString().ToLowerInvariant());
+            effectiveStatus.ToWireValue());
         return McpToolResults.Text(FormatText(payload), payload);
     }
 
