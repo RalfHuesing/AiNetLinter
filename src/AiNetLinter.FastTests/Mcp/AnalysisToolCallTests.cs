@@ -24,14 +24,14 @@ public sealed class AnalysisToolCallTests
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
         var projectCalled = false;
 
-        var result = await AnalysisToolCall.ExecuteAsync(
+        var result = await ProjectAnalysisDispatcher.ExecuteAsync(
             registry,
             new AnalysisTargetRequest("assembly", assemblyPath),
-            new AnalysisToolDispatch(ProjectCall: _ =>
+            (new AnalysisToolDispatch(ProjectCall: _ =>
             {
                 projectCalled = true;
                 return Task.FromResult(McpToolResults.Text("unerwartet"));
-            }));
+            })).ProjectCall!);
 
         Assert.False(projectCalled);
         Assert.False(result.IsError);
@@ -47,11 +47,11 @@ public sealed class AnalysisToolCallTests
         var requestPath = Path.Combine(projectRoot, ".", "sub", "..");
         await using var registry = ProjectWiringFixtures.CreateLoadedRegistry();
 
-        var result = await AnalysisToolCall.ExecuteAsync(
+        var result = await ProjectAnalysisDispatcher.ExecuteAsync(
             registry,
             new AnalysisTargetRequest("project", requestPath),
-            new AnalysisToolDispatch(ProjectCall: lease =>
-                Task.FromResult(McpToolResults.Text(lease.RootPath))));
+            (new AnalysisToolDispatch(ProjectCall: lease =>
+                Task.FromResult(McpToolResults.Text(lease.RootPath)))).ProjectCall!);
 
         Assert.Equal(Path.GetFullPath(projectRoot), TextOf(result));
     }
@@ -65,7 +65,7 @@ public sealed class AnalysisToolCallTests
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
         string? receivedPath = null;
 
-        var result = await AnalysisToolCall.ExecuteAssemblyAsync(
+        var result = await ProjectAnalysisDispatcher.ExecuteAssemblyAsync(
             registry,
             "assembly",
             assemblyPath,

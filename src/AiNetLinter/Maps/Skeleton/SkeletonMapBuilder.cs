@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,13 +22,14 @@ internal static class SkeletonMapBuilder
     internal static async Task<IReadOnlyList<SkeletonTypeInfo>> ExtractFromDocumentAsync(
         Document document,
         string solutionDir,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        Func<string?, string?>? formatSymbolId = null)
     {
         var semanticModel = await document.GetSemanticModelAsync(ct);
         if (semanticModel == null) return [];
 
         var relativePath = PathNormalizer.ToRelative(solutionDir, document.FilePath ?? document.Name);
-        var walker = new SkeletonSyntaxWalker(semanticModel, relativePath);
+        var walker = new SkeletonSyntaxWalker(semanticModel, relativePath, formatSymbolId);
         var root = await semanticModel.SyntaxTree.GetRootAsync(ct);
         walker.Visit(root);
         return walker.Types;

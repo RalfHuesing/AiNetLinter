@@ -3,7 +3,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
-using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using ModelContextProtocol.Server;
 
@@ -23,22 +22,25 @@ internal static class SymbolBodyToolRegistrations
 {
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        AnalysisToolRoute targetRoute)
     {
-        AddGetSymbolBody(tools, registry);
+        AddGetSymbolBody(tools, targetRoute);
     }
 
     private static void AddGetSymbolBody(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string[]? symbolIdentifiers = null, int maxBodyLines = 80, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
-                    registry,
-                    targetType,
-                    targetPath,
-                    lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, symbolIdentifiers, maxBodyLines, ct)),
+                await AnalysisToolCall.ExecuteRouted(
+                    targetRoute,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(
+                            ProjectCall: lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, symbolIdentifiers, maxBodyLines, ct),
+                            AssemblySessionCall: lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, symbolIdentifiers, maxBodyLines, ct)),
+                        ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_symbol_body", GetSymbolBodyDescription)));
     }
 

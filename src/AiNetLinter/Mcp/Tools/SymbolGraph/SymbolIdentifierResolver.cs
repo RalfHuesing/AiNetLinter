@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.Text;
@@ -128,11 +129,36 @@ internal static class SymbolIdentifierResolver
     /// (Datei:Zeile:Spalte oder qualifizierter Name) zurueckfallen.
     /// </summary>
     internal static async Task<(ISymbol? Symbol, CallToolResult? Error)> TryResolveByStableIdAsync(
-        Solution solution, string stableId, CancellationToken ct)
+        Solution solution,
+        string stableId,
+        CancellationToken ct,
+        AnalysisSymbolIdentity? expectedAssemblyIdentity = null)
     {
-        if (string.IsNullOrEmpty(stableId) || !HasKnownDocumentationCommentIdPrefix(stableId))
+        if (string.IsNullOrEmpty(stableId))
         {
             return (null, null);
+        }
+
+        if (!TryNormalizeAssemblyId(
+                stableId,
+                expectedAssemblyIdentity,
+                out var normalizedId,
+                out var isAssemblyId,
+                out var assemblyError))
+        {
+            return (null, assemblyError);
+        }
+
+        stableId = normalizedId;
+
+        if (!HasKnownDocumentationCommentIdPrefix(stableId))
+        {
+            return (null, null);
+        }
+
+        if (expectedAssemblyIdentity is not null && !isAssemblyId)
+        {
+            return (null, StaleAssemblyId(stableId));
         }
 
         foreach (var project in solution.Projects)
@@ -150,6 +176,38 @@ internal static class SymbolIdentifierResolver
 
         return (null, null);
     }
+
+    private static bool TryNormalizeAssemblyId(
+        string value,
+        AnalysisSymbolIdentity? expectedIdentity,
+        out string normalizedId,
+        out bool isAssemblyId,
+        out CallToolResult? error)
+    {
+        normalizedId = value;
+        isAssemblyId = false;
+        error = null;
+        if (!value.StartsWith(AnalysisSymbolIdentity.Prefix, StringComparison.Ordinal)) return true;
+
+        isAssemblyId = true;
+        if (!AnalysisSymbolIdentity.TryParse(value, out var providedIdentity, out var unwrappedId)
+            || providedIdentity is null
+            || expectedIdentity is null
+            || !expectedIdentity.Matches(providedIdentity))
+        {
+            error = StaleAssemblyId(value);
+            return false;
+        }
+
+        normalizedId = unwrappedId;
+        return true;
+    }
+
+    private static CallToolResult StaleAssemblyId(string identifier) =>
+        McpToolResults.Recoverable(
+            LinterErrorCodes.InvalidArgument,
+            $"Die Assembly-Symbol-ID '{identifier}' gehört nicht zur aktuellen Assembly-Generation.",
+            hint: "Eine aktuelle assembly:<sha256>:<generation>:<symbolId>-ID aus dem Assembly-Ziel verwenden.");
 
     private static bool HasKnownDocumentationCommentIdPrefix(string id)
     {

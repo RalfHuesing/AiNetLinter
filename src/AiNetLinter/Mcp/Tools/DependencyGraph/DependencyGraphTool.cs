@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -50,7 +51,7 @@ internal static class DependencyGraphTool
         {
             return hasFilePath
                 ? await ExecuteFileScopeAsync(solution, input, includeOutgoing, includeIncoming, ct)
-                : await ExecuteTypeScopeAsync(solution, input, includeOutgoing, includeIncoming, ct);
+                : await ExecuteTypeScopeAsync(solution, input, includeOutgoing, includeIncoming, state.AssemblySymbolIdentity, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -91,9 +92,14 @@ internal static class DependencyGraphTool
     }
 
     private static async Task<CallToolResult> ExecuteTypeScopeAsync(
-        Solution solution, DependencyGraphInput input, bool includeOutgoing, bool includeIncoming, CancellationToken ct)
+        Solution solution,
+        DependencyGraphInput input,
+        bool includeOutgoing,
+        bool includeIncoming,
+        AnalysisSymbolIdentity? assemblyIdentity,
+        CancellationToken ct)
     {
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, input.SymbolIdentifier!, ct);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, input.SymbolIdentifier!, ct, assemblyIdentity);
         if (error is not null) return error;
 
         // Nicht-Typ-Symbole (Methode/Property/Feld) auf den einschliessenden Typ normalisieren —

@@ -38,11 +38,20 @@ internal static class GetFeatureContextTool
 
         try
         {
-            var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, targetSymbol, ct);
+            var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
+                solution,
+                targetSymbol,
+                ct,
+                state.AssemblySymbolIdentity);
             if (error is not null) return error;
             if (symbol is null) return McpToolResults.SymbolNotFound(targetSymbol);
 
-            var scanContext = new FeatureContextScanContext(solution, state.Config, state.Console, options);
+            var scanContext = new FeatureContextScanContext(
+                solution,
+                state.Config,
+                state.Console,
+                options,
+                state.AssemblySymbolIdentity);
             var payload = await FeatureContextScanner.ScanAsync(symbol, scanContext, ct);
 
             var markdown = FeatureContextFormatter.FormatReport(payload);

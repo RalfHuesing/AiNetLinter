@@ -7,6 +7,8 @@ using System.Linq;
 using System.Threading;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Metrics;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -22,12 +24,15 @@ internal static class MetricsLookupScanner
         ISymbol symbol,
         ILinterEngineConfig config,
         string solutionRoot,
-        CancellationToken ct)
+        CancellationToken ct,
+        AnalysisSymbolIdentity? assemblyIdentity = null)
     {
         var symbolName = symbol.Name;
         var symbolKind = symbol.Kind.ToString();
         var qualifiedName = symbol.ToDisplayString();
-        var docCommentId = symbol.TryGetDocCommentId();
+        var docCommentId = assemblyIdentity?.Format(
+            symbol.TryGetDocCommentId() ?? CallGraphTraversal.GetStableSymbolId(symbol))
+            ?? symbol.TryGetDocCommentId();
         var location = ExtractLocation(symbol, solutionRoot);
 
         MethodMetricsDto? methodMetrics = null;

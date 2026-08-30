@@ -43,7 +43,7 @@ internal static class MetricsLookupTool
         try
         {
             var configSnapshot = state.GetConfigSnapshot();
-            return await RenderMetricsLookupsAsync(solution, configSnapshot.Config, identifiers, ct);
+            return await RenderMetricsLookupsAsync(solution, configSnapshot.Config, identifiers, state.AssemblySymbolIdentity, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -57,6 +57,7 @@ internal static class MetricsLookupTool
         Solution solution,
         ILinterEngineConfig config,
         IReadOnlyList<string> identifiers,
+        AnalysisSymbolIdentity? assemblyIdentity,
         CancellationToken ct)
     {
         var solutionRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
@@ -69,7 +70,9 @@ internal static class MetricsLookupTool
             if (i > 0) mb.Divider();
 
             var (dto, earlyError) = await RenderSingleLookupAsync(
-                solution, config, identifiers[i], solutionRoot, mb, identifiers.Count, ct);
+                new RenderSingleLookupRequest(
+                    solution, config, identifiers[i], solutionRoot, mb, identifiers.Count, assemblyIdentity),
+                ct);
 
             if (earlyError != null) return earlyError;
             if (dto != null) dtos.Add(dto);
@@ -83,15 +86,17 @@ internal static class MetricsLookupTool
     }
 
     private static async Task<(MetricsLookupResultDto? Dto, CallToolResult? EarlyError)> RenderSingleLookupAsync(
-        Solution solution,
-        ILinterEngineConfig config,
-        string identifier,
-        string solutionRoot,
-        MarkdownBuilder mb,
-        int totalCount,
+        RenderSingleLookupRequest request,
         CancellationToken ct)
     {
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, identifier, ct);
+        var solution = request.Solution;
+        var config = request.Config;
+        var identifier = request.Identifier;
+        var solutionRoot = request.SolutionRoot;
+        var mb = request.Markdown;
+        var totalCount = request.TotalCount;
+        var assemblyIdentity = request.AssemblyIdentity;
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, identifier, ct, assemblyIdentity);
 
         if (error is not null)
         {
@@ -110,10 +115,19 @@ internal static class MetricsLookupTool
             return (null, null);
         }
 
-        var dto = MetricsLookupScanner.ScanSymbol(symbol, config, solutionRoot, ct);
+        var dto = MetricsLookupScanner.ScanSymbol(symbol, config, solutionRoot, ct, assemblyIdentity);
         var formattedMarkdown = MetricsLookupFormatter.Format(dto);
         mb.Line(formattedMarkdown.TrimEnd());
 
         return (dto, null);
     }
+
+    private sealed record RenderSingleLookupRequest(
+        Solution Solution,
+        ILinterEngineConfig Config,
+        string Identifier,
+        string SolutionRoot,
+        MarkdownBuilder Markdown,
+        int TotalCount,
+        AnalysisSymbolIdentity? AssemblyIdentity);
 }

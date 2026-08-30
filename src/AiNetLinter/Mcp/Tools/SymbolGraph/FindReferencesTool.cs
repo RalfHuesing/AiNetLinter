@@ -51,13 +51,19 @@ internal static class FindReferencesTool
 
         try
         {
-            var (symbol, error) = await ResolveSymbolAsync(solution, symbolIdentifier, ct);
+            var (symbol, error) = await ResolveSymbolAsync(solution, symbolIdentifier, ct, state.AssemblySymbolIdentity);
             if (error is not null) return error;
 
             var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
             var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
             var traversal = await CallGraphTraversal.ExpandAsync(
-                solution, symbol!, depth, normalizedMaxResults, ct);
+                new ReferenceTraversalRequest(
+                    solution,
+                    symbol!,
+                    depth,
+                    normalizedMaxResults,
+                    ct,
+                    AssemblySymbolIdentity: state.AssemblySymbolIdentity));
             var body = TransitiveCallGraphFormatter.Format(traversal);
             if (traversal.Completeness.TotalCallSiteCount == 0)
             {
@@ -89,17 +95,23 @@ internal static class FindReferencesTool
     /// wie eine Position auf dem Property-/Event-Namen.
     /// </summary>
     internal static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveSymbolAsync(
-        Solution solution, string identifier, CancellationToken ct)
+        Solution solution,
+        string identifier,
+        CancellationToken ct,
+        AnalysisSymbolIdentity? assemblyIdentity = null)
     {
-        var (symbol, error) = await ResolveSymbolCoreAsync(solution, identifier, ct);
+        var (symbol, error) = await ResolveSymbolCoreAsync(solution, identifier, ct, assemblyIdentity);
         return (symbol.NormalizeToOwningMember(), error);
     }
 
     private static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveSymbolCoreAsync(
-        Solution solution, string identifier, CancellationToken ct)
+        Solution solution,
+        string identifier,
+        CancellationToken ct,
+        AnalysisSymbolIdentity? assemblyIdentity)
     {
         var (stableSymbol, stableError) =
-            await SymbolIdentifierResolver.TryResolveByStableIdAsync(solution, identifier, ct);
+            await SymbolIdentifierResolver.TryResolveByStableIdAsync(solution, identifier, ct, assemblyIdentity);
         if (stableError is not null) return (null, stableError);
         if (stableSymbol is not null) return (stableSymbol, null);
 

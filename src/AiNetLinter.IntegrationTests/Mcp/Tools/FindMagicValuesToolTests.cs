@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.IntegrationTests.Platform;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Composition;
 using AiNetLinter.Mcp.Tools.MagicValues;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
@@ -171,7 +172,13 @@ public sealed class FindMagicValuesToolTests
     public async Task AddFindMagicValues_ToolAppearsInRegistrationList()
     {
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
-        var options = McpServerOptionsFactory.Create(registry);
+        var options = McpServerOptionsFactory.Create(
+            McpServerToolCollectionFactory.Build(
+                registry,
+                AnalysisToolCall.CreateTargetRoute(
+                    ProjectAnalysisDispatcher.CreateRoute(registry),
+                    AssemblyAnalysisDispatcher.CreateRoute(null))),
+            McpServerResourceCollectionFactory.Build(registry));
 
         var findMagicValues = options.ToolCollection!.SingleOrDefault(t =>
             string.Equals(t.ProtocolTool.Name, "find_magic_values", StringComparison.Ordinal));

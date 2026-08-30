@@ -48,12 +48,16 @@ internal static class CallGraphTraversal
         }
 
         var state = new TraversalState(request.SeedSymbol, effectiveDepth, effectiveNodeLimit);
-        await TraverseAsync(request.Solution, state, request.CancellationToken);
+        await TraverseAsync(request.Solution, state, request.AssemblySymbolIdentity, request.CancellationToken);
         return state.CreateResult(
             request.RequestedDepth, effectiveDepth, Math.Max(request.MaxResults, 1));
     }
 
-    private static async Task TraverseAsync(Solution solution, TraversalState state, CancellationToken ct)
+    private static async Task TraverseAsync(
+        Solution solution,
+        TraversalState state,
+        AnalysisSymbolIdentity? assemblyIdentity,
+        CancellationToken ct)
     {
         while (state.HasMore)
         {
@@ -67,7 +71,7 @@ internal static class CallGraphTraversal
             var (current, level) = state.Dequeue();
             state.MarkVisited();
             var refs = await SymbolFinder.FindReferencesAsync(current, solution, ct);
-            AppendReferenceLocations(refs, solution, current, level, state);
+            AppendReferenceLocations(refs, solution, current, level, assemblyIdentity, state);
             await EnqueueChildrenAsync(refs, level, state, ct);
         }
     }
@@ -77,6 +81,7 @@ internal static class CallGraphTraversal
         Solution solution,
         ISymbol reachedFromSymbol,
         int depth,
+        AnalysisSymbolIdentity? assemblyIdentity,
         TraversalState state)
     {
         foreach (var reference in refs)
@@ -89,7 +94,7 @@ internal static class CallGraphTraversal
                 }
 
                 state.Add(CreateCallSiteEntry(
-                    reference, referenceLocation, solution, reachedFromSymbol, depth));
+                    reference, referenceLocation, solution, reachedFromSymbol, depth, assemblyIdentity));
             }
         }
     }
@@ -99,7 +104,8 @@ internal static class CallGraphTraversal
         ReferenceLocation referenceLocation,
         Solution solution,
         ISymbol reachedFromSymbol,
-        int depth)
+        int depth,
+        AnalysisSymbolIdentity? assemblyIdentity)
     {
         var location = referenceLocation.Location;
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
@@ -111,7 +117,7 @@ internal static class CallGraphTraversal
             FormatSymbolName(reference.Definition),
             referenceLocation.Document.Project.Name,
             depth,
-            GetStableSymbolId(reachedFromSymbol));
+            GetStableSymbolId(reachedFromSymbol, assemblyIdentity));
     }
 
     /// <summary>
@@ -123,11 +129,16 @@ internal static class CallGraphTraversal
     /// ihre DocumentationCommentId wuerde sonst die des einschliessenden Members liefern, sodass
     /// alle lokalen Funktionen einer Methode auf derselben ID kollidieren wuerden.
     /// </summary>
-    internal static string GetStableSymbolId(ISymbol symbol) =>
-        symbol is IMethodSymbol { MethodKind: MethodKind.LocalFunction } localFunction
+    internal static string GetStableSymbolId(
+        ISymbol symbol,
+        AnalysisSymbolIdentity? assemblyIdentity = null)
+    {
+        var stableId = symbol is IMethodSymbol { MethodKind: MethodKind.LocalFunction } localFunction
             ? FormatLocalFunctionId(localFunction)
             : DocumentationCommentId.CreateDeclarationId(symbol) ??
               symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        return assemblyIdentity?.Format(stableId) ?? stableId;
+    }
 
     // Verschachtelte lokale Funktionen steigen ueber ContainingSymbol bis zum naechsten
     // nicht-lokalen Member auf und teilen sich dessen Basis-ID — das Positionssuffix macht sie

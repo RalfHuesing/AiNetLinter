@@ -1,6 +1,11 @@
 #nullable enable
 
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.TestKit;
+using Microsoft.CodeAnalysis;
+using System.Linq;
+using System.Threading;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Tools.SymbolGraph;
@@ -13,6 +18,53 @@ namespace AiNetLinter.FastTests.Mcp.Tools.SymbolGraph;
 [Trait("Category", "Unit")]
 public sealed class SymbolIdentifierResolverTests
 {
+    [Fact]
+    public async Task TryResolveByStableIdAsync_CurrentAssemblyIdentityResolvesWrappedId()
+    {
+        using var owner = RoslynTestSolutionFactory.CreateSolution(
+            "namespace Probe; public sealed class Current { public void Run() { } }");
+        var project = owner.Solution.Projects.Single();
+        var compilation = (await project.GetCompilationAsync())!;
+        var symbol = compilation.GetTypeByMetadataName("Probe.Current")!;
+        var rawId = DocumentationCommentId.CreateDeclarationId(symbol)!;
+        var identity = new AnalysisSymbolIdentity(new string('a', 64), 4);
+
+        var (resolved, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution,
+            identity.Format(rawId)!,
+            CancellationToken.None,
+            identity);
+
+        Assert.Null(error);
+        Assert.NotNull(resolved);
+        Assert.Equal(rawId, DocumentationCommentId.CreateDeclarationId(resolved));
+    }
+
+    [Fact]
+    public async Task TryResolveByStableIdAsync_StaleAssemblyIdentityIsRejected()
+    {
+        using var owner = RoslynTestSolutionFactory.CreateSolution(
+            "namespace Probe; public sealed class Current { public void Run() { } }");
+        var project = owner.Solution.Projects.Single();
+        var compilation = (await project.GetCompilationAsync())!;
+        var symbol = compilation.GetTypeByMetadataName("Probe.Current")!;
+        var rawId = DocumentationCommentId.CreateDeclarationId(symbol)!;
+        var currentIdentity = new AnalysisSymbolIdentity(new string('b', 64), 5);
+        var staleId = new AnalysisSymbolIdentity(new string('a', 64), 4).Format(rawId)!;
+
+        var (resolved, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution,
+            staleId,
+            CancellationToken.None,
+            currentIdentity);
+
+        Assert.Null(resolved);
+        Assert.NotNull(error);
+        Assert.Contains(
+            "aktuellen Assembly-Generation",
+            Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(error!.Content)).Text);
+    }
+
     [Fact]
     public void TryParsePosition_FileLineColumn_ReturnsTrueWithParsedSegments()
     {
@@ -110,4 +162,5 @@ public sealed class SymbolIdentifierResolverTests
 
         Assert.False(ok);
     }
+
 }

@@ -8,7 +8,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -26,10 +28,10 @@ internal static class FeatureContextScanner
         CancellationToken ct)
     {
         var solutionDir = Path.GetDirectoryName(context.Solution.FilePath) ?? "";
-        var declaration = ExtractDeclaration(symbol, solutionDir);
+        var declaration = ExtractDeclaration(symbol, solutionDir, context.AssemblySymbolIdentity);
 
         var metrics = context.Options.IncludeMetrics
-            ? MetricsLookupScanner.ScanSymbol(symbol, context.Config, solutionDir, ct)
+            ? MetricsLookupScanner.ScanSymbol(symbol, context.Config, solutionDir, ct, context.AssemblySymbolIdentity)
             : null;
 
         var callers = context.Options.IncludeCallers
@@ -81,12 +83,17 @@ internal static class FeatureContextScanner
         return new TestCoverageReportDto(testResults.TotalMatchingTests, testResults.TestFiles.Count, dtos, isTruncated);
     }
 
-    private static SymbolDeclarationDto ExtractDeclaration(ISymbol symbol, string solutionDir)
+    private static SymbolDeclarationDto ExtractDeclaration(
+        ISymbol symbol,
+        string solutionDir,
+        AnalysisSymbolIdentity? assemblyIdentity)
     {
         var (filePath, startLine, endLine) = ExtractLocation(symbol, solutionDir);
         var lineCount = endLine >= startLine ? endLine - startLine + 1 : 0;
         var (returnType, parameters) = ExtractTypeAndParameters(symbol);
-        var docCommentId = symbol.TryGetDocCommentId();
+        var docCommentId = assemblyIdentity?.Format(
+            symbol.TryGetDocCommentId() ?? CallGraphTraversal.GetStableSymbolId(symbol))
+            ?? symbol.TryGetDocCommentId();
 
         return new SymbolDeclarationDto(
             Name: symbol.ToDisplayString(),
@@ -221,5 +228,6 @@ internal sealed record FeatureContextScanContext(
     Solution Solution,
     ILinterEngineConfig Config,
     ILintConsole? Console,
-    FeatureContextOptions Options
+    FeatureContextOptions Options,
+    AnalysisSymbolIdentity? AssemblySymbolIdentity = null
 );

@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Microsoft.CodeAnalysis;
+using AiNetLinter.Mcp;
 
 namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 
@@ -34,4 +35,5 @@ internal sealed record ReferenceTraversalRequest(
     int RequestedDepth,
     int MaxResults,
     CancellationToken CancellationToken,
-    int? NodeLimit = null);
+    int? NodeLimit = null,
+    AnalysisSymbolIdentity? AssemblySymbolIdentity = null);

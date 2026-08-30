@@ -33,13 +33,14 @@ internal static class AnalysisToolRegistrations
     /// </summary>
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        ProjectRegistry registry,
+        AnalysisToolRoute? targetRoute = null)
     {
         AddGetViolations(tools, registry);
         AddSafeguard(tools, registry);
         AddSearchPattern(tools, registry);
-        AddMetricsTree(tools, registry);
-        AddMetricsLookup(tools, registry);
+        AddMetricsTree(tools, registry, targetRoute);
+        AddMetricsLookup(tools, registry, targetRoute);
         AddPatternDetect(tools, registry);
         AddFindMagicValues(tools, registry);
         AddFindDeadCode(tools, registry);
@@ -53,7 +54,7 @@ internal static class AnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? scopeFilter = null, int maxResults = GetViolationsScanner.DefaultMaxResults, int contextLines = 2, bool includeSnippet = false, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
+                await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
@@ -73,7 +74,7 @@ internal static class AnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? scopeFilter = null, double minScore = SafeguardScanner.DefaultMinScoreThreshold, int maxViolations = SafeguardScanner.DefaultMaxRemediationEntries, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
+                await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
@@ -107,7 +108,7 @@ internal static class AnalysisToolRegistrations
                 string[]? excludePatterns = null,
                 bool enrichCSharp = false,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
+                await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
@@ -140,15 +141,19 @@ internal static class AnalysisToolRegistrations
 
     private static void AddMetricsTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        ProjectRegistry registry,
+        AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? root = null, string? mode = null, int depth = 1, int topN = 10, string? fileFilter = null, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
-                    registry,
-                    targetType,
-                    targetPath,
-                    lease => MetricsTreeTool.ExecuteAsync(lease.Server, new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter), ct)),
+                await AnalysisToolCall.ExecuteRouted(
+                    targetRoute!,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(
+                            ProjectCall: lease => MetricsTreeTool.ExecuteAsync(lease.Server, new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter), ct),
+                            AssemblySessionCall: assemblyLease => MetricsTreeTool.ExecuteAsync(assemblyLease.Server, new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter), ct)),
+                        ct)),
             McpToolRegistrationOptions.ReadOnlyTool("metrics_tree", MetricsTreeDescription)));
     }
 
@@ -161,15 +166,19 @@ internal static class AnalysisToolRegistrations
 
     private static void AddMetricsLookup(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        ProjectRegistry registry,
+        AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string[]? symbolIdentifiers = null, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
-                    registry,
-                    targetType,
-                    targetPath,
-                    lease => MetricsLookupTool.ExecuteAsync(lease.Server, symbolIdentifiers, ct)),
+                await AnalysisToolCall.ExecuteRouted(
+                    targetRoute!,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(
+                            ProjectCall: lease => MetricsLookupTool.ExecuteAsync(lease.Server, symbolIdentifiers, ct),
+                            AssemblySessionCall: lease => MetricsLookupTool.ExecuteAsync(lease.Server, symbolIdentifiers, ct)),
+                        ct)),
             McpToolRegistrationOptions.ReadOnlyTool("metrics_lookup", MetricsLookupDescription)));
     }
 
@@ -187,7 +196,7 @@ internal static class AnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string[]? patterns = null, string? scopeFilter = null, int maxResultsPerPattern = PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
+                await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
@@ -222,7 +231,7 @@ internal static class AnalysisToolRegistrations
                 bool includeSuppressed = false,
                 bool changedOnly = false,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
+                await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
@@ -273,7 +282,7 @@ internal static class AnalysisToolRegistrations
                 string? mode = "members",
                 int maxResults = 50,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
+                await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
@@ -307,7 +316,7 @@ internal static class AnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, bool includeCallers = true, bool includeTests = true, bool includeMetrics = true, bool includeViolations = true, int maxCallers = 10, int maxTests = 10, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
+                await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
@@ -328,7 +337,7 @@ internal static class AnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? symbol = null, string? symbolIdentifier = null, int maxResults = 30, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
+                await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,

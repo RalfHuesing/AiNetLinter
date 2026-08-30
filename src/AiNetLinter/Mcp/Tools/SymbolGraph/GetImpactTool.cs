@@ -72,7 +72,7 @@ internal static class GetImpactTool
         return await (detailLevel == ChangeContextContract.DetailLevelChangeContext
             ? ExecuteChangeContextBranchAsync(state, solution, input, ct, counters)
             : hasSymbolIdentifier
-                ? ExecuteSymbolBranchAsync(solution, input, ct)
+                ? ExecuteSymbolBranchAsync(solution, input, state.AssemblySymbolIdentity, ct)
                 : ExecuteGitRefBranchAsync(solution, input, ct));
     }
 
@@ -92,16 +92,26 @@ internal static class GetImpactTool
                 : null;
     }
 
-    private static async Task<CallToolResult> ExecuteSymbolBranchAsync(Solution solution, GetImpactInput input, CancellationToken ct)
+    private static async Task<CallToolResult> ExecuteSymbolBranchAsync(
+        Solution solution,
+        GetImpactInput input,
+        AnalysisSymbolIdentity? assemblyIdentity,
+        CancellationToken ct)
     {
         var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
-            solution, input.SymbolIdentifier!, ct);
+            solution, input.SymbolIdentifier!, ct, assemblyIdentity);
         if (error is not null) return error;
 
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
         var effectiveMax = input.MaxResults < 1 ? 1 : input.MaxResults;
         var traversal = await CallGraphTraversal.ExpandAsync(
-            solution, symbol!, input.Depth, effectiveMax, ct);
+            new ReferenceTraversalRequest(
+                solution,
+                symbol!,
+                input.Depth,
+                effectiveMax,
+                ct,
+                AssemblySymbolIdentity: assemblyIdentity));
         var body = TransitiveCallGraphFormatter.Format(traversal);
         if (traversal.Completeness.TotalCallSiteCount == 0)
         {

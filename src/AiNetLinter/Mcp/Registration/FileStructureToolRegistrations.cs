@@ -30,12 +30,13 @@ internal static class FileStructureToolRegistrations
     /// </summary>
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        ProjectRegistry registry,
+        AnalysisToolRoute? targetRoute = null)
     {
-        AddGetNamespaceTree(tools, registry);
+        AddGetNamespaceTree(tools, registry, targetRoute);
         AddGetFileTree(tools, registry);
-        AddGetFileSkeleton(tools, registry);
-        AddGetClassStructure(tools, registry);
+        AddGetFileSkeleton(tools, registry, targetRoute);
+        AddGetClassStructure(tools, registry, targetRoute);
         AddGetIndexScope(tools, registry);
         AddGetHotspots(tools, registry);
     }
@@ -60,7 +61,7 @@ internal static class FileStructureToolRegistrations
                 bool includeMetadata = true,
                 bool includeLineCount = false,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteFilesystemAsync(
+                await ProjectAnalysisDispatcher.ExecuteFilesystemAsync(
                     registry,
                     new AnalysisTargetRequest(targetType, targetPath),
                     lease => GetFileTreeTool.ExecuteAsync(
@@ -77,7 +78,7 @@ internal static class FileStructureToolRegistrations
                             sortBy,
                             includeMetadata,
                             includeLineCount),
-                        ct)),
+                         ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_file_tree", GetFileTreeDescription)));
     }
 
@@ -95,7 +96,8 @@ internal static class FileStructureToolRegistrations
 
     private static void AddGetNamespaceTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        ProjectRegistry registry,
+        AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? project = null, string? namespacePrefix = null,
@@ -104,15 +106,20 @@ internal static class FileStructureToolRegistrations
                 string? kind = "all",
                 int maxResults = GetNamespaceTreeTool.DefaultMaxResults,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
-                    registry,
-                    targetType,
-                    targetPath,
-                    lease =>
-                    {
-                        var input = new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults);
-                        return GetNamespaceTreeTool.ExecuteAsync(lease.Server, input, ct);
-                    }),
+                await AnalysisToolCall.ExecuteRouted(
+                    targetRoute!,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(
+                            ProjectCall: lease => GetNamespaceTreeTool.ExecuteAsync(
+                                lease.Server,
+                                new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults),
+                                ct),
+                            AssemblySessionCall: lease => GetNamespaceTreeTool.ExecuteAsync(
+                                lease.Server,
+                                new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults),
+                                ct)),
+                        ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_namespace_tree", GetNamespaceTreeDescription)));
     }
 
@@ -125,17 +132,21 @@ internal static class FileStructureToolRegistrations
 
     private static void AddGetClassStructure(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        ProjectRegistry registry,
+        AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? symbolIdentifier = null, string? sortBy = "lines",
                 int maxMembers = GetClassStructureTool.DefaultMaxMembers,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
-                    registry,
-                    targetType,
-                    targetPath,
-                    lease => GetClassStructureTool.ExecuteAsync(lease.Server, symbolIdentifier, sortBy, maxMembers, ct)),
+                await AnalysisToolCall.ExecuteRouted(
+                    targetRoute!,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(
+                            ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, symbolIdentifier, sortBy, maxMembers, ct),
+                            AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, symbolIdentifier, sortBy, maxMembers, ct)),
+                        ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_class_structure", GetClassStructureDescription)));
     }
 
@@ -150,15 +161,19 @@ internal static class FileStructureToolRegistrations
 
     private static void AddGetFileSkeleton(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        ProjectRegistry registry,
+        AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string[]? filePaths = null, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
-                    registry,
-                    targetType,
-                    targetPath,
-                    lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, ct)),
+                await AnalysisToolCall.ExecuteRouted(
+                    targetRoute!,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(
+                            ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, ct),
+                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, ct)),
+                        ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_file_skeleton", GetFileSkeletonDescription)));
     }
 
@@ -173,7 +188,7 @@ internal static class FileStructureToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
+                await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
@@ -192,7 +207,7 @@ internal static class FileStructureToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? scopeFilter = null, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
+                await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,

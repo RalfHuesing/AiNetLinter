@@ -43,7 +43,7 @@ internal static class ServerMaintenanceToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? configPath = null, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
+                await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
@@ -82,7 +82,7 @@ internal static class ServerMaintenanceToolRegistrations
 
                 if (resolution.Target.TargetType == AnalysisTargetType.Assembly)
                 {
-                    return AnalysisToolCall.UnsupportedAssemblyTarget();
+                    return AssemblyAnalysisDispatcher.UnsupportedAssemblyTarget();
                 }
 
                 return await GetServerHealthTool.ExecuteAsync(

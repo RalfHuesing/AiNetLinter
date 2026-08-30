@@ -58,7 +58,11 @@ internal static class GetCallTreeTool
 
         try
         {
-            var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, input.SymbolIdentifier, ct);
+            var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
+                solution,
+                input.SymbolIdentifier,
+                ct,
+                state.AssemblySymbolIdentity);
             if (error is not null) return error;
 
             var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);

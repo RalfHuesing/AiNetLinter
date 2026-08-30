@@ -3,6 +3,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.CallTree;
@@ -30,27 +31,30 @@ internal static class SymbolGraphToolRegistrations
     /// </summary>
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        AnalysisToolRoute targetRoute)
     {
-        AddFindSymbol(tools, registry);
-        AddFindReferences(tools, registry);
-        AddGetCallTree(tools, registry);
-        AddGetImpact(tools, registry);
-        AddGetTypeHierarchy(tools, registry);
-        AddDependencyGraph(tools, registry);
+        AddFindSymbol(tools, targetRoute);
+        AddFindReferences(tools, targetRoute);
+        AddGetCallTree(tools, targetRoute);
+        AddGetImpact(tools, targetRoute);
+        AddGetTypeHierarchy(tools, targetRoute);
+        AddDependencyGraph(tools, targetRoute);
     }
 
     private static void AddFindSymbol(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string[]? namePatterns = null, string? kind = null, int maxResults = 50, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
-                    registry,
-                    targetType,
-                    targetPath,
-                    lease => FindSymbolTool.ExecuteAsync(lease.Server, namePatterns, kind, maxResults, ct)),
+                await AnalysisToolCall.ExecuteRouted(
+                    targetRoute,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(
+                            ProjectCall: lease => FindSymbolTool.ExecuteAsync(lease.Server, namePatterns, kind, maxResults, ct),
+                            AssemblySessionCall: lease => FindSymbolTool.ExecuteAsync(lease.Server, namePatterns, kind, maxResults, ct)),
+                        ct)),
             McpToolRegistrationOptions.ReadOnlyTool("find_symbol", FindSymbolDescription)));
     }
 
@@ -63,15 +67,18 @@ internal static class SymbolGraphToolRegistrations
 
     private static void AddFindReferences(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
-                    registry,
-                    targetType,
-                    targetPath,
-                    lease => FindReferencesTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, depth, ct)),
+                await AnalysisToolCall.ExecuteRouted(
+                    targetRoute,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(
+                            ProjectCall: lease => FindReferencesTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, depth, ct),
+                            AssemblySessionCall: lease => FindReferencesTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, depth, ct)),
+                        ct)),
             McpToolRegistrationOptions.ReadOnlyTool("find_references", FindReferencesDescription)));
     }
 
@@ -86,15 +93,18 @@ internal static class SymbolGraphToolRegistrations
 
     private static void AddGetCallTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
-                    registry,
-                    targetType,
-                    targetPath,
-                    lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction), ct)),
+                await AnalysisToolCall.ExecuteRouted(
+                    targetRoute,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(
+                            ProjectCall: lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction), ct),
+                            AssemblySessionCall: lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction), ct)),
+                        ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_call_tree", GetCallTreeDescription)));
     }
 
@@ -109,7 +119,7 @@ internal static class SymbolGraphToolRegistrations
 
     private static void AddGetImpact(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? gitRef = null, string? symbolIdentifier = null, int maxResults = 50, int depth = 1,
@@ -117,13 +127,14 @@ internal static class SymbolGraphToolRegistrations
                 int maxChangedSymbols = ChangeContextContract.DefaultMaxChangedSymbols,
                 int maxTestsPerSymbol = ChangeContextContract.DefaultMaxTestsPerSymbol,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
-                    registry,
-                    targetType,
-                    targetPath,
-                    lease => GetImpactTool.ExecuteAsync(
-                        lease.Server,
-                        new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
+                await AnalysisToolCall.ExecuteRouted(
+                    targetRoute,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(ProjectCall: lease => GetImpactTool.ExecuteAsync(
+                            lease.Server,
+                            new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
+                            ct)),
                         ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_impact", GetImpactDescription)));
     }
@@ -146,15 +157,18 @@ internal static class SymbolGraphToolRegistrations
 
     private static void AddGetTypeHierarchy(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? symbolIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
-                    registry,
-                    targetType,
-                    targetPath,
-                    lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct)),
+                await AnalysisToolCall.ExecuteRouted(
+                    targetRoute,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(
+                            ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct),
+                            AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct)),
+                        ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_type_hierarchy", GetTypeHierarchyDescription)));
     }
 
@@ -167,16 +181,19 @@ internal static class SymbolGraphToolRegistrations
 
     private static void AddDependencyGraph(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? filePath = null, string? symbolIdentifier = null, string? direction = null,
                 int depth = 1, int maxResults = 50, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
-                    registry,
-                    targetType,
-                    targetPath,
-                    lease => DependencyGraphTool.ExecuteAsync(lease.Server, new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults), ct)),
+                await AnalysisToolCall.ExecuteRouted(
+                    targetRoute,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(
+                            ProjectCall: lease => DependencyGraphTool.ExecuteAsync(lease.Server, new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults), ct),
+                            AssemblySessionCall: lease => DependencyGraphTool.ExecuteAsync(lease.Server, new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults), ct)),
+                        ct)),
             McpToolRegistrationOptions.ReadOnlyTool("dependency_graph", DependencyGraphDescription)));
     }
 

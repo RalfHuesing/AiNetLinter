@@ -32,7 +32,7 @@ internal static class DuplicateDetectionToolRegistrations
                 string? scopeDir = null, int? maxResults = null, string? mode = null, string? helperSymbol = null,
                 string? scopeType = null,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAsync(
+                await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,

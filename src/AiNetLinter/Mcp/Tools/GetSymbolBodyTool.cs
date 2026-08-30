@@ -50,7 +50,7 @@ internal static class GetSymbolBodyTool
 
         try
         {
-            return await RenderSymbolBodiesAsync(solution, identifiers, maxBodyLines, ct);
+            return await RenderSymbolBodiesAsync(solution, identifiers, maxBodyLines, state.AssemblySymbolIdentity, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -64,6 +64,7 @@ internal static class GetSymbolBodyTool
         Solution solution,
         IReadOnlyList<string> identifiers,
         int maxBodyLines,
+        AnalysisSymbolIdentity? assemblyIdentity,
         CancellationToken ct)
     {
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
@@ -75,7 +76,9 @@ internal static class GetSymbolBodyTool
             if (i > 0) mb.Divider();
 
             var earlyError = await RenderSingleSymbolAsync(
-                solution, identifiers[i], identifiers.Count, maxBodyLines, outputRoot, mb, ct);
+                new RenderSingleSymbolRequest(
+                    solution, identifiers[i], identifiers.Count, maxBodyLines, outputRoot, mb, assemblyIdentity),
+                ct);
 
             if (earlyError != null) return earlyError;
         }
@@ -87,15 +90,17 @@ internal static class GetSymbolBodyTool
     }
 
     private static async Task<CallToolResult?> RenderSingleSymbolAsync(
-        Solution solution,
-        string identifier,
-        int totalCount,
-        int maxBodyLines,
-        string outputRoot,
-        MarkdownBuilder mb,
+        RenderSingleSymbolRequest request,
         CancellationToken ct)
     {
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, identifier, ct);
+        var solution = request.Solution;
+        var identifier = request.Identifier;
+        var totalCount = request.TotalCount;
+        var maxBodyLines = request.MaxBodyLines;
+        var outputRoot = request.OutputRoot;
+        var mb = request.Markdown;
+        var assemblyIdentity = request.AssemblyIdentity;
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, identifier, ct, assemblyIdentity);
 
         if (error is not null)
         {
@@ -114,7 +119,8 @@ internal static class GetSymbolBodyTool
             return null;
         }
 
-        var idSuffix = symbol.TryGetDocCommentId();
+        var idSuffix = assemblyIdentity?.Format(symbol.TryGetDocCommentId() ?? CallGraphTraversal.GetStableSymbolId(symbol))
+            ?? symbol.TryGetDocCommentId();
         var body = ExtractSymbolBody(symbol, maxBodyLines, outputRoot);
 
         mb.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{Path.GetFileName(outputRoot)}/{ToRelative(outputRoot, symbol)}`");
@@ -131,6 +137,15 @@ internal static class GetSymbolBodyTool
         mb.CodeBlock("csharp", body);
         return null;
     }
+
+    private sealed record RenderSingleSymbolRequest(
+        Solution Solution,
+        string Identifier,
+        int TotalCount,
+        int MaxBodyLines,
+        string OutputRoot,
+        MarkdownBuilder Markdown,
+        AnalysisSymbolIdentity? AssemblyIdentity);
 
     private static string ToRelative(string outputRoot, ISymbol symbol)
     {

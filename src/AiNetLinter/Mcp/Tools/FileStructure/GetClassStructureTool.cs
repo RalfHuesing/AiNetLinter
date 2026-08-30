@@ -64,7 +64,11 @@ internal static class GetClassStructureTool
 
         try
         {
-            var (resolvedSymbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, symbolIdentifier, ct);
+            var (resolvedSymbol, error) = await FindReferencesTool.ResolveSymbolAsync(
+                solution,
+                symbolIdentifier,
+                ct,
+                state.AssemblySymbolIdentity);
             if (error is not null) return error;
             if (resolvedSymbol is null) return McpToolResults.SymbolNotFound(symbolIdentifier);
 

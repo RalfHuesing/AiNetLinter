@@ -40,7 +40,7 @@ internal static class GetFileSkeletonTool
 
         try
         {
-            return await RenderFileSkeletonsAsync(solution, paths, ct);
+            return await RenderFileSkeletonsAsync(solution, paths, state.AssemblySymbolIdentity, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -53,6 +53,7 @@ internal static class GetFileSkeletonTool
     private static async Task<CallToolResult> RenderFileSkeletonsAsync(
         Solution solution,
         IReadOnlyList<string> paths,
+        AnalysisSymbolIdentity? assemblyIdentity,
         CancellationToken ct)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
@@ -64,7 +65,9 @@ internal static class GetFileSkeletonTool
             if (i > 0) mb.Divider();
 
             var earlyError = await RenderSingleFileSkeletonAsync(
-                solution, paths[i], solutionDir, diagnosticsByFile, mb, paths.Count, ct);
+                new RenderSingleFileSkeletonRequest(
+                    solution, paths[i], solutionDir, diagnosticsByFile, mb, paths.Count, assemblyIdentity),
+                ct);
 
             if (earlyError != null) return earlyError;
         }
@@ -74,14 +77,16 @@ internal static class GetFileSkeletonTool
     }
 
     private static async Task<CallToolResult?> RenderSingleFileSkeletonAsync(
-        Solution solution,
-        string path,
-        string solutionDir,
-        IReadOnlyDictionary<string, IReadOnlyList<Diagnostic>> diagnosticsByFile,
-        MarkdownBuilder mb,
-        int totalCount,
+        RenderSingleFileSkeletonRequest request,
         CancellationToken ct)
     {
+        var solution = request.Solution;
+        var path = request.Path;
+        var solutionDir = request.SolutionDir;
+        var diagnosticsByFile = request.DiagnosticsByFile;
+        var mb = request.Markdown;
+        var totalCount = request.TotalCount;
+        var assemblyIdentity = request.AssemblyIdentity;
         var absolutePath = Path.GetFullPath(Path.Combine(solutionDir, path));
         var document = DiffImpactAnalyzer.FindDocumentByPath(solution, absolutePath);
 
@@ -93,7 +98,11 @@ internal static class GetFileSkeletonTool
             return null;
         }
 
-        var types = await SkeletonMapBuilder.ExtractFromDocumentAsync(document, solutionDir, ct);
+        var types = await SkeletonMapBuilder.ExtractFromDocumentAsync(
+            document,
+            solutionDir,
+            ct,
+            assemblyIdentity is null ? null : symbolId => assemblyIdentity.Format(symbolId));
 
         var fileWarning = McpCompileDiagnostics.FormatFileWarning(
             diagnosticsByFile.GetValueOrDefault(absolutePath, []));
@@ -116,4 +125,13 @@ internal static class GetFileSkeletonTool
 
         return null;
     }
+
+    private sealed record RenderSingleFileSkeletonRequest(
+        Solution Solution,
+        string Path,
+        string SolutionDir,
+        IReadOnlyDictionary<string, IReadOnlyList<Diagnostic>> DiagnosticsByFile,
+        MarkdownBuilder Markdown,
+        int TotalCount,
+        AnalysisSymbolIdentity? AssemblyIdentity);
 }
