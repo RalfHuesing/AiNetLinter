@@ -42,10 +42,15 @@ es nur, wenn der Nutzer sie ausdrücklich verlangt.
 3. Implementiere direkt und fokussiert. Keine ungeplanten Generalisierungen,
    globalen Refactorings oder neuen Abstraktionen nur wegen einer zufälligen
    Ähnlichkeit.
-4. Führe während der Arbeit gezielte Tests und Analysen aus. Vor dem finalen
-   Hand-off müssen die in `AGENTS.md` vorgeschriebenen Build- und
-   Nicht-Stress-Test-Gates ausgeführt werden, sofern der Nutzer nicht
-   ausdrücklich nur eine Analyse oder einen Entwurf verlangt.
+4. Führe während der Arbeit gezielte Tests und Analysen aus. Bei einer
+   eigenständigen Aufgabe müssen vor dem finalen Hand-off die in `AGENTS.md`
+   vorgeschriebenen Build- und Nicht-Stress-Test-Gates ausgeführt werden,
+   sofern der Nutzer nicht ausdrücklich nur eine Analyse oder einen Entwurf
+   verlangt. Wird der Skill als Teil eines vom Orchestrator gesteuerten Epics
+   aufgerufen, führst du die für dieses Epic nötige gezielte Verifikation aus;
+   die vollständigen Abschluss-Gates koordiniert der Orchestrator einmal nach
+   dem letzten Codezustand. Explizite konzeptspezifische Prüfungen dürfen in
+   keinem Modus still entfallen.
 5. Prüfe selbst gegen Ziel, Muss-Kriterien, Non-Goals, relevante Rules und die
    tatsächlichen unterstützten Betriebsannahmen. Berichte Abweichungen offen.
 
@@ -111,7 +116,10 @@ Logik.
 Ein weiterer Agent erhält keinen künstlichen Step-Archivbestand. Übergib kurz:
 geänderte Dateien und Symbole, getroffene Entscheidungen, ausgeführte
 Prüfungen, offene Risiken und den nächsten sinnvollen Einstiegspunkt. Der
-weitere Agent prüft den tatsächlichen Code und Diff selbst.
+weitere Agent prüft den tatsächlichen Code und Diff selbst. In einem
+orchestrierten Epic gehören die finalen solutionweiten Gates nicht in den
+einzelnen Implementierer-Hand-off, sondern in den Abschluss des
+Orchestrators.
 
 ## Abschlussmeldung
 

@@ -10,6 +10,10 @@ für die Umsetzung, nachdem ein Konzept bei Bedarf separat mit dem
 - Liefere eine produktionssichere, fokussierte Lösung für den Nutzerauftrag.
 - Arbeite mit dem tatsächlichen aktuellen Working Tree und erhalte fremde,
   bereits vorhandene Änderungen.
+- Das freigegebene Konzept ist der fachliche Vertrag. Die Roadmap darf daraus
+  nur eine Ausführungsreihenfolge und Statusinformationen ableiten; sie darf
+  keine Muss-Kriterien abschwächen, Non-Goals umdeuten oder neue Anforderungen
+  erfinden.
 - Verwende die projektbezogenen Skills unter `.agents/skills/` als
   Rollenbeschreibung: `implement`, `review` und `audit`.
 - Starte niemals mehrere Subagenten gleichzeitig. Warte jedes Ergebnis ab,
@@ -57,6 +61,13 @@ den manuellen Konzept-Task.
    nur das Epic, für das sie tatsächlich entscheidend ist. Spätere
    Detailentscheidungen dürfen als begrenzte Annahme oder als spätere offene
    Frage in der Roadmap stehen.
+6. Prüfe vor dem ersten Epic, dass ein großes Konzept tatsächlich freigegeben
+   ist und Ziel, Muss-/Akzeptanzkriterien, Non-Goals, Betriebsmodell,
+   Fehlersemantik und Verifikation enthält. Extrahiere außerdem jede explizit
+   geforderte konzeptspezifische Prüfung in eine knappe Abschluss-Checkliste.
+   Bei fehlenden oder widersprüchlichen Angaben stoppe vor Codeänderungen und
+   verweise auf den manuellen Konzept-Planer; schwäche Anforderungen nicht
+   eigenständig ab.
 
 ## Subagent-Lebenszyklus
 
@@ -77,6 +88,11 @@ Review, sondern melde diese Einschränkung.
 - Wenn ein eigener alter Task derselben Ausführung noch läuft oder nicht sauber
   beendet werden kann, starte keinen weiteren Subagenten und stoppe mit einer
   konkreten Meldung.
+- Vor dem ersten Rollenaufruf und bei jedem Resume prüfe die Task-Liste auf
+  eigene abgeschlossene oder abgebrochene Subagenten der laufenden Ausführung,
+  beende und entferne bzw. archiviere sie, sofern das Werkzeug dies unterstützt.
+  Einen noch laufenden eigenen Alt-Task beendest du vor einer neuen Delegation;
+  gelingt das nicht, stoppst du. Fremde Nutzer-Tasks bleiben unberührt.
 
 ## Großkonzept-Modus: einmalige Roadmap
 
@@ -101,7 +117,9 @@ gelesen.
   keine Anforderungen, um die Roadmap künstlich zu füllen.
 - `roadmap.md` ist der einzige dauerhafte Ausführungsstand. Sie darf
   `current_epic`, letzten Commit und einen konkreten Blocker enthalten, aber
-  keine Detailprotokolle oder Kritikerhistorien.
+  keine Detailprotokolle oder Kritikerhistorien. Halte dort zusätzlich nur die
+  knappe Abschluss-Checkliste der aus `Konzept.md` übernommenen Pflicht-
+  verifikationen und deren Erledigungsstatus fest.
 
 Nach der Roadmap-Erzeugung beginnt die autonome Abarbeitung ohne weitere
 Bestätigung des Nutzers.
@@ -162,6 +180,9 @@ Produktions- und Testbereiche, aber keinen zufälligen Altbestand.
 Der Audit sucht mit den vorgesehenen MCP-Tools nach DRY, Refactoring-Drift,
 Dead Code und Magic Values und darf sichere, scope-nahe Befunde proaktiv
 beheben. Er erzeugt keinen eigenen Commit und keine Task-Artefakte.
+Er ersetzt keine ausdrücklich im Konzept geforderten `safeguard`-,
+`get_violations`- oder sonstigen MCP-/Testprüfungen; diese werden als eigene
+Abschlussverifikation ausgeführt.
 
 Wenn der Audit Code verändert hat, folgt genau ein fokussierter Review des
 Audit-Diffs. Ein dabei gefundenes P0/P1-Problem darf höchstens eine letzte
@@ -176,6 +197,13 @@ unbegrenzte Kette.
 - Nach dem letzten Codezustand gelten die Abschluss-Gates aus `AGENTS.md`:
   `dotnet build`, die vollständigen Nicht-Stress-Tests von
   `src/AiNetLinter.FastTests` und `src/AiNetLinter.IntegrationTests`.
+- Führe zusätzlich jede im freigegebenen Konzept ausdrücklich geforderte
+  Verifikation aus, einschließlich passender MCP-Safeguard-/Violation-
+  Prüfungen, sofern der dort definierte Quellen- und Capability-Vertrag sie
+  unterstützt. Diese Nachweise sind nicht durch den allgemeinen Audit erfüllt.
+  Kann eine Pflichtprüfung wegen fehlender Fähigkeit oder Infrastruktur nicht
+  ausgeführt werden, stoppe mit konkreter Evidenz oder behandle sie gemäß dem
+  im Konzept definierten Fallback; verschweige sie nicht.
 - Ein echter P0/P1-Fehler aus einem Gate wird innerhalb des begrenzten
   Korrekturbudgets behandelt. Reine Umgebungs-/Infrastrukturfehler werden mit
   Evidenz berichtet.
@@ -205,6 +233,7 @@ Berichte knapp und selbständig:
 - Review-Urteile und korrigierte P0/P1-Findings;
 - proaktiv durch den Audit behobene Befunde sowie verbleibende P2/P3-Risiken;
 - ausgeführte MCP-Abfragen, Build und Tests;
+- ausgeführte konzeptspezifische Verifikationen und deren Ergebnis;
 - bewusste Non-Goals, Annahmen und offene Entscheidungen.
 
 ### Nutzerauftrag

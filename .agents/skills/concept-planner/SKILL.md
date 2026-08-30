@@ -110,6 +110,36 @@ sein. Ordne sie als spätere Annahme, Abhängigkeit oder offene Frage einem
 sinnvollen Teilbereich zu und blockiere nicht das gesamte Vorhaben ohne
 konkreten Grund.
 
+## Übergabevertrag für autonome Umsetzung
+
+Wenn das Konzept an einen autonomen Orchestrator übergeben werden soll, prüfe
+vor der Freigabe zusätzlich:
+
+- Das Vorhaben lässt sich in wenige fachlich sinnvolle, abhängige und jeweils
+  verifizierbare Umsetzungspakete aufteilen. Die Aufteilung muss nicht als
+  fertige Roadmap im Konzept stehen.
+- Alle expliziten Muss- und Akzeptanzkriterien sind von den bloßen
+  Hintergrundinformationen getrennt und so formuliert, dass ein Implementierer
+  und ein Reviewer sie prüfen können.
+- Jede ausdrücklich geforderte Verifikation ist sichtbar erfasst: Build,
+  Tests, MCP-Abfragen, Audits oder andere Nachweise mit dem jeweils erwarteten
+  Ergebnis. Kennzeichne, ob sie pro Paket oder erst am Gesamtabschluss gilt.
+  Ein späterer Orchestrator darf diese Anforderungen nicht stillschweigend
+  abschwächen oder durch einen anderen Check ersetzen.
+- Annahmen, spätere Detailentscheidungen und echte Blocker sind getrennt. Ein
+  Detailpunkt darf nur dann als später lösbar markiert werden, wenn ein
+  betroffenes Umsetzungspaket ihn ohne fachlich riskante Spekulation behandeln
+  kann.
+- Das Konzept widerspricht nicht dem vorgesehenen Ausführungsmodell: Für ein
+  großes Konzept darf der Orchestrator genau eine knappe `roadmap.md` als
+  Ausführungs- und Resume-Stand erzeugen. Verboten bleiben Step-Dateien,
+  `task-state.md`, künstliche Übergabearchive und eine Planer- oder
+  Kritiker-Schleife pro Detailstep.
+
+Fehlt einer dieser Punkte oder enthält das Konzept einen Widerspruch zum
+Übergabevertrag, bleibt es `draft`; kläre den Punkt interaktiv, statt ihn bei
+der Freigabe oder Umsetzung zu erraten.
+
 ## Historische Quellen und Nachfolgekonzepte
 
 Wenn der Nutzer ein früheres Task-Verzeichnis, Konzept oder Ergebnis als Quelle
@@ -146,6 +176,8 @@ angibt:
 - Berichte abschließend, was freigegeben wurde, welche Annahmen gelten und
   welche Punkte bewusst als spätere Abhängigkeiten erhalten bleiben.
 
-Erzeuge in diesem Skill keine Roadmap, keine Step-Dateien und keinen
-Task-State. Starte nach der Freigabe nicht automatisch den Orchestrator; der
-Nutzer entscheidet über die Übergabe.
+Erzeuge im Planer selbst keine Roadmap, keine Step-Dateien und keinen
+Task-State. Der Planer beschreibt nur die fachliche Grundlage und den
+Verifikationsvertrag; die einmalige `roadmap.md` für einen Großkonzept-Lauf
+erzeugt erst der Orchestrator. Starte nach der Freigabe nicht automatisch den
+Orchestrator; der Nutzer entscheidet über die Übergabe.

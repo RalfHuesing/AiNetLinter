@@ -482,8 +482,11 @@ nicht als versteckter zweiter Root weitergeführt.
 - Keine automatische Garbage-Collection oder umfassende Retention-Architektur
   für persistierte externe Cache-Einträge.
 - Keine neue allgemeine Plugin- oder Artefakt-Framework-Schicht.
-- Keine Erstellung einer separaten Roadmap, von Step-Dateien oder eines
-  zusätzlichen Task-States für dieses Vorhaben.
+- Keine Step-Dateien, kein `task-state.md`, keine künstlichen
+  Übergabearchive und keine Planung pro Detailstep. Für die autonome
+  Umsetzung darf der Orchestrator genau eine knappe `roadmap.md` als
+  Ausführungs- und Resume-Stand erzeugen; sie ist kein Teil des fachlichen
+  Produktumfangs und darf die hier festgelegten Muss-Kriterien nicht ändern.
 
 ## Betroffene Projektbereiche und Dokumente
 

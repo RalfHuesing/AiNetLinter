@@ -41,6 +41,11 @@ Gesamtcheck oder beim Abschluss eines entsprechend großen Tasks angemessen.
 Unabhängige Altbefunde dürfen nicht nur deshalb in Arbeit verwandelt werden,
 weil sie im globalen Scan sichtbar werden.
 
+Der Audit deckt ausschließlich DRY, Refactoring-Drift, Dead Code und Magic
+Values ab. Explizite konzeptspezifische MCP-Prüfungen wie `safeguard`,
+`get_violations` oder ein bestimmter Tool-/Capability-Nachweis sind separate
+Verifikationspflichten und werden nicht durch diesen Audit ersetzt.
+
 ## Audit-Reihenfolge
 
 1. **DRY und Refactoring-Drift:** Rufe `find_duplicates` auf. Prüfe exakte
@@ -58,8 +63,11 @@ weil sie im globalen Scan sichtbar werden.
    bewusst einmalige Testdaten und unterschiedliche Wire-Verträge werden
    nicht pauschal zentralisiert.
 4. Nach jeder Änderung prüfe die betroffenen Aufrufer und die direkte
-   Invariante erneut. Führe gezielte Tests aus; vor dem finalen Hand-off gelten
-   die Build-/Test-Gates aus `AGENTS.md`.
+   Invariante erneut. Führe gezielte Tests aus. Bei einem eigenständigen
+   Audit-Task gelten vor dem finalen Hand-off die Build-/Test-Gates aus
+   `AGENTS.md`; innerhalb eines Orchestrator-Laufs koordiniert dieser die
+   vollständigen Abschluss-Gates nach dem Audit. Explizite
+   konzeptspezifische Prüfungen bleiben zusätzlich erforderlich.
 
 ## Proaktive Korrekturen
 
