@@ -323,9 +323,9 @@ internal static class AnalysisToolRegistrations
     private const string GetFeatureContextDescription =
         "Wann nutzen: Composite One-Shot-Exploration fuer ein beliebiges C#-Symbol vor Edits oder Refactorings — " +
         "buendelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, statische Test-Zuordnung und Linter-Violations) " +
-        "in einem einzigen residenten Aufruf. symbolIdentifier (oder symbol) akzeptiert 'Namespace.Klasse.Methode', 'Datei.cs:Zeile' oder DocCommentId. " +
-        "Teilbereiche koennen ueber includeCallers, includeTests, includeMetrics, includeViolations zu-/abgewaehlt werden. " +
-        "maxCallers und maxTests steuern das Limit (Default 10, Cap 50).";
+        "in einem einzigen residenten Aufruf. symbolIdentifier (oder symbol): 'Namespace.Klasse.Methode', 'Datei.cs:Zeile' oder DocCommentId. " +
+        "includeCallers, includeTests, includeMetrics, includeViolations: Teilbereiche (Default true). " +
+        "maxCallers und maxTests: Limits (Default 10, Cap 50).";
 
     private static void AddGetTestContext(
         McpServerPrimitiveCollection<McpServerTool> tools,
