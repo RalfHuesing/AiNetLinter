@@ -85,9 +85,9 @@ internal static class AnalysisToolRegistrations
     private const string SafeguardDescription =
         "Wann nutzen: Quality-Gate-Wert vor CI-Merge pruefen — deterministischer " +
         "0-10-Score + Pass/Fail-Threshold + Top-Violations + Remediation-Hints fuer " +
-        "die geladene Solution. scopeFilter (Projekt-Name oder Pfad-Substring) " +
-        "grenzt auf einen Teilbereich ein, minScore ueberschreibt den Default-Threshold " +
-        "(8.0), maxViolations begrenzt die Top-Violations-Liste (Default 20).";
+        "die geladene Solution. scopeFilter: Projekt-Name oder Pfad-Substring zur " +
+        "Eingrenzung, minScore: Schwellwert (Default 8.0), maxViolations: Begrenzung " +
+        "der Top-Violations-Liste (Default 20).";
 
     private static void AddSearchPattern(
         McpServerPrimitiveCollection<McpServerTool> tools,
