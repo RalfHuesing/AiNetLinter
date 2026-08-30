@@ -11,6 +11,7 @@ using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.FastTests.Mcp.Projects;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Composition;
 using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
@@ -34,12 +35,17 @@ namespace AiNetLinter.FastTests.Mcp;
 public sealed class WiringContractTests
 {
     [Fact]
-    public void ToolCollection_FreezesInventoryAndProjectRootContract()
+    public async Task ToolCollection_FreezesInventoryAndProjectRootContract()
     {
-        using var composition = AssemblyAnalysisHostComposition.Create();
+        await using var composition = AssemblyAnalysisHostComposition.Create();
+        await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
         var options = McpServerOptionsFactory.Create(
-            ProjectRegistryFixture.CreateInspectionRegistry(),
-            assemblyComposition: composition);
+            McpServerToolCollectionFactory.Build(
+                registry,
+                AnalysisToolCall.CreateTargetRoute(
+                    ProjectAnalysisDispatcher.CreateRoute(registry),
+                    AssemblyAnalysisDispatcher.CreateRoute(composition.Sessions))),
+            McpServerResourceCollectionFactory.Build(registry));
         var tools = options.ToolCollection!.ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool);
         Assert.Equal(29, tools.Count);
         foreach (var tool in tools.Values)
@@ -73,7 +79,11 @@ public sealed class WiringContractTests
     public async Task ToolCollection_ClassifiesEveryRegisteredToolWithExplicitAnnotations()
     {
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
-        var tools = McpServerOptionsFactory.BuildToolCollection(registry)
+        var tools = McpServerToolCollectionFactory.Build(
+                registry,
+                AnalysisToolCall.CreateTargetRoute(
+                    ProjectAnalysisDispatcher.CreateRoute(registry),
+                    AssemblyAnalysisDispatcher.CreateRoute(null)))
             .ToDictionary(tool => tool.ProtocolTool.Name, StringComparer.Ordinal);
         Assert.Equal(
             ExpectedToolAnnotations.Keys.OrderBy(name => name, StringComparer.Ordinal),
@@ -136,13 +146,13 @@ public sealed class WiringContractTests
     public async Task AnalysisToolCall_MissingTarget_ReturnsRequiredGuardWithoutLease()
     {
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
-        var missing = await AnalysisToolCall.ExecuteAsync(
+        var missing = await ExecuteProjectAsync(
             registry,
             new AnalysisTargetRequest(null, null),
             new AnalysisToolDispatch(ProjectCall: _ => throw new InvalidOperationException("darf nicht erreicht werden")));
         Assert.NotEqual(true, missing.IsError);
         Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(missing), StringComparison.Ordinal);
-        var blank = await AnalysisToolCall.ExecuteAsync(
+        var blank = await ExecuteProjectAsync(
             registry,
             new AnalysisTargetRequest("project", "   "),
             new AnalysisToolDispatch(ProjectCall: _ => throw new InvalidOperationException("darf nicht erreicht werden")));
@@ -154,12 +164,31 @@ public sealed class WiringContractTests
     public async Task AnalysisToolCall_RelativeTargetPath_ReturnsInvalidGuard()
     {
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
-        var result = await AnalysisToolCall.ExecuteAsync(
+        var result = await ExecuteProjectAsync(
             registry,
             new AnalysisTargetRequest("project", "relativ/projekt"),
             new AnalysisToolDispatch(ProjectCall: _ => throw new InvalidOperationException("darf nicht erreicht werden")));
         Assert.NotEqual(true, result.IsError);
         Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(result), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AnalysisToolRoute_AssemblyRegistrationDelegatesToSharedTargetDispatcher()
+    {
+        await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        var invoked = false;
+        var result = await AnalysisToolCall.ExecuteRouted(
+            request =>
+            {
+                invoked = request.Dispatch.AssemblySessionCall is not null;
+                return Task.FromResult(McpToolResults.Text("assembly-route"));
+            },
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest("assembly", "C:\\fixture\\Probe.dll"),
+                new AnalysisToolDispatch(AssemblySessionCall: _ => Task.FromResult(McpToolResults.Text("unreachable")))));
+
+        Assert.True(invoked);
+        Assert.Equal("assembly-route", TextOf(result));
     }
 
     [Fact]
@@ -238,7 +267,7 @@ public sealed class WiringContractTests
         var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
         var clock = new FakeClock();
         await using var registry = ProjectWiringFixtures.CreateLoadedRegistry(clock);
-        var callTask = AnalysisToolCall.ExecuteAsync(
+        var callTask = ExecuteProjectAsync(
             registry,
             new AnalysisTargetRequest("project", root),
             new AnalysisToolDispatch(ProjectCall: async _ =>
@@ -270,7 +299,7 @@ public sealed class WiringContractTests
         var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(15);
         while (failedText is null && DateTime.UtcNow < deadline)
         {
-            var result = await AnalysisToolCall.ExecuteAsync(
+            var result = await ExecuteProjectAsync(
                 registry,
                 new AnalysisTargetRequest("project", root),
                 new AnalysisToolDispatch(ProjectCall: _ => Task.FromResult(McpToolResults.Text("sollte nie erreicht werden"))));
@@ -313,7 +342,7 @@ public sealed class WiringContractTests
         });
         await TestWaiter.WaitForConditionAsync(() => server.LoadState == ServerLoadState.Loaded, TimeSpan.FromSeconds(15));
         await using var registry = ProjectRegistryFixture.Create(_ => ProjectInstanceCreation.Resident(server));
-        var healthy = await AnalysisToolCall.ExecuteAsync(
+        var healthy = await ExecuteProjectAsync(
             registry,
             new AnalysisTargetRequest("project", root),
             new AnalysisToolDispatch(ProjectCall: _ => Task.FromResult(McpToolResults.Text("kernantwort"))));
@@ -322,7 +351,7 @@ public sealed class WiringContractTests
         Assert.True(server.HasDegradedAnswerState);
         Assert.NotNull(server.LastGoodStateUtc);
         Assert.Contains("Simulierter Refresh-Fehler", server.LastLoadError, StringComparison.Ordinal);
-        var degraded = await AnalysisToolCall.ExecuteAsync(
+        var degraded = await ExecuteProjectAsync(
             registry,
             new AnalysisTargetRequest("project", root),
             new AnalysisToolDispatch(ProjectCall: _ => Task.FromResult(McpToolResults.Text("kernantwort", new { value = "payload" }))));
@@ -334,7 +363,7 @@ public sealed class WiringContractTests
         Assert.Equal("payload", degraded.StructuredContent!.Value.GetProperty("value").GetString());
         Assert.True(await server.ReloadSolutionAsync(CancellationToken.None));
         Assert.False(server.HasDegradedAnswerState);
-        var healed = await AnalysisToolCall.ExecuteAsync(
+        var healed = await ExecuteProjectAsync(
             registry,
             new AnalysisTargetRequest("project", root),
             new AnalysisToolDispatch(ProjectCall: _ => Task.FromResult(McpToolResults.Text("kernantwort"))));
@@ -404,6 +433,12 @@ public sealed class WiringContractTests
         Assert.True(leaseResult.Succeeded);
         leaseResult.Lease!.Dispose();
     }
+
+    private static Task<CallToolResult> ExecuteProjectAsync(
+        ProjectRegistry registry,
+        AnalysisTargetRequest request,
+        AnalysisToolDispatch dispatch) =>
+        ProjectAnalysisDispatcher.ExecuteAsync(registry, request, dispatch.ProjectCall!);
 
     private static string[] GetRequiredProperties(JsonElement inputSchema)
     {

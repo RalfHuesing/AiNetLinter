@@ -13,6 +13,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Composition;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
 using AiNetLinter.TestKit;
@@ -61,11 +62,11 @@ public sealed class McpServerCommandContractTests
         initial.Lease!.Dispose();
         scenario.ArmReleaseHook();
 
-        var loading = await AnalysisToolCall.ExecuteAsync(
+        var loading = await ProjectAnalysisDispatcher.ExecuteAsync(
             scenario.Registry,
             new AnalysisTargetRequest("project", scenario.Root),
-            new AnalysisToolDispatch(
-                ProjectCall: _ => Task.FromResult(McpToolResults.Text("unerwartet geladen"))));
+            (new AnalysisToolDispatch(
+                ProjectCall: _ => Task.FromResult(McpToolResults.Text("unerwartet geladen")))).ProjectCall!);
         Assert.Contains("laedt die Solution noch", Assert.IsType<TextContentBlock>(Assert.Single(loading.Content)).Text, StringComparison.Ordinal);
         var originalException = await scenario.LoadFailure.Task.WaitAsync(TimeSpan.FromSeconds(10));
         await scenario.LoadFinished.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -156,7 +157,13 @@ public sealed class McpServerCommandContractTests
     public async Task SearchPatternRegistration_AdvertisesOptInEnrichment()
     {
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
-        var tool = McpServerOptionsFactory.Create(registry).ToolCollection!
+        var tool = McpServerOptionsFactory.Create(
+                McpServerToolCollectionFactory.Build(
+                    registry,
+                    AnalysisToolCall.CreateTargetRoute(
+                        ProjectAnalysisDispatcher.CreateRoute(registry),
+                        AssemblyAnalysisDispatcher.CreateRoute(null))),
+                McpServerResourceCollectionFactory.Build(registry)).ToolCollection!
             .Single(candidate => candidate.ProtocolTool.Name == "search_pattern");
 
         Assert.Contains("enrichCSharp", tool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
@@ -379,11 +386,11 @@ public sealed class McpServerCommandContractTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         while (true)
         {
-            var result = await AnalysisToolCall.ExecuteAsync(
+            var result = await ProjectAnalysisDispatcher.ExecuteAsync(
                 scenario.Registry,
                 new AnalysisTargetRequest("project", scenario.Root),
-                new AnalysisToolDispatch(
-                    ProjectCall: _ => Task.FromResult(McpToolResults.Text("unerwartet geladen"))));
+                (new AnalysisToolDispatch(
+                    ProjectCall: _ => Task.FromResult(McpToolResults.Text("unerwartet geladen")))).ProjectCall!);
             var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
             if (text.Contains("PROJECT_LOAD_FAILED", StringComparison.Ordinal)) return result;
 

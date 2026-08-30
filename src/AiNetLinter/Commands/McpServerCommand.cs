@@ -9,6 +9,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Logging;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Composition;
 using AiNetLinter.Mcp.Lifetime;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
@@ -52,7 +53,7 @@ internal static class McpServerCommand
             Clock: TimeProvider.System,
             MaxProjects: args.McpMaxProjects ?? ProjectRegistryDefaults.MaxProjects,
             IdleTtl: args.McpProjectTtlMinutes is { } minutes ? TimeSpan.FromMinutes((double)minutes) : default));
-        using var assemblyComposition = AssemblyAnalysisHostComposition.Create();
+        await using var assemblyComposition = AssemblyAnalysisHostComposition.Create();
 
         var services = new ServiceCollection();
         var serverBuilder = services.AddMcpServer();
@@ -66,10 +67,12 @@ internal static class McpServerCommand
             Version = McpServerOptionsFactory.GetServerVersion(),
         };
         serverOptions.ServerInstructions = ServerInstructions.Text;
-        serverOptions.ToolCollection = McpServerOptionsFactory.BuildToolCollection(
+        serverOptions.ToolCollection = McpServerToolCollectionFactory.Build(
             registry,
-            assemblyComposition: assemblyComposition);
-        serverOptions.ResourceCollection = McpServerOptionsFactory.BuildResourceCollection(registry);
+            AnalysisToolCall.CreateTargetRoute(
+                ProjectAnalysisDispatcher.CreateRoute(registry),
+                AssemblyAnalysisDispatcher.CreateRoute(assemblyComposition.Sessions)));
+        serverOptions.ResourceCollection = McpServerResourceCollectionFactory.Build(registry);
 
         var transport = new StdioServerTransport(serverOptions);
         await using var server = McpServer.Create(transport, serverOptions, serviceProvider: serviceProvider);

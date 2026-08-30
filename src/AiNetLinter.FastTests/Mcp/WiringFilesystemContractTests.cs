@@ -24,7 +24,7 @@ public sealed class WiringFilesystemContractTests
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
         foreach (var root in new string?[] { null, "   ", "relativ/projekt" })
         {
-            var result = await AnalysisToolCall.ExecuteFilesystemAsync(
+            var result = await ProjectAnalysisDispatcher.ExecuteFilesystemAsync(
                 registry,
                 new AnalysisTargetRequest("project", root),
                 ThrowingFilesystemCallback);
@@ -42,7 +42,7 @@ public sealed class WiringFilesystemContractTests
         var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
         var pendingServer = OverviewTestServers.PendingLoadServer();
         await using var registry = ProjectRegistryFixture.Create(_ => ProjectInstanceCreation.Resident(pendingServer));
-        var result = await AnalysisToolCall.ExecuteFilesystemAsync(
+        var result = await ProjectAnalysisDispatcher.ExecuteFilesystemAsync(
             registry,
             new AnalysisTargetRequest("project", root),
             lease => AssertFilesystemCallback(lease, ServerLoadState.Loading, root));
@@ -60,7 +60,7 @@ public sealed class WiringFilesystemContractTests
         var faultingServer = OverviewTestServers.FaultingLoadServer(console);
         await using var registry = ProjectRegistryFixture.Create(_ => ProjectInstanceCreation.Resident(faultingServer));
         await TestWaiter.WaitForConditionAsync(() => faultingServer.LoadState == ServerLoadState.LoadFailed, TimeSpan.FromSeconds(15));
-        var result = await AnalysisToolCall.ExecuteFilesystemAsync(
+        var result = await ProjectAnalysisDispatcher.ExecuteFilesystemAsync(
             registry,
             new AnalysisTargetRequest("project", root),
             lease => AssertFilesystemCallback(lease, ServerLoadState.LoadFailed));
@@ -77,7 +77,7 @@ public sealed class WiringFilesystemContractTests
         var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
         var clock = new FakeClock();
         await using var registry = ProjectWiringFixtures.CreateLoadedRegistry(clock);
-        var result = await AnalysisToolCall.ExecuteFilesystemAsync(
+        var result = await ProjectAnalysisDispatcher.ExecuteFilesystemAsync(
             registry,
             new AnalysisTargetRequest("project", root),
             _ => HoldFilesystemLeaseAsync(registry, root, clock)).WaitAsync(TimeSpan.FromSeconds(15));

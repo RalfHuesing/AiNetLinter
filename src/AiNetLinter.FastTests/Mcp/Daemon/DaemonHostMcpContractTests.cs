@@ -7,6 +7,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Composition;
 using AiNetLinter.Mcp.Daemon;
 using AiNetLinter.Mcp.Projects;
 using ModelContextProtocol.Client;
@@ -23,7 +24,7 @@ public sealed class DaemonHostMcpContractTests
     {
         await using var registry = ProjectWiringFixtures.CreateLoadedRegistry(TimeProvider.System);
         await using var connection = new DaemonPipeConnection(new MemoryStream());
-        using var composition = AssemblyAnalysisHostComposition.Create();
+        await using var composition = AssemblyAnalysisHostComposition.Create();
 
         var session = CreateSession(registry, composition);
         await session.RunAsync(connection);
@@ -73,7 +74,7 @@ public sealed class DaemonHostMcpContractTests
             isAvailable: true,
             diagnostics: [providerDiagnostic],
             sourceSnapshot: snapshot));
-        using var composition = AssemblyAnalysisHostComposition.Create(settingsPath, provider);
+        await using var composition = AssemblyAnalysisHostComposition.Create(settingsPath, provider);
         await using var registry = ProjectWiringFixtures.CreateLoadedRegistry(TimeProvider.System);
         var hostRegistry = composition.Registry;
 
@@ -86,18 +87,19 @@ public sealed class DaemonHostMcpContractTests
             Assert.False(composition.IsDisposed);
             Assert.Same(hostRegistry, composition.Registry);
             Assert.Equal(1, composition.Registry.ResidentCount);
+            Assert.Equal(1, composition.Sessions.ResidentCount);
             Assert.False(snapshot.IsDisposed);
         }
 
-        Assert.Equal(4, provider.CallCount);
+        Assert.Equal(1, provider.CallCount);
         Assert.NotNull(provider.FirstMapping);
         Assert.All(provider.Mappings, observed => Assert.Same(provider.FirstMapping, observed));
         Assert.All(provider.Mappings, observed => Assert.Equal("TargetAssembly", observed.Assemblies.Single()));
-        Assert.Equal(4, provider.CancellationTokens.Count);
+        Assert.Equal(1, provider.CancellationTokens.Count);
         Assert.All(provider.CancellationTokens, token => Assert.True(token.CanBeCanceled));
 
-        composition.Dispose();
-        composition.Dispose();
+        await composition.DisposeAsync();
+        await composition.DisposeAsync();
 
         Assert.True(composition.IsDisposed);
         Assert.Equal(0, composition.Registry.ResidentCount);
@@ -177,11 +179,13 @@ public sealed class DaemonHostMcpContractTests
         ProjectRegistry registry,
         AssemblyAnalysisHostComposition composition) =>
         new(
-            runtimeContext => McpServerOptionsFactory.BuildToolCollection(
+            runtimeContext => McpServerToolCollectionFactory.Build(
                 registry,
-                runtimeContext,
-                composition),
-            () => McpServerOptionsFactory.BuildResourceCollection(registry));
+                AnalysisToolCall.CreateTargetRoute(
+                    ProjectAnalysisDispatcher.CreateRoute(registry),
+                    AssemblyAnalysisDispatcher.CreateRoute(composition.Sessions)),
+                runtimeContext),
+            () => McpServerResourceCollectionFactory.Build(registry));
 
     private static void AssertSourceBackedInspection(
         CallToolResult result,

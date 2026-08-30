@@ -3,6 +3,7 @@
 using System;
 using System.Text;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Composition;
 using AiNetLinter.TestKit;
 using Xunit;
 
@@ -19,7 +20,14 @@ public sealed class McpServerOptionsFactoryTests
     [Fact]
     public void Create_ServerInstructionsCarriesAnalysisTargetContract()
     {
-        var options = McpServerOptionsFactory.Create(ProjectRegistryFixture.CreateInspectionRegistry());
+        var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        var options = McpServerOptionsFactory.Create(
+            McpServerToolCollectionFactory.Build(
+                registry,
+                AnalysisToolCall.CreateTargetRoute(
+                    ProjectAnalysisDispatcher.CreateRoute(registry),
+                    AssemblyAnalysisDispatcher.CreateRoute(null))),
+            McpServerResourceCollectionFactory.Build(registry));
 
         Assert.False(string.IsNullOrEmpty(options.ServerInstructions));
         Assert.Contains("targetType", options.ServerInstructions, StringComparison.Ordinal);
@@ -35,7 +43,14 @@ public sealed class McpServerOptionsFactoryTests
     [Fact]
     public void Create_ServerInstructionsStaysWithinUtf8Budget()
     {
-        var options = McpServerOptionsFactory.Create(ProjectRegistryFixture.CreateInspectionRegistry());
+        var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        var options = McpServerOptionsFactory.Create(
+            McpServerToolCollectionFactory.Build(
+                registry,
+                AnalysisToolCall.CreateTargetRoute(
+                    ProjectAnalysisDispatcher.CreateRoute(registry),
+                    AssemblyAnalysisDispatcher.CreateRoute(null))),
+            McpServerResourceCollectionFactory.Build(registry));
 
         Assert.InRange(
             Encoding.UTF8.GetByteCount(ServerInstructions.Text),

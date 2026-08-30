@@ -1,9 +1,6 @@
 #nullable enable
 
 using System.Reflection;
-using AiNetLinter.Mcp.Assemblies;
-using AiNetLinter.Mcp.Projects;
-using AiNetLinter.Mcp.Registration;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp;
@@ -21,55 +18,20 @@ internal static class McpServerOptionsFactory
     internal const string ServerName = "ainetlinter";
 
     /// <summary>
-    /// Baut die vollstaendigen Server-Optionen inkl. aller registrierten Tools. Die Lambdas
-    /// erreichen die residenten Projektinstanzen ausschliesslich ueber die <paramref name="registry"/>
-    /// (Lease je Project-Target); Assembly-Analyse verwendet optional die explizite
-    /// hostlebenslange Composition — kein DI-Container (Architektur-Verbot, siehe
-    /// <c>AiNetLinterRichtlinien.mdc</c> §2). Die <c>initialize</c>-Handshake-Instructions
-    /// kommen aus <see cref="ServerInstructions.Text"/> (Single-Source-of-Truth, siehe dort).
+    /// Baut die Server-Optionen aus bereits komponierten Collections. Die Tool- und
+    /// Resource-Komposition liegt in den fachlich getrennten Collection-Factories;
+    /// dadurch bleibt diese Factory auf das Optionsformat beschraenkt.
     /// </summary>
     internal static McpServerOptions Create(
-        ProjectRegistry registry,
-        Daemon.DaemonRuntimeContext? runtimeContext = null,
-        AssemblyAnalysisHostComposition? assemblyComposition = null)
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        McpServerResourceCollection resources)
     {
         return new McpServerOptionsBuilder()
             .WithServerVersion(GetServerVersion())
             .WithServerInstructions(ServerInstructions.Text)
-            .WithToolCollection(BuildToolCollection(registry, runtimeContext, assemblyComposition))
-            .WithResourceCollection(BuildResourceCollection(registry))
+            .WithToolCollection(tools)
+            .WithResourceCollection(resources)
             .Build();
-    }
-
-    internal static McpServerResourceCollection BuildResourceCollection(ProjectRegistry registry)
-    {
-        var resources = new McpServerResourceCollection();
-        McpAgentGuideRegistration.Register(resources);
-        OverviewResourceRegistration.Register(resources, registry);
-        RulesResourceRegistration.Register(resources, registry);
-        return resources;
-    }
-
-    internal static McpServerPrimitiveCollection<McpServerTool> BuildToolCollection(
-        ProjectRegistry registry,
-        Daemon.DaemonRuntimeContext? runtimeContext = null,
-        AssemblyAnalysisHostComposition? assemblyComposition = null)
-    {
-        var tools = new McpServerPrimitiveCollection<McpServerTool>();
-
-        SymbolGraphToolRegistrations.Register(tools, registry);
-        AssemblyAnalysisToolRegistrations.Register(
-            tools,
-            (targetType, targetPath, assemblyCall) =>
-                AnalysisToolCall.ExecuteAssemblyAsync(registry, targetType, targetPath, assemblyCall),
-            assemblyComposition);
-        FileStructureToolRegistrations.Register(tools, registry);
-        AnalysisToolRegistrations.Register(tools, registry);
-        SymbolBodyToolRegistrations.Register(tools, registry);
-        ServerMaintenanceToolRegistrations.Register(tools, registry, runtimeContext);
-        DuplicateDetectionToolRegistrations.Register(tools, registry);
-
-        return tools;
     }
 
     internal static string GetServerVersion()

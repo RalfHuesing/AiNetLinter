@@ -65,6 +65,8 @@ internal sealed record McpCodeGraphServerOptions
 
     internal Solution? ReadOnlySolutionSnapshot { get; init; }
 
+    internal AnalysisSymbolIdentity? AssemblySymbolIdentity { get; init; }
+
     /// <summary>
     /// Factory-Methode, die die Konfigurations-Eingaenge in einem Parameter-Record bündelt,
     /// damit <c>MaxMethodParameterCount: 4</c> (siehe <c>AiNetLinter.mdc</c>) eingehalten wird
@@ -85,6 +87,7 @@ internal sealed record McpCodeGraphServerOptions
             UsedDefaultConfig = p.UsedDefaultConfig,
             ResolvedConfigPath = p.ResolvedConfigPath,
             ReadOnlySolutionSnapshot = p.ReadOnlySolutionSnapshot,
+            AssemblySymbolIdentity = p.AssemblySymbolIdentity,
         };
     }
 }
@@ -102,4 +105,5 @@ internal sealed record McpCodeGraphServerOptionsFromParameters(
     Config? Config = null,
     bool UsedDefaultConfig = false,
     string? ResolvedConfigPath = null,
-    Solution? ReadOnlySolutionSnapshot = null);
+    Solution? ReadOnlySolutionSnapshot = null,
+    AnalysisSymbolIdentity? AssemblySymbolIdentity = null);

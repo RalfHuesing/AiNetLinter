@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Composition;
 using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
 using Xunit;
@@ -370,7 +371,11 @@ public sealed class McpServerCommandJsonRpcFramingTests
     private static async Task<IReadOnlySet<string>> GetRegisteredToolNames()
     {
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
-        return McpServerOptionsFactory.BuildToolCollection(registry)
+        return McpServerToolCollectionFactory.Build(
+                registry,
+                AnalysisToolCall.CreateTargetRoute(
+                    ProjectAnalysisDispatcher.CreateRoute(registry),
+                    AssemblyAnalysisDispatcher.CreateRoute(null)))
             .Select(tool => tool.ProtocolTool.Name)
             .ToHashSet(StringComparer.Ordinal);
     }

@@ -42,6 +42,7 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
     private string? _lastRefreshError;
     private int _disposed;
     private readonly bool _isReadOnlySnapshot;
+    private readonly AnalysisSymbolIdentity? _assemblySymbolIdentity;
 
     // Input-Record als Parameter-Object, damit MaxConstructorDependencies: 5 eingehalten wird
     // und kuenftige Config-Properties additiv wachsen koennen, ohne die Konstruktor-Signatur
@@ -54,6 +55,7 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
         Config = options.Config;
         UsedDefaultConfig = options.UsedDefaultConfig;
         ResolvedConfigPath = options.ResolvedConfigPath;
+        _assemblySymbolIdentity = options.AssemblySymbolIdentity;
         if (options.ReadOnlySolutionSnapshot is not null && (options.Catalog is not null || options.LoadFunc is not null))
         {
             throw new ArgumentException("ReadOnlySolutionSnapshot kann nicht mit Catalog oder LoadFunc kombiniert werden.");
@@ -122,6 +124,8 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
 
     /// <summary>Konsolen-Kanal, an den der MCP-Server selbst loggt.</summary>
     public ILintConsole Console => _console;
+
+    internal AnalysisSymbolIdentity? AssemblySymbolIdentity => _assemblySymbolIdentity;
 
     /// <summary>Zeit seit Konstruktion dieser Instanz — Proxy fuer die Server-Uptime, verwendet von
     /// <c>get_server_health</c>.</summary>
