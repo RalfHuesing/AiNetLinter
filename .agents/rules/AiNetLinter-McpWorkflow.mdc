@@ -44,7 +44,7 @@ aber nicht die semantische MCP-Abfrage.
   `maxResults > 100` aufrufen (verhindert massives Token-Flooding von 15k+ Tokens).
   Zur initialen Orientierung immer `view="summary"` (~250 Tokens) oder `view="tree"`
   mit `treeDepth <= 2` einsetzen. Die Dateiansicht `view="files"` ist gezielten
-  Unterpfaden vorbehalten (z. B. `root="src/AiNetLinter/Mcp"`). Für C#-Code-Suchen
+  Unterpfaden vorbehalten (z. B. `root="src/MeinModul"`). Für C#-Code-Suchen
   direkt `find_symbol` oder `get_feature_context` verwenden.
 
 ## Werkzeugwahl
