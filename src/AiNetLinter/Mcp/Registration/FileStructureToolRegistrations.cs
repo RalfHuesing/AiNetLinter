@@ -215,6 +215,5 @@ internal static class FileStructureToolRegistrations
 
     private const string GetHotspotsDescription =
         "Wann nutzen: vor einem geplanten Edit pruefen, ob eine Datei/ein Projekt sich dem " +
-        "Zeilen-Limit (MaxLineCount) naehert. scopeFilter grenzt auf Projekt-Name oder " +
-        "Pfad-Substring ein.";
+        "Zeilen-Limit (MaxLineCount) naehert. scopeFilter: Projekt-Name oder Pfad-Substring zur Eingrenzung.";
 }
