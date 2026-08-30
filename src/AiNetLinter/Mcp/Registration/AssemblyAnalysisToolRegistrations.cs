@@ -107,15 +107,15 @@ internal static class AssemblyAnalysisToolRegistrations
 
     private const string FindAssemblyExtensionsDescription =
         "Wann nutzen: klassische C#-Extension-Methoden einer exakt angegebenen lokalen DLL " +
-        "metadata-only über Roslyn finden. targetType='assembly' und targetPath mit absolutem " +
+        "metadata-only ueber Roslyn finden. targetType='assembly' und targetPath mit absolutem " +
         "DLL-Pfad sind Pflicht; ein Consumer-Projekt wird in diesem Dispatch-Schritt nicht verwendet. " +
-        "receiverType grenzt den gewünschten Empfänger-Typ ein; ohne Consumer-Projekt " +
+        "receiverType grenzt den gewuenschten Empfaenger-Typ ein; ohne Consumer-Projekt " +
         "wird seine Roslyn-Anwendbarkeit als not_decidable ausgewiesen. extensionName und namespace filtern, " +
-        "Generics, Constraints und Konvertierungen werden dabei metadata-only berücksichtigt. " +
-        "Eine verfügbare explizite Source-Zuordnung wird source-backed genutzt; sonst greift " +
+        "Generics, Constraints und Konvertierungen werden dabei metadata-only beruecksichtigt. " +
+        "Eine verfuegbare explizite Source-Zuordnung wird source-backed genutzt; sonst greift " +
         "die statische Decompilation. " +
-        "maxResults begrenzt deterministisch (Default 100, Maximum 1000). Die Antwort trennt " +
-        "applicable, not_applicable und not_decidable und markiert fehlende Abhängigkeiten " +
-        "mit completeness partial. Methoden liefern zusätzlich strukturierte Parameterdaten. " +
-        "Die DLL wird weder geladen noch ausgeführt.";
+        "maxResults begrenzt (Default 100, Maximum 1000). Die Antwort trennt " +
+        "applicable, not_applicable und not_decidable und markiert fehlende Abhaengigkeiten " +
+        "mit completeness partial. Methoden liefern zusaetzlich strukturierte Parameterdaten. " +
+        "Die DLL wird weder geladen noch ausgefuehrt.";
 }
