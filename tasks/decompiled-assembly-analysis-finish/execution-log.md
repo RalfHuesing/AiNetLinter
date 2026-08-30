@@ -689,3 +689,105 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
   fokussierte Tests 40/40 und letzter `get_violations`-Check) werden nicht
   bloß zur Bestätigung wiederholt. Nur konkrete Gegenhypothesen oder fehlende
   Abdeckung rechtfertigen eine gezielte Wiederholung.
+
+## 2026-08-30 — Epic 3 Korrekturrunde 2 Review abgeschlossen
+
+- Run-ID: `resume-2026-08-30-epic-3-correction-2-review`
+- Epic: 3 — Transitive Assembly-Referenzen und getrennte externe Ressourcen
+- Rolle: Reviewer
+- Subagent-ID: `01a053dd-18ee-70a1-bfc0-782247f593ad`
+- Diff-Baseline: `c613d09d`; gegenüber dieser Baseline waren nur
+  `roadmap.md`-/`execution-log.md`-Updates erfolgt, kein Produktionscode.
+- Status: `completed`; Urteil: `issues`.
+- Vollständiger Reviewerbericht:
+
+  Der aktuelle Working Tree enthält gegenüber `c613d09d` nur Log-/Roadmap-
+  Änderungen, keinen Produktionscode. Die Implementierung aus `c613d09d`
+  wurde semantisch gegen den Elternstand geprüft.
+
+  ### P1 — `External-Source-Resource-Lifecycle` bleibt blockierend
+
+  In `SourceSnapshotRegistry.cs:127-166` rollt `CleanupFailedAcquire` den
+  Resident-Lease zwar zurück, aber `ReleaseResidentLease` entfernt einen
+  Eintrag nach dem letzten Lease nicht mehr, wenn die Registry inzwischen
+  terminal disposed ist.
+
+  Reproduzierbare Interleaving-Folge:
+
+  1. Resident-Lease: `LeaseCount = 1`.
+  2. Duplicate-Acquire erhöht auf `2`.
+  3. Parallel `SourceSnapshotRegistry.Dispose()`; der Eintrag bleibt wegen
+     `LeaseCount = 2` erhalten.
+  4. Original-Lease reduziert auf `1`.
+  5. Duplicate-Dispose schlägt fehl; Rollback reduziert auf `0`, entfernt den
+     Eintrag aber nicht.
+  6. Der Snapshot bleibt in `snapshots` und wird nie disposed; `Dispose()` wird
+     nicht erneut ausgeführt.
+
+  Der normale `Release`-Pfad bei `SourceSnapshotRegistry.cs:234-257` enthält
+  genau diese terminale Null-Lease-Bereinigung, der Rollback-Pfad nicht. Der
+  vorhandene Test `SourceSnapshotRegistryTests.cs:45-72` deckt keine parallele
+  Registry-Schließung ab.
+
+  Disposition: vor Freigabe beheben und durch einen deterministischen
+  Dispose-Race-Test absichern. Keine Korrektur wurde vorgenommen.
+
+  ### `Transitive-Reference-Session-Expansion`: ursprünglicher P1 behoben
+
+  Die Route-Wirksamkeit ist jetzt belegt:
+
+  - `AnalysisToolCall.cs:113-158` ruft `ExpandReferencesAsync` vor dem
+    Assembly-Tool auf.
+  - Produktive Host-Verdrahtung ist in `McpServerCommand.cs:72-74` und
+    `DaemonHostCommand.cs:45-47` vorhanden.
+  - Die Source-Project-Route nutzt die gemappte Snapshot-Solution; der Test
+    verschiebt die Dependency-DLL bewusst in ein isoliertes Verzeichnis
+    (`AssemblyAnalysisRouteTests.cs:70-139`).
+  - Expander und Source-Graph begrenzen auf 8 Ebenen/128 Knoten und erzeugen
+    sichtbare Zustände (`AssemblyReferenceSessionExpander.cs:52-108`,
+    `SourceProjectReferenceGraph.cs:65-85`).
+  - MCP-Abfragen bestätigten Dispatcher-Aufrufer, `ExpandReferencesAsync`-
+    Callsite, `LeaseReferencedAsync`-Factorypfad und Source-Project-
+    Symbolkette.
+
+  ### P2 — Expansion-Diagnosen fehlen bei `find_assembly_extensions`
+
+  `FindAssemblyExtensionsTool.cs:26-29` baut nur aus `lease.Context`.
+  Expansion-Diagnosen werden dort nicht übernommen, während
+  `InspectAssemblyTool.cs:57-78` sie explizit ergänzt. Ein Fehler beim Öffnen
+  eines transitiven Child-Leases kann daher im Extensions-Ergebnis als
+  `complete` erscheinen.
+
+  Dispositionsempfehlung: `accepted-deferred` bis zur Capability-/Tool-
+  Integration in Epic 4; vor Epic-Abschluss entweder beheben oder den Vertrag
+  ausdrücklich auf Root-Diagnosen beschränken. Nicht als verbliebener P1 der
+  ursprünglichen Route-Signatur eingestuft.
+
+  ### P2 — Negative Route-Testaussagekraft
+
+  Die neuen Route-Tests belegen erfolgreiche physische und Source-Project-
+  Expansion. Missing-/Cycle-/Limit-Tests liegen überwiegend auf Resolver-
+  Ebene und testen nicht den vollständigen Dispatcher-/Tool-Antwortpfad. Ein
+  gezielter Route-Test pro Fehlerklasse ist für die Capability-/E2E-Prüfung
+  empfehlenswert.
+
+  Dispositionsempfehlung: `accepted-deferred` mit Übergabe an Epic 4; kein
+  eigener P1-Korrekturzyklus.
+
+  ### Code-Map und MCP-Schema
+
+  `code-map.md:30` ist navigationsseitig korrekt; alle referenzierten Dateien
+  und Symbole wurden per Working Tree und MCP bestätigt. Es gab keinen
+  konkreten Navigationsfehler, daher wurde die Datei nicht geändert.
+
+  Die tatsächliche MCP-Installation akzeptiert als Projektparameter nur das
+  absolute Pflichtfeld `projectRoot`; `targetType`/`targetPath` gehören zum
+  analysierten Anwendungsschema, nicht zum MCP-Tool-Schema. Die Abweichung ist
+  in `code-map.md:105` korrekt dokumentiert.
+
+  Die gemeldeten Build-, 40/40-Test- und Violations-Ergebnisse wurden gemäß
+  Vorgabe nicht redundant wiederholt. Es wurden keine Assemblies ausgeführt,
+  kein Produktionscode geändert und kein Commit erstellt.
+
+- Nächste Aktion: nach Checkpoint und Tech-Debt-Triage eine neue frische
+  Korrekturrunde 3 ausschließlich für den Snapshot-Dispose-Race starten.

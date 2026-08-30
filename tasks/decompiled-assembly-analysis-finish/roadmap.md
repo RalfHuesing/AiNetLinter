@@ -3,13 +3,13 @@
 status: executing
 current_epic: 3
 last_commit: c613d09d
-blocker: Review der Korrekturrunde 2 von Epic 3 ausstehend
-correction_round: 2
+blocker: Epic 3 benötigt Korrekturrunde 3 für den Snapshot-Dispose-Race
+correction_round: 3
 cycle_state: active
 recent_finding_signatures:
-  - Transitive-Reference-Session-Expansion: transitive Ziele und Source-backed ProjectReferences sind im realen Toolpfad nicht wirksam
-  - External-Source-Resource-Lifecycle: Duplicate-Rollback kann einen Phantom-Lease im Snapshot hinterlassen
-  - Snapshot-Route-Test-Evidence: vorhandener Test beweist keinen echten Dispatcher-/Tool-E2E-Pfad
+  - Snapshot-Dispose-Race: Rollback nach terminalem Registry-Dispose lässt einen Snapshot mit Null-Lease resident
+  - Extensions-Diagnostic-Propagation: find_assembly_extensions übernimmt Expansion-Diagnosen noch nicht
+  - Negative-Route-Evidence: Missing/Cycle/Limit sind noch nicht über den vollständigen Dispatcher-/Tool-Antwortpfad nachgewiesen
 
 Diese Roadmap ist der einzige dauerhafte Ausführungs- und Resume-Stand für den
 autonomen Lauf. Sie leitet die Reihenfolge aus dem freigegebenen Konzept ab;

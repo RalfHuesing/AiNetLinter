@@ -73,6 +73,32 @@ Bericht festgehalten.
 - Log-Anker: `execution-log.md` — Epic-3-Korrekturrunde-2-Implementierer
   abgeschlossen
 
+## TD-008 — Expansion-Diagnosen im Extensions-Tool ausweisen
+
+- Schweregrad: P2
+- Scope: `FindAssemblyExtensionsTool`
+- Evidenz: Der unabhängige Epic-3-Review stellte fest, dass das Tool nur aus
+  `lease.Context` baut und Expansion-Diagnosen nicht übernimmt; ein
+  fehlgeschlagener Child-Lease kann dadurch als `complete` erscheinen.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: im Capability-/Tool-Integrations-Epic den Extensions-
+  Antwortvertrag an den gemeinsamen Expansion-Diagnosenpfad anschließen oder
+  Root-only-Semantik ausdrücklich und konsistent ausweisen.
+- Log-Anker: `execution-log.md` — Epic-3-Korrekturrunde-2-Review
+
+## TD-009 — Negative Expansion-Routen über den Dispatcher testen
+
+- Schweregrad: P2
+- Scope: `AssemblyAnalysisRouteTests`, Dispatcher-/Tool-Antwortpfad
+- Evidenz: Der unabhängige Epic-3-Review bestätigte erfolgreiche physische
+  und Source-Project-Expansion, aber Missing-/Cycle-/Limit-Fälle nur auf
+  Resolver-Ebene statt im vollständigen Dispatcher-/Tool-Antwortpfad.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: im Capability-/E2E-Epic je relevante Fehlerklasse einen
+  gezielten Route-Nachweis ergänzen, ohne die vorhandenen Resolver-Tests zu
+  duplizieren.
+- Log-Anker: `execution-log.md` — Epic-3-Korrekturrunde-2-Review
+
 ## TD-005 — Source-Ressourcen vor Materialisierung budgetieren
 
 - Schweregrad: P2
