@@ -2,7 +2,7 @@
 status: executing
 task: decompiled-assembly-analysis
 started_at: 2026-08-28T11:06:28+02:00
-last_updated: 2026-08-30T01:35:00+02:00
+last_updated: 2026-08-30T02:45:00+02:00
 rules_dir: .agents/rules
 total_steps: 34
 current_step: step-034
@@ -14,13 +14,13 @@ current_step: step-034
 
 - **Task-Status:** `executing`
 - **Steps gesamt:** 34 (regulär + Korrekturen)
-- **Aktueller Schritt:** `step-034` (`planned/in_progress`; strikter
+- **Aktueller Schritt:** `step-034` (`issues`; strikter
   CacheRoot-Vertrag und fail-closed Konfigurationsweitergabe bis zum
   Assembly-Tool, als Korrektur von `step-033`)
 - **Roadmap:** siehe `roadmap.md`
 - **Tech-Debt:** siehe `tech-debt.md`
 - **Gestartet:** 2026-08-28T11:06:28+02:00
-- **Zuletzt aktualisiert:** 2026-08-30T01:35:00+02:00
+- **Zuletzt aktualisiert:** 2026-08-30T02:45:00+02:00
 - **Initial-Prompt:** siehe `initial-prompt.md`
 
 ## Steps
@@ -60,7 +60,7 @@ current_step: step-034
 | step-031 | EPIC-04 | done | Step-030-Gatebefunde und Nachweise korrigieren | step-030 | 552ef4d4 + 1d15a5b4 | approved | 552ef4d4 + 1d15a5b4 + d8cff007 |
 | step-032 | EPIC-04 | issues | Validated Refresh/Fetch in neue Cache-Generation | - | 59d979b7 | issues → step-033 | 59d979b7 + a16a421c |
 | step-033 | EPIC-04 | issues | Konfigurierbare Cache-Root-/Refresh-Policy mit Fresh/Stale-Vertrag und Step-032-Evidenzabschluss | step-032 | 0c6ab50e + c6787c12 | issues → step-034 | 0c6ab50e + c6787c12 + d57f5aab |
-| step-034 | EPIC-04 | planned/in_progress | Strikter CacheRoot-Vertrag und fail-closed Konfigurationsweitergabe bis zum Assembly-Tool | step-033 | - | - | 6ebbc7c1 |
+| step-034 | EPIC-04 | issues | Strikter CacheRoot-Vertrag und fail-closed Konfigurationsweitergabe bis zum Assembly-Tool | step-033 | fcad25e5 + 1dd59128 | issues → step-035 | fcad25e5 + 1dd59128 + ff5fb2e5 |
 
 ## Aktueller Wiederaufnahmevermerk
 
@@ -680,3 +680,24 @@ Pakets aktiv. Review-Gates: Build grün, Fast Nicht-Stress 2091 bestanden plus
 2 bekannte Reparse-Skips, Integration Nicht-Stress 370/370, Stress nicht
 ausgeführt; aktueller breiter Safeguard 5,80/10 bei Threshold 8,00 bleibt
 ehrlich als FAIL dokumentiert.
+
+### Wiederaufnahme nach Step-034-Review (2026-08-30)
+
+Der frische Kritiker hat Step 034 mit `ff5fb2e5` nicht freigegeben. Der
+verbleibende MAJOR-Befund liegt an derselben terminalen Config-Failure-
+Grenze: Bei `Failure([])` wird `ConfigurationFailure` zu `NoMatch` und kann
+erneut den erfolgreichen statischen Decompilation-Fallback erreichen. Zwei
+gekoppelte MINOR-Nachweise sind ebenfalls offen: die URI-/UNC-Testmatrix ist
+nicht vollständig/exakt genug und das Toolresultat behauptet die
+`IsError=false`-Semantik nicht explizit genug.
+
+Diese Befunde werden auf Nutzeranweisung als ein größeres Korrekturpaket
+gebündelt, nicht als Assertion- oder Audit-only-Mini-Step. Der nächste Step
+verstärkt den terminalen Statusmarker unabhängig von der Diagnosenanzahl,
+schließt die adversariale URI-/UNC-Matrix und verankert die exakte
+strukturierte Resultat-Policy. Die bereits grüne Implementierung, die
+gewöhnlichen statischen Fallbacks, die bekannten Win32-1314-Skips und der
+ehrliche Safeguard-FAIL bleiben als Regressionen erhalten. Der Kritiker
+meldete Build grün, Fast Nicht-Stress 2123 bestanden plus 2 Skips,
+Integration Nicht-Stress 370/370, Stress nicht ausgeführt und keine Leaks;
+`tech-debt.md` blieb unverändert.
