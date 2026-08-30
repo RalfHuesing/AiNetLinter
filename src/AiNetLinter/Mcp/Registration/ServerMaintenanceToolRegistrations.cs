@@ -57,8 +57,8 @@ internal static class ServerMaintenanceToolRegistrations
         "Wann nutzen: rules.json wurde waehrend des Server-Laufs geaendert und get_violations " +
         "soll die neuen Regeln sofort respektieren, ohne den Server neu zu starten. Ohne " +
         "configPath wird der rules-Pfad aus der Definitionsdatei (ainetlinter.project.json) des " +
-        "adressierten Projekts neu eingelesen; mit configPath gilt der Pfad als Override fuer " +
-        "genau diesen Key. Ungueltiger Pfad/JSON: bisherige Config bleibt aktiv.";
+        "adressierten Projekts neu eingelesen; mit configPath gilt der Pfad als temporaerer Override. " +
+        "Bei ungueltigem Pfad/JSON bleibt die bisherige Konfiguration aktiv.";
 
     private static void AddGetServerHealth(
         McpServerPrimitiveCollection<McpServerTool> tools,
