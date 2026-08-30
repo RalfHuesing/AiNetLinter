@@ -58,7 +58,11 @@ internal static class McpServerOptionsFactory
         var tools = new McpServerPrimitiveCollection<McpServerTool>();
 
         SymbolGraphToolRegistrations.Register(tools, registry);
-        AssemblyAnalysisToolRegistrations.Register(tools, registry, assemblyComposition);
+        AssemblyAnalysisToolRegistrations.Register(
+            tools,
+            (targetType, targetPath, assemblyCall) =>
+                AnalysisToolCall.ExecuteAssemblyAsync(registry, targetType, targetPath, assemblyCall),
+            assemblyComposition);
         FileStructureToolRegistrations.Register(tools, registry);
         AnalysisToolRegistrations.Register(tools, registry);
         SymbolBodyToolRegistrations.Register(tools, registry);

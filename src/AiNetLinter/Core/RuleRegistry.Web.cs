@@ -44,7 +44,7 @@ internal static partial class RuleRegistry
             "**Custom Properties konsolidieren**: Design-Tokens als CSS-Variablen in einer kleinen 'tokens.css'."
         ],
         SicherheitsHinweis: null,
-        Intent: "agent-context",
+        Intent: RuleIntents.AgentContext,
         Severity: "error",
         AgentHint: "CSS-Datei splitten oder in Scoped CSS ueberfuehren.",
         HasAutoFix: false,
@@ -67,7 +67,7 @@ internal static partial class RuleRegistry
             "**Suppression** (bei wenigen, klar globalen Regeln): `/* ainetlinter-disable CSS_PreferScopedCss */`."
         ],
         SicherheitsHinweis: null,
-        Intent: "agent-context",
+        Intent: RuleIntents.AgentContext,
         Severity: "warning",
         AgentHint: "Globale CSS-Dateien klein halten; Komponenten-Styles in .razor.css.",
         HasAutoFix: false,
@@ -89,7 +89,7 @@ internal static partial class RuleRegistry
             "**Selektor aufteilen**: Statt '.card > .header .title' zwei separate Regeln fuer '.card-header' und '.card-title'."
         ],
         SicherheitsHinweis: null,
-        Intent: "agent-context",
+        Intent: RuleIntents.AgentContext,
         Severity: "warning",
         AgentHint: "Maximal 3 Selektor-Segmente; Scoped CSS nutzen.",
         HasAutoFix: false,
@@ -111,7 +111,7 @@ internal static partial class RuleRegistry
             "**ExemptPaths pruefen**: Falls Bibliotheks-CSS betroffen ist, ggf. in `Web.Css.ExemptPaths` aufnehmen."
         ],
         SicherheitsHinweis: null,
-        Intent: "general",
+        Intent: RuleIntents.General,
         Severity: "error",
         AgentHint: "Syntax-Fehler im CSS beheben.",
         HasAutoFix: false,
@@ -132,7 +132,7 @@ internal static partial class RuleRegistry
             "**Custom Values uebergeben**: Daten via Parameter an die exportierte Funktion uebergeben statt im Closure zu kapseln."
         ],
         SicherheitsHinweis: null,
-        Intent: "agent-context",
+        Intent: RuleIntents.AgentContext,
         Severity: "error",
         AgentHint: "JavaScript-Datei aufteilen oder Logik nach C# migrieren.",
         HasAutoFix: false,
@@ -155,7 +155,7 @@ internal static partial class RuleRegistry
             "**Suppression** (bei Legacy-Bridge): `// ainetlinter-disable JS_EnforceJsModules`."
         ],
         SicherheitsHinweis: null,
-        Intent: "agent-context",
+        Intent: RuleIntents.AgentContext,
         Severity: "error",
         AgentHint: "ES6-Modul mit 'export' verwenden; window-Zuweisungen vermeiden.",
         HasAutoFix: false,
@@ -176,7 +176,7 @@ internal static partial class RuleRegistry
             "**ExemptPaths pruefen**: Falls Bibliotheks-JS betroffen ist, ggf. in `Web.Js.ExemptPaths` aufnehmen."
         ],
         SicherheitsHinweis: null,
-        Intent: "general",
+        Intent: RuleIntents.General,
         Severity: "error",
         AgentHint: "Syntax-Fehler im JavaScript beheben.",
         HasAutoFix: false,
@@ -197,7 +197,7 @@ internal static partial class RuleRegistry
             "**Suppression** (bei Legacy-Komponenten): `@* ainetlinter-disable RAZOR_MaxRazorLineCount *@`."
         ],
         SicherheitsHinweis: null,
-        Intent: "agent-context",
+        Intent: RuleIntents.AgentContext,
         Severity: "error",
         AgentHint: "Razor-Komponente aufteilen oder Teilbereiche extrahieren.",
         HasAutoFix: false,
@@ -220,7 +220,7 @@ internal static partial class RuleRegistry
             "**Suppression** (bei Legacy): `@* ainetlinter-disable RAZOR_MaxRazorCodeBlockLines *@`."
         ],
         SicherheitsHinweis: null,
-        Intent: "agent-context",
+        Intent: RuleIntents.AgentContext,
         Severity: "warning",
         AgentHint: "@code-Block in Code-Behind-Datei (.razor.cs) verschieben.",
         HasAutoFix: false,
@@ -243,7 +243,7 @@ internal static partial class RuleRegistry
             "**Suppression** (bei semantisch notwendiger Verschachtelung): `@* ainetlinter-disable RAZOR_MaxMarkupNestingDepth *@`."
         ],
         SicherheitsHinweis: null,
-        Intent: "agent-context",
+        Intent: RuleIntents.AgentContext,
         Severity: "warning",
         AgentHint: "Innere Bereiche in eigene Komponenten extrahieren.",
         HasAutoFix: false,
@@ -266,7 +266,7 @@ internal static partial class RuleRegistry
             "**Logik in Code-Behind extrahieren**: Methode in '.razor.cs' anlegen und referenzieren."
         ],
         SicherheitsHinweis: null,
-        Intent: "agent-context",
+        Intent: RuleIntents.AgentContext,
         Severity: "warning",
         AgentHint: "Inline-Lambda durch Methoden-Referenz oder Code-Behind-Methode ersetzen.",
         HasAutoFix: false,
@@ -288,7 +288,7 @@ internal static partial class RuleRegistry
             "**Suppression** (bei Legacy-Komponenten): `@* ainetlinter-disable RAZOR_MaxControlFlowBlocks *@`."
         ],
         SicherheitsHinweis: null,
-        Intent: "agent-context",
+        Intent: RuleIntents.AgentContext,
         Severity: "warning",
         AgentHint: "Teilbereiche in eigenstaendige Komponenten extrahieren.",
         HasAutoFix: false,
@@ -311,7 +311,7 @@ internal static partial class RuleRegistry
             "**Suppression** (bei notwendiger Hierarchie): `@* ainetlinter-disable RAZOR_MaxForeachNestingDepth *@`."
         ],
         SicherheitsHinweis: null,
-        Intent: "agent-context",
+        Intent: RuleIntents.AgentContext,
         Severity: "warning",
         AgentHint: "Innere Schleife in eigene Komponente extrahieren.",
         HasAutoFix: false,
@@ -334,7 +334,7 @@ internal static partial class RuleRegistry
             "**Suppression** (bei Legacy-Komponenten): `@* ainetlinter-disable RAZOR_MaxComponentParameterCount *@`."
         ],
         SicherheitsHinweis: null,
-        Intent: "agent-context",
+        Intent: RuleIntents.AgentContext,
         Severity: "warning",
         AgentHint: "Verwandte Parameter in Parameter-Objekt zusammenfassen.",
         HasAutoFix: false,
@@ -357,7 +357,7 @@ internal static partial class RuleRegistry
             "**Suppression** (bei trivialen Bedingungen): `@* ainetlinter-disable RAZOR_BanInlineTernaryInAttributes *@`."
         ],
         SicherheitsHinweis: null,
-        Intent: "agent-context",
+        Intent: RuleIntents.AgentContext,
         Severity: "warning",
         AgentHint: "Ternary-Ausdruck in Property oder Methode der Code-Behind-Datei extrahieren.",
         HasAutoFix: false,

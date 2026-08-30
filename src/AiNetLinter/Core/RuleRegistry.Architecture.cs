@@ -21,7 +21,7 @@ internal static partial class RuleRegistry
                 "**Shared-Kernel**: Gemeinsam genutzte Typen in einen neutral erlaubten Namespace verschieben."
             ],
             SicherheitsHinweis: null,
-            Intent: "architecture",
+            Intent: RuleIntents.Architecture,
             Severity: "error",
             AgentHint: "Unerlaubte Namespace-Abhaengigkeit gemaess Architektur-Regeln.",
             HasAutoFix: false,
@@ -40,7 +40,7 @@ internal static partial class RuleRegistry
                 "**Datei verschieben**: Datei in das zum Namespace passende Verzeichnis verschieben."
             ],
             SicherheitsHinweis: null,
-            Intent: "architecture",
+            Intent: RuleIntents.Architecture,
             Severity: "error",
             AgentHint: "Namespace muss Verzeichnispfad entsprechen (Modus: `rules.json`).",
             HasAutoFix: false,
@@ -60,7 +60,7 @@ internal static partial class RuleRegistry
                 "**Reflection-Load ersetzen**: `Assembly.LoadFrom` / `Activator.CreateInstance` durch statische Registrierung."
             ],
             SicherheitsHinweis: null,
-            Intent: "architecture",
+            Intent: RuleIntents.Architecture,
             Severity: "error",
             AgentHint: "Keine unauflösbaren `using`; kein `Type.GetType`/`Activator.CreateInstance` für App-Typen.",
             HasAutoFix: false,
@@ -85,7 +85,7 @@ internal static partial class RuleRegistry
                 "**Blazor Code-Behind (False-Positive)**: Deklariere die Klasse im `.razor.cs`-File explizit mit `: ComponentBase` (damit die statische Analyse sie als ausgenommen erkennt) oder füge Namen/Suffix zu `rules.json → TestSentinel.ExemptClassNameSuffixes` hinzu."
             ],
             SicherheitsHinweis: null,
-            Intent: "test-coverage",
+            Intent: RuleIntents.TestCoverage,
             Severity: "warning",
             AgentHint: "Für komplexe Typen: Testklasse, `typeof(T)` oder `// @covers T`.",
             HasAutoFix: false,

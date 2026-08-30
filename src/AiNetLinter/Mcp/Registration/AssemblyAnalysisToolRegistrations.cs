@@ -16,16 +16,16 @@ internal static class AssemblyAnalysisToolRegistrations
 {
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry,
+        Func<string?, string?, Func<string, Task<CallToolResult>>, Task<CallToolResult>> executeAssembly,
         AssemblyAnalysisHostComposition? composition = null)
     {
-        AddInspectAssembly(tools, registry, composition);
-        AddFindAssemblyExtensions(tools, registry, composition);
+        AddInspectAssembly(tools, executeAssembly, composition);
+        AddFindAssemblyExtensions(tools, executeAssembly, composition);
     }
 
     private static void AddInspectAssembly(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry,
+        Func<string?, string?, Func<string, Task<CallToolResult>>, Task<CallToolResult>> executeAssembly,
         AssemblyAnalysisHostComposition? composition)
     {
         tools.Add(McpServerTool.Create(
@@ -41,8 +41,7 @@ internal static class AssemblyAnalysisToolRegistrations
                 string[]? memberNames = null,
                 int maxMembers = AssemblyAnalysisService.DefaultMaxMembers,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAssemblyAsync(
-                    registry,
+                await executeAssembly(
                     targetType,
                     targetPath,
                     assemblyPath => ExecuteInspectAssemblyAsync(
@@ -89,7 +88,7 @@ internal static class AssemblyAnalysisToolRegistrations
 
     private static void AddFindAssemblyExtensions(
         McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry,
+        Func<string?, string?, Func<string, Task<CallToolResult>>, Task<CallToolResult>> executeAssembly,
         AssemblyAnalysisHostComposition? composition)
     {
         tools.Add(McpServerTool.Create(
@@ -101,8 +100,7 @@ internal static class AssemblyAnalysisToolRegistrations
                 string? @namespace = null,
                 int maxResults = AssemblyAnalysisService.DefaultMaxResults,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteAssemblyAsync(
-                    registry,
+                await executeAssembly(
                     targetType,
                     targetPath,
                     assemblyPath => ExecuteFindAssemblyExtensionsAsync(

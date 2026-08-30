@@ -49,7 +49,15 @@ internal static class DuplicateDetectionEngine
     {
         var fingerprints = await CollectFingerprintsAsync(solution, options, ct);
         var edges = FindCandidateEdges(fingerprints, options);
-        var clusters = BuildClusters(fingerprints, edges, options);
+        var clusters = DuplicateClusterBuilder.Build(
+            fingerprints,
+            edges,
+            options,
+            (fingerprint, _) => new DuplicateClusterMember(
+                fingerprint.FilePath,
+                fingerprint.LineNumber,
+                fingerprint.SignatureName,
+                fingerprint.TokenCount));
         return new DuplicateDetectionScanResult(clusters, fingerprints.Count);
     }
 
@@ -142,7 +150,7 @@ internal static class DuplicateDetectionEngine
 
     // ── 3+4) Inverted Index + Kandidaten-Paare ───────────────────────────────────────────────
 
-    private static List<FingerprintEdge> FindCandidateEdges(
+    private static List<DuplicateClusterEdge> FindCandidateEdges(
         IReadOnlyList<MethodFingerprint> fingerprints, DuplicateDetectionOptions options)
     {
         var invertedIndex = BuildInvertedIndex(fingerprints);
@@ -191,15 +199,15 @@ internal static class DuplicateDetectionEngine
         }
     }
 
-    private static List<FingerprintEdge> ComputeQualifyingEdges(
+    private static List<DuplicateClusterEdge> ComputeQualifyingEdges(
         IReadOnlyList<MethodFingerprint> fingerprints, Dictionary<(int A, int B), int> sharedCounts, DuplicateDetectionOptions options)
     {
-        var edges = new List<FingerprintEdge>();
+        var edges = new List<DuplicateClusterEdge>();
         foreach (var ((a, b), shared) in sharedCounts)
         {
             if (shared < options.MinSharedNgrams) continue;
             var jaccard = ComputeJaccard(fingerprints[a].NgramHashes, fingerprints[b].NgramHashes);
-            if (jaccard >= options.FuzzyThreshold) edges.Add(new FingerprintEdge(a, b, jaccard));
+            if (jaccard >= options.FuzzyThreshold) edges.Add(new DuplicateClusterEdge(a, b, jaccard));
         }
         return edges;
     }
@@ -216,62 +224,6 @@ internal static class DuplicateDetectionEngine
 
     // ── 6+7) Cluster-Bildung (Union-Find) + Schwellwert-Staffelung ───────────────────────────
 
-    private static List<DuplicateCluster> BuildClusters(
-        IReadOnlyList<MethodFingerprint> fingerprints, IReadOnlyList<FingerprintEdge> edges, DuplicateDetectionOptions options)
-    {
-        var unionFind = new DuplicateUnionFind(fingerprints.Count);
-        foreach (var edge in edges) unionFind.Union(edge.A, edge.B);
-
-        var groups = new Dictionary<int, List<int>>();
-        for (var i = 0; i < fingerprints.Count; i++)
-        {
-            var root = unionFind.Find(i);
-            if (!groups.TryGetValue(root, out var members))
-            {
-                members = new List<int>();
-                groups[root] = members;
-            }
-            members.Add(i);
-        }
-
-        var edgesByRoot = edges.ToLookup(e => unionFind.Find(e.A));
-        return groups.Values
-            .Where(members => members.Count >= 2)
-            .Select(members => BuildCluster(fingerprints, members, edgesByRoot[unionFind.Find(members[0])], options))
-            .OrderByDescending(c => c.Score)
-            .ThenBy(c => c.Members[0].FilePath, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(c => c.Members[0].LineNumber)
-            .ToList();
-    }
-
-    /// <summary>
-    /// <see cref="DuplicateCluster.Score"/> ist das Minimum aller tatsaechlich berechneten
-    /// paarweisen Kanten-Scores innerhalb des Clusters — nicht approximiert, sondern aus den in
-    /// <see cref="ComputeQualifyingEdges"/> bereits berechneten Werten uebernommen. Konservativ:
-    /// "diese Methoden sind MINDESTENS so aehnlich" statt eines optimistischen Durchschnitts, der
-    /// eine schwache Randverbindung ueberdecken wuerde.
-    /// </summary>
-    private static DuplicateCluster BuildCluster(
-        IReadOnlyList<MethodFingerprint> fingerprints, IReadOnlyList<int> memberIndices,
-        IEnumerable<FingerprintEdge> clusterEdges, DuplicateDetectionOptions options)
-    {
-        var memberSet = new HashSet<int>(memberIndices);
-        var minScore = clusterEdges
-            .Where(e => memberSet.Contains(e.A) && memberSet.Contains(e.B))
-            .Select(e => e.Jaccard)
-            .DefaultIfEmpty(1.0)
-            .Min();
-
-        var members = memberIndices
-            .Select(i => fingerprints[i])
-            .OrderBy(f => f.FilePath, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(f => f.LineNumber)
-            .Select(f => new DuplicateClusterMember(f.FilePath, f.LineNumber, f.SignatureName, f.TokenCount))
-            .ToList();
-
-        return new DuplicateCluster(members, minScore, ClassifyBucket(minScore, options));
-    }
-
     internal static DuplicateSimilarityBucket ClassifyBucket(double score, DuplicateDetectionOptions options) => score switch
     {
         _ when score >= options.ExactThreshold => DuplicateSimilarityBucket.Exact,
@@ -279,5 +231,4 @@ internal static class DuplicateDetectionEngine
         _ => DuplicateSimilarityBucket.Fuzzy,
     };
 
-    private readonly record struct FingerprintEdge(int A, int B, double Jaccard);
 }

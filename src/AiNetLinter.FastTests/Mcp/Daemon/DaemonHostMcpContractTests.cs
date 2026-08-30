@@ -14,7 +14,7 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.FastTests.Mcp.Daemon;
 
-// @covers DaemonHostCommand
+// @covers DaemonMcpSession
 [Trait("Category", "Component")]
 public sealed class DaemonHostMcpContractTests
 {
@@ -25,7 +25,8 @@ public sealed class DaemonHostMcpContractTests
         await using var connection = new DaemonPipeConnection(new MemoryStream());
         using var composition = AssemblyAnalysisHostComposition.Create();
 
-        await DaemonHostCommand.RunMcpSessionAsync(connection, registry, composition);
+        var session = CreateSession(registry, composition);
+        await session.RunAsync(connection);
 
         Assert.False(connection.CancellationToken.IsCancellationRequested);
     }
@@ -123,7 +124,7 @@ public sealed class DaemonHostMcpContractTests
         await using var clientConnection = clientStream;
         await using var daemonConnection = new DaemonPipeConnection(daemonStream);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        var serverTask = DaemonHostCommand.RunMcpSessionAsync(daemonConnection, registry, composition);
+        var serverTask = CreateSession(registry, composition).RunAsync(daemonConnection);
         CallToolResult inspect;
         CallToolResult extensions;
         try
@@ -171,6 +172,16 @@ public sealed class DaemonHostMcpContractTests
         await serverTask.WaitAsync(timeout.Token).ConfigureAwait(false);
         return (inspect, extensions);
     }
+
+    private static DaemonMcpSession CreateSession(
+        ProjectRegistry registry,
+        AssemblyAnalysisHostComposition composition) =>
+        new(
+            runtimeContext => McpServerOptionsFactory.BuildToolCollection(
+                registry,
+                runtimeContext,
+                composition),
+            () => McpServerOptionsFactory.BuildResourceCollection(registry));
 
     private static void AssertSourceBackedInspection(
         CallToolResult result,

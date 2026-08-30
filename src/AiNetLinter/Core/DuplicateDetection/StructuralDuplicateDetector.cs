@@ -28,14 +28,23 @@ internal static class StructuralDuplicateDetector
         }
 
         var edges = FindSimilarPairs(profiles, options, ct);
-        var clusters = BuildClusters(eligible, profiles, edges, options);
+        var clusters = DuplicateClusterBuilder.Build(
+            eligible,
+            edges,
+            options,
+            (method, index) => new DuplicateClusterMember(
+                method.FilePath,
+                method.LineNumber,
+                method.SignatureName,
+                method.TokenCount,
+                profiles[index].Summary));
         return new DuplicateDetectionScanResult(clusters, eligible.Count);
     }
 
-    private static List<(int A, int B, double Score)> FindSimilarPairs(
+    private static List<DuplicateClusterEdge> FindSimilarPairs(
         IReadOnlyList<MethodStructureProfile> profiles, DuplicateDetectionOptions options, CancellationToken ct)
     {
-        var edges = new List<(int A, int B, double Score)>();
+        var edges = new List<DuplicateClusterEdge>();
         for (var i = 0; i < profiles.Count; i++)
         {
             for (var j = i + 1; j < profiles.Count; j++)
@@ -44,7 +53,7 @@ internal static class StructuralDuplicateDetector
                 if (!SharesDiscriminatingFeature(profiles[i].Features, profiles[j].Features)) continue;
 
                 var score = StructureSimilarity.Cosine(profiles[i].Features, profiles[j].Features);
-                if (score >= options.FuzzyThreshold) edges.Add((i, j, score));
+                if (score >= options.FuzzyThreshold) edges.Add(new DuplicateClusterEdge(i, j, score));
             }
         }
         return edges;
@@ -66,62 +75,4 @@ internal static class StructuralDuplicateDetector
         return false;
     }
 
-    private static List<DuplicateCluster> BuildClusters(
-        IReadOnlyList<EligibleMethod> methods,
-        IReadOnlyList<MethodStructureProfile> profiles,
-        IReadOnlyList<(int A, int B, double Score)> edges,
-        DuplicateDetectionOptions options)
-    {
-        var unionFind = new DuplicateUnionFind(methods.Count);
-        foreach (var (a, b, _) in edges) unionFind.Union(a, b);
-
-        var groups = new Dictionary<int, List<int>>();
-        for (var i = 0; i < methods.Count; i++)
-        {
-            var root = unionFind.Find(i);
-            if (!groups.TryGetValue(root, out var members))
-            {
-                members = [];
-                groups[root] = members;
-            }
-            members.Add(i);
-        }
-
-        var edgesByRoot = edges.ToLookup(e => unionFind.Find(e.A));
-        return groups.Values
-            .Where(members => members.Count >= 2)
-            .Select(members => BuildCluster(methods, profiles, members, edgesByRoot[unionFind.Find(members[0])], options))
-            .OrderByDescending(c => c.Score)
-            .ThenBy(c => c.Members[0].FilePath, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(c => c.Members[0].LineNumber)
-            .ToList();
-    }
-
-    private static DuplicateCluster BuildCluster(
-        IReadOnlyList<EligibleMethod> methods,
-        IReadOnlyList<MethodStructureProfile> profiles,
-        IReadOnlyList<int> memberIndices,
-        IEnumerable<(int A, int B, double Score)> clusterEdges,
-        DuplicateDetectionOptions options)
-    {
-        var memberSet = new HashSet<int>(memberIndices);
-        var minScore = clusterEdges
-            .Where(e => memberSet.Contains(e.A) && memberSet.Contains(e.B))
-            .Select(e => e.Score)
-            .DefaultIfEmpty(1.0)
-            .Min();
-
-        var members = memberIndices
-            .OrderBy(i => methods[i].FilePath, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(i => methods[i].LineNumber)
-            .Select(i => new DuplicateClusterMember(
-                methods[i].FilePath,
-                methods[i].LineNumber,
-                methods[i].SignatureName,
-                methods[i].TokenCount,
-                profiles[i].Summary))
-            .ToList();
-
-        return new DuplicateCluster(members, minScore, DuplicateDetectionEngine.ClassifyBucket(minScore, options));
-    }
 }

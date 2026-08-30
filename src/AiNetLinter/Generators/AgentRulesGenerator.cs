@@ -28,6 +28,8 @@ public sealed record AgentRulesSyncOptions(
 /// </summary>
 public static class AgentRulesGenerator
 {
+    private const string FrontMatterDelimiter = "---";
+
     /// <summary>
     /// Generiert die MDC-Datei und schreibt sie nach dem ermittelten Pfad basierend auf den Optionen.
     /// </summary>
@@ -215,11 +217,11 @@ public static class AgentRulesGenerator
         // Bewusst OHNE Versionsstempel: Das Artefakt beschreibt die aktiven Regeln, nicht die
         // Generator-Version. Ein Version-Churn liess die committed Datei bei jedem Release
         // driftet erscheinen (Drift-Check/Dogfood-Guard wuerde ohne Regeländerung anschlagen).
-        sb.AppendLine("---");
+        sb.AppendLine(FrontMatterDelimiter);
         sb.AppendLine("description: C#-Codequalität — Automatisch generierte AiNetLinter-Richtlinien (alwaysApply)");
         sb.AppendLine("globs: *.cs");
         sb.AppendLine("alwaysApply: true");
-        sb.AppendLine("---");
+        sb.AppendLine(FrontMatterDelimiter);
         sb.AppendLine("# C#-Codequalität (AiNetLinter)");
         sb.AppendLine($"Auto-generiert durch AiNetLinter aus `{configFileName}`. Neuen Produktionscode direkt konform schreiben.");
         sb.AppendLine();
@@ -263,7 +265,16 @@ public static class AgentRulesGenerator
     }
 
     private static readonly string[] IntentOrder =
-        ["agent-resilience", "agent-context", "architecture", "aspnet-binding", "test-coverage", "control-flow", "csharp-idiom", "general"];
+        [
+            RuleIntents.AgentResilience,
+            RuleIntents.AgentContext,
+            RuleIntents.Architecture,
+            RuleIntents.AspNetBinding,
+            RuleIntents.TestCoverage,
+            RuleIntents.ControlFlow,
+            RuleIntents.CSharpIdiom,
+            RuleIntents.General,
+        ];
 
     private static void AppendMetricsTable(StringBuilder sb, Config config)
     {
@@ -300,7 +311,7 @@ public static class AgentRulesGenerator
 
         foreach (var group in groups)
         {
-            if (group.Key == "agent-context") continue;
+            if (group.Key == RuleIntents.AgentContext) continue;
             sb.AppendLine($"## {group.Key}");
             foreach (var (rule, _) in group)
             {

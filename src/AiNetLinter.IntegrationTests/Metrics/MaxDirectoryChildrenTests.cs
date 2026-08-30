@@ -106,6 +106,22 @@ public sealed class MaxDirectoryChildrenTests : IDisposable
     }
 
     [Fact]
+    public void DefaultExemptNames_SkipTaskArtifacts()
+    {
+        var tasksDir = Path.Combine(_tempDir, "tasks");
+        Directory.CreateDirectory(tasksDir);
+        CreateFiles(tasksDir, 50);
+
+        var config = CreateConfig(
+            limit: 12,
+            exemptNames: new MetricsConfig().MaxDirectoryChildrenExemptNames.ToArray());
+
+        var violations = RunCheck(_tempDir, config);
+
+        Assert.Empty(violations.Where(v => v.RuleName == nameof(MetricsConfig.MaxDirectoryChildren)));
+    }
+
+    [Fact]
     public void Limit0_Disabled_NoViolation()
     {
         CreateFiles(_tempDir, 100);

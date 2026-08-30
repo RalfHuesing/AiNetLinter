@@ -101,7 +101,7 @@ internal sealed record DuplicateClusterMember(
 /// Eine Gruppe transitiv aehnlicher Methoden (A~B, B~C ⇒ Cluster {A,B,C} statt isolierter Paare).
 /// <see cref="Score"/> ist das Minimum aller innerhalb des Clusters tatsaechlich berechneten
 /// paarweisen Jaccard-Scores (konservativ — "mindestens so aehnlich", siehe
-/// <see cref="DuplicateDetectionEngine.BuildClusters"/>), <see cref="Bucket"/> daraus abgeleitet.
+/// <see cref="DuplicateClusterBuilder"/>), <see cref="Bucket"/> daraus abgeleitet.
 /// </summary>
 internal sealed record DuplicateCluster(
     IReadOnlyList<DuplicateClusterMember> Members,

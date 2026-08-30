@@ -183,7 +183,8 @@
       "TestResults",
       ".vs",
       "speedup-tests",
-      "temp"
+      "temp",
+      "tasks"
     ],
     "MaxPartialClassFiles": 2,
     "MaxPartialClassFilesExemptTypes": [

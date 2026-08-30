@@ -66,7 +66,7 @@ internal static partial class RuleRegistry
                 "**Partial** (letztes Mittel): Nur wenn Datei bereits partial ist — `MaxPartialClassFiles`-Grenze beachten."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "error",
             AgentHint: "Datei splitten wenn sie wächst.",
             HasAutoFix: false,
@@ -87,7 +87,7 @@ internal static partial class RuleRegistry
                 "**Command/Query aufteilen**: Wenn die Methode sowohl schreibt als auch liest — zwei separate Methoden."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "error",
             AgentHint: "Eine Aufgabe pro Methode; Rest extrahieren.",
             HasAutoFix: false,
@@ -108,7 +108,7 @@ internal static partial class RuleRegistry
                 "**Methode aufteilen**: Wenn Parameter verschiedene Anwendungsfälle kodieren — separierte Methoden mit eindeutigen Namen."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "warning",
             AgentHint: "Ab Überschreitung: `record` als Parameter-Object.",
             HasAutoFix: false,
@@ -133,7 +133,7 @@ internal static partial class RuleRegistry
                 "**Guard Clauses**: Frühe Rückgaben für Fehlerfälle reduzieren Verschachtelung ohne Logikänderung."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "error",
             AgentHint: "Weniger `if`/`switch`/`&&`/`||` pro Methode (McCabe).",
             HasAutoFix: false,
@@ -154,7 +154,7 @@ internal static partial class RuleRegistry
                 "**Schleifenrumpf auslagern**: Schleifeninhalt in Hilfsmethode — die Schleife wird zur Iteration, die Methode zur Verarbeitungslogik."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "error",
             AgentHint: "Weniger Verschachtelung; Early Return bevorzugen (kognitiv).",
             HasAutoFix: false,
@@ -174,7 +174,7 @@ internal static partial class RuleRegistry
                 "**Interface statt Basisklasse**: Vertrag definieren, nicht Implementierung teilen — reduziert Hierarchietiefe."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "warning",
             AgentHint: "Komposition vor Vererbung.",
             HasAutoFix: false,
@@ -194,7 +194,7 @@ internal static partial class RuleRegistry
                 "**Explizite Namen**: `FooWithLogging(...)` statt `Foo(...)` + `Foo(..., ILogger)` — semantisch klar, keine Überladungsauflösung nötig."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "warning",
             AgentHint: "Methoden mit eindeutigen Namen bevorzugen.",
             HasAutoFix: false,
@@ -218,7 +218,7 @@ internal static partial class RuleRegistry
                 "**Parameter-Aggregation**: Zusammenhängende Abhängigkeiten in ein Konfigurations-Record bündeln."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "warning",
             AgentHint: "Verantwortlichkeit aufteilen bei Überschreitung.",
             HasAutoFix: false,
@@ -239,7 +239,7 @@ internal static partial class RuleRegistry
                 "**Abhängigkeit kapseln**: Statt direkter Abhängigkeit eine Facade oder ein Data-Transfer-Objekt übergeben."
             ],
             SicherheitsHinweis: "Interfaces einführen kann Architekturentscheidungen ändern. Nutzer fragen ob Interfaces im Projekt erlaubt sind.",
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "warning",
             AgentHint: "Kopplung reduzieren; eigene Typen-Abhängigkeiten minimieren.",
             HasAutoFix: false,
@@ -264,7 +264,7 @@ internal static partial class RuleRegistry
                 "**Namespace-Segmente zusammenfassen**: Verzeichnisse, die nur einen Unterordner enthalten, mit dem Elternverzeichnis zusammenführen."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "warning",
             AgentHint: "Ordner nicht unnötig tief schachteln.",
             HasAutoFix: false,
@@ -283,7 +283,7 @@ internal static partial class RuleRegistry
                 "**Unterverzeichnis anlegen**: Verwandte Dateien in einen Unterordner mit sprechendem Namen gruppieren."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "warning",
             AgentHint: "0 = deaktiviert; zu viele Dateien/Unterordner → Unterverzeichnis anlegen.",
             HasAutoFix: false,
@@ -305,7 +305,7 @@ internal static partial class RuleRegistry
                 "**Separierte Methoden**: Wenn die Pfade fachlich distinct sind — `ProcessSingle()` / `ProcessBatch()` statt `Process(bool isBatch)`."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "warning",
             AgentHint: "0 = deaktiviert; bool-Parameter in Parameter-Object bündeln.",
             HasAutoFix: false,
@@ -327,7 +327,7 @@ internal static partial class RuleRegistry
                 "**Interface** (nur wenn Projektregeln es erlauben): Wenn Partials verschiedene Rollen abbilden — Interfaces extrahieren und Implementierungen trennen."
             ],
             SicherheitsHinweis: "Partials aufzulösen ist ein tiefgreifender Architektureingriff. **Nutzer ZWINGEND fragen bevor du beginnst** — die gewählte Alternativarchitektur muss dem Projektstil entsprechen.",
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "warning",
             AgentHint: "0 = deaktiviert; Logik in eigenständige Klassen auslagern (z. B. XyzChecker).",
             HasAutoFix: false,
@@ -350,7 +350,7 @@ internal static partial class RuleRegistry
                 "**State-Objekt**: Zusammengehörige Properties in ein dediziertes `record`-Zustandsobjekt auslagern."
             ],
             SicherheitsHinweis: "Oft ein SRP-Signal. Vor größerem Refactoring Nutzer fragen und Architektur-Constraints (`.agents/rules`) lesen.",
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "warning",
             AgentHint: "0 = deaktiviert; Typ aufteilen oder Member kapseln.",
             HasAutoFix: false,
@@ -375,7 +375,7 @@ internal static partial class RuleRegistry
                 "**Suppression**: '// ainetlinter-disable MaxLinqChainLength' fuer legitime komplexe Datentransformationen."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "warning",
             AgentHint: "0 = deaktiviert; lange LINQ-Ketten in Teilschritte aufteilen.",
             HasAutoFix: false,
@@ -402,7 +402,7 @@ internal static partial class RuleRegistry
                 "**Suppression** (letztes Mittel, nur nach Freigabe): `// ainetlinter-disable EnforceNoSilentCatch` an der catch-Zeile."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-resilience",
+            Intent: RuleIntents.AgentResilience,
             Severity: "error",
             AgentHint: "`catch` immer mit Log + sichtbarem Fehler oder `throw;` — nie leer.",
             HasAutoFix: false,
@@ -423,7 +423,7 @@ internal static partial class RuleRegistry
                 "**Suppression** (letztes Mittel): '// ainetlinter-disable BanAsyncVoid' fuer Legacy-Code."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-resilience",
+            Intent: RuleIntents.AgentResilience,
             Severity: "error",
             AgentHint: "'async void' verboten; Ausnahme: Event-Handler mit '(object sender, EventArgs e)'.",
             HasAutoFix: false,
@@ -447,7 +447,7 @@ internal static partial class RuleRegistry
                 "**Suppression** (letztes Mittel): '// ainetlinter-disable BanBlockingTaskAccess' fuer unvermeidliche Stellen."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-resilience",
+            Intent: RuleIntents.AgentResilience,
             Severity: "error",
             AgentHint: "'.Wait()'/'.Result'/'.GetAwaiter().GetResult()' verboten; verwende 'await'.",
             HasAutoFix: false,

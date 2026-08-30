@@ -12,6 +12,8 @@ namespace AiNetLinter.Commands;
 /// </summary>
 internal static class DocsCommand
 {
+    private const string McpBootstrapDocument = "mcp-bootstrap";
+
     private static readonly Dictionary<string, string> DocResources = new(StringComparer.OrdinalIgnoreCase)
     {
         { "integration", "Docs/integration.md" },
@@ -21,7 +23,7 @@ internal static class DocsCommand
         { "rationale", "Docs/rationale.md" },
         { "roadmap", "Docs/ROADMAP.md" },
         { "rules-json", "rules.json" },
-        { "mcp-bootstrap", "Docs/mcp-bootstrap.md" },
+        { McpBootstrapDocument, "Docs/mcp-bootstrap.md" },
         { "mcp-rule", "AgentRules/AiNetLinter-McpWorkflow.mdc" }
     };
 
@@ -54,7 +56,7 @@ internal static class DocsCommand
             return 1;
         }
 
-        c.WriteLine(key.Equals("mcp-bootstrap", StringComparison.OrdinalIgnoreCase)
+        c.WriteLine(key.Equals(McpBootstrapDocument, StringComparison.OrdinalIgnoreCase)
             ? McpRegistrationInstructions.AppendRuntimeBlock(text)
             : text);
         return 0;

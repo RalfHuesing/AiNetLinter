@@ -33,7 +33,7 @@ internal static partial class RuleRegistry
                 "**Wenn Vererbung gewollt**: Suffix prüfen (`Base`, `Foundation`, `Host` sind exempt) oder Klasse explizit `abstract` make."
             ],
             SicherheitsHinweis: null,
-            Intent: "general",
+            Intent: RuleIntents.General,
             Severity: "error",
             AgentHint: "`sealed` für konkrete Klassen; Ausnahmen: Suffixe in `rules.json → SealedClassExemptSuffixes`.",
             HasAutoFix: true,
@@ -53,7 +53,7 @@ internal static partial class RuleRegistry
                 "**Ausnahme deklarieren**: Wenn es sich um einen legitimen Proxy, Adapter oder eine Facade handelt, das entsprechende Suffix (z.B. `Proxy`, `Adapter`, `Facade`) im Klassennamen verwenden."
             ],
             SicherheitsHinweis: "Das Zusammenfassen von Klassen kann die Trennung von Belangen (Separation of Concerns) verändern. Prüfen Sie, ob die lose Kopplung hier tatsächlich architektonisch notwendig ist.",
-            Intent: "general",
+            Intent: RuleIntents.General,
             Severity: "warning",
             AgentHint: "Vermeide reine Weiterleitungsklassen ohne eigene Logik; konsolidiere Wrapper.",
             HasAutoFix: false,
@@ -74,7 +74,7 @@ internal static partial class RuleRegistry
                 "**In Host-Datei als Top-Level verschieben**: Als Top-Level-Typ direkt über oder unter der Host-Klasse in derselben Datei — nur für sehr kleine Hilfstypen sinnvoll."
             ],
             SicherheitsHinweis: "Bei > 5 betroffenen Typen: Nutzer fragen. Externe Referenzen auf `HostClass.NestedType` sind Breaking Changes — Scope prüfen.",
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "error",
             AgentHint: "Verbot oeffentlicher nested Typen.",
             HasAutoFix: false,
@@ -93,7 +93,7 @@ internal static partial class RuleRegistry
                 "**Umbenennen**: `public string myField` → `public string MyField` — auto-fix via `--fix` verfügbar."
             ],
             SicherheitsHinweis: null,
-            Intent: "general",
+            Intent: RuleIntents.General,
             Severity: "error",
             AgentHint: "Öffentliche Typen/Methoden/Properties: PascalCase.",
             HasAutoFix: true,
@@ -113,7 +113,7 @@ internal static partial class RuleRegistry
                 "**Rein ASCII-Zeichen verwenden**: Entferne Emojis, Akzente oder fremdsprachige Unicode-Zeichen."
             ],
             SicherheitsHinweis: "Verhindert Homoglyphen-Angriffe (Trojan Source), bei denen ähnlich aussehende Unicode-Zeichen verwendet werden, um Schadcode zu tarnen.",
-            Intent: "general",
+            Intent: RuleIntents.General,
             Severity: "error",
             AgentHint: "Bezeichner duerfen keine Nicht-ASCII-Zeichen (Umlaute, Akzente, Emojis) enthalten.",
             HasAutoFix: false,
@@ -133,7 +133,7 @@ internal static partial class RuleRegistry
                 "**Typ als Namenspräfix**: Wenn kein fachlicher Name greifbar — zumindest den Typ kodieren (`configEntry` statt `obj`)."
             ],
             SicherheitsHinweis: null,
-            Intent: "general",
+            Intent: RuleIntents.General,
             Severity: "error",
             AgentHint: "Keine generischen Namen in oeffentlichen Signaturen oder werkzeug-generierte Dummy-Namen (MyRegex, NewMethod, Class1) auf Deklarationen.",
             HasAutoFix: false,
@@ -151,7 +151,7 @@ internal static partial class RuleRegistry
                 "**Dateikopf ergänzen**: `#nullable enable` als erste Zeile der `.cs`-Datei — auto-fix via `--fix` verfügbar."
             ],
             SicherheitsHinweis: null,
-            Intent: "general",
+            Intent: RuleIntents.General,
             Severity: "error",
             AgentHint: "`#nullable enable` am Dateianfang jeder `.cs`-Datei.",
             HasAutoFix: true,
@@ -175,7 +175,7 @@ internal static partial class RuleRegistry
                 "**`Dictionary<string, object>`**: Für Schlüssel-Wert-Szenarien mit expliziten Casts."
             ],
             SicherheitsHinweis: null,
-            Intent: "general",
+            Intent: RuleIntents.General,
             Severity: "error",
             AgentHint: "`dynamic` ist verboten.",
             HasAutoFix: false,
@@ -195,7 +195,7 @@ internal static partial class RuleRegistry
                 "**Try-Pattern** (erlaubt in `Try*`-Methoden): `bool TryGet(out int value)` — `AllowTryPatternOutParameters` greift."
             ],
             SicherheitsHinweis: null,
-            Intent: "csharp-idiom",
+            Intent: RuleIntents.CSharpIdiom,
             Severity: "warning",
             AgentHint: "`out` Parameter verboten; Ausnahme: `Try*`-Methoden.",
             HasAutoFix: false,
@@ -210,7 +210,7 @@ internal static partial class RuleRegistry
             Warum: "Blazor-Komponenten und generierte Code-Klassen benoetigen unversiegelte partial Klassen. Diese Option deaktiviert die EnforceSealedClasses-Pruefung fuer solche Typen.",
             Alternativen: ["**Standard**: `AllowUnsealedPartialClasses: false` — alle partial Klassen muessen sealed sein."],
             SicherheitsHinweis: null,
-            Intent: "general",
+            Intent: RuleIntents.General,
             Severity: "error",
             AgentHint: "Unversiegelte `partial` Klassen erlaubt (z. B. Blazor-Komponenten).",
             HasAutoFix: false,
@@ -225,7 +225,7 @@ internal static partial class RuleRegistry
             Warum: "Das Try*-Pattern (TryParse, TryGet) benoetigt out-Parameter. Diese Option deaktiviert die Pruefung auf out-Parameter fuer Methoden mit 'Try'-Praefix.",
             Alternativen: ["**Ohne out**: Gib Tuple<bool, T> oder Result<T> zurueck statt out-Parameter."],
             SicherheitsHinweis: null,
-            Intent: "general",
+            Intent: RuleIntents.General,
             Severity: "error",
             AgentHint: "`out` in `Try*`-Methoden erlaubt.",
             HasAutoFix: false,
@@ -240,7 +240,7 @@ internal static partial class RuleRegistry
             Warum: "Graceful-Shutdown-Logik muss OperationCanceledException abfangen koennen. Diese Option erlaubt den Catch in Shutdown-Methoden, die sonst durch die Pruefung blockiert waeren.",
             Alternativen: ["**Ohne Catch**: CancellationToken weiterpropagieren und kein Catch auf oberster Ebene."],
             SicherheitsHinweis: null,
-            Intent: "general",
+            Intent: RuleIntents.General,
             Severity: "error",
             AgentHint: "`OperationCanceledException` beim Shutdown abfangen erlaubt.",
             HasAutoFix: false,
@@ -255,7 +255,7 @@ internal static partial class RuleRegistry
             Warum: "Leseoperationen ohne unmittelbaren Null-Guard sind eine haeufige Fehlerquelle. Diese Option erlaubt spezifische Ausnahmen, z. B. fuer Properties mit garantiertem Wert nach Initialisierung.",
             Alternativen: ["**Mit Guard**: Null-Check direkt nach der Leseoperation."],
             SicherheitsHinweis: null,
-            Intent: "general",
+            Intent: RuleIntents.General,
             Severity: "error",
             AgentHint: "Leseoperationen immer mit unmittelbarem Guard versehen.",
             HasAutoFix: false,
@@ -278,7 +278,7 @@ internal static partial class RuleRegistry
                 "**Parameter dokumentieren**: `/// <param name=\"x\">Bedeutung von x.</param>` für nicht-selbsterklärende Parameter."
             ],
             SicherheitsHinweis: null,
-            Intent: "general",
+            Intent: RuleIntents.General,
             Severity: "warning",
             AgentHint: "XML-Dokumentation für öffentliche APIs.",
             HasAutoFix: false,
@@ -298,7 +298,7 @@ internal static partial class RuleRegistry
                 "**`record`-Typ**: Strukturell unveränderlich — Mutation via `with`-Ausdruck (Copy-and-Modify)."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-resilience",
+            Intent: RuleIntents.AgentResilience,
             Severity: "error",
             AgentHint: "Felder und Properties `readonly`/`init`-only.",
             HasAutoFix: false,
@@ -316,7 +316,7 @@ internal static partial class RuleRegistry
                 "**Parameter-Record**: Eingabeparameter in einen `record` zusammenfassen — `record CreateFooRequest(string Name, int Count)`."
             ],
             SicherheitsHinweis: null,
-            Intent: "aspnet-binding",
+            Intent: RuleIntents.AspNetBinding,
             Severity: "error",
             AgentHint: "Minimal-API: >4 Parameter → `[AsParameters]` + `record`.",
             HasAutoFix: false,
@@ -335,7 +335,7 @@ internal static partial class RuleRegistry
                 "**Discriminated Union**: Erfolg/Fehler explizit als Typ modellieren — keine Exception für erwartete Fehlerfälle."
             ],
             SicherheitsHinweis: null,
-            Intent: "control-flow",
+            Intent: RuleIntents.ControlFlow,
             Severity: "error",
             AgentHint: "`Result<T>` für Domänenfehler; `throw` nur für Infrastruktur-Fehler.",
             HasAutoFix: false,
@@ -354,7 +354,7 @@ internal static partial class RuleRegistry
                 "**`readonly struct`**: Für kleine, häufig kopierte Value Objects ohne Vererbungsbedarf."
             ],
             SicherheitsHinweis: null,
-            Intent: "general",
+            Intent: RuleIntents.General,
             Severity: "error",
             AgentHint: "Klassen mit `*ValueObject`-Suffix: `record` oder `readonly struct`.",
             HasAutoFix: false,
@@ -373,7 +373,7 @@ internal static partial class RuleRegistry
                 "**Named-Constructor-Pattern**: Statische Factory-Methoden mit klaren Namen statt Überladungen."
             ],
             SicherheitsHinweis: null,
-            Intent: "agent-context",
+            Intent: RuleIntents.AgentContext,
             Severity: "error",
             AgentHint: "Keine Überladungen mit identischer Parameteranzahl für primitive Typen.",
             HasAutoFix: false,
@@ -396,7 +396,7 @@ internal static partial class RuleRegistry
                 "**Suppression** (in `.razor`-Dateien): `@* ainetlinter-disable BlazorRequireCodeBehind *@`"
             ],
             SicherheitsHinweis: null,
-            Intent: "architecture",
+            Intent: RuleIntents.Architecture,
             Severity: "error",
             AgentHint: "Blazor-Komponenten muessen Code-Behind nutzen.",
             HasAutoFix: false,
@@ -415,7 +415,7 @@ internal static partial class RuleRegistry
                 "**Suppression** (wenn keine Styles nötig): `@* ainetlinter-disable BlazorRequireCssIsolation *@`"
             ],
             SicherheitsHinweis: null,
-            Intent: "architecture",
+            Intent: RuleIntents.Architecture,
             Severity: "warning",
             AgentHint: "Blazor-Komponenten muessen CSS-Isolation nutzen.",
             HasAutoFix: false,
@@ -434,7 +434,7 @@ internal static partial class RuleRegistry
                 "**EventToCommand-Binding**: Event-Handler durch Command-Bindings ersetzen (MVVM-Infrastruktur des Projekts nutzen)."
             ],
             SicherheitsHinweis: null,
-            Intent: "architecture",
+            Intent: RuleIntents.Architecture,
             Severity: "error",
             AgentHint: "WPF-Code-Behind darf keine Business-Logik enthalten.",
             HasAutoFix: false,

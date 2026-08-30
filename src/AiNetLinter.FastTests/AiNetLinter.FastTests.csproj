@@ -23,6 +23,11 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="AiNetLinter.TestKit" />
+    <Using Include="AiNetLinter.Mcp.Assemblies.Analysis" />
+    <Using Include="AiNetLinter.Mcp.Assemblies.ExternalSource.ProcessExecution" />
+    <Using Include="AiNetLinter.Mcp.Assemblies.ExternalSource.Providers" />
+    <Using Include="AiNetLinter.Mcp.Assemblies.ExternalSource.Repository" />
+    <Using Include="AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots" />
   </ItemGroup>
 
   <ItemGroup>

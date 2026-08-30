@@ -142,7 +142,9 @@ Unaufgelöste Abhängigkeiten werden als `partial` gekennzeichnet.
 
 `rules.json` definiert Regeln und Grenzwerte. Dazu gehören unter anderem
 Komplexitäts- und Strukturmetriken, der AI-Context-Footprint, projekt- und
-pfadspezifische Overrides, Baselines sowie Suppressions. Die Web-Analyse für
+pfadspezifische Overrides, Baselines sowie Suppressions. Die Strukturprüfung
+für Verzeichnisse berücksichtigt dabei organisatorische Ordner wie `tasks` über
+`MaxDirectoryChildrenExemptNames`. Die Web-Analyse für
 CSS, JavaScript und Razor wird über `Web.IsEnabled` aktiviert.
 
 Die vollständige Konfigurationsreferenz enthält alle Regel-IDs, Felder und

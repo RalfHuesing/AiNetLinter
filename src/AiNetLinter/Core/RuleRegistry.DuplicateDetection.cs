@@ -20,7 +20,7 @@ internal static partial class RuleRegistry
                 "**Gezielt unterdruecken**: Falls die Aehnlichkeit beabsichtigt ist (strukturell gleiche, aber fachlich unterschiedliche Methoden) — '// ainetlinter-disable DuplicateCode' statt die Regel global zu deaktivieren."
             ],
             SicherheitsHinweis: null,
-            Intent: "general",
+            Intent: RuleIntents.General,
             Severity: "info",
             AgentHint: "Fast identische Methode gefunden — konsolidieren oder Aehnlichkeit bewusst begruenden.",
             HasAutoFix: false,
