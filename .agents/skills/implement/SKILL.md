@@ -18,6 +18,10 @@ es nur, wenn der Nutzer sie ausdrücklich verlangt.
 
 - Lies `AGENTS.md` und die für die Aufgabe relevanten Dateien unter
   `.agents/rules/`.
+- Lies die task-lokale `code-map.md`, sofern der Orchestrator sie übergibt,
+  vor der eigenen Recherche. Verwende sie als Navigationshilfe und verifiziere
+  jeden relevanten Pfad, jedes Symbol und jede Beziehung gegen den aktuellen
+  Working Tree und die vorgeschriebenen MCP-Abfragen.
 - Lies `.agents/rules/AiNetLinter-McpWorkflow.mdc` vor semantischen Fragen zu
   C# und halte dessen MCP-first-Regel ein. Verwende aktuelle Toolschemas,
   `targetType` und den absoluten `targetPath`; `rg` ergänzt die semantische
@@ -134,8 +138,9 @@ vollständigen aktuellen Arbeitsstand mit seinem ehrlichen Nachweis, damit der
 Orchestrator ihn als Zwischenstand sichern und gezielt reviewen lassen kann.
 
 Ein weiterer Agent erhält keinen künstlichen Step-Archivbestand. Übergib kurz:
-geänderte Dateien und Symbole, getroffene Entscheidungen, ausgeführte
-Prüfungen, offene Risiken und den nächsten sinnvollen Einstiegspunkt. Der
+geänderte Dateien und Symbole, nötige Code-Map-Änderungen, getroffene
+Entscheidungen, ausgeführte Prüfungen, offene Risiken und den nächsten
+sinnvollen Einstiegspunkt. Der
 weitere Agent prüft den tatsächlichen Code und Diff selbst. In einem
 orchestrierten Epic gehören die finalen solutionweiten Gates nicht in den
 einzelnen Implementierer-Hand-off, sondern in den Abschluss des

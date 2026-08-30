@@ -21,6 +21,9 @@ und Review einmal am Ende eines Tasks aufrufen.
 - Lies `AGENTS.md` und die relevanten Dateien unter `.agents/rules/`.
 - Lies `.agents/rules/AiNetLinter-McpWorkflow.mdc` vor jeder semantischen
   C#-Analyse.
+- Lies die task-lokale `code-map.md`, sofern sie übergeben wird, vor dem Audit.
+  Verwende sie als Navigationshilfe, verifiziere sie aber gegen Working Tree
+  und passende MCP-Abfragen und melde veraltete Einträge im Ergebnis.
 - Verwende für `find_duplicates`, `find_dead_code` und `find_magic_values` die
   aktuellen MCP-Toolschemas mit `targetType=project` und dem absoluten
   `targetPath`. `rg` ergänzt nur konkrete Textarbeit und ersetzt die

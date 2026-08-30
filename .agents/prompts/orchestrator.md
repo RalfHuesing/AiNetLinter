@@ -27,6 +27,10 @@ für die Umsetzung, nachdem ein Konzept bei Bedarf separat mit dem
   `tech-debt.md`. Sie ist ein kuratiertes Register für actionable Minor-/P2-/P3-
   Befunde und ihre Dispositionen; auch eine zunächst leere Datei wird vor dem
   ersten Rollenaufruf angelegt und committed.
+- Für jeden orchestrierten Task gibt es außerdem genau eine task-lokale
+  `code-map.md`. Sie ist eine kompakte Navigationshilfe für die betroffenen
+  Dateien, Symbole, Aufrufer, Tests und Dokumentationsbereiche — keine
+  vollständige Repository-Dokumentation.
 - Jeder terminale Rollenbericht wird zusammen mit dem aktuellen auftrags-
   bezogenen Arbeitsstand sofort als Git-Checkpoint gesichert, bevor die nächste
   Rolle oder eine weitere Orchestrator-Aktion beginnt. Das gilt auch bei
@@ -68,9 +72,9 @@ den manuellen Konzept-Task.
    mit `targetType` und absolutem `targetPath`.
 3. Ermittle bei einem Konzept den Taskpfad aus dem vom Nutzer genannten
    Konzept. Im normalen Modus muss der Nutzer ebenfalls ein konkretes
-   Task-Verzeichnis für `roadmap.md`, `execution-log.md` und `tech-debt.md`
-   angegeben haben. Ohne eindeutig ermittelbaren Pfad stoppe vor der
-   Delegation und frage danach; erfinde keinen Ablageort.
+   Task-Verzeichnis für `roadmap.md`, `execution-log.md`, `tech-debt.md` und
+   `code-map.md` angegeben haben. Ohne eindeutig ermittelbaren Pfad stoppe vor
+   der Delegation und frage danach; erfinde keinen Ablageort.
 4. Leite aus Nutzerauftrag und Konzept eine kurze, stabile Primäraufgabe ab
    und halte sie im initialen Roadmap-/Log-Checkpoint fest. Verwende diese
    Bezeichnung für alle Commit-Subjects derselben Ausführung; ersetze sie
@@ -101,6 +105,12 @@ Jeder Rollenauftrag weist den frischen Subagenten ausdrücklich an, den
 MCP-Vorgaben selbstständig einzuhalten. Der Subagent darf sich nicht darauf
 verlassen, dass der Orchestrator Regeln bereits für ihn gelesen oder
 ausgeführt hat.
+
+Jeder Rollenauftrag übergibt außerdem die aktuelle task-lokale `code-map.md`.
+Der Subagent liest sie vor seiner eigenen Recherche und verwendet sie als
+Einstiegspunkt. Die Karte ist niemals eine vertrauenswürdige Source of Truth:
+Pfade, Symbole und Beziehungen werden gegen Working Tree und passende
+MCP-Abfragen verifiziert.
 
 - Jeder Rollenaufruf ist eine frische, unabhängige Subagent-Conversation mit
   neuem Kontext und dem aktuellen Working Tree.
@@ -145,15 +155,20 @@ nicht von den Rollen-Subagenten, gepflegt:
   Dokumentationsstand sowie Roadmap und Log — unabhängig davon, ob der Stand
   bereits reviewed ist oder Findings beziehungsweise fehlgeschlagene Checks
   enthält. Bei einem Reviewer oder Audit ohne Codeänderung werden mindestens
-  die zugehörigen Log-/Roadmap-/Tech-Debt-Änderungen committed.
+  die zugehörigen Log-/Roadmap-/Tech-Debt-/Code-Map-Änderungen committed.
+- Prüfe bei jedem Rollenbericht, ob sich Dateien, Symbole,
+  Aufrufer, Tests oder relevante Dokumentationsbereiche geändert haben. Über-
+  nimm die gemeldeten Änderungen nach kurzer Verifikation in `code-map.md`;
+  entferne veraltete Einträge und halte die Karte vor dem Checkpoint aktuell.
+  Meldet der Agent keine Änderung, wird die Karte nicht künstlich erweitert.
 - Bei einem Resume wird ein `running`-Eintrag ohne Abschluss anhand der
   Task-Liste und des Working Trees als `interrupted` oder `unknown` markiert.
   Der alte eigene Subagent wird beendet/archiviert, bevor ein frischer gestartet
   wird. Das Ereignis und die Entscheidung werden zuerst protokolliert.
-- Lies beim Resume zuerst `roadmap.md` und danach nur die für das aktuelle Epic
-  relevanten beziehungsweise letzten Log-Einträge. Lade nicht den gesamten Log
-  in den Kontext, sofern das nicht für eine konkrete Rekonstruktion notwendig
-  ist.
+- Lies beim Resume zuerst `roadmap.md`, dann `code-map.md` und danach nur die
+  für das aktuelle Epic relevanten beziehungsweise letzten Log-Einträge. Lade
+  nicht den gesamten Log in den Kontext, sofern das nicht für eine konkrete
+  Rekonstruktion notwendig ist.
 
 ## Tech-Debt-Triage
 
@@ -190,6 +205,31 @@ nachträgliche Extraktion aus dem kompletten Log:
 - Beim nächsten Epic werden nur die Roadmap-Zusammenfassung und verknüpfte
   Log-Einträge übergeben. Der gesamte historische Log wird nicht als
   Übergabearchiv an jeden Subagenten kopiert.
+
+## Task-lokale Code-Map
+
+`code-map.md` wird vor dem ersten Rollenaufruf angelegt und gemeinsam mit dem
+Planungs-Checkpoint committed. Sie enthält nur den für den Task relevanten
+Navigationskontext:
+
+- primärer Einstiegspunkt und fachlicher Ablauf;
+- betroffene Produktionsdateien und zentrale Symbole mit direkten Aufrufern
+  beziehungsweise Abhängigkeiten;
+- zugehörige Tests, Konfiguration und Dokumentation;
+- Zuordnung zu Epics sowie bekannte Such- und Prüfstartpunkte.
+
+Erzeuge keine Vollinventur und kopiere keine Agentenberichte in die Karte. Der
+erste Stand darf aus Konzept, Roadmap, `get_file_tree` und gezielten MCP-
+Abfragen abgeleitet werden. Nach jedem Implementierungs- oder Auditbericht
+aktualisiert der Orchestrator nur veränderte oder neu entdeckte Beziehungen.
+Umbenennungen, Verschiebungen und entfallene Symbole werden entfernt. Jeder
+Subagent prüft die Karte gegen den aktuellen Working Tree, identifiziert
+veraltete Hinweise über seine regulären MCP-Abfragen und meldet die nötigen
+Kartenänderungen im Hand-off; der Orchestrator aktualisiert die Karte und der
+Subagent legt keine eigene Task-Artefaktdatei an.
+Fehlt die Karte oder ist sie offensichtlich veraltet, wird sie vor der
+fachlichen Arbeit knapp repariert und nicht als Grund für eine neue
+Planungs-/Review-Schleife verwendet.
 
 ## Wiederverwendung von Verifikationsnachweisen
 
@@ -292,7 +332,8 @@ Arbeite die offenen Epics strikt nacheinander ab:
    teile es bei unabhängigen Teilverträgen einmalig vor dem Start, aber nicht
    in künstliche Detailsteps.
 2. Starte genau einen Implementierer-Subagenten mit dem Nutzerauftrag,
-   `Konzept.md`, der relevanten Roadmap und `.agents/skills/implement/SKILL.md`.
+   `Konzept.md`, der relevanten Roadmap, `code-map.md` und
+   `.agents/skills/implement/SKILL.md`.
    Der Implementierer bearbeitet das gesamte Epic als zusammenhängendes Paket,
    nutzt AiNetLinter-MCP bei C#-Semantik, ergänzt nötige Tests/Dokumentation,
    erstellt einen vollständigen Verifikationsnachweis und committet nicht
@@ -300,7 +341,7 @@ Arbeite die offenen Epics strikt nacheinander ab:
    Orchestrator den Implementierungs-Checkpoint sofort, auch bei Findings oder
    fehlgeschlagenen Prüfungen, bevor der Reviewer startet.
 3. Starte danach genau einen unabhängigen Reviewer-Subagenten mit dem Diff
-   seit dem Baselinepunkt, dem Epic-Kontext und
+   seit dem Baselinepunkt, dem Epic-Kontext, `code-map.md` und
    `.agents/skills/review/SKILL.md` sowie dem Implementiererbericht und dessen
    Verifikationsnachweis. Der Reviewer ändert keinen Code und wiederholt
    erfolgreiche frische Checks nicht ohne konkreten Anlass.
@@ -331,9 +372,11 @@ der Roadmap und der Git-Historie fortgesetzt werden. Ein Resume mit `roadmap.md`
 
 Für einen verständlichen kleinen oder mittleren Auftrag ohne großes Konzept:
 
-1. Starte einen Implementierer mit `.agents/skills/implement/SKILL.md`.
-2. Starte danach einen unabhängigen Reviewer mit `.agents/skills/review/SKILL.md`
-   und dem Implementiererbericht samt Verifikationsnachweis.
+1. Starte einen Implementierer mit `code-map.md` und
+   `.agents/skills/implement/SKILL.md`.
+2. Starte danach einen unabhängigen Reviewer mit `code-map.md`,
+   `.agents/skills/review/SKILL.md` und dem Implementiererbericht samt
+   Verifikationsnachweis.
 3. Bearbeite nur P0/P1-Findings in höchstens zehn Korrekturrunden; P2/P3
    blockieren den Abschluss nicht. Der Zykluswächter kann den Lauf vorher
    stoppen.
@@ -349,8 +392,8 @@ Für einen verständlichen kleinen oder mittleren Auftrag ohne großes Konzept:
 
 Nach erfolgreicher Abarbeitung aller Epics bzw. nach dem Review im normalen
 Aufgabenmodus starte den Skill `.agents/skills/audit/SKILL.md` genau einmal.
-Übergib den aktuellen Diff und im Großkonzept-Modus alle direkt betroffenen
-Produktions- und Testbereiche, aber keinen zufälligen Altbestand.
+Übergib den aktuellen Diff, `code-map.md` und im Großkonzept-Modus alle direkt
+betroffenen Produktions- und Testbereiche, aber keinen zufälligen Altbestand.
 
 Der Audit sucht mit den vorgesehenen MCP-Tools nach DRY, Refactoring-Drift,
 Dead Code und Magic Values und darf sichere, scope-nahe Befunde proaktiv
@@ -397,14 +440,16 @@ Rollen-Subagent committet selbst.
 - Stage ausschließlich die zum Auftrag gehörenden Dateien. Bewahre
   unzusammenhängende Nutzeränderungen und führe keinen Push aus.
 - Committe beim Start einer neuen Ausführung die neu erzeugte `roadmap.md`,
-  `execution-log.md` und `tech-debt.md` einmalig als Planungs-Checkpoint, bevor
-  der erste Implementierer startet. Erstelle danach nach jedem terminalen Rollenbericht
+  `execution-log.md`, `tech-debt.md` und `code-map.md` einmalig als
+  Planungs-Checkpoint, bevor der erste Implementierer startet. Erstelle danach
+  nach jedem terminalen Rollenbericht
   sofort einen Checkpoint-Commit, bevor die nächste Rolle oder eine weitere
   Workflow-Entscheidung beginnt. Implementierer-Checkpoint-Commits enthalten
   den aktuellen auftragsbezogenen Code-, Test- und Dokumentationsstand sowie
-  Roadmap, Log und Tech-Debt-Register — auch bei offenen Findings, roten Checks
-  oder `blocked`. Reviewer-/Audit-Checkpoint-Commits sichern mindestens deren
-  Bericht und den zugehörigen Roadmap-/Log-/Tech-Debt-Stand. Nach `approved`
+  Roadmap, Log, Tech-Debt-Register und aktuelle Code-Map — auch bei offenen
+  Findings, roten Checks oder `blocked`. Reviewer-/Audit-Checkpoint-Commits
+  sichern mindestens deren Bericht und den zugehörigen
+  Roadmap-/Log-/Tech-Debt-/Code-Map-Stand. Nach `approved`
   folgt ein separater Abschluss-Checkpoint; unveränderte Code-Dateien werden
   nicht künstlich dupliziert. Stage dabei nur auftragsbezogene Dateien
   beziehungsweise eindeutige auftragsbezogene Hunks; bei einer unklaren

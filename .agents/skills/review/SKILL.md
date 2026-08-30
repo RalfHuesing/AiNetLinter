@@ -15,6 +15,9 @@ Rundumsweep und erzeugt keine automatische Korrekturschleife.
 ## Kontext und Regeln
 
 - Lies `AGENTS.md` sowie die relevanten Dateien unter `.agents/rules/`.
+- Lies die task-lokale `code-map.md`, sofern sie übergeben wird, vor der
+  eigenen Recherche. Nutze sie als Navigationshilfe, verifiziere ihre Angaben
+  aber gegen den aktuellen Working Tree und passende MCP-Abfragen.
 - Lies `.agents/rules/AiNetLinter-McpWorkflow.mdc` vor semantischen C#-
   Abfragen. Verwende für Symbole, Referenzen, Impact und Violations zuerst
   das passende AiNetLinter-MCP-Tool mit aktuellem Schema,
@@ -73,7 +76,9 @@ enthaltenen Nachweis gegen den aktuellen Diff:
 
 Nutze für jeden Befund konkrete Datei-/Zeilenangaben, reproduzierbare
 Begründung und eine klare Korrekturempfehlung. Trenne echte Fehlfunktion von
-nicht bewiesener zusätzlicher Absicherung.
+nicht bewiesener zusätzlicher Absicherung. Melde veraltete oder fehlende
+Code-Map-Einträge im Ergebnis und nenne die nötige Aktualisierung; lege die
+Karte nicht selbst als Task-Artefakt an.
 
 ## Priorisierung
 
