@@ -1,5 +1,5 @@
 ---
-status: draft
+status: ready
 type: konzept
 project_kind: brownfield
 estimated_scope: medium
@@ -24,7 +24,7 @@ Dieses Konzept ersetzt deshalb den verpflichtenden Scout durch einen MCP-first-W
 
 Damit wird nicht die Kontextarbeit abgeschafft, sondern ihr Ort und ihre Ausführung verändert: vom separaten Recherche-Agenten in einen verifizierbaren, adaptiven Arbeitsablauf des Agents, der die Änderung letztlich verantwortet.
 
-## Architekturentscheidung im Draft
+## Architekturentscheidung
 
 Der verpflichtende Scout-zu-Implementierer-Handoff wird verworfen. Der Standardpfad ist ein einzelner Implementierer mit einer festen Phasenfolge und abgestufter Kontextaufnahme innerhalb der MCP-Phase:
 
@@ -215,9 +215,9 @@ Wesentliche Risiken und Gegenmaßnahmen:
 - **Kaskadierende Agentenfehler:** ein verantwortlicher Implementierer und überprüfbare Übergabepunkte.
 - **Unnötige Aktion bei Diagnose/No-op:** explizite Skip-Entscheidung.
 
-## Geplante Verifikation des Konzepts
+## Geplante Verifikation des Workflows
 
-Vor einer Freigabe als `ready` soll der Workflow an repräsentativen Fällen geprüft werden:
+Bei der Umsetzung und Abnahme soll der Workflow an repräsentativen Fällen geprüft werden:
 
 1. **Einfache lokale Änderung:** keine Scout-Rolle, dieselbe minimale `code-map.md`, begrenzte Toolkette.
 2. **Bekannte C#-Struktur:** `get_feature_context` liefert die Startbasis; nur echte Lücken lösen Folgeabfragen aus.
@@ -252,13 +252,3 @@ Keine fachlich blockierenden Punkte. Detailentscheidungen zur konkreten Ausgesta
 - `code-map.md` als autoritative Quelle,
 - Erfolgsmessung nur über einen externen Benchmark,
 - Bearbeitung fremder Working-Tree-Änderungen durch Reset oder Überschreiben.
-
-## Arbeitsgedächtnis
-
-- Die fachliche Zielrichtung wurde geändert: Nicht „Scout verbessern“, sondern den gesamten Kontextworkflow MCP-first und adaptiv machen.
-- Der Nutzer hat bestätigt, dass der Implementierer anhand sichtbarer Evidenz selbst entscheidet, wann der Kontext ausreicht; es gibt keine starre Toolsequenz.
-- Der AiNetLinter-MCP bietet bereits einen passenden Einstieg: `get_feature_context` bündelt Deklaration, Metriken, Aufrufer, statische Tests und Violations.
-- Eine lokale Probe mit `AiNetLinter.Mcp.AnalysisToolCall` bestätigte diese fünf strukturierten Dimensionen; die begrenzte Aufruferausgabe wurde als Trunkierung sichtbar.
-- Bestehende Orchestrator-/Implementierer-Regeln unterstützen bereits MCP-first-Prüfung, Fallbacks und eine task-lokale `code-map.md`; das Konzept verschiebt sie von Scout-Handoff zu einem konstanten, kleinen Arbeitsgedächtnis ohne Aktivierungszweig.
-- Die Forschung rechtfertigt fokussierte Exploration und strukturiertes Kontextmanagement, aber nicht die pauschale Einführung eines zweiten Recherche-Agenten.
-- Der Draft bleibt bis zur expliziten Freigabe `status: draft`; erst danach darf ein Implementierungs-/Orchestrator-Task gestartet werden.
