@@ -57,6 +57,22 @@ Bericht festgehalten.
   einen Race-Test ergänzen.
 - Log-Anker: `execution-log.md` — Epic-3-Korrekturrunde-1-Review
 
+## TD-007 — Assembly-Analyse-Footprint weiter aufteilen
+
+- Schweregrad: P2
+- Scope: `AssemblyAnalysisRegistry`, `AssemblyAnalysisToolSupport`
+- Evidenz: Der Korrekturrunden-2-Implementierer meldet im letzten gezielten
+  Safeguard-/MCP-Nachweis weiterhin zentrale `AIContextFootprint`-Warnungen
+  für diese beiden Verantwortungsbereiche. Ein Split wäre ein separates
+  Refactoring und ist für die beiden behobenen P1-Ursachen nicht erforderlich.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: in einem eigenständigen Verantwortlichkeits-Refactoring
+  prüfen, ob Registry-, Route- und Tool-Support-Kontext ohne Vertragsdrift
+  weiter zerlegt werden können; dabei Safeguard und get_violations erneut
+  bewerten.
+- Log-Anker: `execution-log.md` — Epic-3-Korrekturrunde-2-Implementierer
+  abgeschlossen
+
 ## TD-005 — Source-Ressourcen vor Materialisierung budgetieren
 
 - Schweregrad: P2

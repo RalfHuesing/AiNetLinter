@@ -568,3 +568,106 @@ fehlende, veraltete, scope-fremde oder fachlich widerlegte Prüfungen.
   Anlass für einen vorsorglichen globalen Cleanup; maßgeblich sind die
   konkrete Grenze, die betroffene fachliche Einheit und der aktuelle Task-
   Scope.
+
+## 2026-08-30 — Epic 3 Korrekturrunde 2 Implementierer abgeschlossen
+
+- Run-ID: `resume-2026-08-30-epic-3-correction-2`
+- Epic: 3 — Transitive Assembly-Referenzen und getrennte externe Ressourcen
+- Rolle: Implementierer
+- Subagent-ID: `01a05398-072b-76e3-9e3e-969a0f3f56cd`
+- Diff-Baseline: `46e76037`
+- Status: `completed`, kein Commit durch den Implementierer.
+- Vollständiger Implementiererbericht:
+
+  Korrekturrunde 2 für Epic 3 ist gegen Baseline `46e76037` implementiert und
+  bereit für unabhängige Review. Kein Commit erstellt.
+
+  Fachliche Wirkung:
+
+  - Der produktive `AssemblyAnalysisDispatcher` expandiert Referenzen jetzt
+    vor dem Tool-Aufruf.
+  - Transitive Sessions besitzen eigene Consumer-Leases, Deduplizierung sowie
+    Tiefen-/Knotenlimits (`8`/`128`).
+  - Missing-, Cycle-, Depth-, Node-Limit- und Partial-Zustände werden in
+    Payload und Text sichtbar.
+  - Source-backed `ProjectReferences` werden über die gemappte
+    Snapshot-Solution aufgelöst, unabhängig vom DLL-Nachbarverzeichnis.
+  - Source-Project-Kinder erhalten eigene Snapshot- und Resource-Leases.
+  - `SourceSnapshotRegistry` rollt bei fehlgeschlagenem Duplicate-Dispose
+    sowohl den Resource-Lease als auch den Resident-Lease zurück;
+    Phantom-Leases bleiben nicht bestehen.
+  - Bestehende Budgets, Health, TTL/LRU, CreationBarrier, Cancellation,
+    Dispose und aktive Leases wurden erhalten.
+
+  Geänderte Produktionsbereiche:
+
+  - `src/AiNetLinter/Mcp/AnalysisToolCall.cs`
+  - `src/AiNetLinter/Mcp/AnalysisTarget.cs`
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisRegistry.cs`
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisRegistry.SourceProjects.cs`
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisEntry.cs`
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisSessionModels.cs`
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs`
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyReferenceResolver.cs`
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySourceSelection.cs`
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/IAssemblyAnalysisRegistry.cs`
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/References/AssemblyAnalysisLease.cs`
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/References/AssemblyReferenceSessionExpander.cs`
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/References/SourceProjectReferenceGraph.cs`
+  - `src/AiNetLinter/Mcp/Assemblies/ExternalSource/Snapshots/SourceSnapshotRegistry.cs`
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs`
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisModels.cs`
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/InspectAssemblyTool.cs`
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/FindAssemblyExtensionsTool.cs`
+
+  Geänderte Tests/Fixtures:
+
+  - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRouteTests.cs`
+  - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRegistryTests.cs`
+  - `src/AiNetLinter.FastTests/Mcp/Assemblies/SourceSnapshotRegistryTests.cs`
+  - `src/AiNetLinter.FastTests/Fixtures/ExternalSourceSnapshotTestFactory.cs`
+
+  Die task-lokale `code-map.md` wurde mit Dateien, Symbolen, Aufrufern,
+  Tests und der MCP-Schemaabweichung aktualisiert. `roadmap.md`,
+  `execution-log.md` und `tech-debt.md` blieben durch den Implementierer
+  unverändert. Fremde Working-Tree-Änderungen wurden erhalten.
+
+  Verifikation:
+
+  - `dotnet build --no-restore`: erfolgreich, `0` Warnungen, `0` Fehler.
+  - Fokussierter Testlauf über Dispatcher/Tool, Source-Project-Auflösung und
+    Snapshot-Rollback: `40/40` bestanden.
+  - `git diff --check`: keine Whitespace-Fehler; lediglich erwartete
+    CRLF-Hinweise.
+  - MCP-Qualitätsprüfung: keine Duplikat-Cluster, keine Dead-Code-Befunde;
+    eigener neuer Magic-Value-Befund bereinigt, verbleibender
+    Localization-Befund außerhalb des Scopes.
+  - Letzter codebezogener MCP-Schritt nach der letzten Codeänderung:
+    `get_violations`. Tatsächliches Schema: absolutes `projectRoot`, da die
+    Installation `targetType`/`targetPath` nicht akzeptiert. Produktionsscope
+    `projectRoot=C:\Daten\Entwicklung\Ralf\AiNetLinter`,
+    `scopeFilter=src/AiNetLinter/Mcp/Assemblies/Analysis`: eine bestehende
+    zentrale `AIContextFootprint`-Warnung bei `AssemblyAnalysisRegistry`.
+    Testscope `scopeFilter=src/AiNetLinter.FastTests/Mcp/Assemblies`: `0`
+    Violations.
+
+  Keine Ziel-/Decompilation-Assemblies wurden ausgeführt; die Tests
+  verwendeten nur erzeugte Testartefakte und den produktiven Analysepfad.
+
+  Risiken/Deferred:
+
+  - Der Safeguard meldet weiterhin den zentralen
+    `AssemblyAnalysisRegistry`-Footprint sowie den älteren
+    `AssemblyAnalysisToolSupport`-Footprint. Ein weiterer
+    Verantwortlichkeitssplit wäre ein separates Refactoring und nicht für
+    diese beiden P1-Ursachen erforderlich.
+  - Die Expansion ist bewusst begrenzt und kann bei großen oder zyklischen
+    Graphen `partial` liefern.
+
+  Commit-Vorschlag des Implementierers (vom Orchestrator anzupassen):
+  `fix(decompiled-assembly-analysis-finish): transitive Assembly-Sessions
+  und Snapshot-Lease-Rollback korrigieren`
+
+- Nächste Aktion: aktuellen auftragsbezogenen Code-, Test-, Log- und
+  Code-Map-Stand als Orchestrator-Checkpoint committen und danach einen
+  frischen unabhängigen Reviewer starten.

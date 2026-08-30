@@ -3,6 +3,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 

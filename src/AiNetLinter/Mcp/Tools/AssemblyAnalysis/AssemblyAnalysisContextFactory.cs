@@ -69,6 +69,69 @@ internal static class AssemblyAnalysisContextFactory
             generation.Number,
             generation.Status);
 
+    internal static async Task<(AssemblyContext? Context, string? Error)> CreateSourceProjectContextAsync(
+        string targetPath,
+        Project project,
+        AssemblySourceSelection selection,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetPath);
+        ArgumentNullException.ThrowIfNull(project);
+        ArgumentNullException.ThrowIfNull(selection);
+
+        if (!IsSourceSelectionUsable(selection))
+        {
+            return (null, "Die Source-Project-Selection ist nicht mehr verfügbar.");
+        }
+
+        Compilation? compilation;
+        try
+        {
+            compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or ArgumentException or NotSupportedException)
+        {
+            return (null, $"Source-Project-Compilation '{project.Name}' konnte nicht geladen werden: {ex.Message}");
+        }
+
+        if (compilation?.Assembly is null)
+        {
+            return (null, $"Source-Project-Compilation '{project.Name}' ist nicht verfügbar.");
+        }
+
+        var sourceReferences = new AssemblyReferenceResolver().ResolveSourceProjectReferences(
+            project,
+            selection.SourceLease.Snapshot.Solution,
+            Array.Empty<AssemblyReferenceDto>());
+        var diagnostics = sourceReferences.Diagnostics
+            .Select(diagnostic => diagnostic.Message)
+            .ToList();
+        var status = diagnostics.Count == 0
+            ? AssemblySessionStatus.Complete
+            : AssemblySessionStatus.Partial;
+        var assemblyName = project.AssemblyName ?? project.Name;
+        var origin = new AssemblyOrigin(
+            "source-backed",
+            targetPath,
+            $"source:{selection.SourceLease.Snapshot.Identity.StableValue}:{project.Id}",
+            string.Empty,
+            "high",
+            selection.SourceLease.Snapshot.Identity,
+            project.FilePath,
+            "verified-clean");
+        return (new AssemblyContext(
+            compilation.Assembly,
+            new AssemblyIdentityDto(assemblyName, "0.0.0.0", "neutral", string.Empty),
+            sourceReferences.References,
+            DistinctDiagnostics(diagnostics),
+            compilation,
+            null,
+            null,
+            origin,
+            0,
+            status), null);
+    }
+
     private static async Task<AssemblyContext?> TryCreateSourceBackedContextAsync(
         AssemblyAnalysisContextRequest request)
     {
@@ -80,13 +143,19 @@ internal static class AssemblyAnalysisContextFactory
             return null;
         }
 
-        var references = new AssemblyReferenceResolver().Resolve(fingerprint!.CanonicalPath);
-        if (references.Identity is null) return null;
-
         var snapshot = selection!.SourceLease.Snapshot;
         var candidate = selection.MatchResult.MatchedCandidate!;
         var project = snapshot.Solution.GetProject(candidate.ProjectId);
         if (project is null) return null;
+
+        var resolver = new AssemblyReferenceResolver();
+        var references = resolver.Resolve(fingerprint!.CanonicalPath);
+        if (references.Identity is null) return null;
+        var sourceReferences = resolver.ResolveSourceProjectReferences(
+            project,
+            snapshot.Solution,
+            references.References);
+        var effectiveReferences = MergeReferences(references.References, sourceReferences);
 
         Compilation? compilation;
         try
@@ -100,10 +169,8 @@ internal static class AssemblyAnalysisContextFactory
 
         if (compilation is null || compilation.Assembly is null) return null;
 
-        var diagnostics = references.Diagnostics
-            .Select(diagnostic => diagnostic.Message)
-            .ToList();
-        var status = references.Diagnostics.Count == 0
+        var diagnostics = MergeDiagnostics(references.Diagnostics, sourceReferences);
+        var status = diagnostics.Count == 0
             ? AssemblySessionStatus.Complete
             : AssemblySessionStatus.Partial;
         var origin = new AssemblyOrigin(
@@ -118,7 +185,7 @@ internal static class AssemblyAnalysisContextFactory
         return new AssemblyContext(
             compilation.Assembly,
             references.Identity,
-            references.References,
+            effectiveReferences,
             DistinctDiagnostics(diagnostics),
             compilation,
             null,
@@ -127,6 +194,24 @@ internal static class AssemblyAnalysisContextFactory
             0,
             status);
     }
+
+    private static IReadOnlyList<AssemblyReferenceDto> MergeReferences(
+        IReadOnlyList<AssemblyReferenceDto> assemblyReferences,
+        SourceProjectReferenceResolution sourceReferences) =>
+        assemblyReferences
+            .Where(reference => !sourceReferences.AssemblyNames.Contains(reference.Name))
+            .Concat(sourceReferences.References)
+            .ToList();
+
+    private static IReadOnlyList<string> MergeDiagnostics(
+        IReadOnlyList<AssemblySessionDiagnostic> assemblyDiagnostics,
+        SourceProjectReferenceResolution sourceReferences) =>
+        assemblyDiagnostics
+            .Where(diagnostic => !sourceReferences.AssemblyNames.Any(name =>
+                diagnostic.Message.Contains(name, StringComparison.OrdinalIgnoreCase)))
+            .Select(diagnostic => diagnostic.Message)
+            .Concat(sourceReferences.Diagnostics.Select(diagnostic => diagnostic.Message))
+            .ToList();
 
     private static bool IsSourceSelectionUsable(AssemblySourceSelection? selection)
     {

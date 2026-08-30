@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Immutable;
 using System.Threading;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 using Microsoft.CodeAnalysis;
@@ -32,6 +33,37 @@ internal sealed record AssemblySourceSelection
     internal ExternalSourceCheckoutTrust CheckoutTrust { get; }
 
     internal bool IsAttested { get; }
+
+    internal AssemblySourceSelection? ForProject(
+        SourceSnapshotLease projectLease,
+        Project project)
+    {
+        ArgumentNullException.ThrowIfNull(projectLease);
+        ArgumentNullException.ThrowIfNull(project);
+
+        var assemblyName = project.AssemblyName ?? project.Name;
+        var candidate = new ExternalSourceMatchCandidate(
+            project.Id,
+            project.Name,
+            assemblyName,
+            project.FilePath);
+        var match = new ExternalSourceMatchResult
+        {
+            State = ExternalSourceMatchState.Matched,
+            Confidence = ExternalSourceMatchConfidence.High,
+            RequestedAssemblyAlias = assemblyName,
+            SourceSnapshotIdentity = projectLease.Snapshot.Identity,
+            MatchedCandidate = candidate,
+            Candidates = ImmutableArray.Create(candidate),
+            Evidence = MatchResult.Evidence.Add("project-reference-matched")
+        };
+        return Create(new AssemblySourceSelectionParameters(
+            projectLease,
+            match,
+            ProviderHealth,
+            CheckoutTrust,
+            IsAttested));
+    }
 
     internal static AssemblySourceSelection? Create(AssemblySourceSelectionParameters parameters)
     {

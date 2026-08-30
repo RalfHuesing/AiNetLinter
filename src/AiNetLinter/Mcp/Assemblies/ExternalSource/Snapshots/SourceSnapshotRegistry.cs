@@ -128,9 +128,14 @@ internal sealed class SourceSnapshotRegistry : IDisposable
         AcquireResolution resolution,
         List<Exception> failures)
     {
-        resolution.ConsumerLease?.Dispose();
+        AddDisposeFailure(failures, resolution.ConsumerLease);
         if (!resolution.IsNewEntry || resolution.Entry is null)
         {
+            if (resolution.Entry is not null)
+            {
+                ReleaseResidentLease(resolution.Entry);
+            }
+
             return;
         }
 
@@ -145,6 +150,19 @@ internal sealed class SourceSnapshotRegistry : IDisposable
 
         resources.Remove(resolution.Entry.ResourceIdentity);
         AddDisposeFailure(failures, resolution.Entry.Snapshot);
+    }
+
+    private void ReleaseResidentLease(SourceSnapshotEntry entry)
+    {
+        lock (gate)
+        {
+            if (snapshots.TryGetValue(entry.ResourceIdentity, out var resident)
+                && ReferenceEquals(resident, entry)
+                && resident.LeaseCount > 0)
+            {
+                resident.LeaseCount--;
+            }
+        }
     }
 
     private sealed record AcquireResolution(
@@ -338,6 +356,8 @@ internal sealed class SourceSnapshotLease : IDisposable
     internal ExternalSourceSnapshot Snapshot => snapshot;
 
     internal bool IsDisposed => Volatile.Read(ref disposed) != 0;
+
+    internal SourceSnapshotLease AcquireSibling() => registry.Acquire(snapshot);
 
     public void Dispose()
     {

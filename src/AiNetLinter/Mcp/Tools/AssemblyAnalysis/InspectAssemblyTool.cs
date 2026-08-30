@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies;
@@ -28,7 +29,7 @@ internal static class InspectAssemblyTool
     internal static Task<CallToolResult> ExecuteAsync(
         AssemblyAnalysisLease lease,
         InspectAssemblyArguments arguments) =>
-        Task.FromResult(BuildResult(lease.CanonicalPath, lease.Context, arguments, AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, 1, AssemblyAnalysisService.MaxResults)));
+        Task.FromResult(BuildResult(lease.CanonicalPath, lease.Context, arguments, AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, 1, AssemblyAnalysisService.MaxResults), lease));
 
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer? state,
@@ -57,7 +58,8 @@ internal static class InspectAssemblyTool
         string fullPath,
         AssemblyContext context,
         InspectAssemblyArguments arguments,
-        int maxResults)
+        int maxResults,
+        AssemblyAnalysisLease? lease = null)
     {
         var selection = AssemblyAnalysisService.Inspect(
             context,
@@ -70,7 +72,12 @@ internal static class InspectAssemblyTool
                 arguments.MemberNames,
                 maxResults,
                 AssemblyAnalysisService.NormalizeLimit(arguments.MaxMembers, AssemblyAnalysisService.DefaultMaxMembers, AssemblyAnalysisService.MaxMembers)));
-        var completeness = context.Diagnostics.Count == 0
+        var diagnostics = context.Diagnostics
+            .Concat(lease?.ReferenceExpansionDiagnostics ?? Array.Empty<string>())
+            .Distinct(StringComparer.Ordinal)
+            .Take(100)
+            .ToList();
+        var completeness = diagnostics.Count == 0
             ? context.Status.ToCompletenessLabel()
             : AssemblySessionStatus.Partial.ToCompletenessLabel();
         var payload = new InspectAssemblyPayload(
@@ -79,13 +86,14 @@ internal static class InspectAssemblyTool
             selection.Namespaces,
             context.References,
             selection.Items,
-            context.Diagnostics,
+            diagnostics,
             completeness,
             selection.Truncated,
             selection.Total,
             context.Origin,
             context.Generation,
-            context.Status.ToString().ToLowerInvariant());
+            context.Status.ToString().ToLowerInvariant(),
+            CreateReferenceSessions(lease));
         return McpToolResults.Text(FormatText(payload, arguments.PublicOnly), payload);
     }
 
@@ -95,6 +103,7 @@ internal static class InspectAssemblyTool
         AppendHeader(builder, payload);
         AppendNamespaces(builder, payload.Namespaces, publicOnly);
         AppendReferences(builder, payload.References);
+        AppendReferenceSessions(builder, payload.ReferenceSessions ?? Array.Empty<AssemblyReferenceSessionDto>());
         AppendTypes(builder, payload, publicOnly);
         AppendDiagnostics(builder, payload.Diagnostics);
 
@@ -134,6 +143,44 @@ internal static class InspectAssemblyTool
         }
 
         builder.AppendLine();
+    }
+
+    private static void AppendReferenceSessions(
+        StringBuilder builder,
+        IReadOnlyList<AssemblyReferenceSessionDto> sessions)
+    {
+        builder.AppendLine($"Referenz-Sessions: {sessions.Count}");
+        foreach (var session in sessions)
+        {
+            var identity = session.Identity?.Name ?? session.Reference.Name;
+            var diagnostic = session.Diagnostics.Count == 0
+                ? string.Empty
+                : $": {string.Join(" ", session.Diagnostics)}";
+            builder.AppendLine(
+                $"- {identity} (Tiefe {session.Reference.Depth}, Zustand {session.Reference.ResolutionState}, Session {session.SessionStatus}, Vollständigkeit {session.Completeness}, Pfad `{session.AssemblyPath}`{diagnostic})");
+        }
+
+        builder.AppendLine();
+    }
+
+    private static IReadOnlyList<AssemblyReferenceSessionDto> CreateReferenceSessions(
+        AssemblyAnalysisLease? lease)
+    {
+        if (lease is null || lease.ReferenceSessions.Count == 0)
+        {
+            return Array.Empty<AssemblyReferenceSessionDto>();
+        }
+
+        return lease.ReferenceSessions
+            .Select(session => new AssemblyReferenceSessionDto(
+                session.Reference,
+                session.AssemblyPath,
+                session.Identity,
+                session.Diagnostics,
+                session.Completeness,
+                session.Origin,
+                session.SessionStatus))
+            .ToList();
     }
 
     private static void AppendTypes(StringBuilder builder, InspectAssemblyPayload payload, bool publicOnly)

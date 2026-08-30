@@ -63,7 +63,17 @@ internal sealed record AssemblyReferenceDto(
     string? ResolvedPath = null,
     string ResolutionState = "resolved",
     int Depth = 1,
-    string? Diagnostic = null);
+    string? Diagnostic = null,
+    string? SourceProjectPath = null);
+
+internal sealed record AssemblyReferenceSessionDto(
+    AssemblyReferenceDto Reference,
+    string AssemblyPath,
+    AssemblyIdentityDto? Identity,
+    IReadOnlyList<string> Diagnostics,
+    string Completeness,
+    AssemblyOrigin? Origin = null,
+    string SessionStatus = "complete");
 
 internal sealed record AssemblyMemberDto(
     string Kind,
@@ -117,7 +127,8 @@ internal sealed record InspectAssemblyPayload(
     int TotalTypes,
     AssemblyOrigin? Origin = null,
     long Generation = 0,
-    string SessionStatus = "complete");
+    string SessionStatus = "complete",
+    IReadOnlyList<AssemblyReferenceSessionDto>? ReferenceSessions = null);
 
 internal sealed record FindAssemblyExtensionsPayload(
     string AssemblyPath,

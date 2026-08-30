@@ -42,6 +42,36 @@ public sealed class SourceSnapshotRegistryTests
     }
 
     [Fact]
+    public void Acquire_FailedDuplicateDisposeRollsBackResidentSnapshotLease()
+    {
+        var mapping = new ExternalSourceMapping(
+            "https://gitea.example/shared.git",
+            "src/Shared.slnx",
+            ["Shared"]);
+        var duplicateMapping = new ExternalSourceMapping(
+            "HTTPS://GITEA.EXAMPLE/shared.git",
+            mapping.SolutionPath,
+            mapping.Assemblies);
+        using var residentSnapshot = CreateSnapshot(mapping, "revision-1");
+        var duplicateOwner = new TrackingCheckoutOwner("duplicate", [], throws: true);
+        var duplicateSnapshot = CreateSnapshot(duplicateMapping, "revision-1", duplicateOwner);
+        var registry = new SourceSnapshotRegistry();
+
+        var residentLease = registry.Acquire(residentSnapshot);
+
+        var failure = Assert.Throws<InvalidOperationException>(() => registry.Acquire(duplicateSnapshot));
+
+        Assert.Equal("duplicate", failure.Message);
+        Assert.True(duplicateSnapshot.IsDisposed);
+        Assert.Equal(1, registry.ResidentCount);
+        residentLease.Dispose();
+        registry.Dispose();
+
+        Assert.True(residentSnapshot.IsDisposed);
+        Assert.Equal(1, duplicateOwner.DisposeCount);
+    }
+
+    [Fact]
     public void Acquire_SeparatesRevisionAndSolutionPath()
     {
         var mapping = new ExternalSourceMapping(

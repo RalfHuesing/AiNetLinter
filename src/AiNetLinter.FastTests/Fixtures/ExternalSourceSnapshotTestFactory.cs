@@ -1,6 +1,8 @@
 #nullable enable
 
 using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.TestKit;
@@ -9,7 +11,11 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace AiNetLinter.FastTests.Fixtures;
 
-internal sealed record ExternalSourceProjectSpec(string Name, string AssemblyName, string Source);
+internal sealed record ExternalSourceProjectSpec(
+    string Name,
+    string AssemblyName,
+    string Source,
+    IReadOnlyList<string>? ProjectReferences = null);
 
 internal static class ExternalSourceSnapshotTestFactory
 {
@@ -34,9 +40,10 @@ internal static class ExternalSourceSnapshotTestFactory
             filePath: solutionPath));
         var solutionDirectory = Path.GetDirectoryName(solutionPath)!;
 
+        var projectIds = projectSpecs.ToDictionary(spec => spec.Name, spec => ProjectId.CreateNewId(spec.Name));
         foreach (var spec in projectSpecs)
         {
-            var projectId = ProjectId.CreateNewId(spec.Name);
+            var projectId = projectIds[spec.Name];
             var projectDirectory = Path.Combine(solutionDirectory, spec.Name);
             var projectPath = Path.Combine(projectDirectory, spec.Name + ".csproj");
             var projectInfo = ProjectInfo.Create(
@@ -56,6 +63,18 @@ internal static class ExternalSourceSnapshotTestFactory
                 "Source.cs",
                 spec.Source,
                 filePath: Path.Combine(projectDirectory, "Source.cs"));
+        }
+
+        foreach (var spec in projectSpecs)
+        {
+            if (spec.ProjectReferences is null) continue;
+            var projectId = projectIds[spec.Name];
+            foreach (var referencedName in spec.ProjectReferences)
+            {
+                solution = solution.AddProjectReference(
+                    projectId,
+                    new ProjectReference(projectIds[referencedName]));
+            }
         }
 
         return new ExternalSourceSnapshot(

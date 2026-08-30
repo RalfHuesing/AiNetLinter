@@ -7,8 +7,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Output;
+using Microsoft.CodeAnalysis;
 using Serilog;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
@@ -18,7 +20,7 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 /// Target-Key; parallele Erstzugriffe teilen die Creation-Task und erhalten
 /// anschliessend eigene, read-only Leases auf denselben Roslyn-Snapshot.
 /// </summary>
-internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
+internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
 {
     internal const int MaxFingerprintRetries = 3;
 
@@ -158,7 +160,7 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
         }
     }
 
-    private async Task<RegistryLeaseAttempt> TryLeaseCurrentAsync(
+    private async Task<(AssemblyAnalysisLeaseResult? Result, bool Retry)> TryLeaseCurrentAsync(
         string canonicalPath,
         AssemblyFingerprint fingerprint,
         CancellationToken cancellationToken,
@@ -167,7 +169,7 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
         var creation = GetOrCreateEntry(canonicalPath);
         if (creation is null)
         {
-            return new(Failure("Die Assembly-Registry wurde bereits beendet."), false);
+            return (Failure("Die Assembly-Registry wurde bereits beendet."), false);
         }
 
         AssemblyAnalysisEntry entry;
@@ -182,12 +184,12 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
         catch (OperationCanceledException)
         {
             RemoveFailedEntry(canonicalPath, creation);
-            return new(Failure("Die Assembly-Session wurde während des Aufbaus abgebrochen."), false);
+            return (Failure("Die Assembly-Session wurde während des Aufbaus abgebrochen."), false);
         }
         catch (Exception exception)
         {
             RemoveFailedEntry(canonicalPath, creation);
-            return new(Failure($"Assembly-Session konnte nicht aufgebaut werden: {exception.Message}"), false);
+            return (Failure($"Assembly-Session konnte nicht aufgebaut werden: {exception.Message}"), false);
         }
 
         lock (gate)
@@ -195,35 +197,51 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
             if (!entries.TryGetValue(canonicalPath, out var current)
                 || !ReferenceEquals(current, creation))
             {
-                return new(null, true);
+                return (null, true);
             }
 
             if (!entry.Matches(fingerprint))
             {
                 if (!refreshOnMismatch)
                 {
-                    return new(null, true);
+                    return (null, true);
                 }
 
                 var refreshed = CreateEntry(canonicalPath);
                 entries[canonicalPath] = refreshed;
                 retiredEntries.Add(RetireEntryAsync(creation));
-                return new(null, true);
+                return (null, true);
             }
 
-            return entry.TryAcquireLease(LeaseReferencedAsync, out var lease)
-                ? new(new(lease, null), false)
-                : new(Failure("Die Assembly-Session wird bereits beendet."), false);
+            return entry.TryAcquireLease(out var lease)
+                ? (new(lease, null), false)
+                : (Failure("Die Assembly-Session wird bereits beendet."), false);
         }
     }
 
     private Task<AssemblyAnalysisLeaseResult> LeaseReferencedAsync(
+        AssemblySourceSelection? sourceSelection,
         AssemblyReferenceDto reference,
         CancellationToken cancellationToken)
     {
-        var path = reference.ResolvedPath!;
-        return LeaseAsync(path, cancellationToken);
+        if (reference.ResolutionState == "source_project")
+        {
+            return LeaseSourceProjectAsync(sourceSelection, reference, cancellationToken);
+        }
+
+        if (string.IsNullOrWhiteSpace(reference.ResolvedPath))
+        {
+            return Task.FromResult(Failure(
+                $"Die Referenz '{reference.Name}' besitzt keinen auflösbaren Assembly-Pfad.",
+                isError: false));
+        }
+
+        return LeaseAsync(reference.ResolvedPath, cancellationToken);
     }
+
+    private AssemblyReferenceLeaseFactory CreateReferenceLeaseFactory(AssemblySourceSelection? sourceSelection) =>
+        (reference, cancellationToken) =>
+            LeaseReferencedAsync(sourceSelection, reference, cancellationToken);
 
     private AssemblyAnalysisRegistryEntryCreation? GetOrCreateEntry(string canonicalPath)
     {
@@ -303,7 +321,8 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
                 sessionGeneration.Snapshot.Solution,
                 context,
                 session,
-                resourceLease));
+                resourceLease,
+                CreateReferenceLeaseFactory(sourceAttempt.Selection)));
             resourceTransferred = true;
             session = null;
             return fallbackEntry;
@@ -363,17 +382,17 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
         }
     }
 
-    private async Task<SourceEntryAttempt> TryCreateSourceEntryAsync(
+    private async Task<(AssemblyAnalysisEntry? Entry, IDisposable? Scope, IReadOnlyList<string> Diagnostics, AssemblySourceSelection? Selection)> TryCreateSourceEntryAsync(
         string canonicalPath,
         long generation,
         CancellationToken creationToken,
         ExternalResourceLease? resourceLease)
     {
-        if (sourceOrchestrator is null) return SourceEntryAttempt.None;
+        if (sourceOrchestrator is null) return (null, null, Array.Empty<string>(), null);
 
         var resolution = await sourceOrchestrator.ResolveForRegistryAsync(canonicalPath, creationToken).ConfigureAwait(false);
         var diagnostics = AssemblyAnalysisToolSupport.FormatExternalDiagnostics(resolution.Diagnostics).ToArray();
-        if (resolution.Selection is null) return new(null, resolution.Lifetime, diagnostics);
+        if (resolution.Selection is null) return (null, resolution.Lifetime, diagnostics, null);
 
         try
         {
@@ -384,7 +403,7 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
                     ReceiverType: null,
                     resolution.Selection,
                     creationToken)).ConfigureAwait(false);
-            if (sourceResult.Context is null) return new(null, resolution.Lifetime, diagnostics);
+            if (sourceResult.Context is null) return (null, resolution.Lifetime, diagnostics, null);
 
             var context = sourceResult.Context with
             {
@@ -400,8 +419,9 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
                 resolution.Selection.SourceLease.Snapshot.Solution,
                 context,
                 resolution.Lifetime,
-                resourceLease));
-            return new(entry, null, diagnostics);
+                resourceLease,
+                CreateReferenceLeaseFactory(resolution.Selection)));
+            return (entry, null, diagnostics, resolution.Selection);
         }
         catch
         {
@@ -451,18 +471,6 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
         IReadOnlyList<string> context,
         IReadOnlyList<string> source) =>
         context.Concat(source).Distinct(StringComparer.Ordinal).Take(100).ToList();
-
-    private sealed record SourceEntryAttempt(
-        AssemblyAnalysisEntry? Entry,
-        IDisposable? Scope,
-        IReadOnlyList<string> Diagnostics)
-    {
-        internal static SourceEntryAttempt None { get; } = new(null, null, Array.Empty<string>());
-    }
-
-    private sealed record RegistryLeaseAttempt(
-        AssemblyAnalysisLeaseResult? Result,
-        bool Retry);
 
     private static AssemblyAnalysisLeaseResult Failure(string message, bool isError = true) =>
         new(null, isError

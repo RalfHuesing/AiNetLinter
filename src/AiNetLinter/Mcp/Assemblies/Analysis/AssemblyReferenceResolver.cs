@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using Microsoft.CodeAnalysis;
 
@@ -16,6 +17,7 @@ internal sealed class AssemblyReferenceResolver
 {
     internal const int MaxReferenceDepth = 8;
     internal const int MaxReferenceNodes = 128;
+    internal const string BoundaryDiagnosticCode = "assembly-reference-boundary";
 
     internal AssemblyReferenceResolution Resolve(string assemblyPath)
     {
@@ -46,6 +48,18 @@ internal sealed class AssemblyReferenceResolver
         {
             return FailedResolution(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolution.Identity)), $"Assembly-Metadaten konnten nicht gelesen werden: {ex.Message}", canonicalPath);
         }
+    }
+
+    internal SourceProjectReferenceResolution ResolveSourceProjectReferences(
+        Project rootProject,
+        Solution solution,
+        IReadOnlyList<AssemblyReferenceDto> existingReferences)
+    {
+        ArgumentNullException.ThrowIfNull(rootProject);
+        ArgumentNullException.ThrowIfNull(solution);
+        ArgumentNullException.ThrowIfNull(existingReferences);
+
+        return new SourceProjectReferenceGraph(solution, existingReferences).Resolve(rootProject);
     }
 
     private static ReferenceGraph BuildReferenceGraph(
@@ -92,7 +106,7 @@ internal sealed class AssemblyReferenceResolver
     {
         if (graph.Visited.Count >= MaxReferenceNodes)
         {
-            diagnostics.Add(new("assembly-reference-boundary", $"Die Referenzauflösung erreicht die Begrenzung von {MaxReferenceNodes} Assemblies.", AssemblyDiagnosticSeverity.Warning));
+            diagnostics.Add(new(BoundaryDiagnosticCode, $"Die Referenzauflösung erreicht die Begrenzung von {MaxReferenceNodes} Assemblies.", AssemblyDiagnosticSeverity.Warning));
             return;
         }
 
@@ -131,7 +145,7 @@ internal sealed class AssemblyReferenceResolver
                 "cycle" => $"Zyklische Referenz erkannt: '{reference.Name}' verweist auf '{resolution.Path}'.",
                 _ => null,
             };
-            diagnostics.Add(new(state == "cycle" ? "assembly-reference-cycle" : "assembly-reference-boundary", diagnostic!, AssemblyDiagnosticSeverity.Warning));
+            diagnostics.Add(new(state == "cycle" ? "assembly-reference-cycle" : BoundaryDiagnosticCode, diagnostic!, AssemblyDiagnosticSeverity.Warning));
         }
 
         return reference with
@@ -410,3 +424,8 @@ internal sealed class AssemblyReferenceResolver
         IReadOnlyList<MetadataReference> References,
         IReadOnlySet<string> SuccessfulPaths);
 }
+
+internal sealed record SourceProjectReferenceResolution(
+    IReadOnlyList<AssemblyReferenceDto> References,
+    IReadOnlySet<string> AssemblyNames,
+    IReadOnlyList<AssemblySessionDiagnostic> Diagnostics);

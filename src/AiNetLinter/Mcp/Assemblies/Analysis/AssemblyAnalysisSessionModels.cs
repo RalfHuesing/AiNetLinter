@@ -134,6 +134,19 @@ internal sealed record AssemblyReferenceResolution(
     IReadOnlyList<AssemblySessionDiagnostic> Diagnostics,
     ICSharpCode.Decompiler.Metadata.IAssemblyResolver DecompilerResolver);
 
+internal sealed record AssemblyReferenceSession(
+    AssemblyReferenceDto Reference,
+    string AssemblyPath,
+    AssemblyIdentityDto? Identity,
+    AssemblyOrigin? Origin,
+    string Completeness,
+    string SessionStatus,
+    IReadOnlyList<string> Diagnostics);
+
+internal sealed record AssemblyReferenceExpansion(
+    IReadOnlyList<AssemblyReferenceSession> Sessions,
+    IReadOnlyList<string> Diagnostics);
+
 internal sealed record AssemblyRoslynSnapshot(
     Solution Solution,
     ProjectId ProjectId,

@@ -2,6 +2,7 @@
 
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
@@ -152,6 +153,7 @@ internal static class AssemblyAnalysisDispatcher
         using var lease = leaseResult.Lease!;
         try
         {
+            await lease.ExpandReferencesAsync(cancellationToken).ConfigureAwait(false);
             var result = await assemblyCall(lease).ConfigureAwait(false);
             return AssemblyAnalysisResponse.Enrich(result, lease);
         }

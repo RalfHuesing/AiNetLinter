@@ -3,6 +3,7 @@
 using System;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Projects;
 using ModelContextProtocol.Protocol;
 
