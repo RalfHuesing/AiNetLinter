@@ -39,12 +39,19 @@ aber nicht die semantische MCP-Abfrage.
 - Nach einem vollständigen MCP-Ergebnis dieselbe semantische Frage nicht
   redundant mit Read/rg/grep nachprüfen; bei Trunkierung den Scope oder die
   Limits des MCP-Aufrufs verfeinern.
+- `get_file_tree` token-effizient und kontextschonend nutzen: Auf Projekt-Root-Ebene
+  (`root="."` oder weggelassen) NIEMALS ungefiltert mit `view="files"` oder
+  `maxResults > 100` aufrufen (verhindert massives Token-Flooding von 15k+ Tokens).
+  Zur initialen Orientierung immer `view="summary"` (~250 Tokens) oder `view="tree"`
+  mit `treeDepth <= 2` einsetzen. Die Dateiansicht `view="files"` ist gezielten
+  Unterpfaden vorbehalten (z. B. `root="src/AiNetLinter/Mcp"`). Für C#-Code-Suchen
+  direkt `find_symbol` oder `get_feature_context` verwenden.
 
 ## Werkzeugwahl
 
 | Anliegen | Zuerst verwenden |
 | :--- | :--- |
-| Physische Projektstruktur und Nicht-C#-Dateien entdecken | `get_file_tree` |
+| Physische Projektstruktur und Nicht-C#-Dateien entdecken | `get_file_tree` (`view="summary"` oder `treeDepth <= 2`) |
 | C#-Symbol oder Feature verstehen | `get_feature_context`; bei unbekanntem Namen `find_symbol` |
 | Signaturen und Struktur überblicken | `get_file_skeleton`, `get_class_structure`, dann `get_symbol_body` |
 | Öffentliche API einer lokalen .NET-DLL untersuchen | `inspect_assembly` |
@@ -57,8 +64,11 @@ aber nicht die semantische MCP-Abfrage.
 `get_file_tree` ist der erste Discovery-Schritt für die physische Projektstruktur:
 Er liefert relative Pfade, Verzeichnisaggregation, optionale Metadaten und
 sichtbare Completeness-/Trunkierungsangaben auch für Dateien außerhalb des
-Roslyn-Solutionindexes. Danach sind `get_index_scope` (Indexabdeckung),
-`search_pattern` (Inhalt/Text) und die semantischen C#-Tools gezielt einzusetzen.
+Roslyn-Solutionindexes. **Token-Effizienz beachten:** Für die Übersicht auf
+Root-Ebene immer `view="summary"` oder `view="tree"` (`treeDepth <= 2`) nutzen;
+`view="files"` auf Root-Ebene ist verboten. Danach sind `get_index_scope`
+(Indexabdeckung), `search_pattern` (Inhalt/Text) und die semantischen C#-Tools
+gezielt einzusetzen.
 `rg`/`grep`, Read und interne Agenten-Tools bleiben für konkrete Edit-/Diff-
 Arbeit, Konfiguration und exakte Textarbeit erlaubt. Sie ersetzen bei
 C#-Symbol-, Referenz- und Impact-Fragen nicht die semantische MCP-Analyse.
