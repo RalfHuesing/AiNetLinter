@@ -104,11 +104,10 @@ internal static class ServerMaintenanceToolRegistrations
 
     private const string GetServerHealthDescription =
         "Wann nutzen: pruefen, ob der Server laeuft und welche Projekt- und Assembly-Sessions " +
-        "resident sind. Ohne targetType und targetPath: getrennte Abschnitte fuer alle Projekt-Keys " +
-        "und Assembly-Sessions. Mit targetType='project' und absolutem targetPath: nur dieser Key. " +
-        "Mit targetType='assembly' und absolutem, existierendem .dll-Pfad: diese Assembly-Session " +
-        "gezielt laden und ihren Origin-/Snapshot-/Generation-/Status-Vertrag ausgeben. " +
-        "targetType und targetPath muessen paarweise gesetzt oder beide weggelassen werden.";
+        "resident sind. Ohne targetType und targetPath: globaler Status fuer alle Projekt-Keys " +
+        "und Assembly-Sessions. Mit targetType='project' und absolutem targetPath: gezielter Status fuer diesen Key. " +
+        "Mit targetType='assembly' und absolutem .dll-Pfad: gezielter Status fuer diese Assembly-Session. " +
+        "targetType und targetPath muessen entweder beide gesetzt oder beide weggelassen werden.";
 
     private static void AddReportObservabilityFeedback(McpServerPrimitiveCollection<McpServerTool> tools)
     {
