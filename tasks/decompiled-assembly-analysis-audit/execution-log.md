@@ -58,3 +58,9 @@
 - Fallback-Report: `reports/04-checkout-security.md`.
 - Terminalurteil: Ownership-, Attestation-, Descendant-, Reparse-, Revision-, Manifest- und Cleanup-Verträge ohne bestätigten S0–S2-Sicherheitsdefekt; adversariale Dateisystem-Races als verbleibende Abdeckungsgrenze markiert.
 - Keine Produktions- oder Testdateien geändert.
+
+## 2026-08-31 — Linse 05 abgeschlossen
+
+- Fallback-Report: `reports/05-cache-snapshot.md`.
+- Terminalurteil: Cache-/Snapshot-Identität, Generationen, Leases, Ressourcenlimits, Eviction, Refresh-Races, atomare Publikation und Dispose ohne bestätigten S0–S2-Defekt; reale Langzeitlast als Abdeckungsgrenze dokumentiert.
+- Keine Produktions- oder Testdateien geändert.
