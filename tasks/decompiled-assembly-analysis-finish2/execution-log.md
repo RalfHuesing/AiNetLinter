@@ -627,6 +627,18 @@
   abgeschlossen behandelt; alle vorherigen Polling-Timeouts lösten keinen
   Interrupt aus.
 
+## 2026-08-31 — running / EPIC-C / Reviewer
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- diff-baseline: `8ab245ab` gegen Parent `c932a01b`
+- scope: unabhängige Prüfung der EPIC-C-Konfiguration, Ressourcenlimits,
+  Registry-/Lease-/TTL-/LRU-Lebensdauer, Materialisierung, Cancellation,
+  Tests, Dokumentation und MCP-Violations.
+- erwarteter Hand-off: `approved` oder präzise P0/P1/P2/P3-Befunde; keine
+  automatische Wiedereröffnung des ausgeschöpften EPIC-B-Findings.
+- warteverhalten: Polling-Timeouts führen nicht zu einem Interrupt; der
+  Reviewer läuft bis zum echten terminalen Status.
+
 ## 2026-08-31 — running / EPIC-B / Korrektur-Implementierer Runde 2
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`

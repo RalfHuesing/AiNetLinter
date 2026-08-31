@@ -4,7 +4,7 @@ status: executing
 current_epic: EPIC-C
 correction_round: 3
 cycle_state: continue-after-finding-budget
-last_commit: 337ebe90
+last_commit: 8ab245ab
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
@@ -83,9 +83,9 @@ tech_debt: siehe tech-debt.md
   Dispose während der Erzeugung sind deterministisch.
 - Verifikation: fokussierte TTL/LRU/Capacity/Lease/Race/Creation-Barrier-
   Tests; hohe Last nur in gezielten Stress-Tests; gezielter Violations-Check.
-- Status: review_pending
+- Status: review_in_progress
 
-## EPIC-C-Implementierung — abgeschlossen, Review ausstehend
+## EPIC-C-Review — Implementierung abgeschlossen
 
 - Subagent: `01a05585-ab4e-7652-b391-96fd81ed6d95`; 43 Arbeitsbaum-Einträge,
   ohne Agenten-Commit.
@@ -97,8 +97,8 @@ tech_debt: siehe tech-debt.md
   Integration 4/4; vollständige Nicht-Stress-FastTests 2256 bestanden,
   2 Skips; Integration 372/374. `get_violations` nur der bekannte
   `AssemblyAnalysisRegistry`-Footprint.
-- Review: frischer Reviewer ausstehend; EPIC-C wird erst nach unabhängigem
-  Review als `done` markiert.
+- Review: unabhängiger Reviewer gegen Commit `8ab245ab` läuft; EPIC-C wird
+  erst nach unabhängigem Review als `done` markiert.
 
 ## EPIC-D — Mehrere Assemblies und tolerante Analyse
 
