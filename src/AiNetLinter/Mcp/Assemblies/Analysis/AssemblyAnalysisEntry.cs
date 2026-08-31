@@ -93,6 +93,16 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable
         }
     }
 
+    internal bool TryBeginRetirement()
+    {
+        lock (gate)
+        {
+            if (closing || leaseCount != 0) return false;
+            closing = true;
+            return true;
+        }
+    }
+
     public ValueTask DisposeAsync()
     {
         TaskCompletionSource<object?>? completion = null;

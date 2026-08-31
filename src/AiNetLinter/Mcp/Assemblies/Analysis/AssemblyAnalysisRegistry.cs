@@ -33,14 +33,16 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
     private readonly AssemblyAnalysisResourceBudget resourceBudget;
     private readonly AssemblyAnalysisRegistryEntryFactory entryFactory;
     private readonly AssemblyAnalysisSourceProjectEntryFactory sourceProjectEntryFactory;
+    private readonly Func<AssemblyAnalysisEntry, Task>? beforeRetirementAsync;
     private int disposed;
 
     internal AssemblyAnalysisRegistry(
         IAssemblySourceResolver? sourceOrchestrator = null,
         Func<string, AssemblyFingerprint>? fingerprintFactory = null,
-        ExternalResourceRegistry? resourceRegistry = null)
+        ExternalResourceRegistry? resourceRegistry = null, Func<AssemblyAnalysisEntry, Task>? beforeRetirementAsync = null)
     {
         this.fingerprintFactory = fingerprintFactory;
+        this.beforeRetirementAsync = beforeRetirementAsync;
         resourceBudget = new(resourceRegistry);
         entryFactory = new(sourceOrchestrator, resourceBudget, CreateReferenceLeaseFactory);
         sourceProjectEntryFactory = new(resourceBudget, CreateReferenceLeaseFactory);
@@ -72,7 +74,6 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         resourceBudget.EvictIdle();
         return retiredCount;
     }
-
     private async Task<List<(AssemblyAnalysisRegistryEntryCreation Creation, AssemblyAnalysisEntry Entry)>>
         FindIdleCandidatesAsync(bool forceCapacity)
     {
@@ -89,7 +90,6 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
                 idleCandidates.Add((creation, entry));
             }
         }
-
         if (forceCapacity)
         {
             idleCandidates.Sort(static (left, right) =>
@@ -106,7 +106,6 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
 
         return idleCandidates;
     }
-
     private AssemblyAnalysisRegistryEntryCreation[] GetCompletedCreations()
     {
         lock (gate)
@@ -117,7 +116,6 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
                 .ToArray();
         }
     }
-
     private async Task<int> RetireIdleCandidatesAsync(
         IEnumerable<(AssemblyAnalysisRegistryEntryCreation Creation, AssemblyAnalysisEntry Entry)> candidates,
         bool forceCapacity,
@@ -125,10 +123,11 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         CancellationToken cancellationToken)
     {
         var retiredCount = 0;
-        foreach (var (creation, _) in candidates)
+        foreach (var (creation, entry) in candidates)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!TryRemoveEntryForRetirement(creation, out var retirement)) continue;
+            if (beforeRetirementAsync is not null) await beforeRetirementAsync(entry).ConfigureAwait(false);
+            if (!TryRemoveEntryForRetirement(creation, entry, out var retirement)) continue;
 
             await retirement!.ConfigureAwait(false);
             retiredCount++;
@@ -144,13 +143,14 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
     }
 
     private bool TryRemoveEntryForRetirement(
-        AssemblyAnalysisRegistryEntryCreation creation,
+        AssemblyAnalysisRegistryEntryCreation creation, AssemblyAnalysisEntry entry,
         out Task? retirement)
     {
         lock (gate)
         {
             var key = entries.FirstOrDefault(pair => ReferenceEquals(pair.Value, creation)).Key;
-            if (key is null || !entries.Remove(key))
+            if (key is null || !ReferenceEquals(entries[key], creation)
+                || !entry.TryBeginRetirement() || !entries.Remove(key))
             {
                 retirement = null;
                 return false;

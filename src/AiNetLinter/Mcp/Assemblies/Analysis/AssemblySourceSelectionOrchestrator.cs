@@ -34,6 +34,7 @@ internal sealed class AssemblySourceSelectionOrchestrator :
     private readonly IReadOnlyList<ExternalSourceMapping> configuredMappings;
     private readonly IExternalSourceProvider provider;
     private readonly IAssemblySourceSelectionSnapshotRegistry registry;
+    private readonly Func<Task>? afterCreationCompletedBeforeRemovalAsync;
     private readonly Lock creationGate = new();
     private readonly Dictionary<string, AssemblySourceProviderCreation> creations = new(StringComparer.Ordinal);
     private Task? disposalTask;
@@ -42,7 +43,8 @@ internal sealed class AssemblySourceSelectionOrchestrator :
     internal AssemblySourceSelectionOrchestrator(
         ExternalSourceConfigurationLoadResult configurationResult,
         IExternalSourceProvider provider,
-        IAssemblySourceSelectionSnapshotRegistry registry)
+        IAssemblySourceSelectionSnapshotRegistry registry,
+        Func<Task>? afterCreationCompletedBeforeRemovalAsync = null)
     {
         ArgumentNullException.ThrowIfNull(configurationResult);
         ArgumentNullException.ThrowIfNull(provider);
@@ -53,6 +55,7 @@ internal sealed class AssemblySourceSelectionOrchestrator :
             ?? ImmutableArray<ExternalSourceMapping>.Empty;
         this.provider = provider;
         this.registry = registry;
+        this.afterCreationCompletedBeforeRemovalAsync = afterCreationCompletedBeforeRemovalAsync;
     }
 
     internal static AssemblySourceSelectionOrchestrator CreateFromSettings(
@@ -252,6 +255,12 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         }
         finally
         {
+            creation.Complete();
+            if (afterCreationCompletedBeforeRemovalAsync is not null)
+            {
+                await afterCreationCompletedBeforeRemovalAsync().ConfigureAwait(false);
+            }
+
             lock (creationGate)
             {
                 if (creations.TryGetValue(key, out var current)
@@ -260,8 +269,6 @@ internal sealed class AssemblySourceSelectionOrchestrator :
                     creations.Remove(key);
                 }
             }
-
-            creation.Complete();
         }
     }
 

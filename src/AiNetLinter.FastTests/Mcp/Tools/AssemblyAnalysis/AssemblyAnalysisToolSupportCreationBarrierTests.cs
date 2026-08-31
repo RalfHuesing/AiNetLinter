@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
@@ -116,6 +117,63 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         await provider.Completed.Task;
         Assert.True(provider.Completed.Task.IsCompletedSuccessfully);
         Assert.Equal(0, registry.ResidentCount);
+    }
+
+    [Fact]
+    public async Task Dispose_AfterProviderCompletionStillJoinsBeforeCreationRemoval()
+    {
+        using var temp = TestTempDirectory.Create("assembly-source-creation-complete-race-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "TargetAssembly",
+            "namespace Target; public sealed class TargetOnly { }");
+        var mapping = CreateMapping(["TargetAssembly"]);
+        using var snapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
+            temp.DirectoryPath,
+            mapping,
+            new ExternalSourceProjectSpec(
+                "SourceProject",
+                "TargetAssembly",
+                "namespace Source; public sealed class SourceOnly { }"));
+        using var registry = new SourceSnapshotRegistry();
+        var provider = new BlockingProvider(snapshot);
+        var completedBeforeRemoval = new TaskCompletionSource<object?>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var allowRemoval = new TaskCompletionSource<object?>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var orchestrator = CreateConfiguredOrchestrator(
+            temp,
+            ["TargetAssembly"],
+            provider,
+            registry,
+            async () =>
+            {
+                completedBeforeRemoval.TrySetResult(null);
+                await allowRemoval.Task.ConfigureAwait(false);
+            });
+
+        try
+        {
+            var resolution = orchestrator.ResolveAsync(assemblyPath);
+            await provider.Started.Task;
+            provider.Release.SetResult(null);
+            await completedBeforeRemoval.Task;
+
+            var dispose = orchestrator.DisposeAsync().AsTask();
+            Assert.False(dispose.IsCompleted);
+            allowRemoval.SetResult(null);
+
+            await dispose;
+            using var scope = await resolution;
+            Assert.NotNull(scope.Selection);
+            Assert.Equal(1, provider.CallCount);
+            Assert.Equal(1, registry.ResidentCount);
+        }
+        finally
+        {
+            allowRemoval.TrySetResult(null);
+            await orchestrator.DisposeAsync();
+        }
     }
 
     private sealed class BlockingProvider(ExternalSourceSnapshot snapshot) : IExternalSourceProvider

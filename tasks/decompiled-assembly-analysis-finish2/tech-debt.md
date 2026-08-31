@@ -89,12 +89,11 @@ Ausführungsprotokoll.
   `ExternalResourceRegistry.cs`.
 - Evidenz: unabhängiger Review; volle Resident-/Disk-/Memory-Kapazität weist
   neue Assemblys ab, statt idle Einträge zu retirieren.
-- Disposition: `fix-now`
-- Risiko: LRU-/Capacity-Vertrag wird im produktiven Registry-Pfad verfehlt;
-  aktive Analyse-Leases müssen weiterhin geschützt bleiben.
-- Nächster Schritt: Capacity-Eviction über idle Assembly-Einträge führen,
-  Owner-Leases nach Retirement freigeben und den Lease-Zustand atomar zwischen
-  Idle-Prüfung und Retirement revalidieren.
+- Disposition: `fixed` (Folge-Review ausstehend)
+- Risiko: behoben durch atomare Retirement-Ownership mit Registry-/Entry-Lock;
+  aktive Analyse-Leases verhindern Retirement.
+- Nächster Schritt: unabhängigen Folge-Review und deterministischen Race-Test
+  gegen den Korrekturstand bestätigen.
 - Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
 
 ## TD-EPIC-C-003 — ThinClient-Overrides fehlen im bestehenden Daemon-Handshake
@@ -140,11 +139,10 @@ Ausführungsprotokoll.
   `AssemblySourceSelectionOrchestrator.cs`, `AssemblyAnalysisHostComposition.cs`.
 - Evidenz: unabhängiger Review; Cleanup verhindert typischerweise Leaks, aber
   keinen deterministischen vollständigen Beendigungspunkt.
-- Disposition: `fix-now`
-- Risiko: Race zwischen laufender Creation und Host-/Registry-Dispose.
-- Nächster Schritt: Checkout-Schätzung cancellation-aware machen, Creation bis
-  nach `creation.Complete()` im Join-Set halten und Provider-Creations beim
-  asynchronen Host-Dispose vollständig joinen.
+- Disposition: `fixed` (Folge-Review ausstehend)
+- Risiko: behoben; Checkout-Schätzung ist cancellation-aware und die Creation
+  bleibt bis nach `creation.Complete()` im Producer-Join-Set.
+- Nächster Schritt: unabhängigen Folge-Review und Dispose-Race-Test bestätigen.
 - Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
 
 ### EPIC-C-Korrekturrunde 1 — Bearbeitungsnachweis
@@ -194,11 +192,10 @@ setzen. Der vollständige Bericht und die Verifikation stehen im
 - Fundstelle/Scope: `AssemblySourceSelectionOrchestrator.cs`.
 - Evidenz: EPIC-C-Folge-Review; ein paralleler Dispose kann die noch nicht
   vollständig beendete Producer-Task dadurch übersehen.
-- Disposition: `fix-now`
-- Risiko: formell nicht deterministischer Host-Dispose-Endpunkt trotz fehlender
-  beobachteter Leaks.
-- Nächster Schritt: Creation erst nach vollständigem Completion aus dem Join-
-  Set entfernen und Race-Test ergänzen.
+- Disposition: `fixed` (Folge-Review ausstehend)
+- Risiko: behoben; Entfernung aus dem Join-Set erfolgt erst nach vollständigem
+  Completion und ist durch einen Race-Test abgesichert.
+- Nächster Schritt: unabhängigen Folge-Review bestätigen.
 - Log-Anker: `execution-log.md`, completed EPIC-C Folge-Reviewer vom
   2026-08-31.
 

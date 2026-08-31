@@ -437,7 +437,8 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         TestTempDirectory temp,
         IReadOnlyList<string> assemblies,
         IExternalSourceProvider provider,
-        SourceSnapshotRegistry registry)
+        SourceSnapshotRegistry registry,
+        Func<Task>? afterCreationCompletedBeforeRemovalAsync = null)
     {
         var mappingsPath = temp.CreateFile(
             "mappings.json",
@@ -447,7 +448,11 @@ public sealed partial class AssemblyAnalysisToolSupportTests
             $$"""{ "ExternalSources": { "MappingsPath": "mappings.json" } }""");
         var loadResult = ExternalSourceConfigurationLoader.Load(settingsPath);
         Assert.True(loadResult.Succeeded, string.Join(Environment.NewLine, loadResult.Diagnostics.Select(diagnostic => diagnostic.Message)));
-        return new AssemblySourceSelectionOrchestrator(loadResult, provider, registry);
+        return new AssemblySourceSelectionOrchestrator(
+            loadResult,
+            provider,
+            registry,
+            afterCreationCompletedBeforeRemovalAsync);
     }
     private static void AssertLiveSelection(
         AssemblySourceSelectionScope? scope,

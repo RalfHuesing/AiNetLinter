@@ -352,18 +352,24 @@
   Ressourcenregister. Bei Assembly-Capacity-Druck retired
   `AssemblyAnalysisRegistry` idle Entries in LRU-Reihenfolge und wartet das
   Retirement vor dem nächsten Acquire; aktive Leases werden nicht angetastet.
+  Die Retirement-Transition revalidiert jetzt unter Registry- und Entry-Lock
+  `leaseCount == 0` und setzt atomar `closing`, bevor der Creation-Eintrag
+  entfernt wird; dadurch kann eine Lease nach der Kandidatenprüfung den Entry
+  nicht mehr unbemerkt zur Retirement-Dispose freigeben.
 - `AssemblySourceProviderCreation` trennt Producer-CTS von wartenden Consumer-
   `WaitAsync`-Tokens, räumt abgelehnte Snapshots auf und bietet mit
   `AssemblySourceSelectionOrchestrator.DisposeAsync` einen deterministischen
-  Join des Producer-Tasks. `AssemblyAnalysisHostComposition` wartet diesen Join
-  vor Source-Registry- und Ressourcen-Dispose ab.
+  Join des Producer-Tasks. `Complete()` erfolgt vor der Entfernung aus dem
+  Join-Set; `AssemblyAnalysisHostComposition` wartet diesen Join vor Source-
+  Registry- und Ressourcen-Dispose ab.
 - Der Pipe-Handshake trägt die fünf effektiven External-Limits als optionale
   Felder. Der ThinClient vergleicht explizite Overrides auch beim Connect zu
   einem bestehenden Daemon; alte Partner ohne diese Felder bleiben kompatibel.
 - Regressionen liegen in `ExternalResourceRegistryTests`,
   `SourceSnapshotRegistryTests`, `AssemblyAnalysisRegistryTests`,
   `AssemblyAnalysisHostCompositionTests`,
-  `AssemblyAnalysisToolSupportCreationBarrierTests`, den CLI-/ThinClient-
+  `AssemblyAnalysisToolSupportCreationBarrierTests` (einschließlich der
+  deterministischen Retirement-/Creation-Join-Races), den CLI-/ThinClient-
   Vertragstests und `ExternalSourceSnapshotMaterializerTests`.
 - Für diesen Korrekturlauf werden nach der letzten Codeänderung erneut die
   MCP-Audits `find_duplicates`, `find_dead_code` und `find_magic_values` sowie
@@ -372,22 +378,32 @@
 
 ## EPIC-C-Verifikation
 
-- `dotnet build --no-restore`: 0 Warnungen, 0 Fehler.
-- EPIC-C-Fokus: FastTests 51/51 in den betroffenen Registry-/Handshake-/
-  Creation-Barrier-Suites und `ExternalSourceSnapshotMaterializerTests` /
-  `ThinClientProxySessionContractTests` 7/7.
-- Vollständige Nicht-Stress-Gates: FastTests 2263/2265 mit 2 vorgesehenen
-  Skips; IntegrationTests 373/375. Die zwei verbleibenden Fehler sind die
-  bekannten externen MCP-Registrierungs-/Beschreibungstext-Verträge
-  `ambiguous` und `sortBy`; CLI-Dogfood und Live-Safeguard sind grün.
-- Finaler MCP-Nachweis nach der letzten Codeänderung: `find_duplicates`
-  meldete 8 bestehende Clone-Cluster ohne sicheren EPIC-C-Refactor.
-  `find_dead_code` meldete 38 Low-/0 High-Confidence-Kandidaten,
-  ausschließlich bestehende Interop-/Framework-/Internal-API-Heuristiken;
-  `find_magic_values` meldete 11 bestehende Wire-/Fehlermeldungs-Kandidaten.
-  `get_violations` meldete keine Fehler und ausschließlich drei bestehende
-  `AIContextFootprint`-Warnungen in `AssemblyAnalysisRegistry`,
-  `InspectAssemblyTool` und `GetServerHealthResponseBuilder`; `safeguard`
-  meldete 5,67/10 (Threshold 5,00, PASS). Das ausgeschöpfte EPIC-B-Finding
-  `DIAGNOSTICS-SAMPLE-BUDGET` wurde nicht wiedereröffnet. Stress wurde nicht
-  ausgeführt.
+ - Round 2 schließt `TD-EPIC-C-002` mit einer atomaren Zustandsübernahme:
+   `TryRemoveEntryForRetirement` hält den Registry-Lock, revalidiert den
+   Kandidaten und ruft `AssemblyAnalysisEntry.TryBeginRetirement` unter dem
+   Entry-Lock auf. Nur ein Entry mit `leaseCount == 0` kann auf `closing`
+   wechseln; eine danach eintreffende Analyse-Lease wird damit nicht mehr auf
+   den gerade retired werdenden Entry angewendet. Der deterministische
+   Kandidat-zu-Lease-Race-Test liegt in
+   `AssemblyAnalysisRegistryRetirementRaceTests`.
+ - Round 2 schließt `TD-EPIC-C-008` / den Rest von `TD-EPIC-C-005` mit dem
+   umgekehrten Producer-Join: `RunProviderCreationAsync` ruft
+   `creation.Complete()` vor der Entfernung aus dem Join-Set auf. Der
+   deterministische Host-Dispose-Race-Test hält genau dieses Zwischenfenster
+   offen und prüft, dass `DisposeAsync` auf den Producer wartet.
+ - Fokussierte Verifikation nach der letzten Codeänderung: betroffene
+   FastTests 57/57 und `ExternalSourceSnapshotMaterializerTests` /
+   `ThinClientProxySessionContractTests` 7/7.
+ - `dotnet build --no-restore`: 0 Warnungen, 0 Fehler.
+ - Vollständige Nicht-Stress-Gates: FastTests 2265 bestanden, 2 vorgesehene
+   Skips, 0 Fehler; IntegrationTests 373/375 bestanden, 0 Skips, 2 bekannte
+   MCP-Registrierungs-/Beschreibungstext-Verträge (`ambiguous` und `sortBy`).
+   CLI-Dogfood und Live-Safeguard sind nach der Strukturkorrektur grün.
+ - Round-2-Audits: `find_duplicates` meldet 1 bestehendes Near-Clone-Cluster
+   in `AssemblyReferenceResolver`; `find_dead_code` meldet 3 Low-/0
+   High-Confidence-Kandidaten (darunter ein duplizierter Heuristik-Treffer);
+   `find_magic_values` meldet 0 Treffer. Kein Befund ist ein sicherer,
+   scope-naher EPIC-C-Refactor.
+ - Das ausgeschöpfte EPIC-B-Finding `DIAGNOSTICS-SAMPLE-BUDGET` wurde nicht
+   wiedereröffnet. `TD-EPIC-C-006` und `TD-EPIC-C-007` bleiben
+   accepted-deferred. Stress wurde nicht ausgeführt.

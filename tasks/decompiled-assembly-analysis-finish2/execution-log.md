@@ -698,6 +698,55 @@
   abgeschlossen behandelt; alle Polling-Timeouts führten nicht zu einem
   Interrupt.
 
+## 2026-08-31 — completed / EPIC-C / Korrektur-Implementierer Runde 2
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a05647-1568-72c3-b948-2250a4c241d8`
+- diff-baseline: `017797d4`; Triagecheckpoint `11600d15`.
+- status: `completed`; P1-Race und Producer-Join-Rest behoben, ohne
+  Agenten-Commit.
+- vollständiger finaler Agentenbericht:
+
+  > EPIC-C-Runde 2 ist ohne Commit abgeschlossen.
+  >
+  > Umgesetzt:
+  >
+  > - Atomare Retirement-Ownership in `AssemblyAnalysisEntry.cs` und
+  >   `AssemblyAnalysisRegistry.cs`: Registry-Lock plus Entry-Lock; aktive
+  >   Leases verhindern Retirement.
+  > - Deterministischer Retirement-Race-Test in
+  >   `AssemblyAnalysisRegistryRetirementRaceTests.cs`.
+  > - `creation.Complete()` erfolgt vor Entfernung aus dem Producer-Join-Set
+  >   in `AssemblySourceSelectionOrchestrator.cs`.
+  > - Deterministischer Host-Dispose-Join-Test in
+  >   `AssemblyAnalysisToolSupportCreationBarrierTests.cs`.
+  > - Code-Map aktualisiert.
+  >
+  > Verifikation:
+  >
+  > - Fokussierte FastTests: 57/57.
+  > - Fokussierte IntegrationTests: 7/7.
+  > - Build: 0 Warnungen, 0 Fehler.
+  > - Vollständige FastTests ohne Stress: 2265 bestanden, 2 vorgesehene
+  >   Skips.
+  > - Vollständige IntegrationTests ohne Stress: 373/375; nur die bekannten
+  >   Beschreibungstext-Verträge `ambiguous` und `sortBy` schlagen fehl.
+  > - Safeguard: 5,67/10, PASS; Änderungs-Impact und Testbereich 0
+  >   Violations.
+  > - Produktivbereich: nur der bereits bestehende `AIContextFootprint`-
+  >   Hinweis für `AssemblyAnalysisRegistry`.
+  > - Audits: 0 Magic Values, 1 bestehendes Near-Clone-Cluster,
+  >   3 Low-/0 High-Confidence-Dead-Code-Heuristiken.
+  > - Stress-Tests nicht ausgeführt; `DIAGNOSTICS-SAMPLE-BUDGET` wurde nicht
+  >   wiedereröffnet.
+  >
+  > `TD-EPIC-C-006` und `TD-EPIC-C-007` bleiben `accepted-deferred`.
+- Urteil: Korrektur erfolgreich; unabhängiges Folge-Review gegen den neuen
+  Stand steht aus. Der Agent wurde erst nach echtem terminalem Status als
+  fertig erkannt; alle Polling-Timeouts führten nicht zu einem Interrupt.
+- nächste Aktion: Review-Checkpoint committen, danach frischen unabhängigen
+  EPIC-C-Folge-Reviewer starten.
+
 ## 2026-08-31 — running / EPIC-C / Folge-Reviewer nach Korrekturrunde 1
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`

@@ -83,7 +83,7 @@ tech_debt: siehe tech-debt.md
   Dispose während der Erzeugung sind deterministisch.
 - Verifikation: fokussierte TTL/LRU/Capacity/Lease/Race/Creation-Barrier-
   Tests; hohe Last nur in gezielten Stress-Tests; gezielter Violations-Check.
-- Status: correction_in_progress (Runde 2; 1 P1, 1 P2)
+- Status: review_pending (Korrekturrunde 2 abgeschlossen)
 
 ## EPIC-C-Review — Korrektur umgesetzt, Folge-Review ausstehend
 
@@ -98,9 +98,10 @@ tech_debt: siehe tech-debt.md
   2 Skips; Integration 372/374. `get_violations` nur der bekannte
   `AssemblyAnalysisRegistry`-Footprint.
 - Review: Korrekturrunde 1 hat vier ursprüngliche EPIC-C-Befunde behoben. Der
-  Folge-Review gegen `017797d4` bestätigte diese und meldete ein P1-Race bei
-  idle Assembly-LRU sowie einen P2-Rest beim Producer-Join; Korrekturrunde 2
-  läuft. Das ausgeschöpfte EPIC-B-Finding bleibt unverändert.
+  Folge-Review gegen `017797d4` meldete ein P1-Race bei idle Assembly-LRU und
+  einen P2-Rest beim Producer-Join; Korrekturrunde 2 hat beide behoben.
+  Unabhängiges Folge-Review gegen den neuen Stand steht aus. Das
+  ausgeschöpfte EPIC-B-Finding bleibt unverändert.
 
 ## EPIC-C-Korrekturrunde 1
 
@@ -141,6 +142,19 @@ tech_debt: siehe tech-debt.md
   `Complete()`); `TD-EPIC-C-006`/`007` bleiben bewusst `accepted-deferred`.
 - Regel: zweiter begründeter Versuch für die betroffenen Findings;
   Polling-Timeouts führen nicht zu einem Interrupt.
+
+## EPIC-C-Korrektur Runde 2 — abgeschlossen, Review ausstehend
+
+- Subagent: `01a05647-1568-72c3-b948-2250a4c241d8`; kein Agenten-Commit.
+- Ergebnis: atomare Retirement-Ownership mit Registry-/Entry-Lock und
+  geschützter aktiver Lease; `creation.Complete()` vor Entfernung aus dem
+  Producer-Join-Set; deterministische Race-/Dispose-Regressionen.
+- Verifikation laut Rollenbericht: Build 0/0; fokussierte FastTests 57/57,
+  Integration 7/7; vollständige FastTests 2265 bestanden, 2 Skips;
+  Integration 373/375 mit nur den bekannten Beschreibungstext-Verträgen
+  `ambiguous` und `sortBy`; Änderungs-/Test-Impact 0 Violations.
+- Review: frischer unabhängiger Folge-Review gegen den Korrekturstand steht
+  aus; EPIC-C wird erst danach als `done` markiert.
 
 ## EPIC-C-Folge-Review — Korrekturstand `017797d4`
 
