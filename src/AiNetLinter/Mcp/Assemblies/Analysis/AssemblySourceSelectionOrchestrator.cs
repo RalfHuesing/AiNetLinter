@@ -81,37 +81,59 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         if (mappings.Count != 1) return CreateScope();
 
         cancellationToken.ThrowIfCancellationRequested();
-        using var providerLease = await LeaseProviderResultAsync(mappings[0], cancellationToken).ConfigureAwait(false);
+        return await ResolveMappedAssemblyAsync(
+                assemblyPath,
+                assemblyName,
+                mappings[0],
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private async Task<AssemblySourceSelectionScope> ResolveMappedAssemblyAsync(
+        string assemblyPath,
+        string assemblyName,
+        ExternalSourceMapping mapping,
+        CancellationToken cancellationToken)
+    {
+        using var providerLease = await LeaseProviderResultAsync(mapping, cancellationToken).ConfigureAwait(false);
         var providerResult = providerLease.Result;
         if (!providerResult.IsAvailable || providerResult.SourceSnapshot is null)
         {
-            return CreateScope(
-                providerResult.Diagnostics,
-                providerResult.ToResultState());
+            return CreateScope(providerResult.Diagnostics, providerResult.ToResultState());
         }
 
-        if (!IsTrusted(providerResult))
-        {
-            return RejectUntrustedSnapshot(providerResult);
-        }
+        if (!IsTrusted(providerResult)) return RejectUntrustedSnapshot(providerResult);
+        var lease = AcquireSnapshot(providerLease, providerResult.SourceSnapshot);
+        return CreateSelectionScope(assemblyPath, assemblyName, mapping, providerResult, lease);
+    }
 
-        SourceSnapshotLease lease;
+    private SourceSnapshotLease AcquireSnapshot(
+        AssemblySourceProviderResultLease providerLease,
+        ExternalSourceSnapshot snapshot)
+    {
         try
         {
-            lease = registry.Acquire(providerResult.SourceSnapshot);
+            var lease = registry.Acquire(snapshot);
             providerLease.AcceptSnapshot();
+            return lease;
         }
         catch
         {
-            ExternalSourceSnapshotDisposal.DisposeBestEffort(
-                providerResult.SourceSnapshot,
-                "Snapshot nach Registry-Fehler");
+            ExternalSourceSnapshotDisposal.DisposeBestEffort(snapshot, "Snapshot nach Registry-Fehler");
             throw;
         }
+    }
 
+    private AssemblySourceSelectionScope CreateSelectionScope(
+        string assemblyPath,
+        string assemblyName,
+        ExternalSourceMapping mapping,
+        ExternalSourceProviderResult providerResult,
+        SourceSnapshotLease lease)
+    {
         try
         {
-            var match = AssemblySourceMatchResolver.Resolve(lease, mappings[0], assemblyName);
+            var match = AssemblySourceMatchResolver.Resolve(lease, mapping, assemblyName);
             var selection = AssemblySourceSelection.Create(
                 new AssemblySourceSelectionParameters(
                     lease,

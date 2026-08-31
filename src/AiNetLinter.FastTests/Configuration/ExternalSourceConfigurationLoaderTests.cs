@@ -495,7 +495,5 @@ public sealed class ExternalSourceConfigurationLoaderTests
             $$"""{ "ExternalSources": { {{fields}} } }""");
     }
 
-    private static string ValidMappings(string assembly) =>
-        $$"""{ "repositories": [{ "url": "https://gitea.example/shared.git", "solutionPath": "src/Shared.slnx", "assemblies": [{{JsonSerializer.Serialize(assembly)}}] }] }""";
-
+    private static string ValidMappings(string assembly) => $$"""{ "repositories": [{ "url": "https://gitea.example/shared.git", "solutionPath": "src/Shared.slnx", "assemblies": [{{JsonSerializer.Serialize(assembly)}}] }] }""";
 }
