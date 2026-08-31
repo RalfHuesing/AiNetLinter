@@ -99,10 +99,14 @@ internal static class GetFileTreeRenderer
         builder.AppendLine();
         if (completeness.Truncated)
         {
-            builder.AppendLine(
-                $"[WARN]: {payload.Summary.MatchedFileCount} Dateien gematcht, " +
-                $"{completeness.ShownFileCount} gezeigt ({string.Join(", ", completeness.TruncatedBy)}).");
-            builder.Append("[HINWEIS]: root/fileFilter verfeinern oder maxResults anpassen.");
+            var isSummary = payload.View.Equals("summary", StringComparison.OrdinalIgnoreCase);
+            var warning = isSummary
+                ? $"[WARN]: {payload.Summary.MatchedFileCount} Dateien aggregiert, Verzeichnisliste begrenzt ({string.Join(", ", completeness.TruncatedBy)})."
+                : $"[WARN]: {payload.Summary.MatchedFileCount} Dateien gematcht, {completeness.ShownFileCount} gezeigt ({string.Join(", ", completeness.TruncatedBy)}).";
+            builder.AppendLine(warning);
+            builder.Append(isSummary
+                ? "[HINWEIS]: Verzeichnisliste auf Top-Level-Aggregate begrenzt; maxResults oder treeDepth anpassen."
+                : "[HINWEIS]: root/fileFilter verfeinern oder maxResults anpassen.");
             return;
         }
 

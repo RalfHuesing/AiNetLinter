@@ -123,7 +123,7 @@ internal static class ServerMaintenanceToolRegistrations
         "Wann nutzen: pruefen, ob der Server laeuft und welche Projekt- und Assembly-Sessions " +
         "resident sind. Ohne targetType und targetPath: globaler Status fuer alle Projekt-Keys " +
         "und Assembly-Sessions. Mit targetType='project' und absolutem targetPath: gezielter Status fuer diesen Key. " +
-        "Mit targetType='assembly' und absolutem .dll-Pfad: gezielter Status fuer diese Assembly-Session. " +
+        "Mit targetType='assembly' und absolutem .dll- oder .exe-Pfad: gezielter Status fuer diese Assembly-Session. " +
         "targetType und targetPath muessen entweder beide gesetzt oder beide weggelassen werden. " +
         "Standardmaessig werden nur kompakte Metadaten und Diagnosezaehler geliefert; " +
         "includeDiagnostics=true fordert begrenzte Diagnose-Samples an, maxDiagnostics begrenzt deren Anzahl.";

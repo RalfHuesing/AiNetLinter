@@ -87,7 +87,8 @@ internal static class FileStructureToolRegistrations
         "Discovery-Schritt fuer Agenten. root, fileFilter und excludePatterns sind relativ zu " +
         "targetPath; fileFilter ist ein Pfad-Glob, keine Inhaltssuche. view: 'tree' [Default], " +
         "'summary', 'files'. includeExtensions: Extensionen wie ['.cs'] oder ['*']. " +
-        "maxDepth und treeDepth: 0 bis 32 (treeDepth Default 2). maxResults: Begrenzung (Default 100, Maximum 2000). " +
+        "maxDepth und treeDepth: 0 bis 32 (effektive Tiefe = maxDepth ?? treeDepth, 0 = Root-Ebene, Default treeDepth 2; maxDepth hat Vorrang). " +
+        "maxResults: Begrenzung (Default 200, Maximum 2000). " +
         "sortBy: 'path' [Default], 'size_desc', 'extension'. includeMetadata: Dateigroessen (Default true), " +
         "includeLineCount: Zeilenzaehlung (Default false). structuredContent liegt unter fileTree.";
 

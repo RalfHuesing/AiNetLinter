@@ -31,7 +31,8 @@ internal static class GetFileTreeScanner
             return accumulator.Build(new TreeWalkStats([]) { SkippedExcludedDirectoryCount = 1 });
         }
 
-        var options = FileSystemWalkOptions.ForFileTree(input.MaxDepth, cancellationToken);
+        var effectiveDepth = input.MaxDepth ?? input.TreeDepth;
+        var options = FileSystemWalkOptions.ForFileTree(effectiveDepth, cancellationToken);
         var stats = FileSystemExclusionHelpers.WalkFilteredTree(
             [resolution.EffectiveRoot!],
             options,
@@ -48,6 +49,7 @@ internal sealed class FileTreeAccumulator
     private readonly string _rootRelativePath;
     private readonly GetFileTreeInput _input;
     private readonly string[] _extensions;
+    private readonly int _effectiveDepth;
     private readonly List<FileTreeCandidate> _matches = [];
     private readonly Dictionary<string, FileTreeDirectoryAccumulator> _directories = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _warnings = [];
@@ -60,6 +62,7 @@ internal sealed class FileTreeAccumulator
         _effectiveRoot = Path.GetFullPath(effectiveRoot);
         _rootRelativePath = NormalizeRelativePath(Path.GetRelativePath(_projectRoot, _effectiveRoot));
         _input = input;
+        _effectiveDepth = input.MaxDepth ?? input.TreeDepth;
         _extensions = FileTreeFilter.NormalizeExtensions(input.IncludeExtensions);
     }
 
@@ -97,9 +100,17 @@ internal sealed class FileTreeAccumulator
         var sortedMatches = SortMatches(_matches, _input.SortBy);
         var exposesFiles = !string.Equals(_input.View, "summary", StringComparison.OrdinalIgnoreCase);
         var shownMatches = exposesFiles ? sortedMatches.Take(_input.MaxResults).ToList() : [];
-        var truncationReasons = BuildTruncationReasons(walkStats, sortedMatches.Count, exposesFiles);
+        var directoryCandidates = BuildDirectoryCandidates();
+        var directoriesTruncated = directoryCandidates.Count > _input.MaxResults;
+        var directories = directoriesTruncated
+            ? directoryCandidates.Take(_input.MaxResults).ToArray()
+            : directoryCandidates;
+        var truncationReasons = BuildTruncationReasons(
+            walkStats,
+            sortedMatches.Count,
+            exposesFiles,
+            directoriesTruncated);
         var warnings = walkStats.Warnings.Concat(_warnings).Distinct(StringComparer.Ordinal).Take(50).ToArray();
-        var directories = BuildDirectories();
         var payload = new FileTreePayload(
             Root: NormalizeRoot(_input.Root),
             EffectiveRoot: NormalizePath(_effectiveRoot),
@@ -125,17 +136,22 @@ internal sealed class FileTreeAccumulator
         return new FileTreeScanResult(payload, _input.TreeDepth);
     }
 
-    private List<string> BuildTruncationReasons(TreeWalkStats stats, int matchedCount, bool exposesFiles)
+    private List<string> BuildTruncationReasons(
+        TreeWalkStats stats,
+        int matchedCount,
+        bool exposesFiles,
+        bool directoriesTruncated)
     {
         var reasons = new List<string>();
-        if (exposesFiles && matchedCount > _input.MaxResults) reasons.Add("maxResults");
+        if ((exposesFiles && matchedCount > _input.MaxResults) || directoriesTruncated) reasons.Add("maxResults");
         if (stats.InaccessibleSubtreeCount > 0) reasons.Add("inaccessibleSubtree");
         if (stats.CancellationRequested) reasons.Add("cancellation");
         return reasons;
     }
 
-    private IReadOnlyList<FileTreeDirectoryEntry> BuildDirectories()
+    private IReadOnlyList<FileTreeDirectoryEntry> BuildDirectoryCandidates()
     {
+        // Vollstaendige Aggregation: Child-Zaehler ueber alle gematchten Verzeichnisse.
         var childCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         foreach (var directory in _directories.Values.Where(directory => directory.MatchedFileCount > 0))
         {
@@ -143,8 +159,13 @@ internal sealed class FileTreeAccumulator
             if (parent is not null) childCounts[parent] = childCounts.GetValueOrDefault(parent) + 1;
         }
 
+        // Ausgegebene Eintraege: im summary-Modus nur Top-Level-Aggregate (Tiefe <= 1),
+        // sonst alles innerhalb der effektiven Scantiefe; maxResults begrenzt in Build.
+        var isSummary = string.Equals(_input.View, "summary", StringComparison.OrdinalIgnoreCase);
+        var maxVisibleDirectoryDepth = isSummary ? 1 : _effectiveDepth;
         return _directories.Values
             .Where(directory => directory.MatchedFileCount > 0 || directory.Path.Equals(_rootRelativePath, StringComparison.OrdinalIgnoreCase))
+            .Where(directory => GetDepth(directory.Path) <= maxVisibleDirectoryDepth)
             .OrderBy(directory => directory.Path, StringComparer.OrdinalIgnoreCase)
             .Select(directory => new FileTreeDirectoryEntry(
                 directory.Path,

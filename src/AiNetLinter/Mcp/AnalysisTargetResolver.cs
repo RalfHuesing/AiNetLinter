@@ -2,6 +2,7 @@
 
 using System;
 using System.IO;
+using AiNetLinter.Configuration;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -38,15 +39,15 @@ internal static class AnalysisTargetResolver
         {
             return Invalid(
                 $"Der Assembly-Pfad muss auf eine vorhandene Datei zeigen: '{path.CanonicalPath}'.",
-                "targetPath muss ein existierender absoluter lokaler .dll-Pfad sein.");
+                "targetPath muss ein existierender absoluter lokaler .dll- oder .exe-Pfad sein.");
         }
 
         if (targetType == AnalysisTargetType.Assembly
-            && !string.Equals(Path.GetExtension(path.CanonicalPath), ".dll", StringComparison.OrdinalIgnoreCase))
+            && !AssemblyPathValidation.IsSupportedAssemblyPath(path.CanonicalPath!))
         {
             return Invalid(
-                $"Der Assembly-Pfad muss auf eine .dll zeigen: '{path.CanonicalPath}'.",
-                "targetPath muss auf eine existierende .dll-Datei zeigen.");
+                $"Der Assembly-Pfad muss auf eine .dll- oder .exe-Datei zeigen: '{path.CanonicalPath}'.",
+                "targetPath muss auf eine vorhandene .dll- oder .exe-Datei zeigen.");
         }
 
         return new(new AnalysisTarget(targetType.Value, path.CanonicalPath!, request), null);

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -43,9 +44,9 @@ internal static class AssemblyAnalysisService
             error = $"Der Parameter 'assemblyPath' ist kein gültiger lokaler Pfad: '{assemblyPath}' ({ex.Message}).";
             return false;
         }
-        if (!string.Equals(Path.GetExtension(fullPath), ".dll", StringComparison.OrdinalIgnoreCase))
+        if (!AssemblyPathValidation.IsSupportedAssemblyPath(fullPath))
         {
-            error = $"Der Assembly-Pfad muss auf eine .dll zeigen: '{assemblyPath}'.";
+            error = $"Der Assembly-Pfad muss auf eine .dll- oder .exe-Datei zeigen: '{assemblyPath}'.";
             return false;
         }
 
@@ -110,6 +111,7 @@ internal static class AssemblyAnalysisService
                 .Select(method => (Type: type, Method: method)))
             .Where(pair => Matches(pair.Type.ContainingNamespace.ToDisplayString(), options.NamespaceFilter))
             .Where(pair => Matches(pair.Method.Name, options.ExtensionName))
+            .Where(pair => MatchesReceiverType(pair.Method.Parameters.Length == 0 ? null : pair.Method.Parameters[0].Type, options.ReceiverType))
             .OrderBy(pair => pair.Type.ContainingNamespace.ToDisplayString(), StringComparer.Ordinal)
             .ThenBy(pair => pair.Method.ToDisplayString(), StringComparer.Ordinal)
             .ToList();
@@ -284,6 +286,25 @@ internal static class AssemblyAnalysisService
 
     private static bool Matches(string value, string? filter) =>
         string.IsNullOrWhiteSpace(filter) || value.Contains(filter.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private static bool MatchesReceiverType(ITypeSymbol? receiverType, string? filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter)) return true;
+        if (receiverType is null) return false;
+        var normalized = NormalizeReceiverFilter(filter.Trim());
+        return normalized.Contains('.')
+            ? string.Equals(receiverType.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat), normalized, StringComparison.Ordinal)
+            : string.Equals(receiverType.Name, normalized, StringComparison.Ordinal);
+    }
+
+    private static string NormalizeReceiverFilter(string value)
+    {
+        const string globalNamespacePrefix = "global::";
+        return value.StartsWith(globalNamespacePrefix, StringComparison.Ordinal)
+            ? value[globalNamespacePrefix.Length..]
+            : value;
+    }
+
 
     private static bool MatchesType(INamedTypeSymbol type, string? filter, bool exact)
     {

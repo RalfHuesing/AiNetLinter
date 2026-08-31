@@ -223,11 +223,7 @@ internal static class AssemblySourceMatchResolver
             return null;
         }
 
-        var normalized = value.Trim();
-        if (normalized.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-        {
-            normalized = normalized[..^4].Trim();
-        }
+        var normalized = AssemblyPathValidation.WithoutAssemblyExtension(value.Trim()).Trim();
 
         return normalized.Length == 0 ? null : normalized;
     }

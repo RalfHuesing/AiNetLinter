@@ -346,11 +346,7 @@ internal static class ExternalSourceMappingValidator
             return null;
         }
 
-        var assembly = element.GetString()!.Trim();
-        if (assembly.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-        {
-            assembly = assembly[..^4];
-        }
+        var assembly = AssemblyPathValidation.WithoutAssemblyExtension(element.GetString()!.Trim());
 
         if (assembly.Length == 0
             || assembly.Contains('/', StringComparison.Ordinal)

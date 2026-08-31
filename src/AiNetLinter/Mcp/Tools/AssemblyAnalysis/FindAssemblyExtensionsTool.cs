@@ -61,7 +61,7 @@ internal static class FindAssemblyExtensionsTool
     {
         var selection = AssemblyAnalysisService.FindExtensions(
             context,
-            new AssemblyExtensionSearchOptions(arguments.ExtensionName, arguments.Namespace, maxResults));
+            new AssemblyExtensionSearchOptions(arguments.ExtensionName, arguments.Namespace, arguments.ReceiverType, maxResults));
         var diagnostics = AssemblyAnalysisResponseLimits.ProjectDiagnostics(
             context.Diagnostics,
             lease?.ReferenceExpansionDiagnostics);

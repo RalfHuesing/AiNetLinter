@@ -36,6 +36,7 @@ internal sealed record AssemblyInspectionOptions(
 internal sealed record AssemblyExtensionSearchOptions(
     string? ExtensionName,
     string? NamespaceFilter,
+    string? ReceiverType,
     int MaxResults);
 
 internal sealed record AssemblyTypeSelection(

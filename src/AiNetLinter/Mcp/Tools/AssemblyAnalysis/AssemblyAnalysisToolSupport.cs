@@ -81,7 +81,7 @@ internal static class AssemblyAnalysisToolSupport
             fullPath = null;
             error = McpToolResults.InvalidArgument(
                 pathError,
-                "assemblyPath muss ein existierender absoluter lokaler .dll-Pfad sein.");
+                "assemblyPath muss ein existierender absoluter lokaler .dll- oder .exe-Pfad sein.");
             return false;
         }
 
