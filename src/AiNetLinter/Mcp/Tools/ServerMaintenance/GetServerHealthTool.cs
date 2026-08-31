@@ -65,7 +65,7 @@ internal static class GetServerHealthTool
             }
             return GetServerHealthResponseBuilder.Build(
                 Array.Empty<ProjectSnapshot>(),
-                [GetServerHealthResponseBuilder.ToAssemblyEntry(lease)],
+                [GetServerHealthProjection.ToAssemblyEntry(lease)],
                 options);
         }
 
@@ -90,7 +90,7 @@ internal static class GetServerHealthTool
             : await assemblyRegistry.SnapshotsAsync().ConfigureAwait(false);
         return GetServerHealthResponseBuilder.Build(
             registry.Snapshots(),
-            assemblySnapshots.Select(GetServerHealthResponseBuilder.ToAssemblyEntry).ToList(),
+            assemblySnapshots.Select(GetServerHealthProjection.ToAssemblyEntry).ToList(),
             options);
     }
 

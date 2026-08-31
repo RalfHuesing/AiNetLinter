@@ -11,7 +11,6 @@ using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Output;
-using Microsoft.CodeAnalysis;
 using Serilog;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
@@ -21,7 +20,7 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 /// Target-Key; parallele Erstzugriffe teilen die Creation-Task und erhalten
 /// anschliessend eigene, read-only Leases auf denselben Roslyn-Snapshot.
 /// </summary>
-internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
+internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
 {
     internal const int MaxFingerprintRetries = 3;
 
@@ -33,7 +32,9 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
     private readonly IAssemblySourceResolver? sourceOrchestrator;
     private readonly AssemblyAnalysisResourceBudget resourceBudget;
     private readonly AssemblyAnalysisRegistryEntryFactory entryFactory;
-    private readonly AssemblyAnalysisSourceProjectEntryFactory sourceProjectEntryFactory;
+    private readonly AssemblyAnalysisSourceProjectLeaseCoordinator sourceProjectLeaseCoordinator;
+    private readonly AssemblyAnalysisRegistryEvictionCoordinator evictionCoordinator;
+    private readonly AssemblyAnalysisHealthSnapshotProvider healthSnapshotProvider;
     private readonly Func<AssemblyAnalysisEntry, Task>? beforeRetirementAsync;
     private int disposed;
 
@@ -47,7 +48,30 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         this.beforeRetirementAsync = beforeRetirementAsync;
         resourceBudget = new(resourceRegistry);
         entryFactory = new(sourceOrchestrator, resourceBudget, CreateReferenceLeaseFactory);
-        sourceProjectEntryFactory = new(resourceBudget, CreateReferenceLeaseFactory);
+        var sourceProjectEntryFactory = new AssemblyAnalysisSourceProjectEntryFactory(
+            resourceBudget,
+            CreateReferenceLeaseFactory);
+        evictionCoordinator = new(
+            gate,
+            entries,
+            retiredEntries,
+            () => Volatile.Read(ref disposed) != 0,
+            resourceBudget,
+            beforeRetirementAsync,
+            RetireEntryAsync);
+        sourceProjectLeaseCoordinator = new(
+            gate,
+            entries,
+            nextGenerations,
+            () => Volatile.Read(ref disposed) != 0,
+            resourceBudget,
+            sourceProjectEntryFactory,
+            ObserveCreation,
+            RemoveFailedEntry,
+            (forceCapacity, requiredPath, cancellationToken) =>
+                RunEvictionTickAsync(forceCapacity, requiredPath, cancellationToken),
+            Failure);
+        healthSnapshotProvider = new(gate, entries);
     }
 
     internal int ResidentCount { get { lock (gate) return entries.Count; } }
@@ -59,110 +83,14 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         CancellationToken cancellationToken) => LeaseAsync(assemblyPath, cancellationToken);
 
     internal ExternalResourceHealthSnapshot? ResourceHealth => resourceBudget.Health;
-    internal Task<int> RunEvictionTickAsync() => RunEvictionTickAsync(false, null, CancellationToken.None);
+    internal Task<int> RunEvictionTickAsync() =>
+        evictionCoordinator.RunAsync(false, null, CancellationToken.None);
 
-    private async Task<int> RunEvictionTickAsync(
+    private Task<int> RunEvictionTickAsync(
         bool forceCapacity,
         string? requiredPath,
-        CancellationToken cancellationToken)
-    {
-        var idleCandidates = await FindIdleCandidatesAsync(forceCapacity).ConfigureAwait(false);
-        var retiredCount = await RetireIdleCandidatesAsync(
-                idleCandidates,
-                forceCapacity,
-                requiredPath,
-                cancellationToken)
-            .ConfigureAwait(false);
-        resourceBudget.EvictIdle();
-        return retiredCount;
-    }
-    private async Task<List<(AssemblyAnalysisRegistryEntryCreation Creation, AssemblyAnalysisEntry Entry)>>
-        FindIdleCandidatesAsync(bool forceCapacity)
-    {
-        var now = resourceBudget.UtcNow;
-        var candidates = GetCompletedCreations();
-        var idleCandidates = new List<(AssemblyAnalysisRegistryEntryCreation, AssemblyAnalysisEntry)>();
-        foreach (var creation in candidates)
-        {
-            var entry = await creation.Task.ConfigureAwait(false);
-            if (forceCapacity
-                    ? entry.IsIdleForCapacity()
-                    : entry.IsIdle(now, resourceBudget.IdleTtl))
-            {
-                idleCandidates.Add((creation, entry));
-            }
-        }
-        if (forceCapacity)
-        {
-            idleCandidates.Sort(static (left, right) =>
-            {
-                var comparison = left.Item2.LastUsedUtc.CompareTo(right.Item2.LastUsedUtc);
-                return comparison != 0
-                    ? comparison
-                    : string.Compare(
-                        left.Item2.CanonicalPath,
-                        right.Item2.CanonicalPath,
-                        StringComparison.OrdinalIgnoreCase);
-            });
-        }
-
-        return idleCandidates;
-    }
-    private AssemblyAnalysisRegistryEntryCreation[] GetCompletedCreations()
-    {
-        lock (gate)
-        {
-            if (Volatile.Read(ref disposed) != 0) return [];
-            return entries.Values
-                .Where(creation => creation.Task.IsCompletedSuccessfully)
-                .ToArray();
-        }
-    }
-    private async Task<int> RetireIdleCandidatesAsync(
-        IEnumerable<(AssemblyAnalysisRegistryEntryCreation Creation, AssemblyAnalysisEntry Entry)> candidates,
-        bool forceCapacity,
-        string? requiredPath,
-        CancellationToken cancellationToken)
-    {
-        var retiredCount = 0;
-        foreach (var (creation, entry) in candidates)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (beforeRetirementAsync is not null) await beforeRetirementAsync(entry).ConfigureAwait(false);
-            if (!TryRemoveEntryForRetirement(creation, entry, out var retirement)) continue;
-
-            await retirement!.ConfigureAwait(false);
-            retiredCount++;
-            if (forceCapacity
-                && requiredPath is not null
-                && resourceBudget.HasCapacity(requiredPath))
-            {
-                break;
-            }
-        }
-
-        return retiredCount;
-    }
-
-    private bool TryRemoveEntryForRetirement(
-        AssemblyAnalysisRegistryEntryCreation creation, AssemblyAnalysisEntry entry,
-        out Task? retirement)
-    {
-        lock (gate)
-        {
-            var key = entries.FirstOrDefault(pair => ReferenceEquals(pair.Value, creation)).Key;
-            if (key is null || !ReferenceEquals(entries[key], creation)
-                || !entry.TryBeginRetirement() || !entries.Remove(key))
-            {
-                retirement = null;
-                return false;
-            }
-
-            retirement = RetireEntryAsync(creation);
-            retiredEntries.Add(retirement);
-            return true;
-        }
-    }
+        CancellationToken cancellationToken) =>
+        evictionCoordinator.RunAsync(forceCapacity, requiredPath, cancellationToken);
 
     internal async Task<AssemblyAnalysisLeaseResult> LeaseAsync(
         string assemblyPath,
@@ -179,7 +107,11 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (!TryCreateFingerprint(canonicalPath, out var fingerprint, out var fingerprintDiagnostic))
+            if (!AssemblyAnalysisRegistryIdentity.TryCreateFingerprint(
+                    canonicalPath,
+                    fingerprintFactory,
+                    out var fingerprint,
+                    out var fingerprintDiagnostic))
             {
                 return Failure(fingerprintDiagnostic?.Message ?? "Assembly-Fingerprint konnte nicht berechnet werden.");
             }
@@ -203,33 +135,6 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         }
 
         return Failure("Assembly-Analyse konnte wegen instabiler Dateiidentität nicht abgeschlossen werden.");
-    }
-
-    private bool TryCreateFingerprint(
-        string canonicalPath,
-        out AssemblyFingerprint? fingerprint,
-        out AssemblySessionDiagnostic? diagnostic)
-    {
-        if (fingerprintFactory is null)
-        {
-            return AssemblyFingerprintCalculator.TryCreate(canonicalPath, out fingerprint, out diagnostic);
-        }
-
-        try
-        {
-            fingerprint = fingerprintFactory(canonicalPath);
-            diagnostic = null;
-            return true;
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
-        {
-            fingerprint = null;
-            diagnostic = new(
-                AssemblyDiagnosticCodes.For(nameof(AssemblyFingerprintCalculator), nameof(AssemblyFingerprintCalculator.TryCreate)),
-                $"Assembly-Fingerprint konnte nicht berechnet werden: {exception.Message}",
-                AssemblyDiagnosticSeverity.Error);
-            return false;
-        }
     }
 
     private async Task<(AssemblyAnalysisLeaseResult? Result, bool Retry)> TryLeaseCurrentAsync(
@@ -257,7 +162,8 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
 
         var entry = creationAttempt.Entry!;
         var sourceSnapshotIdentity = creationResult.WasExisting
-            ? await ResolveCurrentSourceSnapshotIdentityAsync(
+            ? await AssemblyAnalysisRegistryIdentity.ResolveCurrentSourceSnapshotIdentityAsync(
+                    sourceOrchestrator,
                     canonicalPath,
                     cancellationToken)
                 .ConfigureAwait(false)
@@ -269,43 +175,6 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
             fingerprint,
             refreshOnMismatch,
             sourceSnapshotIdentity);
-    }
-
-    private async Task<string?> ResolveCurrentSourceSnapshotIdentityAsync(
-        string canonicalPath,
-        CancellationToken cancellationToken)
-    {
-        if (sourceOrchestrator is null) return null;
-
-        AssemblySourceResolution resolution;
-        try
-        {
-            resolution = await sourceOrchestrator.ResolveForRegistryAsync(
-                    canonicalPath,
-                    cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch
-        {
-            // Ein nicht ermittelbarer aktueller Source-Stand darf keinen
-            // veralteten source-backed Eintrag als frisch erscheinen lassen.
-            return null;
-        }
-
-        try
-        {
-            return resolution.Selection?.SourceLease.Snapshot.Identity.StableValue;
-        }
-        finally
-        {
-            AssemblyAnalysisRegistryDisposal.TryDispose(
-                resolution.Lifetime,
-                "Source-Selection-Scope nach Freshness-Probe");
-        }
     }
 
     private async Task<(AssemblyAnalysisEntry? Entry, AssemblyAnalysisLeaseResult? Result, bool Retry)> AwaitCreationAsync(
@@ -410,7 +279,7 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
     {
         if (reference.ResolutionState == "source_project")
         {
-            return LeaseSourceProjectAsync(sourceSelection, reference, cancellationToken);
+            return sourceProjectLeaseCoordinator.LeaseAsync(sourceSelection, reference, cancellationToken);
         }
 
         if (string.IsNullOrWhiteSpace(reference.ResolvedPath))
@@ -426,6 +295,12 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
     private AssemblyReferenceLeaseFactory CreateReferenceLeaseFactory(AssemblySourceSelection? sourceSelection) =>
         (reference, cancellationToken) =>
             LeaseReferencedAsync(sourceSelection, reference, cancellationToken);
+
+    Task<IReadOnlyList<AssemblyAnalysisHealthSnapshot>> IAssemblyAnalysisRegistry.SnapshotsAsync() =>
+        SnapshotsAsync();
+
+    internal Task<IReadOnlyList<AssemblyAnalysisHealthSnapshot>> SnapshotsAsync() =>
+        healthSnapshotProvider.GetSnapshotsAsync();
 
     private (AssemblyAnalysisRegistryEntryCreation? Creation, bool WasExisting) GetOrCreateEntry(
         string canonicalPath)
