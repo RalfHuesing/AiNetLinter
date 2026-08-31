@@ -52,3 +52,9 @@
 - Fallback-Report: `reports/03-git-transport.md`.
 - Terminalurteil: Prozess-, Timeout-, Cancellation-, Output-, Credential-Isolation-, Exitcode- und Cleanup-Verträge ohne bestätigten S0–S2-Defekt; echter Remote-Transport als externe Abdeckungsgrenze dokumentiert.
 - Keine Produktions- oder Testdateien geändert.
+
+## 2026-08-31 — Linse 04 abgeschlossen
+
+- Fallback-Report: `reports/04-checkout-security.md`.
+- Terminalurteil: Ownership-, Attestation-, Descendant-, Reparse-, Revision-, Manifest- und Cleanup-Verträge ohne bestätigten S0–S2-Sicherheitsdefekt; adversariale Dateisystem-Races als verbleibende Abdeckungsgrenze markiert.
+- Keine Produktions- oder Testdateien geändert.
