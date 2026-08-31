@@ -39,58 +39,55 @@ Ausführungsprotokoll.
 - Evidenz: letzter `get_violations`-Check nach der letzten Codeänderung
   meldete insgesamt fünf Produktionsbefunde; vier davon sind neue
   Komplexitätsbefunde in diesen Formatierern.
-- Disposition: `fix-now`
-- Risiko: vier aktive Produktionsregelverletzungen verhindern die Freigabe des
-  EPIC-B-Stands, auch ohne gemeldete Laufzeitregression.
-- Nächster Schritt: Formatter-Verantwortung in sichere Hilfsfunktionen
-  schneiden, danach Tests, Impact und Violations erneut prüfen.
+- Disposition: `fixed`
+- Risiko: behoben; Formatter-Komplexität liegt nach der Korrekturrunde nicht
+  mehr als aktiver Produktionsbefund vor.
+- Nächster Schritt: keine weitere EPIC-B-Maßnahme.
 - Log-Anker: `execution-log.md`, completed EPIC-B Implementierer vom
   2026-08-31.
 
 ## TD-EPIC-B-003 — Health-Statusprojektion bei Detaildiagnostics
 
 - Schweregrad: P1
-- Beschreibung: Gezielt angeforderte transitive Diagnostics werden ergänzt,
-  ohne den Rohstatus über `ResolveEffectiveStatus` zu `partial` zu projizieren.
-- Fundstelle/Scope: `GetServerHealthResponseBuilder.cs`, gezielter Health-
-  Detailpfad.
-- Evidenz: unabhängiger Review belegte `completeness=complete` trotz
-  vorhandener Diagnostics.
-- Disposition: `fix-now`
-- Risiko: strukturierte Health-Antwort kann Vollständigkeit falsch behaupten.
-- Nächster Schritt: zentrale Statusprojektion auch auf den Detailpfad anwenden
-  und mit Root-/transitiven Diagnostics testen.
-- Log-Anker: `execution-log.md`, completed EPIC-B Reviewer vom 2026-08-31.
+- Beschreibung: Gezielt angeforderte transitive Diagnostics wurden ergänzt,
+  ohne den Rohstatus zu `partial` zu projizieren.
+- Fundstelle/Scope: `GetServerHealthResponseBuilder.cs`, Health-Detailpfad.
+- Evidenz: Folgeimplementierung ergänzt die effektive Statusprojektion;
+  fokussierte Regressionen 21/21 und 9/9 bestanden.
+- Disposition: `fixed`
+- Risiko: behoben; Diagnostics projizieren den Health-Status konsistent.
+- Nächster Schritt: keine weitere EPIC-B-Maßnahme.
+- Log-Anker: `execution-log.md`, completed EPIC-B Korrektur-
+  Implementierer Runde 1 vom 2026-08-31.
 
 ## TD-EPIC-B-004 — Compact-Health `ShownCount`
 
 - Schweregrad: P1
-- Beschreibung: Der kompakte Health-Modus leert Samples, übernimmt aber ihren
-  alten `ShownCount`; StructuredContent und Textdarstellung widersprechen sich.
-- Fundstelle/Scope: `AssemblyAnalysisResponseLimits.cs`, Compact-Health-Projektion.
-- Evidenz: unabhängiger Review belegte leere Samples mit Textdarstellung wie
-  `4 von 4`.
-- Disposition: `fix-now`
-- Risiko: maschinenlesbare und textuelle Antwortverträge sind inkonsistent.
-- Nächster Schritt: `ShownCount` an tatsächlich ausgegebene Samples koppeln und
-  Response-/E2E-Regression ergänzen.
-- Log-Anker: `execution-log.md`, completed EPIC-B Reviewer vom 2026-08-31.
+- Beschreibung: Compact-Health leerte Samples mit veraltetem `ShownCount`.
+- Fundstelle/Scope: `AssemblyAnalysisResponseLimits.cs`, Compact-Health-
+  Projektion.
+- Evidenz: Folgeimplementierung setzt sichtbare Counts auf 0 und ergänzt
+  Regression; fokussierte EPIC-B-Tests bestanden.
+- Disposition: `fixed`
+- Risiko: behoben; strukturierte und textuelle Antworten bleiben konsistent.
+- Nächster Schritt: keine weitere EPIC-B-Maßnahme.
+- Log-Anker: `execution-log.md`, completed EPIC-B Korrektur-
+  Implementierer Runde 1 vom 2026-08-31.
 
 ## TD-EPIC-B-005 — Globales Diagnostics-Sample-Budget
 
 - Schweregrad: P1
-- Beschreibung: Root-/transitive-/Aggregate-Samples werden separat begrenzt
-  und anschließend erneut dupliziert; Deduplizierung gilt nur für Counts.
-- Fundstelle/Scope: `AssemblyAnalysisResponseLimits.ProjectDiagnostics` und
-  Diagnostics-Antwortmodell.
-- Evidenz: unabhängiger Review belegte mögliche `ShownCount > TotalCount` und
-  fehlendes globales 4-KiB-Budget.
-- Disposition: `fix-now`
-- Risiko: Antwortgrößen- und Count-Vertrag kann unter Diagnostics-Last verletzt
-  werden.
-- Nächster Schritt: gemeinsame deduplizierte Sample-Projektion mit globalem
-  Bytebudget implementieren und mit Größen-/Truncationstests absichern.
-- Log-Anker: `execution-log.md`, completed EPIC-B Reviewer vom 2026-08-31.
+- Beschreibung: Root-/transitive-/Aggregate-Samples wurden separat begrenzt
+  und doppelt ausgegeben.
+- Fundstelle/Scope: `AssemblyAnalysisResponseLimits.ProjectDiagnostics`.
+- Evidenz: Folgeimplementierung dedupliziert Samples und projiziert ein
+  gemeinsames 4-KiB-Budget; fokussierte Regressionen bestanden.
+- Disposition: `fixed`
+- Risiko: behoben; Counts, Samples und Truncation teilen einen globalen
+  begrenzten Antwortvertrag.
+- Nächster Schritt: keine weitere EPIC-B-Maßnahme.
+- Log-Anker: `execution-log.md`, completed EPIC-B Korrektur-
+  Implementierer Runde 1 vom 2026-08-31.
 
 ## TD-EPIC-B-002 — `AssemblyAnalysisRegistry` Footprint
 
@@ -107,3 +104,36 @@ Ausführungsprotokoll.
   danach Safeguard, Impact und Violations erneut prüfen.
 - Log-Anker: `execution-log.md`, completed EPIC-B Implementierer vom
   2026-08-31.
+
+## TD-EPIC-B-006 — Bestehender ProjectRegistry-Testflake
+
+- Schweregrad: P2
+- Beschreibung: Ein vollständiger FastTests-Lauf meldete einen bestehenden
+  ProjectRegistry-Flake; der isolierte Testlauf war 1/1 grün.
+- Fundstelle/Scope: `src/AiNetLinter.FastTests/Mcp/Projects/`.
+- Evidenz: vollständiger Korrekturbericht: 2236/2239 grün, 2 Skips; isoliert
+  1/1 grün. Nicht als Assembly-Funktionsfehler reproduziert.
+- Disposition: `accepted-deferred`
+- Risiko: Windows-/Testisolation kann den vollständigen Gate-Lauf sporadisch
+  verfälschen.
+- Nächster Schritt: gezielt reproduzieren und Test-/Umgebungsisolation
+  bereinigen, ohne Assembly-Verhalten einzubeziehen.
+- Log-Anker: `execution-log.md`, completed EPIC-B Korrektur-
+  Implementierer Runde 1 vom 2026-08-31.
+
+## TD-EPIC-B-007 — Bestehende Dokumentations-/Registrierungsvertragsfehler
+
+- Schweregrad: P2
+- Beschreibung: Zwei bestehende IntegrationTests für Dokumentations-/Tool-
+  Registrierungsverträge blieben im vollständigen Nicht-Stress-Lauf rot.
+- Fundstelle/Scope: `src/AiNetLinter.IntegrationTests/Mcp/`.
+- Evidenz: vollständiger Korrekturbericht: 371/373 bestanden; zwei Fehler,
+  außerhalb des EPIC-B-Funktionspfads und ohne neue Produktionsviolations.
+- Disposition: `accepted-deferred`
+- Risiko: Der finale Gate-Status ist bis zur gezielten Einordnung nicht
+  vollständig grün.
+- Nächster Schritt: konkrete Testnamen/TRX-Ausgaben beim Abschluss-Gate
+  prüfen; bei Nicht-Kausalität mit Evidenz dokumentieren, sonst gezielt
+  korrigieren.
+- Log-Anker: `execution-log.md`, completed EPIC-B Korrektur-
+  Implementierer Runde 1 vom 2026-08-31.

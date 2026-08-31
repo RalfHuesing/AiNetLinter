@@ -4,7 +4,7 @@ status: executing
 current_epic: EPIC-B
 correction_round: 1
 cycle_state: normal
-last_commit: b0ebc8b4
+last_commit: 0b8e2176
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
@@ -12,7 +12,7 @@ tech_debt: siehe tech-debt.md
 
 - EPIC-A: done, nach Korrekturrunde 1 `approved`.
 - EPIC-B: in_progress, Implementierung seit Baseline `b0ebc8b4` abgeschlossen;
-  Review steht aus.
+  Korrektur umgesetzt, Folge-Review steht aus.
 - Korrekturrunde: 1 für EPIC-B; Review hat vier P1-Ursachen belegt.
 
 ## EPIC-A — Stabile In-Memory- und Dateipfade
@@ -54,7 +54,8 @@ tech_debt: siehe tech-debt.md
 
 - diff-baseline: `b0ebc8b4`
 - Implementierungsstand: `f6a3f185`
-- Reviewstatus: ausstehend; P2/P3-Befunde sind in `tech-debt.md` erfasst.
+- Reviewstatus: `issues`; vier P1-Ursachen sind in `tech-debt.md` als
+  `fix-now` erfasst.
 
 ## EPIC-B-Korrekturrunde 1
 
@@ -65,6 +66,24 @@ tech_debt: siehe tech-debt.md
   `EPIC-B-FORMATTER-COMPLEXITY`.
 - Begrenzung: erste von höchstens fünf EPIC-B-Korrekturrunden; danach folgt
   genau ein frischer Folge-Review.
+
+## EPIC-B-Korrektur Runde 1 — Implementierung abgeschlossen
+
+- Status: Review ausstehend.
+- Ergebnis: Health-Status, Compact-Counts, globales Diagnostics-Budget und
+  Formatter-Komplexität korrigiert.
+- Verifikation: Build 0/0; fokussierte FastTests 21/21 und Integration 9/9;
+  Produktionsviolations nur der bestehende Registry-Footprint, Testscopes 0.
+
+## Aktueller Rollenlauf
+
+- Rolle: frischer EPIC-B-Korrektur-Implementierer, Runde 1
+- diff-baseline: `0b8e2176`
+- Ursachen: `HEALTH-RAW-STATUS-PROJECTION`,
+  `HEALTH-COMPACT-SHOWNCOUNT`, `DIAGNOSTICS-SAMPLE-BUDGET` und
+  `EPIC-B-FORMATTER-COMPLEXITY`.
+- Nachweisziel: Antwortverträge korrigieren, aktive Produktionsviolations
+  beseitigen, fokussierte Tests und letzter `get_violations`-Check.
 
 ## EPIC-C — Ressourcen, Konfiguration und Lebensdauer
 

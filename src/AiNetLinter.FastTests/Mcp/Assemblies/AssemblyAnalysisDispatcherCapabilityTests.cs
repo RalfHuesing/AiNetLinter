@@ -163,6 +163,63 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
     }
 
     [Fact]
+    public async Task AssemblyRoute_DeduplicatesRootAndTransitiveDiagnostics()
+    {
+        using var temp = TestTempDirectory.Create("assembly-dispatcher-diagnostics-dedup-");
+        var reference = new AssemblyReferenceDto(
+            "DuplicateDiagnosticDependency",
+            "1.0.0.0",
+            "neutral",
+            Resolved: true,
+            ResolvedPath: Path.Combine(temp.DirectoryPath, "DuplicateDiagnosticDependency.dll"));
+        var sharedDiagnostic = "Referenz-Session für 'DuplicateDiagnosticDependency' konnte nicht eröffnet werden.";
+        await using var fixture = await SyntheticAssemblyFixture.CreateAsync(
+            temp,
+            [reference],
+            FailingReferenceFactory,
+            [sharedDiagnostic]);
+
+        var result = await fixture.ExecuteInspectAsync();
+
+        var payload = Structured(result);
+        var summary = payload.GetProperty("diagnosticsSummary");
+        Assert.Equal(1, summary.GetProperty("root").GetProperty("totalCount").GetInt32());
+        Assert.Equal(0, summary.GetProperty("transitive").GetProperty("totalCount").GetInt32());
+        Assert.Equal(1, summary.GetProperty("totalCount").GetInt32());
+        Assert.Equal(1, payload.GetProperty("diagnostics").GetArrayLength());
+        Assert.Equal(
+            payload.GetProperty("diagnostics").GetArrayLength(),
+            summary.GetProperty("shownCount").GetInt32());
+        Assert.Equal(
+            payload.GetProperty("diagnostics").GetArrayLength(),
+            payload.GetProperty("diagnostics").EnumerateArray().Select(item => item.GetString()).Distinct().Count());
+    }
+
+    [Fact]
+    public void DiagnosticsProjection_UsesOneGlobalSampleBudget()
+    {
+        var diagnostics = Enumerable.Range(0, AssemblyAnalysisResponseLimits.MaxDiagnostics * 2)
+            .Select(index => $"diagnostic-{index:D3}: {new string('x', AssemblyAnalysisResponseLimits.MaxDiagnosticCharacters * 2)}")
+            .ToArray();
+
+        var summary = AssemblyAnalysisResponseLimits.ProjectDiagnostics(
+            diagnostics.Take(AssemblyAnalysisResponseLimits.MaxDiagnostics),
+            diagnostics.Skip(AssemblyAnalysisResponseLimits.MaxDiagnostics));
+
+        Assert.Equal(diagnostics.Length, summary.TotalCount);
+        Assert.Equal(summary.Samples.Count, summary.ShownCount);
+        Assert.True(summary.ShownCount <= summary.TotalCount);
+        Assert.Equal(summary.Samples.Count, summary.Samples.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(summary.ShownCount, summary.Root.ShownCount + summary.Transitive.ShownCount);
+        Assert.True(
+            System.Text.Encoding.UTF8.GetByteCount(string.Join("\n", summary.Samples))
+            <= AssemblyAnalysisResponseLimits.MaxDiagnosticBytes);
+        Assert.True(
+            System.Text.Encoding.UTF8.GetByteCount(string.Join("\n", summary.Root.Samples.Concat(summary.Transitive.Samples)))
+            <= AssemblyAnalysisResponseLimits.MaxDiagnosticBytes);
+    }
+
+    [Fact]
     public async Task AssemblyRoute_DiagnosticSamplesStayWithinByteBudgetAndMatchText()
     {
         using var temp = TestTempDirectory.Create("assembly-dispatcher-diagnostic-budget-");

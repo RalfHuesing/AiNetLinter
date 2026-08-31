@@ -58,7 +58,7 @@ internal static class GetServerHealthResponseBuilder
     internal static AssemblyHealthEntry ToAssemblyEntry(AssemblyAnalysisHealthSnapshot snapshot) =>
         new(
             snapshot.TargetPath,
-            snapshot.LoadState,
+            ResolveEffectiveStatus(snapshot.LoadState, snapshot.Diagnostics ?? Array.Empty<string>()),
             snapshot.OriginKind,
             snapshot.SourceProjectPath,
             snapshot.SourceSnapshot,
@@ -72,9 +72,13 @@ internal static class GetServerHealthResponseBuilder
     internal static AssemblyHealthEntry ToAssemblyEntry(AssemblyAnalysisLease lease)
     {
         var origin = lease.Context.Origin;
+        var diagnostics = lease.Context.Diagnostics
+            .Concat(lease.ReferenceExpansionDiagnostics)
+            .ToArray();
+        var effectiveStatus = lease.Context.Status.ResolveEffectiveStatus(diagnostics);
         return new(
             lease.CanonicalPath,
-            lease.Context.Status.ToWireValue(),
+            effectiveStatus.ToWireValue(),
             origin.OriginKind,
             origin.SourceProjectPath,
             origin.SourceSnapshotIdentity,
@@ -84,6 +88,7 @@ internal static class GetServerHealthResponseBuilder
             origin.Trust,
             lease.Context.Generation,
             lease.Context.Diagnostics,
+            Completeness: effectiveStatus.ToCompletenessLabel(),
             TransitiveDiagnostics: lease.ReferenceExpansionDiagnostics);
     }
 
@@ -95,17 +100,37 @@ internal static class GetServerHealthResponseBuilder
             assembly.Diagnostics,
             assembly.TransitiveDiagnostics,
             options.MaxDiagnostics);
+        var diagnostics = (assembly.Diagnostics ?? Array.Empty<string>())
+            .Concat(assembly.TransitiveDiagnostics ?? Array.Empty<string>())
+            .ToArray();
+        var effectiveLoadState = ResolveEffectiveStatus(assembly.LoadState, diagnostics);
+        var effectiveCompleteness = ResolveEffectiveStatus(
+            assembly.Completeness ?? effectiveLoadState,
+            diagnostics);
         if (!options.IncludeDiagnostics)
         {
             summary = AssemblyAnalysisResponseLimits.WithoutSamples(summary);
         }
         return assembly with
         {
+            LoadState = effectiveLoadState,
             Diagnostics = options.IncludeDiagnostics ? summary.Samples : null,
             DiagnosticsSummary = summary,
-            Completeness = assembly.Completeness ?? assembly.LoadState,
+            Completeness = effectiveCompleteness,
             TransitiveDiagnostics = null,
         };
+    }
+
+    private static string ResolveEffectiveStatus(
+        string statusValue,
+        IReadOnlyCollection<string> diagnostics)
+    {
+        if (!Enum.TryParse<AssemblySessionStatus>(statusValue, ignoreCase: true, out var status))
+        {
+            return statusValue;
+        }
+
+        return status.ResolveEffectiveStatus(diagnostics).ToWireValue();
     }
 
     private static void AppendProjectSection(StringBuilder builder, ProjectSnapshot snapshot)
@@ -155,6 +180,14 @@ internal static class GetServerHealthResponseBuilder
 
     private static void AppendAssemblySection(StringBuilder builder, AssemblyHealthEntry assembly)
     {
+        AppendAssemblyHeader(builder, assembly);
+        AppendAssemblySourceDetails(builder, assembly);
+        AppendAssemblyDiagnostics(builder, assembly);
+        builder.AppendLine();
+    }
+
+    private static void AppendAssemblyHeader(StringBuilder builder, AssemblyHealthEntry assembly)
+    {
         builder.AppendLine($"### {assembly.TargetPath}");
         builder.AppendLine($"- LoadState: {assembly.LoadState}");
         if (!string.IsNullOrWhiteSpace(assembly.Completeness))
@@ -163,6 +196,10 @@ internal static class GetServerHealthResponseBuilder
         }
         builder.AppendLine($"- Origin: {assembly.OriginKind ?? "unbekannt"}");
         builder.AppendLine($"- Generation: {assembly.Generation?.ToString() ?? "unbekannt"}");
+    }
+
+    private static void AppendAssemblySourceDetails(StringBuilder builder, AssemblyHealthEntry assembly)
+    {
         if (!string.IsNullOrWhiteSpace(assembly.SourceProjectPath))
         {
             builder.AppendLine($"- Source-Projekt: {assembly.SourceProjectPath}");
@@ -173,23 +210,40 @@ internal static class GetServerHealthResponseBuilder
             builder.AppendLine($"- Source-Snapshot: {snapshot.RepositoryUrl} @ {snapshot.LoadedRevision} — Solution {snapshot.SolutionPath}");
         }
 
-        if (!string.IsNullOrWhiteSpace(assembly.ContentHash)) builder.AppendLine($"- Hash: {assembly.ContentHash}");
-        if (!string.IsNullOrWhiteSpace(assembly.GeneratedDocumentPath)) builder.AppendLine($"- GeneratedPath: {assembly.GeneratedDocumentPath}");
-        if (!string.IsNullOrWhiteSpace(assembly.Confidence)) builder.AppendLine($"- Confidence: {assembly.Confidence}");
-        if (!string.IsNullOrWhiteSpace(assembly.Trust)) builder.AppendLine($"- Trust: {assembly.Trust}");
-        if (assembly.DiagnosticsSummary is { } summary && summary.TotalCount > 0)
+        AppendOptionalAssemblyValue(builder, "Hash", assembly.ContentHash);
+        AppendOptionalAssemblyValue(builder, "GeneratedPath", assembly.GeneratedDocumentPath);
+        AppendOptionalAssemblyValue(builder, "Confidence", assembly.Confidence);
+        AppendOptionalAssemblyValue(builder, "Trust", assembly.Trust);
+    }
+
+    private static void AppendOptionalAssemblyValue(
+        StringBuilder builder,
+        string label,
+        string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
         {
-            builder.AppendLine($"- Diagnosen: {summary.ShownCount} von {summary.TotalCount}{(summary.Truncated ? " (gekürzt)" : string.Empty)}");
-            if (assembly.Diagnostics is { Count: > 0 })
-            {
-                foreach (var diagnostic in assembly.Diagnostics)
-                {
-                    builder.AppendLine($"  - {diagnostic}");
-                }
-            }
+            builder.AppendLine($"- {label}: {value}");
+        }
+    }
+
+    private static void AppendAssemblyDiagnostics(StringBuilder builder, AssemblyHealthEntry assembly)
+    {
+        if (assembly.DiagnosticsSummary is not { } summary || summary.TotalCount <= 0)
+        {
+            return;
         }
 
-        builder.AppendLine();
+        builder.AppendLine($"- Diagnosen: {summary.ShownCount} von {summary.TotalCount}{(summary.Truncated ? " (gekürzt)" : string.Empty)}");
+        if (assembly.Diagnostics is not { Count: > 0 })
+        {
+            return;
+        }
+
+        foreach (var diagnostic in assembly.Diagnostics)
+        {
+            builder.AppendLine($"  - {diagnostic}");
+        }
     }
 
     private static void AppendStalenessSection(StringBuilder builder, ServerStalenessStats staleness)

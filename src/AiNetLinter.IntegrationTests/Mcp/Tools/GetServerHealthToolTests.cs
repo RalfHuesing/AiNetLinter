@@ -114,11 +114,16 @@ public sealed class GetServerHealthToolTests
         Assert.Null(compactAssembly.Diagnostics);
         Assert.Equal(4, compactAssembly.DiagnosticsSummary!.TotalCount);
         Assert.Empty(compactAssembly.DiagnosticsSummary.Samples);
+        Assert.Equal(0, compactAssembly.DiagnosticsSummary.ShownCount);
         Assert.Equal(2, compactAssembly.DiagnosticsSummary.Root.TotalCount);
         Assert.Equal(2, compactAssembly.DiagnosticsSummary.Transitive.TotalCount);
+        Assert.Equal(0, compactAssembly.DiagnosticsSummary.Root.ShownCount);
+        Assert.Equal(0, compactAssembly.DiagnosticsSummary.Transitive.ShownCount);
         Assert.Empty(compactAssembly.DiagnosticsSummary.Root.Samples);
         Assert.Empty(compactAssembly.DiagnosticsSummary.Transitive.Samples);
         Assert.Equal("partial", compactAssembly.Completeness);
+        Assert.Contains("Diagnosen: 0 von 4", Assert.IsType<TextContentBlock>(Assert.Single(compact.Content)).Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Diagnosen: 4 von 4", Assert.IsType<TextContentBlock>(Assert.Single(compact.Content)).Text, StringComparison.Ordinal);
         Assert.DoesNotContain("health-root-0", Assert.IsType<TextContentBlock>(Assert.Single(compact.Content)).Text, StringComparison.Ordinal);
         Assert.DoesNotContain("health-transitive-0", Assert.IsType<TextContentBlock>(Assert.Single(compact.Content)).Text, StringComparison.Ordinal);
 
@@ -138,6 +143,37 @@ public sealed class GetServerHealthToolTests
         Assert.Contains("health-transitive-0", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
         Assert.DoesNotContain("health-root-1", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
         Assert.DoesNotContain("health-transitive-1", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_DetailedDiagnosticsProjectCompleteStatusToPartial()
+    {
+        var entry = new AssemblyHealthEntry(
+            "C:\\fixtures\\health-detail.dll",
+            "complete",
+            "decompiled",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            ["health-root"],
+            TransitiveDiagnostics: ["health-transitive"]);
+
+        var detailed = GetServerHealthResponseBuilder.Build(
+            Array.Empty<ProjectSnapshot>(),
+            [entry],
+            new GetServerHealthOptions(IncludeDiagnostics: true));
+        var payload = JsonSerializer.Deserialize<ServerHealthAggregatePayload>(
+            detailed.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
+        var assembly = Assert.Single(payload.Assemblies!);
+
+        Assert.Equal("partial", assembly.LoadState);
+        Assert.Equal("partial", assembly.Completeness);
+        Assert.Contains("- LoadState: partial", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
+        Assert.Contains("- Vollständigkeit: partial", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
     }
 
     private static ProjectRegistry CreateRegistry(string root, McpCodeGraphServer server)

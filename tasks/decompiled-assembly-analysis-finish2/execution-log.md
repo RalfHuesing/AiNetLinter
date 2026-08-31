@@ -574,3 +574,74 @@
   `AssemblyAnalysisRegistry`-Footprint bleibt `promoted-to-project-debt`.
 - nächste Aktion: Review-Checkpoint committen, danach frischen
   Korrektur-Implementierer für EPIC-B starten.
+
+## 2026-08-31 — running / EPIC-B / Korrektur-Implementierer Runde 1
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a0553d-b7b4-7302-9e24-d69667e35788`
+- diff-baseline: `0b8e2176`
+- scope: `HEALTH-RAW-STATUS-PROJECTION`,
+  `HEALTH-COMPACT-SHOWNCOUNT`, `DIAGNOSTICS-SAMPLE-BUDGET` und
+  `EPIC-B-FORMATTER-COMPLEXITY`.
+- erwarteter Hand-off: fokussierte Code-/Teständerungen ohne Commit,
+  aktualisierte Code-Map, Nachweise nach letzter Codeänderung sowie kein
+  offener P1 im EPIC-B-Scope.
+- warteverhalten: Polling-Timeouts führen nicht zu einem Interrupt; der Agent
+  läuft bis zum echten terminalen Status.
+
+## 2026-08-31 — completed / EPIC-B / Korrektur-Implementierer Runde 1
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a0553d-b7b4-7302-9e24-d69667e35788`
+- diff-baseline: `0b8e2176`
+- status: erfolgreich; vier P1-Ursachen behoben, kein Commit durch den Agenten.
+- vollständiger finaler Agentenbericht:
+
+  > EPIC-B Runde 1 ist im Working Tree umgesetzt; kein Commit erstellt.
+  >
+  > Geändert:
+  >
+  > - Effektiver Health-Status projiziert `complete` mit Diagnostics korrekt
+  >   zu `partial`.
+  > - Compact-Health setzt sichtbare Counts auf `0`; StructuredContent und
+  >   Text sind konsistent.
+  > - Root-/transitive-/Aggregate-Diagnostics werden dedupliziert und über ein
+  >   gemeinsames 4-KiB-Sample-Budget projiziert.
+  > - Formatter-Komplexität durch kleine Helfer reduziert; gemeinsame
+  >   Diagnostics-Ausgabe zentralisiert.
+  > - Regressionen für Statusprojektion, Compact-Counts, Deduplizierung und
+  >   globales Budget ergänzt.
+  >
+  > Relevante Bereiche:
+  > `AssemblyAnalysisResponseLimits.cs`, `GetServerHealthResponseBuilder.cs`,
+  > `FindAssemblyExtensionsTool.cs` und `code-map.md`.
+  >
+  > Verifikation:
+  >
+  > - Build: 0 Warnungen, 0 Fehler.
+  > - Fokussierte EPIC-B-Tests: Fast 21/21, Integration 9/9.
+  > - Vollständige FastTests: 2236/2239 grün, 2 Skips; ein bestehender
+  >   ProjectRegistry-Flake, isoliert 1/1 grün.
+  > - Vollständige IntegrationTests: 371/373 grün; zwei bestehende
+  >   Dokumentations-/Registrierungsvertragstests fehlgeschlagen.
+  > - Finaler `get_violations`: Produktion nur bestehender
+  >   `AssemblyAnalysisRegistry`-Footprint; Fast- und Integration-Testscope
+  >   jeweils 0 Violations.
+  > - Audits ausgeführt und triagiert; keine weiteren sicheren
+  >   Scope-Korrekturen.
+  > - Keine externen Assemblies geändert oder ausgeführt; keine neuen
+  >   Task-/Step-Dateien.
+  >
+  > Commit-Vorschlag des Agenten: `fix: EPIC-B-Diagnosticsprojektion und
+  > Health-Formatierung korrigieren`.
+- MCP-/Qualitätsnachweis: Der Agent meldet MCP-first-Abfragen für den
+  Produktionsscope sowie `find_duplicates`, `find_dead_code`,
+  `find_magic_values` und final `get_violations`; die vier P1-Befunde sind
+  nach dem letzten Codecheck nicht erneut verändert worden.
+- offene Umgebungs-/Historienbefunde: der isolierte ProjectRegistry-Flake und
+  zwei Dokumentations-/Registrierungsvertragstests aus den vollständigen
+  Nicht-Stress-Läufen bleiben nicht kausal für EPIC-B im Log sichtbar.
+- Tech-Debt-Triage: `TD-EPIC-B-001`, `003`, `004` und `005` auf `fixed` gesetzt;
+  `TD-EPIC-B-002` bleibt `promoted-to-project-debt`.
+- nächste Aktion: Korrektur-Checkpoint committen, danach frischen Folge-Review
+  für EPIC-B starten.

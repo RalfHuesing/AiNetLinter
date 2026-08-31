@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
@@ -100,46 +101,63 @@ internal static class FindAssemblyExtensionsTool
     private static string FormatText(FindAssemblyExtensionsPayload payload)
     {
         var builder = new StringBuilder();
+        AppendHeader(builder, payload);
+        AppendExtensions(builder, payload.Extensions);
+        AssemblyAnalysisResponseLimits.AppendDiagnostics(builder, payload.Diagnostics, payload.DiagnosticsSummary);
+        return builder.ToString().TrimEnd();
+    }
+
+    private static void AppendHeader(StringBuilder builder, FindAssemblyExtensionsPayload payload)
+    {
         builder.AppendLine($"Assembly-Extensions: {payload.TotalExtensions}{(payload.Truncated ? " (gekürzt)" : string.Empty)}");
         builder.AppendLine($"Vollständigkeit: `{payload.Completeness}`");
-        if (payload.ReferenceSummary is { } referenceSummary)
-        {
-            builder.AppendLine($"Referenzen: {referenceSummary.ShownReferenceCount} von {referenceSummary.TotalReferenceCount}{(referenceSummary.ReferencesTruncated ? " (gekürzt)" : string.Empty)}");
-            builder.AppendLine($"Referenz-Sessions: {referenceSummary.ShownReferenceSessionCount} von {referenceSummary.TotalReferenceSessionCount}{(referenceSummary.ReferenceSessionsTruncated ? " (gekürzt)" : string.Empty)}");
-        }
+        AppendReferenceSummary(builder, payload.ReferenceSummary);
         if (payload.Origin is { } origin)
         {
             AssemblyAnalysisOriginText.Append(builder, origin);
         }
-        if (payload.ConsumerProject is not null)
+        AppendOptionalContext(builder, "Consumer", payload.ConsumerProject);
+        AppendOptionalContext(builder, "Receiver", payload.ReceiverType);
+    }
+
+    private static void AppendReferenceSummary(StringBuilder builder, AssemblyReferenceSummary? summary)
+    {
+        if (summary is null)
         {
-            builder.AppendLine($"Consumer: `{payload.ConsumerProject}`");
+            return;
         }
 
-        if (payload.ReceiverType is not null)
-        {
-            builder.AppendLine($"Receiver: `{payload.ReceiverType}`");
-        }
+        builder.AppendLine($"Referenzen: {summary.ShownReferenceCount} von {summary.TotalReferenceCount}{(summary.ReferencesTruncated ? " (gekürzt)" : string.Empty)}");
+        builder.AppendLine($"Referenz-Sessions: {summary.ShownReferenceSessionCount} von {summary.TotalReferenceSessionCount}{(summary.ReferenceSessionsTruncated ? " (gekürzt)" : string.Empty)}");
+    }
 
-        foreach (var extension in payload.Extensions)
+    private static void AppendOptionalContext(
+        StringBuilder builder,
+        string label,
+        string? value)
+    {
+        if (value is not null)
         {
-            var qualifiedName = string.IsNullOrEmpty(extension.Namespace) ? extension.Name : $"{extension.Namespace}.{extension.Name}";
+            builder.AppendLine($"{label}: `{value}`");
+        }
+    }
+
+    private static void AppendExtensions(
+        StringBuilder builder,
+        IReadOnlyList<AssemblyExtensionDto> extensions)
+    {
+        foreach (var extension in extensions)
+        {
+            var qualifiedName = string.IsNullOrEmpty(extension.Namespace)
+                ? extension.Name
+                : $"{extension.Namespace}.{extension.Name}";
             builder.AppendLine($"- `{qualifiedName}` für `{extension.ReceiverType}` — {extension.Applicability}");
             builder.AppendLine($"  Signatur: `{extension.Signature}`");
-            if (extension.ApplicabilityReason is not null) builder.AppendLine($"  Grund: {extension.ApplicabilityReason}");
+            if (extension.ApplicabilityReason is not null)
+            {
+                builder.AppendLine($"  Grund: {extension.ApplicabilityReason}");
+            }
         }
-
-        if (payload.Diagnostics.Count > 0)
-        {
-            builder.AppendLine();
-            var count = payload.DiagnosticsSummary is { } summary
-                ? $"{summary.ShownCount} von {summary.TotalCount}"
-                : payload.Diagnostics.Count.ToString();
-            builder.AppendLine($"Diagnosen: {count}{(payload.DiagnosticsSummary?.Truncated == true ? " (gekürzt)" : string.Empty)}");
-            foreach (var diagnostic in payload.Diagnostics) builder.AppendLine($"- {diagnostic}");
-        }
-
-        return builder.ToString().TrimEnd();
     }
 
 }

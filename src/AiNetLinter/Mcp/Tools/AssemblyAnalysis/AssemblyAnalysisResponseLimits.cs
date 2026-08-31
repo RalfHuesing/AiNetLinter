@@ -23,8 +23,9 @@ internal static class AssemblyAnalysisResponseLimits
     internal static AssemblyDiagnosticsSummary WithoutSamples(AssemblyDiagnosticsSummary summary) =>
         summary with
         {
-            Root = summary.Root with { Samples = Array.Empty<string>() },
-            Transitive = summary.Transitive with { Samples = Array.Empty<string>() },
+            Root = summary.Root with { ShownCount = 0, Samples = Array.Empty<string>() },
+            Transitive = summary.Transitive with { ShownCount = 0, Samples = Array.Empty<string>() },
+            ShownCount = 0,
             Samples = Array.Empty<string>(),
         };
 
@@ -35,13 +36,20 @@ internal static class AssemblyAnalysisResponseLimits
     {
         var limit = NormalizeDiagnosticLimit(requestedLimit);
         var root = Normalize(rootDiagnostics);
-        var transitive = Normalize(transitiveDiagnostics);
-        var all = root.Concat(transitive).Distinct(StringComparer.Ordinal).ToList();
-        var samples = SelectRepresentativeSamples(root, transitive, limit);
+        var transitive = Normalize(transitiveDiagnostics)
+            .Where(diagnostic => !root.Contains(diagnostic, StringComparer.Ordinal))
+            .ToList();
+        var all = root.Concat(transitive).ToList();
+        var samples = SelectSamples(SelectRepresentativeDiagnostics(root, transitive, limit), limit, out _);
+        var rootSampleValues = root
+            .Select(NormalizeForDisplay)
+            .ToHashSet(StringComparer.Ordinal);
+        var rootSamples = samples.Where(rootSampleValues.Contains).ToList();
+        var transitiveSamples = samples.Where(sample => !rootSampleValues.Contains(sample)).ToList();
         var allSummary = CreateSummary(all, limit, samples);
         return new(
-            CreateSummary(root, limit),
-            CreateSummary(transitive, limit),
+            CreateSummary(root, limit, rootSamples),
+            CreateSummary(transitive, limit, transitiveSamples),
             all.Count,
             allSummary.ShownCount,
             allSummary.Truncated,
@@ -91,6 +99,20 @@ internal static class AssemblyAnalysisResponseLimits
         return normalized.Length <= MaxDiagnosticCharacters
             ? normalized
             : normalized[..(MaxDiagnosticCharacters - 1)] + "…";
+    }
+
+    internal static void AppendDiagnostics(
+        StringBuilder builder,
+        IReadOnlyList<string> diagnostics,
+        AssemblyDiagnosticsSummary? summary)
+    {
+        if (diagnostics.Count == 0) return;
+        builder.AppendLine();
+        var count = summary is null
+            ? diagnostics.Count.ToString()
+            : $"{summary.ShownCount} von {summary.TotalCount}";
+        builder.AppendLine($"Diagnosen: {count}{(summary?.Truncated == true ? " (gekürzt)" : string.Empty)}");
+        foreach (var diagnostic in diagnostics) builder.AppendLine($"- {diagnostic}");
     }
 
     private static AssemblyReferenceSessionDto ProjectReferenceSession(AssemblyReferenceSession session)
@@ -149,19 +171,6 @@ internal static class AssemblyAnalysisResponseLimits
             truncatedBy);
     }
 
-    private static IReadOnlyList<string> SelectRepresentativeSamples(
-        IReadOnlyList<string> root,
-        IReadOnlyList<string> transitive,
-        int limit)
-    {
-        if (transitive.Count == 0) return SelectSamples(root, limit, out _);
-        if (root.Count == 0) return SelectSamples(transitive, limit, out _);
-
-        var rootCount = Math.Min(root.Count, Math.Max(1, limit - 1));
-        var selected = root.Take(rootCount).Concat(transitive.Take(limit - rootCount)).ToList();
-        return SelectSamples(selected, limit, out _);
-    }
-
     private static IReadOnlyList<string> SelectSamples(
         IReadOnlyList<string> diagnostics,
         int limit,
@@ -180,6 +189,20 @@ internal static class AssemblyAnalysisResponseLimits
         }
 
         return samples;
+    }
+
+    private static IReadOnlyList<string> SelectRepresentativeDiagnostics(
+        IReadOnlyList<string> root,
+        IReadOnlyList<string> transitive,
+        int limit)
+    {
+        if (transitive.Count == 0) return root.Take(limit).ToList();
+        if (root.Count == 0) return transitive.Take(limit).ToList();
+
+        var rootCount = Math.Min(root.Count, Math.Max(1, limit - 1));
+        return root.Take(rootCount)
+            .Concat(transitive.Take(limit - rootCount))
+            .ToList();
     }
 
     private static string NormalizeMessage(string diagnostic) =>

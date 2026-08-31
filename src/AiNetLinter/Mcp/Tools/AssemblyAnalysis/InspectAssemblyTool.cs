@@ -113,7 +113,7 @@ internal static class InspectAssemblyTool
             payload.ReferenceSessions ?? Array.Empty<AssemblyReferenceSessionDto>(),
             payload.ReferenceSummary);
         AppendTypes(builder, payload, publicOnly);
-        AppendDiagnostics(builder, payload.Diagnostics, payload.DiagnosticsSummary);
+        AssemblyAnalysisResponseLimits.AppendDiagnostics(builder, payload.Diagnostics, payload.DiagnosticsSummary);
 
         return builder.ToString().TrimEnd();
     }
@@ -197,20 +197,6 @@ internal static class InspectAssemblyTool
             : $", {type.TotalMembers} Member";
         builder.AppendLine($"- `{qualifiedName}` ({type.Kind}, {type.Accessibility}{memberCount})");
         foreach (var member in type.Members) builder.AppendLine($"  - {member.Kind}: `{member.Signature}`");
-    }
-
-    private static void AppendDiagnostics(
-        StringBuilder builder,
-        IReadOnlyList<string> diagnostics,
-        AssemblyDiagnosticsSummary? summary)
-    {
-        if (diagnostics.Count == 0) return;
-        builder.AppendLine();
-        var count = summary is null
-            ? diagnostics.Count.ToString()
-            : $"{summary.ShownCount} von {summary.TotalCount}";
-        builder.AppendLine($"Diagnosen: {count}{(summary?.Truncated == true ? " (gekürzt)" : string.Empty)}");
-        foreach (var diagnostic in diagnostics) builder.AppendLine($"- {diagnostic}");
     }
 
 }

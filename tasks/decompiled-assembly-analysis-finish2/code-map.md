@@ -70,13 +70,12 @@
   vorhanden; alle abgefragten Dateien meldeten 0 Violations. `AssemblyAnalysisSession`
   ist mit 394 Codezeilen/44 Membern bereits nahe am Footprint-Budget, daher
   keine breite Zerlegung ohne konkreten EPIC-A-Bedarf.
-- EPIC-B-Kontext per MCP bestätigt: `InspectAssemblyTool` (182 Codezeilen;
-  Deklaration 17–216), `FindAssemblyExtensionsTool` (120; Deklaration 15–145),
-  `GetServerHealthTool` (69; Deklaration 28–104),
-  `GetServerHealthResponseBuilder` (206; Deklaration 16–237) und
-  `AssemblyAnalysisDiagnostics` sind die relevanten Einstiegspunkte; die
-  abgefragten Produktionsdateien meldeten im initialen Kontext zunächst 0
-  Violations. Vor der Änderung verwendeten die Handler
+- EPIC-B-Kontext per MCP bestätigt: `InspectAssemblyTool` (202 Codezeilen),
+  `FindAssemblyExtensionsTool` (163), `GetServerHealthTool` (69),
+  `GetServerHealthResponseBuilder` (291) und `AssemblyAnalysisDiagnostics`
+  sind die relevanten Einstiegspunkte. `AssemblyAnalysisResponseLimits` (234)
+  ist der gemeinsame Projektor für Diagnostics und Textausgabe. Vor der
+  Änderung verwendeten die Handler
   `Take(100)` für aggregierte Diagnostics, begrenzten Referenzlisten nicht und
   Health gab Assembly-Diagnostics standardmäßig vollständig aus. EPIC-B führt
   dafür `AssemblyAnalysisResponseLimits` ein: 20 Diagnostics standardmäßig,
@@ -136,16 +135,20 @@
   Registry-Snapshots ohne transitive Expansion arbeitet.
 - Top-Level-`diagnostics` und `analysis.diagnostics` verwenden dieselben
   Samples; Text-Formatter iterieren ausschließlich über bereits projizierte
-  Listen. Die aggregierte Sample-Liste wird begrenzt, aber die Root-/transitiven
-  Summary-Samples werden derzeit separat budgetiert und können die Diagnose-
-  Nutzlast vervielfachen; `WithoutSamples` leert Samples, lässt aber
-  `ShownCount` unverändert.
+  Listen. `ProjectDiagnostics` dedupliziert Root- und transitive Diagnostics
+  mit Root-Vorrang, baut Root-/transitive-/Aggregate-Summaries aus derselben
+  globalen Auswahl und hält die Gesamtgröße der sichtbaren Samples innerhalb
+  des bestehenden 4-KiB-Budgets. `WithoutSamples` leert Samples und setzt
+  Aggregate-/Root-/Transitive-`ShownCount` gemeinsam auf 0.
 - `complete` mit mindestens einer Root- oder transitiven Diagnose wird in den
-  Inspect-/Extensions-Payloads und im `AssemblyAnalysisResponse` über die
-  bestehende `ResolveEffectiveStatus`-Logik als `partial` ausgegeben. Die
-  Health-Umwandlung `ToAssemblyEntry(AssemblyAnalysisLease)` übernimmt den
-  Rohstatus und muss diese Projektion für Expansion-Diagnostics noch separat
-  abbilden.
+  Inspect-/Extensions-Payloads, im `AssemblyAnalysisResponse` und in beiden
+  Health-Umwandlungen über `ResolveEffectiveStatus` als `partial` ausgegeben.
+  `ProjectAssemblyEntry` verwendet diese effektiven Werte auch für die
+  kompakte und detaillierte Health-Projektion.
+- Die vier EPIC-B-Formatter-Komplexitätsbefunde sind durch kleine, verhaltens-
+  neutrale Struktur-/Append-Helfer beseitigt: `FormatText` delegiert Header,
+  Extension-/Kontext- und gemeinsame Diagnostics-Ausgabe; `AppendAssemblySection`
+  delegiert Header-, Source- und Diagnostics-Ausgabe.
 - Leere physische Pfade dürfen in dekompilierten In-Memory-Dokumenten nicht zu
   `Path.GetFullPath`-/`relativeTo`-Fehlern in `get_call_tree`,
   `get_symbol_body` oder `dependency_graph` führen.
@@ -234,20 +237,29 @@
   Solution-Loadings auf `[INFO]`, ein Health-Entry-Kontext lief in den
   300-s-Timeout; lokale Build-/Testverifikation blieb davon unabhängig grün.
 - EPIC-B-Audit im Scope `src/AiNetLinter/Mcp`: `find_duplicates` (8 Cluster;
-  der exakte Inspect-/Extensions-Adapter ist bewusst ausgenommen),
-  `find_dead_code` (40 Low-Confidence-Kandidaten, 0 High; bestehende
-  Infrastruktur-/Interop-/DI-/Serializer-Risiken) und `find_magic_values`
-  (238 eindeutige Treffer, 50 angezeigt; bestehende Wire-/Diagnose- und
-  Plattformwerte) wurden triagiert. Keine sichere scope-nahe Korrektur wurde
-  daraus abgeleitet.
+  der exakte Inspect-/Extensions-Adapter ist bewusst ausgenommen; die zuvor
+  neu entstandene `AppendDiagnostics`-Ähnlichkeit wurde durch den gemeinsamen
+  Helper entfernt), `find_dead_code` (40 Low-Confidence-Kandidaten, 0 High;
+  bestehende Infrastruktur-/Interop-/DI-/Serializer-Risiken) und die
+  eingegrenzten `find_magic_values`-Läufe (AssemblyAnalysis: 2 bestehende
+  Status-Identifier, ServerMaintenance: 4 bestehende Format-/Namenwerte)
+  wurden triagiert. Keine sichere scope-nahe Korrektur wurde daraus abgeleitet.
 - EPIC-B-lokale Verifikation: `dotnet build AiNetLinter.slnx --no-restore`
   sowie die exakten Filter für
   `AssemblyAnalysisToolTests|AssemblyAnalysisDispatcherCapabilityTests`
-  (19/19) und
-  `GetServerHealthToolTests|McpServerAssemblyHealthE2ETests` (8/8) waren
+  (21/21) und
+  `GetServerHealthToolTests|McpServerAssemblyHealthE2ETests` (9/9) waren
   seriell erfolgreich. Der vorherige parallele Wiederholungslauf erzeugte
   lediglich temporäre DLL-Sperren und wurde nicht als fachlicher Befund gewertet.
-- Letzter EPIC-B-`get_violations`-Check nach allen Codeänderungen mit absolutem
+- EPIC-B-Runde-1-Vollverifikation: Der Solution-Build blieb bei 0 Warnungen und
+  0 Fehlern. `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress`
+  meldete 2236 grüne Tests, 2 Skips und 1 bestehenden, isoliert reproduzierbar
+  nicht bestätigten `ProjectRegistry`-Fehler; der Einzeltest lief anschließend
+  1/1 grün. `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`
+  meldete 371/373 grüne Tests; die 2 Fehler betreffen bestehende
+  MCP-Instruktions-/Registrierungsvertragstexte (`sortBy` und `ambiguous`) und
+  nicht den EPIC-B-Diff.
+- Historischer EPIC-B-`get_violations`-Check vor Runde 1 mit absolutem
   Projektroot und den Scopes `src/AiNetLinter/Mcp`,
   `src/AiNetLinter.FastTests/Mcp/Assemblies` und
   `src/AiNetLinter.IntegrationTests/Mcp/Tools`: Tests jeweils 0; Produktion
@@ -259,4 +271,5 @@
   Der fünfte Befund ist der bestehende
   `AssemblyAnalysisRegistry`-AIContextFootprint (3594 > 2500), außerhalb des
   EPIC-B-Response-Scopes; er bleibt als `promoted-to-project-debt` für den
-  Orchestrator sichtbar.
+  Orchestrator sichtbar. Der abschließende Runde-1-Check folgt nach der
+  Code-Map-Aktualisierung und ist der letzte codebezogene Prüfschritt.
