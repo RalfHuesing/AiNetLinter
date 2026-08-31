@@ -635,6 +635,19 @@
   Korrektur-Implementierer für `TD-EPIC-C-002` und `TD-EPIC-C-008` starten;
   die P2-Reste werden im selben begründeten Versuch berücksichtigt.
 
+## 2026-08-31 — running / EPIC-C / Korrektur-Implementierer Runde 2
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- baseline: `017797d4` Code, `3585a0f4` Review-/Triagecheckpoint.
+- scope: `TD-EPIC-C-002` P1 (atomare Lease-Revalidierung vor Retirement) und
+  `TD-EPIC-C-008` P2 (Creation-Join erst nach `Complete()`); `TD-EPIC-C-006`
+  und `TD-EPIC-C-007` bleiben `accepted-deferred`.
+- erwarteter Hand-off: Code-/Regressionstestkorrektur ohne Agenten-Commit,
+  fokussierte Verifikation und MCP-Nachweise nach der letzten Änderung; kein
+  Wiederöffnen des ausgeschöpften EPIC-B-Findings.
+- warteverhalten: Der Implementierer läuft bis zum echten terminalen Status;
+  Polling-Timeouts führen nicht zu einem Interrupt.
+
 ## 2026-08-31 — completed / EPIC-C / Korrektur-Implementierer Runde 1
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`

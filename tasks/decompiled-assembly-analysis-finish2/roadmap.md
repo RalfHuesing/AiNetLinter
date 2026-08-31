@@ -83,7 +83,7 @@ tech_debt: siehe tech-debt.md
   Dispose während der Erzeugung sind deterministisch.
 - Verifikation: fokussierte TTL/LRU/Capacity/Lease/Race/Creation-Barrier-
   Tests; hohe Last nur in gezielten Stress-Tests; gezielter Violations-Check.
-- Status: correction_in_progress (Runde 2; 1 P1, 2 P2-Reste)
+- Status: correction_in_progress (Runde 2; 1 P1, 1 P2)
 
 ## EPIC-C-Review — Korrektur umgesetzt, Folge-Review ausstehend
 
@@ -98,9 +98,9 @@ tech_debt: siehe tech-debt.md
   2 Skips; Integration 372/374. `get_violations` nur der bekannte
   `AssemblyAnalysisRegistry`-Footprint.
 - Review: Korrekturrunde 1 hat vier ursprüngliche EPIC-C-Befunde behoben. Der
-  Folge-Review gegen `017797d4` meldete ein P1-Race bei idle Assembly-LRU und
-  zwei P2-Reste; Korrekturrunde 2 läuft. Das ausgeschöpfte EPIC-B-Finding
-  bleibt unverändert.
+  Folge-Review gegen `017797d4` bestätigte diese und meldete ein P1-Race bei
+  idle Assembly-LRU sowie einen P2-Rest beim Producer-Join; Korrekturrunde 2
+  läuft. Das ausgeschöpfte EPIC-B-Finding bleibt unverändert.
 
 ## EPIC-C-Korrekturrunde 1
 
@@ -133,6 +133,14 @@ tech_debt: siehe tech-debt.md
 - `TD-EPIC-C-005`: ursprünglicher P2 weitgehend behoben; deterministischer
   Producer-Join bleibt wegen Dictionary-Entfernung vor `Complete()` offen.
 - Zusätzliche P2-Testlücke: direkter Materializer-plus-Registry-E2E-Pfad.
+
+## EPIC-C-Korrekturrunde 2
+
+- Scope: `TD-EPIC-C-002` (P1, atomare Lease-Revalidierung zwischen Idle-
+  Prüfung und Retirement) und `TD-EPIC-C-008` (P2, Creation-Join erst nach
+  `Complete()`); `TD-EPIC-C-006`/`007` bleiben bewusst `accepted-deferred`.
+- Regel: zweiter begründeter Versuch für die betroffenen Findings;
+  Polling-Timeouts führen nicht zu einem Interrupt.
 
 ## EPIC-C-Folge-Review — Korrekturstand `017797d4`
 
