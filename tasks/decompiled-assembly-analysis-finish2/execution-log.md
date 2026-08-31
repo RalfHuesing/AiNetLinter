@@ -575,6 +575,66 @@
 - nächste Aktion: Review-Checkpoint committen, danach frischen
   Korrektur-Implementierer für EPIC-B starten.
 
+## 2026-08-31 — completed / EPIC-C / Folge-Reviewer nach Korrekturrunde 1
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a0562b-fce9-7d23-8f2b-a9cde346dcd6`
+- diff-baseline: `8ab245ab -> 017797d4`; zum Reviewzeitpunkt enthielt `HEAD`
+  zusätzlich nur Review-/Triage-Dokumentation.
+- status: `issues`; kein P0, ein verbleibender P1-Race-Befund und präzise
+  P2-Reste; kein Produktions-/Testcode und kein Commit durch die Review-Rolle.
+- vollständiger finaler Agentenbericht:
+
+  > Verdikt: `issues` — kein P0, aber ein belegter P1-Race-Befund. EPIC-C ist
+  > daher nicht freigabefähig.
+  >
+  > `TD-EPIC-C-001` ist behoben: `MaterializeAsync` koordiniert Source-
+  > Reservation mit `SourceSnapshotRegistry.TryReserveMaterialization`;
+  > Eviction, Capacity, Identity-Deduplizierung und Reservation/Resident-
+  > Lease sind unter den vorgesehenen Locks koordiniert.
+  >
+  > `TD-EPIC-C-002` bleibt P1 offen: Zwischen Idle-Prüfung und
+  > `TryRemoveEntryForRetirement` kann ein anderer Thread noch eine Analyse-
+  > Lease erwerben; die Entfernung revalidiert den Lease-Zustand nicht. Die
+  > Entry-Dispose-Logik verhindert Use-after-dispose, aber ein gerade aktiv
+  > gewordener Entry kann trotzdem retired werden. Erforderlich ist eine
+  > atomare Retirement-Transition oder Recheck unter Registry-/Entry-Lock mit
+  > deterministischem Race-Test.
+  >
+  > `TD-EPIC-C-003` ist als ursprünglicher P1 behoben: Handshake und
+  > ThinClient vergleichen die fünf External-Limits, optionale Felder halten
+  > Altprotokoll-Kompatibilität. Als P2-Rest bleibt der Vergleich
+  > normalisierter TimeSpan-Ticks gegen Rohwerte.
+  >
+  > `TD-EPIC-C-004` ist behoben: Reservation wird bis zum Snapshot gehalten
+  > und in `SourceSnapshotRegistry.Acquire` atomar promoted; Fehler und
+  > Cancellation geben Reservation und Workspace zurück. Eine direkte
+  > Materializer-plus-Registry-E2E-Abdeckung bleibt als nichtblockierende P2-
+  > Testlücke.
+  >
+  > `TD-EPIC-C-005` ist weitgehend behoben: Checkout-Schätzung und
+  > Materialization-Use sind cancellation-aware, Consumer-Abbruch cancelt
+  > nicht den gemeinsamen Producer, Orchestrator und Host warten grundsätzlich
+  > auf laufende Producer. Als P2-Rest entfernt `RunProviderCreationAsync`
+  > die Creation jedoch vor `creation.Complete()` aus dem Dictionary; ein
+  > paralleler Dispose kann die noch nicht vollständig beendete Producer-Task
+  > dadurch übersehen.
+  >
+  > Verifikation: `dotnet build --no-restore` 0/0; Fokus Fast 51/51 und
+  > Materializer-Integration 5/5; vollständige FastTests 2263 bestanden,
+  > 2 Skips; Integration 373 bestanden mit den bekannten nicht kausalen
+  > Beschreibungstextfehlern `ambiguous` und `sortBy`; MCP meldet keine
+  > EPIC-C-Regelverletzung, nur bekannte Footprint-Warnungen; Stress-Tests
+  > nicht ausgeführt; `DIAGNOSTICS-SAMPLE-BUDGET` nicht wiedereröffnet.
+- Tech-Debt-Triage: `TD-EPIC-C-001` und `TD-EPIC-C-004` auf `fixed` gesetzt;
+  `TD-EPIC-C-002` bleibt `fix-now`; `TD-EPIC-C-003` ist als ursprünglicher
+  P1 `fixed` mit P2-Rest dokumentiert; `TD-EPIC-C-005` bleibt `fix-now`;
+  `TD-EPIC-C-006` und `TD-EPIC-C-007` sind `accepted-deferred`,
+  `TD-EPIC-C-008` ist `fix-now`.
+- nächste Aktion: Folge-Review checkpointen, danach frischen EPIC-C-
+  Korrektur-Implementierer für `TD-EPIC-C-002` und `TD-EPIC-C-008` starten;
+  die P2-Reste werden im selben begründeten Versuch berücksichtigt.
+
 ## 2026-08-31 — completed / EPIC-C / Korrektur-Implementierer Runde 1
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`

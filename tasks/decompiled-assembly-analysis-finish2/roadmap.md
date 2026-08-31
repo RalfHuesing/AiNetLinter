@@ -83,7 +83,7 @@ tech_debt: siehe tech-debt.md
   Dispose während der Erzeugung sind deterministisch.
 - Verifikation: fokussierte TTL/LRU/Capacity/Lease/Race/Creation-Barrier-
   Tests; hohe Last nur in gezielten Stress-Tests; gezielter Violations-Check.
-- Status: review_in_progress (Folge-Review nach Korrekturrunde 1)
+- Status: correction_in_progress (Runde 2; 1 P1, 2 P2-Reste)
 
 ## EPIC-C-Review — Korrektur umgesetzt, Folge-Review ausstehend
 
@@ -97,10 +97,10 @@ tech_debt: siehe tech-debt.md
   Integration 4/4; vollständige Nicht-Stress-FastTests 2256 bestanden,
   2 Skips; Integration 372/374. `get_violations` nur der bekannte
   `AssemblyAnalysisRegistry`-Footprint.
-- Review: `issues`; der unabhängige Reviewer gegen Commit `8ab245ab` meldete
-  drei P1- und zwei P2-Befunde. Korrekturrunde 1 hat alle fünf Punkte
-  bearbeitet; der Folge-Review gegen `017797d4` läuft. Das ausgeschöpfte
-  EPIC-B-Finding bleibt unverändert.
+- Review: Korrekturrunde 1 hat vier ursprüngliche EPIC-C-Befunde behoben. Der
+  Folge-Review gegen `017797d4` meldete ein P1-Race bei idle Assembly-LRU und
+  zwei P2-Reste; Korrekturrunde 2 läuft. Das ausgeschöpfte EPIC-B-Finding
+  bleibt unverändert.
 
 ## EPIC-C-Korrekturrunde 1
 
@@ -122,6 +122,17 @@ tech_debt: siehe tech-debt.md
   Integration 7/7; vollständige FastTests 2263 bestanden, 2 Skips;
   Integration 373 bestanden mit den zwei bekannten externen
   Beschreibungstextfehlern. Review gegen den Korrekturstand steht aus.
+
+## EPIC-C-Folge-Review — Restbefunde
+
+- `TD-EPIC-C-001` und `TD-EPIC-C-004`: `fixed` bestätigt.
+- `TD-EPIC-C-002`: P1 bleibt wegen fehlender atomarer Revalidierung zwischen
+  Idle-Prüfung und Retirement offen.
+- `TD-EPIC-C-003`: ursprünglicher P1 behoben; Präzisionsvergleich von
+  TimeSpan-Ticks gegen Rohwerte als P2-Rest.
+- `TD-EPIC-C-005`: ursprünglicher P2 weitgehend behoben; deterministischer
+  Producer-Join bleibt wegen Dictionary-Entfernung vor `Complete()` offen.
+- Zusätzliche P2-Testlücke: direkter Materializer-plus-Registry-E2E-Pfad.
 
 ## EPIC-C-Folge-Review — Korrekturstand `017797d4`
 

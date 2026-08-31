@@ -72,11 +72,11 @@ Ausführungsprotokoll.
 - Evidenz: unabhängiger EPIC-C-Review gegen `8ab245ab`; abgelaufene freigegebene
   Snapshots blockieren volle Budgets, identische Snapshots können bei
   `MaxResidentResources=1` abgewiesen werden.
-- Disposition: `fix-now`
-- Risiko: dokumentiertes Source-TTL-/Capacity-Verhalten greift im Daemon-
-  Produktionspfad nicht zuverlässig.
-- Nächster Schritt: Source-Eviction vor Reservation koordinieren und die
-  Reservation atomar bis Registrierung/Resident-Lease halten.
+- Disposition: `fixed`
+- Risiko: behoben; Source-Eviction, Identity-Deduplizierung und Reservation-
+  Promotion sind unter den vorgesehenen Locks koordiniert.
+- Nächster Schritt: keine Korrekturmaßnahme; die direkte Materializer-plus-
+  Registry-E2E-Abdeckung bleibt als separater P2-Punkt dokumentiert.
 - Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
 
 ## TD-EPIC-C-002 — Assembly-LRU durch Owner-Lease blockiert
@@ -92,8 +92,9 @@ Ausführungsprotokoll.
 - Disposition: `fix-now`
 - Risiko: LRU-/Capacity-Vertrag wird im produktiven Registry-Pfad verfehlt;
   aktive Analyse-Leases müssen weiterhin geschützt bleiben.
-- Nächster Schritt: Capacity-Eviction über idle Assembly-Einträge führen und
-  Owner-Leases nach Retirement freigeben.
+- Nächster Schritt: Capacity-Eviction über idle Assembly-Einträge führen,
+  Owner-Leases nach Retirement freigeben und den Lease-Zustand atomar zwischen
+  Idle-Prüfung und Retirement revalidieren.
 - Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
 
 ## TD-EPIC-C-003 — ThinClient-Overrides fehlen im bestehenden Daemon-Handshake
@@ -105,11 +106,11 @@ Ausführungsprotokoll.
 - Fundstelle/Scope: `DaemonProtocol.cs`, `ThinClientProxy.cs`.
 - Evidenz: unabhängiger Review; `EffectiveDaemonConfiguration` enthält im
   bestehenden Pfad nur `MaxProjects` und `IdleExitMinutes`.
-- Disposition: `fix-now`
-- Risiko: CLI-Semantik hängt vom Daemon-Zustand ab und kann falsche Limits
-  suggerieren.
-- Nächster Schritt: External-Limits in den Handshake aufnehmen, Abweichung
-  warnen oder Neustart erzwingen; alte Partner optional-feldkompatibel halten.
+- Disposition: `fixed` für den ursprünglichen P1; P2-Rest `accepted-deferred`
+- Risiko: ursprüngliche CLI-Semantik ist korrigiert; hochpräzise Dezimalwerte
+  können durch Tick-Quantisierung noch eine falsche Warnung auslösen.
+- Nächster Schritt: beide Seiten auf denselben normalisierten Tickwert
+  abbilden.
 - Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
 
 ## TD-EPIC-C-004 — Materialisierungsreservation endet vor Snapshot-Registrierung
@@ -122,10 +123,11 @@ Ausführungsprotokoll.
   `AssemblySourceSelectionOrchestrator.cs`.
 - Evidenz: unabhängiger EPIC-C-Review; zeitliches Fenster zwischen Reservation
   und Registrierung.
-- Disposition: `fix-now`
-- Risiko: kurzzeitige Überschreitung von Resident-/Disk-/Memory-Limits.
-- Nächster Schritt: Reservation bis Registrierung halten und bei erfolgreichem
-  Acquire in die Resident-Lease überführen.
+- Disposition: `fixed`
+- Risiko: behoben; Reservation wird bis zur Registrierung gehalten und bei
+  erfolgreichem Acquire in die Resident-Lease überführt.
+- Nächster Schritt: direkte Materializer-plus-Registry-E2E-Abdeckung separat
+  ergänzen.
 - Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
 
 ## TD-EPIC-C-005 — Producer-Cancellation wird beim Host-Dispose nicht gejoint
@@ -140,8 +142,9 @@ Ausführungsprotokoll.
   keinen deterministischen vollständigen Beendigungspunkt.
 - Disposition: `fix-now`
 - Risiko: Race zwischen laufender Creation und Host-/Registry-Dispose.
-- Nächster Schritt: Checkout-Schätzung cancellation-aware machen und
-  Provider-Creations beim asynchronen Host-Dispose vollständig joinen.
+- Nächster Schritt: Checkout-Schätzung cancellation-aware machen, Creation bis
+  nach `creation.Complete()` im Join-Set halten und Provider-Creations beim
+  asynchronen Host-Dispose vollständig joinen.
 - Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
 
 ### EPIC-C-Korrekturrunde 1 — Bearbeitungsnachweis
@@ -151,6 +154,53 @@ kohärenten Ansatz bearbeitet. Die Dispositionen bleiben bis zum unabhängigen
 Folge-Review `fix-now`; erst ein bestätigter Review darf sie auf `fixed`
 setzen. Der vollständige Bericht und die Verifikation stehen im
 `execution-log.md`.
+
+## TD-EPIC-C-006 — Fehlender Materializer-plus-Registry-E2E-Pfad
+
+- Schweregrad: P2
+- Beschreibung: Die Reservation-/Promotion-Verträge sind in getrennten
+  Registry- und Materializer-Tests belegt, aber ohne direkten E2E-Test des
+  gekoppelten Produktionspfads.
+- Fundstelle/Scope: `ExternalSourceSnapshotMaterializerTests.cs`,
+  `SourceSnapshotRegistryTests.cs`.
+- Evidenz: EPIC-C-Folge-Review; fokussierte Tests sind grün, der direkte
+  gekoppelte Pfad ist nicht abgesichert.
+- Disposition: `accepted-deferred`
+- Risiko: spätere Integrationsdrift zwischen Materializer und Registry könnte
+  unentdeckt bleiben.
+- Nächster Schritt: gekoppelten Reservation-/Promotion-/Rollback-Test ergänzen.
+- Log-Anker: `execution-log.md`, completed EPIC-C Folge-Reviewer vom
+  2026-08-31.
+
+## TD-EPIC-C-007 — Tick-Normalisierung im ThinClient-Limitvergleich
+
+- Schweregrad: P2
+- Beschreibung: `ResolveIdleTtl` vergleicht normalisierte TimeSpan-Ticks nicht
+  mit dem Rohwert des ThinClient-Handshakes.
+- Fundstelle/Scope: `AssemblyAnalysisResourceBudget.cs`, `ThinClientProxy.cs`.
+- Evidenz: EPIC-C-Folge-Review; sehr hochpräzise Dezimalwerte können eine
+  falsche Konfigurationswarnung auslösen.
+- Disposition: `accepted-deferred`
+- Risiko: seltene, aber irreführende Divergenzwarnung bei bestehenden Daemons.
+- Nächster Schritt: beide Seiten auf denselben normalisierten Wert abbilden.
+- Log-Anker: `execution-log.md`, completed EPIC-C Folge-Reviewer vom
+  2026-08-31.
+
+## TD-EPIC-C-008 — Creation-Join nach Dictionary-Entfernung
+
+- Schweregrad: P2
+- Beschreibung: `RunProviderCreationAsync` entfernt die Creation vor
+  `creation.Complete()` aus dem Join-Dictionary.
+- Fundstelle/Scope: `AssemblySourceSelectionOrchestrator.cs`.
+- Evidenz: EPIC-C-Folge-Review; ein paralleler Dispose kann die noch nicht
+  vollständig beendete Producer-Task dadurch übersehen.
+- Disposition: `fix-now`
+- Risiko: formell nicht deterministischer Host-Dispose-Endpunkt trotz fehlender
+  beobachteter Leaks.
+- Nächster Schritt: Creation erst nach vollständigem Completion aus dem Join-
+  Set entfernen und Race-Test ergänzen.
+- Log-Anker: `execution-log.md`, completed EPIC-C Folge-Reviewer vom
+  2026-08-31.
 
 ## TD-EPIC-B-004 — Compact-Health `ShownCount`
 
