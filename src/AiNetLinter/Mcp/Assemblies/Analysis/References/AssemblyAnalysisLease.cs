@@ -50,6 +50,20 @@ internal sealed class AssemblyAnalysisLease : IDisposable
     internal IReadOnlyList<string> ReferenceExpansionDiagnostics =>
         referenceExpansion?.Diagnostics ?? Array.Empty<string>();
 
+    /// <summary>
+    /// Liefert eine nicht-besitzende Momentaufnahme der vom Root-Lease eröffneten Child-Leases.
+    /// Der Aufrufer darf diese Leases nur innerhalb der Lebensdauer dieses Leases verwenden; die
+    /// Freigabe bleibt ausschließlich beim Root-Lease, damit Cross-Assembly-Navigation keine
+    /// unabhängige Resident-Lifetime erzeugt.
+    /// </summary>
+    internal IReadOnlyList<AssemblyAnalysisLease> ReferenceLeasesSnapshot()
+    {
+        lock (referenceGate)
+        {
+            return referenceLeases.ToList();
+        }
+    }
+
     internal Task<AssemblyReferenceExpansion> ExpandReferencesAsync(CancellationToken cancellationToken = default)
     {
         lock (referenceGate)

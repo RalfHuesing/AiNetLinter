@@ -438,3 +438,29 @@
   Produktionsscope lieferte der `changedOnly`-Lauf keine Dateien. Der
   abschließende `get_violations`-Check nach den Audits meldete sowohl im
   Testscope als auch im Daemon-Produktionsscope jeweils 0 Violations.
+
+## EPIC-D-Kontextaufnahme
+
+- EPIC-D erweitert die Assembly-Routen nur bei explizitem `includeReferences=true`.
+  Der Defaultpfad (`false`) bleibt der bisherige Root-Assembly-Pfad; die
+  Projekt-Semantik wird nicht auf eine Assembly-Semantik umgedeutet.
+- Die aktuelle Dispatcher-Kette expandiert bereits vor jedem Assembly-Tool
+  die registrierten Referenz-Leases. `FindSymbolTool`, `FindReferencesTool`
+  und `GetCallTreeTool` konsumieren diese Leases bisher jedoch nicht für die
+  Symbolsuche, Referenzauflösung oder Call-Tree-Bildung. `GetSymbolBodyTool`
+  folgt demselben Root-Snapshot-Vertrag und ist für abhängige Symbolpfade
+  mitzunehmen, sofern der neue Opt-in-Pfad verwendet wird.
+- `AssemblyReferenceResolver` und `AssemblyReferenceSessionExpander` liefern
+  bereits begrenzte, zyklus- und fehlertolerante Referenz-Metadaten
+  (`MaxReferenceDepth=8`, `MaxReferenceNodes=128`). Die neue Navigation muss
+  diese Herkunft/Partialität übernehmen, eigene harte Dokument-/Assembly-
+  Grenzen haben und den Root-Lease als alleinigen Besitzer der Child-Leases
+  respektieren.
+- Vor der Änderung waren die MCP-Schemas der betroffenen Assembly-Tools
+  `targetType`/`targetPath`-gebunden, aber ohne `includeReferences`. Die
+  Kontextaufnahme erfolgte mit absoluten Projekt-/Assembly-Zielen; ein
+  absichtlich falsch qualifizierter MCP-Symbolname für den Dispatcher lieferte
+  `SYMBOL_NOT_FOUND` und wurde nicht als Produktionsbefund interpretiert.
+- Der Low-Reasoning-Stand und die bewusste `rules.json`-Aggregate-Root-
+  Ausnahme bleiben unverändert. `TD-EPIC-B-005`/`TD-EPIC-B-010` bleiben
+  außerhalb des Scopes.

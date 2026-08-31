@@ -1470,3 +1470,14 @@
 - Urteil: `interrupted`; kein Finding und keine Codeänderung ableitbar.
 - nächste Aktion: frischen EPIC-D-Implementierer mit engerem Einstiegspunkt
   starten; kein paralleler Rollenlauf.
+
+## 2026-08-31 — checkpoint / EPIC-D / verspäteter Arbeitsbaumstand nach Abbruch
+
+- Nach dem Shutdown wurden noch verspätet zwei auftragsbezogene Änderungen
+  sichtbar: `AssemblyAnalysisLease.ReferenceLeasesSnapshot` als nicht-
+  besitzende Child-Lease-Momentaufnahme sowie die EPIC-D-Kontextaufnahme in
+  `code-map.md`.
+- Es liegt weiterhin kein terminaler Agentenbericht, kein Testnachweis und
+  kein belastbarer Review vor. Die Änderungen werden deshalb als unreviewter
+  Zwischenstand gesichert und von einem frischen Implementierer verifiziert
+  oder fortgeführt.
