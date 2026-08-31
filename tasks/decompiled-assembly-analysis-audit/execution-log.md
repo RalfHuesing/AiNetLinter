@@ -46,3 +46,9 @@
 - Fallback-Report: `reports/02-external-source.md`.
 - Terminalurteil: Konfigurations-, Mapping-, Provider- und Fallback-Verträge ohne bestätigten S0–S2-Defekt; reale source-backed Provider-Ausführung als externe Abdeckungsgrenze dokumentiert.
 - Keine Produktions- oder Testdateien geändert.
+
+## 2026-08-31 — Linse 03 abgeschlossen
+
+- Fallback-Report: `reports/03-git-transport.md`.
+- Terminalurteil: Prozess-, Timeout-, Cancellation-, Output-, Credential-Isolation-, Exitcode- und Cleanup-Verträge ohne bestätigten S0–S2-Defekt; echter Remote-Transport als externe Abdeckungsgrenze dokumentiert.
+- Keine Produktions- oder Testdateien geändert.
