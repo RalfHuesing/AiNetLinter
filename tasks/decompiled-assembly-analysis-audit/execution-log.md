@@ -77,3 +77,9 @@
 - Report: `reports/02-external-source.md`; geprüfte Revision laut Reviewer: `8a9fbdda` (Source-Baseline unverändert).
 - Terminalurteil: Zwei zusätzliche S2-Befunde wurden nachvollziehbar belegt: Divergenz zwischen Loader- und Laufzeit-URL-Policy sowie fehlende produktive Credential-Resolver-Verdrahtung in MCP-/Daemon-Einstiegen. Beide bleiben audit-only unverändert.
 - Die Befunde werden in der Konsolidierung gegen die aktuelle Host-Komposition und die Laufzeit-URL-Policy übernommen; der frühere Fallback-Befund `SRC-001` ist damit nicht mehr der Primärbericht für Linse 02.
+
+## 2026-08-31 — Linse 07 abgeschlossen
+
+- Fallback-Report: `reports/07-agent-surface.md`.
+- Terminalurteil: Progressive Output-/Completeness-Verträge überwiegend vorhanden; Registry-Footprint als S2-Wartbarkeitsbefund und Audit-Tool-Kandidaten getrennt von bestätigten Funktionsdefekten dokumentiert. Der Wire-Duplikationsbefund verweist auf MCP-001.
+- Keine Produktions- oder Testdateien geändert.
