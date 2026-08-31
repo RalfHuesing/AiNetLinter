@@ -1580,3 +1580,23 @@
 - Nächster Schritt: vollständige Nicht-Stress-Gates ausführen und die Ergebnisse
   als Abschlussstand dokumentieren. Das ausgeschöpfte EPIC-B-P1-Finding bleibt
   unverändert als residualer Tech Debt bestehen.
+
+## 2026-08-31 — completed / Abschluss-Gates und Task-Status
+
+- `dotnet build`: erfolgreich, 0 Warnungen und 0 Fehler.
+- `dotnet test src/AiNetLinter.FastTests --filter "Category!=Stress"`:
+  zunächst 1 transienter Fehler im bestehenden
+  `ExternalSourceRepositoryCacheConfigurationTests`-Test; isolierte
+  Wiederholung 1/1 grün, anschließender vollständiger Wiederholungslauf
+  2274 bestanden, 2 vorgesehene Skips, 0 Fehler.
+- `dotnet test src/AiNetLinter.IntegrationTests --filter "Category!=Stress"`:
+  377 bestanden, 0 Skips, 0 Fehler. Der Lauf ist zusätzlich im
+  `TestResults/epic-d-final-integration.trx` festgehalten.
+- Die Assembly-Live-Verträge wurden durch die Assembly-Health-E2E-Szenarien
+  im vollständigen Integrationslauf wiederholt; die fokussierte Multi-DLL-
+  Regression lief 3/3 grün und deckt Root plus zwei Referenz-DLLs ab.
+- EPIC-D und EPIC-E sind damit abgeschlossen. Der Gesamt-Task bleibt wegen
+  des bereits nach drei Versuchen ausgeschöpften EPIC-B-P1-Findings
+  `DIAGNOSTICS-SAMPLE-BUDGET` blockiert. Für dessen Wire-Form/Payload-Budget
+  ist eine explizite Nutzerentscheidung erforderlich; es wurde keine weitere
+  automatische Korrekturschleife gestartet.

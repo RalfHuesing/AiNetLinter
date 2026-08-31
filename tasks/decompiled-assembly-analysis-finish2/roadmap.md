@@ -1,11 +1,11 @@
 # Ausführungs-Roadmap: decompiled-assembly-analysis-finish2
 
-status: executing
-current_epic: EPIC-E
+status: blocked
+current_epic: EPIC-B
 correction_round: 0
 recent_finding_signatures: none
-cycle_state: final-gates-pending
-last_commit: 5d6cb55c
+cycle_state: blocked-on-epic-b-wire-budget-decision
+last_commit: f8da3283
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
@@ -23,8 +23,8 @@ tech_debt: siehe tech-debt.md
   `AssemblyAnalysisRegistry` bestehen.
 - EPIC-D ist lokal implementiert, fokussiert verifiziert und durch den
   abschließenden MCP-Audit ohne neue scope-nahe Befunde bestätigt. Die
-  vollständigen Nicht-Stress-Gates stehen noch aus. EPIC-B bleibt bis zu einer
-  späteren expliziten Wire-Form-/Payload-Budget-Entscheidung offen.
+  vollständigen Nicht-Stress-Gates sind grün. EPIC-B bleibt bis zu einer
+  expliziten Wire-Form-/Payload-Budget-Entscheidung blockiert.
 
 ## EPIC-A — Stabile In-Memory- und Dateipfade
 
@@ -219,27 +219,27 @@ tech_debt: siehe tech-debt.md
   Projektpfad.
 - Verifikation: explizite Konzept-Checkliste, vollständiger Build, vollständige
   Nicht-Stress-Testläufe, Assembly-Live-Wiederholung und Abschluss-Audit.
-- Status: in_progress (vollständige Nicht-Stress-Gates offen)
+- Status: done (Audit und vollständige Nicht-Stress-Gates grün)
 
 ## Abschluss-Checkliste aus Konzept.md
 
 - [x] Synthetische Multi-DLL-Fixtures einschließlich einer Root-Assembly mit
   zwei Referenz-DLLs und exklusiv referenzierten Typen; fehlende, zyklische und
   beschädigter/unvollständiger Metadaten
-- [ ] Leere In-Memory-Pfade, generierte Dokumente, Parametermethoden und
+- [x] Leere In-Memory-Pfade, generierte Dokumente, Parametermethoden und
   unbekannte Stable-IDs
 - [ ] Begrenzte Root-/transitive Diagnostics, Counts, Samples, Completeness,
   Truncation und festgelegtes Payload-Budget
-- [ ] Resident-Limit, TTL/LRU, Parallelität, Lease und konkurrierende Eviction
-- [ ] Race-Entscheidung ohne Use-after-dispose oder Lease-Leak
-- [ ] Provider-Join, wartender Consumer-Abbruch, Producer-Abbruch und Dispose
+- [x] Resident-Limit, TTL/LRU, Parallelität, Lease und konkurrierende Eviction
+- [x] Race-Entscheidung ohne Use-after-dispose oder Lease-Leak
+- [x] Provider-Join, wartender Consumer-Abbruch, Producer-Abbruch und Dispose
   während Erzeugung
 - [x] `find_symbol` mit `includeReferences=false` und `true`
 - [x] Tolerante, partielle `find_references`-Antwort mit Diagnostics
-- [ ] Positive Routing-, Hierarchie- und Metrics-Regressionen
-- [ ] Historische Befunde und übernommene Tech-Debt-Punkte triagiert
-- [ ] `dotnet build`
-- [ ] `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress`
-- [ ] `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`
-- [ ] Synthetische Assembly-Live-Szenarien wiederholt
+- [x] Positive Routing-, Hierarchie- und Metrics-Regressionen
+- [x] Historische Befunde und übernommene Tech-Debt-Punkte triagiert
+- [x] `dotnet build`
+- [x] `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress`
+- [x] `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`
+- [x] Synthetische Assembly-Live-Szenarien wiederholt
 - [x] Gezielter MCP-Abschluss-Audit ausgeführt

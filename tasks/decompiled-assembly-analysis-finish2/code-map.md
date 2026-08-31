@@ -512,3 +512,13 @@
   `GetServerHealthResponseBuilder`-Footprint-Befund liegt außerhalb des
   EPIC-D-Navigationspfads und wird nicht durch eine künstliche Regeländerung
   kaschiert. Die bewusste `rules.json`-Ausnahme bleibt unverändert.
+
+## Abschluss-Verifikation
+
+- `dotnet build`: 0 Warnungen/Fehler.
+- Vollständige Nicht-Stress-FastTests: 2274 bestanden, 2 vorgesehene Skips,
+  0 Fehler nach sauberem Wiederholungslauf.
+- Vollständige Nicht-Stress-IntegrationTests: 377 bestanden, 0 Skips, 0 Fehler;
+  Assembly-Health-Live-Szenarien enthalten.
+- Der Gesamtstand ist wegen des ausgeschöpften EPIC-B-P1-Wire-Budget-Befunds
+  blockiert; der neue EPIC-D-Code und seine Regressionen sind abgeschlossen.
