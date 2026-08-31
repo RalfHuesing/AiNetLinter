@@ -1624,7 +1624,13 @@ enthält ausschließlich `repositories` mit den Feldern `url`, `solutionPath` un
 }
 ```
 
-`url` muss eine absolute HTTP(S)-URL sein. `solutionPath` ist repository-relativ,
+`url` muss eine absolute HTTP(S)-URL ohne Userinfo/Credentials, Query oder Fragment
+sein. Dieser Vertrag wird von Loader und Runtime gemeinsam verwendet; die
+normalisierte absolute URL ist der deterministische Repository-Schlüssel.
+Geschützte Remotes mit Authentifizierungsbedarf werden in diesem Paket nicht
+unterstützt und fail-closed als recoverable Diagnose gemeldet. Credentials dürfen
+weder in der URL noch in Exceptions, Logs oder MCP-Diagnostics stehen.
+`solutionPath` ist repository-relativ,
 wird mit `/` normalisiert und muss auf `.sln` oder `.slnx` enden; seine Existenz
 wird in diesem Konfigurationsschritt nicht geprüft. Assembly-Namen werden getrimmt,
 case-insensitiv verglichen und um ein optionales `.dll`-Suffix normalisiert.
@@ -1664,6 +1670,16 @@ aktive Assembly- und Snapshot-Leases schützen ihre Einträge vor kapazitätsbed
 Eviction.
 Ein vollständiger Settings-Load schlägt bei einem ungültigen Limit fail-closed
 mit einer strukturierten Diagnose fehl.
+
+Ein Checkout muss vor der Source-Materialisierung bereits restauriert sein; der
+MCP-/Daemon-Pfad startet keinen impliziten Restore und führt keine Assembly aus.
+Fehlen Projekte, ist die Solution ungültig oder scheitert das Laden des
+Workspaces, wird nur eine sichere, redigierte Materialisierungsursache surfacet.
+Soweit der Root-Pfad weiterhin sicher analysierbar ist, kennzeichnet die Antwort
+den dekompilierten Fallback ausdrücklich über Herkunft, Snapshot, Status und
+Completeness. Nach erfolgreichem Pointer-Wechsel behalten die persistenten Caches
+die aktuelle und eine vorherige Generation; ältere sichere Generationen werden
+begrenzt aufgeräumt, ohne aktuelle oder geleaste Einträge zu löschen.
 
 Im MCP-/Daemon-Modus können die Settings mit den CLI-Overrides
 `--mcp-external-max-disk-bytes`, `--mcp-external-max-memory-bytes`,

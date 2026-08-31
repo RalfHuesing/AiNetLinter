@@ -3,9 +3,9 @@
 - Primäraufgabe: Behebe die relevanten Audit-Findings der Analyse dekompilierter Assemblies.
 - Task: `tasks/decompiled-assembly-analysis-audit-fix`
 - Betriebsmodus: Großkonzept, Konzept `status: ready`
-- Status: `executing`
-- Current epic: `E1`
-- Letzter Checkpoint: Initialer Planungsstand
+- Status: `completed`
+- Current epic: `E4` (abgeschlossen)
+- Letzter Checkpoint: Abschlussverifikation und MCP-Audit am 2026-08-31
 - Tech-Debt-Queue: siehe `tech-debt.md`
 
 ## Epics
@@ -17,7 +17,7 @@
 - Betroffene Bereiche: `AnalysisToolCall`, Assembly-Navigationstools, Positionsauflösung, zugehörige Fast-/IntegrationTests, `Docs/agent-api.md`.
 - Muss-/Akzeptanzkriterien: `includeReferences=false` erzeugt keine Referenz-Sessions; ungültige Positionen liefern recoverable `INVALID_ARGUMENT`; erwartete Nicht-Treffer verschlechtern nicht global `partial`; Batch-Diagnostics und Trunkierung bleiben erhalten.
 - Verifikation: gezielte Tests und MCP-`get_violations` nach der letzten Codeänderung.
-- Status: `in_progress`
+- Status: `completed`
 
 ### E2 — External-Source-Vertrag und Ownership
 
@@ -26,7 +26,7 @@
 - Betroffene Bereiche: `ExternalSourceMappingValidator`, External-Source-Repository, Materialisierung, Resolver, Fixtures und IntegrationTests, `Docs/configuration.md`/`Docs/agent-api.md`.
 - Muss-/Akzeptanzkriterien: Loader und Runtime teilen exakt denselben URL-Vertrag; öffentliche Remotes werden unterstützt, geschützte früh recoverable abgewiesen; jeder Checkout-Handle wird exakt einmal freigegeben; restaurierte source-backed Fixtures sind end-to-end unterscheidbar vom sicheren Decompiled-Fallback.
 - Verifikation: gezielte Fast-/IntegrationTests, redigierte Diagnoseprüfungen und MCP-Checks.
-- Status: `open`
+- Status: `completed`
 
 ### E3 — Cache-Generationen, Freshness und Lock-Reclamation
 
@@ -35,7 +35,7 @@
 - Betroffene Bereiche: Assembly-Analysis-Registry, External-Source-Cache/Refresh, Fingerprints, Ressourcenregister und Lebensdauertests.
 - Muss-/Akzeptanzkriterien: aktuelle, geleaste und geschützte Generationen bleiben erhalten; alte Generationen werden begrenzt; unbenutzte Lock-Keys werden sicher freigegeben; Source-/Dependency-Änderungen invalidieren Reuse deterministisch.
 - Verifikation: Komponententests, wiederholte Refresh-/Parallelitäts-IntegrationTests und gezielte MCP-Prüfungen.
-- Status: `open`
+- Status: `completed`
 
 ### E4 — Wire-Budget, Health-Projektion und Abschlussqualität
 
@@ -44,13 +44,13 @@
 - Betroffene Bereiche: Assembly-StructuredContent/Diagnoseprojektion, `GetServerHealthResponseBuilder`, Health-/Wire-Tests, relevante Dokumentation.
 - Muss-/Akzeptanzkriterien: komplette serialisierte Assembly-StructuredContent-Payload bleibt innerhalb 4 KiB; Herkunft, Status, Completeness und Trunkierung bleiben konsistent; Health-Wire-Vertrag bleibt unverändert und Strukturmetriken sind regelkonform.
 - Verifikation: JSON-Fixture-Serialisierung, Health-Tests, `get_violations`, Abschluss-Audit sowie vollständige Nicht-Stress-Gates.
-- Status: `open`
+- Status: `completed`
 
 ## Abschluss-Checkliste
 
-- [ ] `dotnet build`
-- [ ] `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress`
-- [ ] `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`
-- [ ] gezielte MCP-Nachprüfung der betroffenen Symbole, Metriken und Violations
-- [ ] source-backed Live-/Fixture-Nachweis oder dokumentierte konkrete Abdeckungsgrenze
-- [ ] vollständiger Audit auf DRY, Dead Code, Refactoring-Drift und Magic Values
+- [x] `dotnet build`
+- [x] `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress`
+- [x] `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`
+- [x] gezielte MCP-Nachprüfung der betroffenen Symbole, Metriken und Violations
+- [x] source-backed Fixture-/Integration-Nachweis; öffentlicher Live-Safeguard wurde im Wiederholungslauf grün bestätigt
+- [x] vollständiger Audit auf DRY, Dead Code, Refactoring-Drift und Magic Values

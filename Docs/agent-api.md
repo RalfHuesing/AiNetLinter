@@ -320,7 +320,12 @@ Eine source-backed Assembly-Session stammt aus einer explizit gemappten Source-
 Solution; ohne verwendbare Zuordnung liefert die Registry eine dekompilierte
 Session. Beide Varianten kennzeichnen `origin`, `sourcePath`/Snapshot, Assembly-
 Hash, `generatedPath`, Confidence, Trust, Generation, Status, Vollständigkeit und
-Diagnosen. Die Assembly wird nicht geladen oder ausgeführt.
+Diagnosen. Die Assembly wird nicht geladen oder ausgeführt. Ein Request mit
+`includeReferences=false` bleibt bei Assembly-Targets strikt root-only und erzeugt
+weder Referenz-Sessions noch transitive Referenzdiagnosen. Referenzexpansion ist
+eine explizite Fähigkeit der jeweiligen Route; sie wird nur bei
+`includeReferences=true` und innerhalb der dokumentierten Session-/Ergebnislimits
+aktiviert.
 
 | MCP-Familie | Projekt | source-backed Assembly | dekompilierte Assembly | Grenze |
 | :--- | :---: | :---: | :---: | :--- |
@@ -413,11 +418,31 @@ Member ausgegeben wurde. Die Parameterdaten stammen ausschließlich aus den
 
 Assembly-Diagnostics werden nach Herkunft in `diagnosticsSummary.root` und
 `diagnosticsSummary.transitive` gezählt. Die gemeinsame `samples`-Liste ist
-whitespace-normalisiert, pro Meldung auf 256 Zeichen sowie insgesamt auf 4 KiB
-begrenzt; `truncatedBy` benennt die wirksame Grenze. `diagnostics` im Payload
-und der Diagnoseabschnitt im Text enthalten genau diese Samples. Referenz- und
-Referenz-Session-Listen zeigen höchstens 32 Einträge und weisen ihre Gesamt-
-und Anzeigezahlen in `referenceSummary` aus.
+whitespace-normalisiert und pro Meldung auf 256 Zeichen begrenzt. Zusätzlich gilt
+für jede Assembly-Antwort eine harte globale Grenze von 4 KiB (4.096 UTF-8-Bytes)
+für die vollständig serialisierte `structuredContent`-Payload einschließlich
+Navigation, Referenz-Sessions, wiederholter Summaries und Metadaten. Die Ausgabe
+dedupliziert zuerst wiederholte Diagnostic-Samples und kürzt danach optionale
+Detailfelder bzw. Listen deterministisch; `truncatedBy` benennt die wirksame
+Grenze. `diagnostics` im Payload und der Diagnoseabschnitt im Text enthalten die
+gleiche finale Sample-Auswahl. Referenz- und Referenz-Session-Listen zeigen
+höchstens 32 Einträge und weisen ihre Gesamt- und Anzeigezahlen in
+`referenceSummary` aus.
+
+Positionsangaben im `Datei:Zeile:Spalte`-Format sind 1-basiert. Zeile und Spalte
+werden vor dem Roslyn-Zugriff gegen den konkreten `SourceText` geprüft; `0`,
+negative Werte und Werte außerhalb der jeweiligen Zeilenbreite liefern den
+recoverable Fehler `INVALID_ARGUMENT` mit einem Bereichshinweis. Workspace- oder
+Roslyn-Fehler bleiben davon getrennte `WORKSPACE_DIAGNOSTIC`-Fehler.
+
+Eine source-backed Session wird nur aus einer gültig restaurierten, explizit
+gemappten Source-Solution materialisiert. Es gibt keinen impliziten Restore. Wenn
+die Materialisierung nicht sicher möglich ist, bleibt der dekompilierte Fallback
+zulässig; Herkunft, Snapshot, Status und eine redigierte sichere Ursache bleiben
+dabei sichtbar. Öffentliche Repository-URLs sind absolute HTTP(S)-URLs ohne
+Credentials, Query oder Fragment. Geschützte oder anderweitig nicht unterstützte
+Remotes werden fail-closed und recoverable gemeldet; Credentials werden nicht in
+URLs, Logs, Exceptions oder MCP-Payloads übernommen.
 
 `get_server_health` bleibt im Default kompakt: `diagnosticsSummary` enthält
 Counts, aber `diagnostics` bleibt leer/ausgelassen. Erst `includeDiagnostics=true`

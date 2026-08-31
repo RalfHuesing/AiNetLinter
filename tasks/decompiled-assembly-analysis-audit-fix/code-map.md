@@ -6,15 +6,37 @@
 - Session-/Cache-Lebensdauer: `src/AiNetLinter/Mcp/Assemblies/Analysis/`.
 - Health-/Wire-Projektion: `src/AiNetLinter/Mcp/Tools/ServerMaintenance/` und Assembly-Tool-Response-Modelle.
 
+## Aktueller Zuschnitt nach Zwischencommit
+
+- `AssemblyAnalysisRegistry` ist eine schmale Fassade. Die Source-Project-
+  Lease- und Shared-State-Grenze liegt in
+  `AssemblyAnalysisSourceProjectLeaseCoordinator`; Idle-Eviction und
+  Retirement liegen in `AssemblyAnalysisRegistryEvictionCoordinator`.
+- `AssemblyAnalysisRegistryIdentity` kapselt Fingerprint-Erzeugung und die
+  Freshness-Probe des aktuellen Source-Snapshot-Identifiers. Der produktive
+  `AssemblySourceSelectionOrchestrator` stellt dafür bekannte Snapshot-IDs
+  ohne wiederholte Provider-Auflösung bereit; generische Resolver werden
+  weiterhin direkt geprüft. Der Health-Pfad nutzt
+  `AssemblyAnalysisHealthSnapshotProvider` für eine read-only Projektion.
+- `GetServerHealthResponseBuilder` orchestriert nur noch den Markdown-/Payload-
+  Zusammenbau; `GetServerHealthProjection` kapselt Status-, Diagnose- und
+  stabile Datenprojektionen. Der externe Wire-Vertrag bleibt unverändert.
+- `AssemblyAnalysisResponseLimits` delegiert die Messung und Kompaktierung der
+  kompletten serialisierten Assembly-StructuredContent-Payload an
+  `AssemblyAnalysisResponseBudgetCompactor` und hält global 4.096 UTF-8-Bytes
+  ein; `AssemblyAnalysisResponse` synchronisiert den Diagnoseabschnitt im Text
+  mit der finalen StructuredContent-Auswahl.
+
 ## Betroffene Dateien und Symbole
 
 - `src/AiNetLinter/Mcp/AnalysisTarget.cs`: `AnalysisToolDispatch` trägt die Route-Callbacks; hier wird die explizite `ExpandAssemblyReferences`-Fähigkeit ergänzt.
-- `src/AiNetLinter/Mcp/AnalysisToolCall.cs:113-195`: `AssemblyAnalysisDispatcher.ExecuteAsync` akquiriert den Root-Lease, expandiert aktuell pauschal und reichert die Antwort an.
-- `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindSymbolTool.cs:21-100`: bounded Referenzsuche; `BuildResponseAsync` überschreibt aktuell Navigation je Pattern.
-- `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblySymbolResolver.cs:17-137`: Root-/Child-Symbolauflösung; erwartete `SYMBOL_NOT_FOUND`-Ergebnisse werden aktuell als globale Diagnostics übernommen.
-- `src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs:131-210` und `SymbolIdentifierResolver`: gemeinsame Datei-/Zeile-/Spalte-Auflösung; Spaltenbereich wird aktuell vor `FindToken` nicht validiert.
+- `src/AiNetLinter/Mcp/AnalysisToolCall.cs`: `AssemblyAnalysisDispatcher.ExecuteAsync` akquiriert den Root-Lease; Referenzexpansion ist über `AnalysisToolDispatch.ExpandAssemblyReferences` eine explizite Handler-Fähigkeit.
+- `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindSymbolTool.cs`: bounded Referenzsuche; Batch-Navigation, Diagnostics und Trunkierung werden patternübergreifend aggregiert.
+- `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblySymbolResolver.cs`: Root-/Child-Symbolauflösung; erwartete `SYMBOL_NOT_FOUND`-Nichttreffer bleiben intern und verschlechtern keine globale Completeness.
+- `src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs` und `SymbolIdentifierResolver`: gemeinsame Datei-/Zeile-/Spalte-Auflösung; Positionen werden gegen `SourceText` validiert, bevor Roslyn `FindToken` erhält.
 - `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyNavigationSupport.cs`: Lease-Menge, Diagnostics und Navigation-Summary.
 - `src/AiNetLinter/Mcp/Tools/CallTree/AssemblyGetCallTreeTool.cs`: bounded Assembly-Call-Tree mit `includeReferences`.
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.cs` und `AssemblyAnalysisResponseBudgetCompactor.cs`: globale UTF-8-Budgetprüfung und stufenweise Kompaktierung der serialisierten Assembly-StructuredContent-Payload.
 - E1-Tests: `AssemblyAnalysisDispatcherCapabilityTests` deckt Root-only, erwarteten Child-Nichttreffer und Referenzdiagnosen ab; `AssemblyAnalysisRouteTests` deckt includeReferences und Batch-Trunkierung ab; `FindReferencesToolTests` deckt ungültige Datei-/Zeile-/Spalte-Positionen ab.
 
 ## Aufrufer und Abhängigkeiten
@@ -40,9 +62,21 @@
 - Checkout-Leases besitzen ab Acquirer-Rückgabe genau einen Owner; Cleanup darf aktuelle/geleaste/geschützte Generationen nicht löschen.
 - Source-backed, Decompiled-Fallback und Materialisierungsfehler müssen unterscheidbar bleiben.
 - MCP-Schemas und Toolfähigkeit sind gegen den laufenden Server zu verifizieren; konkrete Symbole/Pfade werden nach MCP-Antworten ergänzt.
-- MCP-Kontext: Dispatcher 74 Codezeilen/240 AI-Footprint, `FindReferencesTool` 129/1148, `AssemblyFindSymbolTool` 76/2391, `AssemblyGetCallTreeTool` 112/2452; die betroffenen Dateien meldeten im initialen Feature-Kontext keine Violations.
+- MCP-Kontext nach Abschluss: `AssemblyAnalysisRegistry` 371 LOC,
+  `AssemblySourceSelectionOrchestrator` 328 LOC/2399 AI-Footprint,
+  `AssemblyAnalysisResponseLimits` 261 LOC/661 AI-Footprint,
+  `AssemblyAnalysisResponseBudgetCompactor` 237 LOC/294 AI-Footprint und
+  `GetServerHealthResponseBuilder` 40 LOC/72 AI-Footprint; die betroffenen
+  Scopes melden keine Violations.
 - E1-Entscheidung: `AnalysisToolDispatch.ExpandAssemblyReferences` ist standardmäßig `false`; nur Handler mit explizitem Referenzvertrag aktivieren ihn. `inspect_assembly`/`find_assembly_extensions` bleiben wegen ihrer bestehenden Referenzprojektion opt-in; `includeReferences` steuert Symbol-/Referenz-/Call-Tree-Tools.
 
 ## Verifikation
 
-- Initiale MCP-first-Abfragen ausgeführt: `get_file_tree`/`get_index_scope`, `get_feature_context` und `get_symbol_body` für Dispatcher und Assembly-Navigationssymbole. E1-Codeänderung umfasst explizite Dispatch-Fähigkeit, Positionsgrenzen, expected-miss-Filter und Batch-Summary-Merge; gezielte Tests und `get_violations` folgen nach der letzten Codeänderung.
+- MCP-first-Abfragen und Abschluss-Audit ausgeführt: `get_violations` für
+  Assembly-Analysis, Assembly-Response, Server-Maintenance und Dispatcher
+  liefern 0 Violations; `find_duplicates` exact liefert 0 Cluster,
+  `find_duplicates` refactoring-drift liefert 0 Kandidaten, `find_dead_code`
+  im Assembly-Scope liefert 0 High-Confidence-Kandidaten und
+  `find_magic_values` im geänderten Assembly-Scope liefert keine Dateien.
+  Der near-clone-Lauf zeigt nur dokumentierte bestehende/absichtlich parallele
+  Paare. Vollständige Build-/Fast-/Integration-Gates sind grün.
