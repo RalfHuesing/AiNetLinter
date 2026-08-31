@@ -52,6 +52,15 @@
 - Geänderte Bereiche: ausschließlich die fünf Einzelreports und die verifizierte Code-Map; keine Produktions-, Test-, Konfigurations- oder Dokumentationsdateien.
 - Nächste Aktion: Reports committen und danach im Konsolidierungsreport deduplizieren, primär zuordnen und gegen den aktuellen Code abgleichen.
 
+## 2026-08-31 — Orchestrator-Abgleich Linse 01 und Tech-Debt-Konsolidierung
+
+- Ein unabhängiger Linse-01-Probehinweis wurde fachlich korrigiert: `CancellationToken` ist für die verwendete neutrale DLL ein referenzierter Basistyp; der Unterschied zwischen `includeReferences=false` und `true` beweist kein falsches Root-Routing. Der Hinweis wurde im Report als `ASM-ROUTING-01` mit `rejected/not-applicable` markiert.
+- Der valide, bereits MCP-/Code-bestätigte Befund zur unbedingten `ExpandReferencesAsync`-Ausführung vor jedem Assembly-Handler bleibt als `ASM-001` bestehen. Die unabhängigen Batch- und Nichttreffer-Befunde wurden als `ASM-002` und `ASM-003` getrennt aufgenommen.
+- `tech-debt.md` wurde als kuratiertes Queue-Register mit 2 S1-, 9 bestätigten/bedingten S2- sowie 1 S3-Eintrag angelegt. Der Wire-Budget-Punkt bleibt wegen fehlender vollständiger JSON-Messung ausdrücklich `accepted-deferred` und unbestätigt.
+- Der konsolidierte Report `reports/09-tech-debt.md` wurde angelegt. Er ordnet jeden Einzelbefund genau einem Primärbereich zu, bewahrt Querverweise/Widersprüche und trennt bestätigte Befunde von Coverage-Limits.
+- Geänderte Bereiche: ausschließlich Linse-01-Klarstellung, `tech-debt.md`, `reports/09-tech-debt.md` und dieses Log. Keine Source-, Test-, Konfigurations- oder veröffentlichten Dokumentationsdateien.
+- Nächste Aktion: Berichtsklarstellungen und Konsolidierung committen, danach Roadmap abschließen und abschließenden Build-/Statuscheck ausführen.
+
 ## 2026-08-31 — Linse 02 abgeschlossen
 
 - Fallback-Report: `reports/02-external-source.md`.

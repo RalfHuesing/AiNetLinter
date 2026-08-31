@@ -21,8 +21,13 @@ Nicht Gegenstand waren die übrigen Audit-Linsen, Stress-Tests, nicht assemblybe
 
 ### Befunde
 
-1. **ASM-001 – Assembly-Symbolnavigation ignoriert standardmäßig das Zielmodul.** Bei `targetType=assembly` delegieren `find_symbol`, `find_references` und `get_call_tree` mit dem dokumentierten Standard `includeReferences=false` an die projektbasierte Suche über `lease.Server`. Der absolute DLL-Pfad wird im Antwort-Header zwar weiter als Assembly-Ziel ausgewiesen, die Symbolauflösung sucht aber nicht im dekompilierten Zielbestand. `includeReferences=true` erreicht dagegen die Assembly-Session.
+1. **ASM-001 – Referenzexpansion läuft unbedingt vor jedem Assembly-Handler.** Der Dispatcher expandiert auch bei `includeReferences=false` vor dem Handleraufruf. Dadurch werden Referenzsessions, Diagnosen und Kosten erzeugt, obwohl der dokumentierte Default eine Root-only-Abfrage beschreibt.
 2. **ASM-002 – `find_symbol` verliert bei mehreren Mustern frühere Trunkierungsdiagnosen.** `BuildResponseAsync` überschreibt die Navigation pro Muster und gibt nur die Navigation des letzten Musters zurück. Ein früheres Muster kann auf `maxResults` begrenzt sein, während das letzte Muster die Batch-Antwort ohne diese Information abschließt.
+3. **ASM-003 – Namensauflösung behandelt erwartbare Nichttreffer anderer Sessions als Partialdiagnose.** Bei einer nicht identitätsqualifizierten Suche werden `SymbolNotFound`-Ergebnisse aus Sessions, die das Symbol nicht deklarieren, in die gemeinsame Diagnosemenge aufgenommen; dadurch kann ein in einer Session gefundenes Symbol global als `partial` erscheinen.
+
+### Orchestrator-Abgleich eines unabhängigen Probehinweises
+
+Der unabhängige Reviewer hatte den Unterschied zwischen `includeReferences=false` und `true` mit `CancellationToken` demonstriert. Dieser Name bezeichnet im verwendeten Probeaufruf einen referenzierten Basistyp und isoliert daher nicht die Root-Symbolmenge der geprüften DLL; dass `includeReferences=true` dort zusätzliche Treffer liefert, ist für sich kein Nachweis eines falschen Assembly-Routings. Dieser Probehinweis wird deshalb nicht als eigener Tech-Debt-Befund übernommen. Der bestätigte Default-Vertragsbefund ist die unbedingte Referenzexpansion im gemeinsamen Dispatcher; der `lease.Server`-Root selbst bleibt als dekompilierte Root-Solution bestehen.
 
 ### Bestätigte Erwartungen
 
@@ -38,18 +43,18 @@ Nicht Gegenstand waren die übrigen Audit-Linsen, Stress-Tests, nicht assemblybe
 - Die source-backed Route wurde über Source-Code und vorhandene Fast-Tests geprüft, nicht über eine echte Live-Provider-Akquisition.
 - Ein erster gezielter MCP-Integrationstestlauf endete unter konkurrierender Testlast mit 34 Fehlern und 6 Erfolgen (`MCP server process exited unexpectedly`); derselbe vollständige Nicht-Stress-Integrationslauf war anschließend isoliert mit 377/377 erfolgreich. Das war eine Testumgebungsgrenze, keine reproduzierbare Produktursache der Befunde.
 
-## Befund ASM-001
+## Nicht bestätigter Probehinweis ASM-ROUTING-01
 
-**Titel:** Assembly-Symbolnavigation ignoriert bei `includeReferences=false` den angeforderten DLL-Root.
+**Titel:** Probe mit einem referenzierten Basistyp war nicht geeignet, falsches Root-Routing zu beweisen.
 
 - **Komponente:** `SymbolGraphToolRegistrations`, `AssemblyFindSymbolTool`, `AssemblyFindReferencesTool`, `AssemblyGetCallTreeTool`.
-- **Schweregrad:** S1.
-- **Umfang:** U3 – drei öffentliche Navigationstools mit gemeinsamem Assembly-Dispatch.
-- **Beweissicherheit:** hoch.
+- **Schweregrad:** keiner; verworfene Hypothese.
+- **Umfang:** nicht klassifiziert.
+- **Beweissicherheit:** niedrig für die behauptete Ursache.
 - **Umgebungsabhängigkeit:** nein für die Ursache; die Live-Gegenprobe benötigt nur eine vorhandene DLL und kann durch deren Referenzdiagnosen zusätzlich `partial` sein.
-- **Erwartetes Verhalten:** Bei `targetType=assembly` soll der absolute DLL-Pfad den Root der Analyse bestimmen. `includeReferences=false` soll nur diesen Root durchsuchen; `includeReferences=true` soll zusätzlich die begrenzten Referenz-Sessions einbeziehen. Das ist auch die Bedeutung der Registrierungsbeschreibung in `src/AiNetLinter/Mcp/Registration/SymbolGraphToolRegistrations.cs:70-73`, `:103-106` und `:137-140`.
-- **Beobachtetes Verhalten:** Der Assembly-Zweig wird zwar erreicht, aber seine `false`-Branches delegieren jeweils an die projektbasierte Implementierung mit `lease.Server`. Damit kann der Antwort-Wrapper Assembly-Herkunft melden, während Treffer oder `SYMBOL_NOT_FOUND` aus dem aktuellen Projekt-Workspace stammen.
-- **Auswirkung:** Ein Standardaufruf kann ein Symbol aus der Ziel-DLL nicht finden und einen falschen Nichttreffer liefern. Der Nutzer muss entgegen dem Default explizit `includeReferences=true` setzen, um überhaupt den dekompilierten Root zu durchsuchen. Das verletzt den Zielroutingvertrag und macht Referenz-/Call-Tree-Ergebnisse vom zufällig geladenen Projekt-Workspace abhängig.
+- **Erwartung:** Die Root-Solution der Lease wird bei `includeReferences=false` durchsucht; Referenz-Sessions werden nur bei `true` einbezogen.
+- **Beobachtung:** Die verwendete Probe mit `CancellationToken` zeigte bei `true` mehr Treffer als bei `false`, aber der Name ist in dieser DLL nicht zwingend im Root deklariert. Der Kontrollfluss über `lease.Server` repräsentiert die dekompilierte Root-Solution und ist daher kein Beleg für einen Projekt-Workspace-Fehler.
+- **Auswirkung:** Keine bestätigte Produktwirkung. Die ursprüngliche S1-Einstufung wird verworfen.
 
 ### Konkrete Reproduktion
 
@@ -65,18 +70,31 @@ Ergebnis: `isError=false`, `analysis.targetType=assembly`, `analysis.origin=deco
 
 Die analoge Probe mit `find_references(..., symbolIdentifier="CancellationToken", includeReferences=false)` endete mit `SYMBOL_NOT_FOUND`; mit `includeReferences=true` wurde das Symbol aufgelöst und eine strukturierte Navigation mit `visitedNodeCount=2` geliefert. `get_call_tree` zeigte dasselbe Muster: `false` → `SYMBOL_NOT_FOUND`, `true` mit einem vollqualifizierten Property-Symbol → strukturierte Root-/Navigation-Antwort.
 
-### Belege
+### Belege und Disposition
 
-- **MCP-Symbol:** `SymbolGraphToolRegistrations.AddFindSymbol` in `src/AiNetLinter/Mcp/Registration/SymbolGraphToolRegistrations.cs:45-64` übergibt bei `includeReferences=false` den Assembly-Lease an `AssemblyFindSymbolTool`, dessen `false`-Branch in `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindSymbolTool.cs:23-32` `FindSymbolTool.ExecuteAsync(lease.Server, ...)` aufruft.
-- **MCP-Symbol:** `AssemblyFindReferencesTool.ExecuteAsync` in `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindReferencesTool.cs:21-32` delegiert analog an `FindReferencesTool.ExecuteAsync(lease.Server, ...)`.
-- **MCP-Symbol:** `AssemblyGetCallTreeTool.ExecuteAsync` in `src/AiNetLinter/Mcp/Tools/CallTree/AssemblyGetCallTreeTool.cs:23-30` delegiert analog an `GetCallTreeTool.ExecuteAsync(lease.Server, ...)`.
-- **MCP-Symbol:** Der Registrierungs-Dispatch in `src/AiNetLinter/Mcp/Registration/SymbolGraphToolRegistrations.cs:49-58`, `:80-90` und `:112-124` reicht den `includeReferences`-Wert korrekt bis zu diesen Assembly-Handlern durch; der Verlust entsteht erst in deren `false`-Branch.
-- **Testbeleg:** `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRouteTests.cs:145-224` prüft den positiven `includeReferences=true`-Pfad für alle drei Tools, aber keinen Root-only-Defaultpfad.
-- **Redigierte Live-Felder:** `targetType=assembly`; `analysis.origin=decompiled`; `analysis.snapshot=none`; `includeReferences=false` → leerer Symboltreffer bzw. `SYMBOL_NOT_FOUND`; `includeReferences=true` → Treffer/strukturierte Navigation. Alle Zielpfade wurden im Report entfernt.
+- **MCP-/Code-Abgleich:** `AssemblyFind*Tool` delegiert im `false`-Branch an `lease.Server`; das ist die Root-Solution der Lease, nicht automatisch ein fremder Projekt-Workspace.
+- **Probe:** `includeReferences=true` fand für den referenzierten Typ zusätzliche Treffer; die Probe konnte damit nur die erwartete Referenzaufnahme zeigen.
+- **Disposition:** `rejected/not-applicable` als eigenständiger Root-Routing-Befund. Der separate Dispatcher-Befund `ASM-001` folgt unmittelbar.
 
 ### Nicht umgesetzte Remediation-Hypothese
 
-Die `false`-Branches sollten eine Root-only-Assembly-Suche über den bestehenden Assembly-Lease verwenden; nur die `true`-Branches sollten die bounded Referenz-Sessions einbeziehen. Für `find_references` und `get_call_tree` sollte der Resolver ebenfalls den Assembly-Root statt den Server-Workspace verwenden. Keine Änderung wurde im Audit umgesetzt.
+Keine Änderung wurde im Audit umgesetzt. Die offene, valide Folgearbeit für `ASM-001` ist im nachfolgenden Befund beschrieben.
+
+## Befund ASM-001
+
+**Titel:** Unbedingte Referenzexpansion vor Assembly-Handlern trotz `includeReferences=false`.
+
+- **Komponente:** `AssemblyAnalysisDispatcher.ExecuteAsync` und die Assembly-Registrierungen für `find_symbol`, `find_references`, `get_call_tree`, `inspect_assembly` und `find_assembly_extensions`.
+- **Schweregrad:** S1.
+- **Umfang:** U3 – gemeinsamer Dispatcher mit mehreren öffentlichen Assembly-Tools.
+- **Beweissicherheit:** hoch; Kontrollfluss, Registrierungsdefaults, Dokumentation und sichtbare Lease-Diagnosen stimmen überein.
+- **Erwartetes Verhalten:** Bei `includeReferences=false` bleibt die Analyse auf dem Root-Snapshot; bounded Referenzsessions werden nur bei expliziter Referenznavigation erzeugt.
+- **Beobachtetes Verhalten:** `AssemblyAnalysisDispatcher.ExecuteAsync` ruft in `src/AiNetLinter/Mcp/AnalysisToolCall.cs:161-172` immer `lease.ExpandReferencesAsync(cancellationToken)` auf, bevor der konkrete Handler ausgeführt wird. Die sichtbaren Defaults in `src/AiNetLinter/Mcp/Registration/SymbolGraphToolRegistrations.cs:49`, `:80` und `:112` sind `false`. Auch Assembly-Inspection und Extension-Suche teilen den Dispatcher.
+- **Auswirkung:** Standardabfragen öffnen Referenzsessions und übernehmen deren Fehler-/Partialdiagnosen, obwohl der Agent keine Referenzsuche angefordert hat. Das erhöht Kosten und kann die Vollständigkeitssemantik der Root-Antwort verschlechtern.
+- **Konkrete Reproduktion:** Assembly-Tool mit `includeReferences=false` und einer nicht auflösbaren Referenz aufrufen; vor dem Handleraufruf sind Referenzexpansion und `ReferenceExpansionDiagnostics` bereits angelegt. Der bestehende positive `includeReferences=true`-Test deckt die explizite Variante ab, aber keinen Negativtest auf fehlende Expansion bei `false`.
+- **Belege:** `AnalysisToolCall.cs:161-172`; `SymbolGraphToolRegistrations.cs:49,80,112`; `AssemblyAnalysisLease.ExpandReferencesAsync`; `Docs/agent-api.md:460`; `AssemblyAnalysisRouteTests.AssemblyRoute_IncludeReferencesNavigatesSymbolsReferencesAndCallTree()`.
+- **Nicht umgesetzte Remediation-Hypothese:** Expansion-Capability bis zum Handler durchreichen und bei `false` keine Child-Leases eröffnen; Response-/Statusverträge müssen dabei erhalten bleiben.
+- **Disposition:** `promoted-to-project-debt`; Audit-only, keine Änderung.
 
 ## Befund ASM-002
 
@@ -110,6 +128,22 @@ Die erste Einzelmusterprobe mit `CancellationToken` fand sechs Kandidaten; mit `
 ### Nicht umgesetzte Remediation-Hypothese
 
 Die Antwort könnte Navigation und Trunkierungsdiagnosen über alle Muster akkumulieren oder pro Muster eine eigene Vollständigkeit ausgeben. Keine Änderung wurde im Audit umgesetzt.
+
+## Befund ASM-003
+
+**Titel:** Namensauflösung projiziert erwartbare Nichttreffer anderer Assembly-Sessions als globale Partialdiagnose.
+
+- **Komponente:** `AssemblySymbolResolver.ResolveAsync`, `AssemblyNavigationSupport.CreateSummary` und `FindReferencesTool.ResolveByNameAsync`.
+- **Schweregrad:** S2.
+- **Umfang:** U2 – bounded Navigation über Root- und Referenz-Sessions.
+- **Beweissicherheit:** hoch für den Kontrollfluss; die konkrete Nutzerwirkung hängt von der Anzahl und Diagnosequalität der Referenz-Sessions ab.
+- **Erwartetes Verhalten:** Ein Nichttreffer in einer Session, die das gesuchte Symbol erwartbar nicht deklariert, sollte nicht allein die Vollständigkeit einer erfolgreichen anderen Session auf `partial` setzen. Echte Lade-, Analyse- oder Trunkierungsdiagnosen müssen erhalten bleiben.
+- **Beobachtetes Verhalten:** `AssemblySymbolResolver.ResolveAsync` sammelt für jede nicht identitätsqualifizierte Session das `SymbolNotFound`-Ergebnis als Diagnose. `AssemblyNavigationSupport.CreateSummary` projiziert jede Diagnose direkt auf `completeness=partial`, auch wenn eine andere Session einen eindeutigen Kandidaten liefert.
+- **Auswirkung:** Agenten können eine erfolgreiche Symbolauflösung als unvollständig interpretieren und erwartbare Nichtzuständigkeit mit einer tatsächlichen Referenz-/Analyse-Lücke verwechseln.
+- **Konkrete Reproduktion:** Mit `includeReferences=true` nach einem Namen suchen, der ausschließlich in der Root-Assembly deklariert ist; die Referenz-Sessions liefern `SymbolNotFound`, während der Root einen Kandidaten liefert. Die gemeinsame Navigation enthält anschließend die Nichttrefferdiagnosen und `partial`.
+- **Belege:** `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblySymbolResolver.cs:30-61`; `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyNavigationSupport.cs:41-55`; `src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs:191-208`.
+- **Nicht umgesetzte Remediation-Hypothese:** Erwartbare Session-Nichttreffer aus der globalen Diagnosemenge herausfiltern oder separat als Suchabdeckung ausweisen; echte Expansion-/Sessiondiagnosen unverändert weiterreichen.
+- **Disposition:** `promoted-to-project-debt`; Audit-only, keine Änderung.
 
 ## Bestätigte Detailprüfungen
 
@@ -157,7 +191,7 @@ Die Antwort könnte Navigation und Trunkierungsdiagnosen über alle Muster akkum
   dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress --no-restore
   ```
 
-  Ergebnis: 377 erfolgreich, 0 fehlgeschlagen, 0 übersprungen.
+  Ergebnis zum unabhängigen Reviewerzeitpunkt: 377 erfolgreich, 0 fehlgeschlagen, 0 übersprungen. Ein späterer Orchestrator-Abschlusslauf unter anderer Prozesslast endete mit 307 Erfolgen und 70 MCP-/Daemon-Prozessfehlern; die Abweichung ist in `reports/08-tests-documentation.md` als Umgebungsgrenze dokumentiert.
 
 - **Build:** `dotnet build` wurde nach Ende der konkurrierenden Testprozesse vollständig erfolgreich ausgeführt: 0 Warnungen, 0 Fehler.
 
@@ -168,9 +202,10 @@ Die Antwort könnte Navigation und Trunkierungsdiagnosen über alle Muster akkum
 | `targetType`/absoluter DLL-Pfad | `AnalysisTargetResolver.Resolve`; `InspectAssembly_RejectsRelativeAndMissingPathsWithoutRuntimeLoading()` | bestätigt | kein negativer Live-Aufruf mit absichtlich ungültigem Pfad notwendig |
 | Metadata-only und statische Decompilation | `AssemblyDecompilationAdapter.*`; Session-/Tool-Tests; Live-`inspect_assembly` | bestätigt, Live-Status `partial` | Referenzdiagnosen verhindern vollständige Live-Compilation |
 | Source-backed Mapping/Fallback | `AssemblyAnalysisToolSupportTests.*`; `AssemblyAnalysisContextFactory.*` | im Code und in Fast-Tests bestätigt | keine echte Live-Provider-Probe |
-| Assembly-Root bei Default-Symbolnavigation | `AssemblyFind*Tool.ExecuteAsync`; Live `find_symbol`/`find_references`/`get_call_tree` mit `includeReferences=false/true` | ASM-001 bestätigt | Live-DLL liefert zusätzlich umgebungsabhängige Partialdiagnosen |
+| Unbedingte Referenzexpansion bei Default-Symbolnavigation | `AssemblyAnalysisDispatcher.ExecuteAsync`; Registrierungsdefaults und Lease-Expansion | ASM-001 bestätigt | Live-DLL liefert zusätzlich umgebungsabhängige Partialdiagnosen |
 | Referenz-/Call-Tree-Navigation mit `includeReferences=true` | `AssemblyAnalysisRouteTests.AssemblyRoute_IncludeReferencesNavigatesSymbolsReferencesAndCallTree()` | positiver Pfad bestätigt | nur bounded/partial Referenzumgebungen geprüft |
 | Mehrmuster-Vollständigkeit | `AssemblyFindSymbolTool.BuildResponseAsync`; Live-Batch mit erstem begrenztem Muster | ASM-002 bestätigt | keine vollständige Umgebung ohne Basisdiagnosen verfügbar |
+| Nichttreffer anderer Sessions | `AssemblySymbolResolver.ResolveAsync`; `AssemblyNavigationSupport.CreateSummary` | ASM-003 bestätigt | konkrete Ausprägung hängt von den geladenen Referenzen ab |
 | MCP-Integration/E2E | gezielter Lauf zunächst 34/40 Prozessabbrüche; anschließender vollständiger Nicht-Stress-Lauf 377/377 grün | bestätigt, initiale Prozessabbrüche als Umgebungsgrenze | kein Stress-Lauf |
 | Stress-Kategorie | bewusst nicht ausgeführt | außerhalb Scope | keine Lastaussage |
 
