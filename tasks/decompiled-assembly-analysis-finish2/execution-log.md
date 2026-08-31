@@ -1481,3 +1481,16 @@
   kein belastbarer Review vor. Die Änderungen werden deshalb als unreviewter
   Zwischenstand gesichert und von einem frischen Implementierer verifiziert
   oder fortgeführt.
+
+## 2026-08-31 — running / EPIC-D / Implementierer (Resume 3)
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2-resume3`
+- subagent-id: `01a056e3-c9a6-72e1-a8da-b09c6a4bf493` (Kierkegaard)
+- diff-baseline: `8600f3e2`.
+- scope: Verifikation und Vervollständigung des unreviewten
+  `ReferenceLeasesSnapshot`-Zwischenstands sowie der begrenzten,
+  ausdrücklich anforderbaren Cross-Assembly-Navigation für `find_symbol`,
+  Call-Tree-/Symbolpfade und tolerante `find_references`-Antworten.
+- erwarteter Hand-off: Code- und Regressionsteststand ohne Agenten-Commit,
+  aktualisierte Code-Map sowie fokussierte Tests, Audit-Abfragen und
+  abschließender `get_violations`-Nachweis nach der letzten Codeänderung.
