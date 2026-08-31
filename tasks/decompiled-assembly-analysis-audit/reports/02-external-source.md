@@ -11,15 +11,16 @@
   - zugehörige Fast- und Integration-Tests sowie die Konfigurationsdokumentation.
 - **Verwendete Revision:** `8a9fbddaeba6fff26c4c6f8d3ab2d3f87e7c2193`.
 - **Working Tree:** vor Erstellung dieses Reports sauber; es waren keine relevanten Source-/Teständerungen vorhanden.
-- **Code-Map:** Für diese Linse unverändert korrekt. Die dort genannten Analyse-, External-Source-, Konfigurations- und Testbereiche waren die tatsächlichen Navigationspunkte. Die offenen Formulierungen „gegen Working Tree und MCP zu verifizieren“ sind nach dieser Prüfung weiterhin sachgerecht; konkrete veraltete Navigationsfakten wurden nicht gefunden. `code-map.md` blieb unverändert.
+- **Code-Map:** Die dort genannten Analyse-, External-Source-, Konfigurations- und Testbereiche waren die tatsächlichen Navigationspunkte. Die nachträgliche Live-Probe ergänzt die Map um die explizite Abgrenzung zwischen Checkout-Download und Source-backed-MCP-Herkunft.
 
 ## Nicht geprüfte Bereiche und Abdeckungsgrenzen
 
-- Kein Zugriff auf eine echte externe Repository-Quelle, keinen Netzwerk-/Credential-Test und keine Prüfung eines geschützten Dienstkontos.
-- Keine Live-Ausführung des MCP-/Daemon-Pfads gegen eine externe Quelle.
-- Keine Assembly-Inspektion: Für diese Linse lag keine neutrale, lokale Assembly als sicherer Live-Testgegenstand vor; die statische Mapping-/Provider-Semantik wurde dennoch vollständig im Projektindex geprüft.
+- Ein öffentlicher, redigiert dokumentierter Live-MCP-Aufruf gegen die
+  konfigurierte Mapping-Quelle wurde nachträglich ausgeführt. Ein
+  geschützter Dienst-/Credential-Test bleibt ungeprüft.
+- Die Assembly-Qualität selbst war nicht Primärgegenstand dieser Linse; die vorhandene gemappte DLL wurde jedoch ausdrücklich als Live-Testgegenstand für Mapping, Checkout und Herkunftsprojektion verwendet.
 - Keine Prüfung von Prozessbaum-, Checkout-, Snapshot-, Reparse-Point- oder MCP-Token-Details außer dort, wo sie für Credential- und Provider-Grenzen unmittelbar relevant waren. Diese Themen gehören primär zu anderen Linsen.
-- Die Abwesenheit einer produktiven Credential-Resolver-Implementierung wurde semantisch und ergänzend textuell geprüft; ein negatives End-to-End-Ergebnis gegen einen geschützten Remote ist daher eine Abdeckungsgrenze, kein zusätzlich behaupteter Live-Befund.
+- Die Abwesenheit einer produktiven Credential-Resolver-Implementierung wurde semantisch und ergänzend textuell geprüft; ein negatives End-to-End-Ergebnis gegen einen geschützten Remote ist daher weiterhin eine Abdeckungsgrenze.
 
 ## Executive Summary
 
@@ -27,8 +28,9 @@
 
 1. **EXTSRC-01 – Konfigurationsvalidator und Laufzeit-URL-Policy sind nicht deckungsgleich.** Der Loader akzeptiert URL-Varianten, die die Akquisitionsschicht später unmittelbar als ungültig verwirft. Dadurch wird eine semantisch unbrauchbare Mapping-Konfiguration zunächst als erfolgreich geladen dargestellt.
 2. **EXTSRC-02 – Im produktiven MCP-/Daemon-Einstieg ist kein Credential-Resolver angeschlossen.** Die interne Resolver-Schnittstelle ist vorhanden und der Transport kann Credentials sicher verwenden, aber die realen Einstiegspunkte übergeben keinen Resolver. Bei einer geschützten Quelle bleibt deshalb nur der prompt-freie, credential-lose Pfad.
+3. **EXTSRC-03 – Der konfigurierte MCP-Source-Flow lädt den Checkout, liefert aber keine Source-backed-Assembly-Analyse.** Die Live-Probe erzeugte den konfigurierten Repository-Checkout mit Solution und Source-Dateien; beide Assembly-Funktionen meldeten anschließend weiterhin `origin=decompiled`, `sourcePath=none` und `snapshot=none`. Der sichere Fallback funktioniert, die zugesagte Bereitstellung der Originalquelle jedoch nicht.
 
-Beide Befunde sind **S2**, nicht S0/S1: Die Fehlerpfade sind fail-closed und redigieren sensible Werte, aber relevante External-Source-Szenarien bleiben inkonsistent bzw. nicht nutzbar.
+Drei Befunde sind **S2**, nicht S0/S1: Die Fehlerpfade sind fail-closed und redigieren sensible Werte, aber relevante External-Source-Szenarien bleiben inkonsistent bzw. nicht nutzbar.
 
 ### Bestätigte Erwartungen
 
@@ -148,6 +150,93 @@ Der Fake-/Transportanteil ist ohne Netzwerk durch vorhandene Tests reproduzierba
 
 Entweder muss ein sicherer Resolver am tatsächlichen MCP-/Daemon-Einstieg injizierbar und dokumentiert werden, oder die öffentliche Konfiguration sollte geschützte Quellen ausdrücklich als nicht unterstützt melden. In beiden Fällen dürfen Credentials nicht in Mapping-URLs, CLI-Argumenten, Logs oder Diagnosen gelangen.
 
+## Befund EXTSRC-03
+
+### Metadaten
+
+- **Stabile ID:** `EXTSRC-03`
+- **Titel:** Konfigurierter MCP-Source-Flow fällt trotz erfolgreichem Checkout auf Decompilation zurück
+- **Komponente:** MCP-Assembly-Registry, External-Source-Provider, Solution-Materialisierung und Herkunftsprojektion
+- **Schweregrad:** S2 – die konfigurierte Source-Zuordnung wird nicht als Originalquelle bereitgestellt; der sichere Decompilation-Fallback bleibt verfügbar.
+- **Umfang:** U3 – betrifft die gemappten Assembly-Anfragen über den produktiven MCP-Daemonpfad.
+- **Beweissicherheit:** hoch für Download und beobachtete Antwortfelder; mittel für die genaue Materialisierungsursache.
+- **Umgebungsabhängigkeit:** reproduziert mit der vorhandenen Mapping-Konfiguration und lokalen DLL; die exakte Ursache kann von MSBuild-/Solution-Abhängigkeiten der Quelle abhängen.
+
+### Erwartetes Verhalten
+
+Wenn ein Assembly-Name in `external-sources.json` gemappt ist und der
+Repository-Checkout erfolgreich geladen wird, sollen Assembly-MCP-Funktionen
+den passenden Source-Projektkontext verwenden und `origin=source-backed`,
+`sourcePath`, Snapshot-Identität sowie den passenden Trust-/Completeness-Status
+ausweisen. Ein Checkout allein ist nur eine Vorstufe, nicht die fertige
+Bereitstellung.
+
+### Beobachtetes Verhalten
+
+- Die installierte Mapping-Datei war gültiges JSON mit einem Repository-Eintrag,
+  der die geprüfte Assembly und die zugehörige Solution benennt.
+- Der MCP-Aufruf `inspect_assembly` gegen die vorhandene gemappte DLL erzeugte
+  im installierten Cache einen Repository-Checkout. Darin lagen die
+  konfigurierte Solution und 267 Dateien, darunter 175 C#-Dateien im
+  Core-/Test-Quellbaum.
+- Der Assembly-Cache enthielt für dieselbe DLL eine Generation mit
+  `status=partial`, `complete=false` und 200 generierten Decompilation-Dateien.
+  Der Checkout besaß keine `packages`-Directory; das ist ein plausibler
+  Materialisierungsrisiko-Hinweis, aber nicht allein die bewiesene Ursache.
+- `inspect_assembly` und `find_assembly_extensions` meldeten beide
+  `origin=decompiled`, `sourcePath=none`, `snapshot=none`,
+  `confidence=medium`, `trust=untrusted`, `status=partial` und
+  `completeness=partial`.
+- `get_server_health` bestätigte für die Assembly-Session
+  `originKind=decompiled`, `loadState=partial` und denselben generierten
+  Dokumentpfad. Ein Source-backed Snapshot wurde nicht ausgewiesen.
+- Eine separate, read-only `git ls-remote`-Prüfung war erfolgreich; sie belegt
+  die Erreichbarkeit der Quelle, nicht die erfolgreiche Solution-
+  Materialisierung.
+
+### Auswirkung
+
+Die MCP-Funktionen können die DLL untersuchen, analysieren aber nicht die
+Original-Source-Solution, obwohl der konfigurierte Checkout heruntergeladen
+wird. Dadurch bleibt die Analyse auf dekompilierten, unvollständigen und als
+untrusted markierten Dokumenten. Der Fallback verhindert einen Totalausfall,
+verdeckt aber den eigentlichen Delivery-Fehler, wenn keine aussagekräftige
+Materialisierungsdiagnose mitgeliefert wird.
+
+### Konkrete Reproduktion
+
+1. Die installierte `external-sources.json` mit gültigem Mapping und die
+   vorhandene lokale gemappte DLL verwenden.
+2. Über den produktiven AiNetLinter-MCP-Server `inspect_assembly` mit
+   `targetType="assembly"`, absolutem DLL-`targetPath`,
+   `publicOnly=false`, begrenzten Ergebnislimits aufrufen.
+3. Den Cache vor/nach dem Aufruf prüfen: Repository-Checkout, Solution und
+   C#-Dateien müssen nach dem ersten Lauf sichtbar sein.
+4. Mit `find_assembly_extensions` dieselbe DLL erneut anfragen.
+5. **Beobachtet:** beide Antworten bleiben `origin=decompiled` mit
+   `sourcePath=none` und `snapshot=none`; der Source-backed-Akzeptanztest ist
+   damit rot, obwohl der Checkout vorhanden ist.
+
+### Belege
+
+| Beleg | Redigierte Parameter/Felder | Ergebnis und Begründung |
+|---|---|---|
+| AiNetLinter-MCP `inspect_assembly` | `targetType="assembly"`, gemappte DLL als absoluter `targetPath`, `publicOnly=false`, bounded limits | Antwort: `origin=decompiled`, `sourcePath=none`, `snapshot=none`, `status=partial`, `completeness=partial`. |
+| AiNetLinter-MCP `find_assembly_extensions` | gleicher Assembly-Target, bounded `maxResults` | Zweite Assembly-Funktion bestätigt dieselbe Herkunft und denselben Fallback. |
+| AiNetLinter-MCP `get_server_health` | gleicher Assembly-Target, `includeDiagnostics=true` | Session meldet `originKind=decompiled`, `loadState=partial`; kein Source-Snapshot. |
+| Installierter Cache | redigierter Cache-Root; Checkout mit Solution und Source-Dateien | Belegt den erfolgreichen Git-/Checkout-Schritt, aber keine Source-backed-MCP-Antwort. |
+| Quelltext | `AssemblyAnalysisRegistryEntryFactory.cs:128-168`; `ExternalSourceSnapshotMaterializer.cs:78-117`; `AssemblyAnalysisContextFactory.cs:135-196` | Registry versucht Source-Auswahl vor Fallback; Materialisierung verwirft unerwartete Exceptions in eine generische Failure-Exception; source-backed wird nur bei vollständiger Selection verwendet. |
+
+### Nicht umgesetzte Remediation-Hypothese
+
+Die produktive Probe sollte eine sichere, aber aussagekräftige
+Materialisierungsdiagnose ausweisen und einen echten Integrationstest für
+„Mapping → MCP-Aufruf → Checkout → Source-Snapshot → `origin=source-backed`“
+erhalten. Zusätzlich muss geklärt werden, ob die Quell-Solution ohne
+Package-/MSBuild-Restore materialisierbar sein muss oder ob der Provider einen
+kontrollierten Restore-/Dependency-Vertrag benötigt. Die Decompilation darf
+erst nach einem klar sichtbaren Source-Failure als Fallback erscheinen.
+
 ## Provider-Auswahl, Verfügbarkeit und Mapping-Mehrdeutigkeiten
 
 Die geprüfte Standard-Komposition erstellt genau einen statischen Provider-Aufbau; eine URL-basierte oder konfigurierbare Provider-Auswahl ist nicht sichtbar. Das ist als aktuelle Architekturbeobachtung bestätigt, aber mangels explizitem Mehrprovider-Akzeptanzkriterium kein eigenständiger Befund. Der Test-Provider für „unavailable“ liefert einen typisierten Warnzustand ohne Snapshot; die Produktionsauswahl dieses Testdoubles wurde nicht gefunden. Eine fehlende externe Prozessinstallation bzw. deren genaue Diagnoseklassifikation wurde nicht erneut als Provider-Befund aufgenommen, um keine Überschneidung mit der VCS-/Prozesslinse zu erzeugen.
@@ -171,11 +260,11 @@ Die Mapping-Auswahl selbst vergleicht Assembly-Aliase case-insensitiv. Der Konfi
 | Settings-/Mapping-Schema | MCP-Symbolkörper, Konfigurations-Tests, strukturierte Diagnosen | hoch abgedeckt | Keine neuen Tests angelegt; nur bestehende Testfälle ausgeführt. |
 | URL-Konfiguration vs. Laufzeitpolicy | MCP-Feature-Kontext und direkte Methodenkörper | Befund EXTSRC-01 | Query/Fragment/Userinfo nicht jeweils im Loader-Testbestand; keine Remoteverbindung. |
 | Alias-Normalisierung und Mehrdeutigkeit | Mapping-Validator und Source-Match-Resolver | bestätigt, kein Befund | Keine absichtlich programmatisch injizierte Mehrfachkonfiguration im Live-Orchestrator. |
-| Provider-Auswahl/-Verfügbarkeit | Host-Fabrik, Provider-Vertrag und Testdouble | teilweise abgedeckt | Kein expliziter Mehrprovider-Vertrag; keine fehlende Installation/Remoteverfügbarkeit live geprüft. |
+| Provider-Auswahl/-Verfügbarkeit | Host-Fabrik, Provider-Vertrag, Testdouble und Live-MCP-Checkout | Befund EXTSRC-03 | Checkout wird geladen, Source-Snapshot/MCP-Source-Herkunft aber nicht erreicht; exakte Materialisierungsursache offen. |
 | Credential-Semantik | MCP-Referenzen, Host-Call-Sites, Transporttests | Befund EXTSRC-02 | Keine produktive Resolver-Implementierung gefunden; geschützter Remote nicht live getestet. |
 | Redigierung und Prompt-Verhalten | Bestehende Transport-/Provider-Tests | bestätigt | Vollständiger MCP-Wire-Text außerhalb dieser Linse. |
-| Code-Map-Navigation | `get_file_tree`, `get_index_scope`, MCP-Symbolabfragen | korrekt, unverändert | Keine konkrete veraltete Zeile gefunden; daher keine Änderung an `code-map.md`. |
+| Code-Map-Navigation | `get_file_tree`, `get_index_scope`, MCP-Symbolabfragen | korrekt, ergänzt | Live-Download-/Source-backed-Abgrenzung wurde nachgetragen. |
 
 ## Review-Verdikt
 
-**approved mit zwei S2-Befunden; kein S0/S1-Befund.** Die geprüften Schutz- und Fail-Closed-Verträge sind überwiegend vorhanden. Die URL-Policy sollte an der Konfigurationsgrenze konsistent werden, und die Credential-Unterstützung benötigt entweder eine reale sichere Verdrahtung oder eine explizite, früh sichtbare Public-Only-Grenze.
+**approved mit drei S2-Befunden; kein S0/S1-Befund.** Die geprüften Schutz- und Fail-Closed-Verträge sind überwiegend vorhanden. Zusätzlich ist die konfigurierte Source-backed-Bereitstellung nach erfolgreichem Checkout aktuell nicht nachgewiesen und fällt live auf Decompilation zurück. Die URL-Policy sollte an der Konfigurationsgrenze konsistent werden, und die Credential-Unterstützung benötigt entweder eine reale sichere Verdrahtung oder eine explizite, früh sichtbare Public-Only-Grenze.

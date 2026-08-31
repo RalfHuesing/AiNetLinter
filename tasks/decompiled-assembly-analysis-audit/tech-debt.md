@@ -44,6 +44,15 @@ Die Queue enthält nur actionable Befunde mit belastbarer Evidenz. Es wurden kei
 - **Nächster Schritt:** Gewollte Credential-Quelle und Lebensdauer explizit festlegen, dann Resolver im produktiven Entry-Wiring und einen redigierten geschützten Source-Test nachweisen.
 - **Log-Anker:** Unabhängiger Bericht `reports/02-external-source.md`, Befund `EXTSRC-02`.
 
+### EXTSRC-03 — Konfigurierter MCP-Source-Flow fällt trotz Checkout auf Decompilation zurück
+
+- **Schweregrad/Umfang:** S2 / U3; hohe Beweissicherheit für den Live-Befund, mittlere Beweissicherheit für die genaue Materialisierungsursache.
+- **Scope/Fundstelle:** `AssemblyAnalysisRegistryEntryFactory`; `ExternalSourceSnapshotMaterializer`; `AssemblyAnalysisContextFactory`; produktive Assembly-MCP-Route.
+- **Evidenz:** Der MCP-Test gegen die konfigurierte gemappte DLL erzeugte einen Repository-Checkout mit Solution und Source-Dateien. `inspect_assembly`, `find_assembly_extensions` und `get_server_health` meldeten trotzdem `origin=decompiled`, `sourcePath=none`, `snapshot=none` und `partial`. Der Assembly-Cache blieb bei `complete=false`; ein source-backed Snapshot wurde nicht bereitgestellt.
+- **Disposition:** `promoted-to-project-debt`; `attempts: 0`.
+- **Nächster Schritt:** Einen reproduzierbaren Source-backed-Integrationstest mit Cache-/Solution-/Snapshot-Assertions ergänzen und den Materialisierungsfehler sicher, aber diagnostisch ausreichend projizieren. Klären, ob die externe Solution einen kontrollierten Package-/MSBuild-Restore benötigt.
+- **Log-Anker:** Nachträglicher MCP-Live-Nachweis in `execution-log.md`; Befund `EXTSRC-03` in `reports/02-external-source.md`.
+
 ### ASM-002 — Nichttreffer anderer Assembly-Sessions werden als Partialdiagnose projiziert
 
 - **Schweregrad/Umfang:** S2 / U2; hohe strukturelle Beweissicherheit.
@@ -119,7 +128,7 @@ Die Queue enthält nur actionable Befunde mit belastbarer Evidenz. Es wurden kei
 ## Nicht in die Queue übernommen
 
 - Der unabhängige Probehinweis „falsches Assembly-Root-Routing“ mit einem referenzierten Basistyp wurde nach Orchestrator-Abgleich als `rejected/not-applicable` verworfen; er bleibt im Linse-01-Report dokumentiert.
-- `GIT`-Befunde, `CACHE-001`, Live-Remote-Abdeckung, Reparse-Capability-Skips sowie die niedrigen Dead-Code-/Magic-Value-/Clone-Kandidaten sind Coverage-Grenzen oder unbestätigte Prüfhinweise, keine Tech-Debt-Einträge.
+- `GIT`-Befunde, geschützte-Remote-Abdeckung, Reparse-Capability-Skips sowie die niedrigen Dead-Code-/Magic-Value-/Clone-Kandidaten sind Coverage-Grenzen oder unbestätigte Prüfhinweise, keine Tech-Debt-Einträge. Der öffentliche Live-Checkout ist dagegen in `EXTSRC-03` als bestätigter Delivery-Fallback aufgenommen.
 
 ## Priorität S3
 

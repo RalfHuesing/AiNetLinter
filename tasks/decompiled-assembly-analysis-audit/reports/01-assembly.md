@@ -40,7 +40,9 @@ Der unabhängige Reviewer hatte den Unterschied zwischen `includeReferences=fals
 ### Abdeckungsgrenzen
 
 - Die direkte DLL-Probe konnte wegen der vorhandenen Referenz-/Decompilerdiagnosen keine vollständige Assembly-Compilation herstellen. Das beweist keinen Fehler der Decompilation; es bestätigt aber die vorgesehene sichtbare Partial-Semantik.
-- Die source-backed Route wurde über Source-Code und vorhandene Fast-Tests geprüft, nicht über eine echte Live-Provider-Akquisition.
+- Die source-backed Route wurde über Source-Code und vorhandene Fast-Tests
+  geprüft; der nachträgliche Live-MCP-Aufruf hat zusätzlich den Checkout-
+  Download bestätigt, aber keine source-backed Assembly-Antwort erreicht.
 - Ein erster gezielter MCP-Integrationstestlauf endete unter konkurrierender Testlast mit 34 Fehlern und 6 Erfolgen (`MCP server process exited unexpectedly`); derselbe vollständige Nicht-Stress-Integrationslauf war anschließend isoliert mit 377/377 erfolgreich. Das war eine Testumgebungsgrenze, keine reproduzierbare Produktursache der Befunde.
 
 ## Nicht bestätigter Probehinweis ASM-ROUTING-01
@@ -165,7 +167,13 @@ Die Antwort könnte Navigation und Trunkierungsdiagnosen über alle Muster akkum
 - `AssemblyAnalysisContextFactory.IsSourceSelectionUsable` in `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs:216-233` verlangt Attestation, verifizierte Provider-Gesundheit, sauberes Checkout, matched candidate und identische Snapshot-Identität.
 - `TryCreateSourceBackedContextAsync` in derselben Datei `:135-196` erzeugt nur bei erfüllter Auswahl einen source-backed Context mit tatsächlicher Ziel-Fingerprint- und Snapshot-Herkunft.
 - `AssemblyAnalysisToolSupportTests.ExecuteAsync_WithConfiguredMappingPassesMatchedSelectionToFactory()` und `ExecuteAsync_WithoutMappingSkipsProviderAndUsesDecompilationFallback()` decken Mapping und Fallback ab; `AssemblyAnalysisToolSupportDegradedTests.ExecuteAsync_DegradedProviderShowsLastGoodAndUsesDecompilationFallback()` deckt den degradierenden Providerpfad ab.
-- Die direkte DLL-Probe war erwartungsgemäß `sourcePath=none`; eine neue Live-Source-Zuordnung wurde nicht erzeugt.
+- Die nachträgliche Live-Probe gegen eine konfigurierte gemappte DLL führte
+  über den MCP-Server zu einem Gitea-Checkout mit der konfigurierten Solution
+  und Source-Dateien. Die anschließenden `inspect_assembly`- und
+  `find_assembly_extensions`-Antworten blieben jedoch `origin=decompiled`,
+  `sourcePath=none` und `snapshot=none`, jeweils mit `status=partial` und
+  `completeness=partial`. Der Cache-Download ist damit belegt, die
+  Source-backed-Bereitstellung aber nicht.
 
 ## Verifikation
 
@@ -201,7 +209,7 @@ Die Antwort könnte Navigation und Trunkierungsdiagnosen über alle Muster akkum
 |---|---|---|---|
 | `targetType`/absoluter DLL-Pfad | `AnalysisTargetResolver.Resolve`; `InspectAssembly_RejectsRelativeAndMissingPathsWithoutRuntimeLoading()` | bestätigt | kein negativer Live-Aufruf mit absichtlich ungültigem Pfad notwendig |
 | Metadata-only und statische Decompilation | `AssemblyDecompilationAdapter.*`; Session-/Tool-Tests; Live-`inspect_assembly` | bestätigt, Live-Status `partial` | Referenzdiagnosen verhindern vollständige Live-Compilation |
-| Source-backed Mapping/Fallback | `AssemblyAnalysisToolSupportTests.*`; `AssemblyAnalysisContextFactory.*` | im Code und in Fast-Tests bestätigt | keine echte Live-Provider-Probe |
+| Source-backed Mapping/Fallback | `AssemblyAnalysisToolSupportTests.*`; `AssemblyAnalysisContextFactory.*`; Live-MCP-Probe | Download/Checkout bestätigt, Source-backed-Antwort nicht erreicht | Solution-Materialisierung bzw. Source-Auswahl bleibt offen; MCP fällt sicher auf Decompilation zurück |
 | Unbedingte Referenzexpansion bei Default-Symbolnavigation | `AssemblyAnalysisDispatcher.ExecuteAsync`; Registrierungsdefaults und Lease-Expansion | ASM-001 bestätigt | Live-DLL liefert zusätzlich umgebungsabhängige Partialdiagnosen |
 | Referenz-/Call-Tree-Navigation mit `includeReferences=true` | `AssemblyAnalysisRouteTests.AssemblyRoute_IncludeReferencesNavigatesSymbolsReferencesAndCallTree()` | positiver Pfad bestätigt | nur bounded/partial Referenzumgebungen geprüft |
 | Mehrmuster-Vollständigkeit | `AssemblyFindSymbolTool.BuildResponseAsync`; Live-Batch mit erstem begrenztem Muster | ASM-002 bestätigt | keine vollständige Umgebung ohne Basisdiagnosen verfügbar |

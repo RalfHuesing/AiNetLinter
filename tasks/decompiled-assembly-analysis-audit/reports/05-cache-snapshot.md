@@ -10,7 +10,7 @@
 - **Geprüfter Scope:** `AssemblyAnalysisRegistry`, `AssemblyAnalysisEntry`, `AssemblyAnalysisSession`, `AssemblyDecompilationCache`, `AssemblyReferenceResolver`, `SourceSnapshotRegistry`, `ExternalResourceRegistry`, externe Repository-Cache-Reader/Writer/Refresh sowie Host-Komposition und die zugeordneten Unit-/Component-/Integrationstests.
 - **Revision:** `65c194683597838f69fcb34492837de747d07cc3` bei der letzten MCP-/Codeprüfung; bei der abschließenden Dateiprüfung stand `HEAD` auf `c942350d7478ebb6c1f9aae7c6979bc9dc3d8090`. Die Revisionen dazwischen enthalten in diesem Auditfenster nur Audit-Artefakte; die produktiven Cache-/Snapshot-Quellen wurden in dieser Review nicht geändert.
 - **Working Tree:** Parallel erzeugte Audit-Artefakte waren vorhanden und wurden nicht bearbeitet; außer dem ausdrücklich autorisierten Zielreport und der unten genannten Code-Map-Präzisierung erfolgten keine Änderungen an Source-, Test-, Konfigurations- oder Dokumentationsdateien.
-- **Nicht geprüft:** vollständige Nicht-Stress-Abschlussläufe beider Testprojekte, Stress-/Lasttests, mehrstündige reale Datenträger-/Speicherläufe, eine source-backed Laufzeitprobe mit nutzbarer externer Quelle sowie privilegierte Reparse-Point-Tests.
+- **Nicht geprüft:** vollständige Nicht-Stress-Abschlussläufe beider Testprojekte, Stress-/Lasttests, mehrstündige reale Datenträger-/Speicherläufe, ein erfolgreicher source-backed Refresh trotz vorhandener Live-Checkout-Probe sowie privilegierte Reparse-Point-Tests.
 
 Alle MCP-Zielparameter wurden redigiert dokumentiert: `targetType=project`, `targetPath=<absoluter Projektpfad redigiert>`. Externe URLs, lokale Installationspfade, Credentials und konkrete geschützte Beispieldaten erscheinen nicht in diesem Report.
 
@@ -33,7 +33,12 @@ Alle MCP-Zielparameter wurden redigiert dokumentiert: `targetType=project`, `tar
 ### Abdeckungsgrenzen
 
 - Die beiden bestätigten Ressourcenbefunde wurden statisch durch MCP-Symbolkörper, Callgraph und ergänzende `rg`-Gegenprüfung belegt. Für die Lock-Tabelle wurde kein produktiver Langzeitprozess instrumentiert; die fehlende Entfernung ist jedoch direkt im Code sichtbar.
-- Ein source-backed Refresh nach einer reinen Source-Revision- oder Dependency-Änderung wurde mangels nutzbarer externer Quelle nicht live ausgeführt. F-05-03 bleibt deshalb von der Vertragsauslegung und dieser Umgebung abhängig.
+- Eine Live-MCP-Probe hat den konfigurierten Repository-Checkout erzeugt,
+  aber keinen Source-Snapshot bis zur Assembly-Antwort durchgestellt; beide
+  Funktionen fielen auf Decompilation zurück. Ein source-backed Refresh nach
+  einer reinen Source-Revision- oder Dependency-Änderung wurde damit nicht
+  erfolgreich ausgeführt. F-05-03 bleibt von Vertragsauslegung und der
+  ungeklärten Solution-Materialisierung abhängig.
 - Der privilegierte Reparse-Point-Test wurde übersprungen, weil die Capability im Testhost nicht verfügbar war; das ist kein Sicherheitsnachweis.
 
 ## Code-Map-Abgleich
@@ -243,7 +248,7 @@ Ein buildender Lauf desselben Integrationstestfilters konnte wegen einer von ein
 | Persistenter Assembly-/Source-Cache-Pointer und Readback | geprüft | MCP-Reader/Writer/Storage; Writer-Tests grün |
 | Erfolgreiche Generation-Retention über viele Refreshes | Befund statisch bestätigt, kein Langzeitstress | F-05-01; vorhandener Same-Key-Test zeigt zwei Generationen nach zwei Erfolgen |
 | Prozessweite Lock-Tabellen-Reclamation | Befund statisch bestätigt, kein instrumentierter Daemonlauf | F-05-02; `GetOrAdd` ohne Removal/Dispose |
-| Source-/Dependency-Invalidierung bei identischem Root-SHA | bedingtes Vertragsrisiko | F-05-03; keine echte source-backed Probe und kein direkter Test |
+| Source-/Dependency-Invalidierung bei identischem Root-SHA | bedingtes Vertragsrisiko | F-05-03; Live-Checkout vorhanden, aber kein source-backed Snapshot und kein direkter Test |
 | Reparse-Point-/Symlink-Capability | teilweise | 1 Test übersprungen; Skip ist kein Sicherheitsnachweis |
 | Integration-Materialisierung | geprüft | 6/6 mit `--no-build` erfolgreich; buildender Lauf durch DLL-Lock blockiert |
 | Vollständige Nicht-Stress-Suite | nicht geprüft | Abschluss-Gate außerhalb dieses gezielten Reviewer-Laufs |

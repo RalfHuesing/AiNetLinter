@@ -7,7 +7,7 @@
 - **Linse:** Testinventar, gezielte und vollständige Nicht-Stress-Verifikation, Dokumentations-/Registrierungsabgleich, Source-backed-/Decompilation-Abdeckung und redigierte Nachweisführung.
 - **Geprüfter Scope:** `src/AiNetLinter.FastTests`, `src/AiNetLinter.IntegrationTests`, `Docs/agent-api.md`, `Docs/configuration.md`, `.mcp.json`, `Directory.Build.props`, `rules.json`, `.agents/rules/` sowie die acht Einzelreports.
 - **Revision:** Die Produktions- und Testquellen blieben gegenüber der Audit-Baseline unverändert; die Berichtswelle enthält ausschließlich Task-Artefakte.
-- **Nicht geprüft:** `Stress`-Tests, ein echter entfernter Repository-Dienst, privilegierte Reparse-Point-Laufzeitfälle und ein vollständiger source-backed Live-Refresh mit verfügbarer credential-freier Quelle.
+- **Nicht geprüft:** `Stress`-Tests, ein geschützter entfernter Repository-Dienst, privilegierte Reparse-Point-Laufzeitfälle und ein erfolgreicher source-backed Live-Refresh. Ein öffentlicher gemappter Checkout wurde live über MCP geladen, fiel aber vor der Source-backed-Antwort auf Decompilation zurück.
 - **Redaktion:** Konkrete lokale Installationspfade, externe URLs, Credentials und geschützte Beispieldaten werden in diesem Report nicht wiedergegeben.
 
 ## Executive Summary
@@ -40,12 +40,12 @@ Vor dem Integrationslauf blockierte ein eindeutig identifizierter verwaister Tes
 - Git-Transporttests deckten Erfolg, Fehler, Prompt-Unterdrückung, geerbte Umgebung, Output-Cap, Timeout, Cancellation, Prozessbaum und Cleanup ab; eine echte remote authentifizierte Ausführung blieb offen.
 - Kein vorhandener Test misst die vollständig serialisierte Structured-Content-Wire-Größe einschließlich aller wiederholten Diagnose-/Sessionfelder.
 - Kein vorhandener Test deckt die Cancellation-Grenze zwischen erfolgreicher Akquisitionsrückgabe und lokaler Ownership-Bindung ab; dieser Gap ist Teil von `CHK-001`.
-- Für Loader-/Runtime-URL-Policy-Divergenz und die produktive Credential-Resolver-Verdrahtung fehlen belastbare source-backed Live-Tests; die unabhängige Linse 02 führt diese als `EXTSRC-01` und `EXTSRC-02`.
+- Für Loader-/Runtime-URL-Policy-Divergenz und die produktive Credential-Resolver-Verdrahtung fehlen belastbare geschützte Remote-Tests; die unabhängige Linse 02 führt diese als `EXTSRC-01` und `EXTSRC-02`. Die konfigurierte öffentliche Mapping-Quelle wurde nachträglich live über MCP geprüft und als `EXTSRC-03` erfasst.
 
 ## Source-backed- und Decompilation-Nachweis
 
 - Die reine Decompilation wurde mit einer neutralen lokalen Build-DLL über `inspect_assembly` und `find_assembly_extensions` geprüft. Die Antworten trugen `origin=decompiled`, keinen Source-Snapshot und `partial` wegen Referenz-/Decompilerdiagnosen. Das ist als sichtbare Partial-Semantik bewertet, nicht als vollständige Positivprobe.
-- Source-backed Mapping wurde über `AssemblyAnalysisContextFactory`, Attestation-/Snapshot-Verträge und vorhandene Component-/Integrationstests geprüft. Eine nutzbare externe Quelle für eine echte Live-Akquisition stand nicht zur Verfügung; daraus wird kein Funktionsdefekt abgeleitet.
+- Source-backed Mapping wurde über `AssemblyAnalysisContextFactory`, Attestation-/Snapshot-Verträge und vorhandene Component-/Integrationstests geprüft. Die nachträgliche Live-Probe mit der konfigurierten gemappten DLL zeigte: MCP lädt den Gitea-Checkout mit Solution und Source-Dateien, liefert aber in `inspect_assembly` und `find_assembly_extensions` weiterhin `origin=decompiled`, `sourcePath=none`, `snapshot=none`, `status=partial` und `completeness=partial`. Das ist ein bestätigter Delivery-Fallback und keine bestandene Source-backed-Probe.
 
 ## Dokumentations- und Registrierungsabgleich
 
@@ -64,7 +64,7 @@ Vor dem Integrationslauf blockierte ein eindeutig identifizierter verwaister Tes
 - Die rote vollständige Integrationssuite wurde nach dem gezielten Entfernen eines eindeutig verwaisten Testprozesses erneut ausgeführt. Die verbleibenden Fehler sind Prozess-/Transportabbrüche und werden im Abschluss als Umgebungslimit geführt; sie rechtfertigen keine Änderung am Produktionscode im Audit-only-Scope.
 - Die Einzelreports enthalten zeitlich unterschiedliche Testläufe. Der Orchestrator-Abschlusslauf ist für die Abschlusscheckliste maßgeblich; frühere grüne Reviewerläufe bleiben als Zeitpunkt-/Umgebungsnachweise erhalten.
 - Die Dokumentationsabweichungen werden nicht doppelt als neue Tech-Debt-Einträge angelegt. Sie verweisen auf `ASM-001` und `MCP-001`; die testbaren Gaps werden dort als nächste Schritte wiedergegeben.
-- Es wurden keine Source-, Test-, Konfigurations- oder veröffentlichten Dokumentationsdateien geändert.
+- Es wurden keine Produktions-, Test-, Konfigurations- oder veröffentlichten Dokumentationsdateien geändert; ausschließlich die Audit-Artefakte wurden um den nachträglichen Live-Nachweis ergänzt.
 
 ## Cross-Lens-Überschneidungen
 

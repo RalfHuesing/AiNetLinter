@@ -112,3 +112,53 @@
 - Fallback-Report: `reports/07-agent-surface.md`.
 - Terminalurteil: Progressive Output-/Completeness-Verträge überwiegend vorhanden; Registry-Footprint als S2-Wartbarkeitsbefund und Audit-Tool-Kandidaten getrennt von bestätigten Funktionsdefekten dokumentiert. Der Wire-Duplikationsbefund verweist auf MCP-001.
 - Keine Produktions- oder Testdateien geändert.
+
+## 2026-08-31 — Nachträglicher MCP-Live-Nachweis für gemappte Assembly-Quelle
+
+- Anlass: Der Nutzer verlangte ausdrücklich die Prüfung, dass eine in der
+  installierten `external-sources.json` gemappte DLL über MCP den Gitea-
+  Checkout lädt und als Source bereitstellt. Der frühere Auditstand hatte
+  diesen konkreten Live-Fall fälschlich nur als Abdeckungsgrenze geführt.
+- Konfiguration: Die installierte Mapping-Datei wurde read-only als gültiges
+  JSON mit genau einem Repository-Eintrag geprüft; die gemappte Assembly und
+  die konfigurierte Solution waren enthalten. Der konfigurierte Cache-Root
+  war vorhanden.
+- MCP-Aufruf 1: `inspect_assembly` mit `targetType="assembly"`, absolutem
+  DLL-`targetPath`, `publicOnly=false`, begrenzten Typ-/Memberlimits.
+- MCP-Aufruf 2: `find_assembly_extensions` mit demselben Assembly-Target und
+  begrenztem Ergebnislimit.
+- MCP-Nachweis: Beide Antworten meldeten `origin=decompiled`,
+  `sourcePath=none`, `snapshot=none`, `confidence=medium`,
+  `trust=untrusted`, `status=partial` und `completeness=partial`.
+  `get_server_health` bestätigte für dieselbe Session
+  `originKind=decompiled` und `loadState=partial`.
+- Cache-Nachweis: Der MCP-Aufruf erzeugte im installierten Cache einen
+  Repository-Checkout mit der konfigurierten Solution und 267 Dateien,
+  darunter 175 C#-Dateien im relevanten Source-Baum. Die Assembly-Cache-
+  Generation enthielt 200 generierte Decompilation-Dateien und war mit
+  `status=partial`, `complete=false` markiert.
+- Kontrollbefund: Die read-only Prüfung der Repository-Erreichbarkeit war
+  erfolgreich. Das Repository wurde also heruntergeladen; die anschließende
+  Solution-/Source-Snapshot-Materialisierung wurde nicht bis zur MCP-
+  Antwort durchgestellt. Der Checkout allein gilt deshalb nicht als
+  bestandene Source-backed-Bereitstellung.
+- Auditfolge: Der Befund wurde als `EXTSRC-03` (S2/U3) in
+  `reports/02-external-source.md`, `reports/09-tech-debt.md` und
+  `tech-debt.md` aufgenommen. `Konzept.md`, `code-map.md` und `roadmap.md`
+  enthalten nun den verbindlichen MCP-Live-/Cache-Abgleich. Es wurden keine
+  Produktions-, Test-, Konfigurations- oder veröffentlichten
+  Dokumentationsdateien geändert.
+
+## 2026-08-31 — Abschluss-Qualitätsaudit
+
+- Ausgeführte MCP-Abfragen im absoluten Projektziel und External-Source-/Assembly-Scope:
+  `find_duplicates` (`clone`, production), `find_dead_code`
+  (`private_internal`, members), `find_magic_values` (mindestens zwei
+  Vorkommen), `get_violations` und `safeguard`.
+- Ergebnis: drei `near`/`fuzzy`-Duplikatcluster ohne eindeutigen privaten
+  Klon, nur niedrig-konfidente Dead-Code-Kandidaten mit dynamischer-
+  Bindungswarnung, ein lokalisierbarer String-Kandidat, 0 Lint-Verstöße und
+  Safeguard `8,80/10` (`PASS`).
+- Keine automatische Korrektur: Die Kandidaten erfordern semantische,
+  öffentliche oder indirekte Nutzungsentscheidungen und erfüllen nicht die
+  Kriterien für eine verhaltensneutrale, sichere Proaktivkorrektur.

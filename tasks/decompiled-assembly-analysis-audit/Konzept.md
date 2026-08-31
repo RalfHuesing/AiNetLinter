@@ -164,6 +164,19 @@ Reports und Dokumenten heraus. Fehlen lokale DLLs, ein erreichbarer Git-
 Dienst oder eine gültige, credential-freie Konfiguration, wird das als
 Abdeckungsgrenze mit exakter Ursache notiert, nicht als Funktionsfehler.
 
+Für ein konfiguriertes External-Source-Mapping ist außerdem eine echte
+MCP-Live-Probe verbindlich: Eine gemappte lokale DLL wird über mindestens
+`inspect_assembly` und eine zweite Assembly-Funktion angefragt. Vor und nach
+dem Aufruf werden der konfigurierte Cache, der erzeugte Repository-Checkout,
+die konfigurierte Solution und mindestens eine Source-Datei geprüft. Der
+Nachweis gilt nur dann als erfolgreich source-backed, wenn die MCP-Antworten
+`origin=source-backed`, einen nichtleeren `sourcePath`, einen nichtleeren
+Snapshot sowie den passenden Vertrauens-/Vollständigkeitsstatus ausweisen.
+Ein heruntergeladener Checkout ohne diese Antwortfelder ist ausdrücklich ein
+fehlgeschlagener Source-backed-Nachweis mit sicherem Decompilation-Fallback;
+er darf nicht als bestandener Test verbucht werden. Provider-,
+Materialisierungs- und Fallback-Diagnosen werden dabei getrennt erfasst.
+
 ## 6. Nachweis- und Reportvertrag
 
 Jeder Einzelreport enthält:
@@ -292,10 +305,14 @@ Die Verifikation erfolgt in drei Ebenen:
 - Jeder gemeldete Befund enthält alle Felder des Reportvertrags; fehlende
   Reproduktion oder fehlende Evidenz verhindert seine Aufnahme als
   bestätigter Tech-Debt-Eintrag.
-- Mindestens ein Reviewer prüft einen Source-backed-Fall und einen reinen
-  Decompilation-Fall mit `inspect_assembly`; die Antworten enthalten eine
-  auswertbare Herkunfts- und Vollständigkeitsbewertung oder dokumentieren die
-  externe Voraussetzung, die dies verhindert.
+- Mindestens ein Reviewer prüft einen real gemappten Source-backed-Fall und
+  einen reinen Decompilation-Fall mit `inspect_assembly`; bei einem
+  konfigurierten Mapping werden zusätzlich Cache-Checkout, Solution und
+  Source-Datei gegen die MCP-Herkunftsfelder abgeglichen. Die Antworten
+  enthalten eine auswertbare Herkunfts- und Vollständigkeitsbewertung. Falls
+  die Source-Materialisierung scheitert, wird der Download als Teilerfolg und
+  die weiterhin gelieferte Decompilation als fehlgeschlagene Source-backed-
+  Bereitstellung dokumentiert.
 - Mindestens ein Reviewer prüft Git-Akquisition einschließlich Erfolg,
   Fehler, Cancel/Timeout und Cleanup anhand vorhandener Tests oder einer
   sicheren reproduzierbaren Probe.

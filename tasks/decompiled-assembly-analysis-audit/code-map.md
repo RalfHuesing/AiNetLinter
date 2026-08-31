@@ -34,10 +34,18 @@
 - Bestätigte Architekturbeobachtung: Der Dispatcher ruft `ExpandReferencesAsync` vor dem Assembly-Handler unabhängig vom sichtbaren `includeReferences`-Parameter auf.
 - Bestätigte Wire-Beobachtung: Eine einmalige 4-KiB-Sampleauswahl wird im strukturierten `inspect_assembly`-Payload sowohl top-level als auch in verschachtelten Summary-Feldern wiederverwendet; die globale serialisierte Antwortgröße ist damit nicht aus dem Code ersichtlich begrenzt.
 - Live-Decomp-Probe: lokales neutrales Build-Artefakt wurde metadata-only untersucht; wegen nicht identischer Referenzversionen und semantischer Decompilerdiagnosen war das Ergebnis `partial` und enthielt keine Typen. Dies ist als Umgebungs-/Abdeckungsgrenze, nicht automatisch als Produktdefekt, zu werten.
-- Sicherheits-/Lebenszyklus-Tests sind im Repository umfangreich vorhanden; eine echte source-backed Probe mit nutzbarer externer Quelle wurde in diesem Lauf nicht durchgeführt.
+- Sicherheits-/Lebenszyklus-Tests sind im Repository umfangreich vorhanden.
+  Die nachträgliche MCP-Live-Probe mit einer konfigurierten gemappten DLL
+  erzeugte einen Gitea-Checkout und Source-Dateien, aber die MCP-Antworten
+  blieben `origin=decompiled`, `sourcePath=none` und `snapshot=none`; damit
+  ist die Source-backed-Bereitstellung nicht bestanden.
 
 ## Verifikation
 
 - Durchgeführt: `get_file_tree`, `get_index_scope`, `get_feature_context`, `find_symbol`, `find_references`, `inspect_assembly`, `find_assembly_extensions`, `get_violations`, `safeguard`, `find_duplicates`, `find_dead_code`, `find_magic_values` mit explizitem `targetType` und absolutem `targetPath`.
+- Abschluss-Qualitätsaudit im External-Source-/Assembly-Scope: drei nur
+  `near`/`fuzzy`-Duplikatcluster, ausschließlich niedrig-konfidente
+  Dead-Code-Heuristiken und ein lokalisierbarer String-Kandidat; kein
+  eindeutiger sicherer Korrekturkandidat, daher keine Produktionsänderung.
 - Durchgeführt: `dotnet build` erfolgreich; die beiden vollständigen Nicht-Stress-Testläufe folgen als Abschluss-Gate.
 - Abdeckungslimit: unabhängige Reviewer konnten wegen `collab spawn failed: agent thread limit reached` nicht ausgeführt werden; die Reports sind Orchestrator-Fallbacks und entsprechend markiert.

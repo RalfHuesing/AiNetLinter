@@ -18,8 +18,8 @@ Die Tests liefern eine gemischte Abschlusslage: Build und FastTests ohne Stress 
 
 | Linse | Reportstatus | Befunde | Primäre Abdeckungsgrenze |
 |---|---|---|---|
-| 01 Assembly/Decompilation | unabhängiger Report, nachträglich fachlich abgeglichen | `ASM-001`, `ASM-002`, `ASM-003`; ein Root-Routing-Probehinweis verworfen | neutrale DLL war wegen Referenzdiagnosen nur `partial`; keine echte Source-backed Liveprobe |
-| 02 External Source | unabhängiger Report | `EXTSRC-01`, `EXTSRC-02` | kein geschützter Remote-Dienst und keine produktive Resolver-Implementierung live |
+| 01 Assembly/Decompilation | unabhängiger Report, nachträglich fachlich abgeglichen | `ASM-001`, `ASM-002`, `ASM-003`; ein Root-Routing-Probehinweis verworfen | gemappte Live-DLL wurde geladen, Source-backed-Antwort blieb aus; Decompilation war `partial` |
+| 02 External Source | unabhängiger Report | `EXTSRC-01`, `EXTSRC-02`, `EXTSRC-03` | kein geschützter Remote-Dienst; öffentlicher Checkout live, Solution-Materialisierung nicht erfolgreich |
 | 03 Git-Transport | unabhängiger Report | keine bestätigten S0–S3-Befunde | kein echter entfernter/authentifizierter Transport |
 | 04 Checkout/Sicherheit | unabhängiger Report | `CHK-001` | zwei echte Reparse-Tests wegen fehlender Capability übersprungen; kein privilegierter TOCTOU-Lauf |
 | 05 Cache/Snapshot | unabhängiger Report | `F-05-01`, `F-05-02`; `F-05-03` bedingtes Vertragsrisiko | kein mehrstündiger Langzeitlauf und keine source-backed Refresh-Probe |
@@ -42,6 +42,7 @@ Die Tests liefern eine gemischte Abschlusslage: Build und FastTests ohne Stress 
 |---|---|---|---|
 | `EXTSRC-01` | Loader-URL-Policy und Runtime-URL-Policy akzeptieren nicht dieselbe URL-Menge. | External Source | konkrete Loader-/Runtime-Kontrollflüsse; `promoted-to-project-debt`. |
 | `EXTSRC-02` | Produktive MCP-/Daemon-Einstiege verdrahten keinen Credential-Resolver. | External Source | optionale Composition-Schnittstelle versus produktive Call-Sites; `promoted-to-project-debt`. |
+| `EXTSRC-03` | Konfigurierter MCP-Source-Flow lädt den Checkout, fällt aber bei der Assembly-Antwort auf Decompilation zurück. | External Source | zwei MCP-Assembly-Funktionen plus Cache-Checkout und Health; `promoted-to-project-debt`. |
 | `ASM-002` | Nichttreffer erwartbarer anderer Assembly-Sessions werden als globale Partialdiagnose projiziert. | Assembly-Navigation | `AssemblySymbolResolver` plus `CreateSummary`; `promoted-to-project-debt`. |
 | `ASM-003` | Batch-`find_symbol` gibt nur die Navigation des letzten Musters aus und kann frühere Trunkierung verlieren. | Assembly-Navigation | `BuildResponseAsync` plus begrenzte Musterprobe; `promoted-to-project-debt`. |
 | `F-05-01` | Erfolgreiche persistente Cache-Generationen werden nicht durch Retention/Sweep begrenzt. | Cache/Snapshot | Generation-Writer und Cleanup-Aufrufer; `promoted-to-project-debt`, sichere Lease-/Rollback-Prüfung erforderlich. |
@@ -73,7 +74,7 @@ Der Fallback-Bericht stufte die Mehrfachprojektion des 4-KiB-Sample-Caps zunäch
 
 ### Cache-/Source-Refresh
 
-`F-05-01`/`F-05-02` sind direkte Ressourcenbefunde. `F-05-03` bleibt ein Vertragsrisiko, weil Source-/Dependency-Refresh-Anforderungen und eine belastbare source-backed Liveprobe fehlen. Es wird deshalb nicht als bestätigter Defekt formuliert.
+`F-05-01`/`F-05-02` sind direkte Ressourcenbefunde. `F-05-03` bleibt ein Vertragsrisiko, weil Source-/Dependency-Refresh-Anforderungen und ein erfolgreicher source-backed Snapshot fehlen. Die neue Liveprobe bestätigt zwar den Checkout, aber nicht die anschließende Source-Materialisierung.
 
 ### Testläufe
 
@@ -97,7 +98,8 @@ Die Einzelreports wurden zu unterschiedlichen Zeitpunkten und unter unterschiedl
 6. Eine vollständige Structured-Content-Maximalantwort serialisieren und die UTF-8-Größe inklusive aller Summary-/Sessionfelder messen.
 7. Negative Positionsfälle für Spalte `0`, negative Werte und Überläufe ergänzen.
 8. Reparse-Capability im Testhost bereitstellen und die zwei übersprungenen Sicherheitsläufe nachholen.
-9. Integrationstests in einer isolierten, daemonfreien Testprozessumgebung wiederholen; `Stress` bleibt weiterhin außerhalb des Abschlusslaufs.
+9. Den Source-backed-Livefall als reproduzierbaren Integrationstest mit konfiguriertem Mapping, Cache-Checkout, Solution-Materialisierung und `origin=source-backed` festschreiben; bei Fehlschlag eine sichere Materialisierungsdiagnose ausgeben.
+10. Integrationstests in einer isolierten, daemonfreien Testprozessumgebung wiederholen; `Stress` bleibt weiterhin außerhalb des Abschlusslaufs.
 
 ## Abschlussdisposition
 

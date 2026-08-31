@@ -39,7 +39,7 @@ last_commit: 7fa93ac7
 
 - [x] Acht fachliche Linsen mit eigenem committed Report oder belegter Abdeckungsgrenze
 - [x] Pflichtfelder, Evidenz und Reproduktion je bestätigtem Befund geprüft
-- [x] Source-backed- und reine Decompilation-Probe mit `inspect_assembly` bewertet oder Voraussetzung dokumentiert
+- [x] Source-backed- und reine Decompilation-Probe mit `inspect_assembly` bewertet; bei der konfigurierten Live-DLL wurden MCP-Herkunft und Cache-Checkout gegeneinander geprüft
 - [x] Git-Akquisition für Erfolg, Fehler, Cancel/Timeout und Cleanup bewertet
 - [x] Einzelbefunde dedupliziert, Primärbereich zugeordnet, Querverweise/Widersprüche erhalten
 - [x] Code, Registration, Tests und veröffentlichte Dokumentation konkret verglichen
