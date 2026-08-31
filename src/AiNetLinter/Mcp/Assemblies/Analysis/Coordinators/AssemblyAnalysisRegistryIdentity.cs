@@ -4,9 +4,10 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 
-namespace AiNetLinter.Mcp.Assemblies.Analysis;
+namespace AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
 
 internal static class AssemblyAnalysisRegistryIdentity
 {

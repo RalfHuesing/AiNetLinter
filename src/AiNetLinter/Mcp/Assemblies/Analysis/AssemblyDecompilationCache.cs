@@ -7,7 +7,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
-
 internal sealed class AssemblyDecompilationCache
 {
     private const int PointerPublishAttempts = 3;
@@ -88,9 +87,7 @@ internal sealed class AssemblyDecompilationCache
             }
 
             isPublished = true;
-            AssemblyCacheCleanup.RetainGenerations(
-                entryDirectory,
-                Path.GetFileName(generationDirectory));
+            AssemblyCacheCleanup.RetainGenerations(entryDirectory, Path.GetFileName(generationDirectory));
             return new AssemblyCachePublishResult(true, generationDirectory, null);
         }
         catch (Exception ex) when (IsCacheWriteException(ex))

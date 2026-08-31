@@ -4,8 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 
-namespace AiNetLinter.Mcp.Assemblies.Analysis;
+namespace AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
 
 internal sealed class AssemblyAnalysisHealthSnapshotProvider
 {

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
@@ -12,7 +13,7 @@ using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Assemblies.Analysis;
+namespace AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
 
 internal sealed class AssemblyAnalysisSourceProjectLeaseCoordinator
 {
@@ -28,27 +29,18 @@ internal sealed class AssemblyAnalysisSourceProjectLeaseCoordinator
     private readonly Func<string, bool, AssemblyAnalysisLeaseResult> failure;
 
     internal AssemblyAnalysisSourceProjectLeaseCoordinator(
-        Lock gate,
-        Dictionary<string, AssemblyAnalysisRegistryEntryCreation> entries,
-        Dictionary<string, long> nextGenerations,
-        Func<bool> isDisposed,
-        AssemblyAnalysisResourceBudget resourceBudget,
-        AssemblyAnalysisSourceProjectEntryFactory entryFactory,
-        Action<string, AssemblyAnalysisRegistryEntryCreation> observeCreation,
-        Action<string, AssemblyAnalysisRegistryEntryCreation> removeFailedEntry,
-        Func<bool, string?, CancellationToken, Task<int>> runEvictionTick,
-        Func<string, bool, AssemblyAnalysisLeaseResult> failure)
+        AssemblyAnalysisRegistryCoordinatorContext context)
     {
-        this.gate = gate;
-        this.entries = entries;
-        this.nextGenerations = nextGenerations;
-        this.isDisposed = isDisposed;
-        this.resourceBudget = resourceBudget;
-        this.entryFactory = entryFactory;
-        this.observeCreation = observeCreation;
-        this.removeFailedEntry = removeFailedEntry;
-        this.runEvictionTick = runEvictionTick;
-        this.failure = failure;
+        gate = context.Gate;
+        entries = context.Entries;
+        nextGenerations = context.NextGenerations;
+        isDisposed = context.IsDisposed;
+        resourceBudget = context.ResourceBudget;
+        entryFactory = context.SourceProjectEntryFactory;
+        observeCreation = context.ObserveCreation;
+        removeFailedEntry = context.RemoveFailedEntry;
+        runEvictionTick = context.RunEvictionTick;
+        failure = context.Failure;
     }
 
     internal async Task<AssemblyAnalysisLeaseResult> LeaseAsync(

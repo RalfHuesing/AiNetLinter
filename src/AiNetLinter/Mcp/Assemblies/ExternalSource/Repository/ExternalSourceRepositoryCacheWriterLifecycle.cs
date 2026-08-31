@@ -1,6 +1,10 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
@@ -10,7 +14,7 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter
     private static async Task FinalizePublishAsync(
         PublishContext context,
         bool published,
-        CacheKeyLockRegistry.CacheKeyLockLease? lockLease,
+        ExternalSourceRepositoryCacheKeyLockLease? lockLease,
         Func<Task>? afterLeaseReleasedAsync)
     {
         try
@@ -31,7 +35,7 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter
             }
             else
             {
-                ExternalSourceRepositoryCacheStorage.RetainGenerations(
+                ExternalSourceRepositoryCacheRetention.RetainGenerations(
                     context.EntryDirectory,
                     context.GenerationName);
             }
@@ -57,6 +61,159 @@ internal static class ExternalSourceRepositoryCachePublishLifecycle
         finally
         {
             materializationUse?.Dispose();
+        }
+    }
+}
+
+internal sealed class ExternalSourceRepositoryCacheKeyLockEntry
+{
+    internal SemaphoreSlim Semaphore { get; } = new(1, 1);
+
+    internal int ReferenceCount { get; set; }
+}
+
+internal sealed class ExternalSourceRepositoryCacheKeyLockLease : IDisposable
+{
+    private readonly ExternalSourceRepositoryCacheKeyLockRegistry registry;
+    private readonly string key;
+    private readonly ExternalSourceRepositoryCacheKeyLockEntry entry;
+    private int disposed;
+
+    internal ExternalSourceRepositoryCacheKeyLockLease(
+        ExternalSourceRepositoryCacheKeyLockRegistry registry,
+        string key,
+        ExternalSourceRepositoryCacheKeyLockEntry entry)
+    {
+        this.registry = registry;
+        this.key = key;
+        this.entry = entry;
+    }
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref disposed, 1) != 0)
+        {
+            return;
+        }
+
+        registry.Release(key, entry);
+    }
+}
+
+internal sealed class ExternalSourceRepositoryCacheKeyLockRegistry
+{
+    private readonly object gate = new();
+    private readonly Dictionary<string, ExternalSourceRepositoryCacheKeyLockEntry> entries = new(StringComparer.OrdinalIgnoreCase);
+
+    internal int Count
+    {
+        get
+        {
+            lock (gate) return entries.Count;
+        }
+    }
+
+    internal async Task<ExternalSourceRepositoryCacheKeyLockLease> AcquireAsync(
+        string key,
+        CancellationToken cancellationToken)
+    {
+        ExternalSourceRepositoryCacheKeyLockEntry entry;
+        lock (gate)
+        {
+            if (!entries.TryGetValue(key, out entry!))
+            {
+                entry = new ExternalSourceRepositoryCacheKeyLockEntry();
+                entries.Add(key, entry);
+            }
+
+            entry.ReferenceCount++;
+        }
+
+        try
+        {
+            await entry.Semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+            return new ExternalSourceRepositoryCacheKeyLockLease(this, key, entry);
+        }
+        catch
+        {
+            ReleaseReference(key, entry);
+            throw;
+        }
+    }
+
+    internal void Release(
+        string key,
+        ExternalSourceRepositoryCacheKeyLockEntry entry)
+    {
+        lock (gate)
+        {
+            entry.Semaphore.Release();
+            ReleaseReference(key, entry);
+        }
+    }
+
+    private void ReleaseReference(
+        string key,
+        ExternalSourceRepositoryCacheKeyLockEntry entry)
+    {
+        lock (gate)
+        {
+            entry.ReferenceCount--;
+            if (entry.ReferenceCount == 0
+                && entries.TryGetValue(key, out var current)
+                && ReferenceEquals(current, entry))
+            {
+                entries.Remove(key);
+                entry.Semaphore.Dispose();
+            }
+        }
+    }
+}
+
+internal static class ExternalSourceRepositoryCacheRetention
+{
+    internal static void RetainGenerations(string entryDirectory, string currentGeneration)
+    {
+        try
+        {
+            if (!Directory.Exists(entryDirectory)
+                || ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(entryDirectory))
+            {
+                return;
+            }
+
+            var generations = Directory.EnumerateDirectories(
+                    entryDirectory,
+                    ExternalSourceRepositoryCacheContract.GenerationDirectoryPrefix + "*",
+                    SearchOption.TopDirectoryOnly)
+                .Where(path => ExternalSourceRepositoryCacheContract.IsSafeGenerationName(Path.GetFileName(path)))
+                .Where(path => !ExternalSourceRepositoryPathGuard.ContainsReparsePointInTree(path))
+                .OrderByDescending(path => Directory.GetLastWriteTimeUtc(path))
+                .ThenByDescending(path => Path.GetFileName(path), StringComparer.Ordinal)
+                .ToList();
+            var retained = new HashSet<string>(StringComparer.Ordinal)
+            {
+                currentGeneration,
+            };
+            foreach (var generation in generations)
+            {
+                var name = Path.GetFileName(generation);
+                if (retained.Contains(name))
+                {
+                    continue;
+                }
+
+                if (retained.Count < ExternalSourceRepositoryCacheContract.MaxRetainedGenerations)
+                {
+                    retained.Add(name);
+                    continue;
+                }
+
+                ExternalSourceRepositoryCacheStorage.TryDeleteGeneration(entryDirectory, generation);
+            }
+        }
+        catch (Exception ignored) when (ExternalSourceRepositoryCacheStorage.IsCacheException(ignored))
+        {
         }
     }
 }

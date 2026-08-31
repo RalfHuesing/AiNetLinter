@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
@@ -19,7 +18,7 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter :
     IExternalSourceRepositoryCacheWriter,
     IExternalSourceRepositoryCacheReader
 {
-    private static readonly CacheKeyLockRegistry Locks = new();
+    private static readonly ExternalSourceRepositoryCacheKeyLockRegistry Locks = new();
     private readonly string cacheRoot;
 
     internal LocalExternalSourceRepositoryCacheWriter(string? cacheRoot = null)
@@ -65,7 +64,7 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter :
 
         var context = CreatePublishContext(request, key!);
         var published = false;
-        CacheKeyLockRegistry.CacheKeyLockLease? lockLease = null;
+        ExternalSourceRepositoryCacheKeyLockLease? lockLease = null;
         ExternalSourceCheckoutMaterializationUse? materializationUse = null;
         try
         {
@@ -329,7 +328,7 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter :
         string generationName) =>
         ExternalSourceRepositoryCacheReader.ReadGeneration(request, generationName);
 
-    private static async Task<CacheKeyLockRegistry.CacheKeyLockLease> AcquireLockAsync(
+    private static async Task<ExternalSourceRepositoryCacheKeyLockLease> AcquireLockAsync(
         string entryDirectory,
         CancellationToken cancellationToken)
     {
@@ -438,101 +437,6 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter :
         internal bool PointerPublished { get; set; }
     }
 
-    private sealed class CacheKeyLockRegistry
-    {
-        private readonly object gate = new();
-        private readonly Dictionary<string, CacheKeyLockEntry> entries = new(StringComparer.OrdinalIgnoreCase);
-
-        internal int Count
-        {
-            get
-            {
-                lock (gate) return entries.Count;
-            }
-        }
-
-        internal async Task<CacheKeyLockLease> AcquireAsync(
-            string key,
-            CancellationToken cancellationToken)
-        {
-            CacheKeyLockEntry entry;
-            lock (gate)
-            {
-                if (!entries.TryGetValue(key, out entry!))
-                {
-                    entry = new CacheKeyLockEntry();
-                    entries.Add(key, entry);
-                }
-
-                entry.ReferenceCount++;
-            }
-
-            try
-            {
-                await entry.Semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
-                return new CacheKeyLockLease(this, key, entry);
-            }
-            catch
-            {
-                ReleaseReference(key, entry);
-                throw;
-            }
-        }
-
-        private void ReleaseReference(string key, CacheKeyLockEntry entry)
-        {
-            lock (gate)
-            {
-                entry.ReferenceCount--;
-                if (entry.ReferenceCount == 0
-                    && entries.TryGetValue(key, out var current)
-                    && ReferenceEquals(current, entry))
-                {
-                    entries.Remove(key);
-                    entry.Semaphore.Dispose();
-                }
-            }
-        }
-
-        internal sealed class CacheKeyLockEntry
-        {
-            internal SemaphoreSlim Semaphore { get; } = new(1, 1);
-
-            internal int ReferenceCount { get; set; }
-        }
-
-        internal sealed class CacheKeyLockLease : IDisposable
-        {
-            private readonly CacheKeyLockRegistry registry;
-            private readonly string key;
-            private readonly CacheKeyLockEntry entry;
-            private int disposed;
-
-            internal CacheKeyLockLease(
-                CacheKeyLockRegistry registry,
-                string key,
-                CacheKeyLockEntry entry)
-            {
-                this.registry = registry;
-                this.key = key;
-                this.entry = entry;
-            }
-
-            public void Dispose()
-            {
-                if (Interlocked.Exchange(ref disposed, 1) != 0)
-                {
-                    return;
-                }
-
-                lock (registry.gate)
-                {
-                    entry.Semaphore.Release();
-                    registry.ReleaseReference(key, entry);
-                }
-            }
-        }
-    }
 }
 
 internal sealed class ExternalSourceRepositoryCachePublishTestSeam

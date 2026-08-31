@@ -13,6 +13,8 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies;
 [Trait("Category", "Unit")]
 // @covers AssemblyAnalysisRegistry
 // @covers AssemblyAnalysisEntry
+// @covers AssemblyAnalysisRegistryEvictionCoordinator
+// @covers AssemblyAnalysisSourceProjectLeaseCoordinator
 public sealed class AssemblyAnalysisRegistryRetirementRaceTests
 {
     [Fact]

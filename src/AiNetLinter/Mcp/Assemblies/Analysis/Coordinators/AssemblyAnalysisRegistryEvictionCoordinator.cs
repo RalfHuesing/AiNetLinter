@@ -5,8 +5,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 
-namespace AiNetLinter.Mcp.Assemblies.Analysis;
+namespace AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
 
 internal sealed class AssemblyAnalysisRegistryEvictionCoordinator
 {
@@ -14,26 +15,20 @@ internal sealed class AssemblyAnalysisRegistryEvictionCoordinator
     private readonly Dictionary<string, AssemblyAnalysisRegistryEntryCreation> entries;
     private readonly List<Task> retiredEntries;
     private readonly Func<bool> isDisposed;
-    private readonly AssemblyAnalysisResourceBudget resourceBudget;
+    private readonly IAssemblyAnalysisEvictionResourceBudget resourceBudget;
     private readonly Func<AssemblyAnalysisEntry, Task>? beforeRetirementAsync;
     private readonly Func<AssemblyAnalysisRegistryEntryCreation, Task> retireEntryAsync;
 
     internal AssemblyAnalysisRegistryEvictionCoordinator(
-        Lock gate,
-        Dictionary<string, AssemblyAnalysisRegistryEntryCreation> entries,
-        List<Task> retiredEntries,
-        Func<bool> isDisposed,
-        AssemblyAnalysisResourceBudget resourceBudget,
-        Func<AssemblyAnalysisEntry, Task>? beforeRetirementAsync,
-        Func<AssemblyAnalysisRegistryEntryCreation, Task> retireEntryAsync)
+        AssemblyAnalysisRegistryEvictionContext context)
     {
-        this.gate = gate;
-        this.entries = entries;
-        this.retiredEntries = retiredEntries;
-        this.isDisposed = isDisposed;
-        this.resourceBudget = resourceBudget;
-        this.beforeRetirementAsync = beforeRetirementAsync;
-        this.retireEntryAsync = retireEntryAsync;
+        gate = context.Gate;
+        entries = context.Entries;
+        retiredEntries = context.RetiredEntries;
+        isDisposed = context.IsDisposed;
+        resourceBudget = context.ResourceBudget;
+        beforeRetirementAsync = context.BeforeRetirementAsync;
+        retireEntryAsync = context.RetireEntryAsync;
     }
 
     internal Task<int> RunAsync(

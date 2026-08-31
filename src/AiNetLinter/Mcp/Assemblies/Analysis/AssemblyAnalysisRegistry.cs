@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
+using AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -51,26 +52,34 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
         var sourceProjectEntryFactory = new AssemblyAnalysisSourceProjectEntryFactory(
             resourceBudget,
             CreateReferenceLeaseFactory);
-        evictionCoordinator = new(
-            gate,
-            entries,
-            retiredEntries,
-            () => Volatile.Read(ref disposed) != 0,
-            resourceBudget,
-            beforeRetirementAsync,
-            RetireEntryAsync);
-        sourceProjectLeaseCoordinator = new(
-            gate,
-            entries,
-            nextGenerations,
-            () => Volatile.Read(ref disposed) != 0,
-            resourceBudget,
-            sourceProjectEntryFactory,
-            ObserveCreation,
-            RemoveFailedEntry,
-            (forceCapacity, requiredPath, cancellationToken) =>
+        var coordinatorContext = new AssemblyAnalysisRegistryCoordinatorContext
+        {
+            Gate = gate,
+            Entries = entries,
+            NextGenerations = nextGenerations,
+            RetiredEntries = retiredEntries,
+            IsDisposed = () => Volatile.Read(ref disposed) != 0,
+            ResourceBudget = resourceBudget,
+            BeforeRetirementAsync = beforeRetirementAsync,
+            RetireEntryAsync = RetireEntryAsync,
+            SourceProjectEntryFactory = sourceProjectEntryFactory,
+            ObserveCreation = ObserveCreation,
+            RemoveFailedEntry = RemoveFailedEntry,
+            RunEvictionTick = (forceCapacity, requiredPath, cancellationToken) =>
                 RunEvictionTickAsync(forceCapacity, requiredPath, cancellationToken),
-            Failure);
+            Failure = Failure,
+        };
+        evictionCoordinator = new(new AssemblyAnalysisRegistryEvictionContext
+        {
+            Gate = gate,
+            Entries = entries,
+            RetiredEntries = retiredEntries,
+            IsDisposed = () => Volatile.Read(ref disposed) != 0,
+            ResourceBudget = resourceBudget,
+            BeforeRetirementAsync = beforeRetirementAsync,
+            RetireEntryAsync = RetireEntryAsync,
+        });
+        sourceProjectLeaseCoordinator = new(coordinatorContext);
         healthSnapshotProvider = new(gate, entries);
     }
 

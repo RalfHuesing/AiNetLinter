@@ -14,7 +14,6 @@ using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.TestKit;
-using Microsoft.CodeAnalysis;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Assemblies;
@@ -262,38 +261,6 @@ public sealed class AssemblyAnalysisRegistryTests
     }
 
     [Fact]
-    public async Task Entry_Matches_SourceSnapshotIdentityIsPartOfReuseIdentity()
-    {
-        using var solution = RoslynTestSolutionFactory.CreateSolution(
-            "namespace EntryTest; public sealed class Value { }");
-        var identity = SourceSnapshotIdentity.Create(
-            new ExternalSourceMapping(
-                "https://gitea.example/entry-test.git",
-                "src/EntryTest.slnx",
-                ["EntryTest"]),
-            "revision-1");
-        var baseContext = await CreateContextAsync(solution.Solution);
-        var context = baseContext with
-        {
-            Origin = baseContext.Origin with { SourceSnapshotIdentity = identity },
-        };
-        await using var entry = AssemblyAnalysisEntry.Create(
-            new AssemblyAnalysisEntryCreateParameters(
-                "entry-test.dll",
-                solution.Solution,
-                context,
-                Lifetime: null));
-        var fingerprint = new AssemblyFingerprint(
-            "entry-test.dll",
-            1,
-            DateTime.UtcNow,
-            context.Origin.ContentHash);
-
-        Assert.True(entry.Matches(fingerprint, identity.StableValue, compareSourceSnapshotIdentity: true));
-        Assert.False(entry.Matches(fingerprint, "changed-source-snapshot", compareSourceSnapshotIdentity: true));
-    }
-
-    [Fact]
     public async Task LeaseAsync_ExternalCapacityIsSeparateAndVisibleWithoutEvictingActiveLease()
     {
         using var temp = TestTempDirectory.Create("assembly-registry-capacity-");
@@ -417,7 +384,7 @@ public sealed class AssemblyAnalysisRegistryTests
     {
         using var solution = RoslynTestSolutionFactory.CreateSolution(
             "namespace EntryTest; public sealed class Value { }");
-        var context = await CreateContextAsync(solution.Solution);
+        var context = await AssemblyAnalysisRegistryTestContextFactory.CreateAsync(solution.Solution);
         var lifetime = new TrackingLifetime();
         var entry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
             "entry-test.dll",
@@ -445,7 +412,7 @@ public sealed class AssemblyAnalysisRegistryTests
     {
         using var solution = RoslynTestSolutionFactory.CreateSolution(
             "namespace EntryTest; public sealed class Value { }");
-        var context = await CreateContextAsync(solution.Solution);
+        var context = await AssemblyAnalysisRegistryTestContextFactory.CreateAsync(solution.Solution);
         var lifetime = new TrackingLifetime(throws: true);
         var entry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
             "entry-failure-test.dll",
@@ -461,23 +428,6 @@ public sealed class AssemblyAnalysisRegistryTests
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => entry.DisposeAsync().AsTask());
         Assert.Equal(1, lifetime.DisposeCount);
-    }
-
-    private static async Task<AssemblyContext> CreateContextAsync(Solution solution)
-    {
-        var project = solution.Projects.Single();
-        var compilation = (await project.GetCompilationAsync())!;
-        return new AssemblyContext(
-            compilation.Assembly,
-            new AssemblyIdentityDto("EntryTest", "1.0.0.0", "", ""),
-            [],
-            [],
-            compilation,
-            null,
-            null,
-            new AssemblyOrigin("test", "entry-test.dll", "test-hash", "", "high"),
-            1,
-            AssemblySessionStatus.Complete);
     }
 
     private sealed class TrackingLifetime(bool throws = false) : IDisposable

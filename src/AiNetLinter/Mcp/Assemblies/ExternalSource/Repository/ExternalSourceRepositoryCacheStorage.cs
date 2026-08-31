@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
@@ -439,51 +438,6 @@ internal static class ExternalSourceRepositoryCacheStorage
                 && !ExternalSourceRepositoryPathGuard.ContainsReparsePointInTree(generationDirectory))
             {
                 Directory.Delete(generationDirectory, recursive: true);
-            }
-        }
-        catch (Exception ignored) when (IsCacheException(ignored))
-        {
-        }
-    }
-
-    internal static void RetainGenerations(string entryDirectory, string currentGeneration)
-    {
-        try
-        {
-            if (!Directory.Exists(entryDirectory)
-                || ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(entryDirectory))
-            {
-                return;
-            }
-
-            var generations = Directory.EnumerateDirectories(
-                    entryDirectory,
-                    ExternalSourceRepositoryCacheContract.GenerationDirectoryPrefix + "*",
-                    SearchOption.TopDirectoryOnly)
-                .Where(path => ExternalSourceRepositoryCacheContract.IsSafeGenerationName(Path.GetFileName(path)))
-                .Where(path => !ExternalSourceRepositoryPathGuard.ContainsReparsePointInTree(path))
-                .OrderByDescending(path => Directory.GetLastWriteTimeUtc(path))
-                .ThenByDescending(path => Path.GetFileName(path), StringComparer.Ordinal)
-                .ToList();
-            var retained = new HashSet<string>(StringComparer.Ordinal)
-            {
-                currentGeneration,
-            };
-            foreach (var generation in generations)
-            {
-                var name = Path.GetFileName(generation);
-                if (retained.Contains(name))
-                {
-                    continue;
-                }
-
-                if (retained.Count < ExternalSourceRepositoryCacheContract.MaxRetainedGenerations)
-                {
-                    retained.Add(name);
-                    continue;
-                }
-
-                TryDeleteGeneration(entryDirectory, generation);
             }
         }
         catch (Exception ignored) when (IsCacheException(ignored))

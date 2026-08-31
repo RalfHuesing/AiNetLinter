@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Threading;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
@@ -94,7 +95,7 @@ internal static class ExternalResourceRegistryOptionsFactory
     }
 }
 
-internal sealed class AssemblyAnalysisResourceBudget(ExternalResourceRegistry? registry)
+internal sealed class AssemblyAnalysisResourceBudget(ExternalResourceRegistry? registry) : IAssemblyAnalysisEvictionResourceBudget
 {
     internal bool IsEnabled => registry is not null;
 
@@ -133,6 +134,14 @@ internal sealed class AssemblyAnalysisResourceBudget(ExternalResourceRegistry? r
 
     internal bool CanAccommodate(string path) =>
         registry is null || registry.CanAccommodate(CreateRequest(path));
+
+    TimeSpan IAssemblyAnalysisEvictionResourceBudget.IdleTtl => IdleTtl;
+
+    DateTime IAssemblyAnalysisEvictionResourceBudget.UtcNow => UtcNow;
+
+    int IAssemblyAnalysisEvictionResourceBudget.EvictIdle() => EvictIdle();
+
+    bool IAssemblyAnalysisEvictionResourceBudget.HasCapacity(string path) => HasCapacity(path);
 
     private ExternalResourceRequest CreateRequest(string path)
     {
