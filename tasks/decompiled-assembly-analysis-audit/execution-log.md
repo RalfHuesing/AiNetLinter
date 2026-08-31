@@ -64,3 +64,9 @@
 - Fallback-Report: `reports/05-cache-snapshot.md`.
 - Terminalurteil: Cache-/Snapshot-Identität, Generationen, Leases, Ressourcenlimits, Eviction, Refresh-Races, atomare Publikation und Dispose ohne bestätigten S0–S2-Defekt; reale Langzeitlast als Abdeckungsgrenze dokumentiert.
 - Keine Produktions- oder Testdateien geändert.
+
+## 2026-08-31 — Linse 06 abgeschlossen
+
+- Fallback-Report: `reports/06-mcp-contracts.md`.
+- Terminalurteil: MCP-Target-/Capability-/Error-Verträge weitgehend konsistent; MCP-001 bestätigt, da das dokumentierte 4-KiB-Diagnosebudget nicht die gesamte strukturierte Wire-Antwort begrenzt. Vorhandener Test prüft nur die top-level Samples.
+- Keine Produktions- oder Testdateien geändert.
