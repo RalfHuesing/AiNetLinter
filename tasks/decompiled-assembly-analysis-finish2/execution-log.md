@@ -638,6 +638,82 @@
 - nächste Aktion: Korrektur-Checkpoint committen, danach frischen Folge-Review
   für EPIC-B starten.
 
+## 2026-08-31 — running / EPIC-B / Folge-Reviewer nach Korrekturrunde 2
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a05578-d618-7bc1-ad18-a28e1b3b6564`
+- diff-baseline: `b0ebc8b4`
+- correction-commit: `337ebe90`
+- scope: globale StructuredContent-Diagnostics-Größe, keine redundante
+  `analysis`-Serialisierung, Display-Deduplizierung und Folgeprüfung der
+  EPIC-B-Musskriterien.
+- erwarteter Hand-off: `approved`, wenn kein belegter P0/P1 verbleibt;
+  erfolgreicher Korrekturnachweis nur bei Gegenhypothese wiederholen.
+- warteverhalten: Polling-Timeouts führen nicht zu einem Interrupt; der
+  Reviewer läuft bis zum echten terminalen Status.
+
+## 2026-08-31 — completed / EPIC-B / Folge-Reviewer nach Korrekturrunde 2
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a05578-d618-7bc1-ad18-a28e1b3b6564`
+- diff-baseline: `b0ebc8b4`
+- status: `issues`; kein Produktions-/Testcode und kein Commit erstellt;
+  veraltete bzw. irreführende Fakten in `code-map.md` korrigiert.
+- vollständiger finaler Agentenbericht:
+
+  > issues
+  >
+  > P0: keine. Blocked: nein.
+  >
+  > P1 — `DIAGNOSTICS-SAMPLE-BUDGET` bleibt bestehen
+  >
+  > `ProjectDiagnostics` budgetiert nur die interne Sample-Auswahl einmal.
+  > Im StructuredContent wird dieselbe Liste jedoch mehrfach serialisiert:
+  > `diagnostics`, `diagnosticsSummary.samples` sowie `root/transitive.samples`
+  > und im Health-Payload zusätzlich je Assembly. Reproduzierbar: 15 maximal
+  > lange Samples entsprechen 3.870 UTF-8-Bytes pro Liste; drei Listen ergeben
+  > bereits 11.610 Bytes vor JSON-Overhead. Der bestehende Test misst nur eine
+  > einzelne Liste. Empfehlung: eine kanonische Sample-Liste wireseitig
+  > verwenden oder ein gemeinsames Budget über alle serialisierten Diagnostics
+  > einschließlich Health-Assemblys durchsetzen und den vollständigen
+  > StructuredContent-Payload testen.
+  >
+  > Bestätigt:
+  >
+  > - `analysis` enthält keine redundanten Diagnostics mehr.
+  > - Display-Deduplizierung erfolgt nach Kürzung mit Root-Vorrang.
+  > - Health-Status/Completeness und Compact-`ShownCount` sind korrekt.
+  > - Formatter-Metriken sind unauffällig: `FormatText` 0/1,
+  >   `AppendAssemblySection` 0/1.
+  > - Unabhängiger MCP-Impact gegen `b0ebc8b4`: 12 Dateien, 68 Symbole,
+  >   0 Diff-Violations; keine EPIC-C/D-Ausweitung.
+  >
+  > P2/P3-Dispositionen:
+  >
+  > - Irreführendes `maxDiagnosticBytes`: `accepted-deferred`, actionable.
+  > - Fehlender registrierter Health-Detail-E2E-Test:
+  >   `accepted-deferred`, actionable.
+  > - Bestehender `AssemblyAnalysisRegistry`-Footprint:
+  >   `promoted-to-project-debt`, außerhalb EPIC-B.
+  > - Bekannte nicht-kausale Volltestbefunde (`ambiguous`, `sortBy`,
+  >   Testflake): `accepted-deferred`.
+  >
+  > Die frischen Build-, Fokus-Test- und `get_violations`-Nachweise wurden
+  > ohne redundante Wiederholung akzeptiert; die Wire-Budget-Gegenhypothese
+  > wurde unabhängig am tatsächlichen Diff geprüft.
+  >
+  > Kein Produktions-/Testcode und kein Commit.
+- Urteil: `issues`; gleiche stabile Ursachensignatur wie im vorherigen Review.
+  Nach zwei Korrekturen plus Initialansatz sind die drei ernsthaften Versuche
+  für dieses Finding ausgeschöpft.
+- Tech-Debt-Triage: `TD-EPIC-B-005` bleibt als P1
+  `accepted-deferred` mit ausgeschöpftem Drei-Versuche-Budget; globaler
+  Wire-Rest zusätzlich als `TD-EPIC-B-010` geführt. Die P2-Punkte bleiben
+  `accepted-deferred`, der Registry-Footprint `promoted-to-project-debt`.
+- nächste Aktion: Review-Checkpoint committen; keine weitere automatische
+  Korrekturschleife für `DIAGNOSTICS-SAMPLE-BUDGET`, mit EPIC-C fortfahren und
+  den EPIC-B-Restbefund im Abschluss ausdrücklich offen halten.
+
 ## 2026-08-31 — running / EPIC-B / Korrektur-Implementierer Runde 1
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`

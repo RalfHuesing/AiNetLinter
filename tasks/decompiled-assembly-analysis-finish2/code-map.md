@@ -71,10 +71,11 @@
   ist mit 394 Codezeilen/44 Membern bereits nahe am Footprint-Budget, daher
   keine breite Zerlegung ohne konkreten EPIC-A-Bedarf.
 - EPIC-B-Kontext per MCP bestätigt: `InspectAssemblyTool` (202 Codezeilen),
-  `FindAssemblyExtensionsTool` (163), `GetServerHealthTool` (69),
+  `FindAssemblyExtensionsTool` (163), `GetServerHealthTool` (104),
   `GetServerHealthResponseBuilder` (291) und `AssemblyAnalysisDiagnostics`
-  sind die relevanten Einstiegspunkte. `AssemblyAnalysisResponseLimits` (201
-  Symbolzeilen) ist der gemeinsame Projektor für Diagnostics und Textausgabe. Vor der
+  sind die relevanten Einstiegspunkte. `AssemblyAnalysisResponseLimits` (226
+  physische Zeilen, 207 LOC laut aktuellem MCP) ist der gemeinsame Projektor
+  für Diagnostics und Textausgabe. Vor der
   Änderung verwendeten die Handler
   `Take(100)` für aggregierte Diagnostics, begrenzten Referenzlisten nicht und
   Health gab Assembly-Diagnostics standardmäßig vollständig aus. EPIC-B führt
@@ -136,11 +137,14 @@
 - `ProjectDiagnostics` dedupliziert normalisierte Root-/transitive Diagnostics
   mit Root-Vorrang, dedupliziert zusätzlich nach der finalen
   `NormalizeForDisplay`-Kürzung, baut Root-/transitive-/Aggregate-Summaries aus
-  derselben Auswahl und begrenzt diese Auswahl gemeinsam auf 4 KiB;
+  derselben Auswahl und begrenzt diese Auswahl intern gemeinsam auf 4 KiB;
   `WithoutSamples` leert Samples und setzt Aggregate-/Root-/Transitive-
-  `ShownCount` gemeinsam auf 0. `AssemblyAnalysisResponse.Enrich` ergänzt
-  unter `analysis` nur Metadaten und serialisiert die bereits im Payload
-  vorhandene Diagnostics-Projektion nicht erneut.
+  `ShownCount` gemeinsam auf 0. Die Inspect-/Extensions-Payloads serialisieren
+  die Auswahl jedoch weiterhin mehrfach (`diagnostics`,
+  `diagnosticsSummary.samples` und Root-/Transitive-Samples); im Health-Payload
+  gilt die Projektion zudem je Assembly. `AssemblyAnalysisResponse.Enrich`
+  ergänzt unter `analysis` nur Metadaten und serialisiert dort keine
+  Diagnostics-Projektion erneut.
 - `complete` mit mindestens einer Root- oder transitiven Diagnose wird in den
   Inspect-/Extensions-Payloads, im `AssemblyAnalysisResponse` und in beiden
   Health-Umwandlungen über `ResolveEffectiveStatus` als `partial` ausgegeben.
@@ -281,29 +285,34 @@
   `analysis`-Serialisierung und der Präfix-Kollisionen noch nicht abgeschlossen.
 - EPIC-B-Korrekturrunde 2: `AssemblyAnalysisResponse.Enrich` serialisiert keine
   Diagnostics-/Summary-Felder mehr unter `analysis`; die Payload-Projektion
-  bleibt die einzige Antwortquelle. `ProjectDiagnostics` dedupliziert sichtbare
-  Samples nach der 256-Zeichen-Kürzung mit Root-Vorrang und bewahrt dabei die
-  Root-/Transitive-Counts. Regressionen in
-  `AssemblyAnalysisDispatcherCapabilityTests` prüfen die tatsächliche
-  StructuredContent-Struktur, das globale 4-KiB-Samplebudget und lange
-  Präfixkollisionen. Der fokussierte FastTest-Lauf ist mit 22/22, der
+  bleibt dort die einzige Diagnostics-Quelle. `ProjectDiagnostics` dedupliziert
+  sichtbare Samples nach der 256-Zeichen-Kürzung mit Root-Vorrang und bewahrt
+  dabei die Root-/Transitive-Counts. Regressionen in
+  `AssemblyAnalysisDispatcherCapabilityTests` prüfen die fehlenden
+  `analysis`-Diagnostics, das Budget der jeweiligen Sample-Liste und lange
+  Präfixkollisionen; eine Messung der vollständig serialisierten
+  StructuredContent-Diagnostics fehlt. Der fokussierte FastTest-Lauf ist mit 22/22, der
   fokussierte Health-/Assembly-Integration-Lauf mit 9/9 bestanden. Der
   vollständige Build ist mit 0 Warnungen und 0 Fehlern grün; die vollständigen
   Nicht-Stress-Läufe meldeten FastTests 2238/2240 (2 Skips) und
   IntegrationTests 371/373. Die zwei Integrationsfehler sind die bekannten,
   nicht kausalen Beschreibungstext-Verträge `ambiguous` und `sortBy` außerhalb
-  dieses Scopes. Die drei Abschluss-Audits und der letzte `get_violations`-Check
-  Die MCP-Abschlussaudits sind auf dem finalen Working Tree erneut gelaufen:
+  dieses Scopes. Die drei MCP-Abschlussaudits sind auf dem finalen Working Tree
+  erneut gelaufen:
   Produktions-DRY 8 bestehende Cluster (der exakte Adapter bleibt bewusst
   außerhalb des Scopes), Produktions-Dead-Code 40 Low/0 High ohne sicheren
   neuen Fund und 240 Magic-Value-Kandidaten; im konkreten geänderten
   `AssemblyAnalysis`-Produktionspfad 0 Dead-Code-/Magic-Value-Funde. Im
   geänderten Testfile wurden 0 Dead-Code-Funde und 16 bewusst testbezogene
   Magic-Value-Einträge (25 Vorkommen) triagiert; die drei Test-Clonecluster
-  liegen in bestehenden External-Source-Tests. `get_impact` meldete 3
-  geänderte Dateien, 10 geänderte Symbole, 25 Call-Sites, 5 Testzuordnungen
-  und 0 Diff-Violations. Die Formatter-Metriken bleiben unauffällig:
+  liegen in bestehenden External-Source-Tests. Der Korrekturcommit-Impact
+  gegenüber `45c9200f` meldete 3 geänderte Dateien, 10 geänderte Symbole,
+  25 Call-Sites, 5 Testzuordnungen und 0 Diff-Violations; der unabhängige
+  Gesamt-Impact gegenüber `b0ebc8b4` umfasst 12 geänderte Dateien, 68
+  geänderte Symbole und 0 Diff-Violations. Die Formatter-Metriken bleiben
+  unauffällig:
   `FormatText` kognitiv/zyklomatisch 0/1, `AppendAssemblySection` 0/1.
   Keine Audit-Korrektur war sicher, scope-nah und verhaltensneutral.
-  Als letzter codebezogener Prüfschritt steht nur noch der gezielte
-  `get_violations`-Nachweis für Produktions- und Testscope aus.
+  Der letzte codebezogene `get_violations`-Nachweis meldete im Produktionsscope
+  ausschließlich den bestehenden `AssemblyAnalysisRegistry`-Footprint; die
+  FastTests- und IntegrationTests-Scopes meldeten jeweils 0 Violations.

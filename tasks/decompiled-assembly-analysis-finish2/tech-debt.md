@@ -82,13 +82,37 @@ Ausführungsprotokoll.
 - Fundstelle/Scope: `AssemblyAnalysisResponseLimits.ProjectDiagnostics`.
 - Evidenz: Folgeimplementierung dedupliziert Samples und projiziert ein
   gemeinsames 4-KiB-Budget; fokussierte Regressionen bestanden.
-- Disposition: `fixed`
-- Risiko: behoben; `analysis` serialisiert keine redundanten Diagnostics mehr,
-  und die finale Projektion nutzt ein gemeinsames globales Budget.
-- Nächster Schritt: keine weitere EPIC-B-Maßnahme; der Folge-Review bestätigt
-  die globale Grenze.
+- Disposition: `accepted-deferred`
+- Risiko: P1-Restbefund; das Budget ist intern begrenzt, aber der Wire-Shape
+  serialisiert dieselben Samples in mehreren Feldern und damit nicht global.
+  EPIC-B ist dadurch nicht freigabefähig.
+- Nächster Schritt: Drei ernsthafte Versuche sind ausgeschöpft. Eine spätere
+  Entscheidung muss die kanonische Wire-Sample-Liste oder ein Budget über den
+  vollständigen serialisierten Payload festlegen; danach sind vollständige
+  StructuredContent- und Health-Tests erforderlich.
 - Log-Anker: `execution-log.md`, completed EPIC-B Korrektur-
   Implementierer Runde 1 vom 2026-08-31.
+
+## TD-EPIC-B-010 — Globales Wire-Budget nach drei Versuchen
+
+- Schweregrad: P1
+- Beschreibung: Diagnostics-Samples werden trotz interner gemeinsamer
+  Projektion mehrfach im StructuredContent serialisiert: `diagnostics`,
+  `diagnosticsSummary.samples`, `root/transitive.samples` und zusätzlich je
+  Health-Assembly. Das 4-KiB-Limit gilt nur je Liste.
+- Fundstelle/Scope: `AssemblyAnalysisResponse.cs`, `InspectAssemblyTool.cs`,
+  `AssemblyAnalysisModels.cs` und `GetServerHealthResponseBuilder.cs`.
+- Evidenz: unabhängiger Folge-Review reproduzierte 15 maximal lange Samples
+  mit 3.870 UTF-8-Bytes je Liste; drei Listen ergeben bereits 11.610 Bytes
+  vor JSON-Overhead. Der bestehende Test prüfte nur eine Liste.
+- Disposition: `accepted-deferred`
+- Risiko: P1; globale Antwortgrößen- und Diagnostics-Vertrag bleibt verletzt.
+- Nächster Schritt: Drei Versuche für dieses Finding sind gemäß Konzept
+  ausgeschöpft. Vor einer weiteren Umsetzung ist eine kanonische Wire-Form
+  oder ein vollständiges Payload-Budget festzulegen; keine blinde weitere
+  Korrekturschleife.
+- Log-Anker: `execution-log.md`, completed EPIC-B Folge-Reviewer nach
+  Korrekturrunde 2 vom 2026-08-31.
 
 ## TD-EPIC-B-008 — Irreführendes Budget-Diagnostic
 

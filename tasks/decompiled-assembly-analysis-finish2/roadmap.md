@@ -2,18 +2,19 @@
 
 status: executing
 current_epic: EPIC-B
-correction_round: 2
-cycle_state: normal
-last_commit: 45c9200f
+correction_round: 3
+cycle_state: continue-after-finding-budget
+last_commit: 337ebe90
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
 ## Aktueller Stand
 
 - EPIC-A: done, nach Korrekturrunde 1 `approved`.
-- EPIC-B: in_progress, Implementierung seit Baseline `b0ebc8b4` abgeschlossen;
-  Korrektur umgesetzt, Folge-Review steht aus.
-- Korrekturrunde: 1 für EPIC-B; Review hat vier P1-Ursachen belegt.
+- EPIC-B: residual P1 nach drei ernsthaften Versuchen; keine weitere
+  automatische Schleife für dieses Finding.
+- Nächster unabhängiger Arbeitsblock: EPIC-C; EPIC-B bleibt bis zu einer
+  späteren expliziten Wire-Form-/Payload-Budget-Entscheidung offen.
 
 ## EPIC-A — Stabile In-Memory- und Dateipfade
 
@@ -50,78 +51,23 @@ tech_debt: siehe tech-debt.md
   Truncation und festgelegtes Payload-Budget; gezielter Violations-Check.
 - Status: in_progress
 
-## EPIC-B-Review
+## EPIC-B-Restbefund nach drei Versuchen
 
-- diff-baseline: `b0ebc8b4`
-- Implementierungsstand: `f6a3f185`
-- Reviewstatus: `issues`; vier P1-Ursachen sind in `tech-debt.md` als
-  `fix-now` erfasst.
+- `DIAGNOSTICS-SAMPLE-BUDGET`: drei ernsthafte Implementierungs-/Korrektur-
+  versuche ausgeschöpft; P1 bleibt im Wire-Shape bestehen.
+- Status: nicht freigabefähig; keine weitere automatische Schleife für dieses
+  einzelne Finding. Der Rest ist in `tech-debt.md` und `execution-log.md`
+  vollständig mit Ursache, Evidenz und nächstem Ansatz dokumentiert.
+- Nächste Ausführung: mit dem unabhängigen nächsten Arbeitspaket EPIC-C
+  fortfahren; der Abschluss darf EPIC-B erst als vollständig werten, wenn der
+  Restbefund später ausdrücklich behoben oder mit Nutzerentscheidung behandelt
+  wurde.
 
-## EPIC-B-Korrekturrunde 1
-
-- Status: offen; vier gebündelte P1-Ursachen aus dem Review erfordern einen
-  frischen Implementierer.
-- Ursachen: `HEALTH-RAW-STATUS-PROJECTION`,
-  `HEALTH-COMPACT-SHOWNCOUNT`, `DIAGNOSTICS-SAMPLE-BUDGET` und
-  `EPIC-B-FORMATTER-COMPLEXITY`.
-- Begrenzung: erste von höchstens fünf EPIC-B-Korrekturrunden; danach folgt
-  genau ein frischer Folge-Review.
-
-## EPIC-B-Korrektur Runde 1 — Implementierung abgeschlossen
-
-- Status: Review ausstehend.
-- Ergebnis: Health-Status, Compact-Counts, globales Diagnostics-Budget und
-  Formatter-Komplexität korrigiert.
-- Verifikation: Build 0/0; fokussierte FastTests 21/21 und Integration 9/9;
-  Produktionsviolations nur der bestehende Registry-Footprint, Testscopes 0.
-
-## EPIC-B-Folge-Review — Korrekturrunde 2
-
-- Status: offen; ein P1 zur globalen StructuredContent-Budgetierung bleibt.
-
-## Aktueller Rollenlauf
-
-- Rolle: frischer EPIC-B-Korrektur-Implementierer, Runde 2
-- diff-baseline: `45c9200f`
-- Ursache: globales StructuredContent-Diagnostics-Budget und finale
-  Deduplizierung.
-- Nachweisziel: ein gemeinsames Bytebudget für die gesamte Antwort ohne
-  doppelte `analysis`-Serialisierung, fokussierte Regressionen und letzter
-  `get_violations`-Check.
-
-## EPIC-B-Korrektur Runde 2 — Implementierung abgeschlossen
-
-- Status: Review ausstehend.
-- Ergebnis: redundante `analysis`-Diagnostics entfernt; finale Display-
-  Deduplizierung mit Root-Vorrang und globalem 4-KiB-Budget umgesetzt.
-- Verifikation: 22/22 fokussierte FastTests, 9/9 fokussierte IntegrationTests,
-  Build 0/0; Testscopes 0 Violations, nur bestehender Registry-Footprint im
-  Produktionsscope.
-- Ursache: `DIAGNOSTICS-SAMPLE-BUDGET` — `analysis` serialisiert dieselbe
-  Diagnostics-Projektion erneut; Deduplizierung erfolgt vor der endgültigen
-  Display-Kürzung.
-- P2: irreführendes `maxDiagnosticBytes`-Diagnostic und fehlender registrierter
-  Health-Detail-E2E-Pfad sind `accepted-deferred` in `tech-debt.md`.
-- Begrenzung: zweite von höchstens fünf EPIC-B-Korrekturrunden; danach folgt
-  genau ein frischer Folge-Review.
-
-## Aktueller Rollenlauf
-
-- Rolle: frischer Folge-Reviewer für EPIC-B nach Korrekturrunde 1
-- diff-baseline: `b0ebc8b4`
-- Korrekturstand: `95d29373`
-- Prüffokus: vier behobene P1-Ursachen und der verbleibende
-  `AssemblyAnalysisRegistry`-Footprint.
-
-## Aktueller Rollenlauf
-
-- Rolle: frischer EPIC-B-Korrektur-Implementierer, Runde 1
-- diff-baseline: `0b8e2176`
-- Ursachen: `HEALTH-RAW-STATUS-PROJECTION`,
-  `HEALTH-COMPACT-SHOWNCOUNT`, `DIAGNOSTICS-SAMPLE-BUDGET` und
-  `EPIC-B-FORMATTER-COMPLEXITY`.
-- Nachweisziel: Antwortverträge korrigieren, aktive Produktionsviolations
-  beseitigen, fokussierte Tests und letzter `get_violations`-Check.
+- Evidenz: Commit `337ebe90`, Folge-Review vom 2026-08-31 und
+  `TD-EPIC-B-005`/`TD-EPIC-B-010` in `tech-debt.md`.
+- P2-Restpunkte (`maxDiagnosticBytes`, registrierter Health-Detail-E2E) sind
+  separat als `accepted-deferred` dokumentiert; der Registry-Footprint bleibt
+  als Projekt-Dead-Debt außerhalb dieses EPICs.
 
 ## EPIC-C — Ressourcen, Konfiguration und Lebensdauer
 
