@@ -4,7 +4,7 @@ status: executing
 current_epic: EPIC-C
 correction_round: 1
 cycle_state: continue-after-finding-budget
-last_commit: 017797d4
+last_commit: dc002543
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
@@ -83,7 +83,7 @@ tech_debt: siehe tech-debt.md
   Dispose während der Erzeugung sind deterministisch.
 - Verifikation: fokussierte TTL/LRU/Capacity/Lease/Race/Creation-Barrier-
   Tests; hohe Last nur in gezielten Stress-Tests; gezielter Violations-Check.
-- Status: review_pending (Korrekturrunde 2 abgeschlossen)
+- Status: review_in_progress (Folge-Review nach Korrekturrunde 2)
 
 ## EPIC-C-Review — Korrektur umgesetzt, Folge-Review ausstehend
 
@@ -99,9 +99,9 @@ tech_debt: siehe tech-debt.md
   `AssemblyAnalysisRegistry`-Footprint.
 - Review: Korrekturrunde 1 hat vier ursprüngliche EPIC-C-Befunde behoben. Der
   Folge-Review gegen `017797d4` meldete ein P1-Race bei idle Assembly-LRU und
-  einen P2-Rest beim Producer-Join; Korrekturrunde 2 hat beide behoben.
-  Unabhängiges Folge-Review gegen den neuen Stand steht aus. Das
-  ausgeschöpfte EPIC-B-Finding bleibt unverändert.
+  einen P2-Rest beim Producer-Join; Korrekturrunde 2 hat beide bearbeitet.
+  Der unabhängige Folge-Review gegen `dc002543` läuft. Das ausgeschöpfte
+  EPIC-B-Finding bleibt unverändert.
 
 ## EPIC-C-Korrekturrunde 1
 
@@ -153,8 +153,17 @@ tech_debt: siehe tech-debt.md
   Integration 7/7; vollständige FastTests 2265 bestanden, 2 Skips;
   Integration 373/375 mit nur den bekannten Beschreibungstext-Verträgen
   `ambiguous` und `sortBy`; Änderungs-/Test-Impact 0 Violations.
-- Review: frischer unabhängiger Folge-Review gegen den Korrekturstand steht
-  aus; EPIC-C wird erst danach als `done` markiert.
+- Review: frischer unabhängiger Folge-Review gegen `dc002543` läuft; EPIC-C
+  wird erst danach als `done` markiert.
+
+## EPIC-C-Folge-Review — Korrekturstand `dc002543`
+
+- Rolle: unabhängiger Reviewer; keine Codeänderung und kein Agenten-Commit.
+- Prüffokus: atomare Retirement-Ownership, aktive Lease-Sicherheit,
+  Producer-Join nach `Complete()`, Regressionen und MCP-Violations.
+- Übergabe: `approved` nur bei keinem belegten P0/P1; sonst begründete weitere
+  Korrekturrunde je betroffenem Finding.
+- Warteverhalten: Polling-Timeouts führen nicht zu einem Interrupt.
 
 ## EPIC-C-Folge-Review — Korrekturstand `017797d4`
 

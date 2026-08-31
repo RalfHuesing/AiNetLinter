@@ -747,6 +747,19 @@
 - nächste Aktion: Review-Checkpoint committen, danach frischen unabhängigen
   EPIC-C-Folge-Reviewer starten.
 
+## 2026-08-31 — running / EPIC-C / Folge-Reviewer nach Korrekturrunde 2
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- baseline: Codecheckpoint `dc002543` gegen `017797d4`; Dokumentations-
+  Checkpoint `11600d15`.
+- scope: unabhängige Prüfung der atomaren Assembly-Retirement-Ownership,
+  aktiven Lease-Sicherheit, Producer-Join-Reihenfolge, Regressionen und
+  MCP-Violations.
+- erwarteter Hand-off: `approved` oder präzise P0/P1/P2/P3-Befunde; das
+  ausgeschöpfte EPIC-B-Finding wird nicht erneut geöffnet.
+- warteverhalten: Der Reviewer läuft bis zum echten terminalen Status;
+  Polling-Timeouts führen nicht zu einem Interrupt.
+
 ## 2026-08-31 — running / EPIC-C / Folge-Reviewer nach Korrekturrunde 1
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`
