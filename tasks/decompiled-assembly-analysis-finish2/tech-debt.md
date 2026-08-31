@@ -82,12 +82,11 @@ Ausführungsprotokoll.
 - Fundstelle/Scope: `AssemblyAnalysisResponseLimits.ProjectDiagnostics`.
 - Evidenz: Folgeimplementierung dedupliziert Samples und projiziert ein
   gemeinsames 4-KiB-Budget; fokussierte Regressionen bestanden.
-- Disposition: `fix-now`
-- Risiko: das 4-KiB-Limit gilt noch nicht für das gesamte StructuredContent;
-  doppelte bzw. zu lange Diagnostics-Samples bleiben möglich.
-- Nächster Schritt: `analysis` nicht erneut ungebudgetet serialisieren und die
-  Deduplizierung nach der finalen Display-Kürzung auf dem vollständigen
-  Antwortbudget ausführen; Regressionen für globale Bytes und Präfixe ergänzen.
+- Disposition: `fixed`
+- Risiko: behoben; `analysis` serialisiert keine redundanten Diagnostics mehr,
+  und die finale Projektion nutzt ein gemeinsames globales Budget.
+- Nächster Schritt: keine weitere EPIC-B-Maßnahme; der Folge-Review bestätigt
+  die globale Grenze.
 - Log-Anker: `execution-log.md`, completed EPIC-B Korrektur-
   Implementierer Runde 1 vom 2026-08-31.
 

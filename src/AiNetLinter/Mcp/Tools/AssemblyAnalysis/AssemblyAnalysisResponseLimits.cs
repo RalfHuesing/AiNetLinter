@@ -40,16 +40,11 @@ internal static class AssemblyAnalysisResponseLimits
             .Where(diagnostic => !root.Contains(diagnostic, StringComparer.Ordinal))
             .ToList();
         var all = root.Concat(transitive).ToList();
-        var samples = SelectSamples(SelectRepresentativeDiagnostics(root, transitive, limit), limit, out _);
-        var rootSampleValues = root
-            .Select(NormalizeForDisplay)
-            .ToHashSet(StringComparer.Ordinal);
-        var rootSamples = samples.Where(rootSampleValues.Contains).ToList();
-        var transitiveSamples = samples.Where(sample => !rootSampleValues.Contains(sample)).ToList();
-        var allSummary = CreateSummary(all, limit, samples);
+        var selection = SelectSamples(SelectRepresentativeDiagnostics(root, transitive, limit), limit);
+        var allSummary = CreateSummary(all, limit, selection.Samples);
         return new(
-            CreateSummary(root, limit, rootSamples),
-            CreateSummary(transitive, limit, transitiveSamples),
+            CreateSummary(root, limit, selection.RootSamples),
+            CreateSummary(transitive, limit, selection.TransitiveSamples),
             all.Count,
             allSummary.ShownCount,
             allSummary.Truncated,
@@ -152,7 +147,13 @@ internal static class AssemblyAnalysisResponseLimits
         IReadOnlyList<string> samples;
         if (selectedSamples is null)
         {
-            samples = SelectSamples(diagnostics, limit, out messageTruncated);
+            samples = SelectSamples(
+                diagnostics
+                    .Select(diagnostic => new DiagnosticSampleCandidate(diagnostic, false))
+                    .ToList(),
+                limit)
+                .Samples;
+            messageTruncated = diagnostics.Any(diagnostic => diagnostic.Length > MaxDiagnosticCharacters);
         }
         else
         {
@@ -171,42 +172,66 @@ internal static class AssemblyAnalysisResponseLimits
             truncatedBy);
     }
 
-    private static IReadOnlyList<string> SelectSamples(
-        IReadOnlyList<string> diagnostics,
-        int limit,
-        out bool messageTruncated)
-    {
-        messageTruncated = diagnostics.Any(diagnostic => diagnostic.Length > MaxDiagnosticCharacters);
-        var samples = new List<string>(Math.Min(limit, diagnostics.Count));
-        var bytes = 0;
-        foreach (var diagnostic in diagnostics.Take(limit))
-        {
-            var sample = NormalizeForDisplay(diagnostic)!;
-            var sampleBytes = Encoding.UTF8.GetByteCount(sample);
-            if (bytes + sampleBytes > MaxDiagnosticBytes) break;
-            samples.Add(sample);
-            bytes += sampleBytes;
-        }
-
-        return samples;
-    }
-
-    private static IReadOnlyList<string> SelectRepresentativeDiagnostics(
+    private static IReadOnlyList<DiagnosticSampleCandidate> SelectRepresentativeDiagnostics(
         IReadOnlyList<string> root,
         IReadOnlyList<string> transitive,
         int limit)
     {
-        if (transitive.Count == 0) return root.Take(limit).ToList();
-        if (root.Count == 0) return transitive.Take(limit).ToList();
+        if (transitive.Count == 0)
+        {
+            return root.Take(limit)
+                .Select(diagnostic => new DiagnosticSampleCandidate(diagnostic, true))
+                .ToList();
+        }
+
+        if (root.Count == 0)
+        {
+            return transitive.Take(limit)
+                .Select(diagnostic => new DiagnosticSampleCandidate(diagnostic, false))
+                .ToList();
+        }
 
         var rootCount = Math.Min(root.Count, Math.Max(1, limit - 1));
         return root.Take(rootCount)
-            .Concat(transitive.Take(limit - rootCount))
+            .Select(diagnostic => new DiagnosticSampleCandidate(diagnostic, true))
+            .Concat(transitive.Take(limit - rootCount)
+                .Select(diagnostic => new DiagnosticSampleCandidate(diagnostic, false)))
             .ToList();
+    }
+
+    private static DiagnosticSampleSelection SelectSamples(
+        IReadOnlyList<DiagnosticSampleCandidate> candidates,
+        int limit)
+    {
+        var samples = new List<string>(Math.Min(limit, candidates.Count));
+        var rootSamples = new List<string>();
+        var transitiveSamples = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var bytes = 0;
+        foreach (var candidate in candidates.Take(limit))
+        {
+            var sample = NormalizeForDisplay(candidate.Diagnostic)!;
+            if (!seen.Add(sample)) continue;
+            var sampleBytes = Encoding.UTF8.GetByteCount(sample);
+            if (bytes + sampleBytes > MaxDiagnosticBytes) break;
+            samples.Add(sample);
+            if (candidate.IsRoot) rootSamples.Add(sample);
+            else transitiveSamples.Add(sample);
+            bytes += sampleBytes;
+        }
+
+        return new(samples, rootSamples, transitiveSamples);
     }
 
     private static string NormalizeMessage(string diagnostic) =>
         string.Join(' ', diagnostic.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+    private readonly record struct DiagnosticSampleCandidate(string Diagnostic, bool IsRoot);
+
+    private sealed record DiagnosticSampleSelection(
+        IReadOnlyList<string> Samples,
+        IReadOnlyList<string> RootSamples,
+        IReadOnlyList<string> TransitiveSamples);
 }
 
 internal sealed record AssemblyDiagnosticSummary(

@@ -120,9 +120,8 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
         Assert.Contains(Diagnostics(payload), diagnostic => diagnostic.Contains("FailedExtensionDependency", StringComparison.Ordinal));
         Assert.Equal("assembly", payload.GetProperty("analysis").GetProperty("targetType").GetString());
         Assert.Equal("decompiled", payload.GetProperty("analysis").GetProperty("origin").GetString());
-        Assert.Contains(
-            payload.GetProperty("analysis").GetProperty("diagnostics").EnumerateArray(),
-            diagnostic => diagnostic.GetString()!.Contains("FailedExtensionDependency", StringComparison.Ordinal));
+        Assert.False(payload.GetProperty("analysis").TryGetProperty("diagnostics", out _));
+        Assert.False(payload.GetProperty("analysis").TryGetProperty("diagnosticsSummary", out _));
     }
 
     [Fact]
@@ -196,6 +195,22 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
     }
 
     [Fact]
+    public void DiagnosticsProjection_DeduplicatesAfterDisplayTruncation()
+    {
+        var sharedPrefix = $"long diagnostic: {new string('x', AssemblyAnalysisResponseLimits.MaxDiagnosticCharacters * 2)}";
+        var summary = AssemblyAnalysisResponseLimits.ProjectDiagnostics(
+            [sharedPrefix + " root detail"],
+            [sharedPrefix + " transitive detail"]);
+
+        Assert.Equal(2, summary.TotalCount);
+        Assert.Single(summary.Samples);
+        Assert.Single(summary.Root.Samples);
+        Assert.Empty(summary.Transitive.Samples);
+        Assert.Equal(summary.Samples.Count, summary.Samples.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(summary.ShownCount, summary.Root.ShownCount + summary.Transitive.ShownCount);
+    }
+
+    [Fact]
     public void DiagnosticsProjection_UsesOneGlobalSampleBudget()
     {
         var diagnostics = Enumerable.Range(0, AssemblyAnalysisResponseLimits.MaxDiagnostics * 2)
@@ -220,7 +235,7 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
     }
 
     [Fact]
-    public async Task AssemblyRoute_DiagnosticSamplesStayWithinByteBudgetAndMatchText()
+    public async Task AssemblyRoute_StructuredContentUsesOneGlobalDiagnosticsBudget()
     {
         using var temp = TestTempDirectory.Create("assembly-dispatcher-diagnostic-budget-");
         var diagnostics = Enumerable.Range(0, AssemblyAnalysisResponseLimits.MaxDiagnostics + 10)
@@ -244,6 +259,10 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
         Assert.True(
             System.Text.Encoding.UTF8.GetByteCount(string.Join("\n", samples))
             <= AssemblyAnalysisResponseLimits.MaxDiagnosticBytes);
+
+        var analysis = payload.GetProperty("analysis");
+        Assert.False(analysis.TryGetProperty("diagnostics", out _));
+        Assert.False(analysis.TryGetProperty("diagnosticsSummary", out _));
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains($"Diagnosen: {samples.Length} von {diagnostics.Length} (gekürzt)", text, StringComparison.Ordinal);
@@ -278,12 +297,8 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
         var analysis = payload.GetProperty("analysis");
         Assert.Equal("partial", analysis.GetProperty("status").GetString());
         Assert.Equal("partial", analysis.GetProperty("completeness").GetString());
-        Assert.Equal(
-            payload.GetProperty("diagnostics").GetRawText(),
-            analysis.GetProperty("diagnostics").GetRawText());
-        Assert.Equal(
-            payload.GetProperty("diagnosticsSummary").GetRawText(),
-            analysis.GetProperty("diagnosticsSummary").GetRawText());
+        Assert.False(analysis.TryGetProperty("diagnostics", out _));
+        Assert.False(analysis.TryGetProperty("diagnosticsSummary", out _));
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("status=partial", text, StringComparison.Ordinal);

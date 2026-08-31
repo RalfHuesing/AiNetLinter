@@ -575,6 +575,69 @@
 - nächste Aktion: Review-Checkpoint committen, danach frischen
   Korrektur-Implementierer für EPIC-B starten.
 
+## 2026-08-31 — running / EPIC-B / Korrektur-Implementierer Runde 2
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a05566-9946-7d72-906f-40795a60266d`
+- diff-baseline: `45c9200f`
+- scope: globales StructuredContent-Diagnostics-Budget und finale
+  Deduplizierung; insbesondere erneute `analysis`-Serialisierung und
+  Präfix-/Display-Kürzung.
+- erwarteter Hand-off: fokussierter Code-/Teststand ohne Commit, aktualisierte
+  Code-Map, Audits und letzter `get_violations`-Nachweis nach der letzten
+  Codeänderung.
+- warteverhalten: Timeout-Rückgaben führen nicht zu einem Interrupt; der Agent
+  läuft bis zum echten terminalen Status.
+
+## 2026-08-31 — completed / EPIC-B / Korrektur-Implementierer Runde 2
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a05566-9946-7d72-906f-40795a60266d`
+- diff-baseline: `45c9200f`
+- status: erfolgreich; P1 `DIAGNOSTICS-SAMPLE-BUDGET` behoben, kein Commit
+  durch den Agenten.
+- vollständiger finaler Agentenbericht:
+
+  > EPIC-B P1 `DIAGNOSTICS-SAMPLE-BUDGET` ist behoben.
+  >
+  > Geändert:
+  >
+  > - `AssemblyAnalysisResponse.cs:15`: `analysis` enthält keine redundanten
+  >   Diagnostics mehr.
+  > - `AssemblyAnalysisResponseLimits.cs:32`: Deduplizierung erfolgt nach
+  >   finaler Display-Kürzung, mit Root-Vorrang und gemeinsamem 4-KiB-Budget.
+  > - `AssemblyAnalysisDispatcherCapabilityTests.cs:194`: Regressionen für
+  >   Budget, doppelte `analysis`-Ausgabe und Präfixkollisionen.
+  > - `code-map.md` aktualisiert.
+  >
+  > Nachweise:
+  >
+  > - Fokussierte FastTests: 22/22 bestanden.
+  > - Fokussierte IntegrationTests: 9/9 bestanden.
+  > - Build: 0 Warnungen, 0 Fehler.
+  > - Vollständige FastTests: 2238 bestanden, 2 Skips.
+  > - Vollständige IntegrationTests: 371/373; zwei bekannte, nicht kausale
+  >   Beschreibungstextfehler (`ambiguous`, `sortBy`).
+  > - Audits ausgeführt: keine sichere weitere Korrektur.
+  > - Letzter `get_violations`: Produktionsscope nur bestehender
+  >   `AssemblyAnalysisRegistry`-Footprint; FastTests und IntegrationTests
+  >   jeweils 0.
+  >
+  > Keine Commits und keine neuen Task-/Step-Dateien erstellt. Die akzeptierten
+  > P2-Punkte sowie EPIC-C/D bleiben unverändert.
+- geänderte Bereiche: Assembly-Response-Projektion, globale Diagnostics-
+  Limits/Deduplizierung, Dispatcher-Regressionen und Code-Map.
+- Review-Hinweis: Nach dem Hand-off kein Produktions-/Testcode geändert;
+  fokussierte Tests, Build und `get_violations` sind frisch.
+- Tech-Debt-Triage: `TD-EPIC-B-005` auf `fixed` gesetzt; `TD-EPIC-B-008`
+  und `TD-EPIC-B-009` bleiben `accepted-deferred`; Registry-Footprint bleibt
+  `promoted-to-project-debt`.
+- bekannte Volltest-Restbefunde: Zwei Beschreibungstextfehler (`ambiguous`,
+  `sortBy`) bleiben als nicht kausal im Abschlussprotokoll und werden für die
+  finale Gate-Analyse erneut konkret geprüft.
+- nächste Aktion: Korrektur-Checkpoint committen, danach frischen Folge-Review
+  für EPIC-B starten.
+
 ## 2026-08-31 — running / EPIC-B / Korrektur-Implementierer Runde 1
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`

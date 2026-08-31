@@ -4,7 +4,7 @@ status: executing
 current_epic: EPIC-B
 correction_round: 2
 cycle_state: normal
-last_commit: 95d29373
+last_commit: 45c9200f
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
@@ -78,6 +78,25 @@ tech_debt: siehe tech-debt.md
 ## EPIC-B-Folge-Review — Korrekturrunde 2
 
 - Status: offen; ein P1 zur globalen StructuredContent-Budgetierung bleibt.
+
+## Aktueller Rollenlauf
+
+- Rolle: frischer EPIC-B-Korrektur-Implementierer, Runde 2
+- diff-baseline: `45c9200f`
+- Ursache: globales StructuredContent-Diagnostics-Budget und finale
+  Deduplizierung.
+- Nachweisziel: ein gemeinsames Bytebudget für die gesamte Antwort ohne
+  doppelte `analysis`-Serialisierung, fokussierte Regressionen und letzter
+  `get_violations`-Check.
+
+## EPIC-B-Korrektur Runde 2 — Implementierung abgeschlossen
+
+- Status: Review ausstehend.
+- Ergebnis: redundante `analysis`-Diagnostics entfernt; finale Display-
+  Deduplizierung mit Root-Vorrang und globalem 4-KiB-Budget umgesetzt.
+- Verifikation: 22/22 fokussierte FastTests, 9/9 fokussierte IntegrationTests,
+  Build 0/0; Testscopes 0 Violations, nur bestehender Registry-Footprint im
+  Produktionsscope.
 - Ursache: `DIAGNOSTICS-SAMPLE-BUDGET` — `analysis` serialisiert dieselbe
   Diagnostics-Projektion erneut; Deduplizierung erfolgt vor der endgültigen
   Display-Kürzung.

@@ -5,7 +5,6 @@ using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -16,9 +15,6 @@ internal static class AssemblyAnalysisResponse
     internal static CallToolResult Enrich(CallToolResult result, AssemblyAnalysisLease lease)
     {
         var origin = lease.Context.Origin;
-        var diagnostics = AssemblyAnalysisResponseLimits.ProjectDiagnostics(
-            lease.Context.Diagnostics,
-            lease.ReferenceExpansionDiagnostics);
         var effectiveStatus = lease.Context.Status.ResolveEffectiveStatus(
             lease.Context.Diagnostics
                 .Concat(lease.ReferenceExpansionDiagnostics)
@@ -34,8 +30,6 @@ internal static class AssemblyAnalysisResponse
             lease.Context.Generation,
             effectiveStatus.ToWireValue(),
             effectiveStatus.ToCompletenessLabel(),
-            diagnostics.Samples,
-            diagnostics,
             origin.SourceSnapshotIdentity);
 
         var content = result.Content
@@ -97,8 +91,6 @@ internal static class AssemblyAnalysisResponse
         long Generation,
         string Status,
         string Completeness,
-        IReadOnlyList<string> Diagnostics,
-        AssemblyDiagnosticsSummary DiagnosticsSummary,
         SourceSnapshotIdentity? SourceSnapshot)
     {
         public string TargetType => "assembly";
