@@ -24,3 +24,13 @@
 - Urteil: Keine unabhängige Reviewer-Welle behauptet. Die acht Linsen werden als read-only Orchestrator-Fallback mit expliziter Delegations-Abdeckungsgrenze geprüft; Reports kennzeichnen diese Einschränkung.
 - Geänderte Bereiche: keine Produktions-, Test-, Konfigurations- oder bestehenden Dokumentationsdateien.
 - Nächste Aktion: linsenweise MCP-first-Prüfung im aktuellen Arbeitsstand und redigierte Reports erzeugen.
+
+## 2026-08-31 — MCP-first-Fallback-Prüfung
+
+- Revision: `8a9fbdda`; die Source-Baseline seit `57a793dd` blieb unverändert.
+- Projekt-/Scope-Abfragen: Dateilandkarte und Index-Scope erfasst; zentrale Sessions, Registry, Dispatcher, Source-Auswahl, Git-Transport und Snapshot-Registry per `get_feature_context`/Symbolabfragen verifiziert.
+- Assembly-Probe: lokales neutrales Build-Artefakt ausschließlich über `inspect_assembly` und `find_assembly_extensions` untersucht. Die Antwort blieb wegen nicht identischer Referenzversionen und semantischer Decompilerdiagnosen `partial`; keine Typen wurden als belastbare Positivprobe gewertet.
+- Qualitätsabfragen: `get_violations` lieferte im angefragten Assembly-Scope keine Treffer; `safeguard` meldete einen transitive-Footprint-Hinweis außerhalb des engeren Assembly-Scope; `find_duplicates` meldete drei Clone-Cluster; `find_dead_code` ausschließlich niedrig-konfidente bzw. platform-nahe Kandidaten; `find_magic_values` einen lokalisierten, unterdrückten User-Message-Kandidaten.
+- Codebefunde bestätigt: `AnalysisToolCall.cs:161-172` expandiert Referenzen vor jedem Assembly-Session-Call; `AssemblyAnalysisResponseLimits.cs:32-52` wählt Samples global aus, während `InspectAssemblyTool.cs:84-99` dieselben Samples mehrfach im strukturierten Payload serialisiert.
+- External-Source-/Git-Abdeckung: Konfigurations-, Provider-, Checkout-Attestation-, Reparse-, Cache-, Refresh-, Cancellation-, Timeout-, Prozessbaum- und Cleanup-Tests sind im Repository vorhanden. Eine echte source-backed Live-Repository-Probe war in diesem Lauf nicht möglich bzw. wurde wegen Audit-Scope und Geheimnisschutz nicht durchgeführt.
+- Live-Binary-Prüfung: `.mcp.json` verwendet `dotnet run`; ein separates `ainetlinter`-Kommando ist nicht installiert. Die gebaute DLL ist vorhanden und wurde als neutrale Decompilation-Probe genutzt.
