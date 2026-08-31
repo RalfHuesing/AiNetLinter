@@ -1,10 +1,43 @@
 # AiNetLinter MCP-Server — Findings & Lösungsvorschläge
 
-> **Fokus:** Ausschließlich identifizierte Probleme und konkrete Lösungsvorschläge mit Code-Verweisen, sortiert nach der **Wirkung und Hebelkraft für LLM-Agenten** (Token-Ersparnis, Kontext-Schonung, Fehlverhaltensprävention).
+> **Fokus:** Ausschließlich identifizierte Probleme und konkrete Lösungsvorschläge mit Code-Verweisen, sortiert nach der **Wirkung und Hebelkraft für LLM-Agenten** (Token-Ersparnis, Kontext-Schonung, Fehlverhaltensprävention, funktionale Korrektheit).
 
 ---
 
-## Rang 1: Referenz-Listen-Bloat bei Typfiltern in `inspect_assembly`
+## Rang 1: Konfigurierter Git-Source-Flow fällt trotz erfolgreichem Checkout auf Decompilation zurück
+
+### Problem & Auswirkung auf LLM-Agenten
+- **Befund-ID:** `EXTSRC-001`
+- **Schweregrad / Dringlichkeit:** `S1` / `P1`
+- **Symptom:** Für in `external-sources.json` gemappte Assemblys (z. B. Repository-Bereitstellung) stößt der Server bei Anfragen (`inspect_assembly`, `get_server_health`) erfolgreich den Git-Download an (liegt verifiziert im Cache-Ordner vor). Trotzdem meldet der MCP-Server in allen Antworten:
+  `[ASSEMBLY] ... origin=decompiled; sourcePath=none; snapshot=none; confidence=medium; trust=untrusted; status=partial; completeness=partial`
+- **Agentischer Schaden:** Der LLM-Agent analysiert dekompilierte Stubs und synthetischen C#-Code mit `untrusted`-Status, obwohl der echte Original-Quelltext im lokalen Git-Checkout physisch bereitliegt. Dadurch fehlen echte Kommentare, interne Typen, Methodenkörper und Attestierungen.
+
+### Betroffener Code
+- [src/AiNetLinter/Mcp/Assemblies/ExternalSource/Repository/ExternalSourceSnapshotMaterializer.cs:138-149](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/ExternalSource/Repository/ExternalSourceSnapshotMaterializer.cs#L138-L149)
+  ```csharp
+  var workspaceFailed = 0;
+  workspace.RegisterWorkspaceFailedHandler(_ => Interlocked.Exchange(ref workspaceFailed, 1));
+  var solution = await workspace.OpenSolutionAsync(checkout.SolutionPath, cancellationToken);
+  if (Volatile.Read(ref workspaceFailed) != 0)
+  {
+      throw new ExternalSourceSnapshotMaterializationException(
+          checkoutTrust: ExternalSourceCheckoutTrust.Clean,
+          WorkspaceDiagnosticFailureReason);
+  }
+  ```
+  *(Die strikte Zero-Tolerance-Prüfung verwirft das gesamte Solution-Snapshot, sobald `MSBuildWorkspace` beim Laden der Solution eine Diagnose meldet — was bei älteren Framework- oder externen Solutions ohne explizite SDKs im .NET 9 Host unvermeidlich auftritt).*
+- [src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySourceSelectionOrchestrator.cs:100-108](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySourceSelectionOrchestrator.cs#L100-L108)
+  - Fällt bei `providerResult.IsAvailable == false` lautlos auf `AssemblyDecompilationAdapter` (`origin=decompiled`) zurück, ohne den Grund (z. B. Solution-Ladefehler) im Header oder Text auszuweisen.
+
+### Lösungsvorschlag
+1. **Tolerante Materialisierung:** `workspaceFailed` nicht als harten Abbruch werten, wenn `solution.Projects.Any(p => p.Documents.Any())` gültige C#-Dokumente enthält.
+2. **AdhocWorkspace Fallback:** Falls `MSBuildWorkspace` an der `.sln` scheitert, einen `AdhocWorkspace` direkt aus den `.cs`-Dateien des gemappten Quellordners aufbauen, um `origin=source-backed` zu garantieren.
+3. **Transparenz:** Materialisierungsfehler in `AssemblyContext.Diagnostics` aufnehmen, damit der Agent sieht, warum auf Decompilation ausgewichen wurde.
+
+---
+
+## Rang 2: Referenz-Listen-Bloat bei Typfiltern in `inspect_assembly`
 
 ### Problem & Auswirkung auf LLM-Agenten
 - **Befund-ID:** `TOK-001` / `ASM-001`
@@ -32,7 +65,7 @@
 
 ---
 
-## Rang 2: Ungedeckelter Diagnose-Dump bei `find_references(includeReferences=true)` & `get_call_tree`
+## Rang 3: Ungedeckelter Diagnose-Dump bei `find_references(includeReferences=true)` & `get_call_tree`
 
 ### Problem & Auswirkung auf LLM-Agenten
 - **Befund-ID:** `TOK-002` / `NAV-001`
@@ -73,7 +106,7 @@
 
 ---
 
-## Rang 3: Fehlende syntaktische `receiverType`-Vorfilterung in `find_assembly_extensions`
+## Rang 4: Fehlende syntaktische `receiverType`-Vorfilterung in `find_assembly_extensions`
 
 ### Problem & Auswirkung auf LLM-Agenten
 - **Befund-ID:** `ASM-002`
@@ -100,7 +133,7 @@
 
 ---
 
-## Rang 4: Veraltetes JSON-RPC Tool-Call-Beispiel in `Docs/agent-api.md`
+## Rang 5: Veraltetes JSON-RPC Tool-Call-Beispiel in `Docs/agent-api.md`
 
 ### Problem & Auswirkung auf LLM-Agenten
 - **Befund-ID:** `DOC-001`
@@ -132,7 +165,7 @@ Das Dokumentations-Snippet aktualisieren:
 
 ---
 
-## Rang 5: Diskrepanz beim `maxResults`-Default in `get_file_tree`
+## Rang 6: Diskrepanz beim `maxResults`-Default in `get_file_tree`
 
 ### Problem & Auswirkung auf LLM-Agenten
 - **Befund-ID:** `DOC-002` / `DISCO-001`
@@ -149,7 +182,7 @@ Beschreibungstext in `FileStructureToolRegistrations.cs` von `Default 100` auf `
 
 ---
 
-## Rang 6: Fehlender Kontext-Hinweis bei dekompilierten Metadata-Only-Stubs in `get_symbol_body`
+## Rang 7: Fehlender Kontext-Hinweis bei dekompilierten Metadata-Only-Stubs in `get_symbol_body`
 
 ### Problem & Auswirkung auf LLM-Agenten
 - **Befund-ID:** `NAV-002`
@@ -169,7 +202,7 @@ private static decimal CalculateBestand(ArtikelItem artikelItem, ArtikelVariante
 
 ---
 
-## Rang 7: Parameter-Aliase in Dokumentation vereinheitlichen (`symbol` vs `symbolIdentifier`)
+## Rang 8: Parameter-Aliase in Dokumentation vereinheitlichen (`symbol` vs `symbolIdentifier`)
 
 ### Problem & Auswirkung auf LLM-Agenten
 - **Befund-ID:** `SRC-001`
@@ -186,7 +219,7 @@ Server-seitig beide Aliase tolerant unterstützen (ist bereits der Fall), aber i
 
 ---
 
-## Rang 8: Fehlende Sortier- und Filteroptionen in `get_hotspots`
+## Rang 9: Fehlende Sortier- und Filteroptionen in `get_hotspots`
 
 ### Problem & Auswirkung auf LLM-Agenten
 - **Befund-ID:** `MET-001`
