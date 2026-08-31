@@ -46,14 +46,17 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string[]? namePatterns = null, string? kind = null, int maxResults = 50, CancellationToken ct = default) =>
+            async (string targetType, string targetPath, string[]? namePatterns = null, string? kind = null, int maxResults = 50, bool includeReferences = false, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => FindSymbolTool.ExecuteAsync(lease.Server, namePatterns, kind, maxResults, ct),
-                            AssemblySessionCall: lease => FindSymbolTool.ExecuteAsync(lease.Server, namePatterns, kind, maxResults, ct)),
+                            AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(
+                                lease,
+                                new AssemblyFindSymbolRequest(namePatterns, kind, maxResults, includeReferences),
+                                ct)),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("find_symbol", FindSymbolDescription)));
     }
@@ -64,6 +67,8 @@ internal static class SymbolGraphToolRegistrations
         "Batch loest N sequentielle Calls ab, max. 10 pro Call, z. B. namePatterns: [\"Greeter\"]). " +
         "kind: optionaler Typfilter (Class, Record, Method, Property, Interface, Struct, Enum; " +
         "deutsche und englische Werte). maxResults: Begrenzung der Trefferliste (Default 50). " +
+        "includeReferences (Default false): bei targetType=assembly auch die bounded Referenz-Assemblies " +
+        "durchsuchen und Herkunft/Completeness in structuredContent ausgeben. " +
         "Bei 0 C#-Treffern Hinweis auf Textfunde in Nicht-C#-Dateien (Fallback search_pattern). " +
         "Liefert strukturierte FindSymbolBatchDto in structuredContent.";
 
@@ -72,14 +77,17 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, CancellationToken ct = default) =>
+            async (string targetType, string targetPath, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, bool includeReferences = false, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => FindReferencesTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, depth, ct),
-                            AssemblySessionCall: lease => FindReferencesTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, depth, ct)),
+                            AssemblySessionCall: lease => AssemblyFindReferencesTool.ExecuteAsync(
+                                lease,
+                                new AssemblyFindReferencesRequest(symbolIdentifier, maxResults, depth, includeReferences),
+                                ct)),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("find_references", FindReferencesDescription)));
     }
@@ -92,21 +100,28 @@ internal static class SymbolGraphToolRegistrations
         "maxResults: Begrenzung der Trefferliste (Default 50). " +
         "depth (Default 1, hard cap 3) liefert immer structuredContent.callSites plus " +
         "completeness mit Tiefe, Herkunft und getrennten Trunkierungsgruenden; die " +
-        "Traversierung ist hart auf 200 besuchte Knoten begrenzt.";
+        "Traversierung ist hart auf 200 besuchte Knoten begrenzt. includeReferences (Default false): " +
+        "bei targetType=assembly bounded Referenz-Assemblies einbeziehen und partielle Diagnosen " +
+        "sowie Herkunft in structuredContent ausgeben.";
 
     private static void AddGetCallTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, CancellationToken ct = default) =>
+            async (string targetType, string targetPath, string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, bool includeReferences = false, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction), ct),
-                            AssemblySessionCall: lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction), ct)),
+                            AssemblySessionCall: lease => AssemblyGetCallTreeTool.ExecuteAsync(
+                                lease,
+                                new AssemblyGetCallTreeRequest(
+                                    new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction),
+                                    includeReferences),
+                                ct)),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("get_call_tree", GetCallTreeDescription)));
     }
@@ -118,7 +133,9 @@ internal static class SymbolGraphToolRegistrations
         "depth: Traversierungstiefe (Default 2, hard cap 5). format: \"ascii\" (Default) oder " +
         "\"mermaid\" (flowchart TD). direction: \"incoming\" (Default: wer ruft das Symbol auf), " +
         "\"outgoing\" (wen ruft das Symbol auf) oder \"both\" (beide Richtungen abwechselnd). " +
-        "topN: Fan-Out-Begrenzung pro Ebene (Default 10). Traversierung ist hart auf 250 Knoten begrenzt.";
+        "topN: Fan-Out-Begrenzung pro Ebene (Default 10). Traversierung ist hart auf 250 Knoten begrenzt. " +
+        "includeReferences (Default false): bei targetType=assembly bounded Referenz-Assemblies " +
+        "einbeziehen und Herkunft/partielle Diagnosen im Ergebnis ausgeben.";
 
     private static void AddGetImpact(
         McpServerPrimitiveCollection<McpServerTool> tools,

@@ -103,6 +103,13 @@ Consumer-Projekt die Roslyn-Anwendbarkeit als `not_decidable` aus.
 Antworten begrenzen Diagnose-Samples und Referenz-/Session-Listen gemeinsam in
 Text und StructuredContent.
 
+Für `find_symbol`, `find_references` und `get_call_tree` bleibt bei
+`targetType: "assembly"` der Root-Snapshot der Default. Nur
+`includeReferences: true` aktiviert die bounded Suche beziehungsweise Traversierung
+über eröffnete Referenz-Sessions; `origin`, `navigation.completeness` und partielle
+Diagnostics sind dabei zu beachten. Decompilierte API-Stubs können ohne sichtbare
+Call-Sites bleiben, ohne dass daraus eine globale Negativaussage folgt.
+
 Target-Aufrufe verwenden keine Legacy-Pfadparameter; historische Query-
 Parameter bleiben ausschließlich den projektbezogenen Resource-URIs vorbehalten.
 

@@ -12,7 +12,8 @@ internal static class TransitiveCallGraphFormatter
         var completeness = result.Completeness;
         return !completeness.TruncatedByMaxResults &&
                !completeness.TruncatedByNodeLimit &&
-               !completeness.DepthWasClamped;
+               !completeness.DepthWasClamped &&
+               completeness.Diagnostics is not { Count: > 0 };
     }
 
     internal static string Format(ReferenceTraversalResult result)
@@ -28,9 +29,12 @@ internal static class TransitiveCallGraphFormatter
 
     private static string FormatEntry(TransitiveCallSiteEntry entry, bool transitive)
     {
-        return transitive
+        var text = transitive
             ? $"{entry.FilePath}:{entry.Line} - transitiver Aufrufer"
             : $"{entry.FilePath}:{entry.Line} - Aufruf von '{entry.SymbolName}' in Projekt '{entry.ProjectName}'";
+        return entry.Origin is null
+            ? text
+            : $"{text} [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
     }
 
     private static void AppendLimitMessages(
@@ -52,6 +56,11 @@ internal static class TransitiveCallGraphFormatter
         {
             lines.Add(
                 $"[depth auf {completeness.EffectiveDepth} begrenzt — requestedDepth={completeness.RequestedDepth}]");
+        }
+
+        if (completeness.Diagnostics is { Count: > 0 })
+        {
+            lines.AddRange(completeness.Diagnostics.Select(diagnostic => $"[Assembly-Diagnostic] {diagnostic}"));
         }
     }
 

@@ -5,7 +5,7 @@ current_epic: EPIC-D
 correction_round: 0
 recent_finding_signatures: none
 cycle_state: epic-d-implementation-in-progress
-last_commit: 477a90b7
+last_commit: 8600f3e2
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
@@ -21,8 +21,10 @@ tech_debt: siehe tech-debt.md
 - Die Low-Reasoning-Bereinigung ist als bewusste, abgeschlossene Vorarbeit
   erhalten; insbesondere bleibt die `rules.json`-Ausnahme für den
   `AssemblyAnalysisRegistry` bestehen.
-- EPIC-D ist der aktuelle unabhängige Arbeitsblock. EPIC-B bleibt bis zu einer
-  späteren expliziten Wire-Form-/Payload-Budget-Entscheidung offen.
+- EPIC-D ist lokal implementiert und fokussiert verifiziert; der abschließende
+  MCP-Audit sowie die vollständigen Nicht-Stress-Gates stehen noch aus. EPIC-B
+  bleibt bis zu einer späteren expliziten Wire-Form-/Payload-Budget-Entscheidung
+  offen.
 
 ## EPIC-A — Stabile In-Memory- und Dateipfade
 
@@ -200,7 +202,7 @@ tech_debt: siehe tech-debt.md
 - Verifikation: Root-Assembly mit zwei Referenz-DLLs, exklusiv referenzierter
   Typ, fehlende/zyklische/beschädigte Metadaten, Tiefen-/Anzahl-Limits,
   tolerante Fehlerfälle und Live-Szenarien; gezielter Violations-Check.
-- Status: open (Teilimplementierung aus `118ccb94` wird nach EPIC-D geprüft)
+- Status: implemented (Assembly-Routen und Regressionen ergänzt; Audit/Gates offen)
 
 ## EPIC-E — Abgegrenzte Befunde, Regressionen und Abschluss
 
@@ -217,11 +219,12 @@ tech_debt: siehe tech-debt.md
   Projektpfad.
 - Verifikation: explizite Konzept-Checkliste, vollständiger Build, vollständige
   Nicht-Stress-Testläufe, Assembly-Live-Wiederholung und Abschluss-Audit.
-- Status: open
+- Status: in_progress (Abschluss-Audit und vollständige Gates offen)
 
 ## Abschluss-Checkliste aus Konzept.md
 
-- [ ] Synthetische Multi-DLL-Fixtures einschließlich fehlender, zyklischer und
+- [x] Synthetische Multi-DLL-Fixtures einschließlich einer Root-Assembly mit
+  zwei Referenz-DLLs und exklusiv referenzierten Typen; fehlende, zyklische und
   beschädigter/unvollständiger Metadaten
 - [ ] Leere In-Memory-Pfade, generierte Dokumente, Parametermethoden und
   unbekannte Stable-IDs
@@ -231,8 +234,8 @@ tech_debt: siehe tech-debt.md
 - [ ] Race-Entscheidung ohne Use-after-dispose oder Lease-Leak
 - [ ] Provider-Join, wartender Consumer-Abbruch, Producer-Abbruch und Dispose
   während Erzeugung
-- [ ] `find_symbol` mit `includeReferences=false` und `true`
-- [ ] Tolerante, partielle `find_references`-Antwort mit Diagnostics
+- [x] `find_symbol` mit `includeReferences=false` und `true`
+- [x] Tolerante, partielle `find_references`-Antwort mit Diagnostics
 - [ ] Positive Routing-, Hierarchie- und Metrics-Regressionen
 - [ ] Historische Befunde und übernommene Tech-Debt-Punkte triagiert
 - [ ] `dotnet build`

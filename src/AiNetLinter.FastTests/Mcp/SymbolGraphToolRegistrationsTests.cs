@@ -38,5 +38,10 @@ public sealed class SymbolGraphToolRegistrationsTests
 
         Assert.Contains("200", descriptions["find_references"], StringComparison.Ordinal);
         Assert.Contains("200", descriptions["get_impact"], StringComparison.Ordinal);
+        foreach (var toolName in new[] { "find_symbol", "find_references", "get_call_tree" })
+        {
+            var tool = options.ToolCollection!.Single(item => item.ProtocolTool.Name == toolName);
+            Assert.Contains("includeReferences", tool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
+        }
     }
 }

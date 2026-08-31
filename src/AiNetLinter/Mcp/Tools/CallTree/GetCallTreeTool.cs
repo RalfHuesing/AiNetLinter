@@ -94,7 +94,7 @@ internal static class GetCallTreeTool
         }
     }
 
-    private static bool TryParseDirection(string? value, out CallTreeDirection direction)
+    internal static bool TryParseDirection(string? value, out CallTreeDirection direction)
     {
         if (string.IsNullOrWhiteSpace(value) ||
             string.Equals(value, CallTreeDirectionNames.Incoming, StringComparison.OrdinalIgnoreCase))
@@ -119,7 +119,7 @@ internal static class GetCallTreeTool
         return false;
     }
 
-    private static string RenderTree(MetricsTreeNode root, string? format, int topN) =>
+    internal static string RenderTree(MetricsTreeNode root, string? format, int topN) =>
         string.Equals(format, MermaidFormat, StringComparison.OrdinalIgnoreCase)
             ? CallTreeMermaidRenderer.Render(root, topN)
             : MetricsTreeRenderer.Render(root, topN, sortDescending: false);

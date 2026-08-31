@@ -1507,3 +1507,45 @@
 - nächste Aktion: lokale Umsetzung/Verifikation des EPIC-D-Scope; ein
   unabhängiger Review wird nur bei verfügbarer terminaler Reviewer-Rolle
   ausgewiesen.
+
+## 2026-08-31 — completed / EPIC-D / lokale Implementierung und fokussierte Verifikation
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2-local-epic-d`
+- Rolle: Orchestrator führte die zusammenhängende Implementierung lokal fort,
+  nachdem zwei delegierte Implementierer ohne terminalen Bericht beendet
+  wurden. Es wird kein unabhängiger Review behauptet.
+- MCP-first-Kontext: `find_symbol` und `get_feature_context` wurden für die
+  betroffenen Resolver-, Lease- und Symbolgraph-Symbole gegen den Projektroot
+  abgefragt; die relevanten Ausgangsdateien hatten vor der Änderung keine
+  Violations.
+- Umsetzung:
+  - `AssemblySymbolSearch`, `AssemblySymbolResolver` und
+    `AssemblyReferenceNavigator` ergänzen bounded Root-/Child-Lease-Navigation
+    mit Herkunft, Assembly-Identitätsauflösung, Root-Compilation-Mapping und
+    begrenzten Partial-Diagnostics; `AssemblyNavigationSupport` bündelt die
+    Lease-/Mapping-/Status-Helfer.
+  - `find_symbol`, `find_references` und `get_call_tree` erhalten den
+    rückwärtskompatiblen Opt-in-Parameter `includeReferences=false`; nur der
+    Assemblypfad aktiviert die Mehr-Assembly-Navigation.
+  - Referenz-Traversal-DTOs tragen optional Herkunft, Diagnostics und
+    Navigationssummary; der Projektpfad bleibt serialisierungs-kompatibel.
+  - README, `Docs/agent-api.md` und `Docs/integration.md` dokumentieren den
+    neuen Parameter, die 32-Session-Grenze und die Stub-/Partial-Semantik.
+  - `AssemblyRoute_IncludeReferencesNavigatesSymbolsReferencesAndCallTree`
+    prüft eine synthetische Root-/Referenz-DLL-Kombination über alle drei
+    Routen einschließlich Herkunft und kontrollierter Partialität.
+- fokussierte Verifikation:
+  - `dotnet build src/AiNetLinter/AiNetLinter.csproj --no-restore`: 0 Warnungen,
+    0 Fehler.
+  - `dotnet test src/AiNetLinter.FastTests --no-restore --filter
+    "FullyQualifiedName~Mcp.Tools.SymbolGraph|FullyQualifiedName~Mcp.Assemblies|FullyQualifiedName~SymbolGraphToolRegistrationsTests"`:
+    357 bestanden, 2 vorgesehene Skips, 0 Fehler.
+  - `AssemblyAnalysisRouteTests`: 3/3 bestanden.
+  - Nach dem Footprint-/Parameter-Refactoring meldete der gezielte produktive
+    `get_violations`-Nachweis im Symbolgraph-Scope 0 Violations; auch der
+    Registrierungs-Scope meldete 0 Violations.
+- Besonderheit: Die synthetische dekompilierte Root-Quelle enthält API-Stubs;
+  deshalb liefert die Referenzroute dort keine erfundenen Call-Sites, sondern
+  eine maschinenlesbare partielle Antwort mit begrenzten Diagnostics.
+- nächster Schritt: task-lokalen Stand committen, danach gezielten MCP-Audit
+  und die vollständigen Nicht-Stress-Gates ausführen.

@@ -1,0 +1,80 @@
+#nullable enable
+
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Output;
+using ModelContextProtocol.Protocol;
+
+namespace AiNetLinter.Mcp.Tools.SymbolGraph;
+
+internal sealed record AssemblyFindReferencesRequest(
+    string? SymbolIdentifier,
+    int MaxResults,
+    int Depth,
+    bool IncludeReferences);
+
+internal static class AssemblyFindReferencesTool
+{
+    internal static Task<CallToolResult> ExecuteAsync(
+        AssemblyAnalysisLease lease,
+        AssemblyFindReferencesRequest request,
+        CancellationToken cancellationToken) =>
+        request.IncludeReferences
+            ? ExecuteWithReferencesAsync(lease, request, cancellationToken)
+            : FindReferencesTool.ExecuteAsync(
+                lease.Server,
+                request.SymbolIdentifier,
+                request.MaxResults,
+                request.Depth,
+                cancellationToken);
+
+    private static async Task<CallToolResult> ExecuteWithReferencesAsync(
+        AssemblyAnalysisLease lease,
+        AssemblyFindReferencesRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(request.SymbolIdentifier))
+        {
+            return McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
+                hint: McpToolResults.SymbolIdentifierHint);
+        }
+
+        try
+        {
+            var (target, error, navigation) = await AssemblySymbolResolver.ResolveAsync(
+                lease,
+                request.SymbolIdentifier,
+                cancellationToken).ConfigureAwait(false);
+            if (error is not null) return error;
+
+            var traversal = await AssemblyReferenceNavigator.FindReferencesAsync(
+                new AssemblyReferenceTraversalRequest(
+                    lease,
+                    target!,
+                    request.MaxResults,
+                    request.Depth,
+                    navigation),
+                cancellationToken).ConfigureAwait(false);
+            var formatted = TransitiveCallGraphFormatter.Format(traversal);
+            var body = traversal.Completeness.TotalCallSiteCount == 0
+                ? $"Keine Aufrufstellen gefunden fuer '{request.SymbolIdentifier}'" +
+                  (formatted.Length == 0 ? string.Empty : $"\n{formatted}")
+                : formatted;
+            var finalBody = TransitiveCallGraphFormatter.IsComplete(traversal)
+                ? McpSufficiencyHints.Append(body)
+                : body;
+            return McpToolResults.Text(finalBody, traversal);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return McpToolResults.CompilationError(
+                $"Unerwarteter Fehler in find_references: {exception.Message}",
+                context: $"{request.SymbolIdentifier}; includeReferences=true");
+        }
+    }
+}

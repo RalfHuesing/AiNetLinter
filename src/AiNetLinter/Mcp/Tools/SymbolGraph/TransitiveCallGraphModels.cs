@@ -13,7 +13,8 @@ internal sealed record TransitiveCallSiteEntry(
     string SymbolName,
     string ProjectName,
     int Depth,
-    string ReachedFromSymbolId);
+    string ReachedFromSymbolId,
+    AssemblyNavigationOrigin? Origin = null);
 
 internal sealed record TraversalCompleteness(
     int RequestedDepth,
@@ -23,11 +24,13 @@ internal sealed record TraversalCompleteness(
     int ShownCallSiteCount,
     bool TruncatedByMaxResults,
     bool TruncatedByNodeLimit,
-    bool DepthWasClamped);
+    bool DepthWasClamped,
+    IReadOnlyList<string>? Diagnostics = null);
 
 internal sealed record ReferenceTraversalResult(
     IReadOnlyList<TransitiveCallSiteEntry> CallSites,
-    TraversalCompleteness Completeness);
+    TraversalCompleteness Completeness,
+    AssemblyNavigationSummary? Navigation = null);
 
 internal sealed record ReferenceTraversalRequest(
     Solution Solution,

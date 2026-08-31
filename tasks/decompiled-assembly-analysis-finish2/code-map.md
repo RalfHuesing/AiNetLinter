@@ -464,3 +464,36 @@
 - Der Low-Reasoning-Stand und die bewusste `rules.json`-Aggregate-Root-
   Ausnahme bleiben unverändert. `TD-EPIC-B-005`/`TD-EPIC-B-010` bleiben
   außerhalb des Scopes.
+
+## EPIC-D-Implementierung
+
+- `AssemblyAnalysisLease.ReferenceLeasesSnapshot` liefert eine nicht-besitzende,
+  lock-geschützte Momentaufnahme aller vom Root-Lease eröffneten Child-Leases.
+  Der Root bleibt alleiniger Owner und räumt diese Leases beim Dispose rückwärts
+  auf.
+- `AssemblySymbolSearch`, `AssemblySymbolResolver` und
+  `AssemblyReferenceNavigator` in `src/AiNetLinter/Mcp/Tools/SymbolGraph`
+  bilden aus Root und höchstens 32 residenten Child-Leases eine bounded
+  Navigation. Sie suchen deklarierte Symbole mit Herkunft, lösen
+  Assembly-IDs/qualifizierte Namen sessionspezifisch auf, führen
+  `find_references` über Child- und gemappten Root-Compilation-Kontexten aus
+  und aggregieren Call-Trees mit Herkunftsmarkern. Gemeinsame Lease-, Mapping-
+  und Partiality-Helfer liegen in `AssemblyNavigationSupport`; nicht-fatale
+  Roslyn-/Decompilerfehler werden je Session als Diagnose gesammelt.
+- `find_symbol`, `find_references` und `get_call_tree` tragen jeweils das neue
+  optionale `includeReferences=false`. Der Projektpfad und der Assembly-Default
+  bleiben unverändert; der Opt-in-Assemblypfad ergänzt `navigation`,
+  `origin`, Partiality und begrenzte Diagnostics. `TransitiveCallSiteEntry` und
+  `TraversalCompleteness` bleiben für den Projektpfad rückwärtskompatibel und
+  können Assembly-Herkunft/Diagnostics optional tragen.
+- Der Assembly-Regressionstest
+  `AssemblyRoute_IncludeReferencesNavigatesSymbolsReferencesAndCallTree`
+  prüft die Mehr-DLL-Suche, Herkunft, begrenzte Partiality sowie die drei
+  Assembly-Symbolgraph-Routen. Decompilierte API-Stubs werden als erwarteter
+  begrenzter Fall mit leerer Call-Site-Menge und sichtbaren Diagnostics belegt.
+- Nachweis im lokalen Implementierungslauf: `dotnet build
+  src/AiNetLinter/AiNetLinter.csproj --no-restore` ohne Warnungen/Fehler;
+  fokussierte Symbolgraph-/Assembly-FastTests 357 bestanden, 2 vorgesehene
+  Skips; der neue Assembly-Regressionstest 3/3 bestanden. Der nach der
+  Aufteilung ausgeführte produktive `get_violations`-Nachweis meldete im
+  Symbolgraph-Scope 0 Violations.

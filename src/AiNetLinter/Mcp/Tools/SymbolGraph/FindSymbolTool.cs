@@ -36,6 +36,35 @@ internal static class FindSymbolTool
 
     internal const int MaxPatternsPerCall = 10;
 
+    internal static IReadOnlyList<string> NormalizeNamePatterns(string[]? namePatterns) =>
+        McpBatchArguments.Normalize(namePatterns);
+
+    internal static CallToolResult? ValidateNamePatterns(IReadOnlyList<string> patterns)
+    {
+        if (patterns.Count == 0)
+        {
+            return McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                "Pflichtparameter 'namePatterns' fehlt oder ist leer.",
+                hint: McpToolResults.NamePatternsBatchHint);
+        }
+
+        return patterns.Count > MaxPatternsPerCall
+            ? McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                $"Maximal {MaxPatternsPerCall} namePatterns pro Call erlaubt (angefordert: {patterns.Count}).",
+                hint: "Auf mehrere Calls aufteilen (z. B. 2x 5-10 Patterns).")
+            : null;
+    }
+
+    internal static CallToolResult? ValidateKind(string? kind) =>
+        kind is not null && !ValidKinds.Contains(kind)
+            ? McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                $"Unbekannter kind-Filter '{kind}'.",
+                hint: "Gueltige Werte: Klasse/class, Methode/method, Interface/interface, Property/property, Record/record.")
+            : null;
+
     /// <summary>
     /// Tool-Einstiegspunkt: prueft, ob eine Solution geladen ist, und delegiert an den Scanner.
     /// Stellt dem Scanner-Output einen Warnhinweis voran, falls die Solution
@@ -51,30 +80,9 @@ internal static class FindSymbolTool
         int maxResults,
         CancellationToken ct)
     {
-        var patterns = McpBatchArguments.Normalize(namePatterns);
-        if (patterns.Count == 0)
-        {
-            return McpToolResults.Recoverable(
-                LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'namePatterns' fehlt oder ist leer.",
-                hint: McpToolResults.NamePatternsBatchHint);
-        }
-
-        if (patterns.Count > MaxPatternsPerCall)
-        {
-            return McpToolResults.Recoverable(
-                LinterErrorCodes.InvalidArgument,
-                $"Maximal {MaxPatternsPerCall} namePatterns pro Call erlaubt (angefordert: {patterns.Count}).",
-                hint: "Auf mehrere Calls aufteilen (z. B. 2x 5-10 Patterns).");
-        }
-
-        if (kind is not null && !ValidKinds.Contains(kind))
-        {
-            return McpToolResults.Recoverable(
-                LinterErrorCodes.InvalidArgument,
-                $"Unbekannter kind-Filter '{kind}'.",
-                hint: "Gueltige Werte: Klasse/class, Methode/method, Interface/interface, Property/property, Record/record.");
-        }
+        var patterns = NormalizeNamePatterns(namePatterns);
+        var validationError = ValidateNamePatterns(patterns) ?? ValidateKind(kind);
+        if (validationError is not null) return validationError;
 
         var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
 
@@ -146,8 +154,13 @@ internal static class FindSymbolTool
         }
     }
 
-    private static string FormatEntry(SymbolLocationEntry entry) =>
-        $"{entry.FilePath}:{entry.Line} - {entry.Kind}: {entry.Name}";
+    internal static string FormatEntry(SymbolLocationEntry entry)
+    {
+        var origin = entry.Origin is null
+            ? string.Empty
+            : $" [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
+        return $"{entry.FilePath}:{entry.Line} - {entry.Kind}: {entry.Name}{origin}";
+    }
 
     /// <summary>
     /// Baut einen Warnhinweis, falls mindestens eine Datei einen Compile-Fehler hat. Shared-Helper,
@@ -174,7 +187,9 @@ internal static class FindSymbolTool
 /// <summary>
 /// StructuredContent-Hülle für <c>find_symbol</c> — enthält die Ergebnisliste aller angefragten Namens-Muster.
 /// </summary>
-internal sealed record FindSymbolBatchDto(IReadOnlyList<FindSymbolPatternResultDto> Results);
+internal sealed record FindSymbolBatchDto(
+    IReadOnlyList<FindSymbolPatternResultDto> Results,
+    AssemblyNavigationSummary? Navigation = null);
 
 /// <summary>
 /// Ein Einzelergebnis für ein angefragtes Namens-Muster in <c>find_symbol</c>.
@@ -187,4 +202,9 @@ internal sealed record FindSymbolPatternResultDto(string NamePattern, IReadOnlyL
 /// <c>partial class</c>) liefert einen Eintrag je Fundstelle, konsistent zu
 /// <see cref="FindSymbolTool.FormatSymbolLocations"/>s Text-Zeilen.
 /// </summary>
-internal sealed record SymbolLocationEntry(string FilePath, int Line, string Kind, string Name);
+internal sealed record SymbolLocationEntry(
+    string FilePath,
+    int Line,
+    string Kind,
+    string Name,
+    AssemblyNavigationOrigin? Origin = null);
