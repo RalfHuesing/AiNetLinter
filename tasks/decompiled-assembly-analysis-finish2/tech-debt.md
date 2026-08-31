@@ -89,12 +89,12 @@ Ausführungsprotokoll.
   `ExternalResourceRegistry.cs`.
 - Evidenz: unabhängiger Review; volle Resident-/Disk-/Memory-Kapazität weist
   neue Assemblys ab, statt idle Einträge zu retirieren.
-- Disposition: `fixed` (Folge-Review ausstehend)
+- Disposition: `fixed`
 - Risiko: behoben durch atomare Retirement-Ownership mit Registry-/Entry-Lock;
   aktive Analyse-Leases verhindern Retirement.
-- Nächster Schritt: unabhängigen Folge-Review und deterministischen Race-Test
-  gegen den Korrekturstand bestätigen.
-- Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
+- Nächster Schritt: keine weitere Maßnahme.
+- Log-Anker: `execution-log.md`, EPIC-C-Folge-Review nach Korrekturrunde 3
+  vom 2026-08-31.
 
 ## TD-EPIC-C-003 — ThinClient-Overrides fehlen im bestehenden Daemon-Handshake
 
@@ -105,12 +105,12 @@ Ausführungsprotokoll.
 - Fundstelle/Scope: `DaemonProtocol.cs`, `ThinClientProxy.cs`.
 - Evidenz: unabhängiger Review; `EffectiveDaemonConfiguration` enthält im
   bestehenden Pfad nur `MaxProjects` und `IdleExitMinutes`.
-- Disposition: `fixed` für den ursprünglichen P1; P2-Rest `accepted-deferred`
-- Risiko: ursprüngliche CLI-Semantik ist korrigiert; hochpräzise Dezimalwerte
-  können durch Tick-Quantisierung noch eine falsche Warnung auslösen.
-- Nächster Schritt: beide Seiten auf denselben normalisierten Tickwert
-  abbilden.
-- Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
+- Disposition: `fixed`
+- Risiko: Die CLI-Semantik und die Tick-Normalisierung sind durch Server- und
+  Client-Regressionen abgesichert.
+- Nächster Schritt: keine weitere Maßnahme.
+- Log-Anker: `execution-log.md`, EPIC-C-Folge-Review nach Korrekturrunde 3
+  vom 2026-08-31.
 
 ## TD-EPIC-C-004 — Materialisierungsreservation endet vor Snapshot-Registrierung
 
@@ -139,11 +139,12 @@ Ausführungsprotokoll.
   `AssemblySourceSelectionOrchestrator.cs`, `AssemblyAnalysisHostComposition.cs`.
 - Evidenz: unabhängiger Review; Cleanup verhindert typischerweise Leaks, aber
   keinen deterministischen vollständigen Beendigungspunkt.
-- Disposition: `fixed` (Folge-Review ausstehend)
+- Disposition: `fixed`
 - Risiko: behoben; Checkout-Schätzung ist cancellation-aware und die Creation
   bleibt bis nach `creation.Complete()` im Producer-Join-Set.
-- Nächster Schritt: unabhängigen Folge-Review und Dispose-Race-Test bestätigen.
-- Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
+- Nächster Schritt: keine weitere Maßnahme.
+- Log-Anker: `execution-log.md`, EPIC-C-Folge-Review nach Korrekturrunde 3
+  vom 2026-08-31.
 
 ### EPIC-C-Korrekturrunde 1 — Bearbeitungsnachweis
 
@@ -162,11 +163,12 @@ setzen. Der vollständige Bericht und die Verifikation stehen im
 - Fundstelle/Scope: `ExternalSourceSnapshotMaterializerTests.cs`.
 - Evidenz: Commit `118ccb94` ergänzt den gekoppelten Materializer-/Registry-
   Test für Reservation, Promotion, Lease-Freigabe und Eviction.
-- Disposition: `fixed` (unabhängige Prüfung ausstehend)
+- Disposition: `fixed`
 - Risiko: Der direkte Integrationspfad ist regressionsgesichert; die
   Verifikation des Resume-Stands steht noch aus.
-- Nächster Schritt: Test und Contract im Folge-Review bestätigen.
-- Log-Anker: `execution-log.md`, Resume-Zusammenführung vom 2026-08-31.
+- Nächster Schritt: keine weitere Maßnahme.
+- Log-Anker: `execution-log.md`, EPIC-C-Folge-Review nach Korrekturrunde 3
+  vom 2026-08-31.
 
 ## TD-EPIC-C-007 — Tick-Normalisierung im ThinClient-Limitvergleich
 
@@ -177,12 +179,12 @@ setzen. Der vollständige Bericht und die Verifikation stehen im
 - Fundstelle/Scope: `DaemonProtocol.cs`.
 - Evidenz: Commit `118ccb94` vergleicht optionale Minutenwerte nach
   Normalisierung auf `TimeSpan.Ticks`.
-- Disposition: `fixed` (unabhängige Prüfung ausstehend)
+- Disposition: `fixed`
 - Risiko: Der Rückbau auf den Rohvergleich wird durch Client- und
   Server-Regressionen erkannt; die Folgeprüfung bestätigt noch den
   Korrekturstand.
-- Nächster Schritt: unabhängigen Folge-Review abschließen.
-- Log-Anker: `execution-log.md`, EPIC-C Korrektur-Implementierer Runde 3
+- Nächster Schritt: keine weitere Maßnahme.
+- Log-Anker: `execution-log.md`, EPIC-C-Folge-Review nach Korrekturrunde 3
   vom 2026-08-31.
 
 ## TD-EPIC-C-008 — Creation-Join nach Dictionary-Entfernung
@@ -193,12 +195,12 @@ setzen. Der vollständige Bericht und die Verifikation stehen im
 - Fundstelle/Scope: `AssemblySourceSelectionOrchestrator.cs`.
 - Evidenz: EPIC-C-Folge-Review; ein paralleler Dispose kann die noch nicht
   vollständig beendete Producer-Task dadurch übersehen.
-- Disposition: `fixed` (Folge-Review ausstehend)
+- Disposition: `fixed`
 - Risiko: behoben; Entfernung aus dem Join-Set erfolgt erst nach vollständigem
   Completion und ist durch einen Race-Test abgesichert.
-- Nächster Schritt: unabhängigen Folge-Review bestätigen.
-- Log-Anker: `execution-log.md`, completed EPIC-C Folge-Reviewer vom
-  2026-08-31.
+- Nächster Schritt: keine weitere Maßnahme.
+- Log-Anker: `execution-log.md`, EPIC-C-Folge-Review nach Korrekturrunde 3
+  vom 2026-08-31.
 
 ## TD-EPIC-B-004 — Compact-Health `ShownCount`
 

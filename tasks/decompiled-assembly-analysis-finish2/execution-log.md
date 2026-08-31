@@ -745,6 +745,40 @@
   Absicherung der vorhandenen Semantik; kein Produktions- oder Testcode und
   kein Agenten-Commit.
 
+## 2026-08-31 — completed / EPIC-C / Folge-Reviewer nach Korrekturrunde 3
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2-resume`
+- subagent-id: `/root/epic_c_ttl_followup_review`
+- status: `approved`; keine Arbeitsbaumänderung und kein Agenten-Commit.
+- vollständiger finaler Agentenbericht:
+
+  > approved
+  >
+  > Keine P0/P1/P2/P3-Befunde im TTL-Folge-Scope.
+  >
+  > - Server: `DaemonHandshakeContractTests.cs:119` prüft `1m` gegen
+  >   `1.0000000001m` ohne Divergenz; die zweite Regression prüft
+  >   `1.000000002m` mit Divergenz.
+  > - Client: `ThinClientConnectOrStartTests.cs:207` und die zugehörige
+  >   Differenzregression sichern dieselben Fälle über den Welcome-/ThinClient-
+  >   Pfad.
+  > - Der Produktionsvertrag nutzt Tick-Normalisierung in
+  >   `EffectiveDaemonConfiguration.Matches` und `MatchesAdvertisedPeer`.
+  >   Die Gegenhypothese einer Abweichung zwischen `TimeSpan.FromMinutes` und
+  >   Decimal-Normalisierung ist widerlegt: die Fälle ergeben 600000000,
+  >   600000000 und 600000001 Ticks.
+  > - `code-map.md` ist für den Scope aktuell; keine Änderung.
+  > - Der frische fokussierte 18/18-Test- und Audit-/Violationsnachweis wurde
+  >   wegen vollständigem, unverändertem Diff-Scope akzeptiert. Unabhängig
+  >   wiederholt wurden nur MCP-Feature-/Impact-Prüfung und der gezielte
+  >   Decimal-gegen-TimeSpan-Tickabgleich.
+- Urteil: `approved`; keine P0/P1/P2/P3. Alle EPIC-C-Punkte einschließlich
+  `TD-EPIC-C-002`, `005`, `006`, `007` und `008` sind nun unabhängig geprüft.
+- Tech-Debt-Triage: die noch als prüfungsabhängig markierten EPIC-C-Einträge
+  auf `fixed` fortgeschrieben; keine neue Tech Debt.
+- nächste Aktion: EPIC-C-Abschluss-Checkpoint committen und anschließend den
+  bereits als `in_progress` markierten EPIC-D-Implementierer starten.
+
 ## 2026-08-31 — completed / EPIC-C / Folge-Reviewer nach Korrekturrunde 1
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`

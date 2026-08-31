@@ -1,11 +1,11 @@
 # Ausführungs-Roadmap: decompiled-assembly-analysis-finish2
 
 status: executing
-current_epic: EPIC-C
-correction_round: 2
-recent_finding_signatures: TTL-TICK-NORMALIZATION-REGRESSION
-cycle_state: correction-review-in-progress
-last_commit: 118ccb94
+current_epic: EPIC-D
+correction_round: 3
+recent_finding_signatures: none
+cycle_state: epic-c-approved
+last_commit: 23340037
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
@@ -17,9 +17,9 @@ tech_debt: siehe tech-debt.md
 - Die beim Resume vorgefundene, bereits committete Arbeit `118ccb94` behebt
   vier dokumentierte P2-Punkte und implementiert die zwei EPIC-E-Teilaufträge;
   sie wird als tatsächlicher Arbeitsstand erhalten und unabhängig geprüft.
-- Nächster unabhängiger Arbeitsblock: die ausstehende EPIC-C-Folgeprüfung;
-  EPIC-B bleibt bis zu einer späteren expliziten Wire-Form-/Payload-Budget-
-  Entscheidung offen.
+- EPIC-C: nach drei begrenzten Korrekturrunden `approved`.
+- Nächster unabhängiger Arbeitsblock: EPIC-D. EPIC-B bleibt bis zu einer
+  späteren expliziten Wire-Form-/Payload-Budget-Entscheidung offen.
 
 ## EPIC-A — Stabile In-Memory- und Dateipfade
 
@@ -88,7 +88,7 @@ tech_debt: siehe tech-debt.md
   Dispose während der Erzeugung sind deterministisch.
 - Verifikation: fokussierte TTL/LRU/Capacity/Lease/Race/Creation-Barrier-
   Tests; hohe Last nur in gezielten Stress-Tests; gezielter Violations-Check.
-- Status: review_in_progress (Korrekturrunde 3: Tick-Normalisierungsregression)
+- Status: done
 
 ## EPIC-C-Review — Korrektur umgesetzt, Folge-Review ausstehend
 
@@ -214,7 +214,7 @@ tech_debt: siehe tech-debt.md
   Projektpfad.
 - Verifikation: explizite Konzept-Checkliste, vollständiger Build, vollständige
   Nicht-Stress-Testläufe, Assembly-Live-Wiederholung und Abschluss-Audit.
-- Status: open
+- Status: in_progress
 
 ## Abschluss-Checkliste aus Konzept.md
 
