@@ -494,3 +494,83 @@
   als grün gewertet.
 - nächste Aktion: Implementierungs-Checkpoint committen, danach unabhängigen
   Review für EPIC-B starten.
+
+## 2026-08-31 — running / EPIC-B / Reviewer
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a05530-be7c-73c3-89bb-74a5d62b6caa`
+- diff-baseline: `b0ebc8b4`
+- scope: Unabhängiger Review des EPIC-B-Diffs für Diagnostics-/Referenzlimits,
+  Health-Detailoption, Partiality/Truncation, Wire-Verträge, Dokumentation,
+  Regressionen und Code-Map.
+- erwarteter Hand-off: `approved`, `issues` oder `blocked`; P2/P3-Befunde
+  werden nicht als P1 aufgewertet, sofern kein Muss-Kriterium oder konkreter
+  Produktionsfehler belegt ist.
+- warteverhalten: Polling-Timeouts führen nicht zu einem Interrupt; der
+  Reviewer läuft bis zum echten terminalen Status.
+
+## 2026-08-31 — completed / EPIC-B / Reviewer
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a05530-be7c-73c3-89bb-74a5d62b6caa`
+- diff-baseline: `b0ebc8b4`
+- status: `issues`; kein Produktions-/Testcode und kein Commit erstellt;
+  veraltete Fakten und neue Projektionsrisiken in `code-map.md` korrigiert.
+- vollständiger finaler Agentenbericht:
+
+  > issues
+  >
+  > P0: keine. Blocked: nein.
+  >
+  > P1-Findings:
+  >
+  > - `HEALTH-RAW-STATUS-PROJECTION`: Bei gezielter Health-Abfrage mit
+  >   `includeDiagnostics=true` übernimmt `GetServerHealthResponseBuilder.cs:77`
+  >   den Rohstatus. Transitive Diagnostics werden in Zeile 87 ergänzt, aber
+  >   nicht über `ResolveEffectiveStatus` zu `partial` projiziert. Ergebnis
+  >   kann `completeness=complete` trotz Diagnostics sein. `fix-now`.
+  >
+  > - `HEALTH-COMPACT-SHOWNCOUNT`:
+  >   `AssemblyAnalysisResponseLimits.cs:23` leert im kompakten Health-Modus
+  >   die Samples, lässt aber `ShownCount` unverändert. StructuredContent
+  >   enthält somit leere Samples, während der Text z. B. `4 von 4` meldet.
+  >   `fix-now`.
+  >
+  > - `DIAGNOSTICS-SAMPLE-BUDGET`: `ProjectDiagnostics` dedupliziert den
+  >   Gesamtcount, aber nicht die zusammengeführten Samples. Identische
+  >   Root-/transitive Meldungen können daher `ShownCount > TotalCount`
+  >   erzeugen. Zusätzlich werden Root-, Transitiv- und Aggregate-Samples
+  >   separat bis 4 KiB begrenzt; `analysis` dupliziert sie erneut. Das
+  >   gemeinsame Größenbudget ist damit nicht global gewährleistet. `fix-now`.
+  >
+  > - `EPIC-B-FORMATTER-COMPLEXITY`: Der aktuelle MCP-Nachweis zeigt vier neue
+  >   aktive Produktionsregelverletzungen: `FindAssemblyExtensionsTool.FormatText`
+  >   mit kognitiv 21/15 und zyklomatisch 15/12 sowie
+  >   `AppendAssemblySection` mit 18/15 und 15/12. Die Implementierer-
+  >   Disposition als Deferred Debt ist wegen aktiver Produktionsregeln nicht
+  >   ausreichend. `fix-now`; actionable Tech Debt.
+  >
+  > P2/P3-Disposition:
+  >
+  > - `AssemblyAnalysisRegistry` AIContext-Footprint 3594 > 2500:
+  >   bestehender, EPIC-B-fremder Befund. `promoted-to-project-debt`,
+  >   actionable, nicht blockierend.
+  > - Keine weiteren belastbaren neuen P2/P3-Funde.
+  >
+  > Verifikation: Den frischen Bericht mit Build 0/0, fokussierten Tests 19/19
+  > und 8/8 sowie letztem `get_violations`-Nachweis habe ich gegen den Diff
+  > geprüft und nicht redundant wiederholt. Wegen der zunächst abweichenden
+  > geladenen Toolbeschreibung wurde der konkrete Schema-E2E-Test einmal
+  > wiederholt: 1/1 grün für `includeDiagnostics` und `maxDiagnostics`.
+  >
+  > Nur veraltete Fakten und die neu belegten Projektionsrisiken wurden in
+  > `code-map.md` korrigiert. Kein Produktions-/Testcode und kein Commit wurden
+  > erstellt.
+- Urteil: `issues`; vier gebündelte P1-Ursachensignaturen lösen
+  Korrekturrunde 1 aus.
+- Tech-Debt-Triage: Formatter-Komplexität von
+  `promoted-to-project-debt` auf `fix-now`/P1 fortgeschrieben; drei neue
+  P1-Projektions-/Budgetbefunde in `tech-debt.md` aufgenommen; der bestehende
+  `AssemblyAnalysisRegistry`-Footprint bleibt `promoted-to-project-debt`.
+- nächste Aktion: Review-Checkpoint committen, danach frischen
+  Korrektur-Implementierer für EPIC-B starten.

@@ -39,14 +39,58 @@ Ausführungsprotokoll.
 - Evidenz: letzter `get_violations`-Check nach der letzten Codeänderung
   meldete insgesamt fünf Produktionsbefunde; vier davon sind neue
   Komplexitätsbefunde in diesen Formatierern.
-- Disposition: `promoted-to-project-debt`
-- Risiko: begrenzte Wartbarkeits-/Footprint-Überschreitung ohne gemeldete
-  Funktionsregression; nicht nach dem letzten Violations-Check verändert.
-- Nächster Schritt: Formatter-Verantwortung bei einer eigenständigen
-  Folgeänderung in sichere Hilfsfunktionen schneiden und danach Tests,
-  Impact und Violations erneut prüfen.
+- Disposition: `fix-now`
+- Risiko: vier aktive Produktionsregelverletzungen verhindern die Freigabe des
+  EPIC-B-Stands, auch ohne gemeldete Laufzeitregression.
+- Nächster Schritt: Formatter-Verantwortung in sichere Hilfsfunktionen
+  schneiden, danach Tests, Impact und Violations erneut prüfen.
 - Log-Anker: `execution-log.md`, completed EPIC-B Implementierer vom
   2026-08-31.
+
+## TD-EPIC-B-003 — Health-Statusprojektion bei Detaildiagnostics
+
+- Schweregrad: P1
+- Beschreibung: Gezielt angeforderte transitive Diagnostics werden ergänzt,
+  ohne den Rohstatus über `ResolveEffectiveStatus` zu `partial` zu projizieren.
+- Fundstelle/Scope: `GetServerHealthResponseBuilder.cs`, gezielter Health-
+  Detailpfad.
+- Evidenz: unabhängiger Review belegte `completeness=complete` trotz
+  vorhandener Diagnostics.
+- Disposition: `fix-now`
+- Risiko: strukturierte Health-Antwort kann Vollständigkeit falsch behaupten.
+- Nächster Schritt: zentrale Statusprojektion auch auf den Detailpfad anwenden
+  und mit Root-/transitiven Diagnostics testen.
+- Log-Anker: `execution-log.md`, completed EPIC-B Reviewer vom 2026-08-31.
+
+## TD-EPIC-B-004 — Compact-Health `ShownCount`
+
+- Schweregrad: P1
+- Beschreibung: Der kompakte Health-Modus leert Samples, übernimmt aber ihren
+  alten `ShownCount`; StructuredContent und Textdarstellung widersprechen sich.
+- Fundstelle/Scope: `AssemblyAnalysisResponseLimits.cs`, Compact-Health-Projektion.
+- Evidenz: unabhängiger Review belegte leere Samples mit Textdarstellung wie
+  `4 von 4`.
+- Disposition: `fix-now`
+- Risiko: maschinenlesbare und textuelle Antwortverträge sind inkonsistent.
+- Nächster Schritt: `ShownCount` an tatsächlich ausgegebene Samples koppeln und
+  Response-/E2E-Regression ergänzen.
+- Log-Anker: `execution-log.md`, completed EPIC-B Reviewer vom 2026-08-31.
+
+## TD-EPIC-B-005 — Globales Diagnostics-Sample-Budget
+
+- Schweregrad: P1
+- Beschreibung: Root-/transitive-/Aggregate-Samples werden separat begrenzt
+  und anschließend erneut dupliziert; Deduplizierung gilt nur für Counts.
+- Fundstelle/Scope: `AssemblyAnalysisResponseLimits.ProjectDiagnostics` und
+  Diagnostics-Antwortmodell.
+- Evidenz: unabhängiger Review belegte mögliche `ShownCount > TotalCount` und
+  fehlendes globales 4-KiB-Budget.
+- Disposition: `fix-now`
+- Risiko: Antwortgrößen- und Count-Vertrag kann unter Diagnostics-Last verletzt
+  werden.
+- Nächster Schritt: gemeinsame deduplizierte Sample-Projektion mit globalem
+  Bytebudget implementieren und mit Größen-/Truncationstests absichern.
+- Log-Anker: `execution-log.md`, completed EPIC-B Reviewer vom 2026-08-31.
 
 ## TD-EPIC-B-002 — `AssemblyAnalysisRegistry` Footprint
 

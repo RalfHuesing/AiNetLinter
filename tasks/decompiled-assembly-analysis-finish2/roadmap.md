@@ -2,7 +2,7 @@
 
 status: executing
 current_epic: EPIC-B
-correction_round: 0
+correction_round: 1
 cycle_state: normal
 last_commit: b0ebc8b4
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
@@ -13,7 +13,7 @@ tech_debt: siehe tech-debt.md
 - EPIC-A: done, nach Korrekturrunde 1 `approved`.
 - EPIC-B: in_progress, Implementierung seit Baseline `b0ebc8b4` abgeschlossen;
   Review steht aus.
-- Korrekturrunde: 0 für EPIC-B.
+- Korrekturrunde: 1 für EPIC-B; Review hat vier P1-Ursachen belegt.
 
 ## EPIC-A — Stabile In-Memory- und Dateipfade
 
@@ -49,6 +49,22 @@ tech_debt: siehe tech-debt.md
 - Verifikation: Response- und E2E-Tests für Root-/transitive Diagnostics,
   Truncation und festgelegtes Payload-Budget; gezielter Violations-Check.
 - Status: in_progress
+
+## EPIC-B-Review
+
+- diff-baseline: `b0ebc8b4`
+- Implementierungsstand: `f6a3f185`
+- Reviewstatus: ausstehend; P2/P3-Befunde sind in `tech-debt.md` erfasst.
+
+## EPIC-B-Korrekturrunde 1
+
+- Status: offen; vier gebündelte P1-Ursachen aus dem Review erfordern einen
+  frischen Implementierer.
+- Ursachen: `HEALTH-RAW-STATUS-PROJECTION`,
+  `HEALTH-COMPACT-SHOWNCOUNT`, `DIAGNOSTICS-SAMPLE-BUDGET` und
+  `EPIC-B-FORMATTER-COMPLEXITY`.
+- Begrenzung: erste von höchstens fünf EPIC-B-Korrekturrunden; danach folgt
+  genau ein frischer Folge-Review.
 
 ## EPIC-C — Ressourcen, Konfiguration und Lebensdauer
 

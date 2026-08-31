@@ -70,11 +70,13 @@
   vorhanden; alle abgefragten Dateien meldeten 0 Violations. `AssemblyAnalysisSession`
   ist mit 394 Codezeilen/44 Membern bereits nahe am Footprint-Budget, daher
   keine breite Zerlegung ohne konkreten EPIC-A-Bedarf.
-- EPIC-B-Kontext per MCP bestätigt: `InspectAssemblyTool` (194 Zeilen),
-  `FindAssemblyExtensionsTool` (114), `GetServerHealthTool` (73),
-  `GetServerHealthResponseBuilder` (184) und `AssemblyAnalysisDiagnostics`
-  sind die relevanten Einstiegspunkte; alle abgefragten Produktionsdateien
-  meldeten zunächst 0 Violations. Vor der Änderung verwendeten die Handler
+- EPIC-B-Kontext per MCP bestätigt: `InspectAssemblyTool` (182 Codezeilen;
+  Deklaration 17–216), `FindAssemblyExtensionsTool` (120; Deklaration 15–145),
+  `GetServerHealthTool` (69; Deklaration 28–104),
+  `GetServerHealthResponseBuilder` (206; Deklaration 16–237) und
+  `AssemblyAnalysisDiagnostics` sind die relevanten Einstiegspunkte; die
+  abgefragten Produktionsdateien meldeten im initialen Kontext zunächst 0
+  Violations. Vor der Änderung verwendeten die Handler
   `Take(100)` für aggregierte Diagnostics, begrenzten Referenzlisten nicht und
   Health gab Assembly-Diagnostics standardmäßig vollständig aus. EPIC-B führt
   dafür `AssemblyAnalysisResponseLimits` ein: 20 Diagnostics standardmäßig,
@@ -129,15 +131,21 @@
 - EPIC-A umfasst keine Cross-Assembly-Erweiterung aus EPIC-D.
 - EPIC-B projiziert nur Antwortdaten: Die bestehende Assembly-/Projekt-
   Trennung, Lease-/Snapshot-Ownership und Referenzexpansion bleiben
-  unverändert; Health expandiert Referenzen ausschließlich bei einer
-  expliziten Assembly-Detailabfrage.
+  unverändert; die gezielte Assembly-Health-Route expandiert Referenzen nur
+  bei `includeDiagnostics=true`, während die aggregierte Health-Sicht aus
+  Registry-Snapshots ohne transitive Expansion arbeitet.
 - Top-Level-`diagnostics` und `analysis.diagnostics` verwenden dieselben
   Samples; Text-Formatter iterieren ausschließlich über bereits projizierte
-  Listen. Counts und `truncatedBy` stammen aus denselben Rohdaten und Grenzen
-  wie die sichtbaren Samples.
-- `complete` mit mindestens einer Root- oder transitiven Diagnose wird über die
-  bestehende `ResolveEffectiveStatus`-Logik als `partial` und damit auch als
-  `completeness=partial` ausgegeben.
+  Listen. Die aggregierte Sample-Liste wird begrenzt, aber die Root-/transitiven
+  Summary-Samples werden derzeit separat budgetiert und können die Diagnose-
+  Nutzlast vervielfachen; `WithoutSamples` leert Samples, lässt aber
+  `ShownCount` unverändert.
+- `complete` mit mindestens einer Root- oder transitiven Diagnose wird in den
+  Inspect-/Extensions-Payloads und im `AssemblyAnalysisResponse` über die
+  bestehende `ResolveEffectiveStatus`-Logik als `partial` ausgegeben. Die
+  Health-Umwandlung `ToAssemblyEntry(AssemblyAnalysisLease)` übernimmt den
+  Rohstatus und muss diese Projektion für Expansion-Diagnostics noch separat
+  abbilden.
 - Leere physische Pfade dürfen in dekompilierten In-Memory-Dokumenten nicht zu
   `Path.GetFullPath`-/`relativeTo`-Fehlern in `get_call_tree`,
   `get_symbol_body` oder `dependency_graph` führen.
@@ -243,11 +251,12 @@
   Projektroot und den Scopes `src/AiNetLinter/Mcp`,
   `src/AiNetLinter.FastTests/Mcp/Assemblies` und
   `src/AiNetLinter.IntegrationTests/Mcp/Tools`: Tests jeweils 0; Produktion
-  5 Befunde. Davon sind vier neue Komplexitätsbefunde in
+  5 Befunde. Davon sind vier neue aktive Produktions-Regelbefunde in
   `FindAssemblyExtensionsTool.FormatText` (kognitive 21, zyklomatisch 15)
   und `GetServerHealthResponseBuilder.AppendAssemblySection` (kognitive 18,
   zyklomatisch 15), die nach dem vorgeschriebenen letzten Check nicht mehr
-  korrigiert wurden. Der fünfte Befund ist der bestehende
+  korrigiert wurden und im Review nicht als harmlose Deferred-Befunde gelten.
+  Der fünfte Befund ist der bestehende
   `AssemblyAnalysisRegistry`-AIContextFootprint (3594 > 2500), außerhalb des
-  EPIC-B-Response-Scopes. Diese Punkte bleiben als `promoted-to-project-debt`
-  für den Orchestrator sichtbar.
+  EPIC-B-Response-Scopes; er bleibt als `promoted-to-project-debt` für den
+  Orchestrator sichtbar.
