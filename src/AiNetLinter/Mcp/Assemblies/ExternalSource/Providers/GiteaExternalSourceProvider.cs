@@ -54,10 +54,7 @@ internal sealed class GiteaExternalSourceProvider : IExternalSourceProvider
                         : ExternalSourceCheckoutTrust.Unverified);
             }
 
-            snapshot = await MaterializeVerifiedAsync(
-                    mapping,
-                    checkout!,
-                    cancellationToken)
+            snapshot = await MaterializeVerifiedAsync(mapping, checkout!, cancellationToken)
                 .ConfigureAwait(false);
 
             if (!IsValidSnapshot(snapshot, mapping, checkout!))
@@ -82,7 +79,8 @@ internal sealed class GiteaExternalSourceProvider : IExternalSourceProvider
             return CreateMaterializationFailure(
                 snapshot,
                 checkout,
-                exception.CheckoutTrust);
+                exception.CheckoutTrust,
+                exception.FailureReason);
         }
         catch (Exception)
         {
@@ -153,13 +151,14 @@ internal sealed class GiteaExternalSourceProvider : IExternalSourceProvider
     private static ExternalSourceProviderResult CreateMaterializationFailure(
         ExternalSourceSnapshot? snapshot,
         ExternalSourceCheckoutHandle? checkout = null,
-        ExternalSourceCheckoutTrust checkoutTrust = ExternalSourceCheckoutTrust.Unverified)
+        ExternalSourceCheckoutTrust checkoutTrust = ExternalSourceCheckoutTrust.Unverified,
+        string? failureReason = null)
     {
         var diagnostics = new List<ExternalSourceConfigurationDiagnostic>
         {
             new(
                 ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionInvalid,
-                string.Empty,
+                failureReason ?? string.Empty,
                 "error",
                 "$repository"),
         };

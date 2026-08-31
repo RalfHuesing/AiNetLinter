@@ -9,6 +9,67 @@ using System.Text.Json;
 
 namespace AiNetLinter.Configuration;
 
+internal sealed record ExternalSourceResourceOptions
+{
+    internal const long DefaultMaxDiskBytes = 512L * 1024 * 1024;
+    internal const long DefaultMaxMemoryBytes = 512L * 1024 * 1024;
+    internal const int DefaultMaxParallelOperations = 4;
+    internal const int DefaultMaxResidentResources = 32;
+    internal const long MaxConfiguredBytes = long.MaxValue / 2;
+    internal static readonly TimeSpan DefaultIdleTtl = TimeSpan.FromMinutes(45);
+
+    internal ExternalSourceResourceOptions(
+        long maxDiskBytes = DefaultMaxDiskBytes,
+        long maxMemoryBytes = DefaultMaxMemoryBytes,
+        int maxParallelOperations = DefaultMaxParallelOperations,
+        int maxResidentResources = DefaultMaxResidentResources,
+        TimeSpan idleTtl = default)
+    {
+        if (maxDiskBytes <= 0 || maxDiskBytes > MaxConfiguredBytes)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxDiskBytes));
+        }
+
+        if (maxMemoryBytes <= 0 || maxMemoryBytes > MaxConfiguredBytes)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxMemoryBytes));
+        }
+
+        if (maxParallelOperations <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxParallelOperations));
+        }
+
+        if (maxResidentResources <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxResidentResources));
+        }
+
+        if (idleTtl < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(idleTtl));
+        }
+
+        MaxDiskBytes = maxDiskBytes;
+        MaxMemoryBytes = maxMemoryBytes;
+        MaxParallelOperations = maxParallelOperations;
+        MaxResidentResources = maxResidentResources;
+        IdleTtl = idleTtl > TimeSpan.Zero ? idleTtl : DefaultIdleTtl;
+    }
+
+    internal long MaxDiskBytes { get; }
+
+    internal long MaxMemoryBytes { get; }
+
+    internal int MaxParallelOperations { get; }
+
+    internal int MaxResidentResources { get; }
+
+    internal TimeSpan IdleTtl { get; }
+
+    internal static ExternalSourceResourceOptions Default => new();
+}
+
 internal sealed record ExternalSourceCacheOptions
 {
     internal const string InvalidCacheRootMessage =
@@ -20,7 +81,10 @@ internal sealed record ExternalSourceCacheOptions
     internal static readonly TimeSpan DefaultRefreshInterval =
         TimeSpan.FromMinutes(DefaultRefreshIntervalMinutes);
 
-    internal ExternalSourceCacheOptions(string cacheRoot, TimeSpan refreshInterval)
+    internal ExternalSourceCacheOptions(
+        string cacheRoot,
+        TimeSpan refreshInterval,
+        ExternalSourceResourceOptions? resourceOptions = null)
     {
         ArgumentNullException.ThrowIfNull(cacheRoot);
         CacheRoot = ExternalSourceConfigurationPath.TryCanonicalizeCacheRoot(cacheRoot)
@@ -33,11 +97,14 @@ internal sealed record ExternalSourceCacheOptions
         }
 
         RefreshInterval = refreshInterval;
+        ResourceOptions = resourceOptions ?? ExternalSourceResourceOptions.Default;
     }
 
     internal string CacheRoot { get; }
 
     internal TimeSpan RefreshInterval { get; }
+
+    internal ExternalSourceResourceOptions ResourceOptions { get; }
 
     internal static ExternalSourceCacheOptions Default => new(
         Path.Combine(AppContext.BaseDirectory, DefaultCacheDirectoryName),
@@ -143,6 +210,7 @@ internal static class ExternalSourceConfigurationDiagnosticCodes
     internal const string DuplicateField = "external-source-duplicate-field";
     internal const string CacheRootInvalid = "external-source-cache-root-invalid";
     internal const string RefreshIntervalInvalid = "external-source-refresh-interval-invalid";
+    internal const string ResourceLimitInvalid = "external-source-resource-limit-invalid";
     internal const string UrlInvalid = "external-source-url-invalid";
     internal const string SolutionPathInvalid = "external-source-solution-path-invalid";
     internal const string AssemblyListInvalid = "external-source-assembly-list-invalid";

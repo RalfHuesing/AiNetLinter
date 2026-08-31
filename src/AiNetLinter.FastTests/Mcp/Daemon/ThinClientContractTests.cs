@@ -14,7 +14,16 @@ public sealed class ThinClientContractTests
     [Fact]
     public void Launcher_ForwardsDaemonFlagsWithoutOwningStdoutOrStderr()
     {
-        var startInfo = ThinClientLauncher.CreateStartInfo(new ThinClientLaunchOptions(3.5m, 2, 0.25m, "BETA"));
+        var startInfo = ThinClientLauncher.CreateStartInfo(new ThinClientLaunchOptions(
+            3.5m,
+            2,
+            0.25m,
+            "BETA",
+            100,
+            200,
+            3,
+            5,
+            0.5m));
 
         Assert.False(startInfo.UseShellExecute);
         Assert.True(startInfo.CreateNoWindow);
@@ -24,6 +33,11 @@ public sealed class ThinClientContractTests
         Assert.Contains("--daemon-start", startInfo.ArgumentList);
         Assert.Contains("--mcp-project-ttl-minutes", startInfo.ArgumentList);
         Assert.Contains("--mcp-max-projects", startInfo.ArgumentList);
+        Assert.Contains("--mcp-external-max-disk-bytes", startInfo.ArgumentList);
+        Assert.Contains("--mcp-external-max-memory-bytes", startInfo.ArgumentList);
+        Assert.Contains("--mcp-external-max-parallel-operations", startInfo.ArgumentList);
+        Assert.Contains("--mcp-external-max-resident-resources", startInfo.ArgumentList);
+        Assert.Contains("--mcp-external-idle-ttl-minutes", startInfo.ArgumentList);
         Assert.Contains("--mcp-daemon-idle-exit-minutes", startInfo.ArgumentList);
         var instanceIndex = startInfo.ArgumentList.IndexOf("--daemon-instance");
         Assert.True(instanceIndex >= 0);

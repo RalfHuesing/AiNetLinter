@@ -22,7 +22,7 @@ public sealed class ExternalSourceConfigurationLoaderTests
         Assert.True(result.Succeeded);
         Assert.True(result.Configuration!.IsEmpty);
         Assert.Empty(result.Diagnostics);
-        AssertDefaultCacheOptions(result.Configuration);
+        ExternalSourceConfigurationAssertions.AssertDefaultCacheOptions(result.Configuration);
     }
 
     [Fact]
@@ -36,7 +36,7 @@ public sealed class ExternalSourceConfigurationLoaderTests
         Assert.True(result.Succeeded);
         Assert.True(result.Configuration!.IsEmpty);
         Assert.Empty(result.Diagnostics);
-        AssertDefaultCacheOptions(result.Configuration);
+        ExternalSourceConfigurationAssertions.AssertDefaultCacheOptions(result.Configuration);
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public sealed class ExternalSourceConfigurationLoaderTests
 
         Assert.False(result.Succeeded);
         Assert.Null(result.Configuration);
-        AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.CacheRootInvalid, "CacheRoot");
+        ExternalSourceConfigurationAssertions.AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.CacheRootInvalid, "CacheRoot");
         Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Message.Contains("secret", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -217,7 +217,7 @@ public sealed class ExternalSourceConfigurationLoaderTests
 
         Assert.False(result.Succeeded);
         Assert.Null(result.Configuration);
-        AssertDiagnosis(result, code, "RefreshIntervalMinutes");
+        ExternalSourceConfigurationAssertions.AssertDiagnosis(result, code, "RefreshIntervalMinutes");
     }
 
     [Fact]
@@ -248,7 +248,7 @@ public sealed class ExternalSourceConfigurationLoaderTests
 
         Assert.False(result.Succeeded);
         Assert.Null(result.Configuration);
-        AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.MappingsJsonInvalid, mappingsPath);
+        ExternalSourceConfigurationAssertions.AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.MappingsJsonInvalid, mappingsPath);
     }
 
     [Fact]
@@ -283,7 +283,7 @@ public sealed class ExternalSourceConfigurationLoaderTests
 
         Assert.False(result.Succeeded);
         Assert.Null(result.Configuration);
-        AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.RequiredFieldMissing, "($)");
+        ExternalSourceConfigurationAssertions.AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.RequiredFieldMissing, "($)");
         Assert.DoesNotContain(
             result.Diagnostics,
             diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.DuplicateField);
@@ -302,7 +302,7 @@ public sealed class ExternalSourceConfigurationLoaderTests
 
         Assert.False(result.Succeeded);
         Assert.Null(result.Configuration);
-        AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.UnknownField, "branch");
+        ExternalSourceConfigurationAssertions.AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.UnknownField, "branch");
     }
 
     [Fact]
@@ -337,7 +337,7 @@ public sealed class ExternalSourceConfigurationLoaderTests
         var result = ExternalSourceConfigurationLoader.Load(settingsPath);
 
         Assert.False(result.Succeeded);
-        AssertDiagnosis(result, code, "repositories[0]");
+        ExternalSourceConfigurationAssertions.AssertDiagnosis(result, code, "repositories[0]");
     }
 
     [Fact]
@@ -378,7 +378,7 @@ public sealed class ExternalSourceConfigurationLoaderTests
 
         Assert.False(result.Succeeded);
         Assert.Null(result.Configuration);
-        AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.AssemblyNameInvalid, "repositories[0].assemblies[0]");
+        ExternalSourceConfigurationAssertions.AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.AssemblyNameInvalid, "repositories[0].assemblies[0]");
     }
 
     [Fact]
@@ -390,7 +390,53 @@ public sealed class ExternalSourceConfigurationLoaderTests
         var result = ExternalSourceConfigurationLoader.Load(settingsPath);
 
         Assert.False(result.Succeeded);
-        AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.MappingsPathMissing, "ExternalSources");
+        ExternalSourceConfigurationAssertions.AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.MappingsPathMissing, "ExternalSources");
+    }
+
+    [Fact]
+    public void Load_ExterneRessourcenlimits_WerdenValidiertUndGespeichert()
+    {
+        using var tempDir = TestTempDirectory.Create("external-source-resource-limits-valid-");
+        var mappingsPath = tempDir.CreateFile("mappings.json", ValidMappings("Foo"));
+        var settingsPath = WriteSettings(
+            tempDir,
+            mappingsPath,
+            resourceFields: "\"MaxDiskBytes\": 100, \"MaxMemoryBytes\": 200, \"MaxParallelOperations\": 3, \"MaxResidentResources\": 5, \"IdleTtlMinutes\": 0.5");
+
+        var result = ExternalSourceConfigurationLoader.Load(settingsPath);
+
+        AssertSingleMapping(result);
+        var limits = result.Configuration!.CacheOptions.ResourceOptions;
+        Assert.Equal(100, limits.MaxDiskBytes);
+        Assert.Equal(200, limits.MaxMemoryBytes);
+        Assert.Equal(3, limits.MaxParallelOperations);
+        Assert.Equal(5, limits.MaxResidentResources);
+        Assert.Equal(TimeSpan.FromSeconds(30), limits.IdleTtl);
+    }
+
+    [Theory]
+    [InlineData("MaxDiskBytes", "0")]
+    [InlineData("MaxMemoryBytes", "-1")]
+    [InlineData("MaxParallelOperations", "0")]
+    [InlineData("MaxResidentResources", "0")]
+    [InlineData("IdleTtlMinutes", "0")]
+    [InlineData("MaxDiskBytes", "9223372036854775807")]
+    public void Load_UngueltigesExternesRessourcenlimit_LiefertFailClosedDiagnose(
+        string propertyName,
+        string value)
+    {
+        using var tempDir = TestTempDirectory.Create("external-source-resource-limits-invalid-");
+        var mappingsPath = tempDir.CreateFile("mappings.json", ValidMappings("Foo"));
+        var settingsPath = WriteSettings(
+            tempDir,
+            mappingsPath,
+            resourceFields: $"\"{propertyName}\": {value}");
+
+        var result = ExternalSourceConfigurationLoader.Load(settingsPath);
+
+        Assert.False(result.Succeeded);
+        Assert.Null(result.Configuration);
+        ExternalSourceConfigurationAssertions.AssertDiagnosis(result, ExternalSourceConfigurationDiagnosticCodes.ResourceLimitInvalid, propertyName);
     }
 
     [Fact]
@@ -421,7 +467,8 @@ public sealed class ExternalSourceConfigurationLoaderTests
         string mappingsPath,
         string? cacheRootJson = null,
         string? refreshIntervalJson = null,
-        string relativePath = "appsettings.json")
+        string relativePath = "appsettings.json",
+        string? resourceFields = null)
     {
         var fields = $"\"MappingsPath\": {JsonSerializer.Serialize(mappingsPath)}";
         if (cacheRootJson is not null)
@@ -434,6 +481,11 @@ public sealed class ExternalSourceConfigurationLoaderTests
             fields += $", \"RefreshIntervalMinutes\": {refreshIntervalJson}";
         }
 
+        if (resourceFields is not null)
+        {
+            fields += ", " + resourceFields;
+        }
+
         return tempDir.CreateFile(
             relativePath,
             $$"""{ "ExternalSources": { {{fields}} } }""");
@@ -442,26 +494,4 @@ public sealed class ExternalSourceConfigurationLoaderTests
     private static string ValidMappings(string assembly) =>
         $$"""{ "repositories": [{ "url": "https://gitea.example/shared.git", "solutionPath": "src/Shared.slnx", "assemblies": [{{JsonSerializer.Serialize(assembly)}}] }] }""";
 
-    private static void AssertDiagnosis(
-        ExternalSourceConfigurationLoadResult result,
-        string code,
-        string locationPart)
-    {
-        Assert.Contains(result.Diagnostics, diagnostic =>
-            diagnostic.Code == code
-            && diagnostic.Severity == "error"
-            && diagnostic.Location.Contains(locationPart, StringComparison.Ordinal));
-    }
-
-    private static void AssertDefaultCacheOptions(ExternalSourceConfiguration configuration)
-    {
-        Assert.Equal(
-            Path.GetFullPath(Path.Combine(
-                AppContext.BaseDirectory,
-                ExternalSourceCacheOptions.DefaultCacheDirectoryName)),
-            configuration.CacheOptions.CacheRoot);
-        Assert.Equal(
-            ExternalSourceCacheOptions.DefaultRefreshInterval,
-            configuration.CacheOptions.RefreshInterval);
-    }
 }

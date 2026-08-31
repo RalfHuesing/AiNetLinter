@@ -283,6 +283,33 @@ public sealed class AssemblyAnalysisRegistryTests
     }
 
     [Fact]
+    public async Task LeaseAsync_UsesConfiguredIdleTtlAndEvictsReleasedEntryBeforeRecreation()
+    {
+        using var temp = TestTempDirectory.Create("assembly-registry-idle-ttl-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "RegistryIdleTtl",
+            "namespace Probe; public sealed class Value { } ");
+        var clock = new ManualTimeProvider(DateTimeOffset.UtcNow);
+        using var resources = new ExternalResourceRegistry(new ExternalResourceRegistryOptions(
+            IdleTtl: TimeSpan.FromMinutes(1),
+            Clock: clock));
+        await using var registry = new AssemblyAnalysisRegistry(resourceRegistry: resources);
+
+        var first = await registry.LeaseAsync(assemblyPath);
+        var firstServer = first.Lease!.Server;
+        first.Lease.Dispose();
+        clock.Advance(TimeSpan.FromMinutes(2));
+
+        var second = await registry.LeaseAsync(assemblyPath);
+
+        Assert.NotNull(second.Lease);
+        Assert.NotSame(firstServer, second.Lease!.Server);
+        Assert.Equal(1, registry.ResidentCount);
+        second.Lease.Dispose();
+    }
+
+    [Fact]
     public async Task LeaseAsync_StableChurnStopsAfterBoundedFingerprintRetries()
     {
         using var temp = TestTempDirectory.Create("assembly-registry-churn-");
@@ -402,6 +429,15 @@ public sealed class AssemblyAnalysisRegistryTests
             DisposeCount++;
             if (throws) throw new InvalidOperationException("lifetime");
         }
+    }
+
+    private sealed class ManualTimeProvider(DateTimeOffset initial) : TimeProvider
+    {
+        private DateTimeOffset utcNow = initial;
+
+        internal void Advance(TimeSpan value) => utcNow += value;
+
+        public override DateTimeOffset GetUtcNow() => utcNow;
     }
 
     private sealed class TestRegistrySourceResolver(

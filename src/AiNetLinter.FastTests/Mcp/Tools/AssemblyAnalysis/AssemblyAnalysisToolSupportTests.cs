@@ -67,7 +67,8 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         Assert.Equal("source-backed", context.Origin.OriginKind);
         Assert.Contains(context.Diagnostics, diagnostic => diagnostic.Contains("provider-info", StringComparison.Ordinal));
         Assert.Equal("targetassembly", provider.Mapping!.Assemblies.Single());
-        Assert.Equal(cancellation.Token, provider.CancellationToken);
+        Assert.NotEqual(cancellation.Token, provider.CancellationToken);
+        Assert.True(provider.CancellationToken.CanBeCanceled);
         Assert.Equal(1, provider.CallCount);
     }
 
@@ -363,7 +364,8 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         Assert.Equal(ExternalSourceMatchState.Matched, observedScope!.Selection!.MatchResult.State);
         Assert.True(observedScope.Selection.SourceLease.IsDisposed);
         observedScope.Dispose();
-        Assert.Equal(cancellation.Token, provider.CancellationToken);
+        Assert.NotEqual(cancellation.Token, provider.CancellationToken);
+        Assert.True(provider.CancellationToken.CanBeCanceled);
         Assert.Equal("TargetAssembly", provider.Mapping!.Assemblies.Single());
         Assert.Equal(1, provider.CallCount);
         Assert.Equal(1, registry.ResidentCount);
@@ -426,7 +428,8 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         var orchestrator = CreateConfiguredOrchestrator(temp, ["TargetAssembly"], provider, registry);
         await Assert.ThrowsAsync<OperationCanceledException>(async () =>
             await orchestrator.ResolveAsync(assemblyPath, cancellation.Token));
-        Assert.Equal(cancellation.Token, provider.CancellationToken);
+        Assert.NotEqual(cancellation.Token, provider.CancellationToken);
+        Assert.True(provider.CancellationToken.CanBeCanceled);
         Assert.Equal(1, provider.CallCount);
     }
 

@@ -157,6 +157,7 @@ internal sealed record SourceSnapshotIdentity
     }
 
 }
+
 internal static class DisposeFailureAggregator
 {
     internal static void ThrowIfAny(List<Exception> failures)
@@ -191,18 +192,14 @@ internal sealed record ExternalSourceSnapshotResourceUsage(long DiskBytes, long 
             foreach (var path in Directory.EnumerateFiles(checkoutPath, "*", SearchOption.AllDirectories))
             {
                 totalBytes = checked(totalBytes + new FileInfo(path).Length);
-                if (totalBytes > ExternalResourceRegistryDefaults.MaxDiskBytes)
-                {
-                    return new(totalBytes, totalBytes);
-                }
             }
 
             var boundedBytes = Math.Max(1, totalBytes);
             return new(boundedBytes, boundedBytes);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or OverflowException)
         {
-            return new(1, 1);
+            return new(long.MaxValue, long.MaxValue);
         }
     }
 }

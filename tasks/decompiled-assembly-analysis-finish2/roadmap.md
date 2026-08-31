@@ -49,7 +49,7 @@ tech_debt: siehe tech-debt.md
   `partial` konsistent.
 - Verifikation: Response- und E2E-Tests für Root-/transitive Diagnostics,
   Truncation und festgelegtes Payload-Budget; gezielter Violations-Check.
-- Status: in_progress
+- Status: residual_open (P1; drei Versuche ausgeschöpft)
 
 ## EPIC-B-Restbefund nach drei Versuchen
 
@@ -83,17 +83,22 @@ tech_debt: siehe tech-debt.md
   Dispose während der Erzeugung sind deterministisch.
 - Verifikation: fokussierte TTL/LRU/Capacity/Lease/Race/Creation-Barrier-
   Tests; hohe Last nur in gezielten Stress-Tests; gezielter Violations-Check.
-- Status: in_progress
+- Status: review_pending
 
-## Aktueller Rollenlauf
+## EPIC-C-Implementierung — abgeschlossen, Review ausstehend
 
-- Rolle: EPIC-C-Implementierer
-- Subagent: `01a05585-ab4e-7652-b391-96fd81ed6d95`
-- Scope: validierte Ressourcen-/TTL-/LRU-/Lease-/Creation-Barrier-Verträge
-  und fokussierte Regressionen; EPIC-B-Restbefund bleibt unverändert.
-- Erwarteter Hand-off: Implementierung ohne Commit, Nachweise nach letzter
-  Codeänderung und präzise offene Befunde.
-- Warteverhalten: Polling-Timeouts führen nicht zu einem Interrupt.
+- Subagent: `01a05585-ab4e-7652-b391-96fd81ed6d95`; 43 Arbeitsbaum-Einträge,
+  ohne Agenten-Commit.
+- Ergebnis: gemeinsame validierte Disk-/Memory-/Parallelitäts-/Resident- und
+  Idle-TTL-Limits, JSON-/CLI-/Daemon-/ThinClient-Verdrahtung, LRU/TTL/
+  Capacity, Lease-Schutz, Parallelitätsslots, rollback-sichere Materialisierung
+  sowie deterministische Creation-Cancellation-/Dispose-Verträge.
+- Verifikation laut Rollenbericht: Build 0/0; EPIC-C-Fokus Fast 129/129,
+  Integration 4/4; vollständige Nicht-Stress-FastTests 2256 bestanden,
+  2 Skips; Integration 372/374. `get_violations` nur der bekannte
+  `AssemblyAnalysisRegistry`-Footprint.
+- Review: frischer Reviewer ausstehend; EPIC-C wird erst nach unabhängigem
+  Review als `done` markiert.
 
 ## EPIC-D — Mehrere Assemblies und tolerante Analyse
 

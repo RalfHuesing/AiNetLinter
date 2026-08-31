@@ -76,7 +76,7 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
         finally
         {
             operation?.Dispose();
-            if (!resourceTransferred) resourceLease?.Dispose();
+            if (!resourceTransferred) resourceLease?.DisposeAndRemove();
             AssemblyAnalysisRegistryDisposal.TryDispose(sourceScope, "Source-Selection-Scope");
         }
     }
@@ -111,7 +111,8 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                 context,
                 session,
                 parameters.ResourceLease,
-                referenceLeaseFactory(parameters.SourceSelection)));
+                referenceLeaseFactory(parameters.SourceSelection),
+                resourceBudget.Clock));
             session = null;
             return fallbackEntry;
         }
@@ -162,7 +163,8 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                 context,
                 resolution.Lifetime,
                 resourceLease,
-                referenceLeaseFactory(resolution.Selection)));
+                referenceLeaseFactory(resolution.Selection),
+                resourceBudget.Clock));
             return (entry, null, diagnostics, resolution.Selection);
         }
         catch

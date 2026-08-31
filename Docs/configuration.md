@@ -1597,7 +1597,12 @@ Mapping-Datei benennen:
   "ExternalSources": {
     "MappingsPath": "config/external-sources.json",
     "CacheRoot": "cache",
-    "RefreshIntervalMinutes": 60
+    "RefreshIntervalMinutes": 60,
+    "MaxDiskBytes": 536870912,
+    "MaxMemoryBytes": 536870912,
+    "MaxParallelOperations": 4,
+    "MaxResidentResources": 32,
+    "IdleTtlMinutes": 45
   }
 }
 ```
@@ -1645,6 +1650,23 @@ Bruchwerte, `null`, `0`, negative Werte und Überläufe führen zu einer struktu
 Konfigurationsdiagnose. Ein explizit ungültiges Feld aktiviert nicht stillschweigend
 den Default; der gesamte `ExternalSources`-Load schlägt fehl. Unbekannte oder
 doppelte Felder bleiben ebenfalls harte Fehler.
+
+Die fünf optionalen Ressourcenfelder begrenzen gemeinsam die externen
+Assembly- und Source-Snapshot-Registries: `MaxDiskBytes` und `MaxMemoryBytes`
+werden als positive Bytewerte, `MaxParallelOperations` und
+`MaxResidentResources` als positive Ganzzahlen und `IdleTtlMinutes` als positive
+Dezimalzahl gelesen. Die Defaults sind 512 MiB, 512 MiB, 4, 32 und 45 Minuten.
+Die Limits gelten für LRU-/TTL-Eviction, aktive Leases, Creation-/Materialisierungs-
+Operationen und das vor dem Workspace-Load reservierte Materialisierungsbudget.
+Ein vollständiger Settings-Load schlägt bei einem ungültigen Limit fail-closed
+mit einer strukturierten Diagnose fehl.
+
+Im MCP-/Daemon-Modus können die Settings mit den CLI-Overrides
+`--mcp-external-max-disk-bytes`, `--mcp-external-max-memory-bytes`,
+`--mcp-external-max-parallel-operations`, `--mcp-external-max-resident-resources`
+und `--mcp-external-idle-ttl-minutes` überschrieben werden. Die Overrides werden
+beim detached Daemon mitgeführt; fehlt ein Override, bleibt der Settingswert
+beziehungsweise der Default wirksam.
 
 ### MCP-Tool-Call-Logging
 

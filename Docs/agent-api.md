@@ -86,6 +86,11 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 | `--parent-pid <pid>` | int | Überwacht die Parent-PID im MCP-Modus; ohne Angabe automatische Ermittlung |
 | `--mcp-project-ttl-minutes <minuten>` | decimal | Idle-TTL der Projektregistry (InvariantCulture, Standard 45 Minuten) |
 | `--mcp-max-projects <anzahl>` | int | Maximale Zahl residenter Projekt-Keys (Standard 4) |
+| `--mcp-external-max-disk-bytes <bytes>` | long | Maximale externe Diskbelegung für Assembly-/Snapshot-Ressourcen |
+| `--mcp-external-max-memory-bytes <bytes>` | long | Maximale externe Speicherbelegung für Assembly-/Snapshot-Ressourcen |
+| `--mcp-external-max-parallel-operations <anzahl>` | int | Maximale parallele externe Creation-/Materialisierungsoperationen |
+| `--mcp-external-max-resident-resources <anzahl>` | int | Maximale Anzahl residenter externer Assembly-/Snapshot-Ressourcen |
+| `--mcp-external-idle-ttl-minutes <minuten>` | decimal | Idle-TTL externer Ressourcen (InvariantCulture) |
 | `--daemon-start` | bool | Startet den internen Named-Pipe-Daemonpfad (nicht für externe Client-Registrierungen) |
 | `--daemon-instance <id>` | string | Isoliert Named-Pipe-Endpunkt, Startup-Gate und MRU-State pro Daemon-Instanz; nur im MCP-/Daemon-Modus, sichere ASCII-ID mit maximal 32 Zeichen, invariant lowercase normalisiert |
 | `--mcp-daemon-idle-exit-minutes <minuten>` | decimal | Idle-Exit des internen DaemonHosts (Standard 10 Minuten) |

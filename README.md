@@ -90,6 +90,12 @@ Die ID wird invariant in Kleinbuchstaben normalisiert; `BETA` und `beta`
 verwenden deshalb denselben Named-Pipe-Endpunkt. Ohne ID bleibt der bisherige
 Named-Pipe-Endpunkt unverändert.
 
+Externe Assembly- und Source-Snapshot-Ressourcen werden über den vorhandenen
+`ExternalSources`-Abschnitt in `appsettings.json` begrenzt (Disk, Memory,
+Parallelität, residenter Bestand und Idle-TTL). Im MCP-/Daemon-Modus können
+dieselben Werte mit den `--mcp-external-*`-Flags überschrieben werden; die
+Limits gelten für beide externen Registries und für die Materialisierung.
+
 Jeder zielgebundene Tool-Aufruf erhält `targetType` (`project` oder `assembly`)
 und den absoluten `targetPath`. Die konkrete Capability-Matrix steht in
 `tools/list` und in [Docs/agent-api.md](Docs/agent-api.md#mcp-server-modus):

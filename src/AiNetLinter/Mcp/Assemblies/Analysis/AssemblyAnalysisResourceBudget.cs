@@ -3,14 +3,106 @@
 using System;
 using System.IO;
 using System.Threading;
+using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
+
+internal static class ExternalResourceRegistryDefaults
+{
+    internal const long MaxDiskBytes = ExternalSourceResourceOptions.DefaultMaxDiskBytes;
+    internal const long MaxMemoryBytes = ExternalSourceResourceOptions.DefaultMaxMemoryBytes;
+    internal const int MaxParallelOperations = ExternalSourceResourceOptions.DefaultMaxParallelOperations;
+    internal const int MaxResidentResources = ExternalSourceResourceOptions.DefaultMaxResidentResources;
+    internal static readonly TimeSpan IdleTtl = ExternalSourceResourceOptions.DefaultIdleTtl;
+}
+
+internal sealed record ExternalResourceRegistryOptions(
+    long MaxDiskBytes = ExternalResourceRegistryDefaults.MaxDiskBytes,
+    long MaxMemoryBytes = ExternalResourceRegistryDefaults.MaxMemoryBytes,
+    int MaxParallelOperations = ExternalResourceRegistryDefaults.MaxParallelOperations,
+    int MaxResidentResources = ExternalResourceRegistryDefaults.MaxResidentResources,
+    TimeSpan IdleTtl = default,
+    TimeProvider? Clock = null);
+
+internal enum ExternalResourceHealth
+{
+    Healthy,
+    Degraded,
+    CapacityExceeded,
+    Disposed,
+}
+
+internal sealed record ExternalResourceRequest(
+    string Identity,
+    long DiskBytes,
+    long MemoryBytes);
+
+internal sealed record ExternalResourceHealthSnapshot(
+    ExternalResourceHealth Health,
+    int ResidentResources,
+    int MaxResidentResources,
+    long DiskBytes,
+    long MaxDiskBytes,
+    long MemoryBytes,
+    long MaxMemoryBytes,
+    int ActiveOperations,
+    int MaxParallelOperations,
+    string? LastFailureReason);
+
+internal sealed record ExternalResourceAcquireResult(
+    ExternalResourceLease? Lease,
+    ExternalResourceHealthSnapshot Health,
+    string? FailureReason)
+{
+    internal bool Succeeded => Lease is not null;
+}
+
+internal sealed record ExternalResourceRegistryOverrides(
+    long? MaxDiskBytes = null,
+    long? MaxMemoryBytes = null,
+    int? MaxParallelOperations = null,
+    int? MaxResidentResources = null,
+    decimal? IdleTtlMinutes = null);
+
+internal static class ExternalResourceRegistryOptionsFactory
+{
+    internal static ExternalResourceRegistryOptions Create(
+        ExternalSourceResourceOptions configured,
+        ExternalResourceRegistryOverrides? overrides = null)
+    {
+        ArgumentNullException.ThrowIfNull(configured);
+        var idleTtl = ResolveIdleTtl(configured.IdleTtl, overrides?.IdleTtlMinutes);
+        return new(
+            overrides?.MaxDiskBytes ?? configured.MaxDiskBytes,
+            overrides?.MaxMemoryBytes ?? configured.MaxMemoryBytes,
+            overrides?.MaxParallelOperations ?? configured.MaxParallelOperations,
+            overrides?.MaxResidentResources ?? configured.MaxResidentResources,
+            idleTtl);
+    }
+
+    private static TimeSpan ResolveIdleTtl(TimeSpan configured, decimal? overrideMinutes)
+    {
+        if (overrideMinutes is null) return configured;
+        if (overrideMinutes <= 0 || overrideMinutes > (decimal)TimeSpan.MaxValue.TotalMinutes)
+        {
+            throw new ArgumentOutOfRangeException(nameof(overrideMinutes));
+        }
+
+        var ticks = decimal.ToInt64(overrideMinutes.Value * TimeSpan.TicksPerMinute);
+        if (ticks <= 0) throw new ArgumentOutOfRangeException(nameof(overrideMinutes));
+        return TimeSpan.FromTicks(ticks);
+    }
+}
 
 internal sealed class AssemblyAnalysisResourceBudget(ExternalResourceRegistry? registry)
 {
     internal bool IsEnabled => registry is not null;
 
     internal TimeSpan IdleTtl => registry?.IdleTtl ?? ExternalResourceRegistryDefaults.IdleTtl;
+
+    internal TimeProvider Clock => registry?.Clock ?? TimeProvider.System;
+
+    internal DateTime UtcNow => Clock.GetUtcNow().UtcDateTime;
 
     internal ExternalResourceHealthSnapshot? Health => registry?.Health;
 
@@ -21,10 +113,11 @@ internal sealed class AssemblyAnalysisResourceBudget(ExternalResourceRegistry? r
             return (null, null);
         }
 
+        var length = GetAssemblyLength(path);
         var acquired = registry.TryAcquire(new ExternalResourceRequest(
             path,
-            GetAssemblyLength(path),
-            GetAssemblyMemoryEstimate(path)));
+            length,
+            GetAssemblyMemoryEstimate(length, registry.Health.MaxMemoryBytes)));
         return (acquired.Lease, acquired.FailureReason);
     }
 
@@ -51,11 +144,9 @@ internal sealed class AssemblyAnalysisResourceBudget(ExternalResourceRegistry? r
         }
     }
 
-    private static long GetAssemblyMemoryEstimate(string path)
+    private static long GetAssemblyMemoryEstimate(long length, long maxMemoryBytes)
     {
-        var length = GetAssemblyLength(path);
-        return Math.Min(length, ExternalResourceRegistryDefaults.MaxMemoryBytes / 4) * 4;
+        var boundedLength = Math.Min(length, Math.Max(1, maxMemoryBytes / 4));
+        return Math.Min(maxMemoryBytes, checked(boundedLength * 4));
     }
 }
-
-internal sealed class ExternalResourceCapacityException(string message) : Exception(message);

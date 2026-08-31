@@ -31,6 +31,11 @@ internal sealed record CliOptions(
     Option<int?> ParentPid,
     Option<decimal?> McpProjectTtlMinutes,
     Option<int?> McpMaxProjects,
+    Option<long?> McpExternalMaxDiskBytes,
+    Option<long?> McpExternalMaxMemoryBytes,
+    Option<int?> McpExternalMaxParallelOperations,
+    Option<int?> McpExternalMaxResidentResources,
+    Option<decimal?> McpExternalIdleTtlMinutes,
     Option<bool> DaemonStart,
     Option<decimal?> McpDaemonIdleExitMinutes,
     Option<string?> DaemonInstance);
@@ -86,6 +91,11 @@ internal sealed record CliParsedArgs(
     int? ParentPid,
     decimal? McpProjectTtlMinutes,
     int? McpMaxProjects,
+    long? McpExternalMaxDiskBytes,
+    long? McpExternalMaxMemoryBytes,
+    int? McpExternalMaxParallelOperations,
+    int? McpExternalMaxResidentResources,
+    decimal? McpExternalIdleTtlMinutes,
     bool DaemonStart,
     decimal? McpDaemonIdleExitMinutes,
     string? DaemonInstance);

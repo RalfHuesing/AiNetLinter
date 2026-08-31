@@ -1,5 +1,7 @@
 #nullable enable
 
+using System;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Daemon;
 
 namespace AiNetLinter.Cli;
@@ -96,6 +98,31 @@ public sealed class LinterArgs
     /// Ohne Flag gilt der Registry-Default (4).
     /// </summary>
     public int? McpMaxProjects { get; init; }
+
+    /// <summary>
+    /// Optionale maximale externe Diskbelegung in Bytes für den MCP-/Daemon-Pfad.
+    /// </summary>
+    public long? McpExternalMaxDiskBytes { get; init; }
+
+    /// <summary>
+    /// Optionale maximale externe Speicherbelegung in Bytes für den MCP-/Daemon-Pfad.
+    /// </summary>
+    public long? McpExternalMaxMemoryBytes { get; init; }
+
+    /// <summary>
+    /// Optionale maximale Zahl paralleler externer Operationen.
+    /// </summary>
+    public int? McpExternalMaxParallelOperations { get; init; }
+
+    /// <summary>
+    /// Optionale maximale Zahl residenter externer Ressourcen.
+    /// </summary>
+    public int? McpExternalMaxResidentResources { get; init; }
+
+    /// <summary>
+    /// Optionale Idle-TTL externer Ressourcen in Minuten.
+    /// </summary>
+    public decimal? McpExternalIdleTtlMinutes { get; init; }
 
     /// <summary>
     /// Gibt an, ob der interne DaemonHost statt des stdio-MCP-Servers gestartet werden soll.
@@ -202,12 +229,48 @@ public sealed class LinterArgs
             return "[ERROR]: --mcp-max-projects muss groesser als 0 sein.";
         }
 
+        var externalResourceError = ValidateExternalResourceOverrides();
+        if (externalResourceError is not null)
+        {
+            return externalResourceError;
+        }
+
         if (McpDaemonIdleExitMinutes is <= 0)
         {
             return "[ERROR]: --mcp-daemon-idle-exit-minutes muss groesser als 0 sein.";
         }
 
         return null;
+    }
+
+    private string? ValidateExternalResourceOverrides()
+    {
+        if (McpExternalMaxDiskBytes is <= 0 or > ExternalSourceResourceOptions.MaxConfiguredBytes)
+        {
+            return $"[ERROR]: --mcp-external-max-disk-bytes muss zwischen 1 und {ExternalSourceResourceOptions.MaxConfiguredBytes} liegen.";
+        }
+
+        if (McpExternalMaxMemoryBytes is <= 0 or > ExternalSourceResourceOptions.MaxConfiguredBytes)
+        {
+            return $"[ERROR]: --mcp-external-max-memory-bytes muss zwischen 1 und {ExternalSourceResourceOptions.MaxConfiguredBytes} liegen.";
+        }
+
+        if (McpExternalMaxParallelOperations is <= 0)
+        {
+            return "[ERROR]: --mcp-external-max-parallel-operations muss groesser als 0 sein.";
+        }
+
+        if (McpExternalMaxResidentResources is <= 0)
+        {
+            return "[ERROR]: --mcp-external-max-resident-resources muss groesser als 0 sein.";
+        }
+
+        return McpExternalIdleTtlMinutes is { } externalIdleTtl
+            && (externalIdleTtl <= 0
+                || externalIdleTtl > (decimal)TimeSpan.MaxValue.TotalMinutes
+                || externalIdleTtl * TimeSpan.TicksPerMinute < 1)
+            ? "[ERROR]: --mcp-external-idle-ttl-minutes muss im positiven Bereich der TimeSpan liegen."
+            : null;
     }
 
     private bool IsPathMissing()

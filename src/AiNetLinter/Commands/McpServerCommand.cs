@@ -9,6 +9,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Logging;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Composition;
 using AiNetLinter.Mcp.Lifetime;
 using AiNetLinter.Mcp.Projects;
@@ -53,7 +54,13 @@ internal static class McpServerCommand
             Clock: TimeProvider.System,
             MaxProjects: args.McpMaxProjects ?? ProjectRegistryDefaults.MaxProjects,
             IdleTtl: args.McpProjectTtlMinutes is { } minutes ? TimeSpan.FromMinutes((double)minutes) : default));
-        await using var assemblyComposition = AssemblyAnalysisHostComposition.Create();
+        await using var assemblyComposition = AssemblyAnalysisHostComposition.Create(
+            resourceOverrides: new ExternalResourceRegistryOverrides(
+                args.McpExternalMaxDiskBytes,
+                args.McpExternalMaxMemoryBytes,
+                args.McpExternalMaxParallelOperations,
+                args.McpExternalMaxResidentResources,
+                args.McpExternalIdleTtlMinutes));
 
         var services = new ServiceCollection();
         var serverBuilder = services.AddMcpServer();

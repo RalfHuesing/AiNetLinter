@@ -4,6 +4,7 @@ using AiNetLinter.Cli;
 using AiNetLinter.Commands;
 using AiNetLinter.Logging;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Composition;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
@@ -38,7 +39,13 @@ internal static class DaemonHostCommand
             TimeProvider.System,
             maxProjects,
             args.McpProjectTtlMinutes is { } ttl ? TimeSpan.FromMinutes((double)ttl) : default));
-        await using var assemblyComposition = AssemblyAnalysisHostComposition.Create();
+        await using var assemblyComposition = AssemblyAnalysisHostComposition.Create(
+            resourceOverrides: new ExternalResourceRegistryOverrides(
+                args.McpExternalMaxDiskBytes,
+                args.McpExternalMaxMemoryBytes,
+                args.McpExternalMaxParallelOperations,
+                args.McpExternalMaxResidentResources,
+                args.McpExternalIdleTtlMinutes));
         var session = new DaemonMcpSession(
             runtimeContext => McpServerToolCollectionFactory.Build(
                 projectRegistry,

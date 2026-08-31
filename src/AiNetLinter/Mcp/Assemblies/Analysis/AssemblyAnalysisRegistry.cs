@@ -62,7 +62,7 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
     internal async Task<int> RunEvictionTickAsync()
     {
         var retirements = new List<Task>();
-        var now = DateTime.UtcNow;
+        var now = resourceBudget.UtcNow;
         AssemblyAnalysisRegistryEntryCreation[] candidates;
         lock (gate)
         {

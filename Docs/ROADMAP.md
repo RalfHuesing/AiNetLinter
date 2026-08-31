@@ -16,6 +16,11 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
   Heuristiken: optionale Exaktsuche für Typnamen, exakte OR-Mehrfachauswahl für Member,
   begrenzte Memberausgabe je Typ sowie strukturierte Parameterdaten aus dem Metadatenmodell
   (Name, Typ, `ref`-Art, Optionalität und Defaultwert).
+- [x] Externe Assembly-/Source-Snapshot-Ressourcen verwenden ein gemeinsames validiertes
+  Limitmodell für Disk, Memory, Parallelität, residenten Bestand und Idle-TTL. Die Werte
+  werden über den bestehenden `ExternalSources`-Settings-Abschnitt oder MCP-/Daemon-CLI-
+  Overrides in beide getrennten Registries verdrahtet; LRU/TTL, Leases, Creation-Cancellation
+  und rollback-sichere Materialisierungsreservierungen sind regressionsgesichert.
 
 ## MCP-Tool-Annotations (2026-08-26)
 

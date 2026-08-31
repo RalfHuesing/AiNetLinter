@@ -8,7 +8,17 @@ using AiNetLinter.Mcp.Assemblies.Analysis;
 
 namespace AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 
-internal sealed class SourceSnapshotRegistry : IDisposable
+internal interface IAssemblySourceSelectionSnapshotRegistry
+    : IDisposable
+{
+    int ResidentCount { get; }
+
+    ExternalResourceOperationLease BeginOperation(CancellationToken cancellationToken);
+
+    SourceSnapshotLease Acquire(ExternalSourceSnapshot snapshot);
+}
+
+internal sealed class SourceSnapshotRegistry : IDisposable, IAssemblySourceSelectionSnapshotRegistry
 {
     private readonly Lock gate = new();
     private readonly Dictionary<string, SourceSnapshotEntry> snapshots = new(StringComparer.Ordinal);
@@ -34,6 +44,8 @@ internal sealed class SourceSnapshotRegistry : IDisposable
     }
 
     internal ExternalResourceHealthSnapshot Health => resources.Health;
+
+    int IAssemblySourceSelectionSnapshotRegistry.ResidentCount => ResidentCount;
 
     internal ExternalResourceOperationLease BeginOperation(CancellationToken cancellationToken)
     {
@@ -70,6 +82,14 @@ internal sealed class SourceSnapshotRegistry : IDisposable
             resolution.Entry!.Snapshot,
             resolution.ConsumerLease);
     }
+
+    ExternalResourceOperationLease IAssemblySourceSelectionSnapshotRegistry.BeginOperation(
+        CancellationToken cancellationToken) =>
+        BeginOperation(cancellationToken);
+
+    SourceSnapshotLease IAssemblySourceSelectionSnapshotRegistry.Acquire(
+        ExternalSourceSnapshot snapshot) =>
+        Acquire(snapshot);
 
     private AcquireResolution ResolveAcquire(ExternalSourceSnapshot snapshot)
     {
@@ -230,10 +250,12 @@ internal sealed class SourceSnapshotRegistry : IDisposable
 
     internal int EvictIdle()
     {
-        var identities = resources.EvictIdleIdentities();
         List<SourceSnapshotEntry> evicted;
         lock (gate)
         {
+            // Acquire verwendet dieselbe Sperre vor dem Zugriff auf das Ressourcenregister.
+            // Diese Reihenfolge hält Eviction und Snapshot-Besitz in einer Transaktion.
+            var identities = resources.EvictIdleIdentities();
             evicted = RemoveEntriesNoLock(identities);
         }
 

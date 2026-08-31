@@ -55,7 +55,8 @@ internal sealed class AssemblyAnalysisSourceProjectEntryFactory
                 context,
                 projectLease,
                 parameters.ResourceLease,
-                referenceLeaseFactory(selection)));
+                referenceLeaseFactory(selection),
+                resourceBudget.Clock));
             resourceTransferred = true;
             sourceTransferred = true;
             projectLease = null;
@@ -64,7 +65,7 @@ internal sealed class AssemblyAnalysisSourceProjectEntryFactory
         finally
         {
             operation?.Dispose();
-            if (!resourceTransferred) parameters.ResourceLease?.Dispose();
+            if (!resourceTransferred) parameters.ResourceLease?.DisposeAndRemove();
             if (!sourceTransferred) projectLease?.Dispose();
         }
     }
@@ -77,4 +78,3 @@ internal sealed record AssemblyAnalysisSourceProjectEntryCreationParameters(
     ExternalResourceLease? ResourceLease,
     AssemblySourceSelection ParentSelection,
     Project Project);
-

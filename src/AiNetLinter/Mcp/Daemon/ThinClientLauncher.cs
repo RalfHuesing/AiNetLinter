@@ -11,7 +11,12 @@ internal sealed record ThinClientLaunchOptions(
     decimal? ProjectTtlMinutes,
     int? MaxProjects,
     decimal? IdleExitMinutes,
-    string? DaemonInstance)
+    string? DaemonInstance,
+    long? ExternalMaxDiskBytes = null,
+    long? ExternalMaxMemoryBytes = null,
+    int? ExternalMaxParallelOperations = null,
+    int? ExternalMaxResidentResources = null,
+    decimal? ExternalIdleTtlMinutes = null)
 {
     internal ThinClientLaunchOptions(decimal? projectTtlMinutes, int? maxProjects, decimal? idleExitMinutes)
         : this(projectTtlMinutes, maxProjects, idleExitMinutes, null)
@@ -68,6 +73,11 @@ internal static class ThinClientLauncher
         startInfo.ArgumentList.Add(CliOptionFactory.DaemonStart);
         AddOption(startInfo, CliOptionFactory.McpProjectTtlMinutes, options.ProjectTtlMinutes);
         AddOption(startInfo, CliOptionFactory.McpMaxProjects, options.MaxProjects);
+        AddOption(startInfo, CliOptionFactory.McpExternalMaxDiskBytes, options.ExternalMaxDiskBytes);
+        AddOption(startInfo, CliOptionFactory.McpExternalMaxMemoryBytes, options.ExternalMaxMemoryBytes);
+        AddOption(startInfo, CliOptionFactory.McpExternalMaxParallelOperations, options.ExternalMaxParallelOperations);
+        AddOption(startInfo, CliOptionFactory.McpExternalMaxResidentResources, options.ExternalMaxResidentResources);
+        AddOption(startInfo, CliOptionFactory.McpExternalIdleTtlMinutes, options.ExternalIdleTtlMinutes);
         AddOption(startInfo, CliOptionFactory.McpDaemonIdleExitMinutes, options.IdleExitMinutes);
         AddOption(startInfo, CliOptionFactory.DaemonInstance, DaemonInstanceId.Normalize(options.DaemonInstance));
         return startInfo;

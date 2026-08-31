@@ -136,6 +136,11 @@ public static class Program
             ParentPid = parsed.ParentPid,
             McpProjectTtlMinutes = parsed.McpProjectTtlMinutes,
             McpMaxProjects = parsed.McpMaxProjects,
+            McpExternalMaxDiskBytes = parsed.McpExternalMaxDiskBytes,
+            McpExternalMaxMemoryBytes = parsed.McpExternalMaxMemoryBytes,
+            McpExternalMaxParallelOperations = parsed.McpExternalMaxParallelOperations,
+            McpExternalMaxResidentResources = parsed.McpExternalMaxResidentResources,
+            McpExternalIdleTtlMinutes = parsed.McpExternalIdleTtlMinutes,
             McpDaemonIdleExitMinutes = parsed.McpDaemonIdleExitMinutes,
             DaemonInstance = parsed.DaemonInstance,
         };

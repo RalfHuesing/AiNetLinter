@@ -350,6 +350,14 @@ abgelehnt. Die Projektregistry verwendet standardmäßig 45 Minuten Idle-TTL und
 höchstens 4 Keys; beide Werte können über `--mcp-project-ttl-minutes` und
 `--mcp-max-projects` angepasst werden.
 
+Die getrennten externen Assembly-/Snapshot-Registries verwenden die Limits aus
+`ExternalSources` in `appsettings.json` (Disk, Memory, Parallelität, residenter
+Bestand und Idle-TTL). Für MCP-/Daemon-Aufrufe stehen dafür die fünf
+`--mcp-external-*`-Overrides zur Verfügung; der ThinClient reicht sie beim
+detached Start an denselben Daemon weiter. Materialisierungen reservieren ihr
+geschätztes Disk-/Memory-Budget vor dem Workspace-Load und geben es bei
+Cancellation oder Fehler rollback-sicher frei.
+
 **stdout-Schutz:** der registrierte `ainetlinter`-Prozess nutzt `stdout` **ausschliesslich** für JSON-RPC. Der ThinClient startet bei Bedarf den detached Daemon, verarbeitet nur den Pipe-Level-Handshake und pumpt die MCP-Bytes danach opak; weder MCP-SDK noch JSON-RPC werden im ThinClient geladen. Status-, Retry- und Hängerdiagnosen gehen auf `stderr` (siehe [Docs/agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung](agent-api.md#stdout-schutz-strukturelle-json-rpc-absicherung)).
 
 ### Daemon-Transport: interner Hostpfad

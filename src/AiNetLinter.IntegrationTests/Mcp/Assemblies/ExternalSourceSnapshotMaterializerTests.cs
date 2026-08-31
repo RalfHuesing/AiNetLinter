@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.TestKit;
 using Xunit;
 
@@ -150,6 +151,47 @@ public sealed class ExternalSourceSnapshotMaterializerTests
         Assert.False(checkout.IsDisposed);
         checkout.Dispose();
         Assert.False(Directory.Exists(checkoutPath));
+    }
+
+    [Fact]
+    public async Task MaterializeAsync_RejectsCheckoutBeforeWorkspaceLoadWhenBudgetIsExceeded()
+    {
+        using var fixture = IsolatedFixtureLease.CopyFixture(
+            SolutionRootLocator.Find(),
+            "BaselineMini",
+            "external-source-materializer-budget-fixture-");
+        using var staging = TestTempDirectory.Create("external-source-materializer-budget-staging-");
+        var checkoutPath = staging.GetPath("checkout");
+        Directory.Move(fixture.RootPath, checkoutPath);
+        var ownershipToken = "materializer-budget-owner";
+        var ownership = new ExternalSourceCheckoutOwnership(
+            staging.DirectoryPath,
+            checkoutPath,
+            ownershipToken);
+        File.WriteAllText(ownership.OwnershipMarkerPath, ownershipToken);
+        var checkout = new ExternalSourceCheckoutHandle(
+            ownership,
+            Path.Combine(checkoutPath, "BaselineMini.slnx"),
+            "0123456789abcdef0123456789abcdef01234567",
+            ExternalSourceCheckoutAttestation.ForTesting(
+                checkoutPath,
+                "0123456789abcdef0123456789abcdef01234567"));
+        var mapping = new ExternalSourceMapping(
+            "https://gitea.example/shared.git",
+            "BaselineMini.slnx",
+            ["BaselineMini"]);
+        using var resources = new ExternalResourceRegistry(new ExternalResourceRegistryOptions(
+            MaxDiskBytes: 1,
+            MaxMemoryBytes: 1));
+        var materializer = new ExternalSourceSnapshotMaterializer(resources);
+
+        var failure = await Assert.ThrowsAsync<ExternalSourceSnapshotMaterializationException>(
+            () => materializer.MaterializeAsync(mapping, checkout).AsTask());
+
+        Assert.Contains("Diskbudget", failure.FailureReason, StringComparison.Ordinal);
+        Assert.Equal(0, resources.ResidentCount);
+        Assert.False(checkout.IsDisposed);
+        checkout.Dispose();
     }
 
     private static bool TryMutate(string path)

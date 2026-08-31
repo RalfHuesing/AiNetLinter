@@ -17,6 +17,11 @@ internal static class CliOptionFactory
     internal const string McpServer = "--mcp-server";
     internal const string McpProjectTtlMinutes = "--mcp-project-ttl-minutes";
     internal const string McpMaxProjects = "--mcp-max-projects";
+    internal const string McpExternalMaxDiskBytes = "--mcp-external-max-disk-bytes";
+    internal const string McpExternalMaxMemoryBytes = "--mcp-external-max-memory-bytes";
+    internal const string McpExternalMaxParallelOperations = "--mcp-external-max-parallel-operations";
+    internal const string McpExternalMaxResidentResources = "--mcp-external-max-resident-resources";
+    internal const string McpExternalIdleTtlMinutes = "--mcp-external-idle-ttl-minutes";
     internal const string McpDaemonIdleExitMinutes = "--mcp-daemon-idle-exit-minutes";
     internal const string DaemonInstance = "--daemon-instance";
 
@@ -140,6 +145,31 @@ internal static class CliOptionFactory
     {
         Description = "Optionale maximale Anzahl residenter Projekt-Keys in der Projekt-Registry (LRU-Rahmen). Ohne Flag gilt der Default von 4.",
     };
+
+    internal static Option<long?> CreateMcpExternalMaxDiskBytesOption() => new(McpExternalMaxDiskBytes)
+    {
+        Description = "Optionale maximale externe Diskbelegung in Bytes (positiver Wert). Ohne Flag gilt ExternalSources:MaxDiskBytes oder der Default von 512 MiB.",
+    };
+
+    internal static Option<long?> CreateMcpExternalMaxMemoryBytesOption() => new(McpExternalMaxMemoryBytes)
+    {
+        Description = "Optionale maximale externe Speicherbelegung in Bytes (positiver Wert). Ohne Flag gilt ExternalSources:MaxMemoryBytes oder der Default von 512 MiB.",
+    };
+
+    internal static Option<int?> CreateMcpExternalMaxParallelOperationsOption() => new(McpExternalMaxParallelOperations)
+    {
+        Description = "Optionale maximale Zahl paralleler externer Creation-/Materialisierungsoperationen (positiver Wert).",
+    };
+
+    internal static Option<int?> CreateMcpExternalMaxResidentResourcesOption() => new(McpExternalMaxResidentResources)
+    {
+        Description = "Optionale maximale Zahl residenter externer Assembly-/Snapshot-Ressourcen (positiver Wert).",
+    };
+
+    internal static Option<decimal?> CreateMcpExternalIdleTtlOption() =>
+        CreateInvariantDecimalOption(
+            McpExternalIdleTtlMinutes,
+            "Optionale Idle-TTL externer Assembly-/Snapshot-Ressourcen in Minuten (positive Dezimalwerte, InvariantCulture). Ohne Flag gilt ExternalSources:IdleTtlMinutes oder der Default von 45 Minuten.");
 
     internal static Option<decimal?> CreateMcpDaemonIdleExitOption() =>
         CreateInvariantDecimalOption(

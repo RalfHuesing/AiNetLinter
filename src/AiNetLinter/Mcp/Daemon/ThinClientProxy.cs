@@ -129,7 +129,12 @@ internal static class ThinClientProxy
         args.McpProjectTtlMinutes,
         args.McpMaxProjects,
         args.McpDaemonIdleExitMinutes,
-        args.DaemonInstance);
+        args.DaemonInstance,
+        args.McpExternalMaxDiskBytes,
+        args.McpExternalMaxMemoryBytes,
+        args.McpExternalMaxParallelOperations,
+        args.McpExternalMaxResidentResources,
+        args.McpExternalIdleTtlMinutes);
 
     internal static async Task<ThinClientConnection> ConnectOrStartAsync(
         ThinClientLaunchOptions options,

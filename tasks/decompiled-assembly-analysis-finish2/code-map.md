@@ -316,3 +316,59 @@
   Der letzte codebezogene `get_violations`-Nachweis meldete im Produktionsscope
   ausschließlich den bestehenden `AssemblyAnalysisRegistry`-Footprint; die
   FastTests- und IntegrationTests-Scopes meldeten jeweils 0 Violations.
+
+## EPIC-C — Ressourcen, Konfiguration und Lebensdauer
+
+- `src/AiNetLinter/Configuration/ExternalSourceConfiguration.cs` erweitert den
+  bestehenden `ExternalSources`-Settings-Vertrag um ein validiertes gemeinsames
+  Optionsmodell für Disk, Memory, Parallelität, residenten Bestand und Idle-TTL.
+  `ExternalSourceResourceOptionsLoader` liest dieselben fünf Felder fail-closed
+  aus dem vorhandenen JSON-Abschnitt; Defaultwerte bleiben 512 MiB, 512 MiB, 4,
+  32 und 45 Minuten.
+- `AssemblyAnalysisHostComposition` erzeugt aus Settings und optionalen
+  `ExternalResourceRegistryOverrides` zwei getrennte, gleich konfigurierte
+  `ExternalResourceRegistry`-Instanzen: eine für Assembly-Sessions und eine für
+  Source-Snapshots. Die fünf MCP-/Daemon-CLI-Overrides werden über
+  `CliOptions`/`LinterArgs`, den ThinClient und beide Startpfade bis dorthin
+  weitergereicht; die Projektregistry bleibt getrennt.
+- `ExternalResourceRegistry` bildet Capacity, LRU/TTL, aktive Leases,
+  Parallelitäts-Slots und in-flight Materialisierungsreservierungen unter einer
+  Sperre ab. `SourceSnapshotRegistry` hält dieselbe Sperrreihenfolge für Acquire
+  und Eviction; aktive Snapshot-Leases bleiben dadurch vor Eviction/Dispose
+  geschützt. Die Lease-Typen in `AssemblyAnalysisRegistryEntryCreation` stellen
+  idempotente Consumer-, Owner-, Reservation- und Operation-Leases bereit.
+- `ExternalSourceSnapshotMaterializer` reserviert die konservativ aus dem
+  vollständigen Checkout geschätzten Disk-/Memorykosten vor dem Workspace-Load
+  und gibt die Reservation bei Erfolg, Fehler oder Cancellation frei.
+  `ExternalSourceRepositoryCacheMaterializer` bereinigt einen frisch reservierten
+  Checkout bei Materialisierungsfehlern rollback-sicher und bewahrt die
+  ursprüngliche Exception.
+- `AssemblyAnalysisEntry` erhält die Registry-Zeitquelle für deterministische
+  TTL-Tests; Factory-Fehler und Entry-Dispose entfernen Owner-Leases aus dem
+  Ressourcenregister. `AssemblySourceProviderCreation` trennt Producer-CTS von
+  wartenden Consumer-`WaitAsync`-Tokens, räumt abgelehnte Snapshots auf und
+  behandelt Dispose während der Creation deterministisch.
+- Regressionen liegen in `ExternalResourceRegistryTests`,
+  `SourceSnapshotRegistryTests`, `AssemblyAnalysisRegistryTests`,
+  `AssemblyAnalysisHostCompositionTests`,
+  `AssemblyAnalysisToolSupportCreationBarrierTests`, den CLI-/ThinClient-
+  Vertragstests und `ExternalSourceSnapshotMaterializerTests`.
+- Der EPIC-C-Abschlussaudit prüfte den Produktionsscope mit `find_duplicates`,
+  `find_dead_code` und `find_magic_values`: Es bleiben 3 bestehende
+  Clone-Cluster, 37 Low-/0 High-Confidence-Dead-Code-Heuristiken und 10
+  einmalige Vertrags-/Fehlertexte. Die sichere Zentralisierung der
+  Ressourcenidentitätsmeldung und der gemeinsame Snapshot-Disposal-Helper
+  sind enthalten. Der letzte Produktions-`get_violations`-Nachweis meldet
+  ausschließlich den bestehenden `AssemblyAnalysisRegistry`-
+  `AIContextFootprint` (3893 > 2500); EPIC-B
+  `DIAGNOSTICS-SAMPLE-BUDGET` wurde nicht erneut geöffnet.
+
+## EPIC-C-Verifikation
+
+- `dotnet build --no-restore`: 0 Warnungen, 0 Fehler.
+- EPIC-C-Fokus: FastTests 129/129 und
+  `ExternalSourceSnapshotMaterializerTests` 4/4.
+- Vollständige Nicht-Stress-Gates: FastTests 2256 bestanden, 2 Skips;
+  IntegrationTests 372/374. Die zwei verbleibenden Fehler sind die bekannten
+  externen MCP-Registrierungs-/Beschreibungstext-Verträge `ambiguous` und
+  `sortBy`; der CLI-Dogfood-Lauf ist grün. Stress wurde nicht ausgeführt.

@@ -3,8 +3,10 @@
 using System;
 using System.Collections.Immutable;
 using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 using Microsoft.CodeAnalysis;
+using Serilog;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
@@ -113,3 +115,131 @@ internal sealed record AssemblyAnalysisContextRequest(
     string? ReceiverType,
     AssemblySourceSelection? SourceSelection,
     CancellationToken CancellationToken);
+
+internal sealed class AssemblySourceProviderCreation
+{
+    private readonly CancellationTokenSource cancellation = new();
+    private readonly CancellationToken creationToken;
+    private ExternalSourceProviderResult? completedResult;
+    private int waiters;
+    private int completed;
+    private int snapshotAccepted;
+    private int resultDisposed;
+
+    internal AssemblySourceProviderCreation()
+    {
+        creationToken = cancellation.Token;
+    }
+
+    internal CancellationToken CreationToken => creationToken;
+
+    internal TaskCompletionSource<ExternalSourceProviderResult> Completion { get; } =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    internal void AddWaiter() => Interlocked.Increment(ref waiters);
+
+    internal bool TrySetResult(ExternalSourceProviderResult result)
+    {
+        if (!Completion.TrySetResult(result)) return false;
+        completedResult = result;
+        return true;
+    }
+
+    internal void ReleaseWaiter(bool accepted)
+    {
+        if (accepted) Interlocked.Exchange(ref snapshotAccepted, 1);
+        if (Interlocked.Decrement(ref waiters) == 0
+            && Volatile.Read(ref completed) != 0
+            && Volatile.Read(ref snapshotAccepted) == 0)
+        {
+            DisposeResultSnapshot();
+        }
+    }
+
+    internal void Complete()
+    {
+        Interlocked.Exchange(ref completed, 1);
+        if (Volatile.Read(ref waiters) == 0
+            && Volatile.Read(ref snapshotAccepted) == 0)
+        {
+            DisposeResultSnapshot();
+        }
+
+        cancellation.Dispose();
+    }
+
+    internal void Cancel()
+    {
+        try
+        {
+            cancellation.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Der Producer ist parallel fertig geworden; seine Completion ist bereits final.
+        }
+
+        Completion.TrySetCanceled(creationToken);
+    }
+
+    internal void DisposeRejectedResult(ExternalSourceProviderResult result)
+    {
+        ExternalSourceSnapshotDisposal.DisposeBestEffort(
+            result.SourceSnapshot,
+            "Provider-Creation nach Orchestrator-Dispose");
+    }
+
+    private void DisposeResultSnapshot()
+    {
+        if (Interlocked.Exchange(ref resultDisposed, 1) != 0) return;
+        var result = Volatile.Read(ref completedResult);
+        if (result is not null)
+        {
+            ExternalSourceSnapshotDisposal.DisposeBestEffort(
+                result.SourceSnapshot,
+                "Provider-Creation ohne Consumer-Lease");
+        }
+    }
+}
+
+internal static class ExternalSourceSnapshotDisposal
+{
+    internal static void DisposeBestEffort(ExternalSourceSnapshot? snapshot, string reason)
+    {
+        try
+        {
+            snapshot?.Dispose();
+        }
+        catch (Exception exception)
+        {
+            Log.Warning(exception, "External-Source-Snapshot konnte nicht vollständig freigegeben werden: Grund={Reason}", reason);
+        }
+    }
+}
+
+internal sealed class AssemblySourceProviderResultLease : IDisposable
+{
+    private readonly AssemblySourceProviderCreation creation;
+    private int accepted;
+    private int disposed;
+
+    internal AssemblySourceProviderResultLease(
+        AssemblySourceProviderCreation creation,
+        ExternalSourceProviderResult result)
+    {
+        this.creation = creation;
+        Result = result;
+    }
+
+    internal ExternalSourceProviderResult Result { get; }
+
+    internal void AcceptSnapshot() => Interlocked.Exchange(ref accepted, 1);
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref disposed, 1) == 0)
+        {
+            creation.ReleaseWaiter(Volatile.Read(ref accepted) != 0);
+        }
+    }
+}

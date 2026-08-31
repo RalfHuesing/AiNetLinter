@@ -100,6 +100,29 @@ public sealed class ProgramParsingTests
     }
 
     [Fact]
+    public void CliCommandBuilder_ParsesExternalResourceOverrides()
+    {
+        var (root, options) = CliCommandBuilder.Build();
+        var result = root.Parse(new[]
+        {
+            "--mcp-server",
+            "--mcp-external-max-disk-bytes", "100",
+            "--mcp-external-max-memory-bytes", "200",
+            "--mcp-external-max-parallel-operations", "3",
+            "--mcp-external-max-resident-resources", "5",
+            "--mcp-external-idle-ttl-minutes", "0.5",
+        });
+        Assert.Empty(result.Errors);
+
+        var parsed = CliCommandBuilder.Parse(result, options);
+        Assert.Equal(100, parsed.McpExternalMaxDiskBytes);
+        Assert.Equal(200, parsed.McpExternalMaxMemoryBytes);
+        Assert.Equal(3, parsed.McpExternalMaxParallelOperations);
+        Assert.Equal(5, parsed.McpExternalMaxResidentResources);
+        Assert.Equal(0.5m, parsed.McpExternalIdleTtlMinutes);
+    }
+
+    [Fact]
     public void CliCommandBuilder_Parses_DaemonStartAndIdleExit()
     {
         var (root, options) = CliCommandBuilder.Build();
@@ -176,12 +199,66 @@ public sealed class ProgramParsingTests
         Assert.Contains("mcp-daemon-idle-exit-minutes", args.Validate());
     }
 
+    [Fact]
+    public void LinterArgs_RejectsNonPositiveExternalResourceOverrides()
+    {
+        var invalidArguments = new[]
+        {
+            new LinterArgs
+            {
+                TargetPath = string.Empty,
+                McpServer = true,
+                McpExternalMaxDiskBytes = 0,
+                Verbose = false,
+            },
+            new LinterArgs
+            {
+                TargetPath = string.Empty,
+                McpServer = true,
+                McpExternalMaxMemoryBytes = 0,
+                Verbose = false,
+            },
+            new LinterArgs
+            {
+                TargetPath = string.Empty,
+                McpServer = true,
+                McpExternalMaxParallelOperations = 0,
+                Verbose = false,
+            },
+            new LinterArgs
+            {
+                TargetPath = string.Empty,
+                McpServer = true,
+                McpExternalMaxResidentResources = 0,
+                Verbose = false,
+            },
+            new LinterArgs
+            {
+                TargetPath = string.Empty,
+                McpServer = true,
+                McpExternalIdleTtlMinutes = 0,
+                Verbose = false,
+            },
+            new LinterArgs
+            {
+                TargetPath = string.Empty,
+                McpServer = true,
+                McpExternalIdleTtlMinutes = 0.0000000001m,
+                Verbose = false,
+            },
+        };
+
+        Assert.All(invalidArguments, arguments => Assert.Contains("mcp-external", arguments.Validate()));
+    }
+
     [Theory]
     [InlineData("--mcp-project-ttl-minutes", "abc")]
     [InlineData("--mcp-project-ttl-minutes", "1,5")]
     [InlineData("--mcp-max-projects", "vier")]
     [InlineData("--mcp-daemon-idle-exit-minutes", "abc")]
     [InlineData("--mcp-daemon-idle-exit-minutes", "1,5")]
+    [InlineData("--mcp-external-max-memory-bytes", "abc")]
+    [InlineData("--mcp-external-idle-ttl-minutes", "abc")]
     public void CliCommandBuilder_InvalidFlagValues_AreHardParseErrors(string flag, string value)
     {
         var (root, options) = CliCommandBuilder.Build();

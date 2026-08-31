@@ -19,13 +19,15 @@ internal sealed record AssemblyAnalysisEntryCreateParameters(
     AssemblyContext Context,
     IDisposable? Lifetime,
     ExternalResourceLease? ResourceLease = null,
-    AssemblyReferenceLeaseFactory? ReferenceLeaseFactory = null);
+    AssemblyReferenceLeaseFactory? ReferenceLeaseFactory = null,
+    TimeProvider? Clock = null);
 
 internal sealed class AssemblyAnalysisEntry : IAsyncDisposable
 {
     private readonly object gate = new();
     private readonly IDisposable? lifetime;
     private readonly ExternalResourceLease? resourceLease;
+    private TimeProvider clock = TimeProvider.System;
     private AssemblyReferenceLeaseFactory? referenceLeaseFactory;
     private readonly TaskCompletionSource<object?> leaseDrain = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private DateTime lastUsedUtc = DateTime.UtcNow;
@@ -45,6 +47,7 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable
         Context = context;
         this.lifetime = lifetime;
         this.resourceLease = resourceLease;
+        lastUsedUtc = UtcNow;
     }
 
     internal static AssemblyAnalysisEntry Create(AssemblyAnalysisEntryCreateParameters parameters)
@@ -55,6 +58,7 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable
             parameters.Context,
             parameters.Lifetime,
             parameters.ResourceLease);
+        entry.SetClock(parameters.Clock);
         entry.referenceLeaseFactory = parameters.ReferenceLeaseFactory;
         return entry;
     }
@@ -83,7 +87,7 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable
             }
 
             leaseCount++;
-            lastUsedUtc = DateTime.UtcNow;
+            lastUsedUtc = UtcNow;
             lease = new(this, CanonicalPath, Server, Context, referenceLeaseFactory);
             return true;
         }
@@ -131,7 +135,7 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable
 
             try
             {
-                resourceLease?.Dispose();
+                resourceLease?.DisposeAndRemove();
             }
             catch (Exception exception)
             {
@@ -182,6 +186,15 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable
         }
     }
 
+    internal void SetClock(TimeProvider? value)
+    {
+        lock (gate)
+        {
+            clock = value ?? TimeProvider.System;
+            lastUsedUtc = UtcNow;
+        }
+    }
+
     internal bool IsIdle(DateTime now, TimeSpan idleTtl)
     {
         lock (gate)
@@ -189,6 +202,8 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable
             return !closing && leaseCount == 0 && now - lastUsedUtc > idleTtl;
         }
     }
+
+    private DateTime UtcNow => clock.GetUtcNow().UtcDateTime;
 
     private static McpCodeGraphServer CreateReadOnlyServer(
         Microsoft.CodeAnalysis.Solution solution,

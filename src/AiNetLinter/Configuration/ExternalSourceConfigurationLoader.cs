@@ -112,7 +112,11 @@ internal static class ExternalSourceConfigurationLoader
             section,
             settingsPath,
             "$.ExternalSources",
-            [MappingsPathName, CacheRootName, RefreshIntervalMinutesName]);
+            [
+                MappingsPathName,
+                CacheRootName,
+                RefreshIntervalMinutesName,
+                ..ExternalSourceResourceOptionsLoader.AllowedNames]);
         if (!validation.Diagnostics.IsEmpty)
         {
             return ExternalSourceConfigurationLoadResult.Failure(validation.Diagnostics);
@@ -217,7 +221,16 @@ internal static class ExternalSourceConfigurationLoader
             return false;
         }
 
-        cacheOptions = new ExternalSourceCacheOptions(cacheRoot!, refreshInterval);
+        if (!ExternalSourceResourceOptionsLoader.TryRead(
+                validation,
+                settingsPath,
+                out var resourceOptions,
+                out diagnostic))
+        {
+            return false;
+        }
+
+        cacheOptions = new ExternalSourceCacheOptions(cacheRoot!, refreshInterval, resourceOptions);
         return true;
     }
 

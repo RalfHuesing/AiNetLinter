@@ -2,6 +2,7 @@
 
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 
 namespace AiNetLinter.FastTests.Mcp.Assemblies;
@@ -45,6 +46,55 @@ public sealed class ExternalResourceRegistryTests
         Assert.Contains("Ressourcenlimit", second.FailureReason, StringComparison.Ordinal);
 
         first.Lease!.Dispose();
+    }
+
+    [Fact]
+    public void TryAcquire_OversizedRequestDoesNotEvictReleasedResources()
+    {
+        using var registry = new ExternalResourceRegistry(new ExternalResourceRegistryOptions(
+            MaxDiskBytes: 10,
+            MaxMemoryBytes: 10,
+            MaxResidentResources: 2));
+        var first = registry.TryAcquire(new ExternalResourceRequest("first", 5, 5));
+        first.Lease!.Dispose();
+
+        var oversized = registry.TryAcquire(new ExternalResourceRequest("oversized", 11, 1));
+        var second = registry.TryAcquire(new ExternalResourceRequest("second", 5, 5));
+
+        Assert.False(oversized.Succeeded);
+        Assert.True(second.Succeeded);
+        Assert.Equal(2, registry.ResidentCount);
+        second.Lease!.Dispose();
+    }
+
+    [Fact]
+    public void TryReserve_AccountsForConcurrentMaterializationAndRollsBack()
+    {
+        using var registry = new ExternalResourceRegistry(new ExternalResourceRegistryOptions(
+            MaxDiskBytes: 10,
+            MaxMemoryBytes: 10,
+            MaxResidentResources: 2));
+
+        Assert.True(registry.TryReserve(new ExternalResourceRequest("first", 8, 8), out var first, out _));
+        Assert.False(registry.TryReserve(new ExternalResourceRequest("second", 3, 3), out var second, out var reason));
+        Assert.Null(second);
+        Assert.Contains("Diskbudget", reason, StringComparison.Ordinal);
+
+        first!.Dispose();
+        Assert.True(registry.TryReserve(new ExternalResourceRequest("second", 3, 3), out second, out _));
+        second!.Dispose();
+    }
+
+    [Fact]
+    public async Task Dispose_DuringActiveOperationLeavesOperationLeaseSafeToRelease()
+    {
+        using var registry = new ExternalResourceRegistry();
+        Assert.True(registry.TryBeginOperation(CancellationToken.None, out var operation));
+
+        await Task.Run(registry.Dispose);
+
+        operation!.Dispose();
+        Assert.False(registry.TryBeginOperation(CancellationToken.None, out _));
     }
 
     [Fact]

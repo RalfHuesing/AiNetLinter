@@ -4,65 +4,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using AiNetLinter.Configuration;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
-internal static class ExternalResourceRegistryDefaults
-{
-    internal const long MaxDiskBytes = 512L * 1024 * 1024;
-    internal const long MaxMemoryBytes = 512L * 1024 * 1024;
-    internal const int MaxParallelOperations = 4;
-    internal const int MaxResidentResources = 32;
-    internal static readonly TimeSpan IdleTtl = TimeSpan.FromMinutes(45);
-}
-
-internal sealed record ExternalResourceRegistryOptions(
-    long MaxDiskBytes = ExternalResourceRegistryDefaults.MaxDiskBytes,
-    long MaxMemoryBytes = ExternalResourceRegistryDefaults.MaxMemoryBytes,
-    int MaxParallelOperations = ExternalResourceRegistryDefaults.MaxParallelOperations,
-    int MaxResidentResources = ExternalResourceRegistryDefaults.MaxResidentResources,
-    TimeSpan IdleTtl = default,
-    TimeProvider? Clock = null);
-
-internal enum ExternalResourceHealth
-{
-    Healthy,
-    Degraded,
-    CapacityExceeded,
-    Disposed,
-}
-
-internal sealed record ExternalResourceRequest(
-    string Identity,
-    long DiskBytes,
-    long MemoryBytes);
-
-internal sealed record ExternalResourceHealthSnapshot(
-    ExternalResourceHealth Health,
-    int ResidentResources,
-    int MaxResidentResources,
-    long DiskBytes,
-    long MaxDiskBytes,
-    long MemoryBytes,
-    long MaxMemoryBytes,
-    int ActiveOperations,
-    int MaxParallelOperations,
-    string? LastFailureReason);
-
-internal sealed record ExternalResourceAcquireResult(
-    ExternalResourceLease? Lease,
-    ExternalResourceHealthSnapshot Health,
-    string? FailureReason)
-{
-    internal bool Succeeded => Lease is not null;
-}
-
 /// <summary>
-/// Separates budgets and lifetime accounting for external assemblies/source
-/// resources from the four resident project contexts.
+/// Trennt Budget- und Lebensdauerverwaltung externer Assembly-/Source-Ressourcen
+/// von den vier residenten Projektkontexten.
 /// </summary>
 internal sealed class ExternalResourceRegistry : IDisposable
 {
+    private const string EmptyIdentityMessage = "Die Ressourcenidentität darf nicht leer sein.";
     private readonly Lock gate = new();
     private readonly Dictionary<string, ResourceEntry> entries = new(StringComparer.OrdinalIgnoreCase);
     private readonly ExternalResourceRegistryOptions options;
@@ -72,12 +24,15 @@ internal sealed class ExternalResourceRegistry : IDisposable
     private string? lastFailureReason;
     private ExternalResourceHealth lastFailureHealth = ExternalResourceHealth.Healthy;
     private int activeOperations;
+    private long reservedDiskBytes;
+    private long reservedMemoryBytes;
+    private int reservedResources;
     private int disposed;
 
     internal ExternalResourceRegistry(ExternalResourceRegistryOptions? options = null)
     {
         this.options = options ?? new ExternalResourceRegistryOptions();
-        ValidateOptions(this.options);
+        ExternalResourceRegistrySupport.ValidateOptions(this.options);
         clock = this.options.Clock ?? TimeProvider.System;
         idleTtl = this.options.IdleTtl > TimeSpan.Zero
             ? this.options.IdleTtl
@@ -91,6 +46,8 @@ internal sealed class ExternalResourceRegistry : IDisposable
     }
 
     internal TimeSpan IdleTtl => idleTtl;
+
+    internal TimeProvider Clock => clock;
 
     internal ExternalResourceHealthSnapshot Health
     {
@@ -109,7 +66,7 @@ internal sealed class ExternalResourceRegistry : IDisposable
         TryAcquireWithEvictions(ExternalResourceRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        if (string.IsNullOrWhiteSpace(request.Identity)) throw new ArgumentException("Die Ressourcenidentität darf nicht leer sein.", nameof(request));
+        if (string.IsNullOrWhiteSpace(request.Identity)) throw new ArgumentException(EmptyIdentityMessage, nameof(request));
         if (request.DiskBytes < 0) throw new ArgumentOutOfRangeException(nameof(request));
         if (request.MemoryBytes < 0) throw new ArgumentOutOfRangeException(nameof(request));
 
@@ -124,12 +81,12 @@ internal sealed class ExternalResourceRegistry : IDisposable
             if (entries.TryGetValue(request.Identity, out var resident))
             {
                 resident.LeaseCount++;
-                resident.LastUsedUtc = UtcNowNoLock();
+                resident.LastUsedUtc = ExternalResourceRegistrySupport.UtcNow(clock);
                 ClearFailureNoLock();
                 return (new(new ExternalResourceLease(this, request.Identity), CreateHealthNoLock(ExternalResourceHealth.Healthy), null), evicted);
             }
 
-            EvictExpiredNoLock(UtcNowNoLock(), evicted);
+            EvictExpiredNoLock(ExternalResourceRegistrySupport.UtcNow(clock), evicted);
             EvictLeastRecentlyUsedNoLock(request, evicted);
             var reason = CapacityReasonNoLock(request);
             if (reason is not null)
@@ -137,7 +94,7 @@ internal sealed class ExternalResourceRegistry : IDisposable
                 return (FailureNoLock(ExternalResourceHealth.CapacityExceeded, reason), evicted);
             }
 
-            entries.Add(request.Identity, new ResourceEntry(request.DiskBytes, request.MemoryBytes, UtcNowNoLock()));
+            entries.Add(request.Identity, new ResourceEntry(request.DiskBytes, request.MemoryBytes, ExternalResourceRegistrySupport.UtcNow(clock)));
             ClearFailureNoLock();
             return (new(new ExternalResourceLease(this, request.Identity), CreateHealthNoLock(ExternalResourceHealth.Healthy), null), evicted);
         }
@@ -152,7 +109,18 @@ internal sealed class ExternalResourceRegistry : IDisposable
             return false;
         }
 
-        if (!operationSlots.Wait(0))
+        bool slotAcquired;
+        try
+        {
+            slotAcquired = operationSlots.Wait(0);
+        }
+        catch (ObjectDisposedException)
+        {
+            lease = null;
+            return false;
+        }
+
+        if (!slotAcquired)
         {
             lock (gate)
             {
@@ -167,7 +135,7 @@ internal sealed class ExternalResourceRegistry : IDisposable
         {
             if (Volatile.Read(ref disposed) != 0)
             {
-                operationSlots.Release();
+                ExternalResourceRegistrySupport.ReleaseOperationSlot(operationSlots);
                 lease = null;
                 return false;
             }
@@ -189,7 +157,7 @@ internal sealed class ExternalResourceRegistry : IDisposable
         {
             if (Volatile.Read(ref disposed) != 0) return Array.Empty<string>();
             var evicted = new List<string>();
-            EvictExpiredNoLock(UtcNowNoLock(), evicted);
+            EvictExpiredNoLock(ExternalResourceRegistrySupport.UtcNow(clock), evicted);
             return evicted;
         }
     }
@@ -212,11 +180,77 @@ internal sealed class ExternalResourceRegistry : IDisposable
         {
             if (!entries.TryGetValue(identity, out var entry) || entry.LeaseCount == 0) return;
             entry.LeaseCount--;
-            entry.LastUsedUtc = UtcNowNoLock();
+            entry.LastUsedUtc = ExternalResourceRegistrySupport.UtcNow(clock);
             if (Volatile.Read(ref disposed) != 0 && entry.LeaseCount == 0)
             {
                 entries.Remove(identity);
             }
+        }
+    }
+
+    internal void ReleaseAndRemove(string identity)
+    {
+        lock (gate)
+        {
+            if (!entries.TryGetValue(identity, out var entry) || entry.LeaseCount == 0)
+            {
+                return;
+            }
+
+            entry.LeaseCount--;
+            entry.LastUsedUtc = ExternalResourceRegistrySupport.UtcNow(clock);
+            if (entry.LeaseCount == 0)
+            {
+                entries.Remove(identity);
+            }
+        }
+    }
+
+    internal bool TryReserve(
+        ExternalResourceRequest request,
+        out ExternalResourceReservation? reservation,
+        out string? failureReason)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (string.IsNullOrWhiteSpace(request.Identity)) throw new ArgumentException(EmptyIdentityMessage, nameof(request));
+        if (request.DiskBytes < 0) throw new ArgumentOutOfRangeException(nameof(request));
+        if (request.MemoryBytes < 0) throw new ArgumentOutOfRangeException(nameof(request));
+
+        lock (gate)
+        {
+            if (Volatile.Read(ref disposed) != 0)
+            {
+                reservation = null;
+                failureReason = "Das externe Ressourcenregister wurde bereits beendet.";
+                return false;
+            }
+
+            var reason = CapacityReasonNoLock(request);
+            if (reason is not null)
+            {
+                reservation = null;
+                failureReason = reason;
+                lastFailureHealth = ExternalResourceHealth.CapacityExceeded;
+                lastFailureReason = reason;
+                return false;
+            }
+
+            reservedDiskBytes += request.DiskBytes;
+            reservedMemoryBytes += request.MemoryBytes;
+            reservedResources++;
+            reservation = new ExternalResourceReservation(this, request.DiskBytes, request.MemoryBytes);
+            failureReason = null;
+            return true;
+        }
+    }
+
+    internal void ReleaseReservation(long diskBytes, long memoryBytes)
+    {
+        lock (gate)
+        {
+            reservedDiskBytes = Math.Max(0, reservedDiskBytes - diskBytes);
+            reservedMemoryBytes = Math.Max(0, reservedMemoryBytes - memoryBytes);
+            if (reservedResources > 0) reservedResources--;
         }
     }
 
@@ -241,14 +275,7 @@ internal sealed class ExternalResourceRegistry : IDisposable
             if (Volatile.Read(ref disposed) != 0) return;
         }
 
-        try
-        {
-            operationSlots.Release();
-        }
-        catch (ObjectDisposedException)
-        {
-            // Dispose is terminal; no new operation can be admitted afterwards.
-        }
+        ExternalResourceRegistrySupport.ReleaseOperationSlot(operationSlots);
     }
 
     private ExternalResourceAcquireResult FailureNoLock(ExternalResourceHealth health, string reason)
@@ -266,6 +293,11 @@ internal sealed class ExternalResourceRegistry : IDisposable
 
     private void EvictLeastRecentlyUsedNoLock(ExternalResourceRequest request, ICollection<string> evicted)
     {
+        if (request.DiskBytes > options.MaxDiskBytes || request.MemoryBytes > options.MaxMemoryBytes)
+        {
+            return;
+        }
+
         while (CapacityReasonNoLock(request) is not null)
         {
             var victim = entries
@@ -279,22 +311,19 @@ internal sealed class ExternalResourceRegistry : IDisposable
         }
     }
 
-    private string? CapacityReasonNoLock(ExternalResourceRequest request)
-    {
-        if (request.DiskBytes > options.MaxDiskBytes || Sum(entry => entry.DiskBytes) + request.DiskBytes > options.MaxDiskBytes)
-        {
-            return $"Das externe Diskbudget ist ausgeschöpft ({options.MaxDiskBytes} Bytes).";
-        }
-
-        if (request.MemoryBytes > options.MaxMemoryBytes || Sum(entry => entry.MemoryBytes) + request.MemoryBytes > options.MaxMemoryBytes)
-        {
-            return $"Das externe Speicherbudget ist ausgeschöpft ({options.MaxMemoryBytes} Bytes).";
-        }
-
-        return entries.Count >= options.MaxResidentResources
-            ? $"Das externe Ressourcenlimit ist ausgeschöpft ({options.MaxResidentResources} Einträge)."
-            : null;
-    }
+    private string? CapacityReasonNoLock(ExternalResourceRequest request) =>
+        ExternalResourceRegistrySupport.CapacityReason(
+            new ExternalResourceCapacityContext<ResourceEntry>
+            {
+                Entries = entries.Values,
+                Options = options,
+                ReservedDiskBytes = reservedDiskBytes,
+                ReservedMemoryBytes = reservedMemoryBytes,
+                ReservedResources = reservedResources,
+                DiskSelector = entry => entry.DiskBytes,
+                MemorySelector = entry => entry.MemoryBytes,
+            },
+            request);
 
     private void EvictExpiredNoLock(DateTime now, ICollection<string> evicted)
     {
@@ -309,38 +338,18 @@ internal sealed class ExternalResourceRegistry : IDisposable
         }
     }
 
-    private ExternalResourceHealthSnapshot CreateHealthNoLock(ExternalResourceHealth health)
-    {
-        if (health is ExternalResourceHealth.Healthy && lastFailureReason is not null)
-        {
-            health = ExternalResourceHealth.Degraded;
-        }
-
-        return new(
+    private ExternalResourceHealthSnapshot CreateHealthNoLock(ExternalResourceHealth health) =>
+        ExternalResourceRegistrySupport.CreateHealth(
             health,
-            entries.Count,
-            options.MaxResidentResources,
-            Sum(entry => entry.DiskBytes),
-            options.MaxDiskBytes,
-            Sum(entry => entry.MemoryBytes),
-            options.MaxMemoryBytes,
-            activeOperations,
-            options.MaxParallelOperations,
-            lastFailureReason);
-    }
-
-    private long Sum(Func<ResourceEntry, long> selector) => entries.Values.Sum(selector);
-
-    private DateTime UtcNowNoLock() => clock.GetUtcNow().UtcDateTime;
-
-    private static void ValidateOptions(ExternalResourceRegistryOptions value)
-    {
-        if (value.MaxDiskBytes <= 0) throw new ArgumentOutOfRangeException(nameof(value.MaxDiskBytes));
-        if (value.MaxMemoryBytes <= 0) throw new ArgumentOutOfRangeException(nameof(value.MaxMemoryBytes));
-        if (value.MaxParallelOperations <= 0) throw new ArgumentOutOfRangeException(nameof(value.MaxParallelOperations));
-        if (value.MaxResidentResources <= 0) throw new ArgumentOutOfRangeException(nameof(value.MaxResidentResources));
-        if (value.IdleTtl < TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(value.IdleTtl));
-    }
+            new ExternalResourceHealthContext<ResourceEntry>
+            {
+                LastFailureReason = lastFailureReason,
+                Entries = entries.Values,
+                Options = options,
+                ActiveOperations = activeOperations,
+                DiskSelector = entry => entry.DiskBytes,
+                MemorySelector = entry => entry.MemoryBytes,
+            });
 
     private sealed class ResourceEntry(long diskBytes, long memoryBytes, DateTime lastUsedUtc)
     {
@@ -348,36 +357,5 @@ internal sealed class ExternalResourceRegistry : IDisposable
         internal long MemoryBytes { get; } = memoryBytes;
         internal DateTime LastUsedUtc { get; set; } = lastUsedUtc;
         internal int LeaseCount { get; set; } = 1;
-    }
-}
-
-internal sealed class ExternalResourceLease : IDisposable
-{
-    private readonly ExternalResourceRegistry registry;
-    private readonly string identity;
-    private int disposed;
-
-    internal ExternalResourceLease(ExternalResourceRegistry registry, string identity)
-    {
-        this.registry = registry;
-        this.identity = identity;
-    }
-
-    public void Dispose()
-    {
-        if (Interlocked.Exchange(ref disposed, 1) == 0) registry.Release(identity);
-    }
-}
-
-internal sealed class ExternalResourceOperationLease : IDisposable
-{
-    private readonly ExternalResourceRegistry registry;
-    private int disposed;
-
-    internal ExternalResourceOperationLease(ExternalResourceRegistry registry) => this.registry = registry;
-
-    public void Dispose()
-    {
-        if (Interlocked.Exchange(ref disposed, 1) == 0) registry.EndOperation();
     }
 }

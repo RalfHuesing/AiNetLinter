@@ -13,10 +13,10 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
 internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
 {
-    private readonly SourceSnapshotRegistry registry;
+    private readonly IAssemblySourceSelectionSnapshotRegistry registry;
     private readonly ExternalResourceRegistry resources;
     private readonly ExternalResourceRegistry sourceResources;
-    private readonly AssemblySourceSelectionOrchestrator sourceOrchestrator;
+    private readonly IDisposable sourceOrchestrator;
     private readonly IAssemblySourceSelectionResolver orchestrator;
     private readonly IAssemblySourceResolver registryResolver;
     private readonly IAssemblyAnalysisRegistry sessions;
@@ -24,33 +24,27 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
     private Task? disposalTask;
     private int disposed;
 
-    private AssemblyAnalysisHostComposition(
-        ExternalSourceConfigurationLoadResult configurationResult,
+    internal AssemblyAnalysisHostComposition(
+        AssemblyAnalysisHostConfiguration configuration,
         IExternalSourceProvider provider,
-        SourceSnapshotRegistry registry,
-        ExternalResourceRegistry resources,
-        ExternalResourceRegistry sourceResources)
+        AssemblyAnalysisHostDependencies dependencies)
     {
-        ConfigurationResult = configurationResult;
+        ConfigurationResult = configuration;
         Provider = provider;
-        this.registry = registry;
-        this.resources = resources;
-        this.sourceResources = sourceResources;
-        var sourceOrchestrator = new AssemblySourceSelectionOrchestrator(
-            configurationResult,
-            provider,
-            registry);
-        this.sourceOrchestrator = sourceOrchestrator;
-        orchestrator = sourceOrchestrator;
-        registryResolver = sourceOrchestrator;
-        sessions = new AssemblyAnalysisRegistry(registryResolver, resourceRegistry: resources);
+        sourceOrchestrator = dependencies.SourceOrchestrator;
+        orchestrator = dependencies.Orchestrator;
+        registryResolver = dependencies.RegistryResolver;
+        registry = dependencies.Registry;
+        resources = dependencies.Resources;
+        sourceResources = dependencies.SourceResources;
+        sessions = dependencies.Sessions;
     }
 
-    internal ExternalSourceConfigurationLoadResult ConfigurationResult { get; }
+    internal AssemblyAnalysisHostConfiguration ConfigurationResult { get; }
 
     internal IExternalSourceProvider Provider { get; }
 
-    internal SourceSnapshotRegistry Registry => registry;
+    internal IAssemblySourceSelectionSnapshotRegistry Registry => registry;
 
     internal ExternalResourceRegistry Resources => resources;
 
@@ -79,38 +73,13 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
     internal static AssemblyAnalysisHostComposition Create(
         string? settingsPath = null,
         IExternalSourceProvider? provider = null,
-        IExternalSourceCredentialResolver? credentialResolver = null)
-    {
-        var configurationResult = ExternalSourceConfigurationLoader.Load(settingsPath);
-        var sourceProvider = provider ?? CreateDefaultProvider(
-            configurationResult,
-            credentialResolver);
-        var sourceResources = new ExternalResourceRegistry();
-        var registry = new SourceSnapshotRegistry(sourceResources);
-        var resources = new ExternalResourceRegistry();
-        return new AssemblyAnalysisHostComposition(configurationResult, sourceProvider, registry, resources, sourceResources);
-    }
-
-    private static IExternalSourceProvider CreateDefaultProvider(
-        ExternalSourceConfigurationLoadResult configurationResult,
-        IExternalSourceCredentialResolver? credentialResolver)
-    {
-        var cacheOptions = configurationResult.Configuration?.CacheOptions
-            ?? ExternalSourceCacheOptions.Default;
-        var cacheConstruction = ExternalSourceRepositoryCacheOptionsFactory.Create(cacheOptions);
-        var stagingRoot = Path.Combine(
-            cacheConstruction.CacheRoot,
-            ExternalSourceRepositoryCacheContract.CheckoutDirectoryName);
-        var transport = new GiteaGitRepositoryTransport(credentialResolver);
-        var acquirer = ExternalSourceRepositoryAcquirerFactory.CreateConfigured(
-            transport,
-            stagingRoot,
-            cacheOptions,
-            cacheConstruction.CreateRefreshPolicy());
-        return new GiteaExternalSourceProvider(
-            acquirer,
-            new ExternalSourceSnapshotMaterializer());
-    }
+        IExternalSourceCredentialResolver? credentialResolver = null,
+        ExternalResourceRegistryOverrides? resourceOverrides = null)
+        => AssemblyAnalysisHostFactory.Create(
+            settingsPath,
+            provider,
+            credentialResolver,
+            resourceOverrides);
 
     public ValueTask DisposeAsync() => new(StartDispose());
 
@@ -181,5 +150,93 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
         {
             throw new ObjectDisposedException(nameof(AssemblyAnalysisHostComposition));
         }
+    }
+}
+
+internal sealed record AssemblyAnalysisHostConfiguration(bool Succeeded);
+
+internal sealed class AssemblyAnalysisHostDependencies
+{
+    internal required IDisposable SourceOrchestrator { get; init; }
+
+    internal required IAssemblySourceSelectionResolver Orchestrator { get; init; }
+
+    internal required IAssemblySourceResolver RegistryResolver { get; init; }
+
+    internal required IAssemblySourceSelectionSnapshotRegistry Registry { get; init; }
+
+    internal required ExternalResourceRegistry Resources { get; init; }
+
+    internal required ExternalResourceRegistry SourceResources { get; init; }
+
+    internal required IAssemblyAnalysisRegistry Sessions { get; init; }
+}
+
+internal static class AssemblyAnalysisHostFactory
+{
+    internal static AssemblyAnalysisHostComposition Create(
+        string? settingsPath,
+        IExternalSourceProvider? provider,
+        IExternalSourceCredentialResolver? credentialResolver,
+        ExternalResourceRegistryOverrides? resourceOverrides)
+    {
+        var configurationResult = ExternalSourceConfigurationLoader.Load(settingsPath);
+        var configuredResources = configurationResult.Configuration?.CacheOptions.ResourceOptions
+            ?? ExternalSourceResourceOptions.Default;
+        var resourceOptions = ExternalResourceRegistryOptionsFactory.Create(
+            configuredResources,
+            resourceOverrides);
+        var sourceResources = new ExternalResourceRegistry(resourceOptions);
+        var registry = new SourceSnapshotRegistry(sourceResources);
+        var resources = new ExternalResourceRegistry(resourceOptions);
+        var sourceProvider = provider ?? AssemblyAnalysisHostProviderFactory.CreateDefaultProvider(
+            configurationResult,
+            credentialResolver,
+            sourceResources);
+        var sourceOrchestrator = new AssemblySourceSelectionOrchestrator(
+            configurationResult,
+            sourceProvider,
+            registry);
+        var sessions = new AssemblyAnalysisRegistry(
+            sourceOrchestrator,
+            resourceRegistry: resources);
+        return new AssemblyAnalysisHostComposition(
+            new AssemblyAnalysisHostConfiguration(configurationResult.Succeeded),
+            sourceProvider,
+            new AssemblyAnalysisHostDependencies
+            {
+                SourceOrchestrator = sourceOrchestrator,
+                Orchestrator = sourceOrchestrator,
+                RegistryResolver = sourceOrchestrator,
+                Registry = registry,
+                Resources = resources,
+                SourceResources = sourceResources,
+                Sessions = sessions,
+            });
+    }
+}
+
+internal static class AssemblyAnalysisHostProviderFactory
+{
+    internal static IExternalSourceProvider CreateDefaultProvider(
+        ExternalSourceConfigurationLoadResult configurationResult,
+        IExternalSourceCredentialResolver? credentialResolver,
+        ExternalResourceRegistry sourceResources)
+    {
+        var cacheOptions = configurationResult.Configuration?.CacheOptions
+            ?? ExternalSourceCacheOptions.Default;
+        var cacheConstruction = ExternalSourceRepositoryCacheOptionsFactory.Create(cacheOptions);
+        var stagingRoot = Path.Combine(
+            cacheConstruction.CacheRoot,
+            ExternalSourceRepositoryCacheContract.CheckoutDirectoryName);
+        var transport = new GiteaGitRepositoryTransport(credentialResolver);
+        var acquirer = ExternalSourceRepositoryAcquirerFactory.CreateConfigured(
+            transport,
+            stagingRoot,
+            cacheOptions,
+            cacheConstruction.CreateRefreshPolicy());
+        return new GiteaExternalSourceProvider(
+            acquirer,
+            new ExternalSourceSnapshotMaterializer(sourceResources));
     }
 }

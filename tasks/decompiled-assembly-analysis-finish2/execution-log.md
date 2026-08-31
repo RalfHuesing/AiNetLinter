@@ -575,6 +575,58 @@
 - nächste Aktion: Review-Checkpoint committen, danach frischen
   Korrektur-Implementierer für EPIC-B starten.
 
+## 2026-08-31 — completed / EPIC-C / Implementierer
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a05585-ab4e-7652-b391-96fd81ed6d95`
+- diff-baseline: `20ed7a91`
+- status: EPIC-C vollständig implementiert, ohne Agenten-Commit; 43
+  Arbeitsbaum-Einträge in Konfiguration/CLI, Assembly-/Snapshot-Registries,
+  Materialisierung/Daemon, Fast-/Integration-Regressionen und Dokumentation.
+- vollständiger finaler Agentenbericht:
+
+  > Status: EPIC-C vollständig implementiert, ohne Commit.
+  >
+  > Umgesetzt:
+  >
+  > - Gemeinsame validierte Limits: Disk/Memory 512 MiB, Parallelität 4,
+  >   resident 32, Idle-TTL 45 Minuten.
+  > - JSON-Settings und CLI-/Daemon-/ThinClient-Overrides vollständig
+  >   verdrahtet.
+  > - LRU/TTL/Capacity, aktive Lease-Sicherheit, Parallelitäts-Slots und
+  >   Materialisierungsreservierungen.
+  > - Rollback-sichere Materialisierung inklusive Cancellation.
+  > - Producer-/Consumer-Cancellation sowie Dispose während Creation
+  >   deterministisch behandelt.
+  >
+  > Geänderte Bereiche: 43 Arbeitsbaum-Einträge — Konfiguration/CLI,
+  > Assembly-/Snapshot-Registries, Materialisierung/Daemon,
+  > Fast-/Integration-Regressionen sowie Dokumentation. Die Task-Code-Map
+  > wurde aktualisiert.
+  >
+  > Verifikation:
+  >
+  > - Build: 0 Warnungen, 0 Fehler.
+  > - EPIC-C-Fokus: FastTests 129/129, Integration 4/4.
+  > - Vollständige FastTests ohne Stress: 2256 bestanden, 2 Skips.
+  > - IntegrationTests ohne Stress: 372/374.
+  > - `get_violations`: nur der bekannte `AssemblyAnalysisRegistry`-
+  >   `AIContextFootprint` (3893 > 2500).
+  > - Abschlussaudit: 3 Clone-Cluster, 37 Low-/0 High-Dead-Code-Hinweise,
+  >   10 Magic-Value-Kandidaten.
+  > - `git diff --check`: ohne Whitespace-Fehler.
+  >
+  > Offen bleiben ausschließlich die bekannten externen MCP-
+  > Beschreibungstext-Verträge `ambiguous` und `sortBy`; das EPIC-B-Finding
+  > `DIAGNOSTICS-SAMPLE-BUDGET` wurde nicht erneut geöffnet.
+- Urteil: Implementierung vollständig; unabhängiges Review und anschließender
+  Checkpoint-Commit stehen aus. Es wurde kein neuer EPIC-C-Tech-Debt-Punkt
+  behauptet; vorhandene projektweite/umgebungsbezogene Befunde bleiben in
+  `tech-debt.md`.
+- warteverhalten: Der Agent wurde erst nach echtem terminalem Status als
+  abgeschlossen behandelt; alle vorherigen Polling-Timeouts lösten keinen
+  Interrupt aus.
+
 ## 2026-08-31 — running / EPIC-B / Korrektur-Implementierer Runde 2
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`
