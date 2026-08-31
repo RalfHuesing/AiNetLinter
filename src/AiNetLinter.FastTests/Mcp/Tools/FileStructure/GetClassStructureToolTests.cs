@@ -282,4 +282,63 @@ public sealed class GetClassStructureToolTests
         Assert.Equal(9, method.EndLine);
         Assert.Equal(6, method.LineCount);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_WithKindFilter_FiltersMembersByKind()
+    {
+        const string source = """
+            namespace TestNs;
+            public class MixedClass
+            {
+                public int MyProp { get; set; }
+                public void MethodA() { }
+                public void MethodB() { }
+                private int _field;
+            }
+            """;
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\GetClassStructureToolTests.slnx",
+            new ProjectSpec("TestProject", [("MixedClass.cs", source)])));
+        var state = context.CreateServer();
+
+        var result = await GetClassStructureTool.ExecuteAsync(
+            state, new GetClassStructureArgs("MixedClass", "lines", MaxMembers: 50, KindFilter: "Method"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.All(payload!.Members, m => Assert.Equal("Method", m.Kind));
+        Assert.Equal(2, payload.TotalMemberCount);
+        Assert.Contains(payload.Members, m => m.Name == "MethodA");
+        Assert.Contains(payload.Members, m => m.Name == "MethodB");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithNameFilter_FiltersMembersByName()
+    {
+        const string source = """
+            namespace TestNs;
+            public class MultiMethodClass
+            {
+                public void ProcessOrder() { }
+                public void ProcessPayment() { }
+                public void CancelOrder() { }
+            }
+            """;
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\GetClassStructureToolTests.slnx",
+            new ProjectSpec("TestProject", [("MultiMethodClass.cs", source)])));
+        var state = context.CreateServer();
+
+        var result = await GetClassStructureTool.ExecuteAsync(
+            state, new GetClassStructureArgs("MultiMethodClass", "lines", MaxMembers: 50, NameFilter: "Process"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal(2, payload!.TotalMemberCount);
+        Assert.Contains(payload.Members, m => m.Name == "ProcessOrder");
+        Assert.Contains(payload.Members, m => m.Name == "ProcessPayment");
+        Assert.DoesNotContain(payload.Members, m => m.Name == "CancelOrder");
+    }
 }

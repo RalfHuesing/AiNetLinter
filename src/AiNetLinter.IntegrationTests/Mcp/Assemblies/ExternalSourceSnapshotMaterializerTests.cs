@@ -209,6 +209,55 @@ public sealed class ExternalSourceSnapshotMaterializerTests
                 cancellation.Token).AsTask());
     }
 
+    [Fact]
+    public async Task MaterializeAsync_CoupledWithSourceSnapshotRegistry_PromotesReservationToResidentLease()
+    {
+        using var fixture = IsolatedFixtureLease.CopyFixture(
+            SolutionRootLocator.Find(),
+            "BaselineMini",
+            "external-source-materializer-coupled-");
+        using var staging = TestTempDirectory.Create("external-source-materializer-coupled-staging-");
+        var checkoutPath = staging.GetPath("checkout");
+        Directory.Move(fixture.RootPath, checkoutPath);
+
+        var ownershipToken = "coupled-owner";
+        var ownership = new ExternalSourceCheckoutOwnership(
+            staging.DirectoryPath,
+            checkoutPath,
+            ownershipToken);
+        File.WriteAllText(ownership.OwnershipMarkerPath, ownershipToken);
+        var checkout = new ExternalSourceCheckoutHandle(
+            ownership,
+            Path.Combine(checkoutPath, "BaselineMini.slnx"),
+            "0123456789abcdef0123456789abcdef01234567",
+            ExternalSourceCheckoutAttestation.ForTesting(
+                checkoutPath,
+                "0123456789abcdef0123456789abcdef01234567"));
+        var mapping = new ExternalSourceMapping(
+            "https://gitea.example/shared.git",
+            "BaselineMini.slnx",
+            ["BaselineMini"]);
+
+        using var resources = new ExternalResourceRegistry(new ExternalResourceRegistryOptions(
+            MaxResidentResources: 2));
+        using var registry = new SourceSnapshotRegistry(resources);
+        var materializer = new ExternalSourceSnapshotMaterializer(resources);
+
+        var snapshot = await materializer.MaterializeAsync(mapping, checkout);
+        using var lease = registry.Acquire(snapshot);
+
+        Assert.Equal(1, registry.ResidentCount);
+        Assert.Equal(1, resources.ResidentCount);
+        Assert.False(checkout.IsDisposed);
+
+        lease.Dispose();
+        registry.Dispose();
+
+        Assert.True(checkout.IsDisposed);
+        Assert.Equal(0, resources.ResidentCount);
+        Assert.False(Directory.Exists(checkoutPath));
+    }
+
     private static bool TryMutate(string path)
     {
         try

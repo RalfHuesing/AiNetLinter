@@ -135,7 +135,7 @@ internal static class AnalysisToolRegistrations
         "pattern: Suchtext oder Regex. isRegex=true fuer Regex statt case-insensitive Substring (Default false). " +
         "maxResults: Treffer-Limit (Default 50). maxFiles, contextLines und maxResponseBytes begrenzen " +
         "die strukturierte Nutzlast. scope, includePatterns und excludePatterns steuern den Scope. " +
-        "enrichCSharp=true reichert sichtbare C#-Treffer opt-in semantisch an (semantic-Feld).";
+        "enrichCSharp=true reichert sichtbare C#-Treffer opt-in semantisch an (semantic-Feld; resolution: resolved, not_applicable, unknown, ambiguous, unavailable).";
 
     private static void AddMetricsTree(
         McpServerPrimitiveCollection<McpServerTool> tools,

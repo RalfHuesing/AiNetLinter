@@ -235,6 +235,24 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
     }
 
     [Fact]
+    public void DiagnosticsProjection_TruncatedBy_DoesNotIncludeMaxDiagnosticBytesWhenOnlySlotLimitHit()
+    {
+        // 3 kurze Root- und 3 kurze Transitive-Meldungen bei Limit = 2
+        var summary = AssemblyAnalysisResponseLimits.ProjectDiagnostics(
+            ["root-1", "root-2", "root-3"],
+            ["trans-1", "trans-2", "trans-3"],
+            requestedLimit: 2);
+
+        Assert.Equal(6, summary.TotalCount);
+        Assert.Equal(2, summary.ShownCount);
+        Assert.True(summary.Truncated);
+        Assert.Contains("maxDiagnostics", summary.TruncatedBy);
+        Assert.DoesNotContain("maxDiagnosticBytes", summary.TruncatedBy);
+        Assert.DoesNotContain("maxDiagnosticBytes", summary.Root.TruncatedBy);
+        Assert.DoesNotContain("maxDiagnosticBytes", summary.Transitive.TruncatedBy);
+    }
+
+    [Fact]
     public async Task AssemblyRoute_StructuredContentUsesOneGlobalDiagnosticsBudget()
     {
         using var temp = TestTempDirectory.Create("assembly-dispatcher-diagnostic-budget-");

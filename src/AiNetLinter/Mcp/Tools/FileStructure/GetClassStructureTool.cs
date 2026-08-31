@@ -15,23 +15,19 @@ using ModelContextProtocol.Protocol;
 namespace AiNetLinter.Mcp.Tools.FileStructure;
 
 /// <summary>
+/// Parameter fuer <see cref="GetClassStructureTool.ExecuteAsync(McpCodeGraphServer, GetClassStructureArgs, CancellationToken)"/>.
+/// </summary>
+internal sealed record GetClassStructureArgs(
+    string? SymbolIdentifier,
+    string? SortBy = "lines",
+    int MaxMembers = GetClassStructureTool.DefaultMaxMembers,
+    string? KindFilter = null,
+    string? NameFilter = null);
+
+/// <summary>
 /// MCP-Tool <c>get_class_structure</c>: liefert eine tabellarische Übersicht über alle Member eines
 /// C#-Typs (Kind, Name, Visibility, Start-/End-Zeile, Zeilenanzahl und Signatur). Unterstützt partial
 /// classes über mehrere Dateien.
-///
-/// <para>
-/// <b>Token-Budget:</b> Die Member-Liste wird auf <c>maxMembers</c> Einträge begrenzt (Default 50,
-/// Cap 200). Bei Überschreitung wird eine Truncation-Meta-Zeile in den Markdown-Output gehängt und
-/// das Feld <c>Truncated = true</c> im StructuredContent gesetzt; <c>TotalMemberCount</c> und
-/// <c>ShownMemberCount</c> dokumentieren den Zustand für Tool-zu-Tool-Aufrufer.
-/// </para>
-///
-/// <para>
-/// <b>Records:</b> Bei <c>record class</c>/<c>record struct</c> mit Primary Constructor werden
-/// die Konstruktor-Parameter als eigene Zeilen mit <c>Kind = "PrimaryCtor-Param"</c> vor den
-/// restlichen Membern ausgegeben — Position und Name sind essentiell für Refactorings und gehen
-/// sonst in der impliziten Konstruktor-Syntax verloren.
-/// </para>
 /// </summary>
 internal static class GetClassStructureTool
 {
@@ -43,16 +39,22 @@ internal static class GetClassStructureTool
 
     internal static Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state, string? symbolIdentifier, string? sortBy, CancellationToken ct) =>
-        ExecuteAsync(state, symbolIdentifier, sortBy, DefaultMaxMembers, ct);
+        ExecuteAsync(state, new GetClassStructureArgs(symbolIdentifier, sortBy), ct);
+
+    internal static Task<CallToolResult> ExecuteAsync(
+        McpCodeGraphServer state, string? symbolIdentifier, string? sortBy, int maxMembers, CancellationToken ct) =>
+        ExecuteAsync(state, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers), ct);
 
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? symbolIdentifier, string? sortBy, int maxMembers, CancellationToken ct)
+        McpCodeGraphServer state,
+        GetClassStructureArgs args,
+        CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        if (string.IsNullOrWhiteSpace(symbolIdentifier))
+        if (string.IsNullOrWhiteSpace(args.SymbolIdentifier))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
@@ -60,17 +62,17 @@ internal static class GetClassStructureTool
                 hint: "symbolIdentifier angeben: z. B. 'MyClass', 'Namespace.MyClass' oder 'Datei.cs:42:10'.");
         }
 
-        var clampedMaxMembers = Math.Clamp(maxMembers, 1, MaxMembersCap);
+        var clampedMaxMembers = Math.Clamp(args.MaxMembers, 1, MaxMembersCap);
 
         try
         {
             var (resolvedSymbol, error) = await FindReferencesTool.ResolveSymbolAsync(
                 solution,
-                symbolIdentifier,
+                args.SymbolIdentifier,
                 ct,
                 state.AssemblySymbolIdentity);
             if (error is not null) return error;
-            if (resolvedSymbol is null) return McpToolResults.SymbolNotFound(symbolIdentifier);
+            if (resolvedSymbol is null) return McpToolResults.SymbolNotFound(args.SymbolIdentifier);
 
             if (!TryResolveNamedType(resolvedSymbol, out var namedType) || namedType is null)
             {
@@ -82,7 +84,8 @@ internal static class GetClassStructureTool
             var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
             var (files, totalLines) = await CollectDeclarationFilesAsync(namedType, solutionDir, ct);
             var allMembers = ExtractMembers(namedType, solutionDir);
-            var sortedMembers = SortMembers(allMembers, sortBy);
+            var filteredMembers = FilterMembers(allMembers, args.KindFilter, args.NameFilter);
+            var sortedMembers = SortMembers(filteredMembers, args.SortBy);
             var truncated = sortedMembers.Count > clampedMaxMembers;
             var shownMembers = truncated
                 ? sortedMembers.Take(clampedMaxMembers).ToList()
@@ -105,6 +108,39 @@ internal static class GetClassStructureTool
         {
             return McpToolResults.CompilationError($"Unerwarteter Fehler in get_class_structure: {ex.Message}");
         }
+    }
+
+    private static List<ClassStructureMemberEntry> FilterMembers(
+        List<ClassStructureMemberEntry> members, string? kindFilter, string? nameFilter)
+    {
+        var result = (IEnumerable<ClassStructureMemberEntry>)members;
+        if (!string.IsNullOrWhiteSpace(kindFilter) && !kindFilter.Equals("all", StringComparison.OrdinalIgnoreCase))
+        {
+            var normalizedKind = kindFilter.Trim();
+            result = result.Where(m => MatchesKind(m.Kind, normalizedKind));
+        }
+
+        if (!string.IsNullOrWhiteSpace(nameFilter))
+        {
+            var normalizedName = nameFilter.Trim();
+            result = result.Where(m => m.Name.Contains(normalizedName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return result.ToList();
+    }
+
+    private static bool MatchesKind(string memberKind, string filter)
+    {
+        if (string.Equals(memberKind, filter, StringComparison.OrdinalIgnoreCase)) return true;
+        return filter.ToLowerInvariant() switch
+        {
+            "method" or "methods" => string.Equals(memberKind, "Method", StringComparison.OrdinalIgnoreCase),
+            "property" or "properties" => string.Equals(memberKind, "Property", StringComparison.OrdinalIgnoreCase),
+            "field" or "fields" => string.Equals(memberKind, "Field", StringComparison.OrdinalIgnoreCase),
+            "constructor" or "constructors" => string.Equals(memberKind, "Constructor", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(memberKind, "PrimaryCtor-Param", StringComparison.OrdinalIgnoreCase),
+            _ => false,
+        };
     }
 
     private static bool TryResolveNamedType(ISymbol symbol, out INamedTypeSymbol? namedType)
@@ -145,11 +181,9 @@ internal static class GetClassStructureTool
         return (files.Distinct(StringComparer.OrdinalIgnoreCase).ToList(), totalLines);
     }
 
-
     private static List<ClassStructureMemberEntry> ExtractMembers(INamedTypeSymbol namedType, string solutionDir)
     {
         var result = new List<ClassStructureMemberEntry>();
-        // Records: Primary-Constructor-Parameter voranstellen (Konzept Edge-Case).
         if (namedType.IsRecord)
         {
             result.AddRange(ExtractRecordPrimaryCtorParams(namedType));
@@ -162,20 +196,8 @@ internal static class GetClassStructureTool
         return result;
     }
 
-    /// <summary>
-    /// Liefert für jeden Parameter des Primary Constructors eines Records eine
-    /// <see cref="ClassStructureMemberEntry"/> mit <c>Kind = "PrimaryCtor-Param"</c>.
-    /// Defensiv: gibt eine leere Liste zurück, wenn kein impliziter Constructor
-    /// gefunden wird (z. B. bei Records ohne Primary Ctor).
-    /// </summary>
     private static IEnumerable<ClassStructureMemberEntry> ExtractRecordPrimaryCtorParams(INamedTypeSymbol namedType)
     {
-        // Bei positional records ist der Primary-Constructor der Instance-Constructor mit
-        // den meisten Parametern, dessen Parameter nicht zu einer explizit deklarierten
-        // this(...)-Body-Definition gehören. Roslyn markiert ihn als IsImplicitlyDeclared
-        // = false (er ist explizit Teil der record-Deklaration), aber seine Locations
-        // zeigen auf die Record-Deklarations-Syntax (Klammer-Args, nicht Body).
-        // Pragmatischer Filter: Instance-Constructor mit höchster Parameter-Anzahl.
         IMethodSymbol? primaryCtor = namedType.InstanceConstructors
             .OrderByDescending(c => c.Parameters.Length)
             .FirstOrDefault();

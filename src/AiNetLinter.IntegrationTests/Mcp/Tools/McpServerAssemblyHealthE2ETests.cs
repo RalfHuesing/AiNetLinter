@@ -128,4 +128,26 @@ public sealed class McpServerAssemblyHealthE2ETests
         Assert.Contains("includeDiagnostics", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("maxDiagnostics", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task GetServerHealth_WithIncludeDiagnostics_ReturnsDetailedDiagnosticsPayload()
+    {
+        var host = await _fixture.GetHostAsync();
+        var health = await _fixture.Client.CallToolAsync(
+            "get_server_health",
+            new Dictionary<string, object?>
+            {
+                ["targetType"] = "project",
+                ["targetPath"] = host.TargetPath,
+                ["includeDiagnostics"] = true,
+                ["maxDiagnostics"] = 5,
+            });
+
+        Assert.False(
+            health.IsError == true,
+            string.Join("\n", health.Content.OfType<TextContentBlock>().Select(block => block.Text)));
+        Assert.NotNull(health.StructuredContent);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(health.Content)).Text;
+        Assert.Contains(host.TargetPath, text, StringComparison.OrdinalIgnoreCase);
+    }
 }

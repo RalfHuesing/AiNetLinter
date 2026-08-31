@@ -194,4 +194,29 @@ public sealed class MetricsTreeToolTests
         Assert.Contains("[HINWEIS]", text, StringComparison.Ordinal);
         Assert.Contains("Top-N-Ausschnitt", text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_InMemoryDocument_CalculatesSizeFromSourceText()
+    {
+        const string source = """
+            namespace VirtualNs;
+            public class VirtualClass
+            {
+                public void DoWork() { }
+            }
+            """;
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\MetricsTreeVirtualTest.slnx",
+            new ProjectSpec("VirtualProject", [("VirtualClass.cs", source)])));
+        var state = context.CreateServer();
+
+        var result = await MetricsTreeTool.ExecuteAsync(
+            state, new MetricsTreeToolArgs(null, "code_size", 2, 10, null), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("VirtualClass.cs", text);
+        Assert.Contains("83 B", text);
+        Assert.DoesNotContain("0 B", text);
+    }
 }

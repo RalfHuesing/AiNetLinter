@@ -41,10 +41,10 @@ internal static class AssemblyAnalysisResponseLimits
             .ToList();
         var all = root.Concat(transitive).ToList();
         var selection = SelectSamples(SelectRepresentativeDiagnostics(root, transitive, limit), limit);
-        var allSummary = CreateSummary(all, limit, selection.Samples);
+        var allSummary = CreateSummary(all, limit, selection.Samples, selection.ByteTruncated);
         return new(
-            CreateSummary(root, limit, selection.RootSamples),
-            CreateSummary(transitive, limit, selection.TransitiveSamples),
+            CreateSummary(root, limit, selection.RootSamples, selection.ByteTruncated),
+            CreateSummary(transitive, limit, selection.TransitiveSamples, selection.ByteTruncated),
             all.Count,
             allSummary.ShownCount,
             allSummary.Truncated,
@@ -141,18 +141,20 @@ internal static class AssemblyAnalysisResponseLimits
     private static AssemblyDiagnosticSummary CreateSummary(
         IReadOnlyList<string> diagnostics,
         int limit,
-        IReadOnlyList<string>? selectedSamples = null)
+        IReadOnlyList<string>? selectedSamples = null,
+        bool byteTruncated = false)
     {
         bool messageTruncated;
         IReadOnlyList<string> samples;
         if (selectedSamples is null)
         {
-            samples = SelectSamples(
+            var selection = SelectSamples(
                 diagnostics
                     .Select(diagnostic => new DiagnosticSampleCandidate(diagnostic, false))
                     .ToList(),
-                limit)
-                .Samples;
+                limit);
+            samples = selection.Samples;
+            byteTruncated = selection.ByteTruncated;
             messageTruncated = diagnostics.Any(diagnostic => diagnostic.Length > MaxDiagnosticCharacters);
         }
         else
@@ -163,7 +165,7 @@ internal static class AssemblyAnalysisResponseLimits
         var truncatedBy = new List<string>();
         if (diagnostics.Count > limit) truncatedBy.Add("maxDiagnostics");
         if (messageTruncated) truncatedBy.Add("messageLength");
-        if (samples.Count < Math.Min(diagnostics.Count, limit)) truncatedBy.Add("maxDiagnosticBytes");
+        if (byteTruncated) truncatedBy.Add("maxDiagnosticBytes");
         return new(
             diagnostics.Count,
             samples.Count,
@@ -208,19 +210,24 @@ internal static class AssemblyAnalysisResponseLimits
         var transitiveSamples = new List<string>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var bytes = 0;
+        var byteTruncated = false;
         foreach (var candidate in candidates.Take(limit))
         {
             var sample = NormalizeForDisplay(candidate.Diagnostic)!;
             if (!seen.Add(sample)) continue;
             var sampleBytes = Encoding.UTF8.GetByteCount(sample);
-            if (bytes + sampleBytes > MaxDiagnosticBytes) break;
+            if (bytes + sampleBytes > MaxDiagnosticBytes)
+            {
+                byteTruncated = true;
+                break;
+            }
             samples.Add(sample);
             if (candidate.IsRoot) rootSamples.Add(sample);
             else transitiveSamples.Add(sample);
             bytes += sampleBytes;
         }
 
-        return new(samples, rootSamples, transitiveSamples);
+        return new(samples, rootSamples, transitiveSamples, byteTruncated);
     }
 
     private static string NormalizeMessage(string diagnostic) =>
@@ -231,7 +238,8 @@ internal static class AssemblyAnalysisResponseLimits
     private sealed record DiagnosticSampleSelection(
         IReadOnlyList<string> Samples,
         IReadOnlyList<string> RootSamples,
-        IReadOnlyList<string> TransitiveSamples);
+        IReadOnlyList<string> TransitiveSamples,
+        bool ByteTruncated);
 }
 
 internal sealed record AssemblyDiagnosticSummary(

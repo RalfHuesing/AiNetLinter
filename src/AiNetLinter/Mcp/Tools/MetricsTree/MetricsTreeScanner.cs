@@ -106,7 +106,7 @@ internal static class MetricsTreeScanner
     {
         var lines = SolutionFileWalker.TryReadAllLines(f);
         if (lines is null) return null;
-        return new FileMetric(f.RelativePath, CommentLines: 0, CodeLines: lines.Length, Bytes: TryGetFileSize(f.AbsolutePath));
+        return new FileMetric(f.RelativePath, CommentLines: 0, CodeLines: lines.Length, Bytes: TryGetFileSize(f));
     }
 
     private static FileMetric? ComputeCommentDensityMetric(WalkedFile f)
@@ -117,16 +117,26 @@ internal static class MetricsTreeScanner
         return new FileMetric(f.RelativePath, commentLines, codeLines, Bytes: 0);
     }
 
-    private static long TryGetFileSize(string path)
+    private static long TryGetFileSize(WalkedFile f)
     {
-        try
+        if (File.Exists(f.AbsolutePath))
         {
-            return new FileInfo(path).Length;
+            try
+            {
+                return new FileInfo(f.AbsolutePath).Length;
+            }
+            catch (IOException ignored)
+            {
+                _ = ignored;
+            }
         }
-        catch (IOException)
+
+        if (f.Document.TryGetText(out var sourceText))
         {
-            return 0;
+            return sourceText.Length;
         }
+
+        return 0;
     }
 
     /// <summary>

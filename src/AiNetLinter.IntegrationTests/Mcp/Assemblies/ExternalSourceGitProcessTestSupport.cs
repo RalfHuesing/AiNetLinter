@@ -15,6 +15,22 @@ namespace AiNetLinter.IntegrationTests.Mcp.Assemblies;
 internal static class ExternalSourceGitProcessTestSupport
 {
     internal static readonly TimeSpan ProcessObservationTimeout = TimeSpan.FromSeconds(10);
+    internal static string ShellExecutable { get; } = ResolveShellExecutable();
+
+    private static string ResolveShellExecutable()
+    {
+        var powershellSysPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.System),
+            "WindowsPowerShell",
+            "v1.0",
+            "powershell.exe");
+        if (File.Exists(powershellSysPath))
+        {
+            return powershellSysPath;
+        }
+
+        return "powershell.exe";
+    }
 
     internal static async Task<(
         Task<ExternalSourceGitProcessResult> Operation,
@@ -174,7 +190,7 @@ internal static class ExternalSourceGitProcessTestSupport
         string markerPath,
         int timeoutMilliseconds) =>
         new(
-            "pwsh",
+            ShellExecutable,
             ["-NoLogo", "-NoProfile", "-NonInteractive", "-File", scriptPath, "tree", markerPath],
             workingDirectory,
             TimeSpan.FromMilliseconds(timeoutMilliseconds),
@@ -250,7 +266,8 @@ internal static class ExternalSourceGitProcessTestScripts
         param([string]$Mode, [string]$MarkerPath)
         if ($Mode -ne "tree") { exit 2 }
         $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
-        $startInfo.FileName = "pwsh"
+        $startInfo.FileName = (Get-Process -Id $PID).Path
+        if (-not $startInfo.FileName) { $startInfo.FileName = "powershell.exe" }
         $startInfo.UseShellExecute = $false
         $startInfo.CreateNoWindow = $true
         $startInfo.RedirectStandardInput = $false

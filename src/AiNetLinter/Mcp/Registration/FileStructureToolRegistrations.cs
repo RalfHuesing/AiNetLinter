@@ -136,14 +136,16 @@ internal static class FileStructureToolRegistrations
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, string? symbolIdentifier = null, string? sortBy = "lines",
                 int maxMembers = GetClassStructureTool.DefaultMaxMembers,
+                string? kindFilter = null,
+                string? nameFilter = null,
                 CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, symbolIdentifier, sortBy, maxMembers, ct),
-                            AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, symbolIdentifier, sortBy, maxMembers, ct)),
+                            ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter), ct),
+                            AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter), ct)),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("get_class_structure", GetClassStructureDescription)));
     }
@@ -153,7 +155,8 @@ internal static class FileStructureToolRegistrations
         "Kind, Name, Visibility, Start-/End-Zeile, Zeilenanzahl und Signatur (z. B. zur Analyse " +
         "vor Refactorings oder zur Identifikation langer Member; bei Records inkl. Primary-Constructor-Parametern). " +
         "symbolIdentifier (Pflicht): Typname, Datei.cs:Zeile:Spalte oder DocCommentId. " +
-        "sortBy: 'lines' (Default), 'kind', 'name'. maxMembers: Begrenzung der sichtbaren Member " +
+        "sortBy: 'lines' (Default), 'kind', 'name'. kindFilter: optionaler Filter nach Member-Kind (z. B. Method, Property, Field, Constructor, all). " +
+        "nameFilter: optionaler Substring-Filter nach Member-Namen. maxMembers: Begrenzung der sichtbaren Member " +
         "(Default 50, Cap " + GetClassStructureTool.MaxMembersCap + "); bei Ueberschreitung " +
         "Truncation-Meta-Zeile und TotalMemberCount vs. ShownMemberCount im structuredContent.";
 

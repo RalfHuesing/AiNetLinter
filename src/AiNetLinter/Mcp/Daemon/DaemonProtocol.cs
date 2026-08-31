@@ -61,7 +61,7 @@ internal sealed record EffectiveDaemonConfiguration(
         && OptionalMatches(ExternalMaxMemoryBytes, other.ExternalMaxMemoryBytes)
         && OptionalMatches(ExternalMaxParallelOperations, other.ExternalMaxParallelOperations)
         && OptionalMatches(ExternalMaxResidentResources, other.ExternalMaxResidentResources)
-        && OptionalMatches(ExternalIdleTtlMinutes, other.ExternalIdleTtlMinutes);
+        && OptionalMatchesNormalizedMinutes(ExternalIdleTtlMinutes, other.ExternalIdleTtlMinutes);
 
     // Serverseitig beschreibt ein fehlendes optionales Feld einen alten Client.
     // Neue Clients mit einem expliziten Limit werden dagegen vollständig
@@ -74,10 +74,18 @@ internal sealed record EffectiveDaemonConfiguration(
         && OptionalMatches(other.ExternalMaxMemoryBytes, ExternalMaxMemoryBytes)
         && OptionalMatches(other.ExternalMaxParallelOperations, ExternalMaxParallelOperations)
         && OptionalMatches(other.ExternalMaxResidentResources, ExternalMaxResidentResources)
-        && OptionalMatches(other.ExternalIdleTtlMinutes, ExternalIdleTtlMinutes);
+        && OptionalMatchesNormalizedMinutes(other.ExternalIdleTtlMinutes, ExternalIdleTtlMinutes);
 
     private static bool OptionalMatches<T>(T? expected, T? received)
         where T : struct => expected is null || expected.Value.Equals(received);
+
+    private static bool OptionalMatchesNormalizedMinutes(decimal? expected, decimal? received)
+    {
+        if (expected is null || received is null) return expected is null;
+        var expectedTicks = decimal.ToInt64(expected.Value * TimeSpan.TicksPerMinute);
+        var receivedTicks = decimal.ToInt64(received.Value * TimeSpan.TicksPerMinute);
+        return expectedTicks == receivedTicks;
+    }
 }
 
 internal sealed record DaemonIdentity(

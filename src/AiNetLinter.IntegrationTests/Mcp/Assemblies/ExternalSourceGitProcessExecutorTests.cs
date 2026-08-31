@@ -39,7 +39,7 @@ public sealed class ExternalSourceGitProcessExecutorTests
         {
             Environment.SetEnvironmentVariable(inheritedName, "ambient-marker");
             var request = new ExternalSourceGitProcessRequest(
-                "pwsh",
+                ShellExecutable,
                 ["-NoLogo", "-NoProfile", "-NonInteractive", "-File", scriptPath, "probe", argument],
                 workingDirectory,
                 TimeSpan.FromSeconds(15),
@@ -87,7 +87,7 @@ public sealed class ExternalSourceGitProcessExecutorTests
             "probe.ps1",
             ExternalSourceGitProcessTestScripts.ProbeScript);
         var request = new ExternalSourceGitProcessRequest(
-            "pwsh",
+            ShellExecutable,
             ["-NoLogo", "-NoProfile", "-NonInteractive", "-File", scriptPath, "large", "unused"],
             temp.DirectoryPath,
             TimeSpan.FromSeconds(15),
@@ -159,7 +159,7 @@ public sealed class ExternalSourceGitProcessExecutorTests
             "start-marker.ps1",
             ExternalSourceGitProcessTestScripts.StartMarkerScript);
         var request = new ExternalSourceGitProcessRequest(
-            "pwsh",
+            ShellExecutable,
             ["-NoLogo", "-NoProfile", "-NonInteractive", "-File", scriptPath, markerPath],
             temp.DirectoryPath,
             TimeSpan.FromSeconds(15),
@@ -340,7 +340,7 @@ public sealed class ExternalSourceGitProcessExecutorTests
             "start-marker.ps1",
             ExternalSourceGitProcessTestScripts.StartMarkerScript);
         var request = new ExternalSourceGitProcessRequest(
-            "pwsh",
+            ShellExecutable,
             ["-NoLogo", "-NoProfile", "-NonInteractive", "-File", scriptPath, markerPath],
             temp.DirectoryPath,
             TimeSpan.FromMilliseconds((double)uint.MaxValue + 1),
