@@ -40,3 +40,9 @@
 - Fallback-Report: `reports/01-assembly.md`.
 - Terminalurteil: ASM-001 (unbedingte Referenzexpansion) bestätigt; ASM-002 (falsches `partial` bei Namensauflösung über Nichttreffer-Sessions) bestätigt; Member-ID-Frage als unbestätigte Konsistenzbeobachtung getrennt.
 - Keine Produktions- oder Testdateien geändert.
+
+## 2026-08-31 — Linse 02 abgeschlossen
+
+- Fallback-Report: `reports/02-external-source.md`.
+- Terminalurteil: Konfigurations-, Mapping-, Provider- und Fallback-Verträge ohne bestätigten S0–S2-Defekt; reale source-backed Provider-Ausführung als externe Abdeckungsgrenze dokumentiert.
+- Keine Produktions- oder Testdateien geändert.
