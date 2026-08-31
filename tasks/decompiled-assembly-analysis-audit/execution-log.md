@@ -70,3 +70,10 @@
 - Fallback-Report: `reports/06-mcp-contracts.md`.
 - Terminalurteil: MCP-Target-/Capability-/Error-Verträge weitgehend konsistent; MCP-001 bestätigt, da das dokumentierte 4-KiB-Diagnosebudget nicht die gesamte strukturierte Wire-Antwort begrenzt. Vorhandener Test prüft nur die top-level Samples.
 - Keine Produktions- oder Testdateien geändert.
+
+## 2026-08-31 — Nachträglicher unabhängiger Bericht Linse 02
+
+- Reviewerstatus: Ein zuvor verzögert gestarteter Reviewer hat nachträglich einen unabhängigen, read-only Bericht geliefert und den vorhandenen Fallback-Bericht für Linse 02 ersetzt.
+- Report: `reports/02-external-source.md`; geprüfte Revision laut Reviewer: `8a9fbdda` (Source-Baseline unverändert).
+- Terminalurteil: Zwei zusätzliche S2-Befunde wurden nachvollziehbar belegt: Divergenz zwischen Loader- und Laufzeit-URL-Policy sowie fehlende produktive Credential-Resolver-Verdrahtung in MCP-/Daemon-Einstiegen. Beide bleiben audit-only unverändert.
+- Die Befunde werden in der Konsolidierung gegen die aktuelle Host-Komposition und die Laufzeit-URL-Policy übernommen; der frühere Fallback-Befund `SRC-001` ist damit nicht mehr der Primärbericht für Linse 02.
