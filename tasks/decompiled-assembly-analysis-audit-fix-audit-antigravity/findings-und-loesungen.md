@@ -278,3 +278,63 @@ Optionale Parameter `maxResults` (z. B. Default 20) und `minLinePercentage` (z. 
 2. In Roslyn (`MetadataReference.CreateFromFile`) und `ICSharpCode.Decompiler` sind keine Änderungen notwendig, da beide Bibliotheken `.exe`-Assemblies nativ unterstützen.
 3. Dokumentation und Tool-Beschreibungen anpassen: `targetPath muss ein existierender .dll- oder .exe-Pfad sein`.
 
+---
+
+## Rang 11: Fehlende Enum-Konstantenwerte (`ConstantValue`) in `get_class_structure`
+
+### Problem & Auswirkung auf LLM-Agenten
+- **Befund-ID:** `NAV-003` / `SYM-001`
+- **Schweregrad / Dringlichkeit:** `S2` / `P2`
+- **Symptom:** `get_class_structure` gibt bei Enum-Typen und Konstanten nur den Namen des Members aus (z. B. `Constant: Erfassungsart.Verkauf`), unterschlägt aber den eigentlichen zugewiesenen Integer-/Literal-Wert (`= 4000`).
+- **Agentischer Schaden:** Ein LLM-Agent kann Enum-Werte für SQL-Queries, API-Calls oder Konfigurationen nicht ermitteln. Er muss raten (was zu Falschaussagen wie `0` statt `4000` führt) oder versuchen, Umwege über temporäre Cache-Dateien im Dateisystem zu nehmen.
+
+### Betroffener Code
+- [src/AiNetLinter/Mcp/Tools/FileStructure/GetClassStructureTool.cs:282](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/FileStructure/GetClassStructureTool.cs#L282)
+  ```csharp
+  Signature: m.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+  ```
+  *(Roslyn `IFieldSymbol` besitzt `HasConstantValue` und `ConstantValue`, die aktuell ignoriert werden).*
+
+### Lösungsvorschlag
+In `GetClassStructureTool.cs:282` bei Feldern und Enum-Elementen den `ConstantValue` anhängen:
+```csharp
+Signature: m is IFieldSymbol { HasConstantValue: true } constField
+    ? $"{constField.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} = {constField.ConstantValue}"
+    : m.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+```
+**Ergebnis:** `get_class_structure` gibt sofort `Erfassungsart.Verkauf = 4000` und `GleichgewichtsstatistikWirkung.Negativ = -1` aus.
+
+---
+
+## Rang 12: Fehlende On-Demand Methodenrumpf-Dekompilation in `get_symbol_body`
+
+### Problem & Auswirkung auf LLM-Agenten
+- **Befund-ID:** `NAV-004` / `DEC-001`
+- **Schweregrad / Dringlichkeit:** `S1` / `P2`
+- **Symptom:** Bei dekompilierten Assemblys liefert `get_symbol_body` nur Semikolon-terminierte Metadata-Stubs (`private bool InitializeBelegarten(Mandant mandant);`), nicht den dekompilierten C#-Rumpf `{ ... }`.
+- **Agentischer Schaden:** Der LLM-Agent sieht zwar die Signatur, kann aber die tatsächliche Geschäftslogik (z. B. welche SQL-Statements ausgeführt werden oder welche Berechnungsformeln greifen) nicht analysieren.
+
+### Betroffener Code
+- [src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs)
+- [src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationCache.cs](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationCache.cs)
+
+### Lösungsvorschlag
+Wenn für ein Symbol in einer dekompilierten Assembly kein Source-Code vorliegt, die CIL-Instructions der Methode gezielt über `ICSharpCode.Decompiler` (z. B. `CSharpDecompiler.DecompileAsString(methodDefinitionHandle)`) on-demand dekompilieren und den vollständigen C#-Methodenkörper zurückgeben.
+
+---
+
+## Architektur-Diskussion: Sollte der MCP-Server temporäre Cache-Dateipfade an das LLM mitteilen?
+
+### Frage & Evaluierung
+*Sollte der MCP-Server dem LLM den absoluten Pfad der dekompilierten Zwischendatei im Cache (z. B. `C:\Daten\Tools\...\cache\assembly\...\source\00005-Belegarten.cs`) in den Metadaten übergeben?*
+
+### Bewertung & Empfehlung: **Nein (Nicht als primärer Workflow)**
+1. **Bruch der Protokoll-Kapselung:** Der Sinn eines MCP-Servers besteht darin, dass der Client/Agent **keinen direkten Dateisystemzugriff** auf interne Cache-Strukturen benötigt.
+2. **Sandbox- & Berechtigungskonflikte:** In vielen Agenten-Umgebungen (wie auch in diesem Audit erlebt) sind Dateisystem-Reads außerhalb des Workspace-Roots aus Sicherheitsgründen gesperrt (`Permission denied for read_file(...)`).
+3. **Flüchtigkeit & Lifecycle:** Cache-Dateien können nach Ablauf der `IdleTtl` oder bei Cache-Bereinigungen gelöscht werden. Direkte Dateireferenzen veralten sofort.
+4. **Bessere Alternative:** Die MCP-Tools müssen semantisch vollständig sein (siehe Rang 11 & 12):
+   - `get_class_structure` liefert vollständige Signaturen inkl. Werten.
+   - `get_symbol_body` liefert den dekompilierten Code direkt im Tool-Ergebnis.
+   - Als `filePath` wird ein virtueller Symbolpfad (`assembly://Sagede.OfficeLine.Wawi.BelegBasic/Belegarten.cs`) übergeben, der stabil und aussagekräftig ist.
+
+
