@@ -1,63 +1,60 @@
-# AiNetLinter — .NET-Linter und MCP-Server für C#-Agentenworkflows
+# AiNetLinter
 
-AiNetLinter analysiert C#-Code in `.sln`- und `.slnx`-Solutions mit Roslyn
-gegen die in `rules.json` konfigurierte Regelmenge. Es kann als CLI-Batch-Tool
-oder als [MCP](https://modelcontextprotocol.io)-Server betrieben werden; beide
-Modi verwenden dieselbe Analyse-Engine.
+AiNetLinter ist ein Roslyn-basierter Linter und MCP-Server für C#-Solutions.
+Er prüft Code gegen konfigurierbare Regeln und stellt Coding-Agenten
+semantische Informationen über Code, Abhängigkeiten und Änderungen bereit.
 
-| Modus | Schnittstelle | Aufgabe |
-| :--- | :--- | :--- |
-| CLI-Batch-Modus | `ainetlinter --config … --path …` | Führt einen Lint-Lauf aus, schreibt einen Markdown-Report nach stdout und setzt einen Exit-Code. |
-| MCP-Server-Modus | `ainetlinter --mcp-server` | Stellt die Analyse als einzeln abfragbare Tools für einen laufenden Coding-Agenten bereit. |
+Im CLI-Modus schreibt AiNetLinter einen Markdown-Report und einen passenden
+Exit-Code. Im MCP-Modus stellt es dieselbe Analyse-Engine als gezielt
+abfragbare Werkzeuge bereit. Build und Tests werden nicht ersetzt; sie bleiben
+eigenständige Prüfungen.
 
-Compilerfehler und Laufzeitverhalten sind nicht Gegenstand der Analyse. Build
-und Tests bleiben eigenständige Prüfungen.
+## Für Entwicklungs- und Agentenworkflows
 
----
+| Situation | AiNetLinter liefert |
+| :--- | :--- |
+| Vor einer Änderung | Deklarationen, Member-Struktur, Metriken, Aufrufer, zugeordnete Tests und offene Regelverstöße für ein Symbol. |
+| Beim Nachvollziehen von Abhängigkeiten | Referenzen, Aufrufer- und Aufgerufene-Bäume, Typ-Hierarchien und semantische Dateiabhängigkeiten. |
+| Nach einer Änderung | Git-Diff-bezogene Auswirkungen, statisch zugeordnete Tests, Regelverstöße und ein Quality-Gate. |
+| Beim Erkunden einer fremden DLL | Öffentliche API, Typen, Member und klassische Extension-Methoden – ohne die Assembly zu laden oder auszuführen. |
 
-## Ablauf im agentischen Entwicklungsworkflow
+Die MCP-Tools geben zu begrenzten Ergebnissen und nicht auflösbaren
+Abhängigkeiten ihren Vollständigkeitsstatus aus. Agenten können ihren nächsten
+Schritt daran ausrichten, statt den gesamten Repository-Inhalt als Kontext zu
+laden.
 
-Die MCP-Tools stellen dem Agenten Informationen zu einzelnen Symbolen,
-Zusammenhängen und dem aktuellen Regelstand bereit.
+### Externe Assemblies mit Quellkontext
 
-| Arbeitsphase | Abfragen | Gelieferte Informationen |
-| :--- | :--- | :--- |
-| Physische Orientierung | `get_file_tree` | Relative Dateien/Verzeichnisse, Extension-/Größenaggregation, optionale Filter und sichtbare Completeness-/Trunkierungsangaben — unabhängig vom Roslyn-Index. |
-| Orientierung vor einem Edit | `get_feature_context`, `find_symbol`, `get_file_skeleton`, `get_symbol_body` | Deklarationen, Member-Struktur, Metriken, direkte Aufrufer, statische Test-Zuordnung und aktuelle Regelverstöße. |
-| Abhängigkeiten untersuchen | `find_references`, `get_call_tree`, `get_type_hierarchy`, `dependency_graph` | Aufrufstellen, Aufrufer-/Aufgerufene-Bäume, Vererbung und semantische Typreferenzen; Assembly-Ziele können bei `find_references`/`get_call_tree` mit `includeReferences=true` bounded Referenz-Assemblies einbeziehen. |
-| Externe APIs untersuchen | `inspect_assembly`, `find_assembly_extensions` | Öffentliche API und klassische Extension-Methoden einer exakt angegebenen lokalen DLL metadata-only über Roslyn; `inspect_assembly` unterstützt exakte Typauswahl, Mehrfachfilter, Member-Limits und strukturierte Parameterdaten; optional gegen eine Consumer-Solution. |
-| Änderung und Tests einordnen | `get_impact`, `get_test_context` | Betroffene Call-Sites; für Diff-Kontext auch geänderte Symbole, statische Test-Zuordnungen und ausführbare Testfilter. |
-| Nach einem Edit prüfen | `get_violations`, `metrics_lookup`, `safeguard` | Aktuelle Verstöße für einen Scope, Symbolmetriken mit Schwellwert-Abgleich sowie Score, Pass/Fail und deterministische Top-Befunde mit Gesamt-/Trunkierungsmetadaten. |
-| Repository-Audit | `metrics_tree`, `pattern_detect`, `find_duplicates`, `find_dead_code`, `find_magic_values` | Aggregierte Strukturmetriken und Kandidaten für konfigurierbare Pattern, Duplikate, unreferenzierten Code und Magic Values. |
+`inspect_assembly` und `find_assembly_extensions` untersuchen eine lokale
+`.dll` statisch über Roslyn. Ohne verfügbare Quelle erzeugt AiNetLinter dafür
+eine dekompilierte, schreibgeschützte Analyse-Session.
 
-Für Textmuster, Konfiguration und Nicht-C#-Dateiinhalte steht nach der physischen
-Orientierung mit `get_file_tree` das `search_pattern`-Tool bereit; bei lokaler
-Datei-/Zeilenarbeit auch `rg`. Symbol-, Referenz- und Impact-Fragen werden über
-die Roslyn-basierten MCP-Tools beantwortet.
+Für eine eingebundene Fremd-DLL kann zusätzlich eine passende Source-Solution
+aus einem konfigurierten öffentlichen Git-Repository zugeordnet werden. Dann
+arbeitet die Assembly-Analyse mit einem schreibgeschützten Source-Snapshot
+dieser Solution. Symbolsuche, Struktur-, Referenz- und Metrikabfragen beziehen
+sich damit auf den Quellkontext; Herkunft, Snapshot und mögliche unvollständige
+Abhängigkeiten bleiben im Ergebnis sichtbar.
 
----
+Der Abschnitt `ExternalSources` in `appsettings.json` verweist auf die
+Mapping-Datei und begrenzt die Ressourcen. Ohne gültige Quellzuordnung bleibt
+die Dekompilierung der sichere Fallback. Details und der Konfigurationsvertrag:
+[External-Source-Mapping](Docs/configuration.md#expliziter-external-source-mappingvertrag).
 
-## CLI-Batch-Modus
+## Schnellstart
+
+### Als CLI ausführen
 
 ```powershell
 ainetlinter --config rules.json --path .\src\MeinProjekt.slnx
 ```
 
-Der Lauf liefert Exit-Code `0` ohne neue Verstöße und `1`, wenn Verstöße
-gefunden wurden. Weitere CLI-Funktionen sind unter anderem:
+Der Lauf liefert Exit-Code `0`, wenn keine neuen Verstöße gefunden werden, und
+`1`, wenn Verstöße vorliegen. Für die schrittweise Einführung stehen Baselines
+bereit; einfache Roslyn-basierte Korrekturen lassen sich mit `--fix` anwenden.
+Aus der Regelkonfiguration können außerdem Agenten-Regeln synchronisiert werden.
 
-- `--fix` für die Anwendung einfacher Roslyn-basierter Fixes;
-- `--create-baseline` und `--baseline` für inkrementelle Einführung in bestehenden Code;
-- `--sync-agent-rules` und `--sync-agent-rules-only` für aus der Konfiguration erzeugte Agenten-Regeln;
-- `--list-rules`, `--describe-rule` und `--docs` zur Discovery ohne Lint-Lauf.
-
-Parameter, Exit-Codes und vollständige Workflows: [Docs/agent-api.md](Docs/agent-api.md).
-
----
-
-## MCP-Server-Modus
-
-Registrierung in einem MCP-Host:
+### Als MCP-Server registrieren
 
 ```json
 {
@@ -70,39 +67,8 @@ Registrierung in einem MCP-Host:
 }
 ```
 
-Für eine getrennte Daemon-Instanz kann die Registrierung eine sichere ID
-angeben:
-
-```json
-{
-  "mcpServers": {
-    "ainetlinter-beta": {
-      "command": "ainetlinter",
-      "args": ["--mcp-server", "--daemon-instance", "beta"]
-    }
-  }
-}
-```
-
-Die ID beginnt mit einem ASCII-Buchstaben, enthält danach nur ASCII-
-Buchstaben, Ziffern sowie `.`, `_` oder `-` und ist maximal 32 Zeichen lang.
-Die ID wird invariant in Kleinbuchstaben normalisiert; `BETA` und `beta`
-verwenden deshalb denselben Named-Pipe-Endpunkt. Ohne ID bleibt der bisherige
-Named-Pipe-Endpunkt unverändert.
-
-Externe Assembly- und Source-Snapshot-Ressourcen werden über den vorhandenen
-`ExternalSources`-Abschnitt in `appsettings.json` begrenzt (Disk, Memory,
-Parallelität, residenter Bestand und Idle-TTL). Im MCP-/Daemon-Modus können
-dieselben Werte mit den `--mcp-external-*`-Flags überschrieben werden; die
-Limits gelten für beide externen Registries und für die Materialisierung.
-
-Jeder zielgebundene Tool-Aufruf erhält `targetType` (`project` oder `assembly`)
-und den absoluten `targetPath`. Die konkrete Capability-Matrix steht in
-`tools/list` und in [Docs/agent-api.md](Docs/agent-api.md#mcp-server-modus):
-Read-only Symbol-/Struktur-/Metrikabfragen teilen sich den Projekt-/Assembly-
-Sessionpfad, während Regeln, Audits, Dateisuche und Git-Impact projektgebunden
-bleiben. Bei `targetType=project` liegt im adressierten Projektroot die Definition
-der Solution und Regeldatei:
+Im Projektroot liegt die Definition der zu analysierenden Solution und
+Regeldatei:
 
 ```json
 {
@@ -111,72 +77,19 @@ der Solution und Regeldatei:
 }
 ```
 
-Diese Datei heißt `ainetlinter.project.json`; ihre Pfade werden relativ zu ihr
-aufgelöst. Im MCP-Modus gehören `--path` und `--config` nicht in die
-Registrierung. `ainetlinter://agent-guide` stellt den einmaligen Bootstrap-
-Leitfaden samt dauerhafter Agentenregel bereit; `tools/list` liefert die
-aktuellen Tool- und Parameterschemas. Die Resource
-`ainetlinter://rules?projectRoot=<url-encoded>` liefert pro adressiertem
-Projekt-Key die frisch generierte effektive Regelkonfiguration mit Herkunft,
-aktiven Regeln und Metrik-Schwellwerten.
-
-Die Tools liefern außerdem fachliche MCP-Annotations: Analyse- und Health-Abfragen
-sind read-only, `reload_config` ist idempotent, und
-`report_observability_feedback` ist nicht idempotent. Diese Werte sind Hinweise für
-Hosts und keine Sicherheitsgarantie; Berechtigungs- und Pfadprüfungen bleiben davon
-unabhängig.
-
-Die dauerhafte MCP-Regel wird nur für die bevorzugte Werkzeugwahl geladen. Der
-vollständige Bootstrap ist bei einer neuen Integration einmalig über
-`ainetlinter://agent-guide` oder offline mit `ainetlinter --docs mcp-bootstrap`
-abzurufen.
-
-Die laufenden Bootstrap-Ausgaben ergänzen einen dynamischen
-Registrierungsblock mit dem tatsächlichen Pfad des aktuellen AiNetLinter-
-Prozesses. Verwende diesen absoluten `command`-Pfad, wenn der MCP-Host
-`ainetlinter` nicht über `PATH` auflösen kann.
-
-Registrierung, Projektvertrag und Tool-vs.-Textsuche: [Docs/integration.md](Docs/integration.md#mcp-server-registrieren).
-
-Für externe lokale DLLs stehen `inspect_assembly` und `find_assembly_extensions` bereit. Beide
-verwenden `targetType=assembly` und einen absoluten `targetPath` auf eine vorhandene `.dll`;
-die Assembly wird nicht ausgeführt. Ein Consumer-Projekt ist für diesen Assembly-Zweig in
-diesem Vertrag nicht Teil des Aufrufs. `inspect_assembly` kann mit
-`exactTypeName`, `memberNames` und `maxMembers` große oder mehrdeutige APIs gezielt
-einschränken und liefert bei Methoden und Indexern zusätzlich strukturierte Parameterdaten.
-Unaufgelöste Abhängigkeiten werden als `partial` gekennzeichnet. Diagnostics und
-Referenzdaten sind in StructuredContent und Text gemeinsam begrenzt; Health zeigt
-standardmäßig nur Metadaten/Zähler und liefert Samples erst mit
-`includeDiagnostics=true` (begrenzt durch `maxDiagnostics`).
-
----
-
-## Konfigurierbare Analysebereiche
-
-`rules.json` definiert Regeln und Grenzwerte. Dazu gehören unter anderem
-Komplexitäts- und Strukturmetriken, der AI-Context-Footprint, projekt- und
-pfadspezifische Overrides, Baselines sowie Suppressions. Die Strukturprüfung
-für Verzeichnisse berücksichtigt dabei organisatorische Ordner wie `tasks` über
-`MaxDirectoryChildrenExemptNames`. Die Web-Analyse für
-CSS, JavaScript und Razor wird über `Web.IsEnabled` aktiviert.
-
-Die vollständige Konfigurationsreferenz enthält alle Regel-IDs, Felder und
-Standardwerte: [Docs/configuration.md](Docs/configuration.md).
-
----
+Speichere diese Datei als `ainetlinter.project.json`. Zielgebundene MCP-Aufrufe
+verwenden anschließend `targetType` (`project` oder `assembly`) und einen
+absoluten `targetPath`. Für den Projektstart stellt
+`ainetlinter://agent-guide` den Bootstrap bereit; `tools/list` beschreibt die
+aktuell registrierten Tools und ihre Parameter.
 
 ## Dokumentation
 
-Die Dokumente sind in die Binary eingebettet und können ohne Netzzugriff über
-`ainetlinter --docs <name>` ausgegeben werden.
-
 | Dokument | Inhalt |
 | :--- | :--- |
-| [Docs/agent-api.md](Docs/agent-api.md) | Alle CLI-Flags, MCP-Tools, Parameter, Output- und Fehlerverträge. |
-| [Docs/integration.md](Docs/integration.md) | Integration in ein bestehendes Projekt, Baseline und MCP-Registrierung. |
-| [Docs/mcp-bootstrap.md](Docs/mcp-bootstrap.md) | Einmaliger Bootstrap für die MCP-Integration eines Projekts. |
-| [Docs/configuration.md](Docs/configuration.md) | `rules.json`-Schema, Regeln, Defaults und Deployment-Hinweise. |
-| [Docs/rationale.md](Docs/rationale.md) | Design-Entscheidungen und Quellen zur Regelauswahl. |
-| [Docs/ROADMAP.md](Docs/ROADMAP.md) | Entwicklungshistorie und abgeschlossene Vorhaben. |
+| [MCP- und CLI-Referenz](Docs/agent-api.md) | Tools, Parameter, Antworten, Fehler und Capability-Matrix. |
+| [Integration](Docs/integration.md) | Einbindung in ein bestehendes Projekt, Baseline, CI und MCP-Registrierung. |
+| [Konfiguration](Docs/configuration.md) | `rules.json`, Regel-IDs, Defaults und `ExternalSources`. |
+| [MCP-Bootstrap](Docs/mcp-bootstrap.md) | Einmalige Einrichtung für Agenten und MCP-Hosts. |
 
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
