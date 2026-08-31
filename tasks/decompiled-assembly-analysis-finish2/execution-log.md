@@ -1600,3 +1600,26 @@
   `DIAGNOSTICS-SAMPLE-BUDGET` blockiert. Für dessen Wire-Form/Payload-Budget
   ist eine explizite Nutzerentscheidung erforderlich; es wurde keine weitere
   automatische Korrekturschleife gestartet.
+
+## 2026-08-31 — gestoppt / Kritikerbefunde und Live-MCP-Nachweis
+
+- Auf Nutzeranweisung wurden alle weiteren Kritiker-, Test- und
+  Implementierungsschritte gestoppt. Die von diesem Lauf gestarteten Kritiker
+  wurden beendet/archiviert; fremde bzw. historische Tasks wurden nicht
+  verändert.
+- Kritiker 1 lieferte einen unabhängigen read-only Bericht. Die Befunde sind
+  vollständig in `kritiker-findings.md` erfasst: drei P1-Befunde zur
+  unbeabsichtigten Default-Expansion, irreführenden Partialität und zum
+  globalen Diagnostics-Wire-Budget sowie ein P1-Nachweis-/Deployment-Befund
+  zum nicht ausgeführten Live-MCP-Test. Der bestehende P2-Footprint-Befund ist
+  ebenfalls vermerkt.
+- Kritiker 2 wurde vor einem terminalen Bericht beendet; es werden ihm keine
+  ungeprüften Ergebnisse zugeschrieben.
+- Der tatsächlich registrierte MCP-Server wurde nicht live gestartet. In der
+  Shell war `ainetlinter` nicht auflösbar; `.mcp.json` zeigt nur den
+  source-lokalen `dotnet run`-Fallback. Ein Live-Handshake, `tools/list` und
+  echte DLL-/DLL+Git-Repo-Aufrufe bleiben ausdrücklich offen.
+- Dieser Stop-Lauf änderte ausschließlich Task-Dokumentation; die bewusste
+  `rules.json`-Anpassung und alle vorhandenen Nutzeränderungen blieben
+  unverändert.
+- Findings-Anker: `tasks/decompiled-assembly-analysis-finish2/kritiker-findings.md`.
