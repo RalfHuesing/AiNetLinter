@@ -4,7 +4,7 @@ status: executing
 current_epic: EPIC-C
 correction_round: 1
 cycle_state: continue-after-finding-budget
-last_commit: 8ab245ab
+last_commit: 017797d4
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
@@ -83,7 +83,7 @@ tech_debt: siehe tech-debt.md
   Dispose während der Erzeugung sind deterministisch.
 - Verifikation: fokussierte TTL/LRU/Capacity/Lease/Race/Creation-Barrier-
   Tests; hohe Last nur in gezielten Stress-Tests; gezielter Violations-Check.
-- Status: review_pending (Korrekturrunde 1 abgeschlossen)
+- Status: review_in_progress (Folge-Review nach Korrekturrunde 1)
 
 ## EPIC-C-Review — Korrektur umgesetzt, Folge-Review ausstehend
 
@@ -97,10 +97,10 @@ tech_debt: siehe tech-debt.md
   Integration 4/4; vollständige Nicht-Stress-FastTests 2256 bestanden,
   2 Skips; Integration 372/374. `get_violations` nur der bekannte
   `AssemblyAnalysisRegistry`-Footprint.
-- Review: `issues`; unabhängiger Reviewer gegen Commit `8ab245ab` meldete drei
-  P1- und zwei P2-Befunde. Die Korrekturrunde hat alle fünf Punkte bearbeitet;
-  EPIC-C bleibt bis zum Folge-Review offen. Das ausgeschöpfte EPIC-B-Finding
-  bleibt unverändert.
+- Review: `issues`; der unabhängige Reviewer gegen Commit `8ab245ab` meldete
+  drei P1- und zwei P2-Befunde. Korrekturrunde 1 hat alle fünf Punkte
+  bearbeitet; der Folge-Review gegen `017797d4` läuft. Das ausgeschöpfte
+  EPIC-B-Finding bleibt unverändert.
 
 ## EPIC-C-Korrekturrunde 1
 
@@ -122,6 +122,16 @@ tech_debt: siehe tech-debt.md
   Integration 7/7; vollständige FastTests 2263 bestanden, 2 Skips;
   Integration 373 bestanden mit den zwei bekannten externen
   Beschreibungstextfehlern. Review gegen den Korrekturstand steht aus.
+
+## EPIC-C-Folge-Review — Korrekturstand `017797d4`
+
+- Rolle: unabhängiger Reviewer; keine Codeänderung und kein Agenten-Commit.
+- Prüffokus: alle fünf `TD-EPIC-C-001` bis `TD-EPIC-C-005`, aktive Lease-
+  Sicherheit, Reservation-/Registry-Atomizität, Daemon-Handshake,
+  Cancellation-Join, Regressionen und MCP-Violations.
+- Übergabe: `approved` nur bei keinem belegten P0/P1; sonst frische zweite
+  Korrekturrunde für die betroffenen Findings.
+- Warteverhalten: Polling-Timeouts führen nicht zu einem Interrupt.
 
 ## EPIC-D — Mehrere Assemblies und tolerante Analyse
 

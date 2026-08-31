@@ -625,6 +625,18 @@
   abgeschlossen behandelt; alle Polling-Timeouts führten nicht zu einem
   Interrupt.
 
+## 2026-08-31 — running / EPIC-C / Folge-Reviewer nach Korrekturrunde 1
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- diff-baseline: `017797d4` gegen Reviewstand `8ab245ab`
+- scope: unabhängige Neubewertung der fünf EPIC-C-Korrekturen, insbesondere
+  Source-/Assembly-Eviction, Reservation-Ownership, ThinClient-Handshake und
+  vollständiger Producer-/Host-Dispose-Join.
+- erwarteter Hand-off: `approved` oder präzise P0/P1/P2/P3-Befunde; das
+  ausgeschöpfte EPIC-B-Finding wird nicht erneut geöffnet.
+- warteverhalten: Der Reviewer läuft bis zum echten terminalen Status;
+  Polling-Timeouts führen nicht zu einem Interrupt.
+
 ## 2026-08-31 — completed / EPIC-C / Reviewer
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`
