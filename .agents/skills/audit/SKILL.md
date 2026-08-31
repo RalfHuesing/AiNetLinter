@@ -12,9 +12,11 @@ Refactorings und zusammenhängende Codepakete. Er sucht mit dem AiNetLinter-
 MCP-Server nach Code-Duplikation, Refactoring-Drift, totem Code und Magic Values und behebt
 eindeutige, risikoarme Befunde direkt im aktuellen Arbeitsstand.
 
-Der Audit wird nicht bei jedem kleinen Fix und nicht als endlose
+Der Audit wird nicht bei jedem kleinen Fix und nicht als eigene endlose
 Korrekturschleife ausgeführt. Ein Orchestrator kann ihn nach Implementierung
-und Review einmal am Ende eines Tasks aufrufen.
+und Review einmal am Ende der fachlichen Arbeit aufrufen. Seine Findings werden
+in den bestehenden Orchestrator-/Tech-Debt-Ablauf eingespeist; der Audit darf
+den Gesamtworkflow nicht wegen eines hartnäckigen Befunds beenden.
 
 ## Verbindliche Projektregeln
 
@@ -103,8 +105,12 @@ mit Fundstelle, Evidenz, Risiko und Empfehlung berichtet.
 Führe nach den sicheren Korrekturen einen gebündelten Nachcheck der betroffenen
 Bereiche durch. Starte keine neue vollständige Audit-Kette nur wegen eines
 neu sichtbaren P2-/P3-Befunds. Sobald ein Fund Architekturentscheidungen,
-größeren Scope oder ein anderes Betriebsmodell erfordert, stoppt der Audit an
-dieser Stelle und berichtet ihn zur Nutzerentscheidung.
+größeren Scope oder ein anderes Betriebsmodell erfordert, begrenze den Audit
+auf den belegten Bereich und berichte den Fund mit
+`blocked/needs-user-decision`. Der Orchestrator nimmt ihn in die Queue auf und
+arbeitet unabhängig davon weiter; nur wenn die Entscheidung den gesamten
+Auftrag tatsächlich untrennbar blockiert, darf der Gesamtstatus `blocked`
+werden.
 
 Der Audit ändert keine Task-/Step-Dateien außer der vorgesehenen
 `code-map.md` und erzeugt keinen eigenen Task oder Commit. Wenn er vom
@@ -119,7 +125,7 @@ entscheidungsrelevante Befunde mit Kategorie, Fundstellen, Evidenz, Risiko und
 Empfehlung sowie einer passenden Disposition (`fixed`, `accepted-deferred`,
 `rejected/not-applicable`, `blocked/needs-user-decision` oder
 `promoted-to-project-debt`). Führe außerdem die tatsächlich ausgeführten
-MCP-Abfragen und Tests auf. Kennzeichne bei nicht blockierenden P2/P3-Funden,
-ob sie als actionable Tech Debt in das task-lokale Register gehören. Der
+MCP-Abfragen und Tests auf. Kennzeichne bei jedem actionable Finding, ob es in
+die Tech-Debt-Queue gehört. Der
 Orchestrator persistiert den vollständigen Auditbericht und das Register; der
 Audit legt keine eigene Protokoll- oder Tech-Debt-Datei an.

@@ -27,9 +27,9 @@ für die Umsetzung, nachdem ein Konzept bei Bedarf separat mit dem
   `execution-log.md` im Task-Verzeichnis. Es ist ein dauerhaftes
   Ereignis-/Feedbackprotokoll, keine Step-Datei und kein zweiter Task-State.
 - Für jeden orchestrierten Task gibt es außerdem genau eine task-lokale
-  `tech-debt.md`. Sie ist ein kuratiertes Register für actionable Minor-/P2-/P3-
-  Befunde und ihre Dispositionen; auch eine zunächst leere Datei wird vor dem
-  ersten Rollenaufruf angelegt und committed.
+  `tech-debt.md`. Sie ist ein kuratiertes Register und eine Queue für
+  actionable Findings aller Schweregrade sowie ihre Dispositionen; auch eine
+  zunächst leere Datei wird vor dem ersten Rollenaufruf angelegt und committed.
 - Für jeden orchestrierten Task gibt es außerdem genau eine task-lokale
   `code-map.md`. Sie ist eine kompakte Navigationshilfe für die betroffenen
   Dateien, Symbole, Aufrufer, Tests und Dokumentationsbereiche — keine
@@ -193,8 +193,8 @@ Jeder Agentenbericht wird direkt nach Eingang triagiert; es gibt keine
 nachträgliche Extraktion aus dem kompletten Log:
 
 - Der vollständige Befund bleibt im `execution-log.md`.
-- `tech-debt.md` ist das einzige kuratierte Register für actionable
-  Minor-/P2-/P3-Befunde. Jeder solche Befund erhält dort spätestens vor der
+- `tech-debt.md` ist das einzige kuratierte Register für actionable Befunde
+  aller Schweregrade. Jeder solche Befund erhält dort spätestens vor der
   nächsten Rolle einen Eintrag mit Schweregrad, kurzer Beschreibung, Scope/
   Fundstelle, Evidenz, Disposition, nächstem sinnvollen Schritt und Log-Anker.
   Der Orchestrator führt bestehende Einträge anhand ihrer technischen Ursache
@@ -335,9 +335,11 @@ Bestätigung des Nutzers.
 
 ## Korrektur- und Wiederholungsbudget
 
-Eine Korrekturrunde beginnt nach einem Review mit mindestens einem belegten
-P0/P1-Finding und besteht aus genau einem frischen Implementierer sowie dem
-anschließenden frischen Review. Mehrere Findings derselben technischen Ursache
+Eine Korrekturrunde im fachlichen Ablauf beginnt nach einem Review mit
+mindestens einem belegten P0/P1-Finding und besteht aus genau einem frischen
+Implementierer sowie dem anschließenden frischen Review. Für einen aktivierten
+Tech-Debt-Eintrag besteht jeder Versuch ebenfalls aus diesem frischen
+Implementierer-/Reviewer-Paar. Mehrere Findings derselben technischen Ursache
 werden gebündelt und verbrauchen gemeinsam einen Versuch.
 
 - Das Budget beträgt pro stabiler technischer Ursachensignatur fünf Versuche
@@ -345,9 +347,11 @@ werden gebündelt und verbrauchen gemeinsam einen Versuch.
   Epic, Audit oder Abschluss-Gate.
 - Jeder Versuch startet einen neuen Implementierer und danach einen neuen,
   unabhängigen Reviewer. Kein alter Rollen-Task wird fortgesetzt.
-- P2/P3-Findings lösen keine Korrekturschleife aus. Sie werden direkt in die
-  Tech-Debt-Queue aufgenommen, sofern sie actionable sind; kosmetische oder
-  unbelegte Vorschläge bleiben nur im Log.
+- P2/P3-Findings lösen im aktuellen fachlichen Ablauf keine unmittelbare
+  Korrekturschleife aus. Sie werden direkt in die Tech-Debt-Queue aufgenommen,
+  sofern sie actionable sind; kosmetische oder unbelegte Vorschläge bleiben
+  nur im Log. In der späteren Queue-Bearbeitung erhalten sie wie jeder andere
+  aktive Eintrag einen eigenen Fünferdurchlauf.
 - Nach dem fünften ungelösten Versuch wird die konkrete Ursachensignatur mit
   `accepted-deferred` und einem auf null gesetzten aktuellen Versuchszähler in
   die Tech-Debt-Queue eingereiht. Der Orchestrator setzt danach das nächste
@@ -394,10 +398,12 @@ Arbeite die offenen Epics strikt nacheinander ab:
    belegte P0/P1-Findings an den Implementierer zur Korrektur übergeben;
    danach folgt erneut ein Review. P2/P3-Findings werden dokumentiert, lösen
    aber keine Korrekturschleife aus.
-5. Prüfe vor jedem weiteren Versuch das Korrekturbudget und den Zykluswächter.
-   Bei Budgetende, wiederholter technischer Ursache oder einem Muster wie
-   A → B → A setze das Epic auf `blocked`, halte den konkreten Zustand knapp
-   fest und frage den Nutzer. Es gibt keinen stillen weiteren Versuch.
+5. Prüfe vor jedem weiteren Versuch den verbleibenden Fünferdurchlauf der
+   betroffenen Ursachensignatur. Bei verbleibendem Budget delegiere eine
+   Korrektur an einen frischen Implementierer und danach an einen frischen
+   Reviewer. Nach dem fünften ungelösten Versuch reihe den Befund in die
+   Tech-Debt-Queue ein und fahre mit dem nächsten fachlichen Arbeitspaket
+   fort; setze das Epic nicht allein deshalb auf `blocked`.
 6. Setze ein genehmigtes Epic auf `done`, aktualisiere die Roadmap knapp und
    erstelle einen Abschluss-Checkpoint-Commit. Der aktuelle Code-, Test- und
    Dokumentationsstand ist bereits nach dem Implementiererbericht gesichert;
@@ -422,11 +428,17 @@ Für einen verständlichen kleinen oder mittleren Auftrag ohne großes Konzept:
 2. Starte danach einen unabhängigen Reviewer mit `code-map.md`,
    `.agents/skills/review/SKILL.md` und dem Implementiererbericht samt
    Verifikationsnachweis.
-3. Bearbeite nur P0/P1-Findings in höchstens zehn Korrekturrunden; P2/P3
-   blockieren den Abschluss nicht. Der Zykluswächter kann den Lauf vorher
-   stoppen.
+3. Bearbeite belegte P0/P1-Findings je Ursachensignatur in höchstens fünf
+   frischen Implementierer-/Reviewer-Runden. Nach dem fünften ungelösten
+   Versuch werden sie in die Tech-Debt-Queue verschoben. P2/P3-Findings werden
+   direkt als actionable Tech Debt registriert und blockieren den Hauptablauf
+   nicht.
 4. Führe bei einer nicht-trivialen Änderung einmal den `audit`-Skill aus.
-5. Verifiziere den finalen Stand und erstelle den Abschluss-Checkpoint. Die
+5. Verarbeite nach dem Audit die Tech-Debt-Queue nach den Regeln oben. Erst
+   wenn kein offener Queue-Eintrag verbleibt, ist der Aufgabenlauf fachlich
+   vollständig abgeschlossen; ein einzelner persistenter Eintrag darf dabei
+   endlos weiterbearbeitet werden.
+6. Verifiziere den finalen Stand und erstelle den Abschluss-Checkpoint. Die
    Implementierungs-, Review-, Korrektur- und Auditberichte wurden bereits
    jeweils unmittelbar committed; der Abschluss-Checkpoint enthält den
    finalen Status und alle seit dem letzten Checkpoint entstandenen
@@ -450,10 +462,11 @@ Er ersetzt keine ausdrücklich im Konzept geforderten `safeguard`-,
 Abschlussverifikation ausgeführt.
 
 Wenn der Audit Code verändert hat, folgt ein fokussierter Review des
-Audit-Diffs. Dabei gefundene P0/P1-Probleme dürfen höchstens zwei frische
-Implementierer-Korrekturen mit jeweils anschließendem Review auslösen. Auch
-hier greift der Zykluswächter; bei Budgetende oder einem erkannten Zyklus endet
-der automatische Lauf mit einer konkreten Nutzerfrage.
+Audit-Diffs. Dabei gefundene P0/P1-Probleme folgen demselben Fünferdurchlauf
+pro Ursachensignatur mit jeweils frischem Implementierer und anschließendem
+frischem Review. Nach dem fünften ungelösten Versuch werden sie in die
+Tech-Debt-Queue verschoben; auch hier beendet weder Budgetende noch ein
+erkannter Zyklus den automatischen Lauf.
 
 Nach jedem terminalen Audit-Ergebnis ist dessen Bericht samt aktuellem
 Arbeitsstand bereits als Checkpoint committed. Hat der Audit Änderungen
@@ -479,12 +492,17 @@ Rollen-Subagent committet selbst.
   Prüfungen, sofern der dort definierte Quellen- und Capability-Vertrag sie
   unterstützt. Diese Nachweise sind nicht durch den allgemeinen Audit erfüllt.
   Kann eine Pflichtprüfung wegen fehlender Fähigkeit oder Infrastruktur nicht
-  ausgeführt werden, stoppe mit konkreter Evidenz oder behandle sie gemäß dem
-  im Konzept definierten Fallback; verschweige sie nicht.
-- Ein echter P0/P1-Fehler aus einem Abschluss-Gate darf höchstens drei frische
-  Korrekturrunden mit gezielter Verifikation und Review auslösen. Der
-  Zykluswächter gilt auch hier. Reine Umgebungs-/Infrastrukturfehler werden
-  mit Evidenz berichtet und nicht durch Wiederholungen kaschiert.
+  ausgeführt werden, protokolliere die konkrete Evidenz und behandle sie gemäß
+  dem im Konzept definierten Fallback. Nur der davon tatsächlich abhängige
+  Teilstatus darf warten; unabhängige Arbeit läuft weiter. Den Gesamtworkflow
+  darfst du nur stoppen, wenn die fehlende Voraussetzung den gesamten Auftrag
+  untrennbar verhindert.
+- Ein echter P0/P1-Fehler aus einem Abschluss-Gate folgt ebenfalls dem
+  Fünferdurchlauf pro Ursachensignatur mit gezielter Verifikation und Review.
+  Nach fünf ungelösten Versuchen wird er als Tech Debt eingereiht; der Lauf
+  endet deshalb nicht automatisch. Reine Umgebungs-/Infrastrukturfehler
+  werden mit Evidenz berichtet und nicht durch sinnlose Wiederholungen
+  kaschiert.
 - Stage ausschließlich die zum Auftrag gehörenden Dateien. Bewahre
   unzusammenhängende Nutzeränderungen und führe keinen Push aus.
 - Committe beim Start einer neuen Ausführung die neu erzeugte `roadmap.md`,
@@ -535,9 +553,10 @@ Rollen-Subagent committet selbst.
 Berichte knapp und selbständig:
 
 - Ergebnis, Betriebsart und abgeschlossene bzw. offene Epics;
-- geänderte Bereiche und Commit-Hash(s);
+- Geänderte Bereiche und Commit-Hash(s);
 - Review-Urteile und korrigierte P0/P1-Findings;
-- proaktiv durch den Audit behobene Befunde sowie verbleibende P2/P3-Risiken;
+- Proaktiv durch den Audit behobene Befunde sowie die verbleibende
+  Tech-Debt-Queue einschließlich Schweregrad und Disposition;
 - ausgeführte MCP-Abfragen, Build und Tests;
 - ausgeführte konzeptspezifische Verifikationen und deren Ergebnis;
 - bewusste Non-Goals, Annahmen und offene Entscheidungen.

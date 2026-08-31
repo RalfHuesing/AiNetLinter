@@ -119,8 +119,10 @@ Symptomen. Gib für jede Ursache eine kurze, stabile Ursachensignatur aus
 betroffener Invariante, Bereich oder Symbol und Fehlerbild an. Verwende bei
 einem Folge-Review eine bereits übergebene Signatur wieder, wenn es dieselbe
 Ursache ist, und kennzeichne nachvollziehbar, wenn sie sich fachlich geändert
-hat. Die Signatur dient der Zykluserkennung; sie ist kein künstlicher Task-
-oder Step-Bezeichner.
+hat. Die Signatur ist kein künstlicher Task- oder Step-Bezeichner. Sie dient
+ausschließlich dem Wiedererkennen derselben Ursache und der Zuordnung zum
+laufenden Fünferbudget; sie löst keinen
+automatischen Abbruch oder Zyklus-Stopp aus.
 
 Für relevante P2/P3-Funde und nicht blockierende Verbesserungsvorschläge gib
 zusätzlich eine knappe Dispositionsempfehlung an: `fix-now`,
@@ -129,6 +131,12 @@ zusätzlich eine knappe Dispositionsempfehlung an: `fix-now`,
 Tech Debt in das task-lokale Register gehört. Der Orchestrator entscheidet die
 endgültige Disposition und persistiert den vollständigen Bericht; der Reviewer
 legt keine Protokoll- oder Tech-Debt-Datei an.
+
+Ein belegtes P0/P1-Finding bleibt ein `issues`-Urteil und wird vom Orchestrator
+an einen frischen Implementierer übergeben. Der Reviewer entscheidet nicht
+über das Fünferbudget und beendet keinen laufenden Agenten. Ein P2/P3-Finding
+wird nicht künstlich zum Blocker hochgestuft, sondern als actionable Tech Debt
+für die Queue empfohlen, sofern es nicht rein kosmetisch oder unbelegt ist.
 
 ## Ergebnis
 

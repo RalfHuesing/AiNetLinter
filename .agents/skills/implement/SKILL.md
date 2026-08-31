@@ -152,7 +152,7 @@ Unsicherheiten und kopiere keine vollständigen Tool-Rohantworten oder
 Agentenberichte hinein. Vor dem Hand-off verifizierst du den aktuellen
 Kartenstand gegen Working Tree und MCP ausdrücklich.
 
-## Qualitätsmaßstab und Stoppregel
+## Qualitätsmaßstab und Übergaberegel
 
 „Produktionssicher“ bedeutet hier: kein bekanntes Fehlverhalten im
 unterstützten Normalbetrieb, keine stillen Fehlklassifikationen an den
@@ -160,15 +160,25 @@ fachlichen Grenzen, keine Credential-Leaks, keine offensichtlichen
 Ressourcen-/Prozess-Leaks und ausreichende Regressionstests für die geänderte
 Logik.
 
-- P0/P1-Probleme müssen vor dem Abschluss behoben werden: Datenkorruption,
-  Secret-Leak, Crash im Normalfall, Prozess-/Handle-Leak, falsche
-  Source-of-Truth oder reproduzierbar falsches Muss-Verhalten.
+- P0/P1-Probleme werden nicht verschwiegen und müssen im orchestrierten Ablauf
+  an den nächsten frischen Review-/Korrekturschritt übergeben werden:
+  Datenkorruption, Secret-Leak, Crash im Normalfall, Prozess-/Handle-Leak,
+  falsche Source-of-Truth oder reproduzierbar falsches Muss-Verhalten.
 - P2/P3-Punkte wie theoretische Risiken außerhalb des Betriebsmodells,
   zusätzliche Evidenz ohne geforderten Vertrag, Stil und kosmetisches DRY
   werden berichtet, blockieren aber keinen normalen Abschluss.
-- Nach einer gezielten Korrekturrunde nicht zusammenhängender neuer Findings
-  nicht automatisch in eine Endlosschleife wechseln. Verbleibende Risiken mit
-  Evidenz und Empfehlung an den Nutzer melden.
+- Der Implementierer startet selbst keine Folge- oder Endlosschleife. Die
+  frischen Implementierer-/Reviewer-Runden und die spätere Tech-Debt-Queue
+  steuert ausschließlich der Orchestrator.
+
+Der Implementierer hinterlässt immer einen funktionierenden Arbeitsstand. Das
+bedeutet insbesondere: eigene Änderungen sind kompilierbar, es gibt keine
+bewusst liegen gelassene halbfertige Reparatur und relevante Prüfungen werden
+ausgeführt. Wenn ein Reparaturversuch nicht gelingt, stellt der Implementierer
+vor dem Hand-off den letzten funktionierenden Zustand wieder her oder hält ihn
+unverändert und beschreibt den Befund mit konkreter Evidenz. Ein offenes
+Reviewer-Finding darf den Hand-off begleiten; ein durch den eigenen Versuch
+neu eingeführter kaputter Arbeitsstand nicht.
 
 ## Hand-off
 
@@ -187,9 +197,12 @@ folgendem Nachweis auf:
 Behaupte keine Prüfung als erfolgreich, die nicht ausgeführt wurde. Kennzeichne
 fehlende, übersprungene, fehlgeschlagene oder wegen fehlender Capability nicht
 ausführbare Prüfungen ausdrücklich und nenne die Konsequenz. Ein fehlgeschlagener
-Check oder ein offener P0/P1-Befund verhindert den Hand-off nicht: Übergib den
-vollständigen aktuellen Arbeitsstand mit seinem ehrlichen Nachweis, damit der
-Orchestrator ihn als Zwischenstand sichern und gezielt reviewen lassen kann.
+Check oder ein offener P0/P1-Befund verhindert den Hand-off nicht, sofern der
+Arbeitsstand selbst funktionierend geblieben ist: Übergib ihn mit seinem
+ehrlichen Nachweis, damit der Orchestrator ihn als Zwischenstand sichern und
+gezielt reviewen lassen kann. Einen durch den eigenen Reparaturversuch
+kompilier- oder funktionsunfähigen Stand darfst du nicht übergeben; stelle den
+letzten funktionierenden Zustand wieder her und dokumentiere die offene Ursache.
 
 Ein weiterer Agent erhält keinen künstlichen Step-Archivbestand. Übergib kurz:
 geänderte Dateien und Symbole, den aktuellen Code-Map-Stand, getroffene
