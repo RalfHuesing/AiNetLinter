@@ -1549,3 +1549,34 @@
   eine maschinenlesbare partielle Antwort mit begrenzten Diagnostics.
 - nächster Schritt: task-lokalen Stand committen, danach gezielten MCP-Audit
   und die vollständigen Nicht-Stress-Gates ausführen.
+
+## 2026-08-31 — completed / EPIC-E / Abschlussaudit auf dem finalen EPIC-D-Stand
+
+- Die zuvor im Call-Tree-Handler sichtbaren zwei Regelverletzungen (Methode zu
+  lang und zyklomatische Komplexität 14) wurden durch Aufteilung in Validierung,
+  Ausführung und Response-Building behoben. Der nachfolgende gezielte
+  `get_violations`-Check für `CallTree`, zusammen mit `SymbolGraph` und der
+  Registrierung, meldet jeweils 0 Violations.
+- Abschluss-Audit über `src/AiNetLinter/Mcp/Tools`:
+  - `find_duplicates` mit `exact`: 0 Cluster, 656 Methoden gescannt.
+  - `find_duplicates` mit `near`: 0 Cluster, 656 Methoden gescannt.
+  - `find_dead_code` (`high`, Produktion): 0 Kandidaten bei 343 Symbolen.
+  - `find_magic_values` im Symbolgraph-Scope: vier einmalige Bestands-/Neueinträge;
+    keine sichere, scope-nahe Zentralisierung ohne künstliche Constants-Datei.
+  - Ein separater `refactoring-drift`-Lauf wurde mangels konkreter
+    Helper-Duplikationshypothese nicht angesetzt.
+- `safeguard` für `src/AiNetLinter/Mcp`: 8,50/10,00 — PASS. Der einzige
+  ausgewiesene Warnbefund ist der bestehende, außerhalb dieses EPIC-D-Scope
+  liegende `GetServerHealthResponseBuilder`-AIContext-Footprint (2502 > 2500).
+  Die bewusste `rules.json`-Aggregate-Root-Ausnahme wurde nicht verändert.
+- Nach der letzten Codeänderung erneut bestätigt: `dotnet build
+  src/AiNetLinter/AiNetLinter.csproj --no-restore` mit 0 Warnungen/Fehlern und
+  fokussierte Assembly-/Symbolgraph-FastTests mit 357 Erfolgen, 2 vorgesehenen
+  Skips und 0 Fehlern.
+- Es liegt weiterhin kein unabhängiger terminaler Reviewer-Bericht vor; die
+  zwei delegierten Implementierer wurden ohne Hand-off beendet. Der lokale
+  Audit- und Verifikationsnachweis ist deshalb ausdrücklich kein unabhängiges
+  Review.
+- Nächster Schritt: vollständige Nicht-Stress-Gates ausführen und die Ergebnisse
+  als Abschlussstand dokumentieren. Das ausgeschöpfte EPIC-B-P1-Finding bleibt
+  unverändert als residualer Tech Debt bestehen.

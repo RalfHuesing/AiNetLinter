@@ -329,3 +329,19 @@ setzen. Der vollständige Bericht und die Verifikation stehen im
 - Risiko: behoben; Tool-Beschreibungen und Schematexte stimmen mit den Test-Assertions überein.
 - Nächster Schritt: keine weitere Maßnahme.
 - Log-Anker: `execution-log.md`, Low-Reasoning Tech-Debt Bereinigung vom 2026-08-31.
+
+## TD-EPIC-E-001 — Knapp überschrittener Health-Builder-Footprint
+
+- Schweregrad: P2/P3
+- Beschreibung: Der Abschluss-Audit meldet für `GetServerHealthResponseBuilder`
+  einen AIContext-Footprint von 2502 statt des Grenzwerts 2500.
+- Fundstelle/Scope: `src/AiNetLinter/Mcp/Tools/ServerMaintenance/`;
+  außerhalb des EPIC-D-Cross-Assembly-Navigationspfads.
+- Evidenz: Abschluss-`safeguard` und breiter `get_violations`-Lauf vom
+  2026-08-31; die Datei wurde im EPIC-D-Lauf nicht geändert.
+- Disposition: `accepted-deferred`
+- Risiko: kleiner Struktur-/Kontextbefund ohne funktionale Auswirkung auf die
+  Assembly-Navigation. Eine Zerlegung wäre ein separater Maintenance-Scope.
+- Nächster Schritt: nur in einem eigenständigen Maintenance-Refactoring mit
+  Impact-/Safeguard-Nachweis behandeln; keine künstliche Regeländerung.
+- Log-Anker: `execution-log.md`, Abschlussaudit vom 2026-08-31.

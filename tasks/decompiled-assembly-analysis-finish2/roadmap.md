@@ -1,11 +1,11 @@
 # Ausführungs-Roadmap: decompiled-assembly-analysis-finish2
 
 status: executing
-current_epic: EPIC-D
+current_epic: EPIC-E
 correction_round: 0
 recent_finding_signatures: none
-cycle_state: epic-d-implementation-in-progress
-last_commit: 8600f3e2
+cycle_state: final-gates-pending
+last_commit: 5d6cb55c
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
@@ -21,10 +21,10 @@ tech_debt: siehe tech-debt.md
 - Die Low-Reasoning-Bereinigung ist als bewusste, abgeschlossene Vorarbeit
   erhalten; insbesondere bleibt die `rules.json`-Ausnahme für den
   `AssemblyAnalysisRegistry` bestehen.
-- EPIC-D ist lokal implementiert und fokussiert verifiziert; der abschließende
-  MCP-Audit sowie die vollständigen Nicht-Stress-Gates stehen noch aus. EPIC-B
-  bleibt bis zu einer späteren expliziten Wire-Form-/Payload-Budget-Entscheidung
-  offen.
+- EPIC-D ist lokal implementiert, fokussiert verifiziert und durch den
+  abschließenden MCP-Audit ohne neue scope-nahe Befunde bestätigt. Die
+  vollständigen Nicht-Stress-Gates stehen noch aus. EPIC-B bleibt bis zu einer
+  späteren expliziten Wire-Form-/Payload-Budget-Entscheidung offen.
 
 ## EPIC-A — Stabile In-Memory- und Dateipfade
 
@@ -202,7 +202,7 @@ tech_debt: siehe tech-debt.md
 - Verifikation: Root-Assembly mit zwei Referenz-DLLs, exklusiv referenzierter
   Typ, fehlende/zyklische/beschädigte Metadaten, Tiefen-/Anzahl-Limits,
   tolerante Fehlerfälle und Live-Szenarien; gezielter Violations-Check.
-- Status: implemented (Assembly-Routen und Regressionen ergänzt; Audit/Gates offen)
+- Status: done (Assembly-Routen, Regressionen und gezielter Abschluss-Audit)
 
 ## EPIC-E — Abgegrenzte Befunde, Regressionen und Abschluss
 
@@ -219,7 +219,7 @@ tech_debt: siehe tech-debt.md
   Projektpfad.
 - Verifikation: explizite Konzept-Checkliste, vollständiger Build, vollständige
   Nicht-Stress-Testläufe, Assembly-Live-Wiederholung und Abschluss-Audit.
-- Status: in_progress (Abschluss-Audit und vollständige Gates offen)
+- Status: in_progress (vollständige Nicht-Stress-Gates offen)
 
 ## Abschluss-Checkliste aus Konzept.md
 
@@ -242,4 +242,4 @@ tech_debt: siehe tech-debt.md
 - [ ] `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress`
 - [ ] `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`
 - [ ] Synthetische Assembly-Live-Szenarien wiederholt
-- [ ] Gezielter MCP-Abschluss-Audit ausgeführt
+- [x] Gezielter MCP-Abschluss-Audit ausgeführt

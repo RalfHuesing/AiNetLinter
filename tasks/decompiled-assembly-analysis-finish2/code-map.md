@@ -497,3 +497,18 @@
   Skips; der neue Assembly-Regressionstest 3/3 bestanden. Der nach der
   Aufteilung ausgeführte produktive `get_violations`-Nachweis meldete im
   Symbolgraph-Scope 0 Violations.
+
+## EPIC-D/EPIC-E — Abschlussaudit
+
+- Der Assembly-Call-Tree-Handler ist nach der finalen Aufteilung in einen
+  Validierungs-, Ausführungs- und Response-Pfad regelkonform; die gezielten
+  `get_violations`-Abfragen für Symbolgraph, Call-Tree und Registrierung
+  melden 0 Verstöße.
+- Der MCP-Audit meldete im Produktionsscope `src/AiNetLinter/Mcp/Tools` weder
+  exakte noch nahe Duplikatcluster (je 656 Methoden) und keinen High-Confidence
+  Dead Code. Der engere Magic-Value-Lauf fand nur vier einmalige Einträge;
+  daraus ergab sich keine sichere scope-nahe Änderung.
+- Das Quality-Gate `safeguard` passierte mit 8,50/10,00. Der eine verbleibende
+  `GetServerHealthResponseBuilder`-Footprint-Befund liegt außerhalb des
+  EPIC-D-Navigationspfads und wird nicht durch eine künstliche Regeländerung
+  kaschiert. Die bewusste `rules.json`-Ausnahme bleibt unverändert.
