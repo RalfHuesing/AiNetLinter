@@ -155,7 +155,8 @@
     "FootprintIgnoreNamespacePrefixes": [],
     "FootprintIgnoreTypeNames": [
       "LinterEngine",
-      "NamingChecker"
+      "NamingChecker",
+      "AssemblyAnalysisRegistry"
     ],
     "ComplexityNearMissTolerance": 1,
     "ExcludeSwitchDispatcherCases": true,
