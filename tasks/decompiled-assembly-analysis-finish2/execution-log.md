@@ -575,6 +575,61 @@
 - nächste Aktion: Review-Checkpoint committen, danach frischen
   Korrektur-Implementierer für EPIC-B starten.
 
+## 2026-08-31 — completed / EPIC-C / Reviewer
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a055da-61eb-7651-8ef6-5ab87961cda1`
+- diff-baseline: `c932a01b -> 8ab245ab`; `HEAD` enthielt zum Reviewzeitpunkt
+  zusätzlich nur den Start-Checkpoint `0d09bbc5`.
+- status: `issues`; kein P0, drei P1- und zwei P2-Befunde; kein Produktions-
+  oder Testcode und kein Commit durch die Review-Rolle.
+- vollständiger finaler Agentenbericht:
+
+  > Verdikt: `issues` — EPIC-C ist nicht freigabefähig; es gibt drei belegte
+  > P1- und zwei P2-Befunde. Kein P0.
+  >
+  > P1 — Source-TTL und Materialisierungs-Capacity umgehen die Registry-Logik:
+  > `SourceSnapshotRegistry.EvictIdle()` hat produktiv keinen Caller außer
+  > dem Test; Materialisierung reserviert vor `SourceSnapshotRegistry.Acquire`,
+  > `TryReserve` führt keine TTL-/LRU-Eviction oder Identity-Deduplizierung
+  > aus. Abgelaufene freigegebene Snapshots blockieren volle Budgets und
+  > identische Snapshots können bei `MaxResidentResources=1` abgewiesen werden.
+  >
+  > P1 — Assembly-LRU kann im produktiven Registry-Pfad nicht greifen:
+  > Owner-Resource-Leases bleiben bis Retirement-Dispose gehalten; idle
+  > Assembly-Einträge erscheinen als `LeaseCount=1`, weshalb die LRU-Auswahl
+  > sie nicht evictiert.
+  >
+  > P1 — ThinClient-Overrides werden bei bestehendem Daemon still ignoriert:
+  > die fünf External-Limits werden beim detached Start weitergereicht, aber
+  > im bestehenden Daemon-Handshake weder verglichen noch als Divergenz
+  > gemeldet; `EffectiveDaemonConfiguration` enthält dort nur die alten
+  > Felder.
+  >
+  > P2 — Materialisierungsreservation wird vor Snapshot-Registrierung
+  > freigegeben; eine konkurrierende Materialisierung kann das Budgetfenster
+  > ausnutzen.
+  >
+  > P2 — Producer-Cancellation wird beim Host-Dispose nicht vollständig
+  > gejoint: `EstimateCheckout` ist synchron/tokenlos und `Dispose()` wartet
+  > laufende Producer nicht vollständig vor Registry-/Ressourcen-Dispose.
+  >
+  > Nachweise: Build 0/0; vollständige FastTests 2256 bestanden, 2 Skips;
+  > Integration 372/374 mit den bekannten nicht kausalen
+  > Beschreibungstextfehlern `ambiguous` und `sortBy`; fokussierte EPIC-C-
+  > Tests grün; Stress-Tests nicht ausgeführt; MCP meldet nur den bekannten
+  > `AssemblyAnalysisRegistry`-Footprint 3893 > 2500.
+  > Hotspots: `ExternalSourceConfiguration.cs` 482/500 und
+  > `SourceSnapshotRegistry.cs` 406/500; keine zusätzliche EPIC-C-
+  > MaxLine-Violation. Die Aussagen in `Docs/configuration.md` und
+  > `Docs/integration.md` über bereits gemeinsam wirksames LRU/TTL- und
+  > Materialisierungsverhalten sind bis zur Korrektur zu weitgehend.
+- Tech-Debt-Triage: `TD-EPIC-C-001` bis `TD-EPIC-C-005` in `tech-debt.md`
+  als `fix-now` erfasst; der EPIC-B-Rest `DIAGNOSTICS-SAMPLE-BUDGET` bleibt
+  unverändert und wird nicht erneut geöffnet.
+- nächste Aktion: Review-Checkpoint committen, danach frischen EPIC-C-
+  Korrektur-Implementierer für die fünf Befunde starten.
+
 ## 2026-08-31 — completed / EPIC-C / Implementierer
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`

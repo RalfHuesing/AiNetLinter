@@ -83,9 +83,9 @@ tech_debt: siehe tech-debt.md
   Dispose während der Erzeugung sind deterministisch.
 - Verifikation: fokussierte TTL/LRU/Capacity/Lease/Race/Creation-Barrier-
   Tests; hohe Last nur in gezielten Stress-Tests; gezielter Violations-Check.
-- Status: review_in_progress
+- Status: review_findings (3 P1, 2 P2; Korrekturrunde 1 erforderlich)
 
-## EPIC-C-Review — Implementierung abgeschlossen
+## EPIC-C-Review — Korrekturrunde 1 erforderlich
 
 - Subagent: `01a05585-ab4e-7652-b391-96fd81ed6d95`; 43 Arbeitsbaum-Einträge,
   ohne Agenten-Commit.
@@ -97,8 +97,10 @@ tech_debt: siehe tech-debt.md
   Integration 4/4; vollständige Nicht-Stress-FastTests 2256 bestanden,
   2 Skips; Integration 372/374. `get_violations` nur der bekannte
   `AssemblyAnalysisRegistry`-Footprint.
-- Review: unabhängiger Reviewer gegen Commit `8ab245ab` läuft; EPIC-C wird
-  erst nach unabhängigem Review als `done` markiert.
+- Review: `issues`; unabhängiger Reviewer gegen Commit `8ab245ab` meldet drei
+  P1- und zwei P2-Befunde. EPIC-C ist nicht freigabefähig; frischer
+  Korrektur-Implementierer erforderlich. Das ausgeschöpfte EPIC-B-Finding
+  bleibt unverändert.
 
 ## EPIC-D — Mehrere Assemblies und tolerante Analyse
 

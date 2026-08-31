@@ -60,6 +60,90 @@ Ausführungsprotokoll.
 - Log-Anker: `execution-log.md`, completed EPIC-B Korrektur-
   Implementierer Runde 1 vom 2026-08-31.
 
+## TD-EPIC-C-001 — Source-TTL und Materialisierungs-Capacity umgehen Registry
+
+- Schweregrad: P1
+- Beschreibung: Materialisierung reserviert vor `SourceSnapshotRegistry.Acquire`;
+  `TryReserve` führt weder Source-TTL-/LRU-Eviction noch Identity-Deduplizierung
+  aus. `SourceSnapshotRegistry.EvictIdle()` hat im Produktionspfad keinen
+  Caller.
+- Fundstelle/Scope: `SourceSnapshotRegistry.cs`,
+  `ExternalSourceSnapshotMaterializer.cs`, `ExternalResourceRegistry.cs`.
+- Evidenz: unabhängiger EPIC-C-Review gegen `8ab245ab`; abgelaufene freigegebene
+  Snapshots blockieren volle Budgets, identische Snapshots können bei
+  `MaxResidentResources=1` abgewiesen werden.
+- Disposition: `fix-now`
+- Risiko: dokumentiertes Source-TTL-/Capacity-Verhalten greift im Daemon-
+  Produktionspfad nicht zuverlässig.
+- Nächster Schritt: Source-Eviction vor Reservation koordinieren und die
+  Reservation atomar bis Registrierung/Resident-Lease halten.
+- Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
+
+## TD-EPIC-C-002 — Assembly-LRU durch Owner-Lease blockiert
+
+- Schweregrad: P1
+- Beschreibung: Jeder Assembly-Eintrag hält seine Owner-Resource-Lease bis zur
+  Retirement-Dispose; das Ressourcenregister sieht deshalb auch idle Einträge
+  als `LeaseCount=1`, sodass die LRU-Auswahl nicht greift.
+- Fundstelle/Scope: `AssemblyAnalysisRegistry.cs`, `AssemblyAnalysisEntry.cs`,
+  `ExternalResourceRegistry.cs`.
+- Evidenz: unabhängiger Review; volle Resident-/Disk-/Memory-Kapazität weist
+  neue Assemblys ab, statt idle Einträge zu retirieren.
+- Disposition: `fix-now`
+- Risiko: LRU-/Capacity-Vertrag wird im produktiven Registry-Pfad verfehlt;
+  aktive Analyse-Leases müssen weiterhin geschützt bleiben.
+- Nächster Schritt: Capacity-Eviction über idle Assembly-Einträge führen und
+  Owner-Leases nach Retirement freigeben.
+- Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
+
+## TD-EPIC-C-003 — ThinClient-Overrides fehlen im bestehenden Daemon-Handshake
+
+- Schweregrad: P1
+- Beschreibung: External-Limits werden beim detached Start weitergereicht,
+  aber beim Verbinden mit einem bestehenden Daemon weder verglichen noch als
+  Divergenz gemeldet.
+- Fundstelle/Scope: `DaemonProtocol.cs`, `ThinClientProxy.cs`.
+- Evidenz: unabhängiger Review; `EffectiveDaemonConfiguration` enthält im
+  bestehenden Pfad nur `MaxProjects` und `IdleExitMinutes`.
+- Disposition: `fix-now`
+- Risiko: CLI-Semantik hängt vom Daemon-Zustand ab und kann falsche Limits
+  suggerieren.
+- Nächster Schritt: External-Limits in den Handshake aufnehmen, Abweichung
+  warnen oder Neustart erzwingen; alte Partner optional-feldkompatibel halten.
+- Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
+
+## TD-EPIC-C-004 — Materialisierungsreservation endet vor Snapshot-Registrierung
+
+- Schweregrad: P2
+- Beschreibung: `finally` gibt die Reservation frei, bevor der Snapshot durch
+  `SourceSnapshotRegistry.Acquire` resident registriert ist; eine Konkurrenz-
+  materialisierung kann das Budgetfenster ausnutzen.
+- Fundstelle/Scope: `ExternalSourceSnapshotMaterializer.cs`,
+  `AssemblySourceSelectionOrchestrator.cs`.
+- Evidenz: unabhängiger EPIC-C-Review; zeitliches Fenster zwischen Reservation
+  und Registrierung.
+- Disposition: `fix-now`
+- Risiko: kurzzeitige Überschreitung von Resident-/Disk-/Memory-Limits.
+- Nächster Schritt: Reservation bis Registrierung halten und bei erfolgreichem
+  Acquire in die Resident-Lease überführen.
+- Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
+
+## TD-EPIC-C-005 — Producer-Cancellation wird beim Host-Dispose nicht gejoint
+
+- Schweregrad: P2
+- Beschreibung: `EstimateCheckout` ist synchron/tokenlos; `Dispose()` cancelt
+  laufende Producer, wartet deren Tasks aber nicht vollständig vor dem Dispose
+  von Registry und Ressourcenregister.
+- Fundstelle/Scope: `SourceSnapshotModels.cs`,
+  `AssemblySourceSelectionOrchestrator.cs`, `AssemblyAnalysisHostComposition.cs`.
+- Evidenz: unabhängiger Review; Cleanup verhindert typischerweise Leaks, aber
+  keinen deterministischen vollständigen Beendigungspunkt.
+- Disposition: `fix-now`
+- Risiko: Race zwischen laufender Creation und Host-/Registry-Dispose.
+- Nächster Schritt: Checkout-Schätzung cancellation-aware machen und
+  Provider-Creations beim asynchronen Host-Dispose vollständig joinen.
+- Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
+
 ## TD-EPIC-B-004 — Compact-Health `ShownCount`
 
 - Schweregrad: P1
