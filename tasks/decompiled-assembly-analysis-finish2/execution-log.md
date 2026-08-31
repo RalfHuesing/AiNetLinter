@@ -670,6 +670,21 @@
 - nächste Aktion: Reviewer-Checkpoint committen, danach frischen
   Korrektur-Implementierer nur für die Handshake-Regressionslücke starten.
 
+## 2026-08-31 — running / EPIC-C / Korrektur-Implementierer Runde 3
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2-resume`
+- subagent-id: wird nach dem Start ergänzt.
+- diff-baseline: `879e32fd`.
+- scope: ausschließlich `TTL-TICK-NORMALIZATION-REGRESSION` in
+  `DaemonSessionHandshake.MatchesLimits`: Regressionen für unterschiedliche
+  Rohdezimalwerte mit gleichen normalisierten Ticks und für tatsächlich
+  unterschiedliche Ticks.
+- explizite Grenze: keine erneute Architekturänderung, keine neue
+  Wire-Budget-Schleife und keine EPIC-D-/EPIC-E-Implementierung.
+- erwarteter Hand-off: Test-/bei Bedarf minimale Produktionsänderungen ohne
+  Commit, aktualisierte Code-Map und nach der letzten Änderung fokussierte
+  Test- und Violations-Nachweise.
+
 ## 2026-08-31 — completed / EPIC-C / Folge-Reviewer nach Korrekturrunde 1
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`
