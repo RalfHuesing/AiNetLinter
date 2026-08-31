@@ -733,6 +733,18 @@
 - nächste Aktion: Implementierungs-Checkpoint committen, danach frischen
   Folge-Reviewer gegen die TTL-Regression starten.
 
+## 2026-08-31 — running / EPIC-C / Folge-Reviewer nach Korrekturrunde 3
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2-resume`
+- subagent-id: wird nach dem Start ergänzt.
+- diff-baseline: `879e32fd..23340037`.
+- scope: unabhängige Prüfung der neuen Server- und Client-Handshake-
+  Regressionen für gleiche normalisierte Ticks mit unterschiedlichen
+  Rohdezimalwerten sowie einen echten Tick-Unterschied.
+- erwarteter Hand-off: `approved` nur bei vollständiger, aussagekräftiger
+  Absicherung der vorhandenen Semantik; kein Produktions- oder Testcode und
+  kein Agenten-Commit.
+
 ## 2026-08-31 — completed / EPIC-C / Folge-Reviewer nach Korrekturrunde 1
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`

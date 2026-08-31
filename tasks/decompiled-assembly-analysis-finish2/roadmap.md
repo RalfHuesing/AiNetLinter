@@ -4,7 +4,7 @@ status: executing
 current_epic: EPIC-C
 correction_round: 2
 recent_finding_signatures: TTL-TICK-NORMALIZATION-REGRESSION
-cycle_state: correction-implemented-review-pending
+cycle_state: correction-review-in-progress
 last_commit: 118ccb94
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
@@ -88,7 +88,7 @@ tech_debt: siehe tech-debt.md
   Dispose während der Erzeugung sind deterministisch.
 - Verifikation: fokussierte TTL/LRU/Capacity/Lease/Race/Creation-Barrier-
   Tests; hohe Last nur in gezielten Stress-Tests; gezielter Violations-Check.
-- Status: review_pending (Korrekturrunde 3: Tick-Normalisierungsregression)
+- Status: review_in_progress (Korrekturrunde 3: Tick-Normalisierungsregression)
 
 ## EPIC-C-Review — Korrektur umgesetzt, Folge-Review ausstehend
 
