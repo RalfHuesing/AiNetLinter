@@ -630,6 +630,19 @@
 - nächste Aktion: Review-Checkpoint committen, danach frischen EPIC-C-
   Korrektur-Implementierer für die fünf Befunde starten.
 
+## 2026-08-31 — running / EPIC-C / Korrektur-Implementierer Runde 1
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- scope: `TD-EPIC-C-001` bis `TD-EPIC-C-005`; Source-Eviction und atomare
+  Reservation, Assembly-LRU-Owner-Lease, ThinClient-Handshake,
+  Registrierungsfenster sowie Producer-Cancellation-Join.
+- baseline: Codecheckpoint `8ab245ab`; Review-/Triagecheckpoint `44580ce6`.
+- erwarteter Hand-off: zusammenhängende Produktions-/Testkorrektur ohne
+  Agenten-Commit, fokussierte Regressionen, Build und MCP-Nachweise nach der
+  letzten Codeänderung; EPIC-B-Restbefund nicht öffnen.
+- warteverhalten: Der Implementierer läuft bis zum echten terminalen Status;
+  Polling-Timeouts führen nicht zu einem Interrupt.
+
 ## 2026-08-31 — completed / EPIC-C / Implementierer
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`

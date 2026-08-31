@@ -2,7 +2,7 @@
 
 status: executing
 current_epic: EPIC-C
-correction_round: 3
+correction_round: 1
 cycle_state: continue-after-finding-budget
 last_commit: 8ab245ab
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
@@ -83,7 +83,7 @@ tech_debt: siehe tech-debt.md
   Dispose während der Erzeugung sind deterministisch.
 - Verifikation: fokussierte TTL/LRU/Capacity/Lease/Race/Creation-Barrier-
   Tests; hohe Last nur in gezielten Stress-Tests; gezielter Violations-Check.
-- Status: review_findings (3 P1, 2 P2; Korrekturrunde 1 erforderlich)
+- Status: correction_in_progress (Runde 1; 3 P1, 2 P2)
 
 ## EPIC-C-Review — Korrekturrunde 1 erforderlich
 
@@ -97,10 +97,18 @@ tech_debt: siehe tech-debt.md
   Integration 4/4; vollständige Nicht-Stress-FastTests 2256 bestanden,
   2 Skips; Integration 372/374. `get_violations` nur der bekannte
   `AssemblyAnalysisRegistry`-Footprint.
-- Review: `issues`; unabhängiger Reviewer gegen Commit `8ab245ab` meldet drei
+- Review: `issues`; unabhängiger Reviewer gegen Commit `8ab245ab` meldete drei
   P1- und zwei P2-Befunde. EPIC-C ist nicht freigabefähig; frischer
-  Korrektur-Implementierer erforderlich. Das ausgeschöpfte EPIC-B-Finding
-  bleibt unverändert.
+  Korrektur-Implementierer läuft. Das ausgeschöpfte EPIC-B-Finding bleibt
+  unverändert.
+
+## EPIC-C-Korrekturrunde 1
+
+- Scope: `TD-EPIC-C-001` bis `TD-EPIC-C-005` — Source-Eviction/Reservation,
+  Assembly-LRU-Owner-Lease, ThinClient-Handshake, Registrierungsfenster und
+  Producer-Cancellation-Join.
+- Regel: ein begründeter Versuch je Finding; Polling-Timeouts führen nicht zu
+  einem Interrupt.
 
 ## EPIC-D — Mehrere Assemblies und tolerante Analyse
 
