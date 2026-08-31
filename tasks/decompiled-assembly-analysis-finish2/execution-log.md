@@ -645,3 +645,75 @@
   `TD-EPIC-B-002` bleibt `promoted-to-project-debt`.
 - nächste Aktion: Korrektur-Checkpoint committen, danach frischen Folge-Review
   für EPIC-B starten.
+
+## 2026-08-31 — running / EPIC-B / Folge-Reviewer nach Korrekturrunde 1
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a05558-b4f8-7d02-ba17-0eef0852f4ee`
+- diff-baseline: `b0ebc8b4`
+- correction-commit: `95d29373`
+- scope: unabhängige Prüfung der vier korrigierten P1-Ursachen,
+  Antwortverträge, Regressionen und des verbleibenden Registry-Footprints.
+- erwarteter Hand-off: `approved`, wenn kein belegter P0/P1 verbleibt; keine
+  Produktions-/Teständerung und kein Commit durch die Rolle.
+- warteverhalten: Der Reviewer läuft bis zum echten terminalen Status;
+  Polling-Timeouts führen nicht zu einem Interrupt.
+
+## 2026-08-31 — completed / EPIC-B / Folge-Reviewer nach Korrekturrunde 1
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a05558-b4f8-7d02-ba17-0eef0852f4ee`
+- diff-baseline: `b0ebc8b4`
+- status: `issues`; kein Produktions-/Testcode und kein Commit erstellt;
+  veraltete Darstellungen in `code-map.md` korrigiert.
+- vollständiger finaler Agentenbericht:
+
+  > issues
+  >
+  > P0: keine. P1: ein verbleibender Befund; nicht blockiert, aber EPIC-B
+  > nicht freigabefähig.
+  >
+  > - `DIAGNOSTICS-SAMPLE-BUDGET`: In `AssemblyAnalysisResponse.cs:19` wird
+  >   dieselbe Diagnostics-Projektion zusätzlich unter `analysis` serialisiert.
+  >   Das 4-KiB-Limit gilt damit nur je Projektion, nicht für das gesamte
+  >   StructuredContent. Außerdem dedupliziert `AssemblyAnalysisResponseLimits`
+  >   vor der Display-Kürzung; verschiedene lange Meldungen mit identischem
+  >   Präfix können als doppelte Samples erscheinen. Die globale Budget-/
+  >   Deduplications-Anforderung aus Konzept.md Abschnitt B ist daher nicht
+  >   erfüllt. Disposition: `fix-now`.
+  >
+  > P2:
+  >
+  > - `CreateSummary` kann bei global reservierten Root-/Transitive-Slots
+  >   fälschlich `maxDiagnosticBytes` melden, obwohl keine Bytegrenze ursächlich
+  >   war. Disposition: `accepted-deferred`.
+  > - Für `get_server_health` fehlt ein registrierter E2E-Testpfad mit
+  >   `includeDiagnostics=true`; vorhanden sind Builder-/Schema-Tests.
+  >   Disposition: `accepted-deferred`.
+  > - Der bestehende `AssemblyAnalysisRegistry`-Footprint bleibt bei 3594 >
+  >   2500. Außerhalb EPIC-B, per aktuellem MCP weiterhin aktiv. Disposition:
+  >   `promoted-to-project-debt`.
+  >
+  > Behoben und unabhängig bestätigt:
+  >
+  > - Effective Health-Status/Completeness inklusive `partial` bei Diagnostik.
+  > - Kompakte Health-Samples mit konsistentem `ShownCount=0`.
+  > - Formatter-Komplexität: aktuelle `metrics_lookup`-Werte unauffällig;
+  >   keine aktiven Formatterviolations.
+  > - `get_impact` gegen `b0ebc8b4`: 12 Dateien, 65/65 geänderte Symbole,
+  >   keine Diff-Violations, keine EPIC-C/D-Ausweitung.
+  > - Korrekturbericht mit fokussierten Tests, Build und `get_violations` wurde
+  >   nicht redundant wiederholt. Die dokumentierten nicht-kausalen Volltest-
+  >   Restbefunde (`sortBy`, `ambiguous`, bestehender Flake) bleiben
+  >   `accepted-deferred`; Abschnitt B erlaubt nachvollziehbar dokumentierte
+  >   nicht-kausale Umgebungsbefunde.
+  >
+  > Geändert wurde ausschließlich die veraltete Darstellung in `code-map.md`.
+  > Kein Produktions-/Testcode und kein Commit.
+- Urteil: `issues`; stabile P1-Ursachensignatur
+  `DIAGNOSTICS-SAMPLE-BUDGET` löst Korrekturrunde 2 aus.
+- Tech-Debt-Triage: `TD-EPIC-B-005` bleibt `fix-now`; P2 `CreateSummary` und
+  fehlender registrierter Health-Detail-E2E-Pfad neu als `accepted-deferred`
+  aufgenommen; Registry-Footprint bleibt `promoted-to-project-debt`.
+- nächste Aktion: Review-Checkpoint committen, danach frischen
+  Korrektur-Implementierer für EPIC-B starten.

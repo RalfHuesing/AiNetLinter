@@ -82,12 +82,44 @@ Ausführungsprotokoll.
 - Fundstelle/Scope: `AssemblyAnalysisResponseLimits.ProjectDiagnostics`.
 - Evidenz: Folgeimplementierung dedupliziert Samples und projiziert ein
   gemeinsames 4-KiB-Budget; fokussierte Regressionen bestanden.
-- Disposition: `fixed`
-- Risiko: behoben; Counts, Samples und Truncation teilen einen globalen
-  begrenzten Antwortvertrag.
-- Nächster Schritt: keine weitere EPIC-B-Maßnahme.
+- Disposition: `fix-now`
+- Risiko: das 4-KiB-Limit gilt noch nicht für das gesamte StructuredContent;
+  doppelte bzw. zu lange Diagnostics-Samples bleiben möglich.
+- Nächster Schritt: `analysis` nicht erneut ungebudgetet serialisieren und die
+  Deduplizierung nach der finalen Display-Kürzung auf dem vollständigen
+  Antwortbudget ausführen; Regressionen für globale Bytes und Präfixe ergänzen.
 - Log-Anker: `execution-log.md`, completed EPIC-B Korrektur-
   Implementierer Runde 1 vom 2026-08-31.
+
+## TD-EPIC-B-008 — Irreführendes Budget-Diagnostic
+
+- Schweregrad: P2
+- Beschreibung: `CreateSummary` kann `maxDiagnosticBytes` als Ursache melden,
+  wenn nur globale Root-/Transitive-Slots ausgeschöpft wurden.
+- Fundstelle/Scope: `AssemblyAnalysisResponseLimits.cs:146`.
+- Evidenz: unabhängiger Folge-Review; keine aktuelle P1-Funktionsverletzung,
+  aber die Diagnostic-Ursache ist bei Grenzfällen unpräzise.
+- Disposition: `accepted-deferred`
+- Risiko: begrenzte Diagnosegenauigkeit; Antwort bleibt ansonsten bounded.
+- Nächster Schritt: Truncation-Gründe getrennt modellieren und mit einem
+  gezielten Grenzfalltest absichern.
+- Log-Anker: `execution-log.md`, completed EPIC-B Folge-Reviewer vom
+  2026-08-31.
+
+## TD-EPIC-B-009 — Registrierter Health-Detail-E2E-Pfad
+
+- Schweregrad: P2
+- Beschreibung: Für `get_server_health` fehlt ein registrierter E2E-Testpfad
+  mit `includeDiagnostics=true`; Builder- und Schema-Tests sind vorhanden.
+- Fundstelle/Scope: `src/AiNetLinter.IntegrationTests/Mcp/Tools/`.
+- Evidenz: unabhängiger Folge-Review; keine fehlende Produktionsfunktion,
+  jedoch keine vollständige Wire-E2E-Abdeckung dieses Detailpfads.
+- Disposition: `accepted-deferred`
+- Risiko: spätere Registrierungs-/Wire-Regressionen könnten unentdeckt bleiben.
+- Nächster Schritt: Einen gezielten registrierten E2E-Test ergänzen und den
+  vollständigen Health-Detailvertrag prüfen.
+- Log-Anker: `execution-log.md`, completed EPIC-B Folge-Reviewer vom
+  2026-08-31.
 
 ## TD-EPIC-B-002 — `AssemblyAnalysisRegistry` Footprint
 

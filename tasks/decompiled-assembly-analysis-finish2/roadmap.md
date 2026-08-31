@@ -2,9 +2,9 @@
 
 status: executing
 current_epic: EPIC-B
-correction_round: 1
+correction_round: 2
 cycle_state: normal
-last_commit: 0b8e2176
+last_commit: 95d29373
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
@@ -74,6 +74,25 @@ tech_debt: siehe tech-debt.md
   Formatter-Komplexität korrigiert.
 - Verifikation: Build 0/0; fokussierte FastTests 21/21 und Integration 9/9;
   Produktionsviolations nur der bestehende Registry-Footprint, Testscopes 0.
+
+## EPIC-B-Folge-Review — Korrekturrunde 2
+
+- Status: offen; ein P1 zur globalen StructuredContent-Budgetierung bleibt.
+- Ursache: `DIAGNOSTICS-SAMPLE-BUDGET` — `analysis` serialisiert dieselbe
+  Diagnostics-Projektion erneut; Deduplizierung erfolgt vor der endgültigen
+  Display-Kürzung.
+- P2: irreführendes `maxDiagnosticBytes`-Diagnostic und fehlender registrierter
+  Health-Detail-E2E-Pfad sind `accepted-deferred` in `tech-debt.md`.
+- Begrenzung: zweite von höchstens fünf EPIC-B-Korrekturrunden; danach folgt
+  genau ein frischer Folge-Review.
+
+## Aktueller Rollenlauf
+
+- Rolle: frischer Folge-Reviewer für EPIC-B nach Korrekturrunde 1
+- diff-baseline: `b0ebc8b4`
+- Korrekturstand: `95d29373`
+- Prüffokus: vier behobene P1-Ursachen und der verbleibende
+  `AssemblyAnalysisRegistry`-Footprint.
 
 ## Aktueller Rollenlauf
 

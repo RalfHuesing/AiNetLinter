@@ -133,13 +133,17 @@
   unverändert; die gezielte Assembly-Health-Route expandiert Referenzen nur
   bei `includeDiagnostics=true`, während die aggregierte Health-Sicht aus
   Registry-Snapshots ohne transitive Expansion arbeitet.
-- Top-Level-`diagnostics` und `analysis.diagnostics` verwenden dieselben
-  Samples; Text-Formatter iterieren ausschließlich über bereits projizierte
-  Listen. `ProjectDiagnostics` dedupliziert Root- und transitive Diagnostics
+- `ProjectDiagnostics` dedupliziert normalisierte Root-/transitive Diagnostics
   mit Root-Vorrang, baut Root-/transitive-/Aggregate-Summaries aus derselben
-  globalen Auswahl und hält die Gesamtgröße der sichtbaren Samples innerhalb
-  des bestehenden 4-KiB-Budgets. `WithoutSamples` leert Samples und setzt
-  Aggregate-/Root-/Transitive-`ShownCount` gemeinsam auf 0.
+  Auswahl und begrenzt diese Auswahl gemeinsam auf 4 KiB; `WithoutSamples`
+  leert Samples und setzt Aggregate-/Root-/Transitive-`ShownCount` gemeinsam
+  auf 0. Zwei Grenzen sind im Folge-Review weiterhin offen: Die Deduplikation
+  erfolgt vor `NormalizeForDisplay`, sodass verschiedene lange Meldungen mit
+  gleichem 255-Zeichen-Präfix als doppelte sichtbare Samples erscheinen und
+  ihre Root-/Transitive-Zuordnung verfälschen können; außerdem serialisiert
+  `AssemblyAnalysisResponse.Enrich` dieselben Samples und die Summary unter
+  `analysis` erneut. Das 4-KiB-Budget gilt dadurch nur je Projektion, nicht für
+  das gesamte StructuredContent.
 - `complete` mit mindestens einer Root- oder transitiven Diagnose wird in den
   Inspect-/Extensions-Payloads, im `AssemblyAnalysisResponse` und in beiden
   Health-Umwandlungen über `ResolveEffectiveStatus` als `partial` ausgegeben.
@@ -271,5 +275,11 @@
   Der fünfte Befund ist der bestehende
   `AssemblyAnalysisRegistry`-AIContextFootprint (3594 > 2500), außerhalb des
   EPIC-B-Response-Scopes; er bleibt als `promoted-to-project-debt` für den
-  Orchestrator sichtbar. Der abschließende Runde-1-Check folgt nach der
-  Code-Map-Aktualisierung und ist der letzte codebezogene Prüfschritt.
+  Orchestrator sichtbar. Der Korrekturbericht nach `95d29373` weist für die
+  Produktion nur diesen bestehenden Registry-Footprint und für Fast-/
+  Integration-Testscopes jeweils 0 Violations aus; die vier Formatterbefunde
+  sind per aktuellem `metrics_lookup` ebenfalls 0. Die fokussierten
+  Korrekturtests waren Fast 21/21 und Integration 9/9. Die globale
+  Sample-Projektion ist trotz des bestandenen Budgettests wegen der erneuten
+  `analysis`-Serialisierung und der Präfix-Kollisionen nicht als abgeschlossen
+  zu werten.
