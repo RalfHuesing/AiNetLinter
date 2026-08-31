@@ -8,7 +8,7 @@
 
 ## Betroffene Dateien und Symbole
 
-- Routing: `src/AiNetLinter/Mcp/AnalysisToolCall.cs` (`AssemblyAnalysisDispatcher.ExecuteAsync`, `AssemblyAnalysisDispatcher.CreateRoute`) validiert `targetType`/`targetPath`, leased die Assembly-Session und erweitert aktuell vor jedem Session-Call die Referenzen.
+- Routing: `src/AiNetLinter/Mcp/AnalysisToolCall.cs` (`AssemblyAnalysisDispatcher.ExecuteAsync`, `AssemblyAnalysisDispatcher.CreateRoute`) validiert `targetType`/`targetPath`, leased die Assembly-Session und erweitert aktuell vor jedem Assembly-Tool-Handler die Referenzen.
 - Zielvalidierung: `src/AiNetLinter/Mcp/AnalysisTargetResolver.cs` und `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolSupport.cs` prüfen absolute vorhandene `.dll`-Pfade; `Path.GetFullPath` ist die sichtbare Kanonisierung.
 - Decomp-/Sessionkern: `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisSession.cs`, `AssemblyAnalysisRegistry.cs`, `AssemblyAnalysisResponse.cs` und `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisService.cs`.
 - Navigation: `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblySymbolResolver.cs`, `AssemblyNavigationSupport.cs`, `FindReferencesTool.cs`, `AssemblyAnalysisModels.cs`; Assembly-Inspection-Member DTOs exponieren Signatur-/Parameterdaten, aber keine eigene stabile Member-ID.

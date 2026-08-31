@@ -41,6 +41,17 @@
 - Terminalurteil: ASM-001 (unbedingte Referenzexpansion) bestätigt; ASM-002 (falsches `partial` bei Namensauflösung über Nichttreffer-Sessions) bestätigt; Member-ID-Frage als unbestätigte Konsistenzbeobachtung getrennt.
 - Keine Produktions- oder Testdateien geändert.
 
+## 2026-08-31 — Nachträgliche unabhängige Reviewerberichte Linsen 01, 03, 04, 05 und 06
+
+- Run-ID: `decompiled-assembly-analysis-audit-2026-08-31`; Reviewer-Aufträge der ursprünglich gestarteten, verspätet terminal gewordenen Welle.
+- Linse 01: unabhängiger read-only Report `reports/01-assembly.md`, Urteil `issues`; bestätigt `ASM-001` S1/U3 (Assembly-Root wird im Default-Symbolrouting nicht durchsucht) und `ASM-002` S2/U2 (Batch-Navigation zeigt nur die letzte Muster-Navigation). Build und der zu diesem Reviewerzeitpunkt ausgeführte Nicht-Stress-Lauf wurden als grün gemeldet.
+- Linse 03: unabhängiger read-only Report `reports/03-git-transport.md`, Urteil `approved`; keine bestätigten S0–S3-Befunde. Prozess-, Prompt-, Credential-, Output-, Timeout-, Cancellation- und Cleanup-Verträge sowie gezielte Tests wurden geprüft; echte Remote-Ausführung bleibt Abdeckungsgrenze.
+- Linse 04: unabhängiger read-only Report `reports/04-checkout-security.md`, Urteil `issues`; bestätigt `CHK-001` S1/U2 (Cancellation zwischen Akquisitionsrückgabe und Ownership-Bindung kann einen eigenen Checkout unbereinigt lassen). 98 gezielte FastTests bestanden, 2 Reparse-Tests übersprungen; 6 Materialisierungs- und 8 Prozess-Cleanup-Integrationstests bestanden.
+- Linse 05: unabhängiger read-only Report `reports/05-cache-snapshot.md`, Urteil `approved` mit `F-05-01` und `F-05-02` als S2-Ressourcenbefunde sowie `F-05-03` als bedingtes S2-Vertragsrisiko; 112 gezielte Tests bestanden, 1 umgebungsbedingt übersprungen, zusätzlich 6/6 Integrationstests bestanden.
+- Linse 06: unabhängiger read-only Report `reports/06-mcp-contracts.md`, Urteil `approved`; bestätigt `MCP-L6-001` S2/U2 (ungültige Positionsspalte wird als `WORKSPACE_DIAGNOSTIC` statt recoverable Eingabefehler ausgegeben) und `MCP-L6-002` S3/U2 (Health-Response überschreitet `AIContextFootprint`-Grenze). Die zuvor gelöschte Datei wurde durch den terminalen Reviewer wiederhergestellt.
+- Geänderte Bereiche: ausschließlich die fünf Einzelreports und die verifizierte Code-Map; keine Produktions-, Test-, Konfigurations- oder Dokumentationsdateien.
+- Nächste Aktion: Reports committen und danach im Konsolidierungsreport deduplizieren, primär zuordnen und gegen den aktuellen Code abgleichen.
+
 ## 2026-08-31 — Linse 02 abgeschlossen
 
 - Fallback-Report: `reports/02-external-source.md`.

@@ -1,41 +1,186 @@
-# Linse 01 — Assembly-Routing, Decompilation und Metadaten
+# Linse 01 – Assembly-Zielrouting, Decompilation und Navigation
 
-- Reviewstatus: Orchestrator-Fallback; kein unabhängiger Reviewer verfügbar (`collab spawn failed: agent thread limit reached`). Der Bericht ist keine unabhängige Zweitprüfung.
-- Revision: `ec97fa84`; Produktionsquellen blieben seit der Audit-Baseline unverändert.
-- MCP-Parameter: `targetType=project`, `targetPath=<repo-root-redacted>` für Scope-/Symbolabfragen; `targetType=assembly`, `targetPath=<neutral-built-dll>` für die DLL-Probe. Keine lokalen Installationspfade oder externen URLs werden wiedergegeben.
+## Reviewurteil
 
-## Abdeckung
+**issues** – ein bestätigter S1-Befund verletzt den Assembly-Zielvertrag für die Standard-Symbolnavigation; zusätzlich besteht ein S2-Befund zur Batch-Vollständigkeit.
 
-Geprüft wurden `AnalysisTargetResolver`, `AssemblyAnalysisDispatcher`, `AssemblyAnalysisSession`, `AssemblyAnalysisLease`, `AssemblyAnalysisService`, die Assembly-Symbolnavigation sowie die Registrierungen für `inspect_assembly`, `find_assembly_extensions`, `find_symbol` und `find_references`. Zusätzlich wurde ein lokales Build-Artefakt metadata-only mit `inspect_assembly` und `find_assembly_extensions` abgefragt.
+## Review-Metadaten
+
+- **Linse:** Assembly-Zielrouting, `targetType=assembly`, absolute DLL-Pfade, Pfadvalidierung, Metadata-only-Grenze, statische Decompilation, Source-Mapping sowie Referenz- und Symbolnavigation.
+- **Geprüfter Scope:** `src/AiNetLinter/Mcp/AnalysisToolCall.cs`, `src/AiNetLinter/Mcp/AnalysisTarget*.cs`, `src/AiNetLinter/Mcp/Assemblies/Analysis/**`, `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/**`, `src/AiNetLinter/Mcp/Tools/SymbolGraph/**`, `src/AiNetLinter/Mcp/Tools/CallTree/**`, die zugehörigen Registrierungen und Assembly-Fast-Tests.
+- **Revision:** `c942350d…` (der Commit enthält nur parallele Audit-Artefakte; der geprüfte Produktions- und Testcode blieb gegenüber der Recherche-Revision unverändert).
+- **Working Tree:** Bei meiner Ausgangsprüfung waren Source-, Test-, Konfigurations- und Dokumentationsdateien unverändert. Während der parallelen Audit-Welle kamen fremde Änderungen an `code-map.md` und mehreren anderen Audit-Reports hinzu; sie wurden von mir nicht bearbeitet. Meine einzige Schreibaktion war dieser Report.
+- **MCP-Parameter (redigiert):** projektgebundene Abfragen mit `targetType=project`, `targetPath=<absoluter Repository-Pfad>`; DLL-Proben mit `targetType=assembly`, `targetPath=<absoluter Pfad zu einer lokalen Test-DLL>`. Keine Installationspfade, Zugangsdaten oder vollständigen externen URLs werden wiedergegeben.
+- **Code-Map:** Der aktuelle Inhalt von `tasks/decompiled-assembly-analysis-audit/code-map.md` ist für diese Linse korrekt. Die dort genannten Assembly-, Source-Mapping- und Symbolgraph-Bereiche wurden im MCP-Symbolgraphen wiedergefunden; auch die nachgeschärfte Aussage, dass die Referenzexpansion vor jedem Assembly-Handler erfolgt, stimmt. Ich habe keine Zeile der Datei geändert.
+
+### Nicht geprüfte Bereiche
+
+Nicht Gegenstand waren die übrigen Audit-Linsen, Stress-Tests, nicht assemblybezogene CLI-/Regeländerungen sowie eine echte providerbasierte Live-Source-Zuordnung. Ein früher gezielter Integrationstestlauf lief unter konkurrierenden Test-/Serverprozessen und verlor den MCP-Transport; der danach isoliert ausgeführte vollständige Nicht-Stress-Lauf war grün.
+
+## Executive Summary
+
+### Befunde
+
+1. **ASM-001 – Assembly-Symbolnavigation ignoriert standardmäßig das Zielmodul.** Bei `targetType=assembly` delegieren `find_symbol`, `find_references` und `get_call_tree` mit dem dokumentierten Standard `includeReferences=false` an die projektbasierte Suche über `lease.Server`. Der absolute DLL-Pfad wird im Antwort-Header zwar weiter als Assembly-Ziel ausgewiesen, die Symbolauflösung sucht aber nicht im dekompilierten Zielbestand. `includeReferences=true` erreicht dagegen die Assembly-Session.
+2. **ASM-002 – `find_symbol` verliert bei mehreren Mustern frühere Trunkierungsdiagnosen.** `BuildResponseAsync` überschreibt die Navigation pro Muster und gibt nur die Navigation des letzten Musters zurück. Ein früheres Muster kann auf `maxResults` begrenzt sein, während das letzte Muster die Batch-Antwort ohne diese Information abschließt.
+
+### Bestätigte Erwartungen
+
+- Die Dispatcher-Route validiert `targetType` und `targetPath`; Assembly-Ziele müssen absolut, existent und auf eine DLL-Datei zeigen (`AnalysisTargetResolver.Resolve` sowie `AssemblyAnalysisService.TryValidatePath`).
+- Die Assembly-Analyse liest PE-Metadaten aus einem Dateistream, erzeugt dekompilierte Dokumente mit festen Budgets und markiert fehlende Referenzen, Syntax-/Semantikdiagnosen und Budgetgrenzen als `partial`. Die Live-Antworten enthielten `origin=decompiled`, `snapshot=none`, `trust=untrusted` und `status/completeness=partial`.
+- Die Decompilation-Konfiguration deaktiviert Member-Bodies sowie Debug-/XML-Dokumente; im geprüften Adapter ist kein Laufzeitladen der Zielassembly zu sehen. Der Test `InspectAssembly_RejectsRelativeAndMissingPathsWithoutRuntimeLoading()` bestätigt diese Grenze.
+- Source-backed Mapping wird nur bei attested Auswahl, verifiziertem Provider, sauberem Checkout, passendem Snapshot und identischer Snapshot-Identität verwendet; andernfalls fällt die Factory deterministisch auf Decompilation zurück. Die einschlägigen Component-Tests bestätigen beide Pfade.
+- Der positive Pfad `includeReferences=true` für Symbol-, Referenz- und Call-Tree-Navigation ist durch `AssemblyAnalysisRouteTests.AssemblyRoute_IncludeReferencesNavigatesSymbolsReferencesAndCallTree()` abgedeckt.
+
+### Abdeckungsgrenzen
+
+- Die direkte DLL-Probe konnte wegen der vorhandenen Referenz-/Decompilerdiagnosen keine vollständige Assembly-Compilation herstellen. Das beweist keinen Fehler der Decompilation; es bestätigt aber die vorgesehene sichtbare Partial-Semantik.
+- Die source-backed Route wurde über Source-Code und vorhandene Fast-Tests geprüft, nicht über eine echte Live-Provider-Akquisition.
+- Ein erster gezielter MCP-Integrationstestlauf endete unter konkurrierender Testlast mit 34 Fehlern und 6 Erfolgen (`MCP server process exited unexpectedly`); derselbe vollständige Nicht-Stress-Integrationslauf war anschließend isoliert mit 377/377 erfolgreich. Das war eine Testumgebungsgrenze, keine reproduzierbare Produktursache der Befunde.
 
 ## Befund ASM-001
 
-- Schweregrad: S1
-- Umfang: U3 — zentraler Dispatcher, mehrere Assembly-Tools
-- Konfidenz: hoch
-- Bereich: Referenzauflösung und Default-Semantik
-- Evidenz: `src/AiNetLinter/Mcp/AnalysisToolCall.cs:161-172` ruft `lease.ExpandReferencesAsync(...)` vor jedem `assemblyCall` auf. Die sichtbaren `includeReferences`-Defaults liegen in `src/AiNetLinter/Mcp/Registration/SymbolGraphToolRegistrations.cs:49`, `:80` und `:112` jeweils bei `false`. Der veröffentlichte Vertrag beschreibt in `Docs/agent-api.md:460` für den Assembly-Symbol-Branch den Root-Snapshot als Default bei `includeReferences=false`.
-- Auswirkung: Ein Default-Aufruf kann Referenz-Sessions öffnen, externe bzw. fehlende Abhängigkeiten diagnostizieren und den Status auf `partial` setzen, obwohl der Agent keine Referenznavigation angefordert hat. Das vergrößert Kosten und verändert die Semantik der Default-Antwort. `inspect_assembly` und `find_assembly_extensions` sind ebenfalls betroffen, da sie denselben Dispatcher verwenden.
-- Reproduktion: Einen Assembly-Route-Call mit `includeReferences=false` und einer absichtlich nicht auflösbaren Referenz ausführen; vor dem Handler-Aufruf werden die Referenzexpansion und deren Diagnosen bereits erzeugt. Der bestehende Test `AssemblyAnalysisRouteTests.AssemblyRoute_IncludeReferencesNavigatesSymbolsReferencesAndCallTree` deckt den positiven `true`-Pfad ab, aber keinen Negativtest auf „keine Expansion bei false“.
-- Disposition: Für die Folgeimplementierung zurückgestellt; Audit-only-Auftrag verbietet die Änderung. Empfohlene Regression: Dispatcher soll `includeReferences` bzw. eine explizite Expansion-Capability bis zum Handler durchreichen und bei `false` keine Child-Leases öffnen.
+**Titel:** Assembly-Symbolnavigation ignoriert bei `includeReferences=false` den angeforderten DLL-Root.
+
+- **Komponente:** `SymbolGraphToolRegistrations`, `AssemblyFindSymbolTool`, `AssemblyFindReferencesTool`, `AssemblyGetCallTreeTool`.
+- **Schweregrad:** S1.
+- **Umfang:** U3 – drei öffentliche Navigationstools mit gemeinsamem Assembly-Dispatch.
+- **Beweissicherheit:** hoch.
+- **Umgebungsabhängigkeit:** nein für die Ursache; die Live-Gegenprobe benötigt nur eine vorhandene DLL und kann durch deren Referenzdiagnosen zusätzlich `partial` sein.
+- **Erwartetes Verhalten:** Bei `targetType=assembly` soll der absolute DLL-Pfad den Root der Analyse bestimmen. `includeReferences=false` soll nur diesen Root durchsuchen; `includeReferences=true` soll zusätzlich die begrenzten Referenz-Sessions einbeziehen. Das ist auch die Bedeutung der Registrierungsbeschreibung in `src/AiNetLinter/Mcp/Registration/SymbolGraphToolRegistrations.cs:70-73`, `:103-106` und `:137-140`.
+- **Beobachtetes Verhalten:** Der Assembly-Zweig wird zwar erreicht, aber seine `false`-Branches delegieren jeweils an die projektbasierte Implementierung mit `lease.Server`. Damit kann der Antwort-Wrapper Assembly-Herkunft melden, während Treffer oder `SYMBOL_NOT_FOUND` aus dem aktuellen Projekt-Workspace stammen.
+- **Auswirkung:** Ein Standardaufruf kann ein Symbol aus der Ziel-DLL nicht finden und einen falschen Nichttreffer liefern. Der Nutzer muss entgegen dem Default explizit `includeReferences=true` setzen, um überhaupt den dekompilierten Root zu durchsuchen. Das verletzt den Zielroutingvertrag und macht Referenz-/Call-Tree-Ergebnisse vom zufällig geladenen Projekt-Workspace abhängig.
+
+### Konkrete Reproduktion
+
+Mit demselben redigierten DLL-Ziel wurden folgende MCP-Aufrufe ausgeführt:
+
+```text
+find_symbol(targetType="assembly", targetPath=<absoluter DLL-Pfad>,
+            namePatterns=["CancellationToken"], maxResults=10,
+            includeReferences=false)
+```
+
+Ergebnis: `isError=false`, `analysis.targetType=assembly`, `analysis.origin=decompiled`, aber `results[0].matches=[]` und Text `Keine Treffer`. Der Gegenaufruf mit identischem Ziel und `includeReferences=true` lieferte sechs Treffer aus dekompilierten Assembly-Dokumenten.
+
+Die analoge Probe mit `find_references(..., symbolIdentifier="CancellationToken", includeReferences=false)` endete mit `SYMBOL_NOT_FOUND`; mit `includeReferences=true` wurde das Symbol aufgelöst und eine strukturierte Navigation mit `visitedNodeCount=2` geliefert. `get_call_tree` zeigte dasselbe Muster: `false` → `SYMBOL_NOT_FOUND`, `true` mit einem vollqualifizierten Property-Symbol → strukturierte Root-/Navigation-Antwort.
+
+### Belege
+
+- **MCP-Symbol:** `SymbolGraphToolRegistrations.AddFindSymbol` in `src/AiNetLinter/Mcp/Registration/SymbolGraphToolRegistrations.cs:45-64` übergibt bei `includeReferences=false` den Assembly-Lease an `AssemblyFindSymbolTool`, dessen `false`-Branch in `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindSymbolTool.cs:23-32` `FindSymbolTool.ExecuteAsync(lease.Server, ...)` aufruft.
+- **MCP-Symbol:** `AssemblyFindReferencesTool.ExecuteAsync` in `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindReferencesTool.cs:21-32` delegiert analog an `FindReferencesTool.ExecuteAsync(lease.Server, ...)`.
+- **MCP-Symbol:** `AssemblyGetCallTreeTool.ExecuteAsync` in `src/AiNetLinter/Mcp/Tools/CallTree/AssemblyGetCallTreeTool.cs:23-30` delegiert analog an `GetCallTreeTool.ExecuteAsync(lease.Server, ...)`.
+- **MCP-Symbol:** Der Registrierungs-Dispatch in `src/AiNetLinter/Mcp/Registration/SymbolGraphToolRegistrations.cs:49-58`, `:80-90` und `:112-124` reicht den `includeReferences`-Wert korrekt bis zu diesen Assembly-Handlern durch; der Verlust entsteht erst in deren `false`-Branch.
+- **Testbeleg:** `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRouteTests.cs:145-224` prüft den positiven `includeReferences=true`-Pfad für alle drei Tools, aber keinen Root-only-Defaultpfad.
+- **Redigierte Live-Felder:** `targetType=assembly`; `analysis.origin=decompiled`; `analysis.snapshot=none`; `includeReferences=false` → leerer Symboltreffer bzw. `SYMBOL_NOT_FOUND`; `includeReferences=true` → Treffer/strukturierte Navigation. Alle Zielpfade wurden im Report entfernt.
+
+### Nicht umgesetzte Remediation-Hypothese
+
+Die `false`-Branches sollten eine Root-only-Assembly-Suche über den bestehenden Assembly-Lease verwenden; nur die `true`-Branches sollten die bounded Referenz-Sessions einbeziehen. Für `find_references` und `get_call_tree` sollte der Resolver ebenfalls den Assembly-Root statt den Server-Workspace verwenden. Keine Änderung wurde im Audit umgesetzt.
 
 ## Befund ASM-002
 
-- Schweregrad: S2
-- Umfang: U2 — Assembly-`find_references`-Navigation
-- Konfidenz: hoch
-- Bereich: Vollständigkeitslabel bei Namensauflösung über mehrere Sessions
-- Evidenz: `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblySymbolResolver.cs:30-61` sammelt für jede Lease ohne Treffer den von `FindReferencesTool.ResolveSymbolAsync` gelieferten `SymbolNotFound`-Text als Diagnose, sofern kein Assembly-Identifikator verwendet wird. `AssemblyNavigationSupport.CreateSummary` setzt in `:41-55` bei jeder nichtleeren Diagnose `completeness=partial`. Ein Nichttreffer in einer anderen durchsuchen Lease ist dabei nicht automatisch ein Auflösungsfehler.
-- Auswirkung: Ein erfolgreich in einer Session gefundenes Symbol kann für einen qualifizierten oder teilqualifizierten Namen als `partial` erscheinen, weil andere Sessions den Namen erwartbar nicht enthalten. Agenten können dadurch eine echte Referenzlücke mit bloßer Nichtzuständigkeit anderer Assemblies verwechseln.
-- Reproduktion: `find_references` mit `targetType=assembly`, `includeReferences=true` und einem Namen aufrufen, der nur in der Root-Assembly existiert; die Resolver-Schleife erzeugt für die übrigen Sessions `SymbolNotFound`-Diagnosen und projiziert sie in `navigation.completeness`.
-- Disposition: Als Folgearbeit zurückgestellt. Nichttreffer anderer Assemblies sollten von echten Session-/Referenzdiagnosen getrennt werden; die vorhandene Herkunfts- und Sessiondiagnostik soll erhalten bleiben.
+**Titel:** `find_symbol` gibt bei mehreren Namensmustern nur die Navigation des letzten Musters aus.
 
-## Beobachtung ohne bestätigten Defekt
+- **Komponente:** `AssemblyFindSymbolTool.BuildResponseAsync` und `AssemblySymbolSearch.FindMatchesAsync`.
+- **Schweregrad:** S2.
+- **Umfang:** U2 – Batch-Antwort von Assembly-`find_symbol`.
+- **Beweissicherheit:** hoch.
+- **Umgebungsabhängigkeit:** nein für den Kontrollfluss; ob zusätzlich andere Referenzdiagnosen die Antwort überdecken, ist umgebungsabhängig.
+- **Erwartetes Verhalten:** Die strukturierte Batch-Antwort muss die Vollständigkeit aller angeforderten Muster erkennen lassen. Eine Begrenzung eines früheren Musters darf nicht aus der abschließenden Navigation verschwinden.
+- **Beobachtetes Verhalten:** `AssemblySymbolSearch.FindMatchesAsync` fügt bei `distinct.Count > shown.Count` eine musterbezogene Begrenzungsdiagnose hinzu (`src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblySymbolSearch.cs:47-65`). `AssemblyFindSymbolTool.BuildResponseAsync` setzt dagegen in jeder Schleife `navigation = search.Navigation` und gibt nach der Schleife ausschließlich diese letzte Navigation zurück (`src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindSymbolTool.cs:68-96`). Die per-Muster-Trefferlisten bleiben erhalten, der Top-Level-Status/Diagnosekontext des vorigen Musters nicht.
+- **Auswirkung:** Ein Client kann bei `maxResults=1` nur einen Treffer des ersten Musters erhalten, während die abschließende Navigation keine entsprechende Begrenzungsdiagnose mehr ausweist. Die Batch-Antwort ist dann unvollständig, ohne dies auf Top-Level zuverlässig zu signalisieren.
 
-Die DTOs in `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisModels.cs:79-117` liefern Member-Signatur, Parameter, Generics, Constraints und Attribute, aber keine eigene Member-ID. Die Symbolgraph-APIs besitzen dagegen stabile IDs. Das ist eine offene Konsistenzfrage, jedoch kein bestätigter Vertragsverstoß, weil die Assembly-Inspection-Dokumentation keine Member-ID verspricht.
+### Konkrete Reproduktion
 
-Die neutrale Decompilation-Probe (`inspect_assembly`, exakter Typfilter, `publicOnly=false`) war `isError=false`, aber `completeness=partial`, `sessionStatus=partial`, `totalTypes=0` und enthielt semantische Decompiler-/Referenzdiagnosen. Ursache waren nicht identische Referenzversionen im Analyseumfeld; daraus wird kein Produktdefekt abgeleitet. Eine source-backed Live-Probe war in diesem Lauf nicht verfügbar.
+```text
+find_symbol(targetType="assembly", targetPath=<absoluter DLL-Pfad>,
+            namePatterns=["CancellationToken", "zz-neutral-absent-pattern"],
+            maxResults=1, includeReferences=true)
+```
+
+Die erste Einzelmusterprobe mit `CancellationToken` fand sechs Kandidaten; mit `maxResults=1` wurde einer angezeigt. In der Mehrmusterprobe enthielt `results[0]` ebenfalls nur einen Treffer und `results[1]` keinen Treffer, während die gemeinsame `navigation` nur die abschließende Suche repräsentierte und keine Begrenzungsdiagnose für das erste Muster enthielt. Die Live-Session war wegen unabhängiger Referenzdiagnosen bereits `partial`; der Verlust der musterbezogenen Begrenzungsdiagnose ist zusätzlich durch den statischen Kontrollfluss bestätigt.
+
+### Belege
+
+- **MCP-Symbol:** `AssemblyFindSymbolTool.BuildResponseAsync` in `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindSymbolTool.cs:62-96`, insbesondere `navigation = search.Navigation` in `:82` und der abschließende `summary`-Aufbau in `:90-96`.
+- **MCP-Symbol:** `AssemblySymbolSearch.FindMatchesAsync` in `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblySymbolSearch.cs:18-67`, insbesondere die `maxResults`-Begrenzung in `:54-58` und die Übergabe der Diagnose an `CreateSummary` in `:60-65`.
+- **Redigierte strukturierte Felder:** zwei `results`-Einträge mit `shown=1` und `shown=0`; abschließende `navigation.includeReferences=true`, `totalAssemblyCount=2`, `searchedAssemblyCount=2`, `assembliesTruncated=false`, `completeness=partial` sowie Diagnosen ohne die Begrenzungsdiagnose des ersten Musters.
+
+### Nicht umgesetzte Remediation-Hypothese
+
+Die Antwort könnte Navigation und Trunkierungsdiagnosen über alle Muster akkumulieren oder pro Muster eine eigene Vollständigkeit ausgeben. Keine Änderung wurde im Audit umgesetzt.
+
+## Bestätigte Detailprüfungen
+
+### Routing und Pfadvalidierung
+
+- `AnalysisTargetResolver.Resolve` in `src/AiNetLinter/Mcp/AnalysisTargetResolver.cs:10-58` verlangt `targetType`, akzeptiert nur `project` oder `assembly`, kanonisiert `targetPath`, prüft bei Assembly-Zielen Existenz und `.dll`-Endung.
+- `AssemblyAnalysisService.TryValidatePath` in `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisService.cs:21-59` wiederholt die lokale DLL-Validierung für die Assembly-Tool-Preparation.
+- `AssemblyAnalysisDispatcher.ExecuteAsync` in `src/AiNetLinter/Mcp/AnalysisToolCall.cs:145-195` trennt Project- und Assembly-Route und erzeugt für Assembly-Fehler den kanonisierten Zielkontext.
+
+### Metadata-only und statische Decompilation
+
+- `AssemblyDecompilationAdapter.ReadTopLevelTypes` in `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs:304-326` liest aus `File.OpenRead`/PE-Metadaten und überspringt verschachtelte bzw. compiler-generierte Top-Level-Knoten.
+- `AssemblyDecompilationAdapter.CreateDecompiler` in `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs:280-302` konfiguriert den statischen Adapter; eine ergänzende MCP-Textsuche nach `Assembly.Load` im Assembly-Analysebereich hatte 0 Treffer.
+- `AssemblyAnalysisSession` begrenzt Bytes, Typen, Member, Dokumentzeichen und Laufzeit; `AssemblyAnalysisSessionTests` decken Cache, Generation, Cancellation, Größenlimit, alte Snapshots und Partial-Status ab.
+- Live-`inspect_assembly` mit `targetType=assembly`, absolutem DLL-Pfad, `publicOnly=false`, begrenzten Typ-/Memberlimits lieferte `isError=false`, `origin=decompiled`, `sourcePath=none`, `snapshot=none`, `status=partial`, `completeness=partial`, strukturierte Typen und sichtbare Diagnosen. Das wurde als erwartete Partial-Semantik bewertet.
+
+### Source-Mapping und Herkunft
+
+- `AssemblyAnalysisContextFactory.IsSourceSelectionUsable` in `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs:216-233` verlangt Attestation, verifizierte Provider-Gesundheit, sauberes Checkout, matched candidate und identische Snapshot-Identität.
+- `TryCreateSourceBackedContextAsync` in derselben Datei `:135-196` erzeugt nur bei erfüllter Auswahl einen source-backed Context mit tatsächlicher Ziel-Fingerprint- und Snapshot-Herkunft.
+- `AssemblyAnalysisToolSupportTests.ExecuteAsync_WithConfiguredMappingPassesMatchedSelectionToFactory()` und `ExecuteAsync_WithoutMappingSkipsProviderAndUsesDecompilationFallback()` decken Mapping und Fallback ab; `AssemblyAnalysisToolSupportDegradedTests.ExecuteAsync_DegradedProviderShowsLastGoodAndUsesDecompilationFallback()` deckt den degradierenden Providerpfad ab.
+- Die direkte DLL-Probe war erwartungsgemäß `sourcePath=none`; eine neue Live-Source-Zuordnung wurde nicht erzeugt.
 
 ## Verifikation
 
-Die direkten Assembly- und Session-Tests sind im Repository vorhanden (`AssemblyAnalysisToolTests`, `AssemblyAnalysisSessionTests`, `AssemblyAnalysisDispatcherCapabilityTests`). Der abschließende vollständige Nicht-Stress-Testlauf wird separat im Orchestrator-Log protokolliert.
+- **Fast-Test-Slice:**
+
+  ```powershell
+  dotnet test src/AiNetLinter.FastTests --filter "FullyQualifiedName~AssemblyAnalysis" --no-restore
+  ```
+
+  Ergebnis: 88 erfolgreich, 0 fehlgeschlagen.
+
+- **Gezielter Integrationstestlauf:**
+
+  ```powershell
+  dotnet test src/AiNetLinter.IntegrationTests --filter "FullyQualifiedName~McpServerAssemblyHealthE2ETests|FullyQualifiedName~McpServerCommandContractTests|FullyQualifiedName~McpServerCommandFindReferencesTests|FullyQualifiedName~McpServerToolBehaviorE2ETests" --no-restore
+  ```
+
+  Initiales Ergebnis unter konkurrierender Testlast: 40 gesamt, 6 erfolgreich, 34 fehlgeschlagen. Alle protokollierten Fehler waren `System.IO.IOException: MCP server process exited unexpectedly` im gemeinsamen Testhost-/Stdio-Transport; deshalb keine Zuordnung zu ASM-001 oder ASM-002.
+
+- **Vollständiger Integrations-Nicht-Stress-Lauf:**
+
+  ```powershell
+  dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress --no-restore
+  ```
+
+  Ergebnis: 377 erfolgreich, 0 fehlgeschlagen, 0 übersprungen.
+
+- **Build:** `dotnet build` wurde nach Ende der konkurrierenden Testprozesse vollständig erfolgreich ausgeführt: 0 Warnungen, 0 Fehler.
+
+## Coverage-/Limitations-Tabelle
+
+| Prüfaspekt | MCP-/Testbeleg | Ergebnis | Grenze |
+|---|---|---|---|
+| `targetType`/absoluter DLL-Pfad | `AnalysisTargetResolver.Resolve`; `InspectAssembly_RejectsRelativeAndMissingPathsWithoutRuntimeLoading()` | bestätigt | kein negativer Live-Aufruf mit absichtlich ungültigem Pfad notwendig |
+| Metadata-only und statische Decompilation | `AssemblyDecompilationAdapter.*`; Session-/Tool-Tests; Live-`inspect_assembly` | bestätigt, Live-Status `partial` | Referenzdiagnosen verhindern vollständige Live-Compilation |
+| Source-backed Mapping/Fallback | `AssemblyAnalysisToolSupportTests.*`; `AssemblyAnalysisContextFactory.*` | im Code und in Fast-Tests bestätigt | keine echte Live-Provider-Probe |
+| Assembly-Root bei Default-Symbolnavigation | `AssemblyFind*Tool.ExecuteAsync`; Live `find_symbol`/`find_references`/`get_call_tree` mit `includeReferences=false/true` | ASM-001 bestätigt | Live-DLL liefert zusätzlich umgebungsabhängige Partialdiagnosen |
+| Referenz-/Call-Tree-Navigation mit `includeReferences=true` | `AssemblyAnalysisRouteTests.AssemblyRoute_IncludeReferencesNavigatesSymbolsReferencesAndCallTree()` | positiver Pfad bestätigt | nur bounded/partial Referenzumgebungen geprüft |
+| Mehrmuster-Vollständigkeit | `AssemblyFindSymbolTool.BuildResponseAsync`; Live-Batch mit erstem begrenztem Muster | ASM-002 bestätigt | keine vollständige Umgebung ohne Basisdiagnosen verfügbar |
+| MCP-Integration/E2E | gezielter Lauf zunächst 34/40 Prozessabbrüche; anschließender vollständiger Nicht-Stress-Lauf 377/377 grün | bestätigt, initiale Prozessabbrüche als Umgebungsgrenze | kein Stress-Lauf |
+| Stress-Kategorie | bewusst nicht ausgeführt | außerhalb Scope | keine Lastaussage |
+
+## Cross-Lens-Überschneidungen
+
+- **Source-Mapping/Checkout:** Die Source-backed Auswahlprüfung und Snapshot-Vertrauenslogik gehört primär zu einer Source-/Checkout-Linse; hier wurde nur ihre Auswirkung auf Assembly-Herkunft und Fallback geprüft.
+- **Git/Transport:** Referenzauflösung kann Pfad-/Transportdiagnosen weiterreichen; ihre Transportursache wurde nicht bewertet.
+- **Performance/Resource-Budgets:** Decompilation und Referenzexpansion besitzen feste Caps; hier wurde nur die sichtbare Partial-Semantik, nicht die Laufzeitoptimierung bewertet.
+- **Test-/Wiring-Linse:** Die fehlenden Defaultpfad-Regressionen sind eine Testabdeckungslücke, der bestätigte ASM-001-Befund liegt aber im Produktions-Dispatch und nicht nur im Testaufbau.
+
+### Commit-Vorschlag
+
+Kein Commit erstellt (read-only Audit). Bericht ausschließlich in `tasks/decompiled-assembly-analysis-audit/reports/01-assembly.md`.
