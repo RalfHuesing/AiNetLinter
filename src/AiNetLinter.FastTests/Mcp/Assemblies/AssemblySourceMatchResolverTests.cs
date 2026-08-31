@@ -49,6 +49,41 @@ public sealed class AssemblySourceMatchResolverTests
     }
 
     [Fact]
+    public void Resolve_MatchesConfiguredExeAliasToProjectAssemblyName()
+    {
+        var mapping = CreateMapping("https://gitea.example/shared.git", "src/Shared.slnx", ["Shared"]);
+        using var snapshot = CreateSnapshot(
+            mapping,
+            "revision-1",
+            new ProjectSpec("DifferentProject", "  Shared  ", "shared"));
+        using var registry = new SourceSnapshotRegistry();
+        using var lease = registry.Acquire(snapshot);
+
+        var result = AssemblySourceMatchResolver.Resolve(lease, mapping, "  SHARED.exe  ");
+
+        var candidate = Assert.Single(result.Candidates);
+        Assert.Equal(ExternalSourceMatchState.Matched, result.State);
+        Assert.Equal(ExternalSourceMatchConfidence.High, result.Confidence);
+        Assert.Equal("SHARED", result.RequestedAssemblyAlias);
+        Assert.Same(candidate, result.MatchedCandidate);
+        Assert.Equal("DifferentProject", candidate.ProjectName);
+    }
+
+    [Fact]
+    public void Resolve_DoesNotStripUnsupportedExtensionFromAlias()
+    {
+        var mapping = CreateMapping("https://gitea.example/shared.git", "src/Shared.slnx", ["Shared"]);
+        using var snapshot = CreateSnapshot(mapping, "revision-1", new ProjectSpec("Project", "Shared", "project"));
+        using var registry = new SourceSnapshotRegistry();
+        using var lease = registry.Acquire(snapshot);
+
+        var result = AssemblySourceMatchResolver.Resolve(lease, mapping, "Shared.txt");
+
+        AssertNoMatch(result, "explicit-assembly-alias-not-configured");
+        Assert.Equal("Shared.txt", result.RequestedAssemblyAlias);
+    }
+
+    [Fact]
     public void Resolve_NormalizesConfiguredAliasesAndProjectAssemblyNamesCaseInsensitively()
     {
         var mapping = CreateMapping(

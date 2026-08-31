@@ -191,32 +191,67 @@ public sealed class AssemblyAnalysisToolTests
     }
 
     [Fact]
-    public async Task FindAssemblyExtensions_UsesConsumerCompilationForApplicability()
+    public async Task FindAssemblyExtensions_ReceiverFilterWithoutMatchIsIndependentOfConsumerProject()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-");
         var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "ConsumerExtensions", """
             namespace Probe.Extensions;
+            public sealed class Person { }
             public static class Extensions
             {
                 public static string Mark(this object value) => value.ToString()!;
                 public static string StringOnly(this string value) => value;
+                public static string PersonOnly(this Person value) => value.ToString()!;
             }
             """);
-        using var consumer = RoslynTestSolutionFactory.CreateSolution(
-            Path.Combine(temp.DirectoryPath, "Consumer.slnx"),
-            new ProjectSpec("Consumer", [("Consumer.cs", "namespace Consumer; public sealed class Person { }")]));
-        using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: consumer.Solution)));
 
         var result = await FindAssemblyExtensionsTool.ExecuteAsync(
-            server,
+            null,
             new FindAssemblyExtensionsArguments(assemblyPath, "Consumer.Person", null, null, 100),
             CancellationToken.None);
         var payload = Deserialize<FindAssemblyExtensionsPayload>(result);
 
-        Assert.Equal("applicable", Assert.Single(payload.Extensions, extension => extension.Name == "Mark").Applicability);
-        Assert.Equal("not_applicable", Assert.Single(payload.Extensions, extension => extension.Name == "StringOnly").Applicability);
-        Assert.Equal("Consumer", payload.ConsumerProject);
+        Assert.Empty(payload.Extensions);
+        Assert.Equal(0, payload.TotalExtensions);
+        Assert.Null(payload.ConsumerProject);
+    }
+
+    [Fact]
+    public async Task FindAssemblyExtensions_ReceiverFilterMatchesUnqualifiedQualifiedAndGlobalPrefixOrdinal()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "ReceiverProbe", """
+            namespace Probe.Extensions;
+            public sealed class Person { }
+            public static class Extensions
+            {
+                public static string Mark(this object value) => value.ToString()!;
+                public static string StringOnly(this string value) => value;
+                public static string PersonOnly(this Person value) => value.ToString()!;
+            }
+            """);
+
+        var cases = new[]
+        {
+            ("Object", new[] { "Mark" }),
+            ("Person", new[] { "PersonOnly" }),
+            ("Probe.Extensions.Person", new[] { "PersonOnly" }),
+            ("global::Probe.Extensions.Person", new[] { "PersonOnly" }),
+            ("person", Array.Empty<string>()),
+            ("string", Array.Empty<string>()),
+        };
+
+        foreach (var (receiverType, expectedNames) in cases)
+        {
+            var result = await FindAssemblyExtensionsTool.ExecuteAsync(
+                null,
+                new FindAssemblyExtensionsArguments(assemblyPath, receiverType, null, null, 100),
+                CancellationToken.None);
+            var payload = Deserialize<FindAssemblyExtensionsPayload>(result);
+
+            Assert.Equal(receiverType, payload.ReceiverType);
+            Assert.Equal(expectedNames, payload.Extensions.Select(extension => extension.Name).ToArray());
+        }
     }
 
     [Fact]

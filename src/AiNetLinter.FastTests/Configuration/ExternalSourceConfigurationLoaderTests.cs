@@ -311,7 +311,7 @@ public sealed class ExternalSourceConfigurationLoaderTests
         using var tempDir = TestTempDirectory.Create("external-source-normalized-");
         var mappingsPath = tempDir.CreateFile(
             "mappings.json",
-            "{ \"repositories\": [{ \"url\": \"https://gitea.example/shared.git\", \"solutionPath\": \"./src/../src/Shared.SLNX\", \"assemblies\": [\" Foo.DLL \", \"Bar\"] }] }");
+            "{ \"repositories\": [{ \"url\": \"https://gitea.example/shared.git\", \"solutionPath\": \"./src/../src/Shared.SLNX\", \"assemblies\": [\" Foo.DLL \", \"Bar.exe\"] }] }");
         var settingsPath = WriteSettings(tempDir, mappingsPath);
 
         var mapping = AssertSingleMapping(ExternalSourceConfigurationLoader.Load(settingsPath));

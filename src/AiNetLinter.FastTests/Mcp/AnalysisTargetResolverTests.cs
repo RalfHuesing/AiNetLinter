@@ -60,20 +60,39 @@ public sealed class AnalysisTargetResolverTests
     }
 
     [Fact]
+    public void Resolve_Assembly_AcceptsExistingExeFile()
+    {
+        using var tempDir = TestTempDirectory.Create("analysis-target-assembly-exe-");
+        var assemblyPath = Path.Combine(tempDir.DirectoryPath, "sample.exe");
+        File.WriteAllBytes(assemblyPath, [0]);
+
+        var result = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest("assembly", assemblyPath));
+
+        Assert.Null(result.Error);
+        Assert.Equal(AnalysisTargetType.Assembly, result.Target!.TargetType);
+        Assert.Equal(Path.GetFullPath(assemblyPath), result.Target.CanonicalPath);
+    }
+
+    [Fact]
     public void Resolve_Assembly_RejectsDirectoryAndWrongExtension()
     {
         using var tempDir = TestTempDirectory.Create("analysis-target-invalid-assembly-");
         var directoryPath = Directory.CreateDirectory(Path.Combine(tempDir.DirectoryPath, "directory.dll")).FullName;
         var textPath = Path.Combine(tempDir.DirectoryPath, "sample.txt");
         File.WriteAllText(textPath, "not an assembly");
+        var binaryPath = Path.Combine(tempDir.DirectoryPath, "sample.bin");
+        File.WriteAllBytes(binaryPath, [0]);
 
         var directoryResult = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest("assembly", directoryPath));
         var extensionResult = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest("assembly", textPath));
+        var binaryResult = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest("assembly", binaryPath));
 
         Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(directoryResult.Error!), StringComparison.Ordinal);
         Assert.Contains("vorhandene Datei", TextOf(directoryResult.Error!), StringComparison.Ordinal);
         Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(extensionResult.Error!), StringComparison.Ordinal);
-        Assert.Contains("auf eine .dll", TextOf(extensionResult.Error!), StringComparison.Ordinal);
+        Assert.Contains("auf eine .dll- oder .exe-Datei", TextOf(extensionResult.Error!), StringComparison.Ordinal);
+        Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(binaryResult.Error!), StringComparison.Ordinal);
+        Assert.Contains("auf eine .dll- oder .exe-Datei", TextOf(binaryResult.Error!), StringComparison.Ordinal);
     }
 
     [Fact]

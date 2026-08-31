@@ -36,19 +36,22 @@ public sealed class GetFileTreeToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_TreeViewKeepsDeepFilesVisibleWhenTreeDepthIsShallow()
+    public async Task ExecuteAsync_TreeViewWithTreeDepthZeroShowsOnlyRootFiles()
     {
         using var tempDir = TestTempDirectory.Create("file-tree-tool-tree-");
         Directory.CreateDirectory(Path.Combine(tempDir.DirectoryPath, "nested"));
         File.WriteAllText(Path.Combine(tempDir.DirectoryPath, "nested", "deep.md"), "deep\n");
+        File.WriteAllText(Path.Combine(tempDir.DirectoryPath, "README.md"), "hello\n");
 
         var result = await GetFileTreeTool.ExecuteAsync(
             tempDir.DirectoryPath,
             GetFileTreeTestData.Input() with { View = "tree", TreeDepth = 0 },
             CancellationToken.None);
 
-        Assert.Contains("nested/deep.md", TextOf(result), StringComparison.Ordinal);
-        Assert.Contains("1 Dateien gezeigt", TextOf(result), StringComparison.Ordinal);
+        var text = TextOf(result);
+        Assert.Contains("README.md", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("nested/deep.md", text, StringComparison.Ordinal);
+        Assert.Contains("1 Dateien gezeigt", text, StringComparison.Ordinal);
     }
 
     [Fact]

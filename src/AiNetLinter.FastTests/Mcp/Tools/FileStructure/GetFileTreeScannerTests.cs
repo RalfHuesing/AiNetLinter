@@ -87,6 +87,89 @@ public sealed class GetFileTreeScannerTests
     }
 
     [Fact]
+    public void Scan_TreeDepthZeroScansOnlyFilesAtRoot()
+    {
+        using var tempDir = TestTempDirectory.Create("file-tree-tree-depth-zero-");
+        var root = CreateFixture(tempDir.DirectoryPath);
+        var input = GetFileTreeTestData.Input() with { TreeDepth = 0 };
+
+        var result = GetFileTreeScanner.Scan(root, input, CancellationToken.None).Payload;
+
+        Assert.Single(result.Files);
+        Assert.Equal("README.md", result.Files[0].Path);
+        Assert.Equal(1, result.Summary.ScannedDirectoryCount);
+        Assert.True(result.Completeness.ScanCompleted);
+    }
+
+    [Fact]
+    public void Scan_TreeDepthOneIncludesDirectSubdirectoryFiles()
+    {
+        using var tempDir = TestTempDirectory.Create("file-tree-tree-depth-one-");
+        var root = CreateFixture(tempDir.DirectoryPath);
+        var input = GetFileTreeTestData.Input() with { TreeDepth = 1 };
+
+        var result = GetFileTreeScanner.Scan(root, input, CancellationToken.None).Payload;
+
+        Assert.Equal(3, result.Summary.MatchedFileCount);
+        Assert.DoesNotContain(result.Files, file => file.Path.StartsWith("src/", StringComparison.Ordinal));
+        Assert.Contains(result.Directories, directory => directory.Path == "Docs");
+        Assert.DoesNotContain(result.Directories, directory => directory.Path.StartsWith("src", StringComparison.Ordinal));
+        Assert.True(result.Completeness.ScanCompleted);
+    }
+
+    [Fact]
+    public void Scan_TreeDepthTwoReachesNestedProjectFiles()
+    {
+        using var tempDir = TestTempDirectory.Create("file-tree-tree-depth-two-");
+        var root = CreateFixture(tempDir.DirectoryPath);
+
+        var result = GetFileTreeScanner.Scan(root, GetFileTreeTestData.Input(), CancellationToken.None).Payload;
+
+        Assert.Equal(4, result.Summary.MatchedFileCount);
+        Assert.Contains(result.Files, file => file.Path == "src/Project/Project.cs");
+        Assert.Equal(4, result.Summary.ScannedDirectoryCount);
+    }
+
+    [Fact]
+    public void Scan_MaxDepthTakesPrecedenceOverTreeDepth()
+    {
+        using var tempDir = TestTempDirectory.Create("file-tree-max-depth-precedence-");
+        var root = CreateFixture(tempDir.DirectoryPath);
+
+        var shallow = GetFileTreeScanner.Scan(
+            root,
+            GetFileTreeTestData.Input() with { TreeDepth = 2, MaxDepth = 0 },
+            CancellationToken.None).Payload;
+        var deep = GetFileTreeScanner.Scan(
+            root,
+            GetFileTreeTestData.Input() with { TreeDepth = 0, MaxDepth = 2 },
+            CancellationToken.None).Payload;
+
+        Assert.Single(shallow.Files);
+        Assert.Equal("README.md", shallow.Files[0].Path);
+        Assert.Equal(4, deep.Summary.MatchedFileCount);
+        Assert.Contains(deep.Files, file => file.Path == "src/Project/Project.cs");
+    }
+
+    [Fact]
+    public void Scan_SummaryViewListsOnlyTopLevelDirectoryAggregates()
+    {
+        using var tempDir = TestTempDirectory.Create("file-tree-summary-top-level-");
+        var root = CreateFixture(tempDir.DirectoryPath);
+        var input = GetFileTreeTestData.Input() with { View = "summary" };
+
+        var result = GetFileTreeScanner.Scan(root, input, CancellationToken.None).Payload;
+
+        Assert.Empty(result.Files);
+        Assert.Equal(4, result.Summary.MatchedFileCount);
+        Assert.False(result.Completeness.Truncated);
+        Assert.Equal(3, result.Directories.Count);
+        Assert.Contains(result.Directories, directory => directory.Path == "Docs");
+        Assert.Contains(result.Directories, directory => directory.Path == "src");
+        Assert.DoesNotContain(result.Directories, directory => directory.Path.StartsWith("src/", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Scan_MaxResultsMarksResponseTruncationButKeepsSummaryComplete()
     {
         using var tempDir = TestTempDirectory.Create("file-tree-truncate-");
@@ -103,7 +186,7 @@ public sealed class GetFileTreeScannerTests
     }
 
     [Fact]
-    public void Scan_SummaryViewDoesNotExposeFileListOrMarkMaxResultsTruncated()
+    public void Scan_SummaryViewExposesNoFileListButMarksMaxResultsDirectoryTruncation()
     {
         using var tempDir = TestTempDirectory.Create("file-tree-summary-");
         var root = CreateFixture(tempDir.DirectoryPath);
@@ -113,8 +196,10 @@ public sealed class GetFileTreeScannerTests
 
         Assert.Empty(result.Files);
         Assert.Equal(4, result.Summary.MatchedFileCount);
-        Assert.False(result.Completeness.Truncated);
+        Assert.True(result.Completeness.Truncated);
+        Assert.Contains("maxResults", result.Completeness.TruncatedBy);
         Assert.Equal(0, result.Completeness.ShownFileCount);
+        Assert.Equal(".", Assert.Single(result.Directories).Path);
     }
 
     [Fact]
