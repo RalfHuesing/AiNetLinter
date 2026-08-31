@@ -779,6 +779,22 @@
 - nächste Aktion: EPIC-C-Abschluss-Checkpoint committen und anschließend den
   bereits als `in_progress` markierten EPIC-D-Implementierer starten.
 
+## 2026-08-31 — running / EPIC-D / Implementierer
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2-resume`
+- subagent-id: wird nach dem Start ergänzt.
+- diff-baseline: `d4af294c`.
+- scope: begrenzte, explizit anforderbare Cross-Assembly-Navigation für
+  `find_symbol` und Call-Tree sowie tolerante, herkunftssichere
+  `find_references`-Antworten über Referenzgrenzen.
+- Muss-Kriterien: `includeReferences=false` bleibt unverändert; `true` bleibt
+  begrenzt und weist Herkunft aus; fehlende, zyklische oder beschädigte
+  Referenzen führen zu Partialität/Diagnostics statt Destabilisierung;
+  Sessions/Leases bleiben begrenzt.
+- erwarteter Hand-off: zusammenhängende Code-/Regressionsteständerungen ohne
+  Commit, aktualisierte Code-Map, fokussierte Multi-DLL- und Fehlerfall-
+  Verifikation sowie gezielter Violationsnachweis nach der letzten Änderung.
+
 ## 2026-08-31 — completed / EPIC-C / Folge-Reviewer nach Korrekturrunde 1
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`
