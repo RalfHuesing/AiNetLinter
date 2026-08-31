@@ -92,7 +92,7 @@ internal sealed class DaemonHandshake
     private DaemonConfigurationDivergence? CreateConfigurationWarning(
         EffectiveDaemonConfiguration? received)
     {
-        if (configurationWarningReported || effectiveConfiguration.Matches(received))
+        if (configurationWarningReported || effectiveConfiguration.MatchesAdvertisedPeer(received))
         {
             return null;
         }

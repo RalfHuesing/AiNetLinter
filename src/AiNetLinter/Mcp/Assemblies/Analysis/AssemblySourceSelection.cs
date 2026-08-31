@@ -125,6 +125,7 @@ internal sealed class AssemblySourceProviderCreation
     private int completed;
     private int snapshotAccepted;
     private int resultDisposed;
+    private Task producerTask = Task.CompletedTask;
 
     internal AssemblySourceProviderCreation()
     {
@@ -132,6 +133,14 @@ internal sealed class AssemblySourceProviderCreation
     }
 
     internal CancellationToken CreationToken => creationToken;
+
+    internal Task ProducerTask => Volatile.Read(ref producerTask);
+
+    internal void SetProducerTask(Task task)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        Volatile.Write(ref producerTask, task);
+    }
 
     internal TaskCompletionSource<ExternalSourceProviderResult> Completion { get; } =
         new(TaskCreationOptions.RunContinuationsAsynchronously);

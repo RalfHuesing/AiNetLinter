@@ -156,6 +156,52 @@ public sealed class ThinClientConnectOrStartTests
         Assert.Equal(0, Volatile.Read(ref spawnCount));
     }
 
+    [Fact]
+    public async Task ConnectOrStart_ReportsExternalLimitDivergenceFromExistingDaemon()
+    {
+        var daemonConfiguration = new EffectiveDaemonConfiguration(
+            4,
+            10m,
+            ExternalMaxDiskBytes: 100,
+            ExternalMaxMemoryBytes: 200,
+            ExternalMaxParallelOperations: 3,
+            ExternalMaxResidentResources: 5,
+            ExternalIdleTtlMinutes: 12m);
+        var transport = new ScriptedMockPipeTransport(
+            initialConnectFailures: 0,
+            serveConnection: (connection, index) => MockDaemonScript.WelcomeThenAsync(
+                connection,
+                4711,
+                index,
+                _ => Task.Delay(Timeout.InfiniteTimeSpan),
+                daemonConfiguration));
+        var console = new RecordingLintConsole();
+        var options = new ThinClientLaunchOptions(
+            null,
+            null,
+            null,
+            null,
+            ExternalMaxDiskBytes: 50,
+            ExternalMaxMemoryBytes: 200,
+            ExternalMaxParallelOperations: 3,
+            ExternalMaxResidentResources: 5,
+            ExternalIdleTtlMinutes: 12m);
+
+        var connection = await ThinClientProxy.ConnectOrStartAsync(
+            options,
+            CreateContext(console, transport, (_, _) => false)).ConfigureAwait(false);
+        try
+        {
+            Assert.Contains(
+                console.ErrorLines,
+                line => line.Contains("Daemon-Konfiguration", StringComparison.Ordinal));
+        }
+        finally
+        {
+            await connection.Pipe.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
     private static ThinClientLaunchOptions CreateLaunchOptions() =>
         new(null, null, null);
 

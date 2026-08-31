@@ -147,18 +147,23 @@ internal static class MockDaemonScript
         DaemonPipeConnection connection,
         int processId,
         int connectionId,
-        Func<DaemonPipeConnection, Task> afterWelcome)
+        Func<DaemonPipeConnection, Task> afterWelcome,
+        EffectiveDaemonConfiguration? configuration = null)
     {
-        await WriteWelcomeAsync(connection, processId, connectionId).ConfigureAwait(false);
+        await WriteWelcomeAsync(connection, processId, connectionId, configuration).ConfigureAwait(false);
         await afterWelcome(connection).ConfigureAwait(false);
     }
 
-    public static async Task WriteWelcomeAsync(DaemonPipeConnection connection, int processId, int connectionId) =>
+    public static async Task WriteWelcomeAsync(
+        DaemonPipeConnection connection,
+        int processId,
+        int connectionId,
+        EffectiveDaemonConfiguration? configuration = null) =>
         await connection.WriteJsonFrameAsync(new DaemonWelcome(
             "9.9.mock",
             McpServerOptionsFactory.GetServerVersion(),
             processId,
-            EffectiveDaemonConfiguration.Default)
+            configuration ?? EffectiveDaemonConfiguration.Default)
         {
             ConnectionId = connectionId,
         }).ConfigureAwait(false);

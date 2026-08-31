@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Assemblies.Analysis;
+using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using AiNetLinter.TestKit;
 using Xunit;
 
@@ -192,6 +193,20 @@ public sealed class ExternalSourceSnapshotMaterializerTests
         Assert.Equal(0, resources.ResidentCount);
         Assert.False(checkout.IsDisposed);
         checkout.Dispose();
+    }
+
+    [Fact]
+    public async Task EstimateCheckoutAsync_HonorsCancellationBeforeScanningCheckout()
+    {
+        using var temp = TestTempDirectory.Create("external-source-estimate-cancel-");
+        var checkoutPath = temp.CreateSubdirectory("checkout");
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            ExternalSourceSnapshotResourceUsage.EstimateCheckoutAsync(
+                checkoutPath,
+                cancellation.Token).AsTask());
     }
 
     private static bool TryMutate(string path)

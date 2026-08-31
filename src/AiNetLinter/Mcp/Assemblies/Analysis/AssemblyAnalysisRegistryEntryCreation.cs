@@ -48,25 +48,33 @@ internal sealed class ExternalResourceLease : IDisposable
 internal sealed class ExternalResourceReservation : IDisposable
 {
     private readonly ExternalResourceRegistry registry;
-    private readonly long diskBytes;
-    private readonly long memoryBytes;
-    private int disposed;
+    private readonly ExternalResourceRequest request;
+    private int state;
+
+    private const int Active = 0;
+    private const int Promoted = 1;
+    private const int Disposed = 2;
 
     internal ExternalResourceReservation(
         ExternalResourceRegistry registry,
-        long diskBytes,
-        long memoryBytes)
+        ExternalResourceRequest request)
     {
         this.registry = registry;
-        this.diskBytes = diskBytes;
-        this.memoryBytes = memoryBytes;
+        this.request = request;
     }
+
+    internal ExternalResourceRequest Request => request;
+
+    internal ExternalResourceRegistry Registry => registry;
+
+    internal bool TryPromote() =>
+        Interlocked.CompareExchange(ref state, Promoted, Active) == Active;
 
     public void Dispose()
     {
-        if (Interlocked.Exchange(ref disposed, 1) == 0)
+        if (Interlocked.CompareExchange(ref state, Disposed, Active) == Active)
         {
-            registry.ReleaseReservation(diskBytes, memoryBytes);
+            registry.ReleaseReservation(this);
         }
     }
 }

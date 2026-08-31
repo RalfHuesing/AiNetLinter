@@ -22,6 +22,8 @@ internal sealed class ExternalResourceCapacityContext<T>
 
     internal required int ReservedResources { get; init; }
 
+    internal required int RequestedResources { get; init; }
+
     internal required Func<T, long> DiskSelector { get; init; }
 
     internal required Func<T, long> MemorySelector { get; init; }
@@ -81,7 +83,10 @@ internal static class ExternalResourceRegistrySupport
             return $"Das externe Speicherbudget ist ausgeschöpft ({context.Options.MaxMemoryBytes} Bytes).";
         }
 
-        return context.Entries.Count + context.ReservedResources >= context.Options.MaxResidentResources
+        return context.Entries.Count
+                + context.ReservedResources
+                + context.RequestedResources
+            > context.Options.MaxResidentResources
             ? $"Das externe Ressourcenlimit ist ausgeschöpft ({context.Options.MaxResidentResources} Einträge)."
             : null;
     }

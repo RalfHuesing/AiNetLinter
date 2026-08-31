@@ -16,7 +16,7 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
     private readonly IAssemblySourceSelectionSnapshotRegistry registry;
     private readonly ExternalResourceRegistry resources;
     private readonly ExternalResourceRegistry sourceResources;
-    private readonly IDisposable sourceOrchestrator;
+    private readonly IAsyncDisposable sourceOrchestrator;
     private readonly IAssemblySourceSelectionResolver orchestrator;
     private readonly IAssemblySourceResolver registryResolver;
     private readonly IAssemblyAnalysisRegistry sessions;
@@ -107,7 +107,7 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
 
         try
         {
-            sourceOrchestrator.Dispose();
+            await sourceOrchestrator.DisposeAsync().ConfigureAwait(false);
         }
         catch (Exception exception)
         {
@@ -157,7 +157,7 @@ internal sealed record AssemblyAnalysisHostConfiguration(bool Succeeded);
 
 internal sealed class AssemblyAnalysisHostDependencies
 {
-    internal required IDisposable SourceOrchestrator { get; init; }
+    internal required IAsyncDisposable SourceOrchestrator { get; init; }
 
     internal required IAssemblySourceSelectionResolver Orchestrator { get; init; }
 
@@ -192,7 +192,8 @@ internal static class AssemblyAnalysisHostFactory
         var sourceProvider = provider ?? AssemblyAnalysisHostProviderFactory.CreateDefaultProvider(
             configurationResult,
             credentialResolver,
-            sourceResources);
+            sourceResources,
+            registry);
         var sourceOrchestrator = new AssemblySourceSelectionOrchestrator(
             configurationResult,
             sourceProvider,
@@ -221,7 +222,8 @@ internal static class AssemblyAnalysisHostProviderFactory
     internal static IExternalSourceProvider CreateDefaultProvider(
         ExternalSourceConfigurationLoadResult configurationResult,
         IExternalSourceCredentialResolver? credentialResolver,
-        ExternalResourceRegistry sourceResources)
+        ExternalResourceRegistry sourceResources,
+        IExternalSourceSnapshotResourceCoordinator resourceCoordinator)
     {
         var cacheOptions = configurationResult.Configuration?.CacheOptions
             ?? ExternalSourceCacheOptions.Default;
@@ -237,6 +239,6 @@ internal static class AssemblyAnalysisHostProviderFactory
             cacheConstruction.CreateRefreshPolicy());
         return new GiteaExternalSourceProvider(
             acquirer,
-            new ExternalSourceSnapshotMaterializer(sourceResources));
+            new ExternalSourceSnapshotMaterializer(sourceResources, resourceCoordinator));
     }
 }

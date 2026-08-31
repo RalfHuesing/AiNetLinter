@@ -281,6 +281,72 @@ public sealed class SourceSnapshotRegistryTests
     }
 
     [Fact]
+    public void TryReserveMaterialization_EvictsReleasedSnapshotAndPromotesReservationAtomically()
+    {
+        using var resources = new ExternalResourceRegistry(new ExternalResourceRegistryOptions(
+            MaxResidentResources: 1));
+        using var registry = new SourceSnapshotRegistry(resources);
+        var firstMapping = new ExternalSourceMapping(
+            "https://gitea.example/shared.git",
+            "src/First.slnx",
+            ["First"]);
+        var secondMapping = new ExternalSourceMapping(
+            firstMapping.Url,
+            "src/Second.slnx",
+            ["Second"]);
+        using var first = CreateSnapshot(firstMapping, "revision-1");
+        using var firstLease = registry.Acquire(first);
+        firstLease.Dispose();
+
+        var secondIdentity = SourceSnapshotIdentity.Create(secondMapping, "revision-1");
+        var request = new ExternalResourceRequest(secondIdentity.StableValue, 1, 1);
+        Assert.True(registry.TryReserveMaterialization(request, out var reservation, out var reason), reason);
+        Assert.True(first.IsDisposed);
+
+        using var second = CreateSnapshot(secondMapping, "revision-1", resourceReservation: reservation);
+        using var secondLease = registry.Acquire(second);
+
+        Assert.Same(second, secondLease.Snapshot);
+        Assert.Equal(1, registry.ResidentCount);
+        Assert.Equal(1, resources.ResidentCount);
+    }
+
+    [Fact]
+    public void TryReserveMaterialization_DeduplicatesIdentityAlreadyResident()
+    {
+        using var resources = new ExternalResourceRegistry(new ExternalResourceRegistryOptions(
+            MaxResidentResources: 1));
+        using var registry = new SourceSnapshotRegistry(resources);
+        var mapping = new ExternalSourceMapping(
+            "https://gitea.example/shared.git",
+            "src/Shared.slnx",
+            ["Shared"]);
+        using var resident = CreateSnapshot(mapping, "revision-1");
+        using var residentLease = registry.Acquire(resident);
+        var identity = SourceSnapshotIdentity.Create(mapping, "revision-1");
+
+        Assert.True(
+            registry.TryReserveMaterialization(
+                new ExternalResourceRequest(identity.StableValue, 1, 1),
+                out var firstReservation,
+                out var reason),
+            reason);
+        Assert.True(
+            registry.TryReserveMaterialization(
+                new ExternalResourceRequest(identity.StableValue, 1, 1),
+                out var reservation,
+                out reason),
+            reason);
+        firstReservation!.Dispose();
+        using var duplicate = CreateSnapshot(mapping, "revision-1", resourceReservation: reservation);
+        using var duplicateLease = registry.Acquire(duplicate);
+
+        Assert.Same(resident, duplicateLease.Snapshot);
+        Assert.True(duplicate.IsDisposed);
+        Assert.Equal(1, registry.ResidentCount);
+    }
+
+    [Fact]
     public void EvictIdle_DisposesReleasedSnapshotButPreservesActiveLease()
     {
         var clock = new ManualTimeProvider(DateTimeOffset.UtcNow);
@@ -313,14 +379,17 @@ public sealed class SourceSnapshotRegistryTests
     private static ExternalSourceSnapshot CreateSnapshot(
         ExternalSourceMapping mapping,
         string revision,
-        IExternalSourceCheckoutOwner? checkoutOwner = null)
+        IExternalSourceCheckoutOwner? checkoutOwner = null,
+        ExternalResourceReservation? resourceReservation = null)
     {
         var workspace = new AdhocWorkspace();
         return new(
             SourceSnapshotIdentity.Create(mapping, revision),
             workspace.CurrentSolution,
             workspace,
-            new ExternalSourceSnapshotOwnership(checkoutOwner));
+            new ExternalSourceSnapshotOwnership(
+                CheckoutOwner: checkoutOwner,
+                ResourceReservation: resourceReservation));
     }
 
     private sealed class TrackingCheckoutOwner(

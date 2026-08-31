@@ -321,7 +321,12 @@ internal static class ThinClientProxy
     private static EffectiveDaemonConfiguration CreateConfiguration(ThinClientLaunchOptions options) =>
         new(
             options.MaxProjects ?? DaemonProtocol.DefaultMaxProjects,
-            options.IdleExitMinutes ?? DaemonProtocol.DefaultIdleExitMinutes);
+            options.IdleExitMinutes ?? DaemonProtocol.DefaultIdleExitMinutes,
+            options.ExternalMaxDiskBytes,
+            options.ExternalMaxMemoryBytes,
+            options.ExternalMaxParallelOperations,
+            options.ExternalMaxResidentResources,
+            options.ExternalIdleTtlMinutes);
 
     private static ThinClientLaunchOptions NormalizeLaunchOptions(ThinClientLaunchOptions options) =>
         options with { DaemonInstance = DaemonInstanceId.Normalize(options.DaemonInstance) };

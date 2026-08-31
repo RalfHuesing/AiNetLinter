@@ -144,6 +144,14 @@ Ausführungsprotokoll.
   Provider-Creations beim asynchronen Host-Dispose vollständig joinen.
 - Log-Anker: `execution-log.md`, completed EPIC-C Reviewer vom 2026-08-31.
 
+### EPIC-C-Korrekturrunde 1 — Bearbeitungsnachweis
+
+Der frische Implementierer hat `TD-EPIC-C-001` bis `TD-EPIC-C-005` in einem
+kohärenten Ansatz bearbeitet. Die Dispositionen bleiben bis zum unabhängigen
+Folge-Review `fix-now`; erst ein bestätigter Review darf sie auf `fixed`
+setzen. Der vollständige Bericht und die Verifikation stehen im
+`execution-log.md`.
+
 ## TD-EPIC-B-004 — Compact-Health `ShownCount`
 
 - Schweregrad: P1

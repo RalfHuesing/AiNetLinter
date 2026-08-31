@@ -575,6 +575,56 @@
 - nächste Aktion: Review-Checkpoint committen, danach frischen
   Korrektur-Implementierer für EPIC-B starten.
 
+## 2026-08-31 — completed / EPIC-C / Korrektur-Implementierer Runde 1
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a055f3-1938-7f71-b288-7acdb9b00d76`
+- diff-baseline: `8ab245ab` (Triagecheckpoint `935563a7`)
+- status: alle fünf EPIC-C-Befunde in einem kohärenten Ansatz behoben, ohne
+  Agenten-Commit; Code-/Test-/Dokumentationsänderungen liegen im Working Tree.
+- vollständiger finaler Agentenbericht:
+
+  > Erledigt, ohne Commit. Alle fünf EPIC-C-Befunde wurden kohärent behoben.
+  >
+  > Änderungen:
+  >
+  > - Koordinierte Source-Reservation mit TTL-/LRU-Eviction,
+  >   Identity-Deduplizierung und atomarer Reservation-zu-Resident-Lease-
+  >   Überführung.
+  > - Assembly-LRU retired nun ausschließlich idle Entries; aktive Leases
+  >   bleiben geschützt. Owner-Leases werden vor erneutem Acquire freigegeben.
+  > - ThinClient und Daemon vergleichen die fünf External-Limits auch bei
+  >   bestehender Daemon-Instanz; alte Peers bleiben kompatibel.
+  > - Materialisierungsreservation bleibt bis zur Snapshot-Registrierung
+  >   erhalten und rollt bei Fehler/Cancellation zurück.
+  > - `EstimateCheckoutAsync`, deterministischer Producer-Join und
+  >   Host-Dispose-Reihenfolge umgesetzt.
+  > - Task-Code-Map sowie `Docs/configuration.md` und `Docs/integration.md`
+  >   aktualisiert.
+  >
+  > Verifikation:
+  >
+  > - Build: 0 Warnungen, 0 Fehler.
+  > - EPIC-C-Fokus: FastTests 51/51, IntegrationTests 7/7.
+  > - Vollständige Nicht-Stress-FastTests: 2.263 bestanden, 2 Skips.
+  > - Vollständige Nicht-Stress-IntegrationTests: 373 bestanden, 2 bekannte
+  >   externe Beschreibungstextfehler (`ambiguous`, `sortBy`).
+  > - MCP-Audit: 8 bestehende Clone-Cluster, 38 Low-/0 High-Confidence-
+  >   Dead-Code-Kandidaten, 11 bestehende Magic-Value-Kandidaten.
+  > - `get_violations`: keine Fehler; drei bestehende
+  >   `AIContextFootprint`-Warnungen.
+  > - Safeguard: 5,67/10, PASS.
+  > - Stress-Tests nicht ausgeführt; `DIAGNOSTICS-SAMPLE-BUDGET` wurde nicht
+  >   wiedereröffnet.
+  >
+  > Verbleibende Risiken: die zwei bekannten MCP-Beschreibungstextverträge
+  > und drei bestehende Footprint-Warnungen bleiben außerhalb EPIC-C.
+- Urteil: Implementierung erfolgreich; Folge-Review gegen den Korrekturstand
+  steht aus. Die fünf Tech-Debt-Dispositionen bleiben bis dahin `fix-now`.
+- warteverhalten: Der Agent wurde erst nach echtem terminalem Status als
+  abgeschlossen behandelt; alle Polling-Timeouts führten nicht zu einem
+  Interrupt.
+
 ## 2026-08-31 — completed / EPIC-C / Reviewer
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`

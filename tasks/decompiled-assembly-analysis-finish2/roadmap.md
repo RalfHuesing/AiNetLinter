@@ -83,9 +83,9 @@ tech_debt: siehe tech-debt.md
   Dispose während der Erzeugung sind deterministisch.
 - Verifikation: fokussierte TTL/LRU/Capacity/Lease/Race/Creation-Barrier-
   Tests; hohe Last nur in gezielten Stress-Tests; gezielter Violations-Check.
-- Status: correction_in_progress (Runde 1; 3 P1, 2 P2)
+- Status: review_pending (Korrekturrunde 1 abgeschlossen)
 
-## EPIC-C-Review — Korrekturrunde 1 erforderlich
+## EPIC-C-Review — Korrektur umgesetzt, Folge-Review ausstehend
 
 - Subagent: `01a05585-ab4e-7652-b391-96fd81ed6d95`; 43 Arbeitsbaum-Einträge,
   ohne Agenten-Commit.
@@ -98,9 +98,9 @@ tech_debt: siehe tech-debt.md
   2 Skips; Integration 372/374. `get_violations` nur der bekannte
   `AssemblyAnalysisRegistry`-Footprint.
 - Review: `issues`; unabhängiger Reviewer gegen Commit `8ab245ab` meldete drei
-  P1- und zwei P2-Befunde. EPIC-C ist nicht freigabefähig; frischer
-  Korrektur-Implementierer läuft. Das ausgeschöpfte EPIC-B-Finding bleibt
-  unverändert.
+  P1- und zwei P2-Befunde. Die Korrekturrunde hat alle fünf Punkte bearbeitet;
+  EPIC-C bleibt bis zum Folge-Review offen. Das ausgeschöpfte EPIC-B-Finding
+  bleibt unverändert.
 
 ## EPIC-C-Korrekturrunde 1
 
@@ -109,6 +109,19 @@ tech_debt: siehe tech-debt.md
   Producer-Cancellation-Join.
 - Regel: ein begründeter Versuch je Finding; Polling-Timeouts führen nicht zu
   einem Interrupt.
+
+## EPIC-C-Korrektur Runde 1 — abgeschlossen, Review ausstehend
+
+- Subagent: `01a055f3-1938-7f71-b288-7acdb9b00d76`; kein Agenten-Commit.
+- Ergebnis: Source-Eviction/Identity-Deduplizierung und atomare Reservation-
+  zu-Resident-Lease-Überführung, idle-only Assembly-LRU mit geschützter
+  Analyse-Lease, rückwärtskompatibler ThinClient-Handshake, Reservation bis
+  Registrierung sowie cancellation-aware Checkout und deterministischer
+  Producer-Join/Host-Dispose.
+- Verifikation laut Rollenbericht: Build 0/0; EPIC-C-Fokus Fast 51/51,
+  Integration 7/7; vollständige FastTests 2263 bestanden, 2 Skips;
+  Integration 373 bestanden mit den zwei bekannten externen
+  Beschreibungstextfehlern. Review gegen den Korrekturstand steht aus.
 
 ## EPIC-D — Mehrere Assemblies und tolerante Analyse
 

@@ -16,9 +16,15 @@ namespace AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapshotMaterializer
 {
     private readonly ExternalResourceRegistry? resources;
+    private readonly IExternalSourceSnapshotResourceCoordinator? resourceCoordinator;
 
-    internal ExternalSourceSnapshotMaterializer(ExternalResourceRegistry? resources = null) =>
+    internal ExternalSourceSnapshotMaterializer(
+        ExternalResourceRegistry? resources = null,
+        IExternalSourceSnapshotResourceCoordinator? resourceCoordinator = null)
+    {
         this.resources = resources;
+        this.resourceCoordinator = resourceCoordinator;
+    }
 
     public async ValueTask<ExternalSourceSnapshot> MaterializeAsync(
         ExternalSourceMapping mapping,
@@ -46,8 +52,7 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
                     mapping,
                     checkout,
                     materializationUse,
-                    cancellationToken,
-                    resources)
+                    cancellationToken)
                 .ConfigureAwait(false);
             return snapshot;
         }
@@ -60,34 +65,26 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
         }
     }
 
-    private static async ValueTask<ExternalSourceSnapshot> MaterializeWithLeaseAsync(
+    private async ValueTask<ExternalSourceSnapshot> MaterializeWithLeaseAsync(
         ExternalSourceMapping mapping,
         ExternalSourceCheckoutHandle checkout,
         ExternalSourceCheckoutMaterializationUse materializationUse,
-        CancellationToken cancellationToken,
-        ExternalResourceRegistry? resources)
+        CancellationToken cancellationToken)
     {
         MSBuildWorkspace? workspace = null;
         ExternalResourceReservation? reservation = null;
         try
         {
             await VerifyCheckoutAsync(checkout, cancellationToken).ConfigureAwait(false);
-            var resourceUsage = ExternalSourceSnapshotResourceUsage.EstimateCheckout(checkout.CheckoutPath);
-            reservation = ReserveMaterializationBudget(resources, mapping, checkout, resourceUsage);
+            var resourceUsage = await ExternalSourceSnapshotResourceUsage.EstimateCheckoutAsync(
+                    checkout.CheckoutPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            reservation = ReserveMaterializationBudget(mapping, checkout, resourceUsage);
 
             workspace = SourceFileCatalogLoader.CreateMSBuildWorkspace();
-            var workspaceFailed = 0;
-            workspace.RegisterWorkspaceFailedHandler(_ => Interlocked.Exchange(ref workspaceFailed, 1));
-
-            var solution = await workspace.OpenSolutionAsync(
-                checkout.SolutionPath,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            var solution = await OpenSolutionAsync(workspace, checkout, cancellationToken).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
-            if (Volatile.Read(ref workspaceFailed) != 0 || !solution.Projects.Any())
-            {
-                throw new ExternalSourceSnapshotMaterializationException();
-            }
-
             await VerifyCheckoutAsync(checkout, cancellationToken).ConfigureAwait(false);
             var snapshot = new ExternalSourceSnapshot(
                 SourceSnapshotIdentity.Create(mapping, checkout.LoadedRevision),
@@ -97,7 +94,9 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
                     checkout,
                     materializationUse,
                     IsAttested: true,
-                    ResourceUsage: resourceUsage));
+                    ResourceUsage: resourceUsage,
+                    ResourceReservation: reservation));
+            reservation = null;
             workspace = null;
             return snapshot;
         }
@@ -122,21 +121,48 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
         }
     }
 
-    private static ExternalResourceReservation? ReserveMaterializationBudget(
-        ExternalResourceRegistry? resources,
+    private static async Task<Solution> OpenSolutionAsync(
+        MSBuildWorkspace workspace,
+        ExternalSourceCheckoutHandle checkout,
+        CancellationToken cancellationToken)
+    {
+        var workspaceFailed = 0;
+        workspace.RegisterWorkspaceFailedHandler(_ => Interlocked.Exchange(ref workspaceFailed, 1));
+        var solution = await workspace.OpenSolutionAsync(
+                checkout.SolutionPath,
+                cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+        if (Volatile.Read(ref workspaceFailed) != 0 || !solution.Projects.Any())
+        {
+            throw new ExternalSourceSnapshotMaterializationException();
+        }
+
+        return solution;
+    }
+
+    private ExternalResourceReservation? ReserveMaterializationBudget(
         ExternalSourceMapping mapping,
         ExternalSourceCheckoutHandle checkout,
         ExternalSourceSnapshotResourceUsage resourceUsage)
     {
-        if (resources is null) return null;
         var request = new ExternalResourceRequest(
             SourceSnapshotIdentity.Create(mapping, checkout.LoadedRevision).StableValue,
             resourceUsage.DiskBytes,
             resourceUsage.MemoryBytes);
-        if (resources.TryReserve(request, out var reservation, out var failureReason))
+        if (resourceCoordinator is not null)
         {
-            return reservation;
+            var succeeded = resourceCoordinator.TryReserveMaterialization(
+                request,
+                out var coordinatedReservation,
+                out var coordinatedFailureReason);
+            if (succeeded) return coordinatedReservation;
+            throw new ExternalSourceSnapshotMaterializationException(
+                checkoutTrust: ExternalSourceCheckoutTrust.Clean,
+                coordinatedFailureReason);
         }
+
+        if (resources is null) return null;
+        if (resources.TryReserve(request, out var reservation, out var failureReason)) return reservation;
 
         throw new ExternalSourceSnapshotMaterializationException(
             checkoutTrust: ExternalSourceCheckoutTrust.Clean,

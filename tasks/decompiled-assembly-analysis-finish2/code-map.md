@@ -333,42 +333,61 @@
   weitergereicht; die Projektregistry bleibt getrennt.
 - `ExternalResourceRegistry` bildet Capacity, LRU/TTL, aktive Leases,
   Parallelitäts-Slots und in-flight Materialisierungsreservierungen unter einer
-  Sperre ab. `SourceSnapshotRegistry` hält dieselbe Sperrreihenfolge für Acquire
-  und Eviction; aktive Snapshot-Leases bleiben dadurch vor Eviction/Dispose
-  geschützt. Die Lease-Typen in `AssemblyAnalysisRegistryEntryCreation` stellen
-  idempotente Consumer-, Owner-, Reservation- und Operation-Leases bereit.
+  Sperre ab. Reservierungen deduplizieren Identitäten auch gegenüber residenten
+  Einträgen; `PromoteReservation` überführt sie genau einmal in eine Resident-
+  Lease. `SourceSnapshotRegistry` koordiniert vor einer Materialisierung die
+  Source-Eviction mit dieser Reservation unter derselben Sperrreihenfolge.
+  Aktive Snapshot-Leases bleiben dadurch vor Eviction/Dispose geschützt. Die
+  Lease-Typen in `AssemblyAnalysisRegistryEntryCreation` stellen idempotente
+  Consumer-, Owner-, Reservation- und Operation-Leases bereit.
 - `ExternalSourceSnapshotMaterializer` reserviert die konservativ aus dem
-  vollständigen Checkout geschätzten Disk-/Memorykosten vor dem Workspace-Load
-  und gibt die Reservation bei Erfolg, Fehler oder Cancellation frei.
+  vollständigen Checkout geschätzten Disk-/Memorykosten vor dem Workspace-Load,
+  hält die Reservation bis zur Source-Registrierung am Snapshot und überführt sie
+  dort atomar in die Resident-Lease; Fehler und Cancellation rollen sie zurück.
   `ExternalSourceRepositoryCacheMaterializer` bereinigt einen frisch reservierten
   Checkout bei Materialisierungsfehlern rollback-sicher und bewahrt die
   ursprüngliche Exception.
 - `AssemblyAnalysisEntry` erhält die Registry-Zeitquelle für deterministische
   TTL-Tests; Factory-Fehler und Entry-Dispose entfernen Owner-Leases aus dem
-  Ressourcenregister. `AssemblySourceProviderCreation` trennt Producer-CTS von
-  wartenden Consumer-`WaitAsync`-Tokens, räumt abgelehnte Snapshots auf und
-  behandelt Dispose während der Creation deterministisch.
+  Ressourcenregister. Bei Assembly-Capacity-Druck retired
+  `AssemblyAnalysisRegistry` idle Entries in LRU-Reihenfolge und wartet das
+  Retirement vor dem nächsten Acquire; aktive Leases werden nicht angetastet.
+- `AssemblySourceProviderCreation` trennt Producer-CTS von wartenden Consumer-
+  `WaitAsync`-Tokens, räumt abgelehnte Snapshots auf und bietet mit
+  `AssemblySourceSelectionOrchestrator.DisposeAsync` einen deterministischen
+  Join des Producer-Tasks. `AssemblyAnalysisHostComposition` wartet diesen Join
+  vor Source-Registry- und Ressourcen-Dispose ab.
+- Der Pipe-Handshake trägt die fünf effektiven External-Limits als optionale
+  Felder. Der ThinClient vergleicht explizite Overrides auch beim Connect zu
+  einem bestehenden Daemon; alte Partner ohne diese Felder bleiben kompatibel.
 - Regressionen liegen in `ExternalResourceRegistryTests`,
   `SourceSnapshotRegistryTests`, `AssemblyAnalysisRegistryTests`,
   `AssemblyAnalysisHostCompositionTests`,
   `AssemblyAnalysisToolSupportCreationBarrierTests`, den CLI-/ThinClient-
   Vertragstests und `ExternalSourceSnapshotMaterializerTests`.
-- Der EPIC-C-Abschlussaudit prüfte den Produktionsscope mit `find_duplicates`,
-  `find_dead_code` und `find_magic_values`: Es bleiben 3 bestehende
-  Clone-Cluster, 37 Low-/0 High-Confidence-Dead-Code-Heuristiken und 10
-  einmalige Vertrags-/Fehlertexte. Die sichere Zentralisierung der
-  Ressourcenidentitätsmeldung und der gemeinsame Snapshot-Disposal-Helper
-  sind enthalten. Der letzte Produktions-`get_violations`-Nachweis meldet
-  ausschließlich den bestehenden `AssemblyAnalysisRegistry`-
-  `AIContextFootprint` (3893 > 2500); EPIC-B
-  `DIAGNOSTICS-SAMPLE-BUDGET` wurde nicht erneut geöffnet.
+- Für diesen Korrekturlauf werden nach der letzten Codeänderung erneut die
+  MCP-Audits `find_duplicates`, `find_dead_code` und `find_magic_values` sowie
+  ein produktiver `get_violations`-Nachweis ausgeführt. Das ausgeschöpfte
+  EPIC-B-Finding `DIAGNOSTICS-SAMPLE-BUDGET` bleibt außerhalb des Scopes.
 
 ## EPIC-C-Verifikation
 
 - `dotnet build --no-restore`: 0 Warnungen, 0 Fehler.
-- EPIC-C-Fokus: FastTests 129/129 und
-  `ExternalSourceSnapshotMaterializerTests` 4/4.
-- Vollständige Nicht-Stress-Gates: FastTests 2256 bestanden, 2 Skips;
-  IntegrationTests 372/374. Die zwei verbleibenden Fehler sind die bekannten
-  externen MCP-Registrierungs-/Beschreibungstext-Verträge `ambiguous` und
-  `sortBy`; der CLI-Dogfood-Lauf ist grün. Stress wurde nicht ausgeführt.
+- EPIC-C-Fokus: FastTests 51/51 in den betroffenen Registry-/Handshake-/
+  Creation-Barrier-Suites und `ExternalSourceSnapshotMaterializerTests` /
+  `ThinClientProxySessionContractTests` 7/7.
+- Vollständige Nicht-Stress-Gates: FastTests 2263/2265 mit 2 vorgesehenen
+  Skips; IntegrationTests 373/375. Die zwei verbleibenden Fehler sind die
+  bekannten externen MCP-Registrierungs-/Beschreibungstext-Verträge
+  `ambiguous` und `sortBy`; CLI-Dogfood und Live-Safeguard sind grün.
+- Finaler MCP-Nachweis nach der letzten Codeänderung: `find_duplicates`
+  meldete 8 bestehende Clone-Cluster ohne sicheren EPIC-C-Refactor.
+  `find_dead_code` meldete 38 Low-/0 High-Confidence-Kandidaten,
+  ausschließlich bestehende Interop-/Framework-/Internal-API-Heuristiken;
+  `find_magic_values` meldete 11 bestehende Wire-/Fehlermeldungs-Kandidaten.
+  `get_violations` meldete keine Fehler und ausschließlich drei bestehende
+  `AIContextFootprint`-Warnungen in `AssemblyAnalysisRegistry`,
+  `InspectAssemblyTool` und `GetServerHealthResponseBuilder`; `safeguard`
+  meldete 5,67/10 (Threshold 5,00, PASS). Das ausgeschöpfte EPIC-B-Finding
+  `DIAGNOSTICS-SAMPLE-BUDGET` wurde nicht wiedereröffnet. Stress wurde nicht
+  ausgeführt.

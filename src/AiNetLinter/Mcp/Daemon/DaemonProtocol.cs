@@ -40,14 +40,44 @@ internal static class DaemonProtocol
 
 internal sealed record EffectiveDaemonConfiguration(
     int MaxProjects,
-    decimal IdleExitMinutes)
+    decimal IdleExitMinutes,
+    long? ExternalMaxDiskBytes = null,
+    long? ExternalMaxMemoryBytes = null,
+    int? ExternalMaxParallelOperations = null,
+    int? ExternalMaxResidentResources = null,
+    decimal? ExternalIdleTtlMinutes = null)
 {
     internal static EffectiveDaemonConfiguration Default { get; } = new(
         DaemonProtocol.DefaultMaxProjects,
         DaemonProtocol.DefaultIdleExitMinutes);
 
+    // Clientseitig sind nur explizit gesetzte externe Limits verbindlich. Ein
+    // alter Daemon darf die optionalen Felder im Welcome daher auslassen.
     internal bool Matches(EffectiveDaemonConfiguration? other) =>
-        other is not null && this == other;
+        other is not null
+        && MaxProjects == other.MaxProjects
+        && IdleExitMinutes == other.IdleExitMinutes
+        && OptionalMatches(ExternalMaxDiskBytes, other.ExternalMaxDiskBytes)
+        && OptionalMatches(ExternalMaxMemoryBytes, other.ExternalMaxMemoryBytes)
+        && OptionalMatches(ExternalMaxParallelOperations, other.ExternalMaxParallelOperations)
+        && OptionalMatches(ExternalMaxResidentResources, other.ExternalMaxResidentResources)
+        && OptionalMatches(ExternalIdleTtlMinutes, other.ExternalIdleTtlMinutes);
+
+    // Serverseitig beschreibt ein fehlendes optionales Feld einen alten Client.
+    // Neue Clients mit einem expliziten Limit werden dagegen vollständig
+    // verglichen und erhalten den bestehenden Divergenz-Warnpfad.
+    internal bool MatchesAdvertisedPeer(EffectiveDaemonConfiguration? other) =>
+        other is not null
+        && MaxProjects == other.MaxProjects
+        && IdleExitMinutes == other.IdleExitMinutes
+        && OptionalMatches(other.ExternalMaxDiskBytes, ExternalMaxDiskBytes)
+        && OptionalMatches(other.ExternalMaxMemoryBytes, ExternalMaxMemoryBytes)
+        && OptionalMatches(other.ExternalMaxParallelOperations, ExternalMaxParallelOperations)
+        && OptionalMatches(other.ExternalMaxResidentResources, ExternalMaxResidentResources)
+        && OptionalMatches(other.ExternalIdleTtlMinutes, ExternalIdleTtlMinutes);
+
+    private static bool OptionalMatches<T>(T? expected, T? received)
+        where T : struct => expected is null || expected.Value.Equals(received);
 }
 
 internal sealed record DaemonIdentity(

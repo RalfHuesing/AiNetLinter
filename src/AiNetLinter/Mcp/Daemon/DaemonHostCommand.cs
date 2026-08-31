@@ -62,7 +62,7 @@ internal static class DaemonHostCommand
             new DaemonPipeTransport(daemonInstance: args.DaemonInstance),
             TimeProvider.System,
             TimeSpan.FromMinutes((double)idleMinutes),
-            new EffectiveDaemonConfiguration(maxProjects, idleMinutes),
+            CreateDaemonConfiguration(assemblyComposition, maxProjects, idleMinutes),
             daemonConsole,
             SessionRunner: session.RunAsync));
 
@@ -71,5 +71,23 @@ internal static class DaemonHostCommand
         var exitCode = await activeHost.RunAsync(cancellationToken).ConfigureAwait(false);
         Log.Information("Daemon: Host beendet, ExitCode={ExitCode}", exitCode);
         return exitCode;
+    }
+
+    private static EffectiveDaemonConfiguration CreateDaemonConfiguration(
+        AssemblyAnalysisHostComposition composition,
+        int maxProjects,
+        decimal idleMinutes)
+    {
+        var externalHealth = composition.Resources.Health;
+        var externalIdleMinutes = composition.Resources.IdleTtl.Ticks
+            / (decimal)TimeSpan.TicksPerMinute;
+        return new(
+            maxProjects,
+            idleMinutes,
+            externalHealth.MaxDiskBytes,
+            externalHealth.MaxMemoryBytes,
+            externalHealth.MaxParallelOperations,
+            externalHealth.MaxResidentResources,
+            externalIdleMinutes);
     }
 }

@@ -380,7 +380,12 @@ MRU-State bleibt ohne ID unter `%LOCALAPPDATA%\RalfHuesing\AiNetLinter\daemon-st
 eine ID erhält eine eigene Datei wie `daemon-state.beta.json`. Beide verwenden
 newline-delimited JSON-Objekte. Der Pipe-Level-Handshake ist von der
 MCP-SDK-Interpretation getrennt: `hello`/`welcome` tragen Protokollversion,
-Versions-/PID-Daten und die effektive Daemon-Konfiguration. Eine unbekannte
+Versions-/PID-Daten und die effektive Daemon-Konfiguration einschließlich der
+fünf externen Ressourcenlimits. Explizit gesetzte externe ThinClient-Limits
+werden auch beim Verbinden mit einem bereits laufenden Daemon verglichen und
+als einmalige Konfigurationswarnung gemeldet; sie ändern den Daemon nicht.
+Die neuen Felder sind wire-seitig optional, damit ältere Partner, die sie
+nicht senden, kompatibel bleiben. Eine unbekannte
 Protokollversion wird abgewiesen; ein Versions-Mismatch entscheidet bei null
 weiteren Verbindungen höchstens einmal über `shutdown` und liefert bei
 konkurrierenden oder weiteren Verbindungen `VERSION_CONFLICT`. Eine

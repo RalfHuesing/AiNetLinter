@@ -88,6 +88,51 @@ public sealed class DaemonHandshakeContractTests
         Assert.Equal(DaemonProtocol.ConfigurationDivergence, warning.Code);
     }
 
+    [Fact]
+    public void HandleHello_ExternalLimitDivergenceIsReportedForNewClient()
+    {
+        var effective = new EffectiveDaemonConfiguration(
+            4,
+            10m,
+            ExternalMaxDiskBytes: 100,
+            ExternalMaxMemoryBytes: 200,
+            ExternalMaxParallelOperations: 3,
+            ExternalMaxResidentResources: 5,
+            ExternalIdleTtlMinutes: 12m);
+        var handshake = new DaemonHandshake(
+            new FakeIdentityProvider(new DaemonIdentity("daemon-1", "exe-1", 4321)),
+            effective);
+        var requested = effective with { ExternalMaxDiskBytes = 50 };
+
+        var result = handshake.HandleHello(new DaemonHello("exe-1", 99, requested), activeConnectionCount: 0);
+
+        Assert.True(result.IsAccepted);
+        Assert.NotNull(result.ConfigurationDivergence);
+        Assert.Equal(effective, result.ConfigurationDivergence.Expected);
+        Assert.Equal(requested, result.ConfigurationDivergence.Received);
+    }
+
+    [Fact]
+    public void HandleHello_OldClientWithoutExternalFieldsRemainsCompatible()
+    {
+        var effective = new EffectiveDaemonConfiguration(
+            4,
+            10m,
+            ExternalMaxDiskBytes: 100,
+            ExternalMaxMemoryBytes: 200,
+            ExternalMaxParallelOperations: 3,
+            ExternalMaxResidentResources: 5,
+            ExternalIdleTtlMinutes: 12m);
+        var handshake = new DaemonHandshake(
+            new FakeIdentityProvider(new DaemonIdentity("daemon-1", "exe-1", 4321)),
+            effective);
+
+        var result = handshake.HandleHello(CreateHello(), activeConnectionCount: 0);
+
+        Assert.True(result.IsAccepted);
+        Assert.Null(result.ConfigurationDivergence);
+    }
+
     private static DaemonHandshake CreateHandshake() => new(
         new FakeIdentityProvider(new DaemonIdentity("daemon-1", "exe-1", 4321)),
         Configuration);

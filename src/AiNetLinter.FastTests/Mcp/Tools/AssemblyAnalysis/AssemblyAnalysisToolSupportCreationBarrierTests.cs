@@ -49,7 +49,7 @@ public sealed partial class AssemblyAnalysisToolSupportTests
             secondScope.Selection!.SourceLease.Snapshot);
         Assert.Equal(1, registry.ResidentCount);
 
-        orchestrator.Dispose();
+        await orchestrator.DisposeAsync();
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public sealed partial class AssemblyAnalysisToolSupportTests
 
         using var secondScope = await second;
         Assert.NotNull(secondScope.Selection);
-        orchestrator.Dispose();
+        await orchestrator.DisposeAsync();
     }
 
     [Fact]
@@ -109,10 +109,12 @@ public sealed partial class AssemblyAnalysisToolSupportTests
 
         var first = orchestrator.ResolveAsync(assemblyPath);
         await provider.Started.Task;
-        orchestrator.Dispose();
+        await orchestrator.DisposeAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first);
         Assert.Equal(1, provider.CallCount);
+        await provider.Completed.Task;
+        Assert.True(provider.Completed.Task.IsCompletedSuccessfully);
         Assert.Equal(0, registry.ResidentCount);
     }
 
@@ -121,6 +123,8 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         internal readonly TaskCompletionSource<object?> Started =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal readonly TaskCompletionSource<object?> Release =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal readonly TaskCompletionSource<object?> Completed =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
         private int callCount;
 
@@ -132,14 +136,21 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         {
             Interlocked.Increment(ref callCount);
             Started.TrySetResult(null);
-            await Release.Task.WaitAsync(cancellationToken);
-            return new ExternalSourceProviderResult(
-                true,
-                [],
-                snapshot,
-                ExternalSourceRepositoryResultState.Create(
-                    health: ExternalSourceRepositoryHealth.Verified,
-                    checkoutTrust: ExternalSourceCheckoutTrust.Clean));
+            try
+            {
+                await Release.Task.WaitAsync(cancellationToken);
+                return new ExternalSourceProviderResult(
+                    true,
+                    [],
+                    snapshot,
+                    ExternalSourceRepositoryResultState.Create(
+                        health: ExternalSourceRepositoryHealth.Verified,
+                        checkoutTrust: ExternalSourceCheckoutTrust.Clean));
+            }
+            finally
+            {
+                Completed.TrySetResult(null);
+            }
         }
     }
 }

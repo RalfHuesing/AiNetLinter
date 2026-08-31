@@ -199,9 +199,30 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable
     {
         lock (gate)
         {
-            return !closing && leaseCount == 0 && now - lastUsedUtc > idleTtl;
+            return IsIdleNoLock(now, idleTtl, ignoreTtl: false);
         }
     }
+
+    internal bool IsIdleForCapacity()
+    {
+        lock (gate)
+        {
+            return !closing && leaseCount == 0;
+        }
+    }
+
+    internal DateTime LastUsedUtc
+    {
+        get
+        {
+            lock (gate) return lastUsedUtc;
+        }
+    }
+
+    private bool IsIdleNoLock(DateTime now, TimeSpan idleTtl, bool ignoreTtl) =>
+        !closing
+        && leaseCount == 0
+        && (ignoreTtl || now - lastUsedUtc > idleTtl);
 
     private DateTime UtcNow => clock.GetUtcNow().UtcDateTime;
 

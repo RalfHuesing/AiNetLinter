@@ -86,6 +86,24 @@ public sealed class ExternalResourceRegistryTests
     }
 
     [Fact]
+    public void TryReserve_PromotesToResidentLeaseExactlyOnce()
+    {
+        using var registry = new ExternalResourceRegistry(new ExternalResourceRegistryOptions(
+            MaxResidentResources: 1));
+        var request = new ExternalResourceRequest("foo", 3, 5);
+
+        Assert.True(registry.TryReserve(request, out var reservation, out _));
+        var lease = registry.PromoteReservation(reservation!);
+
+        Assert.NotNull(lease);
+        Assert.Equal(1, registry.ResidentCount);
+        reservation!.Dispose();
+        Assert.Equal(1, registry.ResidentCount);
+
+        lease.Dispose();
+    }
+
+    [Fact]
     public async Task Dispose_DuringActiveOperationLeavesOperationLeaseSafeToRelease()
     {
         using var registry = new ExternalResourceRegistry();

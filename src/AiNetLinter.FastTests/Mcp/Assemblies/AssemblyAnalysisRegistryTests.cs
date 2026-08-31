@@ -283,6 +283,34 @@ public sealed class AssemblyAnalysisRegistryTests
     }
 
     [Fact]
+    public async Task LeaseAsync_CapacityRetiresLeastRecentlyUsedIdleEntryBeforeAcquire()
+    {
+        using var temp = TestTempDirectory.Create("assembly-registry-capacity-lru-");
+        var firstPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "CapacityLruFirst",
+            "namespace Probe; public sealed class First { }");
+        var secondPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "CapacityLruSecond",
+            "namespace Probe; public sealed class Second { }");
+        using var resources = new ExternalResourceRegistry(new ExternalResourceRegistryOptions(
+            MaxResidentResources: 1));
+        await using var registry = new AssemblyAnalysisRegistry(resourceRegistry: resources);
+
+        var first = await registry.LeaseAsync(firstPath);
+        Assert.NotNull(first.Lease);
+        first.Lease!.Dispose();
+
+        var second = await registry.LeaseAsync(secondPath);
+
+        Assert.NotNull(second.Lease);
+        Assert.Equal(1, resources.ResidentCount);
+        Assert.Equal(1, registry.ResidentCount);
+        second.Lease!.Dispose();
+    }
+
+    [Fact]
     public async Task LeaseAsync_UsesConfiguredIdleTtlAndEvictsReleasedEntryBeforeRecreation()
     {
         using var temp = TestTempDirectory.Create("assembly-registry-idle-ttl-");

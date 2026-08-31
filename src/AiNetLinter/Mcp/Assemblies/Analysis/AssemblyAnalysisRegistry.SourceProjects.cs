@@ -28,27 +28,21 @@ internal sealed partial class AssemblyAnalysisRegistry
         }
 
         var key = BuildSourceProjectKey(selection, project);
-        var creation = GetOrCreateSourceProjectEntry(key, selection, project);
-        if (creation is null)
+        var resourcePath = project.FilePath ?? key;
+        var acquisition = await AcquireSourceProjectEntryAsync(
+                key,
+                selection,
+                project,
+                resourcePath,
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (acquisition.Error is not null)
         {
-            return Failure("Die Assembly-Registry wurde bereits beendet.");
+            return Failure(acquisition.Error);
         }
 
-        AssemblyAnalysisEntry entry;
-        try
-        {
-            entry = await creation.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            RemoveFailedEntry(key, creation);
-            return Failure($"Source-Project-Session konnte nicht aufgebaut werden: {exception.Message}");
-        }
-
+        var creation = acquisition.Creation!;
+        var entry = acquisition.Entry!;
         lock (gate)
         {
             if (!entries.TryGetValue(key, out var current)
@@ -61,6 +55,65 @@ internal sealed partial class AssemblyAnalysisRegistry
                 ? new(lease, null)
                 : Failure("Die Source-Project-Session wird bereits beendet.");
         }
+    }
+
+    private async Task<(
+        AssemblyAnalysisEntry? Entry,
+        AssemblyAnalysisRegistryEntryCreation? Creation,
+        string? Error)> AcquireSourceProjectEntryAsync(
+        string key,
+        AssemblySourceSelection selection,
+        Project project,
+        string resourcePath,
+        CancellationToken cancellationToken)
+    {
+        for (var retry = 0; ; retry++)
+        {
+            var creation = GetOrCreateSourceProjectEntry(key, selection, project);
+            if (creation is null)
+            {
+                return (null, null, "Die Assembly-Registry wurde bereits beendet.");
+            }
+
+            try
+            {
+                var entry = await creation.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+                return (entry, creation, null);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (ExternalResourceCapacityException exception)
+            {
+                RemoveFailedEntry(key, creation);
+                if (await TryRetireSourceProjectCapacityAsync(
+                        resourcePath,
+                        retry,
+                        cancellationToken)
+                    .ConfigureAwait(false)) continue;
+                return (null, null, $"Source-Project-Session konnte nicht aufgebaut werden: {exception.Message}");
+            }
+            catch (Exception exception)
+            {
+                RemoveFailedEntry(key, creation);
+                return (null, null, $"Source-Project-Session konnte nicht aufgebaut werden: {exception.Message}");
+            }
+        }
+    }
+
+    private async Task<bool> TryRetireSourceProjectCapacityAsync(
+        string resourcePath,
+        int retry,
+        CancellationToken cancellationToken)
+    {
+        if (retry >= 1 || !resourceBudget.CanAccommodate(resourcePath)) return false;
+        var retired = await RunEvictionTickAsync(
+                forceCapacity: true,
+                requiredPath: resourcePath,
+                cancellationToken)
+            .ConfigureAwait(false);
+        return retired > 0;
     }
 
     private static bool TryFindSourceProject(

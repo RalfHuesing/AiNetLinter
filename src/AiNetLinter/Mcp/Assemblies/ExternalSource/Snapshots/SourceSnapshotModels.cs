@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.ExceptionServices;
 using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Configuration;
 using Microsoft.CodeAnalysis;
@@ -172,7 +173,8 @@ internal sealed record ExternalSourceSnapshotOwnership(
     IExternalSourceCheckoutOwner? CheckoutOwner = null,
     ExternalSourceCheckoutMaterializationUse? MaterializationUse = null,
     bool IsAttested = false,
-    ExternalSourceSnapshotResourceUsage? ResourceUsage = null);
+    ExternalSourceSnapshotResourceUsage? ResourceUsage = null,
+    ExternalResourceReservation? ResourceReservation = null);
 
 internal sealed record ExternalSourceSnapshotResourceUsage(long DiskBytes, long MemoryBytes)
 {
@@ -183,19 +185,29 @@ internal sealed record ExternalSourceSnapshotResourceUsage(long DiskBytes, long 
         return new(projectCount, projectCount);
     }
 
-    internal static ExternalSourceSnapshotResourceUsage EstimateCheckout(string checkoutPath)
+    internal static async ValueTask<ExternalSourceSnapshotResourceUsage> EstimateCheckoutAsync(
+        string checkoutPath,
+        CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(checkoutPath);
+        cancellationToken.ThrowIfCancellationRequested();
+        await Task.Yield();
+        cancellationToken.ThrowIfCancellationRequested();
         try
         {
             long totalBytes = 0;
             foreach (var path in Directory.EnumerateFiles(checkoutPath, "*", SearchOption.AllDirectories))
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 totalBytes = checked(totalBytes + new FileInfo(path).Length);
             }
 
             var boundedBytes = Math.Max(1, totalBytes);
             return new(boundedBytes, boundedBytes);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or OverflowException)
         {
@@ -209,6 +221,7 @@ internal sealed class ExternalSourceSnapshot : IDisposable
     private readonly Workspace workspace;
     private readonly IExternalSourceCheckoutOwner? checkoutOwner;
     private readonly ExternalSourceCheckoutMaterializationUse? materializationUse;
+    private ExternalResourceReservation? resourceReservation;
     private int disposed;
 
     internal ExternalSourceSnapshot(
@@ -226,6 +239,7 @@ internal sealed class ExternalSourceSnapshot : IDisposable
         this.workspace = workspace;
         checkoutOwner = ownership?.CheckoutOwner;
         materializationUse = ownership?.MaterializationUse;
+        resourceReservation = ownership?.ResourceReservation;
         IsAttested = ownership?.IsAttested == true;
         ResourceUsage = ownership?.ResourceUsage ?? ExternalSourceSnapshotResourceUsage.Estimate(solution);
     }
@@ -239,6 +253,9 @@ internal sealed class ExternalSourceSnapshot : IDisposable
     internal bool IsAttested { get; }
 
     internal ExternalSourceSnapshotResourceUsage ResourceUsage { get; }
+
+    internal ExternalResourceReservation? TakeResourceReservation() =>
+        Interlocked.Exchange(ref resourceReservation, null);
 
     internal bool OwnsCheckout(IExternalSourceCheckoutOwner checkout) =>
         ReferenceEquals(checkoutOwner, checkout);
@@ -272,6 +289,15 @@ internal sealed class ExternalSourceSnapshot : IDisposable
         try
         {
             materializationUse?.Dispose();
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+
+        try
+        {
+            Interlocked.Exchange(ref resourceReservation, null)?.Dispose();
         }
         catch (Exception exception)
         {

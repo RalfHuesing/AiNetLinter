@@ -18,10 +18,21 @@ internal interface IAssemblySourceSelectionSnapshotRegistry
     SourceSnapshotLease Acquire(ExternalSourceSnapshot snapshot);
 }
 
-internal sealed class SourceSnapshotRegistry : IDisposable, IAssemblySourceSelectionSnapshotRegistry
+internal interface IExternalSourceSnapshotResourceCoordinator
+{
+    bool TryReserveMaterialization(
+        ExternalResourceRequest request,
+        out ExternalResourceReservation? reservation,
+        out string? failureReason);
+}
+
+internal sealed class SourceSnapshotRegistry :
+    IDisposable,
+    IAssemblySourceSelectionSnapshotRegistry,
+    IExternalSourceSnapshotResourceCoordinator
 {
     private readonly Lock gate = new();
-    private readonly Dictionary<string, SourceSnapshotEntry> snapshots = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, SourceSnapshotEntry> snapshots = new(StringComparer.OrdinalIgnoreCase);
     private readonly ExternalResourceRegistry resources;
     private readonly bool ownsResources;
     private int disposed;
@@ -58,6 +69,41 @@ internal sealed class SourceSnapshotRegistry : IDisposable, IAssemblySourceSelec
             resources.Health.LastFailureReason
             ?? "Das externe Parallelitätsbudget ist ausgeschöpft.");
     }
+
+    internal bool TryReserveMaterialization(
+        ExternalResourceRequest request,
+        out ExternalResourceReservation? reservation,
+        out string? failureReason)
+    {
+        List<SourceSnapshotEntry> evictedEntries;
+        (bool Succeeded,
+            ExternalResourceReservation? Reservation,
+            string? FailureReason,
+            IReadOnlyList<string> EvictedIdentities) acquisition;
+        lock (gate)
+        {
+            ThrowIfDisposed();
+            acquisition = resources.TryReserveWithEvictions(request);
+            evictedEntries = RemoveEntriesNoLock(acquisition.EvictedIdentities);
+        }
+
+        var failures = DisposeEntries(evictedEntries);
+        if (failures.Count > 0)
+        {
+            acquisition.Reservation?.Dispose();
+            throw CreateDisposeException(failures);
+        }
+
+        reservation = acquisition.Reservation;
+        failureReason = acquisition.FailureReason;
+        return acquisition.Succeeded;
+    }
+
+    bool IExternalSourceSnapshotResourceCoordinator.TryReserveMaterialization(
+        ExternalResourceRequest request,
+        out ExternalResourceReservation? reservation,
+        out string? failureReason) =>
+        TryReserveMaterialization(request, out reservation, out failureReason);
 
     internal SourceSnapshotLease Acquire(ExternalSourceSnapshot snapshot)
     {
@@ -109,30 +155,34 @@ internal sealed class SourceSnapshotRegistry : IDisposable, IAssemblySourceSelec
         ExternalSourceSnapshot snapshot,
         SourceSnapshotEntry resident)
     {
-        var resourceResult = resources.TryAcquire(new ExternalResourceRequest(
-            resident.ResourceIdentity,
-            resident.Snapshot.ResourceUsage.DiskBytes,
-            resident.Snapshot.ResourceUsage.MemoryBytes));
-        if (!resourceResult.Succeeded)
+        var resourceResult = AcquireResource(
+            snapshot,
+            new ExternalResourceRequest(
+                resident.ResourceIdentity,
+                resident.Snapshot.ResourceUsage.DiskBytes,
+                resident.Snapshot.ResourceUsage.MemoryBytes));
+        if (!resourceResult.Result.Succeeded)
         {
-            return new(null, snapshot, resourceResult, null, false);
+            return new(null, snapshot, resourceResult.Result, null, false);
         }
 
         resident.LeaseCount++;
         return new(
             resident,
             ReferenceEquals(snapshot, resident.Snapshot) ? null : snapshot,
-            resourceResult,
-            resourceResult.Lease,
+            resourceResult.Result,
+            resourceResult.Result.Lease,
             false);
     }
 
     private AcquireResolution AcquireNew(ExternalSourceSnapshot snapshot)
     {
-        var acquisition = resources.TryAcquireWithEvictions(new ExternalResourceRequest(
-            snapshot.Identity.StableValue,
-            snapshot.ResourceUsage.DiskBytes,
-            snapshot.ResourceUsage.MemoryBytes));
+        var acquisition = AcquireResource(
+            snapshot,
+            new ExternalResourceRequest(
+                snapshot.Identity.StableValue,
+                snapshot.ResourceUsage.DiskBytes,
+                snapshot.ResourceUsage.MemoryBytes));
         var evictedEntries = RemoveEntriesNoLock(acquisition.EvictedIdentities);
         if (!acquisition.Result.Succeeded)
         {
@@ -142,6 +192,44 @@ internal sealed class SourceSnapshotRegistry : IDisposable, IAssemblySourceSelec
         var entry = new SourceSnapshotEntry(snapshot);
         snapshots.Add(snapshot.Identity.StableValue, entry);
         return new(entry, null, acquisition.Result, acquisition.Result.Lease, true, evictedEntries);
+    }
+
+    private (ExternalResourceAcquireResult Result, IReadOnlyList<string> EvictedIdentities) AcquireResource(
+        ExternalSourceSnapshot snapshot,
+        ExternalResourceRequest request)
+    {
+        var reservation = snapshot.TakeResourceReservation();
+        if (reservation is not null)
+        {
+            if (!string.Equals(
+                    reservation.Request.Identity,
+                    request.Identity,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                reservation.Dispose();
+                return (new(
+                    null,
+                    resources.Health,
+                    "Die Snapshot-Reservation gehört nicht zur Snapshot-Identität."),
+                    Array.Empty<string>());
+            }
+
+            var lease = resources.PromoteReservation(reservation);
+            if (lease is not null)
+            {
+                return (new(lease, resources.Health, null), Array.Empty<string>());
+            }
+
+            reservation.Dispose();
+            return (new(
+                null,
+                resources.Health,
+                "Die Snapshot-Reservation konnte nicht in eine Resident-Lease überführt werden."),
+                Array.Empty<string>());
+        }
+
+        var acquisition = resources.TryAcquireWithEvictions(request);
+        return acquisition;
     }
 
     private void CleanupFailedAcquire(

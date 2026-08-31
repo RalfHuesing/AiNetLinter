@@ -46,10 +46,7 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         sourceProjectEntryFactory = new(resourceBudget, CreateReferenceLeaseFactory);
     }
 
-    internal int ResidentCount
-    {
-        get { lock (gate) return entries.Count; }
-    }
+    internal int ResidentCount { get { lock (gate) return entries.Count; } }
 
     int IAssemblyAnalysisRegistry.ResidentCount => ResidentCount;
 
@@ -58,41 +55,111 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         CancellationToken cancellationToken) => LeaseAsync(assemblyPath, cancellationToken);
 
     internal ExternalResourceHealthSnapshot? ResourceHealth => resourceBudget.Health;
+    internal Task<int> RunEvictionTickAsync() => RunEvictionTickAsync(false, null, CancellationToken.None);
 
-    internal async Task<int> RunEvictionTickAsync()
+    private async Task<int> RunEvictionTickAsync(
+        bool forceCapacity,
+        string? requiredPath,
+        CancellationToken cancellationToken)
     {
-        var retirements = new List<Task>();
-        var now = resourceBudget.UtcNow;
-        AssemblyAnalysisRegistryEntryCreation[] candidates;
-        lock (gate)
-        {
-            if (Volatile.Read(ref disposed) != 0) return 0;
-            candidates = entries.Values
-                .Where(creation => creation.Task.IsCompletedSuccessfully)
-                .ToArray();
-        }
+        var idleCandidates = await FindIdleCandidatesAsync(forceCapacity).ConfigureAwait(false);
+        var retiredCount = await RetireIdleCandidatesAsync(
+                idleCandidates,
+                forceCapacity,
+                requiredPath,
+                cancellationToken)
+            .ConfigureAwait(false);
+        resourceBudget.EvictIdle();
+        return retiredCount;
+    }
 
+    private async Task<List<(AssemblyAnalysisRegistryEntryCreation Creation, AssemblyAnalysisEntry Entry)>>
+        FindIdleCandidatesAsync(bool forceCapacity)
+    {
+        var now = resourceBudget.UtcNow;
+        var candidates = GetCompletedCreations();
+        var idleCandidates = new List<(AssemblyAnalysisRegistryEntryCreation, AssemblyAnalysisEntry)>();
         foreach (var creation in candidates)
         {
             var entry = await creation.Task.ConfigureAwait(false);
-            if (!entry.IsIdle(now, resourceBudget.IdleTtl))
+            if (forceCapacity
+                    ? entry.IsIdleForCapacity()
+                    : entry.IsIdle(now, resourceBudget.IdleTtl))
             {
-                continue;
-            }
-
-            lock (gate)
-            {
-                var key = entries.FirstOrDefault(pair => ReferenceEquals(pair.Value, creation)).Key;
-                if (key is null || !entries.Remove(key)) continue;
-                var retirement = RetireEntryAsync(creation);
-                retiredEntries.Add(retirement);
-                retirements.Add(retirement);
+                idleCandidates.Add((creation, entry));
             }
         }
 
-        foreach (var retirement in retirements) await retirement.ConfigureAwait(false);
-        resourceBudget.EvictIdle();
-        return retirements.Count;
+        if (forceCapacity)
+        {
+            idleCandidates.Sort(static (left, right) =>
+            {
+                var comparison = left.Item2.LastUsedUtc.CompareTo(right.Item2.LastUsedUtc);
+                return comparison != 0
+                    ? comparison
+                    : string.Compare(
+                        left.Item2.CanonicalPath,
+                        right.Item2.CanonicalPath,
+                        StringComparison.OrdinalIgnoreCase);
+            });
+        }
+
+        return idleCandidates;
+    }
+
+    private AssemblyAnalysisRegistryEntryCreation[] GetCompletedCreations()
+    {
+        lock (gate)
+        {
+            if (Volatile.Read(ref disposed) != 0) return [];
+            return entries.Values
+                .Where(creation => creation.Task.IsCompletedSuccessfully)
+                .ToArray();
+        }
+    }
+
+    private async Task<int> RetireIdleCandidatesAsync(
+        IEnumerable<(AssemblyAnalysisRegistryEntryCreation Creation, AssemblyAnalysisEntry Entry)> candidates,
+        bool forceCapacity,
+        string? requiredPath,
+        CancellationToken cancellationToken)
+    {
+        var retiredCount = 0;
+        foreach (var (creation, _) in candidates)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!TryRemoveEntryForRetirement(creation, out var retirement)) continue;
+
+            await retirement!.ConfigureAwait(false);
+            retiredCount++;
+            if (forceCapacity
+                && requiredPath is not null
+                && resourceBudget.HasCapacity(requiredPath))
+            {
+                break;
+            }
+        }
+
+        return retiredCount;
+    }
+
+    private bool TryRemoveEntryForRetirement(
+        AssemblyAnalysisRegistryEntryCreation creation,
+        out Task? retirement)
+    {
+        lock (gate)
+        {
+            var key = entries.FirstOrDefault(pair => ReferenceEquals(pair.Value, creation)).Key;
+            if (key is null || !entries.Remove(key))
+            {
+                retirement = null;
+                return false;
+            }
+
+            retirement = RetireEntryAsync(creation);
+            retiredEntries.Add(retirement);
+            return true;
+        }
     }
 
     internal async Task<AssemblyAnalysisLeaseResult> LeaseAsync(
@@ -175,10 +242,36 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
             return (Failure("Die Assembly-Registry wurde bereits beendet."), false);
         }
 
-        AssemblyAnalysisEntry entry;
+        var creationAttempt = await AwaitCreationAsync(
+                canonicalPath,
+                creation,
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (creationAttempt.Retry || creationAttempt.Result is not null)
+        {
+            return (creationAttempt.Result, creationAttempt.Retry);
+        }
+
+        var entry = creationAttempt.Entry!;
+        return TryLeaseEntry(
+            canonicalPath,
+            creation,
+            entry,
+            fingerprint,
+            refreshOnMismatch);
+    }
+
+    private async Task<(AssemblyAnalysisEntry? Entry, AssemblyAnalysisLeaseResult? Result, bool Retry)> AwaitCreationAsync(
+        string canonicalPath,
+        AssemblyAnalysisRegistryEntryCreation creation,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            entry = await creation.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            return new(
+                await creation.Task.WaitAsync(cancellationToken).ConfigureAwait(false),
+                null,
+                false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -187,14 +280,51 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         catch (OperationCanceledException)
         {
             RemoveFailedEntry(canonicalPath, creation);
-            return (Failure("Die Assembly-Session wurde während des Aufbaus abgebrochen."), false);
+            return new(
+                null,
+                Failure("Die Assembly-Session wurde während des Aufbaus abgebrochen."),
+                false);
+        }
+        catch (ExternalResourceCapacityException exception)
+        {
+            RemoveFailedEntry(canonicalPath, creation);
+            if (!resourceBudget.CanAccommodate(canonicalPath))
+            {
+                return new(
+                    null,
+                    Failure($"Assembly-Session konnte nicht aufgebaut werden: {exception.Message}"),
+                    false);
+            }
+
+            var retired = await RunEvictionTickAsync(
+                    forceCapacity: true,
+                    requiredPath: canonicalPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+            return retired > 0
+                ? new(null, null, true)
+                : new(
+                    null,
+                    Failure($"Assembly-Session konnte nicht aufgebaut werden: {exception.Message}"),
+                    false);
         }
         catch (Exception exception)
         {
             RemoveFailedEntry(canonicalPath, creation);
-            return (Failure($"Assembly-Session konnte nicht aufgebaut werden: {exception.Message}"), false);
+            return new(
+                null,
+                Failure($"Assembly-Session konnte nicht aufgebaut werden: {exception.Message}"),
+                false);
         }
+    }
 
+    private (AssemblyAnalysisLeaseResult? Result, bool Retry) TryLeaseEntry(
+        string canonicalPath,
+        AssemblyAnalysisRegistryEntryCreation creation,
+        AssemblyAnalysisEntry entry,
+        AssemblyFingerprint fingerprint,
+        bool refreshOnMismatch)
+    {
         lock (gate)
         {
             if (!entries.TryGetValue(canonicalPath, out var current)

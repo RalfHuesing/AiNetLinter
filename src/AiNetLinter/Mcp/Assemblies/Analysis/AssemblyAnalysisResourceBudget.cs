@@ -113,11 +113,7 @@ internal sealed class AssemblyAnalysisResourceBudget(ExternalResourceRegistry? r
             return (null, null);
         }
 
-        var length = GetAssemblyLength(path);
-        var acquired = registry.TryAcquire(new ExternalResourceRequest(
-            path,
-            length,
-            GetAssemblyMemoryEstimate(length, registry.Health.MaxMemoryBytes)));
+        var acquired = registry.TryAcquireWithoutEvictions(CreateRequest(path));
         return (acquired.Lease, acquired.FailureReason);
     }
 
@@ -131,6 +127,21 @@ internal sealed class AssemblyAnalysisResourceBudget(ExternalResourceRegistry? r
     }
 
     internal int EvictIdle() => registry?.EvictIdle() ?? 0;
+
+    internal bool HasCapacity(string path) =>
+        registry is null || registry.HasCapacity(CreateRequest(path));
+
+    internal bool CanAccommodate(string path) =>
+        registry is null || registry.CanAccommodate(CreateRequest(path));
+
+    private ExternalResourceRequest CreateRequest(string path)
+    {
+        var length = GetAssemblyLength(path);
+        return new(
+            path,
+            length,
+            GetAssemblyMemoryEstimate(length, registry!.Health.MaxMemoryBytes));
+    }
 
     private static long GetAssemblyLength(string path)
     {

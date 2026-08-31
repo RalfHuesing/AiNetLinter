@@ -25,7 +25,10 @@ internal sealed record AssemblySourceSelectionConfiguration(
     bool Succeeded,
     ImmutableArray<ExternalSourceConfigurationDiagnostic> LoaderDiagnostics);
 
-internal sealed class AssemblySourceSelectionOrchestrator : IAssemblySourceResolver, IAssemblySourceSelectionResolver, IDisposable
+internal sealed class AssemblySourceSelectionOrchestrator :
+    IAssemblySourceResolver,
+    IAssemblySourceSelectionResolver,
+    IAsyncDisposable
 {
     private readonly AssemblySourceSelectionConfiguration configuration;
     private readonly IReadOnlyList<ExternalSourceMapping> configuredMappings;
@@ -33,6 +36,7 @@ internal sealed class AssemblySourceSelectionOrchestrator : IAssemblySourceResol
     private readonly IAssemblySourceSelectionSnapshotRegistry registry;
     private readonly Lock creationGate = new();
     private readonly Dictionary<string, AssemblySourceProviderCreation> creations = new(StringComparer.Ordinal);
+    private Task? disposalTask;
     private int disposed;
 
     internal AssemblySourceSelectionOrchestrator(
@@ -136,27 +140,49 @@ internal sealed class AssemblySourceSelectionOrchestrator : IAssemblySourceResol
         CancellationToken cancellationToken) =>
         ResolveAsync(assemblyPath, cancellationToken);
 
-    internal void Dispose()
-    {
-        if (Interlocked.Exchange(ref disposed, 1) != 0)
-        {
-            return;
-        }
+    public ValueTask DisposeAsync() => new(StartDispose());
 
+    private Task StartDispose()
+    {
         AssemblySourceProviderCreation[] pending;
+        TaskCompletionSource<object?>? completion = null;
         lock (creationGate)
         {
+            if (disposalTask is not null)
+            {
+                return disposalTask;
+            }
+
+            Interlocked.Exchange(ref disposed, 1);
             pending = creations.Values.ToArray();
             creations.Clear();
+            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            disposalTask = completion.Task;
         }
 
         foreach (var creation in pending)
         {
             creation.Cancel();
         }
+
+        _ = JoinProducerCreationsAsync(pending, completion);
+        return completion.Task;
     }
 
-    void IDisposable.Dispose() => Dispose();
+    private static async Task JoinProducerCreationsAsync(
+        IReadOnlyList<AssemblySourceProviderCreation> pending,
+        TaskCompletionSource<object?> completion)
+    {
+        try
+        {
+            await Task.WhenAll(pending.Select(creation => creation.ProducerTask)).ConfigureAwait(false);
+            completion.TrySetResult(null);
+        }
+        catch (Exception exception)
+        {
+            completion.TrySetException(exception);
+        }
+    }
 
     private async Task<AssemblySourceProviderResultLease> LeaseProviderResultAsync(
         ExternalSourceMapping mapping,
@@ -173,7 +199,7 @@ internal sealed class AssemblySourceSelectionOrchestrator : IAssemblySourceResol
                 creation = new AssemblySourceProviderCreation();
                 creations.Add(key, creation);
                 creation.AddWaiter();
-                _ = RunProviderCreationAsync(key, mapping, creation);
+                creation.SetProducerTask(RunProviderCreationAsync(key, mapping, creation));
             }
             else
             {

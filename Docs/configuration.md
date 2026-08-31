@@ -1658,6 +1658,10 @@ werden als positive Bytewerte, `MaxParallelOperations` und
 Dezimalzahl gelesen. Die Defaults sind 512 MiB, 512 MiB, 4, 32 und 45 Minuten.
 Die Limits gelten für LRU-/TTL-Eviction, aktive Leases, Creation-/Materialisierungs-
 Operationen und das vor dem Workspace-Load reservierte Materialisierungsbudget.
+Eine Materialisierungsreservation bleibt bis zur Registrierung des residenten
+Snapshot-Eintrags erhalten und wird dann atomar in dessen Resource-Lease überführt;
+aktive Assembly- und Snapshot-Leases schützen ihre Einträge vor kapazitätsbedingter
+Eviction.
 Ein vollständiger Settings-Load schlägt bei einem ungültigen Limit fail-closed
 mit einer strukturierten Diagnose fehl.
 
