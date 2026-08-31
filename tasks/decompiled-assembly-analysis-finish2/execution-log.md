@@ -685,6 +685,54 @@
   Commit, aktualisierte Code-Map und nach der letzten Änderung fokussierte
   Test- und Violations-Nachweise.
 
+## 2026-08-31 — completed / EPIC-C / Korrektur-Implementierer Runde 3
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2-resume`
+- subagent-id: `/root/epic_c_ttl_regression_fix`
+- status: erfolgreich; kein Agenten-Commit und keine Produktions-, Wire- oder
+  EPIC-D-/EPIC-E-Änderung.
+- vollständiger finaler Agentenbericht:
+
+  > EPIC-C Korrekturrunde 3 abgeschlossen, kein Commit erstellt.
+  >
+  > Geändert:
+  >
+  > - `DaemonHandshakeContractTests`: `1m` gegen `1.0000000001m` bestätigt
+  >   gleiche `TimeSpan`-Ticks ohne Divergenz; `1m` gegen `1.000000002m`
+  >   bestätigt den echten Tick-Unterschied mit Divergenz.
+  > - `ThinClientConnectOrStartTests`: dieselben zwei Fälle über den
+  >   Daemon-Welcome-/Clientpfad.
+  > - `code-map.md`: Tick-Invariante, Testzuordnung und reale Audit- und
+  >   Violationsresultate ergänzt.
+  >
+  > Verifikation nach letzter C#-Änderung:
+  >
+  > - `dotnet test src\\AiNetLinter.FastTests --no-restore --filter
+  >   "FullyQualifiedName~DaemonHandshakeContractTests|FullyQualifiedName~ThinClientConnectOrStartTests"`
+  >   → 18/18 erfolgreich.
+  > - MCP `find_duplicates`: FastTests-Daemon und Produktionsdaemon jeweils
+  >   0 Cluster.
+  > - MCP `find_dead_code`: FastTests-Daemon 0 Kandidaten; Produktionsdaemon
+  >   nur der bestehende Low-Confidence-Kandidat
+  >   `DaemonStartupGate.AcquireAsync`, außerhalb des geänderten Codes.
+  > - MCP `find_magic_values`: Testscope nur Fixture-Konstanten/-Einzelwerte;
+  >   neue wiederholte Werte lokal als Konstanten. Produktionsscope
+  >   `changedOnly=true`: keine Dateien, weil unverändert.
+  > - Abschließendes MCP `get_violations`: FastTests-Daemon und
+  >   Produktionsdaemon jeweils 0 Violations.
+  > - `git diff --check` erfolgreich; nur erwartete LF-zu-CRLF-Hinweise.
+  >
+  > Offene Risiken: keine P1 im Korrekturscope. Die solutionweiten
+  > Nicht-Stress-Gates wurden nicht wiederholt; sie gehören zum
+  > Orchestrator-Abschluss.
+- MCP-/Qualitätsnachweis: Alle genannten Audits und Violations-Checks liegen
+  nach der letzten Testcodeänderung vor. Der Low-Confidence-Kandidat ist
+  unbelegt und scopefremd; er wird nicht als task-lokale neue Tech Debt erfasst.
+- Tech-Debt-Triage: `TD-EPIC-C-007` auf `fixed` (unabhängige Prüfung
+  ausstehend) gesetzt.
+- nächste Aktion: Implementierungs-Checkpoint committen, danach frischen
+  Folge-Reviewer gegen die TTL-Regression starten.
+
 ## 2026-08-31 — completed / EPIC-C / Folge-Reviewer nach Korrekturrunde 1
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`

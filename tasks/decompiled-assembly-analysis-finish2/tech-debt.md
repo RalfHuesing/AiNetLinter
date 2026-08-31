@@ -177,12 +177,12 @@ setzen. Der vollständige Bericht und die Verifikation stehen im
 - Fundstelle/Scope: `DaemonProtocol.cs`.
 - Evidenz: Commit `118ccb94` vergleicht optionale Minutenwerte nach
   Normalisierung auf `TimeSpan.Ticks`.
-- Disposition: `fix-now`
-- Risiko: Ein Rückbau auf den Rohvergleich bliebe ohne Test unbemerkt und
-  erzeugte für gleich wirksame TTL-Werte eine falsche Daemon-Divergenz.
-- Nächster Schritt: Client- und Server-Handshake-Regressionen für gleiche
-  Ticks/ungleiche Rohwerte sowie einen echten Tick-Unterschied ergänzen.
-- Log-Anker: `execution-log.md`, EPIC-C-Folge-Review nach Korrekturrunde 2
+- Disposition: `fixed` (unabhängige Prüfung ausstehend)
+- Risiko: Der Rückbau auf den Rohvergleich wird durch Client- und
+  Server-Regressionen erkannt; die Folgeprüfung bestätigt noch den
+  Korrekturstand.
+- Nächster Schritt: unabhängigen Folge-Review abschließen.
+- Log-Anker: `execution-log.md`, EPIC-C Korrektur-Implementierer Runde 3
   vom 2026-08-31.
 
 ## TD-EPIC-C-008 — Creation-Join nach Dictionary-Entfernung

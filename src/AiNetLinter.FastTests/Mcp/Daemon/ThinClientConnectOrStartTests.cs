@@ -10,6 +10,8 @@ namespace AiNetLinter.FastTests.Mcp.Daemon;
 [Trait("Category", "Unit")]
 public sealed class ThinClientConnectOrStartTests
 {
+    private const string DaemonConfigurationWarning = "Daemon-Konfiguration";
+
     [Fact]
     public async Task ConnectOrStart_UsesExistingMockPipeWithoutSpawn()
     {
@@ -194,7 +196,85 @@ public sealed class ThinClientConnectOrStartTests
         {
             Assert.Contains(
                 console.ErrorLines,
-                line => line.Contains("Daemon-Konfiguration", StringComparison.Ordinal));
+                line => line.Contains(DaemonConfigurationWarning, StringComparison.Ordinal));
+        }
+        finally
+        {
+            await connection.Pipe.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
+    [Fact]
+    public async Task ConnectOrStart_AcceptsExternalIdleTtlWithSameNormalizedTicks()
+    {
+        var daemonConfiguration = new EffectiveDaemonConfiguration(
+            4,
+            10m,
+            ExternalIdleTtlMinutes: 1m);
+        var transport = new ScriptedMockPipeTransport(
+            initialConnectFailures: 0,
+            serveConnection: (connection, index) => MockDaemonScript.WelcomeThenAsync(
+                connection,
+                4711,
+                index,
+                _ => Task.Delay(Timeout.InfiniteTimeSpan),
+                daemonConfiguration));
+        var console = new RecordingLintConsole();
+        var options = new ThinClientLaunchOptions(
+            null,
+            null,
+            null,
+            null,
+            ExternalIdleTtlMinutes: 1.0000000001m);
+
+        var connection = await ThinClientProxy.ConnectOrStartAsync(
+            options,
+            CreateContext(console, transport, (_, _) => false)).ConfigureAwait(false);
+        try
+        {
+            Assert.Equal(TimeSpan.FromMinutes(1d).Ticks, TimeSpan.FromMinutes(1.0000000001d).Ticks);
+            Assert.DoesNotContain(
+                console.ErrorLines,
+                line => line.Contains(DaemonConfigurationWarning, StringComparison.Ordinal));
+        }
+        finally
+        {
+            await connection.Pipe.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
+    [Fact]
+    public async Task ConnectOrStart_ReportsExternalIdleTtlWithDifferentNormalizedTicks()
+    {
+        var daemonConfiguration = new EffectiveDaemonConfiguration(
+            4,
+            10m,
+            ExternalIdleTtlMinutes: 1m);
+        var transport = new ScriptedMockPipeTransport(
+            initialConnectFailures: 0,
+            serveConnection: (connection, index) => MockDaemonScript.WelcomeThenAsync(
+                connection,
+                4711,
+                index,
+                _ => Task.Delay(Timeout.InfiniteTimeSpan),
+                daemonConfiguration));
+        var console = new RecordingLintConsole();
+        var options = new ThinClientLaunchOptions(
+            null,
+            null,
+            null,
+            null,
+            ExternalIdleTtlMinutes: 1.000000002m);
+
+        var connection = await ThinClientProxy.ConnectOrStartAsync(
+            options,
+            CreateContext(console, transport, (_, _) => false)).ConfigureAwait(false);
+        try
+        {
+            Assert.NotEqual(TimeSpan.FromMinutes(1d).Ticks, TimeSpan.FromMinutes(1.000000002d).Ticks);
+            Assert.Contains(
+                console.ErrorLines,
+                line => line.Contains(DaemonConfigurationWarning, StringComparison.Ordinal));
         }
         finally
         {

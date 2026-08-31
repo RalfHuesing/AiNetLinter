@@ -7,6 +7,10 @@ namespace AiNetLinter.FastTests.Mcp.Daemon;
 [Trait("Category", "Unit")]
 public sealed class DaemonHandshakeContractTests
 {
+    private const string DaemonVersion = "daemon-1";
+    private const string ExecutableVersion = "exe-1";
+    private const int DaemonProcessId = 4321;
+
     private static readonly EffectiveDaemonConfiguration Configuration =
         new(4, 10m);
 
@@ -19,9 +23,9 @@ public sealed class DaemonHandshakeContractTests
 
         Assert.True(result.IsAccepted);
         Assert.NotNull(result.Welcome);
-        Assert.Equal("daemon-1", result.Welcome.DaemonVersion);
-        Assert.Equal("exe-1", result.Welcome.ExecutableVersion);
-        Assert.Equal(4321, result.Welcome.ProcessId);
+        Assert.Equal(DaemonVersion, result.Welcome.DaemonVersion);
+        Assert.Equal(ExecutableVersion, result.Welcome.ExecutableVersion);
+        Assert.Equal(DaemonProcessId, result.Welcome.ProcessId);
         Assert.Equal(Configuration, result.Welcome.Configuration);
     }
 
@@ -29,7 +33,7 @@ public sealed class DaemonHandshakeContractTests
     public void HandleHello_WithUnknownProtocol_RejectsWithoutWelcome()
     {
         var handshake = CreateHandshake();
-        var hello = new DaemonHello("exe-1", 99, Configuration, DaemonProtocol.Version + 1);
+        var hello = new DaemonHello(ExecutableVersion, 99, Configuration, DaemonProtocol.Version + 1);
 
         var result = handshake.HandleHello(hello, activeConnectionCount: 0);
 
@@ -100,16 +104,48 @@ public sealed class DaemonHandshakeContractTests
             ExternalMaxResidentResources: 5,
             ExternalIdleTtlMinutes: 12m);
         var handshake = new DaemonHandshake(
-            new FakeIdentityProvider(new DaemonIdentity("daemon-1", "exe-1", 4321)),
+            new FakeIdentityProvider(new DaemonIdentity(DaemonVersion, ExecutableVersion, DaemonProcessId)),
             effective);
         var requested = effective with { ExternalMaxDiskBytes = 50 };
 
-        var result = handshake.HandleHello(new DaemonHello("exe-1", 99, requested), activeConnectionCount: 0);
+        var result = handshake.HandleHello(new DaemonHello(ExecutableVersion, 99, requested), activeConnectionCount: 0);
 
         Assert.True(result.IsAccepted);
         Assert.NotNull(result.ConfigurationDivergence);
         Assert.Equal(effective, result.ConfigurationDivergence.Expected);
         Assert.Equal(requested, result.ConfigurationDivergence.Received);
+    }
+
+    [Fact]
+    public void HandleHello_ExternalIdleTtlWithSameNormalizedTicks_DoesNotReportDivergence()
+    {
+        var effective = new EffectiveDaemonConfiguration(4, 10m, ExternalIdleTtlMinutes: 1m);
+        var requested = effective with { ExternalIdleTtlMinutes = 1.0000000001m };
+        var handshake = new DaemonHandshake(
+            new FakeIdentityProvider(new DaemonIdentity(DaemonVersion, ExecutableVersion, DaemonProcessId)),
+            effective);
+
+        var result = handshake.HandleHello(new DaemonHello(ExecutableVersion, 99, requested), activeConnectionCount: 0);
+
+        Assert.Equal(TimeSpan.FromMinutes(1d).Ticks, TimeSpan.FromMinutes(1.0000000001d).Ticks);
+        Assert.True(result.IsAccepted);
+        Assert.Null(result.ConfigurationDivergence);
+    }
+
+    [Fact]
+    public void HandleHello_ExternalIdleTtlWithDifferentNormalizedTicks_ReportsDivergence()
+    {
+        var effective = new EffectiveDaemonConfiguration(4, 10m, ExternalIdleTtlMinutes: 1m);
+        var requested = effective with { ExternalIdleTtlMinutes = 1.000000002m };
+        var handshake = new DaemonHandshake(
+            new FakeIdentityProvider(new DaemonIdentity(DaemonVersion, ExecutableVersion, DaemonProcessId)),
+            effective);
+
+        var result = handshake.HandleHello(new DaemonHello(ExecutableVersion, 99, requested), activeConnectionCount: 0);
+
+        Assert.NotEqual(TimeSpan.FromMinutes(1d).Ticks, TimeSpan.FromMinutes(1.000000002d).Ticks);
+        Assert.True(result.IsAccepted);
+        Assert.NotNull(result.ConfigurationDivergence);
     }
 
     [Fact]
@@ -134,10 +170,10 @@ public sealed class DaemonHandshakeContractTests
     }
 
     private static DaemonHandshake CreateHandshake() => new(
-        new FakeIdentityProvider(new DaemonIdentity("daemon-1", "exe-1", 4321)),
+        new FakeIdentityProvider(new DaemonIdentity(DaemonVersion, ExecutableVersion, DaemonProcessId)),
         Configuration);
 
-    private static DaemonHello CreateHello() => new("exe-1", 99, Configuration);
+    private static DaemonHello CreateHello() => new(ExecutableVersion, 99, Configuration);
 
     private sealed class FakeIdentityProvider(DaemonIdentity identity) : IDaemonIdentityProvider
     {

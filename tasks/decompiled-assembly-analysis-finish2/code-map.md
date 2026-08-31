@@ -365,12 +365,21 @@
 - Der Pipe-Handshake trägt die fünf effektiven External-Limits als optionale
   Felder. Der ThinClient vergleicht explizite Overrides auch beim Connect zu
   einem bestehenden Daemon; alte Partner ohne diese Felder bleiben kompatibel.
+- `EffectiveDaemonConfiguration.Matches` und `MatchesAdvertisedPeer` in
+  `src/AiNetLinter/Mcp/Daemon/DaemonProtocol.cs` vergleichen
+  `ExternalIdleTtlMinutes` über die durch `TimeSpan.TicksPerMinute`
+  normalisierten Ticks. Damit sind unterschiedliche Dezimalwerte mit gleicher
+  wirksamer `TimeSpan`-Dauer kompatibel, ein abweichender Tick bleibt eine
+  Konfigurationsdivergenz.
 - Regressionen liegen in `ExternalResourceRegistryTests`,
   `SourceSnapshotRegistryTests`, `AssemblyAnalysisRegistryTests`,
   `AssemblyAnalysisHostCompositionTests`,
   `AssemblyAnalysisToolSupportCreationBarrierTests` (einschließlich der
   deterministischen Retirement-/Creation-Join-Races), den CLI-/ThinClient-
   Vertragstests und `ExternalSourceSnapshotMaterializerTests`.
+  `DaemonHandshakeContractTests` sichern den Serverpfad und
+  `ThinClientConnectOrStartTests` den Clientpfad für gleiche bzw. verschiedene
+  normalisierte Idle-TTL-Ticks.
 - Für diesen Korrekturlauf werden nach der letzten Codeänderung erneut die
   MCP-Audits `find_duplicates`, `find_dead_code` und `find_magic_values` sowie
   ein produktiver `get_violations`-Nachweis ausgeführt. Das ausgeschöpfte
@@ -405,6 +414,27 @@
    High-Confidence-Kandidaten (darunter ein duplizierter Heuristik-Treffer);
    `find_magic_values` meldet 0 Treffer. Kein Befund ist ein sicherer,
    scope-naher EPIC-C-Refactor.
- - Das ausgeschöpfte EPIC-B-Finding `DIAGNOSTICS-SAMPLE-BUDGET` wurde nicht
-   wiedereröffnet. `TD-EPIC-C-006` und `TD-EPIC-C-007` bleiben
-   accepted-deferred. Stress wurde nicht ausgeführt.
+- Das ausgeschöpfte EPIC-B-Finding `DIAGNOSTICS-SAMPLE-BUDGET` wurde nicht
+  wiedereröffnet. `TD-EPIC-C-006` bleibt als behobener, noch unabhängig zu
+  prüfender E2E-Pfad bestehen; `TD-EPIC-C-007` ist der explizite
+  Korrekturscope dieser Runde. Stress wurde nicht ausgeführt.
+- EPIC-C-Korrekturrunde 3 ergänzt ausschließlich die Regression für
+  `TTL-TICK-NORMALIZATION-REGRESSION`; Produktionscode und Wire-Form bleiben
+  unverändert. Server- und ThinClient-Tests belegen, dass `1m` und
+  `1.0000000001m` denselben `TimeSpan.FromMinutes`-Tickwert
+  (`600000000`) haben und keine Divergenz erzeugen, während
+  `1.000000002m` (`600000001`) die bestehende Divergenz auslöst.
+- Nach der Teständerung lief
+  `dotnet test src\\AiNetLinter.FastTests --no-restore --filter
+  "FullyQualifiedName~DaemonHandshakeContractTests|FullyQualifiedName~ThinClientConnectOrStartTests"`
+  mit 18/18 erfolgreich. Die nach der letzten C#-Änderung ausgeführten
+  MCP-Audits für `src/AiNetLinter.FastTests/Mcp/Daemon` und
+  `src/AiNetLinter/Mcp/Daemon` ergaben jeweils 0 Duplikatcluster; im
+  Testscope 0 Dead-Code-Kandidaten und im Produktionsscope nur den bestehenden
+  Low-Confidence-Kandidaten `DaemonStartupGate.AcquireAsync`.
+  `find_magic_values` meldet im Testscope nur lokale Fixture-Konstanten und
+  einmalige Fixturewerte; die wiederholten neuen Identifikatoren und der
+  Warntext sind bereits als private Testkonstanten ausgedrückt. Im unveränderten
+  Produktionsscope lieferte der `changedOnly`-Lauf keine Dateien. Der
+  abschließende `get_violations`-Check nach den Audits meldete sowohl im
+  Testscope als auch im Daemon-Produktionsscope jeweils 0 Violations.
