@@ -1442,4 +1442,19 @@
   - `get_violations`: 0 Violations in 837 Dateien im Scope.
   - `find_duplicates`: 0 Duplikat-Cluster (Score 1.00 behoben).
   - `safeguard`: 10,00/10 (Threshold 8,00) — PASS (0 Verstöße, 923 Klassen analysiert).
-  - `tech-debt.md`: TD-EPIC-B-007 auf `fixed` gesetzt.
+- `tech-debt.md`: TD-EPIC-B-007 auf `fixed` gesetzt.
+
+## 2026-08-31 — running / EPIC-D / Implementierer (Resume 2)
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2-resume2`
+- subagent-id: `01a056d7-82e2-7cf1-8b52-700ad05942d2` (Copernicus)
+- diff-baseline: `477a90b7` (aktueller sauberer Arbeitsbaum)
+- scope: begrenzte, ausdrücklich anforderbare Cross-Assembly-Navigation für
+  `find_symbol` und abhängige Call-Tree-/Symbolpfade sowie tolerante,
+  herkunftssichere `find_references`-Antworten über Referenzgrenzen.
+- bewusste Ausgangsentscheidung: die Low-Reasoning-Bereinigung und die
+  `rules.json`-Aggregate-Root-Ausnahme bleiben unverändert erhalten.
+- erwarteter Hand-off: zusammenhängende Code-/Regressionsteständerungen ohne
+  Agenten-Commit, aktualisierte Code-Map, fokussierte Multi-DLL- und
+  Fehlerfall-Verifikation sowie gezielter Violationsnachweis nach der letzten
+  Änderung.
