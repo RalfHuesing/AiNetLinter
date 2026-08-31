@@ -233,3 +233,48 @@ Server-seitig beide Aliase tolerant unterstützen (ist bereits der Fall), aber i
 
 ### Lösungsvorschlag
 Optionale Parameter `maxResults` (z. B. Default 20) und `minLinePercentage` (z. B. 90) ergänzen.
+
+---
+
+## Rang 10: Künstliche Beschränkung auf `.dll`-Dateien verhindert Analyse von .NET Executables (`.exe`)
+
+### Problem & Auswirkung auf LLM-Agenten
+- **Befund-ID:** `FEAT-001` / `ASM-003`
+- **Schweregrad / Dringlichkeit:** `S2` / `P2`
+- **Symptom:** Übergibt ein Agent einen Pfad zu einer .NET `.exe`-Datei (z. B. CLI-Tools, Host-Executables, Microservices) als `targetPath` mit `targetType="assembly"`, lehnt der Server den Aufruf mit `INVALID_ARGUMENT: Der Assembly-Pfad muss auf eine .dll zeigen` ab.
+- **Agentischer Schaden:** .NET-Executables können über den MCP-Server nicht untersucht, dekompiliert oder für Symbolgraphen verwendet werden, obwohl sie technisch normale .NET IL-Assemblies sind.
+
+### Betroffener Code
+- [src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisService.cs:46-48](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisService.cs#L46-L48)
+  ```csharp
+  if (!string.Equals(Path.GetExtension(fullPath), ".dll", StringComparison.OrdinalIgnoreCase))
+  {
+      error = $"Der Assembly-Pfad muss auf eine .dll zeigen: '{assemblyPath}'.";
+      return false;
+  }
+  ```
+- [src/AiNetLinter/Mcp/AnalysisTargetResolver.cs:41-49](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/AnalysisTargetResolver.cs#L41-L49)
+  ```csharp
+  && !string.Equals(Path.GetExtension(path.CanonicalPath), ".dll", StringComparison.OrdinalIgnoreCase)
+  ```
+- [src/AiNetLinter/Configuration/ExternalSourceMappingValidator.cs:350](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Configuration/ExternalSourceMappingValidator.cs#L350)
+- [src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySourceMatchResolver.cs:227](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySourceMatchResolver.cs#L227)
+
+### Lösungsvorschlag
+1. Validierungslogik so erweitern, dass sowohl `.dll` als auch `.exe` als gültige Assembly-Dateierweiterungen akzeptiert werden:
+   ```csharp
+   private static readonly HashSet<string> AllowedAssemblyExtensions = new(StringComparer.OrdinalIgnoreCase)
+   {
+       ".dll",
+       ".exe"
+   };
+
+   if (!AllowedAssemblyExtensions.Contains(Path.GetExtension(fullPath)))
+   {
+       error = $"Der Assembly-Pfad muss auf eine .dll oder .exe zeigen: '{assemblyPath}'.";
+       return false;
+   }
+   ```
+2. In Roslyn (`MetadataReference.CreateFromFile`) und `ICSharpCode.Decompiler` sind keine Änderungen notwendig, da beide Bibliotheken `.exe`-Assemblies nativ unterstützen.
+3. Dokumentation und Tool-Beschreibungen anpassen: `targetPath muss ein existierender .dll- oder .exe-Pfad sein`.
+
