@@ -87,7 +87,7 @@ tech_debt: siehe tech-debt.md
   Dispose während der Erzeugung sind deterministisch.
 - Verifikation: fokussierte TTL/LRU/Capacity/Lease/Race/Creation-Barrier-
   Tests; hohe Last nur in gezielten Stress-Tests; gezielter Violations-Check.
-- Status: review_pending (Folge-Review nach Korrekturrunde 2 und Resume)
+- Status: review_in_progress (Folge-Review nach Korrekturrunde 2 und Resume)
 
 ## EPIC-C-Review — Korrektur umgesetzt, Folge-Review ausstehend
 

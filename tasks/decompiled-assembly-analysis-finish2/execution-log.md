@@ -598,6 +598,23 @@
   tatsächlichen Stand `017797d4..118ccb94` starten; EPIC-D bleibt danach der
   nächste offene Implementierungsblock.
 
+## 2026-08-31 — running / EPIC-C / Folge-Reviewer nach Korrekturrunde 2 (Resume)
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2-resume`
+- subagent-id: wird nach dem Start ergänzt.
+- diff-baseline: `017797d4..118ccb94`; nachfolgende Orchestrierungscommits
+  enthalten ausschließlich Task-Metadaten.
+- scope: unabhängige Prüfung der atomaren Assembly-Retirement-Ownership,
+  aktiven Lease-Sicherheit, Producer-Join-Reihenfolge sowie der im selben
+  Codecheckpoint enthaltenen Tick-Normalisierung und gekoppelten
+  Materializer-/Registry-Regression.
+- explizite Grenze: Das ausgeschöpfte EPIC-B-P1
+  `DIAGNOSTICS-SAMPLE-BUDGET` und die vorgezogenen EPIC-E-Teilaufträge sind
+  nicht Gegenstand dieses Reviews.
+- erwarteter Hand-off: `approved` oder präzise P0/P1/P2/P3-Befunde;
+  ausschließlich `code-map.md` darf bei konkretem Navigationsfehler geändert
+  werden.
+
 ## 2026-08-31 — completed / EPIC-C / Folge-Reviewer nach Korrekturrunde 1
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`
