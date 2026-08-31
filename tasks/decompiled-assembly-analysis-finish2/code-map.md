@@ -389,8 +389,9 @@
  - Round 2 schließt `TD-EPIC-C-008` / den Rest von `TD-EPIC-C-005` mit dem
    umgekehrten Producer-Join: `RunProviderCreationAsync` ruft
    `creation.Complete()` vor der Entfernung aus dem Join-Set auf. Der
-   deterministische Host-Dispose-Race-Test hält genau dieses Zwischenfenster
-   offen und prüft, dass `DisposeAsync` auf den Producer wartet.
+   deterministische Orchestrator-Dispose-Race-Test hält genau dieses
+   Zwischenfenster offen und prüft, dass
+   `AssemblySourceSelectionOrchestrator.DisposeAsync` auf den Producer wartet.
  - Fokussierte Verifikation nach der letzten Codeänderung: betroffene
    FastTests 57/57 und `ExternalSourceSnapshotMaterializerTests` /
    `ThinClientProxySessionContractTests` 7/7.

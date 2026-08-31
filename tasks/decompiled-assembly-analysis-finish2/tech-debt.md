@@ -170,18 +170,20 @@ setzen. Der vollständige Bericht und die Verifikation stehen im
 
 ## TD-EPIC-C-007 — Tick-Normalisierung im ThinClient-Limitvergleich
 
-- Schweregrad: P2
-- Beschreibung: `ResolveIdleTtl` vergleicht normalisierte TimeSpan-Ticks nicht
-  mit dem Rohwert des ThinClient-Handshakes.
+- Schweregrad: P1
+- Beschreibung: Die Tick-Normalisierung ist implementiert, jedoch nicht mit
+  unterschiedlichen Rohdezimalwerten bei gleichen `TimeSpan`-Ticks sowie einem
+  tatsächlich unterschiedlichen Tick regressionsgesichert.
 - Fundstelle/Scope: `DaemonProtocol.cs`.
 - Evidenz: Commit `118ccb94` vergleicht optionale Minutenwerte nach
   Normalisierung auf `TimeSpan.Ticks`.
-- Disposition: `fixed` (unabhängige Prüfung ausstehend)
-- Risiko: Die Vergleichssemantik ist auf die durch `TimeSpan` darstellbare
-  Präzision ausgerichtet; der Resume-Review prüft den Handshake-Vertrag.
-- Nächster Schritt: Normalisierung und rückwärtskompatibles Handshake-Verhalten
-  im Folge-Review bestätigen.
-- Log-Anker: `execution-log.md`, Resume-Zusammenführung vom 2026-08-31.
+- Disposition: `fix-now`
+- Risiko: Ein Rückbau auf den Rohvergleich bliebe ohne Test unbemerkt und
+  erzeugte für gleich wirksame TTL-Werte eine falsche Daemon-Divergenz.
+- Nächster Schritt: Client- und Server-Handshake-Regressionen für gleiche
+  Ticks/ungleiche Rohwerte sowie einen echten Tick-Unterschied ergänzen.
+- Log-Anker: `execution-log.md`, EPIC-C-Folge-Review nach Korrekturrunde 2
+  vom 2026-08-31.
 
 ## TD-EPIC-C-008 — Creation-Join nach Dictionary-Entfernung
 

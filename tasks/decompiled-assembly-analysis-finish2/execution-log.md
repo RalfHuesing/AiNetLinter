@@ -615,6 +615,61 @@
   ausschließlich `code-map.md` darf bei konkretem Navigationsfehler geändert
   werden.
 
+## 2026-08-31 — completed / EPIC-C / Folge-Reviewer nach Korrekturrunde 2 (Resume)
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2-resume`
+- subagent-id: `/root/epic_c_resume_review`
+- status: `issues`; kein Produktions- oder Testcode und kein Agenten-Commit;
+  `code-map.md` wurde für den tatsächlichen DisposeAsync-Race-Scope korrigiert.
+- vollständiger finaler Agentenbericht:
+
+  > issues
+  >
+  > P0: keine.
+  >
+  > P1 — `TTL-TICK-NORMALIZATION-REGRESSION`
+  >
+  > - Die neue Vertragslogik in `DaemonProtocol.cs:82` ist nicht
+  >   regressionsgesichert. Alle Testvorkommen von
+  >   `ExternalIdleTtlMinutes` verwenden identische `12m`-Werte und
+  >   unterscheiden weder Rohdecimal noch normalisierte Ticks.
+  > - Ein Rückbau auf den alten Rohvergleich ließe die bestehenden Tests grün,
+  >   obwohl gleich wirksame TTL-Werte fälschlich als Daemon-Divergenz gemeldet
+  >   würden. Beispielsweise normalisieren `1m` und `1.0000000001m` beide zu
+  >   600.000.000 Ticks, sind aber als `decimal` ungleich.
+  > - Empfehlung: je einen Client- und Server-Handshake-Test für gleiche
+  >   Ticks/ungleiche Rohwerte sowie einen echten Tick-Unterschied ergänzen.
+  >   Disposition: `fix-now`.
+  >
+  > P2/P3:
+  >
+  > - P2: keine weiteren belegten Produktbefunde.
+  > - P3: Die Code-Map bezeichnete den Test fälschlich als Host-Dispose-Race.
+  >   Korrigiert: Er prüft `AssemblySourceSelectionOrchestrator.DisposeAsync`.
+  >
+  > Bestätigt:
+  >
+  > - Atomare Retirement-Transition: Registry-Lock plus
+  >   `TryBeginRetirement()` verhindert neue Leases nach dem Idle-Recheck; der
+  >   deterministische Race-Test deckt das ab.
+  > - Producer bleibt bis nach `Complete()` im Join-Set; der
+  >   Orchestrator-Dispose wartet auf den Producer.
+  > - Materializer-/Registry-E2E existiert und deckt den gekoppelten
+  >   Lebenszyklus ab.
+  > - `017797d4..118ccb94`: `git diff --check` sauber; MCP-Impact: 20
+  >   Dateien, 44/44 Symbole, 0 Diff-Violations.
+  > - Wegen Änderungen in `118ccb94` fokussiert neu geprüft: Build 0/0,
+  >   FastTests 48/48, Materializer-Integration 6/6. Die älteren vollständigen
+  >   Gates wurden nicht redundant wiederholt.
+- Urteil: `issues`; stabile Ursachensignatur
+  `TTL-TICK-NORMALIZATION-REGRESSION`. Korrekturrunde 3 bleibt klar begrenzt
+  auf fehlende Tests für die bereits umgesetzte Semantik.
+- Tech-Debt-Triage: `TD-EPIC-C-007` von `fixed` (Prüfung ausstehend) auf P1
+  `fix-now` gesetzt. Der konkrete Code-Map-Fakt ist korrigiert und wird nicht
+  als Tech Debt weitergeführt.
+- nächste Aktion: Reviewer-Checkpoint committen, danach frischen
+  Korrektur-Implementierer nur für die Handshake-Regressionslücke starten.
+
 ## 2026-08-31 — completed / EPIC-C / Folge-Reviewer nach Korrekturrunde 1
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`
