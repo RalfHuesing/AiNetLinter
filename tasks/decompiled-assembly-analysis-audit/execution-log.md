@@ -34,3 +34,9 @@
 - Codebefunde bestätigt: `AnalysisToolCall.cs:161-172` expandiert Referenzen vor jedem Assembly-Session-Call; `AssemblyAnalysisResponseLimits.cs:32-52` wählt Samples global aus, während `InspectAssemblyTool.cs:84-99` dieselben Samples mehrfach im strukturierten Payload serialisiert.
 - External-Source-/Git-Abdeckung: Konfigurations-, Provider-, Checkout-Attestation-, Reparse-, Cache-, Refresh-, Cancellation-, Timeout-, Prozessbaum- und Cleanup-Tests sind im Repository vorhanden. Eine echte source-backed Live-Repository-Probe war in diesem Lauf nicht möglich bzw. wurde wegen Audit-Scope und Geheimnisschutz nicht durchgeführt.
 - Live-Binary-Prüfung: `.mcp.json` verwendet `dotnet run`; ein separates `ainetlinter`-Kommando ist nicht installiert. Die gebaute DLL ist vorhanden und wurde als neutrale Decompilation-Probe genutzt.
+
+## 2026-08-31 — Linse 01 abgeschlossen
+
+- Fallback-Report: `reports/01-assembly.md`.
+- Terminalurteil: ASM-001 (unbedingte Referenzexpansion) bestätigt; ASM-002 (falsches `partial` bei Namensauflösung über Nichttreffer-Sessions) bestätigt; Member-ID-Frage als unbestätigte Konsistenzbeobachtung getrennt.
+- Keine Produktions- oder Testdateien geändert.
