@@ -1601,7 +1601,7 @@ Mapping-Datei benennen:
     "MaxDiskBytes": 536870912,
     "MaxMemoryBytes": 536870912,
     "MaxParallelOperations": 4,
-    "MaxResidentResources": 32,
+    "MaxResidentResources": 128,
     "IdleTtlMinutes": 45
   }
 }
@@ -1655,7 +1655,7 @@ Die fünf optionalen Ressourcenfelder begrenzen gemeinsam die externen
 Assembly- und Source-Snapshot-Registries: `MaxDiskBytes` und `MaxMemoryBytes`
 werden als positive Bytewerte, `MaxParallelOperations` und
 `MaxResidentResources` als positive Ganzzahlen und `IdleTtlMinutes` als positive
-Dezimalzahl gelesen. Die Defaults sind 512 MiB, 512 MiB, 4, 32 und 45 Minuten.
+Dezimalzahl gelesen. Die Defaults sind 512 MiB, 512 MiB, 4, 128 und 45 Minuten.
 Die Limits gelten für LRU-/TTL-Eviction, aktive Leases, Creation-/Materialisierungs-
 Operationen und das vor dem Workspace-Load reservierte Materialisierungsbudget.
 Eine Materialisierungsreservation bleibt bis zur Registrierung des residenten

@@ -1,3 +1,12 @@
 {
-  "repositories": []
+  "repositories": [
+    {
+      "url": "https://github.com/ExampleOrg/ExampleSharedLib.git",
+      "solutionPath": "src/ExampleSharedLib.slnx",
+      "assemblies": [
+        "ExampleSharedLib.Core.dll",
+        "ExampleSharedLib.Contracts.dll"
+      ]
+    }
+  ]
 }

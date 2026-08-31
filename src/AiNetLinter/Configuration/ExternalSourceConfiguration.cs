@@ -14,7 +14,7 @@ internal sealed record ExternalSourceResourceOptions
     internal const long DefaultMaxDiskBytes = 512L * 1024 * 1024;
     internal const long DefaultMaxMemoryBytes = 512L * 1024 * 1024;
     internal const int DefaultMaxParallelOperations = 4;
-    internal const int DefaultMaxResidentResources = 32;
+    internal const int DefaultMaxResidentResources = 128;
     internal const long MaxConfiguredBytes = long.MaxValue / 2;
     internal static readonly TimeSpan DefaultIdleTtl = TimeSpan.FromMinutes(45);
 
