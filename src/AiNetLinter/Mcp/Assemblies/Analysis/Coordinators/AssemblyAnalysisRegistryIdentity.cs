@@ -46,6 +46,14 @@ internal static class AssemblyAnalysisRegistryIdentity
     {
         if (sourceOrchestrator is null) return null;
 
+        if (sourceOrchestrator is IAssemblySourceSnapshotIdentityCache identityCache
+            && identityCache.TryGetCachedSourceSnapshotIdentity(
+                canonicalPath,
+                out var cachedIdentity))
+        {
+            return cachedIdentity;
+        }
+
         AssemblySourceResolution resolution;
         try
         {

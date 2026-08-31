@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,6 +28,7 @@ internal sealed record AssemblySourceSelectionConfiguration(
 
 internal sealed class AssemblySourceSelectionOrchestrator :
     IAssemblySourceResolver,
+    IAssemblySourceSnapshotIdentityCache,
     IAssemblySourceSelectionResolver,
     IAsyncDisposable
 {
@@ -37,6 +39,7 @@ internal sealed class AssemblySourceSelectionOrchestrator :
     private readonly Func<Task>? afterCreationCompletedBeforeRemovalAsync;
     private readonly Lock creationGate = new();
     private readonly Dictionary<string, AssemblySourceProviderCreation> creations = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> cachedSnapshotIdentities = new(StringComparer.OrdinalIgnoreCase);
     private Task? disposalTask;
     private int disposed;
 
@@ -116,12 +119,18 @@ internal sealed class AssemblySourceSelectionOrchestrator :
                     providerResult.Health,
                     providerResult.CheckoutTrust,
                     providerResult.IsAttested));
-            return new AssemblySourceSelectionScope(
+            var scope = new AssemblySourceSelectionScope(
                 selection,
                 configuration,
                 providerResult.Diagnostics,
                 lease,
                 providerResult.ToResultState());
+            if (selection is not null)
+            {
+                RememberSnapshotIdentity(assemblyPath, selection.SourceLease.Snapshot.Identity.StableValue);
+            }
+
+            return scope;
         }
         catch
         {
@@ -143,6 +152,17 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         CancellationToken cancellationToken) =>
         ResolveAsync(assemblyPath, cancellationToken);
 
+    bool IAssemblySourceSnapshotIdentityCache.TryGetCachedSourceSnapshotIdentity(
+        string assemblyPath,
+        out string? snapshotIdentity)
+    {
+        var canonicalPath = Path.GetFullPath(assemblyPath);
+        lock (creationGate)
+        {
+            return cachedSnapshotIdentities.TryGetValue(canonicalPath, out snapshotIdentity);
+        }
+    }
+
     public ValueTask DisposeAsync() => new(StartDispose());
 
     private Task StartDispose()
@@ -159,6 +179,7 @@ internal sealed class AssemblySourceSelectionOrchestrator :
             Interlocked.Exchange(ref disposed, 1);
             pending = creations.Values.ToArray();
             creations.Clear();
+            cachedSnapshotIdentities.Clear();
             completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
             disposalTask = completion.Task;
         }
@@ -283,6 +304,18 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         }
 
         return string.Concat(mapping.Url.Trim(), "|", mapping.SolutionPath.Trim());
+    }
+
+    private void RememberSnapshotIdentity(string assemblyPath, string snapshotIdentity)
+    {
+        var canonicalPath = Path.GetFullPath(assemblyPath);
+        lock (creationGate)
+        {
+            if (Volatile.Read(ref disposed) == 0)
+            {
+                cachedSnapshotIdentities[canonicalPath] = snapshotIdentity;
+            }
+        }
     }
 
     private void ThrowIfDisposed()

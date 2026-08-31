@@ -15,6 +15,13 @@ internal interface IAssemblySourceResolver
         CancellationToken cancellationToken);
 }
 
+internal interface IAssemblySourceSnapshotIdentityCache
+{
+    bool TryGetCachedSourceSnapshotIdentity(
+        string assemblyPath,
+        out string? snapshotIdentity);
+}
+
 internal interface IAssemblySourceSelectionResolver
 {
     Task<AssemblySourceSelectionScope> ResolveAsync(
