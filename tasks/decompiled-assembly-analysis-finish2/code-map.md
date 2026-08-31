@@ -12,6 +12,13 @@
   Symbol-/Datei-/Call-Tree-Tools.
 - `AiNetLinter.Mcp.Assemblies.Analysis.AssemblyAnalysisSession` liefert
   Snapshot/Generation, dekompilierte Dokumente und Assembly-Identität.
+- `AssemblyAnalysisResponse` ergänzt die Assembly-Metadaten nach dem
+  Dispatcher und verwendet denselben Diagnostics-Projektor wie die
+  Inspect-/Extensions-Payloads.
+- `src/AiNetLinter/Mcp/Tools/ServerMaintenance/` enthält Health-Optionen,
+  Wire-Records und den Response-Builder. `includeDiagnostics` ist dort eine
+  explizite Detailoption; standardmäßig werden nur Diagnosezähler und
+  begrenzte Metadaten ausgegeben.
 
 ## Betroffene Dateien und Symbole
 
@@ -21,7 +28,10 @@
 - Assembly-Toolpfad: `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/`
   (`AssemblyAnalysisService`, `AssemblyAnalysisContextFactory`,
   `AssemblyAnalysisSymbolTraversal`, `AssemblyAnalysisSourceToolSupport` und
-  die einzelnen Tool-Handler).
+  die einzelnen Tool-Handler). `AssemblyAnalysisResponseLimits` projiziert
+  Diagnostics und Referenz-/Session-Listen für die Assembly-Wire-Antworten
+  gemeinsam in Text und StructuredContent; Root-/transitive Samples werden
+  whitespace-normalisiert und über ein gemeinsames Diagnosebudget begrenzt.
 - Gemeinsame Symbolgraph-/Dateitool-Pfade unter
   `src/AiNetLinter/Mcp/Tools/SymbolGraph/`,
   `src/AiNetLinter/Mcp/Tools/FileStructure/`,
@@ -60,6 +70,18 @@
   vorhanden; alle abgefragten Dateien meldeten 0 Violations. `AssemblyAnalysisSession`
   ist mit 394 Codezeilen/44 Membern bereits nahe am Footprint-Budget, daher
   keine breite Zerlegung ohne konkreten EPIC-A-Bedarf.
+- EPIC-B-Kontext per MCP bestätigt: `InspectAssemblyTool` (194 Zeilen),
+  `FindAssemblyExtensionsTool` (114), `GetServerHealthTool` (73),
+  `GetServerHealthResponseBuilder` (184) und `AssemblyAnalysisDiagnostics`
+  sind die relevanten Einstiegspunkte; alle abgefragten Produktionsdateien
+  meldeten zunächst 0 Violations. Vor der Änderung verwendeten die Handler
+  `Take(100)` für aggregierte Diagnostics, begrenzten Referenzlisten nicht und
+  Health gab Assembly-Diagnostics standardmäßig vollständig aus. EPIC-B führt
+  dafür `AssemblyAnalysisResponseLimits` ein: 20 Diagnostics standardmäßig,
+  maximal 50, je Meldung 256 Zeichen, insgesamt 4 KiB; Referenzen und
+  Referenz-Sessions werden jeweils auf 32 Einträge und Session-Diagnostics auf
+  3 Samples begrenzt. `get_server_health` bleibt standardmäßig kompakt und
+  akzeptiert für Detail-Samples `includeDiagnostics`/`maxDiagnostics`.
 
 ## Aufrufer und Abhängigkeiten
 
@@ -92,6 +114,11 @@
   `src/AiNetLinter.IntegrationTests/Mcp/` werden für den gezielten Epic-Lauf
   geprüft, aber nur bei tatsächlich notwendigem End-to-End-Vertragsnachweis
   geändert.
+- EPIC-B-Regressionen liegen in
+  `AssemblyAnalysisDispatcherCapabilityTests` (Root-/transitive Diagnostics,
+  Status-/Text-/Structured-Konsistenz, Referenzgrenzen und 4-KiB-Budget),
+  `GetServerHealthToolTests` (kompakter Default und begrenzte Detail-Samples)
+  sowie `McpServerAssemblyHealthE2ETests` (Schema-/Routing-Vertrag).
 - `README.md`/`Docs/*` werden nur bei einer sichtbaren Vertragsänderung
   aktualisiert; keine Assembly-DLL wird ausgeführt oder verändert.
 
@@ -100,6 +127,17 @@
 - Projekt- und Assembly-Sessions bleiben getrennt; externe DLLs werden nicht
   ausgeführt oder verändert.
 - EPIC-A umfasst keine Cross-Assembly-Erweiterung aus EPIC-D.
+- EPIC-B projiziert nur Antwortdaten: Die bestehende Assembly-/Projekt-
+  Trennung, Lease-/Snapshot-Ownership und Referenzexpansion bleiben
+  unverändert; Health expandiert Referenzen ausschließlich bei einer
+  expliziten Assembly-Detailabfrage.
+- Top-Level-`diagnostics` und `analysis.diagnostics` verwenden dieselben
+  Samples; Text-Formatter iterieren ausschließlich über bereits projizierte
+  Listen. Counts und `truncatedBy` stammen aus denselben Rohdaten und Grenzen
+  wie die sichtbaren Samples.
+- `complete` mit mindestens einer Root- oder transitiven Diagnose wird über die
+  bestehende `ResolveEffectiveStatus`-Logik als `partial` und damit auch als
+  `completeness=partial` ausgegeben.
 - Leere physische Pfade dürfen in dekompilierten In-Memory-Dokumenten nicht zu
   `Path.GetFullPath`-/`relativeTo`-Fehlern in `get_call_tree`,
   `get_symbol_body` oder `dependency_graph` führen.
@@ -178,3 +216,38 @@
   0 Violations; der zuvor offene `MaxDirectoryChildren`-Befund ist durch die
   Verlagerung nach `Core/Documents` behoben. Danach wurde kein Code mehr
   geändert.
+- EPIC-B-MCP-Kontext: `find_symbol` und `get_feature_context` wurden für die
+  drei Handler, den Health-Builder, die Response-Modelle, `AssemblyAnalysisResponse`
+  und die Registrierungsstelle mit `targetType=project` sowie dem absoluten
+  Projektroot ausgeführt; `get_symbol_body` prüfte die relevanten Handler und
+  Payload-Records. Ein initialer falscher Namespace für
+  `AssemblyAnalysisResponse` lieferte `SYMBOL_NOT_FOUND` und wurde über
+  `find_symbol` korrigiert. Ein späterer MCP-Lauf traf während des
+  Solution-Loadings auf `[INFO]`, ein Health-Entry-Kontext lief in den
+  300-s-Timeout; lokale Build-/Testverifikation blieb davon unabhängig grün.
+- EPIC-B-Audit im Scope `src/AiNetLinter/Mcp`: `find_duplicates` (8 Cluster;
+  der exakte Inspect-/Extensions-Adapter ist bewusst ausgenommen),
+  `find_dead_code` (40 Low-Confidence-Kandidaten, 0 High; bestehende
+  Infrastruktur-/Interop-/DI-/Serializer-Risiken) und `find_magic_values`
+  (238 eindeutige Treffer, 50 angezeigt; bestehende Wire-/Diagnose- und
+  Plattformwerte) wurden triagiert. Keine sichere scope-nahe Korrektur wurde
+  daraus abgeleitet.
+- EPIC-B-lokale Verifikation: `dotnet build AiNetLinter.slnx --no-restore`
+  sowie die exakten Filter für
+  `AssemblyAnalysisToolTests|AssemblyAnalysisDispatcherCapabilityTests`
+  (19/19) und
+  `GetServerHealthToolTests|McpServerAssemblyHealthE2ETests` (8/8) waren
+  seriell erfolgreich. Der vorherige parallele Wiederholungslauf erzeugte
+  lediglich temporäre DLL-Sperren und wurde nicht als fachlicher Befund gewertet.
+- Letzter EPIC-B-`get_violations`-Check nach allen Codeänderungen mit absolutem
+  Projektroot und den Scopes `src/AiNetLinter/Mcp`,
+  `src/AiNetLinter.FastTests/Mcp/Assemblies` und
+  `src/AiNetLinter.IntegrationTests/Mcp/Tools`: Tests jeweils 0; Produktion
+  5 Befunde. Davon sind vier neue Komplexitätsbefunde in
+  `FindAssemblyExtensionsTool.FormatText` (kognitive 21, zyklomatisch 15)
+  und `GetServerHealthResponseBuilder.AppendAssemblySection` (kognitive 18,
+  zyklomatisch 15), die nach dem vorgeschriebenen letzten Check nicht mehr
+  korrigiert wurden. Der fünfte Befund ist der bestehende
+  `AssemblyAnalysisRegistry`-AIContextFootprint (3594 > 2500), außerhalb des
+  EPIC-B-Response-Scopes. Diese Punkte bleiben als `promoted-to-project-debt`
+  für den Orchestrator sichtbar.

@@ -67,16 +67,21 @@ internal static class FindAssemblyExtensionsTool
         var selection = AssemblyAnalysisService.FindExtensions(
             context,
             new AssemblyExtensionSearchOptions(arguments.ExtensionName, arguments.Namespace, maxResults));
-        var diagnostics = context.Diagnostics
-            .Concat(lease?.ReferenceExpansionDiagnostics ?? Array.Empty<string>())
-            .Distinct(StringComparer.Ordinal)
-            .Take(100)
-            .ToList();
-        var effectiveStatus = context.Status.ResolveEffectiveStatus(diagnostics);
+        var diagnostics = AssemblyAnalysisResponseLimits.ProjectDiagnostics(
+            context.Diagnostics,
+            lease?.ReferenceExpansionDiagnostics);
+        var referenceSessions = AssemblyAnalysisResponseLimits.ProjectReferenceSessions(lease?.ReferenceSessions);
+        var referenceSummary = AssemblyAnalysisResponseLimits.CreateReferenceSummary(
+            context.References,
+            lease?.ReferenceSessions);
+        var effectiveStatus = context.Status.ResolveEffectiveStatus(
+            context.Diagnostics
+                .Concat(lease?.ReferenceExpansionDiagnostics ?? Array.Empty<string>())
+                .ToArray());
         var payload = new FindAssemblyExtensionsPayload(
             fullPath,
             selection.Items,
-            diagnostics,
+            diagnostics.Samples,
             effectiveStatus.ToCompletenessLabel(),
             selection.Truncated,
             selection.Total,
@@ -84,7 +89,11 @@ internal static class FindAssemblyExtensionsTool
             arguments.ReceiverType,
             context.Origin,
             context.Generation,
-            effectiveStatus.ToWireValue());
+            effectiveStatus.ToWireValue(),
+            AssemblyAnalysisResponseLimits.ProjectReferences(context.References),
+            referenceSessions,
+            diagnostics,
+            referenceSummary);
         return McpToolResults.Text(FormatText(payload), payload);
     }
 
@@ -93,6 +102,11 @@ internal static class FindAssemblyExtensionsTool
         var builder = new StringBuilder();
         builder.AppendLine($"Assembly-Extensions: {payload.TotalExtensions}{(payload.Truncated ? " (gekürzt)" : string.Empty)}");
         builder.AppendLine($"Vollständigkeit: `{payload.Completeness}`");
+        if (payload.ReferenceSummary is { } referenceSummary)
+        {
+            builder.AppendLine($"Referenzen: {referenceSummary.ShownReferenceCount} von {referenceSummary.TotalReferenceCount}{(referenceSummary.ReferencesTruncated ? " (gekürzt)" : string.Empty)}");
+            builder.AppendLine($"Referenz-Sessions: {referenceSummary.ShownReferenceSessionCount} von {referenceSummary.TotalReferenceSessionCount}{(referenceSummary.ReferenceSessionsTruncated ? " (gekürzt)" : string.Empty)}");
+        }
         if (payload.Origin is { } origin)
         {
             AssemblyAnalysisOriginText.Append(builder, origin);
@@ -118,7 +132,10 @@ internal static class FindAssemblyExtensionsTool
         if (payload.Diagnostics.Count > 0)
         {
             builder.AppendLine();
-            builder.AppendLine("Diagnosen:");
+            var count = payload.DiagnosticsSummary is { } summary
+                ? $"{summary.ShownCount} von {summary.TotalCount}"
+                : payload.Diagnostics.Count.ToString();
+            builder.AppendLine($"Diagnosen: {count}{(payload.DiagnosticsSummary?.Truncated == true ? " (gekürzt)" : string.Empty)}");
             foreach (var diagnostic in payload.Diagnostics) builder.AppendLine($"- {diagnostic}");
         }
 

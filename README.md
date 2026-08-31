@@ -138,7 +138,10 @@ die Assembly wird nicht ausgeführt. Ein Consumer-Projekt ist für diesen Assemb
 diesem Vertrag nicht Teil des Aufrufs. `inspect_assembly` kann mit
 `exactTypeName`, `memberNames` und `maxMembers` große oder mehrdeutige APIs gezielt
 einschränken und liefert bei Methoden und Indexern zusätzlich strukturierte Parameterdaten.
-Unaufgelöste Abhängigkeiten werden als `partial` gekennzeichnet.
+Unaufgelöste Abhängigkeiten werden als `partial` gekennzeichnet. Diagnostics und
+Referenzdaten sind in StructuredContent und Text gemeinsam begrenzt; Health zeigt
+standardmäßig nur Metadaten/Zähler und liefert Samples erst mit
+`includeDiagnostics=true` (begrenzt durch `maxDiagnostics`).
 
 ---
 

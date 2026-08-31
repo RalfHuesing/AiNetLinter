@@ -315,7 +315,9 @@ adressiert dabei den Projektroot; `targetType=assembly` ist für die in
 Metrikabfragen sowie für die spezialisierten Assembly-Tools verfügbar. Projekt-
 only-Tools weisen Assembly-Ziele ausdrücklich als unsupported aus. `get_server_health`
 akzeptiert keinen Target-Block für die Aggregation, optional einen vollständigen
-Projekt- oder Assembly-Target-Block und liefert getrennte Session-Abschnitte.
+Projekt- oder Assembly-Target-Block und liefert getrennte Session-Abschnitte. Der
+Default bleibt kompakt; `includeDiagnostics=true` fordert begrenzte Samples an,
+deren Anzahl über `maxDiagnostics` (Default 20, Cap 50) gesteuert wird.
 
 Für Legacy-MCP wird der Server über `initialize` ausgehandelt. Clients der Protokollversion `2026-07-28` verwenden stattdessen `server/discover` ohne separaten `initialized`-Schritt. Dieser Request trägt unter `params._meta` die Protokollversion, Client-Info und Client-Capabilities; dieselben Metadaten gehören auch in nachfolgende Requests wie `tools/list`.
 

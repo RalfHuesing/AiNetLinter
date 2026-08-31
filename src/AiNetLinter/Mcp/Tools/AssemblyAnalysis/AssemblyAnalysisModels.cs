@@ -73,7 +73,8 @@ internal sealed record AssemblyReferenceSessionDto(
     IReadOnlyList<string> Diagnostics,
     string Completeness,
     AssemblyOrigin? Origin = null,
-    string SessionStatus = "complete");
+    string SessionStatus = "complete",
+    AssemblyDiagnosticSummary? DiagnosticsSummary = null);
 
 internal sealed record AssemblyMemberDto(
     string Kind,
@@ -128,7 +129,9 @@ internal sealed record InspectAssemblyPayload(
     AssemblyOrigin? Origin = null,
     long Generation = 0,
     string SessionStatus = "complete",
-    IReadOnlyList<AssemblyReferenceSessionDto>? ReferenceSessions = null);
+    IReadOnlyList<AssemblyReferenceSessionDto>? ReferenceSessions = null,
+    AssemblyDiagnosticsSummary? DiagnosticsSummary = null,
+    AssemblyReferenceSummary? ReferenceSummary = null);
 
 internal sealed record FindAssemblyExtensionsPayload(
     string AssemblyPath,
@@ -141,4 +144,8 @@ internal sealed record FindAssemblyExtensionsPayload(
     string? ReceiverType,
     AssemblyOrigin? Origin = null,
     long Generation = 0,
-    string SessionStatus = "complete");
+    string SessionStatus = "complete",
+    IReadOnlyList<AssemblyReferenceDto>? References = null,
+    IReadOnlyList<AssemblyReferenceSessionDto>? ReferenceSessions = null,
+    AssemblyDiagnosticsSummary? DiagnosticsSummary = null,
+    AssemblyReferenceSummary? ReferenceSummary = null);

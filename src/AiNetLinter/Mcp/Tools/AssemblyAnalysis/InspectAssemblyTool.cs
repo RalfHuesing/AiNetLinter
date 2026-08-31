@@ -72,26 +72,33 @@ internal static class InspectAssemblyTool
                 arguments.MemberNames,
                 maxResults,
                 AssemblyAnalysisService.NormalizeLimit(arguments.MaxMembers, AssemblyAnalysisService.DefaultMaxMembers, AssemblyAnalysisService.MaxMembers)));
-        var diagnostics = context.Diagnostics
-            .Concat(lease?.ReferenceExpansionDiagnostics ?? Array.Empty<string>())
-            .Distinct(StringComparer.Ordinal)
-            .Take(100)
-            .ToList();
-        var effectiveStatus = context.Status.ResolveEffectiveStatus(diagnostics);
+        var diagnostics = AssemblyAnalysisResponseLimits.ProjectDiagnostics(
+            context.Diagnostics,
+            lease?.ReferenceExpansionDiagnostics);
+        var referenceSessions = AssemblyAnalysisResponseLimits.ProjectReferenceSessions(lease?.ReferenceSessions);
+        var referenceSummary = AssemblyAnalysisResponseLimits.CreateReferenceSummary(
+            context.References,
+            lease?.ReferenceSessions);
+        var effectiveStatus = context.Status.ResolveEffectiveStatus(
+            context.Diagnostics
+                .Concat(lease?.ReferenceExpansionDiagnostics ?? Array.Empty<string>())
+                .ToArray());
         var payload = new InspectAssemblyPayload(
             fullPath,
             context.Identity,
             selection.Namespaces,
-            context.References,
+            AssemblyAnalysisResponseLimits.ProjectReferences(context.References),
             selection.Items,
-            diagnostics,
+            diagnostics.Samples,
             effectiveStatus.ToCompletenessLabel(),
             selection.Truncated,
             selection.Total,
             context.Origin,
             context.Generation,
             effectiveStatus.ToWireValue(),
-            CreateReferenceSessions(lease));
+            referenceSessions,
+            diagnostics,
+            referenceSummary);
         return McpToolResults.Text(FormatText(payload, arguments.PublicOnly), payload);
     }
 
@@ -100,10 +107,13 @@ internal static class InspectAssemblyTool
         var builder = new StringBuilder();
         AppendHeader(builder, payload);
         AppendNamespaces(builder, payload.Namespaces, publicOnly);
-        AppendReferences(builder, payload.References);
-        AppendReferenceSessions(builder, payload.ReferenceSessions ?? Array.Empty<AssemblyReferenceSessionDto>());
+        AppendReferences(builder, payload.References, payload.ReferenceSummary);
+        AppendReferenceSessions(
+            builder,
+            payload.ReferenceSessions ?? Array.Empty<AssemblyReferenceSessionDto>(),
+            payload.ReferenceSummary);
         AppendTypes(builder, payload, publicOnly);
-        AppendDiagnostics(builder, payload.Diagnostics);
+        AppendDiagnostics(builder, payload.Diagnostics, payload.DiagnosticsSummary);
 
         return builder.ToString().TrimEnd();
     }
@@ -130,9 +140,15 @@ internal static class InspectAssemblyTool
         foreach (var namespaceName in namespaces) builder.AppendLine($"- `{namespaceName}`");
     }
 
-    private static void AppendReferences(StringBuilder builder, IReadOnlyList<AssemblyReferenceDto> references)
+    private static void AppendReferences(
+        StringBuilder builder,
+        IReadOnlyList<AssemblyReferenceDto> references,
+        AssemblyReferenceSummary? summary)
     {
-        builder.AppendLine($"Referenzen: {references.Count}");
+        var referenceCount = summary is null
+            ? references.Count.ToString()
+            : $"{summary.ShownReferenceCount} von {summary.TotalReferenceCount}";
+        builder.AppendLine($"Referenzen: {referenceCount}{(summary?.ReferencesTruncated == true ? " (gekürzt)" : string.Empty)}");
         foreach (var reference in references)
         {
             var path = reference.ResolvedPath is null ? string.Empty : $", Pfad `{reference.ResolvedPath}`";
@@ -145,40 +161,24 @@ internal static class InspectAssemblyTool
 
     private static void AppendReferenceSessions(
         StringBuilder builder,
-        IReadOnlyList<AssemblyReferenceSessionDto> sessions)
+        IReadOnlyList<AssemblyReferenceSessionDto> sessions,
+        AssemblyReferenceSummary? summary)
     {
-        builder.AppendLine($"Referenz-Sessions: {sessions.Count}");
+        var sessionCount = summary is null
+            ? sessions.Count.ToString()
+            : $"{summary.ShownReferenceSessionCount} von {summary.TotalReferenceSessionCount}";
+        builder.AppendLine($"Referenz-Sessions: {sessionCount}{(summary?.ReferenceSessionsTruncated == true ? " (gekürzt)" : string.Empty)}");
         foreach (var session in sessions)
         {
             var identity = session.Identity?.Name ?? session.Reference.Name;
             var diagnostic = session.Diagnostics.Count == 0
                 ? string.Empty
-                : $": {string.Join(" ", session.Diagnostics)}";
+                : $": {string.Join(" | ", session.Diagnostics)}";
             builder.AppendLine(
                 $"- {identity} (Tiefe {session.Reference.Depth}, Zustand {session.Reference.ResolutionState}, Session {session.SessionStatus}, Vollständigkeit {session.Completeness}, Pfad `{session.AssemblyPath}`{diagnostic})");
         }
 
         builder.AppendLine();
-    }
-
-    private static IReadOnlyList<AssemblyReferenceSessionDto> CreateReferenceSessions(
-        AssemblyAnalysisLease? lease)
-    {
-        if (lease is null || lease.ReferenceSessions.Count == 0)
-        {
-            return Array.Empty<AssemblyReferenceSessionDto>();
-        }
-
-        return lease.ReferenceSessions
-            .Select(session => new AssemblyReferenceSessionDto(
-                session.Reference,
-                session.AssemblyPath,
-                session.Identity,
-                session.Diagnostics,
-                session.Completeness,
-                session.Origin,
-                session.SessionStatus))
-            .ToList();
     }
 
     private static void AppendTypes(StringBuilder builder, InspectAssemblyPayload payload, bool publicOnly)
@@ -199,11 +199,17 @@ internal static class InspectAssemblyTool
         foreach (var member in type.Members) builder.AppendLine($"  - {member.Kind}: `{member.Signature}`");
     }
 
-    private static void AppendDiagnostics(StringBuilder builder, IReadOnlyList<string> diagnostics)
+    private static void AppendDiagnostics(
+        StringBuilder builder,
+        IReadOnlyList<string> diagnostics,
+        AssemblyDiagnosticsSummary? summary)
     {
         if (diagnostics.Count == 0) return;
         builder.AppendLine();
-        builder.AppendLine("Diagnosen:");
+        var count = summary is null
+            ? diagnostics.Count.ToString()
+            : $"{summary.ShownCount} von {summary.TotalCount}";
+        builder.AppendLine($"Diagnosen: {count}{(summary?.Truncated == true ? " (gekürzt)" : string.Empty)}");
         foreach (var diagnostic in diagnostics) builder.AppendLine($"- {diagnostic}");
     }
 

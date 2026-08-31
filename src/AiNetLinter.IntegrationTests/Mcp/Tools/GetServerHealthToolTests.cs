@@ -86,6 +86,60 @@ public sealed class GetServerHealthToolTests
         Assert.Contains("Default-Regeln", text);
     }
 
+    [Fact]
+    public void Build_DefaultHealthIsCompact_AndDetailDiagnosticsStayBounded()
+    {
+        var entry = new AssemblyHealthEntry(
+            "C:\\fixtures\\health.dll",
+            "partial",
+            "decompiled",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            ["health-root-0", "health-root-1"],
+            TransitiveDiagnostics: ["health-transitive-0", "health-transitive-1"]);
+
+        var compact = GetServerHealthResponseBuilder.Build(
+            Array.Empty<ProjectSnapshot>(),
+            [entry],
+            new GetServerHealthOptions());
+        var compactPayload = JsonSerializer.Deserialize<ServerHealthAggregatePayload>(
+            compact.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
+        var compactAssembly = Assert.Single(compactPayload.Assemblies!);
+        Assert.False(compactPayload.DiagnosticsIncluded);
+        Assert.Null(compactAssembly.Diagnostics);
+        Assert.Equal(4, compactAssembly.DiagnosticsSummary!.TotalCount);
+        Assert.Empty(compactAssembly.DiagnosticsSummary.Samples);
+        Assert.Equal(2, compactAssembly.DiagnosticsSummary.Root.TotalCount);
+        Assert.Equal(2, compactAssembly.DiagnosticsSummary.Transitive.TotalCount);
+        Assert.Empty(compactAssembly.DiagnosticsSummary.Root.Samples);
+        Assert.Empty(compactAssembly.DiagnosticsSummary.Transitive.Samples);
+        Assert.Equal("partial", compactAssembly.Completeness);
+        Assert.DoesNotContain("health-root-0", Assert.IsType<TextContentBlock>(Assert.Single(compact.Content)).Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("health-transitive-0", Assert.IsType<TextContentBlock>(Assert.Single(compact.Content)).Text, StringComparison.Ordinal);
+
+        var detailed = GetServerHealthResponseBuilder.Build(
+            Array.Empty<ProjectSnapshot>(),
+            [entry],
+            new GetServerHealthOptions(IncludeDiagnostics: true, MaxDiagnostics: 2));
+        var detailedPayload = JsonSerializer.Deserialize<ServerHealthAggregatePayload>(
+            detailed.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
+        var detailedAssembly = Assert.Single(detailedPayload.Assemblies!);
+        Assert.True(detailedPayload.DiagnosticsIncluded);
+        Assert.Equal(["health-root-0", "health-transitive-0"], detailedAssembly.Diagnostics);
+        Assert.True(detailedAssembly.DiagnosticsSummary!.Truncated);
+        Assert.Equal(4, detailedAssembly.DiagnosticsSummary.TotalCount);
+        Assert.Equal(2, detailedAssembly.DiagnosticsSummary.ShownCount);
+        Assert.Contains("health-root-0", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
+        Assert.Contains("health-transitive-0", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("health-root-1", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("health-transitive-1", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
+    }
+
     private static ProjectRegistry CreateRegistry(string root, McpCodeGraphServer server)
     {
         ProjectRegistryFixture.EnsureDefinitionsFile(root);

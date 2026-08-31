@@ -27,3 +27,39 @@ Ausführungsprotokoll.
   Dateiorganisation im Folge-Review verifizieren.
 - Log-Anker: `execution-log.md`, completed EPIC-A Korrektur-
   Implementierer Runde 1 vom 2026-08-31.
+
+## TD-EPIC-B-001 — Formatter-Komplexität
+
+- Schweregrad: P2/P3
+- Beschreibung: Vier neue Komplexitätsbefunde betreffen
+  `FindAssemblyExtensionsTool.FormatText` und
+  `GetServerHealthResponseBuilder.AppendAssemblySection`.
+- Fundstelle/Scope: `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/` und
+  `src/AiNetLinter/Mcp/Tools/ServerMaintenance/`.
+- Evidenz: letzter `get_violations`-Check nach der letzten Codeänderung
+  meldete insgesamt fünf Produktionsbefunde; vier davon sind neue
+  Komplexitätsbefunde in diesen Formatierern.
+- Disposition: `promoted-to-project-debt`
+- Risiko: begrenzte Wartbarkeits-/Footprint-Überschreitung ohne gemeldete
+  Funktionsregression; nicht nach dem letzten Violations-Check verändert.
+- Nächster Schritt: Formatter-Verantwortung bei einer eigenständigen
+  Folgeänderung in sichere Hilfsfunktionen schneiden und danach Tests,
+  Impact und Violations erneut prüfen.
+- Log-Anker: `execution-log.md`, completed EPIC-B Implementierer vom
+  2026-08-31.
+
+## TD-EPIC-B-002 — `AssemblyAnalysisRegistry` Footprint
+
+- Schweregrad: P2/P3
+- Beschreibung: Bestehender AIContext-Footprint-Befund in
+  `AssemblyAnalysisRegistry` bleibt im Abschlusscheck sichtbar.
+- Fundstelle/Scope: `src/AiNetLinter/Mcp/Assemblies/`.
+- Evidenz: finaler `get_violations`-Check meldete einen bestehenden
+  `AssemblyAnalysisRegistry`-Befund; keine Codeänderung zur Vermeidung einer
+  scopefremden Architekturzerlegung.
+- Disposition: `promoted-to-project-debt`
+- Risiko: begrenzter Footprint-/Strukturbefund ohne neue EPIC-B-Funktionalität.
+- Nächster Schritt: Nur bei nachgewiesener unabhängiger Verantwortung zerlegen;
+  danach Safeguard, Impact und Violations erneut prüfen.
+- Log-Anker: `execution-log.md`, completed EPIC-B Implementierer vom
+  2026-08-31.

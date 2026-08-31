@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using AiNetLinter.Mcp.Assemblies.Analysis;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 
@@ -46,7 +47,10 @@ internal sealed record AssemblyHealthEntry(
     string? Confidence,
     string? Trust,
     long? Generation,
-    IReadOnlyList<string>? Diagnostics);
+    IReadOnlyList<string>? Diagnostics,
+    AssemblyDiagnosticsSummary? DiagnosticsSummary = null,
+    string? Completeness = null,
+    IReadOnlyList<string>? TransitiveDiagnostics = null);
 
 /// <summary>
 /// StructuredContent-Payload fuer <c>get_server_health</c>: ein Eintrag je residentem
@@ -56,7 +60,9 @@ internal sealed record ServerHealthAggregatePayload(
     string Version,
     IReadOnlyList<ProjectHealthEntry> Projects,
     DaemonHealthPayload? Daemon = null,
-    IReadOnlyList<AssemblyHealthEntry>? Assemblies = null);
+    IReadOnlyList<AssemblyHealthEntry>? Assemblies = null,
+    bool DiagnosticsIncluded = false,
+    int DiagnosticLimit = AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics);
 
 internal sealed record DaemonHealthPayload(
     string Mode,

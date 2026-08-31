@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Daemon;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -15,7 +16,9 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 internal sealed record GetServerHealthOptions(
     string? ProjectRoot = null,
     DaemonRuntimeContext? RuntimeContext = null,
-    string? AssemblyPath = null);
+    string? AssemblyPath = null,
+    bool IncludeDiagnostics = false,
+    int MaxDiagnostics = AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics);
 
 /// <summary>
 /// MCP-Tool <c>get_server_health</c> fuer den Diagnose-Schnappschuss der residenten
@@ -56,6 +59,10 @@ internal static class GetServerHealthTool
             }
 
             using var lease = leaseResult.Lease!;
+            if (options.IncludeDiagnostics)
+            {
+                await lease.ExpandReferencesAsync(cancellationToken).ConfigureAwait(false);
+            }
             return GetServerHealthResponseBuilder.Build(
                 Array.Empty<ProjectSnapshot>(),
                 [GetServerHealthResponseBuilder.ToAssemblyEntry(lease)],

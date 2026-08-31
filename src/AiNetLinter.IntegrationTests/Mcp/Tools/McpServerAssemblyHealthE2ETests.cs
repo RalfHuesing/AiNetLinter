@@ -122,6 +122,10 @@ public sealed class McpServerAssemblyHealthE2ETests
         Assert.Contains("memberNames", schema, StringComparison.Ordinal);
         Assert.Contains("maxMembers", schema, StringComparison.Ordinal);
         Assert.Contains("strukturierte Parameterdaten", tool.ProtocolTool.Description, StringComparison.Ordinal);
+
+        var healthTool = Assert.Single((await _fixture.Client.ListToolsAsync())
+            .Where(candidate => candidate.ProtocolTool.Name == "get_server_health"));
+        Assert.Contains("includeDiagnostics", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("maxDiagnostics", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
     }
 }
-

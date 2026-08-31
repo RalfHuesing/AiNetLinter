@@ -1,71 +1,19 @@
 # Ausführungs-Roadmap: decompiled-assembly-analysis-finish2
 
 status: executing
-current_epic: EPIC-A
-correction_round: 1
+current_epic: EPIC-B
+correction_round: 0
 cycle_state: normal
-last_commit: 8a85c12a
+last_commit: b0ebc8b4
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
-## Aktueller Rollenlauf
+## Aktueller Stand
 
-- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
-- Rolle: frischer EPIC-A-Implementierer zur Behebung der offenen
-  Pfad-/Stable-ID-Regressionen
-- diff-baseline: `dbae9265`
-- Warteverhalten: Timeout-Rückgaben beenden den Agenten nicht; der Lauf endet
-  erst mit einem echten terminalen Status.
-
-## Aktueller Rollenlauf
-
-- Rolle: unabhängiger Reviewer für EPIC-A
-- diff-baseline: `264332b9`
-- Implementiererbericht: completed EPIC-A Implementierer-Fortsetzung im
-  `execution-log.md`
-- Verifikation: Implementierer-Nachweis frisch; Review wiederholt erfolgreiche
-  Checks nur bei konkreter Gegenhypothese.
-
-## EPIC-A-Korrekturrunde 1
-
-- Ursache: `CORE-DIRECT-CHILDREN-LIMIT` — neuer Resolver verletzt den aktiven
-  Produktionsgrenzwert für direkte Core-Kinder.
-- Status: offen; frischer Implementierer erforderlich.
-- Disposition: `fix-now`; keine Deferred-Disposition für einen konkreten
-  Produktions-Regelverstoß.
-- Begrenzung: erste von höchstens fünf EPIC-A-Korrekturrunden; nach dem Fix
-  folgt genau ein frischer Review.
-
-## Aktueller Rollenlauf
-
-- Rolle: frischer Korrektur-Implementierer, EPIC-A Korrekturrunde 1
-- diff-baseline: `4d5c8106`
-- Ursache: `CORE-DIRECT-CHILDREN-LIMIT` (31 direkte Core-Einträge statt 30)
-- erwarteter Ausgang: scope-nahe P1-Bereinigung ohne fachliche Regression,
-  danach gezielte Tests und letzter `get_violations`-Nachweis.
-
-## Korrekturrunde 1 — Implementierung abgeschlossen
-
-- Ergebnis: `SolutionDocumentPathResolver` und `DocumentContext` liegen unter
-  `src/AiNetLinter/Core/Documents`; Core hat wieder 30 direkte Einträge.
-- Status: done.
-- Verifikation: 90/90 fokussierte Tests bestanden; `get_violations` im
-  Produktionsscope 0.
-
-## EPIC-A-Abschluss
-
-- Ergebnis: `approved` nach Korrekturrunde 1.
-- Review: `CORE-DIRECT-CHILDREN-LIMIT` behoben; keine offenen P0/P1- oder
-  neuen P2/P3-Findings.
-- Abschluss-Checkpoint: folgt mit dem aktuellen Log-/Roadmap-/Code-Map-Stand.
-
-## Aktueller Rollenlauf
-
-- Rolle: frischer Folge-Reviewer für EPIC-A nach Korrekturrunde 1
-- diff-baseline: `264332b9`
-- Korrekturstand: `8a85c12a`
-- Prüffokus: P1 `CORE-DIRECT-CHILDREN-LIMIT`, Namespace-/Dateiverlagerung,
-  Assembly-Pfad- und Stable-ID-Verträge.
+- EPIC-A: done, nach Korrekturrunde 1 `approved`.
+- EPIC-B: in_progress, Implementierung seit Baseline `b0ebc8b4` abgeschlossen;
+  Review steht aus.
+- Korrekturrunde: 0 für EPIC-B.
 
 ## EPIC-A — Stabile In-Memory- und Dateipfade
 
@@ -83,7 +31,7 @@ tech_debt: siehe tech-debt.md
   kontrolliert als fachlicher Fehler ausgegeben.
 - Verifikation: fokussierte Assembly-/Symbolgraph-Tests, synthetische Fixture,
   gezielter `get_violations`-Nachweis.
-- Status: in_progress
+- Status: done
 
 ## EPIC-B — Begrenzte Diagnostik und Antwortverträge
 
@@ -100,7 +48,7 @@ tech_debt: siehe tech-debt.md
   `partial` konsistent.
 - Verifikation: Response- und E2E-Tests für Root-/transitive Diagnostics,
   Truncation und festgelegtes Payload-Budget; gezielter Violations-Check.
-- Status: open
+- Status: in_progress
 
 ## EPIC-C — Ressourcen, Konfiguration und Lebensdauer
 

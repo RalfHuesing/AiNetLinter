@@ -29,7 +29,9 @@ aber nicht die semantische MCP-Abfrage.
   source-backed oder dekompilierte Sessions abfragen.
 - `get_server_health` ist die einzige Ausnahme mit einem optionalen Target:
   `targetType` und `targetPath` müssen paarweise angegeben werden; ohne Target
-  aggregiert das Tool getrennte Projekt- und Assembly-Sessions. Regeln, Audits,
+  aggregiert das Tool getrennte Projekt- und Assembly-Sessions. Der Default ist
+  kompakt; `includeDiagnostics=true` fordert begrenzte Samples an und
+  `maxDiagnostics` wird serverseitig gedeckelt. Regeln, Audits,
   Dateisuche, Tests und Git-Impact bleiben projektgebunden; `report_observability_feedback` ist
   nicht zielgebunden und erhält keinen Target-Block.
 - Das Query-Argument wird ausschließlich in den Resource-URIs
@@ -97,7 +99,9 @@ metadata-only, benötigen kein Consumer-Projekt und laden oder führen die DLL
 nicht aus. Bei `inspect_assembly` zuerst die öffentliche API untersuchen;
 `find_assembly_extensions` prüft klassische C#-Extensions und weist ohne
 Consumer-Projekt die Roslyn-Anwendbarkeit als `not_decidable` aus.
-`completeness` sowie Trunkierungsangaben beachten.
+`completeness`, Diagnostics-Summaries sowie Trunkierungsangaben beachten. Die
+Antworten begrenzen Diagnose-Samples und Referenz-/Session-Listen gemeinsam in
+Text und StructuredContent.
 
 Target-Aufrufe verwenden keine Legacy-Pfadparameter; historische Query-
 Parameter bleiben ausschließlich den projektbezogenen Resource-URIs vorbehalten.

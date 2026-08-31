@@ -88,11 +88,17 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
 
         var payload = Structured(result);
         AssertPartialStatusConsistency(result);
-        Assert.Equal(AssemblyReferenceResolver.MaxReferenceNodes + 1, payload.GetProperty("referenceSessions").GetArrayLength());
-        Assert.Contains(Diagnostics(payload), diagnostic => diagnostic.Contains("Begrenzung von", StringComparison.Ordinal));
-        Assert.Contains(
+        var referenceSummary = payload.GetProperty("referenceSummary");
+        Assert.Equal(AssemblyReferenceResolver.MaxReferenceNodes + 1, referenceSummary.GetProperty("totalReferenceCount").GetInt32());
+        Assert.Equal(AssemblyAnalysisResponseLimits.MaxReferences, referenceSummary.GetProperty("shownReferenceCount").GetInt32());
+        Assert.True(referenceSummary.GetProperty("referencesTruncated").GetBoolean());
+        Assert.Equal(AssemblyAnalysisResponseLimits.MaxReferenceSessions, payload.GetProperty("referenceSessions").GetArrayLength());
+        Assert.Equal(AssemblyReferenceResolver.MaxReferenceNodes + 1, referenceSummary.GetProperty("totalReferenceSessionCount").GetInt32());
+        Assert.True(referenceSummary.GetProperty("referenceSessionsTruncated").GetBoolean());
+        Assert.Contains(Diagnostics(payload), diagnostic => diagnostic.Contains("limited-route-failure", StringComparison.Ordinal));
+        Assert.All(
             payload.GetProperty("referenceSessions").EnumerateArray(),
-            session => session.GetProperty("reference").GetProperty("resolutionState").GetString() == "node_limit");
+            session => Assert.Equal("partial", session.GetProperty("sessionStatus").GetString()));
     }
 
     [Fact]
@@ -117,6 +123,75 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
         Assert.Contains(
             payload.GetProperty("analysis").GetProperty("diagnostics").EnumerateArray(),
             diagnostic => diagnostic.GetString()!.Contains("FailedExtensionDependency", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task AssemblyRoute_AggregatesRootAndTransitiveDiagnosticsWithSharedSamples()
+    {
+        using var temp = TestTempDirectory.Create("assembly-dispatcher-diagnostics-");
+        var reference = new AssemblyReferenceDto(
+            "TransitiveDiagnosticDependency",
+            "1.0.0.0",
+            "neutral",
+            Resolved: true,
+            ResolvedPath: Path.Combine(temp.DirectoryPath, "TransitiveDiagnosticDependency.dll"));
+        await using var fixture = await SyntheticAssemblyFixture.CreateAsync(
+            temp,
+            [reference],
+            FailingReferenceFactory,
+            ["root diagnostic\r\nwith a second line"]);
+
+        var result = await fixture.ExecuteInspectAsync();
+
+        var payload = Structured(result);
+        var summary = payload.GetProperty("diagnosticsSummary");
+        Assert.Equal(1, summary.GetProperty("root").GetProperty("totalCount").GetInt32());
+        Assert.Equal(1, summary.GetProperty("transitive").GetProperty("totalCount").GetInt32());
+        Assert.Equal(2, summary.GetProperty("totalCount").GetInt32());
+        Assert.Equal(
+            payload.GetProperty("diagnostics").GetArrayLength(),
+            summary.GetProperty("shownCount").GetInt32());
+
+        var samples = payload.GetProperty("diagnostics").EnumerateArray()
+            .Select(item => item.GetString()!)
+            .ToArray();
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("root diagnostic with a second line", text, StringComparison.Ordinal);
+        Assert.Contains("TransitiveDiagnosticDependency", text, StringComparison.Ordinal);
+        Assert.All(samples, sample => Assert.Contains($"- {sample}", text, StringComparison.Ordinal));
+        Assert.DoesNotContain("\r", samples.Single(sample => sample.Contains("root diagnostic", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public async Task AssemblyRoute_DiagnosticSamplesStayWithinByteBudgetAndMatchText()
+    {
+        using var temp = TestTempDirectory.Create("assembly-dispatcher-diagnostic-budget-");
+        var diagnostics = Enumerable.Range(0, AssemblyAnalysisResponseLimits.MaxDiagnostics + 10)
+            .Select(index => $"diagnostic-{index:D3}: {new string('x', AssemblyAnalysisResponseLimits.MaxDiagnosticCharacters * 2)}")
+            .ToArray();
+        await using var fixture = await SyntheticAssemblyFixture.CreateAsync(
+            temp,
+            Array.Empty<AssemblyReferenceDto>(),
+            diagnostics: diagnostics);
+
+        var result = await fixture.ExecuteInspectAsync();
+
+        var payload = Structured(result);
+        var samples = payload.GetProperty("diagnostics").EnumerateArray()
+            .Select(item => item.GetString()!)
+            .ToArray();
+        var summary = payload.GetProperty("diagnosticsSummary");
+        Assert.Equal(diagnostics.Length, summary.GetProperty("totalCount").GetInt32());
+        Assert.True(summary.GetProperty("truncated").GetBoolean());
+        Assert.Equal(samples.Length, summary.GetProperty("shownCount").GetInt32());
+        Assert.True(
+            System.Text.Encoding.UTF8.GetByteCount(string.Join("\n", samples))
+            <= AssemblyAnalysisResponseLimits.MaxDiagnosticBytes);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains($"Diagnosen: {samples.Length} von {diagnostics.Length} (gekürzt)", text, StringComparison.Ordinal);
+        Assert.All(samples, sample => Assert.Contains($"- {sample}", text, StringComparison.Ordinal));
+        Assert.DoesNotContain(new string('x', AssemblyAnalysisResponseLimits.MaxDiagnosticCharacters + 1), text, StringComparison.Ordinal);
     }
 
     private static Task<AssemblyAnalysisLeaseResult> FailingReferenceFactory(
@@ -146,6 +221,12 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
         var analysis = payload.GetProperty("analysis");
         Assert.Equal("partial", analysis.GetProperty("status").GetString());
         Assert.Equal("partial", analysis.GetProperty("completeness").GetString());
+        Assert.Equal(
+            payload.GetProperty("diagnostics").GetRawText(),
+            analysis.GetProperty("diagnostics").GetRawText());
+        Assert.Equal(
+            payload.GetProperty("diagnosticsSummary").GetRawText(),
+            analysis.GetProperty("diagnosticsSummary").GetRawText());
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("status=partial", text, StringComparison.Ordinal);
@@ -179,7 +260,8 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
         internal static async Task<SyntheticAssemblyFixture> CreateAsync(
             TestTempDirectory temp,
             IReadOnlyList<AssemblyReferenceDto> references,
-            AssemblyReferenceLeaseFactory? referenceLeaseFactory = null)
+            AssemblyReferenceLeaseFactory? referenceLeaseFactory = null,
+            IReadOnlyList<string>? diagnostics = null)
         {
             var assemblyPath = AssemblyTestHelper.EmitAssembly(
                 temp,
@@ -192,7 +274,7 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
             var context = backingLease.Context with
             {
                 References = references,
-                Diagnostics = Array.Empty<string>(),
+                Diagnostics = diagnostics ?? Array.Empty<string>(),
             };
             var entry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
                 backingLease.CanonicalPath,

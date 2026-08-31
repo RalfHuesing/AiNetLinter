@@ -16,12 +16,13 @@ internal static class AssemblyAnalysisResponse
     internal static CallToolResult Enrich(CallToolResult result, AssemblyAnalysisLease lease)
     {
         var origin = lease.Context.Origin;
-        var diagnostics = lease.Context.Diagnostics
-            .Concat(lease.ReferenceExpansionDiagnostics)
-            .Distinct(StringComparer.Ordinal)
-            .Take(100)
-            .ToList();
-        var effectiveStatus = lease.Context.Status.ResolveEffectiveStatus(diagnostics);
+        var diagnostics = AssemblyAnalysisResponseLimits.ProjectDiagnostics(
+            lease.Context.Diagnostics,
+            lease.ReferenceExpansionDiagnostics);
+        var effectiveStatus = lease.Context.Status.ResolveEffectiveStatus(
+            lease.Context.Diagnostics
+                .Concat(lease.ReferenceExpansionDiagnostics)
+                .ToArray());
         var metadata = new AssemblyResponseMetadata(
             lease.CanonicalPath,
             origin.OriginKind,
@@ -33,6 +34,7 @@ internal static class AssemblyAnalysisResponse
             lease.Context.Generation,
             effectiveStatus.ToWireValue(),
             effectiveStatus.ToCompletenessLabel(),
+            diagnostics.Samples,
             diagnostics,
             origin.SourceSnapshotIdentity);
 
@@ -96,6 +98,7 @@ internal static class AssemblyAnalysisResponse
         string Status,
         string Completeness,
         IReadOnlyList<string> Diagnostics,
+        AssemblyDiagnosticsSummary DiagnosticsSummary,
         SourceSnapshotIdentity? SourceSnapshot)
     {
         public string TargetType => "assembly";

@@ -399,3 +399,98 @@
   offenen actionable P2/P3 aus EPIC-A.
 - nächste Aktion: EPIC-A-Abschluss-Checkpoint committen; danach EPIC-B
   starten.
+
+## 2026-08-31 — running / EPIC-B / Implementierer
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a0550e-7252-7f63-bce8-e68ead52e4f1`
+- diff-baseline: `b0ebc8b4`
+- scope: `inspect_assembly`, `find_assembly_extensions` und
+  `get_server_health`; aggregierte und begrenzte Diagnostics/References,
+  Counts, Samples, Completeness, Truncation, kompakter Standard-Healthcheck
+  und explizit begrenzte Detailoption.
+- erwarteter Hand-off: Produktions-/Teststand ohne Commit, aktualisierte
+  `code-map.md`, MCP-first-Nachweis, fokussierte Tests und letzter
+  `get_violations`-Nachweis nach der letzten Codeänderung.
+- warteverhalten: Timeout-Rückgaben beenden den Agenten nicht; nur ein echter
+  terminaler Status beendet den Rollenaufruf.
+
+## 2026-08-31 — completed / EPIC-B / Implementierer
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a0550e-7252-7f63-bce8-e68ead52e4f1`
+- diff-baseline: `b0ebc8b4`
+- status: erfolgreich implementiert und terminal übergeben; kein Commit durch
+  den Agenten.
+- vollständiger finaler Agentenbericht:
+
+  > EPIC-B ist im gemeinsamen Working Tree implementiert, ohne Commit oder
+  > neue Task-/Step-Dateien.
+  >
+  > Umgesetzt:
+  >
+  > - Gemeinsame Begrenzung in `AssemblyAnalysisResponseLimits.cs`:
+  >   Diagnostics Default 20, Cap 50; je Meldung max. 256 Zeichen, insgesamt
+  >   4 KiB; Referenzen/Sessions jeweils max. 32; Root-/transitive Counts,
+  >   Samples und `truncatedBy`.
+  > - Konsistente Projektion für `InspectAssemblyTool`,
+  >   `FindAssemblyExtensionsTool` und `AssemblyAnalysisResponse`.
+  > - Health-Detailoption `includeDiagnostics`/`maxDiagnostics`; Default
+  >   enthält nur Zähler, keine Samples.
+  > - Health-Root-/transitive Diagnostics und `completeness` in
+  >   `GetServerHealthResponseBuilder`.
+  > - Wire-Modelle und Registrierung aktualisiert.
+  > - Regressionen in Assembly-Dispatcher-, Health- und Assembly-Health-E2E-
+  >   Tests ergänzt.
+  > - Dokumentation und `code-map.md` synchronisiert.
+  >
+  > Verifikation:
+  >
+  > - `dotnet build AiNetLinter.slnx --no-restore`: 0 Warnungen, 0 Fehler.
+  > - FastTests-Filter: 19/19 bestanden.
+  > - Integration-Filter: 8/8 bestanden.
+  > - `git diff --check`: keine Inhaltsfehler; nur CRLF-Hinweise.
+  > - Keine externe Assembly ausgeführt oder verändert.
+  >
+  > MCP-Nachweis:
+  >
+  > - `find_symbol`, `get_feature_context`, `get_symbol_body` mit
+  >   `targetType=project` und absolutem Projektroot für Handler, Formatter,
+  >   Wire-Modelle und Aufrufer.
+  > - Korrigierter initialer Namespace-Fehler bei `AssemblyAnalysisResponse`:
+  >   zunächst `SYMBOL_NOT_FOUND`, danach qualifiziert erfolgreich gefunden.
+  > - `AssemblyAnalysisResponseLimits`: 156 Codezeilen, 20 Callers,
+  >   0 Violations.
+  > - `AssemblyHealthEntry`: 15 Zeilen, 11 Callers, 0 Violations.
+  > - `get_test_context` meldete für Handler/Builder keine statische
+  >   Direktzuordnung; die konkreten Regressionen laufen dennoch erfolgreich.
+  > - `find_duplicates`: 8 Cluster; bestehender exakter Adapter-Cluster bewusst
+  >   ausgenommen.
+  > - `find_dead_code`: 40 Low-Confidence-Kandidaten, 0 High.
+  > - `find_magic_values`: 238 eindeutige Treffer, überwiegend bestehende
+  >   Wire-/Diagnose-/Plattformwerte.
+  > - Finaler `get_violations`: Produktionsscope 5 Befunde, FastTests-Scope 0,
+  >   IntegrationTests-Scope 0.
+  >
+  > Offene Tech Debt aus dem finalen Check:
+  >
+  > - Vier neue Komplexitätsbefunde in `FindAssemblyExtensionsTool.FormatText`
+  >   und `GetServerHealthResponseBuilder.AppendAssemblySection`.
+  > - Ein bestehender `AssemblyAnalysisRegistry`-AIContext-Footprint-Befund.
+  > - Diese Befunde wurden gemäß Vorgabe nach dem finalen `get_violations` nicht
+  >   mehr verändert und sind in der Code-Map als `promoted-to-project-debt`
+  >   dokumentiert.
+  > - Bestehende Änderungen an `execution-log.md` und `roadmap.md` wurden
+  >   bewahrt.
+- geänderte Bereiche: Assembly-Response-Limits, Inspect-/Extensions-/Health-
+  Handler, Wire-Modelle/Registrierung, Tests und Dokumentation.
+- Review-Hinweis: Der Nachweis ist frisch; seit dem Hand-off wurde kein
+  Produktions- oder Testcode geändert.
+- Tech-Debt-Triage: `TD-EPIC-B-001` (vier neue Komplexitätsbefunde) und
+  `TD-EPIC-B-002` (bestehender Registry-Footprint) mit
+  `promoted-to-project-debt` aufgenommen.
+- Nicht kausale Integrations-Dokumentationsfehler aus EPIC-A bleiben als
+  offener Abschluss-/Umgebungsbefund im Log und werden nicht stillschweigend
+  als grün gewertet.
+- nächste Aktion: Implementierungs-Checkpoint committen, danach unabhängigen
+  Review für EPIC-B starten.

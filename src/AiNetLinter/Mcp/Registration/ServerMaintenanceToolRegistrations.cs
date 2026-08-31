@@ -7,6 +7,7 @@ using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
 using ModelContextProtocol.Server;
 
@@ -67,7 +68,12 @@ internal static class ServerMaintenanceToolRegistrations
         IAssemblyAnalysisRegistry? assemblyRegistry)
     {
         tools.Add(McpServerTool.Create(
-            async (string? targetType = null, string? targetPath = null, CancellationToken ct = default) =>
+            async (
+                string? targetType = null,
+                string? targetPath = null,
+                bool includeDiagnostics = false,
+                int maxDiagnostics = AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics,
+                CancellationToken ct = default) =>
             {
                 var resolution = AnalysisTargetResolver.ResolveOptional(
                     new AnalysisTargetRequest(targetType, targetPath));
@@ -81,7 +87,10 @@ internal static class ServerMaintenanceToolRegistrations
                     return await GetServerHealthTool.ExecuteAsync(
                         registry,
                         assemblyRegistry,
-                        new GetServerHealthOptions(RuntimeContext: runtimeContext));
+                        new GetServerHealthOptions(
+                            RuntimeContext: runtimeContext,
+                            IncludeDiagnostics: includeDiagnostics,
+                            MaxDiagnostics: maxDiagnostics));
                 }
 
                 if (resolution.Target.TargetType == AnalysisTargetType.Assembly)
@@ -89,15 +98,23 @@ internal static class ServerMaintenanceToolRegistrations
                     return await GetServerHealthTool.ExecuteAsync(
                         registry,
                         assemblyRegistry,
-                        new GetServerHealthOptions(AssemblyPath: resolution.Target.CanonicalPath, RuntimeContext: runtimeContext),
+                        new GetServerHealthOptions(
+                            AssemblyPath: resolution.Target.CanonicalPath,
+                            RuntimeContext: runtimeContext,
+                            IncludeDiagnostics: includeDiagnostics,
+                            MaxDiagnostics: maxDiagnostics),
                         ct);
                 }
 
-                return await GetServerHealthTool.ExecuteAsync(
-                    registry,
-                    assemblyRegistry,
-                    new GetServerHealthOptions(ProjectRoot: resolution.Target.CanonicalPath, RuntimeContext: runtimeContext),
-                    ct);
+                    return await GetServerHealthTool.ExecuteAsync(
+                        registry,
+                        assemblyRegistry,
+                        new GetServerHealthOptions(
+                            ProjectRoot: resolution.Target.CanonicalPath,
+                            RuntimeContext: runtimeContext,
+                            IncludeDiagnostics: includeDiagnostics,
+                            MaxDiagnostics: maxDiagnostics),
+                        ct);
             },
             McpToolRegistrationOptions.ServerHealthTool("get_server_health", GetServerHealthDescription)));
     }
@@ -107,7 +124,9 @@ internal static class ServerMaintenanceToolRegistrations
         "resident sind. Ohne targetType und targetPath: globaler Status fuer alle Projekt-Keys " +
         "und Assembly-Sessions. Mit targetType='project' und absolutem targetPath: gezielter Status fuer diesen Key. " +
         "Mit targetType='assembly' und absolutem .dll-Pfad: gezielter Status fuer diese Assembly-Session. " +
-        "targetType und targetPath muessen entweder beide gesetzt oder beide weggelassen werden.";
+        "targetType und targetPath muessen entweder beide gesetzt oder beide weggelassen werden. " +
+        "Standardmaessig werden nur kompakte Metadaten und Diagnosezaehler geliefert; " +
+        "includeDiagnostics=true fordert begrenzte Diagnose-Samples an, maxDiagnostics begrenzt deren Anzahl.";
 
     private static void AddReportObservabilityFeedback(McpServerPrimitiveCollection<McpServerTool> tools)
     {

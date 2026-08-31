@@ -8,6 +8,7 @@ using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Daemon;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
@@ -20,6 +21,9 @@ internal static class GetServerHealthResponseBuilder
         GetServerHealthOptions options)
     {
         var runtimeContext = options.RuntimeContext;
+        var projectedAssemblies = assemblies
+            .Select(assembly => ProjectAssemblyEntry(assembly, options))
+            .ToList();
         var builder = new StringBuilder();
         builder.AppendLine("# AiNetLinter MCP-Server — Health");
         builder.AppendLine();
@@ -34,9 +38,9 @@ internal static class GetServerHealthResponseBuilder
             AppendProjectSection(builder, snapshot);
         }
 
-        builder.AppendLine($"## Assembly-Sessions ({assemblies.Count})");
+        builder.AppendLine($"## Assembly-Sessions ({projectedAssemblies.Count})");
         builder.AppendLine();
-        foreach (var assembly in assemblies)
+        foreach (var assembly in projectedAssemblies)
         {
             AppendAssemblySection(builder, assembly);
         }
@@ -45,7 +49,9 @@ internal static class GetServerHealthResponseBuilder
             Version: McpServerOptionsFactory.GetServerVersion(),
             Projects: snapshots.Select(ToEntry).ToList(),
             Daemon: daemonPayload,
-            Assemblies: assemblies);
+            Assemblies: projectedAssemblies,
+            DiagnosticsIncluded: options.IncludeDiagnostics,
+            DiagnosticLimit: AssemblyAnalysisResponseLimits.NormalizeDiagnosticLimit(options.MaxDiagnostics));
         return McpToolResults.Text(builder.ToString().TrimEnd(), payload);
     }
 
@@ -77,7 +83,29 @@ internal static class GetServerHealthResponseBuilder
             origin.Confidence,
             origin.Trust,
             lease.Context.Generation,
-            lease.Context.Diagnostics.Concat(lease.ReferenceExpansionDiagnostics).Distinct(StringComparer.Ordinal).Take(100).ToList());
+            lease.Context.Diagnostics,
+            TransitiveDiagnostics: lease.ReferenceExpansionDiagnostics);
+    }
+
+    private static AssemblyHealthEntry ProjectAssemblyEntry(
+        AssemblyHealthEntry assembly,
+        GetServerHealthOptions options)
+    {
+        var summary = AssemblyAnalysisResponseLimits.ProjectDiagnostics(
+            assembly.Diagnostics,
+            assembly.TransitiveDiagnostics,
+            options.MaxDiagnostics);
+        if (!options.IncludeDiagnostics)
+        {
+            summary = AssemblyAnalysisResponseLimits.WithoutSamples(summary);
+        }
+        return assembly with
+        {
+            Diagnostics = options.IncludeDiagnostics ? summary.Samples : null,
+            DiagnosticsSummary = summary,
+            Completeness = assembly.Completeness ?? assembly.LoadState,
+            TransitiveDiagnostics = null,
+        };
     }
 
     private static void AppendProjectSection(StringBuilder builder, ProjectSnapshot snapshot)
@@ -129,6 +157,10 @@ internal static class GetServerHealthResponseBuilder
     {
         builder.AppendLine($"### {assembly.TargetPath}");
         builder.AppendLine($"- LoadState: {assembly.LoadState}");
+        if (!string.IsNullOrWhiteSpace(assembly.Completeness))
+        {
+            builder.AppendLine($"- Vollständigkeit: {assembly.Completeness}");
+        }
         builder.AppendLine($"- Origin: {assembly.OriginKind ?? "unbekannt"}");
         builder.AppendLine($"- Generation: {assembly.Generation?.ToString() ?? "unbekannt"}");
         if (!string.IsNullOrWhiteSpace(assembly.SourceProjectPath))
@@ -145,9 +177,16 @@ internal static class GetServerHealthResponseBuilder
         if (!string.IsNullOrWhiteSpace(assembly.GeneratedDocumentPath)) builder.AppendLine($"- GeneratedPath: {assembly.GeneratedDocumentPath}");
         if (!string.IsNullOrWhiteSpace(assembly.Confidence)) builder.AppendLine($"- Confidence: {assembly.Confidence}");
         if (!string.IsNullOrWhiteSpace(assembly.Trust)) builder.AppendLine($"- Trust: {assembly.Trust}");
-        if (assembly.Diagnostics is { Count: > 0 })
+        if (assembly.DiagnosticsSummary is { } summary && summary.TotalCount > 0)
         {
-            builder.AppendLine($"- Diagnosen: {string.Join(" | ", assembly.Diagnostics)}");
+            builder.AppendLine($"- Diagnosen: {summary.ShownCount} von {summary.TotalCount}{(summary.Truncated ? " (gekürzt)" : string.Empty)}");
+            if (assembly.Diagnostics is { Count: > 0 })
+            {
+                foreach (var diagnostic in assembly.Diagnostics)
+                {
+                    builder.AppendLine($"  - {diagnostic}");
+                }
+            }
         }
 
         builder.AppendLine();
@@ -196,4 +235,3 @@ internal static class GetServerHealthResponseBuilder
         builder.AppendLine();
     }
 }
-
