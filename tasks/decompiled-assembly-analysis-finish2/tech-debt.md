@@ -321,15 +321,11 @@ setzen. Der vollständige Bericht und die Verifikation stehen im
 
 - Schweregrad: P2
 - Beschreibung: Zwei bestehende IntegrationTests für Dokumentations-/Tool-
-  Registrierungsverträge blieben im vollständigen Nicht-Stress-Lauf rot.
+  Registrierungsverträge blieben in einem vorherigen Zwischenstand rot.
 - Fundstelle/Scope: `src/AiNetLinter.IntegrationTests/Mcp/`.
-- Evidenz: vollständiger Korrekturbericht: 371/373 bestanden; zwei Fehler,
-  außerhalb des EPIC-B-Funktionspfads und ohne neue Produktionsviolations.
-- Disposition: `accepted-deferred`
-- Risiko: Der finale Gate-Status ist bis zur gezielten Einordnung nicht
-  vollständig grün.
-- Nächster Schritt: konkrete Testnamen/TRX-Ausgaben beim Abschluss-Gate
-  prüfen; bei Nicht-Kausalität mit Evidenz dokumentieren, sonst gezielt
-  korrigieren.
-- Log-Anker: `execution-log.md`, completed EPIC-B Korrektur-
-  Implementierer Runde 1 vom 2026-08-31.
+- Evidenz: Vollständiger Integrationslauf `dotnet test src/AiNetLinter.IntegrationTests --filter "Category!=Stress"`:
+  377/377 bestanden (0 Fehler, 0 Skips). Verträge sind synchronisiert und grün.
+- Disposition: `fixed`
+- Risiko: behoben; Tool-Beschreibungen und Schematexte stimmen mit den Test-Assertions überein.
+- Nächster Schritt: keine weitere Maßnahme.
+- Log-Anker: `execution-log.md`, Low-Reasoning Tech-Debt Bereinigung vom 2026-08-31.

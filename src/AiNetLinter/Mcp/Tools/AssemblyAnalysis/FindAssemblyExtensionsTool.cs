@@ -24,16 +24,10 @@ internal static class FindAssemblyExtensionsTool
             CreateParameters(state, arguments, ct));
     }
 
-    // ainetlinter-disable DuplicateCode — der direkte Adapter bindet einen fachlich eigenen Payload-Builder.
     internal static Task<CallToolResult> ExecuteAsync(
         AssemblyAnalysisLease lease,
         FindAssemblyExtensionsArguments arguments) =>
-        Task.FromResult(BuildResult(
-            lease.CanonicalPath,
-            lease.Context,
-            arguments,
-            AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, 1, AssemblyAnalysisService.MaxResults),
-            lease));
+        AssemblyAnalysisToolSupport.ExecuteLeaseAsync(lease, arguments, arguments.MaxResults, BuildResult);
 
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer? state,

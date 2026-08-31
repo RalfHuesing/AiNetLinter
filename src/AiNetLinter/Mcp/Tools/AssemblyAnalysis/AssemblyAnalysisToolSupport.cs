@@ -9,6 +9,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Assemblies.Analysis;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -30,6 +31,18 @@ internal static class AssemblyAnalysisToolSupport
 
         return parameters.BuildResult(preparation.FullPath!, preparation.Context!, parameters.MaxResults);
     }
+
+    internal static Task<CallToolResult> ExecuteLeaseAsync<TArgs>(
+        AssemblyAnalysisLease lease,
+        TArgs arguments,
+        int rawMaxResults,
+        Func<string, AssemblyContext, TArgs, int, AssemblyAnalysisLease, CallToolResult> buildResult) =>
+        Task.FromResult(buildResult(
+            lease.CanonicalPath,
+            lease.Context,
+            arguments,
+            AssemblyAnalysisService.NormalizeLimit(rawMaxResults, 1, AssemblyAnalysisService.MaxResults),
+            lease));
 
     internal static async Task<AssemblyToolPreparation> PrepareAsync(
         McpCodeGraphServer? state,

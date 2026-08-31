@@ -1420,3 +1420,24 @@
   aufgenommen; Registry-Footprint bleibt `promoted-to-project-debt`.
 - nächste Aktion: Review-Checkpoint committen, danach frischen
   Korrektur-Implementierer für EPIC-B starten.
+
+## 2026-08-31 — completed / Low-Reasoning Tech-Debt Bereinigung
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- scope: Behebung von AIContextFootprint-Warnungen (InspectAssemblyTool, GetServerHealthResponseBuilder), DRY-Duplikaten und Tech-Debt-Registersynchronisation (TD-EPIC-B-007).
+- geänderte Dateien:
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/InspectAssemblyFormatter.cs` [NEW]
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/InspectAssemblyTool.cs` [MODIFY]
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/FindAssemblyExtensionsTool.cs` [MODIFY]
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolSupport.cs` [MODIFY]
+  - `src/AiNetLinter/Mcp/Tools/ServerMaintenance/GetServerHealthFormatter.cs` [NEW]
+  - `src/AiNetLinter/Mcp/Tools/ServerMaintenance/GetServerHealthResponseBuilder.cs` [MODIFY]
+  - `src/AiNetLinter/Mcp/Composition/McpServerVersion.cs` [NEW]
+  - `src/AiNetLinter/Mcp/McpServerOptionsFactory.cs` [MODIFY]
+  - `tasks/decompiled-assembly-analysis-finish2/roadmap-low-reasoning-debt.md` [NEW]
+  - `tasks/decompiled-assembly-analysis-finish2/tech-debt.md` [MODIFY]
+- verifikation:
+  - `dotnet build`: 0 Fehler, 0 Warnungen.
+  - `get_violations`: AIContextFootprint-Warnungen für InspectAssemblyTool und GetServerHealthResponseBuilder behoben (0 neue Violations).
+  - `find_duplicates`: 0 Duplikat-Cluster (Score 1.00 behoben).
+  - `tech-debt.md`: TD-EPIC-B-007 auf `fixed` gesetzt.
