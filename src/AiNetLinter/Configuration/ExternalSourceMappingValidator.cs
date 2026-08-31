@@ -203,20 +203,17 @@ internal static class ExternalSourceMappingValidator
 
     private static string? NormalizeUrl(string value, ExternalSourceValidationContext context)
     {
-        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)
-            || uri is null
-            || uri.Host.Length == 0
-            || (uri.Scheme is not ("http" or "https")))
+        if (!ExternalSourceUrlPolicy.TryNormalize(value, out var normalizedUrl))
         {
             context.Diagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
                 ExternalSourceConfigurationDiagnosticCodes.UrlInvalid,
-                $"Die Repository-URL muss eine absolute HTTP(S)-URL sein: '{value}'.",
+                "Die Repository-URL muss eine absolute HTTP(S)-URL ohne Credentials, Query oder Fragment sein.",
                 context.SourcePath,
                 context.ObjectPath + "." + UrlName));
             return null;
         }
 
-        return value;
+        return normalizedUrl;
     }
 
     private static string? NormalizeSolutionPath(string value, ExternalSourceValidationContext context)
@@ -384,4 +381,35 @@ internal static class ExternalSourceMappingValidator
         string SourcePath,
         string ObjectPath,
         List<ExternalSourceConfigurationDiagnostic> Diagnostics);
+}
+
+internal static class ExternalSourceUrlPolicy
+{
+    internal static bool TryNormalize(string value, out string? normalizedUrl)
+    {
+        normalizedUrl = null;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var trimmedValue = value.Trim();
+        if (!Uri.TryCreate(trimmedValue, UriKind.Absolute, out var uri)
+            || uri is null
+            || uri.Host.Length == 0
+            || uri.UserInfo.Length > 0
+            || uri.Query.Length > 0
+            || uri.Fragment.Length > 0
+            || !IsHttpScheme(uri.Scheme))
+        {
+            return false;
+        }
+
+        normalizedUrl = uri.AbsoluteUri;
+        return true;
+    }
+
+    private static bool IsHttpScheme(string scheme) =>
+        string.Equals(scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
 }

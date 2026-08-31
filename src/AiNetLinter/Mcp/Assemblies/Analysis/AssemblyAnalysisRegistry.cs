@@ -30,6 +30,7 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
     private readonly Dictionary<string, long> nextGenerations = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<Task> retiredEntries = [];
     private readonly Func<string, AssemblyFingerprint>? fingerprintFactory;
+    private readonly IAssemblySourceResolver? sourceOrchestrator;
     private readonly AssemblyAnalysisResourceBudget resourceBudget;
     private readonly AssemblyAnalysisRegistryEntryFactory entryFactory;
     private readonly AssemblyAnalysisSourceProjectEntryFactory sourceProjectEntryFactory;
@@ -41,6 +42,7 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         Func<string, AssemblyFingerprint>? fingerprintFactory = null,
         ExternalResourceRegistry? resourceRegistry = null, Func<AssemblyAnalysisEntry, Task>? beforeRetirementAsync = null)
     {
+        this.sourceOrchestrator = sourceOrchestrator;
         this.fingerprintFactory = fingerprintFactory;
         this.beforeRetirementAsync = beforeRetirementAsync;
         resourceBudget = new(resourceRegistry);
@@ -236,7 +238,8 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         CancellationToken cancellationToken,
         bool refreshOnMismatch)
     {
-        var creation = GetOrCreateEntry(canonicalPath);
+        var creationResult = GetOrCreateEntry(canonicalPath);
+        var creation = creationResult.Creation;
         if (creation is null)
         {
             return (Failure("Die Assembly-Registry wurde bereits beendet."), false);
@@ -253,12 +256,56 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         }
 
         var entry = creationAttempt.Entry!;
+        var sourceSnapshotIdentity = creationResult.WasExisting
+            ? await ResolveCurrentSourceSnapshotIdentityAsync(
+                    canonicalPath,
+                    cancellationToken)
+                .ConfigureAwait(false)
+            : entry.Context.Origin.SourceSnapshotIdentity?.StableValue;
         return TryLeaseEntry(
             canonicalPath,
             creation,
             entry,
             fingerprint,
-            refreshOnMismatch);
+            refreshOnMismatch,
+            sourceSnapshotIdentity);
+    }
+
+    private async Task<string?> ResolveCurrentSourceSnapshotIdentityAsync(
+        string canonicalPath,
+        CancellationToken cancellationToken)
+    {
+        if (sourceOrchestrator is null) return null;
+
+        AssemblySourceResolution resolution;
+        try
+        {
+            resolution = await sourceOrchestrator.ResolveForRegistryAsync(
+                    canonicalPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            // Ein nicht ermittelbarer aktueller Source-Stand darf keinen
+            // veralteten source-backed Eintrag als frisch erscheinen lassen.
+            return null;
+        }
+
+        try
+        {
+            return resolution.Selection?.SourceLease.Snapshot.Identity.StableValue;
+        }
+        finally
+        {
+            AssemblyAnalysisRegistryDisposal.TryDispose(
+                resolution.Lifetime,
+                "Source-Selection-Scope nach Freshness-Probe");
+        }
     }
 
     private async Task<(AssemblyAnalysisEntry? Entry, AssemblyAnalysisLeaseResult? Result, bool Retry)> AwaitCreationAsync(
@@ -323,7 +370,8 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         AssemblyAnalysisRegistryEntryCreation creation,
         AssemblyAnalysisEntry entry,
         AssemblyFingerprint fingerprint,
-        bool refreshOnMismatch)
+        bool refreshOnMismatch,
+        string? sourceSnapshotIdentity)
     {
         lock (gate)
         {
@@ -333,7 +381,10 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
                 return (null, true);
             }
 
-            if (!entry.Matches(fingerprint))
+            if (!entry.Matches(
+                    fingerprint,
+                    sourceSnapshotIdentity,
+                    compareSourceSnapshotIdentity: sourceOrchestrator is not null))
             {
                 if (!refreshOnMismatch)
                 {
@@ -376,16 +427,17 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         (reference, cancellationToken) =>
             LeaseReferencedAsync(sourceSelection, reference, cancellationToken);
 
-    private AssemblyAnalysisRegistryEntryCreation? GetOrCreateEntry(string canonicalPath)
+    private (AssemblyAnalysisRegistryEntryCreation? Creation, bool WasExisting) GetOrCreateEntry(
+        string canonicalPath)
     {
         lock (gate)
         {
-            if (Volatile.Read(ref disposed) != 0) return null;
-            if (entries.TryGetValue(canonicalPath, out var creation)) return creation;
+            if (Volatile.Read(ref disposed) != 0) return (null, false);
+            if (entries.TryGetValue(canonicalPath, out var creation)) return (creation, true);
 
             creation = CreateEntry(canonicalPath);
             entries.Add(canonicalPath, creation);
-            return creation;
+            return (creation, false);
         }
     }
 

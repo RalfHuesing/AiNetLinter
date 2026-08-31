@@ -54,7 +54,8 @@ internal static class AssemblyAnalysisToolRegistrations
                                     maxResults,
                                     exactTypeName,
                                     memberNames,
-                                    maxMembers))),
+                                    maxMembers)),
+                             ExpandAssemblyReferences: true),
                         ct)),
             McpToolRegistrationOptions.AssemblyTool("inspect_assembly", InspectAssemblyDescription)));
     }
@@ -100,7 +101,8 @@ internal static class AssemblyAnalysisToolRegistrations
                                     receiverType,
                                     extensionName,
                                     @namespace,
-                                    maxResults))),
+                                    maxResults)),
+                             ExpandAssemblyReferences: true),
                         ct)),
             McpToolRegistrationOptions.AssemblyTool("find_assembly_extensions", FindAssemblyExtensionsDescription)));
     }

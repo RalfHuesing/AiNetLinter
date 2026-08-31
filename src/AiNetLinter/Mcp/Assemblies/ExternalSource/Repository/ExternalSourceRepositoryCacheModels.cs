@@ -37,7 +37,7 @@ internal sealed record ExternalSourceRepositoryCacheKey
         out ExternalSourceRepositoryCacheKey? key)
     {
         key = null;
-        if (!ExternalSourceRepositoryUrlPolicy.TryNormalize(
+        if (!ExternalSourceUrlPolicy.TryNormalize(
                 repositoryUrl,
                 out var normalizedUrl)
             || normalizedUrl!.Length > ExternalSourceRepositoryCacheContract.MaxRepositoryUrlLength

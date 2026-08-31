@@ -68,8 +68,16 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable
     internal AssemblyContext Context { get; }
     internal string ContentHash => Context.Origin.ContentHash;
 
-    internal bool Matches(AssemblyFingerprint fingerprint) =>
-        string.Equals(ContentHash, fingerprint.Sha256, StringComparison.OrdinalIgnoreCase);
+    internal bool Matches(
+        AssemblyFingerprint fingerprint,
+        string? sourceSnapshotIdentity = null,
+        bool compareSourceSnapshotIdentity = false) =>
+        string.Equals(ContentHash, fingerprint.Sha256, StringComparison.OrdinalIgnoreCase)
+        && (!compareSourceSnapshotIdentity
+            || string.Equals(
+                Context.Origin.SourceSnapshotIdentity?.StableValue,
+                sourceSnapshotIdentity,
+                StringComparison.Ordinal));
 
     internal bool TryAcquireLease(out AssemblyAnalysisLease? lease) =>
         TryAcquireLease(referenceLeaseFactory, out lease);

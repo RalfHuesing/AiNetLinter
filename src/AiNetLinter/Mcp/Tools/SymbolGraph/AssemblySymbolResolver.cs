@@ -114,10 +114,21 @@ internal static class AssemblySymbolResolver
             identifier,
             cancellationToken,
             AssemblyNavigationSupport.GetIdentity(lease)).ConfigureAwait(false);
-        return symbol is not null
-            ? (symbol, null)
-            : (null, error?.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text);
+        if (symbol is not null)
+        {
+            return (symbol, null);
+        }
+
+        var diagnostic = error?.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text;
+        return IsExpectedResolutionMiss(diagnostic)
+            ? (null, null)
+            : (null, diagnostic);
     }
+
+    private static bool IsExpectedResolutionMiss(string? diagnostic) =>
+        diagnostic?.StartsWith(
+            $"[ERROR]: {LinterErrorCodes.SymbolNotFound}:",
+            StringComparison.Ordinal) == true;
 
     private static IEnumerable<string> FormatCandidateLocations(AssemblySymbolTarget candidate)
     {

@@ -119,6 +119,7 @@ internal static class AssemblyAnalysisDispatcher
                 assemblyRegistry,
                 request.Target,
                 request.Dispatch.AssemblySessionCall,
+                request.Dispatch.ExpandAssemblyReferences,
                 request.CancellationToken);
 
     private static Task<CallToolResult> UnsupportedRouteAsync(AnalysisToolCallRequest request)
@@ -139,6 +140,7 @@ internal static class AssemblyAnalysisDispatcher
         IAssemblyAnalysisRegistry? assemblyRegistry,
         AnalysisTargetRequest request,
         Func<AssemblyAnalysisLease, Task<CallToolResult>> assemblyCall,
+        bool expandAssemblyReferences = false,
         CancellationToken cancellationToken = default)
     {
         var resolution = AnalysisTargetResolver.Resolve(request);
@@ -167,7 +169,11 @@ internal static class AssemblyAnalysisDispatcher
         using var lease = leaseResult.Lease!;
         try
         {
-            await lease.ExpandReferencesAsync(cancellationToken).ConfigureAwait(false);
+            if (expandAssemblyReferences)
+            {
+                await lease.ExpandReferencesAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             var result = await assemblyCall(lease).ConfigureAwait(false);
             return AssemblyAnalysisResponse.Enrich(result, lease);
         }

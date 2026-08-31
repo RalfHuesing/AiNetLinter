@@ -50,8 +50,28 @@ internal static class AssemblyNavigationSupport
             totalAssemblyCount,
             searchedAssemblyCount,
             assembliesTruncated,
-            distinct.Count == 0 ? "complete" : "partial",
+            !assembliesTruncated && distinct.Count == 0 ? "complete" : "partial",
             distinct);
+    }
+
+    internal static AssemblyNavigationSummary MergeSummaries(
+        AssemblyNavigationSummary first,
+        AssemblyNavigationSummary second)
+    {
+        var assembliesTruncated = first.AssembliesTruncated || second.AssembliesTruncated;
+        var diagnostics = DistinctDiagnostics(first.Diagnostics.Concat(second.Diagnostics));
+        return new(
+            first.IncludeReferences || second.IncludeReferences,
+            Math.Max(first.TotalAssemblyCount, second.TotalAssemblyCount),
+            Math.Max(first.SearchedAssemblyCount, second.SearchedAssemblyCount),
+            assembliesTruncated,
+            !assembliesTruncated
+                && string.Equals(first.Completeness, "complete", StringComparison.Ordinal)
+                && string.Equals(second.Completeness, "complete", StringComparison.Ordinal)
+                && diagnostics.Count == 0
+                ? "complete"
+                : "partial",
+            diagnostics);
     }
 
     internal static IReadOnlyList<string> DistinctDiagnostics(IEnumerable<string> diagnostics) =>

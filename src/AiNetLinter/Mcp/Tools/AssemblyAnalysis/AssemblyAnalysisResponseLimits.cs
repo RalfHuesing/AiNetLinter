@@ -4,6 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using AiNetLinter.Mcp;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
@@ -28,6 +31,75 @@ internal static class AssemblyAnalysisResponseLimits
             ShownCount = 0,
             Samples = Array.Empty<string>(),
         };
+
+    internal static JsonElement EnsureStructuredContentBudget(JsonElement structured)
+    {
+        if (structured.ValueKind != JsonValueKind.Object)
+        {
+            return structured;
+        }
+
+        var node = JsonNode.Parse(structured.GetRawText()) as JsonObject;
+        if (node is null) return structured;
+
+        CompactDiagnosticSamples(node);
+        if (SerializedSize(node) > MaxDiagnosticBytes)
+        {
+            CompactRepeatedMetadata(node);
+        }
+
+        while (SerializedSize(node) > MaxDiagnosticBytes)
+        {
+            if (TrimOneArrayItem(node)) continue;
+            if (RemoveOneOptionalProperty(node)) continue;
+            if (TrimOneLongString(node)) continue;
+            break;
+        }
+
+        SynchronizeDiagnosticSummary(node);
+        SynchronizeReferenceSummary(node);
+
+        return JsonSerializer.SerializeToElement(node, McpJsonOptions.Default);
+    }
+
+    internal static string SynchronizeDiagnosticText(
+        string text,
+        JsonElement structured)
+    {
+        if (structured.ValueKind != JsonValueKind.Object
+            || !structured.TryGetProperty("diagnostics", out var diagnostics)
+            || !structured.TryGetProperty("diagnosticsSummary", out var summary))
+        {
+            return text;
+        }
+
+        var markerIndex = text.LastIndexOf("Diagnosen: ", StringComparison.Ordinal);
+        if (markerIndex < 0) return text;
+
+        var shownCount = diagnostics.ValueKind == JsonValueKind.Array
+            ? diagnostics.GetArrayLength()
+            : summary.TryGetProperty("shownCount", out var shown) ? shown.GetInt32() : 0;
+        var totalCount = summary.TryGetProperty("totalCount", out var total)
+            ? total.GetInt32()
+            : shownCount;
+        var truncated = summary.TryGetProperty("truncated", out var isTruncated)
+            && isTruncated.GetBoolean();
+        var builder = new StringBuilder(text[..markerIndex].TrimEnd());
+        builder.AppendLine();
+        builder.Append($"Diagnosen: {shownCount} von {totalCount}");
+        if (truncated) builder.Append(" (gekürzt)");
+        if (diagnostics.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var diagnostic in diagnostics.EnumerateArray())
+            {
+                builder.AppendLine();
+                builder.Append("- ");
+                builder.Append(diagnostic.GetString());
+            }
+        }
+
+        return builder.ToString();
+    }
 
     internal static AssemblyDiagnosticsSummary ProjectDiagnostics(
         IEnumerable<string>? rootDiagnostics,
@@ -232,6 +304,218 @@ internal static class AssemblyAnalysisResponseLimits
 
     private static string NormalizeMessage(string diagnostic) =>
         string.Join(' ', diagnostic.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+    private static void CompactDiagnosticSamples(JsonObject node)
+    {
+        if (node["diagnosticsSummary"] is not JsonObject summary) return;
+        ClearSamples(summary);
+        if (summary["root"] is JsonObject root) ClearSamples(root);
+        if (summary["transitive"] is JsonObject transitive) ClearSamples(transitive);
+        if (node["referenceSummary"] is JsonObject referenceSummary
+            && referenceSummary["totalReferenceCount"]?.GetValue<int>() == 0
+            && referenceSummary["totalReferenceSessionCount"]?.GetValue<int>() == 0)
+        {
+            node.Remove("referenceSummary");
+        }
+    }
+
+    private static void ClearSamples(JsonObject node) =>
+        node["samples"] = new JsonArray();
+
+    private static void CompactRepeatedMetadata(JsonObject node)
+    {
+        if (node["origin"] is JsonObject origin)
+        {
+            origin.Remove("canonicalPath");
+        }
+
+        if (node["analysis"] is JsonObject analysis)
+        {
+            analysis.Remove("assemblyHash");
+        }
+    }
+
+    private static int SerializedSize(JsonNode node) =>
+        JsonSerializer.SerializeToUtf8Bytes(node, McpJsonOptions.Default).Length;
+
+    private static void SynchronizeDiagnosticSummary(JsonObject node)
+    {
+        if (node["diagnostics"] is not JsonArray diagnostics
+            || node["diagnosticsSummary"] is not JsonObject summary)
+        {
+            return;
+        }
+
+        summary["shownCount"] = diagnostics.Count;
+    }
+
+    private static void SynchronizeReferenceSummary(JsonObject node)
+    {
+        if (node["referenceSummary"] is not JsonObject summary) return;
+
+        if (node["references"] is JsonArray references)
+        {
+            var total = summary["totalReferenceCount"]?.GetValue<int>() ?? references.Count;
+            summary["shownReferenceCount"] = references.Count;
+            summary["referencesTruncated"] = references.Count < total;
+        }
+
+        if (node["referenceSessions"] is JsonArray sessions)
+        {
+            var total = summary["totalReferenceSessionCount"]?.GetValue<int>() ?? sessions.Count;
+            summary["shownReferenceSessionCount"] = sessions.Count;
+            summary["referenceSessionsTruncated"] = sessions.Count < total;
+        }
+    }
+
+    private static bool TrimOneArrayItem(JsonNode node)
+    {
+        if (node is JsonObject obj)
+        {
+            foreach (var propertyName in new[]
+            {
+                "members", "attributes", "parameters", "genericParameters", "constraints",
+                "callSites", "diagnostics",
+            })
+            {
+                if (obj[propertyName] is not JsonArray array || array.Count == 0) continue;
+                if (TrimOneArrayItem(array[^1]!)) return true;
+                if (propertyName is "diagnostics" or "callSites" && array.Count <= 1)
+                {
+                    continue;
+                }
+
+                var isTrimmableArray = propertyName is
+                    "members" or "attributes" or "parameters" or "genericParameters" or "constraints"
+                    or "callSites" or "diagnostics";
+                if (isTrimmableArray)
+                {
+                    array.RemoveAt(array.Count - 1);
+                    return true;
+                }
+            }
+
+            foreach (var property in obj)
+            {
+                if (property.Value is not null && TrimOneArrayItem(property.Value)) return true;
+            }
+
+            return false;
+        }
+
+        if (node is not JsonArray values) return false;
+        for (var index = values.Count - 1; index >= 0; index--)
+        {
+            if (values[index] is not null && TrimOneArrayItem(values[index]!)) return true;
+        }
+
+        return false;
+    }
+
+    private static bool TrimOneLongString(JsonNode node)
+    {
+        if (node is JsonObject obj)
+        {
+            foreach (var property in obj)
+            {
+                if (property.Value is JsonValue value
+                    && value.TryGetValue<string>(out var text)
+                    && text is not null
+                    && text.Length > 128
+                    && !IsStablePathProperty(property.Key))
+                {
+                    obj[property.Key] = text[..125] + "…";
+                    return true;
+                }
+
+                if (property.Value is not null && TrimOneLongString(property.Value)) return true;
+            }
+
+            return false;
+        }
+
+        if (node is not JsonArray values) return false;
+        foreach (var value in values)
+        {
+            if (value is not null && TrimOneLongString(value)) return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsStablePathProperty(string propertyName) => propertyName is
+        "assemblyPath" or "targetPath" or "resolvedPath" or "sourceProjectPath" or
+        "generatedDocumentPath" or "solutionPath" or "repositoryUrl" or "loadedRevision";
+
+    private static bool RemoveOneOptionalProperty(JsonNode node)
+    {
+        if (RemoveOneDeepDetail(node)) return true;
+
+        if (node is JsonObject obj)
+        {
+            foreach (var propertyName in new[]
+            {
+                "diagnostics", "callSites", "referenceSessions", "references", "types", "extensions", "results",
+            })
+            {
+                if (obj[propertyName] is JsonArray array)
+                {
+                    if (array.Count > 1)
+                    {
+                        array.RemoveAt(array.Count - 1);
+                        return true;
+                    }
+
+                    continue;
+                }
+
+                if (obj.Remove(propertyName)) return true;
+            }
+
+            foreach (var property in obj)
+            {
+                if (property.Value is not null && RemoveOneOptionalProperty(property.Value)) return true;
+            }
+        }
+        else if (node is JsonArray values)
+        {
+            foreach (var value in values)
+            {
+                if (value is not null && RemoveOneOptionalProperty(value)) return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool RemoveOneDeepDetail(JsonNode node)
+    {
+        if (node is JsonObject obj)
+        {
+            foreach (var propertyName in new[]
+            {
+                "attributes", "parameters", "genericParameters", "constraints", "applicabilityReason",
+                "canonicalPath", "assemblyHash", "generatedPath",
+            })
+            {
+                if (obj.Remove(propertyName)) return true;
+            }
+
+            foreach (var property in obj)
+            {
+                if (property.Value is not null && RemoveOneDeepDetail(property.Value)) return true;
+            }
+        }
+        else if (node is JsonArray values)
+        {
+            foreach (var value in values)
+            {
+                if (value is not null && RemoveOneDeepDetail(value)) return true;
+            }
+        }
+
+        return false;
+    }
 
     private readonly record struct DiagnosticSampleCandidate(string Diagnostic, bool IsRoot);
 

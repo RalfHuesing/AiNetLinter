@@ -400,34 +400,3 @@ internal static class ExternalSourceRepositoryFailurePolicy
             _ => "Die Repository-Akquisition ist fehlgeschlagen.",
         };
 }
-
-internal static class ExternalSourceRepositoryUrlPolicy
-{
-    internal static bool TryNormalize(string value, out string? normalizedUrl)
-    {
-        normalizedUrl = null;
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        var trimmedValue = value.Trim();
-        if (!Uri.TryCreate(trimmedValue, UriKind.Absolute, out var uri)
-            || uri is null
-            || uri.Host.Length == 0
-            || uri.UserInfo.Length > 0
-            || uri.Query.Length > 0
-            || uri.Fragment.Length > 0
-            || !IsHttpScheme(uri.Scheme))
-        {
-            return false;
-        }
-
-        normalizedUrl = uri.AbsoluteUri;
-        return true;
-    }
-
-    private static bool IsHttpScheme(string scheme) =>
-        string.Equals(scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
-}

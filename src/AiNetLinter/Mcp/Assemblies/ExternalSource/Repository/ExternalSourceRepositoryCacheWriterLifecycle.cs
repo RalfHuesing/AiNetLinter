@@ -10,7 +10,7 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter
     private static async Task FinalizePublishAsync(
         PublishContext context,
         bool published,
-        CacheKeyLockLease? lockLease,
+        CacheKeyLockRegistry.CacheKeyLockLease? lockLease,
         Func<Task>? afterLeaseReleasedAsync)
     {
         try
@@ -28,6 +28,12 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter
                 ExternalSourceRepositoryCacheStorage.TryDeleteGeneration(
                     context.EntryDirectory,
                     context.GenerationDirectory);
+            }
+            else
+            {
+                ExternalSourceRepositoryCacheStorage.RetainGenerations(
+                    context.EntryDirectory,
+                    context.GenerationName);
             }
         }
         finally

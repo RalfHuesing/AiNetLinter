@@ -262,6 +262,38 @@ public sealed class AssemblyAnalysisRegistryTests
     }
 
     [Fact]
+    public async Task Entry_Matches_SourceSnapshotIdentityIsPartOfReuseIdentity()
+    {
+        using var solution = RoslynTestSolutionFactory.CreateSolution(
+            "namespace EntryTest; public sealed class Value { }");
+        var identity = SourceSnapshotIdentity.Create(
+            new ExternalSourceMapping(
+                "https://gitea.example/entry-test.git",
+                "src/EntryTest.slnx",
+                ["EntryTest"]),
+            "revision-1");
+        var baseContext = await CreateContextAsync(solution.Solution);
+        var context = baseContext with
+        {
+            Origin = baseContext.Origin with { SourceSnapshotIdentity = identity },
+        };
+        await using var entry = AssemblyAnalysisEntry.Create(
+            new AssemblyAnalysisEntryCreateParameters(
+                "entry-test.dll",
+                solution.Solution,
+                context,
+                Lifetime: null));
+        var fingerprint = new AssemblyFingerprint(
+            "entry-test.dll",
+            1,
+            DateTime.UtcNow,
+            context.Origin.ContentHash);
+
+        Assert.True(entry.Matches(fingerprint, identity.StableValue, compareSourceSnapshotIdentity: true));
+        Assert.False(entry.Matches(fingerprint, "changed-source-snapshot", compareSourceSnapshotIdentity: true));
+    }
+
+    [Fact]
     public async Task LeaseAsync_ExternalCapacityIsSeparateAndVisibleWithoutEvictingActiveLease()
     {
         using var temp = TestTempDirectory.Create("assembly-registry-capacity-");

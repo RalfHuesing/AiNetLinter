@@ -57,17 +57,14 @@ internal sealed record SourceSnapshotIdentity
 
     private static string CanonicalizeRepositoryUrl(string value)
     {
-        if (!Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)
-            || uri is null
-            || uri.Host.Length == 0
-            || uri.Scheme is not ("http" or "https"))
+        if (!ExternalSourceUrlPolicy.TryNormalize(value, out var normalizedUrl))
         {
             throw new ArgumentException(
                 "Die Repository-URL muss eine absolute HTTP(S)-URL sein.",
                 nameof(value));
         }
 
-        return uri.AbsoluteUri;
+        return normalizedUrl!;
     }
 
     private static string CanonicalizeSolutionPath(string value)

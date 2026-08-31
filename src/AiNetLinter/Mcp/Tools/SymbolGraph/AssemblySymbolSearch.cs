@@ -54,7 +54,7 @@ internal static class AssemblySymbolSearch
         var shown = distinct.Take(Math.Max(maxResults, 1)).ToList();
         if (distinct.Count > shown.Count)
         {
-            diagnostics.Add($"Die Assembly-Symbolsuche ist auf {shown.Count} Treffer begrenzt.");
+            diagnostics.Insert(0, $"Die Assembly-Symbolsuche ist auf {shown.Count} Treffer begrenzt.");
         }
 
         return new(

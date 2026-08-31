@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using System.IO;
 
 namespace AiNetLinter.FastTests.Mcp.Assemblies;
@@ -32,4 +33,33 @@ public sealed class AssemblyCacheCleanupTests
 
         Assert.False(Directory.Exists(directory));
     }
+
+    [Fact]
+    public void RetainGenerations_KeepsCurrentAndOnePreviousSafeGeneration()
+    {
+        using var tempDir = TestTempDirectory.Create("assembly-cache-retention-");
+        var names = new[]
+        {
+            CreateGenerationName(),
+            CreateGenerationName(),
+            CreateGenerationName(),
+        };
+        foreach (var name in names)
+        {
+            Directory.CreateDirectory(Path.Combine(tempDir.DirectoryPath, name));
+        }
+
+        Directory.SetLastWriteTimeUtc(Path.Combine(tempDir.DirectoryPath, names[0]), DateTime.UtcNow.AddMinutes(-3));
+        Directory.SetLastWriteTimeUtc(Path.Combine(tempDir.DirectoryPath, names[1]), DateTime.UtcNow.AddMinutes(-2));
+        Directory.SetLastWriteTimeUtc(Path.Combine(tempDir.DirectoryPath, names[2]), DateTime.UtcNow.AddMinutes(-1));
+
+        AssemblyCacheCleanup.RetainGenerations(tempDir.DirectoryPath, names[0]);
+
+        Assert.True(Directory.Exists(Path.Combine(tempDir.DirectoryPath, names[0])));
+        Assert.True(Directory.Exists(Path.Combine(tempDir.DirectoryPath, names[2])));
+        Assert.False(Directory.Exists(Path.Combine(tempDir.DirectoryPath, names[1])));
+    }
+
+    private static string CreateGenerationName() =>
+        AssemblyCacheContract.GenerationDirectoryPrefix + Guid.NewGuid().ToString("N");
 }

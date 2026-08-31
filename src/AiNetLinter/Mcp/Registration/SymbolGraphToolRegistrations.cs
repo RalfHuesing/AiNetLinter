@@ -53,10 +53,11 @@ internal static class SymbolGraphToolRegistrations
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => FindSymbolTool.ExecuteAsync(lease.Server, namePatterns, kind, maxResults, ct),
-                            AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(
-                                lease,
-                                new AssemblyFindSymbolRequest(namePatterns, kind, maxResults, includeReferences),
-                                ct)),
+                             AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(
+                                 lease,
+                                 new AssemblyFindSymbolRequest(namePatterns, kind, maxResults, includeReferences),
+                                 ct),
+                             ExpandAssemblyReferences: includeReferences),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("find_symbol", FindSymbolDescription)));
     }
@@ -84,10 +85,11 @@ internal static class SymbolGraphToolRegistrations
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => FindReferencesTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, depth, ct),
-                            AssemblySessionCall: lease => AssemblyFindReferencesTool.ExecuteAsync(
-                                lease,
-                                new AssemblyFindReferencesRequest(symbolIdentifier, maxResults, depth, includeReferences),
-                                ct)),
+                             AssemblySessionCall: lease => AssemblyFindReferencesTool.ExecuteAsync(
+                                 lease,
+                                 new AssemblyFindReferencesRequest(symbolIdentifier, maxResults, depth, includeReferences),
+                                 ct),
+                             ExpandAssemblyReferences: includeReferences),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("find_references", FindReferencesDescription)));
     }
@@ -116,12 +118,13 @@ internal static class SymbolGraphToolRegistrations
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction), ct),
-                            AssemblySessionCall: lease => AssemblyGetCallTreeTool.ExecuteAsync(
-                                lease,
-                                new AssemblyGetCallTreeRequest(
-                                    new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction),
-                                    includeReferences),
-                                ct)),
+                             AssemblySessionCall: lease => AssemblyGetCallTreeTool.ExecuteAsync(
+                                 lease,
+                                 new AssemblyGetCallTreeRequest(
+                                     new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction),
+                                     includeReferences),
+                                 ct),
+                             ExpandAssemblyReferences: includeReferences),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("get_call_tree", GetCallTreeDescription)));
     }

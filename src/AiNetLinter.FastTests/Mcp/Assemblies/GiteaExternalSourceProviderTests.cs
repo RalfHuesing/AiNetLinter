@@ -133,6 +133,27 @@ public sealed class GiteaExternalSourceProviderTests
     }
 
     [Fact]
+    public async Task ResolveAsync_KnownMaterializationFailureSurfacesSafeReason()
+    {
+        using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "BaselineMini");
+        using var staging = TestTempDirectory.Create("external-source-provider-safe-materialization-reason-");
+        var acquirer = CreateAcquirer(staging, fixture, out var transport);
+        var materializer = new RecordingMaterializer((_, _, _) =>
+            throw new ExternalSourceSnapshotMaterializationException(
+                ExternalSourceCheckoutTrust.Clean,
+                ExternalSourceSnapshotMaterializer.EmptySolutionFailureReason));
+        var provider = new GiteaExternalSourceProvider(acquirer, materializer);
+
+        var result = await provider.ResolveAsync(CreateMapping());
+
+        Assert.False(result.IsAvailable);
+        Assert.Contains(
+            result.Diagnostics,
+            diagnostic => diagnostic.Message.Contains("keine Projekte", StringComparison.Ordinal));
+        Assert.False(Directory.Exists(transport.DestinationPath));
+    }
+
+    [Fact]
     public async Task ResolveAsync_CancellationFromMaterializer_RethrowsAndCleansCheckout()
     {
         using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "BaselineMini");
@@ -147,6 +168,39 @@ public sealed class GiteaExternalSourceProviderTests
 
         Assert.Equal(cancellation.Token, exception.CancellationToken);
         Assert.False(Directory.Exists(transport.DestinationPath));
+    }
+
+    [Fact]
+    public async Task ResolveAsync_CancellationAfterAcquisitionCleansReturnedCheckout()
+    {
+        using var staging = TestTempDirectory.Create("external-source-provider-acquired-cancellation-");
+        using var cancellation = new CancellationTokenSource();
+        var checkoutPath = staging.CreateSubdirectory("checkout");
+        const string ownershipToken = "provider-boundary-test";
+        staging.CreateFile(
+            "checkout/" + ExternalSourceCheckoutOwnership.OwnershipMarkerFileName,
+            ownershipToken);
+        var ownership = new ExternalSourceCheckoutOwnership(
+            staging.DirectoryPath,
+            checkoutPath,
+            ownershipToken);
+        using var checkout = new ExternalSourceCheckoutHandle(
+            ownership,
+            Path.Combine(checkoutPath, "BaselineMini.slnx"),
+            Revision,
+            ExternalSourceCheckoutAttestation.ForTesting(checkoutPath, Revision));
+        var acquisition = ExternalSourceRepositoryAcquisitionResult.Success(checkout, []);
+        var acquirer = new CancellationAfterAcquisitionAcquirer(acquisition, cancellation);
+        var provider = new GiteaExternalSourceProvider(
+            acquirer,
+            new RecordingMaterializer((_, _, _) =>
+                throw new InvalidOperationException("must not be materialized")));
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            provider.ResolveAsync(CreateMapping(), cancellation.Token).AsTask());
+
+        Assert.True(checkout.IsDisposed);
+        Assert.False(Directory.Exists(checkoutPath));
     }
 
     [Fact]
@@ -241,6 +295,19 @@ public sealed class GiteaExternalSourceProviderTests
             CallCount++;
             Checkout = checkout;
             return operation(mapping, checkout, cancellationToken);
+        }
+    }
+
+    private sealed class CancellationAfterAcquisitionAcquirer(
+        ExternalSourceRepositoryAcquisitionResult acquisition,
+        CancellationTokenSource cancellation) : IExternalSourceRepositoryAcquirer
+    {
+        public Task<ExternalSourceRepositoryAcquisitionResult> AcquireAsync(
+            ExternalSourceMapping mapping,
+            CancellationToken cancellationToken)
+        {
+            cancellation.Cancel();
+            return Task.FromResult(acquisition);
         }
     }
 }

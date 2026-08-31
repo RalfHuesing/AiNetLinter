@@ -11,6 +11,7 @@ using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
@@ -23,6 +24,30 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies;
 // @covers AssemblyReferenceSessionExpander
 public sealed class AssemblyAnalysisDispatcherCapabilityTests
 {
+    [Fact]
+    public async Task AssemblyRoute_SkipsReferenceExpansionWhenHandlerDoesNotRequestIt()
+    {
+        using var temp = TestTempDirectory.Create("assembly-dispatcher-root-only-");
+        var reference = new AssemblyReferenceDto(
+            "UnrequestedDependency",
+            "1.0.0.0",
+            "neutral",
+            Resolved: false,
+            ResolutionState: "missing",
+            Diagnostic: "must-not-be-expanded");
+        await using var fixture = await SyntheticAssemblyFixture.CreateAsync(temp, [reference]);
+
+        var result = await fixture.ExecuteRootOnlyAsync(lease =>
+        {
+            Assert.Empty(lease.ReferenceSessions);
+            Assert.Empty(lease.ReferenceExpansionDiagnostics);
+            return Task.FromResult(McpToolResults.Text("root-only"));
+        });
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.Contains("root-only", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task AssemblyRoute_MissingReference_ReportsPartialSessionAndDiagnostic()
     {
@@ -90,9 +115,13 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
         AssertPartialStatusConsistency(result);
         var referenceSummary = payload.GetProperty("referenceSummary");
         Assert.Equal(AssemblyReferenceResolver.MaxReferenceNodes + 1, referenceSummary.GetProperty("totalReferenceCount").GetInt32());
-        Assert.Equal(AssemblyAnalysisResponseLimits.MaxReferences, referenceSummary.GetProperty("shownReferenceCount").GetInt32());
+        var shownReferences = payload.GetProperty("references").GetArrayLength();
+        Assert.InRange(shownReferences, 1, AssemblyAnalysisResponseLimits.MaxReferences);
+        Assert.Equal(shownReferences, referenceSummary.GetProperty("shownReferenceCount").GetInt32());
         Assert.True(referenceSummary.GetProperty("referencesTruncated").GetBoolean());
-        Assert.Equal(AssemblyAnalysisResponseLimits.MaxReferenceSessions, payload.GetProperty("referenceSessions").GetArrayLength());
+        var shownSessions = payload.GetProperty("referenceSessions").GetArrayLength();
+        Assert.InRange(shownSessions, 1, AssemblyAnalysisResponseLimits.MaxReferenceSessions);
+        Assert.Equal(shownSessions, referenceSummary.GetProperty("shownReferenceSessionCount").GetInt32());
         Assert.Equal(AssemblyReferenceResolver.MaxReferenceNodes + 1, referenceSummary.GetProperty("totalReferenceSessionCount").GetInt32());
         Assert.True(referenceSummary.GetProperty("referenceSessionsTruncated").GetBoolean());
         Assert.Contains(Diagnostics(payload), diagnostic => diagnostic.Contains("limited-route-failure", StringComparison.Ordinal));
@@ -277,6 +306,9 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
         Assert.True(
             System.Text.Encoding.UTF8.GetByteCount(string.Join("\n", samples))
             <= AssemblyAnalysisResponseLimits.MaxDiagnosticBytes);
+        Assert.True(
+            System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length
+            <= AssemblyAnalysisResponseLimits.MaxDiagnosticBytes);
 
         var analysis = payload.GetProperty("analysis");
         Assert.False(analysis.TryGetProperty("diagnostics", out _));
@@ -286,6 +318,43 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
         Assert.Contains($"Diagnosen: {samples.Length} von {diagnostics.Length} (gekürzt)", text, StringComparison.Ordinal);
         Assert.All(samples, sample => Assert.Contains($"- {sample}", text, StringComparison.Ordinal));
         Assert.DoesNotContain(new string('x', AssemblyAnalysisResponseLimits.MaxDiagnosticCharacters + 1), text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AssemblyRoute_ExpectedReferenceMissIsNotAddedToNavigationDiagnostics()
+    {
+        using var temp = TestTempDirectory.Create("assembly-dispatcher-expected-miss-");
+        var dependencyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ExpectedMissDependency",
+            "namespace Probe; public sealed class DependencyOnly { public int Value => 1; }");
+        var rootPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ExpectedMissRoot",
+            "namespace Probe; public sealed class Root { public int Read() => 1; }",
+            dependencyPath);
+        await using var registry = new AssemblyAnalysisRegistry();
+
+        var result = await AnalysisToolCall.ExecuteRouted(
+            AssemblyAnalysisDispatcher.CreateRoute(registry),
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest("assembly", rootPath),
+                new AnalysisToolDispatch(
+                    AssemblySessionCall: lease => AssemblyFindReferencesTool.ExecuteAsync(
+                        lease,
+                        new AssemblyFindReferencesRequest("Probe.Root.Read", 50, 1, true),
+                        CancellationToken.None),
+                    ExpandAssemblyReferences: true),
+                CancellationToken.None));
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value;
+        var navigation = payload.GetProperty("navigation");
+        var diagnostics = navigation.GetProperty("diagnostics")
+            .EnumerateArray()
+            .Select(item => item.GetString() ?? string.Empty)
+            .ToArray();
+        Assert.False(diagnostics.Any(diagnostic => diagnostic.Contains("SYMBOL_NOT_FOUND", StringComparison.Ordinal)));
     }
 
     private static Task<AssemblyAnalysisLeaseResult> FailingReferenceFactory(
@@ -389,10 +458,11 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
                             new InspectAssemblyArguments(
                                 lease.CanonicalPath,
                                 null,
-                                null,
-                                null,
-                                PublicOnly: true,
-                                MaxResults: 100))),
+                                 null,
+                                 null,
+                                 PublicOnly: true,
+                                 MaxResults: 100)),
+                         ExpandAssemblyReferences: true),
                     CancellationToken.None));
         }
 
@@ -409,9 +479,22 @@ public sealed class AssemblyAnalysisDispatcherCapabilityTests
                             new FindAssemblyExtensionsArguments(
                                 lease.CanonicalPath,
                                 null,
-                                null,
-                                null,
-                                100))),
+                                 null,
+                                 null,
+                                 100)),
+                            ExpandAssemblyReferences: true),
+                CancellationToken.None));
+        }
+
+        internal Task<CallToolResult> ExecuteRootOnlyAsync(
+            Func<AssemblyAnalysisLease, Task<CallToolResult>> call)
+        {
+            var route = AssemblyAnalysisDispatcher.CreateRoute(registry);
+            return AnalysisToolCall.ExecuteRouted(
+                route,
+                new AnalysisToolCallRequest(
+                    new AnalysisTargetRequest("assembly", AssemblyPath),
+                    new AnalysisToolDispatch(AssemblySessionCall: call),
                     CancellationToken.None));
         }
 

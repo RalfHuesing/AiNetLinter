@@ -352,6 +352,31 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
             writer.GetEntryDirectory(firstSource.Key),
             ExternalSourceRepositoryCacheContract.GenerationDirectoryPrefix + "*",
             SearchOption.TopDirectoryOnly).Count());
+        Assert.Equal(0, LocalExternalSourceRepositoryCacheWriter.ActiveLockCount);
+    }
+
+    [Fact]
+    public async Task PublishAsync_RetainsOnlyCurrentAndOnePreviousGeneration()
+    {
+        using var source = SourceFixture.Create(Revision);
+        using var cache = TestTempDirectory.Create("external-source-cache-retention-");
+        var writer = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+
+        Assert.True((await writer.PublishAsync(source.Request)).Succeeded);
+        Assert.True((await writer.PublishAsync(source.Request)).Succeeded);
+        var third = await writer.PublishAsync(source.Request);
+
+        Assert.True(third.Succeeded);
+        var generations = Directory.EnumerateDirectories(
+                writer.GetEntryDirectory(source.Key),
+                ExternalSourceRepositoryCacheContract.GenerationDirectoryPrefix + "*",
+                SearchOption.TopDirectoryOnly)
+            .ToArray();
+        Assert.Equal(ExternalSourceRepositoryCacheContract.MaxRetainedGenerations, generations.Length);
+        Assert.Contains(
+            generations,
+            path => string.Equals(Path.GetFileName(path), third.GenerationName, StringComparison.Ordinal));
+        Assert.Equal(0, LocalExternalSourceRepositoryCacheWriter.ActiveLockCount);
     }
 
     [Fact]

@@ -303,7 +303,7 @@ internal sealed class ExternalSourceRepositoryAcquirer : IExternalSourceReposito
     {
         solutionPath = null;
         failure = null;
-        if (!ExternalSourceRepositoryUrlPolicy.TryNormalize(mapping.Url, out _))
+        if (!ExternalSourceUrlPolicy.TryNormalize(mapping.Url, out _))
         {
             failure = InvalidResult(
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryMappingInvalid,

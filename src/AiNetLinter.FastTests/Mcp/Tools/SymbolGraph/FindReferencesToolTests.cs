@@ -121,6 +121,51 @@ public sealed class FindReferencesToolTests
         Assert.Equal("Greet", symbol!.Name);
     }
 
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(-1, 1)]
+    [InlineData(5, 0)]
+    [InlineData(5, -1)]
+    [InlineData(5, 1000)]
+    public async Task ResolveSymbolAsync_InvalidPosition_ReturnsRecoverableInvalidArgument(
+        int line,
+        int column)
+    {
+        var identifier = $"{SymbolGraphMiniSolutionSpec.GreeterPath}:{line}:{column}";
+
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
+            _fixture.Solution,
+            identifier,
+            CancellationToken.None);
+
+        Assert.Null(symbol);
+        Assert.NotNull(error);
+        Assert.NotEqual(true, error!.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(error.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("WORKSPACE_DIAGNOSTIC", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(1000)]
+    public async Task ResolveSymbolAsync_InvalidLineOnlyPosition_ReturnsRecoverableInvalidArgument(int line)
+    {
+        var identifier = $"{SymbolGraphMiniSolutionSpec.GreeterPath}:{line}";
+
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
+            _fixture.Solution,
+            identifier,
+            CancellationToken.None);
+
+        Assert.Null(symbol);
+        Assert.NotNull(error);
+        Assert.NotEqual(true, error!.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(error.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ResolveSymbolAsync_StableId_ReturnsSymbolAtId()
     {

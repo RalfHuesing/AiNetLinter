@@ -79,7 +79,9 @@ internal static class AssemblyFindSymbolTool
                 kind,
                 Math.Max(maxResults, 1),
                 cancellationToken).ConfigureAwait(false);
-            navigation = search.Navigation;
+            navigation = navigation is null
+                ? search.Navigation
+                : AssemblyNavigationSupport.MergeSummaries(navigation, search.Navigation);
             results.Add(new FindSymbolPatternResultDto(pattern, search.Entries));
             markdown.Heading(3, $"Symbol-Suche: {pattern}").BlankLine();
             markdown.Line(search.Entries.Count == 0

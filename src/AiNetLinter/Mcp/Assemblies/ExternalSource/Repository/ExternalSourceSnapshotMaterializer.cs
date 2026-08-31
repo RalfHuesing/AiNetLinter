@@ -15,6 +15,13 @@ namespace AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 
 internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapshotMaterializer
 {
+    internal const string WorkspaceDiagnosticFailureReason =
+        "Die externe Solution hat beim Laden eine Workspace-Diagnose ausgelöst.";
+    internal const string EmptySolutionFailureReason =
+        "Die externe Solution enthält keine Projekte.";
+    internal const string SolutionLoadFailureReason =
+        "Die externe Solution konnte im restaurierten Checkout nicht geladen werden.";
+
     private readonly ExternalResourceRegistry? resources;
     private readonly IExternalSourceSnapshotResourceCoordinator? resourceCoordinator;
 
@@ -113,7 +120,9 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
         catch (Exception)
         {
             DisposeWorkspace(workspace);
-            throw new ExternalSourceSnapshotMaterializationException();
+            throw new ExternalSourceSnapshotMaterializationException(
+                checkoutTrust: ExternalSourceCheckoutTrust.Clean,
+                SolutionLoadFailureReason);
         }
         finally
         {
@@ -132,9 +141,18 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
                 checkout.SolutionPath,
                 cancellationToken: cancellationToken)
             .ConfigureAwait(false);
-        if (Volatile.Read(ref workspaceFailed) != 0 || !solution.Projects.Any())
+        if (Volatile.Read(ref workspaceFailed) != 0)
         {
-            throw new ExternalSourceSnapshotMaterializationException();
+            throw new ExternalSourceSnapshotMaterializationException(
+                checkoutTrust: ExternalSourceCheckoutTrust.Clean,
+                WorkspaceDiagnosticFailureReason);
+        }
+
+        if (!solution.Projects.Any())
+        {
+            throw new ExternalSourceSnapshotMaterializationException(
+                checkoutTrust: ExternalSourceCheckoutTrust.Clean,
+                EmptySolutionFailureReason);
         }
 
         return solution;
@@ -211,4 +229,12 @@ internal sealed class ExternalSourceSnapshotMaterializationException : Exception
     internal ExternalSourceCheckoutTrust CheckoutTrust { get; }
 
     internal string? FailureReason { get; }
+}
+
+internal static class ExternalSourceSnapshotMaterializationFailureReasons
+{
+    internal static bool IsSafe(string? reason) => reason is
+        ExternalSourceSnapshotMaterializer.WorkspaceDiagnosticFailureReason
+        or ExternalSourceSnapshotMaterializer.EmptySolutionFailureReason
+        or ExternalSourceSnapshotMaterializer.SolutionLoadFailureReason;
 }

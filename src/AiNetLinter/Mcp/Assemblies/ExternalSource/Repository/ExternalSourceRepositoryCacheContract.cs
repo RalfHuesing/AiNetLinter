@@ -37,6 +37,7 @@ internal static class ExternalSourceRepositoryCacheContract
     internal const long MaxFileLength = 256L * 1024 * 1024;
     internal const long MaxInventoryBytes = 1024L * 1024 * 1024;
     internal const int GenerationIdentifierLength = 32;
+    internal const int MaxRetainedGenerations = 2;
 
     internal static string CreateStableValue(
         string schemaVersion,

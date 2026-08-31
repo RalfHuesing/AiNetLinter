@@ -271,7 +271,7 @@ internal static class ExternalSourceRepositoryCacheReader
 
     private static void ValidateManifestIdentity(ManifestValues values)
     {
-        if (!ExternalSourceRepositoryUrlPolicy.TryNormalize(values.RepositoryUrl!, out var normalizedUrl)
+        if (!ExternalSourceUrlPolicy.TryNormalize(values.RepositoryUrl!, out var normalizedUrl)
             || !string.Equals(normalizedUrl, values.RepositoryUrl, StringComparison.Ordinal))
         {
             throw new InvalidDataException("Das Cachemanifest enthält eine ungültige Repository-URL.");

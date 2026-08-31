@@ -56,7 +56,7 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(mapping);
-        if (!ExternalSourceRepositoryUrlPolicy.TryNormalize(mapping.Url, out var repositoryUrl))
+        if (!ExternalSourceUrlPolicy.TryNormalize(mapping.Url, out var repositoryUrl))
         {
             return Failure(
                 ExternalSourceProviderFailureKind.InvalidResponse,
@@ -85,7 +85,7 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(mapping);
-        if (!ExternalSourceRepositoryUrlPolicy.TryNormalize(mapping.Url, out _))
+        if (!ExternalSourceUrlPolicy.TryNormalize(mapping.Url, out _))
         {
             return Failure(
                 ExternalSourceProviderFailureKind.InvalidResponse,

@@ -324,6 +324,9 @@ public sealed class ExternalSourceConfigurationLoaderTests
     [Theory]
     [InlineData("file:///repo/source.sln", "external-source-url-invalid")]
     [InlineData("https://", "external-source-url-invalid")]
+    [InlineData("https://build-user:secret@example.invalid/repository", "external-source-url-invalid")]
+    [InlineData("https://gitea.example/shared.git?branch=main", "external-source-url-invalid")]
+    [InlineData("https://gitea.example/shared.git#main", "external-source-url-invalid")]
     [InlineData("https://gitea.example/shared.git", "external-source-solution-path-invalid")]
     public void Load_UngueltigeUrlOderSolutionPath_LiefertStabileDiagnose(string url, string code)
     {
@@ -338,6 +341,7 @@ public sealed class ExternalSourceConfigurationLoaderTests
 
         Assert.False(result.Succeeded);
         ExternalSourceConfigurationAssertions.AssertDiagnosis(result, code, "repositories[0]");
+        Assert.DoesNotContain(result.Diagnostics, diagnostic => diagnostic.Message.Contains("secret", StringComparison.Ordinal));
     }
 
     [Fact]

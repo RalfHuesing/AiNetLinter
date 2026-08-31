@@ -31,4 +31,5 @@ internal sealed record AnalysisTargetResolution(
 internal sealed record AnalysisToolDispatch(
     Func<ProjectLease, Task<CallToolResult>>? ProjectCall = null,
     Func<string, Task<CallToolResult>>? AssemblyCall = null,
-    Func<AssemblyAnalysisLease, Task<CallToolResult>>? AssemblySessionCall = null);
+    Func<AssemblyAnalysisLease, Task<CallToolResult>>? AssemblySessionCall = null,
+    bool ExpandAssemblyReferences = false);

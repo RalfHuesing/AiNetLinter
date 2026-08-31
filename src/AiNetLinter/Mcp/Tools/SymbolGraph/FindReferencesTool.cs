@@ -136,26 +136,81 @@ internal static class FindReferencesTool
     /// Dateiauflösung und Zeilen-Validierung nicht dupliziert werden.
     /// </summary>
     private static async Task<(SyntaxNode? Root, SourceText? Text, SemanticModel? SemanticModel, CallToolResult? Error)>
-        ResolveDocumentForLineAsync(Solution solution, string identifier, string path, int line, CancellationToken ct)
+        ResolveDocumentForLineAsync(
+            Solution solution,
+            string identifier,
+            string path,
+            int line,
+            int? column,
+            CancellationToken ct)
     {
         var document = DiffImpactAnalyzer.FindDocumentByPath(solution, path);
         if (document is null) return (null, null, null, McpToolResults.SymbolNotFound(identifier));
 
-        var root = await document.GetSyntaxRootAsync(ct);
         var text = await document.GetTextAsync(ct);
-        var semanticModel = await document.GetSemanticModelAsync(ct);
-        if (root is null || text is null || semanticModel is null || line < 1 || line > text.Lines.Count)
+        if (text is null)
         {
-            return (null, null, null, McpToolResults.SymbolNotFound(identifier));
+            return (null, null, null, McpToolResults.CompilationError(
+                $"Quelltext für '{path}' konnte nicht gelesen werden.",
+                context: identifier));
+        }
+
+        if (line < 1 || line > text.Lines.Count)
+        {
+            return (
+                null,
+                null,
+                null,
+                InvalidPosition(
+                    identifier,
+                    $"Ungültige Zeile {line}; der gültige Bereich ist 1 bis {text.Lines.Count}."));
+        }
+
+        if (column is { } requestedColumn)
+        {
+            var lineLength = text.Lines[line - 1].Span.Length;
+            if (requestedColumn < 1 || requestedColumn > lineLength)
+            {
+                var range = lineLength == 0 ? "keine gültige Spalte (leere Zeile)" : $"1 bis {lineLength}";
+                return (
+                    null,
+                    null,
+                    null,
+                    InvalidPosition(
+                        identifier,
+                        $"Ungültige Spalte {requestedColumn} in Zeile {line}; der gültige Bereich ist {range}."));
+            }
+        }
+
+        var root = await document.GetSyntaxRootAsync(ct);
+        var semanticModel = await document.GetSemanticModelAsync(ct);
+        if (root is null || semanticModel is null)
+        {
+            return (null, null, null, McpToolResults.CompilationError(
+                $"Roslyn konnte das Dokument '{path}' nicht für die Symbolauflösung bereitstellen.",
+                context: identifier));
         }
 
         return (root, text, semanticModel, null);
     }
 
+    private static CallToolResult InvalidPosition(string identifier, string message) =>
+        McpToolResults.Recoverable(
+            LinterErrorCodes.InvalidArgument,
+            message,
+            context: identifier,
+            hint: "Position im Format Datei:Zeile:Spalte angeben; Zeile und Spalte beginnen bei 1 und müssen innerhalb des Quelltexts liegen.");
+
     private static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveByPositionAsync(
         Solution solution, string identifier, string path, int line, int column, CancellationToken ct)
     {
-        var (root, text, semanticModel, error) = await ResolveDocumentForLineAsync(solution, identifier, path, line, ct);
+        var (root, text, semanticModel, error) = await ResolveDocumentForLineAsync(
+            solution,
+            identifier,
+            path,
+            line,
+            column,
+            ct);
         if (error is not null) return (null, error);
 
         var position = text!.Lines[line - 1].Start + (column - 1);
@@ -175,7 +230,13 @@ internal static class FindReferencesTool
     private static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveByLineAsync(
         Solution solution, string identifier, string path, int line, CancellationToken ct)
     {
-        var (root, text, semanticModel, error) = await ResolveDocumentForLineAsync(solution, identifier, path, line, ct);
+        var (root, text, semanticModel, error) = await ResolveDocumentForLineAsync(
+            solution,
+            identifier,
+            path,
+            line,
+            column: null,
+            ct);
         if (error is not null) return (null, error);
 
         var symbols = SymbolIdentifierResolver.ResolveSymbolsOnLine(root!, text!.Lines[line - 1].Span, semanticModel!);

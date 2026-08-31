@@ -37,7 +37,6 @@ internal sealed class GiteaExternalSourceProvider : IExternalSourceProvider
             var acquisition = await acquirer.AcquireAsync(
                 mapping,
                 cancellationToken).ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
 
             if (!acquisition.IsAvailable)
             {
@@ -53,6 +52,10 @@ internal sealed class GiteaExternalSourceProvider : IExternalSourceProvider
                         ? ExternalSourceCheckoutTrust.Dirty
                         : ExternalSourceCheckoutTrust.Unverified);
             }
+
+            // Der erfolgreich gelieferte Checkout-Handle wird vor jeder weiteren
+            // Cancellation-Grenze an den lokalen Owner gebunden.
+            cancellationToken.ThrowIfCancellationRequested();
 
             snapshot = await MaterializeVerifiedAsync(mapping, checkout!, cancellationToken)
                 .ConfigureAwait(false);
@@ -172,12 +175,22 @@ internal sealed class GiteaExternalSourceProvider : IExternalSourceProvider
                 "$repository"));
         }
 
+        var projectedDiagnostics = ExternalSourceRepositoryFailurePolicy.ProjectTransportDiagnostics(
+            diagnostics,
+            isAvailable: false,
+            ExternalSourceProviderFailureKind.InvalidResponse);
+        if (ExternalSourceSnapshotMaterializationFailureReasons.IsSafe(failureReason))
+        {
+            projectedDiagnostics = projectedDiagnostics.Add(new(
+                ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionInvalid,
+                failureReason!,
+                "error",
+                "$repository"));
+        }
+
         return new ExternalSourceProviderResult(
             isAvailable: false,
-            ExternalSourceRepositoryFailurePolicy.ProjectTransportDiagnostics(
-                diagnostics,
-                isAvailable: false,
-                ExternalSourceProviderFailureKind.InvalidResponse),
+            projectedDiagnostics,
             state: ExternalSourceRepositoryResultState.Create(
                 ExternalSourceProviderFailureKind.InvalidResponse,
                 checkoutTrust: checkoutTrust));

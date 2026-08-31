@@ -88,6 +88,9 @@ internal sealed class AssemblyDecompilationCache
             }
 
             isPublished = true;
+            AssemblyCacheCleanup.RetainGenerations(
+                entryDirectory,
+                Path.GetFileName(generationDirectory));
             return new AssemblyCachePublishResult(true, generationDirectory, null);
         }
         catch (Exception ex) when (IsCacheWriteException(ex))

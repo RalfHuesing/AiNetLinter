@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AiNetLinter.Output;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
@@ -32,18 +33,26 @@ internal static class AssemblyAnalysisResponse
             effectiveStatus.ToCompletenessLabel(),
             origin.SourceSnapshotIdentity);
 
-        var content = result.Content
-            .Select(block => block is TextContentBlock text
-                ? new TextContentBlock { Text = FormatHeader(metadata) + text.Text }
-                : block)
-            .ToList();
         JsonElement? structured = result.StructuredContent;
         if (structured is { ValueKind: JsonValueKind.Object })
         {
             var node = JsonNode.Parse(structured.Value.GetRawText()) as JsonObject ?? new JsonObject();
             node["analysis"] = JsonSerializer.SerializeToNode(metadata, McpJsonOptions.Default);
-            structured = JsonSerializer.SerializeToElement(node, McpJsonOptions.Default);
+            structured = AssemblyAnalysisResponseLimits.EnsureStructuredContentBudget(
+                JsonSerializer.SerializeToElement(node, McpJsonOptions.Default));
         }
+
+        var content = result.Content
+            .Select(block => block is TextContentBlock text
+                ? new TextContentBlock
+                {
+                    Text = FormatHeader(metadata)
+                        + AssemblyAnalysisResponseLimits.SynchronizeDiagnosticText(
+                            text.Text,
+                            structured ?? default),
+                }
+                : block)
+            .ToList();
 
         return new CallToolResult
         {
