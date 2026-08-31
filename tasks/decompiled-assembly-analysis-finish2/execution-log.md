@@ -714,6 +714,21 @@
   Korrekturschleife für `DIAGNOSTICS-SAMPLE-BUDGET`, mit EPIC-C fortfahren und
   den EPIC-B-Restbefund im Abschluss ausdrücklich offen halten.
 
+## 2026-08-31 — running / EPIC-C / Implementierer
+
+- run-id: `run-20260831-decompiled-assembly-analysis-finish2`
+- subagent-id: `01a05585-ab4e-7652-b391-96fd81ed6d95`
+- diff-baseline: `20ed7a91`
+- scope: validierte Ressourcen-, Konfigurations-, TTL-/LRU-, Capacity-,
+  Lease-, Materialisierungs- und Creation-Barrier-Verträge für Assembly-/
+  Snapshot-Registries.
+- explizite Grenze: EPIC-B-P1 `DIAGNOSTICS-SAMPLE-BUDGET` bleibt nach drei
+  Versuchen Tech Debt und wird in diesem Rollenlauf nicht wieder geöffnet.
+- erwarteter Hand-off: Code-/Regressionsteständerungen ohne Commit sowie
+  fokussierte Build-, Test- und Violations-Nachweise nach der letzten Änderung.
+- warteverhalten: Der Implementierer läuft bis zum echten terminalen Status;
+  Polling-Timeouts führen nicht zu einem Interrupt.
+
 ## 2026-08-31 — running / EPIC-B / Korrektur-Implementierer Runde 1
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`

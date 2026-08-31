@@ -1,7 +1,7 @@
 # Ausführungs-Roadmap: decompiled-assembly-analysis-finish2
 
 status: executing
-current_epic: EPIC-B
+current_epic: EPIC-C
 correction_round: 3
 cycle_state: continue-after-finding-budget
 last_commit: 337ebe90
@@ -83,7 +83,17 @@ tech_debt: siehe tech-debt.md
   Dispose während der Erzeugung sind deterministisch.
 - Verifikation: fokussierte TTL/LRU/Capacity/Lease/Race/Creation-Barrier-
   Tests; hohe Last nur in gezielten Stress-Tests; gezielter Violations-Check.
-- Status: open
+- Status: in_progress
+
+## Aktueller Rollenlauf
+
+- Rolle: EPIC-C-Implementierer
+- Subagent: `01a05585-ab4e-7652-b391-96fd81ed6d95`
+- Scope: validierte Ressourcen-/TTL-/LRU-/Lease-/Creation-Barrier-Verträge
+  und fokussierte Regressionen; EPIC-B-Restbefund bleibt unverändert.
+- Erwarteter Hand-off: Implementierung ohne Commit, Nachweise nach letzter
+  Codeänderung und präzise offene Befunde.
+- Warteverhalten: Polling-Timeouts führen nicht zu einem Interrupt.
 
 ## EPIC-D — Mehrere Assemblies und tolerante Analyse
 
