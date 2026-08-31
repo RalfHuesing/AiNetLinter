@@ -4,7 +4,7 @@ status: executing
 current_epic: EPIC-C
 correction_round: 1
 cycle_state: continue-after-finding-budget
-last_commit: dc002543
+last_commit: 118ccb94
 primary_task: Schließe die dekompilierte Assembly-Analyse mit begrenzten Pfaden, Ressourcenverträgen, Cross-Assembly-Navigation und belastbaren Regressionen ab.
 tech_debt: siehe tech-debt.md
 
@@ -13,8 +13,12 @@ tech_debt: siehe tech-debt.md
 - EPIC-A: done, nach Korrekturrunde 1 `approved`.
 - EPIC-B: residual P1 nach drei ernsthaften Versuchen; keine weitere
   automatische Schleife für dieses Finding.
-- Nächster unabhängiger Arbeitsblock: EPIC-C; EPIC-B bleibt bis zu einer
-  späteren expliziten Wire-Form-/Payload-Budget-Entscheidung offen.
+- Die beim Resume vorgefundene, bereits committete Arbeit `118ccb94` behebt
+  vier dokumentierte P2-Punkte und implementiert die zwei EPIC-E-Teilaufträge;
+  sie wird als tatsächlicher Arbeitsstand erhalten und unabhängig geprüft.
+- Nächster unabhängiger Arbeitsblock: die ausstehende EPIC-C-Folgeprüfung;
+  EPIC-B bleibt bis zu einer späteren expliziten Wire-Form-/Payload-Budget-
+  Entscheidung offen.
 
 ## EPIC-A — Stabile In-Memory- und Dateipfade
 
@@ -83,7 +87,7 @@ tech_debt: siehe tech-debt.md
   Dispose während der Erzeugung sind deterministisch.
 - Verifikation: fokussierte TTL/LRU/Capacity/Lease/Race/Creation-Barrier-
   Tests; hohe Last nur in gezielten Stress-Tests; gezielter Violations-Check.
-- Status: review_in_progress (Folge-Review nach Korrekturrunde 2)
+- Status: review_pending (Folge-Review nach Korrekturrunde 2 und Resume)
 
 ## EPIC-C-Review — Korrektur umgesetzt, Folge-Review ausstehend
 
@@ -192,7 +196,7 @@ tech_debt: siehe tech-debt.md
 - Verifikation: Root-Assembly mit zwei Referenz-DLLs, exklusiv referenzierter
   Typ, fehlende/zyklische/beschädigte Metadaten, Tiefen-/Anzahl-Limits,
   tolerante Fehlerfälle und Live-Szenarien; gezielter Violations-Check.
-- Status: open
+- Status: open (Teilimplementierung aus `118ccb94` wird nach EPIC-D geprüft)
 
 ## EPIC-E — Abgegrenzte Befunde, Regressionen und Abschluss
 

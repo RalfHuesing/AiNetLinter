@@ -575,6 +575,29 @@
 - nächste Aktion: Review-Checkpoint committen, danach frischen
   Korrektur-Implementierer für EPIC-B starten.
 
+## 2026-08-31 — Resume-Zusammenführung / Orchestrator
+
+- Anlass: Der Task wurde bei einem `running`-Eintrag für die EPIC-C-
+  Folgeprüfung ohne zugehörigen lebenden Subagenten fortgesetzt. Der Eintrag
+  wird als unterbrochen behandelt; der Codecheckpoint `dc002543` bleibt die
+  zu prüfende EPIC-C-Korrekturgrundlage.
+- Vorgefundener Arbeitsstand: Commit `118ccb94` enthält bereits die zwei
+  bekannten EPIC-B-, zwei EPIC-C- und die zwei EPIC-E-Teilaufträge aus dem
+  vorgefundenen Fortschrittsnachweis. Die Änderungen und ihre Tests werden
+  als externer, noch nicht unabhängig geprüfter Arbeitsstand übernommen, nicht
+  überschrieben.
+- Übernommen: Vertragsbeschreibungen für `ambiguous` und `sortBy`, Tick-
+  Normalisierung des Daemon-Handshakes, präzise Truncation-Ursache, Health-
+  Detail-E2E, Materializer-/Registry-E2E sowie Member-Filter und SourceText-
+  Größenmetrik.
+- Artefaktbereinigung: Der übernommene Fortschrittsnachweis wurde in dieses
+  append-only Protokoll und das Tech-Debt-Register überführt. Seine separate
+  Datei wird entfernt, damit `roadmap.md`, `execution-log.md`, `tech-debt.md`
+  und `code-map.md` wieder die einzigen task-lokalen Zustandsartefakte sind.
+- Nächste Aktion: frischen unabhängigen EPIC-C-Folge-Reviewer gegen den
+  tatsächlichen Stand `017797d4..118ccb94` starten; EPIC-D bleibt danach der
+  nächste offene Implementierungsblock.
+
 ## 2026-08-31 — completed / EPIC-C / Folge-Reviewer nach Korrekturrunde 1
 
 - run-id: `run-20260831-decompiled-assembly-analysis-finish2`

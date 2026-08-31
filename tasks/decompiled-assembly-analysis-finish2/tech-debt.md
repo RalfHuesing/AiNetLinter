@@ -159,30 +159,29 @@ setzen. Der vollständige Bericht und die Verifikation stehen im
 - Beschreibung: Die Reservation-/Promotion-Verträge sind in getrennten
   Registry- und Materializer-Tests belegt, aber ohne direkten E2E-Test des
   gekoppelten Produktionspfads.
-- Fundstelle/Scope: `ExternalSourceSnapshotMaterializerTests.cs`,
-  `SourceSnapshotRegistryTests.cs`.
-- Evidenz: EPIC-C-Folge-Review; fokussierte Tests sind grün, der direkte
-  gekoppelte Pfad ist nicht abgesichert.
-- Disposition: `accepted-deferred`
-- Risiko: spätere Integrationsdrift zwischen Materializer und Registry könnte
-  unentdeckt bleiben.
-- Nächster Schritt: gekoppelten Reservation-/Promotion-/Rollback-Test ergänzen.
-- Log-Anker: `execution-log.md`, completed EPIC-C Folge-Reviewer vom
-  2026-08-31.
+- Fundstelle/Scope: `ExternalSourceSnapshotMaterializerTests.cs`.
+- Evidenz: Commit `118ccb94` ergänzt den gekoppelten Materializer-/Registry-
+  Test für Reservation, Promotion, Lease-Freigabe und Eviction.
+- Disposition: `fixed` (unabhängige Prüfung ausstehend)
+- Risiko: Der direkte Integrationspfad ist regressionsgesichert; die
+  Verifikation des Resume-Stands steht noch aus.
+- Nächster Schritt: Test und Contract im Folge-Review bestätigen.
+- Log-Anker: `execution-log.md`, Resume-Zusammenführung vom 2026-08-31.
 
 ## TD-EPIC-C-007 — Tick-Normalisierung im ThinClient-Limitvergleich
 
 - Schweregrad: P2
 - Beschreibung: `ResolveIdleTtl` vergleicht normalisierte TimeSpan-Ticks nicht
   mit dem Rohwert des ThinClient-Handshakes.
-- Fundstelle/Scope: `AssemblyAnalysisResourceBudget.cs`, `ThinClientProxy.cs`.
-- Evidenz: EPIC-C-Folge-Review; sehr hochpräzise Dezimalwerte können eine
-  falsche Konfigurationswarnung auslösen.
-- Disposition: `accepted-deferred`
-- Risiko: seltene, aber irreführende Divergenzwarnung bei bestehenden Daemons.
-- Nächster Schritt: beide Seiten auf denselben normalisierten Wert abbilden.
-- Log-Anker: `execution-log.md`, completed EPIC-C Folge-Reviewer vom
-  2026-08-31.
+- Fundstelle/Scope: `DaemonProtocol.cs`.
+- Evidenz: Commit `118ccb94` vergleicht optionale Minutenwerte nach
+  Normalisierung auf `TimeSpan.Ticks`.
+- Disposition: `fixed` (unabhängige Prüfung ausstehend)
+- Risiko: Die Vergleichssemantik ist auf die durch `TimeSpan` darstellbare
+  Präzision ausgerichtet; der Resume-Review prüft den Handshake-Vertrag.
+- Nächster Schritt: Normalisierung und rückwärtskompatibles Handshake-Verhalten
+  im Folge-Review bestätigen.
+- Log-Anker: `execution-log.md`, Resume-Zusammenführung vom 2026-08-31.
 
 ## TD-EPIC-C-008 — Creation-Join nach Dictionary-Entfernung
 
@@ -258,30 +257,29 @@ setzen. Der vollständige Bericht und die Verifikation stehen im
 - Schweregrad: P2
 - Beschreibung: `CreateSummary` kann `maxDiagnosticBytes` als Ursache melden,
   wenn nur globale Root-/Transitive-Slots ausgeschöpft wurden.
-- Fundstelle/Scope: `AssemblyAnalysisResponseLimits.cs:146`.
-- Evidenz: unabhängiger Folge-Review; keine aktuelle P1-Funktionsverletzung,
-  aber die Diagnostic-Ursache ist bei Grenzfällen unpräzise.
-- Disposition: `accepted-deferred`
-- Risiko: begrenzte Diagnosegenauigkeit; Antwort bleibt ansonsten bounded.
-- Nächster Schritt: Truncation-Gründe getrennt modellieren und mit einem
-  gezielten Grenzfalltest absichern.
-- Log-Anker: `execution-log.md`, completed EPIC-B Folge-Reviewer vom
-  2026-08-31.
+- Fundstelle/Scope: `AssemblyAnalysisResponseLimits.cs` und
+  `AssemblyAnalysisDispatcherCapabilityTests.cs`.
+- Evidenz: Commit `118ccb94` trennt Slot- und Byte-Truncation und sichert den
+  Slot-Grenzfall durch eine Regression.
+- Disposition: `fixed` (unabhängige Prüfung ausstehend)
+- Risiko: Die Truncation-Ursache ist präziser; der globale Wire-Budget-P1 aus
+  `TD-EPIC-B-010` bleibt davon unberührt.
+- Nächster Schritt: Nach EPIC-D als Teil des EPIC-E-Reviews bestätigen.
+- Log-Anker: `execution-log.md`, Resume-Zusammenführung vom 2026-08-31.
 
 ## TD-EPIC-B-009 — Registrierter Health-Detail-E2E-Pfad
 
 - Schweregrad: P2
 - Beschreibung: Für `get_server_health` fehlt ein registrierter E2E-Testpfad
   mit `includeDiagnostics=true`; Builder- und Schema-Tests sind vorhanden.
-- Fundstelle/Scope: `src/AiNetLinter.IntegrationTests/Mcp/Tools/`.
-- Evidenz: unabhängiger Folge-Review; keine fehlende Produktionsfunktion,
-  jedoch keine vollständige Wire-E2E-Abdeckung dieses Detailpfads.
-- Disposition: `accepted-deferred`
-- Risiko: spätere Registrierungs-/Wire-Regressionen könnten unentdeckt bleiben.
-- Nächster Schritt: Einen gezielten registrierten E2E-Test ergänzen und den
-  vollständigen Health-Detailvertrag prüfen.
-- Log-Anker: `execution-log.md`, completed EPIC-B Folge-Reviewer vom
-  2026-08-31.
+- Fundstelle/Scope: `McpServerAssemblyHealthE2ETests.cs`.
+- Evidenz: Commit `118ccb94` registriert einen E2E-Aufruf mit
+  `includeDiagnostics=true` und begrenztem `maxDiagnostics`.
+- Disposition: `fixed` (unabhängige Prüfung ausstehend)
+- Risiko: Der Detailpfad ist jetzt registriert abgedeckt; die vorhandene
+  P1-Wire-Budget-Entscheidung bleibt offen.
+- Nächster Schritt: Nach EPIC-D als Teil des EPIC-E-Reviews bestätigen.
+- Log-Anker: `execution-log.md`, Resume-Zusammenführung vom 2026-08-31.
 
 ## TD-EPIC-B-002 — `AssemblyAnalysisRegistry` Footprint
 
