@@ -343,6 +343,30 @@ Signature: m is IFieldSymbol { HasConstantValue: true } constField
 
 ---
 
+## Rang 13: Fehler-Diagnose bei nativen Win32/C++-Binaries lesbar und mit Handlungs-Hint aufbereiten
+
+### Problem & Auswirkung auf LLM-Agenten
+- **Befund-ID:** `ERR-002` / `ASM-004`
+- **Schweregrad / Dringlichkeit:** `S3` / `P3`
+- **Symptom:** Wird dem MCP-Server eine native C++/Win32-DLL (ohne .NET-Metadaten / IL-Code) übergeben, antwortet der Server mit einer Roh-Repräsentation des internen C#-Records:
+  ```text
+  [ERROR]: ANALYSIS_FAILED: Assembly-Session konnte nicht aufgebaut werden: AssemblySessionDiagnostic { Code = assembly-metadata-missing, Message = Die Datei enthält keine .NET-Metadaten., Severity = Error }
+  ```
+- **Agentischer Schaden:** Zwar ist die Information sachlich korrekt und der Server reagiert schnell (< 20 ms), aber das Format als C#-Record-String wirkt unformatiert und enthält keinen handlungsorientierten `hint`. Ein Agent könnte versuchen, alternative Parameter zu testen.
+
+### Betroffener Code
+- [src/AiNetLinter/Mcp/Assemblies/Session/AssemblySessionManager.cs](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Session/AssemblySessionManager.cs)
+- [src/AiNetLinter/Mcp/Assemblies/Session/AssemblySessionResultFormatter.cs](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Session/AssemblySessionResultFormatter.cs)
+
+### Lösungsvorschlag
+1. `AssemblySessionDiagnostic` sauber als Markdown/Text-Fehlermeldung mit klarem Grund formatieren:
+   ```text
+   [ERROR]: ANALYSIS_FAILED: Die angegebene Datei ist keine .NET-Assembly (keine CLI/PE-Metadaten vorhanden).
+   hint: AiNetLinter analysiert ausschließlich verwaltete .NET-Binaries (.dll/.exe mit IL-Code). Native Win32/C++-Bibliotheken können nicht geladen werden.
+   ```
+
+---
+
 ## Architektur-Diskussion: Sollte der MCP-Server temporäre Cache-Dateipfade an das LLM mitteilen?
 
 ### Frage & Evaluierung
@@ -353,8 +377,10 @@ Signature: m is IFieldSymbol { HasConstantValue: true } constField
 2. **Sandbox- & Berechtigungskonflikte:** In vielen Agenten-Umgebungen (wie auch in diesem Audit erlebt) sind Dateisystem-Reads außerhalb des Workspace-Roots aus Sicherheitsgründen gesperrt (`Permission denied for read_file(...)`).
 3. **Flüchtigkeit & Lifecycle:** Cache-Dateien können nach Ablauf der `IdleTtl` oder bei Cache-Bereinigungen gelöscht werden. Direkte Dateireferenzen veralten sofort.
 4. **Bessere Alternative:** Die MCP-Tools müssen semantisch vollständig sein (siehe Rang 11 & 12):
-   - `get_class_structure` liefert vollständige Signaturen inkl. Werten.
+   - `get_class_structure` liefert vollständige Signaturen inkl. Werten (`Erfassungsart.Verkauf = 4000`).
    - `get_symbol_body` liefert den dekompilierten Code direkt im Tool-Ergebnis.
    - Als `filePath` wird ein virtueller Symbolpfad (`assembly://Sagede.OfficeLine.Wawi.BelegBasic/Belegarten.cs`) übergeben, der stabil und aussagekräftig ist.
+
+
 
 
