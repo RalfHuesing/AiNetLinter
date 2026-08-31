@@ -314,12 +314,32 @@ Signature: m is IFieldSymbol { HasConstantValue: true } constField
 - **Symptom:** Bei dekompilierten Assemblys liefert `get_symbol_body` nur Semikolon-terminierte Metadata-Stubs (`private bool InitializeBelegarten(Mandant mandant);`), nicht den dekompilierten C#-Rumpf `{ ... }`.
 - **Agentischer Schaden:** Der LLM-Agent sieht zwar die Signatur, kann aber die tatsächliche Geschäftslogik (z. B. welche SQL-Statements ausgeführt werden oder welche Berechnungsformeln greifen) nicht analysieren.
 
-### Betroffener Code
-- [src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs)
-- [src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationCache.cs](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationCache.cs)
+### Ursache im Code
+1. Beim initialen Laden der Assembly in [src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs:287](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs#L287) wird bewusst `DecompileMemberBodies = false` konfiguriert:
+   ```csharp
+   var settings = new ICSharpCode.Decompiler.DecompilerSettings
+   {
+       DecompileMemberBodies = false,
+       // ...
+   };
+   ```
+   *Grund:* Das ist für den initialen Scan sinnvoll, um auch bei 5-MB-Monolithen mit 20.000 Methoden in < 2 Sekunden und ohne Speicher- oder Parse-Explosion den Typgraphen aufzubauen.
+2. In [src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs:160-167](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs#L160-L167) wird jedoch nur der SyntaxTree der initialen Dekompilation abgefragt, der naturgemäß nur die leere Signatur enthält:
+   ```csharp
+   var declaringReference = symbol.DeclaringSyntaxReferences.FirstOrDefault();
+   var syntax = declaringReference.GetSyntax();
+   var text = syntax.ToFullString(); // Liefert nur "private bool Method();"
+   ```
 
-### Lösungsvorschlag
-Wenn für ein Symbol in einer dekompilierten Assembly kein Source-Code vorliegt, die CIL-Instructions der Methode gezielt über `ICSharpCode.Decompiler` (z. B. `CSharpDecompiler.DecompileAsString(methodDefinitionHandle)`) on-demand dekompilieren und den vollständigen C#-Methodenkörper zurückgeben.
+### Lösungsvorschlag (Zweistufiges Modell)
+1. **Initialer Scan bleibt schlank:** `DecompileMemberBodies = false` bleibt für den Aufbau der Assembly-Struktur unverändert erhalten (für schnelle Indizierung und geringen Speicher).
+2. **On-Demand Rumpf-Dekompilation bei `get_symbol_body`:**
+   Wenn `get_symbol_body` aufgerufen wird und das Symbol aus einer dekompilierten Assembly stammt, dekompiliert der Adapter gezielt nur diesen spezifischen Member über `ICSharpCode.Decompiler` mit aktivem `DecompileMemberBodies = true` (Dauer: ~5-15 ms):
+   ```csharp
+   var decompiler = new CSharpDecompiler(assemblyPath, resolver, new DecompilerSettings { DecompileMemberBodies = true });
+   string fullMethodSource = decompiler.DecompileAsString(methodDefinitionHandle);
+   ```
+3. **Ergebnis:** Schneller Start bei voller Verfügbarkeit der Geschäftslogik auf Abruf.
 
 ---
 
