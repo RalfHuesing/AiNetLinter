@@ -1,5 +1,5 @@
 ---
-status: draft
+status: ready
 ---
 
 # Konzept: Findings aus dem Audit zur Analyse dekompilierter Assemblies beheben
@@ -52,19 +52,16 @@ Magic-Value-Kandidaten sowie der verworfene Root-Routing-Probe.
 | `MCP-L6-001` | P0 Funktion | `Datei:Zeile:Spalte` akzeptiert Spalte `0`, negative Werte sowie zu große Werte; `FindToken` kann danach `ArgumentOutOfRangeException` auslösen und den Tool-Call fälschlich als `WORKSPACE_DIAGNOSTIC`/`isError=true` melden. | Zeile und Spalte werden gegen `SourceText` validiert, bevor Roslyn angesprochen wird. Ungültige Positionen liefern den recoverable Fehlercode `INVALID_ARGUMENT`, `isError=false`, mit Format-/Bereichshinweis; Workspace- oder Roslyn-Fehler bleiben davon getrennt. Tests decken 0, negative, überlange und gültige Grenzwerte ab. |
 | `ASM-002` | P0 Funktion/Agentennutzen | Erwartete Nicht-Treffer einzelner Referenz-Sessions werden als globale Diagnostics gesammelt. Ein Symbol, das nur im Root gefunden wird, kann dadurch fälschlich als `partial` erscheinen. | Erwartete Session-Nicht-Treffer werden intern von echten Lade-, Expansions-, Session- und Trunkierungsdiagnosen unterschieden und nicht als globale Unvollständigkeit gezählt. Ein echter Fehler bleibt sichtbar. Ein Multi-Session-Test prüft Root-Treffer plus erwartete Nicht-Treffer und den Gegenfall ohne Treffer. |
 | `ASM-003` | P0 Agentennutzen | `AssemblyFindSymbolTool` überschreibt bei mehreren Patterns die Navigation des vorherigen Patterns; Trunkierung oder Diagnostics des ersten Patterns gehen verloren. | Die Batch-Antwort aggregiert Navigation und Diagnostics aller Patterns deterministisch, ohne frühere Trunkierungsinformationen zu verlieren. Die bestehende Structured-Response-Form bleibt kompatibel; mindestens `partial`/Truncated und die zugehörige Diagnose des ersten begrenzten Patterns müssen im Gesamtergebnis sichtbar bleiben. |
-| `EXTSRC-03` | P1 Funktion/Diagnose | Ein live gemappter Checkout wird zwar gefunden, aber source-backed Assembly-Antworten können weiterhin auf decompiled/`sourcePath=none`/`snapshot=none` fallen. Die Materialisierung verwirft unerwartete Workspace-Ursachen zu stark und gibt teils nur eine generische Diagnose aus. | Der source-backed Pfad wird mit einer reproduzierbaren, gültig restaurierten Fixture end-to-end abgesichert. Die Materialisierung surfacet eine sichere, nicht geheime Ursache (z. B. fehlende/veraltete Assets, keine Projekte, ungültige Solution, Workspace-Diagnostic) und entscheidet nachvollziehbar zwischen source-backed Ergebnis und decompiled Fallback. Kein stiller Statuswechsel. Die Restore-Entscheidung ist unten als Nutzerfrage festgehalten. |
-| `EXTSRC-02` | P1 Sicherheit/Vertrag | Der produktive MCP-/Daemon-Entry verdrahtet keinen Credential Resolver. Geschützte Remotes scheitern dadurch nicht früh und eindeutig; Credentials dürfen keinesfalls in URL, Argumenten, Logs oder Diagnostics landen. | Der Authentifizierungsvertrag wird explizit und fail-closed umgesetzt. Ohne freigegebene Credential-Quelle wird ein geschütztes Remote früh als recoverable, nicht unterstützter/authentifizierungsbedürftiger Zugriff gemeldet. Falls geschützte Remotes in diesem Paket unterstützt werden sollen, braucht es einen klar begrenzten Resolver mit Besitz-/Lebensdauermodell, Redaction und Tests; die Entscheidung ist unten offen. |
+| `EXTSRC-03` | P1 Funktion/Diagnose | Ein live gemappter Checkout wird zwar gefunden, aber source-backed Assembly-Antworten können weiterhin auf decompiled/`sourcePath=none`/`snapshot=none` fallen. Die Materialisierung verwirft unerwartete Workspace-Ursachen zu stark und gibt teils nur eine generische Diagnose aus. | Der source-backed Pfad wird mit einer reproduzierbaren, gültig restaurierten Fixture end-to-end abgesichert. Die Materialisierung surfacet eine sichere, nicht geheime Ursache (z. B. fehlende/veraltete Assets, keine Projekte, ungültige Solution, Workspace-Diagnostic) und entscheidet nachvollziehbar zwischen source-backed Ergebnis und decompiled Fallback. Kein stiller Statuswechsel; ein Checkout muss vor der Materialisierung restauriert sein. |
+| `EXTSRC-02` | P1 Sicherheit/Vertrag | Der produktive MCP-/Daemon-Entry verdrahtet keinen Credential Resolver. Geschützte Remotes scheitern dadurch nicht früh und eindeutig; Credentials dürfen keinesfalls in URL, Argumenten, Logs oder Diagnostics landen. | Der Authentifizierungsvertrag wird explizit und fail-closed umgesetzt. Dieses Paket unterstützt nur öffentliche Remotes; geschützte Remotes werden früh als recoverable, nicht unterstützter/authentifizierungsbedürftiger Zugriff gemeldet. Es gibt keinen Credential Resolver und keine Geheimnisse im MCP-Vertrag. |
 | `F-05-01` | P1 Ressourcen | Erfolgreich veröffentlichte Generationen von Assembly-Decompilation- und External-Source-Caches werden nicht aufgeräumt; nur unveröffentlichte Generationen werden entfernt. | Nach erfolgreichem Pointer-Switch erfolgt eine sichere Retention-/Sweep-Phase. Aktuelle, noch geleaste bzw. innerhalb einer definierten Grace-Zeit benötigte Generationen bleiben erhalten; alte Generationen werden deterministisch begrenzt. Pointer-, Lease-, Race-, Reparse-Point- und Pfadschutz bleiben wirksam. Wiederholte erfolgreiche Refreshes werden als Integration/Komponententest geprüft. |
 | `F-05-02` | P1 Ressourcen | Die statische `ConcurrentDictionary` der Cache-Key-Locks wächst monoton; ein Lease gibt nur das Semaphore frei, entfernt den unbenutzten Key aber nicht. | Ein ref-counted, race-sicherer Key-Lock-Halter entfernt und disposiert sich nach dem letzten Waiter/Publisher per Compare-and-remove. Ein neuer Waiter darf nicht zwischen Remove und Lock-Übernahme verloren gehen. Multi-Key-, Parallelitäts- und Reclamation-Tests beweisen die Lebensdauer. |
-| `F-05-03` | P1 Freshness | Resident Assembly-Reuse vergleicht nur den Root-SHA. Änderungen an Source-Mapping, Snapshot oder Abhängigkeiten können bei unveränderten Root-Bytes übersehen werden. | Die Reuse-Identität umfasst mindestens Root-Inhalt und die für die Analyse maßgebliche Source-/Referenzidentität. Änderungen an Snapshot, Source-Projekt oder aufgelöster Dependency-Fingerprint invalidieren deterministisch; unveränderte Identität reused weiter. Die Auswirkung auf Kosten und Refresh-Vertrag wird vor der Umsetzung bestätigt. |
-| `MCP-WIRE-001` | P1 Agentennutzen | Das 4-KiB-Limit wird auf Diagnose-Samples angewendet, aber dieselben Samples können mehrfach in StructuredContent, Summary, Referenzprojektionen und Text erscheinen. Die vollständige serialisierte MCP-Payload wird nicht gemessen. | Ein maximaler JSON-Fixture-Test misst die komplette `structuredContent`-Payload. Der dokumentierte Wire-Vertrag wird entweder durch eine globale, benannte Budgetierung/Deduplizierung tatsächlich eingehalten oder präzisiert, falls das 4-KiB-Limit bewusst nur für Samples gilt. Text und StructuredContent behalten dieselbe inhaltliche Diagnoseauswahl. |
+| `F-05-03` | P1 Freshness | Resident Assembly-Reuse vergleicht nur den Root-SHA. Änderungen an Source-Mapping, Snapshot oder Abhängigkeiten können bei unveränderten Root-Bytes übersehen werden. | Die Reuse-Identität umfasst mindestens Root-Inhalt und die für die Analyse maßgebliche Source-/Referenzidentität. Änderungen an Snapshot, Source-Projekt oder aufgelöster Dependency-Fingerprint invalidieren deterministisch; unveränderte Identität reused weiter. Die zusätzliche Fingerprint-Arbeit ist Teil des beschlossenen Freshness-Vertrags. |
+| `MCP-WIRE-001` | P1 Agentennutzen | Das 4-KiB-Limit wird auf Diagnose-Samples angewendet, aber dieselben Samples können mehrfach in StructuredContent, Summary, Referenzprojektionen und Text erscheinen. Die vollständige serialisierte MCP-Payload wird nicht gemessen. | Ein maximaler JSON-Fixture-Test misst die komplette `structuredContent`-Payload. Der dokumentierte 4-KiB-Wert gilt als harte globale Grenze der serialisierten Assembly-StructuredContent-Payload; eine benannte Budgetierung und Deduplizierung verhindert Überschreitung. Text und StructuredContent behalten dieselbe inhaltliche Diagnoseauswahl. |
 | `UX-001` | P2 Wartbarkeit/Agentennutzen | `AssemblyAnalysisRegistry` überschreitet als zusammenhängender Typ das konfigurierte Struktur-/Kontextziel; Ownership, Generation, Source-Project-Leases, Retirement und Disposal liegen eng gekoppelt. | Nach den P0/P1-Verhaltensfixes wird die Registry scope-nah in kleine, klar verantwortliche Kollaboratoren/Fassaden zerlegt. Public-/Internal-Verträge, Lock-Reihenfolgen, Generationen und Lease-Ownership bleiben unverändert. Der Refactor darf keine zusätzliche Partial-Datei-Drift oder versteckte Zuständigkeit erzeugen. |
 | `MCP-L6-002` | P2 Wartbarkeit | `GetServerHealthResponseBuilder` liegt knapp über dem AIContextFootprint-Limit und zieht mehrere große Domänenabhängigkeiten direkt ein. | Health-Projektion, Diagnoseprojektion und Markdown-Formatierung werden über schmale, stabile Datenprojektionen getrennt. Der Wire-Vertrag bleibt unverändert; bestehende Health-Tests und die Metrik-/Violation-Prüfung müssen nach dem Refactor grün sein. |
 
-## 4. Vorläufige Architektur- und Vertragsentscheidungen
-
-Diese Entscheidungen gelten als Arbeitsannahmen, bis die offenen Nutzerfragen
-beantwortet sind:
+## 4. Architektur- und Vertragsentscheidungen
 
 - **Metadata-only und keine versteckten Seiteneffekte:** Die Assembly wird nie
   geladen oder ausgeführt. Ein impliziter Restore oder ein beliebiger Prozess-
@@ -76,8 +73,13 @@ beantwortet sind:
   keine Child-Leases.
 - **Fail-closed bei externen Quellen:** Ungültige oder nicht unterstützte
   URL-/Auth-Zustände werden früh, recoverable und ohne Geheimnisse gemeldet.
-  URLs, Exceptions, Logs und MCP-Diagnostics werden auf mögliche Secrets
-  geprüft und redigiert.
+  Dieses Paket verarbeitet nur öffentliche Remotes; ein Credential Resolver ist
+  ausdrücklich nicht Bestandteil des Scopes. URLs, Exceptions, Logs und
+  MCP-Diagnostics werden auf mögliche Secrets geprüft und redigiert.
+- **Kein impliziter Restore:** Ein externer Checkout muss vor der
+  Source-Materialisierung restauriert sein. Fehlen oder veralten die
+  Restore-Artefakte, liefert der Pfad eine konkrete Diagnose und darf nicht
+  eigenmächtig Netzwerk, Restore-Prozess oder zusätzliche Seiteneffekte starten.
 - **Leases besitzen Ressourcen:** Ein erfolgreich übergebener Checkout-Handle
   hat ab der Acquirer-Rückgabe genau einen Owner. Cancellation und jede
   Materialisierungsfehlerbahn müssen diesen Owner eindeutig freigeben.
@@ -219,49 +221,33 @@ diagnostisch verwertbar bleiben, ohne den Serverprozess zu beschädigen.
   und atomarem Pointer-Switch sichtbar. Cleanup läuft nachgelagert und darf
   aktive Nutzer alter Generationen nicht stören.
 - **Resident Sessions:** Reuse wird nur bei gleicher vollständiger
-  Analyseidentität erlaubt; bei Identitätsänderung erfolgt ein sauberer
+  Analyseidentität erlaubt; diese umfasst Root-Inhalt, Source-Snapshot und die
+  aufgelöste Dependency-Identität. Bei Identitätsänderung erfolgt ein sauberer
   Generation-/Lease-Wechsel.
+- **Wire-Budget:** Die komplette serialisierte Assembly-StructuredContent-
+  Payload bleibt einschließlich wiederholter Projektionen innerhalb des
+  dokumentierten 4-KiB-Budgets. Deduplizierung und eine benannte globale
+  Budgetprüfung sind dafür verbindlich.
 
-## 10. Offene Nutzerentscheidungen
+## 10. Beschlossene Nutzerentscheidungen und spätere Detailentscheidungen
 
-1. **Geschützte externe Remotes:** Soll dieses Paket geschützte Remotes
-   produktiv unterstützen? Meine Empfehlung ist zunächst **public-only,
-   fail-closed**: geschützte Remotes erhalten eine eindeutige recoverable
-   Auth-Diagnose, und es wird kein Credential-Resolver eingeführt. Das hält
-   Secrets aus dem MCP-Vertrag und vermeidet eine unklare Quelle/Lebensdauer.
-   Alternative: expliziter OS-/Environment-Resolver mit Redaction- und
-   Ownership-Spezifikation; das erweitert Scope und Testaufwand deutlich.
+- **Geschützte externe Remotes:** Dieses Paket unterstützt nur öffentliche
+  Remotes und bleibt bei geschützten Remotes fail-closed. Es wird kein
+  Credential Resolver eingeführt; der Zugriff wird recoverable und ohne
+  Geheimnisse diagnostiziert.
+- **Restore-Verhalten:** Ein externer Checkout muss vor der
+  Source-Materialisierung restauriert sein. Es gibt keinen versteckten Restore;
+  fehlende oder veraltete Restore-Artefakte werden konkret diagnostiziert und
+  führen zu einem sicheren Fallback, soweit möglich.
+- **Freshness:** Source-Snapshot und aufgelöste Dependency-Fingerprints sind
+  Teil der vollständigen Analyseidentität. Änderungen invalidieren Resident-
+  Reuse deterministisch.
+- **Wire-Limit:** Der dokumentierte 4-KiB-Wert gilt als harte globale Grenze
+  für die komplette serialisierte Assembly-StructuredContent-Payload. Die
+  Implementierung muss wiederholte Diagnose-Samples deduplizieren oder vor der
+  Ausgabe budgetgerecht kürzen.
 
-2. **Restore-Verhalten für Source-backed:** Soll ein externer Checkout vor dem
-   Tool-Aufruf bereits restauriert sein? Meine Empfehlung ist **ja**: kein
-   versteckter Restore, sondern `PROJECT_NOT_RESTORED`/eine konkrete
-   Materialisierungsdiagnose und ein sicherer Fallback. Ein automatischer
-   Restore wäre eine neue Netzwerk-/Prozessberechtigung mit Timeout-, Cache-,
-   Lock- und Fehlersemantik.
-
-3. **Freshness von Source/Dependencies:** Soll die vollständige Analyseidentität
-   Source-Snapshot und aufgelöste Dependency-Fingerprints einschließen? Meine
-   Empfehlung ist **ja**, damit Root-only-Reuse keine veralteten Ergebnisse
-   liefert. Der Preis ist zusätzliche Fingerprint-/Refresh-Arbeit.
-
-4. **Wire-Limit:** Soll der dokumentierte 4-KiB-Wert als harte Grenze für die
-   komplette serialisierte Assembly-StructuredContent-Payload gelten? Meine
-   Empfehlung ist **ja**, mit einer benannten globalen Budgetierung und
-   Deduplizierung wiederholter Diagnose-Samples; andernfalls muss die
-   Dokumentation ausdrücklich auf den bisherigen Sample-Teilbereich begrenzt
-   werden.
-
-## Arbeitsgedächtnis (nur Draft)
-
-- Das Konzept bleibt `status: draft`, bis die offenen Produktentscheidungen
-  beantwortet und die daraus folgenden Vertragsformulierungen eingearbeitet
-  sind.
-- Der historische Audit wurde gegen aktuelle Symbole und Implementierungen
-  geprüft; die Matrix oben ist der vollständige geplante Scope. Historische
-  Befunde werden nicht ungeprüft als aktuelle Wahrheit behandelt.
-- Die MCP-Violation-Gesamtabfrage lief in einen 300-Sekunden-Timeout. Das ändert
-  keine der aus aktuellen Quellen bestätigten Befunde; nach der Implementierung
-  ist eine gezielte MCP-Nachprüfung Teil der Abnahme.
-- Vor einer Freigabe sind die Antworten zu Authentifizierung, Restore,
-  Freshness und Wire-Budget einzuarbeiten. Danach wird dieser Draft bereinigt,
-  auf `status: ready` gesetzt und erneut committed.
+Die genaue Wahl der internen Kollaboratorgrenzen, Retention-/Grace-Strategie,
+diagnostischen Detailtexte und der technisch passenden JSON-Projektion bleibt
+dem Implementierungspaket überlassen, sofern Muss- und Akzeptanzkriterien,
+Sicherheitsmodell und der hier beschlossene Außenvertrag unverändert bleiben.
