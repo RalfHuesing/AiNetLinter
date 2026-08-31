@@ -18,6 +18,9 @@ für die Umsetzung, nachdem ein Konzept bei Bedarf separat mit dem
   Rollenbeschreibung: `implement`, `review` und `audit`.
 - Starte niemals mehrere Subagenten gleichzeitig. Warte jedes Ergebnis ab,
   bevor die nächste Rolle beginnt.
+- Große Aufgaben dürfen lange laufen. Laufzeit, lange MCP-Abfragen oder ein
+  großer Diff sind für sich allein niemals ein Grund, einen lebenden
+  Subagenten zu beenden oder den Auftrag abzubrechen.
 - Der Orchestrator schreibt keinen Produktionscode. Er darf im Großkonzept-
   Modus eine einzige `roadmap.md` als Ausführungs- und Resume-Stand pflegen.
 - Für jeden orchestrierten Task gibt es zusätzlich genau ein
@@ -129,14 +132,18 @@ MCP-Abfragen verifiziert.
 - Verwende niemals einen alten Implementierer für eine Korrektur, einen alten
   Reviewer für das nächste Epic oder einen alten Audit für einen neuen Lauf.
   Korrekturen und Resumes erhalten jeweils neue Subagenten.
-- Wenn ein eigener alter Task derselben Ausführung noch läuft oder nicht sauber
-  beendet werden kann, starte keinen weiteren Subagenten und stoppe mit einer
-  konkreten Meldung.
+- Ein lebender eigener Alt-Task wird niemals nur wegen seiner Laufzeit,
+  scheinbarer Langsamkeit oder eines abgelaufenen Wartefensters beendet. Wenn
+  er bei einem Resume noch läuft, warte auf sein echtes terminales Ergebnis
+  und starte keinen parallelen Ersatz im gemeinsamen Working Tree. Erst ein
+  nachweislicher Prozessabsturz, ein terminaler Toolfehler oder eine
+  ausdrückliche Nutzer-Cancellation erlaubt die Behandlung als beendet oder
+  unterbrochen.
 - Vor dem ersten Rollenaufruf und bei jedem Resume prüfe die Task-Liste auf
-  eigene abgeschlossene oder abgebrochene Subagenten der laufenden Ausführung,
-  beende und entferne bzw. archiviere sie, sofern das Werkzeug dies unterstützt.
-  Einen noch laufenden eigenen Alt-Task beendest du vor einer neuen Delegation;
-  gelingt das nicht, stoppst du. Fremde Nutzer-Tasks bleiben unberührt.
+  eigene abgeschlossene oder terminal fehlgeschlagene Subagenten der laufenden
+  Ausführung und entferne bzw. archiviere sie, sofern das Werkzeug dies
+  unterstützt. Laufende eigene Tasks bleiben bestehen, bis sie terminal sind;
+  Fremde Nutzer-Tasks bleiben unberührt.
 
 ## Persistenz von Agentenfeedback
 
@@ -170,9 +177,11 @@ nicht von den Rollen-Subagenten, gepflegt:
   erneute Tiefenrecherche durch; fehlt eine notwendige Kartenaktualisierung,
   ergänzt er nur die minimal erforderliche Metadatenkorrektur.
 - Bei einem Resume wird ein `running`-Eintrag ohne Abschluss anhand der
-  Task-Liste und des Working Trees als `interrupted` oder `unknown` markiert.
-  Der alte eigene Subagent wird beendet/archiviert, bevor ein frischer gestartet
-  wird. Das Ereignis und die Entscheidung werden zuerst protokolliert.
+  Task-Liste und des Working Trees als `interrupted` oder `unknown` markiert,
+  wenn der zugehörige Subagent nachweislich nicht mehr lebt. Läuft er noch,
+  bleibt der Eintrag `running`; der Orchestrator wartet und delegiert keinen
+  Ersatz. Erst nach einem terminalen Ergebnis oder einem nachweislichen
+  Absturz wird der Task entfernt/archiviert und das Ereignis protokolliert.
 - Lies beim Resume zuerst `roadmap.md`, dann `code-map.md` und danach nur die
   für das aktuelle Epic relevanten beziehungsweise letzten Log-Einträge. Lade
   nicht den gesamten Log in den Kontext, sofern das nicht für eine konkrete
@@ -190,6 +199,14 @@ nachträgliche Extraktion aus dem kompletten Log:
   Fundstelle, Evidenz, Disposition, nächstem sinnvollen Schritt und Log-Anker.
   Der Orchestrator führt bestehende Einträge anhand ihrer technischen Ursache
   fort, statt sie bei jedem Bericht zu duplizieren.
+- `tech-debt.md` ist zugleich eine Queue: Neue Einträge werden hinten
+  angehängt. Wird ein Eintrag zur Bearbeitung aktiviert, erhält er für diesen
+  Durchlauf fünf Korrekturversuche. Nach fünf ungelösten Versuchen wird er mit
+  `accepted-deferred` und `attempts: 0` wieder hinten eingereiht. Wird er in
+  einem späteren Durchlauf erneut aktiviert, wird sein Budget wieder auf fünf
+  gesetzt. Diese Queue darf sich grundsätzlich endlos drehen; insbesondere
+  darf ein einzelner hartnäckiger Eintrag den Orchestrator nicht automatisch
+  stoppen.
 - Verwende die Dispositionen `fixed`, `accepted-deferred`,
   `rejected/not-applicable`, `blocked/needs-user-decision` und
   `promoted-to-project-debt`. `rejected/not-applicable` und kosmetische oder
@@ -307,46 +324,46 @@ gelesen.
   `current_epic`, letzten Commit und einen konkreten Blocker enthalten, aber
   keine Detailprotokolle oder Kritikerhistorien. Halte dort zusätzlich nur die
   knappe Abschluss-Checkliste der aus `Konzept.md` übernommenen Pflicht-
-  verifikationen und deren Erledigungsstatus fest. Für die Zyklus- und
-  Budgetsteuerung sind außerdem `correction_round`, höchstens drei knappe
-  `recent_finding_signatures` und ein `cycle_state` zulässig; vollständige
-  Reviewtexte und Tech-Debt-Details gehören nicht in die Roadmap. Der
+  verifikationen und deren Erledigungsstatus fest. Für die laufende Queue-
+  Steuerung sind außerdem höchstens ein `current_debt_item` und dessen
+  `debt_attempts` zulässig; vollständige Reviewtexte und Tech-Debt-Details
+  gehören nicht in die Roadmap. Der
   kuratierte Tech-Debt-Stand steht ausschließlich in `tech-debt.md`.
 
 Nach der Roadmap-Erzeugung beginnt die autonome Abarbeitung ohne weitere
 Bestätigung des Nutzers.
 
-## Korrektur- und Zyklusbudget
+## Korrektur- und Wiederholungsbudget
 
-Eine Korrekturrunde beginnt erst nach dem initialen Review mit mindestens einem
-belegten P0/P1-Befund und besteht aus genau einem frischen Implementierer sowie
-dem anschließenden frischen Review. Mehrere Findings desselben Reviews zählen
-nicht als mehrere Runden.
+Eine Korrekturrunde beginnt nach einem Review mit mindestens einem belegten
+P0/P1-Finding und besteht aus genau einem frischen Implementierer sowie dem
+anschließenden frischen Review. Mehrere Findings derselben technischen Ursache
+werden gebündelt und verbrauchen gemeinsam einen Versuch.
 
-- Im normalen Aufgabenmodus gelten höchstens zehn Korrekturrunden für den
-  gesamten Task.
-- Im Großkonzept-Modus gelten höchstens fünf Korrekturrunden pro Epic.
-- Nach Änderungen des Abschluss-Audits gelten höchstens zwei zusätzliche
-  Korrekturrunden.
-- Nach einem fehlgeschlagenen Abschluss-Gate gelten höchstens drei zusätzliche
-  Korrekturrunden mit gezielter Verifikation und Review.
+- Das Budget beträgt pro stabiler technischer Ursachensignatur fünf Versuche
+  innerhalb der aktuellen Bearbeitung. Es gibt kein globales Budget pro Task,
+  Epic, Audit oder Abschluss-Gate.
+- Jeder Versuch startet einen neuen Implementierer und danach einen neuen,
+  unabhängigen Reviewer. Kein alter Rollen-Task wird fortgesetzt.
+- P2/P3-Findings lösen keine Korrekturschleife aus. Sie werden direkt in die
+  Tech-Debt-Queue aufgenommen, sofern sie actionable sind; kosmetische oder
+  unbelegte Vorschläge bleiben nur im Log.
+- Nach dem fünften ungelösten Versuch wird die konkrete Ursachensignatur mit
+  `accepted-deferred` und einem auf null gesetzten aktuellen Versuchszähler in
+  die Tech-Debt-Queue eingereiht. Der Orchestrator setzt danach das nächste
+  Epic, den nächsten Befund oder den nächsten Queue-Eintrag fort.
+- Ein wiederholtes Finding, ein Muster wie A → B → A, ein langer Lauf oder ein
+  abgelaufenes Wartefenster löst keinen automatischen `blocked`-Status und
+  keinen Nutzer-Check-in aus. `blocked` bleibt ausschließlich für einen
+  tatsächlichen fachlichen Entscheidungsbedarf oder eine nicht behebbare
+  externe Voraussetzung reserviert.
 
-Das Budget ist eine Sicherheitsgrenze und kein Ziel. Vor jeder weiteren Runde
-gruppiert der Orchestrator die Befunde nach technischer Ursache und bildet eine
-knappe, stabile Signatur aus betroffener Invariante, Bereich/Symbol und
-Fehlerbild. Bei keiner erkennbaren Verbesserung derselben Ursache oder bei
-einem Muster wie A → B → A wird der Lauf sofort auf `blocked` gesetzt und der
-Nutzer mit Evidenz und einer konkreten Entscheidungsfrage eingebunden. Der
-Orchestrator verbraucht in diesem Fall nicht das restliche Budget durch weitere
-Versuche.
-
-Bei Budgetende gilt dasselbe Verhalten: kein stiller weiterer Versuch. Der
-bereits nach dem letzten Rollenbericht gesicherte Zwischenstand bleibt als
-unreviewter oder nicht vollständig genehmigter Checkpoint erhalten; er wird
-nicht als `done` ausgegeben. Der Orchestrator meldet den konkreten Zustand und
-fragt den Nutzer. Bei einem Großkonzept werden `correction_round`, bis zu drei aktuelle
-Ursachensignaturen und `cycle_state` in der Roadmap aktualisiert; ein Resume
-setzt Budget und Zyklusprüfung fort, statt sie zurückzusetzen.
+Nach Abschluss der fachlichen Epics und des Audits arbeitet der Orchestrator
+die Tech-Debt-Queue autonom ab. Für jeden reaktivierten Eintrag beginnt ein
+neuer Fünferdurchlauf; ein ungelöster Eintrag wird wieder hinten eingereiht.
+Wenn die Queue nur noch diesen Eintrag enthält, darf der Lauf deshalb endlos
+zwischen Implementierer und Reviewer rotieren. Das ist beabsichtigt und wird
+manuell vom Nutzer überwacht.
 
 ## Epic-Ablauf
 
