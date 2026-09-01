@@ -18,8 +18,9 @@
 - `GetServerHealthResponseBuilder` projiziert `ServerHealthSnapshot`-Daten in Text und `ServerHealthAggregatePayload`.
 - `InspectAssemblyTool` verwendet die bestehende Assembly-Auswahl, Diagnoseprojektion, Referenzdetail-Option und `ProjectResponseBudget`-Grenzen.
 - `ReloadConfigTool` verwendet `ConfigLoader`, `McpCodeGraphServer.ReloadConfig` und `ReloadSolutionAsync`; `AddReloadConfig` bleibt die Registrierung.
-- `CallTreePayload`, `TypeHierarchyPayload` und `MetricsTreePayload` sind produktiv vorhanden; die fokussierten FastTests prüfen ihre erfolgreichen Structured-Content-Payloads zusätzlich zu den bestehenden Text-/Verhaltensverträgen. `ReloadConfigPayload` wird im erfolgreichen expliziten Reload-Test aus `StructuredContent` deserialisiert und mit den Fixture-Werten 15 vorher, 14 nachher und Delta -1 geprüft.
-- `TransitiveCallGraphFormatter.CreateDiagnosticProjection` ist der gemeinsame Diagnosepfad für die Assembly-Call-Graph-Formate; die fokussierte Regression prüft fünf Samples, `totalCount`, `truncated` und `truncatedBy=["maxDiagnostics"]` einschließlich der konsistenten Textprojektion.
+- `TransitiveCallGraphFormatter.FormatResponse` ist der Response-Einstieg für `FindReferencesTool`, `AssemblyFindReferencesTool` und den Symbol-Branch von `GetImpactTool`; `Format` delegiert dorthin. `AssemblyGetCallTreeTool.CreateResponse` bleibt ein separater Assembly-CallTree-Responsepfad und ruft `CreateDiagnosticProjection` direkt auf.
+- `CallTreePayload`, `TypeHierarchyPayload` und `MetricsTreePayload` sind produktiv vorhanden; die fokussierten FastTests prüfen ihre erfolgreichen Structured-Content-Payloads zusätzlich zu den bestehenden Text-/Verhaltensverträgen. `ReloadConfigPayload` wird im erfolgreichen expliziten Reload-Test aus `StructuredContent` deserialisiert und mit den Fixture-Werten 17 vorher, 16 nachher und Delta -1 geprüft.
+- `TransitiveCallGraphFormatter.CreateDiagnosticProjection` wird in `FormatResponse` für `Completeness` und `Navigation` verwendet; der separate Assembly-CallTree-Pfad nutzt ihn in `AssemblyGetCallTreeTool.CreateResponse` für die Navigation. Die fokussierte Formatter-Regression prüft fünf Samples, `totalCount`, `truncated` und `truncatedBy=["maxDiagnostics"]`, aber nicht den Assembly-Responsepfad.
 - `AssemblyAnalysisToolTests.InspectAssembly_WithConsumerSolution_ResolvesAssemblyDirectoryDependencies` fordert Referenzdetails nun explizit an; `InspectAssembly_TargetedInspectionRequiresExplicitReferenceDetails` deckt Default, `false` und `true` ab.
 
 ## Relevante Tests, Konfiguration und Dokumentation
@@ -46,5 +47,5 @@
 ## Tech-Debt-Disposition
 
 - Produktionsviolations: `BuildResult`-Parameterbefund durch den internen Request-Vertrag behoben; die bestehende `AIContextFootprint`-Warnung sowie die scopefremden `FindSymbolScanner`-Warnungen bleiben `accepted-deferred`.
-- Paket-2-Regressionstest-Drift: `includeReferences`-Regression bleibt erhalten; Health-Assertions sowie Diagnose-/Session-/vier-Payload-Regressionen sind ergänzt. Die ReloadConfig-Delta-Prüfung verwendet konkrete Fixture-Zähler statt einer tautologischen Ableitung; eine belastbare End-to-End-Diagnoseprüfung über den realen Assembly-Referenzpfad wird in diesem kleinen Testscope nicht erweitert.
+- Paket-2-Regressionstest-Drift: `includeReferences`-Regression bleibt erhalten; Health-Assertions sowie Diagnose-/Session-/vier-Payload-Regressionen sind ergänzt. Die ReloadConfig-Delta-Prüfung verwendet konkrete Fixture-Zähler 17 vorher und 16 nachher statt einer tautologischen Ableitung; eine belastbare End-to-End-Diagnoseprüfung über den realen Assembly-Referenzpfad wird in diesem kleinen Testscope nicht erweitert.
 - Kein Commit erstellt.

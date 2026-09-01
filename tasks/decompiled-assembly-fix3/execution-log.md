@@ -767,3 +767,22 @@
 - Magic Values: `find_magic_values` mit `targetType=project`, absolutem Projektpfad, `scopeFilter=src/AiNetLinter/Mcp`, ohne Tests: 249 Treffer in 241 eindeutigen Einträgen über 292 Dateien. `changedOnly=true` war bei sauberem Working Tree leer; der vollständige Scope enthält überwiegend einmalige Diagnosecodes, Fehlermeldungen, Identifier und bestehende Konstantenkandidaten. Keine sichere, scope-nahe Zentralisierung.
 - Disposition: Keine proaktive Audit-Codekorrektur; Magic-Value-Kandidaten werden als `accepted-deferred` in der Tech-Debt-Queue geführt. Der Timeout der breiten Duplikatabfrage wird als Audit-Limit dokumentiert; die verfeinerten relevanten Scopes sind sauber.
 - Verifikation: Audit-Abfragen in der vorgeschriebenen Reihenfolge ausgeführt; Working Tree blieb unverändert und sauber.
+
+## 2026-09-01 – Wiederaufnahme Paket 2 Ersatzreview abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig; Ersatzreview nach verlorenem Agentenstatus)
+- Subagent-ID: `01a05cbd-bdf0-7f32-91e8-4f05050703cf`
+- Ursachensignaturen: `package2-diagnosis-projection-ownership`; `package2-regression-test-contract-drift`
+- Versuch: 0 im neu freigegebenen Lauf
+- Status: completed; kein Produktions-/Testcode geändert; keine Commit-Erstellung
+- Urteil: `issues`; Paket 2 noch nicht freigegeben.
+- Bestätigt: `FormatResponse` wird von `FindReferencesTool`, `AssemblyFindReferencesTool` und `GetImpactTool` verwendet; Text und Structured Content entstehen aus demselben projizierten Modell; Health-/ReloadConfig-Regression ist nun grün.
+- P1 `package2-diagnosis-projection-ownership`: Der strikte Einmal-Projektionsvertrag ist noch nicht vollständig erfüllt, weil `ProjectDiagnostics` die Completeness-Diagnosen projiziert und anschließend `Navigation.Diagnostics` separat nochmals projiziert. Zusätzlich nutzt `AssemblyGetCallTreeTool` weiterhin einen separaten direkten Projektionspfad; `AppendLimitMessages` sichert Navigation-Diagnosen textuell nicht separat aus demselben Modellpfad ab.
+- P1 `package2-regression-test-contract-drift`: Gezielt fehlen Structured-Content-Assertions direkt am `FormatResponse`-Ergebnis, Navigation-Diagnosen mit Samples/Gesamtzahl/Truncation, Assembly-`find_references`-E2E sowie Nulltreffer plus Navigation-Diagnose. Die vorhandenen Formatter-Tests prüfen nur Text und Completeness-Projektion.
+- Nachweise: `dotnet build --no-restore` 0 Warnungen/0 Fehler; gezielte FastTests 80/80; gezielte IntegrationTests 19/19; vollständige FastTests `Category!=Stress` 2334 bestanden, 1 fehlgeschlagen, 2 übersprungen; vollständige IntegrationTests `Category!=Stress` 376/378 bestanden. Die Vollgatefehler sind laut Review unabhängig: veraltete Agent-Guide-Zeilenumbruchserwartung, Repository-Dogfood wegen bestehender Violations und zu niedriger Live-Safeguard-Score.
+- `git diff --check` grün; MCP-first mit absolutem Projektpfad bestätigte die geänderten Symbole und keine neuen Violations in den geänderten Produktionspfaden. Kein erneuter `get_violations`-Lauf nach dem Review.
+- P2: `InspectAssembly`-AIContext-Footprint und bestehende `FindSymbolScanner`-Warnungen bleiben unverändert `accepted-deferred`.
+- Tech-Debt-Disposition: Beide P1-Ursachensignaturen bleiben `fix-now`, Versuchszähler im neuen Lauf 1. Die Korrektur muss die Ownership auch für Assembly-CallTree-/Navigation-Diagnosen eindeutig machen und die fehlenden E2E-/Structured-Content-Verträge ergänzen.
+- Nächste Aktion: Frischer Implementierer für Versuch 1 des wiederaufgenommenen Laufs; danach unabhängiger Review.

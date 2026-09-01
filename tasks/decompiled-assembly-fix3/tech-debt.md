@@ -136,9 +136,9 @@
 - Scope/Fundstelle: Assembly-Inspektions- und Health-/Reload-Tests
 - Evidenz: Frische Nachweise meldeten zunächst 55/1 und 12/2; Korrekturversuch 3 ergänzte Session-, Diagnose- und Structured-Content-Regressionen sowie globale Health-Default-Anpassungen. Der unabhängige Review klassifizierte die verbleibende Assertion als veraltet, weil der Produktionsvertrag aggregiert `Diagnosen gesamt: 4` ausgibt. Zusätzlich fehlen vollständige Aggregatzähler und belastbare konkrete Structured-Content-/Diagnosepfad-Assertions. Nachverifikation: FastTests 61/61, fokussierte IntegrationTests 18/19.
 - Disposition: fix-now
-- attempts: 0
-- Nächster Schritt: Neuer Orchestrator-Lauf mit Nutzerfreigabe; Health-/ReloadConfig-Tests sowie der echte Diagnosepfad werden gemeinsam architektonisch korrigiert.
-- Log-Anker: `execution-log.md`, „Paket 2 nach Nutzerfreigabe wieder aufgenommen"
+- attempts: 1
+- Nächster Schritt: Frischer Korrekturversuch für die fehlenden Structured-Content-/Assembly-E2E-Verträge und den echten Diagnosepfad.
+- Log-Anker: `execution-log.md`, „Wiederaufnahme Paket 2 Ersatzreview abgeschlossen"
 
 ### Diagnoseprojektion mit doppelter Ownership
 
@@ -147,8 +147,8 @@
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs`, `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindReferencesTool.cs`, `src/AiNetLinter/Mcp/Tools/SymbolGraph/TransitiveCallGraphFormatter.cs`
 - Evidenz: Die beiden Toolpfade projizieren Diagnosen vor dem Formatter; `TransitiveCallGraphFormatter.Format` projiziert erneut. Dadurch können `totalCount`/`truncatedBy` aus dem Text verschwinden und Samples im Nulltrefferpfad überschrieben werden. Der Abschlussreview bestätigte den Befund gegen die aktuellen Symbole.
 - Disposition: fix-now
-- attempts: 0
-- Nächster Schritt: Gemeinsame Projektion einmalig an der Formatter-/Response-Grenze durchführen und Text/Structured Content aus demselben projizierten Modell erzeugen; E2E-Regression ergänzen.
+- attempts: 1
+- Nächster Schritt: Projektion auch für Assembly-CallTree-/Navigation-Diagnosen eindeutig an der Formatter-/Response-Grenze ownen, Text/Structured Content aus demselben Modell erzeugen und E2E-Regression ergänzen.
 - Log-Anker: `execution-log.md`, „Paket 2 Abschlussreview abgeschlossen"
 
 ### Paket-2-Produktionsviolations aus Zwischenstand
