@@ -24,63 +24,112 @@ internal static class GetServerHealthResponseBuilder
             .ToList();
         var targeted = options.ProjectRoot is not null || options.AssemblyPath is not null;
         var totalAssemblySessions = projectedAssemblies.Count;
-        var maxSessions = Math.Clamp(options.MaxSessions, 1, GetServerHealthTool.MaxSessions);
-        var shownAssemblies = targeted || options.IncludeSessions
-            ? projectedAssemblies.Take(maxSessions).ToList()
-            : null;
+        var shownAssemblies = SelectShownAssemblies(projectedAssemblies, targeted, options);
         var sessionsTruncated = shownAssemblies is not null && totalAssemblySessions > shownAssemblies.Count;
         var sessionsTruncatedBy = sessionsTruncated ? new[] { "maxSessions" } : Array.Empty<string>();
         var statusCounts = GetServerHealthProjection.CountAssemblyStatuses(projectedAssemblies);
         var diagnosticCount = projectedAssemblies.Sum(assembly => assembly.DiagnosticsSummary?.TotalCount ?? 0);
+        var daemonPayload = runtimeContext is null ? null : GetServerHealthProjection.CreateDaemonPayload(runtimeContext);
+        var version = McpServerVersion.Get();
+        var response = new HealthResponseData(
+            version,
+            snapshots,
+            daemonPayload,
+            shownAssemblies,
+            options,
+            totalAssemblySessions,
+            sessionsTruncated,
+            sessionsTruncatedBy,
+            statusCounts,
+            diagnosticCount);
+        var builder = BuildText(response);
+        return McpToolResults.Text(
+            builder,
+            CreatePayload(response));
+    }
+
+    private static IReadOnlyList<AssemblyHealthEntry>? SelectShownAssemblies(
+        IReadOnlyList<AssemblyHealthEntry> assemblies,
+        bool targeted,
+        GetServerHealthOptions options)
+    {
+        if (!targeted && !options.IncludeSessions) return null;
+        var maxSessions = Math.Clamp(options.MaxSessions, 1, GetServerHealthTool.MaxSessions);
+        return assemblies.Take(maxSessions).ToList();
+    }
+
+    private static string BuildText(HealthResponseData response)
+    {
         var builder = new StringBuilder();
         builder.AppendLine("# AiNetLinter MCP-Server — Health");
         builder.AppendLine();
-        builder.AppendLine($"- Version: {McpServerVersion.Get()}");
-        var daemonPayload = runtimeContext is null ? null : GetServerHealthProjection.CreateDaemonPayload(runtimeContext);
-        GetServerHealthFormatter.AppendDaemonSection(builder, daemonPayload);
+        builder.AppendLine($"- Version: {response.Version}");
+        GetServerHealthFormatter.AppendDaemonSection(builder, response.Daemon);
         builder.AppendLine();
-        builder.AppendLine($"## Projekte ({snapshots.Count})");
+        builder.AppendLine($"## Projekte ({response.Snapshots.Count})");
         builder.AppendLine();
-        foreach (var snapshot in snapshots)
-        {
-            GetServerHealthFormatter.AppendProjectSection(builder, snapshot);
-        }
+        foreach (var snapshot in response.Snapshots) GetServerHealthFormatter.AppendProjectSection(builder, snapshot);
+        builder.AppendLine($"## Assembly-Sessions ({response.TotalAssemblySessions})");
+        builder.AppendLine();
+        AppendAssemblyText(
+            builder,
+            response.ShownAssemblies,
+            response.SessionsTruncated,
+            response.TotalAssemblySessions,
+            response.StatusCounts,
+            response.DiagnosticCount);
+        return builder.ToString().TrimEnd();
+    }
 
-        builder.AppendLine($"## Assembly-Sessions ({totalAssemblySessions})");
-        builder.AppendLine();
+    private static void AppendAssemblyText(
+        StringBuilder builder,
+        IReadOnlyList<AssemblyHealthEntry>? shownAssemblies,
+        bool sessionsTruncated,
+        int totalAssemblySessions,
+        IReadOnlyDictionary<string, int> statusCounts,
+        int diagnosticCount)
+    {
         if (shownAssemblies is null)
         {
-            GetServerHealthFormatter.AppendAssemblyAggregate(
-                builder, totalAssemblySessions, statusCounts, diagnosticCount);
-        }
-        else
-        {
-            if (sessionsTruncated)
-            {
-                builder.AppendLine($"- Sessiondetails: {shownAssemblies.Count} von {totalAssemblySessions} (gekürzt: maxSessions)");
-                builder.AppendLine();
-            }
-            foreach (var assembly in shownAssemblies)
-            {
-                GetServerHealthFormatter.AppendAssemblySection(builder, assembly);
-            }
+            GetServerHealthFormatter.AppendAssemblyAggregate(builder, totalAssemblySessions, statusCounts, diagnosticCount);
+            return;
         }
 
-        var payload = new ServerHealthAggregatePayload(
-            Version: McpServerVersion.Get(),
-            Projects: snapshots.Select(GetServerHealthProjection.ToProjectEntry).ToList(),
-            Daemon: daemonPayload,
-            Assemblies: shownAssemblies,
-            DiagnosticsIncluded: options.IncludeDiagnostics,
-            DiagnosticLimit: AssemblyAnalysisResponseLimits.NormalizeDiagnosticLimit(options.MaxDiagnostics),
-            SessionsIncluded: shownAssemblies is not null,
-            TotalAssemblySessions: totalAssemblySessions,
-            ShownSessionCount: shownAssemblies?.Count ?? 0,
-            SessionsTruncated: sessionsTruncated,
-            SessionsTruncatedBy: sessionsTruncatedBy,
-            AssemblyStatusCounts: statusCounts,
-            AssemblyDiagnosticCount: diagnosticCount);
-        return McpToolResults.Text(builder.ToString().TrimEnd(), payload);
+        if (sessionsTruncated)
+        {
+            builder.AppendLine($"- Sessiondetails: {shownAssemblies.Count} von {totalAssemblySessions} (gekürzt: maxSessions)");
+            builder.AppendLine();
+        }
+
+        foreach (var assembly in shownAssemblies) GetServerHealthFormatter.AppendAssemblySection(builder, assembly);
     }
+
+    private static ServerHealthAggregatePayload CreatePayload(HealthResponseData response) =>
+        new(
+            Version: response.Version,
+            Projects: response.Snapshots.Select(GetServerHealthProjection.ToProjectEntry).ToList(),
+            Daemon: response.Daemon,
+            Assemblies: response.ShownAssemblies,
+            DiagnosticsIncluded: response.Options.IncludeDiagnostics,
+            DiagnosticLimit: AssemblyAnalysisResponseLimits.NormalizeDiagnosticLimit(response.Options.MaxDiagnostics),
+            SessionsIncluded: response.ShownAssemblies is not null,
+            TotalAssemblySessions: response.TotalAssemblySessions,
+            ShownSessionCount: response.ShownAssemblies?.Count ?? 0,
+            SessionsTruncated: response.SessionsTruncated,
+            SessionsTruncatedBy: response.SessionsTruncatedBy,
+            AssemblyStatusCounts: response.StatusCounts,
+            AssemblyDiagnosticCount: response.DiagnosticCount);
+
+    private sealed record HealthResponseData(
+        string Version,
+        IReadOnlyList<ProjectSnapshot> Snapshots,
+        DaemonHealthPayload? Daemon,
+        IReadOnlyList<AssemblyHealthEntry>? ShownAssemblies,
+        GetServerHealthOptions Options,
+        int TotalAssemblySessions,
+        bool SessionsTruncated,
+        IReadOnlyList<string> SessionsTruncatedBy,
+        IReadOnlyDictionary<string, int> StatusCounts,
+        int DiagnosticCount);
 
 }

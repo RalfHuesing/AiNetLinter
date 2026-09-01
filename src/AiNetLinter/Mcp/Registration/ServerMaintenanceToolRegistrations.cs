@@ -9,6 +9,7 @@ using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp.Registration;
@@ -68,64 +69,65 @@ internal static class ServerMaintenanceToolRegistrations
         IAssemblyAnalysisRegistry? assemblyRegistry)
     {
         tools.Add(McpServerTool.Create(
-            async (
+            (
                 string? targetType = null,
-                 string? targetPath = null,
-                 bool includeDiagnostics = false,
-                 int maxDiagnostics = AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics,
-                 bool includeSessions = false,
-                 int maxSessions = GetServerHealthTool.DefaultMaxSessions,
-                 CancellationToken ct = default) =>
-            {
-                var resolution = AnalysisTargetResolver.ResolveOptional(
-                    new AnalysisTargetRequest(targetType, targetPath));
-                if (resolution.Error is not null)
-                {
-                    return resolution.Error;
-                }
-
-                if (resolution.Target is null)
-                {
-                    return await GetServerHealthTool.ExecuteAsync(
-                        registry,
-                        assemblyRegistry,
-                        new GetServerHealthOptions(
-                            RuntimeContext: runtimeContext,
-                            IncludeDiagnostics: includeDiagnostics,
-                            MaxDiagnostics: maxDiagnostics,
-                            IncludeSessions: includeSessions,
-                            MaxSessions: maxSessions));
-                }
-
-                if (resolution.Target.TargetType == AnalysisTargetType.Assembly)
-                {
-                    return await GetServerHealthTool.ExecuteAsync(
-                        registry,
-                        assemblyRegistry,
-                        new GetServerHealthOptions(
-                            AssemblyPath: resolution.Target.CanonicalPath,
-                            RuntimeContext: runtimeContext,
-                            IncludeDiagnostics: includeDiagnostics,
-                            MaxDiagnostics: maxDiagnostics,
-                            IncludeSessions: includeSessions,
-                            MaxSessions: maxSessions),
-                        ct);
-                }
-
-                    return await GetServerHealthTool.ExecuteAsync(
-                        registry,
-                        assemblyRegistry,
-                        new GetServerHealthOptions(
-                            ProjectRoot: resolution.Target.CanonicalPath,
-                            RuntimeContext: runtimeContext,
-                            IncludeDiagnostics: includeDiagnostics,
-                            MaxDiagnostics: maxDiagnostics,
-                            IncludeSessions: includeSessions,
-                            MaxSessions: maxSessions),
-                        ct);
-            },
+                string? targetPath = null,
+                bool includeDiagnostics = false,
+                int maxDiagnostics = AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics,
+                bool includeSessions = false,
+                int maxSessions = GetServerHealthTool.DefaultMaxSessions,
+                CancellationToken ct = default) => ExecuteGetServerHealthAsync(
+                    registry,
+                    runtimeContext,
+                    assemblyRegistry,
+                    new GetServerHealthRequest(
+                        targetType,
+                        targetPath,
+                        includeDiagnostics,
+                        maxDiagnostics,
+                        includeSessions,
+                        maxSessions,
+                        ct)),
             McpToolRegistrationOptions.ServerHealthTool("get_server_health", GetServerHealthDescription)));
     }
+
+    private static async Task<CallToolResult> ExecuteGetServerHealthAsync(
+        ProjectRegistry registry,
+        Daemon.DaemonRuntimeContext? runtimeContext,
+        IAssemblyAnalysisRegistry? assemblyRegistry,
+        GetServerHealthRequest request)
+    {
+        var resolution = AnalysisTargetResolver.ResolveOptional(
+            new AnalysisTargetRequest(request.TargetType, request.TargetPath));
+        if (resolution.Error is not null) return resolution.Error;
+
+        var options = CreateHealthOptions(resolution.Target, runtimeContext, request);
+        return resolution.Target is null
+            ? await GetServerHealthTool.ExecuteAsync(registry, assemblyRegistry, options)
+            : await GetServerHealthTool.ExecuteAsync(registry, assemblyRegistry, options, request.CancellationToken);
+    }
+
+    private static GetServerHealthOptions CreateHealthOptions(
+        AnalysisTarget? target,
+        Daemon.DaemonRuntimeContext? runtimeContext,
+        GetServerHealthRequest request) =>
+        new(
+            ProjectRoot: target?.TargetType == AnalysisTargetType.Project ? target.CanonicalPath : null,
+            RuntimeContext: runtimeContext,
+            AssemblyPath: target?.TargetType == AnalysisTargetType.Assembly ? target.CanonicalPath : null,
+            IncludeDiagnostics: request.IncludeDiagnostics,
+            MaxDiagnostics: request.MaxDiagnostics,
+            IncludeSessions: request.IncludeSessions,
+            MaxSessions: request.MaxSessions);
+
+    private sealed record GetServerHealthRequest(
+        string? TargetType,
+        string? TargetPath,
+        bool IncludeDiagnostics,
+        int MaxDiagnostics,
+        bool IncludeSessions,
+        int MaxSessions,
+        CancellationToken CancellationToken);
 
     private static readonly string GetServerHealthDescription =
         "Wann nutzen: pruefen, ob der Server laeuft und welche Projekt- und Assembly-Sessions " +

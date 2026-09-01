@@ -59,13 +59,13 @@ internal static class ReloadConfigTool
                 hint: "JSON-Syntax der rules.json pruefen. Bisherige Konfiguration bleibt aktiv.");
         }
 
-        var summary = BuildSummary(state, targetPath, newConfig);
+        var payload = BuildPayload(state, targetPath, newConfig);
         state.ReloadConfig(newConfig, usedDefaultConfig: false, resolvedConfigPath: targetPath);
         await state.ReloadSolutionAsync(ct);
-        return McpToolResults.Text(summary);
+        return McpToolResults.Text(BuildSummary(payload), payload);
     }
 
-    private static string BuildSummary(McpCodeGraphServer state, string newPath, Config newConfig)
+    private static ReloadConfigPayload BuildPayload(McpCodeGraphServer state, string newPath, Config newConfig)
     {
         // Atomarer Schnappschuss statt dreier getrennter Property-Zugriffe: sonst koennte ein
         // gleichzeitiger zweiter reload_config-Aufruf eine zerrissene "Vorher"-Kombination liefern
@@ -76,12 +76,24 @@ internal static class ReloadConfigTool
             : oldResolvedConfigPath ?? "unbekannt";
         var oldEnabledRules = CountEnabledRules(oldConfig.Global);
         var newEnabledRules = CountEnabledRules(newConfig.Global);
-        var delta = newEnabledRules - oldEnabledRules;
-        var deltaText = delta == 0 ? "unveraendert" : delta > 0 ? $"+{delta}" : delta.ToString();
+        return new ReloadConfigPayload(
+            oldDescription,
+            newPath,
+            oldEnabledRules,
+            newEnabledRules,
+            newEnabledRules - oldEnabledRules);
+    }
 
+    private static string BuildSummary(ReloadConfigPayload payload)
+    {
+        var deltaText = payload.EnabledRuleDelta == 0
+            ? "unveraendert"
+            : payload.EnabledRuleDelta > 0
+                ? $"+{payload.EnabledRuleDelta}"
+                : payload.EnabledRuleDelta.ToString();
         return "Config neu geladen.\n" +
-               $"- Vorher: {oldDescription} ({oldEnabledRules} aktivierte Regeln)\n" +
-               $"- Nachher: {newPath} ({newEnabledRules} aktivierte Regeln, {deltaText})";
+               $"- Vorher: {payload.PreviousConfig} ({payload.PreviousEnabledRuleCount} aktivierte Regeln)\n" +
+               $"- Nachher: {payload.ConfigPath} ({payload.EnabledRuleCount} aktivierte Regeln, {deltaText})";
     }
 
     /// <summary>

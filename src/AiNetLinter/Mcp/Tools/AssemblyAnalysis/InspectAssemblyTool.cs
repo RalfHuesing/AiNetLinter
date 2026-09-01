@@ -60,6 +60,18 @@ internal static class InspectAssemblyTool
         int maxResults,
         AssemblyAnalysisLease? lease = null)
     {
+        var payload = CreatePayload(fullPath, context, arguments, maxResults, lease);
+        payload = ApplyResponseBudget(payload, arguments, lease);
+        return McpToolResults.Text(InspectAssemblyFormatter.FormatText(payload, arguments.PublicOnly), payload);
+    }
+
+    private static InspectAssemblyPayload CreatePayload(
+        string fullPath,
+        AssemblyContext context,
+        InspectAssemblyArguments arguments,
+        int maxResults,
+        AssemblyAnalysisLease? lease)
+    {
         var selection = AssemblyAnalysisService.Inspect(
             context,
             new AssemblyInspectionOptions(
@@ -107,7 +119,14 @@ internal static class InspectAssemblyTool
             diagnostics,
             referenceSummary,
             includeReferenceDetails);
-        payload = AssemblyAnalysisResponseLimits.ProjectResponseBudget(
+        return payload;
+    }
+
+    private static InspectAssemblyPayload ApplyResponseBudget(
+        InspectAssemblyPayload payload,
+        InspectAssemblyArguments arguments,
+        AssemblyAnalysisLease? lease) =>
+        AssemblyAnalysisResponseLimits.ProjectResponseBudget(
             payload,
             arguments.PublicOnly,
             lease is null
@@ -115,6 +134,4 @@ internal static class InspectAssemblyTool
                 : candidate => AssemblyAnalysisResponse.FitsResponseBudget(
                     McpToolResults.Text(InspectAssemblyFormatter.FormatText(candidate, arguments.PublicOnly), candidate),
                     lease));
-        return McpToolResults.Text(InspectAssemblyFormatter.FormatText(payload, arguments.PublicOnly), payload);
-    }
 }

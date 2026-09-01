@@ -1,54 +1,50 @@
 ## Primäre Einstiegspunkte
 
-- Assembly-MCP-Verträge und Analysefluss in `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/` sowie `src/AiNetLinter/Mcp/Assemblies/Analysis/`.
-- Navigations- und Strukturtools in `src/AiNetLinter/Mcp/Tools/`.
+- Assembly-MCP-Verträge: `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/`
+- Server-Maintenance-Verträge: `src/AiNetLinter/Mcp/Tools/ServerMaintenance/`
+- Tool-Registrierung: `src/AiNetLinter/Mcp/Registration/ServerMaintenanceToolRegistrations.cs`
 
 ## Betroffene Dateien und Symbole
 
-- Verifiziert und geändert: `McpToolResults.Error`, `McpToolResults.Recoverable`, `McpToolResults.BuildResult`, `McpToolResults.CompilationError`, `McpErrorParameters` und `McpErrorPayload` (kleiner interner Parametervertrag für Target-Kontext, typisierte Fehlerpayload, unveränderte IsError-Policy; bestehende Context/Hint-Aufrufer bleiben kompatibel).
-- Verifiziert und geändert: `AssemblyAnalysisResponse.Enrich`/`FitsResponseBudget`/`Unsupported`, `AssemblyAnalysisResponseLimits` und `AssemblyAnalysisResponseLimits.Budget` (typisierte globale 8-KiB-Projektion für Text und JSON einschließlich nachgelagerter Enrichment-Metadaten, sichere Singleton-Kappung sowie Diagnose-/Referenzprojektionen), `AssemblyAnalysisModels`, `AssemblyAnalysisService.Inspect`/`FindExtensions`, `InspectAssemblyTool`, `InspectAssemblyFormatter` und `FindAssemblyExtensionsTool` (vollständige Pflichtfelder, shown/total/truncated/truncatedBy sowie gemeinsame Text/JSON-Auswahl). Der alte JSON-Surgery-Compactor bleibt entfernt; das exakte `TryRemoveLastDiagnostic`-Duplikat ist durch einen gemeinsamen generischen Helper ersetzt.
-- Neue fokussierte Regressionen: `AssemblyAnalysisDispatcherCapabilityTests.ResponseBudget` enthält `AssemblyRoute_BudgetsFinalEnrichedResponseThroughDispatcher` für eine absichtlich große Antwort über Lease, Dispatcher und abschließendes `Enrich`; `AssemblyAnalysisToolTests.ResponseBudget` enthält die Producer-Projektionen sowie `InspectAssembly_GlobalResponseBudgetRemovesOversizedSingletonMember` für die letzte Singleton-Reduktionsstufe bei einem einzelnen übergroßen Member. Die Partial-Dateien halten die fachlich zusammengehörigen Tests getrennt und alle betroffenen Dateien unter 500 Zeilen.
-- Verifiziert und geändert: `FindSymbolTool`, `FindSymbolScanner`, `AssemblySymbolSearch` und `AssemblySymbolResolver` (generationgebundene `id:`-Folgekennungen); `SolutionDocumentPathResolver` und `GetFileSkeletonTool` (relative/virtuelle Pfade ohne CWD-Fallback, Mehrdeutigkeit recoverable); `GetFileTreeScanner` (effektive Tiefe inklusive `MaxDepth`).
-- Paket-2-Arbeitsstand geändert: `InspectAssemblyArguments`/`InspectAssemblyTool`/`AssemblyAnalysisToolRegistrations` (optionales `includeReferences` mit kompaktem Default bei Type-/Member-Filtern), `AssemblyAnalysisResponseLimits` und `InspectAssemblyFormatter` (Referenzsummen ohne Detailarrays).
-- Paket-2-Arbeitsstand geändert: `TransitiveCallGraphFormatter`, `TraversalCompleteness`, `AssemblyNavigationSummary`, `FindReferencesTool`, `AssemblyFindReferencesTool`, `GetCallTreeTool` und `AssemblyGetCallTreeTool` (gemeinsame Navigation-Diagnoseprojektion mit fünf Samples, Zählern und `truncatedBy`; Root-Call-Tree erhält DTO-Erfolgspayload).
-- Paket-2-Arbeitsstand geändert: `GetServerHealthOptions`, `GetServerHealthResponseBuilder`, `GetServerHealthProjection`, `GetServerHealthFormatter`, `GetServerHealthModels` und `ServerMaintenanceToolRegistrations` (globales Health-Aggregat mit optionalen, gedeckelten Sessiondetails; zielgebundene Assembly-Antwort bleibt detailliert).
-- Paket-2-Arbeitsstand geändert: `GetTypeHierarchyModels`/`GetTypeHierarchyFormatter`/`GetTypeHierarchyTool`, `MetricsTreeModels`/`MetricsTreeScanner`/`MetricsTreeRoslynScanner`/`MetricsTreeTool` sowie `ReloadConfigTool`-Registrierungsstrecke (strukturierte Erfolgsprojektionen begonnen; Reload-Config-DTO und vollständige Regressionen sind in diesem vorzeitig beendeten Lauf nicht umgesetzt).
+- `ServerMaintenanceToolRegistrations.AddGetServerHealth`: Request-/Options-Erzeugung und Ausführung in lokale Hilfsmethoden aufgeteilt. Target-/Global-Routing und Cancellation-Verhalten bleiben erhalten.
+- `InspectAssemblyTool.BuildResult`: Payload-Erzeugung und Response-Budgetierung in `CreatePayload` und `ApplyResponseBudget` extrahiert; Text- und Structured-Content bleiben aus demselben final budgetierten Payload abgeleitet.
+- `GetServerHealthResponseBuilder.Build`: Sessionauswahl, Textaufbau und Payloadaufbau getrennt; `HealthResponseData` bündelt den Zwischenzustand. Globales Default bleibt kompakt ohne Sessionliste; Detail-/Sessionoptionen bleiben begrenzt.
+- `ReloadConfigTool`: Erfolgreiche Reloads liefern zusätzlich `ReloadConfigPayload`; die bisherige lesbare Zusammenfassung bleibt additiv erhalten.
+- `ReloadConfigModels.ReloadConfigPayload`: registrierungsfähiges Structured-Content-DTO mit vorherigem/aktuellem Config-Pfad sowie Rule-Count und Delta.
 
 ## Aufrufer und Abhängigkeiten
 
-- Tool-Registrierungen erzeugen Argumente und MCP-Handler; Formatter und Structured-Content-Builder müssen dieselbe Auswahl verwenden.
-- `McpToolResults` serialisiert harte und recoverable Fehler weiterhin mit identischem Text-/Payload-Inhalt; `McpErrorParameters` bündelt nur die optionalen Target-Felder für den internen Build-Pfad. `AssemblyAnalysisResponse.Unsupported` nutzt diesen Vertrag.
-- `AssemblyAnalysisDispatcher.ExecuteAsync` erwirbt über `IAssemblyAnalysisRegistry.LeaseAsync` den Root-Lease, expandiert optional über `AssemblyAnalysisLease.ExpandReferencesAsync`, führt den leasegebundenen Producer aus und reichert danach mit `AssemblyAnalysisResponse.Enrich` an; die neue Dispatcher-Regression nutzt genau diese Verdrahtung.
-- Assembly-Sessions, Symbol-IDs und Dokumentpfade sind gemeinsame Abhängigkeiten für Folgeaufrufe.
-- Paket-2-Detailflag: `InspectAssemblyArguments.IncludeReferences == null` bedeutet kompatibler Detailmodus nur ohne Type-/Member-Filter; bei gezielten Type-/Member-Filtern werden Referenzen/Sessions nicht expandiert und nur Summen plus Folgehinweis ausgegeben. `includeReferences=true` fordert Details explizit an.
-- Navigation-Diagnosen werden über `TransitiveCallGraphFormatter.ProjectDiagnostics` auf fünf normalisierte Samples begrenzt; die Structured-Content-Komplettheit trägt zusätzlich `DiagnosticTotalCount`, `DiagnosticShownCount`, `DiagnosticsTruncated` und `DiagnosticsTruncatedBy`.
-- Globales Health ohne Target gibt `Assemblies=null` und Aggregatfelder aus; `includeSessions`/`maxSessions` sind registriert. Die bisherigen Health-Tests erwarten noch die alte globale Sessionliste und müssen in einem späteren Paket-2-Korrekturlauf angepasst werden.
-- Der aktuelle Arbeitsstand enthält noch keinen Paket-2-`ReloadConfigPayload`; `ReloadConfigTool` liefert weiterhin text-only. Type-Hierarchy- und Metrics-DTOs sind im Code angelegt, aber noch nicht vollständig gegen den Testbestand verifiziert.
+- `AddGetServerHealth` registriert die MCP-Route und ruft `GetServerHealthTool` auf.
+- `GetServerHealthResponseBuilder` projiziert `ServerHealthSnapshot`-Daten in Text und `ServerHealthAggregatePayload`.
+- `InspectAssemblyTool` verwendet die bestehende Assembly-Auswahl, Diagnoseprojektion, Referenzdetail-Option und `ProjectResponseBudget`-Grenzen.
+- `ReloadConfigTool` verwendet `ReloadConfigService`; `AddReloadConfig` bleibt die Registrierung.
+- `CallTreePayload`, `TypeHierarchyPayload` und `MetricsTreePayload` waren bereits produktiv vorhanden; fokussierte Payload-Assertions wurden in diesem Versuch nicht ergänzt.
 
 ## Relevante Tests, Konfiguration und Dokumentation
 
-- Relevante Teststartpunkte aus dem Konzept: `src/AiNetLinter.FastTests/Mcp/Assemblies/`, `src/AiNetLinter.FastTests/Mcp/`, `src/AiNetLinter.IntegrationTests/`; die Producer-/Singleton-Budgetregressionen liegen in `AssemblyAnalysisToolTests.ResponseBudget.cs`, die Lease-/Enrichment-Regression in `AssemblyAnalysisDispatcherCapabilityTests.ResponseBudget.cs`; die Fehlerpayload-Vertragsassertions liegen in `AssemblyAnalysisConfigurationFailureTests.cs` und `SafeguardToolTests.cs`; die jeweiligen Stammdateien enthalten den übrigen Fachbereich derselben Partial-Testklasse.
-- Abschlussgates: Solution-Build und beide Nicht-Stress-Testprojekte gemäß `AGENTS.md`.
-- Konzeptvertrag: `tasks/decompiled-assembly-fix3/Konzept.md`; Roadmap: diese Task-Datei.
+- Betroffene Tests: `src/AiNetLinter.FastTests/` für Assembly-/CallTree-/TypeHierarchy-/MetricsTree-Verträge sowie `src/AiNetLinter.IntegrationTests/` für Health und ReloadConfig.
+- `rules.json` und CLI-Verträge wurden nicht geändert.
+- `Konzept.md` und `roadmap.md` wurden nicht geändert. `execution-log.md` war bereits vor diesem Versuch verändert und wurde nicht angefasst.
+- Diese Map dokumentiert den aktuellen Korrekturstand; sie dokumentiert keine nachträgliche Testbehauptung.
 
-## Invarianten, Risiken und Unsicherheiten
+## Invarianten und offene Kriterien
 
-- Text und Structured Content dürfen nicht auseinanderlaufen; `isError`-Policy bleibt unverändert.
-- Fehlerantworten besitzen einen deserialisierbaren `McpErrorPayload`; `Recoverable` folgt weiterhin ausschließlich der bestehenden `IsError`-Policy.
-- Das 8-KiB-Budget wird für Dispatcher-Aufrufe mit dem finalen `AssemblyAnalysisResponse.Enrich`-Ergebnis vermessen. Kann ein sichtbares Item allein das Budget überschreiten, wird es als letzte sichere Reduktionsstufe entfernt; `totalCount` bleibt erhalten und `responseBudget` wird als Trunkierungsgrund gesetzt. Die Header-/Metadatenbasis selbst wird nicht künstlich gekürzt.
-- Fremde Assemblies werden nicht ausgeführt; Source-Trust bleibt fail-closed.
-- Windows-Reparse-/8.3-Kanonisierung bleibt ohne reproduzierbaren Alias-Befund zurückgestellt.
+- Die zwei scopefremden `FindSymbolScanner`-Warnungen bleiben unverändert.
+- Ausstehend: gezielter Inspect-Default ohne Referenzdetails, globales Health-Default ohne Sessionliste, sowie fokussierte Assertions für `includeReferences`, Diagnose-`totalCount`/`truncatedBy`, `includeSessions`/`maxSessions` und die CallTree-/TypeHierarchy-/MetricsTree-/ReloadConfig-Payloads.
+- Kein Sage-/Wire-Nachweis gegen den aktuell gebauten Stand wurde in diesem Hand-off ausgeführt.
 
-## Verifikation
+## Verifikation dieses Versuchs
 
-- Gezielte Budget-/Assembly-FastTests nach der letzten Teständerung: `dotnet test src/AiNetLinter.FastTests --filter "FullyQualifiedName~AssemblyAnalysisToolTests|FullyQualifiedName~AssemblyAnalysisDispatcherCapabilityTests" --no-restore` — 29/29 bestanden; der Testumfang enthält Producer-Budget, Dispatcher-/Enrichment-Budget, Singleton-Reduktion, Dispatcher-Expansion und Status-/Zählerverträge. Stammdateien: 492 bzw. 448 Zeilen; Partial-Dateien: 41 bzw. 139 Zeilen.
-- Gezielte Fehlervertrags-FastTests nach der letzten Codeänderung: `dotnet test src/AiNetLinter.FastTests --filter "FullyQualifiedName~AssemblyAnalysisConfigurationFailureTests|FullyQualifiedName~SafeguardToolTests" --no-restore` — 11/11 bestanden; die vier Fehlerpfade prüfen nun typisierte `McpErrorPayload`-Felder und die unveränderte IsError-Policy.
-- MCP-Qualitätschecks nach der letzten Codeänderung im erweiterten Test-Scope `src/AiNetLinter.FastTests/Mcp`: `find_duplicates` mit `targetType=project`, absolutem Projektpfad, `scopeDir=src/AiNetLinter.FastTests/Mcp`, `scopeType=tests`, `similarityThreshold=exact`, `maxResults=50` — 0 Cluster bei 1035 Methoden; `find_dead_code` mit Projekt-Target, `includeTests=true`, Scope-Filter und `confidence=high` — 0 High-Confidence-Funde; `find_magic_values` mit Projekt-Target, `includeTests=true`, `changedOnly=true` — 54 Vorkommen in 36 Einträgen über 2 Dateien, bestehende testbezogene Literale ohne sichere scope-nahe Zentralisierung.
-- `git diff --check` nach der letzten Codeänderung — erfolgreich; Git meldete nur erwartete LF/CRLF-Hinweise, keine Whitespace-Fehler.
-- MCP-Qualitätschecks nach der letzten Codeänderung im Produktionsscope `src/AiNetLinter/Mcp`: `find_duplicates` meldete 0 exakte Cluster bei 1431 Methoden, `find_dead_code` 0 High-Confidence-Funde bei 710 Symbolen und `find_magic_values` 0 Treffer in 2 geänderten Dateien.
-- Abschließender MCP-Nachweis nach der letzten Codeänderung: `get_violations` mit `targetType=project`, absolutem `targetPath=C:\Daten\Entwicklung\Ralf\AiNetLinter`, Produktionsscope `scopeFilter=src/AiNetLinter/Mcp`, `includeSnippet=true`, `contextLines=1`, `maxResults=200` — 2 Warnungen in `FindSymbolScanner.cs` (`FindMatchesAndFormat`, `FindMatchesWithEntriesAsync`), keine Verstöße an den geänderten `McpToolResults`-/`AssemblyAnalysisResponse`-Symbolen; scopefremd zum aktuellen Korrekturversuch.
-- Abschlussgates: `dotnet build` — 0 Warnungen/0 Fehler; gezielte Assembly-Tests — 29/29 bestanden; `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` — 2324 bestanden, 5 fehlgeschlagen, 2 übersprungen; `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` — 376 bestanden, 1 fehlgeschlagen. Die vollständigen roten Befunde sind scopefremd und werden unverändert übergeben.
-- Paket-2-Nachweis dieses vorzeitig beendeten Laufs: `dotnet build --no-restore` nach letzter Codeänderung — erfolgreich, 0 Warnungen/0 Fehler.
-- Paket-2-Zieltests nach letzter Codeänderung: FastTests-Filter `AssemblyAnalysisToolTests|GetCallTreeToolTests|GetTypeHierarchyToolTests|MetricsTreeToolTests|SymbolGraphToolRegistrationsTests` — 55 bestanden, 1 fehlgeschlagen. Der Fehler ist `InspectAssembly_WithConsumerSolution_ResolvesAssemblyDirectoryDependencies`, weil der alte Test bei einem gezielten Type-Filter weiterhin `payload.References` erwartet.
-- Paket-2-Health-/Reload-Tests nach letzter Codeänderung: IntegrationTests-Filter `GetServerHealthToolTests|ReloadConfigToolTests` — 12 bestanden, 2 fehlgeschlagen. Beide Fehler sind alte Erwartungen an `payload.Assemblies` im globalen Health-Test; der neue globale Default unterdrückt die Sessionliste.
-- Paket-2-Regressionstestlücke: keine neuen/aktualisierten Testassertions für `includeReferences`, fünf Navigation-Diagnose-Samples, globales Health-Aggregat, `includeSessions`/`maxSessions` oder die vier Erfolgspayloads wurden in diesem Lauf mehr ergänzt. Vollständige Nicht-Stress-Gates und der finale Produktions-`get_violations`-Nachweis dieses Stands sind nach der folgenden Abschlussprüfung zu bewerten.
+- `dotnet build --no-restore`: erfolgreich, 0 Warnungen / 0 Fehler.
+- Gezielte FastTests: 55/56 bestanden; ein bestehender Test erwartet noch die alte Inspect-Referenzdetail-Voreinstellung.
+- Gezielte IntegrationTests: 10/12 bestanden; zwei bestehende Health-Tests erwarten noch eine globale Sessionliste bei Default-/Diagnoseabfrage.
+- `git diff --check`: erfolgreich; nur bestehende Zeilenende-Hinweise.
+- MCP `get_violations` über `src/AiNetLinter/Mcp`: keine Violations an den geänderten Symbolen; genau die zwei bekannten `FindSymbolScanner`-Warnungen bleiben.
+- MCP-DRY-/Dead-Code-/Magic-Value-Prüfungen: keine Befunde im betroffenen MCP-Produktionsscope während des Versuchs.
+- Vollständige Nicht-Stress-Gates beider Testprojekte sowie Sage-/Wire-Proof: nicht ausgeführt.
+
+## Tech-Debt-Disposition
+
+- Produktionsviolations: behoben; kein neuer Tech-Debt-Eintrag.
+- Paket-2-Regressionstest-Drift: für diesen Korrekturversuch offen/deferred, weiterhin im bestehenden Versuchskontext 1/5; nicht in `tech-debt.md` verschoben.
+- Kein Commit erstellt.

@@ -438,6 +438,38 @@
 - Verifikationsbewertung: `dotnet build --no-restore` nach letzter Codeänderung 0/0; Zieltests frisch, aber rot. Vollständige Nicht-Stress-Gates fehlen. Der Live-Assembly-MCP-Aufruf lief gegen ein nicht nachweislich aktualisiertes Daemon-Artefakt und ist daher kein Wire-Nachweis.
 - Nächste Aktion: Frischer Implementierer für die drei P1-Gruppen; zuerst Produktionsviolations, ReloadConfig-DTO und konkrete Regressionen vervollständigen.
 
+## 2026-09-01 – Paket 2 Korrekturversuch 1 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `57e49f88`
+- Ursachensignaturen: `package2-production-violations`; `reload-config-structured-payload-missing`; `package2-regression-test-contract-drift`
+- Versuch: 1 von 5 je Ursachensignatur
+- Status: running
+- Auftrag: Die vier konkreten Produktionsregelverstöße beseitigen, ein strukturiertes `ReloadConfig`-Erfolgs-DTO mit Registrierung ergänzen und die roten/fehlenden Paket-2-Regressionen für Detailflag, Diagnose-Samples, Health-Sessiondetails und Erfolgspayloads aktualisieren. Bestehende semantische Verträge erhalten, `code-map.md` pflegen, gezielte Tests und Produktionsscope-`get_violations` nach letzter Codeänderung ausführen. Kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
+
+## 2026-09-01 – Paket 2 Korrekturversuch 1 abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: `01a05c22-80af-7210-b9e0-f5b4d89271c3`
+- Ursachensignaturen: `package2-production-violations`; `reload-config-structured-payload-missing`; `package2-regression-test-contract-drift`
+- Versuch: 1 von 5 je Ursachensignatur
+- Status: completed; Arbeitsstand ohne Rollen-Commit übergeben
+- Ergebnis: `AddGetServerHealth`, `InspectAssemblyTool.BuildResult` und `GetServerHealthResponseBuilder.Build` wurden regelkonform refaktoriert. `ReloadConfigTool` erhielt mit `ReloadConfigModels` strukturiertes Structured Content; Textausgabe bleibt additiv, Registrierung war bereits vorhanden. `code-map.md` aktualisiert; scopefremde `FindSymbolScanner`-Warnungen unverändert.
+- Verifikationsnachweise nach der letzten Codeänderung:
+  - `dotnet build --no-restore`: 0 Warnungen/Fehler.
+  - Gezielte FastTests: 55/56 bestanden; ein veralteter Inspect-Test erwartet noch Referenzdetails beim gezielten Default.
+  - Gezielte IntegrationTests: 10/12 bestanden; zwei Health-Tests erwarten noch eine globale Sessionliste beim Default-/Diagnoseaufruf.
+  - `git diff --check`: erfolgreich.
+  - MCP `get_violations` mit `targetType=project`, absolutem `targetPath` und `scopeFilter=src/AiNetLinter/Mcp`: keine Violations an geänderten Symbolen; zwei bekannte `FindSymbolScanner`-Warnungen bleiben scopefremd.
+  - Duplicate-/Dead-Code-/Magic-Value-Prüfungen: ohne Befund.
+- Offen: fokussierte Regressionen für `includeReferences`, Diagnose-`totalCount`/`truncatedBy`, `includeSessions`/`maxSessions` und CallTree-/TypeHierarchy-/MetricsTree-/ReloadConfig-Payloads fehlen weiterhin; Wire-Verhalten gegen aktuellen Build nicht extern verifiziert.
+- Nächste Aktion: Korrekturstand committen und frischen Review starten; der Review muss die offenen Testverträge und die drei implementierten Bereiche prüfen.
+
 ## 2026-09-01 – Paket 2 Implementierer abgeschlossen
 
 - Run-ID: decompiled-assembly-fix3-20260901

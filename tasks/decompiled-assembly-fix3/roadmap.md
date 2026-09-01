@@ -4,6 +4,8 @@
 - Betriebsart: Großkonzept-Modus
 - Status: executing
 - current_epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- current_debt_item: package2-production-violations
+- debt_attempts: 1
 - letzter Commit: `ce505d80`
 
 ## Epics
