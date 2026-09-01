@@ -2,7 +2,7 @@
 
 status: executing
 current_epic: 1
-last_checkpoint: Planung wird initial gesichert
+last_checkpoint: Epic 1 Analyse-Checkpoint wird gesichert
 current_debt_item: none
 debt_attempts: 0
 
@@ -22,7 +22,7 @@ acht eigenständige, priorisierte Befundberichte.
    Befunde nach Kategorie, Priorität und Größe ordnen; Evidence-/Scope-
    Abschnitt und Unsicherheiten ausweisen. Verifikation: gezielte MCP-
    Abfragen und Quelltext-/Dokumentlesung, keine Tests/Builds. Status:
-   in_progress.
+   in_progress (Analyse abgeschlossen, Review offen).
 2. **Decompilation und semantischer Snapshot** — Metadata-only-Garantie,
    dekompilierte Dokumente, Syntax/Bodies, Generics, Attribute, Parameter,
    stabile IDs und source-backed-Abgrenzung. Abhängigkeiten: Epic 1.
