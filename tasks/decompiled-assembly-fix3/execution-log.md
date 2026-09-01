@@ -1003,6 +1003,17 @@
 - Verifikation: fokussierte FastTests 148/148, IntegrationTests 29/29, `dotnet build --no-restore` 0 Warnungen/0 Fehler, `git diff --check` sauber.
 - Nächste Aktion: Roadmap auf Paket 4 `done` fortschreiben, Abschluss-Audit ausführen und die vollständigen Nicht-Stress-Gates laufen lassen.
 
+## 2026-09-01 – Paket 4 Abschlussaudit ausgeführt
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Rolle: Orchestrator mit Audit-Skill; Audit-Scope: direkt geänderte MCP-Produktionsbereiche plus unmittelbar betroffene Assembly-Analysis-Helper.
+- DRY/Refactoring-Drift: `find_duplicates` im geänderten Toolscope scannte 716 Methoden und fand 0 exakte Cluster; der konkrete Drift-Check für `AssemblyBodySyntax.HasNoBody` scannte 274 Methoden und fand 0 Kandidaten.
+- Dead Code: `find_dead_code` fand in AssemblyAnalysis 0/47, ServerMaintenance 0/17 und SymbolGraph 0/61 tote Symbole. Im bestehenden `Assemblies/Analysis` wurden zwei LOW-Heuristiken (`AssemblyAnalysisRegistry.ResourceHealth`, `AssemblyOrigin.Kind`) ohne Referenzen gemeldet; `find_references` bestätigte 0 Aufrufstellen, wegen möglicher Serializer-/Internals-Verträge wurden sie nicht entfernt und als accepted-deferred klassifiziert.
+- Magic Values: `find_magic_values` fand zunächst ausschließlich die wiederholten fachlich identischen Origin-Werte `source-backed` und `verified-clean` in `AssemblyAnalysisContextFactory`; diese wurden in `AssemblyAnalysisOriginValues` zentralisiert. Nachcheck: AssemblyAnalysis 0 Magic Values und 0 Violations.
+- Nachkorrektur: Die zentrale Origin-Werte-Datei hält die Context-Fabrik unter dem 500-Zeilen-Limit; der erneute `get_violations`-Check meldet im AssemblyAnalysis-Scope 0 Befunde. ServerMaintenance bleibt bei 0; die bestehenden AIContext-Warnungen in SymbolGraph/Analysis sind scopefremd.
+- Ergebnis: Keine weiteren sicheren, verhaltensneutralen Audit-Korrekturen. Near-/Low-Kandidaten bleiben in der Tech-Debt-Queue; kein Audit-Commit durch den Skill.
+- Nächste Aktion: Audit-/Origin-Konstante checkpointen und danach die vollständigen Nicht-Stress-Gates ausführen.
+
 ## 2026-09-01 – Paket 3 Korrekturversuch 3 Reviewer abgeschlossen
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume

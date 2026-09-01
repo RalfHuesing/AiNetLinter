@@ -252,14 +252,14 @@ internal static class AssemblyAnalysisContextFactory
         var assemblyName = request.Project.AssemblyName ?? request.Project.Name;
         var snapshot = request.Selection.SourceLease.Snapshot;
         var origin = new AssemblyOrigin(
-            "source-backed",
+            AssemblyAnalysisOriginValues.SourceBackedKind,
             request.TargetPath,
             $"source:{snapshot.Identity.StableValue}:{request.Project.Id}",
             string.Empty,
             "high",
             snapshot.Identity,
             request.Project.FilePath,
-            "verified-clean",
+            AssemblyAnalysisOriginValues.VerifiedCleanTrust,
             "source",
             "source",
             null,
@@ -283,14 +283,14 @@ internal static class AssemblyAnalysisContextFactory
             ? AssemblySessionStatus.Complete
             : AssemblySessionStatus.Partial;
         var origin = new AssemblyOrigin(
-            "source-backed",
+            AssemblyAnalysisOriginValues.SourceBackedKind,
             request.Preparation.Fingerprint.CanonicalPath,
             request.Preparation.Fingerprint.Sha256,
             string.Empty,
             "high",
             request.Preparation.Snapshot.Identity,
             request.Preparation.Project!.FilePath,
-            "verified-clean",
+            AssemblyAnalysisOriginValues.VerifiedCleanTrust,
             "source",
             "source",
             request.ContextRequest.Fallback?.Reason,

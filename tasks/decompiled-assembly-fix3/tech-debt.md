@@ -344,6 +344,16 @@
 - Nächster Schritt: In einer separaten Verifikations-/Release-Schleife nachschärfen; keine P1-Blockade der aktuellen Lieferung.
 - Log-Anker: `execution-log.md`, „Paket 4 Reviewer abgeschlossen"
 
+### Abschlussaudit 2026-09-01
+
+- Schweregrad: P2 (nicht blockierend)
+- Ursachensignaturen: audit-package4-low-dead-code; audit-package4-near-duplicate
+- Scope/Fundstelle: direkter MCP-Tool-/Assembly-Analysis-Scope
+- Evidenz: Der Abschlussaudit meldete keine exakten Duplikate und keine Refactoring-Drift im geänderten Scope. Dead-Code meldete in `Mcp/Tools/AssemblyAnalysis`, `ServerMaintenance` und `SymbolGraph` 0 Befunde; im bestehenden `Mcp/Assemblies/Analysis` blieben nur `ResourceHealth` und `AssemblyOrigin.Kind` als LOW-Heuristiken ohne Referenzen, wobei Serializer-/Internals-Verträge möglich sind. Ein bestehender Near-Duplicate in `AssemblyAnalysisResponseLimits.Budget.cs` sowie einzelne nicht eindeutig zentralisierbare Magic-Value-Kandidaten bleiben außerhalb der sicheren Korrektur. Die wiederholten `source-backed`-/`verified-clean`-Werte wurden sicher in `AssemblyAnalysisOriginValues` zentralisiert; der Nachcheck meldet dort 0 Magic Values und 0 Violations.
+- Disposition: accepted-deferred
+- Nächster Schritt: Nur bei konkreter fachlicher Nutzung oder reproduzierbarem Duplikat-/Dead-Code-Nachweis wieder aufnehmen; keine Scope-Erweiterung dieses Tasks.
+- Log-Anker: `execution-log.md`, „Paket 4 Abschlussaudit ausgeführt"
+
 ### Paket-3-Diagnose-Sample-Priorisierung
 
 - Schweregrad: P2
