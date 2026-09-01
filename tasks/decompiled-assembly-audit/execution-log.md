@@ -155,6 +155,56 @@
   Hashes oder dekompilierten Inhalte in Bericht oder Code-Map.
 - Nächste Aktion: mit Epic 4 als Analyse-/Berichtsrolle fortfahren.
 
+## 2026-09-01 — Epic 4 — running
+
+- Run-ID: `decompiled-assembly-audit-20260901`
+- Rolle: Implementierer/Analyse-Agent
+- Subagent-ID: `01a05eb3-02e4-7ad1-bf5d-57ba6d1b27bd`
+- Diff-Baseline: `30f4412f` (Epic-3-Analyse-Checkpoint)
+- Scope: Session-, Cache- und Lebenszeitsemantik.
+- Erwartete Änderungen: ausschließlich `epic-04-session-cache-lebenszeit.md`
+  und `code-map.md`; keine Produktions-, Test-, Konfigurations- oder
+  Produktdokumentationsänderungen.
+
+## 2026-09-01 — Epic 4 — completed
+
+- Subagent-ID: `01a05eb3-02e4-7ad1-bf5d-57ba6d1b27bd`
+- Urteil der Analyse-Rolle: read-only Audit abgeschlossen; keine
+  Implementierung.
+- Geänderte Bereiche: `epic-04-session-cache-lebenszeit.md`, `code-map.md`.
+- Findings: fünf Bugs (E4-BUG-01 bis E4-BUG-05), drei Optimierungen
+  (E4-OPT-01 bis E4-OPT-03) und drei Missing Features (E4-MF-01 bis E4-MF-03).
+  Alle als `accepted-deferred` triagiert, da Konzept und Nutzeranweisung keine
+  Reviewer-/Korrekturschleife oder Codeänderung erlauben.
+- Nach der letzten Code-Map-Änderung erfolgreich ausgeführt: redigierte
+  `inspect_assembly`- und `get_server_health`-Spotchecks für LOCAL-01 bis
+  LOCAL-03 und FALSE-01; Health-Antworten waren recoverable/`isError=false`,
+  lokale Sessions decompiled/partial, FALSE-01 ohne Snapshot. Zusätzlich
+  projektgebundene Symbol-, Struktur- und Referenzabfragen mit absolutem
+  Projektziel.
+- Nur gelesen: Registry, Session, Entry, Eviction, Fingerprint, Cache,
+  Resource-/Health-Komponenten, Testverträge und Dokumentation. Keine Builds,
+  Tests, Produktions-/Konfigurations-/Produktdokumentationsänderungen oder
+  Commits.
+- Redaktionsprüfung: Bericht und Code-Map enthalten keine externen
+  Identitäten, Pfade, URLs, Hashes oder dekompilierten Inhalte.
+- Nächste Aktion: mit Epic 5 als Analyse-/Berichtsrolle fortfahren.
+
+### Vollständiger finaler Agentenbericht
+
+Epic 4 ist abgeschlossen.
+
+Geändert wurden ausschließlich:
+
+- `epic-04-session-cache-lebenszeit.md`
+- `code-map.md`
+
+Enthalten sind fünf Bugs, drei Optimierungen und drei Missing Features
+inklusive MCP-/Quelltext-/Test-Evidence, Priorität, Größe, Vertrauen,
+Abgrenzungen und Unsicherheiten. Die finalen redigierten Spotchecks wurden
+nach der letzten Code-Map-Änderung ausgeführt. Keine Builds, Tests,
+Produktionsänderungen oder Commits wurden vorgenommen.
+
 ### Vollständiger finaler Agentenbericht
 
 Epic 3 abgeschlossen.

@@ -28,6 +28,130 @@
 - Log-Anker: Epic 1 Implementiererbericht, 2026-09-01.
 - Begründung der Disposition: Analyse-Only-Non-Goal.
 
+### E4-BUG-01 — Ressourcen-Dimensionen bei Refresh nicht generationsgebunden
+
+- Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyAnalysisRegistry`, `AssemblyAnalysisResourceBudget`
+  und `ExternalResourceRegistry`.
+- Evidenz: Pfadbasierte Ressourcenidentität übernimmt bei Content-Wechsel nicht
+  zuverlässig die neue Disk-/Memory-Anforderung während Alt-Leases laufen.
+- Nächster Schritt: Generationsgebundene oder konservative Accounting-Übergabe
+  mit Size-Change-/Alt-Lease-Test spezifizieren.
+- Log-Anker: Epic 4 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E4-BUG-02 — Kein Stabilitätscheck vor Generation-Commit
+
+- Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyAnalysisSession.RefreshCoreAsync` und
+  Fresh-/Cache-Generation-Installationspfade.
+- Evidenz: Fingerprint wird vor langem Read-/Decompilation-Fenster ermittelt,
+  ein zweiter Check vor Publish/Install fehlt.
+- Nächster Schritt: In-Flight-Dateiänderung kontrolliert prüfen und Commit-
+  Grenze mit rollback-sicherem Verhalten festlegen.
+- Log-Anker: Epic 4 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E4-BUG-03 — Retirement-Fehler werden verschluckt
+
+- Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `RetireEntryAsync` und Registry-Disposal-Aggregation.
+- Evidenz: Retirement fängt Entry-Disposal-Exceptions und lässt den Task
+  erfolgreich erscheinen; zentrale Aggregation kann sie dadurch nicht sehen.
+- Nächster Schritt: Fehler wie Pending-Entry-Fehler aggregieren oder sichtbaren
+  Degraded-/Quarantäne-Zustand definieren.
+- Log-Anker: Epic 4 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E4-BUG-04 — Session-Disposal kann Refresh-Race auslösen
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyAnalysisSession.RefreshAsync`, `Dispose` und
+  `DisposeAsync`.
+- Evidenz: Gate-Disposal ist nicht gegen wartende/laufende Refreshes drainend
+  synchronisiert; spätes `Release` oder `WaitAsync` kann ungeplant scheitern.
+- Nächster Schritt: Zweistufiges Shutdown- und Drain-Protokoll mit Race-Test.
+- Log-Anker: Epic 4 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E4-BUG-05 — Cancellation ohne Commit-Grenzpunkt
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `BuildFreshGenerationAsync` und
+  `CreateAndInstallGenerationAsync`.
+- Evidenz: Cancellation wird vor Decompilation weitergereicht, aber direkt
+  vor synchronem Cache-Publish/Install nicht erneut geprüft.
+- Nächster Schritt: expliziten Cancellation-Commitpunkt und Rollback-/Late-
+  Cancellation-Semantik definieren.
+- Log-Anker: Epic 4 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E4-OPT-01 — Abgeschlossene Retirement-Tasks bleiben referenziert
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyAnalysisRegistry.retiredEntries`.
+- Evidenz: Retirement-Tasks werden gesammelt, aber im Normalbetrieb nicht nach
+  Abschluss entfernt.
+- Nächster Schritt: abgeschlossene Tasks unter dem bestehenden Gate entfernen.
+- Log-Anker: Epic 4 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E4-OPT-02 — Generation-Counter wächst pro Pfad unbegrenzt
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyAnalysisRegistry.nextGenerations`.
+- Evidenz: Counter bleiben für jeden jemals gesehenen kanonischen Pfad, auch
+  nach Eviction und Lease-Drain, dauerhaft im Dictionary.
+- Nächster Schritt: bounded Epoch-/Identitätsstruktur ohne stale-ID-Reuse prüfen.
+- Log-Anker: Epic 4 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E4-OPT-03 — Registry- und Cache-Pfad-Case uneinheitlich
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: Registry-Map, Fingerprint/Cache-Key und
+  `AssemblyDecompilationCache`.
+- Evidenz: Registry führt Pfadschreibweisen zusammen, Cache-Identity kann sie
+  als unterschiedliche Key-Verzeichnisse behandeln.
+- Nächster Schritt: plattformgerechte Cache-Identity mit case-sensitiver
+  Dateisystemsemantik spezifizieren.
+- Log-Anker: Epic 4 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E4-MF-01 — Kein Root-Cleanup für alte Content-Key-Verzeichnisse
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyDecompilationCache` und `AssemblyCacheCleanup`.
+- Evidenz: Retention ist je Content-Key bounded, ein Root-/TTL-/Bytebudget-
+  Cleanup über veraltete Key-Bäume fehlt.
+- Nächster Schritt: lazy/periodischen sicheren Root-Cleanup mit Diskbudget und
+  Last-Access-Vertrag bewerten.
+- Log-Anker: Epic 4 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E4-MF-02 — Health zeigt keine Lifecycle-/Ressourcenmetriken
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: Assembly-Health-Snapshot und Health-Response-Builder.
+- Evidenz: Lease-, Retirement-, Cache-Reuse-, Disk-/Memory- und Operation-
+  Slot-Zähler des internen ResourceHealth sind nicht sichtbar.
+- Nächster Schritt: bounded, redigierte Lifecycle-/Resource-Snapshots als
+  optionale Health-Felder spezifizieren.
+- Log-Anker: Epic 4 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E4-MF-03 — Kein hostweiter Gesamtblick getrennter Budgets
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyAnalysisHostComposition` und getrennte Resource-
+  Registries.
+- Evidenz: Session- und Source-Register besitzen getrennte Limits und keinen
+  optionalen aggregierten Prozess-/Health-Wert.
+- Nächster Schritt: Produktentscheidung zwischen bewusster Isolation und
+  zusätzlichem hostweitem Accounting treffen.
+- Log-Anker: Epic 4 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
 ### E3-BUG-01 — Starke Assembly-Identität unvollständig geprüft
 
 - Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0

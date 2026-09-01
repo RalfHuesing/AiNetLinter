@@ -1,8 +1,8 @@
 # Ausführungsstand: Assembly-Unterstützungs-Audit
 
 status: executing
-current_epic: 4
-last_checkpoint: Epic 3 abgeschlossen; Analyse-Checkpoint wird gesichert
+current_epic: 5
+last_checkpoint: Epic 4 abgeschlossen; Analyse-Checkpoint wird gesichert
 current_debt_item: none
 debt_attempts: 0
 
@@ -39,12 +39,13 @@ acht eigenständige, priorisierte Befundberichte.
 4. **Session-, Cache- und Lebenszeitsemantik** — Fingerprints, Generationen,
    Cache, Refresh, Leases, Cancellation, Eviction, TTL, Disposal und
    Parallelität. Abhängigkeiten: Epic 2. Verifikation: MCP-Health-/Session-
-   Sicht und Quelltext-/Testanalyse; keine Laufzeitänderung. Status: in_progress.
+   Sicht und Quelltext-/Testanalyse; keine Laufzeitänderung. Status: done
+   (Analysebericht abgeschlossen; Review auf Nutzeranweisung übersprungen).
 5. **Navigation und fachliche Query-Korrektheit** — Assembly-fähige
    Symbolgraph- und Strukturtools, Root-/Referenzgrenzen, Caller-/Calltree-
    Semantik, Extensions und Trunkierung. Abhängigkeiten: Epics 2–3.
    Verifikation: gezielte Navigationstools und Quelltext-/Testvertragsanalyse.
-   Status: open.
+   Status: in_progress.
 6. **Response-, Token- und Laufzeiteffizienz** — Budgets, Reduktionsreihenfolge,
    Text-/JSON-Konsistenz, Diagnose-Samples, Referenzlimits und Worst-Case-
    Payloads. Abhängigkeiten: Epics 3–5. Verifikation: gezielte MCP-

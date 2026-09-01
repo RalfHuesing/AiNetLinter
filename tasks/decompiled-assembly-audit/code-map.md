@@ -1,4 +1,4 @@
-# Epic 3 — kompakte Code-Map (Epic-2-Basis erhalten)
+# Epic 4 — kompakte Code-Map (Epic-3-Basis erhalten)
 
 ## Primäre Einstiegspunkte
 
@@ -20,6 +20,36 @@
 - Session, Generation und Snapshot-Lebenszyklus:
   - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisSession.cs:61-368,432-467`
   - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyRoslynWorkspaceFactory.cs:19-145`
+- Epic-4-Lebenszeit-Hauptpfad:
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisRegistry.cs:29-451`
+    (`LeaseAsync:104-147`, `TryLeaseEntry:250-285`, `CreateEntry:354-378`,
+    `RetireEntryAsync:380-393`, `DisposeAsync:332-350`).
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisSession.cs:15-470`
+    (`RefreshAsync:71-83`, `RefreshCoreAsync:113-130`,
+    `CreateAndInstallGenerationAsync:197-231`, `InstallGeneration:294-334`,
+    `Dispose:85-105`, `ReleaseSnapshot:398-419`).
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisEntry.cs:25-261`
+    (`Matches:65-74`, `TryAcquireLease:76-104`, `TryBeginRetirement:106-112`,
+    `DisposeAsync:114-181`, `IsIdle:205-231`).
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/Coordinators/AssemblyAnalysisRegistryEvictionCoordinator.cs:12-146`
+    (`RunCoreAsync:40-54`, `FindIdleCandidatesAsync:56-88`,
+    `RetireIdleCandidatesAsync:100-124`, `TryRemoveEntryForRetirement:126-145`).
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResourceBudget.cs:98-172`
+    und `src/AiNetLinter/Mcp/Assemblies/Analysis/ExternalResourceRegistry.cs:15-469`
+    für Resident-, Disk-, Memory-, Parallelitäts- und Idle-TTL-Budget.
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyFingerprint.cs:11-66`,
+    `AssemblyDecompilationCache.cs:32-103,238-255` und
+    `AssemblyCacheCleanup.cs:37-75` für Fingerprint-/Key-/Cache-Retention.
+- Epic-4-Health-/Host-Sicht:
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/Coordinators/AssemblyAnalysisHealthSnapshotProvider.cs:24-77`
+    projiziert residenten Status, Origin, Generation und Diagnosen.
+  - `src/AiNetLinter/Mcp/Tools/ServerMaintenance/GetServerHealthModels.cs:39-72`,
+    `GetServerHealthResponseBuilder.cs:16-125` und
+    `Projection/AssemblyHealthProjection.cs:14-84` bilden Sessionlisten,
+    Statuscounts und Diagnosebudgets, aber keine Lease-/Resource-Zähler.
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisHostComposition.cs:177-219`
+    erzeugt getrennte Session- und Source-Resource-Registries und entsorgt sie
+    in definierter Reihenfolge.
 - Source-backed-/Fallback-Kontext:
   - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs:79-331`
 - On-demand-Bodies:
@@ -35,7 +65,9 @@
 - `SourceProjectReferenceGraph:23-127` ergänzt Source-Project-Referenzen bounded, aber keine beliebigen binären Probe-Wurzeln.
 - `AssemblyReferenceSessionExpander:33-163` projiziert Resolved-/Missing-/Boundary-/Sessionstatus, Origin, Completeness und Diagnosen; MCP meldete am Klassensymbol einen `AIContextFootprint`-Überhang.
 - `AssemblySourceMatchResolver:82-176` matcht Snapshot-/Mapping-Identität, Alias und Project-/Assembly-Namen, aber keine Binary-zu-Source-Identität.
-- `AssemblySourceSelectionOrchestrator:116-189`, `GiteaExternalSourceProvider:26-153` und `ExternalSourceProviderResult:22-91` gatesen Provider, Checkout, Snapshot, Attestation, Health und Trust vor Source-backed.
+- `AssemblySourceSelectionOrchestrator:116-189`, der konfigurierte
+  `ExternalSourceProvider` und `ExternalSourceProviderResult:22-91` gatesen
+  Provider, Checkout, Snapshot, Attestation, Health und Trust vor Source-backed.
 - `AssemblyAnalysisRegistryEntryFactory:149-162` setzt im registrierten Assembly-Kontext `ConsumerSolution:null` und `ReceiverType:null`; `AssemblyAnalysisService.ToExtensionDto:133-164` projiziert dann `not_decidable`.
 - `AssemblyAnalysisContextFactory:130-180,280-309,394-411` trennt Source-backed/Fallback, baut Source-Project-References ein und setzt Origin/Confidence/Trust/Partial.
 
@@ -94,9 +126,21 @@
   → `AssemblyDecompilationCache` oder `AssemblyDecompilationAdapter`
   → `AssemblyRoslynWorkspaceFactory`
   → Compilation-Prüfung und Generation-Installation.
+- Epic-4-Lifecycle-Fluss: Fingerprint → Registry-Entry-/Creation-Barriere →
+  `AssemblyAnalysisEntry`-Lease → Session-Snapshot-Lease; bei Hash-/Source-
+  Mismatch wird ein neuer Entry installiert und der alte Entry nach Lease-Drain
+  retired. Eviction prüft LRU/TTL, revalidiert den Entry unter `gate` und reicht
+  Ressourcenfreigabe an `ExternalResourceRegistry` weiter.
+- Epic-4-Cache-Fluss: `AssemblyDecompilationCacheKey` trennt Content-/Options-
+  Identität; der Pointer wählt eine Cache-Generation; Retention begrenzt nur
+  Generation-Verzeichnisse innerhalb eines einzelnen Key-Verzeichnisses.
 - `get_file_skeleton`/`find_symbol` liefern Snapshot-gebundene IDs; `get_class_structure` und `get_symbol_body` lösen dieselbe Assembly-Generation über Symbol-/Positionsadressen auf.
 - `AssemblyReferenceResolver` arbeitet über PE-/Metadatenreferenzen; es gibt keine Runtime-Ausführung des Zielartefakts.
 - Source-backed und decompiled sind getrennte Originpfade. `GIT-01`, `LOCAL-01`, `LOCAL-02` und `LOCAL-03` wurden im Audit nur als `decompiled` beobachtet; `FALSE-01` erzeugte keinen Snapshot.
+- Registry-Isolation: `AssemblyAnalysisHostComposition` hält Session- und
+  Source-Ressourcen in getrennten `ExternalResourceRegistry`-Instanzen. Das
+  isoliert Zustände, bedeutet aber zugleich getrennte Budgets statt eines
+  nachgewiesenen hostweiten Gesamtbudgets.
 
 ## Relevante Tests, Konfiguration und Dokumentation
 
@@ -104,7 +148,29 @@
   - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisDispatcherCapabilityTests.cs:54-127` — Missing Reference und Node-Limit.
   - `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolTests.cs:118-140,349-425` — `not_decidable`, Extension-Consumerfilter, Resolver-Transitivität, Missing und Cycle.
   - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblySourceMatchResolverTests.cs`, `AssemblyAnalysisContextFactoryTests.cs` und `AssemblyAnalysisRouteTests.cs` — Source-Match, Fallback, Source-Project-Expansion und Projektion.
-  - Relevante External-Source-Provider-/Snapshot-Tests in Fast- und IntegrationTests.
+- Relevante External-Source-Provider-/Snapshot-Tests in Fast- und IntegrationTests.
+- Epic-4-relevante, read-only gesichtete Tests:
+  - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRegistryTests.cs:1-430`
+    — Creation-Barriere, Cancellation, ABA-/Generationen, Hash-/Mtime-Refresh,
+    LRU-/TTL-Eviction, Capacity und Entry-Disposition.
+  - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRegistryFreshnessTests.cs:1-80`
+    und `AssemblyAnalysisRegistryRetirementRaceTests.cs:1-80` — Source-
+    Snapshot-Identität und Retirement-Revalidierung.
+  - `src/AiNetLinter.FastTests/Mcp/Assemblies/ExternalResourceRegistryTests.cs:1-180`
+    — Identity-Deduplizierung, Reservierungen, Capacity, Operation-Slots,
+    Idle-Eviction und Dispose-Race.
+  - `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisSessionTests.cs:1-316`
+    — Mtime-/Content-Refresh, Cache-Hit, Manifest, Cancellation, Last-good-
+    Degraded-State, Größen- und Typbaumgrenzen.
+  - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyCacheCleanupTests.cs:1-100`
+    — Retention innerhalb eines Cache-Key-Verzeichnisses.
+  - `src/AiNetLinter.FastTests/Mcp/Tools/ServerMaintenance/GetServerHealthToolTests.cs:1-235`
+    und `McpServerAssemblyHealthE2ETests.cs:1-164` — Health-Listen,
+    Sessionlimits, Diagnosebudgets und Assembly-Health-Projektion.
+- Epic-4-Kontext: `Docs/agent-api.md:453-481`, `Docs/integration.md:337-375`
+  und `Docs/configuration.md:1660-1669` dokumentieren Target-/Health-/Session-
+  sowie externe Resource-Limits; ein hostweiter Gesamtzähler und ein
+  content-key-übergreifender Assembly-Cache-TTL sind dort nicht zugesagt.
 - Die lokale Audit-Matrix wurde ausschließlich zur Label-/Pfadauflösung gelesen; konkrete externe Identitäten bleiben aus dieser Map heraus.
 
 - Read-only gesichtet:
@@ -137,12 +203,36 @@
 - Offene Unsicherheit: die geprüfte Body-Parameterlogik behandelt `ref`, `out` und `in`, aber nicht nachweislich alle modernen Kombinationen wie `ref readonly`, `scoped`, `params` und Extension-`this`.
 - Offene Unsicherheit: Wegen unvollständiger Referenzauflösung und Response-Budgets wurde keine Vollständigkeit über alle generischen Constraints, Attribute oder Member der fünf Falllabels behauptet.
 - `GIT-01` ist kein source-backed Beleg: Der tatsächlich angesprochene Provider meldete `provider-unavailable`; die Source-backed-Implementierung wurde nur statisch als vorhanden verifiziert.
+- Epic-4-Befunde aus dem Read-only-Audit:
+  - `E4-BUG-01`: Resource-Budget dedupliziert bei Refresh nach Pfad und übernimmt
+    bei geänderter Dateigröße die alten Dimensionen.
+  - `E4-BUG-02`: Kein Post-Build-/Post-Read-Fingerprint vor Snapshot-Install und
+    Cache-Publish; ein In-Flight-File-Change bleibt als Race offen.
+  - `E4-BUG-03`: `RetireEntryAsync` verschluckt Cleanup-Fehler, obwohl Registry-
+    Disposal Retirement-Tasks eigentlich aggregieren könnte.
+  - `E4-BUG-04`: `AssemblyAnalysisSession.Dispose` entsorgt `refreshGate` ohne
+    laufende/wartende Refreshes zu koordinieren.
+  - `E4-BUG-05`: Zwischen Snapshot-Erzeugung und Cache-Publish/Install fehlt ein
+    Cancellation-Commitpunkt.
+  - `E4-OPT-01/02/03`: abgeschlossene Retirement-Tasks, Generation-Counter pro
+    Pfad und case-sensitive Cache-Key-Bildung wachsen bzw. duplizieren sich
+    ohne zusätzliche Begrenzung.
+  - `E4-MF-01/02/03`: Root-/Content-Key-Cache-TTL, Lifecycle-/Resource-Health-
+    Felder und ein optionaler hostweiter Budget-View fehlen.
 
 ## Verifikation
 
 - Ausgeführte Epic-3-MCP-Abfragen nutzten das aktuelle Schema mit absolutem `targetPath`: `get_index_scope`, `get_file_tree`, `get_server_health`, `find_symbol`, `get_feature_context`, `get_symbol_body`, `get_violations`, `inspect_assembly` und `find_assembly_extensions`.
 - Redigierte Origin-/Diagnoseprüfungen wurden für GIT-01, LOCAL-01, LOCAL-02, LOCAL-03 und den Epic-relevanten FALSE-01-Negativpfad ausgeführt. GIT-01 war `provider-unavailable`/decompiled/partial ohne nutzbaren Snapshot; LOCAL-Fälle waren decompiled/medium/untrusted/partial; FALSE-01 war recoverable `WORKSPACE_DIAGNOSTIC` ohne Snapshot.
 - Keine Builds, Tests oder Commits ausgeführt. Nach der letzten Code-Map-Änderung wurden die gezielten redigierten MCP-Nachweise wiederholt und ausschließlich im Epic-3-Bericht-Handoff dokumentiert; danach erfolgt keine weitere Dateiänderung.
+- Für Epic 4 wurden keine Builds, Tests oder Commits ausgeführt. Die finale
+  Map-Verifikation erfolgt als redigierte MCP-Runde: `inspect_assembly` und
+  zielgebundenes `get_server_health` für `LOCAL-01`, `LOCAL-02`, `LOCAL-03` und
+  `FALSE-01`; `GIT-01` ist für einen direkten Assembly-Target-Spotcheck nicht
+  anwendbar. Erwartete Ergebnisform: die drei positiven Labels bleiben
+  `decompiled`/`partial` mit sichtbarer Generation; `FALSE-01` bleibt ein
+  recoverable Negativpfad ohne Snapshot. Das konkrete Ergebnis wird im
+  Epic-4-Bericht festgehalten.
 
 - Vollständig gelesen: `AGENTS.md`, relevante `.agents/rules/*.mdc`, `Konzept.md`, `roadmap.md`, vorherige `code-map.md` und `implement/SKILL.md`.
 - MCP-Projektchecks: `get_index_scope`; `get_file_tree` (Assembly-Unterbaum, Tiefe 3, 97/97, nicht gekürzt); `get_server_health` projektgebunden und aggregiert; `get_feature_context`; `get_class_structure`; `get_symbol_body`; `get_file_skeleton`.
