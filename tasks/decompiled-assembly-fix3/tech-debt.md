@@ -156,10 +156,10 @@
 - Schweregrad: P1 (nutzerpriorisiert)
 - Ursachensignatur: package2-test-directory-footprint
 - Scope/Fundstelle: `src/AiNetLinter.FastTests/Mcp/Assemblies`
-- Evidenz: Der unabhängige Review meldet 31 direkte Unterverzeichnisse bei einer Regelgrenze von 30; die neue `AssemblyNavigationResponseContractTests.cs` liegt im bestehenden Assembly-Testbereich. Der Befund ist strukturell und blockiert die fachliche Korrektur nicht.
+- Evidenz: Der unabhängige Review meldet 31 direkte Einträge bei einer Regelgrenze von 30; die neue `AssemblyNavigationResponseContractTests.cs` liegt im bestehenden Assembly-Testbereich. Der Nutzer verlangt ausdrücklich eine fachliche Verschiebung in einen passenden Navigation-/Contract-Unterordner mit neuem Namespace, daher bleibt der Befund aktiv.
 - Disposition: fix-now
 - attempts: 0
-- Nächster Schritt: Assembly-Tests fachlich in einen sinnvollen Unterordner mit passendem Namespace verschieben und anschließend die Directory-/Namespace-Regelprüfung erneut ausführen.
+- Nächster Schritt: Drei zusammengehörige Navigation-/Route-/Contract-Tests nach `src/AiNetLinter.FastTests/Mcp/Assemblies/Navigation` mit Namespace `AiNetLinter.FastTests.Mcp.Assemblies.Navigation` verschieben und anschließend Directory-/Namespace-Regeln erneut ausführen.
 - Log-Anker: `execution-log.md`, „Wiederaufnahme Paket 2 Korrekturversuch 1 Reviewer abgeschlossen"
 
 ### Paket-2-Produktionsviolations aus Zwischenstand
@@ -172,6 +172,17 @@
 - attempts: 2
 - Nächster Schritt: Keine weitere Korrektur; die drei bestehenden Warnungen bleiben separat zurückgestellt.
 - Log-Anker: `execution-log.md`, „Paket 2 Korrekturversuch 2 Reviewer abgeschlossen"
+
+### Paket-3-Produktionsverzeichnis über Strukturgrenze
+
+- Schweregrad: P1 (nutzerpriorisiert)
+- Ursachensignatur: package3-production-directory-namespace-organization
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis`
+- Evidenz: Der unabhängige Review meldet 35 direkte Einträge bei einer Regelgrenze von 30. Die neuen Body- und Source-Selection-Helper vermischen aktuell mehrere fachliche Verantwortungen im gemeinsamen Analysis-Ordner.
+- Disposition: fix-now
+- attempts: 0
+- Nächster Schritt: Body-/Source-Selection-Helper in fachlich benannte Unterordner mit passenden Namespaces verschieben, alle Referenzen aktualisieren und `MaxDirectoryChildren` auf 30 oder weniger verifizieren.
+- Log-Anker: `execution-log.md`, „Paket 3 Korrekturversuch 2 Reviewer abgeschlossen"
 
 ### Paket-2-Magic-Value-Kandidaten
 
@@ -198,10 +209,10 @@
 - Schweregrad: P1
 - Ursachensignatur: package3-structural-rule-drift
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs`, `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySourceSelectionOrchestrator.cs` und direkt betroffene Konstruktor-/AIContext-Schnittstellen
-- Evidenz: Nach der Strukturkorrektur sind Dateigrößen-, Methodenlängen- und Komplexitätsbefunde in den großen Einstiegspunkten beseitigt. Verbleiben laut frischem `get_violations`-Check ein Orchestrator-AIContext-Footprint von 2607 statt 2500 sowie ein exaktes `HasNoBody`-Duplikat zwischen Body-Resolvern; zusätzlich meldet der Audit einen StaticTestSentinel und wiederholte Statuswerte. Die gezielten fachlichen Tests und der Build sind grün; die unabhängige Review-Klassifikation dieses Stands steht aus.
+- Evidenz: Dateigrößen-, Methodenlängen- und Komplexitätsbefunde in den großen Einstiegspunkten sind beseitigt. Verbleiben laut frischem `get_violations`-Check ein Orchestrator-AIContext-Footprint von 2607 statt 2500, ein exaktes `HasNoBody`-Duplikat zwischen Body-Resolvern und ein fehlender `StaticTestSentinel`. Der unabhängige Review meldet zusätzlich 35 statt 30 Einträge im Produktionsordner `Mcp/Assemblies/Analysis`; die fachlichen Tests und der Build sind grün.
 - Disposition: fix-now
-- attempts: 1
-- Nächster Schritt: Im Review prüfen, ob Footprint und Duplikat noch aktiv/P1-relevant sind; danach nur diese konkreten Restbefunde scope-nah beheben.
+- attempts: 2
+- Nächster Schritt: AIContext-Footprint und Duplikat scope-nah beheben, den Produktionsbaum in fachliche Body-/Source-Selection-Unterordner teilen und den fehlenden Sentinel regelkonform ergänzen.
 - Log-Anker: `execution-log.md`, „Paket 3 Implementierer abgeschlossen"
 
 ### Paket-3-Fallback-Diagnosepropagation

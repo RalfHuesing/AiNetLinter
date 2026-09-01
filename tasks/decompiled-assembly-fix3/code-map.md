@@ -8,7 +8,7 @@
 
 - Paket-3-Korrekturversuch: `AssemblySourceFallbackMetadata` wird von `AssemblySourceSelectionOrchestrator` über `AssemblySourceSelectionScope`, `AssemblySourceResolution`, `AssemblyAnalysisContextFactory` und `AssemblyAnalysisRegistryEntryFactory` bis zum `AssemblyOrigin` transportiert; Workspace-/Compilation-Fehler setzen fail-closed `workspace-failure`.
 - `AssemblyDecompilationAdapter` erzeugt den Decompiler und die Typ-/Dokumentauswahl; `AssemblyDecompiledBodyResolver` kapselt die leasegebundene on-demand Body-Auflösung inklusive deterministischer Overload-/Parameteridentität. `AssemblyDecompilationSourceText` enthält den Decompiler-Textscanner.
-- `IAssemblyBodyContext` entkoppelt den Body-Tool-Renderpfad von der vollständigen Assembly-Lease; `SourceSymbolBodyResolver` kapselt Source-Body-/abstract-/extern-/Interface-Erkennung.
+- `IAssemblyBodyContext` entkoppelt den Body-Tool-Renderpfad von der vollständigen Assembly-Lease; `SourceSymbolBodyResolver` kapselt Source-Body-/abstract-/extern-/Interface-Erkennung. Die Datei `src/AiNetLinter/Mcp/Tools/SourceSymbolBodyResolver.cs` ist im aktuellen Arbeitsbaum vorhanden, aber weder in `c6c7378a` noch in `HEAD` versioniert; der nächste Code-Checkpoint muss sie ausdrücklich aufnehmen.
 - `AssemblySourceProviderCoordinator` kapselt Provider-Creation, Snapshot-Acquisition, Identity-Merker und Dispose-Lebenszyklus des Orchestrators. `IAssemblySourceSelectionSnapshotRegistry` und `SourceSnapshotLease` liegen in eigenen fachlich kleinen Snapshot-Dateien.
 
 - `ServerMaintenanceToolRegistrations.AddGetServerHealth`: Request-/Options-Erzeugung und Ausführung in lokale Hilfsmethoden aufgeteilt. Target-/Global-Routing und Cancellation-Verhalten bleiben erhalten.
@@ -32,6 +32,7 @@
 ## Relevante Tests, Konfiguration und Dokumentation
 
 - Betroffene Tests: `src/AiNetLinter.FastTests/Mcp/Tools/SymbolGraph/TransitiveCallGraphFormatterTests.cs` für den direkten No-Hit-/Assembly-Formattervertrag, `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyNavigationResponseContractTests.cs` bündelt die Diagnoseassertions für Assembly-`find_references` und `get_call_tree`, und `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRouteTests.cs` deckt den echten `get_call_tree(includeReferences=true)`-Diagnosepfad mit kontrollierten sechs fehlenden Referenzen ab; `src/AiNetLinter.IntegrationTests/` bleibt für Health und ReloadConfig relevant.
+- Directory-Footprint-Empfehlung für den nächsten Implementierer: `AssemblyAnalysisPathContractTests.cs`, `AssemblyAnalysisRouteTests.cs` und `AssemblyNavigationResponseContractTests.cs` gemeinsam nach `src/AiNetLinter.FastTests/Mcp/Assemblies/Navigation/` verschieben und den Namespace auf `AiNetLinter.FastTests.Mcp.Assemblies.Navigation` ändern. Der Elternordner sinkt damit von 31 auf 28 direkten Einträgen; der neue fachliche Navigation-/Route-/Contract-Ordner enthält 3 Dateien und bleibt unter `MaxDirectoryChildren=30`.
 - `rules.json` und CLI-Verträge wurden nicht geändert.
 - `Konzept.md` wurde nicht geändert; `roadmap.md` und `execution-log.md` enthalten nachgelagerte Review-/Checkpoint-Metadaten und gehören nicht zum Produktions- oder Testumfang.
 - Diese Map dokumentiert den aktuellen Korrekturstand; sie dokumentiert keine nachträgliche Testbehauptung.
@@ -49,6 +50,12 @@
 - Frische Review-Verifikation: fokussierte FastTests 50/50, fokussierte IntegrationTests 19/19, `dotnet build --no-restore` 0 Warnungen/0 Fehler und `git diff --check` grün. Der Produktionsscope-`get_violations`-Check meldet 3 bekannte unabhängige Warnungen; der FastTests-MCP-Scope meldet den bestehenden `AssemblyAnalysisToolTests`-Zeilenbefund sowie die durch die neue Assembly-Testdatei ausgelöste Verzeichnisgrenze; der IntegrationTests-MCP-Scope ist sauber. Vollständige Nicht-Stress-Gates und weitere Audits wurden in diesem Review nicht erneut gestartet.
 - Zu den weiterhin relevanten früheren Befunden gehören die zwei unveränderten `FindSymbolScanner`-Warnungen sowie die bestehende `AIContextFootprint`-Warnung in `InspectAssemblyTool.cs`; aus den aktuellen Änderungen ist kein Produktionscode betroffen.
 - Kein Commit erstellt; `roadmap.md`, `execution-log.md` und `tech-debt.md` wurden in diesem Schritt nicht geändert.
+
+## Unabhängige Review-Ergänzung 2026-09-01
+
+- Gezielte `get_violations`-Checks für `AssemblyDecompilationAdapter`, `GetSymbolBodyTool` und `AssemblyAnalysisContextFactory` melden jeweils 0 Violations. Der Orchestrator meldet weiterhin `AIContextFootprint` 2607 bei Limit 2500; der Assembly-Testordner meldet `MaxDirectoryChildren` mit 31 bei Limit 30.
+- Der breite Produktionsscope `src/AiNetLinter/Mcp/Assemblies/Analysis` meldet zusätzlich 35 direkte Einträge, das exakte `HasNoBody`-Duplikat zwischen `AssemblyDecompiledBodyResolver` und `SourceSymbolBodyResolver` sowie den fehlenden `StaticTestSentinel` für `AssemblySourceProviderCoordinator`; diese Befunde sind gegen die ursprüngliche Ursachensignatur zu klassifizieren und nicht als erledigt zu behaupten.
+- Unabhängig ausgeführt: die sechs fokussierten Assembly-/Body-/Lease-Testklassen 58/58 bestanden; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check c6c7378a^ c6c7378a` erfolgreich. Keine Vollgates gestartet.
 
 ## Tech-Debt-Disposition
 

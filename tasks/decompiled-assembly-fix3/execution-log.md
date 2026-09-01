@@ -979,6 +979,25 @@
 - Status: running
 - Auftrag: Prüfe die strukturelle Aufteilung gegen Konzept, Rules und Nutzerpräzisierung. Bestätige, dass die neun Strukturviolations auf null reduziert wurden bzw. klassifiziere echte Restbefunde. Prüfe zusätzlich den Assembly-Testordner: gruppiere fachlich zusammengehörige Tests (z. B. Navigation/Route/Contract) in einen sinnvollen Unterordner mit passendem Namespace, sodass `MaxDirectoryChildren` ohne Suppression erfüllt wird. Bewerte, ob die funktionalen Fallback-/Overload-/Literalverträge unverändert bleiben. Kein Produktions-/Testcode ändern und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen. Keine lang laufenden Vollgates.
 
+## 2026-09-01 – Paket 3 Korrekturversuch 2 Reviewer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05d42-363d-7053-87ce-d4cd5f9b6baa`
+- Ursachensignaturen: `package3-structural-rule-drift`; nutzerpriorisiert zusätzlich `package2-test-directory-footprint` und `package3-production-directory-namespace-organization`
+- Versuch: 2 im Epic
+- Status: completed; kein Produktions-/Testcode geändert; `code-map.md` um konkrete Review-Navigation ergänzt; kein Commit
+- Urteil: `issues`; keine P0.
+- P1 `package3-fallback-diagnostic-propagation`: `TryGetProjectCompilationAsync` erfasst konkrete Compilation-Fehler, aber `TryCreateSourceBackedContextAsync` verwirft sie und erzeugt nur die generische `workspace-failure`-Diagnose. Der Fallback-Vertrag ist daher noch nicht vollständig bestätigt.
+- P1 `package3-structural-rule-drift`: Orchestrator-AIContext-Footprint 2607 statt 2500, exaktes `HasNoBody`-Duplikat zwischen `AssemblyDecompiledBodyResolver` und `SourceSymbolBodyResolver`, fehlender `StaticTestSentinel` in `AssemblySourceProviderCoordinator`.
+- P1 `package3-production-directory-namespace-organization`: `src/AiNetLinter/Mcp/Assemblies/Analysis` hat 35 statt maximal 30 Einträge.
+- P1 `package2-test-directory-footprint`: `src/AiNetLinter.FastTests/Mcp/Assemblies` hat 31 statt maximal 30 Einträge. Konkrete Empfehlung: `AssemblyAnalysisPathContractTests.cs`, `AssemblyAnalysisRouteTests.cs` und `AssemblyNavigationResponseContractTests.cs` nach `.../Mcp/Assemblies/Navigation/` mit Namespace `AiNetLinter.FastTests.Mcp.Assemblies.Navigation` verschieben; Elternordner sinkt auf 28 Einträge.
+- P2: Overload- und Lease-Verträge sind durch fokussierte Tests bestätigt. Weitere direkte Regressionen für abstract/extern/interface/nicht dekompilierbar, Cancellation und strukturierte Enrich-Diagnosen fehlen weiterhin.
+- Reproduzierbarkeitsbefund: `SourceSymbolBodyResolver.cs` ist für den Build erforderlich, war aber im Code-Checkpoint `c6c7378a` und in HEAD nicht versioniert; er muss im nächsten Code-Checkpoint explizit enthalten sein.
+- Verifikation: MCP `get_violations` – Adapter 0, `GetSymbolBodyTool` 0, Context-Factory 0, Orchestrator 1, FastTests-Assemblyordner 1, breiter Analysis-Scope 6. Fokussierte FastTests 58/58 und danach 16/16, Build 0 Warnungen/0 Fehler, `git diff --check` grün; keine Vollgates.
+- Nächste Aktion: Vollständigen aktuellen Code inklusive `SourceSymbolBodyResolver.cs` checkpointen und einen neuen Implementierer für Fallback-Propagation, Directory-/Namespace-Organisation und die verbleibenden Struktur-P1s starten.
+
 ## 2026-09-01 – Paket 3 Korrekturversuch 1 gestartet
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume
