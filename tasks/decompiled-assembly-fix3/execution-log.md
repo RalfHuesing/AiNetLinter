@@ -927,3 +927,18 @@
 - Versuch: 0 im Epic
 - Status: running
 - Auftrag: Implementiere Paket 3 aus `Konzept.md` als zusammenhängendes, architektonisch klares Paket: Source-Snapshot-Diagnosen und stabile `fallbackReason`-Transparenz, leasegebundene on-demand Body-Dekomposition für dekompilierte Assembly-Symbole, semantische Body-/Content-Mode-Daten sowie zentrale Literalformatierung für Enum-/Klassenstruktur. Halte Source-backed, decompiled signature-only und decompiled body on demand sauber auseinander; keine AdhocWorkspace-Fallbacks, keine Cachepfade in Antworten, keine Assembly-Ausführung. Nutze MCP-first für C#-Semantik, aktualisiere `code-map.md`, ergänze gezielte Tests und führe nach letzter Codeänderung gezielte Tests, `get_violations` im betroffenen Scope, Build und `git diff --check` aus. Kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
+
+## 2026-09-01 – Paket 3 Implementierer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
+- Rolle: Implementierer (frisch)
+- Subagent-ID: `01a05cf9-cdb5-7731-a1b4-84483dca43bf`
+- Ursachensignatur: `package3-source-body-metadata-contract`
+- Versuch: 0 im Epic
+- Status: completed; Änderungen uncommitted übergeben; kein Agenten-Commit
+- Vollständiger Bericht – geänderte Bereiche: `ExternalSourceSnapshotMaterializer`, Snapshot-/Provider-Modelle und Diagnosecodes; `AssemblySourceSelectionOrchestrator`, Context-/Registry-Factories und `AssemblyAnalysisResponse.Enrich`; leasegebundener Resolver in `AssemblyAnalysisLease`, `AssemblyDecompilationAdapter` und `GetSymbolBodyTool`; semantische `bodyAvailability`-/`contentMode`-Metadaten sowie zentrale Literalformatierung in `GetClassStructureTool`; gezielter Literaltest in `GetClassStructureToolTests`; fachliche Aktualisierung von `code-map.md`.
+- Architekturentscheidung: Source-Diagnosen bleiben an Snapshot/Origin gebunden und Fallbacks propagieren stabile Gründe. Bodies werden ausschließlich über einen aktiven Assembly-Lease on demand dekompiliert. Der initiale Decompiler bleibt bodylos und verwendet `decompiledSignatureOnly`; Source-backed behält den Roslyn-Body.
+- Verifikation nach der letzten Codeänderung laut Implementierer: fokussierte FastTests 34/34; fokussierte IntegrationTests 6/6; Literalregression 1/1; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` grün. Fokussierter MCP-Audit: keine Duplikate, kein Dead Code, keine Magic Values. Finaler MCP-`get_violations`: 10 strukturelle Befunde, überwiegend neue Größen-/Komplexitätslimits in `AssemblyDecompilationAdapter` und `AssemblySourceSelectionOrchestrator`; keine DuplicateCode-Meldung.
+- Einschränkung: Vollständige Nicht-Stress-Gates und `safeguard` wurden vom Implementierer nicht gestartet und bleiben Orchestrator-Verifikation. P0/P1 wurden aus den ausgeführten Checks nicht gemeldet. Die neuen strukturellen Limits werden als P2-Tech-Debt klassifiziert und im Review auf konkrete Diff-Betroffenheit geprüft.
+- Nächste Aktion: Implementierungsstand mit Log/Tech-Debt/Code-Map checkpointen und unabhängigen Paket-3-Review starten.

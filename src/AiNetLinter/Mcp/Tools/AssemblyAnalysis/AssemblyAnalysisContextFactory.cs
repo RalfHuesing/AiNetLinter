@@ -42,6 +42,18 @@ internal static class AssemblyAnalysisContextFactory
             }
 
             context = FromGeneration(generation);
+            if (!string.IsNullOrWhiteSpace(request.FallbackReason)
+                || request.SourceDiagnostics is not null)
+            {
+                context = context with
+                {
+                    Origin = context.Origin with
+                    {
+                        FallbackReason = request.FallbackReason,
+                        SourceDiagnostics = request.SourceDiagnostics,
+                    },
+                };
+            }
         }
 
         var contextDiagnostics = context.Diagnostics.ToList();
@@ -65,9 +77,14 @@ internal static class AssemblyAnalysisContextFactory
             generation.Snapshot.Compilation,
             null,
             null,
-            generation.Origin,
+            generation.Origin with
+            {
+                BodyAvailability = "onDemand",
+                ContentMode = "decompiledSignatureOnly",
+            },
             generation.Number,
-            generation.Status);
+            generation.Status,
+            generation.BodyResolver);
 
     internal static async Task<(AssemblyContext? Context, string? Error)> CreateSourceProjectContextAsync(
         string targetPath,
@@ -103,8 +120,11 @@ internal static class AssemblyAnalysisContextFactory
             project,
             selection.SourceLease.Snapshot.Solution,
             Array.Empty<AssemblyReferenceDto>());
-        var diagnostics = sourceReferences.Diagnostics
+        var diagnostics = selection.SourceLease.Snapshot.Diagnostics
             .Select(diagnostic => diagnostic.Message)
+            .Concat(sourceReferences.Diagnostics
+            .Select(diagnostic => diagnostic.Message)
+            )
             .ToList();
         var status = diagnostics.Count == 0
             ? AssemblySessionStatus.Complete
@@ -118,7 +138,11 @@ internal static class AssemblyAnalysisContextFactory
             "high",
             selection.SourceLease.Snapshot.Identity,
             project.FilePath,
-            "verified-clean");
+            "verified-clean",
+            "source",
+            "source",
+            null,
+            selection.SourceLease.Snapshot.Diagnostics);
         return (new AssemblyContext(
             compilation.Assembly,
             new AssemblyIdentityDto(assemblyName, "0.0.0.0", "neutral", string.Empty),
@@ -169,7 +193,8 @@ internal static class AssemblyAnalysisContextFactory
 
         if (compilation is null || compilation.Assembly is null) return null;
 
-        var diagnostics = MergeDiagnostics(references.Diagnostics, sourceReferences);
+        var diagnostics = MergeDiagnostics(references.Diagnostics, sourceReferences).ToList();
+        diagnostics.AddRange(snapshot.Diagnostics.Select(diagnostic => diagnostic.Message));
         var status = diagnostics.Count == 0
             ? AssemblySessionStatus.Complete
             : AssemblySessionStatus.Partial;
@@ -181,7 +206,11 @@ internal static class AssemblyAnalysisContextFactory
             "high",
             snapshot.Identity,
             project.FilePath,
-            "verified-clean");
+            "verified-clean",
+            "source",
+            "source",
+            request.FallbackReason,
+            request.SourceDiagnostics ?? snapshot.Diagnostics);
         return new AssemblyContext(
             compilation.Assembly,
             references.Identity,
@@ -192,7 +221,8 @@ internal static class AssemblyAnalysisContextFactory
             null,
             origin,
             0,
-            status);
+            status,
+            null);
     }
 
     private static IReadOnlyList<AssemblyReferenceDto> MergeReferences(

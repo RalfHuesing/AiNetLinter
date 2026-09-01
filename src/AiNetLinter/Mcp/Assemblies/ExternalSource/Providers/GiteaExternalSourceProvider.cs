@@ -83,7 +83,8 @@ internal sealed class GiteaExternalSourceProvider : IExternalSourceProvider
                 snapshot,
                 checkout,
                 exception.CheckoutTrust,
-                exception.FailureReason);
+                exception.FailureReason,
+                exception.Diagnostics);
         }
         catch (Exception)
         {
@@ -155,16 +156,16 @@ internal sealed class GiteaExternalSourceProvider : IExternalSourceProvider
         ExternalSourceSnapshot? snapshot,
         ExternalSourceCheckoutHandle? checkout = null,
         ExternalSourceCheckoutTrust checkoutTrust = ExternalSourceCheckoutTrust.Unverified,
-        string? failureReason = null)
+        string? failureReason = null,
+        IEnumerable<ExternalSourceConfigurationDiagnostic>? additionalDiagnostics = null)
     {
-        var diagnostics = new List<ExternalSourceConfigurationDiagnostic>
-        {
-            new(
-                ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionInvalid,
-                failureReason ?? string.Empty,
-                "error",
-                "$repository"),
-        };
+        var diagnostics = new List<ExternalSourceConfigurationDiagnostic>();
+        if (additionalDiagnostics is not null) diagnostics.AddRange(additionalDiagnostics);
+        diagnostics.Add(new(
+            ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionInvalid,
+            failureReason ?? string.Empty,
+            "error",
+            "$repository"));
         DisposeFailedResources(snapshot, checkout);
         if (checkout?.CleanupState is ExternalSourceCheckoutCleanupState.RepositoryCleanupFailed)
         {

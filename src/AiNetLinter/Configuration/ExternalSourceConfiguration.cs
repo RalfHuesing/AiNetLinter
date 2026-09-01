@@ -237,6 +237,12 @@ internal static class ExternalSourceConfigurationDiagnosticCodes
     internal const string RepositoryCheckoutDirty = "external-source-repository-checkout-dirty";
     internal const string RepositoryCheckoutUnverified = "external-source-repository-checkout-unverified";
     internal const string RepositoryRefreshDegraded = "external-source-repository-refresh-degraded";
+    internal const string WorkspaceDiagnostic = "external-source-workspace-diagnostic";
+    internal const string NoCSharpDocuments = "external-source-no-csharp-documents";
+    internal const string AssemblyMappingNotFound = "external-source-assembly-mapping-not-found";
+    internal const string AssemblyMappingAmbiguous = "external-source-assembly-mapping-ambiguous";
+    internal const string SourceProjectNotFound = "external-source-project-not-found";
+    internal const string SourceProjectAmbiguous = "external-source-project-ambiguous";
 }
 
 internal static class ExternalSourceConfigurationPath

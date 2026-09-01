@@ -22,6 +22,20 @@ internal enum AssemblySourceSelectionStatus
     ConfigurationFailure,
 }
 
+internal static class AssemblySourceFallbackReasons
+{
+    internal const string ConfigurationInvalid = "configuration-invalid";
+    internal const string AssemblyMetadataUnavailable = "assembly-metadata-unavailable";
+    internal const string MappingNotFound = "mapping-not-found";
+    internal const string MappingAmbiguous = "mapping-ambiguous";
+    internal const string SourceProjectNotFound = "source-project-not-found";
+    internal const string SourceProjectAmbiguous = "source-project-ambiguous";
+    internal const string ProviderUnavailable = "provider-unavailable";
+    internal const string ProviderDegraded = "provider-degraded";
+    internal const string SnapshotUntrusted = "snapshot-untrusted";
+    internal const string WorkspaceFailure = "workspace-failure";
+}
+
 internal sealed record AssemblySourceSelectionConfiguration(
     bool Succeeded,
     ImmutableArray<ExternalSourceConfigurationDiagnostic> LoaderDiagnostics);
@@ -72,21 +86,74 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(assemblyPath);
-        if (!configuration.Succeeded) return CreateScope();
+        if (!configuration.Succeeded)
+        {
+            return CreateScope(fallbackReason: AssemblySourceFallbackReasons.ConfigurationInvalid);
+        }
 
         var assemblyName = ResolveAssemblyName(assemblyPath);
-        if (string.IsNullOrWhiteSpace(assemblyName)) return CreateScope();
+        if (string.IsNullOrWhiteSpace(assemblyName))
+        {
+            return CreateScope(
+                [new(
+                    ExternalSourceConfigurationDiagnosticCodes.RepositoryMappingInvalid,
+                    "Die Assembly-Metadaten konnten für die Source-Zuordnung nicht gelesen werden.",
+                    "warning",
+                    "$assembly")],
+                fallbackReason: AssemblySourceFallbackReasons.AssemblyMetadataUnavailable);
+        }
 
         var mappings = FindMappings(assemblyName);
-        if (mappings.Count != 1) return CreateScope();
+        if (mappings.Count == 0)
+        {
+            return CreateScope(
+                [new(
+                    ExternalSourceConfigurationDiagnosticCodes.AssemblyMappingNotFound,
+                    $"Für Assembly '{assemblyName}' ist kein Source-Mapping konfiguriert.",
+                    "warning",
+                    "$configuration")],
+                fallbackReason: AssemblySourceFallbackReasons.MappingNotFound);
+        }
+
+        if (mappings.Count > 1)
+        {
+            return CreateScope(
+                [new(
+                    ExternalSourceConfigurationDiagnosticCodes.AssemblyMappingAmbiguous,
+                    $"Für Assembly '{assemblyName}' sind mehrere Source-Mappings konfiguriert.",
+                    "warning",
+                    "$configuration")],
+                fallbackReason: AssemblySourceFallbackReasons.MappingAmbiguous);
+        }
 
         cancellationToken.ThrowIfCancellationRequested();
-        return await ResolveMappedAssemblyAsync(
-                assemblyPath,
-                assemblyName,
-                mappings[0],
-                cancellationToken)
-            .ConfigureAwait(false);
+        try
+        {
+            return await ResolveMappedAssemblyAsync(
+                    assemblyPath,
+                    assemblyName,
+                    mappings[0],
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return CreateScope(
+                [new(
+                    ExternalSourceConfigurationDiagnosticCodes.WorkspaceDiagnostic,
+                    "Die Source-Auswahl konnte wegen eines Provider- oder Workspace-Fehlers nicht verwendet werden.",
+                    "error",
+                    "$source")],
+                ExternalSourceRepositoryResultState.Create(
+                    ExternalSourceProviderFailureKind.InvalidResponse,
+                    ExternalSourceRepositoryHealth.Unavailable,
+                    checkoutTrust: ExternalSourceCheckoutTrust.Unverified),
+                AssemblySourceFallbackReasons.ProviderUnavailable);
+        }
     }
 
     private async Task<AssemblySourceSelectionScope> ResolveMappedAssemblyAsync(
@@ -99,7 +166,12 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         var providerResult = providerLease.Result;
         if (!providerResult.IsAvailable || providerResult.SourceSnapshot is null)
         {
-            return CreateScope(providerResult.Diagnostics, providerResult.ToResultState());
+            return CreateScope(
+                providerResult.Diagnostics,
+                providerResult.ToResultState(),
+                providerResult.Health is ExternalSourceRepositoryHealth.Degraded
+                    ? AssemblySourceFallbackReasons.ProviderDegraded
+                    : AssemblySourceFallbackReasons.ProviderUnavailable);
         }
 
         if (!IsTrusted(providerResult)) return RejectUntrustedSnapshot(providerResult);
@@ -141,12 +213,29 @@ internal sealed class AssemblySourceSelectionOrchestrator :
                     providerResult.Health,
                     providerResult.CheckoutTrust,
                     providerResult.IsAttested));
+            var matchDiagnostics = match.State switch
+            {
+                ExternalSourceMatchState.NoMatch => new[] { new ExternalSourceConfigurationDiagnostic(
+                    ExternalSourceConfigurationDiagnosticCodes.SourceProjectNotFound,
+                    "Im Source-Snapshot wurde kein passendes Projekt gefunden.", "warning", "$solution") },
+                ExternalSourceMatchState.Ambiguous => new[] { new ExternalSourceConfigurationDiagnostic(
+                    ExternalSourceConfigurationDiagnosticCodes.SourceProjectAmbiguous,
+                    "Im Source-Snapshot wurden mehrere passende Projekte gefunden.", "warning", "$solution") },
+                _ => Array.Empty<ExternalSourceConfigurationDiagnostic>(),
+            };
             var scope = new AssemblySourceSelectionScope(
                 selection,
                 configuration,
-                providerResult.Diagnostics,
+                providerResult.Diagnostics.Concat(lease.Snapshot.Diagnostics).Concat(matchDiagnostics),
                 lease,
-                providerResult.ToResultState());
+                providerResult.ToResultState(),
+                fallbackReason: match.State switch
+                {
+                    ExternalSourceMatchState.NoMatch => AssemblySourceFallbackReasons.SourceProjectNotFound,
+                    ExternalSourceMatchState.Ambiguous => AssemblySourceFallbackReasons.SourceProjectAmbiguous,
+                    _ => null,
+                },
+                sourceDiagnostics: lease.Snapshot.Diagnostics);
             if (selection is not null)
             {
                 RememberSnapshotIdentity(assemblyPath, selection.SourceLease.Snapshot.Identity.StableValue);
@@ -154,10 +243,20 @@ internal sealed class AssemblySourceSelectionOrchestrator :
 
             return scope;
         }
-        catch
+        catch (Exception)
         {
             lease.Dispose();
-            throw;
+            return CreateScope(
+                [new(
+                    ExternalSourceConfigurationDiagnosticCodes.WorkspaceDiagnostic,
+                    "Der Source-Snapshot konnte nicht in eine nutzbare Source-Selection überführt werden.",
+                    "error",
+                    "$workspace")],
+                ExternalSourceRepositoryResultState.Create(
+                    ExternalSourceProviderFailureKind.InvalidResponse,
+                    ExternalSourceRepositoryHealth.Unavailable,
+                    checkoutTrust: ExternalSourceCheckoutTrust.Unverified),
+                AssemblySourceFallbackReasons.WorkspaceFailure);
         }
     }
 
@@ -166,7 +265,7 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         CancellationToken cancellationToken)
     {
         var scope = await ResolveAsync(assemblyPath, cancellationToken).ConfigureAwait(false);
-        return new(scope.Selection, scope, scope.Diagnostics);
+        return new(scope.Selection, scope, scope.Diagnostics, scope.FallbackReason, scope.SourceDiagnostics);
     }
 
     Task<AssemblySourceSelectionScope> IAssemblySourceSelectionResolver.ResolveAsync(
@@ -375,18 +474,22 @@ internal sealed class AssemblySourceSelectionOrchestrator :
             ExternalSourceRepositoryResultState.Create(
                 ExternalSourceProviderFailureKind.InvalidResponse,
                 ExternalSourceRepositoryHealth.Unavailable,
-                checkoutTrust: ExternalSourceCheckoutTrust.Unverified));
+                checkoutTrust: ExternalSourceCheckoutTrust.Unverified),
+            AssemblySourceFallbackReasons.SnapshotUntrusted);
     }
 
     private AssemblySourceSelectionScope CreateScope(
         IEnumerable<ExternalSourceConfigurationDiagnostic>? providerDiagnostics = null,
-        ExternalSourceRepositoryResultState? state = null) =>
+        ExternalSourceRepositoryResultState? state = null,
+        string? fallbackReason = null) =>
         new(
             null,
             configuration,
             providerDiagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>(),
             null,
-            state ?? ExternalSourceRepositoryResultState.Create());
+            state ?? ExternalSourceRepositoryResultState.Create(),
+            fallbackReason,
+            providerDiagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>());
 
 }
 
@@ -400,7 +503,9 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
         AssemblySourceSelectionConfiguration configuration,
         IEnumerable<ExternalSourceConfigurationDiagnostic> providerDiagnostics,
         SourceSnapshotLease? lease,
-        ExternalSourceRepositoryResultState? state = null)
+        ExternalSourceRepositoryResultState? state = null,
+        string? fallbackReason = null,
+        IEnumerable<ExternalSourceConfigurationDiagnostic>? sourceDiagnostics = null)
     {
         ArgumentNullException.ThrowIfNull(providerDiagnostics);
         ArgumentNullException.ThrowIfNull(configuration);
@@ -424,6 +529,10 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
             .AddRange(ProviderDiagnostics)
             .Distinct()
             .ToImmutableArray();
+        FallbackReason = fallbackReason;
+        SourceDiagnostics = (sourceDiagnostics ?? ProviderDiagnostics)
+            .Distinct()
+            .ToImmutableArray();
         this.lease = lease;
     }
 
@@ -431,6 +540,8 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
 
     internal AssemblySourceSelectionStatus Status =>
         Selection is not null ? (AssemblySourceSelectionStatus)Selection.MatchResult.State :
+        FallbackReason is AssemblySourceFallbackReasons.MappingAmbiguous
+            ? AssemblySourceSelectionStatus.Ambiguous :
         !configuration.Succeeded
             ? AssemblySourceSelectionStatus.ConfigurationFailure
             : ProviderHealth is ExternalSourceRepositoryHealth.Degraded
@@ -454,6 +565,10 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
     internal string? LastGoodRevision { get; }
 
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics { get; }
+
+    internal string? FallbackReason { get; }
+
+    internal ImmutableArray<ExternalSourceConfigurationDiagnostic> SourceDiagnostics { get; }
 
     private readonly AssemblySourceSelectionConfiguration configuration;
 

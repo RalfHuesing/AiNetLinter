@@ -9,6 +9,7 @@ using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
+using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis.References;
 
@@ -43,6 +44,26 @@ internal sealed class AssemblyAnalysisLease : IDisposable
     internal string CanonicalPath { get; }
     internal McpCodeGraphServer Server { get; }
     internal AssemblyContext Context { get; }
+
+    internal Task<AssemblyBodyResolution> ResolveBodyAsync(
+        ISymbol symbol,
+        int maxBodyLines,
+        CancellationToken cancellationToken)
+    {
+        if (Volatile.Read(ref disposed) != 0)
+        {
+            return Task.FromResult(new AssemblyBodyResolution(
+                null, "unavailable", Context.Origin.ContentMode, "Der Assembly-Lease ist nicht mehr gültig."));
+        }
+
+        if (!Context.Origin.IsDecompiled || Context.BodyResolver is null)
+        {
+            return Task.FromResult(new AssemblyBodyResolution(
+                null, "source", "source", "Source-backed Symbole verwenden den Roslyn-Body."));
+        }
+
+        return Context.BodyResolver(symbol, maxBodyLines, cancellationToken);
+    }
 
     internal IReadOnlyList<AssemblyReferenceSession> ReferenceSessions =>
         referenceExpansion?.Sessions ?? Array.Empty<AssemblyReferenceSession>();

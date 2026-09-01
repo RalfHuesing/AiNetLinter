@@ -44,7 +44,9 @@ internal static class AssemblyAnalysisSourceToolSupport
                 parameters.State?.GetCurrentSolution(),
                 parameters.ReceiverType,
                 source.Selection,
-                parameters.CancellationToken)).ConfigureAwait(false);
+                parameters.CancellationToken,
+                source.FallbackReason,
+                source.SourceDiagnostics)).ConfigureAwait(false);
         if (context is null)
         {
             var diagnosticText = AssemblyAnalysisDiagnostics.FormatExternalDiagnostics(source.Diagnostics);

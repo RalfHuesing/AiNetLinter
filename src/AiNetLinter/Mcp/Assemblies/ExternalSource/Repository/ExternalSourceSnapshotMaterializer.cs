@@ -1,6 +1,8 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +21,8 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
         "Die externe Solution hat beim Laden eine Workspace-Diagnose ausgelöst.";
     internal const string EmptySolutionFailureReason =
         "Die externe Solution enthält keine Projekte.";
+    internal const string NoCSharpDocumentsFailureReason =
+        "Die externe Solution enthält keine nutzbaren C#-Dokumente.";
     internal const string SolutionLoadFailureReason =
         "Die externe Solution konnte im restaurierten Checkout nicht geladen werden.";
 
@@ -90,7 +94,8 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
             reservation = ReserveMaterializationBudget(mapping, checkout, resourceUsage);
 
             workspace = SourceFileCatalogLoader.CreateMSBuildWorkspace();
-            var solution = await OpenSolutionAsync(workspace, checkout, cancellationToken).ConfigureAwait(false);
+            var opened = await OpenSolutionAsync(workspace, checkout, cancellationToken).ConfigureAwait(false);
+            var solution = opened.Solution;
             cancellationToken.ThrowIfCancellationRequested();
             await VerifyCheckoutAsync(checkout, cancellationToken).ConfigureAwait(false);
             var snapshot = new ExternalSourceSnapshot(
@@ -102,7 +107,8 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
                     materializationUse,
                     IsAttested: true,
                     ResourceUsage: resourceUsage,
-                    ResourceReservation: reservation));
+                    ResourceReservation: reservation),
+                opened.Diagnostics);
             reservation = null;
             workspace = null;
             return snapshot;
@@ -130,32 +136,63 @@ internal sealed class ExternalSourceSnapshotMaterializer : IExternalSourceSnapsh
         }
     }
 
-    private static async Task<Solution> OpenSolutionAsync(
+    private static async Task<OpenedSourceSolution> OpenSolutionAsync(
         MSBuildWorkspace workspace,
         ExternalSourceCheckoutHandle checkout,
         CancellationToken cancellationToken)
     {
-        var workspaceFailed = 0;
-        workspace.RegisterWorkspaceFailedHandler(_ => Interlocked.Exchange(ref workspaceFailed, 1));
+        var diagnostics = new List<ExternalSourceConfigurationDiagnostic>();
+        workspace.RegisterWorkspaceFailedHandler(args =>
+        {
+            var message = string.Join(' ', (args.Diagnostic.Message ?? string.Empty)
+                .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+            lock (diagnostics)
+            {
+                if (diagnostics.Count < 20)
+                {
+                    diagnostics.Add(new(
+                        ExternalSourceConfigurationDiagnosticCodes.WorkspaceDiagnostic,
+                        TruncateDiagnostic(message),
+                        "warning",
+                        "$workspace"));
+                }
+            }
+        });
         var solution = await workspace.OpenSolutionAsync(
                 checkout.SolutionPath,
                 cancellationToken: cancellationToken)
             .ConfigureAwait(false);
-        if (Volatile.Read(ref workspaceFailed) != 0)
-        {
-            throw new ExternalSourceSnapshotMaterializationException(
-                checkoutTrust: ExternalSourceCheckoutTrust.Clean,
-                WorkspaceDiagnosticFailureReason);
-        }
 
         if (!solution.Projects.Any())
         {
             throw new ExternalSourceSnapshotMaterializationException(
                 checkoutTrust: ExternalSourceCheckoutTrust.Clean,
-                EmptySolutionFailureReason);
+                EmptySolutionFailureReason,
+                diagnostics);
         }
 
-        return solution;
+        if (!solution.Projects.Any(project =>
+                string.Equals(project.Language, LanguageNames.CSharp, StringComparison.Ordinal)
+                && project.Documents.Any()))
+        {
+            diagnostics.Add(new(
+                ExternalSourceConfigurationDiagnosticCodes.NoCSharpDocuments,
+                NoCSharpDocumentsFailureReason,
+                "error",
+                "$solution"));
+            throw new ExternalSourceSnapshotMaterializationException(
+                checkoutTrust: ExternalSourceCheckoutTrust.Clean,
+                NoCSharpDocumentsFailureReason,
+                diagnostics);
+        }
+
+        return new(solution, diagnostics.ToImmutableArray());
+    }
+
+    private static string TruncateDiagnostic(string message)
+    {
+        if (message.Length <= 256) return message;
+        return message[..255] + "…";
     }
 
     private ExternalResourceReservation? ReserveMaterializationBudget(
@@ -219,16 +256,23 @@ internal sealed class ExternalSourceSnapshotMaterializationException : Exception
 {
     internal ExternalSourceSnapshotMaterializationException(
         ExternalSourceCheckoutTrust checkoutTrust = ExternalSourceCheckoutTrust.Unverified,
-        string? failureReason = null)
+        string? failureReason = null,
+        IEnumerable<ExternalSourceConfigurationDiagnostic>? diagnostics = null)
         : base("Die externe Source-Solution konnte nicht vollständig materialisiert werden.")
     {
         CheckoutTrust = ExternalSourceRepositorySourcePolicy.NormalizeFailureTrust(checkoutTrust);
         FailureReason = failureReason;
+        Diagnostics = (diagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>())
+            .Distinct()
+            .Take(20)
+            .ToImmutableArray();
     }
 
     internal ExternalSourceCheckoutTrust CheckoutTrust { get; }
 
     internal string? FailureReason { get; }
+
+    internal ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics { get; }
 }
 
 internal static class ExternalSourceSnapshotMaterializationFailureReasons
@@ -236,5 +280,10 @@ internal static class ExternalSourceSnapshotMaterializationFailureReasons
     internal static bool IsSafe(string? reason) => reason is
         ExternalSourceSnapshotMaterializer.WorkspaceDiagnosticFailureReason
         or ExternalSourceSnapshotMaterializer.EmptySolutionFailureReason
+        or ExternalSourceSnapshotMaterializer.NoCSharpDocumentsFailureReason
         or ExternalSourceSnapshotMaterializer.SolutionLoadFailureReason;
 }
+
+internal sealed record OpenedSourceSolution(
+    Solution Solution,
+    ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics);

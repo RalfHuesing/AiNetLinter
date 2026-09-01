@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.Mcp.Assemblies.Analysis;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
@@ -50,7 +52,7 @@ internal static class GetSymbolBodyTool
 
         try
         {
-            return await RenderSymbolBodiesAsync(solution, identifiers, maxBodyLines, state.AssemblySymbolIdentity, ct);
+            return await RenderSymbolBodiesAsync(solution, identifiers, maxBodyLines, state.AssemblySymbolIdentity, null, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -60,11 +62,34 @@ internal static class GetSymbolBodyTool
         }
     }
 
+    internal static Task<CallToolResult> ExecuteAsync(
+        AssemblyAnalysisLease lease,
+        string[]? symbolIdentifiers,
+        int maxBodyLines,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(lease);
+        var solution = lease.Server.GetCurrentSolution();
+        if (solution is null) return Task.FromResult(McpToolResults.SolutionNotLoaded());
+        var identifiers = McpBatchArguments.Normalize(symbolIdentifiers, StringComparer.Ordinal);
+        if (identifiers.Count == 0)
+        {
+            return Task.FromResult(McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                "Pflichtparameter 'symbolIdentifiers' fehlt oder ist leer.",
+                hint: McpToolResults.SymbolIdentifiersBatchHint));
+        }
+
+        return RenderSymbolBodiesAsync(
+            solution, identifiers, maxBodyLines, lease.Server.AssemblySymbolIdentity, lease, ct);
+    }
+
     private static async Task<CallToolResult> RenderSymbolBodiesAsync(
         Solution solution,
         IReadOnlyList<string> identifiers,
         int maxBodyLines,
         AnalysisSymbolIdentity? assemblyIdentity,
+        AssemblyAnalysisLease? lease,
         CancellationToken ct)
     {
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
@@ -77,7 +102,7 @@ internal static class GetSymbolBodyTool
 
             var earlyError = await RenderSingleSymbolAsync(
                 new RenderSingleSymbolRequest(
-                    solution, identifiers[i], identifiers.Count, maxBodyLines, outputRoot, mb, assemblyIdentity),
+                    solution, identifiers[i], identifiers.Count, maxBodyLines, outputRoot, mb, assemblyIdentity, lease),
                 ct);
 
             if (earlyError != null) return earlyError;
@@ -121,7 +146,9 @@ internal static class GetSymbolBodyTool
 
         var idSuffix = assemblyIdentity?.Format(symbol.TryGetDocCommentId() ?? CallGraphTraversal.GetStableSymbolId(symbol))
             ?? symbol.TryGetDocCommentId();
-        var body = ExtractSymbolBody(symbol, maxBodyLines, outputRoot);
+        var bodyResolution = request.Lease is not null && request.Lease.Context.Origin.IsDecompiled
+            ? await request.Lease.ResolveBodyAsync(symbol, maxBodyLines, ct).ConfigureAwait(false)
+            : CreateSourceBodyResolution(symbol, maxBodyLines, outputRoot);
 
         mb.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{Path.GetFileName(outputRoot)}/{ToRelative(outputRoot, symbol)}`");
         mb.BlankLine();
@@ -133,8 +160,10 @@ internal static class GetSymbolBodyTool
         {
             mb.Line($"id: `{idSuffix}`");
         }
+        mb.Line($"bodyAvailability: `{bodyResolution.BodyAvailability}`; contentMode: `{bodyResolution.ContentMode}`");
+        if (!string.IsNullOrWhiteSpace(bodyResolution.Hint)) mb.Line($"Hinweis: {bodyResolution.Hint}");
         mb.BlankLine();
-        mb.CodeBlock("csharp", body);
+        mb.CodeBlock("csharp", bodyResolution.Body ?? ExtractSymbolBody(symbol, maxBodyLines, outputRoot));
         return null;
     }
 
@@ -145,7 +174,8 @@ internal static class GetSymbolBodyTool
         int MaxBodyLines,
         string OutputRoot,
         MarkdownBuilder Markdown,
-        AnalysisSymbolIdentity? AssemblyIdentity);
+        AnalysisSymbolIdentity? AssemblyIdentity,
+        AssemblyAnalysisLease? Lease);
 
     private static string ToRelative(string outputRoot, ISymbol symbol)
     {
@@ -175,4 +205,36 @@ internal static class GetSymbolBodyTool
         return truncated.TrimEnd()
             + $"\n// ... truncated, total {lines.Length} Zeilen, maxBodyLines erhoehen fuer mehr";
     }
+
+    private static AssemblyBodyResolution CreateSourceBodyResolution(
+        ISymbol symbol,
+        int maxBodyLines,
+        string outputRoot)
+    {
+        var hasSyntax = symbol.DeclaringSyntaxReferences.Any();
+        var unavailable = symbol.ContainingType?.TypeKind == TypeKind.Interface
+            || !hasSyntax
+            || symbol switch
+            {
+                IMethodSymbol method => method.IsAbstract || AssemblyBodySyntax.HasExternModifier(method),
+                IPropertySymbol property => property.GetMethod?.IsAbstract == true
+                    || property.SetMethod?.IsAbstract == true
+                    || AssemblyBodySyntax.HasExternModifier(property.GetMethod)
+                    || AssemblyBodySyntax.HasExternModifier(property.SetMethod),
+                IEventSymbol eventSymbol => eventSymbol.AddMethod?.IsAbstract == true
+                    || eventSymbol.RemoveMethod?.IsAbstract == true,
+                _ => false,
+            };
+        var hint = symbol.ContainingType?.TypeKind == TypeKind.Interface
+            ? "Interfaces stellen keinen ausführbaren Body bereit."
+            : !hasSyntax
+                ? "Für das Symbol ist kein Quell-Syntax verfügbar."
+                : unavailable ? "Das Symbol ist abstract oder extern und besitzt keinen Body." : null;
+        return new(
+            ExtractSymbolBody(symbol, maxBodyLines, outputRoot),
+            unavailable ? "unavailable" : "available",
+            "source",
+            hint);
+    }
+
 }

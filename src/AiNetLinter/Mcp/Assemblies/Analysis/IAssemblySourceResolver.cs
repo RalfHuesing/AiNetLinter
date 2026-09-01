@@ -32,4 +32,6 @@ internal interface IAssemblySourceSelectionResolver
 internal sealed record AssemblySourceResolution(
     AssemblySourceSelection? Selection,
     IDisposable? Lifetime,
-    IReadOnlyList<ExternalSourceConfigurationDiagnostic> Diagnostics);
+    IReadOnlyList<ExternalSourceConfigurationDiagnostic> Diagnostics,
+    string? FallbackReason = null,
+    IReadOnlyList<ExternalSourceConfigurationDiagnostic>? SourceDiagnostics = null);

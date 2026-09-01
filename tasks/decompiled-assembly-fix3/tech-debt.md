@@ -191,3 +191,13 @@
 - Disposition: accepted-deferred
 - Nächster Schritt: Kein solutionweiter Cleanup in diesem Task; nur bei einem späteren, fachlich abgegrenzten Paket erneut prüfen.
 - Log-Anker: `execution-log.md`, „Einmaliger Abschlussaudit ausgeführt"
+
+### Paket-3-Strukturgrenzen in Source-/Body-Navigation
+
+- Schweregrad: P2
+- Ursachensignatur: package3-structural-rule-drift
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs`, `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySourceSelectionOrchestrator.cs` und direkt betroffene Konstruktor-/AIContext-Schnittstellen
+- Evidenz: Der Paket-3-Implementierer meldet im abschließenden `get_violations`-Check 10 strukturelle Befunde, überwiegend neue Größen-/Komplexitäts-, Konstruktorabhängigkeits- und AIContext-Footprint-Limits. Der fokussierte DRY-/Dead-Code-/Magic-Value-Audit meldete dagegen keine Befunde; die fachlichen Tests und der Build sind grün. Eine unabhängige Review-Klassifikation steht aus.
+- Disposition: accepted-deferred
+- Nächster Schritt: Im Paket-3-Review prüfen, ob einzelne Befunde eine sichere, scope-nahe P1-Korrektur erfordern; ansonsten als strukturelle Queue-Schuld zurückgestellt und nicht durch pauschales Aufteilen der Architektur verschlimmert.
+- Log-Anker: `execution-log.md`, „Paket 3 Implementierer abgeschlossen"

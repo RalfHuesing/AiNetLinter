@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
@@ -18,7 +19,9 @@ internal sealed record AssemblyAnalysisFallbackEntryCreationParameters(
     CancellationToken CreationToken,
     ExternalResourceLease? ResourceLease,
     IReadOnlyList<string> Diagnostics,
-    AssemblySourceSelection? SourceSelection);
+    AssemblySourceSelection? SourceSelection,
+    string? FallbackReason = null,
+    IReadOnlyList<ExternalSourceConfigurationDiagnostic>? SourceDiagnostics = null);
 
 internal sealed class AssemblyAnalysisRegistryEntryFactory
 {
@@ -69,7 +72,9 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                     creationToken,
                     resourceLease,
                     sourceAttempt.Diagnostics,
-                    sourceAttempt.Selection)).ConfigureAwait(false);
+                    sourceAttempt.Selection,
+                    sourceAttempt.FallbackReason,
+                    sourceAttempt.SourceDiagnostics)).ConfigureAwait(false);
             resourceTransferred = true;
             return fallbackEntry;
         }
@@ -104,6 +109,11 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                     .Distinct(StringComparer.Ordinal)
                     .Take(100)
                     .ToList(),
+                Origin = context.Origin with
+                {
+                    FallbackReason = parameters.FallbackReason,
+                    SourceDiagnostics = parameters.SourceDiagnostics,
+                },
             };
             var fallbackEntry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
                 parameters.CanonicalPath,
@@ -125,17 +135,17 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
         }
     }
 
-    private async Task<(AssemblyAnalysisEntry? Entry, IDisposable? Scope, IReadOnlyList<string> Diagnostics, AssemblySourceSelection? Selection)> TryCreateSourceEntryAsync(
+    private async Task<(AssemblyAnalysisEntry? Entry, IDisposable? Scope, IReadOnlyList<string> Diagnostics, AssemblySourceSelection? Selection, string? FallbackReason, IReadOnlyList<ExternalSourceConfigurationDiagnostic>? SourceDiagnostics)> TryCreateSourceEntryAsync(
         string canonicalPath,
         long generation,
         CancellationToken creationToken,
         ExternalResourceLease? resourceLease)
     {
-        if (sourceOrchestrator is null) return (null, null, Array.Empty<string>(), null);
+        if (sourceOrchestrator is null) return (null, null, Array.Empty<string>(), null, null, null);
 
         var resolution = await sourceOrchestrator.ResolveForRegistryAsync(canonicalPath, creationToken).ConfigureAwait(false);
         var diagnostics = AssemblyAnalysisDiagnostics.FormatExternalDiagnostics(resolution.Diagnostics).ToArray();
-        if (resolution.Selection is null) return (null, resolution.Lifetime, diagnostics, null);
+        if (resolution.Selection is null) return (null, resolution.Lifetime, diagnostics, null, resolution.FallbackReason, resolution.SourceDiagnostics);
 
         try
         {
@@ -145,8 +155,10 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                     ConsumerSolution: null,
                     ReceiverType: null,
                     resolution.Selection,
-                    creationToken)).ConfigureAwait(false);
-            if (sourceResult.Context is null) return (null, resolution.Lifetime, diagnostics, null);
+                    creationToken,
+                    resolution.FallbackReason,
+                    resolution.SourceDiagnostics)).ConfigureAwait(false);
+            if (sourceResult.Context is null) return (null, resolution.Lifetime, diagnostics, null, resolution.FallbackReason, resolution.SourceDiagnostics);
 
             var context = sourceResult.Context with
             {
@@ -165,7 +177,7 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                 resourceLease,
                 referenceLeaseFactory(resolution.Selection),
                 resourceBudget.Clock));
-            return (entry, null, diagnostics, resolution.Selection);
+            return (entry, null, diagnostics, resolution.Selection, resolution.FallbackReason, resolution.SourceDiagnostics);
         }
         catch
         {

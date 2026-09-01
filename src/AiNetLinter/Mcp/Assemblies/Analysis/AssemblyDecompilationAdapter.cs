@@ -11,11 +11,135 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
 internal sealed class AssemblyDecompilationAdapter
 {
+    internal AssemblyBodyResolver CreateBodyResolver(
+        string assemblyPath,
+        AssemblyReferenceResolution references,
+        AssemblyDecompilationOptions options) =>
+        (symbol, maxBodyLines, cancellationToken) => ResolveBodyAsync(
+            assemblyPath, references, options, symbol, maxBodyLines, cancellationToken);
+
+    private static Task<AssemblyBodyResolution> ResolveBodyAsync(
+        string assemblyPath,
+        AssemblyReferenceResolution references,
+        AssemblyDecompilationOptions options,
+        ISymbol symbol,
+        int maxBodyLines,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(symbol);
+        if (symbol.ContainingType?.TypeKind == TypeKind.Interface)
+        {
+            return Task.FromResult(new AssemblyBodyResolution(
+                null, "unavailable", "decompiledSignatureOnly", "Interfaces haben keine dekompilierbaren Bodies."));
+        }
+
+        if (symbol is IMethodSymbol method
+                && (method.IsAbstract || AssemblyBodySyntax.HasExternModifier(method))
+            || symbol is IPropertySymbol property
+                && (property.GetMethod?.IsAbstract == true || property.SetMethod?.IsAbstract == true
+                    || AssemblyBodySyntax.HasExternModifier(property.GetMethod)
+                    || AssemblyBodySyntax.HasExternModifier(property.SetMethod))
+            || symbol is IEventSymbol eventSymbol
+                && (eventSymbol.AddMethod?.IsAbstract == true || eventSymbol.RemoveMethod?.IsAbstract == true))
+        {
+            return Task.FromResult(new AssemblyBodyResolution(
+                null, "unavailable", "decompiledSignatureOnly", "Das Symbol ist abstract oder extern und besitzt keinen Body."));
+        }
+
+        var normalizedLines = Math.Max(1, maxBodyLines);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(options.EffectiveTimeout);
+        try
+        {
+            var decompiler = CreateDecompiler(assemblyPath, references, deadline.Token, decompileMemberBodies: true);
+            var typeName = new ICSharpCode.Decompiler.TypeSystem.FullTypeName(ToReflectionTypeName(symbol.ContainingType));
+            var source = decompiler.DecompileTypeAsString(typeName);
+            deadline.Token.ThrowIfCancellationRequested();
+            var member = FindMember(Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(source).GetRoot(deadline.Token), symbol);
+            if (member is null)
+            {
+                return Task.FromResult(new AssemblyBodyResolution(
+                    null, "unavailable", "decompiledSignatureOnly", "Für das dekompilierte Symbol wurde kein Member-Body gefunden."));
+            }
+
+            var body = LimitLines(member.ToFullString(), normalizedLines);
+            return Task.FromResult(new AssemblyBodyResolution(
+                body,
+                "available",
+                "decompiledBodyOnDemand",
+                body.Contains("truncated", StringComparison.Ordinal) ? "Der Body wurde auf maxBodyLines begrenzt." : null));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            return Task.FromResult(new AssemblyBodyResolution(
+                null, "unavailable", "decompiledSignatureOnly", "Die Body-Dekomposition wurde wegen Cancellation oder Deadline abgebrochen."));
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or ArgumentException or ICSharpCode.Decompiler.DecompilerException)
+        {
+            return Task.FromResult(new AssemblyBodyResolution(
+                null, "unavailable", "decompiledSignatureOnly", "Body-Dekomposition fehlgeschlagen: " + ex.GetType().Name));
+        }
+    }
+
+    private static string ToReflectionTypeName(INamedTypeSymbol? type)
+    {
+        if (type is null) return string.Empty;
+        var name = type.MetadataName;
+        if (type.ContainingType is not null) return ToReflectionTypeName(type.ContainingType) + "+" + name;
+        return type.ContainingNamespace is { IsGlobalNamespace: false } ns
+            ? ns.ToDisplayString() + "." + name
+            : name;
+    }
+
+    private static MemberDeclarationSyntax? FindMember(SyntaxNode root, ISymbol symbol)
+    {
+        var type = root.DescendantNodes()
+            .OfType<TypeDeclarationSyntax>()
+            .FirstOrDefault(candidate => string.Equals(candidate.Identifier.Text, symbol.ContainingType?.Name, StringComparison.Ordinal)
+                && candidate.TypeParameterList?.Parameters.Count == symbol.ContainingType?.TypeParameters.Length);
+        if (type is null) return null;
+
+        return type.Members.FirstOrDefault(member => member switch
+        {
+            MethodDeclarationSyntax method when symbol is IMethodSymbol methodSymbol =>
+                string.Equals(method.Identifier.Text, methodSymbol.Name, StringComparison.Ordinal)
+                && method.ParameterList.Parameters.Count == methodSymbol.Parameters.Length
+                && method.TypeParameterList?.Parameters.Count == methodSymbol.TypeParameters.Length,
+            ConstructorDeclarationSyntax constructor when symbol is IMethodSymbol constructorSymbol =>
+                constructor.Identifier.Text == symbol.ContainingType?.Name
+                && constructor.ParameterList.Parameters.Count == constructorSymbol.Parameters.Length,
+            PropertyDeclarationSyntax property when symbol is IPropertySymbol propertySymbol =>
+                property.Identifier.Text == propertySymbol.Name,
+            IndexerDeclarationSyntax when symbol is IPropertySymbol { IsIndexer: true } => true,
+            FieldDeclarationSyntax field when symbol is IFieldSymbol fieldSymbol =>
+                field.Declaration.Variables.Any(variable => variable.Identifier.Text == fieldSymbol.Name),
+            EventFieldDeclarationSyntax eventField when symbol is IEventSymbol eventSymbol =>
+                eventField.Declaration.Variables.Any(variable => variable.Identifier.Text == eventSymbol.Name),
+            EventDeclarationSyntax eventDeclaration when symbol is IEventSymbol eventSymbol =>
+                eventDeclaration.Identifier.Text == eventSymbol.Name,
+            _ => false,
+        });
+    }
+
+    private static string LimitLines(string text, int maxBodyLines)
+    {
+        var lines = text.Split('\n');
+        return lines.Length <= maxBodyLines
+            ? text.TrimEnd()
+            : string.Join("\n", lines.Take(maxBodyLines)).TrimEnd()
+                + $"\n// ... truncated, total {lines.Length} Zeilen, maxBodyLines erhoehen fuer mehr";
+    }
+
     internal Task<DecompilationResult> DecompileAsync(
         DecompilationRequest request,
         AssemblyReferenceResolution references)
@@ -280,11 +404,12 @@ internal sealed class AssemblyDecompilationAdapter
     private static ICSharpCode.Decompiler.CSharp.CSharpDecompiler CreateDecompiler(
         string assemblyPath,
         AssemblyReferenceResolution references,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool decompileMemberBodies = false)
     {
         var settings = new ICSharpCode.Decompiler.DecompilerSettings
         {
-            DecompileMemberBodies = false,
+            DecompileMemberBodies = decompileMemberBodies,
             ShowXmlDocumentation = false,
             UseDebugSymbols = false,
             RequiredMembers = false,

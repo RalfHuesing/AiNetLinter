@@ -94,6 +94,34 @@ public sealed class GetClassStructureToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ConstantFields_FormatsInvariantLiteralValues()
+    {
+        const string source = """
+            namespace TestNs;
+            public class Constants
+            {
+                public const double Ratio = 1.5;
+                public const string Greeting = "hello";
+                public const char Marker = 'x';
+                public const bool Enabled = true;
+            }
+            """;
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\GetClassStructureToolTests.slnx",
+            new ProjectSpec("TestProject", [("Constants.cs", source)])));
+
+        var result = await GetClassStructureTool.ExecuteAsync(
+            context.CreateServer(), "Constants", "name", CancellationToken.None);
+
+        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Contains(payload!.Members, member => member.Signature.Contains("1.5", StringComparison.Ordinal));
+        Assert.Contains(payload.Members, member => member.Signature.Contains("\"hello\"", StringComparison.Ordinal));
+        Assert.Contains(payload.Members, member => member.Signature.Contains("'x'", StringComparison.Ordinal));
+        Assert.Contains(payload.Members, member => member.Signature.Contains("true", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task ExecuteAsync_SortByName_SortsAlphabetically()
     {
         const string source = """

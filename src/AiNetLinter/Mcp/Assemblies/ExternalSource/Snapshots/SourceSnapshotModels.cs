@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Globalization;
 using System.IO;
 using System.Runtime.ExceptionServices;
@@ -225,7 +226,8 @@ internal sealed class ExternalSourceSnapshot : IDisposable
         SourceSnapshotIdentity identity,
         Solution solution,
         Workspace workspace,
-        ExternalSourceSnapshotOwnership? ownership = null)
+        ExternalSourceSnapshotOwnership? ownership = null,
+        IEnumerable<ExternalSourceConfigurationDiagnostic>? diagnostics = null)
     {
         ArgumentNullException.ThrowIfNull(identity);
         ArgumentNullException.ThrowIfNull(solution);
@@ -239,6 +241,11 @@ internal sealed class ExternalSourceSnapshot : IDisposable
         resourceReservation = ownership?.ResourceReservation;
         IsAttested = ownership?.IsAttested == true;
         ResourceUsage = ownership?.ResourceUsage ?? ExternalSourceSnapshotResourceUsage.Estimate(solution);
+        Diagnostics = (diagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>())
+            .Where(diagnostic => !string.IsNullOrWhiteSpace(diagnostic.Code))
+            .Distinct()
+            .Take(20)
+            .ToImmutableArray();
     }
 
     internal SourceSnapshotIdentity Identity { get; }
@@ -250,6 +257,8 @@ internal sealed class ExternalSourceSnapshot : IDisposable
     internal bool IsAttested { get; }
 
     internal ExternalSourceSnapshotResourceUsage ResourceUsage { get; }
+
+    internal ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics { get; }
 
     internal ExternalResourceReservation? TakeResourceReservation() =>
         Interlocked.Exchange(ref resourceReservation, null);

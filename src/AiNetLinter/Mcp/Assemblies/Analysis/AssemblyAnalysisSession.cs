@@ -202,7 +202,11 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
             snapshotResult.Snapshot,
             request.References.References,
             CombineDiagnostics(request.Diagnostics, snapshotResult.Diagnostics),
-            CreateGenerationOrigin(request.Fingerprint, request.Documents, finalStatus));
+            CreateGenerationOrigin(request.Fingerprint, request.Documents, finalStatus),
+            decompilationAdapter.CreateBodyResolver(
+                request.Fingerprint.CanonicalPath,
+                request.References,
+                decompilationOptions));
 
         if (request.PublishRequest is not null)
         {

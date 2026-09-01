@@ -2,11 +2,13 @@
 
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AiNetLinter.Output;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using ModelContextProtocol.Protocol;
 
@@ -45,7 +47,11 @@ internal static class AssemblyAnalysisResponse
             lease.Context.Generation,
             effectiveStatus.ToWireValue(),
             effectiveStatus.ToCompletenessLabel(),
-            origin.SourceSnapshotIdentity);
+            origin.SourceSnapshotIdentity,
+            origin.FallbackReason,
+            CreateSourceDiagnosticsSummary(origin.SourceDiagnostics),
+            origin.BodyAvailability,
+            origin.ContentMode);
 
         JsonElement? structured = result.StructuredContent;
         if (structured is { ValueKind: JsonValueKind.Object })
@@ -98,7 +104,21 @@ internal static class AssemblyAnalysisResponse
         $"[ASSEMBLY] targetType=assembly; targetPath={metadata.TargetPath}; origin={metadata.Origin}; " +
         $"sourcePath={metadata.SourcePath ?? "none"}; snapshot={FormatSnapshot(metadata.SourceSnapshot)}; " +
         $"confidence={metadata.Confidence}; trust={metadata.Trust}; generation={metadata.Generation}; " +
-        $"status={metadata.Status}; completeness={metadata.Completeness}\n\n";
+        $"status={metadata.Status}; completeness={metadata.Completeness}; " +
+        $"fallbackReason={metadata.FallbackReason ?? "none"}; bodyAvailability={metadata.BodyAvailability}; " +
+        $"contentMode={metadata.ContentMode}; sourceDiagnostics={metadata.SourceDiagnosticsSummary.ShownCount}/" +
+        $"{metadata.SourceDiagnosticsSummary.TotalCount}\n\n";
+
+    private static AssemblySourceDiagnosticsSummary CreateSourceDiagnosticsSummary(
+        IReadOnlyList<ExternalSourceConfigurationDiagnostic>? diagnostics)
+    {
+        var source = diagnostics ?? [];
+        var samples = source
+            .Take(5)
+            .Select(diagnostic => $"{diagnostic.Code}: {AssemblyAnalysisResponseLimits.NormalizeForDisplay(diagnostic.Message)}")
+            .ToArray();
+        return new(source.Count, samples.Length, source.Count > samples.Length, samples);
+    }
 
     private static string FormatSnapshot(SourceSnapshotIdentity? snapshot) =>
         snapshot is null ? "none" : $"{snapshot.RepositoryUrl}@{snapshot.LoadedRevision}";
@@ -114,8 +134,18 @@ internal static class AssemblyAnalysisResponse
         long Generation,
         string Status,
         string Completeness,
-        SourceSnapshotIdentity? SourceSnapshot)
+        SourceSnapshotIdentity? SourceSnapshot,
+        string? FallbackReason,
+        AssemblySourceDiagnosticsSummary SourceDiagnosticsSummary,
+        string BodyAvailability,
+        string ContentMode)
     {
         public string TargetType => "assembly";
     }
+
+    private sealed record AssemblySourceDiagnosticsSummary(
+        int TotalCount,
+        int ShownCount,
+        bool Truncated,
+        IReadOnlyList<string> Samples);
 }

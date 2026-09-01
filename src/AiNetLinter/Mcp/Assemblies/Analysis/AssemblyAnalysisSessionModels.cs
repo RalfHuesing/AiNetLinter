@@ -2,6 +2,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using Microsoft.CodeAnalysis;
 
@@ -24,7 +27,11 @@ internal sealed record AssemblyOrigin(
     string Confidence,
     SourceSnapshotIdentity? SourceSnapshotIdentity = null,
     string? SourceProjectPath = null,
-    string Trust = "untrusted")
+    string Trust = "untrusted",
+    string BodyAvailability = "unavailable",
+    string ContentMode = "metadata",
+    string? FallbackReason = null,
+    IReadOnlyList<ExternalSourceConfigurationDiagnostic>? SourceDiagnostics = null)
 {
     /// <summary>Interner Kompatibilitätsalias; im MCP-Payload ist <see cref="OriginKind"/> maßgeblich.</summary>
     internal string Kind => OriginKind;
@@ -135,6 +142,26 @@ internal sealed record AssemblyReferenceResolution(
     IReadOnlyList<AssemblySessionDiagnostic> Diagnostics,
     ICSharpCode.Decompiler.Metadata.IAssemblyResolver DecompilerResolver);
 
+internal delegate Task<AssemblyBodyResolution> AssemblyBodyResolver(
+    ISymbol symbol,
+    int maxBodyLines,
+    CancellationToken cancellationToken);
+
+internal sealed record AssemblyBodyResolution(
+    string? Body,
+    string BodyAvailability,
+    string ContentMode,
+    string? Hint = null);
+
+internal static class AssemblyBodySyntax
+{
+    internal static bool HasExternModifier(ISymbol? symbol) =>
+        symbol?.DeclaringSyntaxReferences
+            .Select(reference => reference.GetSyntax())
+            .OfType<Microsoft.CodeAnalysis.CSharp.Syntax.MemberDeclarationSyntax>()
+            .Any(member => member.Modifiers.Any(Microsoft.CodeAnalysis.CSharp.SyntaxKind.ExternKeyword)) == true;
+}
+
 internal sealed record AssemblyReferenceSession(
     AssemblyReferenceDto Reference,
     string AssemblyPath,
@@ -168,7 +195,8 @@ internal sealed record AssemblySessionGeneration(
     AssemblyRoslynSnapshot Snapshot,
     IReadOnlyList<AssemblyReferenceDto> References,
     IReadOnlyList<AssemblySessionDiagnostic> Diagnostics,
-    AssemblyOrigin Origin)
+    AssemblyOrigin Origin,
+    AssemblyBodyResolver? BodyResolver = null)
 {
     internal int ActiveLeaseCount { get; set; }
 }

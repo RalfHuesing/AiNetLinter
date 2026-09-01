@@ -39,7 +39,7 @@ internal static class SymbolBodyToolRegistrations
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, symbolIdentifiers, maxBodyLines, ct),
-                            AssemblySessionCall: lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, symbolIdentifiers, maxBodyLines, ct)),
+                            AssemblySessionCall: lease => GetSymbolBodyTool.ExecuteAsync(lease, symbolIdentifiers, maxBodyLines, ct)),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("get_symbol_body", GetSymbolBodyDescription)));
     }

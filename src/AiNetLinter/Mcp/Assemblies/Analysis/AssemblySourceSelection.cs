@@ -4,6 +4,7 @@ using System;
 using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 using Microsoft.CodeAnalysis;
 using Serilog;
@@ -114,7 +115,9 @@ internal sealed record AssemblyAnalysisContextRequest(
     Solution? ConsumerSolution,
     string? ReceiverType,
     AssemblySourceSelection? SourceSelection,
-    CancellationToken CancellationToken);
+    CancellationToken CancellationToken,
+    string? FallbackReason = null,
+    IReadOnlyList<ExternalSourceConfigurationDiagnostic>? SourceDiagnostics = null);
 
 internal sealed class AssemblySourceProviderCreation
 {

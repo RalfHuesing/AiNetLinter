@@ -272,6 +272,9 @@ internal static class GetClassStructureTool
             lineCount = endLine - startLine + 1;
         }
 
+        var signature = m is IFieldSymbol { HasConstantValue: true } field
+            ? $"{m.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} = {CSharpLiteralFormatter.Format(field.ConstantValue)}"
+            : m.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
         return new ClassStructureMemberEntry(
             Kind: ResolveMemberKind(m),
             Name: m.Name,
@@ -279,7 +282,7 @@ internal static class GetClassStructureTool
             StartLine: startLine,
             EndLine: endLine,
             LineCount: lineCount,
-            Signature: m.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
+            Signature: signature,
             FilePath: memberFilePath);
     }
 
@@ -377,4 +380,13 @@ internal static class GetClassStructureTool
         }
         table.AppendTo(sb);
     }
+}
+
+internal static class CSharpLiteralFormatter
+{
+    internal static string Format(object? value) => value is null
+        ? "null"
+        : Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatPrimitive(value, quoteStrings: true, useHexadecimalNumbers: false)
+            ?? Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)
+            ?? string.Empty;
 }
