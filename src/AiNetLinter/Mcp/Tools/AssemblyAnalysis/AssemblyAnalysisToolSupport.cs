@@ -63,11 +63,9 @@ internal static class AssemblyAnalysisToolSupport
             ct);
         if (context is null)
         {
-            return new(fullPath, null, McpToolResults.Recoverable(
-                LinterErrorCodes.WorkspaceDiagnostic,
+            return new(fullPath, null, McpToolResults.RecoverableWorkspaceDiagnostic(
                 error ?? "Assembly konnte nicht analysiert werden.",
-                context: fullPath,
-                hint: "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung."));
+                context: fullPath));
         }
 
         return new(fullPath, context, null);

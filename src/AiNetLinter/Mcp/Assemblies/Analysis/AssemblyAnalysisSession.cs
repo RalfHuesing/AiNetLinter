@@ -136,7 +136,15 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
         var references = referenceResolver.Resolve(fingerprint.CanonicalPath);
         if (references.Identity is null)
         {
-            return FailureResult(references.Diagnostics);
+            var metadataDiagnostic = references.Diagnostics.FirstOrDefault(
+                diagnostic => diagnostic.Code == AssemblyDiagnosticCodes.MetadataMissing);
+            return FailureResult(
+                references.Diagnostics,
+                metadataDiagnostic is null
+                    ? null
+                    : new AssemblySessionFailure(
+                        AssemblySessionFailureKind.MetadataUnavailable,
+                        metadataDiagnostic));
         }
 
         if (TryReadCache(key, fingerprint, references, out var cached, out var cacheDiagnostics) && cached is not null)
@@ -361,7 +369,9 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
 
     private AssemblySessionRefreshResult FailureResultSingle(AssemblySessionDiagnostic diagnostic) => FailureResult([diagnostic]);
 
-    private AssemblySessionRefreshResult FailureResult(IReadOnlyList<AssemblySessionDiagnostic> diagnostics)
+    private AssemblySessionRefreshResult FailureResult(
+        IReadOnlyList<AssemblySessionDiagnostic> diagnostics,
+        AssemblySessionFailure? failure = null)
     {
         lock (gate)
         {
@@ -375,7 +385,7 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
                 Diagnostics = visible,
                 UpdatedUtc = DateTime.UtcNow,
             };
-            return new AssemblySessionRefreshResult(status, current?.Number, false, visible);
+            return new AssemblySessionRefreshResult(status, current?.Number, false, visible, failure);
         }
     }
 

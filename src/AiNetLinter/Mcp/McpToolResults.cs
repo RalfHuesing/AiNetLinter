@@ -22,6 +22,9 @@ namespace AiNetLinter.Mcp;
 /// </summary>
 internal static class McpToolResults
 {
+    internal const string WorkspaceDiagnosticHint =
+        "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung.";
+
     /// <summary>Hinweis fuer fehlenden/leeren <c>symbolIdentifier</c> (Einzel-Symbol-Tools).</summary>
     internal const string SymbolIdentifierHint =
         "symbolIdentifier angeben: \"M:Namespace.Klasse.Methode\", \"Datei.cs:42:10\" oder \"Klasse.Methode\".";
@@ -76,6 +79,16 @@ internal static class McpToolResults
 
     internal static CallToolResult Recoverable(string code, string message, McpErrorParameters parameters) =>
         BuildResult(code, message, parameters, isError: false);
+
+    internal static CallToolResult RecoverableWorkspaceDiagnostic(
+        string message,
+        string? context = null,
+        string? hint = null) =>
+        Recoverable(
+            LinterErrorCodes.WorkspaceDiagnostic,
+            message,
+            context: context,
+            hint: hint ?? WorkspaceDiagnosticHint);
 
     private static CallToolResult BuildResult(
         string code,
@@ -234,7 +247,7 @@ internal static class McpToolResults
         var effectiveParameters = parameters.Hint is null
             ? parameters with
             {
-                Hint = "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung.",
+                Hint = WorkspaceDiagnosticHint,
             }
             : parameters;
         return Error(

@@ -96,6 +96,11 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
             var sessionGeneration = session.CurrentGeneration;
             if (sessionGeneration is null)
             {
+                if (refresh.Failure is { Kind: AssemblySessionFailureKind.MetadataUnavailable } failure)
+                {
+                    throw new AssemblyAnalysisRegistryRecoverableFailureException(failure);
+                }
+
                 throw new InvalidOperationException(string.Join(" ", refresh.Diagnostics));
             }
 

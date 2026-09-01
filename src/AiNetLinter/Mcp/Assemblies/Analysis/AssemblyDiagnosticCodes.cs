@@ -11,6 +11,7 @@ internal static class AssemblyDiagnosticCodes
 {
     internal const string EmptyEventAccessor = "CS0073";
     internal const string EmptyMemberBody = "CS0501";
+    internal const string MetadataMissing = "assembly-metadata-missing";
 
     private static readonly ImmutableDictionary<string, string> Values = new Dictionary<string, string>
     {
@@ -39,7 +40,7 @@ internal static class AssemblyDiagnosticCodes
         [Key(nameof(AssemblyDecompilationCache), nameof(AssemblyCacheContract.CurrentPointerFileName))] = "assembly-cache-pointer-race",
         [Key(nameof(AssemblyFingerprintCalculator), nameof(AssemblyFingerprintCalculator.Canonicalize))] = "assembly-path-missing",
         [Key(nameof(AssemblyFingerprintCalculator), nameof(AssemblyFingerprintCalculator.TryCreate))] = "assembly-fingerprint-failed",
-        [Key(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolver.Resolve))] = "assembly-metadata-missing",
+        [Key(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolver.Resolve))] = MetadataMissing,
         [Key(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolution.MetadataReferences))] = "assembly-reference-metadata-failed",
         [Key(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolution.Identity))] = "assembly-metadata-read-failed",
         [Key(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceDto.Resolved))] = "assembly-reference-unresolved",

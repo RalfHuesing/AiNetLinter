@@ -210,6 +210,10 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
                 Failure("Die Assembly-Session wurde während des Aufbaus abgebrochen."),
                 false);
         }
+        catch (AssemblyAnalysisRegistryRecoverableFailureException exception)
+        {
+            return new(null, RecoverableMetadataFailure(canonicalPath, creation, exception.Failure), false);
+        }
         catch (ExternalResourceCapacityException exception)
         {
             RemoveFailedEntry(canonicalPath, creation);
@@ -425,6 +429,19 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
                 entries.Remove(canonicalPath);
             }
         }
+    }
+
+    private AssemblyAnalysisLeaseResult RecoverableMetadataFailure(
+        string canonicalPath,
+        AssemblyAnalysisRegistryEntryCreation creation,
+        AssemblySessionFailure failure)
+    {
+        RemoveFailedEntry(canonicalPath, creation);
+        return new(
+            null,
+            McpToolResults.RecoverableWorkspaceDiagnostic(
+                failure.Diagnostic.Message,
+                canonicalPath));
     }
 
     private static AssemblyAnalysisLeaseResult Failure(string message, bool isError = true) =>

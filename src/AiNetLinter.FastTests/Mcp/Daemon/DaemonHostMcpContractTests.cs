@@ -10,6 +10,7 @@ using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Composition;
 using AiNetLinter.Mcp.Daemon;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Output;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
@@ -109,6 +110,33 @@ public sealed class DaemonHostMcpContractTests
         Assert.Throws<ObjectDisposedException>(() => _ = composition.Orchestrator);
     }
 
+    [Fact]
+    public async Task RunMcpSessionAsync_RegisteredInspectAssemblyPreservesNativePeRecoverability()
+    {
+        var nativeAssemblyPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.System),
+            "kernel32.dll");
+        Assert.True(File.Exists(nativeAssemblyPath), $"Native PE fixture fehlt: {nativeAssemblyPath}");
+
+        await using var registry = ProjectWiringFixtures.CreateLoadedRegistry(TimeProvider.System);
+        await using var composition = AssemblyAnalysisHostComposition.Create();
+        var result = await RunRegisteredAssemblyToolAsync(
+            "inspect_assembly",
+            nativeAssemblyPath,
+            registry,
+            composition);
+
+        Assert.False(result.IsError);
+        var payload = StructuredOf(result);
+        Assert.Equal(LinterErrorCodes.WorkspaceDiagnostic, payload.GetProperty("code").GetString());
+        Assert.Equal(nativeAssemblyPath, payload.GetProperty("context").GetString());
+        Assert.Contains(".dll oder .exe mit IL", payload.GetProperty("message").GetString(), StringComparison.Ordinal);
+        Assert.Equal(
+            McpToolResults.WorkspaceDiagnosticHint,
+            payload.GetProperty("hint").GetString());
+        Assert.True(payload.GetProperty("recoverable").GetBoolean());
+    }
+
     private static string CreateSettings(TestTempDirectory temp)
     {
         temp.CreateFile(
@@ -175,6 +203,44 @@ public sealed class DaemonHostMcpContractTests
 
         await serverTask.WaitAsync(timeout.Token).ConfigureAwait(false);
         return (inspect, extensions);
+    }
+
+    private static async Task<CallToolResult> RunRegisteredAssemblyToolAsync(
+        string toolName,
+        string assemblyPath,
+        ProjectRegistry registry,
+        AssemblyAnalysisHostComposition composition)
+    {
+        var (clientStream, daemonStream) = ThinClientPipeTestDoubles.CreateDuplexPair();
+        await using var clientConnection = clientStream;
+        await using var daemonConnection = new DaemonPipeConnection(daemonStream);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var serverTask = CreateSession(registry, composition).RunAsync(daemonConnection);
+        CallToolResult result = null!;
+        try
+        {
+            await using var client = await McpClient.CreateAsync(
+                new StreamClientTransport(clientStream, clientStream),
+                cancellationToken: timeout.Token).ConfigureAwait(false);
+            var tools = await client.ListToolsAsync(cancellationToken: timeout.Token).ConfigureAwait(false);
+            Assert.Contains(tools, tool => tool.Name == toolName);
+            result = await client.CallToolAsync(
+                toolName,
+                new Dictionary<string, object?>
+                {
+                    ["targetType"] = "assembly",
+                    ["targetPath"] = assemblyPath,
+                },
+                cancellationToken: timeout.Token).ConfigureAwait(false);
+        }
+        finally
+        {
+            await clientConnection.DisposeAsync().ConfigureAwait(false);
+            await daemonConnection.DisposeAsync().ConfigureAwait(false);
+            await serverTask.WaitAsync(timeout.Token).ConfigureAwait(false);
+        }
+
+        return result;
     }
 
     private static DaemonMcpSession CreateSession(

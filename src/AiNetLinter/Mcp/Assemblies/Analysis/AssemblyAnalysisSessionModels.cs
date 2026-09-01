@@ -216,7 +216,17 @@ internal sealed record AssemblySessionRefreshResult(
     AssemblySessionStatus Status,
     long? Generation,
     bool Reused,
-    IReadOnlyList<AssemblySessionDiagnostic> Diagnostics);
+    IReadOnlyList<AssemblySessionDiagnostic> Diagnostics,
+    AssemblySessionFailure? Failure = null);
+
+internal enum AssemblySessionFailureKind
+{
+    MetadataUnavailable,
+}
+
+internal sealed record AssemblySessionFailure(
+    AssemblySessionFailureKind Kind,
+    AssemblySessionDiagnostic Diagnostic);
 
 internal sealed record AssemblyAnalysisSessionOptions(
     string AssemblyPath,

@@ -22,6 +22,17 @@ internal sealed record AssemblyAnalysisRegistryEntryCreation(
 
 internal sealed class ExternalResourceCapacityException(string message) : Exception(message);
 
+internal sealed class AssemblyAnalysisRegistryRecoverableFailureException : Exception
+{
+    internal AssemblyAnalysisRegistryRecoverableFailureException(AssemblySessionFailure failure)
+        : base(failure.Diagnostic.Message)
+    {
+        Failure = failure;
+    }
+
+    internal AssemblySessionFailure Failure { get; }
+}
+
 internal sealed class ExternalResourceLease : IDisposable
 {
     private readonly ExternalResourceRegistry registry;

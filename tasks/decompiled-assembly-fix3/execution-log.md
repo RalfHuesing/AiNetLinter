@@ -935,6 +935,21 @@
 - Tech-Debt-Disposition: Die drei P1-Signaturen sowie die damit gebündelte fehlende Literalabdeckung werden für den nächsten Korrekturversuch aktiviert; Paket 3 bleibt in Arbeit. Die übrigen P2-Risiken werden dokumentiert und nicht als separate Schleife gestartet.
 - Nächste Aktion: Korrekturversuch 1 mit frischem Implementierer und anschließendem unabhängigem Review.
 
+## 2026-09-01 – Paket 4 P1-Korrekturversuch 2 Implementierer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 4 – Kompatibilität, API-Lücken und Dokumentation
+- Rolle: Implementierer (frisch, registrierte Native-PE-Route)
+- Subagent-ID: `01a05ddb-e3c0-7ce0-afc0-09f64ba8955b`
+- Ursachensignatur: `package4-native-pe-route-recoverability`
+- Versuch: 2 im Epic
+- Status: completed; Änderungen uncommitted übergeben; keine Roadmap-/Log-/Tech-Debt-Änderung durch den Agenten; kein Commit.
+- Umsetzung: Der native-PE-Zustand wird als typisierter `AssemblySessionFailureKind.MetadataUnavailable`-Befund von `AssemblyAnalysisSession` über die Registry-Entry-Creation bis `AssemblyAnalysisRegistry.AwaitCreationAsync` weitergegeben. Nur dieser Befund wird als `RecoverableWorkspaceDiagnostic` projiziert; Datei-, Ressourcen-, Instabilitäts- und unerwartete Creation-Fehler behalten ihre bisherigen Error-Semantiken.
+- Routentest: `DaemonHostMcpContractTests.RunMcpSessionAsync_RegisteredInspectAssemblyPreservesNativePeRecoverability` ruft den registrierten `inspect_assembly`-Handler über Tool-Collection, Target-Routing, Registry/Lease und Daemon-Dispatcher auf und prüft den strukturierten Recoverable-Vertrag.
+- Gemeinsamer Vertrag: `McpToolResults.WorkspaceDiagnosticHint` und `RecoverableWorkspaceDiagnostic` vermeiden getrennte Payload-Erzeugung für direkten und registrierten Pfad.
+- Verifikation nach letzter Codeänderung: fokussierte FastTests 52/52; fokussierte IntegrationTests 22/22; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` grün; Audit ohne neue Duplikat-, Dead-Code-, Magic-Value- oder Regelbefunde. Vollgates und unabhängiger Abschlussreview bleiben Orchestrator-Schritte.
+- Nächste Aktion: Code-/Dokumentationscheckpoint sichern und frischen, unabhängigen Paket-4-Abschlussreview starten.
+
 ## 2026-09-01 – Paket 3 Korrekturversuch 3 Reviewer abgeschlossen
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume
