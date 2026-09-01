@@ -28,6 +28,93 @@
 - Log-Anker: Epic 1 Implementiererbericht, 2026-09-01.
 - Begründung der Disposition: Analyse-Only-Non-Goal.
 
+### E3-BUG-01 — Starke Assembly-Identität unvollständig geprüft
+
+- Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyReferenceResolver` und Referenzmodell.
+- Evidenz: Referenzkandidaten transportieren keinen Public-Key-Token und die
+  Identitätsprüfung vergleicht nur Name, Version und Kultur; siehe
+  `epic-03-referenzen-source-diagnosen.md`.
+- Nächster Schritt: Starke Identität metadata-only übernehmen, vergleichen
+  und bei Abweichung redigiert diagnostizieren.
+- Log-Anker: Epic 3 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal; keine Korrekturschleife
+  auf Nutzeranweisung.
+
+### E3-BUG-02 — Referenzknotenlimit projiziert Zustand uneinheitlich
+
+- Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyReferenceResolver.VisitNode`/`VisitChild` und
+  `AssemblyReferenceSessionExpander`.
+- Evidenz: Früher Grenzreturn erzeugt keine Diagnose; später Grenzpfad
+  diagnostiziert, ersetzt den zuvor eingefügten Kandidatenstatus aber nicht
+  konsistent.
+- Nächster Schritt: Atomare `node_limit`-Projektion mit einmaligem Boundary-
+  Signal über Resolver, Session und Response abgleichen.
+- Log-Anker: Epic 3 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E3-OPT-01 — Referenz-Expander überschreitet AIContext-Footprint
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyReferenceSessionExpander`.
+- Evidenz: Gezielter `get_violations`-Check meldete im Epic-Scope einen
+  `AIContextFootprint`-Wert oberhalb der Projektgrenze.
+- Nächster Schritt: Verantwortungen für Traversierung, Leases und Projektion
+  risikoarm trennen und denselben Violation-Check wiederholen.
+- Log-Anker: Epic 3 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E3-OPT-02 — Kandidaten mehrfach gelesen
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyReferenceResolver.FindReferencePath`,
+  `VisitChild` und Kandidatenenumeration.
+- Evidenz: Identität, vollständige Metadaten und Verzeichnisenumeration werden
+  in einem Resolve-Pfad wiederholt ausgeführt; quantitative Laufzeitwirkung
+  wurde nicht behauptet.
+- Nächster Schritt: Bounded Resolver-Session-Cache für kanonische Pfade und
+  Identitäts-/Metadatenfehler bewerten.
+- Log-Anker: Epic 3 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E3-MISSING-01 — Consumer-Kontext für Extension-Prüfung nicht bindbar
+
+- Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: registrierter Assembly-Dispatch und source-aware
+  Overloads der Extension-Prüfung.
+- Evidenz: Öffentliche Assembly-Aufrufe liefern `consumerProject=null` und
+  `not_decidable`, obwohl alternate Dispatch-Pfade vorhanden sind.
+- Nächster Schritt: Bounded optionalen Consumer-Projekt-/Solution-Kontext
+  routebar machen und Origin-/Trust-/Partial-Signale erhalten.
+- Log-Anker: Epic 3 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E3-MISSING-02 — Binary-zu-Source-Identität nicht attestiert
+
+- Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblySourceMatchResolver` und source-backed
+  `AssemblyAnalysisContextFactory`.
+- Evidenz: Nach Snapshot-/Mapping-/Aliasprüfung fehlt eine konkrete
+  Binär-/Build-Identität für die Source-Zuordnung.
+- Nächster Schritt: Redigiert vergleichbare Output-/Binary-Attestierung
+  ergänzen oder bei fehlender Übereinstimmung sicher auf decompiled wechseln.
+- Log-Anker: Epic 3 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E3-MISSING-03 — Keine konfigurierten Probe-Wurzeln für Dependencies
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyReferenceResolver` und
+  `SourceProjectReferenceGraph`.
+- Evidenz: Suche beschränkt sich auf Zielverzeichnis, TPA und Source-
+  Projektgraph; vorhandene Source-/Output-Kontexte sind nicht als bounded
+  Probe-Wurzeln adressierbar.
+- Nächster Schritt: Vertrauensgebundene, kanonisierte und mengenmäßig
+  begrenzte Probe-Wurzeln spezifizieren.
+- Log-Anker: Epic 3 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
 ### E2-BUG-01 — Cache-Roundtrip verliert Dokument-Metadaten
 
 - Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0

@@ -1,8 +1,8 @@
 # Ausführungsstand: Assembly-Unterstützungs-Audit
 
 status: executing
-current_epic: 3
-last_checkpoint: Epic 2 abgeschlossen; Analyse-Checkpoint wird gesichert
+current_epic: 4
+last_checkpoint: Epic 3 abgeschlossen; Analyse-Checkpoint wird gesichert
 current_debt_item: none
 debt_attempts: 0
 
@@ -34,11 +34,12 @@ acht eigenständige, priorisierte Befundberichte.
    Auswahl, fehlende/inkompatible Referenzen, Herkunft, Trust, Partialität
    und Diagnoseprojektion. Abhängigkeiten: Epics 1–2. Verifikation:
    redigierte Origin-Abfragen für GIT-01 und LOCAL-01 bis LOCAL-03 sowie
-   Quelltext-/Testvertragsanalyse. Status: in_progress.
+   Quelltext-/Testvertragsanalyse. Status: done (Analysebericht abgeschlossen;
+   Review auf Nutzeranweisung übersprungen).
 4. **Session-, Cache- und Lebenszeitsemantik** — Fingerprints, Generationen,
    Cache, Refresh, Leases, Cancellation, Eviction, TTL, Disposal und
    Parallelität. Abhängigkeiten: Epic 2. Verifikation: MCP-Health-/Session-
-   Sicht und Quelltext-/Testanalyse; keine Laufzeitänderung. Status: open.
+   Sicht und Quelltext-/Testanalyse; keine Laufzeitänderung. Status: in_progress.
 5. **Navigation und fachliche Query-Korrektheit** — Assembly-fähige
    Symbolgraph- und Strukturtools, Root-/Referenzgrenzen, Caller-/Calltree-
    Semantik, Extensions und Trunkierung. Abhängigkeiten: Epics 2–3.
