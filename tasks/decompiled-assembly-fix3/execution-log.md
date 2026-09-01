@@ -597,3 +597,15 @@
 - Orchestrator-Nachverifikation: `dotnet build --no-restore` 0 Warnungen/0 Fehler; fokussierte FastTests 61/61 bestanden; fokussierte IntegrationTests 18/19 bestanden. Ein verbleibender Fehler in `GetServerHealthToolTests.Build_DefaultHealthIsCompact_AndDetailDiagnosticsStayBounded` erwartet den nicht mehr ausgegebenen Text `Diagnosen: 0 von 4`.
 - Verbleibende Risiken: Die Textassertion muss gegen den kompakten globalen Health-Vertrag korrigiert oder fachlich bestätigt werden; danach sind frische MCP-/Regelchecks und vollständige Nicht-Stress-Gates erforderlich. Die bekannte Produktionswarnung `AIContextFootprint` und zwei scopefremde `FindSymbolScanner`-Warnungen bleiben zurückgestellt.
 - Nächste Aktion: Unabhängigen Reviewer auf den aktuellen Test-/Vertragsdiff ansetzen; anschließend gezielte Korrektur und erneute Gates.
+
+## 2026-09-01 – Paket 2 Korrekturversuch 3 Reviewer gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `529d8524`; fachliche Ausgangsbasis `027e4eb8`
+- Ursachensignatur: `package2-regression-test-contract-drift`
+- Versuch: 3 von 5
+- Status: running
+- Auftrag: Den Test-/Vertragsdiff unabhängig prüfen, insbesondere kompakte globale Health-Text-/JSON-Konsistenz, `includeSessions/maxSessions`, Diagnoseprojektion und Structured Content der vier Erfolgstools. Den einen bekannten roten Textassertionspfad gegen den aktuellen Produktionsvertrag klassifizieren. Keine Produktions-/Testcodeänderung und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen.
