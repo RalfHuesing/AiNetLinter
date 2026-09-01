@@ -6,7 +6,7 @@
 - current_epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
 - current_debt_item: package3-source-body-metadata-contract
 - debt_attempts: 1
-- letzter Commit: `4a2a9c40`
+- letzter Commit: `0c6a4306`
 
 ## Epics
 

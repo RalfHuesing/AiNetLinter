@@ -935,6 +935,18 @@
 - Tech-Debt-Disposition: Die drei P1-Signaturen sowie die damit gebündelte fehlende Literalabdeckung werden für den nächsten Korrekturversuch aktiviert; Paket 3 bleibt in Arbeit. Die übrigen P2-Risiken werden dokumentiert und nicht als separate Schleife gestartet.
 - Nächste Aktion: Korrekturversuch 1 mit frischem Implementierer und anschließendem unabhängigem Review.
 
+## 2026-09-01 – Paket 3 Korrekturversuch 1 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
+- Rolle: Implementierer (frisch, gebündelte P1-Korrektur)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `0c6a4306`
+- Ursachensignaturen: `package3-fallback-diagnostic-propagation`; `package3-body-symbol-resolution-ambiguity`; `package3-structural-rule-drift`; begleitend `package3-literal-regression-coverage`
+- Versuch: 1 im Epic
+- Status: running
+- Auftrag: Behebe die im Review belegten P1s: Fallback-Diagnosen/`workspace-failure` über den dekompilierten Origin sicher propagieren; on-demand Body bei Overloads über vollständige Symbolidentität deterministisch auflösen; die zehn neuen strukturellen Violations in scope-nahen Parameterobjekten/Helpern ohne Ownership-Drift bereinigen. Ergänze dabei `null` und negative Konstanten im Literaltest sowie die minimal nötigen Regressionen für verwertbare C#-Dokumente mit Workspace-Diagnose, Body-Varianten und strukturierte Enrich-Diagnosen. Keine AdhocWorkspace-Fallbacks, keine Cachepfade, keine Assembly-Ausführung. Nach letzter Änderung gezielte Tests, betroffene `get_violations`, Build und `git diff --check`; kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
+
 ## 2026-09-01 – Paket 3 Implementierung gestartet
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume
