@@ -1,4 +1,4 @@
-# Epic 5 — Navigation und Query-Korrektheit (Epic-4-Basis erhalten)
+# Epic 7 — Betrieb, Sicherheit und Fehlerbehandlung (Epic-6-Basis erhalten)
 
 ## Primäre Einstiegspunkte
 
@@ -330,4 +330,53 @@ Der aktuelle zielgebundene MCP-Metriklauf meldete für die zentralen Response-Sy
 - Read-only MCP-Projektchecks nutzten `targetType=project` und den absoluten Projektpfad: Indexscope vollständig (886 C#-Dateien), Assembly-Unterbaum 18/18 Einträge nicht gekürzt, Symbol-/Feature-/Metrikauflösung für Response-, Budget-, Service-, Decompilation- und Referenzpfade.
 - Redigierte Assemblychecks nutzten `targetType=assembly` und jeweils den absoluten, nur über das Label referenzierten Matrixpfad. `inspect_assembly` wurde für `LOCAL-01`, `LOCAL-02`, `LOCAL-03` und `FALSE-01` mit kleinen (`includeReferences=false`, `maxResults=1`, `maxMembers=1`) und großen (`includeReferences=true`, `maxResults=1000`, `maxMembers=1000`) Limits ausgeführt. `find_assembly_extensions` wurde für die drei positiven Labels mit `maxResults=1` und `maxResults=1000` ausgeführt; `FALSE-01` war für diesen Extension-Spotcheck nicht relevant.
 - Die positiven Fälle blieben redigiert `decompiled`/`partial`, `FALSE-01` ein recoverable `WORKSPACE_DIAGNOSTIC`-Negativpfad ohne Snapshot. Keine externe Identität oder dekompilierter Inhalt ist in dieser Map enthalten.
-- Nach dieser Code-Map-Ergänzung werden die Schlüssel-Spotchecks erneut ausgeführt; die redigierten Resultate und die finale Dateigrenze werden im Epic-6-Bericht dokumentiert. Danach erfolgt keine weitere Code-Map-Änderung.
+- Die dort dokumentierte Epic-6-Finalrunde wurde nach der damaligen Map-Ergänzung ausgeführt. Spätere Epic-Lieferungen ergänzen diese Karte chronologisch und führen ihre eigenen Abschluss-Spotchecks aus.
+
+## Epic 7 – Betrieb, Sicherheit und Fehlerbehandlung
+
+### Relevante Implementierungspfade
+
+- Zielauflösung und Dateityp:
+  - `src/AiNetLinter/Mcp/AnalysisTargetResolver.cs:11-100` – absolute Kanonisierung, Existenz- und `.dll`/`.exe`-Prüfung sowie recoverable Argumentfehler.
+  - `src/AiNetLinter/Configuration/AssemblyPathValidation.cs:12-21` – zentrale, case-insensitive Erweiterungsregel.
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisService.cs:22-59` – direkter Assembly-Pfad-Guard; Fehlermeldungen übernehmen Eingabepfad bzw. kanonischen Pfad.
+- Metadata-only und Fail-Closed:
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyReferenceResolver.cs:22-50,216-237` – `PEReader`/Metadatenprüfung; fehlende oder beschädigte Metadaten liefern keine Identität.
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs:26-61,151-158` – bounded Decompilation mit Cancellation/Deadline; kein Runtime-Load-Pfad.
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolSupport.cs:48-98` – Pfadfehler und nicht erzeugbarer Kontext werden recoverable projiziert.
+- Fingerprint, IO und wechselnde Dateien:
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyFingerprint.cs:11-28,30-49` – Hashbildung über einmaligen Read und Übernahme des davor gelesenen `FileInfo`-Zustands; IO-/Access-Fehler tragen `exception.Message` weiter.
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisSession.cs:113-229` – Fingerprint vor Referenzauflösung/Decompilation/Snapshot/Cache-Publish; kein neuer Post-Read-Commitpunkt.
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisRegistry.cs:104-146,189-247,434-450` – Retry bei wechselnder Identität, interne Creation-Cancellation und Default-`isError`-Semantik.
+- Fehlerprojektion und Redaction:
+  - `src/AiNetLinter/Mcp/AnalysisToolCall.cs:139-185` – unerwartete Assembly-Route-Exceptions werden als `CompilationError` mit Rohtext zurückgegeben.
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisContextFactory.cs:384-392,458-464` – Source-, Roslyn- und Referenzdiagnosen werden direkt zusammengeführt.
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisDiagnostics.cs:10-20` – externe Diagnosen werden ohne Redaction in die Anzeige formatiert.
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs:32-124` – Enrichment/Origin- und Source-Diagnose-Samples; `NormalizeForDisplay` ist keine Geheimnis-/Pfadredaktion.
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/Coordinators/AssemblyAnalysisHealthSnapshotProvider.cs:24-75` – Health nimmt Fault-Exception-Messages direkt als Diagnose auf.
+- Provider- und Lifecycle-Sicherheit:
+  - `src/AiNetLinter/Mcp/Assemblies/ExternalSource/Repository/ExternalSourceRepositoryFailurePolicy.cs:120-161` – Provider-Transportdiagnosen werden auf Code, sichere Meldung und `$repository` projiziert.
+  - `src/AiNetLinter/Configuration/ExternalSourceMappingValidator.cs:382-410` – URLs mit Userinfo, Query oder Fragment werden abgewiesen.
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/Coordinators/AssemblyAnalysisSourceProjectLeaseCoordinator.cs:46-68,104-127` – Source-Project-Creation und Cancellation-/Exception-Projektion.
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResourceBudget.cs:41-51,98-165` – Resource-Health ist intern vorhanden, wird aber nicht in Assembly-Health eingebunden.
+  - `src/AiNetLinter/Mcp/Tools/ServerMaintenance/Projection/AssemblyHealthProjection.cs:12-90`, `GetServerHealthModels.cs:35-72` und `GetServerHealthTool.cs:47-97` – begrenzte Health-Projektion ohne Fehlerklasse, Lease-/Retirement- oder Resource-Zähler.
+
+### Epic-7-Befundregister
+
+- `E7-BUG-01` (P1/L/hoch): Rohpfade, Roh-Exception-Messages und externe/Compilerdiagnosen erreichen Assembly-Responses und Health. Das wird durch einen redigierten ungültigen MCP-Pfadmarker reproduziert; die bestehenden Transport-Provider-Policies sind davon abgegrenzt.
+- `E7-BUG-02` (P2/M/hoch): Kontrollierte interne Creation-/Source-Project-Cancellation fällt über den Default `Failure(..., isError=true)` in einen harten Toolfehler, obwohl der Aufrufer nicht abgebrochen haben muss. Caller-Cancellation wird korrekt weitergereicht; der Befund betrifft den internen Lifecyclepfad.
+- `E7-OPT-01` (P3/M/hoch): `AssemblyAnalysisRegistryEvictionCoordinator` überschreitet laut zielgebundenem MCP-Violation-Check das AI-context-Footprint-Limit; der bereits bekannte `AssemblyReferenceSessionExpander`-Überhang wird nicht doppelt gezählt.
+- `E7-MF-01` (P2/M/hoch): `get_server_health` weist Assembly-Fehlerklasse/Recoverability, Last-good-/Retirement-Zustand und Resource-/Lease-/Operationstelemetrie nicht maschinenlesbar aus; vorhandene Status-, Origin-, Generation- und Diagnosefelder bleiben erhalten.
+
+### Epic-7-Invarianten und Abgrenzungen
+
+- Assembly-Ziele bleiben metadata-only: `PEReader`, `MetadataReference` und Decompiler-Resolver werden verwendet; im geprüften Assembly-/Analysis-Bereich gibt es keinen `Assembly.Load`, `AssemblyLoadContext`, `Activator.CreateInstance` oder `Process.Start`-Treffer. Externe Provider-Prozesse sind davon getrennt und verarbeiten Source-Checkout, nicht das Ziel als Runtime-Assembly.
+- Absolute Zielpfade und `.dll`/`.exe`-Filter funktionieren als Eingangsvertrag. Native/beschädigte/nicht verwaltete Ziele werden vor einem Snapshot beendet; `FALSE-01` blieb recoverable ohne `analysis`/Snapshot. Das ist kein neuer Fail-Closed-Befund.
+- Der Race zwischen erstem Fingerprint und späterem Snapshot/Cache-Publish bleibt `E4-BUG-02`; Epic 7 bestätigt ihn als relevante Wechseldatei-Unsicherheit, dupliziert ihn aber nicht als neues Finding.
+- Die sichere Provider-Transportprojektion und URL-Policy bleiben bestehen. Der neue Redaction-Befund betrifft die nicht zentralisierte Assembly-/Roslyn-/Health-Exception- und Diagnosekette.
+
+### Epic-7-Verifikation
+
+- Alle zielgebundenen MCP-Abfragen nutzten das aktuelle Schema mit `targetType` und absolutem `targetPath`; `get_server_health` wurde sowohl zielgebunden als auch aggregiert abgefragt.
+- Read-only Gegenproben: `LOCAL-01`, `LOCAL-02` und `LOCAL-03` lieferten `isError=false`, `origin=decompiled`, `status=partial`, `completeness=partial`, `confidence=medium`, `trust=untrusted`, `generation=1` und sichtbare Truncation. `FALSE-01` lieferte `isError=false`, `recoverable=true`, `WORKSPACE_DIAGNOSTIC`, ohne Origin, Completeness, Snapshot oder Assembly-Payload. `GIT-01` ist der konfigurierte Source-/Git-Fall und wurde in diesem Epic nicht als direkter Assembly-Pfad wiederholt.
+- Die abschließenden positiven/negativen Spotchecks nach der letzten Änderung an dieser Code-Map werden im Epic-7-Bericht vollständig und redigiert dokumentiert; danach erfolgte keine weitere Map-Änderung.

@@ -28,6 +28,55 @@
 - Log-Anker: Epic 1 Implementiererbericht, 2026-09-01.
 - Begründung der Disposition: Analyse-Only-Non-Goal.
 
+### E7-BUG-01 — Assembly-Fehlerpfad redigiert Rohpfade und Rohdiagnosen nicht
+
+- Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: Assembly-Service, Reference-Resolver, Sessiondiagnosen,
+  `AnalysisToolCall` und Health-Projektion.
+- Evidenz: Kontrollierter Fehler mit synthetischem Marker gab den Marker im
+  Text/Structured Content zurück; Rohpfade, Exception-Messages und Diagnosen
+  werden ohne zentrale Redaction aggregiert.
+- Nächster Schritt: Zentralen typed-error-/Redaction-Projektionspfad für
+  Fehler, Diagnosen und Health festlegen.
+- Log-Anker: Epic 7 Implementiererbericht, 2026-09-02.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E7-BUG-02 — Interne Creation-Cancellation wird als harter Toolfehler klassifiziert
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyAnalysisRegistry` und Source-Project-Lease-
+  Coordinator.
+- Evidenz: Nicht vom Caller ausgelöste interne Cancellation wird über den
+  Default von `Failure` als `isError=true`/harter Aufbaufehler projiziert.
+- Nächster Schritt: Caller-Cancellation, Lifecycle-Abbruch und Provider-/IO-
+  Fehler als getrennte typed Zustände modellieren.
+- Log-Anker: Epic 7 Implementiererbericht, 2026-09-02.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E7-OPT-01 — Eviction-/Lifecycle-Koordinator überschreitet MCP-Footprint
+
+- Schweregrad: P3; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyAnalysisRegistryEvictionCoordinator`.
+- Evidenz: `get_violations` meldete im Assembly-Analyse-Scope einen
+  `AIContextFootprint`-Treffer oberhalb des Grenzwerts.
+- Nächster Schritt: Nur in einem Umsetzungstask Lifecycle-Fassaden und
+  Retirement-/Capacity-/Health-Verantwortungen risikoarm schneiden.
+- Log-Anker: Epic 7 Implementiererbericht, 2026-09-02.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E7-MF-01 — Assembly-Health weist Lifecycle und Recoverability unvollständig aus
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: Assembly-Health-Snapshot, Projection und Server-Health-
+  Response.
+- Evidenz: Health zeigt Status/Origin/Generation/Diagnosen, aber keine typed
+  Fehlerklasse, Recoverability, Lease-/Operation-, Resident-/Eviction- oder
+  Resource-Ist-/Limitwerte.
+- Nächster Schritt: Optionales, bounded `assemblyOperational`-Objekt mit
+  redigierten Status- und Zählerfeldern spezifizieren.
+- Log-Anker: Epic 7 Implementiererbericht, 2026-09-02.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
 ### E6-BUG-01 — Response-Budget prüft Kanäle getrennt statt CallToolResult gesamt
 
 - Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
