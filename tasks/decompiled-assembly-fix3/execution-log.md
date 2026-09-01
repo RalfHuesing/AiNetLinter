@@ -786,3 +786,15 @@
 - P2: `InspectAssembly`-AIContext-Footprint und bestehende `FindSymbolScanner`-Warnungen bleiben unverändert `accepted-deferred`.
 - Tech-Debt-Disposition: Beide P1-Ursachensignaturen bleiben `fix-now`, Versuchszähler im neuen Lauf 1. Die Korrektur muss die Ownership auch für Assembly-CallTree-/Navigation-Diagnosen eindeutig machen und die fehlenden E2E-/Structured-Content-Verträge ergänzen.
 - Nächste Aktion: Frischer Implementierer für Versuch 1 des wiederaufgenommenen Laufs; danach unabhängiger Review.
+
+## 2026-09-01 – Wiederaufnahme Paket 2 Korrekturversuch 1 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `774503f5`
+- Ursachensignaturen: `package2-diagnosis-projection-ownership`; `package2-regression-test-contract-drift`
+- Versuch: 1 im neu freigegebenen Lauf
+- Status: running
+- Auftrag: Den verbliebenen separaten `AssemblyGetCallTreeTool`-Projektionspfad in denselben klaren Response-/Projection-Vertrag integrieren, Navigation-Diagnosen mit Text und Structured Content konsistent projizieren, den aktuellen Method-Parametervertrag dabei regelkonform halten und echte Assembly-`find_references`-/Nulltreffer-Regressionen ergänzen. Health-/ReloadConfig-/DTO-Verträge erhalten. Nach letzter Änderung gezielte Tests, `git diff --check`, DRY-/Dead-Code-/Magic-Checks und als letzten codebezogenen Schritt den relevanten `get_violations`-Scope ausführen. Kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
