@@ -34,7 +34,11 @@ internal sealed record AssemblyNavigationSummary(
     int SearchedAssemblyCount,
     bool AssembliesTruncated,
     string Completeness,
-    IReadOnlyList<string> Diagnostics);
+    IReadOnlyList<string> Diagnostics,
+    int DiagnosticTotalCount = 0,
+    int DiagnosticShownCount = 0,
+    bool DiagnosticsTruncated = false,
+    IReadOnlyList<string>? DiagnosticsTruncatedBy = null);
 
 internal sealed record AssemblyCallTreeResult(
     MetricsTreeNode Root,

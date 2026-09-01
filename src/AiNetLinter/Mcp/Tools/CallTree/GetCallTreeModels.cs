@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using Microsoft.CodeAnalysis;
+using AiNetLinter.Mcp.Tools.MetricsTree;
 
 namespace AiNetLinter.Mcp.Tools.CallTree;
 
@@ -39,3 +40,11 @@ internal sealed record CallTreeBuildRequest(
     int RequestedDepth,
     int TopN,
     CallTreeDirection Direction);
+
+internal sealed record CallTreePayload(
+    MetricsTreeNode Root,
+    string Direction,
+    int RequestedDepth,
+    int TopN,
+    bool Truncated,
+    bool TopNTruncated);

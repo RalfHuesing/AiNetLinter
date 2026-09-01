@@ -75,17 +75,18 @@ internal static partial class AssemblyAnalysisResponseLimits
 
     internal static AssemblyReferenceSummary CreateReferenceSummary(
         IEnumerable<AssemblyReferenceDto>? references,
-        IEnumerable<AssemblyReferenceSession>? sessions)
+        IEnumerable<AssemblyReferenceSession>? sessions,
+        bool includeDetails = true)
     {
         var referenceCount = references?.Count() ?? 0;
         var sessionCount = sessions?.Count() ?? 0;
         return new(
             referenceCount,
-            Math.Min(referenceCount, MaxReferences),
-            referenceCount > MaxReferences,
+            includeDetails ? Math.Min(referenceCount, MaxReferences) : 0,
+            includeDetails ? referenceCount > MaxReferences : referenceCount > 0,
             sessionCount,
-            Math.Min(sessionCount, MaxReferenceSessions),
-            sessionCount > MaxReferenceSessions);
+            includeDetails ? Math.Min(sessionCount, MaxReferenceSessions) : 0,
+            includeDetails ? sessionCount > MaxReferenceSessions : sessionCount > 0);
     }
 
     internal static string? NormalizeForDisplay(string? diagnostic)

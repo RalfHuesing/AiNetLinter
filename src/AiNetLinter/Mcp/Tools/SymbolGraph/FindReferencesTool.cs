@@ -64,6 +64,7 @@ internal static class FindReferencesTool
                     normalizedMaxResults,
                     ct,
                     AssemblySymbolIdentity: state.AssemblySymbolIdentity));
+            traversal = TransitiveCallGraphFormatter.ProjectDiagnostics(traversal);
             var body = TransitiveCallGraphFormatter.Format(traversal);
             if (traversal.Completeness.TotalCallSiteCount == 0)
             {

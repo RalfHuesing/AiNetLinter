@@ -40,6 +40,15 @@ internal static class MetricsTreeRoslynScanner
 {
     internal static async Task<string> BuildTreeAsync(MetricsTreeRoslynScanParameters scan, MetricsTreeQuery query)
     {
+        var result = await BuildTreeResultAsync(scan, query);
+        return result.Root is null
+            ? result.Message!
+            : MetricsTreeRenderer.Render(result.Root, query.TopN, sortDescending: true);
+    }
+
+    internal static async Task<MetricsTreeScanResult> BuildTreeResultAsync(
+        MetricsTreeRoslynScanParameters scan, MetricsTreeQuery query)
+    {
         var solutionDir = Path.GetDirectoryName(scan.Solution.FilePath) ?? "";
         var rootRelative = MetricsTreeScanner.NormalizeRoot(query.Root);
 
@@ -48,8 +57,8 @@ internal static class MetricsTreeRoslynScanner
 
         if (scoped.Count == 0)
         {
-            return $"Keine Dateien unter root='{rootRelative}'" +
-                   (query.FileFilter != null ? " mit file_filter" : "") + " — Pfad/Filter pruefen.";
+            return new(null, $"Keine Dateien unter root='{rootRelative}'" +
+                (query.FileFilter != null ? " mit file_filter" : "") + " — Pfad/Filter pruefen.");
         }
 
         var metrics = query.Mode == MetricsTreeMode.ViolationDensity
@@ -58,13 +67,12 @@ internal static class MetricsTreeRoslynScanner
 
         if (metrics.Count == 0)
         {
-            return $"Keine auswertbaren Dateien unter root='{rootRelative}' — Pfad/Filter pruefen.";
+            return new(null, $"Keine auswertbaren Dateien unter root='{rootRelative}' — Pfad/Filter pruefen.");
         }
 
         var rootName = MetricsTreeScanner.ComputeRootName(solutionDir, rootRelative);
         var builderRoot = MetricsTreeScanner.BuildNode(rootName, rootRelative, metrics, level: 0, query.Depth);
-        var treeRoot = MetricsTreeScanner.ToMetricsTreeNode(builderRoot, query.Mode);
-        return MetricsTreeRenderer.Render(treeRoot, query.TopN, sortDescending: true);
+        return new(MetricsTreeScanner.ToMetricsTreeNode(builderRoot, query.Mode), null);
     }
 
     private static async Task<List<FileMetric>> ComputeViolationDensityMetricsAsync(

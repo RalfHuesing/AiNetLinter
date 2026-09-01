@@ -74,10 +74,14 @@ internal static class InspectAssemblyTool
         var diagnostics = AssemblyAnalysisResponseLimits.ProjectDiagnostics(
             context.Diagnostics,
             lease?.ReferenceExpansionDiagnostics);
-        var referenceSessions = AssemblyAnalysisResponseLimits.ProjectReferenceSessions(lease?.ReferenceSessions);
+        var includeReferenceDetails = arguments.IncludeReferenceDetails;
+        var referenceSessions = includeReferenceDetails
+            ? AssemblyAnalysisResponseLimits.ProjectReferenceSessions(lease?.ReferenceSessions)
+            : Array.Empty<AssemblyReferenceSessionDto>();
         var referenceSummary = AssemblyAnalysisResponseLimits.CreateReferenceSummary(
             context.References,
-            lease?.ReferenceSessions);
+            lease?.ReferenceSessions,
+            includeReferenceDetails);
         var effectiveStatus = context.Status.ResolveEffectiveStatus(
             context.Diagnostics
                 .Concat(lease?.ReferenceExpansionDiagnostics ?? Array.Empty<string>())
@@ -86,7 +90,9 @@ internal static class InspectAssemblyTool
             fullPath,
             context.Identity,
             selection.Namespaces,
-            AssemblyAnalysisResponseLimits.ProjectReferences(context.References),
+            includeReferenceDetails
+                ? AssemblyAnalysisResponseLimits.ProjectReferences(context.References)
+                : Array.Empty<AssemblyReferenceDto>(),
             selection.Items,
             diagnostics.Samples,
             effectiveStatus.ToCompletenessLabel(),
@@ -99,7 +105,8 @@ internal static class InspectAssemblyTool
             effectiveStatus.ToWireValue(),
             referenceSessions,
             diagnostics,
-            referenceSummary);
+            referenceSummary,
+            includeReferenceDetails);
         payload = AssemblyAnalysisResponseLimits.ProjectResponseBudget(
             payload,
             arguments.PublicOnly,

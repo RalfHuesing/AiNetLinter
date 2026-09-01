@@ -15,6 +15,8 @@ namespace AiNetLinter.Mcp.Tools.MetricsTree;
 internal sealed record MetricsTreeQuery(
     string? Root, MetricsTreeMode Mode, int Depth, int TopN, Regex? FileFilter);
 
+internal sealed record MetricsTreeScanResult(MetricsTreeNode? Root, string? Message);
+
 /// <summary>
 /// Pro-Datei-Metrik, gemeinsam fuer alle vier <c>metrics_tree</c>-Modi. Die zwei Datei-Modi
 /// (<c>code_size</c>/<c>comment_density</c>) fuellen nur <see cref="CommentLines"/>/
@@ -55,6 +57,14 @@ internal static class MetricsTreeScanner
 {
     internal static string BuildTree(Solution solution, MetricsTreeQuery query)
     {
+        var result = BuildTreeResult(solution, query);
+        return result.Root is null
+            ? result.Message!
+            : MetricsTreeRenderer.Render(result.Root, query.TopN, IsSortDescending(query.Mode));
+    }
+
+    internal static MetricsTreeScanResult BuildTreeResult(Solution solution, MetricsTreeQuery query)
+    {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var rootRelative = NormalizeRoot(query.Root);
 
@@ -63,8 +73,8 @@ internal static class MetricsTreeScanner
 
         if (scoped.Count == 0)
         {
-            return $"Keine Dateien unter root='{rootRelative}'" +
-                   (query.FileFilter != null ? " mit file_filter" : "") + " — Pfad/Filter pruefen.";
+            return new(null, $"Keine Dateien unter root='{rootRelative}'" +
+                (query.FileFilter != null ? " mit file_filter" : "") + " — Pfad/Filter pruefen.");
         }
 
         var metrics = scoped
@@ -75,15 +85,15 @@ internal static class MetricsTreeScanner
 
         if (metrics.Count == 0)
         {
-            return $"Keine lesbaren Dateien unter root='{rootRelative}' — Dateien pruefen (evtl. gesperrt/geloescht).";
+            return new(null, $"Keine lesbaren Dateien unter root='{rootRelative}' — Dateien pruefen (evtl. gesperrt/geloescht).");
         }
 
         var rootName = ComputeRootName(solutionDir, rootRelative);
         var builderRoot = BuildNode(rootName, rootRelative, metrics, level: 0, query.Depth);
-        var treeRoot = ToMetricsTreeNode(builderRoot, query.Mode);
-        var sortDescending = query.Mode == MetricsTreeMode.CodeSize;
-        return MetricsTreeRenderer.Render(treeRoot, query.TopN, sortDescending);
+        return new(ToMetricsTreeNode(builderRoot, query.Mode), null);
     }
+
+    internal static bool IsSortDescending(MetricsTreeMode mode) => mode != MetricsTreeMode.CommentDensity;
 
     /// <summary>Normalisiert den <c>root</c>-Parameter (Backslashes, fuehrende/folgende Slashes) —
     /// gemeinsam genutzt von den Datei- und den Roslyn-Modi (<see cref="MetricsTreeRoslynScanner"/>).</summary>

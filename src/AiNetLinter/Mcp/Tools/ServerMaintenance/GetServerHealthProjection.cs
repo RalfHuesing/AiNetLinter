@@ -79,6 +79,13 @@ internal static class GetServerHealthProjection
         };
     }
 
+    internal static IReadOnlyDictionary<string, int> CountAssemblyStatuses(
+        IEnumerable<AssemblyHealthEntry> assemblies) =>
+        assemblies
+            .GroupBy(assembly => assembly.LoadState, StringComparer.Ordinal)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+
     internal static ProjectHealthEntry ToProjectEntry(ProjectSnapshot snapshot)
     {
         var server = snapshot.Server;

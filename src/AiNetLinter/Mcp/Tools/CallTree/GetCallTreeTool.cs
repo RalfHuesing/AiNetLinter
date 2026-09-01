@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
@@ -77,14 +78,22 @@ internal static class GetCallTreeTool
             // diesen Fall zeigte der Sufficiency-Hinweis faelschlich "vollstaendig" an, obwohl der
             // Baum sichtbar gekappt war. Marker-String-Erkennung analog zum "hard-cap"-Muster in
             // FindReferencesTool.
-            var topNTruncated = body.Contains("... und ", StringComparison.Ordinal);
+            var topNTruncated = HasTreeOverflow(root, topN);
             var finalBody = truncated
                 ? body + "\n\n" + BuildTruncationMeta()
                 : topNTruncated
                     ? body + "\n\n" + BuildTopNTruncationMeta()
                     : McpSufficiencyHints.Append(body);
 
-            return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, finalBody));
+            return McpToolResults.Text(
+                FindSymbolTool.PrependWarning(warning, finalBody),
+                new CallTreePayload(
+                    root,
+                    CallTreeDirectionNames.For(direction),
+                    input.Depth,
+                    topN,
+                    truncated || topNTruncated,
+                    topNTruncated));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -123,6 +132,9 @@ internal static class GetCallTreeTool
         string.Equals(format, MermaidFormat, StringComparison.OrdinalIgnoreCase)
             ? CallTreeMermaidRenderer.Render(root, topN)
             : MetricsTreeRenderer.Render(root, topN, sortDescending: false);
+
+    internal static bool HasTreeOverflow(MetricsTreeNode root, int topN) =>
+        root.Children.Count > topN || root.Children.Any(child => HasTreeOverflow(child, topN));
 
     private static string BuildTruncationMeta() =>
         $"[Baum trunkiert — hard-cap {CallGraphTreeBuilder.MaxCallTreeNodes} Knoten erreicht, " +

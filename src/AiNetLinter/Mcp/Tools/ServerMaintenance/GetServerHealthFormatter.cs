@@ -1,6 +1,8 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using AiNetLinter.Mcp.Daemon;
 using AiNetLinter.Mcp.Projects;
@@ -56,6 +58,18 @@ internal static class GetServerHealthFormatter
         AppendAssemblySourceDetails(builder, assembly);
         AppendAssemblyDiagnostics(builder, assembly);
         builder.AppendLine();
+    }
+
+    internal static void AppendAssemblyAggregate(
+        StringBuilder builder,
+        int totalSessions,
+        IReadOnlyDictionary<string, int> statusCounts,
+        int diagnosticCount)
+    {
+        builder.AppendLine("- Sessiondetails unterdrückt; includeSessions=true für die Liste");
+        builder.AppendLine($"- Sessions gesamt: {totalSessions}");
+        builder.AppendLine($"- Statusverteilung: {string.Join(", ", statusCounts.Select(pair => $"{pair.Key}={pair.Value}"))}");
+        builder.AppendLine($"- Diagnosen gesamt: {diagnosticCount}");
     }
 
     private static void AppendAssemblyHeader(StringBuilder builder, AssemblyHealthEntry assembly)

@@ -65,26 +65,42 @@ internal static class MetricsTreeTool
         if (filterResult.Error is not null) return filterResult.Error;
 
         var query = new MetricsTreeQuery(args.Root, parsedMode.Value, args.Depth, args.TopN, filterResult.Regex);
-        var text = await BuildTreeTextAsync(state, solution, query, ct);
+        var scan = await BuildTreeResultAsync(state, solution, query, ct);
+        if (scan.Root is null)
+        {
+            return McpToolResults.Text(scan.Message!);
+        }
+
+        var text = MetricsTreeRenderer.Render(
+            scan.Root,
+            query.TopN,
+            MetricsTreeScanner.IsSortDescending(query.Mode));
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
         var withHint = McpDrillDownHints.Append(text, args.Depth);
-        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, withHint));
+        return McpToolResults.Text(
+            FindSymbolTool.PrependWarning(warning, withHint),
+            new MetricsTreePayload(
+                MetricsTreeModeParser.ToWireValue(query.Mode),
+                query.Root,
+                query.Depth,
+                query.TopN,
+                scan.Root));
     }
 
     /// <summary>Dispatcht auf den passenden Scanner: die zwei Datei-Modi laufen synchron ohne
     /// Config/Console-Overhead, die zwei Roslyn-Modi brauchen <see cref="McpCodeGraphServer.GetConfigSnapshot"/>
     /// (fuer <c>LinterEngine</c>) und <see cref="McpCodeGraphServer.Console"/> (damit <c>LinterEngine</c>
     /// auf demselben Kanal loggt wie der MCP-Server selbst, analog <see cref="GetViolationsTool"/>).</summary>
-    private static async Task<string> BuildTreeTextAsync(
+    private static async Task<MetricsTreeScanResult> BuildTreeResultAsync(
         McpCodeGraphServer state, Solution solution, MetricsTreeQuery query, CancellationToken ct)
     {
         if (query.Mode is MetricsTreeMode.CodeSize or MetricsTreeMode.CommentDensity)
         {
-            return MetricsTreeScanner.BuildTree(solution, query);
+            return MetricsTreeScanner.BuildTreeResult(solution, query);
         }
 
         var configSnapshot = state.GetConfigSnapshot();
-        return await MetricsTreeRoslynScanner.BuildTreeAsync(
+        return await MetricsTreeRoslynScanner.BuildTreeResultAsync(
             new MetricsTreeRoslynScanParameters(solution, configSnapshot.Config, state.Console, ct), query);
     }
 

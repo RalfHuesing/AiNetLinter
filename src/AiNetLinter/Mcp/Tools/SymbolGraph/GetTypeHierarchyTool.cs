@@ -46,14 +46,15 @@ internal static class GetTypeHierarchyTool
         }
 
         var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
-        var (text, isTruncated) = await GetTypeHierarchyFormatter.BuildHierarchyTextAsync(type, solution, normalizedMaxResults, ct);
+        var payload = await GetTypeHierarchyFormatter.BuildHierarchyAsync(type, solution, normalizedMaxResults, ct);
+        var text = GetTypeHierarchyFormatter.FormatText(payload);
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
         // Basisklassen/Interfaces trunkieren nie (durch die Deklaration des Typs selbst begrenzt),
         // aber abgeleitete/implementierende Typen sind transitiv ueber die gesamte Solution
         // aufgeloest und koennen bei weit verbreiteten Basistypen/Interfaces (z. B. IDisposable)
         // das maxResults-Limit ueberschreiten — Sufficiency-Hinweis daher nur im nicht-trunkierten
         // Fall (analog zu FindReferencesTool/GetViolationsTool).
-        var finalText = isTruncated ? text : McpSufficiencyHints.Append(text);
-        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, finalText));
+        var finalText = payload.SubtypesTruncated ? text : McpSufficiencyHints.Append(text);
+        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, finalText), payload);
     }
 }

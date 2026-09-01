@@ -25,7 +25,11 @@ internal sealed record TraversalCompleteness(
     bool TruncatedByMaxResults,
     bool TruncatedByNodeLimit,
     bool DepthWasClamped,
-    IReadOnlyList<string>? Diagnostics = null);
+    IReadOnlyList<string>? Diagnostics = null,
+    int DiagnosticTotalCount = 0,
+    int DiagnosticShownCount = 0,
+    bool DiagnosticsTruncated = false,
+    IReadOnlyList<string>? DiagnosticsTruncatedBy = null);
 
 internal sealed record ReferenceTraversalResult(
     IReadOnlyList<TransitiveCallSiteEntry> CallSites,

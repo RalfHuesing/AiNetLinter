@@ -18,7 +18,9 @@ internal sealed record GetServerHealthOptions(
     DaemonRuntimeContext? RuntimeContext = null,
     string? AssemblyPath = null,
     bool IncludeDiagnostics = false,
-    int MaxDiagnostics = AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics);
+    int MaxDiagnostics = AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics,
+    bool IncludeSessions = false,
+    int MaxSessions = GetServerHealthTool.DefaultMaxSessions);
 
 /// <summary>
 /// MCP-Tool <c>get_server_health</c> fuer den Diagnose-Schnappschuss der residenten
@@ -27,6 +29,9 @@ internal sealed record GetServerHealthOptions(
 /// </summary>
 internal static class GetServerHealthTool
 {
+    internal const int DefaultMaxSessions = 20;
+    internal const int MaxSessions = 50;
+
     internal static Task<CallToolResult> ExecuteAsync(
         ProjectRegistry registry,
         string? projectRoot = null,
@@ -59,10 +64,7 @@ internal static class GetServerHealthTool
             }
 
             using var lease = leaseResult.Lease!;
-            if (options.IncludeDiagnostics)
-            {
-                await lease.ExpandReferencesAsync(cancellationToken).ConfigureAwait(false);
-            }
+            await lease.ExpandReferencesAsync(cancellationToken).ConfigureAwait(false);
             return GetServerHealthResponseBuilder.Build(
                 Array.Empty<ProjectSnapshot>(),
                 [GetServerHealthProjection.ToAssemblyEntry(lease)],

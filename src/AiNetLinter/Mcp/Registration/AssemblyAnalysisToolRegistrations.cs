@@ -2,6 +2,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Tools;
@@ -34,10 +35,11 @@ internal static class AssemblyAnalysisToolRegistrations
                 string? memberName = null,
                 bool publicOnly = true,
                 int maxResults = AssemblyAnalysisService.DefaultMaxResults,
-                bool exactTypeName = false,
-                string[]? memberNames = null,
-                int maxMembers = AssemblyAnalysisService.DefaultMaxMembers,
-                CancellationToken ct = default) =>
+                 bool exactTypeName = false,
+                 string[]? memberNames = null,
+                 int maxMembers = AssemblyAnalysisService.DefaultMaxMembers,
+                 bool? includeReferences = null,
+                 CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
                     new AnalysisToolCallRequest(
@@ -52,10 +54,14 @@ internal static class AssemblyAnalysisToolRegistrations
                                     memberName,
                                     publicOnly,
                                     maxResults,
-                                    exactTypeName,
-                                    memberNames,
-                                    maxMembers)),
-                             ExpandAssemblyReferences: true),
+                                     exactTypeName,
+                                     memberNames,
+                                     maxMembers,
+                                     includeReferences)),
+                              ExpandAssemblyReferences: includeReferences ??
+                                  (string.IsNullOrWhiteSpace(typeName)
+                                   && string.IsNullOrWhiteSpace(memberName)
+                                   && (memberNames is null || memberNames.All(string.IsNullOrWhiteSpace)))),
                         ct)),
             McpToolRegistrationOptions.AssemblyTool("inspect_assembly", InspectAssemblyDescription)));
     }
@@ -66,7 +72,9 @@ internal static class AssemblyAnalysisToolRegistrations
         "sind Pflicht; ein Consumer-Projekt wird in diesem Dispatch-Schritt nicht verwendet. " +
         "namespace, typeName und memberName filtern, publicOnly ist standardmaessig true, " +
         "exactTypeName schaltet fuer typeName von Teiltext- auf Exaktsuche um, memberNames " +
-        "ergaenzt den Teiltextfilter memberName um eine exakte OR-Auswahl, " +
+         "ergaenzt den Teiltextfilter memberName um eine exakte OR-Auswahl, " +
+         "includeReferences (Default: bei Type-/Member-Filter false, sonst true) steuert " +
+         "Referenzlisten und Referenz-Sessions; ohne Detailflag bleiben nur Summen sichtbar, " +
         "maxResults begrenzt Typen (Default 100, Maximum 1000), " +
         "maxMembers begrenzt Member je Typ (Default 100, Maximum 1000). Identitaet, " +
         "Referenzen, Typen, Methoden, Properties, Felder, Events, Attribute und Diagnosen " +

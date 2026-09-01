@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.Linq;
 using AiNetLinter.Mcp.Assemblies;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -14,7 +15,14 @@ internal sealed record InspectAssemblyArguments(
     int MaxResults,
     bool ExactTypeName = false,
     IReadOnlyList<string>? MemberNames = null,
-    int MaxMembers = 0);
+    int MaxMembers = 0,
+    bool? IncludeReferences = null)
+{
+    internal bool IncludeReferenceDetails => IncludeReferences ?? (
+        string.IsNullOrWhiteSpace(TypeName)
+        && string.IsNullOrWhiteSpace(MemberName)
+        && (MemberNames is null || MemberNames.All(string.IsNullOrWhiteSpace)));
+}
 
 internal sealed record FindAssemblyExtensionsArguments(
     string? AssemblyPath,
@@ -137,7 +145,8 @@ internal sealed record InspectAssemblyPayload(
     string SessionStatus = "complete",
     IReadOnlyList<AssemblyReferenceSessionDto>? ReferenceSessions = null,
     AssemblyDiagnosticsSummary? DiagnosticsSummary = null,
-    AssemblyReferenceSummary? ReferenceSummary = null);
+    AssemblyReferenceSummary? ReferenceSummary = null,
+    bool ReferenceDetailsIncluded = true);
 
 internal sealed record FindAssemblyExtensionsPayload(
     string AssemblyPath,

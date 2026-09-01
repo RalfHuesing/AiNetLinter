@@ -402,3 +402,32 @@
 - Abgeschlossene Korrektursignaturen: `assembly-response-budget-projection-missing-after-compactor-removal`, `response-projection-structural-rule-drift`, `typed-error-payload-contract-test-drift`, `mcp-error-helper-parameter-growth` – jeweils `fixed` in `tech-debt.md`.
 - Paketnachweise: gezielte 29/29 Budgettests sowie 11/11 Fehlerpayloadtests; frische Builds mit 0 Warnungen/0 Fehlern; scoped `get_violations`-Nachweise für Produktions- und Testbereiche ohne auftragsbezogene Verstöße; vollständige Gates mit abgegrenztem Alt-/Umgebungsfehlerstand.
 - Nächste Aktion: Paket 2 – Progressive Disclosure, Diagnosen und Health.
+
+## 2026-09-01 – Paket 2 Implementierer gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `08ca9222`
+- Status: running
+- Auftrag: `includeReferences`/Detailflags für gezielte Assembly-Inspektion, gemeinsame begrenzte Diagnoseprojektion für Navigation, kompakter globaler Health mit optionalen Sessiondetails und strukturierte Erfolgspayloads für Call Tree, Type Hierarchy, Metrics Tree und Reload Config umsetzen. Relevante Tests/Dokumentation ergänzen, `code-map.md` pflegen und nach letzter Codeänderung gezielt testen sowie `get_violations` ausführen. Kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
+
+## 2026-09-01 – Paket 2 Implementierer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer
+- Subagent-ID: `01a05c0d-ba65-7861-9b42-151c916e60b6`
+- Status: completed; unreviewter Zwischenstand ohne Rollen-Commit übergeben
+- Ergebnis: `includeReferences` und kompakte Referenzsummen für gezielte Assembly-Inspektionen; gemeinsame Navigation-Diagnoseprojektion mit maximal fünf Samples/Zählern/`truncatedBy`; globales Health-Aggregat mit `includeSessions`/`maxSessions` bei detailliertem zielgebundenem Health; strukturierte Payloads für Call Tree, Type Hierarchy und Metrics Tree. `code-map.md` aktualisiert.
+- Bewusst nicht fertiggestellt: `ReloadConfigTool`-DTO, neue Regressionstestassertions und vollständige Paket-2-Testanpassungen; dies verletzt noch explizite Paket-2-Musskriterien.
+- Verifikationsnachweise nach der letzten Codeänderung:
+  - `dotnet build --no-restore`: erfolgreich, 0 Warnungen/Fehler.
+  - FastTests: 55 bestanden, 1 fehlgeschlagen – Altassertion erwartet ungefragte Referenzdetails.
+  - Health-/Reload-IntegrationTests: 12 bestanden, 2 fehlgeschlagen – Altassertion erwartet globale Sessionliste.
+  - `git diff --check`: erfolgreich.
+  - MCP-Audits: 0 Duplikate, 0 High-Confidence-Dead-Code, 11 Magic-Value-Hinweise.
+  - `get_violations` mit `targetType=project`, absolutem Projektpfad und `scopeFilter=src/AiNetLinter/Mcp`: 6 Befunde; vier durch den Zwischenstand verursacht, zwei `FindSymbolScanner`-Befunde unverändert und scopefremd.
+- Nicht ausgeführt: Sage-Abfrage unter 8 KiB ohne Detailflag und vollständige Gesamtgates.
+- Nächste Aktion: Implementierungs-Checkpoint committen; Review muss `ReloadConfig`-DTO, Regressionen und die sechs Violations klassifizieren.

@@ -35,23 +35,46 @@ internal static class GetTypeHierarchyFormatter
     internal static async Task<(string Text, bool IsTruncated)> BuildHierarchyTextAsync(
         INamedTypeSymbol type, Solution solution, int maxResults, CancellationToken ct)
     {
+        var payload = await BuildHierarchyAsync(type, solution, maxResults, ct);
+        return (FormatText(payload), payload.SubtypesTruncated);
+    }
+
+    internal static async Task<TypeHierarchyPayload> BuildHierarchyAsync(
+        INamedTypeSymbol type, Solution solution, int maxResults, CancellationToken ct)
+    {
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
 
-        var (subtypesSection, isTruncated) = await FormatSubtypesSectionAsync(type, solution, outputRoot, maxResults, ct);
+        var baseTypes = FormatBaseTypes(type, outputRoot).ToList();
+        var interfaces = FormatInterfaces(type, outputRoot).ToList();
+        var subtypeProjection = await ProjectSubtypesAsync(type, solution, outputRoot, maxResults, ct);
+        var diHits = await DiRegistrationHeuristics.FindRegistrationsAsync(solution, type, ct);
+        return new(
+            type.ToDisplayString(),
+            baseTypes,
+            interfaces,
+            type.TypeKind == TypeKind.Interface ? "Implementierende Typen:" : "Abgeleitete Klassen:",
+            subtypeProjection.ShownLines,
+            subtypeProjection.TotalCount,
+            subtypeProjection.ShownCount,
+            subtypeProjection.IsTruncated,
+            subtypeProjection.IsTruncated ? ["maxResults"] : [],
+            diHits);
+    }
+
+    internal static string FormatText(TypeHierarchyPayload payload)
+    {
         var sections = new List<string>
         {
-            FormatSection("Basisklassen:", FormatBaseTypes(type, outputRoot), "Keine Basisklasse."),
-            FormatSection("Implementierte Interfaces:", FormatInterfaces(type, outputRoot), "Keine Interfaces."),
-            subtypesSection,
+            FormatSection("Basisklassen:", payload.BaseTypes, "Keine Basisklasse."),
+            FormatSection("Implementierte Interfaces:", payload.Interfaces, "Keine Interfaces."),
+            FormatSubtypesSection(payload),
         };
-
-        var diHits = await DiRegistrationHeuristics.FindRegistrationsAsync(solution, type, ct);
-        if (diHits.Count > 0)
+        if (payload.DiRegistrations.Count > 0)
         {
-            sections.Add(FormatDiRegistrationSection(diHits));
+            sections.Add(FormatDiRegistrationSection(payload.DiRegistrations));
         }
 
-        return (string.Join("\n\n", sections), isTruncated);
+        return string.Join("\n\n", sections);
     }
 
     private static string FormatDiRegistrationSection(IReadOnlyList<string> hits)
@@ -99,21 +122,19 @@ internal static class GetTypeHierarchyFormatter
         return new[] { $"{kindLabel}: {symbol.ToDisplayString()} (extern, keine Datei im Repo)" };
     }
 
-    private static async Task<(string Text, bool IsTruncated)> FormatSubtypesSectionAsync(
+    private static async Task<SubtypeProjection> ProjectSubtypesAsync(
         INamedTypeSymbol type, Solution solution, string outputRoot, int maxResults, CancellationToken ct)
     {
         if (type.TypeKind == TypeKind.Interface)
         {
             var implementations = await SymbolFinder.FindImplementationsAsync(
                 type, solution, transitive: true, cancellationToken: ct);
-            return FormatTruncatedSubtypesSection(
-                "Implementierende Typen:", implementations.ToList(), outputRoot, "Keine implementierenden Typen.", maxResults);
+            return ProjectSubtypes(implementations.ToList(), outputRoot, maxResults);
         }
 
         var derived = await SymbolFinder.FindDerivedClassesAsync(
             type, solution, transitive: true, cancellationToken: ct);
-        return FormatTruncatedSubtypesSection(
-            "Abgeleitete Klassen:", derived.ToList(), outputRoot, "Keine abgeleiteten Typen.", maxResults);
+        return ProjectSubtypes(derived.ToList(), outputRoot, maxResults);
     }
 
     /// <summary>
@@ -121,18 +142,23 @@ internal static class GetTypeHierarchyFormatter
     /// (z. B. <c>partial class</c>) darf nicht mehrere "Slots" im Limit verbrauchen. Meta-Zeile
     /// nennt die Gesamtzahl der TYPEN, nicht der formatierten Zeilen.
     /// </summary>
-    private static (string Text, bool IsTruncated) FormatTruncatedSubtypesSection(
-        string heading, IReadOnlyList<ISymbol> types, string outputRoot, string emptyMessage, int maxResults)
+    private static SubtypeProjection ProjectSubtypes(
+        IReadOnlyList<ISymbol> types, string outputRoot, int maxResults)
     {
         var isTruncated = types.Count > maxResults;
         var shown = isTruncated ? types.Take(maxResults).ToList() : types;
         var lines = shown.SelectMany(s => FindSymbolTool.FormatSymbolLocations(s, outputRoot));
-        var text = FormatSection(heading, lines, emptyMessage);
-        if (isTruncated)
-        {
-            text += $"\n[{types.Count} Typen gesamt, {maxResults} gezeigt — maxResults erhoehen]";
-        }
-        return (text, isTruncated);
+        return new(types.Count, shown.Count, isTruncated, lines.ToList());
+    }
+
+    private static string FormatSubtypesSection(TypeHierarchyPayload payload)
+    {
+        var body = payload.Subtypes.Count == 0
+            ? "Keine abgeleiteten Typen."
+            : string.Join("\n", payload.Subtypes);
+        return payload.SubtypesTruncated
+            ? $"{payload.SubtypeHeading}\n{body}\n[{payload.TotalSubtypeCount} Typen gesamt, {payload.ShownSubtypeCount} gezeigt — maxResults erhoehen]"
+            : $"{payload.SubtypeHeading}\n{body}";
     }
 
     private static string FormatSection(string heading, IEnumerable<string> lines, string emptyMessage)
@@ -141,4 +167,10 @@ internal static class GetTypeHierarchyFormatter
         var body = materialized.Count == 0 ? emptyMessage : string.Join("\n", materialized);
         return $"{heading}\n{body}";
     }
+
+    private sealed record SubtypeProjection(
+        int TotalCount,
+        int ShownCount,
+        bool IsTruncated,
+        IReadOnlyList<string> ShownLines);
 }

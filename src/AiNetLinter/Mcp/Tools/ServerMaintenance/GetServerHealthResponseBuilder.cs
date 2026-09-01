@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -21,6 +22,16 @@ internal static class GetServerHealthResponseBuilder
         var projectedAssemblies = assemblies
             .Select(assembly => GetServerHealthProjection.ProjectAssemblyEntry(assembly, options))
             .ToList();
+        var targeted = options.ProjectRoot is not null || options.AssemblyPath is not null;
+        var totalAssemblySessions = projectedAssemblies.Count;
+        var maxSessions = Math.Clamp(options.MaxSessions, 1, GetServerHealthTool.MaxSessions);
+        var shownAssemblies = targeted || options.IncludeSessions
+            ? projectedAssemblies.Take(maxSessions).ToList()
+            : null;
+        var sessionsTruncated = shownAssemblies is not null && totalAssemblySessions > shownAssemblies.Count;
+        var sessionsTruncatedBy = sessionsTruncated ? new[] { "maxSessions" } : Array.Empty<string>();
+        var statusCounts = GetServerHealthProjection.CountAssemblyStatuses(projectedAssemblies);
+        var diagnosticCount = projectedAssemblies.Sum(assembly => assembly.DiagnosticsSummary?.TotalCount ?? 0);
         var builder = new StringBuilder();
         builder.AppendLine("# AiNetLinter MCP-Server — Health");
         builder.AppendLine();
@@ -35,20 +46,40 @@ internal static class GetServerHealthResponseBuilder
             GetServerHealthFormatter.AppendProjectSection(builder, snapshot);
         }
 
-        builder.AppendLine($"## Assembly-Sessions ({projectedAssemblies.Count})");
+        builder.AppendLine($"## Assembly-Sessions ({totalAssemblySessions})");
         builder.AppendLine();
-        foreach (var assembly in projectedAssemblies)
+        if (shownAssemblies is null)
         {
-            GetServerHealthFormatter.AppendAssemblySection(builder, assembly);
+            GetServerHealthFormatter.AppendAssemblyAggregate(
+                builder, totalAssemblySessions, statusCounts, diagnosticCount);
+        }
+        else
+        {
+            if (sessionsTruncated)
+            {
+                builder.AppendLine($"- Sessiondetails: {shownAssemblies.Count} von {totalAssemblySessions} (gekürzt: maxSessions)");
+                builder.AppendLine();
+            }
+            foreach (var assembly in shownAssemblies)
+            {
+                GetServerHealthFormatter.AppendAssemblySection(builder, assembly);
+            }
         }
 
         var payload = new ServerHealthAggregatePayload(
             Version: McpServerVersion.Get(),
             Projects: snapshots.Select(GetServerHealthProjection.ToProjectEntry).ToList(),
             Daemon: daemonPayload,
-            Assemblies: projectedAssemblies,
+            Assemblies: shownAssemblies,
             DiagnosticsIncluded: options.IncludeDiagnostics,
-            DiagnosticLimit: AssemblyAnalysisResponseLimits.NormalizeDiagnosticLimit(options.MaxDiagnostics));
+            DiagnosticLimit: AssemblyAnalysisResponseLimits.NormalizeDiagnosticLimit(options.MaxDiagnostics),
+            SessionsIncluded: shownAssemblies is not null,
+            TotalAssemblySessions: totalAssemblySessions,
+            ShownSessionCount: shownAssemblies?.Count ?? 0,
+            SessionsTruncated: sessionsTruncated,
+            SessionsTruncatedBy: sessionsTruncatedBy,
+            AssemblyStatusCounts: statusCounts,
+            AssemblyDiagnosticCount: diagnosticCount);
         return McpToolResults.Text(builder.ToString().TrimEnd(), payload);
     }
 

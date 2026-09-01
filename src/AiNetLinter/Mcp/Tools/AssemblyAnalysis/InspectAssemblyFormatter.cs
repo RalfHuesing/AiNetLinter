@@ -59,6 +59,10 @@ internal static class InspectAssemblyFormatter
             ? references.Count.ToString()
             : $"{summary.ShownReferenceCount} von {summary.TotalReferenceCount}";
         builder.AppendLine($"Referenzen: {referenceCount}{(summary?.ReferencesTruncated == true ? " (gekürzt)" : string.Empty)}");
+        if (summary?.ReferencesTruncated == true && references.Count == 0)
+        {
+            builder.AppendLine("- Referenzdetails nicht angefordert; includeReferences=true für die Liste");
+        }
         foreach (var reference in references)
         {
             var path = reference.ResolvedPath is null ? string.Empty : $", Pfad `{reference.ResolvedPath}`";
@@ -78,6 +82,10 @@ internal static class InspectAssemblyFormatter
             ? sessions.Count.ToString()
             : $"{summary.ShownReferenceSessionCount} von {summary.TotalReferenceSessionCount}";
         builder.AppendLine($"Referenz-Sessions: {sessionCount}{(summary?.ReferenceSessionsTruncated == true ? " (gekürzt)" : string.Empty)}");
+        if (summary?.ReferenceSessionsTruncated == true && sessions.Count == 0)
+        {
+            builder.AppendLine("- Referenz-Sessiondetails nicht angefordert; includeReferences=true für die Liste");
+        }
         foreach (var session in sessions)
         {
             var identity = session.Identity?.Name ?? session.Reference.Name;

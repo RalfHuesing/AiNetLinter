@@ -62,7 +62,14 @@ internal sealed record ServerHealthAggregatePayload(
     DaemonHealthPayload? Daemon = null,
     IReadOnlyList<AssemblyHealthEntry>? Assemblies = null,
     bool DiagnosticsIncluded = false,
-    int DiagnosticLimit = AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics);
+    int DiagnosticLimit = AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics,
+    bool SessionsIncluded = false,
+    int TotalAssemblySessions = 0,
+    int ShownSessionCount = 0,
+    bool SessionsTruncated = false,
+    IReadOnlyList<string>? SessionsTruncatedBy = null,
+    IReadOnlyDictionary<string, int>? AssemblyStatusCounts = null,
+    int AssemblyDiagnosticCount = 0);
 
 internal sealed record DaemonHealthPayload(
     string Mode,

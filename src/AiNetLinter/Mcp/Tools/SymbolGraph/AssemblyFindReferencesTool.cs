@@ -60,6 +60,7 @@ internal static class AssemblyFindReferencesTool
                     request.Depth,
                     navigation),
                 cancellationToken).ConfigureAwait(false);
+            traversal = TransitiveCallGraphFormatter.ProjectDiagnostics(traversal);
             var formatted = TransitiveCallGraphFormatter.Format(traversal);
             var body = traversal.Completeness.TotalCallSiteCount == 0
                 ? $"Keine Aufrufstellen gefunden fuer '{request.SymbolIdentifier}'" +

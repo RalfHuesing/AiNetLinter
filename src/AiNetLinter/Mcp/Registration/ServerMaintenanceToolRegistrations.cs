@@ -70,10 +70,12 @@ internal static class ServerMaintenanceToolRegistrations
         tools.Add(McpServerTool.Create(
             async (
                 string? targetType = null,
-                string? targetPath = null,
-                bool includeDiagnostics = false,
-                int maxDiagnostics = AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics,
-                CancellationToken ct = default) =>
+                 string? targetPath = null,
+                 bool includeDiagnostics = false,
+                 int maxDiagnostics = AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics,
+                 bool includeSessions = false,
+                 int maxSessions = GetServerHealthTool.DefaultMaxSessions,
+                 CancellationToken ct = default) =>
             {
                 var resolution = AnalysisTargetResolver.ResolveOptional(
                     new AnalysisTargetRequest(targetType, targetPath));
@@ -90,7 +92,9 @@ internal static class ServerMaintenanceToolRegistrations
                         new GetServerHealthOptions(
                             RuntimeContext: runtimeContext,
                             IncludeDiagnostics: includeDiagnostics,
-                            MaxDiagnostics: maxDiagnostics));
+                            MaxDiagnostics: maxDiagnostics,
+                            IncludeSessions: includeSessions,
+                            MaxSessions: maxSessions));
                 }
 
                 if (resolution.Target.TargetType == AnalysisTargetType.Assembly)
@@ -102,7 +106,9 @@ internal static class ServerMaintenanceToolRegistrations
                             AssemblyPath: resolution.Target.CanonicalPath,
                             RuntimeContext: runtimeContext,
                             IncludeDiagnostics: includeDiagnostics,
-                            MaxDiagnostics: maxDiagnostics),
+                            MaxDiagnostics: maxDiagnostics,
+                            IncludeSessions: includeSessions,
+                            MaxSessions: maxSessions),
                         ct);
                 }
 
@@ -113,20 +119,24 @@ internal static class ServerMaintenanceToolRegistrations
                             ProjectRoot: resolution.Target.CanonicalPath,
                             RuntimeContext: runtimeContext,
                             IncludeDiagnostics: includeDiagnostics,
-                            MaxDiagnostics: maxDiagnostics),
+                            MaxDiagnostics: maxDiagnostics,
+                            IncludeSessions: includeSessions,
+                            MaxSessions: maxSessions),
                         ct);
             },
             McpToolRegistrationOptions.ServerHealthTool("get_server_health", GetServerHealthDescription)));
     }
 
-    private const string GetServerHealthDescription =
+    private static readonly string GetServerHealthDescription =
         "Wann nutzen: pruefen, ob der Server laeuft und welche Projekt- und Assembly-Sessions " +
         "resident sind. Ohne targetType und targetPath: globaler Status fuer alle Projekt-Keys " +
         "und Assembly-Sessions. Mit targetType='project' und absolutem targetPath: gezielter Status fuer diesen Key. " +
         "Mit targetType='assembly' und absolutem .dll- oder .exe-Pfad: gezielter Status fuer diese Assembly-Session. " +
         "targetType und targetPath muessen entweder beide gesetzt oder beide weggelassen werden. " +
-        "Standardmaessig werden nur kompakte Metadaten und Diagnosezaehler geliefert; " +
-        "includeDiagnostics=true fordert begrenzte Diagnose-Samples an, maxDiagnostics begrenzt deren Anzahl.";
+         "Standardmaessig werden global nur Aggregat, Status- und Diagnosezaehler geliefert; " +
+         "includeSessions=true fordert begrenzte Sessiondetails an, maxSessions wird serverseitig " +
+         $"auf {GetServerHealthTool.MaxSessions} gedeckelt. includeDiagnostics=true fordert begrenzte " +
+         "Diagnose-Samples an, maxDiagnostics begrenzt deren Anzahl. Zielgebundene Antworten bleiben detailliert.";
 
     private static void AddReportObservabilityFeedback(McpServerPrimitiveCollection<McpServerTool> tools)
     {

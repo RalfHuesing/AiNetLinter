@@ -84,7 +84,7 @@ internal static class AssemblyGetCallTreeTool
             cancellationToken).ConfigureAwait(false);
         var topN = input.TopN < 1 ? 1 : input.TopN;
         var body = GetCallTreeTool.RenderTree(root, input.Format, topN);
-        var topNTruncated = body.Contains("... und ", StringComparison.Ordinal);
+        var topNTruncated = GetCallTreeTool.HasTreeOverflow(root, topN);
         return CreateResponse(
             root,
             body,
@@ -103,20 +103,28 @@ internal static class AssemblyGetCallTreeTool
         bool topNTruncated)
     {
         var treeTruncated = truncated || topNTruncated;
+        var diagnosticProjection = TransitiveCallGraphFormatter.CreateDiagnosticProjection(
+            navigation.Diagnostics.Concat(diagnostics));
         var effectiveNavigation = navigation with
         {
-            Completeness = navigation.Completeness == "complete" && !treeTruncated && diagnostics.Count == 0
+            Completeness = navigation.Completeness == "complete" && !treeTruncated && diagnosticProjection.TotalCount == 0
                 ? "complete"
                 : "partial",
-            Diagnostics = navigation.Diagnostics
-                .Concat(diagnostics)
-                .Distinct(StringComparer.Ordinal)
-                .Take(100)
-                .ToList(),
+            Diagnostics = diagnosticProjection.Samples,
+            DiagnosticTotalCount = diagnosticProjection.TotalCount,
+            DiagnosticShownCount = diagnosticProjection.Samples.Count,
+            DiagnosticsTruncated = diagnosticProjection.Truncated,
+            DiagnosticsTruncatedBy = diagnosticProjection.TruncatedBy,
         };
         var metadata = effectiveNavigation.Diagnostics
             .Select(diagnostic => $"[Assembly-Diagnostic] {diagnostic}")
             .ToList();
+        if (effectiveNavigation.DiagnosticsTruncated)
+        {
+            metadata.Add($"[{effectiveNavigation.DiagnosticTotalCount} Diagnosen gesamt, " +
+                $"{effectiveNavigation.DiagnosticShownCount} Samples gezeigt — gekürzt: " +
+                $"{string.Join(", ", effectiveNavigation.DiagnosticsTruncatedBy ?? Array.Empty<string>())}]");
+        }
         var finalBody = treeTruncated || metadata.Count > 0
             ? body + "\n\n" + string.Join(
                 "\n",

@@ -117,3 +117,46 @@
 - Disposition: accepted-deferred
 - Nächster Schritt: Nur bei einem späteren direkten Scope-Bezug prüfen; keine Ausweitung von Paket 1.
 - Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 5 abgeschlossen"
+
+### Unvollständiger ReloadConfig-Erfolgspayload
+
+- Schweregrad: P1
+- Ursachensignatur: reload-config-structured-payload-missing
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Tools/ReloadConfigTool.cs` und zugehörige Registrierung/Tests
+- Evidenz: Paket-2-Implementierer meldet das DTO und die zugehörigen Regressionstestassertions bewusst nicht fertiggestellt; das explizite Konzeptkriterium für strukturierte Reload-Config-Erfolgspayloads ist offen.
+- Disposition: fix-now
+- attempts: 0
+- Nächster Schritt: Frischer Review konkretisieren; anschließend DTO, Registrierung und Tests vervollständigen.
+- Log-Anker: `execution-log.md`, „Paket 2 Implementierer abgeschlossen"
+
+### Paket-2-Testvertrag nach Progressive Disclosure
+
+- Schweregrad: P1
+- Ursachensignatur: package2-regression-test-contract-drift
+- Scope/Fundstelle: Assembly-Inspektions- und Health-/Reload-Tests
+- Evidenz: FastTests meldeten 55 bestanden/1 fehlgeschlagen wegen erwarteter ungefragter Referenzdetails; Health-/Reload-IntegrationTests meldeten 12 bestanden/2 fehlgeschlagen wegen erwarteter globaler Sessionlisten. Die Assertions sind an den neuen expliziten Detailvertrag anzupassen, soweit sie nicht Altbestand außerhalb des Paket-Scope sind.
+- Disposition: fix-now
+- attempts: 0
+- Nächster Schritt: Review klassifiziert die konkreten Tests; betroffene Assertions und fehlende neue Regressionen gezielt korrigieren.
+- Log-Anker: `execution-log.md`, „Paket 2 Implementierer abgeschlossen"
+
+### Paket-2-Produktionsviolations aus Zwischenstand
+
+- Schweregrad: P1
+- Ursachensignatur: package2-production-violations
+- Scope/Fundstelle: `src/AiNetLinter/Mcp` – vier durch den Paket-2-Zwischenstand verursachte Befunde im Produktionsscope
+- Evidenz: Der Implementierer meldete im finalen `get_violations` sechs Befunde; vier davon seien durch den Zwischenstand verursacht, zwei `FindSymbolScanner`-Befunde unverändert und scopefremd. Konkrete Symbole werden im Review verifiziert.
+- Disposition: fix-now
+- attempts: 0
+- Nächster Schritt: Frischer Review ermittelt die vier konkreten Regelverletzungen; anschließend scope-nah beheben oder technisch begründet zurückstellen.
+- Log-Anker: `execution-log.md`, „Paket 2 Implementierer abgeschlossen"
+
+### Paket-2-Magic-Value-Kandidaten
+
+- Schweregrad: P2
+- Ursachensignatur: package2-magic-value-candidates
+- Scope/Fundstelle: geänderte Paket-2-Produktionsbereiche
+- Evidenz: Der Implementierer meldete 11 Magic-Value-Hinweise; konkrete gemeinsame fachliche Werte und sichere Zentralisierung sind noch nicht belegt.
+- Disposition: accepted-deferred
+- Nächster Schritt: Abschluss-Audit prüft nur scope-nahe, eindeutig gemeinsame Werte; keine pauschale Zentralisierung.
+- Log-Anker: `execution-log.md`, „Paket 2 Implementierer abgeschlossen"
