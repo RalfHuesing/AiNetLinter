@@ -7,6 +7,7 @@ using System.Threading;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis.Dispatch;
 using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
@@ -35,7 +36,7 @@ public sealed class AssemblyAnalysisHostCompositionTests
             new UnavailableExternalSourceProvider(),
             resourceOverrides: new ExternalResourceRegistryOverrides(MaxResidentResources: 6));
 
-        var inspect = await InspectAssemblyTool.ExecuteAsync(
+        var inspect = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(
                 assemblyPath,
@@ -49,7 +50,7 @@ public sealed class AssemblyAnalysisHostCompositionTests
                 10),
             CancellationToken.None,
             composition.Orchestrator);
-        var extensions = await FindAssemblyExtensionsTool.ExecuteAsync(
+        var extensions = await FindAssemblyExtensionsToolDispatch.ExecuteAsync(
             null,
             new FindAssemblyExtensionsArguments(assemblyPath, null, null, null, 10),
             CancellationToken.None,

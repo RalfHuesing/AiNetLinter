@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis.Dispatch;
 using AiNetLinter.TestKit;
 using Xunit;
 
@@ -35,7 +36,7 @@ public sealed class AssemblyAnalysisFilterTests
             }
             """);
 
-        var result = await InspectAssemblyTool.ExecuteAsync(
+        var result = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(assemblyPath, "Probe.Api", "PublicApi", null, true, 100, true, ["Save", "Validate"], 10),
             CancellationToken.None);
@@ -56,7 +57,7 @@ public sealed class AssemblyAnalysisFilterTests
         Assert.True(save.Parameters[2].IsOptional);
         Assert.Equal("\"safe\"", save.Parameters[2].DefaultValue);
 
-        var metadataResult = await InspectAssemblyTool.ExecuteAsync(
+        var metadataResult = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(assemblyPath, "Probe.Api", "PublicApi", null, true, 100, true, ["ReadOnly", "Escaped", "NullDefault", "this[]"], 10),
             CancellationToken.None);
@@ -73,7 +74,7 @@ public sealed class AssemblyAnalysisFilterTests
         Assert.Equal("index", indexer.Parameters[0].Name);
         Assert.Equal("int", indexer.Parameters[0].Type);
 
-        var limitedResult = await InspectAssemblyTool.ExecuteAsync(
+        var limitedResult = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(assemblyPath, "Probe.Api", "PublicApi", null, true, 100, true, ["Save", "Validate"], 1),
             CancellationToken.None);

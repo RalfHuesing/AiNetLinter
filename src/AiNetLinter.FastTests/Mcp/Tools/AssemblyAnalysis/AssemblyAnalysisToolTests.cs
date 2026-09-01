@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis.Dispatch;
 using AiNetLinter.TestKit;
 using Xunit;
 
@@ -37,7 +38,7 @@ public sealed partial class AssemblyAnalysisToolTests
             }
             """);
 
-        var result = await InspectAssemblyTool.ExecuteAsync(
+        var result = await InspectAssemblyToolDispatch.ExecuteAsync(
             state: null,
             new InspectAssemblyArguments(assemblyPath, "Probe.Api", "PublicApi", null, true, 100),
             CancellationToken.None);
@@ -70,7 +71,7 @@ public sealed partial class AssemblyAnalysisToolTests
             """);
         File.WriteAllBytes(temp.GetPath("unrelated.dll"), [0, 1, 2, 3]);
 
-        var result = await InspectAssemblyTool.ExecuteAsync(
+        var result = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(assemblyPath, null, null, null, true, 1),
             CancellationToken.None);
@@ -86,11 +87,11 @@ public sealed partial class AssemblyAnalysisToolTests
     [Fact]
     public async Task InspectAssembly_RejectsRelativeAndMissingPathsWithoutRuntimeLoading()
     {
-        var relative = await InspectAssemblyTool.ExecuteAsync(null, new InspectAssemblyArguments("relative.dll", null, null, null, true, 100), CancellationToken.None);
+        var relative = await InspectAssemblyToolDispatch.ExecuteAsync(null, new InspectAssemblyArguments("relative.dll", null, null, null, true, 100), CancellationToken.None);
         Assert.Contains("INVALID_ARGUMENT", AssemblyAnalysisTestSupport.TextOf(relative), StringComparison.Ordinal);
 
         using var temp = TestTempDirectory.Create("assembly-analysis-");
-        var missing = await InspectAssemblyTool.ExecuteAsync(null, new InspectAssemblyArguments(Path.Combine(temp.DirectoryPath, "missing.dll"), null, null, null, true, 100), CancellationToken.None);
+        var missing = await InspectAssemblyToolDispatch.ExecuteAsync(null, new InspectAssemblyArguments(Path.Combine(temp.DirectoryPath, "missing.dll"), null, null, null, true, 100), CancellationToken.None);
         Assert.Contains("nicht gefunden", AssemblyAnalysisTestSupport.TextOf(missing), StringComparison.OrdinalIgnoreCase);
     }
 
@@ -109,7 +110,7 @@ public sealed partial class AssemblyAnalysisToolTests
             }
             """);
 
-        var result = await FindAssemblyExtensionsTool.ExecuteAsync(null, new FindAssemblyExtensionsArguments(assemblyPath, null, "Mark", "Probe.Extensions", 100), CancellationToken.None);
+        var result = await FindAssemblyExtensionsToolDispatch.ExecuteAsync(null, new FindAssemblyExtensionsArguments(assemblyPath, null, "Mark", "Probe.Extensions", 100), CancellationToken.None);
         var payload = AssemblyAnalysisTestSupport.Deserialize<FindAssemblyExtensionsPayload>(result);
 
         var extension = Assert.Single(payload.Extensions);
@@ -134,7 +135,7 @@ public sealed partial class AssemblyAnalysisToolTests
             }
             """);
 
-        var result = await FindAssemblyExtensionsTool.ExecuteAsync(
+        var result = await FindAssemblyExtensionsToolDispatch.ExecuteAsync(
             null,
             new FindAssemblyExtensionsArguments(assemblyPath, "Consumer.Person", null, null, 100),
             CancellationToken.None);
@@ -172,7 +173,7 @@ public sealed partial class AssemblyAnalysisToolTests
 
         foreach (var (receiverType, expectedNames) in cases)
         {
-            var result = await FindAssemblyExtensionsTool.ExecuteAsync(
+            var result = await FindAssemblyExtensionsToolDispatch.ExecuteAsync(
                 null,
                 new FindAssemblyExtensionsArguments(assemblyPath, receiverType, null, null, 100),
                 CancellationToken.None);
@@ -199,7 +200,7 @@ public sealed partial class AssemblyAnalysisToolTests
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: consumer.Solution)));
 
-        var result = await InspectAssemblyTool.ExecuteAsync(
+        var result = await InspectAssemblyToolDispatch.ExecuteAsync(
             server,
             new InspectAssemblyArguments(
                 assemblyPath,
@@ -234,11 +235,11 @@ public sealed partial class AssemblyAnalysisToolTests
             "namespace Probe; public sealed class UsesDependency { public Dependency.Value Value { get; } = new(); }",
             dependencyPath);
 
-        var defaultPayload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(await InspectAssemblyTool.ExecuteAsync(
+        var defaultPayload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(assemblyPath, null, "UsesDependency", null, true, 100),
             CancellationToken.None));
-        var explicitFalsePayload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(await InspectAssemblyTool.ExecuteAsync(
+        var explicitFalsePayload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(
                 assemblyPath,
@@ -249,7 +250,7 @@ public sealed partial class AssemblyAnalysisToolTests
                 100,
                 IncludeReferences: false),
             CancellationToken.None));
-        var explicitTrueResult = await InspectAssemblyTool.ExecuteAsync(
+        var explicitTrueResult = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(
                 assemblyPath,
@@ -283,7 +284,7 @@ public sealed partial class AssemblyAnalysisToolTests
             public sealed class Value { public int Number => 1; }
             """);
 
-        var result = await InspectAssemblyTool.ExecuteAsync(
+        var result = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(assemblyPath, null, "Value", null, true, 100),
             CancellationToken.None);
@@ -315,7 +316,7 @@ public sealed partial class AssemblyAnalysisToolTests
             public sealed class Value { }
             """);
 
-        var result = await InspectAssemblyTool.ExecuteAsync(
+        var result = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(assemblyPath, null, null, null, true, 100),
             CancellationToken.None);
@@ -336,7 +337,7 @@ public sealed partial class AssemblyAnalysisToolTests
         var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "PartialProbe", "namespace Probe; public sealed class UsesMissing { public Missing.DependencyType Value { get; } = new(); }", dependencyPath);
         File.Delete(dependencyPath);
 
-        var result = await InspectAssemblyTool.ExecuteAsync(null, new InspectAssemblyArguments(assemblyPath, null, null, null, true, 100), CancellationToken.None);
+        var result = await InspectAssemblyToolDispatch.ExecuteAsync(null, new InspectAssemblyArguments(assemblyPath, null, null, null, true, 100), CancellationToken.None);
         var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
 
         Assert.Equal("partial", payload.Completeness);

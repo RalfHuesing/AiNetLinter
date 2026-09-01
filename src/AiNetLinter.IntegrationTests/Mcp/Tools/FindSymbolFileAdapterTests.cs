@@ -24,7 +24,7 @@ public sealed class FindSymbolFileAdapterTests : IClassFixture<FindSymbolFileAda
     public async Task FindMatchesAndFormat_NoCsMatchAndNonCsHit_EmitsUntruncatedFileList()
     {
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            fixture.Solution, "userService", kind: null, maxResults: 50);
+            new FindSymbolScanRequest(fixture.Solution, "userService", null, 50));
 
         Assert.Contains("Hinweis: kein C#-Symbol, aber Textfund", result);
         Assert.Contains("site.js", result);
@@ -37,7 +37,7 @@ public sealed class FindSymbolFileAdapterTests : IClassFixture<FindSymbolFileAda
     public async Task FindMatchesAndFormat_NoCsMatchAndNoNonCsHit_ReturnsPlainNoMatchText()
     {
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            fixture.Solution, "DoesNotExistXyzBlub123", kind: null, maxResults: 50);
+            new FindSymbolScanRequest(fixture.Solution, "DoesNotExistXyzBlub123", null, 50));
 
         Assert.Contains("Keine Treffer fuer 'DoesNotExistXyzBlub123'", result);
         Assert.DoesNotContain("Hinweis: kein C#-Symbol", result);
@@ -47,7 +47,7 @@ public sealed class FindSymbolFileAdapterTests : IClassFixture<FindSymbolFileAda
     public async Task FindMatchesAndFormat_KindFilterExcludesNonMatchingKind()
     {
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            fixture.Solution, "Greeter", kind: "method", maxResults: 50);
+            new FindSymbolScanRequest(fixture.Solution, "Greeter", "method", 50));
 
         Assert.Contains("Keine Treffer fuer 'Greeter' (Kind-Filter: method)", result);
     }
@@ -56,7 +56,7 @@ public sealed class FindSymbolFileAdapterTests : IClassFixture<FindSymbolFileAda
     public async Task FindMatchesAndFormat_ToolKindFilterExcludesNonMatchingKind()
     {
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            fixture.Solution, "Greeter", kind: "method", maxResults: 50);
+            new FindSymbolScanRequest(fixture.Solution, "Greeter", "method", 50));
 
         Assert.Contains("Keine Treffer", result);
     }
@@ -65,7 +65,7 @@ public sealed class FindSymbolFileAdapterTests : IClassFixture<FindSymbolFileAda
     public async Task FindMatchesAndFormat_GermanKindMethode_BehavesLikeEnglishMethod()
     {
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            fixture.Solution, "Greeter", kind: "Methode", maxResults: 50);
+            new FindSymbolScanRequest(fixture.Solution, "Greeter", "Methode", 50));
 
         Assert.Contains("Keine Treffer", result);
     }
@@ -74,7 +74,7 @@ public sealed class FindSymbolFileAdapterTests : IClassFixture<FindSymbolFileAda
     public async Task FindMatchesAndFormat_NoMatch_ReturnsNoResultsText()
     {
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            fixture.Solution, "DoesNotExistXyz", kind: null, maxResults: 50);
+            new FindSymbolScanRequest(fixture.Solution, "DoesNotExistXyz", null, 50));
 
         Assert.Contains("Keine Treffer fuer 'DoesNotExistXyz'", result);
     }
@@ -83,7 +83,7 @@ public sealed class FindSymbolFileAdapterTests : IClassFixture<FindSymbolFileAda
     public async Task FindMatchesAndFormat_NoCsMatchButNonCsHit_ReturnsMissHintWithFileList()
     {
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            fixture.Solution, "userService", kind: null, maxResults: 50);
+            new FindSymbolScanRequest(fixture.Solution, "userService", null, 50));
 
         Assert.Contains("Keine Treffer fuer 'userService'", result);
         Assert.Contains("Hinweis: kein C#-Symbol, aber Textfund", result);
@@ -97,7 +97,7 @@ public sealed class FindSymbolFileAdapterTests : IClassFixture<FindSymbolFileAda
     public async Task FindMatchesAndFormat_KindFilterMissHit_StillFires()
     {
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            fixture.Solution, "userService", kind: "class", maxResults: 50);
+            new FindSymbolScanRequest(fixture.Solution, "userService", "class", 50));
 
         Assert.Contains("Kind-Filter: class", result);
         Assert.Contains("Hinweis: kein C#-Symbol, aber Textfund", result);

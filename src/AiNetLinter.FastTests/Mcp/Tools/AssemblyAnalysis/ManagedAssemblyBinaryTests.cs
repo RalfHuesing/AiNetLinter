@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis.Dispatch;
 using AiNetLinter.Output;
 using AiNetLinter.TestKit;
 using Xunit;
@@ -29,7 +30,7 @@ public sealed class ManagedAssemblyBinaryTests
             }
             """);
 
-        var result = await InspectAssemblyTool.ExecuteAsync(
+        var result = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(assemblyPath, null, "Program", null, true, 100),
             CancellationToken.None);
@@ -50,7 +51,7 @@ public sealed class ManagedAssemblyBinaryTests
             "kernel32.dll");
         Assert.True(File.Exists(nativeAssemblyPath), $"Native PE fixture fehlt: {nativeAssemblyPath}");
 
-        var result = await InspectAssemblyTool.ExecuteAsync(
+        var result = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(nativeAssemblyPath, null, null, null, true, 100),
             CancellationToken.None);

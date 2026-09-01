@@ -5,15 +5,13 @@ using System.Collections.Generic;
 using System.Linq;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
-using AiNetLinter.Mcp.Daemon;
-using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
-namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
+namespace AiNetLinter.Mcp.Tools.ServerMaintenance.Projection;
 
-internal static class GetServerHealthProjection
+internal static class AssemblyHealthProjection
 {
-    internal static AssemblyHealthEntry ToAssemblyEntry(AssemblyAnalysisHealthSnapshot snapshot) =>
+    internal static AssemblyHealthEntry FromSnapshot(AssemblyAnalysisHealthSnapshot snapshot) =>
         new(
             snapshot.TargetPath,
             ResolveEffectiveStatus(snapshot.LoadState, snapshot.Diagnostics ?? Array.Empty<string>()),
@@ -27,7 +25,7 @@ internal static class GetServerHealthProjection
             snapshot.Generation,
             snapshot.Diagnostics);
 
-    internal static AssemblyHealthEntry ToAssemblyEntry(AssemblyAnalysisLease lease)
+    internal static AssemblyHealthEntry FromLease(AssemblyAnalysisLease lease)
     {
         var origin = lease.Context.Origin;
         var diagnostics = lease.Context.Diagnostics
@@ -50,7 +48,7 @@ internal static class GetServerHealthProjection
             TransitiveDiagnostics: lease.ReferenceExpansionDiagnostics);
     }
 
-    internal static AssemblyHealthEntry ProjectAssemblyEntry(
+    internal static AssemblyHealthEntry Project(
         AssemblyHealthEntry assembly,
         GetServerHealthOptions options)
     {
@@ -65,10 +63,7 @@ internal static class GetServerHealthProjection
         var effectiveCompleteness = ResolveEffectiveStatus(
             assembly.Completeness ?? effectiveLoadState,
             diagnostics);
-        if (!options.IncludeDiagnostics)
-        {
-            summary = AssemblyAnalysisResponseLimits.WithoutSamples(summary);
-        }
+        if (!options.IncludeDiagnostics) summary = AssemblyAnalysisResponseLimits.WithoutSamples(summary);
         return assembly with
         {
             LoadState = effectiveLoadState,
@@ -79,57 +74,18 @@ internal static class GetServerHealthProjection
         };
     }
 
-    internal static IReadOnlyDictionary<string, int> CountAssemblyStatuses(
+    internal static IReadOnlyDictionary<string, int> CountStatuses(
         IEnumerable<AssemblyHealthEntry> assemblies) =>
         assemblies
             .GroupBy(assembly => assembly.LoadState, StringComparer.Ordinal)
             .OrderBy(group => group.Key, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
 
-    internal static ProjectHealthEntry ToProjectEntry(ProjectSnapshot snapshot)
-    {
-        var server = snapshot.Server;
-        var (_, usedDefaultConfig, resolvedConfigPath) = server.GetConfigSnapshot();
-        var staleness = server.LastStalenessStats;
-        return new ProjectHealthEntry(
-            ProjectRoot: snapshot.RootPath,
-            LoadState: server.LoadState.ToString(),
-            SolutionPath: server.LoadState == ServerLoadState.Loading ? null : server.GetCurrentSolution()?.FilePath,
-            UsedDefaultConfig: usedDefaultConfig,
-            ConfigPath: usedDefaultConfig ? null : resolvedConfigPath,
-            LastUsedUtc: snapshot.LastUsedUtc,
-            UptimeSeconds: server.Uptime.TotalSeconds,
-            RefreshCount: server.RefreshCount,
-            StalenessCheckCount: staleness.CheckCount,
-            StalenessCheckDurationMs: staleness.TotalMilliseconds,
-            StalenessWarningCount: staleness.WarningCount,
-            LastStalenessWarning: staleness.LastWarning,
-            LastGoodStateUtc: server.LastGoodStateUtc,
-            LastLoadError: server.LastLoadError);
-    }
-
-    internal static DaemonHealthPayload CreateDaemonPayload(DaemonRuntimeContext context)
-    {
-        var snapshot = context.Snapshot;
-        return new DaemonHealthPayload(
-            context.Mode,
-            context.ConnectionId,
-            snapshot.Connections,
-            snapshot.ProcessId,
-            snapshot.Uptime.TotalSeconds,
-            snapshot.Keys,
-            snapshot.DaemonVersion);
-    }
-
     private static string ResolveEffectiveStatus(
         string statusValue,
         IReadOnlyCollection<string> diagnostics)
     {
-        if (!Enum.TryParse<AssemblySessionStatus>(statusValue, ignoreCase: true, out var status))
-        {
-            return statusValue;
-        }
-
+        if (!Enum.TryParse<AssemblySessionStatus>(statusValue, ignoreCase: true, out var status)) return statusValue;
         return status.ResolveEffectiveStatus(diagnostics).ToWireValue();
     }
 }

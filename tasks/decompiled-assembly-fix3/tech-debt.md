@@ -280,6 +280,17 @@
 - Nächster Schritt: Unabhängigen Paket-4-Abschlussreview gegen den neuen Dokumentationscheckpoint abwarten.
 - Log-Anker: `execution-log.md`, „Paket 4 P1-Korrekturversuch 2 Dokumentations-Implementierer abgeschlossen"
 
+### Paket-4-Produktionsstruktur- und Parametergrenzen
+
+- Schweregrad: P1
+- Ursachensignaturen: changed-production-aicontext-footprint-drift; changed-symbol-scanner-parameter-contract
+- Scope/Fundstelle: `Mcp/Tools/AssemblyAnalysis`, `Mcp/Tools/ServerMaintenance`, `Mcp/Tools/SymbolGraph`
+- Evidenz: Der unabhängige Abschlussreview meldete fünf AIContext-Footprints über 2500 und zwei `FindSymbolScanner`-Methoden über vier effektive Parameter im durch diesen Task berührten Produktionsscope. Der Korrekturversuch trennt Assembly-Dispatch und Response-Building, zerlegt Health-Projektionen in fachliche `Projection`-Klassen, verschiebt Assembly-Symbolformatierung nach `SymbolGraph/Navigation` und bündelt Scanner-Parameter in `FindSymbolScanRequest`. Der Nachcheck meldet Fassaden 2375, 2476 und 2482 AIContext sowie je einen effektiven Scanner-Parameter; keine neuen Verstöße im betroffenen Scope.
+- Disposition: review-pending
+- attempts: 1
+- Nächster Schritt: Unabhängigen Review des Struktur-/Parameter-Checkpoints abwarten.
+- Log-Anker: `execution-log.md`, „Paket 4 Produktionsstrukturkorrektur Implementierer abgeschlossen"
+
 ### Paket-4-Hotspots-Parameter
 
 - Schweregrad: P2

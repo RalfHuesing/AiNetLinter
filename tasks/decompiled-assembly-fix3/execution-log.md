@@ -975,6 +975,20 @@
 - Verifikation nach letzter Änderung: fokussierte Tests 7/7; `dotnet build --no-restore` 0 Warnungen/0 Fehler; MCP-Violationscheck der geänderten C#-Dateien 0 Befunde; enge `rg`-Suche ohne öffentliche DLL-only-Altformulierungen; `git diff --check` grün.
 - Nächste Aktion: Dokumentations-/Registrierungspatch checkpointen und frischen, unabhängigen Paket-4-Abschlussreview starten.
 
+## 2026-09-01 – Paket 4 Produktionsstrukturkorrektur Implementierer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 4 – Kompatibilität, API-Lücken und Dokumentation
+- Rolle: Implementierer (frisch, Produktionsstruktur-/Parametergrenzen)
+- Subagent-ID: `01a05e08-2a78-7833-83ca-c2b952c6ec00`
+- Ursachensignaturen: `changed-production-aicontext-footprint-drift`; `changed-symbol-scanner-parameter-contract`
+- Versuch: 1 im Korrekturlauf
+- Status: completed; Änderungen uncommitted übergeben; keine Roadmap-/Log-/Tech-Debt-Änderung durch den Agenten; kein Commit.
+- Architektur: Assembly-Routing liegt unter `AssemblyAnalysis/Dispatch`, Response-Aufbau unter `AssemblyAnalysis/Responses`, Health-Projektionen unter `ServerMaintenance/Projection`, Assembly-Symbolformatierung unter `SymbolGraph/Navigation`; `FindSymbolScanner` verwendet den typisierten `FindSymbolScanRequest`.
+- Verifikation: Assembly-Fassaden 2375 AIContext, Health-Projection 2476, Assembly-Symbolresolver 2482; Scanner-Methoden jeweils 1 effektiver Parameter; gezielte FastTests 126/126, IntegrationTests 27/27, `dotnet build --no-restore` 0 Warnungen/0 Fehler, `git diff --check` grün, Dead-Code 0, keine Suppressionen.
+- Nicht verändert: Native-PE-/Doku-Semantik und die drei unabhängigen Altbefunde in `AssemblyNavigationSupport`/`AssemblyReferenceNavigator`.
+- Nächste Aktion: Struktur-/Parametercheckpoint sichern und finalen unabhängigen Paket-4-Review starten.
+
 ## 2026-09-01 – Paket 3 Korrekturversuch 3 Reviewer abgeschlossen
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume

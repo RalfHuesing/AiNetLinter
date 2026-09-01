@@ -8,6 +8,7 @@ using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Daemon;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
+using AiNetLinter.Mcp.Tools.ServerMaintenance.Projection;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -67,7 +68,7 @@ internal static class GetServerHealthTool
             await lease.ExpandReferencesAsync(cancellationToken).ConfigureAwait(false);
             return GetServerHealthResponseBuilder.Build(
                 Array.Empty<ProjectSnapshot>(),
-                [GetServerHealthProjection.ToAssemblyEntry(lease)],
+                [AssemblyHealthProjection.FromLease(lease)],
                 options);
         }
 
@@ -92,7 +93,7 @@ internal static class GetServerHealthTool
             : await assemblyRegistry.SnapshotsAsync().ConfigureAwait(false);
         return GetServerHealthResponseBuilder.Build(
             registry.Snapshots(),
-            assemblySnapshots.Select(GetServerHealthProjection.ToAssemblyEntry).ToList(),
+            assemblySnapshots.Select(AssemblyHealthProjection.FromSnapshot).ToList(),
             options);
     }
 

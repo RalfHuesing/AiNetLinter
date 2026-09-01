@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis.Dispatch;
 using AiNetLinter.TestKit;
 using Xunit;
 
@@ -24,7 +25,7 @@ public sealed partial class AssemblyAnalysisToolTests
             "ResponseBudgetProbe",
             $"namespace Probe.Budget; {string.Join(Environment.NewLine, types)}");
 
-        var result = await InspectAssemblyTool.ExecuteAsync(
+        var result = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(assemblyPath, null, null, null, true, 1000, MaxMembers: 1000),
             CancellationToken.None);
@@ -67,7 +68,7 @@ public sealed partial class AssemblyAnalysisToolTests
             "ExtensionResponseBudgetProbe",
             $"namespace Probe.Budget; public static class Extensions {{ {string.Join(Environment.NewLine, extensions)} }}");
 
-        var result = await FindAssemblyExtensionsTool.ExecuteAsync(
+        var result = await FindAssemblyExtensionsToolDispatch.ExecuteAsync(
             null,
             new FindAssemblyExtensionsArguments(assemblyPath, null, null, null, 1000),
             CancellationToken.None);
@@ -106,7 +107,7 @@ public sealed partial class AssemblyAnalysisToolTests
             "SingletonResponseBudgetProbe",
             $"namespace Probe.Budget; public sealed class Oversized {{ public void Consume({string.Join(", ", parameters)}) {{ }} }}");
 
-        var result = await InspectAssemblyTool.ExecuteAsync(
+        var result = await InspectAssemblyToolDispatch.ExecuteAsync(
             null,
             new InspectAssemblyArguments(
                 assemblyPath,

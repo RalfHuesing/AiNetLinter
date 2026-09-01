@@ -1,9 +1,12 @@
 ## Primäre Einstiegspunkte
 
 - Assembly-Context-Aufbau: `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs`
+- Assembly-Tool-Routing und Antworten: `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/Dispatch/` und `Responses/`
 - Source-Selection: `src/AiNetLinter/Mcp/Assemblies/Analysis/SourceSelection/`
 - Assembly-Registry-Fallback: `src/AiNetLinter/Mcp/Assemblies/Analysis/Factories/AssemblyAnalysisRegistryEntryFactory.cs`
 - Body-Navigation: `src/AiNetLinter/Mcp/Assemblies/Analysis/Bodies/` und `src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs`
+- Health-Projektion: `src/AiNetLinter/Mcp/Tools/ServerMaintenance/Projection/` mit getrennten Assembly-, Project- und Daemon-Projektionen.
+- Symbol-Scanning und Navigation: `FindSymbolScanner.cs` mit `FindSymbolScanRequest.cs` sowie `src/AiNetLinter/Mcp/Tools/SymbolGraph/Navigation/`.
 - Assembly-Erweiterungen: `src/AiNetLinter/Configuration/AssemblyPathValidation.cs` ist die zentrale interne Prüfung für `.dll`/`.exe`; die vier Verbraucher sind `AnalysisTargetResolver`, `AssemblyAnalysisService`, `ExternalSourceMappingValidator` und `AssemblySourceMatchResolver`.
 - Hotspots: `src/AiNetLinter/Mcp/Tools/FileStructure/GetHotspotsTool.cs`, `GetHotspotsScanner.cs` und `src/AiNetLinter/Mcp/Registration/FileStructureToolRegistrations.cs`.
 
@@ -25,7 +28,10 @@
 - `AssemblyAnalysisRegistryEntryFactory` übergibt die vom Context-Factory-Fallback erhaltenen Diagnosen weiter in den Registry-Fallback-Origin.
 - `AssemblyAnalysisRegistryEntryFactory` signalisiert einen fehlenden Native-PE-Generation-Snapshot über `AssemblyAnalysisRegistryRecoverableFailureException`; `AssemblyAnalysisRegistry.AwaitCreationAsync` baut daraus den öffentlichen Recoverable-Workspace-Diagnostic.
 - `AssemblyAnalysisRegistry.LeaseAsync` verwendet weiterhin ausschließlich `Path.GetFullPath`. Die lokale Registry-Untersuchung reproduzierte keine Alias-/Reparse-/8.3-Doppelgeneration: das Volume-8.3-Query war ohne erhöhte Rechte nicht verfügbar, der Datei-Query unterstützt den verwendeten Parameter nicht und im Projektroot wurden keine Reparse-Punkte gefunden. Daher wurde keine riskante Windows-Handle-Kanonisierung und kein Regressionstest ohne reproduzierten Fehler eingeführt; der Befund bleibt als P2 zurückgestellt.
+- `AssemblyAnalysisToolRegistrations` und Assembly-Tests verwenden für den direkten Lease-Pfad die Fassaden; State-basierte Testpfade verwenden die benannten Dispatch-Typen.
 - `src/AiNetLinter/Mcp/Assemblies/GlobalUsings.cs` und `src/AiNetLinter.FastTests/GlobalUsings.cs` importieren die beiden fachlichen Unter-Namespaces.
+- `FindAssemblyExtensionsTool` und `InspectAssemblyTool` sind schmale Lease-Fassaden; State-/Source-Routing liegt in `AssemblyAnalysis/Dispatch`, Response-Aufbau in `AssemblyAnalysis/Responses`. `FindSymbolScanner` akzeptiert den typisierten `FindSymbolScanRequest`.
+- `GetServerHealthProjection` wurde fachlich in `AssemblyHealthProjection`, `ProjectHealthProjection` und `DaemonHealthProjection` unter `ServerMaintenance/Projection` aufgeteilt.
 
 ## Relevante Tests, Konfiguration und Dokumentation
 
@@ -55,7 +61,7 @@
 - Abschluss-Audit: `find_duplicates` meldete 10 bestehende near-/fuzzy-Kandidaten, ohne eindeutigen Klon im Paket-4-Code; `find_magic_values` meldete 8 eindeutige bestehende Einträge (16 Vorkommen), ohne sicheren tasknahen Korrekturbedarf. `find_dead_code` meldete 37 LOW-Heuristiken und keine HIGH-Funde; die Kandidaten betreffen vor allem dynamische/Interop-Verträge und wurden nicht entfernt.
 - Audit-Nachcheck: `find_duplicates` findet im geänderten FileStructure-Produktionsscope 0 und im Assembly-Testscope 0 Cluster; `find_magic_values` findet dort nur den bestehenden `PrimaryCtor-Param`-Literal in `GetClassStructureTool`; `find_dead_code` findet im FileStructure-Scope 0.
 - Nach der letzten Codeänderung: gezielte Assembly-/Hotspot-/Wiring-/Agent-Guide-FastTests 119 bestanden, 1 bestehender Agent-Guide-Zeilenumbruchfehler; `get_violations` meldet für FileStructure-Produktion und Assembly-Tests jeweils 0. Der frühere stale Snapshot ist damit durch eine aktualisierte MCP-Abfrage ersetzt.
-- Finales projektweites `get_violations`: 10 bestehende Warnungen, davon 8 `AIContextFootprint` in Assembly-/Health-/SymbolGraph-Komponenten und 2 `MaxMethodParameterCount` in `FindSymbolScanner`; keine Fehler und keine Paket-4-Datei betroffen.
+- Vor dem letzten Refactoring meldete der projektweite Scope die fünf Footprint- und zwei Parameterverstöße in den betroffenen Produktionssymbolen; die nachgelagerte gezielte Prüfung muss die neuen Fassaden, Projektionen und den typisierten Scanner-Auftrag erneut bestätigen. Unabhängige Altbefunde in `AssemblyNavigationSupport`/`AssemblyReferenceNavigator` bleiben scopefremd.
 - Vollständige Nicht-Stress-Gates nach der Teststruktur-Bereinigung: FastTests 2346 bestanden, 2 übersprungen, 1 bestehender `McpAgentGuideRegistrationTests`-Fehler; IntegrationTests 377 bestanden, 2 Fehler im Vollparallel-/Live-Lauf. Die isolierte Nachprüfung besteht den Whole-Solution-Dogfood-Test 1/1, der Safeguard-Live-Test scheitert reproduzierbar mit Score 0 statt mindestens 5. `dotnet build --no-restore` meldete 0 Warnungen/0 Fehler; `git diff --check` meldet keine Diff-Fehler.
 - Paket-4-P1-Korrekturversuch 1 nach letzter Codeänderung: gezielte Assembly-FastTests einschließlich `ManagedAssemblyBinaryTests` und `AssemblyAnalysisToolSupportTests` 21/21 bestanden; gezielte Health-/Dokumentations-IntegrationTests (`McpDocumentationSmokeTests`, `McpServerAssemblyHealthE2ETests`, `GetServerHealthToolTests`) 15/15 bestanden. `dotnet build --no-restore` meldete 0 Warnungen/0 Fehler; der finale `git diff --check` meldete keine Diff-Fehler.
 - Der Checkpoint `76301ae5` enthält die Code-/Strukturänderungen sowie die zugehörigen Einträge in `execution-log.md` und `tech-debt.md`; `roadmap.md` wurde nicht geändert.

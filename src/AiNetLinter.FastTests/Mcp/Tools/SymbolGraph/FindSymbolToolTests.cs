@@ -199,7 +199,7 @@ public sealed class FindSymbolToolTests
     {
         using var fixture = new McpInMemoryTestContext();
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            fixture.Solution, "Greeter", kind: null, maxResults: 50);
+            new FindSymbolScanRequest(fixture.Solution, "Greeter", null, 50));
 
         Assert.Contains("Greeter.cs", result);
         Assert.Contains("Klasse", result);
@@ -211,7 +211,7 @@ public sealed class FindSymbolToolTests
     {
         using var fixture = new McpInMemoryTestContext();
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            fixture.Solution, "Greeter", kind: "Klasse", maxResults: 50);
+            new FindSymbolScanRequest(fixture.Solution, "Greeter", "Klasse", 50));
 
         Assert.Contains("Greeter.cs", result);
         Assert.Contains("Klasse", result);
@@ -234,7 +234,7 @@ public sealed class FindSymbolToolTests
     {
         using var fixture = new McpInMemoryTestContext();
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            fixture.Solution, "greeter", kind: null, maxResults: 50);
+            new FindSymbolScanRequest(fixture.Solution, "greeter", null, 50));
 
         Assert.Contains("Greeter", result);
     }

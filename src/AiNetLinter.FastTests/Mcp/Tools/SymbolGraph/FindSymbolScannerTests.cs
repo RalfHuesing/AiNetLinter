@@ -16,7 +16,7 @@ public sealed class FindSymbolScannerTests
         using var fixture = new McpInMemoryTestContext();
 
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            fixture.Solution, "Greeter", kind: null, maxResults: 50);
+            new FindSymbolScanRequest(fixture.Solution, "Greeter", null, 50));
 
         Assert.Contains("Greeter.cs", result);
         Assert.Contains("Klasse", result);
@@ -28,7 +28,7 @@ public sealed class FindSymbolScannerTests
         using var fixture = new McpInMemoryTestContext();
 
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            fixture.Solution, "Greet", kind: null, maxResults: 2);
+            new FindSymbolScanRequest(fixture.Solution, "Greet", null, 2));
 
         Assert.Contains("Treffer gesamt", result);
         Assert.Contains("2 gezeigt", result);

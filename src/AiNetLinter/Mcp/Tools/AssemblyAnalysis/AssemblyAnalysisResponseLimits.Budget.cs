@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis.Responses;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
@@ -123,7 +124,7 @@ internal static partial class AssemblyAnalysisResponseLimits
         && JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length <= MaxResponseBytes;
 
     private static bool FitsResponseBudget(FindAssemblyExtensionsPayload payload) =>
-        Encoding.UTF8.GetByteCount(FindAssemblyExtensionsTool.FormatText(payload)) <= MaxResponseBytes
+        Encoding.UTF8.GetByteCount(FindAssemblyExtensionsResponseBuilder.FormatText(payload)) <= MaxResponseBytes
         && JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length <= MaxResponseBytes;
 
     private static bool TryRemoveLastReferenceSession(

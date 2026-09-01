@@ -101,7 +101,13 @@ internal static class FindSymbolTool
                 if (i > 0) mb.Divider();
                 var pattern = patterns[i];
                 var (text, entries) = await FindSymbolScanner.FindMatchesWithEntriesAsync(
-                    solution, pattern, kind, normalizedMaxResults, ct, state.AssemblySymbolIdentity);
+                    new FindSymbolScanRequest(
+                        solution,
+                        pattern,
+                        kind,
+                        normalizedMaxResults,
+                        state.AssemblySymbolIdentity),
+                    ct);
                 results.Add(new FindSymbolPatternResultDto(pattern, entries));
 
                 mb.Heading(3, $"Symbol-Suche: `{pattern}`").BlankLine();

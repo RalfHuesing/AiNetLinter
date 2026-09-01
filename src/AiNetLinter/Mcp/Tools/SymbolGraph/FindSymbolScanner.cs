@@ -38,14 +38,10 @@ internal static class FindSymbolScanner
     /// <returns>Plain-Text-Output (Trefferzeilen + optionale Trunkierungs-Meta-Zeile,
     /// optionale Miss-Hint-Zeile mit eigener Trunkierungs-Meta-Zeile).</returns>
     internal static async Task<string> FindMatchesAndFormat(
-        Solution solution,
-        string namePattern,
-        string? kind,
-        int maxResults,
-        CancellationToken ct = default,
-        AnalysisSymbolIdentity? assemblyIdentity = null)
+        FindSymbolScanRequest request,
+        CancellationToken ct = default)
     {
-        var (text, _) = await FindMatchesWithEntriesAsync(solution, namePattern, kind, maxResults, ct, assemblyIdentity);
+        var (text, _) = await FindMatchesWithEntriesAsync(request, ct);
         return text;
     }
 
@@ -58,34 +54,30 @@ internal static class FindSymbolScanner
     /// <paramref name="maxResults"/> gekappt, konsistent zur Text-Trunkierung.
     /// </summary>
     internal static async Task<(string Text, IReadOnlyList<SymbolLocationEntry> Entries)> FindMatchesWithEntriesAsync(
-        Solution solution,
-        string namePattern,
-        string? kind,
-        int maxResults,
-        CancellationToken ct = default,
-        AnalysisSymbolIdentity? assemblyIdentity = null)
+        FindSymbolScanRequest request,
+        CancellationToken ct = default)
     {
         var symbols = await SymbolFinder.FindSourceDeclarationsAsync(
-            solution,
-            name => name.Contains(namePattern, StringComparison.OrdinalIgnoreCase),
+            request.Solution,
+            name => name.Contains(request.NamePattern, StringComparison.OrdinalIgnoreCase),
             SymbolFilter.TypeAndMember,
             ct);
 
-        var filtered = FilterByKind(symbols, kind).ToList();
+        var filtered = FilterByKind(symbols, request.Kind).ToList();
         if (filtered.Count == 0)
         {
-            var kindSuffix = kind is null ? "" : $" (Kind-Filter: {kind})";
-            var baseText = $"Keine Treffer fuer '{namePattern}'{kindSuffix}";
-            return (AppendMissHint(solution, namePattern, baseText), Array.Empty<SymbolLocationEntry>());
+            var kindSuffix = request.Kind is null ? "" : $" (Kind-Filter: {request.Kind})";
+            var baseText = $"Keine Treffer fuer '{request.NamePattern}'{kindSuffix}";
+            return (AppendMissHint(request.Solution, request.NamePattern, baseText), Array.Empty<SymbolLocationEntry>());
         }
 
-        var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
+        var outputRoot = Path.GetDirectoryName(request.Solution.FilePath) ?? "";
         var allEntries = filtered
-            .SelectMany(symbol => FindSymbolTool.FormatSymbolLocationEntries(symbol, outputRoot, assemblyIdentity))
+            .SelectMany(symbol => FindSymbolTool.FormatSymbolLocationEntries(symbol, outputRoot, request.AssemblyIdentity))
             .ToList();
         var lines = allEntries.Select(FindSymbolTool.FormatEntry).ToList();
-        var text = McpTruncation.TruncateLines(lines, lines.Count, maxResults);
-        var shownEntries = allEntries.Count <= maxResults ? allEntries : allEntries.Take(maxResults).ToList();
+        var text = McpTruncation.TruncateLines(lines, lines.Count, request.MaxResults);
+        var shownEntries = allEntries.Count <= request.MaxResults ? allEntries : allEntries.Take(request.MaxResults).ToList();
         return (text, shownEntries);
     }
 

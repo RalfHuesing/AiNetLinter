@@ -7,6 +7,7 @@ using System.Text;
 using AiNetLinter.Mcp.Composition;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
+using AiNetLinter.Mcp.Tools.ServerMaintenance.Projection;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
@@ -20,16 +21,16 @@ internal static class GetServerHealthResponseBuilder
     {
         var runtimeContext = options.RuntimeContext;
         var projectedAssemblies = assemblies
-            .Select(assembly => GetServerHealthProjection.ProjectAssemblyEntry(assembly, options))
+            .Select(assembly => AssemblyHealthProjection.Project(assembly, options))
             .ToList();
         var targeted = options.ProjectRoot is not null || options.AssemblyPath is not null;
         var totalAssemblySessions = projectedAssemblies.Count;
         var shownAssemblies = SelectShownAssemblies(projectedAssemblies, targeted, options);
         var sessionsTruncated = shownAssemblies is not null && totalAssemblySessions > shownAssemblies.Count;
         var sessionsTruncatedBy = sessionsTruncated ? new[] { "maxSessions" } : Array.Empty<string>();
-        var statusCounts = GetServerHealthProjection.CountAssemblyStatuses(projectedAssemblies);
+        var statusCounts = AssemblyHealthProjection.CountStatuses(projectedAssemblies);
         var diagnosticCount = projectedAssemblies.Sum(assembly => assembly.DiagnosticsSummary?.TotalCount ?? 0);
-        var daemonPayload = runtimeContext is null ? null : GetServerHealthProjection.CreateDaemonPayload(runtimeContext);
+        var daemonPayload = runtimeContext is null ? null : DaemonHealthProjection.FromContext(runtimeContext);
         var version = McpServerVersion.Get();
         var response = new HealthResponseData(
             version,
@@ -107,7 +108,7 @@ internal static class GetServerHealthResponseBuilder
     private static ServerHealthAggregatePayload CreatePayload(HealthResponseData response) =>
         new(
             Version: response.Version,
-            Projects: response.Snapshots.Select(GetServerHealthProjection.ToProjectEntry).ToList(),
+            Projects: response.Snapshots.Select(ProjectHealthProjection.FromSnapshot).ToList(),
             Daemon: response.Daemon,
             Assemblies: response.ShownAssemblies,
             DiagnosticsIncluded: response.Options.IncludeDiagnostics,
