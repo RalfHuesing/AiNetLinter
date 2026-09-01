@@ -296,3 +296,38 @@
 - Ergebnis: `GIT-01`/`LOCAL-01`/`LOCAL-02`/`LOCAL-03` decompiled, `partial`, ohne Source-Snapshot; `FALSE-01` recoverable `WORKSPACE_DIAGNOSTIC` ohne Snapshot. Signaturen, Attribute, Parameter, generische Signaturen und Bodies waren im bounded Umfang abfragbar.
 - Read-only Text-/Testinspektionen wurden nur zur Kontext- und Abdeckungsprüfung verwendet. Es wurden keine Builds, Tests, Produktions-/Konfigurations-/Produktdokumentationsänderungen oder Commits ausgeführt.
 - Nach der letzten Änderung an dieser Code-Map wurden ausschließlich redigierte Artefaktprüfungen, Pfad-/Label-Scans und gezielte MCP-Semantik-Spotchecks ausgeführt; der finale Hand-off bezieht sich auf diesen Stand.
+
+## Epic 6 – Response-, Token- und Laufzeiteffizienz
+
+### Relevante Implementierungspfade
+
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.cs:12-244` definiert Diagnose-, Referenz-, Session- und Samplebudgets. Die Diagnoseauswahl ist root-first/prefix-basiert; `SelectSamples` beendet die Kandidatenschleife beim ersten Byteüberlauf.
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.Budget.cs:15-323` projiziert Inspect-/Extension-Payloads durch einzelnes Entfernen von Sessions, Referenzen, Diagnosen und Ergebnislisten. Jede Probe misst Text und Structured Content separat; ein terminaler irreduzibler Fixed-Metadata-Fallback fehlt.
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs:19-144` reichert beide Responsekanäle an. Die interne Budgetprüfung zählt Text- und Structured Content getrennt.
+- `src/AiNetLinter/Mcp/McpToolResults.cs:197-225` erzeugt für `Text<T>` ein gemeinsames Ergebnis mit Text- und Structured-Content-Kanal.
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisService.cs:58-95` sammelt/sortiert passende Typen und Extensions vor `Take(maxResults)`; die Memberprojektion begrenzt ebenfalls erst nach vorgelagerter Materialisierung.
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs:26-42,151-229` und `AssemblyAnalysisSession.cs:167-195` bauen den bounded Signature-Snapshot vor der konkreten MCP-Ausgabeauswahl.
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyReferenceSessionExpander.cs:23-60,89-163` besucht Referenzkanten vor der sichtbaren Projektion; nach dem Node-Cap können weitere Boundary-Sessions/Diagnosen materialisiert werden.
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisModels.cs:131-168` weist keine feldspezifischen Namespace-Gesamt-/Truncationwerte und keine maschinenlesbaren Bytebudgetwerte aus.
+
+### Epic-6-Befundregister
+
+- `E6-BUG-01` (P2/M/hoch): `MaxResponseBytes=8192` wird in `FitsResponseBudget` kanalweise statt über das vollständige CallToolResult geprüft. Redigierte große/kleine positive Abfragen lagen je Kanal unter 8192, zusammen aber zwischen 9198 und 13271 Byte. Details und alle Counts stehen in `tasks/decompiled-assembly-audit/epic-06-response-token-laufzeiteffizienz.md`.
+- `E6-BUG-02` (P2/M/mittel-hoch): Nach dem Entfernen aller optionalen Listen garantiert `ProjectResponseBudget` keinen weiterhin passenden Payload; feste Pfad-/Identitäts-/Statusfelder werden nicht separat begrenzt. Der Extremfall ist statisch abgeleitet, in der Normalmatrix nicht reproduziert.
+- `E6-OPT-01` (P2/L/hoch): Einzelweises Trimming serialisiert/formatierte den Payload wiederholt und misst beide Kanäle erneut.
+- `E6-OPT-02` (P2/L/hoch): Query-Limits begrenzen die vorgelagerte Typ-/Extension-/Member- und Snapshotarbeit nicht proportional.
+- `E6-OPT-03` (P2/M/hoch): Die Referenzarbeit übersteigt die sichtbaren Caps. Die redigierten Gesamt-Sessioncounts der positiven großen Fälle lagen bei 4039, 1482 und 1519; sichtbar blieb regelmäßig nur eine Session. Die verdeckte Referenzerweiterung selbst bleibt `E1-BUG-01`.
+- `E6-OPT-04` (P3/S/mittel-hoch): Diagnose-Sample-Auswahl ist root-first und bricht beim ersten nicht passenden Sample ab; späteres kürzeres/ergänzendes Material wird nicht geprüft.
+- `E6-MF-01` (P2/M/hoch): Es fehlen maschinenlesbare Ist-/Limitwerte für Text, Structured Content und die kombinierte Response sowie feldbezogene Trimursachen.
+- `E6-MF-02` (P3/S/hoch): Namespace-Trimming ist nur über den allgemeinen Top-Level-Grund sichtbar; `TotalNamespaces`/`NamespacesTruncated` fehlen.
+
+### Epic-6-Metrik-/Footprint-Nachweis
+
+Der aktuelle zielgebundene MCP-Metriklauf meldete für die zentralen Response-Symbole: `AssemblyAnalysisResponseLimits` 498 LOC/941 Footprint, `InspectAssemblyResponseBuilder` 75/2450, `FindAssemblyExtensionsResponseBuilder` 86/2463, `AssemblyAnalysisResponse` 125/2500 und `AssemblyReferenceSessionExpander` 135/2513. Der letzte Wert ist der bereits bestehende Epic-3-Footprint-Überhang und wird in Epic 6 nicht doppelt als Befund gezählt. Die zentrale Response-/Budgetlogik liegt damit nahe an den projektweiten Grenzen und soll nicht ungezielt weiter anwachsen.
+
+### Epic-6-Verifikation
+
+- Read-only MCP-Projektchecks nutzten `targetType=project` und den absoluten Projektpfad: Indexscope vollständig (886 C#-Dateien), Assembly-Unterbaum 18/18 Einträge nicht gekürzt, Symbol-/Feature-/Metrikauflösung für Response-, Budget-, Service-, Decompilation- und Referenzpfade.
+- Redigierte Assemblychecks nutzten `targetType=assembly` und jeweils den absoluten, nur über das Label referenzierten Matrixpfad. `inspect_assembly` wurde für `LOCAL-01`, `LOCAL-02`, `LOCAL-03` und `FALSE-01` mit kleinen (`includeReferences=false`, `maxResults=1`, `maxMembers=1`) und großen (`includeReferences=true`, `maxResults=1000`, `maxMembers=1000`) Limits ausgeführt. `find_assembly_extensions` wurde für die drei positiven Labels mit `maxResults=1` und `maxResults=1000` ausgeführt; `FALSE-01` war für diesen Extension-Spotcheck nicht relevant.
+- Die positiven Fälle blieben redigiert `decompiled`/`partial`, `FALSE-01` ein recoverable `WORKSPACE_DIAGNOSTIC`-Negativpfad ohne Snapshot. Keine externe Identität oder dekompilierter Inhalt ist in dieser Map enthalten.
+- Nach dieser Code-Map-Ergänzung werden die Schlüssel-Spotchecks erneut ausgeführt; die redigierten Resultate und die finale Dateigrenze werden im Epic-6-Bericht dokumentiert. Danach erfolgt keine weitere Code-Map-Änderung.

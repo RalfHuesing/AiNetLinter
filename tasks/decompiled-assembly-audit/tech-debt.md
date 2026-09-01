@@ -28,6 +28,96 @@
 - Log-Anker: Epic 1 Implementiererbericht, 2026-09-01.
 - Begründung der Disposition: Analyse-Only-Non-Goal.
 
+### E6-BUG-01 — Response-Budget prüft Kanäle getrennt statt CallToolResult gesamt
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyAnalysisResponseLimits`, `AssemblyAnalysisResponse`
+  und Response-Builder.
+- Evidenz: Text und Structured Content liegen jeweils unter 8192 Byte, ihre
+  Summe überschreitet den Grenzwert mehrfach; es gibt keine Gesamtmessung.
+- Nächster Schritt: Gesamtbudget über tatsächliche Response-Hülle festlegen
+  oder kanalweise Budgets eindeutig benennen und dokumentieren.
+- Log-Anker: Epic 6 Implementiererbericht, 2026-09-02.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E6-BUG-02 — Irreduzible feste Metadaten können Budget überschreiten
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyAnalysisResponseLimits.Budget` und feste
+  Assembly-Payloadfelder.
+- Evidenz: Nach Entfernung optionaler Listen fehlt ein terminaler bounded
+  Fallback, wenn feste Pfad-/Identitäts-/Statuswerte weiterhin nicht passen.
+- Nächster Schritt: Fixed-Metadata-Budgets und maschinenlesbaren
+  `irreducibleBudget`-Zustand definieren.
+- Log-Anker: Epic 6 Implementiererbericht, 2026-09-02.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E6-OPT-01 — Einzelweises Trimming serialisiert wiederholt
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyAnalysisResponseLimits.Budget`.
+- Evidenz: Jede Einzelentfernung formatiert und serialisiert Text/JSON erneut.
+- Nächster Schritt: Fixed-Overhead und Quoten in einem bounded Pass oder mit
+  begrenzter Suchstrategie berechnen.
+- Log-Anker: Epic 6 Implementiererbericht, 2026-09-02.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E6-OPT-02 — Query-Limits begrenzen vorgelagerte Arbeit nicht
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyAnalysisService` sowie Snapshot-/DTO-Aufbau.
+- Evidenz: Typen, Extensions und Member werden vor `Take(maxResults/maxMembers)`
+  vollständig gesammelt, sortiert oder projiziert.
+- Nächster Schritt: Semantisch sichere frühe Filterung, Streaming oder bounded
+  Auswahlstrukturen prüfen.
+- Log-Anker: Epic 6 Implementiererbericht, 2026-09-02.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E6-OPT-03 — Referenzarbeit über sichtbare Grenze hinaus amplifiziert
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblyReferenceResolver`, Session-Expander und
+  Response-Limits.
+- Evidenz: Vor der Projektion werden deutlich mehr Referenzen/Sessions besucht
+  und diagnostiziert als sichtbar ausgegeben werden können.
+- Nächster Schritt: Hard-Cap für Kanten/Sessions/Boundary-Einträge und
+  gemeinsame Kostenstrategie definieren.
+- Log-Anker: Epic 6 Implementiererbericht, 2026-09-02.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E6-OPT-04 — Diagnose-Samples sind nicht byteeffizient repräsentativ
+
+- Schweregrad: P3; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: Diagnoseauswahl in `AssemblyAnalysisResponseLimits`.
+- Evidenz: Root-first-Prefix-Scan bricht beim ersten Byteüberlauf ab und prüft
+  spätere kürzere oder neue Samples nicht mehr.
+- Nächster Schritt: Bounded Coverage-/Round-Robin-Auswahl unter Beibehaltung
+  von Counts und Deduplizierung bewerten.
+- Log-Anker: Epic 6 Implementiererbericht, 2026-09-02.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E6-MF-01 — Maschinenlesbare Budgettelemetrie fehlt
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: Assembly-Payload, Budgetprojektion und Enrichment.
+- Evidenz: `responseBudget` signalisiert nur die Ursache; Byte-Limits,
+  Kanal-/Gesamt-Istwerte und Trim-Anteile werden nicht ausgegeben.
+- Nächster Schritt: Optionales, selbst bounded Budgetobjekt mit redigierten
+  Counts, Limits, Istwerten und Ursachen spezifizieren.
+- Log-Anker: Epic 6 Implementiererbericht, 2026-09-02.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E6-MF-02 — Namespace-Trimming nicht feldspezifisch sichtbar
+
+- Schweregrad: P3; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `InspectAssemblyPayload`, Namespace-Trimming und Formatter.
+- Evidenz: Keine Gesamt-/Shown-/Truncated-Werte für Namespaces; nur der
+  allgemeine `responseBudget`-Grund bleibt sichtbar.
+- Nächster Schritt: Feldspezifische Counts und Trunkierungsursachen in Text und
+  Structured Content aus derselben Projektion ergänzen.
+- Log-Anker: Epic 6 Implementiererbericht, 2026-09-02.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
 ### E4-BUG-01 — Ressourcen-Dimensionen bei Refresh nicht generationsgebunden
 
 - Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0

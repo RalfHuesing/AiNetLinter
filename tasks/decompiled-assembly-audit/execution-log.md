@@ -222,6 +222,53 @@
   dokumentationsänderungen oder Commits.
 - Nächste Aktion: mit Epic 6 als Analyse-/Berichtsrolle fortfahren.
 
+## 2026-09-01 — Epic 6 — running
+
+- Run-ID: `decompiled-assembly-audit-20260901`
+- Rolle: Implementierer/Analyse-Agent
+- Subagent-ID: `01a05eeb-5793-7121-a1a6-3ae6d93a01fe`
+- Diff-Baseline: `5e5b0f3c` (Epic-5-Analyse-Checkpoint)
+- Scope: Response-, Token- und Laufzeiteffizienz.
+- Erwartete Änderungen: ausschließlich
+  `epic-06-response-token-laufzeiteffizienz.md` und `code-map.md`; keine
+  Produktions-, Test-, Konfigurations- oder Produktdokumentationsänderungen.
+
+## 2026-09-02 — Epic 6 — completed
+
+- Subagent-ID: `01a05eeb-5793-7121-a1a6-3ae6d93a01fe`
+- Urteil der Analyse-Rolle: read-only Audit abgeschlossen; keine
+  Implementierung.
+- Geänderte Bereiche: `epic-06-response-token-laufzeiteffizienz.md`,
+  `code-map.md`.
+- Findings: zwei Bugs (P2), vier Optimierungen (P2/P3) und zwei Missing
+  Features (P2/P3). Alle als `accepted-deferred` triagiert, weil Konzept und
+  Nutzeranweisung keine Umsetzung erlauben.
+- Nach der letzten Code-Map-Änderung erfolgreich ausgeführt: redigierte
+  große/kleine `inspect_assembly`-Abfragen für LOCAL-01 bis LOCAL-03 und
+  FALSE-01 sowie `find_assembly_extensions`-Worst-Case-Abfragen. Kanal- und
+  Summenbytes, Counts, `partial` und Trunkierungsursachen wurden dokumentiert;
+  der kombinierte Text-/Structured-Budgetbefund wurde mehrfach bestätigt.
+- Nur gelesen: Response-/Budget-/Formatter-/Assembly-Code, Dokumentation und
+  Testverträge. Keine Builds, Tests, Produktions-/Konfigurations-/Produkt-
+  dokumentationsänderungen oder Commits.
+- Redaktionsprüfung: Keine externen Assembly-Identitäten, Pfade, URLs, Hashes
+  oder dekompilierten Inhalte im Bericht oder in der Code-Map.
+- Nächste Aktion: mit Epic 7 als Analyse-/Berichtsrolle fortfahren.
+
+### Vollständiger finaler Agentenbericht
+
+Epic 6 ist abgeschlossen.
+
+- Bericht erstellt: `epic-06-response-token-laufzeiteffizienz.md`
+- Code-Map ausschließlich um Epic-6-Nachweise ergänzt.
+- Finale redigierte Spotchecks nach der letzten Code-Map-Änderung erfolgreich
+  ausgeführt.
+- Keine Builds, Tests oder Commits; keine Produktions-/Test-/Konfigurations-
+  änderungen.
+- Befunde: zwei Bugs, vier Optimierungen, zwei Missing Features; technische
+  Schulden zur weiteren Orchestrator-Behandlung vorgeschlagen.
+- Bereits vorhandene, fremde Worktree-Änderungen wurden nicht verändert.
+
 ### Vollständiger finaler Agentenbericht
 
 Erledigt.
