@@ -263,10 +263,10 @@
 - Schweregrad: P1
 - Ursachensignatur: package4-managed-executable-support
 - Scope/Fundstelle: `src/AiNetLinter/Configuration/AssemblyPathValidation.cs` und Assembly-Ziel-/Source-Mapping-Verbraucher
-- Evidenz: Die zentrale Prüfung akzeptiert `.dll` und `.exe`; eine verwaltete Test-`.exe` wird ohne Ausführung analysiert. Native PE-Dateien liefern nun einen typisierten und hilfreichen `Recoverable`-Payload mit `IsError=false` und `Recoverable=true`.
-- Disposition: fixed
-- attempts: 1
-- Nächster Schritt: Keine weitere Korrektur; Recoverable-Payload und managed-/native-PE-Test sind durch die gezielte Korrektur abgesichert.
+- Evidenz: Der direkte Supportpfad liefert für native PE nun einen typisierten und hilfreichen `Recoverable`-Payload mit `IsError=false` und `Recoverable=true`. Die öffentliche Registry-/Lease-Route mappt denselben Fall jedoch noch auf `AnalysisFailed`/`isError=true`; der Routenvertrag ist daher nicht geschlossen.
+- Disposition: fix-now
+- attempts: 2
+- Nächster Schritt: Den typisierten Native-PE-Recoverable-Vertrag durch `AssemblyAnalysisRegistry`/`AnalysisToolCall` bis zur registrierten MCP-Route propagieren und einen öffentlichen Routentest ergänzen.
 - Log-Anker: `execution-log.md`, „Paket 4 Implementierer abgeschlossen"
 
 ### Paket-4-Hotspots-Parameter

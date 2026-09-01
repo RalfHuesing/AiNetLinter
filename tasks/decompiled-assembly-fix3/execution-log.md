@@ -986,9 +986,19 @@
 - P1 `package4-native-pe-recoverability`: Native PE wird über `McpToolResults.CompilationError` als `isError=true`/`recoverable=false` geliefert, während Konzept und Roadmap einen typisierten recoverable Fehler verlangen. Test und Dokumentation müssen auf `IsError=false`, `Recoverable=true` korrigiert werden; managed `.exe` selbst wird korrekt metadata-only analysiert.
 - P1 `package4-health-documentation-drift`: Die Runtime aggregiert den parameterlosen Health-Call standardmäßig und unterstützt `includeSessions`/`maxSessions`; die Doku beschreibt noch getrennte Sessiondetails als Standard und dokumentiert diese Argumente unvollständig.
 - Erfüllte Kriterien: zentrale `.dll`/`.exe`-Prüfung, nicht reproduzierbarer Registry-Aliasbefund als P2-Rückstellung, Hotspots-Defaults/Bounds/Zähler, primäres `symbolIdentifier`, FileTree-Default und TestKit-/Fixture-Schnitt wurden bestätigt. Betroffene Test-/Wiring-/TestKit-Scopes haben 0 Violations.
-- P2: `get_test_context` verwendet in der Fehlerhilfe noch `symbol`; der managed-`.exe`-Test beweist Nichtausführung nur schwach; Hotspot-Sortierung und Text-/Structured-Content-Gleichheit könnten belastbarer getestet werden. Der aktive MCP-Daemon ist älter als der lokale Source-Stand und benötigt vor Deployment einen Neustart/Aktualisierung.
+- P2: `get_test_context` verwendet in der Fehlerhilfe weiterhin `symbol`; der managed-`.exe`-Test beweist Nichtausführung nur schwach; Hotspot-Sortierung und Text-/Structured-Content-Gleichheit könnten belastbarer getestet werden. Der aktive MCP-Daemon ist älter als der lokale Source-Stand und benötigt vor Deployment einen Neustart/Aktualisierung.
 - Verifikation: fokussierte FastTests 78 bestanden/1 bestehender Agent-Guide-Zeilenumbruchfehler; fokussierte IntegrationTests 25/25; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` grün; Audit ohne tasknahe Duplikat-/HIGH-Dead-Code-/sichere Magic-Value-Befunde. Keine Vollgates im Review.
-- Nächste Aktion: P1-Korrekturversuch 1 mit frischem Implementierer für Recoverability und Health-Dokumentation starten.
+- Nächste Aktion: P1-Korrekturversuch 2 mit frischem Implementierer für die registrierte Native-PE-Route starten.
+
+## 2026-09-01 – Paket 4 P1-Korrekturversuch 2 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 4 – Kompatibilität, API-Lücken und Dokumentation
+- Rolle: Implementierer (frisch, registrierte Native-PE-Route)
+- Ursachensignatur: `package4-native-pe-route-recoverability`
+- Versuch: 2 im Epic
+- Status: running
+- Auftrag: Den typisierten Native-PE-Recoverable-Vertrag vom direkten Supportpfad durch Registry/Lease bis zur öffentlichen `inspect_assembly`-Route propagieren. Einen öffentlichen Routentest ergänzen, ohne Assembly-Ausführung, AdhocWorkspace-Fallback, Alias-Kanonisierung, Suppressionen oder Änderungen an Roadmap/Log/Tech-Debt durch den Agenten. Keine anderen Paket-4-P2s ausweiten.
 
 ## 2026-09-01 – Paket 4 P1-Korrekturversuch 1 Implementierer abgeschlossen
 
