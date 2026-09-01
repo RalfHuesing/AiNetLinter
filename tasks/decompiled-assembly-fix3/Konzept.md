@@ -1,5 +1,5 @@
 ---
-status: draft
+status: ready
 ---
 
 # Konzept: Robuste Analyse dekompilierter .NET-Assemblies
@@ -210,12 +210,4 @@ Diese Auditbefunde sind als `accepted-deferred`, nicht als Erweiterung des aktue
 
 ## Offene Punkte und Freigabestatus
 
-Die Umsetzung kann mit den beschriebenen Paketen beginnen. Nicht blockierend, aber vor Paket 4 zu entscheiden, ist nur die konkrete Windows-Strategie für Reparse-/8.3-Pfadkanonisierung; ohne Reproduktion bleibt sie aus dem Code heraus.
-
-Der Status bleibt gemäß Konzept-Workflow `draft`, bis der Nutzer ihn ausdrücklich freigibt. Die Detailentscheidungen zu Budgetkonstanten, neuen optionalen Tool-Flags und DTO-Namen sind innerhalb der oben festgelegten Verträge umsetzbar und blockieren keinen Start.
-
-## Arbeitsgedächtnis (nur Draft)
-
-- MCP-Health und alle genannten Live-Aufrufe wurden gegen AiNetLinter 1.0.157 ausgeführt. Keine Rohantworten, Fremdpfade oder Geheimnisse sind als dauerhafter Vertrag zu übernehmen.
-- Kein Build, kein Test und keine Produktivcode-Änderung in diesem Konzepttask. Die externen Assembly-Aufrufe haben nur residente MCP-Sessions erzeugt; deren Lifecycle unterliegt dem Server-TTL.
-- Nächster Schritt nach einer expliziten Freigabe: Draft-Bereich entfernen, Status auf `ready` setzen und das Konzept an den Umsetzungsworkflow übergeben. Nicht automatisch starten.
+Das Konzept ist zur Umsetzung freigegeben. Nicht blockierend, aber vor Paket 4 zu entscheiden, ist nur die konkrete Windows-Strategie für Reparse-/8.3-Pfadkanonisierung; ohne Reproduktion bleibt sie aus dem Code heraus. Die Detailentscheidungen zu Budgetkonstanten, neuen optionalen Tool-Flags und DTO-Namen sind innerhalb der festgelegten Verträge umsetzbar und blockieren keinen Start.
