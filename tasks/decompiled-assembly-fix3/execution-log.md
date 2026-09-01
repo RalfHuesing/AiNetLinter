@@ -391,3 +391,14 @@
 - Bestätigt: Die vier Fehlerassertions prüfen `code`, `message`, `context`, `hint`, `recoverable` und `isError` sinnvoll. `McpErrorParameters` reduziert die vier betroffenen Produktionsmethoden auf höchstens vier effektive Parameter; der Produktionsscope enthält keine entsprechenden Verstöße. `AssemblyAnalysisResponse.Unsupported` behält `targetType=assembly` und kanonischen `targetPath` bei; `isError` und Wire-Semantik bleiben unverändert.
 - Verifikationsnachweise: gezielte Tests 11/11 bestanden; frischer `dotnet build` über alle vier Projekte mit 0 Warnungen/0 Fehlern; MCP-first Symbol-/Referenz-/Metrikabfragen mit absolutem Projekt-Target erfolgreich; `git diff --check` erfolgreich. Zwei verbleibende `FindSymbolScanner`-Warnungen sind unverändert und scopefremd.
 - Nächste Aktion: Paket 1 als `done` markieren, Abschluss-Checkpoint committen und Paket 2 starten.
+
+## 2026-09-01 – Paket 1 abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Primäraufgabe: Robuste Assembly-Analyse und konsistente MCP-Antwortverträge
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektheit
+- Status: done
+- Abschlussentscheidung: `approved` nach frischem Review. Typisierte Fehlerpayloads, gemeinsame Budgetprojektion inklusive Enrichment-/Singleton-Fällen, Receiver-Filter, generationgebundene Folge-IDs, sichere Pfadauflösung und File-Tree-Tiefe sind umgesetzt und geprüft.
+- Abgeschlossene Korrektursignaturen: `assembly-response-budget-projection-missing-after-compactor-removal`, `response-projection-structural-rule-drift`, `typed-error-payload-contract-test-drift`, `mcp-error-helper-parameter-growth` – jeweils `fixed` in `tech-debt.md`.
+- Paketnachweise: gezielte 29/29 Budgettests sowie 11/11 Fehlerpayloadtests; frische Builds mit 0 Warnungen/0 Fehlern; scoped `get_violations`-Nachweise für Produktions- und Testbereiche ohne auftragsbezogene Verstöße; vollständige Gates mit abgegrenztem Alt-/Umgebungsfehlerstand.
+- Nächste Aktion: Paket 2 – Progressive Disclosure, Diagnosen und Health.

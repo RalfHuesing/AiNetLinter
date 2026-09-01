@@ -3,10 +3,8 @@
 - Primäraufgabe: Robuste Assembly-Analyse und konsistente MCP-Antwortverträge
 - Betriebsart: Großkonzept-Modus
 - Status: executing
-- current_epic: Paket 1 – Vertragsintegrität und P1-Korrektheit
-- current_debt_item: typed-error-payload-contract-drift-and-parameter-growth
-- debt_attempts: 2
-- letzter Commit: folgt nach diesem Planungs-Checkpoint
+- current_epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- letzter Commit: `ce505d80`
 
 ## Epics
 
@@ -16,7 +14,7 @@
 - Betroffene Bereiche: typisierte Fehlerpayloads, Budgetprojektion, Receiver-Filter, Folge-ID/Pfadauflösung, `get_file_tree`
 - Muss-/Akzeptanzkriterien: Fehlerdaten sind strukturiert und behalten die bestehende `isError`-Policy; Text und JSON verwenden dieselbe Auswahl; Receiver- und Folgeaufruf-Verträge funktionieren; Baumtiefe und Summary-Grenzen stimmen.
 - Verifikation: gezielte Assembly-, Budget-, Navigations- und File-Tree-Tests sowie MCP-`get_violations` nach der letzten Codeänderung
-- Status: in_progress
+- Status: done
 
 ### Paket 2 – Progressive Disclosure, Diagnosen und Health
 
@@ -24,7 +22,7 @@
 - Betroffene Bereiche: Assembly-Detailflags, Diagnoseprojektionen, globaler Health, strukturierte Erfolgspayloads
 - Muss-/Akzeptanzkriterien: gezielte Antworten bleiben kompakt; Diagnose-Samples sind begrenzt und transparent; globaler Health aggregiert standardmäßig; text-only Erfolgsdaten sind strukturiert verfügbar.
 - Verifikation: gezielte Tool-/DTO-/Registrierungs- und Health-Tests sowie MCP-`get_violations`
-- Status: open
+- Status: in_progress
 
 ### Paket 3 – Source-Backing und Body-/Metadata-Navigation
 
