@@ -43,12 +43,14 @@ internal sealed record AssemblyTypeSelection(
     IReadOnlyList<AssemblyTypeDto> Items,
     IReadOnlyList<string> Namespaces,
     int Total,
-    bool Truncated);
+    bool Truncated,
+    IReadOnlyList<string> TruncatedBy);
 
 internal sealed record AssemblyExtensionSelection(
     IReadOnlyList<AssemblyExtensionDto> Items,
     int Total,
-    bool Truncated);
+    bool Truncated,
+    IReadOnlyList<string> TruncatedBy);
 
 internal sealed record AssemblyIdentityDto(
     string Name,
@@ -102,7 +104,8 @@ internal sealed record AssemblyTypeDto(
     IReadOnlyList<AssemblyMemberDto> Members,
     IReadOnlyList<string> Attributes,
     int TotalMembers = 0,
-    bool MembersTruncated = false);
+    bool MembersTruncated = false,
+    IReadOnlyList<string>? TruncatedBy = null);
 
 internal sealed record AssemblyExtensionDto(
     string Namespace,
@@ -127,6 +130,8 @@ internal sealed record InspectAssemblyPayload(
     string Completeness,
     bool Truncated,
     int TotalTypes,
+    int ShownCount,
+    IReadOnlyList<string> TruncatedBy,
     AssemblyOrigin? Origin = null,
     long Generation = 0,
     string SessionStatus = "complete",
@@ -141,6 +146,8 @@ internal sealed record FindAssemblyExtensionsPayload(
     string Completeness,
     bool Truncated,
     int TotalExtensions,
+    int ShownCount,
+    IReadOnlyList<string> TruncatedBy,
     string? ConsumerProject,
     string? ReceiverType,
     AssemblyOrigin? Origin = null,

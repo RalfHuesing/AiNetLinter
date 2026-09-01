@@ -80,6 +80,8 @@ internal static class FindAssemblyExtensionsTool
             effectiveStatus.ToCompletenessLabel(),
             selection.Truncated,
             selection.Total,
+            selection.Items.Count,
+            selection.TruncatedBy,
             context.ConsumerProject,
             arguments.ReceiverType,
             context.Origin,
@@ -103,7 +105,7 @@ internal static class FindAssemblyExtensionsTool
 
     private static void AppendHeader(StringBuilder builder, FindAssemblyExtensionsPayload payload)
     {
-        builder.AppendLine($"Assembly-Extensions: {payload.TotalExtensions}{(payload.Truncated ? " (gekürzt)" : string.Empty)}");
+        builder.AppendLine($"Assembly-Extensions: {payload.ShownCount} von {payload.TotalExtensions}{(payload.Truncated ? $" (gekürzt: {string.Join(", ", payload.TruncatedBy)})" : string.Empty)}");
         builder.AppendLine($"Vollständigkeit: `{payload.Completeness}`");
         AppendReferenceSummary(builder, payload.ReferenceSummary);
         if (payload.Origin is { } origin)

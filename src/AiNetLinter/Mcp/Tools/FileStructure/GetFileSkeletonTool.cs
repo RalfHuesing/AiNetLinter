@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Cli;
 using AiNetLinter.Core;
+using AiNetLinter.Core.Documents;
 using AiNetLinter.Maps.Skeleton;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -87,8 +88,19 @@ internal static class GetFileSkeletonTool
         var mb = request.Markdown;
         var totalCount = request.TotalCount;
         var assemblyIdentity = request.AssemblyIdentity;
-        var absolutePath = Path.GetFullPath(Path.Combine(solutionDir, path));
-        var document = DiffImpactAnalyzer.FindDocumentByPath(solution, path);
+        var candidates = SolutionDocumentPathResolver.FindCandidates(solution, path);
+        if (candidates.Count > 1)
+        {
+            var candidateNames = candidates
+                .Select(candidate => $"{candidate.Project.Name}/{candidate.Name}")
+                .ToList();
+            if (totalCount == 1) return McpToolResults.AmbiguousPath(path, candidateNames);
+            mb.Heading(3, $"Datei nicht eindeutig: `{path}`").BlankLine();
+            mb.Line(McpToolResults.AmbiguousPath(path, candidateNames).Content.OfType<TextContentBlock>().Single().Text);
+            return null;
+        }
+
+        var document = candidates.SingleOrDefault();
 
         if (document is null)
         {
@@ -104,8 +116,15 @@ internal static class GetFileSkeletonTool
             ct,
             assemblyIdentity is null ? null : symbolId => assemblyIdentity.Format(symbolId));
 
+        var diagnosticPath = document.FilePath;
+        if (!string.IsNullOrWhiteSpace(diagnosticPath) && !Path.IsPathFullyQualified(diagnosticPath)
+            && Path.IsPathFullyQualified(solutionDir))
+        {
+            diagnosticPath = Path.GetFullPath(Path.Combine(solutionDir, diagnosticPath));
+        }
+
         var fileWarning = McpCompileDiagnostics.FormatFileWarning(
-            diagnosticsByFile.GetValueOrDefault(absolutePath, []));
+            diagnosticsByFile.GetValueOrDefault(diagnosticPath ?? path, []));
 
         if (!string.IsNullOrEmpty(fileWarning))
         {

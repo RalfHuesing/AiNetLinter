@@ -45,9 +45,15 @@ internal static class McpToolResults
     /// Sicherheitsverweigerung, echte Malfunction) — fuer erwartbare/recoverable Bedingungen
     /// <see cref="Recoverable"/> nutzen.
     /// </summary>
-    internal static CallToolResult Error(string code, string message, string? context = null, string? hint = null)
+    internal static CallToolResult Error(
+        string code,
+        string message,
+        string? context = null,
+        string? hint = null,
+        string? targetType = null,
+        string? targetPath = null)
     {
-        return BuildResult(code, message, context, hint, isError: true);
+        return BuildResult(code, message, context, hint, isError: true, targetType, targetPath);
     }
 
     /// <summary>
@@ -58,18 +64,34 @@ internal static class McpToolResults
     /// soll den Aufruf als erfolgreich verarbeitet betrachten (mit Handlungsanleitung im Text),
     /// nicht als Tool-Ausfall. Siehe <c>IsErrorPolicy.md</c> fuer die vollstaendige Tabelle.
     /// </summary>
-    internal static CallToolResult Recoverable(string code, string message, string? context = null, string? hint = null)
+    internal static CallToolResult Recoverable(
+        string code,
+        string message,
+        string? context = null,
+        string? hint = null,
+        string? targetType = null,
+        string? targetPath = null)
     {
-        return BuildResult(code, message, context, hint, isError: false);
+        return BuildResult(code, message, context, hint, isError: false, targetType, targetPath);
     }
 
-    private static CallToolResult BuildResult(string code, string message, string? context, string? hint, bool isError)
+    private static CallToolResult BuildResult(
+        string code,
+        string message,
+        string? context,
+        string? hint,
+        bool isError,
+        string? targetType,
+        string? targetPath)
     {
         var text = LinterErrorFormatter.Format(code, message, context, hint);
         return new CallToolResult
         {
             IsError = isError,
             Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
+            StructuredContent = JsonSerializer.SerializeToElement(
+                new McpErrorPayload(code, message, context, hint, Recoverable: !isError, targetType, targetPath),
+                McpJsonOptions.Default),
         };
     }
 
@@ -144,6 +166,15 @@ internal static class McpToolResults
             hint: "Pfad relativ zum Solution-Verzeichnis angeben (Forward- oder Backslash), 'find_symbol' zur Orientierung nutzen.");
     }
 
+    internal static CallToolResult AmbiguousPath(string path, IEnumerable<string> candidates)
+    {
+        return Recoverable(
+            LinterErrorCodes.InvalidArgument,
+            $"Der Dokumentpfad '{path}' ist in der Solution nicht eindeutig.",
+            context: string.Join("\n", candidates),
+            hint: "Einen eindeutigen relativen Pfad einschließlich Projekt-/Verzeichnisanteil angeben.");
+    }
+
     internal static CallToolResult Text(string text)
     {
         return new CallToolResult
@@ -186,13 +217,20 @@ internal static class McpToolResults
     /// bestehenden <see cref="LinterErrorCodes.WorkspaceDiagnostic"/>-Code (wiederverwendet, nicht
     /// neu angelegt — Duplikat-Vermeidung).
     /// </summary>
-    internal static CallToolResult CompilationError(string message, string? context = null)
+    internal static CallToolResult CompilationError(
+        string message,
+        string? context = null,
+        string? hint = null,
+        string? targetType = null,
+        string? targetPath = null)
     {
         return Error(
             LinterErrorCodes.WorkspaceDiagnostic,
             message,
             context: context,
-            hint: "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung.");
+            hint: hint ?? "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung.",
+            targetType: targetType,
+            targetPath: targetPath);
     }
 
     /// <summary>
@@ -218,3 +256,17 @@ internal static class McpToolResults
         };
     }
 }
+
+/// <summary>
+/// Typisierter Fehlervertrag fuer MCP-Antworten. Die Payload wird fuer harte und recoverable
+/// Fehler identisch serialisiert; nur <see cref="CallToolResult.IsError"/> folgt weiterhin der
+/// bestehenden IsError-Policy.
+/// </summary>
+internal sealed record McpErrorPayload(
+    string Code,
+    string Message,
+    string? Context,
+    string? Hint,
+    bool Recoverable,
+    string? TargetType = null,
+    string? TargetPath = null);

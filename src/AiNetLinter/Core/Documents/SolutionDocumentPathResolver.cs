@@ -15,25 +15,35 @@ internal static class SolutionDocumentPathResolver
 {
     internal static Document? Find(Solution solution, string filePath)
     {
-        if (string.IsNullOrWhiteSpace(filePath)) return null;
-
-        foreach (var project in solution.Projects)
-        {
-            var document = project.Documents.FirstOrDefault(document => PathsEquivalent(solution, document.FilePath, filePath));
-            if (document is not null) return document;
-        }
-
-        return IsBareFileName(filePath) ? FindUniqueByName(solution, filePath) : null;
+        var matches = FindCandidates(solution, filePath);
+        return matches.Count == 1 ? matches[0] : null;
     }
 
-    private static Document? FindUniqueByName(Solution solution, string fileName)
+    internal static IReadOnlyList<Document> FindCandidates(Solution solution, string filePath)
     {
-        var matches = solution.Projects
+        if (string.IsNullOrWhiteSpace(filePath)) return [];
+
+        var pathMatches = solution.Projects
             .SelectMany(project => project.Documents)
-            .Where(document => string.Equals(document.Name, fileName, StringComparison.OrdinalIgnoreCase))
-            .Take(2)
+            .Where(document => PathsEquivalent(solution, document.FilePath, filePath))
             .ToList();
-        return matches.Count == 1 ? matches[0] : null;
+        if (pathMatches.Count > 0) return pathMatches;
+
+        var virtualMatches = solution.Projects
+            .SelectMany(project => project.Documents)
+            .Where(document => string.Equals(
+                NormalizeVirtualPath(document.FilePath),
+                NormalizeVirtualPath(filePath),
+                StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (virtualMatches.Count > 0) return virtualMatches;
+
+        return IsBareFileName(filePath)
+            ? solution.Projects
+                .SelectMany(project => project.Documents)
+                .Where(document => string.Equals(document.Name, filePath, StringComparison.OrdinalIgnoreCase))
+                .ToList()
+            : [];
     }
 
     private static bool PathsEquivalent(Solution solution, string? left, string right)
@@ -46,11 +56,41 @@ internal static class SolutionDocumentPathResolver
     {
         if (string.IsNullOrWhiteSpace(path)) yield break;
 
-        var solutionDir = Path.GetDirectoryName(solution.FilePath ?? string.Empty) ?? string.Empty;
-        foreach (var candidate in new[] { path, Path.Combine(solutionDir, path) })
+        if (Path.IsPathFullyQualified(path))
         {
-            if (TryGetFullPath(candidate, out var fullPath)) yield return fullPath;
+            if (TryGetFullPath(path, out var fullPath)) yield return fullPath;
+            yield break;
         }
+
+        var solutionDir = GetSolutionDirectory(solution);
+        if (solutionDir is null) yield break;
+        if (TryGetFullPath(Path.Combine(solutionDir, path), out var relativeFullPath))
+        {
+            yield return relativeFullPath;
+        }
+    }
+
+    private static string? GetSolutionDirectory(Solution solution)
+    {
+        if (string.IsNullOrWhiteSpace(solution.FilePath)
+            || !Path.IsPathFullyQualified(solution.FilePath))
+        {
+            return null;
+        }
+
+        return Path.GetDirectoryName(solution.FilePath);
+    }
+
+    private static string NormalizeVirtualPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return string.Empty;
+        var normalized = path.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+        while (normalized.StartsWith($".{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+        {
+            normalized = normalized[2..];
+        }
+
+        return normalized.TrimStart(Path.DirectorySeparatorChar).Replace(Path.DirectorySeparatorChar, '/');
     }
 
     private static bool TryGetFullPath(string path, out string fullPath)

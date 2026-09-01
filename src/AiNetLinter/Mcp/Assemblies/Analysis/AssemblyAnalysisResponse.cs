@@ -38,18 +38,14 @@ internal static class AssemblyAnalysisResponse
         {
             var node = JsonNode.Parse(structured.Value.GetRawText()) as JsonObject ?? new JsonObject();
             node["analysis"] = JsonSerializer.SerializeToNode(metadata, McpJsonOptions.Default);
-            structured = AssemblyAnalysisResponseLimits.EnsureStructuredContentBudget(
-                JsonSerializer.SerializeToElement(node, McpJsonOptions.Default));
+            structured = JsonSerializer.SerializeToElement(node, McpJsonOptions.Default);
         }
 
         var content = result.Content
             .Select(block => block is TextContentBlock text
                 ? new TextContentBlock
                 {
-                    Text = FormatHeader(metadata)
-                        + AssemblyAnalysisResponseLimits.SynchronizeDiagnosticText(
-                            text.Text,
-                            structured ?? default),
+                    Text = FormatHeader(metadata) + text.Text,
                 }
                 : block)
             .ToList();
@@ -68,7 +64,9 @@ internal static class AssemblyAnalysisResponse
             LinterErrorCodes.AssemblyTargetUnsupported,
             "Dieses Tool unterstützt das Assembly-Ziel nicht.",
             context: canonicalPath,
-            hint: "Für dieses Assembly-Ziel eine unterstützte Roslyn-Abfrage oder targetType='project' verwenden.");
+            hint: "Für dieses Assembly-Ziel eine unterstützte Roslyn-Abfrage oder targetType='project' verwenden.",
+            targetType: "assembly",
+            targetPath: canonicalPath);
         return new CallToolResult
         {
             IsError = result.IsError,
@@ -77,6 +75,7 @@ internal static class AssemblyAnalysisResponse
                 Text = "[ASSEMBLY] capability=unsupported; status=unsupported; " +
                        "origin=assembly-target\n\n" + result.Content.OfType<TextContentBlock>().Single().Text,
             }],
+            StructuredContent = result.StructuredContent,
         };
     }
 

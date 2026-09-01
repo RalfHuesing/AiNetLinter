@@ -42,9 +42,10 @@ internal static class FindSymbolScanner
         string namePattern,
         string? kind,
         int maxResults,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        AnalysisSymbolIdentity? assemblyIdentity = null)
     {
-        var (text, _) = await FindMatchesWithEntriesAsync(solution, namePattern, kind, maxResults, ct);
+        var (text, _) = await FindMatchesWithEntriesAsync(solution, namePattern, kind, maxResults, ct, assemblyIdentity);
         return text;
     }
 
@@ -61,7 +62,8 @@ internal static class FindSymbolScanner
         string namePattern,
         string? kind,
         int maxResults,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        AnalysisSymbolIdentity? assemblyIdentity = null)
     {
         var symbols = await SymbolFinder.FindSourceDeclarationsAsync(
             solution,
@@ -78,8 +80,10 @@ internal static class FindSymbolScanner
         }
 
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var allEntries = filtered.SelectMany(symbol => FindSymbolTool.FormatSymbolLocationEntries(symbol, outputRoot)).ToList();
-        var lines = allEntries.Select(e => $"{e.FilePath}:{e.Line} - {e.Kind}: {e.Name}").ToList();
+        var allEntries = filtered
+            .SelectMany(symbol => FindSymbolTool.FormatSymbolLocationEntries(symbol, outputRoot, assemblyIdentity))
+            .ToList();
+        var lines = allEntries.Select(FindSymbolTool.FormatEntry).ToList();
         var text = McpTruncation.TruncateLines(lines, lines.Count, maxResults);
         var shownEntries = allEntries.Count <= maxResults ? allEntries : allEntries.Take(maxResults).ToList();
         return (text, shownEntries);

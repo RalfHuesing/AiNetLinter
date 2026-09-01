@@ -133,7 +133,7 @@ internal sealed class FileTreeAccumulator
                 SkippedExcludedDirectoryCount: walkStats.SkippedExcludedDirectoryCount,
                 SkippedReparsePointCount: walkStats.SkippedReparsePointCount,
                 Warnings: warnings));
-        return new FileTreeScanResult(payload, _input.TreeDepth);
+        return new FileTreeScanResult(payload, _effectiveDepth);
     }
 
     private List<string> BuildTruncationReasons(

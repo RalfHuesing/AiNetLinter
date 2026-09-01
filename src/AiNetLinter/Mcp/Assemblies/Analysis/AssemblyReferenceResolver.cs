@@ -357,6 +357,7 @@ internal sealed class AssemblyReferenceResolver
 
     private static AssemblyReferenceResolution FailedResolution(string code, string message, string canonicalPath)
     {
+        message = $"{message} Hinweis: verwaltete .NET-.dll oder .exe mit IL erforderlich.";
         var resolver = new ICSharpCode.Decompiler.Metadata.UniversalAssemblyResolver(
             canonicalPath,
             false,

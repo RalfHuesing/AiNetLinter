@@ -93,7 +93,7 @@ internal static class InspectAssemblyFormatter
 
     private static void AppendTypes(StringBuilder builder, InspectAssemblyPayload payload, bool publicOnly)
     {
-        builder.AppendLine($"{VisibilityLabel(publicOnly)}API-Typen: {payload.Types.Count} von {payload.TotalTypes}{(payload.Truncated ? " (gekürzt)" : string.Empty)}");
+        builder.AppendLine($"{VisibilityLabel(publicOnly)}API-Typen: {payload.ShownCount} von {payload.TotalTypes}{FormatTruncation(payload.Truncated, payload.TruncatedBy)}");
         foreach (var type in payload.Types) AppendType(builder, type);
     }
 
@@ -103,9 +103,14 @@ internal static class InspectAssemblyFormatter
     {
         var qualifiedName = string.IsNullOrEmpty(type.Namespace) ? type.Name : $"{type.Namespace}.{type.Name}";
         var memberCount = type.MembersTruncated
-            ? $", Member {type.Members.Count} von {type.TotalMembers} gezeigt"
+            ? $", Member {type.Members.Count} von {type.TotalMembers} gezeigt{FormatTruncation(true, type.TruncatedBy)}"
             : $", {type.TotalMembers} Member";
         builder.AppendLine($"- `{qualifiedName}` ({type.Kind}, {type.Accessibility}{memberCount})");
         foreach (var member in type.Members) builder.AppendLine($"  - {member.Kind}: `{member.Signature}`");
     }
+
+    private static string FormatTruncation(bool truncated, IReadOnlyList<string>? reasons) =>
+        truncated
+            ? $" (gekürzt{(reasons is { Count: > 0 } ? $": {string.Join(", ", reasons)}" : string.Empty)})"
+            : string.Empty;
 }

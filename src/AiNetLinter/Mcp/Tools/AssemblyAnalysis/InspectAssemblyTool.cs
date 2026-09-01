@@ -91,6 +91,8 @@ internal static class InspectAssemblyTool
             effectiveStatus.ToCompletenessLabel(),
             selection.Truncated,
             selection.Total,
+            selection.Items.Count,
+            selection.TruncatedBy,
             context.Origin,
             context.Generation,
             effectiveStatus.ToWireValue(),

@@ -97,7 +97,12 @@ internal static class AssemblyAnalysisService
             .Distinct(StringComparer.Ordinal)
             .OrderBy(namespaceName => namespaceName, StringComparer.Ordinal)
             .ToList();
-        return new AssemblyTypeSelection(items, namespaces, types.Count, limited.Count < types.Count);
+        return new AssemblyTypeSelection(
+            items,
+            namespaces,
+            types.Count,
+            limited.Count < types.Count,
+            limited.Count < types.Count ? ["maxResults"] : []);
     }
 
     internal static AssemblyExtensionSelection FindExtensions(
@@ -118,7 +123,11 @@ internal static class AssemblyAnalysisService
 
         var limited = extensions.Take(options.MaxResults).ToList();
         var items = limited.Select(pair => ToExtensionDto(context, pair.Type, pair.Method)).ToList();
-        return new AssemblyExtensionSelection(items, extensions.Count, limited.Count < extensions.Count);
+        return new AssemblyExtensionSelection(
+            items,
+            extensions.Count,
+            limited.Count < extensions.Count,
+            limited.Count < extensions.Count ? ["maxResults"] : []);
     }
 
     private static AssemblyExtensionDto ToExtensionDto(AssemblyContext context, INamedTypeSymbol declaringType, IMethodSymbol method)
@@ -190,7 +199,8 @@ internal static class AssemblyAnalysisService
             members,
             Attributes(type),
             matchingMembers.Count,
-            members.Count < matchingMembers.Count);
+            members.Count < matchingMembers.Count,
+            members.Count < matchingMembers.Count ? ["maxMembers"] : []);
     }
 
     private static AssemblyMemberDto ToMemberDto(ISymbol member)

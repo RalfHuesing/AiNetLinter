@@ -11,3 +11,23 @@
 - Disposition: accepted-deferred
 - Nächster Schritt: Im Abschluss-Audit nur scope-nahe, eindeutig verhaltensneutrale Befunde prüfen; übrige Kandidaten nicht in den aktuellen Produktumfang ziehen.
 - Log-Anker: `Konzept.md`, Abschnitt „Audit-Zusatzbefunde"
+
+### Neue Parameterzahl-Warnungen nach Paket 1
+
+- Schweregrad: P2 (Review-Bestätigung ausstehend)
+- Ursachensignatur: erweiterte-mcp-verträge-ohne-parameterobjekt
+- Scope/Fundstelle: geänderte MCP-Methoden in `src/AiNetLinter/Mcp`, insbesondere `McpToolResults` und Assembly-Analyse-Verträge
+- Evidenz: Der nach der letzten Codeänderung ausgeführte `get_violations`-Check meldete vier neue Parameterzahl-Warnungen; der Implementierer führte kein Parameter-Object-Refactoring durch.
+- Disposition: accepted-deferred
+- Nächster Schritt: Reviewer bewertet, ob die Warnungen aus dem aktuellen fachlichen Vertrag sicher und scope-nah durch ein Parameterobjekt behoben werden können; andernfalls als bewusste Folgearbeit dokumentieren.
+- Log-Anker: `execution-log.md`, „Paket 1 Implementierer abgeschlossen"
+
+### Bestehender AIContext-Footprint-Hinweis
+
+- Schweregrad: P2
+- Ursachensignatur: bestehender-aicontext-footprint
+- Scope/Fundstelle: `src/AiNetLinter/Mcp` – bestehender AIContext-Footprint-Hinweis außerhalb der Paket-1-Fachursache
+- Evidenz: Im frischen `get_violations`-Check weiterhin als eine der sieben Warnungen gemeldet; keine neue Ursache durch Paket 1 belegt.
+- Disposition: accepted-deferred
+- Nächster Schritt: Nur bei direkter Betroffenheit eines späteren Pakets erneut bewerten; kein solutionweiter Cleanup in diesem Task.
+- Log-Anker: `execution-log.md`, „Paket 1 Implementierer abgeschlossen"

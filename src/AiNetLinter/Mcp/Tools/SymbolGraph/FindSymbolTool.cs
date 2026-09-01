@@ -101,7 +101,7 @@ internal static class FindSymbolTool
                 if (i > 0) mb.Divider();
                 var pattern = patterns[i];
                 var (text, entries) = await FindSymbolScanner.FindMatchesWithEntriesAsync(
-                    solution, pattern, kind, normalizedMaxResults, ct);
+                    solution, pattern, kind, normalizedMaxResults, ct, state.AssemblySymbolIdentity);
                 results.Add(new FindSymbolPatternResultDto(pattern, entries));
 
                 mb.Heading(3, $"Symbol-Suche: `{pattern}`").BlankLine();
@@ -142,15 +142,21 @@ internal static class FindSymbolTool
     /// JSON via <see cref="FindSymbolScanner.FindMatchesWithEntriesAsync"/>s
     /// <c>StructuredContent</c>), damit Text und JSON nie auseinanderdriften.
     /// </summary>
-    internal static IEnumerable<SymbolLocationEntry> FormatSymbolLocationEntries(ISymbol symbol, string outputRoot)
+    internal static IEnumerable<SymbolLocationEntry> FormatSymbolLocationEntries(
+        ISymbol symbol,
+        string outputRoot,
+        AnalysisSymbolIdentity? assemblyIdentity = null)
     {
         var kindLabel = SymbolKindClassifier.DescribeSymbolKind(symbol);
+        var symbolId = DocumentationCommentId.CreateDeclarationId(symbol)
+            ?? CallGraphTraversal.GetStableSymbolId(symbol);
+        var qualifiedId = assemblyIdentity?.Format(symbolId);
         foreach (var location in symbol.Locations.Where(l => l.IsInSource))
         {
             var lineSpan = location.GetLineSpan();
             var relativePath = PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath);
             var line = lineSpan.StartLinePosition.Line + 1;
-            yield return new SymbolLocationEntry(relativePath, line, kindLabel, symbol.ToDisplayString());
+            yield return new SymbolLocationEntry(relativePath, line, kindLabel, symbol.ToDisplayString(), qualifiedId);
         }
     }
 
@@ -159,7 +165,8 @@ internal static class FindSymbolTool
         var origin = entry.Origin is null
             ? string.Empty
             : $" [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
-        return $"{entry.FilePath}:{entry.Line} - {entry.Kind}: {entry.Name}{origin}";
+        var id = entry.Id is null ? string.Empty : $" id: `{entry.Id}`";
+        return $"{entry.FilePath}:{entry.Line} - {entry.Kind}: {entry.Name}{id}{origin}";
     }
 
     /// <summary>
@@ -207,4 +214,5 @@ internal sealed record SymbolLocationEntry(
     int Line,
     string Kind,
     string Name,
+    string? Id = null,
     AssemblyNavigationOrigin? Origin = null);

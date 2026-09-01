@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using AiNetLinter.Mcp;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -31,60 +29,6 @@ internal static class AssemblyAnalysisResponseLimits
             ShownCount = 0,
             Samples = Array.Empty<string>(),
         };
-
-    internal static JsonElement EnsureStructuredContentBudget(JsonElement structured)
-    {
-        if (structured.ValueKind != JsonValueKind.Object)
-        {
-            return structured;
-        }
-
-        var node = JsonNode.Parse(structured.GetRawText()) as JsonObject;
-        if (node is null) return structured;
-
-        AssemblyAnalysisResponseBudgetCompactor.Compact(node, MaxDiagnosticBytes);
-
-        return JsonSerializer.SerializeToElement(node, McpJsonOptions.Default);
-    }
-
-    internal static string SynchronizeDiagnosticText(
-        string text,
-        JsonElement structured)
-    {
-        if (structured.ValueKind != JsonValueKind.Object
-            || !structured.TryGetProperty("diagnostics", out var diagnostics)
-            || !structured.TryGetProperty("diagnosticsSummary", out var summary))
-        {
-            return text;
-        }
-
-        var markerIndex = text.LastIndexOf("Diagnosen: ", StringComparison.Ordinal);
-        if (markerIndex < 0) return text;
-
-        var shownCount = diagnostics.ValueKind == JsonValueKind.Array
-            ? diagnostics.GetArrayLength()
-            : summary.TryGetProperty("shownCount", out var shown) ? shown.GetInt32() : 0;
-        var totalCount = summary.TryGetProperty("totalCount", out var total)
-            ? total.GetInt32()
-            : shownCount;
-        var truncated = summary.TryGetProperty("truncated", out var isTruncated)
-            && isTruncated.GetBoolean();
-        var builder = new StringBuilder(text[..markerIndex].TrimEnd());
-        builder.AppendLine();
-        builder.Append($"Diagnosen: {shownCount} von {totalCount}");
-        if (truncated) builder.Append(" (gekürzt)");
-        if (diagnostics.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var diagnostic in diagnostics.EnumerateArray())
-            {
-                builder.AppendLine();
-                builder.Append("- ");
-                builder.Append(diagnostic.GetString());
-            }
-        }
-
-        return builder.ToString();
-    }
 
     internal static AssemblyDiagnosticsSummary ProjectDiagnostics(
         IEnumerable<string>? rootDiagnostics,

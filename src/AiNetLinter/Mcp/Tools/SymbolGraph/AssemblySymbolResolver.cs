@@ -135,7 +135,10 @@ internal static class AssemblySymbolResolver
         var solution = candidate.Lease.Server.GetCurrentSolution();
         if (solution is null) return [];
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
-        return FindSymbolTool.FormatSymbolLocationEntries(candidate.Symbol, outputRoot)
+        return FindSymbolTool.FormatSymbolLocationEntries(
+                candidate.Symbol,
+                outputRoot,
+                AssemblyNavigationSupport.GetIdentity(candidate.Lease))
             .Select(entry => FormatLocation(entry with
             {
                 Origin = AssemblyNavigationSupport.CreateOrigin(candidate.Lease),

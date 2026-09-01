@@ -83,7 +83,10 @@ internal static class AssemblySymbolSearch
             var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
             var entries = symbols
                 .Where(symbol => kind is null || SymbolKindClassifier.MatchesSymbolKind(symbol, kind))
-                .SelectMany(symbol => FindSymbolTool.FormatSymbolLocationEntries(symbol, outputRoot))
+                .SelectMany(symbol => FindSymbolTool.FormatSymbolLocationEntries(
+                    symbol,
+                    outputRoot,
+                    AssemblyNavigationSupport.GetIdentity(lease)))
                 .Select(entry => entry with { Origin = AssemblyNavigationSupport.CreateOrigin(lease) })
                 .ToList();
             return (entries, true, null);
