@@ -222,3 +222,31 @@
 - Nicht ausgeführt: vollständiger Build und beide Nicht-Stress-Gates.
 - Restrisiko: Die neuen Tests isolieren die zuvor fehlende Abdeckung; die Gesamtgates stehen noch aus.
 - Nächste Aktion: Testkorrekturstand committen und frischen Abschluss-Reviewer für Paket 1 starten.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 3 Reviewer gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: Testkorrekturstand `114b1ddc`; vorheriger Review-Checkpoint `b9ffa968`
+- Ursachensignatur: `assembly-response-budget-projection-missing-after-compactor-removal`
+- Versuch: 3 von 5
+- Status: running
+- Auftrag: Neue Dispatcher-/Enrichment- und Singleton-Regressionstests gegen den tatsächlichen Produktionspfad prüfen, die vollständige Budgetinvariante bewerten und den frischen 29/29-/MCP-Nachweis einordnen. Kein Produktions-/Testcode und kein Commit; nur konkrete `code-map.md`-Korrekturen.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 3 Reviewer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05bd7-0e64-75b3-a811-0cae6d4487a3`
+- Ursachensignatur: `response-projection-structural-rule-drift`
+- Versuch: 3 von 5 für die strukturelle Regelursache
+- Status: completed; kein Produktions-/Testcode geändert
+- Urteil: `issues`; P0 keine.
+- P1: Die neuen Regressionstests verletzen weiterhin die aktive `MaxLineCount`-Regel: `AssemblyAnalysisDispatcherCapabilityTests.cs` hat 518 statt maximal 500 Zeilen; `AssemblyAnalysisToolTests.cs` hat 573 statt maximal 500 Zeilen und wurde durch 42 Zeilen erweitert. Der vorige scoped `get_violations`-Nachweis erfasste nur Produktionscode und nicht die geänderten Testdateien.
+- Budgeturteil: Die fachliche P1-Ursache `assembly-response-budget-projection-missing-after-compactor-removal` ist ausreichend abgedeckt. Der Dispatcher-Test erzeugt 180 echte Typen und durchläuft Route, Lease, Referenzexpansion, Producer und Enrich; er prüft finales Text-/JSON-Budget, `responseBudget`, Zähler und Metadaten. Der Singleton-Test erzeugt eine echte Assembly mit 500 Parametern und erzwingt die letzte Member-Entfernung.
+- Frische Verifikation: 29/29, `git diff --check`, Produktionsscope-`get_violations` 0 und MCP-Semantiknachweise wurden als frisch und passend akzeptiert; nicht redundant wiederholt. Keine weiteren P2/P3-Funde.
+- Empfehlung: Testklassen thematisch aufteilen, beide Testdateien mit `get_violations` erfassen und danach vollständigen Build sowie beide Nicht-Stress-Gates ausführen.
+- Nächste Aktion: `assembly-response...` in `tech-debt.md` als `fixed` fortschreiben; frischer Implementierer-Korrekturversuch für `response-projection-structural-rule-drift`.
