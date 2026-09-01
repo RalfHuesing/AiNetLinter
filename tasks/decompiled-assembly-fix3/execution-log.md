@@ -37,6 +37,17 @@
 - Status: running
 - Auftrag: Den zentralen `FormatResponse`-Vertrag, alle geänderten Aufrufer und Text-/Structured-Content-Konsistenz unabhängig prüfen. Gezielte Build-/Fast-/IntegrationTests sowie MCP-`get_violations`/DRY-Checks nur soweit erforderlich ausführen. Besonders Assembly-`find_references`-Nulltreffer/Diagnosemetadaten, Health-Default ohne Sessions und ReloadConfig-Fixturewerte prüfen. Kein Produktions-/Testcode und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen.
 
+## 2026-09-01 – Wiederaufnahme Paket 2 Reviewer fehlgeschlagen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05cbb-3e9e-7980-a8d0-ed32a73a659a`
+- Ursachensignaturen: `package2-diagnosis-projection-ownership`; `package2-regression-test-contract-drift`
+- Versuch: 0 im neu freigegebenen Lauf
+- Status: failed; der Agent verschwand während der Wartephase aus dem Agentenregister (`not_found`) und lieferte keinen Bericht. Der Working Tree blieb sauber; keine Produktions-/Testcodeänderung und kein Commit durch den Reviewer.
+- Konsequenz: Es liegt noch kein unabhängiges Urteil über den Architekturpatch und keine frische Verifikation vor. Ein neuer unabhängiger Reviewer ist erforderlich.
+
 ## 2026-09-01 – Planungs-Checkpoint
 
 - Run-ID: decompiled-assembly-fix3-20260901
