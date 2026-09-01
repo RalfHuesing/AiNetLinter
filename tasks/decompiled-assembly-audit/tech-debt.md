@@ -624,3 +624,49 @@
   E7-MF-01; bestehende Ursachen werden nicht dupliziert.
 - Begründung der Disposition: Analyse-Only-Non-Goal; keine Testausführung oder
   Teständerung in diesem Lauf.
+
+### AUD-N01 — Private Prüfhelfer duplizieren Kontroll- und Fehlerpfad
+
+- Schweregrad: P3; Disposition: `accepted-deferred`; attempts: 0
+- Kategorie: Optimierung / DRY; Vertrauen: hoch; Größe: S
+- Evidenz: Der Abschluss-Audit fand zwei private Prüfhelfer mit nahezu
+  identischem Kontroll- und Fehlerbehandlungspfad.
+- Aktion: Gemeinsame, eng begrenzte Hilfsabstraktion prüfen; Verhalten und
+  Diagnoseprojektion dabei separat regressionssichern.
+- Begründung der Disposition: Analyse-Only-Non-Goal; kein Refactoring in
+  diesem Lauf.
+
+### AUD-N02 — Stabiler typbestimmender Ausgabemarker ist doppelt definiert
+
+- Schweregrad: P3; Disposition: `accepted-deferred`; attempts: 0
+- Kategorie: Optimierung / Magic Value; Vertrauen: mittel-hoch; Größe: S
+- Evidenz: Derselbe stabile typbestimmende Ausgabemarker wird an zwei Stellen
+  separat verwendet.
+- Aktion: Eine benannte Konstante oder gemeinsame Projektion mit gezieltem
+  Contract-Test erwägen.
+- Begründung der Disposition: Analyse-Only-Non-Goal; keine Wert- oder
+  Codeänderung in diesem Lauf.
+
+### AUD-N03 — Interner Kompatibilitätsalias ohne statische Referenzen
+
+- Schweregrad: P3; Disposition: `accepted-deferred`; attempts: 0
+- Kategorie: Dead Code / unused surface; Vertrauen: niedrig; Größe: S
+- Evidenz: Der Audit fand keine statischen Referenzen auf den internen Alias;
+  dynamische Nutzung bleibt als Unsicherheitsvorbehalt möglich.
+- Aktion: Dynamische Registrierungs-/Reflexionspfade prüfen und den Alias erst
+  danach entfernen oder ausdrücklich als Kompatibilitätsfläche dokumentieren.
+- Begründung der Disposition: Analyse-Only-Non-Goal; keine Entfernung ohne
+  zusätzliche Laufzeitattestation.
+
+### AUD-N04 — Fallback-Fehlermeldung ist in zwei Startfehlerpfaden dupliziert
+
+- Schweregrad: P3; Disposition: `accepted-deferred`; attempts: 0
+- Kategorie: Optimierung / DRY / Magic Value; Vertrauen: hoch; Größe: S
+- Evidenz: Identische Fallback-Fehlermeldung wird in zwei Startfehlerpfaden
+  separat erzeugt.
+- Aktion: Gemeinsame redigierte Fehlerprojektion prüfen und dabei E7-BUG-01s
+  sichere Pfad-/Diagnosebehandlung als Leitplanke beibehalten.
+- Abgrenzung: Nicht als neue Sicherheitsursache gewertet; E7-BUG-01 bleibt
+  der maßgebliche Redaction-Befund.
+- Begründung der Disposition: Analyse-Only-Non-Goal; kein Refactoring in
+  diesem Lauf.

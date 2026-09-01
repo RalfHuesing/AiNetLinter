@@ -503,6 +503,15 @@ Rohform von `tools/list`.
   dokumentationsänderungen oder Commits durch den Agenten.
 - Vorbestehende Worktree-Änderungen blieben unangetastet.
 
+## 2026-09-02 — Abschluss-Audit — running
+
+- Rolle: Audit-Agent `Socrates` (`01a05f2c-07ff-7470-9355-c7ec280da3b9`).
+- Auftrag: MCP-first-Prüfung auf DRY, Refactoring-Drift, Dead Code und Magic
+  Values gemäß `.agents/skills/audit/SKILL.md`.
+- Betriebsart: read-only; keine Reviewer-Rolle, keine Produktions-, Test-,
+  Konfigurations-, Produktdokumentations- oder Task-Artefaktänderungen.
+- Baseline: `b18cd552` (Epic-8-Abschluss-Checkpoint).
+
 ### Vollständiger finaler Agentenbericht
 
 Epic 8 ist abgeschlossen.
@@ -516,3 +525,68 @@ Epic 8 ist abgeschlossen.
 - Keine Builds, Tests, Produktions-/Test-/Konfigurations-/Produkt-
   dokumentationsänderungen oder Commits vorgenommen.
 - Vorbestehende Worktree-Änderungen blieben unangetastet.
+
+## 2026-09-02 — Abschluss-Audit — completed
+
+- Rolle: Audit-Agent `Socrates` (`01a05f2c-07ff-7470-9355-c7ec280da3b9`).
+- Geprüft: `get_index_scope`, `get_file_tree`, `get_server_health`,
+  `find_duplicates`, `find_dead_code`, `find_references`,
+  `find_magic_values`, `get_violations`, `find_symbol`, `get_symbol_body`
+  und `get_feature_context`; zusätzlich Abgleich mit Code-Map und E1–E8.
+- Neue bestätigte Befunde: `AUD-N01` bis `AUD-N04`, allesamt P3/S; alle
+  wegen des Analyse-Only-Non-Goals als `accepted-deferred` vorgemerkt.
+- Konsolidiert: Antwortbudget mit E6-OPT-01, Health-Metrik mit E4-MF-02,
+  Footprint mit E3-OPT-01/E7-OPT-01 sowie Konstruktor-Signatur mit
+  E2-BUG-03/E5-BUG-04.
+- Keine Dateien, Produktionsartefakte, Tests, Konfiguration oder
+  Produktdokumentation geändert; kein Reviewer gestartet.
+
+### Vollständiger finaler Agentenbericht
+
+## Abschlussbericht – read-only
+
+### Geprüfte MCP-Abfragen
+
+- `get_index_scope`, `get_file_tree`, `get_server_health`
+- `find_duplicates`: exakte, normalisierte, Near- und strukturelle Suche
+- `find_dead_code` sowie `find_references`
+- `find_magic_values`
+- `get_violations`
+- `find_symbol`, `get_symbol_body`, `get_feature_context`
+- Abgleich mit aktueller Code-Map und E1–E8
+
+### Neue bestätigte Befunde
+
+| Label | Kategorie | Prio | Größe | Vertrauen |
+|---|---|---:|---:|---:|
+| `AUD-N01` | Optimierung / DRY | P3 | S | hoch |
+| `AUD-N02` | Optimierung / Magic Value | P3 | S | mittel-hoch |
+| `AUD-N03` | Dead Code / unused surface | P3 | S | niedrig |
+| `AUD-N04` | Optimierung / DRY/Magic Value | P3 | S | hoch |
+
+- `AUD-N01`: Zwei private Prüfhelfer duplizieren nahezu vollständig denselben
+  Kontroll- und Fehlerbehandlungspfad.
+- `AUD-N02`: Derselbe stabile typbestimmende Ausgabemarker wird zweimal separat
+  verwendet.
+- `AUD-N03`: Interner Kompatibilitätsalias ohne statische Referenzen; dynamische
+  Nutzung bleibt als Vertrauensvorbehalt bestehen.
+- `AUD-N04`: Identische Fallback-Fehlermeldung in zwei Startfehlerpfaden.
+
+Alle Befunde bleiben wegen des Analyse-Only-Non-Goals unverändert und werden
+nur zur späteren Bearbeitung vorgemerkt.
+
+### Duplikate und Konsolidierungen mit bestehenden E*-IDs
+
+- Antwortbudget-Kandidaten: durch `E6-OPT-01` abgedeckt.
+- Unreferenzierte Gesundheitsmetrik: durch `E4-MF-02` abgedeckt.
+- Aktuelle Footprint-Verstöße: durch `E3-OPT-01` und `E7-OPT-01` abgedeckt.
+- Konstruktorsignatur-Befund: bestehende Konsolidierung `E2-BUG-03` /
+  `E5-BUG-04`.
+- `AUD-N01` ist kein Duplikat von `E3-OPT-02`; dort geht es um Laufzeit-I/O,
+  hier um strukturelle Code-Duplikation.
+- Übrige Near-/Strukturkandidaten wurden wegen unterschiedlicher Verträge oder
+  Verantwortlichkeiten nicht bestätigt.
+
+Es wurden keine weiteren neuen bestätigten Befunde festgestellt. Keine
+Dateien geändert, kein Reviewer gestartet; Builds und Tests wurden gemäß
+Analyse-Only-Non-Goal nicht ausgeführt.

@@ -1,8 +1,8 @@
 # Ausführungsstand: Assembly-Unterstützungs-Audit
 
-status: executing
-current_epic: audit
-last_checkpoint: Epic 8 abgeschlossen; Abschluss-Audit folgt
+status: complete
+current_epic: none
+last_checkpoint: Abschluss-Audit abgeschlossen; vier P3-Befunde vorgemerkt
 current_debt_item: none
 debt_attempts: 0
 
@@ -67,22 +67,22 @@ acht eigenständige, priorisierte Befundberichte.
 
 ## Abschluss-Checkliste aus dem Konzept
 
-- [ ] Acht separate Epic-Berichte mit Evidence-/Scope-Abschnitt erstellt.
-- [ ] Befunde nach `Bug`, `Optimierung`, `Missing Feature`, danach Priorität,
+- [x] Acht separate Epic-Berichte mit Evidence-/Scope-Abschnitt erstellt.
+- [x] Befunde nach `Bug`, `Optimierung`, `Missing Feature`, danach Priorität,
       Vertrauen und Größe geordnet; leere Kategorien begründet.
-- [ ] Assembly-Tools und assembly-fähige Folgeabfragen gegen aktuelle
+- [x] Assembly-Tools und assembly-fähige Folgeabfragen gegen aktuelle
       Implementierung und MCP-Verträge geprüft.
-- [ ] Decompilation, Referenzen, Fallback/Diagnosen, Lebenszeit, Sicherheit,
+- [x] Decompilation, Referenzen, Fallback/Diagnosen, Lebenszeit, Sicherheit,
       Response-Budget und Agentennutzbarkeit abgedeckt.
-- [ ] GIT-01 redigierter Origin-Nachweis sowie LOCAL-01 bis LOCAL-03
+- [x] GIT-01 redigierter Origin-Nachweis sowie LOCAL-01 bis LOCAL-03
       Decompilation-Nachweis erstellt.
-- [ ] FALSE-01 als sicherer, recoverable Negativfall nachgewiesen.
-- [ ] Keine externen Assembly-Identitäten in versionierten Ergebnissen,
+- [x] FALSE-01 als sicherer, recoverable Negativfall nachgewiesen.
+- [x] Keine externen Assembly-Identitäten in versionierten Ergebnissen,
       Commit-Texten oder Vorschlägen; lokale Prüffall-Matrix nicht übernommen.
-- [ ] Explizit dokumentiert, welche Nachweise nur gelesen und welche MCP-
+- [x] Explizit dokumentiert, welche Nachweise nur gelesen und welche MCP-
       Abfragen tatsächlich ausgeführt wurden.
-- [ ] Keine Code-, Build-, Test- oder Dokumentationsänderungen vorgenommen.
-- [ ] Redaktionsprüfung und Gitignore-Prüfung der lokalen Prüffall-Matrix
+- [x] Keine Code-, Build-, Test- oder Dokumentationsänderungen vorgenommen.
+- [x] Redaktionsprüfung und Gitignore-Prüfung der lokalen Prüffall-Matrix
       durchgeführt.
 
 ## Tech-Debt
