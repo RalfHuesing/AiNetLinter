@@ -264,10 +264,10 @@
 - Ursachensignatur: package4-managed-executable-support
 - Scope/Fundstelle: `src/AiNetLinter/Configuration/AssemblyPathValidation.cs` und Assembly-Ziel-/Source-Mapping-Verbraucher
 - Evidenz: Der direkte Supportpfad und die öffentliche registrierte `inspect_assembly`-Route liefern für native PE nun denselben typisierten und hilfreichen `Recoverable`-Payload mit `IsError=false`, `Recoverable=true`, `WorkspaceDiagnostic`, Kontext, Message und Hint. Die Weitergabe erfolgt über den typisierten Sessionbefund `AssemblySessionFailureKind.MetadataUnavailable`; Datei-, Ressourcen-, Instabilitäts- und unerwartete Creation-Fehler bleiben unverändert fehlerhaft.
-- Disposition: review-pending
+- Disposition: fixed
 - attempts: 2
-- Nächster Schritt: Unabhängigen Paket-4-Abschlussreview gegen den Codecheckpoint abwarten.
-- Log-Anker: `execution-log.md`, „Paket 4 P1-Korrekturversuch 2 Implementierer abgeschlossen"
+- Nächster Schritt: Keine weitere Korrektur; der unabhängige Abschlussreview hat direkten und registrierten Native-PE-Vertrag freigegeben.
+- Log-Anker: `execution-log.md`, „Paket 4 finaler Abschlussreview abgeschlossen"
 
 ### Paket-4-Öffentliche Assembly-Beschreibungen
 
@@ -275,10 +275,10 @@
 - Ursachensignatur: package4-public-assembly-description-drift
 - Scope/Fundstelle: `AssemblyAnalysisToolRegistrations`, `ServerInstructions` und `Docs/configuration.md`
 - Evidenz: Der unabhängige Review fand DLL-only-Hinweise in den öffentlichen Toolbeschreibungen und der Konfigurationsdokumentation, obwohl verwaltete `.exe`-Ziele bereits unterstützt werden. Der Korrekturversuch formuliert alle drei öffentlichen Hinweise als `.dll`- oder `.exe`-Vertrag und ergänzt echte `tools/list`-/Server-Instructions-Regressionen; fachlich korrekte External-Source-Mapping-Beispiele bleiben unverändert.
-- Disposition: review-pending
+- Disposition: fixed
 - attempts: 1
-- Nächster Schritt: Unabhängigen Paket-4-Abschlussreview gegen den neuen Dokumentationscheckpoint abwarten.
-- Log-Anker: `execution-log.md`, „Paket 4 P1-Korrekturversuch 2 Dokumentations-Implementierer abgeschlossen"
+- Nächster Schritt: Keine weitere Korrektur; öffentliche Beschreibungen und Regressionen sind durch den unabhängigen Abschlussreview freigegeben.
+- Log-Anker: `execution-log.md`, „Paket 4 finaler Abschlussreview abgeschlossen"
 
 ### Paket-4-Produktionsstruktur- und Parametergrenzen
 
@@ -286,10 +286,10 @@
 - Ursachensignaturen: changed-production-aicontext-footprint-drift; changed-symbol-scanner-parameter-contract
 - Scope/Fundstelle: `Mcp/Tools/AssemblyAnalysis`, `Mcp/Tools/ServerMaintenance`, `Mcp/Tools/SymbolGraph`
 - Evidenz: Der unabhängige Abschlussreview meldete fünf AIContext-Footprints über 2500 und zwei `FindSymbolScanner`-Methoden über vier effektive Parameter im durch diesen Task berührten Produktionsscope. Der Korrekturversuch trennt Assembly-Dispatch und Response-Building, zerlegt Health-Projektionen in fachliche `Projection`-Klassen, verschiebt Assembly-Symbolformatierung nach `SymbolGraph/Navigation` und bündelt Scanner-Parameter in `FindSymbolScanRequest`. Der Nachcheck meldet Fassaden 2375, 2476 und 2482 AIContext sowie je einen effektiven Scanner-Parameter; keine neuen Verstöße im betroffenen Scope.
-- Disposition: review-pending
+- Disposition: fixed
 - attempts: 1
-- Nächster Schritt: Unabhängigen Review des Struktur-/Parameter-Checkpoints abwarten.
-- Log-Anker: `execution-log.md`, „Paket 4 Produktionsstrukturkorrektur Implementierer abgeschlossen"
+- Nächster Schritt: Keine weitere Korrektur; der unabhängige Abschlussreview bestätigt die Struktur-/Parametergrenzen.
+- Log-Anker: `execution-log.md`, „Paket 4 finaler Abschlussreview abgeschlossen"
 
 ### Paket-4-Hotspots-Parameter
 
@@ -297,9 +297,9 @@
 - Ursachensignatur: package4-hotspots-parameter-contract
 - Scope/Fundstelle: `GetHotspotsTool`, `GetHotspotsScanner` und `FileStructureToolRegistrations`
 - Evidenz: `maxResults` (Default 50, Cap 200) und `minLinePercentage` (Default 80, 0–100) werden typisiert normalisiert; Ergebniszählung, Trunkierung und deterministische Sortierung sind regressionstestiert.
-- Disposition: review-pending
+- Disposition: fixed
 - attempts: 0
-- Nächster Schritt: Unabhängigen Paket-4-Abschlussreview abwarten.
+- Nächster Schritt: Keine weitere Korrektur; die Hotspot-Verträge wurden im unabhängigen Abschlussreview bestätigt.
 - Log-Anker: `execution-log.md`, „Paket 4 Implementierer abgeschlossen"
 
 ### Paket-4-SymbolIdentifier- und Dokumentationsvertrag
@@ -308,9 +308,9 @@
 - Ursachensignatur: package4-symbolidentifier-documentation-drift
 - Scope/Fundstelle: Feature-/TestContext-Registrierungen, `Docs/agent-api.md`, `Docs/integration.md` und `.agents/rules/AiNetLinter-McpWorkflow.mdc`
 - Evidenz: `symbolIdentifier` ist als primäre Benennung dokumentiert und registriert; `symbol` bleibt kompatibler Alias. Assembly-Detailflags, `bodyAvailability`, `.exe`-Support, Health-Ziele und Progressive Disclosure sind dokumentiert und per Smoke-/Vertragstests abgeglichen.
-- Disposition: review-pending
+- Disposition: fixed
 - attempts: 0
-- Nächster Schritt: Unabhängigen Paket-4-Review abwarten.
+- Nächster Schritt: Keine weitere Korrektur; Alias- und Dokumentationsvertrag wurden im unabhängigen Abschlussreview bestätigt.
 - Log-Anker: `execution-log.md`, „Paket 4 Implementierer abgeschlossen"
 
 ### Paket-4-Health-Dokumentationsvertrag

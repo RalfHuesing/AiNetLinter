@@ -2,11 +2,11 @@
 
 - Primäraufgabe: Robuste Assembly-Analyse und konsistente MCP-Antwortverträge
 - Betriebsart: Großkonzept-Modus
-- Status: executing
+- Status: final_verification
 - current_epic: Paket 4 – Kompatibilität, API-Lücken und Dokumentation
-- current_debt_item: package4-native-pe-recoverability
-- debt_attempts: 1
-- letzter Commit: `7a02ff1c`
+- current_debt_item: abschluss-audit-und-vollgates
+- debt_attempts: 0
+- letzter Commit: `bf5f6083`
 
 ## Epics
 
@@ -40,15 +40,15 @@
 - Betroffene Bereiche: `.exe`-Unterstützung, Registry-Pfadbefund, Hotspots, Parameterbenennung, Dokumentation und Registrierungen
 - Muss-/Akzeptanzkriterien: verwaltete `.dll` und `.exe` werden unterstützt; nicht verwaltete PE-Dateien liefern typisierte Recoverable-Fehler; Tool-Schemas und Dokumentation stimmen überein; Alias-Kanonisierung bleibt ohne Reproduktion bewusst zurückgestellt.
 - Verifikation: Fixture-, Registrierungs-, Dokumentations- und MCP-Checks sowie `get_violations`
-- Status: in_progress
+- Status: done
 
 ## Abschluss-Checkliste
 
 - [ ] `dotnet build`
 - [ ] `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress`
 - [ ] `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`
-- [ ] Konzepttests für Assembly-Filter, Budget, Navigation, File Tree, Source-Backing, Health, Fehlerpayloads, DTOs und `.exe`/native PE
-- [ ] Dokumentationsbeispiele gegen aktuelle Tool-Registrierungen geprüft
+- [x] Konzepttests für Assembly-Filter, Budget, Navigation, File Tree, Source-Backing, Health, Fehlerpayloads, DTOs und `.exe`/native PE
+- [x] Dokumentationsbeispiele gegen aktuelle Tool-Registrierungen geprüft
 - [ ] Abschluss-Audit auf DRY, Refactoring-Drift, Dead Code und Magic Values
 
 Tech-Debt-Queue: siehe `tech-debt.md`.
