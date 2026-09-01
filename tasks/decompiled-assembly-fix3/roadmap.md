@@ -6,7 +6,7 @@
 - current_epic: Paket 4 – Kompatibilität, API-Lücken und Dokumentation
 - current_debt_item: package4-native-pe-recoverability
 - debt_attempts: 1
-- letzter Commit: `b7fd550d`
+- letzter Commit: `7a02ff1c`
 
 ## Epics
 
