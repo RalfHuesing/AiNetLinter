@@ -238,6 +238,48 @@ public sealed class AssemblyAnalysisToolTests
     }
 
     [Fact]
+    public async Task InspectAssembly_GlobalResponseBudgetRemovesOversizedSingletonMember()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-singleton-budget-");
+        var parameters = Enumerable.Range(0, 500)
+            .Select(index => $"string parameter{index:D3}");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "SingletonResponseBudgetProbe",
+            $"namespace Probe.Budget; public sealed class Oversized {{ public void Consume({string.Join(", ", parameters)}) {{ }} }}");
+
+        var result = await InspectAssemblyTool.ExecuteAsync(
+            null,
+            new InspectAssemblyArguments(
+                assemblyPath,
+                "Probe.Budget",
+                "Oversized",
+                null,
+                true,
+                1000,
+                ExactTypeName: true,
+                MemberNames: ["Consume"],
+                MaxMembers: 1000),
+            CancellationToken.None);
+
+        var payload = Deserialize<InspectAssemblyPayload>(result);
+        var type = Assert.Single(payload.Types);
+        var text = TextOf(result);
+        var structuredBytes = Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText());
+
+        Assert.Equal(1, payload.TotalTypes);
+        Assert.Equal(1, payload.ShownCount);
+        Assert.True(payload.Truncated);
+        Assert.Contains("responseBudget", payload.TruncatedBy);
+        Assert.Equal(1, type.TotalMembers);
+        Assert.Empty(type.Members);
+        Assert.True(type.MembersTruncated);
+        Assert.Contains("responseBudget", type.TruncatedBy!);
+        Assert.True(Encoding.UTF8.GetByteCount(text) <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
+        Assert.True(structuredBytes <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
+    }
+
+    [Fact]
     public async Task InspectAssembly_RejectsRelativeAndMissingPathsWithoutRuntimeLoading()
     {
         var relative = await InspectAssemblyTool.ExecuteAsync(null, new InspectAssemblyArguments("relative.dll", null, null, null, true, 100), CancellationToken.None);

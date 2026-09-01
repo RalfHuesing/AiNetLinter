@@ -27,11 +27,11 @@
 - Schweregrad: P1
 - Ursachensignatur: assembly-response-budget-projection-missing-after-compactor-removal
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs`, `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisService.cs`, `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.cs`
-- Evidenz: Der erste Reviewer stellte fehlende globale Budgetierung fest. Korrekturversuch 2 bezieht nun `AssemblyAnalysisResponse.Enrich` ein, behandelt Singleton-Übergrößen und meldete im scoped `get_violations`-Nachcheck 0 Verstöße; die unabhängige Bestätigung steht noch aus.
+- Evidenz: Der erste Reviewer stellte fehlende globale Budgetierung fest. Korrekturversuch 2 bezieht nun `AssemblyAnalysisResponse.Enrich` ein und behandelt Singleton-Übergrößen. Korrekturversuch 3 ergänzt isolierte Dispatcher-/Enrichment- und Singleton-Regressionstests; 29/29 gezielte Tests und der scoped `get_violations`-Nachcheck meldeten 0 Verstöße. Der Abschluss-Review und die Gesamtgates stehen noch aus.
 - Disposition: fix-now
-- attempts: 2
-- Nächster Schritt: Dispatcher-/Singleton-Regressionstests ergänzen und danach Gesamtgates ausführen; erst bei bestätigter Behebung als `fixed` markieren.
-- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 2 Reviewer abgeschlossen"
+- attempts: 3
+- Nächster Schritt: Frischer Abschluss-Review und danach Gesamtgates; erst bei bestätigter Behebung als `fixed` markieren.
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 3 abgeschlossen"
 
 ### Projektionstyp übersteigt Zeilenlimit
 

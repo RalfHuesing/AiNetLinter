@@ -190,3 +190,35 @@
 - Verifikationsbewertung: Implementierer-Nachweis 27/27 und `git diff --check` sind frisch und passend für den Producer-Scope; MCP-first `get_feature_context`/`find_references` bestätigten die Enrichment-Reihenfolge. Vollständiger `dotnet build` und beide Nicht-Stress-Gates sind auf diesem Stand noch nicht ausgeführt.
 - Empfehlung: Dispatcher-Test mit absichtlich übergroßer finaler Enrichment-Antwort und Singleton-Test ergänzen, danach `dotnet build` und beide vollständigen Nicht-Stress-Testläufe erfolgreich ausführen.
 - Nächste Aktion: Frischer Implementierer-Korrekturversuch für die verbleibende P1-Ursache; strukturellen Befund in `tech-debt.md` als `fixed` fortschreiben.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 3 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `b9ffa968`
+- Ursachensignatur: `assembly-response-budget-projection-missing-after-compactor-removal`
+- Versuch: 3 von 5
+- Status: running
+- Auftrag: Explizite Dispatcher-/Enrichment-Regression für eine übergroße finale Antwort und explizite Singleton-Regression ergänzen, sodass der zuvor fehlerhafte Pfad isoliert geprüft wird. Bestehende Budgetlogik nicht unnötig umbauen, `code-map.md` pflegen und nach letzter Codeänderung gezielte Tests sowie `get_violations` ausführen. Kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 3 abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: `01a05bcf-c5cf-7650-847f-b0956e15406f`
+- Ursachensignatur: `assembly-response-budget-projection-missing-after-compactor-removal`
+- Versuch: 3 von 5
+- Status: completed; Arbeitsstand ohne Rollen-Commit übergeben
+- Ergebnis: `AssemblyAnalysisDispatcherCapabilityTests.cs` enthält eine Lease-/Dispatcher-/Enrichment-Budgetregression; `AssemblyAnalysisToolTests.cs` enthält eine Singleton-Übergrößenregression. `code-map.md` wurde aktualisiert; keine Produktionsänderungen.
+- Verifikationsnachweise nach der letzten Codeänderung:
+  - Gezielte Tests: 29/29 bestanden.
+  - `git diff --check`: erfolgreich; nur erwartete LF/CRLF-Hinweise.
+  - Scoped `get_violations` mit `targetType=project`, absolutem `targetPath` und AssemblyAnalysis-Scope: 0 Verstöße.
+  - DRY-/Dead-Code-/Magic-Value-Prüfungen: 0 exakte Duplikate, 0 High-Confidence-Dead-Code-Funde, keine geänderten Produktionsdateien für Magic Values.
+  - Lease-/Dispatcher-Verdrahtung MCP-first verifiziert.
+- Nicht ausgeführt: vollständiger Build und beide Nicht-Stress-Gates.
+- Restrisiko: Die neuen Tests isolieren die zuvor fehlende Abdeckung; die Gesamtgates stehen noch aus.
+- Nächste Aktion: Testkorrekturstand committen und frischen Abschluss-Reviewer für Paket 1 starten.
