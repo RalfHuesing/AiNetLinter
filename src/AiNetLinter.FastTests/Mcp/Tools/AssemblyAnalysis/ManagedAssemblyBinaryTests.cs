@@ -55,7 +55,7 @@ public sealed class ManagedAssemblyBinaryTests
             new InspectAssemblyArguments(nativeAssemblyPath, null, null, null, true, 100),
             CancellationToken.None);
 
-        Assert.True(result.IsError);
+        Assert.False(result.IsError);
         Assert.Contains("keine .NET-Metadaten", AssemblyAnalysisTestSupport.TextOf(result), StringComparison.OrdinalIgnoreCase);
         Assert.Contains("verwaltete .NET-.dll oder .exe mit IL", AssemblyAnalysisTestSupport.TextOf(result), StringComparison.Ordinal);
         var payload = JsonSerializer.Deserialize<McpErrorPayload>(
@@ -63,8 +63,12 @@ public sealed class ManagedAssemblyBinaryTests
             McpJsonOptions.Default);
         Assert.NotNull(payload);
         Assert.Equal(LinterErrorCodes.WorkspaceDiagnostic, payload.Code);
+        Assert.Equal(nativeAssemblyPath, payload.Context);
         Assert.Contains(".dll oder .exe mit IL", payload.Message, StringComparison.Ordinal);
-        Assert.Contains("Einmal erneut versuchen", payload.Hint, StringComparison.Ordinal);
+        Assert.Equal(
+            "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung.",
+            payload.Hint);
+        Assert.True(payload.Recoverable);
     }
 
 }

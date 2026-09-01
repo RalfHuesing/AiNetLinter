@@ -263,10 +263,10 @@
 - Schweregrad: P1
 - Ursachensignatur: package4-managed-executable-support
 - Scope/Fundstelle: `src/AiNetLinter/Configuration/AssemblyPathValidation.cs` und Assembly-Ziel-/Source-Mapping-Verbraucher
-- Evidenz: Die zentrale Prüfung akzeptiert `.dll` und `.exe`; eine verwaltete Test-`.exe` wird ohne Ausführung analysiert. Native PE-Dateien liefern zwar einen typisierten und hilfreichen Fehler, aber aktuell `isError=true`/`recoverable=false` statt des im Konzept geforderten recoverable Vertrags.
-- Disposition: fix-now
+- Evidenz: Die zentrale Prüfung akzeptiert `.dll` und `.exe`; eine verwaltete Test-`.exe` wird ohne Ausführung analysiert. Native PE-Dateien liefern nun einen typisierten und hilfreichen `Recoverable`-Payload mit `IsError=false` und `Recoverable=true`.
+- Disposition: fixed
 - attempts: 1
-- Nächster Schritt: Native-PE-Antwort auf `IsError=false`, `Recoverable=true` umstellen und Test/Doku synchronisieren.
+- Nächster Schritt: Keine weitere Korrektur; Recoverable-Payload und managed-/native-PE-Test sind durch die gezielte Korrektur abgesichert.
 - Log-Anker: `execution-log.md`, „Paket 4 Implementierer abgeschlossen"
 
 ### Paket-4-Hotspots-Parameter
@@ -277,7 +277,7 @@
 - Evidenz: `maxResults` (Default 50, Cap 200) und `minLinePercentage` (Default 80, 0–100) werden typisiert normalisiert; Ergebniszählung, Trunkierung und deterministische Sortierung sind regressionstestiert.
 - Disposition: review-pending
 - attempts: 0
-- Nächster Schritt: Unabhängigen Paket-4-Review abwarten.
+- Nächster Schritt: Unabhängigen Paket-4-Abschlussreview abwarten.
 - Log-Anker: `execution-log.md`, „Paket 4 Implementierer abgeschlossen"
 
 ### Paket-4-SymbolIdentifier- und Dokumentationsvertrag
@@ -296,10 +296,10 @@
 - Schweregrad: P1
 - Ursachensignatur: package4-health-documentation-drift
 - Scope/Fundstelle: `Docs/agent-api.md`, `Docs/integration.md`, `ServerMaintenanceToolRegistrations` und `GetServerHealthResponseBuilder`
-- Evidenz: Die Runtime aggregiert den parameterlosen Health-Call standardmäßig und unterstützt `includeSessions`/`maxSessions`; die Dokumentation beschreibt noch getrennte Sessiondetails als Standard und dokumentiert die beiden Steuerparameter nicht vollständig.
-- Disposition: fix-now
+- Evidenz: Die Runtime aggregiert den parameterlosen Health-Call standardmäßig und unterstützt `includeSessions`/`maxSessions`; die Dokumentation beschreibt nun Aggregate, zielgebundene Details und die beiden Steuerparameter synchron zur Runtime. Smoke-/Integrationstests sind grün.
+- Disposition: fixed
 - attempts: 1
-- Nächster Schritt: Health-Abschnitte auf den tatsächlichen Aggregate-/Detailvertrag aktualisieren und per Smoke-Test verifizieren.
+- Nächster Schritt: Keine weitere Korrektur; Aggregate-/Detailvertrag mit `includeSessions`/`maxSessions` ist synchronisiert und getestet.
 - Log-Anker: `execution-log.md`, „Paket 4 Reviewer abgeschlossen"
 
 ### Paket-4-Registry-Alias-Kanonisierung
@@ -311,6 +311,16 @@
 - Disposition: accepted-deferred
 - Nächster Schritt: Nur bei reproduzierbarem Alias-Test als eigenes Paket wieder aufnehmen.
 - Log-Anker: `execution-log.md`, „Paket 4 Implementierer abgeschlossen"
+
+### Paket-4-Test- und Betriebsnachschärfungen
+
+- Schweregrad: P2
+- Ursachensignatur: package4-follow-up-verification
+- Scope/Fundstelle: `GetTestContextTool`, `ManagedAssemblyBinaryTests`, `GetHotspotsToolTests` und aktiver MCP-Daemon
+- Evidenz: Die TestContext-Fehlerhilfe nennt noch `symbol`; der managed-`.exe`-Test beweist Nichtausführung nur indirekt; die Hotspot-Sortierungsassertion ist teilweise selbstreferenziell. Der aktive MCP-Daemon kann gegenüber dem lokalen Source-Stand veraltet sein und benötigt vor Deployment einen Neustart/Aktualisierung.
+- Disposition: accepted-deferred
+- Nächster Schritt: In einer separaten Verifikations-/Release-Schleife nachschärfen; keine P1-Blockade der aktuellen Lieferung.
+- Log-Anker: `execution-log.md`, „Paket 4 Reviewer abgeschlossen"
 
 ### Paket-3-Diagnose-Sample-Priorisierung
 

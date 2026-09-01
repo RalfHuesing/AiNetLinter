@@ -315,9 +315,12 @@ adressiert dabei den Projektroot; `targetType=assembly` ist für die in
 Metrikabfragen sowie für die spezialisierten Assembly-Tools verfügbar. Projekt-
 only-Tools weisen Assembly-Ziele ausdrücklich als unsupported aus. `get_server_health`
 akzeptiert keinen Target-Block für die Aggregation, optional einen vollständigen
-Projekt- oder Assembly-Target-Block und liefert getrennte Session-Abschnitte. Der
-Default bleibt kompakt; `includeDiagnostics=true` fordert begrenzte Samples an,
-deren Anzahl über `maxDiagnostics` (Default 20, Cap 50) gesteuert wird.
+Projekt- oder Assembly-Target-Block. Ohne Target liefert es standardmäßig ein
+kleines Aggregat mit Session-, Status- und Diagnosezählern; `includeSessions=true`
+fordert begrenzte Sessiondetails an und `maxSessions` steuert deren Grenze
+(Default 20, Cap 50). Ein zielgebundener Aufruf bleibt detailliert.
+Unabhängig davon fordert `includeDiagnostics=true` begrenzte Samples an, deren
+Anzahl über `maxDiagnostics` (Default 20, Cap 50) gesteuert wird.
 
 Assembly-Targets sind verwaltete `.dll` oder `.exe`; die Analyse bleibt metadata-only
 und führt keine Assembly aus. `inspect_assembly` nutzt `publicOnly`, `exactTypeName`,

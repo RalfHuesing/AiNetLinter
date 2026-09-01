@@ -990,6 +990,19 @@
 - Verifikation: fokussierte FastTests 78 bestanden/1 bestehender Agent-Guide-Zeilenumbruchfehler; fokussierte IntegrationTests 25/25; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` grün; Audit ohne tasknahe Duplikat-/HIGH-Dead-Code-/sichere Magic-Value-Befunde. Keine Vollgates im Review.
 - Nächste Aktion: P1-Korrekturversuch 1 mit frischem Implementierer für Recoverability und Health-Dokumentation starten.
 
+## 2026-09-01 – Paket 4 P1-Korrekturversuch 1 Implementierer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 4 – Kompatibilität, API-Lücken und Dokumentation
+- Rolle: Implementierer (frisch)
+- Subagent-ID: `01a05dbf-80c1-79d3-bed5-51f527465d80`
+- Versuch: 1 im Epic
+- Status: completed; Änderungen uncommitted übergeben; keine Roadmap-/Log-/Tech-Debt-Änderung durch den Agenten; kein Commit.
+- Umsetzung: Native PE verwendet jetzt den typisierten Recoverable-Vertrag (`IsError=false`, `Recoverable=true`, `WorkspaceDiagnostic`, Kontext, Message und Hint); der Native-PE-Test prüft diese Felder. Managed `.exe` bleibt metadata-only.
+- Dokumentation: `Docs/agent-api.md`, `Docs/integration.md` und die notwendige Smoke-Assertion beschreiben Aggregate, zielgebundene Details sowie `includeSessions` und `maxSessions` nun synchron zur Runtime.
+- Verifikation: gezielte FastTests 21/21, gezielte IntegrationTests 15/15, `dotnet build --no-restore` 0 Warnungen/0 Fehler, `git diff --check` grün. Keine Vollgates; bestehende projektweite Warnungen/Altfehler bleiben separat klassifiziert.
+- Nächste Aktion: Code-/Dokumentationscheckpoint sichern und unabhängigen Paket-4-Abschlussreview starten.
+
 ## 2026-09-01 – Paket 4 P1-Korrekturversuch 1 gestartet
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume

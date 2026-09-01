@@ -90,5 +90,8 @@ public sealed class McpDocumentationSmokeTests
         Assert.Contains("contentMode", docText, StringComparison.Ordinal);
         Assert.Contains("minLinePercentage", docText, StringComparison.Ordinal);
         Assert.Contains("Progressive Disclosure", docText, StringComparison.Ordinal);
+        Assert.Contains("`includeSessions=true`", docText, StringComparison.Ordinal);
+        Assert.Contains("`maxSessions`", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("ohne Target getrennte Projekt-/Assembly-Session-Listen", docText, StringComparison.Ordinal);
     }
 }

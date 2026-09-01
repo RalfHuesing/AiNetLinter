@@ -10,6 +10,7 @@ using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -62,9 +63,11 @@ internal static class AssemblyAnalysisToolSupport
             ct);
         if (context is null)
         {
-            return new(fullPath, null, McpToolResults.CompilationError(
+            return new(fullPath, null, McpToolResults.Recoverable(
+                LinterErrorCodes.WorkspaceDiagnostic,
                 error ?? "Assembly konnte nicht analysiert werden.",
-                fullPath));
+                context: fullPath,
+                hint: "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung."));
         }
 
         return new(fullPath, context, null);

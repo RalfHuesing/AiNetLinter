@@ -193,7 +193,10 @@ detached `--daemon-start`, falls kein Endpunkt erreichbar ist. Nach `hello` /
 weitergereicht; stdout bleibt ausschließlich MCP-Protokoll. Jeder
 zielgebundene Tool-Aufruf erhält `targetType` und den absoluten `targetPath`;
 `get_server_health` kann diesen Target-Block weglassen oder einen vollständigen
-Projekt-Target-Block erhalten. Im Projektroot liegt
+Projekt- oder Assembly-Target-Block erhalten. Ohne Target liefert es standardmäßig
+ein kleines Aggregat; `includeSessions=true` fordert begrenzte Sessiondetails an,
+`maxSessions` begrenzt deren Anzahl. Ein zielgebundener Aufruf bleibt detailliert.
+Im Projektroot liegt
 `ainetlinter.project.json` mit `solution` und `rules`:
 
 ```json
@@ -341,7 +344,7 @@ aktiviert.
 | `get_impact` | supported | unsupported | unsupported | Git-/Change-Impact bezieht sich nur auf den aktuellen Projektcheckout |
 | `find_duplicates`, `search_pattern` | supported | unsupported | unsupported | Audit-/Dateisuche bleibt projektgebunden |
 | `reload_config` | supported | unsupported | unsupported | lädt nur die Projekt-Regelkonfiguration neu |
-| `get_server_health` | supported | supported | supported | ohne Target getrennte Projekt-/Assembly-Session-Listen; Target lädt/zeigt genau eine Session |
+| `get_server_health` | supported | supported | supported | ohne Target kleines Aggregat; `includeSessions=true` blendet begrenzte Sessiondetails ein; zielgebunden detailliert |
 | `report_observability_feedback` | unbound | unbound | unbound | kein Target-Vertrag; `projectRoot` ist nur optionaler Feedback-Kontext |
 
 `unsupported` ist ein expliziter Capability-Status und keine leere erfolgreiche
@@ -377,7 +380,7 @@ Source-backed Checkout-/Snapshot-Erzeugung und Decompilation bleiben read-only.
 | `get_symbol_body` | `symbolIdentifiers` (Array stabiler IDs/Namen/Dateizeilen fuer Batch in 1 Turn; auch fuer genau ein Symbol), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body bzw. -Bodies, getrennt durch Divider, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator | ja | nein (Body) |
 | `search_pattern` | `pattern` (Text oder Regex), `isRegex?` (Default `false` = case-insensitive Substring), `maxResults?` (Default 50), `maxFiles?`, `contextLines?`, `maxResponseBytes?`, `scope?`, `includePatterns?`, `excludePatterns?`, `enrichCSharp?` (Default `false`) | Treffer im Dateibestand (alle Dateitypen) mit Match-Bereichen, optionalem Kontext und `completeness`; bei `enrichCSharp=true` zusätzlich `semantic` für sichtbare Treffer geladener C#-Dokumente | nein (Fallback) | ja |
 | `reload_config` | `targetType="project"`, `targetPath` (Pflicht, absoluter Projektroot), `configPath?` (optional, Override für diesen Key) | Liest standardmäßig die `rules`-Datei des adressierten Keys neu ein; ein expliziter `configPath` ist ein Hot-Swap-Override. Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
-| `get_server_health` | kein Target (Aggregation) oder `targetType="project"`/`targetType="assembly"` plus vollständiger `targetPath` (optionaler Session-Filter), `includeDiagnostics?` (Default `false`), `maxDiagnostics?` (Default 20, Cap 50) | getrennte Health-Listen für Projekt-Keys und residente Assembly-/Source-Project-Sessions; standardmäßig kompakte Metadaten und Diagnosezähler, mit `includeDiagnostics=true` begrenzte Samples bis `maxDiagnostics`; `diagnosticsSummary` weist Counts/Truncation aus | nein | ja |
+| `get_server_health` | kein Target (Aggregation) oder `targetType="project"`/`targetType="assembly"` plus vollständiger `targetPath`, `includeSessions?` (Default `false`), `maxSessions?` (Default 20, Cap 50), `includeDiagnostics?` (Default `false`), `maxDiagnostics?` (Default 20, Cap 50) | ohne Target kleines Aggregat mit Session-, Status- und Diagnosezählern; `includeSessions=true` ergänzt eine auf `maxSessions` begrenzte Sessionliste. Ein zielgebundener Projekt- oder Assembly-Aufruf bleibt detailliert; `includeDiagnostics=true` begrenzt Diagnosesamples über `maxDiagnostics`; `diagnosticsSummary` weist Counts/Truncation aus | nein | ja |
 | `report_observability_feedback` | `feedbackType` (Pflicht), `title` (Pflicht), `description` (Pflicht), `relatedTool?`, `severity?` (Default `medium`), `expectedBehavior?`, `actualBehavior?`, `additionalContext?`, `projectRoot?` | Schreibt Fehlerberichte, unerwartete Ausgaben, False Positives oder Feature-Wünsche von KI-Agenten unbeschränkt ins System-Log zur Analyse (nicht für normale Leermengen wie nicht existierende Symbole); liefert Bestätigung und typisiertes DTO | ja | nein |
 | `find_duplicates` | `mode?` (`clone` Default, `refactoring-drift` oder `structural`), `scopeType?` (`all` Default, `production`, `tests`), `minTokens?` (Default aus `rules.json`, 30), `similarityThreshold?` (`exact`/`near`/`fuzzy`, Default `fuzzy` — niedrigste noch angezeigte Stufe, bei `mode=clone` und `mode=structural`), `normalizeIdentifiers?` (Default `false`, nur `mode=clone`), `scopeDir?` (Default Solution-Root), `maxResults?` (Default 20), `helperSymbol?` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte, stabile DocumentationCommentId oder qualifizierter Name wie bei `find_references`; Pflicht bei `mode=refactoring-drift`, bei `mode=structural` ignoriert) | `mode=clone`: Token-basierte Code-Clone-Detection (Jaccard-N-Gram, Method-Granularität) als transitiv gruppierte Cluster (nicht isolierte Paare), gestaffelt nach exact/near/fuzzy-Ähnlichkeit (inkl. Top-Cluster-Übersicht bei >20 Treffern). `mode=refactoring-drift`: Methoden, die den per `helperSymbol` angegebenen Helper strukturell nachbauen statt ihn aufzurufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005) — als Kandidaten (nicht Verstöße) gelistet, siehe Detail-Abschnitt unten. `mode=structural`: Erkennt semantisch ähnliche Hilfsmethoden anhand eines Roslyn-Strukturprofils und Cosine-Similarity (Typ-4/Intended Duplication), liefert manuell zu prüfende Kandidatencluster mit Strukturprofil-Kurzfassung — keine automatische `DuplicateCode`-Violation, eigene Cosine-Schwellwerte aus `rules.json` (`StructuralDuplicate*Threshold`) | ja | ja |
 
@@ -446,9 +449,14 @@ Credentials, Query oder Fragment. Geschützte oder anderweitig nicht unterstütz
 Remotes werden fail-closed und recoverable gemeldet; Credentials werden nicht in
 URLs, Logs, Exceptions oder MCP-Payloads übernommen.
 
-`get_server_health` bleibt im Default kompakt: `diagnosticsSummary` enthält
-Counts, aber `diagnostics` bleibt leer/ausgelassen. Erst `includeDiagnostics=true`
-aktiviert begrenzte Samples; `maxDiagnostics` wird serverseitig auf 50 gedeckelt.
+`get_server_health` liefert ohne Target standardmäßig ein kleines Aggregat:
+`sessionsIncluded=false`, `shownSessionCount=0` und keine Sessionliste; sichtbar
+bleiben Gesamtzahl, Statusverteilung und Diagnosezähler. `includeSessions=true`
+fordert begrenzte Sessiondetails an, `maxSessions` wird serverseitig auf 50
+gedeckelt. Ein zielgebundener Projekt- oder Assembly-Call bleibt detailliert.
+Unabhängig davon enthält `diagnosticsSummary` Counts; erst
+`includeDiagnostics=true` aktiviert begrenzte Samples und `maxDiagnostics` wird
+serverseitig auf 50 gedeckelt.
 
 Die Assembly-StructuredContent-Payloads sind additive DTOs: `InspectAssemblyPayload`
 enthält `assemblyPath`, `identity`, `namespaces`, `references`, `types`,
