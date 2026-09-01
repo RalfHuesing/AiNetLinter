@@ -68,11 +68,11 @@
 - Schweregrad: P1
 - Ursachensignatur: response-projection-structural-rule-drift
 - Scope/Fundstelle: `AssemblyAnalysisResponseLimits.cs`, `FindAssemblyExtensionsTool.cs`
-- Evidenz: Der Review meldete 543 statt maximal 500 Zeilen, ein exaktes `TryRemoveLastDiagnostic`-Duplikat und AIContext-Footprint 2503 statt 2500. Korrekturversuch 2 reduzierte die Datei auf 268 Zeilen, entfernte das Duplikat und meldete im scoped Nachcheck 0 Verstöße; die unabhängige Bestätigung steht noch aus.
-- Disposition: fix-now
-- attempts: 2
-- Nächster Schritt: Testklassen thematisch aufteilen und beide Testdateien mit `get_violations` prüfen.
-- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 3 Reviewer abgeschlossen"
+- Evidenz: Der Review meldete 543 statt maximal 500 Zeilen, ein exaktes `TryRemoveLastDiagnostic`-Duplikat und AIContext-Footprint 2503 statt 2500. Korrekturversuch 2 bereinigte den Produktionsscope. Korrekturversuch 3 teilte die Testdateien in 492/448 Zeilen plus Budget-Partial-Dateien auf; der erweiterte Testscope meldet 0 Verstöße in 134 Dateien.
+- Disposition: fixed
+- attempts: 1
+- Nächster Schritt: Keine weitere Korrektur; Abschluss-Review und Audit prüfen nur auf Regression.
+- Log-Anker: `execution-log.md`, „Paket 1 Strukturkorrekturversuch 1 abgeschlossen"
 
 
 ### Bestehender AIContext-Footprint-Hinweis
@@ -84,3 +84,14 @@
 - Disposition: accepted-deferred
 - Nächster Schritt: Nur bei direkter Betroffenheit eines späteren Pakets erneut bewerten; kein solutionweiter Cleanup in diesem Task.
 - Log-Anker: `execution-log.md`, „Paket 1 Implementierer abgeschlossen"
+
+### Nicht klassifizierte vollständige Gate-Fehler
+
+- Schweregrad: P1 (Klassifikation ausstehend)
+- Ursachensignatur: full-gate-failures-unclassified
+- Scope/Fundstelle: `src/AiNetLinter.FastTests` und `src/AiNetLinter.IntegrationTests` – Fehler aus dem vollständigen Lauf des Strukturkorrekturversuchs
+- Evidenz: Der Implementierer meldete 2324 bestanden, 5 fehlgeschlagen, 2 übersprungen in FastTests sowie 376 bestanden, 1 fehlgeschlagen in IntegrationTests, ohne Testnamen oder Fehlerausgaben. Eine unabhängige Klassifikation gegen den aktuellen Diff ist erforderlich.
+- Disposition: fix-now
+- attempts: 0
+- Nächster Schritt: Paket-1-Abschlussreview klassifiziert die Fehler; nur bei auftragsbezogener Ursache folgt eine gezielte Korrekturrunde.
+- Log-Anker: `execution-log.md`, „Paket 1 Strukturkorrekturversuch 1 abgeschlossen"

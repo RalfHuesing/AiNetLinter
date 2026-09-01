@@ -250,3 +250,35 @@
 - Frische Verifikation: 29/29, `git diff --check`, Produktionsscope-`get_violations` 0 und MCP-Semantiknachweise wurden als frisch und passend akzeptiert; nicht redundant wiederholt. Keine weiteren P2/P3-Funde.
 - Empfehlung: Testklassen thematisch aufteilen, beide Testdateien mit `get_violations` erfassen und danach vollständigen Build sowie beide Nicht-Stress-Gates ausführen.
 - Nächste Aktion: `assembly-response...` in `tech-debt.md` als `fixed` fortschreiben; frischer Implementierer-Korrekturversuch für `response-projection-structural-rule-drift`.
+
+## 2026-09-01 – Paket 1 Strukturkorrekturversuch 1 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `30625983`
+- Ursachensignatur: `response-projection-structural-rule-drift`
+- Versuch: 1 von 5 für die erneut aktivierte Strukturursache
+- Status: running
+- Auftrag: Die neuen Budgetregressionen thematisch so aufteilen oder verschieben, dass beide geänderten Testdateien die aktive `MaxLineCount`-Regel einhalten, ohne Testwert oder Paketumfang zu verlieren. Danach beide Testdateien im `get_violations`-Scope erfassen und gezielt testen. Kein Produktionscode, kein Commit und keine Roadmap-/Log-/Tech-Debt-Änderung durch den Agenten; `code-map.md` pflegen.
+
+## 2026-09-01 – Paket 1 Strukturkorrekturversuch 1 abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: `01a05bdf-c378-75c3-a1ca-5655eaf994d5`
+- Ursachensignatur: `response-projection-structural-rule-drift`
+- Versuch: 1 von 5 für die erneut aktivierte Strukturursache
+- Status: completed; Arbeitsstand ohne Rollen-Commit übergeben
+- Ergebnis: `AssemblyAnalysisDispatcherCapabilityTests.cs` (492 Zeilen) und `AssemblyAnalysisToolTests.cs` (448 Zeilen) unterschreiten das aktive 500-Zeilen-Limit. Neue Partial-Dateien `AssemblyAnalysisDispatcherCapabilityTests.ResponseBudget.cs` (41 Zeilen) und `AssemblyAnalysisToolTests.ResponseBudget.cs` (139 Zeilen) erhalten die Dispatcher-/Enrichment- und Producer-/Singleton-Budgetregressionen vollständig. `code-map.md` wurde aktualisiert; kein Produktionscode geändert.
+- Verifikationsnachweise nach der letzten Testcodeänderung:
+  - Gezielte Tests: 29/29 bestanden.
+  - `dotnet build`: 0 Warnungen, 0 Fehler.
+  - Erweiterter `get_violations`-Scope `src/AiNetLinter.FastTests/Mcp` mit absolutem Projekt-Target: 0 Verstöße in 134 Dateien.
+  - `git diff --check`: erfolgreich.
+  - DRY: 0 Duplikatcluster; Dead Code: 0 High-Confidence-Funde.
+  - Vollständige Gates: `src/AiNetLinter.FastTests` 2324 bestanden, 5 fehlgeschlagen, 2 übersprungen; `src/AiNetLinter.IntegrationTests` 376 bestanden, 1 fehlgeschlagen. Failing-Testnamen und Ursachen wurden im Hand-off nicht benannt; eine unabhängige Klassifikation ist erforderlich.
+- Tech-Debt: `response-projection-structural-rule-drift` ist im geänderten Test-/Produktionsscope fachlich behoben; bestehende Test-Fixture-Magic-Values bleiben `accepted-deferred`.
+- Nächste Aktion: Strukturkorrekturstand committen und frischen Paket-1-Abschlussreview starten; Gate-Fehler dabei konkret klassifizieren.

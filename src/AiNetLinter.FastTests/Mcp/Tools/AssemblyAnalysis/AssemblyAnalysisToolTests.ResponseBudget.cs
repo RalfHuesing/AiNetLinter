@@ -1,0 +1,139 @@
+#nullable enable
+
+using System;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using AiNetLinter.FastTests.Fixtures;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
+using AiNetLinter.TestKit;
+using Xunit;
+
+namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
+
+public sealed partial class AssemblyAnalysisToolTests
+{
+    [Fact]
+    public async Task InspectAssembly_GlobalResponseBudgetUsesOneTypedSelectionForTextAndJson()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-response-budget-");
+        var types = Enumerable.Range(0, 180)
+            .Select(index => $"public sealed class Type{index:D3} {{ public string Value{index:D3} => \"value\"; public void Reset{index:D3}(string input) {{ }} }}");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ResponseBudgetProbe",
+            $"namespace Probe.Budget; {string.Join(Environment.NewLine, types)}");
+
+        var result = await InspectAssemblyTool.ExecuteAsync(
+            null,
+            new InspectAssemblyArguments(assemblyPath, null, null, null, true, 1000, MaxMembers: 1000),
+            CancellationToken.None);
+
+        var payload = Deserialize<InspectAssemblyPayload>(result);
+        var text = TextOf(result);
+        var structuredBytes = Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText());
+
+        Assert.True(payload.TotalTypes > payload.ShownCount || payload.Types.Any(type => type.MembersTruncated));
+        Assert.True(payload.Truncated);
+        Assert.Contains("responseBudget", payload.TruncatedBy);
+        Assert.Equal(payload.Types.Count, payload.ShownCount);
+        Assert.True(structuredBytes <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
+        Assert.True(Encoding.UTF8.GetByteCount(text) <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
+        Assert.Contains(payload.Types, type => type.Members.Count > 0);
+        Assert.All(
+            payload.Types.SelectMany(type => type.Members),
+            member =>
+            {
+                Assert.NotNull(member.Name);
+                Assert.NotNull(member.Signature);
+                Assert.NotNull(member.Parameters);
+                Assert.NotNull(member.GenericParameters);
+                Assert.NotNull(member.Constraints);
+                Assert.Contains(member.Signature, text, StringComparison.Ordinal);
+            });
+        Assert.All(
+            payload.Types,
+            type => Assert.Contains($"`{type.Namespace}.{type.Name}`", text, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task FindAssemblyExtensions_GlobalResponseBudgetKeepsCountsAndSharedSelection()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-extension-budget-");
+        var extensions = Enumerable.Range(0, 180)
+            .Select(index => $"public static string Extend{index:D3}(this object value, string input) => input;");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ExtensionResponseBudgetProbe",
+            $"namespace Probe.Budget; public static class Extensions {{ {string.Join(Environment.NewLine, extensions)} }}");
+
+        var result = await FindAssemblyExtensionsTool.ExecuteAsync(
+            null,
+            new FindAssemblyExtensionsArguments(assemblyPath, null, null, null, 1000),
+            CancellationToken.None);
+
+        var payload = Deserialize<FindAssemblyExtensionsPayload>(result);
+        var text = TextOf(result);
+        var structuredBytes = Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText());
+
+        Assert.True(payload.TotalExtensions > payload.ShownCount);
+        Assert.True(payload.Truncated);
+        Assert.Equal(payload.Extensions.Count, payload.ShownCount);
+        Assert.Contains("responseBudget", payload.TruncatedBy);
+        Assert.True(structuredBytes <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
+        Assert.True(Encoding.UTF8.GetByteCount(text) <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
+        Assert.All(
+            payload.Extensions,
+            extension =>
+            {
+                Assert.NotNull(extension.Name);
+                Assert.NotNull(extension.Signature);
+                Assert.NotNull(extension.Parameters);
+                Assert.NotNull(extension.GenericParameters);
+                Assert.NotNull(extension.Constraints);
+                Assert.Contains(extension.Signature, text, StringComparison.Ordinal);
+            });
+    }
+
+    [Fact]
+    public async Task InspectAssembly_GlobalResponseBudgetRemovesOversizedSingletonMember()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-singleton-budget-");
+        var parameters = Enumerable.Range(0, 500)
+            .Select(index => $"string parameter{index:D3}");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "SingletonResponseBudgetProbe",
+            $"namespace Probe.Budget; public sealed class Oversized {{ public void Consume({string.Join(", ", parameters)}) {{ }} }}");
+
+        var result = await InspectAssemblyTool.ExecuteAsync(
+            null,
+            new InspectAssemblyArguments(
+                assemblyPath,
+                "Probe.Budget",
+                "Oversized",
+                null,
+                true,
+                1000,
+                ExactTypeName: true,
+                MemberNames: ["Consume"],
+                MaxMembers: 1000),
+            CancellationToken.None);
+
+        var payload = Deserialize<InspectAssemblyPayload>(result);
+        var type = Assert.Single(payload.Types);
+        var text = TextOf(result);
+        var structuredBytes = Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText());
+
+        Assert.Equal(1, payload.TotalTypes);
+        Assert.Equal(1, payload.ShownCount);
+        Assert.True(payload.Truncated);
+        Assert.Contains("responseBudget", payload.TruncatedBy);
+        Assert.Equal(1, type.TotalMembers);
+        Assert.Empty(type.Members);
+        Assert.True(type.MembersTruncated);
+        Assert.Contains("responseBudget", type.TruncatedBy!);
+        Assert.True(Encoding.UTF8.GetByteCount(text) <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
+        Assert.True(structuredBytes <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
+    }
+}
