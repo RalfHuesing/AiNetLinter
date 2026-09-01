@@ -33,6 +33,36 @@
 - Nächster Schritt: Frischer Implementierer führt eine gemeinsame typisierte Vorformatierungsprojektion für Text und Structured Content ein und ergänzt/aktualisiert die Budgettests.
 - Log-Anker: `execution-log.md`, „Paket 1 Reviewer abgeschlossen"
 
+### Projektionstyp übersteigt Zeilenlimit
+
+- Schweregrad: P2
+- Ursachensignatur: response-projection-file-footprint
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.cs`
+- Evidenz: Frischer `get_violations`-Check meldet 543 statt maximal 500 Zeilen.
+- Disposition: accepted-deferred
+- Nächster Schritt: Nach dem P1-Review prüfen, ob eine kleine verhaltensneutrale Aufteilung ohne neue Abstraktionsdrift möglich ist.
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 1 abgeschlossen"
+
+### Duplizierte Diagnose-Entfernung
+
+- Schweregrad: P2
+- Ursachensignatur: duplicate-diagnostic-removal-overloads
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.cs` – `TryRemoveLastDiagnostic`-Überladungen
+- Evidenz: Frischer `get_violations`-Check meldet ein Duplikatcluster nach der Budgetprojektion.
+- Disposition: accepted-deferred
+- Nächster Schritt: Nach dem P1-Review auf identische fachliche Verantwortung und verhaltensneutrale Zusammenführung prüfen.
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 1 abgeschlossen"
+
+### Assembly-Extensions Footprint-Grenze
+
+- Schweregrad: P2
+- Ursachensignatur: assembly-extension-aicontext-footprint
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/FindAssemblyExtensionsTool.cs`
+- Evidenz: Frischer `get_violations`-Check meldet AIContext-Footprint 2503 statt 2500.
+- Disposition: accepted-deferred
+- Nächster Schritt: Nur bei direkter, risikoarmer Reduktion innerhalb des bestehenden Paketvertrags erneut bewerten.
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 1 abgeschlossen"
+
 ### Bestehender AIContext-Footprint-Hinweis
 
 - Schweregrad: P2

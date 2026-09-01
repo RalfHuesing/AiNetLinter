@@ -63,3 +63,38 @@
 - Frische Verifikation: Unabhängiger `dotnet build` erfolgreich mit 0 Warnungen und 0 Fehlern. Der Implementierer-Nachweis mit 53/53 gezielten Tests ist scopegerecht und frisch; seit `462c2edb` wurde nur das Log geändert. Vollständige Nicht-Stress-Gates fehlen weiterhin.
 - P2/P3: `mcp-error-helper-parameter-growth` und `existing-aicontext-footprint` bleiben `accepted-deferred` in `tech-debt.md`.
 - Nächste Aktion: Erster frischer Implementierer-Korrekturversuch für die P1-Ursachensignatur; danach unabhängiger Review.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 1 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `60690838`
+- Ursachensignatur: `assembly-response-budget-projection-missing-after-compactor-removal`
+- Versuch: 1 von 5
+- Status: running
+- Auftrag: Fehlende globale typisierte Antwortbudget-Projektion beheben, ohne Text/JSON-Drift oder Verlust sichtbarer Pflichtfelder. Bestehende Paket-1-Verträge erhalten, passende Regressionstests ergänzen/aktualisieren, `code-map.md` pflegen und nach letzter Codeänderung gezielt testen sowie `get_violations` ausführen. Kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 1 abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: `01a05bab-7a61-79f0-be21-494bb7b5d7fc`
+- Ursachensignatur: `assembly-response-budget-projection-missing-after-compactor-removal`
+- Versuch: 1 von 5
+- Status: completed; Arbeitsstand ohne Rollen-Commit übergeben
+- Ergebnis: `AssemblyAnalysisResponseLimits` führt eine globale typisierte 8-KiB-Projektion für Inspect-/Extension-Payloads ein. `InspectAssemblyTool` und `FindAssemblyExtensionsTool` wenden sie vor `McpToolResults.Text(...)` an. Text und JSON nutzen dieselbe Auswahl, Zähler und `responseBudget` werden gesetzt. Zwei Budgetregressionen für große Typ-/Member- und Extension-Listen wurden ergänzt.
+- Geänderte Bereiche: `AssemblyAnalysisResponseLimits`, `InspectAssemblyTool`, `FindAssemblyExtensionsTool`, `AssemblyAnalysisToolTests`, `code-map.md`.
+- MCP-first-Kontext: `get_feature_context` für `AssemblyAnalysisResponse`, `AssemblyAnalysisService`, `AssemblyAnalysisResponseLimits`; `get_symbol_body` für die drei Symbole.
+- Verifikationsnachweise nach der letzten Codeänderung:
+  - `dotnet test src/AiNetLinter.FastTests --filter "FullyQualifiedName~AssemblyAnalysisToolTests|FullyQualifiedName~AssemblyAnalysisDispatcherCapabilityTests" --no-restore`: 27/27 bestanden.
+  - `git diff --check`: erfolgreich.
+  - `find_dead_code` mit Projekt-Target und absolutem Pfad: 0 High-Confidence-Funde.
+  - `find_magic_values` mit Projekt-Target und absolutem Pfad: 0 Treffer.
+  - `find_duplicates` mit Projekt-Target und absolutem Pfad: 4 Cluster, darunter 2 neue Duplikatpaare.
+  - `get_violations` nach der letzten Codeänderung mit Projekt-Target und absolutem Pfad: 3 Befunde – Datei über 500 Zeilen, duplizierte `TryRemoveLastDiagnostic`-Überladungen und AIContext-Footprint 2503 statt 2500.
+- Nicht ausgeführt: vollständiger Build und vollständige Nicht-Stress-Gates in diesem Versuch.
+- Offene Risiken: Die nachgelagerte Header-Anreicherung wurde nicht separat in das 8-KiB-Messbudget einbezogen; die drei strukturellen Violations bleiben zur Review-/Tech-Debt-Triage.
+- Nächste Aktion: Korrekturstand committen und frischen Reviewer starten.

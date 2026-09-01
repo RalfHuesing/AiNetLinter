@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using AiNetLinter.Mcp;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -17,6 +18,7 @@ internal static class AssemblyAnalysisResponseLimits
     internal const int MaxReferences = 32;
     internal const int MaxReferenceSessions = 32;
     internal const int MaxSessionDiagnostics = 3;
+    internal const int MaxResponseBytes = 8 * 1024;
 
     internal static int NormalizeDiagnosticLimit(int requested) =>
         requested <= 0 ? DefaultMaxDiagnostics : Math.Clamp(requested, 1, MaxDiagnostics);
@@ -88,6 +90,71 @@ internal static class AssemblyAnalysisResponseLimits
             sessionCount > MaxReferenceSessions);
     }
 
+    internal static InspectAssemblyPayload ProjectResponseBudget(
+        InspectAssemblyPayload payload,
+        bool publicOnly)
+    {
+        var projected = payload;
+        if (FitsResponseBudget(projected, publicOnly)) return projected;
+
+        if (projected.Diagnostics.Count > 0)
+        {
+            projected = MarkResponseBudget(projected with
+            {
+                Diagnostics = projected.Diagnostics.Take(1).ToList(),
+                DiagnosticsSummary = ProjectDiagnosticSamples(projected.DiagnosticsSummary, projected.Diagnostics.Take(1).ToList()),
+            });
+        }
+
+        while (!FitsResponseBudget(projected, publicOnly))
+        {
+            if (TryRemoveLastReferenceSession(ref projected)
+                || TryRemoveLastReference(ref projected)
+                || TryRemoveLastDiagnostic(ref projected)
+                || TryRemoveLastMember(ref projected)
+                || TryRemoveLastType(ref projected)
+                || TryRemoveLastNamespace(ref projected))
+            {
+                continue;
+            }
+
+            break;
+        }
+
+        return projected;
+    }
+
+    internal static FindAssemblyExtensionsPayload ProjectResponseBudget(
+        FindAssemblyExtensionsPayload payload)
+    {
+        var projected = payload;
+        if (FitsResponseBudget(projected)) return projected;
+
+        if (projected.Diagnostics.Count > 0)
+        {
+            projected = MarkResponseBudget(projected with
+            {
+                Diagnostics = projected.Diagnostics.Take(1).ToList(),
+                DiagnosticsSummary = ProjectDiagnosticSamples(projected.DiagnosticsSummary, projected.Diagnostics.Take(1).ToList()),
+            });
+        }
+
+        while (!FitsResponseBudget(projected))
+        {
+            if (TryRemoveLastReferenceSession(ref projected)
+                || TryRemoveLastReference(ref projected)
+                || TryRemoveLastDiagnostic(ref projected)
+                || TryRemoveLastExtension(ref projected))
+            {
+                continue;
+            }
+
+            break;
+        }
+
+        return projected;
+    }
+
     internal static string? NormalizeForDisplay(string? diagnostic)
     {
         if (string.IsNullOrWhiteSpace(diagnostic)) return diagnostic;
@@ -102,13 +169,220 @@ internal static class AssemblyAnalysisResponseLimits
         IReadOnlyList<string> diagnostics,
         AssemblyDiagnosticsSummary? summary)
     {
-        if (diagnostics.Count == 0) return;
+        if (diagnostics.Count == 0 && summary?.TotalCount is not > 0) return;
         builder.AppendLine();
         var count = summary is null
             ? diagnostics.Count.ToString()
             : $"{summary.ShownCount} von {summary.TotalCount}";
         builder.AppendLine($"Diagnosen: {count}{(summary?.Truncated == true ? " (gekürzt)" : string.Empty)}");
         foreach (var diagnostic in diagnostics) builder.AppendLine($"- {diagnostic}");
+    }
+
+    private static bool FitsResponseBudget(
+        InspectAssemblyPayload payload,
+        bool publicOnly) =>
+        Encoding.UTF8.GetByteCount(InspectAssemblyFormatter.FormatText(payload, publicOnly)) <= MaxResponseBytes
+        && JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length <= MaxResponseBytes;
+
+    private static bool FitsResponseBudget(FindAssemblyExtensionsPayload payload) =>
+        Encoding.UTF8.GetByteCount(FindAssemblyExtensionsTool.FormatText(payload)) <= MaxResponseBytes
+        && JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length <= MaxResponseBytes;
+
+    private static bool TryRemoveLastReferenceSession(ref InspectAssemblyPayload payload)
+    {
+        if (payload.ReferenceSessions is not { Count: > 1 } sessions) return false;
+        var shownSessions = sessions.Count - 1;
+        payload = MarkResponseBudget(payload with
+        {
+            ReferenceSessions = sessions.Take(shownSessions).ToList(),
+        });
+        payload = payload with { ReferenceSummary = UpdateReferenceSummary(payload.ReferenceSummary, payload.References.Count, shownSessions) };
+        return true;
+    }
+
+    private static bool TryRemoveLastReference(ref InspectAssemblyPayload payload)
+    {
+        if (payload.References.Count <= 1) return false;
+        payload = MarkResponseBudget(payload with
+        {
+            References = payload.References.Take(payload.References.Count - 1).ToList(),
+        });
+        payload = payload with { ReferenceSummary = UpdateReferenceSummary(payload.ReferenceSummary, payload.References.Count, payload.ReferenceSessions?.Count ?? 0) };
+        return true;
+    }
+
+    private static bool TryRemoveLastDiagnostic(ref InspectAssemblyPayload payload)
+    {
+        if (payload.Diagnostics.Count <= 1) return false;
+        var diagnostics = payload.Diagnostics.Take(payload.Diagnostics.Count - 1).ToList();
+        payload = MarkResponseBudget(payload with
+        {
+            Diagnostics = diagnostics,
+            DiagnosticsSummary = ProjectDiagnosticSamples(payload.DiagnosticsSummary, diagnostics),
+        });
+        return true;
+    }
+
+    private static bool TryRemoveLastMember(ref InspectAssemblyPayload payload)
+    {
+        var types = payload.Types.ToList();
+        for (var index = types.Count - 1; index >= 0; index--)
+        {
+            if (types.Count > 1 && index == 0) break;
+            var type = types[index];
+            if (type.Members.Count == 0) continue;
+            types[index] = type with
+            {
+                Members = type.Members.Take(type.Members.Count - 1).ToList(),
+                MembersTruncated = true,
+                TruncatedBy = AddReason(type.TruncatedBy, "responseBudget"),
+            };
+            payload = MarkResponseBudget(payload with { Types = types });
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryRemoveLastType(ref InspectAssemblyPayload payload)
+    {
+        if (payload.Types.Count <= 1) return false;
+        var types = payload.Types.Take(payload.Types.Count - 1).ToList();
+        payload = MarkResponseBudget(payload with
+        {
+            Types = types,
+            ShownCount = types.Count,
+        });
+        return true;
+    }
+
+    private static bool TryRemoveLastNamespace(ref InspectAssemblyPayload payload)
+    {
+        if (payload.Namespaces.Count == 0) return false;
+        payload = MarkResponseBudget(payload with
+        {
+            Namespaces = payload.Namespaces.Take(payload.Namespaces.Count - 1).ToList(),
+        });
+        return true;
+    }
+
+    private static bool TryRemoveLastReferenceSession(ref FindAssemblyExtensionsPayload payload)
+    {
+        if (payload.ReferenceSessions is not { Count: > 1 } sessions) return false;
+        var shownSessions = sessions.Count - 1;
+        payload = MarkResponseBudget(payload with
+        {
+            ReferenceSessions = sessions.Take(shownSessions).ToList(),
+        });
+        payload = payload with { ReferenceSummary = UpdateReferenceSummary(payload.ReferenceSummary, payload.References?.Count ?? 0, shownSessions) };
+        return true;
+    }
+
+    private static bool TryRemoveLastReference(ref FindAssemblyExtensionsPayload payload)
+    {
+        if (payload.References is not { Count: > 1 } references) return false;
+        var shownReferences = references.Count - 1;
+        payload = MarkResponseBudget(payload with
+        {
+            References = references.Take(shownReferences).ToList(),
+        });
+        payload = payload with { ReferenceSummary = UpdateReferenceSummary(payload.ReferenceSummary, shownReferences, payload.ReferenceSessions?.Count ?? 0) };
+        return true;
+    }
+
+    private static bool TryRemoveLastDiagnostic(ref FindAssemblyExtensionsPayload payload)
+    {
+        if (payload.Diagnostics.Count <= 1) return false;
+        var diagnostics = payload.Diagnostics.Take(payload.Diagnostics.Count - 1).ToList();
+        payload = MarkResponseBudget(payload with
+        {
+            Diagnostics = diagnostics,
+            DiagnosticsSummary = ProjectDiagnosticSamples(payload.DiagnosticsSummary, diagnostics),
+        });
+        return true;
+    }
+
+    private static bool TryRemoveLastExtension(ref FindAssemblyExtensionsPayload payload)
+    {
+        if (payload.Extensions.Count <= 1) return false;
+        var extensions = payload.Extensions.Take(payload.Extensions.Count - 1).ToList();
+        payload = MarkResponseBudget(payload with
+        {
+            Extensions = extensions,
+            ShownCount = extensions.Count,
+        });
+        return true;
+    }
+
+    private static InspectAssemblyPayload MarkResponseBudget(InspectAssemblyPayload payload) =>
+        payload with
+        {
+            Truncated = true,
+            TruncatedBy = AddReason(payload.TruncatedBy, "responseBudget"),
+        };
+
+    private static FindAssemblyExtensionsPayload MarkResponseBudget(FindAssemblyExtensionsPayload payload) =>
+        payload with
+        {
+            Truncated = true,
+            TruncatedBy = AddReason(payload.TruncatedBy, "responseBudget"),
+        };
+
+    private static AssemblyDiagnosticsSummary? ProjectDiagnosticSamples(
+        AssemblyDiagnosticsSummary? summary,
+        IReadOnlyList<string> samples) =>
+        summary is null
+            ? null
+            : summary with
+            {
+                Root = ProjectDiagnosticSummary(summary.Root, samples),
+                Transitive = ProjectDiagnosticSummary(summary.Transitive, samples),
+                ShownCount = samples.Count,
+                Truncated = summary.TotalCount > samples.Count || summary.Truncated,
+                Samples = samples,
+                TruncatedBy = summary.TotalCount > samples.Count
+                    ? AddReason(summary.TruncatedBy, "responseBudget")
+                    : summary.TruncatedBy,
+            };
+
+    private static AssemblyDiagnosticSummary ProjectDiagnosticSummary(
+        AssemblyDiagnosticSummary summary,
+        IReadOnlyList<string> samples)
+    {
+        var visibleSamples = summary.Samples
+            .Where(samples.Contains)
+            .ToList();
+        return summary with
+        {
+            ShownCount = visibleSamples.Count,
+            Truncated = summary.TotalCount > visibleSamples.Count || summary.Truncated,
+            Samples = visibleSamples,
+            TruncatedBy = summary.TotalCount > visibleSamples.Count
+                ? AddReason(summary.TruncatedBy, "responseBudget")
+                : summary.TruncatedBy,
+        };
+    }
+
+    private static AssemblyReferenceSummary? UpdateReferenceSummary(
+        AssemblyReferenceSummary? summary,
+        int shownReferences,
+        int shownSessions) =>
+        summary is null
+            ? null
+            : summary with
+            {
+                ShownReferenceCount = shownReferences,
+                ReferencesTruncated = shownReferences < summary.TotalReferenceCount,
+                ShownReferenceSessionCount = shownSessions,
+                ReferenceSessionsTruncated = shownSessions < summary.TotalReferenceSessionCount,
+            };
+
+    private static IReadOnlyList<string> AddReason(
+        IReadOnlyList<string>? reasons,
+        string reason)
+    {
+        if (reasons?.Contains(reason, StringComparer.Ordinal) == true) return reasons;
+        return (reasons ?? Array.Empty<string>()).Concat([reason]).ToList();
     }
 
     private static AssemblyReferenceSessionDto ProjectReferenceSession(AssemblyReferenceSession session)

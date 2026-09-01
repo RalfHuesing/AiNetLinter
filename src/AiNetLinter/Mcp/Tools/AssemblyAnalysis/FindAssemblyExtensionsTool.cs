@@ -91,10 +91,11 @@ internal static class FindAssemblyExtensionsTool
             referenceSessions,
             diagnostics,
             referenceSummary);
+        payload = AssemblyAnalysisResponseLimits.ProjectResponseBudget(payload);
         return McpToolResults.Text(FormatText(payload), payload);
     }
 
-    private static string FormatText(FindAssemblyExtensionsPayload payload)
+    internal static string FormatText(FindAssemblyExtensionsPayload payload)
     {
         var builder = new StringBuilder();
         AppendHeader(builder, payload);

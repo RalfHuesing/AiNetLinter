@@ -6,7 +6,7 @@
 ## Betroffene Dateien und Symbole
 
 - Verifiziert und geändert: `McpToolResults.Error`, `McpToolResults.Recoverable`, `McpToolResults.CompilationError` und `McpErrorPayload` (typisierte Fehlerpayload, unveränderte IsError-Policy).
-- Verifiziert und geändert: `AssemblyAnalysisResponse.Enrich`/`Unsupported`, `AssemblyAnalysisResponseLimits` (typed Vorprojektion für Diagnosen/Referenzen), `AssemblyAnalysisModels`, `AssemblyAnalysisService.Inspect`/`FindExtensions`, `InspectAssemblyTool`, `InspectAssemblyFormatter` und `FindAssemblyExtensionsTool` (vollständige Pflichtfelder, shown/total/truncated/truncatedBy sowie Text/JSON-Konsistenz). Der alte JSON-Surgery-Compactor wurde entfernt.
+- Verifiziert und geändert: `AssemblyAnalysisResponse.Enrich`/`Unsupported`, `AssemblyAnalysisResponseLimits` (typisierte globale 8-KiB-Vorprojektion für Text und JSON sowie Diagnose-/Referenzprojektionen), `AssemblyAnalysisModels`, `AssemblyAnalysisService.Inspect`/`FindExtensions`, `InspectAssemblyTool`, `InspectAssemblyFormatter` und `FindAssemblyExtensionsTool` (vollständige Pflichtfelder, shown/total/truncated/truncatedBy sowie gemeinsame Text/JSON-Auswahl). Der alte JSON-Surgery-Compactor wurde entfernt.
 - Verifiziert und geändert: `FindSymbolTool`, `FindSymbolScanner`, `AssemblySymbolSearch` und `AssemblySymbolResolver` (generationgebundene `id:`-Folgekennungen); `SolutionDocumentPathResolver` und `GetFileSkeletonTool` (relative/virtuelle Pfade ohne CWD-Fallback, Mehrdeutigkeit recoverable); `GetFileTreeScanner` (effektive Tiefe inklusive `MaxDepth`).
 
 ## Aufrufer und Abhängigkeiten
@@ -16,7 +16,7 @@
 
 ## Relevante Tests, Konfiguration und Dokumentation
 
-- Relevante Teststartpunkte aus dem Konzept: `src/AiNetLinter.FastTests/Mcp/Assemblies/`, `src/AiNetLinter.FastTests/Mcp/`, `src/AiNetLinter.IntegrationTests/`.
+- Relevante Teststartpunkte aus dem Konzept: `src/AiNetLinter.FastTests/Mcp/Assemblies/`, `src/AiNetLinter.FastTests/Mcp/`, `src/AiNetLinter.IntegrationTests/`; die Budgetregressionen liegen in `AssemblyAnalysisToolTests`.
 - Abschlussgates: Solution-Build und beide Nicht-Stress-Testprojekte gemäß `AGENTS.md`.
 - Konzeptvertrag: `tasks/decompiled-assembly-fix3/Konzept.md`; Roadmap: diese Task-Datei.
 
@@ -28,6 +28,7 @@
 
 ## Verifikation
 
-- Gezielte FastTests nach letzter Codeänderung: `dotnet test src/AiNetLinter.FastTests --filter "FullyQualifiedName~McpToolResultsTests|FullyQualifiedName~AssemblyAnalysisToolTests|FullyQualifiedName~FindSymbolToolTests|FullyQualifiedName~GetFileTreeScannerTests|FullyQualifiedName~AssemblyAnalysisPathContractTests" --no-restore` — 53/53 bestanden.
-- MCP-Qualitätschecks im Scope `src/AiNetLinter/Mcp`: `find_duplicates` (1 bestehender Near-Cluster), `find_dead_code` (0 high-confidence Funde), `find_magic_values` (4 Hinweise, unverändert zurückgestellt).
-- Abschließender MCP-Nachweis: `get_violations` mit `targetType=project`, absolutem `targetPath=C:\Daten\Entwicklung\Ralf\AiNetLinter`, `scopeFilter=src/AiNetLinter`, `includeSnippet=true`, `contextLines=1`, `maxResults=200` — 0 Fehler, 7 Warnungen; vier davon betreffen neue Parameterzahlgrenzen, ein bestehendes AIContext-Footprint-Limit.
+- Gezielte Budget-/Assembly-FastTests nach letzter Codeänderung: `dotnet test src/AiNetLinter.FastTests --filter "FullyQualifiedName~AssemblyAnalysisToolTests|FullyQualifiedName~AssemblyAnalysisDispatcherCapabilityTests" --no-restore` — 27/27 bestanden.
+- MCP-Qualitätschecks nach letzter Codeänderung im Scope `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis`: `find_duplicates` fand 4 Cluster, darunter 2 neue Duplikatpaare der Budget-Hilfslogik; `find_dead_code` fand 0 High-Confidence-Funde; `find_magic_values` fand 0 Treffer.
+- Abschließender MCP-Nachweis nach letzter Codeänderung: `get_violations` mit `targetType=project`, absolutem `targetPath=C:\Daten\Entwicklung\Ralf\AiNetLinter`, `scopeFilter=src/AiNetLinter/Mcp/Tools/AssemblyAnalysis`, `includeSnippet=true`, `contextLines=1`, `maxResults=200` — 3 Befunde: `AssemblyAnalysisResponseLimits.cs` überschreitet mit 543 Zeilen das 500-Zeilen-Limit, die beiden neuen `TryRemoveLastDiagnostic`-Überladungen sind exact dupliziert, und `FindAssemblyExtensionsTool` überschreitet das AIContext-Footprint-Limit um 3 Zeilen.
+- Vollständiger Build und die beiden vollständigen Nicht-Stress-Gates wurden in diesem Korrekturversuch nicht erneut ausgeführt; der gezielte Testlauf kompilierte die betroffenen Projekte erfolgreich.

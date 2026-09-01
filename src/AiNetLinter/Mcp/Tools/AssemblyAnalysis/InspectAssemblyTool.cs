@@ -99,6 +99,7 @@ internal static class InspectAssemblyTool
             referenceSessions,
             diagnostics,
             referenceSummary);
+        payload = AssemblyAnalysisResponseLimits.ProjectResponseBudget(payload, arguments.PublicOnly);
         return McpToolResults.Text(InspectAssemblyFormatter.FormatText(payload, arguments.PublicOnly), payload);
     }
 }
