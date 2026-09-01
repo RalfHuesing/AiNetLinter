@@ -153,12 +153,13 @@
 
 ### Paket-2-Testverzeichnis über Strukturgrenze
 
-- Schweregrad: P2
+- Schweregrad: P1 (nutzerpriorisiert)
 - Ursachensignatur: package2-test-directory-footprint
 - Scope/Fundstelle: `src/AiNetLinter.FastTests/Mcp/Assemblies`
 - Evidenz: Der unabhängige Review meldet 31 direkte Unterverzeichnisse bei einer Regelgrenze von 30; die neue `AssemblyNavigationResponseContractTests.cs` liegt im bestehenden Assembly-Testbereich. Der Befund ist strukturell und blockiert die fachliche Korrektur nicht.
-- Disposition: accepted-deferred
-- Nächster Schritt: Beim nächsten strukturellen Testzuschnitt nur scope-nah bereinigen; keine künstliche Produktionsänderung für diesen P2-Befund.
+- Disposition: fix-now
+- attempts: 0
+- Nächster Schritt: Assembly-Tests fachlich in einen sinnvollen Unterordner mit passendem Namespace verschieben und anschließend die Directory-/Namespace-Regelprüfung erneut ausführen.
 - Log-Anker: `execution-log.md`, „Wiederaufnahme Paket 2 Korrekturversuch 1 Reviewer abgeschlossen"
 
 ### Paket-2-Produktionsviolations aus Zwischenstand
@@ -197,10 +198,10 @@
 - Schweregrad: P1
 - Ursachensignatur: package3-structural-rule-drift
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs`, `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySourceSelectionOrchestrator.cs` und direkt betroffene Konstruktor-/AIContext-Schnittstellen
-- Evidenz: Der Paket-3-Implementierer meldet im abschließenden `get_violations`-Check noch 9 strukturelle Befunde, überwiegend Größen-/Komplexitäts-, Konstruktorabhängigkeits- und AIContext-Footprint-Limits in den neu berührten Bereichen. Der fokussierte DRY-/Dead-Code-/Magic-Value-Audit meldete dagegen keine Befunde; die fachlichen Tests und der Build sind grün. Die unabhängige Review-Klassifikation steht für diesen Korrekturstand noch aus.
+- Evidenz: Nach der Strukturkorrektur sind Dateigrößen-, Methodenlängen- und Komplexitätsbefunde in den großen Einstiegspunkten beseitigt. Verbleiben laut frischem `get_violations`-Check ein Orchestrator-AIContext-Footprint von 2607 statt 2500 sowie ein exaktes `HasNoBody`-Duplikat zwischen Body-Resolvern; zusätzlich meldet der Audit einen StaticTestSentinel und wiederholte Statuswerte. Die gezielten fachlichen Tests und der Build sind grün; die unabhängige Review-Klassifikation dieses Stands steht aus.
 - Disposition: fix-now
 - attempts: 1
-- Nächster Schritt: Im Review prüfen, welche der verbleibenden 9 Befunde nach der Strukturaufteilung noch aktiv und P1-relevant sind; nur bestätigte Verstöße scope-nah beheben, ohne Source-/Lease-Ownership künstlich zu duplizieren.
+- Nächster Schritt: Im Review prüfen, ob Footprint und Duplikat noch aktiv/P1-relevant sind; danach nur diese konkreten Restbefunde scope-nah beheben.
 - Log-Anker: `execution-log.md`, „Paket 3 Implementierer abgeschlossen"
 
 ### Paket-3-Fallback-Diagnosepropagation

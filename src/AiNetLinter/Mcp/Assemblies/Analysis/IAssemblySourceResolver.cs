@@ -33,5 +33,4 @@ internal sealed record AssemblySourceResolution(
     AssemblySourceSelection? Selection,
     IDisposable? Lifetime,
     IReadOnlyList<ExternalSourceConfigurationDiagnostic> Diagnostics,
-    string? FallbackReason = null,
-    IReadOnlyList<ExternalSourceConfigurationDiagnostic>? SourceDiagnostics = null);
+    AssemblySourceFallbackMetadata? Fallback = null);

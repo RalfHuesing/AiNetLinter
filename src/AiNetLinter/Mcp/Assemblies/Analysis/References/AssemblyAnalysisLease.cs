@@ -17,7 +17,7 @@ internal delegate Task<AssemblyAnalysisLeaseResult> AssemblyReferenceLeaseFactor
     AssemblyReferenceDto reference,
     CancellationToken cancellationToken);
 
-internal sealed class AssemblyAnalysisLease : IDisposable
+internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
 {
     private readonly AssemblyAnalysisEntry entry;
     private readonly AssemblyReferenceLeaseFactory? referenceLeaseFactory;
@@ -44,6 +44,18 @@ internal sealed class AssemblyAnalysisLease : IDisposable
     internal string CanonicalPath { get; }
     internal McpCodeGraphServer Server { get; }
     internal AssemblyContext Context { get; }
+
+    Solution? IAssemblyBodyContext.Solution => Server.GetCurrentSolution();
+
+    AnalysisSymbolIdentity? IAssemblyBodyContext.AssemblySymbolIdentity => Server.AssemblySymbolIdentity;
+
+    bool IAssemblyBodyContext.IsDecompiled => Context.Origin.IsDecompiled;
+
+    Task<AssemblyBodyResolution> IAssemblyBodyContext.ResolveBodyAsync(
+        ISymbol symbol,
+        int maxBodyLines,
+        CancellationToken cancellationToken) =>
+        ResolveBodyAsync(symbol, maxBodyLines, cancellationToken);
 
     internal Task<AssemblyBodyResolution> ResolveBodyAsync(
         ISymbol symbol,

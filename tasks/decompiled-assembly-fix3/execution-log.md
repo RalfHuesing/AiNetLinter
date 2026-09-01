@@ -947,6 +947,26 @@
 - Status: running
 - Auftrag: Behebe ausschließlich die im letzten Review bestätigten strukturellen P1s in `AssemblySourceSelectionOrchestrator`, `AssemblyDecompilationAdapter`, `GetSymbolBodyTool` und `AssemblyAnalysisContextFactory`: Dateigröße, Methodenkomplexität/-zeilen, Parameter-/Konstruktorabhängigkeiten, AIContext-Footprint und etwaige nach der Aufteilung verbliebene Duplikate. Verwende kleine reine Helper/Parameterobjekte und halte Source-/Lease-Ownership unverändert. Prüfe die bereits behobenen Fallback-/Overload-Verträge durch die vorhandenen Regressionen. Keine konzeptfremde Umorganisation und kein solutionweiter Cleanup. Nach letzter Änderung gezielte Tests, betroffener `get_violations`-Scope, Build und `git diff --check`; kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
 
+## 2026-09-01 – Paket 3 Korrekturversuch 2 abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
+- Rolle: Implementierer (frisch, Strukturkorrektur)
+- Subagent-ID: `01a05d2f-33a8-79d1-9b15-f69948133b1c`
+- Ursachensignaturen: `package3-structural-rule-drift`; funktionale P1s `package3-fallback-diagnostic-propagation` und `package3-body-symbol-resolution-ambiguity` als geschützte Regressionen
+- Versuch: 2 im Epic
+- Status: completed/partially completed; umfangreicher Patch uncommitted übergeben; kein Agenten-Commit
+- Vollständiger Bericht – Änderungen: Provider-/Lease-Lebenszyklus nach `AssemblySourceProviderCoordinator` verschoben; Body-Auflösung nach `AssemblyDecompiledBodyResolver`; Property-Prüfung in `AssemblyBodySyntax.HasNoBody` zentralisiert; `GetSymbolBodyTool` in Fehler-/Missing-/Renderpfade getrennt; `AssemblyAnalysisContextFactory` über Builder/Parameterobjekte zerlegt; Snapshot-Interface und `SourceSnapshotLease` ausgelagert; fachliche Updates in `code-map.md`.
+- Regelbefunde vorher/nachher: `AssemblySourceSelectionOrchestrator` 509 Zeilen auf ohne Datei-/Methodenbefunde, `ResolveAsync` 70 und `CreateSelectionScope` 64 behoben; `AssemblyDecompilationAdapter` 519 Zeilen und `RenderSingleSymbolAsync` CC 13 behoben; Context-Factory 2×65 Zeilen behoben. Verbleiben AIContext-Footprint 2607 statt 2500, ein exaktes `HasNoBody`-Duplikat zwischen `AssemblyDecompiledBodyResolver` und `SourceSymbolBodyResolver`, `StaticTestSentinel` in `AssemblySourceProviderCoordinator` sowie wiederholte `source-backed`/`verified-clean`-Werte.
+- Verifikation nach letzter Codeänderung: gezielte FastTests 75/75; `ExternalSourceSnapshotMaterializerTests` 6/6; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` grün. Vollständige FastTests ohne Stress 2339 bestanden, 2 fehlgeschlagen (bestehende Agent-Guide-Zeilenumbruchserwartung und `ExternalSourceRepositoryCacheWriterTests`); vollständige IntegrationTests 376 bestanden, 2 fehlgeschlagen (Dogfood wegen aktueller Strukturviolations und Live-Safeguard-Score 0). MCP-Audit: kein Dead Code; keine zusätzlichen sicheren Magic-Value-Bereinigungen.
+- Offene Risiken: Die verbleibenden strukturellen Befunde sind noch nicht unabhängig klassifiziert; `promoted-to-project-debt` ist daher noch keine endgültige Disposition. Die vollständigen Gatefehler werden getrennt von den gezielten Paket-3-Regressionen bewertet.
+- Nächste Aktion: Code-/Berichtscheckpoint sichern und unabhängigen Review des Refactorings starten.
+
+## 2026-09-01 – Nutzerpräzisierung zur Strukturkorrektur
+
+- Der Nutzer verlangt ausdrücklich, den Directory-Footprint nicht als akzeptierte Restschuld zu behandeln: Der Linterbefund zur maximalen Anzahl von Einträgen pro Verzeichnis soll durch eine fachlich sinnvolle Verschiebung in einen neuen Unterordner mit passendem Namespace behoben werden.
+- Konsequenz: `package2-test-directory-footprint` wird als nutzerpriorisierter P1 reaktiviert. Der nächste Korrekturversuch umfasst neben den verbleibenden Produktionsstruktur-Befunden die geordnete Assembly-Teststruktur; keine bloße Suppression oder kosmetische Umbenennung.
+
 ## 2026-09-01 – Paket 3 Korrekturversuch 1 gestartet
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume

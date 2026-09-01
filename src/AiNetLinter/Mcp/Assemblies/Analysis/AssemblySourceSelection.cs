@@ -110,14 +110,17 @@ internal sealed record AssemblySourceSelectionParameters(
     ExternalSourceCheckoutTrust CheckoutTrust = ExternalSourceCheckoutTrust.Clean,
     bool? IsAttested = null);
 
+internal sealed record AssemblySourceFallbackMetadata(
+    string Reason,
+    IReadOnlyList<ExternalSourceConfigurationDiagnostic> Diagnostics);
+
 internal sealed record AssemblyAnalysisContextRequest(
     string AssemblyPath,
     Solution? ConsumerSolution,
     string? ReceiverType,
     AssemblySourceSelection? SourceSelection,
     CancellationToken CancellationToken,
-    string? FallbackReason = null,
-    IReadOnlyList<ExternalSourceConfigurationDiagnostic>? SourceDiagnostics = null);
+    AssemblySourceFallbackMetadata? Fallback = null);
 
 internal sealed class AssemblySourceProviderCreation
 {

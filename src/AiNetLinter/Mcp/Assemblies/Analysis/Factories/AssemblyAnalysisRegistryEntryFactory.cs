@@ -20,8 +20,7 @@ internal sealed record AssemblyAnalysisFallbackEntryCreationParameters(
     ExternalResourceLease? ResourceLease,
     IReadOnlyList<string> Diagnostics,
     AssemblySourceSelection? SourceSelection,
-    string? FallbackReason = null,
-    IReadOnlyList<ExternalSourceConfigurationDiagnostic>? SourceDiagnostics = null);
+    AssemblySourceFallbackMetadata? Fallback = null);
 
 internal sealed class AssemblyAnalysisRegistryEntryFactory
 {
@@ -73,8 +72,7 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                     resourceLease,
                     sourceAttempt.Diagnostics,
                     sourceAttempt.Selection,
-                    sourceAttempt.FallbackReason,
-                    sourceAttempt.SourceDiagnostics)).ConfigureAwait(false);
+                    sourceAttempt.Fallback)).ConfigureAwait(false);
             resourceTransferred = true;
             return fallbackEntry;
         }
@@ -111,8 +109,8 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                     .ToList(),
                 Origin = context.Origin with
                 {
-                    FallbackReason = parameters.FallbackReason,
-                    SourceDiagnostics = parameters.SourceDiagnostics,
+                    FallbackReason = parameters.Fallback?.Reason,
+                    SourceDiagnostics = parameters.Fallback?.Diagnostics,
                 },
             };
             var fallbackEntry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
@@ -135,17 +133,17 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
         }
     }
 
-    private async Task<(AssemblyAnalysisEntry? Entry, IDisposable? Scope, IReadOnlyList<string> Diagnostics, AssemblySourceSelection? Selection, string? FallbackReason, IReadOnlyList<ExternalSourceConfigurationDiagnostic>? SourceDiagnostics)> TryCreateSourceEntryAsync(
+    private async Task<(AssemblyAnalysisEntry? Entry, IDisposable? Scope, IReadOnlyList<string> Diagnostics, AssemblySourceSelection? Selection, AssemblySourceFallbackMetadata? Fallback)> TryCreateSourceEntryAsync(
         string canonicalPath,
         long generation,
         CancellationToken creationToken,
         ExternalResourceLease? resourceLease)
     {
-        if (sourceOrchestrator is null) return (null, null, Array.Empty<string>(), null, null, null);
+        if (sourceOrchestrator is null) return (null, null, Array.Empty<string>(), null, null);
 
         var resolution = await sourceOrchestrator.ResolveForRegistryAsync(canonicalPath, creationToken).ConfigureAwait(false);
         var diagnostics = AssemblyAnalysisDiagnostics.FormatExternalDiagnostics(resolution.Diagnostics).ToArray();
-        if (resolution.Selection is null) return (null, resolution.Lifetime, diagnostics, null, resolution.FallbackReason, resolution.SourceDiagnostics);
+        if (resolution.Selection is null) return (null, resolution.Lifetime, diagnostics, null, resolution.Fallback);
 
         try
         {
@@ -156,9 +154,19 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                     ReceiverType: null,
                     resolution.Selection,
                     creationToken,
-                    resolution.FallbackReason,
-                    resolution.SourceDiagnostics)).ConfigureAwait(false);
-            if (sourceResult.Context is null) return (null, resolution.Lifetime, diagnostics, null, resolution.FallbackReason, resolution.SourceDiagnostics);
+                    resolution.Fallback)).ConfigureAwait(false);
+            if (sourceResult.Context is null) return (null, resolution.Lifetime, diagnostics, null, resolution.Fallback);
+
+            if (sourceResult.Context.Origin.IsDecompiled)
+            {
+                var fallback = CreateFallbackMetadata(sourceResult.Context.Origin, resolution.Fallback);
+                var fallbackDiagnostics = diagnostics
+                    .Concat(sourceResult.Context.Diagnostics)
+                    .Distinct(StringComparer.Ordinal)
+                    .Take(100)
+                    .ToArray();
+                return (null, resolution.Lifetime, fallbackDiagnostics, null, fallback);
+            }
 
             var context = sourceResult.Context with
             {
@@ -177,12 +185,22 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                 resourceLease,
                 referenceLeaseFactory(resolution.Selection),
                 resourceBudget.Clock));
-            return (entry, null, diagnostics, resolution.Selection, resolution.FallbackReason, resolution.SourceDiagnostics);
+            return (entry, null, diagnostics, resolution.Selection, resolution.Fallback);
         }
         catch
         {
             AssemblyAnalysisRegistryDisposal.TryDispose(resolution.Lifetime, "Source-Selection-Scope nach Creation-Fehler");
             throw;
         }
+    }
+
+    private static AssemblySourceFallbackMetadata? CreateFallbackMetadata(
+        AssemblyOrigin origin,
+        AssemblySourceFallbackMetadata? existing)
+    {
+        if (string.IsNullOrWhiteSpace(origin.FallbackReason)) return existing;
+        return new(
+            origin.FallbackReason,
+            origin.SourceDiagnostics ?? existing?.Diagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>());
     }
 }

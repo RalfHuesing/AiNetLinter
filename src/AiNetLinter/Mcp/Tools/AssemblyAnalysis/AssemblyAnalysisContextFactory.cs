@@ -6,7 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -23,14 +25,16 @@ internal static class AssemblyAnalysisContextFactory
             consumerSolution,
             receiverType,
             null,
-            cancellationToken));
+            cancellationToken,
+            null));
 
     internal static async Task<(AssemblyContext? Context, string? Error)> CreateAsync(
         AssemblyAnalysisContextRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var context = await TryCreateSourceBackedContextAsync(request).ConfigureAwait(false);
+        var sourceAttempt = await TryCreateSourceBackedContextAsync(request).ConfigureAwait(false);
+        var context = sourceAttempt.Context;
         if (context is null)
         {
             await using var session = new AssemblyAnalysisSession(request.AssemblyPath);
@@ -41,19 +45,7 @@ internal static class AssemblyAnalysisContextFactory
                 return (null, FormatFailure(refresh.Diagnostics));
             }
 
-            context = FromGeneration(generation);
-            if (!string.IsNullOrWhiteSpace(request.FallbackReason)
-                || request.SourceDiagnostics is not null)
-            {
-                context = context with
-                {
-                    Origin = context.Origin with
-                    {
-                        FallbackReason = request.FallbackReason,
-                        SourceDiagnostics = request.SourceDiagnostics,
-                    },
-                };
-            }
+            context = ApplyFallback(FromGeneration(generation), sourceAttempt.Fallback ?? request.Fallback);
         }
 
         var contextDiagnostics = context.Diagnostics.ToList();
@@ -101,17 +93,13 @@ internal static class AssemblyAnalysisContextFactory
             return (null, "Die Source-Project-Selection ist nicht mehr verfügbar.");
         }
 
-        Compilation? compilation;
-        try
+        var compilationResult = await TryGetProjectCompilationAsync(project, cancellationToken).ConfigureAwait(false);
+        if (compilationResult.Error is not null)
         {
-            compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or IOException or ArgumentException or NotSupportedException)
-        {
-            return (null, $"Source-Project-Compilation '{project.Name}' konnte nicht geladen werden: {ex.Message}");
+            return (null, compilationResult.Error);
         }
 
-        if (compilation?.Assembly is null)
+        if (compilationResult.Compilation?.Assembly is null)
         {
             return (null, $"Source-Project-Compilation '{project.Name}' ist nicht verfügbar.");
         }
@@ -126,38 +114,55 @@ internal static class AssemblyAnalysisContextFactory
             .Select(diagnostic => diagnostic.Message)
             )
             .ToList();
-        var status = diagnostics.Count == 0
-            ? AssemblySessionStatus.Complete
-            : AssemblySessionStatus.Partial;
-        var assemblyName = project.AssemblyName ?? project.Name;
-        var origin = new AssemblyOrigin(
-            "source-backed",
+        return (BuildSourceProjectContext(new(
             targetPath,
-            $"source:{selection.SourceLease.Snapshot.Identity.StableValue}:{project.Id}",
-            string.Empty,
-            "high",
-            selection.SourceLease.Snapshot.Identity,
-            project.FilePath,
-            "verified-clean",
-            "source",
-            "source",
-            null,
-            selection.SourceLease.Snapshot.Diagnostics);
-        return (new AssemblyContext(
-            compilation.Assembly,
-            new AssemblyIdentityDto(assemblyName, "0.0.0.0", "neutral", string.Empty),
-            sourceReferences.References,
-            DistinctDiagnostics(diagnostics),
-            compilation,
-            null,
-            null,
-            origin,
-            0,
-            status), null);
+            project,
+            selection,
+            compilationResult.Compilation,
+            sourceReferences,
+            diagnostics)), null);
     }
 
-    private static async Task<AssemblyContext?> TryCreateSourceBackedContextAsync(
+    private static async Task<SourceContextAttempt> TryCreateSourceBackedContextAsync(
         AssemblyAnalysisContextRequest request)
+    {
+        var preparation = PrepareSourceContext(request);
+        if (preparation is null)
+        {
+            return new(null, request.Fallback);
+        }
+
+        if (preparation.Project is null)
+            return new(null, CreateWorkspaceFallback(request, preparation.Snapshot));
+
+        var resolver = new AssemblyReferenceResolver();
+        var references = resolver.Resolve(preparation.Fingerprint.CanonicalPath);
+        if (references.Identity is null) return new(null, request.Fallback);
+        var sourceReferences = resolver.ResolveSourceProjectReferences(
+            preparation.Project,
+            preparation.Snapshot.Solution,
+            references.References);
+        var effectiveReferences = MergeReferences(references.References, sourceReferences);
+
+        var compilationResult = await TryGetProjectCompilationAsync(
+            preparation.Project,
+            request.CancellationToken).ConfigureAwait(false);
+
+        if (compilationResult.Compilation?.Assembly is null)
+            return new(null, CreateWorkspaceFallback(request, preparation.Snapshot));
+
+        var diagnostics = MergeDiagnostics(references.Diagnostics, sourceReferences).ToList();
+        diagnostics.AddRange(preparation.Snapshot.Diagnostics.Select(diagnostic => diagnostic.Message));
+        return new SourceContextAttempt(BuildSourceBackedContext(new(
+            request,
+            preparation,
+            references,
+            effectiveReferences,
+            compilationResult.Compilation,
+            diagnostics)), null);
+    }
+
+    private static SourceContextPreparation? PrepareSourceContext(AssemblyAnalysisContextRequest request)
     {
         var selection = request.SourceSelection;
         if (!IsSourceSelectionUsable(selection)
@@ -169,60 +174,125 @@ internal static class AssemblyAnalysisContextFactory
 
         var snapshot = selection!.SourceLease.Snapshot;
         var candidate = selection.MatchResult.MatchedCandidate!;
-        var project = snapshot.Solution.GetProject(candidate.ProjectId);
-        if (project is null) return null;
+        return new(snapshot, snapshot.Solution.GetProject(candidate.ProjectId), fingerprint!);
+    }
 
-        var resolver = new AssemblyReferenceResolver();
-        var references = resolver.Resolve(fingerprint!.CanonicalPath);
-        if (references.Identity is null) return null;
-        var sourceReferences = resolver.ResolveSourceProjectReferences(
-            project,
-            snapshot.Solution,
-            references.References);
-        var effectiveReferences = MergeReferences(references.References, sourceReferences);
-
-        Compilation? compilation;
+    private static async Task<ProjectCompilationResult> TryGetProjectCompilationAsync(
+        Project project,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            compilation = await project.GetCompilationAsync(request.CancellationToken).ConfigureAwait(false);
+            var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
+            return new(compilation, null);
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or ArgumentException or NotSupportedException)
         {
-            return null;
+            return new(null, $"Source-Project-Compilation '{project.Name}' konnte nicht geladen werden: {ex.Message}");
         }
+    }
 
-        if (compilation is null || compilation.Assembly is null) return null;
+    private static AssemblyContext BuildSourceProjectContext(SourceProjectContextBuildRequest request)
+    {
+        var status = request.Diagnostics.Count == 0
+            ? AssemblySessionStatus.Complete
+            : AssemblySessionStatus.Partial;
+        var assemblyName = request.Project.AssemblyName ?? request.Project.Name;
+        var snapshot = request.Selection.SourceLease.Snapshot;
+        var origin = new AssemblyOrigin(
+            "source-backed",
+            request.TargetPath,
+            $"source:{snapshot.Identity.StableValue}:{request.Project.Id}",
+            string.Empty,
+            "high",
+            snapshot.Identity,
+            request.Project.FilePath,
+            "verified-clean",
+            "source",
+            "source",
+            null,
+            snapshot.Diagnostics);
+        return new(
+            request.Compilation.Assembly!,
+            new AssemblyIdentityDto(assemblyName, "0.0.0.0", "neutral", string.Empty),
+            request.SourceReferences.References,
+            DistinctDiagnostics(request.Diagnostics),
+            request.Compilation,
+            null,
+            null,
+            origin,
+            0,
+            status);
+    }
 
-        var diagnostics = MergeDiagnostics(references.Diagnostics, sourceReferences).ToList();
-        diagnostics.AddRange(snapshot.Diagnostics.Select(diagnostic => diagnostic.Message));
-        var status = diagnostics.Count == 0
+    private static AssemblyContext BuildSourceBackedContext(SourceContextBuildRequest request)
+    {
+        var status = request.Diagnostics.Count == 0
             ? AssemblySessionStatus.Complete
             : AssemblySessionStatus.Partial;
         var origin = new AssemblyOrigin(
             "source-backed",
-            fingerprint.CanonicalPath,
-            fingerprint.Sha256,
+            request.Preparation.Fingerprint.CanonicalPath,
+            request.Preparation.Fingerprint.Sha256,
             string.Empty,
             "high",
-            snapshot.Identity,
-            project.FilePath,
+            request.Preparation.Snapshot.Identity,
+            request.Preparation.Project!.FilePath,
             "verified-clean",
             "source",
             "source",
-            request.FallbackReason,
-            request.SourceDiagnostics ?? snapshot.Diagnostics);
-        return new AssemblyContext(
-            compilation.Assembly,
-            references.Identity,
-            effectiveReferences,
-            DistinctDiagnostics(diagnostics),
-            compilation,
+            request.ContextRequest.Fallback?.Reason,
+            request.ContextRequest.Fallback?.Diagnostics ?? request.Preparation.Snapshot.Diagnostics);
+        return new(
+            request.Compilation.Assembly!,
+            request.References.Identity!,
+            request.EffectiveReferences,
+            DistinctDiagnostics(request.Diagnostics),
+            request.Compilation,
             null,
             null,
             origin,
             0,
             status,
             null);
+    }
+
+    private static AssemblyContext ApplyFallback(
+        AssemblyContext context,
+        AssemblySourceFallbackMetadata? fallback)
+    {
+        if (fallback is null) return context;
+        var diagnostics = context.Diagnostics
+            .Concat(AssemblyAnalysisDiagnostics.FormatExternalDiagnostics(fallback.Diagnostics))
+            .Distinct(StringComparer.Ordinal)
+            .Take(100)
+            .ToList();
+        return context with
+        {
+            Diagnostics = diagnostics,
+            Origin = context.Origin with
+            {
+                FallbackReason = fallback.Reason,
+                SourceDiagnostics = fallback.Diagnostics,
+            },
+        };
+    }
+
+    private static AssemblySourceFallbackMetadata CreateWorkspaceFallback(
+        AssemblyAnalysisContextRequest request,
+        ExternalSourceSnapshot snapshot)
+    {
+        var diagnostics = (request.Fallback?.Diagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>())
+            .Concat(snapshot.Diagnostics)
+            .Append(new ExternalSourceConfigurationDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.WorkspaceDiagnostic,
+                "Die Source-Compilation konnte nicht als analysefähiger Workspace verwendet werden; die Assembly wird decompiliert.",
+                "error",
+                "$workspace"))
+            .Distinct()
+            .Take(20)
+            .ToArray();
+        return new(AssemblySourceFallbackReasons.WorkspaceFailure, diagnostics);
     }
 
     private static IReadOnlyList<AssemblyReferenceDto> MergeReferences(
@@ -316,4 +386,33 @@ internal static class AssemblyAnalysisContextFactory
         diagnostics.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.Ordinal).Take(100).ToList();
 
     private sealed record ConsumerSelection(ITypeSymbol? Receiver, string? ProjectName);
+
+    private sealed record SourceContextAttempt(
+        AssemblyContext? Context,
+        AssemblySourceFallbackMetadata? Fallback);
+
+    private sealed record ProjectCompilationResult(
+        Compilation? Compilation,
+        string? Error);
+
+    private sealed record SourceContextPreparation(
+        ExternalSourceSnapshot Snapshot,
+        Project? Project,
+        AssemblyFingerprint Fingerprint);
+
+    private sealed record SourceProjectContextBuildRequest(
+        string TargetPath,
+        Project Project,
+        AssemblySourceSelection Selection,
+        Compilation Compilation,
+        SourceProjectReferenceResolution SourceReferences,
+        IReadOnlyList<string> Diagnostics);
+
+    private sealed record SourceContextBuildRequest(
+        AssemblyAnalysisContextRequest ContextRequest,
+        SourceContextPreparation Preparation,
+        AssemblyReferenceResolution References,
+        IReadOnlyList<AssemblyReferenceDto> EffectiveReferences,
+        Compilation Compilation,
+        IReadOnlyList<string> Diagnostics);
 }

@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
@@ -21,124 +20,8 @@ internal sealed class AssemblyDecompilationAdapter
         string assemblyPath,
         AssemblyReferenceResolution references,
         AssemblyDecompilationOptions options) =>
-        (symbol, maxBodyLines, cancellationToken) => ResolveBodyAsync(
-            assemblyPath, references, options, symbol, maxBodyLines, cancellationToken);
-
-    private static Task<AssemblyBodyResolution> ResolveBodyAsync(
-        string assemblyPath,
-        AssemblyReferenceResolution references,
-        AssemblyDecompilationOptions options,
-        ISymbol symbol,
-        int maxBodyLines,
-        CancellationToken cancellationToken)
-    {
-        ArgumentNullException.ThrowIfNull(symbol);
-        if (symbol.ContainingType?.TypeKind == TypeKind.Interface)
-        {
-            return Task.FromResult(new AssemblyBodyResolution(
-                null, "unavailable", "decompiledSignatureOnly", "Interfaces haben keine dekompilierbaren Bodies."));
-        }
-
-        if (symbol is IMethodSymbol method
-                && (method.IsAbstract || AssemblyBodySyntax.HasExternModifier(method))
-            || symbol is IPropertySymbol property
-                && (property.GetMethod?.IsAbstract == true || property.SetMethod?.IsAbstract == true
-                    || AssemblyBodySyntax.HasExternModifier(property.GetMethod)
-                    || AssemblyBodySyntax.HasExternModifier(property.SetMethod))
-            || symbol is IEventSymbol eventSymbol
-                && (eventSymbol.AddMethod?.IsAbstract == true || eventSymbol.RemoveMethod?.IsAbstract == true))
-        {
-            return Task.FromResult(new AssemblyBodyResolution(
-                null, "unavailable", "decompiledSignatureOnly", "Das Symbol ist abstract oder extern und besitzt keinen Body."));
-        }
-
-        var normalizedLines = Math.Max(1, maxBodyLines);
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        deadline.CancelAfter(options.EffectiveTimeout);
-        try
-        {
-            var decompiler = CreateDecompiler(assemblyPath, references, deadline.Token, decompileMemberBodies: true);
-            var typeName = new ICSharpCode.Decompiler.TypeSystem.FullTypeName(ToReflectionTypeName(symbol.ContainingType));
-            var source = decompiler.DecompileTypeAsString(typeName);
-            deadline.Token.ThrowIfCancellationRequested();
-            var member = FindMember(Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(source).GetRoot(deadline.Token), symbol);
-            if (member is null)
-            {
-                return Task.FromResult(new AssemblyBodyResolution(
-                    null, "unavailable", "decompiledSignatureOnly", "Für das dekompilierte Symbol wurde kein Member-Body gefunden."));
-            }
-
-            var body = LimitLines(member.ToFullString(), normalizedLines);
-            return Task.FromResult(new AssemblyBodyResolution(
-                body,
-                "available",
-                "decompiledBodyOnDemand",
-                body.Contains("truncated", StringComparison.Ordinal) ? "Der Body wurde auf maxBodyLines begrenzt." : null));
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (OperationCanceledException)
-        {
-            return Task.FromResult(new AssemblyBodyResolution(
-                null, "unavailable", "decompiledSignatureOnly", "Die Body-Dekomposition wurde wegen Cancellation oder Deadline abgebrochen."));
-        }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException or ArgumentException or ICSharpCode.Decompiler.DecompilerException)
-        {
-            return Task.FromResult(new AssemblyBodyResolution(
-                null, "unavailable", "decompiledSignatureOnly", "Body-Dekomposition fehlgeschlagen: " + ex.GetType().Name));
-        }
-    }
-
-    private static string ToReflectionTypeName(INamedTypeSymbol? type)
-    {
-        if (type is null) return string.Empty;
-        var name = type.MetadataName;
-        if (type.ContainingType is not null) return ToReflectionTypeName(type.ContainingType) + "+" + name;
-        return type.ContainingNamespace is { IsGlobalNamespace: false } ns
-            ? ns.ToDisplayString() + "." + name
-            : name;
-    }
-
-    private static MemberDeclarationSyntax? FindMember(SyntaxNode root, ISymbol symbol)
-    {
-        var type = root.DescendantNodes()
-            .OfType<TypeDeclarationSyntax>()
-            .FirstOrDefault(candidate => string.Equals(candidate.Identifier.Text, symbol.ContainingType?.Name, StringComparison.Ordinal)
-                && candidate.TypeParameterList?.Parameters.Count == symbol.ContainingType?.TypeParameters.Length);
-        if (type is null) return null;
-
-        return type.Members.FirstOrDefault(member => member switch
-        {
-            MethodDeclarationSyntax method when symbol is IMethodSymbol methodSymbol =>
-                string.Equals(method.Identifier.Text, methodSymbol.Name, StringComparison.Ordinal)
-                && method.ParameterList.Parameters.Count == methodSymbol.Parameters.Length
-                && method.TypeParameterList?.Parameters.Count == methodSymbol.TypeParameters.Length,
-            ConstructorDeclarationSyntax constructor when symbol is IMethodSymbol constructorSymbol =>
-                constructor.Identifier.Text == symbol.ContainingType?.Name
-                && constructor.ParameterList.Parameters.Count == constructorSymbol.Parameters.Length,
-            PropertyDeclarationSyntax property when symbol is IPropertySymbol propertySymbol =>
-                property.Identifier.Text == propertySymbol.Name,
-            IndexerDeclarationSyntax when symbol is IPropertySymbol { IsIndexer: true } => true,
-            FieldDeclarationSyntax field when symbol is IFieldSymbol fieldSymbol =>
-                field.Declaration.Variables.Any(variable => variable.Identifier.Text == fieldSymbol.Name),
-            EventFieldDeclarationSyntax eventField when symbol is IEventSymbol eventSymbol =>
-                eventField.Declaration.Variables.Any(variable => variable.Identifier.Text == eventSymbol.Name),
-            EventDeclarationSyntax eventDeclaration when symbol is IEventSymbol eventSymbol =>
-                eventDeclaration.Identifier.Text == eventSymbol.Name,
-            _ => false,
-        });
-    }
-
-    private static string LimitLines(string text, int maxBodyLines)
-    {
-        var lines = text.Split('\n');
-        return lines.Length <= maxBodyLines
-            ? text.TrimEnd()
-            : string.Join("\n", lines.Take(maxBodyLines)).TrimEnd()
-                + $"\n// ... truncated, total {lines.Length} Zeilen, maxBodyLines erhoehen fuer mehr";
-    }
+        AssemblyDecompiledBodyResolver.Create(
+            assemblyPath, references, options);
 
     internal Task<DecompilationResult> DecompileAsync(
         DecompilationRequest request,
@@ -199,8 +82,8 @@ internal sealed class AssemblyDecompilationAdapter
                     continue;
                 }
 
-                source = RemoveCompilerGeneratedNestedTypes(source);
-                source = RemoveCompilerGeneratedStateMachineAttributes(source);
+                source = AssemblyDecompilationSourceText.RemoveCompilerGeneratedNestedTypes(source);
+                source = AssemblyDecompilationSourceText.RemoveCompilerGeneratedStateMachineAttributes(source);
 
                 if (source.Length > options.MaxDocumentCharacters)
                 {
@@ -240,168 +123,7 @@ internal sealed class AssemblyDecompilationAdapter
         return documents;
     }
 
-    private static string RemoveCompilerGeneratedNestedTypes(string source)
-    {
-        while (true)
-        {
-            var typeStart = FindCompilerGeneratedTypeStart(source);
-            if (typeStart < 0) return source;
-
-            var openingBrace = source.IndexOf('{', typeStart);
-            var closingBrace = openingBrace < 0 ? -1 : FindMatchingBrace(source, openingBrace);
-            if (closingBrace < 0) return source;
-            source = source.Remove(typeStart, closingBrace - typeStart);
-        }
-    }
-
-    private static int FindCompilerGeneratedTypeStart(string source)
-    {
-        var markers = new[] { "class <", "struct <", "interface <", "record <", "delegate <", "enum <" };
-        var markerIndex = markers
-            .Select(marker => source.IndexOf(marker, StringComparison.Ordinal))
-            .Where(index => index >= 0)
-            .DefaultIfEmpty(-1)
-            .Min();
-        if (markerIndex < 0) return -1;
-
-        var lineStart = source.LastIndexOf('\n', markerIndex) + 1;
-        var attributeStart = lineStart;
-        while (attributeStart > 0)
-        {
-            var previousLineEnd = attributeStart - 1;
-            var previousLineStart = source.LastIndexOf('\n', Math.Max(0, previousLineEnd - 1)) + 1;
-            var previousLine = source[previousLineStart..previousLineEnd].Trim();
-            if (!previousLine.StartsWith("[", StringComparison.Ordinal)
-                || !previousLine.Contains("CompilerGenerated", StringComparison.Ordinal))
-            {
-                break;
-            }
-
-            attributeStart = previousLineStart;
-        }
-
-        return attributeStart;
-    }
-
-    private static string RemoveCompilerGeneratedStateMachineAttributes(string source) =>
-        string.Join(
-            Environment.NewLine,
-            source.Split(Environment.NewLine)
-                .Where(line => !line.Contains("[AsyncStateMachine(", StringComparison.Ordinal)
-                    && !line.Contains("[IteratorStateMachine(", StringComparison.Ordinal)));
-
-    private static int FindMatchingBrace(string source, int openingBrace)
-    {
-        var depth = 0;
-        var state = new BraceScannerState();
-        for (var index = openingBrace; index < source.Length; index++)
-        {
-            if (SkipIgnoredCharacter(source, ref index, ref state)) continue;
-
-            var character = source[index];
-            if (character == '{') depth++;
-            else if (character == '}' && --depth == 0) return index + 1;
-        }
-
-        return -1;
-    }
-
-    private static bool SkipIgnoredCharacter(string source, ref int index, ref BraceScannerState state) =>
-        SkipLineComment(source, ref index, ref state)
-        || SkipBlockComment(source, ref index, ref state)
-        || SkipString(source, ref index, ref state)
-        || SkipCharacter(source, ref index, ref state)
-        || EnterIgnoredRegion(source, ref index, ref state);
-
-    private static bool SkipLineComment(string source, ref int index, ref BraceScannerState state)
-    {
-        if (!state.InLineComment) return false;
-        if (source[index] is '\r' or '\n') state.InLineComment = false;
-        return true;
-    }
-
-    private static bool SkipBlockComment(string source, ref int index, ref BraceScannerState state)
-    {
-        if (!state.InBlockComment) return false;
-        if (source[index] == '*' && index + 1 < source.Length && source[index + 1] == '/')
-        {
-            state.InBlockComment = false;
-            index++;
-        }
-
-        return true;
-    }
-
-    private static bool SkipString(string source, ref int index, ref BraceScannerState state)
-    {
-        if (!state.InString) return false;
-        if (state.IsVerbatimString)
-        {
-            if (source[index] == '"')
-            {
-                if (index + 1 < source.Length && source[index + 1] == '"') index++;
-                else state.InString = false;
-            }
-        }
-        else if (source[index] == '\\') index++;
-        else if (source[index] == '"') state.InString = false;
-
-        return true;
-    }
-
-    private static bool SkipCharacter(string source, ref int index, ref BraceScannerState state)
-    {
-        if (!state.InCharacter) return false;
-        if (source[index] == '\\') index++;
-        else if (source[index] == '\'') state.InCharacter = false;
-        return true;
-    }
-
-    private static bool EnterIgnoredRegion(string source, ref int index, ref BraceScannerState state)
-    {
-        if (source[index] == '/' && index + 1 < source.Length)
-        {
-            if (source[index + 1] == '/')
-            {
-                state.InLineComment = true;
-                index++;
-                return true;
-            }
-
-            if (source[index + 1] == '*')
-            {
-                state.InBlockComment = true;
-                index++;
-                return true;
-            }
-        }
-
-        if (source[index] == '"')
-        {
-            state.InString = true;
-            state.IsVerbatimString = index > 0 && source[index - 1] == '@';
-            return true;
-        }
-
-        if (source[index] == '\'')
-        {
-            state.InCharacter = true;
-            return true;
-        }
-
-        return false;
-    }
-
-    private struct BraceScannerState
-    {
-        internal bool InString;
-        internal bool IsVerbatimString;
-        internal bool InCharacter;
-        internal bool InLineComment;
-        internal bool InBlockComment;
-    }
-
-    private static ICSharpCode.Decompiler.CSharp.CSharpDecompiler CreateDecompiler(
+    internal static ICSharpCode.Decompiler.CSharp.CSharpDecompiler CreateDecompiler(
         string assemblyPath,
         AssemblyReferenceResolution references,
         CancellationToken cancellationToken,

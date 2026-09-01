@@ -101,7 +101,9 @@ public sealed class GetClassStructureToolTests
             public class Constants
             {
                 public const double Ratio = 1.5;
+                public const int Offset = -7;
                 public const string Greeting = "hello";
+                public const string? Missing = null;
                 public const char Marker = 'x';
                 public const bool Enabled = true;
             }
@@ -116,7 +118,9 @@ public sealed class GetClassStructureToolTests
         var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
         Assert.NotNull(payload);
         Assert.Contains(payload!.Members, member => member.Signature.Contains("1.5", StringComparison.Ordinal));
+        Assert.Contains(payload.Members, member => member.Signature.Contains("-7", StringComparison.Ordinal));
         Assert.Contains(payload.Members, member => member.Signature.Contains("\"hello\"", StringComparison.Ordinal));
+        Assert.Contains(payload.Members, member => member.Signature.Contains("null", StringComparison.Ordinal));
         Assert.Contains(payload.Members, member => member.Signature.Contains("'x'", StringComparison.Ordinal));
         Assert.Contains(payload.Members, member => member.Signature.Contains("true", StringComparison.Ordinal));
     }

@@ -63,13 +63,13 @@ internal static class GetSymbolBodyTool
     }
 
     internal static Task<CallToolResult> ExecuteAsync(
-        AssemblyAnalysisLease lease,
+        IAssemblyBodyContext lease,
         string[]? symbolIdentifiers,
         int maxBodyLines,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(lease);
-        var solution = lease.Server.GetCurrentSolution();
+        var solution = lease.Solution;
         if (solution is null) return Task.FromResult(McpToolResults.SolutionNotLoaded());
         var identifiers = McpBatchArguments.Normalize(symbolIdentifiers, StringComparer.Ordinal);
         if (identifiers.Count == 0)
@@ -81,7 +81,7 @@ internal static class GetSymbolBodyTool
         }
 
         return RenderSymbolBodiesAsync(
-            solution, identifiers, maxBodyLines, lease.Server.AssemblySymbolIdentity, lease, ct);
+            solution, identifiers, maxBodyLines, lease.AssemblySymbolIdentity, lease, ct);
     }
 
     private static async Task<CallToolResult> RenderSymbolBodiesAsync(
@@ -89,7 +89,7 @@ internal static class GetSymbolBodyTool
         IReadOnlyList<string> identifiers,
         int maxBodyLines,
         AnalysisSymbolIdentity? assemblyIdentity,
-        AssemblyAnalysisLease? lease,
+        IAssemblyBodyContext? lease,
         CancellationToken ct)
     {
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
@@ -119,51 +119,60 @@ internal static class GetSymbolBodyTool
         CancellationToken ct)
     {
         var solution = request.Solution;
-        var identifier = request.Identifier;
-        var totalCount = request.TotalCount;
-        var maxBodyLines = request.MaxBodyLines;
-        var outputRoot = request.OutputRoot;
-        var mb = request.Markdown;
-        var assemblyIdentity = request.AssemblyIdentity;
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, identifier, ct, assemblyIdentity);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
+            solution, request.Identifier, ct, request.AssemblyIdentity);
 
-        if (error is not null)
-        {
-            if (totalCount == 1) return error;
-            mb.Heading(3, $"Symbol `{identifier}` nicht aufgeloest");
-            mb.BlankLine();
-            var errorText = error.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? "Fehler beim Aufloesen.";
-            mb.Line(errorText.Trim());
-            return null;
-        }
+        if (error is not null) return RenderResolutionError(request, error);
 
-        if (symbol is null)
-        {
-            if (totalCount == 1) return McpToolResults.SymbolNotFound(identifier);
-            mb.Heading(3, $"Symbol nicht gefunden: `{identifier}`");
-            return null;
-        }
+        if (symbol is null) return RenderMissingSymbol(request);
 
-        var idSuffix = assemblyIdentity?.Format(symbol.TryGetDocCommentId() ?? CallGraphTraversal.GetStableSymbolId(symbol))
+        return await RenderResolvedSymbolAsync(request, symbol, ct).ConfigureAwait(false);
+    }
+
+    private static CallToolResult? RenderResolutionError(
+        RenderSingleSymbolRequest request,
+        CallToolResult error)
+    {
+        if (request.TotalCount == 1) return error;
+        request.Markdown.Heading(3, $"Symbol `{request.Identifier}` nicht aufgeloest");
+        request.Markdown.BlankLine();
+        var errorText = error.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? "Fehler beim Aufloesen.";
+        request.Markdown.Line(errorText.Trim());
+        return null;
+    }
+
+    private static CallToolResult? RenderMissingSymbol(RenderSingleSymbolRequest request)
+    {
+        if (request.TotalCount == 1) return McpToolResults.SymbolNotFound(request.Identifier);
+        request.Markdown.Heading(3, $"Symbol nicht gefunden: `{request.Identifier}`");
+        return null;
+    }
+
+    private static async Task<CallToolResult?> RenderResolvedSymbolAsync(
+        RenderSingleSymbolRequest request,
+        ISymbol symbol,
+        CancellationToken ct)
+    {
+        var idSuffix = request.AssemblyIdentity?.Format(symbol.TryGetDocCommentId() ?? CallGraphTraversal.GetStableSymbolId(symbol))
             ?? symbol.TryGetDocCommentId();
-        var bodyResolution = request.Lease is not null && request.Lease.Context.Origin.IsDecompiled
-            ? await request.Lease.ResolveBodyAsync(symbol, maxBodyLines, ct).ConfigureAwait(false)
-            : CreateSourceBodyResolution(symbol, maxBodyLines, outputRoot);
+        var bodyResolution = request.Lease is { IsDecompiled: true }
+            ? await request.Lease.ResolveBodyAsync(symbol, request.MaxBodyLines, ct).ConfigureAwait(false)
+            : SourceSymbolBodyResolver.Resolve(symbol, request.MaxBodyLines);
 
-        mb.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{Path.GetFileName(outputRoot)}/{ToRelative(outputRoot, symbol)}`");
-        mb.BlankLine();
-        if (!string.Equals(identifier, idSuffix, StringComparison.Ordinal))
+        request.Markdown.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{Path.GetFileName(request.OutputRoot)}/{ToRelative(request.OutputRoot, symbol)}`");
+        request.Markdown.BlankLine();
+        if (!string.Equals(request.Identifier, idSuffix, StringComparison.Ordinal))
         {
-            mb.Line($"angefordert: `{identifier}`");
+            request.Markdown.Line($"angefordert: `{request.Identifier}`");
         }
         if (idSuffix is not null)
         {
-            mb.Line($"id: `{idSuffix}`");
+            request.Markdown.Line($"id: `{idSuffix}`");
         }
-        mb.Line($"bodyAvailability: `{bodyResolution.BodyAvailability}`; contentMode: `{bodyResolution.ContentMode}`");
-        if (!string.IsNullOrWhiteSpace(bodyResolution.Hint)) mb.Line($"Hinweis: {bodyResolution.Hint}");
-        mb.BlankLine();
-        mb.CodeBlock("csharp", bodyResolution.Body ?? ExtractSymbolBody(symbol, maxBodyLines, outputRoot));
+        request.Markdown.Line($"bodyAvailability: `{bodyResolution.BodyAvailability}`; contentMode: `{bodyResolution.ContentMode}`");
+        if (!string.IsNullOrWhiteSpace(bodyResolution.Hint)) request.Markdown.Line($"Hinweis: {bodyResolution.Hint}");
+        request.Markdown.BlankLine();
+        request.Markdown.CodeBlock("csharp", bodyResolution.Body ?? "// Für dieses Symbol ist kein dekompilierbarer Body verfügbar.");
         return null;
     }
 
@@ -175,66 +184,13 @@ internal static class GetSymbolBodyTool
         string OutputRoot,
         MarkdownBuilder Markdown,
         AnalysisSymbolIdentity? AssemblyIdentity,
-        AssemblyAnalysisLease? Lease);
+        IAssemblyBodyContext? Lease);
 
     private static string ToRelative(string outputRoot, ISymbol symbol)
     {
         var path = symbol.Locations.FirstOrDefault(l => l.IsInSource)?.SourceTree?.FilePath;
         if (string.IsNullOrEmpty(path)) return symbol.ToDisplayString();
         return PathNormalizer.ToRelative(outputRoot, path);
-    }
-
-    private static string ExtractSymbolBody(ISymbol symbol, int maxBodyLines, string outputRoot)
-    {
-        var normalized = maxBodyLines < 1 ? 1 : maxBodyLines;
-        var declaringReference = symbol.DeclaringSyntaxReferences.FirstOrDefault();
-        if (declaringReference is null)
-        {
-            return $"// Kein Quell-Syntax verfuegbar fuer '{symbol.ToDisplayString()}' (externes Symbol).";
-        }
-
-        var syntax = declaringReference.GetSyntax();
-        var text = syntax.ToFullString();
-        var lines = text.Split('\n');
-        if (lines.Length <= normalized)
-        {
-            return text.TrimEnd();
-        }
-
-        var truncated = string.Join("\n", lines.Take(normalized));
-        return truncated.TrimEnd()
-            + $"\n// ... truncated, total {lines.Length} Zeilen, maxBodyLines erhoehen fuer mehr";
-    }
-
-    private static AssemblyBodyResolution CreateSourceBodyResolution(
-        ISymbol symbol,
-        int maxBodyLines,
-        string outputRoot)
-    {
-        var hasSyntax = symbol.DeclaringSyntaxReferences.Any();
-        var unavailable = symbol.ContainingType?.TypeKind == TypeKind.Interface
-            || !hasSyntax
-            || symbol switch
-            {
-                IMethodSymbol method => method.IsAbstract || AssemblyBodySyntax.HasExternModifier(method),
-                IPropertySymbol property => property.GetMethod?.IsAbstract == true
-                    || property.SetMethod?.IsAbstract == true
-                    || AssemblyBodySyntax.HasExternModifier(property.GetMethod)
-                    || AssemblyBodySyntax.HasExternModifier(property.SetMethod),
-                IEventSymbol eventSymbol => eventSymbol.AddMethod?.IsAbstract == true
-                    || eventSymbol.RemoveMethod?.IsAbstract == true,
-                _ => false,
-            };
-        var hint = symbol.ContainingType?.TypeKind == TypeKind.Interface
-            ? "Interfaces stellen keinen ausführbaren Body bereit."
-            : !hasSyntax
-                ? "Für das Symbol ist kein Quell-Syntax verfügbar."
-                : unavailable ? "Das Symbol ist abstract oder extern und besitzt keinen Body." : null;
-        return new(
-            ExtractSymbolBody(symbol, maxBodyLines, outputRoot),
-            unavailable ? "unavailable" : "available",
-            "source",
-            hint);
     }
 
 }

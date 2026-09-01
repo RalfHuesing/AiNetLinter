@@ -155,6 +155,12 @@ internal sealed record AssemblyBodyResolution(
 
 internal static class AssemblyBodySyntax
 {
+    internal static bool HasNoBody(IPropertySymbol property) =>
+        property.GetMethod?.IsAbstract == true
+        || property.SetMethod?.IsAbstract == true
+        || HasExternModifier(property.GetMethod)
+        || HasExternModifier(property.SetMethod);
+
     internal static bool HasExternModifier(ISymbol? symbol) =>
         symbol?.DeclaringSyntaxReferences
             .Select(reference => reference.GetSyntax())

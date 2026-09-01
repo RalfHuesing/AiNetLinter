@@ -157,6 +157,39 @@ public sealed class AssemblyAnalysisPathContractTests
         Assert.Contains("aktuellen Assembly-Generation", Text(foreignResult), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task AssemblyRoute_ResolvesOverloadedBodyByCompleteParameterSignature()
+    {
+        using var temp = TestTempDirectory.Create("assembly-overload-body-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "OverloadProbe",
+            """
+            namespace Probe;
+            public sealed class Converter
+            {
+                public string Convert(int value) => "wrong-int";
+                public string Convert(string value) => "selected-string";
+            }
+            """);
+        await using var registry = new AssemblyAnalysisRegistry();
+        var leaseResult = await registry.LeaseAsync(assemblyPath);
+        Assert.Null(leaseResult.Error);
+        using var lease = leaseResult.Lease!;
+        var converter = lease.Context.Compilation.GetTypeByMetadataName("Probe.Converter")!;
+        var method = Assert.Single(converter.GetMembers("Convert").OfType<IMethodSymbol>(), symbol =>
+            symbol.Parameters.Single().Type.SpecialType == SpecialType.System_String);
+        var methodId = new AnalysisSymbolIdentity(lease.Context.Origin.ContentHash, lease.Context.Generation)
+            .Format(DocumentationCommentId.CreateDeclarationId(method))!;
+
+        var result = await GetSymbolBodyTool.ExecuteAsync(lease, [methodId], 80, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Text(result);
+        Assert.Contains("selected-string", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("wrong-int", text, StringComparison.Ordinal);
+    }
+
     private static async Task<CallToolResult> DispatchAsync(
         AssemblyAnalysisRegistry registry,
         string assemblyPath,

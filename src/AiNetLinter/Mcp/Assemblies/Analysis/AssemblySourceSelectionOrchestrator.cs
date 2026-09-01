@@ -3,12 +3,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
-using AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
@@ -48,14 +46,7 @@ internal sealed class AssemblySourceSelectionOrchestrator :
 {
     private readonly AssemblySourceSelectionConfiguration configuration;
     private readonly IReadOnlyList<ExternalSourceMapping> configuredMappings;
-    private readonly IExternalSourceProvider provider;
-    private readonly IAssemblySourceSelectionSnapshotRegistry registry;
-    private readonly Func<Task>? afterCreationCompletedBeforeRemovalAsync;
-    private readonly Lock creationGate = new();
-    private readonly Dictionary<string, AssemblySourceProviderCreation> creations = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, string> cachedSnapshotIdentities = new(StringComparer.OrdinalIgnoreCase);
-    private Task? disposalTask;
-    private int disposed;
+    private readonly AssemblySourceProviderCoordinator providerCoordinator;
 
     internal AssemblySourceSelectionOrchestrator(
         ExternalSourceConfigurationLoadResult configurationResult,
@@ -64,21 +55,17 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         Func<Task>? afterCreationCompletedBeforeRemovalAsync = null)
     {
         ArgumentNullException.ThrowIfNull(configurationResult);
-        ArgumentNullException.ThrowIfNull(provider);
-        ArgumentNullException.ThrowIfNull(registry);
 
         configuration = new(configurationResult.Succeeded, configurationResult.Diagnostics);
         configuredMappings = configurationResult.Configuration?.Mappings
             ?? ImmutableArray<ExternalSourceMapping>.Empty;
-        this.provider = provider;
-        this.registry = registry;
-        this.afterCreationCompletedBeforeRemovalAsync = afterCreationCompletedBeforeRemovalAsync;
+        providerCoordinator = new(provider, registry, afterCreationCompletedBeforeRemovalAsync);
     }
 
     internal static AssemblySourceSelectionOrchestrator CreateFromSettings(
         string? settingsPath,
         IExternalSourceProvider provider,
-        SourceSnapshotRegistry registry) =>
+        IAssemblySourceSelectionSnapshotRegistry registry) =>
         new(ExternalSourceConfigurationLoader.Load(settingsPath), provider, registry);
 
     internal async Task<AssemblySourceSelectionScope> ResolveAsync(
@@ -94,36 +81,13 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         var assemblyName = ResolveAssemblyName(assemblyPath);
         if (string.IsNullOrWhiteSpace(assemblyName))
         {
-            return CreateScope(
-                [new(
-                    ExternalSourceConfigurationDiagnosticCodes.RepositoryMappingInvalid,
-                    "Die Assembly-Metadaten konnten für die Source-Zuordnung nicht gelesen werden.",
-                    "warning",
-                    "$assembly")],
-                fallbackReason: AssemblySourceFallbackReasons.AssemblyMetadataUnavailable);
+            return CreateMetadataUnavailableScope();
         }
 
-        var mappings = FindMappings(assemblyName);
-        if (mappings.Count == 0)
+        var mappingResolution = ResolveMapping(assemblyName);
+        if (mappingResolution.Scope is not null)
         {
-            return CreateScope(
-                [new(
-                    ExternalSourceConfigurationDiagnosticCodes.AssemblyMappingNotFound,
-                    $"Für Assembly '{assemblyName}' ist kein Source-Mapping konfiguriert.",
-                    "warning",
-                    "$configuration")],
-                fallbackReason: AssemblySourceFallbackReasons.MappingNotFound);
-        }
-
-        if (mappings.Count > 1)
-        {
-            return CreateScope(
-                [new(
-                    ExternalSourceConfigurationDiagnosticCodes.AssemblyMappingAmbiguous,
-                    $"Für Assembly '{assemblyName}' sind mehrere Source-Mappings konfiguriert.",
-                    "warning",
-                    "$configuration")],
-                fallbackReason: AssemblySourceFallbackReasons.MappingAmbiguous);
+            return mappingResolution.Scope;
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -132,7 +96,7 @@ internal sealed class AssemblySourceSelectionOrchestrator :
             return await ResolveMappedAssemblyAsync(
                     assemblyPath,
                     assemblyName,
-                    mappings[0],
+                    mappingResolution.Mapping!,
                     cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -162,7 +126,8 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         ExternalSourceMapping mapping,
         CancellationToken cancellationToken)
     {
-        using var providerLease = await LeaseProviderResultAsync(mapping, cancellationToken).ConfigureAwait(false);
+        using var providerLease = await providerCoordinator
+            .LeaseProviderResultAsync(mapping, cancellationToken).ConfigureAwait(false);
         var providerResult = providerLease.Result;
         if (!providerResult.IsAvailable || providerResult.SourceSnapshot is null)
         {
@@ -175,25 +140,8 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         }
 
         if (!IsTrusted(providerResult)) return RejectUntrustedSnapshot(providerResult);
-        var lease = AcquireSnapshot(providerLease, providerResult.SourceSnapshot);
+        var lease = providerCoordinator.AcquireSnapshot(providerLease, providerResult.SourceSnapshot);
         return CreateSelectionScope(assemblyPath, assemblyName, mapping, providerResult, lease);
-    }
-
-    private SourceSnapshotLease AcquireSnapshot(
-        AssemblySourceProviderResultLease providerLease,
-        ExternalSourceSnapshot snapshot)
-    {
-        try
-        {
-            var lease = registry.Acquire(snapshot);
-            providerLease.AcceptSnapshot();
-            return lease;
-        }
-        catch
-        {
-            ExternalSourceSnapshotDisposal.DisposeBestEffort(snapshot, "Snapshot nach Registry-Fehler");
-            throw;
-        }
     }
 
     private AssemblySourceSelectionScope CreateSelectionScope(
@@ -213,32 +161,20 @@ internal sealed class AssemblySourceSelectionOrchestrator :
                     providerResult.Health,
                     providerResult.CheckoutTrust,
                     providerResult.IsAttested));
-            var matchDiagnostics = match.State switch
-            {
-                ExternalSourceMatchState.NoMatch => new[] { new ExternalSourceConfigurationDiagnostic(
-                    ExternalSourceConfigurationDiagnosticCodes.SourceProjectNotFound,
-                    "Im Source-Snapshot wurde kein passendes Projekt gefunden.", "warning", "$solution") },
-                ExternalSourceMatchState.Ambiguous => new[] { new ExternalSourceConfigurationDiagnostic(
-                    ExternalSourceConfigurationDiagnosticCodes.SourceProjectAmbiguous,
-                    "Im Source-Snapshot wurden mehrere passende Projekte gefunden.", "warning", "$solution") },
-                _ => Array.Empty<ExternalSourceConfigurationDiagnostic>(),
-            };
-            var scope = new AssemblySourceSelectionScope(
+            var matchDiagnostics = CreateMatchDiagnostics(match.State);
+            var scope = new AssemblySourceSelectionScope(new(
                 selection,
                 configuration,
                 providerResult.Diagnostics.Concat(lease.Snapshot.Diagnostics).Concat(matchDiagnostics),
                 lease,
                 providerResult.ToResultState(),
-                fallbackReason: match.State switch
-                {
-                    ExternalSourceMatchState.NoMatch => AssemblySourceFallbackReasons.SourceProjectNotFound,
-                    ExternalSourceMatchState.Ambiguous => AssemblySourceFallbackReasons.SourceProjectAmbiguous,
-                    _ => null,
-                },
-                sourceDiagnostics: lease.Snapshot.Diagnostics);
+                CreateFallbackMetadata(GetMatchFallbackReason(match.State), lease.Snapshot.Diagnostics),
+                lease.Snapshot.Diagnostics));
             if (selection is not null)
             {
-                RememberSnapshotIdentity(assemblyPath, selection.SourceLease.Snapshot.Identity.StableValue);
+                providerCoordinator.RememberSnapshotIdentity(
+                    assemblyPath,
+                    selection.SourceLease.Snapshot.Identity.StableValue);
             }
 
             return scope;
@@ -265,7 +201,7 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         CancellationToken cancellationToken)
     {
         var scope = await ResolveAsync(assemblyPath, cancellationToken).ConfigureAwait(false);
-        return new(scope.Selection, scope, scope.Diagnostics, scope.FallbackReason, scope.SourceDiagnostics);
+        return new(scope.Selection, scope, scope.Diagnostics, scope.Fallback);
     }
 
     Task<AssemblySourceSelectionScope> IAssemblySourceSelectionResolver.ResolveAsync(
@@ -276,179 +212,59 @@ internal sealed class AssemblySourceSelectionOrchestrator :
     bool IAssemblySourceSnapshotIdentityCache.TryGetCachedSourceSnapshotIdentity(
         string assemblyPath,
         out string? snapshotIdentity)
-    {
-        var canonicalPath = Path.GetFullPath(assemblyPath);
-        lock (creationGate)
-        {
-            return cachedSnapshotIdentities.TryGetValue(canonicalPath, out snapshotIdentity);
-        }
-    }
+        => providerCoordinator.TryGetCachedSnapshotIdentity(assemblyPath, out snapshotIdentity);
 
-    public ValueTask DisposeAsync() => new(StartDispose());
-
-    private Task StartDispose()
-    {
-        AssemblySourceProviderCreation[] pending;
-        TaskCompletionSource<object?>? completion = null;
-        lock (creationGate)
-        {
-            if (disposalTask is not null)
-            {
-                return disposalTask;
-            }
-
-            Interlocked.Exchange(ref disposed, 1);
-            pending = creations.Values.ToArray();
-            creations.Clear();
-            cachedSnapshotIdentities.Clear();
-            completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            disposalTask = completion.Task;
-        }
-
-        foreach (var creation in pending)
-        {
-            creation.Cancel();
-        }
-
-        _ = JoinProducerCreationsAsync(pending, completion);
-        return completion.Task;
-    }
-
-    private static async Task JoinProducerCreationsAsync(
-        IReadOnlyList<AssemblySourceProviderCreation> pending,
-        TaskCompletionSource<object?> completion)
-    {
-        try
-        {
-            await Task.WhenAll(pending.Select(creation => creation.ProducerTask)).ConfigureAwait(false);
-            completion.TrySetResult(null);
-        }
-        catch (Exception exception)
-        {
-            completion.TrySetException(exception);
-        }
-    }
-
-    private async Task<AssemblySourceProviderResultLease> LeaseProviderResultAsync(
-        ExternalSourceMapping mapping,
-        CancellationToken cancellationToken)
-    {
-        ThrowIfDisposed();
-        var key = CreateCreationKey(mapping);
-        AssemblySourceProviderCreation creation;
-        lock (creationGate)
-        {
-            ThrowIfDisposed();
-            if (!creations.TryGetValue(key, out creation!))
-            {
-                creation = new AssemblySourceProviderCreation();
-                creations.Add(key, creation);
-                creation.AddWaiter();
-                creation.SetProducerTask(RunProviderCreationAsync(key, mapping, creation));
-            }
-            else
-            {
-                creation.AddWaiter();
-            }
-        }
-
-        try
-        {
-            var result = await creation.Completion.Task
-                .WaitAsync(cancellationToken)
-                .ConfigureAwait(false);
-            return new AssemblySourceProviderResultLease(creation, result);
-        }
-        catch
-        {
-            creation.ReleaseWaiter(accepted: false);
-            throw;
-        }
-    }
-
-    private async Task RunProviderCreationAsync(
-        string key,
-        ExternalSourceMapping mapping,
-        AssemblySourceProviderCreation creation)
-    {
-        try
-        {
-            using var operation = registry.BeginOperation(creation.CreationToken);
-            var result = await provider.ResolveAsync(mapping, creation.CreationToken)
-                .ConfigureAwait(false);
-            if (!creation.TrySetResult(result))
-            {
-                creation.DisposeRejectedResult(result);
-            }
-        }
-        catch (OperationCanceledException exception) when (
-            exception.CancellationToken.IsCancellationRequested
-            || creation.CreationToken.IsCancellationRequested)
-        {
-            creation.Completion.TrySetCanceled(exception.CancellationToken);
-        }
-        catch (OperationCanceledException exception)
-        {
-            creation.Completion.TrySetException(exception);
-        }
-        catch (Exception exception)
-        {
-            creation.Completion.TrySetException(exception);
-        }
-        finally
-        {
-            creation.Complete();
-            if (afterCreationCompletedBeforeRemovalAsync is not null)
-            {
-                await afterCreationCompletedBeforeRemovalAsync().ConfigureAwait(false);
-            }
-
-            lock (creationGate)
-            {
-                if (creations.TryGetValue(key, out var current)
-                    && ReferenceEquals(current, creation))
-                {
-                    creations.Remove(key);
-                }
-            }
-        }
-    }
-
-    private static string CreateCreationKey(ExternalSourceMapping mapping)
-    {
-        if (ExternalSourceRepositoryCacheKey.TryCreate(
-                mapping.Url,
-                mapping.SolutionPath,
-                out var cacheKey))
-        {
-            return cacheKey!.StableValue;
-        }
-
-        return string.Concat(mapping.Url.Trim(), "|", mapping.SolutionPath.Trim());
-    }
-
-    private void RememberSnapshotIdentity(string assemblyPath, string snapshotIdentity)
-    {
-        var canonicalPath = Path.GetFullPath(assemblyPath);
-        lock (creationGate)
-        {
-            if (Volatile.Read(ref disposed) == 0)
-            {
-                cachedSnapshotIdentities[canonicalPath] = snapshotIdentity;
-            }
-        }
-    }
-
-    private void ThrowIfDisposed()
-    {
-        if (Volatile.Read(ref disposed) != 0)
-        {
-            throw new ObjectDisposedException(nameof(AssemblySourceSelectionOrchestrator));
-        }
-    }
+    public ValueTask DisposeAsync() => providerCoordinator.DisposeAsync();
 
     private string? ResolveAssemblyName(string assemblyPath) =>
         new AssemblyReferenceResolver().Resolve(assemblyPath).Identity?.Name?.Trim();
+
+    private AssemblySourceMappingResolution ResolveMapping(string assemblyName)
+    {
+        var mappings = FindMappings(assemblyName);
+        if (mappings.Count == 1) return new(mappings[0], null);
+
+        var isAmbiguous = mappings.Count > 1;
+        var code = isAmbiguous
+            ? ExternalSourceConfigurationDiagnosticCodes.AssemblyMappingAmbiguous
+            : ExternalSourceConfigurationDiagnosticCodes.AssemblyMappingNotFound;
+        var message = isAmbiguous
+            ? $"Für Assembly '{assemblyName}' sind mehrere Source-Mappings konfiguriert."
+            : $"Für Assembly '{assemblyName}' ist kein Source-Mapping konfiguriert.";
+        var reason = isAmbiguous
+            ? AssemblySourceFallbackReasons.MappingAmbiguous
+            : AssemblySourceFallbackReasons.MappingNotFound;
+        return new(null, CreateScope([new(code, message, "warning", "$configuration")], fallbackReason: reason));
+    }
+
+    private AssemblySourceSelectionScope CreateMetadataUnavailableScope() =>
+        CreateScope(
+            [new(
+                ExternalSourceConfigurationDiagnosticCodes.RepositoryMappingInvalid,
+                "Die Assembly-Metadaten konnten für die Source-Zuordnung nicht gelesen werden.",
+                "warning",
+                "$assembly")],
+            fallbackReason: AssemblySourceFallbackReasons.AssemblyMetadataUnavailable);
+
+    private static ExternalSourceConfigurationDiagnostic[] CreateMatchDiagnostics(ExternalSourceMatchState state) =>
+        state switch
+        {
+            ExternalSourceMatchState.NoMatch => [new(
+                ExternalSourceConfigurationDiagnosticCodes.SourceProjectNotFound,
+                "Im Source-Snapshot wurde kein passendes Projekt gefunden.", "warning", "$solution")],
+            ExternalSourceMatchState.Ambiguous => [new(
+                ExternalSourceConfigurationDiagnosticCodes.SourceProjectAmbiguous,
+                "Im Source-Snapshot wurden mehrere passende Projekte gefunden.", "warning", "$solution")],
+            _ => [],
+        };
+
+    private static string? GetMatchFallbackReason(ExternalSourceMatchState state) =>
+        state switch
+        {
+            ExternalSourceMatchState.NoMatch => AssemblySourceFallbackReasons.SourceProjectNotFound,
+            ExternalSourceMatchState.Ambiguous => AssemblySourceFallbackReasons.SourceProjectAmbiguous,
+            _ => null,
+        };
 
     private IReadOnlyList<ExternalSourceMapping> FindMappings(string assemblyName) =>
         configuredMappings
@@ -482,98 +298,29 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         IEnumerable<ExternalSourceConfigurationDiagnostic>? providerDiagnostics = null,
         ExternalSourceRepositoryResultState? state = null,
         string? fallbackReason = null) =>
-        new(
+        new(new(
             null,
             configuration,
             providerDiagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>(),
             null,
             state ?? ExternalSourceRepositoryResultState.Create(),
-            fallbackReason,
-            providerDiagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>());
+            CreateFallbackMetadata(fallbackReason, providerDiagnostics),
+            providerDiagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>()));
 
-}
-
-internal sealed class AssemblySourceSelectionScope : IDisposable
-{
-    private SourceSnapshotLease? lease;
-    private int disposed;
-
-    internal AssemblySourceSelectionScope(
-        AssemblySourceSelection? selection,
-        AssemblySourceSelectionConfiguration configuration,
-        IEnumerable<ExternalSourceConfigurationDiagnostic> providerDiagnostics,
-        SourceSnapshotLease? lease,
-        ExternalSourceRepositoryResultState? state = null,
-        string? fallbackReason = null,
-        IEnumerable<ExternalSourceConfigurationDiagnostic>? sourceDiagnostics = null)
+    private static AssemblySourceFallbackMetadata? CreateFallbackMetadata(
+        string? reason,
+        IEnumerable<ExternalSourceConfigurationDiagnostic>? diagnostics)
     {
-        ArgumentNullException.ThrowIfNull(providerDiagnostics);
-        ArgumentNullException.ThrowIfNull(configuration);
-        state ??= ExternalSourceRepositoryResultState.Create();
-
-        Selection = selection;
-        this.configuration = configuration;
-        LoaderDiagnostics = configuration.LoaderDiagnostics;
-        ProviderDiagnostics = providerDiagnostics.ToImmutableArray();
-        ProviderFailureKind = state.FailureKind;
-        ProviderHealth = ExternalSourceRepositorySourcePolicy.ResolveHealth(
-            selection is not null,
-            state.Health,
-            state.LastGoodRevision);
-        ProviderCheckoutTrust = state.CheckoutTrust
-            ?? (selection is not null
-                ? ExternalSourceCheckoutTrust.Clean
-                : ExternalSourceCheckoutTrust.Unverified);
-        LastGoodRevision = ExternalSourceRepositorySourcePolicy.NormalizeLastGoodRevision(state.LastGoodRevision);
-        Diagnostics = LoaderDiagnostics
-            .AddRange(ProviderDiagnostics)
-            .Distinct()
-            .ToImmutableArray();
-        FallbackReason = fallbackReason;
-        SourceDiagnostics = (sourceDiagnostics ?? ProviderDiagnostics)
-            .Distinct()
-            .ToImmutableArray();
-        this.lease = lease;
+        if (string.IsNullOrWhiteSpace(reason)) return null;
+        return new(
+            reason,
+            (diagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>())
+                .Distinct()
+                .Take(20)
+                .ToArray());
     }
 
-    internal AssemblySourceSelection? Selection { get; }
-
-    internal AssemblySourceSelectionStatus Status =>
-        Selection is not null ? (AssemblySourceSelectionStatus)Selection.MatchResult.State :
-        FallbackReason is AssemblySourceFallbackReasons.MappingAmbiguous
-            ? AssemblySourceSelectionStatus.Ambiguous :
-        !configuration.Succeeded
-            ? AssemblySourceSelectionStatus.ConfigurationFailure
-            : ProviderHealth is ExternalSourceRepositoryHealth.Degraded
-            ? AssemblySourceSelectionStatus.ProviderDegraded
-            : ProviderFailureKind is not ExternalSourceProviderFailureKind.None
-            ? AssemblySourceSelectionStatus.ProviderUnavailable
-            : AssemblySourceSelectionStatus.NoMatch;
-
-    internal bool IsDisposed => Volatile.Read(ref disposed) != 0;
-
-    internal ImmutableArray<ExternalSourceConfigurationDiagnostic> LoaderDiagnostics { get; }
-
-    internal ImmutableArray<ExternalSourceConfigurationDiagnostic> ProviderDiagnostics { get; }
-
-    internal ExternalSourceProviderFailureKind ProviderFailureKind { get; }
-
-    internal ExternalSourceRepositoryHealth ProviderHealth { get; }
-
-    internal ExternalSourceCheckoutTrust ProviderCheckoutTrust { get; }
-
-    internal string? LastGoodRevision { get; }
-
-    internal ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics { get; }
-
-    internal string? FallbackReason { get; }
-
-    internal ImmutableArray<ExternalSourceConfigurationDiagnostic> SourceDiagnostics { get; }
-
-    private readonly AssemblySourceSelectionConfiguration configuration;
-
-    public void Dispose()
-    {
-        if (Interlocked.Exchange(ref disposed, 1) == 0) Interlocked.Exchange(ref lease, null)?.Dispose();
-    }
+    private sealed record AssemblySourceMappingResolution(
+        ExternalSourceMapping? Mapping,
+        AssemblySourceSelectionScope? Scope);
 }

@@ -188,6 +188,11 @@ public sealed class AssemblyAnalysisContextFactoryTests
             missingProjectSelection,
             CancellationToken.None));
         AssertDecompiledFallback(missingProjectResult, "Source.SecondSourceOnly");
+        var missingProjectContext = missingProjectResult.Context!;
+        Assert.Equal(AssemblySourceFallbackReasons.WorkspaceFailure, missingProjectContext.Origin.FallbackReason);
+        Assert.Contains(
+            missingProjectContext.Origin.SourceDiagnostics!,
+            diagnostic => diagnostic.Code == ExternalSourceConfigurationDiagnosticCodes.WorkspaceDiagnostic);
     }
 
     [Fact]
