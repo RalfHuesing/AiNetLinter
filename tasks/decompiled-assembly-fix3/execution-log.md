@@ -470,6 +470,33 @@
 - Offen: fokussierte Regressionen für `includeReferences`, Diagnose-`totalCount`/`truncatedBy`, `includeSessions`/`maxSessions` und CallTree-/TypeHierarchy-/MetricsTree-/ReloadConfig-Payloads fehlen weiterhin; Wire-Verhalten gegen aktuellen Build nicht extern verifiziert.
 - Nächste Aktion: Korrekturstand committen und frischen Review starten; der Review muss die offenen Testverträge und die drei implementierten Bereiche prüfen.
 
+## 2026-09-01 – Paket 2 Korrekturversuch 1 Reviewer gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: Korrekturstand `1e77fa8e`; vorheriger Review-Checkpoint `57e49f88`
+- Ursachensignaturen: `package2-production-violations`; `reload-config-structured-payload-missing`; `package2-regression-test-contract-drift`
+- Versuch: 1 von 5 je Ursachensignatur
+- Status: running
+- Auftrag: Produktionsrefactorings, ReloadConfig-DTO/Registrierung und aktuelle Test-/Wire-Verträge unabhängig prüfen. Kein Produktions-/Testcode und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen. Frische Nachweise und offene rote Tests gegen den Diff bewerten.
+
+## 2026-09-01 – Paket 2 Korrekturversuch 1 Reviewer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05c30-66e6-7cf3-8013-2cfdac006642`
+- Status: completed; keine Produktions-/Teständerung, `code-map.md` korrigiert
+- Urteil: `issues`; P0 keine.
+- P1 `package2-production-violations`: `InspectAssemblyTool.BuildResult` hat weiterhin fünf effektive Parameter bei Limit 4 (`InspectAssemblyTool.cs:56`); `AddGetServerHealth` und `GetServerHealthResponseBuilder.Build` liegen im Limit. `metrics_lookup` bestätigt 11 LOC/CC1 und den Parameterverstoß.
+- P1 `package2-regression-test-contract-drift`: `AssemblyAnalysisToolTests.cs:282` erwartet ohne `includeReferences=true` noch Referenzen; `GetServerHealthToolTests.cs:112/171` erwarten global weiterhin `Assert.Single(payload.Assemblies!)`, obwohl der Default keine Sessionliste liefert. Fokussierte Assertions für Detailflag, Diagnose-Samples, `includeSessions/maxSessions` und alle Structured-Content-Erfolgspayloads fehlen.
+- P1 `reload-config-structured-payload-missing`: produktiv durch `ReloadConfigModels`/`ReloadConfigTool` behoben; verbleibende Testabdeckung gehört zum Regressionstest-Befund.
+- P2: `violation-query-metrics-disagreement` – vollständiger `get_violations`-Scope zeigt nur zwei unveränderte `FindSymbolScanner`-Warnungen, `metrics_lookup` bestätigt dennoch `InspectAssemblyTool.BuildResult`; als actionable `accepted-deferred` bis zur gezielten Parameterkorrektur. `health-wire-documentation-drift` in `Docs/agent-api.md` wird für Paket 4 `accepted-deferred`.
+- Verifikation: frischer `dotnet build --no-restore` 0/0; gezielte Tests frisch, aber rot; vollständiger Produktionsscope-MCP zwei scopefremde `FindSymbolScanner`-Warnungen; `git diff --check` erfolgreich. Live-Assembly-Aufruf gegen nicht nachweislich aktualisiertes Daemon-Artefakt nicht als Wire-Nachweis angerechnet.
+- Nächste Aktion: Frischer Implementierer für Inspect-Parametervertrag und Paket-2-Regressionen.
+
 ## 2026-09-01 – Paket 2 Implementierer abgeschlossen
 
 - Run-ID: decompiled-assembly-fix3-20260901

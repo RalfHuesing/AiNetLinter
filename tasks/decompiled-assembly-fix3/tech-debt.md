@@ -123,11 +123,11 @@
 - Schweregrad: P1
 - Ursachensignatur: reload-config-structured-payload-missing
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Tools/ReloadConfigTool.cs` und zugehörige Registrierung/Tests
-- Evidenz: Der Paket-2-Review stellte das fehlende DTO fest. Korrekturversuch 1 ergänzte `ReloadConfigTool`/`ReloadConfigModels`; gezielte Payload-Regressionen fehlen noch, unabhängiger Review steht aus.
-- Disposition: fix-now
-- attempts: 0
-- Nächster Schritt: Strukturierte ReloadConfig-Erfolgstests ergänzen und DTO-Vertrag unabhängig prüfen.
-- Log-Anker: `execution-log.md`, „Paket 2 Korrekturversuch 1 abgeschlossen"
+- Evidenz: Der Paket-2-Review stellte das fehlende DTO fest. Korrekturversuch 1 ergänzte `ReloadConfigTool`/`ReloadConfigModels` und liefert Text plus Payload; die verbleibende Testabdeckung wird unter `package2-regression-test-contract-drift` verfolgt.
+- Disposition: fixed
+- attempts: 1
+- Nächster Schritt: Keine separate Produktionskorrektur; strukturierte ReloadConfig-Tests im Regressionstest-Befund ergänzen.
+- Log-Anker: `execution-log.md`, „Paket 2 Korrekturversuch 1 Reviewer abgeschlossen"
 
 ### Paket-2-Testvertrag nach Progressive Disclosure
 
@@ -136,7 +136,7 @@
 - Scope/Fundstelle: Assembly-Inspektions- und Health-/Reload-Tests
 - Evidenz: Frische TRX-Nachweise meldeten 55/1 in `Package2Targeted.trx` und 12/2 in `Package2HealthTargeted.trx`; nach Korrekturversuch 1 bleiben diese gezielten Läufe mit denselben roten Vertragsassertions. End-to-End-Assertions für `includeReferences`, Diagnose-Samples, `includeSessions/maxSessions` und Erfolgspayloads fehlen.
 - Disposition: fix-now
-- attempts: 0
+- attempts: 1
 - Nächster Schritt: Konkrete Assertions aktualisieren und fehlende Paket-2-Regressionen ergänzen.
 - Log-Anker: `execution-log.md`, „Paket 2 Korrekturversuch 1 abgeschlossen"
 
@@ -145,11 +145,11 @@
 - Schweregrad: P1
 - Ursachensignatur: package2-production-violations
 - Scope/Fundstelle: `src/AiNetLinter/Mcp` – vier durch den Paket-2-Zwischenstand verursachte Befunde im Produktionsscope
-- Evidenz: Der Review verifizierte vier diffbedingte Befunde. Korrekturversuch 1 refaktorierte die drei betroffenen Produktionspfade; der Produktionsscope-Nachcheck meldet keine Violations an geänderten Symbolen. Zwei `FindSymbolScanner`-Befunde sind unverändert und scopefremd.
+- Evidenz: Der Review verifizierte vier diffbedingte Befunde. Korrekturversuch 1 refaktorierte drei betroffene Produktionspfade; `InspectAssemblyTool.BuildResult` behält jedoch fünf statt maximal vier effektive Parameter. `AddGetServerHealth` und `GetServerHealthResponseBuilder.Build` liegen im Limit. Zwei `FindSymbolScanner`-Befunde sind unverändert und scopefremd.
 - Disposition: fix-now
-- attempts: 0
-- Nächster Schritt: Unabhängiger Review; bei bestätigter Behebung als `fixed` markieren.
-- Log-Anker: `execution-log.md`, „Paket 2 Korrekturversuch 1 abgeschlossen"
+- attempts: 1
+- Nächster Schritt: `InspectAssemblyTool.BuildResult` über den bestehenden internen Parametervertrag refaktorieren und Produktionsscope erneut prüfen.
+- Log-Anker: `execution-log.md`, „Paket 2 Korrekturversuch 1 Reviewer abgeschlossen"
 
 ### Paket-2-Magic-Value-Kandidaten
 
