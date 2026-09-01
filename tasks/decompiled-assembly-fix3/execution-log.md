@@ -651,3 +651,15 @@
 - Ergebnis: Keine Korrekturen umgesetzt. Der P1-Testvertrag bleibt offen: `GetServerHealthToolTests.Build_DefaultHealthIsCompact_AndDetailDiagnosticsStayBounded` erwartet weiterhin `Diagnosen: 0 von 4`, während der Produktionsvertrag `Diagnosen gesamt: 4` ausgibt; Diagnose- und Structured-Content-Assertions sind weiterhin nachzuschärfen.
 - Verifikation: MCP-Kontextabfragen für Health, `GetServerHealthResponseBuilder.Build`, `TransitiveCallGraphFormatter.CreateDiagnosticProjection` und relevante Testklassen erfolgreich; Working Tree vor Abbruch sauber. Keine Tests/Checks nach Änderungen erforderlich, da keine Änderungen erfolgten.
 - Nächste Aktion: Letzter frischer Implementierer-Korrekturversuch 5/5 mit kleinem, klar abgegrenztem Testpatch; danach Review oder bei unverändertem Befund dokumentierte Blockierung.
+
+## 2026-09-01 – Paket 2 Korrekturversuch 5 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer (letzter frischer Korrekturversuch)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `90da9dbc`
+- Ursachensignatur: `package2-regression-test-contract-drift`
+- Versuch: 5 von 5
+- Status: running
+- Auftrag: Kleiner Testpatch ohne Produktionsänderung. Ersetze die veraltete globale Health-Textassertion `Diagnosen: 0 von 4` durch den tatsächlichen Default-Text `Diagnosen gesamt: 4` und ergänze nur die konkret fehlenden, nicht tautologischen Default-Aggregatzähler/`SessionsTruncatedBy`-Assertionen sowie belastbare konkrete Werte für Diagnose-/Structured-Content-Regressionen. Keine großen Vollgates starten; nach Änderungen nur gezielte Fast-/IntegrationTests, `git diff --check` und relevante MCP-/Regelchecks. Nur `code-map.md` darf neben den Testdateien aktualisiert werden; kein Commit, keine Roadmap-/Log-/Tech-Debt-Änderung.
