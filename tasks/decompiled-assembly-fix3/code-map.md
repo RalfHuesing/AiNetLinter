@@ -28,7 +28,7 @@
 
 - Betroffene Tests: `src/AiNetLinter.FastTests/Mcp/Tools/SymbolGraph/TransitiveCallGraphFormatterTests.cs` für den direkten No-Hit-/Assembly-Formattervertrag, `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyNavigationResponseContractTests.cs` bündelt die Diagnoseassertions für Assembly-`find_references` und `get_call_tree`, und `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRouteTests.cs` deckt den echten `get_call_tree(includeReferences=true)`-Diagnosepfad mit kontrollierten sechs fehlenden Referenzen ab; `src/AiNetLinter.IntegrationTests/` bleibt für Health und ReloadConfig relevant.
 - `rules.json` und CLI-Verträge wurden nicht geändert.
-- `Konzept.md` und `roadmap.md` wurden nicht geändert. `execution-log.md` war bereits vor diesem Versuch verändert und wurde nicht angefasst.
+- `Konzept.md` wurde nicht geändert; `roadmap.md` und `execution-log.md` enthalten nachgelagerte Review-/Checkpoint-Metadaten und gehören nicht zum Produktions- oder Testumfang.
 - Diese Map dokumentiert den aktuellen Korrekturstand; sie dokumentiert keine nachträgliche Testbehauptung.
 
 ## Invarianten und offene Kriterien

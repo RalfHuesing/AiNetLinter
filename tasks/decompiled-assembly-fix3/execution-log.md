@@ -900,3 +900,18 @@
 - Vorgehen/Nachweis: Der Agent wurde nach wiederholten Wartefenstern und beendeten Prüfprozessen zur Abschlussübergabe aufgefordert, lieferte aber keinen terminalen Bericht. Daher wird kein unabhängiges Reviewurteil behauptet. Der Orchestrator hat den Patch separat mit fokussierten Assembly-FastTests 6/6, Build 0/0, Health-/ReloadConfig-IntegrationTests 15/15, `git diff --check` und den relevanten `get_violations`-Scopes geprüft.
 - Tech-Debt-Disposition: `package2-regression-test-contract-drift` bleibt `fix-now`, Versuchszähler 2; der unabhängige Review ist als fehlende Übergabe offen und wird durch einen schlanken Ersatzreview nachgeholt.
 - Nächste Aktion: Review ohne lang laufende Vollabfragen erneut delegieren.
+
+## 2026-09-01 – Wiederaufnahme Paket 2 Korrekturversuch 2 Ersatzreview abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig; Ersatzreview)
+- Subagent-ID: `01a05cf6-9d16-7011-9200-814e0f48549b`
+- Ursachensignatur: `package2-regression-test-contract-drift`
+- Versuch: 2 im neu freigegebenen Lauf
+- Status: completed; kein Produktions-/Testcode geändert; konkrete Korrektur in `code-map.md` übernommen; kein Commit
+- Vollständiger Bericht: Urteil `approved`; P0: keine; P1: keine; P2: keine neuen. Der Reviewer bestätigt den echten Dispatcher-/`AssemblyGetCallTreeTool`-Pfad mit `includeReferences=true`, sechs fehlende Abhängigkeiten, fünf Samples, Zähler, `truncated`, `truncatedBy=["maxDiagnostics"]`, Ausschluss des sechsten Samples, Text-/Structured-Content-Konsistenz und unveränderte zentrale Formatter-Ownership.
+- Verifikation nach der letzten Codeänderung: gezielte Assembly-FastTests 6/6; `git diff --check` grün. Bekannte `FindSymbolScanner`-/Verzeichniswarnungen sind unverändert und scopefremd.
+- Tech-Debt-Disposition: `package2-regression-test-contract-drift` wird auf `fixed` gesetzt, Versuchszähler 2. `package2-diagnosis-projection-ownership` bleibt `fixed`; der P2-Verzeichnis-Footprint bleibt `accepted-deferred`.
+- Paketentscheidung: Paket 2 ist fachlich abgeschlossen. Paket 3 wird als nächstes Epic aktiviert.
+- Nächste Aktion: Review-/Roadmap-Checkpoint committen und Paket 3 implementieren.

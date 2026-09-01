@@ -3,9 +3,9 @@
 - Primäraufgabe: Robuste Assembly-Analyse und konsistente MCP-Antwortverträge
 - Betriebsart: Großkonzept-Modus
 - Status: executing
-- current_epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
-- current_debt_item: package2-regression-test-contract-drift
-- debt_attempts: 2
+- current_epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
+- current_debt_item: none
+- debt_attempts: 0
 - letzter Commit: `206eae92`
 
 ## Epics
@@ -24,7 +24,7 @@
 - Betroffene Bereiche: Assembly-Detailflags, Diagnoseprojektionen, globaler Health, strukturierte Erfolgspayloads
 - Muss-/Akzeptanzkriterien: gezielte Antworten bleiben kompakt; Diagnose-Samples sind begrenzt und transparent; globaler Health aggregiert standardmäßig; text-only Erfolgsdaten sind strukturiert verfügbar.
 - Verifikation: gezielte Tool-/DTO-/Registrierungs- und Health-Tests sowie MCP-`get_violations`
-- Status: in_progress
+- Status: done
 
 ### Paket 3 – Source-Backing und Body-/Metadata-Navigation
 
@@ -32,7 +32,7 @@
 - Betroffene Bereiche: Source-Snapshot-Diagnosen, Fallback-Transparenz, on-demand Body-Dekompilation, Enum-/Ladezustandsdaten
 - Muss-/Akzeptanzkriterien: Source-Backing bleibt fail-closed und Diagnosen sichtbar; Assembly-Leases sichern Body-Abrufe; Source, dekompilierte Signatur und on-demand Body sind unterscheidbar.
 - Verifikation: Source-/Support-, Body-, Pfad- und Strukturtests sowie MCP-`get_violations`
-- Status: open
+- Status: in_progress
 
 ### Paket 4 – Kompatibilität, API-Lücken und Dokumentation
 

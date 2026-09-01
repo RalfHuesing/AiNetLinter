@@ -135,9 +135,9 @@
 - Ursachensignatur: package2-regression-test-contract-drift
 - Scope/Fundstelle: Assembly-Inspektions- und Health-/Reload-Tests
 - Evidenz: Frische Nachweise meldeten zunächst 55/1 und 12/2; Korrekturversuch 3 ergänzte Session-, Diagnose- und Structured-Content-Regressionen sowie globale Health-Default-Anpassungen. Der Resume-Implementierer korrigierte die verbliebenen konkreten Health-/ReloadConfig-Werte und ergänzte Assembly-`find_references`-Abdeckung. Versuch 2 ergänzt nun zusätzlich den echten Assembly-`get_call_tree`-E2E-Pfad mit sechs kontrollierten fehlenden Referenzen und gemeinsame konkrete Assertions für Zähler, Sample-Limit, Truncation und Text-/Structured-Content-Gleichheit. Orchestrator-Verifikation: Assembly-FastTests 6/6, Health-/ReloadConfig-IntegrationTests 15/15, Build ohne Warnungen/Fehler. Vollgates bleiben wegen unabhängiger Altfehler rot; unabhängiger Abschlussreview steht noch aus.
-- Disposition: fix-now
+- Disposition: fixed
 - attempts: 2
-- Nächster Schritt: Unabhängigen Reviewer auf die neuen Assembly-CallTree-/Routing-Verträge und die unveränderte zentrale Produktionsprojektion ansetzen.
+- Nächster Schritt: Keine weitere Korrektur; die Regressionen decken den echten Assembly-`get_call_tree`- und `find_references`-Vertragsweg ab.
 - Log-Anker: `execution-log.md`, „Wiederaufnahme Paket 2 Korrekturversuch 1 abgeschlossen"
 
 ### Diagnoseprojektion mit doppelter Ownership
