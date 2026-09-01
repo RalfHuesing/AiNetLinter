@@ -3,7 +3,7 @@
 using System;
 using System.Linq;
 
-namespace AiNetLinter.Mcp.Assemblies.Analysis;
+namespace AiNetLinter.Mcp.Assemblies.Analysis.Bodies;
 
 internal static class AssemblyDecompilationSourceText
 {

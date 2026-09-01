@@ -16,6 +16,7 @@ using Xunit;
 namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 
 // @covers AssemblySourceSelectionOrchestrator
+// @covers AssemblySourceProviderCoordinator
 [Trait("Category", "Component")]
 public sealed partial class AssemblyAnalysisToolSupportTests
 {
@@ -256,9 +257,8 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         using var invalidRegistry = new SourceSnapshotRegistry();
         var invalidProvider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(false, []));
         var invalidOrchestrator = new AssemblySourceSelectionOrchestrator(
-            ExternalSourceConfigurationLoadResult.Failure([loaderDiagnostic]),
-            invalidProvider,
-            invalidRegistry);
+            new(false, [], [loaderDiagnostic]),
+            new AssemblySourceProviderCoordinator(invalidProvider, invalidRegistry));
         AssemblyContext? invalidContext = null;
         AssemblySourceSelectionScope? invalidScope = null;
 
@@ -449,10 +449,14 @@ public sealed partial class AssemblyAnalysisToolSupportTests
         var loadResult = ExternalSourceConfigurationLoader.Load(settingsPath);
         Assert.True(loadResult.Succeeded, string.Join(Environment.NewLine, loadResult.Diagnostics.Select(diagnostic => diagnostic.Message)));
         return new AssemblySourceSelectionOrchestrator(
-            loadResult,
-            provider,
-            registry,
-            afterCreationCompletedBeforeRemovalAsync);
+            new(
+                loadResult.Succeeded,
+                loadResult.Configuration?.Mappings ?? [],
+                loadResult.Diagnostics),
+            new AssemblySourceProviderCoordinator(
+                provider,
+                registry,
+                afterCreationCompletedBeforeRemovalAsync));
     }
     private static void AssertLiveSelection(
         AssemblySourceSelectionScope? scope,

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Assemblies.Analysis;
+namespace AiNetLinter.Mcp.Assemblies.Analysis.Bodies;
 
 internal interface IAssemblyBodyContext
 {

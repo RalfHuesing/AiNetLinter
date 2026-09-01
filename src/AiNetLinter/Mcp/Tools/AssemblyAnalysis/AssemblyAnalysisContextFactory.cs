@@ -1,5 +1,4 @@
 #nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,7 +9,6 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using Microsoft.CodeAnalysis;
-
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
 internal static class AssemblyAnalysisContextFactory
@@ -108,7 +106,12 @@ internal static class AssemblyAnalysisContextFactory
             project,
             selection.SourceLease.Snapshot.Solution,
             Array.Empty<AssemblyReferenceDto>());
-        var diagnostics = selection.SourceLease.Snapshot.Diagnostics
+        var sourceDiagnostics = selection.SourceLease.Snapshot.Diagnostics
+            .Concat(compilationResult.Diagnostics)
+            .Distinct()
+            .Take(20)
+            .ToArray();
+        var diagnostics = sourceDiagnostics
             .Select(diagnostic => diagnostic.Message)
             .Concat(sourceReferences.Diagnostics
             .Select(diagnostic => diagnostic.Message)
@@ -120,7 +123,8 @@ internal static class AssemblyAnalysisContextFactory
             selection,
             compilationResult.Compilation,
             sourceReferences,
-            diagnostics)), null);
+            diagnostics,
+            sourceDiagnostics)), null);
     }
 
     private static async Task<SourceContextAttempt> TryCreateSourceBackedContextAsync(
@@ -149,17 +153,32 @@ internal static class AssemblyAnalysisContextFactory
             request.CancellationToken).ConfigureAwait(false);
 
         if (compilationResult.Compilation?.Assembly is null)
-            return new(null, CreateWorkspaceFallback(request, preparation.Snapshot));
+        {
+            return new(
+                null,
+                CreateWorkspaceFallback(
+                    request,
+                    preparation.Snapshot,
+                    compilationResult.Diagnostics,
+                    compilationResult.Error));
+        }
 
         var diagnostics = MergeDiagnostics(references.Diagnostics, sourceReferences).ToList();
         diagnostics.AddRange(preparation.Snapshot.Diagnostics.Select(diagnostic => diagnostic.Message));
+        diagnostics.AddRange(compilationResult.Diagnostics.Select(diagnostic => diagnostic.Message));
+        var sourceDiagnostics = preparation.Snapshot.Diagnostics
+            .Concat(compilationResult.Diagnostics)
+            .Distinct()
+            .Take(20)
+            .ToArray();
         return new SourceContextAttempt(BuildSourceBackedContext(new(
             request,
             preparation,
             references,
             effectiveReferences,
             compilationResult.Compilation,
-            diagnostics)), null);
+            diagnostics,
+            sourceDiagnostics)), null);
     }
 
     private static SourceContextPreparation? PrepareSourceContext(AssemblyAnalysisContextRequest request)
@@ -184,12 +203,45 @@ internal static class AssemblyAnalysisContextFactory
         try
         {
             var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
-            return new(compilation, null);
+            return new(compilation, CreateCompilationDiagnostics(project, compilation, cancellationToken), null);
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException or ArgumentException or NotSupportedException)
         {
-            return new(null, $"Source-Project-Compilation '{project.Name}' konnte nicht geladen werden: {ex.Message}");
+            var error = $"Source-Project-Compilation '{project.Name}' konnte nicht geladen werden: {ex.Message}";
+            return new(
+                null,
+                [new(
+                    ExternalSourceConfigurationDiagnosticCodes.CompilationFailed,
+                    error,
+                    "error",
+                    project.FilePath ?? project.Name)],
+                error);
         }
+    }
+
+    private static IReadOnlyList<ExternalSourceConfigurationDiagnostic> CreateCompilationDiagnostics(
+        Project project,
+        Compilation? compilation,
+        CancellationToken cancellationToken)
+    {
+        if (compilation is null) return [];
+        return compilation.GetDiagnostics(cancellationToken)
+            .Where(diagnostic => diagnostic.Severity is not DiagnosticSeverity.Hidden)
+            .Take(20)
+            .Select(diagnostic => new ExternalSourceConfigurationDiagnostic(
+                diagnostic.Id,
+                diagnostic.GetMessage(),
+                diagnostic.Severity.ToString().ToLowerInvariant(),
+                GetCompilationDiagnosticLocation(project, diagnostic)))
+            .ToArray();
+    }
+
+    private static string GetCompilationDiagnosticLocation(Project project, Diagnostic diagnostic)
+    {
+        var path = diagnostic.Location == Location.None
+            ? null
+            : diagnostic.Location.GetLineSpan().Path;
+        return string.IsNullOrWhiteSpace(path) ? project.FilePath ?? project.Name : path;
     }
 
     private static AssemblyContext BuildSourceProjectContext(SourceProjectContextBuildRequest request)
@@ -211,7 +263,7 @@ internal static class AssemblyAnalysisContextFactory
             "source",
             "source",
             null,
-            snapshot.Diagnostics);
+            request.SourceDiagnostics);
         return new(
             request.Compilation.Assembly!,
             new AssemblyIdentityDto(assemblyName, "0.0.0.0", "neutral", string.Empty),
@@ -242,7 +294,7 @@ internal static class AssemblyAnalysisContextFactory
             "source",
             "source",
             request.ContextRequest.Fallback?.Reason,
-            request.ContextRequest.Fallback?.Diagnostics ?? request.Preparation.Snapshot.Diagnostics);
+            request.SourceDiagnostics);
         return new(
             request.Compilation.Assembly!,
             request.References.Identity!,
@@ -280,10 +332,14 @@ internal static class AssemblyAnalysisContextFactory
 
     private static AssemblySourceFallbackMetadata CreateWorkspaceFallback(
         AssemblyAnalysisContextRequest request,
-        ExternalSourceSnapshot snapshot)
+        ExternalSourceSnapshot snapshot,
+        IReadOnlyList<ExternalSourceConfigurationDiagnostic>? compilationDiagnostics = null,
+        string? compilationError = null)
     {
         var diagnostics = (request.Fallback?.Diagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>())
             .Concat(snapshot.Diagnostics)
+            .Concat(compilationDiagnostics ?? Array.Empty<ExternalSourceConfigurationDiagnostic>())
+            .Concat(CreateCompilationFailureDiagnostic(request, compilationDiagnostics, compilationError))
             .Append(new ExternalSourceConfigurationDiagnostic(
                 ExternalSourceConfigurationDiagnosticCodes.WorkspaceDiagnostic,
                 "Die Source-Compilation konnte nicht als analysefähiger Workspace verwendet werden; die Assembly wird decompiliert.",
@@ -293,6 +349,28 @@ internal static class AssemblyAnalysisContextFactory
             .Take(20)
             .ToArray();
         return new(AssemblySourceFallbackReasons.WorkspaceFailure, diagnostics);
+    }
+
+    private static IEnumerable<ExternalSourceConfigurationDiagnostic> CreateCompilationFailureDiagnostic(
+        AssemblyAnalysisContextRequest request,
+        IReadOnlyList<ExternalSourceConfigurationDiagnostic>? compilationDiagnostics,
+        string? compilationError)
+    {
+        if (string.IsNullOrWhiteSpace(compilationError)
+            || compilationDiagnostics?.Any(diagnostic =>
+                string.Equals(
+                    diagnostic.Code,
+                    ExternalSourceConfigurationDiagnosticCodes.CompilationFailed,
+                    StringComparison.Ordinal)) == true)
+        {
+            return Array.Empty<ExternalSourceConfigurationDiagnostic>();
+        }
+
+        return [new(
+            ExternalSourceConfigurationDiagnosticCodes.CompilationFailed,
+            compilationError,
+            "error",
+            request.AssemblyPath)];
     }
 
     private static IReadOnlyList<AssemblyReferenceDto> MergeReferences(
@@ -393,6 +471,7 @@ internal static class AssemblyAnalysisContextFactory
 
     private sealed record ProjectCompilationResult(
         Compilation? Compilation,
+        IReadOnlyList<ExternalSourceConfigurationDiagnostic> Diagnostics,
         string? Error);
 
     private sealed record SourceContextPreparation(
@@ -406,7 +485,8 @@ internal static class AssemblyAnalysisContextFactory
         AssemblySourceSelection Selection,
         Compilation Compilation,
         SourceProjectReferenceResolution SourceReferences,
-        IReadOnlyList<string> Diagnostics);
+        IReadOnlyList<string> Diagnostics,
+        IReadOnlyList<ExternalSourceConfigurationDiagnostic> SourceDiagnostics);
 
     private sealed record SourceContextBuildRequest(
         AssemblyAnalysisContextRequest ContextRequest,
@@ -414,5 +494,6 @@ internal static class AssemblyAnalysisContextFactory
         AssemblyReferenceResolution References,
         IReadOnlyList<AssemblyReferenceDto> EffectiveReferences,
         Compilation Compilation,
-        IReadOnlyList<string> Diagnostics);
+        IReadOnlyList<string> Diagnostics,
+        IReadOnlyList<ExternalSourceConfigurationDiagnostic> SourceDiagnostics);
 }

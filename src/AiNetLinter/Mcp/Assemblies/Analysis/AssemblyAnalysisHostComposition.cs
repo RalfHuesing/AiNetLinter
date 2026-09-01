@@ -194,10 +194,14 @@ internal static class AssemblyAnalysisHostFactory
             credentialResolver,
             sourceResources,
             registry);
+        var sourceConfiguration = new AssemblySourceSelectionConfiguration(
+            configurationResult.Succeeded,
+            configurationResult.Configuration?.Mappings ?? [],
+            configurationResult.Diagnostics);
+        var providerCoordinator = new AssemblySourceProviderCoordinator(sourceProvider, registry);
         var sourceOrchestrator = new AssemblySourceSelectionOrchestrator(
-            configurationResult,
-            sourceProvider,
-            registry);
+            sourceConfiguration,
+            providerCoordinator);
         var sessions = new AssemblyAnalysisRegistry(
             sourceOrchestrator,
             resourceRegistry: resources);

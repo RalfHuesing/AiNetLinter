@@ -65,6 +65,44 @@ public sealed class AssemblyAnalysisContextFactoryTests
     }
 
     [Fact]
+    public async Task CreateAsync_PreservesSourceCompilationDiagnosticsAsTypedOriginMetadata()
+    {
+        using var temp = TestTempDirectory.Create("assembly-context-compilation-diagnostics-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "TargetAssembly",
+            "namespace Target; public sealed class TargetOnly { }");
+        var mapping = CreateMapping("https://gitea.example/source.git", "src/Source.slnx", ["TargetAssembly"]);
+        using var snapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
+            temp.DirectoryPath,
+            mapping,
+            new ExternalSourceProjectSpec(
+                "SourceProject",
+                "TargetAssembly",
+                "namespace Source; public sealed class SourceOnly { MissingType Value = null!; }"));
+        using var registry = new SourceSnapshotRegistry();
+        using var lease = registry.Acquire(snapshot);
+        var match = AssemblySourceMatchResolver.Resolve(lease, mapping, "TargetAssembly.dll");
+        var selection = AssemblySourceSelection.Create(new(lease, match));
+        Assert.NotNull(selection);
+
+        var result = await AssemblyAnalysisContextFactory.CreateAsync(new AssemblyAnalysisContextRequest(
+            assemblyPath,
+            null,
+            null,
+            selection,
+            CancellationToken.None));
+
+        var context = AssertContext(result);
+        Assert.Equal("source-backed", context.Origin.OriginKind);
+        Assert.Equal(AssemblySessionStatus.Partial, context.Status);
+        Assert.Contains(
+            context.Origin.SourceDiagnostics!,
+            diagnostic => diagnostic.Code == "CS0246" && diagnostic.Message.Contains("MissingType", StringComparison.Ordinal));
+        Assert.Contains(context.Diagnostics, diagnostic => diagnostic.Contains("MissingType", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task CreateAsync_NoMatchAndAmbiguousUseExistingDecompilationFallback()
     {
         using var temp = TestTempDirectory.Create("assembly-context-fallback-");

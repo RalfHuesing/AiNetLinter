@@ -24,17 +24,8 @@ internal static class SourceSymbolBodyResolver
     }
 
     private static bool HasUnavailableBody(ISymbol symbol, bool hasSyntax) =>
-        !hasSyntax || symbol.ContainingType?.TypeKind == TypeKind.Interface || HasUnavailableMember(symbol);
-
-    private static bool HasUnavailableMember(ISymbol symbol) =>
-        symbol switch
-        {
-            IMethodSymbol method => method.IsAbstract || AssemblyBodySyntax.HasExternModifier(method),
-            IPropertySymbol property => AssemblyBodySyntax.HasNoBody(property),
-            IEventSymbol eventSymbol => eventSymbol.AddMethod?.IsAbstract == true
-                || eventSymbol.RemoveMethod?.IsAbstract == true,
-            _ => false,
-        };
+        !hasSyntax || symbol.ContainingType?.TypeKind == TypeKind.Interface
+        || AssemblyBodySyntax.HasUnavailableMember(symbol);
 
     private static string? GetHint(ISymbol symbol, bool hasSyntax, bool unavailable)
     {

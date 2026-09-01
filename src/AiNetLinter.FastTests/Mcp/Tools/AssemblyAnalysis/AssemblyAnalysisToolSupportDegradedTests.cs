@@ -44,7 +44,12 @@ public sealed class AssemblyAnalysisToolSupportDegradedTests
             """{ "ExternalSources": { "MappingsPath": "mappings.json" } }""");
         var configuration = ExternalSourceConfigurationLoader.Load(settingsPath);
         Assert.True(configuration.Succeeded);
-        var orchestrator = new AssemblySourceSelectionOrchestrator(configuration, provider, registry);
+        var orchestrator = new AssemblySourceSelectionOrchestrator(
+            new(
+                configuration.Succeeded,
+                configuration.Configuration?.Mappings ?? [],
+                configuration.Diagnostics),
+            new AssemblySourceProviderCoordinator(provider, registry));
         AssemblyContext? context = null;
         AssemblySourceSelectionScope? scope = null;
 

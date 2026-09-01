@@ -7,7 +7,7 @@ using System.Linq;
 using AiNetLinter.Configuration;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Assemblies.Analysis;
+namespace AiNetLinter.Mcp.Assemblies.Analysis.SourceSelection;
 
 internal enum ExternalSourceMatchState
 {

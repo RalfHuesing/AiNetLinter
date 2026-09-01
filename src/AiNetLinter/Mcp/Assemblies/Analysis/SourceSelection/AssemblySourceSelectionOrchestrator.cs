@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 
-namespace AiNetLinter.Mcp.Assemblies.Analysis;
+namespace AiNetLinter.Mcp.Assemblies.Analysis.SourceSelection;
 
 internal enum AssemblySourceSelectionStatus
 {
@@ -36,6 +36,7 @@ internal static class AssemblySourceFallbackReasons
 
 internal sealed record AssemblySourceSelectionConfiguration(
     bool Succeeded,
+    ImmutableArray<ExternalSourceMapping> Mappings,
     ImmutableArray<ExternalSourceConfigurationDiagnostic> LoaderDiagnostics);
 
 internal sealed class AssemblySourceSelectionOrchestrator :
@@ -46,27 +47,19 @@ internal sealed class AssemblySourceSelectionOrchestrator :
 {
     private readonly AssemblySourceSelectionConfiguration configuration;
     private readonly IReadOnlyList<ExternalSourceMapping> configuredMappings;
-    private readonly AssemblySourceProviderCoordinator providerCoordinator;
+    private readonly IAssemblySourceProviderCoordinator providerCoordinator;
 
     internal AssemblySourceSelectionOrchestrator(
-        ExternalSourceConfigurationLoadResult configurationResult,
-        IExternalSourceProvider provider,
-        IAssemblySourceSelectionSnapshotRegistry registry,
-        Func<Task>? afterCreationCompletedBeforeRemovalAsync = null)
+        AssemblySourceSelectionConfiguration configuration,
+        IAssemblySourceProviderCoordinator providerCoordinator)
     {
-        ArgumentNullException.ThrowIfNull(configurationResult);
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(providerCoordinator);
 
-        configuration = new(configurationResult.Succeeded, configurationResult.Diagnostics);
-        configuredMappings = configurationResult.Configuration?.Mappings
-            ?? ImmutableArray<ExternalSourceMapping>.Empty;
-        providerCoordinator = new(provider, registry, afterCreationCompletedBeforeRemovalAsync);
+        this.configuration = configuration;
+        configuredMappings = configuration.Mappings;
+        this.providerCoordinator = providerCoordinator;
     }
-
-    internal static AssemblySourceSelectionOrchestrator CreateFromSettings(
-        string? settingsPath,
-        IExternalSourceProvider provider,
-        IAssemblySourceSelectionSnapshotRegistry registry) =>
-        new(ExternalSourceConfigurationLoader.Load(settingsPath), provider, registry);
 
     internal async Task<AssemblySourceSelectionScope> ResolveAsync(
         string assemblyPath,

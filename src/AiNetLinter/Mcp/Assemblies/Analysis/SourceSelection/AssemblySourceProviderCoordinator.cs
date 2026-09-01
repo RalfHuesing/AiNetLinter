@@ -8,9 +8,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 
-namespace AiNetLinter.Mcp.Assemblies.Analysis;
+namespace AiNetLinter.Mcp.Assemblies.Analysis.SourceSelection;
 
-internal sealed class AssemblySourceProviderCoordinator : IAsyncDisposable
+internal sealed class AssemblySourceProviderCoordinator : IAssemblySourceProviderCoordinator
 {
     private readonly IExternalSourceProvider provider;
     private readonly IAssemblySourceSelectionSnapshotRegistry registry;
@@ -20,6 +20,26 @@ internal sealed class AssemblySourceProviderCoordinator : IAsyncDisposable
     private readonly Dictionary<string, string> cachedSnapshotIdentities = new(StringComparer.OrdinalIgnoreCase);
     private Task? disposalTask;
     private int disposed;
+
+    Task<AssemblySourceProviderResultLease> IAssemblySourceProviderCoordinator.LeaseProviderResultAsync(
+        ExternalSourceMapping mapping,
+        CancellationToken cancellationToken) =>
+        LeaseProviderResultAsync(mapping, cancellationToken);
+
+    SourceSnapshotLease IAssemblySourceProviderCoordinator.AcquireSnapshot(
+        AssemblySourceProviderResultLease providerLease,
+        ExternalSourceSnapshot snapshot) =>
+        AcquireSnapshot(providerLease, snapshot);
+
+    void IAssemblySourceProviderCoordinator.RememberSnapshotIdentity(
+        string assemblyPath,
+        string snapshotIdentity) =>
+        RememberSnapshotIdentity(assemblyPath, snapshotIdentity);
+
+    bool IAssemblySourceProviderCoordinator.TryGetCachedSnapshotIdentity(
+        string assemblyPath,
+        out string? snapshotIdentity) =>
+        TryGetCachedSnapshotIdentity(assemblyPath, out snapshotIdentity);
 
     internal AssemblySourceProviderCoordinator(
         IExternalSourceProvider provider,

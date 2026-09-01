@@ -8,7 +8,7 @@ using System.Threading;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 
-namespace AiNetLinter.Mcp.Assemblies.Analysis;
+namespace AiNetLinter.Mcp.Assemblies.Analysis.SourceSelection;
 
 internal sealed record AssemblySourceSelectionScopeParameters(
     AssemblySourceSelection? Selection,

@@ -11,7 +11,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace AiNetLinter.Mcp.Assemblies.Analysis;
+namespace AiNetLinter.Mcp.Assemblies.Analysis.Bodies;
 
 internal static class AssemblyDecompiledBodyResolver
 {
@@ -46,20 +46,10 @@ internal static class AssemblyDecompiledBodyResolver
             return new(null, "unavailable", "decompiledSignatureOnly", "Interfaces haben keine dekompilierbaren Bodies.");
         }
 
-        return HasNoBody(symbol)
+        return AssemblyBodySyntax.HasUnavailableMember(symbol)
             ? new(null, "unavailable", "decompiledSignatureOnly", "Das Symbol ist abstract oder extern und besitzt keinen Body.")
             : null;
     }
-
-    private static bool HasNoBody(ISymbol symbol) =>
-        symbol switch
-        {
-            IMethodSymbol method => method.IsAbstract || AssemblyBodySyntax.HasExternModifier(method),
-            IPropertySymbol property => AssemblyBodySyntax.HasNoBody(property),
-            IEventSymbol eventSymbol => eventSymbol.AddMethod?.IsAbstract == true
-                || eventSymbol.RemoveMethod?.IsAbstract == true,
-            _ => false,
-        };
 
     private static async Task<AssemblyBodyResolution> DecompileBodyAsync(
         string assemblyPath,

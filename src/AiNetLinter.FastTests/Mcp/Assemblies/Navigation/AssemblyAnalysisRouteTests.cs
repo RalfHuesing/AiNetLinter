@@ -17,7 +17,7 @@ using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.TestKit;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Assemblies;
+namespace AiNetLinter.FastTests.Mcp.Assemblies.Navigation;
 
 [Trait("Category", "Unit")]
 // @covers AssemblyAnalysisRegistry
@@ -110,10 +110,13 @@ public sealed class AssemblyAnalysisRouteTests
             "{ \"ExternalSources\": { \"MappingsPath\": \"mappings.json\" } }");
         var provider = new AssemblyAnalysisRecordingProvider(
             new ExternalSourceProviderResult(true, [], snapshot));
-        var orchestrator = AssemblySourceSelectionOrchestrator.CreateFromSettings(
-            settingsPath,
-            provider,
-            sourceRegistry);
+        var configuration = ExternalSourceConfigurationLoader.Load(settingsPath);
+        var orchestrator = new AssemblySourceSelectionOrchestrator(
+            new(
+                configuration.Succeeded,
+                configuration.Configuration?.Mappings ?? [],
+                configuration.Diagnostics),
+            new AssemblySourceProviderCoordinator(provider, sourceRegistry));
         await using var registry = new AssemblyAnalysisRegistry(orchestrator);
 
         var result = await AnalysisToolCall.ExecuteRouted(

@@ -9,7 +9,7 @@ using AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 using Microsoft.CodeAnalysis;
 using Serilog;
 
-namespace AiNetLinter.Mcp.Assemblies.Analysis;
+namespace AiNetLinter.Mcp.Assemblies.Analysis.SourceSelection;
 
 internal sealed record AssemblySourceSelection
 {

@@ -935,6 +935,24 @@
 - Tech-Debt-Disposition: Die drei P1-Signaturen sowie die damit gebündelte fehlende Literalabdeckung werden für den nächsten Korrekturversuch aktiviert; Paket 3 bleibt in Arbeit. Die übrigen P2-Risiken werden dokumentiert und nicht als separate Schleife gestartet.
 - Nächste Aktion: Korrekturversuch 1 mit frischem Implementierer und anschließendem unabhängigem Review.
 
+## 2026-09-01 – Paket 3 Korrekturversuch 3 Implementierer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
+- Rolle: Implementierer (frisch, Fallback-/Struktur-/Namespace-Korrektur)
+- Subagent-ID: `01a05d4e-4248-7f00-b88a-07af6fed909a`
+- Ursachensignaturen: `package3-fallback-diagnostic-propagation`; `package3-structural-rule-drift`; `package3-production-directory-namespace-organization`; nutzerpriorisiert `package2-test-directory-footprint`
+- Versuch: 3 im Epic
+- Status: completed; Arbeitsstand ohne Rollen-Commit übergeben; keine Roadmap-/Log-/Tech-Debt-Änderung durch den Agenten
+- Fachliche Struktur: Body-Verantwortungen liegen jetzt unter `src/AiNetLinter/Mcp/Assemblies/Analysis/Bodies` im Namespace `AiNetLinter.Mcp.Assemblies.Analysis.Bodies`; Source-Selection liegt unter `src/AiNetLinter/Mcp/Assemblies/Analysis/SourceSelection` im Namespace `AiNetLinter.Mcp.Assemblies.Analysis.SourceSelection`. Der gemeinsame `AssemblyBodySyntax`-Helper beseitigt das `HasNoBody`-Duplikat.
+- Teststruktur: `AssemblyAnalysisPathContractTests`, `AssemblyAnalysisRouteTests` und `AssemblyNavigationResponseContractTests` liegen unter `src/AiNetLinter.FastTests/Mcp/Assemblies/Navigation` im Namespace `AiNetLinter.FastTests.Mcp.Assemblies.Navigation`.
+- Fallback-Vertrag: Konkrete Compilation-Diagnosen werden typisiert bis in `AssemblySourceFallbackMetadata`/`AssemblyOrigin.SourceDiagnostics` weitergegeben; `workspace-failure` bleibt Zusatzinformation. Der fehlende `StaticTestSentinel` wurde regelkonform über direkte `@covers`-Abdeckung korrigiert.
+- Struktur-Nachweis: Produktionsordner `Analysis` 35 → 28 direkte Einträge; Testordner `Mcp/Assemblies` 31 → 29; Orchestrator-AIContext 2607 → 2396.
+- Verifikation des Agenten: `dotnet build --no-restore` erfolgreich mit 0 Warnungen/0 Fehlern; fokussierte FastTests 35/35; fokussierte IntegrationTests 17/17; `git diff --check` grün; MCP-Audit ohne Duplikat- oder Magic-Value-Treffer, zwei LOW-Dead-Code-Heuristiken ohne HIGH-Fund. Finaler Scope-Check: Testordner 0 Befunde; bestehende AIContext-Hinweise außerhalb der Korrektur in zwei Produktionsscopes.
+- Vollständige Nicht-Stress-Gates: FastTests 2341 bestanden, 2 übersprungen, 1 bestehender `McpAgentGuideRegistrationTests`-Fehler; IntegrationTests 376 bestanden, 2 bestehende Live-/Dogfood-Fehler. Diese Alt-/Infrastrukturfehler bleiben für die Orchestrator-Klassifikation dokumentiert.
+- Offene Risiken: Unabhängiger Review des korrigierten Diffs steht aus. Die zwei LOW-Dead-Code-Heuristiken und die bestehenden, nicht diffbetroffenen AIContext-/Live-/Dogfood-Befunde werden im Review/Audit gegen Scope und Wiederholbarkeit bewertet.
+- Nächste Aktion: Vollständigen Code- und Dokumentationscheckpoint sichern und einen frischen unabhängigen Reviewer starten.
+
 ## 2026-09-01 – Paket 3 Korrekturversuch 2 gestartet
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume

@@ -156,10 +156,10 @@
 - Schweregrad: P1 (nutzerpriorisiert)
 - Ursachensignatur: package2-test-directory-footprint
 - Scope/Fundstelle: `src/AiNetLinter.FastTests/Mcp/Assemblies`
-- Evidenz: Der unabhängige Review meldet 31 direkte Einträge bei einer Regelgrenze von 30; die neue `AssemblyNavigationResponseContractTests.cs` liegt im bestehenden Assembly-Testbereich. Der Nutzer verlangt ausdrücklich eine fachliche Verschiebung in einen passenden Navigation-/Contract-Unterordner mit neuem Namespace, daher bleibt der Befund aktiv.
-- Disposition: fix-now
-- attempts: 0
-- Nächster Schritt: Drei zusammengehörige Navigation-/Route-/Contract-Tests nach `src/AiNetLinter.FastTests/Mcp/Assemblies/Navigation` mit Namespace `AiNetLinter.FastTests.Mcp.Assemblies.Navigation` verschieben und anschließend Directory-/Namespace-Regeln erneut ausführen.
+- Evidenz: Der unabhängige Review meldete 31 direkte Einträge bei einer Regelgrenze von 30. Die drei fachlich zusammengehörigen Navigation-/Route-/Contract-Tests wurden nach `src/AiNetLinter.FastTests/Mcp/Assemblies/Navigation` mit Namespace `AiNetLinter.FastTests.Mcp.Assemblies.Navigation` verschoben; der Elternordner hat nun 29 direkte Einträge und der finale MCP-Scope meldet 0 Befunde.
+- Disposition: review-pending
+- attempts: 1
+- Nächster Schritt: Unabhängigen Review des verschobenen Testpakets abwarten; keine Suppression und keine weitere kosmetische Umbenennung.
 - Log-Anker: `execution-log.md`, „Wiederaufnahme Paket 2 Korrekturversuch 1 Reviewer abgeschlossen"
 
 ### Paket-2-Produktionsviolations aus Zwischenstand
@@ -178,10 +178,10 @@
 - Schweregrad: P1 (nutzerpriorisiert)
 - Ursachensignatur: package3-production-directory-namespace-organization
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis`
-- Evidenz: Der unabhängige Review meldet 35 direkte Einträge bei einer Regelgrenze von 30. Die neuen Body- und Source-Selection-Helper vermischen aktuell mehrere fachliche Verantwortungen im gemeinsamen Analysis-Ordner.
-- Disposition: fix-now
-- attempts: 0
-- Nächster Schritt: Body-/Source-Selection-Helper in fachlich benannte Unterordner mit passenden Namespaces verschieben, alle Referenzen aktualisieren und `MaxDirectoryChildren` auf 30 oder weniger verifizieren.
+- Evidenz: Der unabhängige Review meldete 35 direkte Einträge bei einer Regelgrenze von 30. Body-Verantwortungen wurden nach `Analysis/Bodies` (`AiNetLinter.Mcp.Assemblies.Analysis.Bodies`) und Source-Selection nach `Analysis/SourceSelection` (`AiNetLinter.Mcp.Assemblies.Analysis.SourceSelection`) verschoben; der Elternordner hat nun 28 direkte Einträge und der finale Scope-Check meldet keinen Directory-Footprint-Befund.
+- Disposition: review-pending
+- attempts: 1
+- Nächster Schritt: Unabhängigen Review der fachlichen Namespace-Grenzen abwarten; keine Suppression und keine Verlagerung in einen unpassenden Sammelordner.
 - Log-Anker: `execution-log.md`, „Paket 3 Korrekturversuch 2 Reviewer abgeschlossen"
 
 ### Paket-2-Magic-Value-Kandidaten
@@ -209,10 +209,10 @@
 - Schweregrad: P1
 - Ursachensignatur: package3-structural-rule-drift
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs`, `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySourceSelectionOrchestrator.cs` und direkt betroffene Konstruktor-/AIContext-Schnittstellen
-- Evidenz: Dateigrößen-, Methodenlängen- und Komplexitätsbefunde in den großen Einstiegspunkten sind beseitigt. Verbleiben laut frischem `get_violations`-Check ein Orchestrator-AIContext-Footprint von 2607 statt 2500, ein exaktes `HasNoBody`-Duplikat zwischen Body-Resolvern und ein fehlender `StaticTestSentinel`. Der unabhängige Review meldet zusätzlich 35 statt 30 Einträge im Produktionsordner `Mcp/Assemblies/Analysis`; die fachlichen Tests und der Build sind grün.
-- Disposition: fix-now
-- attempts: 2
-- Nächster Schritt: AIContext-Footprint und Duplikat scope-nah beheben, den Produktionsbaum in fachliche Body-/Source-Selection-Unterordner teilen und den fehlenden Sentinel regelkonform ergänzen.
+- Evidenz: Dateigrößen-, Methodenlängen- und Komplexitätsbefunde sind beseitigt. Der Orchestrator-AIContext-Footprint sank 2607 → 2396, das `HasNoBody`-Duplikat wurde durch `AssemblyBodySyntax` zentralisiert, und der fehlende `StaticTestSentinel` ist durch direkte `@covers`-Abdeckung behoben. Produktions- und Teststruktur liegen mit 28 bzw. 29 direkten Einträgen unter der Grenze; der finale Scope-Check meldet nur bestehende, nicht diffbetroffene AIContext-Hinweise.
+- Disposition: review-pending
+- attempts: 3
+- Nächster Schritt: Unabhängigen Review und anschließendes Abschlussaudit abwarten; bestehende AIContext-Hinweise außerhalb des Diffs bleiben zurückgestellt.
 - Log-Anker: `execution-log.md`, „Paket 3 Implementierer abgeschlossen"
 
 ### Paket-3-Fallback-Diagnosepropagation
@@ -220,10 +220,10 @@
 - Schweregrad: P1
 - Ursachensignatur: package3-fallback-diagnostic-propagation
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs`, `src/AiNetLinter/Mcp/Assemblies/Analysis/Factories/AssemblyAnalysisRegistryEntryFactory.cs`
-- Evidenz: Der unabhängige Review zeigt, dass bei fehlender Compilation bzw. Source-Context-Fehlern die dekompilierte Fallback-Session weiterläuft, ohne zuverlässig `workspace-failure` und die Source-Diagnosen in den Fallback-Origin zu übernehmen. Damit kann die geforderte Fallback-Transparenz verloren gehen.
-- Disposition: fix-now
-- attempts: 1
-- Nächster Schritt: Fallback-Erzeugung auf einen gemeinsamen, typisierten Origin-/Diagnosevertrag umstellen und einen deterministischen Workspace-Fehlerpfad testen.
+- Evidenz: Die konkrete Compilation-Diagnose wird nun von `TryGetProjectCompilationAsync` über `AssemblySourceFallbackMetadata` bis in `AssemblyOrigin.SourceDiagnostics` getragen; `workspace-failure` bleibt als Zusatzdiagnose erhalten. Eine gezielte `CS0246`-Regression und 35 fokussierte FastTests/17 fokussierte IntegrationTests sind grün.
+- Disposition: review-pending
+- attempts: 2
+- Nächster Schritt: Unabhängigen Review des vollständigen Fallback-Pfads abwarten.
 - Log-Anker: `execution-log.md`, „Paket 3 Review abgeschlossen"
 
 ### Paket-3-Body-Symbolauflösung bei Overloads
@@ -231,10 +231,10 @@
 - Schweregrad: P1
 - Ursachensignatur: package3-body-symbol-resolution-ambiguity
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs`, `FindMember`/`ResolveBodyAsync`
-- Evidenz: Die Zuordnung nutzt derzeit Name, Parameteranzahl und Generic-Arity und nimmt den ersten Treffer. Überladene Member mit gleicher Arity können so den Body eines anderen Symbols liefern; das verletzt die direkte Symbolidentität des on-demand Abrufs.
-- Disposition: fix-now
+- Evidenz: Die ursprüngliche Zuordnung nach Name, Parameteranzahl und Generic-Arity wurde auf vollständige Symbolidentität/Parametertypen und deterministische Kandidatenauswahl umgestellt. Gleichartige Overloads werden durch fokussierte Regressionen unterschieden; der aktuelle Struktur-Refactor erhält diesen Vertrag.
+- Disposition: review-pending
 - attempts: 1
-- Nächster Schritt: Symbolidentität über die vollständige `AnalysisSymbolIdentity`/Signatur deterministisch auflösen und mit gleichartigen Overloads regressionsprüfen.
+- Nächster Schritt: Unabhängigen Review der vollständigen Symbolidentität und der Regressionstests abwarten.
 - Log-Anker: `execution-log.md`, „Paket 3 Review abgeschlossen"
 
 ### Paket-3-Literalregression unvollständig
@@ -242,8 +242,8 @@
 - Schweregrad: P2
 - Ursachensignatur: package3-literal-regression-coverage
 - Scope/Fundstelle: `src/AiNetLinter.FastTests/Mcp/Tools/FileStructure/GetClassStructureToolTests.cs`, `ExecuteAsync_ConstantFields_FormatsInvariantLiteralValues`
-- Evidenz: Der Review bestätigt die plausible Formatter-Implementierung, aber der explizite Test deckt positive Zahlen, String, Char und Bool ab; `null` und negative Konstanten fehlen.
-- Disposition: fix-now
+- Evidenz: Die zentrale Literalformatierung deckt jetzt positive und negative Zahlen, `null`, String, Char und Bool ab; der gezielte Literaltest ist grün.
+- Disposition: review-pending
 - attempts: 1
-- Nächster Schritt: Im laufenden P1-Korrekturversuch die fehlenden Fälle ergänzen; keine eigenständige weitere Korrekturschleife.
+- Nächster Schritt: Unabhängigen Review der Testabdeckung abwarten; keine eigenständige weitere Korrekturschleife.
 - Log-Anker: `execution-log.md`, „Paket 3 Review abgeschlossen"

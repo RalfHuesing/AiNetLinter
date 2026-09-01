@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -152,21 +151,6 @@ internal sealed record AssemblyBodyResolution(
     string BodyAvailability,
     string ContentMode,
     string? Hint = null);
-
-internal static class AssemblyBodySyntax
-{
-    internal static bool HasNoBody(IPropertySymbol property) =>
-        property.GetMethod?.IsAbstract == true
-        || property.SetMethod?.IsAbstract == true
-        || HasExternModifier(property.GetMethod)
-        || HasExternModifier(property.SetMethod);
-
-    internal static bool HasExternModifier(ISymbol? symbol) =>
-        symbol?.DeclaringSyntaxReferences
-            .Select(reference => reference.GetSyntax())
-            .OfType<Microsoft.CodeAnalysis.CSharp.Syntax.MemberDeclarationSyntax>()
-            .Any(member => member.Modifiers.Any(Microsoft.CodeAnalysis.CSharp.SyntaxKind.ExternKeyword)) == true;
-}
 
 internal sealed record AssemblyReferenceSession(
     AssemblyReferenceDto Reference,

@@ -14,7 +14,7 @@ using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Assemblies;
+namespace AiNetLinter.FastTests.Mcp.Assemblies.Navigation;
 
 [Trait("Category", "Component")]
 // @covers AssemblyFindReferencesTool

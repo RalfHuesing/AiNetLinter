@@ -32,10 +32,13 @@ public sealed class AssemblyAnalysisConfigurationFailureTests
             $$"""{ "ExternalSources": { "MappingsPath": "mappings.json", "CacheRoot": {{JsonSerializer.Serialize(rawCacheRoot)}} } }""");
         var provider = new AssemblyAnalysisRecordingProvider();
         using var registry = new SourceSnapshotRegistry();
-        var orchestrator = AssemblySourceSelectionOrchestrator.CreateFromSettings(
-            settingsPath,
-            provider,
-            registry);
+        var configurationResult = ExternalSourceConfigurationLoader.Load(settingsPath);
+        var orchestrator = new AssemblySourceSelectionOrchestrator(
+            new(
+                configurationResult.Succeeded,
+                configurationResult.Configuration?.Mappings ?? [],
+                configurationResult.Diagnostics),
+            new AssemblySourceProviderCoordinator(provider, registry));
         AssemblySourceSelectionScope? observedScope = null;
         var builderCalled = false;
 
@@ -91,9 +94,8 @@ public sealed class AssemblyAnalysisConfigurationFailureTests
         var provider = new AssemblyAnalysisRecordingProvider(new ExternalSourceProviderResult(false, []));
         using var registry = new SourceSnapshotRegistry();
         var orchestrator = new AssemblySourceSelectionOrchestrator(
-            ExternalSourceConfigurationLoadResult.Failure([]),
-            provider,
-            registry);
+            new(false, [], []),
+            new AssemblySourceProviderCoordinator(provider, registry));
         AssemblySourceSelectionScope? observedScope = null;
         var builderCalled = false;
 
