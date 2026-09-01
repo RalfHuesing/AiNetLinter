@@ -37,3 +37,29 @@
 - Nicht ausgeführt: vollständiger Build und vollständige Nicht-Stress-Gates; diese bleiben Abschlussaufgabe des Orchestrators.
 - Offene Risiken: Es wurden keine neuen Regressionstestmethoden ergänzt; nur der bestehende gezielte Testbestand wurde erneut verifiziert. Parameter-Object-Refactoring, bestehendes Near-Duplikat, Magic Values und AIContext-Footprint bleiben zur Triage zurückgestellt.
 - Nächste Aktion: Implementierungs-Checkpoint committen, danach unabhängigen Reviewer starten.
+
+## 2026-09-01 – Paket 1 Reviewer gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektheit
+- Rolle: Reviewer
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `1c8d8a85`; Implementierungs-Checkpoint: `462c2edb`
+- Status: running
+- Auftrag: Diff und Implementierer-Nachweis unabhängig gegen Konzept, Rules, Code-Map und Paket-1-Musskriterien prüfen. Produktions-/Testcode nicht ändern; nur konkrete Navigationsfehler in `code-map.md` korrigieren. Urteil als `approved`, `issues` oder `blocked` mit stabilen Ursachensignaturen, Prioritäten und Verifikation liefern.
+
+## 2026-09-01 – Paket 1 Reviewer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektheit
+- Rolle: Reviewer
+- Subagent-ID: `01a05ba2-bd88-7f52-9c4d-247ecaa4c90d`
+- Status: completed; kein Produktions-/Testcode geändert, `code-map.md` unverändert korrekt
+- Urteil: `issues`
+- P0-Findings: keine.
+- P1-Finding / Ursachensignatur `assembly-response-budget-projection-missing-after-compactor-removal`: In `AssemblyAnalysisResponse.cs`, `AssemblyAnalysisService.cs` und `AssemblyAnalysisResponseLimits.cs` fehlt nach Entfernung des alten Compactors weiterhin eine globale typisierte Vorformatierungsprojektion. Die aktuelle Projektion begrenzt einzelne Diagnose-, Referenz-, `maxResults`- und `maxMembers`-Listen, aber ein Aufruf mit bis zu 1000 Typen/Membern kann weiterhin unbeschränkte Text- und JSON-Antworten erzeugen. Pflichtfelder und Text/JSON-Konsistenz sind teilweise erhalten, das Gesamtbudget-Kriterium jedoch nicht.
+- Reviewer-Empfehlung: Eine typisierte Vorformatierungsprojektion mit festem Antwortbudget für Text und Structured Content wieder einführen; sichtbare Pflichtfelder bewahren und `shownCount`, `totalCount`, `truncated` sowie `truncatedBy=["responseBudget"]` korrekt setzen.
+- Bestätigte Paket-1-Kriterien: typisierte Fehlerpayloads bei unveränderter `isError`-Policy, ReceiverType-Filter, generationgebundene Folge-IDs, sichere relative/virtuelle Pfade und `get_file_tree`-Tiefen-/Summary-Vertrag.
+- Frische Verifikation: Unabhängiger `dotnet build` erfolgreich mit 0 Warnungen und 0 Fehlern. Der Implementierer-Nachweis mit 53/53 gezielten Tests ist scopegerecht und frisch; seit `462c2edb` wurde nur das Log geändert. Vollständige Nicht-Stress-Gates fehlen weiterhin.
+- P2/P3: `mcp-error-helper-parameter-growth` und `existing-aicontext-footprint` bleiben `accepted-deferred` in `tech-debt.md`.
+- Nächste Aktion: Erster frischer Implementierer-Korrekturversuch für die P1-Ursachensignatur; danach unabhängiger Review.

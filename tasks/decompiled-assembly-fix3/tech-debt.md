@@ -22,6 +22,17 @@
 - Nächster Schritt: Reviewer bewertet, ob die Warnungen aus dem aktuellen fachlichen Vertrag sicher und scope-nah durch ein Parameterobjekt behoben werden können; andernfalls als bewusste Folgearbeit dokumentieren.
 - Log-Anker: `execution-log.md`, „Paket 1 Implementierer abgeschlossen"
 
+### Fehlende globale Antwortbudget-Projektion
+
+- Schweregrad: P1
+- Ursachensignatur: assembly-response-budget-projection-missing-after-compactor-removal
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs`, `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisService.cs`, `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.cs`
+- Evidenz: Der Reviewer stellte fest, dass nach Entfernung des alten Compactors nur einzelne Listen begrenzt werden; große Typ-/Member-Listen können Text und JSON weiterhin über das Gesamtbudget wachsen lassen.
+- Disposition: fix-now
+- attempts: 0
+- Nächster Schritt: Frischer Implementierer führt eine gemeinsame typisierte Vorformatierungsprojektion für Text und Structured Content ein und ergänzt/aktualisiert die Budgettests.
+- Log-Anker: `execution-log.md`, „Paket 1 Reviewer abgeschlossen"
+
 ### Bestehender AIContext-Footprint-Hinweis
 
 - Schweregrad: P2
