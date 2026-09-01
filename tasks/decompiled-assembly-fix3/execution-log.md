@@ -887,3 +887,16 @@
 - Versuch: 2 im neu freigegebenen Lauf
 - Status: running
 - Auftrag: Prüfe ausschließlich den neuen Assembly-Test-/Vertragsnachweis gegen Konzept, Rules und Code-Map. Führe frische gezielte Assembly-FastTests, Build/Diff-Checks und bei Bedarf den relevanten `get_violations`-Scope aus. Bestätige, dass `AssemblyGetCallTreeTool` tatsächlich mit `includeReferences=true` läuft, dass Diagnosezähler/Samples/Truncation/Ausschluss des sechsten Samples korrekt sind und Text sowie Structured Content denselben projizierten Datensatz tragen. Prüfe, dass keine Produktions-Ownership zurückdriftet und keine neue Regelverletzung eingeführt wurde. Kein Produktions-/Testcode ändern und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen.
+
+## 2026-09-01 – Wiederaufnahme Paket 2 Korrekturversuch 2 Reviewer abgebrochen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig angefordert)
+- Subagent-ID: `01a05cf0-00f4-7af3-9af7-8994a7b055c2`
+- Ursachensignatur: `package2-regression-test-contract-drift`
+- Versuch: 2 im neu freigegebenen Lauf
+- Status: shutdown ohne terminalen Bericht; kein Produktions-/Testcode geändert; kein Commit
+- Vorgehen/Nachweis: Der Agent wurde nach wiederholten Wartefenstern und beendeten Prüfprozessen zur Abschlussübergabe aufgefordert, lieferte aber keinen terminalen Bericht. Daher wird kein unabhängiges Reviewurteil behauptet. Der Orchestrator hat den Patch separat mit fokussierten Assembly-FastTests 6/6, Build 0/0, Health-/ReloadConfig-IntegrationTests 15/15, `git diff --check` und den relevanten `get_violations`-Scopes geprüft.
+- Tech-Debt-Disposition: `package2-regression-test-contract-drift` bleibt `fix-now`, Versuchszähler 2; der unabhängige Review ist als fehlende Übergabe offen und wird durch einen schlanken Ersatzreview nachgeholt.
+- Nächste Aktion: Review ohne lang laufende Vollabfragen erneut delegieren.
