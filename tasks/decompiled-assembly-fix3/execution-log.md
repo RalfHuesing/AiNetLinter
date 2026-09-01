@@ -626,3 +626,15 @@
 - Frische Verifikation: FastTests 61/61 bestanden; Integration reproduzierte den Fehler bei `GetServerHealthToolTests.cs:118`; der vorherige fokussierte Stand 18/19 bleibt klassifiziert, nicht behoben. HEAD vor diesem Bericht: `eda883b9`.
 - Tech-Debt-Empfehlung: `fix-now`, weiterhin P1. Health-Textassertion, vollständige Aggregatzähler sowie echte gemeinsame Diagnose-/Structured-Content-Assertions ergänzen; danach vollständige Nicht-Stress-Gates und finaler `get_violations`-Check.
 - Nächste Aktion: Frischer Implementierer, Korrekturversuch 4/5, ausschließlich für `package2-regression-test-contract-drift`.
+
+## 2026-09-01 – Paket 2 Korrekturversuch 4 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `20bd5cc1`
+- Ursachensignatur: `package2-regression-test-contract-drift`
+- Versuch: 4 von 5
+- Status: running
+- Auftrag: Den globalen Health-Default-Test an den tatsächlichen aggregierten Text `Diagnosen gesamt: 4` anpassen und alle relevanten Default-Aggregatzähler einschließlich leerem `SessionsTruncatedBy` festschreiben. Diagnoseprojektion sowie die vier Structured-Content-Erfolgstests mit konkreten, nicht tautologischen Werten und dem tatsächlichen gemeinsamen Pfad nachschärfen, ohne Produktionscode zu ändern. `code-map.md` pflegen; keine Änderungen an Roadmap, Log oder Tech-Debt und kein Commit durch den Agenten. Danach gezielte Tests und passende MCP-/Regelchecks ausführen, aber keine unnötigen Vollgates starten.
