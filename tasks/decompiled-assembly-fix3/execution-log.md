@@ -846,3 +846,15 @@
 - MCP-Nachweise: Produktionsscope mit drei bekannten unabhängigen Warnungen, FastTests mit bestehendem Testdatei-/Strukturbefund plus Verzeichnisgrenze, IntegrationTests ohne Violations. Keine neue Produktionsverletzung aus dem korrigierten Projektionsteil.
 - Tech-Debt-Disposition: `package2-diagnosis-projection-ownership` wird auf `fixed` gesetzt. `package2-regression-test-contract-drift` bleibt `fix-now`, Versuchszähler im neuen Lauf 2; nächster Schritt ist ein frischer Implementierer mit engem Testscope.
 - Nächste Aktion: Review-Bericht checkpointen und Korrekturversuch 2 starten.
+
+## 2026-09-01 – Wiederaufnahme Paket 2 Korrekturversuch 2 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer (frisch, enger Testscope)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `88087559`; fachliche Ausgangsbasis `23b9d65d`
+- Ursachensignatur: `package2-regression-test-contract-drift`
+- Versuch: 2 im neu freigegebenen Lauf
+- Status: running
+- Auftrag: Ergänze deterministische Regressionen für den echten Assembly-`get_call_tree`-Pfad mit `includeReferences=true` und Navigation-Diagnosen. Prüfe für Assembly-`get_call_tree` und `find_references` konkrete Completeness-/Diagnosezähler, Sample-Limit und Sample-Ausschluss sowie Gleichheit der relevanten Diagnoseinformationen in Text und Structured Content. Nutze vorhandene Fixtures und ändere Produktionscode nur, wenn ein konkreter Testbefund ihn zwingend betrifft; die zentrale Formatter-Ownership bleibt unverändert. Vermeide eine zusätzliche Strukturverletzung im Testverzeichnis, wenn dies ohne künstliche Umorganisation möglich ist. Nach Änderungen gezielte Tests, Build und `git diff --check`; kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
