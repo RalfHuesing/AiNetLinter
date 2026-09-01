@@ -1,13 +1,10 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
-using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
@@ -85,58 +82,20 @@ internal static class AssemblyGetCallTreeTool
         var topN = input.TopN < 1 ? 1 : input.TopN;
         var body = GetCallTreeTool.RenderTree(root, input.Format, topN);
         var topNTruncated = GetCallTreeTool.HasTreeOverflow(root, topN);
-        return CreateResponse(
-            root,
-            body,
-            navigation,
-            diagnostics,
-            truncated,
-            topNTruncated);
-    }
-
-    private static CallToolResult CreateResponse(
-        MetricsTreeNode root,
-        string body,
-        AssemblyNavigationSummary navigation,
-        IReadOnlyList<string> diagnostics,
-        bool truncated,
-        bool topNTruncated)
-    {
-        var treeTruncated = truncated || topNTruncated;
-        var diagnosticProjection = TransitiveCallGraphFormatter.CreateDiagnosticProjection(
-            navigation.Diagnostics.Concat(diagnostics));
-        var effectiveNavigation = navigation with
-        {
-            Completeness = navigation.Completeness == "complete" && !treeTruncated && diagnosticProjection.TotalCount == 0
-                ? "complete"
-                : "partial",
-            Diagnostics = diagnosticProjection.Samples,
-            DiagnosticTotalCount = diagnosticProjection.TotalCount,
-            DiagnosticShownCount = diagnosticProjection.Samples.Count,
-            DiagnosticsTruncated = diagnosticProjection.Truncated,
-            DiagnosticsTruncatedBy = diagnosticProjection.TruncatedBy,
-        };
-        var metadata = effectiveNavigation.Diagnostics
-            .Select(diagnostic => $"[Assembly-Diagnostic] {diagnostic}")
-            .ToList();
-        if (effectiveNavigation.DiagnosticsTruncated)
-        {
-            metadata.Add($"[{effectiveNavigation.DiagnosticTotalCount} Diagnosen gesamt, " +
-                $"{effectiveNavigation.DiagnosticShownCount} Samples gezeigt — gekürzt: " +
-                $"{string.Join(", ", effectiveNavigation.DiagnosticsTruncatedBy ?? Array.Empty<string>())}]");
-        }
-        var finalBody = treeTruncated || metadata.Count > 0
-            ? body + "\n\n" + string.Join(
-                "\n",
-                metadata.Prepend(
-                        truncated
-                            ? BuildTruncationMeta()
-                            : topNTruncated ? BuildTopNTruncationMeta() : string.Empty)
-                    .Where(line => line.Length > 0))
-            : McpSufficiencyHints.Append(body);
-        return McpToolResults.Text(
-            finalBody,
-            new AssemblyCallTreeResult(root, effectiveNavigation, treeTruncated));
+        var treeTruncationMessage = truncated
+            ? BuildTruncationMeta()
+            : topNTruncated
+                ? BuildTopNTruncationMeta()
+                : null;
+        return TransitiveCallGraphFormatter.FormatAssemblyCallTreeResponse(
+            new AssemblyCallTreeResponseRequest(
+                root,
+                body,
+                navigation,
+                diagnostics,
+                truncated,
+                topNTruncated,
+                treeTruncationMessage));
     }
 
     private static string BuildTruncationMeta() =>

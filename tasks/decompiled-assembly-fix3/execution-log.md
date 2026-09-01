@@ -798,3 +798,20 @@
 - Versuch: 1 im neu freigegebenen Lauf
 - Status: running
 - Auftrag: Den verbliebenen separaten `AssemblyGetCallTreeTool`-Projektionspfad in denselben klaren Response-/Projection-Vertrag integrieren, Navigation-Diagnosen mit Text und Structured Content konsistent projizieren, den aktuellen Method-Parametervertrag dabei regelkonform halten und echte Assembly-`find_references`-/Nulltreffer-Regressionen ergänzen. Health-/ReloadConfig-/DTO-Verträge erhalten. Nach letzter Änderung gezielte Tests, `git diff --check`, DRY-/Dead-Code-/Magic-Checks und als letzten codebezogenen Schritt den relevanten `get_violations`-Scope ausführen. Kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
+
+## 2026-09-01 – Wiederaufnahme Paket 2 Korrekturversuch 1 abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: `01a05cca-9243-7fa3-9338-a970330f9fcf`
+- Ursachensignaturen: `package2-diagnosis-projection-ownership`; `package2-regression-test-contract-drift`
+- Versuch: 1 im neu freigegebenen Lauf
+- Status: completed/interrupted after implementation; Arbeitsstand ohne Rollen-Commit übergeben
+- Architekturentscheidung: `TransitiveCallGraphFormatter` besitzt die Diagnoseprojektion für Symbolgraph- und Assembly-CallTree-Antworten. `FormatResponse` bzw. `FormatAssemblyCallTreeResponse` erzeugen Text und Structured Content aus demselben projizierten Modell; `AssemblyGetCallTreeTool` ruft keine eigene Projektion mehr auf. Der vorherige 6-Parameter-Response-Builder wurde durch `AssemblyCallTreeResponseRequest` ersetzt; die bestehende `AssemblyCallTreeResult`-Wire-Struktur bleibt unverändert.
+- Geänderte Produktionsbereiche: `TransitiveCallGraphFormatter.cs`, `AssemblyGetCallTreeTool.cs`.
+- Geänderte Testbereiche: `TransitiveCallGraphFormatterTests.cs`, neue `AssemblyNavigationResponseContractTests.cs`, `GetServerHealthToolTests.cs`, `ReloadConfigToolTests.cs`, `GetTypeHierarchyToolTests.cs`, `MetricsTreeToolTests.cs`.
+- Regressionen: Formatter-No-Hit mit fünf Samples/`totalCount`/`shownCount`/`truncatedBy`; Assembly-`find_references`-No-Hit mit Navigation-Diagnosen und Text-/Structured-Content-Konsistenz; konkrete Health-/ReloadConfig-/DTO-Werte.
+- Verifikation nach letzter Codeänderung: gezielte FastTests 51/51; Health-/ReloadConfig-IntegrationTests 19/19; `git diff --check` erfolgreich. Wegen Nutzerunterbrechung nicht ausgeführt: vollständiger Build, vollständige Nicht-Stress-Gates, DRY-/Dead-Code-/Magic-Checks und abschließender `get_violations`-Check.
+- Verbleibende Risiken: Die Assembly-Regression prüft `totalCount > shownCount` dynamisch, aber der vollständige Coverage-Nachweis für alle Assembly-CallTree-/Navigation-Varianten steht noch aus. `code-map.md` wurde aktualisiert.
+- Nächste Aktion: Implementierungs-Checkpoint committen, unabhängigen Review starten.

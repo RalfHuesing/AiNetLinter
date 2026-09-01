@@ -137,8 +137,8 @@
 - Evidenz: Frische Nachweise meldeten zunächst 55/1 und 12/2; Korrekturversuch 3 ergänzte Session-, Diagnose- und Structured-Content-Regressionen sowie globale Health-Default-Anpassungen. Der unabhängige Review klassifizierte die verbleibende Assertion als veraltet, weil der Produktionsvertrag aggregiert `Diagnosen gesamt: 4` ausgibt. Zusätzlich fehlen vollständige Aggregatzähler und belastbare konkrete Structured-Content-/Diagnosepfad-Assertions. Nachverifikation: FastTests 61/61, fokussierte IntegrationTests 18/19.
 - Disposition: fix-now
 - attempts: 1
-- Nächster Schritt: Frischer Korrekturversuch für die fehlenden Structured-Content-/Assembly-E2E-Verträge und den echten Diagnosepfad.
-- Log-Anker: `execution-log.md`, „Wiederaufnahme Paket 2 Ersatzreview abgeschlossen"
+- Nächster Schritt: Unabhängigen Review des zentralisierten Diagnose-/Response-Vertrags und der neuen Assembly-E2E-Regression ausführen.
+- Log-Anker: `execution-log.md`, „Wiederaufnahme Paket 2 Korrekturversuch 1 abgeschlossen"
 
 ### Diagnoseprojektion mit doppelter Ownership
 
@@ -148,7 +148,7 @@
 - Evidenz: Die beiden Toolpfade projizieren Diagnosen vor dem Formatter; `TransitiveCallGraphFormatter.Format` projiziert erneut. Dadurch können `totalCount`/`truncatedBy` aus dem Text verschwinden und Samples im Nulltrefferpfad überschrieben werden. Der Abschlussreview bestätigte den Befund gegen die aktuellen Symbole.
 - Disposition: fix-now
 - attempts: 1
-- Nächster Schritt: Projektion auch für Assembly-CallTree-/Navigation-Diagnosen eindeutig an der Formatter-/Response-Grenze ownen, Text/Structured Content aus demselben Modell erzeugen und E2E-Regression ergänzen.
+- Nächster Schritt: Unabhängig prüfen, dass Assembly-CallTree-/Navigation-Diagnosen genau einmal projiziert werden und Text/Structured Content dasselbe Modell verwenden.
 - Log-Anker: `execution-log.md`, „Paket 2 Abschlussreview abgeschlossen"
 
 ### Paket-2-Produktionsviolations aus Zwischenstand

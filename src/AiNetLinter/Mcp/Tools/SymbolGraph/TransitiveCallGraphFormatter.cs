@@ -3,6 +3,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System;
+using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Tools.MetricsTree;
+using AiNetLinter.Output;
+using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 
@@ -12,7 +16,9 @@ internal static class TransitiveCallGraphFormatter
 
     internal static ReferenceTraversalResult ProjectDiagnostics(ReferenceTraversalResult result)
     {
-        var projection = CreateDiagnosticProjection(result.Completeness.Diagnostics);
+        var projection = CreateDiagnosticProjection(
+            (result.Completeness.Diagnostics ?? Array.Empty<string>())
+                .Concat(result.Navigation?.Diagnostics ?? Array.Empty<string>()));
         return result with
         {
             Completeness = result.Completeness with
@@ -25,7 +31,14 @@ internal static class TransitiveCallGraphFormatter
             },
             Navigation = result.Navigation is null
                 ? null
-                : ProjectNavigationDiagnostics(result.Navigation),
+                : result.Navigation with
+                {
+                    Diagnostics = projection.Samples,
+                    DiagnosticTotalCount = projection.TotalCount,
+                    DiagnosticShownCount = projection.Samples.Count,
+                    DiagnosticsTruncated = projection.Truncated,
+                    DiagnosticsTruncatedBy = projection.TruncatedBy,
+                },
         };
     }
 
@@ -46,6 +59,41 @@ internal static class TransitiveCallGraphFormatter
 
         AppendLimitMessages(lines, completeness);
         return new(projected, string.Join("\n", lines));
+    }
+
+    internal static CallToolResult FormatAssemblyCallTreeResponse(
+        AssemblyCallTreeResponseRequest request)
+    {
+        var projection = CreateDiagnosticProjection(
+            request.Navigation.Diagnostics.Concat(request.Diagnostics));
+        var treeTruncated = request.Truncated || request.TopNTruncated;
+        var effectiveNavigation = request.Navigation with
+        {
+            Completeness = request.Navigation.Completeness == "complete" &&
+                           !treeTruncated &&
+                           projection.TotalCount == 0
+                ? "complete"
+                : "partial",
+            Diagnostics = projection.Samples,
+            DiagnosticTotalCount = projection.TotalCount,
+            DiagnosticShownCount = projection.Samples.Count,
+            DiagnosticsTruncated = projection.Truncated,
+            DiagnosticsTruncatedBy = projection.TruncatedBy,
+        };
+
+        var metadata = new List<string>();
+        if (request.TreeTruncationMessage is not null)
+        {
+            metadata.Add(request.TreeTruncationMessage);
+        }
+        AppendDiagnosticMetadata(metadata, projection);
+        var finalBody = metadata.Count > 0
+            ? request.Body + "\n\n" + string.Join("\n", metadata)
+            : McpSufficiencyHints.Append(request.Body);
+
+        return McpToolResults.Text(
+            finalBody,
+            new AssemblyCallTreeResult(request.Root, effectiveNavigation, treeTruncated));
     }
 
     internal static DiagnosticProjection CreateDiagnosticProjection(IEnumerable<string>? diagnostics)
@@ -73,20 +121,6 @@ internal static class TransitiveCallGraphFormatter
 
     internal static string Format(ReferenceTraversalResult result)
         => FormatResponse(result).Text;
-
-    private static AssemblyNavigationSummary ProjectNavigationDiagnostics(
-        AssemblyNavigationSummary navigation)
-    {
-        var projection = CreateDiagnosticProjection(navigation.Diagnostics);
-        return navigation with
-        {
-            Diagnostics = projection.Samples,
-            DiagnosticTotalCount = projection.TotalCount,
-            DiagnosticShownCount = projection.Samples.Count,
-            DiagnosticsTruncated = projection.Truncated,
-            DiagnosticsTruncatedBy = projection.TruncatedBy,
-        };
-    }
 
     private static string FormatEntry(TransitiveCallSiteEntry entry, bool transitive)
     {
@@ -121,14 +155,28 @@ internal static class TransitiveCallGraphFormatter
 
         if (completeness.Diagnostics is { Count: > 0 })
         {
-            lines.AddRange(completeness.Diagnostics.Select(diagnostic => $"[Assembly-Diagnostic] {diagnostic}"));
+            AppendDiagnosticMetadata(
+                lines,
+                new DiagnosticProjection(
+                    completeness.DiagnosticTotalCount,
+                    completeness.Diagnostics,
+                    completeness.DiagnosticsTruncated,
+                    completeness.DiagnosticsTruncatedBy ?? Array.Empty<string>()));
         }
-        if (completeness.DiagnosticsTruncated)
-        {
-            lines.Add($"[{completeness.DiagnosticTotalCount} Diagnosen gesamt, " +
-                $"{completeness.DiagnosticShownCount} Samples gezeigt — " +
-                $"gekürzt: {string.Join(", ", completeness.DiagnosticsTruncatedBy ?? Array.Empty<string>())}]");
-        }
+    }
+
+    private static void AppendDiagnosticMetadata(
+        List<string> lines,
+        DiagnosticProjection projection)
+    {
+        lines.AddRange(projection.Samples.Select(diagnostic => $"[Assembly-Diagnostic] {diagnostic}"));
+        if (projection.TotalCount == 0) return;
+
+        var truncatedBy = projection.TruncatedBy.Count == 0
+            ? "keine"
+            : string.Join(", ", projection.TruncatedBy);
+        lines.Add($"[{projection.TotalCount} Diagnosen gesamt, " +
+            $"{projection.Samples.Count} Samples gezeigt — gekürzt: {truncatedBy}]");
     }
 
     private static string CreateMaxResultsMessage(TraversalCompleteness completeness)
@@ -150,6 +198,15 @@ internal sealed record DiagnosticProjection(
     IReadOnlyList<string> Samples,
     bool Truncated,
     IReadOnlyList<string> TruncatedBy);
+
+internal sealed record AssemblyCallTreeResponseRequest(
+    MetricsTreeNode Root,
+    string Body,
+    AssemblyNavigationSummary Navigation,
+    IReadOnlyList<string> Diagnostics,
+    bool Truncated,
+    bool TopNTruncated,
+    string? TreeTruncationMessage);
 
 internal sealed record TransitiveCallGraphFormatResult(
     ReferenceTraversalResult Traversal,
