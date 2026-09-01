@@ -309,3 +309,29 @@
 - Gate-Klassifikation: FastTests 2324 bestanden/5 fehlgeschlagen/2 übersprungen; vier Fehler gehören zu `typed-error-payload-contract-test-drift`, `McpAgentGuideRegistrationTests.BuildResource_IsReadableWithoutProjectAndContainsIntegrationContract` ist unveränderter Altbestand mit zeilenumbruchabhängiger Assertion, zwei Symlink-Skips beruhen auf `ERROR_PRIVILEGE_NOT_HELD (1314)`. IntegrationTests meldete 376 bestanden/1 fehlgeschlagen; `CliRepositoryDogfoodTests.RunLinterCli_OnWholeSolution_ReturnsSuccess` scheitert mit `PROJECT_NOT_RESTORED` und ist nicht dem Diff zuzuordnen, allerdings war der vorhandene TRX vor `4c024584` und damit kein frischer Nachweis.
 - Bestätigte Verifikation: 29/29 gezielte Assembly-/Budgettests, Build 0/0, `git diff --check`, MCP `get_violations` im FastTests-MCP-Scope 0/134 Dateien; diese decken den Produktionsscope nicht ab. MCP-Semantiknachweise bestätigten die relevanten Pfade.
 - Nächste Aktion: Frischer Implementierer korrigiert die vier alten Fehlerassertions und den `McpToolResults`-Parametervertrag; danach gezielte Tests und Produktionsscope-`get_violations`.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 4 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `1b7dd68d`
+- Ursachensignaturen: `typed-error-payload-contract-test-drift`; `mcp-error-helper-parameter-growth`
+- Versuch: 1 von 5 je neu aktivierter Ursachensignatur
+- Status: running
+- Auftrag: Veraltete `StructuredContent == null`-Assertions an den typisierten Fehlerpayload-Vertrag anpassen und die vier `MaxMethodParameterCount`-Verstöße in `McpToolResults` scope-nah beheben, ohne `isError`-Policy oder bestehende Wire-Verträge zu ändern. `code-map.md` pflegen; nach letzter Codeänderung gezielte Tests und Produktionsscope-`get_violations` ausführen. Kein Commit und keine Roadmap-/Log-/Tech-Debt-Änderung durch den Agenten.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 4 abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: `01a05bf6-5b4f-7661-b173-584a185a038b`
+- Ursachensignaturen: `typed-error-payload-contract-test-drift`; `mcp-error-helper-parameter-growth`
+- Versuch: 1 von 5 je Ursachensignatur
+- Status: completed; keine Codeänderung, kein Commit
+- Ergebnis: Der Agent stellte den funktionierenden Ausgangscode unverändert wieder her. Die vier veralteten Assertions und vier Produktions-Parameterbefunde bleiben offen. MCP bestätigte den Projektstatus (AiNetLinter 1.0.157), `get_feature_context` bestätigte die vier `MaxMethodParameterCount`-Violations, und der Kontext zu `AssemblyAnalysisResponse.Unsupported` bestätigte den typisierten Fehlerpayload.
+- Verifikation: `git diff --check` erfolgreich; Abschluss-Tests und finaler `get_violations`-Lauf wurden nicht ausgeführt, da keine Codeänderung vorlag.
+- Disposition des Orchestrators: Die Agentenempfehlung `promoted-to-project-debt` wird nicht übernommen; beide P1-Einträge bleiben `fix-now`, da das Fünferbudget nicht ausgeschöpft ist.
+- Nächste Aktion: Neuer frischer Implementierer mit engerer, symbolgenauer Korrekturvorgabe.

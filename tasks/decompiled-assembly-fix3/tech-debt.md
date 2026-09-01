@@ -19,9 +19,9 @@
 - Scope/Fundstelle: geänderte MCP-Methoden in `src/AiNetLinter/Mcp`, insbesondere `McpToolResults` und Assembly-Analyse-Verträge
 - Evidenz: Der Abschlussreview bestätigte vier aktive `MaxMethodParameterCount`-Verstöße in `McpToolResults.cs` an Zeilen 48, 67, 78 und 220 (`Error`, `Recoverable`, `BuildResult`, `CompilationError`). Sie entstanden durch die typisierte Payload-Erweiterung und wurden als Produktions-P1 eingestuft.
 - Disposition: fix-now
-- attempts: 0
+- attempts: 1
 - Nächster Schritt: Scope-nahen Parametervertrag/Parameterobjekt-Fix implementieren und Produktionsscope mit `get_violations` erneut prüfen.
-- Log-Anker: `execution-log.md`, „Paket 1 Abschlussreview abgeschlossen"
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 4 abgeschlossen"
 
 ### Fehlende globale Antwortbudget-Projektion
 
@@ -103,6 +103,6 @@
 - Scope/Fundstelle: `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisConfigurationFailureTests.cs:71,124`; `src/AiNetLinter.FastTests/Mcp/Tools/Safeguard/SafeguardToolTests.cs:44,199`
 - Evidenz: Vier Assertions erwarten `StructuredContent == null`, obwohl `McpErrorPayload` gemäß freigegebenem Paket-1-Vertrag korrekt geliefert wird.
 - Disposition: fix-now
-- attempts: 0
+- attempts: 1
 - Nächster Schritt: Assertions auf typisierte Fehlerfelder umstellen und betroffene FastTests erneut ausführen.
-- Log-Anker: `execution-log.md`, „Paket 1 Abschlussreview abgeschlossen"
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 4 abgeschlossen"
