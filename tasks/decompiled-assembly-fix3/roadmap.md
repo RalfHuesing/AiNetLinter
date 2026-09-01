@@ -2,11 +2,11 @@
 
 - Primäraufgabe: Robuste Assembly-Analyse und konsistente MCP-Antwortverträge
 - Betriebsart: Großkonzept-Modus
-- Status: executing
+- Status: blocked
 - current_epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
 - current_debt_item: package2-regression-test-contract-drift
 - debt_attempts: 5
-- letzter Commit: `f98eeead`
+- letzter Commit: `6f3e4a1b`
 
 ## Epics
 
@@ -24,7 +24,7 @@
 - Betroffene Bereiche: Assembly-Detailflags, Diagnoseprojektionen, globaler Health, strukturierte Erfolgspayloads
 - Muss-/Akzeptanzkriterien: gezielte Antworten bleiben kompakt; Diagnose-Samples sind begrenzt und transparent; globaler Health aggregiert standardmäßig; text-only Erfolgsdaten sind strukturiert verfügbar.
 - Verifikation: gezielte Tool-/DTO-/Registrierungs- und Health-Tests sowie MCP-`get_violations`
-- Status: in_progress
+- Status: blocked (Benutzerentscheidung nach ausgeschöpftem P1-Korrekturbudget erforderlich)
 
 ### Paket 3 – Source-Backing und Body-/Metadata-Navigation
 

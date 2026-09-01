@@ -690,3 +690,21 @@
 - Korrekturbudget: 5 von 5 ausgeschöpft; keine weitere automatische Korrektur bei neuem P1
 - Status: running
 - Auftrag: Abschlussprüfung von Paket 2 gegen Konzept, Rules und Code-Map. Frische gezielte Tests für Health/Reload/Structured Content sowie Fast-/Integration-Slices; Produktionsscope-MCP-Checks bei Bedarf. Prüfe besonders den korrigierten globalen Health-Default, konkrete Aggregatzähler, `includeSessions/maxSessions`, Diagnoseprojektion und die vier Structured-Content-Erfolgspayloads. Kein Produktions-/Testcode ändern und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen.
+
+## 2026-09-01 – Paket 2 Abschlussreview abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05c72-3b3e-76d0-8cd2-889df5d5f735`
+- Ursachensignatur: `package2-regression-test-contract-drift`
+- Korrekturbudget: 5 von 5 ausgeschöpft
+- Status: completed; kein Produktions-/Testcode geändert; kein Commit
+- Urteil: `blocked`; P0 keine.
+- P1: Frischer Integration-Lauf 17/19. `GetServerHealthToolTests.cs:134` wirft `ArgumentNullException`, weil `IncludeDiagnostics=true` ohne `IncludeSessions=true` weiterhin korrekt `Assemblies=null` liefert, der Test aber `Assert.Single` verwendet. Der globale Default ist laut Produktionspfad korrekt. `ReloadConfigToolTests.cs:107` erwartet 15 Regeln, der aktuelle Code liefert 17; die neue Konfiguration ergibt 16 und Delta -1, der Test ist veraltet.
+- P1: Echter Diagnosepfad-Drift: `FindReferencesTool` und `AssemblyFindReferencesTool` projizieren vor `Format`; `TransitiveCallGraphFormatter.Format` projiziert erneut. Dadurch verliert der Text `totalCount`/`truncatedBy`; im Projekt-Nulltrefferpfad werden Diagnosesamples überschrieben. Ein belastbarer E2E-Test für den Assembly-`find_references`-Diagnosepfad fehlt.
+- P1: CallTree-Structured-Content ist brauchbar belegt; TypeHierarchy und MetricsTree prüfen relevante DTO-Felder nur teilweise bzw. tautologisch. ReloadConfig wurde teilweise konkretisiert, aber der aktuelle Zählervertrag ist noch nicht korrekt verifiziert.
+- P2: `InspectAssemblyTool` meldet weiterhin AIContext-Footprint 2508/2500; zwei unveränderte `FindSymbolScanner`-Warnungen bleiben scopefremd und zurückgestellt.
+- Nachweise: FastTests 61/61; IntegrationTests 17/19 mit genau den zwei oben genannten Fehlern. Health `includeSessions=true`/`maxSessions` bestanden. MCP-Kontextabfragen bestätigten die relevanten Health-, Diagnose-, CallTree-, TypeHierarchy-, MetricsTree- und Assembly-Pfade. HEAD: `6f3e4a1b`; Working Tree sauber.
+- Tech-Debt-Disposition: `package2-regression-test-contract-drift` bleibt wegen ausgeschöpftem Korrekturbudget `blocked/needs-user-decision`; Paket 2 ist nicht freigegeben und darf nicht geschlossen werden. Keine sechste automatische Korrektur.
+- Nächste Aktion: Benutzerentscheidung erforderlich, ob ein neuer Orchestrator-Lauf mit neuem Budget für den Paket-2-Diagnose-/Testvertrag gestartet werden soll.
