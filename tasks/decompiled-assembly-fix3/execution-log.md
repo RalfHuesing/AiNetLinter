@@ -875,3 +875,15 @@
 - Regelstatus: Produktionsscope `src/AiNetLinter/Mcp/Tools/SymbolGraph` meldet nur die zwei bekannten `FindSymbolScanner`-Warnungen; Assembly-Testscope meldet nur die bekannte `MaxDirectoryChildren`-Warnung (31 statt 30); IntegrationTest-Toolscope ist sauber.
 - Verbleibendes Risiko: Der Agent lieferte wegen Unterbrechung keinen Abschlussbericht; die Änderungen und Verifikation wurden direkt durch den Orchestrator geprüft. Der strukturelle P2-Verzeichnisbefund bleibt akzeptiert-zurückgestellt.
 - Nächste Aktion: Code-Checkpoint committen und einen frischen unabhängigen Reviewer starten.
+
+## 2026-09-01 – Wiederaufnahme Paket 2 Korrekturversuch 2 Reviewer gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `206eae92`; fachliche Ausgangsbasis `23b9d65d`
+- Ursachensignatur: `package2-regression-test-contract-drift`
+- Versuch: 2 im neu freigegebenen Lauf
+- Status: running
+- Auftrag: Prüfe ausschließlich den neuen Assembly-Test-/Vertragsnachweis gegen Konzept, Rules und Code-Map. Führe frische gezielte Assembly-FastTests, Build/Diff-Checks und bei Bedarf den relevanten `get_violations`-Scope aus. Bestätige, dass `AssemblyGetCallTreeTool` tatsächlich mit `includeReferences=true` läuft, dass Diagnosezähler/Samples/Truncation/Ausschluss des sechsten Samples korrekt sind und Text sowie Structured Content denselben projizierten Datensatz tragen. Prüfe, dass keine Produktions-Ownership zurückdriftet und keine neue Regelverletzung eingeführt wurde. Kein Produktions-/Testcode ändern und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen.
