@@ -942,3 +942,15 @@
 - Verifikation nach der letzten Codeänderung laut Implementierer: fokussierte FastTests 34/34; fokussierte IntegrationTests 6/6; Literalregression 1/1; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` grün. Fokussierter MCP-Audit: keine Duplikate, kein Dead Code, keine Magic Values. Finaler MCP-`get_violations`: 10 strukturelle Befunde, überwiegend neue Größen-/Komplexitätslimits in `AssemblyDecompilationAdapter` und `AssemblySourceSelectionOrchestrator`; keine DuplicateCode-Meldung.
 - Einschränkung: Vollständige Nicht-Stress-Gates und `safeguard` wurden vom Implementierer nicht gestartet und bleiben Orchestrator-Verifikation. P0/P1 wurden aus den ausgeführten Checks nicht gemeldet. Die neuen strukturellen Limits werden als P2-Tech-Debt klassifiziert und im Review auf konkrete Diff-Betroffenheit geprüft.
 - Nächste Aktion: Implementierungsstand mit Log/Tech-Debt/Code-Map checkpointen und unabhängigen Paket-3-Review starten.
+
+## 2026-09-01 – Paket 3 Reviewer gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `b3d25401`
+- Ursachensignatur: `package3-source-body-metadata-contract`
+- Versuch: 0 im Epic
+- Status: running
+- Auftrag: Prüfe den Paket-3-Diff gegen Konzept, Rules und Code-Map. Kontrolliere Source-Snapshot-Diagnosen, jeden `fallbackReason`-Pfad, fail-closed Trust, leasegebundene on-demand Body-Dekomposition, Source-/Signature-/Body-Content-Mode, Cancellation/Limit/Pfadtransparenz und zentrale Literalformatierung. Führe nur frische, relevante Tests und bei Bedarf gezielte MCP-Checks aus; klassifiziere die gemeldeten 10 strukturellen Violations als P2 oder P1. Kein Produktions-/Testcode ändern und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen.
