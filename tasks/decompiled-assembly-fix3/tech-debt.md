@@ -136,20 +136,20 @@
 - Scope/Fundstelle: Assembly-Inspektions- und Health-/Reload-Tests
 - Evidenz: Frische TRX-Nachweise meldeten 55/1 in `Package2Targeted.trx` und 12/2 in `Package2HealthTargeted.trx`; nach Korrekturversuch 1 bleiben diese gezielten Läufe mit denselben roten Vertragsassertions. End-to-End-Assertions für `includeReferences`, Diagnose-Samples, `includeSessions/maxSessions` und Erfolgspayloads fehlen.
 - Disposition: fix-now
-- attempts: 1
-- Nächster Schritt: Konkrete Assertions aktualisieren und fehlende Paket-2-Regressionen ergänzen.
-- Log-Anker: `execution-log.md`, „Paket 2 Korrekturversuch 1 abgeschlossen"
+- attempts: 2
+- Nächster Schritt: Health-Assertions sowie Diagnose-/Session-/Structured-Content-Regressionen ergänzen.
+- Log-Anker: `execution-log.md`, „Paket 2 Korrekturversuch 2 abgeschlossen"
 
 ### Paket-2-Produktionsviolations aus Zwischenstand
 
 - Schweregrad: P1
 - Ursachensignatur: package2-production-violations
 - Scope/Fundstelle: `src/AiNetLinter/Mcp` – vier durch den Paket-2-Zwischenstand verursachte Befunde im Produktionsscope
-- Evidenz: Der Review verifizierte vier diffbedingte Befunde. Korrekturversuch 1 refaktorierte drei betroffene Produktionspfade; `InspectAssemblyTool.BuildResult` behält jedoch fünf statt maximal vier effektive Parameter. `AddGetServerHealth` und `GetServerHealthResponseBuilder.Build` liegen im Limit. Zwei `FindSymbolScanner`-Befunde sind unverändert und scopefremd.
-- Disposition: fix-now
-- attempts: 1
-- Nächster Schritt: `InspectAssemblyTool.BuildResult` über den bestehenden internen Parametervertrag refaktorieren und Produktionsscope erneut prüfen.
-- Log-Anker: `execution-log.md`, „Paket 2 Korrekturversuch 1 Reviewer abgeschlossen"
+- Evidenz: Der Review verifizierte vier diffbedingte Befunde. Korrekturversuch 2 refaktorierte `InspectAssemblyTool.BuildResult` auf einen effektiven Parameter; der Produktionsscope-Nachcheck meldete keine neuen Fehler. `AddGetServerHealth` und `GetServerHealthResponseBuilder.Build` liegen im Limit.
+- Disposition: fix-now (Review ausstehend)
+- attempts: 2
+- Nächster Schritt: Unabhängiger Review; bei bestätigter Behebung als `fixed` markieren.
+- Log-Anker: `execution-log.md`, „Paket 2 Korrekturversuch 2 abgeschlossen"
 
 ### Paket-2-Magic-Value-Kandidaten
 

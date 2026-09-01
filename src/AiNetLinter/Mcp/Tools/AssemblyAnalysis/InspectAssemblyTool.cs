@@ -28,7 +28,17 @@ internal static class InspectAssemblyTool
     internal static Task<CallToolResult> ExecuteAsync(
         AssemblyAnalysisLease lease,
         InspectAssemblyArguments arguments) =>
-        AssemblyAnalysisToolSupport.ExecuteLeaseAsync(lease, arguments, arguments.MaxResults, BuildResult);
+        AssemblyAnalysisToolSupport.ExecuteLeaseAsync(
+            lease,
+            arguments,
+            arguments.MaxResults,
+            (fullPath, context, inspectedArguments, maxResults, activeLease) =>
+                BuildResult(new InspectAssemblyBuildRequest(
+                    fullPath,
+                    context,
+                    inspectedArguments,
+                    maxResults,
+                    activeLease)));
 
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer? state,
@@ -51,18 +61,25 @@ internal static class InspectAssemblyTool
             null,
             AssemblyAnalysisService.NormalizeLimit(arguments.MaxResults, 1, AssemblyAnalysisService.MaxResults),
             ct,
-            (fullPath, context, maxResults) => BuildResult(fullPath, context, arguments, maxResults));
+            (fullPath, context, maxResults) => BuildResult(new InspectAssemblyBuildRequest(
+                fullPath,
+                context,
+                arguments,
+                maxResults,
+                null)));
 
-    private static CallToolResult BuildResult(
-        string fullPath,
-        AssemblyContext context,
-        InspectAssemblyArguments arguments,
-        int maxResults,
-        AssemblyAnalysisLease? lease = null)
+    private static CallToolResult BuildResult(InspectAssemblyBuildRequest request)
     {
-        var payload = CreatePayload(fullPath, context, arguments, maxResults, lease);
-        payload = ApplyResponseBudget(payload, arguments, lease);
-        return McpToolResults.Text(InspectAssemblyFormatter.FormatText(payload, arguments.PublicOnly), payload);
+        var payload = CreatePayload(
+            request.FullPath,
+            request.Context,
+            request.Arguments,
+            request.MaxResults,
+            request.Lease);
+        payload = ApplyResponseBudget(payload, request.Arguments, request.Lease);
+        return McpToolResults.Text(
+            InspectAssemblyFormatter.FormatText(payload, request.Arguments.PublicOnly),
+            payload);
     }
 
     private static InspectAssemblyPayload CreatePayload(
@@ -134,4 +151,11 @@ internal static class InspectAssemblyTool
                 : candidate => AssemblyAnalysisResponse.FitsResponseBudget(
                     McpToolResults.Text(InspectAssemblyFormatter.FormatText(candidate, arguments.PublicOnly), candidate),
                     lease));
+
+    private sealed record InspectAssemblyBuildRequest(
+        string FullPath,
+        AssemblyContext Context,
+        InspectAssemblyArguments Arguments,
+        int MaxResults,
+        AssemblyAnalysisLease? Lease);
 }

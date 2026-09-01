@@ -273,7 +273,14 @@ public sealed partial class AssemblyAnalysisToolTests
 
         var result = await InspectAssemblyTool.ExecuteAsync(
             server,
-            new InspectAssemblyArguments(assemblyPath, null, "UsesDependency", null, true, 100),
+            new InspectAssemblyArguments(
+                assemblyPath,
+                null,
+                "UsesDependency",
+                null,
+                true,
+                100,
+                IncludeReferences: true),
             CancellationToken.None);
         var payload = Deserialize<InspectAssemblyPayload>(result);
 
@@ -283,6 +290,58 @@ public sealed partial class AssemblyAnalysisToolTests
         Assert.True(dependency.Resolved);
         Assert.Equal(dependency.ResolvedPath, Path.GetFullPath(dependency.ResolvedPath!));
         Assert.Contains(dependency.ResolvedPath!, TextOf(result), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InspectAssembly_TargetedInspectionRequiresExplicitReferenceDetails()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-targeted-references-");
+        var dependencyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "TargetedDependency",
+            "namespace Dependency; public sealed class Value { }");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "TargetedReferenceProbe",
+            "namespace Probe; public sealed class UsesDependency { public Dependency.Value Value { get; } = new(); }",
+            dependencyPath);
+
+        var defaultPayload = Deserialize<InspectAssemblyPayload>(await InspectAssemblyTool.ExecuteAsync(
+            null,
+            new InspectAssemblyArguments(assemblyPath, null, "UsesDependency", null, true, 100),
+            CancellationToken.None));
+        var explicitFalsePayload = Deserialize<InspectAssemblyPayload>(await InspectAssemblyTool.ExecuteAsync(
+            null,
+            new InspectAssemblyArguments(
+                assemblyPath,
+                null,
+                "UsesDependency",
+                null,
+                true,
+                100,
+                IncludeReferences: false),
+            CancellationToken.None));
+        var explicitTrueResult = await InspectAssemblyTool.ExecuteAsync(
+            null,
+            new InspectAssemblyArguments(
+                assemblyPath,
+                null,
+                "UsesDependency",
+                null,
+                true,
+                100,
+                IncludeReferences: true),
+            CancellationToken.None);
+        var explicitTruePayload = Deserialize<InspectAssemblyPayload>(explicitTrueResult);
+
+        AssertReferenceDetailsExcluded(defaultPayload);
+        AssertReferenceDetailsExcluded(explicitFalsePayload);
+        Assert.True(explicitTruePayload.ReferenceSummary!.TotalReferenceCount >= 1);
+        Assert.True(explicitTruePayload.ReferenceDetailsIncluded);
+        Assert.Contains(
+            explicitTruePayload.References,
+            reference => reference.Name == "TargetedDependency");
+        Assert.Contains("TargetedDependency", TextOf(explicitTrueResult), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -445,4 +504,16 @@ public sealed partial class AssemblyAnalysisToolTests
 
     private static string TextOf(CallToolResult result) =>
         string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text));
+
+    private static void AssertReferenceDetailsExcluded(InspectAssemblyPayload payload)
+    {
+        Assert.Empty(payload.References);
+        Assert.Empty(payload.ReferenceSessions!);
+        Assert.False(payload.ReferenceDetailsIncluded);
+        Assert.True(payload.ReferenceSummary!.TotalReferenceCount >= 1);
+        Assert.Equal(0, payload.ReferenceSummary.ShownReferenceCount);
+        Assert.True(payload.ReferenceSummary.ReferencesTruncated);
+        Assert.Equal(0, payload.ReferenceSummary.ShownReferenceSessionCount);
+        Assert.False(payload.ReferenceSummary.ReferenceSessionsTruncated);
+    }
 }

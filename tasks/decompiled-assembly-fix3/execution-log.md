@@ -497,6 +497,32 @@
 - Verifikation: frischer `dotnet build --no-restore` 0/0; gezielte Tests frisch, aber rot; vollständiger Produktionsscope-MCP zwei scopefremde `FindSymbolScanner`-Warnungen; `git diff --check` erfolgreich. Live-Assembly-Aufruf gegen nicht nachweislich aktualisiertes Daemon-Artefakt nicht als Wire-Nachweis angerechnet.
 - Nächste Aktion: Frischer Implementierer für Inspect-Parametervertrag und Paket-2-Regressionen.
 
+## 2026-09-01 – Paket 2 Korrekturversuch 2 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `49369e95`
+- Ursachensignaturen: `package2-production-violations`; `package2-regression-test-contract-drift`
+- Versuch: 2 von 5 je Ursachensignatur
+- Status: running
+- Auftrag: `InspectAssemblyTool.BuildResult` über den bestehenden Parametervertrag regelkonform machen und die roten/fehlenden Paket-2-Regressionen für Inspect-Detailflag, Health-Sessiondetails, Diagnoseprojektion und alle strukturierten Erfolgspayloads ergänzen/aktualisieren; ReloadConfig-Produktionsfix erhalten. Nach letzter Codeänderung gezielte Fast-/IntegrationTests, vollständigen relevanten `get_violations`-Scope und `git diff --check` ausführen. Kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
+
+## 2026-09-01 – Paket 2 Korrekturversuch 2 abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: `01a05c3a-e9e5-7fd3-a685-52908b67836a`
+- Ursachensignaturen: `package2-production-violations`; `package2-regression-test-contract-drift`
+- Versuch: 2 von 5 je Ursachensignatur
+- Status: completed; Arbeitsstand ohne Rollen-Commit übergeben
+- Ergebnis: `InspectAssemblyTool.BuildResult` über einen internen Request-Vertrag auf einen effektiven Parameter reduziert; Wire-/Verhaltenssemantik bleibt unverändert. `AssemblyAnalysisToolTests` aktualisiert die bestehende Consumer-Regression mit `includeReferences=true` und ergänzt Default/false/true-Regressionen. `code-map.md` aktualisiert.
+- Verifikationsnachweise nach der letzten Codeänderung: `dotnet build --no-restore` 0/0; Assembly-FastTests 18/18; CallTree-/TypeHierarchy-/MetricsTree-FastTests 38/38; Health-/ReloadConfig-IntegrationTests 12/14 mit zwei weiterhin roten globalen Health-Default-Assertions; `git diff --check` erfolgreich; `metrics_lookup` meldet `BuildResult` 1/4 effektive Parameter; Produktionsscope-`get_violations` meldet 0 Fehler und 3 bestehende Warnungen (AIContextFootprint sowie zwei scopefremde `FindSymbolScanner`); Duplicate-Audit 4 bestehende Cluster, Dead-Code 0, Magic Values 0.
+- Offen: Health-Assertions, Diagnose-/`includeSessions`-/`maxSessions`-Regressionen und fokussierte Structured-Content-Assertions für die vier Erfolgstools fehlen; kein Wire-Nachweis gegen den aktuellen Build.
+- Nächste Aktion: Korrekturstand committen und frischen Review starten.
+
 ## 2026-09-01 – Paket 2 Implementierer abgeschlossen
 
 - Run-ID: decompiled-assembly-fix3-20260901
