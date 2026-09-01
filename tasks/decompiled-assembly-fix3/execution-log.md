@@ -98,3 +98,32 @@
 - Nicht ausgeführt: vollständiger Build und vollständige Nicht-Stress-Gates in diesem Versuch.
 - Offene Risiken: Die nachgelagerte Header-Anreicherung wurde nicht separat in das 8-KiB-Messbudget einbezogen; die drei strukturellen Violations bleiben zur Review-/Tech-Debt-Triage.
 - Nächste Aktion: Korrekturstand committen und frischen Reviewer starten.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 1 Reviewer gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: Korrekturstand `4501b15a`; fachliche Ausgangsbasis `462c2edb`
+- Ursachensignatur: `assembly-response-budget-projection-missing-after-compactor-removal`
+- Versuch: 1 von 5
+- Status: running
+- Auftrag: Die typisierte globale Antwortbudget-Projektion, ihre gemeinsame Text-/JSON-Auswahl, Pflichtfelder, Zähler, Trunkierungsgründe und Regressionstests unabhängig prüfen. Frische Tests/Checks nur bei konkretem Anlass wiederholen; Produktions-/Testcode nicht ändern, nur konkrete `code-map.md`-Navigationsfehler korrigieren. Urteil und Tech-Debt-Empfehlungen liefern.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 1 Reviewer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05bb5-5997-7340-8199-fa5c8d9e4e51`
+- Ursachensignaturen: `assembly-response-budget-projection-missing-after-compactor-removal`; `response-projection-structural-rule-drift`
+- Versuch: 1 von 5 für die Budgetursache; struktureller Regelbefund neu aktiviert
+- Status: completed; nur `code-map.md` um konkrete Einschränkungen ergänzt
+- Urteil: `issues`; P0 keine.
+- P1 `assembly-response-budget-projection-missing-after-compactor-removal`: Die Producer projizieren Text/JSON zwar gemeinsam vor `McpToolResults.Text(...)`, aber der Dispatcher führt anschließend `AssemblyAnalysisResponse.Enrich` aus. Zusätzlicher Text-Header und `analysis`-Objekt werden nicht in das 8-KiB-Budget einbezogen; ein finales Ergebnis kann daher weiterhin zu groß sein. Zusätzlich brechen die Projektionstabellen bei einem einzelnen übergroßen sichtbaren Item ab, ohne die Budgeteinhaltung sicherzustellen. Die neuen Tests decken nur direkte Producer-Aufrufe, nicht den angereicherten Dispatcherpfad ab.
+- P1 `response-projection-structural-rule-drift`: Der frische `get_violations`-Check meldet drei durch die Korrektur verursachte aktive Produktionsregelverstöße: `AssemblyAnalysisResponseLimits.cs` mit 543 statt maximal 500 Zeilen, ein exaktes `TryRemoveLastDiagnostic`-Duplikat und `FindAssemblyExtensionsTool` mit AIContext-Footprint 2503 statt 2500.
+- Reviewer-Empfehlung: Budgetprojektion und finale Enrichment-Metadaten gemeinsam vermessen, Singleton-Übergrößenfall testen und die drei Produktionsregelverstöße in demselben scope-nahen Pfad beseitigen.
+- Bestätigte Kriterien: gemeinsame Producer-Auswahl, Pflichtfelder, Zähler und `responseBudget` sind grundsätzlich vorhanden; ältere Paket-1-Kriterien bleiben intakt.
+- Verifikationsbewertung: MCP-first mit `targetType=project` und absolutem Projektpfad; `get_feature_context` und `find_references` bestätigten Aufrufer und Enrichment-Reihenfolge. Der Implementierer-Nachweis 27/27, `git diff --check` sowie Dead-/Magic-Value-Checks ist frisch und für den Producer-Scope passend; nicht redundant wiederholt. Vollständiger Build und beide Nicht-Stress-Gates fehlen weiterhin.
+- Nächste Aktion: Frischer Implementierer-Korrekturversuch für beide P1-Ursachensignaturen, danach frischer Review.

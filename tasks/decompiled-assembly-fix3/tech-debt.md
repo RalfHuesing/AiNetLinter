@@ -63,6 +63,28 @@
 - Nächster Schritt: Nur bei direkter, risikoarmer Reduktion innerhalb des bestehenden Paketvertrags erneut bewerten.
 - Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 1 abgeschlossen"
 
+### Antwortbudget umfasst Enrichment und Singleton-Übergrößen
+
+- Schweregrad: P1
+- Ursachensignatur: assembly-response-budget-projection-missing-after-compactor-removal
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/AnalysisToolCall.cs`, `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs`, `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.cs`, `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolTests.cs`
+- Evidenz: Der Reviewer bestätigte gemeinsame Producer-Auswahl, stellte aber fest, dass nachfolgendes `Enrich` nicht vermessen wird und einzelne übergroße Items ohne sichere Budgeteinhaltung verbleiben können.
+- Disposition: fix-now
+- attempts: 1
+- Nächster Schritt: Frischer Implementierer ergänzt die Endgrößenprüfung um Enrichment-Metadaten und einen Singleton-Übergrößenfall.
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 1 Reviewer abgeschlossen"
+
+### Aktive Produktionsregelverstöße der Budgetkorrektur
+
+- Schweregrad: P1
+- Ursachensignatur: response-projection-structural-rule-drift
+- Scope/Fundstelle: `AssemblyAnalysisResponseLimits.cs`, `FindAssemblyExtensionsTool.cs`
+- Evidenz: Frischer `get_violations`-Check meldet 543 statt maximal 500 Zeilen, ein exaktes `TryRemoveLastDiagnostic`-Duplikat und AIContext-Footprint 2503 statt 2500.
+- Disposition: fix-now
+- attempts: 0
+- Nächster Schritt: Im selben frischen Korrekturversuch strukturelle Duplikation, Zeilenlimit und Footprint beseitigen; danach `get_violations` erneut ausführen.
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 1 Reviewer abgeschlossen"
+
 ### Bestehender AIContext-Footprint-Hinweis
 
 - Schweregrad: P2
