@@ -282,3 +282,30 @@
   - Vollständige Gates: `src/AiNetLinter.FastTests` 2324 bestanden, 5 fehlgeschlagen, 2 übersprungen; `src/AiNetLinter.IntegrationTests` 376 bestanden, 1 fehlgeschlagen. Failing-Testnamen und Ursachen wurden im Hand-off nicht benannt; eine unabhängige Klassifikation ist erforderlich.
 - Tech-Debt: `response-projection-structural-rule-drift` ist im geänderten Test-/Produktionsscope fachlich behoben; bestehende Test-Fixture-Magic-Values bleiben `accepted-deferred`.
 - Nächste Aktion: Strukturkorrekturstand committen und frischen Paket-1-Abschlussreview starten; Gate-Fehler dabei konkret klassifizieren.
+
+## 2026-09-01 – Paket 1 Abschlussreview gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektheit
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: Abschlussstand `4c024584`; vorheriger Review-Checkpoint `30625983`
+- Ursachensignaturen: `response-projection-structural-rule-drift`; `full-gate-failures-unclassified`
+- Versuch: Strukturursache erneut aktiviert, Versuch 1 von 5; Gate-Klassifikation neu
+- Status: running
+- Auftrag: Aufteilung der Testdateien, vollständige Paket-1-Kriterien und den erweiterten Violations-Scope prüfen; die gemeldeten vollständigen Gate-Fehler anhand des aktuellen Diff-/Teststands konkret klassifizieren. Kein Produktions-/Testcode und kein Commit; nur konkrete `code-map.md`-Korrekturen.
+
+## 2026-09-01 – Paket 1 Abschlussreview abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05bec-98e2-78b1-aae4-86c4a43e9294`
+- Ursachensignaturen: `typed-error-payload-contract-test-drift`; `mcp-error-helper-parameter-growth`; `full-gate-failures-unclassified`
+- Status: completed; nur konkrete Zeilenzahlen in `code-map.md` korrigiert
+- Urteil: `issues`; P0 keine.
+- P1 `typed-error-payload-contract-test-drift`: Vier FastTests erwarten noch `StructuredContent == null`, obwohl die Paket-1-Implementierung korrekt typisierte `McpErrorPayload` liefert: `AssemblyAnalysisConfigurationFailureTests.cs:71/124` und `SafeguardToolTests.cs:44/199`. Die Assertions müssen an den freigegebenen Fehlervertrag angepasst werden.
+- P1 `mcp-error-helper-parameter-growth`: Der aktuelle Produktions-MCP-Check meldet vier aktive `MaxMethodParameterCount`-Verstöße in `McpToolResults.cs` an Zeilen 48, 67, 78 und 220 (`Error`, `Recoverable`, `BuildResult`, `CompilationError`). Der Testscope deckte den Produktionsscope nicht ab; die Verstöße sind durch die Payload-Erweiterung entstanden und müssen scope-nah über einen Parametervertrag/Parameterobjekt-Fix behoben werden.
+- Gate-Klassifikation: FastTests 2324 bestanden/5 fehlgeschlagen/2 übersprungen; vier Fehler gehören zu `typed-error-payload-contract-test-drift`, `McpAgentGuideRegistrationTests.BuildResource_IsReadableWithoutProjectAndContainsIntegrationContract` ist unveränderter Altbestand mit zeilenumbruchabhängiger Assertion, zwei Symlink-Skips beruhen auf `ERROR_PRIVILEGE_NOT_HELD (1314)`. IntegrationTests meldete 376 bestanden/1 fehlgeschlagen; `CliRepositoryDogfoodTests.RunLinterCli_OnWholeSolution_ReturnsSuccess` scheitert mit `PROJECT_NOT_RESTORED` und ist nicht dem Diff zuzuordnen, allerdings war der vorhandene TRX vor `4c024584` und damit kein frischer Nachweis.
+- Bestätigte Verifikation: 29/29 gezielte Assembly-/Budgettests, Build 0/0, `git diff --check`, MCP `get_violations` im FastTests-MCP-Scope 0/134 Dateien; diese decken den Produktionsscope nicht ab. MCP-Semantiknachweise bestätigten die relevanten Pfade.
+- Nächste Aktion: Frischer Implementierer korrigiert die vier alten Fehlerassertions und den `McpToolResults`-Parametervertrag; danach gezielte Tests und Produktionsscope-`get_violations`.

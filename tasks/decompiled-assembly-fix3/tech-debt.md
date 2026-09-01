@@ -17,10 +17,11 @@
 - Schweregrad: P2 (Review-Bestätigung ausstehend)
 - Ursachensignatur: erweiterte-mcp-verträge-ohne-parameterobjekt
 - Scope/Fundstelle: geänderte MCP-Methoden in `src/AiNetLinter/Mcp`, insbesondere `McpToolResults` und Assembly-Analyse-Verträge
-- Evidenz: Der nach der letzten Codeänderung ausgeführte `get_violations`-Check meldete vier neue Parameterzahl-Warnungen; der Implementierer führte kein Parameter-Object-Refactoring durch.
-- Disposition: accepted-deferred
-- Nächster Schritt: Reviewer bewertet, ob die Warnungen aus dem aktuellen fachlichen Vertrag sicher und scope-nah durch ein Parameterobjekt behoben werden können; andernfalls als bewusste Folgearbeit dokumentieren.
-- Log-Anker: `execution-log.md`, „Paket 1 Implementierer abgeschlossen"
+- Evidenz: Der Abschlussreview bestätigte vier aktive `MaxMethodParameterCount`-Verstöße in `McpToolResults.cs` an Zeilen 48, 67, 78 und 220 (`Error`, `Recoverable`, `BuildResult`, `CompilationError`). Sie entstanden durch die typisierte Payload-Erweiterung und wurden als Produktions-P1 eingestuft.
+- Disposition: fix-now
+- attempts: 0
+- Nächster Schritt: Scope-nahen Parametervertrag/Parameterobjekt-Fix implementieren und Produktionsscope mit `get_violations` erneut prüfen.
+- Log-Anker: `execution-log.md`, „Paket 1 Abschlussreview abgeschlossen"
 
 ### Fehlende globale Antwortbudget-Projektion
 
@@ -91,7 +92,17 @@
 - Ursachensignatur: full-gate-failures-unclassified
 - Scope/Fundstelle: `src/AiNetLinter.FastTests` und `src/AiNetLinter.IntegrationTests` – Fehler aus dem vollständigen Lauf des Strukturkorrekturversuchs
 - Evidenz: Der Implementierer meldete 2324 bestanden, 5 fehlgeschlagen, 2 übersprungen in FastTests sowie 376 bestanden, 1 fehlgeschlagen in IntegrationTests, ohne Testnamen oder Fehlerausgaben. Eine unabhängige Klassifikation gegen den aktuellen Diff ist erforderlich.
+- Disposition: rejected/not-applicable
+- Nächster Schritt: Die auftragsbezogenen vier Payload-Fehler und der Produktions-Parametervertrag sind als eigene P1-Einträge erfasst; Altbestand und Infrastrukturfehler werden nicht in den Paketumfang gezogen. Der Integrationstest bleibt bis zu einem frischen Lauf als Verifikationsrisiko protokolliert.
+- Log-Anker: `execution-log.md`, „Paket 1 Abschlussreview abgeschlossen"
+
+### Veraltete Fehlerpayload-Assertions
+
+- Schweregrad: P1
+- Ursachensignatur: typed-error-payload-contract-test-drift
+- Scope/Fundstelle: `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisConfigurationFailureTests.cs:71,124`; `src/AiNetLinter.FastTests/Mcp/Tools/Safeguard/SafeguardToolTests.cs:44,199`
+- Evidenz: Vier Assertions erwarten `StructuredContent == null`, obwohl `McpErrorPayload` gemäß freigegebenem Paket-1-Vertrag korrekt geliefert wird.
 - Disposition: fix-now
 - attempts: 0
-- Nächster Schritt: Paket-1-Abschlussreview klassifiziert die Fehler; nur bei auftragsbezogener Ursache folgt eine gezielte Korrekturrunde.
-- Log-Anker: `execution-log.md`, „Paket 1 Strukturkorrekturversuch 1 abgeschlossen"
+- Nächster Schritt: Assertions auf typisierte Fehlerfelder umstellen und betroffene FastTests erneut ausführen.
+- Log-Anker: `execution-log.md`, „Paket 1 Abschlussreview abgeschlossen"
