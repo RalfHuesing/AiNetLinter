@@ -92,9 +92,10 @@ public sealed class GetTypeHierarchyToolTests
         Assert.NotNull(payload);
         Assert.Equal("SymbolGraphMini.BaseGreeting", payload!.TypeName);
         Assert.Contains(payload.Interfaces, value => value.Contains("IGreeting", StringComparison.Ordinal));
-        Assert.Contains(payload.Subtypes, value => value.Contains("SpecialGreeting", StringComparison.Ordinal));
-        Assert.Equal(payload.Subtypes.Count, payload.ShownSubtypeCount);
-        Assert.Equal(payload.Subtypes.Count, payload.TotalSubtypeCount);
+        var subtype = Assert.Single(payload.Subtypes);
+        Assert.Contains("SpecialGreeting", subtype, StringComparison.Ordinal);
+        Assert.Equal(1, payload.ShownSubtypeCount);
+        Assert.Equal(1, payload.TotalSubtypeCount);
         Assert.False(payload.SubtypesTruncated);
         Assert.Empty(payload.SubtypesTruncatedBy);
     }

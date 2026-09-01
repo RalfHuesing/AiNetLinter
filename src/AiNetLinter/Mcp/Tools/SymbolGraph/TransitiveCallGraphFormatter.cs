@@ -23,7 +23,29 @@ internal static class TransitiveCallGraphFormatter
                 DiagnosticsTruncated = projection.Truncated,
                 DiagnosticsTruncatedBy = projection.TruncatedBy,
             },
+            Navigation = result.Navigation is null
+                ? null
+                : ProjectNavigationDiagnostics(result.Navigation),
         };
+    }
+
+    internal static TransitiveCallGraphFormatResult FormatResponse(
+        ReferenceTraversalResult result,
+        string? emptyResultText = null)
+    {
+        var projected = ProjectDiagnostics(result);
+        var completeness = projected.Completeness;
+        var lines = projected.CallSites
+            .Select(entry => FormatEntry(entry, completeness.EffectiveDepth > 1))
+            .ToList();
+
+        if (lines.Count == 0 && emptyResultText is not null)
+        {
+            lines.Insert(0, emptyResultText);
+        }
+
+        AppendLimitMessages(lines, completeness);
+        return new(projected, string.Join("\n", lines));
     }
 
     internal static DiagnosticProjection CreateDiagnosticProjection(IEnumerable<string>? diagnostics)
@@ -50,15 +72,20 @@ internal static class TransitiveCallGraphFormatter
     }
 
     internal static string Format(ReferenceTraversalResult result)
-    {
-        result = ProjectDiagnostics(result);
-        var completeness = result.Completeness;
-        var lines = result.CallSites
-            .Select(entry => FormatEntry(entry, completeness.EffectiveDepth > 1))
-            .ToList();
+        => FormatResponse(result).Text;
 
-        AppendLimitMessages(lines, completeness);
-        return string.Join("\n", lines);
+    private static AssemblyNavigationSummary ProjectNavigationDiagnostics(
+        AssemblyNavigationSummary navigation)
+    {
+        var projection = CreateDiagnosticProjection(navigation.Diagnostics);
+        return navigation with
+        {
+            Diagnostics = projection.Samples,
+            DiagnosticTotalCount = projection.TotalCount,
+            DiagnosticShownCount = projection.Samples.Count,
+            DiagnosticsTruncated = projection.Truncated,
+            DiagnosticsTruncatedBy = projection.TruncatedBy,
+        };
     }
 
     private static string FormatEntry(TransitiveCallSiteEntry entry, bool transitive)
@@ -123,3 +150,7 @@ internal sealed record DiagnosticProjection(
     IReadOnlyList<string> Samples,
     bool Truncated,
     IReadOnlyList<string> TruncatedBy);
+
+internal sealed record TransitiveCallGraphFormatResult(
+    ReferenceTraversalResult Traversal,
+    string Text);

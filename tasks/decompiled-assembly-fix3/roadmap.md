@@ -6,7 +6,7 @@
 - current_epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
 - current_debt_item: package2-diagnosis-projection-ownership
 - debt_attempts: 0
-- letzter Commit: `6f3e4a1b`
+- letzter Commit: `74a4003c`
 
 ## Epics
 

@@ -60,16 +60,15 @@ internal static class AssemblyFindReferencesTool
                     request.Depth,
                     navigation),
                 cancellationToken).ConfigureAwait(false);
-            traversal = TransitiveCallGraphFormatter.ProjectDiagnostics(traversal);
-            var formatted = TransitiveCallGraphFormatter.Format(traversal);
-            var body = traversal.Completeness.TotalCallSiteCount == 0
-                ? $"Keine Aufrufstellen gefunden fuer '{request.SymbolIdentifier}'" +
-                  (formatted.Length == 0 ? string.Empty : $"\n{formatted}")
-                : formatted;
-            var finalBody = TransitiveCallGraphFormatter.IsComplete(traversal)
-                ? McpSufficiencyHints.Append(body)
-                : body;
-            return McpToolResults.Text(finalBody, traversal);
+            var formatted = TransitiveCallGraphFormatter.FormatResponse(
+                traversal,
+                traversal.Completeness.TotalCallSiteCount == 0
+                    ? $"Keine Aufrufstellen gefunden fuer '{request.SymbolIdentifier}'"
+                    : null);
+            var finalBody = TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
+                ? McpSufficiencyHints.Append(formatted.Text)
+                : formatted.Text;
+            return McpToolResults.Text(finalBody, formatted.Traversal);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

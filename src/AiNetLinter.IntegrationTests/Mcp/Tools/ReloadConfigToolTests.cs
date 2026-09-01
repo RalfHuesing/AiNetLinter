@@ -104,8 +104,8 @@ public sealed class ReloadConfigToolTests
             result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
         Assert.NotNull(payload);
         Assert.Equal(newPath, payload!.ConfigPath);
-        Assert.Equal(15, payload.PreviousEnabledRuleCount);
-        Assert.Equal(14, payload.EnabledRuleCount);
+        Assert.Equal(17, payload.PreviousEnabledRuleCount);
+        Assert.Equal(16, payload.EnabledRuleCount);
         Assert.Equal(-1, payload.EnabledRuleDelta);
         Assert.False(state.UsedDefaultConfig);
         Assert.Equal(newPath, state.ResolvedConfigPath);

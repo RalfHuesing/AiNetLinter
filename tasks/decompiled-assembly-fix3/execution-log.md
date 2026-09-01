@@ -9,6 +9,22 @@
 - Architekturziel: Diagnoseprojektion erhält eine eindeutige Ownership; Text und Structured Content werden aus demselben projizierten Modell erzeugt. Health-/ReloadConfig-Regressionen werden an den aktuellen Produktionsvertrag angepasst und mit konkreten E2E-Werten abgesichert.
 - Nächste Aktion: Frischen Implementierer für das zusammenhängende Paket aus Produktionsfix und Regressionstests starten.
 
+## 2026-09-01 – Wiederaufnahme Paket 2 Implementierer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer (frischer Wiederaufnahmeversuch)
+- Subagent-ID: `01a05cae-249b-7743-8f40-fb819bdb9558`
+- Ursachensignaturen: `package2-diagnosis-projection-ownership`; `package2-regression-test-contract-drift`
+- Versuch: 0 im neu freigegebenen Lauf
+- Status: completed/interrupted after implementation; Arbeitsstand ohne Rollen-Commit übergeben
+- Architekturentscheidung: `TransitiveCallGraphFormatter` übernimmt die einmalige Projektion über `FormatResponse`. Diese Methode erzeugt Text und strukturiertes Traversal-Ergebnis aus demselben projizierten Modell. Die doppelte Vorprojektion in `FindReferencesTool` und `AssemblyFindReferencesTool` entfällt; `GetImpactTool` verwendet denselben Vertrag. Nulltreffertexte werden innerhalb dieser Grenze eingefügt, damit Diagnose-Metadaten erhalten bleiben.
+- Geänderte Produktionsbereiche: `TransitiveCallGraphFormatter.cs`, `FindReferencesTool.cs`, `AssemblyFindReferencesTool.cs`, `GetImpactTool.cs`.
+- Geänderte Testbereiche: `GetServerHealthToolTests.cs`, `ReloadConfigToolTests.cs`, `GetTypeHierarchyToolTests.cs`, `MetricsTreeToolTests.cs`.
+- Verifikation des Agenten: keine Tests oder MCP-/Regelchecks nach der letzten Codeänderung; kein Commit. Die Assembly-E2E-Regression und die Aktualisierung der `code-map.md` wurden nicht mehr umgesetzt.
+- Verbleibende Risiken: Der Architekturpatch ist ungetestet. Die tatsächlichen Assembly-`find_references`-Diagnosemetadaten und Nulltreffer müssen per E2E abgesichert werden; Health-/ReloadConfig-Zähler und neue konkrete DTO-Werte müssen kompiliert und ausgeführt werden. `git diff --check`, DRY-/Dead-Code-/Magic-Checks und der abschließende `get_violations`-Check sind offen.
+- Nächste Aktion: Implementierungs-Checkpoint committen, danach unabhängigen Review starten.
+
 ## 2026-09-01 – Planungs-Checkpoint
 
 - Run-ID: decompiled-assembly-fix3-20260901

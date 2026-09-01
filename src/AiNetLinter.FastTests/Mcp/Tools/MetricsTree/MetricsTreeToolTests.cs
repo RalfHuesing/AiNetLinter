@@ -124,8 +124,13 @@ public sealed class MetricsTreeToolTests
         Assert.Equal("src/SymbolGraphMini", payload.Root);
         Assert.Equal(1, payload.Depth);
         Assert.Equal(10, payload.TopN);
-        Assert.NotEmpty(payload.Tree.Children);
-        Assert.True(payload.Tree.FileCount > 0);
+        Assert.Equal("SymbolGraphMini", payload.Tree.Name);
+        Assert.Equal("src/SymbolGraphMini", payload.Tree.RelativePath);
+        Assert.Equal(6, payload.Tree.FileCount);
+        Assert.Equal(6, payload.Tree.Children.Count);
+        var hierarchy = Assert.Single(payload.Tree.Children, child => child.Name == "Hierarchy.cs");
+        Assert.Equal(1, hierarchy.FileCount);
+        Assert.Equal("src/SymbolGraphMini/Hierarchy.cs", hierarchy.RelativePath);
     }
 
     [Fact]

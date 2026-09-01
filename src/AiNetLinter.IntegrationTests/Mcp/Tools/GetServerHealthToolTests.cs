@@ -131,16 +131,28 @@ public sealed class GetServerHealthToolTests
             new GetServerHealthOptions(IncludeDiagnostics: true, MaxDiagnostics: 2));
         var detailedPayload = JsonSerializer.Deserialize<ServerHealthAggregatePayload>(
             detailed.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
-        var detailedAssembly = Assert.Single(detailedPayload.Assemblies!);
+        Assert.Null(detailedPayload.Assemblies);
         Assert.True(detailedPayload.DiagnosticsIncluded);
+        Assert.Equal(4, detailedPayload.AssemblyDiagnosticCount);
+        Assert.Equal(1, detailedPayload.AssemblyStatusCounts!["partial"]);
+        Assert.DoesNotContain("health-root-0", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
+
+        var sessionDetails = GetServerHealthResponseBuilder.Build(
+            Array.Empty<ProjectSnapshot>(),
+            [entry],
+            new GetServerHealthOptions(IncludeDiagnostics: true, IncludeSessions: true, MaxDiagnostics: 2));
+        var sessionDetailsPayload = JsonSerializer.Deserialize<ServerHealthAggregatePayload>(
+            sessionDetails.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
+        var detailedAssembly = Assert.Single(sessionDetailsPayload.Assemblies!);
         Assert.Equal(["health-root-0", "health-transitive-0"], detailedAssembly.Diagnostics);
         Assert.True(detailedAssembly.DiagnosticsSummary!.Truncated);
         Assert.Equal(4, detailedAssembly.DiagnosticsSummary.TotalCount);
         Assert.Equal(2, detailedAssembly.DiagnosticsSummary.ShownCount);
-        Assert.Contains("health-root-0", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
-        Assert.Contains("health-transitive-0", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("health-root-1", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("health-transitive-1", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
+        var sessionDetailsText = Assert.IsType<TextContentBlock>(Assert.Single(sessionDetails.Content)).Text;
+        Assert.Contains("health-root-0", sessionDetailsText, StringComparison.Ordinal);
+        Assert.Contains("health-transitive-0", sessionDetailsText, StringComparison.Ordinal);
+        Assert.DoesNotContain("health-root-1", sessionDetailsText, StringComparison.Ordinal);
+        Assert.DoesNotContain("health-transitive-1", sessionDetailsText, StringComparison.Ordinal);
     }
 
     [Fact]

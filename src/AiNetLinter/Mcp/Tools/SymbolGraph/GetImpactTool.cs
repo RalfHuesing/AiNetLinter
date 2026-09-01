@@ -112,19 +112,19 @@ internal static class GetImpactTool
                 effectiveMax,
                 ct,
                 AssemblySymbolIdentity: assemblyIdentity));
-        var body = TransitiveCallGraphFormatter.Format(traversal);
-        if (traversal.Completeness.TotalCallSiteCount == 0)
-        {
-            body = $"Keine Aufrufstellen gefunden fuer '{input.SymbolIdentifier}'";
-        }
+        var formatted = TransitiveCallGraphFormatter.FormatResponse(
+            traversal,
+            traversal.Completeness.TotalCallSiteCount == 0
+                ? $"Keine Aufrufstellen gefunden fuer '{input.SymbolIdentifier}'"
+                : null);
 
         // Wie find_references: auch ein leeres, aber vollstaendiges Ergebnis gilt als
         // abschliessend und bekommt den Sufficiency-Hinweis statt stillschweigend zu enden.
-        var finalBody = TransitiveCallGraphFormatter.IsComplete(traversal)
-            ? McpSufficiencyHints.Append(body)
-            : body;
+        var finalBody = TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
+            ? McpSufficiencyHints.Append(formatted.Text)
+            : formatted.Text;
         var finalText = FindSymbolTool.PrependWarning(warning, finalBody);
-        return McpToolResults.Text(finalText, traversal);
+        return McpToolResults.Text(finalText, formatted.Traversal);
     }
 
     private static async Task<CallToolResult> ExecuteGitRefBranchAsync(Solution solution, GetImpactInput input, CancellationToken ct)
