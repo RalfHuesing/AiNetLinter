@@ -858,3 +858,20 @@
 - Versuch: 2 im neu freigegebenen Lauf
 - Status: running
 - Auftrag: Ergänze deterministische Regressionen für den echten Assembly-`get_call_tree`-Pfad mit `includeReferences=true` und Navigation-Diagnosen. Prüfe für Assembly-`get_call_tree` und `find_references` konkrete Completeness-/Diagnosezähler, Sample-Limit und Sample-Ausschluss sowie Gleichheit der relevanten Diagnoseinformationen in Text und Structured Content. Nutze vorhandene Fixtures und ändere Produktionscode nur, wenn ein konkreter Testbefund ihn zwingend betrifft; die zentrale Formatter-Ownership bleibt unverändert. Vermeide eine zusätzliche Strukturverletzung im Testverzeichnis, wenn dies ohne künstliche Umorganisation möglich ist. Nach Änderungen gezielte Tests, Build und `git diff --check`; kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
+
+## 2026-09-01 – Wiederaufnahme Paket 2 Korrekturversuch 2 abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer; Übergabe nach Unterbrechung durch Orchestrator verifiziert
+- Subagent-ID: `01a05ce4-8f12-7782-b048-f7e17aabffc5`
+- Ursachensignatur: `package2-regression-test-contract-drift`
+- Versuch: 2 im neu freigegebenen Lauf
+- Status: interrupted/shutdown; Patch im Workspace übernommen, kein Agenten-Commit
+- Geänderte Dateien: `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRouteTests.cs`, `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyNavigationResponseContractTests.cs`, `tasks/decompiled-assembly-fix3/code-map.md`.
+- Architekturentscheidung: Keine Produktionsänderung. Der bestehende gemeinsame Formatter bleibt alleiniger Projektionsbesitzer; die Tests führen den echten Dispatcher-Pfad für `AssemblyGetCallTreeTool` mit `includeReferences=true` aus und teilen die konkreten Diagnoseassertions zwischen Assembly-`find_references` und `get_call_tree`.
+- Korrekturen: Kontrolliertes Fixture mit sechs fehlenden Abhängigkeiten; Prüfung von `partial`, fünf Samples, `diagnosticTotalCount`, `diagnosticShownCount`, `diagnosticsTruncated`, `diagnosticsTruncatedBy`, Ausschluss des sechsten Samples sowie Text-/Structured-Content-Gleichheit. Die neue Abdeckung bleibt in bestehenden Testdateien und vergrößert den Verzeichnis-Footprint nicht weiter.
+- Verifikation durch Orchestrator: fokussierte Assembly-FastTests 6/6; `dotnet build --no-restore` 0 Warnungen/0 Fehler nach Beendigung verwaister Testprozesse; fokussierte Health-/ReloadConfig-IntegrationTests 15/15; `git diff --check` grün.
+- Regelstatus: Produktionsscope `src/AiNetLinter/Mcp/Tools/SymbolGraph` meldet nur die zwei bekannten `FindSymbolScanner`-Warnungen; Assembly-Testscope meldet nur die bekannte `MaxDirectoryChildren`-Warnung (31 statt 30); IntegrationTest-Toolscope ist sauber.
+- Verbleibendes Risiko: Der Agent lieferte wegen Unterbrechung keinen Abschlussbericht; die Änderungen und Verifikation wurden direkt durch den Orchestrator geprüft. Der strukturelle P2-Verzeichnisbefund bleibt akzeptiert-zurückgestellt.
+- Nächste Aktion: Code-Checkpoint committen und einen frischen unabhängigen Reviewer starten.

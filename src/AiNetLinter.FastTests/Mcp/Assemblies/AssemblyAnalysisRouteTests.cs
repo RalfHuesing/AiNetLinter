@@ -24,6 +24,8 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies;
 // @covers AssemblyAnalysisLease
 // @covers AssemblyReferenceSessionExpander
 // @covers AssemblyAnalysisSourceProjectEntryFactory
+// @covers AssemblyGetCallTreeTool
+// @covers AssemblyFindReferencesTool
 public sealed class AssemblyAnalysisRouteTests
 {
     [Fact]
@@ -228,6 +230,59 @@ public sealed class AssemblyAnalysisRouteTests
         Assert.Contains("assembly=", Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(treeResult.Content)).Text, StringComparison.Ordinal);
         var treePayload = treeResult.StructuredContent!.Value;
         Assert.True(treePayload.GetProperty("navigation").GetProperty("includeReferences").GetBoolean());
+    }
+
+    [Fact]
+    public async Task AssemblyRoute_GetCallTreeWithReferencesProjectsNavigationDiagnosticsIntoTextAndStructuredContent()
+    {
+        using var temp = TestTempDirectory.Create("assembly-route-call-tree-diagnostics-");
+        var dependencyPaths = Enumerable.Range(1, 6)
+            .Select(index => AssemblyTestHelper.EmitAssembly(
+                temp,
+                $"CallTreeMissingDependency{index}",
+                $"namespace Probe; public sealed class DependencyType{index} {{ public int Value => {index}; }}"))
+            .ToArray();
+        var rootPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "CallTreeNavigationRoot",
+            "namespace Probe; public sealed class Root { public int Read() => " +
+            string.Join(" + ", Enumerable.Range(1, 6).Select(index => $"new DependencyType{index}().Value")) + "; }",
+            dependencyPaths);
+        foreach (var dependencyPath in dependencyPaths)
+        {
+            File.Delete(dependencyPath);
+        }
+
+        await using var registry = new AssemblyAnalysisRegistry();
+        var result = await AnalysisToolCall.ExecuteRouted(
+            AssemblyAnalysisDispatcher.CreateRoute(registry),
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest("assembly", rootPath),
+                new AnalysisToolDispatch(
+                    AssemblySessionCall: lease => AssemblyGetCallTreeTool.ExecuteAsync(
+                        lease,
+                        new AssemblyGetCallTreeRequest(
+                            new GetCallTreeInput("Probe.Root.Read", 1, null, 10, null),
+                            true),
+                        CancellationToken.None),
+                    ExpandAssemblyReferences: true),
+                CancellationToken.None));
+
+        Assert.True(
+            result.IsError != true,
+            string.Join("\n", result.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>().Select(block => block.Text)));
+        var text = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content)).Text;
+        var payload = result.StructuredContent!.Value;
+        var navigation = payload.GetProperty("navigation");
+
+        Assert.Equal("partial", navigation.GetProperty("completeness").GetString());
+        Assert.False(payload.GetProperty("truncated").GetBoolean());
+        AssemblyNavigationResponseAssertions.AssertDiagnosticProjection(
+            navigation,
+            null,
+            text,
+            "CallTreeMissingDependency",
+            "Abhängigkeit nicht auflösbar: CallTreeMissingDependency6");
     }
 
     [Fact]
