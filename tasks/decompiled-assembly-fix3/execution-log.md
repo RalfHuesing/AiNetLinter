@@ -25,6 +25,18 @@
 - Verbleibende Risiken: Der Architekturpatch ist ungetestet. Die tatsächlichen Assembly-`find_references`-Diagnosemetadaten und Nulltreffer müssen per E2E abgesichert werden; Health-/ReloadConfig-Zähler und neue konkrete DTO-Werte müssen kompiliert und ausgeführt werden. `git diff --check`, DRY-/Dead-Code-/Magic-Checks und der abschließende `get_violations`-Check sind offen.
 - Nächste Aktion: Implementierungs-Checkpoint committen, danach unabhängigen Review starten.
 
+## 2026-09-01 – Wiederaufnahme Paket 2 Reviewer gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `1b47f373`; Wiederaufnahme-Basis: `74a4003c`
+- Ursachensignaturen: `package2-diagnosis-projection-ownership`; `package2-regression-test-contract-drift`
+- Versuch: 0 im neu freigegebenen Lauf
+- Status: running
+- Auftrag: Den zentralen `FormatResponse`-Vertrag, alle geänderten Aufrufer und Text-/Structured-Content-Konsistenz unabhängig prüfen. Gezielte Build-/Fast-/IntegrationTests sowie MCP-`get_violations`/DRY-Checks nur soweit erforderlich ausführen. Besonders Assembly-`find_references`-Nulltreffer/Diagnosemetadaten, Health-Default ohne Sessions und ReloadConfig-Fixturewerte prüfen. Kein Produktions-/Testcode und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen.
+
 ## 2026-09-01 – Planungs-Checkpoint
 
 - Run-ID: decompiled-assembly-fix3-20260901
