@@ -123,33 +123,33 @@
 - Schweregrad: P1
 - Ursachensignatur: reload-config-structured-payload-missing
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Tools/ReloadConfigTool.cs` und zugehörige Registrierung/Tests
-- Evidenz: Paket-2-Implementierer meldet das DTO und die zugehörigen Regressionstestassertions bewusst nicht fertiggestellt; das explizite Konzeptkriterium für strukturierte Reload-Config-Erfolgspayloads ist offen.
+- Evidenz: Der Paket-2-Review bestätigt, dass `ReloadConfigTool` weiterhin nur `McpToolResults.Text(summary)` liefert; DTO und Registrierung fehlen trotz explizitem Konzeptkriterium.
 - Disposition: fix-now
 - attempts: 0
-- Nächster Schritt: Frischer Review konkretisieren; anschließend DTO, Registrierung und Tests vervollständigen.
-- Log-Anker: `execution-log.md`, „Paket 2 Implementierer abgeschlossen"
+- Nächster Schritt: DTO, Registrierung und strukturierte Erfolgstests vervollständigen.
+- Log-Anker: `execution-log.md`, „Paket 2 Reviewer abgeschlossen"
 
 ### Paket-2-Testvertrag nach Progressive Disclosure
 
 - Schweregrad: P1
 - Ursachensignatur: package2-regression-test-contract-drift
 - Scope/Fundstelle: Assembly-Inspektions- und Health-/Reload-Tests
-- Evidenz: FastTests meldeten 55 bestanden/1 fehlgeschlagen wegen erwarteter ungefragter Referenzdetails; Health-/Reload-IntegrationTests meldeten 12 bestanden/2 fehlgeschlagen wegen erwarteter globaler Sessionlisten. Die Assertions sind an den neuen expliziten Detailvertrag anzupassen, soweit sie nicht Altbestand außerhalb des Paket-Scope sind.
+- Evidenz: Frische TRX-Nachweise meldeten 55/1 in `Package2Targeted.trx` wegen ungefragter Referenzdetails und 12/2 in `Package2HealthTargeted.trx` wegen global erwarteter Sessionlisten. End-to-End-Assertions für `includeReferences`, Diagnose-Samples, `includeSessions/maxSessions` und die Erfolgspayloads fehlen.
 - Disposition: fix-now
 - attempts: 0
-- Nächster Schritt: Review klassifiziert die konkreten Tests; betroffene Assertions und fehlende neue Regressionen gezielt korrigieren.
-- Log-Anker: `execution-log.md`, „Paket 2 Implementierer abgeschlossen"
+- Nächster Schritt: Konkrete Assertions aktualisieren und fehlende Paket-2-Regressionen ergänzen.
+- Log-Anker: `execution-log.md`, „Paket 2 Reviewer abgeschlossen"
 
 ### Paket-2-Produktionsviolations aus Zwischenstand
 
 - Schweregrad: P1
 - Ursachensignatur: package2-production-violations
 - Scope/Fundstelle: `src/AiNetLinter/Mcp` – vier durch den Paket-2-Zwischenstand verursachte Befunde im Produktionsscope
-- Evidenz: Der Implementierer meldete im finalen `get_violations` sechs Befunde; vier davon seien durch den Zwischenstand verursacht, zwei `FindSymbolScanner`-Befunde unverändert und scopefremd. Konkrete Symbole werden im Review verifiziert.
+- Evidenz: Der Review verifizierte vier diffbedingte Befunde: `AddGetServerHealth` 62/60 Zeilen, `InspectAssemblyTool.BuildResult` 64/60 Zeilen sowie `GetServerHealthResponseBuilder.Build` mit 13/12 Komplexität und 67/60 Zeilen. Zwei `FindSymbolScanner`-Befunde sind unverändert und scopefremd.
 - Disposition: fix-now
 - attempts: 0
-- Nächster Schritt: Frischer Review ermittelt die vier konkreten Regelverletzungen; anschließend scope-nah beheben oder technisch begründet zurückstellen.
-- Log-Anker: `execution-log.md`, „Paket 2 Implementierer abgeschlossen"
+- Nächster Schritt: Produktionsmethoden scope-nah refaktorieren und den vollständigen MCP-Produktionsscope erneut prüfen.
+- Log-Anker: `execution-log.md`, „Paket 2 Reviewer abgeschlossen"
 
 ### Paket-2-Magic-Value-Kandidaten
 

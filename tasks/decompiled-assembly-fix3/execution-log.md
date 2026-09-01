@@ -413,6 +413,31 @@
 - Status: running
 - Auftrag: `includeReferences`/Detailflags für gezielte Assembly-Inspektion, gemeinsame begrenzte Diagnoseprojektion für Navigation, kompakter globaler Health mit optionalen Sessiondetails und strukturierte Erfolgspayloads für Call Tree, Type Hierarchy, Metrics Tree und Reload Config umsetzen. Relevante Tests/Dokumentation ergänzen, `code-map.md` pflegen und nach letzter Codeänderung gezielt testen sowie `get_violations` ausführen. Kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
 
+## 2026-09-01 – Paket 2 Reviewer gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `08ca9222`; Implementierungs-Checkpoint `24865b2b`
+- Status: running
+- Auftrag: Paket-2-Diff unabhängig gegen Konzept/Musskriterien prüfen, offene ReloadConfig-/Testlücken und die sechs gemeldeten `get_violations`-Befunde konkret klassifizieren. Kein Produktions-/Testcode und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen. Verifikationsnachweise auf Frische und Scope prüfen.
+
+## 2026-09-01 – Paket 2 Reviewer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer
+- Subagent-ID: `01a05c19-b5ca-7b43-b464-f8afd29ae37d`
+- Status: completed; keine Produktions-/Teständerung, `code-map.md` beschreibt die offenen Lücken korrekt
+- Urteil: `issues`; P0 keine.
+- P1 `package2-production-violations`: Frischer MCP-Check mit absolutem Projekt-Target und `scopeFilter=src/AiNetLinter/Mcp` ergab vier diffbedingte Befunde: `ServerMaintenanceToolRegistrations.AddGetServerHealth` 62 statt maximal 60 Zeilen; `InspectAssemblyTool.BuildResult` 64 statt 60; `GetServerHealthResponseBuilder.Build` zyklomatische Komplexität 13 statt 12 und 67 statt 60 Zeilen. Zwei unveränderte `FindSymbolScanner`-Befunde bleiben scopefremd.
+- P1 `reload-config-structured-payload-missing`: `ReloadConfigTool` liefert weiterhin nur Text; DTO und Registrierung fehlen trotz explizitem Konzeptkriterium.
+- P1 `package2-regression-test-contract-drift`: Neue Verträge sind nicht vollständig regressionstestiert. Frischer TRX `Package2Targeted.trx`: 55 bestanden/1 fehlgeschlagen wegen ungefragter Referenzdetails in `AssemblyAnalysisToolTests.cs:282`. Frischer TRX `Package2HealthTargeted.trx`: 12 bestanden/2 fehlgeschlagen, weil `GetServerHealthToolTests.cs:112/171` global weiterhin `Assert.Single(payload.Assemblies!)` erwarten. End-to-End-Assertions für `includeReferences`, Diagnose-Samples, `includeSessions/maxSessions` und alle vier Erfolgspayloads fehlen.
+- Bestätigte source-seitige Bereiche: `includeReferences`/Summen in `AssemblyAnalysisModels`/`InspectAssemblyTool`, gemeinsame Diagnoseprojektion in `TransitiveCallGraphFormatter`, Health-Aggregat/Optionen in `GetServerHealthResponseBuilder`/Registrierung, CallTree-/TypeHierarchy-/MetricsTree-DTOS. `ReloadConfig` bleibt offen.
+- Verifikationsbewertung: `dotnet build --no-restore` nach letzter Codeänderung 0/0; Zieltests frisch, aber rot. Vollständige Nicht-Stress-Gates fehlen. Der Live-Assembly-MCP-Aufruf lief gegen ein nicht nachweislich aktualisiertes Daemon-Artefakt und ist daher kein Wire-Nachweis.
+- Nächste Aktion: Frischer Implementierer für die drei P1-Gruppen; zuerst Produktionsviolations, ReloadConfig-DTO und konkrete Regressionen vervollständigen.
+
 ## 2026-09-01 – Paket 2 Implementierer abgeschlossen
 
 - Run-ID: decompiled-assembly-fix3-20260901
