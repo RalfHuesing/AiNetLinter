@@ -638,3 +638,16 @@
 - Versuch: 4 von 5
 - Status: running
 - Auftrag: Den globalen Health-Default-Test an den tatsächlichen aggregierten Text `Diagnosen gesamt: 4` anpassen und alle relevanten Default-Aggregatzähler einschließlich leerem `SessionsTruncatedBy` festschreiben. Diagnoseprojektion sowie die vier Structured-Content-Erfolgstests mit konkreten, nicht tautologischen Werten und dem tatsächlichen gemeinsamen Pfad nachschärfen, ohne Produktionscode zu ändern. `code-map.md` pflegen; keine Änderungen an Roadmap, Log oder Tech-Debt und kein Commit durch den Agenten. Danach gezielte Tests und passende MCP-/Regelchecks ausführen, aber keine unnötigen Vollgates starten.
+
+## 2026-09-01 – Paket 2 Korrekturversuch 4 abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: `01a05c65-8610-71c0-99de-8ac60e2a239c`
+- Ursachensignatur: `package2-regression-test-contract-drift`
+- Versuch: 4 von 5
+- Status: completed/interrupted before changes; Arbeitsstand blieb bei Baseline `20bd5cc1`, kein Commit
+- Ergebnis: Keine Korrekturen umgesetzt. Der P1-Testvertrag bleibt offen: `GetServerHealthToolTests.Build_DefaultHealthIsCompact_AndDetailDiagnosticsStayBounded` erwartet weiterhin `Diagnosen: 0 von 4`, während der Produktionsvertrag `Diagnosen gesamt: 4` ausgibt; Diagnose- und Structured-Content-Assertions sind weiterhin nachzuschärfen.
+- Verifikation: MCP-Kontextabfragen für Health, `GetServerHealthResponseBuilder.Build`, `TransitiveCallGraphFormatter.CreateDiagnosticProjection` und relevante Testklassen erfolgreich; Working Tree vor Abbruch sauber. Keine Tests/Checks nach Änderungen erforderlich, da keine Änderungen erfolgten.
+- Nächste Aktion: Letzter frischer Implementierer-Korrekturversuch 5/5 mit kleinem, klar abgegrenztem Testpatch; danach Review oder bei unverändertem Befund dokumentierte Blockierung.

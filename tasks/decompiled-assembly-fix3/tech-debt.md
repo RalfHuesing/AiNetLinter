@@ -136,8 +136,8 @@
 - Scope/Fundstelle: Assembly-Inspektions- und Health-/Reload-Tests
 - Evidenz: Frische Nachweise meldeten zunächst 55/1 und 12/2; Korrekturversuch 3 ergänzte Session-, Diagnose- und Structured-Content-Regressionen sowie globale Health-Default-Anpassungen. Der unabhängige Review klassifizierte die verbleibende Assertion als veraltet, weil der Produktionsvertrag aggregiert `Diagnosen gesamt: 4` ausgibt. Zusätzlich fehlen vollständige Aggregatzähler und belastbare konkrete Structured-Content-/Diagnosepfad-Assertions. Nachverifikation: FastTests 61/61, fokussierte IntegrationTests 18/19.
 - Disposition: fix-now
-- attempts: 3
-- Nächster Schritt: Health-Assertions sowie Diagnose-/Session-/Structured-Content-Regressionen ergänzen.
+- attempts: 4
+- Nächster Schritt: Letzten frischen Korrekturversuch 5/5 für die veraltete Health-Textassertion und die konkret fehlenden Diagnose-/Structured-Content-Assertions ausführen; bei erneutem Abbruch als blockiert klassifizieren.
 - Log-Anker: `execution-log.md`, „Paket 2 Korrekturversuch 3 Reviewer abgeschlossen"
 
 ### Paket-2-Produktionsviolations aus Zwischenstand

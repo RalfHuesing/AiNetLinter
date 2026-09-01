@@ -5,8 +5,8 @@
 - Status: executing
 - current_epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
 - current_debt_item: package2-regression-test-contract-drift
-- debt_attempts: 4
-- letzter Commit: `20bd5cc1`
+- debt_attempts: 5
+- letzter Commit: `9f05c057`
 
 ## Epics
 
