@@ -1,5 +1,14 @@
 # Ausführungsprotokoll
 
+## 2026-09-01 – Paket 2 nach Nutzerfreigabe wieder aufgenommen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Status: executing; der Nutzer hat die vorherige Korrekturbudget-Blockierung ausdrücklich aufgehoben und den Korrekturzähler auf 0 zurückgesetzt.
+- Primäraufgabe: Robuste Assembly-Analyse und konsistente MCP-Antwortverträge
+- Aktueller Fokus: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Architekturziel: Diagnoseprojektion erhält eine eindeutige Ownership; Text und Structured Content werden aus demselben projizierten Modell erzeugt. Health-/ReloadConfig-Regressionen werden an den aktuellen Produktionsvertrag angepasst und mit konkreten E2E-Werten abgesichert.
+- Nächste Aktion: Frischen Implementierer für das zusammenhängende Paket aus Produktionsfix und Regressionstests starten.
+
 ## 2026-09-01 – Planungs-Checkpoint
 
 - Run-ID: decompiled-assembly-fix3-20260901
