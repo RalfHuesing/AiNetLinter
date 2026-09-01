@@ -4,7 +4,7 @@
 - Betriebsart: Großkonzept-Modus
 - Status: executing
 - current_epic: Paket 1 – Vertragsintegrität und P1-Korrektheit
-- current_debt_item: response-projection-structural-rule-drift
+- current_debt_item: typed-error-payload-contract-drift-and-parameter-growth
 - debt_attempts: 1
 - letzter Commit: folgt nach diesem Planungs-Checkpoint
 
