@@ -4,9 +4,9 @@
 - Betriebsart: Großkonzept-Modus
 - Status: executing
 - current_epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
-- current_debt_item: package2-diagnosis-projection-ownership
-- debt_attempts: 1
-- letzter Commit: `23b9d65d`
+- current_debt_item: package2-regression-test-contract-drift
+- debt_attempts: 2
+- letzter Commit: `dc13d8c7`
 
 ## Epics
 

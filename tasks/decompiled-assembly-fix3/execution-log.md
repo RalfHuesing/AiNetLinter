@@ -827,3 +827,22 @@
 - Versuch: 1 im neu freigegebenen Lauf
 - Status: running
 - Auftrag: Prüfe den gemeinsamen Formatter-/Assembly-CallTree-Responsevertrag, die neue Assembly-Navigation-Regression, die konkrete Health-/ReloadConfig-Testbasis und alle betroffenen Aufrufer. Führe frische gezielte Tests sowie den relevanten MCP-`get_violations`-Scope aus, weil der Implementierer keine abschließenden Regelchecks liefern konnte. Kein Produktions-/Testcode und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen.
+
+## 2026-09-01 – Wiederaufnahme Paket 2 Korrekturversuch 1 Reviewer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05cd5-f849-73f2-acf6-e2e583f13a00`
+- Ursachensignaturen: `package2-diagnosis-projection-ownership`; `package2-regression-test-contract-drift`
+- Versuch: 1 im neu freigegebenen Lauf
+- Status: completed; kein Produktions-/Testcode geändert; nur konkrete `code-map.md`-Navigationskorrekturen
+- Urteil: `issues`; Paket 2 noch nicht freigegeben.
+- Bestätigt: `TransitiveCallGraphFormatter` besitzt jetzt die Projektion sowohl für den Standard- als auch für den Assembly-CallTree-Response; die relevanten Pfade verwenden den gemeinsamen Helper, und Text sowie Structured Content verwenden denselben projizierten Datensatz. Health-/ReloadConfig-Regressionen, Build, gezielte Slices und `git diff --check` sind grün.
+- P1 `package2-regression-test-contract-drift`: Es fehlt weiterhin ein echter Assembly-`get_call_tree`-E2E-Test mit `includeReferences=true` und Navigation-Diagnosen. Der vorhandene neue Test deckt Assembly-`find_references` im No-Hit-Fall und Metadaten ab, beweist aber nicht den CallTree-Pfad. Zusätzlich prüfen die Assembly-Routentests bislang Routing/Flags, nicht die vollständige Gleichheit konkreter Text-/Structured-Content-Diagnoseproben, Zähler, Assembly-Anzahl und Sample-Ausschluss.
+- P2 `package2-test-directory-footprint`: `src/AiNetLinter.FastTests/Mcp/Assemblies` hat durch den neuen Test 31 direkte Unterverzeichnisse statt maximal 30; als akzeptierter Strukturhinweis zurückgestellt.
+- Nicht erneut zu korrigieren: Die zuvor gemeldete doppelte Produktions-Ownership ist behoben; kein neuer Produktions-P1 wurde bestätigt. Root-only `get_call_tree` delegiert weiterhin bewusst an den bestehenden `GetCallTreeTool`-Pfad.
+- Nachweise: `dotnet build --no-restore` 0 Warnungen/0 Fehler; gezielte FastTests 50/50; fokussierte Health-/ReloadConfig-IntegrationTests 19/19; `git diff --check` grün. Vollständige Nicht-Stress-Gates: FastTests 2334 bestanden, 1 fehlgeschlagen, 2 übersprungen; IntegrationTests 376/378 bestanden. Die Fehler sind laut Review bestehender Altbestand/Umgebung: Agent-Guide-Zeilenumbruch, Symlink-Privileg, Dogfood-Violations und Live-Safeguard-Score.
+- MCP-Nachweise: Produktionsscope mit drei bekannten unabhängigen Warnungen, FastTests mit bestehendem Testdatei-/Strukturbefund plus Verzeichnisgrenze, IntegrationTests ohne Violations. Keine neue Produktionsverletzung aus dem korrigierten Projektionsteil.
+- Tech-Debt-Disposition: `package2-diagnosis-projection-ownership` wird auf `fixed` gesetzt. `package2-regression-test-contract-drift` bleibt `fix-now`, Versuchszähler im neuen Lauf 2; nächster Schritt ist ein frischer Implementierer mit engem Testscope.
+- Nächste Aktion: Review-Bericht checkpointen und Korrekturversuch 2 starten.

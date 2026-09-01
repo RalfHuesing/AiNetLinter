@@ -134,10 +134,10 @@
 - Schweregrad: P1
 - Ursachensignatur: package2-regression-test-contract-drift
 - Scope/Fundstelle: Assembly-Inspektions- und Health-/Reload-Tests
-- Evidenz: Frische Nachweise meldeten zunächst 55/1 und 12/2; Korrekturversuch 3 ergänzte Session-, Diagnose- und Structured-Content-Regressionen sowie globale Health-Default-Anpassungen. Der unabhängige Review klassifizierte die verbleibende Assertion als veraltet, weil der Produktionsvertrag aggregiert `Diagnosen gesamt: 4` ausgibt. Zusätzlich fehlen vollständige Aggregatzähler und belastbare konkrete Structured-Content-/Diagnosepfad-Assertions. Nachverifikation: FastTests 61/61, fokussierte IntegrationTests 18/19.
+- Evidenz: Frische Nachweise meldeten zunächst 55/1 und 12/2; Korrekturversuch 3 ergänzte Session-, Diagnose- und Structured-Content-Regressionen sowie globale Health-Default-Anpassungen. Der erste Resume-Implementierer korrigierte die verbliebenen konkreten Health-/ReloadConfig-Werte und ergänzte eine Assembly-`find_references`-No-Hit-Regression. Der unabhängige Review bestätigt nun Health/ReloadConfig, Build und die gezielten Slices; es fehlt weiterhin ein echter Assembly-`get_call_tree`-E2E-Nachweis mit Diagnose-Metadaten sowie eine vollständige Gleichheitsprüfung von Text und Structured Content für beide Assembly-Routen. Vollgates bleiben wegen unabhängiger Altfehler rot.
 - Disposition: fix-now
-- attempts: 1
-- Nächster Schritt: Unabhängigen Review des zentralisierten Diagnose-/Response-Vertrags und der neuen Assembly-E2E-Regression ausführen.
+- attempts: 2
+- Nächster Schritt: Frischen Implementierer für Versuch 2 auf die fehlenden Assembly-CallTree-/Routing-Verträge begrenzen; keine Produktionsänderung an der bereits bestätigten zentralen Projektion.
 - Log-Anker: `execution-log.md`, „Wiederaufnahme Paket 2 Korrekturversuch 1 abgeschlossen"
 
 ### Diagnoseprojektion mit doppelter Ownership
@@ -145,11 +145,21 @@
 - Schweregrad: P1
 - Ursachensignatur: package2-diagnosis-projection-ownership
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Tools/SymbolGraph/FindReferencesTool.cs`, `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindReferencesTool.cs`, `src/AiNetLinter/Mcp/Tools/SymbolGraph/TransitiveCallGraphFormatter.cs`
-- Evidenz: Die beiden Toolpfade projizieren Diagnosen vor dem Formatter; `TransitiveCallGraphFormatter.Format` projiziert erneut. Dadurch können `totalCount`/`truncatedBy` aus dem Text verschwinden und Samples im Nulltrefferpfad überschrieben werden. Der Abschlussreview bestätigte den Befund gegen die aktuellen Symbole.
-- Disposition: fix-now
+- Evidenz: Der Resume-Implementierer verlagert die Projektion in `TransitiveCallGraphFormatter.FormatResponse` und `FormatAssemblyCallTreeResponse`; `AssemblyGetCallTreeTool` projiziert nicht mehr selbst. Der unabhängige Review bestätigt, dass Symbolgraph- und Assembly-CallTree-Pfade denselben projizierten Datensatz für Text und Structured Content verwenden; ein Produktionsfehler ist nicht mehr belegt.
+- Disposition: fixed
 - attempts: 1
-- Nächster Schritt: Unabhängig prüfen, dass Assembly-CallTree-/Navigation-Diagnosen genau einmal projiziert werden und Text/Structured Content dasselbe Modell verwenden.
+- Nächster Schritt: Keine weitere Produktionskorrektur. Der verbleibende E2E-Testausbau wird ausschließlich unter `package2-regression-test-contract-drift` geführt.
 - Log-Anker: `execution-log.md`, „Paket 2 Abschlussreview abgeschlossen"
+
+### Paket-2-Testverzeichnis über Strukturgrenze
+
+- Schweregrad: P2
+- Ursachensignatur: package2-test-directory-footprint
+- Scope/Fundstelle: `src/AiNetLinter.FastTests/Mcp/Assemblies`
+- Evidenz: Der unabhängige Review meldet 31 direkte Unterverzeichnisse bei einer Regelgrenze von 30; die neue `AssemblyNavigationResponseContractTests.cs` liegt im bestehenden Assembly-Testbereich. Der Befund ist strukturell und blockiert die fachliche Korrektur nicht.
+- Disposition: accepted-deferred
+- Nächster Schritt: Beim nächsten strukturellen Testzuschnitt nur scope-nah bereinigen; keine künstliche Produktionsänderung für diesen P2-Befund.
+- Log-Anker: `execution-log.md`, „Wiederaufnahme Paket 2 Korrekturversuch 1 Reviewer abgeschlossen"
 
 ### Paket-2-Produktionsviolations aus Zwischenstand
 
