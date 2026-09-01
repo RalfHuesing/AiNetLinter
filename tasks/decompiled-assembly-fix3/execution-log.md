@@ -708,3 +708,14 @@
 - Nachweise: FastTests 61/61; IntegrationTests 17/19 mit genau den zwei oben genannten Fehlern. Health `includeSessions=true`/`maxSessions` bestanden. MCP-Kontextabfragen bestätigten die relevanten Health-, Diagnose-, CallTree-, TypeHierarchy-, MetricsTree- und Assembly-Pfade. HEAD: `6f3e4a1b`; Working Tree sauber.
 - Tech-Debt-Disposition: `package2-regression-test-contract-drift` bleibt wegen ausgeschöpftem Korrekturbudget `blocked/needs-user-decision`; Paket 2 ist nicht freigegeben und darf nicht geschlossen werden. Keine sechste automatische Korrektur.
 - Nächste Aktion: Benutzerentscheidung erforderlich, ob ein neuer Orchestrator-Lauf mit neuem Budget für den Paket-2-Diagnose-/Testvertrag gestartet werden soll.
+
+## 2026-09-01 – Einmaliger Abschlussaudit ausgeführt
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Rolle: Orchestrator-Abschlussaudit gemäß `.agents/skills/audit/SKILL.md`
+- Scope: direkt betroffene MCP-Produktionsbereiche; nach Timeout der breiten Duplikatabfrage auf `ServerMaintenance` und `SymbolGraph` eingegrenzt. Keine Codeänderungen und keine `code-map.md`-Korrektur erforderlich.
+- DRY/Refactoring-Drift: Breiter exakter `find_duplicates`-Scan im MCP-Produktionsscope lief nach 300 Sekunden in einen MCP-Timeout. Die gezielten exakten Checks meldeten 0 Cluster in `Mcp/Tools/ServerMaintenance` (29 Methoden) und 0 Refactoring-Drift-Kandidaten für `TransitiveCallGraphFormatter.CreateDiagnosticProjection` im `SymbolGraph`-Scope (118 Methoden).
+- Dead Code: `find_dead_code` mit `targetType=project`, absolutem Projektpfad, `scopeFilter=src/AiNetLinter/Mcp`, `private_internal`, `high`, ohne Tests: 0 High-/Low-Confidence-Funde bei 720 Symbolen in 293 Dokumenten. Keine Löschung.
+- Magic Values: `find_magic_values` mit `targetType=project`, absolutem Projektpfad, `scopeFilter=src/AiNetLinter/Mcp`, ohne Tests: 249 Treffer in 241 eindeutigen Einträgen über 292 Dateien. `changedOnly=true` war bei sauberem Working Tree leer; der vollständige Scope enthält überwiegend einmalige Diagnosecodes, Fehlermeldungen, Identifier und bestehende Konstantenkandidaten. Keine sichere, scope-nahe Zentralisierung.
+- Disposition: Keine proaktive Audit-Codekorrektur; Magic-Value-Kandidaten werden als `accepted-deferred` in der Tech-Debt-Queue geführt. Der Timeout der breiten Duplikatabfrage wird als Audit-Limit dokumentiert; die verfeinerten relevanten Scopes sind sauber.
+- Verifikation: Audit-Abfragen in der vorgeschriebenen Reihenfolge ausgeführt; Working Tree blieb unverändert und sauber.

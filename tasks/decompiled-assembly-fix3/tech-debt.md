@@ -160,3 +160,13 @@
 - Disposition: accepted-deferred
 - Nächster Schritt: Abschluss-Audit prüft nur scope-nahe, eindeutig gemeinsame Werte; keine pauschale Zentralisierung.
 - Log-Anker: `execution-log.md`, „Paket 2 Implementierer abgeschlossen"
+
+### Abschlussaudit-Magic-Value-Kandidaten
+
+- Schweregrad: P2
+- Ursachensignatur: audit-mcp-magic-value-candidates
+- Scope/Fundstelle: `src/AiNetLinter/Mcp` – 249 Treffer in 241 eindeutigen Einträgen über 292 Dateien
+- Evidenz: Der einmalige Abschlussaudit meldete überwiegend einmalige Diagnosecodes, Fehlermeldungen, Identifier und bestehende Konstantenkandidaten. Die Werte sind ohne zusätzliche Fachentscheidung nicht sicher gemeinsam zu zentralisieren; `changedOnly=true` war wegen sauberem Working Tree leer.
+- Disposition: accepted-deferred
+- Nächster Schritt: Kein solutionweiter Cleanup in diesem Task; nur bei einem späteren, fachlich abgegrenzten Paket erneut prüfen.
+- Log-Anker: `execution-log.md`, „Einmaliger Abschlussaudit ausgeführt"
