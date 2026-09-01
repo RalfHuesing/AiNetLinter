@@ -194,10 +194,44 @@
 
 ### Paket-3-Strukturgrenzen in Source-/Body-Navigation
 
-- Schweregrad: P2
+- Schweregrad: P1
 - Ursachensignatur: package3-structural-rule-drift
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs`, `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySourceSelectionOrchestrator.cs` und direkt betroffene Konstruktor-/AIContext-Schnittstellen
 - Evidenz: Der Paket-3-Implementierer meldet im abschließenden `get_violations`-Check 10 strukturelle Befunde, überwiegend neue Größen-/Komplexitäts-, Konstruktorabhängigkeits- und AIContext-Footprint-Limits. Der fokussierte DRY-/Dead-Code-/Magic-Value-Audit meldete dagegen keine Befunde; die fachlichen Tests und der Build sind grün. Eine unabhängige Review-Klassifikation steht aus.
-- Disposition: accepted-deferred
-- Nächster Schritt: Im Paket-3-Review prüfen, ob einzelne Befunde eine sichere, scope-nahe P1-Korrektur erfordern; ansonsten als strukturelle Queue-Schuld zurückgestellt und nicht durch pauschales Aufteilen der Architektur verschlimmert.
+- Disposition: fix-now
+- attempts: 1
+- Nächster Schritt: Im Korrekturversuch die gemeldeten Dateigrößen-, Komplexitäts-, Konstruktorabhängigkeits- und AIContext-Footprint-Befunde scope-nah beheben, ohne Source-/Lease-Ownership künstlich zu duplizieren.
 - Log-Anker: `execution-log.md`, „Paket 3 Implementierer abgeschlossen"
+
+### Paket-3-Fallback-Diagnosepropagation
+
+- Schweregrad: P1
+- Ursachensignatur: package3-fallback-diagnostic-propagation
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs`, `src/AiNetLinter/Mcp/Assemblies/Analysis/Factories/AssemblyAnalysisRegistryEntryFactory.cs`
+- Evidenz: Der unabhängige Review zeigt, dass bei fehlender Compilation bzw. Source-Context-Fehlern die dekompilierte Fallback-Session weiterläuft, ohne zuverlässig `workspace-failure` und die Source-Diagnosen in den Fallback-Origin zu übernehmen. Damit kann die geforderte Fallback-Transparenz verloren gehen.
+- Disposition: fix-now
+- attempts: 1
+- Nächster Schritt: Fallback-Erzeugung auf einen gemeinsamen, typisierten Origin-/Diagnosevertrag umstellen und einen deterministischen Workspace-Fehlerpfad testen.
+- Log-Anker: `execution-log.md`, „Paket 3 Review abgeschlossen"
+
+### Paket-3-Body-Symbolauflösung bei Overloads
+
+- Schweregrad: P1
+- Ursachensignatur: package3-body-symbol-resolution-ambiguity
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs`, `FindMember`/`ResolveBodyAsync`
+- Evidenz: Die Zuordnung nutzt derzeit Name, Parameteranzahl und Generic-Arity und nimmt den ersten Treffer. Überladene Member mit gleicher Arity können so den Body eines anderen Symbols liefern; das verletzt die direkte Symbolidentität des on-demand Abrufs.
+- Disposition: fix-now
+- attempts: 1
+- Nächster Schritt: Symbolidentität über die vollständige `AnalysisSymbolIdentity`/Signatur deterministisch auflösen und mit gleichartigen Overloads regressionsprüfen.
+- Log-Anker: `execution-log.md`, „Paket 3 Review abgeschlossen"
+
+### Paket-3-Literalregression unvollständig
+
+- Schweregrad: P2
+- Ursachensignatur: package3-literal-regression-coverage
+- Scope/Fundstelle: `src/AiNetLinter.FastTests/Mcp/Tools/FileStructure/GetClassStructureToolTests.cs`, `ExecuteAsync_ConstantFields_FormatsInvariantLiteralValues`
+- Evidenz: Der Review bestätigt die plausible Formatter-Implementierung, aber der explizite Test deckt positive Zahlen, String, Char und Bool ab; `null` und negative Konstanten fehlen.
+- Disposition: fix-now
+- attempts: 1
+- Nächster Schritt: Im laufenden P1-Korrekturversuch die fehlenden Fälle ergänzen; keine eigenständige weitere Korrekturschleife.
+- Log-Anker: `execution-log.md`, „Paket 3 Review abgeschlossen"

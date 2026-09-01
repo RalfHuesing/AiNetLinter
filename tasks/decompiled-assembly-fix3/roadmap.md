@@ -4,9 +4,9 @@
 - Betriebsart: Großkonzept-Modus
 - Status: executing
 - current_epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
-- current_debt_item: none
-- debt_attempts: 0
-- letzter Commit: `b3d25401`
+- current_debt_item: package3-source-body-metadata-contract
+- debt_attempts: 1
+- letzter Commit: `4a2a9c40`
 
 ## Epics
 
