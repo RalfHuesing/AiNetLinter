@@ -815,3 +815,15 @@
 - Verifikation nach letzter Codeänderung: gezielte FastTests 51/51; Health-/ReloadConfig-IntegrationTests 19/19; `git diff --check` erfolgreich. Wegen Nutzerunterbrechung nicht ausgeführt: vollständiger Build, vollständige Nicht-Stress-Gates, DRY-/Dead-Code-/Magic-Checks und abschließender `get_violations`-Check.
 - Verbleibende Risiken: Die Assembly-Regression prüft `totalCount > shownCount` dynamisch, aber der vollständige Coverage-Nachweis für alle Assembly-CallTree-/Navigation-Varianten steht noch aus. `code-map.md` wurde aktualisiert.
 - Nächste Aktion: Implementierungs-Checkpoint committen, unabhängigen Review starten.
+
+## 2026-09-01 – Wiederaufnahme Paket 2 Korrekturversuch 1 Reviewer gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `23b9d65d`; Implementierungsstand: `23b9d65d`
+- Ursachensignaturen: `package2-diagnosis-projection-ownership`; `package2-regression-test-contract-drift`
+- Versuch: 1 im neu freigegebenen Lauf
+- Status: running
+- Auftrag: Prüfe den gemeinsamen Formatter-/Assembly-CallTree-Responsevertrag, die neue Assembly-Navigation-Regression, die konkrete Health-/ReloadConfig-Testbasis und alle betroffenen Aufrufer. Führe frische gezielte Tests sowie den relevanten MCP-`get_violations`-Scope aus, weil der Implementierer keine abschließenden Regelchecks liefern konnte. Kein Produktions-/Testcode und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen.
