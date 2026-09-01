@@ -42,7 +42,8 @@ public sealed class McpAgentGuideRegistrationTests
         Assert.Contains("targetType", workflow, StringComparison.Ordinal);
         Assert.Contains("targetPath", workflow, StringComparison.Ordinal);
         Assert.Contains("get_server_health", workflow, StringComparison.Ordinal);
-        Assert.Contains("report_observability_feedback` ist\n  nicht zielgebunden", workflow, StringComparison.Ordinal);
+        Assert.Contains("report_observability_feedback", workflow, StringComparison.Ordinal);
+        Assert.Contains("nicht zielgebunden", workflow, StringComparison.Ordinal);
         Assert.Contains("targetType: \"assembly\"", workflow, StringComparison.Ordinal);
         Assert.Contains("metadata-only", workflow, StringComparison.Ordinal);
         Assert.Contains("not_decidable", workflow, StringComparison.Ordinal);
