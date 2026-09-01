@@ -18,9 +18,10 @@
 - Ursachensignatur: erweiterte-mcp-verträge-ohne-parameterobjekt
 - Scope/Fundstelle: geänderte MCP-Methoden in `src/AiNetLinter/Mcp`, insbesondere `McpToolResults` und Assembly-Analyse-Verträge
 - Evidenz: Der Abschlussreview bestätigte vier aktive `MaxMethodParameterCount`-Verstöße in `McpToolResults.cs`; Korrekturversuch 5 führte `McpErrorParameters` ein und der Produktionsscope-Nachcheck meldete keine Verstöße an den geänderten Symbolen. Unabhängige Review-Bestätigung steht noch aus.
-- Disposition: fix-now (Review ausstehend)
+- Disposition: fixed
 - attempts: 2
-- Nächster Schritt: Unabhängiger Review; bei bestätigter Behebung als `fixed` markieren.
+- Nächster Schritt: Keine weitere Korrektur; die zwei scopefremden `FindSymbolScanner`-Warnungen bleiben separat `accepted-deferred`.
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 5 Reviewer abgeschlossen"
 - Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 5 abgeschlossen"
 
 ### Fehlende globale Antwortbudget-Projektion
@@ -102,10 +103,10 @@
 - Ursachensignatur: typed-error-payload-contract-test-drift
 - Scope/Fundstelle: `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisConfigurationFailureTests.cs:71,124`; `src/AiNetLinter.FastTests/Mcp/Tools/Safeguard/SafeguardToolTests.cs:44,199`
 - Evidenz: Vier Assertions erwarteten `StructuredContent == null`; Korrekturversuch 5 prüft nun typisierte `McpErrorPayload`-Felder und der gezielte Lauf meldete 11/11 Tests grün. Unabhängige Review-Bestätigung steht noch aus.
-- Disposition: fix-now (Review ausstehend)
+- Disposition: fixed
 - attempts: 2
-- Nächster Schritt: Unabhängiger Review; bei bestätigter Behebung als `fixed` markieren.
-- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 5 abgeschlossen"
+- Nächster Schritt: Keine weitere Korrektur.
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 5 Reviewer abgeschlossen"
 
 ### Bestehende FindSymbolScanner-Warnungen
 

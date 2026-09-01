@@ -365,3 +365,29 @@
   - `git diff --check`: erfolgreich; nur bekannte LF/CRLF-Hinweise.
 - Nicht ausgeführt: vollständiger Build und vollständige Nicht-Stress-Gates in diesem Versuch; letzter bekannter Gate-Stand bleibt mit Alt-/Umgebungsfehlern belastet.
 - Nächste Aktion: Korrekturstand committen und beide P1-Ursachen unabhängig reviewen lassen.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 5 Reviewer gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: Korrekturstand `383a8339`; vorheriger Review-Checkpoint `1b7dd68d`
+- Ursachensignaturen: `typed-error-payload-contract-test-drift`; `mcp-error-helper-parameter-growth`
+- Versuch: 2 von 5 je Ursachensignatur
+- Status: running
+- Auftrag: Typisierte Fehlerassertions, internen `McpErrorParameters`-Vertrag, unveränderte `isError`-/Wire-Semantik, Aufrufer und gezielte Verifikation unabhängig prüfen. Kein Produktions-/Testcode und kein Commit; nur konkrete `code-map.md`-Korrekturen.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 5 Reviewer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05c07-8dbb-7912-b225-3b4cc5f77010`
+- Ursachensignaturen: `typed-error-payload-contract-test-drift`; `mcp-error-helper-parameter-growth`
+- Versuch: 2 von 5 je Ursachensignatur
+- Status: completed; kein Produktions-/Testcode und keine `code-map.md`-Korrektur erforderlich
+- Urteil: `approved`; keine P0/P1-Findings.
+- Bestätigt: Die vier Fehlerassertions prüfen `code`, `message`, `context`, `hint`, `recoverable` und `isError` sinnvoll. `McpErrorParameters` reduziert die vier betroffenen Produktionsmethoden auf höchstens vier effektive Parameter; der Produktionsscope enthält keine entsprechenden Verstöße. `AssemblyAnalysisResponse.Unsupported` behält `targetType=assembly` und kanonischen `targetPath` bei; `isError` und Wire-Semantik bleiben unverändert.
+- Verifikationsnachweise: gezielte Tests 11/11 bestanden; frischer `dotnet build` über alle vier Projekte mit 0 Warnungen/0 Fehlern; MCP-first Symbol-/Referenz-/Metrikabfragen mit absolutem Projekt-Target erfolgreich; `git diff --check` erfolgreich. Zwei verbleibende `FindSymbolScanner`-Warnungen sind unverändert und scopefremd.
+- Nächste Aktion: Paket 1 als `done` markieren, Abschluss-Checkpoint committen und Paket 2 starten.
