@@ -935,6 +935,18 @@
 - Tech-Debt-Disposition: Die drei P1-Signaturen sowie die damit gebündelte fehlende Literalabdeckung werden für den nächsten Korrekturversuch aktiviert; Paket 3 bleibt in Arbeit. Die übrigen P2-Risiken werden dokumentiert und nicht als separate Schleife gestartet.
 - Nächste Aktion: Korrekturversuch 1 mit frischem Implementierer und anschließendem unabhängigem Review.
 
+## 2026-09-01 – Paket 3 Korrekturversuch 2 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
+- Rolle: Implementierer (frisch, Strukturkorrektur)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `42d0ba12`
+- Ursachensignaturen: `package3-structural-rule-drift`; funktionale P1s `package3-fallback-diagnostic-propagation` und `package3-body-symbol-resolution-ambiguity` sind aus dem letzten Review korrigiert und bleiben als Regression zu schützen.
+- Versuch: 2 im Epic
+- Status: running
+- Auftrag: Behebe ausschließlich die im letzten Review bestätigten strukturellen P1s in `AssemblySourceSelectionOrchestrator`, `AssemblyDecompilationAdapter`, `GetSymbolBodyTool` und `AssemblyAnalysisContextFactory`: Dateigröße, Methodenkomplexität/-zeilen, Parameter-/Konstruktorabhängigkeiten, AIContext-Footprint und etwaige nach der Aufteilung verbliebene Duplikate. Verwende kleine reine Helper/Parameterobjekte und halte Source-/Lease-Ownership unverändert. Prüfe die bereits behobenen Fallback-/Overload-Verträge durch die vorhandenen Regressionen. Keine konzeptfremde Umorganisation und kein solutionweiter Cleanup. Nach letzter Änderung gezielte Tests, betroffener `get_violations`-Scope, Build und `git diff --check`; kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
+
 ## 2026-09-01 – Paket 3 Korrekturversuch 1 gestartet
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume
