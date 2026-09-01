@@ -3,6 +3,7 @@
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AiNetLinter.Output;
@@ -13,6 +14,19 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
 internal static class AssemblyAnalysisResponse
 {
+    internal static bool FitsResponseBudget(CallToolResult result, AssemblyAnalysisLease lease)
+    {
+        var enriched = Enrich(result, lease);
+        var textBytes = enriched.Content
+            .OfType<TextContentBlock>()
+            .Sum(block => Encoding.UTF8.GetByteCount(block.Text));
+        var structuredBytes = enriched.StructuredContent is { } structured
+            ? Encoding.UTF8.GetByteCount(structured.GetRawText())
+            : 0;
+        return textBytes <= AssemblyAnalysisResponseLimits.MaxResponseBytes
+            && structuredBytes <= AssemblyAnalysisResponseLimits.MaxResponseBytes;
+    }
+
     internal static CallToolResult Enrich(CallToolResult result, AssemblyAnalysisLease lease)
     {
         var origin = lease.Context.Origin;

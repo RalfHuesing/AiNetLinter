@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using System.Threading;
 using System.Threading.Tasks;
@@ -91,7 +92,13 @@ internal static class FindAssemblyExtensionsTool
             referenceSessions,
             diagnostics,
             referenceSummary);
-        payload = AssemblyAnalysisResponseLimits.ProjectResponseBudget(payload);
+        payload = AssemblyAnalysisResponseLimits.ProjectResponseBudget(
+            payload,
+            lease is null
+                ? null
+                : candidate => AssemblyAnalysisResponse.FitsResponseBudget(
+                    McpToolResults.Text(FormatText(candidate), candidate),
+                    lease));
         return McpToolResults.Text(FormatText(payload), payload);
     }
 
@@ -113,30 +120,16 @@ internal static class FindAssemblyExtensionsTool
         {
             AssemblyAnalysisOriginText.Append(builder, origin);
         }
-        AppendOptionalContext(builder, "Consumer", payload.ConsumerProject);
-        AppendOptionalContext(builder, "Receiver", payload.ReceiverType);
+        if (payload.ConsumerProject is not null) builder.AppendLine($"Consumer: `{payload.ConsumerProject}`");
+        if (payload.ReceiverType is not null) builder.AppendLine($"Receiver: `{payload.ReceiverType}`");
     }
 
     private static void AppendReferenceSummary(StringBuilder builder, AssemblyReferenceSummary? summary)
     {
-        if (summary is null)
-        {
-            return;
-        }
+        if (summary is null) return;
 
         builder.AppendLine($"Referenzen: {summary.ShownReferenceCount} von {summary.TotalReferenceCount}{(summary.ReferencesTruncated ? " (gekürzt)" : string.Empty)}");
         builder.AppendLine($"Referenz-Sessions: {summary.ShownReferenceSessionCount} von {summary.TotalReferenceSessionCount}{(summary.ReferenceSessionsTruncated ? " (gekürzt)" : string.Empty)}");
-    }
-
-    private static void AppendOptionalContext(
-        StringBuilder builder,
-        string label,
-        string? value)
-    {
-        if (value is not null)
-        {
-            builder.AppendLine($"{label}: `{value}`");
-        }
     }
 
     private static void AppendExtensions(

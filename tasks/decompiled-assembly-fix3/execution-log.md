@@ -127,3 +127,38 @@
 - Bestätigte Kriterien: gemeinsame Producer-Auswahl, Pflichtfelder, Zähler und `responseBudget` sind grundsätzlich vorhanden; ältere Paket-1-Kriterien bleiben intakt.
 - Verifikationsbewertung: MCP-first mit `targetType=project` und absolutem Projektpfad; `get_feature_context` und `find_references` bestätigten Aufrufer und Enrichment-Reihenfolge. Der Implementierer-Nachweis 27/27, `git diff --check` sowie Dead-/Magic-Value-Checks ist frisch und für den Producer-Scope passend; nicht redundant wiederholt. Vollständiger Build und beide Nicht-Stress-Gates fehlen weiterhin.
 - Nächste Aktion: Frischer Implementierer-Korrekturversuch für beide P1-Ursachensignaturen, danach frischer Review.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 2 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `af9c8f0d`
+- Ursachensignaturen: `assembly-response-budget-projection-missing-after-compactor-removal`; `response-projection-structural-rule-drift`
+- Versuch: 2 von 5 für die Budgetursache; 1 von 5 für den strukturellen Regelbefund
+- Status: running
+- Auftrag: Finale Enrichment-Metadaten in die Antwortbudgetberechnung einbeziehen, Singleton-Übergrößen sicher behandeln und die drei aktiven Produktionsregelverstöße im selben Projektionspfad beheben. Bestehende Text/JSON-/Pflichtfeld-/Zählerverträge erhalten, Regressionstests erweitern, `code-map.md` pflegen sowie nach letzter Codeänderung gezielte Tests und `get_violations` ausführen. Kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 2 abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: `01a05bbb-45c3-7102-afc4-95b2a829a1b9`
+- Ursachensignaturen: `assembly-response-budget-projection-missing-after-compactor-removal`; `response-projection-structural-rule-drift`
+- Versuch: 2 von 5 für die Budgetursache; 1 von 5 für den strukturellen Regelbefund
+- Status: completed; Arbeitsstand ohne Rollen-Commit übergeben
+- Ergebnis: Finale `AssemblyAnalysisResponse.Enrich`-Metadaten werden in die 8-KiB-Budgetprüfung einbezogen. Singleton-Übergrößen werden durch Entfernen des sichtbaren Items sicher behandelt; Zähler und `responseBudget` bleiben erhalten. Die Budgetlogik wurde in `AssemblyAnalysisResponseLimits.Budget.cs` ausgelagert, `AssemblyAnalysisResponseLimits.cs` hat 268 Zeilen. Das exakte `TryRemoveLastDiagnostic`-Duplikat wurde entfernt und der `FindAssemblyExtensionsTool`-AIContext-Footprint wieder unter das Limit gebracht.
+- Geänderte Symbole: `AssemblyAnalysisResponse.FitsResponseBudget`/`Enrich`, `AssemblyAnalysisResponseLimits.ProjectResponseBudget`, `InspectAssemblyTool.BuildResult`, `FindAssemblyExtensionsTool.BuildResult`, `AssemblyAnalysisDispatcher.ExecuteAsync`; `code-map.md` aktualisiert.
+- MCP-first-Kontext: `get_feature_context` für Response, Limits, Service, beide Producer und Dispatcher-Kontext; `find_symbol`; `find_references`/Impact-Prüfung.
+- Verifikationsnachweise nach der letzten Codeänderung:
+  - `dotnet test src/AiNetLinter.FastTests --filter "FullyQualifiedName~AssemblyAnalysisToolTests|FullyQualifiedName~AssemblyAnalysisDispatcherCapabilityTests" --no-restore`: 27/27 bestanden.
+  - `find_duplicates`: 0 Cluster.
+  - `find_dead_code` mit High-Confidence-Scope: 0 Befunde.
+  - `find_magic_values` mit `changedOnly=true`: 0 Treffer.
+  - `git diff --check`: erfolgreich; nur erwartete LF/CRLF-Hinweise.
+  - `get_violations` mit `targetType=project`, absolutem Projektpfad und Scope `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis`: 0 Verstöße.
+- Nicht ausgeführt: vollständiger `dotnet build`, vollständige Nicht-Stress-Gates sowie neue dedizierte Dispatcher-/Singleton-Testmethoden; vorhandene Dispatcher-/Budgettests bestanden.
+- Restrisiko: Die nachgelagerte Enrichment-/Singleton-Abdeckung ist durch die vorhandenen Tests plausibel, aber nicht durch separate neue Testmethoden isoliert.
+- Nächste Aktion: Korrekturstand committen und frischen Reviewer starten.

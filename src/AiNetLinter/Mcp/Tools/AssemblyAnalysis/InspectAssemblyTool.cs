@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using System.Threading;
 using System.Threading.Tasks;
@@ -99,7 +100,14 @@ internal static class InspectAssemblyTool
             referenceSessions,
             diagnostics,
             referenceSummary);
-        payload = AssemblyAnalysisResponseLimits.ProjectResponseBudget(payload, arguments.PublicOnly);
+        payload = AssemblyAnalysisResponseLimits.ProjectResponseBudget(
+            payload,
+            arguments.PublicOnly,
+            lease is null
+                ? null
+                : candidate => AssemblyAnalysisResponse.FitsResponseBudget(
+                    McpToolResults.Text(InspectAssemblyFormatter.FormatText(candidate, arguments.PublicOnly), candidate),
+                    lease));
         return McpToolResults.Text(InspectAssemblyFormatter.FormatText(payload, arguments.PublicOnly), payload);
     }
 }

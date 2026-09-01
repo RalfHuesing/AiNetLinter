@@ -27,11 +27,11 @@
 - Schweregrad: P1
 - Ursachensignatur: assembly-response-budget-projection-missing-after-compactor-removal
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs`, `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisService.cs`, `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.cs`
-- Evidenz: Der Reviewer stellte fest, dass nach Entfernung des alten Compactors nur einzelne Listen begrenzt werden; große Typ-/Member-Listen können Text und JSON weiterhin über das Gesamtbudget wachsen lassen.
+- Evidenz: Der erste Reviewer stellte fehlende globale Budgetierung fest. Korrekturversuch 2 bezieht nun `AssemblyAnalysisResponse.Enrich` ein, behandelt Singleton-Übergrößen und meldete im scoped `get_violations`-Nachcheck 0 Verstöße; die unabhängige Bestätigung steht noch aus.
 - Disposition: fix-now
-- attempts: 0
-- Nächster Schritt: Frischer Implementierer führt eine gemeinsame typisierte Vorformatierungsprojektion für Text und Structured Content ein und ergänzt/aktualisiert die Budgettests.
-- Log-Anker: `execution-log.md`, „Paket 1 Reviewer abgeschlossen"
+- attempts: 2
+- Nächster Schritt: Unabhängiger frischer Review; bei bestätigter Behebung als `fixed` markieren.
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 2 abgeschlossen"
 
 ### Projektionstyp übersteigt Zeilenlimit
 
@@ -70,7 +70,7 @@
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/AnalysisToolCall.cs`, `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs`, `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.cs`, `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolTests.cs`
 - Evidenz: Der Reviewer bestätigte gemeinsame Producer-Auswahl, stellte aber fest, dass nachfolgendes `Enrich` nicht vermessen wird und einzelne übergroße Items ohne sichere Budgeteinhaltung verbleiben können.
 - Disposition: fix-now
-- attempts: 1
+- attempts: 2
 - Nächster Schritt: Frischer Implementierer ergänzt die Endgrößenprüfung um Enrichment-Metadaten und einen Singleton-Übergrößenfall.
 - Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 1 Reviewer abgeschlossen"
 
@@ -79,11 +79,12 @@
 - Schweregrad: P1
 - Ursachensignatur: response-projection-structural-rule-drift
 - Scope/Fundstelle: `AssemblyAnalysisResponseLimits.cs`, `FindAssemblyExtensionsTool.cs`
-- Evidenz: Frischer `get_violations`-Check meldet 543 statt maximal 500 Zeilen, ein exaktes `TryRemoveLastDiagnostic`-Duplikat und AIContext-Footprint 2503 statt 2500.
+- Evidenz: Der Review meldete 543 statt maximal 500 Zeilen, ein exaktes `TryRemoveLastDiagnostic`-Duplikat und AIContext-Footprint 2503 statt 2500. Korrekturversuch 2 reduzierte die Datei auf 268 Zeilen, entfernte das Duplikat und meldete im scoped Nachcheck 0 Verstöße; die unabhängige Bestätigung steht noch aus.
 - Disposition: fix-now
-- attempts: 0
-- Nächster Schritt: Im selben frischen Korrekturversuch strukturelle Duplikation, Zeilenlimit und Footprint beseitigen; danach `get_violations` erneut ausführen.
-- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 1 Reviewer abgeschlossen"
+- attempts: 1
+- Nächster Schritt: Unabhängiger frischer Review; bei bestätigter Behebung als `fixed` markieren.
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 2 abgeschlossen"
+
 
 ### Bestehender AIContext-Footprint-Hinweis
 
