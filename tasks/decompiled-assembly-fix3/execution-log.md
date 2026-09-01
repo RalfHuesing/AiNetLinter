@@ -162,3 +162,31 @@
 - Nicht ausgeführt: vollständiger `dotnet build`, vollständige Nicht-Stress-Gates sowie neue dedizierte Dispatcher-/Singleton-Testmethoden; vorhandene Dispatcher-/Budgettests bestanden.
 - Restrisiko: Die nachgelagerte Enrichment-/Singleton-Abdeckung ist durch die vorhandenen Tests plausibel, aber nicht durch separate neue Testmethoden isoliert.
 - Nächste Aktion: Korrekturstand committen und frischen Reviewer starten.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 2 Reviewer gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: Korrekturstand `209852c1`; vorheriger Review-Checkpoint `af9c8f0d`
+- Ursachensignaturen: `assembly-response-budget-projection-missing-after-compactor-removal`; `response-projection-structural-rule-drift`
+- Versuch: 2 von 5 für die Budgetursache; 1 von 5 für den strukturellen Regelbefund
+- Status: running
+- Auftrag: Enrichment-/Dispatcher-Budget, Singleton-Übergrößen, gemeinsame Text/JSON-Auswahl, Code-/Rule-Verstöße und Regressionen unabhängig prüfen. Kein Produktions-/Testcode und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen. Frische Checks nur bei Anlass.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 2 Reviewer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05bc8-2d85-7122-b6a0-e7050b9656aa`
+- Ursachensignaturen: `assembly-response-budget-projection-missing-after-compactor-removal`; `response-projection-structural-rule-drift`
+- Versuch: 2 von 5 für die Budgetursache; 1 von 5 für den strukturellen Regelbefund
+- Status: completed; kein Produktions-/Testcode geändert
+- Urteil: `issues`; P0 keine.
+- P1 `assembly-response-budget-projection-missing-after-compactor-removal`: Produktionslogik vermisst plausibel den finalen `Enrich`-Pfad und behandelt Singleton-Kappung. Die vorhandenen 27/27 Tests prüfen jedoch direkte Producer-Aufrufe mit `lease = null`; die Dispatcher-Tests verwenden nur kleine synthetische Antworten. Der zuvor fehlerhafte Lease-/Dispatcher-Pfad und die letzte Singleton-Reduktionsstufe sind damit nicht isoliert regressionstestiert. Wegen expliziter Konzept-Testpflicht bleibt das ein P1.
+- P1 `response-projection-structural-rule-drift`: behoben. Der aktuelle scoped `get_violations`-Check mit `targetType=project`, absolutem Projektpfad und Scope `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis` meldet 0 Verstöße; Zeilenlimit, exaktes Duplikat und Footprint sind nicht mehr aktiv.
+- Verifikationsbewertung: Implementierer-Nachweis 27/27 und `git diff --check` sind frisch und passend für den Producer-Scope; MCP-first `get_feature_context`/`find_references` bestätigten die Enrichment-Reihenfolge. Vollständiger `dotnet build` und beide Nicht-Stress-Gates sind auf diesem Stand noch nicht ausgeführt.
+- Empfehlung: Dispatcher-Test mit absichtlich übergroßer finaler Enrichment-Antwort und Singleton-Test ergänzen, danach `dotnet build` und beide vollständigen Nicht-Stress-Testläufe erfolgreich ausführen.
+- Nächste Aktion: Frischer Implementierer-Korrekturversuch für die verbleibende P1-Ursache; strukturellen Befund in `tech-debt.md` als `fixed` fortschreiben.

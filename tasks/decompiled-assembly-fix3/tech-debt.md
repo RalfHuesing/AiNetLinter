@@ -30,8 +30,8 @@
 - Evidenz: Der erste Reviewer stellte fehlende globale Budgetierung fest. Korrekturversuch 2 bezieht nun `AssemblyAnalysisResponse.Enrich` ein, behandelt Singleton-Übergrößen und meldete im scoped `get_violations`-Nachcheck 0 Verstöße; die unabhängige Bestätigung steht noch aus.
 - Disposition: fix-now
 - attempts: 2
-- Nächster Schritt: Unabhängiger frischer Review; bei bestätigter Behebung als `fixed` markieren.
-- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 2 abgeschlossen"
+- Nächster Schritt: Dispatcher-/Singleton-Regressionstests ergänzen und danach Gesamtgates ausführen; erst bei bestätigter Behebung als `fixed` markieren.
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 2 Reviewer abgeschlossen"
 
 ### Projektionstyp übersteigt Zeilenlimit
 
@@ -63,26 +63,15 @@
 - Nächster Schritt: Nur bei direkter, risikoarmer Reduktion innerhalb des bestehenden Paketvertrags erneut bewerten.
 - Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 1 abgeschlossen"
 
-### Antwortbudget umfasst Enrichment und Singleton-Übergrößen
-
-- Schweregrad: P1
-- Ursachensignatur: assembly-response-budget-projection-missing-after-compactor-removal
-- Scope/Fundstelle: `src/AiNetLinter/Mcp/AnalysisToolCall.cs`, `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs`, `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.cs`, `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolTests.cs`
-- Evidenz: Der Reviewer bestätigte gemeinsame Producer-Auswahl, stellte aber fest, dass nachfolgendes `Enrich` nicht vermessen wird und einzelne übergroße Items ohne sichere Budgeteinhaltung verbleiben können.
-- Disposition: fix-now
-- attempts: 2
-- Nächster Schritt: Frischer Implementierer ergänzt die Endgrößenprüfung um Enrichment-Metadaten und einen Singleton-Übergrößenfall.
-- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 1 Reviewer abgeschlossen"
-
 ### Aktive Produktionsregelverstöße der Budgetkorrektur
 
 - Schweregrad: P1
 - Ursachensignatur: response-projection-structural-rule-drift
 - Scope/Fundstelle: `AssemblyAnalysisResponseLimits.cs`, `FindAssemblyExtensionsTool.cs`
 - Evidenz: Der Review meldete 543 statt maximal 500 Zeilen, ein exaktes `TryRemoveLastDiagnostic`-Duplikat und AIContext-Footprint 2503 statt 2500. Korrekturversuch 2 reduzierte die Datei auf 268 Zeilen, entfernte das Duplikat und meldete im scoped Nachcheck 0 Verstöße; die unabhängige Bestätigung steht noch aus.
-- Disposition: fix-now
+- Disposition: fixed
 - attempts: 1
-- Nächster Schritt: Unabhängiger frischer Review; bei bestätigter Behebung als `fixed` markieren.
+- Nächster Schritt: Keine weitere Korrektur; im Abschluss-Audit nur auf Regression prüfen.
 - Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 2 abgeschlossen"
 
 
