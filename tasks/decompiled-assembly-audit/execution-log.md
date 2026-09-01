@@ -83,6 +83,65 @@
 - Nächste Aktion: mit Epic 2 als Analyse-/Berichtsrolle fortfahren; weitere
   Reviewer-Rollen werden in diesem Lauf nicht gestartet.
 
+## 2026-09-01 — Epic 2 — running
+
+- Run-ID: `decompiled-assembly-audit-20260901`
+- Rolle: Implementierer/Analyse-Agent
+- Subagent-ID: `01a05e7c-1f19-7a13-9d40-4133a93572ef`
+- Diff-Baseline: `61d5dc1b` (Epic-1-Abschluss-Checkpoint)
+- Scope: Decompilation und semantischer Snapshot.
+- Erwartete Änderungen: ausschließlich `epic-02-decompilation-snapshot.md`
+  und `code-map.md`; keine Produktions-, Test-, Konfigurations- oder
+  Produktdokumentationsänderungen.
+
+## 2026-09-01 — Epic 2 — completed
+
+- Subagent-ID: `01a05e7c-1f19-7a13-9d40-4133a93572ef`
+- Urteil der Analyse-Rolle: read-only Audit abgeschlossen; keine
+  Implementierung.
+- Geänderte Bereiche: `epic-02-decompilation-snapshot.md`, `code-map.md`.
+- Findings: E2-BUG-01 (P1, M, hoch), E2-BUG-02 (P2, S, hoch), E2-BUG-03
+  (P2, M, hoch), E2-OPT-01 (P2, M, hoch); keine zusätzlichen Missing Features.
+  Alle als `accepted-deferred` triagiert, da Konzept und Nutzeranweisung
+  keine Reviewer-/Korrekturschleife oder Codeänderung erlauben.
+- Nach der letzten Code-Map-Änderung erfolgreich ausgeführt: Artefakt- und
+  Redaktionsprüfungen, Projekt-MCP-Spotchecks, `inspect_assembly` und
+  `find_assembly_extensions` für alle fünf opaken Labels sowie gezielte
+  Assembly-Skeleton-/Symbol-/Body-Gegenproben. Ergebnis: metadata-only und
+  Herkunftssignale grundsätzlich vorhanden; die oben genannten Befunde sind
+  statisch beziehungsweise MCP-beobachtet belegt.
+- Nur gelesen: Vorgaben, Task-Artefakte, Assembly-Produktionspfade,
+  Testverträge, Konfiguration und Dokumentation. Die lokale Matrix wurde nur
+  zur Label-/Pfadauflösung verwendet.
+- Nicht ausgeführt: Builds und Tests; keine Produktions-, Test-, Konfigurations-
+  oder Produktdokumentationsänderungen; kein Commit durch den Agenten.
+- Origin-Nachweis: GIT-01 blieb in der angesprochenen Umgebung decompiled mit
+  nicht verifiziertem Source-Provider; LOCAL-01 bis LOCAL-03 decompiled; der
+  Nicht-.NET-Fall recoverable ohne Snapshot.
+- Nächste Aktion: mit Epic 3 als Analyse-/Berichtsrolle fortfahren.
+
+### Vollständiger finaler Agentenbericht
+
+Epic 2 ist als read-only Audit abgeschlossen.
+
+Erstellt/aktualisiert wurden ausschließlich:
+
+- `epic-02-decompilation-snapshot.md`
+- `code-map.md`
+
+Befunde:
+
+- P1: Cache-Roundtrip verliert Dokument-Metadaten.
+- P2: uneindeutige Zeilenkoordinaten in `get_class_structure`.
+- P2: Konstruktor-IDs aus Skeleton und Body-Auflösung inkompatibel.
+- P2: wiederholte On-demand-Body-Dekomposition als Optimierungspotenzial.
+- Keine zusätzlichen Missing-Feature-Findings.
+
+Nach der letzten Code-Map-Änderung wurden Artefakt-/Redaktionsprüfungen,
+Projekt-MCP-Spotchecks sowie `inspect_assembly` und
+`find_assembly_extensions` für alle fünf Labels erfolgreich ausgeführt. Keine
+Builds, Tests, Produktions-/Konfigurationsänderungen oder Commits.
+
 ### Vollständiger finaler Agentenbericht
 
 Epic 1 ist abgeschlossen. Es wurden keine Produktionsdateien, Tests,
