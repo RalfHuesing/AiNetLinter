@@ -32,6 +32,8 @@ public sealed class McpServerOptionsFactoryTests
         Assert.False(string.IsNullOrEmpty(options.ServerInstructions));
         Assert.Contains("targetType", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains("targetPath", options.ServerInstructions, StringComparison.Ordinal);
+        Assert.Contains(".dll", options.ServerInstructions, StringComparison.Ordinal);
+        Assert.Contains(".exe", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".cs", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains("search_pattern", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".js", options.ServerInstructions, StringComparison.Ordinal);

@@ -269,6 +269,17 @@
 - Nächster Schritt: Unabhängigen Paket-4-Abschlussreview gegen den Codecheckpoint abwarten.
 - Log-Anker: `execution-log.md`, „Paket 4 P1-Korrekturversuch 2 Implementierer abgeschlossen"
 
+### Paket-4-Öffentliche Assembly-Beschreibungen
+
+- Schweregrad: P1
+- Ursachensignatur: package4-public-assembly-description-drift
+- Scope/Fundstelle: `AssemblyAnalysisToolRegistrations`, `ServerInstructions` und `Docs/configuration.md`
+- Evidenz: Der unabhängige Review fand DLL-only-Hinweise in den öffentlichen Toolbeschreibungen und der Konfigurationsdokumentation, obwohl verwaltete `.exe`-Ziele bereits unterstützt werden. Der Korrekturversuch formuliert alle drei öffentlichen Hinweise als `.dll`- oder `.exe`-Vertrag und ergänzt echte `tools/list`-/Server-Instructions-Regressionen; fachlich korrekte External-Source-Mapping-Beispiele bleiben unverändert.
+- Disposition: review-pending
+- attempts: 1
+- Nächster Schritt: Unabhängigen Paket-4-Abschlussreview gegen den neuen Dokumentationscheckpoint abwarten.
+- Log-Anker: `execution-log.md`, „Paket 4 P1-Korrekturversuch 2 Dokumentations-Implementierer abgeschlossen"
+
 ### Paket-4-Hotspots-Parameter
 
 - Schweregrad: P2

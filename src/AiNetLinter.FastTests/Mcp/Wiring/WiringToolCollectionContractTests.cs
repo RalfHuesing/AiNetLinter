@@ -109,6 +109,8 @@ public sealed class WiringToolCollectionContractTests
             var description = tools[name].Description;
             Assert.Contains("targetType='assembly'", description, StringComparison.Ordinal);
             Assert.DoesNotContain("targetType='project'", description, StringComparison.Ordinal);
+            Assert.Contains(".dll", description, StringComparison.Ordinal);
+            Assert.Contains(".exe", description, StringComparison.Ordinal);
         }
 
         Assert.Contains("Projekt- und Assembly-Sessions", tools["get_server_health"].Description, StringComparison.Ordinal);

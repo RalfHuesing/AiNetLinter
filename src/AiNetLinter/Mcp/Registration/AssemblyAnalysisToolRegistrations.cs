@@ -67,8 +67,8 @@ internal static class AssemblyAnalysisToolRegistrations
     }
 
     private const string InspectAssemblyDescription =
-        "Wann nutzen: oeffentliche API einer exakt angegebenen lokalen .NET-DLL metadata-only " +
-        "ueber Roslyn untersuchen. targetType='assembly' und targetPath mit absolutem DLL-Pfad " +
+        "Wann nutzen: oeffentliche API einer exakt angegebenen lokalen .NET-Assembly metadata-only " +
+        "ueber Roslyn untersuchen. targetType='assembly' und targetPath mit absolutem .dll- oder .exe-Pfad " +
         "sind Pflicht; ein Consumer-Projekt wird in diesem Dispatch-Schritt nicht verwendet. " +
         "namespace, typeName und memberName filtern, publicOnly ist standardmaessig true, " +
         "exactTypeName schaltet fuer typeName von Teiltext- auf Exaktsuche um, memberNames " +
@@ -82,7 +82,7 @@ internal static class AssemblyAnalysisToolRegistrations
         "Parameterdaten. Eine verfuegbare explizite Source-Zuordnung wird source-backed " +
         "genutzt; ohne Zuordnung oder verfuegbaren Provider greift die statische Decompilation. Bei " +
         "fehlenden Abhaengigkeiten lautet completeness partial. " +
-        "Die DLL wird weder geladen noch ausgefuehrt.";
+        "Die Assembly wird weder geladen noch ausgefuehrt.";
 
     private static void AddFindAssemblyExtensions(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -116,9 +116,9 @@ internal static class AssemblyAnalysisToolRegistrations
     }
 
     private const string FindAssemblyExtensionsDescription =
-        "Wann nutzen: klassische C#-Extension-Methoden einer exakt angegebenen lokalen DLL " +
+        "Wann nutzen: klassische C#-Extension-Methoden einer exakt angegebenen lokalen .NET-Assembly " +
         "metadata-only ueber Roslyn finden. targetType='assembly' und targetPath mit absolutem " +
-        "DLL-Pfad sind Pflicht; ein Consumer-Projekt wird in diesem Dispatch-Schritt nicht verwendet. " +
+        ".dll- oder .exe-Pfad sind Pflicht; ein Consumer-Projekt wird in diesem Dispatch-Schritt nicht verwendet. " +
         "receiverType grenzt den gewuenschten Empfaenger-Typ ein; ohne Consumer-Projekt " +
         "wird seine Roslyn-Anwendbarkeit als not_decidable ausgewiesen. extensionName und namespace filtern, " +
         "Generics, Constraints und Konvertierungen werden dabei metadata-only beruecksichtigt. " +
@@ -127,5 +127,5 @@ internal static class AssemblyAnalysisToolRegistrations
         "maxResults begrenzt (Default 100, Maximum 1000). Die Antwort trennt " +
         "applicable, not_applicable und not_decidable und markiert fehlende Abhaengigkeiten " +
         "mit completeness partial. Methoden liefern zusaetzlich strukturierte Parameterdaten. " +
-        "Die DLL wird weder geladen noch ausgefuehrt.";
+        "Die Assembly wird weder geladen noch ausgefuehrt.";
 }

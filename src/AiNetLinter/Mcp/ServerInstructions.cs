@@ -17,7 +17,7 @@ internal static class ServerInstructions
     internal const string Text =
         "AiNetLinter analysiert .NET-Solutions mit Roslyn. JEDEM zielgebundenen Tool-Aufruf " +
         "sind targetType und targetPath beizufuegen: targetType='project' fuer eine Source-" +
-        "Solution oder targetType='assembly' fuer eine lokale DLL; targetPath ist absolut. " +
+        "Solution oder targetType='assembly' fuer eine lokale .dll- oder .exe-Datei; targetPath ist absolut. " +
         "get_server_health darf ohne Ziel aggregieren, report_observability_feedback bleibt " +
         "nicht zielgebunden.\n\n" +
         "Neue Integration nur bei ausdruecklichem Auftrag: ainetlinter://agent-guide lesen; " +

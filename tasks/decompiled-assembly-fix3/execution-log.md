@@ -950,6 +950,31 @@
 - Verifikation nach letzter Codeänderung: fokussierte FastTests 52/52; fokussierte IntegrationTests 22/22; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` grün; Audit ohne neue Duplikat-, Dead-Code-, Magic-Value- oder Regelbefunde. Vollgates und unabhängiger Abschlussreview bleiben Orchestrator-Schritte.
 - Nächste Aktion: Code-/Dokumentationscheckpoint sichern und frischen, unabhängigen Paket-4-Abschlussreview starten.
 
+## 2026-09-01 – Paket 4 Abschlussreview: Öffentliche Assembly-Beschreibungen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 4 – Kompatibilität, API-Lücken und Dokumentation
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05def-c50e-7d20-90ac-ce7876d84db3`
+- Review-Basis: Codecheckpoint `76301ae5`; der Reviewer änderte ausschließlich `code-map.md` mit Navigationskorrekturen.
+- Urteil: `issues`; P1 `package4-public-assembly-description-drift`: `AssemblyAnalysisToolRegistrations`, `ServerInstructions` und `Docs/configuration.md` beschrieben Assembly-Ziele noch DLL-only, obwohl `.exe` unterstützt wird.
+- Verifiziert: Native-PE-Route typisiert recoverable; nur `assembly-metadata-missing` wird umklassifiziert; managed `.exe`, bestehende Fehlersemantiken und fachliche Namespace-Struktur sind korrekt. Struktur: Produktionsroot 23, Testroot 28 direkte Dateien, Unterordner unter 30. Build 0/0, fokussierte Daemon-/Health-/Dokumentationstests grün.
+- Nächste Aktion: Öffentliche Beschreibungen auf `.dll` oder `.exe` vereinheitlichen und `tools/list`-/Server-Instructions-Verträge regressionstestieren; danach frischen Abschlussreview starten.
+
+## 2026-09-01 – Paket 4 P1-Korrekturversuch 2 Dokumentations-Implementierer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 4 – Kompatibilität, API-Lücken und Dokumentation
+- Rolle: Implementierer (frisch, öffentliche Assembly-Beschreibungen)
+- Subagent-ID: `01a05df7-c716-7032-b156-5eabfd5d74b6`
+- Ursachensignatur: `package4-public-assembly-description-drift`
+- Versuch: 1 für diese P1-Signatur
+- Status: completed; Änderungen uncommitted übergeben; keine Roadmap-/Log-/Tech-Debt-Änderung durch den Agenten; kein Commit.
+- Umsetzung: `inspect_assembly` und `find_assembly_extensions` nennen lokale .NET-Assemblies mit absolutem `.dll`- oder `.exe`-Pfad; `ServerInstructions` und `Docs/configuration.md` sind synchron. Fachlich korrekte `.dll`-Beispiele für External-Source-Mappings wurden nicht verändert.
+- Regressionen: `WiringToolCollectionContractTests` prüft `.dll` und `.exe` je registriertem Assembly-Tool; `McpServerOptionsFactoryTests` prüft beide Extensions in der globalen Server-Anleitung.
+- Verifikation nach letzter Änderung: fokussierte Tests 7/7; `dotnet build --no-restore` 0 Warnungen/0 Fehler; MCP-Violationscheck der geänderten C#-Dateien 0 Befunde; enge `rg`-Suche ohne öffentliche DLL-only-Altformulierungen; `git diff --check` grün.
+- Nächste Aktion: Dokumentations-/Registrierungspatch checkpointen und frischen, unabhängigen Paket-4-Abschlussreview starten.
+
 ## 2026-09-01 – Paket 3 Korrekturversuch 3 Reviewer abgeschlossen
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume
