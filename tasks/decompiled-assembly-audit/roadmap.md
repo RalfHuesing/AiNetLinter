@@ -1,8 +1,8 @@
 # Ausführungsstand: Assembly-Unterstützungs-Audit
 
 status: executing
-current_epic: 1
-last_checkpoint: Epic 1 Analyse-Checkpoint wird gesichert
+current_epic: 2
+last_checkpoint: Epic 1 abgeschlossen; Review auf Nutzeranweisung übersprungen
 current_debt_item: none
 debt_attempts: 0
 
@@ -22,12 +22,13 @@ acht eigenständige, priorisierte Befundberichte.
    Befunde nach Kategorie, Priorität und Größe ordnen; Evidence-/Scope-
    Abschnitt und Unsicherheiten ausweisen. Verifikation: gezielte MCP-
    Abfragen und Quelltext-/Dokumentlesung, keine Tests/Builds. Status:
-   in_progress (Analyse abgeschlossen, Review offen).
+   done (Analysebericht abgeschlossen; unabhängiger Review auf Nutzeranweisung
+   übersprungen).
 2. **Decompilation und semantischer Snapshot** — Metadata-only-Garantie,
    dekompilierte Dokumente, Syntax/Bodies, Generics, Attribute, Parameter,
    stabile IDs und source-backed-Abgrenzung. Abhängigkeiten: Epic 1.
    Verifikation: Assembly- und Symbol-/Strukturabfragen, Quelltextlesung.
-   Status: open.
+   Status: in_progress.
 3. **Referenzen, Source Selection und Diagnosen** — Auflösung, Source-
    Auswahl, fehlende/inkompatible Referenzen, Herkunft, Trust, Partialität
    und Diagnoseprojektion. Abhängigkeiten: Epics 1–2. Verifikation:
