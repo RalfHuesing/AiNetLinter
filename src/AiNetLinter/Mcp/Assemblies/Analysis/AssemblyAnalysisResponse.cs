@@ -77,10 +77,11 @@ internal static class AssemblyAnalysisResponse
         var result = McpToolResults.Recoverable(
             LinterErrorCodes.AssemblyTargetUnsupported,
             "Dieses Tool unterstützt das Assembly-Ziel nicht.",
-            context: canonicalPath,
-            hint: "Für dieses Assembly-Ziel eine unterstützte Roslyn-Abfrage oder targetType='project' verwenden.",
-            targetType: "assembly",
-            targetPath: canonicalPath);
+            new McpErrorParameters(
+                Context: canonicalPath,
+                Hint: "Für dieses Assembly-Ziel eine unterstützte Roslyn-Abfrage oder targetType='project' verwenden.",
+                TargetType: "assembly",
+                TargetPath: canonicalPath));
         return new CallToolResult
         {
             IsError = result.IsError,

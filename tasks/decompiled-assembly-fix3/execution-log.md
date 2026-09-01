@@ -335,3 +335,33 @@
 - Verifikation: `git diff --check` erfolgreich; Abschluss-Tests und finaler `get_violations`-Lauf wurden nicht ausgeführt, da keine Codeänderung vorlag.
 - Disposition des Orchestrators: Die Agentenempfehlung `promoted-to-project-debt` wird nicht übernommen; beide P1-Einträge bleiben `fix-now`, da das Fünferbudget nicht ausgeschöpft ist.
 - Nächste Aktion: Neuer frischer Implementierer mit engerer, symbolgenauer Korrekturvorgabe.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 5 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `80056ccf`
+- Ursachensignaturen: `typed-error-payload-contract-test-drift`; `mcp-error-helper-parameter-growth`
+- Versuch: 2 von 5 je Ursachensignatur
+- Status: running
+- Auftrag: Nur die vier konkreten Altassertions auf `McpErrorPayload` umstellen und die vier konkreten Produktionsmethoden in `McpToolResults` über einen kleinen internen Parametervertrag regelkonform machen. Keine Promotion zu Project Debt vor dem fünften ungelösten Versuch. Danach betroffene Tests, Produktionsscope-`get_violations` und `git diff --check` ausführen; kein Commit und keine Roadmap-/Log-/Tech-Debt-Änderung durch den Agenten.
+
+## 2026-09-01 – Paket 1 Korrekturversuch 5 abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 1 – Vertragsintegrität und P1-Korrektur
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: `01a05bfe-8075-7b91-815e-c2634a022c71`
+- Ursachensignaturen: `typed-error-payload-contract-test-drift`; `mcp-error-helper-parameter-growth`
+- Versuch: 2 von 5 je Ursachensignatur
+- Status: completed; Arbeitsstand ohne Rollen-Commit übergeben
+- Ergebnis: Vier veraltete Assertions in `AssemblyAnalysisConfigurationFailureTests.cs` und `SafeguardToolTests.cs` prüfen nun typisierte `McpErrorPayload`-Felder. `McpToolResults` verwendet für `Error`, `Recoverable`, `BuildResult` und `CompilationError` einen kleinen internen `McpErrorParameters`-Vertrag; `isError`-Policy und Wire-Semantik bleiben unverändert. `AssemblyAnalysisResponse` wurde für den Target-Kontext angepasst. `code-map.md` aktualisiert.
+- Verifikationsnachweise nach der letzten Codeänderung:
+  - Gezielte FastTests: 11/11 bestanden.
+  - DRY: 0 exakte Duplikatcluster; Dead Code: 0 High-Confidence-Funde; Magic Values: 0 Treffer.
+  - Produktionsscope `get_violations` mit absolutem Projektpfad und `scopeFilter=src/AiNetLinter/Mcp`: keine Verstöße an geänderten Symbolen; 2 bestehende Warnungen in `FindSymbolScanner.cs`, scopefremd.
+  - `git diff --check`: erfolgreich; nur bekannte LF/CRLF-Hinweise.
+- Nicht ausgeführt: vollständiger Build und vollständige Nicht-Stress-Gates in diesem Versuch; letzter bekannter Gate-Stand bleibt mit Alt-/Umgebungsfehlern belastet.
+- Nächste Aktion: Korrekturstand committen und beide P1-Ursachen unabhängig reviewen lassen.

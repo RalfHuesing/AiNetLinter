@@ -49,12 +49,13 @@ internal static class McpToolResults
         string code,
         string message,
         string? context = null,
-        string? hint = null,
-        string? targetType = null,
-        string? targetPath = null)
+        string? hint = null)
     {
-        return BuildResult(code, message, context, hint, isError: true, targetType, targetPath);
+        return BuildResult(code, message, new McpErrorParameters(context, hint), isError: true);
     }
+
+    internal static CallToolResult Error(string code, string message, McpErrorParameters parameters) =>
+        BuildResult(code, message, parameters, isError: true);
 
     /// <summary>
     /// Baut ein Ergebnis fuer eine erwartbare/recoverable Bedingung (Symbol nicht gefunden,
@@ -68,29 +69,34 @@ internal static class McpToolResults
         string code,
         string message,
         string? context = null,
-        string? hint = null,
-        string? targetType = null,
-        string? targetPath = null)
+        string? hint = null)
     {
-        return BuildResult(code, message, context, hint, isError: false, targetType, targetPath);
+        return BuildResult(code, message, new McpErrorParameters(context, hint), isError: false);
     }
+
+    internal static CallToolResult Recoverable(string code, string message, McpErrorParameters parameters) =>
+        BuildResult(code, message, parameters, isError: false);
 
     private static CallToolResult BuildResult(
         string code,
         string message,
-        string? context,
-        string? hint,
-        bool isError,
-        string? targetType,
-        string? targetPath)
+        McpErrorParameters parameters,
+        bool isError)
     {
-        var text = LinterErrorFormatter.Format(code, message, context, hint);
+        var text = LinterErrorFormatter.Format(code, message, parameters.Context, parameters.Hint);
         return new CallToolResult
         {
             IsError = isError,
             Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
             StructuredContent = JsonSerializer.SerializeToElement(
-                new McpErrorPayload(code, message, context, hint, Recoverable: !isError, targetType, targetPath),
+                new McpErrorPayload(
+                    code,
+                    message,
+                    parameters.Context,
+                    parameters.Hint,
+                    Recoverable: !isError,
+                    parameters.TargetType,
+                    parameters.TargetPath),
                 McpJsonOptions.Default),
         };
     }
@@ -220,17 +226,21 @@ internal static class McpToolResults
     internal static CallToolResult CompilationError(
         string message,
         string? context = null,
-        string? hint = null,
-        string? targetType = null,
-        string? targetPath = null)
+        string? hint = null) =>
+        CompilationError(message, new McpErrorParameters(context, hint));
+
+    internal static CallToolResult CompilationError(string message, McpErrorParameters parameters)
     {
+        var effectiveParameters = parameters.Hint is null
+            ? parameters with
+            {
+                Hint = "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung.",
+            }
+            : parameters;
         return Error(
             LinterErrorCodes.WorkspaceDiagnostic,
             message,
-            context: context,
-            hint: hint ?? "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung.",
-            targetType: targetType,
-            targetPath: targetPath);
+            effectiveParameters);
     }
 
     /// <summary>
@@ -256,6 +266,12 @@ internal static class McpToolResults
         };
     }
 }
+
+internal readonly record struct McpErrorParameters(
+    string? Context = null,
+    string? Hint = null,
+    string? TargetType = null,
+    string? TargetPath = null);
 
 /// <summary>
 /// Typisierter Fehlervertrag fuer MCP-Antworten. Die Payload wird fuer harte und recoverable

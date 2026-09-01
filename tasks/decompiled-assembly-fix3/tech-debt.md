@@ -17,11 +17,11 @@
 - Schweregrad: P2 (Review-Bestätigung ausstehend)
 - Ursachensignatur: erweiterte-mcp-verträge-ohne-parameterobjekt
 - Scope/Fundstelle: geänderte MCP-Methoden in `src/AiNetLinter/Mcp`, insbesondere `McpToolResults` und Assembly-Analyse-Verträge
-- Evidenz: Der Abschlussreview bestätigte vier aktive `MaxMethodParameterCount`-Verstöße in `McpToolResults.cs` an Zeilen 48, 67, 78 und 220 (`Error`, `Recoverable`, `BuildResult`, `CompilationError`). Sie entstanden durch die typisierte Payload-Erweiterung und wurden als Produktions-P1 eingestuft.
-- Disposition: fix-now
-- attempts: 1
-- Nächster Schritt: Scope-nahen Parametervertrag/Parameterobjekt-Fix implementieren und Produktionsscope mit `get_violations` erneut prüfen.
-- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 4 abgeschlossen"
+- Evidenz: Der Abschlussreview bestätigte vier aktive `MaxMethodParameterCount`-Verstöße in `McpToolResults.cs`; Korrekturversuch 5 führte `McpErrorParameters` ein und der Produktionsscope-Nachcheck meldete keine Verstöße an den geänderten Symbolen. Unabhängige Review-Bestätigung steht noch aus.
+- Disposition: fix-now (Review ausstehend)
+- attempts: 2
+- Nächster Schritt: Unabhängiger Review; bei bestätigter Behebung als `fixed` markieren.
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 5 abgeschlossen"
 
 ### Fehlende globale Antwortbudget-Projektion
 
@@ -101,8 +101,18 @@
 - Schweregrad: P1
 - Ursachensignatur: typed-error-payload-contract-test-drift
 - Scope/Fundstelle: `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisConfigurationFailureTests.cs:71,124`; `src/AiNetLinter.FastTests/Mcp/Tools/Safeguard/SafeguardToolTests.cs:44,199`
-- Evidenz: Vier Assertions erwarten `StructuredContent == null`, obwohl `McpErrorPayload` gemäß freigegebenem Paket-1-Vertrag korrekt geliefert wird.
-- Disposition: fix-now
-- attempts: 1
-- Nächster Schritt: Assertions auf typisierte Fehlerfelder umstellen und betroffene FastTests erneut ausführen.
-- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 4 abgeschlossen"
+- Evidenz: Vier Assertions erwarteten `StructuredContent == null`; Korrekturversuch 5 prüft nun typisierte `McpErrorPayload`-Felder und der gezielte Lauf meldete 11/11 Tests grün. Unabhängige Review-Bestätigung steht noch aus.
+- Disposition: fix-now (Review ausstehend)
+- attempts: 2
+- Nächster Schritt: Unabhängiger Review; bei bestätigter Behebung als `fixed` markieren.
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 5 abgeschlossen"
+
+### Bestehende FindSymbolScanner-Warnungen
+
+- Schweregrad: P2
+- Ursachensignatur: existing-find-symbol-scanner-warnings
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Tools/SymbolGraph/FindSymbolScanner.cs`
+- Evidenz: Der frische Produktionsscope-Check meldete zwei bestehende Warnungen; sie betreffen keine geänderten Symbole dieses Korrekturversuchs.
+- Disposition: accepted-deferred
+- Nächster Schritt: Nur bei einem späteren direkten Scope-Bezug prüfen; keine Ausweitung von Paket 1.
+- Log-Anker: `execution-log.md`, „Paket 1 Korrekturversuch 5 abgeschlossen"

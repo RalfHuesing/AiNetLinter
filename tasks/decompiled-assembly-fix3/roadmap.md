@@ -5,7 +5,7 @@
 - Status: executing
 - current_epic: Paket 1 – Vertragsintegrität und P1-Korrektheit
 - current_debt_item: typed-error-payload-contract-drift-and-parameter-growth
-- debt_attempts: 1
+- debt_attempts: 2
 - letzter Commit: folgt nach diesem Planungs-Checkpoint
 
 ## Epics

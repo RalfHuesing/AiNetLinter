@@ -41,7 +41,14 @@ public sealed class SafeguardToolTests
         var result = await SafeguardTool.ExecuteAsync(state, null, 8.0, 20, CancellationToken.None);
 
         Assert.True(result.IsError);
-        Assert.Null(result.StructuredContent);
+        Assert.NotNull(result.StructuredContent);
+        var payload = JsonSerializer.Deserialize<McpErrorPayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal("SOLUTION_NOT_LOADED", payload.Code);
+        Assert.Contains("Solution ist nicht geladen", payload.Message, StringComparison.Ordinal);
+        Assert.Contains("Server-Log", payload.Hint, StringComparison.Ordinal);
+        Assert.False(payload.Recoverable);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SOLUTION_NOT_LOADED", textContent.Text, StringComparison.Ordinal);
     }
@@ -196,7 +203,15 @@ public sealed class SafeguardToolTests
         var result = await SafeguardTool.ExecuteAsync(state, null, 8.0, 20, CancellationToken.None);
 
         Assert.True(result.IsError);
-        Assert.Null(result.StructuredContent);
+        Assert.NotNull(result.StructuredContent);
+        var payload = JsonSerializer.Deserialize<McpErrorPayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal("ANALYSIS_FAILED", payload.Code);
+        Assert.Contains("Safeguard-Berechnung", payload.Message, StringComparison.Ordinal);
+        Assert.Contains("Einmal erneut versuchen", payload.Hint, StringComparison.Ordinal);
+        Assert.Contains("Simulierter Lesefehler fuer Malfunction-Regression", payload.Context, StringComparison.Ordinal);
+        Assert.False(payload.Recoverable);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("ANALYSIS_FAILED", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Einmal erneut versuchen", textContent.Text, StringComparison.Ordinal);

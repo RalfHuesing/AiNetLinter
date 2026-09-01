@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.TestKit;
@@ -68,7 +69,15 @@ public sealed class AssemblyAnalysisConfigurationFailureTests
         Assert.DoesNotContain(rawCacheRoot, resultText, StringComparison.Ordinal);
         Assert.DoesNotContain("secret", resultText, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("decompiled", resultText, StringComparison.OrdinalIgnoreCase);
-        Assert.Null(result.StructuredContent);
+        Assert.NotNull(result.StructuredContent);
+        var payload = JsonSerializer.Deserialize<McpErrorPayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal(ExternalSourceConfigurationDiagnosticCodes.CacheRootInvalid, payload.Code);
+        Assert.Contains("externe Source-Konfiguration ist ungültig", payload.Message, StringComparison.Ordinal);
+        Assert.Equal(assemblyPath, payload.Context);
+        Assert.Equal("ExternalSources-Konfiguration korrigieren und erneut versuchen.", payload.Hint);
+        Assert.True(payload.Recoverable);
     }
 
     [Fact]
@@ -121,7 +130,15 @@ public sealed class AssemblyAnalysisConfigurationFailureTests
         Assert.Contains(ExternalSourceConfigurationDiagnosticCodes.ExternalSourcesSectionInvalid, resultText, StringComparison.Ordinal);
         Assert.Contains("ExternalSources-Konfiguration korrigieren", resultText, StringComparison.Ordinal);
         Assert.DoesNotContain("decompiled", resultText, StringComparison.OrdinalIgnoreCase);
-        Assert.Null(result.StructuredContent);
+        Assert.NotNull(result.StructuredContent);
+        var payload = JsonSerializer.Deserialize<McpErrorPayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal(ExternalSourceConfigurationDiagnosticCodes.ExternalSourcesSectionInvalid, payload.Code);
+        Assert.Contains("externe Source-Konfiguration ist ungültig", payload.Message, StringComparison.Ordinal);
+        Assert.Equal(assemblyPath, payload.Context);
+        Assert.Equal("ExternalSources-Konfiguration korrigieren und erneut versuchen.", payload.Hint);
+        Assert.True(payload.Recoverable);
     }
 
     private static string ValidMappings() =>
