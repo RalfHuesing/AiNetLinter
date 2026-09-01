@@ -568,3 +568,15 @@
 - P1 `package2-regression-test-contract-drift`: offen. `GetServerHealthToolTests.cs:112` und `:171` erwarten weiterhin eine globale Sessionliste, obwohl der Default `includeSessions=false` ist; der gezielte Health-/Reload-Lauf steht deshalb bei 12/14. End-to-End-Abdeckung für `includeSessions`/`maxSessions`, Diagnose-Samples mit `totalCount`/`truncatedBy` sowie Structured Content von CallTree, TypeHierarchy, MetricsTree und ReloadConfig fehlt weiterhin. Der 38/38-Lauf prüft nur Text-/Verhaltensverträge.
 - Frische Nachweise: Assembly 18/18; CallTree/TypeHierarchy/MetricsTree 38/38; Health/Reload 12/14; Produktionsscope 0 Fehler und 3 bestehende Warnungen.
 - Nächste Aktion: Health-Assertions aktualisieren und gezielte E2E-Regressionen für Sessionlimits, Diagnoseprojektion und alle vier Structured-Content-Erfolgstools ergänzen; danach vollständige Nicht-Stress-Gates und den MCP-Produktionsscope erneut ausführen.
+
+## 2026-09-01 – Paket 2 Korrekturversuch 3 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `1dfb9a1f`
+- Ursachensignatur: `package2-regression-test-contract-drift`
+- Versuch: 3 von 5
+- Status: running
+- Auftrag: Die zwei roten globalen Health-Assertions auf den Default `includeSessions=false` aktualisieren und fokussierte Regressionen für `includeSessions`/`maxSessions`, Diagnose-Samples mit `totalCount`/`truncatedBy` sowie Structured Content von CallTree, TypeHierarchy, MetricsTree und ReloadConfig ergänzen. Bestehende Produktionsfixes und Textverträge erhalten, `code-map.md` pflegen, nach letzter Codeänderung gezielte Tests, vollständige Nicht-Stress-Gates soweit sinnvoll und den relevanten MCP-`get_violations`-Scope ausführen. Kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
