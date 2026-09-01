@@ -678,3 +678,15 @@
 - Verifikation des Agenten: keine Nachtests nach der Änderung auf Agentenebene; der vorherige Stand war FastTests 61/61 und IntegrationTests 18/19. `git diff --check` nach dem Patch offen.
 - Verbleibende Risiken: Der Patch ist ungetestet; insbesondere ReloadConfig-Zähler, gezielte IntegrationTests und `git diff --check` müssen vor einer Freigabe nachgeholt werden. Die Diagnose-/Structured-Content-Nachschärfungen aus dem Review sind nur teilweise umgesetzt.
 - Nächste Aktion: Orchestrator-Nachverifikation, danach unabhängiger Abschlussreview für Paket 2.
+
+## 2026-09-01 – Paket 2 Abschlussreview gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `f98eeead`; fachliche Ausgangsbasis `027e4eb8`
+- Ursachensignatur: `package2-regression-test-contract-drift`
+- Korrekturbudget: 5 von 5 ausgeschöpft; keine weitere automatische Korrektur bei neuem P1
+- Status: running
+- Auftrag: Abschlussprüfung von Paket 2 gegen Konzept, Rules und Code-Map. Frische gezielte Tests für Health/Reload/Structured Content sowie Fast-/Integration-Slices; Produktionsscope-MCP-Checks bei Bedarf. Prüfe besonders den korrigierten globalen Health-Default, konkrete Aggregatzähler, `includeSessions/maxSessions`, Diagnoseprojektion und die vier Structured-Content-Erfolgspayloads. Kein Produktions-/Testcode ändern und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen.
