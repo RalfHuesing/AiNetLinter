@@ -663,3 +663,18 @@
 - Versuch: 5 von 5
 - Status: running
 - Auftrag: Kleiner Testpatch ohne Produktionsänderung. Ersetze die veraltete globale Health-Textassertion `Diagnosen: 0 von 4` durch den tatsächlichen Default-Text `Diagnosen gesamt: 4` und ergänze nur die konkret fehlenden, nicht tautologischen Default-Aggregatzähler/`SessionsTruncatedBy`-Assertionen sowie belastbare konkrete Werte für Diagnose-/Structured-Content-Regressionen. Keine großen Vollgates starten; nach Änderungen nur gezielte Fast-/IntegrationTests, `git diff --check` und relevante MCP-/Regelchecks. Nur `code-map.md` darf neben den Testdateien aktualisiert werden; kein Commit, keine Roadmap-/Log-/Tech-Debt-Änderung.
+
+## 2026-09-01 – Paket 2 Korrekturversuch 5 abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer (letzter frischer Korrekturversuch)
+- Subagent-ID: `01a05c6c-9fd9-7ac1-a43f-f75457ebff51`
+- Ursachensignatur: `package2-regression-test-contract-drift`
+- Versuch: 5 von 5
+- Status: completed; Testpatch ohne Produktionsänderung und ohne Rollen-Commit übergeben
+- Geänderte Dateien: `src/AiNetLinter.IntegrationTests/Mcp/Tools/GetServerHealthToolTests.cs`, `src/AiNetLinter.IntegrationTests/Mcp/Tools/ReloadConfigToolTests.cs`, `tasks/decompiled-assembly-fix3/code-map.md`.
+- Korrekturen: Health-Text auf `Diagnosen gesamt: 4` korrigiert; Default-Aggregat konkret mit vier Diagnosen, `partial=1`, keinen Sessions, 0 angezeigten Sessions, keiner Trunkierung und leerem `SessionsTruncatedBy` abgesichert; ReloadConfig-Delta auf konkrete Fixture-Werte 15 → 14 mit Delta -1 geändert.
+- Verifikation des Agenten: keine Nachtests nach der Änderung auf Agentenebene; der vorherige Stand war FastTests 61/61 und IntegrationTests 18/19. `git diff --check` nach dem Patch offen.
+- Verbleibende Risiken: Der Patch ist ungetestet; insbesondere ReloadConfig-Zähler, gezielte IntegrationTests und `git diff --check` müssen vor einer Freigabe nachgeholt werden. Die Diagnose-/Structured-Content-Nachschärfungen aus dem Review sind nur teilweise umgesetzt.
+- Nächste Aktion: Orchestrator-Nachverifikation, danach unabhängiger Abschlussreview für Paket 2.

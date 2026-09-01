@@ -115,10 +115,15 @@ public sealed class GetServerHealthToolTests
         Assert.Equal(0, compactPayload.ShownSessionCount);
         Assert.False(compactPayload.DiagnosticsIncluded);
         Assert.False(compactPayload.SessionsTruncated);
-        Assert.Contains("Diagnosen: 0 von 4", Assert.IsType<TextContentBlock>(Assert.Single(compact.Content)).Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("Diagnosen: 4 von 4", Assert.IsType<TextContentBlock>(Assert.Single(compact.Content)).Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("health-root-0", Assert.IsType<TextContentBlock>(Assert.Single(compact.Content)).Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("health-transitive-0", Assert.IsType<TextContentBlock>(Assert.Single(compact.Content)).Text, StringComparison.Ordinal);
+        Assert.Empty(compactPayload.SessionsTruncatedBy!);
+        Assert.Equal(4, compactPayload.AssemblyDiagnosticCount);
+        Assert.Equal(1, compactPayload.AssemblyStatusCounts!["partial"]);
+        Assert.Single(compactPayload.AssemblyStatusCounts);
+        var compactText = Assert.IsType<TextContentBlock>(Assert.Single(compact.Content)).Text;
+        Assert.Contains("Diagnosen gesamt: 4", compactText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Diagnosen: 4 von 4", compactText, StringComparison.Ordinal);
+        Assert.DoesNotContain("health-root-0", compactText, StringComparison.Ordinal);
+        Assert.DoesNotContain("health-transitive-0", compactText, StringComparison.Ordinal);
 
         var detailed = GetServerHealthResponseBuilder.Build(
             Array.Empty<ProjectSnapshot>(),

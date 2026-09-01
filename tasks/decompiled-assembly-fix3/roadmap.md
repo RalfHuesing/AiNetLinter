@@ -6,7 +6,7 @@
 - current_epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
 - current_debt_item: package2-regression-test-contract-drift
 - debt_attempts: 5
-- letzter Commit: `90da9dbc`
+- letzter Commit: `db75bc23`
 
 ## Epics
 
