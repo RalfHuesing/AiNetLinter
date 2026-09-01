@@ -6,7 +6,7 @@
 - current_epic: Paket 4 – Kompatibilität, API-Lücken und Dokumentation
 - current_debt_item: package4-compatibility-api-documentation
 - debt_attempts: 0
-- letzter Commit: `2914bf42`
+- letzter Commit: `b4d48e55`
 
 ## Epics
 
