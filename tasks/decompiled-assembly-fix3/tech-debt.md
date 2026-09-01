@@ -263,10 +263,10 @@
 - Schweregrad: P1
 - Ursachensignatur: package4-managed-executable-support
 - Scope/Fundstelle: `src/AiNetLinter/Configuration/AssemblyPathValidation.cs` und Assembly-Ziel-/Source-Mapping-Verbraucher
-- Evidenz: Die zentrale Prüfung akzeptiert `.dll` und `.exe`; eine verwaltete Test-`.exe` wird ohne Ausführung analysiert. Native PE-Dateien liefern weiterhin einen typisierten Hinweis auf erforderliche verwaltete .NET-Metadaten/IL.
-- Disposition: review-pending
-- attempts: 0
-- Nächster Schritt: Unabhängigen Paket-4-Review abwarten.
+- Evidenz: Die zentrale Prüfung akzeptiert `.dll` und `.exe`; eine verwaltete Test-`.exe` wird ohne Ausführung analysiert. Native PE-Dateien liefern zwar einen typisierten und hilfreichen Fehler, aber aktuell `isError=true`/`recoverable=false` statt des im Konzept geforderten recoverable Vertrags.
+- Disposition: fix-now
+- attempts: 1
+- Nächster Schritt: Native-PE-Antwort auf `IsError=false`, `Recoverable=true` umstellen und Test/Doku synchronisieren.
 - Log-Anker: `execution-log.md`, „Paket 4 Implementierer abgeschlossen"
 
 ### Paket-4-Hotspots-Parameter
@@ -290,6 +290,17 @@
 - attempts: 0
 - Nächster Schritt: Unabhängigen Paket-4-Review abwarten.
 - Log-Anker: `execution-log.md`, „Paket 4 Implementierer abgeschlossen"
+
+### Paket-4-Health-Dokumentationsvertrag
+
+- Schweregrad: P1
+- Ursachensignatur: package4-health-documentation-drift
+- Scope/Fundstelle: `Docs/agent-api.md`, `Docs/integration.md`, `ServerMaintenanceToolRegistrations` und `GetServerHealthResponseBuilder`
+- Evidenz: Die Runtime aggregiert den parameterlosen Health-Call standardmäßig und unterstützt `includeSessions`/`maxSessions`; die Dokumentation beschreibt noch getrennte Sessiondetails als Standard und dokumentiert die beiden Steuerparameter nicht vollständig.
+- Disposition: fix-now
+- attempts: 1
+- Nächster Schritt: Health-Abschnitte auf den tatsächlichen Aggregate-/Detailvertrag aktualisieren und per Smoke-Test verifizieren.
+- Log-Anker: `execution-log.md`, „Paket 4 Reviewer abgeschlossen"
 
 ### Paket-4-Registry-Alias-Kanonisierung
 

@@ -4,8 +4,8 @@
 - Betriebsart: Großkonzept-Modus
 - Status: executing
 - current_epic: Paket 4 – Kompatibilität, API-Lücken und Dokumentation
-- current_debt_item: package4-compatibility-api-documentation
-- debt_attempts: 0
+- current_debt_item: package4-native-pe-recoverability
+- debt_attempts: 1
 - letzter Commit: `b7fd550d`
 
 ## Epics

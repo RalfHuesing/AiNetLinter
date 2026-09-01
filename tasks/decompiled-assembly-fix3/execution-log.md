@@ -975,6 +975,31 @@
 - Offene Risiken: Registry-Alias-/Reparse-/8.3-Kanonisierung bleibt ohne Reproduktion zurückgestellt; bestehende projektweite AIContext-/FindSymbol-Parameterwarnungen bleiben außerhalb des Scopes. Der unabhängige Review steht aus.
 - Nächste Aktion: Code-/Dokumentationscheckpoint sichern und frischen Paket-4-Review starten.
 
+## 2026-09-01 – Paket 4 Reviewer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 4 – Kompatibilität, API-Lücken und Dokumentation
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05dad-245a-78c2-8f88-0a02bb835c32`
+- Review-Basis: Codecheckpoint `b7fd550d`, Taskstand `a2646273`; kein Produktions-/Testcode und kein Commit durch den Reviewer.
+- Urteil: `issues`; keine P0-, aber zwei P1-Befunde.
+- P1 `package4-native-pe-recoverability`: Native PE wird über `McpToolResults.CompilationError` als `isError=true`/`recoverable=false` geliefert, während Konzept und Roadmap einen typisierten recoverable Fehler verlangen. Test und Dokumentation müssen auf `IsError=false`, `Recoverable=true` korrigiert werden; managed `.exe` selbst wird korrekt metadata-only analysiert.
+- P1 `package4-health-documentation-drift`: Die Runtime aggregiert den parameterlosen Health-Call standardmäßig und unterstützt `includeSessions`/`maxSessions`; die Doku beschreibt noch getrennte Sessiondetails als Standard und dokumentiert diese Argumente unvollständig.
+- Erfüllte Kriterien: zentrale `.dll`/`.exe`-Prüfung, nicht reproduzierbarer Registry-Aliasbefund als P2-Rückstellung, Hotspots-Defaults/Bounds/Zähler, primäres `symbolIdentifier`, FileTree-Default und TestKit-/Fixture-Schnitt wurden bestätigt. Betroffene Test-/Wiring-/TestKit-Scopes haben 0 Violations.
+- P2: `get_test_context` verwendet in der Fehlerhilfe noch `symbol`; der managed-`.exe`-Test beweist Nichtausführung nur schwach; Hotspot-Sortierung und Text-/Structured-Content-Gleichheit könnten belastbarer getestet werden. Der aktive MCP-Daemon ist älter als der lokale Source-Stand und benötigt vor Deployment einen Neustart/Aktualisierung.
+- Verifikation: fokussierte FastTests 78 bestanden/1 bestehender Agent-Guide-Zeilenumbruchfehler; fokussierte IntegrationTests 25/25; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` grün; Audit ohne tasknahe Duplikat-/HIGH-Dead-Code-/sichere Magic-Value-Befunde. Keine Vollgates im Review.
+- Nächste Aktion: P1-Korrekturversuch 1 mit frischem Implementierer für Recoverability und Health-Dokumentation starten.
+
+## 2026-09-01 – Paket 4 P1-Korrekturversuch 1 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 4 – Kompatibilität, API-Lücken und Dokumentation
+- Rolle: Implementierer (frisch, Native-PE-Recoverability und Health-Dokumentation)
+- Ursachensignaturen: `package4-native-pe-recoverability`; `package4-health-documentation-drift`
+- Versuch: 1 im Epic
+- Status: running
+- Auftrag: Native PE mit typisiertem `Recoverable`-Payload (`IsError=false`, `Recoverable=true`) bei unverändert hilfreicher Meldung liefern; managed `.exe`- und native-PE-Regressionen aktualisieren. Health-Dokumentation muss Aggregate-Default, zielgebundene Details sowie `includeSessions`/`maxSessions` exakt beschreiben. Keine Assembly-Ausführung, keine Alias-Kanonisierung, keine Ausweitung; kein Commit und keine Roadmap-/Log-/Tech-Debt-Änderung durch den Agenten.
+
 ## 2026-09-01 – Paket 3 Korrekturversuch 3 Implementierer abgeschlossen
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume
