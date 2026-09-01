@@ -967,6 +967,18 @@
 - Der Nutzer verlangt ausdrücklich, den Directory-Footprint nicht als akzeptierte Restschuld zu behandeln: Der Linterbefund zur maximalen Anzahl von Einträgen pro Verzeichnis soll durch eine fachlich sinnvolle Verschiebung in einen neuen Unterordner mit passendem Namespace behoben werden.
 - Konsequenz: `package2-test-directory-footprint` wird als nutzerpriorisierter P1 reaktiviert. Der nächste Korrekturversuch umfasst neben den verbleibenden Produktionsstruktur-Befunden die geordnete Assembly-Teststruktur; keine bloße Suppression oder kosmetische Umbenennung.
 
+## 2026-09-01 – Paket 3 Korrekturversuch 2 Reviewer gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `c6c7378a`
+- Ursachensignaturen: `package3-structural-rule-drift`; nutzerpriorisiert zusätzlich `package2-test-directory-footprint`
+- Versuch: 2 im Epic; der kombinierte Code-Checkpoint enthält die vorangegangene Korrektur-1/2-Arbeit
+- Status: running
+- Auftrag: Prüfe die strukturelle Aufteilung gegen Konzept, Rules und Nutzerpräzisierung. Bestätige, dass die neun Strukturviolations auf null reduziert wurden bzw. klassifiziere echte Restbefunde. Prüfe zusätzlich den Assembly-Testordner: gruppiere fachlich zusammengehörige Tests (z. B. Navigation/Route/Contract) in einen sinnvollen Unterordner mit passendem Namespace, sodass `MaxDirectoryChildren` ohne Suppression erfüllt wird. Bewerte, ob die funktionalen Fallback-/Overload-/Literalverträge unverändert bleiben. Kein Produktions-/Testcode ändern und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen. Keine lang laufenden Vollgates.
+
 ## 2026-09-01 – Paket 3 Korrekturversuch 1 gestartet
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume
