@@ -1,8 +1,8 @@
 # Ausführungsstand: Assembly-Unterstützungs-Audit
 
 status: executing
-current_epic: 5
-last_checkpoint: Epic 4 abgeschlossen; Analyse-Checkpoint wird gesichert
+current_epic: 6
+last_checkpoint: Epic 5 abgeschlossen; Analyse-Checkpoint wird gesichert
 current_debt_item: none
 debt_attempts: 0
 
@@ -45,12 +45,13 @@ acht eigenständige, priorisierte Befundberichte.
    Symbolgraph- und Strukturtools, Root-/Referenzgrenzen, Caller-/Calltree-
    Semantik, Extensions und Trunkierung. Abhängigkeiten: Epics 2–3.
    Verifikation: gezielte Navigationstools und Quelltext-/Testvertragsanalyse.
-   Status: in_progress.
+   Status: done (Analysebericht abgeschlossen; Review auf Nutzeranweisung
+   übersprungen).
 6. **Response-, Token- und Laufzeiteffizienz** — Budgets, Reduktionsreihenfolge,
    Text-/JSON-Konsistenz, Diagnose-Samples, Referenzlimits und Worst-Case-
    Payloads. Abhängigkeiten: Epics 3–5. Verifikation: gezielte MCP-
    Payloads, Budget-/Limit-Code und vorhandene Tests, ohne Testausführung.
-   Status: open.
+   Status: in_progress.
 7. **Betrieb, Sicherheit und Fehlerverhalten** — Pfade, Dateitypen, native/
    beschädigte/wechselnde Dateien, Nichtausführung, redigierte Fehler,
    Health/Observability und Fail-Closed. Abhängigkeiten: Epics 2–6.

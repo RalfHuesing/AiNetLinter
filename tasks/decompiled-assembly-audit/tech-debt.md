@@ -320,3 +320,86 @@
   Darstellung für generische Clients fachlich spezifizieren.
 - Log-Anker: Epic 1 Implementiererbericht, 2026-09-01.
 - Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E5-BUG-01 — Root-Treffer werden durch globale Referenzsortierung verdrängt
+
+- Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblySymbolSearch.FindMatchesAsync` und
+  `AssemblyNavigationSupport`.
+- Evidenz: Bei `includeReferences=true` und kleinem `maxResults` wurden nur
+  Referenztreffer angezeigt, obwohl Root-Treffer existierten; die globale
+  Sortierung erfolgt vor der Kappung.
+- Nächster Schritt: Root-first-Reservierung und getrennte Treffer-/Assembly-
+  Trunkierungsgründe spezifizieren.
+- Log-Anker: Epic 5 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E5-BUG-02 — Trefferlisten-Kappung wird als Assembly-Kappung markiert
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblySymbolSearch` und Navigation-Summary.
+- Evidenz: Bei unverändert vollständigem Assembly-Suchraum wechselte
+  `assembliesTruncated` allein durch `maxResults` von false zu true.
+- Nächster Schritt: `resultsTruncated`/`truncatedBy` getrennt von
+  `assembliesTruncated` projizieren.
+- Log-Anker: Epic 5 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E5-BUG-03 — Referenz-Stable-ID ist für Body-Folgeabfrage nicht nutzbar
+
+- Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `AssemblySymbolSearch`, `SymbolIdentifierResolver` und
+  Body-Tool-Registrierung.
+- Evidenz: Eine referenzgebundene ID aus `find_symbol(includeReferences=true)`
+  wurde vom `get_symbol_body`-Dispatch mit `INVALID_ARGUMENT` abgewiesen.
+- Nächster Schritt: Referenz-Lease/Origin-Route im Body-Tool ergänzen oder
+  solche IDs explizit als nicht weiterleitbar markieren.
+- Log-Anker: Epic 5 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E5-BUG-05 — Response-Budgettrimming wird als Extension-Trunkierung markiert
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: `FindAssemblyExtensionsResponseBuilder` und
+  `AssemblyAnalysisResponseLimits`.
+- Evidenz: `extensions=[]`, `totalExtensions=0`, aber `truncated=true` wegen
+  `responseBudget`, obwohl Begleitlisten und nicht Extension-Treffer gekürzt
+  wurden.
+- Nächster Schritt: Extension-Listen- und Response-Budget-Trunkierung mit
+  eigenen Flags, Counts und Ursachen trennen.
+- Log-Anker: Epic 5 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E5-MF-01 — Referenzsicht für Struktur- und Metriktools fehlt
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: Registrierungen für Hierarchie-, Struktur- und
+  Metrikwerkzeuge.
+- Evidenz: Nur Symbol-/Referenz-/Calltree-Pfade besitzen Assembly-
+  `includeReferences`; Struktur-/Metrikpfade bleiben Root-only.
+- Nächster Schritt: Gemeinsamen bounded Opt-in-Vertrag oder maschinenlesbare
+  Root-only-Grenze definieren.
+- Log-Anker: Epic 5 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E5-MF-02 — Signatur-only-Basis wird in Metrics/Calltree nicht hinreichend projiziert
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: Metrics-/Calltree-Response-Projektion.
+- Evidenz: Globales `analysis` nennt `contentMode`/`bodyAvailability`, aber
+  Metrics-/Tree-/Leerresultate tragen keine eigene Messbasis.
+- Nächster Schritt: `measurementBasis` sowie unterscheidbare leere Calltree-
+  Zustände spezifizieren.
+- Log-Anker: Epic 5 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E5-MF-03 — Consumer-basierte Extension-Anwendbarkeit fehlt standalone
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Scope/Fundstelle: Assembly-Dispatch und `AssemblyAnalysisService.FindExtensions`.
+- Evidenz: Standalone-Calls liefern ohne Consumer-Kontext höchstens
+  `not_decidable`; `receiverType` ist nur ein Filter.
+- Nächster Schritt: Expliziten bounded Consumer-/Projekt-Target-Kontext oder
+  source-backed Consumer-Route definieren.
+- Log-Anker: Epic 5 Implementiererbericht, 2026-09-01.
+- Begründung der Disposition: Analyse-Only-Non-Goal.

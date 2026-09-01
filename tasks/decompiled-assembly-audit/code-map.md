@@ -1,6 +1,38 @@
-# Epic 4 — kompakte Code-Map (Epic-3-Basis erhalten)
+# Epic 5 — Navigation und Query-Korrektheit (Epic-4-Basis erhalten)
 
 ## Primäre Einstiegspunkte
+
+- Epic-5-Target-Routing und Assembly-Dispatch:
+  - `src/AiNetLinter/Mcp/AnalysisToolCall.cs:113-201`
+  - `src/AiNetLinter/Mcp/Registration/SymbolGraphToolRegistrations.cs:44-224`
+  - `src/AiNetLinter/Mcp/Registration/SymbolBodyToolRegistrations.cs:30-44`
+  - `src/AiNetLinter/Mcp/Registration/FileStructureToolRegistrations.cs:95-179`
+  - `src/AiNetLinter/Mcp/Registration/AnalysisToolRegistrations.cs:140-180`
+  - `src/AiNetLinter/Mcp/Registration/AssemblyAnalysisToolRegistrations.cs:87-125`
+- Epic-5-Symbolsuche und Referenznavigation:
+  - `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyNavigationSupport.cs:21-145`
+  - `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblySymbolSearch.cs:18-107`
+  - `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblySymbolResolver.cs:16-106`
+  - `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyReferenceNavigator.cs:24-180`
+  - `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindSymbolTool.cs:21-96`
+  - `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindReferencesTool.cs:19-79`
+  - `src/AiNetLinter/Mcp/Tools/CallTree/AssemblyGetCallTreeTool.cs:18-90`
+- Epic-5-Body-, Struktur- und Metrikfolgen:
+  - `src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs:65-176`
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/Bodies/AssemblyDecompiledBodyResolver.cs:18-260`
+  - `src/AiNetLinter/Mcp/Tools/SymbolGraph/SymbolIdentifierResolver.cs:131-221`
+  - `src/AiNetLinter/Mcp/Tools/SymbolGraph/GetTypeHierarchyTool.cs:20-61`
+  - `src/AiNetLinter/Mcp/Tools/DependencyGraph/DependencyGraphTool.cs:29-194`
+  - `src/AiNetLinter/Mcp/Tools/FileStructure/GetNamespaceTreeTool.cs:20-216`
+  - `src/AiNetLinter/Mcp/Tools/FileStructure/GetFileSkeletonTool.cs:24-156`
+  - `src/AiNetLinter/Mcp/Tools/FileStructure/GetClassStructureTool.cs:32-382`
+  - `src/AiNetLinter/Mcp/Tools/MetricsLookup/MetricsLookupTool.cs:23-133`
+  - `src/AiNetLinter/Mcp/Tools/MetricsTree/MetricsTreeTool.cs:28-122`
+- Epic-5-Extensions und Trunkierungsprojektion:
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisService.cs:108-177`
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/Responses/FindAssemblyExtensionsResponseBuilder.cs:15-110`
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.Budget.cs:38-58,92-128,205-268`
+  - `src/AiNetLinter/Mcp/Tools/SymbolGraph/TransitiveCallGraphFormatter.cs:41-180`
 
 - Epic-3-Hauptpfad Referenzen/Source/Diagnosen:
   - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyReferenceResolver.cs:16-427`
@@ -70,6 +102,12 @@
   Provider, Checkout, Snapshot, Attestation, Health und Trust vor Source-backed.
 - `AssemblyAnalysisRegistryEntryFactory:149-162` setzt im registrierten Assembly-Kontext `ConsumerSolution:null` und `ReceiverType:null`; `AssemblyAnalysisService.ToExtensionDto:133-164` projiziert dann `not_decidable`.
 - `AssemblyAnalysisContextFactory:130-180,280-309,394-411` trennt Source-backed/Fallback, baut Source-Project-References ein und setzt Origin/Confidence/Trust/Partial.
+- Epic-5-Befund E5-BUG-01: `AssemblySymbolSearch.FindMatchesAsync:18-67` sammelt Root zuerst, sortiert die Treffer aber global nach Origin-Pfad und kappt danach; bei kleinem `maxResults` können Root-Treffer unsichtbar werden.
+- Epic-5-Befund E5-BUG-02: derselbe Pfad übergibt `distinct.Count > shown.Count` an `CreateSummary` als `assembliesTruncated`; Trefferlisten- und Assembly-Scope-Trunkierung werden dadurch vermischt.
+- Epic-5-Befund E5-BUG-03: Referenz-IDs aus `find_symbol(includeReferences=true)` werden von `get_symbol_body` gegen die Root-Lease-Identität geprüft und sind dort nicht weiterverwendbar.
+- Epic-5-Befund E5-BUG-04: `SkeletonSyntaxWalker.BuildConstructorInfo:214-220` erzeugt eine Konstruktor-DocumentationCommentId, die der aktuelle Stable-ID-Resolver beim Skeleton-zu-Body-Roundtrip nicht findet.
+- Epic-5-Befund E5-BUG-05: `AssemblyAnalysisResponseLimits.ProjectResponseBudget(FindAssemblyExtensionsPayload):38-58` setzt bei Begleitlisten-Trimming `Truncated=true`, obwohl `TotalExtensions=0` und kein Extension-Element entfernt wurde.
+- Epic-5-Boundary: `get_type_hierarchy`, `dependency_graph`, `get_namespace_tree`, `get_file_skeleton`, `get_class_structure`, `metrics_lookup` und `metrics_tree` dispatchen assembly-seitig auf die Root-Solution; sie besitzen aktuell kein `includeReferences`.
 
 - `AssemblyDecompilationAdapter`
   - `CreateBodyResolver` und `CreateDecompiler` trennen Signatur-Snapshot (`decompileMemberBodies=false`) von Body-Abfrage (`true`).
@@ -106,6 +144,10 @@
 - `AssemblyDiagnosticCodes.IsExpectedDeclarationOnlyDiagnostic`
   - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDiagnosticCodes.cs`.
   - Erkennt nur die erwartbaren Deklarations-only-Diagnosecodes für leere Event-Accessors bzw. Member-Bodies.
+- `AssemblyReferenceNavigator:24-180` traversiert für `find_references`/`get_call_tree` nur bei explizitem `includeReferences=true` die bounded Lease-Menge; `CreateSources:134-145` ergänzt bei Referenzzielen eine auf den Root gemappte Quelle.
+- `TransitiveCallGraphFormatter:41-180` projiziert Diagnostics und Call-Site-Completeness; leere dekompilierte Stub-Ergebnisse bleiben fachlich von globalen Negativaussagen zu trennen.
+- `GetSymbolBodyTool:65-176` liefert für Assembly-Leases Text-only-Bodies und nutzt Stable-ID-/Positionsauflösung; `AssemblyDecompiledBodyResolver:54-101` dekodiert Bodies separat on demand und kann `unavailable` oder zeilenbegrenzte Ergebnisse liefern.
+- `MetricsLookupTool:56-86` misst die bereitgestellte Roslyn-Snapshot-Solution; bei decompiled `decompiledSignatureOnly` sind die Metriken daher nicht automatisch Body-Metriken.
 
 ## Aufrufer und Abhängigkeiten
 
@@ -137,6 +179,10 @@
 - `get_file_skeleton`/`find_symbol` liefern Snapshot-gebundene IDs; `get_class_structure` und `get_symbol_body` lösen dieselbe Assembly-Generation über Symbol-/Positionsadressen auf.
 - `AssemblyReferenceResolver` arbeitet über PE-/Metadatenreferenzen; es gibt keine Runtime-Ausführung des Zielartefakts.
 - Source-backed und decompiled sind getrennte Originpfade. `GIT-01`, `LOCAL-01`, `LOCAL-02` und `LOCAL-03` wurden im Audit nur als `decompiled` beobachtet; `FALSE-01` erzeugte keinen Snapshot.
+- Epic-5-Navigationsfluss: `targetType/targetPath` → `AnalysisToolCall` → Root-Lease; nur `find_symbol`, `find_references` und `get_call_tree` setzen mit `includeReferences=true` die bounded Referenzexpansion für ihre jeweilige Navigation in Gang.
+- Progressive-Disclosure-Fluss: `find_symbol`/`get_file_skeleton` → Stable-ID → `get_symbol_body`; der Root-Methodenpfad ist auflösbar, der getestete Referenz-ID-Pfad und der Skeleton-Konstruktorpfad sind aktuell nicht geschlossen.
+- Struktur-/Metrik-Fluss: Assembly-Lease → eine Root-Roslyn-Solution → `get_type_hierarchy`/`dependency_graph`/Namespace-/Klassen-/Skeleton-/Metrics-Scanner; Referenz-Assemblies werden in diesen Routen nicht als fachliche Knoten aggregiert.
+- Extension-Fluss: `find_assembly_extensions` expandiert Referenz-Sessions für Begleitmetadaten, sucht klassische öffentliche `IMethodSymbol.IsExtensionMethod`-Treffer aber nur in `context.Assembly`; ohne Consumer-Solution bleibt `ReduceExtensionMethod`-Applicability `not_decidable`.
 - Registry-Isolation: `AssemblyAnalysisHostComposition` hält Session- und
   Source-Ressourcen in getrennten `ExternalResourceRegistry`-Instanzen. Das
   isoliert Zustände, bedeutet aber zugleich getrennte Budgets statt eines
@@ -185,6 +231,12 @@
   - `temp/decompiled-assembly-audit-examples.md` nur für die lokale Fallauflösung; keine konkrete Matrixidentität ist in diese Map übernommen.
 - Kein Test deckt im gesichteten Scope den direkten Skeleton-zu-Body-Roundtrip eines Konstruktors oder die vollständige Cache-Rundtrip-Gleichheit aller `DecompiledDocument`-Metadaten ab.
 - Für Epic 2 sind keine Konfigurationsänderungen vorgeschlagen oder vorgenommen worden.
+- Epic-5-relevante, read-only gesichtete Tests:
+  - `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolTests.cs:99-185` — klassische Extension-Erkennung, Receiver-Filter und erwartetes `not_decidable` ohne Consumer.
+  - `src/AiNetLinter.FastTests/Mcp/Assemblies/Navigation/AssemblyAnalysisPathContractTests.cs:23-190` — Assembly-Dokumentrouting, stabile Parameter-Methoden-ID und Generationsgrenze.
+  - `src/AiNetLinter.FastTests/Mcp/Tools/FileStructure/GetClassStructureToolTests.cs` — Member-/Linien-/Budgetvertrag; kein direkter Konstruktor-Skeleton-zu-Body-Roundtrip.
+  - `src/AiNetLinter.FastTests/Mcp/Tools/CallTree/GetCallTreeToolTests.cs` und Navigation-Vertragstests — Calltree-/Richtungs-/Trunkierungsform; kein externer dekompilierter Vollbody-Nachweis.
+- Epic-5-relevante Doku: `Docs/agent-api.md:329-372,468-482,516-518,870-895` und `Docs/integration.md:477-495` beschreiben Root-only-Defaults, bounded Referenzexpansion, Progressive Disclosure, Stable IDs, Body-Modi sowie die Snapshot-Grenze.
 
 ## Invarianten, Risiken und Unsicherheiten
 
@@ -199,6 +251,10 @@
 - Completeness: Typ-/Member-/Referenz-/Diagnosebudgets und Assembly-Limits können Ergebnisse kürzen oder `partial` machen. Jede Assembly-MCP-Antwort im Audit wurde mit Herkunft, Snapshot/Generation, Status, Completeness, Trunkierung und Diagnosen erfasst.
 - Signatur-/Body-Vertrag: `decompiledSignatureOnly` ist der Basissnapshot; Bodies sind `decompiledBodyOnDemand` und können zeilenbegrenzt/trunkiert oder unavailable sein.
 - Stable IDs: `assembly:<content-hash>:<generation>:<symbol-id>` sind nur innerhalb des passenden Content-Hash-/Generation-Kontexts gültig; alte Generationen dürfen nicht als aktuelle Symbole wiederverwendet werden.
+- Epic-5-Invariante: Root-vs-Referenz muss in Ergebnisreihenfolge, Origin, Assembly-Count und Trunkierungsgründen getrennt sichtbar bleiben; ein `maxResults`-Trefferlimit darf kein Assembly-Scope-Limit überschreiben.
+- Epic-5-Invariante: `decompiledSignatureOnly` ist der Navigations-/Metrik-Snapshot; `decompiledBodyOnDemand` ist ein separater, optionaler Folgepfad und darf keine globale Aussage über Caller-Abwesenheit erzeugen.
+- Epic-5-Risiko: `find_symbol(includeReferences=true)` kann unter kleinem Budget Root-Treffer verdrängen; Struktur-/Metriktools bleiben Root-only; Referenz- und Konstruktor-IDs sind nicht überall als Folgeinput konsumierbar.
+- Epic-5-Risiko: `find_assembly_extensions` markiert Response-Budget-Trimming derzeit auf der Extension-Liste, obwohl nur Begleitlisten reduziert wurden; Consumer-Applicability bleibt im Standalone-Assembly-Dispatch bewusst `not_decidable`.
 - E2-BUG-01 gefährdet Cache-Hit-Metadatenidentität; E2-BUG-02 gefährdet Zeileninterpretation; E2-BUG-03 gefährdet Konstruktor-Progressive-Disclosure; E2-OPT-01 betrifft Kosten, nicht Semantik.
 - Offene Unsicherheit: die geprüfte Body-Parameterlogik behandelt `ref`, `out` und `in`, aber nicht nachweislich alle modernen Kombinationen wie `ref readonly`, `scoped`, `params` und Extension-`this`.
 - Offene Unsicherheit: Wegen unvollständiger Referenzauflösung und Response-Budgets wurde keine Vollständigkeit über alle generischen Constraints, Attribute oder Member der fünf Falllabels behauptet.

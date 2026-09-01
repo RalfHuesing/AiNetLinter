@@ -190,6 +190,52 @@
   Identitäten, Pfade, URLs, Hashes oder dekompilierten Inhalte.
 - Nächste Aktion: mit Epic 5 als Analyse-/Berichtsrolle fortfahren.
 
+## 2026-09-01 — Epic 5 — running
+
+- Run-ID: `decompiled-assembly-audit-20260901`
+- Rolle: Implementierer/Analyse-Agent
+- Subagent-ID: `01a05ecd-1875-77a3-bce8-efad8f97b5f6`
+- Diff-Baseline: `686f4b9c` (Epic-4-Analyse-Checkpoint)
+- Scope: Navigation und fachliche Query-Korrektheit.
+- Erwartete Änderungen: ausschließlich `epic-05-navigation-query-korrektheit.md`
+  und `code-map.md`; keine Produktions-, Test-, Konfigurations- oder
+  Produktdokumentationsänderungen.
+
+## 2026-09-01 — Epic 5 — completed
+
+- Subagent-ID: `01a05ecd-1875-77a3-bce8-efad8f97b5f6`
+- Urteil der Analyse-Rolle: read-only Audit abgeschlossen; keine
+  Implementierung.
+- Geänderte Bereiche: `epic-05-navigation-query-korrektheit.md`, `code-map.md`.
+- Findings: fünf Bugs (drei P1, zwei P2), keine belastbare Optimierung und
+  drei Missing Features (P2). E5-BUG-04 ist dieselbe technische Ursache wie
+  E2-BUG-03 und wurde im Register nicht dupliziert; die Epic-5-Evidence
+  bestätigt und präzisiert den bestehenden Eintrag. Neue Findings wurden als
+  `accepted-deferred` triagiert.
+- Nach der letzten Code-Map-Änderung erfolgreich ausgeführt: redigierte
+  `find_symbol`-Expanded-/Root-Kontrollpaare, `get_symbol_body`-Folgeabfrage,
+  `find_references`, `get_call_tree`, Struktur-/Metrik-/Extension-Spotchecks
+  und read-only Qualitätsabfragen. Ergebnisse: stabile reproduzierte
+  Root-/Referenz- und Trunkierungsbefunde, keine externen Identitäten.
+- Nur gelesen: Navigation-/Dispatch-/Resolver-/Response-Code, Dokumentation
+  und Tests. Keine Builds, Tests, Produktions-/Konfigurations-/Produkt-
+  dokumentationsänderungen oder Commits.
+- Nächste Aktion: mit Epic 6 als Analyse-/Berichtsrolle fortfahren.
+
+### Vollständiger finaler Agentenbericht
+
+Erledigt.
+
+- Bericht erstellt: `epic-05-navigation-query-korrektheit.md`
+- Ausschließlich `code-map.md` aktualisiert.
+- Fünf Bugs und drei Missing-Feature-Befunde dokumentiert;
+  Optimierungskategorie begründet leer.
+- Finale Navigations-Spotchecks nach der letzten Map-Änderung ausgeführt und
+  redigiert dokumentiert.
+- Keine Produktions-/Test-/Konfigurations-/Produktdokumentationsänderungen,
+  Builds, Tests oder Commits. Unabhängige bestehende Working-Tree-Änderungen
+  blieben unangetastet.
+
 ### Vollständiger finaler Agentenbericht
 
 Epic 4 ist abgeschlossen.
