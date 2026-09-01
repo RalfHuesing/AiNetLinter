@@ -1003,6 +1003,19 @@
 - Verifikation: fokussierte FastTests 148/148, IntegrationTests 29/29, `dotnet build --no-restore` 0 Warnungen/0 Fehler, `git diff --check` sauber.
 - Nächste Aktion: Roadmap auf Paket 4 `done` fortschreiben, Abschluss-Audit ausführen und die vollständigen Nicht-Stress-Gates laufen lassen.
 
+## 2026-09-01 – Paket decompiled-assembly-fix3 Abschlussgates klassifiziert
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Status: abgeschlossen; taskbezogene P0-/P1-Befunde sind behoben, zwei unabhängige Vollgate-Baselinebefunde bleiben `accepted-deferred`.
+- Abschlusscheckpoint: `2af76c82` (`refactor(decompiled-assembly-fix3): Zentralisiere Assembly-Origin-Werte`)
+- Struktur-/Architekturnachweis: Die frühere Überschreitung von `MaxDirectoryChildren` ist durch fachliche Unterordner und passende Namespaces behoben. Assembly-Analyse, Body-/Source-Selection, Dispatch/Responses, Health-Projektionen, SymbolGraph-Navigation und Assembly-Testnavigation sind getrennt organisiert; keine Suppressionen.
+- Build: `dotnet build` erfolgreich, 0 Warnungen, 0 Fehler.
+- Vollständige FastTests ohne Stress: 2347 bestanden, 2 übersprungen, 1 Fehler in `McpAgentGuideRegistrationTests.BuildResource_IsReadableWithoutProjectAndContainsIntegrationContract` wegen einer bestehenden LF/CRLF-Substring-Erwartung in `src/AiNetLinter.FastTests/Mcp/McpAgentGuideRegistrationTests.cs:45`.
+- Vollständige IntegrationTests ohne Stress: 378 bestanden, 1 Fehler in `McpLiveRepositoryTests.LiveDogfood_Safeguard_ReturnsResults`; der bestehende Live-Safeguard-Score 2,6502057613168724 liegt unter dem Korridor 5,0 (`src/AiNetLinter.IntegrationTests/Mcp/McpLiveRepositoryTests.cs:244`).
+- Taskbezogene Verifikation: finaler unabhängiger Review 148/148 FastTests und 29/29 IntegrationTests; Native-PE-Recoverability direkt und registriert, managed `.exe`, `.dll`/`.exe`-Dokumentation, Response-Budgets und Strukturgrenzen bestätigt. Abschlussaudit: keine exakten Duplikate, keine Refactoring-Drift und kein High-Confidence-Dead-Code im geänderten Tool-Scope; sichere Origin-Konstanten wurden zentralisiert.
+- Klassifikation: Beide Vollgatefehler sind reproduzierte, diffunabhängige Baseline-/Umgebungsbefunde und als `accepted-deferred` in `tech-debt.md` erfasst. Keine weitere Korrekturschleife im Scope dieses Tasks.
+- Nächste Aktion: Task abschließen; Stress-Tests wurden nicht gestartet.
+
 ## 2026-09-01 – Paket 4 Abschlussaudit ausgeführt
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume

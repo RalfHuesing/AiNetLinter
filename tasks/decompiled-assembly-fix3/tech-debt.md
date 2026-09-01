@@ -373,3 +373,13 @@
 - Disposition: accepted-deferred
 - Nächster Schritt: Nur bei einer späteren Body-Navigationserweiterung direkte Resolver-Tests ergänzen.
 - Log-Anker: `execution-log.md`, „Paket 3 Abschlussreview abgeschlossen"
+
+### Abschlussgates mit unabhängigen Baseline-/Umgebungsfehlern 2026-09-01
+
+- Schweregrad: P2 (nicht blockierend)
+- Ursachensignaturen: `full-gate-agent-guide-line-ending-baseline`; `full-gate-live-safeguard-baseline`
+- Scope/Fundstelle: `src/AiNetLinter.FastTests/Mcp/McpAgentGuideRegistrationTests.cs:45` und `src/AiNetLinter.IntegrationTests/Mcp/McpLiveRepositoryTests.cs:244`
+- Evidenz: Der vollständige Nicht-Stress-Lauf meldete in FastTests 2347/2350 bestanden, 2 übersprungen und 1 Fehler, weil eine bestehende Agent-Guide-Assertion LF statt CRLF erwartet. IntegrationTests meldeten 378/379 bestanden; der bestehende Live-Dogfood-Safeguard-Score lag mit 2,6502057613168724 unter dem Korridor von 5,0. Die taskbezogenen Abschlussregressionen bleiben grün (Finalreview: FastTests 148/148, IntegrationTests 29/29); der Produktdiff erzeugt keinen dieser beiden Befunde.
+- Disposition: accepted-deferred
+- Nächster Schritt: Separat als Test-/Umgebungsbereinigung behandeln; keine Scope-Erweiterung und keine Änderung der Assembly-Architektur in diesem Task.
+- Log-Anker: `execution-log.md`, „Paket decompiled-assembly-fix3 Abschlussgates klassifiziert"

@@ -2,11 +2,11 @@
 
 - Primäraufgabe: Robuste Assembly-Analyse und konsistente MCP-Antwortverträge
 - Betriebsart: Großkonzept-Modus
-- Status: final_verification
-- current_epic: Paket 4 – Kompatibilität, API-Lücken und Dokumentation
-- current_debt_item: abschluss-audit-und-vollgates
-- debt_attempts: 0
-- letzter Commit: `bf5f6083`
+- Status: done
+- current_epic: Abschlussverifikation
+- current_debt_item: full-gate-baseline-failures
+- debt_attempts: 1
+- letzter Commit: `2af76c82`
 
 ## Epics
 
@@ -44,11 +44,18 @@
 
 ## Abschluss-Checkliste
 
-- [ ] `dotnet build`
+- [x] `dotnet build`
 - [ ] `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress`
 - [ ] `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`
 - [x] Konzepttests für Assembly-Filter, Budget, Navigation, File Tree, Source-Backing, Health, Fehlerpayloads, DTOs und `.exe`/native PE
 - [x] Dokumentationsbeispiele gegen aktuelle Tool-Registrierungen geprüft
-- [ ] Abschluss-Audit auf DRY, Refactoring-Drift, Dead Code und Magic Values
+- [x] Abschluss-Audit auf DRY, Refactoring-Drift, Dead Code und Magic Values
+
+Die beiden Nicht-Stress-Vollgates wurden ausgeführt, sind aber wegen unabhängiger
+Baseline-/Umgebungsbefunde nicht vollständig grün: FastTests 2347 bestanden,
+2 übersprungen und 1 bestehender LF/CRLF-Erwartungsfehler; IntegrationTests 378
+bestanden und 1 bestehender Live-Safeguard-Score unter dem Korridor. Die
+auftragsbezogenen Regressionen sind grün; die Befunde sind in `tech-debt.md`
+als `accepted-deferred` klassifiziert und blockieren keine P0-/P1-Lieferung.
 
 Tech-Debt-Queue: siehe `tech-debt.md`.
