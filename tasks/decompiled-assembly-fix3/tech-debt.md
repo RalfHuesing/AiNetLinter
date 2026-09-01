@@ -146,10 +146,10 @@
 - Ursachensignatur: package2-production-violations
 - Scope/Fundstelle: `src/AiNetLinter/Mcp` – vier durch den Paket-2-Zwischenstand verursachte Befunde im Produktionsscope
 - Evidenz: Der Review verifizierte vier diffbedingte Befunde. Korrekturversuch 2 refaktorierte `InspectAssemblyTool.BuildResult` auf einen effektiven Parameter; der Produktionsscope-Nachcheck meldete keine neuen Fehler. `AddGetServerHealth` und `GetServerHealthResponseBuilder.Build` liegen im Limit.
-- Disposition: fix-now (Review ausstehend)
+- Disposition: fixed
 - attempts: 2
-- Nächster Schritt: Unabhängiger Review; bei bestätigter Behebung als `fixed` markieren.
-- Log-Anker: `execution-log.md`, „Paket 2 Korrekturversuch 2 abgeschlossen"
+- Nächster Schritt: Keine weitere Korrektur; die drei bestehenden Warnungen bleiben separat zurückgestellt.
+- Log-Anker: `execution-log.md`, „Paket 2 Korrekturversuch 2 Reviewer abgeschlossen"
 
 ### Paket-2-Magic-Value-Kandidaten
 

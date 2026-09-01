@@ -523,6 +523,18 @@
 - Offen: Health-Assertions, Diagnose-/`includeSessions`-/`maxSessions`-Regressionen und fokussierte Structured-Content-Assertions für die vier Erfolgstools fehlen; kein Wire-Nachweis gegen den aktuellen Build.
 - Nächste Aktion: Korrekturstand committen und frischen Review starten.
 
+## 2026-09-01 – Paket 2 Korrekturversuch 2 Reviewer gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: Korrekturstand `c98b1e3a`; vorheriger Review-Checkpoint `1d03f7d5`
+- Ursachensignaturen: `package2-production-violations`; `package2-regression-test-contract-drift`
+- Versuch: 2 von 5 je Ursachensignatur
+- Status: running
+- Auftrag: Inspect-Parameterobjekt und neue IncludeReferences-Tests unabhängig prüfen, die verbleibenden Health-/DTO-Regressionen sowie Produktionsscope-Checks bewerten. Kein Produktions-/Testcode und kein Commit; nur konkrete `code-map.md`-Korrekturen.
+
 ## 2026-09-01 – Paket 2 Implementierer abgeschlossen
 
 - Run-ID: decompiled-assembly-fix3-20260901
@@ -541,3 +553,18 @@
   - `get_violations` mit `targetType=project`, absolutem Projektpfad und `scopeFilter=src/AiNetLinter/Mcp`: 6 Befunde; vier durch den Zwischenstand verursacht, zwei `FindSymbolScanner`-Befunde unverändert und scopefremd.
 - Nicht ausgeführt: Sage-Abfrage unter 8 KiB ohne Detailflag und vollständige Gesamtgates.
 - Nächste Aktion: Implementierungs-Checkpoint committen; Review muss `ReloadConfig`-DTO, Regressionen und die sechs Violations klassifizieren.
+
+## 2026-09-01 – Paket 2 Korrekturversuch 2 Reviewer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05c47-90d9-7b10-a42b-08d9298575ab`
+- Ursachensignaturen: `package2-production-violations`; `package2-regression-test-contract-drift`
+- Versuch: 2 von 5 je Ursachensignatur
+- Status: completed; kein Produktions-/Testcode geändert; `code-map.md` nur mit konkreten, verifizierten Fakten ergänzt
+- Urteil: `issues`; P0 keine.
+- P1 `package2-production-violations`: behoben und freigegeben. `InspectAssemblyTool.BuildResult` hat im MCP-/Symbolcheck 1/4 effektive Parameter; der Produktionsscope meldet 0 neue Fehler. Drei bestehende Warnungen bleiben: `AIContextFootprint` sowie zwei scopefremde `FindSymbolScanner`-Warnungen.
+- P1 `package2-regression-test-contract-drift`: offen. `GetServerHealthToolTests.cs:112` und `:171` erwarten weiterhin eine globale Sessionliste, obwohl der Default `includeSessions=false` ist; der gezielte Health-/Reload-Lauf steht deshalb bei 12/14. End-to-End-Abdeckung für `includeSessions`/`maxSessions`, Diagnose-Samples mit `totalCount`/`truncatedBy` sowie Structured Content von CallTree, TypeHierarchy, MetricsTree und ReloadConfig fehlt weiterhin. Der 38/38-Lauf prüft nur Text-/Verhaltensverträge.
+- Frische Nachweise: Assembly 18/18; CallTree/TypeHierarchy/MetricsTree 38/38; Health/Reload 12/14; Produktionsscope 0 Fehler und 3 bestehende Warnungen.
+- Nächste Aktion: Health-Assertions aktualisieren und gezielte E2E-Regressionen für Sessionlimits, Diagnoseprojektion und alle vier Structured-Content-Erfolgstools ergänzen; danach vollständige Nicht-Stress-Gates und den MCP-Produktionsscope erneut ausführen.
