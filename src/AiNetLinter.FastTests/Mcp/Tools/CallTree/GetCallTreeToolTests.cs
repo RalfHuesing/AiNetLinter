@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
@@ -75,6 +76,27 @@ public sealed class GetCallTreeToolTests
         Assert.Contains("├──", textContent.Text, StringComparison.Ordinal);
         // Sufficiency-Hinweis fuer nicht-trunkierte Ergebnisse.
         Assert.Contains("vollstaendig", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ValidCallTree_ReturnsStructuredSuccessPayload()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetCallTreeTool.ExecuteAsync(
+            state, new GetCallTreeInput("Greeter.Greet", 1, null, 10), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = JsonSerializer.Deserialize<CallTreePayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal("incoming", payload!.Direction);
+        Assert.Equal(1, payload.RequestedDepth);
+        Assert.Equal(10, payload.TopN);
+        Assert.False(payload.Truncated);
+        Assert.False(payload.TopNTruncated);
+        Assert.NotEmpty(payload.Root.Children);
+        Assert.Contains(payload.Root.Children, child => child.Name.Contains("Caller", StringComparison.Ordinal));
     }
 
     [Fact]

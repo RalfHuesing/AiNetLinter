@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
@@ -105,6 +106,26 @@ public sealed class MetricsTreeToolTests
         // bei absteigender Sortierung muss Hierarchy.cs vor OtherCaller.cs erscheinen.
         Assert.True(text.IndexOf("Hierarchy.cs", StringComparison.Ordinal) <
                      text.IndexOf("OtherCaller.cs", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CodeSizeMode_ReturnsStructuredSuccessPayload()
+    {
+        var state = NewState();
+
+        var result = await MetricsTreeTool.ExecuteAsync(
+            state, new MetricsTreeToolArgs("src/SymbolGraphMini", "code_size", 1, 10, null), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = JsonSerializer.Deserialize<MetricsTreePayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal("code_size", payload!.Mode);
+        Assert.Equal("src/SymbolGraphMini", payload.Root);
+        Assert.Equal(1, payload.Depth);
+        Assert.Equal(10, payload.TopN);
+        Assert.NotEmpty(payload.Tree.Children);
+        Assert.True(payload.Tree.FileCount > 0);
     }
 
     [Fact]

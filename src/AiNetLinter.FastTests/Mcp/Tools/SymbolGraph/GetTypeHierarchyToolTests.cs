@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
@@ -75,6 +76,27 @@ public sealed class GetTypeHierarchyToolTests
         // abgeleiteten/implementierenden Typen koennten es bei Ueberschreitung von maxResults —
         // hier unter dem Default-Limit, also gilt der Hinweis.
         Assert.Contains("vollstaendig", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ClassWithBaseAndDerived_ReturnsStructuredSuccessPayload()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetTypeHierarchyTool.ExecuteAsync(
+            state, "BaseGreeting", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = JsonSerializer.Deserialize<TypeHierarchyPayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal("SymbolGraphMini.BaseGreeting", payload!.TypeName);
+        Assert.Contains(payload.Interfaces, value => value.Contains("IGreeting", StringComparison.Ordinal));
+        Assert.Contains(payload.Subtypes, value => value.Contains("SpecialGreeting", StringComparison.Ordinal));
+        Assert.Equal(payload.Subtypes.Count, payload.ShownSubtypeCount);
+        Assert.Equal(payload.Subtypes.Count, payload.TotalSubtypeCount);
+        Assert.False(payload.SubtypesTruncated);
+        Assert.Empty(payload.SubtypesTruncatedBy);
     }
 
     [Fact]

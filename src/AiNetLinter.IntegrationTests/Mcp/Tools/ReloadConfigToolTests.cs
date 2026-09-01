@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.IO;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
@@ -98,6 +99,12 @@ public sealed class ReloadConfigToolTests
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("Config neu geladen", text);
+        Assert.NotNull(result.StructuredContent);
+        var payload = JsonSerializer.Deserialize<ReloadConfigPayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal(newPath, payload!.ConfigPath);
+        Assert.Equal(payload.EnabledRuleCount - payload.PreviousEnabledRuleCount, payload.EnabledRuleDelta);
         Assert.False(state.UsedDefaultConfig);
         Assert.Equal(newPath, state.ResolvedConfigPath);
         Assert.False(state.Config.Global.BanAsyncVoid);

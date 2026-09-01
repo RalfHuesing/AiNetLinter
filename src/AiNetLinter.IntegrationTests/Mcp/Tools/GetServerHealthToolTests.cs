@@ -109,19 +109,12 @@ public sealed class GetServerHealthToolTests
             new GetServerHealthOptions());
         var compactPayload = JsonSerializer.Deserialize<ServerHealthAggregatePayload>(
             compact.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
-        var compactAssembly = Assert.Single(compactPayload.Assemblies!);
+        Assert.Null(compactPayload.Assemblies);
+        Assert.False(compactPayload.SessionsIncluded);
+        Assert.Equal(1, compactPayload.TotalAssemblySessions);
+        Assert.Equal(0, compactPayload.ShownSessionCount);
         Assert.False(compactPayload.DiagnosticsIncluded);
-        Assert.Null(compactAssembly.Diagnostics);
-        Assert.Equal(4, compactAssembly.DiagnosticsSummary!.TotalCount);
-        Assert.Empty(compactAssembly.DiagnosticsSummary.Samples);
-        Assert.Equal(0, compactAssembly.DiagnosticsSummary.ShownCount);
-        Assert.Equal(2, compactAssembly.DiagnosticsSummary.Root.TotalCount);
-        Assert.Equal(2, compactAssembly.DiagnosticsSummary.Transitive.TotalCount);
-        Assert.Equal(0, compactAssembly.DiagnosticsSummary.Root.ShownCount);
-        Assert.Equal(0, compactAssembly.DiagnosticsSummary.Transitive.ShownCount);
-        Assert.Empty(compactAssembly.DiagnosticsSummary.Root.Samples);
-        Assert.Empty(compactAssembly.DiagnosticsSummary.Transitive.Samples);
-        Assert.Equal("partial", compactAssembly.Completeness);
+        Assert.False(compactPayload.SessionsTruncated);
         Assert.Contains("Diagnosen: 0 von 4", Assert.IsType<TextContentBlock>(Assert.Single(compact.Content)).Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Diagnosen: 4 von 4", Assert.IsType<TextContentBlock>(Assert.Single(compact.Content)).Text, StringComparison.Ordinal);
         Assert.DoesNotContain("health-root-0", Assert.IsType<TextContentBlock>(Assert.Single(compact.Content)).Text, StringComparison.Ordinal);
@@ -165,7 +158,7 @@ public sealed class GetServerHealthToolTests
         var detailed = GetServerHealthResponseBuilder.Build(
             Array.Empty<ProjectSnapshot>(),
             [entry],
-            new GetServerHealthOptions(IncludeDiagnostics: true));
+            new GetServerHealthOptions(IncludeDiagnostics: true, IncludeSessions: true));
         var payload = JsonSerializer.Deserialize<ServerHealthAggregatePayload>(
             detailed.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
         var assembly = Assert.Single(payload.Assemblies!);
@@ -175,6 +168,42 @@ public sealed class GetServerHealthToolTests
         Assert.Contains("- LoadState: partial", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
         Assert.Contains("- Vollständigkeit: partial", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Build_IncludeSessionsRespectsMaxSessionsAndReportsTruncation()
+    {
+        var entries = new[]
+        {
+            CreateAssemblyEntry("C:\\fixtures\\health-1.dll"),
+            CreateAssemblyEntry("C:\\fixtures\\health-2.dll"),
+            CreateAssemblyEntry("C:\\fixtures\\health-3.dll"),
+        };
+
+        var result = GetServerHealthResponseBuilder.Build(
+            Array.Empty<ProjectSnapshot>(),
+            entries,
+            new GetServerHealthOptions(IncludeSessions: true, MaxSessions: 2));
+
+        var payload = JsonSerializer.Deserialize<ServerHealthAggregatePayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
+        Assert.True(payload.SessionsIncluded);
+        Assert.Equal(3, payload.TotalAssemblySessions);
+        Assert.Equal(2, payload.ShownSessionCount);
+        Assert.True(payload.SessionsTruncated);
+        Assert.Equal(["maxSessions"], payload.SessionsTruncatedBy);
+        Assert.Equal(2, payload.Assemblies!.Count);
+        Assert.Equal(entries[0].TargetPath, payload.Assemblies[0].TargetPath);
+        Assert.Equal(entries[1].TargetPath, payload.Assemblies[1].TargetPath);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Sessiondetails: 2 von 3 (gekürzt: maxSessions)", text, StringComparison.Ordinal);
+        Assert.Contains(entries[0].TargetPath, text, StringComparison.Ordinal);
+        Assert.Contains(entries[1].TargetPath, text, StringComparison.Ordinal);
+        Assert.DoesNotContain(entries[2].TargetPath, text, StringComparison.Ordinal);
+    }
+
+    private static AssemblyHealthEntry CreateAssemblyEntry(string targetPath) =>
+        new(targetPath, "complete", "decompiled", null, null, null, null, null, null, null, null);
 
     private static ProjectRegistry CreateRegistry(string root, McpCodeGraphServer server)
     {

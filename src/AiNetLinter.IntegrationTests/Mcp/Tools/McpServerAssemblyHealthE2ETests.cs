@@ -72,6 +72,10 @@ public sealed class McpServerAssemblyHealthE2ETests
         var host = await _fixture.GetHostAsync();
         var aggregate = await _fixture.Client.CallToolAsync("get_server_health");
         Assert.NotEqual(true, aggregate.IsError);
+        Assert.NotNull(aggregate.StructuredContent);
+        Assert.False(aggregate.StructuredContent!.Value.GetProperty("sessionsIncluded").GetBoolean());
+        Assert.Equal(0, aggregate.StructuredContent.Value.GetProperty("shownSessionCount").GetInt32());
+        Assert.False(aggregate.StructuredContent.Value.TryGetProperty("assemblies", out _));
 
         await _fixture.Client.CallToolAsync(
             "find_symbol",
@@ -100,6 +104,8 @@ public sealed class McpServerAssemblyHealthE2ETests
             {
                 ["targetType"] = "assembly",
                 ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["includeSessions"] = true,
+                ["maxSessions"] = 1,
             });
         Assert.False(
             assembly.IsError == true,
@@ -108,6 +114,8 @@ public sealed class McpServerAssemblyHealthE2ETests
         Assert.Contains("Assembly-Sessions (1)", assemblyText, StringComparison.Ordinal);
         Assert.Contains("Origin:", assemblyText, StringComparison.Ordinal);
         Assert.NotNull(assembly.StructuredContent);
+        Assert.True(assembly.StructuredContent!.Value.GetProperty("sessionsIncluded").GetBoolean());
+        Assert.Equal(1, assembly.StructuredContent.Value.GetProperty("shownSessionCount").GetInt32());
         Assert.Single(assembly.StructuredContent!.Value.GetProperty("assemblies").EnumerateArray());
     }
 
@@ -127,6 +135,8 @@ public sealed class McpServerAssemblyHealthE2ETests
             .Where(candidate => candidate.ProtocolTool.Name == "get_server_health"));
         Assert.Contains("includeDiagnostics", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("maxDiagnostics", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("includeSessions", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("maxSessions", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]

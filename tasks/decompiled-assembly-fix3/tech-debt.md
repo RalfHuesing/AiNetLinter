@@ -134,11 +134,11 @@
 - Schweregrad: P1
 - Ursachensignatur: package2-regression-test-contract-drift
 - Scope/Fundstelle: Assembly-Inspektions- und Health-/Reload-Tests
-- Evidenz: Frische TRX-Nachweise meldeten 55/1 in `Package2Targeted.trx` und 12/2 in `Package2HealthTargeted.trx`; nach Korrekturversuch 1 bleiben diese gezielten Läufe mit denselben roten Vertragsassertions. End-to-End-Assertions für `includeReferences`, Diagnose-Samples, `includeSessions/maxSessions` und Erfolgspayloads fehlen.
+- Evidenz: Frische Nachweise meldeten zunächst 55/1 und 12/2; Korrekturversuch 3 ergänzte die fehlenden Session-, Diagnose- und Structured-Content-Regressionen sowie die beiden globalen Health-Default-Anpassungen. Die Orchestrator-Nachverifikation steht nun bei 61/61 FastTests und 18/19 fokussierten IntegrationTests; eine Textassertion erwartet noch den nicht mehr ausgegebenen Detailblock `Diagnosen: 0 von 4`. Vollständige Nicht-Stress-Gates und unabhängige Review-Bestätigung stehen aus.
 - Disposition: fix-now
 - attempts: 2
 - Nächster Schritt: Health-Assertions sowie Diagnose-/Session-/Structured-Content-Regressionen ergänzen.
-- Log-Anker: `execution-log.md`, „Paket 2 Korrekturversuch 2 abgeschlossen"
+- Log-Anker: `execution-log.md`, „Paket 2 Korrekturversuch 3 abgeschlossen"
 
 ### Paket-2-Produktionsviolations aus Zwischenstand
 

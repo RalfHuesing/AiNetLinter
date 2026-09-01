@@ -580,3 +580,20 @@
 - Versuch: 3 von 5
 - Status: running
 - Auftrag: Die zwei roten globalen Health-Assertions auf den Default `includeSessions=false` aktualisieren und fokussierte Regressionen für `includeSessions`/`maxSessions`, Diagnose-Samples mit `totalCount`/`truncatedBy` sowie Structured Content von CallTree, TypeHierarchy, MetricsTree und ReloadConfig ergänzen. Bestehende Produktionsfixes und Textverträge erhalten, `code-map.md` pflegen, nach letzter Codeänderung gezielte Tests, vollständige Nicht-Stress-Gates soweit sinnvoll und den relevanten MCP-`get_violations`-Scope ausführen. Kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
+
+## 2026-09-01 – Paket 2 Korrekturversuch 3 abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Implementierer (frischer Korrekturversuch)
+- Subagent-ID: `01a05c4f-7df5-7d20-a6ac-de7afe74a4a8`
+- Ursachensignatur: `package2-regression-test-contract-drift`
+- Versuch: 3 von 5
+- Baseline: `027e4eb8`
+- Status: completed; Änderungen ohne Rollen-Commit übergeben; Produktionscode unverändert
+- Geänderte Dateien: `src/AiNetLinter.IntegrationTests/Mcp/Tools/GetServerHealthToolTests.cs`, `src/AiNetLinter.IntegrationTests/Mcp/Tools/McpServerAssemblyHealthE2ETests.cs`, `src/AiNetLinter.IntegrationTests/Mcp/Tools/ReloadConfigToolTests.cs`, `src/AiNetLinter.FastTests/Mcp/Tools/CallTree/GetCallTreeToolTests.cs`, `src/AiNetLinter.FastTests/Mcp/Tools/SymbolGraph/GetTypeHierarchyToolTests.cs`, `src/AiNetLinter.FastTests/Mcp/Tools/MetricsTree/MetricsTreeToolTests.cs`, `src/AiNetLinter.FastTests/Mcp/Tools/SymbolGraph/TransitiveCallGraphFormatterTests.cs` und `code-map.md`.
+- Implementierte Korrekturen: globale Health-Assertions auf `includeSessions=false` angepasst; Regressionen für `includeSessions=true`, `maxSessions`, `totalAssemblySessions`, `shownSessionCount`, `sessionsTruncated` und `sessionsTruncatedBy` ergänzt; Structured-Content-Erfolgspayloads für CallTree, TypeHierarchy, MetricsTree und ReloadConfig ergänzt; Diagnoseprojektion mit maximal fünf Samples sowie `totalCount`/`truncatedBy` abgesichert; bestehende Text-, `includeReferences`- und ReloadConfig-Produktionsverträge erhalten.
+- Verifikation des Agenten: `git diff --check` erfolgreich; nach der letzten Testcodeänderung keine großen Testläufe mehr gestartet; finaler `get_violations`-, Dead-Code-, Duplicate- und Magic-Value-Lauf nicht ausgeführt.
+- Orchestrator-Nachverifikation: `dotnet build --no-restore` 0 Warnungen/0 Fehler; fokussierte FastTests 61/61 bestanden; fokussierte IntegrationTests 18/19 bestanden. Ein verbleibender Fehler in `GetServerHealthToolTests.Build_DefaultHealthIsCompact_AndDetailDiagnosticsStayBounded` erwartet den nicht mehr ausgegebenen Text `Diagnosen: 0 von 4`.
+- Verbleibende Risiken: Die Textassertion muss gegen den kompakten globalen Health-Vertrag korrigiert oder fachlich bestätigt werden; danach sind frische MCP-/Regelchecks und vollständige Nicht-Stress-Gates erforderlich. Die bekannte Produktionswarnung `AIContextFootprint` und zwei scopefremde `FindSymbolScanner`-Warnungen bleiben zurückgestellt.
+- Nächste Aktion: Unabhängigen Reviewer auf den aktuellen Test-/Vertragsdiff ansetzen; anschließend gezielte Korrektur und erneute Gates.
