@@ -287,6 +287,17 @@
   oder dekompilierten Inhalte in Bericht oder Map.
 - Nächste Aktion: mit Epic 8 als Analyse-/Berichtsrolle fortfahren.
 
+## 2026-09-02 — Epic 8 — running
+
+- Run-ID: `decompiled-assembly-audit-20260901`
+- Rolle: Implementierer/Analyse-Agent
+- Subagent-ID: `01a05f17-29cc-7d73-bc1d-b5be70fe43ba`
+- Diff-Baseline: `03ecb9b9` (Epic-7-Analyse-Checkpoint)
+- Scope: Test- und Dokumentationsnachweis.
+- Erwartete Änderungen: ausschließlich
+  `epic-08-test-dokumentationsnachweis.md` und `code-map.md`; keine
+  Produktions-, Test-, Konfigurations- oder Produktdokumentationsänderungen.
+
 ### Vollständiger finaler Agentenbericht
 
 Epic 7 ist abgeschlossen.
@@ -477,3 +488,31 @@ erstellt.
 Offene Dispositionen: fachlicher Referenzbedarf von
 `find_assembly_extensions`, autoritative Response-Budgetgröße und exakte
 Rohform von `tools/list`.
+
+## 2026-09-02 — Epic 8 — completed
+
+- Rolle: Implementierer/Analyse-Agent; Reviewer gemäß Nutzeranweisung nicht
+  gestartet.
+- Bericht: `epic-08-test-dokumentationsnachweis.md`.
+- Code-Map: ausschließlich um Epic-8-Nachweise ergänzt.
+- Befunde: ein Bug, eine Optimierung und vier Missing Features; bestehende
+  technische Ursachen aus Epics 1–7 wurden nur referenziert.
+- Verifikation: Finale MCP-Abfragen nach der letzten Code-Map-Änderung wurden
+  redigiert dokumentiert.
+- Keine Builds, Tests, Produktions-/Test-/Konfigurations-/Produkt-
+  dokumentationsänderungen oder Commits durch den Agenten.
+- Vorbestehende Worktree-Änderungen blieben unangetastet.
+
+### Vollständiger finaler Agentenbericht
+
+Epic 8 ist abgeschlossen.
+
+- Bericht erstellt: `epic-08-test-dokumentationsnachweis.md`
+- Code-Map ausschließlich um Epic-8-Nachweise ergänzt: `code-map.md`
+- Befunde: 1 Bug, 1 Optimierung, 4 Missing Features; bestehende Ursachen aus
+  Epics 1–7 nur referenziert.
+- Finale MCP-Abfragen nach der letzten Map-Änderung durchgeführt und
+  redigiert dokumentiert.
+- Keine Builds, Tests, Produktions-/Test-/Konfigurations-/Produkt-
+  dokumentationsänderungen oder Commits vorgenommen.
+- Vorbestehende Worktree-Änderungen blieben unangetastet.

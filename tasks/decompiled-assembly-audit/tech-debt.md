@@ -542,3 +542,85 @@
   source-backed Consumer-Route definieren.
 - Log-Anker: Epic 5 Implementiererbericht, 2026-09-01.
 - Begründung der Disposition: Analyse-Only-Non-Goal.
+
+### E8-BUG-01 — Negativtest verankert die falsche Redaction-Erwartung
+
+- Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0
+- Kategorie: Bug; Vertrauen: hoch; Größe: M
+- Evidenz: `ManagedAssemblyBinaryTests.cs` erwartet im strukturierten
+  Negativpayload den unveränderten Eingabepfad eines nicht verwalteten PE.
+  Damit würde der Test eine spätere sichere Redaction als Regression werten.
+- Aktion: Nach der technischen Korrektur aus E7-BUG-01 nur typisierten,
+  recoverable Grund und das Fehlen konkreter Pfade/Exceptiontexte in Text und
+  Structured Content assertieren.
+- Abhängigkeit: E7-BUG-01. Keine Duplikation der technischen Ursache.
+- Begründung der Disposition: Analyse-Only-Non-Goal; keine Teständerung in
+  diesem Read-only-Lauf.
+
+### E8-OPT-01 — Statische Testzuordnung unterschätzt indirekte Assembly-Abdeckung
+
+- Schweregrad: P2; Disposition: `accepted-deferred`; attempts: 0
+- Kategorie: Optimierung; Vertrauen: hoch; Größe: M
+- Evidenz: `get_test_context` meldet für mehrere Assembly-Orchestrierungs-,
+  Response- und Health-Hilfen `isUntested=true`, obwohl route-nahe Tests nur
+  indirekt abdecken und überwiegend keine `@covers`-Markierung tragen.
+- Aktion: Direkte, indirekte Route-Abdeckung und nur gelesene Artefakte im
+  Testkontext getrennt ausweisen oder vorhandene Tests gezielt markieren.
+- Begründung der Disposition: Analyse-Only-Non-Goal; keine Test- oder Mapper-
+  Änderung in diesem Lauf.
+
+### E8-MF-01 — Öffentlicher Assembly-Capability-Regressionstest fehlt
+
+- Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0
+- Kategorie: Missing Feature; Vertrauen: hoch; Größe: L
+- Evidenz: Direkte Route- und Schema-Bausteine existieren, aber keine
+  table-driven öffentliche MCP-Matrix über GIT-01, LOCAL-01 bis LOCAL-03 und
+  FALSE-01 mit Root-/Referenzsicht, Folgeabfragen, Herkunft, Diagnosen,
+  Trunkation und Redaction.
+- Aktion: Redigierten öffentlichen Integrationstest mit den fünf opaken
+  Labels ergänzen; konkrete externe Identitäten nicht versionieren.
+- Begründung der Disposition: Analyse-Only-Non-Goal; keine neuen Tests in
+  diesem Lauf.
+
+### E8-MF-02 — Öffentlicher source-backed Vertrag ist nicht konfiguriert belegt
+
+- Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0
+- Kategorie: Missing Feature; Vertrauen: hoch; Größe: M
+- Evidenz: Fake-/Component- und Host-Composition-Tests decken Source-/Fallback-
+  Zustände ab; ein öffentlicher MCP-Nachweis über den konfigurierten GIT-01-
+  Pfad fehlt.
+- Aktion: Öffentlichen, redigierten Source-backed-Call mit Source-Erfolg und
+  kontrolliertem Fallback als wiederholbaren Test verankern.
+- Abhängigkeit: E3-MISSING-02 und E3-MISSING-03 bleiben technische
+  Abgrenzungen.
+- Begründung der Disposition: Analyse-Only-Non-Goal; kein externer Provider-
+  Testlauf in diesem Audit.
+
+### E8-MF-03 — Cache-Test prüft keinen semantischen Dokument-Roundtrip
+
+- Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0
+- Kategorie: Missing Feature; Vertrauen: hoch; Größe: M
+- Evidenz: Der bestehende Session-Test prüft Manifest, Statusmarker und
+  generierte Dateien, vergleicht aber keine semantischen `DecompiledDocument`-
+  Metadaten und keine stabile ID-/Body-Folgeabfrage nach Cache-Restaurierung.
+- Aktion: Fresh-vs-Cache-Snapshotvergleich inklusive Origin/Generation,
+  Dokumentmetadaten, C#-Source und Body-Navigation ergänzen.
+- Abhängigkeit: E2-BUG-01 bleibt die technische Ursache.
+- Begründung der Disposition: Analyse-Only-Non-Goal; keine Teständerung in
+  diesem Lauf.
+
+### E8-MF-04 — Kritische Lebenszeit- und Health-Verträge ohne Regression-Matrix
+
+- Schweregrad: P1; Disposition: `accepted-deferred`; attempts: 0
+- Kategorie: Missing Feature; Vertrauen: hoch; Größe: L
+- Evidenz: Einzelne Session-, Registry-, Retirement- und Health-Tests decken
+  Teilpfade ab, aber keine zusammenhängende öffentliche Matrix für Refresh-
+  Rennen, Publish-Entscheidung, Cancellation, Cleanup, Fehler-/Degraded-/
+  Retirement-Health und Resource-/Lease-/Operationstelemetrie.
+- Aktion: Gezielte fehlerinjizierende Fast-/Integration-Matrix ergänzen und
+  Text, Structured Content, Status, Recoverability sowie Redaction gemeinsam
+  prüfen.
+- Abhängigkeiten: E4-BUG-01 bis E4-BUG-05, E4-MF-02/03, E7-BUG-02 und
+  E7-MF-01; bestehende Ursachen werden nicht dupliziert.
+- Begründung der Disposition: Analyse-Only-Non-Goal; keine Testausführung oder
+  Teständerung in diesem Lauf.

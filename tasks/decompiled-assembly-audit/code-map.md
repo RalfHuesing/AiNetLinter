@@ -380,3 +380,55 @@ Der aktuelle zielgebundene MCP-Metriklauf meldete für die zentralen Response-Sy
 - Alle zielgebundenen MCP-Abfragen nutzten das aktuelle Schema mit `targetType` und absolutem `targetPath`; `get_server_health` wurde sowohl zielgebunden als auch aggregiert abgefragt.
 - Read-only Gegenproben: `LOCAL-01`, `LOCAL-02` und `LOCAL-03` lieferten `isError=false`, `origin=decompiled`, `status=partial`, `completeness=partial`, `confidence=medium`, `trust=untrusted`, `generation=1` und sichtbare Truncation. `FALSE-01` lieferte `isError=false`, `recoverable=true`, `WORKSPACE_DIAGNOSTIC`, ohne Origin, Completeness, Snapshot oder Assembly-Payload. `GIT-01` ist der konfigurierte Source-/Git-Fall und wurde in diesem Epic nicht als direkter Assembly-Pfad wiederholt.
 - Die abschließenden positiven/negativen Spotchecks nach der letzten Änderung an dieser Code-Map werden im Epic-7-Bericht vollständig und redigiert dokumentiert; danach erfolgte keine weitere Map-Änderung.
+
+## Epic 8 – Test- und Dokumentationsnachweis
+
+### Relevante Implementierungs-, Test- und Dokumentationspfade
+
+- Öffentliche Assembly-Registrierung und Target-Vertrag:
+  - `src/AiNetLinter/Mcp/Registration/AssemblyAnalysisToolRegistrations.cs:15-131`
+  - `src/AiNetLinter/Mcp/AnalysisToolCall.cs:113-201`
+  - `src/AiNetLinter.FastTests/Mcp/Wiring/WiringToolCollectionContractTests.cs:66-116,158-227`
+  - `Docs/agent-api.md:310-383`
+- Assembly-Analyse, Source-Auswahl und Antwortprojektion:
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisService.cs:15-400`
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.cs:10-269`
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.Budget.cs:13-324`
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs:14-499`
+  - `src/AiNetLinter/Mcp/Tools/ServerMaintenance/Projection/AssemblyHealthProjection.cs:12-90`
+- Session, Cache und Navigation als spätere Vertragsnachweise:
+  - `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisSessionTests.cs:22-315`
+  - `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/ManagedAssemblyBinaryTests.cs:21-75`
+  - `src/AiNetLinter.FastTests/Mcp/Assemblies/Navigation/AssemblyAnalysisRouteTests.cs:32-316`
+  - `src/AiNetLinter.FastTests/Mcp/Assemblies/Navigation/AssemblyAnalysisPathContractTests.cs:32-208`
+  - `src/AiNetLinter.IntegrationTests/Mcp/Tools/McpServerAssemblyHealthE2ETests.cs:28-162`
+- Source-/Provider- und Lebenszeitnachweise:
+  - `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactoryTests.cs:22-260`
+  - `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolSupportTests.cs:24-450`
+  - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisHostCompositionTests.cs:21-161`
+  - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRegistryTests.cs`
+  - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRegistryRetirementRaceTests.cs`
+  - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyCacheCleanupTests.cs`
+
+### Epic-8-Befundregister
+
+- `E8-BUG-01` (P1/M/hoch): `ManagedAssemblyBinaryTests` erwartet im Nicht-.NET-Negativfall unveränderten Pfadkontext und verankert damit die falsche Redaction-Erwartung. **E7-BUG-01** bleibt die technische Ursache; Epic 8 bewertet nur das widersprüchliche Testoracle.
+- `E8-OPT-01` (P2/M/hoch): Der statische MCP-Testkontext meldet für zentrale Registrierungs-, Service-, Response-, Navigation-, Body- und Health-Hilfen keine direkte Testzuordnung, obwohl indirekte Dispatcher-/Route-/E2E-Tests gelesen wurden. Die Traceability ist für Coverage-Entscheidungen unvollständig.
+- `E8-MF-01` (P1/L/hoch): Die dokumentierte öffentliche Assembly-Capability-Matrix hat keinen zusammenhängenden MCP-Integrationstest für alle Assembly-fähigen Folgewerkzeuge, Status-/Origin-/Completeness-/Truncation- und Redaction-Verträge. Die Einzeltests und früheren Semantikbefunde werden nicht dupliziert.
+- `E8-MF-02` (P1/M/hoch): Source-backed Auswahl ist über Fake-/Component-Provider und redigierte Audit-Evidence belegt, aber nicht als dauerhaft wiederholbarer öffentlicher, konfigurierter `GIT-01`-Pfadtest.
+- `E8-MF-03` (P1/M/hoch): Der Cache-Test prüft Manifest und generierte Dateien, nicht die semantische Gleichheit der `DecompiledDocument`-Metadaten und den anschließenden Stable-ID-/Body-Roundtrip. **E2-BUG-01** bleibt die technische Ursache.
+- `E8-MF-04` (P1/L/hoch): Für die in Epics 4 und 7 registrierten negativen Lebenszeit-/Health-Übergänge fehlt eine zusammenhängende, öffentlich sichtbare Regression-Matrix; normale Einzelpfade sind vorhanden.
+
+### Test-/Dokumentationsstatus
+
+- Die vorhandenen Tests belegen wichtige Bausteine: synthetische Metadata-only-Inspektion, managed `.exe`, typed Nicht-.NET-Diagnose, Filter, Referenzauflösung, direkte Assembly-Routen, Source-Fallback, Session-/Cache-Normalpfade sowie begrenzte MCP-Health-/Schema-E2E.
+- Nicht als Laufzeitaussage missverstehen: `get_test_context` ist statische Zuordnung. Die erneute Abfrage meldete für `AssemblyAnalysisToolRegistrations`, `AssemblyAnalysisService`, `AssemblyAnalysisResponseLimits`, `AssemblyAnalysisHealthSnapshotProvider`, `AssemblyNavigationSupport`, `AssemblySymbolSearch`, `AssemblyReferenceNavigator`, `AssemblyDecompiledBodyResolver` und `AssemblyHealthProjection` keine direkte Testdatei; indirekte Nachweise wurden separat gelesen.
+- `Docs/agent-api.md:335-383`, `Docs/integration.md:325-330` und `Docs/configuration.md:35` wurden gegen Tests und Implementierung gelesen. Die bereits bekannten Response-/Referenz-/Health-Dokumentations- und Semantikabweichungen (**E1-BUG-01/02**, **E1-BUG-03**, **E3-MISSING-02/03**, **E6-BUG-01/02**, **E7-MF-01**) werden nicht als neue Epic-8-Befunde wiederholt.
+- Redaktionsvertrag eingehalten: nur `GIT-01`, `LOCAL-01`, `LOCAL-02`, `LOCAL-03`, `FALSE-01`; keine externen Assembly-Identitäten, Namespaces, externen Pfade, URLs, Hashes oder dekompilierten Inhalte.
+
+### Epic-8-Verifikation
+
+- Read-only MCP-Projektabfragen nutzten das aktuelle Schema, `targetType="project"` und den absoluten Repo-Root: `get_server_health`, `get_feature_context` und `get_test_context`. Assembly-Ziele wurden für project-only Testkontextabfragen nicht verwendet.
+- Die zielgebundene Abschlussrunde nach der letzten Map-Änderung wiederholte `get_test_context`/`get_feature_context` für die wichtigsten Coverage-Symbole sowie `inspect_assembly` und `get_server_health` für `LOCAL-03` und `FALSE-01` mit absolutem, nur labelreferenziertem Matrixpfad. Das Ergebnis blieb redigiert: positiver managed Fall mit Decompilation-/Health-Nachweis, negativer Fall recoverable und ohne Snapshot.
+- Nur gelesen wurden die Epic-1-bis-Epic-7-Berichte, Test-/Implementierungs-/Dokumentationsstellen und die Konzeptverträge; keine Builds, Tests, Produktions-/Konfigurations-/Produktdokumentationsänderungen oder Commits.
+- Der vollständige Nachweis, die konkreten MCP-Parameter und die Begründung der späteren Regressionen stehen in `tasks/decompiled-assembly-audit/epic-08-test-dokumentationsnachweis.md`. Nach dieser Map-Ergänzung wurde die Map nicht mehr geändert.

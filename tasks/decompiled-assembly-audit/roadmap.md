@@ -1,8 +1,8 @@
 # Ausführungsstand: Assembly-Unterstützungs-Audit
 
 status: executing
-current_epic: 8
-last_checkpoint: Epic 7 abgeschlossen; Analyse-Checkpoint wird gesichert
+current_epic: audit
+last_checkpoint: Epic 8 abgeschlossen; Abschluss-Audit folgt
 current_debt_item: none
 debt_attempts: 0
 
@@ -62,7 +62,8 @@ acht eigenständige, priorisierte Befundberichte.
 8. **Test- und Dokumentationsnachweis** — Abdeckung kritischer Verträge,
    Lücken, irreführende Erwartungen und spätere Verifikation. Abhängigkeiten:
    Epics 1–7. Verifikation: read-only Analyse bestehender Tests und Doku.
-   Status: in_progress.
+   Status: done (Analysebericht abgeschlossen; Review auf Nutzeranweisung
+   übersprungen).
 
 ## Abschluss-Checkliste aus dem Konzept
 
