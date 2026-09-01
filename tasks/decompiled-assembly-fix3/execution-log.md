@@ -998,6 +998,18 @@
 - Verifikation: MCP `get_violations` – Adapter 0, `GetSymbolBodyTool` 0, Context-Factory 0, Orchestrator 1, FastTests-Assemblyordner 1, breiter Analysis-Scope 6. Fokussierte FastTests 58/58 und danach 16/16, Build 0 Warnungen/0 Fehler, `git diff --check` grün; keine Vollgates.
 - Nächste Aktion: Vollständigen aktuellen Code inklusive `SourceSymbolBodyResolver.cs` checkpointen und einen neuen Implementierer für Fallback-Propagation, Directory-/Namespace-Organisation und die verbleibenden Struktur-P1s starten.
 
+## 2026-09-01 – Paket 3 Korrekturversuch 3 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
+- Rolle: Implementierer (frisch, Fallback-/Struktur-/Namespace-Korrektur)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `5f7a82ee`
+- Ursachensignaturen: `package3-fallback-diagnostic-propagation`; `package3-structural-rule-drift`; `package3-production-directory-namespace-organization`; nutzerpriorisiert `package2-test-directory-footprint`
+- Versuch: 3 im Epic
+- Status: running
+- Auftrag: Behebe die verbleibende Fallback-Lücke, indem konkrete Compilation-Diagnosen von `TryGetProjectCompilationAsync` bis in den dekompilierten Fallback-Origin erhalten bleiben; kein generischer Informationsverlust. Entferne die noch bestätigten strukturellen Befunde (Orchestrator-Footprint, Body-Check-Duplikat, StaticTestSentinel) und verschiebe fachlich zusammengehörige Produktions-Helper aus `Mcp/Assemblies/Analysis` in sinnvolle Unterordner mit passenden Namespaces (empfohlen `Bodies` und `SourceSelection`), sodass der Elternordner höchstens 30 Einträge hat. Verschiebe außerdem `AssemblyAnalysisPathContractTests`, `AssemblyAnalysisRouteTests` und `AssemblyNavigationResponseContractTests` nach `src/AiNetLinter.FastTests/Mcp/Assemblies/Navigation` und passe den Namespace `AiNetLinter.FastTests.Mcp.Assemblies.Navigation` sowie alle Referenzen an. Der Build muss danach aus HEAD reproduzierbar sein; `SourceSymbolBodyResolver.cs` ist bereits als untracked-Fehler behoben und muss erhalten bleiben. Keine Suppressionen, kein AdhocWorkspace-Fallback, keine Cachepfade, keine Assembly-Ausführung. Nach letzter Änderung gezielte Tests, `get_violations` für Produktions-/Testdirectory, Build, `git diff --check`; kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
+
 ## 2026-09-01 – Paket 3 Korrekturversuch 1 gestartet
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume
