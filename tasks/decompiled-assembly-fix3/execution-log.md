@@ -609,3 +609,20 @@
 - Versuch: 3 von 5
 - Status: running
 - Auftrag: Den Test-/Vertragsdiff unabhängig prüfen, insbesondere kompakte globale Health-Text-/JSON-Konsistenz, `includeSessions/maxSessions`, Diagnoseprojektion und Structured Content der vier Erfolgstools. Den einen bekannten roten Textassertionspfad gegen den aktuellen Produktionsvertrag klassifizieren. Keine Produktions-/Testcodeänderung und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen.
+
+## 2026-09-01 – Paket 2 Korrekturversuch 3 Reviewer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901
+- Epic: Paket 2 – Progressive Disclosure, Diagnosen und Health
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05c5d-6daf-7df0-89fe-51a5b666de1d`
+- Ursachensignatur: `package2-regression-test-contract-drift`
+- Versuch: 3 von 5
+- Status: completed; kein Produktions-/Testcode geändert
+- Urteil: `issues`; P0 keine.
+- P1: Die rote Assertion in `GetServerHealthToolTests.cs:118` ist veraltet. Der globale Default unterdrückt Sessions und schreibt aggregiert `Diagnosen gesamt: 4`, nicht `Diagnosen: 0 von 4`; der Produktionspfad in `GetServerHealthResponseBuilder`/`GetServerHealthFormatter` bestätigt das. Die Default-Assertions prüfen außerdem noch nicht alle Aggregatzähler und den leeren `SessionsTruncatedBy`-Vertrag.
+- P1: Die Diagnose-Regression prüft den gemeinsamen Helper und Text, aber nicht den strukturierten `find_references`-/Assembly-CallTree-Projektionspfad belastbar. Die vier Structured-Content-Tests sind vorhanden, aber teilweise oberflächlich; insbesondere werden bei CallTree, TypeHierarchy und MetricsTree nicht alle relevanten DTO-Felder gegen konkrete Werte geprüft, und die ReloadConfig-Delta-Assertion ist überwiegend tautologisch.
+- Bestätigt: `includeSessions=true`/`maxSessions` ist grundsätzlich korrekt mit Text, JSON, Zählern und `maxSessions` abgedeckt. Die neue `TransitiveCallGraphFormatterTests.cs` ist korrekt im Projekt enthalten und wurde ausgeführt.
+- Frische Verifikation: FastTests 61/61 bestanden; Integration reproduzierte den Fehler bei `GetServerHealthToolTests.cs:118`; der vorherige fokussierte Stand 18/19 bleibt klassifiziert, nicht behoben. HEAD vor diesem Bericht: `eda883b9`.
+- Tech-Debt-Empfehlung: `fix-now`, weiterhin P1. Health-Textassertion, vollständige Aggregatzähler sowie echte gemeinsame Diagnose-/Structured-Content-Assertions ergänzen; danach vollständige Nicht-Stress-Gates und finaler `get_violations`-Check.
+- Nächste Aktion: Frischer Implementierer, Korrekturversuch 4/5, ausschließlich für `package2-regression-test-contract-drift`.
