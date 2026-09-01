@@ -6,7 +6,7 @@
 - current_epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
 - current_debt_item: none
 - debt_attempts: 0
-- letzter Commit: `206eae92`
+- letzter Commit: `2a8e23b6`
 
 ## Epics
 

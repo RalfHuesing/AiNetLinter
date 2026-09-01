@@ -915,3 +915,15 @@
 - Tech-Debt-Disposition: `package2-regression-test-contract-drift` wird auf `fixed` gesetzt, Versuchszähler 2. `package2-diagnosis-projection-ownership` bleibt `fixed`; der P2-Verzeichnis-Footprint bleibt `accepted-deferred`.
 - Paketentscheidung: Paket 2 ist fachlich abgeschlossen. Paket 3 wird als nächstes Epic aktiviert.
 - Nächste Aktion: Review-/Roadmap-Checkpoint committen und Paket 3 implementieren.
+
+## 2026-09-01 – Paket 3 Implementierung gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
+- Rolle: Implementierer (frisch)
+- Subagent-ID: folgt unmittelbar nach dem Start
+- Diff-Baseline: `2a8e23b6`
+- Ursachensignatur: `package3-source-body-metadata-contract`
+- Versuch: 0 im Epic
+- Status: running
+- Auftrag: Implementiere Paket 3 aus `Konzept.md` als zusammenhängendes, architektonisch klares Paket: Source-Snapshot-Diagnosen und stabile `fallbackReason`-Transparenz, leasegebundene on-demand Body-Dekomposition für dekompilierte Assembly-Symbole, semantische Body-/Content-Mode-Daten sowie zentrale Literalformatierung für Enum-/Klassenstruktur. Halte Source-backed, decompiled signature-only und decompiled body on demand sauber auseinander; keine AdhocWorkspace-Fallbacks, keine Cachepfade in Antworten, keine Assembly-Ausführung. Nutze MCP-first für C#-Semantik, aktualisiere `code-map.md`, ergänze gezielte Tests und führe nach letzter Codeänderung gezielte Tests, `get_violations` im betroffenen Scope, Build und `git diff --check` aus. Kein Commit und keine Änderungen an Roadmap, Log oder Tech-Debt durch den Agenten.
