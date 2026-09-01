@@ -85,5 +85,10 @@ public sealed class McpDocumentationSmokeTests
         Assert.Contains("unavailable", docText, StringComparison.Ordinal);
         Assert.Contains("Tool-Annotations", docText, StringComparison.Ordinal);
         Assert.Contains("keine Sicherheitsgarantie", docText, StringComparison.Ordinal);
+        Assert.Contains("\"targetPath\": \"C:\\\\Projects\\\\MyApp\"", docText, StringComparison.Ordinal);
+        Assert.Contains("bodyAvailability", docText, StringComparison.Ordinal);
+        Assert.Contains("contentMode", docText, StringComparison.Ordinal);
+        Assert.Contains("minLinePercentage", docText, StringComparison.Ordinal);
+        Assert.Contains("Progressive Disclosure", docText, StringComparison.Ordinal);
     }
 }

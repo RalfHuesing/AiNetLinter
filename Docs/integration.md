@@ -319,6 +319,15 @@ Projekt- oder Assembly-Target-Block und liefert getrennte Session-Abschnitte. De
 Default bleibt kompakt; `includeDiagnostics=true` fordert begrenzte Samples an,
 deren Anzahl über `maxDiagnostics` (Default 20, Cap 50) gesteuert wird.
 
+Assembly-Targets sind verwaltete `.dll` oder `.exe`; die Analyse bleibt metadata-only
+und führt keine Assembly aus. `inspect_assembly` nutzt `publicOnly`, `exactTypeName`,
+`memberName`/`memberNames`, `includeReferences`, `maxResults` und `maxMembers` als
+bewusste Detailflags. Die Antwort unterscheidet über `analysis.bodyAvailability`
+und `analysis.contentMode` Signatur-Snapshot, source-backed Body und on-demand
+dekompilierten Body; `get_symbol_body` ist der gezielte Folgeschritt. Native PE-Dateien
+ohne .NET-Metadaten werden als typisierte, recoverable Diagnose mit Handlungshinweis
+beantwortet.
+
 Für Legacy-MCP wird der Server über `initialize` ausgehandelt. Clients der Protokollversion `2026-07-28` verwenden stattdessen `server/discover` ohne separaten `initialized`-Schritt. Dieser Request trägt unter `params._meta` die Protokollversion, Client-Info und Client-Capabilities; dieselben Metadaten gehören auch in nachfolgende Requests wie `tools/list`.
 
 ### MCP-Tool-Annotations
@@ -462,14 +471,21 @@ Solution-Loads, weil die Enumeration unabhängig vom Roslyn-Snapshot arbeitet.
 
 Für die anschließende semantische Analyse sollten Agent-Loops folgende Reihenfolge einhalten:
 
+Die Progressive-Disclosure-Regel gilt für breite Listen besonders strikt: mit kleinen
+`maxResults`-Werten und einem engen `scopeFilter`/`typeName` beginnen, die stabile
+Symbol-ID oder den passenden Typ ermitteln und erst danach Bodies, Referenzen oder
+weitere Detailflags anfordern. Für `get_hotspots` begrenzt `maxResults` die sichtbaren
+Einträge, `minLinePercentage` filtert die Auslastung (Default 80, Bereich 0–100); die
+Ausgabe ist nach absteigender Zeilenzahl und Pfad deterministisch sortiert.
+
 1. **Zuerst** symbolische Tools: `get_feature_context` (Composite One-Shot vor Edits/Refactoring), `get_test_context` (statische Test-Zuordnung & zugehörige Testmethoden), `find_symbol` (Symbol lokalisieren), `get_file_skeleton` (Strukturüberblick), `get_symbol_body` (Body eines Symbols per stabiler ID), `metrics_lookup` (One-Shot-Metriken & Schwellwerte für ein Einzelsymbol), `find_references` / `get_impact` (Aufrufstellen, optional mit `depth`-Parameter für transitive Aggregation; jede erlaubte Tiefe liefert im Erfolgsfall strukturierte `callSites` und `completeness`), `get_type_hierarchy` (Vererbung inkl. heuristischer DI-Registrierungs-Hinweise), `get_violations` (Lint-Stand). Diese Tools liefern **semantisch präzise, getypte** Ergebnisse — keine String-Suche, keine False Positives.
 2. **Nur wenn das nicht reicht** (Nicht-C#-Dateien wie `.json`/`.yml`/`.md`/`.razor`/`.xaml`/`.html`/`.css` oder reine Konfigurations-/Kommentar-/String-Suche): `search_pattern` mit `isRegex=false` (Default, case-insensitive Substring) oder `isRegex=true` für komplexere Muster. Für sichtbare C#-Treffer kann `enrichCSharp=true` die Syntax-/Symbolkategorie und eine stabile `symbolId` ergänzen; der Default bleibt `false`.
 3. **Ergänzend** `rg` / `grep` für **C#-Symbole** nur dann, wenn eine semantische MCP-Abfrage nicht passt oder konkrete Text-/Dateiarbeit gefragt ist. Für reine Symbol-, Referenz- und Impact-Fragen bleibt MCP die bevorzugte Quelle.
 
 Konkret:
 
-- Feature-Kontext vor Edit abrufen (Deklaration, Metriken, Callers, Tests, Violations) → `get_feature_context(symbol: "MyClass.MyMethod")`
-- Statische Test-Zuordnung & Test-Methoden für ein Symbol finden → `get_test_context(symbol: "MyClass")`
+- Feature-Kontext vor Edit abrufen (Deklaration, Metriken, Callers, Tests, Violations) → `get_feature_context(symbolIdentifier: "MyClass.MyMethod")`; `symbol` bleibt kompatibler Alias
+- Statische Test-Zuordnung & Test-Methoden für ein Symbol finden → `get_test_context(symbolIdentifier: "MyClass")`; `symbol` bleibt kompatibler Alias
 - Klassennamen suchen → `find_symbol(namePatterns: ["MyClass"], kind: "Klasse")`; bei einem Assembly-Ziel Referenz-DLLs ausdrücklich mit `includeReferences: true` einbeziehen
 - Methoden-Aufrufer finden → `find_references(symbolIdentifier: "MyClass.MyMethod", depth: 2)` oder `get_impact(symbolIdentifier: ..., depth: 2)`; `structuredContent.completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei `targetType: "assembly"` liefert `includeReferences: true` zusätzlich bounded Herkunft und partielle Diagnostics.
 - Treffer semantisch einordnen → `search_pattern(pattern: "MyClass", enrichCSharp: true)`; `semantic.resolution` prüfen und bei `ambiguous`/`unavailable` den Snapshot-/Projektbezug oder `find_symbol`/`get_feature_context` verwenden

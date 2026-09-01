@@ -208,16 +208,31 @@ internal static class FileStructureToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? scopeFilter = null, CancellationToken ct = default) =>
+            async (
+                string targetType,
+                string targetPath,
+                string? scopeFilter = null,
+                int maxResults = GetHotspotsScanner.DefaultMaxResults,
+                double minLinePercentage = GetHotspotsScanner.DefaultMinLinePercentage,
+                CancellationToken ct = default) =>
                 await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
-                    lease => GetHotspotsTool.ExecuteAsync(lease.Server, scopeFilter, ct)),
+                    lease => GetHotspotsTool.ExecuteAsync(
+                        lease.Server,
+                        scopeFilter,
+                        maxResults,
+                        minLinePercentage,
+                        ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_hotspots", GetHotspotsDescription)));
     }
 
     private const string GetHotspotsDescription =
         "Wann nutzen: vor einem geplanten Edit pruefen, ob eine Datei/ein Projekt sich dem " +
-        "Zeilen-Limit (MaxLineCount) naehert. scopeFilter: Projekt-Name oder Pfad-Substring zur Eingrenzung.";
+        "Zeilen-Limit (MaxLineCount) naehert. scopeFilter: Projekt-Name oder Pfad-Substring zur Eingrenzung. " +
+        "maxResults: sichtbare Hotspots (Default 50, Cap 200). minLinePercentage: untere " +
+        "Auslastungsschwelle in Prozent (Default 80, Bereich 0-100). Ergebnisse bleiben " +
+        "deterministisch nach absteigender Zeilenzahl und Pfad sortiert; StructuredContent " +
+        "weist Gesamtzahl, Anzeigezahl und Trunkierung aus.";
 }

@@ -116,6 +116,35 @@ public sealed class WiringToolCollectionContractTests
     }
 
     [Fact]
+    public async Task ToolCollection_AdvertisesHotspotBoundsAndPrimarySymbolIdentifierNames()
+    {
+        await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        var targetRoute = AnalysisToolCall.CreateTargetRoute(
+            ProjectAnalysisDispatcher.CreateRoute(registry),
+            AssemblyAnalysisDispatcher.CreateRoute(null));
+        var options = McpServerOptionsFactory.Create(
+            McpServerToolCollectionFactory.Build(registry, targetRoute),
+            McpServerResourceCollectionFactory.Build(registry));
+        var tools = options.ToolCollection!.ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool);
+
+        var hotspots = tools["get_hotspots"];
+        Assert.Contains("maxResults", hotspots.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("minLinePercentage", hotspots.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Default 50, Cap 200", hotspots.Description, StringComparison.Ordinal);
+        Assert.Contains("Default 80, Bereich 0-100", hotspots.Description, StringComparison.Ordinal);
+
+        var featureContext = tools["get_feature_context"];
+        Assert.Contains("symbolIdentifier", featureContext.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("symbol", featureContext.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("symbolIdentifier (primaer", featureContext.Description, StringComparison.Ordinal);
+
+        var testContext = tools["get_test_context"];
+        Assert.Contains("symbolIdentifier", testContext.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("symbol", testContext.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("symbolIdentifier (primaer", testContext.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ToolCollection_ClassifiesEveryRegisteredToolWithExplicitAnnotations()
     {
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
@@ -194,4 +223,3 @@ public sealed class WiringToolCollectionContractTests
         return required.EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray();
     }
 }
-

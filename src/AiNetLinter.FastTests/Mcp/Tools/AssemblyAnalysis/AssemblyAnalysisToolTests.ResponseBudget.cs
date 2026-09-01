@@ -29,8 +29,8 @@ public sealed partial class AssemblyAnalysisToolTests
             new InspectAssemblyArguments(assemblyPath, null, null, null, true, 1000, MaxMembers: 1000),
             CancellationToken.None);
 
-        var payload = Deserialize<InspectAssemblyPayload>(result);
-        var text = TextOf(result);
+        var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
         var structuredBytes = Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText());
 
         Assert.True(payload.TotalTypes > payload.ShownCount || payload.Types.Any(type => type.MembersTruncated));
@@ -72,8 +72,8 @@ public sealed partial class AssemblyAnalysisToolTests
             new FindAssemblyExtensionsArguments(assemblyPath, null, null, null, 1000),
             CancellationToken.None);
 
-        var payload = Deserialize<FindAssemblyExtensionsPayload>(result);
-        var text = TextOf(result);
+        var payload = AssemblyAnalysisTestSupport.Deserialize<FindAssemblyExtensionsPayload>(result);
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
         var structuredBytes = Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText());
 
         Assert.True(payload.TotalExtensions > payload.ShownCount);
@@ -120,9 +120,9 @@ public sealed partial class AssemblyAnalysisToolTests
                 MaxMembers: 1000),
             CancellationToken.None);
 
-        var payload = Deserialize<InspectAssemblyPayload>(result);
+        var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
         var type = Assert.Single(payload.Types);
-        var text = TextOf(result);
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
         var structuredBytes = Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText());
 
         Assert.Equal(1, payload.TotalTypes);

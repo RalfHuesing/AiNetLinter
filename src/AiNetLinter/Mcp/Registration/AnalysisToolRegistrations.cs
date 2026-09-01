@@ -315,14 +315,25 @@ internal static class AnalysisToolRegistrations
                     registry,
                     targetType,
                     targetPath,
-                    lease => GetFeatureContextTool.ExecuteAsync(lease.Server, new FeatureContextOptions(symbol, symbolIdentifier, includeCallers, includeTests, includeMetrics, includeViolations, maxCallers, maxTests), ct)),
+                    lease => GetFeatureContextTool.ExecuteAsync(
+                        lease.Server,
+                        new FeatureContextOptions(
+                            Symbol: symbol,
+                            SymbolIdentifier: symbolIdentifier,
+                            IncludeCallers: includeCallers,
+                            IncludeTests: includeTests,
+                            IncludeMetrics: includeMetrics,
+                            IncludeViolations: includeViolations,
+                            MaxCallers: maxCallers,
+                            MaxTests: maxTests),
+                        ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_feature_context", GetFeatureContextDescription)));
     }
 
     private const string GetFeatureContextDescription =
         "Wann nutzen: Composite One-Shot-Exploration fuer ein beliebiges C#-Symbol vor Edits oder Refactorings — " +
         "buendelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, statische Test-Zuordnung und Linter-Violations) " +
-        "in einem einzigen residenten Aufruf. symbolIdentifier (oder symbol): 'Namespace.Klasse.Methode', 'Datei.cs:Zeile' oder DocCommentId. " +
+        "in einem einzigen residenten Aufruf. symbolIdentifier (primaer; symbol bleibt kompatibler Alias): 'Namespace.Klasse.Methode', 'Datei.cs:Zeile' oder DocCommentId. " +
         "includeCallers, includeTests, includeMetrics, includeViolations: Teilbereiche (Default true). " +
         "maxCallers und maxTests: Limits (Default 10, Cap 50).";
 
@@ -331,18 +342,24 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? symbol = null, string? symbolIdentifier = null, int maxResults = 30, CancellationToken ct = default) =>
+            async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, int maxResults = 30, CancellationToken ct = default) =>
                 await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
-                    lease => GetTestContextTool.ExecuteAsync(lease.Server, new TestContextOptions(symbol, symbolIdentifier, maxResults), ct)),
+                    lease => GetTestContextTool.ExecuteAsync(
+                        lease.Server,
+                        new TestContextOptions(
+                            Symbol: symbol,
+                            SymbolIdentifier: symbolIdentifier,
+                            MaxResults: maxResults),
+                        ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_test_context", GetTestContextDescription)));
     }
 
     private const string GetTestContextDescription =
         "Wann nutzen: Test-Dateien, Test-Klassen und Test-Methoden fuer ein gegebenes Produktions-Symbol " +
-        "(Klasse, Methode, Datei.cs:Zeile oder DocCommentId) abfragen. symbol (oder symbolIdentifier): Ziel-Symbol, " +
+        "(Klasse, Methode, Datei.cs:Zeile oder DocCommentId) abfragen. symbolIdentifier (primaer; symbol bleibt kompatibler Alias): Ziel-Symbol, " +
         "maxResults: Begrenzung der Testdateien (Default 30). Liefert statische Zuordnungsgruende, Test-Kategorien " +
         "(Unit/Integration), kopierbare dotnet test Filterbefehle und Hinweis bei fehlender Zuordnung.";
 }

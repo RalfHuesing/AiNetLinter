@@ -21,15 +21,42 @@ internal static class GetHotspotsTool
 {
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state, string? scopeFilter, CancellationToken ct)
+        => await ExecuteAsync(
+            state,
+            scopeFilter,
+            GetHotspotsScanner.DefaultMaxResults,
+            GetHotspotsScanner.DefaultMinLinePercentage,
+            ct).ConfigureAwait(false);
+
+    internal static async Task<CallToolResult> ExecuteAsync(
+        McpCodeGraphServer state,
+        string? scopeFilter,
+        int maxResults,
+        double minLinePercentage,
+        CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var (text, entries) = GetHotspotsScanner.BuildHotspots(solution, state.MaxLineCount, scopeFilter);
+        var report = GetHotspotsScanner.BuildHotspots(
+            solution,
+            new HotspotScanOptions(
+                state.MaxLineCount,
+                scopeFilter,
+                maxResults,
+                minLinePercentage));
         var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
         // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
         // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
-        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text), new { Hotspots = entries });
+        return McpToolResults.Text(
+            FindSymbolTool.PrependWarning(warning, report.Text),
+            new HotspotsPayload(
+                report.Entries,
+                report.TotalHotspots,
+                report.ShownHotspots,
+                report.Truncated,
+                report.MaxResults,
+                report.MinLinePercentage));
     }
 }

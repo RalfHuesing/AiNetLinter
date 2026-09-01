@@ -124,6 +124,52 @@ public sealed class GetHotspotsToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_MaxResultsAndMinLinePercentage_KeepDeterministicBoundedResults()
+    {
+        var state = _fixture.CreateServer(1);
+
+        var result = await GetHotspotsTool.ExecuteAsync(
+            state,
+            null,
+            maxResults: 1,
+            minLinePercentage: 0,
+            CancellationToken.None);
+
+        var payload = DeserializePayload(result);
+        Assert.Equal(6, payload.TotalHotspots);
+        Assert.Equal(1, payload.ShownHotspots);
+        Assert.True(payload.Truncated);
+        Assert.Single(payload.Hotspots);
+        Assert.Equal(1, payload.MaxResults);
+        Assert.Equal(0, payload.MinLinePercentage);
+        Assert.Contains("Hotspots gesamt, 1 gezeigt", TextOf(result), StringComparison.Ordinal);
+        Assert.Equal(
+            payload.Hotspots
+                .OrderByDescending(entry => entry.Lines)
+                .ThenBy(entry => entry.RelativePath, StringComparer.OrdinalIgnoreCase),
+            payload.Hotspots);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_HotspotParameters_ClampToMeaningfulBounds()
+    {
+        var state = _fixture.CreateServer(1);
+
+        var result = await GetHotspotsTool.ExecuteAsync(
+            state,
+            null,
+            maxResults: 0,
+            minLinePercentage: -10,
+            CancellationToken.None);
+
+        var payload = DeserializePayload(result);
+        Assert.Equal(GetHotspotsScanner.DefaultMaxResults, payload.MaxResults);
+        Assert.Equal(GetHotspotsScanner.MinLinePercentage, payload.MinLinePercentage);
+        Assert.Equal(payload.TotalHotspots, payload.ShownHotspots);
+        Assert.False(payload.Truncated);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ScopeFilterMatchesNoFile_ReturnsExplicitNoScopeMessage()
     {
         var state = _fixture.CreateServer();
@@ -161,4 +207,15 @@ public sealed class GetHotspotsToolTests
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         CompileErrorHeaderAssertions.AssertStartsWithCompileErrorHeader(text, expectedFileCount: 1);
     }
+
+    private static HotspotsPayload DeserializePayload(CallToolResult result)
+    {
+        Assert.NotNull(result.StructuredContent);
+        return JsonSerializer.Deserialize<HotspotsPayload>(
+            result.StructuredContent!.Value.GetRawText(),
+            McpJsonOptions.Default)!;
+    }
+
+    private static string TextOf(CallToolResult result) =>
+        string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text));
 }

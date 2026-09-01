@@ -959,6 +959,22 @@
 - Architekturgrenze: Keine Alias-Kanonisierung ohne reproduzierbaren Test; keine Assembly-Ausführung, kein AdhocWorkspace-Fallback, keine Cachepfade in Antworten und keine Ausweitung auf unbeteiligte Altbefunde.
 - Nächste Aktion: Code-/Dokumentationscheckpoint sichern und einen frischen Paket-4-Implementierer starten.
 
+## 2026-09-01 – Paket 4 Implementierer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 4 – Kompatibilität, API-Lücken und Dokumentation
+- Rolle: Implementierer (frisch)
+- Subagent-ID: `01a05d7b-558e-75b0-985f-7de4ecc239d6`
+- Versuch: 0
+- Status: completed; Änderungen uncommitted übergeben; keine Roadmap-/Log-/Tech-Debt-Änderung durch den Agenten; kein Commit.
+- Architektur: Die vorhandene zentrale `AssemblyPathValidation`-Prüfung wird für `.dll` und `.exe` verwendet; managed `.exe` wird ohne Ausführung analysiert, native PE bleibt ein typisierter Metadatenfehler. Der Registry-Aliasbefund ist nicht reproduzierbar, daher keine riskante Windows-Kanonisierung.
+- Hotspots: `maxResults` (Default 50, Cap 200) und `minLinePercentage` (Default 80, Bereich 0–100) sind als typisierte Optionen mit deterministischer Sortierung und Trunkierungsmetadaten umgesetzt.
+- API-/Doku-Vertrag: `symbolIdentifier` ist primäre Benennung, `symbol` bleibt kompatibler Alias; `Docs/agent-api.md`, `Docs/integration.md` und MCP-Agentenhinweise sind aktualisiert. Der FileTree-Default war bereits konsistent mit 200.
+- Teststruktur: Assembly-Analyse-, Filter-, Binary- und Supportregressionen wurden ergänzt bzw. fachlich aus dem großen Assembly-Testfile ausgelagert.
+- Verifikation: Build 0 Warnungen/0 Fehler; vollständige FastTests ohne Stress 2346 bestanden/2 übersprungen/1 bestehender Agent-Guide-Fehler; IntegrationTests 377 bestanden/2 bestehende Live-/Safeguard-Fehler; Whole-Solution-Dogfood isoliert 1/1. MCP-`get_violations`: 0 Fehler, 10 bestehende Warnungen außerhalb Paket 4; `git diff --check` grün. Gezielte Paket-4-FastTests liefen mit 119 Bestanden und einem bekannten Agent-Guide-Zeilenumbruchfehler; gezielte IntegrationTests 23/23.
+- Offene Risiken: Registry-Alias-/Reparse-/8.3-Kanonisierung bleibt ohne Reproduktion zurückgestellt; bestehende projektweite AIContext-/FindSymbol-Parameterwarnungen bleiben außerhalb des Scopes. Der unabhängige Review steht aus.
+- Nächste Aktion: Code-/Dokumentationscheckpoint sichern und frischen Paket-4-Review starten.
+
 ## 2026-09-01 – Paket 3 Korrekturversuch 3 Implementierer abgeschlossen
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume

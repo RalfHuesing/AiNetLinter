@@ -41,6 +41,9 @@ aber nicht die semantische MCP-Abfrage.
 - Die aktuellen Tool- und Parameterschemas aus der MCP-Tooldefinition verwenden
   (typischerweise über `tools/list` bereitgestellt); diese Regel dupliziert keine
   Toolschemas.
+- Für `get_feature_context` und `get_test_context` ist `symbolIdentifier` der
+  primäre Parametername. Der bestehende Parameter `symbol` bleibt als
+  kompatibler Alias verfügbar.
 - Nach einem vollständigen MCP-Ergebnis dieselbe semantische Frage nicht
   redundant mit Read/rg/grep nachprüfen; bei Trunkierung den Scope oder die
   Limits des MCP-Aufrufs verfeinern.

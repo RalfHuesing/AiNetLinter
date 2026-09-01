@@ -14,13 +14,29 @@ public static class AssemblyTestHelper
         string name,
         string source,
         params string[] additionalReferences)
+        => Emit(temp, name, source, OutputKind.DynamicallyLinkedLibrary, "dll", additionalReferences);
+
+    public static string EmitExecutable(
+        TestTempDirectory temp,
+        string name,
+        string source,
+        params string[] additionalReferences)
+        => Emit(temp, name, source, OutputKind.ConsoleApplication, "exe", additionalReferences);
+
+    private static string Emit(
+        TestTempDirectory temp,
+        string name,
+        string source,
+        OutputKind outputKind,
+        string extension,
+        string[] additionalReferences)
     {
         ArgumentNullException.ThrowIfNull(temp);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
         ArgumentNullException.ThrowIfNull(additionalReferences);
 
-        var outputPath = temp.GetPath(name + ".dll");
+        var outputPath = temp.GetPath($"{name}.{extension}");
         var references = RoslynTestSolutionFactory.CoreReferences
             .Concat(additionalReferences.Select(path => MetadataReference.CreateFromFile(path)))
             .ToArray();
@@ -28,7 +44,7 @@ public static class AssemblyTestHelper
             name,
             [CSharpSyntaxTree.ParseText(source)],
             references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+            new CSharpCompilationOptions(outputKind));
         var emit = compilation.Emit(outputPath);
         if (!emit.Success)
         {

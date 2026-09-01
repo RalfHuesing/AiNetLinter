@@ -46,6 +46,7 @@ public sealed class McpAgentGuideRegistrationTests
         Assert.Contains("targetType: \"assembly\"", workflow, StringComparison.Ordinal);
         Assert.Contains("metadata-only", workflow, StringComparison.Ordinal);
         Assert.Contains("not_decidable", workflow, StringComparison.Ordinal);
+        Assert.Contains("symbolIdentifier", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("assemblyPath", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("Consumer-Kontext", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("optionalen Consumer-Typ", workflow, StringComparison.Ordinal);

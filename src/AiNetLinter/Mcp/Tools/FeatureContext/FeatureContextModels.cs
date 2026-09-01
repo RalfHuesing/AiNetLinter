@@ -8,7 +8,8 @@ namespace AiNetLinter.Mcp.Tools.FeatureContext;
 
 /// <summary>
 /// Optionen fuer den Aufruf des MCP-Tools <c>get_feature_context</c>.
-/// Unterstuetzt sowohl <c>symbolIdentifier</c> (Standard-Konvention) als auch <c>symbol</c> (Alias).
+/// <c>symbolIdentifier</c> ist die primaere Konvention; <c>symbol</c> bleibt als kompatibler Alias
+/// unterstuetzt. Die Record-Reihenfolge bleibt fuer bestehende interne Aufrufer kompatibel.
 /// </summary>
 internal sealed record FeatureContextOptions(
     string? Symbol = null,

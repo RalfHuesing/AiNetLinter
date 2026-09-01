@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -25,8 +26,21 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 /// </summary>
 internal static class GetHotspotsScanner
 {
-    private const double WarnThreshold = 0.80;
+    internal const int DefaultMaxResults = 50;
+    internal const int MaxResultsCap = 200;
+    internal const double DefaultMinLinePercentage = 80.0;
+    internal const double MinLinePercentage = 0.0;
+    internal const double MaxLinePercentage = 100.0;
+
     private const double CriticalThreshold = 0.95;
+
+    internal static int NormalizeMaxResults(int maxResults) =>
+        Math.Clamp(maxResults < 1 ? DefaultMaxResults : maxResults, 1, MaxResultsCap);
+
+    internal static double NormalizeMinLinePercentage(double minLinePercentage) =>
+        double.IsNaN(minLinePercentage) || double.IsInfinity(minLinePercentage)
+            ? DefaultMinLinePercentage
+            : Math.Clamp(minLinePercentage, MinLinePercentage, MaxLinePercentage);
 
     /// <summary>
     /// Baut den vollstaendigen Hotspot-Report fuer <paramref name="solution"/> — Text (Markdown-
@@ -38,20 +52,67 @@ internal static class GetHotspotsScanner
     internal static (string Text, IReadOnlyList<HotspotEntry> Entries) BuildHotspots(
         Solution solution, int maxLineCount, string? scopeFilter)
     {
+        var report = BuildHotspots(
+            solution,
+            new HotspotScanOptions(
+                maxLineCount,
+                scopeFilter,
+                DefaultMaxResults,
+                DefaultMinLinePercentage));
+        return (report.Text, report.Entries);
+    }
+
+    internal static HotspotScanResult BuildHotspots(
+        Solution solution,
+        HotspotScanOptions options)
+    {
+        var effectiveMaxResults = NormalizeMaxResults(options.MaxResults);
+        var effectiveMinLinePercentage = NormalizeMinLinePercentage(options.MinLinePercentage);
+        var maxLineCount = options.MaxLineCount;
+        var scopeFilter = options.ScopeFilter;
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var files = CollectFiles(solution, solutionDir, scopeFilter);
 
         if (files.Count == 0 && !string.IsNullOrWhiteSpace(scopeFilter))
         {
-            return ($"Keine Dateien im Scope (Filter: '{scopeFilter}') — Filter pruefen.", Array.Empty<HotspotEntry>());
+            return new HotspotScanResult(
+                $"Keine Dateien im Scope (Filter: '{scopeFilter}') — Filter pruefen.",
+                Array.Empty<HotspotEntry>(),
+                0,
+                0,
+                false,
+                effectiveMaxResults,
+                effectiveMinLinePercentage);
         }
 
-        var critical = files.Where(f => (double)f.Lines / maxLineCount >= CriticalThreshold).ToList();
-        var warning = files.Where(f => (double)f.Lines / maxLineCount is >= WarnThreshold and < CriticalThreshold).ToList();
+        var candidates = files
+            .Where(f => GetUtilization(f, maxLineCount) >= effectiveMinLinePercentage)
+            .OrderByDescending(f => f.Lines)
+            .ThenBy(f => f.RelativePath, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var shown = candidates.Take(effectiveMaxResults).ToList();
+        var critical = shown.Where(f => GetUtilization(f, maxLineCount) >= CriticalThreshold * 100).ToList();
+        var warning = shown.Where(f => GetUtilization(f, maxLineCount) < CriticalThreshold * 100).ToList();
 
-        var text = FormatReport(files, critical, warning, maxLineCount, scopeFilter);
-        var entries = BuildEntries(critical, warning, maxLineCount);
-        return (text, entries);
+        var text = FormatReport(
+            new HotspotReportData(
+                files,
+                critical,
+                warning,
+                candidates.Count,
+                shown.Count,
+                maxLineCount,
+                scopeFilter,
+                effectiveMinLinePercentage));
+        var entries = BuildEntries(shown, maxLineCount);
+        return new HotspotScanResult(
+            text,
+            entries,
+            candidates.Count,
+            shown.Count,
+            candidates.Count > shown.Count,
+            effectiveMaxResults,
+            effectiveMinLinePercentage);
     }
 
     /// <summary>
@@ -64,20 +125,24 @@ internal static class GetHotspotsScanner
     /// genau das Gegenteil vom Zweck eines Hotspot-Reports (nur die Dateien nahe/ueber dem Limit).
     /// </summary>
     private static IReadOnlyList<HotspotEntry> BuildEntries(
-        IReadOnlyList<HotspotFileInfo> critical,
-        IReadOnlyList<HotspotFileInfo> warning,
+        IReadOnlyList<HotspotFileInfo> files,
         int maxLineCount)
     {
-        return critical
-            .Select(f => BuildEntry(f, maxLineCount, "critical"))
-            .Concat(warning.Select(f => BuildEntry(f, maxLineCount, "warning")))
+        return files
+            .Select(f => BuildEntry(
+                f,
+                maxLineCount,
+                GetUtilization(f, maxLineCount) >= CriticalThreshold * 100 ? "critical" : "warning"))
             .OrderByDescending(e => e.Lines)
             .ThenBy(e => e.RelativePath, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
     private static HotspotEntry BuildEntry(HotspotFileInfo file, int maxLineCount, string category) =>
-        new(file.RelativePath, file.Lines, Math.Round((double)file.Lines / maxLineCount * 100, 1), category);
+        new(file.RelativePath, file.Lines, Math.Round(GetUtilization(file, maxLineCount), 1), category);
+
+    private static double GetUtilization(HotspotFileInfo file, int maxLineCount) =>
+        (double)file.Lines / maxLineCount * 100;
 
     private static List<HotspotFileInfo> CollectFiles(Solution solution, string solutionDir, string? scopeFilter)
     {
@@ -94,43 +159,82 @@ internal static class GetHotspotsScanner
         return result;
     }
 
-    private static string FormatReport(
-        IReadOnlyList<HotspotFileInfo> files,
-        IReadOnlyList<HotspotFileInfo> critical,
-        IReadOnlyList<HotspotFileInfo> warning,
-        int maxLineCount,
-        string? scopeFilter)
+    private static string FormatReport(HotspotReportData report)
     {
         var sb = new StringBuilder();
-        var scopeSuffix = string.IsNullOrWhiteSpace(scopeFilter) ? "" : $" | Scope-Filter: '{scopeFilter}'";
-        sb.AppendLine($"Gescannt: {files.Count} .cs-Dateien | MaxLineCount: {maxLineCount}{scopeSuffix}");
+        var scopeSuffix = string.IsNullOrWhiteSpace(report.ScopeFilter) ? "" : $" | Scope-Filter: '{report.ScopeFilter}'";
+        sb.AppendLine($"Gescannt: {report.Files.Count} .cs-Dateien | MaxLineCount: {report.MaxLineCount}{scopeSuffix}");
         sb.AppendLine();
 
-        HotspotTableFormatter.AppendSection(sb, "Kritische Dateien (>=95% des Limits)", critical.Select(f => (f.RelativePath, f.Lines)), maxLineCount);
-        HotspotTableFormatter.AppendSection(sb, "Warnungs-Dateien (>=80% des Limits)", warning.Select(f => (f.RelativePath, f.Lines)), maxLineCount);
+        HotspotTableFormatter.AppendSection(sb, "Kritische Dateien (>=95% des Limits)", report.Critical.Select(f => (f.RelativePath, f.Lines)), report.MaxLineCount);
+        HotspotTableFormatter.AppendSection(sb, $"Warnungs-Dateien (>= {FormatPercentage(report.MinLinePercentage)}% des Limits)", report.Warning.Select(f => (f.RelativePath, f.Lines)), report.MaxLineCount);
 
-        if (critical.Count == 0 && warning.Count == 0)
+        if (report.TotalHotspots == 0)
         {
             sb.AppendLine("## Alle Dateien im gruenen Bereich");
             sb.AppendLine();
-            sb.AppendLine($"Keine Datei ueberschreitet 80% des Limits ({(int)(maxLineCount * WarnThreshold)} Zeilen).");
+            sb.AppendLine($"Keine Datei erreicht {FormatPercentage(report.MinLinePercentage)}% des Limits.");
         }
         else
         {
             sb.AppendLine();
-            sb.AppendLine($"## Alle anderen Dateien: {files.Count - critical.Count - warning.Count} Dateien im gruenen Bereich");
+            sb.AppendLine($"## Alle anderen Dateien: {report.Files.Count - report.TotalHotspots} Dateien im gruenen Bereich");
+        }
+
+        if (report.TotalHotspots > report.ShownHotspots)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"[{report.TotalHotspots} Hotspots gesamt, {report.ShownHotspots} gezeigt — maxResults erhöhen]");
         }
 
         return sb.ToString().TrimEnd();
     }
 
+    private static string FormatPercentage(double percentage) =>
+        percentage % 1 == 0
+            ? percentage.ToString("0", CultureInfo.InvariantCulture)
+            : percentage.ToString("0.0", CultureInfo.InvariantCulture);
+
+    private sealed record HotspotReportData(
+        IReadOnlyList<HotspotFileInfo> Files,
+        IReadOnlyList<HotspotFileInfo> Critical,
+        IReadOnlyList<HotspotFileInfo> Warning,
+        int TotalHotspots,
+        int ShownHotspots,
+        int MaxLineCount,
+        string? ScopeFilter,
+        double MinLinePercentage);
+
     private sealed record HotspotFileInfo(string RelativePath, int Lines);
 }
+
+internal sealed record HotspotScanOptions(
+    int MaxLineCount,
+    string? ScopeFilter,
+    int MaxResults,
+    double MinLinePercentage);
+
+internal sealed record HotspotScanResult(
+    string Text,
+    IReadOnlyList<HotspotEntry> Entries,
+    int TotalHotspots,
+    int ShownHotspots,
+    bool Truncated,
+    int MaxResults,
+    double MinLinePercentage);
 
 /// <summary>
 /// StructuredContent-Eintrag fuer <c>get_hotspots</c> — ein Objekt je Datei mit Pfad, Zeilen
 /// und Auslastung, nur fuer <see cref="Category"/> <c>"critical"</c> (>=95%) oder <c>"warning"</c>
-/// (>=80%) — Dateien im gruenen Bereich tauchen bewusst nicht auf (siehe
+/// (>= dem angeforderten Minimum) — Dateien im gruenen Bereich tauchen bewusst nicht auf (siehe
 /// <see cref="GetHotspotsScanner.BuildEntries"/>).
 /// </summary>
 internal sealed record HotspotEntry(string RelativePath, int Lines, double UtilizationPercent, string Category);
+
+internal sealed record HotspotsPayload(
+    IReadOnlyList<HotspotEntry> Hotspots,
+    int TotalHotspots,
+    int ShownHotspots,
+    bool Truncated,
+    int MaxResults,
+    double MinLinePercentage);

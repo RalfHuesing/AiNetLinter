@@ -121,6 +121,25 @@ public sealed class McpServerToolBehaviorE2ETests
     }
 
     [Fact]
+    public async Task GetHotspots_WireParameters_ReturnBoundedStructuredPayload()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_hotspots",
+            new Dictionary<string, object?>
+            {
+                ["maxResults"] = 1,
+                ["minLinePercentage"] = 0,
+            });
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var payload = result.StructuredContent!.Value;
+        Assert.Equal(1, payload.GetProperty("maxResults").GetInt32());
+        Assert.Equal(0, payload.GetProperty("minLinePercentage").GetDouble());
+        Assert.True(payload.GetProperty("shownHotspots").GetInt32() <= 1);
+    }
+
+    [Fact]
     public async Task GetViolations_WithScopeFilter_FiltersResults()
     {
         var text = await _fixture.Client.CallToolGetTextAsync(
@@ -182,4 +201,3 @@ public sealed class McpServerToolBehaviorE2ETests
             StringComparison.OrdinalIgnoreCase);
     }
 }
-

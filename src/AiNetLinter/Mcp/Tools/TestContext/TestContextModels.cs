@@ -7,6 +7,8 @@ namespace AiNetLinter.Mcp.Tools.TestContext;
 
 /// <summary>
 /// Optionen fuer den Aufruf des MCP-Tools <c>get_test_context</c>.
+/// <c>symbolIdentifier</c> ist die primaere Konvention; <c>symbol</c> bleibt als kompatibler Alias
+/// unterstuetzt.
 /// </summary>
 internal sealed record TestContextOptions(
     string? Symbol = null,

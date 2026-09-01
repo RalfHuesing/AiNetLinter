@@ -258,6 +258,49 @@
 - Nächster Schritt: In einem separat abgegrenzten Body-Identity-Paket ergänzen; keine Scope-Erweiterung dieses Tasks.
 - Log-Anker: `execution-log.md`, „Paket 3 Abschlussreview abgeschlossen"
 
+### Paket-4-Assembly-Extension-Unterstützung
+
+- Schweregrad: P1
+- Ursachensignatur: package4-managed-executable-support
+- Scope/Fundstelle: `src/AiNetLinter/Configuration/AssemblyPathValidation.cs` und Assembly-Ziel-/Source-Mapping-Verbraucher
+- Evidenz: Die zentrale Prüfung akzeptiert `.dll` und `.exe`; eine verwaltete Test-`.exe` wird ohne Ausführung analysiert. Native PE-Dateien liefern weiterhin einen typisierten Hinweis auf erforderliche verwaltete .NET-Metadaten/IL.
+- Disposition: review-pending
+- attempts: 0
+- Nächster Schritt: Unabhängigen Paket-4-Review abwarten.
+- Log-Anker: `execution-log.md`, „Paket 4 Implementierer abgeschlossen"
+
+### Paket-4-Hotspots-Parameter
+
+- Schweregrad: P2
+- Ursachensignatur: package4-hotspots-parameter-contract
+- Scope/Fundstelle: `GetHotspotsTool`, `GetHotspotsScanner` und `FileStructureToolRegistrations`
+- Evidenz: `maxResults` (Default 50, Cap 200) und `minLinePercentage` (Default 80, 0–100) werden typisiert normalisiert; Ergebniszählung, Trunkierung und deterministische Sortierung sind regressionstestiert.
+- Disposition: review-pending
+- attempts: 0
+- Nächster Schritt: Unabhängigen Paket-4-Review abwarten.
+- Log-Anker: `execution-log.md`, „Paket 4 Implementierer abgeschlossen"
+
+### Paket-4-SymbolIdentifier- und Dokumentationsvertrag
+
+- Schweregrad: P2
+- Ursachensignatur: package4-symbolidentifier-documentation-drift
+- Scope/Fundstelle: Feature-/TestContext-Registrierungen, `Docs/agent-api.md`, `Docs/integration.md` und `.agents/rules/AiNetLinter-McpWorkflow.mdc`
+- Evidenz: `symbolIdentifier` ist als primäre Benennung dokumentiert und registriert; `symbol` bleibt kompatibler Alias. Assembly-Detailflags, `bodyAvailability`, `.exe`-Support, Health-Ziele und Progressive Disclosure sind dokumentiert und per Smoke-/Vertragstests abgeglichen.
+- Disposition: review-pending
+- attempts: 0
+- Nächster Schritt: Unabhängigen Paket-4-Review abwarten.
+- Log-Anker: `execution-log.md`, „Paket 4 Implementierer abgeschlossen"
+
+### Paket-4-Registry-Alias-Kanonisierung
+
+- Schweregrad: P2
+- Ursachensignatur: package4-registry-alias-canonicalization
+- Scope/Fundstelle: `AssemblyAnalysisRegistry.LeaseAsync` / Pfadidentität
+- Evidenz: Alias-/Reparse-/8.3-Doppelgeneration war in der Untersuchung nicht reproduzierbar. Eine Windows-spezifische Kanonisierung würde ohne Regression ein Risiko für Pfadsemantik und Lebenszeitvertrag einführen.
+- Disposition: accepted-deferred
+- Nächster Schritt: Nur bei reproduzierbarem Alias-Test als eigenes Paket wieder aufnehmen.
+- Log-Anker: `execution-log.md`, „Paket 4 Implementierer abgeschlossen"
+
 ### Paket-3-Diagnose-Sample-Priorisierung
 
 - Schweregrad: P2
