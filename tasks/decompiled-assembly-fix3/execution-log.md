@@ -985,3 +985,22 @@
 - Versuch: 0 im Epic
 - Status: running
 - Auftrag: Prüfe den Paket-3-Diff gegen Konzept, Rules und Code-Map. Kontrolliere Source-Snapshot-Diagnosen, jeden `fallbackReason`-Pfad, fail-closed Trust, leasegebundene on-demand Body-Dekomposition, Source-/Signature-/Body-Content-Mode, Cancellation/Limit/Pfadtransparenz und zentrale Literalformatierung. Führe nur frische, relevante Tests und bei Bedarf gezielte MCP-Checks aus; klassifiziere die gemeldeten 10 strukturellen Violations als P2 oder P1. Kein Produktions-/Testcode ändern und kein Commit; nur konkrete `code-map.md`-Navigationskorrekturen.
+
+## 2026-09-01 – Paket 3 Reviewer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05d10-251f-7922-a6fa-86f6d8a52e68`
+- Ursachensignatur: `package3-source-body-metadata-contract`
+- Versuch: 0 im Epic
+- Status: completed; kein Produktions-/Testcode geändert; konkrete Navigationskorrekturen in `code-map.md`; kein Commit
+- Urteil: `issues`; keine P0, aber P1-Findings.
+- P1 `package3-fallback-diagnostic-propagation`: Bei fehlender Compilation bzw. Source-Context-Fehlern kann die dekompilierte Fallback-Session weiterlaufen, ohne `workspace-failure` und Source-Diagnosen zuverlässig in den Fallback-Origin zu übernehmen. Betroffene Symbole: `AssemblyAnalysisContextFactory.CreateAsync`/`TryCreateSourceBackedContextAsync` und `AssemblyAnalysisRegistryEntryFactory.TryCreateSourceEntryAsync`.
+- P1 `package3-body-symbol-resolution-ambiguity`: `AssemblyDecompilationAdapter.FindMember` nutzt nur Name, Parameteranzahl und Generic-Arity und nimmt den ersten Treffer; gleichartige Overloads können daher den falschen Body liefern.
+- P1 `package3-structural-rule-drift`: Die zehn neuen `get_violations` in `AssemblySourceSelectionOrchestrator`, `AssemblyDecompilationAdapter` und `GetSymbolBodyTool` werden wegen verbindlicher Projektregeln als P1 statt P2 klassifiziert (Dateigröße, Komplexität, Konstruktorabhängigkeiten, AIContext-Footprint).
+- P2 `package3-literal-regression-coverage`: Der Literaltest prüft positive Zahlen, String, Char und Bool, aber noch nicht `null` und negative Konstanten.
+- Weitere P2-Risiken: Kein direkter Test für verwertbare C#-Dokumente mit Workspace-Diagnose; keine direkte Regression für abstract/extern/interface/nicht dekompilierbar, Cancellation und strukturierte `Enrich`-Diagnoseausgabe.
+- Verifikation: Implementierer-Nachweise 34/34 FastTests, 6/6 IntegrationTests, 1/1 Literaltest, Build 0 Warnungen/0 Fehler und `git diff --check` wurden gegen den Diff bewertet; keine weiteren Volltests gestartet.
+- Tech-Debt-Disposition: Die drei P1-Signaturen sowie die damit gebündelte fehlende Literalabdeckung werden für den nächsten Korrekturversuch aktiviert; Paket 3 bleibt in Arbeit. Die übrigen P2-Risiken werden dokumentiert und nicht als separate Schleife gestartet.
+- Nächste Aktion: Korrekturversuch 1 mit frischem Implementierer und anschließendem unabhängigem Review.

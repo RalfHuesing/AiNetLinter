@@ -197,10 +197,10 @@
 - Schweregrad: P1
 - Ursachensignatur: package3-structural-rule-drift
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs`, `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySourceSelectionOrchestrator.cs` und direkt betroffene Konstruktor-/AIContext-Schnittstellen
-- Evidenz: Der Paket-3-Implementierer meldet im abschließenden `get_violations`-Check 10 strukturelle Befunde, überwiegend neue Größen-/Komplexitäts-, Konstruktorabhängigkeits- und AIContext-Footprint-Limits. Der fokussierte DRY-/Dead-Code-/Magic-Value-Audit meldete dagegen keine Befunde; die fachlichen Tests und der Build sind grün. Eine unabhängige Review-Klassifikation steht aus.
+- Evidenz: Der Paket-3-Implementierer meldet im abschließenden `get_violations`-Check noch 9 strukturelle Befunde, überwiegend Größen-/Komplexitäts-, Konstruktorabhängigkeits- und AIContext-Footprint-Limits in den neu berührten Bereichen. Der fokussierte DRY-/Dead-Code-/Magic-Value-Audit meldete dagegen keine Befunde; die fachlichen Tests und der Build sind grün. Die unabhängige Review-Klassifikation steht für diesen Korrekturstand noch aus.
 - Disposition: fix-now
 - attempts: 1
-- Nächster Schritt: Im Korrekturversuch die gemeldeten Dateigrößen-, Komplexitäts-, Konstruktorabhängigkeits- und AIContext-Footprint-Befunde scope-nah beheben, ohne Source-/Lease-Ownership künstlich zu duplizieren.
+- Nächster Schritt: Im Review prüfen, welche der verbleibenden 9 Befunde nach der Strukturaufteilung noch aktiv und P1-relevant sind; nur bestätigte Verstöße scope-nah beheben, ohne Source-/Lease-Ownership künstlich zu duplizieren.
 - Log-Anker: `execution-log.md`, „Paket 3 Implementierer abgeschlossen"
 
 ### Paket-3-Fallback-Diagnosepropagation

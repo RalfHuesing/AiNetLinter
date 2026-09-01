@@ -6,6 +6,10 @@
 
 ## Betroffene Dateien und Symbole
 
+- Paket-3-Korrekturversuch: `AssemblySourceFallbackMetadata` wird von `AssemblySourceSelectionOrchestrator` über `AssemblySourceSelectionScope`, `AssemblySourceResolution`, `AssemblyAnalysisContextFactory` und `AssemblyAnalysisRegistryEntryFactory` bis zum `AssemblyOrigin` transportiert; Workspace-/Compilation-Fehler setzen fail-closed `workspace-failure`.
+- `AssemblyDecompilationAdapter.FindMember` vergleicht deklarierenden Typ, Generic-Arity, Parameter-Ref-Kind und mehrere Roslyn-Typdarstellungen; `AssemblyDecompilationSourceText` enthält den Decompiler-Textscanner.
+- `IAssemblyBodyContext` entkoppelt den Body-Tool-Renderpfad von der vollständigen Assembly-Lease; `SourceSymbolBodyResolver` kapselt Source-Body-/abstract-/extern-/Interface-Erkennung.
+
 - `ServerMaintenanceToolRegistrations.AddGetServerHealth`: Request-/Options-Erzeugung und Ausführung in lokale Hilfsmethoden aufgeteilt. Target-/Global-Routing und Cancellation-Verhalten bleiben erhalten.
 - `InspectAssemblyTool.BuildResult` (`InspectAssemblyTool.cs`): Verwendet den internen `InspectAssemblyBuildRequest`-Vertrag; Lease- und Nicht-Lease-Pfade behalten dieselbe Payload-Erzeugung und Response-Budgetierung, die Methode hat keine fünf effektiven Parameter mehr.
 - `GetServerHealthResponseBuilder.Build`: Sessionauswahl, Textaufbau und Payloadaufbau getrennt; `HealthResponseData` bündelt den Zwischenzustand. Globales Default bleibt kompakt ohne Sessionliste; Detail-/Sessionoptionen bleiben begrenzt.
@@ -62,3 +66,4 @@
 - Review-Navigation: Bei einer Source-Context-/Compilation-Störung kann `AssemblyAnalysisContextFactory.TryCreateSourceBackedContextAsync` in `CreateAsync` in die dekompilierte Fallback-Session wechseln, ohne dort zwingend `AssemblySourceFallbackReasons.WorkspaceFailure` bzw. die Source-Diagnosen zu setzen; für diese Fallback-Transparenzprüfung sind `AssemblyAnalysisContextFactory.CreateAsync`/`TryCreateSourceBackedContextAsync` und `AssemblyAnalysisRegistryEntryFactory.TryCreateSourceEntryAsync` maßgeblich.
 - Review-Navigation: `AssemblyDecompilationAdapter.FindMember` ordnet Methoden derzeit über Name, Parameteranzahl und Generic-Arity zu und nimmt den ersten Treffer; für die Prüfung der Symbolidentität bei überladenen Membern sind `FindMember`, `ResolveBodyAsync` und die Assembly-Body-Tests maßgeblich.
 - Review-Navigation: Der aktuelle Literal-Regressionstest prüft positive Zahl/String/Char/Bool-Werte; für das explizite Paket-3-Kriterium fehlen in `GetClassStructureToolTests.ExecuteAsync_ConstantFields_FormatsInvariantLiteralValues` noch direkte Fälle für `null` und negative Konstanten.
+- Paket-3-Korrekturversuch: `AssemblyAnalysisContextFactoryTests` prüft den fehlenden Source-Projektkontext mit `workspace-diagnostic`; `AssemblyAnalysisPathContractTests` prüft einen echten dekompilierten String-/Int-Overloadpfad; der Literaltest prüft zusätzlich negative und `null`-Konstanten. Roadmap, Execution-Log und Tech-Debt wurden nicht geändert; kein Commit erstellt.
