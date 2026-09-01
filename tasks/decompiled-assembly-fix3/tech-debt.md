@@ -157,9 +157,9 @@
 - Ursachensignatur: package2-test-directory-footprint
 - Scope/Fundstelle: `src/AiNetLinter.FastTests/Mcp/Assemblies`
 - Evidenz: Der unabhängige Review meldete 31 direkte Einträge bei einer Regelgrenze von 30. Die drei fachlich zusammengehörigen Navigation-/Route-/Contract-Tests wurden nach `src/AiNetLinter.FastTests/Mcp/Assemblies/Navigation` mit Namespace `AiNetLinter.FastTests.Mcp.Assemblies.Navigation` verschoben; der Elternordner hat nun 29 direkte Einträge und der finale MCP-Scope meldet 0 Befunde.
-- Disposition: review-pending
+- Disposition: fixed
 - attempts: 1
-- Nächster Schritt: Unabhängigen Review des verschobenen Testpakets abwarten; keine Suppression und keine weitere kosmetische Umbenennung.
+- Nächster Schritt: Keine weitere Korrektur; die Strukturgrenze ist durch fachliche Verschiebung erfüllt.
 - Log-Anker: `execution-log.md`, „Wiederaufnahme Paket 2 Korrekturversuch 1 Reviewer abgeschlossen"
 
 ### Paket-2-Produktionsviolations aus Zwischenstand
@@ -179,9 +179,9 @@
 - Ursachensignatur: package3-production-directory-namespace-organization
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis`
 - Evidenz: Der unabhängige Review meldete 35 direkte Einträge bei einer Regelgrenze von 30. Body-Verantwortungen wurden nach `Analysis/Bodies` (`AiNetLinter.Mcp.Assemblies.Analysis.Bodies`) und Source-Selection nach `Analysis/SourceSelection` (`AiNetLinter.Mcp.Assemblies.Analysis.SourceSelection`) verschoben; der Elternordner hat nun 28 direkte Einträge und der finale Scope-Check meldet keinen Directory-Footprint-Befund.
-- Disposition: review-pending
+- Disposition: fixed
 - attempts: 1
-- Nächster Schritt: Unabhängigen Review der fachlichen Namespace-Grenzen abwarten; keine Suppression und keine Verlagerung in einen unpassenden Sammelordner.
+- Nächster Schritt: Keine weitere Korrektur; die fachlichen Namespace-Grenzen sind durch den unabhängigen Review bestätigt.
 - Log-Anker: `execution-log.md`, „Paket 3 Korrekturversuch 2 Reviewer abgeschlossen"
 
 ### Paket-2-Magic-Value-Kandidaten
@@ -210,9 +210,9 @@
 - Ursachensignatur: package3-structural-rule-drift
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs`, `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySourceSelectionOrchestrator.cs` und direkt betroffene Konstruktor-/AIContext-Schnittstellen
 - Evidenz: Dateigrößen-, Methodenlängen- und Komplexitätsbefunde sind beseitigt. Der Orchestrator-AIContext-Footprint sank 2607 → 2396, das `HasNoBody`-Duplikat wurde durch `AssemblyBodySyntax` zentralisiert, und der fehlende `StaticTestSentinel` ist durch direkte `@covers`-Abdeckung behoben. Produktions- und Teststruktur liegen mit 28 bzw. 29 direkten Einträgen unter der Grenze; der finale Scope-Check meldet nur bestehende, nicht diffbetroffene AIContext-Hinweise.
-- Disposition: review-pending
+- Disposition: fixed
 - attempts: 3
-- Nächster Schritt: Unabhängigen Review und anschließendes Abschlussaudit abwarten; bestehende AIContext-Hinweise außerhalb des Diffs bleiben zurückgestellt.
+- Nächster Schritt: Keine weitere Korrektur; bestehende AIContext-Hinweise außerhalb des Diffs bleiben zurückgestellt und werden nur im Abschlussaudit auf Regression geprüft.
 - Log-Anker: `execution-log.md`, „Paket 3 Implementierer abgeschlossen"
 
 ### Paket-3-Fallback-Diagnosepropagation
@@ -221,9 +221,9 @@
 - Ursachensignatur: package3-fallback-diagnostic-propagation
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs`, `src/AiNetLinter/Mcp/Assemblies/Analysis/Factories/AssemblyAnalysisRegistryEntryFactory.cs`
 - Evidenz: Die konkrete Compilation-Diagnose wird nun von `TryGetProjectCompilationAsync` über `AssemblySourceFallbackMetadata` bis in `AssemblyOrigin.SourceDiagnostics` getragen; `workspace-failure` bleibt als Zusatzdiagnose erhalten. Eine gezielte `CS0246`-Regression und 35 fokussierte FastTests/17 fokussierte IntegrationTests sind grün.
-- Disposition: review-pending
+- Disposition: fixed
 - attempts: 2
-- Nächster Schritt: Unabhängigen Review des vollständigen Fallback-Pfads abwarten.
+- Nächster Schritt: Keine weitere Korrektur; der vollständige Fallback-Pfad ist durch den unabhängigen Review bestätigt.
 - Log-Anker: `execution-log.md`, „Paket 3 Review abgeschlossen"
 
 ### Paket-3-Body-Symbolauflösung bei Overloads
@@ -232,9 +232,9 @@
 - Ursachensignatur: package3-body-symbol-resolution-ambiguity
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter.cs`, `FindMember`/`ResolveBodyAsync`
 - Evidenz: Die ursprüngliche Zuordnung nach Name, Parameteranzahl und Generic-Arity wurde auf vollständige Symbolidentität/Parametertypen und deterministische Kandidatenauswahl umgestellt. Gleichartige Overloads werden durch fokussierte Regressionen unterschieden; der aktuelle Struktur-Refactor erhält diesen Vertrag.
-- Disposition: review-pending
+- Disposition: fixed
 - attempts: 1
-- Nächster Schritt: Unabhängigen Review der vollständigen Symbolidentität und der Regressionstests abwarten.
+- Nächster Schritt: Randtypen der textuellen Parametertypauflösung bleiben als P2-Folgearbeit dokumentiert; keine Korrekturschleife in diesem Task.
 - Log-Anker: `execution-log.md`, „Paket 3 Review abgeschlossen"
 
 ### Paket-3-Literalregression unvollständig
@@ -243,7 +243,37 @@
 - Ursachensignatur: package3-literal-regression-coverage
 - Scope/Fundstelle: `src/AiNetLinter.FastTests/Mcp/Tools/FileStructure/GetClassStructureToolTests.cs`, `ExecuteAsync_ConstantFields_FormatsInvariantLiteralValues`
 - Evidenz: Die zentrale Literalformatierung deckt jetzt positive und negative Zahlen, `null`, String, Char und Bool ab; der gezielte Literaltest ist grün.
-- Disposition: review-pending
+- Disposition: fixed
 - attempts: 1
-- Nächster Schritt: Unabhängigen Review der Testabdeckung abwarten; keine eigenständige weitere Korrekturschleife.
+- Nächster Schritt: Keine weitere Korrektur; die ergänzte Literalabdeckung ist durch den unabhängigen Review bestätigt.
 - Log-Anker: `execution-log.md`, „Paket 3 Review abgeschlossen"
+
+### Paket-3-Overload-Randtypabdeckung
+
+- Schweregrad: P2
+- Ursachensignatur: package3-overload-identity-edge-cases
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/Bodies/AssemblyDecompiledBodyResolver.cs`
+- Evidenz: Die Auflösung ist für die getesteten `int`-/`string`-Overloads deterministisch und fail-closed. Sonderfälle wie `ref readonly`, komplexe Nullable-/Alias-/Function-Pointer-Typen und nicht direkt unterstützte Methodenkinds sind nicht explizit regressionstestiert.
+- Disposition: promoted-to-project-debt
+- Nächster Schritt: In einem separat abgegrenzten Body-Identity-Paket ergänzen; keine Scope-Erweiterung dieses Tasks.
+- Log-Anker: `execution-log.md`, „Paket 3 Abschlussreview abgeschlossen"
+
+### Paket-3-Diagnose-Sample-Priorisierung
+
+- Schweregrad: P2
+- Ursachensignatur: package3-fallback-diagnostic-sample-priority
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs`
+- Evidenz: Nach dem Zusammenführen werden Diagnosen mit `Take(20)` begrenzt. Bei mindestens 20 Snapshot-Diagnosen können `CompilationFailed` oder `WorkspaceDiagnostic` aus den Samples fallen; `fallbackReason` bleibt unabhängig davon erhalten.
+- Disposition: promoted-to-project-debt
+- Nächster Schritt: In einem separaten Diagnose-Projektionspaket die Priorisierung systematisch absichern; keine Änderung nach dem freigegebenen Review.
+- Log-Anker: `execution-log.md`, „Paket 3 Abschlussreview abgeschlossen"
+
+### Paket-3-Resolver-Direktabdeckung
+
+- Schweregrad: P2
+- Ursachensignatur: package3-resolver-direct-test-coverage
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/Bodies/AssemblyDecompiledBodyResolver.cs`
+- Evidenz: Der Resolver wird über Navigationstests indirekt ausgeführt; eine eigene direkte Testdatei ist nicht erforderlich für die aktuelle Regelprüfung, da keine aktive `StaticTestSentinel`-Violation besteht.
+- Disposition: accepted-deferred
+- Nächster Schritt: Nur bei einer späteren Body-Navigationserweiterung direkte Resolver-Tests ergänzen.
+- Log-Anker: `execution-log.md`, „Paket 3 Abschlussreview abgeschlossen"

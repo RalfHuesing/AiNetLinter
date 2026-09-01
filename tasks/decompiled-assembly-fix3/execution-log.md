@@ -935,6 +935,30 @@
 - Tech-Debt-Disposition: Die drei P1-Signaturen sowie die damit gebündelte fehlende Literalabdeckung werden für den nächsten Korrekturversuch aktiviert; Paket 3 bleibt in Arbeit. Die übrigen P2-Risiken werden dokumentiert und nicht als separate Schleife gestartet.
 - Nächste Aktion: Korrekturversuch 1 mit frischem Implementierer und anschließendem unabhängigem Review.
 
+## 2026-09-01 – Paket 3 Korrekturversuch 3 Reviewer abgeschlossen
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
+- Rolle: Reviewer (frisch, unabhängig)
+- Subagent-ID: `01a05d6c-54a3-7580-8b59-9f1837e5d368`
+- Review-Basis: HEAD `a554d1a1`, Codecheckpoint `2914bf42`; der Arbeitsbaum war vor dem Review sauber, der Reviewer änderte keinen Produktions-/Testcode.
+- Urteil: `approved`; keine P0/P1-Befunde.
+- Strukturprüfung: `src/AiNetLinter/Mcp/Assemblies/Analysis` 28 direkte Einträge, `Analysis/Bodies` 4, `Analysis/SourceSelection` 6, `src/AiNetLinter.FastTests/Mcp/Assemblies` 29 und `Assemblies/Navigation` 3. Die Namespaces `AiNetLinter.Mcp.Assemblies.Analysis.Bodies`, `AiNetLinter.Mcp.Assemblies.Analysis.SourceSelection` und `AiNetLinter.FastTests.Mcp.Assemblies.Navigation` stimmen; keine Suppressionen oder alten Namespace-Referenzen. Betroffene `get_violations`-Scopes melden 0 Befunde.
+- Funktionsprüfung: `AssemblyBodySyntax` zentralisiert die bisherige abstrakt/extern-Propertylogik ohne Verhaltensverlust; konkrete Compilation-Diagnosen und `workspace-failure` erreichen den Fallback-Origin; fail-closed Trust bleibt an Attestierung, Health, Checkout und Snapshot-Identität gebunden. Leasegebundene on-demand Bodies, Source-/Signature-/Body-Modi, Overload-Auflösung und Literalregression sind bestätigt.
+- Audit-/Regelprüfung: Orchestrator-AIContext 2396/2500, Provider-Koordinator 2197/2500, Context-Factory 2056/2500; exakte Duplikate 0; Produktions-Magic-Values 0; keine HIGH-Confidence-Dead-Code-Funde. Ein unveränderter Near-Duplicate-Cluster und zwei bestehende LOW-Heuristiken bleiben außerhalb des Diffs.
+- Verifikation: fokussierte FastTests 61/61; `ExternalSourceSnapshotMaterializerTests` 6/6; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` grün. Vollständige Nicht-Stress-Gates wurden entsprechend dem Auftrag nicht wiederholt; ihre zuvor dokumentierten Alt-/Live-/Dogfood-Fehler bleiben unverändert.
+- Neue P2-Tech-Debt: textuelle Parametertypauflösung für seltene Overload-Randtypen, mögliche Sample-Verdrängung durch `Take(20)` nach Diagnosezusammenführung sowie fehlende direkte Resolver-Testdatei ohne aktive Sentinel-Violation. Keine davon blockiert Paket 3.
+- Nächste Aktion: Reviewergebnis und P2-Disposition checkpointen; Paket 3 schließen und Paket 4 gemäß Konzept aufnehmen.
+
+## 2026-09-01 – Paket 3 abgeschlossen, Paket 4 gestartet
+
+- Run-ID: decompiled-assembly-fix3-20260901-resume
+- Status: Paket 3 `done`; Paket 4 `in_progress`.
+- Abschlussgrund: Der unabhängige Review hat die fachliche Struktur-/Namespace-Korrektur, Fallback-Transparenz, Body-Navigation und Literalregression mit `approved` ohne P0/P1 freigegeben.
+- Paket-4-Fokus: verwaltete `.exe` als Assembly-Ziel, reproduzierbare Entscheidung zum Registry-Pfadbefund, `get_hotspots`-Parameter und konsistente `symbolIdentifier`-Benennung sowie die im Konzept geforderten Dokumentations-/Registrierungsabgleiche.
+- Architekturgrenze: Keine Alias-Kanonisierung ohne reproduzierbaren Test; keine Assembly-Ausführung, kein AdhocWorkspace-Fallback, keine Cachepfade in Antworten und keine Ausweitung auf unbeteiligte Altbefunde.
+- Nächste Aktion: Code-/Dokumentationscheckpoint sichern und einen frischen Paket-4-Implementierer starten.
+
 ## 2026-09-01 – Paket 3 Korrekturversuch 3 Implementierer abgeschlossen
 
 - Run-ID: decompiled-assembly-fix3-20260901-resume

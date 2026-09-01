@@ -3,9 +3,9 @@
 - Primäraufgabe: Robuste Assembly-Analyse und konsistente MCP-Antwortverträge
 - Betriebsart: Großkonzept-Modus
 - Status: executing
-- current_epic: Paket 3 – Source-Backing und Body-/Metadata-Navigation
-- current_debt_item: package3-source-body-metadata-contract
-- debt_attempts: 3
+- current_epic: Paket 4 – Kompatibilität, API-Lücken und Dokumentation
+- current_debt_item: package4-compatibility-api-documentation
+- debt_attempts: 0
 - letzter Commit: `2914bf42`
 
 ## Epics
@@ -32,7 +32,7 @@
 - Betroffene Bereiche: Source-Snapshot-Diagnosen, Fallback-Transparenz, on-demand Body-Dekompilation, Enum-/Ladezustandsdaten
 - Muss-/Akzeptanzkriterien: Source-Backing bleibt fail-closed und Diagnosen sichtbar; Assembly-Leases sichern Body-Abrufe; Source, dekompilierte Signatur und on-demand Body sind unterscheidbar.
 - Verifikation: Source-/Support-, Body-, Pfad- und Strukturtests sowie MCP-`get_violations`
-- Status: in_progress
+- Status: done
 
 ### Paket 4 – Kompatibilität, API-Lücken und Dokumentation
 
@@ -40,7 +40,7 @@
 - Betroffene Bereiche: `.exe`-Unterstützung, Registry-Pfadbefund, Hotspots, Parameterbenennung, Dokumentation und Registrierungen
 - Muss-/Akzeptanzkriterien: verwaltete `.dll` und `.exe` werden unterstützt; nicht verwaltete PE-Dateien liefern typisierte Recoverable-Fehler; Tool-Schemas und Dokumentation stimmen überein; Alias-Kanonisierung bleibt ohne Reproduktion bewusst zurückgestellt.
 - Verifikation: Fixture-, Registrierungs-, Dokumentations- und MCP-Checks sowie `get_violations`
-- Status: open
+- Status: in_progress
 
 ## Abschluss-Checkliste
 
