@@ -15,20 +15,21 @@
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/References/ISolutionStateProvider.cs` —
   `GetCurrentSolution`, `AssemblySymbolIdentity`, `LoadState`,
   `Console` und `GetConfigSnapshot`. Die letzten zwei Capabilities werden
-  von MetricsTree/GetImpact auf dem Assembly-Pfad benötigt.
+  von `MetricsTree` sowie vom projektweiten Change-Context-Zweig von
+  `GetImpact` benötigt.
 - `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` — implementiert den Vertrag
   über explizite Adapter für Symbolidentität und Konfigurations-Snapshot.
-- `Mcp/Assemblies/Analysis/References/AssemblyAnalysisLease.cs` — hält und
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/References/AssemblyAnalysisLease.cs` — hält und
   übergibt nur noch `ISolutionStateProvider`; die
   `IAssemblyBodyContext`-Auflösung bleibt `GetCurrentSolution`.
-- `Mcp/Assemblies/Analysis/AssemblyAnalysisEntry.cs` — trennt
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisEntry.cs` — trennt
   `State` von seiner `IAsyncDisposable`-Lebensdauer, behält
   Referenzlease-, Locking- und Fehleraggregationsreihenfolge bei.
-- `Mcp/Assemblies/Analysis/Factories/AssemblyAnalysisEntryFactory.cs` —
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/Factories/AssemblyAnalysisEntryFactory.cs` —
   neue Kompositionsfactory für den read-only `McpCodeGraphServer`.
   `AssemblyAnalysisRegistryEntryFactory` und
   `AssemblyAnalysisSourceProjectEntryFactory` verwenden sie.
-- `Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolSupport.cs` und
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolSupport.cs` und
   `AssemblyToolExecutionParameters` — akzeptieren den Vertragszustand.
 - Die unmittelbar über `lease.Server` erreichbaren Tools benutzen ebenfalls
   nur den Vertrag: CallTree, DependencyGraph, FileStructure
@@ -56,8 +57,9 @@
   `AssemblyAnalysisRegistryTests`,
   `AssemblyAnalysisRegistryFreshnessTests` und
   `AssemblyAnalysisDispatcherCapabilityTests`.
-- Dieses Artefakt ist der aktualisierte Stand für Epic 1; Roadmap, Execution
-  Log und Tech Debt wurden vom Epic nicht geändert.
+- Dieses Artefakt ist der aktualisierte Stand für Epic 1; `roadmap.md` blieb
+  unverändert, während `execution-log.md` und `tech-debt.md` den
+  Implementierungsnachweis und die Triage ergänzen.
 
 ## Invarianten, Risiken und Unsicherheiten
 

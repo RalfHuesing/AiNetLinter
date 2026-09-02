@@ -90,3 +90,56 @@ Auftrag: Den Implementierungsdiff gegen die Interface-Grenze, unveränderte
 Project-Lease-Grenzen, Lifetime-/Locking-Semantik, Tests und den frischen
 Verifikationsnachweis prüfen. Konkrete Code-Map-Fakten dürfen berichtigt,
 Produktions- und Testcode jedoch nicht geändert werden.
+
+Abschluss: erfolgreich  
+Urteil: approved
+
+Bericht des Reviewers:
+
+- Epic 1 ist im Commit `3302dffe` gegenüber `df858b69` fachlich vollständig
+  umgesetzt. Es gibt keine P0-, P1-, P2- oder P3-Findings im geprüften
+  Epic-1-Diff.
+- `ISolutionStateProvider` enthält die tatsächlich verwendeten Capabilities;
+  `McpCodeGraphServer` implementiert den Vertrag korrekt.
+- `AssemblyAnalysisLease` referenziert nur noch den Vertrag. `AssemblyAnalysisEntry`
+  trennt Zustandszugriff und `IAsyncDisposable`-Ownership.
+- `AssemblyAnalysisEntryFactory` ist die konkrete Assembly-Kompositionsgrenze
+  für `McpCodeGraphServer`.
+- Locking, Lease-Drain, Disposal-Reihenfolge, Child-Leases und Cancellation
+  wurden semantisch nicht verändert.
+- `ProjectLease` und `ProjectRegistry` sind im Commit unverändert. Es gibt
+  keine DI-Abhängigkeit, kein `IServiceProvider` und kein neues NuGet-Paket.
+
+Verifikation des Reviewers:
+
+- Git-Diff `df858b69..3302dffe`: 27 erwartete Interface-/Factory-/Caller-
+  Änderungen, keine unerwarteten Produktionsbereiche.
+- MCP `get_feature_context`, `get_symbol_body`, `find_symbol`,
+  `find_references`, `dependency_graph` und `metrics_lookup` mit absolutem
+  Projektziel `C:\\Daten\\Entwicklung\\Ralf\\AiNetLinter`: Interface- und
+  Übergabekette bestätigt.
+- MCP-Metriken: `AssemblyAnalysisLease` und `AssemblyAnalysisEntry` jeweils
+  AI-Context-Footprint 1531/2500; Factory 2446/2500.
+- MCP `get_violations`, Scope `src/AiNetLinter/Mcp/Assemblies/Analysis`:
+  0 Verstöße. Im breiten MCP-Scope verblieben nur die für Epic 2 und Epic 3
+  geplanten Restbefunde.
+- Frischer Testlauf: 258 bestanden, 0 fehlgeschlagen, 2 übersprungen bei 260
+  Assembly-/Contract-Tests. Die Skips waren symlink-berechtigungsbedingt und
+  nicht Epic-1-relevant.
+- `get_impact` mit `gitRef=3302dffe` lieferte keinen Diff-Kontext im aktuellen
+  cleanen HEAD; der Commit-Diff wurde deshalb direkt per Git geprüft.
+
+Code-Map-Stand: Der Reviewer korrigierte ausschließlich konkrete
+Navigations-/Faktenfehler in `code-map.md` (vollständige Repository-Pfade,
+korrekte Artifact-Änderungen und präzisere GetImpact-Begründung). Produktions-
+und Testcode blieben unverändert; der Reviewer erstellte keinen Commit.
+
+Tech-Debt-Triage: Keine neuen actionablen Befunde. Die geplanten Befunde
+`AssemblySymbolResolver.ResolveAsync` und `AssemblyHealthProjection` bleiben
+den nachfolgenden Epics zugeordnet.
+
+Risiken: Keine über Epic 1 hinausgehenden Risiken festgestellt. Die zwei
+symlink-berechtigungsbedingten Test-Skips bleiben für die Abschlussverifikation
+zu berücksichtigen.
+
+Nächste Aktion: Epic 1 als `done` markieren und Epic 2 starten.
