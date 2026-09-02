@@ -221,7 +221,7 @@ internal static class AnalysisToolRegistrations
                 string? scopeFilter = null,
                 string? valueType = "all",
                 string? categoryFilter = "all",
-                int minOccurrences = 1,
+                int minOccurrences = 2,
                 int maxResults = FindMagicValuesScanner.DefaultMaxResults,
                 int[]? ignoreNumbers = null,
                 bool includeTests = false,
@@ -255,7 +255,7 @@ internal static class AnalysisToolRegistrations
         "valueType: Literal-Filter ('all' [Default], 'strings', 'numbers'). " +
         "categoryFilter: Refactoring-Kategorie ('all' [Default], 'config_candidates', 'constant_candidates', " +
         "'enum_candidates', 'nameof_candidates', 'localization_candidates', 'standard_candidates', 'security_candidates'). " +
-        "minOccurrences: Mindestvorkommen (Default 1), maxResults: Begrenzung (Default 50). " +
+        "minOccurrences: Mindestvorkommen (Default 2), maxResults: Begrenzung (Default 50). " +
         "ignoreNumbers: projektspezifische Ignorier-Zahlen. includeTests: Tests einbeziehen (Default false). " +
         "includeSuppressed: Fundstellen mit '// ainetlinter-disable MagicValues' einbeziehen (Default false). " +
         "changedOnly: Git-Diff-Einschraenkung auf geaenderte Dateien (Default false). " +

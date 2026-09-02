@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Threading.Tasks;
@@ -161,6 +161,36 @@ public sealed class Foo
         Assert.Equal("config_candidates", entry.Category);
         Assert.Equal("Server=prod;Database=mydb; for env ", entry.Value);
         Assert.Contains("Server=prod;Database=mydb", entry.Value, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ScanAsync_CliOptionsWithLeadingDash_AreNotReportedAsConstantCandidates()
+    {
+        const string source = @"
+namespace Test;
+public sealed class Foo
+{
+    public const string Opt1 = ""--mcp-server"";
+    public const string Opt2 = ""-sar"";
+    public const string Opt3 = ""--daemon-start"";
+}";
+        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        Assert.Empty(result.Payload!.MagicValues);
+    }
+
+    [Fact]
+    public async Task ScanAsync_HeaderIdentifier_ReportedAsConstantCandidate()
+    {
+        const string source = @"
+namespace Test;
+public sealed class Foo
+{
+    public const string Header = ""X-Correlation-ID"";
+}";
+        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var entry = Assert.Single(result.Payload!.MagicValues);
+        Assert.Equal("constant_candidates", entry.Category);
+        Assert.Equal("X-Correlation-ID", entry.Value);
     }
 }
 

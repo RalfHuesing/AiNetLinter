@@ -30,7 +30,7 @@ internal static class DuplicateDetectionToolRegistrations
         tools.Add(McpServerTool.Create(
             async (string targetType, string targetPath, int? minTokens = null, string? similarityThreshold = null, bool? normalizeIdentifiers = null,
                 string? scopeDir = null, int? maxResults = null, string? mode = null, string? helperSymbol = null,
-                string? scopeType = null,
+                string? scopeType = "production",
                 CancellationToken ct = default) =>
                 await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
@@ -53,5 +53,5 @@ internal static class DuplicateDetectionToolRegistrations
         "helperSymbol: Ziel-Helper (Pflicht bei mode='refactoring-drift': Datei:Zeile:Spalte, DocCommentId oder Name). " +
         "minTokens: Mindest-Tokens (Default aus rules.json, 30). similarityThreshold: 'exact' (>=0.95), 'near' (>=0.80), " +
         "'fuzzy' (>=0.65 [Default]). normalizeIdentifiers: Klone mit umbenannten Variablen erkennen (Default false). " +
-        "scopeDir: Verzeichnispfad zur Eingrenzung. scopeType: 'all' [Default], 'production', 'tests'. maxResults: Begrenzung (Default 20).";
+        "scopeDir: Verzeichnispfad zur Eingrenzung. scopeType: 'production' [Default], 'all', 'tests'. maxResults: Begrenzung (Default 20).";
 }

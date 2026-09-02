@@ -110,6 +110,8 @@ internal static class MagicValuesStringHeuristics
     /// Liefert <see langword="null"/>, wenn der String nicht in das Muster passt.</summary>
     internal static MagicValueClassification? ClassifyHeaderIdentifierCandidate(string value)
     {
+        if (value.StartsWith('-') || value.EndsWith('-')) return null;
+
         if (value.Contains('-', StringComparison.Ordinal) && value.Length is > 2 and < 64
             && value.All(c => char.IsLetterOrDigit(c) || c == '-' || c == '_'))
         {

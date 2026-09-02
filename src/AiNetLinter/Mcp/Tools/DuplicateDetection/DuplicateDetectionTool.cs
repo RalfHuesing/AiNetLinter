@@ -54,7 +54,7 @@ internal static class DuplicateDetectionTool
             {
                 return McpToolResults.InvalidArgument(
                     $"Ungueltiger scopeType-Wert '{input.ScopeType}' — gueltig sind 'all', 'production', 'tests'.",
-                    hint: "scopeType='all', 'production' oder 'tests' angeben (Default: 'all').");
+                    hint: "scopeType='production' [Default], 'all' oder 'tests' angeben.");
             }
         }
 

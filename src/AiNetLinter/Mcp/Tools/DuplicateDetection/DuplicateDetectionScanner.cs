@@ -63,5 +63,5 @@ internal static class DuplicateDetectionScanner
             FuzzyThreshold: config.DuplicateCodeFuzzyThreshold,
             NormalizeIdentifiers: input.NormalizeIdentifiers ?? config.DuplicateCodeNormalizeIdentifiers,
             PathScopeFilter: string.IsNullOrWhiteSpace(input.ScopeDir) ? null : Output.PathNormalizer.NormalizeSeparators(input.ScopeDir),
-            ScopeType: string.IsNullOrWhiteSpace(input.ScopeType) ? "all" : input.ScopeType.Trim().ToLowerInvariant());
+            ScopeType: string.IsNullOrWhiteSpace(input.ScopeType) ? "production" : input.ScopeType.Trim().ToLowerInvariant());
 }

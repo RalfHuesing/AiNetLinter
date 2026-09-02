@@ -36,5 +36,5 @@ internal static class StructuralDuplicateScanner
             FuzzyThreshold: config.StructuralDuplicateFuzzyThreshold,
             NormalizeIdentifiers: false,
             PathScopeFilter: string.IsNullOrWhiteSpace(input.ScopeDir) ? null : Output.PathNormalizer.NormalizeSeparators(input.ScopeDir),
-            ScopeType: string.IsNullOrWhiteSpace(input.ScopeType) ? "all" : input.ScopeType.Trim().ToLowerInvariant());
+            ScopeType: string.IsNullOrWhiteSpace(input.ScopeType) ? "production" : input.ScopeType.Trim().ToLowerInvariant());
 }
