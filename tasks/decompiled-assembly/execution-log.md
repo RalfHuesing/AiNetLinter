@@ -215,7 +215,7 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 
 - Run-ID: `decompiled-assembly-20260902`
 - Rolle: frischer Implementierer
-- Subagent: wird nach Delegation ergänzt
+- Subagent: `01a061ce-c7da-7a01-9bf3-e8644c303f1b`
 - Diff-Baseline: `b38a3578`
 - Anlass: P1 `TD-SESSION-EVICTION-REFRESH-001`, Request-Set-Leak bei direktem Fingerprint-Refresh-Retirement.
 - Scope: Alle direkten Retirement-Pfade per Entry-Identität an die Request-Bereinigung anbinden und eine Regression für offenen Request plus Generationwechsel ergänzen; keine Paket-4-Testmatrix und keine Release-/Live-MCP-Verifikation.
