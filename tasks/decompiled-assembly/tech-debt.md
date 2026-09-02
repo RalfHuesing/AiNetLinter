@@ -20,7 +20,7 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### TD-ASM-CACHE-001 – In-Flight-Generation wird vor Publish-Return löschbar
 
 - Schweregrad: P1
-- Status: behoben in Korrekturversuch 1/5.
+- Status: behoben, Review ausstehend (Korrekturversuch 1/5).
 - Scope/Fundstelle: `AssemblyDecompilationCache.Publish` und `AssemblyCacheCleanup`.
 - Evidenz: Review-Gegenbeispiel mit konkurrierenden Publishern unterschiedlicher Fingerprints; eine erfolgreich gemeldete Generation kann vor dem Return durch Retention gelöscht werden.
 - Disposition: `fixed`
@@ -160,9 +160,9 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### SIGONLY-CONSTRUCTOR-EXPRESSION-BODY – Expression-bodied Konstruktor wird fälschlich gestubbt
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 1/5 läuft.
+- Status: behoben in Korrekturversuch 1/5.
 - Scope/Fundstelle: `AssemblyDecompilationSourceText.ShouldStub(ConstructorDeclarationSyntax)`.
 - Evidenz: Review: fehlende `ExpressionBody`-Prüfung erzeugt einen zusätzlichen Block neben `=>` und damit ungültigen dekompilierten C#-Code.
 - Disposition: `fix-now`
-- Nächster Schritt: Expression-bodied Konstruktoren vom Stubben ausschließen und Negativregression ergänzen.
+- Nächster Schritt: Folge-Review des Korrekturstands; bei Bestätigung als `fixed` schließen.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Folge-Review.

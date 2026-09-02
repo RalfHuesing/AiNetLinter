@@ -304,6 +304,20 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Offene Risiken: Die sechs bestehenden Footprint-Warnungen sind durch den lokalen CLI-Linter für die vier Zielklassen nicht mehr sichtbar; unabhängiger Review steht aus. Neun verbleibende Linterverstöße gehören nicht zum Paket-3-Scope.
 - Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Paket-3-Review.
 
+## 2026-09-02 – Paket 3 – Korrekturversuch 1 – Implementierer
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: `01a06203-798e-7023-a826-ff1852701bf8`
+- Diff-Baseline: `4bfa970b`
+- Status: terminal abgeschlossen; Korrekturstand unreviewt gesichert.
+- Urteil: P1 `SIGONLY-CONSTRUCTOR-EXPRESSION-BODY` behoben.
+- Geänderte Bereiche: `AssemblyDecompilationSourceText.ShouldStub(ConstructorDeclarationSyntax)` berücksichtigt `ExpressionBody`; direkte Negativregression in `AssemblyAnalysisSessionTests`; `code-map.md` aktualisiert.
+- Verifikation nach der letzten Änderung: gezielte Regression 1/1; gesamte `AssemblyAnalysisSessionTests` 18/18; `dotnet build` 0 Warnungen/0 Fehler; lokaler CLI-Linter Exit 1 wegen 12 bereits dokumentierter Fremdviolations, kein Befund im geänderten Body-/Testbereich; lokale DRY-/Dead-Code-/Magic-Value-Prüfungen ohne Befund.
+- MCP-Hinweis: `get_violations` im Body-Scope 0, wegen veraltetem Live-Server nur Zusatzdiagnose; Release-/Live-, Stress- und Paket-4-Prüfungen ausgespart.
+- Code-Map: aktualisiert; `roadmap.md`, `execution-log.md` und `tech-debt.md` blieben durch den Implementierer unverändert.
+- Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.
+
 ## 2026-09-02 – Paket 3 – Reviewer running
 
 - Run-ID: `decompiled-assembly-20260902`

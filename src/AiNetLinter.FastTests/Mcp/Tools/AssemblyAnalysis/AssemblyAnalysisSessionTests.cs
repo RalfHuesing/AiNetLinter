@@ -9,6 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 
@@ -68,6 +70,28 @@ public sealed class AssemblyAnalysisSessionTests
         Assert.Equal(AssemblySessionStatus.Complete, result.Status);
         Assert.Contains("throw null!;", source, StringComparison.Ordinal);
         Assert.DoesNotContain(diagnostics, diagnostic => diagnostic.Id == "CS0501");
+    }
+
+    [Fact]
+    public void MakeSignatureOnlyMethodsParsable_DoesNotStubExpressionBodiedConstructors()
+    {
+        const string source = """
+            namespace Probe;
+            public sealed class Value
+            {
+                public Value() => Initialize();
+                private void Initialize() { }
+            }
+            """;
+
+        var transformed = AssemblyDecompilationSourceText.MakeSignatureOnlyMethodsParsable(source);
+        var tree = CSharpSyntaxTree.ParseText(transformed);
+        var constructor = Assert.Single(tree.GetRoot().DescendantNodes().OfType<ConstructorDeclarationSyntax>());
+
+        Assert.Empty(tree.GetDiagnostics().Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+        Assert.NotNull(constructor.ExpressionBody);
+        Assert.Null(constructor.Body);
+        Assert.DoesNotContain("throw null!;", transformed, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -3,8 +3,8 @@
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
 Status: executing  
-Current epic: Paket 3 – Korrekturrunde 1/5
-Letzter Commit: Review-Checkpoint `8f297a6b`
+Current epic: Paket 3 – Folge-Review nach Korrekturrunde 1/5
+Letzter Commit: Konstruktor-Korrektur unreviewt; Artefakt-Checkpoint folgt
 Current debt item: `SIGONLY-CONSTRUCTOR-EXPRESSION-BODY`
 Debt attempts: 1
 Blocker: keiner

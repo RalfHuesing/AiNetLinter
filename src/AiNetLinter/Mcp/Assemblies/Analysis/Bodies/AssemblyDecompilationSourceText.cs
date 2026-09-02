@@ -70,6 +70,7 @@ internal static class AssemblyDecompilationSourceText
 
     private static bool ShouldStub(ConstructorDeclarationSyntax constructor) =>
         constructor.Body is null
+        && constructor.ExpressionBody is null
         && !constructor.SemicolonToken.IsMissing
         && !constructor.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.ExternKeyword));
 
