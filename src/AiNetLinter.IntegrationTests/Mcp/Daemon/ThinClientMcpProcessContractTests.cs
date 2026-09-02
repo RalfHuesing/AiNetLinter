@@ -76,6 +76,13 @@ public sealed class ThinClientMcpProcessContractTests
     [Fact]
     public async Task ProjectTargetHealth_UsesDaemonRegistryAndReturnsResidentProject()
     {
+        // Exklusives Endpunkt-Gate verhindert, dass parallele xUnit-Kollektionen
+        // denselben Daemon teilen oder dessen PID im Cleanup beenden. Das Budget
+        // deckt die legitime Wartezeit auf den eigenen Turn ab.
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(240));
+        using var endpointLease = await DaemonProcessContractHarness
+            .AcquireEndpointAsync(cancellation.Token)
+            .ConfigureAwait(false);
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
         using var isolatedState = TestTempDirectory.Create("thin-client-project-health-");
         string[] warmupFrames =

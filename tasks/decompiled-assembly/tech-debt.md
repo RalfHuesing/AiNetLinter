@@ -150,21 +150,21 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### HEALTH-DAEMON-PROJECT-TARGET-E2E-001 – Projekt-Health nicht im echten Daemon-End-to-End geprüft
 
 - Schweregrad: P1
-- Status: behoben, Review ausstehend (Korrekturversuch 1/5).
+- Status: fixed in Korrekturversuch 1/5.
 - Scope/Fundstelle: echter Daemon-`tools/call` für `get_server_health` mit `targetType="project"` und `targetPath`.
 - Evidenz: Der vorhandene Daemon-Prozess-Test ruft `get_server_health` ohne Zielargumente auf; der projektbezogene Test injiziert nur einen `DaemonRuntimeContext`; der E2E-Projektaufruf läuft bislang im direkten No-Daemon-Testhost.
-- Disposition: `fix-now`
-- Nächster Schritt: Folge-Review des echten Daemon-/Proxy-Tests; bei Bestätigung als `fixed` schließen.
+- Disposition: `fixed`
+- Nächster Schritt: Erledigt; echter lokaler Daemon-/Proxy-Test prüft Projektziel, Registry-Status und Solution-Pfad.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 4 Review.
 
 ### DAEMON-ENDPOINT-OWNERSHIP-TEST-001 – Projekt-Health-Test besitzt keinen isolierten Daemon-Endpunkt
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 1/5 läuft.
+- Status: fixed in Korrekturversuch 1/5.
 - Scope/Fundstelle: `ThinClientMcpProcessContractTests.ProjectTargetHealth_UsesDaemonRegistryAndReturnsResidentProject` und `DaemonProcessContractHarness.AcquireEndpointAsync`.
 - Evidenz: Bei parallelen xUnit-Testkollektionen wird kein exklusiver Endpoint erworben. Der Test kann dadurch einen fremden Daemon teilen und im `finally`-Cleanup dessen PID beenden.
-- Disposition: `fix-now`
-- Nächster Schritt: Vor dem Thin-Client-Lauf exklusiven Endpoint-Harness verwenden und Cleanup auf den eigenen Prozess begrenzen.
+- Disposition: `fixed`
+- Nächster Schritt: Erledigt; Test verwendet exklusives `AcquireEndpointAsync`-Gate für sichere parallele Ausführung.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 4 Folge-Review.
 
 ### TD-SESSION-LEASE-RACE-001 – Verspätete Registrierung nach asynchroner Expansion möglich

@@ -575,6 +575,19 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet.
 - Status: running
 
+## 2026-09-02 – Paket 4 – Korrekturversuch 1 – Implementierer
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: `01a06255-d554-7d73-a24c-974fc2b6f42d`
+- Diff-Baseline: `370d0fa7`
+- Status: terminal abgeschlossen; Korrekturstand unreviewt gesichert.
+- Urteil: P1 `DAEMON-ENDPOINT-OWNERSHIP-TEST-001` behoben.
+- Geänderte Bereiche: `ThinClientMcpProcessContractTests` verwendet vor dem lokalen Daemon-Lauf ein exklusives `DaemonProcessContractHarness.AcquireEndpointAsync`-Gate mit 240 Sekunden Wartebudget; `code-map.md` dokumentiert die Lifecycle-Isolation. Keine Produktionsänderung.
+- Verifikation nach der letzten Änderung: Projekt-Health-Daemon-Test 1/1, ca. 1:40 Minuten; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` sauber; keine Flakiness oder Timeouts, nur erwartete xUnit-Long-Running-Hinweise.
+- MCP-Hinweis: Laufender alter MCP sowie Release-/Stress-Verifikation wurden nicht verwendet.
+- Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.
+
 ## 2026-09-02 – Paket 3 – Folge-Review nach Quellenkorrektur
 
 - Run-ID: `decompiled-assembly-20260902`

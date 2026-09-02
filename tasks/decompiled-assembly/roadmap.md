@@ -4,7 +4,7 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 
 Status: executing  
 Current epic: Paket 4 – Folge-Review nach Korrekturrunde 1/5
-Letzter Commit: `370d0fa7` – Endpoint-Testisolation triagiert, Korrektur läuft
+Letzter Commit: Endpoint-Korrektur unreviewt; Artefakt-Checkpoint folgt
 Current debt item: `DAEMON-ENDPOINT-OWNERSHIP-TEST-001`
 Debt attempts: 1
 Blocker: keiner
