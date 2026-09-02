@@ -14,7 +14,13 @@ internal static class SearchPatternLegacyFormatter
         var completeness = result.Payload.Completeness;
         if (completeness.TotalMatchedLineCount == 0)
         {
-            return AppendHints("0 Treffer fuer das angegebene Pattern.", result, Array.Empty<string>());
+            var text = "0 Treffer fuer das angegebene Pattern.";
+            if (!result.IsRegex && !string.IsNullOrEmpty(result.Pattern) && (result.Pattern.Contains('*') || result.Pattern.Contains('?')))
+            {
+                text += "\nHinweis: Das Pattern enthaelt Wildcard-Zeichen ('*' oder '?'), aber isRegex=false. Fuer Wildcards/Regex bitte isRegex: true setzen.";
+            }
+
+            return AppendHints(text, result, Array.Empty<string>());
         }
 
         var hitLines = result.Payload.Matches

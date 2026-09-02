@@ -79,14 +79,16 @@ internal static class AssemblySymbolSearch
         try
         {
             var view = AssemblyNavigationLeaseAccess.CreateView(lease);
+            var nameFilter = SymbolNameMatcher.CreateDeclarationNameFilter(namePattern);
             var symbols = await SymbolFinder.FindSourceDeclarationsAsync(
                 solution,
-                name => name.Contains(namePattern, StringComparison.OrdinalIgnoreCase),
+                nameFilter,
                 SymbolFilter.TypeAndMember,
                 cancellationToken).ConfigureAwait(false);
             var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
             var entries = symbols
                 .Where(symbol => kind is null || SymbolKindClassifier.MatchesSymbolKind(symbol, kind))
+                .Where(symbol => SymbolNameMatcher.MatchesSymbol(symbol, namePattern))
                 .SelectMany(symbol => FindSymbolTool.FormatSymbolLocationEntries(
                     symbol,
                     outputRoot,

@@ -107,6 +107,7 @@ internal static class AnalysisToolRegistrations
                 string[]? includePatterns = null,
                 string[]? excludePatterns = null,
                 bool enrichCSharp = false,
+                string? scopeType = null,
                 CancellationToken ct = default) =>
                 await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
@@ -124,7 +125,8 @@ internal static class AnalysisToolRegistrations
                             scope,
                             includePatterns,
                             excludePatterns,
-                            enrichCSharp),
+                            enrichCSharp,
+                            scopeType),
                         ct)),
             McpToolRegistrationOptions.ReadOnlyTool("search_pattern", SearchPatternDescription)));
     }
@@ -133,6 +135,7 @@ internal static class AnalysisToolRegistrations
         "Wann nutzen: Fallback fuer Namen/Strings ausserhalb des C#-Symbolgraphs (z. B. " +
         "JS-Funktionen, Razor-Komponenten, WPF-Elemente, Config-Eintraege) oder allgemeine Textsuche. " +
         "pattern: Suchtext oder Regex. isRegex=true fuer Regex statt case-insensitive Substring (Default false). " +
+        "scopeType: 'all' (Default), 'production' (schliesst Tests aus) oder 'tests'. " +
         "maxResults: Treffer-Limit (Default 50). maxFiles, contextLines und maxResponseBytes begrenzen " +
         "die strukturierte Nutzlast. scope, includePatterns und excludePatterns steuern den Scope. " +
         "enrichCSharp=true reichert sichtbare C#-Treffer opt-in semantisch an (semantic-Feld; resolution: resolved, not_applicable, unknown, ambiguous, unavailable).";

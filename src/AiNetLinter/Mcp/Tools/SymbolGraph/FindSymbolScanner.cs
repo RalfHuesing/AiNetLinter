@@ -17,61 +17,52 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// Reine Symbol-Scan- und Format-Logik fuer <see cref="FindSymbolTool"/> — in eine eigene
 /// Datei ausgelagert, damit <see cref="FindSymbolTool"/>s eigener <c>AIContextFootprint</c>
 /// klein bleibt. Keine Abhaengigkeit von <see cref="McpCodeGraphServer"/> — direkt unit-testbar.
-/// Trunkierung des
-/// Haupt-Treffer-Outputs ueber <see cref="McpTruncation.TruncateLines"/>, Trunkierung der
-/// Miss-Hint-Datei-Liste ueber <see cref="McpTruncation.TruncateFileList"/>.
+/// Trunkierung des Haupt-Treffer-Outputs ueber <see cref="McpTruncation.TruncateLines"/>,
+/// Trunkierung der Miss-Hint-Datei-Liste ueber <see cref="McpTruncation.TruncateFileList"/>.
 /// </summary>
 internal static class FindSymbolScanner
 {
     /// <summary>
     /// Liefert den fertig formatierten und trunkierten Treffer-Text fuer
-    /// <paramref name="namePattern"/>. Verwendet <see cref="SymbolFinder"/> fuer die
-    /// Symbol-Suche, <see cref="McpTruncation"/> fuer die Trunkierung. Bei null
-    /// C#-Treffern wird der Miss-Hint ueber <see cref="SearchPatternScanner.GetFilesWithHits"/>
-    /// aufgebaut und ebenfalls trunkiert.
+    /// <paramref name="request.NamePattern"/>. Verwendet <see cref="SymbolFinder"/> fuer die
+    /// Symbol-Suche, <see cref="McpTruncation"/> fuer die Trunkierung.
     /// </summary>
-    /// <param name="solution">Bereits geladene Roslyn-Solution.</param>
-    /// <param name="namePattern">Substring-Match auf Symbol-Namen (case-insensitive).</param>
-    /// <param name="kind">Optionaler Kind-Filter ("class"/"interface"/"method"/"property").</param>
-    /// <param name="maxResults">Obergrenze fuer die Anzahl ausgegebener Trefferzeilen
-    /// (siehe <see cref="McpTruncation.TruncateLines"/>); muss >= 1 sein (Aufrufer normalisiert).</param>
-    /// <returns>Plain-Text-Output (Trefferzeilen + optionale Trunkierungs-Meta-Zeile,
-    /// optionale Miss-Hint-Zeile mit eigener Trunkierungs-Meta-Zeile).</returns>
     internal static async Task<string> FindMatchesAndFormat(
         FindSymbolScanRequest request,
         CancellationToken ct = default)
     {
-        var (text, _) = await FindMatchesWithEntriesAsync(request, ct);
+        var (text, _) = await FindMatchesWithEntriesAsync(request, ct).ConfigureAwait(false);
         return text;
     }
 
     /// <summary>
     /// Wie <see cref="FindMatchesAndFormat"/>, liefert zusaetzlich die <see cref="SymbolLocationEntry"/>-
-    /// Liste fuer <c>find_symbol</c>s <c>StructuredContent</c> — dieselbe Symbolsuche/Filterung
-    /// einmal ausgefuehrt statt dupliziert, <see cref="FindMatchesAndFormat"/> ist ein duenner
-    /// Wrapper darauf (bestehende Signatur/bestehendes Verhalten unveraendert, siehe dessen
-    /// direkte Tests in FindSymbolScannerTests/FindSymbolToolTests). Die Entries sind auf
-    /// <paramref name="maxResults"/> gekappt, konsistent zur Text-Trunkierung.
+    /// Liste fuer <c>find_symbol</c>s <c>StructuredContent</c>.
     /// </summary>
     internal static async Task<(string Text, IReadOnlyList<SymbolLocationEntry> Entries)> FindMatchesWithEntriesAsync(
         FindSymbolScanRequest request,
         CancellationToken ct = default)
     {
+        var nameFilter = SymbolNameMatcher.CreateDeclarationNameFilter(request.NamePattern);
         var symbols = await SymbolFinder.FindSourceDeclarationsAsync(
             request.Solution,
-            name => name.Contains(request.NamePattern, StringComparison.OrdinalIgnoreCase),
+            nameFilter,
             SymbolFilter.TypeAndMember,
-            ct);
+            ct).ConfigureAwait(false);
 
-        var filtered = FilterByKind(symbols, request.Kind).ToList();
+        var filtered = FilterByKind(symbols, request.Kind)
+            .Where(symbol => SymbolNameMatcher.MatchesSymbol(symbol, request.NamePattern))
+            .ToList();
+
         if (filtered.Count == 0)
         {
-            var kindSuffix = request.Kind is null ? "" : $" (Kind-Filter: {request.Kind})";
+            var kindSuffix = request.Kind is null ? string.Empty : $" (Kind-Filter: {request.Kind})";
             var baseText = $"Keine Treffer fuer '{request.NamePattern}'{kindSuffix}";
-            return (AppendMissHint(request.Solution, request.NamePattern, baseText), Array.Empty<SymbolLocationEntry>());
+            var textWithHint = await AppendMissHintAsync(request.Solution, request.NamePattern, baseText, ct).ConfigureAwait(false);
+            return (textWithHint, Array.Empty<SymbolLocationEntry>());
         }
 
-        var outputRoot = Path.GetDirectoryName(request.Solution.FilePath) ?? "";
+        var outputRoot = Path.GetDirectoryName(request.Solution.FilePath) ?? string.Empty;
         var allEntries = filtered
             .SelectMany(symbol => FindSymbolTool.FormatSymbolLocationEntries(symbol, outputRoot, request.AssemblyIdentity))
             .ToList();
@@ -81,27 +72,36 @@ internal static class FindSymbolScanner
         return (text, shownEntries);
     }
 
-    private static string AppendMissHint(Solution solution, string namePattern, string baseText)
+    private static async Task<string> AppendMissHintAsync(
+        Solution solution,
+        string namePattern,
+        string baseText,
+        CancellationToken ct)
     {
+        var clean = SymbolNameMatcher.CleanPattern(namePattern).Trim('*', '?');
         var missScan = SearchPatternLegacyFileHitScanner.Scan(
-            solution, namePattern, isRegex: false);
+            solution, string.IsNullOrWhiteSpace(clean) ? namePattern : clean, isRegex: false);
+
+        var suggestions = await SymbolNameMatcher.FindSimilarSymbolNamesAsync(solution, namePattern, ct).ConfigureAwait(false);
+        var suggestionText = suggestions.Count > 0
+            ? $"\nÄhnliche Symbole im Projekt: {string.Join(", ", suggestions)}"
+            : string.Empty;
+
         if (missScan.Files.Count == 0 && !missScan.HasErrors)
         {
-            return baseText;
+            return baseText + suggestionText;
         }
-        // Trunkierung der Datei-Liste : Default 10 Dateien, Meta-Zeile via
-        // McpTruncation.TruncateFileList. Forward-Slash-Pfade konsistent mit
-        // SearchPatternScanner.GetFilesWithHits.
+
         var status = FormatLegacySearchStatus(missScan);
         if (missScan.Files.Count == 0)
         {
-            return $"{baseText}\nHinweis: Die Legacy-Textsuche konnte keine Treffer auswerten ({status}).";
+            return $"{baseText}\nHinweis: Die Legacy-Textsuche konnte keine Treffer auswerten ({status}).{suggestionText}";
         }
 
         var fileList = McpTruncation.TruncateFileList(missScan.Files, missScan.Files.Count);
         return $"{baseText}\nHinweis: kein C#-Symbol, aber Textfund in {fileList} " +
             $"(nicht Teil des Symbolgraphs — fuer Inhalte search_pattern nutzen)." +
-            (string.IsNullOrEmpty(status) ? "" : $" {status}");
+            (string.IsNullOrEmpty(status) ? string.Empty : $" {status}") + suggestionText;
     }
 
     private static string FormatLegacySearchStatus(SearchPatternLegacyFileHitScanResult scan)
@@ -115,15 +115,6 @@ internal static class FindSymbolScanner
         return string.Join(", ", status);
     }
 
-    /// <summary>
-    /// Wendet den Kind-Filter an. Akzeptiert sowohl die englischen internen Schluesselwoerter als
-    /// auch die in <c>Docs/agent-api.md</c> dokumentierten deutschen Werte (identisch zur eigenen
-    /// Output-Vokabular "Klasse:"/"Methode:" aus <see cref="FindSymbolTool.FormatSymbolLocations"/>).
-    /// <see cref="FindSymbolTool.ExecuteAsync"/> validiert <paramref name="kind"/> vorab gegen
-    /// genau dieselbe Wertemenge — ein unbekannter Wert erreicht diese Methode also nie; der
-    /// Default-Fall bleibt trotzdem ungefiltert (statt zu werfen), damit die Methode als reine
-    /// Funktion auch direkt (z. B. aus Tests) sicher aufrufbar bleibt.
-    /// </summary>
     private static IEnumerable<ISymbol> FilterByKind(IEnumerable<ISymbol> symbols, string? kind)
     {
         if (kind is null) return symbols;

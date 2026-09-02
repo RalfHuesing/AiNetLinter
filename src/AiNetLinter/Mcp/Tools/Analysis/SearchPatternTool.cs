@@ -47,7 +47,8 @@ internal static class SearchPatternTool
             arguments.IncludePatterns,
             arguments.ExcludePatterns,
             ct,
-            arguments.EnrichCSharp);
+            arguments.EnrichCSharp,
+            arguments.ScopeType);
         SearchPatternScanResult scan;
         try
         {

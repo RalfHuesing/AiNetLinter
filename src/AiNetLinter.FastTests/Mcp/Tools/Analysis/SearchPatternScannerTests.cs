@@ -371,7 +371,54 @@ public sealed class SearchPatternScannerTests
             options.IncludePatterns,
             null,
             options.CancellationToken,
-            options.EnrichCSharp);
+            options.EnrichCSharp,
+            options.ScopeType);
+
+    [Fact]
+    public void Scan_ScopeTypeProduction_ExcludesTestFiles()
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-scope-prod-");
+        using var solution = CreateSolution(tempDir.DirectoryPath);
+        var prodPath = Path.Combine(tempDir.DirectoryPath, "src", "Project", "Service.cs");
+        var testPath = Path.Combine(tempDir.DirectoryPath, "src", "Project", "ServiceTests.cs");
+        File.WriteAllText(prodPath, "public class Service { void Do() {} }");
+        File.WriteAllText(testPath, "public class ServiceTests { void TestDo() {} }");
+
+        var result = SearchPatternScanner.Scan(CreateParameters(solution.Solution, new("Service") { ScopeType = "production" }));
+
+        Assert.Contains(result.Payload.Matches, m => m.FilePath.Contains("Service.cs") && !m.FilePath.Contains("ServiceTests.cs"));
+        Assert.DoesNotContain(result.Payload.Matches, m => m.FilePath.Contains("ServiceTests.cs"));
+    }
+
+    [Fact]
+    public void Scan_ScopeTypeTests_IncludesOnlyTestFiles()
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-scope-test-");
+        using var solution = CreateSolution(tempDir.DirectoryPath);
+        var prodPath = Path.Combine(tempDir.DirectoryPath, "src", "Project", "Service.cs");
+        var testPath = Path.Combine(tempDir.DirectoryPath, "src", "Project", "ServiceTests.cs");
+        File.WriteAllText(prodPath, "public class Service { void Do() {} }");
+        File.WriteAllText(testPath, "public class ServiceTests { void TestDo() {} }");
+
+        var result = SearchPatternScanner.Scan(CreateParameters(solution.Solution, new("Service") { ScopeType = "tests" }));
+
+        Assert.Single(result.Payload.Matches);
+        Assert.Contains("ServiceTests.cs", result.Payload.Matches[0].FilePath);
+    }
+
+    [Fact]
+    public void Format_ZeroHitsWithWildcardAndPlainSearch_AppendsWildcardHint()
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-hint-");
+        using var solution = CreateSolution(tempDir.DirectoryPath);
+
+        var result = SearchPatternScanner.Scan(CreateParameters(solution.Solution, new("*NonExistent*")));
+        var formatted = SearchPatternLegacyFormatter.Format(result);
+
+        Assert.Contains("0 Treffer", formatted);
+        Assert.Contains("Wildcard", formatted);
+        Assert.Contains("isRegex: true", formatted);
+    }
 
     private sealed record SearchPatternTestOptions(string Pattern)
     {
@@ -384,5 +431,6 @@ public sealed class SearchPatternScannerTests
         internal string[]? IncludePatterns { get; init; }
         internal CancellationToken CancellationToken { get; init; }
         internal bool EnrichCSharp { get; init; }
+        internal string? ScopeType { get; init; }
     }
 }

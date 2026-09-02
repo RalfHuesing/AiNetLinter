@@ -17,7 +17,8 @@ internal sealed record SearchPatternToolArguments(
     string? Scope,
     string[]? IncludePatterns,
     string[]? ExcludePatterns,
-    bool EnrichCSharp = false);
+    bool EnrichCSharp = false,
+    string? ScopeType = null);
 
 internal sealed record SearchPatternScannerParameters(
     Solution Solution,
@@ -31,7 +32,8 @@ internal sealed record SearchPatternScannerParameters(
     IReadOnlyList<string>? IncludePatterns,
     IReadOnlyList<string>? ExcludePatterns,
     CancellationToken CancellationToken,
-    bool EnrichCSharp = false);
+    bool EnrichCSharp = false,
+    string? ScopeType = null);
 
 internal sealed record SearchPatternPayloadOptions(
     SearchPatternScannerParameters ScannerParameters,
@@ -44,7 +46,9 @@ internal sealed record SearchPatternScanResult(
     int TotalMatchedLineCount,
     int MaxResults,
     int MaxFiles,
-    int MaxResponseBytes);
+    int MaxResponseBytes,
+    string Pattern = "",
+    bool IsRegex = false);
 
 internal sealed record SearchPatternFileScanResult(
     SearchPatternFileScanStatus Status,
