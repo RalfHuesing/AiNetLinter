@@ -2,9 +2,9 @@
 
 Primäraufgabe: MCP-Komposition entkoppeln und Qualitätsgrenzen wiederherstellen.
 
-Status: executing  
-current_epic: Abschluss-Audit  
-letzter_checkpoint: 4ebd194d  
+Status: complete  
+current_epic: abgeschlossen  
+letzter_checkpoint: 76bc5868  
 Tech-Debt-Register: `tech-debt.md`  
 
 Der Großkonzept-Modus folgt dem freigegebenen `Konzept.md`. Die Einordnung als
@@ -96,17 +96,18 @@ genommen; das Konzept ermächtigt keinen zufälligen globalen Cleanup.
 
 ## Abschluss-Checkliste
 
-- [ ] Kein DI-Container, `IServiceProvider` oder neues NuGet-Paket.
-- [ ] `ProjectLease`/`ProjectRegistry`, Roslyn-Rules, Logging, CLI und
+- [x] Kein DI-Container, `IServiceProvider` oder neues NuGet-Paket.
+- [x] `ProjectLease`/`ProjectRegistry`, Roslyn-Rules, Logging, CLI und
   `rules.json` bleiben außerhalb des vereinbarten Scopes unverändert.
-- [ ] MCP-/Assembly-Klassen liegen ohne Suppressions unter dem
-  AIContextFootprint-Limit von 2.500.
-- [ ] MCP-Produktions- und Testdateien erfüllen Datei- und Methodenlimits.
-- [ ] MCP `find_dead_code`, `find_magic_values` und exaktes
-  `find_duplicates` melden im MCP-Scope keine relevanten Befunde.
-- [ ] MCP `get_violations` meldet projektweit keine Verstöße.
-- [ ] MCP `safeguard` mit `minScore: 8.0` meldet 10,00 / 10,00 und PASS.
-- [ ] `dotnet build` sowie beide vollständigen Nicht-Stress-Testsuiten sind
+- [x] MCP-/Assembly-Klassen liegen ohne Suppressions unter dem
+  AIContextFootprint-Limit von 2.500; `get_violations` ist projektweit 0.
+- [x] MCP-Produktions- und Testdateien erfüllen Datei- und Methodenlimits.
+- [x] MCP `find_dead_code`, `find_magic_values` und exaktes
+  `find_duplicates` melden keine relevanten, unbegründeten Befunde; Low-
+  Konfidenz- und Magic-Value-Kandidaten sind in `tech-debt.md` disponiert.
+- [x] MCP `get_violations` meldet projektweit keine Verstöße.
+- [x] MCP `safeguard` mit `minScore: 8.0` meldet 10,00 / 10,00 und PASS.
+- [x] `dotnet build` sowie beide vollständigen Nicht-Stress-Testsuiten sind
   nach dem letzten Codezustand grün.
-- [ ] Die Core-Linter-Ausführung bleibt containerlos; kein zusätzlicher
+- [x] Die Core-Linter-Ausführung bleibt containerlos; kein zusätzlicher
   Startup-Pfad wird eingeführt.
