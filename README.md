@@ -33,8 +33,10 @@ Grenzen wie nicht auflösbare Abhängigkeiten oder gekürzte Ergebnisse sichtbar
 ## Externe Assemblies statisch analysieren
 
 `inspect_assembly` und `find_assembly_extensions` untersuchen eine lokale
-`.dll` oder `.exe` statisch über Roslyn-Metadaten. Die Assembly wird dafür nicht
-geladen oder ausgeführt. Ohne verfügbare Quelle erzeugt AiNetLinter eine
+`.dll` oder `.exe` statisch über Roslyn-Metadaten. Bei diesen beiden
+Assembly-Tools kann `targetType` entfallen; `targetPath` reicht aus und wird als
+Assembly-Ziel behandelt. Die Assembly wird dafür nicht geladen oder ausgeführt.
+Ohne verfügbare Quelle erzeugt AiNetLinter eine
 dekompilierte, schreibgeschützte Analyse-Session.
 
 Für eine eingebundene Fremd-Assembly kann zusätzlich eine passende
