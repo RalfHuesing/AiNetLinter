@@ -124,6 +124,71 @@ public sealed class GetHotspotsToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_DefaultScopeType_ExcludesTestProjects()
+    {
+        using var context = new McpInMemoryTestContext(McpInMemoryTestContext.CreateScenario(
+            new ProjectSpec("Production", [("Service.cs", "namespace Probe; public sealed class Service { }")], VirtualProjectDirectory: "src/Production"),
+            new ProjectSpec("Production.Tests", [("ServiceTests.cs", "namespace Probe.Tests; public sealed class ServiceTests { }")], VirtualProjectDirectory: "tests/Production.Tests")));
+        using var state = context.CreateServer(1);
+
+        var result = await GetHotspotsTool.ExecuteAsync(
+            new GetHotspotsRequest(
+                state,
+                ScopeFilter: null,
+                MaxResults: 50,
+                MinLinePercentage: 0,
+                ScopeType: null,
+                CancellationToken: CancellationToken.None));
+
+        var payload = DeserializePayload(result);
+        Assert.Single(payload.Hotspots);
+        Assert.Contains("Service.cs", payload.Hotspots.Single().RelativePath, StringComparison.Ordinal);
+        Assert.Equal("production", payload.ScopeType);
+        Assert.Contains("Gescannt: 1 .cs-Dateien", TextOf(result), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_TestScopeType_IncludesOnlyTestProjects()
+    {
+        using var context = new McpInMemoryTestContext(McpInMemoryTestContext.CreateScenario(
+            new ProjectSpec("Production", [("Service.cs", "namespace Probe; public sealed class Service { }")], VirtualProjectDirectory: "src/Production"),
+            new ProjectSpec("Production.Tests", [("ServiceTests.cs", "namespace Probe.Tests; public sealed class ServiceTests { }")], VirtualProjectDirectory: "tests/Production.Tests")));
+        using var state = context.CreateServer(1);
+
+        var result = await GetHotspotsTool.ExecuteAsync(
+            new GetHotspotsRequest(
+                state,
+                ScopeFilter: null,
+                MaxResults: 50,
+                MinLinePercentage: 0,
+                ScopeType: "tests",
+                CancellationToken: CancellationToken.None));
+
+        var payload = DeserializePayload(result);
+        Assert.Single(payload.Hotspots);
+        Assert.Contains("ServiceTests.cs", payload.Hotspots.Single().RelativePath, StringComparison.Ordinal);
+        Assert.Equal("tests", payload.ScopeType);
+        Assert.Contains("Gescannt: 1 .cs-Dateien", TextOf(result), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_InvalidScopeType_ReturnsRecoverableInvalidArgument()
+    {
+        var result = await GetHotspotsTool.ExecuteAsync(
+            new GetHotspotsRequest(
+                _fixture.CreateServer(),
+                ScopeFilter: null,
+                MaxResults: 50,
+                MinLinePercentage: 80,
+                ScopeType: "unknown",
+                CancellationToken: CancellationToken.None));
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.Contains("INVALID_ARGUMENT", TextOf(result), StringComparison.Ordinal);
+        Assert.Contains("scopeType", TextOf(result), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_MaxResultsAndMinLinePercentage_KeepDeterministicBoundedResults()
     {
         var state = _fixture.CreateServer(1);

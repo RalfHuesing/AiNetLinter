@@ -98,6 +98,24 @@ public sealed class GetIndexScopeToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_MixedFixture_DiscoversAdditionalExtensionsAndOmitsZeroEntries()
+    {
+        using var state = _fixture.CreateReadOnlyServer();
+
+        var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var entries = result.StructuredContent!.Value.GetProperty("breakdown")
+            .Deserialize<List<FileTypeBreakdownEntry>>(McpJsonOptions.Default)!;
+        Assert.Contains(entries, entry => entry.Extension == ".json" && entry.Count == 1 && !entry.SymbolGraphCovered);
+        Assert.Contains(entries, entry => entry.Extension == ".md" && entry.Count == 1 && !entry.SymbolGraphCovered);
+        Assert.Contains(entries, entry => entry.Extension == ".slnx" && entry.Count == 1 && !entry.SymbolGraphCovered);
+        Assert.DoesNotContain(entries, entry => entry.Extension == ".ts");
+        Assert.DoesNotContain(entries, entry => entry.Count == 0);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_GeneratedObjBinDirectories_ExcludedFromXamlHtmlCount()
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();

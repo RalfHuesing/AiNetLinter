@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AiNetLinter.Baseline;
-using AiNetLinter.Configuration;
 using AiNetLinter.Web;
 using Microsoft.CodeAnalysis;
 
@@ -17,8 +16,8 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 /// <c> klein bleibt 
 /// <see cref="SymbolIdentifierResolver"/>). Keine Abhaengigkeit von <see cref="McpCodeGraphServer"/> —
 /// direkt unit-testbar. .cs-Zaehlung ueber <see cref="SourceFileCatalog.IsValidDocument"/>,
-/// .css/.js/.razor-Zaehlung ueber <see cref="WebFileCatalog.Collect"/>, .xaml/.html ueber einen neuen,
-/// minimalen Dateisystem-Scan auf Basis von <see cref="WebFileCatalog.GetProjectDirectories"/>.
+/// alle weiteren Dateiendungen ueber einen deduplizierten Dateisystem-Scan auf Basis von
+/// <see cref="WebFileCatalog.GetProjectDirectories"/>.
 /// </summary>
 internal static class GetIndexScopeScanner
 {
@@ -30,22 +29,14 @@ internal static class GetIndexScopeScanner
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var csCount = CountCsFiles(solution, solutionDir);
-        var webCounts = CountWebFiles(solution, solutionDir);
-        var (xamlCount, htmlCount) = CountXamlAndHtmlFiles(solution);
-        var cssCount = webCounts.GetValueOrDefault(WebFileType.Css);
-        var jsCount = webCounts.GetValueOrDefault(WebFileType.Js);
-        var razorCount = webCounts.GetValueOrDefault(WebFileType.Razor);
+        var nonCSharpCounts = CountNonCSharpFiles(solution);
+        var entries = new List<FileTypeBreakdownEntry>();
+        if (csCount > 0) entries.Add(new FileTypeBreakdownEntry(".cs", csCount, SymbolGraphCovered: true));
+        entries.AddRange(nonCSharpCounts
+            .OrderBy(pair => pair.Key, StringComparer.Ordinal)
+            .Select(pair => new FileTypeBreakdownEntry(pair.Key, pair.Value, SymbolGraphCovered: false)));
 
-        var text = FormatBreakdown(csCount, cssCount, htmlCount, jsCount, razorCount, xamlCount);
-        var entries = new List<FileTypeBreakdownEntry>
-        {
-            new(".cs", csCount, SymbolGraphCovered: true),
-            new(".css", cssCount, SymbolGraphCovered: false),
-            new(".html", htmlCount, SymbolGraphCovered: false),
-            new(".js", jsCount, SymbolGraphCovered: false),
-            new(".razor", razorCount, SymbolGraphCovered: false),
-            new(".xaml", xamlCount, SymbolGraphCovered: false),
-        };
+        var text = FormatBreakdown(entries);
         return (text, entries);
     }
 
@@ -63,49 +54,47 @@ internal static class GetIndexScopeScanner
         return count;
     }
 
-    private static IReadOnlyDictionary<WebFileType, int> CountWebFiles(Solution solution, string solutionDir)
+    private static IReadOnlyDictionary<string, int> CountNonCSharpFiles(Solution solution)
     {
-        var request = new WebFileDiscoveryRequest(new FileFiltersConfig(), Array.Empty<string>(), null);
-        var entries = WebFileCatalog.Collect(solution, solutionDir, request);
-        return entries.GroupBy(e => e.Type).ToDictionary(g => g.Key, g => g.Count());
-    }
-
-    private static (int XamlCount, int HtmlCount) CountXamlAndHtmlFiles(Solution solution)
-    {
-        var xamlCount = 0;
-        var htmlCount = 0;
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+        var seenAbsolutePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var projectDir in WebFileCatalog.GetProjectDirectories(solution))
         {
             foreach (var filePath in FileSystemExclusionHelpers.SafeEnumerateFiles(projectDir))
             {
-                if (FileSystemExclusionHelpers.IsGeneratedPath(filePath)) continue;
-
-                if (filePath.EndsWith(".xaml", StringComparison.OrdinalIgnoreCase)) xamlCount++;
-                else if (filePath.EndsWith(".html", StringComparison.OrdinalIgnoreCase)) htmlCount++;
+                CountFileExtension(filePath, seenAbsolutePaths, counts);
             }
         }
 
-        return (xamlCount, htmlCount);
+        CountFileExtension(solution.FilePath, seenAbsolutePaths, counts);
+        return counts;
     }
 
-    // 6 Parameter: innerhalb MaxMethodParameterCountForNonPublic (rules.json: 6) fuer private
-    // Methoden — kein Parameter-Object noetig, BuildBreakdown baut aus denselben 6 Werten direkt
-    // danach ohnehin schon die FileTypeBreakdownEntry-Liste.
-    private static string FormatBreakdown(
-        int csCount, int cssCount, int htmlCount, int jsCount, int razorCount, int xamlCount)
+    private static void CountFileExtension(
+        string? filePath,
+        ISet<string> seenAbsolutePaths,
+        IDictionary<string, int> counts)
     {
-        var lines = new[]
-        {
-            FormatFileCountLine(csCount, ".cs", " (voll vom Symbolgraph abgedeckt)"),
-            FormatFileCountLine(cssCount, ".css", " (nicht vom Symbolgraph abgedeckt)"),
-            FormatFileCountLine(htmlCount, ".html", " (nicht vom Symbolgraph abgedeckt)"),
-            FormatFileCountLine(jsCount, ".js", " (nicht vom Symbolgraph abgedeckt)"),
-            FormatFileCountLine(razorCount, ".razor", " (nicht vom Symbolgraph abgedeckt)"),
-            FormatFileCountLine(xamlCount, ".xaml", " (nicht vom Symbolgraph abgedeckt)"),
-        };
+        if (string.IsNullOrEmpty(filePath)
+            || !File.Exists(filePath)
+            || FileSystemExclusionHelpers.IsGeneratedPath(filePath)
+            || !seenAbsolutePaths.Add(filePath)) return;
 
-        return string.Join("\n", lines);
+        var extension = Path.GetExtension(filePath).ToLowerInvariant();
+        if (string.IsNullOrEmpty(extension) || extension == ".cs") return;
+        counts[extension] = counts.TryGetValue(extension, out var count) ? count + 1 : 1;
+    }
+
+    private static string FormatBreakdown(IReadOnlyList<FileTypeBreakdownEntry> entries) =>
+        string.Join("\n", entries.Select(FormatFileCountLine));
+
+    private static string FormatFileCountLine(FileTypeBreakdownEntry entry)
+    {
+        var suffix = entry.SymbolGraphCovered
+            ? " (voll vom Symbolgraph abgedeckt)"
+            : " (nicht vom Symbolgraph abgedeckt)";
+        return FormatFileCountLine(entry.Count, entry.Extension, suffix);
     }
 
     /// <summary>
@@ -121,8 +110,8 @@ internal static class GetIndexScopeScanner
 }
 
 /// <summary>
-/// StructuredContent-Eintrag fuer <c>get_index_scope</c> — ein Objekt je Dateityp mit Anzahl
-/// und ob er vom Roslyn-Symbolgraph abgedeckt ist (nur <c>.cs</c>; siehe Scope-Hinweis-Text der
-/// anderen C#-only-Tools).
+/// StructuredContent-Eintrag fuer <c>get_index_scope</c> — ein Objekt je vorhandener Dateiendung
+/// mit Anzahl und ob sie vom Roslyn-Symbolgraph abgedeckt ist (nur <c>.cs</c>; siehe Scope-Hinweis-
+/// Text der anderen C#-only-Tools).
 /// </summary>
 internal sealed record FileTypeBreakdownEntry(string Extension, int Count, bool SymbolGraphCovered);

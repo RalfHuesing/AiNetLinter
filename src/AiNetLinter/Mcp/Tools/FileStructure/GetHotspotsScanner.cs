@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using AiNetLinter.Core;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 
@@ -31,6 +32,7 @@ internal static class GetHotspotsScanner
     internal const double DefaultMinLinePercentage = 80.0;
     internal const double MinLinePercentage = 0.0;
     internal const double MaxLinePercentage = 100.0;
+    internal const string DefaultScopeType = "production";
 
     private const double CriticalThreshold = 0.95;
 
@@ -41,6 +43,12 @@ internal static class GetHotspotsScanner
         double.IsNaN(minLinePercentage) || double.IsInfinity(minLinePercentage)
             ? DefaultMinLinePercentage
             : Math.Clamp(minLinePercentage, MinLinePercentage, MaxLinePercentage);
+
+    internal static string NormalizeScopeType(string? scopeType) =>
+        string.IsNullOrWhiteSpace(scopeType) ? DefaultScopeType : scopeType.Trim().ToLowerInvariant();
+
+    internal static bool IsValidScopeType(string? scopeType) =>
+        NormalizeScopeType(scopeType) is "production" or "tests" or "all";
 
     /// <summary>
     /// Baut den vollstaendigen Hotspot-Report fuer <paramref name="solution"/> — Text (Markdown-
@@ -58,7 +66,8 @@ internal static class GetHotspotsScanner
                 maxLineCount,
                 scopeFilter,
                 DefaultMaxResults,
-                DefaultMinLinePercentage));
+                DefaultMinLinePercentage,
+                DefaultScopeType));
         return (report.Text, report.Entries);
     }
 
@@ -70,8 +79,9 @@ internal static class GetHotspotsScanner
         var effectiveMinLinePercentage = NormalizeMinLinePercentage(options.MinLinePercentage);
         var maxLineCount = options.MaxLineCount;
         var scopeFilter = options.ScopeFilter;
+        var scopeType = NormalizeScopeType(options.ScopeType);
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var files = CollectFiles(solution, solutionDir, scopeFilter);
+        var files = CollectFiles(solution, solutionDir, scopeFilter, scopeType);
 
         if (files.Count == 0 && !string.IsNullOrWhiteSpace(scopeFilter))
         {
@@ -82,7 +92,8 @@ internal static class GetHotspotsScanner
                 0,
                 false,
                 effectiveMaxResults,
-                effectiveMinLinePercentage);
+                effectiveMinLinePercentage,
+                scopeType);
         }
 
         var candidates = files
@@ -103,7 +114,8 @@ internal static class GetHotspotsScanner
                 shown.Count,
                 maxLineCount,
                 scopeFilter,
-                effectiveMinLinePercentage));
+                effectiveMinLinePercentage,
+                scopeType));
         var entries = BuildEntries(shown, maxLineCount);
         return new HotspotScanResult(
             text,
@@ -112,7 +124,8 @@ internal static class GetHotspotsScanner
             shown.Count,
             candidates.Count > shown.Count,
             effectiveMaxResults,
-            effectiveMinLinePercentage);
+            effectiveMinLinePercentage,
+            scopeType);
     }
 
     /// <summary>
@@ -144,12 +157,17 @@ internal static class GetHotspotsScanner
     private static double GetUtilization(HotspotFileInfo file, int maxLineCount) =>
         (double)file.Lines / maxLineCount * 100;
 
-    private static List<HotspotFileInfo> CollectFiles(Solution solution, string solutionDir, string? scopeFilter)
+    private static List<HotspotFileInfo> CollectFiles(
+        Solution solution,
+        string solutionDir,
+        string? scopeFilter,
+        string scopeType)
     {
         var result = new List<HotspotFileInfo>();
 
         foreach (var walked in SolutionFileWalker.CollectFiles(solution, solutionDir, scopeFilter))
         {
+            if (!MatchesScopeType(walked, scopeType)) continue;
             var lines = SolutionFileWalker.TryReadAllLines(walked)?.Length;
             if (lines is null) continue;
 
@@ -159,11 +177,20 @@ internal static class GetHotspotsScanner
         return result;
     }
 
+    private static bool MatchesScopeType(WalkedFile file, string scopeType)
+    {
+        if (scopeType == "all") return true;
+
+        var isTest = TestDetector.IsTestProject(file.Document.Project)
+            || TestDetector.IsTestFile(file.RelativePath);
+        return scopeType == "tests" ? isTest : !isTest;
+    }
+
     private static string FormatReport(HotspotReportData report)
     {
         var sb = new StringBuilder();
         var scopeSuffix = string.IsNullOrWhiteSpace(report.ScopeFilter) ? "" : $" | Scope-Filter: '{report.ScopeFilter}'";
-        sb.AppendLine($"Gescannt: {report.Files.Count} .cs-Dateien | MaxLineCount: {report.MaxLineCount}{scopeSuffix}");
+        sb.AppendLine($"Gescannt: {report.Files.Count} .cs-Dateien | MaxLineCount: {report.MaxLineCount} | Scope-Typ: '{report.ScopeType}'{scopeSuffix}");
         sb.AppendLine();
 
         HotspotTableFormatter.AppendSection(sb, "Kritische Dateien (>=95% des Limits)", report.Critical.Select(f => (f.RelativePath, f.Lines)), report.MaxLineCount);
@@ -203,7 +230,8 @@ internal static class GetHotspotsScanner
         int ShownHotspots,
         int MaxLineCount,
         string? ScopeFilter,
-        double MinLinePercentage);
+        double MinLinePercentage,
+        string ScopeType);
 
     private sealed record HotspotFileInfo(string RelativePath, int Lines);
 }
@@ -212,7 +240,8 @@ internal sealed record HotspotScanOptions(
     int MaxLineCount,
     string? ScopeFilter,
     int MaxResults,
-    double MinLinePercentage);
+    double MinLinePercentage,
+    string? ScopeType = GetHotspotsScanner.DefaultScopeType);
 
 internal sealed record HotspotScanResult(
     string Text,
@@ -221,7 +250,8 @@ internal sealed record HotspotScanResult(
     int ShownHotspots,
     bool Truncated,
     int MaxResults,
-    double MinLinePercentage);
+    double MinLinePercentage,
+    string ScopeType);
 
 /// <summary>
 /// StructuredContent-Eintrag fuer <c>get_hotspots</c> — ein Objekt je Datei mit Pfad, Zeilen
@@ -237,4 +267,5 @@ internal sealed record HotspotsPayload(
     int ShownHotspots,
     bool Truncated,
     int MaxResults,
-    double MinLinePercentage);
+    double MinLinePercentage,
+    string ScopeType);

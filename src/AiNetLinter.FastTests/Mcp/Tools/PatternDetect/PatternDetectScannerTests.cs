@@ -169,7 +169,21 @@ public class MiddleManClass
         Assert.All(result.Payload!.Patterns, p => Assert.Equal(0, p.Occurrences));
         Assert.Equal(0, result.Payload.Summary.PatternsWithHits);
         Assert.Equal(0, result.Payload.Summary.TotalOccurrences);
-        Assert.Contains("Keine.", result.Text!);
+        Assert.Contains("Keine Auffälligkeiten gefunden.", result.Text!, StringComparison.Ordinal);
+        Assert.DoesNotContain("## ", result.Text!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task BuildReportAsync_SinglePatternWithoutHits_KeepsDetailedPatternSection()
+    {
+        using var testSolution = CreateSolution();
+        var result = await RunAsync(
+            testSolution.Solution,
+            CreateConfig(),
+            PatternCatalog.Patterns.Where(p => p.Id == "async-void").ToList());
+
+        Assert.Contains("## async-void", result.Text!, StringComparison.Ordinal);
+        Assert.Contains("Keine.", result.Text!, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -221,6 +235,7 @@ public sealed class Foo{i}
         Assert.Equal(2, asyncVoid.Items.Count);
         Assert.Contains("Treffer gesamt", result.Text!, StringComparison.Ordinal);
         Assert.Contains("gezeigt", result.Text!, StringComparison.Ordinal);
+        Assert.DoesNotContain("## empty-catch", result.Text!, StringComparison.Ordinal);
     }
 
     [Fact]

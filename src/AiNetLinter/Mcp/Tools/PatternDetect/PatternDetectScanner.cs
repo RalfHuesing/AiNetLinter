@@ -125,7 +125,13 @@ internal static class PatternDetectScanner
             $"{totalOccurrences} Treffer gesamt in {matchingFileCount} Dateien im Scope{scopeSuffix}");
         sb.AppendLine();
 
-        foreach (var report in reports)
+        if (totalOccurrences == 0 && reports.Count != 1)
+        {
+            sb.AppendLine("Keine Auffälligkeiten gefunden.");
+            return sb.ToString().TrimEnd();
+        }
+
+        foreach (var report in reports.Where(report => reports.Count == 1 || report.Entry.Occurrences > 0))
         {
             sb.AppendLine($"## {report.Entry.Id} — {report.Entry.Description} ({report.Entry.Occurrences} Treffer)");
             sb.AppendLine();

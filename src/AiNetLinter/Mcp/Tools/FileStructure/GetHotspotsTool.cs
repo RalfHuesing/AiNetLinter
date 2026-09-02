@@ -7,6 +7,14 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.FileStructure;
 
+internal sealed record GetHotspotsRequest(
+    McpCodeGraphServer State,
+    string? ScopeFilter,
+    int MaxResults,
+    double MinLinePercentage,
+    string? ScopeType,
+    CancellationToken CancellationToken);
+
 /// <summary>
 /// MCP-Tool <c>get_hotspots</c>: liefert Dateien der resident gehaltenen Solution, die sich ihrem
 /// konfigurierten <see cref="McpCodeGraphServer.MaxLineCount"/>-Limit naehern oder es ueberschreiten —
@@ -22,11 +30,13 @@ internal static class GetHotspotsTool
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state, string? scopeFilter, CancellationToken ct)
         => await ExecuteAsync(
-            state,
-            scopeFilter,
-            GetHotspotsScanner.DefaultMaxResults,
-            GetHotspotsScanner.DefaultMinLinePercentage,
-            ct).ConfigureAwait(false);
+            new GetHotspotsRequest(
+                state,
+                scopeFilter,
+                GetHotspotsScanner.DefaultMaxResults,
+                GetHotspotsScanner.DefaultMinLinePercentage,
+                GetHotspotsScanner.DefaultScopeType,
+                ct)).ConfigureAwait(false);
 
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
@@ -34,19 +44,40 @@ internal static class GetHotspotsTool
         int maxResults,
         double minLinePercentage,
         CancellationToken ct)
+        => await ExecuteAsync(
+            new GetHotspotsRequest(
+                state,
+                scopeFilter,
+                maxResults,
+                minLinePercentage,
+                GetHotspotsScanner.DefaultScopeType,
+                ct)).ConfigureAwait(false);
+
+    internal static async Task<CallToolResult> ExecuteAsync(
+        GetHotspotsRequest request)
     {
+        var state = request.State;
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
+
+        var normalizedScopeType = GetHotspotsScanner.NormalizeScopeType(request.ScopeType);
+        if (!GetHotspotsScanner.IsValidScopeType(request.ScopeType))
+        {
+            return McpToolResults.InvalidArgument(
+                $"Ungueltiger scopeType-Wert '{request.ScopeType}' — gueltig sind 'production', 'tests', 'all'.",
+                hint: "scopeType='production' [Default], 'tests' oder 'all' angeben.");
+        }
 
         var report = GetHotspotsScanner.BuildHotspots(
             solution,
             new HotspotScanOptions(
                 state.MaxLineCount,
-                scopeFilter,
-                maxResults,
-                minLinePercentage));
-        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
+                request.ScopeFilter,
+                request.MaxResults,
+                request.MinLinePercentage,
+                normalizedScopeType));
+        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, request.CancellationToken);
         // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
         // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
         return McpToolResults.Text(
@@ -57,6 +88,7 @@ internal static class GetHotspotsTool
                 report.ShownHotspots,
                 report.Truncated,
                 report.MaxResults,
-                report.MinLinePercentage));
+                report.MinLinePercentage,
+                report.ScopeType));
     }
 }

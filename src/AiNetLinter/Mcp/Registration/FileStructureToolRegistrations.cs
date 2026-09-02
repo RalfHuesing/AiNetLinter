@@ -222,23 +222,27 @@ internal static class FileStructureToolRegistrations
                 string? scopeFilter = null,
                 int maxResults = GetHotspotsScanner.DefaultMaxResults,
                 double minLinePercentage = GetHotspotsScanner.DefaultMinLinePercentage,
+                string? scopeType = GetHotspotsScanner.DefaultScopeType,
                 CancellationToken ct = default) =>
                 await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
                     lease => GetHotspotsTool.ExecuteAsync(
-                        lease.Server,
-                        scopeFilter,
-                        maxResults,
-                        minLinePercentage,
-                        ct)),
+                        new GetHotspotsRequest(
+                            lease.Server,
+                            scopeFilter,
+                            maxResults,
+                            minLinePercentage,
+                            scopeType,
+                            ct))),
             McpToolRegistrationOptions.ReadOnlyTool("get_hotspots", GetHotspotsDescription)));
     }
 
     private const string GetHotspotsDescription =
         "Wann nutzen: vor einem geplanten Edit pruefen, ob eine Datei/ein Projekt sich dem " +
         "Zeilen-Limit (MaxLineCount) naehert. scopeFilter: Projekt-Name oder Pfad-Substring zur Eingrenzung. " +
+        "scopeType: 'production' [Default], 'tests' oder 'all' zur Auswahl von Produktions- bzw. Testdateien. " +
         "maxResults: sichtbare Hotspots (Default 50, Cap 200). minLinePercentage: untere " +
         "Auslastungsschwelle in Prozent (Default 80, Bereich 0-100). Ergebnisse bleiben " +
         "deterministisch nach absteigender Zeilenzahl und Pfad sortiert; StructuredContent " +
