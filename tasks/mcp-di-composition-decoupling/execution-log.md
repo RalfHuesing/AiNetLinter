@@ -73,3 +73,20 @@ für reale Lease-Consumer belegt hat. Das bleibt innerhalb der dokumentierten
 Erweiterungsregel und wird im Review geprüft.
 
 Nächste Aktion: unabhängigen Review des Diffs seit `df858b69` durchführen.
+
+Resume-Triage: Der zugehörige Reviewer war im aktuellen Agentenbestand nicht
+mehr als lebender Task auffindbar. Der unvollständige Rollenlauf wird daher als
+unterbrochen behandelt; der Implementierungsstand bleibt in Commit `3302dffe`
+gesichert. Vor dem Fortsetzen wird ein frischer unabhängiger Review gestartet.
+
+## Run 2026-09-02-03 — Epic 1 / Review
+
+Status: running
+Rolle: unabhängiger Reviewer
+Subagent: `/root/epic1_review`
+Diff-Baseline: `df858b69`
+
+Auftrag: Den Implementierungsdiff gegen die Interface-Grenze, unveränderte
+Project-Lease-Grenzen, Lifetime-/Locking-Semantik, Tests und den frischen
+Verifikationsnachweis prüfen. Konkrete Code-Map-Fakten dürfen berichtigt,
+Produktions- und Testcode jedoch nicht geändert werden.
