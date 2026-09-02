@@ -19,6 +19,7 @@ internal interface IAssemblyAnalysisEvictionEntry
 {
     string CanonicalPath { get; }
     DateTime LastUsedUtc { get; }
+    bool IsRetiring { get; }
     bool IsIdleForCapacity();
     bool IsIdle(DateTime now, TimeSpan idleTtl);
 }

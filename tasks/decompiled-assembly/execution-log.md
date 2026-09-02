@@ -234,6 +234,7 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Verifikation nach letzter Codeänderung: `dotnet build --no-restore` 0 Warnungen/0 Fehler; gezielter Lifecycle-Slice 18/18 bestanden; FastTests `Category!=Stress` 2372 bestanden, 2 übersprungen; IntegrationTests `Category!=Stress` 381 bestanden, 2 fehlgeschlagen wegen bestehender Gesamt-Linter-Violations bzw. Live-Dogfood-Safeguard-Score 0; lokaler CLI-Linter meldet 12 bestehende P1-fremde Produktionsviolations und keine Registry-`MaxLineCount`-Violation.
 - MCP-/Release-Hinweis: Alter Live-MCP nicht zur Feature-Verifikation verwendet; Stress- und Release-/Live-Abschlussprüfungen ausgespart.
 - Code-Map: nach der Korrektur aktualisiert; `roadmap.md`, `execution-log.md` und `tech-debt.md` blieben durch den Implementierer unverändert.
+- Checkpoint-Nachtrag: Der direkte Lifecycle-Hunk `IAssemblyAnalysisEvictionEntry.IsRetiring` in `AssemblyAnalysisRegistryEvictionContext.cs` wurde nach dem Bericht als zugehörig verifiziert und separat in den Checkpoint aufgenommen.
 - Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.
 
 ## 2026-09-02 – Paket 3 – Review
