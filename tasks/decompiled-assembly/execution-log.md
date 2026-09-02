@@ -262,6 +262,21 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Code-Map: ausschließlich konkrete Scope-/Historienfakten korrigiert; kein Produktions-/Testcode und kein Commit durch den Reviewer.
 - Nächste Aktion: frischer Implementierer für P1 `TD-SESSION-EVICTION-REFRESH-001`, Versuch 1/5.
 
+## 2026-09-02 – Paket 3 – Folge-Review
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Folge-Reviewer
+- Subagent: `01a061f2-dea2-7ac1-a56b-6b747f722013`
+- Diff-Scope: Paket-3-Gesamtstand seit `84d7f27c`, einschließlich Lifecycle-Korrektur bis `04cb27bd`.
+- Status: terminal abgeschlossen; ein neues P1 in der Signature-only-Ursachensignatur erfordert Korrekturrunde 1/5.
+- Urteil: `issues`.
+- P1-Finding `SIGONLY-CONSTRUCTOR-EXPRESSION-BODY`: `ShouldStub(ConstructorDeclarationSyntax)` in `AssemblyDecompilationSourceText` prüft `ExpressionBody` nicht. Ein Konstruktor `public C() => Initialize();` erhält dadurch zusätzlich einen Block, während der Expression-Body bestehen bleibt; der Stub wird ungültig und kann das dekompilierte Dokument verwerfen. Korrektur: `constructor.ExpressionBody is null` berücksichtigen und eine Negativregression ergänzen.
+- Bestätigt: Namespace-Limit/ Summary und 8-KiB-Erhalt (32-Namespace-Test), Lifecycle-P1-Fix (direkter Refresh, Candidate-Eviction, `DisposeAsync`; Retirement-Regression 3/3) und Footprint-Refactor (keine Zielklassen-/Factory-Violations im lokalen CLI) erfüllen die jeweiligen Paket-3-Kriterien.
+- P2/P3 bleiben `accepted-deferred`: vollständige Signature-only-Negativmatrix/Operatoren, atomare Dispose-/Lease-Registrierung, Summary-Erhalt bei extremem Gesamttrimming und ungenutzte Retirement-Callbacks.
+- Verifikation: Implementierer-Nachweise (Lifecycle 18/18, Fast 2372/2 übersprungen, Build 0/0, CLI-Linter ohne Zielklassen, Integration 381/2 bestehende Fehler) wurden als frisch übernommen; keine erfolgreichen Checks ohne Gegenhypothese wiederholt. MCP, Release/Live und Stress gemäß Nutzerentscheidung nicht verwendet.
+- Code-Map: ausschließlich konkrete Scope-/Historienangaben korrigiert; kein Produktions-/Testcode geändert.
+- Nächste Aktion: frischer Implementierer für `SIGONLY-CONSTRUCTOR-EXPRESSION-BODY`, Versuch 1/5.
+
 ## 2026-09-02 – Paket 3 – Implementierer
 
 - Run-ID: `decompiled-assembly-20260902`

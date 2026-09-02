@@ -156,3 +156,13 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 - Disposition: `accepted-deferred`
 - Nächster Schritt: Nach Abschluss der Lifecycle-Änderungen Referenzen erneut prüfen und sichere Bereinigung durchführen.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Review.
+
+### SIGONLY-CONSTRUCTOR-EXPRESSION-BODY – Expression-bodied Konstruktor wird fälschlich gestubbt
+
+- Schweregrad: P1
+- Status: aktiv, Versuch 1/5 steht an.
+- Scope/Fundstelle: `AssemblyDecompilationSourceText.ShouldStub(ConstructorDeclarationSyntax)`.
+- Evidenz: Review: fehlende `ExpressionBody`-Prüfung erzeugt einen zusätzlichen Block neben `=>` und damit ungültigen dekompilierten C#-Code.
+- Disposition: `fix-now`
+- Nächster Schritt: Expression-bodied Konstruktoren vom Stubben ausschließen und Negativregression ergänzen.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Folge-Review.

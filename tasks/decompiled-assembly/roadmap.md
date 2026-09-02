@@ -3,9 +3,9 @@
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
 Status: executing  
-Current epic: Paket 3 – Folge-Review nach Korrekturrunde 1/5
-Letzter Commit: Lifecycle-Korrektur `04cb27bd`; Folge-Review läuft
-Current debt item: `TD-SESSION-EVICTION-REFRESH-001`
+Current epic: Paket 3 – Korrekturrunde 1/5
+Letzter Commit: Paket-3-Folge-Review; Artefakt-Checkpoint ausstehend
+Current debt item: `SIGONLY-CONSTRUCTOR-EXPRESSION-BODY`
 Debt attempts: 1
 Blocker: keiner
 
