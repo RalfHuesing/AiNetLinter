@@ -4,9 +4,9 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 
 Status: executing  
 Current epic: Paket 2 – Korrekturrunde 1/5
-Letzter Commit: Paket-2-Implementierung `ca82ac9e`; Review-Checkpoint ausstehend
+Letzter Commit: Paket-2-Review-Checkpoint `51ac63ba`
 Current debt item: `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE`
-Debt attempts: 0
+Debt attempts: 1
 Blocker: keiner
 
 ## Epics

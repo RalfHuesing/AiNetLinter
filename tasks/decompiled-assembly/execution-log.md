@@ -133,3 +133,14 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Lokale Nachweise: Implementiererbericht mit Build 0/0, gezielten Fast 130/130 und Integration 54/54 sowie vollständigen Nicht-Stress-Läufen wurde auf Frische/Scope übernommen; ein direkter Code-/Doku-Gegencheck führte zum P1. `git diff --check` sauber.
 - Code-Map: nur konkrete Pfade/Zeilenanker aktualisiert (`Tools/NamespaceTree` → `Tools/FileStructure`, `AssemblyReferenceResolver`-Zeilen); kein Produktions-/Testcode geändert.
 - Nächste Aktion: frischer Implementierer für `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE`, Versuch 1/5.
+
+## 2026-09-02 – Paket 2 – Korrekturversuch 1 – Implementierer running
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: wird nach Delegation ergänzt
+- Diff-Baseline: `51ac63ba`
+- Anlass: P1-Dokumentationsfehler `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE`.
+- Scope: Nur Trennung/Korrektur des `find_references`-/`get_impact`-Abschnitts und direkte Doku-Regression; keine Produktionscodeänderung und keine Paket-3/4-Arbeit.
+- MCP-Hinweis: Laufender Server ist älter als der Working Tree und darf nicht als Feature-Verifikation dienen; Release-/Live-Prüfung bleibt separater Task.
+- Status: running

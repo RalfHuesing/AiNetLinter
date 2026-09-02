@@ -70,7 +70,7 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE – Gemeinsamer Dokuabschnitt vermischt Toolverträge
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 1/5 steht an.
+- Status: aktiv, Versuch 1/5 läuft.
 - Scope/Fundstelle: `Docs/agent-api.md`, Beschreibung von `find_references` und `get_impact`.
 - Evidenz: Review des Paket-2-Diffs; `get_impact` besitzt weder `includeReferences` noch eine `navigation`-Struktur, obwohl der gemeinsame Abschnitt dies nahelegt.
 - Disposition: `fix-now`
