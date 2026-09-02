@@ -205,7 +205,7 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 
 - Run-ID: `decompiled-assembly-20260902`
 - Rolle: Implementierer
-- Subagent: wird nach Delegation ergänzt
+- Subagent: `01a061bc-d0c5-7a60-a4a4-1684cd380667`
 - Diff-Baseline: `84d7f27c`
 - Status: running
 - Scope: Namespace-/Response-Budget, Signature-only-Stub-Fehlerlast, AIContextFootprint und Referenz-Session-Lebenszeit gemäß Paket 3; keine Paket-4-Abschlussmatrix und keine Release-/Live-MCP-Verifikation.
