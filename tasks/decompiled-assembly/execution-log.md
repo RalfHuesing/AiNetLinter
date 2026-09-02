@@ -441,3 +441,13 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Verifikation nach der letzten Änderung: Navigationstests 7/7; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` sauber; lokaler CLI-Linter mit 12 bestehenden Baseline-Violations außerhalb dieses Scopes; lokale Qualitätschecks ohne Duplikate, Dead Code oder Magic Values.
 - MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wurde nicht als Feature-Nachweis verwendet; keine Release-/Live-/Stress-Prüfung.
 - Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.
+
+## 2026-09-02 – Paket 3 – Folge-Review running (aktuell)
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Folge-Reviewer
+- Subagent: `01a06230-066f-7483-9d0e-a08bc4ba1140`
+- Diff-Scope: Quellenkorrektur `1b4d0e53` und Paket-3-Gesamtstand.
+- Status: running
+- Scope: Quellen für alle gecappten Leases, Symbol-Mapping/Fallback, Origin-, Limit- und Lifecycle-Semantik sowie konkrete transitive Call-Sites/Baumknoten.
+- MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet; Release-/Live-/Stress-Verifikation bleibt ausgespart.

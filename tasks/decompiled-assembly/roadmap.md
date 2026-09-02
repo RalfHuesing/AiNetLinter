@@ -4,7 +4,7 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 
 Status: executing  
 Current epic: Paket 3 – Folge-Review nach Korrekturrunde 1/5
-Letzter Commit: Quellenkorrektur unreviewt; Artefakt-Checkpoint folgt
+Letzter Commit: `1b4d0e53` – Quellenkorrektur, Review läuft
 Current debt item: `NAV-TRANSITIVE-SOURCE-COVERAGE-001`
 Debt attempts: 1
 Blocker: keiner
