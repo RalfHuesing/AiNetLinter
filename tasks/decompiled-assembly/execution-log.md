@@ -575,6 +575,16 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet.
 - Status: running
 
+## 2026-09-02 – Paket 4 – Folge-Review running (aktuell)
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Folge-Reviewer
+- Subagent: `01a06259-5e8d-7a21-b61a-4ef3cdf1f8e2`
+- Diff-Scope: Endpoint-Isolationskorrektur `c55c0e8a` und Paket-4-Gesamtstand.
+- Status: running
+- Scope: exklusiver Endpoint-Harness, Übergabe an beide Daemon-Sitzungen, eigener Prozess-Cleanup, Projektziel-Health-Assertions und Nebenläufigkeit.
+- MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet.
+
 ## 2026-09-02 – Paket 4 – Korrekturversuch 1 – Implementierer
 
 - Run-ID: `decompiled-assembly-20260902`
