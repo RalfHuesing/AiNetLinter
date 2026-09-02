@@ -13,6 +13,15 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 
+internal sealed record FindSymbolRequest(
+    ISolutionStateProvider State,
+    string[]? NamePatterns,
+    string? Kind,
+    int MaxResults,
+    CancellationToken CancellationToken,
+    string? NamePattern = null,
+    string? Symbol = null);
+
 /// <summary>
 /// MCP-Tool <c>find_symbol</c>: durchsucht die resident gehaltene Solution per Substring auf
 /// Symbolnamen (optionaler Kind-Filter) und liefert Fundstellen (Datei:Zeile, Kind, Signatur).
@@ -37,8 +46,17 @@ internal static class FindSymbolTool
 
     internal const int MaxPatternsPerCall = 10;
 
-    internal static IReadOnlyList<string> NormalizeNamePatterns(string[]? namePatterns) =>
-        McpBatchArguments.Normalize(namePatterns);
+    internal static IReadOnlyList<string> NormalizeNamePatterns(
+        string[]? namePatterns,
+        string? namePattern = null,
+        string? symbol = null)
+    {
+        var patterns = McpBatchArguments.Normalize(namePatterns);
+        if (patterns.Count > 0) return patterns;
+
+        var scalar = string.IsNullOrWhiteSpace(namePattern) ? symbol : namePattern;
+        return string.IsNullOrWhiteSpace(scalar) ? patterns : [scalar];
+    }
 
     internal static CallToolResult? ValidateNamePatterns(IReadOnlyList<string> patterns)
     {
@@ -79,16 +97,19 @@ internal static class FindSymbolTool
         string[]? namePatterns,
         string? kind,
         int maxResults,
-        CancellationToken ct)
+        CancellationToken ct) =>
+        await ExecuteAsync(new FindSymbolRequest(state, namePatterns, kind, maxResults, ct));
+
+    internal static async Task<CallToolResult> ExecuteAsync(FindSymbolRequest request)
     {
-        var patterns = NormalizeNamePatterns(namePatterns);
-        var validationError = ValidateNamePatterns(patterns) ?? ValidateKind(kind);
+        var patterns = NormalizeNamePatterns(request.NamePatterns, request.NamePattern, request.Symbol);
+        var validationError = ValidateNamePatterns(patterns) ?? ValidateKind(request.Kind);
         if (validationError is not null) return validationError;
 
-        var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
+        var normalizedMaxResults = request.MaxResults < 1 ? 1 : request.MaxResults;
 
-        if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
-        var solution = state.GetCurrentSolution();
+        if (request.State.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
+        var solution = request.State.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
         try
@@ -98,24 +119,24 @@ internal static class FindSymbolTool
 
             for (var i = 0; i < patterns.Count; i++)
             {
-                ct.ThrowIfCancellationRequested();
+                request.CancellationToken.ThrowIfCancellationRequested();
                 if (i > 0) mb.Divider();
                 var pattern = patterns[i];
                 var (text, entries) = await FindSymbolScanner.FindMatchesWithEntriesAsync(
                     new FindSymbolScanRequest(
                         solution,
                         pattern,
-                        kind,
+                        request.Kind,
                         normalizedMaxResults,
-                        state.AssemblySymbolIdentity),
-                    ct);
+                        request.State.AssemblySymbolIdentity),
+                    request.CancellationToken);
                 results.Add(new FindSymbolPatternResultDto(pattern, entries));
 
                 mb.Heading(3, $"Symbol-Suche: `{pattern}`").BlankLine();
                 mb.Line(text.TrimEnd());
             }
 
-            var warning = await BuildAggregateWarningAsync(solution, ct);
+            var warning = await BuildAggregateWarningAsync(solution, request.CancellationToken);
             var markdown = mb.Build().TrimEnd();
             return McpToolResults.Text(PrependWarning(warning, markdown), new FindSymbolBatchDto(results));
         }
@@ -134,9 +155,12 @@ internal static class FindSymbolTool
     /// geblieben, weil es eine tool-uebergreifend genutzte Format-Methode ist und nicht zur
     /// Scanner-Kernlogik gehoert (Konsument sitzt in einem anderen Tool).
     /// </summary>
-    internal static IEnumerable<string> FormatSymbolLocations(ISymbol symbol, string outputRoot)
+    internal static IEnumerable<string> FormatSymbolLocations(
+        ISymbol symbol,
+        string outputRoot,
+        AnalysisSymbolIdentity? assemblyIdentity = null)
     {
-        foreach (var entry in FormatSymbolLocationEntries(symbol, outputRoot))
+        foreach (var entry in FormatSymbolLocationEntries(symbol, outputRoot, assemblyIdentity))
         {
             yield return FormatEntry(entry);
         }

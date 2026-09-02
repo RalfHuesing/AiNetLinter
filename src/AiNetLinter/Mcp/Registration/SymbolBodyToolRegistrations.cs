@@ -32,21 +32,22 @@ internal static class SymbolBodyToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string[]? symbolIdentifiers = null, int maxBodyLines = 80, CancellationToken ct = default) =>
+            async (string targetType, string targetPath, string[]? symbolIdentifiers = null, string? symbolIdentifier = null, int maxBodyLines = 80, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, symbolIdentifiers, maxBodyLines, ct),
-                            AssemblySessionCall: lease => GetSymbolBodyTool.ExecuteAsync(lease, symbolIdentifiers, maxBodyLines, ct)),
+                            ProjectCall: lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, symbolIdentifiers, maxBodyLines, ct, symbolIdentifier),
+                            AssemblySessionCall: lease => GetSymbolBodyTool.ExecuteAsync(lease, symbolIdentifiers, maxBodyLines, ct, symbolIdentifier)),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("get_symbol_body", GetSymbolBodyDescription)));
     }
 
     private const string GetSymbolBodyDescription =
         "Wann nutzen: Source-Body eines oder mehrerer C#-Symbole lesen (Batch-Support in 1 Turn). " +
-        "symbolIdentifiers: Array von Symbol-IDs (auch fuer genau ein Symbol): \"M:Namespace.Klasse.Methode\", " +
+        "symbolIdentifiers: Array von Symbol-IDs oder symbolIdentifier als String-Alias fuer genau ein Symbol: " +
+        "\"M:Namespace.Klasse.Methode\", " +
         "\"Datei.cs:Zeile:Spalte\", \"Datei.cs:Zeile\" oder \"Klasse.Methode\". " +
         "maxBodyLines: Begrenzung der Zeilenanzahl je Symbol-Body (Default 80).";
 }

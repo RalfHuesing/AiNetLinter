@@ -3,6 +3,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Tools;
@@ -14,6 +15,11 @@ namespace AiNetLinter.Mcp.Registration;
 
 internal static class AssemblyAnalysisToolRegistrations
 {
+    internal static string ResolveTargetType(string? targetType, string targetPath) =>
+        AssemblyPathValidation.IsSupportedAssemblyPath(targetPath)
+            ? "assembly"
+            : string.IsNullOrWhiteSpace(targetType) ? "assembly" : targetType;
+
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
         AnalysisToolRoute assemblyRoute)
@@ -28,8 +34,8 @@ internal static class AssemblyAnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (
-                string targetType,
                 string targetPath,
+                string? targetType = null,
                 string? @namespace = null,
                 string? typeName = null,
                 string? memberName = null,
@@ -43,7 +49,7 @@ internal static class AssemblyAnalysisToolRegistrations
                 await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
                     new AnalysisToolCallRequest(
-                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisTargetRequest(ResolveTargetType(targetType, targetPath), targetPath),
                         new AnalysisToolDispatch(
                             AssemblySessionCall: lease => InspectAssemblyTool.ExecuteAsync(
                                 lease,
@@ -65,8 +71,9 @@ internal static class AssemblyAnalysisToolRegistrations
 
     private const string InspectAssemblyDescription =
         "Wann nutzen: oeffentliche API einer exakt angegebenen lokalen .NET-Assembly metadata-only " +
-        "ueber Roslyn untersuchen. targetType='assembly' und targetPath mit absolutem .dll- oder .exe-Pfad " +
-        "sind Pflicht; ein Consumer-Projekt wird in diesem Dispatch-Schritt nicht verwendet. " +
+        "ueber Roslyn untersuchen. targetPath mit absolutem .dll- oder .exe-Pfad ist Pflicht; " +
+        "targetType ist optional und wird standardmaessig als 'assembly' behandelt. Ein Consumer-Projekt " +
+        "wird in diesem Dispatch-Schritt nicht verwendet. " +
         "namespace, typeName und memberName filtern, publicOnly ist standardmaessig true, " +
         "exactTypeName schaltet fuer typeName von Teiltext- auf Exaktsuche um, memberNames " +
         "ergaenzt den Teiltextfilter memberName um eine exakte OR-Auswahl, " +
@@ -87,8 +94,8 @@ internal static class AssemblyAnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (
-                string targetType,
                 string targetPath,
+                string? targetType = null,
                 string? receiverType = null,
                 string? extensionName = null,
                 string? @namespace = null,
@@ -98,7 +105,7 @@ internal static class AssemblyAnalysisToolRegistrations
                 await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
                     new AnalysisToolCallRequest(
-                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisTargetRequest(ResolveTargetType(targetType, targetPath), targetPath),
                         new AnalysisToolDispatch(
                             AssemblySessionCall: lease => FindAssemblyExtensionsTool.ExecuteAsync(
                                 lease,
@@ -116,8 +123,9 @@ internal static class AssemblyAnalysisToolRegistrations
 
     private const string FindAssemblyExtensionsDescription =
         "Wann nutzen: klassische C#-Extension-Methoden einer exakt angegebenen lokalen .NET-Assembly " +
-        "metadata-only ueber Roslyn finden. targetType='assembly' und targetPath mit absolutem " +
-        ".dll- oder .exe-Pfad sind Pflicht; ein Consumer-Projekt wird in diesem Dispatch-Schritt nicht verwendet. " +
+        "metadata-only ueber Roslyn finden. targetPath mit absolutem .dll- oder .exe-Pfad ist Pflicht; " +
+        "targetType ist optional und wird standardmaessig als 'assembly' behandelt. Ein Consumer-Projekt " +
+        "wird in diesem Dispatch-Schritt nicht verwendet. " +
         "receiverType grenzt den gewuenschten Empfaenger-Typ ein; ohne Consumer-Projekt " +
         "wird seine Roslyn-Anwendbarkeit als not_decidable ausgewiesen. extensionName und namespace filtern, " +
         "includeReferences (Default false) steuert, ob bounded Referenz-Assemblies und Reference-Sessions " +

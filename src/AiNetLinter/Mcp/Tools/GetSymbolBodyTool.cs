@@ -20,7 +20,8 @@ namespace AiNetLinter.Mcp.Tools;
 /// <summary>
 /// MCP-Tool <c>get_symbol_body</c>: liefert den vollstaendigen Body eines oder mehrerer C#-Symbole
 /// (Methode, Konstruktor, Property, Indexer, Event). Erwartet ausschliesslich das
-/// <c>symbolIdentifiers</c>-Array; ein einzelnes Symbol ist ein Array-Eintrag.
+/// <c>symbolIdentifiers</c>-Array; <c>symbolIdentifier</c> bleibt als Alias fuer genau ein
+/// Symbol verfuegbar.
 /// </summary>
 internal static class GetSymbolBodyTool
 {
@@ -35,13 +36,14 @@ internal static class GetSymbolBodyTool
         ISolutionStateProvider state,
         string[]? symbolIdentifiers,
         int maxBodyLines,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? symbolIdentifier = null)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var identifiers = McpBatchArguments.Normalize(symbolIdentifiers, StringComparer.Ordinal);
+        var identifiers = NormalizeIdentifiers(symbolIdentifiers, symbolIdentifier);
         if (identifiers.Count == 0)
         {
             return McpToolResults.Recoverable(
@@ -66,12 +68,13 @@ internal static class GetSymbolBodyTool
         IAssemblyBodyContext lease,
         string[]? symbolIdentifiers,
         int maxBodyLines,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? symbolIdentifier = null)
     {
         ArgumentNullException.ThrowIfNull(lease);
         var solution = lease.Solution;
         if (solution is null) return Task.FromResult(McpToolResults.SolutionNotLoaded());
-        var identifiers = McpBatchArguments.Normalize(symbolIdentifiers, StringComparer.Ordinal);
+        var identifiers = NormalizeIdentifiers(symbolIdentifiers, symbolIdentifier);
         if (identifiers.Count == 0)
         {
             return Task.FromResult(McpToolResults.Recoverable(
@@ -82,6 +85,16 @@ internal static class GetSymbolBodyTool
 
         return RenderSymbolBodiesAsync(
             solution, identifiers, maxBodyLines, lease.AssemblySymbolIdentity, lease, ct);
+    }
+
+    private static IReadOnlyList<string> NormalizeIdentifiers(
+        string[]? symbolIdentifiers,
+        string? symbolIdentifier)
+    {
+        var identifiers = McpBatchArguments.Normalize(symbolIdentifiers, StringComparer.Ordinal);
+        return identifiers.Count > 0 || string.IsNullOrWhiteSpace(symbolIdentifier)
+            ? identifiers
+            : McpBatchArguments.Normalize([symbolIdentifier], StringComparer.Ordinal);
     }
 
     private static async Task<CallToolResult> RenderSymbolBodiesAsync(

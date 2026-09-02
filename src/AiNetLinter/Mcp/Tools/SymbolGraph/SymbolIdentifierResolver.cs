@@ -292,7 +292,11 @@ internal static class SymbolIdentifierResolver
         normalizedId = value;
         isAssemblyId = false;
         error = null;
-        if (!value.StartsWith(AnalysisSymbolIdentity.Prefix, StringComparison.Ordinal)) return true;
+        if (!value.StartsWith(AnalysisSymbolIdentity.Prefix, StringComparison.Ordinal))
+        {
+            isAssemblyId = expectedIdentity is not null && HasKnownDocumentationCommentIdPrefix(value);
+            return true;
+        }
 
         isAssemblyId = true;
         if (!AnalysisSymbolIdentity.TryParse(value, out var providedIdentity, out var unwrappedId)

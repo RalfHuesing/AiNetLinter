@@ -52,6 +52,13 @@ public sealed class WiringToolCollectionContractTests
                 Assert.Contains("\"targetPath\"", tool.InputSchema.ToString(), StringComparison.Ordinal);
                 Assert.DoesNotContain("projectRoot", tool.InputSchema.ToString(), StringComparison.Ordinal);
             }
+            else if (tool.Name is "inspect_assembly" or "find_assembly_extensions")
+            {
+                Assert.DoesNotContain("targetType", required);
+                Assert.Contains("targetPath", required);
+                Assert.Contains("\"targetType\"", tool.InputSchema.ToString(), StringComparison.Ordinal);
+                Assert.DoesNotContain("projectRoot", tool.InputSchema.ToString(), StringComparison.Ordinal);
+            }
             else
             {
                 Assert.Contains("targetType", required);
@@ -111,10 +118,22 @@ public sealed class WiringToolCollectionContractTests
             Assert.DoesNotContain("targetType='project'", description, StringComparison.Ordinal);
             Assert.Contains(".dll", description, StringComparison.Ordinal);
             Assert.Contains(".exe", description, StringComparison.Ordinal);
+            Assert.Contains("targetType ist optional", description, StringComparison.Ordinal);
         }
 
         Assert.Contains("Projekt- und Assembly-Sessions", tools["get_server_health"].Description, StringComparison.Ordinal);
         Assert.Contains("targetType='assembly'", tools["get_server_health"].Description, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(null, "C:\\build\\Library.dll", "assembly")]
+    [InlineData(null, "C:\\build\\Tool.exe", "assembly")]
+    [InlineData("project", "C:\\build\\Library.dll", "assembly")]
+    [InlineData("assembly", "C:\\build\\Library", "assembly")]
+    public void AssemblyOnlyTools_ResolveAssemblyTargetByDefaultOrExtension(
+        string? targetType, string targetPath, string expected)
+    {
+        Assert.Equal(expected, AssemblyAnalysisToolRegistrations.ResolveTargetType(targetType, targetPath));
     }
 
     [Fact]
@@ -143,6 +162,17 @@ public sealed class WiringToolCollectionContractTests
         Assert.Contains("\"mode\"", metrics.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("code_size", metrics.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("Default", metrics.Description, StringComparison.Ordinal);
+
+        var symbolBody = tools["get_symbol_body"];
+        Assert.Contains("symbolIdentifiers", symbolBody.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("symbolIdentifier", symbolBody.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("String-Alias", symbolBody.Description, StringComparison.Ordinal);
+
+        var findSymbol = tools["find_symbol"];
+        Assert.Contains("namePatterns", findSymbol.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("namePattern", findSymbol.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("symbol", findSymbol.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("String-Alias", findSymbol.Description, StringComparison.Ordinal);
     }
 
     [Fact]

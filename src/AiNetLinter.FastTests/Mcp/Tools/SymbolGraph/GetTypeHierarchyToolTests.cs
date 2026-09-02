@@ -291,7 +291,7 @@ public sealed class GetTypeHierarchyToolTests
         Assert.Contains("INVALID_ARGUMENT", staleText, StringComparison.Ordinal);
         Assert.Contains("aktuellen Assembly-Generation", staleText, StringComparison.Ordinal);
 
-        // 4. Unverpackte ID auf Assembly-Ziel wird ebenfalls abgelehnt (keine Umgehung der Generation-Pruefung)
+        // 4. Eine bare DocumentationCommentId wird auf die aktuelle Assembly-Generation bezogen
         var unwrappedCallResult = await AnalysisToolCall.ExecuteRouted(
             targetRoute,
             new AnalysisToolCallRequest(
@@ -302,8 +302,7 @@ public sealed class GetTypeHierarchyToolTests
 
         Assert.NotEqual(true, unwrappedCallResult.IsError);
         var unwrappedText = TextOf(unwrappedCallResult);
-        Assert.Contains("INVALID_ARGUMENT", unwrappedText, StringComparison.Ordinal);
-        Assert.Contains("aktuellen Assembly-Generation", unwrappedText, StringComparison.Ordinal);
+        Assert.Contains("IService", unwrappedText, StringComparison.Ordinal);
 
         // 5. Projekt-ID auf Projekt-Ziel bleibt weiterhin erfolgreich
         var projectRoot = ProjectRegistryFixture.CreateProjectRoot(temp, "probe-proj");

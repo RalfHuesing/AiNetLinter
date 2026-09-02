@@ -148,10 +148,10 @@ internal static class FindReferencesTool
 
         if (SymbolIdentifierResolver.TryParseLineOnlyPosition(identifier, out var linePath, out var lineOnly))
         {
-            return await ResolveByLineAsync(solution, identifier, linePath, lineOnly, ct);
+            return await ResolveByLineAsync(solution, identifier, linePath, lineOnly, assemblyIdentity, ct);
         }
 
-        return await ResolveByNameAsync(solution, identifier, ct);
+        return await ResolveByNameAsync(solution, identifier, assemblyIdentity, ct);
     }
 
 
@@ -254,7 +254,12 @@ internal static class FindReferencesTool
     /// Mehrdeutigkeitsbehandlung.
     /// </summary>
     private static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveByLineAsync(
-        Solution solution, string identifier, string path, int line, CancellationToken ct)
+        Solution solution,
+        string identifier,
+        string path,
+        int line,
+        AnalysisSymbolIdentity? assemblyIdentity,
+        CancellationToken ct)
     {
         var (root, text, semanticModel, error) = await ResolveDocumentForLineAsync(
             solution,
@@ -284,12 +289,15 @@ internal static class FindReferencesTool
         if (declarationsOnLine.Count == 1) return (declarationsOnLine[0], null);
 
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var lines = symbols.SelectMany(s => FindSymbolTool.FormatSymbolLocations(s, outputRoot));
+        var lines = symbols.SelectMany(s => FindSymbolTool.FormatSymbolLocations(s, outputRoot, assemblyIdentity));
         return (null, McpToolResults.AmbiguousSymbol(identifier, lines));
     }
 
     private static async Task<(ISymbol? Symbol, CallToolResult? Error)> ResolveByNameAsync(
-        Solution solution, string identifier, CancellationToken ct)
+        Solution solution,
+        string identifier,
+        AnalysisSymbolIdentity? assemblyIdentity,
+        CancellationToken ct)
     {
         var lastSegment = SymbolIdentifierResolver.StripParameterList(identifier).Split('.')[^1];
         var symbols = await SymbolFinder.FindSourceDeclarationsAsync(
@@ -304,7 +312,7 @@ internal static class FindReferencesTool
         if (candidates.Count == 1) return (candidates[0], null);
 
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var lines = candidates.SelectMany(s => FindSymbolTool.FormatSymbolLocations(s, outputRoot));
+        var lines = candidates.SelectMany(s => FindSymbolTool.FormatSymbolLocations(s, outputRoot, assemblyIdentity));
         return (null, McpToolResults.AmbiguousSymbol(identifier, lines));
     }
 }

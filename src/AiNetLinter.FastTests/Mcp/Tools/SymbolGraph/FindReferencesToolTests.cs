@@ -87,6 +87,24 @@ public sealed class FindReferencesToolTests
     }
 
     [Fact]
+    public async Task ResolveSymbolAsync_AmbiguousNameWithAssemblyIdentity_FormatsCurrentAssemblyIds()
+    {
+        using var context = new McpInMemoryTestContext();
+        var identity = new AnalysisSymbolIdentity(new string('e', 64), 8);
+
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
+            context.Solution,
+            "Run",
+            CancellationToken.None,
+            identity);
+
+        Assert.Null(symbol);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(error!.Content)).Text;
+        Assert.Contains($"assembly:{identity.ContentHash}:{identity.Generation}:M:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("id: `M:", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ResolveSymbolAsync_PositionIdentifier_ReturnsSymbolAtPosition()
     {
         var identifier = $"{SymbolGraphMiniSolutionSpec.GreeterPath}:5:19";

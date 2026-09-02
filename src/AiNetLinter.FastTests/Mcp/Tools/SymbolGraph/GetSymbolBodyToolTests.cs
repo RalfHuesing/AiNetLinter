@@ -74,6 +74,25 @@ public sealed class GetSymbolBodyToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ScalarSymbolIdentifierAlias_ReturnsBodyForMethod()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetSymbolBodyTool.ExecuteAsync(
+            state,
+            symbolIdentifiers: null,
+            maxBodyLines: 80,
+            ct: CancellationToken.None,
+            symbolIdentifier: "Greeter.Greet");
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.Contains(
+            "Greet",
+            Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ValidStableId_TruncatesAtMaxBodyLines_AppendsEllipsis()
     {
         var state = _fixture.CreateServer();

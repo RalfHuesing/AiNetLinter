@@ -41,6 +41,28 @@ public sealed class SymbolIdentifierResolverTests
     }
 
     [Fact]
+    public async Task TryResolveByStableIdAsync_CurrentAssemblyIdentityResolvesBareDocumentationId()
+    {
+        using var owner = RoslynTestSolutionFactory.CreateSolution(
+            "namespace Probe; public sealed class Current { public void Run() { } }");
+        var project = owner.Solution.Projects.Single();
+        var compilation = (await project.GetCompilationAsync())!;
+        var symbol = compilation.GetTypeByMetadataName("Probe.Current")!;
+        var rawId = DocumentationCommentId.CreateDeclarationId(symbol)!;
+        var identity = new AnalysisSymbolIdentity(new string('d', 64), 7);
+
+        var (resolved, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution,
+            rawId,
+            CancellationToken.None,
+            identity);
+
+        Assert.Null(error);
+        Assert.NotNull(resolved);
+        Assert.Equal(rawId, DocumentationCommentId.CreateDeclarationId(resolved));
+    }
+
+    [Fact]
     public async Task TryResolveByStableIdAsync_StaleAssemblyIdentityIsRejected()
     {
         using var owner = RoslynTestSolutionFactory.CreateSolution(
