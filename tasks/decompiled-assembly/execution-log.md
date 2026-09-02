@@ -391,3 +391,13 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Verifikation nach der letzten Änderung: gezielte Regression 1/1; Navigationstestbereich 7/7; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` sauber; lokaler CLI-Linter mit 12 bestehenden Violations außerhalb des Scopes.
 - MCP-Hinweis: MCP nur für statische Qualitätsorientierung verwendet, nicht als Feature-Verifikation; keine Release-/Live-/Stress-Prüfung.
 - Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.
+
+## 2026-09-02 – Paket 3 – Folge-Review running (aktuell)
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Folge-Reviewer
+- Subagent: `01a06218-b97a-7272-b74d-32284035d9ea`
+- Diff-Scope: Paket-3-Gesamtstand einschließlich Lease-Korrektur `dfb49a17`.
+- Status: running
+- Scope: vollständiges Root-first-Lease-Flattening, Deduplizierung, Navigationslimit/Vollständigkeit, Lifecycle sowie Regressionen für alle drei Symbolgraph-Routen; zusätzlich Regression-Sweep über Paket 3.
+- MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet; Release-/Live-/Stress-Verifikation bleibt ausgespart.

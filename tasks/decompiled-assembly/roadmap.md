@@ -4,7 +4,7 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 
 Status: executing  
 Current epic: Paket 3 – Folge-Review nach Korrekturrunde 1/5
-Letzter Commit: Lease-Korrektur unreviewt; Artefakt-Checkpoint folgt
+Letzter Commit: `dfb49a17` – Lease-Korrektur, Review läuft
 Current debt item: `NAV-TRANSITIVE-LEASE-COMPLETENESS-001`
 Debt attempts: 1
 Blocker: keiner
