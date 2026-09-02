@@ -489,7 +489,7 @@ Konkret:
 
 - Feature-Kontext vor Edit abrufen (Deklaration, Metriken, Callers, Tests, Violations) → `get_feature_context(symbolIdentifier: "MyClass.MyMethod")`; `symbol` bleibt kompatibler Alias
 - Statische Test-Zuordnung & Test-Methoden für ein Symbol finden → `get_test_context(symbolIdentifier: "MyClass")`; `symbol` bleibt kompatibler Alias
-- Klassennamen suchen → `find_symbol(namePatterns: ["MyClass"], kind: "Klasse")`; bei einem Assembly-Ziel Referenz-DLLs ausdrücklich mit `includeReferences: true` einbeziehen
+- Klassennamen suchen → `find_symbol(namePatterns: ["MyClass"], kind: "Klasse")` oder bei genau einem Muster `find_symbol(namePattern: "MyClass", kind: "Klasse")`; bei einem Assembly-Ziel Referenz-DLLs ausdrücklich mit `includeReferences: true` einbeziehen
 - Methoden-Aufrufer finden → `find_references(symbolIdentifier: "MyClass.MyMethod", depth: 2)`; `structuredContent.completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei `targetType: "assembly"` kann `find_references` mit `includeReferences: true` zusätzlich bounded Referenz-Assemblies und partielle Diagnostics einbeziehen.
 - Impact eines Symbols prüfen → `get_impact(symbolIdentifier: ..., depth: 2)`; `structuredContent.completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei `targetType: "assembly"` ausschließlich `symbolIdentifier` verwenden: `gitRef` oder ein leerer Aufruf sind nicht zulässig. Die Referenzexpansion ist intern festgelegt und nicht öffentlich wählbar.
 - Treffer semantisch einordnen → `search_pattern(pattern: "MyClass", enrichCSharp: true)`; `semantic.resolution` prüfen und bei `ambiguous`/`unavailable` den Snapshot-/Projektbezug oder `find_symbol`/`get_feature_context` verwenden
@@ -497,6 +497,7 @@ Konkret:
 - Konfigwert in `.json` finden → `search_pattern(pattern: "MySetting")` (oder direkt `rg`, das ist hier äquivalent)
 - TODO-Kommentare listen → `search_pattern(pattern: "TODO", isRegex: false)` (oder `rg "TODO"`)
 - Lint-Stand einer Datei → `get_violations(scopeFilter: "src/MeinProjekt/Service.cs")`
+- Produktions-Hotspots isolieren → `get_hotspots(scopeType: "production")`; `tests` und `all` sind ebenfalls möglich. `get_index_scope` zeigt die tatsächlich vorhandenen Dateiendungen einschließlich Nicht-C#-Dateien ohne künstliche Null-Einträge.
 
 ### Erstorientierung: Resources
 

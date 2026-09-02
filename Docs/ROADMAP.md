@@ -909,17 +909,28 @@ Lifecycle aller Prozessrollen in einer gemeinsamen Tagesdatei sichtbar macht:
   Defaults, Bereichsprüfungen, Severity-Klassifizierung) in `AiNetLinter.FastTests/Logging/`;
   Abschnitt „System-Logging" in `Docs/configuration.md`.
 
-## MCP-Batch-Toolfamilie: Reine Array-Parameter & Einheits-DTOs (Task 13)
+## MCP-Batch-Toolfamilie: Array-Parameter mit kompatiblen Singular-Aliases (Task 13)
 
-Vollständige Umstellung der vier MCP-Batch-Tools auf reine Array-Parameter und Beseitigung des Singular/Array-Dualismus:
+Die Batch-Tools verwenden weiterhin einheitliche Array-Parameter und DTOs. Für ergonomische
+Einzelabfragen bleiben skalare, optionale Aliases kompatibel:
 
-- [x] **Reine Array-Parameter:** `find_symbol` (`namePatterns`), `get_file_skeleton` (`filePaths`), `get_symbol_body` (`symbolIdentifiers`), `metrics_lookup` (`symbolIdentifiers`). Alle Singular-Parameter (`namePattern`, `filePath`, `symbolIdentifier`) vollständig entfernt.
+- [x] **Array-Parameter als kanonische Form:** `find_symbol` (`namePatterns`), `get_file_skeleton` (`filePaths`), `get_symbol_body` (`symbolIdentifiers`), `metrics_lookup` (`symbolIdentifiers`).
+- [x] **Kompatible Einzel-Aliases:** `find_symbol` akzeptiert `namePattern` und `symbol`, `get_symbol_body` akzeptiert `symbolIdentifier`; bei gemischter Eingabe hat das Array Vorrang.
 - [x] **Einheitliche Helper-Logik:** `McpBatchArguments.Normalize` ersetzt `Collect` (kein Single/Multiple-Merge-Code mehr, string-trimming, Leer-/Whitespace-Filterung, Ordinal- bzw. OrdinalIgnoreCase-Deduplizierung).
 - [x] **Batch-DTO-Vereinheitlichung:**
   - `find_symbol` liefert immer `FindSymbolBatchDto` (`results: [{ namePattern, matches: [...] }]`), auch bei Länge 1.
   - `metrics_lookup` liefert immer `MetricsLookupBatchDto` (`results`, `requestedCount`), auch bei genau einem Symbol.
 - [x] **Cap & Validierung:** `find_symbol` hat hartes Limit `MaxPatternsPerCall = 10` (bei > 10 sofort `INVALID_ARGUMENT`); alle 4 Tools liefern einheitliches `INVALID_ARGUMENT` bei leerem/fehlendem Parameter.
 - [x] **Tests & Integration:** Sämtliche Unit-, Komponenten- und Integrationstests aktualisiert; neue Tests für Normalisierung, Batch-Ausführung, Caps und Multi-Pattern-Miss-Hints.
+
+## MCP-Server Usability & Ergonomie (Findings v1.0.161)
+
+- [x] **F-01 Assembly-Disambiguierung:** Bare DocumentationCommentIds aus Ambiguitätshinweisen werden in der aktuellen Assembly-Generation akzeptiert; Kandidaten zeigen direkt generationgebundene `assembly:<hash>:<generation>:<symbolId>`-IDs.
+- [x] **F-02 Einzelabfragen:** `get_symbol_body` und `find_symbol` bieten optionale skalare Aliases bei unverändertem Batch-Vertrag.
+- [x] **F-03 Hotspot-Scope:** `get_hotspots` unterstützt `scopeType=production|tests|all` mit Produktions-Default.
+- [x] **F-04 Assembly-Defaults:** `inspect_assembly` und `find_assembly_extensions` inferieren Assembly-Ziele ohne redundantes `targetType`.
+- [x] **F-05 Kompakter Pattern-Report:** Null-Treffer-Ausgaben von `pattern_detect` bleiben bei mehreren Patterns kompakt; Ein-Pattern-Abfragen behalten Details.
+- [x] **F-06 Dynamischer Index-Scope:** `get_index_scope` listet vorhandene Dateiendungen dynamisch, unterdrückt Null-Einträge und weist Nicht-C#-Dateien aus.
 
 ---
 
