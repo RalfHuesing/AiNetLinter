@@ -2,7 +2,60 @@
 
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
-Aktuell sind noch keine Befunde aus einem Rollenbericht triagiert.
+## Aktive Korrekturen
+
+Die folgenden P1-Befunde sind nach dem Review für eine frische Korrekturrunde
+aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
+
+### TD-ASM-ACCESSOR-001 – Accessor-Matching verliert das zugehörige Member
+
+- Schweregrad: P1
+- Status: aktiv, Versuch 1/5 steht an.
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/Bodies/AssemblyDecompiledBodyResolver.cs`, Accessor-Matching.
+- Evidenz: Review des Diffs `396e77f1..b3bb2ea8`; ein Descendant-Scan vergleicht nur Accessor-Kinds und kann bei mehreren gleichartigen Properties/Events den falschen Body wählen.
+- Disposition: `fix-now`
+- Nächster Schritt: Accessor über `AssociatedSymbol` auf den direkten Property-/Indexer-/Event-Member begrenzen und Regressionen ergänzen.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 1 Review, P1-Finding A.
+
+### TD-ASM-CACHE-001 – In-Flight-Generation wird vor Publish-Return löschbar
+
+- Schweregrad: P1
+- Status: aktiv, Versuch 1/5 steht an.
+- Scope/Fundstelle: `AssemblyDecompilationCache.Publish` und `AssemblyCacheCleanup`.
+- Evidenz: Review-Gegenbeispiel mit konkurrierenden Publishern unterschiedlicher Fingerprints; eine erfolgreich gemeldete Generation kann vor dem Return durch Retention gelöscht werden.
+- Disposition: `fix-now`
+- Nächster Schritt: Publisher/Retention pro Cache-Key synchronisieren oder In-Flight-Generationen schützen und mit einem verzögerten Multi-Fingerprint-Test absichern.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 1 Review, P1-Finding B.
+
+### TD-ASM-FRAMEWORK-001 – Exakte Assembly `System` nicht vereinheitlicht
+
+- Schweregrad: P1
+- Status: aktiv, Versuch 1/5 steht an.
+- Scope/Fundstelle: `AssemblyReferenceResolver` Framework-Namens-/Versionsprüfung.
+- Evidenz: `StartsWith("System.")` erfasst nicht den exakten Namen `System`, obwohl die freigegebene Fachentscheidung die Familie `System` nennt.
+- Disposition: `fix-now`
+- Nächster Schritt: exaktes `System` ergänzen, `Systemish` ausschließen und Regressionstest hinzufügen.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 1 Review, P1-Finding C.
+
+### TD-ASM-HEALTH-TEST-001 – Direkter Registrierungstest der Health-Route fehlt
+
+- Schweregrad: P2
+- Status: zurückgestellt bis zur passenden Test-Matrix.
+- Scope/Fundstelle: private Route in `ServerMaintenanceToolRegistrations.cs`.
+- Evidenz: Der vorhandene Test prüft den Tool-Level-Aufruf, nicht die Closure der Registrierung.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: In Paket 4 einen direkten Registrierungstest ergänzen, sofern die Route weiterhin privat verdrahtet ist.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 1 Review, P2-Empfehlung 1.
+
+### TD-ASM-EVIDENCE-001 – Abweichende get-impact-Nachweiszahl
+
+- Schweregrad: P2
+- Status: zurückgestellt; kein Codefehler belegt.
+- Scope/Fundstelle: Implementiererbericht versus aktueller MCP-Impact-Nachweis.
+- Evidenz: Implementierer meldete 37 geänderte Symbole; Reviewer-Abfrage mit `gitRef=396e77f1` meldete 48.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: Abschlussnachweise mit eindeutigem Git-Ref und aktuellem Scope reproduzieren.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 1 Review, P2-Empfehlung 2.
 
 ## TD-QL-001 – AIContextFootprint-Warnungen in Assembly-Modulen
 

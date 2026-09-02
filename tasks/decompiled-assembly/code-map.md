@@ -11,7 +11,7 @@
 
 ## Betroffene Dateien und Symbole
 
-- `AssemblyDecompiledBodyResolver` (`FindMember`, `MatchesMember`, `MatchesAccessor`, Typnamensauflösung; aktuell `:16-278`) unterstützt Top-Level-`INamedTypeSymbol`, Struct/Enum/Record/Interface und Property-/Event-Accessor-Syntax.
+- `AssemblyDecompiledBodyResolver` (`FindMember`, `MatchesMember`, `MatchesAccessor`, Typnamensauflösung; aktuell `:16-297`) unterstützt Top-Level-`INamedTypeSymbol`, Struct/Enum/Record/Interface und Property-/Event-Accessor-Syntax.
 - `AssemblyDecompilationCache.Publish` (aktuell `:66-114`) unterscheidet eigene Publikation, konkurrierend vorhandene Generation und Fehler; `TryPublishPointer`/`PublishPointerAttempt` liegen für die Größeninvariante in `AssemblyDecompilationCache.PointerPublishing.cs` (`:9-147`). Bei Cache-Hit wird die tatsächliche Current-Pointer-Generation zurückgegeben, das lokale temporäre Verzeichnis bleibt cleanup-fähig.
 - `AssemblyReferenceResolver.IdentityMatches` (`:356-360`) toleriert Versionen nur für `mscorlib`, `System.*`, `Microsoft.*` und `WindowsBase*`; Kultur und Drittanbieter-Versionen bleiben strikt. Die Prefix-/Namensentscheidung liegt in `IsVersionTolerantFrameworkAssembly` (`:362-364`).
 - `SymbolIdentifierResolver.TryResolveByStableIdAsync` (`:131-178`) nutzt für Assembly-IDs nach exaktem Match einen eindeutigen, marker-/shape-toleranten Fallback; Parsing und Parameterzählung liegen in den privaten Helfern `:180-266`.
@@ -21,7 +21,7 @@
 ## Aufrufer und Abhängigkeiten
 
 - `AssemblyDecompilationAdapter` ruft den Body-Resolver auf; `AssemblyAnalysisSession` bindet Cache und Reference-Resolver in den Assembly-Snapshot-Lifecycle ein.
-- Der Cache wird zusätzlich von `AssemblyDiagnosticCodes`, Session-Tests und der Adapter-Pipeline verwendet; `Publish` löscht nur die eigene, nicht publizierte Generation.
+- Der Cache wird zusätzlich von `AssemblyDiagnosticCodes`, Session-Tests und der Adapter-Pipeline verwendet; `Publish` löscht im `finally` nur die eigene, noch nicht als publiziert markierte Generation. `RetainGenerations` kennt jedoch keine in-flight Publisher und kann eine Generation zwischen Pointer-Erfolg und Return eines konkurrierenden Publishers entfernen.
 - `AssemblyReferenceSessionExpander` und `SourceProjectReferenceGraph` verwenden `AssemblyReferenceResolver`; die vollständige MCP-Caller-Liste war auf 20/39 gekappt und wird lokal nicht als vollständig behauptet.
 - `FindReferencesTool` und `GetTypeHierarchyFormatter` verwenden `SymbolIdentifierResolver`; der Fallback läuft nur nach erfolgreicher Assembly-Identitätsprüfung.
 - `DaemonHost` reicht den Snapshot-Provider in jede `DaemonRuntimeContext`-Instanz; Health-Registrierung und `GetServerHealthTool` verwenden ihn für gezielte Projektziele.
@@ -29,11 +29,11 @@
 
 ## Relevante Tests, Konfiguration und Dokumentation
 
-- Cache-/Session-Bereich: `AssemblyAnalysisSessionTests.cs` enthält jetzt den gezielten parallelen Publish-Test neben den bestehenden Session-/Cache-Tests; der Test verifiziert zwei konkurrierende Publisher und ausschließlich existierende Generation-Verzeichnisse.
+- Cache-/Session-Bereich: `AssemblyAnalysisSessionTests.cs` enthält jetzt den gezielten parallelen Publish-Test neben den bestehenden Session-/Cache-Tests; der Test startet mit einem initialen Publish und verifiziert zwei parallele Cache-Hits sowie ausschließlich existierende Generation-Verzeichnisse. Konkurrierende Erst-Publisher mit demselben Cache-Key, aber unterschiedlichen Fingerprints, sind nicht abgedeckt.
 - Body-/Navigation-Bereich: `AssemblyAnalysisPathContractTests.cs` enthält den Top-Level-/Struct-/Enum-/Record-/Interface-/Getter-/Setter-Test; `AssemblyDecompiledBodyResolver` ist als Coverage-Symbol markiert.
 - Framework-Unification: neue `AssemblyReferenceResolverTests.cs` (`:19-52`) deckt `mscorlib`, `System.*`, `Microsoft.*`, `WindowsBase`/`WindowsBase.*`, Kulturbindung, Drittanbieter-Versionen und Nicht-Präfix-Ähnlichkeit ab; der bestehende falsche Drittanbieter-Versionsfall bleibt erhalten.
 - Stable-ID: `SymbolIdentifierResolverTests.cs` enthält jetzt die Marker-Regression neben den bestehenden 11 Tests.
-- Daemon-Health: `WiringProjectContractTests.cs` enthält den Proxy-Kontext-Test; `DaemonRuntimeContext.FindProjectSnapshot`, `IDaemonRegistry.FindSnapshot`, `DaemonRegistryAdapter.FindSnapshot` und die explizite Registrierungsroute werden damit abgedeckt; `GetServerHealthToolTests.cs` behält die 7 Integrationstests für die öffentliche Health-Projektion.
+- Daemon-Health: `WiringProjectContractTests.cs` enthält den Tool-Level-Proxy-Kontext-Test mit einem daemon-residenten Snapshot; die private `ServerMaintenanceToolRegistrations`-Closure wird dabei nicht direkt ausgeführt. `GetServerHealthToolTests.cs` behält die 7 Integrationstests für die öffentliche Health-Projektion.
 - Testverträge und Kategorien bleiben im bestehenden Fast-/Integration-Testaufbau; der neue Cache-Test ist gezielt und nicht als Stress-Test markiert.
 - `tasks/decompiled-assembly/Konzept.md` und `roadmap.md` sind Navigationshilfe; `rules.json`, `Docs/`, `README.md` und `instructions.md` sind für Paket 1 nur zu ändern, falls die tatsächliche Umsetzung einen dort dokumentierten Vertrag berührt.
 
@@ -41,7 +41,7 @@
 
 - Fremde Assemblies bleiben metadata-only; kein dynamisches Laden oder Ausführen.
 - Framework-Unification bleibt auf `mscorlib`, `System.*`, `Microsoft.*` und `WindowsBase*` begrenzt; Drittanbieter-Versionen bleiben strikt, Kultur bleibt bindend.
-- Der Cache darf kein erfolgreich publiziertes oder zurückgegebenes Generation-Verzeichnis im Fehlerpfad löschen; konkurrierende Publisher dürfen nur eigene temporäre Generationen entfernen.
+- Der Cache darf kein erfolgreich publiziertes oder zurückgegebenes Generation-Verzeichnis im Fehlerpfad löschen; lokal temporäre Generationen werden von `Publish` bereinigt, während `RetainGenerations` ausschließlich die übergebene aktuelle Generation und höchstens einen Vorgänger schützt und keine weiteren in-flight Publisher kennt.
 - Skeleton-ID-Fallback akzeptiert keine stale Assembly-Identität und liefert bei fehlender oder mehrdeutiger Zuordnung weiterhin `null` für den bestehenden Fallbackpfad.
 - Der Daemon-Kontext referenziert für gezielte Projekt-Health den residenten `ProjectSnapshot`; ohne Snapshot bleibt `PROJECT_NOT_INITIALIZED` korrekt.
 - Die MCP-Caller-Liste des `AssemblyReferenceResolver` war bei 20/39 gekappt; dieser bekannte Evidenzrest bleibt als Risiko dokumentiert.
