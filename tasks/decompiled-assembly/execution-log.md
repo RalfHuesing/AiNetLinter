@@ -210,6 +210,7 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Status: running
 - Scope: Namespace-/Response-Budget, Signature-only-Stub-Fehlerlast, AIContextFootprint und Referenz-Session-Lebenszeit gemäß Paket 3; keine Paket-4-Abschlussmatrix und keine Release-/Live-MCP-Verifikation.
 - MCP-Hinweis: Laufender Server ist älter als der Working Tree; nicht als Feature-Nachweis verwenden.
+- Subagent: `01a06180-c9cf-76e3-8e14-93289a28acd8`
 
 ## 2026-09-02 – Paket 2 – Korrekturversuch 1 – Implementierer
 
