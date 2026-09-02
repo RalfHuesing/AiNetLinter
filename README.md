@@ -1,62 +1,53 @@
 # AiNetLinter
 
-AiNetLinter ist ein Roslyn-basierter Linter und MCP-Server für C#-Solutions.
-Er prüft Code gegen konfigurierbare Regeln und stellt Coding-Agenten
-semantische Informationen über Code, Abhängigkeiten und Änderungen bereit.
+AiNetLinter ist ein Roslyn-basierter MCP-Server für C#-Solutions und lokale
+.NET-Assemblies (`.dll`/`.exe`). Er stellt Coding-Agenten gezielt abgefragten,
+strukturierten Kontext zu Symbolen, Abhängigkeiten, Auswirkungen, Tests,
+Metriken und Regelverstößen bereit.
 
-Im CLI-Modus schreibt AiNetLinter einen Markdown-Report und einen passenden
-Exit-Code. Im MCP-Modus stellt es dieselbe Analyse-Engine als gezielt
-abfragbare Werkzeuge bereit. Build und Tests werden nicht ersetzt; sie bleiben
-eigenständige Prüfungen.
+Die Antworten sind begrenzt und weisen ihren Vollständigkeitsstatus aus.
+Agenten können dadurch weitere Informationen gezielt nachladen, statt
+standardmäßig große Teile eines Repositorys als Kontext zu verwenden. Die
+zugrunde liegende Analyse-Engine ist zusätzlich als CLI-Linter für
+konfigurierbare Regeln, Baselines, automatische Fixes und Quality Gates
+verfügbar.
 
 ## Für Entwicklungs- und Agentenworkflows
 
-| Situation | AiNetLinter liefert |
-| :--- | :--- |
-| Vor einer Änderung | Deklarationen, Member-Struktur, Metriken, Aufrufer, zugeordnete Tests und offene Regelverstöße für ein Symbol. |
-| Beim Nachvollziehen von Abhängigkeiten | Referenzen, Aufrufer- und Aufgerufene-Bäume, Typ-Hierarchien und semantische Dateiabhängigkeiten. |
-| Nach einer Änderung | Git-Diff-bezogene Auswirkungen, statisch zugeordnete Tests, Regelverstöße und ein Quality-Gate. |
-| Beim Erkunden einer fremden Assembly | Öffentliche API, Typen, Member und klassische Extension-Methoden aus `.dll` oder `.exe` – ohne die Assembly zu laden oder auszuführen. |
+Der MCP-Server unterstützt die Analyse vor, während und nach einer Änderung:
+
+| Situation | Beispiele | AiNetLinter liefert |
+| :--- | :--- | :--- |
+| Vor einer Änderung | `get_feature_context`, `get_class_structure` | Deklaration, Member-Struktur, Metriken, direkte Aufrufer, statische Testzuordnung und Regelverstöße für ein Symbol. |
+| Beim Nachvollziehen von Abhängigkeiten | `find_references`, `get_call_tree`, `get_type_hierarchy`, `dependency_graph` | Aufrufstellen, Aufrufer- und Aufgerufene-Bäume, Typ-Hierarchien und semantische Abhängigkeiten. |
+| Nach einer Änderung | `get_impact`, `get_test_context`, `safeguard` | Betroffene Symbole und Dateien, statisch zugeordnete Tests, diffbezogene Regelverstöße und ein Quality Gate. |
+| Beim Erkunden einer fremden Assembly | `inspect_assembly`, `find_assembly_extensions` | Öffentliche API, Typen, Member und klassische Extension-Methoden aus einer lokalen `.dll` oder `.exe`. |
 
 Die MCP-Tools geben zu begrenzten Ergebnissen und nicht auflösbaren
 Abhängigkeiten ihren Vollständigkeitsstatus aus. Agenten können ihren nächsten
 Schritt daran ausrichten, statt den gesamten Repository-Inhalt als Kontext zu
-laden.
+laden. Build und Tests werden nicht ersetzt; sie bleiben eigenständige
+Prüfungen. Die semantischen MCP-Abfragen sind auf C# ausgerichtet und machen
+Grenzen wie nicht auflösbare Abhängigkeiten oder gekürzte Ergebnisse sichtbar.
 
-### Externe Assemblies mit Quellkontext
+## Externe Assemblies statisch analysieren
 
 `inspect_assembly` und `find_assembly_extensions` untersuchen eine lokale
-`.dll` oder `.exe` statisch über Roslyn. Ohne verfügbare Quelle erzeugt AiNetLinter dafür
-eine dekompilierte, schreibgeschützte Analyse-Session.
+`.dll` oder `.exe` statisch über Roslyn-Metadaten. Die Assembly wird dafür nicht
+geladen oder ausgeführt. Ohne verfügbare Quelle erzeugt AiNetLinter eine
+dekompilierte, schreibgeschützte Analyse-Session.
 
-Bei `inspect_assembly` ist `memberNames` eine case-insensitive exakte OR-Auswahl;
-`memberName` bleibt eine Teiltextsuche. Referenz-Assemblies werden bei
-`find_assembly_extensions` nur mit `includeReferences=true` einbezogen (Default: `false`).
+Für eine eingebundene Fremd-Assembly kann zusätzlich eine passende
+Source-Solution aus einem konfigurierten öffentlichen Git-Repository
+zugeordnet werden. Dann arbeitet die Assembly-Analyse mit einem
+schreibgeschützten Source-Snapshot dieser Solution. Herkunft, Snapshot und
+mögliche unvollständige Abhängigkeiten bleiben im Ergebnis sichtbar.
 
-Für eine eingebundene Fremd-Assembly kann zusätzlich eine passende Source-Solution
-aus einem konfigurierten öffentlichen Git-Repository zugeordnet werden. Dann
-arbeitet die Assembly-Analyse mit einem schreibgeschützten Source-Snapshot
-dieser Solution. Symbolsuche, Struktur-, Referenz- und Metrikabfragen beziehen
-sich damit auf den Quellkontext; Herkunft, Snapshot und mögliche unvollständige
-Abhängigkeiten bleiben im Ergebnis sichtbar.
-
-Der Abschnitt `ExternalSources` in `appsettings.json` verweist auf die
-Mapping-Datei und begrenzt die Ressourcen. Ohne gültige Quellzuordnung bleibt
-die Dekompilierung der sichere Fallback. Details und der Konfigurationsvertrag:
-[External-Source-Mapping](Docs/configuration.md#expliziter-external-source-mappingvertrag).
+Details zum Verhalten, zu Filtern und zum Konfigurationsvertrag:
+[External-Source-Mapping](Docs/configuration.md#expliziter-external-source-mappingvertrag)
+und [MCP- und CLI-Referenz](Docs/agent-api.md).
 
 ## Schnellstart
-
-### Als CLI ausführen
-
-```powershell
-ainetlinter --config rules.json --path .\src\MeinProjekt.slnx
-```
-
-Der Lauf liefert Exit-Code `0`, wenn keine neuen Verstöße gefunden werden, und
-`1`, wenn Verstöße vorliegen. Für die schrittweise Einführung stehen Baselines
-bereit; einfache Roslyn-basierte Korrekturen lassen sich mit `--fix` anwenden.
-Aus der Regelkonfiguration können außerdem Agenten-Regeln synchronisiert werden.
 
 ### Als MCP-Server registrieren
 
@@ -86,6 +77,18 @@ verwenden anschließend `targetType` (`project` oder `assembly`) und einen
 absoluten `targetPath`. Für den Projektstart stellt
 `ainetlinter://agent-guide` den Bootstrap bereit; `tools/list` beschreibt die
 aktuell registrierten Tools und ihre Parameter.
+
+### Als CLI-Linter ausführen
+
+```powershell
+ainetlinter --config rules.json --path .\src\MeinProjekt.slnx
+```
+
+Der Lauf liefert einen Markdown-Report und einen Exit-Code: `0`, wenn keine
+neuen Verstöße gefunden werden, und `1`, wenn Verstöße vorliegen. Für die
+schrittweise Einführung stehen Baselines bereit; einfache Roslyn-basierte
+Korrekturen lassen sich mit `--fix` anwenden. Aus der Regelkonfiguration
+können außerdem Agenten-Regeln synchronisiert werden.
 
 ## Dokumentation
 
