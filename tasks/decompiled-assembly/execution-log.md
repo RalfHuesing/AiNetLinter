@@ -186,6 +186,16 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Nicht ausgeführt: Release-/Live-Verifikation, vollständige Nicht-Stress-Gates, Paket 3/4 und `safeguard`.
 - Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.
 
+## 2026-09-02 – Paket 3 – Folge-Review running (aktuell)
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Reviewer
+- Subagent: `01a0620b-a03a-7212-974e-3bc4ebb8b625`
+- Diff-Scope: Paket-3-Gesamtstand einschließlich Konstruktor-Korrektur `cf0a0343`.
+- Status: running
+- Scope: Signature-only-Parsierbarkeit und Ausschlüsse, Response-/Namespace-Budgets, Footprint-Refactoring sowie Reference-Session-/Lease-/Retirement-Lifecycle.
+- MCP-Hinweis: Laufender Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet; Release-/Live-Verifikation bleibt ausgespart.
+
 ## 2026-09-02 – Paket 2 – Folge-Review nach Korrekturversuch 2
 
 - Run-ID: `decompiled-assembly-20260902`
