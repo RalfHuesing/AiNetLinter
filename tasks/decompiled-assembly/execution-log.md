@@ -401,3 +401,19 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Status: running
 - Scope: vollständiges Root-first-Lease-Flattening, Deduplizierung, Navigationslimit/Vollständigkeit, Lifecycle sowie Regressionen für alle drei Symbolgraph-Routen; zusätzlich Regression-Sweep über Paket 3.
 - MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet; Release-/Live-/Stress-Verifikation bleibt ausgespart.
+
+## 2026-09-02 – Paket 3 – Folge-Review nach Lease-Korrektur
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Folge-Reviewer
+- Subagent: `01a06218-b97a-7272-b74d-32284035d9ea`
+- Diff-Scope: Lease-Korrektur `dfb49a17` und Paket-3-Gesamtstand.
+- Status: terminal abgeschlossen; neues P1 erfordert Korrekturrunde 1/5.
+- Urteil: `issues`.
+- P1-Finding `NAV-TRANSITIVE-SOURCE-COVERAGE-001`: `AssemblyNavigationLeaseAccess.GetLeases` flatteniert den Lease-Baum korrekt, aber `AssemblyNavigationSourceFactory.CreateSources` berücksichtigt weiterhin nur Target und Root. Bei Root → Dependency → TransitiveDependency können `find_references` und Call-Tree dadurch Treffer in der Zwischenabhängigkeit verlieren; die neue Regression prüft dort bislang nur `totalAssemblyCount`.
+- Korrekturhinweis: Für alle zugelassenen, nicht abgeschnittenen Leases Quellen erzeugen und konkrete Treffer samt Assembly-Origin in `find_references` und Call-Tree prüfen.
+- Restrisiken P2: Session-Cap kann `completeness=complete` trotz `assembliesTruncated=true` liefern; asynchrone Lease-Registrierungsrace; Operator-/Conversion-Operator-Matrix; Namespace-Summary bei extremem Trimming.
+- Verifikation: lokale fokussierte Regressionen 5/5, Commit-Check sauber; kein MCP-, Live-, Release- oder Stress-Nachweis.
+- MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wurde nicht als Feature-Nachweis verwendet.
+- Code-Map: nicht geändert; kein konkreter Scope-/Historienbefund.
+- Nächste Aktion: frischer Implementierer für `NAV-TRANSITIVE-SOURCE-COVERAGE-001`, Versuch 1/5.

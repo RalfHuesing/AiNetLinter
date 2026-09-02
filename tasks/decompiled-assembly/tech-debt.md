@@ -20,7 +20,7 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### TD-ASM-CACHE-001 – In-Flight-Generation wird vor Publish-Return löschbar
 
 - Schweregrad: P1
-- Status: behoben, Review ausstehend (Korrekturversuch 1/5).
+- Status: behoben, Folge-Review ausstehend (Korrekturversuch 1/5).
 - Scope/Fundstelle: `AssemblyDecompilationCache.Publish` und `AssemblyCacheCleanup`.
 - Evidenz: Review-Gegenbeispiel mit konkurrierenden Publishern unterschiedlicher Fingerprints; eine erfolgreich gemeldete Generation kann vor dem Return durch Retention gelöscht werden.
 - Disposition: `fixed`
@@ -126,6 +126,16 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 - Disposition: `fix-now`
 - Nächster Schritt: Folge-Review des Korrekturstands; bei Bestätigung als `fixed` schließen.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Folge-Review.
+
+### NAV-TRANSITIVE-SOURCE-COVERAGE-001 – Navigation erzeugt Quellen nicht für transitive Leases
+
+- Schweregrad: P1
+- Status: aktiv, Versuch 1/5 läuft.
+- Scope/Fundstelle: `AssemblyNavigationSourceFactory.CreateSources`.
+- Evidenz: Trotz vollständigem Lease-Flattening werden weiterhin nur Target und Root als Navigation-Quellen erzeugt. Bei Root → Dependency → TransitiveDependency können `find_references` und Call-Tree dadurch Aufrufstellen in der direkten Zwischenabhängigkeit verlieren; reine Assembly-Zähltests erkennen das nicht.
+- Disposition: `fix-now`
+- Nächster Schritt: Quellen für alle zugelassenen, nicht abgeschnittenen Leases erzeugen und konkrete Treffer samt Assembly-Origin für `find_references` und Call-Tree regressionstesten.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Folge-Review nach Lease-Korrektur.
 
 ### TD-SIGONLY-COVERAGE-001 – Signature-only-Ausschlüsse und Operatoren nicht direkt abgesichert
 
