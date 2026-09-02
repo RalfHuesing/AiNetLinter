@@ -20,6 +20,8 @@
 | `[F-08]` | `[Agenten-Sackgasse / Graph-Bruch]` | P1 | S | `get_file_tree` | Default-Depth-Falle (`treeDepth=2`) maskiert 95% des Projekts bei gleichzeitiger Falschmeldung `[vollstaendig]`. |
 | `[F-09]` | `[Token-Waste & Payload-Bloat]` | P2 | S | `find_magic_values` | Ertrinkt in CLI-Optionen und Einzelfunden durch bindestrichbasierte Heuristik und `minOccurrences=1`. |
 | `[F-10]` | `[Token-Waste & Payload-Bloat]` | P3 | S | `find_duplicates` | Scope-Default `"all"` wird von Test-Boilerplate dominiert und verdrängt Produktionscode-Klone. |
+| `[F-11]` | `[Agenten-Sackgasse / Graph-Bruch]` | P1 | S | `find_symbol` | Scheitert an Wildcards (`*`, `?`), punktseparierten Namen (`Type.Member`) und Methodenklammern; unterschlägt Namensalternativen bei Miss. |
+| `[F-12]` | `[Token-Waste & Payload-Bloat]` | P2 | S | `search_pattern` | Fehlt `scopeType`-Filterung (Test-Pollution) und bietet keine Wildcard-Leitplanke bei 0 Treffern. |
 
 ---
 
@@ -209,3 +211,48 @@
   - [`src/AiNetLinter/Mcp/Registration/DuplicateDetectionToolRegistrations.cs:33`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Registration/DuplicateDetectionToolRegistrations.cs#L33): `string? scopeType = "all"`.
 - **Konkreter, architektonisch sauberer Lösungsvorschlag:**
   `scopeType` analog zu `find_dead_code` (`includeTests: false`) und `find_magic_values` (`includeTests: false`) standardmäßig auf `"production"` setzen. Tests sollten nur bei explizitem Opt-in (`scopeType: "all"` oder `scopeType: "tests"`) einbezogen werden.
+
+---
+
+### `[F-11]` `find_symbol` scheitert an Wildcards, punktseparierten Namen und Methodenklammern; unterschlägt Namensalternativen bei Miss
+- **Kategorie:** `[Agenten-Sackgasse / Graph-Bruch]`
+- **Schweregrad:** P1 (Blocker / falsche Negativbefunde)
+- **Geschätzter Aufwand:** S (Stunden)
+- **Betroffene MCP-Tools & Parameter:** `find_symbol` (`namePatterns: ["*MagicValues*"]`, `namePatterns: ["FindSymbolTool.ExecuteAsync"]`, `namePatterns: ["ExecuteAsync()"]`).
+- **Symptom & Agentic Friction:**
+  1. **Wildcard-Match-Failure:** Ein Agent sucht oft mit Wildcards (z. B. `*MagicValues*`, `Inspect*Tests`, `Get*`, `*Scanner`). Roslyns `SymbolFinder.FindSourceDeclarationsAsync` führte strikt `name.Contains(request.NamePattern)` aus. Da C#-Identifier kein `*` oder `?` enthalten, ergab jede Wildcard-Suche `0 Treffer` und meldete fälschlicherweise `"kein C#-Symbol"`.
+  2. **Punktseparierte Namen:** Sucht ein Agent nach `FindSymbolTool.ExecuteAsync` oder `Namespace.Type`, scheiterte `name.Contains("...")` immer, weil Roslyn als Symbolnamen ausschließlich den einfachen Bezeichner (`ExecuteAsync`) führt.
+  3. **Methodenklammern:** Suchen wie `ExecuteAsync()` oder `Greet()` scheiterten ebenfalls am exakten Bezeichnerabgleich.
+  4. **Keine "Did-You-Mean"-Vorschläge:** Bei 0 Treffern (z. B. Tippfehler oder ungefähre Klassennamen) gab es keinerlei Hinweis auf existierende ähnliche Symbole im geladenen Projekt.
+- **Token-Impact:** Agenten folgern fälschlicherweise, dass ein Symbol nicht existiert, und weichen auf ineffiziente globale Text- oder Grep-Suchen aus.
+- **Verifizierte Codestellen (AiNetLinter):**
+  - [`src/AiNetLinter/Mcp/Tools/SymbolGraph/FindSymbolScanner.cs`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/SymbolGraph/FindSymbolScanner.cs): `name => name.Contains(request.NamePattern)` in `SymbolFinder.FindSourceDeclarationsAsync`.
+  - [`src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblySymbolSearch.cs`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblySymbolSearch.cs): Identische Einschränkung in Assembly-Suchen.
+- **Konkreter, architektonisch sauberer Lösungsvorschlag & Umsetzung:**
+  1. Zentraler [`SymbolNameMatcher`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/SymbolGraph/SymbolNameMatcher.cs) für pattern-basierte Vorfilterung und exaktes Symbol-Matching:
+     - Automatische Klammerbereinigung (`Method()` -> `Method`).
+     - Übersetzung von Wildcards (`*`, `?`) in Regex-Prädikate.
+     - Unterstützung punktseparierter Pfade (`Type.Member`), indem sowohl Member- als auch Typsegmente vorselektiert und die Containment-Hierarchie validiert werden.
+  2. `FindSimilarSymbolNamesAsync`: Bei 0 Treffern analysiert der Server Wortbausteine und schlägt bis zu 5 ähnliche Symbole aus dem Projekt vor (`Ähnliche Symbole im Projekt: ...`).
+
+---
+
+### `[F-12]` `search_pattern` fehlt `scopeType`-Filterung (Test-Pollution) und bietet keine Wildcard-Leitplanke bei 0 Treffern
+- **Kategorie:** `[Token-Waste & Payload-Bloat]`
+- **Schweregrad:** P2 (Ergonomie-Hürde / Token-Waste)
+- **Geschätzter Aufwand:** S (Stunden)
+- **Betroffene MCP-Tools & Parameter:** `search_pattern` (`pattern`, `isRegex: false`).
+- **Symptom & Agentic Friction:**
+  1. **Test-Pollution:** `search_pattern` besaß keinen `scopeType`-Filter. Suchen nach fachlichen Begriffen oder Typen brachten 50 Treffer, die zu 80% aus Test-Fixtures, Test-Methoden und Assertions bestanden und den Produktionscode verdrängten.
+  2. **Fehlende Wildcard-Führung:** Wenn ein Agent `pattern: "*Service*"` oder `"?Service"` mit Default `isRegex: false` übergab, fand der Substring-Abgleich 0 Treffer. Das Tool gab lediglich `0 Treffer fuer das angegebene Pattern.` zurück, ohne den Agenten darauf hinzuweisen, dass Wildcards `isRegex: true` erfordern.
+- **Token-Impact:** Verdrängung relevanter Produktionszeilen; Agent muss aufwendige `excludePatterns`-Listen formulieren oder wiederholt suchen.
+- **Verifizierte Codestellen (AiNetLinter):**
+  - [`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScannerRecords.cs`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScannerRecords.cs): Fehlendes `ScopeType`-Feld in Argumenten und Parametern.
+  - [`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScanner.cs`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScanner.cs): Kein Ausschluss von Test-Dateien via `TestDetector`.
+  - [`src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternLegacyFormatter.cs`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternLegacyFormatter.cs): Keine Hinweisausgabe bei Wildcard-Zeichen in Plaintext-Suche mit 0 Treffern.
+- **Konkreter, architektonisch sauberer Lösungsvorschlag & Umsetzung:**
+  1. `scopeType`-Parameter (`"all"` [Default], `"production"`, `"tests"`) in `SearchPatternToolArguments`, `SearchPatternScannerParameters` und Tool-Registrierung etablieren. Testdateien werden über `TestDetector.IsTestFile(filePath)` gefiltert.
+  2. In `SearchPatternLegacyFormatter`: Bei 0 Treffern prüfen, ob `!isRegex` und das Pattern `*` oder `?` enthält. In diesem Fall Leitplanken-Hinweis ausgeben:
+     `[HINWEIS]: Das Pattern enthält Wildcard-Zeichen ('*' oder '?'), aber isRegex=false. Für Wildcards/Regex bitte isRegex: true setzen.`
+  3. Zur Wahrung der maximalen Zeilenlänge (`MaxLineCount <= 500`) Pfad- und Filter-Logik in [`SearchPatternScanner.Scope.cs`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/Analysis/SearchPatternScanner.Scope.cs) auslagern.
+

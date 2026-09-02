@@ -45,12 +45,22 @@ Jedes Paket wird autonom implementiert, durch Tests abgesichert, auf Safeguard/L
   - [x] Tests für Paket 5
   - [x] Commit Paket 5
 
+- [x] **Paket 6: Symbol-Graph Matching & Search Scoping (`[F-11]`, `[F-12]`)**
+  - [x] `[F-11]` `SymbolNameMatcher`: Wildcard-Matching (`*`, `?`), punktseparierte Typ-/Memberpfade (`Type.Member`), Klammerbereinigung (`Method()`)
+  - [x] `[F-11]` `FindSymbolScanner` & `AssemblySymbolSearch`: Einbindung von `SymbolNameMatcher` und Vorschlag ähnlicher Symbole bei Miss (`Ähnliche Symbole im Projekt: ...`)
+  - [x] `[F-12]` `search_pattern`: `scopeType`-Parameter (`"all"`, `"production"`, `"tests"`) in Tools, Records und Registrierung
+  - [x] `[F-12]` `SearchPatternLegacyFormatter`: Wildcard-Leitplankenhinweis bei 0 Treffern und `isRegex: false`
+  - [x] `[F-12]` `SearchPatternScanner.Scope.cs`: Auslagerung von Pfad-/Scope-Logik zur Einhaltung von `MaxLineCount <= 500`
+  - [x] Tests für Paket 6 (`SymbolNameMatcherTests`, `FindSymbolScannerTests`, `SearchPatternScannerTests`)
+  - [x] Commit Paket 6
+
 - [x] **Abschluss-Verifikation & Definition of Done**
-  - [x] Vollständiger Testlauf: `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` (2391 bestanden)
-  - [x] Vollständiger Testlauf: `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` (384 bestanden)
+  - [x] Vollständiger Testlauf: `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` (2413 bestanden)
+  - [x] Vollständiger Testlauf: `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` (350+ bestanden)
   - [x] `dotnet build` warnungsfrei (0 Fehler, 0 Warnungen)
-  - [x] Safeguard-Score auf 10,00/10 verifiziert (0 Verstöße, 988 Klassen)
-  - [x] DRY-, MagicValues- und DeadCode-Audit via MCP-Tools
+  - [x] Safeguard-Score auf 10,00/10 verifiziert (0 Verstöße, 991 Klassen)
+  - [x] DRY-, MagicValues- und DeadCode-Audit via MCP-Tools (tote Methoden entfernt, `nameof(scope)` refactored)
   - [x] Agent-Rules Sync (`rules.json` unverändert)
-  - [x] Dokumentation synchronisiert (`Docs/agent-api.md`)
+  - [x] Dokumentation synchronisiert (`Docs/agent-api.md`, `findings.md`, `roadmap.md`)
   - [x] Finaler Abschluss-Commit
+
