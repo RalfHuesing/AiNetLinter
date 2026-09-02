@@ -38,7 +38,7 @@ internal static class AssemblyAnalysisToolRegistrations
                 bool exactTypeName = false,
                 string[]? memberNames = null,
                 int maxMembers = AssemblyAnalysisService.DefaultMaxMembers,
-                bool? includeReferences = null,
+                bool includeReferences = false,
                 CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
@@ -58,10 +58,7 @@ internal static class AssemblyAnalysisToolRegistrations
                                     memberNames,
                                     maxMembers,
                                     includeReferences)),
-                            ExpandAssemblyReferences: includeReferences ??
-                                (string.IsNullOrWhiteSpace(typeName)
-                                 && string.IsNullOrWhiteSpace(memberName)
-                                 && (memberNames is null || memberNames.All(string.IsNullOrWhiteSpace)))),
+                            ExpandAssemblyReferences: includeReferences),
                         ct)),
             McpToolRegistrationOptions.AssemblyTool("inspect_assembly", InspectAssemblyDescription)));
     }

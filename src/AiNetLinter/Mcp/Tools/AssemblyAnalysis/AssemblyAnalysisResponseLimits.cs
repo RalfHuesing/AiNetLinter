@@ -16,7 +16,7 @@ internal static partial class AssemblyAnalysisResponseLimits
     internal const int MaxReferences = 32;
     internal const int MaxReferenceSessions = 32;
     internal const int MaxSessionDiagnostics = 3;
-    internal const int MaxResponseBytes = 8 * 1024;
+    internal const int MaxResponseBytes = 32 * 1024;
 
     internal static int NormalizeDiagnosticLimit(int requested) =>
         requested <= 0 ? DefaultMaxDiagnostics : Math.Clamp(requested, 1, MaxDiagnostics);

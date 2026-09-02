@@ -120,7 +120,8 @@ internal static class InspectAssemblyFormatter
 
     private static void AppendTypes(StringBuilder builder, InspectAssemblyPayload payload, bool publicOnly)
     {
-        builder.AppendLine($"{VisibilityLabel(publicOnly)}API-Typen: {payload.ShownCount} von {payload.TotalTypes}{FormatTruncation(payload.Truncated, payload.TruncatedBy)}");
+        var typesTruncated = payload.ShownCount < payload.TotalTypes;
+        builder.AppendLine($"{VisibilityLabel(publicOnly)}API-Typen: {payload.ShownCount} von {payload.TotalTypes}{FormatTruncation(typesTruncated, payload.TruncatedBy)}");
         foreach (var type in payload.Types) AppendType(builder, type);
     }
 

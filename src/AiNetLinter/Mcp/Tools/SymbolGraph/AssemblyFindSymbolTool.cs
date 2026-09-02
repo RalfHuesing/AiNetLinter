@@ -95,7 +95,18 @@ internal static class AssemblyFindSymbolTool
             $"includeReferences=true; Assemblies: {summary.SearchedAssemblyCount} von {summary.TotalAssemblyCount}; " +
             $"Vollständigkeit: {summary.Completeness}; " +
             $"Ergebnisse gekürzt: {summary.ResultsTruncated}");
-        foreach (var diagnostic in summary.Diagnostics) markdown.Line($"- {diagnostic}");
+
+        var diagnostics = summary.Diagnostics
+            .Where(d => !d.Contains("verbleibenden", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (diagnostics.Count > 0)
+        {
+            var shown = diagnostics.Take(5).ToList();
+            var suffix = diagnostics.Count > 5 ? $" ({shown.Count} von {diagnostics.Count} gezeigt)" : string.Empty;
+            markdown.Line($"Diagnosen{suffix}:");
+            foreach (var diagnostic in shown) markdown.Line($"- {diagnostic}");
+        }
         return McpToolResults.Text(
             markdown.Build().TrimEnd(),
             new FindSymbolBatchDto(results, summary));

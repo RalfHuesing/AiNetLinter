@@ -311,7 +311,7 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
             <= AssemblyAnalysisResponseLimits.MaxDiagnosticBytes);
         Assert.True(
             System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length
-            <= AssemblyAnalysisResponseLimits.MaxDiagnosticBytes);
+            <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
 
         var analysis = payload.GetProperty("analysis");
         Assert.False(analysis.TryGetProperty("diagnostics", out _));

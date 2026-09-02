@@ -175,5 +175,6 @@ public sealed partial class AssemblyAnalysisToolTests
         Assert.Contains("responseBudget", type.TruncatedBy!);
         Assert.True(Encoding.UTF8.GetByteCount(text) <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
         Assert.True(structuredBytes <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
+        Assert.DoesNotContain("API-Typen: 1 von 1 (gekürzt", text, StringComparison.Ordinal);
     }
 }

@@ -74,7 +74,8 @@ internal static class FindAssemblyExtensionsResponseBuilder
 
     private static void AppendHeader(StringBuilder builder, FindAssemblyExtensionsPayload payload)
     {
-        builder.AppendLine($"Assembly-Extensions: {payload.ShownCount} von {payload.TotalExtensions}{(payload.Truncated ? $" (gekürzt: {string.Join(", ", payload.TruncatedBy)})" : string.Empty)}");
+        var extensionsTruncated = payload.ShownCount < payload.TotalExtensions;
+        builder.AppendLine($"Assembly-Extensions: {payload.ShownCount} von {payload.TotalExtensions}{(extensionsTruncated ? $" (gekürzt: {string.Join(", ", payload.TruncatedBy)})" : string.Empty)}");
         builder.AppendLine($"Vollständigkeit: `{payload.Completeness}`");
         AppendReferenceSummary(builder, payload.ReferenceSummary);
         if (payload.Origin is { } origin) AssemblyAnalysisOriginText.Append(builder, origin);

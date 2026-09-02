@@ -150,6 +150,8 @@ internal static partial class AssemblyAnalysisResponseLimits
         return true;
     }
 
+    private const int MinPreservedMembersPerType = 3;
+
     private static bool TryRemoveLastMember(
         ref InspectAssemblyPayload payload,
         bool allowLast = false)
@@ -159,6 +161,7 @@ internal static partial class AssemblyAnalysisResponseLimits
         {
             var type = types[index];
             if (type.Members.Count == 0
+                || (!allowLast && types.Count > 1 && type.Members.Count <= MinPreservedMembersPerType)
                 || (!allowLast && types.Count == 1 && type.Members.Count == 1)
                 || (!allowLast && types.Count > 1 && index == 0)) continue;
             types[index] = type with
