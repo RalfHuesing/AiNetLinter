@@ -3,8 +3,8 @@
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
 Status: executing  
-Current epic: Paket 4 – Korrekturrunde 1/5
-Letzter Commit: `125d6a8f` – Daemon-Health-Testlücke triagiert, Korrektur läuft
+Current epic: Paket 4 – Folge-Review nach Korrekturrunde 1/5
+Letzter Commit: Daemon-Health-Korrektur unreviewt; Artefakt-Checkpoint folgt
 Current debt item: `HEALTH-DAEMON-PROJECT-TARGET-E2E-001`
 Debt attempts: 1
 Blocker: keiner

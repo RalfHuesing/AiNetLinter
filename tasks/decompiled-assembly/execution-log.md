@@ -526,6 +526,19 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet.
 - Status: running
 
+## 2026-09-02 – Paket 4 – Korrekturversuch 1 – Implementierer
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: `01a06244-81f0-76c2-9e48-90175e414797`
+- Diff-Baseline: `125d6a8f`
+- Status: terminal abgeschlossen; Korrekturstand unreviewt gesichert.
+- Urteil: P1 `HEALTH-DAEMON-PROJECT-TARGET-E2E-001` behoben, ohne Produktionsänderungen.
+- Geänderte Bereiche: `ThinClientMcpProcessContractTests` startet zwei isolierte lokale Thin-Client-Sitzungen gegen den aktuellen Daemon, ruft `get_server_health` mit `targetType="project"` und absolutem `targetPath` auf und prüft Daemon-Registry-Key, Modus, `projectRoot`, `Loaded` und `solutionPath`; `code-map.md` aktualisiert.
+- Verifikation nach der letzten Änderung: neue Regression 1/1; ThinClient-Contract-Suite 3/3; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` sauber; lokaler Linter mit 13 bestehenden Baseline-Verstößen außerhalb des Scopes.
+- MCP-Hinweis: Kein laufender alter MCP, keine Release-/Live-/Stress-Verifikation verwendet.
+- Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.
+
 ## 2026-09-02 – Paket 3 – Folge-Review nach Quellenkorrektur
 
 - Run-ID: `decompiled-assembly-20260902`
