@@ -62,8 +62,8 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 - Schweregrad: P2
 - Ursache/Scope: Sechs bestehende `AIContextFootprint`-Warnungen in den Assembly-Coordinators/Navigators unter `src/AiNetLinter/Mcp`.
 - Evidenz: Paket-1-Implementierer meldet `get_violations` mit 0 Fehlern und 6 Warnungen sowie `safeguard` 1,0/10; die Warnungen lagen bereits außerhalb des Paket-1-Änderungsbereichs.
-- Disposition: `accepted-deferred`
-- Attempts: 0
+- Disposition: `fix-now`
+- Attempts: 1
 - Nächster Schritt: Im vorgesehenen Paket 3 die betroffenen transitive Footprints gezielt untersuchen und auf `AIContextFootprint <= 2500` bringen.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 1 Implementierer.
 

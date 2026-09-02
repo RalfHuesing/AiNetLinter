@@ -4,9 +4,9 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 
 Status: executing  
 Current epic: Paket 3
-Letzter Commit: Paket-2-Korrektur `3d91b3c8`; Folge-Review abgeschlossen
-Current debt item: `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE`
-Debt attempts: 0
+Letzter Commit: Paket-2-Abschluss `84d7f27c`; Paket 3 läuft
+Current debt item: `TD-QL-001`
+Debt attempts: 1
 Blocker: keiner
 
 ## Epics
