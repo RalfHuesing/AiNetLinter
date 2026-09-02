@@ -4,8 +4,8 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 
 Status: executing  
 Current epic: Paket 4 – Abschluss-Audit
-Letzter Commit: Endpoint-Folge-Review bestätigt; Artefakt-Checkpoint folgt
-Current debt item: `DAEMON-ENDPOINT-OWNERSHIP-TEST-001`
+Letzter Commit: `4b0bd08f` – Paket 4 abgeschlossen, Audit läuft
+Current debt item: `TD-SESSION-LEASE-RACE-001`
 Debt attempts: 1
 Blocker: keiner
 
