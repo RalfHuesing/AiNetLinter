@@ -3,9 +3,9 @@
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
 Status: executing  
-Current epic: Paket 3 – Folge-Review nach Korrekturrunde 1/5
-Letzter Commit: `cf0a0343` – Konstruktor-Korrektur, Review läuft
-Current debt item: `SIGONLY-CONSTRUCTOR-EXPRESSION-BODY`
+Current epic: Paket 3 – Korrekturrunde 1/5
+Letzter Commit: `dc0131f0` – Folge-Review; neues P1 triagiert
+Current debt item: `NAV-TRANSITIVE-LEASE-COMPLETENESS-001`
 Debt attempts: 1
 Blocker: keiner
 

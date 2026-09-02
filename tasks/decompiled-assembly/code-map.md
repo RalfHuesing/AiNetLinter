@@ -32,7 +32,7 @@
 - Neue lokale Unit-Regressionen in `AssemblyAnalysisRegistryRetirementRaceTests`: `LeaseAsync_FingerprintRefreshClearsPendingRequestForRetiredEntry` hält eine Fremd-Lease auf der alten Generation, erzeugt vorher einen offenen Child-Eviction-Request, erzwingt einen Fingerprintwechsel und prüft, dass die alte Identität danach nicht mehr im Request-Set liegt. `DisposeAsync_ClearsPendingRequestForEntryHeldByForeignLease` prüft denselben Cleanup beim Registry-Ende.
 - `AssemblyAnalysisToolTests.ResponseBudget` prüft 32 Namespaces, `TotalNamespaces=32`, elf kompakte Anzeigeeinträge, die exakte Summary, Typ-/Member-Erhalt und beide 8-KiB-Repräsentationen; `AssemblyAnalysisSessionTests` prüft den Signature-only-Pfad an 160 expression-bodied Methoden sowie direkt, dass expression-bodied Konstruktoren unverändert expression-bodied und syntaktisch gültig bleiben.
 - Bestehende direkte Lifecycle-Abdeckung bleibt relevant: `AssemblyAnalysisRegistryTests` deckt normale Leases, Creation-Cancellation, Concurrent-Cancellation und Byte-Refresh ab; `AssemblyAnalysisRegistryRetirementRaceTests` deckt die Retirement-Revalidierung bei konkurrierender Lease ab.
-- Es gibt keine CLI-, Regel-, MCP-Vertrags- oder Konfigurationsänderung. `roadmap.md`, `execution-log.md` und `tech-debt.md` wurden für diese Korrektur nicht geändert; Paket 4 sowie Release-/Live-Verifikation sind Non-Goals.
+- Es gibt keine CLI-, Regel-, MCP-Vertrags- oder Konfigurationsänderung. `roadmap.md`, `execution-log.md` und `tech-debt.md` enthalten den Orchestrator-Nachweis einschließlich der Folge-Korrektur; Paket 4 sowie Release-/Live-Verifikation sind Non-Goals.
 
 ## Invarianten, Risiken und Unsicherheiten
 

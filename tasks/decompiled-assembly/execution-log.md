@@ -196,6 +196,21 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Scope: Signature-only-Parsierbarkeit und Ausschlüsse, Response-/Namespace-Budgets, Footprint-Refactoring sowie Reference-Session-/Lease-/Retirement-Lifecycle.
 - MCP-Hinweis: Laufender Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet; Release-/Live-Verifikation bleibt ausgespart.
 
+## 2026-09-02 – Paket 3 – Folge-Review
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Reviewer
+- Subagent: `01a0620b-a03a-7212-974e-3bc4ebb8b625`
+- Diff-Scope: Paket-3-Gesamtstand einschließlich Konstruktor-Korrektur `cf0a0343`.
+- Status: terminal abgeschlossen; neues P1 erfordert Korrekturrunde 1/5.
+- Urteil: `issues`.
+- P1-Finding `NAV-TRANSITIVE-LEASE-COMPLETENESS-001`: `OpenReferenceExpansionNodeAsync` registriert ein Child-Lease nur beim aktuellen Parent, während `AssemblyNavigationLeaseAccess.GetLeases` nur Root plus direkte Children liest. Referenzgraphen ab Tiefe 2 fehlen dadurch in `find_symbol`, `find_references` und Call-Tree; Assembly-Anzahl und Vollständigkeit werden falsch ausgewiesen. Korrektur: rootgebundene Sammlung beibehalten oder Lease-Baum rekursiv flatten und Root → Dependency → TransitiveDependency regressionstesten.
+- P2/P3 bleiben `accepted-deferred`: vollständige Signature-only-Negativmatrix/Operatoren, asynchrone Dispose-/Lease-Registrierungsrace, Namespace-Summary bei extremem Trimming und ungenutzte Retirement-Callbacks.
+- Verifikation: lokale fokussierte Tests 59/59 bestanden, `git diff --check` sauber; keine MCP-, Live-, Release- oder Stress-Verifikation.
+- MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wurde nicht als Feature-Nachweis verwendet.
+- Code-Map: historische Aussage zur Orchestrator-Ledger-Änderung korrigiert; kein Produktionscode und kein Commit durch den Reviewer.
+- Nächste Aktion: frischer Implementierer für `NAV-TRANSITIVE-LEASE-COMPLETENESS-001`, Versuch 1/5.
+
 ## 2026-09-02 – Paket 2 – Folge-Review nach Korrekturversuch 2
 
 - Run-ID: `decompiled-assembly-20260902`
