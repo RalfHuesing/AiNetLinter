@@ -16,8 +16,9 @@
 - Audit-Parameterobjekte: `FindSymbolRequest`, `GetHotspotsRequest`.
 - Pattern-Ausgabe: `PatternDetectScanner`.
 - Index-Scope: `GetIndexScopeScanner`, `FileTypeBreakdownEntry`.
-- Decompiled Bodies: `AssemblyDecompiledBodyResolver.FindMember`, `MatchesParameters` und
-  `MatchesParameterType`.
+- Decompiled Bodies: `AssemblyDecompiledBodyResolver.DecompileBodyAsync`, `FindMember`,
+  `MatchesParameters` und `MatchesParameterType`; gemeinsame Bereinigung in
+  `AssemblyDecompilationSourceText.RemoveCompilerGeneratedNestedTypes`.
 
 ## Aufrufer und Abhängigkeiten
 
@@ -30,6 +31,9 @@
 - `AssemblyDecompiledBodyResolver.ResolveAsync` dekompiliert den deklarierenden Typ und ordnet
   anschließend den Roslyn-Member dem dekompilierten C#-Syntaxbaum zu; `AssemblyReferenceResolver`
   liefert dafür Referenzen und Partial-Diagnosen.
+- Der On-Demand-Bodypfad verwendet `decompileMemberBodies: true`. Vor dem Roslyn-Parsing werden
+  jetzt dieselben Compiler-Generated-Bereinigungen wie im vollständigen Assembly-Snapshot
+  angewendet; damit werden insbesondere ungültige VB-Closure-Namen wie `_Closure$__...` entfernt.
 
 ## Relevante Tests, Konfiguration und Dokumentation
 
@@ -38,6 +42,9 @@
 - API-Dokumentation: `Docs/agent-api.md`, `Docs/integration.md`, `Docs/ROADMAP.md`.
 - Decompiled-Body-Tests: `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyDecompiledBodyResolverTests.cs`
   sowie die Partial-Referenz-Szenarien in `AssemblyAnalysisSessionTests.cs`.
+- Neue Regression: `RemoveCompilerGeneratedNestedTypes_RemovesVisualBasicClosureTypes` deckt die
+  konkreten `$VB$Local...`-Felder aus dem Sage-Decompilat ab; ein separater Smoke-Test gegen die
+  installierte Sage-DLL bestätigte `Beleg.Save` als verfügbaren Body.
 
 ## Invarianten, Risiken und Unsicherheiten
 
@@ -58,6 +65,10 @@
   C#-Syntaxsignatur mit zusätzlichen Default-Parametern abgebildet werden können. Ein einfacher
   Typnamen-Fallback darf nur bei nicht auflösbaren Error-Typen greifen, damit gleichnamige Typen
   aus verschiedenen Namespaces nicht versehentlich vermischt werden.
+- Compiler-generierte verschachtelte Typen dürfen nicht in den Syntaxbaum des Body-Resolvers
+  gelangen, wenn der Decompiler deren VB-Namen als nicht gültiges C# ausgibt. Die Bereinigung muss
+  auf den On-Demand- und Snapshot-Pfad gleichermaßen angewendet werden und echte Methoden-Bodies
+  unverändert lassen.
 
 ## Verifikation
 
@@ -72,4 +83,7 @@
   exakten Duplikate, keinen Dead Code und keine Magic Values. Der finale Violations-Check für
   denselben Scope meldet 0 Verstöße. Die vollständigen Solution-Gates sind nach der letzten
   Codeänderung grün: `dotnet build` mit 0 Warnungen/0 Fehlern, FastTests 2.428 bestanden und
-  2 übersprungen sowie IntegrationTests 385 bestanden und 0 übersprungen.
+  2 übersprungen sowie IntegrationTests 384 bestanden und 0 übersprungen. Der Release-Build
+  wurde anschließend nach `C:\Daten\Tools\AiNetLinter-win-x64` deployt. Ein frischer MCP-
+  Stdio-Prozess der Installation liefert für Sage `Beleg.Save(bool)` `bodyAvailability:
+  available` und der abschließende Violations-Check meldet 0 Verstöße.

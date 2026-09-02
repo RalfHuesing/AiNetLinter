@@ -79,7 +79,12 @@ internal static class AssemblyDecompilationSourceText
 
     private static int FindCompilerGeneratedTypeStart(string source)
     {
-        var markers = new[] { "class <", "struct <", "interface <", "record <", "delegate <", "enum <" };
+        var markers = new[]
+        {
+            "class <", "struct <", "interface <", "record <", "delegate <", "enum <",
+            "class _Closure$__", "class _Lambda$__", "class VB$StateMachine_",
+            "struct VB$StateMachine_",
+        };
         var markerIndex = markers
             .Select(marker => source.IndexOf(marker, StringComparison.Ordinal))
             .Where(index => index >= 0)

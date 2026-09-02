@@ -10,6 +10,7 @@ using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.Bodies;
 using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
@@ -192,5 +193,31 @@ public sealed class AssemblyDecompiledBodyResolverTests
 
         Assert.Equal("available", result.BodyAvailability);
         Assert.Contains("Consume", result.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RemoveCompilerGeneratedNestedTypes_RemovesVisualBasicClosureTypes()
+    {
+        const string source = """
+            namespace Probe;
+            public sealed class Document
+            {
+                public bool Save() => true;
+                [CompilerGenerated]
+                internal sealed class _Closure$__496-0
+                {
+                    public string $VB$Local_qryUdfFields;
+                }
+            }
+            """;
+
+        var transformed = AssemblyDecompilationSourceText.RemoveCompilerGeneratedNestedTypes(source);
+        var diagnostics = CSharpSyntaxTree.ParseText(transformed)
+            .GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error);
+
+        Assert.DoesNotContain("_Closure$__", transformed, StringComparison.Ordinal);
+        Assert.DoesNotContain("$VB$Local", transformed, StringComparison.Ordinal);
+        Assert.Empty(diagnostics);
     }
 }

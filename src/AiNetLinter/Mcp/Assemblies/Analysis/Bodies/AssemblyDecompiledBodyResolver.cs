@@ -73,6 +73,8 @@ internal static class AssemblyDecompiledBodyResolver
             var declaringType = symbol as INamedTypeSymbol ?? symbol.ContainingType;
             var typeName = new ICSharpCode.Decompiler.TypeSystem.FullTypeName(ToReflectionTypeName(declaringType));
             var source = decompiler.DecompileTypeAsString(typeName);
+            source = AssemblyDecompilationSourceText.RemoveCompilerGeneratedNestedTypes(source);
+            source = AssemblyDecompilationSourceText.RemoveCompilerGeneratedStateMachineAttributes(source);
             deadline.Token.ThrowIfCancellationRequested();
             var root = CSharpSyntaxTree.ParseText(source).GetRoot(deadline.Token);
             var member = FindMember(root, symbol);
