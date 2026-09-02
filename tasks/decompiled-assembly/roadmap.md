@@ -3,10 +3,10 @@
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
 Status: executing  
-Current epic: Paket 1 – Korrekturrunde 1/5  
-Letzter Commit: Implementierungs-Checkpoint `b3bb2ea8`; Review-Checkpoint ausstehend  
-Current debt item: `TD-ASM-ACCESSOR-001`, `TD-ASM-CACHE-001`, `TD-ASM-FRAMEWORK-001`  
-Debt attempts: 0  
+Current epic: Paket 1 – Korrekturrunde 1/5
+Letzter Commit: Implementierungs-Checkpoint `b3bb2ea8`; Review-Checkpoint `671d0f66`
+Current debt item: `TD-ASM-ACCESSOR-001`, `TD-ASM-CACHE-001`, `TD-ASM-FRAMEWORK-001`
+Debt attempts: 0
 Blocker: keiner
 
 ## Epics
