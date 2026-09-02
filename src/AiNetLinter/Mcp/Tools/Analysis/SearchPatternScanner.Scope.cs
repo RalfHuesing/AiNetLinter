@@ -50,7 +50,7 @@ internal static partial class SearchPatternScanner
     private static string NormalizeScope(string? scope, string solutionRoot)
     {
         if (string.IsNullOrWhiteSpace(scope)) return ".";
-        ValidateRelativeValue(scope, "scope");
+        ValidateRelativeValue(scope, nameof(scope));
         var fullPath = Path.GetFullPath(Path.Combine(solutionRoot, scope));
         if (!IsWithinRoot(fullPath, solutionRoot))
         {

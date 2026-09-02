@@ -43,11 +43,6 @@ internal static class SearchPatternLegacyFileHitScanner
         return new(filesWithHits.ToList(), fileReadErrorCount, regexTimedOut);
     }
 
-    internal static IReadOnlyList<string> GetFilesWithHits(
-        Solution solution,
-        string pattern,
-        bool isRegex)
-        => Scan(solution, pattern, isRegex).Files;
 
     private static SearchPatternLegacyFileMatchResult FileMatches(
         string filePath,

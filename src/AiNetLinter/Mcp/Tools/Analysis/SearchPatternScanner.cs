@@ -230,11 +230,6 @@ internal static partial class SearchPatternScanner
             lineScan.CancellationRequested);
     }
 
-    internal static IReadOnlyList<string> GetFilesWithHits(
-        Solution solution,
-        string pattern,
-        bool isRegex)
-        => SearchPatternLegacyFileHitScanner.GetFilesWithHits(solution, pattern, isRegex);
 
     internal static SearchPatternPayload BuildPayload(
         SearchPatternPayloadOptions options,
