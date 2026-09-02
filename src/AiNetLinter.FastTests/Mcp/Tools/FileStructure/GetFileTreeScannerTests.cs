@@ -11,6 +11,7 @@ using Xunit;
 namespace AiNetLinter.FastTests.Mcp.Tools.FileStructure;
 
 [Trait("Category", "Unit")]
+// @covers FileTreeAccumulator
 public sealed class GetFileTreeScannerTests
 {
     [Fact]

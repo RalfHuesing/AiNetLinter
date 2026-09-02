@@ -166,9 +166,20 @@ internal static class FileSystemExclusionHelpers
         (Action<string>? VisitDirectory, Action<string>? VisitFile) callbacks,
         WalkContext context)
     {
-        List<string>? subDirectories = entry.Depth >= context.Options.MaxDepth
-            ? []
-            : TryEnumerateSubDirectories(entry.Directory, context.Warnings);
+        List<string>? subDirectories;
+        if (entry.Depth >= context.Options.MaxDepth)
+        {
+            subDirectories = [];
+            if (WalkContext.HasAnySubDirectories(entry.Directory, context.Warnings))
+            {
+                context.HasDepthTruncation = true;
+            }
+        }
+        else
+        {
+            subDirectories = TryEnumerateSubDirectories(entry.Directory, context.Warnings);
+        }
+
         if (subDirectories == null || context.IsCancellationRequested) return;
 
         var visitDirectory = callbacks.VisitDirectory;
@@ -361,6 +372,7 @@ internal static class FileSystemExclusionHelpers
         internal bool CancellationRequested { get; private set; }
         internal int SkippedExcludedDirectoryCount { get; set; }
         internal int SkippedReparsePointCount { get; set; }
+        internal bool HasDepthTruncation { get; set; }
 
         internal bool IsCancellationRequested
         {
@@ -380,7 +392,22 @@ internal static class FileSystemExclusionHelpers
             CancellationRequested = CancellationRequested,
             SkippedExcludedDirectoryCount = SkippedExcludedDirectoryCount,
             SkippedReparsePointCount = SkippedReparsePointCount,
+            HasDepthTruncation = HasDepthTruncation,
         };
+
+        internal static bool HasAnySubDirectories(string directory, List<string> warnings)
+        {
+            try
+            {
+                using var enumerator = Directory.EnumerateDirectories(directory).GetEnumerator();
+                return enumerator.MoveNext();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                warnings.Add($"{directory}: {ex.Message}");
+                return false;
+            }
+        }
     }
 }
 

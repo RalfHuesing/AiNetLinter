@@ -52,7 +52,11 @@ internal static class GetFileTreeRenderer
         builder.AppendLine(payload.Root == "." ? "." : $"{payload.Root}/");
         AppendDirectories(builder, payload, treeDepth, includeRoot: false);
 
-        foreach (var file in payload.Files.OrderBy(file => file.Path, StringComparer.OrdinalIgnoreCase))
+        var rootFiles = payload.Files
+            .Where(file => !file.Path.Contains('/') && !file.Path.Contains('\\'))
+            .OrderBy(file => file.Path, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var file in rootFiles)
         {
             builder.AppendLine($"├── {file.Path} {FormatFileDetails(file)}");
         }
@@ -100,6 +104,14 @@ internal static class GetFileTreeRenderer
         if (completeness.Truncated)
         {
             var isSummary = payload.View.Equals("summary", StringComparison.OrdinalIgnoreCase);
+            var isDepthOnly = completeness.TruncatedBy.Count == 1 && completeness.TruncatedBy[0] == "maxDepth";
+            if (isDepthOnly)
+            {
+                builder.AppendLine($"[WARN]: Scantiefe begrenzt ({string.Join(", ", completeness.TruncatedBy)}), tiefere Ebenen nicht gescannt.");
+                builder.Append("[HINWEIS]: maxDepth bzw. treeDepth anpassen fuer tiefere Ebenen.");
+                return;
+            }
+
             var warning = isSummary
                 ? $"[WARN]: {payload.Summary.MatchedFileCount} Dateien aggregiert, Verzeichnisliste begrenzt ({string.Join(", ", completeness.TruncatedBy)})."
                 : $"[WARN]: {payload.Summary.MatchedFileCount} Dateien gematcht, {completeness.ShownFileCount} gezeigt ({string.Join(", ", completeness.TruncatedBy)}).";

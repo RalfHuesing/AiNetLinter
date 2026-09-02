@@ -144,6 +144,7 @@ internal sealed class FileTreeAccumulator
     {
         var reasons = new List<string>();
         if ((exposesFiles && matchedCount > _input.MaxResults) || directoriesTruncated) reasons.Add("maxResults");
+        if (stats.HasDepthTruncation) reasons.Add("maxDepth");
         if (stats.InaccessibleSubtreeCount > 0) reasons.Add("inaccessibleSubtree");
         if (stats.CancellationRequested) reasons.Add("cancellation");
         return reasons;

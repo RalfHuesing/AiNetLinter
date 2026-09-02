@@ -51,7 +51,8 @@ public sealed class GetFileTreeToolTests
         var text = TextOf(result);
         Assert.Contains("README.md", text, StringComparison.Ordinal);
         Assert.DoesNotContain("nested/deep.md", text, StringComparison.Ordinal);
-        Assert.Contains("1 Dateien gezeigt", text, StringComparison.Ordinal);
+        Assert.Contains("Scantiefe begrenzt", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("vollstaendig", text, StringComparison.Ordinal);
     }
 
     [Fact]

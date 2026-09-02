@@ -19,4 +19,6 @@ internal sealed record TreeWalkStats(IReadOnlyList<string> Warnings)
     internal int SkippedExcludedDirectoryCount { get; init; }
 
     internal int SkippedReparsePointCount { get; init; }
+
+    internal bool HasDepthTruncation { get; init; }
 }
