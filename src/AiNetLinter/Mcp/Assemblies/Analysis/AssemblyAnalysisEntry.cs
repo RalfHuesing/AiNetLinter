@@ -80,6 +80,7 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable, IAssemblyAnalysi
 
     string IAssemblyAnalysisEvictionEntry.CanonicalPath => CanonicalPath;
     DateTime IAssemblyAnalysisEvictionEntry.LastUsedUtc => LastUsedUtc;
+    bool IAssemblyAnalysisEvictionEntry.IsRetiring => IsRetiring;
     bool IAssemblyAnalysisEvictionEntry.IsIdleForCapacity() => IsIdleForCapacity();
     bool IAssemblyAnalysisEvictionEntry.IsIdle(DateTime now, TimeSpan idleTtl) => IsIdle(now, idleTtl);
 
@@ -128,6 +129,14 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable, IAssemblyAnalysi
             if (closing || leaseCount != 0) return false;
             closing = true;
             return true;
+        }
+    }
+
+    internal bool IsRetiring
+    {
+        get
+        {
+            lock (gate) return closing;
         }
     }
 

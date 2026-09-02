@@ -69,4 +69,70 @@ public sealed class AssemblyAnalysisRegistryRetirementRaceTests
             activeLease?.Dispose();
         }
     }
+
+    [Fact]
+    public async Task LeaseAsync_FingerprintRefreshClearsPendingRequestForRetiredEntry()
+    {
+        using var temp = TestTempDirectory.Create("assembly-registry-reference-eviction-refresh-");
+        var dependencyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ReferenceEvictionRefreshDependency",
+            "namespace Probe; public sealed class DependencyType { public int Value => 1; }");
+        var rootPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ReferenceEvictionRefreshRoot",
+            "namespace Probe; public sealed class Root { public DependencyType Value { get; } = new(); }",
+            dependencyPath);
+        await using var registry = new AssemblyAnalysisRegistry();
+
+        using var foreignLease = (await registry.LeaseAsync(dependencyPath)).Lease!;
+        using var rootLease = (await registry.LeaseAsync(rootPath)).Lease!;
+        await rootLease.ExpandReferencesAsync();
+        rootLease.Dispose();
+
+        Assert.True(registry.TemporaryReferenceEvictionRequestCount > 0);
+        Assert.Equal(
+            1,
+            await ((IAssemblyAnalysisTemporaryReferenceEvictor)registry)
+                .EvictTemporaryReferenceSessionsAsync());
+        Assert.Equal(1, registry.TemporaryReferenceEvictionRequestCount);
+
+        var previousGeneration = foreignLease.Context.Generation;
+        AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ReferenceEvictionRefreshDependency",
+            "namespace Probe; public sealed class DependencyType { public int Value => 2; public int Changed => 3; }");
+
+        using var refreshed = (await registry.LeaseAsync(dependencyPath)).Lease!;
+        Assert.True(refreshed.Context.Generation > previousGeneration);
+        Assert.Equal(0, registry.TemporaryReferenceEvictionRequestCount);
+    }
+
+    [Fact]
+    public async Task DisposeAsync_ClearsPendingRequestForEntryHeldByForeignLease()
+    {
+        using var temp = TestTempDirectory.Create("assembly-registry-reference-eviction-dispose-");
+        var dependencyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ReferenceEvictionDisposeDependency",
+            "namespace Probe; public sealed class DependencyType { public int Value => 1; }");
+        var rootPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ReferenceEvictionDisposeRoot",
+            "namespace Probe; public sealed class Root { public DependencyType Value { get; } = new(); }",
+            dependencyPath);
+        await using var registry = new AssemblyAnalysisRegistry();
+
+        using var foreignLease = (await registry.LeaseAsync(dependencyPath)).Lease!;
+        using var rootLease = (await registry.LeaseAsync(rootPath)).Lease!;
+        await rootLease.ExpandReferencesAsync();
+        rootLease.Dispose();
+
+        Assert.True(registry.TemporaryReferenceEvictionRequestCount > 0);
+        var disposal = registry.DisposeAsync().AsTask();
+        foreignLease.Dispose();
+
+        await disposal;
+        Assert.Equal(0, registry.TemporaryReferenceEvictionRequestCount);
+    }
 }

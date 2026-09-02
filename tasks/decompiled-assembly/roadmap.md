@@ -3,8 +3,8 @@
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
 Status: executing  
-Current epic: Paket 3 – Korrekturrunde 1/5
-Letzter Commit: Paket-3-Review-Checkpoint `b38a3578`
+Current epic: Paket 3 – Folge-Review nach Korrekturrunde 1/5
+Letzter Commit: Lifecycle-Korrektur unreviewt; Artefakt-Checkpoint `b38a3578`
 Current debt item: `TD-SESSION-EVICTION-REFRESH-001`
 Debt attempts: 1
 Blocker: keiner

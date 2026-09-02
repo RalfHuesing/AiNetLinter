@@ -68,7 +68,7 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAss
             IsDisposed = () => Volatile.Read(ref disposed) != 0,
             ResourceBudget = resourceBudget,
             BeforeRetirementAsync = beforeRetirementAsync,
-            RetireEntryAsync = AssemblyAnalysisRegistryDisposal.RetireEntryAsync,
+            RetireEntryAsync = creation => AssemblyAnalysisRegistryDisposal.RetireEntryAsync(creation, ClearTemporaryReferenceEvictionRequest),
             SourceProjectEntryFactory = sourceProjectEntryFactory,
             ObserveCreation = ObserveCreation,
             RemoveFailedEntry = RemoveFailedEntry,
@@ -97,6 +97,7 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAss
     }
 
     internal int ResidentCount { get { lock (gate) return entries.Count; } }
+    internal int TemporaryReferenceEvictionRequestCount => referenceEviction.RequestCount;
 
     int IAssemblyAnalysisRegistry.ResidentCount => ResidentCount;
 
@@ -298,7 +299,7 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAss
 
                 var refreshed = CreateEntry(canonicalPath);
                 entries[canonicalPath] = refreshed;
-                retiredEntries.Add(AssemblyAnalysisRegistryDisposal.RetireEntryAsync(creation));
+                retiredEntries.Add(AssemblyAnalysisRegistryDisposal.RetireEntryAsync(creation, ClearTemporaryReferenceEvictionRequest));
                 return (null, true);
             }
 
@@ -373,7 +374,7 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAss
                 return null;
             }
 
-            var retirement = AssemblyAnalysisRegistryDisposal.RetireEntryAsync(creation);
+            var retirement = AssemblyAnalysisRegistryDisposal.RetireEntryAsync(creation, ClearTemporaryReferenceEvictionRequest);
             retiredEntries.Add(retirement);
             return retirement;
         }
@@ -410,8 +411,7 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAss
 
         AssemblyAnalysisRegistryDisposal.CancelCreations(pending, failures);
         await AssemblyAnalysisRegistryDisposal.DisposeRetiredEntriesAsync(retired, failures).ConfigureAwait(false);
-        await AssemblyAnalysisRegistryDisposal.DisposeEntriesAsync(pending, failures).ConfigureAwait(false);
-
+        await AssemblyAnalysisRegistryDisposal.DisposeEntriesAsync(pending, failures, ClearTemporaryReferenceEvictionRequest).ConfigureAwait(false);
         DisposeFailureAggregator.ThrowIfAny(failures);
     }
 

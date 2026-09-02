@@ -137,12 +137,16 @@ internal static class ExternalResourceRegistrySupport
 
 internal static class AssemblyAnalysisRegistryDisposal
 {
-    internal static async Task RetireEntryAsync(AssemblyAnalysisRegistryEntryCreation creation)
+    internal static async Task RetireEntryAsync(
+        AssemblyAnalysisRegistryEntryCreation creation,
+        Action<AssemblyAnalysisEntry>? onRetirementStarted = null)
     {
         try
         {
             var entry = await creation.Task.ConfigureAwait(false);
-            await entry.DisposeAsync().ConfigureAwait(false);
+            var disposal = entry.DisposeAsync();
+            onRetirementStarted?.Invoke(entry);
+            await disposal.ConfigureAwait(false);
         }
         catch (Exception exception)
         {
@@ -196,14 +200,17 @@ internal static class AssemblyAnalysisRegistryDisposal
 
     internal static async Task DisposeEntriesAsync(
         IEnumerable<AssemblyAnalysisRegistryEntryCreation> creations,
-        List<Exception> failures)
+        List<Exception> failures,
+        Action<AssemblyAnalysisEntry>? onRetirementStarted = null)
     {
         foreach (var creation in creations)
         {
             try
             {
                 var entry = await creation.Task.ConfigureAwait(false);
-                await entry.DisposeAsync().ConfigureAwait(false);
+                var disposal = entry.DisposeAsync();
+                onRetirementStarted?.Invoke(entry);
+                await disposal.ConfigureAwait(false);
             }
             catch (OperationCanceledException exception)
             {

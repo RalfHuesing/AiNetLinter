@@ -222,6 +222,20 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - MCP-Hinweis: Laufender Server ist älter als der Working Tree; nicht als Feature-Nachweis verwenden.
 - Status: running
 
+## 2026-09-02 – Paket 3 – Korrekturversuch 1 – Implementierer
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: `01a061ce-c7da-7a01-9bf3-e8644c303f1b`
+- Diff-Baseline: `7a9002b3`
+- Status: terminal abgeschlossen; Korrekturstand unreviewt gesichert.
+- Urteil: P1 `TD-SESSION-EVICTION-REFRESH-001` behoben. Jeder Retirement-Pfad entfernt die Request-Identität; `IsRetiring` verhindert spätes Wiedereintragen.
+- Geänderte Bereiche: Registry-/Disposal-Lifecycle und Eviction-Koordinatoren; zwei Regressionen in `AssemblyAnalysisRegistryRetirementRaceTests` für offenen Request plus Fremd-Lease und Fingerprint-/Generationswechsel sowie Disposal mit gehaltener Fremd-Lease; `code-map.md` aktualisiert.
+- Verifikation nach letzter Codeänderung: `dotnet build --no-restore` 0 Warnungen/0 Fehler; gezielter Lifecycle-Slice 18/18 bestanden; FastTests `Category!=Stress` 2372 bestanden, 2 übersprungen; IntegrationTests `Category!=Stress` 381 bestanden, 2 fehlgeschlagen wegen bestehender Gesamt-Linter-Violations bzw. Live-Dogfood-Safeguard-Score 0; lokaler CLI-Linter meldet 12 bestehende P1-fremde Produktionsviolations und keine Registry-`MaxLineCount`-Violation.
+- MCP-/Release-Hinweis: Alter Live-MCP nicht zur Feature-Verifikation verwendet; Stress- und Release-/Live-Abschlussprüfungen ausgespart.
+- Code-Map: nach der Korrektur aktualisiert; `roadmap.md`, `execution-log.md` und `tech-debt.md` blieben durch den Implementierer unverändert.
+- Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.
+
 ## 2026-09-02 – Paket 3 – Review
 
 - Run-ID: `decompiled-assembly-20260902`

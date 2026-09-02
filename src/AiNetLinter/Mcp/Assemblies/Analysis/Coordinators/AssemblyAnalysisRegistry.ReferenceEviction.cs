@@ -82,7 +82,18 @@ internal sealed class AssemblyAnalysisRegistryReferenceEviction
 
     internal void Request(IAssemblyAnalysisEvictionEntry entry)
     {
-        lock (requestGate) requests.Add(entry);
+        lock (requestGate)
+        {
+            if (!entry.IsRetiring) requests.Add(entry);
+        }
+    }
+
+    internal int RequestCount
+    {
+        get
+        {
+            lock (requestGate) return requests.Count;
+        }
     }
 
     internal bool IsRequested(IAssemblyAnalysisEvictionEntry entry)

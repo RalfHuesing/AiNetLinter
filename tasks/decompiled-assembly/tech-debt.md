@@ -110,11 +110,11 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### TD-SESSION-EVICTION-REFRESH-001 – Request-Set verliert alte Entry-Identitäten nicht
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 1/5 läuft.
+- Status: behoben in Korrekturversuch 1/5.
 - Scope/Fundstelle: `AssemblyAnalysisRegistryReferenceEviction` und direkter Refresh-Retirement in `AssemblyAnalysisRegistry`.
 - Evidenz: Review des Paket-3-Diffs; ein offener Request mit Fremd-Lease wird beim Fingerprint-Refresh nicht per `OnRetired/ClearRequest` entfernt und hält den alten Entry samt Server/Solution referenziert.
-- Disposition: `fix-now`
-- Nächster Schritt: Alle Retirement-Pfade per Entry-Identität bereinigen und wiederholte Generationwechsel testen.
+- Disposition: `fixed`
+- Nächster Schritt: Erledigt; alle Retirement-Pfade bereinigen die Entry-Identität, Regressionen decken Refresh und Disposal ab.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Review.
 
 ### TD-SIGONLY-COVERAGE-001 – Signature-only-Ausschlüsse und Operatoren nicht direkt abgesichert
