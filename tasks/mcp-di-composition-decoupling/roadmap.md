@@ -2,9 +2,9 @@
 
 Primäraufgabe: MCP-Komposition entkoppeln und Qualitätsgrenzen wiederherstellen.
 
-Status: complete  
-current_epic: abgeschlossen  
-letzter_checkpoint: 76bc5868  
+Status: complete
+current_epic: abgeschlossen
+letzter_checkpoint: c64bd021
 Tech-Debt-Register: `tech-debt.md`  
 
 Der Großkonzept-Modus folgt dem freigegebenen `Konzept.md`. Die Einordnung als
