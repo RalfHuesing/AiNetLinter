@@ -160,6 +160,17 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - MCP-Hinweis: Laufender Server ist älter als der Working Tree und darf nicht als Feature-Verifikation dienen; Release-/Live-Prüfung bleibt separater Task.
 - Status: running
 
+## 2026-09-02 – Paket 2 – Korrekturversuch 2 – Implementierer running
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: wird nach Delegation ergänzt
+- Diff-Baseline: `8f057c79`
+- Anlass: gleiche P1-Ursachensignatur `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE`, verbliebener Widerspruch in `Docs/integration.md`.
+- Scope: Nur `Docs/integration.md` und direkte Doku-Regression; keine Produktionscodeänderung, keine Paket-3/4-Arbeit.
+- MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und darf nicht als Feature-Verifikation dienen; Release-/Live-Prüfung bleibt separater Task.
+- Status: running
+
 ## 2026-09-02 – Paket 2 – Korrekturversuch 1 – Implementierer
 
 - Run-ID: `decompiled-assembly-20260902`

@@ -10,7 +10,7 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### TD-ASM-ACCESSOR-001 – Accessor-Matching verliert das zugehörige Member
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 2/5 steht an.
+- Status: aktiv, Versuch 2/5 läuft.
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/Bodies/AssemblyDecompiledBodyResolver.cs`, Accessor-Matching.
 - Evidenz: Review des Diffs `396e77f1..b3bb2ea8`; ein Descendant-Scan vergleicht nur Accessor-Kinds und kann bei mehreren gleichartigen Properties/Events den falschen Body wählen.
 - Disposition: `fix-now`
