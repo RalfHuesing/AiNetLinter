@@ -106,3 +106,53 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 - Disposition: `accepted-deferred`
 - Nächster Schritt: Bei der vorgesehenen Efficiency-/Quality-Arbeit oder einem späteren Vertragstask bewerten.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 2 Review.
+
+### TD-SESSION-EVICTION-REFRESH-001 – Request-Set verliert alte Entry-Identitäten nicht
+
+- Schweregrad: P1
+- Status: aktiv, Versuch 1/5 steht an.
+- Scope/Fundstelle: `AssemblyAnalysisRegistryReferenceEviction` und direkter Refresh-Retirement in `AssemblyAnalysisRegistry`.
+- Evidenz: Review des Paket-3-Diffs; ein offener Request mit Fremd-Lease wird beim Fingerprint-Refresh nicht per `OnRetired/ClearRequest` entfernt und hält den alten Entry samt Server/Solution referenziert.
+- Disposition: `fix-now`
+- Nächster Schritt: Alle Retirement-Pfade per Entry-Identität bereinigen und wiederholte Generationwechsel testen.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Review.
+
+### TD-SIGONLY-COVERAGE-001 – Signature-only-Ausschlüsse und Operatoren nicht direkt abgesichert
+
+- Schweregrad: P2
+- Status: zurückgestellt bis Paket 4.
+- Scope/Fundstelle: `AssemblyDecompilationSourceText` und Signature-only-Regressionen.
+- Evidenz: Review: Abstract/Extern/Partial/Interface, echte Bodies sowie Operator-/Conversion-Operator-Syntax sind nicht jeweils direkt getestet.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: Paket-4-Testmatrix um diese Ausschlüsse und Operatoren erweitern.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Review.
+
+### TD-SESSION-LEASE-RACE-001 – Verspätete Registrierung nach asynchroner Expansion möglich
+
+- Schweregrad: P2
+- Status: zurückgestellt.
+- Scope/Fundstelle: `OpenReferenceExpansionNodeAsync` und `RegisterReferenceLease`.
+- Evidenz: Zwischen beiden Operationen liegt ein `await`; eine parallele Freigabe kann die Liste vor der Registrierung leeren.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: Defensive atomare Prüfung gegen `disposed` im Lifecycle-/Paket-4-Test bewerten.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Review.
+
+### TD-RESPONSE-SUMMARY-001 – Namespace-Summary kann beim Gesamttrimming verschwinden
+
+- Schweregrad: P2
+- Status: zurückgestellt.
+- Scope/Fundstelle: `InspectAssemblyFormatter.TryRemoveLastNamespace` und Gesamtpayload-Budget.
+- Evidenz: Review: Bei weiterhin übergroßem Payload kann der Summary-Eintrag selbst entfernt werden.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: Grenztest für Summary-Erhalt bei maximalem Response-Trimming ergänzen.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Review.
+
+### TD-REGISTRY-DEAD-WIRING-001 – Ungelesene Retirement-Callbacks
+
+- Schweregrad: P3
+- Status: zurückgestellt bis nach Paket 4.
+- Scope/Fundstelle: `AssemblyAnalysisRegistryCoordinatorContext.BeforeRetirementAsync` und `RetireEntryAsync`.
+- Evidenz: Review: Delegates werden gesetzt, vom aktuellen Koordinator jedoch nicht mehr gelesen.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: Nach Abschluss der Lifecycle-Änderungen Referenzen erneut prüfen und sichere Bereinigung durchführen.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Review.

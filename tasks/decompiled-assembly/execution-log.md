@@ -211,6 +211,22 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Scope: Namespace-/Response-Budget, Signature-only-Stub-Fehlerlast, AIContextFootprint und Referenz-Session-Lebenszeit gemäß Paket 3; keine Paket-4-Abschlussmatrix und keine Release-/Live-MCP-Verifikation.
 - MCP-Hinweis: Laufender Server ist älter als der Working Tree; nicht als Feature-Nachweis verwenden.
 
+## 2026-09-02 – Paket 3 – Review
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Reviewer
+- Subagent: `01a061bc-d0c5-7a60-a4a4-1684cd380667`
+- Diff-Scope: Paket-3-Stand `84d7f27c..13c6e936`.
+- Status: terminal abgeschlossen; Review-Checkpoint vor Korrektur.
+- Urteil: `issues`; ein belegtes P1.
+- P1-Finding `TD-SESSION-EVICTION-REFRESH-001`: `AssemblyAnalysisRegistryReferenceEviction` hält offene Entry-Identitäten im `HashSet`. Bei aktivem Fremd-Lease bleibt der Request offen; ein anschließender Fingerprint-Refresh ersetzt den Entry über einen direkten Retirement-Pfad ohne `OnRetired/ClearRequest`. Der alte Entry bleibt damit über Request-Set und Server/Solution referenziert; wiederholte Generationwechsel können den Speicher anwachsen lassen. Korrektur: jeden Retirement-Pfad per Entry-Identität aus dem Request-Set entfernen und den Generationwechsel mit Regression absichern.
+- P2-Risiken: Signature-only-Ausschlüsse/Operator-Syntax nicht vollständig direkt getestet (`accepted-deferred` bis Paket 4); Race zwischen `OpenReferenceExpansionNodeAsync` und `RegisterReferenceLease` (`accepted-deferred`, defensive disposed-atomare Registrierung prüfen); Namespace-Summary kann bei übergroßem Gesamtpayload durch `TryRemoveLastNamespace` entfernt werden (`accepted-deferred`, Grenztest ergänzen).
+- P3-Finding: `BeforeRetirementAsync` und `RetireEntryAsync` werden im `AssemblyAnalysisRegistryCoordinatorContext` noch gesetzt, aber vom aktuellen Koordinator nicht gelesen; `accepted-deferred` nach Paket 4 empfohlen.
+- Verifikation: Implementierer-Nachweise (gezielte Fast 22/22, vollständige Fast Nicht-Stress 2370/2 übersprungen, Build 0/0, lokaler CLI-Linter 0 Zielklassen/9 Altverstöße, Integration 381/2 bestehende Fehler) wurden frisch und passend übernommen. Der Reviewer wiederholte keine erfolgreichen Checks ohne Gegenhypothese.
+- MCP-/Release-Hinweis: MCP, Release/Live und Stress wurden wegen Nutzerhinweis nicht verwendet; der laufende MCP-Server ist älter und kein Feature-Nachweis. Vollständige Live-/Abschlussverifikation bleibt separater Task.
+- Code-Map: ausschließlich konkrete Scope-/Historienfakten korrigiert; kein Produktions-/Testcode und kein Commit durch den Reviewer.
+- Nächste Aktion: frischer Implementierer für P1 `TD-SESSION-EVICTION-REFRESH-001`, Versuch 1/5.
+
 ## 2026-09-02 – Paket 3 – Implementierer
 
 - Run-ID: `decompiled-assembly-20260902`
