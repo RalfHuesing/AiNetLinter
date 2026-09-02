@@ -9,11 +9,11 @@ bereich: src/AiNetLinter/Mcp
 
 ## 1. Intention & Zielsetzung
 
-AiNetLinter nutzt im MCP-Server- und Daemon-Modus derzeit überwiegend manuelle Konstruktor-Kaskaden (*„Poor Man's DI“*) mit Default-Instanziierungen per `new`. Dadurch instanziieren zentrale Klassen (z. B. `AssemblyAnalysisRegistry`, `GetServerHealthResponseBuilder`, `InspectAssemblyTool`) ihre Subkomponenten und Host-Factories selbst.
+AiNetLinter nutzt im MCP-Server- und Daemon-Modus derzeit überwiegend manuelle Konstruktor-Kaskaden (*„Poor Man's DI"*) mit Default-Instanziierungen per `new`. Dadurch instanziieren zentrale Klassen (z. B. `AssemblyAnalysisRegistry`, `GetServerHealthResponseBuilder`, `InspectAssemblyTool`) ihre Subkomponenten und Host-Factories selbst.
 
 ### Das Problem
 1. **Transitive AIContextFootprint-Explosion:**  
-   Roslyn und der AiNetLinter-Footprint-Rechner traversieren konkrete Klassenreferenzen transitiv. Die Kopplung an zentrale Server-Hubs wie `ExternalResourceRegistry` (470 Zeilen) und `McpCodeGraphServer` (448 Zeilen) drückt aktuell mindestens **11 MCP- und Assembly-Klassen** knapp über das Limit von 2.500 Zeilen:
+   Roslyn und der AiNetLinter-Footprint-Rechner traversieren konkrete Klassenreferenzen transitiv. Die **zentrale Koppelungsstelle** ist [`AssemblyAnalysisLease.Server`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/References/AssemblyAnalysisLease.cs#L38) (Typ `McpCodeGraphServer`, 423 Zeilen), die den kompletten `McpCodeGraphServer`-Footprint (inkl. `ExternalResourceRegistry` 455 Zeilen + `SourceSnapshotIdentity` 316 Zeilen) transitiv in **alle 11 Klassen** propagiert, die `AssemblyAnalysisLease` nutzen:
    - `AssemblyHealthProjection` (2.567)
    - `AssemblyAnalysisResponse` (2.556)
    - `AssemblySymbolResolver` (2.540)
@@ -25,20 +25,24 @@ AiNetLinter nutzt im MCP-Server- und Daemon-Modus derzeit überwiegend manuelle 
    - `InspectAssemblyResponseBuilder` (2.509)
    - `AssemblyFindSymbolTool` (2.508)
    - `InspectAssemblyBuildRequest` (2.501)
-2. **Symptombehandlung in `rules.json`:**  
-   Bisherige Ausnahmen wie `"AssemblyAnalysisRegistry"` in `FootprintIgnoreTypeNames` sowie **15 dateispezifische `MaxAIContextFootprint`-Overrides** in `rules.json` (für `FindSymbolTool`, `FindReferencesTool`, `GetServerHealthTool`, `GetViolationsTool`, `SymbolGraphToolRegistrations` etc.) kaschieren das Problem auf Konfigurationsebene, heilen jedoch nicht die strukturelle Kopplung.
+   
+   Zusätzlich gibt es 1 Fehler (`MaxMethodLineCount`): `AssemblySymbolResolver.ResolveAsync` hat 62 Zeilen (Limit: 60).
+
+2. **Symptomkaschierung war die bisherige Antwort:**  
+   Historische `FootprintIgnoreTypeNames`- und `PathOverrides`-Einträge in `rules.json` wurden bereits vollständig entfernt. Damit sind die Violations jetzt **sichtbar**, aber das strukturelle Problem bleibt ungelöst.
+
 3. **Begleitende Code-Schulden (DRY, Magic Values, Dead Code):**  
-   Durch manuelle Dispatcher-Kaskaden und historische Refactorings verbleiben Duplikate bei der Parameter-Extraktion, Magic Strings bei Fehlermeldungen/Routennamen und totes Wiring (z. B. ungenutzte Retirement-Callbacks in `AssemblyAnalysisRegistryCoordinatorContext`).
+   Durch manuelle Dispatcher-Kaskaden und historische Refactorings verbleiben Duplikate bei der Parameter-Extraktion, Magic Strings bei Fehlermeldungen/Routennamen und potenziell totes Wiring.
+
 4. **Erhöhter Testaufwand in `FastTests`:**  
-   Um einzelne Komponenten isoliert im In-Memory-Modus zu testen, müssen komplexe reale Objektbäume aufgebaut werden, statt schlanke Fakes/Mocks injizieren zu können.
+   Um einzelne Komponenten isoliert im In-Memory-Modus zu testen, müssen komplexe reale Objektbäume aufgebaut werden (>249 Referenzen auf `McpCodeGraphServer` allein in den Tests), statt schlanke Fakes/Mocks injizieren zu können.
 
 ### Das Ziel
-Einführung einer **gezielten, leichtgewichtigen Dependency Injection (DI)** und eines sauberen **Composition Roots** für den MCP-Server-Host auf Basis von `Microsoft.Extensions.DependencyInjection`, sodass:
-- Klassen ausschließlich schlanke Interfaces über Constructor Injection empfangen und keine Subsysteme mehr per `new` erzeugen.
-- Der transitive `AIContextFootprint` aller Klassen im MCP-Bereich stabil und ohne Ausnahmeregeln unter dem Limit von 2.500 Zeilen bleibt (Abschneiden der transitiven Bäume bei < 1.400 Zeilen).
-- **Alle 15 dateispezifischen Overrides sowie die `AssemblyAnalysisRegistry`-Ausnahme in `rules.json` rückstandslos entfernt werden**.
+Einführung einer **gezielten, leichtgewichtigen Entkopplung** durch schlanke Interfaces im MCP-Server-Host, sodass:
+- Der transitive `AIContextFootprint` aller Klassen im MCP-Bereich stabil und ohne Ausnahmeregeln unter dem Limit von 2.500 Zeilen bleibt.
+- `AssemblySymbolResolver.ResolveAsync` auf ≤ 60 Zeilen modularisiert wird.
 - DRY-Verstöße, Magic Values und Dead Code im gesamten `Mcp/`-Scope bereinigt werden.
-- Der Safeguard-Score **echte 10,00 / 10,00 aus dem Code heraus** erreicht.
+- Der Safeguard-Score **echte 10,00 / 10,00 aus dem Code heraus** erreicht (aktuell 0,00/10 mit 13 Verstößen).
 
 ---
 
@@ -51,7 +55,7 @@ Um maximale Performance im CLI-Batchbetrieb (<50ms) zu garantieren und gleichzei
 │                              AiNetLinter                               │
 ├───────────────────────────────────┬────────────────────────────────────┤
 │     MCP-Server & Daemon-Host      │          Core Linter CLI           │
-│  (Microsoft.Extensions.DI Root)   │        (Pure / Manual DI)          │
+│  (Interface-basierte Entkopplung) │        (Pure / Manual DI)          │
 │                                   │                                    │
 │  - Assembly-Analysis-Subsystem    │  - LinterEngine                    │
 │  - ExternalResource-Registry      │  - Keine DI-Container              │
@@ -60,133 +64,214 @@ Um maximale Performance im CLI-Batchbetrieb (<50ms) zu garantieren und gleichzei
 └───────────────────────────────────┴────────────────────────────────────┘
 ```
 
----
+### Entscheidung: Interfaces statt DI-Container
 
-## 3. Konkrete Vorschläge & Code-Anker
+Die 360°-Analyse ergibt, dass **kein `Microsoft.Extensions.DependencyInjection`-Container nötig ist**. Das Paket ist nicht referenziert, und die bestehende `AssemblyAnalysisHostComposition` / `AssemblyAnalysisHostFactory` übernimmt bereits die Composition-Root-Rolle für das Assembly-Subsystem. Die Lösung besteht ausschließlich in **schlanken Interfaces**, die die transitiven Footprint-Ketten kappen.
 
-### 3.1. MCP Host Composition Root (`src/AiNetLinter/Mcp/Composition/`)
-
-* **Code-Anker:**  
-  [`src/AiNetLinter/Mcp/Composition/McpServerComposition.cs`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Composition/McpServerComposition.cs) (neu)  
-  [`src/AiNetLinter/Mcp/McpServerOptionsFactory.cs`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/McpServerOptionsFactory.cs)
-* **Maßnahme:**
-  - Bereitstellung einer Extension-Methode `AddMcpServerServices(this IServiceCollection services, McpServerOptions options)`.
-  - Registrierung von Singletons hinter schlanken Interfaces:
-    - `IExternalResourceRegistry` statt konkreter `ExternalResourceRegistry`
-    - `ISolutionSnapshotProvider` / `IMcpServerState` statt monolithischem `McpCodeGraphServer`
-    - `IAssemblyAnalysisRegistry` statt konkreter `AssemblyAnalysisRegistry`
-  - Aufbau des `ServiceProvider` einmalig beim Start des MCP-Hosts (`McpCodeGraphServer` / `DaemonHost`).
+> [!IMPORTANT]
+> **Kein NuGet-Paket `Microsoft.Extensions.DependencyInjection` wird eingeführt.**
+> Die bestehende Factory-/Constructor-Injection-Architektur bleibt vollständig erhalten.
+> Nur die konkreten Typen in Konstruktor-Parametern und Properties werden durch Interfaces ersetzt.
 
 ---
 
-### 3.2. Entkopplung des Assembly-Analysis-Subsystems (`src/AiNetLinter/Mcp/Assemblies/Analysis/`)
+## 3. Root-Cause-Analyse & Koppelungsketten
 
-* **Code-Anker:**  
-  [`src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisRegistry.cs`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisRegistry.cs)  
-  [`src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResourceBudget.cs`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResourceBudget.cs)  
-  [`src/AiNetLinter/Mcp/Assemblies/Analysis/Factories/AssemblyAnalysisRegistryEntryFactory.cs`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/Factories/AssemblyAnalysisRegistryEntryFactory.cs)
-* **Maßnahme:**
-  1. **Einführung von Kern-Interfaces:**
-     - `IAssemblyAnalysisResourceBudget`: Abstrahiert `Acquire`, `BeginOperation`, `EvictIdle`, `Health`, `Clock`.
-     - `IAssemblyAnalysisEntryFactory`: Abstrahiert die asynchrone Entry-Erstellung (`CreateAsync`).
-     - `IAssemblySourceProjectCoordinator`: Abstrahiert die Source-Project-Resolution und das Lease-Mapping.
-  2. **Reine Constructor Injection in `AssemblyAnalysisRegistry`:**
-     - `AssemblyAnalysisRegistry` instanziiert keine Sub-Factories mehr mit `new`.
-     - Alle Abhängigkeiten werden über den primären Konstruktor injiziert.
-  3. **Ergebnis:** Der transitive Footprint von `AssemblyAnalysisRegistry` sinkt von **4.362 auf < 1.400 Zeilen**.
+### 3.1. Primäre Koppelungskette (verantwortlich für alle 11 Footprint-Warnungen)
 
----
+```
+AssemblyAnalysisLease.Server : McpCodeGraphServer (423 Zeilen)
+    ├── verwendet von: 20+ Aufrufstellen (lease.Server.GetCurrentSolution(), 
+    │                   lease.Server.AssemblySymbolIdentity, lease.Server.GetConfigSnapshot())
+    └── transitiv: McpCodeGraphServer → ExternalResourceRegistry (455) + SourceSnapshotIdentity (316)
+         → Footprint > 2.500 für alle Consumer von AssemblyAnalysisLease
+```
 
-### 3.3. Entkopplung der MCP Tool Handlers & Response Builder (`src/AiNetLinter/Mcp/Tools/`)
+**Beweis aus MCP-Evidenz:** Jede einzelne Footprint-Warnung zeigt exakt dieselben Top-3:
+- `+ ExternalResourceRegistry (470)` (Datei: 455 + 7 nested class `ResourceEntry`)
+- `+ McpCodeGraphServer (448)` (Datei: 423 + interne Records)
+- `+ SourceSnapshotIdentity (316)`
 
-* **Code-Anker:**  
-  [`src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/InspectAssemblyTool.cs`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/InspectAssemblyTool.cs)  
-  [`src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/FindAssemblyExtensionsTool.cs`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/FindAssemblyExtensionsTool.cs)  
-  [`src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblySymbolResolver.cs`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblySymbolResolver.cs)  
-  [`src/AiNetLinter/Mcp/Tools/ServerMaintenance/GetServerHealthResponseBuilder.cs`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/ServerMaintenance/GetServerHealthResponseBuilder.cs)
-* **Maßnahme:**
-  - Tools und Response-Builder empfangen nicht mehr die monolithischen Klassen `ExternalResourceRegistry` und `McpCodeGraphServer`, sondern ausschließlich gezielte Interfaces (`IAssemblyAnalysisRegistry`, `ISolutionSnapshotProvider`, `IExternalResourceRegistry`).
-  - Werkzeuge können als instanziierbare Handler `IMcpToolHandler<TArgs>` im DI-Container registriert werden.
-  - Überlange Methoden wie `AssemblySymbolResolver.ResolveAsync` (62 Zeilen) werden im Zuge der Schnittstellenumstellung auf $\le 60$ Zeilen modularisiert.
+### 3.2. Sekundäre Koppelungskette (AssemblyAnalysisRegistry-intern)
 
----
+```
+AssemblyAnalysisRegistry(.ctor)
+    ├── new AssemblyAnalysisResourceBudget(resourceRegistry) → ExternalResourceRegistry
+    ├── new AssemblyAnalysisRegistryEntryFactory(...) → ExternalResourceRegistry transitiv
+    ├── new AssemblyAnalysisSourceProjectEntryFactory(...) → dito
+    ├── new AssemblyAnalysisRegistryEvictionCandidates(...)
+    ├── new AssemblyAnalysisRegistryEvictionCoordinator(...)
+    └── new AssemblyAnalysisSourceProjectLeaseCoordinator(...)
+```
 
-### 3.4. Systematischer Quality-Audit: DRY, Dead Code & Magic Values
-
-* **Maßnahme:**
-  1. **Dead-Code-Bereinigung (`find_dead_code`):**
-     - Bereinigung von historischem Dead-Wiring in Koordinatoren (z. B. ungenutzte `BeforeRetirementAsync`- und `RetireEntryAsync`-Delegates in `AssemblyAnalysisRegistryCoordinatorContext`).
-     - Entfernung ungenutzter interner Überladungen und Hilfsstrukturen im MCP-Scope.
-  2. **Magic-Values-Bereinigung (`find_magic_values`):**
-     - Zentralisierung von Magic Strings (Tool-Namen, Diagnose-Codes, Header-Texte) und Magic Numbers (Timeout-Defaults, Cache-Limits, Navigations-Tiefen) in dedizierten Kontrakten/Enums/Konstanten.
-  3. **DRY-Konsolidierung (`find_duplicates`):**
-     - Vereinheitlichung redundanter Parameter-Validierungs- und Fehlerbehandlungsblöcke (`IsErrorPolicy`) in gemeinsamen Dispatcher-Helfern.
+Diese Kette verursacht aktuell **keine** Footprint-Warnung für `AssemblyAnalysisRegistry` selbst (liegt durch `IAssemblyAnalysisRegistry`-Interface bereits entkoppelt), aber sie erhöht den Footprint der Klassen, die `AssemblyAnalysisRegistry` **konkret** (statt über das Interface) nutzen.
 
 ---
 
-### 3.5. Vollständige Rücknahme aller `rules.json`-Ausnahmen & Overrides
+## 4. Konkrete Maßnahmen & Code-Sketches
 
-* **Code-Anker:**  
-  [`rules.json`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/rules.json#L156) (Zeile 156–160 und 446–537)  
-  [`Docs/configuration.md`](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/Docs/configuration.md)
-* **Maßnahme:**
-  1. **Entfernung aus `FootprintIgnoreTypeNames`:**  
-     - `"AssemblyAnalysisRegistry"` wird aus `Metrics.FootprintIgnoreTypeNames` gelöscht (es verbleiben nur die unvermeidlichen Core-Linter-Hubs `LinterEngine` und `NamingChecker`).
-  2. **Vollständige Löschung aller 18 dateispezifischen `PathOverrides` unter `src/AiNetLinter/Mcp/**`:**  
-     - `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` (bisher Override 2520)
-     - `src/AiNetLinter/Mcp/McpServerOptionsFactory.cs` (bisher Override 2830)
-     - `src/AiNetLinter/Mcp/Registration/OverviewResourceRegistration.cs` (bisher Override 2650)
-     - `src/AiNetLinter/Mcp/Registration/SymbolGraphToolRegistrations.cs` (bisher Override 2900)
-     - `src/AiNetLinter/Mcp/Tools/FindReferencesTool.cs` (bisher Override 2700)
-     - `src/AiNetLinter/Mcp/Tools/FindSymbolTool.cs` (bisher Override 2690)
-     - `src/AiNetLinter/Mcp/Tools/GetFileSkeletonTool.cs` (bisher Override 2620)
-     - `src/AiNetLinter/Mcp/Tools/GetHotspotsTool.cs` (bisher Override 2610)
-     - `src/AiNetLinter/Mcp/Tools/GetIndexScopeTool.cs` (bisher Override 2620)
-     - `src/AiNetLinter/Mcp/Tools/GetImpactTool.cs` (bisher Override 2650)
-     - `src/AiNetLinter/Mcp/Tools/GetTypeHierarchyTool.cs` (bisher Override 2620)
-     - `src/AiNetLinter/Mcp/Tools/GetViolationsTool.cs` (bisher Override 2620)
-     - `src/AiNetLinter/Mcp/Tools/SearchPatternTool.cs` (bisher Override 2650)
-     - `src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs` (bisher Override 2700)
-     - `src/AiNetLinter/Mcp/Registration/SymbolBodyToolRegistrations.cs` (bisher Override 2830)
-     - `src/AiNetLinter/Mcp/Registration/ServerMaintenanceToolRegistrations.cs` (bisher Override 2860)
-     - `src/AiNetLinter/Mcp/Tools/GetServerHealthTool.cs` (bisher Override 2860)
-     - `src/AiNetLinter/Mcp/Tools/ReloadConfigTool.cs` (bisher Override 2610)
-  3. **Regel-Synchronisation:**  
-     - Ausführung von `dotnet run --project src/AiNetLinter -- --sync-agent-rules-only` zur Aktualisierung der Agentenregeln in `.agents/rules/AiNetLinter.mdc`.
-  4. **Verifikation:**  
-     - `get_violations` (0 Violations) und `safeguard` (**10,00 / 10,00 PASS** ohne jegliche Ausnahmeregel).
+### 4.1. Interface `ISolutionSnapshotProvider` — Primärer Hebel (Kappen der Hauptkette)
+
+**Lokation:** `src/AiNetLinter/Mcp/ISolutionSnapshotProvider.cs` (NEU)
+
+Das Interface abstrahiert die **drei tatsächlich genutzten** Capabilities von `McpCodeGraphServer` in der Lease-Kette:
+
+```csharp
+// src/AiNetLinter/Mcp/ISolutionSnapshotProvider.cs (NEU)
+namespace AiNetLinter.Mcp;
+
+internal interface ISolutionSnapshotProvider
+{
+    Solution? GetCurrentSolution();
+    AnalysisSymbolIdentity? AssemblySymbolIdentity { get; }
+    ServerLoadState LoadState { get; }
+}
+```
+
+**Erwarteter Footprint des Interface:** ~5 Zeilen → kein transitiver Ballast.
+
+**Änderungen an `McpCodeGraphServer`:**
+```csharp
+// McpCodeGraphServer.cs — nur Ergänzung der Interface-Deklaration
+internal sealed class McpCodeGraphServer : ISolutionSnapshotProvider, IDisposable, IAsyncDisposable
+{
+    // Alle Member bleiben unverändert — die Methoden existieren bereits.
+}
+```
+
+**Änderungen an `AssemblyAnalysisLease`:**
+```csharp
+// AssemblyAnalysisLease.cs — Konstruktor und Property
+internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
+{
+    // VORHER: McpCodeGraphServer server
+    // NACHHER:
+    internal AssemblyAnalysisLease(
+        AssemblyAnalysisEntry entry,
+        string canonicalPath,
+        ISolutionSnapshotProvider server,  // ← Interface statt konkreter Klasse
+        AssemblyContext context,
+        AssemblyReferenceLeaseContext referenceContext) { ... }
+
+    internal ISolutionSnapshotProvider Server { get; }  // ← Typ-Änderung
+}
+```
+
+**Auswirkung:** Alle 11 Footprint-Warnungen werden aufgelöst, da `ISolutionSnapshotProvider` (~5 Zeilen) statt `McpCodeGraphServer` (423 Zeilen) den transitiven Baum dominiert.
+
+### 4.2. Weitere Interface-Auslagerung von `McpCodeGraphServer` in Methodenparametern
+
+**Problem:** `AssemblyAnalysisToolSupport` nimmt `McpCodeGraphServer?` direkt als Parameter:
+
+```csharp
+// VORHER (AssemblyAnalysisToolSupport.cs:48-52)
+internal static async Task<AssemblyToolPreparation> PrepareAsync(
+    McpCodeGraphServer? state, ...)
+```
+
+**NACHHER:**
+```csharp
+internal static async Task<AssemblyToolPreparation> PrepareAsync(
+    ISolutionSnapshotProvider? state, ...)
+```
+
+Ebenso für `AssemblyToolExecutionParameters.State` (Record-Definition Zeile 112) und `TryPrepareInput`.
+
+### 4.3. Caller-Anpassungen: `lease.Server`-Zugriffe
+
+Die ~50 Aufrufstellen von `lease.Server` bleiben **syntaktisch unverändert**, da `ISolutionSnapshotProvider` genau die genutzten Member deklariert:
+- `lease.Server.GetCurrentSolution()` → ✅ im Interface
+- `lease.Server.AssemblySymbolIdentity` → ✅ im Interface
+- `lease.Server.LoadState` → ✅ im Interface
+
+Einzige Ausnahmen, die zusätzliches Interface-Surface erfordern (oder einen cast benötigen):
+
+| Caller | Zugriff | Lösung |
+|:---|:---|:---|
+| `ReloadConfigTool.ExecuteAsync` | `lease.Server` als `McpCodeGraphServer` (für `ReloadConfig`) | Parameter auf `McpCodeGraphServer` belassen (nicht über Lease) |
+| `OverviewResourceRegistration` | `snapshot.Server` für `DescribeSolution`/`DescribeConfig` | Dito — der ProjectLease hat eigene Server-Ref |
+| `ProjectToolCall` | `lease.Server` für Load-State-Check + Reload | Dito — ProjectLease behält eigenen konkreten Typ |
+
+> [!IMPORTANT]
+> Die `ProjectLease` (in `ProjectRegistry`) ist ein anderer Lease-Typ als `AssemblyAnalysisLease` und **nicht betroffen** von den Footprint-Warnungen. Dort bleibt `McpCodeGraphServer` konkret.
+
+### 4.4. Modularisierung `AssemblySymbolResolver.ResolveAsync` (62 → ≤ 60 Zeilen)
+
+**Problem:** `ResolveAsync` hat 62 Codezeilen (Limit: 60), CyclomaticComplexity=10, CognitiveComplexity=12 — zu hoch für Compound-Suppression.
+
+**Lösung:** Extract-Method-Refactoring — die referenzierende Lease-Resolution (19 Zeilen) ist bereits in `ResolveLeaseAsync` extrahiert. Der verbleibende Body enthält zwei separate Blöcke:
+1. Initial-Resolution + Fehlerbehandlung (~30 Zeilen)
+2. Reference-Navigation + Fallback (~32 Zeilen)
+
+Ein `TryResolveInReferences`-Extrakt kann die Methode unter das Limit bringen:
+
+```csharp
+// Sketch: Extract-Method
+private async Task<(AssemblySymbolTarget? Target, string? Diagnostic)> TryResolveInReferencesAsync(
+    Solution solution,
+    AssemblyAnalysisLease root,
+    string identifier,
+    CancellationToken cancellationToken)
+{
+    // Die ~20 Zeilen Reference-Navigation-Logik hierher verschieben
+}
+```
+
+### 4.5. Systematischer Quality-Audit: DRY, Dead Code & Magic Values
+
+* **Dead-Code-Bereinigung (`find_dead_code`):**
+  - Bereinigung von historischem Dead-Wiring in Koordinatoren (z. B. `beforeRetirementAsync`-Callback in `AssemblyAnalysisRegistry` Konstruktor, falls ungenutzt).
+  - Entfernung ungenutzter interner Überladungen und Hilfsstrukturen im MCP-Scope.
+* **Magic-Values-Bereinigung (`find_magic_values`):**
+  - Zentralisierung von Magic Strings (Tool-Namen, Diagnose-Codes, Header-Texte) und Magic Numbers (Timeout-Defaults, Cache-Limits, Navigations-Tiefen) in dedizierten Kontrakten/Enums/Konstanten.
+* **DRY-Konsolidierung (`find_duplicates`):**
+  - Vereinheitlichung redundanter Parameter-Validierungs- und Fehlerbehandlungsblöcke in gemeinsamen Dispatcher-Helfern.
+
+### 4.6. Test-Datei-Splitting: `AssemblyAnalysisSessionTests.cs` (508 → ≤ 500 Zeilen)
+
+**Problem:** `AssemblyAnalysisSessionTests.cs` hat 508 Zeilen (Limit: 500, Severity: error).
+
+**Lösung:** Thematisch zusammengehörende Test-Gruppen in eigene Dateien extrahieren (z. B. `AssemblyAnalysisSessionReferenceTests.cs` oder `AssemblyAnalysisSessionLeaseTests.cs`).
 
 ---
 
-## 4. Muss-Kriterien & Akzeptanzkriterien
+## 5. Muss-Kriterien & Akzeptanzkriterien
 
-1. **Keine `rules.json`-Ausnahmen oder Tool-Overrides im MCP-Bereich:**  
-   `rules.json` enthält weder `FootprintIgnoreTypeNames` für MCP-Klassen noch dateispezifische `MaxAIContextFootprint`-PathOverrides für die 18 MCP-Dateien.
-2. **0 AIContextFootprint-Warnungen:**  
+1. **0 AIContextFootprint-Warnungen:**  
    Alle Klassen im MCP- und Assembly-Bereich unterschreiten den globalen Standard-Grenzwert von 2.500 Zeilen ohne lokale `#pragma` oder Disable-Kommentare.
-3. **0 MaxLineCount- und MaxMethodLineCount-Fehler:**  
-   Alle MCP-Produktions- und Testdateien halten $\le 500$ Datei-Zeilen und $\le 60$ Methoden-Zeilen ein.
-4. **Sauberes DRY-, Dead-Code- und Magic-Value-Audit:**  
+2. **0 MaxLineCount- und MaxMethodLineCount-Fehler:**  
+   Alle MCP-Produktions- und Testdateien halten ≤ 500 Datei-Zeilen und ≤ 60 Methoden-Zeilen ein (konkret: `AssemblySymbolResolver.ResolveAsync` und `AssemblyAnalysisSessionTests.cs`).
+3. **Sauberes DRY-, Dead-Code- und Magic-Value-Audit:**  
    MCP-Tools `find_dead_code`, `find_magic_values` und `find_duplicates` melden 0 relevante Befunde im `Mcp/`-Scope.
-5. **100 % Regressionsfreiheit & Thread-Safety:**  
+4. **100 % Regressionsfreiheit & Thread-Safety:**  
    Alle FastTests (2.370+ Tests) und IntegrationTests (380+ Tests) laufen vollständig grün durch. Locking- und Concurrency-Invarianten in `AssemblyAnalysisRegistry` bleiben erhalten.
-6. **Keine Latenz-Regression im Core-Linter:**  
+5. **Keine Latenz-Regression im Core-Linter:**  
    Die CLI-Ausführung von `LinterEngine` bleibt containerlos und instantiiert keine unnötigen DI-Strukturen (< 10 ms).
+6. **Kein neues NuGet-Paket:**  
+   `Microsoft.Extensions.DependencyInjection` wird nicht eingeführt.
+7. **Safeguard-Score:**  
+   `safeguard(minScore: 8.0)` ergibt **10,00 / 10,00 — PASS** ohne jegliche Ausnahmeregel.
 
 ---
 
-## 5. Explizite Non-Goals & Scope-Grenzen
+## 6. Explizite Non-Goals & Scope-Grenzen
 
+* **Kein DI-Container (weder `Microsoft.Extensions.DependencyInjection` noch anderer):**  
+  Die bestehende Constructor/Factory-Architektur bleibt vollständig erhalten.
 * **Kein DI in Roslyn Rules (`Rules/`):**  
   Die Roslyn-SyntaxWalker und Regel-Implementierungen bleiben 100 % zustandslos und containerlos.
 * **Kein globaler Service Locator:**  
-  `IServiceProvider` wird nicht durch Methodenaufrufe oder Parameter weitergereicht (`Anti-Pattern`). Auflösung erfolgt ausschließlich an den Systemgrenzen (Composition Root / Dispatcher).
+  `IServiceProvider` wird nicht durch Methodenaufrufe oder Parameter weitergereicht (`Anti-Pattern`). Auflösung erfolgt ausschließlich an den Systemgrenzen.
 * **Kein Austausch des Logging- oder CLI-Frameworks:**  
   Serilog und System.CommandLine bleiben unverändert im Einsatz.
+* **ProjectLease / ProjectRegistry bleibt unverändert:**  
+  Der `ProjectEntry.Server`-Typ bleibt `McpCodeGraphServer` — dort gibt es keine Footprint-Warnung.
+* **Keine `rules.json`-Änderungen:**  
+  Es gibt keine `PathOverrides` oder `FootprintIgnoreTypeNames` mehr — die wurden bereits entfernt. Das Konzept erzeugt keine neuen Einträge.
 
 ---
 
-## 6. Geplante Verifikation
+## 7. Geplante Verifikation
 
 | Phase / Schritt | Verifikationsbefehl | Erwartetes Ergebnis |
 |:---|:---|:---|
@@ -201,8 +286,51 @@ Um maximale Performance im CLI-Batchbetrieb (<50ms) zu garantieren und gleichzei
 
 ---
 
-## 7. Arbeitsgedächtnis (nur Draft)
+## 8. Risiken & Edge Cases
 
-- **Kontext-Anker:** Analyse vom 2026-09-02 zur Beseitigung aller 11 MCP-Footprint-Warnungen, der 15 `rules.json`-Overrides und Wiederherstellung des echten 10,00/10 Safeguard-Scores.
-- **Entscheidung:** Entlastung aller MCP-Klassen durch gezielte Interface-DI (`IExternalResourceRegistry`, `ISolutionSnapshotProvider`, `IAssemblyAnalysisRegistry`) sowie systematischer DRY/DeadCode/MagicValues-Audit im `Mcp/`-Bereich.
-- **Nächster Schritt:** Freigabe des Konzepts (`status: ready`) nach Abschluss des aktuellen Assembly-Tasks.
+### 8.1. Interface-Segregation: Reicht `ISolutionSnapshotProvider` aus?
+
+**Risiko:** Einzelne Caller greifen über `lease.Server` auf Members zu, die nicht im Interface sind.
+
+**Analyse:** Die grep-Suche auf `lease.Server` zeigt:
+- Häufigste Zugriffe: `.GetCurrentSolution()`, `.AssemblySymbolIdentity`, `.LoadState` → alle im Interface
+- Sonderfälle (`ReloadConfigTool`, `OverviewResourceRegistration`, `RulesResourceFormatter`, `ProjectResourceLease`) nutzen `ProjectLease.Server` (anderer Lease-Typ) oder erhalten `McpCodeGraphServer` direkt als Parameter → **nicht betroffen**
+
+**Maßnahme:** Vor Implementierung einmalig alle `lease.Server.`-Zugriffe validieren und ggf. Interface erweitern.
+
+### 8.2. Thread-Safety bei `AssemblyAnalysisLease`
+
+**Risiko:** `AssemblyAnalysisLease` ist thread-safe durch `referenceGate` (Lock-Objekt). Die Typänderung von `McpCodeGraphServer` → `ISolutionSnapshotProvider` ändert keine Locking-Semantik.
+
+**Maßnahme:** Regressionstests für Concurrency-Szenarien (inkl. `AssemblyAnalysisRegistryRetirementRaceTests`).
+
+### 8.3. Assembly-Analyse-Entry-Factory: Erhält `McpCodeGraphServer` über `AssemblyAnalysisRegistryEntryCreation`
+
+Die Entry-Creation-Kette in `AssemblyAnalysisRegistryEntryCreation` erstellt Leases und übergibt den konkreten `McpCodeGraphServer`. Hier muss die Factory ebenfalls das Interface verwenden.
+
+**Edge Case:** `AssemblyAnalysisRegistryEntryCreation` wird in `AssemblyAnalysisHostComposition.Create()` und diversen Tests erstellt. Die Tests konstruieren `McpCodeGraphServer` direkt — diese müssen das Interface nutzen oder die Tests einen konkreten `McpCodeGraphServer` übergeben (der das Interface implementiert).
+
+### 8.4. Body-Resolution und `IAssemblyBodyContext`
+
+`AssemblyAnalysisLease` implementiert `IAssemblyBodyContext` mit:
+```csharp
+Solution? IAssemblyBodyContext.Solution => Server.GetCurrentSolution();
+AnalysisSymbolIdentity? IAssemblyBodyContext.AssemblySymbolIdentity => Server.AssemblySymbolIdentity;
+```
+Das funktioniert weiterhin, da `ISolutionSnapshotProvider` genau diese Member deklariert.
+
+### 8.5. Kein Over-Engineering: `IExternalResourceRegistry` ist nicht nötig
+
+**Analyse:** `ExternalResourceRegistry` erscheint als Top-Contributor in den Footprint-Warnungen, aber **nicht weil sie direkt referenziert wird**, sondern transitiv über `McpCodeGraphServer`. Sobald `ISolutionSnapshotProvider` die Kette kappt, sinkt der Footprint aller 11 Klassen um ~470+448+316 = ~1.234 Zeilen — weit unter das 2.500-Limit.
+
+Ein separates `IExternalResourceRegistry`-Interface wäre Over-Engineering und wird **nicht** eingeführt.
+
+---
+
+## 9. Arbeitsgedächtnis (nur Draft)
+
+- **Kontext-Anker:** 360°-Analyse vom 2026-09-02 auf Basis von MCP `get_violations`, `safeguard`, `find_references`, `dependency_graph`, `get_class_structure` und Quellcode-Lektüre.
+- **Zentrale Erkenntnis:** Die 11 Footprint-Warnungen haben eine einzige Root-Cause: `AssemblyAnalysisLease.Server` als `McpCodeGraphServer` (konkret statt Interface). Alle 11 Klassen referenzieren `AssemblyAnalysisLease` und erben den transitiven Baum.
+- **Korrektur gegenüber v1:** `rules.json` enthält **keine** `PathOverrides` oder `FootprintIgnoreTypeNames` mehr. Abschnitt 3.5 der v1 (Rücknahme aller Overrides) ist **gegenstandslos** — das wurde bereits erledigt. Das Konzept wurde auf die tatsächliche Code-Realität aktualisiert.
+- **Offene Frage:** Soll das Interface `ISolutionSnapshotProvider` heißen oder `IMcpServerState`? Empfehlung: `ISolutionSnapshotProvider`, da es den primären Zweck (Solution-Zugriff) beschreibt, nicht die Herkunft.
+- **Nächster Schritt:** Review durch den Nutzer, ggf. Freigabe auf `status: ready`.
