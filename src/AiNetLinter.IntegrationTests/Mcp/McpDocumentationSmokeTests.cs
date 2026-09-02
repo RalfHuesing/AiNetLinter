@@ -93,5 +93,22 @@ public sealed class McpDocumentationSmokeTests
         Assert.Contains("`includeSessions=true`", docText, StringComparison.Ordinal);
         Assert.Contains("`maxSessions`", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("ohne Target getrennte Projekt-/Assembly-Session-Listen", docText, StringComparison.Ordinal);
+
+        var getImpactStart = docText.IndexOf(
+            "**`get_impact` (Symbol-Branch) — Assembly-Vertrag:**", StringComparison.Ordinal);
+        Assert.True(getImpactStart >= 0,
+            "Der getrennte Assembly-Vertrag für get_impact fehlt.");
+        var getImpactEnd = docText.IndexOf(
+            "**`get_impact` (`detailLevel=change-context`)", getImpactStart, StringComparison.Ordinal);
+        Assert.True(getImpactEnd > getImpactStart,
+            "Der getrennte Assembly-Vertrag für get_impact ist nicht begrenzt.");
+        var getImpactAssemblySection = docText.Substring(getImpactStart, getImpactEnd - getImpactStart);
+        Assert.Contains("keinen `includeReferences`-Parameter", getImpactAssemblySection, StringComparison.Ordinal);
+        Assert.Contains("ExpandAssemblyReferences=true", getImpactAssemblySection, StringComparison.Ordinal);
+        Assert.Contains("callSites", getImpactAssemblySection, StringComparison.Ordinal);
+        Assert.Contains("analysis", getImpactAssemblySection, StringComparison.Ordinal);
+        Assert.DoesNotContain("includeReferences=false", getImpactAssemblySection, StringComparison.Ordinal);
+        Assert.DoesNotContain("includeReferences=true", getImpactAssemblySection, StringComparison.Ordinal);
+        Assert.Contains("nicht als `get_impact`-Antwortvertrag", getImpactAssemblySection, StringComparison.Ordinal);
     }
 }

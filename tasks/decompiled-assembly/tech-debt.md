@@ -70,11 +70,11 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE – Gemeinsamer Dokuabschnitt vermischt Toolverträge
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 1/5 läuft.
+- Status: behoben in Korrekturversuch 1/5.
 - Scope/Fundstelle: `Docs/agent-api.md`, Beschreibung von `find_references` und `get_impact`.
 - Evidenz: Review des Paket-2-Diffs; `get_impact` besitzt weder `includeReferences` noch eine `navigation`-Struktur, obwohl der gemeinsame Abschnitt dies nahelegt.
-- Disposition: `fix-now`
-- Nächster Schritt: Dokumentation in getrennte, gegen die aktuellen Registrierungen verifizierte Toolverträge aufteilen.
+- Disposition: `fixed`
+- Nächster Schritt: Erledigt; Doku ist getrennt und durch `McpDocumentationSmokeTests` abgesichert.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 2 Review.
 
 ### NAV-COMPLETENESS-SESSION-CAP-OVERWRITE – Completeness kann Trunkierung überdecken

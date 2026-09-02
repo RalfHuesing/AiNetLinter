@@ -144,3 +144,17 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Scope: Nur Trennung/Korrektur des `find_references`-/`get_impact`-Abschnitts und direkte Doku-Regression; keine Produktionscodeänderung und keine Paket-3/4-Arbeit.
 - MCP-Hinweis: Laufender Server ist älter als der Working Tree und darf nicht als Feature-Verifikation dienen; Release-/Live-Prüfung bleibt separater Task.
 - Status: running
+
+## 2026-09-02 – Paket 2 – Korrekturversuch 1 – Implementierer
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: `01a0615d-e542-7051-9a93-86a96e5a2c82`
+- Diff-Baseline: `60e91694`
+- Status: terminal abgeschlossen; Korrekturstand unreviewt gesichert.
+- Urteil: P1-Finding `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE` behoben; kein Produktionscode geändert.
+- Geänderte Bereiche: `Docs/agent-api.md` trennt `find_references` und `get_impact` und beschreibt den tatsächlichen Assembly-`get_impact`-Vertrag; `McpDocumentationSmokeTests.cs` ergänzt einen Doku-Vertragstest; `code-map.md` aktualisiert.
+- Verifikation nach der letzten Änderung: exakter Doku-Test 1/1 bestanden; FastTests mit `GetImpactToolTests|AssemblyAnalysisRouteTests|SymbolGraphToolRegistrationsTests` 26/26 bestanden; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` sauber.
+- `get_violations` mit Projektziel und Scope `src/AiNetLinter.IntegrationTests/Mcp/McpDocumentationSmokeTests.cs` meldete 0 Befunde, wurde wegen des veralteten MCP-Builds ausdrücklich nur als Zusatzdiagnose und nicht als Feature-Nachweis behandelt.
+- Unverändert konsistent: `instructions.md`, `ServerInstructions.cs`, `README.md`, `Docs/configuration.md`. Vollständige Nicht-Stress-Gates sowie Release-/Live-MCP-Prüfungen wurden bewusst nicht ausgeführt.
+- Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.

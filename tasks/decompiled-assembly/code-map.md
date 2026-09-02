@@ -1,5 +1,13 @@
 # Code Map
 
+## Korrekturrunde 1/5 — DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE
+
+- Scope bleibt auf den P1-Dokumentationsfehler begrenzt; keine Produktionscode-, Paket-3/4-, `roadmap.md`-, `execution-log.md`- oder `tech-debt.md`-Änderung.
+- Lokale Source-of-Truth: `SymbolGraphToolRegistrations.AddGetImpact` registriert für Assemblys denselben `GetImpactInput`-Datensatz ohne öffentliches `includeReferences`; der Dispatch setzt intern `ExpandAssemblyReferences: true`. `GetImpactTool.ValidateTargetArguments` verlangt im Assembly-Zweig `symbolIdentifier` und weist leere bzw. `gitRef`-basierte Aufrufe als recoverable `INVALID_ARGUMENT` ab.
+- Der Assembly-Symbolzweig ruft `CallGraphTraversal` auf und liefert `ReferenceTraversalResult` mit `callSites` und `completeness`. `AssemblyAnalysisResponse.Enrich` ergänzt das strukturierte Ergebnis um `analysis` mit Target, `origin`, Source-/Snapshot-Kontext, Generation, Status und Vollständigkeit; die Call-Sites erhalten in dieser Route keine eigene `navigation`-/`origin`-Struktur.
+- `Docs/agent-api.md` trennt seit der Korrektur den `find_references`-Vertrag (öffentliches `includeReferences`, `navigation`, höchstens 32 Root-/Referenz-Sessions) vom Assembly-Vertrag von `get_impact`. Die geprüften Abschnitte in `instructions.md`, `src/AiNetLinter/Mcp/ServerInstructions.cs`, `README.md` und `Docs/configuration.md` waren unmittelbar konsistent und blieben unverändert.
+- `src/AiNetLinter.IntegrationTests/Mcp/McpDocumentationSmokeTests.cs` schützt den Dokuvertrag mit Assertions für den getrennten Abschnitt, die interne Dispatch-Option, die tatsächliche Payload und das Nichtvorhandensein der vererbten öffentlichen `includeReferences`-Aussagen.
+
 ## Paket-2-Kontextaufnahme
 
 - `src/AiNetLinter/Mcp/Registration/AssemblyAnalysisToolRegistrations.cs` — Schema-/Dispatcher-Einstieg für `inspect_assembly` und `find_assembly_extensions`; `AnalysisToolDispatch.ExpandAssemblyReferences` steuert die tatsächliche Reference-Expansion.
@@ -67,6 +75,15 @@ Die MCP-first-Aufnahme erfolgte mit `targetType=project` und absolutem Projektro
 - Vor der abschließenden whitespace-only Codeänderung: vollständige `FastTests --filter Category!=Stress` 2363 bestanden, 2 übersprungen; `IntegrationTests --filter Category!=Stress` 378 bestanden, 1 fehlgeschlagen wegen des bestehenden Live-Safeguard-Korridors (`Score 1,154... < 5,0`). Nach der letzten Codeänderung liefen die fokussierten Body-/Cache-/Resolver-/Cleanup-Tests 33/33 grün und `dotnet build --no-restore` mit 0 Warnungen/0 Fehlern. MCP-Impact: 6 Dateien/16 Symbole/0 Violations; `find_duplicates`: 0 Cluster bei 1509 Methoden; `find_magic_values`: 0 Treffer; `find_dead_code`: 0 High- und 37 Low-Confidence-Kandidaten.
 - Historischer Paket-1-Abschluss-Audit mit `targetType=project`, absolutem Projektroot und MCP-Scope `src/AiNetLinter/Mcp`: `find_duplicates` 0 Cluster bei 1504 Methoden; `find_magic_values` 0 Treffer; `find_dead_code` 37 Low-Confidence-Kandidaten, 0 High-Confidence-Kandidaten (nicht sicher löschbar); `safeguard` 1,0/10 mit 6 bestehenden `AIContextFootprint`-Warnungen in Paket-3-nahen Typen. Diese Befunde wurden nicht in Paket 2 hineingezogen.
 - Der abschließende gezielte `get_violations`-Check wurde nach der letzten Codeänderung mit `targetType=project`, absolutem Projektroot, `scopeFilter=src/AiNetLinter/Mcp`, `maxResults=200`, `includeSnippet=false` und `contextLines=0` ausgeführt: 6 `AIContextFootprint`-Warnungen, 0 Fehler; die Befunde sind bestehende bzw. architektonische Footprint-Themen (einer liegt im geänderten Helper `AssemblyNavigationSupport`) und erfordern keinen sicheren Paket-2-Kurzfix.
+
+### Korrekturrunden-Verifikation
+
+- Nach der letzten Codeänderung und mit dem finalen Doku-Stand: `dotnet test src/AiNetLinter.IntegrationTests --no-build --filter "FullyQualifiedName~McpDocumentationSmokeTests.AgentApi_DescribesCsharpOnlyToolScopeWithoutHardcodedCounts" --logger "console;verbosity=minimal"` — 1/1 bestanden.
+- Nach der letzten Codeänderung: `dotnet test src/AiNetLinter.FastTests --filter "FullyQualifiedName~GetImpactToolTests|FullyQualifiedName~AssemblyAnalysisRouteTests|FullyQualifiedName~SymbolGraphToolRegistrationsTests" --logger "console;verbosity=minimal"` — 26/26 bestanden.
+- Nach der letzten Codeänderung: `dotnet build --no-restore` — erfolgreich, 0 Warnungen, 0 Fehler.
+- Nach der letzten Codeänderung: `get_violations` mit `targetType=project`, absolutem Projektroot, `scopeFilter=src/AiNetLinter.IntegrationTests/Mcp/McpDocumentationSmokeTests.cs`, `maxResults=50`, `includeSnippet=false`, `contextLines=0` — MCP-Antwort 0 Violations. Der laufende MCP-Server war gemäß Nutzerentscheidung ein älterer Build; dieser Check ist deshalb nur Zusatzdiagnose und kein Nachweis der neuen Doku-/Feature-Vertragsänderung.
+- Der erste Lauf des Doku-Tests vor der letzten Assertion-Korrektur schlug erwartungsgemäß an einer zu strengen Negativassertion für den erklärenden Text `32-Session-Limit` fehl; nach der Korrektur wurde der Lauf erfolgreich wiederholt.
+- Nicht ausgeführt: vollständige Nicht-Stress-Gates, Release-/Live-MCP-Verifikation, `safeguard` und Paket-3/4-Audits; diese gehören laut Auftrag bzw. Workflow in spätere/übergeordnete Schritte.
 
 ### Paket-2-Abschlussstand
 
