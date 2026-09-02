@@ -451,3 +451,31 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Status: running
 - Scope: Quellen für alle gecappten Leases, Symbol-Mapping/Fallback, Origin-, Limit- und Lifecycle-Semantik sowie konkrete transitive Call-Sites/Baumknoten.
 - MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet; Release-/Live-/Stress-Verifikation bleibt ausgespart.
+
+## 2026-09-02 – Paket 3 – Folge-Review nach Quellenkorrektur
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Folge-Reviewer
+- Subagent: `01a06230-066f-7483-9d0e-a08bc4ba1140`
+- Diff-Scope: Quellenkorrektur `1b4d0e53` und Paket-3-Gesamtstand.
+- Status: terminal abgeschlossen.
+- Urteil: `approved`.
+- Bestätigt: `CreateSources` verarbeitet alle gecappten Leases, mappt Symbole je Compilation einschließlich Metadata-Fallback und bewahrt Source-Origin. Transitive Call-Sites/Baumknoten sind konkret regressionstestet; Target-/Root-Fälle, Ambiguitäten, nicht-mappbare Symbole sowie Root-besessene rekursive Freigabe bleiben korrekt.
+- Verifikation: Navigationstests 7/7, Build 0 Warnungen/Fehler, `git diff --check` sauber; keine MCP-, Live-, Release- oder Stress-Verifikation.
+- Restrisiken: P2 `NAV-COMPLETENESS-SESSION-CAP-OVERWRITE`, verspätete Lease-Registrierung, Operator-/Conversion-Operator-Matrix und Namespace-Summary bei extremem Trimming bleiben zurückgestellt.
+- Code-Map: nicht geändert; kein konkreter Scope-/Historienbefund.
+- Nächste Aktion: Paket 3 schließen, Paket 4 als Abschlussmatrix starten.
+
+## 2026-09-02 – Paket 3 – Folge-Review nach Quellenkorrektur
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Folge-Reviewer
+- Subagent: `01a06230-066f-7483-9d0e-a08bc4ba1140`
+- Diff-Scope: Quellenkorrektur `1b4d0e53` und Paket-3-Gesamtstand.
+- Status: terminal abgeschlossen.
+- Urteil: `approved`.
+- Bestätigt: `CreateSources` verarbeitet alle gecappten Leases, mappt Symbole je Compilation einschließlich Metadata-Fallback und bewahrt Source-Origin. Transitive Call-Sites/Baumknoten sind konkret regressionstestet; Target-/Root-Fälle, Ambiguitäten, nicht-mappbare Symbole sowie Root-besessene rekursive Freigabe bleiben korrekt.
+- Verifikation: Navigationstests 7/7, Build 0 Warnungen/Fehler, `git diff --check` sauber; keine MCP-, Live-, Release- oder Stress-Verifikation.
+- Restrisiken: P2 `NAV-COMPLETENESS-SESSION-CAP-OVERWRITE`, verspätete Lease-Registrierung, Operator-/Conversion-Operator-Matrix und Namespace-Summary bei extremem Trimming bleiben zurückgestellt.
+- Code-Map: nicht geändert; kein konkreter Scope-/Historienbefund.
+- Nächste Aktion: Paket 3 schließen, Paket 4 als Abschlussmatrix starten.

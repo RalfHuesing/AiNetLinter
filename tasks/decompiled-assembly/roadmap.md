@@ -3,9 +3,9 @@
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
 Status: executing  
-Current epic: Paket 3 – Folge-Review nach Korrekturrunde 1/5
-Letzter Commit: `1b4d0e53` – Quellenkorrektur, Review läuft
-Current debt item: `NAV-TRANSITIVE-SOURCE-COVERAGE-001`
+Current epic: Paket 4 – Implementierung der Abschlussmatrix
+Letzter Commit: `2e6c3010` – Quellen-Folge-Review bestätigt Paket 3
+Current debt item: `TD-SIGONLY-COVERAGE-001`
 Debt attempts: 1
 Blocker: keiner
 
@@ -36,7 +36,7 @@ Blocker: keiner
 - Betroffene Bereiche: Assembly-Formatter, Stub-Erzeugung, Assembly-Navigation/Registry/Session-Komponenten.
 - Muss-/Akzeptanzkriterien: Große Assembly-Antworten erhalten Typen und Member unter dem Response-Limit; Signature-Only erzeugt keine unnötige Fehlerflut; die betroffenen Produktionsklassen erfüllen `AIContextFootprint <= 2500`; temporäre Referenz-Sessions belasten den Speicher nicht unbegrenzt.
 - Verifikation: Budget-/Großassembly-Tests, gezielter Linter-/MCP-Nachweis für `AIContextFootprint` und passende Regressionstests.
-- Status: in_progress
+- Status: done
 
 ### Paket 4: Test-Matrix, Regressionen & Nachweise
 
@@ -45,7 +45,7 @@ Blocker: keiner
 - Betroffene Bereiche: FastTests, IntegrationTests und Abschlussnachweise.
 - Muss-/Akzeptanzkriterien: Die spezifizierte Testmatrix deckt Core-Fixes, Tool-Verträge, Daemon-/Assembly-Routen und Response-Budgets ab.
 - Verifikation: `dotnet build`; vollständige Nicht-Stress-Läufe beider Testprojekte; sauberer `get_violations`- und `safeguard`-Durchlauf über die eigene Solution; konzeptspezifische Prüfungen aus den Paketen.
-- Status: open
+- Status: in_progress
 
 ## Abschluss-Checkliste aus dem Konzept
 

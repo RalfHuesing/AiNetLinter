@@ -120,21 +120,21 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### NAV-TRANSITIVE-LEASE-COMPLETENESS-001 – Navigation verliert transitive Referenz-Leases
 
 - Schweregrad: P1
-- Status: behoben, Review ausstehend (Korrekturversuch 1/5).
+- Status: fixed in Korrekturversuch 1/5.
 - Scope/Fundstelle: `OpenReferenceExpansionNodeAsync` und `AssemblyNavigationLeaseAccess.GetLeases`.
 - Evidenz: Child-Leases werden jeweils am aktuellen Parent registriert, die Navigation liest jedoch nur Root plus direkte Children. Referenzgraphen ab Tiefe 2 fehlen damit in `find_symbol`, `find_references` und Call-Tree; Vollständigkeit und Assembly-Anzahl werden falsch ausgewiesen.
-- Disposition: `fix-now`
-- Nächster Schritt: Folge-Review des Korrekturstands; bei Bestätigung als `fixed` schließen.
+- Disposition: `fixed`
+- Nächster Schritt: Erledigt; vollständiger Lease-Baum wird navigiert und dedupliziert.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Folge-Review.
 
 ### NAV-TRANSITIVE-SOURCE-COVERAGE-001 – Navigation erzeugt Quellen nicht für transitive Leases
 
 - Schweregrad: P1
-- Status: behoben, Review ausstehend (Korrekturversuch 1/5).
+- Status: fixed in Korrekturversuch 1/5.
 - Scope/Fundstelle: `AssemblyNavigationSourceFactory.CreateSources`.
 - Evidenz: Trotz vollständigem Lease-Flattening werden weiterhin nur Target und Root als Navigation-Quellen erzeugt. Bei Root → Dependency → TransitiveDependency können `find_references` und Call-Tree dadurch Aufrufstellen in der direkten Zwischenabhängigkeit verlieren; reine Assembly-Zähltests erkennen das nicht.
-- Disposition: `fix-now`
-- Nächster Schritt: Folge-Review des Korrekturstands; bei Bestätigung als `fixed` schließen.
+- Disposition: `fixed`
+- Nächster Schritt: Erledigt; alle zugelassenen Lease-Compilations liefern gemappte Navigation-Quellen und konkrete transitive Treffer.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Folge-Review nach Lease-Korrektur.
 
 ### TD-SIGONLY-COVERAGE-001 – Signature-only-Ausschlüsse und Operatoren nicht direkt abgesichert
@@ -180,9 +180,9 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### SIGONLY-CONSTRUCTOR-EXPRESSION-BODY – Expression-bodied Konstruktor wird fälschlich gestubbt
 
 - Schweregrad: P1
-- Status: behoben in Korrekturversuch 1/5.
+- Status: fixed in Korrekturversuch 1/5.
 - Scope/Fundstelle: `AssemblyDecompilationSourceText.ShouldStub(ConstructorDeclarationSyntax)`.
 - Evidenz: Review: fehlende `ExpressionBody`-Prüfung erzeugt einen zusätzlichen Block neben `=>` und damit ungültigen dekompilierten C#-Code.
-- Disposition: `fix-now`
-- Nächster Schritt: Folge-Review des Korrekturstands; bei Bestätigung als `fixed` schließen.
+- Disposition: `fixed`
+- Nächster Schritt: Erledigt; expression-bodied Konstruktoren werden nicht gestubbt und bleiben syntaktisch gültig.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Folge-Review.
