@@ -161,21 +161,113 @@ internal static class SymbolIdentifierResolver
             return (null, StaleAssemblyId(stableId));
         }
 
+        var assemblyCandidates = isAssemblyId ? new List<ISymbol>() : null;
+        var exactMatch = await FindExactStableIdAsync(solution, stableId, ct, assemblyCandidates);
+        if (exactMatch is not null) return (exactMatch, null);
+
+        if (assemblyCandidates is not null)
+        {
+            var matches = assemblyCandidates
+                .Where(symbol => MatchesAssemblyStableId(symbol, stableId))
+                .Distinct(SymbolEqualityComparer.Default)
+                .ToList();
+            if (matches.Count == 1) return (matches[0], null);
+        }
+
+        return (null, null);
+    }
+
+    private static async Task<ISymbol?> FindExactStableIdAsync(
+        Solution solution,
+        string stableId,
+        CancellationToken ct,
+        ICollection<ISymbol>? assemblyCandidates)
+    {
         foreach (var project in solution.Projects)
         {
             var declared = await SymbolFinder.FindSourceDeclarationsAsync(
                 project, name => true, SymbolFilter.TypeAndMember, ct);
             foreach (var symbol in declared)
             {
-                if (DocumentationCommentId.CreateDeclarationId(symbol) == stableId)
+                var declarationId = DocumentationCommentId.CreateDeclarationId(symbol);
+                if (declarationId == stableId)
                 {
-                    return (symbol, null);
+                    return symbol;
                 }
+
+                if (assemblyCandidates is not null) assemblyCandidates.Add(symbol);
             }
         }
 
-        return (null, null);
+        return null;
     }
+
+    private static bool MatchesAssemblyStableId(ISymbol symbol, string stableId)
+    {
+        var declarationId = DocumentationCommentId.CreateDeclarationId(symbol);
+        if (declarationId is null) return false;
+
+        return string.Equals(
+                   NormalizeUnresolvedStableId(declarationId),
+                   NormalizeUnresolvedStableId(stableId),
+                   StringComparison.Ordinal)
+            || MatchesStableIdShape(declarationId, stableId);
+    }
+
+    private static bool MatchesStableIdShape(string declarationId, string stableId)
+    {
+        if (!TryParseStableIdShape(declarationId, out var declarationShape)
+            || !TryParseStableIdShape(stableId, out var stableShape))
+        {
+            return false;
+        }
+
+        return declarationShape.Prefix == stableShape.Prefix
+            && string.Equals(declarationShape.Name, stableShape.Name, StringComparison.Ordinal)
+            && declarationShape.ParameterCount == stableShape.ParameterCount;
+    }
+
+    private static bool TryParseStableIdShape(string value, out StableIdShape shape)
+    {
+        shape = default;
+        if (value.Length < 3 || value[1] != ':') return false;
+
+        var payload = value[2..];
+        var parameterStart = payload.IndexOf('(');
+        if (parameterStart < 0)
+        {
+            shape = new(value[0], NormalizeUnresolvedStableId(payload), null);
+            return !string.IsNullOrEmpty(shape.Name);
+        }
+
+        if (!payload.EndsWith(")", StringComparison.Ordinal)) return false;
+        var name = payload[..parameterStart];
+        var parameters = payload[(parameterStart + 1)..^1];
+        shape = new(value[0], NormalizeUnresolvedStableId(name), CountStableParameters(parameters));
+        return !string.IsNullOrEmpty(shape.Name);
+    }
+
+    private static int CountStableParameters(string parameters)
+    {
+        if (string.IsNullOrEmpty(parameters)) return 0;
+
+        var depth = 0;
+        var separators = 0;
+        foreach (var character in parameters)
+        {
+            if (character is '{' or '[' or '<' or '(') depth++;
+            else if (character is '}' or ']' or '>' or ')') depth = Math.Max(0, depth - 1);
+            else if (character == ',' && depth == 0) separators++;
+        }
+
+        return separators + 1;
+    }
+
+    private static string NormalizeUnresolvedStableId(string value) =>
+        value.Replace("~", string.Empty, StringComparison.Ordinal)
+            .Replace("?", string.Empty, StringComparison.Ordinal);
+
+    private readonly record struct StableIdShape(char Prefix, string Name, int? ParameterCount);
 
     private static bool TryNormalizeAssemblyId(
         string value,

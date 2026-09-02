@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
-internal sealed class AssemblyDecompilationCache
+internal sealed partial class AssemblyDecompilationCache
 {
     private const int PointerPublishAttempts = 3;
     private static readonly UTF8Encoding Utf8 = new(false, true);
@@ -78,10 +78,20 @@ internal sealed class AssemblyDecompilationCache
             var readRequest = new AssemblyCacheReadRequest(request.CacheKey, request.Fingerprint, request.References);
             if (TryRead(readRequest, out _, out _))
             {
-                return new AssemblyCachePublishResult(true, generationDirectory, null);
+                var currentPointer = Path.Combine(entryDirectory, AssemblyCacheContract.CurrentPointerFileName);
+                var publishedGenerationDirectory = ReadPointer(entryDirectory, currentPointer);
+                return new AssemblyCachePublishResult(true, publishedGenerationDirectory, null);
             }
 
-            if (!TryPublishPointer(entryDirectory, generationDirectory, request, out var diagnostic))
+            var publishOutcome = TryPublishPointer(entryDirectory, generationDirectory, request, out var diagnostic);
+            if (publishOutcome == PointerPublishOutcome.Existing)
+            {
+                var currentPointer = Path.Combine(entryDirectory, AssemblyCacheContract.CurrentPointerFileName);
+                var publishedGenerationDirectory = ReadPointer(entryDirectory, currentPointer);
+                return new AssemblyCachePublishResult(true, publishedGenerationDirectory, null);
+            }
+
+            if (publishOutcome != PointerPublishOutcome.Published)
             {
                 return new AssemblyCachePublishResult(false, null, diagnostic);
             }
@@ -131,108 +141,6 @@ internal sealed class AssemblyDecompilationCache
         {
             throw new InvalidDataException("Eine vollständige Assembly-Generation darf keine Fehler oder ungelösten Referenzen enthalten.");
         }
-    }
-
-    private bool TryPublishPointer(
-        string entryDirectory,
-        string generationDirectory,
-        AssemblyCachePublishRequest request,
-        out AssemblySessionDiagnostic? diagnostic)
-    {
-        diagnostic = null;
-        var pointerPath = Path.Combine(entryDirectory, AssemblyCacheContract.CurrentPointerFileName);
-        var generationName = Path.GetFileName(generationDirectory);
-        for (var attempt = 0; attempt < PointerPublishAttempts; attempt++)
-        {
-            var readRequest = new AssemblyCacheReadRequest(request.CacheKey, request.Fingerprint, request.References);
-            if (TryRead(readRequest, out _, out _)) return true;
-            var attemptResult = PublishPointerAttempt(pointerPath, generationName, readRequest);
-            if (attemptResult.Succeeded) return true;
-            diagnostic = attemptResult.Diagnostic;
-        }
-
-        diagnostic ??= new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCachePublishRequest)), "Current-Pointer konnte nach begrenzten Versuchen nicht validiert veröffentlicht werden.", AssemblyDiagnosticSeverity.Error);
-        return false;
-    }
-    private PointerPublishAttempt PublishPointerAttempt(
-        string pointerPath,
-        string generationName,
-        AssemblyCacheReadRequest readRequest)
-    {
-        var temporaryPointer = pointerPath + ".tmp-" + Guid.NewGuid().ToString("N");
-        try
-        {
-            WritePointer(temporaryPointer, generationName);
-            ReplacePointer(pointerPath, temporaryPointer);
-            var succeeded = TryRead(readRequest, out _, out _);
-            return new PointerPublishAttempt(succeeded, succeeded ? null : new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCacheContract.CurrentPointerFileName)), "Der neu veröffentlichte Current-Pointer konnte nicht erneut validiert werden.", AssemblyDiagnosticSeverity.Warning));
-        }
-        catch (IOException ex)
-        {
-            var diagnostic = new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), nameof(AssemblyCacheContract.CurrentPointerFileName)), $"Current-Pointer konnte nicht ersetzt werden: {ex.Message}", AssemblyDiagnosticSeverity.Warning);
-            return new(TryRead(readRequest, out _, out _), diagnostic);
-        }
-        finally
-        {
-            AssemblyCacheCleanup.DeleteFile(temporaryPointer);
-        }
-    }
-    private static void ReplacePointer(string pointerPath, string temporaryPointer)
-    {
-        if (File.Exists(pointerPath))
-        {
-            File.Replace(temporaryPointer, pointerPath, null, ignoreMetadataErrors: true);
-            return;
-        }
-
-        if (File.Exists(pointerPath)) return;
-        File.Move(temporaryPointer, pointerPath);
-    }
-    private static void WritePointer(string path, string generation)
-    {
-        using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, AssemblyCacheContract.FileBufferSize, FileOptions.WriteThrough);
-        using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
-        writer.WriteStartObject();
-        writer.WriteString(nameof(generation), generation);
-        writer.WriteEndObject();
-        writer.Flush();
-        stream.Flush(flushToDisk: true);
-    }
-
-    private static string ReadPointer(string entryDirectory, string pointerPath)
-    {
-        using var document = JsonDocument.Parse(File.ReadAllText(pointerPath, Utf8));
-        var root = document.RootElement;
-        if (root.ValueKind != JsonValueKind.Object) throw new InvalidDataException("Der Current-Pointer ist kein JSON-Objekt.");
-        string? generation = null;
-        foreach (var property in root.EnumerateObject())
-        {
-            if (!string.Equals(property.Name, nameof(generation), StringComparison.Ordinal) || generation is not null)
-            {
-                throw new InvalidDataException("Der Current-Pointer enthält unerwartete oder doppelte Felder.");
-            }
-
-            if (property.Value.ValueKind != JsonValueKind.String)
-            {
-                throw new InvalidDataException("Der Current-Pointer muss auf eine Generation verweisen.");
-            }
-
-            generation = property.Value.GetString();
-        }
-
-        if (string.IsNullOrWhiteSpace(generation)) throw new InvalidDataException("Der Current-Pointer enthält keine Generation.");
-        var normalized = generation.Replace('\\', '/');
-        if (Path.IsPathFullyQualified(normalized)
-            || normalized.Contains("..", StringComparison.Ordinal)
-            || normalized.Contains('/', StringComparison.Ordinal)
-            || normalized.Contains(':', StringComparison.Ordinal))
-        {
-            throw new InvalidDataException("Der Current-Pointer enthält einen unsicheren Generationpfad.");
-        }
-
-        var generationDirectory = ResolveSafePath(entryDirectory, normalized);
-        if (!Directory.Exists(generationDirectory)) throw new InvalidDataException("Die referenzierte Cachegeneration fehlt.");
-        return generationDirectory;
     }
 
     private static CachedDecompilationGeneration ReadGeneration(
@@ -495,5 +403,4 @@ internal sealed class AssemblyDecompilationCache
     private static bool IsCacheWriteException(Exception exception) =>
         exception is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException;
 
-    private sealed record PointerPublishAttempt(bool Succeeded, AssemblySessionDiagnostic? Diagnostic);
 }

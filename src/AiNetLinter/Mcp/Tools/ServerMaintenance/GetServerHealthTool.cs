@@ -74,13 +74,23 @@ internal static class GetServerHealthTool
 
         if (options.ProjectRoot is not null)
         {
+            if (options.RuntimeContext is not null)
+            {
+                return await ExecuteDaemonProjectAsync(
+                    options.RuntimeContext,
+                    options.ProjectRoot,
+                    options).ConfigureAwait(false);
+            }
+
             var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(options.ProjectRoot);
             if (guard is not null)
             {
                 return McpToolResults.Error(guard.Code, guard.Message, hint: guard.Hint);
             }
 
-            var snapshot = registry.FindSnapshot(options.ProjectRoot);
+            var snapshot = options.RuntimeContext is null
+                ? registry.FindSnapshot(options.ProjectRoot)
+                : options.RuntimeContext.FindProjectSnapshot(options.ProjectRoot);
             if (snapshot is null) return ProjectNotInitialized(options.ProjectRoot);
             return GetServerHealthResponseBuilder.Build(
                 [snapshot],
@@ -95,6 +105,30 @@ internal static class GetServerHealthTool
             registry.Snapshots(),
             assemblySnapshots.Select(AssemblyHealthProjection.FromSnapshot).ToList(),
             options);
+    }
+
+    internal static Task<CallToolResult> ExecuteDaemonProjectAsync(
+        DaemonRuntimeContext runtimeContext,
+        string projectRoot,
+        GetServerHealthOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(runtimeContext);
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectRoot);
+        ArgumentNullException.ThrowIfNull(options);
+
+        var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(projectRoot);
+        if (guard is not null)
+        {
+            return Task.FromResult(McpToolResults.Error(guard.Code, guard.Message, hint: guard.Hint));
+        }
+
+        var snapshot = runtimeContext.FindProjectSnapshot(projectRoot);
+        return Task.FromResult(snapshot is null
+            ? ProjectNotInitialized(projectRoot)
+            : GetServerHealthResponseBuilder.Build(
+                [snapshot],
+                Array.Empty<AssemblyHealthEntry>(),
+                options));
     }
 
     private static CallToolResult ProjectNotInitialized(string projectRoot) =>

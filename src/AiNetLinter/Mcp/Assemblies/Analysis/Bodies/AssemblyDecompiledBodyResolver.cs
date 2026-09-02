@@ -41,7 +41,8 @@ internal static class AssemblyDecompiledBodyResolver
 
     private static AssemblyBodyResolution? GetUnavailableBodyResolution(ISymbol symbol)
     {
-        if (symbol.ContainingType?.TypeKind == TypeKind.Interface)
+        var declaringType = symbol as INamedTypeSymbol ?? symbol.ContainingType;
+        if (declaringType?.TypeKind == TypeKind.Interface)
         {
             return new(null, "unavailable", "decompiledSignatureOnly", "Interfaces haben keine dekompilierbaren Bodies.");
         }
@@ -69,7 +70,8 @@ internal static class AssemblyDecompiledBodyResolver
                 references,
                 deadline.Token,
                 decompileMemberBodies: true);
-            var typeName = new ICSharpCode.Decompiler.TypeSystem.FullTypeName(ToReflectionTypeName(symbol.ContainingType));
+            var declaringType = symbol as INamedTypeSymbol ?? symbol.ContainingType;
+            var typeName = new ICSharpCode.Decompiler.TypeSystem.FullTypeName(ToReflectionTypeName(declaringType));
             var source = decompiler.DecompileTypeAsString(typeName);
             deadline.Token.ThrowIfCancellationRequested();
             var root = CSharpSyntaxTree.ParseText(source).GetRoot(deadline.Token);
@@ -110,29 +112,43 @@ internal static class AssemblyDecompiledBodyResolver
             : name;
     }
 
-    private static MemberDeclarationSyntax? FindMember(SyntaxNode root, ISymbol symbol)
+    private static SyntaxNode? FindMember(SyntaxNode root, ISymbol symbol)
     {
         var type = root.DescendantNodes()
-            .OfType<TypeDeclarationSyntax>()
-            .FirstOrDefault(candidate => MatchesContainingType(candidate, symbol.ContainingType));
+            .OfType<BaseTypeDeclarationSyntax>()
+            .FirstOrDefault(candidate => MatchesContainingType(
+                candidate,
+                symbol as INamedTypeSymbol ?? symbol.ContainingType));
         if (type is null) return null;
 
-        return type.Members.FirstOrDefault(member => MatchesMember(member, symbol));
+        if (symbol is INamedTypeSymbol) return type;
+        if (type is not TypeDeclarationSyntax declaration) return null;
+
+        var member = declaration.Members.FirstOrDefault(candidate => MatchesMember(candidate, symbol));
+        if (member is not null) return member;
+        return declaration.DescendantNodes()
+            .OfType<AccessorDeclarationSyntax>()
+            .FirstOrDefault(accessor => MatchesMember(accessor, symbol));
     }
 
-    private static bool MatchesContainingType(TypeDeclarationSyntax candidate, INamedTypeSymbol? type)
+    private static bool MatchesContainingType(BaseTypeDeclarationSyntax candidate, INamedTypeSymbol? type)
     {
         if (type is null) return false;
         var syntaxTypes = candidate.AncestorsAndSelf()
-            .OfType<TypeDeclarationSyntax>()
+            .OfType<BaseTypeDeclarationSyntax>()
             .Reverse()
             .ToArray();
         var symbolTypes = GetContainingTypes(type);
         return syntaxTypes.Length == symbolTypes.Count
             && syntaxTypes.Zip(symbolTypes).All(pair =>
                 string.Equals(pair.First.Identifier.Text, pair.Second.Name, StringComparison.Ordinal)
-                && (pair.First.TypeParameterList?.Parameters.Count ?? 0) == pair.Second.TypeParameters.Length);
+                && GetTypeParameterCount(pair.First) == pair.Second.TypeParameters.Length);
     }
+
+    private static int GetTypeParameterCount(BaseTypeDeclarationSyntax declaration) =>
+        declaration is TypeDeclarationSyntax type
+            ? type.TypeParameterList?.Parameters.Count ?? 0
+            : 0;
 
     private static List<INamedTypeSymbol> GetContainingTypes(INamedTypeSymbol type)
     {
@@ -146,8 +162,13 @@ internal static class AssemblyDecompiledBodyResolver
         return result;
     }
 
-    private static bool MatchesMember(MemberDeclarationSyntax member, ISymbol symbol)
+    private static bool MatchesMember(SyntaxNode member, ISymbol symbol)
     {
+        if (member is AccessorDeclarationSyntax accessor)
+        {
+            return symbol is IMethodSymbol accessorMethod && MatchesAccessor(accessor, accessorMethod);
+        }
+
         if (symbol is IMethodSymbol method) return MatchesMethod(member, method);
         if (symbol is IPropertySymbol property) return MatchesProperty(member, property);
         if (symbol is IFieldSymbol field) return member is FieldDeclarationSyntax declaration
@@ -156,8 +177,10 @@ internal static class AssemblyDecompiledBodyResolver
         return false;
     }
 
-    private static bool MatchesMethod(MemberDeclarationSyntax member, IMethodSymbol symbol)
+    private static bool MatchesMethod(SyntaxNode member, IMethodSymbol symbol)
     {
+        if (symbol.AssociatedSymbol is not null) return false;
+
         if (symbol.MethodKind == MethodKind.Constructor)
         {
             return member is ConstructorDeclarationSyntax constructor
@@ -171,7 +194,20 @@ internal static class AssemblyDecompiledBodyResolver
             && MatchesParameters(method.ParameterList.Parameters, symbol.Parameters);
     }
 
-    private static bool MatchesProperty(MemberDeclarationSyntax member, IPropertySymbol symbol)
+    private static bool MatchesAccessor(AccessorDeclarationSyntax accessor, IMethodSymbol symbol)
+    {
+        return symbol.AssociatedSymbol is IPropertySymbol or IEventSymbol
+            && symbol.MethodKind switch
+            {
+                MethodKind.PropertyGet => accessor.IsKind(SyntaxKind.GetAccessorDeclaration),
+                MethodKind.PropertySet => accessor.IsKind(SyntaxKind.SetAccessorDeclaration),
+                MethodKind.EventAdd => accessor.IsKind(SyntaxKind.AddAccessorDeclaration),
+                MethodKind.EventRemove => accessor.IsKind(SyntaxKind.RemoveAccessorDeclaration),
+                _ => false,
+            };
+    }
+
+    private static bool MatchesProperty(SyntaxNode member, IPropertySymbol symbol)
     {
         if (symbol.IsIndexer)
         {
@@ -183,7 +219,7 @@ internal static class AssemblyDecompiledBodyResolver
             && string.Equals(property.Identifier.Text, symbol.Name, StringComparison.Ordinal);
     }
 
-    private static bool MatchesEvent(MemberDeclarationSyntax member, IEventSymbol symbol) =>
+    private static bool MatchesEvent(SyntaxNode member, IEventSymbol symbol) =>
         member switch
         {
             EventFieldDeclarationSyntax eventField => eventField.Declaration.Variables.Any(variable => variable.Identifier.Text == symbol.Name),

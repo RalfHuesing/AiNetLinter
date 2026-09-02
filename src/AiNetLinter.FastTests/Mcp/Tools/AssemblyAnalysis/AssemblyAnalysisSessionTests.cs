@@ -312,4 +312,49 @@ public sealed class AssemblyAnalysisSessionTests
         Assert.Equal(expected, cache.RootPath);
     }
 
+    [Fact]
+    public async Task AssemblyDecompilationCache_ConcurrentPublishReturnsOnlyExistingGenerationDirectories()
+    {
+        using var temp = TestTempDirectory.Create("assembly-cache-publish-race-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "CachePublishRaceProbe",
+            "namespace Probe; public sealed class Value { public int Number => 1; }");
+        var options = AssemblyDecompilationOptions.Default;
+        var fingerprint = AssemblyFingerprintCalculator.Create(assemblyPath);
+        var references = new AssemblyReferenceResolver().Resolve(assemblyPath);
+        Assert.DoesNotContain(references.References, reference => !reference.Resolved);
+        var cacheKey = AssemblyFingerprintCalculator.CreateCacheKey(fingerprint, options);
+        var request = new AssemblyCachePublishRequest(
+            fingerprint,
+            cacheKey,
+            options,
+            references,
+            new DecompilationResult(
+                [new DecompiledDocument(
+                    "Value.cs",
+                    "Probe.Value",
+                    "namespace Probe; public sealed class Value { public int Number => 1; }")],
+                [],
+                true),
+            AssemblySessionStatus.Complete);
+        var cache = new AssemblyDecompilationCache(temp.GetPath("cache"));
+
+        Assert.True(cache.Publish(request).Succeeded);
+        using var barrier = new Barrier(2);
+        var results = await Task.WhenAll(
+            Enumerable.Range(0, 2).Select(_ => Task.Run(() =>
+            {
+                barrier.SignalAndWait();
+                return cache.Publish(request);
+            })));
+
+        Assert.All(results, result =>
+        {
+            Assert.True(result.Succeeded);
+            Assert.NotNull(result.EntryDirectory);
+            Assert.True(Directory.Exists(result.EntryDirectory));
+        });
+    }
+
 }

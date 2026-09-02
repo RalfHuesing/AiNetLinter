@@ -66,6 +66,33 @@ public sealed class SymbolIdentifierResolverTests
     }
 
     [Fact]
+    public async Task TryResolveByStableIdAsync_AssemblyFallbackToleratesSkeletonUnresolvedMarkers()
+    {
+        using var owner = RoslynTestSolutionFactory.CreateSolution(
+            "namespace Probe; public sealed class Current { public void Run(Missing.Type value) { } }");
+        var project = owner.Solution.Projects.Single();
+        var compilation = (await project.GetCompilationAsync())!;
+        var symbol = compilation.GetTypeByMetadataName("Probe.Current")!
+            .GetMembers("Run")
+            .OfType<IMethodSymbol>()
+            .Single();
+        var rawId = DocumentationCommentId.CreateDeclarationId(symbol)!;
+        var legacyId = rawId.Replace("Missing.Type", "~?Missing.Type", StringComparison.Ordinal);
+        if (legacyId == rawId) legacyId = rawId.Insert(2, "~?");
+        var identity = new AnalysisSymbolIdentity(new string('c', 64), 6);
+
+        var (resolved, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution,
+            identity.Format(legacyId)!,
+            CancellationToken.None,
+            identity);
+
+        Assert.Null(error);
+        Assert.NotNull(resolved);
+        Assert.True(SymbolEqualityComparer.Default.Equals(symbol, resolved));
+    }
+
+    [Fact]
     public void TryParsePosition_FileLineColumn_ReturnsTrueWithParsedSegments()
     {
         var ok = SymbolIdentifierResolver.TryParsePosition("src/Foo.cs:42:10", out var path, out var line, out var column);

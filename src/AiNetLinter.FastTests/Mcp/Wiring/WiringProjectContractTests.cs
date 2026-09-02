@@ -9,6 +9,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.FastTests.Mcp.Projects;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Daemon;
 using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
@@ -25,6 +26,8 @@ namespace AiNetLinter.FastTests.Mcp.Wiring;
 /// Vertragstests fuer Target-Guards, Projekt-Lifecycle, Health und Ressourcen.
 /// </summary>
 [Trait("Category", "Unit")]
+// @covers GetServerHealthTool
+// @covers ServerMaintenanceToolRegistrations
 public sealed class WiringProjectContractTests
 {
     [Fact]
@@ -279,6 +282,29 @@ public sealed class WiringProjectContractTests
         var notInitialized = await GetServerHealthTool.ExecuteAsync(registry, projectRoot: unknown);
         Assert.True(notInitialized.IsError);
         Assert.Contains("[ERROR]: PROJECT_NOT_INITIALIZED", TextOf(notInitialized), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Health_ProjectTarget_UsesDaemonRegistrySnapshotWhenRuntimeContextIsPresent()
+    {
+        using var tempDir = TestTempDirectory.Create("wiring-health-daemon-route-");
+        var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "daemon-project");
+        await using var daemonRegistry = ProjectWiringFixtures.CreateLoadedRegistry();
+        OpenAndCloseLease(daemonRegistry, root);
+        await using var localRegistry = ProjectWiringFixtures.CreateLoadedRegistry();
+        var runtimeContext = new DaemonRuntimeContext(
+            17,
+            () => new DaemonRuntimeSnapshot(1, 1234, TimeSpan.FromSeconds(3), [root], "test"),
+            daemonRegistry.FindSnapshot);
+
+        var result = await GetServerHealthTool.ExecuteAsync(
+            localRegistry,
+            new GetServerHealthOptions(ProjectRoot: root, RuntimeContext: runtimeContext));
+
+        Assert.NotEqual(true, result.IsError);
+        var text = TextOf(result);
+        Assert.Contains("## Projekte (1)", text, StringComparison.Ordinal);
+        Assert.Contains(root, text, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

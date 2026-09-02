@@ -21,6 +21,7 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies.Navigation;
 
 [Trait("Category", "Component")]
 // @covers AssemblyRoslynWorkspaceFactory
+// @covers AssemblyDecompiledBodyResolver
 // @covers DiffImpactAnalyzer
 // @covers GetFileSkeletonTool
 // @covers GetSymbolBodyTool
@@ -28,6 +29,72 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies.Navigation;
 // @covers DependencyGraphTool
 public sealed class AssemblyAnalysisPathContractTests
 {
+    [Fact]
+    public async Task AssemblyRoute_ResolvesTopLevelTypeAndPropertyAccessorBodies()
+    {
+        using var temp = TestTempDirectory.Create("assembly-top-level-body-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "TopLevelBodyProbe",
+            """
+            namespace Probe;
+            public sealed class Document
+            {
+                private string name = "initial";
+                public string Name
+                {
+                    get { return name; }
+                    set { name = value; }
+                }
+            }
+            public struct Structure { public int Number => 1; }
+            public enum State { Ready }
+            public interface IContract { void Run(); }
+            public record Record(int Value);
+            """);
+        await using var registry = new AssemblyAnalysisRegistry();
+
+        var leaseResult = await registry.LeaseAsync(assemblyPath);
+        Assert.Null(leaseResult.Error);
+        using var lease = leaseResult.Lease!;
+        var type = lease.Context.Compilation.GetTypeByMetadataName("Probe.Document")!;
+        var property = Assert.Single(type.GetMembers("Name").OfType<IPropertySymbol>());
+        var getter = property.GetMethod!;
+        var setter = property.SetMethod!;
+        var structure = lease.Context.Compilation.GetTypeByMetadataName("Probe.Structure")!;
+        var state = lease.Context.Compilation.GetTypeByMetadataName("Probe.State")!;
+        var contract = lease.Context.Compilation.GetTypeByMetadataName("Probe.IContract")!;
+        var record = lease.Context.Compilation.GetTypeByMetadataName("Probe.Record")!;
+
+        var typeBody = await lease.ResolveBodyAsync(type, 80, CancellationToken.None);
+        var propertyBody = await lease.ResolveBodyAsync(property, 80, CancellationToken.None);
+        var getterBody = await lease.ResolveBodyAsync(getter, 80, CancellationToken.None);
+        var setterBody = await lease.ResolveBodyAsync(setter, 80, CancellationToken.None);
+        var structureBody = await lease.ResolveBodyAsync(structure, 80, CancellationToken.None);
+        var stateBody = await lease.ResolveBodyAsync(state, 80, CancellationToken.None);
+        var contractBody = await lease.ResolveBodyAsync(contract, 80, CancellationToken.None);
+        var recordBody = await lease.ResolveBodyAsync(record, 80, CancellationToken.None);
+
+        Assert.Equal("available", typeBody.BodyAvailability);
+        Assert.Contains("class Document", typeBody.Body, StringComparison.Ordinal);
+        Assert.Equal("available", propertyBody.BodyAvailability);
+        Assert.Contains("Name", propertyBody.Body, StringComparison.Ordinal);
+        Assert.Equal("available", getterBody.BodyAvailability);
+        Assert.Contains("get", getterBody.Body, StringComparison.Ordinal);
+        Assert.Contains("return name", getterBody.Body, StringComparison.Ordinal);
+        Assert.Equal("available", setterBody.BodyAvailability);
+        Assert.Contains("set", setterBody.Body, StringComparison.Ordinal);
+        Assert.Contains("name = value", setterBody.Body, StringComparison.Ordinal);
+        Assert.Equal("available", structureBody.BodyAvailability);
+        Assert.Contains("struct Structure", structureBody.Body, StringComparison.Ordinal);
+        Assert.Equal("available", stateBody.BodyAvailability);
+        Assert.Contains("enum State", stateBody.Body, StringComparison.Ordinal);
+        Assert.Equal("unavailable", contractBody.BodyAvailability);
+        Assert.Contains("Interfaces", contractBody.Hint, StringComparison.Ordinal);
+        Assert.Equal("available", recordBody.BodyAvailability);
+        Assert.Contains("Record", recordBody.Body, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task AssemblyRoute_ResolvesGeneratedDocumentAndStableParameterMethodAcrossTools()
     {

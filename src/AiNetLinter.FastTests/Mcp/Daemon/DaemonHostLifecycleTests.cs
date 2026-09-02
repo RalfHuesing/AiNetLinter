@@ -181,6 +181,8 @@ public sealed class DaemonHostLifecycleTests
 
         public IReadOnlyList<DaemonProjectSnapshot> Snapshots() => [];
 
+        public ProjectSnapshot? FindSnapshot(string rootPath) => null;
+
         public DaemonRegistryLeaseResult Lease(string rootPath) => new(null, "not used");
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;

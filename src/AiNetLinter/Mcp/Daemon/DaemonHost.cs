@@ -467,7 +467,7 @@ internal sealed class DaemonHost : IAsyncDisposable
     }
 
     private DaemonRuntimeContext CreateRuntimeContext(int connectionId) =>
-        new(connectionId, SnapshotRuntime);
+        new(connectionId, SnapshotRuntime, options.Registry.FindSnapshot);
 
     private DaemonRuntimeSnapshot SnapshotRuntime()
     {

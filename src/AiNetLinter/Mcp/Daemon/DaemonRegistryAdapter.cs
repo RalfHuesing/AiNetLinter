@@ -10,6 +10,8 @@ internal interface IDaemonRegistry : IAsyncDisposable
 
     IReadOnlyList<DaemonProjectSnapshot> Snapshots();
 
+    ProjectSnapshot? FindSnapshot(string rootPath);
+
     DaemonRegistryLeaseResult Lease(string rootPath);
 }
 
@@ -74,6 +76,8 @@ internal sealed class DaemonRegistryAdapter : IDaemonRegistry
         registry.Snapshots()
             .Select(snapshot => new DaemonProjectSnapshot(snapshot.RootPath, snapshot.LastUsedUtc))
             .ToList();
+
+    public ProjectSnapshot? FindSnapshot(string rootPath) => registry.FindSnapshot(rootPath);
 
     public DaemonRegistryLeaseResult Lease(string rootPath)
     {

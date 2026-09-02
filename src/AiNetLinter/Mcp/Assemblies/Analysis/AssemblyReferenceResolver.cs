@@ -15,6 +15,14 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
 internal sealed class AssemblyReferenceResolver
 {
+    private const string LegacyCoreLibraryName = "mscorlib";
+    private static readonly string[] VersionTolerantFrameworkPrefixes =
+    [
+        "System.",
+        "Microsoft.",
+        "WindowsBase",
+    ];
+
     internal const int MaxReferenceDepth = 8;
     internal const int MaxReferenceNodes = 128;
     internal const string BoundaryDiagnosticCode = "assembly-reference-boundary";
@@ -345,10 +353,15 @@ internal sealed class AssemblyReferenceResolver
         return Convert.ToHexString(token);
     }
 
-    private static bool IdentityMatches(AssemblyReferenceDto expected, AssemblyIdentityDto actual) =>
+    internal static bool IdentityMatches(AssemblyReferenceDto expected, AssemblyIdentityDto actual) =>
         string.Equals(expected.Name, actual.Name, StringComparison.OrdinalIgnoreCase)
-        && string.Equals(expected.Version, actual.Version, StringComparison.Ordinal)
+        && (IsVersionTolerantFrameworkAssembly(expected.Name)
+            || string.Equals(expected.Version, actual.Version, StringComparison.Ordinal))
         && string.Equals(NormalizeCulture(expected.Culture), NormalizeCulture(actual.Culture), StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsVersionTolerantFrameworkAssembly(string name) =>
+        string.Equals(name, LegacyCoreLibraryName, StringComparison.OrdinalIgnoreCase)
+        || VersionTolerantFrameworkPrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
 
     private static string NormalizeCulture(string culture) =>
         string.IsNullOrWhiteSpace(culture) || string.Equals(culture, "neutral", StringComparison.OrdinalIgnoreCase)
