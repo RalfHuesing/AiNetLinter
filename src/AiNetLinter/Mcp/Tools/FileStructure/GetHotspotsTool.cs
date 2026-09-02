@@ -2,7 +2,6 @@
 
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Mcp.Tools.SymbolGraph;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.FileStructure;
@@ -53,20 +52,20 @@ internal static class GetHotspotsTool
                 GetHotspotsScanner.DefaultScopeType,
                 ct)).ConfigureAwait(false);
 
-    internal static async Task<CallToolResult> ExecuteAsync(
+    internal static Task<CallToolResult> ExecuteAsync(
         GetHotspotsRequest request)
     {
         var state = request.State;
-        if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
+        if (state.LoadState == ServerLoadState.Loading) return Task.FromResult(McpToolResults.Loading());
         var solution = state.GetCurrentSolution();
-        if (solution is null) return McpToolResults.SolutionNotLoaded();
+        if (solution is null) return Task.FromResult(McpToolResults.SolutionNotLoaded());
 
         var normalizedScopeType = GetHotspotsScanner.NormalizeScopeType(request.ScopeType);
         if (!GetHotspotsScanner.IsValidScopeType(request.ScopeType))
         {
-            return McpToolResults.InvalidArgument(
+            return Task.FromResult(McpToolResults.InvalidArgument(
                 $"Ungueltiger scopeType-Wert '{request.ScopeType}' — gueltig sind 'production', 'tests', 'all'.",
-                hint: "scopeType='production' [Default], 'tests' oder 'all' angeben.");
+                hint: "scopeType='production' [Default], 'tests' oder 'all' angeben."));
         }
 
         var report = GetHotspotsScanner.BuildHotspots(
@@ -77,11 +76,10 @@ internal static class GetHotspotsTool
                 request.MaxResults,
                 request.MinLinePercentage,
                 normalizedScopeType));
-        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, request.CancellationToken);
         // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
         // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
-        return McpToolResults.Text(
-            FindSymbolTool.PrependWarning(warning, report.Text),
+        return Task.FromResult(McpToolResults.Text(
+            report.Text,
             new HotspotsPayload(
                 report.Entries,
                 report.TotalHotspots,
@@ -89,6 +87,6 @@ internal static class GetHotspotsTool
                 report.Truncated,
                 report.MaxResults,
                 report.MinLinePercentage,
-                report.ScopeType));
+                report.ScopeType)));
     }
 }

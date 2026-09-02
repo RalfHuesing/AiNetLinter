@@ -89,7 +89,7 @@ internal static class DependencyGraphTool
         var result = await DependencyGraphScanner.ScanFileAsync(document, request, ct);
         var relativePath = PathNormalizer.ToRelative(solutionDir, document.FilePath ?? absolutePath);
         var target = new DependencyGraphTarget("file", relativePath, null);
-        return await BuildResponseAsync(solution, target, result, ct);
+        return BuildResponse(target, result);
     }
 
     private static async Task<CallToolResult> ExecuteTypeScopeAsync(
@@ -117,7 +117,7 @@ internal static class DependencyGraphTool
         var result = await DependencyGraphScanner.ScanTypeAsync(targetType, request, ct);
         var declaringPath = FormatDeclaringPath(solution, targetType);
         var target = new DependencyGraphTarget("type", declaringPath, targetType.Name);
-        return await BuildResponseAsync(solution, target, result, ct);
+        return BuildResponse(target, result);
     }
 
     private static string FormatDeclaringPath(Solution solution, INamedTypeSymbol type)
@@ -128,16 +128,13 @@ internal static class DependencyGraphTool
         return PathNormalizer.ToRelative(solutionDir, location.SourceTree!.FilePath);
     }
 
-    private static async Task<CallToolResult> BuildResponseAsync(
-        Solution solution, DependencyGraphTarget target, DependencyGraphResult result, CancellationToken ct)
+    private static CallToolResult BuildResponse(
+        DependencyGraphTarget target, DependencyGraphResult result)
     {
-        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
         var body = RenderText(target, result);
         // Sufficiency-Hinweis nur fuer nicht-trunkierte Ergebnisse — trunkiert durch
         // maxResults ODER durch den Traversierungs-Hard-Cap (NodeCapReached), beides zaehlt.
         var finalBody = result.Truncated ? body : McpSufficiencyHints.Append(body);
-        var finalText = FindSymbolTool.PrependWarning(warning, finalBody);
-
         var payload = new
         {
             Target = target,
@@ -148,7 +145,7 @@ internal static class DependencyGraphTool
         };
         // In ein Objekt gewrappt statt eines nackten Arrays — MCP-Clients validieren structuredContent
         // schema-seitig als JSON-Objekt (siehe McpToolResults.Text``1-Doc-Kommentar).
-        return McpToolResults.Text(finalText, payload);
+        return McpToolResults.Text(finalBody, payload);
     }
 
     private static string DirectionLabel(DependencyGraphResult result) =>

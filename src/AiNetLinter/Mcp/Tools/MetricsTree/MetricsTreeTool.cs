@@ -5,7 +5,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
-using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
@@ -22,7 +21,7 @@ internal sealed record MetricsTreeToolArgs(
 /// Komplett-Dump. Deckt alle vier Modi ab: die zwei Datei-Walk-Modi <c>code_size</c>/
 /// <c>comment_density</c> (synchron, <see cref="MetricsTreeScanner"/>) und die zwei Roslyn-Modi
 /// <c>violation_density</c>/<c>complexity</c> (async, <see cref="MetricsTreeRoslynScanner"/>). Bewusst
-/// duenner Dispatch: Validierung hier (analog <see cref="FindSymbolTool.ExecuteAsync"/>), Scan-/
+/// duenner Dispatch: Validierung hier, Scan-/
 /// Aggregationslogik in den zwei Scanner-Klassen — keine eigene Logik, damit dieser Klasse eigener
 /// <c>AIContextFootprint</c> klein bleibt.
 /// </summary>
@@ -69,10 +68,9 @@ internal static class MetricsTreeTool
             scan.Root,
             query.TopN,
             MetricsTreeScanner.IsSortDescending(query.Mode));
-        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
         var withHint = McpDrillDownHints.Append(text, args.Depth);
         return McpToolResults.Text(
-            FindSymbolTool.PrependWarning(warning, withHint),
+            withHint,
             new MetricsTreePayload(
                 MetricsTreeModeParser.ToWireValue(query.Mode),
                 query.Root,

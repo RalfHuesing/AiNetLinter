@@ -151,7 +151,7 @@ public sealed class GetImpactToolIntegrationTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
+    public async Task ExecuteAsync_CompileErrorFixture_ReturnsResultsWithoutCompileErrorHint()
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         using var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
@@ -160,7 +160,7 @@ public sealed class GetImpactToolIntegrationTests
         var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, "ValidClassA.DoWork", 50, 1), CancellationToken.None);
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Compile-Fehler", text, StringComparison.Ordinal);
     }
 
     [Fact]

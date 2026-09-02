@@ -148,7 +148,6 @@ internal static class GetImpactTool
             solution, input.SymbolIdentifier!, ct, assemblyIdentity);
         if (error is not null) return error;
 
-        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
         var effectiveMax = input.MaxResults < 1 ? 1 : input.MaxResults;
         var traversal = await CallGraphTraversal.ExpandAsync(
             new ReferenceTraversalRequest(
@@ -169,8 +168,7 @@ internal static class GetImpactTool
         var finalBody = TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
             ? McpSufficiencyHints.Append(formatted.Text)
             : formatted.Text;
-        var finalText = FindSymbolTool.PrependWarning(warning, finalBody);
-        return McpToolResults.Text(finalText, formatted.Traversal);
+        return McpToolResults.Text(finalBody, formatted.Traversal);
     }
 
     private static async Task<CallToolResult> ExecuteGitRefBranchAsync(Solution solution, GetImpactInput input, CancellationToken ct)
@@ -193,19 +191,16 @@ internal static class GetImpactTool
                 context: ex.Message,
                 hint: GitRefUnresolvableHint);
         }
-        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
         var effectiveMax = input.MaxResults < 1 ? 1 : input.MaxResults;
 
         if (callSiteEntries.Count == 0)
         {
             var refLabel = string.IsNullOrEmpty(input.GitRef) ? "uncommittete Aenderungen" : input.GitRef;
-            return McpToolResults.Text(FindSymbolTool.PrependWarning(
-                warning, $"Keine betroffenen Aufrufstellen gefunden fuer '{refLabel}'"));
+            return McpToolResults.Text($"Keine betroffenen Aufrufstellen gefunden fuer '{refLabel}'");
         }
 
         var callSites = callSiteEntries.Select(DiffImpactAnalyzer.FormatCallSite).ToList();
-        var finalText = FindSymbolTool.PrependWarning(
-            warning, McpTruncation.TruncateLines(callSites, callSiteEntries.Count, effectiveMax));
+        var finalText = McpTruncation.TruncateLines(callSites, callSiteEntries.Count, effectiveMax);
         var shownEntries = callSiteEntries.Count <= effectiveMax
             ? callSiteEntries
             : callSiteEntries.Take(effectiveMax).ToList();

@@ -102,7 +102,7 @@ public sealed class GetFileSkeletonToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_CompileErrorFile_OutputContainsFileSpecificWarning()
+    public async Task ExecuteAsync_CompileErrorFile_ReturnsWithoutCompileErrorHint()
     {
         using var context = new McpInMemoryTestContext(CompileErrorMiniSolutionSpec.CreatePlural());
         using var state = context.CreateServer();
@@ -112,9 +112,7 @@ public sealed class GetFileSkeletonToolTests
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.Contains("Diese Datei hat", text, StringComparison.Ordinal);
-        Assert.Contains("Compile-Fehler", text, StringComparison.Ordinal);
-        Assert.Matches(@"CS\d{4}", text);
+        Assert.DoesNotContain("Compile-Fehler", text, StringComparison.Ordinal);
     }
 
     [Fact]

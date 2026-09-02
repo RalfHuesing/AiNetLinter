@@ -248,7 +248,7 @@ public sealed class GetHotspotsToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithPluralAggregateWarning()
+    public async Task ExecuteAsync_CompileErrorFixture_ReturnsResultsWithoutCompileErrorHint()
     {
         using var context = new McpInMemoryTestContext(CompileErrorMiniSolutionSpec.CreatePlural());
         using var state = context.CreateServer();
@@ -257,20 +257,7 @@ public sealed class GetHotspotsToolTests
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        CompileErrorHeaderAssertions.AssertStartsWithCompileErrorHeader(text, expectedFileCount: 3);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_SingleCompileErrorFixture_OutputStartsWithSingularAggregateWarning()
-    {
-        using var context = new McpInMemoryTestContext(CompileErrorMiniSolutionSpec.CreateSingular());
-        using var state = context.CreateServer();
-
-        var result = await GetHotspotsTool.ExecuteAsync(state, null, CancellationToken.None);
-
-        Assert.NotEqual(true, result.IsError);
-        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        CompileErrorHeaderAssertions.AssertStartsWithCompileErrorHeader(text, expectedFileCount: 1);
+        Assert.DoesNotContain("Compile-Fehler", text, StringComparison.Ordinal);
     }
 
     private static HotspotsPayload DeserializePayload(CallToolResult result)

@@ -196,7 +196,6 @@ internal sealed class ChangeContextMiniWorkspace : IDisposable
 }
 
 internal sealed class CompileErrorMiniFixtureWorkspace : FixtureWorkspace { public CompileErrorMiniFixtureWorkspace() : base("CompileErrorMini") { } }
-internal sealed class SingleCompileErrorMiniFixtureWorkspace : FixtureWorkspace { public SingleCompileErrorMiniFixtureWorkspace() : base("SingleCompileErrorMini") { } }
 internal sealed class BlazorPartialMiniFixtureWorkspace : FixtureWorkspace
 {
     public BlazorPartialMiniFixtureWorkspace() : base("BlazorPartialMini") { }

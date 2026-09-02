@@ -15,8 +15,4 @@ internal static class CompileErrorMiniSolutionSpec
         ("BrokenClassC.cs", "public class BrokenClassC { UndefinedType Value; }")
     ], VirtualProjectDirectory: "src/CompileErrorMini"));
 
-    public static RoslynTestSolution CreateSingular() => RoslynTestSolutionFactory.CreateSolution(@"C:\ainetlinter-virtual\SingleCompileErrorMini.slnx", new ProjectSpec("SingleCompileErrorMini", [
-        ("ValidClass.cs", "public class ValidClass { public void M() { } }"),
-        ("BrokenClass.cs", "public class BrokenClass { public void F( { } }")
-    ], VirtualProjectDirectory: "src/SingleCompileErrorMini"));
 }

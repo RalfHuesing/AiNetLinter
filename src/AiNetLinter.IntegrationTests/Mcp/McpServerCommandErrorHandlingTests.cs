@@ -15,11 +15,10 @@ using Xunit;
 namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
-/// E2E-Tests fuer den
-/// Server-Crash, sondern jeder Tool-Call liefert eine strukturierte [ERROR]-Antwort; eine
-/// valide Solution mit Compile-Fehlern in einzelnen Dateien liefert fuer die betroffene
-/// Datei den
-/// 006-Erweiterung.
+/// E2E-Tests fuer robuste MCP-Fehlerbehandlung: jeder Tool-Call liefert bei echten Fehlern
+/// eine strukturierte [ERROR]-Antwort; eine valide Solution mit Compile-Fehlern in einzelnen
+/// Dateien liefert weiterhin normale Ergebnisse ohne automatisch vorangestellte Compile-
+/// Fehler-Hinweise.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class McpServerCommandErrorHandlingTests
@@ -83,11 +82,8 @@ public sealed class McpServerCommandErrorHandlingTests
     }
 
     [Fact]
-    public async Task RunAsync_CompileErrorMini_GetFileSkeleton_ReturnsFileSpecificCompileErrorHint()
+    public async Task RunAsync_CompileErrorMini_GetFileSkeleton_ReturnsWithoutCompileErrorHint()
     {
-        // 006-Erweiterung: GetFileSkeleton auf einer datei-spezifisch fehlerhaften
-        // Datei muss den
-        // unstrukturierter Output.
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         McpFixtureProjectDefinition.Ensure(fixture.RootPath);
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
@@ -122,9 +118,7 @@ public sealed class McpServerCommandErrorHandlingTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        // Datei-spezifischer Hinweis (NICHT Aggregate-Format).
-        Assert.Contains("Diese Datei hat", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("Compile-Fehler", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Compile-Fehler", textContent.Text, StringComparison.Ordinal);
     }
 
     /// <summary>

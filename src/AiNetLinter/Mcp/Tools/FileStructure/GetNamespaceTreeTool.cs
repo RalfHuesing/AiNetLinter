@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
-using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
@@ -124,9 +123,7 @@ internal static class GetNamespaceTreeTool
         Solution solution, CancellationToken ct)
     {
         var (overviewText, overviewPayload) = await GetNamespaceTreeScanner.ScanSolutionProjectsAsync(solution, ct);
-        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
-        var textWithWarning = FindSymbolTool.PrependWarning(warning, overviewText);
-        return McpToolResults.Text(textWithWarning, overviewPayload);
+        return McpToolResults.Text(overviewText, overviewPayload);
     }
 
     private static async Task<CallToolResult> ExecuteAutoProjectDrilldownAsync(
@@ -256,8 +253,7 @@ internal static class GetNamespaceTreeTool
             SolutionDir: solutionDir);
 
         var (treeText, treePayload) = await GetNamespaceTreeScanner.ScanProjectNamespacesAsync(scanParams, ct);
-        var projWarning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
-        var finalText = FindSymbolTool.PrependWarning(projWarning, treeText);
+        var finalText = treeText;
 
         if (!treePayload.Truncated)
         {

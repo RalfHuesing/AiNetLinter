@@ -302,7 +302,7 @@ public sealed class FindReferencesToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
+    public async Task ExecuteAsync_CompileErrorFixture_ReturnsResultsWithoutCompileErrorHint()
     {
         using var context = new McpInMemoryTestContext(CompileErrorMiniSolutionSpec.CreatePlural());
         using var state = context.CreateServer();
@@ -311,8 +311,7 @@ public sealed class FindReferencesToolTests
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
-        Assert.Contains("Compile-Fehler", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Compile-Fehler", text, StringComparison.Ordinal);
     }
 
     [Fact]

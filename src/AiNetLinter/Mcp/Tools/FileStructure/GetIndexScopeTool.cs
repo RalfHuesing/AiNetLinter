@@ -2,7 +2,6 @@
 
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Mcp.Tools.SymbolGraph;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.FileStructure;
@@ -18,16 +17,15 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 /// </summary>
 internal static class GetIndexScopeTool
 {
-    internal static async Task<CallToolResult> ExecuteAsync(McpCodeGraphServer state, CancellationToken ct)
+    internal static Task<CallToolResult> ExecuteAsync(McpCodeGraphServer state, CancellationToken ct)
     {
-        if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
+        if (state.LoadState == ServerLoadState.Loading) return Task.FromResult(McpToolResults.Loading());
         var solution = state.GetCurrentSolution();
-        if (solution is null) return McpToolResults.SolutionNotLoaded();
+        if (solution is null) return Task.FromResult(McpToolResults.SolutionNotLoaded());
 
         var (text, entries) = GetIndexScopeScanner.BuildBreakdown(solution);
-        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
         // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
         // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
-        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text), new { Breakdown = entries });
+        return Task.FromResult(McpToolResults.Text(text, new { Breakdown = entries }));
     }
 }

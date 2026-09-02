@@ -31,9 +31,9 @@ internal static class GetCallTreeTool
 
     /// <summary>
     /// Tool-Einstiegspunkt: prueft Solution-Ladezustand, loest den Identifikator auf, baut den
-    /// Aufrufer- oder Aufgerufene-Baum und rendert ihn im angeforderten Format. Fehlerbehandlung/Warnhinweis-Muster
-    /// identisch zu <see cref="FindReferencesTool.ExecuteAsync"/> (Compile-Fehler-Warnhinweis,
-    /// defensiver try/catch, Sufficiency-Hinweis nur fuer nicht-trunkierte Ergebnisse).
+    /// Aufrufer- oder Aufgerufene-Baum und rendert ihn im angeforderten Format. Die Fehlerbehandlung
+    /// verwendet einen defensiven try/catch; ein Sufficiency-Hinweis erscheint nur fuer
+    /// nicht-trunkierte Ergebnisse.
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
         ISolutionStateProvider state, GetCallTreeInput input, CancellationToken ct)
@@ -67,7 +67,6 @@ internal static class GetCallTreeTool
                 state.AssemblySymbolIdentity);
             if (error is not null) return error;
 
-            var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
             var topN = input.TopN < 1 ? 1 : input.TopN;
             var (root, truncated) = await CallGraphTreeBuilder.BuildTreeAsync(
                 new CallTreeBuildRequest(solution, symbol!, input.Depth, topN, direction), ct);
@@ -89,7 +88,7 @@ internal static class GetCallTreeTool
                         : McpSufficiencyHints.Append(body);
 
             return McpToolResults.Text(
-                FindSymbolTool.PrependWarning(warning, finalBody),
+                finalBody,
                 new CallTreePayload(
                     root,
                     CallTreeDirectionNames.For(direction),

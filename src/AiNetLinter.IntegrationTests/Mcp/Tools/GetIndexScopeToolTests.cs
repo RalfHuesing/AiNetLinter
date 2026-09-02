@@ -137,7 +137,7 @@ public sealed class GetIndexScopeToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithPluralAggregateWarning()
+    public async Task ExecuteAsync_CompileErrorFixture_ReturnsBreakdownWithoutCompileErrorHint()
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
@@ -147,21 +147,7 @@ public sealed class GetIndexScopeToolTests
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        CompileErrorHeaderAssertions.AssertStartsWithCompileErrorHeader(text, expectedFileCount: 3);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_SingleCompileErrorFixture_OutputStartsWithSingularAggregateWarning()
-    {
-        using var fixture = new SingleCompileErrorMiniFixtureWorkspace();
-        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
-        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
-
-        var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
-
-        Assert.NotEqual(true, result.IsError);
-        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        CompileErrorHeaderAssertions.AssertStartsWithCompileErrorHeader(text, expectedFileCount: 1);
+        Assert.DoesNotContain("Compile-Fehler", text, StringComparison.Ordinal);
     }
 
     private static string BuildBreakdownLine(string extension, int count, string suffix)

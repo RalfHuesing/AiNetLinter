@@ -106,7 +106,6 @@ internal static class GetSymbolBodyTool
         CancellationToken ct)
     {
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
         var mb = new MarkdownBuilder();
 
         for (var i = 0; i < identifiers.Count; i++)
@@ -124,7 +123,7 @@ internal static class GetSymbolBodyTool
         var markdown = mb.Build().TrimEnd();
         var isTruncated = markdown.Contains(TruncationMarker, StringComparison.Ordinal);
         var final = isTruncated ? markdown : McpSufficiencyHints.Append(markdown);
-        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, final));
+        return McpToolResults.Text(final);
     }
 
     private static async Task<CallToolResult?> RenderSingleSymbolAsync(

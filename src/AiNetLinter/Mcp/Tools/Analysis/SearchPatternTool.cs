@@ -3,7 +3,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -73,8 +72,7 @@ internal static class SearchPatternTool
             return McpToolResults.Text(text, scan.Payload);
         }
 
-        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
-        return McpToolResults.Text(FindSymbolTool.PrependWarning(warning, text), scan.Payload);
+        return McpToolResults.Text(text, scan.Payload);
     }
 
     private static CallToolResult? ValidateArguments(SearchPatternToolArguments arguments)

@@ -59,7 +59,6 @@ internal static class GetFileSkeletonTool
         CancellationToken ct)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var diagnosticsByFile = await McpCompileDiagnostics.GetErrorsByFileAsync(solution, ct);
         var mb = new MarkdownBuilder();
 
         for (var i = 0; i < paths.Count; i++)
@@ -68,7 +67,7 @@ internal static class GetFileSkeletonTool
 
             var earlyError = await RenderSingleFileSkeletonAsync(
                 new RenderSingleFileSkeletonRequest(
-                    solution, paths[i], solutionDir, diagnosticsByFile, mb, paths.Count, assemblyIdentity),
+                    solution, paths[i], solutionDir, mb, paths.Count, assemblyIdentity),
                 ct);
 
             if (earlyError != null) return earlyError;
@@ -85,7 +84,6 @@ internal static class GetFileSkeletonTool
         var solution = request.Solution;
         var path = request.Path;
         var solutionDir = request.SolutionDir;
-        var diagnosticsByFile = request.DiagnosticsByFile;
         var mb = request.Markdown;
         var totalCount = request.TotalCount;
         var assemblyIdentity = request.AssemblyIdentity;
@@ -117,21 +115,6 @@ internal static class GetFileSkeletonTool
             ct,
             assemblyIdentity is null ? null : symbolId => assemblyIdentity.Format(symbolId));
 
-        var diagnosticPath = document.FilePath;
-        if (!string.IsNullOrWhiteSpace(diagnosticPath) && !Path.IsPathFullyQualified(diagnosticPath)
-            && Path.IsPathFullyQualified(solutionDir))
-        {
-            diagnosticPath = Path.GetFullPath(Path.Combine(solutionDir, diagnosticPath));
-        }
-
-        var fileWarning = McpCompileDiagnostics.FormatFileWarning(
-            diagnosticsByFile.GetValueOrDefault(diagnosticPath ?? path, []));
-
-        if (!string.IsNullOrEmpty(fileWarning))
-        {
-            mb.Line(fileWarning).BlankLine();
-        }
-
         if (types.Count == 0)
         {
             mb.Heading(3, $"Skelett: `{path}`").BlankLine();
@@ -150,7 +133,6 @@ internal static class GetFileSkeletonTool
         Solution Solution,
         string Path,
         string SolutionDir,
-        IReadOnlyDictionary<string, IReadOnlyList<Diagnostic>> DiagnosticsByFile,
         MarkdownBuilder Markdown,
         int TotalCount,
         AnalysisSymbolIdentity? AssemblyIdentity);

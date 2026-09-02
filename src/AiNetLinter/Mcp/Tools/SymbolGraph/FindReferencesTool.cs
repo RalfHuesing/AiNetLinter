@@ -35,11 +35,9 @@ internal static class FindReferencesTool
 {
     /// <summary>
     /// Tool-Einstiegspunkt: prueft, ob eine Solution geladen ist, loest den Identifikator zu einem
-    /// Symbol auf und liefert dessen Aufrufstellen als Text. Stellt dem Aufrufstellen-Output
-    /// einen Warnhinweis voran, falls die Solution Compile-Fehler in einzelnen Dateien hat
-    /// (Roslyn toleriert sie, aber der Agent weiss sonst nicht, dass die Antwort unvollstaendig
-    /// sein kann). Defensiver try/catch-Wrapper faengt unerwartete Roslyn-Exceptions ab und
-    /// liefert einen strukturierten [ERROR]-Antwort statt eines Server-Crashs (Defensiv-Pfad).
+    /// Symbol auf und liefert dessen Aufrufstellen als Text. Ein defensiver try/catch-Wrapper
+    /// faengt unerwartete Roslyn-Exceptions ab und liefert einen strukturierten [ERROR]-Antwort
+    /// statt eines Server-Crashs (Defensiv-Pfad).
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
         ISolutionStateProvider state,
@@ -78,7 +76,6 @@ internal static class FindReferencesTool
                 state.AssemblySymbolIdentity);
             if (error is not null) return error;
 
-            var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
             var normalizedMaxResults = request.MaxResults < 1 ? 1 : request.MaxResults;
             var traversal = await CallGraphTraversal.ExpandAsync(
                 new ReferenceTraversalRequest(
@@ -99,8 +96,7 @@ internal static class FindReferencesTool
                 : TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
                     ? McpSufficiencyHints.Append(formatted.Text)
                     : formatted.Text;
-            var finalText = FindSymbolTool.PrependWarning(warning, finalBody);
-            return McpToolResults.Text(finalText, formatted.Traversal);
+            return McpToolResults.Text(finalBody, formatted.Traversal);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

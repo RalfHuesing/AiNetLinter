@@ -191,7 +191,7 @@ public sealed class SearchPatternToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_CompileErrorFixture_OutputStartsWithAggregateWarning()
+    public async Task ExecuteAsync_CompileErrorFixture_ReturnsResultsWithoutCompileErrorHint()
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
         var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
@@ -202,8 +202,7 @@ public sealed class SearchPatternToolTests
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.StartsWith("Hinweis:", text, StringComparison.Ordinal);
-        Assert.Contains("Compile-Fehler", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Compile-Fehler", text, StringComparison.Ordinal);
     }
 
     [Fact]

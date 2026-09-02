@@ -86,11 +86,8 @@ internal static class FindSymbolTool
 
     /// <summary>
     /// Tool-Einstiegspunkt: prueft, ob eine Solution geladen ist, und delegiert an den Scanner.
-    /// Stellt dem Scanner-Output einen Warnhinweis voran, falls die Solution
-    /// Compile-Fehler in einzelnen Dateien hat (Roslyn toleriert sie, aber der Agent weiss sonst
-    /// nicht, dass die Antwort unvollstaendig sein kann). Defensiver try/catch-Wrapper faengt
-    /// unerwartete Roslyn-Exceptions ab und liefert einen strukturierten [ERROR]-Antwort statt
-    /// eines Server-Crashs.
+    /// Ein defensiver try/catch-Wrapper faengt unerwartete Roslyn-Exceptions ab und liefert
+    /// einen strukturierten [ERROR]-Antwort statt eines Server-Crashs.
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
         ISolutionStateProvider state,
@@ -136,9 +133,8 @@ internal static class FindSymbolTool
                 mb.Line(text.TrimEnd());
             }
 
-            var warning = await BuildAggregateWarningAsync(solution, request.CancellationToken);
             var markdown = mb.Build().TrimEnd();
-            return McpToolResults.Text(PrependWarning(warning, markdown), new FindSymbolBatchDto(results));
+            return McpToolResults.Text(markdown, new FindSymbolBatchDto(results));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -200,26 +196,6 @@ internal static class FindSymbolTool
         return $"{entry.FilePath}:{entry.Line} - {entry.Kind}: {entry.Name}{id}{origin}";
     }
 
-    /// <summary>
-    /// Baut einen Warnhinweis, falls mindestens eine Datei einen Compile-Fehler hat. Shared-Helper,
-    /// weil das identische Muster in
-    /// mehreren Tools verwendet wird (find_symbol, find_references, get_impact,
-    /// get_type_hierarchy, search_pattern). Bei 0 Compile-Fehlern wird der Original-Text
-    /// unveraendert zurueckgegeben.
-    /// </summary>
-    internal static async Task<string> BuildAggregateWarningAsync(Solution solution, CancellationToken ct)
-    {
-        var diagnosticsByFile = await McpCompileDiagnostics.GetErrorsByFileAsync(solution, ct);
-        var totalErrors = diagnosticsByFile.Values.Sum(list => list.Count);
-        return totalErrors > 0
-            ? McpCompileDiagnostics.FormatAggregateWarning(diagnosticsByFile.Count, totalErrors)
-            : string.Empty;
-    }
-
-    internal static string PrependWarning(string warning, string text)
-    {
-        return string.IsNullOrEmpty(warning) ? text : warning + "\n\n" + text;
-    }
 }
 
 /// <summary>

@@ -848,18 +848,9 @@ Der Schutz ist **strukturell**, nicht ueber Disziplin geloest: im MCP-Modus wird
 
 Regressions-Schutz: E2E-Framing-Tests in `McpServerCommandJsonRpcFramingTests` spawnen `AiNetLinter.exe` als Subprozess und schreiben Legacy-`initialize` beziehungsweise modernes `server/discover` mit anschließendem `tools/list` manuell auf stdin. Sie prüfen **jede** Zeile auf stdout als gültigen JSON-RPC-Frame (`jsonrpc == "2.0"`), vergleichen Instructions und Toolnamen mit der registrierten Collection und messen Zeichen sowie UTF-8-Bytes. Kein SDK-Parser zwischen Subprozess und Assertions — ein zukünftiger Leak würde als nicht-JSON-Zeile sichtbar.
 
-### Compile-Fehler-Warnhinweis
+### Compile-Diagnostics
 
-Wenn die Solution Compile-Fehler in einzelnen Dateien hat, prependieren **9 von 15 Tools** (inkl. `metrics_tree`) einen aggregierten Warnhinweis vor das eigentliche Ergebnis. `pattern_detect` prependet diesen Warnhinweis bewusst nicht (Pattern 1:1 von `get_violations` übernommen, siehe unten):
-
-```
-Hinweis: 1 Datei hat Compile-Fehler (M Errors gesamt) — Details siehe get_file_skeleton fuer die betroffenen Dateien.
-Hinweis: N Dateien haben Compile-Fehler (M Errors gesamt) — Details siehe get_file_skeleton fuer die betroffenen Dateien.
-```
-
-Bei genau einer betroffenen Datei wechselt die Zeile in den Singular (`1 Datei hat`), bei mehreren bleibt es beim Plural (`N Dateien haben`).
-
-`get_file_skeleton` nutzt stattdessen einen **datei-spezifischen** Warnhinweis für die angefragte Datei (mit den ersten 3 Diagnostic-IDs und Messages, weitere mit `+M weitere`). `get_violations` und `pattern_detect` prependen keinen Compile-Warnhinweis **und** surfacen Compile-Fehler auch nicht als eigene Violations/Pattern-Treffer — der zugrunde liegende Lint-Lauf ignoriert sie schlicht. Wer wissen will, ob Compile-Fehler vorliegen, muss eines der anderen 9 Tools nutzen (z. B. `get_index_scope` fuer den aggregierten oder `get_file_skeleton` fuer den datei-spezifischen Warnhinweis).
+Normale erfolgreiche MCP-Tool-Antworten enthalten keine automatisch aggregierten oder datei-spezifischen Compile-Fehler-Hinweise. Der residente Roslyn-Workspace kann während laufender Bearbeitung einen Zwischenstand enthalten; der Build-Status wird weiterhin durch `dotnet build` bestimmt. Echte Tool- oder Workspace-Fehler werden gemäß dem strukturierten Fehlervertrag ausgegeben.
 
 ### Staleness-Invalidierung
 

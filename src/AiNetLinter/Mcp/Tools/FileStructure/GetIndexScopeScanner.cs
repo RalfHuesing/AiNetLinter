@@ -97,11 +97,6 @@ internal static class GetIndexScopeScanner
         return FormatFileCountLine(entry.Count, entry.Extension, suffix);
     }
 
-    /// <summary>
-    /// Pluralisierung in eine eigene Zeile extrahiert, damit Singular ("1 Datei") und Plural
-    /// ("N Dateien") konsistent zu <see cref="McpCompileDiagnostics.FormatAggregateWarning"/>
-    /// bleiben und Test-Assertions Singular/Plural gleichermassen matchen koennen.
-    /// </summary>
     private static string FormatFileCountLine(int count, string extension, string suffix)
     {
         var fileLabel = count == 1 ? "Datei" : "Dateien";

@@ -62,7 +62,6 @@ internal static class MetricsLookupTool
         CancellationToken ct)
     {
         var solutionRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
         var mb = new MarkdownBuilder();
         var dtos = new List<MetricsLookupResultDto>();
 
@@ -81,9 +80,7 @@ internal static class MetricsLookupTool
 
         var markdown = mb.Build().TrimEnd();
         var final = McpSufficiencyHints.Append(markdown);
-        var finalText = FindSymbolTool.PrependWarning(warning, final);
-
-        return McpToolResults.Text(finalText, new MetricsLookupBatchDto(dtos, identifiers.Count));
+        return McpToolResults.Text(final, new MetricsLookupBatchDto(dtos, identifiers.Count));
     }
 
     private static async Task<(MetricsLookupResultDto? Dto, CallToolResult? EarlyError)> RenderSingleLookupAsync(
