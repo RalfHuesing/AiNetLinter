@@ -466,6 +466,16 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Code-Map: nicht geändert; kein konkreter Scope-/Historienbefund.
 - Nächste Aktion: Paket 3 schließen, Paket 4 als Abschlussmatrix starten.
 
+## 2026-09-02 – Paket 4 – Implementierer running (aktuell)
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: Implementierer
+- Subagent: `01a06234-e47d-7150-af63-05014836fecb`
+- Diff-Baseline: `66224863`
+- Status: running
+- Scope: Konzeptgemäße Fast-/Integration-Testmatrix und Nachweise für Resolver, Cache-Race, Unification, Tool-Ergonomie, Assembly-`get_impact`, Daemon-Health, Response-Budget sowie Paket-3-Regressionen; keine Produktionsausweitung ohne klar belegten Testfehler.
+- MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet; Release-/Live-/Stress-Verifikation bleibt ausgespart.
+
 ## 2026-09-02 – Paket 3 – Folge-Review nach Quellenkorrektur
 
 - Run-ID: `decompiled-assembly-20260902`
