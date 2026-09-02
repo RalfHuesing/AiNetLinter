@@ -10,7 +10,7 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### TD-ASM-ACCESSOR-001 – Accessor-Matching verliert das zugehörige Member
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 1/5 steht an.
+- Status: aktiv, Versuch 1/5 läuft.
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/Bodies/AssemblyDecompiledBodyResolver.cs`, Accessor-Matching.
 - Evidenz: Review des Diffs `396e77f1..b3bb2ea8`; ein Descendant-Scan vergleicht nur Accessor-Kinds und kann bei mehreren gleichartigen Properties/Events den falschen Body wählen.
 - Disposition: `fix-now`
@@ -20,7 +20,7 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### TD-ASM-CACHE-001 – In-Flight-Generation wird vor Publish-Return löschbar
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 1/5 steht an.
+- Status: aktiv, Versuch 1/5 läuft.
 - Scope/Fundstelle: `AssemblyDecompilationCache.Publish` und `AssemblyCacheCleanup`.
 - Evidenz: Review-Gegenbeispiel mit konkurrierenden Publishern unterschiedlicher Fingerprints; eine erfolgreich gemeldete Generation kann vor dem Return durch Retention gelöscht werden.
 - Disposition: `fix-now`
@@ -30,7 +30,7 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### TD-ASM-FRAMEWORK-001 – Exakte Assembly `System` nicht vereinheitlicht
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 1/5 steht an.
+- Status: aktiv, Versuch 1/5 läuft.
 - Scope/Fundstelle: `AssemblyReferenceResolver` Framework-Namens-/Versionsprüfung.
 - Evidenz: `StartsWith("System.")` erfasst nicht den exakten Namen `System`, obwohl die freigegebene Fachentscheidung die Familie `System` nennt.
 - Disposition: `fix-now`

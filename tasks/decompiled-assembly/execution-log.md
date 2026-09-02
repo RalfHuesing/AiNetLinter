@@ -53,3 +53,13 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Wiederholte Checks wegen konkreter Gegenhypothese: Body-/Cache-Filter 5 Tests bestanden; `AssemblyReferenceResolverTests` 8 Tests bestanden. Keine Produktions- oder Testdatei geändert.
 - Code-Map: nur konkrete Fakten zu Resolver-Zeilenbereich, Cache-Testabdeckung/Retention-Risiko und Health-Testebene korrigiert.
 - Nächste Aktion: frischer Implementierer für die drei gebündelten P1-Ursachensignaturen, Versuch 1/5.
+
+## 2026-09-02 – Paket 1 – Korrekturversuch 1 – Implementierer running
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: wird nach Delegation ergänzt
+- Diff-Baseline: `df11979e`
+- Anlass: P1-Findings aus dem unabhängigen Review zu Accessor-Matching, In-Flight-Cache-Retention und exakter Framework-Assembly `System`.
+- Scope: Nur die drei gebündelten Ursachen und ihre direkten Regressionstests; keine Paket-2/3/4-Erweiterung.
+- Status: running
