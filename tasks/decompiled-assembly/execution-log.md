@@ -164,7 +164,7 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 
 - Run-ID: `decompiled-assembly-20260902`
 - Rolle: frischer Implementierer
-- Subagent: wird nach Delegation ergänzt
+- Subagent: `01a06170-85bb-7c00-8539-4d32d2d1ff9d`
 - Diff-Baseline: `8f057c79`
 - Anlass: gleiche P1-Ursachensignatur `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE`, verbliebener Widerspruch in `Docs/integration.md`.
 - Scope: Nur `Docs/integration.md` und direkte Doku-Regression; keine Produktionscodeänderung, keine Paket-3/4-Arbeit.
