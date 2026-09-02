@@ -35,7 +35,7 @@ internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
     internal AssemblyAnalysisLease(
         AssemblyAnalysisEntry entry,
         string canonicalPath,
-        McpCodeGraphServer server,
+        ISolutionStateProvider server,
         AssemblyContext context,
         AssemblyReferenceLeaseContext referenceContext)
     {
@@ -48,7 +48,7 @@ internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
     }
 
     internal string CanonicalPath { get; }
-    internal McpCodeGraphServer Server { get; }
+    internal ISolutionStateProvider Server { get; }
     internal AssemblyContext Context { get; }
 
     Solution? IAssemblyBodyContext.Solution => Server.GetCurrentSolution();

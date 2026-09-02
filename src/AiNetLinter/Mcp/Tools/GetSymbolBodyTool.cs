@@ -32,7 +32,7 @@ internal static class GetSymbolBodyTool
     private const string TruncationMarker = "// ... truncated, total ";
 
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state,
+        ISolutionStateProvider state,
         string[]? symbolIdentifiers,
         int maxBodyLines,
         CancellationToken ct)

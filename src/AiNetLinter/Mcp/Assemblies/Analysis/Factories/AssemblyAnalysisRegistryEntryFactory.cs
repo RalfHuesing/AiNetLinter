@@ -121,7 +121,7 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                     SourceDiagnostics = parameters.Fallback?.Diagnostics,
                 },
             };
-            var fallbackEntry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
+            var fallbackEntry = AssemblyAnalysisEntryFactory.Create(new AssemblyAnalysisEntryCreateParameters(
                 parameters.CanonicalPath,
                 sessionGeneration.Snapshot.Solution,
                 context,
@@ -186,7 +186,7 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                     .Take(100)
                     .ToList(),
             };
-            var entry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
+            var entry = AssemblyAnalysisEntryFactory.Create(new AssemblyAnalysisEntryCreateParameters(
                 canonicalPath,
                 resolution.Selection.SourceLease.Snapshot.Solution,
                 context,

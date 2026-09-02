@@ -46,7 +46,7 @@ internal static class AssemblyAnalysisToolSupport
             lease));
 
     internal static async Task<AssemblyToolPreparation> PrepareAsync(
-        McpCodeGraphServer? state,
+        ISolutionStateProvider? state,
         string? assemblyPath,
         string? receiverType,
         CancellationToken ct)
@@ -76,7 +76,7 @@ internal static class AssemblyAnalysisToolSupport
     }
 
     internal static bool TryPrepareInput(
-        McpCodeGraphServer? state,
+        ISolutionStateProvider? state,
         string? assemblyPath,
         out string? fullPath,
         out CallToolResult? error)
@@ -109,7 +109,7 @@ internal sealed record AssemblyToolPreparation(
     CallToolResult? Error);
 
 internal sealed record AssemblyToolExecutionParameters(
-    McpCodeGraphServer? State,
+    ISolutionStateProvider? State,
     string? AssemblyPath,
     string? ReceiverType,
     int MaxResults,

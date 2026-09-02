@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -25,7 +26,7 @@ internal static class GetNamespaceTreeTool
     internal const int MaxResultsCap = 200;
 
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state,
+        ISolutionStateProvider state,
         GetNamespaceTreeInput input,
         CancellationToken ct)
     {
@@ -77,7 +78,7 @@ internal static class GetNamespaceTreeTool
     }
 
     private static CallToolResult AddAssemblyOverviewHeader(
-        McpCodeGraphServer state,
+        ISolutionStateProvider state,
         Solution solution,
         CallToolResult result)
     {

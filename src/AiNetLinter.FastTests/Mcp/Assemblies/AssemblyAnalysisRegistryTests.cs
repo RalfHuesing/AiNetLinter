@@ -10,6 +10,7 @@ using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
+using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -386,7 +387,7 @@ public sealed class AssemblyAnalysisRegistryTests
             "namespace EntryTest; public sealed class Value { }");
         var context = await AssemblyAnalysisRegistryTestContextFactory.CreateAsync(solution.Solution);
         var lifetime = new TrackingLifetime();
-        var entry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
+        var entry = AssemblyAnalysisEntryFactory.Create(new AssemblyAnalysisEntryCreateParameters(
             "entry-test.dll",
             solution.Solution,
             context,
@@ -414,7 +415,7 @@ public sealed class AssemblyAnalysisRegistryTests
             "namespace EntryTest; public sealed class Value { }");
         var context = await AssemblyAnalysisRegistryTestContextFactory.CreateAsync(solution.Solution);
         var lifetime = new TrackingLifetime(throws: true);
-        var entry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
+        var entry = AssemblyAnalysisEntryFactory.Create(new AssemblyAnalysisEntryCreateParameters(
             "entry-failure-test.dll",
             solution.Solution,
             context,

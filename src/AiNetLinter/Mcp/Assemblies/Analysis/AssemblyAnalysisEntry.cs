@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -27,7 +26,8 @@ internal sealed record AssemblyAnalysisEntryCreateParameters(
 internal sealed record AssemblyAnalysisEntryResources(
     IDisposable? Lifetime,
     ExternalResourceLease? ResourceLease,
-    Action<AssemblyAnalysisEntry>? OnReferenceLeaseReleased);
+    Action<AssemblyAnalysisEntry>? OnReferenceLeaseReleased,
+    AssemblyReferenceLeaseFactory? ReferenceLeaseFactory);
 
 internal sealed class AssemblyAnalysisEntry : IAsyncDisposable, IAssemblyAnalysisEvictionEntry
 {
@@ -35,6 +35,7 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable, IAssemblyAnalysi
     private readonly IDisposable? lifetime;
     private readonly ExternalResourceLease? resourceLease;
     private readonly Action<AssemblyAnalysisEntry>? onReferenceLeaseReleased;
+    private readonly IAsyncDisposable stateLifetime;
     private TimeProvider clock = TimeProvider.System;
     private AssemblyReferenceLeaseFactory? referenceLeaseFactory;
     private readonly TaskCompletionSource<object?> leaseDrain = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -45,36 +46,24 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable, IAssemblyAnalysi
 
     internal AssemblyAnalysisEntry(
         string canonicalPath,
-        McpCodeGraphServer server,
+        ISolutionStateProvider state,
+        IAsyncDisposable stateLifetime,
         AssemblyContext context,
         AssemblyAnalysisEntryResources resources)
     {
         CanonicalPath = canonicalPath;
-        Server = server;
+        State = state;
+        this.stateLifetime = stateLifetime;
         Context = context;
         lifetime = resources.Lifetime;
         resourceLease = resources.ResourceLease;
         onReferenceLeaseReleased = resources.OnReferenceLeaseReleased;
+        referenceLeaseFactory = resources.ReferenceLeaseFactory;
         lastUsedUtc = UtcNow;
     }
 
-    internal static AssemblyAnalysisEntry Create(AssemblyAnalysisEntryCreateParameters parameters)
-    {
-        var entry = new AssemblyAnalysisEntry(
-            parameters.CanonicalPath,
-            CreateReadOnlyServer(parameters.Solution, parameters.Context),
-            parameters.Context,
-            new(
-                parameters.Lifetime,
-                parameters.ResourceLease,
-                parameters.OnReferenceLeaseReleased));
-        entry.SetClock(parameters.Clock);
-        entry.referenceLeaseFactory = parameters.ReferenceLeaseFactory;
-        return entry;
-    }
-
     internal string CanonicalPath { get; }
-    internal McpCodeGraphServer Server { get; }
+    internal ISolutionStateProvider State { get; }
     internal AssemblyContext Context { get; }
     internal string ContentHash => Context.Origin.ContentHash;
 
@@ -115,7 +104,7 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable, IAssemblyAnalysi
             lease = new(
                 this,
                 CanonicalPath,
-                Server,
+                State,
                 Context,
                 new(referenceLeaseFactory, onReferenceLeaseReleased));
             return true;
@@ -173,7 +162,7 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable, IAssemblyAnalysi
             var failures = new List<Exception>();
             try
             {
-                await Server.DisposeAsync().ConfigureAwait(false);
+                await stateLifetime.DisposeAsync().ConfigureAwait(false);
             }
             catch (Exception exception)
             {
@@ -273,18 +262,4 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable, IAssemblyAnalysi
 
     private DateTime UtcNow => clock.GetUtcNow().UtcDateTime;
 
-    private static McpCodeGraphServer CreateReadOnlyServer(
-        Microsoft.CodeAnalysis.Solution solution,
-        AssemblyContext context) =>
-        new(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(
-            Catalog: null,
-            Config: new Config
-            {
-                Global = new GlobalConfig(),
-                Metrics = new MetricsConfig(),
-            },
-            ReadOnlySolutionSnapshot: solution,
-            AssemblySymbolIdentity: new AnalysisSymbolIdentity(
-                context.Origin.ContentHash,
-                context.Generation))));
 }

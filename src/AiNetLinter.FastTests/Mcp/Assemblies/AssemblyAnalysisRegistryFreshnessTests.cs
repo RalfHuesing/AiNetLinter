@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Assemblies.Analysis;
+using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using Xunit;
 
@@ -31,7 +32,7 @@ public sealed class AssemblyAnalysisRegistryFreshnessTests
         {
             Origin = baseContext.Origin with { SourceSnapshotIdentity = identity },
         };
-        await using var entry = AssemblyAnalysisEntry.Create(
+        await using var entry = AssemblyAnalysisEntryFactory.Create(
             new AssemblyAnalysisEntryCreateParameters(
                 "entry-test.dll",
                 solution.Solution,

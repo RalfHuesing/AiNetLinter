@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -74,7 +75,7 @@ internal static class FindSymbolTool
     /// eines Server-Crashs.
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state,
+        ISolutionStateProvider state,
         string[]? namePatterns,
         string? kind,
         int maxResults,

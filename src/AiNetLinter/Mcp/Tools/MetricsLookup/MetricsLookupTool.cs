@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -23,7 +24,7 @@ namespace AiNetLinter.Mcp.Tools.MetricsLookup;
 internal static class MetricsLookupTool
 {
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state,
+        ISolutionStateProvider state,
         string[]? symbolIdentifiers,
         CancellationToken ct)
     {

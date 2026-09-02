@@ -2,6 +2,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
@@ -21,7 +22,7 @@ internal static class GetTypeHierarchyTool
     internal const int DefaultMaxResults = 50;
 
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? symbolIdentifier, int maxResults, CancellationToken ct)
+        ISolutionStateProvider state, string? symbolIdentifier, int maxResults, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();

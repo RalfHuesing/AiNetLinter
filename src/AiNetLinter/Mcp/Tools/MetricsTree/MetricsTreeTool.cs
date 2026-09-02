@@ -4,6 +4,7 @@ using System;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -28,7 +29,7 @@ internal sealed record MetricsTreeToolArgs(
 internal static class MetricsTreeTool
 {
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, MetricsTreeToolArgs args, CancellationToken ct)
+        ISolutionStateProvider state, MetricsTreeToolArgs args, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
@@ -81,11 +82,11 @@ internal static class MetricsTreeTool
     }
 
     /// <summary>Dispatcht auf den passenden Scanner: die zwei Datei-Modi laufen synchron ohne
-    /// Config/Console-Overhead, die zwei Roslyn-Modi brauchen <see cref="McpCodeGraphServer.GetConfigSnapshot"/>
-    /// (fuer <c>LinterEngine</c>) und <see cref="McpCodeGraphServer.Console"/> (damit <c>LinterEngine</c>
+    /// Config/Console-Overhead, die zwei Roslyn-Modi brauchen <see cref="ISolutionStateProvider.GetConfigSnapshot"/>
+    /// (fuer <c>LinterEngine</c>) und <see cref="ISolutionStateProvider.Console"/> (damit <c>LinterEngine</c>
     /// auf demselben Kanal loggt wie der MCP-Server selbst, analog <see cref="GetViolationsTool"/>).</summary>
     private static async Task<MetricsTreeScanResult> BuildTreeResultAsync(
-        McpCodeGraphServer state, Solution solution, MetricsTreeQuery query, CancellationToken ct)
+        ISolutionStateProvider state, Solution solution, MetricsTreeQuery query, CancellationToken ct)
     {
         if (query.Mode is MetricsTreeMode.CodeSize or MetricsTreeMode.CommentDensity)
         {

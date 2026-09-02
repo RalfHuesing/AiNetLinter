@@ -52,7 +52,7 @@ internal sealed class AssemblyAnalysisSourceProjectEntryFactory
             }
 
             var context = sourceResult.Context with { Generation = parameters.Generation };
-            var entry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
+            var entry = AssemblyAnalysisEntryFactory.Create(new AssemblyAnalysisEntryCreateParameters(
                 targetPath,
                 parameters.ParentSelection.SourceLease.Snapshot.Solution,
                 context,

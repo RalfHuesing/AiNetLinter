@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -29,7 +30,7 @@ namespace AiNetLinter.Mcp.Tools.DependencyGraph;
 internal static class DependencyGraphTool
 {
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, DependencyGraphInput input, CancellationToken ct)
+        ISolutionStateProvider state, DependencyGraphInput input, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();

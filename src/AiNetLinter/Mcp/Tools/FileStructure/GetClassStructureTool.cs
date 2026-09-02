@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -15,7 +16,7 @@ using ModelContextProtocol.Protocol;
 namespace AiNetLinter.Mcp.Tools.FileStructure;
 
 /// <summary>
-/// Parameter fuer <see cref="GetClassStructureTool.ExecuteAsync(McpCodeGraphServer, GetClassStructureArgs, CancellationToken)"/>.
+/// Parameter fuer <see cref="GetClassStructureTool.ExecuteAsync(ISolutionStateProvider, GetClassStructureArgs, CancellationToken)"/>.
 /// </summary>
 internal sealed record GetClassStructureArgs(
     string? SymbolIdentifier,
@@ -38,15 +39,15 @@ internal static class GetClassStructureTool
     internal const int MaxMembersCap = 200;
 
     internal static Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? symbolIdentifier, string? sortBy, CancellationToken ct) =>
+        ISolutionStateProvider state, string? symbolIdentifier, string? sortBy, CancellationToken ct) =>
         ExecuteAsync(state, new GetClassStructureArgs(symbolIdentifier, sortBy), ct);
 
     internal static Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? symbolIdentifier, string? sortBy, int maxMembers, CancellationToken ct) =>
+        ISolutionStateProvider state, string? symbolIdentifier, string? sortBy, int maxMembers, CancellationToken ct) =>
         ExecuteAsync(state, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers), ct);
 
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state,
+        ISolutionStateProvider state,
         GetClassStructureArgs args,
         CancellationToken ct)
     {

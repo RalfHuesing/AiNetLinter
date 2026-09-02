@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
+using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -401,7 +402,7 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
                 References = references,
                 Diagnostics = diagnostics ?? Array.Empty<string>(),
             };
-            var entry = AssemblyAnalysisEntry.Create(new AssemblyAnalysisEntryCreateParameters(
+            var entry = AssemblyAnalysisEntryFactory.Create(new AssemblyAnalysisEntryCreateParameters(
                 backingLease.CanonicalPath,
                 backingLease.Server.GetCurrentSolution()!,
                 context,

@@ -2,48 +2,85 @@
 
 ## Primäre Einstiegspunkte
 
-- `Konzept.md`: verbindlicher fachlicher Vertrag.
-- Epic 1 startet an `AssemblyAnalysisLease` und der Zustandsübergabe aus dem
-  MCP-Host in die Assembly-Analyse.
+- Epic 1 ist umgesetzt: `ISolutionStateProvider` kapselt den für
+  Assembly-Analyse-Leases tatsächlich benötigten read-only Lösungszustand.
+- `McpCodeGraphServer` implementiert diesen Vertrag; die konkrete
+  Konstruktion eines read-only Hosts liegt in
+  `AssemblyAnalysisEntryFactory`, nicht in Entry oder Lease.
+- Der nächste geplante Einstiegspunkt ist Epic 2:
+  `AssemblySymbolResolver.ResolveAsync`.
 
 ## Betroffene Dateien und Symbole
 
-- `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` — vorgesehene Implementierung
-  der schlanken Zustandsgrenze.
-- `src/AiNetLinter/Mcp/Assemblies/Analysis/References/AssemblyAnalysisLease.cs`
-  — konkrete Server-Referenz in der Lease; zu verifizieren.
-- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblySymbolResolver.cs` —
-  vorgesehene Methodengrößen-Extraktion; zu verifizieren.
-- `AssemblyAnalysisToolSupport`,
-  `AssemblyAnalysisRegistryEntryCreation` und ihre exakten Pfade — durch den
-  Implementierer per MCP zu verifizieren.
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/References/ISolutionStateProvider.cs` —
+  `GetCurrentSolution`, `AssemblySymbolIdentity`, `LoadState`,
+  `Console` und `GetConfigSnapshot`. Die letzten zwei Capabilities werden
+  von MetricsTree/GetImpact auf dem Assembly-Pfad benötigt.
+- `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` — implementiert den Vertrag
+  über explizite Adapter für Symbolidentität und Konfigurations-Snapshot.
+- `Mcp/Assemblies/Analysis/References/AssemblyAnalysisLease.cs` — hält und
+  übergibt nur noch `ISolutionStateProvider`; die
+  `IAssemblyBodyContext`-Auflösung bleibt `GetCurrentSolution`.
+- `Mcp/Assemblies/Analysis/AssemblyAnalysisEntry.cs` — trennt
+  `State` von seiner `IAsyncDisposable`-Lebensdauer, behält
+  Referenzlease-, Locking- und Fehleraggregationsreihenfolge bei.
+- `Mcp/Assemblies/Analysis/Factories/AssemblyAnalysisEntryFactory.cs` —
+  neue Kompositionsfactory für den read-only `McpCodeGraphServer`.
+  `AssemblyAnalysisRegistryEntryFactory` und
+  `AssemblyAnalysisSourceProjectEntryFactory` verwenden sie.
+- `Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolSupport.cs` und
+  `AssemblyToolExecutionParameters` — akzeptieren den Vertragszustand.
+- Die unmittelbar über `lease.Server` erreichbaren Tools benutzen ebenfalls
+  nur den Vertrag: CallTree, DependencyGraph, FileStructure
+  (ClassStructure/FileSkeleton/NamespaceTree), GetSymbolBody,
+  MetricsLookup/MetricsTree sowie SymbolGraph
+  (FindReferences/FindSymbol/GetImpact/GetTypeHierarchy).
 
 ## Aufrufer und Abhängigkeiten
 
-- Die Lease-Aufrufer und ihre verwendeten Server-Member sind vor einer
-  Typänderung semantisch zu erfassen.
-- `ProjectLease` und `ProjectRegistry` gehören ausdrücklich nicht zur
-  Typumstellung.
+- Assembly-Leases entstehen über `AssemblyAnalysisEntry.TryAcquireLease`;
+  die Entry-Factories liefern den separierten Zustand und dessen Ownership.
+- Die Tool-Dispatcher können den vorhandenen konkreten Server weiterhin
+  übergeben, weil er den Vertrag implementiert; der Assembly-Lease-Pfad kennt
+  den konkreten Typ nicht.
+- `ProjectLease` und `ProjectRegistry` bleiben unverändert und konkret.
+- Kein DI-Container, `IServiceProvider`, neues NuGet-Paket oder
+  `rules.json` wurde eingeführt bzw. geändert.
 
 ## Relevante Tests, Konfiguration und Dokumentation
 
-- `AssemblyAnalysisSessionTests.cs` ist laut Konzept über dem Dateilimit;
-  exakter Pfad und Testverantwortung sind zu verifizieren.
-- Relevante Assembly-Analyse- und Concurrency-Tests, einschließlich
-  `AssemblyAnalysisRegistryRetirementRaceTests`, sind per MCP zu ermitteln.
-- `rules.json` ist eine explizite Non-Goal-Grenze; keine Änderung vorgesehen.
+- Neu: `src/AiNetLinter.FastTests/Mcp/SolutionStateProviderContractTests.cs`
+  prüft den Vertragsaufruf von `AssemblyAnalysisToolSupport`, die
+  Lease-/Tool-Signaturen und die Server-Implementierung per Reflection.
+- Angepasste Factory-Aufrufer in
+  `AssemblyAnalysisRegistryTests`,
+  `AssemblyAnalysisRegistryFreshnessTests` und
+  `AssemblyAnalysisDispatcherCapabilityTests`.
+- Dieses Artefakt ist der aktualisierte Stand für Epic 1; Roadmap, Execution
+  Log und Tech Debt wurden vom Epic nicht geändert.
 
 ## Invarianten, Risiken und Unsicherheiten
 
-- Kein DI-Container oder Service Locator; Constructor-/Factory-Injection
-  bleibt erhalten.
-- Die Lease behält ihre Locking-, Cancellation- und Body-Resolution-Semantik.
-- Das neue Interface enthält nur tatsächlich benötigte Capabilities und kappt
-  den transitiven Footprint zum konkreten Server.
+- `AssemblyAnalysisEntry.DisposeAsync` entsorgt weiter erst den
+  zustandsbesitzenden Host und aggregiert Fehler wie zuvor; Cancellation,
+  Lease-Drain und Body-Resolution wurden nicht umgebaut.
+- Der Interfaceumfang ist aus den realen Assembly-Tool-Aufrufen abgeleitet,
+  nicht aus einem generischen Server-Abbild.
+- Frischer MCP-Metriknachweis: Lease und Entry liegen mit je 1531
+  AI-Context-Footprint unter dem Limit 2500.
+- Außerhalb von Epic 1 verbleiben `AssemblyHealthProjection`
+  (Footprint 2564 über eine andere Response-/Health-Kette),
+  `AssemblySymbolResolver.ResolveAsync` (62 statt 60 Zeilen).
 
 ## Verifikation
 
-- Je Implementierungs-Epic: passende FastTests sowie ein frischer gezielter
-  MCP-`get_violations`-Nachweis.
-- Abschluss: Build, beide Nicht-Stress-Testsuiten, die drei Scope-Audits,
-  projektweite Violations und Safeguard gemäß `roadmap.md`.
+- `dotnet build`: erfolgreich, 0 Warnungen/0 Fehler.
+- Fokussierter FastTest-Slice mit State-Contract, ToolSupport, Registry,
+  Freshness, Retirement-Race und Path-Contract: 57/57 bestanden.
+- MCP-Audits im Produktionsscope `src/AiNetLinter/Mcp`:
+  keine exakten Duplikat-Cluster (1523 Methoden), kein High-Confidence
+  Dead Code (783 Symbole). Der Magic-Value-Scan meldet ausschließlich
+  bestehende Kandidaten in bereits geänderten Dateien, keine aus Epic 1
+  eingeführten Werte.
+- Frisches MCP-`get_violations` nach der letzten Codeänderung: die zwei
+  oben genannten, scope-fremden Folge-Befunde; keine Lease-/Entry-Verletzung.

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 
@@ -22,7 +23,7 @@ namespace AiNetLinter.Mcp;
 /// aktualisieren) liegt in <see cref="McpCodeGraphServerRefresh"/>, damit diese Klasse unter
 /// dem projektweiten <c>MaxAIContextFootprint</c>-Limit bleibt.
 /// </summary>
-internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
+internal sealed class McpCodeGraphServer : ISolutionStateProvider, IDisposable, IAsyncDisposable
 {
     private readonly Lock _lock = new();
     private readonly ILintConsole _console;
@@ -126,6 +127,7 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
     public ILintConsole Console => _console;
 
     internal AnalysisSymbolIdentity? AssemblySymbolIdentity => _assemblySymbolIdentity;
+    AnalysisSymbolIdentity? ISolutionStateProvider.AssemblySymbolIdentity => AssemblySymbolIdentity;
 
     /// <summary>Zeit seit Konstruktion dieser Instanz — Proxy fuer die Server-Uptime, verwendet von
     /// <c>get_server_health</c>.</summary>
@@ -269,6 +271,9 @@ internal sealed class McpCodeGraphServer : IDisposable, IAsyncDisposable
             return (Config, UsedDefaultConfig, ResolvedConfigPath);
         }
     }
+
+    (ILinterEngineConfig Config, bool UsedDefaultConfig, string? ResolvedConfigPath)
+        ISolutionStateProvider.GetConfigSnapshot() => GetConfigSnapshot();
 
     /// <summary>Liefert die aktuelle <see cref="Solution"/> oder <see langword="null"/>, wenn der
     /// Server noch laedt (<see cref="LoadState"/> == <see cref="ServerLoadState.Loading"/>) oder

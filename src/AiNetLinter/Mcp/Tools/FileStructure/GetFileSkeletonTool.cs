@@ -10,6 +10,7 @@ using AiNetLinter.Cli;
 using AiNetLinter.Core;
 using AiNetLinter.Core.Documents;
 using AiNetLinter.Maps.Skeleton;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
@@ -24,7 +25,7 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 internal static class GetFileSkeletonTool
 {
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string[]? filePaths, CancellationToken ct)
+        ISolutionStateProvider state, string[]? filePaths, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();

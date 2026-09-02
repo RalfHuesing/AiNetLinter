@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -38,7 +39,7 @@ internal static class GetImpactTool
         "gitRef pruefen (z. B. via 'git log'/'git branch') oder ohne gitRef aufrufen fuer uncommittete Aenderungen.";
 
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, GetImpactInput input, CancellationToken ct, DiffImpactCounters? counters = null)
+        ISolutionStateProvider state, GetImpactInput input, CancellationToken ct, DiffImpactCounters? counters = null)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
@@ -108,7 +109,7 @@ internal static class GetImpactTool
             : null;
 
     private static Task<CallToolResult> ExecuteBranchAsync(
-        McpCodeGraphServer state,
+        ISolutionStateProvider state,
         Solution solution,
         GetImpactInput input,
         string detailLevel,
@@ -219,7 +220,7 @@ internal static class GetImpactTool
     /// Diff" liefert eine leere, aber vertragsgueltige Struktur samt Sufficiency-Hinweis.
     /// </summary>
     private static async Task<CallToolResult> ExecuteChangeContextBranchAsync(
-        McpCodeGraphServer state,
+        ISolutionStateProvider state,
         Solution solution,
         GetImpactInput input,
         CancellationToken ct,
@@ -277,7 +278,7 @@ internal static class GetImpactTool
     /// <summary>Eine solutionweite Violations-Stufe pro Aufruf — Config/Console beschafft der
     /// Tool-Zweig wie <c>get_violations</c> (atomarer Config-Schnappschuss, Server-Konsolen-Kanal).</summary>
     private static Task<DiffViolationScanResult> CollectDiffViolationsAsync(
-        McpCodeGraphServer state,
+        ISolutionStateProvider state,
         Solution solution,
         DiffImpactAnalysis analysis,
         DiffImpactCounters? counters,

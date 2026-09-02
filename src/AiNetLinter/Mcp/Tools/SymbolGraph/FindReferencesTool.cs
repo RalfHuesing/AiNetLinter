@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
@@ -41,7 +42,7 @@ internal static class FindReferencesTool
     /// liefert einen strukturierten [ERROR]-Antwort statt eines Server-Crashs (Defensiv-Pfad).
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state,
+        ISolutionStateProvider state,
         string? symbolIdentifier,
         int maxResults,
         int depth,
@@ -52,7 +53,7 @@ internal static class FindReferencesTool
             ct).ConfigureAwait(false);
 
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state,
+        ISolutionStateProvider state,
         FindReferencesRequest request,
         CancellationToken ct)
     {

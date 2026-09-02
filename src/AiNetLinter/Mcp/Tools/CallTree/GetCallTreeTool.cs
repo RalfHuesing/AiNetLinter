@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -35,7 +36,7 @@ internal static class GetCallTreeTool
     /// defensiver try/catch, Sufficiency-Hinweis nur fuer nicht-trunkierte Ergebnisse).
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, GetCallTreeInput input, CancellationToken ct)
+        ISolutionStateProvider state, GetCallTreeInput input, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
