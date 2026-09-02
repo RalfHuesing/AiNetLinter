@@ -367,3 +367,14 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - `get_violations` mit Projektziel und Scope `src/AiNetLinter.IntegrationTests/Mcp/McpDocumentationSmokeTests.cs` meldete 0 Befunde, wurde wegen des veralteten MCP-Builds ausdrücklich nur als Zusatzdiagnose und nicht als Feature-Nachweis behandelt.
 - Unverändert konsistent: `instructions.md`, `ServerInstructions.cs`, `README.md`, `Docs/configuration.md`. Vollständige Nicht-Stress-Gates sowie Release-/Live-MCP-Prüfungen wurden bewusst nicht ausgeführt.
 - Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.
+
+## 2026-09-02 – Paket 3 – Korrekturversuch 1 – Implementierer running (aktuell)
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: `01a06213-5cdb-75b3-a018-d661eca47623`
+- Diff-Baseline: `e081cc48`
+- Anlass: P1 `NAV-TRANSITIVE-LEASE-COMPLETENESS-001`.
+- Scope: Transitive Referenz-Leases für Root → Dependency → TransitiveDependency in Navigation vollständig sichtbar machen und lokale Regression ergänzen; keine Paket-4-Ausweitung und keine Release-/Live-MCP-Verifikation.
+- MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet.
+- Status: running
