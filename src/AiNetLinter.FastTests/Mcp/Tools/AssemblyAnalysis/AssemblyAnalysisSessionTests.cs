@@ -95,6 +95,27 @@ public sealed class AssemblyAnalysisSessionTests
     }
 
     [Fact]
+    public void MakeSignatureOnlyMethodsParsable_PreservesOperatorAndConversionOperatorDeclarations()
+    {
+        const string source = """
+            namespace Probe;
+            public readonly struct Value
+            {
+                public static Value operator +(Value left, Value right) => left;
+                public static explicit operator int(Value value) => 1;
+            }
+            """;
+
+        var transformed = AssemblyDecompilationSourceText.MakeSignatureOnlyMethodsParsable(source);
+        var tree = CSharpSyntaxTree.ParseText(transformed);
+
+        Assert.Empty(tree.GetDiagnostics().Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+        Assert.Single(tree.GetRoot().DescendantNodes().OfType<OperatorDeclarationSyntax>());
+        Assert.Single(tree.GetRoot().DescendantNodes().OfType<ConversionOperatorDeclarationSyntax>());
+        Assert.DoesNotContain("throw null!;", transformed, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task RefreshAsync_ChangesGenerationForChangedBytesAndKeepsOldLeaseReadable()
     {
         using var temp = TestTempDirectory.Create("assembly-session-generation-");

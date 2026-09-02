@@ -140,11 +140,11 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### TD-SIGONLY-COVERAGE-001 – Signature-only-Ausschlüsse und Operatoren nicht direkt abgesichert
 
 - Schweregrad: P2
-- Status: zurückgestellt bis Paket 4.
+- Status: behoben, Review ausstehend (Paket 4).
 - Scope/Fundstelle: `AssemblyDecompilationSourceText` und Signature-only-Regressionen.
 - Evidenz: Review: Abstract/Extern/Partial/Interface, echte Bodies sowie Operator-/Conversion-Operator-Syntax sind nicht jeweils direkt getestet.
-- Disposition: `accepted-deferred`
-- Nächster Schritt: Paket-4-Testmatrix um diese Ausschlüsse und Operatoren erweitern.
+- Disposition: `fix-now`
+- Nächster Schritt: Folge-Review der Resolver-/Operator-Matrix; bei Bestätigung als `fixed` schließen.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Review.
 
 ### TD-SESSION-LEASE-RACE-001 – Verspätete Registrierung nach asynchroner Expansion möglich

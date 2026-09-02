@@ -476,6 +476,20 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Scope: Konzeptgemäße Fast-/Integration-Testmatrix und Nachweise für Resolver, Cache-Race, Unification, Tool-Ergonomie, Assembly-`get_impact`, Daemon-Health, Response-Budget sowie Paket-3-Regressionen; keine Produktionsausweitung ohne klar belegten Testfehler.
 - MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet; Release-/Live-/Stress-Verifikation bleibt ausgespart.
 
+## 2026-09-02 – Paket 4 – Implementierer
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: Implementierer
+- Subagent: `01a06234-e47d-7150-af63-05014836fecb`
+- Diff-Baseline: `66224863`
+- Status: terminal abgeschlossen; Teststand unreviewt gesichert.
+- Urteil: Paket-4-Testlücken ergänzt.
+- Geänderte Bereiche: direkte `AssemblyDecompiledBodyResolver`-Matrix für Klasse, Struct, Enum, Property/Accessors und typisierte `unavailable`-Fälle; Signature-only-Regression für Operatoren/Conversion-Operatoren; `code-map.md` aktualisiert. Keine Produktionsänderungen.
+- Verifikation nach der letzten Änderung: fokussierte FastTests 32/32; Assembly-/Health-Integrationtests 8/8; Build 0 Warnungen/0 Fehler; `git diff --check` sauber.
+- Bestehender Daemon-Proxy-Test ist bereits in `WiringProjectContractTests` direkt abgedeckt. Kein zusätzlicher Live-Daemon-Test wegen des veralteten MCP-/Daemon-Buildstands.
+- MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wurde nicht als Feature-Nachweis verwendet; keine Release-/Live-/Stress-Prüfung.
+- Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Paket-4-Review.
+
 ## 2026-09-02 – Paket 3 – Folge-Review nach Quellenkorrektur
 
 - Run-ID: `decompiled-assembly-20260902`

@@ -19,6 +19,7 @@
 - `AssemblyAnalysisRegistryEvictionCoordinator`, `AssemblyReferenceSessionExpander`, `AssemblyNavigationSupport` und `AssemblyReferenceNavigator` enthalten keine direkte konkrete Registry-/Lease-Verwaltung mehr; die vier Ziele erscheinen im aktuellen lokalen CLI-Footprint-Nachweis nicht als `AIContextFootprint`-Violation.
 - `AssemblyNavigationLeaseAccess.GetLeases` flatteniert die vom Root aus erreichbare Lease-Struktur depth-first, dedupliziert Lease-Instanzen und wendet erst danach das Navigationslimit an; `AssemblyAnalysisLease.ReferenceLeasesSnapshot` liefert dafür weiterhin nur die direkten Child-Leases.
 - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRegistryRetirementRaceTests.cs` enthält neben der bestehenden Retirement-Race-Regression die Regression für offenen temporären Request plus Fremd-Lease und Generationwechsel sowie die Disposal-Regression bei noch gehaltener Fremd-Lease.
+- `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyDecompiledBodyResolverTests.cs` ruft den Body-Resolver direkt für Klasse, Struct, Enum, Property und Accessors auf und prüft die typisierten `unavailable`-Ergebnisse für Interface und abstrakte Methode; `AssemblyAnalysisSessionTests` deckt zusätzlich Operator-/Conversion-Operator-Signature-only-Syntax ab.
 
 ## Aufrufer und Abhängigkeiten
 
