@@ -7,7 +7,7 @@
 - `src/AiNetLinter/Mcp/Registration/FileStructureToolRegistrations.cs` und `AnalysisToolRegistrations.cs` — betroffene Schema-/Dispatcher-Verträge von `get_file_skeleton` und `metrics_tree`.
 - `src/AiNetLinter/Mcp/AnalysisToolCall.cs` — gemeinsame Project-/Assembly-Routen, optionale Reference-Expansion und Assembly-Response-Enrichment.
 - `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindReferencesTool.cs`, `GetImpactTool.cs` und `AssemblyNavigationModels.cs` — Assembly-Symbolauflösung, Impact-Route sowie Trunkierungs-/Vollständigkeitsmetadaten.
-- `src/AiNetLinter/Mcp/Tools/NamespaceTree/GetNamespaceTreeTool.cs`, `McpToolResults.cs` und `Assemblies/Analysis/AssemblyAnalysisRegistry.cs` — Assembly-Header und deterministischer native-PE-Fehlervertrag.
+- `src/AiNetLinter/Mcp/Tools/FileStructure/GetNamespaceTreeTool.cs`, `McpToolResults.cs` und `Assemblies/Analysis/AssemblyAnalysisRegistry.cs` — Assembly-Header und deterministischer native-PE-Fehlervertrag.
 
 Die MCP-first-Aufnahme erfolgte mit `targetType=project` und absolutem Projektroot über `get_file_tree`, `find_symbol` und `get_feature_context` für die relevanten Produktionssymbole. Die aktuelle Matrix enthält 13 Cross-Target-Tools; `get_impact` ist jetzt über `AssemblySessionCall` ergänzt. `inspect_assembly` und `find_assembly_extensions` bleiben zusätzliche Assembly-only-Tools.
 
@@ -15,7 +15,7 @@ Die MCP-first-Aufnahme erfolgte mit `targetType=project` und absolutem Projektro
 
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/Bodies/AssemblyDecompiledBodyResolver.cs` — Body-Auflösung, direkt aufgerufen durch `AssemblyDecompilationAdapter`; MCP bestätigte den aktuellen Scope `:16-324` und den direkten Aufrufer in `AssemblyDecompilationAdapter.cs:23`.
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationCache.cs`, `AssemblyDecompilationCache.PointerPublishing.cs` und `AssemblyDecompilationCache.Locking.cs` — Generation-Publish, Current-Pointer, Retention-Synchronisierung und Cache-Lebenszyklus; MCP bestätigte `Publish` `:69-118`.
-- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyReferenceResolver.cs` — Assembly-Identitäts-/Referenzkandidatenauflösung, genutzt von Assembly-Sessions, Referenzexpansion und Source-Reference-Graph; MCP bestätigte `IdentityMatches` `:357-361` und `IsVersionTolerantFrameworkAssembly` `:363-366`.
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyReferenceResolver.cs` — Assembly-Identitäts-/Referenzkandidatenauflösung, genutzt von Assembly-Sessions, Referenzexpansion und Source-Reference-Graph; `IdentityMatches` liegt aktuell bei `:358-362`, `IsVersionTolerantFrameworkAssembly` bei `:364-367`.
 - `src/AiNetLinter/Mcp/Tools/SymbolGraph/SymbolIdentifierResolver.cs` — stabile Symbol-ID-Auflösung, genutzt von `FindReferencesTool`, Hierarchie- und Assembly-Registry-Pfaden.
 - `src/AiNetLinter/Mcp/Daemon/DaemonRuntimeContext.cs`, `DaemonRegistryAdapter.cs`, `DaemonHost.cs` — Daemon-Snapshot-Provider im Verbindungs-Kontext.
 - `src/AiNetLinter/Mcp/Tools/ServerMaintenance/GetServerHealthTool.cs` sowie `src/AiNetLinter/Mcp/Registration/ServerMaintenanceToolRegistrations.cs` — Health-Ausführung und Registrierungs-/Routingpfad.
@@ -24,7 +24,7 @@ Die MCP-first-Aufnahme erfolgte mit `targetType=project` und absolutem Projektro
 
 - `AssemblyDecompiledBodyResolver` (`FindMember`, `MatchesMember`, `MatchesAssociatedMember`, `FindAccessor`, `MatchesAccessor`, Typnamensauflösung; MCP aktuell `:16-324`) unterstützt Top-Level-`INamedTypeSymbol`, Struct/Enum/Record/Interface und Property-/Event-Accessor-Syntax. Accessors werden über `AssociatedSymbol` gegen einen direkten Property-/Indexer-/Event-Member und danach ausschließlich dessen Accessor-Liste aufgelöst.
 - `AssemblyDecompilationCache.Publish` (MCP nach Änderung `:69-118`) unterscheidet eigene Publikation, konkurrierend vorhandene Generation und Fehler; `TryPublishPointer`/`PublishPointerAttempt` liegen in `AssemblyDecompilationCache.PointerPublishing.cs`. `AssemblyCacheKeyLockRegistry` synchronisiert Publish und Retention pro kanonischem Entry über die gesamte `Publish`-Lebensdauer; der lokale Return-Seam ermöglicht den verzögerten Race-Test.
-- `AssemblyReferenceResolver.IdentityMatches` (`:357-361`) toleriert Versionen für `mscorlib`, exakt `System`, `System.*`, `Microsoft.*` und `WindowsBase*`; Kultur und Drittanbieter-Versionen bleiben strikt. `Systemish` bleibt ausgeschlossen.
+- `AssemblyReferenceResolver.IdentityMatches` (`:358-362`) toleriert Versionen für `mscorlib`, exakt `System`, `System.*`, `Microsoft.*` und `WindowsBase*`; Kultur und Drittanbieter-Versionen bleiben strikt. `Systemish` bleibt ausgeschlossen.
 - `SymbolIdentifierResolver.TryResolveByStableIdAsync` (`:131-178`) nutzt für Assembly-IDs nach exaktem Match einen eindeutigen, marker-/shape-toleranten Fallback; Parsing und Parameterzählung liegen in den privaten Helfern `:180-266`.
 - `DaemonRuntimeContext.FindProjectSnapshot`, `IDaemonRegistry.FindSnapshot`, `DaemonHost.CreateRuntimeContext`, `GetServerHealthTool.ExecuteDaemonProjectAsync` und `ServerMaintenanceToolRegistrations.ExecuteGetServerHealthAsync` bilden die explizite Daemon-Projekt-Route.
 - Paket-3/4-Bereiche sind Non-Goal; Paket 2 bleibt auf die Assembly-Tool-Verträge, die benannten Ergonomie-/Ausgabeverträge und die dafür nötigen Instruktions-/Dokumentationsabgleiche beschränkt.

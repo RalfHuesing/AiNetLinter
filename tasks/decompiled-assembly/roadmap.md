@@ -3,9 +3,9 @@
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
 Status: executing  
-Current epic: Paket 2
-Letzter Commit: Korrektur-Implementierung `e8492e34`; Paket-1-Folge-Review abgeschlossen
-Current debt item: keiner
+Current epic: Paket 2 – Korrekturrunde 1/5
+Letzter Commit: Paket-2-Implementierung `ca82ac9e`; Review-Checkpoint ausstehend
+Current debt item: `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE`
 Debt attempts: 0
 Blocker: keiner
 

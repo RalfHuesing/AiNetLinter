@@ -66,3 +66,33 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 - Attempts: 0
 - Nächster Schritt: Im vorgesehenen Paket 3 die betroffenen transitive Footprints gezielt untersuchen und auf `AIContextFootprint <= 2500` bringen.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 1 Implementierer.
+
+### DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE – Gemeinsamer Dokuabschnitt vermischt Toolverträge
+
+- Schweregrad: P1
+- Status: aktiv, Versuch 1/5 steht an.
+- Scope/Fundstelle: `Docs/agent-api.md`, Beschreibung von `find_references` und `get_impact`.
+- Evidenz: Review des Paket-2-Diffs; `get_impact` besitzt weder `includeReferences` noch eine `navigation`-Struktur, obwohl der gemeinsame Abschnitt dies nahelegt.
+- Disposition: `fix-now`
+- Nächster Schritt: Dokumentation in getrennte, gegen die aktuellen Registrierungen verifizierte Toolverträge aufteilen.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 2 Review.
+
+### NAV-COMPLETENESS-SESSION-CAP-OVERWRITE – Completeness kann Trunkierung überdecken
+
+- Schweregrad: P2
+- Status: außerhalb des aktuellen Korrekturscopes als Projektbefund vorgemerkt.
+- Scope/Fundstelle: `AssemblyReferenceNavigator`, Session-Cap und `assembliesTruncated`.
+- Evidenz: Review-Hinweis: Bei mehr als 32 Assembly-Sessions kann `completeness` auf `complete` gesetzt werden, obwohl `assembliesTruncated=true` bleibt.
+- Disposition: `promoted-to-project-debt`
+- Nächster Schritt: In einem separaten Projekt-Backlog/-Task die Vollständigkeitsprojektion und Diagnosesemantik korrigieren.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 2 Review.
+
+### SIGONLY-PROJECTION-GAP – Signature-only-Basis bei Calltree/Metrics nicht explizit
+
+- Schweregrad: P2
+- Status: zurückgestellt.
+- Scope/Fundstelle: `get_call_tree`/`metrics_tree` bei dekompilierten Signature-only-Snapshots.
+- Evidenz: Review bestätigt die korrigierte `find_references`-Einschränkung; für Calltree/Metrics bleibt eine explizite Sichtbarkeit der Signatur-only-Basis offen.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: Bei der vorgesehenen Efficiency-/Quality-Arbeit oder einem späteren Vertragstask bewerten.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 2 Review.

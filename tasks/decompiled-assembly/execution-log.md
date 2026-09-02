@@ -117,3 +117,19 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Offene Risiken: Die sechs Footprint-Warnungen erfordern Paket-3-Architekturentscheidungen; ein Fast-Test war einmalig timingbedingt rot und bestand bei direkter Wiederholung; Stress-Tests wurden nicht ausgeführt.
 - Code-Map: nach der Kontextaufnahme und den Änderungen aktualisiert. `roadmap.md`, `execution-log.md` und `tech-debt.md` blieben durch den Implementierer unverändert; `git diff --check` war sauber.
 - Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Paket-2-Review.
+
+## 2026-09-02 – Paket 2 – Review
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Reviewer
+- Subagent: `01a06148-5e04-79a3-be2d-c382f28ad8e3`
+- Diff-Scope: Paket-2-Stand seit `cfc4149c`, Implementierungs-Checkpoint `ca82ac9e`.
+- Status: terminal abgeschlossen; Review-Checkpoint vor Korrektur.
+- Urteil: `issues`; kein P0, ein belegtes P1.
+- P1-Finding `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE`: `Docs/agent-api.md` beschreibt `find_references` und `get_impact` gemeinsam so, als hätten beide `includeReferences=false/true` und 32-Assembly-Navigation. Der aktuelle Code führt `includeReferences` nur für `find_references`; `get_impact` hat keinen solchen Parameter und liefert keine `navigation`-Struktur. Korrektur: Dokumentationsabschnitt trennen und auf die tatsächliche `get_impact`-Semantik ausrichten.
+- Erfüllte Kriterien: `find_assembly_extensions`-Parameter und Expansion, Assembly-`get_impact`, `filePath`-Alias, `metrics_tree`-Default, Assembly-Header, Signature-only-/Native-PE-Hinweise, getrennte Trunkierungsflags und die Capability-Dokumentation stimmen laut Review grundsätzlich mit dem Quellcode überein.
+- Nicht blockierende P2-Funde: `NAV-COMPLETENESS-SESSION-CAP-OVERWRITE` wegen möglicher Überschreibung von `completeness` trotz `assembliesTruncated=true` wird als `promoted-to-project-debt` empfohlen; `SIGONLY-PROJECTION-GAP` für `get_call_tree`/`metrics_tree` wird als `accepted-deferred` empfohlen.
+- MCP-Hinweis: Der laufende MCP-Server war ein älterer Build. Alle ausgeführten MCP-Ergebnisse (`get_file_tree`, `get_feature_context`, `find_assembly_extensions`, `get_impact`) sind ausschließlich historische/kontextuelle Evidenz und kein Nachweis des aktuellen Paket-2-Codes; nach dem Nutzerhinweis wurde keine MCP-Verifikation wiederholt. Release-/Live-Verifikation bleibt separater Task.
+- Lokale Nachweise: Implementiererbericht mit Build 0/0, gezielten Fast 130/130 und Integration 54/54 sowie vollständigen Nicht-Stress-Läufen wurde auf Frische/Scope übernommen; ein direkter Code-/Doku-Gegencheck führte zum P1. `git diff --check` sauber.
+- Code-Map: nur konkrete Pfade/Zeilenanker aktualisiert (`Tools/NamespaceTree` → `Tools/FileStructure`, `AssemblyReferenceResolver`-Zeilen); kein Produktions-/Testcode geändert.
+- Nächste Aktion: frischer Implementierer für `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE`, Versuch 1/5.
