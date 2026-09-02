@@ -203,3 +203,65 @@ zugeordnet.
 
 Nächste Aktion: Implementierungs-Checkpoint sichern und unabhängigen Review
 des Epic-2-Diffs starten.
+
+## Run 2026-09-02-05 — Epic 2 / Review
+
+Status: running
+Rolle: unabhängiger Reviewer
+Subagent: `01a062a2-afc0-7d31-9d02-a7bc7a3694ae` (James)
+Diff-Baseline: `525bb0bc`
+
+Auftrag: Den Epic-2-Diff gegen die Größenlimits, fachliche Testaufteilung,
+Verhaltensneutralität der Resolver-Extraktion, Testabdeckung,
+Testparallelität, Code-Map und den frischen Verifikationsnachweis unabhängig
+prüfen. Produktions- und Testcode dürfen nicht geändert werden.
+
+Abschluss: erfolgreich  
+Urteil: approved
+
+Bericht des Reviewers:
+
+- Epic 2 ist fachlich erfüllt. Es gibt keine P0-, P1-, P2- oder P3-Findings.
+- `AssemblySymbolResolver.ResolveAsync` bleibt mit 40 Codezeilen unter dem
+  Methodenlimit; die Extraktion in `ResolveCandidatesAsync` ist
+  verhaltensneutral. Lease-Reihenfolge, Cancellation, Assembly-ID-Filter,
+  Diagnostics, Fallback sowie Distinct-/Ambiguous-Ausgabe blieben erhalten.
+- 15 Session-Testmethoden verblieben in `AssemblyAnalysisSessionTests.cs`,
+  drei Cache-Tests wurden unverändert nach `AssemblyAnalysisCacheTests.cs`
+  verschoben. Die Testabdeckung blieb erhalten.
+- Keine Collection- oder `DisableParallelization`-Sperre wurde eingeführt;
+  die zentrale Testparallelität bleibt erhalten.
+- Die Epic-Anforderungen zu Datei-/Methodenlimits, fachlicher Kohärenz und
+  Regressionstest-Scope sind erfüllt. Interface-, Body-Resolution- und
+  Retirement-Race-Tests liefen mit.
+
+Verifikation des Reviewers:
+
+- Git-Diff `525bb0bc..241fb94e`: erwarteter Resolver-Extract und Test-Split.
+- MCP `get_feature_context`, `get_symbol_body`, `metrics_lookup` mit absolutem
+  Projektziel `C:\\Daten\\Entwicklung\\Ralf\\AiNetLinter`: Bodies, Metriken und
+  Limits bestätigt.
+- MCP `find_references`/`get_impact`: 2 direkte und 9 Aufrufstellen bei Tiefe
+  3; der Git-Diff-Modus von `get_impact` lieferte keinen verwertbaren
+  Diff-Kontext, daher wurde der Diff direkt per Git geprüft.
+- MCP `get_violations` für Resolver-Scope und
+  `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis`: 0 Verstöße.
+- Gezielter FastTest-Filter für Session, Cache, Interface, Body und
+  Retirement-Race: 25 bestanden, 0 fehlgeschlagen, 0 übersprungen.
+- Der vorhandene Build-/Audit-Nachweis meldet 0 Warnungen/Fehler, keine
+  Duplikate, keinen High-Confidence-Dead-Code und keine Produktions-
+  Magic-Values; dieser Nachweis war laut Implementiererbericht frisch und
+  wurde nicht redundant wiederholt.
+
+Code-Map-Stand: Der Reviewer korrigierte ausschließlich die belegte Zahl der
+Aufrufstellen (Tiefe 3: 9 statt 4). Produktions-/Testcode und andere
+Task-Artefakte blieben unangetastet.
+
+Tech-Debt-Triage: Keine neuen actionablen Befunde. Die bestehenden
+testbezogenen Magic-Value-Kandidaten bleiben für Epic 3 zurückgestellt.
+
+Risiken: Kein Epic-2-Risiko. Vollständige Build-/Nicht-Stress-Suites bleiben
+als Orchestrator-Abschlusscheck offen.
+
+Nächste Aktion: Epic 2 als `done` markieren und Epic 3 zur evidenzbasierten
+MCP-Qualitätsbereinigung starten.

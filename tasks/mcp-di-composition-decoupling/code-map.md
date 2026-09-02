@@ -57,8 +57,10 @@
   Diagnostics-Reihenfolge sowie Distinct-/Ambiguous-Ausgabe bleiben erhalten.
 - Die Cache-Concurrency-Tests behalten ihre `Barrier`, verzögerte Rückgabe,
   `Task.WhenAll`- und Timeout-Invarianten.
-- MCP-Impact bestätigt vier Aufrufstellen (zwei direkte, zwei transitive) und
-  keine zusätzliche betroffene Produktionskette.
+- MCP `get_feature_context`/`find_references` bestätigt zwei direkte
+  Resolver-Aufrufstellen; die Tiefen-3-Traversierung liefert 9 Aufrufstellen
+  insgesamt (2 direkt, 7 transitiv), einschließlich Registrierungs- und
+  Testpfaden. Einen weiteren direkten Resolver-Aufruf gibt es nicht.
 - Verifizierte MCP-Metriken: `ResolveAsync` 40 Codezeilen; Session-Testklasse
   285 Codezeilen / 375 Footprint; Cache-Testklasse 125 Codezeilen / 159
   Footprint. Physische Zeilenzählung: 139 Resolver-, 374 Session- und 146
