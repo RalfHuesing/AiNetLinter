@@ -21,12 +21,15 @@ aber nicht die semantische MCP-Abfrage.
 
 ## Standard
 
-- Jeder zielgebundene MCP-Tool-Aufruf erhält `targetType` (`project` oder
-  `assembly`) und den absoluten `targetPath`. `targetType=project` adressiert
-  den Projektroot. `tools/list` weist je Tool aus, ob der gemeinsame read-only
-  Projekt-/Assembly-Sessionpfad, nur der Projektpfad oder nur der Assemblypfad
-  unterstützt wird; Symbolgraph, Struktur und Metriken können Assemblys über
-  source-backed oder dekompilierte Sessions abfragen.
+- Jeder zielgebundene MCP-Tool-Aufruf verwendet einen absoluten `targetPath` und
+  die im aktuellen Toolschema vorgesehene `targetType`-Zuordnung (`project` oder
+  `assembly`). `targetType=project` adressiert den Projektroot. Für die beiden
+  Assembly-only-Tools darf `targetType` gemäß ihrem Schema entfallen; ein
+  `.dll`-/`.exe`-`targetPath` wird dort als `assembly` inferiert. `tools/list`
+  weist je Tool aus, ob der gemeinsame read-only Projekt-/Assembly-Sessionpfad,
+  nur der Projektpfad oder nur der Assemblypfad unterstützt wird; Symbolgraph,
+  Struktur und Metriken können Assemblys über source-backed oder dekompilierte
+  Sessions abfragen.
 - `get_server_health` ist die einzige Ausnahme mit einem optionalen Target:
   `targetType` und `targetPath` müssen paarweise angegeben werden; ohne Target
   aggregiert das Tool getrennte Projekt- und Assembly-Sessions. Der Default ist
@@ -96,8 +99,9 @@ gezielt einzusetzen.
 Arbeit, Konfiguration und exakte Textarbeit erlaubt. Sie ersetzen bei
 C#-Symbol-, Referenz- und Impact-Fragen nicht die semantische MCP-Analyse.
 
-Für beide Assembly-Tools sind `targetType: "assembly"` und `targetPath` mit
-einem absoluten, lokalen `.dll`- oder `.exe`-Pfad Pflicht. Die Spezialtools arbeiten
+Für beide Assembly-Tools ist `targetPath` mit einem absoluten, lokalen `.dll`- oder
+`.exe`-Pfad Pflicht. `targetType` darf entfallen und wird als `assembly` behandelt;
+bei expliziter Angabe ist nur `assembly` zulässig. Die Spezialtools arbeiten
 metadata-only, benötigen kein Consumer-Projekt und laden oder führen die Assembly
 nicht aus. Bei `inspect_assembly` zuerst die öffentliche API untersuchen;
 `find_assembly_extensions` prüft klassische C#-Extensions und weist ohne
