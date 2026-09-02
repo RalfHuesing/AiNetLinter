@@ -1,5 +1,5 @@
 ---
-status: draft
+status: ready
 task: mcp-di-composition-decoupling
 datum: 2026-09-02
 bereich: src/AiNetLinter/Mcp
@@ -110,17 +110,17 @@ Diese Kette verursacht aktuell **keine** Footprint-Warnung für `AssemblyAnalysi
 
 ## 4. Konkrete Maßnahmen & Code-Sketches
 
-### 4.1. Interface `ISolutionSnapshotProvider` — Primärer Hebel (Kappen der Hauptkette)
+### 4.1. Interface `ISolutionStateProvider` — Primärer Hebel (Kappen der Hauptkette)
 
-**Lokation:** `src/AiNetLinter/Mcp/ISolutionSnapshotProvider.cs` (NEU)
+**Lokation:** `src/AiNetLinter/Mcp/ISolutionStateProvider.cs` (NEU)
 
 Das Interface abstrahiert die **drei tatsächlich genutzten** Capabilities von `McpCodeGraphServer` in der Lease-Kette:
 
 ```csharp
-// src/AiNetLinter/Mcp/ISolutionSnapshotProvider.cs (NEU)
+// src/AiNetLinter/Mcp/ISolutionStateProvider.cs (NEU)
 namespace AiNetLinter.Mcp;
 
-internal interface ISolutionSnapshotProvider
+internal interface ISolutionStateProvider
 {
     Solution? GetCurrentSolution();
     AnalysisSymbolIdentity? AssemblySymbolIdentity { get; }
@@ -133,7 +133,7 @@ internal interface ISolutionSnapshotProvider
 **Änderungen an `McpCodeGraphServer`:**
 ```csharp
 // McpCodeGraphServer.cs — nur Ergänzung der Interface-Deklaration
-internal sealed class McpCodeGraphServer : ISolutionSnapshotProvider, IDisposable, IAsyncDisposable
+internal sealed class McpCodeGraphServer : ISolutionStateProvider, IDisposable, IAsyncDisposable
 {
     // Alle Member bleiben unverändert — die Methoden existieren bereits.
 }
@@ -149,15 +149,15 @@ internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
     internal AssemblyAnalysisLease(
         AssemblyAnalysisEntry entry,
         string canonicalPath,
-        ISolutionSnapshotProvider server,  // ← Interface statt konkreter Klasse
+        ISolutionStateProvider server,  // ← Interface statt konkreter Klasse
         AssemblyContext context,
         AssemblyReferenceLeaseContext referenceContext) { ... }
 
-    internal ISolutionSnapshotProvider Server { get; }  // ← Typ-Änderung
+    internal ISolutionStateProvider Server { get; }  // ← Typ-Änderung
 }
 ```
 
-**Auswirkung:** Alle 11 Footprint-Warnungen werden aufgelöst, da `ISolutionSnapshotProvider` (~5 Zeilen) statt `McpCodeGraphServer` (423 Zeilen) den transitiven Baum dominiert.
+**Auswirkung:** Alle 11 Footprint-Warnungen werden aufgelöst, da `ISolutionStateProvider` (~5 Zeilen) statt `McpCodeGraphServer` (423 Zeilen) den transitiven Baum dominiert.
 
 ### 4.2. Weitere Interface-Auslagerung von `McpCodeGraphServer` in Methodenparametern
 
@@ -172,14 +172,14 @@ internal static async Task<AssemblyToolPreparation> PrepareAsync(
 **NACHHER:**
 ```csharp
 internal static async Task<AssemblyToolPreparation> PrepareAsync(
-    ISolutionSnapshotProvider? state, ...)
+    ISolutionStateProvider? state, ...)
 ```
 
 Ebenso für `AssemblyToolExecutionParameters.State` (Record-Definition Zeile 112) und `TryPrepareInput`.
 
 ### 4.3. Caller-Anpassungen: `lease.Server`-Zugriffe
 
-Die ~50 Aufrufstellen von `lease.Server` bleiben **syntaktisch unverändert**, da `ISolutionSnapshotProvider` genau die genutzten Member deklariert:
+Die ~50 Aufrufstellen von `lease.Server` bleiben **syntaktisch unverändert**, da `ISolutionStateProvider` genau die genutzten Member deklariert:
 - `lease.Server.GetCurrentSolution()` → ✅ im Interface
 - `lease.Server.AssemblySymbolIdentity` → ✅ im Interface
 - `lease.Server.LoadState` → ✅ im Interface
@@ -288,7 +288,7 @@ private async Task<(AssemblySymbolTarget? Target, string? Diagnostic)> TryResolv
 
 ## 8. Risiken & Edge Cases
 
-### 8.1. Interface-Segregation: Reicht `ISolutionSnapshotProvider` aus?
+### 8.1. Interface-Segregation: Reicht `ISolutionStateProvider` aus?
 
 **Risiko:** Einzelne Caller greifen über `lease.Server` auf Members zu, die nicht im Interface sind.
 
@@ -300,7 +300,7 @@ private async Task<(AssemblySymbolTarget? Target, string? Diagnostic)> TryResolv
 
 ### 8.2. Thread-Safety bei `AssemblyAnalysisLease`
 
-**Risiko:** `AssemblyAnalysisLease` ist thread-safe durch `referenceGate` (Lock-Objekt). Die Typänderung von `McpCodeGraphServer` → `ISolutionSnapshotProvider` ändert keine Locking-Semantik.
+**Risiko:** `AssemblyAnalysisLease` ist thread-safe durch `referenceGate` (Lock-Objekt). Die Typänderung von `McpCodeGraphServer` → `ISolutionStateProvider` ändert keine Locking-Semantik.
 
 **Maßnahme:** Regressionstests für Concurrency-Szenarien (inkl. `AssemblyAnalysisRegistryRetirementRaceTests`).
 
@@ -317,20 +317,11 @@ Die Entry-Creation-Kette in `AssemblyAnalysisRegistryEntryCreation` erstellt Lea
 Solution? IAssemblyBodyContext.Solution => Server.GetCurrentSolution();
 AnalysisSymbolIdentity? IAssemblyBodyContext.AssemblySymbolIdentity => Server.AssemblySymbolIdentity;
 ```
-Das funktioniert weiterhin, da `ISolutionSnapshotProvider` genau diese Member deklariert.
+Das funktioniert weiterhin, da `ISolutionStateProvider` genau diese Member deklariert.
 
 ### 8.5. Kein Over-Engineering: `IExternalResourceRegistry` ist nicht nötig
 
-**Analyse:** `ExternalResourceRegistry` erscheint als Top-Contributor in den Footprint-Warnungen, aber **nicht weil sie direkt referenziert wird**, sondern transitiv über `McpCodeGraphServer`. Sobald `ISolutionSnapshotProvider` die Kette kappt, sinkt der Footprint aller 11 Klassen um ~470+448+316 = ~1.234 Zeilen — weit unter das 2.500-Limit.
+**Analyse:** `ExternalResourceRegistry` erscheint als Top-Contributor in den Footprint-Warnungen, aber **nicht weil sie direkt referenziert wird**, sondern transitiv über `McpCodeGraphServer`. Sobald `ISolutionStateProvider` die Kette kappt, sinkt der Footprint aller 11 Klassen um ~470+448+316 = ~1.234 Zeilen — weit unter das 2.500-Limit.
 
 Ein separates `IExternalResourceRegistry`-Interface wäre Over-Engineering und wird **nicht** eingeführt.
 
----
-
-## 9. Arbeitsgedächtnis (nur Draft)
-
-- **Kontext-Anker:** 360°-Analyse vom 2026-09-02 auf Basis von MCP `get_violations`, `safeguard`, `find_references`, `dependency_graph`, `get_class_structure` und Quellcode-Lektüre.
-- **Zentrale Erkenntnis:** Die 11 Footprint-Warnungen haben eine einzige Root-Cause: `AssemblyAnalysisLease.Server` als `McpCodeGraphServer` (konkret statt Interface). Alle 11 Klassen referenzieren `AssemblyAnalysisLease` und erben den transitiven Baum.
-- **Korrektur gegenüber v1:** `rules.json` enthält **keine** `PathOverrides` oder `FootprintIgnoreTypeNames` mehr. Abschnitt 3.5 der v1 (Rücknahme aller Overrides) ist **gegenstandslos** — das wurde bereits erledigt. Das Konzept wurde auf die tatsächliche Code-Realität aktualisiert.
-- **Offene Frage:** Soll das Interface `ISolutionSnapshotProvider` heißen oder `IMcpServerState`? Empfehlung: `ISolutionSnapshotProvider`, da es den primären Zweck (Solution-Zugriff) beschreibt, nicht die Herkunft.
-- **Nächster Schritt:** Review durch den Nutzer, ggf. Freigabe auf `status: ready`.
