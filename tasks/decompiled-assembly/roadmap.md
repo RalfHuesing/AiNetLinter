@@ -4,8 +4,8 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 
 Status: executing  
 Current epic: Paket 4 – Folge-Review nach Korrekturrunde 1/5
-Letzter Commit: `3b7b5cb5` – Daemon-Health-E2E-Korrektur, Review läuft
-Current debt item: `HEALTH-DAEMON-PROJECT-TARGET-E2E-001`
+Letzter Commit: `82573c4e` – Daemon-Health-Folge-Review; neues P1 triagiert
+Current debt item: `DAEMON-ENDPOINT-OWNERSHIP-TEST-001`
 Debt attempts: 1
 Blocker: keiner
 

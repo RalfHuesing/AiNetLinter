@@ -157,6 +157,16 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 - Nächster Schritt: Folge-Review des echten Daemon-/Proxy-Tests; bei Bestätigung als `fixed` schließen.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 4 Review.
 
+### DAEMON-ENDPOINT-OWNERSHIP-TEST-001 – Projekt-Health-Test besitzt keinen isolierten Daemon-Endpunkt
+
+- Schweregrad: P1
+- Status: aktiv, Versuch 1/5 läuft.
+- Scope/Fundstelle: `ThinClientMcpProcessContractTests.ProjectTargetHealth_UsesDaemonRegistryAndReturnsResidentProject` und `DaemonProcessContractHarness.AcquireEndpointAsync`.
+- Evidenz: Bei parallelen xUnit-Testkollektionen wird kein exklusiver Endpoint erworben. Der Test kann dadurch einen fremden Daemon teilen und im `finally`-Cleanup dessen PID beenden.
+- Disposition: `fix-now`
+- Nächster Schritt: Vor dem Thin-Client-Lauf exklusiven Endpoint-Harness verwenden und Cleanup auf den eigenen Prozess begrenzen.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 4 Folge-Review.
+
 ### TD-SESSION-LEASE-RACE-001 – Verspätete Registrierung nach asynchroner Expansion möglich
 
 - Schweregrad: P2

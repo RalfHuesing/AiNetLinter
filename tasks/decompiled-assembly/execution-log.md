@@ -549,6 +549,21 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Scope: aktueller lokaler Daemon-Prozess, Projektziel-Health-Request, Registry-/Status-/Pfad-Assertions, Cleanup und Testisolation; keine Release-/Live-/Stress-Verifikation.
 - MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet.
 
+## 2026-09-02 – Paket 4 – Folge-Review
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Folge-Reviewer
+- Subagent: `01a06250-8d90-7c91-9152-8956e122dfc2`
+- Diff-Scope: Daemon-Health-E2E-Korrektur `3b7b5cb5` und Paket-4-Gesamtdiff.
+- Status: terminal abgeschlossen; neues P1 erfordert Korrekturrunde 1/5.
+- Urteil: `issues`.
+- P1-Finding `DAEMON-ENDPOINT-OWNERSHIP-TEST-001`: Der neue Projekt-Health-Test erwirbt kein `DaemonProcessContractHarness.AcquireEndpointAsync`, obwohl `parallelizeTestCollections=true` gilt. Dadurch kann er einen fremden Daemon-Endpunkt teilen und im `finally` dessen Prozess beenden. Korrektur: exklusiven Endpoint-Harness verwenden und Cleanup auf den eigenen Prozess begrenzen.
+- Bestätigt: Assertions beweisen im isolierten Erfolgsfall den echten lokalen Daemon-Proxy mit `tools/call`, `targetType="project"`, absolutem `targetPath`, Registry-Key, Modus, Status und Solution-Pfad.
+- P2-Risiken: gleiche Daemon-PID in Warmup/Health nicht explizit geprüft, Cleanup-Identität/Wait-Ergebnis nicht vollständig abgesichert, semicolon-only Operatoren, legacy-versionierte Framework-Pipeline und echter Concurrent-Cache-Miss-Pfad.
+- Verifikation: gezielter Test grün (1/1, ca. 1:40 Minuten, Harness-Timeout-Wartepfad), keine MCP-, Release-, Live- oder Stress-Verifikation.
+- MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wurde nicht als Feature-Nachweis verwendet.
+- Nächste Aktion: frischer Implementierer für `DAEMON-ENDPOINT-OWNERSHIP-TEST-001`, Versuch 1/5.
+
 ## 2026-09-02 – Paket 3 – Folge-Review nach Quellenkorrektur
 
 - Run-ID: `decompiled-assembly-20260902`
