@@ -39,5 +39,19 @@ Status: drei begründete `accepted-deferred`-Befunde.
   eindeutiger gemeinsamer Semantik erneut aktivieren.
 - Log-Anker: Run 2026-09-02-06 / Epic 3 Implementierer
 
+## TD-004 — Unreferenzierter DaemonStartupGate-Wrapper
+
+- Schweregrad: P3
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Daemon/DaemonStartupGate.cs:9`,
+  `AcquireAsync(CancellationToken, TimeSpan)`
+- Evidenz: MCP `find_dead_code` meldet keine Managed-Referenzen; die Methode
+  delegiert an die Drei-Parameter-Überladung. Ein interner
+  Kompatibilitäts-/Reflection-Vertrag ist nicht ausgeschlossen.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: Bei einer dedizierten Daemon-API-/Reflection-Prüfung
+  `InternalsVisibleTo`, Serializer- und Routing-Verträge verifizieren; erst
+  danach Entfernung oder Beibehaltung entscheiden.
+- Log-Anker: Run 2026-09-02-08 / Abschluss-Audit
+
 Neue Befunde werden mit Schweregrad, Scope, Evidenz, Disposition, nächstem
 Schritt und Verweis auf den jeweiligen Execution-Log-Eintrag angehängt.

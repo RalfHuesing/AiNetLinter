@@ -50,8 +50,8 @@
   `AssemblyNavigationSupport`, `FindReferencesTool` und die bestehende
   `AssemblyAnalysisLease`-Vertragsgrenze.
 - `GetServerHealthResponseBuilder` ist der einzige direkte Consumer der
-  geänderten `AssemblyHealthProjection.Project`-Signatur; die vier direkten
-  Projection-Aufrufstellen bleiben laut MCP vollständig sichtbar.
+  geänderten `AssemblyHealthProjection.Project`-Signatur; MCP bestätigt genau
+  eine direkte Aufrufstelle ohne Trunkierung.
 - Cache-Tests verwenden weiterhin `TestTempDirectory`; keine Test-Collection
   und keine globale Serialisierung wurde eingeführt.
 - `ProjectLease`, `ProjectRegistry`, Regeln, Logging, CLI, `rules.json` und

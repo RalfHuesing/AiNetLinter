@@ -409,3 +409,80 @@ nicht die noch offenen solutionweiten Abschlussgates.
 
 Nächste Aktion: Epic 3 als `done` markieren, den Review checkpointen und die
 vollständigen Abschlussgates sowie den `safeguard` ausführen.
+
+## Run 2026-09-02-08 — Abschluss-Audit
+
+Status: running
+Rolle: Audit
+Subagent: `01a062b8-b049-7413-8052-945b1a21c697` (Huygens)
+Diff-Baseline: `c58ead8c`
+
+Auftrag: Einmaliger MCP-Audit des geänderten MCP-/Assembly-Bereichs auf DRY,
+Refactoring-Drift, Dead Code und Magic Values; sichere, belegte Befunde
+proaktiv beheben, unsichere Befunde mit Disposition berichten und die
+Code-Map bei konkreten Navigationsfehlern korrigieren.
+
+Abschluss: erfolgreich  
+Urteil: Audit abgeschlossen; keine Produktionskorrektur erforderlich
+
+Bericht des Audit-Agenten:
+
+- Seit `c58ead8c` gab es keinen neuen Produktionsdiff. Der Auditbereich war
+  daher die bereits geänderte MCP-Produktionsfläche und ihre direkten Symbole.
+- Veraltete Dokumentation in `code-map.md` wurde korrigiert: Für
+  `AssemblyHealthProjection.Project` bestätigt MCP exakt einen direkten
+  Aufrufer in `GetServerHealthResponseBuilder`, nicht vier.
+- Keine Produktionsdateien wurden geändert; `execution-log.md` wurde vom
+  Audit nicht angefasst und kein Commit erstellt.
+
+Verbleibende Befunde und Disposition:
+
+- Exaktes MCP `find_duplicates`: 0 Cluster, vollständig; `rejected/not-
+  applicable`, kein Tech-Debt.
+- MCP `find_dead_code` meldete `AssemblyAnalysisRegistry.ResourceHealth` und
+  `AssemblyOrigin.Kind` nur mit LOW-Konfidenz ohne Referenzen. Wegen möglicher
+  Modell-/Serializer-/Friend-Assembly-Verträge: `accepted-deferred`, derzeit
+  nicht hinreichend actionable und kein Tech-Debt-Eintrag.
+- 34 native Interop-Felder in `ExternalSourceGitProcessNativeMethods` wurden
+  wegen möglicher P/Invoke-ABI-/Struct-Layout-Risiken nicht entfernt:
+  `rejected/not-applicable`, kein Tech-Debt.
+- `DaemonStartupGate.AcquireAsync(CancellationToken, TimeSpan)` ist ein
+  unreferenzierter Wrapper auf eine Drei-Parameter-Überladung. Wegen eines
+  möglichen internen Kompatibilitäts-/Reflection-Vertrags:
+  `accepted-deferred`; als TD-004 ins Register aufgenommen.
+- Die Magic-Value-Kandidaten `PrimaryCtor-Param`, die Buffer-Whitelist und
+  heuristische Einzelkandidaten bleiben gemäß TD-001 bis TD-003
+  `accepted-deferred`.
+- Es gibt keinen `blocked/needs-user-decision`-Befund. Eine
+  `refactoring-drift`-Abfrage war mangels konkreter Hypothese nicht angezeigt.
+
+Audit-Verifikation:
+
+- Alle projektbezogenen MCP-Abfragen liefen mit `targetType=project` und dem
+  absoluten Ziel `C:\\Daten\\Entwicklung\\Ralf\\AiNetLinter`.
+- `find_dead_code`: 783 Symbole, 37 LOW- und 0 HIGH-Kandidaten,
+  vollständig.
+- `find_references` bestätigte die relevanten Dead-Code-Kandidaten und den
+  Projection-Caller vollständig.
+- `find_magic_values`: 252 eindeutige Werte/256 Vorkommen, strukturiert
+  vollständig; fokussierte Scans für die geänderten Pfade wurden ergänzt.
+- `get_violations`, MCP-Scope: 0 Verstöße in 319 Dateien.
+- `get_violations`, projektweit: 0 Verstöße in 900 Dateien.
+- `safeguard`: 10,00/10, PASS, 0 Verstöße, 988 Klassen.
+- `dotnet build`: 0 Fehler und 0 Warnungen.
+- `dotnet test src/AiNetLinter.FastTests --no-build --filter
+  \"Category!=Stress\"`: 2378 bestanden, 0 fehlgeschlagen, 2 Skips wegen
+  fehlender Symlink-Berechtigung `ERROR_PRIVILEGE_NOT_HELD (1314)`.
+- `dotnet test src/AiNetLinter.IntegrationTests --no-build --filter
+  \"Category!=Stress\"`: 384 bestanden, 0 fehlgeschlagen, 0 Skips.
+- `git diff --check`: ohne Beanstandung.
+
+Code-Map-Stand: konsistent und für den Abschluss ausreichend; direkte
+Verantwortlichkeiten, Lease-Grenzen und Vertragsrisiken sind nachvollziehbar.
+
+Tech-Debt-Triage: TD-004 wurde neu erfasst. Die LOW-Konfidenz-Dead-Code-
+Kandidaten bleiben dokumentierte, nicht hinreichend actionable Auditbefunde
+und werden nicht in die Queue aufgenommen.
+
+Nächste Aktion: Audit-Checkpoint sichern, Abschluss-Checkliste aktualisieren
+und den Task mit finalem Status checkpointen.
