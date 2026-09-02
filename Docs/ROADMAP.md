@@ -932,6 +932,19 @@ Einzelabfragen bleiben skalare, optionale Aliases kompatibel:
 - [x] **F-05 Kompakter Pattern-Report:** Null-Treffer-Ausgaben von `pattern_detect` bleiben bei mehreren Patterns kompakt; Ein-Pattern-Abfragen behalten Details.
 - [x] **F-06 Dynamischer Index-Scope:** `get_index_scope` listet vorhandene Dateiendungen dynamisch, unterdrückt Null-Einträge und weist Nicht-C#-Dateien aus.
 
+## Decompiled Bodies bei optionalen Parametern und Partial-Referenzen
+
+- [x] `get_symbol_body` ordnet dekompilierte C#-Syntaxsignaturen mit zusätzlichen
+  Defaultparametern den verfügbaren Roslyn-Metadaten-Signaturen zu; damit bleiben
+  VB.NET-Methoden mit optionalen Parametern auch für ausgelassene Argumentformen
+  erreichbar.
+- [x] Bei unvollständigen Assembly-Referenzen erlaubt das Body-Matching einen
+  einfachen Parametertypnamen nur für Roslyn-Error-Typen. Eindeutige Member bleiben
+  als `available` sichtbar; nicht auflösbare oder mehrdeutige Bodies bleiben
+  `unavailable` mit dem vorhandenen Hinweis.
+- [x] Unit- und Komponenten-Tests decken 0/1/2-Parameterformen und einen fehlenden
+  externen Parametertyp in einer `partial`-Assembly-Session ab.
+
 ---
 
 ## find_magic_values: False-Positive-Reduktion & Holder-Bewusstsein (Task 12)

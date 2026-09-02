@@ -16,6 +16,8 @@
 - Audit-Parameterobjekte: `FindSymbolRequest`, `GetHotspotsRequest`.
 - Pattern-Ausgabe: `PatternDetectScanner`.
 - Index-Scope: `GetIndexScopeScanner`, `FileTypeBreakdownEntry`.
+- Decompiled Bodies: `AssemblyDecompiledBodyResolver.FindMember`, `MatchesParameters` und
+  `MatchesParameterType`.
 
 ## Aufrufer und Abhängigkeiten
 
@@ -25,12 +27,17 @@
   projektweite Heuristik für `scopeType`.
 - `FileSystemExclusionHelpers` und `WebFileCatalog.GetProjectDirectories` liefern den
   geschützten Dateisystem-Walk für Index-Scope.
+- `AssemblyDecompiledBodyResolver.ResolveAsync` dekompiliert den deklarierenden Typ und ordnet
+  anschließend den Roslyn-Member dem dekompilierten C#-Syntaxbaum zu; `AssemblyReferenceResolver`
+  liefert dafür Referenzen und Partial-Diagnosen.
 
 ## Relevante Tests, Konfiguration und Dokumentation
 
 - Fast-Tests: Symbolgraph-, Hotspot-, Pattern- und Wiring-Verträge.
 - Integration: `src/AiNetLinter.IntegrationTests/Mcp/Tools/GetIndexScopeToolTests.cs`.
 - API-Dokumentation: `Docs/agent-api.md`, `Docs/integration.md`, `Docs/ROADMAP.md`.
+- Decompiled-Body-Tests: `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyDecompiledBodyResolverTests.cs`
+  sowie die Partial-Referenz-Szenarien in `AssemblyAnalysisSessionTests.cs`.
 
 ## Invarianten, Risiken und Unsicherheiten
 
@@ -47,6 +54,10 @@
   Kandidaten bzw. ein nicht taskbezogenes Daemon-Mitglied; wegen Reflection/Serializer/Interop-
   Risiken wurden sie nicht entfernt. Magic-Value-Treffer betreffen ausschließlich die bestehende
   Buffer-Heuristik außerhalb des geänderten Bereichs.
+- Für dekompilierte VB.NET-Signaturen muss ein Roslyn-Member mit weniger Parametern auf eine
+  C#-Syntaxsignatur mit zusätzlichen Default-Parametern abgebildet werden können. Ein einfacher
+  Typnamen-Fallback darf nur bei nicht auflösbaren Error-Typen greifen, damit gleichnamige Typen
+  aus verschiedenen Namespaces nicht versehentlich vermischt werden.
 
 ## Verifikation
 
@@ -56,3 +67,9 @@
   2 übersprungen; IntegrationTests 385 bestanden, 0 übersprungen, 0 Fehler.
 - Audit-MCP-Abfragen für Duplikate, Dead Code und Magic Values wurden ausgeführt; der
   gezielte `get_violations`-Nachcheck für `src/AiNetLinter/Mcp` meldet 0 Verstöße.
+- Für die Decompiled-Body-Erweiterung sind fokussierte Resolver-/Assembly-Route-Tests grün
+  (10 Tests); der Audit-Scope `src/AiNetLinter/Mcp/Assemblies/Analysis/Bodies` meldet keine
+  exakten Duplikate, keinen Dead Code und keine Magic Values. Der finale Violations-Check für
+  denselben Scope meldet 0 Verstöße. Die vollständigen Solution-Gates sind nach der letzten
+  Codeänderung grün: `dotnet build` mit 0 Warnungen/0 Fehlern, FastTests 2.428 bestanden und
+  2 übersprungen sowie IntegrationTests 385 bestanden und 0 übersprungen.

@@ -327,7 +327,9 @@ und führt keine Assembly aus. `inspect_assembly` nutzt `publicOnly`, `exactType
 `memberName`/`memberNames`, `includeReferences`, `maxResults` und `maxMembers` als
 bewusste Detailflags. Die Antwort unterscheidet über `analysis.bodyAvailability`
 und `analysis.contentMode` Signatur-Snapshot, source-backed Body und on-demand
-dekompilierten Body; `get_symbol_body` ist der gezielte Folgeschritt. Native PE-Dateien
+dekompilierten Body; `get_symbol_body` ist der gezielte Folgeschritt. Bei dekompilierten
+VB.NET-Assemblies werden zusätzliche C#-Defaultparameter und nicht auflösbare
+Parametertypen im sichtbaren Partial-Scope beim Body-Matching berücksichtigt. Native PE-Dateien
 ohne .NET-Metadaten werden als typisierte, recoverable Diagnose mit Handlungshinweis
 beantwortet.
 
