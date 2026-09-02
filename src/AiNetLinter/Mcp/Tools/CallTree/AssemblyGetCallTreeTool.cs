@@ -75,8 +75,8 @@ internal static class AssemblyGetCallTreeTool
         if (error is not null) return error;
 
         var (root, truncated, diagnostics) = await AssemblyReferenceNavigator.BuildCallTreeAsync(
-            lease,
-            target!,
+            AssemblyNavigationSourceFactory.CreateSources(lease, target!),
+            target!.Symbol,
             input,
             cancellationToken).ConfigureAwait(false);
         var topN = input.TopN < 1 ? 1 : input.TopN;

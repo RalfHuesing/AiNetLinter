@@ -66,7 +66,7 @@ public sealed class AssemblyAnalysisRouteTests
         Assert.Equal("RoutedReferenceTarget", dependencySession.GetProperty("identity").GetProperty("name").GetString());
         Assert.Equal("complete", dependencySession.GetProperty("sessionStatus").GetString());
         Assert.Contains("RoutedReferenceTarget", Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(rootResult.Content)).Text, StringComparison.Ordinal);
-        Assert.True(registry.ResidentCount >= 2);
+        Assert.Equal(1, registry.ResidentCount);
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public sealed class AssemblyAnalysisRouteTests
         Assert.Equal("RoutedSourceDependency", dependencySession.GetProperty("identity").GetProperty("name").GetString());
         Assert.Equal("source-backed", dependencySession.GetProperty("origin").GetProperty("originKind").GetString());
         Assert.Equal("complete", dependencySession.GetProperty("sessionStatus").GetString());
-        Assert.True(registry.ResidentCount >= 2);
+        Assert.Equal(1, registry.ResidentCount);
     }
 
     [Fact]

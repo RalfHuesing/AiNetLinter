@@ -21,16 +21,18 @@ internal static class AssemblySymbolResolver
         string identifier,
         CancellationToken cancellationToken)
     {
-        var leaseSet = AssemblyNavigationSupport.GetLeases(root);
+        var leaseSet = AssemblyNavigationLeaseAccess.GetLeases(root);
         var leases = leaseSet.Leases;
-        var diagnostics = AssemblyNavigationSupport.CreateExpansionDiagnostics(root);
+        var diagnostics = AssemblyNavigationSupport.CreateExpansionDiagnostics(
+            AssemblyNavigationLeaseAccess.CreateView(root));
         var candidates = new List<AssemblySymbolTarget>();
         var hasAssemblyId = identifier.StartsWith(AnalysisSymbolIdentity.Prefix, StringComparison.Ordinal);
 
         foreach (var lease in leases)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (hasAssemblyId && !AssemblyNavigationSupport.MatchesLeaseIdentity(identifier, lease)) continue;
+            var view = AssemblyNavigationLeaseAccess.CreateView(lease);
+            if (hasAssemblyId && !AssemblyNavigationSupport.MatchesLeaseIdentity(identifier, view.Identity)) continue;
 
             var solution = lease.Server.GetCurrentSolution();
             if (solution is null)
@@ -113,7 +115,7 @@ internal static class AssemblySymbolResolver
             solution,
             identifier,
             cancellationToken,
-            AssemblyNavigationSupport.GetIdentity(lease)).ConfigureAwait(false);
+            AssemblyNavigationLeaseAccess.CreateView(lease).Identity).ConfigureAwait(false);
         if (symbol is not null)
         {
             return (symbol, null);

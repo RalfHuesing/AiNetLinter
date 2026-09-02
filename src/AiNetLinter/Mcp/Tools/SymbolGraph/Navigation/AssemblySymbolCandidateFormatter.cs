@@ -15,13 +15,14 @@ internal static class AssemblySymbolCandidateFormatter
         if (solution is null) return [];
 
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
+        var view = AssemblyNavigationLeaseAccess.CreateView(candidate.Lease);
         return FindSymbolTool.FormatSymbolLocationEntries(
                 candidate.Symbol,
                 outputRoot,
-                AssemblyNavigationSupport.GetIdentity(candidate.Lease))
+                view.Identity)
             .Select(entry => FormatLocation(entry with
             {
-                Origin = AssemblyNavigationSupport.CreateOrigin(candidate.Lease),
+                Origin = view.Origin,
             }));
     }
 

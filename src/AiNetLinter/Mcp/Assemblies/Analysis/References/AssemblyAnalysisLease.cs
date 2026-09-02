@@ -17,12 +17,17 @@ internal delegate Task<AssemblyAnalysisLeaseResult> AssemblyReferenceLeaseFactor
     AssemblyReferenceDto reference,
     CancellationToken cancellationToken);
 
+internal sealed record AssemblyReferenceLeaseContext(
+    AssemblyReferenceLeaseFactory? Factory,
+    Action<AssemblyAnalysisEntry>? OnReferenceLeaseReleased);
+
 internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
 {
     private readonly AssemblyAnalysisEntry entry;
     private readonly AssemblyReferenceLeaseFactory? referenceLeaseFactory;
     private readonly object referenceGate = new();
     private readonly List<AssemblyAnalysisLease> referenceLeases = [];
+    private readonly Action<AssemblyAnalysisEntry>? onReferenceLeaseReleased;
     private Task<AssemblyReferenceExpansion>? referenceExpansionTask;
     private AssemblyReferenceExpansion? referenceExpansion;
     private int disposed;
@@ -32,13 +37,14 @@ internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
         string canonicalPath,
         McpCodeGraphServer server,
         AssemblyContext context,
-        AssemblyReferenceLeaseFactory? referenceLeaseFactory = null)
+        AssemblyReferenceLeaseContext referenceContext)
     {
         this.entry = entry;
         CanonicalPath = canonicalPath;
         Server = server;
         Context = context;
-        this.referenceLeaseFactory = referenceLeaseFactory;
+        referenceLeaseFactory = referenceContext.Factory;
+        onReferenceLeaseReleased = referenceContext.OnReferenceLeaseReleased;
     }
 
     internal string CanonicalPath { get; }
@@ -147,7 +153,7 @@ internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
 
     private async Task<AssemblyReferenceExpansion> ExpandReferencesCoreAsync(CancellationToken cancellationToken)
     {
-        var expander = new AssemblyReferenceSessionExpander(this, cancellationToken, RegisterReferenceLease);
+        var expander = new AssemblyReferenceSessionExpander(CreateReferenceExpansionNode(), cancellationToken);
         try
         {
             referenceExpansion = await expander.BuildAsync().ConfigureAwait(false);
@@ -168,16 +174,27 @@ internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
         }
     }
 
-    internal static IReadOnlyList<string> DiagnosticOf(AssemblyReferenceDto reference) =>
-        string.IsNullOrWhiteSpace(reference.Diagnostic)
-            ? Array.Empty<string>()
-            : [reference.Diagnostic];
+    private AssemblyReferenceExpansionNode CreateReferenceExpansionNode() =>
+        new(
+            CanonicalPath,
+            Context.Identity,
+            Context.Origin,
+            Context.Status.ToCompletenessLabel(),
+            Context.Status.ToString().ToLowerInvariant(),
+            Context.Diagnostics,
+            Context.References,
+            OpenReferenceExpansionNodeAsync);
 
-    internal static string GetTargetKey(AssemblyReferenceDto reference)
+    private async Task<AssemblyReferenceExpansionNode?> OpenReferenceExpansionNodeAsync(
+        AssemblyReferenceDto reference,
+        CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrWhiteSpace(reference.ResolvedPath)) return reference.ResolvedPath;
-        if (!string.IsNullOrWhiteSpace(reference.SourceProjectPath)) return $"source:{reference.SourceProjectPath}";
-        return string.Join('|', reference.Name, reference.Version, reference.Culture);
+        var result = await LeaseReferenceAsync(reference, cancellationToken).ConfigureAwait(false);
+        if (result.Lease is null) return null;
+
+        var child = result.Lease;
+        RegisterReferenceLease(child);
+        return child.CreateReferenceExpansionNode();
     }
 
     private void DisposeReferenceLeases()
@@ -192,6 +209,7 @@ internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
         for (var index = leases.Length - 1; index >= 0; index--)
         {
             leases[index].Dispose();
+            onReferenceLeaseReleased?.Invoke(leases[index].entry);
         }
     }
 

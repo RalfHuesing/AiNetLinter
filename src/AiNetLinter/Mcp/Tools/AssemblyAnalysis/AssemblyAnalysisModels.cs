@@ -147,7 +147,8 @@ internal sealed record InspectAssemblyPayload(
     IReadOnlyList<AssemblyReferenceSessionDto>? ReferenceSessions = null,
     AssemblyDiagnosticsSummary? DiagnosticsSummary = null,
     AssemblyReferenceSummary? ReferenceSummary = null,
-    bool ReferenceDetailsIncluded = true);
+    bool ReferenceDetailsIncluded = true,
+    int TotalNamespaces = 0);
 
 internal sealed record FindAssemblyExtensionsPayload(
     string AssemblyPath,

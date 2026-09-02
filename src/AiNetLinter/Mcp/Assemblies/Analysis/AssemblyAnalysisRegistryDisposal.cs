@@ -137,6 +137,23 @@ internal static class ExternalResourceRegistrySupport
 
 internal static class AssemblyAnalysisRegistryDisposal
 {
+    internal static async Task RetireEntryAsync(AssemblyAnalysisRegistryEntryCreation creation)
+    {
+        try
+        {
+            var entry = await creation.Task.ConfigureAwait(false);
+            await entry.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            Log.Warning(exception, "Assembly-Registry-retired Entry konnte nicht vollständig freigegeben werden.");
+        }
+        finally
+        {
+            creation.DisposeCancellationSource();
+        }
+    }
+
     internal static void CancelCreations(
         IEnumerable<AssemblyAnalysisRegistryEntryCreation> creations,
         List<Exception> failures)

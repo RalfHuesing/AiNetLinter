@@ -11,9 +11,8 @@ using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 namespace AiNetLinter.Mcp.Assemblies.Analysis.References;
 
 internal sealed class AssemblyReferenceSessionExpander(
-    AssemblyAnalysisLease root,
-    CancellationToken cancellationToken,
-    Action<AssemblyAnalysisLease> registerLease)
+    AssemblyReferenceExpansionNode root,
+    CancellationToken cancellationToken)
 {
     private readonly List<AssemblyReferenceSession> sessions = [];
     private readonly List<string> diagnostics = [];
@@ -22,7 +21,7 @@ internal sealed class AssemblyReferenceSessionExpander(
 
     internal async Task<AssemblyReferenceExpansion> BuildAsync()
     {
-        foreach (var reference in OrderReferences(root.Context.References))
+        foreach (var reference in OrderReferences(root.References))
         {
             await VisitAsync(root, reference, depth: 1).ConfigureAwait(false);
         }
@@ -31,7 +30,7 @@ internal sealed class AssemblyReferenceSessionExpander(
     }
 
     private async Task VisitAsync(
-        AssemblyAnalysisLease owner,
+        AssemblyReferenceExpansionNode owner,
         AssemblyReferenceDto reference,
         int depth)
     {
@@ -62,7 +61,7 @@ internal sealed class AssemblyReferenceSessionExpander(
     private bool TryAddUnresolved(AssemblyReferenceDto reference)
     {
         if (reference.Resolved) return false;
-        var referenceDiagnostics = AssemblyAnalysisLease.DiagnosticOf(reference).DefaultIfEmpty(
+        var referenceDiagnostics = DiagnosticOf(reference).DefaultIfEmpty(
             $"Die Referenz '{reference.Name}' ist nicht auflösbar.").ToList();
         AddSession(reference, reference.ResolutionState, referenceDiagnostics);
         diagnostics.AddRange(referenceDiagnostics);
@@ -72,7 +71,7 @@ internal sealed class AssemblyReferenceSessionExpander(
     private bool TryAddTerminal(AssemblyReferenceDto reference)
     {
         if (reference.ResolutionState is not ("cycle" or "depth_limit" or "node_limit")) return false;
-        var referenceDiagnostics = AssemblyAnalysisLease.DiagnosticOf(reference).DefaultIfEmpty(
+        var referenceDiagnostics = DiagnosticOf(reference).DefaultIfEmpty(
             $"Die Referenz-Session für '{reference.Name}' wurde wegen {reference.ResolutionState} beendet.").ToList();
         AddSession(reference, reference.ResolutionState, referenceDiagnostics);
         diagnostics.AddRange(referenceDiagnostics);
@@ -81,40 +80,37 @@ internal sealed class AssemblyReferenceSessionExpander(
 
     private bool TryAddDeduplicated(AssemblyReferenceDto reference)
     {
-        if (visitedTargets.Add(AssemblyAnalysisLease.GetTargetKey(reference))) return false;
-        AddSession(reference with { ResolutionState = "deduplicated" }, "deduplicated", AssemblyAnalysisLease.DiagnosticOf(reference));
+        if (visitedTargets.Add(GetTargetKey(reference))) return false;
+        AddSession(reference with { ResolutionState = "deduplicated" }, "deduplicated", DiagnosticOf(reference));
         return true;
     }
 
     private async Task LeaseAndVisitChildAsync(
-        AssemblyAnalysisLease owner,
+        AssemblyReferenceExpansionNode owner,
         AssemblyReferenceDto reference,
         AssemblyReferenceDto sessionReference,
         int depth)
     {
-        var result = await owner.LeaseReferenceAsync(reference, cancellationToken).ConfigureAwait(false);
-        if (result.Lease is null)
+        var child = await owner.OpenReferenceAsync(reference, cancellationToken).ConfigureAwait(false);
+        if (child is null)
         {
             AddFailedSession(sessionReference);
             return;
         }
 
-        var child = result.Lease;
-        registerLease(child);
-        var childDiagnostics = child.Context.Diagnostics.ToList();
         AddSession(
             sessionReference,
-            child.Context.Status.ToString().ToLowerInvariant(),
-            childDiagnostics,
+            child.SessionStatus,
+            child.Diagnostics,
             child);
-        diagnostics.AddRange(childDiagnostics);
+        diagnostics.AddRange(child.Diagnostics);
         if (depth >= AssemblyReferenceResolver.MaxReferenceDepth)
         {
             AddDepthBoundary();
             return;
         }
 
-        foreach (var childReference in OrderReferences(child.Context.References))
+        foreach (var childReference in OrderReferences(child.References))
         {
             await VisitAsync(child, childReference, depth + 1).ConfigureAwait(false);
         }
@@ -122,7 +118,7 @@ internal sealed class AssemblyReferenceSessionExpander(
 
     private void AddFailedSession(AssemblyReferenceDto reference)
     {
-        var failure = AssemblyAnalysisLease.DiagnosticOf(reference).DefaultIfEmpty(
+        var failure = DiagnosticOf(reference).DefaultIfEmpty(
             $"Referenz-Session für '{reference.Name}' konnte nicht eröffnet werden.").ToList();
         AddSession(reference, "partial", failure);
         diagnostics.AddRange(failure);
@@ -137,16 +133,28 @@ internal sealed class AssemblyReferenceSessionExpander(
         AssemblyReferenceDto reference,
         string sessionStatus,
         IReadOnlyList<string> sessionDiagnostics,
-        AssemblyAnalysisLease? lease = null)
+        AssemblyReferenceExpansionNode? node = null)
     {
         sessions.Add(new(
             reference,
-            lease?.CanonicalPath ?? GetReferencePath(reference),
-            lease?.Context.Identity,
-            lease?.Context.Origin,
-            lease?.Context.Status.ToCompletenessLabel() ?? AssemblySessionStatus.Partial.ToCompletenessLabel(),
-            sessionStatus,
+            node?.AssemblyPath ?? GetReferencePath(reference),
+            node?.Identity,
+            node?.Origin,
+            node?.Completeness ?? AssemblySessionStatus.Partial.ToCompletenessLabel(),
+            node?.SessionStatus ?? sessionStatus,
             sessionDiagnostics));
+    }
+
+    private static IReadOnlyList<string> DiagnosticOf(AssemblyReferenceDto reference) =>
+        string.IsNullOrWhiteSpace(reference.Diagnostic)
+            ? Array.Empty<string>()
+            : [reference.Diagnostic];
+
+    private static string GetTargetKey(AssemblyReferenceDto reference)
+    {
+        if (!string.IsNullOrWhiteSpace(reference.ResolvedPath)) return reference.ResolvedPath;
+        if (!string.IsNullOrWhiteSpace(reference.SourceProjectPath)) return $"source:{reference.SourceProjectPath}";
+        return string.Join('|', reference.Name, reference.Version, reference.Culture);
     }
 
     private static string GetReferencePath(AssemblyReferenceDto reference) =>

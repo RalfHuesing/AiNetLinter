@@ -27,15 +27,18 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
     private readonly IAssemblySourceResolver? sourceOrchestrator;
     private readonly AssemblyAnalysisResourceBudget resourceBudget;
     private readonly Func<AssemblySourceSelection?, AssemblyReferenceLeaseFactory> referenceLeaseFactory;
+    private readonly Action<AssemblyAnalysisEntry> requestTemporaryReferenceEviction;
 
     internal AssemblyAnalysisRegistryEntryFactory(
         IAssemblySourceResolver? sourceOrchestrator,
         AssemblyAnalysisResourceBudget resourceBudget,
-        Func<AssemblySourceSelection?, AssemblyReferenceLeaseFactory> referenceLeaseFactory)
+        Func<AssemblySourceSelection?, AssemblyReferenceLeaseFactory> referenceLeaseFactory,
+        Action<AssemblyAnalysisEntry> requestTemporaryReferenceEviction)
     {
         this.sourceOrchestrator = sourceOrchestrator;
         this.resourceBudget = resourceBudget;
         this.referenceLeaseFactory = referenceLeaseFactory;
+        this.requestTemporaryReferenceEviction = requestTemporaryReferenceEviction;
     }
 
     internal async Task<AssemblyAnalysisEntry> CreateAsync(
@@ -125,7 +128,8 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                 session,
                 parameters.ResourceLease,
                 referenceLeaseFactory(parameters.SourceSelection),
-                resourceBudget.Clock));
+                resourceBudget.Clock,
+                requestTemporaryReferenceEviction));
             session = null;
             return fallbackEntry;
         }
@@ -189,7 +193,8 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                 resolution.Lifetime,
                 resourceLease,
                 referenceLeaseFactory(resolution.Selection),
-                resourceBudget.Clock));
+                resourceBudget.Clock,
+                requestTemporaryReferenceEviction));
             return (entry, null, diagnostics, resolution.Selection, resolution.Fallback);
         }
         catch

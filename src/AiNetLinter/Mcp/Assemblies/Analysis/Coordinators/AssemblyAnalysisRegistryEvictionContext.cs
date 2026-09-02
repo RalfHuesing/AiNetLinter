@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Mcp.Assemblies.Analysis;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
 
@@ -16,13 +15,32 @@ internal interface IAssemblyAnalysisEvictionResourceBudget
     bool HasCapacity(string path);
 }
 
+internal interface IAssemblyAnalysisEvictionEntry
+{
+    string CanonicalPath { get; }
+    DateTime LastUsedUtc { get; }
+    bool IsIdleForCapacity();
+    bool IsIdle(DateTime now, TimeSpan idleTtl);
+}
+
+internal sealed record AssemblyAnalysisEvictionCreation(
+    string Key,
+    IAssemblyAnalysisEvictionEntry Entry,
+    Func<Task?> TryRetire);
+
+internal sealed record AssemblyAnalysisEvictionCandidate(
+    string Key,
+    string CanonicalPath,
+    DateTime LastUsedUtc,
+    Func<bool> IsIdleForCapacity,
+    Func<DateTime, TimeSpan, bool> IsIdle,
+    Func<Task?> TryRetire,
+    Func<Task>? BeforeRetirementAsync = null,
+    Action? OnRetired = null);
+
 internal sealed class AssemblyAnalysisRegistryEvictionContext
 {
-    internal Lock Gate { get; init; } = null!;
-    internal Dictionary<string, AssemblyAnalysisRegistryEntryCreation> Entries { get; init; } = null!;
-    internal List<Task> RetiredEntries { get; init; } = null!;
-    internal Func<bool> IsDisposed { get; init; } = null!;
     internal IAssemblyAnalysisEvictionResourceBudget ResourceBudget { get; init; } = null!;
-    internal Func<AssemblyAnalysisEntry, Task>? BeforeRetirementAsync { get; init; }
-    internal Func<AssemblyAnalysisRegistryEntryCreation, Task> RetireEntryAsync { get; init; } = null!;
+    internal Func<Task<IReadOnlyList<AssemblyAnalysisEvictionCandidate>>> GetCandidates { get; init; } = null!;
+    internal Func<AssemblyAnalysisEvictionCandidate, Task?> TryRetireCandidate { get; init; } = null!;
 }

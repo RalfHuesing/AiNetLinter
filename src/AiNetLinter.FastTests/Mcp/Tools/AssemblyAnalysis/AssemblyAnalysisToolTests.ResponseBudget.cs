@@ -58,6 +58,45 @@ public sealed partial class AssemblyAnalysisToolTests
     }
 
     [Fact]
+    public async Task InspectAssembly_CompactsLargeNamespaceListAndKeepsTypesWithinBudget()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-namespace-budget-");
+        var namespaces = Enumerable.Range(0, 32)
+            .Select(index =>
+                $"namespace Probe.Budget.Namespace{index:D2} {{ public sealed class Type{index:D2} {{ public string Value => \"value\"; }} }}");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "NamespaceResponseBudgetProbe",
+            string.Join(Environment.NewLine, namespaces));
+
+        var result = await InspectAssemblyToolDispatch.ExecuteAsync(
+            null,
+            new InspectAssemblyArguments(
+                assemblyPath,
+                null,
+                null,
+                null,
+                true,
+                1000,
+                MaxMembers: 1000,
+                IncludeReferences: false),
+            CancellationToken.None);
+
+        var payload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(result);
+        var text = AssemblyAnalysisTestSupport.TextOf(result);
+        var summary = "Top 10 Namespaces und 22 weitere";
+
+        Assert.Equal(32, payload.TotalNamespaces);
+        Assert.Equal(11, payload.Namespaces.Count);
+        Assert.Equal(summary, payload.Namespaces[^1]);
+        Assert.Contains(summary, text, StringComparison.Ordinal);
+        Assert.True(payload.Types.Count > 10);
+        Assert.Contains(payload.Types, type => type.Members.Count > 0);
+        Assert.True(Encoding.UTF8.GetByteCount(text) <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
+        Assert.True(Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText()) <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
+    }
+
+    [Fact]
     public async Task FindAssemblyExtensions_GlobalResponseBudgetKeepsCountsAndSharedSelection()
     {
         using var temp = TestTempDirectory.Create("assembly-analysis-extension-budget-");

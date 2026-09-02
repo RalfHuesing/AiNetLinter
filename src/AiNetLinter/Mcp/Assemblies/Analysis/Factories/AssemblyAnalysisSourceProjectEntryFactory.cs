@@ -15,13 +15,16 @@ internal sealed class AssemblyAnalysisSourceProjectEntryFactory
 {
     private readonly AssemblyAnalysisResourceBudget resourceBudget;
     private readonly Func<AssemblySourceSelection?, AssemblyReferenceLeaseFactory> referenceLeaseFactory;
+    private readonly Action<AssemblyAnalysisEntry> requestTemporaryReferenceEviction;
 
     internal AssemblyAnalysisSourceProjectEntryFactory(
         AssemblyAnalysisResourceBudget resourceBudget,
-        Func<AssemblySourceSelection?, AssemblyReferenceLeaseFactory> referenceLeaseFactory)
+        Func<AssemblySourceSelection?, AssemblyReferenceLeaseFactory> referenceLeaseFactory,
+        Action<AssemblyAnalysisEntry> requestTemporaryReferenceEviction)
     {
         this.resourceBudget = resourceBudget;
         this.referenceLeaseFactory = referenceLeaseFactory;
+        this.requestTemporaryReferenceEviction = requestTemporaryReferenceEviction;
     }
 
     internal async Task<AssemblyAnalysisEntry> CreateAsync(
@@ -56,7 +59,8 @@ internal sealed class AssemblyAnalysisSourceProjectEntryFactory
                 projectLease,
                 parameters.ResourceLease,
                 referenceLeaseFactory(selection),
-                resourceBudget.Clock));
+                resourceBudget.Clock,
+                requestTemporaryReferenceEviction));
             resourceTransferred = true;
             sourceTransferred = true;
             projectLease = null;

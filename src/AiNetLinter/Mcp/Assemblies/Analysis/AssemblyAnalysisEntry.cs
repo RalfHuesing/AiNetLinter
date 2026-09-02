@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Output;
@@ -20,13 +21,20 @@ internal sealed record AssemblyAnalysisEntryCreateParameters(
     IDisposable? Lifetime,
     ExternalResourceLease? ResourceLease = null,
     AssemblyReferenceLeaseFactory? ReferenceLeaseFactory = null,
-    TimeProvider? Clock = null);
+    TimeProvider? Clock = null,
+    Action<AssemblyAnalysisEntry>? OnReferenceLeaseReleased = null);
 
-internal sealed class AssemblyAnalysisEntry : IAsyncDisposable
+internal sealed record AssemblyAnalysisEntryResources(
+    IDisposable? Lifetime,
+    ExternalResourceLease? ResourceLease,
+    Action<AssemblyAnalysisEntry>? OnReferenceLeaseReleased);
+
+internal sealed class AssemblyAnalysisEntry : IAsyncDisposable, IAssemblyAnalysisEvictionEntry
 {
     private readonly object gate = new();
     private readonly IDisposable? lifetime;
     private readonly ExternalResourceLease? resourceLease;
+    private readonly Action<AssemblyAnalysisEntry>? onReferenceLeaseReleased;
     private TimeProvider clock = TimeProvider.System;
     private AssemblyReferenceLeaseFactory? referenceLeaseFactory;
     private readonly TaskCompletionSource<object?> leaseDrain = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -39,14 +47,14 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable
         string canonicalPath,
         McpCodeGraphServer server,
         AssemblyContext context,
-        IDisposable? lifetime,
-        ExternalResourceLease? resourceLease = null)
+        AssemblyAnalysisEntryResources resources)
     {
         CanonicalPath = canonicalPath;
         Server = server;
         Context = context;
-        this.lifetime = lifetime;
-        this.resourceLease = resourceLease;
+        lifetime = resources.Lifetime;
+        resourceLease = resources.ResourceLease;
+        onReferenceLeaseReleased = resources.OnReferenceLeaseReleased;
         lastUsedUtc = UtcNow;
     }
 
@@ -56,8 +64,10 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable
             parameters.CanonicalPath,
             CreateReadOnlyServer(parameters.Solution, parameters.Context),
             parameters.Context,
-            parameters.Lifetime,
-            parameters.ResourceLease);
+            new(
+                parameters.Lifetime,
+                parameters.ResourceLease,
+                parameters.OnReferenceLeaseReleased));
         entry.SetClock(parameters.Clock);
         entry.referenceLeaseFactory = parameters.ReferenceLeaseFactory;
         return entry;
@@ -67,6 +77,11 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable
     internal McpCodeGraphServer Server { get; }
     internal AssemblyContext Context { get; }
     internal string ContentHash => Context.Origin.ContentHash;
+
+    string IAssemblyAnalysisEvictionEntry.CanonicalPath => CanonicalPath;
+    DateTime IAssemblyAnalysisEvictionEntry.LastUsedUtc => LastUsedUtc;
+    bool IAssemblyAnalysisEvictionEntry.IsIdleForCapacity() => IsIdleForCapacity();
+    bool IAssemblyAnalysisEvictionEntry.IsIdle(DateTime now, TimeSpan idleTtl) => IsIdle(now, idleTtl);
 
     internal bool Matches(
         AssemblyFingerprint fingerprint,
@@ -96,7 +111,12 @@ internal sealed class AssemblyAnalysisEntry : IAsyncDisposable
 
             leaseCount++;
             lastUsedUtc = UtcNow;
-            lease = new(this, CanonicalPath, Server, Context, referenceLeaseFactory);
+            lease = new(
+                this,
+                CanonicalPath,
+                Server,
+                Context,
+                new(referenceLeaseFactory, onReferenceLeaseReleased));
             return true;
         }
     }

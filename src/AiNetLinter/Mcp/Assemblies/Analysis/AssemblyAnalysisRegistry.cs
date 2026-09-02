@@ -21,7 +21,7 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 /// Target-Key; parallele Erstzugriffe teilen die Creation-Task und erhalten
 /// anschliessend eigene, read-only Leases auf denselben Roslyn-Snapshot.
 /// </summary>
-internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
+internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAssemblyAnalysisTemporaryReferenceEvictor
 {
     internal const int MaxFingerprintRetries = 3;
 
@@ -34,7 +34,9 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
     private readonly AssemblyAnalysisResourceBudget resourceBudget;
     private readonly AssemblyAnalysisRegistryEntryFactory entryFactory;
     private readonly AssemblyAnalysisSourceProjectLeaseCoordinator sourceProjectLeaseCoordinator;
+    private readonly AssemblyAnalysisRegistryEvictionCandidates evictionCandidates;
     private readonly AssemblyAnalysisRegistryEvictionCoordinator evictionCoordinator;
+    private readonly AssemblyAnalysisRegistryReferenceEviction referenceEviction;
     private readonly AssemblyAnalysisHealthSnapshotProvider healthSnapshotProvider;
     private readonly Func<AssemblyAnalysisEntry, Task>? beforeRetirementAsync;
     private int disposed;
@@ -48,10 +50,15 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
         this.fingerprintFactory = fingerprintFactory;
         this.beforeRetirementAsync = beforeRetirementAsync;
         resourceBudget = new(resourceRegistry);
-        entryFactory = new(sourceOrchestrator, resourceBudget, CreateReferenceLeaseFactory);
+        entryFactory = new(
+            sourceOrchestrator,
+            resourceBudget,
+            CreateReferenceLeaseFactory,
+            RequestTemporaryReferenceEviction);
         var sourceProjectEntryFactory = new AssemblyAnalysisSourceProjectEntryFactory(
             resourceBudget,
-            CreateReferenceLeaseFactory);
+            CreateReferenceLeaseFactory,
+            RequestTemporaryReferenceEviction);
         var coordinatorContext = new AssemblyAnalysisRegistryCoordinatorContext
         {
             Gate = gate,
@@ -61,7 +68,7 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
             IsDisposed = () => Volatile.Read(ref disposed) != 0,
             ResourceBudget = resourceBudget,
             BeforeRetirementAsync = beforeRetirementAsync,
-            RetireEntryAsync = RetireEntryAsync,
+            RetireEntryAsync = AssemblyAnalysisRegistryDisposal.RetireEntryAsync,
             SourceProjectEntryFactory = sourceProjectEntryFactory,
             ObserveCreation = ObserveCreation,
             RemoveFailedEntry = RemoveFailedEntry,
@@ -69,16 +76,22 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
                 RunEvictionTickAsync(forceCapacity, requiredPath, cancellationToken),
             Failure = Failure,
         };
+        evictionCandidates = new(
+            GetCompletedEvictionCreations,
+            beforeRetirementAsync is null
+                ? null
+                : entry => beforeRetirementAsync((AssemblyAnalysisEntry)entry),
+            entry => IsTemporaryReferenceEvictionRequested(entry),
+            entry => ClearTemporaryReferenceEvictionRequest(entry));
         evictionCoordinator = new(new AssemblyAnalysisRegistryEvictionContext
         {
-            Gate = gate,
-            Entries = entries,
-            RetiredEntries = retiredEntries,
-            IsDisposed = () => Volatile.Read(ref disposed) != 0,
             ResourceBudget = resourceBudget,
-            BeforeRetirementAsync = beforeRetirementAsync,
-            RetireEntryAsync = RetireEntryAsync,
+            GetCandidates = evictionCandidates.GetCompletedEvictionCandidates,
+            TryRetireCandidate = evictionCandidates.TryRetireCandidate,
         });
+        referenceEviction = new(
+            evictionCoordinator,
+            evictionCandidates.GetCompletedTemporaryEvictionCandidates);
         sourceProjectLeaseCoordinator = new(coordinatorContext);
         healthSnapshotProvider = new(gate, entries);
     }
@@ -91,6 +104,16 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
         string assemblyPath,
         CancellationToken cancellationToken) => LeaseAsync(assemblyPath, cancellationToken);
 
+    Task<int> IAssemblyAnalysisTemporaryReferenceEvictor.EvictTemporaryReferenceSessionsAsync(
+        CancellationToken cancellationToken) => referenceEviction.EvictAsync(cancellationToken);
+
+    private void RequestTemporaryReferenceEviction(AssemblyAnalysisEntry entry) => referenceEviction.Request(entry);
+
+    private bool IsTemporaryReferenceEvictionRequested(IAssemblyAnalysisEvictionEntry entry) =>
+        referenceEviction.IsRequested(entry);
+
+    private void ClearTemporaryReferenceEvictionRequest(IAssemblyAnalysisEvictionEntry entry) =>
+        referenceEviction.ClearRequest(entry);
     internal ExternalResourceHealthSnapshot? ResourceHealth => resourceBudget.Health;
     internal Task<int> RunEvictionTickAsync() =>
         evictionCoordinator.RunAsync(false, null, CancellationToken.None);
@@ -275,7 +298,7 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
 
                 var refreshed = CreateEntry(canonicalPath);
                 entries[canonicalPath] = refreshed;
-                retiredEntries.Add(RetireEntryAsync(creation));
+                retiredEntries.Add(AssemblyAnalysisRegistryDisposal.RetireEntryAsync(creation));
                 return (null, true);
             }
 
@@ -314,6 +337,47 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
 
     internal Task<IReadOnlyList<AssemblyAnalysisHealthSnapshot>> SnapshotsAsync() =>
         healthSnapshotProvider.GetSnapshotsAsync();
+
+    private async Task<IReadOnlyList<AssemblyAnalysisEvictionCreation>> GetCompletedEvictionCreations()
+    {
+        KeyValuePair<string, AssemblyAnalysisRegistryEntryCreation>[] completedCreations;
+        lock (gate)
+        {
+            if (Volatile.Read(ref disposed) != 0) return [];
+            completedCreations = [.. entries.Where(pair => pair.Value.Task.IsCompletedSuccessfully)];
+        }
+
+        var completedEntries = await Task.WhenAll(
+            completedCreations.Select(pair => pair.Value.Task)).ConfigureAwait(false);
+        return completedCreations
+            .Zip(completedEntries)
+            .Select(item => new AssemblyAnalysisEvictionCreation(
+                item.First.Key,
+                item.Second,
+                () => TryRetireEvictionEntry(item.First.Key, item.First.Value, item.Second)))
+            .ToList();
+    }
+
+    private Task? TryRetireEvictionEntry(
+        string key,
+        AssemblyAnalysisRegistryEntryCreation creation,
+        AssemblyAnalysisEntry entry)
+    {
+        lock (gate)
+        {
+            if (!entries.TryGetValue(key, out var current)
+                || !ReferenceEquals(current, creation)
+                || !entry.TryBeginRetirement()
+                || !entries.Remove(key))
+            {
+                return null;
+            }
+
+            var retirement = AssemblyAnalysisRegistryDisposal.RetireEntryAsync(creation);
+            retiredEntries.Add(retirement);
+            return retirement;
+        }
+    }
 
     private (AssemblyAnalysisRegistryEntryCreation? Creation, bool WasExisting) GetOrCreateEntry(
         string canonicalPath)
@@ -375,23 +439,6 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
             entryFactory.CreateAsync(canonicalPath, generation, creationLifetime.Token, resourceLease));
         ObserveCreation(canonicalPath, creation);
         return creation;
-    }
-
-    private static async Task RetireEntryAsync(AssemblyAnalysisRegistryEntryCreation creation)
-    {
-        try
-        {
-            var entry = await creation.Task.ConfigureAwait(false);
-            await entry.DisposeAsync().ConfigureAwait(false);
-        }
-        catch (Exception exception)
-        {
-            Log.Warning(exception, "Assembly-Registry-retired Entry konnte nicht vollständig freigegeben werden.");
-        }
-        finally
-        {
-            creation.DisposeCancellationSource();
-        }
     }
 
     private void ObserveCreation(string canonicalPath, AssemblyAnalysisRegistryEntryCreation creation)

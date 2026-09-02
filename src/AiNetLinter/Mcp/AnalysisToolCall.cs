@@ -166,7 +166,7 @@ internal static class AssemblyAnalysisDispatcher
             return leaseResult.Error;
         }
 
-        using var lease = leaseResult.Lease!;
+        var lease = leaseResult.Lease!;
         try
         {
             if (expandAssemblyReferences)
@@ -182,6 +182,14 @@ internal static class AssemblyAnalysisDispatcher
             return McpToolResults.CompilationError(
                 $"Unerwarteter Fehler in der Assembly-Roslyn-Route: {exception.Message}",
                 target.CanonicalPath);
+        }
+        finally
+        {
+            lease.Dispose();
+            if (assemblyRegistry is IAssemblyAnalysisTemporaryReferenceEvictor evictor)
+            {
+                await evictor.EvictTemporaryReferenceSessionsAsync().ConfigureAwait(false);
+            }
         }
     }
 

@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -12,11 +13,24 @@ namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 /// </summary>
 internal static class InspectAssemblyFormatter
 {
+    internal const int MaxDisplayedNamespaces = 10;
+    internal const string NamespaceSummaryPrefix = "Top 10 Namespaces und ";
+
+    internal static IReadOnlyList<string> CompactNamespaces(IReadOnlyList<string> namespaces)
+    {
+        if (namespaces.Count <= MaxDisplayedNamespaces) return namespaces;
+
+        return namespaces
+            .Take(MaxDisplayedNamespaces)
+            .Append($"{NamespaceSummaryPrefix}{namespaces.Count - MaxDisplayedNamespaces} weitere")
+            .ToList();
+    }
+
     internal static string FormatText(InspectAssemblyPayload payload, bool publicOnly)
     {
         var builder = new StringBuilder();
         AppendHeader(builder, payload);
-        AppendNamespaces(builder, payload.Namespaces, publicOnly);
+        AppendNamespaces(builder, payload.Namespaces, payload.TotalNamespaces, publicOnly);
         AppendReferences(builder, payload.References, payload.ReferenceSummary);
         AppendReferenceSessions(
             builder,
@@ -44,9 +58,14 @@ internal static class InspectAssemblyFormatter
         }
     }
 
-    private static void AppendNamespaces(StringBuilder builder, IReadOnlyList<string> namespaces, bool publicOnly)
+    private static void AppendNamespaces(
+        StringBuilder builder,
+        IReadOnlyList<string> namespaces,
+        int totalNamespaces,
+        bool publicOnly)
     {
-        builder.AppendLine($"{VisibilityLabel(publicOnly)}Namespaces: {namespaces.Count}");
+        var count = totalNamespaces > 0 ? totalNamespaces : namespaces.Count;
+        builder.AppendLine($"{VisibilityLabel(publicOnly)}Namespaces: {count}");
         foreach (var namespaceName in namespaces) builder.AppendLine($"- `{namespaceName}`");
     }
 

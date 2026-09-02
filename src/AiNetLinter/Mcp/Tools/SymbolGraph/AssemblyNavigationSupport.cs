@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AiNetLinter.Mcp;
-using AiNetLinter.Mcp.Assemblies.Analysis;
-using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
@@ -22,22 +20,9 @@ internal sealed record AssemblyNavigationSummaryRequest(
 
 internal static class AssemblyNavigationSupport
 {
-    private const int MaxNavigationAssemblies = AssemblyAnalysisResponseLimits.MaxReferenceSessions;
     private const int MaxNavigationDiagnostics = 100;
 
-    internal static AssemblyNavigationLeaseSet GetLeases(AssemblyAnalysisLease root)
-    {
-        var all = new[] { root }
-            .Concat(root.ReferenceLeasesSnapshot())
-            .Distinct()
-            .ToList();
-        return new(
-            all.Take(MaxNavigationAssemblies).ToList(),
-            all.Count,
-            all.Count > MaxNavigationAssemblies);
-    }
-
-    internal static List<string> CreateExpansionDiagnostics(AssemblyAnalysisLease root) =>
+    internal static List<string> CreateExpansionDiagnostics(AssemblyNavigationLeaseView root) =>
         root.ReferenceExpansionDiagnostics
             .Concat(root.ReferenceSessions.SelectMany(session => session.Diagnostics))
             .Where(diagnostic => !string.IsNullOrWhiteSpace(diagnostic))
@@ -88,57 +73,17 @@ internal static class AssemblyNavigationSupport
             .Take(MaxNavigationDiagnostics)
             .ToList();
 
-    internal static void AddSource(
-        ICollection<(AssemblyAnalysisLease Lease, ISymbol Symbol, Solution Solution)> sources,
-        AssemblyAnalysisLease lease,
-        ISymbol symbol)
-    {
-        if (lease.Server.GetCurrentSolution() is { } solution)
-        {
-            sources.Add((lease, symbol, solution));
-        }
-    }
-
-    internal static void AddMappedRootSource(
-        ICollection<(AssemblyAnalysisLease Lease, ISymbol Symbol, Solution Solution)> sources,
-        AssemblyAnalysisLease root,
-        ISymbol symbol)
-    {
-        var solution = root.Server.GetCurrentSolution();
-        var mapped = solution is null ? null : MapToCompilation(symbol, root.Context.Compilation);
-        if (solution is not null && mapped is not null)
-        {
-            sources.Add((root, mapped, solution));
-        }
-    }
-
-    internal static AnalysisSymbolIdentity GetIdentity(AssemblyAnalysisLease lease) =>
-        new(lease.Context.Origin.ContentHash, lease.Context.Generation);
-
-    internal static AssemblyNavigationOrigin CreateOrigin(AssemblyAnalysisLease lease)
-    {
-        var origin = lease.Context.Origin;
-        return new(
-            origin.OriginKind,
-            origin.CanonicalPath,
-            origin.ContentHash,
-            origin.GeneratedDocumentPath,
-            origin.Confidence,
-            origin.Trust);
-    }
-
-    internal static bool MatchesLeaseIdentity(string identifier, AssemblyAnalysisLease lease) =>
+    internal static bool MatchesLeaseIdentity(string identifier, AnalysisSymbolIdentity identity) =>
         AnalysisSymbolIdentity.TryParse(identifier, out var provided, out _)
         && provided is not null
-        && GetIdentity(lease).Matches(provided);
+        && identity.Matches(provided);
 
-    internal static MetricsTreeNode AddOrigin(MetricsTreeNode node, AssemblyAnalysisLease lease)
+    internal static MetricsTreeNode AddOrigin(MetricsTreeNode node, AssemblyNavigationOrigin origin)
     {
-        var origin = CreateOrigin(lease);
         return node with
         {
             DisplayLine = $"{node.DisplayLine} [assembly={origin.CanonicalPath}; origin={origin.OriginKind}]",
-            Children = node.Children.Select(child => AddOrigin(child, lease)).ToList(),
+            Children = node.Children.Select(child => AddOrigin(child, origin)).ToList(),
         };
     }
 
@@ -149,11 +94,4 @@ internal static class AssemblyNavigationSupport
                 ? CallTreeDirection.Both
                 : CallTreeDirection.Incoming;
 
-    private static ISymbol? MapToCompilation(ISymbol symbol, Compilation compilation)
-    {
-        var declarationId = DocumentationCommentId.CreateDeclarationId(symbol);
-        return declarationId is null
-            ? null
-            : DocumentationCommentId.GetFirstSymbolForDeclarationId(declarationId, compilation);
-    }
 }

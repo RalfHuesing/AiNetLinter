@@ -84,6 +84,7 @@ internal sealed class AssemblyDecompilationAdapter
 
                 source = AssemblyDecompilationSourceText.RemoveCompilerGeneratedNestedTypes(source);
                 source = AssemblyDecompilationSourceText.RemoveCompilerGeneratedStateMachineAttributes(source);
+                source = AssemblyDecompilationSourceText.MakeSignatureOnlyMethodsParsable(source);
 
                 if (source.Length > options.MaxDocumentCharacters)
                 {

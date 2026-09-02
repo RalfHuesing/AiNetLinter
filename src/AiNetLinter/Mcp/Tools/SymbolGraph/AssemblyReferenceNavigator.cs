@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using Microsoft.CodeAnalysis;
@@ -13,8 +12,7 @@ using Microsoft.CodeAnalysis;
 namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 
 internal sealed record AssemblyReferenceTraversalRequest(
-    AssemblyAnalysisLease Root,
-    AssemblySymbolTarget Target,
+    IReadOnlyList<AssemblyNavigationSource> Sources,
     int MaxResults,
     int RequestedDepth,
     AssemblyNavigationSummary Navigation);
@@ -25,10 +23,9 @@ internal static class AssemblyReferenceNavigator
         AssemblyReferenceTraversalRequest request,
         CancellationToken cancellationToken)
     {
-        var sources = CreateSources(request.Root, request.Target);
         var partialDiagnostics = request.Navigation.Diagnostics.ToList();
         var results = new List<ReferenceTraversalResult>();
-        foreach (var source in sources)
+        foreach (var source in request.Sources)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
@@ -40,13 +37,13 @@ internal static class AssemblyReferenceNavigator
                         request.RequestedDepth,
                         Math.Max(request.MaxResults, 1),
                         cancellationToken,
-                        AssemblySymbolIdentity: AssemblyNavigationSupport.GetIdentity(source.Lease))).ConfigureAwait(false);
+                        AssemblySymbolIdentity: source.Identity)).ConfigureAwait(false);
                 results.Add(traversal with
                 {
                     CallSites = traversal.CallSites
                         .Select(entry => entry with
                         {
-                            Origin = AssemblyNavigationSupport.CreateOrigin(source.Lease),
+                            Origin = source.Origin,
                         })
                         .ToList(),
                 });
@@ -54,7 +51,7 @@ internal static class AssemblyReferenceNavigator
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 partialDiagnostics.Add(
-                    $"Referenzsuche in '{source.Lease.CanonicalPath}' war unvollständig: {exception.Message}");
+                    $"Referenzsuche in '{source.CanonicalPath}' war unvollständig: {exception.Message}");
             }
         }
 
@@ -70,14 +67,14 @@ internal static class AssemblyReferenceNavigator
     }
 
     internal static async Task<(MetricsTreeNode Root, bool Truncated, IReadOnlyList<string> Diagnostics)> BuildCallTreeAsync(
-        AssemblyAnalysisLease root,
-        AssemblySymbolTarget target,
+        IReadOnlyList<AssemblyNavigationSource> sources,
+        ISymbol targetSymbol,
         GetCallTreeInput input,
         CancellationToken cancellationToken)
     {
-        var trees = new List<(AssemblyAnalysisLease Lease, MetricsTreeNode Root)>();
+        var trees = new List<(AssemblyNavigationSource Source, MetricsTreeNode Root)>();
         var diagnostics = new List<string>();
-        foreach (var source in CreateSources(root, target))
+        foreach (var source in sources)
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
@@ -90,17 +87,17 @@ internal static class AssemblyReferenceNavigator
                         Math.Max(input.TopN, 1),
                         AssemblyNavigationSupport.ParseDirection(input.Direction)),
                     cancellationToken).ConfigureAwait(false);
-                trees.Add((source.Lease, AssemblyNavigationSupport.AddOrigin(tree, source.Lease)));
+                trees.Add((source, AssemblyNavigationSupport.AddOrigin(tree, source.Origin)));
                 if (truncated)
                 {
                     diagnostics.Add(
-                        $"Call-Tree in '{source.Lease.CanonicalPath}' erreicht das Knotenlimit.");
+                        $"Call-Tree in '{source.CanonicalPath}' erreicht das Knotenlimit.");
                 }
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 diagnostics.Add(
-                    $"Call-Tree in '{source.Lease.CanonicalPath}' war unvollständig: {exception.Message}");
+                    $"Call-Tree in '{source.CanonicalPath}' war unvollständig: {exception.Message}");
             }
         }
 
@@ -108,7 +105,7 @@ internal static class AssemblyReferenceNavigator
         {
             return (
                 new MetricsTreeNode(
-                    target.Symbol.Name,
+                    targetSymbol.Name,
                     string.Empty,
                     0,
                     0,
@@ -123,26 +120,12 @@ internal static class AssemblyReferenceNavigator
         var rootDisplay = string.Join(
             "; ",
             trees.Select(item =>
-                    $"{item.Root.DisplayLine} [assembly={item.Lease.Context.Origin.CanonicalPath}]")
+                    $"{item.Root.DisplayLine} [assembly={item.Source.CanonicalPath}]")
                 .Distinct(StringComparer.Ordinal));
         return (
             first with { DisplayLine = rootDisplay, Children = children },
             diagnostics.Count > 0,
             diagnostics);
-    }
-
-    private static IReadOnlyList<(AssemblyAnalysisLease Lease, ISymbol Symbol, Solution Solution)> CreateSources(
-        AssemblyAnalysisLease root,
-        AssemblySymbolTarget target)
-    {
-        var sources = new List<(AssemblyAnalysisLease Lease, ISymbol Symbol, Solution Solution)>();
-        AssemblyNavigationSupport.AddSource(sources, target.Lease, target.Symbol);
-        if (!ReferenceEquals(root, target.Lease))
-        {
-            AssemblyNavigationSupport.AddMappedRootSource(sources, root, target.Symbol);
-        }
-
-        return sources;
     }
 
     private static ReferenceTraversalResult MergeTraversals(

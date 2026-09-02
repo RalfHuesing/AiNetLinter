@@ -20,6 +20,21 @@ internal sealed record AssemblyNavigationLeaseSet(
     int TotalAssemblyCount,
     bool AssembliesTruncated);
 
+internal sealed record AssemblyNavigationLeaseView(
+    string CanonicalPath,
+    Solution? Solution,
+    AnalysisSymbolIdentity Identity,
+    AssemblyNavigationOrigin Origin,
+    IReadOnlyList<AssemblyReferenceSession> ReferenceSessions,
+    IReadOnlyList<string> ReferenceExpansionDiagnostics);
+
+internal sealed record AssemblyNavigationSource(
+    ISymbol Symbol,
+    Solution Solution,
+    string CanonicalPath,
+    AnalysisSymbolIdentity Identity,
+    AssemblyNavigationOrigin Origin);
+
 internal sealed record AssemblyNavigationOrigin(
     string OriginKind,
     string CanonicalPath,

@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies;
+using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 
@@ -40,6 +41,33 @@ public sealed class AssemblyAnalysisSessionTests
         Assert.Equal(firstGeneration, second.Generation);
         Assert.Equal(AssemblySessionStatus.Complete, session.State.Status);
         Assert.Equal(originalMtime.AddMinutes(1), session.State.Fingerprint!.MtimeUtc);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_SignatureOnlyStubsConcreteMethodsWithoutSyntheticEmptyBodyDiagnostics()
+    {
+        using var temp = TestTempDirectory.Create("assembly-session-signature-only-");
+        var methods = string.Join(
+            Environment.NewLine,
+            Enumerable.Range(0, 160)
+                .Select(index => $"public int Read{index:D3}(int value) => value + {index};"));
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "SignatureOnlyProbe",
+            $"namespace Probe; public sealed class Value {{ {methods} }}");
+        await using var session = new AssemblyAnalysisSession(assemblyPath, cacheRoot: temp.GetPath("cache"));
+
+        var result = await session.RefreshAsync();
+        var generation = session.CurrentGeneration;
+        Assert.NotNull(generation);
+        var source = (await Assert.Single(generation.Snapshot.Documents).GetTextAsync()).ToString();
+        var diagnostics = generation.Snapshot.Compilation.GetDiagnostics()
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+            .ToList();
+
+        Assert.Equal(AssemblySessionStatus.Complete, result.Status);
+        Assert.Contains("throw null!;", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(diagnostics, diagnostic => diagnostic.Id == "CS0501");
     }
 
     [Fact]

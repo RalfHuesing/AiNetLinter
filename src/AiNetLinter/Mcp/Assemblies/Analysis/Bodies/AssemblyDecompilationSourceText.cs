@@ -2,11 +2,35 @@
 
 using System;
 using System.Linq;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis.Bodies;
 
 internal static class AssemblyDecompilationSourceText
 {
+    internal static string MakeSignatureOnlyMethodsParsable(string source)
+    {
+        var tree = CSharpSyntaxTree.ParseText(source);
+        var root = tree.GetRoot();
+        var transformed = root.ReplaceNodes(
+            root.DescendantNodes().OfType<MethodDeclarationSyntax>(),
+            static (method, _) => ShouldStub(method)
+                ? method
+                    .WithSemicolonToken(default)
+                    .WithBody(CreateStubBody())
+                : method);
+        transformed = transformed.ReplaceNodes(
+            transformed.DescendantNodes().OfType<ConstructorDeclarationSyntax>(),
+            static (constructor, _) => ShouldStub(constructor)
+                ? constructor
+                    .WithSemicolonToken(default)
+                    .WithBody(CreateStubBody())
+                : constructor);
+        return transformed.ToFullString();
+    }
+
     internal static string RemoveCompilerGeneratedNestedTypes(string source)
     {
         while (true)
@@ -27,6 +51,30 @@ internal static class AssemblyDecompilationSourceText
             source.Split(Environment.NewLine)
                 .Where(line => !line.Contains("[AsyncStateMachine(", StringComparison.Ordinal)
                     && !line.Contains("[IteratorStateMachine(", StringComparison.Ordinal)));
+
+    private static bool ShouldStub(MethodDeclarationSyntax method)
+    {
+        if (method.Body is not null
+            || method.ExpressionBody is not null
+            || method.SemicolonToken.IsMissing
+            || method.Modifiers.Any(modifier => modifier.Kind() is
+                SyntaxKind.AbstractKeyword or
+                SyntaxKind.ExternKeyword or
+                SyntaxKind.PartialKeyword))
+        {
+            return false;
+        }
+
+        return method.Ancestors().OfType<BaseTypeDeclarationSyntax>().FirstOrDefault() is not InterfaceDeclarationSyntax;
+    }
+
+    private static bool ShouldStub(ConstructorDeclarationSyntax constructor) =>
+        constructor.Body is null
+        && !constructor.SemicolonToken.IsMissing
+        && !constructor.Modifiers.Any(modifier => modifier.IsKind(SyntaxKind.ExternKeyword));
+
+    private static BlockSyntax CreateStubBody() =>
+        SyntaxFactory.Block(SyntaxFactory.ParseStatement("throw null!;"));
 
     private static int FindCompilerGeneratedTypeStart(string source)
     {

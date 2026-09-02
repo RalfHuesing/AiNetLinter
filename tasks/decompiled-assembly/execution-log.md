@@ -210,6 +210,22 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Status: running
 - Scope: Namespace-/Response-Budget, Signature-only-Stub-Fehlerlast, AIContextFootprint und Referenz-Session-Lebenszeit gemäß Paket 3; keine Paket-4-Abschlussmatrix und keine Release-/Live-MCP-Verifikation.
 - MCP-Hinweis: Laufender Server ist älter als der Working Tree; nicht als Feature-Nachweis verwenden.
+
+## 2026-09-02 – Paket 3 – Implementierer
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: Implementierer
+- Subagent: `01a06180-c9cf-76e3-8e14-93289a28acd8`
+- Diff-Baseline: `84d7f27c`
+- Status: terminal abgeschlossen; Implementierungsstand unreviewt gesichert.
+- Urteil: Paket 3 umgesetzt.
+- Geänderte Bereiche: Namespace-Budget in `InspectAssemblyFormatter`/Response-Builder; gültige Signature-only-Stub-Rümpfe in `AssemblyDecompilationSourceText`; Registry-/Eviction-/Lease-/Reference-Session-Lifecycle einschließlich schlanker Delegations-/Factory-Dateien; Assembly-Navigation-Unterstützung; passende Fast-/Daemon-/Response-Budget-Regressionen; aktualisierte `code-map.md`.
+- Verifikation nach der letzten Quelländerung: gezielte Fast-Regressionen für Namespace, Signature-only und Registry/Lifecycle 22/22 bestanden; vollständige FastTests `Category!=Stress` 2370 bestanden, 2 übersprungen; `dotnet build --no-restore` 0 Warnungen/0 Fehler; lokaler CLI-Linter mit `--no-cache` meldete 0 Treffer für die vier Paket-3-Zielklassen und 9 verbleibende Nicht-Paket-3-Verstöße; `git diff --check` Exit 0.
+- IntegrationTests `Category!=Stress`: 381 bestanden, 2 fehlgeschlagen. `LiveDogfood_Safeguard_ReturnsResults` meldet Live-Safeguard-Score 0 statt mindestens 5; `CliRepositoryDogfoodTests.RunLinterCli_OnWholeSolution_ReturnsSuccess` meldet die bestehenden 9 Repository-Verstöße. Beide liegen außerhalb des Paket-3-Feature-Nachweises.
+- Nicht ausgeführt: Stress-Tests, Release-/Live-Verifikation gegen den veralteten MCP-Server, aktueller MCP-`get_violations`-Nachweis und Paket-4-Abschlussmatrix. Historische MCP-/Audit-Ergebnisse wurden nur als Altstand-Kontext verwendet.
+- Code-Map: nach Kontextaufnahme und Änderungen aktualisiert; `roadmap.md`, `execution-log.md` und `tech-debt.md` blieben durch den Implementierer unverändert.
+- Offene Risiken: Die sechs bestehenden Footprint-Warnungen sind durch den lokalen CLI-Linter für die vier Zielklassen nicht mehr sichtbar; unabhängiger Review steht aus. Neun verbleibende Linterverstöße gehören nicht zum Paket-3-Scope.
+- Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Paket-3-Review.
 - Subagent: `01a06180-c9cf-76e3-8e14-93289a28acd8`
 
 ## 2026-09-02 – Paket 2 – Korrekturversuch 1 – Implementierer

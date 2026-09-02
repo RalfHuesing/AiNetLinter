@@ -11,38 +11,40 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
 
 internal sealed class AssemblyAnalysisRegistryEvictionCoordinator
 {
-    private readonly Lock gate;
-    private readonly Dictionary<string, AssemblyAnalysisRegistryEntryCreation> entries;
-    private readonly List<Task> retiredEntries;
-    private readonly Func<bool> isDisposed;
     private readonly IAssemblyAnalysisEvictionResourceBudget resourceBudget;
-    private readonly Func<AssemblyAnalysisEntry, Task>? beforeRetirementAsync;
-    private readonly Func<AssemblyAnalysisRegistryEntryCreation, Task> retireEntryAsync;
+    private readonly Func<Task<IReadOnlyList<AssemblyAnalysisEvictionCandidate>>> getCandidates;
+    private readonly Func<AssemblyAnalysisEvictionCandidate, Task?> tryRetireCandidate;
 
     internal AssemblyAnalysisRegistryEvictionCoordinator(
         AssemblyAnalysisRegistryEvictionContext context)
     {
-        gate = context.Gate;
-        entries = context.Entries;
-        retiredEntries = context.RetiredEntries;
-        isDisposed = context.IsDisposed;
         resourceBudget = context.ResourceBudget;
-        beforeRetirementAsync = context.BeforeRetirementAsync;
-        retireEntryAsync = context.RetireEntryAsync;
+        getCandidates = context.GetCandidates;
+        tryRetireCandidate = context.TryRetireCandidate;
     }
 
-    internal Task<int> RunAsync(
-        bool forceCapacity,
-        string? requiredPath,
-        CancellationToken cancellationToken) =>
-        RunCoreAsync(forceCapacity, requiredPath, cancellationToken);
-
-    private async Task<int> RunCoreAsync(
+    internal async Task<int> RunAsync(
         bool forceCapacity,
         string? requiredPath,
         CancellationToken cancellationToken)
     {
-        var idleCandidates = await FindIdleCandidatesAsync(forceCapacity).ConfigureAwait(false);
+        var candidates = await getCandidates().ConfigureAwait(false);
+        return await RunCoreAsync(candidates, forceCapacity, requiredPath, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    internal Task<int> RunTemporaryAsync(
+        IReadOnlyList<AssemblyAnalysisEvictionCandidate> candidates,
+        CancellationToken cancellationToken) =>
+        RunCoreAsync(candidates, forceCapacity: true, requiredPath: null, cancellationToken);
+
+    private async Task<int> RunCoreAsync(
+        IReadOnlyList<AssemblyAnalysisEvictionCandidate> candidates,
+        bool forceCapacity,
+        string? requiredPath,
+        CancellationToken cancellationToken)
+    {
+        var idleCandidates = FindIdleCandidates(candidates, forceCapacity);
         var retiredCount = await RetireIdleCandidatesAsync(
                 idleCandidates,
                 forceCapacity,
@@ -53,32 +55,26 @@ internal sealed class AssemblyAnalysisRegistryEvictionCoordinator
         return retiredCount;
     }
 
-    private async Task<List<(AssemblyAnalysisRegistryEntryCreation Creation, AssemblyAnalysisEntry Entry)>>
-        FindIdleCandidatesAsync(bool forceCapacity)
+    private List<AssemblyAnalysisEvictionCandidate> FindIdleCandidates(
+        IReadOnlyList<AssemblyAnalysisEvictionCandidate> candidates,
+        bool forceCapacity)
     {
         var now = resourceBudget.UtcNow;
-        var candidates = GetCompletedCreations();
-        var idleCandidates = new List<(AssemblyAnalysisRegistryEntryCreation, AssemblyAnalysisEntry)>();
-        foreach (var creation in candidates)
-        {
-            var entry = await creation.Task.ConfigureAwait(false);
-            if (forceCapacity
-                    ? entry.IsIdleForCapacity()
-                    : entry.IsIdle(now, resourceBudget.IdleTtl))
-            {
-                idleCandidates.Add((creation, entry));
-            }
-        }
+        var idleCandidates = candidates
+            .Where(candidate => forceCapacity
+                ? candidate.IsIdleForCapacity()
+                : candidate.IsIdle(now, resourceBudget.IdleTtl))
+            .ToList();
         if (forceCapacity)
         {
             idleCandidates.Sort(static (left, right) =>
             {
-                var comparison = left.Item2.LastUsedUtc.CompareTo(right.Item2.LastUsedUtc);
+                var comparison = left.LastUsedUtc.CompareTo(right.LastUsedUtc);
                 return comparison != 0
                     ? comparison
                     : string.Compare(
-                        left.Item2.CanonicalPath,
-                        right.Item2.CanonicalPath,
+                        left.CanonicalPath,
+                        right.CanonicalPath,
                         StringComparison.OrdinalIgnoreCase);
             });
         }
@@ -86,31 +82,25 @@ internal sealed class AssemblyAnalysisRegistryEvictionCoordinator
         return idleCandidates;
     }
 
-    private AssemblyAnalysisRegistryEntryCreation[] GetCompletedCreations()
-    {
-        lock (gate)
-        {
-            if (isDisposed()) return [];
-            return entries.Values
-                .Where(creation => creation.Task.IsCompletedSuccessfully)
-                .ToArray();
-        }
-    }
-
     private async Task<int> RetireIdleCandidatesAsync(
-        IEnumerable<(AssemblyAnalysisRegistryEntryCreation Creation, AssemblyAnalysisEntry Entry)> candidates,
+        IEnumerable<AssemblyAnalysisEvictionCandidate> candidates,
         bool forceCapacity,
         string? requiredPath,
         CancellationToken cancellationToken)
     {
         var retiredCount = 0;
-        foreach (var (creation, entry) in candidates)
+        foreach (var candidate in candidates)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (beforeRetirementAsync is not null) await beforeRetirementAsync(entry).ConfigureAwait(false);
-            if (!TryRemoveEntryForRetirement(creation, entry, out var retirement)) continue;
+            if (candidate.BeforeRetirementAsync is not null)
+            {
+                await candidate.BeforeRetirementAsync().ConfigureAwait(false);
+            }
 
-            await retirement!.ConfigureAwait(false);
+            var retirement = tryRetireCandidate(candidate);
+            if (retirement is null) continue;
+
+            await retirement.ConfigureAwait(false);
             retiredCount++;
             if (forceCapacity
                 && requiredPath is not null
@@ -121,26 +111,5 @@ internal sealed class AssemblyAnalysisRegistryEvictionCoordinator
         }
 
         return retiredCount;
-    }
-
-    private bool TryRemoveEntryForRetirement(
-        AssemblyAnalysisRegistryEntryCreation creation,
-        AssemblyAnalysisEntry entry,
-        out Task? retirement)
-    {
-        lock (gate)
-        {
-            var key = entries.FirstOrDefault(pair => ReferenceEquals(pair.Value, creation)).Key;
-            if (key is null || !ReferenceEquals(entries[key], creation)
-                || !entry.TryBeginRetirement() || !entries.Remove(key))
-            {
-                retirement = null;
-                return false;
-            }
-
-            retirement = retireEntryAsync(creation);
-            retiredEntries.Add(retirement);
-            return true;
-        }
     }
 }

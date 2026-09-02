@@ -22,15 +22,17 @@ internal static class AssemblySymbolSearch
         int maxResults,
         CancellationToken cancellationToken)
     {
-        var leaseSet = AssemblyNavigationSupport.GetLeases(root);
+        var leaseSet = AssemblyNavigationLeaseAccess.GetLeases(root);
         var leases = leaseSet.Leases;
         var entries = new List<SymbolLocationEntry>();
-        var diagnostics = AssemblyNavigationSupport.CreateExpansionDiagnostics(root);
+        var diagnostics = AssemblyNavigationSupport.CreateExpansionDiagnostics(
+            AssemblyNavigationLeaseAccess.CreateView(root));
         var searched = 0;
 
         foreach (var lease in leases)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var view = AssemblyNavigationLeaseAccess.CreateView(lease);
             var solution = lease.Server.GetCurrentSolution();
             if (solution is null)
             {
@@ -76,6 +78,7 @@ internal static class AssemblySymbolSearch
     {
         try
         {
+            var view = AssemblyNavigationLeaseAccess.CreateView(lease);
             var symbols = await SymbolFinder.FindSourceDeclarationsAsync(
                 solution,
                 name => name.Contains(namePattern, StringComparison.OrdinalIgnoreCase),
@@ -87,8 +90,8 @@ internal static class AssemblySymbolSearch
                 .SelectMany(symbol => FindSymbolTool.FormatSymbolLocationEntries(
                     symbol,
                     outputRoot,
-                    AssemblyNavigationSupport.GetIdentity(lease)))
-                .Select(entry => entry with { Origin = AssemblyNavigationSupport.CreateOrigin(lease) })
+                    view.Identity))
+                .Select(entry => entry with { Origin = view.Origin })
                 .ToList();
             return (entries, true, null);
         }

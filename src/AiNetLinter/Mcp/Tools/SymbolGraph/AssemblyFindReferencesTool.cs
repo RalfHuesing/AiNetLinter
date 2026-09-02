@@ -56,8 +56,7 @@ internal static class AssemblyFindReferencesTool
 
             var traversal = await AssemblyReferenceNavigator.FindReferencesAsync(
                 new AssemblyReferenceTraversalRequest(
-                    lease,
-                    target!,
+                    AssemblyNavigationSourceFactory.CreateSources(lease, target!),
                     request.MaxResults,
                     request.Depth,
                     navigation),

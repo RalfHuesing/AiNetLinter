@@ -18,3 +18,8 @@ internal interface IAssemblyAnalysisRegistry : IAsyncDisposable
         string assemblyPath,
         CancellationToken cancellationToken = default);
 }
+
+internal interface IAssemblyAnalysisTemporaryReferenceEvictor
+{
+    Task<int> EvictTemporaryReferenceSessionsAsync(CancellationToken cancellationToken = default);
+}

@@ -41,6 +41,8 @@ internal static class InspectAssemblyResponseBuilder
             context.Diagnostics,
             request.Lease?.ReferenceExpansionDiagnostics);
         var includeReferenceDetails = arguments.IncludeReferenceDetails;
+        var totalNamespaces = selection.Namespaces.Count;
+        var namespaces = InspectAssemblyFormatter.CompactNamespaces(selection.Namespaces);
         var referenceSessions = includeReferenceDetails
             ? AssemblyAnalysisResponseLimits.ProjectReferenceSessions(request.Lease?.ReferenceSessions)
             : Array.Empty<AssemblyReferenceSessionDto>();
@@ -55,7 +57,7 @@ internal static class InspectAssemblyResponseBuilder
         return new InspectAssemblyPayload(
             request.FullPath,
             context.Identity,
-            selection.Namespaces,
+            namespaces,
             includeReferenceDetails
                 ? AssemblyAnalysisResponseLimits.ProjectReferences(context.References)
                 : Array.Empty<AssemblyReferenceDto>(),
@@ -72,7 +74,8 @@ internal static class InspectAssemblyResponseBuilder
             referenceSessions,
             diagnostics,
             referenceSummary,
-            includeReferenceDetails);
+            includeReferenceDetails,
+            totalNamespaces);
     }
 
     private static InspectAssemblyPayload ApplyResponseBudget(
