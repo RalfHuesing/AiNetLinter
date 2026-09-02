@@ -466,6 +466,20 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Code-Map: nicht geändert; kein konkreter Scope-/Historienbefund.
 - Nächste Aktion: Paket 3 schließen, Paket 4 als Abschlussmatrix starten.
 
+## 2026-09-02 – Paket 4 – Folge-Review nach Endpoint-Korrektur
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Folge-Reviewer
+- Subagent: `01a06259-5e8d-7a21-b61a-4ef3cdf1f8e2`
+- Diff-Scope: Endpoint-Isolationskorrektur `c55c0e8a` und Paket-4-Gesamtstand.
+- Status: terminal abgeschlossen.
+- Urteil: `approved`; keine verbleibenden P0/P1-Risiken.
+- Bestätigt: Der Test erwirbt den exklusiven Endpoint vor Fixture-/Prozessstart, beide Sitzungen verwenden denselben isolierten Zustand und Cleanup nutzt die eigene Daemon-PID. Der echte Projekt-Health-Proxy-Nachweis mit `tools/call`, `targetType="project"`, absolutem `targetPath`, Registry-Key, Daemon-Modus, `Loaded` und `solutionPath` bleibt erhalten.
+- P2-Restlücken: Warmup-/Health-PID-Gleichheit und zusätzliche Prozessidentitätsprüfung im Cleanup; semicolon-only Operatoren, legacy-versionierte Framework-Pipeline und echter Concurrent-Cache-Miss-Pfad. Nicht erweitert.
+- Verifikation: gezielter Test 1/1, ThinClient-Suite 3/3, Build ohne Warnungen/Fehler, `git diff --check` sauber; keine MCP-, Release-, Live- oder Stress-Verifikation.
+- MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wurde nicht als Feature-Nachweis verwendet.
+- Nächste Aktion: Paket 4 abschließen und den einmaligen Audit-Schritt ausführen.
+
 ## 2026-09-02 – Paket 4 – Implementierer running (aktuell)
 
 - Run-ID: `decompiled-assembly-20260902`

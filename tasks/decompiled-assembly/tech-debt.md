@@ -140,12 +140,12 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### TD-SIGONLY-COVERAGE-001 – Signature-only-Ausschlüsse und Operatoren nicht direkt abgesichert
 
 - Schweregrad: P2
-- Status: behoben, Review ausstehend (Paket 4).
+- Status: teilweise verbessert, weiter zurückgestellt.
 - Scope/Fundstelle: `AssemblyDecompilationSourceText` und Signature-only-Regressionen.
-- Evidenz: Review: Abstract/Extern/Partial/Interface, echte Bodies sowie Operator-/Conversion-Operator-Syntax sind nicht jeweils direkt getestet.
-- Disposition: `fix-now`
-- Nächster Schritt: Folge-Review der Resolver-/Operator-Matrix; bei Bestätigung als `fixed` schließen.
-- Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Review.
+- Evidenz: Abstract/Extern/Partial/Interface und echte Bodies sind abgedeckt; die Operator-/Conversion-Operator-Regression prüft expression-bodied Varianten, semicolon-only Signature-only-Fälle bleiben offen.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: In einer späteren Testmatrix semicolon-only Signature-only-Fälle für Operatoren und Conversion-Operatoren ergänzen.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 4 Review.
 
 ### HEALTH-DAEMON-PROJECT-TARGET-E2E-001 – Projekt-Health nicht im echten Daemon-End-to-End geprüft
 

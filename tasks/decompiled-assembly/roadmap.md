@@ -3,8 +3,8 @@
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
 Status: executing  
-Current epic: Paket 4 – Folge-Review nach Korrekturrunde 1/5
-Letzter Commit: `c55c0e8a` – Endpoint-Korrektur, Review läuft
+Current epic: Paket 4 – Abschluss-Audit
+Letzter Commit: Endpoint-Folge-Review bestätigt; Artefakt-Checkpoint folgt
 Current debt item: `DAEMON-ENDPOINT-OWNERSHIP-TEST-001`
 Debt attempts: 1
 Blocker: keiner
@@ -45,7 +45,7 @@ Blocker: keiner
 - Betroffene Bereiche: FastTests, IntegrationTests und Abschlussnachweise.
 - Muss-/Akzeptanzkriterien: Die spezifizierte Testmatrix deckt Core-Fixes, Tool-Verträge, Daemon-/Assembly-Routen und Response-Budgets ab.
 - Verifikation: `dotnet build`; vollständige Nicht-Stress-Läufe beider Testprojekte; sauberer `get_violations`- und `safeguard`-Durchlauf über die eigene Solution; konzeptspezifische Prüfungen aus den Paketen.
-- Status: in_review
+- Status: done
 
 ## Abschluss-Checkliste aus dem Konzept
 
