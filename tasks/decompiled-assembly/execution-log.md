@@ -505,6 +505,16 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Lokale Checks: `dotnet build --no-restore` 0 Warnungen/Fehler; Lifecycle-/Registry-Regressionen 18/18; Navigation-/Resolver-Regressionen 9/9; `git diff --check` sauber. Unabhängige Änderungen unter `tasks/mcp-di-composition-decoupling/Konzept.md` unverändert.
 - Nächste Aktion: Audit-Fix checkpointen, danach vollständige lokale Abschlussgates.
 
+## 2026-09-02 – Abschlussgates running (aktuell)
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: Orchestrator-Abschlussverifikation
+- Baseline: `92aab0ed`
+- Status: running
+- Scope: `dotnet build`, vollständige FastTests `Category!=Stress` und vollständige IntegrationTests `Category!=Stress`; keine Stress-, Release- oder Live-MCP-Verifikation.
+- Nutzerentscheidung: aktueller Safeguard-Score und bekannte sonstige Violations sind für diesen Task ausdrücklich nicht abschlussblockierend; größerer Refactoring-Auftrag folgt separat.
+- MCP-Hinweis: laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet.
+
 ## 2026-09-02 – Paket 4 – Implementierer running (aktuell)
 
 - Run-ID: `decompiled-assembly-20260902`
