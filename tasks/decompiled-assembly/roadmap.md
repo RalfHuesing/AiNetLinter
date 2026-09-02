@@ -3,8 +3,8 @@
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
 Status: executing  
-Current epic: Paket 3
-Letzter Commit: Paket-2-Abschluss `84d7f27c`; Paket-3-Implementierung unreviewt
+Current epic: Paket 3 – Review
+Letzter Commit: Paket-3-Implementierung `13c6e936`; Review läuft
 Current debt item: `TD-QL-001`
 Debt attempts: 1
 Blocker: keiner
