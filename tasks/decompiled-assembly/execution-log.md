@@ -281,7 +281,7 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 
 - Run-ID: `decompiled-assembly-20260902`
 - Rolle: frischer Implementierer
-- Subagent: wird nach Delegation ergänzt
+- Subagent: `01a06203-798e-7023-a826-ff1852701bf8`
 - Diff-Baseline: `8f297a6b`
 - Anlass: P1 `SIGONLY-CONSTRUCTOR-EXPRESSION-BODY`.
 - Scope: Expression-bodied Konstruktoren vom Signature-only-Stubben ausschließen und direkte Negativregression ergänzen; keine Paket-4-Ausweitung und keine Release-/Live-MCP-Verifikation.
