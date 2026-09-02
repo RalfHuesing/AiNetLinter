@@ -77,3 +77,19 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Offenes Risiko: Ein Integrationstest bleibt wegen des externen Live-Safeguard-Korridors fehlgeschlagen.
 - Code-Map: nach der Korrektur aktualisiert.
 - Nächste Aktion: frischer unabhängiger Folge-Review.
+
+## 2026-09-02 – Paket 1 – Folge-Review nach Korrekturversuch 1
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Folge-Reviewer
+- Subagent: `01a0610c-d3d4-7483-b1cc-7931f2f1e5da`
+- Diff-Scope: Korrekturdiff seit `df11979e`, Implementierungs-Checkpoint `e8492e34`.
+- Status: terminal abgeschlossen.
+- Urteil: `approved`; keine belegten P0/P1-Findings in den drei geprüften Ursachensignaturen.
+- Bestätigt: `FindMember` verwendet `AssociatedSymbol` und den passenden direkten Property-/Indexer-/Event-Member; der Regressionstest deckt mehrere gleichartige Members ab. Die ref-counted Sperre schützt Pointer-Publish, Retention und verzögerten Return pro kanonischem Cache-Key; der Multi-Fingerprint-Test deckt das Race-Fenster ab. Exaktes `System` wird versions-tolerant vereinheitlicht, `Systemish` bleibt ausgeschlossen.
+- MCP-Prüfungen mit `targetType=project` und absolutem Projektziel: `get_feature_context`, `get_symbol_body`, `find_references` und `get_test_context`; relevante Produktionssymbole, Aufrufer und Tests ohne Trunkierung geprüft.
+- Wiederholte Prüfung wegen konkreter Gegenhypothese: Event-/Accessor-Test 1/1 bestanden. Implementierer-Nachweis 33/33, Build 0/0 und gezielter `get_violations`-Lauf wurden nicht redundant wiederholt.
+- Code-Map: konkrete veraltete Zeilenangaben aktualisiert; keine Produktions-/Testdatei geändert.
+- Restrisiken: Ein Integrationstest bleibt wegen des externen Live-Safeguard-Korridors fehlgeschlagen; sechs bestehende `AIContextFootprint`-Warnungen bleiben Paket-3-Risiko.
+- P2-Dispositionen: direkter Registrierungstest der privaten Health-Route und uneinheitliche `get_impact`-Nachweiszahl bleiben `accepted-deferred`. Ein veralteter Roadmap-Verweis wird durch den Orchestrator korrigiert.
+- Nächste Aktion: Paket 1 als `done` abschließen und Paket 2 starten.

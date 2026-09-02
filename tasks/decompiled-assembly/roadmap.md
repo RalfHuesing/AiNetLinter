@@ -3,10 +3,10 @@
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
 Status: executing  
-Current epic: Paket 1 – Folge-Review nach Korrekturrunde 1/5
-Letzter Commit: Korrektur-Implementierung unreviewt; Artefakt-Checkpoint `4bda46fc`
-Current debt item: `TD-ASM-ACCESSOR-001`, `TD-ASM-CACHE-001`, `TD-ASM-FRAMEWORK-001`
-Debt attempts: 1
+Current epic: Paket 2
+Letzter Commit: Korrektur-Implementierung `e8492e34`; Paket-1-Folge-Review abgeschlossen
+Current debt item: keiner
+Debt attempts: 0
 Blocker: keiner
 
 ## Epics
@@ -18,7 +18,7 @@ Blocker: keiner
 - Betroffene Bereiche: Body-Auflösung, Decompilation-Cache, Framework-Referenzen, Stable-ID-Auflösung, Daemon-Health-Routing.
 - Muss-/Akzeptanzkriterien: Top-Level-Typen und Accessors liefern stabile Bodies oder typisierte `unavailable`-Ergebnisse; Publishing löscht kein erfolgreiches Cache-Verzeichnis; bekannte Framework-Assemblies werden versions-tolerant vereinheitlicht; Skeleton-IDs bleiben für Folgeabfragen auflösbar; Projekt-Health funktioniert im Daemon-Proxy.
 - Verifikation: gezielte Tests für Resolver, Cache-Concurrency, Framework-Unification und Daemon-Health; nach letzter Codeänderung `get_violations` für den Scope.
-- Status: in_progress
+- Status: done
 
 ### Paket 2: Tool-Verträge, Schemas & Entwicklerergonomie
 
@@ -27,7 +27,7 @@ Blocker: keiner
 - Betroffene Bereiche: Assembly-/SymbolGraph-/FileStructure-/Maintenance-Registrierungen, Formatter, Instructions und relevante Dokumentation.
 - Muss-/Akzeptanzkriterien: `includeReferences`, Assembly-`get_impact`, `filePath`-Alias, `metrics_tree`-Default, Assembly-Header, wahrheitsgetreue Hinweise/Trunkierungsflags und die 13-Tool-Capability-Matrix sind konsistent umgesetzt.
 - Verifikation: Schema-/Dispatcher-/Ergonomie-Tests, Capability-Matrix-Prüfung und gezielter `get_violations`-Nachweis.
-- Status: open
+- Status: in_progress
 
 ### Paket 3: Token-Budget, Response-Limits & Dogfooding
 
