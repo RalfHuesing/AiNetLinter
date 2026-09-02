@@ -25,6 +25,10 @@ internal static class McpToolResults
     internal const string WorkspaceDiagnosticHint =
         "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung.";
 
+    internal const string NativePeAssemblyHint =
+        "Keine Wiederholung nötig: Das Ziel ist keine verwaltete .NET-Assembly mit IL; " +
+        "eine passende .dll oder .exe mit .NET-Metadaten angeben.";
+
     /// <summary>Hinweis fuer fehlenden/leeren <c>symbolIdentifier</c> (Einzel-Symbol-Tools).</summary>
     internal const string SymbolIdentifierHint =
         "symbolIdentifier angeben: \"M:Namespace.Klasse.Methode\", \"Datei.cs:42:10\" oder \"Klasse.Methode\".";
@@ -89,6 +93,11 @@ internal static class McpToolResults
             message,
             context: context,
             hint: hint ?? WorkspaceDiagnosticHint);
+
+    internal static CallToolResult NativePeAssembly(
+        string message,
+        string? context = null) =>
+        RecoverableWorkspaceDiagnostic(message, context, NativePeAssemblyHint);
 
     private static CallToolResult BuildResult(
         string code,

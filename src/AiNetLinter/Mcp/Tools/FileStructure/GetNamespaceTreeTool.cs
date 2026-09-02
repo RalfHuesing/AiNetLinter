@@ -51,13 +51,22 @@ internal static class GetNamespaceTreeTool
             {
                 if (string.IsNullOrWhiteSpace(input.NamespacePrefix))
                 {
-                    return await ExecuteSolutionOverviewAsync(solution, ct);
+                    return AddAssemblyOverviewHeader(
+                        state,
+                        solution,
+                        await ExecuteSolutionOverviewAsync(solution, ct));
                 }
 
-                return await ExecuteAutoProjectDrilldownAsync(solution, input, clampedDepth, clampedMaxResults, solutionDir, ct);
+                return AddAssemblyOverviewHeader(
+                    state,
+                    solution,
+                    await ExecuteAutoProjectDrilldownAsync(solution, input, clampedDepth, clampedMaxResults, solutionDir, ct));
             }
 
-            return await ExecuteProjectDrilldownAsync(solution, input, clampedDepth, clampedMaxResults, solutionDir, ct);
+            return AddAssemblyOverviewHeader(
+                state,
+                solution,
+                await ExecuteProjectDrilldownAsync(solution, input, clampedDepth, clampedMaxResults, solutionDir, ct));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -65,6 +74,49 @@ internal static class GetNamespaceTreeTool
                 $"Unerwarteter Fehler in get_namespace_tree: {ex.Message}",
                 context: input.Project);
         }
+    }
+
+    private static CallToolResult AddAssemblyOverviewHeader(
+        McpCodeGraphServer state,
+        Solution solution,
+        CallToolResult result)
+    {
+        if (state.AssemblySymbolIdentity is null || result.IsError == true)
+        {
+            return result;
+        }
+
+        var textBlock = result.Content.OfType<TextContentBlock>().FirstOrDefault();
+        if (textBlock is null || string.IsNullOrEmpty(textBlock.Text))
+        {
+            return result;
+        }
+
+        var assemblyName = solution.Projects.FirstOrDefault()?.AssemblyName
+            ?? solution.Projects.FirstOrDefault()?.Name
+            ?? Path.GetFileNameWithoutExtension(solution.FilePath)
+            ?? "Assembly";
+        var text = textBlock.Text;
+        var solutionHeadingIndex = text.IndexOf("# Solution Overview:", StringComparison.Ordinal);
+        if (solutionHeadingIndex >= 0)
+        {
+            var lineBreak = text.IndexOf('\n', solutionHeadingIndex);
+            var assemblyHeading = $"# Assembly Overview: {assemblyName}";
+            text = lineBreak < 0
+                ? string.Concat(text.AsSpan(0, solutionHeadingIndex), assemblyHeading)
+                : string.Concat(text.AsSpan(0, solutionHeadingIndex), assemblyHeading, text.AsSpan(lineBreak));
+        }
+        else
+        {
+            text = $"# Assembly Overview: {assemblyName}\n\n{text}";
+        }
+
+        return new CallToolResult
+        {
+            IsError = result.IsError,
+            Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
+            StructuredContent = result.StructuredContent,
+        };
     }
 
     private static async Task<CallToolResult> ExecuteSolutionOverviewAsync(

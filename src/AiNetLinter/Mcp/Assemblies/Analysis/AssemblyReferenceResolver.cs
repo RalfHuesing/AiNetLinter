@@ -27,6 +27,7 @@ internal sealed class AssemblyReferenceResolver
     internal const int MaxReferenceDepth = 8;
     internal const int MaxReferenceNodes = 128;
     internal const string BoundaryDiagnosticCode = "assembly-reference-boundary";
+    internal const string NativeMetadataFailureMessage = "Die Datei enthält keine .NET-Metadaten.";
 
     internal AssemblyReferenceResolution Resolve(string assemblyPath)
     {
@@ -37,7 +38,7 @@ internal sealed class AssemblyReferenceResolver
             using var peReader = new PEReader(stream);
             if (!peReader.HasMetadata)
             {
-                return FailedResolution(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolver.Resolve)), "Die Datei enthält keine .NET-Metadaten.", canonicalPath);
+                return FailedResolution(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolver.Resolve)), NativeMetadataFailureMessage, canonicalPath);
             }
             var diagnostics = new List<AssemblySessionDiagnostic>();
             var metadata = ReadMetadata(peReader.GetMetadataReader());

@@ -132,7 +132,7 @@ public sealed class DaemonHostMcpContractTests
         Assert.Equal(nativeAssemblyPath, payload.GetProperty("context").GetString());
         Assert.Contains(".dll oder .exe mit IL", payload.GetProperty("message").GetString(), StringComparison.Ordinal);
         Assert.Equal(
-            McpToolResults.WorkspaceDiagnosticHint,
+            McpToolResults.NativePeAssemblyHint,
             payload.GetProperty("hint").GetString());
         Assert.True(payload.GetProperty("recoverable").GetBoolean());
     }
@@ -191,6 +191,7 @@ public sealed class DaemonHostMcpContractTests
                         ["extensionName"] = "SourceOnly",
                         ["namespace"] = "Source",
                         ["maxResults"] = 1,
+                        ["includeReferences"] = true,
                     },
                     cancellationToken: timeout.Token).ConfigureAwait(false);
             }

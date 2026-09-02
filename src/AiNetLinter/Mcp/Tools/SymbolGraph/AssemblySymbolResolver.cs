@@ -54,11 +54,11 @@ internal static class AssemblySymbolResolver
             }
         }
 
-        var navigation = AssemblyNavigationSupport.CreateSummary(
+        var navigation = AssemblyNavigationSupport.CreateSummary(new AssemblyNavigationSummaryRequest(
             leaseSet.TotalAssemblyCount,
             leases.Count,
             leaseSet.AssembliesTruncated,
-            diagnostics);
+            diagnostics));
         if (candidates.Count == 0)
         {
             return (null, McpToolResults.SymbolNotFound(identifier), navigation);

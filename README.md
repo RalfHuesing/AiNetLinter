@@ -16,7 +16,7 @@ eigenständige Prüfungen.
 | Vor einer Änderung | Deklarationen, Member-Struktur, Metriken, Aufrufer, zugeordnete Tests und offene Regelverstöße für ein Symbol. |
 | Beim Nachvollziehen von Abhängigkeiten | Referenzen, Aufrufer- und Aufgerufene-Bäume, Typ-Hierarchien und semantische Dateiabhängigkeiten. |
 | Nach einer Änderung | Git-Diff-bezogene Auswirkungen, statisch zugeordnete Tests, Regelverstöße und ein Quality-Gate. |
-| Beim Erkunden einer fremden DLL | Öffentliche API, Typen, Member und klassische Extension-Methoden – ohne die Assembly zu laden oder auszuführen. |
+| Beim Erkunden einer fremden Assembly | Öffentliche API, Typen, Member und klassische Extension-Methoden aus `.dll` oder `.exe` – ohne die Assembly zu laden oder auszuführen. |
 
 Die MCP-Tools geben zu begrenzten Ergebnissen und nicht auflösbaren
 Abhängigkeiten ihren Vollständigkeitsstatus aus. Agenten können ihren nächsten
@@ -26,10 +26,14 @@ laden.
 ### Externe Assemblies mit Quellkontext
 
 `inspect_assembly` und `find_assembly_extensions` untersuchen eine lokale
-`.dll` statisch über Roslyn. Ohne verfügbare Quelle erzeugt AiNetLinter dafür
+`.dll` oder `.exe` statisch über Roslyn. Ohne verfügbare Quelle erzeugt AiNetLinter dafür
 eine dekompilierte, schreibgeschützte Analyse-Session.
 
-Für eine eingebundene Fremd-DLL kann zusätzlich eine passende Source-Solution
+Bei `inspect_assembly` ist `memberNames` eine case-insensitive exakte OR-Auswahl;
+`memberName` bleibt eine Teiltextsuche. Referenz-Assemblies werden bei
+`find_assembly_extensions` nur mit `includeReferences=true` einbezogen (Default: `false`).
+
+Für eine eingebundene Fremd-Assembly kann zusätzlich eine passende Source-Solution
 aus einem konfigurierten öffentlichen Git-Repository zugeordnet werden. Dann
 arbeitet die Assembly-Analyse mit einem schreibgeschützten Source-Snapshot
 dieser Solution. Symbolsuche, Struktur-, Referenz- und Metrikabfragen beziehen

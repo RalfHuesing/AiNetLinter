@@ -59,11 +59,12 @@ internal static class AssemblySymbolSearch
 
         return new(
             shown,
-            AssemblyNavigationSupport.CreateSummary(
+            AssemblyNavigationSupport.CreateSummary(new AssemblyNavigationSummaryRequest(
                 leaseSet.TotalAssemblyCount,
                 searched,
-                leaseSet.AssembliesTruncated || distinct.Count > shown.Count,
-                diagnostics));
+                leaseSet.AssembliesTruncated,
+                diagnostics,
+                ResultsTruncated: distinct.Count > shown.Count)));
     }
 
     private static async Task<(IReadOnlyList<SymbolLocationEntry> Entries, bool Searched, string? Diagnostic)> SearchLeaseAsync(

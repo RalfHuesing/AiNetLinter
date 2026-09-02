@@ -15,6 +15,12 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 
+internal sealed record FindReferencesRequest(
+    string? SymbolIdentifier,
+    int MaxResults,
+    int Depth,
+    bool SuppressSufficiencyHint = false);
+
 /// <summary>
 /// MCP-Tool <c>find_references</c>: loest einen Symbol-Identifikator (stabile
 /// DocumentationCommentId, Datei:Zeile:Spalte oder qualifizierter/teil-qualifizierter Name) zu
@@ -35,13 +41,26 @@ internal static class FindReferencesTool
     /// liefert einen strukturierten [ERROR]-Antwort statt eines Server-Crashs (Defensiv-Pfad).
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer state, string? symbolIdentifier, int maxResults, int depth, CancellationToken ct)
+        McpCodeGraphServer state,
+        string? symbolIdentifier,
+        int maxResults,
+        int depth,
+        CancellationToken ct) =>
+        await ExecuteAsync(
+            state,
+            new FindReferencesRequest(symbolIdentifier, maxResults, depth),
+            ct).ConfigureAwait(false);
+
+    internal static async Task<CallToolResult> ExecuteAsync(
+        McpCodeGraphServer state,
+        FindReferencesRequest request,
+        CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        if (string.IsNullOrEmpty(symbolIdentifier))
+        if (string.IsNullOrEmpty(request.SymbolIdentifier))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
@@ -51,28 +70,34 @@ internal static class FindReferencesTool
 
         try
         {
-            var (symbol, error) = await ResolveSymbolAsync(solution, symbolIdentifier, ct, state.AssemblySymbolIdentity);
+            var (symbol, error) = await ResolveSymbolAsync(
+                solution,
+                request.SymbolIdentifier,
+                ct,
+                state.AssemblySymbolIdentity);
             if (error is not null) return error;
 
             var warning = await FindSymbolTool.BuildAggregateWarningAsync(solution, ct);
-            var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
+            var normalizedMaxResults = request.MaxResults < 1 ? 1 : request.MaxResults;
             var traversal = await CallGraphTraversal.ExpandAsync(
                 new ReferenceTraversalRequest(
                     solution,
                     symbol!,
-                    depth,
+                    request.Depth,
                     normalizedMaxResults,
                     ct,
                     AssemblySymbolIdentity: state.AssemblySymbolIdentity));
             var formatted = TransitiveCallGraphFormatter.FormatResponse(
                 traversal,
                 traversal.Completeness.TotalCallSiteCount == 0
-                    ? $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"
+                    ? $"Keine Aufrufstellen gefunden fuer '{request.SymbolIdentifier}'"
                     : null);
 
-            var finalBody = TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
-                ? McpSufficiencyHints.Append(formatted.Text)
-                : formatted.Text;
+            var finalBody = request.SuppressSufficiencyHint
+                ? McpSufficiencyHints.AppendDecompiledSignatureOnlyLimitation(formatted.Text)
+                : TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
+                    ? McpSufficiencyHints.Append(formatted.Text)
+                    : formatted.Text;
             var finalText = FindSymbolTool.PrependWarning(warning, finalBody);
             return McpToolResults.Text(finalText, formatted.Traversal);
         }
@@ -80,7 +105,7 @@ internal static class FindReferencesTool
         {
             return McpToolResults.CompilationError(
                 $"Unerwarteter Fehler in find_references: {ex.Message}",
-                context: symbolIdentifier);
+                context: request.SymbolIdentifier);
         }
     }
 

@@ -439,7 +439,7 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry
         RemoveFailedEntry(canonicalPath, creation);
         return new(
             null,
-            McpToolResults.RecoverableWorkspaceDiagnostic(
+            McpToolResults.NativePeAssembly(
                 failure.Diagnostic.Message,
                 canonicalPath));
     }

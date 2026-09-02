@@ -157,15 +157,22 @@ internal static class SymbolGraphToolRegistrations
                         new AnalysisToolDispatch(ProjectCall: lease => GetImpactTool.ExecuteAsync(
                             lease.Server,
                             new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
-                            ct)),
+                            ct),
+                            AssemblySessionCall: lease => GetImpactTool.ExecuteAsync(
+                                lease.Server,
+                                new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
+                                ct),
+                            ExpandAssemblyReferences: true),
                         ct)),
-            McpToolRegistrationOptions.ReadOnlyTool("get_impact", GetImpactDescription)));
+            McpToolRegistrationOptions.TargetedReadOnlyTool("get_impact", GetImpactDescription)));
     }
 
     private const string GetImpactDescription =
         "Wann nutzen: pruefen, was eine geplante oder bereits gemachte Aenderung betrifft. " +
         "Ohne gitRef/symbolIdentifier: uncommittete lokale Aenderungen (Default). Sonst gitRef (Commit-Ref) " +
         "ODER symbolIdentifier (Format wie find_references) angeben, nie beide. " +
+        "Bei targetType='assembly' ist nur symbolIdentifier zulaessig; gitRef und leerer Aufruf " +
+        "werden als recoverable InvalidArgument beantwortet. " +
         "detailLevel: 'callers' [Default] oder 'change-context' (nur im Git-Diff-Modus zulaessig: " +
         "liefert geaenderte Symbole, Call-Sites, zugeordnete Tests, diffbezogene Violations und dotnet test Filter). " +
         "maxResults: Limit der Trefferliste (Default 50). depth: Traversierungstiefe im Symbol-Branch (Default 1, hard cap 3, hart begrenzt auf 200 besuchte Knoten). " +

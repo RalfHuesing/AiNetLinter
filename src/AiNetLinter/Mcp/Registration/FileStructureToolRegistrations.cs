@@ -167,14 +167,14 @@ internal static class FileStructureToolRegistrations
         AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string[]? filePaths = null, CancellationToken ct = default) =>
+            async (string targetType, string targetPath, string[]? filePaths = null, string? filePath = null, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, ct),
-                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, ct)),
+                            ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, ResolveFilePaths(filePaths, filePath), ct),
+                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, ResolveFilePaths(filePaths, filePath), ct)),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("get_file_skeleton", GetFileSkeletonDescription)));
     }
@@ -182,7 +182,15 @@ internal static class FileStructureToolRegistrations
     private const string GetFileSkeletonDescription =
         "Wann nutzen: Ueberblick ueber Typen und Signaturen einer oder mehrerer C#-Dateien (Batch in 1 Turn) " +
         "ohne die Bodies zu lesen — jede Signatur traegt eine stabile id: fuer einen Folge-Call an get_symbol_body. " +
-        "filePaths: Array von Dateipfaden (auch fuer genau eine Datei), relativ oder absolut.";
+        "filePaths: Array von Dateipfaden (auch fuer genau eine Datei), relativ oder absolut; " +
+        "filePath: String-Alias fuer genau eine Datei, wenn kein filePaths-Array uebergeben wird.";
+
+    private static string[]? ResolveFilePaths(string[]? filePaths, string? filePath) =>
+        filePaths is { Length: > 0 }
+            ? filePaths
+            : string.IsNullOrWhiteSpace(filePath)
+                ? filePaths
+                : [filePath];
 
     private static void AddGetIndexScope(
         McpServerPrimitiveCollection<McpServerTool> tools,

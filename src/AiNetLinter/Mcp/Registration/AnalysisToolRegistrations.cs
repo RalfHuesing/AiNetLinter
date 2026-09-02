@@ -143,7 +143,7 @@ internal static class AnalysisToolRegistrations
         AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? root = null, string? mode = null, int depth = 1, int topN = 10, string? fileFilter = null, CancellationToken ct = default) =>
+            async (string targetType, string targetPath, string? root = null, string? mode = "code_size", int depth = 1, int topN = 10, string? fileFilter = null, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
                     new AnalysisToolCallRequest(
@@ -158,7 +158,7 @@ internal static class AnalysisToolRegistrations
     private const string MetricsTreeDescription =
         "Wann nutzen: Verzeichnishierarchie einer unbekannten/grossen Codebase Ebene fuer Ebene " +
         "erkunden statt Komplett-Dump zu lesen — aggregierte Werte pro Knoten + sortierte " +
-        "Top-N-Kinder. mode: code_size, comment_density, violation_density, complexity. " +
+        "Top-N-Kinder. mode: code_size [Default], comment_density, violation_density, complexity. " +
         "root: Teilbaum-Eingrenzung (Default: Root), depth: Baumtiefe (1-5, Default 1), " +
         "topN: sichtbare Kinder pro Ebene (Default 10), fileFilter: Regex-Filter auf den Pfad.";
 

@@ -67,7 +67,7 @@ public sealed class ManagedAssemblyBinaryTests
         Assert.Equal(nativeAssemblyPath, payload.Context);
         Assert.Contains(".dll oder .exe mit IL", payload.Message, StringComparison.Ordinal);
         Assert.Equal(
-            "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung.",
+            McpToolResults.NativePeAssemblyHint,
             payload.Hint);
         Assert.True(payload.Recoverable);
     }

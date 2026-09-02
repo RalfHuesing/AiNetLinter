@@ -141,15 +141,14 @@ public sealed class McpServerArgumentValidationE2ETests
     }
 
     [Fact]
-    public async Task MetricsTree_MissingMode_ReturnsRecoverableInvalidArgument()
+    public async Task MetricsTree_MissingMode_UsesCodeSizeDefault()
     {
         var result = await _fixture.Client.CallToolAsync(
             "metrics_tree", new Dictionary<string, object?>());
 
         Assert.NotEqual(true, result.IsError);
-        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("mode", textContent.Text, StringComparison.Ordinal);
+        Assert.NotNull(result.StructuredContent);
+        Assert.Equal("code_size", result.StructuredContent!.Value.GetProperty("mode").GetString());
     }
 
     [Fact]
@@ -164,4 +163,3 @@ public sealed class McpServerArgumentValidationE2ETests
         Assert.Contains("helperSymbol", textContent.Text, StringComparison.Ordinal);
     }
 }
-

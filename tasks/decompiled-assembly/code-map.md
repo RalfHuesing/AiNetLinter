@@ -1,5 +1,16 @@
 # Code Map
 
+## Paket-2-Kontextaufnahme
+
+- `src/AiNetLinter/Mcp/Registration/AssemblyAnalysisToolRegistrations.cs` — Schema-/Dispatcher-Einstieg für `inspect_assembly` und `find_assembly_extensions`; `AnalysisToolDispatch.ExpandAssemblyReferences` steuert die tatsächliche Reference-Expansion.
+- `src/AiNetLinter/Mcp/Registration/SymbolGraphToolRegistrations.cs` — Registrierung von `find_symbol`, `find_references`, `get_call_tree`, `get_impact` und weiteren Symbolgraph-Tools; Assembly-Support läuft über `AssemblySessionCall`.
+- `src/AiNetLinter/Mcp/Registration/FileStructureToolRegistrations.cs` und `AnalysisToolRegistrations.cs` — betroffene Schema-/Dispatcher-Verträge von `get_file_skeleton` und `metrics_tree`.
+- `src/AiNetLinter/Mcp/AnalysisToolCall.cs` — gemeinsame Project-/Assembly-Routen, optionale Reference-Expansion und Assembly-Response-Enrichment.
+- `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindReferencesTool.cs`, `GetImpactTool.cs` und `AssemblyNavigationModels.cs` — Assembly-Symbolauflösung, Impact-Route sowie Trunkierungs-/Vollständigkeitsmetadaten.
+- `src/AiNetLinter/Mcp/Tools/NamespaceTree/GetNamespaceTreeTool.cs`, `McpToolResults.cs` und `Assemblies/Analysis/AssemblyAnalysisRegistry.cs` — Assembly-Header und deterministischer native-PE-Fehlervertrag.
+
+Die MCP-first-Aufnahme erfolgte mit `targetType=project` und absolutem Projektroot über `get_file_tree`, `find_symbol` und `get_feature_context` für die relevanten Produktionssymbole. Die aktuelle Matrix enthält 13 Cross-Target-Tools; `get_impact` ist jetzt über `AssemblySessionCall` ergänzt. `inspect_assembly` und `find_assembly_extensions` bleiben zusätzliche Assembly-only-Tools.
+
 ## Primäre Einstiegspunkte
 
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/Bodies/AssemblyDecompiledBodyResolver.cs` — Body-Auflösung, direkt aufgerufen durch `AssemblyDecompilationAdapter`; MCP bestätigte den aktuellen Scope `:16-324` und den direkten Aufrufer in `AssemblyDecompilationAdapter.cs:23`.
@@ -16,7 +27,7 @@
 - `AssemblyReferenceResolver.IdentityMatches` (`:357-361`) toleriert Versionen für `mscorlib`, exakt `System`, `System.*`, `Microsoft.*` und `WindowsBase*`; Kultur und Drittanbieter-Versionen bleiben strikt. `Systemish` bleibt ausgeschlossen.
 - `SymbolIdentifierResolver.TryResolveByStableIdAsync` (`:131-178`) nutzt für Assembly-IDs nach exaktem Match einen eindeutigen, marker-/shape-toleranten Fallback; Parsing und Parameterzählung liegen in den privaten Helfern `:180-266`.
 - `DaemonRuntimeContext.FindProjectSnapshot`, `IDaemonRegistry.FindSnapshot`, `DaemonHost.CreateRuntimeContext`, `GetServerHealthTool.ExecuteDaemonProjectAsync` und `ServerMaintenanceToolRegistrations.ExecuteGetServerHealthAsync` bilden die explizite Daemon-Projekt-Route.
-- Paket-2/3/4-Bereiche sind Non-Goal; die Änderungen bleiben auf Paket 1 und die dafür nötige Daemon-Kontext-Schnittstelle beschränkt.
+- Paket-3/4-Bereiche sind Non-Goal; Paket 2 bleibt auf die Assembly-Tool-Verträge, die benannten Ergonomie-/Ausgabeverträge und die dafür nötigen Instruktions-/Dokumentationsabgleiche beschränkt.
 
 ## Aufrufer und Abhängigkeiten
 
@@ -31,12 +42,12 @@
 ## Relevante Tests, Konfiguration und Dokumentation
 
 - Cache-/Session-Bereich: `AssemblyAnalysisSessionTests.cs` enthält den bestehenden Cache-Hit-Test und `AssemblyDecompilationCache_DifferentFingerprintsKeepDelayedPublishResultUntilReturn`; letzterer startet drei unterschiedliche Fingerprints auf demselben Entry und hält den ersten Return vorübergehend an. `AssemblyDecompilationCache.Locking.cs` enthält die bounded Lock-Registry.
-- Body-/Navigation-Bereich: `AssemblyAnalysisPathContractTests.cs` enthält den Top-Level-/Struct-/Enum-/Record-/Interface-/Getter-/Setter-Test sowie die Regression für zwei gleichartige Properties, einen Indexer und zwei Event-Accessorpaare; `AssemblyDecompiledBodyResolver` ist als Coverage-Symbol markiert.
+- Body-/Navigation-Bereich: `AssemblyAnalysisPathContractTests.cs` enthält den Top-Level-/Struct-/Enum-/Record-/Interface-/Getter-/Setter-Test sowie die Regression für zwei gleichartige Properties, einen Indexer und zwei Event-Accessorpaare; `AssemblyDecompiledBodyResolver` ist als Coverage-Symbol markiert. `AssemblyAnalysisDispatcherIncludeReferencesTests.cs` isoliert die Regression für den expliziten `includeReferences=false`-Default.
 - Framework-Unification: `AssemblyReferenceResolverTests.cs` prüft `mscorlib`, den exakten Namen `System`, `System.*`, `Microsoft.*`, `WindowsBase`/`WindowsBase.*`, Kulturbindung, Drittanbieter-Versionen und `Systemish`-Ähnlichkeit.
 - Stable-ID: `SymbolIdentifierResolverTests.cs` enthält jetzt die Marker-Regression neben den bestehenden 11 Tests.
 - Daemon-Health: `WiringProjectContractTests.cs` enthält den Tool-Level-Proxy-Kontext-Test mit einem daemon-residenten Snapshot; die private `ServerMaintenanceToolRegistrations`-Closure wird dabei nicht direkt ausgeführt. `GetServerHealthToolTests.cs` behält die 7 Integrationstests für die öffentliche Health-Projektion.
 - Testverträge und Kategorien bleiben im bestehenden Fast-/Integration-Testaufbau; der neue Cache-Test ist gezielt und nicht als Stress-Test markiert.
-- `tasks/decompiled-assembly/Konzept.md` und `roadmap.md` sind Navigationshilfe; `rules.json`, `Docs/`, `README.md` und `instructions.md` sind für Paket 1 nur zu ändern, falls die tatsächliche Umsetzung einen dort dokumentierten Vertrag berührt.
+- `tasks/decompiled-assembly/Konzept.md` und `roadmap.md` sind Navigationshilfe; `roadmap.md`, `execution-log.md` und `tech-debt.md` bleiben unverändert. `Docs/agent-api.md`, `README.md`, `Docs/configuration.md` und `ServerInstructions.cs` wurden nur für den verifizierten aktuellen Vertrag angepasst. Da die Baseline keine versionierte `instructions.md` enthielt, wurde sie als aktuelle Capability-Instruktion neu angelegt.
 
 ## Invarianten, Risiken und Unsicherheiten
 
@@ -46,10 +57,22 @@
 - Skeleton-ID-Fallback akzeptiert keine stale Assembly-Identität und liefert bei fehlender oder mehrdeutiger Zuordnung weiterhin `null` für den bestehenden Fallbackpfad.
 - Der Daemon-Kontext referenziert für gezielte Projekt-Health den residenten `ProjectSnapshot`; ohne Snapshot bleibt `PROJECT_NOT_INITIALIZED` korrekt.
 - Die MCP-Caller-Liste des `AssemblyReferenceResolver` war bei 20/39 gekappt; dieser bekannte Evidenzrest bleibt als Risiko dokumentiert.
+- `find_assembly_extensions` darf Reference-Sessions nur bei explizitem `includeReferences=true` öffnen; fehlend/null bedeutet `false`.
+- `filePath` ist ein String-Fallback für fehlendes/leer geliefertes `filePaths`; unbekannte explizite `metrics_tree.mode`-Werte bleiben Fehler, fehlend/null wird `code_size`.
+- Native PE bleibt metadata-only und erhält einen recoverable, kontextualisierten Fehler ohne generischen Retry-Hinweis. `find_assembly_extensions` expandiert Referenzen nur bei explizitem `includeReferences=true`; `get_impact` erlaubt für Assemblys ausschließlich `symbolIdentifier` und expandiert seine Impact-Abhängigkeiten intern.
 
 ## Verifikation
 
 - MCP-first-Kontext am 2026-09-02: `get_feature_context` mit `targetType=project` und absolutem Projektroot für die fünf Ausgangssymbole; alle wurden aufgelöst und meldeten 0 offene Violations. Nach den Änderungen bestätigten die fünf zentralen Feature-Kontexte erneut 0 Datei-/Symbol-Violations; `find_references` meldete vollständige, nicht trunkierte direkte Aufruferlisten für Publish (3), Health-Proxy (2), Snapshot-Zugriff (2), IdentityMatches (5) und Stable-ID (5).
 - Vor der abschließenden whitespace-only Codeänderung: vollständige `FastTests --filter Category!=Stress` 2363 bestanden, 2 übersprungen; `IntegrationTests --filter Category!=Stress` 378 bestanden, 1 fehlgeschlagen wegen des bestehenden Live-Safeguard-Korridors (`Score 1,154... < 5,0`). Nach der letzten Codeänderung liefen die fokussierten Body-/Cache-/Resolver-/Cleanup-Tests 33/33 grün und `dotnet build --no-restore` mit 0 Warnungen/0 Fehlern. MCP-Impact: 6 Dateien/16 Symbole/0 Violations; `find_duplicates`: 0 Cluster bei 1509 Methoden; `find_magic_values`: 0 Treffer; `find_dead_code`: 0 High- und 37 Low-Confidence-Kandidaten.
-- Abschluss-Audit mit `targetType=project`, absolutem Projektroot und MCP-Scope `src/AiNetLinter/Mcp`: `find_duplicates` 0 Cluster bei 1504 Methoden; `find_magic_values` 0 Treffer; `find_dead_code` 37 Low-Confidence-Kandidaten, 0 High-Confidence-Kandidaten (nicht sicher löschbar); `safeguard` 1,0/10 mit 6 bestehenden `AIContextFootprint`-Warnungen in Paket-3-nahen Typen. Diese Befunde wurden nicht in Paket 1 hineingezogen.
-- Der abschließende gezielte `get_violations`-Check wurde nach der letzten Codeänderung mit `targetType=project`, absolutem Projektroot, `scopeFilter=src/AiNetLinter/Mcp`, `maxResults=200`, `includeSnippet=false` und `contextLines=0` ausgeführt: 6 Warnungen, 0 Fehler; alle 6 Warnungen betreffen bestehende `AIContextFootprint`-Befunde außerhalb der geänderten Paket-1-Dateien.
+- Historischer Paket-1-Abschluss-Audit mit `targetType=project`, absolutem Projektroot und MCP-Scope `src/AiNetLinter/Mcp`: `find_duplicates` 0 Cluster bei 1504 Methoden; `find_magic_values` 0 Treffer; `find_dead_code` 37 Low-Confidence-Kandidaten, 0 High-Confidence-Kandidaten (nicht sicher löschbar); `safeguard` 1,0/10 mit 6 bestehenden `AIContextFootprint`-Warnungen in Paket-3-nahen Typen. Diese Befunde wurden nicht in Paket 2 hineingezogen.
+- Der abschließende gezielte `get_violations`-Check wurde nach der letzten Codeänderung mit `targetType=project`, absolutem Projektroot, `scopeFilter=src/AiNetLinter/Mcp`, `maxResults=200`, `includeSnippet=false` und `contextLines=0` ausgeführt: 6 `AIContextFootprint`-Warnungen, 0 Fehler; die Befunde sind bestehende bzw. architektonische Footprint-Themen (einer liegt im geänderten Helper `AssemblyNavigationSupport`) und erfordern keinen sicheren Paket-2-Kurzfix.
+
+### Paket-2-Abschlussstand
+
+- Implementiert und getestet: `includeReferences`-Schema/DTO/Dispatcher samt echter Reference-Expansion, Assembly-`get_impact` über `AssemblySessionCall`, `filePath`-Alias, `metrics_tree`-Default `code_size`, Assembly-Namespace-Header, Signature-only-Einschränkung, deterministischer native-PE-Fehler sowie getrennte `assembliesTruncated`-/`resultsTruncated`-Flags.
+- Instruktionen und Dokumentation spiegeln die verifizierte 13-Tool-Cross-Target-Matrix wider; `memberNames` ist als exakte, case-insensitive OR-Filter dokumentiert. `.exe`-Targets sind für verwaltete Assemblies eingeschlossen.
+- Nach der letzten Codeänderung: gezielte Fast-Regressionen `dotnet test src/AiNetLinter.FastTests --no-build --filter "FullyQualifiedName~AssemblyAnalysisDispatcherCapabilityTests|FullyQualifiedName~AssemblyAnalysisRouteTests|FullyQualifiedName~AssemblyAnalysisPathContractTests|FullyQualifiedName~AssemblyNavigationResponseContractTests|FullyQualifiedName~WiringToolCollectionContractTests|FullyQualifiedName~WiringProjectContractTests|FullyQualifiedName~ManagedAssemblyBinaryTests|FullyQualifiedName~McpToolResultsTests|FullyQualifiedName~MetricsTreeToolTests|FullyQualifiedName~GetFileSkeletonToolTests|FullyQualifiedName~SymbolGraphToolRegistrationsTests|FullyQualifiedName~GetImpactToolTests|FullyQualifiedName~FindReferencesToolTests|FullyQualifiedName~DaemonHostMcpContractTests" --logger "console;verbosity=minimal"` — 130/130 bestanden; gezielte Integration-/Daemon-Regressionen `dotnet test src/AiNetLinter.IntegrationTests --no-build --filter "FullyQualifiedName~McpServerCommandGetImpactTests|FullyQualifiedName~McpServerCommandContractTests|FullyQualifiedName~McpServerArgumentValidationE2ETests|FullyQualifiedName~McpServerAssemblyHealthE2ETests|FullyQualifiedName~DaemonHostMcpProcessContractTests|FullyQualifiedName~GetImpactToolIntegrationTests" --logger "console;verbosity=minimal"` — 54/54 bestanden; `dotnet build --no-restore` — 0 Warnungen/0 Fehler.
+- Repository-Gates nach der letzten Codeänderung: `dotnet test src/AiNetLinter.FastTests --filter "Category!=Stress" --logger "console;verbosity=minimal"` — 2368/2370 bestanden, 2 bewusst übersprungen; `dotnet test src/AiNetLinter.IntegrationTests --filter "Category!=Stress" --logger "console;verbosity=minimal"` — 381/382 bestanden, 0 übersprungen, ein bekannter Live-Safeguard-Korridor-Fehler (Score 1,155… < 5,0) in `McpLiveRepositoryTests.LiveDogfood_Safeguard_ReturnsResults`.
+- Audit mit `targetType=project`, absolutem Projektroot und Scope `src/AiNetLinter/Mcp`: `find_duplicates` — 0 Cluster/1510 Methoden; `find_dead_code` mit `maxResults=10` — 37 LOW, 0 HIGH, heuristisch und nicht sicher löschbar; `find_magic_values` mit `minOccurrences=2`, `maxResults=20` — 6 Einträge (12 Vorkommen), alles bestehende bzw. bewusst nicht scope-erweiterte Befunde. Kein Audit-Fix erforderlich.
+- Der finale gezielte `get_violations`-Check wurde nach der letzten Codeänderung mit `targetType=project`, absolutem Projektroot, `scopeFilter=src/AiNetLinter/Mcp`, `maxResults=200`, `includeSnippet=false` und `contextLines=0` ausgeführt: 6 `AIContextFootprint`-Warnungen, 0 Fehler; die paketnahen Komplexitäts-/Parameterverstöße sind behoben.

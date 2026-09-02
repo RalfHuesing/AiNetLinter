@@ -432,7 +432,7 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
                     CancellationToken.None));
         }
 
-        internal async Task<CallToolResult> ExecuteExtensionsAsync()
+        internal async Task<CallToolResult> ExecuteExtensionsAsync(bool includeReferences = true)
         {
             var route = AssemblyAnalysisDispatcher.CreateRoute(registry);
             return await AnalysisToolCall.ExecuteRouted(
@@ -447,8 +447,9 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
                                 null,
                                  null,
                                  null,
-                                 100)),
-                            ExpandAssemblyReferences: true),
+                                 100,
+                                 includeReferences)),
+                            ExpandAssemblyReferences: includeReferences),
                 CancellationToken.None));
         }
 

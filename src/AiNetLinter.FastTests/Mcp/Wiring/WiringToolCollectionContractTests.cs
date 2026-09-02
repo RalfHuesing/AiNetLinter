@@ -78,13 +78,13 @@ public sealed class WiringToolCollectionContractTests
         var projectAndAssembly = new[]
         {
             "dependency_graph", "find_references", "find_symbol", "get_call_tree",
-            "get_class_structure", "get_file_skeleton", "get_namespace_tree", "get_symbol_body",
+            "get_class_structure", "get_file_skeleton", "get_impact", "get_namespace_tree", "get_symbol_body",
             "get_type_hierarchy", "metrics_lookup", "metrics_tree",
         };
         var projectOnly = new[]
         {
             "find_dead_code", "find_duplicates", "find_magic_values", "get_feature_context",
-            "get_file_tree", "get_hotspots", "get_impact", "get_index_scope", "get_test_context",
+            "get_file_tree", "get_hotspots", "get_index_scope", "get_test_context",
             "get_violations", "pattern_detect", "reload_config", "safeguard", "search_pattern",
         };
 
@@ -115,6 +115,34 @@ public sealed class WiringToolCollectionContractTests
 
         Assert.Contains("Projekt- und Assembly-Sessions", tools["get_server_health"].Description, StringComparison.Ordinal);
         Assert.Contains("targetType='assembly'", tools["get_server_health"].Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ToolCollection_AdvertisesP2ArgumentAliasesAndDefaults()
+    {
+        await using var composition = AssemblyAnalysisHostComposition.Create();
+        await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        var tools = McpServerToolCollectionFactory.Build(
+                registry,
+                AnalysisToolCall.CreateTargetRoute(
+                    ProjectAnalysisDispatcher.CreateRoute(registry),
+                    AssemblyAnalysisDispatcher.CreateRoute(composition.Sessions)),
+                assemblyRegistry: composition.Sessions)
+            .ToDictionary(tool => tool.ProtocolTool.Name, tool => tool.ProtocolTool);
+
+        var extensions = tools["find_assembly_extensions"];
+        Assert.Contains("includeReferences", extensions.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Default false", extensions.Description, StringComparison.Ordinal);
+
+        var skeleton = tools["get_file_skeleton"];
+        Assert.Contains("filePaths", skeleton.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("filePath", skeleton.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("String-Alias", skeleton.Description, StringComparison.Ordinal);
+
+        var metrics = tools["metrics_tree"];
+        Assert.Contains("\"mode\"", metrics.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("code_size", metrics.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Default", metrics.Description, StringComparison.Ordinal);
     }
 
     [Fact]

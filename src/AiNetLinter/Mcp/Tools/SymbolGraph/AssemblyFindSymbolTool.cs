@@ -93,7 +93,8 @@ internal static class AssemblyFindSymbolTool
         markdown.Heading(3, "Assembly-Referenzsuche").BlankLine();
         markdown.Line(
             $"includeReferences=true; Assemblies: {summary.SearchedAssemblyCount} von {summary.TotalAssemblyCount}; " +
-            $"Vollständigkeit: {summary.Completeness}");
+            $"Vollständigkeit: {summary.Completeness}; " +
+            $"Ergebnisse gekürzt: {summary.ResultsTruncated}");
         foreach (var diagnostic in summary.Diagnostics) markdown.Line($"- {diagnostic}");
         return McpToolResults.Text(
             markdown.Build().TrimEnd(),

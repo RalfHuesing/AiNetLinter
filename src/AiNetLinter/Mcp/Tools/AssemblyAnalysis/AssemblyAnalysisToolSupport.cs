@@ -63,9 +63,13 @@ internal static class AssemblyAnalysisToolSupport
             ct);
         if (context is null)
         {
-            return new(fullPath, null, McpToolResults.RecoverableWorkspaceDiagnostic(
-                error ?? "Assembly konnte nicht analysiert werden.",
-                context: fullPath));
+            var message = error ?? "Assembly konnte nicht analysiert werden.";
+            var result = message.Contains(
+                    AssemblyReferenceResolver.NativeMetadataFailureMessage,
+                    StringComparison.Ordinal)
+                ? McpToolResults.NativePeAssembly(message, fullPath)
+                : McpToolResults.RecoverableWorkspaceDiagnostic(message, context: fullPath);
+            return new(fullPath, null, result);
         }
 
         return new(fullPath, context, null);

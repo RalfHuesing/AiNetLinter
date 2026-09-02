@@ -26,9 +26,11 @@ internal static class AssemblyFindReferencesTool
             ? ExecuteWithReferencesAsync(lease, request, cancellationToken)
             : FindReferencesTool.ExecuteAsync(
                 lease.Server,
-                request.SymbolIdentifier,
-                request.MaxResults,
-                request.Depth,
+                new FindReferencesRequest(
+                    request.SymbolIdentifier,
+                    request.MaxResults,
+                    request.Depth,
+                    SuppressSufficiencyHint: IsSignatureOnly(lease)),
                 cancellationToken);
 
     private static async Task<CallToolResult> ExecuteWithReferencesAsync(
@@ -65,9 +67,11 @@ internal static class AssemblyFindReferencesTool
                 traversal.Completeness.TotalCallSiteCount == 0
                     ? $"Keine Aufrufstellen gefunden fuer '{request.SymbolIdentifier}'"
                     : null);
-            var finalBody = TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
-                ? McpSufficiencyHints.Append(formatted.Text)
-                : formatted.Text;
+            var finalBody = IsSignatureOnly(lease)
+                ? McpSufficiencyHints.AppendDecompiledSignatureOnlyLimitation(formatted.Text)
+                : TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
+                    ? McpSufficiencyHints.Append(formatted.Text)
+                    : formatted.Text;
             return McpToolResults.Text(finalBody, formatted.Traversal);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -77,4 +81,10 @@ internal static class AssemblyFindReferencesTool
                 context: $"{request.SymbolIdentifier}; includeReferences=true");
         }
     }
+
+    private static bool IsSignatureOnly(AssemblyAnalysisLease lease) =>
+        string.Equals(
+            lease.Context.Origin.ContentMode,
+            "decompiledSignatureOnly",
+            StringComparison.Ordinal);
 }

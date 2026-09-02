@@ -34,14 +34,7 @@ internal static class MetricsTreeTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        if (string.IsNullOrWhiteSpace(args.Mode))
-        {
-            return McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'mode' fehlt oder ist leer.",
-                hint: "Gueltige Werte: code_size, comment_density, violation_density, complexity.");
-        }
-
-        var parsedMode = MetricsTreeModeParser.TryParse(args.Mode);
+        var parsedMode = MetricsTreeModeParser.TryParse(args.Mode ?? "code_size");
         if (parsedMode is null)
         {
             return McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument,

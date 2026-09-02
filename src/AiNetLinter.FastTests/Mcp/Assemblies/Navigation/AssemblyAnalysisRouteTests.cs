@@ -195,6 +195,24 @@ public sealed class AssemblyAnalysisRouteTests
         Assert.Equal("partial", symbolPayload.GetProperty("navigation").GetProperty("completeness").GetString());
         Assert.NotEmpty(symbolPayload.GetProperty("navigation").GetProperty("diagnostics").EnumerateArray());
 
+        var impactResult = await AnalysisToolCall.ExecuteRouted(
+            route,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest("assembly", rootPath),
+                new AnalysisToolDispatch(
+                    AssemblySessionCall: lease => GetImpactTool.ExecuteAsync(
+                        lease.Server,
+                        new GetImpactInput(null, "Probe.Root.Read", 50, 1),
+                        CancellationToken.None),
+                    ExpandAssemblyReferences: true),
+                CancellationToken.None));
+
+        Assert.NotEqual(true, impactResult.IsError);
+        var impactPayload = impactResult.StructuredContent!.Value;
+        Assert.Equal("assembly", impactPayload.GetProperty("analysis").GetProperty("targetType").GetString());
+        Assert.Equal("decompiled", impactPayload.GetProperty("analysis").GetProperty("origin").GetString());
+        Assert.DoesNotContain("ASSEMBLY_TARGET_UNSUPPORTED", Text(impactResult), StringComparison.Ordinal);
+
         var referenceResult = await AnalysisToolCall.ExecuteRouted(
             route,
             new AnalysisToolCallRequest(
@@ -233,6 +251,33 @@ public sealed class AssemblyAnalysisRouteTests
         Assert.Contains("assembly=", Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(treeResult.Content)).Text, StringComparison.Ordinal);
         var treePayload = treeResult.StructuredContent!.Value;
         Assert.True(treePayload.GetProperty("navigation").GetProperty("includeReferences").GetBoolean());
+    }
+
+    [Fact]
+    public async Task AssemblyRoute_GetImpactWithoutSymbolReturnsRecoverableInvalidArgument()
+    {
+        using var temp = TestTempDirectory.Create("assembly-route-impact-invalid-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ImpactInvalidProbe",
+            "namespace Probe; public sealed class Root { public int Read() => 1; }");
+        await using var registry = new AssemblyAnalysisRegistry();
+
+        var result = await AnalysisToolCall.ExecuteRouted(
+            AssemblyAnalysisDispatcher.CreateRoute(registry),
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest("assembly", assemblyPath),
+                new AnalysisToolDispatch(
+                    AssemblySessionCall: lease => GetImpactTool.ExecuteAsync(
+                        lease.Server,
+                        new GetImpactInput(null, null, 50, 1),
+                        CancellationToken.None)),
+                CancellationToken.None));
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Contains("symbolIdentifier", Text(result), StringComparison.Ordinal);
+        Assert.DoesNotContain("ASSEMBLY_TARGET_UNSUPPORTED", Text(result), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -318,10 +363,15 @@ public sealed class AssemblyAnalysisRouteTests
         var payload = result.StructuredContent!.Value;
         var navigation = payload.GetProperty("navigation");
         Assert.Equal("partial", navigation.GetProperty("completeness").GetString());
+        Assert.False(navigation.GetProperty("assembliesTruncated").GetBoolean());
+        Assert.True(navigation.GetProperty("resultsTruncated").GetBoolean());
         Assert.True(
             navigation.GetProperty("diagnostics").EnumerateArray()
                 .Select(item => item.GetString()!)
                 .Any(diagnostic => diagnostic.Contains("Treffer", StringComparison.Ordinal)),
             navigation.GetRawText());
     }
+
+    private static string Text(ModelContextProtocol.Protocol.CallToolResult result) =>
+        Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content)).Text;
 }

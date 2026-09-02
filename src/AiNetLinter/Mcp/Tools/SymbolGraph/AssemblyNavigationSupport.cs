@@ -13,6 +13,13 @@ using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 
+internal sealed record AssemblyNavigationSummaryRequest(
+    int TotalAssemblyCount,
+    int SearchedAssemblyCount,
+    bool AssembliesTruncated,
+    IEnumerable<string> Diagnostics,
+    bool ResultsTruncated = false);
+
 internal static class AssemblyNavigationSupport
 {
     private const int MaxNavigationAssemblies = AssemblyAnalysisResponseLimits.MaxReferenceSessions;
@@ -38,20 +45,17 @@ internal static class AssemblyNavigationSupport
             .Take(MaxNavigationDiagnostics)
             .ToList();
 
-    internal static AssemblyNavigationSummary CreateSummary(
-        int totalAssemblyCount,
-        int searchedAssemblyCount,
-        bool assembliesTruncated,
-        IEnumerable<string> diagnostics)
+    internal static AssemblyNavigationSummary CreateSummary(AssemblyNavigationSummaryRequest request)
     {
-        var distinct = DistinctDiagnostics(diagnostics);
+        var distinct = DistinctDiagnostics(request.Diagnostics);
         return new(
             true,
-            totalAssemblyCount,
-            searchedAssemblyCount,
-            assembliesTruncated,
-            !assembliesTruncated && distinct.Count == 0 ? "complete" : "partial",
-            distinct);
+            request.TotalAssemblyCount,
+            request.SearchedAssemblyCount,
+            request.AssembliesTruncated,
+            !request.AssembliesTruncated && !request.ResultsTruncated && distinct.Count == 0 ? "complete" : "partial",
+            distinct,
+            ResultsTruncated: request.ResultsTruncated);
     }
 
     internal static AssemblyNavigationSummary MergeSummaries(
@@ -59,6 +63,7 @@ internal static class AssemblyNavigationSupport
         AssemblyNavigationSummary second)
     {
         var assembliesTruncated = first.AssembliesTruncated || second.AssembliesTruncated;
+        var resultsTruncated = first.ResultsTruncated || second.ResultsTruncated;
         var diagnostics = DistinctDiagnostics(first.Diagnostics.Concat(second.Diagnostics));
         return new(
             first.IncludeReferences || second.IncludeReferences,
@@ -66,12 +71,14 @@ internal static class AssemblyNavigationSupport
             Math.Max(first.SearchedAssemblyCount, second.SearchedAssemblyCount),
             assembliesTruncated,
             !assembliesTruncated
+                && !resultsTruncated
                 && string.Equals(first.Completeness, "complete", StringComparison.Ordinal)
                 && string.Equals(second.Completeness, "complete", StringComparison.Ordinal)
                 && diagnostics.Count == 0
                 ? "complete"
                 : "partial",
-            diagnostics);
+            diagnostics,
+            ResultsTruncated: resultsTruncated);
     }
 
     internal static IReadOnlyList<string> DistinctDiagnostics(IEnumerable<string> diagnostics) =>

@@ -96,6 +96,29 @@ public sealed class AssemblyAnalysisPathContractTests
     }
 
     [Fact]
+    public async Task AssemblyRoute_NamespaceTreeUsesAssemblyOverviewHeader()
+    {
+        using var temp = TestTempDirectory.Create("assembly-namespace-header-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "NamespaceHeaderProbe",
+            "namespace Probe; public sealed class Document { public int Value => 1; }");
+        await using var registry = new AssemblyAnalysisRegistry();
+
+        var result = await DispatchAsync(
+            registry,
+            assemblyPath,
+            lease => GetNamespaceTreeTool.ExecuteAsync(
+                lease.Server,
+                new GetNamespaceTreeInput(),
+                CancellationToken.None));
+
+        var text = Text(result);
+        Assert.Contains("# Assembly Overview: NamespaceHeaderProbe", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("# Solution Overview:", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task AssemblyRoute_ResolvesAccessorBodiesByAssociatedPropertyIndexerAndEvent()
     {
         using var temp = TestTempDirectory.Create("assembly-associated-accessor-");

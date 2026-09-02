@@ -29,7 +29,8 @@ internal sealed record FindAssemblyExtensionsArguments(
     string? ReceiverType,
     string? ExtensionName,
     string? Namespace,
-    int MaxResults);
+    int MaxResults,
+    bool IncludeReferences = false);
 
 internal sealed record AssemblyInspectionOptions(
     string? NamespaceFilter,

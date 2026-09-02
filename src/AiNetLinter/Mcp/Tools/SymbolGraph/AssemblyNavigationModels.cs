@@ -38,7 +38,8 @@ internal sealed record AssemblyNavigationSummary(
     int DiagnosticTotalCount = 0,
     int DiagnosticShownCount = 0,
     bool DiagnosticsTruncated = false,
-    IReadOnlyList<string>? DiagnosticsTruncatedBy = null);
+    IReadOnlyList<string>? DiagnosticsTruncatedBy = null,
+    bool ResultsTruncated = false);
 
 internal sealed record AssemblyCallTreeResult(
     MetricsTreeNode Root,

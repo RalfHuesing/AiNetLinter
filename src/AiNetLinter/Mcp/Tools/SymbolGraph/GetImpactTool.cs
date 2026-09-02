@@ -28,7 +28,9 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// <see cref="FindReferencesTool.ResolveSymbolAsync"/> + <see cref="DiffImpactAnalyzer.FindCallSitesAsync"/>.
 /// Optionaler <c>depth</c>-Parameter (Default 1, hard cap 3) wirkt nur im Symbol-Branch; er ist im
 /// gesamten Git-Branch wirkungslos, weil eine Git-Diff-Symboltiefe nicht sinnvoll definiert ist.
-/// Bewusst duenner Dispatch ohne eigene Analyse-/Parsing-Logik. Deckt nur .cs-Dateien ab.
+/// Assembly-Ziele verwenden denselben Symbol-Branch ueber die Assembly-Session und akzeptieren
+/// keine Git-Referenz oder einen leeren Aufruf. Bewusst duenner Dispatch ohne eigene Analyse-/
+/// Parsing-Logik.
 /// </summary>
 internal static class GetImpactTool
 {
@@ -43,13 +45,9 @@ internal static class GetImpactTool
         if (solution is null) return McpToolResults.SolutionNotLoaded();
         var hasGitRef = !string.IsNullOrEmpty(input.GitRef);
         var hasSymbolIdentifier = !string.IsNullOrEmpty(input.SymbolIdentifier);
-        if (hasGitRef && hasSymbolIdentifier)
-        {
-            return McpToolResults.InvalidArgument(
-                "gitRef und symbolIdentifier sind gegenseitig exklusiv — genau einen angeben oder " +
-                "beide weglassen fuer Git-Diff gegen uncommittete Aenderungen.",
-                hint: "Entweder gitRef ODER symbolIdentifier angeben, nie beide.");
-        }
+        var isAssemblyTarget = state.AssemblySymbolIdentity is not null;
+        var targetError = ValidateTargetArguments(isAssemblyTarget, hasGitRef, hasSymbolIdentifier);
+        if (targetError is not null) return targetError;
 
         var detailLevel = ResolveDetailLevel(input.DetailLevel);
         if (detailLevel is null)
@@ -61,20 +59,67 @@ internal static class GetImpactTool
                 hint: "detailLevel weglassen oder einen der erlaubten Werte uebergeben.");
         }
 
-        if (detailLevel == ChangeContextContract.DetailLevelChangeContext && hasSymbolIdentifier)
+        var detailError = ValidateDetailLevel(detailLevel, hasSymbolIdentifier);
+        if (detailError is not null) return detailError;
+
+        return await ExecuteBranchAsync(
+            state,
+            solution,
+            input,
+            detailLevel,
+            hasSymbolIdentifier,
+            ct,
+            counters);
+    }
+
+    private static CallToolResult? ValidateTargetArguments(
+        bool isAssemblyTarget,
+        bool hasGitRef,
+        bool hasSymbolIdentifier)
+    {
+        if (isAssemblyTarget && !hasSymbolIdentifier)
         {
             return McpToolResults.InvalidArgument(
-                "detailLevel='change-context' ist nur im Git-Diff-Modus zulaessig und kann nicht " +
-                "mit symbolIdentifier kombiniert werden.",
-                hint: "Fuer den Kontext eines einzelnen Symbols get_feature_context nutzen.");
+                "Assembly-Ziele benoetigen symbolIdentifier; gitRef-basierter Impact ist fuer Assemblies nicht verfuegbar.",
+                hint: McpToolResults.SymbolIdentifierHint);
         }
 
-        return await (detailLevel == ChangeContextContract.DetailLevelChangeContext
+        if (isAssemblyTarget && hasGitRef)
+        {
+            return McpToolResults.InvalidArgument(
+                "gitRef ist fuer Assembly-Ziele nicht zulaessig; nur symbolIdentifier verwenden.",
+                hint: McpToolResults.SymbolIdentifierHint);
+        }
+
+        return hasGitRef && hasSymbolIdentifier
+            ? McpToolResults.InvalidArgument(
+                "gitRef und symbolIdentifier sind gegenseitig exklusiv — genau einen angeben oder " +
+                "beide weglassen fuer Git-Diff gegen uncommittete Aenderungen.",
+                hint: "Entweder gitRef ODER symbolIdentifier angeben, nie beide.")
+            : null;
+    }
+
+    private static CallToolResult? ValidateDetailLevel(string? detailLevel, bool hasSymbolIdentifier) =>
+        detailLevel == ChangeContextContract.DetailLevelChangeContext && hasSymbolIdentifier
+            ? McpToolResults.InvalidArgument(
+                "detailLevel='change-context' ist nur im Git-Diff-Modus zulaessig und kann nicht " +
+                "mit symbolIdentifier kombiniert werden.",
+                hint: "Fuer den Kontext eines einzelnen Symbols get_feature_context nutzen.")
+            : null;
+
+    private static Task<CallToolResult> ExecuteBranchAsync(
+        McpCodeGraphServer state,
+        Solution solution,
+        GetImpactInput input,
+        string detailLevel,
+        bool hasSymbolIdentifier,
+        CancellationToken ct,
+        DiffImpactCounters? counters) =>
+        detailLevel == ChangeContextContract.DetailLevelChangeContext
             ? ExecuteChangeContextBranchAsync(state, solution, input, ct, counters)
             : hasSymbolIdentifier
                 ? ExecuteSymbolBranchAsync(solution, input, state.AssemblySymbolIdentity, ct)
-                : ExecuteGitRefBranchAsync(solution, input, ct));
-    }
+                : ExecuteGitRefBranchAsync(solution, input, ct);
 
     // Case-insensitive; null/leer waehlt den Bestands-Pfad (callers). Rueckgabe null = unbekannter Wert.
     private static string? ResolveDetailLevel(string? detailLevel)

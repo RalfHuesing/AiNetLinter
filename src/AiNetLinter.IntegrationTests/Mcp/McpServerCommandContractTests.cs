@@ -205,6 +205,10 @@ public sealed class McpServerCommandContractTests
         await AssertTextAsync("get_file_skeleton", new Dictionary<string, object?> { ["filePaths"] = new[] { "src/SymbolGraphMini/Greeter.cs" } }, "Greet");
 
     [Fact]
+    public async Task RunAsync_ValidFixture_GetFileSkeletonAcceptsStringFilePathAlias() =>
+        await AssertTextAsync("get_file_skeleton", new Dictionary<string, object?> { ["filePath"] = "src/SymbolGraphMini/Greeter.cs" }, "Greet");
+
+    [Fact]
     public async Task RunAsync_ValidFixture_GetFileTreeDiscoversPhysicalFilesAndStructuredPayload()
     {
         var host = await fixture.GetHostAsync();

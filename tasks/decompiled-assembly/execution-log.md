@@ -102,3 +102,18 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Diff-Baseline: `cfc4149c`
 - Status: running
 - Scope: Tool-Verträge, Schemas, Assembly-Routen, Ausgabepräzisierung und direkt betroffene Dokumentation gemäß Paket 2; keine Paket-3/4-Arbeit.
+
+## 2026-09-02 – Paket 2 – Implementierer
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: Implementierer
+- Subagent: `01a06116-213f-7ac2-989b-6cfb0be286e4`
+- Diff-Baseline: `56019845`
+- Status: terminal abgeschlossen; Implementierungsstand unreviewt gesichert.
+- Urteil: Paket 2 umgesetzt und kompilierbar.
+- Geänderte Bereiche: `find_assembly_extensions` inklusive `includeReferences=false` und echter Reference-Expansion; Assembly-`get_impact` über `AssemblySessionCall`; `get_file_skeleton`-`filePath`-Alias; `metrics_tree`-Default `code_size`; Assembly-Header; Signature-only-Hinweis; deterministischer Native-PE-Fehler; getrennte Trunkierungsflags; Capability-Instruktionen, `ServerInstructions`, `README.md`, `Docs/agent-api.md`, `Docs/configuration.md`; neue `instructions.md`; zugehörige Fast-/Integration-Tests; aktualisierte `code-map.md`.
+- Verifikation nach der letzten Code-/Teständerung: `dotnet build --no-restore` über 4 Projekte mit 0 Warnungen/0 Fehlern; gezielte Fast-Regressionen 130/130 bestanden; gezielte Integration-/Daemon-Regressionen 54/54 bestanden; vollständige FastTests Nicht-Stress 2368/2370 bestanden, 2 übersprungen; vollständige IntegrationTests Nicht-Stress 381/382 bestanden, ein paketfremder Live-Safeguard-Test blieb wegen Score 1,155… statt Korridor >= 5,0 offen.
+- MCP-/Qualitätsnachweis nach letzter Codeänderung: gezielter `get_violations` mit `targetType=project`, absolutem `targetPath=C:\Daten\Entwicklung\Ralf\AiNetLinter`, `scopeFilter=src/AiNetLinter/Mcp`, `maxResults=200`, `includeSnippet=false`, `contextLines=0`: 0 Fehler und 6 architektonische `AIContextFootprint`-Warnungen. Der Implementierer führte außerdem den vorgesehenen Audit-Scope aus: keine Duplikate, 0 High-/37 Low-Confidence-Dead-Code-Kandidaten, 6 bestehende Magic-Value-Einträge; keine sichere Audit-Korrektur.
+- Offene Risiken: Die sechs Footprint-Warnungen erfordern Paket-3-Architekturentscheidungen; ein Fast-Test war einmalig timingbedingt rot und bestand bei direkter Wiederholung; Stress-Tests wurden nicht ausgeführt.
+- Code-Map: nach der Kontextaufnahme und den Änderungen aktualisiert. `roadmap.md`, `execution-log.md` und `tech-debt.md` blieben durch den Implementierer unverändert; `git diff --check` war sauber.
+- Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Paket-2-Review.

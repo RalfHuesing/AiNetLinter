@@ -134,6 +134,21 @@ public sealed class MetricsTreeToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_MissingMode_UsesCodeSizeDefault()
+    {
+        var state = NewState();
+
+        var result = await MetricsTreeTool.ExecuteAsync(
+            state, new MetricsTreeToolArgs("src/SymbolGraphMini", null, 1, 10, null), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = JsonSerializer.Deserialize<MetricsTreePayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal("code_size", payload!.Mode);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_CommentDensityMode_ReturnsTreeSortedByRatioAscending()
     {
         var state = NewState();
