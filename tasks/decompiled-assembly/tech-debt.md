@@ -160,7 +160,7 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### SIGONLY-CONSTRUCTOR-EXPRESSION-BODY – Expression-bodied Konstruktor wird fälschlich gestubbt
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 1/5 steht an.
+- Status: aktiv, Versuch 1/5 läuft.
 - Scope/Fundstelle: `AssemblyDecompilationSourceText.ShouldStub(ConstructorDeclarationSyntax)`.
 - Evidenz: Review: fehlende `ExpressionBody`-Prüfung erzeugt einen zusätzlichen Block neben `=>` und damit ungültigen dekompilierten C#-Code.
 - Disposition: `fix-now`

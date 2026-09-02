@@ -277,6 +277,17 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Code-Map: ausschließlich konkrete Scope-/Historienangaben korrigiert; kein Produktions-/Testcode geändert.
 - Nächste Aktion: frischer Implementierer für `SIGONLY-CONSTRUCTOR-EXPRESSION-BODY`, Versuch 1/5.
 
+## 2026-09-02 – Paket 3 – Korrekturversuch 1 – Implementierer running
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: wird nach Delegation ergänzt
+- Diff-Baseline: `8f297a6b`
+- Anlass: P1 `SIGONLY-CONSTRUCTOR-EXPRESSION-BODY`.
+- Scope: Expression-bodied Konstruktoren vom Signature-only-Stubben ausschließen und direkte Negativregression ergänzen; keine Paket-4-Ausweitung und keine Release-/Live-MCP-Verifikation.
+- MCP-Hinweis: Laufender Server ist älter als der Working Tree; nicht als Feature-Nachweis verwenden.
+- Status: running
+
 ## 2026-09-02 – Paket 3 – Implementierer
 
 - Run-ID: `decompiled-assembly-20260902`
