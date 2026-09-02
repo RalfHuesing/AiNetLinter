@@ -86,7 +86,10 @@ internal static class FeatureContextFormatter
         {
             foreach (var call in callers.CallSites)
             {
-                sb.AppendLine($"- `{call.FilePath}:{call.Line}` — Aufruf in `{call.ProjectName}`");
+                var callerDesc = !string.IsNullOrEmpty(call.CallerMemberName)
+                    ? $"`{call.CallerMemberName}()` in `{call.ProjectName}`"
+                    : $"Aufruf in `{call.ProjectName}`";
+                sb.AppendLine($"- `{call.FilePath}:{call.Line}` — {callerDesc}");
             }
 
             if (callers.IsTruncated)

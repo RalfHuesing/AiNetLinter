@@ -144,6 +144,8 @@ public sealed class GetFeatureContextToolTests
         // 3. Callers
         Assert.Contains("## 3. Direkte Aufrufer", text);
         Assert.Contains("Consumer.cs", text);
+        Assert.Contains("Consumer.Run()", text);
+        Assert.Contains("Consumer.RunOther()", text);
 
         // 4. Test-Kontext
         Assert.Contains("## 4. Test-Kontext (statische Test-Zuordnung", text);

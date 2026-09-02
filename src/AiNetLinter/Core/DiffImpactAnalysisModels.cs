@@ -86,3 +86,45 @@ internal sealed class DiffImpactCounters
     /// </summary>
     public int LintRuns;
 }
+
+/// <summary>
+/// Interne Paarung eines geaenderten Roslyn-Symbols mit seinem strukturierten Eintrag — der
+/// Eintrag geht ins <see cref="DiffImpactAnalysis"/>-Ergebnisobjekt, das Symbol in die
+/// Call-Site-Suche.
+/// </summary>
+internal sealed record ChangedSymbolMatch(ISymbol Symbol, ChangedSymbolEntry Entry);
+
+/// <summary>
+/// Eingangsdaten eines Analyse-Kern-Laufs: Solution, Ziel-Pfad, Git-Ref, Protokollierung und der
+/// Symbolermittlungs-Scope (<see cref="DiffSymbolScope"/>) — Parameter-Object fuer den gemeinsamen
+/// Kern beider benannter Eintrittspunkte. Die Zaehler sind optional (Null-Verhalten ohne Uebergabe).
+/// <see cref="ChangedSymbolCap"/> ist die Obergrenze GEZEIGTER geaenderter Symbole; die Kappung
+/// greift im Kern VOR der Referenz-Stufe. Default <see cref="int.MaxValue"/> = unbegrenzt
+/// (Bestandsverhalten beider Scopes).
+/// </summary>
+internal sealed record DiffAnalysisRequest(
+    Solution Solution,
+    string TargetPath,
+    string? GitSinceRef,
+    bool Verbose,
+    DiffSymbolScope Scope,
+    DiffImpactCounters? Counters = null,
+    int ChangedSymbolCap = int.MaxValue);
+
+/// <summary>
+/// StructuredContent-Eintrag fuer <c>find_references</c>/<c>get_impact</c> — eine Aufrufstelle
+/// eines Symbols (Pfad, Zeile, aufgerufenes Symbol, Projekt). 1:1-Struktur zum Text-Format von
+/// <see cref="DiffImpactAnalyzer.FormatCallSite"/>.
+/// </summary>
+internal sealed record CallSiteEntry(string FilePath, int Line, string SymbolName, string ProjectName, string? CallerMemberName = null);
+
+/// <summary>
+/// Signalisiert, dass ein explizit angegebener <c>gitRef</c> von <c>git diff</c> nicht aufgeloest
+/// werden konnte (Tippfehler, geloeschter Branch, unbekannte Commit-Ref). Getrennt von einem
+/// leeren-aber-validen Diff, damit Aufrufer (MCP <c>get_impact</c>) einen
+/// falschen gitRef nicht mit "keine Aenderungen" verwechseln.
+/// </summary>
+internal sealed class GitDiffFailedException(string gitRef, string gitStdErr) : Exception(gitStdErr)
+{
+    internal string GitRef { get; } = gitRef;
+}

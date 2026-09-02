@@ -406,25 +406,38 @@ public sealed class DiffImpactAnalyzer
     internal static async Task<List<CallSiteEntry>> FindCallSiteEntriesAsync(ISymbol symbol, Solution solution)
     {
         var entries = new List<CallSiteEntry>();
-        var references = await SymbolFinder.FindReferencesAsync(symbol, solution);
+        var references = await SymbolFinder.FindReferencesAsync(symbol, solution).ConfigureAwait(false);
+        var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
 
         foreach (var reference in references)
         {
             foreach (var location in reference.Locations)
             {
                 var lineSpan = location.Location.GetLineSpan();
-                var filePath = lineSpan.Path;
+                var relativePath = PathNormalizer.ToRelative(outputRoot, lineSpan.Path);
                 var line = lineSpan.StartLinePosition.Line + 1;
-
-                var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-                var relativePath = PathNormalizer.ToRelative(outputRoot, filePath);
+                var callerMemberName = await ResolveCallerMemberNameAsync(location).ConfigureAwait(false);
 
                 entries.Add(new CallSiteEntry(
-                    relativePath, line, FormatMemberDisplayName(symbol), location.Document.Project.Name));
+                    relativePath, line, FormatMemberDisplayName(symbol), location.Document.Project.Name, callerMemberName));
             }
         }
 
         return entries;
+    }
+
+    private static async Task<string?> ResolveCallerMemberNameAsync(ReferenceLocation location)
+    {
+        if (location.Document is not { } doc) return null;
+
+        var semanticModel = await doc.GetSemanticModelAsync().ConfigureAwait(false);
+        var enclosingSymbol = semanticModel?.GetEnclosingSymbol(location.Location.SourceSpan.Start);
+        return enclosingSymbol switch
+        {
+            IMethodSymbol m => $"{m.ContainingType?.Name}.{m.Name}",
+            IPropertySymbol p => $"{p.ContainingType?.Name}.{p.Name}",
+            _ => enclosingSymbol?.Name
+        };
     }
 
     /// <summary>Formatiert <see cref="CallSiteEntry"/> identisch zum bisherigen Text-Format von
@@ -445,46 +458,4 @@ public sealed class DiffImpactAnalyzer
 
     private static List<ChangedFileRange> BuildChangedFiles(Dictionary<string, List<HunkRange>> hunkRanges) =>
         hunkRanges.Select(pair => new ChangedFileRange(pair.Key, pair.Value)).ToList();
-}
-
-/// <summary>
-/// Interne Paarung eines geaenderten Roslyn-Symbols mit seinem strukturierten Eintrag — der
-/// Eintrag geht ins <see cref="DiffImpactAnalysis"/>-Ergebnisobjekt, das Symbol in die
-/// Call-Site-Suche.
-/// </summary>
-internal sealed record ChangedSymbolMatch(ISymbol Symbol, ChangedSymbolEntry Entry);
-
-/// <summary>
-/// Eingangsdaten eines Analyse-Kern-Laufs: Solution, Ziel-Pfad, Git-Ref, Protokollierung und der
-/// Symbolermittlungs-Scope (<see cref="DiffSymbolScope"/>) — Parameter-Object fuer den gemeinsamen
-/// Kern beider benannter Eintrittspunkte. Die Zaehler sind optional (Null-Verhalten ohne Uebergabe).
-/// <see cref="ChangedSymbolCap"/> ist die Obergrenze GEZEIGTER geaenderter Symbole; die Kappung
-/// greift im Kern VOR der Referenz-Stufe. Default <see cref="int.MaxValue"/> = unbegrenzt
-/// (Bestandsverhalten beider Scopes).
-/// </summary>
-internal sealed record DiffAnalysisRequest(
-    Solution Solution,
-    string TargetPath,
-    string? GitSinceRef,
-    bool Verbose,
-    DiffSymbolScope Scope,
-    DiffImpactCounters? Counters = null,
-    int ChangedSymbolCap = int.MaxValue);
-
-/// <summary>
-/// StructuredContent-Eintrag fuer <c>find_references</c>/<c>get_impact</c> — eine Aufrufstelle
-/// eines Symbols (Pfad, Zeile, aufgerufenes Symbol, Projekt). 1:1-Struktur zum Text-Format von
-/// <see cref="DiffImpactAnalyzer.FormatCallSite"/>.
-/// </summary>
-internal sealed record CallSiteEntry(string FilePath, int Line, string SymbolName, string ProjectName);
-
-/// <summary>
-/// Signalisiert, dass ein explizit angegebener <c>gitRef</c> von <c>git diff</c> nicht aufgeloest
-/// werden konnte (Tippfehler, geloeschter Branch, unbekannte Commit-Ref). Getrennt von einem
-/// leeren-aber-validen Diff, damit Aufrufer (MCP <c>get_impact</c>) einen
-/// falschen gitRef nicht mit "keine Aenderungen" verwechseln.
-/// </summary>
-internal sealed class GitDiffFailedException(string gitRef, string gitStdErr) : Exception(gitStdErr)
-{
-    internal string GitRef { get; } = gitRef;
 }

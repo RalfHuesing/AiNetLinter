@@ -99,4 +99,19 @@ public sealed class TestDetectorTests
         Assert.NotNull(preferred);
         Assert.Equal("App.Core.Tests", preferred.Name);
     }
+
+    [Theory]
+    [InlineData("CalculatorTests", "Calculator", true)]
+    [InlineData("CalculatorTest", "Calculator", true)]
+    [InlineData("TestCalculator", "Calculator", true)]
+    [InlineData("CalculatorSolutionAnalysisTests", "Calculator", true)]
+    [InlineData("CalculatorCacheTests", "Calculator", true)]
+    [InlineData("CalculatorBroadScopeTests", "Calculator", true)]
+    [InlineData("UnrelatedTests", "Calculator", false)]
+    [InlineData("CalculatorService", "Calculator", false)]
+    public void MatchesTestClassName_ValidatesAffixesAndPrefixes(string testClass, string target, bool expected)
+    {
+        var result = TestDetector.MatchesTestClassName(testClass, target);
+        Assert.Equal(expected, result);
+    }
 }

@@ -240,7 +240,9 @@ public static class TestDetector
             testClassName.Equals(targetTypeName + affix, StringComparison.OrdinalIgnoreCase) ||
             testClassName.StartsWith(targetTypeName + affix, StringComparison.OrdinalIgnoreCase) ||
             testClassName.EndsWith(targetTypeName + affix, StringComparison.OrdinalIgnoreCase) ||
-            testClassName.Contains(targetTypeName + affix, StringComparison.OrdinalIgnoreCase));
+            testClassName.Contains(targetTypeName + affix, StringComparison.OrdinalIgnoreCase))
+            || (testClassName.StartsWith(targetTypeName, StringComparison.OrdinalIgnoreCase)
+                && ClassNameAffixes.Any(affix => testClassName.EndsWith(affix, StringComparison.OrdinalIgnoreCase)));
     }
 
     #endregion
