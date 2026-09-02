@@ -3,8 +3,8 @@
 Primäraufgabe: MCP-Komposition entkoppeln und Qualitätsgrenzen wiederherstellen.
 
 Status: executing  
-current_epic: 1  
-letzter_checkpoint: 9a7afacf  
+current_epic: 2  
+letzter_checkpoint: 3e837436  
 Tech-Debt-Register: `tech-debt.md`  
 
 Der Großkonzept-Modus folgt dem freigegebenen `Konzept.md`. Die Einordnung als
@@ -13,7 +13,7 @@ expliziten Orchestrierungsauftrag ab.
 
 ## Epic 1: Lease-basierte Zustandsgrenze entkoppeln
 
-Status: in_progress
+Status: done
 
 Ziel: Die Assembly-Analyse verwendet an ihrer Lease-Grenze ausschließlich eine
 schlanke Zustandsabstraktion statt des konkreten `McpCodeGraphServer`.
@@ -34,14 +34,15 @@ Muss-/Akzeptanzkriterien:
   weder DI-Container noch `IServiceProvider` werden eingeführt.
 
 Verifikation: fokussierte FastTests, gezieltes `get_violations` nach der
-letzten Codeänderung und Prüfung betroffener Aufrufer.
+letzten Codeänderung und unabhängiger Review des Implementierungsdiffs.
 
-Annahmen/offene Fragen: Das Interface wird nur erweitert, falls die
-MCP-first-Referenzprüfung einen tatsächlich genutzten Lease-Member zeigt.
+Annahmen/offene Fragen: Das Interface wurde nach MCP-first-Referenzprüfung um
+die tatsächlich benötigten Capabilities erweitert; weitere Erweiterungen waren
+nicht erforderlich.
 
 ## Epic 2: Größenlimits und Regressionsschutz bereinigen
 
-Status: open
+Status: in_progress
 
 Ziel: Die konkreten Line-Count-Verstöße werden durch kleine, verhaltensneutrale
 Extraktionen behoben und die entkoppelten Komponenten erhalten passende
