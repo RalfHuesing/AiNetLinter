@@ -10,10 +10,10 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### TD-ASM-ACCESSOR-001 – Accessor-Matching verliert das zugehörige Member
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 2/5 läuft.
+- Status: behoben in Korrekturversuch 2/5.
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/Bodies/AssemblyDecompiledBodyResolver.cs`, Accessor-Matching.
 - Evidenz: Review des Diffs `396e77f1..b3bb2ea8`; ein Descendant-Scan vergleicht nur Accessor-Kinds und kann bei mehreren gleichartigen Properties/Events den falschen Body wählen.
-- Disposition: `fix-now`
+- Disposition: `fixed`
 - Nächster Schritt: Accessor über `AssociatedSymbol` auf den direkten Property-/Indexer-/Event-Member begrenzen und Regressionen ergänzen.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 1 Review, P1-Finding A.
 
@@ -74,7 +74,7 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 - Scope/Fundstelle: `Docs/agent-api.md`, Beschreibung von `find_references` und `get_impact`.
 - Evidenz: Review des Paket-2-Diffs; `get_impact` besitzt weder `includeReferences` noch eine `navigation`-Struktur, obwohl der gemeinsame Abschnitt dies nahelegt.
 - Disposition: `fix-now`
-- Nächster Schritt: `Docs/integration.md` ebenfalls in getrennte, gegen den lokalen Code verifizierte Toolverträge aufteilen.
+- Nächster Schritt: Erledigt; `Docs/agent-api.md` und `Docs/integration.md` sind getrennt und durch Doku-Smoke-Regressionen abgesichert.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 2 Review.
 
 ### DOC-GET-IMPACT-NAVIGATION-ASSERTION-001 – Explizite Negativassertion im Doku-Smoke-Test fehlt

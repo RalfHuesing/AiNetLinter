@@ -171,6 +171,21 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und darf nicht als Feature-Verifikation dienen; Release-/Live-Prüfung bleibt separater Task.
 - Status: running
 
+## 2026-09-02 – Paket 2 – Korrekturversuch 2 – Implementierer
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: `01a06170-85bb-7c00-8539-4d32d2d1ff9d`
+- Diff-Baseline: `cae5b04a`
+- Status: terminal abgeschlossen; Korrekturstand unreviewt gesichert.
+- Urteil: P1-Finding `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE` behoben; kein Produktionscode geändert.
+- Geänderte Bereiche: `Docs/integration.md` trennt `find_references` und `get_impact`; `McpDocumentationSmokeTests.cs` ergänzt eine direkte Abschnittsregression; `code-map.md` aktualisiert.
+- Lokale Evidenz: `SymbolGraphToolRegistrations.cs`, `GetImpactTool.cs` und `GetImpactInput` bestätigen die dokumentierten Parameter und Assembly-Semantik; `rg` findet keine gemeinsame `includeReferences: true`-/`get_impact`-Empfehlung.
+- Verifikation nach der letzten Änderung: Doku-Smoke-Tests 5/5 bestanden; direkte neue Doku-Regression 1/1 bestanden; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` erfolgreich.
+- `get_violations` meldete 0 Befunde, wurde wegen des veralteten MCP-Servers nur als Zusatzdiagnose und nicht als Feature-Nachweis behandelt.
+- Nicht ausgeführt: Release-/Live-Verifikation, vollständige Nicht-Stress-Gates, Paket 3/4 und `safeguard`.
+- Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.
+
 ## 2026-09-02 – Paket 2 – Korrekturversuch 1 – Implementierer
 
 - Run-ID: `decompiled-assembly-20260902`

@@ -111,4 +111,40 @@ public sealed class McpDocumentationSmokeTests
         Assert.DoesNotContain("includeReferences=true", getImpactAssemblySection, StringComparison.Ordinal);
         Assert.Contains("nicht als `get_impact`-Antwortvertrag", getImpactAssemblySection, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void IntegrationGuide_SeparatesFindReferencesAndGetImpactAssemblyOptions()
+    {
+        var docPath = Path.Combine(SolutionRootLocator.Find(), "Docs", "integration.md");
+
+        Assert.True(File.Exists(docPath),
+            $"Doku-Datei nicht gefunden unter '{docPath}'. Bitte Pfad-Aufloesung pruefen.");
+
+        var docText = File.ReadAllText(docPath);
+        var findReferencesStart = docText.IndexOf(
+            "- Methoden-Aufrufer finden", StringComparison.Ordinal);
+        var getImpactStart = docText.IndexOf(
+            "- Impact eines Symbols prüfen", StringComparison.Ordinal);
+        var nextBulletStart = getImpactStart < 0
+            ? -1
+            : docText.IndexOf("- Treffer semantisch einordnen", getImpactStart, StringComparison.Ordinal);
+
+        Assert.True(findReferencesStart >= 0,
+            "Die find_references-Empfehlung im Integrationsleitfaden fehlt.");
+        Assert.True(getImpactStart > findReferencesStart,
+            "Die get_impact-Empfehlung ist nicht von der find_references-Empfehlung getrennt.");
+        Assert.True(nextBulletStart > getImpactStart,
+            "Die get_impact-Empfehlung ist nicht bis zum nächsten Tool begrenzt.");
+
+        var findReferencesSection = docText.Substring(findReferencesStart, getImpactStart - findReferencesStart);
+        var getImpactSection = docText.Substring(getImpactStart, nextBulletStart - getImpactStart);
+
+        Assert.Contains("`find_references(symbolIdentifier: \"MyClass.MyMethod\", depth: 2)`", findReferencesSection, StringComparison.Ordinal);
+        Assert.Contains("`includeReferences: true`", findReferencesSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("`get_impact`", findReferencesSection, StringComparison.Ordinal);
+        Assert.Contains("`get_impact(symbolIdentifier: ..., depth: 2)`", getImpactSection, StringComparison.Ordinal);
+        Assert.Contains("ausschließlich `symbolIdentifier`", getImpactSection, StringComparison.Ordinal);
+        Assert.Contains("Referenzexpansion ist intern festgelegt und nicht öffentlich wählbar", getImpactSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("includeReferences", getImpactSection, StringComparison.Ordinal);
+    }
 }
