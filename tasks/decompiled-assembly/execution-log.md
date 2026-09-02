@@ -186,6 +186,21 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Nicht ausgeführt: Release-/Live-Verifikation, vollständige Nicht-Stress-Gates, Paket 3/4 und `safeguard`.
 - Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.
 
+## 2026-09-02 – Paket 2 – Folge-Review nach Korrekturversuch 2
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Folge-Reviewer
+- Subagent: `01a0617a-03c9-7c52-9504-4faa0a74e00a`
+- Diff-Scope: Doku-Korrektur seit `cae5b04a`, Checkpoint `3d91b3c8`.
+- Status: terminal abgeschlossen.
+- Urteil: `approved`; `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE` ist behoben.
+- Bestätigt: `Docs/agent-api.md` und `Docs/integration.md` trennen `find_references`/`get_impact`; `includeReferences: true` steht nur bei `find_references`; `get_impact` dokumentiert Assembly-`symbolIdentifier`, tatsächliche Rückgabe/Herkunft und schließt `navigation` ausdrücklich aus. Lokaler Code in `SymbolGraphToolRegistrations.cs` und `GetImpactTool.cs` sowie `McpDocumentationSmokeTests` stimmen damit überein; keine direkten Widersprüche in den unmittelbar betroffenen Paket-2-Dokumenten.
+- Verifikation: frische lokale Nachweise des Implementierers (Doku-Smoke 5/5, direkte Regression 1/1, `dotnet build --no-restore` 0 Warnungen/Fehler, `rg` sauber) wegen vollständigem Nachweis nicht redundant wiederholt; `git diff --check` nach Map-Korrektur sauber.
+- MCP-Ausschluss: Alter laufender MCP-Server nicht als Feature-Nachweis verwendet; Release-/Live-Verifikation, vollständige Nicht-Stress-Gates und `safeguard` bleiben separater Task bzw. Abschlussbereich.
+- Code-Map: ausschließlich die veraltete Aussage zu unveränderten Ledger-Dateien korrigiert; kein Produktions-/Testcode geändert.
+- Restrisiko: P2 `DOC-GET-IMPACT-NAVIGATION-ASSERTION-001` bleibt `accepted-deferred`, da keine wörtliche `navigation`-Negativassertion im Smoke-Test vorhanden ist; Dokuvertrag ist dennoch korrekt abgesichert.
+- Nächste Aktion: Paket 2 als `done` abschließen und Paket 3 starten.
+
 ## 2026-09-02 – Paket 2 – Korrekturversuch 1 – Implementierer
 
 - Run-ID: `decompiled-assembly-20260902`

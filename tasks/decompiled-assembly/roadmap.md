@@ -3,10 +3,10 @@
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
 Status: executing  
-Current epic: Paket 2 – Folge-Review nach Korrekturrunde 2/5
-Letzter Commit: Doku-Korrektur unreviewt; Artefakt-Checkpoint `cae5b04a`
+Current epic: Paket 3
+Letzter Commit: Paket-2-Korrektur `3d91b3c8`; Folge-Review abgeschlossen
 Current debt item: `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE`
-Debt attempts: 2
+Debt attempts: 0
 Blocker: keiner
 
 ## Epics
@@ -27,7 +27,7 @@ Blocker: keiner
 - Betroffene Bereiche: Assembly-/SymbolGraph-/FileStructure-/Maintenance-Registrierungen, Formatter, Instructions und relevante Dokumentation.
 - Muss-/Akzeptanzkriterien: `includeReferences`, Assembly-`get_impact`, `filePath`-Alias, `metrics_tree`-Default, Assembly-Header, wahrheitsgetreue Hinweise/Trunkierungsflags und die 13-Tool-Capability-Matrix sind konsistent umgesetzt.
 - Verifikation: Schema-/Dispatcher-/Ergonomie-Tests, Capability-Matrix-Prüfung und gezielter `get_violations`-Nachweis.
-- Status: in_progress
+- Status: done
 
 ### Paket 3: Token-Budget, Response-Limits & Dogfooding
 
@@ -36,7 +36,7 @@ Blocker: keiner
 - Betroffene Bereiche: Assembly-Formatter, Stub-Erzeugung, Assembly-Navigation/Registry/Session-Komponenten.
 - Muss-/Akzeptanzkriterien: Große Assembly-Antworten erhalten Typen und Member unter dem Response-Limit; Signature-Only erzeugt keine unnötige Fehlerflut; die betroffenen Produktionsklassen erfüllen `AIContextFootprint <= 2500`; temporäre Referenz-Sessions belasten den Speicher nicht unbegrenzt.
 - Verifikation: Budget-/Großassembly-Tests, gezielter Linter-/MCP-Nachweis für `AIContextFootprint` und passende Regressionstests.
-- Status: open
+- Status: in_progress
 
 ### Paket 4: Test-Matrix, Regressionen & Nachweise
 

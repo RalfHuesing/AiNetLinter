@@ -2,7 +2,7 @@
 
 ## Korrekturrunde 2/5 — DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE
 
-- Scope bleibt auf die P1-Dokumentationskorrektur begrenzt; keine Produktionscode-, Paket-3/4- oder Release-/Live-Änderung. `roadmap.md`, `execution-log.md` und `tech-debt.md` bleiben unverändert.
+- Scope bleibt auf die P1-Dokumentationskorrektur begrenzt; keine Produktionscode-, Paket-3/4- oder Release-/Live-Änderung. `roadmap.md`, `execution-log.md` und `tech-debt.md` wurden im Checkpoint ausschließlich mit Orchestrator-Status-/Ledger-Buchungen fortgeschrieben.
 - Lokale Source-of-Truth: `SymbolGraphToolRegistrations.AddGetImpact` registriert für `get_impact` die lokalen Parameter `gitRef`, `symbolIdentifier`, `maxResults`, `depth`, `detailLevel`, `maxChangedSymbols` und `maxTestsPerSymbol`; `GetImpactInput` bildet dieselben Eingaben ab. Für Assembly-Ziele verlangt `GetImpactTool.ValidateTargetArguments` `symbolIdentifier`, weist `gitRef` bzw. einen leeren Aufruf ab und verwendet die interne `ExpandAssemblyReferences=true`-Dispatch-Option.
 - `Docs/integration.md` trennt die Agent-Loop-Empfehlung jetzt in einen `find_references`-Abschnitt mit öffentlichem `includeReferences: true` und einen separaten `get_impact`-Abschnitt ohne öffentliche `includeReferences`-Option. Der Assembly-Vertrag nennt dort nur `symbolIdentifier`, `depth` und die tatsächlich lokalen Assembly-Einschränkungen.
 - `McpDocumentationSmokeTests.IntegrationGuide_SeparatesFindReferencesAndGetImpactAssemblyOptions` schützt die beiden Dokuabschnitte direkt aus der lokalen Datei; die bestehende `agent-api.md`-Regression bleibt unverändert.

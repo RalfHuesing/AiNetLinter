@@ -70,10 +70,10 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE – Gemeinsamer Dokuabschnitt vermischt Toolverträge
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 2/5 steht an.
+- Status: behoben in Korrekturversuch 2/5.
 - Scope/Fundstelle: `Docs/agent-api.md`, Beschreibung von `find_references` und `get_impact`.
 - Evidenz: Review des Paket-2-Diffs; `get_impact` besitzt weder `includeReferences` noch eine `navigation`-Struktur, obwohl der gemeinsame Abschnitt dies nahelegt.
-- Disposition: `fix-now`
+- Disposition: `fixed`
 - Nächster Schritt: Erledigt; `Docs/agent-api.md` und `Docs/integration.md` sind getrennt und durch Doku-Smoke-Regressionen abgesichert.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 2 Review.
 
