@@ -258,10 +258,16 @@ internal static class AssemblyDecompiledBodyResolver
         SeparatedSyntaxList<ParameterSyntax> syntaxParameters,
         ImmutableArray<IParameterSymbol> symbolParameters)
     {
-        if (syntaxParameters.Count != symbolParameters.Length) return false;
-        for (var index = 0; index < symbolParameters.Length; index++)
+        if (syntaxParameters.Count < symbolParameters.Length) return false;
+        for (var index = 0; index < syntaxParameters.Count; index++)
         {
             var syntaxParameter = syntaxParameters[index];
+            if (index >= symbolParameters.Length)
+            {
+                if (syntaxParameter.Default is null) return false;
+                continue;
+            }
+
             var symbolParameter = symbolParameters[index];
             if (!string.Equals(
                     GetParameterModifier(syntaxParameter),
@@ -286,12 +292,20 @@ internal static class AssemblyDecompiledBodyResolver
     {
         if (syntaxType is null) return false;
         var normalizedSyntax = NormalizeTypeName(syntaxType);
-        return new[]
+        if (new[]
         {
             symbolType.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat),
             symbolType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
             symbolType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-        }.Select(NormalizeTypeName).Contains(normalizedSyntax, StringComparer.Ordinal);
+        }.Select(NormalizeTypeName).Contains(normalizedSyntax, StringComparer.Ordinal))
+        {
+            return true;
+        }
+
+        if (symbolType.TypeKind != TypeKind.Error) return false;
+        var lastSeparator = normalizedSyntax.LastIndexOf('.');
+        var simpleSyntaxName = normalizedSyntax[(lastSeparator + 1)..];
+        return string.Equals(simpleSyntaxName, symbolType.Name, StringComparison.Ordinal);
     }
 
     private static string NormalizeTypeName(string value) =>

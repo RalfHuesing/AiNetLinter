@@ -207,7 +207,7 @@ public sealed class AssemblyAnalysisPathContractTests
             namespace Probe;
             public sealed class Document
             {
-                public bool Save(bool value) => value;
+                public bool Save(bool includeSub = false, bool saveAll = false) => includeSub || saveAll;
             }
             """);
         await using var registry = new AssemblyAnalysisRegistry();
@@ -238,7 +238,7 @@ public sealed class AssemblyAnalysisPathContractTests
         var bodyText = Text(body);
         Assert.NotEqual(true, body.IsError);
         Assert.Contains($"id: `{methodId}`", bodyText, StringComparison.Ordinal);
-        Assert.Contains("Save(bool value)", bodyText, StringComparison.Ordinal);
+        Assert.Contains("Save(bool includeSub = false, bool saveAll = false)", bodyText, StringComparison.Ordinal);
 
         var callTree = await DispatchAsync(
             registry,

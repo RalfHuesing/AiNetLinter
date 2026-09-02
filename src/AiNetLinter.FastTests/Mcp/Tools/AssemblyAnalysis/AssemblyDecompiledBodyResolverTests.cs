@@ -1,12 +1,14 @@
 #nullable enable
 
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.Bodies;
+using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
 using Xunit;
 
@@ -113,5 +115,82 @@ public sealed class AssemblyDecompiledBodyResolverTests
         Assert.Equal("unavailable", abstractResult.BodyAvailability);
         Assert.Equal("decompiledSignatureOnly", abstractResult.ContentMode);
         Assert.Contains("abstract", abstractResult.Hint, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_MatchesDecompilerDefaultsForMetadataOverloadShapes()
+    {
+        using var temp = TestTempDirectory.Create("assembly-body-resolver-defaults-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "DefaultBodyResolverProbe",
+            """
+            namespace Probe;
+            public sealed class Document
+            {
+                public bool Save(bool includeSub = false, bool saveAll = false) => includeSub || saveAll;
+            }
+            """);
+        var references = new AssemblyReferenceResolver().Resolve(assemblyPath);
+        var resolver = AssemblyDecompiledBodyResolver.Create(
+            assemblyPath,
+            references,
+            AssemblyDecompilationOptions.Default);
+
+        var symbolSources = new[]
+        {
+            "namespace Probe; public sealed class Document { public bool Save() => true; }",
+            "namespace Probe; public sealed class Document { public bool Save(bool includeSub = false) => includeSub; }",
+            "namespace Probe; public sealed class Document { public bool Save(bool includeSub = false, bool saveAll = false) => includeSub || saveAll; }"
+        };
+
+        foreach (var symbolSource in symbolSources)
+        {
+            using var sourceSolution = RoslynTestSolutionFactory.CreateSolution(symbolSource);
+            var compilation = await sourceSolution.Solution.Projects.Single().GetCompilationAsync();
+            Assert.NotNull(compilation);
+            var document = compilation!.GetTypeByMetadataName("Probe.Document")!;
+            var save = Assert.Single(document.GetMembers("Save").OfType<IMethodSymbol>());
+
+            var result = await resolver(save, 80, CancellationToken.None);
+
+            Assert.Equal("available", result.BodyAvailability);
+            Assert.Contains("Save", result.Body, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public async Task ResolveAsync_MatchesUnresolvedParameterTypeInPartialReferences()
+    {
+        using var temp = TestTempDirectory.Create("assembly-body-resolver-partial-");
+        var dependencyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "BodyResolverDependency",
+            "namespace External; public sealed class Dependency { public int Value => 1; }");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "PartialBodyResolverProbe",
+            "namespace Probe; public sealed class Consumer { public int Consume(External.Dependency dependency) => dependency.Value; }",
+            dependencyPath);
+        File.Delete(dependencyPath);
+
+        var references = new AssemblyReferenceResolver().Resolve(assemblyPath);
+        await using var session = new AssemblyAnalysisSession(
+            assemblyPath,
+            cacheRoot: temp.GetPath("cache"));
+        var refresh = await session.RefreshAsync();
+
+        Assert.Equal(AssemblySessionStatus.Partial, refresh.Status);
+        var consumer = session.CurrentGeneration!.Snapshot.Compilation.GetTypeByMetadataName("Probe.Consumer")!;
+        var consume = Assert.Single(consumer.GetMembers("Consume").OfType<IMethodSymbol>());
+        var resolver = AssemblyDecompiledBodyResolver.Create(
+            assemblyPath,
+            references,
+            AssemblyDecompilationOptions.Default);
+
+        var result = await resolver(consume, 80, CancellationToken.None);
+
+        Assert.Equal("available", result.BodyAvailability);
+        Assert.Contains("Consume", result.Body, StringComparison.Ordinal);
     }
 }
