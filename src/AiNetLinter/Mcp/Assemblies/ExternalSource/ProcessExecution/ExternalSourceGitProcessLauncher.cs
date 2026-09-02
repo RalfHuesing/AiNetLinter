@@ -17,6 +17,9 @@ namespace AiNetLinter.Mcp.Assemblies.ExternalSource.ProcessExecution;
 
 internal static class ExternalSourceGitProcessLauncher
 {
+    private const string PrimaryProcessStartExceptionMessage =
+        "Die primäre Prozessstart-Exception konnte nicht erneut ausgelöst werden.";
+
     private const uint CreateNoWindow = 0x08000000;
     private const uint CreateSuspended = 0x00000004;
     private const uint CreateUnicodeEnvironment = 0x00000400;
@@ -52,8 +55,7 @@ internal static class ExternalSourceGitProcessLauncher
             }
 
             ExceptionDispatchInfo.Capture(primaryException).Throw();
-            throw new InvalidOperationException(
-                "Die primäre Prozessstart-Exception konnte nicht erneut ausgelöst werden.");
+            throw new InvalidOperationException(PrimaryProcessStartExceptionMessage);
         }
     }
 
@@ -225,8 +227,7 @@ internal static class ExternalSourceGitProcessLauncher
             ExternalSourceGitProcessStartFailureCleanup.RethrowWithCleanup(
                 primaryException,
                 failures);
-            throw new InvalidOperationException(
-                "Die primäre Prozessstart-Exception konnte nicht erneut ausgelöst werden.");
+            throw new InvalidOperationException(PrimaryProcessStartExceptionMessage);
         }
         finally
         {

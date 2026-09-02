@@ -32,6 +32,8 @@ internal sealed record GetClassStructureArgs(
 /// </summary>
 internal static class GetClassStructureTool
 {
+    private const string PrimaryConstructorParameterKind = "PrimaryCtor-Param";
+
     /// <summary>Default für <c>maxMembers</c> — konsistent mit <see cref="McpTruncation"/>.</summary>
     internal const int DefaultMaxMembers = 50;
 
@@ -139,7 +141,7 @@ internal static class GetClassStructureTool
             "property" or "properties" => string.Equals(memberKind, "Property", StringComparison.OrdinalIgnoreCase),
             "field" or "fields" => string.Equals(memberKind, "Field", StringComparison.OrdinalIgnoreCase),
             "constructor" or "constructors" => string.Equals(memberKind, "Constructor", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(memberKind, "PrimaryCtor-Param", StringComparison.OrdinalIgnoreCase),
+                || string.Equals(memberKind, PrimaryConstructorParameterKind, StringComparison.OrdinalIgnoreCase),
             _ => false,
         };
     }
@@ -218,7 +220,7 @@ internal static class GetClassStructureTool
         foreach (var p in primaryCtor.Parameters)
         {
             yield return new ClassStructureMemberEntry(
-                Kind: "PrimaryCtor-Param",
+                Kind: PrimaryConstructorParameterKind,
                 Name: p.Name,
                 Visibility: "public",
                 StartLine: recordLine,

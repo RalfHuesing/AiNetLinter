@@ -265,3 +265,79 @@ als Orchestrator-Abschlusscheck offen.
 
 Nächste Aktion: Epic 2 als `done` markieren und Epic 3 zur evidenzbasierten
 MCP-Qualitätsbereinigung starten.
+
+## Run 2026-09-02-06 — Epic 3 / Implementierer
+
+Status: running
+Rolle: Implementierer
+Subagent: `01a062a8-7545-72e1-817c-5c9402a4676a` (Ramanujan)
+Diff-Baseline: `f797d6cc`
+
+Auftrag: Belegte, scope-nahe Restbefunde unter `src/AiNetLinter/Mcp` anhand
+aktueller MCP-Evidenz bereinigen, insbesondere den geplanten
+`AssemblyHealthProjection`-Footprint-/Lint-Befund sowie sichere DRY-,
+Dead-Code- und Magic-Value-Funde. Keine zufällige globale Bereinigung und
+keine Änderungen außerhalb des vereinbarten Scopes.
+
+Abschluss: erfolgreich  
+Urteil: Epic 3 scoped umgesetzt
+
+Bericht des Implementierers:
+
+- Der geplante `AssemblyHealthProjection`-Befund ist behoben. `Project`
+  akzeptiert nur noch `includeDiagnostics` und `maxDiagnostics`; der
+  transitive Server-/Runtime-Footprint wurde damit aus der Projektion entfernt.
+- `GetServerHealthResponseBuilder` übergibt die primitiven Optionen.
+- In `GetClassStructureTool` wurde der identische `PrimaryCtor-Param`-Marker
+  lokal konsolidiert.
+- In `ExternalSourceGitProcessLauncher` wurde die identische
+  Prozessstart-Exception-Nachricht konsolidiert.
+- `code-map.md` wurde mit den verifizierten Änderungen, MCP-Zählern und
+  Unsicherheiten aktualisiert. `execution-log.md` wurde nicht verändert.
+- Es gab keine DI-, `IServiceProvider`-, ProjectLease-, Registry-, Roslyn-,
+  Logging-, CLI- oder `rules.json`-Änderungen.
+
+MCP-Befunde und Disposition:
+
+- Initiales MCP `get_violations`: 1 vollständiger Befund in 319 MCP-Dateien —
+  `AssemblyHealthProjection` mit `2564 > 2500`.
+- Die Ursache wurde mit `get_feature_context`, `get_symbol_body`,
+  `find_references` und `get_impact` bestätigt: `GetServerHealthOptions` zog
+  transitiv `DaemonRuntimeContext`/`McpCodeGraphServer` ein; 4 direkte und 16
+  Call-Sites bei Tiefe 2, keine Trunkierung.
+- Nach der Änderung: Footprint `1642/2500`, 77 LOC, keine Violation.
+- `find_dead_code`: 0 von 783 Symbolen, vollständig; bekannte Grenzen für
+  Reflection/Serializer/Routing bleiben.
+- Exaktes `find_duplicates` im Produktionsscope: 0 Cluster bei 1524 Methoden,
+  nicht trunciert.
+- `find_magic_values`: initial 253 Einträge/259 Vorkommen, bei `maxResults=100`
+  trunciert; nach der Änderung 252 Einträge/256 Vorkommen, vollständig bei
+  `maxResults=300`.
+- Als `accepted-deferred` verbleiben der stabile Wire-/Format-Marker
+  `GetClassStructureTool.cs:35`, die absichtliche Buffer-Whitelist in
+  `MagicValuesStringHeuristics.cs:52` und `:59-62` sowie heuristische
+  Einzelkandidaten (Diagnosecodes, Formatter-Texte und Erkennungspräfixe),
+  für die kein sicherer scope-naher Verhaltenserhalt belegt ist.
+
+Verifikation nach der letzten Codeänderung:
+
+- `dotnet build` — gesamte Solution, 0 Warnungen, 0 Fehler.
+- FastTests `WiringProjectContractTests` — 13/13 bestanden.
+- FastTests `GetClassStructureToolTests` — 14/14 bestanden.
+- FastTests `FindMagicValuesScanner` — 59/59 bestanden.
+- IntegrationTests `GetServerHealthToolTests` — 7/7 bestanden.
+- `git diff --check` — aktueller Working Tree fehlerfrei.
+- MCP `get_violations` — absoluter Projektpfad, Scope `src/AiNetLinter/Mcp`,
+  0 Verstöße, vollständig.
+
+Offene Punkte/Risiken: Die vollständigen solutionweiten Nicht-Stress-Gates und
+`safeguard` bleiben Orchestrator-Abschlussprüfungen. Die zurückgestellten
+Magic-Value-Kandidaten sind im Scope begründet und keine ungeprüften P0/P1-
+Befunde.
+
+Tech-Debt-Triage: Die drei im Bericht begründeten
+`accepted-deferred`-Kandidaten werden im bestehenden Register erfasst. Sie
+werden nicht als neue Duplikat- oder P0/P1-Befunde behandelt.
+
+Nächste Aktion: Implementierungs-Checkpoint sichern und unabhängigen Review
+des Epic-3-Diffs starten.

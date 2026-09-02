@@ -50,12 +50,13 @@ internal static class AssemblyHealthProjection
 
     internal static AssemblyHealthEntry Project(
         AssemblyHealthEntry assembly,
-        GetServerHealthOptions options)
+        bool includeDiagnostics,
+        int maxDiagnostics)
     {
         var summary = AssemblyAnalysisResponseLimits.ProjectDiagnostics(
             assembly.Diagnostics,
             assembly.TransitiveDiagnostics,
-            options.MaxDiagnostics);
+            maxDiagnostics);
         var diagnostics = (assembly.Diagnostics ?? Array.Empty<string>())
             .Concat(assembly.TransitiveDiagnostics ?? Array.Empty<string>())
             .ToArray();
@@ -63,11 +64,11 @@ internal static class AssemblyHealthProjection
         var effectiveCompleteness = ResolveEffectiveStatus(
             assembly.Completeness ?? effectiveLoadState,
             diagnostics);
-        if (!options.IncludeDiagnostics) summary = AssemblyAnalysisResponseLimits.WithoutSamples(summary);
+        if (!includeDiagnostics) summary = AssemblyAnalysisResponseLimits.WithoutSamples(summary);
         return assembly with
         {
             LoadState = effectiveLoadState,
-            Diagnostics = options.IncludeDiagnostics ? summary.Samples : null,
+            Diagnostics = includeDiagnostics ? summary.Samples : null,
             DiagnosticsSummary = summary,
             Completeness = effectiveCompleteness,
             TransitiveDiagnostics = null,

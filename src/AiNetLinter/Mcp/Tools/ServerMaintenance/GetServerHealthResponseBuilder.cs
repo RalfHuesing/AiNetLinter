@@ -21,7 +21,10 @@ internal static class GetServerHealthResponseBuilder
     {
         var runtimeContext = options.RuntimeContext;
         var projectedAssemblies = assemblies
-            .Select(assembly => AssemblyHealthProjection.Project(assembly, options))
+            .Select(assembly => AssemblyHealthProjection.Project(
+                assembly,
+                options.IncludeDiagnostics,
+                options.MaxDiagnostics))
             .ToList();
         var targeted = options.ProjectRoot is not null || options.AssemblyPath is not null;
         var totalAssemblySessions = projectedAssemblies.Count;
