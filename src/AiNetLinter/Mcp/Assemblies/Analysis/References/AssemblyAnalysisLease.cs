@@ -90,7 +90,7 @@ internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
         referenceExpansion?.Diagnostics ?? Array.Empty<string>();
 
     /// <summary>
-    /// Liefert eine nicht-besitzende Momentaufnahme der vom Root-Lease eröffneten Child-Leases.
+    /// Liefert eine nicht-besitzende Momentaufnahme der direkt von diesem Lease eröffneten Child-Leases.
     /// Der Aufrufer darf diese Leases nur innerhalb der Lebensdauer dieses Leases verwenden; die
     /// Freigabe bleibt ausschließlich beim Root-Lease, damit Cross-Assembly-Navigation keine
     /// unabhängige Resident-Lifetime erzeugt.

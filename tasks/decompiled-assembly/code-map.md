@@ -17,6 +17,7 @@
 - `InspectAssemblyFormatter.CompactNamespaces` behält höchstens zehn Namespace-Namen und ergänzt exakt `Top 10 Namespaces und X weitere`; `InspectAssemblyPayload.TotalNamespaces` kommt aus der ungekürzten Selection. `AssemblyAnalysisResponseLimits` trimmt bei einem weiterhin übergroßen Gesamtpayload zuletzt auch Namespace-Anzeigeeinträge.
 - `AssemblyDecompilationSourceText.ShouldStub(MethodDeclarationSyntax)` schützt vorhandene Bodies, Expression-Bodies, Abstract-/Extern-/Partial-Methoden und Interfaces. `ShouldStub(ConstructorDeclarationSyntax)` schützt Extern-Konstruktoren und Expression-Bodies; konkrete Konstruktoren ohne Body werden weiterhin für Signature-only-Quelltext gestubbt.
 - `AssemblyAnalysisRegistryEvictionCoordinator`, `AssemblyReferenceSessionExpander`, `AssemblyNavigationSupport` und `AssemblyReferenceNavigator` enthalten keine direkte konkrete Registry-/Lease-Verwaltung mehr; die vier Ziele erscheinen im aktuellen lokalen CLI-Footprint-Nachweis nicht als `AIContextFootprint`-Violation.
+- `AssemblyNavigationLeaseAccess.GetLeases` flatteniert die vom Root aus erreichbare Lease-Struktur depth-first, dedupliziert Lease-Instanzen und wendet erst danach das Navigationslimit an; `AssemblyAnalysisLease.ReferenceLeasesSnapshot` liefert dafür weiterhin nur die direkten Child-Leases.
 - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRegistryRetirementRaceTests.cs` enthält neben der bestehenden Retirement-Race-Regression die Regression für offenen temporären Request plus Fremd-Lease und Generationwechsel sowie die Disposal-Regression bei noch gehaltener Fremd-Lease.
 
 ## Aufrufer und Abhängigkeiten
@@ -26,6 +27,7 @@
 - Die lokale Caller-Suche bestätigt, dass Fingerprint-Refresh, normale Candidate-Eviction und der Coordinator den callback-behafteten Aufruf von `AssemblyAnalysisRegistryDisposal.RetireEntryAsync` verwenden; `DisposeEntriesAsync` wird nur aus `AssemblyAnalysisRegistry.DisposeAsync` aufgerufen. `AssemblyAnalysisRegistryEvictionCandidates.TryRetireCandidate` behält den bestehenden `OnRetired`-Callback für den normalen Pfad zusätzlich bei.
 - `AnalysisToolCall` stößt nach einem Assembly-Tool-Call die temporäre Child-Eviction an; das Verhalten der Route und der normalen Lease-/Cancellation-Pfade bleibt außerhalb der Produktionsänderung.
 - `AssemblyFindReferencesTool` und `AssemblyGetCallTreeTool` erzeugen über `AssemblyNavigationSourceFactory` die Source-Projektionen; `AssemblySymbolResolver`/`AssemblySymbolSearch` verwenden `AssemblyNavigationLeaseAccess` für die begrenzte Lease-Menge.
+- `AssemblyAnalysisRouteTests.AssemblyRoute_IncludeReferencesNavigatesTransitiveAssembliesAcrossAllSymbolGraphRoutes` deckt Root → direkte Dependency → transitive Dependency für `find_symbol`, `find_references` und Call-Tree ab und prüft die gemeinsame Assembly-Anzahl.
 
 ## Relevante Tests, Konfiguration und Dokumentation
 
@@ -41,6 +43,7 @@
 - Die HashSet-Struktur bleibt bewusst bestehen; der Fix begrenzt ihre Lebensdauer über jeden bekannten Retirement-Pfad, statt die temporäre Eviction-Semantik zu verändern. `RequestCount` ist nur intern und kein neuer MCP-Vertrag.
 - Die Namespace-Summary ist im normalen 32-Namespace-Budgetfall in Text und JSON synchron; bei extremem Gesamtpayload darf der nachgelagerte Budget-Trim die kompakte Summary als letzten Namespace-Eintrag entfernen (`TD-RESPONSE-SUMMARY-001`, P2, accepted-deferred).
 - Die Child-Lease-Registrierung erfolgt nach einem asynchronen Open; eine Root-Dispose-Race zwischen Open-Abschluss und Registrierung bleibt als bestehendes Risiko (`TD-SESSION-LEASE-RACE-001`, P2, accepted-deferred).
+- Die Navigation verwendet nicht-besitzende Snapshots des vollständigen Lease-Baums; `AssemblyAnalysisLease` bleibt alleiniger Besitzer und gibt jeden Child-Baum beim Root-Dispose frei. Die Deduplizierung schützt zusätzlich gegen mehrfach erreichbare Lease-Instanzen, ohne neue Lebensdauer zu erzeugen.
 - Die vorgeschriebene MCP-first-Abfrage für `AssemblyDecompilationSourceText.ShouldStub` meldete nur „Solution wird noch geladen“. Der laufende MCP-Server ist laut Nutzerentscheidung älter als der Working Tree; seine Antworten wurden nicht als aktueller Feature- oder Verifikationsnachweis verwendet.
 
 ## Verifikation

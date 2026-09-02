@@ -120,11 +120,11 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### NAV-TRANSITIVE-LEASE-COMPLETENESS-001 – Navigation verliert transitive Referenz-Leases
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 1/5 läuft.
+- Status: behoben, Review ausstehend (Korrekturversuch 1/5).
 - Scope/Fundstelle: `OpenReferenceExpansionNodeAsync` und `AssemblyNavigationLeaseAccess.GetLeases`.
 - Evidenz: Child-Leases werden jeweils am aktuellen Parent registriert, die Navigation liest jedoch nur Root plus direkte Children. Referenzgraphen ab Tiefe 2 fehlen damit in `find_symbol`, `find_references` und Call-Tree; Vollständigkeit und Assembly-Anzahl werden falsch ausgewiesen.
 - Disposition: `fix-now`
-- Nächster Schritt: Transitive Lease-Sammlung rootgebunden oder rekursiv flatten und mit Root → Dependency → TransitiveDependency regressionstesten.
+- Nächster Schritt: Folge-Review des Korrekturstands; bei Bestätigung als `fixed` schließen.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Folge-Review.
 
 ### TD-SIGONLY-COVERAGE-001 – Signature-only-Ausschlüsse und Operatoren nicht direkt abgesichert

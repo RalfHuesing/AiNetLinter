@@ -378,3 +378,16 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Scope: Transitive Referenz-Leases für Root → Dependency → TransitiveDependency in Navigation vollständig sichtbar machen und lokale Regression ergänzen; keine Paket-4-Ausweitung und keine Release-/Live-MCP-Verifikation.
 - MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet.
 - Status: running
+
+## 2026-09-02 – Paket 3 – Korrekturversuch 1 – Implementierer
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: `01a06213-5cdb-75b3-a018-d661eca47623`
+- Diff-Baseline: `e081cc48`
+- Status: terminal abgeschlossen; Korrekturstand unreviewt gesichert.
+- Urteil: P1 `NAV-TRANSITIVE-LEASE-COMPLETENESS-001` behoben.
+- Geänderte Bereiche: `AssemblyNavigationLeaseAccess.GetLeases` flatteniert den vollständigen Root-Lease-Baum depth-first und dedupliziert Instanzen; `AssemblyAnalysisLease`-Dokumentation präzisiert; `AssemblyAnalysisRouteTests` ergänzt Root → Dependency → TransitiveDependency für `find_symbol`, `find_references` und Call-Tree; `code-map.md` aktualisiert.
+- Verifikation nach der letzten Änderung: gezielte Regression 1/1; Navigationstestbereich 7/7; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` sauber; lokaler CLI-Linter mit 12 bestehenden Violations außerhalb des Scopes.
+- MCP-Hinweis: MCP nur für statische Qualitätsorientierung verwendet, nicht als Feature-Verifikation; keine Release-/Live-/Stress-Prüfung.
+- Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.

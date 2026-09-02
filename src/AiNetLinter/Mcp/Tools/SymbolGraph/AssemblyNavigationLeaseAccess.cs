@@ -13,10 +13,23 @@ internal static class AssemblyNavigationLeaseAccess
 
     internal static AssemblyNavigationLeaseSet GetLeases(AssemblyAnalysisLease root)
     {
-        var all = new[] { root }
-            .Concat(root.ReferenceLeasesSnapshot())
-            .Distinct()
-            .ToList();
+        var all = new List<AssemblyAnalysisLease>();
+        var pending = new Stack<AssemblyAnalysisLease>();
+        var visited = new HashSet<AssemblyAnalysisLease>();
+        pending.Push(root);
+        while (pending.Count > 0)
+        {
+            var lease = pending.Pop();
+            if (!visited.Add(lease)) continue;
+
+            all.Add(lease);
+            var children = lease.ReferenceLeasesSnapshot();
+            for (var index = children.Count - 1; index >= 0; index--)
+            {
+                pending.Push(children[index]);
+            }
+        }
+
         return new(
             all.Take(MaxNavigationAssemblies).ToList(),
             all.Count,
