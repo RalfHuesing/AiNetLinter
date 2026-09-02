@@ -500,6 +500,21 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Scope: Aussagekraft, Isolation und Vollständigkeit der Resolver-/Operator-/Cache-/Unification-/Tool-/Impact-/Health-/Budget-/Paket-3-Regressionen; keine Release-/Live-/Stress-Verifikation.
 - MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet.
 
+## 2026-09-02 – Paket 4 – Review
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Reviewer
+- Subagent: `01a0623d-05bf-7e83-a743-df44c0408902`
+- Diff-Scope: Paket-4-Teststand `44c2d012` und vollständige Konzeptmatrix.
+- Status: terminal abgeschlossen; neues P1 erfordert Korrekturrunde 1/5.
+- Urteil: `issues`.
+- P1-Finding `HEALTH-DAEMON-PROJECT-TARGET-E2E-001`: Das Muss-Kriterium `get_server_health(targetType="project")` im Daemon-Proxy ist nicht vollständig abgesichert. Der echte Daemon-Test ist argumentlos, der projektbezogene Test nutzt einen injizierten `DaemonRuntimeContext`, und der E2E-Projektaufruf läuft im No-Daemon-Testhost. Korrektur: echten Daemon-`tools/call` mit `targetType` und `targetPath` ergänzen und Projektstatus/-pfad aus der Daemon-Registry assertieren.
+- P2-Risiken: semicolon-only Operator-/Signature-only-Fälle, überwiegend Cache-Hit im benannten Concurrent-Test, indirekte statt vollständiger Dispatcher-Abdeckung der transitive Navigation, keine legacy-versionierte Framework-Resolver-Pipeline.
+- Erfüllt: direkte Resolver-Fälle, Assembly-`get_impact`, Tool-Ergonomie, Namespace-Header, normales Response-Budget, Lifecycle und transitive Source-Regressions.
+- Verifikation: 83 fokussierte FastTests, 32 fokussierte IntegrationTests, Build 0 Warnungen/Fehler, `git diff --check` sauber; keine MCP-, Live-, Release- oder Stress-Verifikation.
+- MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wurde nicht als Feature-Nachweis verwendet.
+- Nächste Aktion: frischer Implementierer für `HEALTH-DAEMON-PROJECT-TARGET-E2E-001`, Versuch 1/5.
+
 ## 2026-09-02 – Paket 3 – Folge-Review nach Quellenkorrektur
 
 - Run-ID: `decompiled-assembly-20260902`

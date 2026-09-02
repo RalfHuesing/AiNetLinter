@@ -147,6 +147,16 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 - Nächster Schritt: Folge-Review der Resolver-/Operator-Matrix; bei Bestätigung als `fixed` schließen.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Review.
 
+### HEALTH-DAEMON-PROJECT-TARGET-E2E-001 – Projekt-Health nicht im echten Daemon-End-to-End geprüft
+
+- Schweregrad: P1
+- Status: aktiv, Versuch 1/5 läuft.
+- Scope/Fundstelle: echter Daemon-`tools/call` für `get_server_health` mit `targetType="project"` und `targetPath`.
+- Evidenz: Der vorhandene Daemon-Prozess-Test ruft `get_server_health` ohne Zielargumente auf; der projektbezogene Test injiziert nur einen `DaemonRuntimeContext`; der E2E-Projektaufruf läuft bislang im direkten No-Daemon-Testhost.
+- Disposition: `fix-now`
+- Nächster Schritt: echten Daemon-Proxy-Aufruf mit Projektziel ergänzen und Projektstatus/-pfad aus der Daemon-Registry assertieren.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 4 Review.
+
 ### TD-SESSION-LEASE-RACE-001 – Verspätete Registrierung nach asynchroner Expansion möglich
 
 - Schweregrad: P2
