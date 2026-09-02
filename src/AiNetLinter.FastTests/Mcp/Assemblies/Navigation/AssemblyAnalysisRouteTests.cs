@@ -15,6 +15,7 @@ using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.TestKit;
+using Microsoft.CodeAnalysis;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Assemblies.Navigation;
@@ -251,89 +252,6 @@ public sealed class AssemblyAnalysisRouteTests
         Assert.Contains("assembly=", Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(treeResult.Content)).Text, StringComparison.Ordinal);
         var treePayload = treeResult.StructuredContent!.Value;
         Assert.True(treePayload.GetProperty("navigation").GetProperty("includeReferences").GetBoolean());
-    }
-
-    [Fact]
-    public async Task AssemblyRoute_IncludeReferencesNavigatesTransitiveAssembliesAcrossAllSymbolGraphRoutes()
-    {
-        using var temp = TestTempDirectory.Create("assembly-route-transitive-symbol-graph-");
-        var transitivePath = AssemblyTestHelper.EmitAssembly(
-            temp,
-            "RoutedTransitiveDependency",
-            "namespace Probe; public sealed class TransitiveType { public int Read() => 3; }");
-        var dependencyPath = AssemblyTestHelper.EmitAssembly(
-            temp,
-            "RoutedDirectDependency",
-            "namespace Probe; public sealed class DependencyType { public int Read() => new TransitiveType().Read(); }",
-            transitivePath);
-        var rootPath = AssemblyTestHelper.EmitAssembly(
-            temp,
-            "RoutedTransitiveRoot",
-            "namespace Probe; public sealed class Root { public int Read() => new DependencyType().Read(); }",
-            dependencyPath);
-        await using var registry = new AssemblyAnalysisRegistry();
-        var route = AssemblyAnalysisDispatcher.CreateRoute(registry);
-
-        var symbolResult = await AnalysisToolCall.ExecuteRouted(
-            route,
-            new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("assembly", rootPath),
-                new AnalysisToolDispatch(
-                    AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(
-                        lease,
-                        new AssemblyFindSymbolRequest(["TransitiveType"], null, 50, true),
-                        CancellationToken.None),
-                    ExpandAssemblyReferences: true),
-                CancellationToken.None));
-
-        Assert.NotEqual(true, symbolResult.IsError);
-        var symbolNavigation = symbolResult.StructuredContent!.Value.GetProperty("navigation");
-        var totalAssemblyCount = symbolNavigation.GetProperty("totalAssemblyCount").GetInt32();
-        Assert.InRange(totalAssemblyCount, 3, int.MaxValue);
-        Assert.Equal(totalAssemblyCount, symbolNavigation.GetProperty("searchedAssemblyCount").GetInt32());
-        Assert.Equal("partial", symbolNavigation.GetProperty("completeness").GetString());
-        Assert.Equal(
-            "Probe.TransitiveType",
-            symbolResult.StructuredContent.Value.GetProperty("results")[0]
-                .GetProperty("matches")[0].GetProperty("name").GetString());
-
-        var referenceResult = await AnalysisToolCall.ExecuteRouted(
-            route,
-            new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("assembly", rootPath),
-                new AnalysisToolDispatch(
-                    AssemblySessionCall: lease => AssemblyFindReferencesTool.ExecuteAsync(
-                        lease,
-                        new AssemblyFindReferencesRequest("Probe.TransitiveType.Read", 50, 1, true),
-                        CancellationToken.None),
-                    ExpandAssemblyReferences: true),
-                CancellationToken.None));
-
-        Assert.NotEqual(true, referenceResult.IsError);
-        Assert.Equal(
-            totalAssemblyCount,
-            referenceResult.StructuredContent!.Value.GetProperty("navigation")
-                .GetProperty("totalAssemblyCount").GetInt32());
-
-        var treeResult = await AnalysisToolCall.ExecuteRouted(
-            route,
-            new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("assembly", rootPath),
-                new AnalysisToolDispatch(
-                    AssemblySessionCall: lease => AssemblyGetCallTreeTool.ExecuteAsync(
-                        lease,
-                        new AssemblyGetCallTreeRequest(
-                            new GetCallTreeInput("Probe.TransitiveType.Read", 1, null, 10, null),
-                            true),
-                        CancellationToken.None),
-                    ExpandAssemblyReferences: true),
-                CancellationToken.None));
-
-        Assert.NotEqual(true, treeResult.IsError);
-        Assert.Equal(
-            totalAssemblyCount,
-            treeResult.StructuredContent!.Value.GetProperty("navigation")
-                .GetProperty("totalAssemblyCount").GetInt32());
     }
 
     [Fact]

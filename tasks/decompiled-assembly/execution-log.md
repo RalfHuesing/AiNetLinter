@@ -428,3 +428,16 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Scope: Navigation-Quellen für alle zugelassenen Leases sowie konkrete transitive `find_references`-/Call-Tree-Treffer mit Origin; keine Paket-4-Ausweitung und keine Release-/Live-MCP-Verifikation.
 - MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet.
 - Status: running
+
+## 2026-09-02 – Paket 3 – Korrekturversuch 1 – Implementierer
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: `01a0621e-0d95-7b01-b04a-b6d6bb6b63b9`
+- Diff-Baseline: `32afeed2`
+- Status: terminal abgeschlossen; Korrekturstand unreviewt gesichert.
+- Urteil: P1 `NAV-TRANSITIVE-SOURCE-COVERAGE-001` behoben.
+- Geänderte Bereiche: `AssemblyNavigationSourceFactory.CreateSources` iteriert alle gecappten, deduplizierten Leases und mappt das Zielsymbol je Compilation mit Metadata-Fallback; Source-Origin bleibt je Lease erhalten; die transitive Navigationstestabdeckung prüft konkrete `find_references`-Call-Sites und Call-Tree-Knoten samt `source-backed`-Origin.
+- Verifikation nach der letzten Änderung: Navigationstests 7/7; `dotnet build --no-restore` 0 Warnungen/0 Fehler; `git diff --check` sauber; lokaler CLI-Linter mit 12 bestehenden Baseline-Violations außerhalb dieses Scopes; lokale Qualitätschecks ohne Duplikate, Dead Code oder Magic Values.
+- MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wurde nicht als Feature-Nachweis verwendet; keine Release-/Live-/Stress-Prüfung.
+- Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.

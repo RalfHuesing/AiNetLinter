@@ -27,7 +27,8 @@
 - Die lokale Caller-Suche bestätigt, dass Fingerprint-Refresh, normale Candidate-Eviction und der Coordinator den callback-behafteten Aufruf von `AssemblyAnalysisRegistryDisposal.RetireEntryAsync` verwenden; `DisposeEntriesAsync` wird nur aus `AssemblyAnalysisRegistry.DisposeAsync` aufgerufen. `AssemblyAnalysisRegistryEvictionCandidates.TryRetireCandidate` behält den bestehenden `OnRetired`-Callback für den normalen Pfad zusätzlich bei.
 - `AnalysisToolCall` stößt nach einem Assembly-Tool-Call die temporäre Child-Eviction an; das Verhalten der Route und der normalen Lease-/Cancellation-Pfade bleibt außerhalb der Produktionsänderung.
 - `AssemblyFindReferencesTool` und `AssemblyGetCallTreeTool` erzeugen über `AssemblyNavigationSourceFactory` die Source-Projektionen; `AssemblySymbolResolver`/`AssemblySymbolSearch` verwenden `AssemblyNavigationLeaseAccess` für die begrenzte Lease-Menge.
-- `AssemblyAnalysisRouteTests.AssemblyRoute_IncludeReferencesNavigatesTransitiveAssembliesAcrossAllSymbolGraphRoutes` deckt Root → direkte Dependency → transitive Dependency für `find_symbol`, `find_references` und Call-Tree ab und prüft die gemeinsame Assembly-Anzahl.
+- `AssemblyNavigationSourceFactory.CreateSources` iteriert den vom Lease-Zugriff gecappten, deduplizierten Lease-Satz, behält das Target-Symbol für seine Lease und bildet es für jede weitere nutzbare Compilation über DocCommentId bzw. ContainingType/Member-Metadaten ab; die Source-Origin bleibt je Lease erhalten.
+- `AssemblyAnalysisTransitiveNavigationTests.AssemblyRoute_IncludeReferencesNavigatesTransitiveAssembliesAcrossAllSymbolGraphRoutes` deckt Root → direkte Dependency → transitive Dependency für `find_symbol`, die gemeinsame Referenznavigation und den Call-Tree ab und prüft konkrete direkte Call-Sites/Baumknoten samt `source-backed`-Origin.
 
 ## Relevante Tests, Konfiguration und Dokumentation
 

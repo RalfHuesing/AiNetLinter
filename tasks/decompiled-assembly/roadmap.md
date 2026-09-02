@@ -3,8 +3,8 @@
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
 Status: executing  
-Current epic: Paket 3 – Korrekturrunde 1/5
-Letzter Commit: `98f32c51` – Lease-Folge-Review; neues P1 triagiert
+Current epic: Paket 3 – Folge-Review nach Korrekturrunde 1/5
+Letzter Commit: Quellenkorrektur unreviewt; Artefakt-Checkpoint folgt
 Current debt item: `NAV-TRANSITIVE-SOURCE-COVERAGE-001`
 Debt attempts: 1
 Blocker: keiner
