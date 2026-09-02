@@ -143,3 +143,63 @@ symlink-berechtigungsbedingten Test-Skips bleiben für die Abschlussverifikation
 zu berücksichtigen.
 
 Nächste Aktion: Epic 1 als `done` markieren und Epic 2 starten.
+
+## Run 2026-09-02-04 — Epic 2 / Implementierer
+
+Status: running
+Rolle: Implementierer
+Subagent: `01a0629a-276b-7cd2-a7b2-2d6b5c4e0d6a` (Mencius)
+Diff-Baseline: `525bb0bc`
+
+Auftrag: Die verbleibenden Größenlimit-Verstöße in
+`AssemblySymbolResolver.ResolveAsync` und `AssemblyAnalysisSessionTests.cs`
+verhaltensneutral beheben, passende Regressionstests bewahren oder ergänzen,
+die Code-Map aktualisieren und die Epic-2-Verifikation nach der letzten
+Codeänderung durchführen.
+
+Abschluss: erfolgreich  
+Urteil: funktionsfähiger Implementierungsstand für unabhängigen Review
+
+Bericht des Implementierers:
+
+- In `AssemblySymbolResolver.cs` wurde der Lease-Loop nach
+  `ResolveCandidatesAsync` extrahiert; das Verhalten blieb unverändert.
+- In `AssemblyAnalysisSessionTests.cs` wurden Cache-Tests ausgelagert.
+  Dafür entstand `AssemblyAnalysisCacheTests.cs` als fachlich eigene
+  Testklasse.
+- `code-map.md` wurde auf die neuen Dateien und Verantwortlichkeiten
+  aktualisiert.
+
+Line Counts:
+
+- `AssemblySymbolResolver.ResolveAsync`: 40 MCP-Codezeilen.
+- `AssemblySymbolResolver.cs`: 139 Zeilen.
+- `AssemblyAnalysisSessionTests.cs`: 374 Zeilen.
+- `AssemblyAnalysisCacheTests.cs`: 146 Zeilen.
+
+Verifikation nach der letzten Codeänderung:
+
+- `dotnet build` — 0 Warnungen, 0 Fehler.
+- Gezielter FastTest-Slice — 25/25 bestanden, 0 übersprungen.
+- MCP `get_impact` — 4 vollständige Aufrufstellen, keine Trunkierung.
+- MCP `find_duplicates` — 0 Cluster.
+- MCP `find_dead_code` — 0 High-Confidence-Kandidaten.
+- MCP `find_magic_values` — Produktionsscope 0 Treffer.
+- MCP `get_violations` — Resolver-Scope und Assembly-Analysis-Testscope jeweils
+  0 Verstöße.
+- `git diff --check` — keine Fehler.
+
+Offene Befunde/Risiken:
+
+- Bestehende testbezogene Magic-Value-Kandidaten bleiben für Epic 3
+  zurückgestellt.
+- Vollständige solutionweite Nicht-Stress-Gates wurden nicht ausgeführt; sie
+  bleiben Aufgabe des Orchestrators.
+- `execution-log.md` wurde vom Implementierer nicht verändert.
+
+Tech-Debt-Triage: Keine neuen actionablen Befunde. Die zurückgestellten
+testbezogenen Magic-Value-Kandidaten sind bereits dem geplanten Epic 3
+zugeordnet.
+
+Nächste Aktion: Implementierungs-Checkpoint sichern und unabhängigen Review
+des Epic-2-Diffs starten.

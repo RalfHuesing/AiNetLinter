@@ -2,87 +2,86 @@
 
 ## Primäre Einstiegspunkte
 
-- Epic 1 ist umgesetzt: `ISolutionStateProvider` kapselt den für
-  Assembly-Analyse-Leases tatsächlich benötigten read-only Lösungszustand.
-- `McpCodeGraphServer` implementiert diesen Vertrag; die konkrete
-  Konstruktion eines read-only Hosts liegt in
-  `AssemblyAnalysisEntryFactory`, nicht in Entry oder Lease.
-- Der nächste geplante Einstiegspunkt ist Epic 2:
-  `AssemblySymbolResolver.ResolveAsync`.
+- `AssemblySymbolResolver.ResolveAsync` verarbeitet Symbolauflösung über den
+  Root-Lease und dessen Reference-Leases.
+- Die konkrete Lease-Zustandsgrenze bleibt `ISolutionStateProvider`; Epic 1
+  ist unverändert abgeschlossen.
+- Session- und Cache-Verhalten sind in getrennten Component-Testklassen
+  organisiert.
 
 ## Betroffene Dateien und Symbole
 
-- `src/AiNetLinter/Mcp/Assemblies/Analysis/References/ISolutionStateProvider.cs` —
-  `GetCurrentSolution`, `AssemblySymbolIdentity`, `LoadState`,
-  `Console` und `GetConfigSnapshot`. Die letzten zwei Capabilities werden
-  von `MetricsTree` sowie vom projektweiten Change-Context-Zweig von
-  `GetImpact` benötigt.
-- `src/AiNetLinter/Mcp/McpCodeGraphServer.cs` — implementiert den Vertrag
-  über explizite Adapter für Symbolidentität und Konfigurations-Snapshot.
-- `src/AiNetLinter/Mcp/Assemblies/Analysis/References/AssemblyAnalysisLease.cs` — hält und
-  übergibt nur noch `ISolutionStateProvider`; die
-  `IAssemblyBodyContext`-Auflösung bleibt `GetCurrentSolution`.
-- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisEntry.cs` — trennt
-  `State` von seiner `IAsyncDisposable`-Lebensdauer, behält
-  Referenzlease-, Locking- und Fehleraggregationsreihenfolge bei.
-- `src/AiNetLinter/Mcp/Assemblies/Analysis/Factories/AssemblyAnalysisEntryFactory.cs` —
-  neue Kompositionsfactory für den read-only `McpCodeGraphServer`.
-  `AssemblyAnalysisRegistryEntryFactory` und
-  `AssemblyAnalysisSourceProjectEntryFactory` verwenden sie.
-- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisToolSupport.cs` und
-  `AssemblyToolExecutionParameters` — akzeptieren den Vertragszustand.
-- Die unmittelbar über `lease.Server` erreichbaren Tools benutzen ebenfalls
-  nur den Vertrag: CallTree, DependencyGraph, FileStructure
-  (ClassStructure/FileSkeleton/NamespaceTree), GetSymbolBody,
-  MetricsLookup/MetricsTree sowie SymbolGraph
-  (FindReferences/FindSymbol/GetImpact/GetTypeHierarchy).
+- `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblySymbolResolver.cs`
+  - `AssemblySymbolResolver.ResolveAsync` baut Navigation, Distinct- und
+    Ambiguous-Ergebnis unverändert auf.
+  - `ResolveCandidatesAsync` enthält jetzt ausschließlich den bestehenden
+    Lease-Loop inklusive Cancellation, Solution-Fehlern und Diagnostics.
+  - `ResolveLeaseAsync` und `FindInLeaseAsync` bleiben unverändert zuständig
+    für Einzel-Lease-Auflösung und typisierte Resolution-Misses.
+- `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisSessionTests.cs`
+  - enthält weiterhin die 15 Session-/Decompilation-Tests; physisch 374
+    Zeilen im Working Tree, MCP-Code-LOC 285.
+- `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisCacheTests.cs`
+  - enthält die unverändert übernommenen Cache-Policy-, Concurrent-Publish-
+    und Delayed-Publish-Tests samt `CreatePublishRequest`.
 
 ## Aufrufer und Abhängigkeiten
 
-- Assembly-Leases entstehen über `AssemblyAnalysisEntry.TryAcquireLease`;
-  die Entry-Factories liefern den separierten Zustand und dessen Ownership.
-- Die Tool-Dispatcher können den vorhandenen konkreten Server weiterhin
-  übergeben, weil er den Vertrag implementiert; der Assembly-Lease-Pfad kennt
-  den konkreten Typ nicht.
-- `ProjectLease` und `ProjectRegistry` bleiben unverändert und konkret.
-- Kein DI-Container, `IServiceProvider`, neues NuGet-Paket oder
-  `rules.json` wurde eingeführt bzw. geändert.
+- `AssemblyFindReferencesTool` ruft `ResolveAsync` in
+  `ExecuteWithReferencesAsync` auf.
+- `AssemblyGetCallTreeTool` ruft `ResolveAsync` in `BuildResponseAsync` auf.
+- `ResolveCandidatesAsync` verwendet nur `AssemblyNavigationLeaseAccess`,
+  `AssemblyNavigationSupport`, `FindReferencesTool` und die bestehende
+  `AssemblyAnalysisLease`-Vertragsgrenze.
+- Cache-Tests verwenden weiterhin `TestTempDirectory`; keine Test-Collection
+  und keine globale Serialisierung wurde eingeführt.
+- `ProjectLease`, `ProjectRegistry`, Regeln, Logging, CLI, `rules.json` und
+  DI-Abhängigkeiten sind nicht betroffen.
 
 ## Relevante Tests, Konfiguration und Dokumentation
 
-- Neu: `src/AiNetLinter.FastTests/Mcp/SolutionStateProviderContractTests.cs`
-  prüft den Vertragsaufruf von `AssemblyAnalysisToolSupport`, die
-  Lease-/Tool-Signaturen und die Server-Implementierung per Reflection.
-- Angepasste Factory-Aufrufer in
-  `AssemblyAnalysisRegistryTests`,
-  `AssemblyAnalysisRegistryFreshnessTests` und
-  `AssemblyAnalysisDispatcherCapabilityTests`.
-- Dieses Artefakt ist der aktualisierte Stand für Epic 1; `roadmap.md` blieb
-  unverändert, während `execution-log.md` und `tech-debt.md` den
-  Implementierungsnachweis und die Triage ergänzen.
+- `SolutionStateProviderContractTests` bestätigt die Epic-1-Interface-Grenze.
+- `AssemblyDecompiledBodyResolverTests` bestätigt Direct-Member-/Body-
+  Resolution und typed unavailable results.
+- `AssemblyAnalysisRegistryRetirementRaceTests` bestätigt die relevante
+  Retirement-/Lease-Concurrency; die bestehende Testabdeckung war ausreichend,
+  daher wurden dort keine Assertions ergänzt oder abgeschwächt.
+- `AssemblyAnalysisSessionTests` und `AssemblyAnalysisCacheTests` sichern die
+  Session-, Cache- und Publish-Concurrency-Invarianten.
+- Keine Konfigurations- oder Dokumentationsänderung ist für dieses reine
+  Extract-Method-/Test-Split-Refactoring erforderlich.
 
 ## Invarianten, Risiken und Unsicherheiten
 
-- `AssemblyAnalysisEntry.DisposeAsync` entsorgt weiter erst den
-  zustandsbesitzenden Host und aggregiert Fehler wie zuvor; Cancellation,
-  Lease-Drain und Body-Resolution wurden nicht umgebaut.
-- Der Interfaceumfang ist aus den realen Assembly-Tool-Aufrufen abgeleitet,
-  nicht aus einem generischen Server-Abbild.
-- Frischer MCP-Metriknachweis: Lease und Entry liegen mit je 1531
-  AI-Context-Footprint unter dem Limit 2500.
-- Außerhalb von Epic 1 verbleiben `AssemblyHealthProjection`
-  (Footprint 2564 über eine andere Response-/Health-Kette),
-  `AssemblySymbolResolver.ResolveAsync` (62 statt 60 Zeilen).
+- Resolver-Reihenfolge, Cancellation-Prüfung, Assembly-ID-Filter,
+  Diagnostics-Reihenfolge sowie Distinct-/Ambiguous-Ausgabe bleiben erhalten.
+- Die Cache-Concurrency-Tests behalten ihre `Barrier`, verzögerte Rückgabe,
+  `Task.WhenAll`- und Timeout-Invarianten.
+- MCP-Impact bestätigt vier Aufrufstellen (zwei direkte, zwei transitive) und
+  keine zusätzliche betroffene Produktionskette.
+- Verifizierte MCP-Metriken: `ResolveAsync` 40 Codezeilen; Session-Testklasse
+  285 Codezeilen / 375 Footprint; Cache-Testklasse 125 Codezeilen / 159
+  Footprint. Physische Zeilenzählung: 139 Resolver-, 374 Session- und 146
+  Cache-Dateizeilen; alle Datei-/Methodenlimits sind eingehalten.
+- Der Magic-Value-Testscan meldet bestehende testbezogene Literal-Kandidaten
+  in `AssemblyAnalysisSessionTests`; sie gehören zur späteren Audit-Triage und
+  wurden in diesem Epic nicht semantisch verändert.
 
 ## Verifikation
 
-- `dotnet build`: erfolgreich, 0 Warnungen/0 Fehler.
-- Fokussierter FastTest-Slice mit State-Contract, ToolSupport, Registry,
-  Freshness, Retirement-Race und Path-Contract: 57/57 bestanden.
-- MCP-Audits im Produktionsscope `src/AiNetLinter/Mcp`:
-  keine exakten Duplikat-Cluster (1523 Methoden), kein High-Confidence
-  Dead Code (783 Symbole). Der Magic-Value-Scan meldet ausschließlich
-  bestehende Kandidaten in bereits geänderten Dateien, keine aus Epic 1
-  eingeführten Werte.
-- Frisches MCP-`get_violations` nach der letzten Codeänderung: die zwei
-  oben genannten, scope-fremden Folge-Befunde; keine Lease-/Entry-Verletzung.
+- `dotnet build` nach der letzten Codeänderung: 0 Warnungen, 0 Fehler.
+- Gezielter FastTest-Slice nach der letzten Codeänderung: 25/25 bestanden,
+  0 übersprungen, für Session-, Cache-, Interface-, Body- und Retirement-Race-
+  Tests.
+- MCP `get_impact`, Projektziel absolut, für `ResolveAsync`: 4 vollständige
+  Aufrufstellen, keine Trunkierung.
+- MCP `find_duplicates`, production scope `src/AiNetLinter/Mcp`, exact:
+  0 Cluster bei 1524 gescannten Methoden.
+- MCP `find_dead_code`, private/internal high-confidence, production scope:
+  0 Kandidaten bei 783 Symbolen.
+- MCP `find_magic_values`, production scope, `changedOnly=true`: 0 Treffer.
+- Testscope-Audits: `find_duplicates` 0 Cluster bei 75 Methoden und
+  `find_dead_code` 0 Kandidaten bei 17 Symbolen.
+- Abschließender gezielter MCP-`get_violations`-Check nach der letzten
+  Codeänderung: 0 Verstöße im Resolver-Scope und 0 Verstöße im gesamten
+  Assembly-Analysis-Testscope (15 Dateien).

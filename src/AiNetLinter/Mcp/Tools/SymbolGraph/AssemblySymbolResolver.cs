@@ -25,36 +25,11 @@ internal static class AssemblySymbolResolver
         var leases = leaseSet.Leases;
         var diagnostics = AssemblyNavigationSupport.CreateExpansionDiagnostics(
             AssemblyNavigationLeaseAccess.CreateView(root));
-        var candidates = new List<AssemblySymbolTarget>();
-        var hasAssemblyId = identifier.StartsWith(AnalysisSymbolIdentity.Prefix, StringComparison.Ordinal);
-
-        foreach (var lease in leases)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var view = AssemblyNavigationLeaseAccess.CreateView(lease);
-            if (hasAssemblyId && !AssemblyNavigationSupport.MatchesLeaseIdentity(identifier, view.Identity)) continue;
-
-            var solution = lease.Server.GetCurrentSolution();
-            if (solution is null)
-            {
-                diagnostics.Add($"Assembly-Session '{lease.CanonicalPath}' besitzt keine lesbare Solution.");
-                continue;
-            }
-
-            var resolved = await ResolveLeaseAsync(
-                solution,
-                lease,
-                identifier,
-                cancellationToken).ConfigureAwait(false);
-            if (resolved.Symbol is not null)
-            {
-                candidates.Add(new(resolved.Symbol, lease));
-            }
-            else if (resolved.Diagnostic is not null && !hasAssemblyId)
-            {
-                diagnostics.Add(resolved.Diagnostic);
-            }
-        }
+        var candidates = await ResolveCandidatesAsync(
+            leases,
+            identifier,
+            diagnostics,
+            cancellationToken).ConfigureAwait(false);
 
         var navigation = AssemblyNavigationSupport.CreateSummary(new AssemblyNavigationSummaryRequest(
             leaseSet.TotalAssemblyCount,
@@ -83,6 +58,35 @@ internal static class AssemblySymbolResolver
         }
 
         return (distinct[0], null, navigation);
+    }
+
+    private static async Task<List<AssemblySymbolTarget>> ResolveCandidatesAsync(
+        IReadOnlyList<AssemblyAnalysisLease> leases,
+        string identifier,
+        List<string> diagnostics,
+        CancellationToken cancellationToken)
+    {
+        var candidates = new List<AssemblySymbolTarget>();
+        var hasAssemblyId = identifier.StartsWith(AnalysisSymbolIdentity.Prefix, StringComparison.Ordinal);
+        foreach (var lease in leases)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var view = AssemblyNavigationLeaseAccess.CreateView(lease);
+            if (hasAssemblyId && !AssemblyNavigationSupport.MatchesLeaseIdentity(identifier, view.Identity)) continue;
+
+            var solution = lease.Server.GetCurrentSolution();
+            if (solution is null)
+            {
+                diagnostics.Add($"Assembly-Session '{lease.CanonicalPath}' besitzt keine lesbare Solution.");
+                continue;
+            }
+
+            var resolved = await ResolveLeaseAsync(solution, lease, identifier, cancellationToken).ConfigureAwait(false);
+            if (resolved.Symbol is not null) candidates.Add(new(resolved.Symbol, lease));
+            else if (resolved.Diagnostic is not null && !hasAssemblyId) diagnostics.Add(resolved.Diagnostic);
+        }
+
+        return candidates;
     }
 
     private static async Task<(ISymbol? Symbol, string? Diagnostic)> ResolveLeaseAsync(
