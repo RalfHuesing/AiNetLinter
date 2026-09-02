@@ -125,10 +125,10 @@ internal static class AssemblyDecompiledBodyResolver
         if (type is not TypeDeclarationSyntax declaration) return null;
 
         var member = declaration.Members.FirstOrDefault(candidate => MatchesMember(candidate, symbol));
-        if (member is not null) return member;
-        return declaration.DescendantNodes()
-            .OfType<AccessorDeclarationSyntax>()
-            .FirstOrDefault(accessor => MatchesMember(accessor, symbol));
+        if (member is null) return null;
+        return symbol is IMethodSymbol { AssociatedSymbol: not null } accessor
+            ? FindAccessor(member, accessor)
+            : member;
     }
 
     private static bool MatchesContainingType(BaseTypeDeclarationSyntax candidate, INamedTypeSymbol? type)
@@ -164,12 +164,13 @@ internal static class AssemblyDecompiledBodyResolver
 
     private static bool MatchesMember(SyntaxNode member, ISymbol symbol)
     {
-        if (member is AccessorDeclarationSyntax accessor)
+        if (symbol is IMethodSymbol method)
         {
-            return symbol is IMethodSymbol accessorMethod && MatchesAccessor(accessor, accessorMethod);
+            return method.AssociatedSymbol is not null
+                ? MatchesAssociatedMember(member, method)
+                : MatchesMethod(member, method);
         }
 
-        if (symbol is IMethodSymbol method) return MatchesMethod(member, method);
         if (symbol is IPropertySymbol property) return MatchesProperty(member, property);
         if (symbol is IFieldSymbol field) return member is FieldDeclarationSyntax declaration
             && declaration.Declaration.Variables.Any(variable => variable.Identifier.Text == field.Name);
@@ -194,13 +195,39 @@ internal static class AssemblyDecompiledBodyResolver
             && MatchesParameters(method.ParameterList.Parameters, symbol.Parameters);
     }
 
+    private static bool MatchesAssociatedMember(SyntaxNode member, IMethodSymbol symbol) =>
+        symbol.AssociatedSymbol switch
+        {
+            IPropertySymbol property => MatchesProperty(member, property),
+            IEventSymbol eventSymbol => MatchesEvent(member, eventSymbol),
+            _ => false,
+        };
+
+    private static AccessorDeclarationSyntax? FindAccessor(SyntaxNode member, IMethodSymbol symbol)
+    {
+        var accessors = member switch
+        {
+            BasePropertyDeclarationSyntax property => property.AccessorList?.Accessors,
+            _ => null,
+        };
+        return accessors?.FirstOrDefault(accessor => MatchesAccessor(accessor, symbol));
+    }
+
     private static bool MatchesAccessor(AccessorDeclarationSyntax accessor, IMethodSymbol symbol)
     {
-        return symbol.AssociatedSymbol is IPropertySymbol or IEventSymbol
-            && symbol.MethodKind switch
-            {
-                MethodKind.PropertyGet => accessor.IsKind(SyntaxKind.GetAccessorDeclaration),
-                MethodKind.PropertySet => accessor.IsKind(SyntaxKind.SetAccessorDeclaration),
+        var declaringMember = accessor.Parent?.Parent;
+        var associatedMemberMatches = symbol.AssociatedSymbol switch
+        {
+            IPropertySymbol property => declaringMember is BasePropertyDeclarationSyntax declaration
+                && MatchesProperty(declaration, property),
+            IEventSymbol eventSymbol => declaringMember is EventDeclarationSyntax declaration
+                && MatchesEvent(declaration, eventSymbol),
+            _ => false,
+        };
+        return associatedMemberMatches && symbol.MethodKind switch
+        {
+            MethodKind.PropertyGet => accessor.IsKind(SyntaxKind.GetAccessorDeclaration),
+            MethodKind.PropertySet => accessor.IsKind(SyntaxKind.SetAccessorDeclaration),
                 MethodKind.EventAdd => accessor.IsKind(SyntaxKind.AddAccessorDeclaration),
                 MethodKind.EventRemove => accessor.IsKind(SyntaxKind.RemoveAccessorDeclaration),
                 _ => false,

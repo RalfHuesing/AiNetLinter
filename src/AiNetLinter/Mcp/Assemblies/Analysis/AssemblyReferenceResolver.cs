@@ -16,6 +16,7 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 internal sealed class AssemblyReferenceResolver
 {
     private const string LegacyCoreLibraryName = "mscorlib";
+    private const string FrameworkBaseLibraryName = "System";
     private static readonly string[] VersionTolerantFrameworkPrefixes =
     [
         "System.",
@@ -361,6 +362,7 @@ internal sealed class AssemblyReferenceResolver
 
     private static bool IsVersionTolerantFrameworkAssembly(string name) =>
         string.Equals(name, LegacyCoreLibraryName, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(name, FrameworkBaseLibraryName, StringComparison.OrdinalIgnoreCase)
         || VersionTolerantFrameworkPrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
 
     private static string NormalizeCulture(string culture) =>

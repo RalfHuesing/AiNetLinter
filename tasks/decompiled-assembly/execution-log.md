@@ -63,3 +63,17 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Anlass: P1-Findings aus dem unabhängigen Review zu Accessor-Matching, In-Flight-Cache-Retention und exakter Framework-Assembly `System`.
 - Scope: Nur die drei gebündelten Ursachen und ihre direkten Regressionstests; keine Paket-2/3/4-Erweiterung.
 - Status: running
+
+## 2026-09-02 – Paket 1 – Korrekturversuch 1 – Implementierer
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: `01a060f4-8938-7842-9a6c-33d624b91898`
+- Diff-Baseline: `39bf17b7`
+- Status: terminal abgeschlossen; Korrekturstand unreviewt gesichert.
+- Urteil: Drei P1-Findings behoben.
+- Geänderte Bereiche: Accessor-Auflösung in `AssemblyDecompiledBodyResolver`, Cache-Locking/Retention in `AssemblyDecompilationCache` einschließlich neuem Locking-Helfer, exakte `System`-Unification in `AssemblyReferenceResolver`, direkte Regressionstests und aktualisierte `code-map.md`.
+- Verifikation nach der letzten Codeänderung: fokussierte Korrekturtests 33/33 bestanden; `dotnet build` 0 Warnungen/0 Fehler; gezielter `get_violations` mit `targetType=project`, absolutem Projektziel, `scopeFilter=src/AiNetLinter/Mcp`, `maxResults=200`, `includeSnippet=false`, `contextLines=0`: 0 Fehler und sechs bestehende, nicht betroffene `AIContextFootprint`-Warnungen.
+- Offenes Risiko: Ein Integrationstest bleibt wegen des externen Live-Safeguard-Korridors fehlgeschlagen.
+- Code-Map: nach der Korrektur aktualisiert.
+- Nächste Aktion: frischer unabhängiger Folge-Review.

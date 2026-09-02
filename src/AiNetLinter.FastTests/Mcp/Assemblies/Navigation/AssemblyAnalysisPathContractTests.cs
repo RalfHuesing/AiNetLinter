@@ -96,6 +96,84 @@ public sealed class AssemblyAnalysisPathContractTests
     }
 
     [Fact]
+    public async Task AssemblyRoute_ResolvesAccessorBodiesByAssociatedPropertyIndexerAndEvent()
+    {
+        using var temp = TestTempDirectory.Create("assembly-associated-accessor-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "AssociatedAccessorProbe",
+            """
+            namespace Probe;
+            public sealed class Document
+            {
+                public int FirstValue
+                {
+                    get { return 11; }
+                    set { }
+                }
+                public int SecondValue
+                {
+                    get { return 22; }
+                    set { }
+                }
+                public int this[int index]
+                {
+                    get { return index == 0 ? 31 : 32; }
+                    set { }
+                }
+                private System.EventHandler? firstHandler;
+                public event System.EventHandler FirstChanged
+                {
+                    add { FirstMarker(); firstHandler += value; }
+                    remove { firstHandler -= value; }
+                }
+                private System.EventHandler? secondHandler;
+                public event System.EventHandler SecondChanged
+                {
+                    add { SecondMarker(); secondHandler += value; }
+                    remove { secondHandler -= value; }
+                }
+                private static void FirstMarker() { }
+                private static void SecondMarker() { }
+            }
+            """);
+        await using var registry = new AssemblyAnalysisRegistry();
+
+        var leaseResult = await registry.LeaseAsync(assemblyPath);
+        Assert.Null(leaseResult.Error);
+        using var lease = leaseResult.Lease!;
+        var type = lease.Context.Compilation.GetTypeByMetadataName("Probe.Document")!;
+        var firstProperty = Assert.Single(type.GetMembers("FirstValue").OfType<IPropertySymbol>());
+        var secondProperty = Assert.Single(type.GetMembers("SecondValue").OfType<IPropertySymbol>());
+        var indexer = Assert.Single(type.GetMembers().OfType<IPropertySymbol>().Where(property => property.IsIndexer));
+        var firstEvent = Assert.Single(type.GetMembers("FirstChanged").OfType<IEventSymbol>());
+        var secondEvent = Assert.Single(type.GetMembers("SecondChanged").OfType<IEventSymbol>());
+
+        var firstPropertyBody = await lease.ResolveBodyAsync(firstProperty.GetMethod!, 80, CancellationToken.None);
+        var secondPropertyBody = await lease.ResolveBodyAsync(secondProperty.GetMethod!, 80, CancellationToken.None);
+        var indexerBody = await lease.ResolveBodyAsync(indexer.GetMethod!, 80, CancellationToken.None);
+        var firstEventBody = await lease.ResolveBodyAsync(firstEvent.AddMethod!, 80, CancellationToken.None);
+        var secondEventBody = await lease.ResolveBodyAsync(secondEvent.AddMethod!, 80, CancellationToken.None);
+
+        Assert.Equal("available", firstPropertyBody.BodyAvailability);
+        Assert.Contains("return 11", firstPropertyBody.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("return 22", firstPropertyBody.Body, StringComparison.Ordinal);
+        Assert.Equal("available", secondPropertyBody.BodyAvailability);
+        Assert.Contains("return 22", secondPropertyBody.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("return 11", secondPropertyBody.Body, StringComparison.Ordinal);
+        Assert.Equal("available", indexerBody.BodyAvailability);
+        Assert.Contains("31", indexerBody.Body, StringComparison.Ordinal);
+        Assert.Contains("32", indexerBody.Body, StringComparison.Ordinal);
+        Assert.Equal("available", firstEventBody.BodyAvailability);
+        Assert.Contains("add", firstEventBody.Body, StringComparison.Ordinal);
+        Assert.Contains("FirstMarker", firstEventBody.Body, StringComparison.Ordinal);
+        Assert.Equal("available", secondEventBody.BodyAvailability);
+        Assert.Contains("add", secondEventBody.Body, StringComparison.Ordinal);
+        Assert.Contains("SecondMarker", secondEventBody.Body, StringComparison.Ordinal);
+        Assert.NotEqual(firstEventBody.Body, secondEventBody.Body);
+    }
+
+    [Fact]
     public async Task AssemblyRoute_ResolvesGeneratedDocumentAndStableParameterMethodAcrossTools()
     {
         using var temp = TestTempDirectory.Create("assembly-path-contract-");

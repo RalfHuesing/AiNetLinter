@@ -12,6 +12,7 @@ public sealed class AssemblyReferenceResolverTests
 {
     [Theory]
     [InlineData("mscorlib")]
+    [InlineData("System")]
     [InlineData("System.Runtime")]
     [InlineData("Microsoft.CodeAnalysis")]
     [InlineData("WindowsBase")]

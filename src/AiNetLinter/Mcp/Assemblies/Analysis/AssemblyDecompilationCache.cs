@@ -11,6 +11,7 @@ internal sealed partial class AssemblyDecompilationCache
 {
     private const int PointerPublishAttempts = 3;
     private static readonly UTF8Encoding Utf8 = new(false, true);
+    private static readonly AssemblyCacheKeyLockRegistry PublishLocks = new();
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -23,11 +24,13 @@ internal sealed partial class AssemblyDecompilationCache
         JsonOptions.Converters.Add(new AssemblyDecompilationManifestJsonConverter());
     }
 
-    internal AssemblyDecompilationCache(string? cacheRoot = null)
+    internal AssemblyDecompilationCache(string? cacheRoot = null, Action<string>? beforePublishReturn = null)
     {
         RootPath = AssemblyCacheContract.ResolveRootPath(cacheRoot);
+        this.beforePublishReturn = beforePublishReturn;
     }
     internal string RootPath { get; }
+    private readonly Action<string>? beforePublishReturn;
 
     internal string GetEntryDirectory(AssemblyDecompilationCacheKey key)
     {
@@ -66,6 +69,7 @@ internal sealed partial class AssemblyDecompilationCache
     internal AssemblyCachePublishResult Publish(AssemblyCachePublishRequest request)
     {
         var entryDirectory = GetEntryDirectory(request.CacheKey);
+        using var publishLock = PublishLocks.Acquire(entryDirectory);
         var generationDirectory = Path.Combine(entryDirectory, AssemblyCacheContract.GenerationDirectoryPrefix + Guid.NewGuid().ToString("N"));
         var isPublished = false;
         try
@@ -80,7 +84,7 @@ internal sealed partial class AssemblyDecompilationCache
             {
                 var currentPointer = Path.Combine(entryDirectory, AssemblyCacheContract.CurrentPointerFileName);
                 var publishedGenerationDirectory = ReadPointer(entryDirectory, currentPointer);
-                return new AssemblyCachePublishResult(true, publishedGenerationDirectory, null);
+                return ReturnSuccessful(publishedGenerationDirectory);
             }
 
             var publishOutcome = TryPublishPointer(entryDirectory, generationDirectory, request, out var diagnostic);
@@ -88,7 +92,7 @@ internal sealed partial class AssemblyDecompilationCache
             {
                 var currentPointer = Path.Combine(entryDirectory, AssemblyCacheContract.CurrentPointerFileName);
                 var publishedGenerationDirectory = ReadPointer(entryDirectory, currentPointer);
-                return new AssemblyCachePublishResult(true, publishedGenerationDirectory, null);
+                return ReturnSuccessful(publishedGenerationDirectory);
             }
 
             if (publishOutcome != PointerPublishOutcome.Published)
@@ -98,7 +102,7 @@ internal sealed partial class AssemblyDecompilationCache
 
             isPublished = true;
             AssemblyCacheCleanup.RetainGenerations(entryDirectory, Path.GetFileName(generationDirectory));
-            return new AssemblyCachePublishResult(true, generationDirectory, null);
+            return ReturnSuccessful(generationDirectory);
         }
         catch (Exception ex) when (IsCacheWriteException(ex))
         {
@@ -111,6 +115,13 @@ internal sealed partial class AssemblyDecompilationCache
         {
             if (!isPublished) AssemblyCacheCleanup.DeleteDirectory(generationDirectory);
         }
+    }
+
+    private AssemblyCachePublishResult ReturnSuccessful(string generationDirectory)
+    {
+        var result = new AssemblyCachePublishResult(true, generationDirectory, null);
+        beforePublishReturn?.Invoke(generationDirectory);
+        return result;
     }
 
     private static void WriteGeneration(string generationDirectory, AssemblyCachePublishRequest request)

@@ -10,30 +10,30 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### TD-ASM-ACCESSOR-001 – Accessor-Matching verliert das zugehörige Member
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 1/5 läuft.
+- Status: behoben in Korrekturversuch 1/5.
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/Bodies/AssemblyDecompiledBodyResolver.cs`, Accessor-Matching.
 - Evidenz: Review des Diffs `396e77f1..b3bb2ea8`; ein Descendant-Scan vergleicht nur Accessor-Kinds und kann bei mehreren gleichartigen Properties/Events den falschen Body wählen.
-- Disposition: `fix-now`
+- Disposition: `fixed`
 - Nächster Schritt: Accessor über `AssociatedSymbol` auf den direkten Property-/Indexer-/Event-Member begrenzen und Regressionen ergänzen.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 1 Review, P1-Finding A.
 
 ### TD-ASM-CACHE-001 – In-Flight-Generation wird vor Publish-Return löschbar
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 1/5 läuft.
+- Status: behoben in Korrekturversuch 1/5.
 - Scope/Fundstelle: `AssemblyDecompilationCache.Publish` und `AssemblyCacheCleanup`.
 - Evidenz: Review-Gegenbeispiel mit konkurrierenden Publishern unterschiedlicher Fingerprints; eine erfolgreich gemeldete Generation kann vor dem Return durch Retention gelöscht werden.
-- Disposition: `fix-now`
+- Disposition: `fixed`
 - Nächster Schritt: Publisher/Retention pro Cache-Key synchronisieren oder In-Flight-Generationen schützen und mit einem verzögerten Multi-Fingerprint-Test absichern.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 1 Review, P1-Finding B.
 
 ### TD-ASM-FRAMEWORK-001 – Exakte Assembly `System` nicht vereinheitlicht
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 1/5 läuft.
+- Status: behoben in Korrekturversuch 1/5.
 - Scope/Fundstelle: `AssemblyReferenceResolver` Framework-Namens-/Versionsprüfung.
 - Evidenz: `StartsWith("System.")` erfasst nicht den exakten Namen `System`, obwohl die freigegebene Fachentscheidung die Familie `System` nennt.
-- Disposition: `fix-now`
+- Disposition: `fixed`
 - Nächster Schritt: exaktes `System` ergänzen, `Systemish` ausschließen und Regressionstest hinzufügen.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 1 Review, P1-Finding C.
 
