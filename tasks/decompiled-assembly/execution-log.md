@@ -93,3 +93,12 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Restrisiken: Ein Integrationstest bleibt wegen des externen Live-Safeguard-Korridors fehlgeschlagen; sechs bestehende `AIContextFootprint`-Warnungen bleiben Paket-3-Risiko.
 - P2-Dispositionen: direkter Registrierungstest der privaten Health-Route und uneinheitliche `get_impact`-Nachweiszahl bleiben `accepted-deferred`. Ein veralteter Roadmap-Verweis wird durch den Orchestrator korrigiert.
 - Nächste Aktion: Paket 1 als `done` abschließen und Paket 2 starten.
+
+## 2026-09-02 – Paket 2 – Implementierer running
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: Implementierer
+- Subagent: wird nach Delegation ergänzt
+- Diff-Baseline: `cfc4149c`
+- Status: running
+- Scope: Tool-Verträge, Schemas, Assembly-Routen, Ausgabepräzisierung und direkt betroffene Dokumentation gemäß Paket 2; keine Paket-3/4-Arbeit.
