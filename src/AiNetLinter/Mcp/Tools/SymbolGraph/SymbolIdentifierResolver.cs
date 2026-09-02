@@ -177,12 +177,19 @@ internal static class SymbolIdentifierResolver
         return (null, null);
     }
 
+    internal static string NormalizeDocCommentId(string id)
+    {
+        var tilde = id.IndexOf('~');
+        return tilde >= 0 ? id[..tilde] : id;
+    }
+
     private static async Task<ISymbol?> FindExactStableIdAsync(
         Solution solution,
         string stableId,
         CancellationToken ct,
         ICollection<ISymbol>? assemblyCandidates)
     {
+        var normalizedStableId = NormalizeDocCommentId(stableId);
         foreach (var project in solution.Projects)
         {
             var declared = await SymbolFinder.FindSourceDeclarationsAsync(
@@ -190,9 +197,12 @@ internal static class SymbolIdentifierResolver
             foreach (var symbol in declared)
             {
                 var declarationId = DocumentationCommentId.CreateDeclarationId(symbol);
-                if (declarationId == stableId)
+                if (declarationId is not null)
                 {
-                    return symbol;
+                    if (declarationId == stableId || NormalizeDocCommentId(declarationId) == normalizedStableId)
+                    {
+                        return symbol;
+                    }
                 }
 
                 if (assemblyCandidates is not null) assemblyCandidates.Add(symbol);
@@ -233,6 +243,9 @@ internal static class SymbolIdentifierResolver
         if (value.Length < 3 || value[1] != ':') return false;
 
         var payload = value[2..];
+        var tilde = payload.IndexOf('~');
+        if (tilde >= 0) payload = payload[..tilde];
+
         var parameterStart = payload.IndexOf('(');
         if (parameterStart < 0)
         {

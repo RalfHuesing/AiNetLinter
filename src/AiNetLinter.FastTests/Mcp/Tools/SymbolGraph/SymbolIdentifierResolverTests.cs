@@ -190,4 +190,30 @@ public sealed class SymbolIdentifierResolverTests
         Assert.False(ok);
     }
 
+    [Fact]
+    public async Task TryResolveByStableIdAsync_WithAndWithoutReturnTypeSuffix_BothResolve()
+    {
+        using var owner = RoslynTestSolutionFactory.CreateSolution(
+            "namespace Probe; public sealed class Service { public string Process(int id) => id.ToString(); }");
+        var project = owner.Solution.Projects.Single();
+        var compilation = (await project.GetCompilationAsync())!;
+        var symbol = compilation.GetTypeByMetadataName("Probe.Service")!
+            .GetMembers("Process")
+            .OfType<IMethodSymbol>()
+            .Single();
+        var rawId = DocumentationCommentId.CreateDeclarationId(symbol)!;
+        var withReturnType = rawId + "~System.String";
+
+        var (resolvedExact, errorExact) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution, rawId, CancellationToken.None);
+        var (resolvedWithReturn, errorWithReturn) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution, withReturnType, CancellationToken.None);
+
+        Assert.Null(errorExact);
+        Assert.NotNull(resolvedExact);
+        Assert.Null(errorWithReturn);
+        Assert.NotNull(resolvedWithReturn);
+        Assert.True(SymbolEqualityComparer.Default.Equals(symbol, resolvedExact));
+        Assert.True(SymbolEqualityComparer.Default.Equals(symbol, resolvedWithReturn));
+    }
 }

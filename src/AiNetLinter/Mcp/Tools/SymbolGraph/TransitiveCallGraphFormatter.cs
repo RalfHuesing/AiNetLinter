@@ -89,7 +89,9 @@ internal static class TransitiveCallGraphFormatter
         AppendDiagnosticMetadata(metadata, projection);
         var finalBody = metadata.Count > 0
             ? request.Body + "\n\n" + string.Join("\n", metadata)
-            : McpSufficiencyHints.Append(request.Body);
+            : request.SuppressSufficiencyHint
+                ? McpSufficiencyHints.AppendDecompiledSignatureOnlyLimitation(request.Body)
+                : McpSufficiencyHints.Append(request.Body);
 
         return McpToolResults.Text(
             finalBody,
@@ -206,7 +208,8 @@ internal sealed record AssemblyCallTreeResponseRequest(
     IReadOnlyList<string> Diagnostics,
     bool Truncated,
     bool TopNTruncated,
-    string? TreeTruncationMessage);
+    string? TreeTruncationMessage,
+    bool SuppressSufficiencyHint = false);
 
 internal sealed record TransitiveCallGraphFormatResult(
     ReferenceTraversalResult Traversal,

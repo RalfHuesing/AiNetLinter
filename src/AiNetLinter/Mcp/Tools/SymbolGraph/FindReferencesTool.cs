@@ -265,10 +265,23 @@ internal static class FindReferencesTool
             ct);
         if (error is not null) return (null, error);
 
-        var symbols = SymbolIdentifierResolver.ResolveSymbolsOnLine(root!, text!.Lines[line - 1].Span, semanticModel!);
+        var lineSpan = text!.Lines[line - 1].Span;
+        var symbols = SymbolIdentifierResolver.ResolveSymbolsOnLine(root!, lineSpan, semanticModel!);
 
         if (symbols.Count == 0) return (null, McpToolResults.SymbolNotFound(identifier));
         if (symbols.Count == 1) return (symbols[0], null);
+
+        var declarationsOnLine = symbols
+            .Where(s => s.DeclaringSyntaxReferences.Any(r =>
+                r.SyntaxTree == root!.SyntaxTree && lineSpan.Contains(r.Span.Start)))
+            .ToList();
+
+        var memberDeclarations = declarationsOnLine
+            .Where(s => s is IMethodSymbol or IPropertySymbol or INamedTypeSymbol or IFieldSymbol or IEventSymbol)
+            .ToList();
+
+        if (memberDeclarations.Count == 1) return (memberDeclarations[0], null);
+        if (declarationsOnLine.Count == 1) return (declarationsOnLine[0], null);
 
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
         var lines = symbols.SelectMany(s => FindSymbolTool.FormatSymbolLocations(s, outputRoot));

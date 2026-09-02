@@ -157,7 +157,7 @@ internal static class FindSymbolTool
         var kindLabel = SymbolKindClassifier.DescribeSymbolKind(symbol);
         var symbolId = DocumentationCommentId.CreateDeclarationId(symbol)
             ?? CallGraphTraversal.GetStableSymbolId(symbol);
-        var qualifiedId = assemblyIdentity?.Format(symbolId);
+        var qualifiedId = assemblyIdentity?.Format(symbolId) ?? symbolId;
         foreach (var location in symbol.Locations.Where(l => l.IsInSource))
         {
             var lineSpan = location.GetLineSpan();

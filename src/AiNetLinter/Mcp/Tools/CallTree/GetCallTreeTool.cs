@@ -84,7 +84,9 @@ internal static class GetCallTreeTool
                 ? body + "\n\n" + BuildTruncationMeta()
                 : topNTruncated
                     ? body + "\n\n" + BuildTopNTruncationMeta()
-                    : McpSufficiencyHints.Append(body);
+                    : input.SuppressSufficiencyHint
+                        ? McpSufficiencyHints.AppendDecompiledSignatureOnlyLimitation(body)
+                        : McpSufficiencyHints.Append(body);
 
             return McpToolResults.Text(
                 FindSymbolTool.PrependWarning(warning, finalBody),

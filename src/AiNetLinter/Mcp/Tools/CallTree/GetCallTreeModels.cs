@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Mcp.Tools.MetricsTree;
@@ -32,7 +32,8 @@ internal sealed record GetCallTreeInput(
     int Depth,
     string? Format,
     int TopN,
-    string? Direction = null);
+    string? Direction = null,
+    bool SuppressSufficiencyHint = false);
 
 internal sealed record CallTreeBuildRequest(
     Solution Solution,

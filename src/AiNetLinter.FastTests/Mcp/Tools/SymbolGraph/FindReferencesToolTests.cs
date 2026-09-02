@@ -121,6 +121,18 @@ public sealed class FindReferencesToolTests
         Assert.Equal("Greet", symbol!.Name);
     }
 
+    [Fact]
+    public async Task ResolveSymbolAsync_LineOnlyOnMethodDeclaration_ReturnsMethodSymbol()
+    {
+        var identifier = "src/SymbolGraphMini/Greeter.cs:5";
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(_fixture.Solution, identifier, CancellationToken.None);
+
+        Assert.Null(error);
+        Assert.NotNull(symbol);
+        Assert.Equal("Greet", symbol!.Name);
+        Assert.IsAssignableFrom<IMethodSymbol>(symbol);
+    }
+
     [Theory]
     [InlineData(0, 1)]
     [InlineData(-1, 1)]
