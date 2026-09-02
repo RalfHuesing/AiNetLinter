@@ -138,7 +138,7 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 
 - Run-ID: `decompiled-assembly-20260902`
 - Rolle: frischer Implementierer
-- Subagent: wird nach Delegation ergänzt
+- Subagent: `01a0615d-e542-7051-9a93-86a96e5a2c82`
 - Diff-Baseline: `51ac63ba`
 - Anlass: P1-Dokumentationsfehler `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE`.
 - Scope: Nur Trennung/Korrektur des `find_references`-/`get_impact`-Abschnitts und direkte Doku-Regression; keine Produktionscodeänderung und keine Paket-3/4-Arbeit.
