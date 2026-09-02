@@ -3,8 +3,8 @@
 Primäraufgabe: MCP-Komposition entkoppeln und Qualitätsgrenzen wiederherstellen.
 
 Status: executing  
-current_epic: 2  
-letzter_checkpoint: 3e837436  
+current_epic: 3  
+letzter_checkpoint: 569cd72a  
 Tech-Debt-Register: `tech-debt.md`  
 
 Der Großkonzept-Modus folgt dem freigegebenen `Konzept.md`. Die Einordnung als
@@ -42,7 +42,7 @@ nicht erforderlich.
 
 ## Epic 2: Größenlimits und Regressionsschutz bereinigen
 
-Status: in_progress
+Status: done
 
 Ziel: Die konkreten Line-Count-Verstöße werden durch kleine, verhaltensneutrale
 Extraktionen behoben und die entkoppelten Komponenten erhalten passende
@@ -62,15 +62,15 @@ Muss-/Akzeptanzkriterien:
 - Die Tests sichern Interface-Grenze, Body-Resolution und relevante
   Registry-Concurrency-Invarianten ab.
 
-Verifikation: betroffene Unit-/Component-Tests und gezieltes
-`get_violations` nach der letzten Codeänderung.
+Verifikation: betroffene Unit-/Component-Tests, gezieltes `get_violations`
+nach der letzten Codeänderung und unabhängiger Review des Epic-2-Diffs.
 
-Annahmen/offene Fragen: Die konkrete Zuordnung ausgelagerter Tests folgt ihrer
-fachlichen Verantwortung, nicht einer künstlichen Größenaufteilung.
+Annahmen/offene Fragen: Die ausgelagerten Cache-Tests folgen ihrer fachlichen
+Verantwortung; die Testparallelität blieb unverändert.
 
 ## Epic 3: MCP-Qualitätsbefunde im vereinbarten Scope bereinigen
 
-Status: open
+Status: in_progress
 
 Ziel: Belegte, scope-nahe Restbefunde zu Kopplung, DRY, Dead Code und Magic
 Values werden ohne neue globale Abstraktionen bereinigt.
