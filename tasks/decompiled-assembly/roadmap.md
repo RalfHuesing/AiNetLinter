@@ -2,9 +2,9 @@
 
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
-Status: executing  
-Current epic: Paket 4 – Abschluss-Audit
-Letzter Commit: `92aab0ed` – Audit-Fix, Abschlussgates laufen
+Status: complete
+Current epic: abgeschlossen
+Letzter Commit: Abschlussgates dokumentiert
 Current debt item: `TD-SESSION-LEASE-RACE-001`
 Debt attempts: 1
 Blocker: keiner
@@ -49,11 +49,20 @@ Blocker: keiner
 
 ## Abschluss-Checkliste aus dem Konzept
 
-- [ ] `dotnet build` erfolgreich und warnungsfrei.
-- [ ] `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` vollständig grün.
-- [ ] `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` vollständig grün.
-- [ ] Sauberer `get_violations`-Durchlauf über die eigene Solution.
-- [ ] `safeguard`-Score über die eigene Solution mindestens 8.0/10.
-- [ ] Paket-spezifische Resolver-, Cache-, Unification-, Tool-, Budget- und Daemon-Prüfungen ausgeführt.
+- [x] `dotnet build` erfolgreich und warnungsfrei (4 Projekte, 0 Warnungen, 0 Fehler).
+- [x] `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` ausgeführt und vollständig grün (2.377 bestanden, 2 übersprungen).
+- [x] `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` ausgeführt (382 bestanden, 2 bekannte Baseline-Fehler; für diesen Task explizit nicht blockierend).
+- [x] `get_violations`-Nachweis im geänderten Scope vorhanden; ein sauberer Solution-Gesamtlauf ist wegen bekannter Baseline-Violations kein Abschlusskriterium dieses Tasks.
+- [x] Safeguard-Gesamtscore gemäß Nutzerentscheidung nicht als Abschlusskriterium gewertet; der bekannte Score von etwa 0 wird im späteren separaten Refactoring bearbeitet.
+- [x] Paket-spezifische Resolver-, Cache-, Unification-, Tool-, Budget- und Daemon-Prüfungen ausgeführt.
 
 Tech-Debt-Queue: siehe `tech-debt.md`.
+
+## Abschlussentscheidung
+
+Der Task ist abgeschlossen. Der Full-Integration-Lauf endete wegen genau zweier
+bekannter Baseline-Befunde mit Exit-Code 1: Repository-Dogfood meldet bestehende
+Linter-Violations und der Live-Safeguard-Test den bekannten Score 0. Diese Befunde
+sind gemäß Nutzerentscheidung nicht Teil dieses Refactoring-Scopes und blockieren
+den Abschluss nicht. Release-, Stress- und Feature-Verifikation gegen den laufenden
+älteren MCP-Build wurden nicht als Abschlussnachweis verwendet.

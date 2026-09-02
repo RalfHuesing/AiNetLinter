@@ -660,3 +660,15 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Restrisiken: P2 `NAV-COMPLETENESS-SESSION-CAP-OVERWRITE`, verspätete Lease-Registrierung, Operator-/Conversion-Operator-Matrix und Namespace-Summary bei extremem Trimming bleiben zurückgestellt.
 - Code-Map: nicht geändert; kein konkreter Scope-/Historienbefund.
 - Nächste Aktion: Paket 3 schließen, Paket 4 als Abschlussmatrix starten.
+
+## 2026-09-02 – Abschlussgates abgeschlossen
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: Orchestrator-Abschlussverifikation
+- Status: terminal abgeschlossen; Task abgeschlossen.
+- `dotnet build`: erfolgreich, 4 Projekte, 0 Warnungen, 0 Fehler.
+- `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress`: erfolgreich, 2.377 bestanden, 2 übersprungen, 2.379 gesamt.
+- `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`: 382 bestanden, 2 fehlgeschlagen, 0 übersprungen, 384 gesamt. Beide Fehlschläge sind die bekannten, nicht blockierenden Baseline-Befunde `CliRepositoryDogfoodTests.RunLinterCli_OnWholeSolution_ReturnsSuccess` (bestehende Linter-Violations) und `McpLiveRepositoryTests.LiveDogfood_Safeguard_ReturnsResults` (Safeguard-Score 0); sie werden gemäß Nutzerentscheidung in diesem Task ignoriert und für ein späteres separates Refactoring vorgemerkt.
+- Die Paket-4-spezifischen lokalen Regressionen sowie der einmalige Abschluss-Audit sind abgeschlossen; sichere Audit-Bereinigung wurde umgesetzt.
+- Nicht als Abschlusskriterium ausgeführt bzw. gewertet: Release-Verifikation, Stress-Tests und Feature-Verifikation gegen den laufenden älteren MCP-Build. Der MCP-Hinweis gilt unverändert für alle Subagenten.
+- Abschlussentscheidung: keine offenen P1-Befunde, kein Task-Blocker. Verbleibende P2-/Baseline-Themen stehen in `tech-debt.md` bzw. werden im späteren Refactoring bearbeitet.
