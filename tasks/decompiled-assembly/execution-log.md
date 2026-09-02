@@ -237,6 +237,15 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Checkpoint-Nachtrag: Der direkte Lifecycle-Hunk `IAssemblyAnalysisEvictionEntry.IsRetiring` in `AssemblyAnalysisRegistryEvictionContext.cs` wurde nach dem Bericht als zugehörig verifiziert und separat in den Checkpoint aufgenommen.
 - Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.
 
+## 2026-09-02 – Paket 3 – Folge-Review running
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Folge-Reviewer
+- Subagent: `01a061f2-dea2-7ac1-a56b-6b747f722013`
+- Diff-Scope: Paket-3-Gesamtstand seit `84d7f27c`, einschließlich Korrektur und Checkpoint `04cb27bd`.
+- Status: running
+- MCP-Hinweis: Laufender Server ist älter als der Working Tree; nicht als Feature-Nachweis verwenden.
+
 ## 2026-09-02 – Paket 3 – Review
 
 - Run-ID: `decompiled-assembly-20260902`
