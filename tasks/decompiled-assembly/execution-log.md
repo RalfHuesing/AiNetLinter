@@ -58,7 +58,7 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 
 - Run-ID: `decompiled-assembly-20260902`
 - Rolle: frischer Implementierer
-- Subagent: wird nach Delegation ergänzt
+- Subagent: `01a060f4-8938-7842-9a6c-33d624b91898`
 - Diff-Baseline: `df11979e`
 - Anlass: P1-Findings aus dem unabhängigen Review zu Accessor-Matching, In-Flight-Cache-Retention und exakter Framework-Assembly `System`.
 - Scope: Nur die drei gebündelten Ursachen und ihre direkten Regressionstests; keine Paket-2/3/4-Erweiterung.
