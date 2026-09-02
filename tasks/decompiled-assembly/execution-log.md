@@ -539,6 +539,16 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - MCP-Hinweis: Kein laufender alter MCP, keine Release-/Live-/Stress-Verifikation verwendet.
 - Nächste Aktion: Orchestrator-Checkpoint, danach unabhängiger Folge-Review.
 
+## 2026-09-02 – Paket 4 – Folge-Review running (aktuell)
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Folge-Reviewer
+- Subagent: `01a06250-8d90-7c91-9152-8956e122dfc2`
+- Diff-Scope: Daemon-Health-E2E-Korrektur `3b7b5cb5` und Paket-4-Gesamtstand.
+- Status: running
+- Scope: aktueller lokaler Daemon-Prozess, Projektziel-Health-Request, Registry-/Status-/Pfad-Assertions, Cleanup und Testisolation; keine Release-/Live-/Stress-Verifikation.
+- MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet.
+
 ## 2026-09-02 – Paket 3 – Folge-Review nach Quellenkorrektur
 
 - Run-ID: `decompiled-assembly-20260902`
