@@ -110,7 +110,7 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### TD-SESSION-EVICTION-REFRESH-001 – Request-Set verliert alte Entry-Identitäten nicht
 
 - Schweregrad: P1
-- Status: aktiv, Versuch 1/5 steht an.
+- Status: aktiv, Versuch 1/5 läuft.
 - Scope/Fundstelle: `AssemblyAnalysisRegistryReferenceEviction` und direkter Refresh-Retirement in `AssemblyAnalysisRegistry`.
 - Evidenz: Review des Paket-3-Diffs; ein offener Request mit Fremd-Lease wird beim Fingerprint-Refresh nicht per `OnRetired/ClearRequest` entfernt und hält den alten Entry samt Server/Solution referenziert.
 - Disposition: `fix-now`

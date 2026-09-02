@@ -211,6 +211,17 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Scope: Namespace-/Response-Budget, Signature-only-Stub-Fehlerlast, AIContextFootprint und Referenz-Session-Lebenszeit gemäß Paket 3; keine Paket-4-Abschlussmatrix und keine Release-/Live-MCP-Verifikation.
 - MCP-Hinweis: Laufender Server ist älter als der Working Tree; nicht als Feature-Nachweis verwenden.
 
+## 2026-09-02 – Paket 3 – Korrekturversuch 1 – Implementierer running
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: wird nach Delegation ergänzt
+- Diff-Baseline: `b38a3578`
+- Anlass: P1 `TD-SESSION-EVICTION-REFRESH-001`, Request-Set-Leak bei direktem Fingerprint-Refresh-Retirement.
+- Scope: Alle direkten Retirement-Pfade per Entry-Identität an die Request-Bereinigung anbinden und eine Regression für offenen Request plus Generationwechsel ergänzen; keine Paket-4-Testmatrix und keine Release-/Live-MCP-Verifikation.
+- MCP-Hinweis: Laufender Server ist älter als der Working Tree; nicht als Feature-Nachweis verwenden.
+- Status: running
+
 ## 2026-09-02 – Paket 3 – Review
 
 - Run-ID: `decompiled-assembly-20260902`
