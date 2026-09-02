@@ -3,8 +3,8 @@
 Primäraufgabe: MCP-Komposition entkoppeln und Qualitätsgrenzen wiederherstellen.
 
 Status: executing  
-current_epic: 3  
-letzter_checkpoint: 569cd72a  
+current_epic: Abschluss-Audit  
+letzter_checkpoint: 4ebd194d  
 Tech-Debt-Register: `tech-debt.md`  
 
 Der Großkonzept-Modus folgt dem freigegebenen `Konzept.md`. Die Einordnung als
@@ -70,7 +70,7 @@ Verantwortung; die Testparallelität blieb unverändert.
 
 ## Epic 3: MCP-Qualitätsbefunde im vereinbarten Scope bereinigen
 
-Status: in_progress
+Status: done
 
 Ziel: Belegte, scope-nahe Restbefunde zu Kopplung, DRY, Dead Code und Magic
 Values werden ohne neue globale Abstraktionen bereinigt.
@@ -88,8 +88,8 @@ Muss-/Akzeptanzkriterien:
   scope-fremdes bleibt mit Evidenz im Tech-Debt-Register.
 - `rules.json`, Roslyn-Rules, Logging und CLI-Framework bleiben unverändert.
 
-Verifikation: gezieltes `get_violations`; die vollständigen MCP-Audits und
-Solution-Gates erfolgen im Abschluss.
+Verifikation: gezieltes `get_violations`, vollständige MCP-Scope-Audits und
+unabhängiger Review des Epic-3-Diffs.
 
 Annahmen/offene Fragen: Nur tatsächlich bestätigte Befunde werden in Arbeit
 genommen; das Konzept ermächtigt keinen zufälligen globalen Cleanup.
