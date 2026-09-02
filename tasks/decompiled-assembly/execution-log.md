@@ -417,3 +417,14 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wurde nicht als Feature-Nachweis verwendet.
 - Code-Map: nicht geändert; kein konkreter Scope-/Historienbefund.
 - Nächste Aktion: frischer Implementierer für `NAV-TRANSITIVE-SOURCE-COVERAGE-001`, Versuch 1/5.
+
+## 2026-09-02 – Paket 3 – Korrekturversuch 1 – Implementierer running (aktuell)
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: frischer Implementierer
+- Subagent: `01a0621e-0d95-7b01-b04a-b6d6bb6b63b9`
+- Diff-Baseline: `32afeed2`
+- Anlass: P1 `NAV-TRANSITIVE-SOURCE-COVERAGE-001`.
+- Scope: Navigation-Quellen für alle zugelassenen Leases sowie konkrete transitive `find_references`-/Call-Tree-Treffer mit Origin; keine Paket-4-Ausweitung und keine Release-/Live-MCP-Verifikation.
+- MCP-Hinweis: Laufender MCP-Server ist älter als der Working Tree und wird nicht als Feature-Nachweis verwendet.
+- Status: running
