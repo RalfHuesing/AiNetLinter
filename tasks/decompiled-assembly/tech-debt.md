@@ -190,12 +190,12 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### TD-REGISTRY-DEAD-WIRING-001 – Ungelesene Retirement-Callbacks
 
 - Schweregrad: P3
-- Status: zurückgestellt bis nach Paket 4.
+- Status: fixed im einmaligen Abschluss-Audit.
 - Scope/Fundstelle: `AssemblyAnalysisRegistryCoordinatorContext.BeforeRetirementAsync` und `RetireEntryAsync`.
 - Evidenz: Review: Delegates werden gesetzt, vom aktuellen Koordinator jedoch nicht mehr gelesen.
-- Disposition: `accepted-deferred`
-- Nächster Schritt: Nach Abschluss der Lifecycle-Änderungen Referenzen erneut prüfen und sichere Bereinigung durchführen.
-- Log-Anker: `execution-log.md`, 2026-09-02 Paket 3 Review.
+- Disposition: `fixed`
+- Nächster Schritt: Erledigt; ungenutzte Coordinator-Delegates und ihre Verdrahtung sind entfernt.
+- Log-Anker: `execution-log.md`, 2026-09-02 Abschluss-Audit.
 
 ### SIGONLY-CONSTRUCTOR-EXPRESSION-BODY – Expression-bodied Konstruktor wird fälschlich gestubbt
 

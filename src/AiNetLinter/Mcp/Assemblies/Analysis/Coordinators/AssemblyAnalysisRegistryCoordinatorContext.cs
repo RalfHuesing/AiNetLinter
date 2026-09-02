@@ -18,8 +18,6 @@ internal sealed class AssemblyAnalysisRegistryCoordinatorContext
     internal List<Task> RetiredEntries { get; init; } = null!;
     internal Func<bool> IsDisposed { get; init; } = null!;
     internal AssemblyAnalysisResourceBudget ResourceBudget { get; init; } = null!;
-    internal Func<AssemblyAnalysisEntry, Task>? BeforeRetirementAsync { get; init; }
-    internal Func<AssemblyAnalysisRegistryEntryCreation, Task> RetireEntryAsync { get; init; } = null!;
     internal AssemblyAnalysisSourceProjectEntryFactory SourceProjectEntryFactory { get; init; } = null!;
     internal Action<string, AssemblyAnalysisRegistryEntryCreation> ObserveCreation { get; init; } = null!;
     internal Action<string, AssemblyAnalysisRegistryEntryCreation> RemoveFailedEntry { get; init; } = null!;

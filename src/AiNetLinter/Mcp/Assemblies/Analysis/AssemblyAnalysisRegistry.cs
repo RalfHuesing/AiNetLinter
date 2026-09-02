@@ -67,8 +67,6 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAss
             RetiredEntries = retiredEntries,
             IsDisposed = () => Volatile.Read(ref disposed) != 0,
             ResourceBudget = resourceBudget,
-            BeforeRetirementAsync = beforeRetirementAsync,
-            RetireEntryAsync = creation => AssemblyAnalysisRegistryDisposal.RetireEntryAsync(creation, ClearTemporaryReferenceEvictionRequest),
             SourceProjectEntryFactory = sourceProjectEntryFactory,
             ObserveCreation = ObserveCreation,
             RemoveFailedEntry = RemoveFailedEntry,

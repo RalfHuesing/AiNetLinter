@@ -490,6 +490,21 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Audit-Scope: DRY/exakte Duplikate, konkreter Refactoring-Drift, Dead Code und Magic Values; sichere scope-nahe Korrekturen zulässig, keine Task-Ledger-Änderungen außer `code-map.md`.
 - MCP-Hinweis: MCP-Aufrufe sind nur statische Qualitätsorientierung; der laufende Server ist älter als der Working Tree und wird nicht für Feature-/Release-Nachweise verwendet.
 
+## 2026-09-02 – Abschluss-Audit
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Abschluss-Auditor
+- Subagent: `01a0625d-c2e4-7b20-a0f0-a7f31d4da373`
+- Diff-Scope: aktueller Gesamtstand nach Paket 1–4; primär geänderte Produktions-/Testpfade und direkte Aufrufer.
+- Status: terminal abgeschlossen; genau einmal ausgeführt.
+- Proaktiver Fix: eindeutig totes Coordinator-Wiring `BeforeRetirementAsync`/`RetireEntryAsync` in `AssemblyAnalysisRegistryCoordinatorContext` und die ungenutzte Registry-Zuweisung entfernt; `code-map.md` aktualisiert. Referenzsuche bestätigte ausschließlich Zuweisungen, keine Nutzung. `TD-REGISTRY-DEAD-WIRING-001` ist fixed.
+- DRY/exakte Duplikate: keine Cluster; Refactoring-Drift: keine konkrete Hypothese bzw. kein Befund.
+- Dead Code: 37 Low-Confidence-Kandidaten, 0 High-Confidence; P/Invoke-Strukturfelder, `ResourceHealth`, `AssemblyOrigin.Kind` und `DaemonStartupGate.AcquireAsync` wurden wegen ABI-/Interop-, Kompatibilitäts- oder realer Aufrufer-Risiken nicht entfernt. Keine weiteren Tech-Debt-Einträge.
+- Magic Values: Produktionspfade ohne Befund; Test-Wirewerte (`result`, `daemon`, `isError`, `opaque-init`) als `rejected/not-applicable` ohne Queue.
+- Ausgeführte MCP-Abfragen: `find_duplicates`, `find_dead_code`, `find_magic_values` jeweils mit `targetType=project` und absolutem Projektpfad, ergänzende bereichsbezogene Magic-Value-Abfragen, `find_references` zur Dead-Code-Bestätigung, gezieltes `get_violations` nach dem Fix. Alles ausschließlich statische Qualitätsorientierung; alter MCP nicht als Feature-/Release-Nachweis.
+- Lokale Checks: `dotnet build --no-restore` 0 Warnungen/Fehler; Lifecycle-/Registry-Regressionen 18/18; Navigation-/Resolver-Regressionen 9/9; `git diff --check` sauber. Unabhängige Änderungen unter `tasks/mcp-di-composition-decoupling/Konzept.md` unverändert.
+- Nächste Aktion: Audit-Fix checkpointen, danach vollständige lokale Abschlussgates.
+
 ## 2026-09-02 – Paket 4 – Implementierer running (aktuell)
 
 - Run-ID: `decompiled-assembly-20260902`
