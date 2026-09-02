@@ -10,10 +10,10 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### TD-ASM-ACCESSOR-001 – Accessor-Matching verliert das zugehörige Member
 
 - Schweregrad: P1
-- Status: behoben in Korrekturversuch 1/5.
+- Status: aktiv, Versuch 2/5 steht an.
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/Bodies/AssemblyDecompiledBodyResolver.cs`, Accessor-Matching.
 - Evidenz: Review des Diffs `396e77f1..b3bb2ea8`; ein Descendant-Scan vergleicht nur Accessor-Kinds und kann bei mehreren gleichartigen Properties/Events den falschen Body wählen.
-- Disposition: `fixed`
+- Disposition: `fix-now`
 - Nächster Schritt: Accessor über `AssociatedSymbol` auf den direkten Property-/Indexer-/Event-Member begrenzen und Regressionen ergänzen.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 1 Review, P1-Finding A.
 
@@ -70,12 +70,22 @@ aktiviert. Der Versuchszähler gilt je technische Ursachensignatur.
 ### DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE – Gemeinsamer Dokuabschnitt vermischt Toolverträge
 
 - Schweregrad: P1
-- Status: behoben in Korrekturversuch 1/5.
+- Status: aktiv, Versuch 2/5 steht an.
 - Scope/Fundstelle: `Docs/agent-api.md`, Beschreibung von `find_references` und `get_impact`.
 - Evidenz: Review des Paket-2-Diffs; `get_impact` besitzt weder `includeReferences` noch eine `navigation`-Struktur, obwohl der gemeinsame Abschnitt dies nahelegt.
-- Disposition: `fixed`
-- Nächster Schritt: Erledigt; Doku ist getrennt und durch `McpDocumentationSmokeTests` abgesichert.
+- Disposition: `fix-now`
+- Nächster Schritt: `Docs/integration.md` ebenfalls in getrennte, gegen den lokalen Code verifizierte Toolverträge aufteilen.
 - Log-Anker: `execution-log.md`, 2026-09-02 Paket 2 Review.
+
+### DOC-GET-IMPACT-NAVIGATION-ASSERTION-001 – Explizite Negativassertion im Doku-Smoke-Test fehlt
+
+- Schweregrad: P2
+- Status: zurückgestellt.
+- Scope/Fundstelle: `McpDocumentationSmokeTests` und `Docs/agent-api.md`.
+- Evidenz: Review bestätigt korrekten Dokuinhalt, aber die fehlende `navigation`-Negativassertion wird nur indirekt durch Abschnitts-/Payload-Prüfungen abgesichert.
+- Disposition: `accepted-deferred`
+- Nächster Schritt: Bei einer späteren Doku-Vertragsrunde eine explizite Assertion ergänzen, dass `get_impact` keine `navigation`-Struktur dokumentiert.
+- Log-Anker: `execution-log.md`, 2026-09-02 Paket 2 Folge-Review.
 
 ### NAV-COMPLETENESS-SESSION-CAP-OVERWRITE – Completeness kann Trunkierung überdecken
 

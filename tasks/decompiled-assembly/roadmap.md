@@ -3,10 +3,10 @@
 Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemäß dem freigegebenen Konzept.
 
 Status: executing  
-Current epic: Paket 2 – Folge-Review nach Korrekturrunde 1/5
-Letzter Commit: Doku-Korrektur unreviewt; Artefakt-Checkpoint `60e91694`
+Current epic: Paket 2 – Korrekturrunde 2/5
+Letzter Commit: Doku-Korrektur-Checkpoint `18723b9a`; Folge-Review offen
 Current debt item: `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE`
-Debt attempts: 1
+Debt attempts: 2
 Blocker: keiner
 
 ## Epics

@@ -134,6 +134,21 @@ Primäraufgabe: Behebe und konsolidiere die dekompilierte Assembly-Analyse gemä
 - Code-Map: nur konkrete Pfade/Zeilenanker aktualisiert (`Tools/NamespaceTree` → `Tools/FileStructure`, `AssemblyReferenceResolver`-Zeilen); kein Produktions-/Testcode geändert.
 - Nächste Aktion: frischer Implementierer für `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE`, Versuch 1/5.
 
+## 2026-09-02 – Paket 2 – Folge-Review nach Doku-Korrektur
+
+- Run-ID: `decompiled-assembly-20260902`
+- Rolle: unabhängiger Folge-Reviewer
+- Subagent: `01a06169-216a-7212-aa39-bb953d93032a`
+- Diff-Scope: Doku-Korrektur seit `60e91694`, Checkpoint `18723b9a`.
+- Status: terminal abgeschlossen; dieselbe P1-Ursachensignatur bleibt offen, Korrekturversuch 2/5 erforderlich.
+- Urteil: `issues`
+- P1-Finding `DOC-GET-IMPACT-INCLUDE-REFERENCES-SCOPE`: `Docs/agent-api.md` ist nun korrekt getrennt und dokumentiert Assembly-`get_impact` mit `symbolIdentifier`, internem `ExpandAssemblyReferences=true`, `callSites`/`completeness` und `analysis`-Herkunft ohne öffentliches `includeReferences` oder eigene `navigation`-Struktur. `Docs/integration.md` empfiehlt jedoch in einem gemeinsamen Hinweis weiterhin `includeReferences: true` auch für `get_impact`; das widerspricht dem lokalen Vertrag und kann ungültige Requests erzeugen. Korrektur: diesen Abschnitt ebenfalls trennen und den `get_impact`-Hinweis entfernen/korrigieren.
+- P2-Finding: Der Smoke-Test sichert die Abschnittstrennung, Payload und fehlenden `includeReferences`-Varianten indirekt; eine explizite Negativassertion für `navigation` fehlt. Disposition `accepted-deferred`.
+- Lokale Verifikation: Doku-Test 1/1, gezielte FastTests 26/26 und `dotnet build --no-restore` 0 Warnungen/Fehler wurden als frisch und passend übernommen, nicht redundant wiederholt. `git diff --check` sauber; nach Map-Korrektur nur LF/CRLF-Normalisierungswarnung.
+- MCP-Hinweis: Alter MCP-Server nicht zur Verifikation verwendet; historische `get_violations`-Ergebnisse nur Zusatzdiagnose. Vollständige Nicht-Stress-, Release- und Live-MCP-Prüfungen bleiben offen.
+- Code-Map: nur konkrete Aussagen zu unveränderten Task-Dateien, `Docs/integration.md`-Widerspruch und Smoke-Test-Abdeckung korrigiert; kein Produktions-/Testcode geändert.
+- Nächste Aktion: frischer Implementierer für dieselbe P1-Ursachensignatur, Versuch 2/5.
+
 ## 2026-09-02 – Paket 2 – Korrekturversuch 1 – Implementierer running
 
 - Run-ID: `decompiled-assembly-20260902`
