@@ -1,7 +1,7 @@
 # Analyse-Findings & Architektur-Überlegungen: Robuste Assembly-Analyse (Paket 1)
 
 **Erstellt am:** 2026-09-03  
-**Status:** Hauptursachen identifiziert; 4 Detailfragen (siehe Abschnitt 6) vor Codeänderungen noch offen.  
+**Status:** ✅ Analyse vollständig abgeschlossen. Alle 4 Detailfragen per MCP beantwortet. Implementierungstabelle in Abschnitt 7.  
 **Zweck dieses Dokuments:** Vollständiges Festhalten aller ermittelten Fakten, Code-Stellen, Root Causes und Architekturentscheidungen dieses Chats. Verhindert erneutes Einlesen und Token-Verbrauch in nachfolgenden Chats.
 
 ---
@@ -114,15 +114,57 @@ In einer Session entstanden 136 redundante Generation-Verzeichnisse unter `cache
 
 ---
 
-## 6. Status der Analyse: Noch offene Detailanalysen vor Codeänderungen
+## 6. Detailanalysen (per MCP abgeschlossen)
 
-Die funktionale Ursachenanalyse (warum dekompiliert wird und wo Locks fehlen) ist abgeschlossen. Folgende Detailfragen müssen vor der eigentlichen Implementierung vom nächsten Modell gezielt (per MCP!) geprüft werden:
+### 6.1 Bestehende Lock-Primitive — Ergebnis: Kein OS-FileStream-Lock vorhanden
 
-1. **Bestehende File-Lock-Primitive im Codebase:**
-   - Prüfen via MCP (`find_symbol` / `get_symbol_body`), wie `ExternalSourceRepositoryCheckoutReservation.TryCreateOwnership` oder `AssemblyCacheKeyLockRegistry` aufgebaut sind: Existiert bereits ein unvollständiger oder wiederverwendbarer OS-Lock, oder muss ein neuer `KeyedFileLock` (auf `FileStream`-Basis mit `FileShare.None`) unter `src/AiNetLinter/Mcp/Assemblies/Infrastructure/` angelegt werden?
-2. **Stall-Erkennung & Timeout-Verhalten (10 Minuten):**
-   - Wie wird das 10-Minuten-Stall-Kriterium an wartende Aufrufer signalisiert (welche Diagnose-Codes werden dafür vergeben, z. B. unter `ExternalSourceConfigurationDiagnosticCodes` / `AssemblyDiagnosticCodes`)?
-3. **Negative Source-Ergebnisse (TTL):**
-   - Wo wird das negative Ergebnis gecacht, wenn ein Source-Projekt nicht matcht (z. B. `AssemblySourceFallbackReasons.SourceProjectNotFound`), damit nicht bei jedem Aufruf ein erneuter Checkout-Versuch gestartet wird?
-4. **Test-Hooks:**
-   - Prüfen, wo die bestehenden Tests für parallele Aufrufe liegen (`AssemblyAnalysisRegistryTests`, `ExternalSourceSnapshotMaterializerTests`), um den neuen Lock- und Wait-Mechanismus ohne künstliche Testkopplung abzusichern.
+- `find_symbol` auf `KeyedFileLock`, `FileStreamLock`, `FileLock`: **keine Treffer**.
+- Einziges bestehendes Lock-Primitiv: `AssemblyCacheKeyLockRegistry` (Monitor-basiert, prozessintern).
+- **Konsequenz:** Ein neuer OS-Level-FileStream-Lock muss gebaut werden. Passendes Paket:
+  - `src/AiNetLinter/Mcp/Assemblies/Analysis/` (für den Assembly-Decompilation-Lock, Pendant zu `AssemblyDecompilationCache.Locking.cs`)
+  - `src/AiNetLinter/Mcp/Assemblies/ExternalSource/Repository/` (für den Checkout-Exklusivitäts-Lock)
+  - Neue Klasse: `AssemblyArtifactFileLock` (oder ähnlich), hält `FileStream` mit `FileShare.None` + `CancellationToken`-basiertes Warten.
+
+### 6.2 Stall-Erkennung & Diagnose-Codes — Ergebnis: Fehlender Code `RepositoryStallDetected`
+
+- Bestehende passende Codes in `ExternalSourceConfigurationDiagnosticCodes`:
+  - `Timeout = "external-source-timeout"` (Netzwerk-Timeout, nicht Lock-Stall)
+  - `RepositoryCleanupFailed`, `RepositoryCheckoutInvalid` – keine Stall-spezifische Semantik
+- **Konsequenz:** Neuer Diagnose-Code `RepositoryLockStall = "external-source-repository-lock-stall"` in `ExternalSourceConfigurationDiagnosticCodes` anlegen. Analog: Neuer `AssemblySourceFallbackReason` (`LockStall`?) ist **nicht nötig** – Stall ist ein infrastrukturelles Timeout, kein semantischer Fallback-Grund.
+
+### 6.3 Negative Source-Ergebnisse (TTL) — Ergebnis: Caching bereits in `AssemblySourceProviderCoordinator`
+
+- `RememberSnapshotIdentity(assemblyPath, identity)` in `AssemblySourceProviderCoordinator` merkt sich die Snapshot-Identity pro Assembly-Pfad.
+- `TryGetCachedSnapshotIdentity(assemblyPath, out snapshotIdentity)` liefert den gecachten Wert zurück.
+- **Aber:** Negative Ergebnisse (kein Match, kein Mapping) werden dort *nicht* gecacht – nur positive Snapshot-Identitäten. Ein erneuter Provider-Aufruf für ein Non-Match-Assembly läuft damit bei jedem Request erneut durch.
+- **Konsequenz:** Negatives Ergebnis-Caching muss mit TTL ergänzt werden (z. B. `NegativeSourceResolutionCache` im `AssemblySourceProviderCoordinator` – Dictionary `assemblyPath → (FallbackReason, expiry)`). TTL aus `ExternalSourceCacheOptions` o. Ä. ableiten.
+
+### 6.4 Test-Hooks — Ergebnis: Bestehende Testklassen ausreichend als Basis
+
+- **`AssemblyAnalysisRegistryTests`** (FastTests, 18 Methoden, 440 Zeilen):
+  - `LeaseAsync_ConcurrentWaiters_CancelledWaiterThrowsWhileOtherCompletes` – geeignet als Vorlage für Warten mit Cancel auf OS-Lock.
+  - `LeaseAsync_ConcurrentFirstAccessUsesOneCreationBarrier` – geeignet als Vorlage für Exklusivitäts-Test (genau eine Creation pro Schlüssel).
+- **`ExternalSourceSnapshotMaterializerTests`** (IntegrationTests, 8 Methoden, 262 Zeilen):
+  - `MaterializeAsync_CoupledWithSourceSnapshotRegistry_PromotesReservationToResidentLease` – End-to-End für Snapshot-Lebenszyklus.
+  - `MaterializeAsync_RejectsCheckoutBeforeWorkspaceLoadWhenBudgetIsExceeded` – Budget/Resource-Limit-Pattern als Vorlage.
+- **Konsequenz:** Neue Tests für OS-Lock-Exklusivität, Stall-Timeout-Diagnose und Negative-TTL-Ablauf gehören in `AssemblyAnalysisRegistryTests` (FastTests, Category=Component) bzw. `ExternalSourceSnapshotMaterializerTests` (Integration). Keine neue Testklasse erforderlich.
+
+---
+
+## 7. Vollständiges Bild: Was genau implementiert werden muss
+
+### Änderungen Paket 1
+
+| # | Typ | Datei | Beschreibung |
+|---|---|---|---|
+| 1 | NEU | `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyArtifactFileLock.cs` | OS-FileStream-Lock (`FileShare.None`) mit `WaitAsync(CancellationToken, TimeSpan timeout)` und Stall-Erkennung |
+| 2 | NEU | `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyArtifactFileLockEntry.cs` | Zugehörige Lease-/Entry-Klasse |
+| 3 | ÄNDERN | `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyDecompilationCache.Locking.cs` | `PublishLocks` von Monitor auf `AssemblyArtifactFileLock` (OS-Level) umstellen |
+| 4 | ÄNDERN | `src/AiNetLinter/Mcp/Assemblies/ExternalSource/Repository/ExternalSourceRepositoryAcquirer.cs` | Vor `CheckoutReservation.TryCreate` OS-Lock auf Repo-URL+Revision acquiren; warten auf laufende Klonoperationen |
+| 5 | ÄNDERN | `src/AiNetLinter/Configuration/ExternalSourceConfiguration.cs` | `RepositoryLockStall = "external-source-repository-lock-stall"` in `ExternalSourceConfigurationDiagnosticCodes` |
+| 6 | ÄNDERN | `src/AiNetLinter/Mcp/Assemblies/Analysis/SourceSelection/AssemblySourceProviderCoordinator.cs` | Negatives Ergebnis-Caching mit TTL ergänzen |
+| 7 | ÄNDERN | `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs` | Source-First-Pfad: auch bei Roslyn-Diagnosen/Warnungen als `source-backed` weiterführen, solange Symbole lesbar |
+| 8 | ERGÄNZEN | `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRegistryTests.cs` | Tests für OS-Lock-Exklusivität, Stall-Timeout-Diagnose, Cancel-Verhalten |
+| 9 | ERGÄNZEN | `src/AiNetLinter.IntegrationTests/Mcp/Assemblies/ExternalSourceSnapshotMaterializerTests.cs` | Test für parallele Checkout-Unterdrückung (zweiter Aufruf nutzt Ergebnis des ersten) |
+
+**Status: Analyse abgeschlossen. Implementierung kann beginnen.**
