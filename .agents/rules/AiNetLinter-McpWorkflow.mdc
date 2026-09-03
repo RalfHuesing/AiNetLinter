@@ -12,8 +12,7 @@ Referenzen und Abhängigkeiten.
 
 ## Verbindliche Priorität (MCP-first, pragmatisch)
 
-> [!IMPORTANT]
-> **Standard: AiNetLinter-MCP-Tools verwenden**, wenn C#-Symbole, Typen, Aufrufketten, Referenzen, Abhängigkeiten oder Regelverstöße betroffen sind. Sie liefern semantisch aufgelöste, kompakte Ergebnisse und verbrauchen deutlich weniger Kontext als seitenweises Dateilesen.
+> **Standard: AiNetLinter-MCP-Tools verwenden** — bei jeder C#-Aufgabe (Symbole, Typen, Aufrufketten, Referenzen, Abhängigkeiten, Regelverstöße) MUSS zuerst das passende MCP-Tool gewählt werden. Sie liefern semantisch aufgelöste, kompakte Ergebnisse und verbrauchen deutlich weniger Kontext als seitenweises Dateilesen.
 >
 > **Werkzeugwahl nach Stärken — kein blindes Verbot:**
 >

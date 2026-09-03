@@ -59,7 +59,7 @@ internal sealed partial class AssemblyAnalysisSession
 
         if (request.PublishRequest is not null)
         {
-            var publish = cache.Publish(request.PublishRequest with { Status = finalStatus });
+            var publish = await cache.PublishAsync(request.PublishRequest with { Status = finalStatus }, cancellationToken).ConfigureAwait(false);
             if (!publish.Succeeded)
             {
                 snapshotResult.Snapshot.Dispose();

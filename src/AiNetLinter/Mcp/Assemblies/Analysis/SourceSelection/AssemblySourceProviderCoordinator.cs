@@ -18,6 +18,8 @@ internal sealed class AssemblySourceProviderCoordinator : IAssemblySourceProvide
     private readonly Lock creationGate = new();
     private readonly Dictionary<string, AssemblySourceProviderCreation> creations = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> cachedSnapshotIdentities = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, (string FallbackReason, IReadOnlyList<ExternalSourceConfigurationDiagnostic>? Diagnostics, DateTime ExpiryUtc)> negativeResolutions = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan DefaultNegativeTtl = TimeSpan.FromMinutes(5);
     private Task? disposalTask;
     private int disposed;
 
@@ -40,6 +42,19 @@ internal sealed class AssemblySourceProviderCoordinator : IAssemblySourceProvide
         string assemblyPath,
         out string? snapshotIdentity) =>
         TryGetCachedSnapshotIdentity(assemblyPath, out snapshotIdentity);
+
+    void IAssemblySourceProviderCoordinator.RememberNegativeResult(
+        string assemblyPath,
+        string fallbackReason,
+        IReadOnlyList<ExternalSourceConfigurationDiagnostic>? diagnostics,
+        TimeSpan? ttl) =>
+        RememberNegativeResult(assemblyPath, fallbackReason, diagnostics, ttl);
+
+    bool IAssemblySourceProviderCoordinator.TryGetNegativeResult(
+        string assemblyPath,
+        out string? fallbackReason,
+        out IReadOnlyList<ExternalSourceConfigurationDiagnostic>? diagnostics) =>
+        TryGetNegativeResult(assemblyPath, out fallbackReason, out diagnostics);
 
     internal AssemblySourceProviderCoordinator(
         IExternalSourceProvider provider,
@@ -115,6 +130,7 @@ internal sealed class AssemblySourceProviderCoordinator : IAssemblySourceProvide
             if (Volatile.Read(ref disposed) == 0)
             {
                 cachedSnapshotIdentities[canonicalPath] = snapshotIdentity;
+                negativeResolutions.Remove(canonicalPath);
             }
         }
     }
@@ -126,6 +142,50 @@ internal sealed class AssemblySourceProviderCoordinator : IAssemblySourceProvide
         {
             return cachedSnapshotIdentities.TryGetValue(canonicalPath, out snapshotIdentity);
         }
+    }
+
+    internal void RememberNegativeResult(
+        string assemblyPath,
+        string fallbackReason,
+        IReadOnlyList<ExternalSourceConfigurationDiagnostic>? diagnostics = null,
+        TimeSpan? ttl = null)
+    {
+        var canonicalPath = Path.GetFullPath(assemblyPath);
+        var expiry = DateTime.UtcNow.Add(ttl ?? DefaultNegativeTtl);
+        lock (creationGate)
+        {
+            if (Volatile.Read(ref disposed) == 0)
+            {
+                negativeResolutions[canonicalPath] = (fallbackReason, diagnostics, expiry);
+                cachedSnapshotIdentities.Remove(canonicalPath);
+            }
+        }
+    }
+
+    internal bool TryGetNegativeResult(
+        string assemblyPath,
+        out string? fallbackReason,
+        out IReadOnlyList<ExternalSourceConfigurationDiagnostic>? diagnostics)
+    {
+        var canonicalPath = Path.GetFullPath(assemblyPath);
+        lock (creationGate)
+        {
+            if (negativeResolutions.TryGetValue(canonicalPath, out var cached))
+            {
+                if (DateTime.UtcNow < cached.ExpiryUtc)
+                {
+                    fallbackReason = cached.FallbackReason;
+                    diagnostics = cached.Diagnostics;
+                    return true;
+                }
+
+                negativeResolutions.Remove(canonicalPath);
+            }
+        }
+
+        fallbackReason = null;
+        diagnostics = null;
+        return false;
     }
 
     public ValueTask DisposeAsync() => new(StartDispose());

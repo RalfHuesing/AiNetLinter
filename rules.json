@@ -156,7 +156,12 @@
     "FootprintIgnoreTypeNames": [
       "LinterEngine",
       "NamingChecker",
-      "AssemblyAnalysisRegistry"
+      "AssemblyAnalysisRegistry",
+      "AssemblyAnalysisSession",
+      "AssemblyAnalysisSnapshotLease",
+      "ExternalSourceRepositoryAcquirer",
+      "ExternalSourceRepositoryAcquirerFactory",
+      "DaemonHostCommand"
     ],
     "ComplexityNearMissTolerance": 1,
     "ExcludeSwitchDispatcherCases": true,

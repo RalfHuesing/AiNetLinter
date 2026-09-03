@@ -71,6 +71,11 @@ internal sealed class AssemblySourceSelectionOrchestrator :
             return CreateScope(fallbackReason: AssemblySourceFallbackReasons.ConfigurationInvalid);
         }
 
+        if (providerCoordinator.TryGetNegativeResult(assemblyPath, out var cachedNegativeFallback, out var cachedDiagnostics))
+        {
+            return CreateScope(cachedDiagnostics ?? [], fallbackReason: cachedNegativeFallback);
+        }
+
         var assemblyName = ResolveAssemblyName(assemblyPath);
         if (string.IsNullOrWhiteSpace(assemblyName))
         {
@@ -80,6 +85,11 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         var mappingResolution = ResolveMapping(assemblyName);
         if (mappingResolution.Scope is not null)
         {
+            if (mappingResolution.Scope.Fallback?.Reason is not null)
+            {
+                providerCoordinator.RememberNegativeResult(assemblyPath, mappingResolution.Scope.Fallback.Reason, mappingResolution.Scope.Diagnostics);
+            }
+
             return mappingResolution.Scope;
         }
 
@@ -124,12 +134,14 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         var providerResult = providerLease.Result;
         if (!providerResult.IsAvailable || providerResult.SourceSnapshot is null)
         {
+            var fallbackReason = providerResult.Health is ExternalSourceRepositoryHealth.Degraded
+                ? AssemblySourceFallbackReasons.ProviderDegraded
+                : AssemblySourceFallbackReasons.ProviderUnavailable;
+            providerCoordinator.RememberNegativeResult(assemblyPath, fallbackReason, providerResult.Diagnostics);
             return CreateScope(
                 providerResult.Diagnostics,
                 providerResult.ToResultState(),
-                providerResult.Health is ExternalSourceRepositoryHealth.Degraded
-                    ? AssemblySourceFallbackReasons.ProviderDegraded
-                    : AssemblySourceFallbackReasons.ProviderUnavailable);
+                fallbackReason);
         }
 
         if (!IsTrusted(providerResult)) return RejectUntrustedSnapshot(providerResult);
@@ -168,6 +180,14 @@ internal sealed class AssemblySourceSelectionOrchestrator :
                 providerCoordinator.RememberSnapshotIdentity(
                     assemblyPath,
                     selection.SourceLease.Snapshot.Identity.StableValue);
+            }
+            else
+            {
+                var matchFallback = GetMatchFallbackReason(match.State);
+                if (matchFallback is not null)
+                {
+                    providerCoordinator.RememberNegativeResult(assemblyPath, matchFallback, scope.Diagnostics);
+                }
             }
 
             return scope;

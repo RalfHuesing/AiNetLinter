@@ -6,17 +6,19 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp.Assemblies.Locking;
 using Serilog;
 
 namespace AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 
-internal sealed class ExternalSourceRepositoryAcquirer : IExternalSourceRepositoryAcquirer
+internal sealed partial class ExternalSourceRepositoryAcquirer : IExternalSourceRepositoryAcquirer
 {
     private readonly IGiteaRepositoryTransport transport;
     private readonly string stagingRoot;
     private readonly ILogger logger;
     private readonly IExternalSourceRepositoryCacheWriter cacheWriter;
     private readonly ExternalSourceRepositoryCacheRefresh cacheRefresh;
+    private readonly AssemblyArtifactFileLockRegistry checkoutLockRegistry;
     internal ExternalSourceRepositoryAcquirer(
         IGiteaRepositoryTransport transport,
         string stagingRoot,
@@ -40,6 +42,9 @@ internal sealed class ExternalSourceRepositoryAcquirer : IExternalSourceReposito
             this.stagingRoot,
             effectiveCacheReader,
             this.logger);
+        // Gemeinsamer OS-Level-Lock: serialisiert Checkout-Erzeugungen desselben stagingRoot
+        // sowohl im direkten Pfad (AcquireAsync) als auch im CacheRefresh-Pfad.
+        checkoutLockRegistry = new AssemblyArtifactFileLockRegistry("checkout.lock");
         cacheRefresh = new ExternalSourceRepositoryCacheRefresh(
             new ExternalSourceRepositoryCacheRefreshContext
             {
@@ -76,6 +81,28 @@ internal sealed class ExternalSourceRepositoryAcquirer : IExternalSourceReposito
         {
             return cacheResult;
         }
+
+        // Exklusiver OS-Lock pro Repository-Schlüssel: verhindert parallele Erstbeschaffungen/Klone desselben Repositories.
+        var lockDir = ExternalSourceRepositoryCacheKey.TryCreate(mapping.Url, solutionPath!, out var cacheKey)
+            ? Path.Combine(stagingRoot, ".locks", cacheKey!.StableValue)
+            : Path.Combine(stagingRoot, ".locks", "default");
+        await using var checkoutLock = await checkoutLockRegistry.AcquireAsync(lockDir, cancellationToken).ConfigureAwait(false);
+        if (checkoutLock.IsStalled)
+        {
+            return ExternalSourceRepositoryAcquisitionResult.Failure(
+                ExternalSourceProviderFailureKind.InvalidResponse,
+                [CreateDiagnostic(
+                    ExternalSourceConfigurationDiagnosticCodes.CheckoutLockStall,
+                    $"Ein Repository-Checkout-Lock h\u00e4ngt l\u00e4nger als {checkoutLock.StallThreshold?.TotalMinutes:0} Minuten.")]);
+        }
+
+        // Double-check Cache nach Lock-Erwerb (anderer Prozess hat ggf. inzwischen publiziert).
+        var postLockCache = await cacheRefresh.TryAcquireAsync(mapping, solutionPath!, cancellationToken).ConfigureAwait(false);
+        if (postLockCache is not null)
+        {
+            return postLockCache;
+        }
+
         if (!ExternalSourceRepositoryCheckoutReservation.TryCreate(
                 stagingRoot,
                 out var ownership,
@@ -383,112 +410,4 @@ internal sealed class ExternalSourceRepositoryAcquirer : IExternalSourceReposito
             return false;
         }
     }
-
-    private CheckoutValidationResult ValidateCheckout(
-        ExternalSourceCheckoutOwnership ownership,
-        string solutionPath,
-        ExternalSourceRepositoryTransportResult transportResult)
-    {
-        if (!ExternalSourceRepositorySourcePolicy.IsVerifiedTransport(transportResult))
-        {
-            return CheckoutValidationResult.Failure(
-                ExternalSourceProviderFailureKind.InvalidResponse,
-                [CreateDiagnostic(
-                    ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutUnverified,
-                    "Der Repository-Transport hat keinen cleanen, verifizierten Checkout geliefert.")]);
-        }
-
-        if (TryGetCheckoutPathFailure(ownership, out var pathFailure))
-        {
-            return pathFailure!;
-        }
-
-        string solutionAbsolutePath;
-        try
-        {
-            solutionAbsolutePath = Path.GetFullPath(Path.Combine(ownership.CheckoutPath, solutionPath));
-        }
-        catch (Exception exception) when (
-            ExternalSourceRepositoryFailurePolicy.IsFileSystemException(exception))
-        {
-            return CheckoutValidationResult.Failure(
-                ExternalSourceProviderFailureKind.InvalidResponse,
-                [CreateDiagnostic(
-                    ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionPathInvalid,
-                    "Der Solution-Pfad konnte nicht aufgelöst werden.")]);
-        }
-
-        if (!ExternalSourceRepositoryPathGuard.IsDescendantPath(
-                ownership.CheckoutPath,
-                solutionAbsolutePath)
-            || !ExternalSourceRepositoryPathGuard.IsDescendantPath(
-                stagingRoot,
-                solutionAbsolutePath)
-            || !File.Exists(solutionAbsolutePath)
-            || ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(solutionAbsolutePath))
-        {
-            return CheckoutValidationResult.Failure(
-                ExternalSourceProviderFailureKind.InvalidResponse,
-                [CreateDiagnostic(
-                    ExternalSourceConfigurationDiagnosticCodes.RepositorySolutionInvalid,
-                    "Die konfigurierte Solution liegt nicht als sichere Datei im Checkout vor.")]);
-        }
-
-        return CheckoutValidationResult.Success(solutionAbsolutePath);
-    }
-
-    private static bool TryGetCheckoutPathFailure(
-        ExternalSourceCheckoutOwnership ownership,
-        out CheckoutValidationResult? failure)
-    {
-        failure = null;
-        if (ExternalSourceRepositoryPathGuard.ContainsActualReparsePointOnPath(
-                ownership.CheckoutPath)
-            || ExternalSourceRepositoryPathGuard.ContainsActualReparsePointInTree(
-                ownership.CheckoutPath))
-        {
-            failure = CheckoutValidationResult.Failure(
-                ExternalSourceProviderFailureKind.ProviderUnavailable,
-                [CreateDiagnostic(
-                    ExternalSourceConfigurationDiagnosticCodes.RepositoryCapabilityUnavailable,
-                    "Der Repository-Checkout benötigt eine nicht verfügbare lokale Capability.")]);
-            return true;
-        }
-
-        if (!ExternalSourceRepositoryPathGuard.IsOwnedCheckout(ownership)
-            || ExternalSourceRepositoryPathGuard.ContainsReparsePointInTree(ownership.CheckoutPath))
-        {
-            failure = CheckoutValidationResult.Failure(
-                ExternalSourceProviderFailureKind.InvalidResponse,
-                [CreateDiagnostic(
-                    ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutInvalid,
-                    "Der Repository-Transport hat keinen sicheren Checkout innerhalb der Staging-Wurzel erzeugt.")]);
-            return true;
-        }
-
-        return false;
-    }
-
-    private static ExternalSourceRepositoryAcquisitionResult InvalidResult(
-        string code,
-        string message) =>
-        ExternalSourceRepositoryAcquisitionResult.Failure(
-            ExternalSourceProviderFailureKind.InvalidResponse,
-            [CreateDiagnostic(code, message)]);
-
-    private static ExternalSourceConfigurationDiagnostic CreateDiagnostic(
-        string code,
-        string message) =>
-        ExternalSourceConfigurationDiagnostic.CreateError(
-            code,
-            message,
-            nameof(ExternalSourceRepositoryAcquirer),
-            "$repository");
-
-    private static string? CanonicalizeStagingRoot(string value)
-        => ExternalSourceRepositoryCacheContract.TryCanonicalizeAbsoluteRoot(value);
-
-    internal static bool IsReparsePointAttribute(FileAttributes attributes) =>
-        ExternalSourceRepositoryPathGuard.IsReparsePointAttribute(attributes);
-
 }

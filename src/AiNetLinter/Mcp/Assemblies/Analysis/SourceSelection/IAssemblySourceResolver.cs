@@ -42,6 +42,10 @@ internal interface IAssemblySourceProviderCoordinator : IAsyncDisposable
     void RememberSnapshotIdentity(string assemblyPath, string snapshotIdentity);
 
     bool TryGetCachedSnapshotIdentity(string assemblyPath, out string? snapshotIdentity);
+
+    void RememberNegativeResult(string assemblyPath, string fallbackReason, IReadOnlyList<ExternalSourceConfigurationDiagnostic>? diagnostics = null, TimeSpan? ttl = null);
+
+    bool TryGetNegativeResult(string assemblyPath, out string? fallbackReason, out IReadOnlyList<ExternalSourceConfigurationDiagnostic>? diagnostics);
 }
 
 internal sealed record AssemblySourceResolution(

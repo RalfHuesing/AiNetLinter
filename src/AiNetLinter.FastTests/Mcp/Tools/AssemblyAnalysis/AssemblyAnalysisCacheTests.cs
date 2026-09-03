@@ -54,14 +54,14 @@ public sealed class AssemblyAnalysisCacheTests
             AssemblySessionStatus.Complete);
         var cache = new AssemblyDecompilationCache(temp.GetPath("cache"));
 
-        Assert.True(cache.Publish(request).Succeeded);
+        Assert.True((await cache.PublishAsync(request)).Succeeded);
         Assert.Empty(Directory.EnumerateDirectories(temp.GetPath("cache"), "*.tmp", SearchOption.AllDirectories));
         using var barrier = new Barrier(2);
         var results = await Task.WhenAll(
-            Enumerable.Range(0, 2).Select(_ => Task.Run(() =>
+            Enumerable.Range(0, 2).Select(_ => Task.Run(async () =>
             {
                 barrier.SignalAndWait();
-                return cache.Publish(request);
+                return await cache.PublishAsync(request);
             })));
 
         Assert.All(results, result =>
@@ -103,12 +103,12 @@ public sealed class AssemblyAnalysisCacheTests
                 delayedReturn.Wait();
             });
 
-        var firstTask = Task.Run(() => cache.Publish(requests[0]));
+        var firstTask = Task.Run(async () => await cache.PublishAsync(requests[0]));
         var firstGeneration = await firstReturnReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
         Assert.True(Directory.Exists(firstGeneration));
 
-        var secondTask = Task.Run(() => cache.Publish(requests[1]));
-        var thirdTask = Task.Run(() => cache.Publish(requests[2]));
+        var secondTask = Task.Run(async () => await cache.PublishAsync(requests[1]));
+        var thirdTask = Task.Run(async () => await cache.PublishAsync(requests[2]));
         var competingPublishes = Task.WhenAll(secondTask, thirdTask);
 
         try
@@ -127,7 +127,7 @@ public sealed class AssemblyAnalysisCacheTests
     }
 
     [Fact]
-    public void AssemblyDecompilationCache_RejectsIncompleteDecompilationBeforePublishing()
+    public async Task AssemblyDecompilationCache_RejectsIncompleteDecompilationBeforePublishing()
     {
         using var temp = TestTempDirectory.Create("assembly-cache-incomplete-");
         var assemblyPath = AssemblyTestHelper.EmitAssembly(
@@ -141,7 +141,7 @@ public sealed class AssemblyAnalysisCacheTests
         var request = CreatePublishRequest(fingerprint, cacheKey, options, references, 1, isComplete: false);
         var cache = new AssemblyDecompilationCache(temp.GetPath("cache"));
 
-        var result = cache.Publish(request);
+        var result = await cache.PublishAsync(request);
 
         Assert.False(result.Succeeded);
         Assert.NotNull(result.Diagnostic);
@@ -154,7 +154,7 @@ public sealed class AssemblyAnalysisCacheTests
     }
 
     [Fact]
-    public void AssemblyDecompilationCache_DoesNotUseIncompleteGenerationAsCacheHit()
+    public async Task AssemblyDecompilationCache_DoesNotUseIncompleteGenerationAsCacheHit()
     {
         using var temp = TestTempDirectory.Create("assembly-cache-incomplete-hit-");
         var assemblyPath = AssemblyTestHelper.EmitAssembly(
@@ -167,7 +167,7 @@ public sealed class AssemblyAnalysisCacheTests
         var cacheKey = AssemblyFingerprintCalculator.CreateCacheKey(fingerprint, options);
         var request = CreatePublishRequest(fingerprint, cacheKey, options, references, 1);
         var cache = new AssemblyDecompilationCache(temp.GetPath("cache"));
-        Assert.True(cache.Publish(request).Succeeded);
+        Assert.True((await cache.PublishAsync(request)).Succeeded);
 
         var entryDirectory = cache.GetEntryDirectory(cacheKey);
         var pointerPath = Path.Combine(entryDirectory, AssemblyCacheContract.CurrentPointerFileName);
@@ -191,7 +191,7 @@ public sealed class AssemblyAnalysisCacheTests
     }
 
     [Fact]
-    public void AssemblyDecompilationCache_KeepsPointerGenerationWhenValidationIsLocked()
+    public async Task AssemblyDecompilationCache_KeepsPointerGenerationWhenValidationIsLocked()
     {
         using var temp = TestTempDirectory.Create("assembly-cache-pointer-lock-");
         var assemblyPath = AssemblyTestHelper.EmitAssembly(
@@ -205,7 +205,7 @@ public sealed class AssemblyAnalysisCacheTests
         var initialRequest = CreatePublishRequest(fingerprint, cacheKey, options, references, 1);
         var cacheRoot = temp.GetPath("cache");
         var cache = new AssemblyDecompilationCache(cacheRoot);
-        Assert.True(cache.Publish(initialRequest).Succeeded);
+        Assert.True((await cache.PublishAsync(initialRequest)).Succeeded);
 
         var changedRequest = CreatePublishRequest(
             fingerprint with { Sha256 = new string('b', 64) },
@@ -232,7 +232,7 @@ public sealed class AssemblyAnalysisCacheTests
         AssemblyCachePublishResult result;
         try
         {
-            result = lockedCache.Publish(changedRequest);
+            result = await lockedCache.PublishAsync(changedRequest);
 
             Assert.False(result.Succeeded);
             Assert.NotNull(publishedGenerationDirectory);

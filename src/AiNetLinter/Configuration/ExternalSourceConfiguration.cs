@@ -244,6 +244,8 @@ internal static class ExternalSourceConfigurationDiagnosticCodes
     internal const string AssemblyMappingAmbiguous = "external-source-assembly-mapping-ambiguous";
     internal const string SourceProjectNotFound = "external-source-project-not-found";
     internal const string SourceProjectAmbiguous = "external-source-project-ambiguous";
+    internal const string RepositoryLockStall = "external-source-repository-lock-stall";
+    internal const string CheckoutLockStall = "external-source-checkout-lock-stall";
 }
 
 internal static class ExternalSourceConfigurationPath

@@ -7,7 +7,10 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
+using AiNetLinter.Mcp.Assemblies.Locking;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
@@ -15,7 +18,7 @@ internal sealed partial class AssemblyDecompilationCache
 {
     private const int PointerPublishAttempts = 3;
     private static readonly UTF8Encoding Utf8 = new(false, true);
-    private static readonly AssemblyCacheKeyLockRegistry PublishLocks = new();
+    private static readonly AssemblyArtifactFileLockRegistry PublishLocks = new();
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -94,10 +97,24 @@ internal sealed partial class AssemblyDecompilationCache
         }
     }
 
-    internal AssemblyCachePublishResult Publish(AssemblyCachePublishRequest request)
+
+    internal async Task<AssemblyCachePublishResult> PublishAsync(
+        AssemblyCachePublishRequest request,
+        CancellationToken cancellationToken = default)
     {
         var entryDirectory = GetEntryDirectory(request.CacheKey);
-        using var publishLock = PublishLocks.Acquire(entryDirectory);
+        await using var publishLock = await PublishLocks.AcquireAsync(entryDirectory, cancellationToken).ConfigureAwait(false);
+        if (publishLock.IsStalled)
+        {
+            return new AssemblyCachePublishResult(
+                false,
+                null,
+                new(
+                    AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationCache), "PublishLockStall"),
+                    $"Assembly-Artefakt-Erzeugung hängt seit mehr als {publishLock.StallThreshold?.TotalMinutes:0} Minuten — anderer Prozess hält Lock: {entryDirectory}",
+                    AssemblyDiagnosticSeverity.Error));
+        }
+
         try
         {
             ValidatePublishRequest(request);

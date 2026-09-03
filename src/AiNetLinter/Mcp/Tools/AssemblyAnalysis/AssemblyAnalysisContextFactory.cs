@@ -9,9 +9,10 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
-internal static class AssemblyAnalysisContextFactory
+internal static partial class AssemblyAnalysisContextFactory
 {
     internal static Task<(AssemblyContext? Context, string? Error)> CreateAsync(
         string assemblyPath,
@@ -194,54 +195,6 @@ internal static class AssemblyAnalysisContextFactory
         var snapshot = selection!.SourceLease.Snapshot;
         var candidate = selection.MatchResult.MatchedCandidate!;
         return new(snapshot, snapshot.Solution.GetProject(candidate.ProjectId), fingerprint!);
-    }
-
-    private static async Task<ProjectCompilationResult> TryGetProjectCompilationAsync(
-        Project project,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var compilation = await project.GetCompilationAsync(cancellationToken).ConfigureAwait(false);
-            return new(compilation, CreateCompilationDiagnostics(project, compilation, cancellationToken), null);
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or IOException or ArgumentException or NotSupportedException)
-        {
-            var error = $"Source-Project-Compilation '{project.Name}' konnte nicht geladen werden: {ex.Message}";
-            return new(
-                null,
-                [new(
-                    ExternalSourceConfigurationDiagnosticCodes.CompilationFailed,
-                    error,
-                    "error",
-                    project.FilePath ?? project.Name)],
-                error);
-        }
-    }
-
-    private static IReadOnlyList<ExternalSourceConfigurationDiagnostic> CreateCompilationDiagnostics(
-        Project project,
-        Compilation? compilation,
-        CancellationToken cancellationToken)
-    {
-        if (compilation is null) return [];
-        return compilation.GetDiagnostics(cancellationToken)
-            .Where(diagnostic => diagnostic.Severity is not DiagnosticSeverity.Hidden)
-            .Take(20)
-            .Select(diagnostic => new ExternalSourceConfigurationDiagnostic(
-                diagnostic.Id,
-                diagnostic.GetMessage(),
-                diagnostic.Severity.ToString().ToLowerInvariant(),
-                GetCompilationDiagnosticLocation(project, diagnostic)))
-            .ToArray();
-    }
-
-    private static string GetCompilationDiagnosticLocation(Project project, Diagnostic diagnostic)
-    {
-        var path = diagnostic.Location == Location.None
-            ? null
-            : diagnostic.Location.GetLineSpan().Path;
-        return string.IsNullOrWhiteSpace(path) ? project.FilePath ?? project.Name : path;
     }
 
     private static AssemblyContext BuildSourceProjectContext(SourceProjectContextBuildRequest request)
