@@ -40,6 +40,7 @@
 
 ## Relevante Tests, Konfiguration und Dokumentation
 
+- `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRegistryRetirementRaceTests.cs` — Test-Stabilisierung: Bereinigung der Eviction-Assertions bei fremdgehaltenem Lease (`Assert.True(registry.TemporaryReferenceEvictionRequestCount > 0)` vor und nach Eviction, Bereinigung bei nachfolgendem Fingerprint-Refresh).
 - `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyCacheCleanupTests.cs` — Lock-Toleranz bei Datei- und Verzeichnisbereinigung (`DeleteDirectory_IgnoresLockedFileInDirectoryAsBestEffortCleanup`, M10).
 - `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisSessionTests.cs` — Partielle Snapshots bei Syntaxfehlern im Cache und in frischer Dekompilation (`RefreshAsync_CachedFileContainsSyntaxError_YieldsPartialStatusAndKeepsSnapshotQueryable`, `RefreshAsync_FreshDecompilationWithSyntaxError_YieldsPartialStatusAndKeepsQueryableSnapshot`, M7).
 - `src/AiNetLinter.FastTests/Mcp/Assemblies/Navigation/AssemblyAnalysisPathContractTests.cs` — sechs Assembly-Routen-Tests; echte Typ-, Property-, Indexer-, Event- und Methodenkörper werden über `GetSymbolBodyTool` aus dem Snapshot gelesen.
@@ -54,12 +55,12 @@
 - M7: Syntaxfehler und semantische Diagnosen in dekompiliertem Quelltext verwerfen den Snapshot nicht; `ValidateCompilation` und `AssemblyDecompilationAdapter` melden diese als Warnings, die Generation verbleibt im Status `Partial`, und alle funktionierenden Typen und Symbole bleiben resident und über Roslyn abfragbar.
 - M9: Unvollständige oder abgebrochene Läufe (Cancellation, Decompiler-Absturz ohne `.csproj` oder 0 Dokumente) veröffentlichen keinen Cache und räumen Staging-Verzeichnisse auf.
 - M10: Cache-Bereinigung fängt `IOException` und `UnauthorizedAccessException` bei Datei-Sperren durch Hintergrundprozesse (`rg`, Scanner) als Best-Effort ab, ohne Exception zu werfen.
+- Gate-Stabilität (Epic 5): Beide Nicht-Stress-Testsuiten (FastTests und IntegrationTests) laufen deterministisch, ohne Hänger und ohne manuelles Eingreifen durch.
 - Jede Assembly-Body-Abfrage verwendet den bereits geladenen Roslyn-Syntaxbaum; es gibt keinen Request-Pfad zu `CSharpDecompiler.DecompileTypeAsString` oder einer nachträglichen Stub-/SourceText-Transformation.
 - `AssemblyBodyResolution.ContentMode` ist beim direkten Resolver `source`; der Assembly-Analyseheader bleibt `decompiledProject` und beschreibt die Snapshot-Herkunft.
 - `DecompiledProjectPaths.DecompiledSourceRoot` ist der tiefste gemeinsame physische Verzeichnisroot aller materialisierten `.cs`-Dokumente; dadurch sind `rg` und `get_file_tree(targetType="project", targetPath=...)` direkt anschließbar. Fehlen Projektpfad oder absolute Dokumentpfade, bleiben die optionalen `decompiled*`-Felder leer statt erfundene Pfade auszugeben.
 - Die drei Pfadfelder stehen ausschließlich im `inspect_assembly`-Payload/Header. Die gemeinsame Assembly-Response-Metadatenzeile bleibt für M1/M2/M6/M11 unverändert; Folgeantworten liefern nur ihre konkrete Datei-Location.
 - Interfaces sowie abstract-/extern-Symbole bleiben `unavailable` mit Hinweis; verfügbare dekompilierte Member liefern ihren echten Syntaxausschnitt.
-- Vorhandene, scope-fremde FastTest-Race-Ausfälle (`AssemblyAnalysisRegistryRetirementRaceTests`, etc.) bleiben ein Thema für das dedizierte Epic 5.
 
 ## Verifikation
 
@@ -67,5 +68,5 @@
 - Letzter gezielter `get_violations`-Check nach der letzten C#-Änderung: `src/AiNetLinter/Mcp/Assemblies` (0 Violations), `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis` (0 Violations), `src/AiNetLinter.FastTests/Mcp/Assemblies` (0 Violations).
 - Build-Verifikation: `dotnet build --no-restore` — 0 Warnungen, 0 Fehler.
 - `git diff --check` — sauber ohne Whitespace-Fehler.
-- FastTests Epic 4 Focus: `AssemblyAnalysisSessionTests` — 17/17 bestanden (inkl. 2 neuer M7-Tests für Syntaxfehler im Cache und in frischer Dekompilation); `AssemblyCacheCleanupTests` — 5/5 bestanden (inkl. M10 Lock-Toleranz); `AssemblyAnalysisRouteTests`/`AssemblyAnalysisToolTests` — 24/24 bestanden.
-- IntegrationTests: `McpServerAssemblyHealthE2ETests` — 5/5 bestanden.
+- FastTests `Category!=Stress`: 2.440 bestanden, 2 übersprungen (Symlink-Privilegien-Preflight), 0 Fehler in 1 m 33 s.
+- IntegrationTests `Category!=Stress`: 385 bestanden, 0 Fehler in 4 m 30 s.

@@ -379,3 +379,37 @@ Korrektur-Checkpoint committen, danach frischen Folge-Review starten.
 
 - Epic 4 ist abgeschlossen und genehmigt (`approved`).
 - Nächste Aktion: Roadmap aktualisieren (`epic-4: done`, `current_epic: epic-5`), Commit für Abschluss Epic 4 erstellen.
+
+## Run 2026-09-03 / Epic 5 / Implementierer / completed
+
+- Rolle: Implementierer (`.agents/skills/implement/SKILL.md`)
+- Baseline: 30c2edb1
+- Auftrag: Epic 5: Testlaufzeit und Gate-Stabilität.
+  - Ziel: Lang laufende oder unkontrolliert hängende Tests identifizieren, reproduzieren und die betroffenen Tests/Testharnesses so bereinigen, dass die Nicht-Stress-Gates deterministisch ohne manuelles Abbrechen durchlaufen.
+  - Bekannte Kandidaten: `AssemblyAnalysisRegistryRetirementRaceTests`, `ProjectRegistryTests`, `ThinClientPumpContractTests` sowie die übersprungenen External-Source-/Symlink-Tests.
+- Status: completed
+
+### Durchgeführte Änderungen
+
+1. `src/AiNetLinter.FastTests/Mcp/Assemblies/AssemblyAnalysisRegistryRetirementRaceTests.cs`:
+   - Bereinigung der Eviction-Assertions in `LeaseAsync_FingerprintRefreshClearsPendingRequestForRetiredEntry`: Bei fremdgehaltenem Lease (`foreignLease`) kann die temporäre Referenz-Session nicht geräumt werden (`leaseCount != 0`). Assertions auf `registry.TemporaryReferenceEvictionRequestCount > 0` vor und nach Eviction angepasst, Bereinigung bei nachfolgendem Re-Lease/Fingerprint-Refresh verifiziert.
+2. Identifikation & Analyse:
+   - `ProjectRegistryTests`: 13/13 bestanden in 142 ms.
+   - `ProjectRegistryPublishRaceTests`: 1/1 bestanden in 54 ms.
+   - `ThinClientPumpContractTests`: 8/8 bestanden in 1 s.
+   - External-Source-/Symlink-Tests: 2 geplante Skips via `Assert.Skip` (erfordern Windows SeCreateSymbolicLinkPrivilege im Nicht-Entwicklermodus).
+
+### Verifikation & Qualitätschecks
+
+- Build: `dotnet build --no-restore` — 0 Warnungen, 0 Fehler.
+- `git diff --check`: sauber.
+- MCP `get_violations`: 0 Violations in `src/AiNetLinter.FastTests/Mcp/Assemblies`.
+- Vollständige Gate-Läufe:
+  - FastTests `Category!=Stress`: 2.440 bestanden, 2 übersprungen, 0 Fehler in 1 m 33 s.
+  - IntegrationTests `Category!=Stress`: 385 bestanden, 0 Fehler in 4 m 30 s.
+  - Beide Suiten laufen deterministisch, ohne Hänger und ohne manuellen Abbruch durch.
+
+### Triage
+
+- Keine offenen P0/P1-Befunde.
+- Nächste Aktion: Implementierungs-Checkpoint committen, danach Reviewer-Rolle für Epic 5 ausführen.
