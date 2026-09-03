@@ -3,8 +3,8 @@
 Primäraufgabe: Robuste und fokussierte Assembly-Analyse
 Betriebsart: Großkonzept, ein fachliches Epic mit zwei lieferbaren Umsetzungspaketen und einer bewusst zurückgestellten Erweiterung
 Status: executing
-current_epic: EPIC-1
-last_commit: noch nicht erstellt
+current_epic: EPIC-1 / Paket 1
+last_commit: 04e8c3e5
 current_debt_item: keines
 debt_attempts: 0
 
@@ -24,7 +24,7 @@ Annahmen/offene Fragen: Lokales gemeinsames Dateisystem ist die vorausgesetzte K
 
 ### Umsetzungspakete
 
-- [ ] Paket 1 — Source-first und gemeinsame Artefakte: `open`
+- [ ] Paket 1 — Source-first und gemeinsame Artefakte: `in_progress`
   - Ziel: Gültige attestierte Checkouts tatsächlich als source-backed Analyse verwenden; Artefakte und Repository-Snapshots pro fachlichem Schlüssel exklusiv, unveränderlich und cleanup-sicher erzeugen.
   - Abhängigkeiten: keine innerhalb dieses Epics.
   - Verifikation: passende Fast-/Integrationstests und gezielter `get_violations`-Nachweis nach der letzten Codeänderung.
