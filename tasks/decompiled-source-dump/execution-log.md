@@ -465,3 +465,36 @@ Korrektur-Checkpoint committen, danach frischen Folge-Review starten.
 - Alle Epics (Epic 1 bis Epic 6) erfolgreich abgeschlossen.
 - Roadmap-Status: `complete`.
 - Gesamtaufgabe `decompiled-source-dump` ist vollständig abgeschlossen.
+
+## Run 2026-09-03 / Kritisches Selbst-Review & Behebung / completed
+
+- Rolle: Orchestrator / Kritisches Selbst-Audit
+- Auftrag: Kritisches Review der gesamten Änderungen (Epics 1–6), Identifikation von Lücken/Residuen, proaktive Behebung und Beseitigung von Tech Debt (inklusive FastTests-Hänger-Diagnose).
+- Status: completed
+
+### Identifizierte Findings & Behebungen
+
+1. **M7-Resilienz im Cache-Reader (`AssemblyCacheGenerationStorage.cs`, `AssemblyDecompilationCache.cs`):**
+   - *Befund:* Beim Vorhandensein leerer dekompilierter `.cs`-Dateien erzeugt die Dekompilierung absichtlich ein Warning-Diagnostic und setzt den Status auf `Partial`. Der Cache-Reader warf jedoch in `ReadDocuments` hart `InvalidDataException("... ist leer")`, wodurch gecachte Partial-Snapshots nicht wiederverwendet werden konnten.
+   - *Behebung:* Harte Exception entfernt; leere Dokumente werden wie bei der frischen Dekompilierung resilient übernommen.
+2. **Defensive Pfadprüfung (`AssemblyCacheGenerationStorage.cs`):**
+   - *Befund:* `FindProjectFile` prüfte `Directory.Exists(root)` nicht ab und warf bei nicht vorhandenem Verzeichnis `DirectoryNotFoundException`.
+   - *Behebung:* `Directory.Exists`-Guard ergänzt; gibt deterministisch `null` zurück.
+3. **Auflösungsgenauigkeit bei Dekompilierung (`AssemblyDecompilationAdapter.cs`):**
+   - *Befund:* `references` wurde via `_ = references;` verworfen, wodurch `UniversalAssemblyResolver` externe Abhängigkeitspfade außerhalb des Assembly-Verzeichnisses nicht fand.
+   - *Behebung:* Verzeichnisse aller aufgelösten Referenzen werden ermittelt und via `resolver.AddSearchDirectory(...)` registriert.
+4. **Bereinigung von Alt-Parametern (TD-003, `GetSymbolBodyTool.cs`, `AssemblyReferenceResolver.cs`):**
+   - *Befund:* `RenderSingleSymbolRequest.Lease` und `lease`-Parameter in `RenderSymbolBodiesAsync` wurden nach Wegfall des alten Body-Resolvers nicht mehr gelesen. `FailedResolution` erhielt ein ungenutztes `canonicalPath`.
+   - *Behebung:* Ungenutzte Parameter und Record-Felder restlos entfernt. TD-003 auf `fixed` gesetzt.
+5. **FastTests-Hänger & Linter-Regel-Konformität (TD-004, `AssemblyAnalysisSessionTests.cs`):**
+   - *Befund 1:* Verwaiste Hintergrundprozesse (`testhost`, `AiNetLinter.FastTests`) aus abgebrochenen Läufen sperrten Ausgabedateien (`AiNetLinter.dll`), was zu MSBuild-Kopier-Wiederholungsschleifen (`MSB3026`) und scheinbarem Hängen führte.
+   - *Befund 2:* `AssemblyAnalysisSessionTests.cs` wuchs durch neue Tests auf 531 Zeilen an (Linter-Fehler `MaxLineCount` > 500).
+   - *Behebung:* Prozessbaum bereinigt; Testklasse in Partial-Klassen `AssemblyAnalysisSessionTests.cs` (342 Zeilen) und `AssemblyAnalysisSessionTests.Resilience.cs` (217 Zeilen) aufgeteilt. E2E-Regressionstests für leere Cache-Dokumente und ungültige Pfade ergänzt.
+
+### Verifikation & finale Gates
+
+- Build: `dotnet build --no-restore` — 0 Warnungen, 0 Fehler (`TreatWarningsAsErrors = true`).
+- MCP `get_violations`: 0 Violations in allen modifizierten Scopes (`Mcp/Assemblies`, `Mcp/Tools`, `FastTests`).
+- FastTests `Category!=Stress`: 2.444 bestanden, 2 übersprungen, 0 Fehler (1 m 38 s).
+- IntegrationTests `Category!=Stress`: 385 bestanden, 0 Fehler (4 m 18 s).
+- Tech Debt Queue: TD-001 bis TD-004 alle auf `fixed`.

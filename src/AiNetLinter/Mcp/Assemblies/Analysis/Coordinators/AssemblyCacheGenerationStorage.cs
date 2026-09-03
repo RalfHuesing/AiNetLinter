@@ -33,9 +33,11 @@ internal static class AssemblyCacheGenerationStorage
     }
 
     internal static string? FindProjectFile(string root) =>
-        Directory.EnumerateFiles(root, "*.csproj", SearchOption.AllDirectories)
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault();
+        Directory.Exists(root)
+            ? Directory.EnumerateFiles(root, "*.csproj", SearchOption.AllDirectories)
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault()
+            : null;
 
     internal static string GetSafeRelativePath(string root, string fullPath) =>
         NormalizeDocumentPath(Path.GetRelativePath(root, fullPath));
@@ -143,7 +145,6 @@ internal static class AssemblyCacheGenerationStorage
             if (!File.Exists(fullPath)) throw new InvalidDataException($"Das Cache-Dokument '{relativePath}' fehlt.");
 
             var source = File.ReadAllText(fullPath, encoding);
-            if (string.IsNullOrWhiteSpace(source)) throw new InvalidDataException($"Das Cache-Dokument '{relativePath}' ist leer.");
             documents.Add(new DecompiledDocument(fullPath, Path.GetFileNameWithoutExtension(fullPath), source));
         }
 

@@ -283,11 +283,10 @@ internal sealed partial class AssemblyDecompilationCache
         var result = new List<DecompiledDocument>(documents.Count);
         foreach (var (document, index) in documents.Select((value, index) => (value, index)))
         {
-            if (string.IsNullOrWhiteSpace(document.CSharpSource)) throw new InvalidDataException("Eine dekompilierte Dokumenteinheit ist leer.");
             var relativePath = $"{AssemblyCacheContract.SourceDirectoryName}/{index:D5}-{SanitizeFileName(document.TypeMetadataName)}.cs";
             var fullPath = AssemblyCacheGenerationStorage.ResolveSafePath(generationDirectory, relativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-            WriteTextAtomically(fullPath, document.CSharpSource);
+            WriteTextAtomically(fullPath, document.CSharpSource ?? string.Empty);
             result.Add(document with { GeneratedPath = fullPath });
         }
 

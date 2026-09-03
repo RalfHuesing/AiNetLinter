@@ -54,7 +54,7 @@ internal static class GetSymbolBodyTool
 
         try
         {
-            return await RenderSymbolBodiesAsync(solution, identifiers, maxBodyLines, state.AssemblySymbolIdentity, null, ct);
+            return await RenderSymbolBodiesAsync(solution, identifiers, maxBodyLines, state.AssemblySymbolIdentity, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -84,7 +84,7 @@ internal static class GetSymbolBodyTool
         }
 
         return RenderSymbolBodiesAsync(
-            solution, identifiers, maxBodyLines, lease.AssemblySymbolIdentity, lease, ct);
+            solution, identifiers, maxBodyLines, lease.AssemblySymbolIdentity, ct);
     }
 
     private static IReadOnlyList<string> NormalizeIdentifiers(
@@ -102,7 +102,6 @@ internal static class GetSymbolBodyTool
         IReadOnlyList<string> identifiers,
         int maxBodyLines,
         AnalysisSymbolIdentity? assemblyIdentity,
-        IAssemblyBodyContext? lease,
         CancellationToken ct)
     {
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
@@ -114,7 +113,7 @@ internal static class GetSymbolBodyTool
 
             var earlyError = await RenderSingleSymbolAsync(
                 new RenderSingleSymbolRequest(
-                    solution, identifiers[i], identifiers.Count, maxBodyLines, outputRoot, mb, assemblyIdentity, lease),
+                    solution, identifiers[i], identifiers.Count, maxBodyLines, outputRoot, mb, assemblyIdentity),
                 ct);
 
             if (earlyError != null) return earlyError;
@@ -192,8 +191,7 @@ internal static class GetSymbolBodyTool
         int MaxBodyLines,
         string OutputRoot,
         MarkdownBuilder Markdown,
-        AnalysisSymbolIdentity? AssemblyIdentity,
-        IAssemblyBodyContext? Lease);
+        AnalysisSymbolIdentity? AssemblyIdentity);
 
     private static string ToRelative(string outputRoot, ISymbol symbol)
     {

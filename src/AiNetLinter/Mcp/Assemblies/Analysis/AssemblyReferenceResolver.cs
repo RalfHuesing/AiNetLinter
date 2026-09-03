@@ -38,7 +38,7 @@ internal sealed class AssemblyReferenceResolver
             using var peReader = new PEReader(stream);
             if (!peReader.HasMetadata)
             {
-                return FailedResolution(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolver.Resolve)), NativeMetadataFailureMessage, canonicalPath);
+                return FailedResolution(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolver.Resolve)), NativeMetadataFailureMessage);
             }
             var diagnostics = new List<AssemblySessionDiagnostic>();
             var metadata = ReadMetadata(peReader.GetMetadataReader());
@@ -49,7 +49,7 @@ internal sealed class AssemblyReferenceResolver
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException or ArgumentException)
         {
-            return FailedResolution(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolution.Identity)), $"Assembly-Metadaten konnten nicht gelesen werden: {ex.Message}", canonicalPath);
+            return FailedResolution(AssemblyDiagnosticCodes.For(nameof(AssemblyReferenceResolver), nameof(AssemblyReferenceResolution.Identity)), $"Assembly-Metadaten konnten nicht gelesen werden: {ex.Message}");
         }
     }
 
@@ -364,7 +364,7 @@ internal sealed class AssemblyReferenceResolver
             ? "neutral"
             : culture.Trim().ToLowerInvariant();
 
-    private static AssemblyReferenceResolution FailedResolution(string code, string message, string canonicalPath)
+    private static AssemblyReferenceResolution FailedResolution(string code, string message)
     {
         message = $"{message} Hinweis: verwaltete .NET-.dll oder .exe mit IL erforderlich.";
         return new AssemblyReferenceResolution(null, [], [], [new AssemblySessionDiagnostic(code, message, AssemblyDiagnosticSeverity.Error)]);

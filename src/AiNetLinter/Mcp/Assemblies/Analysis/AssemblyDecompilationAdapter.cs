@@ -90,12 +90,25 @@ internal sealed class AssemblyDecompilationAdapter
         ICollection<AssemblySessionDiagnostic> diagnostics)
     {
         Directory.CreateDirectory(stagingDirectory);
-        _ = references;
         using var module = new PEFile(request.AssemblyPath);
         var targetFrameworkId = module.DetectTargetFrameworkId();
         var resolver = new UniversalAssemblyResolver(request.AssemblyPath, throwOnError: false, targetFrameworkId);
         var assemblyDirectory = Path.GetDirectoryName(request.AssemblyPath);
         if (!string.IsNullOrWhiteSpace(assemblyDirectory)) resolver.AddSearchDirectory(assemblyDirectory);
+        if (references?.References is { Count: > 0 } resolvedReferences)
+        {
+            var extraDirectories = resolvedReferences
+                .Where(reference => reference.Resolved && !string.IsNullOrWhiteSpace(reference.ResolvedPath))
+                .Select(reference => Path.GetDirectoryName(reference.ResolvedPath))
+                .Where(dir => !string.IsNullOrWhiteSpace(dir))
+                .Select(dir => dir!)
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var extraDirectory in extraDirectories)
+            {
+                resolver.AddSearchDirectory(extraDirectory);
+            }
+        }
         var decompiler = new WholeProjectDecompiler(
             new DecompilerSettings
             {
