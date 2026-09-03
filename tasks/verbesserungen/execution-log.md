@@ -85,3 +85,14 @@ Dieses Protokoll ist append-only. Primäraufgabe: Robuste und fokussierte Assemb
 - Risiken/Findings: kein fachlicher Befund; derselbe externe Subagent-Infrastrukturfehler ist in drei aufeinanderfolgenden frischen Läufen aufgetreten.
 - Entscheidung: Der Orchestrator-Lauf ist gemäß Blockierungsregel angehalten. Es wurde kein unabhängiger Review und kein Audit behauptet oder gestartet.
 - Nächste Aktion: Subagent-Ausführung nach Wiederherstellung der externen Infrastruktur erneut aufnehmen; die bestehenden Checkpoints und der Task-Stand bleiben erhalten.
+
+## 2026-09-03 — Analyse-Checkpoint & Findings gesichert
+
+- Run-ID: `verbesserungen-2026-09-03`
+- Epic/Paket: `EPIC-1 / Paket 1 — Source-first und gemeinsame Artefakte`
+- Status: `findings_persisted`
+- Dokumentation: `tasks/verbesserungen/findings-analyse.md` erstellt.
+- Wesentliche Erkenntnisse:
+  1. Ursache Decompilation statt Source: `AssemblyAnalysisContextFactory` fällt bei Compilation-Diagnosen/Warnungen oder zu restriktiven Vorbedingungen stillschweigend auf Decompilation zurück (`FromGeneration`).
+  2. Ursache Checkout- und Artefakt-Explosion: Fehlen eines OS-Level FileLocks (`FileShare.None`) pro Artefaktschlüssel; `AssemblyDecompilationCache` nutzt rein prozessinternen Monitor; `ExternalSourceRepositoryAcquirer` erzeugt blind parallele `checkout-<Guid>`-Ordner ohne Exklusivität.
+  3. Lösungsarchitektur: OS-FileLock pro Schlüssel (RepoUrl+Rev bzw. AssemblyKey) mit Timeout/Stall-Erkennung + Source-First-Erhalt auch bei Roslyn-Diagnosen.
