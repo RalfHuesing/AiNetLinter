@@ -6,11 +6,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
-using AiNetLinter.FastTests.Fixtures;
-using AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Assemblies.Analysis.SourceSelection;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.CallTree;
@@ -19,9 +18,9 @@ using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Assemblies.Navigation;
+namespace AiNetLinter.IntegrationTests.Mcp.Assemblies.Navigation;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 // @covers AssemblyNavigationSourceFactory
 // @covers AssemblyReferenceNavigator
 public sealed class AssemblyAnalysisTransitiveNavigationTests

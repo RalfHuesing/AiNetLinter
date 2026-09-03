@@ -3,8 +3,6 @@
 using System;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
-using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -13,9 +11,9 @@ using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Assemblies;
+namespace AiNetLinter.IntegrationTests.Mcp.Assemblies;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 // @covers AssemblyAnalysisDispatcher
 // @covers AssemblySymbolResolver
 public sealed class AssemblyAnalysisExpectedMissTests

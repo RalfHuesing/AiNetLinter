@@ -6,8 +6,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Assemblies.ExternalSource.Providers;
+using AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 
-namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
+namespace AiNetLinter.TestKit;
 
 internal sealed class AssemblyAnalysisRecordingProvider : IExternalSourceProvider
 {

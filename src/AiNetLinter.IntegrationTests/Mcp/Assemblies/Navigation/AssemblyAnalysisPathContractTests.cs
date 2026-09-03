@@ -18,9 +18,9 @@ using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Assemblies.Navigation;
+namespace AiNetLinter.IntegrationTests.Mcp.Assemblies.Navigation;
 
-[Trait("Category", "Component")]
+[Trait("Category", "Integration")]
 // @covers AssemblyRoslynWorkspaceFactory
 // @covers DiffImpactAnalyzer
 // @covers GetFileSkeletonTool

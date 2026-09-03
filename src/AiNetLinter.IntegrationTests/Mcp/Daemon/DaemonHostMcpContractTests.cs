@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using AiNetLinter.Configuration;
-using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Composition;
@@ -14,10 +13,10 @@ using AiNetLinter.Output;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.FastTests.Mcp.Daemon;
+namespace AiNetLinter.IntegrationTests.Mcp.Daemon;
 
 // @covers DaemonMcpSession
-[Trait("Category", "Component")]
+[Trait("Category", "Integration")]
 public sealed class DaemonHostMcpContractTests
 {
     [Fact]

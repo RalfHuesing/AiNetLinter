@@ -2,15 +2,14 @@
 
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.TestKit;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Assemblies;
+namespace AiNetLinter.IntegrationTests.Mcp.Assemblies;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 // @covers AssemblyAnalysisRegistry
 // @covers AssemblyAnalysisEntry
 // @covers AssemblyAnalysisRegistryEvictionCoordinator

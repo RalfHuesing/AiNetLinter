@@ -8,7 +8,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
@@ -20,9 +19,9 @@ using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Assemblies;
+namespace AiNetLinter.IntegrationTests.Mcp.Assemblies;
 
-[Trait("Category", "Unit")]
+[Trait("Category", "Integration")]
 // @covers AssemblyAnalysisDispatcher
 // @covers AssemblyReferenceSessionExpander
 public sealed partial class AssemblyAnalysisDispatcherCapabilityTests

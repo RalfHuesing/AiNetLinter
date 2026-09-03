@@ -5,11 +5,12 @@ using System.Collections.Generic;
 using System.Linq;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
-using AiNetLinter.TestKit;
+using AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
+using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace AiNetLinter.FastTests.Fixtures;
+namespace AiNetLinter.TestKit;
 
 internal sealed record ExternalSourceProjectSpec(
     string Name,
@@ -19,13 +20,13 @@ internal sealed record ExternalSourceProjectSpec(
 
 internal static class ExternalSourceSnapshotTestFactory
 {
-    internal static ExternalSourceSnapshot CreateSnapshot(
+    public static ExternalSourceSnapshot CreateSnapshot(
         string rootPath,
         ExternalSourceMapping mapping,
         params ExternalSourceProjectSpec[] projectSpecs)
         => CreateSnapshot(rootPath, mapping, "revision-1", null, projectSpecs);
 
-    internal static ExternalSourceSnapshot CreateSnapshot(
+    public static ExternalSourceSnapshot CreateSnapshot(
         string rootPath,
         ExternalSourceMapping mapping,
         string loadedRevision,

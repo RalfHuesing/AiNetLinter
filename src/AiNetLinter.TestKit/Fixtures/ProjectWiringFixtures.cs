@@ -4,21 +4,14 @@ using System;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
-using AiNetLinter.TestKit;
 
-namespace AiNetLinter.FastTests.Fixtures;
+namespace AiNetLinter.TestKit;
 
-/// <summary>
-/// Wiring-Test-Bausteine: sofort geladene Server-Instanzen ueber einen geteilten
-/// In-Memory-Roslyn-Snapshot (kein Hintergrund-Load, kein MSBuild) und daraus
-/// gebaute Registries.
-/// </summary>
 internal static class ProjectWiringFixtures
 {
     private static readonly Lazy<RoslynTestSolution> Scenario =
         new(SymbolGraphMiniSolutionSpec.Create);
 
-    /// <summary>Server mit fertigem ReadOnly-Snapshot: LoadState ist sofort Loaded.</summary>
     public static McpCodeGraphServer CreateLoadedServer(Config? config = null) =>
         new(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(
             null,

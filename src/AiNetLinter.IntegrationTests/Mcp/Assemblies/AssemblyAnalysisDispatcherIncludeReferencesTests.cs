@@ -3,14 +3,13 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.TestKit;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Assemblies;
+namespace AiNetLinter.IntegrationTests.Mcp.Assemblies;
 
 public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
 {

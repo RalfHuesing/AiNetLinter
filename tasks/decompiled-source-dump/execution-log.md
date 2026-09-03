@@ -498,3 +498,34 @@ Korrektur-Checkpoint committen, danach frischen Folge-Review starten.
 - FastTests `Category!=Stress`: 2.444 bestanden, 2 übersprungen, 0 Fehler (1 m 38 s).
 - IntegrationTests `Category!=Stress`: 385 bestanden, 0 Fehler (4 m 18 s).
 - Tech Debt Queue: TD-001 bis TD-004 alle auf `fixed`.
+
+## Run 2026-09-03 / Testsuite-Reorganisation & Performance-Optimierung / completed
+
+- Rolle: Orchestrator
+- Auftrag: Reorganisation der Testsuite gemäss AGENTS.md (< 10s FastTests, rein in-memory). Verlagerung schwerer Datei-I/O-, IPC- und Whole-Project-Decompilation-Tests von FastTests nach IntegrationTests.
+- Status: completed
+
+### Durchgeführte Maßnahmen
+
+1. **Shared Test Fixtures nach `AiNetLinter.TestKit` verlagert:**
+   - `ExternalSourceSnapshotTestFactory.cs`, `ProjectWiringFixtures.cs`, `SymbolGraphMiniSolutionSpec.cs` und `AssemblyAnalysisToolSupportTestProviders.cs` in `src/AiNetLinter.TestKit/Fixtures/` zentralisiert.
+   - Da `AiNetLinter.TestKit` in beiden Testprojekten als globale Using-Direktive importiert ist, stehen die Fixtures ohne redundanten Code beiden Suiten zur Verfügung.
+2. **Heavy-Integration-Tests nach `src/AiNetLinter.IntegrationTests/` migriert:**
+   - `DaemonHostMcpContractTests.cs` (71s, Named-Pipe-Daemon-IPC mit echter MCP-Client/Server-Kommunikation) -> `IntegrationTests/Mcp/Daemon/`
+   - `AssemblyAnalysisPathContractTests.cs` (11s, Whole-Project-Decompilation) -> `IntegrationTests/Mcp/Assemblies/Navigation/`
+   - `AssemblyAnalysisRouteTests.cs` (90s, Whole-Project-Decompilation, Routing, 5 MCP-Tools) -> `IntegrationTests/Mcp/Assemblies/Navigation/`
+   - `AssemblyAnalysisTransitiveNavigationTests.cs` (50s, 3 Assemblies mit Gitea-Snapshots) -> `IntegrationTests/Mcp/Assemblies/Navigation/`
+   - `AssemblyNavigationResponseContractTests.cs` (39s, 7 Assembly-Dumps, Fehler-Injektion) -> `IntegrationTests/Mcp/Assemblies/Navigation/`
+   - `AssemblyAnalysisExpectedMissTests.cs` (37s) -> `IntegrationTests/Mcp/Assemblies/`
+   - `AssemblyAnalysisRegistryRetirementRaceTests.cs` (48s, Multithreading-Races) -> `IntegrationTests/Mcp/Assemblies/`
+   - `AssemblyAnalysisDispatcherCapabilityTests.cs` (+ Partials) -> `IntegrationTests/Mcp/Assemblies/`
+3. **Namespaces und Traits:**
+   - Alle migrierten Klassen auf Namespace `AiNetLinter.IntegrationTests.*` und Trait `[Trait("Category", "Integration")]` aktualisiert.
+
+### Verifikationsergebnisse & Performance-Gewinn
+
+- **Build:** `dotnet build --no-restore` — 0 Warnungen, 0 Fehler (`TreatWarningsAsErrors = true`).
+- **FastTests Unit-Slice (`Category=Unit`):** 1.496 bestanden in **5 Sekunden** (vorher ~45s).
+- **FastTests Gesamt (`Category!=Stress`):** 2.410 bestanden, 2 übersprungen, 0 Fehler in **8 Sekunden** (vorher **1 m 38 s** bzw. Timeout).
+- **IntegrationTests Gesamt (`Category!=Stress`):** 419 bestanden, 0 Fehler in **4 m 19 s** (vollständige Abdeckung aller E2E-, Decompilation- und Daemon-Szenarien erhalten).
+- **Zielerreichung:** AGENTS.md-Kriterium `< 10s Laufzeit` für FastTests vollständig und nachhaltig wiederhergestellt.

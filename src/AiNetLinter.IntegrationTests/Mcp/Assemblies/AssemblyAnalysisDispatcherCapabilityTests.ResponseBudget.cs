@@ -10,7 +10,7 @@ using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Assemblies;
+namespace AiNetLinter.IntegrationTests.Mcp.Assemblies;
 
 public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
 {

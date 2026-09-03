@@ -5,8 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
-using System.Threading.Tasks;
-using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -14,9 +12,9 @@ using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Assemblies.Navigation;
+namespace AiNetLinter.IntegrationTests.Mcp.Assemblies.Navigation;
 
-[Trait("Category", "Component")]
+[Trait("Category", "Integration")]
 // @covers AssemblyFindReferencesTool
 // @covers TransitiveCallGraphFormatter
 public sealed class AssemblyNavigationResponseContractTests

@@ -2,7 +2,7 @@
 
 using AiNetLinter.TestKit;
 
-namespace AiNetLinter.FastTests.Fixtures;
+namespace AiNetLinter.TestKit;
 
 internal static class SymbolGraphMiniSolutionSpec
 {
