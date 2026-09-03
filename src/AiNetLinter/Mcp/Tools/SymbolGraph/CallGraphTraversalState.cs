@@ -25,8 +25,10 @@ internal sealed class CallTreeBuilderNode
 
     internal ISymbol? Symbol { get; }
     internal string Name { get; }
-    internal string DisplayLine { get; }
+    internal string DisplayLine { get; private set; }
     internal List<CallTreeBuilderNode> Children { get; } = new();
+
+    internal void SetDisplayLine(string displayLine) => DisplayLine = displayLine;
 }
 
 /// <summary>
@@ -74,10 +76,17 @@ internal sealed class TreeBuildState
     internal int Depth { get; }
     internal int TopN { get; }
     internal CallTreeDirection Direction { get; }
-    internal CallTreeBuilderNode Root { get; }
+    internal bool AbsolutePaths { get; private set; }
+    internal CallTreeBuilderNode Root { get; private set; }
     internal int NodeCount { get; set; }
     internal bool Truncated { get; set; }
     internal bool HasQueuedNodes => _queue.Count > 0;
+
+    internal void SetPathDisplayMode(bool absolutePaths)
+    {
+        AbsolutePaths = absolutePaths;
+        Root.SetDisplayLine(CallGraphTreeBuilder.FormatRootDisplay(Root.Symbol!, Solution, absolutePaths));
+    }
 
     internal (CallTreeBuilderNode Node, int Level) Dequeue() => _queue.Dequeue();
     internal void Enqueue(CallTreeBuilderNode node, int level) => _queue.Enqueue((node, level));

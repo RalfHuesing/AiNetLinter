@@ -85,7 +85,8 @@ internal static class AssemblyReferenceNavigator
                         source.Symbol,
                         input.Depth,
                         Math.Max(input.TopN, 1),
-                        AssemblyNavigationSupport.ParseDirection(input.Direction)),
+                        AssemblyNavigationSupport.ParseDirection(input.Direction),
+                        AbsolutePaths: true),
                     cancellationToken).ConfigureAwait(false);
                 trees.Add((source, AssemblyNavigationSupport.AddOrigin(tree, source.Origin)));
                 if (truncated)

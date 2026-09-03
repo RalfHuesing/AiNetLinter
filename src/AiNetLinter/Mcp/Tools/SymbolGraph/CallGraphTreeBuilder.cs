@@ -59,6 +59,7 @@ internal static class CallGraphTreeBuilder
         var depth = Math.Clamp(request.RequestedDepth, 1, MaxCallTreeDepth);
         var state = new TreeBuildState(
             request.Solution, request.SeedSymbol, depth, request.TopN, request.Direction);
+        state.SetPathDisplayMode(request.AbsolutePaths);
         await RunTreeBfsAsync(state, ct);
         return (ToMetricsTreeNode(state.Root), state.Truncated);
     }
@@ -86,7 +87,7 @@ internal static class CallGraphTreeBuilder
         foreach (var (group, direction) in groups)
         {
             var child = AddChild(
-                node, group, state.Solution, direction, state.Direction == CallTreeDirection.Both);
+                node, group, state.Solution, direction, state.Direction == CallTreeDirection.Both, state.AbsolutePaths);
             if (recursed >= state.TopN || !CanExpand(state, level, group.CallerSymbol, direction)) continue;
             recursed++;
             EnqueueOrTruncate(state, child, level + 1);
@@ -218,9 +219,10 @@ internal static class CallGraphTreeBuilder
         CallerGroup group,
         Solution solution,
         CallTreeDirection direction,
-        bool includeDirection)
+        bool includeDirection,
+        bool absolutePaths)
     {
-        var displayLine = FormatGroupDisplay(group, solution);
+        var displayLine = FormatGroupDisplay(group, solution, absolutePaths);
         var name = group.CallerSymbol is null
             ? "<unbekannt>"
             : CallGraphTraversal.FormatSymbolName(group.CallerSymbol, direction);
@@ -248,20 +250,20 @@ internal static class CallGraphTreeBuilder
         state.Enqueue(child, nextLevel);
     }
 
-    private static string FormatGroupDisplay(CallerGroup group, Solution solution)
+    private static string FormatGroupDisplay(CallerGroup group, Solution solution, bool absolutePaths)
     {
-        var path = FormatPath(group.Locations[0], solution);
+        var path = FormatPath(group.Locations[0], solution, absolutePaths);
         var line = FirstLocationLine(group);
         return group.Locations.Count > 1
             ? $"{path}:{line} (+{group.Locations.Count - 1} weitere Aufrufe)"
             : $"{path}:{line}";
     }
 
-    internal static string FormatRootDisplay(ISymbol seedSymbol, Solution solution)
+    internal static string FormatRootDisplay(ISymbol seedSymbol, Solution solution, bool absolutePaths = false)
     {
         var declaringLocation = seedSymbol.Locations.FirstOrDefault(l => l.IsInSource);
         if (declaringLocation is null) return seedSymbol.ToDisplayString();
-        var path = FormatPath(declaringLocation, solution);
+        var path = FormatPath(declaringLocation, solution, absolutePaths);
         var line = declaringLocation.GetLineSpan().StartLinePosition.Line + 1;
         return $"{path}:{line}";
     }
@@ -272,10 +274,12 @@ internal static class CallGraphTreeBuilder
     private static int FirstLocationLine(CallerGroup group) =>
         group.Locations[0].GetLineSpan().StartLinePosition.Line + 1;
 
-    private static string FormatPath(Location location, Solution solution)
+    private static string FormatPath(Location location, Solution solution, bool absolutePaths = false)
     {
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-        return PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath);
+        return absolutePaths
+            ? Path.GetFullPath(location.SourceTree!.FilePath)
+            : PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath);
     }
 
     private static MetricsTreeNode ToMetricsTreeNode(CallTreeBuilderNode node) =>

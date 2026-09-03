@@ -73,7 +73,8 @@ internal static class AssemblyAnalysisContextFactory
                 ContentMode = "decompiledProject",
             },
             generation.Number,
-            generation.Status);
+            generation.Status,
+            generation.DecompiledProjectPaths);
 
     internal static async Task<(AssemblyContext? Context, string? Error)> CreateSourceProjectContextAsync(
         string targetPath,

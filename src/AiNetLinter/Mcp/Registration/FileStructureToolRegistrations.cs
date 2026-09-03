@@ -34,7 +34,7 @@ internal static class FileStructureToolRegistrations
         AnalysisToolRoute? targetRoute = null)
     {
         AddGetNamespaceTree(tools, registry, targetRoute);
-        AddGetFileTree(tools, registry);
+        AddGetFileTree(tools);
         AddGetFileSkeleton(tools, registry, targetRoute);
         AddGetClassStructure(tools, registry, targetRoute);
         AddGetIndexScope(tools, registry);
@@ -42,8 +42,7 @@ internal static class FileStructureToolRegistrations
     }
 
     private static void AddGetFileTree(
-        McpServerPrimitiveCollection<McpServerTool> tools,
-        ProjectRegistry registry)
+        McpServerPrimitiveCollection<McpServerTool> tools)
     {
         tools.Add(McpServerTool.Create(
             async (
@@ -61,11 +60,10 @@ internal static class FileStructureToolRegistrations
                 bool includeMetadata = true,
                 bool includeLineCount = false,
                 CancellationToken ct = default) =>
-                await ProjectAnalysisDispatcher.ExecuteFilesystemAsync(
-                    registry,
+                await ProjectAnalysisDispatcher.ExecutePhysicalFilesystemAsync(
                     new AnalysisTargetRequest(targetType, targetPath),
-                    lease => GetFileTreeTool.ExecuteAsync(
-                        lease.RootPath,
+                    canonicalRoot => GetFileTreeTool.ExecuteAsync(
+                        canonicalRoot,
                         new GetFileTreeInput(
                             root ?? ".",
                             view,
@@ -83,8 +81,9 @@ internal static class FileStructureToolRegistrations
     }
 
     private const string GetFileTreeDescription =
-        "Wann nutzen: physische Dateilandkarte eines registrierten Projektroots als ersten " +
-        "Discovery-Schritt fuer Agenten. root, fileFilter und excludePatterns sind relativ zu " +
+        "Wann nutzen: physische Dateilandkarte eines absoluten Projekt- oder dekompilierten " +
+        "SourceRoots als ersten Discovery-Schritt fuer Agenten. root, fileFilter und " +
+        "excludePatterns sind relativ zu " +
         "targetPath; fileFilter ist ein Pfad-Glob, keine Inhaltssuche. view: 'tree' [Default], " +
         "'summary', 'files'. includeExtensions: Extensionen wie ['.cs'] oder ['*']. " +
         "maxDepth und treeDepth: 0 bis 32 (effektive Tiefe = maxDepth ?? treeDepth, 0 = Root-Ebene, Default treeDepth 2; maxDepth hat Vorrang). " +

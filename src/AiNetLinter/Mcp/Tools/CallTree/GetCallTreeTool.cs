@@ -69,7 +69,8 @@ internal static class GetCallTreeTool
 
             var topN = input.TopN < 1 ? 1 : input.TopN;
             var (root, truncated) = await CallGraphTreeBuilder.BuildTreeAsync(
-                new CallTreeBuildRequest(solution, symbol!, input.Depth, topN, direction), ct);
+                new CallTreeBuildRequest(solution, symbol!, input.Depth, topN, direction, state.AssemblySymbolIdentity is not null),
+                ct);
 
             var body = RenderTree(root, input.Format, topN);
             // "truncated" deckt nur den 250-Knoten-Hardcap von BuildTreeAsync ab. Der Renderer

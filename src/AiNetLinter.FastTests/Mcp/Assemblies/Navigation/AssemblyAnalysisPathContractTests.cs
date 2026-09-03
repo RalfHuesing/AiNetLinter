@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +27,7 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies.Navigation;
 // @covers GetSymbolBodyTool
 // @covers GetCallTreeTool
 // @covers DependencyGraphTool
+// @covers DecompiledProjectPaths
 public sealed class AssemblyAnalysisPathContractTests
 {
     [Fact]
@@ -226,6 +228,25 @@ public sealed class AssemblyAnalysisPathContractTests
         Assert.NotEqual(true, body.IsError);
         Assert.Contains($"id: `{methodId}`", bodyText, StringComparison.Ordinal);
         Assert.Contains("Save(bool includeSub = false, bool saveAll = false)", bodyText, StringComparison.Ordinal);
+        Assert.Contains(Path.GetFullPath(document.FilePath!), bodyText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("decompiledProjectDirectory", bodyText, StringComparison.Ordinal);
+
+        var findSymbol = await DispatchAsync(
+            registry,
+            assemblyPath,
+            activeLease => AssemblyFindSymbolTool.ExecuteAsync(
+                activeLease,
+                new AssemblyFindSymbolRequest(["Document"], "class", 10, false),
+                CancellationToken.None));
+        Assert.NotEqual(true, findSymbol.IsError);
+        Assert.Contains(Path.GetFullPath(document.FilePath!), Text(findSymbol), StringComparison.OrdinalIgnoreCase);
+        var findSymbolPayload = findSymbol.StructuredContent!.Value;
+        var location = Assert.Single(
+            findSymbolPayload.GetProperty("results")[0].GetProperty("matches").EnumerateArray());
+        var locationPath = location.GetProperty("filePath").GetString();
+        Assert.True(Path.IsPathFullyQualified(locationPath!));
+        Assert.True(File.Exists(locationPath));
+        Assert.Equal(Path.GetFullPath(document.FilePath!), Path.GetFullPath(locationPath!), StringComparer.OrdinalIgnoreCase);
 
         var callTree = await DispatchAsync(
             registry,
@@ -235,6 +256,7 @@ public sealed class AssemblyAnalysisPathContractTests
                 new GetCallTreeInput(methodId, 1, null, 10, "outgoing"),
                 CancellationToken.None));
         Assert.NotEqual(true, callTree.IsError);
+        Assert.Contains(Path.GetFullPath(document.FilePath!), Text(callTree), StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Unerwarteter Fehler in get_call_tree", Text(callTree), StringComparison.Ordinal);
 
         var dependencyGraph = await DispatchAsync(

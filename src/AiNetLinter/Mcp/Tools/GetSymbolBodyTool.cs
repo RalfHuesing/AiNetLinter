@@ -168,7 +168,7 @@ internal static class GetSymbolBodyTool
             ?? symbol.TryGetDocCommentId();
         var bodyResolution = SourceSymbolBodyResolver.Resolve(symbol, request.MaxBodyLines);
 
-        request.Markdown.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{Path.GetFileName(request.OutputRoot)}/{ToRelative(request.OutputRoot, symbol)}`");
+        request.Markdown.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{FormatLocation(request, symbol)}`");
         request.Markdown.BlankLine();
         if (!string.Equals(request.Identifier, idSuffix, StringComparison.Ordinal))
         {
@@ -200,6 +200,15 @@ internal static class GetSymbolBodyTool
         var path = symbol.Locations.FirstOrDefault(l => l.IsInSource)?.SourceTree?.FilePath;
         if (string.IsNullOrEmpty(path)) return symbol.ToDisplayString();
         return PathNormalizer.ToRelative(outputRoot, path);
+    }
+
+    private static string FormatLocation(RenderSingleSymbolRequest request, ISymbol symbol)
+    {
+        var path = symbol.Locations.FirstOrDefault(l => l.IsInSource)?.SourceTree?.FilePath;
+        if (string.IsNullOrEmpty(path)) return symbol.ToDisplayString();
+        return request.AssemblyIdentity is null
+            ? $"{Path.GetFileName(request.OutputRoot)}/{ToRelative(request.OutputRoot, symbol)}"
+            : Path.GetFullPath(path);
     }
 
 }

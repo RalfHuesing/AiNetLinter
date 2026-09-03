@@ -148,7 +148,10 @@ internal sealed record InspectAssemblyPayload(
     AssemblyDiagnosticsSummary? DiagnosticsSummary = null,
     AssemblyReferenceSummary? ReferenceSummary = null,
     bool ReferenceDetailsIncluded = true,
-    int TotalNamespaces = 0);
+    int TotalNamespaces = 0,
+    string? DecompiledProjectDirectory = null,
+    string? DecompiledProjectPath = null,
+    string? DecompiledSourceRoot = null);
 
 internal sealed record FindAssemblyExtensionsPayload(
     string AssemblyPath,

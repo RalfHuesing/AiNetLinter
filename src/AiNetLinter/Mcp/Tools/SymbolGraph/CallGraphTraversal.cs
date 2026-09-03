@@ -109,7 +109,9 @@ internal static class CallGraphTraversal
     {
         var location = referenceLocation.Location;
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
-        var filePath = PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath);
+        var filePath = assemblyIdentity is null
+            ? PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath)
+            : Path.GetFullPath(location.SourceTree!.FilePath);
         var line = location.GetLineSpan().StartLinePosition.Line + 1;
         return new TransitiveCallSiteEntry(
             filePath,

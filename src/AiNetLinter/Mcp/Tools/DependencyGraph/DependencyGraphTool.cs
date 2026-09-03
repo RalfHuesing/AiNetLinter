@@ -51,7 +51,13 @@ internal static class DependencyGraphTool
         try
         {
             return hasFilePath
-                ? await ExecuteFileScopeAsync(solution, input, includeOutgoing, includeIncoming, ct)
+                ? await ExecuteFileScopeAsync(
+                    solution,
+                    input,
+                    includeOutgoing,
+                    includeIncoming,
+                    state.AssemblySymbolIdentity is not null,
+                    ct)
                 : await ExecuteTypeScopeAsync(solution, input, includeOutgoing, includeIncoming, state.AssemblySymbolIdentity, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -78,7 +84,12 @@ internal static class DependencyGraphTool
     }
 
     private static async Task<CallToolResult> ExecuteFileScopeAsync(
-        Solution solution, DependencyGraphInput input, bool includeOutgoing, bool includeIncoming, CancellationToken ct)
+        Solution solution,
+        DependencyGraphInput input,
+        bool includeOutgoing,
+        bool includeIncoming,
+        bool absolutePaths,
+        CancellationToken ct)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var absolutePath = Path.GetFullPath(Path.Combine(solutionDir, input.FilePath!));
@@ -88,8 +99,11 @@ internal static class DependencyGraphTool
         var request = new DependencyGraphScanRequest(solution, includeOutgoing, includeIncoming, input.Depth, input.MaxResults);
         var result = await DependencyGraphScanner.ScanFileAsync(document, request, ct);
         var relativePath = PathNormalizer.ToRelative(solutionDir, document.FilePath ?? absolutePath);
-        var target = new DependencyGraphTarget("file", relativePath, null);
-        return BuildResponse(target, result);
+        var target = new DependencyGraphTarget(
+            "file",
+            absolutePaths ? Path.GetFullPath(document.FilePath ?? absolutePath) : relativePath,
+            null);
+        return BuildResponse(target, absolutePaths ? ToAbsolutePaths(result, solution) : result);
     }
 
     private static async Task<CallToolResult> ExecuteTypeScopeAsync(
@@ -115,17 +129,42 @@ internal static class DependencyGraphTool
 
         var request = new DependencyGraphScanRequest(solution, includeOutgoing, includeIncoming, input.Depth, input.MaxResults);
         var result = await DependencyGraphScanner.ScanTypeAsync(targetType, request, ct);
-        var declaringPath = FormatDeclaringPath(solution, targetType);
+        var declaringPath = FormatDeclaringPath(solution, targetType, assemblyIdentity is not null);
         var target = new DependencyGraphTarget("type", declaringPath, targetType.Name);
-        return BuildResponse(target, result);
+        return BuildResponse(
+            target,
+            assemblyIdentity is null ? result : ToAbsolutePaths(result, solution));
     }
 
-    private static string FormatDeclaringPath(Solution solution, INamedTypeSymbol type)
+    private static string FormatDeclaringPath(Solution solution, INamedTypeSymbol type, bool absolutePath)
     {
         var location = type.Locations.FirstOrDefault(l => l.IsInSource && l.SourceTree is not null);
         if (location is null) return type.Name;
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-        return PathNormalizer.ToRelative(solutionDir, location.SourceTree!.FilePath);
+        return absolutePath
+            ? Path.GetFullPath(location.SourceTree!.FilePath)
+            : PathNormalizer.ToRelative(solutionDir, location.SourceTree!.FilePath);
+    }
+
+    private static DependencyGraphResult ToAbsolutePaths(
+        DependencyGraphResult result,
+        Solution solution) =>
+        result with
+        {
+            Edges = result.Edges
+                .Select(edge => edge with
+                {
+                    From = ToAbsolutePath(solution, edge.From),
+                    To = ToAbsolutePath(solution, edge.To),
+                })
+                .ToList(),
+        };
+
+    private static string ToAbsolutePath(Solution solution, string path)
+    {
+        if (Path.IsPathFullyQualified(path)) return Path.GetFullPath(path);
+        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
+        return Path.GetFullPath(Path.Combine(solutionDir, path));
     }
 
     private static CallToolResult BuildResponse(

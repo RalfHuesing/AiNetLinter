@@ -2,8 +2,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using AiNetLinter.IntegrationTests.Platform;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
 using AiNetLinter.Mcp;
 using ModelContextProtocol.Protocol;
@@ -64,6 +67,84 @@ public sealed class McpServerAssemblyHealthE2ETests
             "Assembly-Extensions:",
             Assert.IsType<TextContentBlock>(Assert.Single(extensions.Content)).Text,
             StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InspectAssembly_ExposesPhysicalPathsForRgAndFileTreeDiscovery()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "inspect_assembly",
+            new Dictionary<string, object?>
+            {
+                ["targetType"] = "assembly",
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["typeName"] = nameof(McpCodeGraphServer),
+                ["exactTypeName"] = true,
+                ["publicOnly"] = false,
+                ["maxMembers"] = 10,
+            });
+
+        Assert.False(result.IsError == true, string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text)));
+        Assert.NotNull(result.StructuredContent);
+        var payload = result.StructuredContent!.Value;
+        var projectDirectory = payload.GetProperty("decompiledProjectDirectory").GetString();
+        var projectPath = payload.GetProperty("decompiledProjectPath").GetString();
+        var sourceRoot = payload.GetProperty("decompiledSourceRoot").GetString();
+        Assert.All(
+            new[] { projectDirectory, projectPath, sourceRoot },
+            path => Assert.True(path is not null && Path.IsPathFullyQualified(path), $"Expected absolute path, got '{path}'."));
+        Assert.True(Directory.Exists(projectDirectory));
+        Assert.True(File.Exists(projectPath));
+        Assert.True(Directory.Exists(sourceRoot));
+
+        var tree = await _fixture.Client.CallToolAsync(
+            "get_file_tree",
+            new Dictionary<string, object?>
+            {
+                ["targetType"] = "project",
+                ["targetPath"] = sourceRoot,
+                ["view"] = "files",
+                ["includeExtensions"] = new[] { ".cs" },
+                ["fileFilter"] = "**/*.cs",
+                ["maxDepth"] = 32,
+                ["maxResults"] = 2000,
+            });
+
+        Assert.False(tree.IsError == true, string.Join("\n", tree.Content.OfType<TextContentBlock>().Select(block => block.Text)));
+        Assert.NotNull(tree.StructuredContent);
+        var treePayload = tree.StructuredContent!.Value.GetProperty("fileTree");
+        var files = treePayload.GetProperty("files").EnumerateArray().ToList();
+        Assert.NotEmpty(files);
+        Assert.All(files, file => Assert.EndsWith(".cs", file.GetProperty("path").GetString(), StringComparison.OrdinalIgnoreCase));
+        Assert.All(
+            files,
+            file => Assert.True(
+                File.Exists(Path.Combine(sourceRoot!, file.GetProperty("path").GetString()!.Replace('/', Path.DirectorySeparatorChar))),
+                $"Expected physical file below SourceRoot: {file.GetProperty("path").GetString()}"));
+
+        var rg = await RunRipgrepAsync(sourceRoot!, nameof(McpCodeGraphServer));
+        Assert.Equal(0, rg.ExitCode);
+        Assert.NotEmpty(rg.Output);
+    }
+
+    private static async Task<(int ExitCode, string Output)> RunRipgrepAsync(string root, string pattern)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "rg",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+        };
+        startInfo.ArgumentList.Add("--fixed-strings");
+        startInfo.ArgumentList.Add("--glob");
+        startInfo.ArgumentList.Add("*.cs");
+        startInfo.ArgumentList.Add(pattern);
+        startInfo.ArgumentList.Add(root);
+
+        var result = await CliProcessRunner.RunAsync(startInfo, TimeSpan.FromSeconds(15));
+        return (result.ExitCode, result.Output);
     }
 
     [Fact]

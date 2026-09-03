@@ -75,7 +75,10 @@ internal static class InspectAssemblyResponseBuilder
             diagnostics,
             referenceSummary,
             includeReferenceDetails,
-            totalNamespaces);
+            totalNamespaces,
+            context.DecompiledProjectPaths?.DecompiledProjectDirectory,
+            context.DecompiledProjectPaths?.DecompiledProjectPath,
+            context.DecompiledProjectPaths?.DecompiledSourceRoot);
     }
 
     private static InspectAssemblyPayload ApplyResponseBudget(

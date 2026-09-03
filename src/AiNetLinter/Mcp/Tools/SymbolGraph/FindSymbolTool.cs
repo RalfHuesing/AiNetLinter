@@ -154,9 +154,10 @@ internal static class FindSymbolTool
     internal static IEnumerable<string> FormatSymbolLocations(
         ISymbol symbol,
         string outputRoot,
-        AnalysisSymbolIdentity? assemblyIdentity = null)
+        AnalysisSymbolIdentity? assemblyIdentity = null,
+        bool absolutePaths = false)
     {
-        foreach (var entry in FormatSymbolLocationEntries(symbol, outputRoot, assemblyIdentity))
+        foreach (var entry in FormatSymbolLocationEntries(symbol, outputRoot, assemblyIdentity, absolutePaths))
         {
             yield return FormatEntry(entry);
         }
@@ -172,7 +173,8 @@ internal static class FindSymbolTool
     internal static IEnumerable<SymbolLocationEntry> FormatSymbolLocationEntries(
         ISymbol symbol,
         string outputRoot,
-        AnalysisSymbolIdentity? assemblyIdentity = null)
+        AnalysisSymbolIdentity? assemblyIdentity = null,
+        bool absolutePaths = false)
     {
         var kindLabel = SymbolKindClassifier.DescribeSymbolKind(symbol);
         var symbolId = DocumentationCommentId.CreateDeclarationId(symbol)
@@ -181,9 +183,12 @@ internal static class FindSymbolTool
         foreach (var location in symbol.Locations.Where(l => l.IsInSource))
         {
             var lineSpan = location.GetLineSpan();
-            var relativePath = PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath);
+            var sourcePath = location.SourceTree!.FilePath;
+            var displayPath = assemblyIdentity is null && !absolutePaths
+                ? PathNormalizer.ToRelative(outputRoot, sourcePath)
+                : Path.GetFullPath(sourcePath);
             var line = lineSpan.StartLinePosition.Line + 1;
-            yield return new SymbolLocationEntry(relativePath, line, kindLabel, symbol.ToDisplayString(), qualifiedId);
+            yield return new SymbolLocationEntry(displayPath, line, kindLabel, symbol.ToDisplayString(), qualifiedId);
         }
     }
 

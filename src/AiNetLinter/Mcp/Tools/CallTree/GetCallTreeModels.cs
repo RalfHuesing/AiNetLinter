@@ -39,7 +39,8 @@ internal sealed record CallTreeBuildRequest(
     ISymbol SeedSymbol,
     int RequestedDepth,
     int TopN,
-    CallTreeDirection Direction);
+    CallTreeDirection Direction,
+    bool AbsolutePaths = false);
 
 internal sealed record CallTreePayload(
     MetricsTreeNode Root,

@@ -46,6 +46,15 @@ internal static class InspectAssemblyFormatter
     {
         builder.AppendLine($"Assembly: `{payload.Identity?.Name ?? "unbekannt"}`");
         builder.AppendLine($"Pfad: `{payload.AssemblyPath}`");
+        if (payload.DecompiledProjectDirectory is not null
+            && payload.DecompiledProjectPath is not null
+            && payload.DecompiledSourceRoot is not null)
+        {
+            builder.AppendLine(
+                $"Pfade: decompiledProjectDirectory=`{payload.DecompiledProjectDirectory}`; " +
+                $"decompiledProjectPath=`{payload.DecompiledProjectPath}`; " +
+                $"decompiledSourceRoot=`{payload.DecompiledSourceRoot}`");
+        }
         builder.AppendLine($"Vollständigkeit: `{payload.Completeness}`");
         if (payload.Origin is { } origin)
         {

@@ -47,7 +47,12 @@ internal static class GetTypeHierarchyTool
         }
 
         var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
-        var payload = await GetTypeHierarchyFormatter.BuildHierarchyAsync(type, solution, normalizedMaxResults, ct);
+        var payload = await GetTypeHierarchyFormatter.BuildHierarchyAsync(
+            type,
+            solution,
+            normalizedMaxResults,
+            ct,
+            absolutePaths: state.AssemblySymbolIdentity is not null);
         var text = GetTypeHierarchyFormatter.FormatText(payload);
         // Basisklassen/Interfaces trunkieren nie (durch die Deklaration des Typs selbst begrenzt),
         // aber abgeleitete/implementierende Typen sind transitiv ueber die gesamte Solution

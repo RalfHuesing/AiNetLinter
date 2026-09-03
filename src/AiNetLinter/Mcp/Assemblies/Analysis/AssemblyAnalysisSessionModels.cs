@@ -2,6 +2,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using Microsoft.CodeAnalysis;
@@ -101,6 +103,81 @@ internal sealed record DecompiledDocument(
     string CSharpSource,
     string? MetadataToken = null);
 
+/// <summary>
+/// Absolute, physical paths of the materialized WholeProjectDecompiler output.
+/// The source root is the deepest common directory of all generated C# documents,
+/// so it is safe to pass directly to <c>rg</c> or <c>get_file_tree</c>.
+/// </summary>
+internal sealed record DecompiledProjectPaths(
+    string DecompiledProjectDirectory,
+    string DecompiledProjectPath,
+    string DecompiledSourceRoot)
+{
+    internal static DecompiledProjectPaths? Create(
+        string? projectFilePath,
+        IReadOnlyList<DecompiledDocument> documents)
+    {
+        if (string.IsNullOrWhiteSpace(projectFilePath) || documents.Count == 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            var projectPath = Path.GetFullPath(projectFilePath);
+            var projectDirectory = Path.GetDirectoryName(projectPath);
+            var sourceDirectories = documents
+                .Select(document => document.GeneratedPath)
+                .Where(Path.IsPathFullyQualified)
+                .Select(Path.GetFullPath)
+                .Select(Path.GetDirectoryName)
+                .Where(directory => !string.IsNullOrWhiteSpace(directory))
+                .Select(directory => directory!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (string.IsNullOrWhiteSpace(projectDirectory) || sourceDirectories.Count == 0)
+            {
+                return null;
+            }
+
+            var sourceRoot = FindCommonDirectory(sourceDirectories);
+            return sourceRoot is null
+                ? null
+                : new(projectDirectory, projectPath, sourceRoot);
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException or NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    private static string? FindCommonDirectory(IReadOnlyList<string> directories)
+    {
+        var common = directories[0];
+        foreach (var directory in directories.Skip(1))
+        {
+            while (!IsSameOrDescendant(common, directory))
+            {
+                var parent = Directory.GetParent(common);
+                if (parent is null) return null;
+                common = parent.FullName;
+            }
+        }
+
+        return common;
+    }
+
+    private static bool IsSameOrDescendant(string ancestor, string candidate)
+    {
+        var relative = Path.GetRelativePath(ancestor, candidate);
+        return relative == "."
+            || (!Path.IsPathRooted(relative)
+                && relative != ".."
+                && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+                && !relative.StartsWith(".." + Path.AltDirectorySeparatorChar, StringComparison.Ordinal));
+    }
+}
+
 internal sealed record DecompilationRequest(
     string AssemblyPath,
     AssemblyFingerprint Fingerprint,
@@ -182,7 +259,8 @@ internal sealed record AssemblySessionGeneration(
     AssemblyRoslynSnapshot Snapshot,
     IReadOnlyList<AssemblyReferenceDto> References,
     IReadOnlyList<AssemblySessionDiagnostic> Diagnostics,
-    AssemblyOrigin Origin)
+    AssemblyOrigin Origin,
+    DecompiledProjectPaths? DecompiledProjectPaths = null)
 {
     internal int ActiveLeaseCount { get; set; }
 }

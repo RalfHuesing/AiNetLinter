@@ -40,13 +40,17 @@ internal static class GetTypeHierarchyFormatter
     }
 
     internal static async Task<TypeHierarchyPayload> BuildHierarchyAsync(
-        INamedTypeSymbol type, Solution solution, int maxResults, CancellationToken ct)
+        INamedTypeSymbol type,
+        Solution solution,
+        int maxResults,
+        CancellationToken ct,
+        bool absolutePaths = false)
     {
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
 
-        var baseTypes = FormatBaseTypes(type, outputRoot).ToList();
-        var interfaces = FormatInterfaces(type, outputRoot).ToList();
-        var subtypeProjection = await ProjectSubtypesAsync(type, solution, outputRoot, maxResults, ct);
+        var baseTypes = FormatBaseTypes(type, outputRoot, absolutePaths).ToList();
+        var interfaces = FormatInterfaces(type, outputRoot, absolutePaths).ToList();
+        var subtypeProjection = await ProjectSubtypesAsync(type, solution, outputRoot, maxResults, absolutePaths, ct);
         var diHits = await DiRegistrationHeuristics.FindRegistrationsAsync(solution, type, ct);
         return new(
             type.ToDisplayString(),
@@ -83,12 +87,12 @@ internal static class GetTypeHierarchyFormatter
         return $"{header}\n{string.Join("\n", hits)}";
     }
 
-    private static IEnumerable<string> FormatBaseTypes(INamedTypeSymbol type, string outputRoot)
+    private static IEnumerable<string> FormatBaseTypes(INamedTypeSymbol type, string outputRoot, bool absolutePaths)
     {
         var current = type.BaseType;
         while (current is not null)
         {
-            foreach (var line in FormatHierarchyTypeReference(current, outputRoot))
+            foreach (var line in FormatHierarchyTypeReference(current, outputRoot, absolutePaths))
             {
                 yield return line;
             }
@@ -97,9 +101,9 @@ internal static class GetTypeHierarchyFormatter
         }
     }
 
-    private static IEnumerable<string> FormatInterfaces(INamedTypeSymbol type, string outputRoot)
+    private static IEnumerable<string> FormatInterfaces(INamedTypeSymbol type, string outputRoot, bool absolutePaths)
     {
-        return type.AllInterfaces.SelectMany(i => FormatHierarchyTypeReference(i, outputRoot));
+        return type.AllInterfaces.SelectMany(i => FormatHierarchyTypeReference(i, outputRoot, absolutePaths));
     }
 
     /// <summary>
@@ -110,9 +114,13 @@ internal static class GetTypeHierarchyFormatter
     /// sind hier der Normalfall, kein Sonderfall, und muessen sichtbar bleiben statt spurlos zu
     /// verschwinden.
     /// </summary>
-    private static IEnumerable<string> FormatHierarchyTypeReference(INamedTypeSymbol symbol, string outputRoot)
+    private static IEnumerable<string> FormatHierarchyTypeReference(
+        INamedTypeSymbol symbol, string outputRoot, bool absolutePaths)
     {
-        var sourceLines = FindSymbolTool.FormatSymbolLocations(symbol, outputRoot).ToList();
+        var sourceLines = FindSymbolTool.FormatSymbolLocations(
+            symbol,
+            outputRoot,
+            absolutePaths: absolutePaths).ToList();
         if (sourceLines.Count > 0)
         {
             return sourceLines;
@@ -123,18 +131,23 @@ internal static class GetTypeHierarchyFormatter
     }
 
     private static async Task<SubtypeProjection> ProjectSubtypesAsync(
-        INamedTypeSymbol type, Solution solution, string outputRoot, int maxResults, CancellationToken ct)
+        INamedTypeSymbol type,
+        Solution solution,
+        string outputRoot,
+        int maxResults,
+        bool absolutePaths,
+        CancellationToken ct)
     {
         if (type.TypeKind == TypeKind.Interface)
         {
             var implementations = await SymbolFinder.FindImplementationsAsync(
                 type, solution, transitive: true, cancellationToken: ct);
-            return ProjectSubtypes(implementations.ToList(), outputRoot, maxResults);
+            return ProjectSubtypes(implementations.ToList(), outputRoot, maxResults, absolutePaths);
         }
 
         var derived = await SymbolFinder.FindDerivedClassesAsync(
             type, solution, transitive: true, cancellationToken: ct);
-        return ProjectSubtypes(derived.ToList(), outputRoot, maxResults);
+        return ProjectSubtypes(derived.ToList(), outputRoot, maxResults, absolutePaths);
     }
 
     /// <summary>
@@ -143,11 +156,14 @@ internal static class GetTypeHierarchyFormatter
     /// nennt die Gesamtzahl der TYPEN, nicht der formatierten Zeilen.
     /// </summary>
     private static SubtypeProjection ProjectSubtypes(
-        IReadOnlyList<ISymbol> types, string outputRoot, int maxResults)
+        IReadOnlyList<ISymbol> types, string outputRoot, int maxResults, bool absolutePaths)
     {
         var isTruncated = types.Count > maxResults;
         var shown = isTruncated ? types.Take(maxResults).ToList() : types;
-        var lines = shown.SelectMany(s => FindSymbolTool.FormatSymbolLocations(s, outputRoot));
+        var lines = shown.SelectMany(s => FindSymbolTool.FormatSymbolLocations(
+            s,
+            outputRoot,
+            absolutePaths: absolutePaths));
         return new(types.Count, shown.Count, isTruncated, lines.ToList());
     }
 

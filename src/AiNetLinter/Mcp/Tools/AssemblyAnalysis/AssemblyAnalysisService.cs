@@ -396,4 +396,5 @@ internal sealed record AssemblyContext(
     string? ConsumerProject,
     AssemblyOrigin Origin,
     long Generation,
-    AssemblySessionStatus Status);
+    AssemblySessionStatus Status,
+    DecompiledProjectPaths? DecompiledProjectPaths = null);

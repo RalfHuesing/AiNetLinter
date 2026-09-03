@@ -476,10 +476,13 @@ Auto-Discovery.
 Beginne bei physischer Discovery mit `get_file_tree`: Das read-only Tool liefert
 relative Pfade, Verzeichnis-/Extension-Aggregation und sichtbare
 Completeness-/Trunkierungsangaben auch für Dateien außerhalb des
-Roslyn-Solutionindexes. `view=files` eignet sich als Folgeaufruf, wenn Pfade an
-`search_pattern` oder `get_file_skeleton` weitergegeben werden sollen. Ein
-Ein valider Projekt-Target-Block genügt auch während eines laufenden oder fehlgeschlagenen
-Solution-Loads, weil die Enumeration unabhängig vom Roslyn-Snapshot arbeitet.
+Roslyn-Solutionindexes. Für eine dekompilierte Assembly übernimmt der Agent die
+absoluten `decompiledSourceRoot`-Werte aus `inspect_assembly` als `targetPath`; die
+direkte Dateisystemroute benötigt dafür keinen registrierten Projekt-Key. `view=files`
+eignet sich als Folgeaufruf, wenn Pfade an `search_pattern` oder `get_file_skeleton`
+weitergegeben werden sollen. Ein valider Projekt-Target-Block genügt auch während
+eines laufenden oder fehlgeschlagenen Solution-Loads, weil die Enumeration unabhängig
+vom Roslyn-Snapshot arbeitet.
 
 Für die anschließende semantische Analyse sollten Agent-Loops folgende Reihenfolge einhalten:
 

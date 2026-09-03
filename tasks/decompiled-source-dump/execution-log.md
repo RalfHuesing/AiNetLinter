@@ -245,3 +245,37 @@ Korrektur-Checkpoint committen, danach frischen Folge-Review starten.
 
 - Epic 2 ist abgeschlossen und freigegeben.
 - Nächster Arbeitsbereich: Epic 3, MCP-Pfadverträge und physische Dateinavigation.
+
+## Run 2026-09-03 / Epic 3 / Implementierer / running
+
+- Subagent: `01a066e0-1044-7652-b331-307a564d2bb4` (`Faraday`)
+- Baseline: `a3b23b4d`
+- Auftrag: Absolute Assembly-Pfade in inspect_assembly sowie physische rg-/get_file_tree-Navigation (M3, M4, M5).
+- Status: completed / hand-off-ready
+
+### Terminaler Implementiererbericht
+
+- Absolute Pfadverträge über `DecompiledProjectPaths`, Session-Generation, Context, Payload und Formatter: `decompiledProjectDirectory`, `decompiledProjectPath` und `decompiledSourceRoot` werden ausgewiesen.
+- Direkte physische `get_file_tree`-Route ergänzt; `find_symbol`, `get_symbol_body`, Call Tree, Type Hierarchy, Dependency Graph und Assembly-Navigation verweisen auf absolute Assembly-Locations. Folgeantworten wiederholen keinen Projekt-Header.
+- Design: `decompiledSourceRoot` ist der tiefste gemeinsame physische Root aller materialisierten `.cs`-Dateien; Projektziele behalten relative Pfade; M1/M2/M6/M11 und Non-Goals bleiben stabil.
+- Geänderte Bereiche: Assembly-Session-/Payload-/Formatter-Dateien, File-Structure-Registrierung, Symbolgraph-/Call-Tree-/Dependency-/Type-Hierarchy-Tools, Pfad-/Wiring-/E2E-Tests, `Docs/agent-api.md`, `Docs/integration.md` und `code-map.md`.
+- Code-Map: aktualisiert.
+- Urteil: Epic 3 hand-off-ready; kein Commit durch den Implementierer.
+
+### Verifikationsnachweise
+
+- `dotnet build --no-restore`: 0 Warnungen, 0 Fehler; nach der letzten Codeänderung ausgeführt.
+- Epic-3-Fast-Slice: 31/31 bestanden; nach der letzten Codeänderung ausgeführt.
+- Assembly-Health-E2E: 5/5 bestanden; nach der letzten Codeänderung ausgeführt.
+- CLI-Dogfood: 3/3 bestanden; nach der letzten Codeänderung ausgeführt.
+- Vollständige Integration-Nicht-Stresssuite: 385/385 bestanden; nach der letzten Codeänderung ausgeführt.
+- Vollständiger Fast-Nicht-Stresslauf: 2.432 bestanden, 2 übersprungen, 5 scope-fremde Fehler; Wiederholung reproduzierte `ProjectRegistryPublishRaceTests` und `AssemblyAnalysisRegistryRetirementRaceTests`, blieb ohne Endstatistik und wurde kontrolliert beendet.
+- Gezielter MCP-`get_violations`: 0 Fehler, eine bestehende scope-fremde `AIContextFootprint`-Warnung in `DaemonHostCommand.cs:15`; nach der letzten Codeänderung ausgeführt.
+- Audit: keine sicheren Duplicate-/Dead-Code-/Magic-Value-Fixes; `git diff --check` ohne Whitespace-Fehler.
+- Physischer Nachweis auf dem finalen Build: drei absolute Pfade existent; `get_file_tree` auf `decompiledSourceRoot` vollständig mit 1.025 `.cs`-Dateien; `rg --files --glob '*.cs'` Exit 0 mit 1.025 Dateien; `rg --fixed-strings ... McpCodeGraphServer` Exit 0 mit 68 Treffern.
+- Capability-Risiko: Separat registrierter MCP-Connector lieferte noch alten Header ohne `decompiled*`-Felder; lokale Working-Tree-Binary und IntegrationTests liefern den neuen Vertrag. Erforderlich ist Rebuild/Restart bzw. Deployment-Refresh des Connectors.
+
+### Triage
+
+- Keine neuen task-scope-actionable Findings aus dem Implementiererbericht. Das Connector-Risiko ist ein externer Deployment-Refresh, kein belegter Codefehler; es bleibt als offenes Abschlussrisiko dokumentiert.
+- Nächste Aktion: Implementierungs-Checkpoint committen, danach unabhängigen Review starten.

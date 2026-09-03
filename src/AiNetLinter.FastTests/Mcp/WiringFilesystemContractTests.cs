@@ -7,6 +7,7 @@ using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.FastTests.Mcp.Projects;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.Output;
 using AiNetLinter.TestKit;
 using static AiNetLinter.TestKit.McpTestResultText;
@@ -107,6 +108,41 @@ public sealed class WiringFilesystemContractTests
         clock.AdvanceMinutes(60);
         await registry.RunEvictionTickAsync();
         Assert.Null(registry.FindSnapshot(root));
+    }
+
+    [Fact]
+    public async Task PhysicalFilesystemDispatch_EnumeratesUnregisteredSourceRootDirectly()
+    {
+        using var tempDir = TestTempDirectory.Create("wiring-filesystem-source-root-");
+        var sourceRoot = tempDir.DirectoryPath;
+        var sourcePath = Path.Combine(sourceRoot, "Generated.cs");
+        File.WriteAllText(sourcePath, "public sealed class Generated { }");
+
+        var result = await ProjectAnalysisDispatcher.ExecutePhysicalFilesystemAsync(
+            new AnalysisTargetRequest("project", sourceRoot),
+            canonicalRoot => GetFileTreeTool.ExecuteAsync(
+                canonicalRoot,
+                new GetFileTreeInput(
+                    ".",
+                    "files",
+                    [".cs"],
+                    "**/*.cs",
+                    null,
+                    32,
+                    2,
+                    GetFileTreeTool.DefaultMaxResults,
+                    "path",
+                    true,
+                    false),
+                CancellationToken.None));
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.Contains("Generated.cs", TextOf(result), StringComparison.Ordinal);
+        var payload = result.StructuredContent!.Value.GetProperty("fileTree");
+        Assert.Contains(
+            payload.GetProperty("files").EnumerateArray(),
+            file => file.GetProperty("path").GetString()?.EndsWith("Generated.cs", StringComparison.Ordinal) == true);
+        Assert.True(File.Exists(sourcePath));
     }
 
     private static Task<CallToolResult> ThrowingFilesystemCallback(ProjectLease _) =>
