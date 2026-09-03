@@ -18,9 +18,9 @@ internal sealed partial class AssemblyAnalysisSession : IDisposable, IAsyncDispo
     private readonly AssemblyAnalysisSessionOptions sessionOptions;
     private readonly AssemblyDecompilationOptions decompilationOptions;
     private readonly AssemblyDecompilationCache cache;
-    private readonly AssemblyReferenceResolver referenceResolver = new();
-    private readonly AssemblyDecompilationAdapter decompilationAdapter = new();
-    private readonly AssemblyRoslynWorkspaceFactory workspaceFactory = new();
+    private readonly AssemblyReferenceResolver referenceResolver;
+    private readonly AssemblyDecompilationAdapter decompilationAdapter;
+    private readonly AssemblyRoslynWorkspaceFactory workspaceFactory;
     private readonly List<AssemblySessionGeneration> generations = [];
     private readonly TaskCompletionSource<object?> leasesDrained = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private AssemblySessionGeneration? current;
@@ -45,12 +45,20 @@ internal sealed partial class AssemblyAnalysisSession : IDisposable, IAsyncDispo
             cacheRoot ?? configured.CacheRoot);
     }
 
-    internal AssemblyAnalysisSession(AssemblyAnalysisSessionOptions options)
+    internal AssemblyAnalysisSession(
+        AssemblyAnalysisSessionOptions options,
+        AssemblyDecompilationAdapter? decompilationAdapter = null,
+        AssemblyRoslynWorkspaceFactory? workspaceFactory = null,
+        AssemblyDecompilationCache? cache = null,
+        AssemblyReferenceResolver? referenceResolver = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         sessionOptions = options;
         decompilationOptions = options.Decompilation ?? AssemblyDecompilationOptions.Default;
-        cache = new AssemblyDecompilationCache(options.CacheRoot);
+        this.cache = cache ?? new AssemblyDecompilationCache(options.CacheRoot);
+        this.decompilationAdapter = decompilationAdapter ?? new();
+        this.workspaceFactory = workspaceFactory ?? new();
+        this.referenceResolver = referenceResolver ?? new();
         nextGeneration = options.GenerationStart;
         state = new AssemblySessionState(AssemblySessionStatus.Loading, null, null, null, [], DateTime.UtcNow);
     }
@@ -320,7 +328,7 @@ internal sealed partial class AssemblyAnalysisSession : IDisposable, IAsyncDispo
     }
 
     private static AssemblySessionStatus DetermineStatus(IReadOnlyList<AssemblySessionDiagnostic> references, DecompilationResult decompilation) =>
-        references.Count == 0 && decompilation.IsComplete ? AssemblySessionStatus.Complete : AssemblySessionStatus.Partial;
+        references.Count == 0 && decompilation.IsComplete && decompilation.Diagnostics.Count == 0 ? AssemblySessionStatus.Complete : AssemblySessionStatus.Partial;
 
     private static AssemblySessionStatus ResolveManifestStatus(
         string status,

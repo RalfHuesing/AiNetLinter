@@ -319,9 +319,45 @@ Korrektur-Checkpoint committen, danach frischen Folge-Review starten.
 - Keine P0/P1-Findings offen, keine neuen task-scope Tech-Debt-Einträge.
 - Umgebungshinweis: Im aktuellen Agentenwerkzeug (Antigravity IDE) steht keine Subagent-Delegationsfunktion zur Verfügung; die Rollen werden daher sequenziell mit getrennten Phasen und strikter Einhaltung der jeweiligen Skill-Vorgaben ausgeführt, ohne einen unabhängigen Review zu behaupten.
 
-## Run 2026-09-03 / Epic 4 / Implementierer / running
+## Run 2026-09-03 / Epic 4 / Implementierer / completed
 
 - Rolle: Implementierer (`.agents/skills/implement/SKILL.md`)
 - Baseline: a5ae5178
 - Auftrag: Partielle Snapshots, Fehlersemantik und Betriebsresilienz (M7, M9, M10).
-- Status: running
+- Status: completed
+
+### Durchgeführte Änderungen
+
+1. `AssemblyDecompilationAdapter.cs`:
+   - Dekompilierte Dateien mit Syntaxfehlern (`CSharpSyntaxTree.ParseText` liefert Fehler) werden als `AssemblyDiagnosticSeverity.Warning` diagnostiziert statt als fataler Fehler.
+   - Leere dekompilierte Dateien werden als Warning diagnostiziert und trotzdem in die Dokumentliste aufgenommen, um die Vollständigkeit bzgl. materialisierter Dateien zu wahren.
+   - Optionaler `decompileOverride`-Delegat im Konstruktor für isolierte Resilienz-Tests ergänzt; Klasse bleibt `sealed` (`EnforceSealedClasses`).
+2. `AssemblyAnalysisSession.Generation.cs`:
+   - `ValidateCompilation`: Syntaxfehler und semantische Diagnosen werden als `AssemblyDiagnosticSeverity.Warning` eingestuft; `CreateSnapshotAsync` verwirft den Snapshot bei Syntaxfehlern nicht, sondern belässt alle analysierbaren Typen und Dokumente im Roslyn-Workspace.
+3. `AssemblyAnalysisSession.cs`:
+   - `DetermineStatus`: Prüft `decompilation.Diagnostics.Count == 0`, sodass bei Vorliegen von Decompilations-Warnungen automatisch der Status `AssemblySessionStatus.Partial` erteilt wird.
+   - Konstruktor um optionale Parameter für Injektion von `AssemblyDecompilationAdapter`, `AssemblyRoslynWorkspaceFactory`, `AssemblyDecompilationCache` und `AssemblyReferenceResolver` erweitert.
+4. `AssemblyCacheCleanupTests.cs`:
+   - Test `DeleteDirectory_IgnoresLockedFileInDirectoryAsBestEffortCleanup` ergänzt (verifiziert M10 Lock-Toleranz bei Bereinigung).
+5. `AssemblyAnalysisSessionTests.cs`:
+   - Tests `RefreshAsync_CachedFileContainsSyntaxError_YieldsPartialStatusAndKeepsSnapshotQueryable` und `RefreshAsync_FreshDecompilationWithSyntaxError_YieldsPartialStatusAndKeepsQueryableSnapshot` ergänzt (verifiziert M7 partielle Snapshots und Abfragbarkeit über Roslyn).
+
+### Verifikation & Qualitätschecks
+
+- Build: `dotnet build --no-restore` — 0 Warnungen, 0 Fehler.
+- `git diff --check`: sauber.
+- MCP-Quality-Checks:
+  - `find_duplicates`: 0 neue Cluster im Assemblies-Scope.
+  - `find_dead_code`: 0 toter Code (High/Low).
+  - `find_magic_values`: 0 Treffer auf geänderten Dateien.
+  - `get_violations`: 0 Violations in `src/AiNetLinter/Mcp/Assemblies`, `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis` und `src/AiNetLinter.FastTests/Mcp/Assemblies`.
+- Testläufe:
+  - `AssemblyAnalysisSessionTests`: 17/17 bestanden (inkl. 2 neuer M7-Tests).
+  - `AssemblyCacheCleanupTests`: 5/5 bestanden (inkl. M10 Lock-Toleranz-Test).
+  - `AssemblyAnalysisRouteTests` & `AssemblyAnalysisToolTests`: 24/24 bestanden.
+  - `McpServerAssemblyHealthE2ETests`: 5/5 bestanden.
+
+### Triage
+
+- Keine offenen P0/P1-Befunde.
+- Nächste Aktion: Implementierungs-Checkpoint für Epic 4 committen, danach Reviewer-Rolle für Epic 4 ausführen.

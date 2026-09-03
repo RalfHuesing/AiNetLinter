@@ -17,10 +17,23 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
 internal sealed class AssemblyDecompilationAdapter
 {
+    private readonly Func<DecompilationRequest, AssemblyReferenceResolution, Task<DecompilationResult>>? decompileOverride;
+
+    internal AssemblyDecompilationAdapter(
+        Func<DecompilationRequest, AssemblyReferenceResolution, Task<DecompilationResult>>? decompileOverride = null)
+    {
+        this.decompileOverride = decompileOverride;
+    }
+
     internal Task<DecompilationResult> DecompileAsync(
         DecompilationRequest request,
         AssemblyReferenceResolution references)
     {
+        if (decompileOverride is not null)
+        {
+            return decompileOverride(request, references);
+        }
+
         request.CancellationToken.ThrowIfCancellationRequested();
         var ownsStagingDirectory = request.StagingDirectory is null;
         var stagingDirectory = request.StagingDirectory ?? Path.Combine(
@@ -126,21 +139,22 @@ internal sealed class AssemblyDecompilationAdapter
                     diagnostics.Add(new AssemblySessionDiagnostic(
                         AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompiledDocument.CSharpSource)),
                         $"Die dekompilierte Datei '{Path.GetFileName(path)}' ist leer.",
-                        AssemblyDiagnosticSeverity.Error));
-                    continue;
+                        AssemblyDiagnosticSeverity.Warning));
                 }
-
-                var syntaxErrors = CSharpSyntaxTree.ParseText(source)
-                    .GetDiagnostics(cancellationToken)
-                    .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
-                    .Take(3)
-                    .ToList();
-                if (syntaxErrors.Count > 0)
+                else
                 {
-                    diagnostics.Add(new AssemblySessionDiagnostic(
-                        AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompiledDocument.CSharpSource)),
-                        $"Die dekompilierte Datei '{Path.GetFileName(path)}' ist nicht parsbar: {string.Join("; ", syntaxErrors.Select(diagnostic => diagnostic.Id + " " + diagnostic.GetMessage()))}.",
-                        AssemblyDiagnosticSeverity.Error));
+                    var syntaxErrors = CSharpSyntaxTree.ParseText(source)
+                        .GetDiagnostics(cancellationToken)
+                        .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+                        .Take(3)
+                        .ToList();
+                    if (syntaxErrors.Count > 0)
+                    {
+                        diagnostics.Add(new AssemblySessionDiagnostic(
+                            AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompiledDocument.CSharpSource)),
+                            $"Die dekompilierte Datei '{Path.GetFileName(path)}' enthält Syntaxfehler: {string.Join("; ", syntaxErrors.Select(diagnostic => diagnostic.Id + " " + diagnostic.GetMessage()))}.",
+                            AssemblyDiagnosticSeverity.Warning));
+                    }
                 }
 
                 documents.Add(new DecompiledDocument(
@@ -153,7 +167,7 @@ internal sealed class AssemblyDecompilationAdapter
                 diagnostics.Add(new AssemblySessionDiagnostic(
                     AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompiledDocument.GeneratedPath)),
                     $"Die dekompilierte Datei '{Path.GetFileName(path)}' konnte nicht gelesen werden: {ex.Message}",
-                    AssemblyDiagnosticSeverity.Error));
+                    AssemblyDiagnosticSeverity.Warning));
             }
         }
 
