@@ -1,7 +1,7 @@
 ---
 status: executing
-current_epic: epic-1
-last_commit: eaccb747
+current_epic: epic-2
+last_commit: fff5eb47
 current_debt_item: null
 debt_attempts: 0
 ---
@@ -15,7 +15,7 @@ debt_attempts: 0
 - Betroffene Bereiche: `Mcp/Assemblies/Analysis/AssemblyDecompilationAdapter`, `AssemblyDecompilationCache`, `AssemblyCacheCleanup`, Konfiguration und Projektpakete.
 - Muss-/Akzeptanzkriterien: M1, M2, M8, M9 und M10; Nachbar-DLLs bleiben Metadaten-Referenzen ohne rekursive Volldekompilierung; Cancellation räumt Staging auf.
 - Verifikation: gezielte FastTests für Projektmaterialisierung, Cache-Konfiguration, atomare Veröffentlichung, Wiederverwendung und Lock-Toleranz; gezielter MCP-Violationscheck.
-- Status: in_progress
+- Status: done
 
 ## Epic 2: Roslyn-Snapshot und direkte Body-Auflösung
 
@@ -24,7 +24,7 @@ debt_attempts: 0
 - Betroffene Bereiche: `AssemblyRoslynWorkspaceFactory`, `IAssemblyBodyContext`, `SourceSymbolBodyResolver`, Symbolgraph-/Call-Tree-Navigation und obsolete Body-/Stub-Komponenten.
 - Muss-/Akzeptanzkriterien: M6 und M11; echte Methodenkörper sind ohne On-Demand-Dekompilierung verfügbar; alte Stub- und Body-Auflösungspfade sind restlos entfernt.
 - Verifikation: FastTests für echte Bodies, Navigation und Regressionen; semantische MCP-Prüfungen für Symbole/Referenzen/Violations.
-- Status: open
+- Status: in_progress
 
 ## Epic 3: MCP-Pfadverträge und physische Dateinavigation
 

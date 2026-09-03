@@ -113,3 +113,22 @@ P1-Ursachensignaturen in einer frischen Implementierer-/Reviewer-Korrekturrunde 
 ### Nächste Aktion
 
 Implementierungs-Checkpoint committen, danach frischen Folge-Review für den Korrekturdiff starten.
+
+## Run 2026-09-03 / Epic 1 / Korrekturversuch 1 / Reviewer / running
+
+- Subagent: `01a0668a-e838-7470-aa42-2b9a179040f0` (`Hume`)
+- Baseline: `51be4775`; Korrektur-Checkpoint: `fff5eb47`
+- Auftrag: Unabhängige Nachprüfung der drei P1-Korrekturen, des Cache-Hit-Projektpfads und der Regressionstests.
+- Status: completed / approved
+
+### Terminales Folge-Review
+
+- Urteil: `approved`.
+- Die drei P1-Ursachensignaturen und der Cache-Hit-Projektpfad wurden unabhängig als behoben bewertet; es wurden keine weiteren Findings festgestellt.
+- Kein eigener Check hing. Der bereits dokumentierte MCP-Audit-Abbruch und die vier bekannten scope-fremden FastTest-Race-Fehler bleiben als offene Risiken vermerkt.
+- Keine Produktions-/Teständerung und kein Commit durch den Reviewer.
+
+### Epic-Entscheidung
+
+- Epic 1 ist abgeschlossen und freigegeben.
+- Nächster Arbeitsbereich: Epic 2, Roslyn-Snapshot und direkte Body-Auflösung.
