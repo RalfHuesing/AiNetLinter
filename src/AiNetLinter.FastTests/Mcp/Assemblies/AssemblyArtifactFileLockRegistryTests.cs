@@ -79,4 +79,29 @@ public sealed class AssemblyArtifactFileLockRegistryTests
             firstLease.Dispose();
         }
     }
+
+    [Fact]
+    public async Task AcquireAsync_ConcurrentCallers_SecondWaitsUntilFirstReleasesAndSucceeds()
+    {
+        using var temp = TestTempDirectory.Create("artifact-file-lock-wait-");
+        var registry = new AssemblyArtifactFileLockRegistry("test.lock");
+
+        var firstLease = await registry.AcquireAsync(temp.DirectoryPath, CancellationToken.None);
+        var secondAcquired = false;
+
+        var secondTask = Task.Run(async () =>
+        {
+            var secondLease = await registry.AcquireAsync(temp.DirectoryPath, CancellationToken.None);
+            secondAcquired = true;
+            secondLease.Dispose();
+        });
+
+        // Zweiter Aufruf darf noch nicht akquiriert haben, solange firstLease gehalten wird
+        await Task.Delay(50);
+        Assert.False(secondAcquired);
+
+        firstLease.Dispose();
+        await secondTask.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.True(secondAcquired);
+    }
 }

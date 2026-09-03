@@ -144,7 +144,7 @@ internal sealed class AssemblySourceSelectionOrchestrator :
                 fallbackReason);
         }
 
-        if (!IsTrusted(providerResult)) return RejectUntrustedSnapshot(providerResult);
+        if (!IsTrusted(providerResult)) return RejectUntrustedSnapshot(assemblyPath, providerResult);
         var lease = providerCoordinator.AcquireSnapshot(providerLease, providerResult.SourceSnapshot);
         return CreateSelectionScope(assemblyPath, assemblyName, mapping, providerResult, lease);
     }
@@ -290,14 +290,18 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         && providerResult.Health is ExternalSourceRepositoryHealth.Verified
         && providerResult.CheckoutTrust is ExternalSourceCheckoutTrust.Clean;
 
-    private AssemblySourceSelectionScope RejectUntrustedSnapshot(ExternalSourceProviderResult providerResult)
+    private AssemblySourceSelectionScope RejectUntrustedSnapshot(
+        string assemblyPath,
+        ExternalSourceProviderResult providerResult)
     {
         var diagnostics = providerResult.Diagnostics
             .Append(new ExternalSourceConfigurationDiagnostic(
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutUnverified,
                 "Der Source-Snapshot ist nicht als clean, verifiziert und attestiert ausgewiesen; die Assembly wird decompiliert.",
                 "warning",
-                "$repository"));
+                "$repository"))
+            .ToArray();
+        providerCoordinator.RememberNegativeResult(assemblyPath, AssemblySourceFallbackReasons.SnapshotUntrusted, diagnostics);
         return CreateScope(
             diagnostics,
             ExternalSourceRepositoryResultState.Create(

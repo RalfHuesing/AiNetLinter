@@ -17,8 +17,8 @@ internal sealed partial class ExternalSourceRepositoryAcquirer : IExternalSource
     private readonly string stagingRoot;
     private readonly ILogger logger;
     private readonly IExternalSourceRepositoryCacheWriter cacheWriter;
+    private static readonly AssemblyArtifactFileLockRegistry CheckoutLocks = new("checkout.lock");
     private readonly ExternalSourceRepositoryCacheRefresh cacheRefresh;
-    private readonly AssemblyArtifactFileLockRegistry checkoutLockRegistry;
     internal ExternalSourceRepositoryAcquirer(
         IGiteaRepositoryTransport transport,
         string stagingRoot,
@@ -44,7 +44,6 @@ internal sealed partial class ExternalSourceRepositoryAcquirer : IExternalSource
             this.logger);
         // Gemeinsamer OS-Level-Lock: serialisiert Checkout-Erzeugungen desselben stagingRoot
         // sowohl im direkten Pfad (AcquireAsync) als auch im CacheRefresh-Pfad.
-        checkoutLockRegistry = new AssemblyArtifactFileLockRegistry("checkout.lock");
         cacheRefresh = new ExternalSourceRepositoryCacheRefresh(
             new ExternalSourceRepositoryCacheRefreshContext
             {
@@ -86,7 +85,7 @@ internal sealed partial class ExternalSourceRepositoryAcquirer : IExternalSource
         var lockDir = ExternalSourceRepositoryCacheKey.TryCreate(mapping.Url, solutionPath!, out var cacheKey)
             ? Path.Combine(stagingRoot, ".locks", cacheKey!.StableValue)
             : Path.Combine(stagingRoot, ".locks", "default");
-        await using var checkoutLock = await checkoutLockRegistry.AcquireAsync(lockDir, cancellationToken).ConfigureAwait(false);
+        await using var checkoutLock = await CheckoutLocks.AcquireAsync(lockDir, cancellationToken).ConfigureAwait(false);
         if (checkoutLock.IsStalled)
         {
             return ExternalSourceRepositoryAcquisitionResult.Failure(
