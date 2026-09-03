@@ -77,6 +77,28 @@
 - Subagent: `01a06934-b41d-7f03-9df2-bf908274cbd4` (Boyle)
 - Auftrag: finalen Wire-Trim, effektive Budgetweitergabe und finalen Composite-Envelope korrigieren; Regressionen ergänzen und Verifikation nach der letzten Codeänderung liefern.
 
+## Run 2026-09-04 / Epic 1 / Folge-Reviewer 2
+
+- Status: running
+- Diff-Baseline: `50cd4724` (Korrektur-Checkpoint 2)
+- Scope: unabhängige Nachprüfung der fünf Epic-1-Ursachensignaturen, insbesondere finaler Wire-Trim, Budgetweitergabe und Composite-Enrichment
+- Subagent: `01a06952-96da-7222-a460-f11fe57a4444` (Franklin)
+- Auftrag: tatsächlichen Korrekturdiff, Regressionen, Code-Map und Verifikationsnachweise prüfen; kein Produktionscode und kein Commit.
+
+## Run 2026-09-04 / Epic 1 / Folge-Reviewer 2 – Abschluss
+
+- Status: completed; Folge-Reviewerbericht terminal eingegangen.
+- Urteil: `issues`; drei P1-Ursachensignaturen weiterhin offen, `topN` und Body-Provenienz behoben.
+- Befundstatus:
+  - `BudgetProjection/Envelope` offen: Zentraler Trim entfernt generisch Arrayeinträge/Knoten, rekonstruiert aber nur `types`/`extensions`; `fileTree.files`, `callSites` und Body-`Results` können deshalb ohne aktualisierte route-spezifische Counts/Completeness gekürzt werden.
+  - `AssemblyWireBudget/Coverage` offen: `maxResponseBytes=1` wird akzeptiert; finaler Fallback ergänzt weiterhin Text und Wire-Budget-Metadaten, ohne die Gesamtgröße erneut sicher innerhalb des Limits zu halten.
+  - `CompositeBudget/Enrichment` offen: Finaler Trim markiert den äußeren Composite-Root gekürzt, `SyncCompositeEnvelope` kann diesen Status danach mit innerem `assemblyAnalysis.isTruncated=false`/leerem `truncatedBy` überschreiben.
+  - `CompositeTraversal/TopN` behoben: `SelectionLimit` begrenzt Caller/Impact; Regression vorhanden.
+  - `AssemblyProvenance/BodyMode` behoben: Body-Provenienz wird aus dem Assembly-Kontext übernommen; dekompilierter Body bleibt konsistent.
+- Verifikation: Frische Implementierer-Nachweise (Dispatcher 16/16, Assembly-/Body-FastTests 33/33, Build 0/0, FastTests Nicht-Stress 2423/2, MCP-Audits und `get_violations` 0) wurden nicht redundant wiederholt. Reviewer-MCP-Abfragen erfolgten mit absolutem Projektpfad/`targetType=project`; `git diff --check` grün.
+- Restrisiken: Vollständiger Integration-Nicht-Stresslauf bleibt wegen externem Live-Safeguard-Fehler nicht vollständig grün; Dateisperren-Ausreißer war isoliert grün. Bestehende P2/P3-Funde nicht hochgestuft.
+- Nächste Aktion: Checkpoint-Commit, danach frischer Korrektur-Implementierer für die drei offenen Ursachen.
+
 ## Run 2026-09-04 / Epic 1 / Korrektur-Implementierer 2 – Abschluss
 
 - Status: completed; Korrekturbericht terminal eingegangen.
