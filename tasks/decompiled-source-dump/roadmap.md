@@ -1,7 +1,7 @@
 ---
 status: blocked
 current_epic: epic-3
-last_commit: 91566855
+last_commit: 534c50cb
 current_debt_item: null
 debt_attempts: 0
 blocker: Nutzeranweisung beendet den Lauf nach dem terminalen Epic-3-Review; Resume erfordert eine neue ausdrückliche Fortsetzungsanweisung.
