@@ -1,10 +1,9 @@
 ---
-status: blocked
-current_epic: epic-3
-last_commit: 534c50cb
+status: executing
+current_epic: epic-4
+last_commit: a5ae5178
 current_debt_item: null
 debt_attempts: 0
-blocker: Nutzeranweisung beendet den Lauf nach dem terminalen Epic-3-Review; Resume erfordert eine neue ausdrückliche Fortsetzungsanweisung.
 ---
 
 # Roadmap: Vollständige sofortige Assembly-Projekt-Materialisierung
@@ -34,7 +33,7 @@ blocker: Nutzeranweisung beendet den Lauf nach dem terminalen Epic-3-Review; Res
 - Betroffene Bereiche: `InspectAssemblyTool`, Formatter, Payload-/Response-Modelle, `get_file_tree`-Integration und Assembly-Navigation.
 - Muss-/Akzeptanzkriterien: M3, M4 und M5; Header und JSON-Payload enthalten die drei absoluten Pfade; nachfolgende Symbolantworten verweisen auf reale `.cs`-Dateien ohne redundante Projekt-Header.
 - Verifikation: Pfad-/Payload-Tests, `rg`- und `get_file_tree`-Nachweise auf einem dekompilierten Root sowie MCP-Violationscheck.
-- Status: in_progress
+- Status: done
 
 ## Epic 4: Partielle Snapshots, Fehlersemantik und Betriebsresilienz
 
@@ -43,7 +42,7 @@ blocker: Nutzeranweisung beendet den Lauf nach dem terminalen Epic-3-Review; Res
 - Betroffene Bereiche: `ValidateCompilation`, Session-Status/Diagnostik, Resolver-/Workspace-Fehlerpfade, Cache-Cleanup und Timeout/Cancellation.
 - Muss-/Akzeptanzkriterien: M7; Syntax-/Typfehler verwerfen den Snapshot nicht; Status `Partial`/`Degraded`, verfügbare Dateien und funktionierende Typen bleiben abfragbar; Abbruch veröffentlicht keinen unvollständigen Cache.
 - Verifikation: Resilienz-, Cancellation-, Timeout- und Cleanup-Tests sowie gezielte Status-/MCP-Prüfungen.
-- Status: open
+- Status: in_progress
 
 ## Epic 5: Testlaufzeit und Gate-Stabilität
 

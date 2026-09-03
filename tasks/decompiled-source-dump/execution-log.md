@@ -310,3 +310,18 @@ Korrektur-Checkpoint committen, danach frischen Folge-Review starten.
 - Der laufende Epic-3-Reviewer wurde nach seinem terminalen Ergebnis beendet; er hat nichts programmiert und keine Artefakte geändert.
 - Der Orchestrator stoppt auf Nutzeranweisung an diesem Punkt und startet keine weitere Rolle.
 - Nicht erledigt bzw. nicht gestartet bleiben Epic 4, das eingefügte Epic 5 zur Testlaufzeit-/Gate-Stabilisierung, Epic 6, Abschluss-Audit und die finalen solutionweiten Nicht-Stress-Gates.
+
+## Resume 2026-09-03 / Fortsetzung nach Nutzeranweisung
+
+- Nutzer hat die Fortsetzung des Tasks ausdrücklich angewiesen ("Bitte fortsetzen.").
+- Blocker aufgelöst.
+- Epic 3 ist auf Basis des terminalen, befundfreien Reviewer-Ergebnisses genehmigt (`approved`) und abgeschlossen (`done`).
+- Keine P0/P1-Findings offen, keine neuen task-scope Tech-Debt-Einträge.
+- Umgebungshinweis: Im aktuellen Agentenwerkzeug (Antigravity IDE) steht keine Subagent-Delegationsfunktion zur Verfügung; die Rollen werden daher sequenziell mit getrennten Phasen und strikter Einhaltung der jeweiligen Skill-Vorgaben ausgeführt, ohne einen unabhängigen Review zu behaupten.
+
+## Run 2026-09-03 / Epic 4 / Implementierer / running
+
+- Rolle: Implementierer (`.agents/skills/implement/SKILL.md`)
+- Baseline: a5ae5178
+- Auftrag: Partielle Snapshots, Fehlersemantik und Betriebsresilienz (M7, M9, M10).
+- Status: running
