@@ -14,7 +14,7 @@
 - `Bodies/IAssemblyBodyContext.cs` und `References/AssemblyAnalysisLease.cs` — Kontextvertrag auf `Solution` und `AssemblySymbolIdentity` reduziert; `ResolveBodyAsync`, `IsDecompiled` und deren Aufrufer entfernt.
 - `SourceSymbolBodyResolver.cs` — übernimmt die Prüfung für Interface-, abstract-, extern- und accessor-basierte Symbole lokal und bleibt der einzige Body-Extraktionspfad.
 - `Tools/CallTree/` und `Tools/SymbolGraph/` — Signature-only-Suppressions, `decompiledSignatureOnly`-Hinweise und die zugehörigen Request-/Response-Felder entfernt; Assembly-Navigation verwendet die vollständigen Snapshot-Bodies.
-- `Docs/agent-api.md` — Body-/Content-Vertrag auf eager dekompilierte Roslyn-Syntaxbäume und `contentMode=source` für `get_symbol_body` aktualisiert.
+- `Docs/agent-api.md` und `Docs/integration.md` — Body-/Content-Vertrag auf eager `WholeProjectDecompiler`-Projekt-Snapshots, echte Roslyn-Dokumente, den direkten `SourceSymbolBodyResolver`-Pfad und `contentMode=source` für `get_symbol_body` aktualisiert; Interface-/abstract-/extern-Grenzen bleiben dokumentiert.
 
 ## Aufrufer und Abhängigkeiten
 
@@ -49,3 +49,4 @@
 - Audit nach Änderungen: `find_duplicates` — nur 10 fuzzy/nahe Cluster ohne sicheren Epic-2-Fix; `find_dead_code` — 37 LOW, 0 HIGH; `find_magic_values` — 0 sichere Befunde.
 - Letzter gezielter `get_violations`-Check nach der letzten C#-Änderung: `src/AiNetLinter.FastTests/Mcp/Assemblies` und `src/AiNetLinter.FastTests/Mcp/Tools/CallTree` — jeweils 0; breiter Produktionsscope `src/AiNetLinter/Mcp` — 1 bestehende scope-fremde `AIContextFootprint`-Warnung in `DaemonHostCommand.cs:15`.
 - `git diff --check` — ohne Fehler. `roadmap.md`, `execution-log.md` und `tech-debt.md` wurden von diesem Implementierungsschritt nicht geändert; keine Step-Dateien und kein Commit.
+- Dokumentationskorrektur nach dem Epic-2-Review: `Docs/integration.md` und `Docs/agent-api.md` wurden ohne Produktions-/Testcodeänderung angepasst; `roadmap.md`, `execution-log.md` und `tech-debt.md` bleiben unverändert, keine Step-Dateien und kein Commit.

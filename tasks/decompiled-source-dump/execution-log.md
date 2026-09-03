@@ -198,3 +198,30 @@ P1-Dokumentationsdrift in einer frischen Implementierer-/Reviewer-Korrekturrunde
 
 - Der Nutzer hat ausdrücklich angeordnet, in diesen Task die Prüfung und Bereinigung extrem lange laufender bzw. manuell abzubrechender Tests einzuschieben.
 - Dafür wurde Epic 5 als eigenständiges Teststabilitäts-Epic vor dem bisherigen Gesamtabschluss eingefügt. Ziel ist ein terminaler, reproduzierbarer Nicht-Stress-Gate-Lauf ohne Ctrl+C-Abbruch; bestehende Race-/Timeout-Befunde werden nur mit konkreter Evidenz als außerhalb des Scopes zurückgestellt.
+
+## Run 2026-09-03 / Epic 2 / Korrekturversuch 1 / Implementierer / running
+
+- Subagent: `01a066cc-7f80-71b0-a036-86d48ddb5339` (`Hubble`)
+- Baseline: `a6acd83e`
+- Ursache: P1 `DOC-BODY-MODE-DRIFT` in aktiver Assembly-Dokumentation.
+- Status: completed / hand-off-ready
+
+### Terminaler Korrekturbericht
+
+- `DOC-BODY-MODE-DRIFT` ausschließlich in der Dokumentation korrigiert: `Docs/integration.md:328`, `Docs/agent-api.md:382`, `:472`, `:524` und `:902` beschreiben nun `analysis.contentMode=decompiledProject`, eager `WholeProjectDecompiler`-Snapshots, echte Roslyn-Dokumente, den direkten `SourceSymbolBodyResolver`-Pfad und `contentMode=source`. Interface-, abstract- und extern-Member bleiben ausdrücklich `bodyAvailability=unavailable`.
+- `code-map.md` wurde minimal um die konkrete `integration.md`-Beziehung ergänzt. Keine Produktions-/Testcodeänderung, keine anderen Task-Artefakte und kein Commit durch den Implementierer.
+
+### Verifikationsnachweise
+
+- `McpDocumentationSmokeTests`: 5/5 bestanden; nach der letzten Änderung ausgeführt.
+- Assembly-Navigationsverträge: 7/7 bestanden; nach der letzten Änderung ausgeführt.
+- `AssemblyAnalysisSessionTests`: 15/15 bestanden; nach der letzten Änderung ausgeführt.
+- `dotnet build --no-restore`: 0 Warnungen, 0 Fehler; nach der letzten Änderung ausgeführt.
+- `git diff --check`: bestanden; nach der letzten Änderung ausgeführt.
+- Legacy-Scan über aktives `Docs`: keine veralteten Assembly-Body-Verträge; nach der letzten Änderung ausgeführt.
+- Gezielter `get_violations` mit `targetType=project`, absolutem Projektroot und `scopeFilter=src/AiNetLinter/Mcp`: 0 Fehler, eine bestehende scope-fremde `AIContextFootprint`-Warnung in `DaemonHostCommand.cs:15`; nach der letzten Änderung ausgeführt.
+- TD-003 bleibt unverändert `promoted-to-project-debt`.
+
+### Nächste Aktion
+
+Korrektur-Checkpoint committen, danach frischen Folge-Review starten.

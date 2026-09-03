@@ -325,11 +325,18 @@ Anzahl über `maxDiagnostics` (Default 20, Cap 50) gesteuert wird.
 Assembly-Targets sind verwaltete `.dll` oder `.exe`; die Analyse bleibt metadata-only
 und führt keine Assembly aus. `inspect_assembly` nutzt `publicOnly`, `exactTypeName`,
 `memberName`/`memberNames`, `includeReferences`, `maxResults` und `maxMembers` als
-bewusste Detailflags. Die Antwort unterscheidet über `analysis.bodyAvailability`
-und `analysis.contentMode` Signatur-Snapshot, source-backed Body und on-demand
-dekompilierten Body; `get_symbol_body` ist der gezielte Folgeschritt. Bei dekompilierten
-VB.NET-Assemblies werden zusätzliche C#-Defaultparameter und nicht auflösbare
-Parametertypen im sichtbaren Partial-Scope beim Body-Matching berücksichtigt. Native PE-Dateien
+bewusste Detailflags. Die Antwort weist mit `analysis.bodyAvailability` und
+`analysis.contentMode` den geladenen Assembly-Snapshot aus. Beim dekompilierten
+Fallback steht `analysis.contentMode=decompiledProject`: `WholeProjectDecompiler`
+materialisiert beim Laden eager einen
+Projekt-Snapshot; `AssemblyRoslynWorkspaceFactory` lädt die erzeugten `.cs`-Dateien als
+echte Roslyn-Dokumente in den `AdhocWorkspace`. `get_symbol_body` ist der gezielte
+Ausleseschritt aus diesem bereits geladenen Snapshot: Der direkte
+`SourceSymbolBodyResolver` liefert verfügbare Bodies mit `contentMode=source` und
+löst keine zusätzliche Dekompilierung aus. Für Interface- sowie abstract-/extern-
+Member bleibt das Body-Resultat `bodyAvailability=unavailable` und enthält einen
+Hinweis. Bei dekompilierten VB.NET-Assemblies werden zusätzliche C#-Defaultparameter
+und nicht auflösbare Parametertypen im sichtbaren Partial-Scope beim Body-Matching berücksichtigt. Native PE-Dateien
 ohne .NET-Metadaten werden als typisierte, recoverable Diagnose mit Handlungshinweis
 beantwortet.
 
