@@ -10,14 +10,20 @@ C#-Code gelten die folgenden verbindlichen Prioritäten; die AiNetLinter-MCP-
 Tools kennen Symbole, Typen,
 Referenzen und Abhängigkeiten.
 
-## Verbindliche Priorität
+## Verbindliche Priorität (Token-Schutz & Semantik)
 
-Bei jeder Aufgabe, die C#-Symbole, Typen, Aufrufer, Referenzen, Abhängigkeiten,
-Impact, Codeverständnis oder Regelverstöße betrifft, MUSS zuerst das passende
-AiNetLinter-MCP-Tool aufgerufen werden. Die Werkzeugwahl richtet sich nach der
-Tabelle unten; `rg`/`grep`/Read oder interne Agenten-Tools dürfen ergänzend für
-konkreten Edit-/Diff-Kontext und exakte Textarbeit verwendet werden, ersetzen
-aber nicht die semantische MCP-Abfrage.
+> [!IMPORTANT]
+> **STRIKTER TOKEN-SCHUTZ**: Niemals C#-Dateien seitenweise mit `view_file` oder explorativ mit `grep_search` einlesen! Das verbrennt massiv Kontext und Nutzungslimit.
+> 
+> Bei jeder Aufgabe, die C#-Symbole, Typen, Aufrufer, Referenzen, Abhängigkeiten,
+> Impact, Codeverständnis oder Regelverstöße betrifft, MUSS proaktiv zuerst das passende
+> AiNetLinter-MCP-Tool aufgerufen werden:
+> - **Aufrufpfade & Kontrollfluss**: `get_call_tree` (outgoing/incoming, depth 2). Liefert in ~30 Zeilen, was sonst Dutzende Dateiausschnitte erfordern würde.
+> - **Methodenrümpfe**: `get_symbol_body` mit konkreter Symbol-ID liefert exakt den Code ohne umgebenden Datei-Overhead.
+> - **Symbolsuche**: `find_symbol` (mit `namePattern` und optional `kind`) statt textuellem Grep.
+> - **Kontext**: `get_feature_context` oder `get_class_structure`.
+> 
+> `rg`/`grep`/`view_file` sind ausschließlich für Nicht-C#-Dateien (Markdown, JSON, Konfiguration) oder für minimale, bereits exakt lokalisierte Edits erlaubt.
 
 ## Standard
 
