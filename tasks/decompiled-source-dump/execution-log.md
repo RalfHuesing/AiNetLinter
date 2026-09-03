@@ -361,3 +361,21 @@ Korrektur-Checkpoint committen, danach frischen Folge-Review starten.
 
 - Keine offenen P0/P1-Befunde.
 - Nächste Aktion: Implementierungs-Checkpoint für Epic 4 committen, danach Reviewer-Rolle für Epic 4 ausführen.
+
+## Run 2026-09-03 / Epic 4 / Reviewer / completed
+
+- Rolle: Reviewer (`.agents/skills/review/SKILL.md`)
+- Diff: `7eb065e1` gegen `HEAD~1`
+- Urteil: `approved`
+- P0/P1-Befunde: 0
+- P2/P3-Befunde: 0
+- Prüfergebnis:
+  - Ziel & Scope: M7, M9, M10 vollständig und präzise umgesetzt. Keine Non-Goals berührt.
+  - Regeln & Architektur: `EnforceSealedClasses` eingehalten (Adapter bleibt sealed, Testbarkeit über optionalen Delegat hergestellt). `TreatWarningsAsErrors` grün (0 Warnungen, 0 Fehler).
+  - Logik: Syntaxfehler und semantische Diagnosen werden als Warning eingestuft; Roslyn-Snapshot wird nicht verworfen; funktionierende Typen und Member bleiben resident und abfragbar; Session-Status wird korrekt auf `Partial` gesetzt. Lock-Toleranz bei Bereinigung fängt `IOException` und `UnauthorizedAccessException` als Best-Effort ab.
+  - Verifikationsnachweis: Vollständig und frisch; FastTests (17/17 Session-Tests, 5/5 Cleanup-Tests, 24/24 Route-Tests), E2E-Tests (5/5), MCP `get_violations` (0 Violations), `git diff --check` sauber.
+
+### Triage
+
+- Epic 4 ist abgeschlossen und genehmigt (`approved`).
+- Nächste Aktion: Roadmap aktualisieren (`epic-4: done`, `current_epic: epic-5`), Commit für Abschluss Epic 4 erstellen.

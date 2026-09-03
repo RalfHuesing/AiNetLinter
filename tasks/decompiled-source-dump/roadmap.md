@@ -1,7 +1,7 @@
 ---
 status: executing
-current_epic: epic-4
-last_commit: a5ae5178
+current_epic: epic-5
+last_commit: 7eb065e1
 current_debt_item: null
 debt_attempts: 0
 ---
@@ -42,7 +42,7 @@ debt_attempts: 0
 - Betroffene Bereiche: `ValidateCompilation`, Session-Status/Diagnostik, Resolver-/Workspace-Fehlerpfade, Cache-Cleanup und Timeout/Cancellation.
 - Muss-/Akzeptanzkriterien: M7; Syntax-/Typfehler verwerfen den Snapshot nicht; Status `Partial`/`Degraded`, verfügbare Dateien und funktionierende Typen bleiben abfragbar; Abbruch veröffentlicht keinen unvollständigen Cache.
 - Verifikation: Resilienz-, Cancellation-, Timeout- und Cleanup-Tests sowie gezielte Status-/MCP-Prüfungen.
-- Status: in_progress
+- Status: done
 
 ## Epic 5: Testlaufzeit und Gate-Stabilität
 
