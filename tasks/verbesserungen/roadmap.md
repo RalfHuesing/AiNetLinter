@@ -2,9 +2,10 @@
 
 Primäraufgabe: Robuste und fokussierte Assembly-Analyse
 Betriebsart: Großkonzept, ein fachliches Epic mit zwei lieferbaren Umsetzungspaketen und einer bewusst zurückgestellten Erweiterung
-Status: executing
+Status: blocked
 current_epic: EPIC-1 / Paket 1
-last_commit: 04e8c3e5
+last_commit: 954d64d4
+Blocker: Drei frische Implementierer-Aufrufe scheiterten vor Arbeitsbeginn am identischen Subagent-Backend-Fehler `404 Not Found`; für eine unabhängige Orchestrator-Rolle ist derzeit kein ausführbarer Implementierer verfügbar.
 current_debt_item: keines
 debt_attempts: 0
 
@@ -24,7 +25,7 @@ Annahmen/offene Fragen: Lokales gemeinsames Dateisystem ist die vorausgesetzte K
 
 ### Umsetzungspakete
 
-- [ ] Paket 1 — Source-first und gemeinsame Artefakte: `in_progress`
+- [ ] Paket 1 — Source-first und gemeinsame Artefakte: `blocked`
   - Ziel: Gültige attestierte Checkouts tatsächlich als source-backed Analyse verwenden; Artefakte und Repository-Snapshots pro fachlichem Schlüssel exklusiv, unveränderlich und cleanup-sicher erzeugen.
   - Abhängigkeiten: keine innerhalb dieses Epics.
   - Verifikation: passende Fast-/Integrationstests und gezielter `get_violations`-Nachweis nach der letzten Codeänderung.
