@@ -93,6 +93,14 @@
 - Subagent: `01a0695b-64ab-7b11-aa30-ab8e25778359` (Volta)
 - Auftrag: route-spezifische Envelope-Counts, Mindest-/Effektivbudget und OR-sichere Composite-Statusaggregation einschließlich Regressionen korrigieren; Verifikation nach der letzten Codeänderung liefern.
 
+## Run 2026-09-04 / Epic 1 / Folge-Reviewer 3
+
+- Status: running
+- Diff-Baseline: `55dbaa4b` (Korrektur-Checkpoint 3)
+- Scope: unabhängige Nachprüfung der drei Budget-/Envelope-Ursachensignaturen und der bereits behobenen `topN`-/Body-Provenienz-Verträge
+- Subagent: `01a06985-82ed-7a11-a5c5-9b258ce34295` (Nietzsche)
+- Auftrag: finalen Wire-Trim, route-spezifische Rekonstruktion, Mindestbudget, Composite-Statusmerge, Regressionen, Code-Map und Verifikationsnachweise prüfen; kein Produktionscode und kein Commit.
+
 ## Run 2026-09-04 / Epic 1 / Folge-Reviewer 2 – Abschluss
 
 - Status: completed; Folge-Reviewerbericht terminal eingegangen.
@@ -156,3 +164,12 @@
 - Verifikation jeweils nach der letzten Codeänderung: `dotnet build --no-restore` mit 0 Warnungen/0 Fehlern; FastTests `FullyQualifiedName~AssemblyAnalysisToolTests`: 24/24; IntegrationTests `FullyQualifiedName~AssemblyAnalysisDispatcherCapabilityTests`: 17/17; FastTests vollständig `Category!=Stress`: 2427 bestanden, 2 übersprungen; `find_duplicates` mit `targetType=project`, absolutem Projekt-`targetPath`, `scopeDir=src/AiNetLinter/Mcp`, Production/Clone/Fuzzy, `minTokens=30`, `maxResults=50`: 9 bestehende Kandidaten, kein sicherer Scope-Fix; `find_dead_code` gleicher Scope mit `private_internal`, `both`, `members`, Tests ausgeschlossen, `maxResults=50`: 39 Low-Confidence-Funde; `find_magic_values` gleicher Scope, alle Kategorien/Werttypen, `minOccurrences=2`, Tests/Suppressed ausgeschlossen, `maxResults=50`: nur bestehende Kandidaten; letzter `get_violations` mit gleichem absolutem Projekt-Scope, Snippets, `contextLines=2`, `maxResults=200`: 0 Violations.
 - Offenes Risiko: Vollständiger Integrationslauf vor dem letzten kleinen Refactoring hatte vier umgebungs-/prozessbedingte Fehler (Restore-Fixtures, Daemon-Prozess, DLL-Lock); der betroffene Dispatcher-Scope ist im finalen Lauf vollständig grün.
 - Nächste Aktion: Checkpoint-Commit, danach frischer Folge-Review 3.
+
+## Run 2026-09-04 / Epic 1 / Folge-Reviewer 3 – Abschluss
+
+- Status: completed; Folge-Reviewerbericht terminal eingegangen.
+- Urteil: `issues`; `AssemblyWireBudget/Coverage`, `CompositeBudget/Enrichment`, `CompositeTraversal/TopN` und `AssemblyProvenance/BodyMode` geschlossen; `BudgetProjection/Envelope` bleibt P1 offen.
+- Befund: Der finale Trim kennt nur die feste Liste `ResultCollections`; unbekannte Arrays werden über generische Property-Entfernung lautlos gelöscht. Zusätzlich behandelt `AssemblyAnalysisResponseEnvelope` `fileTree.directories` ohne Completeness-Update, Truncation-Grund oder Continuation-Cursor. Die vorhandenen Regressionen decken diese Fälle nicht ab.
+- Betroffene Navigation: `AssemblyAnalysisResponse.cs` im finalen generischen Trim; `AssemblyAnalysisResponseEnvelope.cs` bei `fileTree.directories`. Code-Map wurde ausschließlich um diese konkreten Fakten korrigiert.
+- Verifikation: Frische Implementierer-Nachweise (Build 0/0, Fast 24/24, Dispatcher 17/17, FastTests Nicht-Stress 2427/2, MCP-Audits und `get_violations` 0) wurden mangels Gegenhypothese nicht redundant wiederholt; eigene MCP-Abfragen mit absolutem Projektpfad/`targetType=project`; `git diff --check` grün. Externe Integrationsfehler nicht hochgestuft.
+- Nächste Aktion: Checkpoint-Commit, danach frischer Korrektur-Implementierer für `BudgetProjection/Envelope` (Attempt 4).

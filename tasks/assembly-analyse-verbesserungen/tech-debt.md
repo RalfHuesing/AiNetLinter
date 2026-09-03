@@ -27,7 +27,7 @@ Implementierer Korrekturrunde 1 meldet alle fünf als behoben; Disposition bleib
 - Evidenz: Reviewer reproduziert übersprungene oder unerreichbare Ergebnisse bei kleinem `maxResponseBytes`.
 - Disposition: fix-now (aktive Korrekturrunde)
 - Nächster Schritt: Rückgabeoffset, Counts, Truncation und Continuation-Token nach der finalen Projektion gemeinsam ableiten; Regressionstest ergänzen.
-- Attempts: 3
+- Attempts: 4
 - Log-Anker: `execution-log.md`, Run 2026-09-03 / Epic 1 / Reviewer – Abschluss, Signatur `BudgetProjection/Envelope`.
 
 ### P1 – AssemblyWireBudget/Coverage
@@ -81,3 +81,5 @@ Korrektur-Implementierer 2 meldet die drei offenen Ursachen behoben; Disposition
 Folge-Reviewer 2 bestätigt die drei Ursachen weiterhin als P1 offen: `BudgetProjection/Envelope`, `AssemblyWireBudget/Coverage` und `CompositeBudget/Enrichment`. `CompositeTraversal/TopN` und `AssemblyProvenance/BodyMode` bleiben `fixed`. Korrekturrunde 3 wird mit Attempts 3 für die drei aktiven Einträge gestartet.
 
 Korrektur-Implementierer 3 meldet die drei aktiven Ursachen behoben; Disposition bleibt bis zum Folge-Review 3 `fix-now`, Attempts bleiben bei 3.
+
+Folge-Reviewer 3 bestätigt `AssemblyWireBudget/Coverage`, `CompositeBudget/Enrichment`, `CompositeTraversal/TopN` und `AssemblyProvenance/BodyMode` als `fixed`; `BudgetProjection/Envelope` bleibt wegen unbekannter Arrays und `fileTree.directories` P1 offen. Korrekturrunde 4 wird mit Attempts 4 gestartet.
