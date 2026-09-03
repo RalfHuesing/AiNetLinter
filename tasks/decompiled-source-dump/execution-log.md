@@ -431,3 +431,37 @@ Korrektur-Checkpoint committen, danach frischen Folge-Review starten.
 
 - Epic 5 ist abgeschlossen und genehmigt (`approved`).
 - Nächste Aktion: Roadmap aktualisieren (`epic-5: done`, `current_epic: epic-6`), Commit für Abschluss Epic 5 erstellen.
+
+## Run 2026-09-03 / Epic 6 / Abschluss & Audit / completed
+
+- Rolle: Orchestrator / Abschluss-Audit (`.agents/skills/audit/SKILL.md`)
+- Auftrag: Epic 6: Regression, Dokumentation, MCP-Qualitäts-Audit und Gesamtabschluss.
+- Status: completed
+
+### Durchgeführte Prüfungen & MCP-Audit
+
+1. **DRY & Refactoring-Drift (`find_duplicates`):**
+   - 0 exakte Duplikate im Scope `src/AiNetLinter/Mcp/Assemblies`.
+   - 4 near/fuzzy Cluster zwischen unabhängigen Subsystemen (ExternalSource vs DecompilationCache), fachlich getrennt und dispositioniert als `rejected/not-applicable`.
+2. **Dead Code (`find_dead_code`):**
+   - 0 toter Code in den neu eingeführten oder geänderten Klassen.
+   - Alle 38 gemeldeten Einträge im Scope sind bestehende P/Invoke-Structs (Win32 Native Methods) oder serialisierbare DTOs mit `[LOW]`-Heuristik.
+3. **Magic Values (`find_magic_values`):**
+   - 0 unzulässige Magic Values im geänderten Code (nur interne Heuristik-Tabelle in `MagicValuesStringHeuristics.cs`).
+4. **Violations (`get_violations`):**
+   - 0 Fehler solutionweit. 0 Warnungen in geänderten Scopes.
+5. **Agenten-Regel-Synchronisation:**
+   - `dotnet run --project src/AiNetLinter -- --sync-agent-rules-only` ausgeführt: Regeldatei `.agents/rules/AiNetLinter.mdc` ist synchron.
+6. **Dokumentation & Verträge:**
+   - `Docs/agent-api.md` und `Docs/integration.md` spiegeln den neuen Pfad- und Analyse-Vertrag wider.
+   - Alle Kriterien M1–M12 aus `Konzept.md` sind vollständig erfüllt und verifiziert.
+7. **Gesamt-Gates:**
+   - `dotnet build --no-restore`: 0 Fehler, 0 Warnungen (`TreatWarningsAsErrors = true`).
+   - FastTests `Category!=Stress`: 2.440 bestanden, 2 übersprungen (Symlink-Privilegien-Preflight), 0 Fehler (1m 33s).
+   - IntegrationTests `Category!=Stress`: 385 bestanden, 0 Fehler (4m 30s).
+
+### Triage
+
+- Alle Epics (Epic 1 bis Epic 6) erfolgreich abgeschlossen.
+- Roadmap-Status: `complete`.
+- Gesamtaufgabe `decompiled-source-dump` ist vollständig abgeschlossen.

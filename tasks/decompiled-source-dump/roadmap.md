@@ -1,7 +1,7 @@
 ---
-status: executing
-current_epic: epic-6
-last_commit: 2786a84e
+status: complete
+current_epic: null
+last_commit: 76357fe6
 current_debt_item: null
 debt_attempts: 0
 ---
@@ -60,13 +60,13 @@ debt_attempts: 0
 - Betroffene Bereiche: FastTests, IntegrationTests, `Docs/configuration.md`, bei Bedarf `Docs/ROADMAP.md`, Agent-Regelsynchronisation und Abschlussartefakte.
 - Muss-/Akzeptanzkriterien: M12; `dotnet build` ohne Fehler/Warnungen sowie beide vollständigen Nicht-Stress-Testläufe grün; keine Non-Goals umgesetzt.
 - Verifikation: vollständige Konzept-Checkliste einschließlich Materialisierung, Pfadausgabe, Dateibaum, echter Body, Partial/Degraded, Konfiguration, atomarer Veröffentlichung und Lock-Toleranz.
-- Status: open
+- Status: done
 
 ## Abschluss-Checkliste
 
-- [ ] M1–M11 fachlich umgesetzt und gezielt verifiziert
-- [ ] M12: `dotnet build` ohne Fehler/Warnungen
-- [ ] M12: FastTests `Category!=Stress` nach Epic 5 terminal grün
-- [ ] M12: IntegrationTests `Category!=Stress` nach Epic 5 terminal grün
-- [ ] Konzeptbezogene MCP-/Dateisystem-Nachweise dokumentiert
-- [ ] Task-lokale Tech-Debt-Queue leer oder mit Disposition ausgewiesen
+- [x] M1–M11 fachlich umgesetzt und gezielt verifiziert
+- [x] M12: `dotnet build` ohne Fehler/Warnungen
+- [x] M12: FastTests `Category!=Stress` nach Epic 5 terminal grün (2.440 bestanden, 2 übersprungen, 0 Fehler in 1 m 33 s)
+- [x] M12: IntegrationTests `Category!=Stress` nach Epic 5 terminal grün (385 bestanden, 0 Fehler in 4 m 30 s)
+- [x] Konzeptbezogene MCP-/Dateisystem-Nachweise dokumentiert
+- [x] Task-lokale Tech-Debt-Queue leer oder mit Disposition ausgewiesen
