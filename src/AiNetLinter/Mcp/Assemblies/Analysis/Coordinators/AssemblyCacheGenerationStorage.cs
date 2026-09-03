@@ -83,7 +83,8 @@ internal static class AssemblyCacheGenerationStorage
     {
         if (!AssemblySessionStatusExtensions.TryParsePersisted(status.Status, out var parsed)) return false;
         return status.Complete == (parsed == AssemblySessionStatus.Complete)
-            && (!status.Complete || (diagnostics.Errors.Count == 0 && diagnostics.UnresolvedReferences.Count == 0))
+            && diagnostics.Errors.Count == 0
+            && (!status.Complete || diagnostics.UnresolvedReferences.Count == 0)
             && AreMessagesValid(diagnostics.Warnings)
             && AreMessagesValid(diagnostics.Errors)
             && AreMessagesValid(diagnostics.UnresolvedReferences)

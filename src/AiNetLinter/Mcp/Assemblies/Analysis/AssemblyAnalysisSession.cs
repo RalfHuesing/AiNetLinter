@@ -170,7 +170,8 @@ internal sealed partial class AssemblyAnalysisSession : IDisposable, IAsyncDispo
                     references,
                     cached.Documents,
                     status,
-                    CombineDiagnostics(references.Diagnostics, ManifestDiagnostics(cached.Manifest))),
+                    CombineDiagnostics(references.Diagnostics, ManifestDiagnostics(cached.Manifest)),
+                    ProjectFilePath: cached.ProjectFilePath),
                 cancellationToken).ConfigureAwait(false);
         }
 
@@ -306,6 +307,7 @@ internal sealed partial class AssemblyAnalysisSession : IDisposable, IAsyncDispo
     private bool ValidateOptions(out AssemblySessionDiagnostic? diagnostic)
     {
         if (decompilationOptions.EffectiveTimeout > TimeSpan.Zero
+            && AssemblyDecompilationOptions.IsSupportedTimeout(decompilationOptions.EffectiveTimeout)
             && !string.IsNullOrWhiteSpace(decompilationOptions.DecompilerVersion)
             && !string.IsNullOrWhiteSpace(decompilationOptions.CacheSchemaVersion))
         {

@@ -47,6 +47,8 @@ internal sealed partial class AssemblyDecompilationCache
         {
             WritePointer(temporaryPointer, generationName);
             ReplacePointer(pointerPath, temporaryPointer);
+            beforePointerValidation?.Invoke(
+                Path.Combine(Path.GetDirectoryName(pointerPath)!, generationName));
             var succeeded = TryRead(readRequest, out _, out _);
             var generationPublished = succeeded
                 && string.Equals(
@@ -72,6 +74,29 @@ internal sealed partial class AssemblyDecompilationCache
         finally
         {
             AssemblyCacheCleanup.DeleteFile(temporaryPointer);
+        }
+    }
+
+    private static bool IsGenerationReferencedByPointer(
+        string entryDirectory,
+        string generationDirectory)
+    {
+        var pointerPath = Path.Combine(entryDirectory, AssemblyCacheContract.CurrentPointerFileName);
+        try
+        {
+            var currentGeneration = ReadPointer(entryDirectory, pointerPath);
+            return string.Equals(
+                currentGeneration,
+                Path.GetFullPath(generationDirectory),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return false;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException or ArgumentException or NotSupportedException)
+        {
+            return true;
         }
     }
 

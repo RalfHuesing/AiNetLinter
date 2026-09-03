@@ -61,10 +61,19 @@ internal static class AssemblyDecompiledBodyResolver
         CancellationToken cancellationToken)
     {
         var normalizedLines = Math.Max(1, maxBodyLines);
+        if (!AssemblyDecompilationOptions.IsSupportedTimeout(options.EffectiveTimeout))
+        {
+            return new(
+                null,
+                "unavailable",
+                "decompiledSignatureOnly",
+                "Das Decompilation-Timeout liegt außerhalb des von CancellationTokenSource.CancelAfter unterstützten Bereichs.");
+        }
+
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        deadline.CancelAfter(options.EffectiveTimeout);
         try
         {
+            deadline.CancelAfter(options.EffectiveTimeout);
             var decompiler = AssemblyDecompilationAdapter.CreateDecompiler(
                 assemblyPath,
                 references,

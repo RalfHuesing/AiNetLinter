@@ -37,6 +37,36 @@ public sealed class AssemblyAnalysisConfigurationLoaderTests
         Assert.Equal(TimeSpan.FromSeconds(45), result.Options.DecompilationTimeout);
     }
 
+    [Fact]
+    public void Load_AkzeptiertDasMaximaleCancelAfterTimeout()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-settings-max-timeout-");
+        var maxSeconds = AssemblyAnalysisConfigurationOptions.MaxDecompilationTimeoutSeconds;
+        var settingsPath = temp.CreateFile(
+            "appsettings.json",
+            $$"""{ "AssemblyAnalysis": { "DecompilationTimeoutSeconds": {{maxSeconds}} } }""");
+
+        var result = AssemblyAnalysisConfigurationLoader.Load(settingsPath);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(TimeSpan.FromSeconds(maxSeconds), result.Options.DecompilationTimeout);
+    }
+
+    [Fact]
+    public void Load_LehntTimeoutOberhalbDesCancelAfterBereichsStrukturiertAb()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-settings-overflow-timeout-");
+        var timeout = AssemblyAnalysisConfigurationOptions.MaxDecompilationTimeoutSeconds + 1;
+        var settingsPath = temp.CreateFile(
+            "appsettings.json",
+            $$"""{ "AssemblyAnalysis": { "DecompilationTimeoutSeconds": {{timeout}} } }""");
+
+        var result = AssemblyAnalysisConfigurationLoader.Load(settingsPath);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Location.Contains("DecompilationTimeoutSeconds", StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("0")]
     [InlineData("-1")]

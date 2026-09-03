@@ -25,9 +25,9 @@ internal sealed partial class AssemblyAnalysisSession
                 new DecompilationRequest(fingerprint.CanonicalPath, fingerprint, key, decompilationOptions, cancellationToken, stagingDirectory),
                 references).ConfigureAwait(false);
             var diagnostics = CombineDiagnostics(cacheDiagnostics, references.Diagnostics, decompilation.Diagnostics);
-            if (decompilation.Documents.Count == 0)
+            if (!decompilation.IsComplete || decompilation.Documents.Count == 0)
             {
-                return FailureResult(EnsureDiagnostic(diagnostics, AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSession), nameof(DecompilationResult.Documents)), "Die Decompilation hat keine analysierbaren Dokumente erzeugt."));
+                return FailureResult(EnsureDiagnostic(diagnostics, AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(AssemblyDecompilationOptions)), "Die Decompilation hat keine vollständige, analysierbare Generation erzeugt."));
             }
 
             var status = DetermineStatus(references.Diagnostics, decompilation);

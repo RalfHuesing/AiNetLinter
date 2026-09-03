@@ -188,6 +188,10 @@ public sealed class AssemblyAnalysisSessionTests
         Assert.False(cached.Reused);
         Assert.NotNull(second.CurrentGeneration);
         Assert.All(second.CurrentGeneration!.Snapshot.Documents, document => Assert.True(File.Exists(document.FilePath)));
+        Assert.Equal(
+            Assert.Single(Directory.EnumerateFiles(Path.GetDirectoryName(manifestPath)!, "*.csproj")),
+            Assert.Single(second.CurrentGeneration.Snapshot.Solution.Projects).FilePath,
+            StringComparer.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -294,6 +298,27 @@ public sealed class AssemblyAnalysisSessionTests
         Assert.NotNull(session.CurrentGeneration);
         Assert.Equal(AssemblySessionStatus.Complete, session.State.Status);
         Assert.NotEmpty(Directory.EnumerateFiles(cacheRoot, "manifest.json", SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public async Task RefreshAsync_RejectsTimeoutOutsideCancelAfterRangeWithoutThrowing()
+    {
+        using var temp = TestTempDirectory.Create("assembly-session-timeout-range-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "TimeoutRangeProbe",
+            "namespace Probe; public sealed class Value { public int Number => 42; }");
+        await using var session = new AssemblyAnalysisSession(
+            assemblyPath,
+            new AssemblyDecompilationOptions(
+                Timeout: AssemblyDecompilationOptions.MaxCancelAfterTimeout + TimeSpan.FromMilliseconds(1)),
+            temp.GetPath("cache"));
+
+        var result = await session.RefreshAsync();
+
+        Assert.Equal(AssemblySessionStatus.Failed, result.Status);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "assembly-options-invalid");
+        Assert.Null(session.CurrentGeneration);
     }
 
     [Fact]

@@ -45,6 +45,8 @@ internal sealed record AssemblyDecompilationOptions(
 {
     internal const string CurrentDecompilerVersion = "10.0.1.8346";
     internal const string CurrentCacheSchemaVersion = AssemblyCacheContract.CacheSchemaVersion;
+    internal const int MaxCancelAfterMilliseconds = int.MaxValue;
+    internal static readonly TimeSpan MaxCancelAfterTimeout = TimeSpan.FromMilliseconds(MaxCancelAfterMilliseconds);
     internal static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(180);
 
     internal static AssemblyDecompilationOptions Default => new();
@@ -52,6 +54,9 @@ internal sealed record AssemblyDecompilationOptions(
     internal TimeSpan EffectiveTimeout => Timeout > TimeSpan.Zero
         ? Timeout
         : DefaultTimeout;
+
+    internal static bool IsSupportedTimeout(TimeSpan timeout) =>
+        timeout > TimeSpan.Zero && timeout <= MaxCancelAfterTimeout;
 
     internal string Identity => string.Join(
         "|",

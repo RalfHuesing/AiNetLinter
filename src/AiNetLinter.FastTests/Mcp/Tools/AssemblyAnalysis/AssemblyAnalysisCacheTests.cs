@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies;
@@ -125,12 +126,138 @@ public sealed class AssemblyAnalysisCacheTests
         Assert.Equal(3, results.Count(result => result.Succeeded));
     }
 
+    [Fact]
+    public void AssemblyDecompilationCache_RejectsIncompleteDecompilationBeforePublishing()
+    {
+        using var temp = TestTempDirectory.Create("assembly-cache-incomplete-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "CacheIncompleteProbe",
+            "namespace Probe; public sealed class Value { public int Number => 1; }");
+        var options = AssemblyDecompilationOptions.Default;
+        var fingerprint = AssemblyFingerprintCalculator.Create(assemblyPath);
+        var references = new AssemblyReferenceResolver().Resolve(assemblyPath);
+        var cacheKey = AssemblyFingerprintCalculator.CreateCacheKey(fingerprint, options);
+        var request = CreatePublishRequest(fingerprint, cacheKey, options, references, 1, isComplete: false);
+        var cache = new AssemblyDecompilationCache(temp.GetPath("cache"));
+
+        var result = cache.Publish(request);
+
+        Assert.False(result.Succeeded);
+        Assert.NotNull(result.Diagnostic);
+        Assert.Empty(Directory.Exists(cache.RootPath)
+            ? Directory.EnumerateFiles(cache.RootPath, "current.json", SearchOption.AllDirectories)
+            : []);
+        Assert.Empty(Directory.Exists(cache.RootPath)
+            ? Directory.EnumerateDirectories(cache.RootPath, "*.tmp", SearchOption.AllDirectories)
+            : []);
+    }
+
+    [Fact]
+    public void AssemblyDecompilationCache_DoesNotUseIncompleteGenerationAsCacheHit()
+    {
+        using var temp = TestTempDirectory.Create("assembly-cache-incomplete-hit-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "CacheIncompleteHitProbe",
+            "namespace Probe; public sealed class Value { public int Number => 1; }");
+        var options = AssemblyDecompilationOptions.Default;
+        var fingerprint = AssemblyFingerprintCalculator.Create(assemblyPath);
+        var references = new AssemblyReferenceResolver().Resolve(assemblyPath);
+        var cacheKey = AssemblyFingerprintCalculator.CreateCacheKey(fingerprint, options);
+        var request = CreatePublishRequest(fingerprint, cacheKey, options, references, 1);
+        var cache = new AssemblyDecompilationCache(temp.GetPath("cache"));
+        Assert.True(cache.Publish(request).Succeeded);
+
+        var entryDirectory = cache.GetEntryDirectory(cacheKey);
+        var pointerPath = Path.Combine(entryDirectory, AssemblyCacheContract.CurrentPointerFileName);
+        using var pointer = JsonDocument.Parse(File.ReadAllText(pointerPath));
+        var generationDirectory = Path.Combine(entryDirectory, pointer.RootElement.GetProperty("generation").GetString()!);
+        var manifestPath = Path.Combine(generationDirectory, AssemblyCacheContract.ManifestFileName);
+        var incompleteManifest = File.ReadAllText(manifestPath)
+            .Replace("\"errors\": []", "\"errors\": [\"incomplete decompilation\"]", StringComparison.Ordinal)
+            .Replace("\"status\": \"complete\"", "\"status\": \"partial\"", StringComparison.Ordinal)
+            .Replace("\"complete\": true", "\"complete\": false", StringComparison.Ordinal);
+        File.WriteAllText(manifestPath, incompleteManifest);
+
+        var canRead = cache.TryRead(
+            new AssemblyCacheReadRequest(cacheKey, fingerprint, references),
+            out var generation,
+            out var diagnostic);
+
+        Assert.False(canRead);
+        Assert.Null(generation);
+        Assert.NotNull(diagnostic);
+    }
+
+    [Fact]
+    public void AssemblyDecompilationCache_KeepsPointerGenerationWhenValidationIsLocked()
+    {
+        using var temp = TestTempDirectory.Create("assembly-cache-pointer-lock-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "CachePointerLockProbe",
+            "namespace Probe; public sealed class Value { public int Number => 1; }");
+        var options = AssemblyDecompilationOptions.Default;
+        var fingerprint = AssemblyFingerprintCalculator.Create(assemblyPath);
+        var references = new AssemblyReferenceResolver().Resolve(assemblyPath);
+        var cacheKey = AssemblyFingerprintCalculator.CreateCacheKey(fingerprint, options);
+        var initialRequest = CreatePublishRequest(fingerprint, cacheKey, options, references, 1);
+        var cacheRoot = temp.GetPath("cache");
+        var cache = new AssemblyDecompilationCache(cacheRoot);
+        Assert.True(cache.Publish(initialRequest).Succeeded);
+
+        var changedRequest = CreatePublishRequest(
+            fingerprint with { Sha256 = new string('b', 64) },
+            cacheKey,
+            options,
+            references,
+            2);
+        FileStream? heldPointer = null;
+        string? publishedGenerationDirectory = null;
+        var lockAcquired = 0;
+        var lockedCache = new AssemblyDecompilationCache(
+            cacheRoot,
+            beforePointerValidation: generationDirectory =>
+            {
+                if (Interlocked.Exchange(ref lockAcquired, 1) != 0) return;
+                publishedGenerationDirectory = generationDirectory;
+                heldPointer = new FileStream(
+                    Path.Combine(Path.GetDirectoryName(generationDirectory)!, AssemblyCacheContract.CurrentPointerFileName),
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.None);
+            });
+
+        AssemblyCachePublishResult result;
+        try
+        {
+            result = lockedCache.Publish(changedRequest);
+
+            Assert.False(result.Succeeded);
+            Assert.NotNull(publishedGenerationDirectory);
+            Assert.True(Directory.Exists(publishedGenerationDirectory));
+        }
+        finally
+        {
+            heldPointer?.Dispose();
+        }
+
+        Assert.True(lockedCache.TryRead(
+            new AssemblyCacheReadRequest(cacheKey, changedRequest.Fingerprint, references),
+            out var generation,
+            out var diagnostic));
+        Assert.NotNull(generation);
+        Assert.Null(diagnostic);
+    }
+
     private static AssemblyCachePublishRequest CreatePublishRequest(
         AssemblyFingerprint fingerprint,
         AssemblyDecompilationCacheKey cacheKey,
         AssemblyDecompilationOptions options,
         AssemblyReferenceResolution references,
-        int number) =>
+        int number,
+        bool isComplete = true) =>
         new(
             fingerprint,
             cacheKey,
@@ -142,6 +269,6 @@ public sealed class AssemblyAnalysisCacheTests
                     "Probe.Value",
                     $"namespace Probe; public sealed class Value {{ public int Number => {number}; }}")],
                 [],
-                true),
+                isComplete),
             AssemblySessionStatus.Complete);
 }

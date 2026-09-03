@@ -75,3 +75,41 @@ Urteil: `issues`. Epic 1 ist wegen drei belegter P1-Findings nicht freigabefähi
 ### Nächste Aktion
 
 P1-Ursachensignaturen in einer frischen Implementierer-/Reviewer-Korrekturrunde bearbeiten; P2-Befunde bleiben in der task-lokalen Queue.
+
+## Run 2026-09-03 / Epic 1 / Korrekturversuch 1 / Implementierer / running
+
+- Subagent: `01a06671-603b-7581-a87a-7083e3fc37e7` (`Peirce`)
+- Baseline: `51be4775`
+- Ursache: P1-1 unvollständiger Publish, P1-2 dangling Pointer, P1-3 ungeschützter großer Timeout; zusätzlich direkt betroffener Cache-Hit-Projektpfad.
+- Status: completed / hand-off-ready
+
+### Terminaler Korrekturbericht
+
+- Urteil: Die drei P1-Findings sind behoben; der fokussierte Korrekturstand ist funktionierend.
+- Geändert: Cache-/Decompilation-Schutz in `AssemblyDecompilationAdapter`, `AssemblyAnalysisSession.Generation` und `AssemblyDecompilationCache`; Pointer-Schutz in `AssemblyDecompilationCache.PointerPublishing`; Cache-Hit-Validierung in `AssemblyCacheGenerationStorage`; `CancelAfter`-Grenze und Konfigurationsvalidierung in `AssemblyAnalysisSessionModels`/`AssemblyAnalysisConfiguration`; Cache-Hit-Projektpfad in `AssemblyAnalysisSession`; Regressionstests in drei AssemblyAnalysis-Testdateien; Code-Map aktualisiert.
+- Design: Unvollständige/abgebrochene Generationen werden nicht veröffentlicht oder als Hit verwendet; bei fehlgeschlagener Nachvalidierung wird keine aktuell referenzierte Generation gelöscht; Timeout-Werte werden auf den CTS-Bereich abgesichert.
+
+### Verifikationsnachweise
+
+- Gezielte Epic-1-Tests: 33/33 erfolgreich; nach der letzten C#-Codeänderung ausgeführt.
+- Pfad-/Host-Regressionen: 11/11 erfolgreich; nach der letzten C#-Codeänderung ausgeführt.
+- Vollständige FastTests ohne Stress: 2.440 erfolgreich, 2 übersprungen, 4 bestehende scope-fremde Fehler; nach der letzten C#-Codeänderung ausgeführt. Die Fehler betreffen Repository-/ProjectRegistry-Races, nicht die geänderten Symbole.
+- IntegrationTests ohne Stress: 384/384 erfolgreich; nach der letzten C#-Codeänderung ausgeführt.
+- `dotnet build`: erfolgreich; nach der letzten C#-Codeänderung ausgeführt.
+- `find_duplicates`: nur bestehender Near-Duplicate außerhalb des Änderungsbereichs; nach der letzten C#-Codeänderung ausgeführt.
+- `find_dead_code`: 0 Treffer; nach der letzten C#-Codeänderung ausgeführt.
+- `find_magic_values`: 0 Treffer; nach der letzten C#-Codeänderung ausgeführt.
+- Gezielter abschließender `get_violations`: 0 Violations in Analysis, Configuration und betroffenen Tests; nach der letzten C#-Codeänderung ausgeführt.
+- `git diff --check`: erfolgreich; nach der letzten C#-Codeänderung ausgeführt.
+- Zwei Symlink-Tests wurden wegen fehlender Windows-Berechtigung übersprungen.
+- Offene Risiken: vier bestehende FastTest-Race-Fehler und fehlende Symlink-Berechtigung; keine neuen Violations. Kein Commit durch den Implementierer.
+
+### Triage
+
+- `TD-001` (Cache-Hit-Projektpfad) ist durch die direkte Korrektur behoben und wird als `fixed` markiert.
+- `TD-002` (fehlende Regressionstests) ist durch die ergänzten gezielten Tests behoben und wird als `fixed` markiert.
+- Die vier bestehenden scope-fremden Race-Testfehler werden nicht als neue Tech Debt des Epic-Scopes eingereiht; sie bleiben als Abschlussrisiko dokumentiert.
+
+### Nächste Aktion
+
+Implementierungs-Checkpoint committen, danach frischen Folge-Review für den Korrekturdiff starten.

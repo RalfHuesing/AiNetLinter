@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 
 namespace AiNetLinter.Configuration;
 
@@ -17,7 +18,7 @@ internal sealed record AssemblyAnalysisConfigurationOptions
     internal const string DefaultAssemblyCacheDirectoryName = "asm";
     internal const long DefaultDecompilationTimeoutSeconds = 180;
     internal static readonly long MaxDecompilationTimeoutSeconds =
-        TimeSpan.MaxValue.Ticks / TimeSpan.TicksPerSecond;
+        AssemblyDecompilationOptions.MaxCancelAfterMilliseconds / 1000;
 
     internal AssemblyAnalysisConfigurationOptions(
         string cacheRoot,
@@ -25,7 +26,7 @@ internal sealed record AssemblyAnalysisConfigurationOptions
     {
         CacheRoot = ExternalSourceConfigurationPath.TryCanonicalizeAbsoluteRoot(cacheRoot)
             ?? throw new ArgumentException("Die Assembly-Cache-Wurzel muss ein gültiger absoluter Pfad sein.", nameof(cacheRoot));
-        if (decompilationTimeout <= TimeSpan.Zero)
+        if (!AssemblyDecompilationOptions.IsSupportedTimeout(decompilationTimeout))
         {
             throw new ArgumentOutOfRangeException(nameof(decompilationTimeout));
         }

@@ -29,15 +29,20 @@ internal sealed partial class AssemblyDecompilationCache
         JsonOptions.Converters.Add(new AssemblyDecompilationManifestJsonConverter());
     }
 
-    internal AssemblyDecompilationCache(string? cacheRoot = null, Action<string>? beforePublishReturn = null)
+    internal AssemblyDecompilationCache(
+        string? cacheRoot = null,
+        Action<string>? beforePublishReturn = null,
+        Action<string>? beforePointerValidation = null)
     {
         RootPath = AssemblyCacheContract.ResolveRootPath(cacheRoot);
         this.beforePublishReturn = beforePublishReturn;
+        this.beforePointerValidation = beforePointerValidation;
     }
 
     internal string RootPath { get; }
 
     private readonly Action<string>? beforePublishReturn;
+    private readonly Action<string>? beforePointerValidation;
 
     internal string GetEntryDirectory(AssemblyDecompilationCacheKey key)
     {
@@ -143,7 +148,10 @@ internal sealed partial class AssemblyDecompilationCache
         }
         finally
         {
-            if (generationMoved && !pointerPublished && generationDirectory is not null)
+            if (generationMoved
+                && !pointerPublished
+                && generationDirectory is not null
+                && !IsGenerationReferencedByPointer(entryDirectory, generationDirectory))
             {
                 AssemblyCacheCleanup.DeleteDirectory(generationDirectory);
             }
@@ -220,10 +228,14 @@ internal sealed partial class AssemblyDecompilationCache
             throw new InvalidDataException("Eine veröffentlichte Assembly-Generation benötigt mindestens ein Dokument.");
         }
 
-        if (request.Status != AssemblySessionStatus.Complete) return;
         if (!request.Decompilation.IsComplete
-            || request.Decompilation.Diagnostics.Any(diagnostic => !IsWarning(diagnostic))
-            || request.References.References.Any(reference => !reference.Resolved))
+            || request.Decompilation.Diagnostics.Any(diagnostic => !IsWarning(diagnostic)))
+        {
+            throw new InvalidDataException("Eine unvollständige oder fehlerhafte Decompilation darf nicht als Cachegeneration veröffentlicht werden.");
+        }
+
+        if (request.Status != AssemblySessionStatus.Complete) return;
+        if (request.References.References.Any(reference => !reference.Resolved))
         {
             throw new InvalidDataException("Eine vollständige Assembly-Generation darf keine Fehler oder ungelösten Referenzen enthalten.");
         }

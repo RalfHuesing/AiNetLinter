@@ -29,16 +29,26 @@ internal sealed class AssemblyDecompilationAdapter
         DecompilationRequest request,
         AssemblyReferenceResolution references)
     {
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken);
-        deadline.CancelAfter(request.Options.EffectiveTimeout);
+        request.CancellationToken.ThrowIfCancellationRequested();
         var ownsStagingDirectory = request.StagingDirectory is null;
         var stagingDirectory = request.StagingDirectory ?? Path.Combine(
             Path.GetTempPath(),
             "ainetlinter-decompilation-" + Guid.NewGuid().ToString("N"));
         var diagnostics = new List<AssemblySessionDiagnostic>();
+        if (!AssemblyDecompilationOptions.IsSupportedTimeout(request.Options.EffectiveTimeout))
+        {
+            diagnostics.Add(new AssemblySessionDiagnostic(
+                AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(AssemblyDecompilationOptions)),
+                "Das Decompilation-Timeout liegt außerhalb des von CancellationTokenSource.CancelAfter unterstützten Bereichs.",
+                AssemblyDiagnosticSeverity.Error));
+            return Task.FromResult(new DecompilationResult([], diagnostics, false));
+        }
+
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken);
 
         try
         {
+            deadline.CancelAfter(request.Options.EffectiveTimeout);
             return Task.FromResult(DecompileProject(request, references, stagingDirectory, deadline.Token, diagnostics));
         }
         catch (OperationCanceledException) when (request.CancellationToken.IsCancellationRequested)
@@ -56,7 +66,7 @@ internal sealed class AssemblyDecompilationAdapter
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException or ArgumentException or InvalidDataException or DecompilerException)
         {
             diagnostics.Add(new AssemblySessionDiagnostic(
-                AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompilationRequest)),
+                AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(AssemblyDecompilationOptions)),
                 $"Volldekompilierung fehlgeschlagen: {ex.Message}",
                 AssemblyDiagnosticSeverity.Error));
             return Task.FromResult(ReadProjectOutput(stagingDirectory, diagnostics, CancellationToken.None, false));
