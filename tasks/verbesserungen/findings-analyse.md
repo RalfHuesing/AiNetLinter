@@ -1,6 +1,7 @@
 # Analyse-Findings & Architektur-Überlegungen: Robuste Assembly-Analyse (Paket 1)
 
 **Erstellt am:** 2026-09-03  
+**Status:** Hauptursachen identifiziert; 4 Detailfragen (siehe Abschnitt 6) vor Codeänderungen noch offen.  
 **Zweck dieses Dokuments:** Vollständiges Festhalten aller ermittelten Fakten, Code-Stellen, Root Causes und Architekturentscheidungen dieses Chats. Verhindert erneutes Einlesen und Token-Verbrauch in nachfolgenden Chats.
 
 ---
@@ -110,3 +111,18 @@ In einer Session entstanden 136 redundante Generation-Verzeichnisse unter `cache
    - `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress`
    - Parallele Tests (keine Duplikat-Ordner mehr)
    - `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`
+
+---
+
+## 6. Status der Analyse: Noch offene Detailanalysen vor Codeänderungen
+
+Die funktionale Ursachenanalyse (warum dekompiliert wird und wo Locks fehlen) ist abgeschlossen. Folgende Detailfragen müssen vor der eigentlichen Implementierung vom nächsten Modell gezielt (per MCP!) geprüft werden:
+
+1. **Bestehende File-Lock-Primitive im Codebase:**
+   - Prüfen via MCP (`find_symbol` / `get_symbol_body`), wie `ExternalSourceRepositoryCheckoutReservation.TryCreateOwnership` oder `AssemblyCacheKeyLockRegistry` aufgebaut sind: Existiert bereits ein unvollständiger oder wiederverwendbarer OS-Lock, oder muss ein neuer `KeyedFileLock` (auf `FileStream`-Basis mit `FileShare.None`) unter `src/AiNetLinter/Mcp/Assemblies/Infrastructure/` angelegt werden?
+2. **Stall-Erkennung & Timeout-Verhalten (10 Minuten):**
+   - Wie wird das 10-Minuten-Stall-Kriterium an wartende Aufrufer signalisiert (welche Diagnose-Codes werden dafür vergeben, z. B. unter `ExternalSourceConfigurationDiagnosticCodes` / `AssemblyDiagnosticCodes`)?
+3. **Negative Source-Ergebnisse (TTL):**
+   - Wo wird das negative Ergebnis gecacht, wenn ein Source-Projekt nicht matcht (z. B. `AssemblySourceFallbackReasons.SourceProjectNotFound`), damit nicht bei jedem Aufruf ein erneuter Checkout-Versuch gestartet wird?
+4. **Test-Hooks:**
+   - Prüfen, wo die bestehenden Tests für parallele Aufrufe liegen (`AssemblyAnalysisRegistryTests`, `ExternalSourceSnapshotMaterializerTests`), um den neuen Lock- und Wait-Mechanismus ohne künstliche Testkopplung abzusichern.
