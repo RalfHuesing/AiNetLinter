@@ -208,7 +208,8 @@ internal static class AssemblyAnalysisHostFactory
             providerCoordinator);
         var assemblyDecompilationConfiguration = new AssemblyDecompilationConfiguration(
             new AssemblyDecompilationOptions(Timeout: assemblyConfigurationResult.Options.DecompilationTimeout),
-            assemblyConfigurationResult.Options.CacheRoot);
+            assemblyConfigurationResult.Options.CacheRoot,
+            assemblyConfigurationResult.Options.ResponseBudgetBytes);
         var sessions = new AssemblyAnalysisRegistry(
             sourceOrchestrator,
             resourceRegistry: resources,

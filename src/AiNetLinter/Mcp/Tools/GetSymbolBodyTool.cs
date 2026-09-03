@@ -106,6 +106,7 @@ internal static class GetSymbolBodyTool
     {
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
         var mb = new MarkdownBuilder();
+        var entries = new List<SymbolBodyEntry>();
 
         for (var i = 0; i < identifiers.Count; i++)
         {
@@ -113,7 +114,7 @@ internal static class GetSymbolBodyTool
 
             var earlyError = await RenderSingleSymbolAsync(
                 new RenderSingleSymbolRequest(
-                    solution, identifiers[i], identifiers.Count, maxBodyLines, outputRoot, mb, assemblyIdentity),
+                    solution, identifiers[i], identifiers.Count, maxBodyLines, outputRoot, mb, assemblyIdentity, entries),
                 ct);
 
             if (earlyError != null) return earlyError;
@@ -122,7 +123,7 @@ internal static class GetSymbolBodyTool
         var markdown = mb.Build().TrimEnd();
         var isTruncated = markdown.Contains(TruncationMarker, StringComparison.Ordinal);
         var final = isTruncated ? markdown : McpSufficiencyHints.Append(markdown);
-        return McpToolResults.Text(final);
+        return McpToolResults.Text(final, new SymbolBodyBatchDto(entries, identifiers.Count));
     }
 
     private static async Task<CallToolResult?> RenderSingleSymbolAsync(
@@ -181,6 +182,17 @@ internal static class GetSymbolBodyTool
         if (!string.IsNullOrWhiteSpace(bodyResolution.Hint)) request.Markdown.Line($"Hinweis: {bodyResolution.Hint}");
         request.Markdown.BlankLine();
         request.Markdown.CodeBlock("csharp", bodyResolution.Body ?? "// Für dieses Symbol ist kein dekompilierbarer Body verfügbar.");
+        var location = symbol.Locations.FirstOrDefault(candidate => candidate.IsInSource);
+        var lineSpan = location?.GetLineSpan();
+        request.Entries.Add(new SymbolBodyEntry(
+            request.Identifier,
+            idSuffix,
+            PathNormalizer.ToRelative(request.OutputRoot, location?.SourceTree?.FilePath ?? ""),
+            lineSpan is null ? 0 : lineSpan.Value.StartLinePosition.Line + 1,
+            bodyResolution.Body,
+            bodyResolution.BodyAvailability,
+            bodyResolution.ContentMode,
+            bodyResolution.Body?.Contains(TruncationMarker, StringComparison.Ordinal) == true));
         return null;
     }
 
@@ -191,7 +203,8 @@ internal static class GetSymbolBodyTool
         int MaxBodyLines,
         string OutputRoot,
         MarkdownBuilder Markdown,
-        AnalysisSymbolIdentity? AssemblyIdentity);
+        AnalysisSymbolIdentity? AssemblyIdentity,
+        List<SymbolBodyEntry> Entries);
 
     private static string ToRelative(string outputRoot, ISymbol symbol)
     {
@@ -210,3 +223,17 @@ internal static class GetSymbolBodyTool
     }
 
 }
+
+internal sealed record SymbolBodyBatchDto(
+    IReadOnlyList<SymbolBodyEntry> Results,
+    int RequestedCount);
+
+internal sealed record SymbolBodyEntry(
+    string RequestedIdentifier,
+    string? Id,
+    string FilePath,
+    int StartLine,
+    string? Body,
+    string BodyAvailability,
+    string ContentMode,
+    bool IsTruncated);

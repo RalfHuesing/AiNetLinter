@@ -34,7 +34,7 @@ public sealed class WiringToolCollectionContractTests
                     AssemblyAnalysisDispatcher.CreateRoute(composition.Sessions))),
             McpServerResourceCollectionFactory.Build(registry));
         var tools = options.ToolCollection!.ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool);
-        Assert.Equal(29, tools.Count);
+        Assert.Equal(30, tools.Count);
         foreach (var tool in tools.Values)
         {
             var required = GetRequiredProperties(tool.InputSchema);
@@ -52,7 +52,7 @@ public sealed class WiringToolCollectionContractTests
                 Assert.Contains("\"targetPath\"", tool.InputSchema.ToString(), StringComparison.Ordinal);
                 Assert.DoesNotContain("projectRoot", tool.InputSchema.ToString(), StringComparison.Ordinal);
             }
-            else if (tool.Name is "inspect_assembly" or "find_assembly_extensions")
+            else if (tool.Name is "inspect_assembly" or "find_assembly_extensions" or "get_assembly_context")
             {
                 Assert.DoesNotContain("targetType", required);
                 Assert.Contains("targetPath", required);
@@ -86,12 +86,12 @@ public sealed class WiringToolCollectionContractTests
         {
             "dependency_graph", "find_references", "find_symbol", "get_call_tree",
             "get_class_structure", "get_file_skeleton", "get_impact", "get_namespace_tree", "get_symbol_body",
-            "get_type_hierarchy", "metrics_lookup", "metrics_tree",
+            "get_type_hierarchy", "metrics_lookup", "metrics_tree", "get_file_tree",
         };
         var projectOnly = new[]
         {
             "find_dead_code", "find_duplicates", "find_magic_values", "get_feature_context",
-            "get_file_tree", "get_hotspots", "get_index_scope", "get_test_context",
+            "get_hotspots", "get_index_scope", "get_test_context",
             "get_violations", "pattern_detect", "reload_config", "safeguard", "search_pattern",
         };
 
@@ -111,7 +111,7 @@ public sealed class WiringToolCollectionContractTests
             Assert.Contains("ausdrücklich unsupported", description, StringComparison.Ordinal);
         }
 
-        foreach (var name in new[] { "inspect_assembly", "find_assembly_extensions" })
+        foreach (var name in new[] { "inspect_assembly", "find_assembly_extensions", "get_assembly_context" })
         {
             var description = tools[name].Description;
             Assert.Contains("targetType='assembly'", description, StringComparison.Ordinal);
@@ -240,6 +240,7 @@ public sealed class WiringToolCollectionContractTests
             ["find_symbol"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["get_call_tree"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["get_class_structure"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["get_assembly_context"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["get_feature_context"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["get_file_tree"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["get_file_skeleton"] = ToolAnnotationExpectation.ReadOnlyProfile,

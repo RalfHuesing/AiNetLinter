@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
@@ -7,6 +8,7 @@ using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using ModelContextProtocol.Server;
+using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Registration;
 
@@ -34,7 +36,7 @@ internal static class FileStructureToolRegistrations
         AnalysisToolRoute? targetRoute = null)
     {
         AddGetNamespaceTree(tools, registry, targetRoute);
-        AddGetFileTree(tools);
+        AddGetFileTree(tools, targetRoute);
         AddGetFileSkeleton(tools, registry, targetRoute);
         AddGetClassStructure(tools, registry, targetRoute);
         AddGetIndexScope(tools, registry);
@@ -42,7 +44,8 @@ internal static class FileStructureToolRegistrations
     }
 
     private static void AddGetFileTree(
-        McpServerPrimitiveCollection<McpServerTool> tools)
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
             async (
@@ -60,25 +63,32 @@ internal static class FileStructureToolRegistrations
                 bool includeMetadata = true,
                 bool includeLineCount = false,
                 CancellationToken ct = default) =>
-                await ProjectAnalysisDispatcher.ExecutePhysicalFilesystemAsync(
-                    new AnalysisTargetRequest(targetType, targetPath),
-                    canonicalRoot => GetFileTreeTool.ExecuteAsync(
-                        canonicalRoot,
-                        new GetFileTreeInput(
-                            root ?? ".",
-                            view,
-                            includeExtensions,
-                            fileFilter,
-                            excludePatterns,
-                            maxDepth,
-                            treeDepth,
-                            maxResults,
-                            sortBy,
-                            includeMetadata,
-                            includeLineCount),
-                         ct)),
-            McpToolRegistrationOptions.ReadOnlyTool("get_file_tree", GetFileTreeDescription)));
+                await ExecuteFileTreeAsync(
+                    targetRoute,
+                    targetType,
+                    targetPath,
+                    new GetFileTreeInput(root ?? ".", view, includeExtensions, fileFilter, excludePatterns, maxDepth, treeDepth, maxResults, sortBy, includeMetadata, includeLineCount),
+                    ct),
+            McpToolRegistrationOptions.TargetedReadOnlyTool("get_file_tree", GetFileTreeDescription)));
     }
+
+    private static Task<CallToolResult> ExecuteFileTreeAsync(
+        AnalysisToolRoute? targetRoute,
+        string targetType,
+        string targetPath,
+        GetFileTreeInput input,
+        CancellationToken cancellationToken) =>
+        string.Equals(targetType, "assembly", StringComparison.OrdinalIgnoreCase)
+            ? AnalysisToolCall.ExecuteRouted(
+                targetRoute!,
+                new AnalysisToolCallRequest(
+                    new AnalysisTargetRequest(targetType, targetPath),
+                    new AnalysisToolDispatch(
+                        AssemblySessionCall: lease => AssemblyGetFileTreeTool.ExecuteAsync(lease, input, cancellationToken)),
+                    cancellationToken))
+            : ProjectAnalysisDispatcher.ExecutePhysicalFilesystemAsync(
+                new AnalysisTargetRequest(targetType, targetPath),
+                canonicalRoot => GetFileTreeTool.ExecuteAsync(canonicalRoot, input, cancellationToken));
 
     private const string GetFileTreeDescription =
         "Wann nutzen: physische Dateilandkarte eines absoluten Projekt- oder dekompilierten " +
@@ -87,7 +97,9 @@ internal static class FileStructureToolRegistrations
         "targetPath; fileFilter ist ein Pfad-Glob, keine Inhaltssuche. view: 'tree' [Default], " +
         "'summary', 'files'. includeExtensions: Extensionen wie ['.cs'] oder ['*']. " +
         "maxDepth und treeDepth: 0 bis 32 (effektive Tiefe = maxDepth ?? treeDepth, 0 = Root-Ebene, Default treeDepth 2; maxDepth hat Vorrang). " +
-        "maxResults: Begrenzung (Default 200, Maximum 2000). " +
+        "targetType='project' oder targetType='assembly'; maxResults: Begrenzung (Default 200, Maximum 2000). Für Assembly-Ziele wird der " +
+        "vorhandene Source- oder dekompilierte SourceRoot verwendet; ohne solchen Root ist die " +
+        "Capability unsupported. Snapshot/Generation bleiben im Assembly-Response-Envelope sichtbar. " +
         "sortBy: 'path' [Default], 'size_desc', 'extension'. includeMetadata: Dateigroessen (Default true), " +
         "includeLineCount: Zeilenzaehlung (Default false). structuredContent liegt unter fileTree.";
 

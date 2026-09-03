@@ -16,30 +16,27 @@ internal static class FindAssemblyExtensionsResponseBuilder
 {
     internal static CallToolResult Build(FindAssemblyExtensionsBuildRequest request)
     {
-        var fullPath = request.FullPath;
-        var context = request.Context;
+        var payload = CreatePayload(request);
+        payload = ApplyResponseBudget(payload, request);
+        return McpToolResults.Text(FormatText(payload), payload);
+    }
+
+    private static FindAssemblyExtensionsPayload CreatePayload(FindAssemblyExtensionsBuildRequest request)
+    {
         var arguments = request.Arguments;
-        var maxResults = request.MaxResults;
-        var lease = request.Lease;
+        var context = request.Context;
         var selection = AssemblyAnalysisService.FindExtensions(
             context,
-            new AssemblyExtensionSearchOptions(arguments.ExtensionName, arguments.Namespace, arguments.ReceiverType, maxResults));
-        var diagnostics = AssemblyAnalysisResponseLimits.ProjectDiagnostics(
-            context.Diagnostics,
-            lease?.ReferenceExpansionDiagnostics);
-        var referenceSessions = AssemblyAnalysisResponseLimits.ProjectReferenceSessions(lease?.ReferenceSessions);
-        var referenceSummary = AssemblyAnalysisResponseLimits.CreateReferenceSummary(
-            context.References,
-            lease?.ReferenceSessions);
-        var effectiveStatus = context.Status.ResolveEffectiveStatus(
-            context.Diagnostics
-                .Concat(lease?.ReferenceExpansionDiagnostics ?? Array.Empty<string>())
-                .ToArray());
-        var payload = new FindAssemblyExtensionsPayload(
-            fullPath,
+            new AssemblyExtensionSearchOptions(arguments.ExtensionName, arguments.Namespace, arguments.ReceiverType,
+                request.MaxResults, AssemblyPaging.ReadOffset(arguments.Cursor)));
+        var diagnostics = AssemblyAnalysisResponseLimits.ProjectDiagnostics(context.Diagnostics, request.Lease?.ReferenceExpansionDiagnostics);
+        var status = context.Status.ResolveEffectiveStatus(context.Diagnostics.Concat(request.Lease?.ReferenceExpansionDiagnostics ?? Array.Empty<string>()).ToArray());
+        var includeReferences = arguments.IncludeReferences;
+        return new FindAssemblyExtensionsPayload(
+            request.FullPath,
             selection.Items,
             diagnostics.Samples,
-            effectiveStatus.ToCompletenessLabel(),
+            status.ToCompletenessLabel(),
             selection.Truncated,
             selection.Total,
             selection.Items.Count,
@@ -48,19 +45,33 @@ internal static class FindAssemblyExtensionsResponseBuilder
             arguments.ReceiverType,
             context.Origin,
             context.Generation,
-            effectiveStatus.ToWireValue(),
+            status.ToWireValue(),
             AssemblyAnalysisResponseLimits.ProjectReferences(context.References),
-            referenceSessions,
+            AssemblyAnalysisResponseLimits.ProjectReferenceSessions(request.Lease?.ReferenceSessions),
             diagnostics,
-            referenceSummary);
-        payload = AssemblyAnalysisResponseLimits.ProjectResponseBudget(
+            AssemblyAnalysisResponseLimits.CreateReferenceSummary(context.References, request.Lease?.ReferenceSessions, includeReferences)) with
+        {
+            TotalCount = selection.Total,
+            ReturnedCount = selection.Items.Count,
+            IsTruncated = selection.Truncated,
+            ContinuationToken = selection.Truncated ? AssemblyPaging.CreateToken(AssemblyPaging.ReadOffset(arguments.Cursor) + selection.Items.Count) : null,
+            Scope = includeReferences ? "root+references" : "root",
+        };
+    }
+
+    private static FindAssemblyExtensionsPayload ApplyResponseBudget(
+        FindAssemblyExtensionsPayload payload,
+        FindAssemblyExtensionsBuildRequest request)
+    {
+        var budget = AssemblyAnalysisResponseLimits.ResolveResponseBudget(
+            request.Arguments.MaxResponseBytes,
+            request.Arguments.DetailLevel,
+            request.Lease?.Context.ResponseBudgetBytes ?? AssemblyAnalysisResponseLimits.DefaultResponseBytes);
+        return AssemblyAnalysisResponseLimits.ProjectResponseBudget(
             payload,
-            lease is null
-                ? null
-                : candidate => AssemblyAnalysisResponse.FitsResponseBudget(
-                    McpToolResults.Text(FormatText(candidate), candidate),
-                    lease));
-        return McpToolResults.Text(FormatText(payload), payload);
+            request.Lease is null ? null : candidate => AssemblyAnalysisResponse.FitsResponseBudget(
+                McpToolResults.Text(FormatText(candidate), candidate), request.Lease, budget),
+            budget);
     }
 
     internal static string FormatText(FindAssemblyExtensionsPayload payload)

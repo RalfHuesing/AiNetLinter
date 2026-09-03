@@ -69,6 +69,11 @@ public sealed class GetSymbolBodyToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("id:", textContent.Text, System.StringComparison.Ordinal);
+        Assert.True(result.StructuredContent.HasValue);
+        var structured = result.StructuredContent!.Value;
+        var entry = Assert.Single(structured.GetProperty("results").EnumerateArray());
+        Assert.Equal(stableId, entry.GetProperty("id").GetString());
+        Assert.False(entry.GetProperty("isTruncated").GetBoolean());
         // Sufficiency-Hinweis: vollstaendiger (nicht gekappter) Body ist final.
         Assert.Contains("vollstaendig", textContent.Text, System.StringComparison.Ordinal);
     }

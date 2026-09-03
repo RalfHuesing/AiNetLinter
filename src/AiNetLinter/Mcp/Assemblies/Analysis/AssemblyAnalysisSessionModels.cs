@@ -68,7 +68,8 @@ internal sealed record AssemblyDecompilationOptions(
 
 internal sealed record AssemblyDecompilationConfiguration(
     AssemblyDecompilationOptions Options,
-    string CacheRoot);
+    string CacheRoot,
+    int ResponseBudgetBytes = AssemblyAnalysisResponseLimits.DefaultResponseBytes);
 
 internal sealed record AssemblyFingerprint(
     string CanonicalPath,

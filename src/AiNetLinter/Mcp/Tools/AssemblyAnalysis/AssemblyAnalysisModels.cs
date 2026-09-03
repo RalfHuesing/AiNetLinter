@@ -16,7 +16,10 @@ internal sealed record InspectAssemblyArguments(
     bool ExactTypeName = false,
     IReadOnlyList<string>? MemberNames = null,
     int MaxMembers = 0,
-    bool? IncludeReferences = null)
+    bool? IncludeReferences = null,
+    int MaxResponseBytes = 0,
+    string? DetailLevel = null,
+    string? Cursor = null)
 {
     internal bool IncludeReferenceDetails => IncludeReferences ?? (
         string.IsNullOrWhiteSpace(TypeName)
@@ -30,7 +33,10 @@ internal sealed record FindAssemblyExtensionsArguments(
     string? ExtensionName,
     string? Namespace,
     int MaxResults,
-    bool IncludeReferences = false);
+    bool IncludeReferences = false,
+    int MaxResponseBytes = 0,
+    string? DetailLevel = null,
+    string? Cursor = null);
 
 internal sealed record AssemblyInspectionOptions(
     string? NamespaceFilter,
@@ -40,13 +46,15 @@ internal sealed record AssemblyInspectionOptions(
     bool ExactTypeName,
     IReadOnlyList<string>? MemberNames,
     int MaxResults,
-    int MaxMembers);
+    int MaxMembers,
+    int Offset = 0);
 
 internal sealed record AssemblyExtensionSearchOptions(
     string? ExtensionName,
     string? NamespaceFilter,
     string? ReceiverType,
-    int MaxResults);
+    int MaxResults,
+    int Offset = 0);
 
 internal sealed record AssemblyTypeSelection(
     IReadOnlyList<AssemblyTypeDto> Items,
@@ -96,7 +104,8 @@ internal sealed record AssemblyMemberDto(
     IReadOnlyList<AssemblyParameterDto> Parameters,
     IReadOnlyList<string> GenericParameters,
     IReadOnlyList<string> Constraints,
-    IReadOnlyList<string> Attributes);
+    IReadOnlyList<string> Attributes,
+    string? Id = null);
 
 internal sealed record AssemblyParameterDto(
     string Name,
@@ -114,7 +123,8 @@ internal sealed record AssemblyTypeDto(
     IReadOnlyList<string> Attributes,
     int TotalMembers = 0,
     bool MembersTruncated = false,
-    IReadOnlyList<string>? TruncatedBy = null);
+    IReadOnlyList<string>? TruncatedBy = null,
+    string? Id = null);
 
 internal sealed record AssemblyExtensionDto(
     string Namespace,
@@ -151,7 +161,12 @@ internal sealed record InspectAssemblyPayload(
     int TotalNamespaces = 0,
     string? DecompiledProjectDirectory = null,
     string? DecompiledProjectPath = null,
-    string? DecompiledSourceRoot = null);
+    string? DecompiledSourceRoot = null,
+    int TotalCount = 0,
+    int ReturnedCount = 0,
+    bool IsTruncated = false,
+    string? ContinuationToken = null,
+    string Scope = "root");
 
 internal sealed record FindAssemblyExtensionsPayload(
     string AssemblyPath,
@@ -170,4 +185,17 @@ internal sealed record FindAssemblyExtensionsPayload(
     IReadOnlyList<AssemblyReferenceDto>? References = null,
     IReadOnlyList<AssemblyReferenceSessionDto>? ReferenceSessions = null,
     AssemblyDiagnosticsSummary? DiagnosticsSummary = null,
-    AssemblyReferenceSummary? ReferenceSummary = null);
+    AssemblyReferenceSummary? ReferenceSummary = null,
+    int TotalCount = 0,
+    int ReturnedCount = 0,
+    bool IsTruncated = false,
+    string? ContinuationToken = null,
+    string Scope = "root");
+
+internal static class AssemblyPaging
+{
+    internal static int ReadOffset(string? cursor) =>
+        int.TryParse(cursor?.Trim(), out var offset) && offset > 0 ? offset : 0;
+
+    internal static string CreateToken(int offset) => offset.ToString(System.Globalization.CultureInfo.InvariantCulture);
+}

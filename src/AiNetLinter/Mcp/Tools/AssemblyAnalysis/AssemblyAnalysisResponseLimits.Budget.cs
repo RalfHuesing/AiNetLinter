@@ -15,9 +15,11 @@ internal static partial class AssemblyAnalysisResponseLimits
     internal static InspectAssemblyPayload ProjectResponseBudget(
         InspectAssemblyPayload payload,
         bool publicOnly,
-        Func<InspectAssemblyPayload, bool>? fitsBudget = null)
+        Func<InspectAssemblyPayload, bool>? fitsBudget = null,
+        int responseBudgetBytes = DefaultResponseBytes)
     {
-        fitsBudget ??= candidate => FitsResponseBudget(candidate, publicOnly);
+        var budget = NormalizeResponseBudget(responseBudgetBytes);
+        fitsBudget ??= candidate => FitsResponseBudget(candidate, publicOnly, budget);
         var projected = payload;
         if (fitsBudget(projected)) return projected;
 
@@ -37,9 +39,11 @@ internal static partial class AssemblyAnalysisResponseLimits
 
     internal static FindAssemblyExtensionsPayload ProjectResponseBudget(
         FindAssemblyExtensionsPayload payload,
-        Func<FindAssemblyExtensionsPayload, bool>? fitsBudget = null)
+        Func<FindAssemblyExtensionsPayload, bool>? fitsBudget = null,
+        int responseBudgetBytes = DefaultResponseBytes)
     {
-        fitsBudget ??= FitsResponseBudget;
+        var budget = NormalizeResponseBudget(responseBudgetBytes);
+        fitsBudget ??= candidate => FitsResponseBudget(candidate, budget);
         var projected = payload;
         if (fitsBudget(projected)) return projected;
 
@@ -119,13 +123,14 @@ internal static partial class AssemblyAnalysisResponseLimits
 
     private static bool FitsResponseBudget(
         InspectAssemblyPayload payload,
-        bool publicOnly) =>
-        Encoding.UTF8.GetByteCount(InspectAssemblyFormatter.FormatText(payload, publicOnly)) <= MaxResponseBytes
-        && JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length <= MaxResponseBytes;
+        bool publicOnly,
+        int responseBudgetBytes) =>
+        Encoding.UTF8.GetByteCount(InspectAssemblyFormatter.FormatText(payload, publicOnly)) <= responseBudgetBytes
+        && JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length <= responseBudgetBytes;
 
-    private static bool FitsResponseBudget(FindAssemblyExtensionsPayload payload) =>
-        Encoding.UTF8.GetByteCount(FindAssemblyExtensionsResponseBuilder.FormatText(payload)) <= MaxResponseBytes
-        && JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length <= MaxResponseBytes;
+    private static bool FitsResponseBudget(FindAssemblyExtensionsPayload payload, int responseBudgetBytes) =>
+        Encoding.UTF8.GetByteCount(FindAssemblyExtensionsResponseBuilder.FormatText(payload)) <= responseBudgetBytes
+        && JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length <= responseBudgetBytes;
 
     private static bool TryRemoveLastReferenceSession(
         ref InspectAssemblyPayload payload,

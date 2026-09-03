@@ -47,6 +47,11 @@ public sealed partial class AssemblyAnalysisToolTests
         var type = Assert.Single(payload.Types);
         Assert.Equal("Probe.Api", type.Namespace);
         Assert.Equal("PublicApi", type.Name);
+        Assert.StartsWith("T:", type.Id, StringComparison.Ordinal);
+        Assert.All(type.Members, member => Assert.False(string.IsNullOrWhiteSpace(member.Id)));
+        Assert.Equal(payload.TotalTypes, payload.TotalCount);
+        Assert.Equal(payload.ShownCount, payload.ReturnedCount);
+        Assert.Equal(payload.Truncated, payload.IsTruncated);
         Assert.Contains("Probe.Api", payload.Namespaces);
         Assert.Contains(type.Members, member => member.Name == "Name" && member.Kind == "property");
         Assert.Contains(type.Members, member => member.Name == "Changed" && member.Kind == "event");
@@ -81,8 +86,39 @@ public sealed partial class AssemblyAnalysisToolTests
         Assert.Single(payload.Types);
         Assert.Equal(2, payload.TotalTypes);
         Assert.True(payload.Truncated);
+        Assert.Equal("1", payload.ContinuationToken);
+        Assert.Equal(2, payload.TotalCount);
+        Assert.Equal(1, payload.ReturnedCount);
         Assert.Equal("complete", payload.Completeness);
         Assert.DoesNotContain(payload.Diagnostics, diagnostic => diagnostic.Contains("unrelated.dll", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task InspectAssembly_CursorReturnsTheNextStablePage()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-paging-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "PagingProbe", """
+            namespace Probe;
+            public sealed class Alpha { }
+            public sealed class Beta { }
+            public sealed class Gamma { }
+            """);
+
+        var first = await InspectAssemblyToolDispatch.ExecuteAsync(
+            null,
+            new InspectAssemblyArguments(assemblyPath, null, null, null, true, 1),
+            CancellationToken.None);
+        var firstPayload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(first);
+        var second = await InspectAssemblyToolDispatch.ExecuteAsync(
+            null,
+            new InspectAssemblyArguments(assemblyPath, null, null, null, true, 1, Cursor: firstPayload.ContinuationToken),
+            CancellationToken.None);
+        var secondPayload = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(second);
+
+        Assert.NotEqual(firstPayload.Types[0].Id, secondPayload.Types[0].Id);
+        Assert.Equal(3, secondPayload.TotalCount);
+        Assert.Equal(1, secondPayload.ReturnedCount);
+        Assert.Equal("2", secondPayload.ContinuationToken);
     }
 
     [Fact]

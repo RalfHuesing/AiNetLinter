@@ -340,6 +340,13 @@ und nicht auflösbare Parametertypen im sichtbaren Partial-Scope beim Body-Match
 ohne .NET-Metadaten werden als typisierte, recoverable Diagnose mit Handlungshinweis
 beantwortet.
 
+`get_assembly_context` ist der Assembly-spezifische Composite-Einstieg für Agenten.
+Er bündelt die kompakte Assembly-Analyse und optional Metrics, Referenzen, Caller/Impact,
+Body und Klassenstruktur. `maxResponseBytes` bzw. `detailLevel` steuern das Budget;
+`cursor` setzt die Fortsetzung einer begrenzten Typ-/Extension-Auswahl fort. Jede
+Assembly-Payload weist additive `totalCount`, `returnedCount`, `isTruncated` und
+`continuationToken` sowie stabile Typ-/Member-IDs aus.
+
 Für Legacy-MCP wird der Server über `initialize` ausgehandelt. Clients der Protokollversion `2026-07-28` verwenden stattdessen `server/discover` ohne separaten `initialized`-Schritt. Dieser Request trägt unter `params._meta` die Protokollversion, Client-Info und Client-Capabilities; dieselben Metadaten gehören auch in nachfolgende Requests wie `tools/list`.
 
 ### MCP-Tool-Annotations
@@ -476,9 +483,10 @@ Auto-Discovery.
 Beginne bei physischer Discovery mit `get_file_tree`: Das read-only Tool liefert
 relative Pfade, Verzeichnis-/Extension-Aggregation und sichtbare
 Completeness-/Trunkierungsangaben auch für Dateien außerhalb des
-Roslyn-Solutionindexes. Für eine dekompilierte Assembly übernimmt der Agent die
-absoluten `decompiledSourceRoot`-Werte aus `inspect_assembly` als `targetPath`; die
-direkte Dateisystemroute benötigt dafür keinen registrierten Projekt-Key. `view=files`
+Roslyn-Solutionindexes. Für ein Assembly-Ziel verwendet der Agent den Source- oder
+dekompilierten SourceRoot der Assembly-Session; fehlt dieser, ist die Capability
+explizit unsupported. Die direkte Dateisystemroute benötigt für Projekt-Ziele
+weiterhin keinen registrierten Projekt-Key. `view=files`
 eignet sich als Folgeaufruf, wenn Pfade an `search_pattern` oder `get_file_skeleton`
 weitergegeben werden sollen. Ein valider Projekt-Target-Block genügt auch während
 eines laufenden oder fehlgeschlagenen Solution-Loads, weil die Enumeration unabhängig

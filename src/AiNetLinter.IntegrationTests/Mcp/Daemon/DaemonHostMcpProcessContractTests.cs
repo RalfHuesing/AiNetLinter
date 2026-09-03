@@ -81,6 +81,21 @@ public sealed class DaemonHostMcpProcessContractTests
                 "Assembly-Extensions:",
                 Assert.IsType<TextContentBlock>(Assert.Single(extensions.Content)).Text,
                 StringComparison.Ordinal);
+
+            var context = await client.CallToolAsync(
+                "get_assembly_context",
+                new Dictionary<string, object?>
+                {
+                    ["targetType"] = "assembly",
+                    ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                    ["maxResults"] = 1,
+                    ["includeMetrics"] = false,
+                },
+                cancellationToken: cancellation.Token);
+            Assert.NotEqual(true, context.IsError);
+            Assert.True(context.StructuredContent.HasValue);
+            Assert.Equal("assembly", context.StructuredContent!.Value.GetProperty("targetType").GetString());
+            Assert.True(context.StructuredContent.Value.TryGetProperty("analysis", out _));
         }
 
         var result = await daemon.WaitForExitAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(false);

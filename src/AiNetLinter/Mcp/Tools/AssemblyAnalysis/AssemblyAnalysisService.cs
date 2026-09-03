@@ -87,7 +87,7 @@ internal static class AssemblyAnalysisService
             .ThenBy(type => type.ToDisplayString(), StringComparer.Ordinal)
             .ToList();
 
-        var limited = types.Take(options.MaxResults).ToList();
+        var limited = types.Skip(Math.Max(0, options.Offset)).Take(options.MaxResults).ToList();
         var items = limited
             .Select(type => ToTypeDto(type, options))
             .ToList();
@@ -101,8 +101,8 @@ internal static class AssemblyAnalysisService
             items,
             namespaces,
             types.Count,
-            limited.Count < types.Count,
-            limited.Count < types.Count ? ["maxResults"] : []);
+            Math.Max(0, options.Offset) + limited.Count < types.Count,
+            Math.Max(0, options.Offset) + limited.Count < types.Count ? ["maxResults"] : []);
     }
 
     internal static AssemblyExtensionSelection FindExtensions(
@@ -121,13 +121,13 @@ internal static class AssemblyAnalysisService
             .ThenBy(pair => pair.Method.ToDisplayString(), StringComparer.Ordinal)
             .ToList();
 
-        var limited = extensions.Take(options.MaxResults).ToList();
+        var limited = extensions.Skip(Math.Max(0, options.Offset)).Take(options.MaxResults).ToList();
         var items = limited.Select(pair => ToExtensionDto(context, pair.Type, pair.Method)).ToList();
         return new AssemblyExtensionSelection(
             items,
             extensions.Count,
-            limited.Count < extensions.Count,
-            limited.Count < extensions.Count ? ["maxResults"] : []);
+            Math.Max(0, options.Offset) + limited.Count < extensions.Count,
+            Math.Max(0, options.Offset) + limited.Count < extensions.Count ? ["maxResults"] : []);
     }
 
     private static AssemblyExtensionDto ToExtensionDto(AssemblyContext context, INamedTypeSymbol declaringType, IMethodSymbol method)
@@ -200,7 +200,8 @@ internal static class AssemblyAnalysisService
             Attributes(type),
             matchingMembers.Count,
             members.Count < matchingMembers.Count,
-            members.Count < matchingMembers.Count ? ["maxMembers"] : []);
+            members.Count < matchingMembers.Count ? ["maxMembers"] : [],
+            StableId(type));
     }
 
     private static AssemblyMemberDto ToMemberDto(ISymbol member)
@@ -220,8 +221,13 @@ internal static class AssemblyAnalysisService
             parameters,
             method is null ? Array.Empty<string>() : GenericParameters(method),
             method is null ? Array.Empty<string>() : Constraints(method.TypeParameters),
-            Attributes(member));
+            Attributes(member),
+            StableId(member));
     }
+
+    private static string StableId(ISymbol symbol) =>
+        symbol.GetDocumentationCommentId()
+        ?? $"{symbol.Kind}:{symbol.ContainingType?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}.{symbol.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat)}";
 
     private static string MethodSignature(IMethodSymbol method)
     {
@@ -397,4 +403,5 @@ internal sealed record AssemblyContext(
     AssemblyOrigin Origin,
     long Generation,
     AssemblySessionStatus Status,
-    DecompiledProjectPaths? DecompiledProjectPaths = null);
+    DecompiledProjectPaths? DecompiledProjectPaths = null,
+    int ResponseBudgetBytes = AssemblyAnalysisResponseLimits.DefaultResponseBytes);

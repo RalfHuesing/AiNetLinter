@@ -20,6 +20,7 @@ public sealed class AssemblyAnalysisConfigurationLoaderTests
         Assert.True(result.Succeeded);
         Assert.Equal(Path.GetFullPath(Path.Combine(temp.DirectoryPath, "cache", "asm")), result.Options.CacheRoot);
         Assert.Equal(TimeSpan.FromSeconds(180), result.Options.DecompilationTimeout);
+        Assert.Equal(AssemblyAnalysisConfigurationOptions.DefaultResponseBudgetBytes, result.Options.ResponseBudgetBytes);
     }
 
     [Fact]
@@ -100,5 +101,36 @@ public sealed class AssemblyAnalysisConfigurationLoaderTests
 
         Assert.False(result.Succeeded);
         Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Location.Contains("Unexpected", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Load_LiestResponseBudgetUndBegrenztDenTechnischenMaximalwert()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-settings-budget-");
+        var settingsPath = temp.CreateFile(
+            "appsettings.json",
+            "{ \"AssemblyAnalysis\": { \"ResponseBudgetBytes\": 24576 } }");
+
+        var result = AssemblyAnalysisConfigurationLoader.Load(settingsPath);
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(24576, result.Options.ResponseBudgetBytes);
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("32769")]
+    [InlineData("1.5")]
+    public void Load_LehntUngueltigesResponseBudgetStrukturiertAb(string budget)
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-settings-budget-invalid-");
+        var settingsPath = temp.CreateFile(
+            "appsettings.json",
+            $$"""{ "AssemblyAnalysis": { "ResponseBudgetBytes": {{budget}} } }""");
+
+        var result = AssemblyAnalysisConfigurationLoader.Load(settingsPath);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Location.Contains("ResponseBudgetBytes", StringComparison.Ordinal));
     }
 }

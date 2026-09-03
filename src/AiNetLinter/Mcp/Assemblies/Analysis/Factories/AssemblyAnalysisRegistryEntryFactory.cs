@@ -125,6 +125,8 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                     FallbackReason = parameters.Fallback?.Reason,
                     SourceDiagnostics = parameters.Fallback?.Diagnostics,
                 },
+                ResponseBudgetBytes = decompilationConfiguration?.ResponseBudgetBytes
+                    ?? AssemblyAnalysisResponseLimits.DefaultResponseBytes,
             };
             var fallbackEntry = AssemblyAnalysisEntryFactory.Create(new AssemblyAnalysisEntryCreateParameters(
                 parameters.CanonicalPath,
@@ -190,6 +192,8 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                     .Distinct(StringComparer.Ordinal)
                     .Take(100)
                     .ToList(),
+                ResponseBudgetBytes = decompilationConfiguration?.ResponseBudgetBytes
+                    ?? AssemblyAnalysisResponseLimits.DefaultResponseBytes,
             };
             var entry = AssemblyAnalysisEntryFactory.Create(new AssemblyAnalysisEntryCreateParameters(
                 canonicalPath,

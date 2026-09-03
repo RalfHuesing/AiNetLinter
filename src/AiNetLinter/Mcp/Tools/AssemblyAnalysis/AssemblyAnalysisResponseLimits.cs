@@ -16,7 +16,23 @@ internal static partial class AssemblyAnalysisResponseLimits
     internal const int MaxReferences = 32;
     internal const int MaxReferenceSessions = 32;
     internal const int MaxSessionDiagnostics = 3;
+    internal const int DefaultResponseBytes = 16 * 1024;
     internal const int MaxResponseBytes = 32 * 1024;
+
+    internal static int NormalizeResponseBudget(int requested) =>
+        requested <= 0 ? DefaultResponseBytes : Math.Clamp(requested, 1, MaxResponseBytes);
+
+    internal static int ResolveResponseBudget(int requested, string? detailLevel, int configuredDefault = DefaultResponseBytes)
+    {
+        if (requested > 0) return NormalizeResponseBudget(requested);
+        var standard = Math.Clamp(configuredDefault, 1, MaxResponseBytes);
+        return detailLevel?.Trim().ToLowerInvariant() switch
+        {
+            "compact" => Math.Min(DefaultResponseBytes, standard),
+            "full" => MaxResponseBytes,
+            _ => standard,
+        };
+    }
 
     internal static int NormalizeDiagnosticLimit(int requested) =>
         requested <= 0 ? DefaultMaxDiagnostics : Math.Clamp(requested, 1, MaxDiagnostics);

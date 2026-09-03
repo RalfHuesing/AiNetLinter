@@ -14,15 +14,19 @@ internal sealed record AssemblyAnalysisConfigurationOptions
     internal const string SectionName = "AssemblyAnalysis";
     internal const string CacheRootName = "CacheRoot";
     internal const string DecompilationTimeoutSecondsName = "DecompilationTimeoutSeconds";
+    internal const string ResponseBudgetBytesName = "ResponseBudgetBytes";
     internal const string DefaultCacheDirectoryName = "cache";
     internal const string DefaultAssemblyCacheDirectoryName = "asm";
     internal const long DefaultDecompilationTimeoutSeconds = 180;
+    internal const int DefaultResponseBudgetBytes = 16 * 1024;
+    internal const int MaxResponseBudgetBytes = 32 * 1024;
     internal static readonly long MaxDecompilationTimeoutSeconds =
         AssemblyDecompilationOptions.MaxCancelAfterMilliseconds / 1000;
 
     internal AssemblyAnalysisConfigurationOptions(
         string cacheRoot,
-        TimeSpan decompilationTimeout)
+        TimeSpan decompilationTimeout,
+        int responseBudgetBytes = DefaultResponseBudgetBytes)
     {
         CacheRoot = ExternalSourceConfigurationPath.TryCanonicalizeAbsoluteRoot(cacheRoot)
             ?? throw new ArgumentException("Die Assembly-Cache-Wurzel muss ein gültiger absoluter Pfad sein.", nameof(cacheRoot));
@@ -32,16 +36,25 @@ internal sealed record AssemblyAnalysisConfigurationOptions
         }
 
         DecompilationTimeout = decompilationTimeout;
+        if (responseBudgetBytes is < 1 or > MaxResponseBudgetBytes)
+        {
+            throw new ArgumentOutOfRangeException(nameof(responseBudgetBytes));
+        }
+
+        ResponseBudgetBytes = responseBudgetBytes;
     }
 
     internal string CacheRoot { get; }
 
     internal TimeSpan DecompilationTimeout { get; }
 
+    internal int ResponseBudgetBytes { get; }
+
     internal static AssemblyAnalysisConfigurationOptions Default(string? settingsPath = null) =>
         new(
             ResolveDefaultCacheRoot(settingsPath),
-            TimeSpan.FromSeconds(DefaultDecompilationTimeoutSeconds));
+            TimeSpan.FromSeconds(DefaultDecompilationTimeoutSeconds),
+            DefaultResponseBudgetBytes);
 
     private static string ResolveDefaultCacheRoot(string? settingsPath)
     {
@@ -136,7 +149,14 @@ internal static class AssemblyAnalysisConfigurationLoader
             return Failure(settingsPath, "$.AssemblyAnalysis.DecompilationTimeoutSeconds", "'AssemblyAnalysis:DecompilationTimeoutSeconds' muss eine positive ganze Zahl sein.");
         }
 
-        return Success(new AssemblyAnalysisConfigurationOptions(cacheRoot, timeout));
+        var responseBudgetBytes = defaults.ResponseBudgetBytes;
+        if (section.TryGetProperty(AssemblyAnalysisConfigurationOptions.ResponseBudgetBytesName, out var responseBudgetElement)
+            && !TryReadResponseBudget(responseBudgetElement, out responseBudgetBytes))
+        {
+            return Failure(settingsPath, "$.AssemblyAnalysis.ResponseBudgetBytes", $"'AssemblyAnalysis:ResponseBudgetBytes' muss eine ganze Zahl zwischen 1 und {AssemblyAnalysisConfigurationOptions.MaxResponseBudgetBytes} sein.");
+        }
+
+        return Success(new AssemblyAnalysisConfigurationOptions(cacheRoot, timeout, responseBudgetBytes));
     }
 
     private static string? FindPropertyIssue(IReadOnlyList<JsonProperty> properties)
@@ -148,9 +168,19 @@ internal static class AssemblyAnalysisConfigurationLoader
 
         return properties
             .Where(property => property.Name is not AssemblyAnalysisConfigurationOptions.CacheRootName
-                and not AssemblyAnalysisConfigurationOptions.DecompilationTimeoutSecondsName)
+                and not AssemblyAnalysisConfigurationOptions.DecompilationTimeoutSecondsName
+                and not AssemblyAnalysisConfigurationOptions.ResponseBudgetBytesName)
             .Select(property => property.Name)
             .FirstOrDefault();
+    }
+
+    private static bool TryReadResponseBudget(JsonElement element, out int bytes)
+    {
+        bytes = 0;
+        return element.ValueKind is JsonValueKind.Number
+            && element.GetRawText().IndexOfAny(['.', 'e', 'E']) < 0
+            && element.TryGetInt32(out bytes)
+            && bytes is >= 1 and <= AssemblyAnalysisConfigurationOptions.MaxResponseBudgetBytes;
     }
 
     private static bool TryReadTimeout(JsonElement element, out TimeSpan timeout)

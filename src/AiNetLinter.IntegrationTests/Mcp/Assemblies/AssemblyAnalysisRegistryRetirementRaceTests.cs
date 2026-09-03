@@ -11,6 +11,7 @@ namespace AiNetLinter.IntegrationTests.Mcp.Assemblies;
 
 [Trait("Category", "Integration")]
 // @covers AssemblyAnalysisRegistry
+// @covers AssemblyAnalysisRegistryEntryFactory
 // @covers AssemblyAnalysisEntry
 // @covers AssemblyAnalysisRegistryEvictionCoordinator
 // @covers AssemblyAnalysisSourceProjectLeaseCoordinator

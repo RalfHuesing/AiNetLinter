@@ -16,7 +16,7 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
 internal static class AssemblyAnalysisResponse
 {
-    internal static bool FitsResponseBudget(CallToolResult result, AssemblyAnalysisLease lease)
+    internal static bool FitsResponseBudget(CallToolResult result, AssemblyAnalysisLease lease, int responseBudgetBytes = 0)
     {
         var enriched = Enrich(result, lease);
         var textBytes = enriched.Content
@@ -25,8 +25,11 @@ internal static class AssemblyAnalysisResponse
         var structuredBytes = enriched.StructuredContent is { } structured
             ? Encoding.UTF8.GetByteCount(structured.GetRawText())
             : 0;
-        return textBytes <= AssemblyAnalysisResponseLimits.MaxResponseBytes
-            && structuredBytes <= AssemblyAnalysisResponseLimits.MaxResponseBytes;
+        var budget = AssemblyAnalysisResponseLimits.ResolveResponseBudget(
+            responseBudgetBytes,
+            null,
+            lease.Context.ResponseBudgetBytes);
+        return textBytes <= budget && structuredBytes <= budget;
     }
 
     internal static CallToolResult Enrich(CallToolResult result, AssemblyAnalysisLease lease)

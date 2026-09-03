@@ -26,6 +26,7 @@ internal static class AssemblyAnalysisToolRegistrations
     {
         AddInspectAssembly(tools, assemblyRoute);
         AddFindAssemblyExtensions(tools, assemblyRoute);
+        AddGetAssemblyContext(tools, assemblyRoute);
     }
 
     private static void AddInspectAssembly(
@@ -45,6 +46,9 @@ internal static class AssemblyAnalysisToolRegistrations
                 string[]? memberNames = null,
                 int maxMembers = AssemblyAnalysisService.DefaultMaxMembers,
                 bool includeReferences = false,
+                int maxResponseBytes = 0,
+                string? detailLevel = null,
+                string? cursor = null,
                 CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
@@ -63,7 +67,10 @@ internal static class AssemblyAnalysisToolRegistrations
                                     exactTypeName,
                                     memberNames,
                                     maxMembers,
-                                    includeReferences)),
+                                    includeReferences,
+                                    maxResponseBytes,
+                                    detailLevel,
+                                    cursor)),
                             ExpandAssemblyReferences: includeReferences),
                         ct)),
             McpToolRegistrationOptions.AssemblyTool("inspect_assembly", InspectAssemblyDescription)));
@@ -101,6 +108,9 @@ internal static class AssemblyAnalysisToolRegistrations
                 string? @namespace = null,
                 int maxResults = AssemblyAnalysisService.DefaultMaxResults,
                 bool includeReferences = false,
+                int maxResponseBytes = 0,
+                string? detailLevel = null,
+                string? cursor = null,
                 CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
@@ -115,7 +125,10 @@ internal static class AssemblyAnalysisToolRegistrations
                                     extensionName,
                                     @namespace,
                                     maxResults,
-                                    includeReferences)),
+                                    includeReferences,
+                                    maxResponseBytes,
+                                    detailLevel,
+                                    cursor)),
                             ExpandAssemblyReferences: includeReferences),
                         ct)),
             McpToolRegistrationOptions.AssemblyTool("find_assembly_extensions", FindAssemblyExtensionsDescription)));
@@ -137,4 +150,68 @@ internal static class AssemblyAnalysisToolRegistrations
         "applicable, not_applicable und not_decidable und markiert fehlende Abhaengigkeiten " +
         "mit completeness partial. Methoden liefern zusaetzlich strukturierte Parameterdaten. " +
         "Die Assembly wird weder geladen noch ausgefuehrt.";
+
+    private static void AddGetAssemblyContext(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        AnalysisToolRoute assemblyRoute)
+    {
+        tools.Add(McpServerTool.Create(
+            async (
+                string targetPath,
+                string? targetType = null,
+                string? symbolIdentifier = null,
+                string? symbol = null,
+                bool includeMetrics = true,
+                bool includeReferences = false,
+                bool includeCallers = false,
+                bool includeImpact = false,
+                bool includeBody = false,
+                bool includeClassStructure = false,
+                int maxResults = AssemblyAnalysisService.DefaultMaxResults,
+                int maxBodyLines = GetSymbolBodyTool.DefaultMaxBodyLines,
+                int maxCallers = 10,
+                int depth = 1,
+                int topN = 10,
+                int maxResponseBytes = 0,
+                string? detailLevel = null,
+                string? cursor = null,
+                CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteRouted(
+                    assemblyRoute,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(ResolveTargetType(targetType, targetPath), targetPath),
+                        new AnalysisToolDispatch(
+                            AssemblySessionCall: lease => AssemblyAnalysisContextTool.ExecuteAsync(
+                                lease,
+                                new AssemblyAnalysisContextArguments(
+                                    symbolIdentifier ?? symbol,
+                                    includeMetrics,
+                                    includeReferences,
+                                    includeCallers,
+                                    includeImpact,
+                                    includeBody,
+                                    includeClassStructure,
+                                    maxResults,
+                                    maxBodyLines,
+                                    maxCallers,
+                                    depth,
+                                    topN,
+                                    maxResponseBytes,
+                                    detailLevel,
+                                    cursor),
+                                ct),
+                            ExpandAssemblyReferences: includeReferences || includeCallers || includeImpact),
+                        ct)),
+            McpToolRegistrationOptions.AssemblyTool("get_assembly_context", GetAssemblyContextDescription)));
+    }
+
+    private const string GetAssemblyContextDescription =
+        "Wann nutzen: kompakter Assembly-spezifischer Composite-Einstieg fuer Agenten. " +
+        "Liefert Identitaet, Scope, Vollstaendigkeit und auf Wunsch Metriken, Referenzen, " +
+        "Caller/Impact, Body und Klassenstruktur in einer strukturierten Antwort. " +
+        "targetType='assembly' und targetPath sind ein absoluter .dll- oder .exe-Pfad; targetType ist optional und wird inferiert; symbolIdentifier ist optional und " +
+        "akzeptiert DocCommentId, Typname oder Datei:Zeile:Spalte. symbol ist ein Alias. " +
+        "maxResponseBytes, detailLevel (compact/standard/full) und cursor steuern Budget und Paging; " +
+        "unsupported/partial/complete sowie totalCount, returnedCount, isTruncated und continuationToken " +
+        "bleiben maschinenlesbar sichtbar. Die Assembly wird weder geladen noch ausgefuehrt.";
 }
