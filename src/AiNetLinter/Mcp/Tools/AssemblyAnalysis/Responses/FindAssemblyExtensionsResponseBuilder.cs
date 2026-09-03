@@ -63,14 +63,24 @@ internal static class FindAssemblyExtensionsResponseBuilder
         FindAssemblyExtensionsPayload payload,
         FindAssemblyExtensionsBuildRequest request)
     {
+        if (request.Lease is not null
+            && (request.Arguments.MaxResponseBytes > 0 || request.Arguments.DetailLevel is not null))
+        {
+            return payload;
+        }
+
         var budget = AssemblyAnalysisResponseLimits.ResolveResponseBudget(
             request.Arguments.MaxResponseBytes,
             request.Arguments.DetailLevel,
             request.Lease?.Context.ResponseBudgetBytes ?? AssemblyAnalysisResponseLimits.DefaultResponseBytes);
         return AssemblyAnalysisResponseLimits.ProjectResponseBudget(
             payload,
-            request.Lease is null ? null : candidate => AssemblyAnalysisResponse.FitsResponseBudget(
-                McpToolResults.Text(FormatText(candidate), candidate), request.Lease, budget),
+            request.Lease is null
+                ? null
+                : candidate => AssemblyAnalysisResponse.FitsResponseBudget(
+                    McpToolResults.Text(FormatText(candidate), candidate),
+                    request.Lease,
+                    budget),
             options: new(budget, AssemblyPaging.ReadOffset(request.Arguments.Cursor)));
     }
 

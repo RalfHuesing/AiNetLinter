@@ -71,7 +71,10 @@ internal static class AssemblyAnalysisToolRegistrations
                                     maxResponseBytes,
                                     detailLevel,
                                     cursor)),
-                            ExpandAssemblyReferences: includeReferences),
+                            ExpandAssemblyReferences: includeReferences,
+                            MaxResponseBytes: maxResponseBytes,
+                            DetailLevel: detailLevel,
+                            Cursor: cursor),
                         ct)),
             McpToolRegistrationOptions.AssemblyTool("inspect_assembly", InspectAssemblyDescription)));
     }
@@ -129,7 +132,10 @@ internal static class AssemblyAnalysisToolRegistrations
                                     maxResponseBytes,
                                     detailLevel,
                                     cursor)),
-                            ExpandAssemblyReferences: includeReferences),
+                            ExpandAssemblyReferences: includeReferences,
+                            MaxResponseBytes: maxResponseBytes,
+                            DetailLevel: detailLevel,
+                            Cursor: cursor),
                         ct)),
             McpToolRegistrationOptions.AssemblyTool("find_assembly_extensions", FindAssemblyExtensionsDescription)));
     }
@@ -200,7 +206,10 @@ internal static class AssemblyAnalysisToolRegistrations
                                     detailLevel,
                                     cursor),
                                 ct),
-                            ExpandAssemblyReferences: includeReferences || includeCallers || includeImpact),
+                            ExpandAssemblyReferences: includeReferences || includeCallers || includeImpact,
+                            MaxResponseBytes: maxResponseBytes,
+                            DetailLevel: detailLevel,
+                            Cursor: cursor),
                         ct)),
             McpToolRegistrationOptions.AssemblyTool("get_assembly_context", GetAssemblyContextDescription)));
     }

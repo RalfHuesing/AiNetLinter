@@ -100,6 +100,12 @@ internal static class InspectAssemblyResponseBuilder
         InspectAssemblyArguments arguments,
         AssemblyAnalysisLease? lease)
     {
+        if (lease is not null
+            && (arguments.MaxResponseBytes > 0 || arguments.DetailLevel is not null))
+        {
+            return payload;
+        }
+
         var budget = AssemblyAnalysisResponseLimits.ResolveResponseBudget(
             arguments.MaxResponseBytes,
             arguments.DetailLevel,

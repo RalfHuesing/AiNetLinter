@@ -27,7 +27,7 @@ Implementierer Korrekturrunde 1 meldet alle fünf als behoben; Disposition bleib
 - Evidenz: Reviewer reproduziert übersprungene oder unerreichbare Ergebnisse bei kleinem `maxResponseBytes`.
 - Disposition: fix-now (aktive Korrekturrunde)
 - Nächster Schritt: Rückgabeoffset, Counts, Truncation und Continuation-Token nach der finalen Projektion gemeinsam ableiten; Regressionstest ergänzen.
-- Attempts: 1
+- Attempts: 2
 - Log-Anker: `execution-log.md`, Run 2026-09-03 / Epic 1 / Reviewer – Abschluss, Signatur `BudgetProjection/Envelope`.
 
 ### P1 – AssemblyWireBudget/Coverage
@@ -38,7 +38,7 @@ Implementierer Korrekturrunde 1 meldet alle fünf als behoben; Disposition bleib
 - Evidenz: Reviewer weist getrennte Messung und redundante umfangreiche Textdaten nach.
 - Disposition: fix-now (aktive Korrekturrunde)
 - Nächster Schritt: zentralen, rückwärtskompatiblen Budgetpfad oder kurze Textzusammenfassung mit Structured als kanonischer Nutzlast umsetzen und messen.
-- Attempts: 1
+- Attempts: 2
 - Log-Anker: `execution-log.md`, Run 2026-09-03 / Epic 1 / Reviewer – Abschluss, Signatur `AssemblyWireBudget/Coverage`.
 
 ### P1 – CompositeBudget/Enrichment
@@ -49,7 +49,7 @@ Implementierer Korrekturrunde 1 meldet alle fünf als behoben; Disposition bleib
 - Evidenz: Reviewer beschreibt erneutes Überschreiten durch spätere Metadaten und transparente Sektionsverluste bei kleinem Budget.
 - Disposition: fix-now (aktive Korrekturrunde)
 - Nächster Schritt: finalen Envelope vor dem gemeinsamen Trim erzeugen und jeden optionalen Abschnitt mit Status/Truncation/Detailhinweis versehen; Regressionstest ergänzen.
-- Attempts: 1
+- Attempts: 2
 - Log-Anker: `execution-log.md`, Run 2026-09-03 / Epic 1 / Reviewer – Abschluss, Signatur `CompositeBudget/Enrichment`.
 
 ### P1 – CompositeTraversal/TopN
@@ -75,3 +75,5 @@ Implementierer Korrekturrunde 1 meldet alle fünf als behoben; Disposition bleib
 - Log-Anker: `execution-log.md`, Run 2026-09-03 / Epic 1 / Folge-Reviewer 1 – Abschluss, Signatur `AssemblyProvenance/BodyMode`.
 
 Folge-Reviewer 1 bestätigt `BudgetProjection/Envelope`, `AssemblyWireBudget/Coverage` und `CompositeBudget/Enrichment` weiterhin als P1 offen; `CompositeTraversal/TopN` und `AssemblyProvenance/BodyMode` sind `fixed`. Die drei offenen Einträge bleiben für Korrekturrunde 2 mit Attempts 1 aktiv.
+
+Korrektur-Implementierer 2 meldet die drei offenen Ursachen behoben; Disposition bleibt bis zum Folge-Review 2 `fix-now`. Attempts werden auf 2 fortgeschrieben.

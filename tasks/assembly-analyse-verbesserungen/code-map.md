@@ -10,9 +10,12 @@
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisModels.cs`: `InspectAssemblyPayload`, `FindAssemblyExtensionsPayload`, Paging-Envelope und stabile Assembly-Signatur-/Member-IDs.
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.Budget.cs`: trimmt Inspect-/Extension-Projektionen und rekonstruiert Paging-/Count-/Truncation-Felder aus der tatsächlich zurückgegebenen Projektion und dem Caller-Offset.
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/Responses/*ResponseBuilder.cs`: übergibt den gelesenen Cursor-Offset an die Budgetprojektion, damit Folgecursor keine Ergebnisse überspringen.
-- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextTool.cs`: wendet `topN` auf Caller-/Impact-Auswahl an und markiert bei Composite-Trim optionale Sektionen mit Status, Truncation und Detail-/Paging-Hinweis.
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextTool.cs`: wendet `topN` auf Caller-/Impact-Auswahl an und übergibt den Composite-Envelope vor dem Dispatcher-Enrichment an denselben gemeinsamen Wire-Trim; optionale Sektionen erhalten bei Entfernung Status, Truncation und Detail-/Paging-Hinweis.
 - `src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs`, `SourceSymbolBodyResolver.cs`, `Assemblies/Analysis/Bodies/IAssemblyBodyContext.cs`, `Assemblies/Analysis/References/AssemblyAnalysisLease.cs`: leiten Body-Provenienz aus dem tatsächlichen Assembly-Lease-Kontext ab.
-- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs`: misst und trimmt Text plus Structured gemeinsam über einen tatsächlichen Wire-Budget-Vertrag und hält `wireBudget`-/Legacy-Metadaten kompatibel.
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs`: letzter zentraler Wire-Trim für alle Assembly-Routen; misst Text plus Structured gemeinsam, rekonstruiert Listen-Envelope/Continuation aus der tatsächlichen Nutzlast und bewahrt Composite-Sektionsstatus.
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponseEnvelope.cs`, `AssemblyAnalysisResponseRequest.cs`: kapseln Envelope-Rekonstruktion sowie die aufrufsspezifischen Budget-/Detail-/Cursor-Optionen.
+- `src/AiNetLinter/Mcp/AnalysisTarget.cs`, `AnalysisToolCall.cs`: tragen `maxResponseBytes`, `detailLevel` und `cursor` vom Aufruf bis zum finalen Assembly-Enricher weiter.
+- `src/AiNetLinter/Mcp/AssemblyAnalysisExecutionOptions.cs`: bündelt Dispatcher-Optionen einschließlich CancellationToken und verhindert Parameterdrift.
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/ResponseBudgetOptions.cs`: interne, sichtbare Projektionsträgerstruktur für Response-Budget und Cursor-Offset.
 - `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindSymbolTool.cs`, `AssemblyFindReferencesTool.cs`, `AssemblySymbolResolver.cs`, `AssemblyReferenceNavigator.cs`, `TransitiveCallGraphModels.cs` sowie `src/AiNetLinter/Mcp/Tools/CallTree/AssemblyGetCallTreeTool.cs`: Assembly-Symbolauflösung, Navigation, Scope-/Truncation-Metadaten.
 - `src/AiNetLinter/Mcp/Tools/FileStructure/GetFileTree*.cs` und `AssemblyGetFileTreeTool.cs`: physischer Dateibaum für Projekte sowie den Source-/Decompiler-Root einer Assembly-Session.
@@ -30,7 +33,7 @@
 - Konzept-Vertrag: `tasks/assembly-analyse-verbesserungen/Konzept.md`.
 - Abschluss-Gates: `src/AiNetLinter.FastTests`, `src/AiNetLinter.IntegrationTests`, `dotnet build`.
 - `Docs/agent-api.md`, `Docs/integration.md`, `Docs/configuration.md` sind die maßgeblichen MCP-/Konfigurationsverträge; nur unmittelbar geänderte Assembly-Verträge aktualisieren.
-- Regressionen: `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/`, `src/AiNetLinter.IntegrationTests/Mcp/Assemblies/` und `src/AiNetLinter.IntegrationTests/Mcp/Tools/McpServerAssemblyHealthE2ETests.cs`.
+- Regressionen: `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/`, `src/AiNetLinter.IntegrationTests/Mcp/Assemblies/` und `src/AiNetLinter.IntegrationTests/Mcp/Tools/McpServerAssemblyHealthE2ETests.cs`; `AssemblyAnalysisDispatcherCapabilityTests.ResponseBudget.cs` enthält den finalen 4096-Byte-Wire-/Cursor- und Composite-Envelope-Nachweis, die Fixture liegt wegen der Längenregel in `AssemblyAnalysisDispatcherCapabilityTests.Fixture.cs`.
 
 ## Invarianten, Risiken und Unsicherheiten
 
@@ -43,4 +46,4 @@
 ## Verifikation
 
 - MCP-first: `get_file_tree(summary)`, `get_index_scope`, `find_symbol` und `get_feature_context` für Factory, Response-Limits, Registrierungen und Navigation ausgeführt; Root-Tree war wegen `maxDepth` absichtlich gekürzt.
-- Fast-Regressionen decken Budget-Konfiguration, stabile IDs, Cursor-Paging und strukturierte Bodies ab. Neue gezielte Regressionen prüfen Paging nach Trim; kombiniertes Text-/Structured-Wire-Budget; Composite-Sektionsstatus; `topN`; und Body-Provenienz. Die abschließenden Audit- und Testnachweise werden im terminalen Bericht dieses Korrekturlaufs geführt.
+- Fast-Regressionen decken Budget-Konfiguration, stabile IDs, Cursor-Paging und strukturierte Bodies ab. Die Dispatcher-Regressionen prüfen nach dem finalen Trim tatsächliche Counts/Continuation bei 4096 Byte, Aufrufbudget gegenüber Lease-Default, kombiniertes Text-/Structured-Wire-Budget sowie Composite-Sektionsstatus; `topN` und Body-Provenienz bleiben regressionsgesichert. Die abschließenden Audit- und Testnachweise werden im terminalen Bericht dieses Korrekturlaufs geführt.

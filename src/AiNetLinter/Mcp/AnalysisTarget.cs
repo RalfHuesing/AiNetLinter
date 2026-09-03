@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
@@ -32,4 +33,14 @@ internal sealed record AnalysisToolDispatch(
     Func<ProjectLease, Task<CallToolResult>>? ProjectCall = null,
     Func<string, Task<CallToolResult>>? AssemblyCall = null,
     Func<AssemblyAnalysisLease, Task<CallToolResult>>? AssemblySessionCall = null,
-    bool ExpandAssemblyReferences = false);
+    bool ExpandAssemblyReferences = false,
+    int MaxResponseBytes = 0,
+    string? DetailLevel = null,
+    string? Cursor = null);
+
+internal sealed record AssemblyAnalysisExecutionOptions(
+    bool ExpandAssemblyReferences = false,
+    CancellationToken CancellationToken = default,
+    int MaxResponseBytes = 0,
+    string? DetailLevel = null,
+    string? Cursor = null);

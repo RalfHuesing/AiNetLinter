@@ -45,6 +45,37 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
     }
 
     [Fact]
+    public async Task AssemblyRoute_FinalWireTrimRecalculatesCountsAndCursorAt4096Bytes()
+    {
+        using var temp = TestTempDirectory.Create("assembly-dispatcher-final-wire-budget-");
+        var types = Enumerable.Range(0, 180)
+            .Select(index => $"public sealed class Page{index:D3} {{ public string Value{index:D3} => \"value\"; public void Reset{index:D3}(string input) {{ }} }}");
+        await using var fixture = await SyntheticAssemblyFixture.CreateAsync(
+            temp,
+            [],
+            sourceCode: $"namespace Probe.Budget; {string.Join(Environment.NewLine, types)}");
+
+        var first = Structured(await fixture.ExecuteInspectAsync(maxResponseBytes: 4096));
+        var firstTypes = first.GetProperty("types").EnumerateArray().ToArray();
+        var firstCount = first.GetProperty("returnedCount").GetInt32();
+        var firstToken = first.GetProperty("continuationToken").GetString();
+
+        Assert.NotEmpty(firstTypes);
+        Assert.Equal(firstTypes.Length, firstCount);
+        Assert.True(first.GetProperty("totalCount").GetInt32() > firstCount);
+        Assert.Equal(firstCount.ToString(), firstToken);
+
+        var second = Structured(await fixture.ExecuteInspectAsync(
+            maxResponseBytes: 4096,
+            cursor: firstToken));
+
+        Assert.NotEmpty(second.GetProperty("types").EnumerateArray());
+        Assert.DoesNotContain(
+            second.GetProperty("types").EnumerateArray().Select(type => type.GetProperty("id").GetString()),
+            id => firstTypes.Any(type => type.GetProperty("id").GetString() == id));
+    }
+
+    [Fact]
     public async Task AssemblyContext_BudgetKeepsSectionStatusAndDetailHint()
     {
         using var temp = TestTempDirectory.Create("assembly-context-section-budget-");
@@ -71,10 +102,18 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
                 MaxResponseBytes: 4096,
                 DetailLevel: null,
                 Cursor: null),
-            CancellationToken.None));
+            CancellationToken.None),
+            maxResponseBytes: 4096);
 
         var payload = Structured(result);
         var section = payload.GetProperty("body");
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        var textBytes = Encoding.UTF8.GetByteCount(text);
+        var structuredBytes = JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length;
+
+        Assert.True(textBytes + structuredBytes <= 4096);
+        Assert.Equal(4096, payload.GetProperty("wireBudget").GetProperty("limitBytes").GetInt32());
+        Assert.Equal(textBytes + structuredBytes, payload.GetProperty("wireBudget").GetProperty("totalBytes").GetInt32());
         Assert.Equal("truncated", section.GetProperty("status").GetString());
         Assert.True(section.GetProperty("truncated").GetBoolean());
         Assert.Contains("maxResponseBytes", section.GetProperty("detailHint").GetString(), StringComparison.Ordinal);

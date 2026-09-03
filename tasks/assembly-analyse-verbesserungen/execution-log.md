@@ -69,6 +69,23 @@
 - Subagent: `01a06927-9465-7f33-8b43-3796c9858c9d` (Ptolemy)
 - Auftrag: tatsächlichen Korrekturdiff, fünf Ursachensignaturen, Regressionen, Code-Map und frische Verifikationsnachweise prüfen; kein Produktionscode und kein Commit.
 
+## Run 2026-09-03 / Epic 1 / Korrektur-Implementierer 2
+
+- Status: running
+- Diff-Baseline: `e8cbcfe9` (Folge-Review-Checkpoint)
+- Scope: drei verbleibende P1-Ursachensignaturen `BudgetProjection/Envelope`, `AssemblyWireBudget/Coverage` und `CompositeBudget/Enrichment`
+- Subagent: `01a06934-b41d-7f03-9df2-bf908274cbd4` (Boyle)
+- Auftrag: finalen Wire-Trim, effektive Budgetweitergabe und finalen Composite-Envelope korrigieren; Regressionen ergänzen und Verifikation nach der letzten Codeänderung liefern.
+
+## Run 2026-09-04 / Epic 1 / Korrektur-Implementierer 2 – Abschluss
+
+- Status: completed; Korrekturbericht terminal eingegangen.
+- Urteil: Implementierer meldet die drei verbleibenden P1-Ursachensignaturen behoben; Folge-Review erforderlich.
+- Bericht: Finaler Wire-Trim misst Text und Structured gemeinsam und rekonstruiert Counts, Truncation sowie Cursor aus der tatsächlichen Nutzlast; `maxResponseBytes`, `detailLevel` und `cursor` werden bis zum zentralen Enricher weitergereicht; `get_assembly_context` budgetiert den Composite-Envelope inklusive Enrichment, entfernte Sektionen behalten Status, Truncation und Detail-/Paging-Hinweis; Parameterobjekte und Dateiauslagerungen beseitigen neue Struktur-/Komplexitätsverstöße; `topN` und Body-Provenienz bleiben erhalten; `code-map.md` aktualisiert.
+- Verifikation jeweils nach der letzten Codeänderung: Dispatcher-Regressionen 16/16; Assembly-/Body-FastTests 33/33; `dotnet build` 0 Warnungen/0 Fehler; FastTests vollständig `Category!=Stress`: 2.423 erfolgreich, 2 übersprungen; `find_duplicates` 9 bestehende Cluster ohne neue sichere Korrektur; `find_dead_code` 39 LOW-/0 HIGH-Heuristiken; `find_magic_values` 4 bestehende Buffer-Konstanten; letzter `get_violations` mit `targetType=project`, absolutem `targetPath`, Scope `src/AiNetLinter/Mcp`: 0 Verstöße.
+- Offenes Risiko: Vollständiger Integration-Lauf hatte einen externen Live-Safeguard-Fehler (Score 0); ein früherer CLI-Lintfehler durch Patch-Struktur wurde behoben. Vorhandene Änderung an `execution-log.md` blieb laut Bericht unangetastet.
+- Nächste Aktion: Checkpoint-Commit, danach frischer Folge-Review 2.
+
 ## Run 2026-09-03 / Epic 1 / Folge-Reviewer 1 – Abschluss
 
 - Status: completed; Folge-Reviewerbericht terminal eingegangen.

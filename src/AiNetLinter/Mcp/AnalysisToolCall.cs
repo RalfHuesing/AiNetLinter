@@ -140,8 +140,12 @@ internal static class AssemblyAnalysisDispatcher
                 assemblyRegistry,
                 request.Target,
                 request.Dispatch.AssemblySessionCall,
-                request.Dispatch.ExpandAssemblyReferences,
-                request.CancellationToken);
+                new AssemblyAnalysisExecutionOptions(
+                    request.Dispatch.ExpandAssemblyReferences,
+                    request.CancellationToken,
+                    request.Dispatch.MaxResponseBytes,
+                    request.Dispatch.DetailLevel,
+                    request.Dispatch.Cursor));
 
     private static Task<CallToolResult> UnsupportedRouteAsync(AnalysisToolCallRequest request)
     {
@@ -161,8 +165,7 @@ internal static class AssemblyAnalysisDispatcher
         IAssemblyAnalysisRegistry? assemblyRegistry,
         AnalysisTargetRequest request,
         Func<AssemblyAnalysisLease, Task<CallToolResult>> assemblyCall,
-        bool expandAssemblyReferences = false,
-        CancellationToken cancellationToken = default)
+        AssemblyAnalysisExecutionOptions options)
     {
         var resolution = AnalysisTargetResolver.Resolve(request);
         if (resolution.Error is not null)
@@ -181,7 +184,7 @@ internal static class AssemblyAnalysisDispatcher
             return UnsupportedAssemblyTarget(target.CanonicalPath);
         }
 
-        var leaseResult = await assemblyRegistry.LeaseAsync(target.CanonicalPath, cancellationToken).ConfigureAwait(false);
+        var leaseResult = await assemblyRegistry.LeaseAsync(target.CanonicalPath, options.CancellationToken).ConfigureAwait(false);
         if (leaseResult.Error is not null)
         {
             return leaseResult.Error;
@@ -190,13 +193,19 @@ internal static class AssemblyAnalysisDispatcher
         var lease = leaseResult.Lease!;
         try
         {
-            if (expandAssemblyReferences)
+            if (options.ExpandAssemblyReferences)
             {
-                await lease.ExpandReferencesAsync(cancellationToken).ConfigureAwait(false);
+                await lease.ExpandReferencesAsync(options.CancellationToken).ConfigureAwait(false);
             }
 
             var result = await assemblyCall(lease).ConfigureAwait(false);
-            return AssemblyAnalysisResponse.Enrich(result, lease);
+            return AssemblyAnalysisResponse.Enrich(
+                result,
+                lease,
+                new AssemblyAnalysisResponseRequest(
+                    options.MaxResponseBytes,
+                    options.DetailLevel,
+                    options.Cursor));
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

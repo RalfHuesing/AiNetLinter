@@ -50,8 +50,10 @@ internal static class AssemblyAnalysisContextTool
             await AddAssemblyAnalysisAsync(root, lease, arguments, budget).ConfigureAwait(false);
             await AddSymbolSectionsAsync(root, lease, arguments, cancellationToken).ConfigureAwait(false);
             AddEnvelope(root);
-            TrimToBudget(root, budget);
-            return McpToolResults.Text(RenderText(root), root);
+            return AssemblyAnalysisResponse.ApplyWireBudget(
+                McpToolResults.Text(RenderText(root), root),
+                budget,
+                AssemblyPaging.ReadOffset(arguments.Cursor));
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -144,30 +146,6 @@ internal static class AssemblyAnalysisContextTool
         root["continuationToken"] = analysis?["continuationToken"]?.GetValue<string>();
         root["truncatedBy"] = analysis?["truncatedBy"]?.DeepClone() ?? new JsonArray();
     }
-
-    private static void TrimToBudget(JsonObject root, int budget)
-    {
-        var removable = new[] { "body", "classStructure", "metrics", "impact", "callers" };
-        foreach (var property in removable)
-        {
-            if (JsonSerializer.SerializeToUtf8Bytes(root, McpJsonOptions.Default).Length <= budget) return;
-            if (root[property] is null) continue;
-            root[property] = CreateTruncatedSection(property, root[property]);
-            root["isTruncated"] = true;
-            root["truncatedBy"] = new JsonArray("responseBudget");
-        }
-    }
-
-    private static JsonObject CreateTruncatedSection(string section, JsonNode? original) => new()
-    {
-        ["status"] = "truncated",
-        ["truncated"] = true,
-        ["detailHint"] = $"Abschnitt '{section}' wurde wegen des Antwortbudgets gekürzt; maxResponseBytes oder detailLevel erhöhen und den Abschnitt gezielt erneut anfordern.",
-        ["continuationToken"] = ExtractContinuationToken(original),
-    };
-
-    private static string? ExtractContinuationToken(JsonNode? section) =>
-        section?["continuationToken"]?.GetValue<string>();
 
     private static JsonNode? Serialize(JsonElement? element) =>
         element is { } value ? JsonNode.Parse(value.GetRawText()) : null;
