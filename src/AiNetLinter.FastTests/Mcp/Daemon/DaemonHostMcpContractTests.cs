@@ -155,7 +155,9 @@ public sealed class DaemonHostMcpContractTests
         var (clientStream, daemonStream) = ThinClientPipeTestDoubles.CreateDuplexPair();
         await using var clientConnection = clientStream;
         await using var daemonConnection = new DaemonPipeConnection(daemonStream);
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        // Eager Assembly-Materialisierung darf unter paralleler Suite-Last dem
+        // konfigurierten Produktions-Timeout von 180 Sekunden entsprechen.
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(180));
         var serverTask = CreateSession(registry, composition).RunAsync(daemonConnection);
         CallToolResult inspect;
         CallToolResult extensions;

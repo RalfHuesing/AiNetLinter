@@ -54,6 +54,7 @@ public sealed class AssemblyAnalysisCacheTests
         var cache = new AssemblyDecompilationCache(temp.GetPath("cache"));
 
         Assert.True(cache.Publish(request).Succeeded);
+        Assert.Empty(Directory.EnumerateDirectories(temp.GetPath("cache"), "*.tmp", SearchOption.AllDirectories));
         using var barrier = new Barrier(2);
         var results = await Task.WhenAll(
             Enumerable.Range(0, 2).Select(_ => Task.Run(() =>

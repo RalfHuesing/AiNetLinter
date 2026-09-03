@@ -25,7 +25,9 @@ internal sealed class McpProcessHost : IAsyncDisposable
     // Große Dogfood-Workspaces können nach dem MCP-Handshake noch deutlich
     // länger als 15 Sekunden laden; der Loading-Vertrag bleibt dabei gültig.
     private const int LoadingRetryCount = 120;
-    private static readonly TimeSpan DefaultCallTimeout = TimeSpan.FromSeconds(60);
+    // Assembly-Ziele materialisieren WholeProjectDecompiler-Inhalte synchron; der Client muss
+    // dem konfigurierten Assembly-Decompilation-Timeout von 180 Sekunden entsprechen.
+    private static readonly TimeSpan DefaultCallTimeout = TimeSpan.FromSeconds(180);
     private static readonly McpConnectRetryOptions DefaultConnectRetryOptions = new();
     private readonly McpClient client;
     private readonly McpProcessTarget target;

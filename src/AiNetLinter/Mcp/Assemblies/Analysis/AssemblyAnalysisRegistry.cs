@@ -44,7 +44,9 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAss
     internal AssemblyAnalysisRegistry(
         IAssemblySourceResolver? sourceOrchestrator = null,
         Func<string, AssemblyFingerprint>? fingerprintFactory = null,
-        ExternalResourceRegistry? resourceRegistry = null, Func<AssemblyAnalysisEntry, Task>? beforeRetirementAsync = null)
+        ExternalResourceRegistry? resourceRegistry = null,
+        Func<AssemblyAnalysisEntry, Task>? beforeRetirementAsync = null,
+        AssemblyDecompilationConfiguration? decompilationConfiguration = null)
     {
         this.sourceOrchestrator = sourceOrchestrator;
         this.fingerprintFactory = fingerprintFactory;
@@ -54,7 +56,8 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAss
             sourceOrchestrator,
             resourceBudget,
             CreateReferenceLeaseFactory,
-            RequestTemporaryReferenceEviction);
+            RequestTemporaryReferenceEviction,
+            decompilationConfiguration);
         var sourceProjectEntryFactory = new AssemblyAnalysisSourceProjectEntryFactory(
             resourceBudget,
             CreateReferenceLeaseFactory,
@@ -493,5 +496,4 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAss
         new(null, isError
             ? McpToolResults.Error(LinterErrorCodes.AnalysisFailed, message)
             : McpToolResults.Recoverable(LinterErrorCodes.AnalysisFailed, message));
-
 }

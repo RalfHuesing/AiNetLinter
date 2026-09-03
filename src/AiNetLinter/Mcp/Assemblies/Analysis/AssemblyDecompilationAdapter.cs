@@ -4,11 +4,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection.Metadata;
-using System.Reflection.Metadata.Ecma335;
-using System.Reflection.PortableExecutable;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using ICSharpCode.Decompiler;
+using ICSharpCode.Decompiler.CSharp;
+using ICSharpCode.Decompiler.CSharp.ProjectDecompiler;
+using ICSharpCode.Decompiler.Metadata;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -29,17 +31,15 @@ internal sealed class AssemblyDecompilationAdapter
     {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken);
         deadline.CancelAfter(request.Options.EffectiveTimeout);
+        var ownsStagingDirectory = request.StagingDirectory is null;
+        var stagingDirectory = request.StagingDirectory ?? Path.Combine(
+            Path.GetTempPath(),
+            "ainetlinter-decompilation-" + Guid.NewGuid().ToString("N"));
+        var diagnostics = new List<AssemblySessionDiagnostic>();
+
         try
         {
-            var selection = SelectTypes(ReadTopLevelTypes(request.AssemblyPath, deadline.Token), request.Options);
-            if (selection.Types.Count == 0)
-            {
-                return Task.FromResult(new DecompilationResult([], selection.Diagnostics, false));
-            }
-
-            var decompiler = CreateDecompiler(request.AssemblyPath, references, deadline.Token);
-            var documents = DecompileTypes(decompiler, selection.Types, request.Options, deadline.Token, selection.Diagnostics);
-            return Task.FromResult(new DecompilationResult(documents, selection.Diagnostics, selection.Diagnostics.Count == 0));
+            return Task.FromResult(DecompileProject(request, references, stagingDirectory, deadline.Token, diagnostics));
         }
         catch (OperationCanceledException) when (request.CancellationToken.IsCancellationRequested)
         {
@@ -47,90 +47,132 @@ internal sealed class AssemblyDecompilationAdapter
         }
         catch (OperationCanceledException)
         {
-            return Task.FromResult(new DecompilationResult(
-                [],
-                [new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(OperationCanceledException)), "Die Decompilation wurde wegen Cancellation oder Deadline abgebrochen.", AssemblyDiagnosticSeverity.Error)],
-                false));
+            diagnostics.Add(new AssemblySessionDiagnostic(
+                AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(OperationCanceledException)),
+                "Die Volldekompilierung wurde wegen des konfigurierten Timeouts abgebrochen.",
+                AssemblyDiagnosticSeverity.Error));
+            return Task.FromResult(ReadProjectOutput(stagingDirectory, diagnostics, CancellationToken.None, false));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException or ArgumentException or ICSharpCode.Decompiler.DecompilerException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException or ArgumentException or InvalidDataException or DecompilerException)
         {
-            return Task.FromResult(new DecompilationResult(
-                [],
-                [new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(AssemblyDecompilationOptions)), $"Decompilation fehlgeschlagen: {ex.Message}", AssemblyDiagnosticSeverity.Error)],
-                false));
+            diagnostics.Add(new AssemblySessionDiagnostic(
+                AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompilationRequest)),
+                $"Volldekompilierung fehlgeschlagen: {ex.Message}",
+                AssemblyDiagnosticSeverity.Error));
+            return Task.FromResult(ReadProjectOutput(stagingDirectory, diagnostics, CancellationToken.None, false));
+        }
+        finally
+        {
+            if (ownsStagingDirectory) AssemblyCacheCleanup.DeleteDirectory(stagingDirectory);
         }
     }
 
-    private static List<DecompiledDocument> DecompileTypes(
-        ICSharpCode.Decompiler.CSharp.CSharpDecompiler decompiler,
-        IReadOnlyList<TypeDefinitionInfo> types,
-        AssemblyDecompilationOptions options,
+    private static DecompilationResult DecompileProject(
+        DecompilationRequest request,
+        AssemblyReferenceResolution references,
+        string stagingDirectory,
         CancellationToken cancellationToken,
         ICollection<AssemblySessionDiagnostic> diagnostics)
     {
-        var documents = new List<DecompiledDocument>(types.Count);
-        foreach (var type in types)
+        Directory.CreateDirectory(stagingDirectory);
+        _ = references;
+        using var module = new PEFile(request.AssemblyPath);
+        var targetFrameworkId = module.DetectTargetFrameworkId();
+        var resolver = new UniversalAssemblyResolver(request.AssemblyPath, throwOnError: false, targetFrameworkId);
+        var assemblyDirectory = Path.GetDirectoryName(request.AssemblyPath);
+        if (!string.IsNullOrWhiteSpace(assemblyDirectory)) resolver.AddSearchDirectory(assemblyDirectory);
+        var decompiler = new WholeProjectDecompiler(
+            new DecompilerSettings
+            {
+                RemoveDeadCode = true,
+                YieldReturn = true,
+                AsyncAwait = true,
+            },
+            resolver,
+            projectWriter: null,
+            assemblyReferenceClassifier: null,
+            debugInfoProvider: null);
+        decompiler.DecompileProject(module, stagingDirectory, cancellationToken);
+        return ReadProjectOutput(stagingDirectory, diagnostics, cancellationToken, true);
+    }
+
+    private static DecompilationResult ReadProjectOutput(
+        string stagingDirectory,
+        ICollection<AssemblySessionDiagnostic> diagnostics,
+        CancellationToken cancellationToken,
+        bool initiallyComplete)
+    {
+        var projectFilePath = FindProjectFile(stagingDirectory);
+        if (projectFilePath is null)
+        {
+            diagnostics.Add(new AssemblySessionDiagnostic(
+                AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompilationResult.ProjectFilePath)),
+                "Die Volldekompilierung hat keine .csproj-Datei materialisiert.",
+                AssemblyDiagnosticSeverity.Error));
+            return new DecompilationResult([], diagnostics.ToList(), false);
+        }
+
+        var documents = new List<DecompiledDocument>();
+        foreach (var path in Directory.EnumerateFiles(stagingDirectory, "*.cs", SearchOption.AllDirectories).OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
             cancellationToken.ThrowIfCancellationRequested();
             try
             {
-                var source = decompiler.DecompileTypesAsString([type.Handle]);
-                cancellationToken.ThrowIfCancellationRequested();
+                var source = File.ReadAllText(path, new UTF8Encoding(false, true));
                 if (string.IsNullOrWhiteSpace(source))
                 {
-                    diagnostics.Add(new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompiledDocument.CSharpSource)), $"Typ '{type.MetadataName}' erzeugte keinen Quelltext."));
+                    diagnostics.Add(new AssemblySessionDiagnostic(
+                        AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompiledDocument.CSharpSource)),
+                        $"Die dekompilierte Datei '{Path.GetFileName(path)}' ist leer.",
+                        AssemblyDiagnosticSeverity.Error));
                     continue;
                 }
 
-                source = AssemblyDecompilationSourceText.RemoveCompilerGeneratedNestedTypes(source);
-                source = AssemblyDecompilationSourceText.RemoveCompilerGeneratedStateMachineAttributes(source);
-                source = AssemblyDecompilationSourceText.MakeSignatureOnlyMethodsParsable(source);
-
-                if (source.Length > options.MaxDocumentCharacters)
-                {
-                    diagnostics.Add(new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(AssemblyDecompilationOptions.MaxDocumentCharacters)), $"Der dekompilierte Typ '{type.MetadataName}' überschreitet die Dokumentgrenze."));
-                    continue;
-                }
-
-                var syntaxDiagnostics = Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(source)
-                    .GetDiagnostics()
-                    .Where(diagnostic => diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+                var syntaxErrors = CSharpSyntaxTree.ParseText(source)
+                    .GetDiagnostics(cancellationToken)
+                    .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
                     .Take(3)
                     .ToList();
-                if (syntaxDiagnostics.Count > 0)
+                if (syntaxErrors.Count > 0)
                 {
-                    diagnostics.Add(new(
-                        AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompiledDocument.GeneratedPath)),
-                        $"Typ '{type.MetadataName}' erzeugte nicht parsbaren C#-Quelltext: {string.Join("; ", syntaxDiagnostics.Select(diagnostic => diagnostic.Id + " " + diagnostic.GetMessage()))}."));
-                    continue;
+                    diagnostics.Add(new AssemblySessionDiagnostic(
+                        AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompiledDocument.CSharpSource)),
+                        $"Die dekompilierte Datei '{Path.GetFileName(path)}' ist nicht parsbar: {string.Join("; ", syntaxErrors.Select(diagnostic => diagnostic.Id + " " + diagnostic.GetMessage()))}.",
+                        AssemblyDiagnosticSeverity.Error));
                 }
 
                 documents.Add(new DecompiledDocument(
-                    $"source/{documents.Count:D5}-{AssemblyDecompilationCache.SanitizeFileName(type.MetadataName)}.cs",
-                    type.MetadataName,
-                    source,
-                    $"0x{MetadataTokens.GetToken(type.Handle):X8}"));
+                    path,
+                    Path.GetFileNameWithoutExtension(path),
+                    source));
             }
-            catch (OperationCanceledException)
+            catch (IOException ex)
             {
-                throw;
-            }
-            catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or IOException or ICSharpCode.Decompiler.DecompilerException)
-            {
-                diagnostics.Add(new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompiledDocument.GeneratedPath)), $"Typ '{type.MetadataName}' konnte nicht dekompiliert werden: {ex.Message}"));
+                diagnostics.Add(new AssemblySessionDiagnostic(
+                    AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(DecompiledDocument.GeneratedPath)),
+                    $"Die dekompilierte Datei '{Path.GetFileName(path)}' konnte nicht gelesen werden: {ex.Message}",
+                    AssemblyDiagnosticSeverity.Error));
             }
         }
 
-        return documents;
+        var hasErrors = diagnostics.Any(diagnostic => diagnostic.Severity == AssemblyDiagnosticSeverity.Error);
+        return new DecompilationResult(documents, diagnostics.ToList(), initiallyComplete && !hasErrors, projectFilePath);
     }
 
-    internal static ICSharpCode.Decompiler.CSharp.CSharpDecompiler CreateDecompiler(
+    private static string? FindProjectFile(string stagingDirectory) =>
+        Directory.Exists(stagingDirectory)
+            ? Directory.EnumerateFiles(stagingDirectory, "*.csproj", SearchOption.AllDirectories)
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault()
+            : null;
+
+    internal static CSharpDecompiler CreateDecompiler(
         string assemblyPath,
         AssemblyReferenceResolution references,
         CancellationToken cancellationToken,
         bool decompileMemberBodies = false)
     {
-        var settings = new ICSharpCode.Decompiler.DecompilerSettings
+        var settings = new DecompilerSettings
         {
             DecompileMemberBodies = decompileMemberBodies,
             ShowXmlDocumentation = false,
@@ -143,122 +185,9 @@ internal sealed class AssemblyDecompilationAdapter
             LocalFunctions = true,
             YieldReturn = true,
         };
-        return new ICSharpCode.Decompiler.CSharp.CSharpDecompiler(assemblyPath, references.DecompilerResolver, settings)
+        return new CSharpDecompiler(assemblyPath, references.DecompilerResolver, settings)
         {
             CancellationToken = cancellationToken,
         };
     }
-
-    private static IReadOnlyList<TypeDefinitionInfo> ReadTopLevelTypes(
-        string assemblyPath,
-        CancellationToken cancellationToken)
-    {
-        using var stream = File.OpenRead(assemblyPath);
-        using var peReader = new PEReader(stream);
-        if (!peReader.HasMetadata) return [];
-        var reader = peReader.GetMetadataReader();
-        var result = new List<TypeDefinitionInfo>();
-        foreach (var handle in reader.TypeDefinitions)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var definition = reader.GetTypeDefinition(handle);
-            if (!definition.GetDeclaringType().IsNil) continue;
-            var name = reader.GetString(definition.Name);
-            if (name == "<Module>" || name.StartsWith("<", StringComparison.Ordinal)) continue;
-            var namespaceName = definition.Namespace.IsNil ? string.Empty : reader.GetString(definition.Namespace);
-            var metadataName = string.IsNullOrEmpty(namespaceName) ? name : namespaceName + "." + name;
-            result.Add(ReadTypeTree(reader, handle, metadataName, cancellationToken));
-        }
-
-        return result;
-    }
-
-    private static TypeDefinitionInfo ReadTypeTree(
-        MetadataReader reader,
-        TypeDefinitionHandle handle,
-        string metadataName,
-        CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        var definition = reader.GetTypeDefinition(handle);
-        var children = definition.GetNestedTypes()
-            .Select(nestedHandle =>
-            {
-                var nested = reader.GetTypeDefinition(nestedHandle);
-                return ReadTypeTree(reader, nestedHandle, metadataName + "." + reader.GetString(nested.Name), cancellationToken);
-            })
-            .ToList();
-        var ownMemberCount = CountMembers(definition);
-        return new TypeDefinitionInfo(
-            handle,
-            metadataName,
-            1 + children.Sum(child => child.TypeCount),
-            ownMemberCount + children.Sum(child => child.MemberCount),
-            1 + ownMemberCount + children.Sum(child => child.ComplexityCost));
-    }
-
-    private static int CountMembers(TypeDefinition definition) =>
-        definition.GetMethods().Count()
-        + definition.GetFields().Count()
-        + definition.GetProperties().Count()
-        + definition.GetEvents().Count();
-
-    private static TypeSelection SelectTypes(
-        IReadOnlyList<TypeDefinitionInfo> types,
-        AssemblyDecompilationOptions options)
-    {
-        var diagnostics = new List<AssemblySessionDiagnostic>();
-        var selected = new List<TypeDefinitionInfo>();
-        var typeBudget = options.MaxTypes;
-        var memberBudget = options.MaxMembers;
-        var complexityBudget = options.MaxComplexity;
-        foreach (var type in types)
-        {
-            var rejection = GetLimitDiagnostic(type, typeBudget, memberBudget, complexityBudget);
-            if (rejection is not null)
-            {
-                diagnostics.Add(rejection);
-                continue;
-            }
-
-            selected.Add(type);
-            typeBudget -= type.TypeCount;
-            memberBudget -= type.MemberCount;
-            complexityBudget -= type.ComplexityCost;
-        }
-
-        return new TypeSelection(selected, diagnostics);
-    }
-
-    private static AssemblySessionDiagnostic? GetLimitDiagnostic(
-        TypeDefinitionInfo type,
-        int typeBudget,
-        int memberBudget,
-        int complexityBudget)
-    {
-        if (type.TypeCount > typeBudget)
-        {
-            return new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(AssemblyDecompilationOptions.MaxTypes)), $"Typbaum '{type.MetadataName}' benötigt {type.TypeCount} von {typeBudget} verbleibenden Typbudgets.");
-        }
-
-        if (type.MemberCount > memberBudget)
-        {
-            return new(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(AssemblyDecompilationOptions.MaxMembers)), $"Typbaum '{type.MetadataName}' benötigt {type.MemberCount} von {memberBudget} verbleibenden Memberbudgets.");
-        }
-
-        return type.ComplexityCost > complexityBudget
-            ? new AssemblySessionDiagnostic(AssemblyDiagnosticCodes.For(nameof(AssemblyDecompilationAdapter), nameof(AssemblyDecompilationOptions.MaxComplexity)), $"Typbaum '{type.MetadataName}' benötigt Komplexitätskosten {type.ComplexityCost} von {complexityBudget} verbleibenden Kosten.")
-            : null;
-    }
-
-    private sealed record TypeSelection(
-        IReadOnlyList<TypeDefinitionInfo> Types,
-        List<AssemblySessionDiagnostic> Diagnostics);
-
-    private sealed record TypeDefinitionInfo(
-        TypeDefinitionHandle Handle,
-        string MetadataName,
-        int TypeCount,
-        int MemberCount,
-        int ComplexityCost);
 }

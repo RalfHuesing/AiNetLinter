@@ -62,8 +62,8 @@ public sealed class AssemblyNavigationResponseContractTests
         var completeness = payload.GetProperty("completeness");
 
         Assert.Contains("Keine Aufrufstellen gefunden", text, StringComparison.Ordinal);
-        Assert.Contains("contentMode=decompiledSignatureOnly", text, StringComparison.Ordinal);
-        Assert.Contains("fehlende Aufrufstellen innerhalb von Methoden", text, StringComparison.Ordinal);
+        Assert.Contains("contentMode=decompiledProject", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("decompiledSignatureOnly", text, StringComparison.Ordinal);
         Assert.DoesNotContain("vollstaendig fuer den angefragten Scope", text, StringComparison.Ordinal);
         AssemblyNavigationResponseAssertions.AssertDiagnosticProjection(
             navigation,

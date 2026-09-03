@@ -39,35 +39,30 @@ internal sealed record AssemblyOrigin(
 }
 
 internal sealed record AssemblyDecompilationOptions(
-    int MaxAssemblyBytes = 64 * 1024 * 1024,
-    int MaxTypes = 2_000,
-    int MaxMembers = 20_000,
-    int MaxDocumentCharacters = 2_000_000,
-    int MaxComplexity = 50_000,
     TimeSpan Timeout = default,
     string DecompilerVersion = AssemblyDecompilationOptions.CurrentDecompilerVersion,
     string CacheSchemaVersion = AssemblyDecompilationOptions.CurrentCacheSchemaVersion)
 {
     internal const string CurrentDecompilerVersion = "10.0.1.8346";
     internal const string CurrentCacheSchemaVersion = AssemblyCacheContract.CacheSchemaVersion;
+    internal static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(180);
 
     internal static AssemblyDecompilationOptions Default => new();
 
     internal TimeSpan EffectiveTimeout => Timeout > TimeSpan.Zero
         ? Timeout
-        : TimeSpan.FromSeconds(30);
+        : DefaultTimeout;
 
     internal string Identity => string.Join(
         "|",
-        MaxAssemblyBytes,
-        MaxTypes,
-        MaxMembers,
-        MaxDocumentCharacters,
-        MaxComplexity,
         EffectiveTimeout.Ticks,
         DecompilerVersion,
         CacheSchemaVersion);
 }
+
+internal sealed record AssemblyDecompilationConfiguration(
+    AssemblyDecompilationOptions Options,
+    string CacheRoot);
 
 internal sealed record AssemblyFingerprint(
     string CanonicalPath,
@@ -107,12 +102,14 @@ internal sealed record DecompilationRequest(
     AssemblyFingerprint Fingerprint,
     AssemblyDecompilationCacheKey CacheKey,
     AssemblyDecompilationOptions Options,
-    System.Threading.CancellationToken CancellationToken);
+    System.Threading.CancellationToken CancellationToken,
+    string? StagingDirectory = null);
 
 internal sealed record DecompilationResult(
     IReadOnlyList<DecompiledDocument> Documents,
     IReadOnlyList<AssemblySessionDiagnostic> Diagnostics,
-    bool IsComplete);
+    bool IsComplete,
+    string? ProjectFilePath = null);
 
 internal sealed record AssemblyCachePublishRequest(
     AssemblyFingerprint Fingerprint,
@@ -120,14 +117,16 @@ internal sealed record AssemblyCachePublishRequest(
     AssemblyDecompilationOptions Options,
     AssemblyReferenceResolution References,
     DecompilationResult Decompilation,
-    AssemblySessionStatus Status);
+    AssemblySessionStatus Status,
+    string? StagingDirectory = null);
 
 internal sealed record AssemblyWorkspaceRequest(
     string AssemblyPath,
     AssemblyFingerprint Fingerprint,
     IReadOnlyList<DecompiledDocument> Documents,
     IReadOnlyList<MetadataReference> MetadataReferences,
-    AssemblySessionStatus Status);
+    AssemblySessionStatus Status,
+    string? ProjectFilePath = null);
 
 internal sealed record AssemblyCachePublishResult(
     bool Succeeded,
@@ -236,7 +235,8 @@ internal sealed record AssemblyAnalysisSessionOptions(
 
 internal sealed record CachedDecompilationGeneration(
     AssemblyDecompilationManifest Manifest,
-    IReadOnlyList<DecompiledDocument> Documents);
+    IReadOnlyList<DecompiledDocument> Documents,
+    string? ProjectFilePath = null);
 
 internal sealed record AssemblyCacheReadRequest(
     AssemblyDecompilationCacheKey Key,
@@ -250,7 +250,8 @@ internal sealed record AssemblyGenerationBuildRequest(
     IReadOnlyList<DecompiledDocument> Documents,
     AssemblySessionStatus Status,
     IReadOnlyList<AssemblySessionDiagnostic> Diagnostics,
-    AssemblyCachePublishRequest? PublishRequest = null);
+    AssemblyCachePublishRequest? PublishRequest = null,
+    string? ProjectFilePath = null);
 
 internal sealed record AssemblyManifestInput
 {
@@ -299,4 +300,41 @@ internal sealed record AssemblyDecompilationManifest
     internal required AssemblyManifestFormat Format { get; init; }
     internal required AssemblyManifestDiagnostics Diagnostics { get; init; }
     internal required AssemblyManifestStatus Status { get; init; }
+}
+
+internal enum AssemblyDiagnosticSeverity
+{
+    Warning,
+    Error,
+}
+
+internal static class AssemblyDiagnosticSeverityExtensions
+{
+    internal const string WarningWireValue = "warning";
+    internal const string ErrorWireValue = "error";
+
+    internal static string ToWireValue(this AssemblyDiagnosticSeverity severity) => severity switch
+    {
+        AssemblyDiagnosticSeverity.Warning => WarningWireValue,
+        AssemblyDiagnosticSeverity.Error => ErrorWireValue,
+        _ => throw new ArgumentOutOfRangeException(nameof(severity), severity, "Unbekannte Assembly-Diagnoseschwere.")
+    };
+
+    internal static bool TryParseWireValue(string? value, out AssemblyDiagnosticSeverity severity)
+    {
+        if (string.Equals(value, WarningWireValue, StringComparison.OrdinalIgnoreCase))
+        {
+            severity = AssemblyDiagnosticSeverity.Warning;
+            return true;
+        }
+
+        if (string.Equals(value, ErrorWireValue, StringComparison.OrdinalIgnoreCase))
+        {
+            severity = AssemblyDiagnosticSeverity.Error;
+            return true;
+        }
+
+        severity = default;
+        return false;
+    }
 }

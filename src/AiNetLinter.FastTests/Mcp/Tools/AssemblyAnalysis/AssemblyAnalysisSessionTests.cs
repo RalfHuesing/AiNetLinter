@@ -45,7 +45,7 @@ public sealed class AssemblyAnalysisSessionTests
     }
 
     [Fact]
-    public async Task RefreshAsync_SignatureOnlyStubsConcreteMethodsWithoutSyntheticEmptyBodyDiagnostics()
+    public async Task RefreshAsync_EagerlyMaterializesWholeProjectWithRealSourceFiles()
     {
         using var temp = TestTempDirectory.Create("assembly-session-signature-only-");
         var methods = string.Join(
@@ -61,13 +61,19 @@ public sealed class AssemblyAnalysisSessionTests
         var result = await session.RefreshAsync();
         var generation = session.CurrentGeneration;
         Assert.NotNull(generation);
-        var source = (await Assert.Single(generation.Snapshot.Documents).GetTextAsync()).ToString();
+        var sources = await Task.WhenAll(generation.Snapshot.Documents.Select(document => document.GetTextAsync()));
+        var source = string.Join(Environment.NewLine, sources.Select(text => text.ToString()));
         var diagnostics = generation.Snapshot.Compilation.GetDiagnostics()
             .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
             .ToList();
 
         Assert.Equal(AssemblySessionStatus.Complete, result.Status);
-        Assert.Contains("throw null!;", source, StringComparison.Ordinal);
+        Assert.Contains("Read159", source, StringComparison.Ordinal);
+        Assert.Contains("value + 159", source, StringComparison.Ordinal);
+        Assert.NotEmpty(generation.Snapshot.Documents);
+        Assert.All(generation.Snapshot.Documents, document => Assert.True(File.Exists(document.FilePath)));
+        Assert.Single(Directory.EnumerateFiles(temp.GetPath("cache"), "*.csproj", SearchOption.AllDirectories));
+        Assert.DoesNotContain("throw null!;", source, StringComparison.Ordinal);
         Assert.DoesNotContain(diagnostics, diagnostic => diagnostic.Id == "CS0501");
     }
 
@@ -126,19 +132,25 @@ public sealed class AssemblyAnalysisSessionTests
         Assert.NotNull(oldLeaseSnapshot);
         using var oldLease = oldLeaseSnapshot!;
         var oldGeneration = oldLease.Generation.Number;
-        var oldText = await Assert.Single(oldLease.Snapshot.Documents).GetTextAsync();
+        var oldText = string.Join(
+            Environment.NewLine,
+            (await Task.WhenAll(oldLease.Snapshot.Documents.Select(document => document.GetTextAsync())))
+                .Select(text => text.ToString()));
 
         AssemblyTestHelper.EmitAssembly(temp, "GenerationProbe", "namespace Probe; public sealed class Second { public int Value => 2; }");
         var refreshed = await session.RefreshAsync();
         var currentSnapshot = session.CurrentGeneration;
         Assert.NotNull(currentSnapshot);
         var current = currentSnapshot!;
-        var currentText = await Assert.Single(current.Snapshot.Documents).GetTextAsync();
+        var currentText = string.Join(
+            Environment.NewLine,
+            (await Task.WhenAll(current.Snapshot.Documents.Select(document => document.GetTextAsync())))
+                .Select(text => text.ToString()));
 
         Assert.False(refreshed.Reused);
         Assert.True(current.Number > oldGeneration);
-        Assert.Contains("First", oldText.ToString(), StringComparison.Ordinal);
-        Assert.Contains("Second", currentText.ToString(), StringComparison.Ordinal);
+        Assert.Contains("First", oldText, StringComparison.Ordinal);
+        Assert.Contains("Second", currentText, StringComparison.Ordinal);
         Assert.Equal("decompiled", current.Origin.OriginKind);
         Assert.Contains(current.Snapshot.Origins.Values, origin => origin.ContentHash == current.Fingerprint.Sha256);
     }
@@ -225,20 +237,18 @@ public sealed class AssemblyAnalysisSessionTests
     }
 
     [Fact]
-    public async Task RefreshAsync_RejectsOversizedAssemblyBeforeDecompilationAndDoesNotPublishCache()
+    public async Task RefreshAsync_RemovesArtificialWholeAssemblyLimits()
     {
         using var temp = TestTempDirectory.Create("assembly-session-limits-");
         var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "LimitProbe", "namespace Probe; public sealed class Value { }");
-        var options = new AssemblyDecompilationOptions(MaxAssemblyBytes: 1);
         var cacheRoot = temp.GetPath("cache");
-        await using var session = new AssemblyAnalysisSession(assemblyPath, options, cacheRoot);
+        await using var session = new AssemblyAnalysisSession(assemblyPath, cacheRoot: cacheRoot);
 
         var result = await session.RefreshAsync();
 
-        Assert.Equal(AssemblySessionStatus.Failed, result.Status);
-        Assert.Null(session.CurrentGeneration);
-        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Code == "assembly-size-limit");
-        Assert.False(Directory.Exists(cacheRoot));
+        Assert.Equal(AssemblySessionStatus.Complete, result.Status);
+        Assert.NotNull(session.CurrentGeneration);
+        Assert.NotEmpty(Directory.EnumerateFiles(cacheRoot, "*.cs", SearchOption.AllDirectories));
     }
 
     [Fact]
@@ -257,6 +267,9 @@ public sealed class AssemblyAnalysisSessionTests
         Assert.Null(session.CurrentGeneration);
         Assert.Empty(Directory.Exists(cacheRoot)
             ? Directory.EnumerateFiles(cacheRoot, "manifest.json", SearchOption.AllDirectories)
+            : []);
+        Assert.Empty(Directory.Exists(cacheRoot)
+            ? Directory.EnumerateDirectories(cacheRoot, "*.tmp", SearchOption.AllDirectories)
             : []);
     }
 
@@ -305,7 +318,7 @@ public sealed class AssemblyAnalysisSessionTests
     }
 
     [Fact]
-    public async Task RefreshAsync_BudgetsNestedTypeTreesWithoutWholeModuleFallback()
+    public async Task RefreshAsync_EagerlyMaterializesNestedTypesWithoutTypeBudgets()
     {
         using var temp = TestTempDirectory.Create("assembly-session-nested-limits-");
         var assemblyPath = AssemblyTestHelper.EmitAssembly(temp, "NestedLimitProbe", """
@@ -320,35 +333,17 @@ public sealed class AssemblyAnalysisSessionTests
             public sealed class Second { public int Value => 2; }
             """);
 
-        await using var typeLimited = new AssemblyAnalysisSession(
-            assemblyPath,
-            new AssemblyDecompilationOptions(MaxTypes: 1),
-            temp.GetPath("type-cache"));
-        var typeResult = await typeLimited.RefreshAsync();
+        await using var session = new AssemblyAnalysisSession(assemblyPath, cacheRoot: temp.GetPath("eager-cache"));
+        var result = await session.RefreshAsync();
+        var source = string.Join(
+            Environment.NewLine,
+            (await Task.WhenAll(session.CurrentGeneration!.Snapshot.Documents.Select(document => document.GetTextAsync())))
+                .Select(text => text.ToString()));
 
-        Assert.Equal(AssemblySessionStatus.Partial, typeResult.Status);
-        Assert.NotNull(typeLimited.CurrentGeneration);
-        Assert.Contains(typeResult.Diagnostics, diagnostic => diagnostic.Code == "assembly-type-limit");
-        Assert.DoesNotContain(Directory.Exists(temp.GetPath("type-cache"))
-            ? Directory.EnumerateFiles(temp.GetPath("type-cache"), "*.cs", SearchOption.AllDirectories)
-            : [],
-            path => File.ReadAllText(path).Contains("First", StringComparison.Ordinal));
-
-        await using var memberLimited = new AssemblyAnalysisSession(
-            assemblyPath,
-            new AssemblyDecompilationOptions(MaxMembers: 1),
-            temp.GetPath("member-cache"));
-        var memberResult = await memberLimited.RefreshAsync();
-        Assert.Equal(AssemblySessionStatus.Failed, memberResult.Status);
-        Assert.Contains(memberResult.Diagnostics, diagnostic => diagnostic.Code == "assembly-member-limit");
-
-        await using var complexityLimited = new AssemblyAnalysisSession(
-            assemblyPath,
-            new AssemblyDecompilationOptions(MaxComplexity: 1),
-            temp.GetPath("complexity-cache"));
-        var complexityResult = await complexityLimited.RefreshAsync();
-        Assert.Equal(AssemblySessionStatus.Failed, complexityResult.Status);
-        Assert.Contains(complexityResult.Diagnostics, diagnostic => diagnostic.Code == "assembly-complexity-limit");
+        Assert.Equal(AssemblySessionStatus.Complete, result.Status);
+        Assert.Contains("First", source, StringComparison.Ordinal);
+        Assert.Contains("Nested", source, StringComparison.Ordinal);
+        Assert.Contains("Second", source, StringComparison.Ordinal);
     }
 
     [Theory]

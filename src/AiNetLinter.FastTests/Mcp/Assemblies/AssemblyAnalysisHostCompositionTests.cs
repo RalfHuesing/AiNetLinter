@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis.Dispatch;
 using AiNetLinter.TestKit;
@@ -119,6 +120,34 @@ public sealed class AssemblyAnalysisHostCompositionTests
         Assert.Equal(composition.Resources.Health.MaxParallelOperations, composition.SourceResources.Health.MaxParallelOperations);
         Assert.Equal(composition.Resources.Health.MaxResidentResources, composition.SourceResources.Health.MaxResidentResources);
         Assert.Equal(TimeSpan.FromMinutes(1.5), composition.Resources.IdleTtl);
+    }
+
+    [Fact]
+    public async Task Composition_WiresAssemblyCacheRootAndTimeoutIntoFallbackSessions()
+    {
+        using var temp = TestTempDirectory.Create("assembly-host-composition-assembly-settings-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "ConfiguredAssembly",
+            "namespace Configured; public sealed class Value { public int Number => 1; }");
+        var mappingsPath = temp.CreateFile(
+            "mappings.json",
+            "{ \"repositories\": [{ \"url\": \"https://gitea.example/shared.git\", \"solutionPath\": \"src/Shared.slnx\", \"assemblies\": [\"ConfiguredAssembly\"] }] }");
+        var settingsPath = temp.CreateFile(
+            "appsettings.json",
+            $$"""{ "ExternalSources": { "MappingsPath": {{JsonSerializer.Serialize(mappingsPath)}} }, "AssemblyAnalysis": { "CacheRoot": "assembly-cache", "DecompilationTimeoutSeconds": 12 } }""");
+        var cacheRoot = Path.Combine(temp.DirectoryPath, "assembly-cache");
+
+        await using var composition = AssemblyAnalysisHostComposition.Create(
+            settingsPath,
+            new UnavailableExternalSourceProvider());
+        var leaseResult = await composition.Sessions.LeaseAsync(assemblyPath);
+        Assert.Null(leaseResult.Error);
+        using var lease = leaseResult.Lease!;
+
+        Assert.Equal(Path.GetFullPath(cacheRoot), composition.ConfigurationResult.AssemblyAnalysis!.CacheRoot);
+        Assert.Equal(TimeSpan.FromSeconds(12), composition.ConfigurationResult.AssemblyAnalysis.DecompilationTimeout);
+        Assert.NotEmpty(Directory.EnumerateFiles(cacheRoot, "*.csproj", SearchOption.AllDirectories));
     }
 
     [Fact]

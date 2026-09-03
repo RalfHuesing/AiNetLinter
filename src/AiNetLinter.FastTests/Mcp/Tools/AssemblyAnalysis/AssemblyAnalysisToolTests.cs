@@ -57,7 +57,8 @@ public sealed partial class AssemblyAnalysisToolTests
         Assert.Equal("complete", payload.Completeness);
         Assert.Equal("decompiled", payload.Origin?.OriginKind);
         Assert.NotNull(payload.Origin);
-        Assert.Contains("source", payload.Origin!.GeneratedDocumentPath, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith(".cs", payload.Origin!.GeneratedDocumentPath, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(payload.Origin.GeneratedDocumentPath));
     }
 
     [Fact]

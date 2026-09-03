@@ -1671,6 +1671,26 @@ Eviction.
 Ein vollständiger Settings-Load schlägt bei einem ungültigen Limit fail-closed
 mit einer strukturierten Diagnose fehl.
 
+### Eager Assembly-Decompilation
+
+Der optionale Abschnitt `AssemblyAnalysis` steuert die eager WholeProjectDecompiler-
+Materialisierung und ihren persistenten Cache:
+
+```json
+{
+  "AssemblyAnalysis": {
+    "CacheRoot": "cache/asm",
+    "DecompilationTimeoutSeconds": 180
+  }
+}
+```
+
+`CacheRoot` wird relativ zum Verzeichnis der gelesenen `appsettings.json` aufgelöst;
+der Default ist `<AppContext.BaseDirectory>/cache/asm`. Der Timeout akzeptiert nur
+positive ganzzahlige Sekunden und gilt für die vollständige Projektdekompilierung.
+Unbekannte oder doppelte Felder sowie ungültige Pfade und Timeoutwerte liefern eine
+strukturierte Diagnose; bei fehlendem Abschnitt gelten die Defaults.
+
 Ein Checkout muss vor der Source-Materialisierung bereits restauriert sein; der
 MCP-/Daemon-Pfad startet keinen impliziten Restore und führt keine Assembly aus.
 Fehlen Projekte, ist die Solution ungültig oder scheitert das Laden des

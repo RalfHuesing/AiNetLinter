@@ -28,17 +28,20 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
     private readonly AssemblyAnalysisResourceBudget resourceBudget;
     private readonly Func<AssemblySourceSelection?, AssemblyReferenceLeaseFactory> referenceLeaseFactory;
     private readonly Action<AssemblyAnalysisEntry> requestTemporaryReferenceEviction;
+    private AssemblyDecompilationConfiguration? decompilationConfiguration;
 
     internal AssemblyAnalysisRegistryEntryFactory(
         IAssemblySourceResolver? sourceOrchestrator,
         AssemblyAnalysisResourceBudget resourceBudget,
         Func<AssemblySourceSelection?, AssemblyReferenceLeaseFactory> referenceLeaseFactory,
-        Action<AssemblyAnalysisEntry> requestTemporaryReferenceEviction)
+        Action<AssemblyAnalysisEntry> requestTemporaryReferenceEviction,
+        AssemblyDecompilationConfiguration? decompilationConfiguration = null)
     {
         this.sourceOrchestrator = sourceOrchestrator;
         this.resourceBudget = resourceBudget;
         this.referenceLeaseFactory = referenceLeaseFactory;
         this.requestTemporaryReferenceEviction = requestTemporaryReferenceEviction;
+        this.decompilationConfiguration = decompilationConfiguration;
     }
 
     internal async Task<AssemblyAnalysisEntry> CreateAsync(
@@ -92,7 +95,9 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
     {
         AssemblyAnalysisSession? session = new AssemblyAnalysisSession(new AssemblyAnalysisSessionOptions(
             parameters.CanonicalPath,
-            GenerationStart: parameters.TargetGeneration - 1));
+            decompilationConfiguration?.Options,
+            decompilationConfiguration?.CacheRoot,
+            parameters.TargetGeneration - 1));
         try
         {
             var refresh = await session.RefreshAsync(parameters.CreationToken).ConfigureAwait(false);

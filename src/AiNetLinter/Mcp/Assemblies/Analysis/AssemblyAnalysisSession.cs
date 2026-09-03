@@ -6,11 +6,12 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Configuration;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
-internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
+internal sealed partial class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
 {
     private readonly object gate = new();
     private readonly SemaphoreSlim refreshGate = new(1, 1);
@@ -28,8 +29,20 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
     private bool disposed;
 
     internal AssemblyAnalysisSession(string assemblyPath, AssemblyDecompilationOptions? options = null, string? cacheRoot = null)
-        : this(new AssemblyAnalysisSessionOptions(assemblyPath, options, cacheRoot))
+        : this(CreateConfiguredOptions(assemblyPath, options, cacheRoot))
     {
+    }
+
+    private static AssemblyAnalysisSessionOptions CreateConfiguredOptions(
+        string assemblyPath,
+        AssemblyDecompilationOptions? options,
+        string? cacheRoot)
+    {
+        var configured = AssemblyAnalysisConfigurationLoader.Load().Options;
+        return new AssemblyAnalysisSessionOptions(
+            assemblyPath,
+            options ?? new AssemblyDecompilationOptions(Timeout: configured.DecompilationTimeout),
+            cacheRoot ?? configured.CacheRoot);
     }
 
     internal AssemblyAnalysisSession(AssemblyAnalysisSessionOptions options)
@@ -119,9 +132,9 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
             return FailureResultSingle(fingerprintDiagnostic!);
         }
 
-        if (fingerprint!.Length > decompilationOptions.MaxAssemblyBytes)
+        if (fingerprint is null)
         {
-            return FailureResultSingle(new(AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSession), nameof(AssemblyFingerprint.Length)), $"Die Assembly überschreitet die Dateigrößenbegrenzung ({fingerprint.Length} von {decompilationOptions.MaxAssemblyBytes} Bytes).", AssemblyDiagnosticSeverity.Error));
+            return FailureResultSingle(new(AssemblyDiagnosticCodes.For(nameof(AssemblyFingerprintCalculator), nameof(AssemblyFingerprintCalculator.TryCreate)), "Die Assembly-Fingerprint konnte nicht erzeugt werden.", AssemblyDiagnosticSeverity.Error));
         }
 
         if (TryReuseCurrent(fingerprint, out var reused)) return reused;
@@ -162,133 +175,6 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
         }
 
         return await BuildFreshGenerationAsync(fingerprint, key, references, cacheDiagnostics, cancellationToken).ConfigureAwait(false);
-    }
-
-    private async Task<AssemblySessionRefreshResult> BuildFreshGenerationAsync(
-        AssemblyFingerprint fingerprint,
-        AssemblyDecompilationCacheKey key,
-        AssemblyReferenceResolution references,
-        IReadOnlyList<AssemblySessionDiagnostic> cacheDiagnostics,
-        CancellationToken cancellationToken)
-    {
-        var decompilation = await decompilationAdapter.DecompileAsync(
-            new DecompilationRequest(fingerprint.CanonicalPath, fingerprint, key, decompilationOptions, cancellationToken),
-            references).ConfigureAwait(false);
-        var diagnostics = CombineDiagnostics(cacheDiagnostics, references.Diagnostics, decompilation.Diagnostics);
-        if (decompilation.Documents.Count == 0)
-        {
-            return FailureResult(EnsureDiagnostic(diagnostics, AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSession), nameof(DecompilationResult.Documents)), "Die Decompilation hat keine analysierbaren Dokumente erzeugt."));
-        }
-
-        var status = DetermineStatus(references.Diagnostics, decompilation);
-        var result = await CreateAndInstallGenerationAsync(
-            new AssemblyGenerationBuildRequest(
-                fingerprint,
-                key,
-                references,
-                decompilation.Documents,
-                status,
-                diagnostics,
-                new AssemblyCachePublishRequest(fingerprint, key, decompilationOptions, references, decompilation, status)),
-            cancellationToken).ConfigureAwait(false);
-        return result;
-    }
-
-    private async Task<AssemblySessionRefreshResult> CreateAndInstallGenerationAsync(
-        AssemblyGenerationBuildRequest request,
-        CancellationToken cancellationToken)
-    {
-        var snapshotResult = await CreateSnapshotAsync(request.Fingerprint, request.References, request.Documents, request.Status, cancellationToken).ConfigureAwait(false);
-        if (snapshotResult.Snapshot is null) return FailureResult(CombineDiagnostics(request.Diagnostics, snapshotResult.Diagnostics));
-        var finalStatus = snapshotResult.Diagnostics.Count == 0 ? request.Status : AssemblySessionStatus.Partial;
-        var generation = new AssemblySessionGeneration(
-            Interlocked.Increment(ref nextGeneration),
-            request.Fingerprint,
-            request.Key,
-            request.References.Identity!,
-            finalStatus,
-            snapshotResult.Snapshot,
-            request.References.References,
-            CombineDiagnostics(request.Diagnostics, snapshotResult.Diagnostics),
-            CreateGenerationOrigin(request.Fingerprint, request.Documents, finalStatus),
-            decompilationAdapter.CreateBodyResolver(
-                request.Fingerprint.CanonicalPath,
-                request.References,
-                decompilationOptions));
-
-        if (request.PublishRequest is not null)
-        {
-            var publish = cache.Publish(request.PublishRequest with { Status = finalStatus });
-            if (!publish.Succeeded)
-            {
-                generation.Snapshot.Dispose();
-                return FailureResult(CombineDiagnostics(generation.Diagnostics, OptionalDiagnostic(publish.Diagnostic)));
-            }
-        }
-
-        return InstallGeneration(generation);
-    }
-
-    private async Task<WorkspaceCreationResult> CreateSnapshotAsync(
-        AssemblyFingerprint fingerprint,
-        AssemblyReferenceResolution references,
-        IReadOnlyList<DecompiledDocument> documents,
-        AssemblySessionStatus status,
-        CancellationToken cancellationToken)
-    {
-        AssemblyRoslynSnapshot? snapshot = null;
-        try
-        {
-            snapshot = await workspaceFactory.CreateAsync(
-                new AssemblyWorkspaceRequest(fingerprint.CanonicalPath, fingerprint, documents, references.MetadataReferences, status),
-                references.Identity!.Name,
-                fingerprint.Sha256,
-                cancellationToken).ConfigureAwait(false);
-            var diagnostics = ValidateCompilation(snapshot.Compilation, cancellationToken);
-            if (diagnostics.Any(diagnostic => diagnostic.Severity == AssemblyDiagnosticSeverity.Error))
-            {
-                snapshot.Dispose();
-                return new WorkspaceCreationResult(null, diagnostics);
-            }
-
-            return new WorkspaceCreationResult(snapshot, diagnostics);
-        }
-        catch (OperationCanceledException)
-        {
-            snapshot?.Dispose();
-            throw;
-        }
-        catch (InvalidOperationException ex)
-        {
-            snapshot?.Dispose();
-            return new WorkspaceCreationResult(null, [new(AssemblyDiagnosticCodes.For(nameof(AssemblyRoslynWorkspaceFactory), nameof(AssemblySessionStatus.Failed)), $"Roslyn-Snapshot konnte nicht erzeugt werden: {ex.Message}", AssemblyDiagnosticSeverity.Error)]);
-        }
-    }
-
-    private static IReadOnlyList<AssemblySessionDiagnostic> ValidateCompilation(Compilation compilation, CancellationToken cancellationToken)
-    {
-        var errors = compilation.GetDiagnostics(cancellationToken)
-            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
-            .Where(diagnostic => !AssemblyDiagnosticCodes.IsExpectedDeclarationOnlyDiagnostic(diagnostic.Id))
-            .ToList();
-        if (errors.Count == 0)
-        {
-            return [];
-        }
-
-        var syntaxErrors = compilation.SyntaxTrees
-            .SelectMany(tree => tree.GetDiagnostics(cancellationToken))
-            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
-            .Take(5)
-            .ToList();
-        if (syntaxErrors.Count > 0)
-        {
-            return [new(AssemblyDiagnosticCodes.For(nameof(AssemblyRoslynWorkspaceFactory), nameof(AssemblyRoslynSnapshot.Compilation)), $"Die synthetische Compilation enthält nicht parsbaren Quelltext: {string.Join("; ", syntaxErrors.Select(diagnostic => diagnostic.Id + " " + diagnostic.GetMessage()))}", AssemblyDiagnosticSeverity.Error)];
-        }
-
-        return [new(
-            AssemblyDiagnosticCodes.For(nameof(AssemblyRoslynWorkspaceFactory), nameof(AssemblyRoslynSnapshot.Solution)),
-            $"Die synthetische Compilation enthält {errors.Count} semantische Decompiler-/Referenzdiagnosen: {string.Join("; ", errors.Take(5).Select(diagnostic => diagnostic.Id + " " + diagnostic.GetMessage()))}.")];
     }
 
     private AssemblySessionRefreshResult InstallGeneration(AssemblySessionGeneration generation)
@@ -419,13 +305,15 @@ internal sealed class AssemblyAnalysisSession : IDisposable, IAsyncDisposable
 
     private bool ValidateOptions(out AssemblySessionDiagnostic? diagnostic)
     {
-        if (decompilationOptions.MaxAssemblyBytes > 0 && decompilationOptions.MaxTypes > 0 && decompilationOptions.MaxMembers > 0 && decompilationOptions.MaxDocumentCharacters > 0 && decompilationOptions.MaxComplexity > 0)
+        if (decompilationOptions.EffectiveTimeout > TimeSpan.Zero
+            && !string.IsNullOrWhiteSpace(decompilationOptions.DecompilerVersion)
+            && !string.IsNullOrWhiteSpace(decompilationOptions.CacheSchemaVersion))
         {
             diagnostic = null;
             return true;
         }
 
-        diagnostic = new(AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSessionOptions), nameof(AssemblyAnalysisSessionOptions.CacheRoot)), "Die Assembly-Decompilation-Optionen enthalten ungültige Größen- oder Komplexitätsgrenzen.", AssemblyDiagnosticSeverity.Error);
+        diagnostic = new(AssemblyDiagnosticCodes.For(nameof(AssemblyAnalysisSessionOptions), nameof(AssemblyAnalysisSessionOptions.CacheRoot)), "Die Assembly-Decompilation-Optionen enthalten ungültige Werte.", AssemblyDiagnosticSeverity.Error);
         return false;
     }
 

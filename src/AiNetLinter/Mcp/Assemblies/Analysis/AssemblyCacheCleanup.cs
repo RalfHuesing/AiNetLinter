@@ -47,6 +47,15 @@ internal static class AssemblyCacheCleanup
                 .OrderByDescending(Directory.GetLastWriteTimeUtc)
                 .ThenByDescending(Path.GetFileName, StringComparer.Ordinal)
                 .ToList();
+            foreach (var staging in Directory.EnumerateDirectories(
+                         entryDirectory,
+                         AssemblyCacheContract.GenerationDirectoryPrefix + "*" + AssemblyCacheContract.StagingDirectorySuffix,
+                         SearchOption.TopDirectoryOnly)
+                     .Where(path => AssemblyCacheContract.IsSafeStagingName(Path.GetFileName(path))))
+            {
+                DeleteDirectory(staging);
+            }
+
             var retained = new HashSet<string>(StringComparer.Ordinal)
             {
                 currentGeneration,

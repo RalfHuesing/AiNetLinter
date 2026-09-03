@@ -153,7 +153,10 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
     }
 }
 
-internal sealed record AssemblyAnalysisHostConfiguration(bool Succeeded);
+internal sealed record AssemblyAnalysisHostConfiguration(
+    bool Succeeded,
+    AssemblyAnalysisConfigurationOptions? AssemblyAnalysis = null,
+    IReadOnlyList<ExternalSourceConfigurationDiagnostic>? AssemblyAnalysisDiagnostics = null);
 
 internal sealed class AssemblyAnalysisHostDependencies
 {
@@ -181,6 +184,7 @@ internal static class AssemblyAnalysisHostFactory
         ExternalResourceRegistryOverrides? resourceOverrides)
     {
         var configurationResult = ExternalSourceConfigurationLoader.Load(settingsPath);
+        var assemblyConfigurationResult = AssemblyAnalysisConfigurationLoader.Load(settingsPath);
         var configuredResources = configurationResult.Configuration?.CacheOptions.ResourceOptions
             ?? ExternalSourceResourceOptions.Default;
         var resourceOptions = ExternalResourceRegistryOptionsFactory.Create(
@@ -202,11 +206,18 @@ internal static class AssemblyAnalysisHostFactory
         var sourceOrchestrator = new AssemblySourceSelectionOrchestrator(
             sourceConfiguration,
             providerCoordinator);
+        var assemblyDecompilationConfiguration = new AssemblyDecompilationConfiguration(
+            new AssemblyDecompilationOptions(Timeout: assemblyConfigurationResult.Options.DecompilationTimeout),
+            assemblyConfigurationResult.Options.CacheRoot);
         var sessions = new AssemblyAnalysisRegistry(
             sourceOrchestrator,
-            resourceRegistry: resources);
+            resourceRegistry: resources,
+            decompilationConfiguration: assemblyDecompilationConfiguration);
         return new AssemblyAnalysisHostComposition(
-            new AssemblyAnalysisHostConfiguration(configurationResult.Succeeded),
+            new AssemblyAnalysisHostConfiguration(
+                configurationResult.Succeeded,
+                assemblyConfigurationResult.Options,
+                assemblyConfigurationResult.Diagnostics),
             sourceProvider,
             new AssemblyAnalysisHostDependencies
             {

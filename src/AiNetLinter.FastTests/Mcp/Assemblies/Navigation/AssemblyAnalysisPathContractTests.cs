@@ -216,7 +216,9 @@ public sealed class AssemblyAnalysisPathContractTests
         Assert.Null(leaseResult.Error);
         using var lease = leaseResult.Lease!;
         var solution = lease.Server.GetCurrentSolution()!;
-        var document = Assert.Single(solution.Projects.Single().Documents);
+        var document = Assert.Single(
+            solution.Projects.Single().Documents.Where(document =>
+                string.Equals(document.Name, "Document.cs", StringComparison.OrdinalIgnoreCase)));
         var type = lease.Context.Compilation.GetTypeByMetadataName("Probe.Document")!;
         var method = Assert.Single(type.GetMembers("Save").OfType<IMethodSymbol>());
         var identity = new AnalysisSymbolIdentity(lease.Context.Origin.ContentHash, lease.Context.Generation);

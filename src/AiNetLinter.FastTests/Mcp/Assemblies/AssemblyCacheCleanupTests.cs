@@ -35,6 +35,20 @@ public sealed class AssemblyCacheCleanupTests
     }
 
     [Fact]
+    public void DeleteFile_IgnoresLockedFileAsBestEffortCleanup()
+    {
+        using var tempDir = TestTempDirectory.Create("assembly-cache-cleanup-locked-");
+        var path = Path.Combine(tempDir.DirectoryPath, "locked-generation.tmp");
+        File.WriteAllText(path, "generation");
+        using var handle = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
+
+        var exception = Record.Exception(() => AssemblyCacheCleanup.DeleteFile(path));
+
+        Assert.Null(exception);
+        Assert.True(File.Exists(path));
+    }
+
+    [Fact]
     public void RetainGenerations_KeepsCurrentAndOnePreviousSafeGeneration()
     {
         using var tempDir = TestTempDirectory.Create("assembly-cache-retention-");

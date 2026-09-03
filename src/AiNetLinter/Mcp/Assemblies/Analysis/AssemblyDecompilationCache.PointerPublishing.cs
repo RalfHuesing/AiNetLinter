@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
@@ -128,7 +129,7 @@ internal sealed partial class AssemblyDecompilationCache
             throw new InvalidDataException("Der Current-Pointer enthält einen unsicheren Generationpfad.");
         }
 
-        var generationDirectory = ResolveSafePath(entryDirectory, normalized);
+        var generationDirectory = AssemblyCacheGenerationStorage.ResolveSafePath(entryDirectory, normalized);
         if (!Directory.Exists(generationDirectory)) throw new InvalidDataException("Die referenzierte Cachegeneration fehlt.");
         return generationDirectory;
     }

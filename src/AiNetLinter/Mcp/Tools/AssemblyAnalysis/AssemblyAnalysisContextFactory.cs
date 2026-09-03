@@ -69,8 +69,8 @@ internal static class AssemblyAnalysisContextFactory
             null,
             generation.Origin with
             {
-                BodyAvailability = "onDemand",
-                ContentMode = "decompiledSignatureOnly",
+                BodyAvailability = "available",
+                ContentMode = "decompiledProject",
             },
             generation.Number,
             generation.Status,
