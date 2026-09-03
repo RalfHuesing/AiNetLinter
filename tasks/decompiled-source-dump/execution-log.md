@@ -166,3 +166,30 @@ Implementierungs-Checkpoint committen, danach frischen Folge-Review für den Kor
 
 - Keine neuen task-scope-actionable Tech-Debt-Findings. Die 37 LOW-Dead-Code-Hinweise, bestehende Race-/Timeout-Fehler und die breite AIContextFootprint-Warnung sind nicht als Epic-2-Ursachen belegt und bleiben außerhalb der Queue.
 - Nächste Aktion: Implementierungs-Checkpoint committen, danach unabhängigen Review starten.
+
+## Run 2026-09-03 / Epic 2 / Reviewer / running
+
+- Subagent: `01a066bc-4d7d-7d42-beeb-a7ee2896ba8d` (`Sagan`)
+- Baseline: `30e4c727`; Implementierungs-Checkpoint: `9ffffa2a`
+- Auftrag: Unabhängige Prüfung der direkten Roslyn-Body-Auflösung und der vollständigen Entfernung des Stub-/On-Demand-Systems.
+- Status: completed / issues
+
+### Terminaler Reviewerbericht
+
+Urteil: `issues`.
+
+- **P1 / `DOC-BODY-MODE-DRIFT`:** `Docs/integration.md:328-330` behauptet weiterhin einen on-demand dekompilierten Body; `Docs/agent-api.md:522` beschreibt dekompilierte Dokumente weiterhin als API-Stubs. Gegenbeleg sind eager `WholeProjectDecompiler` in `AssemblyDecompilationAdapter.cs:86-98`, echte Roslyn-Dokumente in `AssemblyRoslynWorkspaceFactory.cs:31-47` und der direkte `SourceSymbolBodyResolver`-Pfad in `GetSymbolBodyTool.cs:163-184`. Empfehlung: Dokumentation auf eager Projekt-Snapshots und `contentMode=source` aktualisieren; Stub-Einschränkung nur für tatsächlich nicht verfügbare Member nennen.
+- **P3 / `BODY-RESOLVER-CLEANUP-RESIDUE`:** `GetSymbolBodyTool.cs:117,188-196` übergibt ein ungelesenes `RenderSingleSymbolRequest.Lease`; `AssemblyReferenceResolver.cs:367` übergibt ein ungenutztes `canonicalPath` an `FailedResolution`. Keine funktionale Auswirkung; als `promoted-to-project-debt` in `tech-debt.md` registriert.
+
+### Reviewer-Verifikation
+
+- AiNetLinter-MCP mit `targetType=project` und absolutem `targetPath`: Change Context 28/28 geänderte Symbole, 173 Aufrufstellen, 0 Violations; Feature-/Body-Kontext für Resolver, Workspace, Generation, Lease, Call-Tree und Symbolgraph; Type-Hierarchy für `IAssemblyBodyContext` mit genau einer Implementierung; zusätzliche Symbol-/Body-Prüfungen.
+- Eigene fokussierte Tests: `GetSymbolBodyToolTests` 13/13 und Assembly-Routen-/Transitiv-Navigation 7/7 grün.
+- Implementierer-Nachweise für Focus-Suite 33/33, Integration 384/384, Build 0/0, gezielte Violations 0 und `git diff --check` wurden als frisch und passend übernommen.
+- Exakte Suche nach entfernten Typen/Dateien/Delegaten/`ResolveBodyAsync`: keine Treffer.
+- Full-FastGate: 2.433 grün, 2 übersprungen, 3 bekannte scope-fremde Race-/Timeout-Fehler (`AssemblyAnalysisRegistryRetirementRaceTests`, `ProjectRegistryTests`, `ThinClientPumpContractTests`); zwei externe Source-/Symlink-Tests wegen Windows-Berechtigungen übersprungen; bestehende `AIContextFootprint`-Warnung in `DaemonHostCommand.cs:15`; verbleibende `MSBuildWorkspace`-Verwendung außerhalb des Assembly-Pfads.
+- Kein Produktions-/Testcode und kein Commit durch den Reviewer; Code-Map geprüft und unverändert.
+
+### Nächste Aktion
+
+P1-Dokumentationsdrift in einer frischen Implementierer-/Reviewer-Korrekturrunde beheben; P3-Residuum bleibt Projekt-Tech-Debt.

@@ -23,3 +23,14 @@
 - attempts: 0
 
 Die im Implementiererbericht genannten bestehenden Near-Duplicate-/Low-Confidence-Dead-Code-Hinweise sind nicht durch Epic 1 eingeführt und bleiben außerhalb dieser task-scope Queue.
+
+## TD-003
+
+- Schweregrad: P3
+- Ursache: Unvollständiges Cleanup nach Entfernung der alten Body-Auflösung.
+- Scope/Fundstelle: `GetSymbolBodyTool.cs:117,188-196`, `AssemblyReferenceResolver.cs:367`.
+- Evidenz: `RenderSingleSymbolRequest.Lease` wird übergeben, aber nicht gelesen; `FailedResolution` erhält einen ungenutzten `canonicalPath`.
+- Disposition: `promoted-to-project-debt`
+- Nächster Schritt: Bei einer passenden projektweiten Cleanup-Lieferung Parameter-/Request-Verträge ohne Funktionsänderung bereinigen und gezielt kompilieren/testen.
+- Log-Anker: `execution-log.md`, Epic 2 Reviewer, P3 `BODY-RESOLVER-CLEANUP-RESIDUE`.
+- attempts: 0
