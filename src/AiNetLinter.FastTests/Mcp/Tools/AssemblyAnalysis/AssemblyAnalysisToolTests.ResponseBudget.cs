@@ -3,8 +3,11 @@
 using System;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using AiNetLinter.FastTests.Fixtures;
+using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis.Dispatch;
 using AiNetLinter.TestKit;
@@ -14,6 +17,144 @@ namespace AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 
 public sealed partial class AssemblyAnalysisToolTests
 {
+    [Fact]
+    public void FinalWireTrim_RecalculatesFileTreeCountsAndContinuation()
+    {
+        var files = Enumerable.Range(0, 40)
+            .Select(index => new { path = $"src/very-long-file-name-{index:D2}.cs", extension = ".cs", sizeBytes = 123L, lineCount = 4, depth = 1 })
+            .ToArray();
+        var result = McpToolResults.Text(
+            "file tree",
+            new
+            {
+                fileTree = new
+                {
+                    root = ".",
+                    effectiveRoot = "src",
+                    view = "files",
+                    summary = new
+                    {
+                        scannedFileCount = 40,
+                        matchedFileCount = 40,
+                        scannedDirectoryCount = 2,
+                        matchedDirectoryCount = 1,
+                        matchedBytes = 4920L,
+                        byExtension = new[] { new { extension = ".cs", count = 40, bytes = 4920L } },
+                    },
+                    directories = new[] { new { path = "src", depth = 0, matchedFileCount = 40, matchedBytes = 4920L, childDirectoryCount = 0 } },
+                    files,
+                    completeness = new
+                    {
+                        scanCompleted = true,
+                        truncated = false,
+                        truncatedBy = Array.Empty<string>(),
+                        shownFileCount = 40,
+                        inaccessibleSubtreeCount = 0,
+                        skippedExcludedDirectoryCount = 0,
+                        skippedReparsePointCount = 0,
+                        warnings = Array.Empty<string>(),
+                    },
+                },
+            });
+
+        var projected = AssemblyAnalysisResponse.ApplyWireBudget(result, AssemblyAnalysisResponseLimits.MinimumResponseBytes, 0);
+        var tree = projected.StructuredContent!.Value.GetProperty("fileTree");
+        var returned = tree.GetProperty("files").GetArrayLength();
+
+        Assert.True(returned < 40);
+        Assert.Equal(returned, tree.GetProperty("returnedCount").GetInt32());
+        Assert.Equal(returned, tree.GetProperty("completeness").GetProperty("shownFileCount").GetInt32());
+        Assert.True(tree.GetProperty("completeness").GetProperty("truncated").GetBoolean());
+        Assert.Contains("responseBudget", tree.GetProperty("completeness").GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal(returned.ToString(), tree.GetProperty("continuationToken").GetString());
+    }
+
+    [Fact]
+    public void FinalWireTrim_RecalculatesCallSitesAndBodyResults()
+    {
+        var callSites = Enumerable.Range(0, 24)
+            .Select(index => new { filePath = $"src/Caller{index:D2}.cs", line = index + 1, symbolName = "Probe.Run", projectName = "Probe", depth = 1, reachedFromSymbolId = "M:Probe.Run" })
+            .ToArray();
+        var bodyResults = Enumerable.Range(0, 12)
+            .Select(index => new { requestedIdentifier = $"Probe.Run{index:D2}", id = $"M:Probe.Run{index:D2}", filePath = $"src/Body{index:D2}.cs", startLine = 1, body = new string('x', 400), bodyAvailability = "available", contentMode = "source", isTruncated = false })
+            .ToArray();
+        var result = McpToolResults.Text(
+            "composite",
+            new
+            {
+                callers = new
+                {
+                    callSites,
+                    completeness = new
+                    {
+                        requestedDepth = 1,
+                        effectiveDepth = 1,
+                        visitedNodeCount = 24,
+                        totalCallSiteCount = 24,
+                        shownCallSiteCount = 24,
+                        truncatedByMaxResults = false,
+                        truncatedByNodeLimit = false,
+                        depthWasClamped = false,
+                    },
+                },
+                body = new { results = bodyResults, requestedCount = 12 },
+            });
+
+        var projected = AssemblyAnalysisResponse.ApplyWireBudget(result, AssemblyAnalysisResponseLimits.MinimumResponseBytes, 0);
+        var payload = projected.StructuredContent!.Value;
+        var callers = payload.GetProperty("callers");
+        var shownCallSites = callers.GetProperty("callSites").GetArrayLength();
+        var body = payload.GetProperty("body");
+        var shownBodies = body.GetProperty("results").GetArrayLength();
+
+        Assert.True(shownCallSites < 24 || shownBodies < 12);
+        Assert.Equal(shownCallSites, callers.GetProperty("completeness").GetProperty("shownCallSiteCount").GetInt32());
+        Assert.Equal(shownCallSites < 24, callers.GetProperty("completeness").GetProperty("truncated").GetBoolean());
+        Assert.Equal(shownBodies, body.GetProperty("returnedCount").GetInt32());
+        Assert.Equal(shownBodies < 12, body.GetProperty("isTruncated").GetBoolean());
+        if (shownBodies < 12) Assert.Equal(shownBodies.ToString(), body.GetProperty("continuationToken").GetString());
+    }
+
+    [Fact]
+    public void FinalWireTrim_MergesOuterAndInnerCompositeTruncation()
+    {
+        var result = McpToolResults.Text(
+            "composite",
+            new
+            {
+                isTruncated = true,
+                truncatedBy = new[] { "responseBudget" },
+                assemblyAnalysis = new
+                {
+                    totalCount = 1,
+                    returnedCount = 1,
+                    isTruncated = false,
+                    truncatedBy = Array.Empty<string>(),
+                    types = new[] { new { id = "T:Probe.Run", name = "Run", signature = new string('x', 8000) } },
+                },
+            });
+
+        var projected = AssemblyAnalysisResponse.ApplyWireBudget(result, AssemblyAnalysisResponseLimits.MinimumResponseBytes, 0);
+        var payload = projected.StructuredContent!.Value;
+
+        Assert.True(payload.GetProperty("isTruncated").GetBoolean());
+        Assert.Contains("responseBudget", payload.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
+        Assert.True(payload.GetProperty("wireBudget").GetProperty("totalBytes").GetInt32() <= AssemblyAnalysisResponseLimits.MinimumResponseBytes);
+    }
+
+    [Fact]
+    public void FinalWireTrim_RejectsUnrepresentableMinimumBudget()
+    {
+        var result = AssemblyAnalysisResponse.ApplyWireBudget(
+            McpToolResults.Text("too small", new { value = "payload" }),
+            1,
+            0);
+
+        Assert.False(result.IsError);
+        Assert.Contains(AssemblyAnalysisResponseLimits.MinimumResponseBytes.ToString(), AssemblyAnalysisTestSupport.TextOf(result), StringComparison.Ordinal);
+        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
+    }
+
     [Fact]
     public async Task InspectAssembly_GlobalResponseBudgetUsesOneTypedSelectionForTextAndJson()
     {

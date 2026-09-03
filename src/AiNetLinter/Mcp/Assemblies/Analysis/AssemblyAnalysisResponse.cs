@@ -39,6 +39,13 @@ internal static class AssemblyAnalysisResponse
         AssemblyAnalysisLease lease,
         AssemblyAnalysisResponseRequest request)
     {
+        if (AssemblyAnalysisResponseLimits.IsBelowMinimumResponseBudget(request.MaxResponseBytes))
+        {
+            return McpToolResults.InvalidArgument(
+                $"maxResponseBytes muss mindestens {AssemblyAnalysisResponseLimits.MinimumResponseBytes} Bytes betragen, damit ein maschinenlesbarer Assembly-Envelope mit Status und Budgetdaten repräsentierbar bleibt.",
+                $"maxResponseBytes erhöhen oder den Parameter weglassen; dann gilt das konfigurierte Assembly-Budget von {lease.Context.ResponseBudgetBytes} Bytes.");
+        }
+
         var enriched = CreateEnriched(result, lease);
         var budget = AssemblyAnalysisResponseLimits.ResolveResponseBudget(
             request.MaxResponseBytes,
@@ -98,6 +105,13 @@ internal static class AssemblyAnalysisResponse
 
     internal static CallToolResult ApplyWireBudget(CallToolResult result, int budget, int cursorOffset)
     {
+        if (budget < AssemblyAnalysisResponseLimits.MinimumResponseBytes)
+        {
+            return McpToolResults.InvalidArgument(
+                $"Das angeforderte Assembly-Antwortbudget muss mindestens {AssemblyAnalysisResponseLimits.MinimumResponseBytes} Bytes betragen.",
+                "maxResponseBytes erhöhen; unterhalb dieser Grenze wird kein unvollständiger Wire-Envelope erzeugt.");
+        }
+
         var withBudget = AddWireBudgetMetadata(
             result,
             budget,
@@ -110,18 +124,22 @@ internal static class AssemblyAnalysisResponse
             "die Textdarstellung wurde wegen des gemeinsamen Wire-Budgets gekürzt.");
         withBudget = AddWireBudgetMetadata(withBudget, budget, isTruncated: true);
 
-        for (var attempt = 0; attempt < 8 && Measure(withBudget).TotalBytes > budget; attempt++)
+        for (var attempt = 0; attempt < 128 && Measure(withBudget).TotalBytes > budget; attempt++)
         {
             if (withBudget.StructuredContent is not { ValueKind: JsonValueKind.Object } structured)
             {
-                withBudget = ReplaceText(withBudget, TrimUtf8(
-                    withBudget.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty,
-                    budget));
+                var text = withBudget.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
+                withBudget = ReplaceText(withBudget, TrimUtf8(text, Math.Max(1, budget - Measure(withBudget).StructuredBytes)));
                 break;
             }
 
             var available = Math.Max(1, budget - Measure(withBudget).TextBytes);
             var trimmed = TrimStructured(structured, available, cursorOffset);
+            if (trimmed.GetRawText() == structured.GetRawText())
+            {
+                withBudget = ReplaceText(withBudget, string.Empty);
+                break;
+            }
             withBudget = ReplaceStructured(withBudget, trimmed);
             withBudget = AddWireBudgetMetadata(withBudget, budget, isTruncated: true);
         }
@@ -133,10 +151,15 @@ internal static class AssemblyAnalysisResponse
                 ["wireTruncated"] = true,
                 ["truncatedBy"] = new JsonArray("responseBudget"),
             }, McpJsonOptions.Default));
+            withBudget = ReplaceText(withBudget, string.Empty);
             withBudget = AddWireBudgetMetadata(withBudget, budget, isTruncated: true);
         }
 
-        return withBudget;
+        if (Measure(withBudget).TotalBytes <= budget) return withBudget;
+
+        return McpToolResults.InvalidArgument(
+            $"Das Assembly-Antwortbudget von {budget} Bytes ist für den minimalen Wire-Envelope nicht repräsentierbar.",
+            $"maxResponseBytes auf mindestens {AssemblyAnalysisResponseLimits.MinimumResponseBytes} Bytes erhöhen.");
     }
 
     private static CallToolResult AddWireBudgetMetadata(
@@ -151,7 +174,7 @@ internal static class AssemblyAnalysisResponse
 
         var node = JsonNode.Parse(structured.GetRawText()) as JsonObject ?? new JsonObject();
         var candidate = result;
-        for (var attempt = 0; attempt < 8; attempt++)
+        for (var attempt = 0; attempt < 16; attempt++)
         {
             var measurement = Measure(candidate);
             node["wireBudget"] = new JsonObject
@@ -163,7 +186,8 @@ internal static class AssemblyAnalysisResponse
                 ["truncated"] = isTruncated,
             };
             var next = ReplaceStructured(candidate, JsonSerializer.SerializeToElement(node, McpJsonOptions.Default));
-            if (Measure(next) == measurement) return next;
+            if (Measure(next) == measurement
+                && next.StructuredContent?.GetRawText() == candidate.StructuredContent?.GetRawText()) return next;
             candidate = next;
         }
 
@@ -177,7 +201,7 @@ internal static class AssemblyAnalysisResponse
         while (JsonSerializer.SerializeToUtf8Bytes(node, McpJsonOptions.Default).Length > budget
             && TryTrimNode(node))
         {
-            AssemblyAnalysisResponseEnvelope.RecalculateEnvelopes(node, cursorOffset);
+            // Projection is intentionally batched; envelope fields are rebuilt once below.
         }
 
         AssemblyAnalysisResponseEnvelope.RecalculateEnvelopes(node, cursorOffset);
@@ -194,27 +218,31 @@ internal static class AssemblyAnalysisResponse
             || (value.TryGetProperty("truncated", out var truncated)
                 && truncated.ValueKind == JsonValueKind.True));
 
-    private static bool TryTrimNode(JsonNode node) =>
+    private static bool TryTrimNode(JsonNode node, string? propertyName = null) =>
         node switch
         {
             JsonObject obj => TryTrimObject(obj),
-            JsonArray array => TryTrimArray(array),
+            JsonArray array => IsTrimCandidate(propertyName) && TryTrimArray(array),
             _ => false,
         };
 
     private static bool TryTrimObject(JsonObject obj) =>
-        TryTrimOptionalSections(obj)
-        || TryTrimCollections(obj)
-        || TryTrimObjectStrings(obj)
+        TryTrimCollections(obj)
         || TryTrimObjectChildren(obj)
+        || TryTrimOptionalSections(obj)
+        || TryTrimObjectStrings(obj)
         || TryRemoveLargestObjectProperty(obj);
 
     private static bool TryTrimCollections(JsonObject obj)
     {
-        foreach (var collectionName in new[] { "types", "extensions" })
+        foreach (var collectionName in ResultCollections)
         {
             if (obj[collectionName] is not JsonArray collection || collection.Count <= 1) continue;
-            collection.RemoveAt(collection.Count - 1);
+            var removeCount = collection.Count > 16 ? Math.Max(1, collection.Count / 4) : 1;
+            for (var index = 0; index < removeCount; index++)
+            {
+                collection.RemoveAt(collection.Count - 1);
+            }
             return true;
         }
 
@@ -226,7 +254,9 @@ internal static class AssemblyAnalysisResponse
         foreach (var section in new[] { "body", "classStructure", "metrics", "impact", "callers" })
         {
             if (obj[section] is not { } original
-                || original is JsonObject sectionObject && sectionObject["status"] is not null) continue;
+                || original is JsonObject sectionObject
+                    && (sectionObject["status"] is not null
+                        || ResultCollections.Any(collection => sectionObject[collection] is JsonArray))) continue;
 
             obj[section] = new JsonObject
             {
@@ -252,6 +282,13 @@ internal static class AssemblyAnalysisResponse
                 && text.Length > 256)
             {
                 obj[property.Key] = TrimUtf8(text, 256);
+                if (property.Key == "body")
+                {
+                    obj["isTruncated"] = true;
+                    obj["truncated"] = true;
+                    AssemblyAnalysisResponseEnvelope.AddReason(obj, "responseBudget");
+                    obj["detailHint"] = "Body wegen des Antwortbudgets gekürzt; maxResponseBytes erhöhen oder den Body gezielt mit kleinerem Zeilenbereich anfordern.";
+                }
                 return true;
             }
         }
@@ -264,7 +301,11 @@ internal static class AssemblyAnalysisResponse
         foreach (var property in obj)
         {
             if (IsBudgetMetadata(property.Key)) continue;
-            if (property.Value is not null && TryTrimNode(property.Value)) return true;
+            if (property.Value is JsonArray && IsTrimCandidate(property.Key)
+                && TryTrimNode(property.Value, property.Key)) return true;
+            if (property.Value is JsonObject && IsTrimContainer(property.Key)
+                && property.Key is not ("completeness" or "summary" or "referenceSummary" or "diagnosticsSummary")
+                && TryTrimNode(property.Value, property.Key)) return true;
         }
 
         return false;
@@ -273,7 +314,11 @@ internal static class AssemblyAnalysisResponse
     private static bool TryRemoveLargestObjectProperty(JsonObject obj)
     {
         var removable = obj
-            .Where(property => !IsBudgetMetadata(property.Key) && !IsEnvelopeMetadata(property.Key))
+            .Where(property => !IsBudgetMetadata(property.Key)
+                && !IsEnvelopeMetadata(property.Key)
+                && !IsTrimCandidate(property.Key)
+                && !IsTrimContainer(property.Key)
+                && property.Key is not ("body" or "classStructure" or "metrics" or "impact" or "callers" or "fileTree"))
             .OrderByDescending(property => property.Value is null
                 ? 0
                 : JsonSerializer.SerializeToUtf8Bytes(property.Value, McpJsonOptions.Default).Length)
@@ -290,7 +335,7 @@ internal static class AssemblyAnalysisResponse
             if (item is not null && TryTrimNode(item)) return true;
         }
 
-        if (array.Count == 0) return false;
+        if (array.Count <= 1) return false;
         array.RemoveAt(array.Count - 1);
         return true;
     }
@@ -298,11 +343,25 @@ internal static class AssemblyAnalysisResponse
     private static void MarkStructuredTruncated(JsonNode node)
     {
         if (node is not JsonObject obj) return;
-        if (obj["isTruncated"] is not null) obj["isTruncated"] = true;
-        if (obj["truncated"] is not null) obj["truncated"] = true;
+        obj["isTruncated"] = true;
+        obj["truncated"] = true;
         obj["wireTruncated"] = true;
         AssemblyAnalysisResponseEnvelope.AddReason(obj, "responseBudget");
     }
+
+    private static readonly string[] ResultCollections =
+        [
+            "types", "extensions", "files", "directories", "callSites", "results", "members",
+            "references", "referenceSessions", "diagnostics", "samples", "namespaces",
+        ];
+
+    private static bool IsTrimCandidate(string? propertyName) =>
+        propertyName is not null && ResultCollections.Contains(propertyName, StringComparer.Ordinal);
+
+    private static bool IsTrimContainer(string propertyName) =>
+        propertyName is "assemblyAnalysis" or "body" or "classStructure" or "metrics" or "impact"
+            or "callers" or "fileTree" or "completeness" or "summary" or "referenceSummary"
+            or "diagnosticsSummary";
 
     private static bool IsBudgetMetadata(string name) =>
         name is "analysis" or "wireBudget" or "wireTruncated" or "truncatedBy";
@@ -310,7 +369,7 @@ internal static class AssemblyAnalysisResponse
     private static bool IsEnvelopeMetadata(string name) =>
         name is "totalTypes" or "totalExtensions" or "totalCount" or "returnedCount"
             or "shownCount" or "isTruncated" or "truncated" or "continuationToken"
-            or "types" or "extensions" or "id";
+            or "types" or "extensions" or "id" or "status" or "detailHint";
 
     private static CallToolResult ReplaceStructured(CallToolResult result, JsonElement structured) =>
         new()

@@ -85,6 +85,14 @@
 - Subagent: `01a06952-96da-7222-a460-f11fe57a4444` (Franklin)
 - Auftrag: tatsächlichen Korrekturdiff, Regressionen, Code-Map und Verifikationsnachweise prüfen; kein Produktionscode und kein Commit.
 
+## Run 2026-09-04 / Epic 1 / Korrektur-Implementierer 3
+
+- Status: running
+- Diff-Baseline: `2291e3fe` (Folge-Review-Checkpoint 2)
+- Scope: drei aktive P1-Ursachensignaturen `BudgetProjection/Envelope`, `AssemblyWireBudget/Coverage` und `CompositeBudget/Enrichment`
+- Subagent: `01a0695b-64ab-7b11-aa30-ab8e25778359` (Volta)
+- Auftrag: route-spezifische Envelope-Counts, Mindest-/Effektivbudget und OR-sichere Composite-Statusaggregation einschließlich Regressionen korrigieren; Verifikation nach der letzten Codeänderung liefern.
+
 ## Run 2026-09-04 / Epic 1 / Folge-Reviewer 2 – Abschluss
 
 - Status: completed; Folge-Reviewerbericht terminal eingegangen.
@@ -139,3 +147,12 @@
 - MCP-/Qualitätsnachweise nach letzter Codeänderung: `find_duplicates` mit `targetType=project`, absolutem Projektpfad, Scope `src/AiNetLinter/Mcp`, `scopeType=production`, `mode=clone`, `similarityThreshold=fuzzy`, `minTokens=30`, `maxResults=50` meldet 9 bestehende Near-/Fuzzy-Cluster ohne sichere scope-nahe Korrektur; Dead-Code-Audit 38 Low-Confidence-/0 High-Confidence-Funde; Magic-Values-Audit 8 bestehende Treffer in `MagicValuesStringHeuristics.cs`; `find_references` bestätigt 4 Verwendungen von `ResponseBudgetOptions`; finaler `get_violations` mit `targetType=project`, absolutem Projektpfad, Scope `src/AiNetLinter/Mcp`, `includeSnippet=true`, `contextLines=2`, `maxResults=200`: 0 Violations.
 - Offene Risiken: vollständiger Integrationtestlauf ist unter paralleler Ausführung weiterhin anfällig für externe Fixture-Dateisperren, isoliert ist der betroffene Test grün; Feature-Metrik weist auf bestehende aggregierte LOC-Überschreitung von `AssemblyAnalysisResponseLimits` hin, ohne actionable Violation im finalen Scope-Check.
 - Nächste Aktion: Checkpoint-Commit, danach frischer Folge-Review der fünf P1-Korrekturen.
+
+## Run 2026-09-04 / Epic 1 / Korrektur-Implementierer 3 – Abschluss
+
+- Status: completed; Korrekturbericht terminal eingegangen.
+- Urteil: Implementierer meldet die drei verbleibenden P1-Ursachensignaturen behoben; Folge-Review erforderlich.
+- Bericht: Finaler Wire-Trim budgetiert Text, Structured Content und Metadaten gemeinsam; Mindestbudget 2048 Bytes, `maxResponseBytes=1` liefert recoverable `INVALID_ARGUMENT`; Counts, Completeness und Cursor werden für fileTree, callSites, Body-Results, Members, Referenzen, Diagnostics und weitere bekannte Arrays rekonstruiert; unbekannte Arrays werden nicht unkontrolliert gekürzt; Composite-Outer-/Inner-Truncation wird verlustfrei gemerged; `topN`, Body-Provenienz und CLR-/Wire-Kompatibilität bleiben erhalten; Regressionstests und `code-map.md` aktualisiert.
+- Verifikation jeweils nach der letzten Codeänderung: `dotnet build --no-restore` mit 0 Warnungen/0 Fehlern; FastTests `FullyQualifiedName~AssemblyAnalysisToolTests`: 24/24; IntegrationTests `FullyQualifiedName~AssemblyAnalysisDispatcherCapabilityTests`: 17/17; FastTests vollständig `Category!=Stress`: 2427 bestanden, 2 übersprungen; `find_duplicates` mit `targetType=project`, absolutem Projekt-`targetPath`, `scopeDir=src/AiNetLinter/Mcp`, Production/Clone/Fuzzy, `minTokens=30`, `maxResults=50`: 9 bestehende Kandidaten, kein sicherer Scope-Fix; `find_dead_code` gleicher Scope mit `private_internal`, `both`, `members`, Tests ausgeschlossen, `maxResults=50`: 39 Low-Confidence-Funde; `find_magic_values` gleicher Scope, alle Kategorien/Werttypen, `minOccurrences=2`, Tests/Suppressed ausgeschlossen, `maxResults=50`: nur bestehende Kandidaten; letzter `get_violations` mit gleichem absolutem Projekt-Scope, Snippets, `contextLines=2`, `maxResults=200`: 0 Violations.
+- Offenes Risiko: Vollständiger Integrationslauf vor dem letzten kleinen Refactoring hatte vier umgebungs-/prozessbedingte Fehler (Restore-Fixtures, Daemon-Prozess, DLL-Lock); der betroffene Dispatcher-Scope ist im finalen Lauf vollständig grün.
+- Nächste Aktion: Checkpoint-Commit, danach frischer Folge-Review 3.

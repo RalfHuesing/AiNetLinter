@@ -15,6 +15,21 @@ namespace AiNetLinter.IntegrationTests.Mcp.Assemblies;
 public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
 {
     [Fact]
+    public async Task AssemblyRoute_MaxResponseBytesBelowMinimumReturnsRecoverableArgument()
+    {
+        using var temp = TestTempDirectory.Create("assembly-dispatcher-minimum-budget-");
+        await using var fixture = await SyntheticAssemblyFixture.CreateAsync(temp, []);
+
+        var result = await fixture.ExecuteInspectAsync(maxResponseBytes: 1);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+
+        Assert.False(result.IsError);
+        Assert.Contains("maxResponseBytes", text, StringComparison.Ordinal);
+        Assert.Contains(AssemblyAnalysisResponseLimits.MinimumResponseBytes.ToString(), text, StringComparison.Ordinal);
+        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
+    }
+
+    [Fact]
     public async Task AssemblyRoute_BudgetsFinalEnrichedResponseThroughDispatcher()
     {
         using var temp = TestTempDirectory.Create("assembly-dispatcher-response-budget-");
@@ -107,6 +122,7 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
 
         var payload = Structured(result);
         var section = payload.GetProperty("body");
+        var bodyResult = Assert.Single(section.GetProperty("results").EnumerateArray());
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         var textBytes = Encoding.UTF8.GetByteCount(text);
         var structuredBytes = JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length;
@@ -114,9 +130,9 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
         Assert.True(textBytes + structuredBytes <= 4096);
         Assert.Equal(4096, payload.GetProperty("wireBudget").GetProperty("limitBytes").GetInt32());
         Assert.Equal(textBytes + structuredBytes, payload.GetProperty("wireBudget").GetProperty("totalBytes").GetInt32());
-        Assert.Equal("truncated", section.GetProperty("status").GetString());
-        Assert.True(section.GetProperty("truncated").GetBoolean());
-        Assert.Contains("maxResponseBytes", section.GetProperty("detailHint").GetString(), StringComparison.Ordinal);
+        Assert.Equal("truncated", bodyResult.GetProperty("body").GetProperty("status").GetString());
+        Assert.True(bodyResult.GetProperty("body").GetProperty("truncated").GetBoolean());
+        Assert.Contains("maxResponseBytes", bodyResult.GetProperty("body").GetProperty("detailHint").GetString(), StringComparison.Ordinal);
     }
 
     [Fact]

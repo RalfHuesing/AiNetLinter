@@ -79,3 +79,5 @@ Folge-Reviewer 1 bestätigt `BudgetProjection/Envelope`, `AssemblyWireBudget/Cov
 Korrektur-Implementierer 2 meldet die drei offenen Ursachen behoben; Disposition bleibt bis zum Folge-Review 2 `fix-now`. Attempts werden auf 2 fortgeschrieben.
 
 Folge-Reviewer 2 bestätigt die drei Ursachen weiterhin als P1 offen: `BudgetProjection/Envelope`, `AssemblyWireBudget/Coverage` und `CompositeBudget/Enrichment`. `CompositeTraversal/TopN` und `AssemblyProvenance/BodyMode` bleiben `fixed`. Korrekturrunde 3 wird mit Attempts 3 für die drei aktiven Einträge gestartet.
+
+Korrektur-Implementierer 3 meldet die drei aktiven Ursachen behoben; Disposition bleibt bis zum Folge-Review 3 `fix-now`, Attempts bleiben bei 3.

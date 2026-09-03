@@ -140,8 +140,14 @@ internal static class AssemblyAnalysisContextTool
     private static void AddEnvelope(JsonObject root)
     {
         var analysis = root["assemblyAnalysis"];
-        root["totalCount"] = analysis?["totalCount"]?.GetValue<int>() ?? analysis?["totalTypes"]?.GetValue<int>() ?? 0;
-        root["returnedCount"] = analysis?["returnedCount"]?.GetValue<int>() ?? analysis?["shownCount"]?.GetValue<int>() ?? 0;
+        var analysisTotalCount = analysis?["totalCount"]?.GetValue<int>() ?? 0;
+        var analysisReturnedCount = analysis?["returnedCount"]?.GetValue<int>() ?? 0;
+        root["totalCount"] = analysisTotalCount > 0
+            ? analysisTotalCount
+            : analysis?["totalTypes"]?.GetValue<int>() ?? 0;
+        root["returnedCount"] = analysisReturnedCount > 0
+            ? analysisReturnedCount
+            : analysis?["shownCount"]?.GetValue<int>() ?? 0;
         root["isTruncated"] = analysis?["isTruncated"]?.GetValue<bool>() ?? analysis?["truncated"]?.GetValue<bool>() ?? false;
         root["continuationToken"] = analysis?["continuationToken"]?.GetValue<string>();
         root["truncatedBy"] = analysis?["truncatedBy"]?.DeepClone() ?? new JsonArray();
