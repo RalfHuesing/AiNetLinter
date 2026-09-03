@@ -7,14 +7,14 @@
 
 ## Betroffene Dateien und Symbole
 
-- `Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisModels.cs`: `InspectAssemblyPayload`, `FindAssemblyExtensionsPayload`, Paging-Envelope und stabile Assembly-Signatur-/Member-IDs.
-- `Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits*.cs`: Diagnose-/Referenz-Projektion, konfigurierbares 16-KiB-Standardbudget und harte technische 32-KiB-Grenze.
-- `Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextTool.cs`: kompakter Composite mit optionalen Metrics, Referenzen, Caller/Impact, Body und Klassenstruktur.
-- `Mcp/Tools/GetSymbolBodyTool.cs`: additive strukturierte Body-Batch-Ergebnisse mit stabiler ID, relativer Position, Herkunftsmodus und Truncation-Flag.
-- `Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs`: gemeinsamer `analysis`-Envelope für Folgeaufrufe.
-- `Mcp/Tools/SymbolGraph/Assembly*` und `TransitiveCallGraphModels.cs`: Assembly-Symbolauflösung, Navigation, Scope-/Truncation-Metadaten.
-- `Mcp/Tools/FileStructure/GetFileTree*.cs` und `AssemblyGetFileTreeTool.cs`: physischer Dateibaum für Projekte sowie den Source-/Decompiler-Root einer Assembly-Session.
-- `Mcp/Tools/AssemblyAnalysis/Responses/*ResponseBuilder.cs`: strukturierte Assembly-Antworten und Textprojektion.
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisModels.cs`: `InspectAssemblyPayload`, `FindAssemblyExtensionsPayload`, Paging-Envelope und stabile Assembly-Signatur-/Member-IDs.
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits*.cs`: Diagnose-/Referenz-Projektion, konfigurierbares 16-KiB-Standardbudget und harte technische 32-KiB-Grenze.
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextTool.cs`: kompakter Composite mit optionalen Metrics, Referenzen, Caller/Impact, Body und Klassenstruktur.
+- `src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs`: additive strukturierte Body-Batch-Ergebnisse mit stabiler ID, relativer Position, Herkunftsmodus und Truncation-Flag.
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs`: gemeinsamer `analysis`-Envelope für Folgeaufrufe.
+- `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindSymbolTool.cs`, `AssemblyFindReferencesTool.cs`, `AssemblySymbolResolver.cs`, `AssemblyReferenceNavigator.cs`, `TransitiveCallGraphModels.cs` sowie `src/AiNetLinter/Mcp/Tools/CallTree/AssemblyGetCallTreeTool.cs`: Assembly-Symbolauflösung, Navigation, Scope-/Truncation-Metadaten.
+- `src/AiNetLinter/Mcp/Tools/FileStructure/GetFileTree*.cs` und `AssemblyGetFileTreeTool.cs`: physischer Dateibaum für Projekte sowie den Source-/Decompiler-Root einer Assembly-Session.
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/Responses/*ResponseBuilder.cs`: strukturierte Assembly-Antworten und Textprojektion.
 
 ## Aufrufer und Abhängigkeiten
 
@@ -28,7 +28,7 @@
 - Konzept-Vertrag: `tasks/assembly-analyse-verbesserungen/Konzept.md`.
 - Abschluss-Gates: `src/AiNetLinter.FastTests`, `src/AiNetLinter.IntegrationTests`, `dotnet build`.
 - `Docs/agent-api.md`, `Docs/integration.md`, `Docs/configuration.md` sind die maßgeblichen MCP-/Konfigurationsverträge; nur unmittelbar geänderte Assembly-Verträge aktualisieren.
-- Regressionen: `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/`, `src/AiNetLinter.IntegrationTests/Mcp/Assemblies/` und `.../Mcp/Tools/McpServerAssemblyHealthE2ETests.cs`.
+- Regressionen: `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/`, `src/AiNetLinter.IntegrationTests/Mcp/Assemblies/` und `src/AiNetLinter.IntegrationTests/Mcp/Tools/McpServerAssemblyHealthE2ETests.cs`.
 
 ## Invarianten, Risiken und Unsicherheiten
 

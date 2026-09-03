@@ -29,3 +29,26 @@
 - Verifikationsnachweise: Alle oben genannten Checks wurden laut Implementierer nach der letzten Codeänderung ausgeführt. Der `get_violations`-Check war der letzte codebezogene Prüfschritt.
 - Code-Map: vom Implementierer aktualisiert; vor Review gegen den tatsächlichen Diff zu verifizieren.
 - Nächste Aktion: Checkpoint-Commit des aktuellen Epic-1-Stands, danach frischer unabhängiger Review.
+
+## Run 2026-09-03 / Epic 1 / Reviewer
+
+- Status: running
+- Diff-Baseline: `7a64e031` (unreviewter Epic-1-Checkpoint)
+- Scope: unabhängige Prüfung von Analysevertrag und Agenten-UX
+- Auftrag: tatsächlichen Diff, Konzeptabdeckung, Regeln, Aufrufer, Tests, Dokumentation, Code-Map und frische Implementierer-Nachweise prüfen; keine Produktionscodeänderung und kein Commit.
+
+## Run 2026-09-03 / Epic 1 / Reviewer – Abschluss
+
+- Status: completed; Reviewerbericht terminal eingegangen.
+- Urteil: `issues`.
+- P0: keine.
+- P1-Findings nach Ursachensignatur:
+  1. `BudgetProjection/Envelope`: In `InspectAssemblyResponseBuilder.cs`, `FindAssemblyExtensionsResponseBuilder.cs` und `AssemblyAnalysisResponseLimits.Budget.cs` werden `ReturnedCount`, `IsTruncated` und `ContinuationToken` vor dem Budget-Trim berechnet; der Trim aktualisiert nur Legacy-Felder. Bei kleinerem `maxResponseBytes` können Ergebnisse übersprungen oder unerreichbar werden. Korrektur: kanonische und Legacy-Felder nach jeder Projektion gemeinsam aus dem tatsächlichen Rückgabeoffset berechnen.
+  2. `AssemblyWireBudget/Coverage`: Text und Structured werden getrennt budgetiert; für `get_symbol_body`, Assembly-Symbolgraph-Tools und Assembly-`get_file_tree` fehlt ein gleichwertiger zentraler Budgetpfad. `InspectAssemblyFormatter` wiederholt umfangreiche Daten. Korrektur: finales Wire-Ergebnis gemeinsam budgetieren oder Structured kanonisch und Text kurz halten; zentral für alle Assembly-Routen.
+  3. `CompositeBudget/Enrichment`: `get_assembly_context` trimmt vor dem späteren `AssemblyAnalysisResponse.Enrich`; nachträgliche Metadaten können das Budget überschreiten und entfernte Sektionen (`body`, `classStructure`, `metrics`, `impact`, `callers`) werden ohne Status/Fortsetzungsmöglichkeit verworfen. Korrektur: finalen Envelope zuerst erzeugen, danach gemeinsam budgetieren und Sektionsstatus/Detailhinweise ausgeben.
+  4. `CompositeTraversal/TopN`: `topN` wird registriert und akzeptiert, aber bei Callers/Impact ignoriert. Korrektur: semantisch implementieren oder entfernen und regressionsprüfen.
+  5. `AssemblyProvenance/BodyMode`: `SourceSymbolBodyResolver` setzt Structured Body fest auf `source`, während dekompilierte Assembly-Kontexte `decompiledProject` melden. Korrektur: Body-Herkunft aus Assembly-Kontext ableiten und testen.
+- Implementierer-Nachweis: Build, FastTests, gezielte Integrationstests, Registry-Races, DRY/Dead-Code/Magic-Values und `get_violations` waren laut Bericht vollständig/plausibel und wurden nicht redundant wiederholt. `git diff --check` blieb grün.
+- Code-Map: Reviewer korrigierte ausschließlich konkrete Navigationsfakten; Zielpfade existieren.
+- Restrisiken: Vier bestehende DRY-P2-Cluster bleiben `accepted-deferred`; für Composite und Assembly-`get_file_tree` fehlen direkte dedizierte Regressionstests. Die Doku behauptet teilweise mehr Vertragssicherheit als die Findings derzeit garantieren.
+- Nächste Aktion: frischer Implementierer für die fünf P1-Ursachen, danach frischer Folge-Review.
