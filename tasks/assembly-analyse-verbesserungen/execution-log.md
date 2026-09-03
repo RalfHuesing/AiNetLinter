@@ -101,6 +101,14 @@
 - Subagent: `01a06985-82ed-7a11-a5c5-9b258ce34295` (Nietzsche)
 - Auftrag: finalen Wire-Trim, route-spezifische Rekonstruktion, Mindestbudget, Composite-Statusmerge, Regressionen, Code-Map und Verifikationsnachweise prüfen; kein Produktionscode und kein Commit.
 
+## Run 2026-09-04 / Epic 1 / Korrektur-Implementierer 4
+
+- Status: running
+- Diff-Baseline: `d2f4fa31` (Folge-Review-Checkpoint 3)
+- Scope: aktive P1-Ursachensignatur `BudgetProjection/Envelope`, unbekannte Arrays und `fileTree.directories`
+- Subagent: `01a0698e-dce0-7162-a3a7-dd0de5b646dd` (Pascal)
+- Auftrag: unbekannte Arrays gegen lautloses Entfernen schützen, Directory-Envelope mit Completeness/Truncation/Cursor ergänzen und gezielte Regressionen liefern.
+
 ## Run 2026-09-04 / Epic 1 / Folge-Reviewer 2 – Abschluss
 
 - Status: completed; Folge-Reviewerbericht terminal eingegangen.
@@ -173,3 +181,11 @@
 - Betroffene Navigation: `AssemblyAnalysisResponse.cs` im finalen generischen Trim; `AssemblyAnalysisResponseEnvelope.cs` bei `fileTree.directories`. Code-Map wurde ausschließlich um diese konkreten Fakten korrigiert.
 - Verifikation: Frische Implementierer-Nachweise (Build 0/0, Fast 24/24, Dispatcher 17/17, FastTests Nicht-Stress 2427/2, MCP-Audits und `get_violations` 0) wurden mangels Gegenhypothese nicht redundant wiederholt; eigene MCP-Abfragen mit absolutem Projektpfad/`targetType=project`; `git diff --check` grün. Externe Integrationsfehler nicht hochgestuft.
 - Nächste Aktion: Checkpoint-Commit, danach frischer Korrektur-Implementierer für `BudgetProjection/Envelope` (Attempt 4).
+
+## Run 2026-09-04 / Epic 1 / Korrektur-Implementierer 4 – Abschluss
+
+- Status: completed; Korrekturbericht terminal eingegangen.
+- Urteil: Implementierer meldet die P1-Ursachensignatur `BudgetProjection/Envelope` behoben; Folge-Review erforderlich.
+- Bericht: Unbekannte Arrays werden vor generischer Property-Entfernung geschützt; `parameters`, `attributes`, `genericParameters` und `constraints` erhalten bei Kürzung additive Envelopes mit Counts, Truncation-Grund, Cursor und Detailhinweis; `fileTree.directories` aktualisiert Top-Level- und Completeness-Envelope konsistent; Wire-Metadaten werden nach finalem Trim synchronisiert; Regressionen für unbekannte Arrays und Directory-Truncation ergänzt; `code-map.md` aktualisiert.
+- Verifikation jeweils nach der letzten Codeänderung: `dotnet build --no-restore` mit 0 Warnungen/0 Fehlern; gezielte FastTests 26/26; gezielte IntegrationTests 17/17; FastTests vollständig `Category!=Stress`: 2429 bestanden, 2 übersprungen; IntegrationTests vollständig `Category!=Stress`: 424/424 bestanden; `find_duplicates` im Scope `src/AiNetLinter/Mcp` mit `targetType=project`, absolutem `targetPath`, Production/Clone/Fuzzy, `minTokens=30`, `maxResults=50`, `normalizeIdentifiers=false`: 9 bestehende Cluster ohne sichere Korrektur; `find_dead_code` gleicher Scope mit `private_internal`, `both`, `members`, Tests ausgeschlossen, `maxResults=50`: 39 LOW/0 HIGH; `find_magic_values` gleicher Scope, alle Kategorien/Werte, `minOccurrences=2`, `maxResults=50`, Tests/Suppressed ausgeschlossen: 7 bestehende Befunde; letzter `get_violations` mit `scopeFilter=src/AiNetLinter/Mcp/Assemblies/Analysis`, `includeSnippet=true`, `contextLines=2`, `maxResults=200`: 0 Verstöße.
+- Nächste Aktion: Checkpoint-Commit, danach frischer Folge-Review 4 als letzter Reviewversuch für diese Ursachensignatur.

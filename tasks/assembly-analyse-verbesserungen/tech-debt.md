@@ -83,3 +83,5 @@ Folge-Reviewer 2 bestätigt die drei Ursachen weiterhin als P1 offen: `BudgetPro
 Korrektur-Implementierer 3 meldet die drei aktiven Ursachen behoben; Disposition bleibt bis zum Folge-Review 3 `fix-now`, Attempts bleiben bei 3.
 
 Folge-Reviewer 3 bestätigt `AssemblyWireBudget/Coverage`, `CompositeBudget/Enrichment`, `CompositeTraversal/TopN` und `AssemblyProvenance/BodyMode` als `fixed`; `BudgetProjection/Envelope` bleibt wegen unbekannter Arrays und `fileTree.directories` P1 offen. Korrekturrunde 4 wird mit Attempts 4 gestartet.
+
+Korrektur-Implementierer 4 meldet `BudgetProjection/Envelope` behoben; Disposition bleibt bis zum letzten Folge-Review 4 `fix-now`, Attempts bleiben bei 4.

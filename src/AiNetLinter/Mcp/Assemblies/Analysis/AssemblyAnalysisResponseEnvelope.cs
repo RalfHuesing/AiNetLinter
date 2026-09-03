@@ -5,9 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Nodes;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
-
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
-
 internal static class AssemblyAnalysisResponseEnvelope
 {
     internal static void RecalculateEnvelopes(JsonNode node, int cursorOffset)
@@ -16,7 +14,9 @@ internal static class AssemblyAnalysisResponseEnvelope
         {
             foreach (var property in obj.ToList())
             {
-                if (!IsBudgetMetadata(property.Key) && property.Value is not null)
+                if (!IsBudgetMetadata(property.Key)
+                    && !IsEnvelopeMetadata(property.Key)
+                    && property.Value is not null)
                 {
                     RecalculateEnvelopes(property.Value, cursorOffset);
                 }
@@ -34,6 +34,7 @@ internal static class AssemblyAnalysisResponseEnvelope
             RecalculateKnownCollectionEnvelope(obj, "diagnostics", cursorOffset);
             RecalculateKnownCollectionEnvelope(obj, "samples", cursorOffset);
             RecalculateKnownCollectionEnvelope(obj, "namespaces", cursorOffset);
+            RecalculateGenericCollectionEnvelopes(obj, cursorOffset);
             SyncCompositeEnvelope(obj);
         }
         else if (node is JsonArray array)
@@ -44,7 +45,6 @@ internal static class AssemblyAnalysisResponseEnvelope
             }
         }
     }
-
     internal static string? ExtractContinuationToken(JsonNode? section) =>
         section is JsonObject obj
             && obj["continuationToken"] is JsonValue token
@@ -66,6 +66,26 @@ internal static class AssemblyAnalysisResponseEnvelope
         }
     }
 
+    internal static void MarkArrayTruncated(
+        JsonObject owner,
+        string collectionName,
+        int total,
+        int returned)
+    {
+        var envelopeName = $"{collectionName}Envelope";
+        var envelope = owner[envelopeName] as JsonObject ?? new JsonObject();
+        var effectiveTotal = Math.Max(total, GetInt(envelope, "totalCount") ?? 0);
+        envelope["totalCount"] = effectiveTotal;
+        envelope["returnedCount"] = returned;
+        envelope["isTruncated"] = true;
+        envelope["truncatedBy"] = new JsonArray("responseBudget");
+        envelope["continuationToken"] = returned < effectiveTotal
+            ? AssemblyPaging.CreateToken(returned)
+            : null;
+        envelope["detailHint"] = $"Array '{collectionName}' wurde wegen des Antwortbudgets gekürzt; maxResponseBytes erhöhen oder die Detailabfrage gezielt erneut anfordern.";
+        owner[envelopeName] = envelope;
+    }
+
     private static void RecalculateCollectionEnvelope(
         JsonObject obj,
         string collectionName,
@@ -77,7 +97,7 @@ internal static class AssemblyAnalysisResponseEnvelope
 
         var returnedBeforeTrim = GetReturnedBeforeTrim(obj, collectionName);
         var returned = GetReturnedCount(obj, collectionName);
-        var offset = GetContinuationOffset(obj, returnedBeforeTrim, fallbackCursorOffset);
+        var offset = GetContinuationOffset(obj, collectionName, returnedBeforeTrim, fallbackCursorOffset);
         var truncated = IsTruncated(obj, returned, total);
 
         UpdateCounts(obj, returned, truncated);
@@ -97,14 +117,12 @@ internal static class AssemblyAnalysisResponseEnvelope
 
         var returnedBeforeTrim = GetReturnedBeforeTrim(obj, collectionName);
         var returned = collection.Count;
-        var offset = GetContinuationOffset(obj, returnedBeforeTrim, fallbackCursorOffset);
+        var offset = GetContinuationOffset(obj, collectionName, returnedBeforeTrim, fallbackCursorOffset);
         var truncated = IsTruncated(obj, returned, total.Value) || ContainsTruncatedChild(collection);
 
         if (collectionName == "directories")
         {
-            obj["totalDirectoryCount"] = total.Value;
-            obj["returnedDirectoryCount"] = returned;
-            obj["directoriesTruncated"] = truncated;
+            UpdateDirectoryProjection(obj, total.Value, returned, truncated, offset);
         }
         else if (collectionName is not ("references" or "referenceSessions" or "diagnostics" or "samples" or "namespaces"))
         {
@@ -125,6 +143,45 @@ internal static class AssemblyAnalysisResponseEnvelope
         }
 
         UpdateNestedCollectionEnvelope(obj, collectionName, total.Value, returned, truncated, offset);
+    }
+
+    private static void UpdateDirectoryProjection(JsonObject obj, int total, int returned, bool truncated, int offset)
+    {
+        obj["totalDirectoryCount"] = total;
+        obj["returnedDirectoryCount"] = returned;
+        obj["directoriesTruncated"] = truncated;
+        obj["directoriesTruncatedBy"] = CreateReasons(obj, truncated);
+        obj["directoriesContinuationToken"] = truncated
+            ? AssemblyPaging.CreateToken(Math.Max(0, offset) + returned)
+            : null;
+        obj["directoriesDetailHint"] = truncated
+            ? "Verzeichnisse wurden wegen des Antwortbudgets gekürzt; maxResponseBytes erhöhen oder die Verzeichnisabfrage gezielt erneut anfordern."
+            : null;
+    }
+
+    private static void RecalculateGenericCollectionEnvelopes(JsonObject obj, int cursorOffset)
+    {
+        foreach (var property in obj.ToList())
+        {
+            if (property.Value is not JsonArray collection
+                || obj[$"{property.Key}Envelope"] is not JsonObject envelope) continue;
+
+            var total = Math.Max(collection.Count, GetInt(envelope, "totalCount") ?? collection.Count);
+            var returned = collection.Count;
+            var truncated = GetBool(envelope, "isTruncated") == true || returned < total;
+            envelope["totalCount"] = total;
+            envelope["returnedCount"] = returned;
+            envelope["isTruncated"] = truncated;
+            if (truncated)
+            {
+                AddReason(envelope, "responseBudget");
+                envelope["continuationToken"] = AssemblyPaging.CreateToken(Math.Max(0, cursorOffset) + returned);
+            }
+            else
+            {
+                envelope["continuationToken"] = null;
+            }
+        }
     }
 
     private static int? GetKnownTotal(JsonObject obj, string collectionName, int fallback)
@@ -167,6 +224,9 @@ internal static class AssemblyAnalysisResponseEnvelope
             case "files":
                 UpdateFileTreeEnvelope(obj, total, returned, truncated, offset);
                 break;
+            case "directories":
+                UpdateDirectoryEnvelope(obj, total, returned, truncated, offset);
+                break;
             case "callSites":
                 UpdateCallSiteEnvelope(obj, total, returned, truncated, offset);
                 break;
@@ -190,6 +250,48 @@ internal static class AssemblyAnalysisResponseEnvelope
         }
     }
 
+    private static void UpdateDirectoryEnvelope(JsonObject obj, int total, int returned, bool truncated, int offset)
+    {
+        if (obj["completeness"] is not JsonObject completeness) return;
+
+        completeness["totalDirectoryCount"] = total;
+        completeness["shownDirectoryCount"] = returned;
+        completeness["directoryTruncated"] = truncated;
+        completeness["directoryTruncatedBy"] = CreateReasons(completeness, truncated);
+        completeness["directoryContinuationToken"] = truncated
+            ? AssemblyPaging.CreateToken(Math.Max(0, offset) + returned)
+            : null;
+        completeness["directoryDetailHint"] = truncated
+            ? "Verzeichnisse wurden wegen des Antwortbudgets gekürzt; maxResponseBytes erhöhen oder die Verzeichnisabfrage gezielt erneut anfordern."
+            : null;
+        if (!truncated) return;
+
+        completeness["scanCompleted"] = false;
+        completeness["truncated"] = true;
+        AddReason(completeness, "responseBudget");
+    }
+
+    private static JsonArray CreateReasons(JsonObject obj, bool responseBudgetTruncated)
+    {
+        var reasons = new JsonArray();
+        var existing = obj["truncatedBy"] as JsonArray
+            ?? (obj["completeness"] as JsonObject)?["truncatedBy"] as JsonArray;
+        if (existing is not null)
+        {
+            foreach (var reason in existing)
+            {
+                if (reason is not null) reasons.Add(reason.DeepClone());
+            }
+        }
+
+        if (responseBudgetTruncated
+            && !reasons.Any(item => string.Equals(item?.GetValue<string>(), "responseBudget", StringComparison.Ordinal)))
+        {
+            reasons.Add("responseBudget");
+        }
+
+        return reasons;
+    }
     private static void UpdateFileTreeEnvelope(JsonObject obj, int total, int returned, bool truncated, int offset)
     {
         if (obj["completeness"] is not JsonObject completeness) return;
@@ -246,7 +348,9 @@ internal static class AssemblyAnalysisResponseEnvelope
     }
 
     private static int GetReturnedBeforeTrim(JsonObject obj, string collectionName) =>
-        GetInt(obj, "returnedCount")
+        (collectionName == "directories" ? GetInt(obj, "returnedDirectoryCount") : null)
+            ?? (collectionName == "directories" ? GetNestedInt(obj, "completeness", "shownDirectoryCount") : null)
+            ?? GetInt(obj, "returnedCount")
             ?? GetInt(obj, "shownCount")
             ?? GetInt(obj, collectionName)
             ?? 0;
@@ -257,6 +361,7 @@ internal static class AssemblyAnalysisResponseEnvelope
     private static bool IsTruncated(JsonObject obj, int returned, int total) =>
         (GetBool(obj, "truncated") ?? false)
             || (GetBool(obj, "isTruncated") ?? false)
+            || (GetBool(obj, "directoriesTruncated") ?? false)
             || returned < total;
 
     private static bool ContainsTruncatedChild(JsonArray collection) =>
@@ -280,7 +385,6 @@ internal static class AssemblyAnalysisResponseEnvelope
                 : null;
         }
     }
-
     private static void SyncCompositeEnvelope(JsonObject obj)
     {
         if (obj["assemblyAnalysis"] is not JsonObject analysis) return;
@@ -342,14 +446,23 @@ internal static class AssemblyAnalysisResponseEnvelope
         }
     }
 
-    private static int GetContinuationOffset(JsonObject obj, int returnedBeforeTrim, int fallback)
+    private static int GetContinuationOffset(
+        JsonObject obj,
+        string collectionName,
+        int returnedBeforeTrim,
+        int fallback)
     {
-        if (obj["continuationToken"] is JsonValue token
-            && token.TryGetValue<string>(out var value)
-            && int.TryParse(value, out var absolute)
-            && absolute >= returnedBeforeTrim)
+        foreach (var propertyName in collectionName == "directories"
+            ? new[] { "directoriesContinuationToken", "continuationToken" }
+            : new[] { "continuationToken" })
         {
-            return absolute - returnedBeforeTrim;
+            if (obj[propertyName] is JsonValue token
+                && token.TryGetValue<string>(out var value)
+                && int.TryParse(value, out var absolute)
+                && absolute >= returnedBeforeTrim)
+            {
+                return absolute - returnedBeforeTrim;
+            }
         }
 
         return fallback;
@@ -379,4 +492,7 @@ internal static class AssemblyAnalysisResponseEnvelope
 
     private static bool IsBudgetMetadata(string name) =>
         name is "analysis" or "wireBudget" or "wireTruncated" or "truncatedBy";
+
+    private static bool IsEnvelopeMetadata(string name) =>
+        name.EndsWith("Envelope", StringComparison.Ordinal);
 }

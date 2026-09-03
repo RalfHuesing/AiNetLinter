@@ -1,9 +1,7 @@
 #nullable enable
-
 using System;
 using System.Collections.Generic;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
-
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -12,7 +10,7 @@ using AiNetLinter.Output;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using ModelContextProtocol.Protocol;
-
+using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
 internal sealed record AssemblyAnalysisResponseRequest(
@@ -20,7 +18,7 @@ internal sealed record AssemblyAnalysisResponseRequest(
     string? DetailLevel = null,
     string? Cursor = null);
 
-internal static class AssemblyAnalysisResponse
+internal static partial class AssemblyAnalysisResponse
 {
     internal static bool FitsResponseBudget(CallToolResult result, AssemblyAnalysisLease lease, int responseBudgetBytes = 0)
     {
@@ -148,13 +146,17 @@ internal static class AssemblyAnalysisResponse
         {
             withBudget = ReplaceStructured(withBudget, JsonSerializer.SerializeToElement(new JsonObject
             {
+                ["isTruncated"] = true,
+                ["truncated"] = true,
                 ["wireTruncated"] = true,
                 ["truncatedBy"] = new JsonArray("responseBudget"),
+                ["detailHint"] = "Die strukturierte Nutzlast wurde auf den minimalen Antwortumfang gekürzt; maxResponseBytes erhöhen oder die Detailabfrage gezielt erneut anfordern.",
             }, McpJsonOptions.Default));
             withBudget = ReplaceText(withBudget, string.Empty);
             withBudget = AddWireBudgetMetadata(withBudget, budget, isTruncated: true);
         }
 
+        withBudget = AddWireBudgetMetadata(withBudget, budget, IsStructuredTruncated(withBudget.StructuredContent));
         if (Measure(withBudget).TotalBytes <= budget) return withBudget;
 
         return McpToolResults.InvalidArgument(
@@ -301,6 +303,7 @@ internal static class AssemblyAnalysisResponse
         foreach (var property in obj)
         {
             if (IsBudgetMetadata(property.Key)) continue;
+            if (AssemblyAnalysisResponseUnknownArrays.TryTrim(obj, property.Key, property.Value)) return true;
             if (property.Value is JsonArray && IsTrimCandidate(property.Key)
                 && TryTrimNode(property.Value, property.Key)) return true;
             if (property.Value is JsonObject && IsTrimContainer(property.Key)
@@ -318,6 +321,9 @@ internal static class AssemblyAnalysisResponse
                 && !IsEnvelopeMetadata(property.Key)
                 && !IsTrimCandidate(property.Key)
                 && !IsTrimContainer(property.Key)
+                && (property.Value is not JsonArray array
+                    || array.Count == 0
+                    || ResultCollections.Contains(property.Key, StringComparer.Ordinal))
                 && property.Key is not ("body" or "classStructure" or "metrics" or "impact" or "callers" or "fileTree"))
             .OrderByDescending(property => property.Value is null
                 ? 0
@@ -369,7 +375,8 @@ internal static class AssemblyAnalysisResponse
     private static bool IsEnvelopeMetadata(string name) =>
         name is "totalTypes" or "totalExtensions" or "totalCount" or "returnedCount"
             or "shownCount" or "isTruncated" or "truncated" or "continuationToken"
-            or "types" or "extensions" or "id" or "status" or "detailHint";
+            or "types" or "extensions" or "id" or "status" or "detailHint"
+            || name.EndsWith("Envelope", StringComparison.Ordinal);
 
     private static CallToolResult ReplaceStructured(CallToolResult result, JsonElement structured) =>
         new()
@@ -402,7 +409,7 @@ internal static class AssemblyAnalysisResponse
         return new(textBytes, structuredBytes);
     }
 
-    private static string TrimUtf8(string value, int maxBytes)
+    internal static string TrimUtf8(string value, int maxBytes)
     {
         if (Encoding.UTF8.GetByteCount(value) <= maxBytes) return value;
         var limit = Math.Max(1, maxBytes - Encoding.UTF8.GetByteCount("…"));

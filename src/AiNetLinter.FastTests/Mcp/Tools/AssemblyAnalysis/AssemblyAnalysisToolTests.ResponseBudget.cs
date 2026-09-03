@@ -70,6 +70,111 @@ public sealed partial class AssemblyAnalysisToolTests
     }
 
     [Fact]
+    public void FinalWireTrim_PreservesUnknownArraysWithTruncationEnvelopes()
+    {
+        var result = McpToolResults.Text(
+            "assembly member",
+            new
+            {
+                parameters = Enumerable.Range(0, 100).Select(index => $"parameter-{index:D3}").ToArray(),
+                attributes = Enumerable.Range(0, 100).Select(index => $"attribute-{index:D3}").ToArray(),
+                genericParameters = Enumerable.Range(0, 100).Select(index => $"T{index:D3}").ToArray(),
+                constraints = Enumerable.Range(0, 100).Select(index => $"T{index:D3}:class").ToArray(),
+            });
+
+        var projected = AssemblyAnalysisResponse.ApplyWireBudget(
+            result,
+            AssemblyAnalysisResponseLimits.MinimumResponseBytes,
+            0);
+        var payload = projected.StructuredContent!.Value;
+        foreach (var collectionName in new[] { "parameters", "attributes", "genericParameters", "constraints" })
+        {
+            var collection = payload.GetProperty(collectionName);
+            var envelope = payload.GetProperty($"{collectionName}Envelope");
+            var returned = collection.GetArrayLength();
+
+            Assert.True(returned < 100);
+            Assert.Equal(100, envelope.GetProperty("totalCount").GetInt32());
+            Assert.Equal(returned, envelope.GetProperty("returnedCount").GetInt32());
+            Assert.True(envelope.GetProperty("isTruncated").GetBoolean());
+            Assert.Contains("responseBudget", envelope.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
+            Assert.Equal(returned.ToString(), envelope.GetProperty("continuationToken").GetString());
+            Assert.Contains("maxResponseBytes", envelope.GetProperty("detailHint").GetString(), StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void FinalWireTrim_RecalculatesFileTreeDirectoryEnvelope()
+    {
+        var directories = Enumerable.Range(0, 40)
+            .Select(index => new
+            {
+                path = $"src/very-long-directory-name-{index:D2}",
+                depth = 1,
+                matchedFileCount = 1,
+                matchedBytes = 123L,
+                childDirectoryCount = 0,
+            })
+            .ToArray();
+        var result = McpToolResults.Text(
+            "file tree",
+            new
+            {
+                fileTree = new
+                {
+                    root = ".",
+                    effectiveRoot = "src",
+                    view = "summary",
+                    summary = new
+                    {
+                        scannedFileCount = 40,
+                        matchedFileCount = 40,
+                        scannedDirectoryCount = 40,
+                        matchedDirectoryCount = 40,
+                        matchedBytes = 4920L,
+                        byExtension = Array.Empty<object>(),
+                    },
+                    directories,
+                    files = Array.Empty<object>(),
+                    completeness = new
+                    {
+                        scanCompleted = true,
+                        truncated = false,
+                        truncatedBy = Array.Empty<string>(),
+                        shownFileCount = 0,
+                        inaccessibleSubtreeCount = 0,
+                        skippedExcludedDirectoryCount = 0,
+                        skippedReparsePointCount = 0,
+                        warnings = Array.Empty<string>(),
+                    },
+                },
+            });
+
+        var projected = AssemblyAnalysisResponse.ApplyWireBudget(
+            result,
+            AssemblyAnalysisResponseLimits.MinimumResponseBytes,
+            0);
+        var tree = projected.StructuredContent!.Value.GetProperty("fileTree");
+        var completeness = tree.GetProperty("completeness");
+        var returned = tree.GetProperty("directories").GetArrayLength();
+
+        Assert.True(returned < 40);
+        Assert.Equal(40, tree.GetProperty("totalDirectoryCount").GetInt32());
+        Assert.Equal(returned, tree.GetProperty("returnedDirectoryCount").GetInt32());
+        Assert.True(tree.GetProperty("directoriesTruncated").GetBoolean());
+        Assert.Contains("responseBudget", tree.GetProperty("directoriesTruncatedBy").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal(returned.ToString(), tree.GetProperty("directoriesContinuationToken").GetString());
+        Assert.Contains("maxResponseBytes", tree.GetProperty("directoriesDetailHint").GetString(), StringComparison.Ordinal);
+        Assert.Equal(40, completeness.GetProperty("totalDirectoryCount").GetInt32());
+        Assert.Equal(returned, completeness.GetProperty("shownDirectoryCount").GetInt32());
+        Assert.True(completeness.GetProperty("directoryTruncated").GetBoolean());
+        Assert.True(completeness.GetProperty("truncated").GetBoolean());
+        Assert.Contains("responseBudget", completeness.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal(returned.ToString(), completeness.GetProperty("directoryContinuationToken").GetString());
+        Assert.Contains("maxResponseBytes", completeness.GetProperty("directoryDetailHint").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void FinalWireTrim_RecalculatesCallSitesAndBodyResults()
     {
         var callSites = Enumerable.Range(0, 24)
