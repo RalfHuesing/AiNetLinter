@@ -41,3 +41,37 @@
 
 - Keine neuen actionable Tech-Debt-Findings aus dem Epic-Bericht. Die genannten Near-Duplicate-/Low-Confidence-Dead-Code-Hinweise sind bestehende, nicht durch Epic 1 eingeführte Befunde und werden nicht in die task-lokale Queue übernommen.
 - Nächste Aktion: Implementierungs-Checkpoint committen, danach unabhängigen Reviewer für Epic 1 starten.
+
+## Run 2026-09-03 / Epic 1 / Reviewer / running
+
+- Subagent: `01a06660-be22-77c1-86b2-e6ab7dbda6cc` (`Mencius`)
+- Baseline: `39b707e3`; Implementierungs-Checkpoint: `9789dc07`
+- Auftrag: Unabhängige Prüfung von Epic 1 inklusive M1, M2, M8, M9 und M10.
+- Status: completed / issues
+
+### Terminaler Reviewerbericht
+
+Urteil: `issues`. Epic 1 ist wegen drei belegter P1-Findings nicht freigabefähig.
+
+1. **P1 — Unvollständige Dekompilation kann als Cache-Generation veröffentlicht werden.** Timeout-/Decompiler-Fehler können teilweise Dokumente mit `IsComplete=false` liefern; danach wird nur `Documents.Count == 0` geprüft und eine nicht vollständige Generation zugelassen. Evidenz: `AssemblyDecompilationAdapter.cs:48`, `AssemblyAnalysisSession.Generation.cs:28`, `AssemblyDecompilationCache.cs:223`. Empfehlung: Timeout-/Abbruch-/Fehlerresultate nicht veröffentlichen und nicht als Cache-Hit zulassen, Staging verwerfen und den bisherigen Pointer behalten; Regressionstest mit bereits teilweise erzeugten Dateien ergänzen.
+2. **P1 — Pointer-Veröffentlichung kann einen dangling `current.json` erzeugen.** Nach dem Ersetzen des Pointers kann die Nachvalidierung wegen einer Dateisperre fehlschlagen; nach drei Versuchen wird die bereits referenzierte Generation dennoch gelöscht. Evidenz: `AssemblyDecompilationCache.PointerPublishing.cs:49-50`, `AssemblyDecompilationCache.cs:146`. Empfehlung: alten Pointer restaurieren oder neue Generation behalten; niemals die aktuell referenzierte Generation löschen; Lock-Test ergänzen.
+3. **P1 — Gültige große Timeout-Konfigurationen können `CancelAfter` ungefangen sprengen.** Der Loader akzeptiert bis `TimeSpan.MaxValue`, `CancellationTokenSource.CancelAfter(TimeSpan)` jedoch nur Millisekunden bis `Int32.MaxValue`; z. B. sind 2147484 Sekunden konfigurierbar, aber für `CancelAfter` ungültig. Evidenz: `AssemblyAnalysisConfiguration.cs:19`, `:162`, `AssemblyDecompilationAdapter.cs:33`. Empfehlung: Grenze auf den CTS-Bereich begrenzen oder andere Timeout-Implementierung verwenden; Grenzwerttests ergänzen.
+
+### P2-/P3-Triage
+
+- P2, actionable: Cache-Hit verliert in `RefreshGenerationAsync` den persistierten Projektdateipfad; dadurch kann die Workspace-Fabrik einen synthetischen, nicht zwingend existierenden `.csproj`-Pfad erzeugen. Evidenz: `AssemblyAnalysisSession.cs:163`, `AssemblyRoslynWorkspaceFactory.cs:116`. In `tech-debt.md` als `accepted-deferred` registriert.
+- P2, actionable: Regressionstests für Timeout-/Decompiler-Abbruch ohne Cache-Publish, Pointer-Fehler unter Dateisperre und Projektpfad-Erhaltung beim Cache-Hit fehlen. In `tech-debt.md` als `accepted-deferred` registriert.
+
+### Reviewer-Verifikation
+
+- Alle Anweisungen, Regeln, Konzept-/Roadmap-/Code-Map- und Log-Dateien gelesen.
+- Diff `39b707e3..9789dc07`: 32 Dateien, 1263 Einfügungen, 658 Löschungen.
+- AiNetLinter-MCP mit `targetType=project` und absolutem `targetPath`: `get_impact` meldete 26 Dateien, 100/107 geänderte Symbole, 311 Aufrufstellen und 0 Violations; `get_feature_context`/`get_symbol_body` für Adapter, Cache, Session, Resolver, Host und Workspace-Fabrik meldeten keine Violations.
+- Frische Implementierer-Nachweise wurden akzeptiert und nicht redundant wiederholt: Build 0/0, Epic-Slice 53/53, Assembly-Daemon 1/1, Integration-Nicht-Stress 384/384, gezielte `get_violations` 0/51 und 0/30, `git diff --check` erfolgreich.
+- Gezielt wiederholt: Race-Tests, 4 Tests insgesamt, 3 erfolgreich, 1 fehlgeschlagen nach 43,5 Sekunden (`AssemblyAnalysisRegistryRetirementRaceTests.cs:94`, erwartet 1, tatsächlich 0); kein Hänger.
+- Vollständiger Fast-Nicht-Stress-Lauf bleibt wegen kontrolliertem Abbruch und bekannten Race-/Timeout-Ausfällen ohne grünen Abschlussnachweis. Der vollständige MCP-Audit wurde laut Log nach etwa vier Minuten wegen Hängens kontrolliert beendet.
+- Code-Map gegen den aktuellen Diff geprüft und ausschließlich den konkreten Navigationsfehler zur AdhocWorkspace-Verwendung korrigiert. Keine Produktions-/Teständerung und kein Commit.
+
+### Nächste Aktion
+
+P1-Ursachensignaturen in einer frischen Implementierer-/Reviewer-Korrekturrunde bearbeiten; P2-Befunde bleiben in der task-lokalen Queue.

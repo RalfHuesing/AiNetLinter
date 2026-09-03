@@ -9,7 +9,7 @@ Epic 1 ist im Working Tree umgesetzt: eager WholeProject-Decompilation, persiste
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/Coordinators/AssemblyCacheGenerationStorage.cs` — Manifest-/Pfadvalidierung und Wiederlesen veröffentlichter Generationen.
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisSession.Generation.cs` — Fresh-Build, Publish und Snapshot-Erzeugung als zweiter Partial-Slice der Session.
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisSession.cs` — Cache-Hit/Fresh-Build, Snapshot-Erzeugung aus den finalen Cache-Pfaden und Cancellation-Aufräumung.
-- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyRoslynWorkspaceFactory.cs` — lädt das dekompilierte Projektfile als Roslyn-Projekt.
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyRoslynWorkspaceFactory.cs` — registriert die dekompilierten Dateien in einem `AdhocWorkspace` und verwendet das generierte `.csproj` als Projektpfad.
 - `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisHostComposition.cs` — lädt und verdrahtet Assembly-Analyse-Konfiguration in Registry-Fallback-Sessions.
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextFactory.cs` — setzt für eager Assembly-Snapshots `ContentMode=decompiledProject` und `BodyAvailability=available`.
 
