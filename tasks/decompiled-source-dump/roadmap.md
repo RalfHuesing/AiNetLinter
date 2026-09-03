@@ -1,7 +1,7 @@
 ---
 status: executing
 current_epic: epic-2
-last_commit: fff5eb47
+last_commit: 418557f3
 current_debt_item: null
 debt_attempts: 0
 ---
@@ -44,10 +44,19 @@ debt_attempts: 0
 - Verifikation: Resilienz-, Cancellation-, Timeout- und Cleanup-Tests sowie gezielte Status-/MCP-Prüfungen.
 - Status: open
 
-## Epic 5: Regression, Dokumentation und Gesamtabschluss
+## Epic 5: Testlaufzeit und Gate-Stabilität
+
+- Ziel: Lang laufende oder unkontrolliert hängende Tests identifizieren, reproduzieren und die betroffenen Tests/Testharnesses so bereinigen, dass die Nicht-Stress-Gates deterministisch ohne manuelles Abbrechen durchlaufen.
+- Abhängigkeiten: Epic 1 bis Epic 4; bekannte Befunde sind `AssemblyAnalysisRegistryRetirementRaceTests`, `ProjectRegistryTests`, `ThinClientPumpContractTests` sowie die übersprungenen External-Source-/Symlink-Tests.
+- Betroffene Bereiche: FastTests-/IntegrationTests-Testharness, Testkategorien, Prozess-/Cancellation-/Timeout-Steuerung und nur direkt betroffene Testfälle; Produktionsverträge nur, wenn die Testanalyse einen echten Produktfehler belegt.
+- Muss-/Akzeptanzkriterien: Beide vollständigen Nicht-Stress-Testläufe liefern einen terminalen, reproduzierbaren Befund ohne manuelles Ctrl+C; echte Testfehler werden behoben oder mit konkreter, begründeter Disposition dokumentiert; keine künstliche Absenkung der Testabdeckung und keine Stress-Tests im normalen Gate.
+- Verifikation: wiederholte vollständige `Category!=Stress`-Läufe mit Zeit-/Abbruchnachweis, gezielte Tests der gefundenen Ursachen, `dotnet build` und gezielter `get_violations`-Check nach der letzten Änderung.
+- Status: open
+
+## Epic 6: Regression, Dokumentation und Gesamtabschluss
 
 - Ziel: Bestehende Assembly-Routen, Tests und Dokumentation auf den neuen Vertrag umstellen und den vollständigen Abschlussnachweis erbringen.
-- Abhängigkeiten: Epic 1 bis Epic 4.
+- Abhängigkeiten: Epic 1 bis Epic 5.
 - Betroffene Bereiche: FastTests, IntegrationTests, `Docs/configuration.md`, bei Bedarf `Docs/ROADMAP.md`, Agent-Regelsynchronisation und Abschlussartefakte.
 - Muss-/Akzeptanzkriterien: M12; `dotnet build` ohne Fehler/Warnungen sowie beide vollständigen Nicht-Stress-Testläufe grün; keine Non-Goals umgesetzt.
 - Verifikation: vollständige Konzept-Checkliste einschließlich Materialisierung, Pfadausgabe, Dateibaum, echter Body, Partial/Degraded, Konfiguration, atomarer Veröffentlichung und Lock-Toleranz.
@@ -57,7 +66,7 @@ debt_attempts: 0
 
 - [ ] M1–M11 fachlich umgesetzt und gezielt verifiziert
 - [ ] M12: `dotnet build` ohne Fehler/Warnungen
-- [ ] M12: FastTests `Category!=Stress`
-- [ ] M12: IntegrationTests `Category!=Stress`
+- [ ] M12: FastTests `Category!=Stress` nach Epic 5 terminal grün
+- [ ] M12: IntegrationTests `Category!=Stress` nach Epic 5 terminal grün
 - [ ] Konzeptbezogene MCP-/Dateisystem-Nachweise dokumentiert
 - [ ] Task-lokale Tech-Debt-Queue leer oder mit Disposition ausgewiesen

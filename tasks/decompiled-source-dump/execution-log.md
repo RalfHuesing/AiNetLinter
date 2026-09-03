@@ -193,3 +193,8 @@ Urteil: `issues`.
 ### Nächste Aktion
 
 P1-Dokumentationsdrift in einer frischen Implementierer-/Reviewer-Korrekturrunde beheben; P3-Residuum bleibt Projekt-Tech-Debt.
+
+## Nutzer-Einschub / Teststabilität
+
+- Der Nutzer hat ausdrücklich angeordnet, in diesen Task die Prüfung und Bereinigung extrem lange laufender bzw. manuell abzubrechender Tests einzuschieben.
+- Dafür wurde Epic 5 als eigenständiges Teststabilitäts-Epic vor dem bisherigen Gesamtabschluss eingefügt. Ziel ist ein terminaler, reproduzierbarer Nicht-Stress-Gate-Lauf ohne Ctrl+C-Abbruch; bestehende Race-/Timeout-Befunde werden nur mit konkreter Evidenz als außerhalb des Scopes zurückgestellt.
