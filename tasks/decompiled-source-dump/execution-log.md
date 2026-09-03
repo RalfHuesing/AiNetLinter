@@ -413,3 +413,21 @@ Korrektur-Checkpoint committen, danach frischen Folge-Review starten.
 
 - Keine offenen P0/P1-Befunde.
 - Nächste Aktion: Implementierungs-Checkpoint committen, danach Reviewer-Rolle für Epic 5 ausführen.
+
+## Run 2026-09-03 / Epic 5 / Reviewer / completed
+
+- Rolle: Reviewer (`.agents/skills/review/SKILL.md`)
+- Diff: `2786a84e` gegen `HEAD~1`
+- Urteil: `approved`
+- P0/P1-Befunde: 0
+- P2/P3-Befunde: 0
+- Prüfergebnis:
+  - Ziel & Scope: Testlaufzeit und Gate-Stabilität deterministisch sichergestellt. Keine Non-Goals berührt.
+  - Regeln & Architektur: Eingehalten; keine Produktionscode-Änderung erforderlich gewesen, da der Befund rein testintern in den flüchtigen Eviction-Assertions unter fremdgehaltenen Leases begründet war.
+  - Logik: Die Eviction-Assertions testen nun exakt die beabsichtigte Invariante, dass fremdgehaltene Leases nicht geräumt werden können und erst beim nachfolgenden Fingerprint-Refresh invalidiert werden.
+  - Verifikationsnachweis: Vollständig und frisch; FastTests `Category!=Stress` 2.440/2.442 grün (1m 33s), IntegrationTests `Category!=Stress` 385/385 grün (4m 30s), MCP `get_violations` 0 Violations, `git diff --check` sauber.
+
+### Triage
+
+- Epic 5 ist abgeschlossen und genehmigt (`approved`).
+- Nächste Aktion: Roadmap aktualisieren (`epic-5: done`, `current_epic: epic-6`), Commit für Abschluss Epic 5 erstellen.

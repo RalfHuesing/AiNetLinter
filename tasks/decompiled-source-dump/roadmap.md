@@ -1,7 +1,7 @@
 ---
 status: executing
-current_epic: epic-5
-last_commit: 7eb065e1
+current_epic: epic-6
+last_commit: 2786a84e
 current_debt_item: null
 debt_attempts: 0
 ---
@@ -51,7 +51,7 @@ debt_attempts: 0
 - Betroffene Bereiche: FastTests-/IntegrationTests-Testharness, Testkategorien, Prozess-/Cancellation-/Timeout-Steuerung und nur direkt betroffene Testfälle; Produktionsverträge nur, wenn die Testanalyse einen echten Produktfehler belegt.
 - Muss-/Akzeptanzkriterien: Beide vollständigen Nicht-Stress-Testläufe liefern einen terminalen, reproduzierbaren Befund ohne manuelles Ctrl+C; echte Testfehler werden behoben oder mit konkreter, begründeter Disposition dokumentiert; keine künstliche Absenkung der Testabdeckung und keine Stress-Tests im normalen Gate.
 - Verifikation: wiederholte vollständige `Category!=Stress`-Läufe mit Zeit-/Abbruchnachweis, gezielte Tests der gefundenen Ursachen, `dotnet build` und gezielter `get_violations`-Check nach der letzten Änderung.
-- Status: open
+- Status: done
 
 ## Epic 6: Regression, Dokumentation und Gesamtabschluss
 
