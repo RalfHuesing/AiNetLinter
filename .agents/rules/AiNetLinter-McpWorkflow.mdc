@@ -10,20 +10,32 @@ C#-Code gelten die folgenden verbindlichen Prioritäten; die AiNetLinter-MCP-
 Tools kennen Symbole, Typen,
 Referenzen und Abhängigkeiten.
 
-## Verbindliche Priorität (Token-Schutz & Semantik)
+## Verbindliche Priorität (MCP-first, pragmatisch)
 
 > [!IMPORTANT]
-> **STRIKTER TOKEN-SCHUTZ**: Niemals C#-Dateien seitenweise mit `view_file` oder explorativ mit `grep_search` einlesen! Das verbrennt massiv Kontext und Nutzungslimit.
-> 
-> Bei jeder Aufgabe, die C#-Symbole, Typen, Aufrufer, Referenzen, Abhängigkeiten,
-> Impact, Codeverständnis oder Regelverstöße betrifft, MUSS proaktiv zuerst das passende
-> AiNetLinter-MCP-Tool aufgerufen werden:
-> - **Aufrufpfade & Kontrollfluss**: `get_call_tree` (outgoing/incoming, depth 2). Liefert in ~30 Zeilen, was sonst Dutzende Dateiausschnitte erfordern würde.
-> - **Methodenrümpfe**: `get_symbol_body` mit konkreter Symbol-ID liefert exakt den Code ohne umgebenden Datei-Overhead.
-> - **Symbolsuche**: `find_symbol` (mit `namePattern` und optional `kind`) statt textuellem Grep.
-> - **Kontext**: `get_feature_context` oder `get_class_structure`.
-> 
-> `rg`/`grep`/`view_file` sind ausschließlich für Nicht-C#-Dateien (Markdown, JSON, Konfiguration) oder für minimale, bereits exakt lokalisierte Edits erlaubt.
+> **Standard: AiNetLinter-MCP-Tools verwenden**, wenn C#-Symbole, Typen, Aufrufketten, Referenzen, Abhängigkeiten oder Regelverstöße betroffen sind. Sie liefern semantisch aufgelöste, kompakte Ergebnisse und verbrauchen deutlich weniger Kontext als seitenweises Dateilesen.
+>
+> **Werkzeugwahl nach Stärken — kein blindes Verbot:**
+>
+> | Situation | Bevorzugtes Tool |
+> |---|---|
+> | Aufrufbaum einer Methode verstehen | `get_call_tree` (outgoing/incoming) |
+> | Methodenrumpf lesen | `get_symbol_body` mit Symbol-ID |
+> | Symbol/Klasse suchen | `find_symbol` (namePattern + kind) |
+> | Klassenstruktur / Members | `get_class_structure` |
+> | Regelverstöße, Impact, Hotspots | `get_violations`, `get_impact`, `get_hotspots` |
+> | Text in Nicht-C#-Dateien suchen (`.md`, `.json`, `.yml`) | `grep_search` / `rg` |
+> | Kleiner, exakt bekannter Codeausschnitt editieren | `view_file` (gezielt, wenige Zeilen) |
+> | Exakter Textmatch über viele Dateitypen | `grep_search` (wenn MCP-Symbol-Suche keinen Treffer liefert) |
+> | Konfiguration, Projektstruktur | `list_dir`, `view_file` |
+>
+> **Wann rg/view_file trotzdem sinnvoll sein können:**
+> - MCP liefert keinen Treffer (Symbol existiert nur als String-Literal, generierter Code, Nicht-C#-Datei).
+> - Exakter Zeilenbereich für einen minimalen Edit bereits bekannt → `view_file` günstiger als MCP-Roundtrip.
+> - Textuelle Muster über Dateiarten hinweg (z. B. alle `*.json` nach einem Wert durchsuchen).
+>
+> **Was vermieden werden soll:** Reflexartig *alle* Dateien einer Aufrufkette seitenweise einlesen, anstatt `get_call_tree` + `get_symbol_body` zu nutzen. Das verbrennt unnötig Kontext.
+
 
 ## Standard
 
