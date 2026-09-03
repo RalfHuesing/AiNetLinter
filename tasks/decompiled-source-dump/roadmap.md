@@ -1,7 +1,7 @@
 ---
 status: executing
-current_epic: epic-2
-last_commit: 418557f3
+current_epic: epic-3
+last_commit: d87bf8b3
 current_debt_item: null
 debt_attempts: 0
 ---
@@ -24,7 +24,7 @@ debt_attempts: 0
 - Betroffene Bereiche: `AssemblyRoslynWorkspaceFactory`, `IAssemblyBodyContext`, `SourceSymbolBodyResolver`, Symbolgraph-/Call-Tree-Navigation und obsolete Body-/Stub-Komponenten.
 - Muss-/Akzeptanzkriterien: M6 und M11; echte Methodenkörper sind ohne On-Demand-Dekompilierung verfügbar; alte Stub- und Body-Auflösungspfade sind restlos entfernt.
 - Verifikation: FastTests für echte Bodies, Navigation und Regressionen; semantische MCP-Prüfungen für Symbole/Referenzen/Violations.
-- Status: in_progress
+- Status: done
 
 ## Epic 3: MCP-Pfadverträge und physische Dateinavigation
 
@@ -33,7 +33,7 @@ debt_attempts: 0
 - Betroffene Bereiche: `InspectAssemblyTool`, Formatter, Payload-/Response-Modelle, `get_file_tree`-Integration und Assembly-Navigation.
 - Muss-/Akzeptanzkriterien: M3, M4 und M5; Header und JSON-Payload enthalten die drei absoluten Pfade; nachfolgende Symbolantworten verweisen auf reale `.cs`-Dateien ohne redundante Projekt-Header.
 - Verifikation: Pfad-/Payload-Tests, `rg`- und `get_file_tree`-Nachweise auf einem dekompilierten Root sowie MCP-Violationscheck.
-- Status: open
+- Status: in_progress
 
 ## Epic 4: Partielle Snapshots, Fehlersemantik und Betriebsresilienz
 

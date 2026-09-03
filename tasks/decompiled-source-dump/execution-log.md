@@ -225,3 +225,23 @@ P1-Dokumentationsdrift in einer frischen Implementierer-/Reviewer-Korrekturrunde
 ### Nächste Aktion
 
 Korrektur-Checkpoint committen, danach frischen Folge-Review starten.
+
+## Run 2026-09-03 / Epic 2 / Korrekturversuch 1 / Reviewer / running
+
+- Subagent: `01a066d8-e11a-7f31-a468-130de2864d62` (`Bernoulli`)
+- Baseline: `a6acd83e`; Korrektur-Checkpoint: `d87bf8b3`
+- Auftrag: Unabhängige Nachprüfung der korrigierten Assembly-Body-Dokumentation.
+- Status: completed / approved
+
+### Terminales Folge-Review
+
+- Urteil: `approved`.
+- `Docs/integration.md:325-340` und `Docs/agent-api.md:382,470-481,525,903-913` beschreiben konsistent eager `WholeProjectDecompiler`-Snapshots, echte Roslyn-Dokumente, `AdhocWorkspace`, den direkten `SourceSymbolBodyResolver`, `contentMode=source` und `unavailable`.
+- Kein veralteter Assembly-Stub-/On-Demand-Vertrag im aktiven getrackten `src`-/`Docs`-Scope; keine neuen P0/P1- oder P2/P3-Findings. TD-003 bleibt `promoted-to-project-debt`.
+- MCP-/Docs-/Symbolprüfungen wurden ausgeführt; frische Implementierer-Nachweise für Tests, Build, Violations und Diff-Check wurden übernommen und nicht redundant wiederholt. Code-Map war korrekt und blieb unverändert.
+- Offene Risiken bleiben ausschließlich bekannte scope-fremde FullGate-Races/Timeouts, übersprungene Windows-Symlink-Tests und die bestehende `AIContextFootprint`-Warnung.
+
+### Epic-Entscheidung
+
+- Epic 2 ist abgeschlossen und freigegeben.
+- Nächster Arbeitsbereich: Epic 3, MCP-Pfadverträge und physische Dateinavigation.
