@@ -54,7 +54,7 @@ internal static class GetSymbolBodyTool
 
         try
         {
-            return await RenderSymbolBodiesAsync(solution, identifiers, maxBodyLines, state.AssemblySymbolIdentity, ct);
+            return await RenderSymbolBodiesAsync(solution, identifiers, maxBodyLines, state.AssemblySymbolIdentity, null, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -84,7 +84,7 @@ internal static class GetSymbolBodyTool
         }
 
         return RenderSymbolBodiesAsync(
-            solution, identifiers, maxBodyLines, lease.AssemblySymbolIdentity, ct);
+            solution, identifiers, maxBodyLines, lease.AssemblySymbolIdentity, lease.Origin, ct);
     }
 
     private static IReadOnlyList<string> NormalizeIdentifiers(
@@ -102,6 +102,7 @@ internal static class GetSymbolBodyTool
         IReadOnlyList<string> identifiers,
         int maxBodyLines,
         AnalysisSymbolIdentity? assemblyIdentity,
+        AssemblyOrigin? assemblyOrigin,
         CancellationToken ct)
     {
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
@@ -114,7 +115,7 @@ internal static class GetSymbolBodyTool
 
             var earlyError = await RenderSingleSymbolAsync(
                 new RenderSingleSymbolRequest(
-                    solution, identifiers[i], identifiers.Count, maxBodyLines, outputRoot, mb, assemblyIdentity, entries),
+                    solution, identifiers[i], identifiers.Count, maxBodyLines, outputRoot, mb, assemblyIdentity, assemblyOrigin, entries),
                 ct);
 
             if (earlyError != null) return earlyError;
@@ -166,7 +167,7 @@ internal static class GetSymbolBodyTool
     {
         var idSuffix = request.AssemblyIdentity?.Format(symbol.TryGetDocCommentId() ?? CallGraphTraversal.GetStableSymbolId(symbol))
             ?? symbol.TryGetDocCommentId();
-        var bodyResolution = SourceSymbolBodyResolver.Resolve(symbol, request.MaxBodyLines);
+        var bodyResolution = SourceSymbolBodyResolver.Resolve(symbol, request.MaxBodyLines, request.AssemblyOrigin);
 
         request.Markdown.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{FormatLocation(request, symbol)}`");
         request.Markdown.BlankLine();
@@ -204,6 +205,7 @@ internal static class GetSymbolBodyTool
         string OutputRoot,
         MarkdownBuilder Markdown,
         AnalysisSymbolIdentity? AssemblyIdentity,
+        AssemblyOrigin? AssemblyOrigin,
         List<SymbolBodyEntry> Entries);
 
     private static string ToRelative(string outputRoot, ISymbol symbol)

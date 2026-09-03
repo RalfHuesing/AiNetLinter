@@ -55,6 +55,8 @@ internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
 
     AnalysisSymbolIdentity? IAssemblyBodyContext.AssemblySymbolIdentity => Server.AssemblySymbolIdentity;
 
+    AssemblyOrigin? IAssemblyBodyContext.Origin => Context.Origin;
+
     internal IReadOnlyList<AssemblyReferenceSession> ReferenceSessions =>
         referenceExpansion?.Sessions ?? Array.Empty<AssemblyReferenceSession>();
 

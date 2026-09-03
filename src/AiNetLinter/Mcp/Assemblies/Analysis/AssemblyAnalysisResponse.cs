@@ -1,8 +1,9 @@
 #nullable enable
 
+using System;
+using System.Collections.Generic;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -18,21 +19,24 @@ internal static class AssemblyAnalysisResponse
 {
     internal static bool FitsResponseBudget(CallToolResult result, AssemblyAnalysisLease lease, int responseBudgetBytes = 0)
     {
-        var enriched = Enrich(result, lease);
-        var textBytes = enriched.Content
-            .OfType<TextContentBlock>()
-            .Sum(block => Encoding.UTF8.GetByteCount(block.Text));
-        var structuredBytes = enriched.StructuredContent is { } structured
-            ? Encoding.UTF8.GetByteCount(structured.GetRawText())
-            : 0;
         var budget = AssemblyAnalysisResponseLimits.ResolveResponseBudget(
             responseBudgetBytes,
             null,
             lease.Context.ResponseBudgetBytes);
-        return textBytes <= budget && structuredBytes <= budget;
+        return Measure(CreateEnriched(result, lease)).TotalBytes <= budget;
     }
 
     internal static CallToolResult Enrich(CallToolResult result, AssemblyAnalysisLease lease)
+    {
+        var enriched = CreateEnriched(result, lease);
+        var budget = AssemblyAnalysisResponseLimits.ResolveResponseBudget(
+            0,
+            null,
+            lease.Context.ResponseBudgetBytes);
+        return ApplyWireBudget(enriched, budget);
+    }
+
+    private static CallToolResult CreateEnriched(CallToolResult result, AssemblyAnalysisLease lease)
     {
         var origin = lease.Context.Origin;
         var effectiveStatus = lease.Context.Status.ResolveEffectiveStatus(
@@ -79,6 +83,209 @@ internal static class AssemblyAnalysisResponse
             Content = content,
             StructuredContent = structured,
         };
+    }
+
+    private static CallToolResult ApplyWireBudget(CallToolResult result, int budget)
+    {
+        var withBudget = AddWireBudgetMetadata(result, budget, isTruncated: false);
+        if (Measure(withBudget).TotalBytes <= budget) return withBudget;
+
+        withBudget = ReplaceText(
+            withBudget,
+            "[ASSEMBLY] StructuredContent ist die kanonische Nutzlast; " +
+            "die Textdarstellung wurde wegen des gemeinsamen Wire-Budgets gekürzt.");
+        withBudget = AddWireBudgetMetadata(withBudget, budget, isTruncated: true);
+
+        for (var attempt = 0; attempt < 8 && Measure(withBudget).TotalBytes > budget; attempt++)
+        {
+            if (withBudget.StructuredContent is not { ValueKind: JsonValueKind.Object } structured)
+            {
+                withBudget = ReplaceText(withBudget, TrimUtf8(
+                    withBudget.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty,
+                    budget));
+                break;
+            }
+
+            var available = Math.Max(1, budget - Measure(withBudget).TextBytes);
+            var trimmed = TrimStructured(structured, available);
+            withBudget = ReplaceStructured(withBudget, trimmed);
+            withBudget = AddWireBudgetMetadata(withBudget, budget, isTruncated: true);
+        }
+
+        if (Measure(withBudget).TotalBytes > budget)
+        {
+            withBudget = ReplaceStructured(withBudget, JsonSerializer.SerializeToElement(new JsonObject
+            {
+                ["wireTruncated"] = true,
+                ["truncatedBy"] = new JsonArray("responseBudget"),
+            }, McpJsonOptions.Default));
+            withBudget = AddWireBudgetMetadata(withBudget, budget, isTruncated: true);
+        }
+
+        return withBudget;
+    }
+
+    private static CallToolResult AddWireBudgetMetadata(
+        CallToolResult result,
+        int budget,
+        bool isTruncated)
+    {
+        if (result.StructuredContent is not { ValueKind: JsonValueKind.Object } structured)
+        {
+            return result;
+        }
+
+        var node = JsonNode.Parse(structured.GetRawText()) as JsonObject ?? new JsonObject();
+        var candidate = result;
+        for (var attempt = 0; attempt < 8; attempt++)
+        {
+            var measurement = Measure(candidate);
+            node["wireBudget"] = new JsonObject
+            {
+                ["limitBytes"] = budget,
+                ["textBytes"] = measurement.TextBytes,
+                ["structuredBytes"] = measurement.StructuredBytes,
+                ["totalBytes"] = measurement.TotalBytes,
+                ["truncated"] = isTruncated,
+            };
+            var next = ReplaceStructured(candidate, JsonSerializer.SerializeToElement(node, McpJsonOptions.Default));
+            if (Measure(next) == measurement) return next;
+            candidate = next;
+        }
+
+        return candidate;
+    }
+
+    private static JsonElement TrimStructured(JsonElement structured, int budget)
+    {
+        var node = JsonNode.Parse(structured.GetRawText()) ?? new JsonObject();
+        MarkStructuredTruncated(node);
+        while (JsonSerializer.SerializeToUtf8Bytes(node, McpJsonOptions.Default).Length > budget
+            && TryTrimNode(node))
+        {
+        }
+
+        return JsonSerializer.SerializeToElement(node, McpJsonOptions.Default);
+    }
+
+    private static bool TryTrimNode(JsonNode node) =>
+        node switch
+        {
+            JsonObject obj => TryTrimObject(obj),
+            JsonArray array => TryTrimArray(array),
+            _ => false,
+        };
+
+    private static bool TryTrimObject(JsonObject obj) =>
+        TryTrimObjectStrings(obj)
+        || TryTrimObjectChildren(obj)
+        || TryRemoveLargestObjectProperty(obj);
+
+    private static bool TryTrimObjectStrings(JsonObject obj)
+    {
+        foreach (var property in obj.ToList())
+        {
+            if (IsBudgetMetadata(property.Key)) continue;
+            if (property.Value is JsonValue value
+                && value.TryGetValue<string>(out var text)
+                && text.Length > 256)
+            {
+                obj[property.Key] = TrimUtf8(text, 256);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryTrimObjectChildren(JsonObject obj)
+    {
+        foreach (var property in obj)
+        {
+            if (IsBudgetMetadata(property.Key)) continue;
+            if (property.Value is not null && TryTrimNode(property.Value)) return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryRemoveLargestObjectProperty(JsonObject obj)
+    {
+        var removable = obj
+            .Where(property => !IsBudgetMetadata(property.Key))
+            .OrderByDescending(property => property.Value is null
+                ? 0
+                : JsonSerializer.SerializeToUtf8Bytes(property.Value, McpJsonOptions.Default).Length)
+            .FirstOrDefault();
+        if (removable.Key is null) return false;
+        obj.Remove(removable.Key);
+        return true;
+    }
+
+    private static bool TryTrimArray(JsonArray array)
+    {
+        foreach (var item in array)
+        {
+            if (item is not null && TryTrimNode(item)) return true;
+        }
+
+        if (array.Count == 0) return false;
+        array.RemoveAt(array.Count - 1);
+        return true;
+    }
+
+    private static void MarkStructuredTruncated(JsonNode node)
+    {
+        if (node is not JsonObject obj) return;
+        if (obj["isTruncated"] is not null) obj["isTruncated"] = true;
+        if (obj["truncated"] is not null) obj["truncated"] = true;
+        obj["wireTruncated"] = true;
+    }
+
+    private static bool IsBudgetMetadata(string name) =>
+        name is "analysis" or "wireBudget" or "wireTruncated" or "truncatedBy";
+
+    private static CallToolResult ReplaceStructured(CallToolResult result, JsonElement structured) =>
+        new()
+        {
+            IsError = result.IsError,
+            Content = result.Content,
+            StructuredContent = structured,
+        };
+
+    private static CallToolResult ReplaceText(CallToolResult result, string text) =>
+        new()
+        {
+            IsError = result.IsError,
+            Content = result.Content
+                .Select(block => block is TextContentBlock
+                    ? new TextContentBlock { Text = text }
+                    : block)
+                .ToList(),
+            StructuredContent = result.StructuredContent,
+        };
+
+    private static WireBudgetMeasurement Measure(CallToolResult result)
+    {
+        var textBytes = result.Content
+            .OfType<TextContentBlock>()
+            .Sum(block => Encoding.UTF8.GetByteCount(block.Text));
+        var structuredBytes = result.StructuredContent is { } structured
+            ? Encoding.UTF8.GetByteCount(structured.GetRawText())
+            : 0;
+        return new(textBytes, structuredBytes);
+    }
+
+    private static string TrimUtf8(string value, int maxBytes)
+    {
+        if (Encoding.UTF8.GetByteCount(value) <= maxBytes) return value;
+        var limit = Math.Max(1, maxBytes - Encoding.UTF8.GetByteCount("…"));
+        while (limit > 0 && Encoding.UTF8.GetByteCount(value[..limit]) > maxBytes - Encoding.UTF8.GetByteCount("…"))
+        {
+            limit--;
+        }
+
+        return value[..limit] + "…";
     }
 
     internal static CallToolResult Unsupported(string canonicalPath)
@@ -151,4 +358,9 @@ internal static class AssemblyAnalysisResponse
         int ShownCount,
         bool Truncated,
         IReadOnlyList<string> Samples);
+
+    private readonly record struct WireBudgetMeasurement(int TextBytes, int StructuredBytes)
+    {
+        internal int TotalBytes => TextBytes + StructuredBytes;
+    }
 }

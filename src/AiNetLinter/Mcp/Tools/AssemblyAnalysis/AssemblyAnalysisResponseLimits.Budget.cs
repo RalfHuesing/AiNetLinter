@@ -16,9 +16,9 @@ internal static partial class AssemblyAnalysisResponseLimits
         InspectAssemblyPayload payload,
         bool publicOnly,
         Func<InspectAssemblyPayload, bool>? fitsBudget = null,
-        int responseBudgetBytes = DefaultResponseBytes)
+        ResponseBudgetOptions options = default)
     {
-        var budget = NormalizeResponseBudget(responseBudgetBytes);
+        var budget = NormalizeResponseBudget(options.ResponseBudgetBytes);
         fitsBudget ??= candidate => FitsResponseBudget(candidate, publicOnly, budget);
         var projected = payload;
         if (fitsBudget(projected)) return projected;
@@ -34,15 +34,15 @@ internal static partial class AssemblyAnalysisResponseLimits
 
         while (!fitsBudget(projected) && TryTrimInspect(ref projected)) { }
 
-        return projected;
+        return RecalculateEnvelope(projected, options.CursorOffset);
     }
 
     internal static FindAssemblyExtensionsPayload ProjectResponseBudget(
         FindAssemblyExtensionsPayload payload,
         Func<FindAssemblyExtensionsPayload, bool>? fitsBudget = null,
-        int responseBudgetBytes = DefaultResponseBytes)
+        ResponseBudgetOptions options = default)
     {
-        var budget = NormalizeResponseBudget(responseBudgetBytes);
+        var budget = NormalizeResponseBudget(options.ResponseBudgetBytes);
         fitsBudget ??= candidate => FitsResponseBudget(candidate, budget);
         var projected = payload;
         if (fitsBudget(projected)) return projected;
@@ -58,7 +58,7 @@ internal static partial class AssemblyAnalysisResponseLimits
 
         while (!fitsBudget(projected) && TryTrimExtensions(ref projected)) { }
 
-        return projected;
+        return RecalculateEnvelope(projected, options.CursorOffset);
     }
 
     private static bool TryTrimInspect(ref InspectAssemblyPayload payload) =>
@@ -125,12 +125,50 @@ internal static partial class AssemblyAnalysisResponseLimits
         InspectAssemblyPayload payload,
         bool publicOnly,
         int responseBudgetBytes) =>
-        Encoding.UTF8.GetByteCount(InspectAssemblyFormatter.FormatText(payload, publicOnly)) <= responseBudgetBytes
-        && JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length <= responseBudgetBytes;
+        Encoding.UTF8.GetByteCount(InspectAssemblyFormatter.FormatText(payload, publicOnly))
+            + JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length <= responseBudgetBytes;
 
     private static bool FitsResponseBudget(FindAssemblyExtensionsPayload payload, int responseBudgetBytes) =>
-        Encoding.UTF8.GetByteCount(FindAssemblyExtensionsResponseBuilder.FormatText(payload)) <= responseBudgetBytes
-        && JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length <= responseBudgetBytes;
+        Encoding.UTF8.GetByteCount(FindAssemblyExtensionsResponseBuilder.FormatText(payload))
+            + JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length <= responseBudgetBytes;
+
+    private static InspectAssemblyPayload RecalculateEnvelope(
+        InspectAssemblyPayload payload,
+        int cursorOffset)
+    {
+        var returned = payload.Types.Count;
+        var truncated = payload.Truncated || returned < payload.TotalTypes;
+        return payload with
+        {
+            ShownCount = returned,
+            Truncated = truncated,
+            TotalCount = payload.TotalTypes,
+            ReturnedCount = returned,
+            IsTruncated = truncated,
+            ContinuationToken = returned < payload.TotalTypes
+                ? AssemblyPaging.CreateToken(Math.Max(0, cursorOffset) + returned)
+                : null,
+        };
+    }
+
+    private static FindAssemblyExtensionsPayload RecalculateEnvelope(
+        FindAssemblyExtensionsPayload payload,
+        int cursorOffset)
+    {
+        var returned = payload.Extensions.Count;
+        var truncated = payload.Truncated || returned < payload.TotalExtensions;
+        return payload with
+        {
+            ShownCount = returned,
+            Truncated = truncated,
+            TotalCount = payload.TotalExtensions,
+            ReturnedCount = returned,
+            IsTruncated = truncated,
+            ContinuationToken = returned < payload.TotalExtensions
+                ? AssemblyPaging.CreateToken(Math.Max(0, cursorOffset) + returned)
+                : null,
+        };
+    }
 
     private static bool TryRemoveLastReferenceSession(
         ref InspectAssemblyPayload payload,

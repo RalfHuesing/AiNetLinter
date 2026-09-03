@@ -8,10 +8,12 @@
 ## Betroffene Dateien und Symbole
 
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisModels.cs`: `InspectAssemblyPayload`, `FindAssemblyExtensionsPayload`, Paging-Envelope und stabile Assembly-Signatur-/Member-IDs.
-- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits*.cs`: Diagnose-/Referenz-Projektion, konfigurierbares 16-KiB-Standardbudget und harte technische 32-KiB-Grenze.
-- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextTool.cs`: kompakter Composite mit optionalen Metrics, Referenzen, Caller/Impact, Body und Klassenstruktur.
-- `src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs`: additive strukturierte Body-Batch-Ergebnisse mit stabiler ID, relativer Position, Herkunftsmodus und Truncation-Flag.
-- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs`: gemeinsamer `analysis`-Envelope für Folgeaufrufe.
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.Budget.cs`: trimmt Inspect-/Extension-Projektionen und rekonstruiert Paging-/Count-/Truncation-Felder aus der tatsächlich zurückgegebenen Projektion und dem Caller-Offset.
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/Responses/*ResponseBuilder.cs`: übergibt den gelesenen Cursor-Offset an die Budgetprojektion, damit Folgecursor keine Ergebnisse überspringen.
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisContextTool.cs`: wendet `topN` auf Caller-/Impact-Auswahl an und markiert bei Composite-Trim optionale Sektionen mit Status, Truncation und Detail-/Paging-Hinweis.
+- `src/AiNetLinter/Mcp/Tools/GetSymbolBodyTool.cs`, `SourceSymbolBodyResolver.cs`, `Assemblies/Analysis/Bodies/IAssemblyBodyContext.cs`, `Assemblies/Analysis/References/AssemblyAnalysisLease.cs`: leiten Body-Provenienz aus dem tatsächlichen Assembly-Lease-Kontext ab.
+- `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs`: misst und trimmt Text plus Structured gemeinsam über einen tatsächlichen Wire-Budget-Vertrag und hält `wireBudget`-/Legacy-Metadaten kompatibel.
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/ResponseBudgetOptions.cs`: interne, sichtbare Projektionsträgerstruktur für Response-Budget und Cursor-Offset.
 - `src/AiNetLinter/Mcp/Tools/SymbolGraph/AssemblyFindSymbolTool.cs`, `AssemblyFindReferencesTool.cs`, `AssemblySymbolResolver.cs`, `AssemblyReferenceNavigator.cs`, `TransitiveCallGraphModels.cs` sowie `src/AiNetLinter/Mcp/Tools/CallTree/AssemblyGetCallTreeTool.cs`: Assembly-Symbolauflösung, Navigation, Scope-/Truncation-Metadaten.
 - `src/AiNetLinter/Mcp/Tools/FileStructure/GetFileTree*.cs` und `AssemblyGetFileTreeTool.cs`: physischer Dateibaum für Projekte sowie den Source-/Decompiler-Root einer Assembly-Session.
 - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/Responses/*ResponseBuilder.cs`: strukturierte Assembly-Antworten und Textprojektion.
@@ -41,4 +43,4 @@
 ## Verifikation
 
 - MCP-first: `get_file_tree(summary)`, `get_index_scope`, `find_symbol` und `get_feature_context` für Factory, Response-Limits, Registrierungen und Navigation ausgeführt; Root-Tree war wegen `maxDepth` absichtlich gekürzt.
-- Fast-Regressionen decken Budget-Konfiguration, stabile IDs, Cursor-Paging und strukturierte Bodies ab; Live-Contract-Regression deckt Tool-Anzahl/-Gruppierung sowie den Composite-Daemon-Call ab. Final geprüft: Build/Fast- und relevante Integrationstests grün; DRY meldet vier bestehende Budget-Parallelcluster als P2, Dead-Code und Magic Values 0, letzter `get_violations`-Check im Assembly-Scope 0.
+- Fast-Regressionen decken Budget-Konfiguration, stabile IDs, Cursor-Paging und strukturierte Bodies ab. Neue gezielte Regressionen prüfen Paging nach Trim; kombiniertes Text-/Structured-Wire-Budget; Composite-Sektionsstatus; `topN`; und Body-Provenienz. Die abschließenden Audit- und Testnachweise werden im terminalen Bericht dieses Korrekturlaufs geführt.

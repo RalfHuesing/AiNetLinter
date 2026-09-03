@@ -71,7 +71,7 @@ internal static class FindAssemblyExtensionsResponseBuilder
             payload,
             request.Lease is null ? null : candidate => AssemblyAnalysisResponse.FitsResponseBudget(
                 McpToolResults.Text(FormatText(candidate), candidate), request.Lease, budget),
-            budget);
+            options: new(budget, AssemblyPaging.ReadOffset(request.Arguments.Cursor)));
     }
 
     internal static string FormatText(FindAssemblyExtensionsPayload payload)

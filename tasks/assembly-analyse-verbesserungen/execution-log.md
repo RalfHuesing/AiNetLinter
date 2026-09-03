@@ -52,3 +52,28 @@
 - Code-Map: Reviewer korrigierte ausschließlich konkrete Navigationsfakten; Zielpfade existieren.
 - Restrisiken: Vier bestehende DRY-P2-Cluster bleiben `accepted-deferred`; für Composite und Assembly-`get_file_tree` fehlen direkte dedizierte Regressionstests. Die Doku behauptet teilweise mehr Vertragssicherheit als die Findings derzeit garantieren.
 - Nächste Aktion: frischer Implementierer für die fünf P1-Ursachen, danach frischer Folge-Review.
+
+## Run 2026-09-03 / Epic 1 / Korrektur-Implementierer 1
+
+- Status: running
+- Diff-Baseline: `75ed7cdb` (Review-Checkpoint)
+- Scope: fünf P1-Ursachensignaturen aus dem Epic-1-Review
+- Subagent: `01a0690c-129d-78c1-bbd8-16de599a3a93` (Bacon)
+- Auftrag: Paging nach Budget-Trim, gemeinsames Assembly-Wire-Budget, finaler Composite-Envelope mit Sektionsstatus, `topN`-Semantik und Body-Provenienz korrigieren; passende Regressionen ergänzen und den Implementierungs-/MCP-Nachweis nach der letzten Codeänderung liefern.
+
+## Run 2026-09-03 / Epic 1 / Korrektur-Implementierer 1 – Abschluss
+
+- Status: completed; Korrekturbericht terminal eingegangen.
+- Urteil: Implementierer meldet alle fünf P1-Ursachensignaturen behoben; Folge-Review erforderlich.
+- Bericht:
+  - Paging-/Envelope-Neuberechnung nach Budget-Trim inklusive korrektem Cursor-Offset.
+  - Gemeinsames gemessenes Wire-Budget für Text und StructuredContent.
+  - Composite-Sektionsstatus mit Truncation- und Detailhinweisen.
+  - `topN` für Caller-/Impact-Auswahl.
+  - Body-Provenienz aus dem tatsächlichen Assembly-Lease-Kontext.
+  - Regressionstests für alle fünf P1-Ursachen.
+  - `code-map.md` aktualisiert; vorhandene Nutzeränderungen an `execution-log.md` und `tech-debt.md` laut Bericht erhalten.
+- Verifikation jeweils nach der letzten Codeänderung: `dotnet build` erfolgreich mit 0 Warnungen/0 Fehlern; FastTests gezielt mit Filter `FullyQualifiedName~AssemblyAnalysisToolTests|FullyQualifiedName~GetSymbolBodyToolTests`: 33/33 bestanden; IntegrationTests gezielt mit Filter `FullyQualifiedName~AssemblyAnalysisDispatcherCapabilityTests|FullyQualifiedName~AssemblyAnalysisPathContractTests`: 22/22 bestanden; FastTests vollständig `Category!=Stress`: 2423 bestanden, 2 übersprungen; IntegrationTests vollständig `Category!=Stress`: 421/422 bestanden, ein paralleler Dateisperren-Fehler in `AssemblyAnalysisRegistryRetirementRaceTests`, isolierter Wiederholungslauf desselben Tests 1/1 bestanden.
+- MCP-/Qualitätsnachweise nach letzter Codeänderung: `find_duplicates` mit `targetType=project`, absolutem Projektpfad, Scope `src/AiNetLinter/Mcp`, `scopeType=production`, `mode=clone`, `similarityThreshold=fuzzy`, `minTokens=30`, `maxResults=50` meldet 9 bestehende Near-/Fuzzy-Cluster ohne sichere scope-nahe Korrektur; Dead-Code-Audit 38 Low-Confidence-/0 High-Confidence-Funde; Magic-Values-Audit 8 bestehende Treffer in `MagicValuesStringHeuristics.cs`; `find_references` bestätigt 4 Verwendungen von `ResponseBudgetOptions`; finaler `get_violations` mit `targetType=project`, absolutem Projektpfad, Scope `src/AiNetLinter/Mcp`, `includeSnippet=true`, `contextLines=2`, `maxResults=200`: 0 Violations.
+- Offene Risiken: vollständiger Integrationtestlauf ist unter paralleler Ausführung weiterhin anfällig für externe Fixture-Dateisperren, isoliert ist der betroffene Test grün; Feature-Metrik weist auf bestehende aggregierte LOC-Überschreitung von `AssemblyAnalysisResponseLimits` hin, ohne actionable Violation im finalen Scope-Check.
+- Nächste Aktion: Checkpoint-Commit, danach frischer Folge-Review der fünf P1-Korrekturen.

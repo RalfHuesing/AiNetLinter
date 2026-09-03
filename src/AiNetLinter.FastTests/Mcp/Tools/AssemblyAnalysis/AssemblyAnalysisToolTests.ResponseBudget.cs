@@ -177,4 +177,43 @@ public sealed partial class AssemblyAnalysisToolTests
         Assert.True(structuredBytes <= AssemblyAnalysisResponseLimits.MaxResponseBytes);
         Assert.DoesNotContain("API-Typen: 1 von 1 (gekürzt", text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task InspectAssembly_BudgetTrimAdvancesContinuationByReturnedItems()
+    {
+        using var temp = TestTempDirectory.Create("assembly-analysis-paging-budget-");
+        var types = Enumerable.Range(0, 120)
+            .Select(index => $"public sealed class Page{index:D3} {{ public void Run{index:D3}() {{ }} }}");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "BudgetPagingProbe",
+            $"namespace Probe.Budget; {string.Join(Environment.NewLine, types)}");
+
+        var arguments = new InspectAssemblyArguments(
+            assemblyPath,
+            null,
+            null,
+            null,
+            true,
+            1000,
+            MaxMembers: 1000,
+            MaxResponseBytes: 8192);
+        var first = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(
+            await InspectAssemblyToolDispatch.ExecuteAsync(null, arguments, CancellationToken.None));
+
+        Assert.True(first.ReturnedCount > 0);
+        Assert.True(first.IsTruncated);
+        Assert.Equal(first.ReturnedCount.ToString(), first.ContinuationToken);
+
+        var second = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(
+            await InspectAssemblyToolDispatch.ExecuteAsync(
+                null,
+                arguments with { Cursor = first.ContinuationToken },
+                CancellationToken.None));
+
+        Assert.NotEmpty(second.Types);
+        Assert.DoesNotContain(
+            second.Types.Select(type => type.Id),
+            id => first.Types.Any(type => type.Id == id));
+    }
 }

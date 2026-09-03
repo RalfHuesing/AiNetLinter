@@ -113,7 +113,7 @@ internal static class InspectAssemblyResponseBuilder
                     McpToolResults.Text(InspectAssemblyFormatter.FormatText(candidate, arguments.PublicOnly), candidate),
                     lease,
                     budget),
-            budget);
+            options: new(budget, AssemblyPaging.ReadOffset(arguments.Cursor)));
     }
 
 }

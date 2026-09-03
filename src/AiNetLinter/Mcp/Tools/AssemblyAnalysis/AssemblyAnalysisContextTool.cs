@@ -118,17 +118,22 @@ internal static class AssemblyAnalysisContextTool
         {
             root["callers"] = Serialize((await AssemblyFindReferencesTool.ExecuteAsync(
                 lease,
-                new AssemblyFindReferencesRequest(arguments.SymbolIdentifier, Math.Clamp(arguments.MaxCallers, 1, 200), Math.Clamp(arguments.Depth, 1, 3), true),
+                new AssemblyFindReferencesRequest(arguments.SymbolIdentifier, SelectionLimit(arguments), Math.Clamp(arguments.Depth, 1, 3), true),
                 cancellationToken).ConfigureAwait(false)).StructuredContent);
         }
         if (arguments.IncludeImpact)
         {
             root["impact"] = Serialize((await GetImpactTool.ExecuteAsync(
                 lease.Server,
-                new GetImpactInput(null, arguments.SymbolIdentifier, Math.Clamp(arguments.MaxCallers, 1, 200), Math.Clamp(arguments.Depth, 1, 3)),
+                new GetImpactInput(null, arguments.SymbolIdentifier, SelectionLimit(arguments), Math.Clamp(arguments.Depth, 1, 3)),
                 cancellationToken).ConfigureAwait(false)).StructuredContent);
         }
     }
+
+    private static int SelectionLimit(AssemblyAnalysisContextArguments arguments) =>
+        Math.Min(
+            Math.Clamp(arguments.MaxCallers, 1, 200),
+            Math.Max(arguments.TopN, 1));
 
     private static void AddEnvelope(JsonObject root)
     {
@@ -137,6 +142,7 @@ internal static class AssemblyAnalysisContextTool
         root["returnedCount"] = analysis?["returnedCount"]?.GetValue<int>() ?? analysis?["shownCount"]?.GetValue<int>() ?? 0;
         root["isTruncated"] = analysis?["isTruncated"]?.GetValue<bool>() ?? analysis?["truncated"]?.GetValue<bool>() ?? false;
         root["continuationToken"] = analysis?["continuationToken"]?.GetValue<string>();
+        root["truncatedBy"] = analysis?["truncatedBy"]?.DeepClone() ?? new JsonArray();
     }
 
     private static void TrimToBudget(JsonObject root, int budget)
@@ -145,10 +151,23 @@ internal static class AssemblyAnalysisContextTool
         foreach (var property in removable)
         {
             if (JsonSerializer.SerializeToUtf8Bytes(root, McpJsonOptions.Default).Length <= budget) return;
-            root.Remove(property);
+            if (root[property] is null) continue;
+            root[property] = CreateTruncatedSection(property, root[property]);
             root["isTruncated"] = true;
+            root["truncatedBy"] = new JsonArray("responseBudget");
         }
     }
+
+    private static JsonObject CreateTruncatedSection(string section, JsonNode? original) => new()
+    {
+        ["status"] = "truncated",
+        ["truncated"] = true,
+        ["detailHint"] = $"Abschnitt '{section}' wurde wegen des Antwortbudgets gekürzt; maxResponseBytes oder detailLevel erhöhen und den Abschnitt gezielt erneut anfordern.",
+        ["continuationToken"] = ExtractContinuationToken(original),
+    };
+
+    private static string? ExtractContinuationToken(JsonNode? section) =>
+        section?["continuationToken"]?.GetValue<string>();
 
     private static JsonNode? Serialize(JsonElement? element) =>
         element is { } value ? JsonNode.Parse(value.GetRawText()) : null;

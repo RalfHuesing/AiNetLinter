@@ -72,7 +72,7 @@ public sealed class AssemblyAnalysisPathContractTests
         var contractBody = await GetBodyTextAsync(lease, contract);
         var recordBody = await GetBodyTextAsync(lease, record);
 
-        Assert.Contains("bodyAvailability: `available`; contentMode: `source`", typeBody, StringComparison.Ordinal);
+        Assert.Contains("bodyAvailability: `available`; contentMode: `decompiledProject`", typeBody, StringComparison.Ordinal);
         Assert.Contains("class Document", typeBody, StringComparison.Ordinal);
         Assert.Contains("Name", propertyBody, StringComparison.Ordinal);
         Assert.Contains("get", propertyBody, StringComparison.Ordinal);
@@ -81,10 +81,38 @@ public sealed class AssemblyAnalysisPathContractTests
         Assert.Contains("name = value", propertyBody, StringComparison.Ordinal);
         Assert.Contains("struct Structure", structureBody, StringComparison.Ordinal);
         Assert.Contains("enum State", stateBody, StringComparison.Ordinal);
-        Assert.Contains("bodyAvailability: `unavailable`; contentMode: `source`", contractBody, StringComparison.Ordinal);
+        Assert.Contains("bodyAvailability: `unavailable`; contentMode: `decompiledProject`", contractBody, StringComparison.Ordinal);
         Assert.Contains("Interfaces", contractBody, StringComparison.Ordinal);
-        Assert.Contains("bodyAvailability: `available`; contentMode: `source`", recordBody, StringComparison.Ordinal);
+        Assert.Contains("bodyAvailability: `available`; contentMode: `decompiledProject`", recordBody, StringComparison.Ordinal);
         Assert.Contains("Record", recordBody, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AssemblyRoute_BodyProvenanceMatchesDecompiledAnalysisEnvelope()
+    {
+        using var temp = TestTempDirectory.Create("assembly-body-provenance-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "BodyProvenanceProbe",
+            "namespace Probe; public sealed class Document { public int Read() => 42; }");
+        await using var registry = new AssemblyAnalysisRegistry();
+        var leaseResult = await registry.LeaseAsync(assemblyPath);
+        Assert.Null(leaseResult.Error);
+        using var lease = leaseResult.Lease!;
+        var method = Assert.Single(
+            lease.Context.Compilation.GetTypeByMetadataName("Probe.Document")!.GetMembers("Read").OfType<IMethodSymbol>());
+        var methodId = new AnalysisSymbolIdentity(lease.Context.Origin.ContentHash, lease.Context.Generation)
+            .Format(DocumentationCommentId.CreateDeclarationId(method))!;
+
+        var result = await DispatchAsync(
+            registry,
+            assemblyPath,
+            activeLease => GetSymbolBodyTool.ExecuteAsync(activeLease, [methodId], 80, CancellationToken.None));
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value;
+        Assert.Equal("decompiledProject", payload.GetProperty("results")[0].GetProperty("contentMode").GetString());
+        Assert.Equal("decompiledProject", payload.GetProperty("analysis").GetProperty("contentMode").GetString());
     }
 
     [Fact]

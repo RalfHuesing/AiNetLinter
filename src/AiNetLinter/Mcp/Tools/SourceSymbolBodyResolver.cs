@@ -13,15 +13,16 @@ internal static class SourceSymbolBodyResolver
 {
     internal static AssemblyBodyResolution Resolve(
         ISymbol symbol,
-        int maxBodyLines)
+        int maxBodyLines,
+        AssemblyOrigin? origin = null)
     {
         var hasSyntax = symbol.DeclaringSyntaxReferences.Any();
         var unavailable = HasUnavailableBody(symbol, hasSyntax);
         var hint = GetHint(symbol, hasSyntax, unavailable);
         return new(
             Extract(symbol, maxBodyLines),
-            unavailable ? "unavailable" : "available",
-            "source",
+            unavailable ? "unavailable" : origin?.BodyAvailability ?? "available",
+            origin?.ContentMode ?? "source",
             hint);
     }
 

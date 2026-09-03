@@ -17,6 +17,7 @@ internal static partial class AssemblyAnalysisResponseLimits
     internal const int MaxReferenceSessions = 32;
     internal const int MaxSessionDiagnostics = 3;
     internal const int DefaultResponseBytes = 16 * 1024;
+
     internal const int MaxResponseBytes = 32 * 1024;
 
     internal static int NormalizeResponseBudget(int requested) =>
