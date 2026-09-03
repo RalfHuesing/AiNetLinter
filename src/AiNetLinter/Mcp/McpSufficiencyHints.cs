@@ -22,11 +22,6 @@ internal static class McpSufficiencyHints
     private const string CompleteDataHint =
         "[HINWEIS]: Diese Daten sind vollstaendig fuer den angefragten Scope — kein zusaetzliches Read/Grep noetig.";
 
-    internal const string DecompiledSignatureOnlyLimitation =
-        "[EINSCHRAENKUNG]: contentMode=decompiledSignatureOnly enthaelt nur dekompilierte " +
-        "Signaturen ohne Methodenrümpfe; fehlende Aufrufstellen innerhalb von Methoden koennen " +
-        "daher nicht vollstaendig bestimmt werden.";
-
     /// <summary>
     /// Haengt <see cref="CompleteDataHint"/> an <paramref name="text"/> an (Leerzeile davor).
     /// Aufrufer duerfen das nur fuer nicht-trunkierte Ergebnisse tun — trunkierte Ergebnisse
@@ -35,6 +30,4 @@ internal static class McpSufficiencyHints
     /// </summary>
     internal static string Append(string text) => text + "\n\n" + CompleteDataHint;
 
-    internal static string AppendDecompiledSignatureOnlyLimitation(string text) =>
-        text + "\n\n" + DecompiledSignatureOnlyLimitation;
 }

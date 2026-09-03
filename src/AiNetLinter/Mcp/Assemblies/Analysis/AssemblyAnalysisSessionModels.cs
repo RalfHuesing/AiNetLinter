@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using Microsoft.CodeAnalysis;
@@ -142,13 +141,7 @@ internal sealed record AssemblyReferenceResolution(
     AssemblyIdentityDto? Identity,
     IReadOnlyList<AssemblyReferenceDto> References,
     IReadOnlyList<MetadataReference> MetadataReferences,
-    IReadOnlyList<AssemblySessionDiagnostic> Diagnostics,
-    ICSharpCode.Decompiler.Metadata.IAssemblyResolver DecompilerResolver);
-
-internal delegate Task<AssemblyBodyResolution> AssemblyBodyResolver(
-    ISymbol symbol,
-    int maxBodyLines,
-    CancellationToken cancellationToken);
+    IReadOnlyList<AssemblySessionDiagnostic> Diagnostics);
 
 internal sealed record AssemblyBodyResolution(
     string? Body,
@@ -189,8 +182,7 @@ internal sealed record AssemblySessionGeneration(
     AssemblyRoslynSnapshot Snapshot,
     IReadOnlyList<AssemblyReferenceDto> References,
     IReadOnlyList<AssemblySessionDiagnostic> Diagnostics,
-    AssemblyOrigin Origin,
-    AssemblyBodyResolver? BodyResolver = null)
+    AssemblyOrigin Origin)
 {
     internal int ActiveLeaseCount { get; set; }
 }

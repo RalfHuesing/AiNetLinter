@@ -45,14 +45,7 @@ internal sealed class AssemblyReferenceResolver
             var graph = BuildReferenceGraph(canonicalPath, metadata, diagnostics);
             var metadataResult = CreateMetadataReferences(graph.Paths, diagnostics);
             var references = graph.References.Select(reference => NormalizeReference(reference, metadataResult.SuccessfulPaths)).ToList();
-            var decompilerResolver = new ICSharpCode.Decompiler.Metadata.UniversalAssemblyResolver(
-                canonicalPath,
-                false,
-                null,
-                null,
-                PEStreamOptions.PrefetchEntireImage,
-                MetadataReaderOptions.None);
-            return new AssemblyReferenceResolution(metadata.Identity, references, metadataResult.References, diagnostics, decompilerResolver);
+            return new AssemblyReferenceResolution(metadata.Identity, references, metadataResult.References, diagnostics);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or InvalidOperationException or ArgumentException)
         {
@@ -374,14 +367,7 @@ internal sealed class AssemblyReferenceResolver
     private static AssemblyReferenceResolution FailedResolution(string code, string message, string canonicalPath)
     {
         message = $"{message} Hinweis: verwaltete .NET-.dll oder .exe mit IL erforderlich.";
-        var resolver = new ICSharpCode.Decompiler.Metadata.UniversalAssemblyResolver(
-            canonicalPath,
-            false,
-            null,
-            null,
-            PEStreamOptions.PrefetchEntireImage,
-            MetadataReaderOptions.None);
-        return new AssemblyReferenceResolution(null, [], [], [new AssemblySessionDiagnostic(code, message, AssemblyDiagnosticSeverity.Error)], resolver);
+        return new AssemblyReferenceResolution(null, [], [], [new AssemblySessionDiagnostic(code, message, AssemblyDiagnosticSeverity.Error)]);
     }
 
     private static IReadOnlyList<string> GetTrustedPlatformAssemblyPaths() =>

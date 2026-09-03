@@ -32,8 +32,7 @@ internal sealed record GetCallTreeInput(
     int Depth,
     string? Format,
     int TopN,
-    string? Direction = null,
-    bool SuppressSufficiencyHint = false);
+    string? Direction = null);
 
 internal sealed record CallTreeBuildRequest(
     Solution Solution,

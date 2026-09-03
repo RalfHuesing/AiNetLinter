@@ -19,8 +19,7 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 internal sealed record FindReferencesRequest(
     string? SymbolIdentifier,
     int MaxResults,
-    int Depth,
-    bool SuppressSufficiencyHint = false);
+    int Depth);
 
 /// <summary>
 /// MCP-Tool <c>find_references</c>: loest einen Symbol-Identifikator (stabile
@@ -91,11 +90,9 @@ internal static class FindReferencesTool
                     ? $"Keine Aufrufstellen gefunden fuer '{request.SymbolIdentifier}'"
                     : null);
 
-            var finalBody = request.SuppressSufficiencyHint
-                ? McpSufficiencyHints.AppendDecompiledSignatureOnlyLimitation(formatted.Text)
-                : TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
-                    ? McpSufficiencyHints.Append(formatted.Text)
-                    : formatted.Text;
+            var finalBody = TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
+                ? McpSufficiencyHints.Append(formatted.Text)
+                : formatted.Text;
             return McpToolResults.Text(finalBody, formatted.Traversal);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

@@ -132,3 +132,37 @@ Implementierungs-Checkpoint committen, danach frischen Folge-Review für den Kor
 
 - Epic 1 ist abgeschlossen und freigegeben.
 - Nächster Arbeitsbereich: Epic 2, Roslyn-Snapshot und direkte Body-Auflösung.
+
+## Run 2026-09-03 / Epic 2 / Implementierer / running
+
+- Subagent: `01a06697-684c-7773-9a83-73f1419382af` (`Fermat`)
+- Baseline: `30e4c727`
+- Auftrag: Direkte Roslyn-Body-Auflösung und restlose Entfernung des alten Stub-/On-Demand-Systems (M6, M11).
+- Status: completed / hand-off-ready
+
+### Terminaler Implementiererbericht
+
+- Eager `WholeProjectDecompiler`-Snapshots werden als echte Roslyn-Dokumente geladen; `get_symbol_body` nutzt für Assemblys und normale Projekte denselben direkten `SourceSymbolBodyResolver.Resolve`-Pfad.
+- Entfernt: `AssemblyDecompiledBodyResolver`, `AssemblyBodySyntax`, `AssemblyDecompilationSourceText`, Stub-Erzeugung, `ResolveBodyAsync`, Body-Delegaten und Signature-only-Suppressions. `IAssemblyBodyContext` enthält nur noch `Solution` und `AssemblySymbolIdentity`.
+- Navigation und Call-Tree verwenden wieder die normalen Sufficiency-Verträge; Interfaces sowie abstract-/extern-Symbole bleiben `unavailable`.
+- Non-Goals eingehalten: kein `MSBuildWorkspace`, keine rekursive Referenz-Dekompilierung.
+- Geänderte Bereiche: Assembly-Analyse-, Workspace-, Lease-, Body-, Symbolgraph- und Call-Tree-Dateien, betroffene Assembly-/Navigationstests, `Docs/agent-api.md` und `code-map.md`. Gelöscht wurden die drei alten Produktionsdateien und der zugehörige Resolver-Test.
+- Code-Map: aktualisiert mit betroffenen Symbolen, Aufrufern, Tests, Invarianten und Prüfstand.
+- Urteil: Epic 2 hand-off-ready; kein Commit durch den Implementierer.
+
+### Verifikationsnachweise
+
+- Epic-Fokustests: 33/33 bestanden; nach der letzten C#-Änderung ausgeführt.
+- Integration-Nicht-Stress-Gate: 384/384 bestanden; nach der letzten C#-Änderung ausgeführt.
+- `dotnet build`: 0 Warnungen, 0 Fehler; nach der letzten C#-Änderung ausgeführt.
+- Gezielter `get_violations`-Check für Produktions- und betroffene Testscopes: 0 Violations; nach der letzten C#-Änderung ausgeführt.
+- Suche nach alten Resolver-/Stub-/On-Demand-Namen in `src`/`Docs`: keine Treffer; nach der letzten C#-Änderung ausgeführt.
+- `git diff --check`: sauber; nach der letzten C#-Änderung ausgeführt.
+- Audit: keine sicheren Duplikatbefunde, 37 LOW-/0 HIGH-Dead-Code-Hinweise, 0 Magic Values.
+- Vollständiger Fast-Nicht-Stress-Lauf: 2.433 bestanden, 2 wegen bestehender External-Source-Reparse-Tests übersprungen, 3 bestehende Race-/Timeout-Fehler in `AssemblyAnalysisRegistryRetirementRaceTests`, `ProjectRegistryTests` und `ThinClientPumpContractTests`; unveränderte Wiederholung reproduzierte zwei und wurde nach über zwölf Minuten kontrolliert beendet. Keine Epic-2-Tests betroffen.
+- Offenes Risiko: bestehende breite `AIContextFootprint`-Warnung in `Mcp/Daemon/DaemonHostCommand.cs:15`; zwei Symlink-/External-Source-Tests benötigen fehlende Windows-Berechtigung. Diese Befunde sind nicht durch Epic 2 eingeführt.
+
+### Triage
+
+- Keine neuen task-scope-actionable Tech-Debt-Findings. Die 37 LOW-Dead-Code-Hinweise, bestehende Race-/Timeout-Fehler und die breite AIContextFootprint-Warnung sind nicht als Epic-2-Ursachen belegt und bleiben außerhalb der Queue.
+- Nächste Aktion: Implementierungs-Checkpoint committen, danach unabhängigen Review starten.

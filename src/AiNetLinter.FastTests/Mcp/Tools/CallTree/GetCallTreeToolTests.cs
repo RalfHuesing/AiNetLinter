@@ -61,20 +61,6 @@ public sealed class GetCallTreeToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_SuppressSufficiencyHint_AppendsDecompiledSignatureOnlyLimitation()
-    {
-        var state = _fixture.CreateServer();
-
-        var result = await GetCallTreeTool.ExecuteAsync(
-            state, new GetCallTreeInput("Greeter.Greet", 1, null, 10, SuppressSufficiencyHint: true), CancellationToken.None);
-
-        Assert.NotEqual(true, result.IsError);
-        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("[EINSCHRAENKUNG]: contentMode=decompiledSignatureOnly", textContent.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("vollstaendig fuer den angefragten Scope", textContent.Text, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public async Task ExecuteAsync_AsciiFormatDefault_ReturnsTreeWithCallerNames()
     {
         var state = _fixture.CreateServer();

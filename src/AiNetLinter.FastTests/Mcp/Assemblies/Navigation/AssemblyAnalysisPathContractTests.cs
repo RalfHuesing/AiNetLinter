@@ -21,7 +21,6 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies.Navigation;
 
 [Trait("Category", "Component")]
 // @covers AssemblyRoslynWorkspaceFactory
-// @covers AssemblyDecompiledBodyResolver
 // @covers DiffImpactAnalyzer
 // @covers GetFileSkeletonTool
 // @covers GetSymbolBodyTool
@@ -59,40 +58,31 @@ public sealed class AssemblyAnalysisPathContractTests
         using var lease = leaseResult.Lease!;
         var type = lease.Context.Compilation.GetTypeByMetadataName("Probe.Document")!;
         var property = Assert.Single(type.GetMembers("Name").OfType<IPropertySymbol>());
-        var getter = property.GetMethod!;
-        var setter = property.SetMethod!;
         var structure = lease.Context.Compilation.GetTypeByMetadataName("Probe.Structure")!;
         var state = lease.Context.Compilation.GetTypeByMetadataName("Probe.State")!;
         var contract = lease.Context.Compilation.GetTypeByMetadataName("Probe.IContract")!;
         var record = lease.Context.Compilation.GetTypeByMetadataName("Probe.Record")!;
 
-        var typeBody = await lease.ResolveBodyAsync(type, 80, CancellationToken.None);
-        var propertyBody = await lease.ResolveBodyAsync(property, 80, CancellationToken.None);
-        var getterBody = await lease.ResolveBodyAsync(getter, 80, CancellationToken.None);
-        var setterBody = await lease.ResolveBodyAsync(setter, 80, CancellationToken.None);
-        var structureBody = await lease.ResolveBodyAsync(structure, 80, CancellationToken.None);
-        var stateBody = await lease.ResolveBodyAsync(state, 80, CancellationToken.None);
-        var contractBody = await lease.ResolveBodyAsync(contract, 80, CancellationToken.None);
-        var recordBody = await lease.ResolveBodyAsync(record, 80, CancellationToken.None);
+        var typeBody = await GetBodyTextAsync(lease, type);
+        var propertyBody = await GetBodyTextAsync(lease, property);
+        var structureBody = await GetBodyTextAsync(lease, structure);
+        var stateBody = await GetBodyTextAsync(lease, state);
+        var contractBody = await GetBodyTextAsync(lease, contract);
+        var recordBody = await GetBodyTextAsync(lease, record);
 
-        Assert.Equal("available", typeBody.BodyAvailability);
-        Assert.Contains("class Document", typeBody.Body, StringComparison.Ordinal);
-        Assert.Equal("available", propertyBody.BodyAvailability);
-        Assert.Contains("Name", propertyBody.Body, StringComparison.Ordinal);
-        Assert.Equal("available", getterBody.BodyAvailability);
-        Assert.Contains("get", getterBody.Body, StringComparison.Ordinal);
-        Assert.Contains("return name", getterBody.Body, StringComparison.Ordinal);
-        Assert.Equal("available", setterBody.BodyAvailability);
-        Assert.Contains("set", setterBody.Body, StringComparison.Ordinal);
-        Assert.Contains("name = value", setterBody.Body, StringComparison.Ordinal);
-        Assert.Equal("available", structureBody.BodyAvailability);
-        Assert.Contains("struct Structure", structureBody.Body, StringComparison.Ordinal);
-        Assert.Equal("available", stateBody.BodyAvailability);
-        Assert.Contains("enum State", stateBody.Body, StringComparison.Ordinal);
-        Assert.Equal("unavailable", contractBody.BodyAvailability);
-        Assert.Contains("Interfaces", contractBody.Hint, StringComparison.Ordinal);
-        Assert.Equal("available", recordBody.BodyAvailability);
-        Assert.Contains("Record", recordBody.Body, StringComparison.Ordinal);
+        Assert.Contains("bodyAvailability: `available`; contentMode: `source`", typeBody, StringComparison.Ordinal);
+        Assert.Contains("class Document", typeBody, StringComparison.Ordinal);
+        Assert.Contains("Name", propertyBody, StringComparison.Ordinal);
+        Assert.Contains("get", propertyBody, StringComparison.Ordinal);
+        Assert.Contains("return name", propertyBody, StringComparison.Ordinal);
+        Assert.Contains("set", propertyBody, StringComparison.Ordinal);
+        Assert.Contains("name = value", propertyBody, StringComparison.Ordinal);
+        Assert.Contains("struct Structure", structureBody, StringComparison.Ordinal);
+        Assert.Contains("enum State", stateBody, StringComparison.Ordinal);
+        Assert.Contains("bodyAvailability: `unavailable`; contentMode: `source`", contractBody, StringComparison.Ordinal);
+        Assert.Contains("Interfaces", contractBody, StringComparison.Ordinal);
+        Assert.Contains("bodyAvailability: `available`; contentMode: `source`", recordBody, StringComparison.Ordinal);
+        Assert.Contains("Record", recordBody, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -119,7 +109,7 @@ public sealed class AssemblyAnalysisPathContractTests
     }
 
     [Fact]
-    public async Task AssemblyRoute_ResolvesAccessorBodiesByAssociatedPropertyIndexerAndEvent()
+    public async Task AssemblyRoute_ResolvesPropertyIndexerAndEventBodies()
     {
         using var temp = TestTempDirectory.Create("assembly-associated-accessor-");
         var assemblyPath = AssemblyTestHelper.EmitAssembly(
@@ -172,28 +162,23 @@ public sealed class AssemblyAnalysisPathContractTests
         var firstEvent = Assert.Single(type.GetMembers("FirstChanged").OfType<IEventSymbol>());
         var secondEvent = Assert.Single(type.GetMembers("SecondChanged").OfType<IEventSymbol>());
 
-        var firstPropertyBody = await lease.ResolveBodyAsync(firstProperty.GetMethod!, 80, CancellationToken.None);
-        var secondPropertyBody = await lease.ResolveBodyAsync(secondProperty.GetMethod!, 80, CancellationToken.None);
-        var indexerBody = await lease.ResolveBodyAsync(indexer.GetMethod!, 80, CancellationToken.None);
-        var firstEventBody = await lease.ResolveBodyAsync(firstEvent.AddMethod!, 80, CancellationToken.None);
-        var secondEventBody = await lease.ResolveBodyAsync(secondEvent.AddMethod!, 80, CancellationToken.None);
+        var firstPropertyBody = await GetBodyTextAsync(lease, firstProperty);
+        var secondPropertyBody = await GetBodyTextAsync(lease, secondProperty);
+        var indexerBody = await GetBodyTextAsync(lease, indexer);
+        var firstEventBody = await GetBodyTextAsync(lease, firstEvent);
+        var secondEventBody = await GetBodyTextAsync(lease, secondEvent);
 
-        Assert.Equal("available", firstPropertyBody.BodyAvailability);
-        Assert.Contains("return 11", firstPropertyBody.Body, StringComparison.Ordinal);
-        Assert.DoesNotContain("return 22", firstPropertyBody.Body, StringComparison.Ordinal);
-        Assert.Equal("available", secondPropertyBody.BodyAvailability);
-        Assert.Contains("return 22", secondPropertyBody.Body, StringComparison.Ordinal);
-        Assert.DoesNotContain("return 11", secondPropertyBody.Body, StringComparison.Ordinal);
-        Assert.Equal("available", indexerBody.BodyAvailability);
-        Assert.Contains("31", indexerBody.Body, StringComparison.Ordinal);
-        Assert.Contains("32", indexerBody.Body, StringComparison.Ordinal);
-        Assert.Equal("available", firstEventBody.BodyAvailability);
-        Assert.Contains("add", firstEventBody.Body, StringComparison.Ordinal);
-        Assert.Contains("FirstMarker", firstEventBody.Body, StringComparison.Ordinal);
-        Assert.Equal("available", secondEventBody.BodyAvailability);
-        Assert.Contains("add", secondEventBody.Body, StringComparison.Ordinal);
-        Assert.Contains("SecondMarker", secondEventBody.Body, StringComparison.Ordinal);
-        Assert.NotEqual(firstEventBody.Body, secondEventBody.Body);
+        Assert.Contains("return 11", firstPropertyBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("return 22", firstPropertyBody, StringComparison.Ordinal);
+        Assert.Contains("return 22", secondPropertyBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("return 11", secondPropertyBody, StringComparison.Ordinal);
+        Assert.Contains("31", indexerBody, StringComparison.Ordinal);
+        Assert.Contains("32", indexerBody, StringComparison.Ordinal);
+        Assert.Contains("add", firstEventBody, StringComparison.Ordinal);
+        Assert.Contains("FirstMarker", firstEventBody, StringComparison.Ordinal);
+        Assert.Contains("add", secondEventBody, StringComparison.Ordinal);
+        Assert.Contains("SecondMarker", secondEventBody, StringComparison.Ordinal);
+        Assert.NotEqual(firstEventBody, secondEventBody);
     }
 
     [Fact]
@@ -375,4 +360,18 @@ public sealed class AssemblyAnalysisPathContractTests
 
     private static string Text(CallToolResult result) =>
         Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+
+    private static async Task<string> GetBodyTextAsync(AssemblyAnalysisLease lease, ISymbol symbol)
+    {
+        var declarationId = DocumentationCommentId.CreateDeclarationId(symbol);
+        Assert.NotNull(declarationId);
+        var identity = new AnalysisSymbolIdentity(lease.Context.Origin.ContentHash, lease.Context.Generation);
+        var result = await GetSymbolBodyTool.ExecuteAsync(
+            lease,
+            [identity.Format(declarationId!)!],
+            80,
+            CancellationToken.None);
+        Assert.NotEqual(true, result.IsError);
+        return Text(result);
+    }
 }

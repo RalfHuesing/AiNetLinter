@@ -25,7 +25,7 @@ internal static class AssemblyGetCallTreeTool
             ? ExecuteWithReferencesAsync(lease, request.Input, cancellationToken)
             : GetCallTreeTool.ExecuteAsync(
                 lease.Server,
-                request.Input with { SuppressSufficiencyHint = IsSignatureOnly(lease) },
+                request.Input,
                 cancellationToken);
 
     private static async Task<CallToolResult> ExecuteWithReferencesAsync(
@@ -98,15 +98,8 @@ internal static class AssemblyGetCallTreeTool
                 diagnostics,
                 truncated,
                 topNTruncated,
-                treeTruncationMessage,
-                SuppressSufficiencyHint: IsSignatureOnly(lease)));
+                treeTruncationMessage));
     }
-
-    private static bool IsSignatureOnly(AssemblyAnalysisLease lease) =>
-        string.Equals(
-            lease.Context.Origin.ContentMode,
-            "decompiledSignatureOnly",
-            StringComparison.Ordinal);
 
     private static string BuildTruncationMeta() =>
         $"[Baum trunkiert — hard-cap {CallGraphTreeBuilder.MaxCallTreeNodes} Knoten erreicht, " +

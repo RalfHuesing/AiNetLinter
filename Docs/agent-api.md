@@ -469,10 +469,11 @@ Defaultwert. `FindAssemblyExtensionsPayload` verwendet analog `extensions`,
 `totalExtensions`, `shownCount` und die gemeinsamen Diagnose-/Trunkierungsfelder.
 Assembly-fähige Symbol- und Strukturtools erhalten zusätzlich ein `analysis`-Objekt
 mit Herkunft, absolutem Target, Hash, Snapshot/Generation, Status, Vollständigkeit,
-`fallbackReason`, `bodyAvailability` und `contentMode`. Die Werte unterscheiden
-`source`/`source`, `onDemand`/`decompiledSignatureOnly` und den Folgeabruf
-`available`/`decompiledBodyOnDemand`; `get_symbol_body` weist bei nicht verfügbaren
-Bodies `unavailable` mit einem Hinweis aus. Verwaltete `.dll`- und `.exe`-Dateien
+`fallbackReason`, `bodyAvailability` und `contentMode`. Source-backed Projekte und
+dekompilierte Assembly-Projekte liefern ihre Bodies aus den bereits geladenen
+Roslyn-Syntaxbäumen; `get_symbol_body` weist den direkten Resolver-Pfad mit
+`contentMode=source` aus und meldet nicht verfügbare Bodies als `unavailable` mit
+einem Hinweis. Verwaltete `.dll`- und `.exe`-Dateien
 sind gleichwertige Assembly-Targets; native PE-Dateien ohne .NET-Metadaten liefern
 statt einer Analyse einen typisierten, recoverable Diagnose-/Hinweis-Response.
 
@@ -481,8 +482,8 @@ Limits und engeren Filtern (`maxResults`, `scopeFilter`, `typeName` oder
 `symbolIdentifier`) orientieren, dann die gefundene stabile ID bzw. das Symbol
 gezielt an `get_symbol_body`, `get_class_structure` oder Referenztools weitergeben.
 Bei Tools mit öffentlichem `includeReferences`-Parameter sind
-`includeReferences=true`, Assembly-Detailflags und Body-Abruf bewusst explizite
-Folgeschritte; breite Assembly-Listen nicht als ersten Call ungegrenzt anfordern.
+`includeReferences=true` und Assembly-Detailflags bewusst explizite Folgeschritte;
+breite Assembly-Listen nicht als ersten Call ungegrenzt anfordern.
 
 Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_file_tree`, `get_namespace_tree`, `get_violations`, `get_class_structure`, `metrics_lookup`, `get_feature_context`, `get_test_context`, `get_hotspots`, `get_server_health`, `report_observability_feedback`, `get_index_scope`, `find_symbol`, `find_references` (alle erlaubten `depth`-Werte), `get_impact` (Symbol- und Git-Diff-Branch), `dependency_graph` (alle `depth`-Werte), `find_duplicates`, `find_magic_values` und `search_pattern` zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den Text-Vertrag zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) ist das Vorbild fuer dieses Muster. Bei `get_file_tree` liegt die Payload als Objekt unter `fileTree`; bei `includeMetadata=false` wird `sizeBytes` pro Dateieintrag intern nicht gesetzt und wegen der gemeinsamen MCP-JSON-Optionen im ausgegebenen `structuredContent` ausgelassen, waehrend Summary-/Directory-Aggregate fuer Sortierung und Orientierung erhalten bleiben. `find_references` und der Symbol-Branch von `get_impact` liefern bei jeder erlaubten Tiefe dieselbe strukturierte Transitivantwort; der Git-Diff-Branch von `get_impact` behaelt im Default `detailLevel="callers"` seine bestehende `CallSiteEntry`-Form, mit `detailLevel="change-context"` liefert er stattdessen ein eigenes Payload-Objekt (siehe Detailabschnitt unten).
 

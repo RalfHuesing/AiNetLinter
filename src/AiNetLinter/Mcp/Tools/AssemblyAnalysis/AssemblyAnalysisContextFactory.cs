@@ -73,8 +73,7 @@ internal static class AssemblyAnalysisContextFactory
                 ContentMode = "decompiledProject",
             },
             generation.Number,
-            generation.Status,
-            generation.BodyResolver);
+            generation.Status);
 
     internal static async Task<(AssemblyContext? Context, string? Error)> CreateSourceProjectContextAsync(
         string targetPath,
@@ -305,8 +304,7 @@ internal static class AssemblyAnalysisContextFactory
             null,
             origin,
             0,
-            status,
-            null);
+            status);
     }
 
     private static AssemblyContext ApplyFallback(

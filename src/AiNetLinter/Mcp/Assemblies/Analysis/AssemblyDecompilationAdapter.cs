@@ -8,7 +8,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ICSharpCode.Decompiler;
-using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.CSharp.ProjectDecompiler;
 using ICSharpCode.Decompiler.Metadata;
 using Microsoft.CodeAnalysis;
@@ -18,13 +17,6 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
 internal sealed class AssemblyDecompilationAdapter
 {
-    internal AssemblyBodyResolver CreateBodyResolver(
-        string assemblyPath,
-        AssemblyReferenceResolution references,
-        AssemblyDecompilationOptions options) =>
-        AssemblyDecompiledBodyResolver.Create(
-            assemblyPath, references, options);
-
     internal Task<DecompilationResult> DecompileAsync(
         DecompilationRequest request,
         AssemblyReferenceResolution references)
@@ -175,29 +167,4 @@ internal sealed class AssemblyDecompilationAdapter
                 .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault()
             : null;
-
-    internal static CSharpDecompiler CreateDecompiler(
-        string assemblyPath,
-        AssemblyReferenceResolution references,
-        CancellationToken cancellationToken,
-        bool decompileMemberBodies = false)
-    {
-        var settings = new DecompilerSettings
-        {
-            DecompileMemberBodies = decompileMemberBodies,
-            ShowXmlDocumentation = false,
-            UseDebugSymbols = false,
-            RequiredMembers = false,
-            AsyncAwait = true,
-            AsyncEnumerator = true,
-            AnonymousMethods = true,
-            AnonymousTypes = true,
-            LocalFunctions = true,
-            YieldReturn = true,
-        };
-        return new CSharpDecompiler(assemblyPath, references.DecompilerResolver, settings)
-        {
-            CancellationToken = cancellationToken,
-        };
-    }
 }

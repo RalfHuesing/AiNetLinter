@@ -396,5 +396,4 @@ internal sealed record AssemblyContext(
     string? ConsumerProject,
     AssemblyOrigin Origin,
     long Generation,
-    AssemblySessionStatus Status,
-    AssemblyBodyResolver? BodyResolver = null);
+    AssemblySessionStatus Status);

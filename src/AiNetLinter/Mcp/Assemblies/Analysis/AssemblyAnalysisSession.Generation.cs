@@ -98,11 +98,7 @@ internal sealed partial class AssemblyAnalysisSession
             snapshotResult.Snapshot,
             request.References.References,
             CombineDiagnostics(request.Diagnostics, snapshotResult.Diagnostics),
-            CreateGenerationOrigin(request.Fingerprint, request.Documents, finalStatus),
-            decompilationAdapter.CreateBodyResolver(
-                request.Fingerprint.CanonicalPath,
-                request.References,
-                decompilationOptions));
+            CreateGenerationOrigin(request.Fingerprint, request.Documents, finalStatus));
 
         return InstallGeneration(generation);
     }

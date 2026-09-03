@@ -55,34 +55,6 @@ internal sealed class AssemblyAnalysisLease : IDisposable, IAssemblyBodyContext
 
     AnalysisSymbolIdentity? IAssemblyBodyContext.AssemblySymbolIdentity => Server.AssemblySymbolIdentity;
 
-    bool IAssemblyBodyContext.IsDecompiled => Context.Origin.IsDecompiled;
-
-    Task<AssemblyBodyResolution> IAssemblyBodyContext.ResolveBodyAsync(
-        ISymbol symbol,
-        int maxBodyLines,
-        CancellationToken cancellationToken) =>
-        ResolveBodyAsync(symbol, maxBodyLines, cancellationToken);
-
-    internal Task<AssemblyBodyResolution> ResolveBodyAsync(
-        ISymbol symbol,
-        int maxBodyLines,
-        CancellationToken cancellationToken)
-    {
-        if (Volatile.Read(ref disposed) != 0)
-        {
-            return Task.FromResult(new AssemblyBodyResolution(
-                null, "unavailable", Context.Origin.ContentMode, "Der Assembly-Lease ist nicht mehr gültig."));
-        }
-
-        if (!Context.Origin.IsDecompiled || Context.BodyResolver is null)
-        {
-            return Task.FromResult(new AssemblyBodyResolution(
-                null, "source", "source", "Source-backed Symbole verwenden den Roslyn-Body."));
-        }
-
-        return Context.BodyResolver(symbol, maxBodyLines, cancellationToken);
-    }
-
     internal IReadOnlyList<AssemblyReferenceSession> ReferenceSessions =>
         referenceExpansion?.Sessions ?? Array.Empty<AssemblyReferenceSession>();
 

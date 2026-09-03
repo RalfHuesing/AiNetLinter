@@ -138,7 +138,7 @@ internal static class GetSymbolBodyTool
 
         if (symbol is null) return RenderMissingSymbol(request);
 
-        return await RenderResolvedSymbolAsync(request, symbol, ct).ConfigureAwait(false);
+        return RenderResolvedSymbol(request, symbol);
     }
 
     private static CallToolResult? RenderResolutionError(
@@ -160,16 +160,13 @@ internal static class GetSymbolBodyTool
         return null;
     }
 
-    private static async Task<CallToolResult?> RenderResolvedSymbolAsync(
+    private static CallToolResult? RenderResolvedSymbol(
         RenderSingleSymbolRequest request,
-        ISymbol symbol,
-        CancellationToken ct)
+        ISymbol symbol)
     {
         var idSuffix = request.AssemblyIdentity?.Format(symbol.TryGetDocCommentId() ?? CallGraphTraversal.GetStableSymbolId(symbol))
             ?? symbol.TryGetDocCommentId();
-        var bodyResolution = request.Lease is { IsDecompiled: true }
-            ? await request.Lease.ResolveBodyAsync(symbol, request.MaxBodyLines, ct).ConfigureAwait(false)
-            : SourceSymbolBodyResolver.Resolve(symbol, request.MaxBodyLines);
+        var bodyResolution = SourceSymbolBodyResolver.Resolve(symbol, request.MaxBodyLines);
 
         request.Markdown.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{Path.GetFileName(request.OutputRoot)}/{ToRelative(request.OutputRoot, symbol)}`");
         request.Markdown.BlankLine();
