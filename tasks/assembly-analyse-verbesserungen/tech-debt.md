@@ -58,10 +58,10 @@ Implementierer Korrekturrunde 1 meldet alle fünf als behoben; Disposition bleib
 - Beschreibung: Öffentlich akzeptierter `topN`-Parameter verändert die Caller-/Impact-Auswahl nicht.
 - Scope/Fundstelle: `AssemblyAnalysisToolRegistrations.cs`, `AssemblyAnalysisContextTool.cs`.
 - Evidenz: Reviewer reproduziert identische Auswahl für `topN=1` und `topN=100`.
-- Disposition: fix-now (aktive Korrekturrunde)
+- Disposition: fixed
 - Nächster Schritt: `topN` semantisch anwenden oder aus dem Vertrag entfernen und Regressionstest ergänzen.
 - Attempts: 1
-- Log-Anker: `execution-log.md`, Run 2026-09-03 / Epic 1 / Reviewer – Abschluss, Signatur `CompositeTraversal/TopN`.
+- Log-Anker: `execution-log.md`, Run 2026-09-03 / Epic 1 / Folge-Reviewer 1 – Abschluss, Signatur `CompositeTraversal/TopN`.
 
 ### P1 – AssemblyProvenance/BodyMode
 
@@ -69,7 +69,9 @@ Implementierer Korrekturrunde 1 meldet alle fünf als behoben; Disposition bleib
 - Beschreibung: Structured Body kann bei dekompilierten Assemblies `source` melden, obwohl der äußere Analysekontext `decompiledProject` ausweist.
 - Scope/Fundstelle: `SourceSymbolBodyResolver.cs`, `AssemblyAnalysisContextFactory.cs`, `GetSymbolBodyTool.cs`.
 - Evidenz: Reviewer weist widersprüchliche Herkunftsangaben im Fallback-Pfad nach.
-- Disposition: fix-now (aktive Korrekturrunde)
+- Disposition: fixed
 - Nächster Schritt: Body-Herkunft aus dem Assembly-Kontext ableiten und Assembly-Body-Regressionstest ergänzen.
 - Attempts: 1
-- Log-Anker: `execution-log.md`, Run 2026-09-03 / Epic 1 / Reviewer – Abschluss, Signatur `AssemblyProvenance/BodyMode`.
+- Log-Anker: `execution-log.md`, Run 2026-09-03 / Epic 1 / Folge-Reviewer 1 – Abschluss, Signatur `AssemblyProvenance/BodyMode`.
+
+Folge-Reviewer 1 bestätigt `BudgetProjection/Envelope`, `AssemblyWireBudget/Coverage` und `CompositeBudget/Enrichment` weiterhin als P1 offen; `CompositeTraversal/TopN` und `AssemblyProvenance/BodyMode` sind `fixed`. Die drei offenen Einträge bleiben für Korrekturrunde 2 mit Attempts 1 aktiv.

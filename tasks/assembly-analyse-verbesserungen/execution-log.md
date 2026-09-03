@@ -61,6 +61,29 @@
 - Subagent: `01a0690c-129d-78c1-bbd8-16de599a3a93` (Bacon)
 - Auftrag: Paging nach Budget-Trim, gemeinsames Assembly-Wire-Budget, finaler Composite-Envelope mit Sektionsstatus, `topN`-Semantik und Body-Provenienz korrigieren; passende Regressionen ergänzen und den Implementierungs-/MCP-Nachweis nach der letzten Codeänderung liefern.
 
+## Run 2026-09-03 / Epic 1 / Folge-Reviewer 1
+
+- Status: running
+- Diff-Baseline: `71ec0d24` (Korrektur-Checkpoint)
+- Scope: unabhängige Nachprüfung der fünf P1-Korrekturen aus Epic 1
+- Subagent: `01a06927-9465-7f33-8b43-3796c9858c9d` (Ptolemy)
+- Auftrag: tatsächlichen Korrekturdiff, fünf Ursachensignaturen, Regressionen, Code-Map und frische Verifikationsnachweise prüfen; kein Produktionscode und kein Commit.
+
+## Run 2026-09-03 / Epic 1 / Folge-Reviewer 1 – Abschluss
+
+- Status: completed; Folge-Reviewerbericht terminal eingegangen.
+- Urteil: `issues`; P1 #4 und #5 behoben, drei Budget-/Envelope-Ursachen offen.
+- Befundstatus:
+  - `BudgetProjection/Envelope` offen: Der abschließende Wire-Trim in `AssemblyAnalysisResponse.cs` entfernt JSON-Knoten/Arrayeinträge, berechnet aber `returnedCount`, `shownCount`, `continuationToken` und Truncation nicht aus der tatsächlichen Nutzlast neu.
+  - `AssemblyWireBudget/Coverage` offen: Der finale Enricher erhält `maxResponseBytes`/`detailLevel` des Aufrufs nicht und verwendet nur das Lease-Default; der öffentliche Budgetvertrag ist dadurch nicht durchgehend wirksam.
+  - `CompositeBudget/Enrichment` offen: Der Composite trimmt nur den strukturierten Root vor äußerem Enrichment; Text, Metadaten und finaler Envelope werden danach ergänzt. Der finale Wire-Umfang und die Sektions-Fortsetzung sind nicht vollständig abgesichert.
+  - `CompositeTraversal/TopN` behoben: `SelectionLimit` begrenzt Caller und Impact; Regression vorhanden.
+  - `AssemblyProvenance/BodyMode` behoben: Body-Provenienz wird aus `IAssemblyBodyContext.Origin` des Leases abgeleitet; dekompilierter Body meldet konsistent `decompiledProject`.
+- Prüfungen: Fast-Assemblytests 20/20 bestanden; relevante Integrationstests 22/22 bestanden; Implementierer-Nachweis für Build/FastTests und isolierte Wiederholung des Dateisperren-Ausreißers berücksichtigt; MCP-first-Feature-Kontext, Call-Tree und Referenzabfragen ausgeführt; frischer `get_violations`-Nachweis 0 Violations; `git diff --check` grün. Erfolgreiche Checks wurden nicht redundant wiederholt.
+- Code-Map: alle Navigationspfade verifiziert, keine Korrektur erforderlich.
+- Restrisiken: bestehende DRY-/Low-Confidence-Dead-Code-/LOC-Funde bleiben nachgelagerte P2/P3-Themen; administrativ veralteter Roadmap-Commitstand ist kein Produktionsbefund.
+- Nächste Aktion: Checkpoint-Commit, danach frischer Implementierer für die drei verbleibenden P1-Ursachen.
+
 ## Run 2026-09-03 / Epic 1 / Korrektur-Implementierer 1 – Abschluss
 
 - Status: completed; Korrekturbericht terminal eingegangen.
