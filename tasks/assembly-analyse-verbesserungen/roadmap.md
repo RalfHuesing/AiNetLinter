@@ -45,8 +45,8 @@ Großkonzept-Modus. Grundlage ist `Konzept.md` mit `status: ready`.
 
 ## Ausführungsstand
 
-- current_epic: Epic 3 Korrekturrunde 2
-- letzter Commit: `47fe9768` (Epic-3-Korrekturcheckpoint); Fingerprint-Korrektur folgt
+- current_epic: Epic 3 Review nach Korrekturrunde 2
+- letzter Commit: `215d8e61` (Discovery-Reviewcheckpoint); Fingerprint-Korrekturcheckpoint folgt
 - current_debt_item: P1 `BudgetProjection/Envelope` in `tech-debt.md`, `accepted-deferred`, Attempts 0
 - debt_attempts: 0
 - Blocker: keiner

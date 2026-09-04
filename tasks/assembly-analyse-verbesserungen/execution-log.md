@@ -317,6 +317,23 @@
 - MCP-Nachweis: relevante Quell-/Symbolprüfung und `get_violations` ohne neue violations; `code-map.md` um eine Faktenpräzisierung ergänzt.
 - Nächste Aktion: Review-Checkpoint committen; danach Korrektur-Implementierer 2 ausschließlich für `DaemonDiscovery/ExecutableVersionFingerprint`.
 
+## Run 2026-09-04 / Epic 3 / Korrektur-Implementierer 2 – Abschluss
+
+- Status: completed; zweiter Epic-3-Korrekturbericht terminal eingegangen, ohne Commit.
+- Urteil: Implementierer meldet `DaemonDiscovery/ExecutableVersionFingerprint` behoben; Folge-Review erforderlich.
+- Bericht: `ThinClientProxy` behandelt Discovery-Mismatch nicht mehr als transienten IOException-Retry, liefert terminalen agentenlesbaren Fehler `DISCOVERY_FINGERPRINT_MISMATCH` mit Exit-Code 2, startet keinen weiteren Detached-Prozess ohne Zustandsänderung und enthält einen realen Named-Pipe-Test für einen Legacy-Daemon ohne Fingerprint; `Docs/integration.md` und `code-map.md` aktualisiert.
+- Verifikation: Build 0 Warnungen/0 Fehler; gezielte Tests 26/26; FastTests ohne Stress 2448 bestanden/2 Plattform-Skips; IntegrationTests ohne Stress 428/428; MCP-Violations ohne Fehler, nur bestehender `AIContextFootprint`-Hinweis; Duplikate/Magic Values 0; `git diff --check` sauber; Stress nicht ausgeführt.
+- Offenes nicht-blockierendes Risiko: bestehender LOW-Confidence-Dead-Code-Hinweis außerhalb des Korrekturscopes.
+- Nächste Aktion: Checkpoint-Commit, danach letzter frischer Folge-Review 2 für die Discovery-Ursache.
+
+## Run 2026-09-04 / Epic 3 / Korrektur-Implementierer 2
+
+- Status: running; zweite Epic-3-Korrekturrunde gestartet, ausschließlich Discovery-Fingerprint-Recovery.
+- Baseline: `215d8e61` (`chore(assembly-analyse-verbesserungen): Präzisiere Discovery-Folgeprüfung`).
+- Scope: fingerprintloses Welcome eines alten Daemons, kontrollierter ThinClient-Recovery-/Terminalpfad und realer Alt-Daemon/Neu-Client-Test.
+- Implementierer: Lagrange (`01a06ad0-e1cd-7123-b5ae-6d5d3a02750b`).
+- Vorgabe: kein Commit; keine externen Assemblies/Repos; alte Clients/Daemons mit optionalem Feld nicht pauschal brechen; `code-map.md` und Dokumentation bei Vertragsänderung aktualisieren.
+
 ## Run 2026-09-04 / Epic 3 / Folge-Reviewer 1
 
 - Status: running; frischer Folge-Review nach Korrekturrunde 1 gestartet.

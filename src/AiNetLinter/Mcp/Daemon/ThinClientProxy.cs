@@ -120,6 +120,14 @@ internal static class ThinClientProxy
             Log.Information("ThinClient: Session durch Client-Abbruch beendet, ExitCode=0");
             return 0;
         }
+        catch (ThinClientDiscoveryMismatchException exception)
+        {
+            Log.Error("ThinClient: Discovery-Vertrag inkompatibel; kein Retry oder Detached-Start ({Message})", exception.Message);
+            context.Console.WriteError(
+                $"[ERROR]: Daemon-Discovery inkompatibel ({DaemonProtocol.DiscoveryFingerprintMismatch}); "
+                + $"kein Retry ohne Zustandsaenderung. {exception.Message}");
+            return 2;
+        }
 
         Log.Error("ThinClient: Session unerwartet beendet, ExitCode=2");
         return 2;
@@ -192,6 +200,10 @@ internal static class ThinClientProxy
         {
             throw;
         }
+        catch (ThinClientDiscoveryMismatchException)
+        {
+            throw;
+        }
         catch (Exception exception)
         {
             if (reportFailure)
@@ -216,6 +228,10 @@ internal static class ThinClientProxy
                 return await ConnectAsync(options, ConnectTimeout, readiness.Token, context).ConfigureAwait(false);
             }
             catch (ThinClientVersionConflictException)
+            {
+                throw;
+            }
+            catch (ThinClientDiscoveryMismatchException)
             {
                 throw;
             }

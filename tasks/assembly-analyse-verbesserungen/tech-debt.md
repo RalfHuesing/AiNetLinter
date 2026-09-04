@@ -209,6 +209,8 @@ Die unabhängige Epic-3-Review hat drei voneinander unabhängige P1-Ursachen gef
 
 Korrektur-Implementierer 1 meldet alle drei Epic-3-P1-Ursachen behoben; Disposition bleibt bis zum Folge-Review `fix-now`, Attempts bleiben bei 1. Die bestehende `AIContextFootprint`-Warnung in `DaemonHost` (2530 > 2500) bleibt außerhalb der P1-Ursachen und wird als nicht-blockierendes Tech Debt weitergeführt.
 
+Korrektur-Implementierer 2 meldet `DaemonDiscovery/ExecutableVersionFingerprint` behoben; Disposition bleibt bis zum letzten Folge-Review `fix-now`, Attempts bleiben bei 2. Der kontrollierte terminale `DISCOVERY_FINGERPRINT_MISMATCH`-Pfad und der reale Legacy-Named-Pipe-Test werden durch die Folge-Review abschließend verifiziert.
+
 Folge-Reviewer 1 bestätigt `SearchBudget/EnvelopeReachability` und `SearchPaging/MaxFilesContinuation` als `fixed`. `DaemonDiscovery/ExecutableVersionFingerprint` bleibt P1 offen, weil ein fingerprintloses Welcome des alten Daemons im generischen Retrypfad bis zum Readiness-Timeout läuft. Korrekturrunde 2 wird mit Attempts 2 ausschließlich für diese Ursache gestartet.
 
 ## P2 – AIContextFootprint im DaemonHost

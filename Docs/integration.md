@@ -425,8 +425,15 @@ Versions-/PID-Daten, einen deterministischen Build-/Tool-Contract-Fingerprint
 und die effektive Daemon-Konfiguration einschließlich der fünf externen
 Ressourcenlimits. Der Fingerprint wird aus dem laufenden Binary gebildet; damit
 akzeptiert ein neuer ThinClient keinen alten Daemon mit veralteter Discovery.
-Ein alter Client darf den optionalen Fingerprint noch auslassen und bleibt mit
-einem neuen Daemon kompatibel. Explizit gesetzte externe ThinClient-Limits
+Meldet ein bestehender Daemon im `welcome` keinen Fingerprint oder einen anderen
+Fingerprint, wird dieser Discovery-Mismatch als terminaler, agentenlesbarer
+Fehler auf `stderr` (`DISCOVERY_FINGERPRINT_MISMATCH`) mit Exit-Code 2 beendet.
+Der ThinClient startet in diesem Fall keinen weiteren Daemon und wiederholt den
+Handshake nicht ohne Zustandsaenderung; so bleibt ein inkompatibler alter
+Daemon nicht in einer Readiness-Retryschleife. Ein alter Client darf dagegen
+das optionale Fingerprint-Feld im `hello` weiterhin auslassen und wird von einem
+neuen Daemon akzeptiert.
+Explizit gesetzte externe ThinClient-Limits
 werden auch beim Verbinden mit einem bereits laufenden Daemon verglichen und
 als einmalige Konfigurationswarnung gemeldet; sie ändern den Daemon nicht.
 Die neuen Felder sind wire-seitig optional, damit ältere Partner, die sie
