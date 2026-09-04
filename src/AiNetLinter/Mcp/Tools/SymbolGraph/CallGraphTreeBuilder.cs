@@ -57,8 +57,7 @@ internal static class CallGraphTreeBuilder
         CancellationToken ct)
     {
         var depth = Math.Clamp(request.RequestedDepth, 1, MaxCallTreeDepth);
-        var state = new TreeBuildState(
-            request.Solution, request.SeedSymbol, depth, request.TopN, request.Direction);
+        var state = new TreeBuildState(request, depth);
         state.SetPathDisplayMode(request.AbsolutePaths);
         await RunTreeBfsAsync(state, ct);
         return (ToMetricsTreeNode(state.Root), state.Truncated);
@@ -107,7 +106,7 @@ internal static class CallGraphTreeBuilder
 
         if (state.Direction is CallTreeDirection.Outgoing or CallTreeDirection.Both)
         {
-            outgoing = await BuildSortedOutgoingGroupsAsync(symbol, state.Solution, ct);
+            outgoing = await BuildSortedOutgoingGroupsAsync(symbol, state.Solution, state.IncludeBcl, ct);
         }
 
         return state.Direction == CallTreeDirection.Both
@@ -163,9 +162,9 @@ internal static class CallGraphTreeBuilder
             .ToList();
 
     private static async Task<List<CallerGroup>> BuildSortedOutgoingGroupsAsync(
-        ISymbol symbol, Solution solution, CancellationToken ct)
+        ISymbol symbol, Solution solution, bool includeBcl, CancellationToken ct)
     {
-        var groups = await OutgoingCallScanner.ScanAsync(symbol, solution, ct);
+        var groups = await OutgoingCallScanner.ScanAsync(symbol, solution, ct, includeBcl);
         return SortGroups(
             groups.Select(group => new CallerGroup(group.Symbol, group.Locations.ToList())), solution);
     }
@@ -237,7 +236,10 @@ internal static class CallGraphTreeBuilder
 
     private static bool CanExpand(
         TreeBuildState state, int level, ISymbol? callerSymbol, CallTreeDirection direction) =>
-        level < state.Depth && callerSymbol is not null && state.MarkVisited(callerSymbol, direction);
+        level < state.Depth
+        && callerSymbol is not null
+        && callerSymbol.Locations.Any(l => l.IsInSource)
+        && state.MarkVisited(callerSymbol, direction);
 
     private static void EnqueueOrTruncate(TreeBuildState state, CallTreeBuilderNode child, int nextLevel)
     {

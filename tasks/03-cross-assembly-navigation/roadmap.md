@@ -1,8 +1,8 @@
 # Roadmap: 03-cross-assembly-navigation
 
 Status: executing
-Current Epic: EPIC-04
-Letzter Commit: ausstehend (EPIC-03 abgeschlossen)
+Current Epic: EPIC-05
+Letzter Commit: in Arbeit (EPIC-04 abgeschlossen)
 Blocker: keine
 
 ## Primäraufgabe
@@ -40,7 +40,7 @@ Cross-Assembly-Navigation und Typauflösung im MCP-Server
 - **Betroffene Bereiche**: `OutgoingCallScanner.cs`, `GetCallTreeTool.cs`, `AssemblyGetCallTreeTool.cs`, FastTests.
 - **Muss-Kriterien**: `[ref: <Assembly>] <Typ>.<Member>` für Calls in referenzierte Assemblies; Unterdrückung von `System.*`/`Microsoft.NETCore.*` wenn `includeBcl=false`; optionales Einblenden bei `includeBcl=true`.
 - **Verifikation**: FastTests für Outgoing-Call-Trees mit Cross-Assembly-Referenzen und BCL-Filter; `get_violations`.
-- **Status**: open
+- **Status**: done
 
 ### EPIC-05: MCP-Tool `find_implementations` (Project & Assembly)
 - **Ziel**: Eigenständiges Tool zum Auffinden konkreter Implementierungen von Interfaces und abstrakten Klassen/Methoden.
@@ -59,10 +59,10 @@ Cross-Assembly-Navigation und Typauflösung im MCP-Server
 - **Status**: open
 
 ## Abschluss-Checkliste (aus Konzept.md)
-- [ ] `resolve_type_origin` antwortet deterministisch in < 100 ms mit Assembly-Name und Dateipfad.
-- [ ] `get_call_tree(direction="outgoing")` zeigt Fremd-Assembly-Calls als `[ref: <Assembly>]` ohne BCL-Rauschen.
+- [x] `resolve_type_origin` antwortet deterministisch in < 100 ms mit Assembly-Name und Dateipfad.
+- [x] `get_call_tree(direction="outgoing")` zeigt Fremd-Assembly-Calls als `[ref: <Assembly>]` ohne BCL-Rauschen.
 - [ ] `find_implementations` findet konkrete Implementierungen/Overrides in Quellcode und Assemblies mit Zeilenangaben.
-- [ ] `search_assembly` liefert mit `declarationOnly=true` keine Treffer in XML-Docs oder Kommentaren.
+- [x] `search_assembly` liefert mit `declarationOnly=true` keine Treffer in XML-Docs oder Kommentaren.
 - [x] `get_impact` und `get_assembly_context` schließen bei Fremd-Assemblies ohne Testreferenzen in < 3 s ab.
 - [ ] FastTests (`Category!=Stress`) und IntegrationTests (`Category!=Stress`) laufen warnungs- und fehlerfrei.
 - [ ] Dokumentation & MCP-Schemas synchronisiert (`Docs/configuration.md`, `.agents/rules/AiNetLinter-McpWorkflow.mdc`, `AiNetLinter.mdc`).

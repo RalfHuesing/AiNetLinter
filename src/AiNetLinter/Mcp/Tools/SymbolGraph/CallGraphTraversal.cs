@@ -215,11 +215,18 @@ internal static class CallGraphTraversal
         {
             effectiveName = symbol.ContainingType?.Name ?? effectiveName;
         }
-        return symbol.ContainingType is { } containingType
+        var formatted = symbol.ContainingType is { } containingType
             ? direction == CallTreeDirection.Outgoing && symbol is IMethodSymbol { MethodKind: MethodKind.Constructor }
                 ? containingType.Name
                 : $"{containingType.Name}.{effectiveName}"
             : effectiveName;
+
+        if (!symbol.Locations.Any(l => l.IsInSource) && symbol.ContainingAssembly is { } asm)
+        {
+            return $"[ref: {asm.Name}] {formatted}";
+        }
+
+        return formatted;
     }
 
     private static string DescribeAnonymousMethod(ISymbol symbol)

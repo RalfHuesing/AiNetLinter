@@ -70,7 +70,7 @@ internal static class GetCallTreeTool
 
             var topN = input.TopN < 1 ? 1 : input.TopN;
             var (root, truncated) = await CallGraphTreeBuilder.BuildTreeAsync(
-                new CallTreeBuildRequest(solution, symbol!, input.Depth, topN, direction, state.AssemblySymbolIdentity is not null),
+                new CallTreeBuildRequest(solution, symbol!, input.Depth, topN, direction, state.AssemblySymbolIdentity is not null, input.IncludeBcl),
                 ct);
 
             var body = RenderTree(root, input.Format, topN);

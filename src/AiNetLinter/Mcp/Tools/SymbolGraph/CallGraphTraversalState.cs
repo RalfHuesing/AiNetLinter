@@ -55,18 +55,18 @@ internal sealed class TreeBuildState
     private readonly Queue<(CallTreeBuilderNode Node, int Level)> _queue = new();
     private readonly HashSet<(ISymbol Symbol, CallTreeDirection Direction)> _visited;
 
-    internal TreeBuildState(
-        Solution solution, ISymbol seedSymbol, int depth, int topN, CallTreeDirection direction)
+    internal TreeBuildState(CallTreeBuildRequest request, int depth)
     {
-        Solution = solution;
+        Solution = request.Solution;
         Depth = depth;
-        TopN = topN;
-        Direction = direction;
-        Root = new CallTreeBuilderNode(seedSymbol, CallGraphTraversal.FormatSymbolName(seedSymbol), CallGraphTreeBuilder.FormatRootDisplay(seedSymbol, solution));
+        TopN = request.TopN;
+        Direction = request.Direction;
+        IncludeBcl = request.IncludeBcl;
+        Root = new CallTreeBuilderNode(request.SeedSymbol, CallGraphTraversal.FormatSymbolName(request.SeedSymbol), CallGraphTreeBuilder.FormatRootDisplay(request.SeedSymbol, request.Solution));
         _visited = new HashSet<(ISymbol Symbol, CallTreeDirection Direction)>(
             new DirectionAwareSymbolComparer())
         {
-            (seedSymbol, direction),
+            (request.SeedSymbol, request.Direction),
         };
         _queue.Enqueue((Root, 1));
         NodeCount = 1;
@@ -76,6 +76,7 @@ internal sealed class TreeBuildState
     internal int Depth { get; }
     internal int TopN { get; }
     internal CallTreeDirection Direction { get; }
+    internal bool IncludeBcl { get; }
     internal bool AbsolutePaths { get; private set; }
     internal CallTreeBuilderNode Root { get; private set; }
     internal int NodeCount { get; set; }

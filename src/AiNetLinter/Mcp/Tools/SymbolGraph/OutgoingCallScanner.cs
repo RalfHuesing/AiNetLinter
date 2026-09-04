@@ -13,7 +13,7 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 internal static class OutgoingCallScanner
 {
     internal static async Task<List<OutgoingCallGroup>> ScanAsync(
-        ISymbol symbol, Solution solution, CancellationToken ct)
+        ISymbol symbol, Solution solution, CancellationToken ct, bool includeBcl = false)
     {
         var byCallee = new Dictionary<ISymbol, List<Location>>(SymbolEqualityComparer.Default);
         foreach (var syntaxReference in symbol.DeclaringSyntaxReferences)
@@ -26,7 +26,7 @@ internal static class OutgoingCallScanner
             if (document is null) continue;
             var semanticModel = await document.GetSemanticModelAsync(ct);
             if (semanticModel is null) continue;
-            AddOutgoingSymbols(body, semanticModel, byCallee, ct);
+            AddOutgoingSymbols(body, semanticModel, byCallee, includeBcl, ct);
         }
 
         return byCallee
@@ -38,25 +38,26 @@ internal static class OutgoingCallScanner
         SyntaxNode body,
         SemanticModel semanticModel,
         Dictionary<ISymbol, List<Location>> byCallee,
+        bool includeBcl,
         CancellationToken ct)
     {
         foreach (var invocation in body.DescendantNodes().OfType<InvocationExpressionSyntax>())
         {
             var symbol = ResolveInvocationSymbol(invocation, semanticModel, ct);
-            AddOutgoingSymbol(symbol, invocation.GetLocation(), byCallee);
+            AddOutgoingSymbol(symbol, invocation.GetLocation(), byCallee, includeBcl);
         }
 
         foreach (var creation in body.DescendantNodes().OfType<ObjectCreationExpressionSyntax>())
         {
             var symbol = ResolveCreationSymbol(creation, semanticModel, ct);
-            AddOutgoingSymbol(symbol, creation.GetLocation(), byCallee);
+            AddOutgoingSymbol(symbol, creation.GetLocation(), byCallee, includeBcl);
         }
 
         foreach (var memberAccess in body.DescendantNodes().OfType<MemberAccessExpressionSyntax>())
         {
             if (memberAccess.Parent is InvocationExpressionSyntax) continue;
             var symbol = ResolveMemberAccessSymbol(memberAccess, semanticModel, ct);
-            AddOutgoingSymbol(symbol, memberAccess.GetLocation(), byCallee);
+            AddOutgoingSymbol(symbol, memberAccess.GetLocation(), byCallee, includeBcl);
         }
     }
 
@@ -102,9 +103,18 @@ internal static class OutgoingCallScanner
     }
 
     private static void AddOutgoingSymbol(
-        ISymbol? symbol, Location location, Dictionary<ISymbol, List<Location>> byCallee)
+        ISymbol? symbol,
+        Location location,
+        Dictionary<ISymbol, List<Location>> byCallee,
+        bool includeBcl)
     {
-        if (symbol is null || !symbol.Locations.Any(candidate => candidate.IsInSource)) return;
+        if (symbol is null) return;
+        var isExternal = !symbol.Locations.Any(candidate => candidate.IsInSource);
+        if (isExternal && !includeBcl && IsBclSymbol(symbol))
+        {
+            return;
+        }
+
         if (!byCallee.TryGetValue(symbol, out var locations))
         {
             locations = new List<Location>();
@@ -112,6 +122,30 @@ internal static class OutgoingCallScanner
         }
         locations.Add(location);
     }
+
+    internal static bool IsBclSymbol(ISymbol symbol)
+    {
+        var asmName = symbol.ContainingAssembly?.Name;
+        if (!string.IsNullOrEmpty(asmName) && IsBclAssemblyName(asmName))
+        {
+            return true;
+        }
+
+        var ns = symbol.ContainingNamespace?.ToDisplayString();
+        return !string.IsNullOrEmpty(ns) && IsBclNamespace(ns);
+    }
+
+    private static bool IsBclAssemblyName(string name) =>
+        string.Equals(name, "System", StringComparison.OrdinalIgnoreCase)
+        || name.StartsWith("System.", StringComparison.OrdinalIgnoreCase)
+        || name.StartsWith("Microsoft.NETCore.", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(name, "mscorlib", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(name, "netstandard", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsBclNamespace(string ns) =>
+        string.Equals(ns, "System", StringComparison.Ordinal)
+        || ns.StartsWith("System.", StringComparison.Ordinal)
+        || ns.StartsWith("Microsoft.Win32", StringComparison.Ordinal);
 }
 
 internal sealed record OutgoingCallGroup(ISymbol Symbol, IReadOnlyList<Location> Locations);

@@ -33,7 +33,8 @@ internal sealed record GetCallTreeInput(
     string? Format,
     int TopN,
     string? Direction = null,
-    string? Symbol = null)
+    string? Symbol = null,
+    bool IncludeBcl = false)
 {
     public string? EffectiveSymbolIdentifier =>
         !string.IsNullOrWhiteSpace(SymbolIdentifier) ? SymbolIdentifier : Symbol;
@@ -45,7 +46,8 @@ internal sealed record CallTreeBuildRequest(
     int RequestedDepth,
     int TopN,
     CallTreeDirection Direction,
-    bool AbsolutePaths = false);
+    bool AbsolutePaths = false,
+    bool IncludeBcl = false);
 
 internal sealed record CallTreePayload(
     MetricsTreeNode Root,

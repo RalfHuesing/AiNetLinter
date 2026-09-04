@@ -125,7 +125,7 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, bool includeReferences = false, CancellationToken ct = default) =>
+            async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, bool includeReferences = false, bool includeBcl = false, CancellationToken ct = default) =>
             {
                 var effectiveIdentifier = !string.IsNullOrWhiteSpace(symbolIdentifier) ? symbolIdentifier : symbol;
                 return await AnalysisToolCall.ExecuteRouted(
@@ -133,11 +133,11 @@ internal static class SymbolGraphToolRegistrations
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(effectiveIdentifier, depth, format, topN, direction), ct),
+                            ProjectCall: lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(effectiveIdentifier, depth, format, topN, direction, IncludeBcl: includeBcl), ct),
                             AssemblySessionCall: lease => AssemblyGetCallTreeTool.ExecuteAsync(
                                 lease,
                                 new AssemblyGetCallTreeRequest(
-                                    new GetCallTreeInput(effectiveIdentifier, depth, format, topN, direction),
+                                    new GetCallTreeInput(effectiveIdentifier, depth, format, topN, direction, IncludeBcl: includeBcl),
                                     includeReferences),
                                 ct),
                             ExpandAssemblyReferences: includeReferences),
@@ -155,7 +155,8 @@ internal static class SymbolGraphToolRegistrations
         "\"outgoing\" (wen ruft das Symbol auf) oder \"both\" (beide Richtungen abwechselnd). " +
         "topN: Fan-Out-Begrenzung pro Ebene (Default 10). Traversierung ist hart auf 250 Knoten begrenzt. " +
         "includeReferences (Default false): bei targetType=assembly bounded Referenz-Assemblies " +
-        "einbeziehen und Herkunft/partielle Diagnosen im Ergebnis ausgeben.";
+        "einbeziehen und Herkunft/partielle Diagnosen im Ergebnis ausgeben. " +
+        "includeBcl (Default false): bei direction=outgoing auch BCL-/Framework-Symbole (z. B. System.*) als Leaves einbeziehen.";
 
     private static void AddGetImpact(
         McpServerPrimitiveCollection<McpServerTool> tools,
