@@ -13,7 +13,8 @@
 - `AssemblySearchTool.cs`: `declarationOnly`, `kind`-Filter in `ExecuteAsync` / `ScanLines`.
 - `AssemblySearchDeclarationFilter.cs`: Syntax-basierte Deklarationsprüfung (`InitSyntaxTree`, `FilterDeclarationRanges`, `ResolveCallableHeader`, `ResolveMemberHeader`, `ResolveTypeHeader`).
 - `AssemblySearchModels.cs`: Argument- und Match-Records für `AssemblySearchTool`.
-- `ResolveTypeOriginTool.cs`: `ResolveTypeOriginRequest`, `ResolveTypeOriginResultDto`.
+- `ResolveTypeOriginTool.cs`: Typauflösung über Roslyn-Compilation und Metadaten-Referenzen (`ExecuteProjectAsync`, `ExecuteAssemblyAsync`, `ExecuteCompilation`).
+- `ResolveTypeOriginModels.cs`: DTO-Records (`TypeOriginInfoDto`, `ResolveTypeOriginResultDto`).
 - `OutgoingCallScanner.cs`: Behandlung externer Symbole (`symbol.ContainingAssembly != compilation.Assembly`), `includeBcl`-Flag.
 - `GetCallTreeTool.cs` / `AssemblyGetCallTreeTool.cs` / `CallTreeMermaidRenderer.cs`: Referenzknoten `[ref: Assembly]`.
 - `FindImplementationsTool.cs`: `FindImplementationsRequest`, `FindImplementationsResultDto`.

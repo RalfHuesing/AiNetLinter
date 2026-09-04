@@ -51,3 +51,26 @@
 - Ergebnis: EPIC-02 erfolgreich abgeschlossen. `search_assembly` unterstützt präzises Auffinden von Methoden-, Typ- und Property-Deklarationen ohne Störgeräusche durch Aufrufe, Strings oder Kommentare.
 - Nächste Aktion: Start von EPIC-03 (MCP-Tool `resolve_type_origin`)
 
+## [RUN-04] EPIC-03: MCP-Tool `resolve_type_origin`
+- Datum: 2026-09-04
+- Rolle: Implementierer & Orchestrator
+- Status: completed
+- Primäraufgabe: Cross-Assembly-Navigation und Typauflösung im MCP-Server
+- Geänderte Bereiche:
+  - `src/AiNetLinter/Mcp/Tools/TypeResolution/ResolveTypeOriginTool.cs`: O(1)/O(log N) Typauflösung über Roslyn-Compilation und Metadaten-Referenzen mit Arity-Support und Namespace-Traversierung
+  - `src/AiNetLinter/Mcp/Tools/TypeResolution/ResolveTypeOriginModels.cs`: DTO-Records (`TypeOriginInfoDto`, `ResolveTypeOriginResultDto`)
+  - `src/AiNetLinter/Mcp/Registration/SymbolGraphToolRegistrations.cs`: Registrierung von `resolve_type_origin` für `project` und `assembly`
+  - `src/AiNetLinter.FastTests/Mcp/Tools/TypeResolution/ResolveTypeOriginTests.cs`: 7 neue Unit-Tests
+  - `src/AiNetLinter.FastTests/Mcp/Wiring/WiringToolCollectionContractTests.cs`: Tool-Inventar (32 Tools) und Tool-Annotationen aktualisiert
+  - `tasks/03-cross-assembly-navigation/code-map.md`, `roadmap.md`
+- Durchgeführte Prüfungen (nach letzter Codeänderung):
+  - `dotnet build`: 0 Fehler, 0 Warnungen
+  - `dotnet test src/AiNetLinter.FastTests --filter Category=Unit`: 1490 erfolgreich
+  - `dotnet test src/AiNetLinter.FastTests --filter Category=Component`: 658 erfolgreich
+  - MCP `get_violations` (Scope `TypeResolution`): 0 Verstöße
+  - MCP `get_violations` (Scope `SymbolGraphToolRegistrations`): 0 Verstöße
+  - MCP `get_violations` (Scope `WiringToolCollectionContractTests`): 0 Verstöße
+- Ergebnis: EPIC-03 erfolgreich abgeschlossen. `resolve_type_origin` beantwortet Typ-Anfragen in < 25ms mit Assembly-Name, Festplatten-DLL-Pfad und Symbol-Kind.
+- Nächste Aktion: Start von EPIC-04 (Outgoing Cross-Assembly Call-Leaves in `get_call_tree` mit BCL-Filterung)
+
+

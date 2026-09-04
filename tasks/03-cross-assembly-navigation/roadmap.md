@@ -1,8 +1,8 @@
 # Roadmap: 03-cross-assembly-navigation
 
 Status: executing
-Current Epic: EPIC-03
-Letzter Commit: ausstehend (EPIC-02 abgeschlossen)
+Current Epic: EPIC-04
+Letzter Commit: ausstehend (EPIC-03 abgeschlossen)
 Blocker: keine
 
 ## Primäraufgabe
@@ -29,10 +29,10 @@ Cross-Assembly-Navigation und Typauflösung im MCP-Server
 ### EPIC-03: MCP-Tool `resolve_type_origin`
 - **Ziel**: Eigenständiges Tool zur schnellen Auflösung von Typnamen zu definierender Assembly und absolutem DLL-Pfad über Roslyn `Compilation.References`.
 - **Abhängigkeiten**: Keine.
-- **Betroffene Bereiche**: `ResolveTypeOriginTool.cs`, Tool-Registrierung, FastTests.
+- **Betroffene Bereiche**: `ResolveTypeOriginTool.cs`, `ResolveTypeOriginModels.cs`, `SymbolGraphToolRegistrations.cs`, FastTests.
 - **Muss-Kriterien**: Ermittelt Assembly-Name, absoluten Pfad der DLL auf der Festplatte, vollqualifizierten Typnamen und Symbol-Kind; `SYMBOL_NOT_FOUND` mit durchsuchten Referenzen bei Nichterfolg; Antwortzeit < 100ms.
 - **Verifikation**: FastTests mit InMemory-Workspace und Referenz-Metadaten; `get_violations`.
-- **Status**: open
+- **Status**: done
 
 ### EPIC-04: Outgoing Cross-Assembly Call-Leaves in `get_call_tree` mit BCL-Filterung
 - **Ziel**: Cross-Assembly-Aufrufe in `OutgoingCallScanner` nicht verwerfen, sondern als externe Referenz-Blätter mit `[ref: Assembly]` ausweisen; BCL-Rauschfilter via `includeBcl` (Default `false`).

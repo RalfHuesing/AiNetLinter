@@ -10,6 +10,7 @@ using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.DependencyGraph;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.Mcp.Tools.TypeResolution;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp.Registration;
@@ -40,6 +41,7 @@ internal static class SymbolGraphToolRegistrations
         AddGetImpact(tools, targetRoute);
         AddGetTypeHierarchy(tools, targetRoute);
         AddDependencyGraph(tools, targetRoute);
+        AddResolveTypeOrigin(tools, targetRoute);
     }
 
     private static void AddFindSymbol(
@@ -253,4 +255,27 @@ internal static class SymbolGraphToolRegistrations
         "find_references. direction: \"incoming\", \"outgoing\" oder \"both\" (Default). depth: " +
         "Traversierungstiefe (Default 1, hard cap 3, max. 150 besuchte Dateien). maxResults: " +
         "Begrenzung der angezeigten Kanten (Default 50).";
+
+    private static void AddResolveTypeOrigin(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        AnalysisToolRoute targetRoute)
+    {
+        tools.Add(McpServerTool.Create(
+            async (string targetType, string targetPath, string typeName, CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteRouted(
+                    targetRoute,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(
+                            ProjectCall: lease => ResolveTypeOriginTool.ExecuteProjectAsync(lease.Server, typeName, ct),
+                            AssemblySessionCall: lease => ResolveTypeOriginTool.ExecuteAssemblyAsync(lease, typeName, ct)),
+                        ct)),
+            McpToolRegistrationOptions.TargetedReadOnlyTool("resolve_type_origin", ResolveTypeOriginDescription)));
+    }
+
+    private const string ResolveTypeOriginDescription =
+        "Wann nutzen: Ermittelt zu einem angegebenen Typnamen (z. B. 'IDataProvider' oder 'Vendor.Data.BaseCommand') " +
+        "sofort die definierende Assembly (Name und Festplatten-Dateipfad der DLL) sowie den vollqualifizierten Typnamen " +
+        "und Symbol-Kind ueber Roslyn-Metadatenreferenzen. Unterstuetzt sowohl targetType='project' als auch targetType='assembly'.";
 }
+

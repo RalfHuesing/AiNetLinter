@@ -34,7 +34,7 @@ public sealed class WiringToolCollectionContractTests
                     AssemblyAnalysisDispatcher.CreateRoute(composition.Sessions))),
             McpServerResourceCollectionFactory.Build(registry));
         var tools = options.ToolCollection!.ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool);
-        Assert.Equal(31, tools.Count);
+        Assert.Equal(32, tools.Count);
         foreach (var tool in tools.Values)
         {
             var required = GetRequiredProperties(tool.InputSchema);
@@ -274,6 +274,7 @@ public sealed class WiringToolCollectionContractTests
             ["safeguard"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["search_pattern"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["inspect_assembly"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["resolve_type_origin"] = ToolAnnotationExpectation.ReadOnlyProfile,
         };
 
     private readonly record struct ToolAnnotationExpectation(
