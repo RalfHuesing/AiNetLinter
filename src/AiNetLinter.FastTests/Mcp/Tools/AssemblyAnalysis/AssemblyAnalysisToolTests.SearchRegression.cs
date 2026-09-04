@@ -195,10 +195,10 @@ public sealed partial class AssemblyAnalysisToolTests
             });
 
         var projected = AssemblyAnalysisResponse.ApplyWireBudget(result, 4096, 0);
-        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(projected.Content));
+        var projectedText = AssemblyAnalysisTestSupport.TextOf(projected);
 
-        Assert.Contains("# Klasse MyType", textContent.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("StructuredContent ist die kanonische Nutzlast", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("# Klasse MyType", projectedText, StringComparison.Ordinal);
+        Assert.DoesNotContain("StructuredContent ist die kanonische Nutzlast", projectedText, StringComparison.Ordinal);
     }
 
     [Fact]
