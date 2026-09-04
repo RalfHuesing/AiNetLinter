@@ -184,7 +184,7 @@ internal static class FindSymbolTool
         {
             var lineSpan = location.GetLineSpan();
             var sourcePath = location.SourceTree!.FilePath;
-            var displayPath = assemblyIdentity is null && !absolutePaths
+            var displayPath = !absolutePaths && !string.IsNullOrWhiteSpace(outputRoot)
                 ? PathNormalizer.ToRelative(outputRoot, sourcePath)
                 : Path.GetFullPath(sourcePath);
             var line = lineSpan.StartLinePosition.Line + 1;

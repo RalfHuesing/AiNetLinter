@@ -325,4 +325,28 @@ public sealed class FindSymbolToolTests
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
             FindSymbolTool.ExecuteAsync(fixture.CreateServer(), ["Greeter"], kind: null, maxResults: 50, cts.Token));
     }
+
+    [Fact]
+    public async Task FormatSymbolLocationEntries_WithAssemblyIdentity_FormatsRelativePathWhenAbsolutePathsFalse()
+    {
+        using var fixture = new McpInMemoryTestContext();
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
+            fixture.Solution, "Greeter", CancellationToken.None);
+        Assert.NotNull(symbol);
+
+        var outputRoot = System.IO.Path.GetDirectoryName(fixture.Solution.FilePath)!;
+        var identity = new AiNetLinter.Mcp.AnalysisSymbolIdentity("test-asm", 1);
+
+        var relativeEntries = FindSymbolTool.FormatSymbolLocationEntries(
+            symbol!, outputRoot, identity, absolutePaths: false).ToList();
+        var entry = Assert.Single(relativeEntries);
+        Assert.False(System.IO.Path.IsPathRooted(entry.FilePath));
+        Assert.Equal("src/SymbolGraphMini/Greeter.cs", entry.FilePath.Replace('\\', '/'));
+
+        var absoluteEntries = FindSymbolTool.FormatSymbolLocationEntries(
+            symbol!, outputRoot, identity, absolutePaths: true).ToList();
+        var absEntry = Assert.Single(absoluteEntries);
+        Assert.True(System.IO.Path.IsPathRooted(absEntry.FilePath));
+    }
 }
+

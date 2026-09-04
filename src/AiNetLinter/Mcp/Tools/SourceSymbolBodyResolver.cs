@@ -14,16 +14,22 @@ internal static class SourceSymbolBodyResolver
     internal static AssemblyBodyResolution Resolve(
         ISymbol symbol,
         int maxBodyLines,
-        AssemblyOrigin? origin = null)
+        AssemblyOrigin? origin = null,
+        int startLine = 1)
     {
         var hasSyntax = symbol.DeclaringSyntaxReferences.Any();
         var unavailable = HasUnavailableBody(symbol, hasSyntax);
         var hint = GetHint(symbol, hasSyntax, unavailable);
+        var (body, totalLines, displayedStart, displayedEnd, hasMore) = Extract(symbol, maxBodyLines, startLine);
         return new(
-            Extract(symbol, maxBodyLines),
+            body,
             unavailable ? "unavailable" : origin?.BodyAvailability ?? "available",
             origin?.ContentMode ?? "source",
-            hint);
+            hint,
+            totalLines,
+            displayedStart,
+            displayedEnd,
+            hasMore);
     }
 
     private static bool HasUnavailableBody(ISymbol symbol, bool hasSyntax) =>
@@ -60,18 +66,43 @@ internal static class SourceSymbolBodyResolver
             .OfType<MemberDeclarationSyntax>()
             .Any(member => member.Modifiers.Any(SyntaxKind.ExternKeyword)) == true;
 
-    private static string Extract(ISymbol symbol, int maxBodyLines)
+    private static (string Body, int TotalLines, int DisplayedStart, int DisplayedEnd, bool HasMore) Extract(
+        ISymbol symbol,
+        int maxBodyLines,
+        int startLine)
     {
-        var normalized = Math.Max(1, maxBodyLines);
+        var normalizedMax = Math.Max(1, maxBodyLines);
+        var normalizedStart = Math.Max(1, startLine);
         var declaringReference = symbol.DeclaringSyntaxReferences.FirstOrDefault();
         if (declaringReference is null)
-            return $"// Kein Quell-Syntax verfuegbar fuer '{symbol.ToDisplayString()}' (externes Symbol).";
+            return ($"// Kein Quell-Syntax verfuegbar fuer '{symbol.ToDisplayString()}' (externes Symbol).", 0, 1, 0, false);
 
         var text = declaringReference.GetSyntax().ToFullString();
         var lines = text.Split('\n');
-        if (lines.Length <= normalized) return text.TrimEnd();
+        var totalLines = lines.Length;
 
-        return string.Join("\n", lines.Take(normalized)).TrimEnd()
-            + $"\n// ... truncated, total {lines.Length} Zeilen, maxBodyLines erhoehen fuer mehr";
+        if (normalizedStart > totalLines)
+        {
+            return (
+                $"// startLine {normalizedStart} liegt ausserhalb der Methode (total {totalLines} Zeilen).",
+                totalLines,
+                normalizedStart,
+                normalizedStart,
+                false);
+        }
+
+        var startIndex = normalizedStart - 1;
+        var count = Math.Min(normalizedMax, totalLines - startIndex);
+        var selectedLines = lines.Skip(startIndex).Take(count).ToArray();
+        var displayedEnd = normalizedStart + count - 1;
+        var hasMore = displayedEnd < totalLines;
+
+        var body = string.Join("\n", selectedLines).TrimEnd();
+        if (hasMore)
+        {
+            body += $"\n// ... truncated, total {totalLines} Zeilen (angezeigt {normalizedStart}-{displayedEnd}), startLine/maxBodyLines anpassen fuer mehr";
+        }
+
+        return (body, totalLines, normalizedStart, displayedEnd, hasMore);
     }
 }

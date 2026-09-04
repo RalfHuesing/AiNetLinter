@@ -220,7 +220,11 @@ internal sealed record AssemblyBodyResolution(
     string? Body,
     string BodyAvailability,
     string ContentMode,
-    string? Hint = null);
+    string? Hint = null,
+    int TotalBodyLines = 0,
+    int DisplayedStartLine = 1,
+    int DisplayedEndLine = 0,
+    bool HasMoreLines = false);
 
 internal sealed record AssemblyReferenceSession(
     AssemblyReferenceDto Reference,

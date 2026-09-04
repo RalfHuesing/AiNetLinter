@@ -34,16 +34,14 @@ internal static class GetSymbolBodyTool
 
     internal static async Task<CallToolResult> ExecuteAsync(
         ISolutionStateProvider state,
-        string[]? symbolIdentifiers,
-        int maxBodyLines,
-        CancellationToken ct,
-        string? symbolIdentifier = null)
+        GetSymbolBodyRequest request,
+        CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var identifiers = NormalizeIdentifiers(symbolIdentifiers, symbolIdentifier);
+        var identifiers = NormalizeIdentifiers(request.SymbolIdentifiers, request.SymbolIdentifier);
         if (identifiers.Count == 0)
         {
             return McpToolResults.Recoverable(
@@ -54,7 +52,7 @@ internal static class GetSymbolBodyTool
 
         try
         {
-            return await RenderSymbolBodiesAsync(solution, identifiers, maxBodyLines, state.AssemblySymbolIdentity, null, ct);
+            return await RenderSymbolBodiesAsync(solution, identifiers, request.MaxBodyLines, request.StartLine, state.AssemblySymbolIdentity, null, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -65,16 +63,21 @@ internal static class GetSymbolBodyTool
     }
 
     internal static Task<CallToolResult> ExecuteAsync(
-        IAssemblyBodyContext lease,
+        ISolutionStateProvider state,
         string[]? symbolIdentifiers,
         int maxBodyLines,
-        CancellationToken ct,
-        string? symbolIdentifier = null)
+        CancellationToken ct) =>
+        ExecuteAsync(state, new GetSymbolBodyRequest(symbolIdentifiers, MaxBodyLines: maxBodyLines), ct);
+
+    internal static Task<CallToolResult> ExecuteAsync(
+        IAssemblyBodyContext lease,
+        GetSymbolBodyRequest request,
+        CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(lease);
         var solution = lease.Solution;
         if (solution is null) return Task.FromResult(McpToolResults.SolutionNotLoaded());
-        var identifiers = NormalizeIdentifiers(symbolIdentifiers, symbolIdentifier);
+        var identifiers = NormalizeIdentifiers(request.SymbolIdentifiers, request.SymbolIdentifier);
         if (identifiers.Count == 0)
         {
             return Task.FromResult(McpToolResults.Recoverable(
@@ -84,8 +87,16 @@ internal static class GetSymbolBodyTool
         }
 
         return RenderSymbolBodiesAsync(
-            solution, identifiers, maxBodyLines, lease.AssemblySymbolIdentity, lease.Origin, ct);
+            solution, identifiers, request.MaxBodyLines, request.StartLine, lease.AssemblySymbolIdentity, lease.Origin, ct);
     }
+
+    internal static Task<CallToolResult> ExecuteAsync(
+        IAssemblyBodyContext lease,
+        string[]? symbolIdentifiers,
+        int maxBodyLines,
+        CancellationToken ct) =>
+        ExecuteAsync(lease, new GetSymbolBodyRequest(symbolIdentifiers, MaxBodyLines: maxBodyLines), ct);
+
 
     private static IReadOnlyList<string> NormalizeIdentifiers(
         string[]? symbolIdentifiers,
@@ -101,6 +112,7 @@ internal static class GetSymbolBodyTool
         Solution solution,
         IReadOnlyList<string> identifiers,
         int maxBodyLines,
+        int startLine,
         AnalysisSymbolIdentity? assemblyIdentity,
         AssemblyOrigin? assemblyOrigin,
         CancellationToken ct)
@@ -115,7 +127,7 @@ internal static class GetSymbolBodyTool
 
             var earlyError = await RenderSingleSymbolAsync(
                 new RenderSingleSymbolRequest(
-                    solution, identifiers[i], identifiers.Count, maxBodyLines, outputRoot, mb, assemblyIdentity, assemblyOrigin, entries),
+                    solution, identifiers[i], identifiers.Count, maxBodyLines, startLine, outputRoot, mb, assemblyIdentity, assemblyOrigin, entries),
                 ct);
 
             if (earlyError != null) return earlyError;
@@ -167,7 +179,7 @@ internal static class GetSymbolBodyTool
     {
         var idSuffix = request.AssemblyIdentity?.Format(symbol.TryGetDocCommentId() ?? CallGraphTraversal.GetStableSymbolId(symbol))
             ?? symbol.TryGetDocCommentId();
-        var bodyResolution = SourceSymbolBodyResolver.Resolve(symbol, request.MaxBodyLines, request.AssemblyOrigin);
+        var bodyResolution = SourceSymbolBodyResolver.Resolve(symbol, request.MaxBodyLines, request.AssemblyOrigin, request.StartLine);
 
         request.Markdown.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{FormatLocation(request, symbol)}`");
         request.Markdown.BlankLine();
@@ -180,6 +192,10 @@ internal static class GetSymbolBodyTool
             request.Markdown.Line($"id: `{idSuffix}`");
         }
         request.Markdown.Line($"bodyAvailability: `{bodyResolution.BodyAvailability}`; contentMode: `{bodyResolution.ContentMode}`");
+        if (bodyResolution.TotalBodyLines > 0)
+        {
+            request.Markdown.Line($"Zeilen: {bodyResolution.DisplayedStartLine}-{bodyResolution.DisplayedEndLine} von {bodyResolution.TotalBodyLines}");
+        }
         if (!string.IsNullOrWhiteSpace(bodyResolution.Hint)) request.Markdown.Line($"Hinweis: {bodyResolution.Hint}");
         request.Markdown.BlankLine();
         request.Markdown.CodeBlock("csharp", bodyResolution.Body ?? "// Für dieses Symbol ist kein dekompilierbarer Body verfügbar.");
@@ -193,7 +209,11 @@ internal static class GetSymbolBodyTool
             bodyResolution.Body,
             bodyResolution.BodyAvailability,
             bodyResolution.ContentMode,
-            bodyResolution.Body?.Contains(TruncationMarker, StringComparison.Ordinal) == true));
+            bodyResolution.Body?.Contains(TruncationMarker, StringComparison.Ordinal) == true,
+            bodyResolution.TotalBodyLines,
+            bodyResolution.DisplayedStartLine,
+            bodyResolution.DisplayedEndLine,
+            bodyResolution.HasMoreLines));
         return null;
     }
 
@@ -202,6 +222,7 @@ internal static class GetSymbolBodyTool
         string Identifier,
         int TotalCount,
         int MaxBodyLines,
+        int StartLine,
         string OutputRoot,
         MarkdownBuilder Markdown,
         AnalysisSymbolIdentity? AssemblyIdentity,
@@ -238,4 +259,14 @@ internal sealed record SymbolBodyEntry(
     string? Body,
     string BodyAvailability,
     string ContentMode,
-    bool IsTruncated);
+    bool IsTruncated,
+    int TotalBodyLines = 0,
+    int DisplayedStartLine = 1,
+    int DisplayedEndLine = 0,
+    bool HasMoreLines = false);
+
+internal sealed record GetSymbolBodyRequest(
+    string[]? SymbolIdentifiers = null,
+    string? SymbolIdentifier = null,
+    int MaxBodyLines = GetSymbolBodyTool.DefaultMaxBodyLines,
+    int StartLine = 1);

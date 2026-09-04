@@ -85,10 +85,8 @@ public sealed class GetSymbolBodyToolTests
 
         var result = await GetSymbolBodyTool.ExecuteAsync(
             state,
-            symbolIdentifiers: null,
-            maxBodyLines: 80,
-            ct: CancellationToken.None,
-            symbolIdentifier: "Greeter.Greet");
+            new GetSymbolBodyRequest(SymbolIdentifier: "Greeter.Greet", MaxBodyLines: 80),
+            CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         Assert.Contains(
@@ -222,4 +220,48 @@ public sealed class GetSymbolBodyToolTests
         Assert.Contains("DoesNotExistXyz", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("nicht aufgeloest", textContent.Text, System.StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_WithStartLineAndMaxBodyLines_ReturnsWindowedLines()
+    {
+        var state = _fixture.CreateServer();
+
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
+            _fixture.Solution, "Greeter.Greet", CancellationToken.None);
+        var stableId = Microsoft.CodeAnalysis.DocumentationCommentId.CreateDeclarationId(symbol!);
+
+        var result = await GetSymbolBodyTool.ExecuteAsync(
+            state,
+            new GetSymbolBodyRequest(SymbolIdentifiers: [stableId!], MaxBodyLines: 1, StartLine: 1),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Zeilen: 1-1 von", textContent.Text, System.StringComparison.Ordinal);
+        Assert.True(result.StructuredContent.HasValue);
+        var structured = result.StructuredContent!.Value;
+        var entry = Assert.Single(structured.GetProperty("results").EnumerateArray());
+        Assert.Equal(1, entry.GetProperty("displayedStartLine").GetInt32());
+        Assert.Equal(1, entry.GetProperty("displayedEndLine").GetInt32());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_StartLineExceedsTotalLines_ReturnsOutOfBoundsMessage()
+    {
+        var state = _fixture.CreateServer();
+
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
+            _fixture.Solution, "Greeter.Greet", CancellationToken.None);
+        var stableId = Microsoft.CodeAnalysis.DocumentationCommentId.CreateDeclarationId(symbol!);
+
+        var result = await GetSymbolBodyTool.ExecuteAsync(
+            state,
+            new GetSymbolBodyRequest(SymbolIdentifiers: [stableId!], MaxBodyLines: 10, StartLine: 9999),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("liegt ausserhalb der Methode", textContent.Text, System.StringComparison.Ordinal);
+    }
 }
+
