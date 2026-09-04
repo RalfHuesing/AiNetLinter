@@ -109,6 +109,14 @@
 - Subagent: `01a0698e-dce0-7162-a3a7-dd0de5b646dd` (Pascal)
 - Auftrag: unbekannte Arrays gegen lautloses Entfernen schützen, Directory-Envelope mit Completeness/Truncation/Cursor ergänzen und gezielte Regressionen liefern.
 
+## Run 2026-09-04 / Epic 1 / Folge-Reviewer 4
+
+- Status: running
+- Diff-Baseline: `4f6f9e00` (Korrektur-Checkpoint 4)
+- Scope: letzter P1-Befund `BudgetProjection/Envelope`, unbekannte Arrays, `fileTree.directories` und Regressionserhalt
+- Subagent: `01a069b2-ba17-70e0-bc52-e37197d75a39` (Schrodinger)
+- Auftrag: tatsächlichen Diff, kritische Array-/Directory-Fälle, frühere Vertragskorrekturen, Code-Map und Verifikationsnachweise prüfen; kein Produktionscode und kein Commit.
+
 ## Run 2026-09-04 / Epic 1 / Folge-Reviewer 2 – Abschluss
 
 - Status: completed; Folge-Reviewerbericht terminal eingegangen.
@@ -189,3 +197,12 @@
 - Bericht: Unbekannte Arrays werden vor generischer Property-Entfernung geschützt; `parameters`, `attributes`, `genericParameters` und `constraints` erhalten bei Kürzung additive Envelopes mit Counts, Truncation-Grund, Cursor und Detailhinweis; `fileTree.directories` aktualisiert Top-Level- und Completeness-Envelope konsistent; Wire-Metadaten werden nach finalem Trim synchronisiert; Regressionen für unbekannte Arrays und Directory-Truncation ergänzt; `code-map.md` aktualisiert.
 - Verifikation jeweils nach der letzten Codeänderung: `dotnet build --no-restore` mit 0 Warnungen/0 Fehlern; gezielte FastTests 26/26; gezielte IntegrationTests 17/17; FastTests vollständig `Category!=Stress`: 2429 bestanden, 2 übersprungen; IntegrationTests vollständig `Category!=Stress`: 424/424 bestanden; `find_duplicates` im Scope `src/AiNetLinter/Mcp` mit `targetType=project`, absolutem `targetPath`, Production/Clone/Fuzzy, `minTokens=30`, `maxResults=50`, `normalizeIdentifiers=false`: 9 bestehende Cluster ohne sichere Korrektur; `find_dead_code` gleicher Scope mit `private_internal`, `both`, `members`, Tests ausgeschlossen, `maxResults=50`: 39 LOW/0 HIGH; `find_magic_values` gleicher Scope, alle Kategorien/Werte, `minOccurrences=2`, `maxResults=50`, Tests/Suppressed ausgeschlossen: 7 bestehende Befunde; letzter `get_violations` mit `scopeFilter=src/AiNetLinter/Mcp/Assemblies/Analysis`, `includeSnippet=true`, `contextLines=2`, `maxResults=200`: 0 Verstöße.
 - Nächste Aktion: Checkpoint-Commit, danach frischer Folge-Review 4 als letzter Reviewversuch für diese Ursachensignatur.
+
+## Run 2026-09-04 / Epic 1 / Folge-Reviewer 4 – Abschluss
+
+- Status: completed; Folge-Reviewerbericht terminal eingegangen.
+- Urteil: `issues`; `BudgetProjection/Envelope` bleibt P1 offen.
+- Befund: `AssemblyAnalysisResponseEnvelope` wertet globale `truncated`-/`isTruncated`-Flags für jede Collection aus. Ein Trim von `fileTree.files` kann dadurch vollständige `directories` fälschlich als gekürzt markieren und umgekehrt; `directoriesTruncated` verstärkt die Vermischung. Die neue Regression deckt nur gekürzte Verzeichnisse ohne vollständige Gegen-`files` ab.
+- Betroffene Navigation: `AssemblyAnalysisResponseEnvelope.cs` bei der Collection-Rekonstruktion und dem `fileTree`-Envelope. Code-Map wurde ausschließlich um diese konkreten Fakten korrigiert.
+- Verifikation: Frische Nachweise Build 0/0, gezielte FastTests 26/26, gezielte IntegrationTests 17/17, FastTests Nicht-Stress 2429/2, MCP-Audits und `get_violations` 0 wurden mangels Gegenhypothese nicht redundant wiederholt; `git diff --check` grün. Shared Wire-Budget/Mindestbudget, Composite-Statusmerge, `topN` und Body-Provenienz ohne neue Regression.
+- Nächste Aktion: Checkpoint-Commit, danach letzter frischer Korrektur-Implementierer für `BudgetProjection/Envelope` (Attempt 5).
