@@ -161,4 +161,16 @@ public sealed class GetFileSkeletonToolTests
         Assert.NotNull(resolved);
         Assert.Equal("Greeter.cs", resolved.Name);
     }
+
+    [Fact]
+    public void SolutionDocumentPathResolver_FindsCommonDirectoryForNestedDocuments()
+    {
+        var paths = new[]
+        {
+            @"C:\Workspace\Decompiled\SubA\Foo.cs",
+            @"C:\Workspace\Decompiled\SubB\Bar.cs",
+        };
+        var common = AiNetLinter.Core.Documents.SolutionDocumentPathResolver.FindCommonDirectory(paths);
+        Assert.Equal(@"C:\Workspace\Decompiled", common);
+    }
 }

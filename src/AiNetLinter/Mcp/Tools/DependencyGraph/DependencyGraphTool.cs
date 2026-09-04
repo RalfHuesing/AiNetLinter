@@ -164,7 +164,8 @@ internal static class DependencyGraphTool
     private static string ToAbsolutePath(Solution solution, string path)
     {
         if (Path.IsPathFullyQualified(path)) return Path.GetFullPath(path);
-        var solutionDir = SolutionDocumentPathResolver.GetSolutionDirectory(solution) ?? "";
+        var solutionDir = SolutionDocumentPathResolver.GetSolutionDirectory(solution);
+        if (string.IsNullOrWhiteSpace(solutionDir)) return path;
         return Path.GetFullPath(Path.Combine(solutionDir, path));
     }
 

@@ -92,14 +92,45 @@ internal static class SolutionDocumentPathResolver
             return Path.GetDirectoryName(projectWithDir.FilePath);
         }
 
-        var firstDoc = solution.Projects.SelectMany(p => p.Documents).FirstOrDefault(d =>
-            !string.IsNullOrWhiteSpace(d.FilePath) && Path.IsPathFullyQualified(d.FilePath));
-        if (firstDoc is not null)
+        var docPaths = solution.Projects
+            .SelectMany(p => p.Documents)
+            .Select(d => d.FilePath)
+            .Where(f => !string.IsNullOrWhiteSpace(f) && Path.IsPathFullyQualified(f))
+            .ToList();
+
+        if (docPaths.Count > 0)
         {
-            return Path.GetDirectoryName(firstDoc.FilePath);
+            return FindCommonDirectory(docPaths);
         }
 
         return null;
+    }
+
+    internal static string? FindCommonDirectory(IReadOnlyList<string?> paths)
+    {
+        var validPaths = paths
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Select(p => Path.GetFullPath(p!))
+            .ToList();
+        if (validPaths.Count == 0) return null;
+
+        var common = Path.GetDirectoryName(validPaths[0]);
+        if (string.IsNullOrEmpty(common)) return null;
+
+        for (var i = 1; i < validPaths.Count; i++)
+        {
+            while (!string.IsNullOrEmpty(common)
+                && !validPaths[i].StartsWith(common + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                && !validPaths[i].StartsWith(common + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(validPaths[i], common, StringComparison.OrdinalIgnoreCase))
+            {
+                var parent = Path.GetDirectoryName(common);
+                if (string.Equals(parent, common, StringComparison.OrdinalIgnoreCase)) break;
+                common = parent;
+            }
+        }
+
+        return string.IsNullOrEmpty(common) ? null : common;
     }
 
     private static string NormalizeVirtualPath(string? path)
