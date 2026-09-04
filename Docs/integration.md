@@ -352,8 +352,11 @@ benötigt ein eigenes Pattern; `data_access` und `external_calls` verwenden ohne
 Pattern die dokumentierten eingebauten Regexe. Die Treffer sind relative Pfade zum
 effektiven Source-/Decompiler-Root und besitzen stabile IDs. `completeness`,
 `truncatedBy`, `totalCount`, `returnedCount` und `continuationToken` sind die
-verbindliche Folgeaufrufinformation; bei `maxFiles` muss der Dateiscope zusätzlich
-erhöht werden. Ohne Root antwortet das Tool explizit mit `unsupported`. Für
+verbindliche Folgeaufrufinformation. Ein `continuationToken` wird nur ausgegeben,
+wenn innerhalb des sichtbaren Dateiscopes weitere Treffer folgen; endet der
+Scope durch `maxFiles`, bleibt der Zustand ohne wiederholbaren Cursor
+`truncated` und der Dateiscope muss für weitere Treffer erhöht werden. Ohne Root
+antwortet das Tool explizit mit `unsupported`. Für
 Semantik eines Treffers folgt ein Assembly-`find_symbol`-/Body-/Referenz-/Call-Tree-
 oder Impact-Aufruf. `search_pattern` bleibt auf Projektziele beschränkt.
 
@@ -418,8 +421,12 @@ MRU-State bleibt ohne ID unter `%LOCALAPPDATA%\RalfHuesing\AiNetLinter\daemon-st
 eine ID erhält eine eigene Datei wie `daemon-state.beta.json`. Beide verwenden
 newline-delimited JSON-Objekte. Der Pipe-Level-Handshake ist von der
 MCP-SDK-Interpretation getrennt: `hello`/`welcome` tragen Protokollversion,
-Versions-/PID-Daten und die effektive Daemon-Konfiguration einschließlich der
-fünf externen Ressourcenlimits. Explizit gesetzte externe ThinClient-Limits
+Versions-/PID-Daten, einen deterministischen Build-/Tool-Contract-Fingerprint
+und die effektive Daemon-Konfiguration einschließlich der fünf externen
+Ressourcenlimits. Der Fingerprint wird aus dem laufenden Binary gebildet; damit
+akzeptiert ein neuer ThinClient keinen alten Daemon mit veralteter Discovery.
+Ein alter Client darf den optionalen Fingerprint noch auslassen und bleibt mit
+einem neuen Daemon kompatibel. Explizit gesetzte externe ThinClient-Limits
 werden auch beim Verbinden mit einem bereits laufenden Daemon verglichen und
 als einmalige Konfigurationswarnung gemeldet; sie ändern den Daemon nicht.
 Die neuen Felder sind wire-seitig optional, damit ältere Partner, die sie

@@ -222,7 +222,7 @@ internal sealed class DaemonHost : IAsyncDisposable
             }
             if (result.Status == DaemonHandshakeStatus.ShutdownRequested)
             {
-                Serilog.Log.Warning("Daemon: Kontrollierter Neustart angefordert (ExecutableVersionMismatch) - Shutdown");
+                Serilog.Log.Warning("Daemon: Kontrollierter Neustart angefordert (Versions-/Discovery-Konflikt) - Shutdown");
                 shutdownSource.Cancel();
             }
 

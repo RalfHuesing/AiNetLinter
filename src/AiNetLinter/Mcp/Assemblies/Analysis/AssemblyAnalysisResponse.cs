@@ -366,7 +366,7 @@ internal static partial class AssemblyAnalysisResponse
 
     private static bool IsTrimContainer(string propertyName) =>
         propertyName is "assemblyAnalysis" or "body" or "classStructure" or "metrics" or "impact"
-            or "callers" or "fileTree" or "completeness" or "summary" or "referenceSummary"
+            or "callers" or "fileTree" or "assemblySearch" or "completeness" or "summary" or "referenceSummary"
             or "diagnosticsSummary";
 
     private static bool IsBudgetMetadata(string name) =>

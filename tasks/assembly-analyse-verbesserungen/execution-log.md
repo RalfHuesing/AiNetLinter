@@ -298,6 +298,15 @@
 - Reviewer: Anscombe (`01a06a38-f4f1-7c03-bc94-d4003143610a`).
 - Vorgabe: keine Produktionsänderungen und kein Commit; nur offensichtliche task-lokale `code-map.md`-Korrekturen zulässig. P0/P1 blockieren, P2/P3 werden als Tech Debt erfasst.
 
+## Run 2026-09-04 / Epic 3 / Korrektur-Implementierer 1 – Abschluss
+
+- Status: completed; erster Epic-3-Korrekturbericht terminal eingegangen, ohne Commit.
+- Urteil: Implementierer meldet `SearchBudget/EnvelopeReachability`, `SearchPaging/MaxFilesContinuation` und `DaemonDiscovery/ExecutableVersionFingerprint` behoben; Folge-Review erforderlich.
+- Bericht: `assemblySearch` ist trimbarer Container und erhält bei kleinem Budget Results/Counts/Status/Completeness/Paging; `maxFiles` erzeugt am Scope-Ende keinen wiederholbaren Cursor; Daemon-Handshake nutzt deterministischen MVID-Fingerprint, wobei alte Clients ohne optionales Feld kompatibel bleiben; `code-map.md` aktualisiert.
+- Verifikation: Build 0 Warnungen/0 Fehler; gezielte Regressionen 40/40; FastTests ohne Stress 2448 bestanden/2 übersprungen; IntegrationTests ohne Stress 427/427; MCP-Kontexte 0 Violations; `git diff --check` sauber; Stress nicht ausgeführt.
+- Offenes nicht-blockierendes Risiko: bestehende `AIContextFootprint`-Warnung in `DaemonHost` (2530 > 2500), nicht durch die drei P1-Ursachen verursacht; vier bestehende Duplicate-Cluster im Budget-Code bleiben außerhalb des Suchcodes.
+- Nächste Aktion: Checkpoint-Commit, danach frischer Folge-Review 1.
+
 ## Run 2026-09-04 / Epic 2 / Folge-Reviewer 2
 
 - Status: running; frischer Folge-Review nach Korrekturrunde 2 gestartet.
@@ -377,6 +386,14 @@
 - P2: ungebundener numerischer Cursor; absolute Target-/Source-Pfade und Repository-URLs im gemeinsamen Header; unvollständige `ServerInstructions`-Capability-Doku; E2E-Lücken für `external_calls`, fehlenden Root, Budget, `maxFiles`, ungültige Cursor und Source-backed Suche.
 - MCP-Nachweise: `find_symbol`, `get_feature_context`, `get_symbol_body`, `get_impact`, `get_violations` im MCP-Scope 0; keine `code-map.md`-Korrektur.
 - Nächste Aktion: Review-Checkpoint committen; danach frischer Korrektur-Implementierer für drei P1-Ursachen (Attempt 1).
+
+## Run 2026-09-04 / Epic 3 / Korrektur-Implementierer 1
+
+- Status: running; erste Epic-3-Korrekturrunde gestartet.
+- Baseline: `cc0001a7` (`chore(assembly-analyse-verbesserungen): Dokumentiere Epic-3-Reviewbefunde`).
+- Scope: `SearchBudget/EnvelopeReachability`, `SearchPaging/MaxFilesContinuation` und `DaemonDiscovery/ExecutableVersionFingerprint`.
+- Implementierer: Noether (`01a06a91-d4b2-7240-87ca-b7c5088b8437`).
+- Vorgabe: kein Commit; keine externen Assemblies/Repos; MCP-first; echte Paging-/Budget-/Handshake-Regressionen; `code-map.md` aktualisieren.
 
 ## Run 2026-09-04 / Epic 3 / Reviewer
 

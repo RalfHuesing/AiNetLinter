@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Nodes;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
+using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 internal static class AssemblyAnalysisResponseEnvelope
 {
@@ -132,15 +133,8 @@ internal static class AssemblyAnalysisResponseEnvelope
             obj["truncated"] = truncated;
         }
 
-        if (truncated && collectionName != "directories")
-        {
-            AddReason(obj, "responseBudget");
-            obj["continuationToken"] = AssemblyPaging.CreateToken(Math.Max(0, offset) + returned);
-        }
-        else if (collectionName != "directories" && obj["continuationToken"] is not null)
-        {
-            obj["continuationToken"] = null;
-        }
+        AssemblyAnalysisSearchEnvelope.UpdateKnownContinuation(
+            obj, (collectionName, truncated, returned, total.Value, offset));
 
         UpdateNestedCollectionEnvelope(obj, collectionName, total.Value, returned, truncated, offset);
     }
@@ -243,9 +237,8 @@ internal static class AssemblyAnalysisResponseEnvelope
             case "samples":
                 UpdateDiagnosticsEnvelope(obj, total, returned, truncated, offset);
                 break;
-            case "results" when truncated:
-                obj["status"] = "truncated";
-                obj["detailHint"] = "Body-Ergebnisse wurden wegen des Antwortbudgets gekürzt; maxResponseBytes erhöhen oder den Body gezielt erneut anfordern.";
+            case "results":
+                AssemblyAnalysisSearchEnvelope.Update(obj, truncated);
                 break;
         }
     }

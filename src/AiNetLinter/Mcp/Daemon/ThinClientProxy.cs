@@ -262,7 +262,8 @@ internal static class ThinClientProxy
             var hello = new DaemonHello(
                 McpServerOptionsFactory.GetServerVersion(),
                 Environment.ProcessId,
-                CreateConfiguration(options));
+                CreateConfiguration(options),
+                ToolContractFingerprint: McpServerOptionsFactory.GetDaemonToolContractFingerprint());
             await pipe.WriteJsonFrameAsync(hello, connect.Token).ConfigureAwait(false);
             var response = await pipe.ReadFrameAsync(connect.Token).ConfigureAwait(false)
                 ?? throw new EndOfStreamException("Daemon beendete den Handshake ohne Antwort.");
@@ -289,6 +290,12 @@ internal static class ThinClientProxy
         {
             var welcome = JsonSerializer.Deserialize<DaemonWelcome>(response, DaemonProtocol.JsonOptions)
                 ?? throw new InvalidDataException("Daemon-Welcome konnte nicht gelesen werden.");
+            var expectedFingerprint = McpServerOptionsFactory.GetDaemonToolContractFingerprint();
+            if (!string.Equals(welcome.ToolContractFingerprint, expectedFingerprint, StringComparison.Ordinal))
+            {
+                throw new ThinClientDiscoveryMismatchException(
+                    $"Daemon-Discovery-Fingerprint inkompatibel (erwartet {expectedFingerprint}, empfangen {welcome.ToolContractFingerprint ?? "fehlt"}).");
+            }
             Log.Debug("ThinClient: Handshake Welcome empfangen (DaemonPid={DaemonPid}, DaemonVersion={DaemonVersion}, ExecutableVersion={ExecutableVersion}, IdleExit={IdleExitMinutes}, MaxProjects={MaxProjects})", welcome.ProcessId, welcome.DaemonVersion, welcome.ExecutableVersion, welcome.Configuration.IdleExitMinutes, welcome.Configuration.MaxProjects);
             if (!expectedConfiguration.Matches(welcome.Configuration))
             {
@@ -300,7 +307,7 @@ internal static class ThinClientProxy
 
         if (string.Equals(type, DaemonProtocol.Shutdown, StringComparison.Ordinal))
         {
-            throw new IOException("Daemon meldet kontrollierten Neustart nach Versionskonflikt.");
+            throw new IOException("Daemon meldet kontrollierten Neustart nach Versions- oder Discovery-Konflikt.");
         }
 
         var error = JsonSerializer.Deserialize<DaemonError>(response, DaemonProtocol.JsonOptions);
@@ -368,6 +375,8 @@ internal static class ThinClientProxy
         string.Equals(Environment.GetEnvironmentVariable("AINETLINTER_NO_DAEMON"), "1", StringComparison.Ordinal);
 
     private sealed record ConnectAttempt(ThinClientConnection? Connection, Exception? Failure);
+
+    private sealed class ThinClientDiscoveryMismatchException(string message) : IOException(message);
 
     private sealed class ThinClientVersionConflictException(string message) : IOException(message);
 }

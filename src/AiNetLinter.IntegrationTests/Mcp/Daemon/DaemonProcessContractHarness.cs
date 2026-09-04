@@ -106,7 +106,11 @@ internal static class DaemonProcessContractHarness
     {
         var executableVersion = McpServerOptionsFactory.GetServerVersion();
         await connection.WriteJsonFrameAsync(
-            new DaemonHello(executableVersion, Environment.ProcessId, spec.Configuration),
+            new DaemonHello(
+                executableVersion,
+                Environment.ProcessId,
+                spec.Configuration,
+                ToolContractFingerprint: McpServerOptionsFactory.GetDaemonToolContractFingerprint()),
             cancellationToken).ConfigureAwait(false);
         var welcome = await connection
             .ReadJsonFrameAsync<DaemonWelcome>(cancellationToken)

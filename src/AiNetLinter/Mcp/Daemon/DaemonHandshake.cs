@@ -12,7 +12,11 @@ internal sealed class CurrentDaemonIdentityProvider : IDaemonIdentityProvider
     public DaemonIdentity GetIdentity()
     {
         var version = McpServerOptionsFactory.GetServerVersion();
-        return new DaemonIdentity(version, version, Environment.ProcessId);
+        return new DaemonIdentity(
+            version,
+            version,
+            Environment.ProcessId,
+            McpServerOptionsFactory.GetDaemonToolContractFingerprint());
     }
 }
 
@@ -78,11 +82,22 @@ internal sealed class DaemonHandshake
             return HandleExecutableMismatch(hello.ExecutableVersion, identity.ExecutableVersion, activeConnectionCount);
         }
 
+        // Old clients omit this optional field and remain compatible. New
+        // clients provide it and therefore cannot silently use an old daemon
+        // whose discovery contract was built before the current binary.
+        if (!string.IsNullOrWhiteSpace(hello.ToolContractFingerprint)
+            && !string.Equals(hello.ToolContractFingerprint, identity.ToolContractFingerprint, StringComparison.Ordinal))
+        {
+            warning = null;
+            return HandleDiscoveryMismatch(hello.ToolContractFingerprint, identity.ToolContractFingerprint, activeConnectionCount);
+        }
+
         var welcome = new DaemonWelcome(
             identity.DaemonVersion,
             identity.ExecutableVersion,
             identity.ProcessId,
-            effectiveConfiguration);
+            effectiveConfiguration,
+            ToolContractFingerprint: identity.ToolContractFingerprint);
         return new DaemonHandshakeResult(
             DaemonHandshakeStatus.Accepted,
             Welcome: welcome,
@@ -125,5 +140,25 @@ internal sealed class DaemonHandshake
             Error: new DaemonError(
                 DaemonProtocol.VersionConflict,
                 $"Ausfuehrbare Version {receivedVersion} kollidiert mit {expectedVersion}."));
+    }
+
+    private DaemonHandshakeResult HandleDiscoveryMismatch(
+        string receivedFingerprint,
+        string? expectedFingerprint,
+        int activeConnectionCount)
+    {
+        if (activeConnectionCount == 0 && !shutdownRequested)
+        {
+            shutdownRequested = true;
+            return new DaemonHandshakeResult(
+                DaemonHandshakeStatus.ShutdownRequested,
+                Shutdown: new DaemonShutdown(DaemonProtocol.DiscoveryFingerprintMismatch));
+        }
+
+        return new DaemonHandshakeResult(
+            DaemonHandshakeStatus.VersionConflict,
+            Error: new DaemonError(
+                DaemonProtocol.VersionConflict,
+                $"Discovery-Fingerprint {receivedFingerprint} kollidiert mit {expectedFingerprint ?? "unbekannt"}."));
     }
 }

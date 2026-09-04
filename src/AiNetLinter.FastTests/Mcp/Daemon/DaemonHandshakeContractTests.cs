@@ -73,6 +73,29 @@ public sealed class DaemonHandshakeContractTests
     }
 
     [Fact]
+    public void HandleHello_NewDiscoveryFingerprintDoesNotAcceptOldDaemon()
+    {
+        var handshake = new DaemonHandshake(
+            new FakeIdentityProvider(new DaemonIdentity(
+                DaemonVersion,
+                ExecutableVersion,
+                DaemonProcessId,
+                ToolContractFingerprint: "discovery-old")),
+            Configuration);
+
+        var result = handshake.HandleHello(
+            new DaemonHello(
+                ExecutableVersion,
+                99,
+                Configuration,
+                ToolContractFingerprint: "discovery-new"),
+            activeConnectionCount: 0);
+
+        Assert.Equal(DaemonHandshakeStatus.ShutdownRequested, result.Status);
+        Assert.Equal(DaemonProtocol.DiscoveryFingerprintMismatch, result.Shutdown?.Reason);
+    }
+
+    [Fact]
     public void HandleHello_ConfigurationDivergence_ReportsOneStructuredWarning()
     {
         var warnings = new List<DaemonConfigurationDivergence>();

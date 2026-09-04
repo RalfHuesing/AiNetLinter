@@ -15,6 +15,7 @@ internal static class DaemonProtocol
     internal const string VersionConflict = "VERSION_CONFLICT";
     internal const string UnsupportedProtocolVersion = "PROTOCOL_VERSION_UNSUPPORTED";
     internal const string ExecutableVersionMismatch = "EXECUTABLE_VERSION_MISMATCH";
+    internal const string DiscoveryFingerprintMismatch = "DISCOVERY_FINGERPRINT_MISMATCH";
     internal const string ConfigurationDivergence = "CONFIGURATION_DIVERGENCE";
     internal const int DefaultMaxProjects = 4;
     internal const decimal DefaultIdleExitMinutes = 10m;
@@ -91,13 +92,15 @@ internal sealed record EffectiveDaemonConfiguration(
 internal sealed record DaemonIdentity(
     string DaemonVersion,
     string ExecutableVersion,
-    int ProcessId);
+    int ProcessId,
+    string? ToolContractFingerprint = null);
 
 internal sealed record DaemonHello(
     string ExecutableVersion,
     int ProcessId,
     EffectiveDaemonConfiguration? Configuration,
-    int ProtocolVersion = DaemonProtocol.Version)
+    int ProtocolVersion = DaemonProtocol.Version,
+    string? ToolContractFingerprint = null)
 {
     [JsonPropertyName("type")]
     public string Type => DaemonProtocol.Hello;
@@ -108,7 +111,8 @@ internal sealed record DaemonWelcome(
     string ExecutableVersion,
     int ProcessId,
     EffectiveDaemonConfiguration Configuration,
-    int ProtocolVersion = DaemonProtocol.Version)
+    int ProtocolVersion = DaemonProtocol.Version,
+    string? ToolContractFingerprint = null)
 {
     [JsonPropertyName("type")]
     public string Type => DaemonProtocol.Welcome;

@@ -36,4 +36,6 @@ internal static class McpServerOptionsFactory
     }
 
     internal static string GetServerVersion() => McpServerVersion.Get();
+
+    internal static string GetDaemonToolContractFingerprint() => McpServerVersion.GetBuildFingerprint();
 }

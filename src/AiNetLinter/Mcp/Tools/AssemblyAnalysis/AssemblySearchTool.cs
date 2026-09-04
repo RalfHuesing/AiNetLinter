@@ -153,7 +153,11 @@ internal static class AssemblySearchTool
         var selection = SelectMatches(orderedMatches, accumulator.MatchedFiles.Count, arguments);
         var reasons = BuildTruncationReasons(selection, accumulator);
         var completeness = GetCompleteness(reasons, accumulator);
-        var continuationToken = selection.IsTruncated
+        // maxFiles is an explicit scope limit, not a page over the hidden
+        // files. Once the selected file scope is exhausted there is no
+        // forward cursor to offer; the hint tells the caller to increase the
+        // scope instead of returning the same offset forever.
+        var continuationToken = selection.HasMoreVisibleMatches
             ? AssemblyPaging.CreateToken(selection.NextOffset)
             : null;
         return new AssemblySearchPayload(
@@ -176,7 +180,7 @@ internal static class AssemblySearchTool
             BuildHint(selection.MaxFilesTruncated, selection.IsTruncated));
     }
 
-    private static AssemblySearchSelection SelectMatches(
+    internal static AssemblySearchSelection SelectMatches(
         IReadOnlyList<AssemblySearchMatch> orderedMatches,
         int matchedFileCount,
         AssemblySearchArguments arguments)
@@ -196,7 +200,8 @@ internal static class AssemblySearchTool
             visibleMatches,
             offset + visibleMatches.Length,
             offset + visibleMatches.Length < fileLimitedMatches.Count || maxFilesTruncated,
-            maxFilesTruncated);
+            maxFilesTruncated,
+            offset + visibleMatches.Length < fileLimitedMatches.Count);
     }
 
     private static List<string> BuildTruncationReasons(
@@ -439,7 +444,8 @@ internal sealed record AssemblySearchSelection(
     AssemblySearchMatch[] VisibleMatches,
     int NextOffset,
     bool IsTruncated,
-    bool MaxFilesTruncated);
+    bool MaxFilesTruncated,
+    bool HasMoreVisibleMatches);
 
 internal sealed record AssemblySearchPayload(
     string SearchKind,

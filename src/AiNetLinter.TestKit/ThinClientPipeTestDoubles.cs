@@ -163,7 +163,8 @@ internal static class MockDaemonScript
             "9.9.mock",
             McpServerOptionsFactory.GetServerVersion(),
             processId,
-            configuration ?? EffectiveDaemonConfiguration.Default)
+            configuration ?? EffectiveDaemonConfiguration.Default,
+            ToolContractFingerprint: McpServerOptionsFactory.GetDaemonToolContractFingerprint())
         {
             ConnectionId = connectionId,
         }).ConfigureAwait(false);
