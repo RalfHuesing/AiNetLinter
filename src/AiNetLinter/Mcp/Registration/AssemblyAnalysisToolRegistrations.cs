@@ -47,8 +47,11 @@ internal static class AssemblyAnalysisToolRegistrations
                 string? fileFilter = null,
                 int maxResponseBytes = 0,
                 string? cursor = null,
+                string? continuationToken = null,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteRouted(
+            {
+                var effectiveCursor = cursor ?? continuationToken;
+                return await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(ResolveTargetType(targetType, targetPath), targetPath),
@@ -64,11 +67,13 @@ internal static class AssemblyAnalysisToolRegistrations
                                     contextLines,
                                     maxResponseBytes,
                                     fileFilter,
-                                    cursor),
+                                    effectiveCursor,
+                                    continuationToken),
                                 ct),
                             MaxResponseBytes: maxResponseBytes,
-                            Cursor: cursor),
-                        ct)),
+                            Cursor: effectiveCursor),
+                        ct));
+            },
             McpToolRegistrationOptions.AssemblyTool("search_assembly", SearchAssemblyDescription)));
     }
 
@@ -106,8 +111,11 @@ internal static class AssemblyAnalysisToolRegistrations
                 int maxResponseBytes = 0,
                 string? detailLevel = null,
                 string? cursor = null,
+                string? continuationToken = null,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteRouted(
+            {
+                var effectiveCursor = cursor ?? continuationToken;
+                return await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(ResolveTargetType(targetType, targetPath), targetPath),
@@ -127,12 +135,13 @@ internal static class AssemblyAnalysisToolRegistrations
                                     includeReferences,
                                     maxResponseBytes,
                                     detailLevel,
-                                    cursor)),
+                                    effectiveCursor)),
                             ExpandAssemblyReferences: includeReferences,
                             MaxResponseBytes: maxResponseBytes,
                             DetailLevel: detailLevel,
-                            Cursor: cursor),
-                        ct)),
+                            Cursor: effectiveCursor),
+                        ct));
+            },
             McpToolRegistrationOptions.AssemblyTool("inspect_assembly", InspectAssemblyDescription)));
     }
 
@@ -171,8 +180,11 @@ internal static class AssemblyAnalysisToolRegistrations
                 int maxResponseBytes = 0,
                 string? detailLevel = null,
                 string? cursor = null,
+                string? continuationToken = null,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteRouted(
+            {
+                var effectiveCursor = cursor ?? continuationToken;
+                return await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(ResolveTargetType(targetType, targetPath), targetPath),
@@ -188,12 +200,13 @@ internal static class AssemblyAnalysisToolRegistrations
                                     includeReferences,
                                     maxResponseBytes,
                                     detailLevel,
-                                    cursor)),
+                                    effectiveCursor)),
                             ExpandAssemblyReferences: includeReferences,
                             MaxResponseBytes: maxResponseBytes,
                             DetailLevel: detailLevel,
-                            Cursor: cursor),
-                        ct)),
+                            Cursor: effectiveCursor),
+                        ct));
+            },
             McpToolRegistrationOptions.AssemblyTool("find_assembly_extensions", FindAssemblyExtensionsDescription)));
     }
 
@@ -238,8 +251,11 @@ internal static class AssemblyAnalysisToolRegistrations
                 int maxResponseBytes = 0,
                 string? detailLevel = null,
                 string? cursor = null,
+                string? continuationToken = null,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteRouted(
+            {
+                var effectiveCursor = cursor ?? continuationToken;
+                return await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(ResolveTargetType(targetType, targetPath), targetPath),
@@ -261,13 +277,14 @@ internal static class AssemblyAnalysisToolRegistrations
                                     topN,
                                     maxResponseBytes,
                                     detailLevel,
-                                    cursor),
+                                    effectiveCursor),
                                 ct),
                             ExpandAssemblyReferences: includeReferences || includeCallers || includeImpact,
                             MaxResponseBytes: maxResponseBytes,
                             DetailLevel: detailLevel,
-                            Cursor: cursor),
-                        ct)),
+                            Cursor: effectiveCursor),
+                        ct));
+            },
             McpToolRegistrationOptions.AssemblyTool("get_assembly_context", GetAssemblyContextDescription)));
     }
 

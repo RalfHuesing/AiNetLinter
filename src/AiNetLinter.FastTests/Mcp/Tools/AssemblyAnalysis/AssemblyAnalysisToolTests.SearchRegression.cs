@@ -44,6 +44,30 @@ public sealed partial class AssemblyAnalysisToolTests
     }
 
     [Fact]
+    public void AssemblySearchPaging_SupportsContinuationTokenAsAliasForCursor()
+    {
+        var matches = new[]
+        {
+            CreateSearchMatch("src/A.cs", 1),
+            CreateSearchMatch("src/A.cs", 2),
+            CreateSearchMatch("src/B.cs", 1),
+        };
+
+        var secondPageWithCursor = AssemblySearchTool.SelectMatches(
+            matches,
+            matchedFileCount: 2,
+            new AssemblySearchArguments("needle", false, "text", 1, 2, 0, 0, null, Cursor: "1"));
+
+        var secondPageWithContinuationToken = AssemblySearchTool.SelectMatches(
+            matches,
+            matchedFileCount: 2,
+            new AssemblySearchArguments("needle", false, "text", 1, 2, 0, 0, null, Cursor: null, ContinuationToken: "1"));
+
+        Assert.Equal(secondPageWithCursor.NextOffset, secondPageWithContinuationToken.NextOffset);
+        Assert.Equal(secondPageWithCursor.VisibleMatches.Single().Id, secondPageWithContinuationToken.VisibleMatches.Single().Id);
+    }
+
+    [Fact]
     public void FinalWireTrim_AssemblySearchKeepsUsableEnvelopeAndPaging()
     {
         var result = McpToolResults.Text(

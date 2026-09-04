@@ -76,7 +76,7 @@ internal static class AssemblySearchTool
         var kind = NormalizeKind(arguments.SearchKind);
         return ValidateKind(kind, arguments.Pattern)
             ?? ValidateLimits(arguments)
-            ?? ValidateCursor(arguments.Cursor);
+            ?? ValidateCursor(arguments.EffectiveCursor);
     }
 
     private static CallToolResult? ValidateKind(string? kind, string? pattern)
@@ -191,7 +191,7 @@ internal static class AssemblySearchTool
         var fileLimitedMatches = visibleFileSet is null
             ? orderedMatches
             : orderedMatches.Where(match => visibleFileSet.Contains(match.FilePath)).ToArray();
-        var offset = AssemblyPaging.ReadOffset(arguments.Cursor);
+        var offset = AssemblyPaging.ReadOffset(arguments.EffectiveCursor);
         var maxResults = arguments.MaxResults == 0 ? DefaultMaxResults : arguments.MaxResults;
         var visibleMatches = fileLimitedMatches.Skip(offset).Take(maxResults).ToArray();
         var maxFilesTruncated = visibleFileSet is not null && matchedFileCount > visibleFileSet.Count;
@@ -233,7 +233,7 @@ internal static class AssemblySearchTool
         maxFilesTruncated
             ? "maxFiles erhoehen, um weitere Dateien in den sichtbaren Suchscope aufzunehmen."
             : truncated
-                ? "continuationToken mit derselben Suchanfrage verwenden oder maxResults erhoehen."
+                ? "cursor oder continuationToken mit derselben Suchanfrage verwenden oder maxResults erhoehen."
                 : null;
 
     private static AssemblySearchAccumulator ScanFiles(
@@ -373,7 +373,7 @@ internal static class AssemblySearchTool
         {
             builder.AppendLine($"Ergebnis gekürzt ({string.Join(", ", payload.TruncatedBy)}); " +
                                (payload.ContinuationToken is null ? payload.DetailHint :
-                               $"continuationToken={payload.ContinuationToken}; {payload.DetailHint}"));
+                               $"cursor={payload.ContinuationToken}; continuationToken={payload.ContinuationToken}; {payload.DetailHint}"));
         }
 
         return builder.ToString().TrimEnd();
@@ -398,7 +398,11 @@ internal sealed record AssemblySearchArguments(
     int ContextLines,
     int MaxResponseBytes,
     string? FileFilter,
-    string? Cursor);
+    string? Cursor,
+    string? ContinuationToken = null)
+{
+    internal string? EffectiveCursor => Cursor ?? ContinuationToken;
+}
 
 internal sealed class AssemblySearchAccumulator(FileSystemEnumerationResult enumeration)
 {
