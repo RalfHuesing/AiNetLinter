@@ -326,6 +326,23 @@
 - Offenes nicht-blockierendes Risiko: bestehender LOW-Confidence-Dead-Code-Hinweis außerhalb des Korrekturscopes.
 - Nächste Aktion: Checkpoint-Commit, danach letzter frischer Folge-Review 2 für die Discovery-Ursache.
 
+## Run 2026-09-04 / Epic 3 / Folge-Reviewer 2 – Abschluss
+
+- Status: completed; letzter Epic-3-Folge-Reviewerbericht terminal eingegangen.
+- Urteil: `approved`; keine P0/P1-Befunde.
+- Discovery: MVID-Fingerprint wird deterministisch aus dem laufenden Modul gebildet und im Hello/Welcome verifiziert. Legacy-Welcomes ohne Fingerprint führen über den expliziten Catch-Pfad zu `DISCOVERY_FINGERPRINT_MISMATCH`, Exit-Code 2, genau einem Connect-Versuch und keinem Detached-Start; Pipe wird freigegeben. Alte Clients ohne optionales Feld und gleiche neue Fingerprints bleiben kompatibel; SearchBudget/SearchPaging ohne Rückkopplung.
+- Verifikation: frische Implementierer-Nachweise FastTests 2448 bestanden, IntegrationTests 428 bestanden, gezielte Regressionen 26/26; `get_violations` geänderte Produktionsdateien ohne Verstöße.
+- P2: DuplicateCode für `CompleteAsync` im neuen Test-Helper; zusätzlicher separater Legacy-EXE-Prozess wäre optionale Evidenz, der echte Named-Pipe-/Client-Pfad reicht für Wire-/Retry-/Spawn-Invariante.
+- Nächste Aktion: Epic 3 abschließen, Review-Checkpoint committen und einmaligen Audit starten.
+
+## Run 2026-09-04 / Epic 3 / Folge-Reviewer 2
+
+- Status: running; letzter frischer Folge-Review der verbliebenen Epic-3-P1-Ursache gestartet.
+- Baseline: `02f073de` (`fix(assembly-analyse-verbesserungen): Beende inkompatible Discovery-Handshakes`).
+- Scope: deterministischer MVID-/Toolvertrags-Fingerprint, Legacy-Welcome, kontrollierter terminaler ThinClient-Pfad, Prozess-/Named-Pipe-Regressionsnachweis und Kompatibilität.
+- Reviewer: Plato (`01a06ada-9a3e-7690-98ed-cda0b44919be`).
+- Vorgabe: keine Produktionsänderungen und kein Commit; nur offensichtliche task-lokale `code-map.md`-Korrekturen zulässig. P0/P1 blockieren, P2/P3 werden als Tech Debt erfasst.
+
 ## Run 2026-09-04 / Epic 3 / Korrektur-Implementierer 2
 
 - Status: running; zweite Epic-3-Korrekturrunde gestartet, ausschließlich Discovery-Fingerprint-Recovery.

@@ -191,8 +191,8 @@ Die unabhängige Epic-3-Review hat drei voneinander unabhängige P1-Ursachen gef
 - Beschreibung: Der Handshake prüft nur eine feste, hashfreie `ExecutableVersion`; ein alter Daemon kann einen neuen ThinClient akzeptieren und eine Tool-Liste ohne `search_assembly` liefern.
 - Scope/Fundstelle: `src/AiNetLinter/AiNetLinter.csproj:5`, `src/AiNetLinter/Mcp/Composition/McpServerVersion.cs:17`, `src/AiNetLinter/Mcp/Daemon/DaemonHandshake.cs:75`.
 - Evidenz: Discovery wird beim Daemonstart aufgebaut, die feste Projektversion bleibt trotz neuer Toolregistrierung gleich; Dokumentation nennt nur manuellen Neustart.
-- Disposition: fix-now
-- Nächster Schritt: fingerprintloses Welcome eines alten Daemons im ThinClient kontrolliert behandeln; kein generischer Readiness-Retry ohne Recovery/terminales Ergebnis; echten Alt-/Neu-Test ergänzen.
+- Disposition: fixed
+- Nächster Schritt: keine; kontrollierter `DISCOVERY_FINGERPRINT_MISMATCH`-Pfad und Legacy-Named-Pipe-Regression vorhanden.
 - Attempts: 2
 - Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 3 / Reviewer – Abschluss, Signatur `DaemonDiscovery/ExecutableVersionFingerprint`.
 
@@ -210,6 +210,19 @@ Die unabhängige Epic-3-Review hat drei voneinander unabhängige P1-Ursachen gef
 Korrektur-Implementierer 1 meldet alle drei Epic-3-P1-Ursachen behoben; Disposition bleibt bis zum Folge-Review `fix-now`, Attempts bleiben bei 1. Die bestehende `AIContextFootprint`-Warnung in `DaemonHost` (2530 > 2500) bleibt außerhalb der P1-Ursachen und wird als nicht-blockierendes Tech Debt weitergeführt.
 
 Korrektur-Implementierer 2 meldet `DaemonDiscovery/ExecutableVersionFingerprint` behoben; Disposition bleibt bis zum letzten Folge-Review `fix-now`, Attempts bleiben bei 2. Der kontrollierte terminale `DISCOVERY_FINGERPRINT_MISMATCH`-Pfad und der reale Legacy-Named-Pipe-Test werden durch die Folge-Review abschließend verifiziert.
+
+Folge-Reviewer 2 bestätigt `DaemonDiscovery/ExecutableVersionFingerprint` als `fixed`: Legacy-Welcome ohne Fingerprint endet kontrolliert mit `DISCOVERY_FINGERPRINT_MISMATCH`, Exit 2, genau einem Connect-Versuch und freigegebener Pipe. Disposition wird auf `fixed` gesetzt, Attempts bleiben bei 2.
+
+## P2 – Duplicate Helper im Legacy-Handshake-Test
+
+- Schweregrad: P2
+- Beschreibung: `CompleteAsync` ist im neuen Legacy-Handshake-Test und bereits in `ThinClientProxySessionContractTests` vorhanden.
+- Scope/Fundstelle: `src/AiNetLinter.IntegrationTests/Mcp/Daemon/ThinClientDiscoveryContractTests.cs:101` und bestehender Session-Test.
+- Evidenz: Folge-Reviewer 2 meldet einen DuplicateCode-Kandidaten; keine Produktionsduplikation und keine P1-Relevanz.
+- Disposition: accepted-deferred
+- Nächster Schritt: In einem fokussierten Test-DRY-Nachlauf prüfen, ob gemeinsamer Helper ohne Testsemantik-Drift sinnvoll ist.
+- Attempts: 0
+- Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 3 / Folge-Reviewer 2 – Abschluss.
 
 Folge-Reviewer 1 bestätigt `SearchBudget/EnvelopeReachability` und `SearchPaging/MaxFilesContinuation` als `fixed`. `DaemonDiscovery/ExecutableVersionFingerprint` bleibt P1 offen, weil ein fingerprintloses Welcome des alten Daemons im generischen Retrypfad bis zum Readiness-Timeout läuft. Korrekturrunde 2 wird mit Attempts 2 ausschließlich für diese Ursache gestartet.
 
