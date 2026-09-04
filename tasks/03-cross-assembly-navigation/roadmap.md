@@ -1,8 +1,8 @@
 # Roadmap: 03-cross-assembly-navigation
 
 Status: executing
-Current Epic: EPIC-05
-Letzter Commit: in Arbeit (EPIC-04 abgeschlossen)
+Current Epic: EPIC-06
+Letzter Commit: in Arbeit (EPIC-05 abgeschlossen)
 Blocker: keine
 
 ## Primäraufgabe
@@ -48,7 +48,7 @@ Cross-Assembly-Navigation und Typauflösung im MCP-Server
 - **Betroffene Bereiche**: `FindImplementationsTool.cs`, Tool-Registrierungen (`project` & `assembly`), FastTests.
 - **Muss-Kriterien**: Dualer Zielvertrag (`targetType=project|assembly`); liefert Klasse, Methode, Datei- und Zeilenposition sowie Status (`concrete`, `abstract`, `virtual`).
 - **Verifikation**: FastTests für Schnittstellen-Implementierungen und Overrides in Project und Assembly; `get_violations`.
-- **Status**: open
+- **Status**: done
 
 ### EPIC-06: MCP-Registrierung, Toolschemas, Dokumentations-Sync & Abschlussverifikation
 - **Ziel**: Registrierung aller neuen Tools in `tools/list` und `.gemini/antigravity-ide/mcp/AiNetLinter/`, Dokumentations-Sync, Gesamtabschlussprüfung.
@@ -61,7 +61,7 @@ Cross-Assembly-Navigation und Typauflösung im MCP-Server
 ## Abschluss-Checkliste (aus Konzept.md)
 - [x] `resolve_type_origin` antwortet deterministisch in < 100 ms mit Assembly-Name und Dateipfad.
 - [x] `get_call_tree(direction="outgoing")` zeigt Fremd-Assembly-Calls als `[ref: <Assembly>]` ohne BCL-Rauschen.
-- [ ] `find_implementations` findet konkrete Implementierungen/Overrides in Quellcode und Assemblies mit Zeilenangaben.
+- [x] `find_implementations` findet konkrete Implementierungen/Overrides in Quellcode und Assemblies mit Zeilenangaben.
 - [x] `search_assembly` liefert mit `declarationOnly=true` keine Treffer in XML-Docs oder Kommentaren.
 - [x] `get_impact` und `get_assembly_context` schließen bei Fremd-Assemblies ohne Testreferenzen in < 3 s ab.
 - [ ] FastTests (`Category!=Stress`) und IntegrationTests (`Category!=Stress`) laufen warnungs- und fehlerfrei.

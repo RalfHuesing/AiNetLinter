@@ -10,6 +10,7 @@ using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.DependencyGraph;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.Mcp.Tools.TypeHierarchy;
 using AiNetLinter.Mcp.Tools.TypeResolution;
 using ModelContextProtocol.Server;
 
@@ -42,6 +43,7 @@ internal static class SymbolGraphToolRegistrations
         AddGetTypeHierarchy(tools, targetRoute);
         AddDependencyGraph(tools, targetRoute);
         AddResolveTypeOrigin(tools, targetRoute);
+        AddFindImplementations(tools, targetRoute);
     }
 
     private static void AddFindSymbol(
@@ -278,5 +280,32 @@ internal static class SymbolGraphToolRegistrations
         "Wann nutzen: Ermittelt zu einem angegebenen Typnamen (z. B. 'IDataProvider' oder 'Vendor.Data.BaseCommand') " +
         "sofort die definierende Assembly (Name und Festplatten-Dateipfad der DLL) sowie den vollqualifizierten Typnamen " +
         "und Symbol-Kind ueber Roslyn-Metadatenreferenzen. Unterstuetzt sowohl targetType='project' als auch targetType='assembly'.";
+
+    private static void AddFindImplementations(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        AnalysisToolRoute targetRoute)
+    {
+        tools.Add(McpServerTool.Create(
+            async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, int maxResults = FindImplementationsTool.DefaultMaxResults, CancellationToken ct = default) =>
+            {
+                var effectiveIdentifier = !string.IsNullOrWhiteSpace(symbolIdentifier) ? symbolIdentifier : symbol;
+                return await AnalysisToolCall.ExecuteRouted(
+                    targetRoute,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisToolDispatch(
+                            ProjectCall: lease => FindImplementationsTool.ExecuteAsync(lease.Server, effectiveIdentifier, maxResults, ct),
+                            AssemblySessionCall: lease => FindImplementationsTool.ExecuteAsync(lease.Server, effectiveIdentifier, maxResults, ct)),
+                        ct));
+            },
+            McpToolRegistrationOptions.TargetedReadOnlyTool("find_implementations", FindImplementationsDescription)));
+    }
+
+    private const string FindImplementationsDescription =
+        "Wann nutzen: Findet konkrete Implementierungen und Overrides von Interfaces, abstrakten Klassen, " +
+        "virtuellen Methoden oder Properties in Quellcode-Projekten (targetType='project') oder dekompilierten " +
+        "Assemblies (targetType='assembly'). Liefert Typ, Member, Status (concrete/abstract/virtual) und Zeilenposition. " +
+        "symbolIdentifier (oder Alias symbol): Format wie find_references (\"M:Namespace.Klasse.Methode\", \"IInterface\", \"BaseClass.Method\"). " +
+        "maxResults: Begrenzung der Trefferliste (Default 50).";
 }
 
