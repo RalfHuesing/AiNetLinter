@@ -366,6 +366,9 @@ public sealed class Foo
     {
         var continuationToken = ""token-offset-123"";
         var cancellationToken = ""cancel-me"";
+        var metadataToken = ""meta-456"";
+        var typeToken = ""type-789"";
+        var jsonToken = ""json-prop"";
     }
 }";
         var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.SecurityCandidates);

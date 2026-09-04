@@ -247,7 +247,10 @@ internal static class MagicValuesStringHeuristics
         text.Contains("cancellation", StringComparison.OrdinalIgnoreCase)
         || text.Contains("continuation", StringComparison.OrdinalIgnoreCase)
         || text.Contains("syntax", StringComparison.OrdinalIgnoreCase)
-        || text.Contains("publicKey", StringComparison.OrdinalIgnoreCase);
+        || text.Contains("publicKey", StringComparison.OrdinalIgnoreCase)
+        || text.Contains("metadata", StringComparison.OrdinalIgnoreCase)
+        || text.Contains("typeToken", StringComparison.OrdinalIgnoreCase)
+        || text.Contains("jsonToken", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Prueft, ob ein numerisches Literal einer Well-known Buffer-Konstante
     /// entspricht (1024/2048/4096/8192) und im umgebenden Kontext einen entsprechenden
