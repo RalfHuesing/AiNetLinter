@@ -126,6 +126,13 @@ Bislang durchläuft ein Klon- oder Update-Vorgang folgende Schichten in `src/AiN
   - Ralf: „10 Klassen für Git Clone ist eindeutig sinnfrei. [...] Am Ende liegt irgendwo im Dateisystem halt das Git Repo.“
   - Klare Entscheidung: Keine native Dependency (LibGit2Sharp), sondern eine einzige, testbare Klasse `GitEngine.cs`.
 
+### Offene Entscheidungen & Fragen
+- **Reales Netzwerk-/HTTP-Git-Test-Repository**:
+  - *Hintergrund*: Der fatale `GIT-PROGRESS-ABORT`-Bug trat spezifisch bei echten HTTP-Netzwerk-Clones auf (`remote: Counting objects...`, `Receiving objects...`). Ein reiner Dateisystem-Clone (`file://`) verhält sich anders als der Git-Smart-HTTP-Transfer.
+  - *Option 1*: Ein dediziertes Test-Repository auf dem internen Git-Server.
+  - *Option 2*: Ein autarker lokaler HTTP-Git-Fixture-Server in `AiNetLinter.IntegrationTests` (z. B. Kestrel / `git http-backend` auf `http://127.0.0.1:<port>`), damit Tests auch offline / in CI deterministisch laufen.
+  - *Option 3 (Empfohlen)*: Beides – ein autarker lokaler HTTP-Test in der Suite + ein optionaler E2E-Smoke-Test gegen ein konfiguriertes reales Git-Repository.
+
 ### Zu entfernende / zu ersetzende Alt-Dateien
 - `src/AiNetLinter/Mcp/Assemblies/ExternalSource/Providers/GiteaGitRepositoryTransport.cs`
 - `src/AiNetLinter/Mcp/Assemblies/ExternalSource/ProcessExecution/ExternalSourceGitProcessOutputPolicy.cs`

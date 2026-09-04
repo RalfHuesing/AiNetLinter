@@ -101,7 +101,7 @@ Die neuen und erweiterten MCP-Tools wurden in Version `1.0.166` interaktiv gegen
   {
     "repositories": [
       {
-        "url": "http://ol80:3000/SAN/San.OfficeLine.Core",
+        "url": "http://git-server:3000/SAN/San.OfficeLine.Core",
         "solutionPath": "San.OfficeLine.Core.sln",
         "assemblies": [
           "San.OfficeLine.Core.dll",
