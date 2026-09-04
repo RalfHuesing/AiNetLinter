@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Collections.Generic;
 using System.Linq;
@@ -42,20 +42,63 @@ internal static class OutgoingCallScanner
     {
         foreach (var invocation in body.DescendantNodes().OfType<InvocationExpressionSyntax>())
         {
-            AddOutgoingSymbol(semanticModel.GetSymbolInfo(invocation, ct).Symbol, invocation.GetLocation(), byCallee);
+            var symbol = ResolveInvocationSymbol(invocation, semanticModel, ct);
+            AddOutgoingSymbol(symbol, invocation.GetLocation(), byCallee);
         }
 
         foreach (var creation in body.DescendantNodes().OfType<ObjectCreationExpressionSyntax>())
         {
-            var symbol = semanticModel.GetSymbolInfo(creation, ct).Symbol ?? semanticModel.GetTypeInfo(creation, ct).Type;
+            var symbol = ResolveCreationSymbol(creation, semanticModel, ct);
             AddOutgoingSymbol(symbol, creation.GetLocation(), byCallee);
         }
 
         foreach (var memberAccess in body.DescendantNodes().OfType<MemberAccessExpressionSyntax>())
         {
             if (memberAccess.Parent is InvocationExpressionSyntax) continue;
-            AddOutgoingSymbol(semanticModel.GetSymbolInfo(memberAccess, ct).Symbol, memberAccess.GetLocation(), byCallee);
+            var symbol = ResolveMemberAccessSymbol(memberAccess, semanticModel, ct);
+            AddOutgoingSymbol(symbol, memberAccess.GetLocation(), byCallee);
         }
+    }
+
+    private static ISymbol? ResolveInvocationSymbol(
+        InvocationExpressionSyntax invocation,
+        SemanticModel semanticModel,
+        CancellationToken ct)
+    {
+        var info = semanticModel.GetSymbolInfo(invocation, ct);
+        if (info.Symbol is not null) return info.Symbol;
+        if (info.CandidateSymbols.Length > 0) return info.CandidateSymbols[0];
+
+        if (invocation.Expression is MemberAccessExpressionSyntax memberAccess)
+        {
+            return ResolveMemberAccessSymbol(memberAccess, semanticModel, ct);
+        }
+
+        return null;
+    }
+
+    private static ISymbol? ResolveCreationSymbol(
+        ObjectCreationExpressionSyntax creation,
+        SemanticModel semanticModel,
+        CancellationToken ct)
+    {
+        var info = semanticModel.GetSymbolInfo(creation, ct);
+        if (info.Symbol is not null) return info.Symbol;
+        if (info.CandidateSymbols.Length > 0) return info.CandidateSymbols[0];
+        return semanticModel.GetTypeInfo(creation, ct).Type;
+    }
+
+    private static ISymbol? ResolveMemberAccessSymbol(
+        MemberAccessExpressionSyntax memberAccess,
+        SemanticModel semanticModel,
+        CancellationToken ct)
+    {
+        var info = semanticModel.GetSymbolInfo(memberAccess, ct);
+        if (info.Symbol is not null) return info.Symbol;
+        if (info.CandidateSymbols.Length > 0) return info.CandidateSymbols[0];
+
+        var memberGroup = semanticModel.GetMemberGroup(memberAccess, ct);
+        return memberGroup.Length > 0 ? memberGroup[0] : null;
     }
 
     private static void AddOutgoingSymbol(

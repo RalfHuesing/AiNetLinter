@@ -289,4 +289,37 @@ public sealed class CallGraphTraversalTests
         Assert.StartsWith("[incoming] Caller.Invoke", root.Children[0].Name, System.StringComparison.Ordinal);
         Assert.StartsWith("[outgoing]", root.Children[1].Name, System.StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task BuildTreeAsync_Outgoing_ResolvesMemberGroupWhenCandidateSymbolsPresent()
+    {
+        using var scenario = McpInMemoryTestContext.CreateScenario(new ProjectSpec("OverloadProbe", [
+            ("Calls.cs", """
+                namespace OverloadProbe;
+                public class Callee
+                {
+                    public void Work(int x) { }
+                    public void Work(string s) { }
+                }
+                public class Caller
+                {
+                    public void Run()
+                    {
+                        var callee = new Callee();
+                        callee.Work(42);
+                    }
+                }
+                """)
+        ]));
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
+            scenario.Solution, "OverloadProbe.Caller.Run", CancellationToken.None);
+        Assert.NotNull(symbol);
+
+        var (root, truncated) = await CallGraphTreeBuilder.BuildTreeAsync(
+            new CallTreeBuildRequest(scenario.Solution, symbol!, 1, 10, CallTreeDirection.Outgoing),
+            CancellationToken.None);
+
+        Assert.False(truncated);
+        Assert.Contains(root.Children, child => child.Name.Contains("Callee.Work", System.StringComparison.Ordinal));
+    }
 }
