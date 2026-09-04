@@ -1,8 +1,8 @@
 # Roadmap: 03-cross-assembly-navigation
 
 Status: executing
-Current Epic: EPIC-01
-Letzter Commit: 8ab914d0 (Planungs-Checkpoint)
+Current Epic: EPIC-02
+Letzter Commit: bb636742 (EPIC-01 abgeschlossen)
 Blocker: keine
 
 ## Primäraufgabe
@@ -13,10 +13,10 @@ Cross-Assembly-Navigation und Typauflösung im MCP-Server
 ### EPIC-01: Performance Short-Circuit für Test-Scans bei Fremd-Assemblies
 - **Ziel**: Bei `targetType=assembly` in `get_impact` und `get_assembly_context` unnötige Test-Referenz-Scans sofort abbrechen, wenn die Assembly keine Testframework-Referenzen enthält.
 - **Abhängigkeiten**: Keine (Quick-Win, beschleunigt nachfolgende Testläufe).
-- **Betroffene Bereiche**: `GetImpactTool.cs`, `AssemblyAnalysisContextTool.cs`, FastTests.
+- **Betroffene Bereiche**: `TestDetector.cs`, `TestCoverageBatchScan.cs`, `TestCoverageAssemblyShortCircuitTests.cs`.
 - **Muss-Kriterien**: Erkennung von Testframework-Referenzen (`xunit.*`, `nunit.*`, `MSTest.*`, `Microsoft.VisualStudio.TestPlatform.*`); Short-Circuiting auf leere Test-Menge in < 3s; bestehende Tests für Test-Assemblies unberührt.
 - **Verifikation**: FastTests für Short-Circuiting bei Assembly ohne Testreferenzen vs. Assembly mit Testreferenzen; `get_violations`.
-- **Status**: open
+- **Status**: done
 
 ### EPIC-02: `search_assembly` Deklarations- & Symbolart-Filter
 - **Ziel**: `search_assembly` um `declarationOnly` (`boolean`, Default `false`) und `kind` (`method`, `type`, `property`) erweitern.
@@ -63,6 +63,6 @@ Cross-Assembly-Navigation und Typauflösung im MCP-Server
 - [ ] `get_call_tree(direction="outgoing")` zeigt Fremd-Assembly-Calls als `[ref: <Assembly>]` ohne BCL-Rauschen.
 - [ ] `find_implementations` findet konkrete Implementierungen/Overrides in Quellcode und Assemblies mit Zeilenangaben.
 - [ ] `search_assembly` liefert mit `declarationOnly=true` keine Treffer in XML-Docs oder Kommentaren.
-- [ ] `get_impact` und `get_assembly_context` schließen bei Fremd-Assemblies ohne Testreferenzen in < 3 s ab.
+- [x] `get_impact` und `get_assembly_context` schließen bei Fremd-Assemblies ohne Testreferenzen in < 3 s ab.
 - [ ] FastTests (`Category!=Stress`) und IntegrationTests (`Category!=Stress`) laufen warnungs- und fehlerfrei.
 - [ ] Dokumentation & MCP-Schemas synchronisiert (`Docs/configuration.md`, `.agents/rules/AiNetLinter-McpWorkflow.mdc`, `AiNetLinter.mdc`).

@@ -8,7 +8,8 @@
 - `src/AiNetLinter/Mcp/Tools/TypeHierarchy/FindImplementationsTool.cs`: Neues Tool für Interface-/Override-Implementierungen (EPIC-05).
 
 ## Betroffene Dateien und Symbole
-- `AssemblyAnalysisContextTool.cs` / `GetImpactTool.cs`: Heuristik/Prüfung auf Testframework-Referenzen (`HasTestFrameworkReferences`).
+- `TestDetector.cs`: `HasTestFrameworkReferences`, `IsTestFrameworkReference`, `IsDecompiledAssemblyProject`.
+- `TestCoverageBatchScan.cs`: `FindTestsForSymbolsCoreAsync`, `ScanAllTestDocumentsAsync`, `ShouldScanProject`.
 - `AssemblySearchTool.cs`: `declarationOnly`, `kind`-Filter in `ExecuteAsync` / `SearchMembers`.
 - `ResolveTypeOriginTool.cs`: `ResolveTypeOriginRequest`, `ResolveTypeOriginResultDto`.
 - `OutgoingCallScanner.cs`: Behandlung externer Symbole (`symbol.ContainingAssembly != compilation.Assembly`), `includeBcl`-Flag.
@@ -22,6 +23,7 @@
 - `Roslyn`: `Compilation.References`, `MetadataReference`, `INamedTypeSymbol`, `SymbolFinder`.
 
 ## Relevante Tests, Konfiguration und Dokumentation
+- `src/AiNetLinter.FastTests/Core/TestCoverageAssemblyShortCircuitTests.cs`: Unit-Tests für Assembly Test-Short-Circuit.
 - `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/`: FastTests für `AssemblySearchTool` und Kontext.
 - `src/AiNetLinter.FastTests/Mcp/Tools/SymbolGraph/`: FastTests für Outgoing-Calls, Typauflösung und Implementierungssuche.
 - `src/AiNetLinter.IntegrationTests/Mcp/`: E2E-MCP-Tests für neue Tools und Routen.

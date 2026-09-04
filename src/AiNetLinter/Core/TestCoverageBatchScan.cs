@@ -45,6 +45,14 @@ public static partial class TestCoverageScanner
             return BuildBatchResult(targets, []);
         }
 
+        // Performance Short-Circuit: wenn alle Projekte dekompilierte Assemblies ohne Testframework-Referenzen sind
+        if (solution.ProjectIds.Count > 0 && solution.Projects.All(p => TestDetector.IsDecompiledAssemblyProject(p) && !TestDetector.HasTestFrameworkReferences(p)))
+        {
+            var emptyMatches = new List<TestFileCoverageResult>[targets.Count];
+            for (var i = 0; i < targets.Count; i++) emptyMatches[i] = [];
+            return BuildBatchResult(targets, emptyMatches);
+        }
+
         if (counters is { } activeCounters)
         {
             Interlocked.Increment(ref activeCounters.TestSolutionScans);
@@ -87,16 +95,37 @@ public static partial class TestCoverageScanner
         foreach (var project in solution.Projects)
         {
             if (ct.IsCancellationRequested) break;
-            if (!TestDetector.IsTestProjectOrHasTestFiles(project)) continue;
+            if (!ShouldScanProject(project)) continue;
 
-            foreach (var document in project.Documents)
-            {
-                if (ct.IsCancellationRequested) break;
-                await ScanDocumentAgainstTargetsAsync(document, solutionDir, states, ct);
-            }
+            await ScanProjectDocumentsAsync(project, solutionDir, states, ct).ConfigureAwait(false);
         }
 
         return states.Select(state => state.Files).ToArray();
+    }
+
+    private static bool ShouldScanProject(Project project)
+    {
+        if (TestDetector.IsDecompiledAssemblyProject(project) && !TestDetector.HasTestFrameworkReferences(project))
+        {
+            return false;
+        }
+
+        return TestDetector.IsTestProjectOrHasTestFiles(project);
+    }
+
+    private static async Task ScanProjectDocumentsAsync(
+        Project project,
+        string solutionDir,
+        BatchTargetState[] states,
+        CancellationToken ct)
+    {
+        var isTestProject = TestDetector.IsTestProject(project);
+        foreach (var document in project.Documents)
+        {
+            if (ct.IsCancellationRequested) break;
+            if (!isTestProject && !TestDetector.IsTestFile(document.FilePath ?? "")) continue;
+            await ScanDocumentAgainstTargetsAsync(document, solutionDir, states, ct).ConfigureAwait(false);
+        }
     }
 
     private static async Task ScanDocumentAgainstTargetsAsync(

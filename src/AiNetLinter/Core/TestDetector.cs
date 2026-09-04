@@ -80,6 +80,11 @@ public static class TestDetector
     /// </summary>
     public static bool IsTestProject(Project project, IReadOnlyList<string>? testProjectNameSuffixes = null)
     {
+        if (IsDecompiledAssemblyProject(project) && !HasTestFrameworkReferences(project))
+        {
+            return false;
+        }
+
         foreach (var reference in project.MetadataReferences)
         {
             if (IsTestReference(reference.Display))
@@ -111,6 +116,11 @@ public static class TestDetector
     /// </summary>
     public static bool IsTestProjectOrHasTestFiles(Project project, IReadOnlyList<string>? testProjectNameSuffixes = null)
     {
+        if (IsDecompiledAssemblyProject(project) && !HasTestFrameworkReferences(project))
+        {
+            return false;
+        }
+
         if (IsTestProject(project, testProjectNameSuffixes)) return true;
         return project.Documents.Any(d => d.FilePath != null && IsTestFile(d.FilePath));
     }
@@ -171,6 +181,55 @@ public static class TestDetector
             }
         }
         return false;
+    }
+
+    private static readonly string[] TestFrameworkKeywords =
+    [
+        "xunit", "nunit", "testplatform", "unittesting", "mstest"
+    ];
+
+    /// <summary>
+    /// Prüft, ob ein Roslyn-Projekt Referenzen auf bekannte Testframeworks (xUnit, NUnit, MSTest, TestPlatform) besitzt.
+    /// </summary>
+    public static bool HasTestFrameworkReferences(Project project)
+    {
+        foreach (var reference in project.MetadataReferences)
+        {
+            if (IsTestFrameworkReference(reference.Display))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Prüft, ob ein Referenzpfad oder DisplayName auf ein bekanntes Testframework verweist.
+    /// </summary>
+    public static bool IsTestFrameworkReference(string? display)
+    {
+        if (string.IsNullOrEmpty(display)) return false;
+
+        foreach (var keyword in TestFrameworkKeywords)
+        {
+            if (display.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Prüft, ob es sich um ein synthetisches Projekt aus einer dekompilierten Fremd-Assembly handelt.
+    /// </summary>
+    public static bool IsDecompiledAssemblyProject(Project project)
+    {
+        return project.Id.ToString().Contains("decompiled-assembly", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(project.Name, "decompiled-assembly", StringComparison.OrdinalIgnoreCase)
+            || (project.FilePath != null && project.FilePath.Contains("decompiled-assembly", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsTestReference(string? display)
