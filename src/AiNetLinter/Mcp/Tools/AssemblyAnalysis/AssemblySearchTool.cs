@@ -30,11 +30,11 @@ internal static class AssemblySearchTool
     private static readonly RegexOptions SearchRegexOptions =
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant;
     private static readonly string[] MinifiedMarkers = [".min.", ".bundle."];
-    private static readonly IReadOnlyDictionary<string, string> BuiltInPatterns =
+    internal static readonly IReadOnlyDictionary<string, string> BuiltInPatterns =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             [DataAccessSearchKind] =
-                @"\b(DbContext|IDbConnection|SqlConnection|NpgsqlConnection|MySqlConnection|Execute(?:Async)?|FromSql(?:Raw|Interpolated)?|SaveChanges(?:Async)?|BeginTransaction(?:Async)?|TransactionScope|SELECT|INSERT|UPDATE|DELETE|File\.(?:Read|Write|Open)|Directory\.)\b",
+                @"\b(DbContext|DbSet|IDbConnection|DbCommand|SqlConnection|NpgsqlConnection|MySqlConnection|SqliteConnection|Execute(?:Reader|NonQuery|Scalar|Sql|SqlRaw|Interpolated|Async)?|FromSql(?:Raw|Interpolated)?|SaveChanges(?:Async)?|BeginTransaction(?:Async)?|TransactionScope|Dapper|DataContext|SELECT\s+.*?\s+FROM|INSERT\s+INTO|UPDATE\s+.*?\s+SET|DELETE\s+FROM|EXEC(?:UTE)?\s+[a-zA-Z0-9_#]+|File\.(?:Read|Write|Open)\w*|Directory\.\w+)\b",
             [ExternalCallsSearchKind] =
                 @"\b(HttpClient|HttpRequestMessage|WebClient|RestClient|GrpcChannel|ChannelBase|Socket|TcpClient|Process\.Start|Assembly\.Load)\b",
         };
@@ -134,7 +134,7 @@ internal static class AssemblySearchTool
         var kind = NormalizeKind(arguments.SearchKind)!;
         var pattern = ResolvePattern(kind, arguments.Pattern);
         var regex = CreateRegex(pattern, arguments.IsRegex || arguments.Pattern is null);
-        var fileFilter = CreateOptionalRegex(arguments.FileFilter, "fileFilter");
+        var fileFilter = AssemblyFileFilter.Create(arguments.FileFilter, "fileFilter");
         var accumulator = ScanFiles(root, arguments, pattern, regex, fileFilter, cancellationToken);
         return BuildPayload(kind, pattern, arguments, accumulator);
     }
@@ -241,7 +241,7 @@ internal static class AssemblySearchTool
         AssemblySearchArguments arguments,
         string pattern,
         Regex regex,
-        Regex? fileFilter,
+        AssemblyFileFilter? fileFilter,
         CancellationToken cancellationToken)
     {
         var accumulator = new AssemblySearchAccumulator(
@@ -311,7 +311,7 @@ internal static class AssemblySearchTool
         }
     }
 
-    private static bool ShouldSkip(string relativePath, Regex? fileFilter) =>
+    private static bool ShouldSkip(string relativePath, AssemblyFileFilter? fileFilter) =>
         FileSystemExclusionHelpers.IsSearchExcludedRelativePath(relativePath)
         || IsMinified(relativePath)
         || fileFilter is not null && !fileFilter.IsMatch(relativePath);
@@ -320,19 +320,6 @@ internal static class AssemblySearchTool
         useRegex
             ? new Regex(pattern, SearchRegexOptions, RegexTimeout)
             : new Regex(Regex.Escape(pattern), SearchRegexOptions, RegexTimeout);
-
-    private static Regex? CreateOptionalRegex(string? pattern, string parameterName)
-    {
-        if (string.IsNullOrWhiteSpace(pattern)) return null;
-        try
-        {
-            return new Regex(pattern, SearchRegexOptions, RegexTimeout);
-        }
-        catch (ArgumentException exception)
-        {
-            throw new ArgumentException($"{parameterName} muss ein gueltiger Regex-Filter sein: {exception.Message}", parameterName, exception);
-        }
-    }
 
     private static string ResolvePattern(string kind, string? pattern) =>
         string.IsNullOrWhiteSpace(pattern) ? BuiltInPatterns[kind] : pattern;
@@ -432,7 +419,7 @@ internal sealed record AssemblySearchFileParameters(
     AssemblySearchArguments Arguments,
     string Pattern,
     Regex Regex,
-    Regex? FileFilter,
+    AssemblyFileFilter? FileFilter,
     AssemblySearchAccumulator Accumulator,
     CancellationToken CancellationToken)
 {
@@ -476,3 +463,114 @@ internal sealed record AssemblySearchMatch(
     IReadOnlyList<string> ContextAfter);
 
 internal sealed record AssemblySearchMatchRange(int Column, int Length);
+
+internal sealed class AssemblyFileFilter
+{
+    private static readonly RegexOptions FilterRegexOptions =
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant;
+    private static readonly TimeSpan FilterTimeout = TimeSpan.FromMilliseconds(100);
+
+    private readonly Regex _regex;
+    private readonly bool _isNegated;
+
+    private AssemblyFileFilter(Regex regex, bool isNegated)
+    {
+        _regex = regex;
+        _isNegated = isNegated;
+    }
+
+    internal static AssemblyFileFilter? Create(string? pattern, string parameterName)
+    {
+        if (string.IsNullOrWhiteSpace(pattern)) return null;
+
+        var trimmed = pattern.Trim();
+        var isNegated = false;
+        if (trimmed.StartsWith('!'))
+        {
+            isNegated = true;
+            trimmed = trimmed[1..].Trim();
+            if (string.IsNullOrWhiteSpace(trimmed)) return null;
+        }
+
+        if (IsGlobPattern(trimmed))
+        {
+            var regexPattern = ConvertGlobToRegex(trimmed);
+            try
+            {
+                var regex = new Regex(regexPattern, FilterRegexOptions, FilterTimeout);
+                return new AssemblyFileFilter(regex, isNegated);
+            }
+            catch (ArgumentException exception)
+            {
+                throw new ArgumentException($"{parameterName} ungueltiger Glob-Filter: {exception.Message}", parameterName, exception);
+            }
+        }
+
+        try
+        {
+            var regex = new Regex(trimmed, FilterRegexOptions, FilterTimeout);
+            return new AssemblyFileFilter(regex, isNegated);
+        }
+        catch (ArgumentException exception)
+        {
+            throw new ArgumentException($"{parameterName} muss ein gueltiger Glob- oder Regex-Filter sein: {exception.Message}", parameterName, exception);
+        }
+    }
+
+    internal bool IsMatch(string relativePath)
+    {
+        var normalized = relativePath.Replace('\\', '/');
+        var fileName = Path.GetFileName(normalized);
+        var matched = _regex.IsMatch(normalized) || _regex.IsMatch(fileName);
+        return _isNegated ? !matched : matched;
+    }
+
+    private static bool IsGlobPattern(string text)
+    {
+        if (text.Contains("(?") || text.Contains(@"\b") || text.Contains(@"\d") || text.Contains(@"\w") || text.Contains(@"\s") || text.StartsWith('^') || text.EndsWith('$'))
+        {
+            return false;
+        }
+
+        return text.Contains('*') || text.Contains('?');
+    }
+
+    internal static string ConvertGlobToRegex(string glob)
+    {
+        var sb = new StringBuilder("^");
+        foreach (var c in glob)
+        {
+            switch (c)
+            {
+                case '*':
+                    sb.Append(".*");
+                    break;
+                case '?':
+                    sb.Append('.');
+                    break;
+                case '/':
+                case '\\':
+                    sb.Append("[/\\\\]");
+                    break;
+                case '.':
+                case '$':
+                case '^':
+                case '{':
+                case '}':
+                case '(':
+                case ')':
+                case '+':
+                case '|':
+                case '[':
+                case ']':
+                    sb.Append('\\').Append(c);
+                    break;
+                default:
+                    sb.Append(c);
+                    break;
+            }
+        }
+        sb.Append('$');
+        return sb.ToString();
+    }
+}
