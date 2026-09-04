@@ -2,6 +2,7 @@
 
 using System;
 using System.Linq;
+using System.Text;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -180,4 +181,45 @@ public sealed partial class AssemblyAnalysisToolTests
             "needle",
             Array.Empty<string>(),
             Array.Empty<string>());
+
+    [Fact]
+    public void ApplyWireBudget_PreservesReadableTextInsteadOfDeletingIt()
+    {
+        var text = "# Klasse MyType\n| Kind | Name | Lines |\n| Method | DoWork | 1-10 |\n";
+        var result = McpToolResults.Text(
+            text,
+            new
+            {
+                types = Enumerable.Range(0, 50).Select(index => new { id = $"T{index}", name = $"Type{index}" }).ToArray(),
+                members = Enumerable.Range(0, 50).Select(index => new { id = $"M{index}", name = $"Member{index}" }).ToArray(),
+            });
+
+        var projected = AssemblyAnalysisResponse.ApplyWireBudget(result, 4096, 0);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(projected.Content));
+
+        Assert.Contains("# Klasse MyType", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("StructuredContent ist die kanonische Nutzlast", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TrimUtf8_HandlesMultiByteAndEdgeCasesWithoutException()
+    {
+        // Multi-byte string (100 'ä' = 200 Bytes in UTF-8, aber nur 100 Zeichen lang)
+        var umlautText = new string('ä', 100);
+        // maxBytes = 150: früher Absturz mit ArgumentOutOfRangeException wegen limit = 147 > value.Length (100)
+        var trimmedUmlaut = AssemblyAnalysisResponse.TrimUtf8(umlautText, 150);
+        Assert.EndsWith("…", trimmedUmlaut, StringComparison.Ordinal);
+        Assert.True(Encoding.UTF8.GetByteCount(trimmedUmlaut) <= 150);
+
+        // Sehr kleine Budgets
+        Assert.Equal(string.Empty, AssemblyAnalysisResponse.TrimUtf8("Hallo", 0));
+        Assert.Equal(".", AssemblyAnalysisResponse.TrimUtf8("Hallo", 1));
+        Assert.Equal(".", AssemblyAnalysisResponse.TrimUtf8("Hallo", 2));
+        Assert.Equal("…", AssemblyAnalysisResponse.TrimUtf8("Hallo", 3));
+
+        // Surrogate pair
+        var emojiText = "A\U0001F600B"; // 4 Bytes fuer Emoji
+        var trimmedEmoji = AssemblyAnalysisResponse.TrimUtf8(emojiText, 6);
+        Assert.True(Encoding.UTF8.GetByteCount(trimmedEmoji) <= 6);
+    }
 }
