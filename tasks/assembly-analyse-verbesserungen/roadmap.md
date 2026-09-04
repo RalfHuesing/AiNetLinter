@@ -46,7 +46,7 @@ Großkonzept-Modus. Grundlage ist `Konzept.md` mit `status: ready`.
 ## Ausführungsstand
 
 - current_epic: Finale Orchestrator-Gates
-- letzter fachlicher Commit: `bbe0d2dc` (Audit-Checkpoint); finaler Artefakt-Checkpoint folgt
+- letzter fachlicher Commit: `bbe0d2dc` (Audit-Checkpoint); finale Artefaktverifikation: `ff36df76`
 - current_debt_item: P1 `BudgetProjection/Envelope` in `tech-debt.md`, `accepted-deferred`, Attempts 0
 - debt_attempts: 0
 - Blocker: keiner; MCP-Symbol-/Violations-Nachweis am Projektroot erfolgreich, initialer Solution-Pfad- und Timeout-Versuch als Diagnose dokumentiert
