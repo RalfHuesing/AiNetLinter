@@ -53,19 +53,20 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? scopeFilter = null, int maxResults = GetViolationsScanner.DefaultMaxResults, int contextLines = 2, bool includeSnippet = false, CancellationToken ct = default) =>
+            async (string targetType, string targetPath, string? scopeFilter = null, string? ruleId = null, string? minSeverity = null, int maxResults = GetViolationsScanner.DefaultMaxResults, int contextLines = 2, bool includeSnippet = false, CancellationToken ct = default) =>
                 await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
-                    lease => GetViolationsTool.ExecuteAsync(lease.Server, new GetViolationsToolExecutionOptions(scopeFilter, maxResults, contextLines, includeSnippet), ct)),
+                    lease => GetViolationsTool.ExecuteAsync(lease.Server, new GetViolationsToolExecutionOptions(scopeFilter, maxResults, contextLines, includeSnippet, ruleId, minSeverity), ct)),
             McpToolRegistrationOptions.ReadOnlyTool("get_violations", GetViolationsDescription)));
     }
 
     private const string GetViolationsDescription =
         "Wann nutzen: aktuelle Lint-Regelverstoesse der Solution abfragen — nach jedem Edit " +
         "erneut aufrufbar, kein Disk-Cache. scopeFilter: Projekt-Name oder Pfad-Substring zur " +
-        "Eingrenzung, maxResults: Begrenzung der Trefferliste (Default 50). " +
+        "Eingrenzung. ruleId: Filter auf bestimmte Regel (z. B. 'ANL0021'). minSeverity: 'info', 'warning' oder 'error'. " +
+        "maxResults: Begrenzung der Trefferliste (Default 50). " +
         "includeSnippet=true gibt den Quellcode-Ausschnitt mit (contextLines 0-5, Default 2).";
 
     private static void AddSafeguard(

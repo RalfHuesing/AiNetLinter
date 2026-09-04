@@ -335,4 +335,36 @@ public sealed class GetViolationsToolTests
         Assert.NotNull(violations);
         Assert.All(violations!, v => Assert.Null(v.Snippet));
     }
+
+    [Fact]
+    public async Task ExecuteAsync_FilterByRuleId_ReturnsOnlyMatchingRuleViolations()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetViolationsTool.ExecuteAsync(
+            state, new GetViolationsToolExecutionOptions(RuleId: "NonExistingRuleXyz"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var violations = result.StructuredContent!.Value.GetProperty("violations")
+            .Deserialize<List<RuleViolation>>(McpJsonOptions.Default);
+        Assert.NotNull(violations);
+        Assert.Empty(violations!);
+    }
+
+    [Fact]
+    public void FilterAndSortViolations_WithMinSeverity_FiltersOutLowerSeverities()
+    {
+        var violations = new List<RuleViolation>
+        {
+            new() { FilePath = "A.cs", LineNumber = 1, RuleName = "Rule1", Details = "", Guidance = "", EffectiveSeverity = "info" },
+            new() { FilePath = "B.cs", LineNumber = 2, RuleName = "Rule2", Details = "", Guidance = "", EffectiveSeverity = "error" },
+        };
+        var fileToProject = new Dictionary<string, string>();
+
+        var filtered = ViolationScopeFilter.FilterAndSortViolations(
+            "", fileToProject, violations, new ViolationFilterOptions(MinSeverity: "error"));
+
+        Assert.Single(filtered);
+        Assert.Equal("Rule2", filtered[0].RuleName);
+    }
 }

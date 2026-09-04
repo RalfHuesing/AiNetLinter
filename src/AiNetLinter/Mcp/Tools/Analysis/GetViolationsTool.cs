@@ -53,7 +53,9 @@ internal static class GetViolationsTool
                 UsedDefaultConfig: configSnapshot.UsedDefaultConfig,
                 MaxResults: normalizedMaxResults,
                 ContextLines: options.ContextLines,
-                IncludeSnippet: options.IncludeSnippet));
+                IncludeSnippet: options.IncludeSnippet,
+                RuleId: options.RuleId,
+                MinSeverity: options.MinSeverity));
 
         // Echte Malfunction (unerwartete Exception in der LinterEngine) -> IsError=true mit
         // Retry-once-Hinweis, siehe IsErrorPolicy.md. Normale Reports (auch "0 Violations" oder
@@ -87,4 +89,6 @@ internal sealed record GetViolationsToolExecutionOptions(
     string? ScopeFilter = null,
     int MaxResults = GetViolationsScanner.DefaultMaxResults,
     int ContextLines = 2,
-    bool IncludeSnippet = false);
+    bool IncludeSnippet = false,
+    string? RuleId = null,
+    string? MinSeverity = null);

@@ -81,10 +81,8 @@ internal static class GetViolationsScanner
                 Context: ex.Message);
         }
 
-        // Einmal gefiltert/sortiert, um IsTruncated hier UND in FormatReport (das dieselbe Logik
-        // fuer seinen eigenen, direkt getesteten Vertrag erneut ausfuehrt) konsistent zu halten —
-        // die zweite Ausfuehrung ist ein reines In-Memory Where/OrderBy, kein zweiter Lint-Lauf.
-        var filtered = ViolationScopeFilter.FilterAndSortViolations(solutionDir, fileToProject, violations, scopeFilter);
+        var filterOptions = new ViolationFilterOptions(scopeFilter, p.RuleId, p.MinSeverity);
+        var filtered = ViolationScopeFilter.FilterAndSortViolations(solutionDir, fileToProject, violations, filterOptions);
         var isTruncated = filtered.Count > maxResults;
 
         IReadOnlyList<RuleViolation> finalViolations;
@@ -105,7 +103,7 @@ internal static class GetViolationsScanner
             finalViolations = filtered;
         }
 
-        var reportText = FormatReport(solutionDir, fileToProject, finalViolations, scopeFilter, usedDefaultConfig, maxResults);
+        var reportText = FormatReport(solutionDir, fileToProject, finalViolations, filterOptions, usedDefaultConfig, maxResults);
         var shown = isTruncated ? finalViolations.Take(maxResults).ToList() : finalViolations;
 
         return new GetViolationsResult(
@@ -192,14 +190,23 @@ internal static class GetViolationsScanner
         IReadOnlyCollection<RuleViolation> violations,
         string? scopeFilter,
         bool usedDefaultConfig,
+        int maxResults = DefaultMaxResults) =>
+        FormatReport(solutionDir, fileToProject, violations, new ViolationFilterOptions(scopeFilter), usedDefaultConfig, maxResults);
+
+    internal static string FormatReport(
+        string solutionDir,
+        Dictionary<string, string> fileToProject,
+        IReadOnlyCollection<RuleViolation> violations,
+        ViolationFilterOptions filterOptions,
+        bool usedDefaultConfig,
         int maxResults = DefaultMaxResults)
     {
-        var filtered = ViolationScopeFilter.FilterAndSortViolations(solutionDir, fileToProject, violations, scopeFilter);
-        var matchingFileCount = ViolationScopeFilter.CountMatchingFiles(fileToProject, solutionDir, scopeFilter);
+        var filtered = ViolationScopeFilter.FilterAndSortViolations(solutionDir, fileToProject, violations, filterOptions);
+        var matchingFileCount = ViolationScopeFilter.CountMatchingFiles(fileToProject, solutionDir, filterOptions.ScopeFilter);
 
-        if (matchingFileCount == 0 && !string.IsNullOrWhiteSpace(scopeFilter))
+        if (matchingFileCount == 0 && !string.IsNullOrWhiteSpace(filterOptions.ScopeFilter))
         {
-            return $"Keine Dateien im Scope (Filter: '{scopeFilter}') — Filter pruefen.";
+            return $"Keine Dateien im Scope (Filter: '{filterOptions.ScopeFilter}') — Filter pruefen.";
         }
 
         var sb = new StringBuilder();
@@ -212,7 +219,11 @@ internal static class GetViolationsScanner
             sb.AppendLine("Basis: Default-Regeln, keine rules.json gefunden");
             sb.AppendLine();
         }
-        var scopeSuffix = string.IsNullOrWhiteSpace(scopeFilter) ? "" : $" | Scope-Filter: '{scopeFilter}'";
+        var filterDetails = new List<string>();
+        if (!string.IsNullOrWhiteSpace(filterOptions.ScopeFilter)) filterDetails.Add($"Scope: '{filterOptions.ScopeFilter}'");
+        if (!string.IsNullOrWhiteSpace(filterOptions.RuleId)) filterDetails.Add($"Regel: '{filterOptions.RuleId}'");
+        if (!string.IsNullOrWhiteSpace(filterOptions.MinSeverity)) filterDetails.Add($"Min-Severity: '{filterOptions.MinSeverity}'");
+        var scopeSuffix = filterDetails.Count > 0 ? " | " + string.Join(", ", filterDetails) : "";
         sb.AppendLine($"Lint-Violations: {filtered.Count} Verstoesse in {matchingFileCount} Dateien im Scope{scopeSuffix}");
         sb.AppendLine();
 
@@ -298,7 +309,9 @@ internal sealed record GetViolationsScannerParameters(
     bool UsedDefaultConfig = false,
     int MaxResults = GetViolationsScanner.DefaultMaxResults,
     int ContextLines = 0,
-    bool IncludeSnippet = false);
+    bool IncludeSnippet = false,
+    string? RuleId = null,
+    string? MinSeverity = null);
 
 /// <summary>
 /// Ergebnis-Record fuer <see cref="GetViolationsScanner.BuildViolationsTextAsync"/>.

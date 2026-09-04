@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AiNetLinter.Baseline;
+using AiNetLinter.Core;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -64,13 +65,25 @@ internal static class ViolationScopeFilter
     /// </summary>
     internal static IReadOnlyList<RuleViolation> FilterAndSortViolations(
         string solutionDir, Dictionary<string, string> fileToProject,
-        IReadOnlyCollection<RuleViolation> violations, string? scopeFilter)
+        IReadOnlyCollection<RuleViolation> violations, string? scopeFilter) =>
+        FilterAndSortViolations(solutionDir, fileToProject, violations, new ViolationFilterOptions(scopeFilter));
+
+    internal static IReadOnlyList<RuleViolation> FilterAndSortViolations(
+        string solutionDir, Dictionary<string, string> fileToProject,
+        IReadOnlyCollection<RuleViolation> violations, ViolationFilterOptions filterOptions)
     {
         return violations
             .Where(v =>
             {
                 var projectName = LookupProjectName(fileToProject, v.FilePath) ?? string.Empty;
-                return MatchesScope(v.FilePath, projectName, solutionDir, scopeFilter);
+                if (!MatchesScope(v.FilePath, projectName, solutionDir, filterOptions.ScopeFilter)) return false;
+                if (!string.IsNullOrWhiteSpace(filterOptions.RuleId)
+                    && !v.RuleName.Equals(filterOptions.RuleId.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+                if (!MatchesMinSeverity(v, filterOptions.MinSeverity)) return false;
+                return true;
             })
             .OrderBy(v => v.FilePath, StringComparer.OrdinalIgnoreCase)
             .ThenBy(v => v.LineNumber)
@@ -78,8 +91,32 @@ internal static class ViolationScopeFilter
             .ToList();
     }
 
+    private static bool MatchesMinSeverity(RuleViolation violation, string? minSeverity)
+    {
+        if (string.IsNullOrWhiteSpace(minSeverity)) return true;
+        var requiredRank = SeverityRank(minSeverity);
+        if (requiredRank == 0) return true;
+        var actualSeverity = RuleRegistry.ResolveSeverity(violation);
+        var actualRank = SeverityRank(actualSeverity);
+        return actualRank >= requiredRank;
+    }
+
+    private static int SeverityRank(string severity) =>
+        severity.Trim().ToLowerInvariant() switch
+        {
+            "error" => 3,
+            "warning" => 2,
+            "info" => 1,
+            _ => 0,
+        };
+
     private static string? LookupProjectName(Dictionary<string, string> fileToProject, string filePath)
     {
         return fileToProject.TryGetValue(filePath, out var name) ? name : null;
     }
 }
+
+internal sealed record ViolationFilterOptions(
+    string? ScopeFilter = null,
+    string? RuleId = null,
+    string? MinSeverity = null);
