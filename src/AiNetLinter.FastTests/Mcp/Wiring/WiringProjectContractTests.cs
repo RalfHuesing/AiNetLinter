@@ -96,7 +96,7 @@ public sealed class WiringProjectContractTests
         };
         Assert.Equal(13, assemblyCapabilityMatrix.Length);
         Assert.All(assemblyCapabilityMatrix, toolName => Assert.Contains(toolName, ServerInstructions.Text, StringComparison.Ordinal));
-        Assert.Contains("Assembly-only: inspect_assembly und find_assembly_extensions", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("Assembly-only: inspect_assembly, find_assembly_extensions, search_assembly", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("get_impact akzeptiert fuer Assemblys nur symbolIdentifier", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("ainetlinter.project.json", ServerInstructions.Text, StringComparison.Ordinal);
     }

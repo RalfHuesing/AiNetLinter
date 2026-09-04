@@ -347,6 +347,16 @@ Body und Klassenstruktur. `maxResponseBytes` bzw. `detailLevel` steuern das Budg
 Assembly-Payload weist additive `totalCount`, `returnedCount`, `isTruncated` und
 `continuationToken` sowie stabile Typ-/Member-IDs aus.
 
+Für eine Assembly-Volltextsuche wird `search_assembly` verwendet. `searchKind="text"`
+benötigt ein eigenes Pattern; `data_access` und `external_calls` verwenden ohne
+Pattern die dokumentierten eingebauten Regexe. Die Treffer sind relative Pfade zum
+effektiven Source-/Decompiler-Root und besitzen stabile IDs. `completeness`,
+`truncatedBy`, `totalCount`, `returnedCount` und `continuationToken` sind die
+verbindliche Folgeaufrufinformation; bei `maxFiles` muss der Dateiscope zusätzlich
+erhöht werden. Ohne Root antwortet das Tool explizit mit `unsupported`. Für
+Semantik eines Treffers folgt ein Assembly-`find_symbol`-/Body-/Referenz-/Call-Tree-
+oder Impact-Aufruf. `search_pattern` bleibt auf Projektziele beschränkt.
+
 Für Legacy-MCP wird der Server über `initialize` ausgehandelt. Clients der Protokollversion `2026-07-28` verwenden stattdessen `server/discover` ohne separaten `initialized`-Schritt. Dieser Request trägt unter `params._meta` die Protokollversion, Client-Info und Client-Capabilities; dieselben Metadaten gehören auch in nachfolgende Requests wie `tools/list`.
 
 ### MCP-Tool-Annotations
@@ -516,6 +526,7 @@ Konkret:
 - Metriken & Komplexität eines Symbols prüfen → `metrics_lookup(symbolIdentifiers: ["MyClass.MyMethod"])`
 - Konfigwert in `.json` finden → `search_pattern(pattern: "MySetting")` (oder direkt `rg`, das ist hier äquivalent)
 - TODO-Kommentare listen → `search_pattern(pattern: "TODO", isRegex: false)` (oder `rg "TODO"`)
+- Text in einer externen Assembly suchen → `search_assembly(targetPath: "C:/libs/Library.dll", searchKind: "text", pattern: "Repository", maxResults: 20)`; für typische Persistenz-/Datenzugriffe `searchKind: "data_access"`, für HTTP/RPC/Socket/Prozessaufrufe `searchKind: "external_calls"`
 - Lint-Stand einer Datei → `get_violations(scopeFilter: "src/MeinProjekt/Service.cs")`
 - Produktions-Hotspots isolieren → `get_hotspots(scopeType: "production")`; `tests` und `all` sind ebenfalls möglich. `get_index_scope` zeigt die tatsächlich vorhandenen Dateiendungen einschließlich Nicht-C#-Dateien ohne künstliche Null-Einträge.
 
@@ -530,7 +541,21 @@ aktiven Regeln und Schwellwerten. Details: [Docs/agent-api.md](agent-api.md).
 
 ### Mehrere parallele Server-Instanzen
 
-Pro Solution ein eigener Server-Prozess — die Cache-Isolation zwischen verschiedenen Solutions ist SHA-256-basiert (Implementierung in `AnalysisCacheManager`), der Nutzer braucht nichts zu konfigurieren. Ein gleichzeitiger CLI-Lint-Lauf auf derselben Solution kollidiert nicht mit dem MCP-Server-Cache, weil `get_violations` den Disk-Cache umgeht.
+Mehrere Daemon-Instanzen sind mit einem gemeinsamen Cache grundsätzlich unterstützt.
+Der konfigurierte Cache-Stamm wird mit einem stabilen Daemon-Profil deterministisch
+als Suffix versehen, etwa `cache.codex`. Gleiche Profile verwenden denselben
+prozesssicher gelockten Cache; Generationen werden über Writer-/Reader-Leases und
+Retention geschützt. Unterschiedliche Profile, etwa `codex-a` und `codex-b`,
+erzeugen getrennte Cache-Stämme und sind für bewusst isolierte Instanzen zu
+verwenden. Prozess-IDs sind keine Cache-Identität. Health und Assembly-Antworten
+zeigen Profil, Generation, Lock-/Lease- und Cleanup-Status; private Repository-URLs
+und Credentials werden nicht ausgegeben. Bei stale oder nicht löschbaren Artefakten
+bleibt der Zustand als Quarantäne mit Ursache, Besitzer und TTL sichtbar und wird
+nicht als gültiger Checkout wiederverwendet.
+
+Ein gleichzeitiger CLI-Lint-Lauf auf derselben Solution kollidiert nicht mit dem
+MCP-Server-Cache, weil `get_violations` den Disk-Cache umgeht. Assembly-Suche und
+die anschließenden Assembly-Navigationstools bleiben read-only.
 
 ---
 

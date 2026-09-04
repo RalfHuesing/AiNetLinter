@@ -33,7 +33,7 @@ Großkonzept-Modus. Grundlage ist `Konzept.md` mit `status: ready`.
 - Betroffene Bereiche: Assembly-Suche, MCP-Registrierungen/Capabilities, Testinfrastruktur, `Docs/integration.md`, betroffene MCP-Vertragsdokumentation.
 - Muss-/Akzeptanzkriterien: Konzept-Kriterien 10–30, insbesondere 15, 20–24 und die vollständige Source-/Cache-/Antwortbudget-Abdeckung.
 - Verifikation: gezielte E2E-/Integration-/Stress-Tests nach Kategorien, Dokumentationsabgleich, anschließend vollständige Nicht-Stress-Gates.
-- Status: open
+- Status: in_progress (Implementierung abgeschlossen; Review ausstehend)
 
 ## Abschluss-Checkliste
 
@@ -45,8 +45,8 @@ Großkonzept-Modus. Grundlage ist `Konzept.md` mit `status: ready`.
 
 ## Ausführungsstand
 
-- current_epic: Epic 3
-- letzter Commit: `b0b28e2c` (Epic-2-Implementierungscheckpoint); Epic-2-Review-Checkpoint folgt
+- current_epic: Epic 3 Review
+- letzter Commit: `2866bd40` (Epic-2-Abschlusscheckpoint); Epic-3-Checkpoint folgt
 - current_debt_item: P1 `BudgetProjection/Envelope` in `tech-debt.md`, `accepted-deferred`, Attempts 0
 - debt_attempts: 0
 - Blocker: keiner

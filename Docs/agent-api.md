@@ -339,6 +339,7 @@ Reference-Expansion ist im eigenen Toolabschnitt beschrieben.
 | `get_symbol_body`, `find_references`, `get_call_tree`, `get_type_hierarchy`, `dependency_graph` | supported | supported | supported | nur statisch auflösbare Nodes; Diagnosen bleiben sichtbar |
 | `metrics_tree`, `metrics_lookup` | supported | supported | supported | berechnet auf dem jeweiligen Snapshot |
 | `inspect_assembly`, `find_assembly_extensions` | n/a | supported | supported | Assembly-Target-only; Extensions ohne Consumer ggf. `not_decidable` |
+| `search_assembly` | n/a | supported | supported | Assembly-Target-only; durchsucht den verifizierten Source-/Decompiler-Root, ohne Root explizit `unsupported` |
 | `get_file_tree` | supported | supported | supported | physischer Projekt-, Source- oder dekompilierter SourceRoot-Dateibestand; bei Assembly ohne Root explizit `unsupported` |
 | `get_index_scope`, `get_hotspots` | supported | unsupported | unsupported | physischer Projekt-Dateibestand |
 | `get_violations`, `safeguard`, `pattern_detect`, `find_magic_values`, `find_dead_code` | supported | unsupported | unsupported | Regeln/Audits gelten nur für den Projekt-Key |
@@ -362,6 +363,7 @@ Source-backed Checkout-/Snapshot-Erzeugung und Decompilation bleiben read-only.
 | `inspect_assembly` | `targetPath` (Pflicht, absoluter lokaler `.dll`- oder `.exe`-Pfad), `targetType?` (Default `"assembly"`; bei `.dll`/`.exe` wird Assembly ebenfalls inferiert), `namespace?`, `typeName?`, `exactTypeName?` (Default `false`, einfache oder vollqualifizierte Exaktsuche), `memberName?` (case-insensitive Teiltext), `memberNames?` (case-insensitive exakte OR-Auswahl), `publicOnly?` (Default `true`), `includeReferences?` (Default kontextabhängig; für explizite Referenzdetails `true`/`false` setzen), `maxResults?` (Typen, Default 100, Cap 1000), `maxMembers?` (Member je Typ, Default 100, Cap 1000) | Assembly-Identität/-Referenzen sowie gefilterte Typen und Member (Methodensignaturen mit Parameternamen, strukturierte Parameter mit Typ, `ref`-Art, Optionalität und Defaultwert, Generics/Constraints, Properties, Felder, Events, Attribute); jeder Typ weist `totalMembers` und `membersTruncated` aus. Bei dekompilierten Assemblies weist der kompakte Text-Header die absoluten Pfade `decompiledProjectDirectory`, `decompiledProjectPath` und `decompiledSourceRoot` aus; dieselben drei Felder stehen im strukturierten Payload auf Top-Level. Referenzen und Referenz-Sessions sind zusätzlich auf 32 Einträge begrenzt und liefern `referenceSummary`; `diagnostics` sind Samples mit `diagnosticsSummary` (Root/transitiv, Counts, Samples, `truncatedBy`). Bei Diagnosen wird `completeness` auf `partial` projiziert; das additive `analysis`-Objekt beschreibt Herkunft, Snapshot/Generation, Status sowie `bodyAvailability` und `contentMode` | nein | ja |
 | `find_assembly_extensions` | `targetPath` (Pflicht, absoluter lokaler `.dll`- oder `.exe`-Pfad), `targetType?` (Default `"assembly"`), `receiverType?`, `extensionName?`, `namespace?`, `maxResults?` (Default 100, Cap 1000), `includeReferences?`, `maxResponseBytes?`, `detailLevel?`, `cursor?` | Klassische C#-Extensions mit strukturierten Parametern, Referenz-/Diagnose-Summaries und additivem Budget-/Paging-Envelope. | nein | ja |
 | `get_assembly_context` | `targetType="assembly"`, `targetPath` (Pflicht), `symbolIdentifier?` oder Alias `symbol?`, optionale Abschnitte für Metrics, References, Callers, Impact, Body und Class Structure, `maxResults?`, `maxBodyLines?`, `maxCallers?`, `depth?`, `topN?`, `maxResponseBytes?`, `detailLevel?` (`compact`, `standard`, `full`) und `cursor?` | Kompakter Composite-Vertrag mit stabiler `contextId`, Identität, Herkunft, Scope, Completeness und `assemblyAnalysis`. Envelope-Felder `totalCount`, `returnedCount`, `isTruncated` und `continuationToken` bleiben maschinenlesbar. | nein | ja |
+| `search_assembly` | `targetPath` (Pflicht, absoluter lokaler `.dll`- oder `.exe`-Pfad), `targetType?`, `pattern?`, `isRegex?`, `searchKind?` (`text` Default, `data_access`, `external_calls`), `maxResults?` (Default 50, Cap 1000), `maxFiles?`, `contextLines?` (Cap 5), `fileFilter?` (Regex), `maxResponseBytes?`, `cursor?` | Read-only Suche im verifizierten Source- oder dekompilierten SourceRoot. `text` benötigt ein eigenes Pattern; `data_access` und `external_calls` liefern ohne Pattern sichtbare eingebaute Regexe für typische Datenbank-/Datei-/Transaktions- bzw. HTTP-/RPC-/Socket-/Prozessaufrufe. `structuredContent.assemblySearch` enthält relative Trefferpfade, stabile `id`, Matchbereiche, Kontext, `totalCount`, `returnedCount`, `completeness`, `truncatedBy` und `continuationToken`; der gemeinsame `analysis`-Block enthält Ursprung, Generation und Source-Policy. | nein | ja |
 | `find_symbol` | `namePatterns` (Array von Namens-Mustern) **oder** `namePattern`/`symbol` (skalare String-Aliase fuer genau ein Muster; bei gemischter Eingabe hat das Array Vorrang), max. 10 Patterns pro Call; unterstuetzt Substrings, Wildcards `*` und `?`, punktseparierte Pfade wie `Type.Member` sowie `Method()`; `kind?` (Klasse/Methode/Property/Interface/Record; deutsche und englische Werte), `maxResults?` (Default 50), `includeReferences?` (Default `false`; bei `targetType="assembly"` bounded Referenz-Assemblies durchsuchen) | Fundstellen als `Datei:Zeile - Kind: Signatur` je Pattern; StructuredContent liefert immer `FindSymbolBatchDto` (`results: [{ namePattern, matches: [...] }]`); bei 0 Treffern schlaegt das Tool aehnliche Symbole im Projekt vor; mit `includeReferences=true` enthalten Treffer `origin` und das Payload eine begrenzte `navigation`-Zusammenfassung | ja | ja |
 | `find_references` | `symbolIdentifier` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte oder qualifizierter Name), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3), `includeReferences?` (Default `false`; bei `targetType="assembly"` bounded Referenz-Assemblies traversieren) | Alle Aufrufstellen; jede erfolgreiche Tiefe liefert `structuredContent.callSites` plus `completeness` mit Tiefe, Herkunft, besuchten Knoten und getrennten Trunkierungsgründen; Assembly-Antworten markieren `navigation` und partielle Diagnostics | ja | ja |
 | `get_call_tree` | `symbolIdentifier` (wie `find_references`), `depth?` (Default 2, hard cap 5), `format?` (`ascii` Default oder `mermaid`), `topN?` (Default 10, Fan-Out-Kappung pro Ebene), `direction?` (`incoming` Default, `outgoing` oder `both`), `includeReferences?` (Default `false`; bei `targetType="assembly"` bounded Referenz-Assemblies einbeziehen) | Echter Aufrufer- oder Aufgerufene-Baum (Eltern-Kind-Struktur) als ASCII-Baum oder Mermaid-`flowchart TD`; `incoming` fragt, wer das Symbol aufruft, `outgoing` fragt, welche Source-Symbole es aufruft, `both` liefert beide Richtungen abwechselnd, damit `topN` nicht eine Richtung vollständig aus der sichtbaren Ebene verdrängt; Traversierung hart begrenzt auf 250 Knoten; Assembly-Nodes tragen Herkunft und partielle Diagnostics | ja | ja |
@@ -397,6 +399,44 @@ Die Assembly-Tools liefern zusätzlich strukturierte Payloads: `inspect_assembly
 `FindAssemblyExtensionsPayload`. Beide enthalten `completeness`, Diagnosen und die
 Trunkierungsmetadaten; die Extension-Payload kennzeichnet die Roslyn-Anwendbarkeit als
 `applicable`, `not_applicable` oder `not_decidable`.
+
+`search_assembly` verwendet `AssemblySearchPayload`. Die Treffer verwenden relative
+Pfade zum effektiven Analyse-Root; Herkunft, Revision, Generation und Source-Policy
+stehen einmalig im gemeinsamen `analysis`-Block. Für weitere Seiten wird der
+`continuationToken` mit derselben Anfrage wiederverwendet. Bei `truncatedBy=maxFiles`
+ist zusätzlich `maxFiles` zu erhöhen, weil der Token nur innerhalb des gewählten
+Dateiscope fortsetzt.
+
+```json
+{
+  "assemblySearch": {
+    "searchKind": "data_access",
+    "query": "...",
+    "scope": "assembly-source-root",
+    "results": [{
+      "id": "asm-search:...",
+      "filePath": "Namespace/Service.cs",
+      "line": 42,
+      "matchRanges": [{ "column": 13, "length": 12 }],
+      "lineText": "...",
+      "contextBefore": [],
+      "contextAfter": []
+    }],
+    "totalCount": 12,
+    "returnedCount": 1,
+    "isTruncated": true,
+    "completeness": "truncated",
+    "truncatedBy": ["maxResults"],
+    "continuationToken": "1"
+  }
+}
+```
+
+`search_pattern` bleibt die projektgebundene Textsuche für Nicht-C#-Dateien und
+Konfiguration; `search_assembly` ist die passende Assembly-Operation. Semantische
+C#-Fragen zu gefundenen Symbolen werden anschließend über `find_symbol`,
+`get_symbol_body`, `find_references`, `get_call_tree` oder `get_impact` mit dem
+Assembly-Target fortgesetzt.
 
 `inspect_assembly` begrenzt mit `maxResults` die Anzahl der Typen und mit `maxMembers`
 die Member je Typ. `typeName` bleibt standardmäßig eine Teiltextsuche; mit

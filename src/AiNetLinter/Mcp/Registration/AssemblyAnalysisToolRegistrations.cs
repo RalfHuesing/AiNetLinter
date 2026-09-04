@@ -26,8 +26,65 @@ internal static class AssemblyAnalysisToolRegistrations
     {
         AddInspectAssembly(tools, assemblyRoute);
         AddFindAssemblyExtensions(tools, assemblyRoute);
+        AddSearchAssembly(tools, assemblyRoute);
         AddGetAssemblyContext(tools, assemblyRoute);
     }
+
+    private static void AddSearchAssembly(
+        McpServerPrimitiveCollection<McpServerTool> tools,
+        AnalysisToolRoute assemblyRoute)
+    {
+        tools.Add(McpServerTool.Create(
+            async (
+                string targetPath,
+                string? targetType = null,
+                string? pattern = null,
+                bool isRegex = false,
+                string? searchKind = null,
+                int maxResults = AssemblySearchTool.DefaultMaxResults,
+                int maxFiles = 0,
+                int contextLines = 0,
+                string? fileFilter = null,
+                int maxResponseBytes = 0,
+                string? cursor = null,
+                CancellationToken ct = default) =>
+                await AnalysisToolCall.ExecuteRouted(
+                    assemblyRoute,
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(ResolveTargetType(targetType, targetPath), targetPath),
+                        new AnalysisToolDispatch(
+                            AssemblySessionCall: lease => AssemblySearchTool.ExecuteAsync(
+                                lease,
+                                new AssemblySearchArguments(
+                                    pattern,
+                                    isRegex,
+                                    searchKind,
+                                    maxResults,
+                                    maxFiles,
+                                    contextLines,
+                                    maxResponseBytes,
+                                    fileFilter,
+                                    cursor),
+                                ct),
+                            MaxResponseBytes: maxResponseBytes,
+                            Cursor: cursor),
+                        ct)),
+            McpToolRegistrationOptions.AssemblyTool("search_assembly", SearchAssemblyDescription)));
+    }
+
+    private const string SearchAssemblyDescription =
+        "Wann nutzen: read-only Text-/Mustersuche im verifizierten Source- oder dekompilierten " +
+        "Root einer lokalen Assembly. targetPath ist ein absoluter .dll- oder .exe-Pfad; " +
+        "targetType ist optional und wird inferiert. searchKind: 'text' fuer ein eigenes pattern, " +
+        "'data_access' fuer typische Datenbank-/Datei-/Transaktionsaufrufe oder 'external_calls' " +
+        "fuer typische HTTP-/RPC-/Socket-/Prozessaufrufe; die beiden Fachmodi verwenden ohne pattern " +
+        "ein eingebautes, sichtbares Regex. isRegex gilt fuer ein eigenes pattern. " +
+        "maxResults (Default 50, Cap 1000), maxFiles, contextLines (Cap 5), fileFilter als Regex, " +
+        "maxResponseBytes und cursor begrenzen die Antwort. StructuredContent.assemblySearch liefert " +
+        "relative Trefferpfade, stabile IDs, Matchbereiche, totalCount/returnedCount, " +
+        "completeness, truncatedBy und continuationToken; analysis enthaelt Origin, Generation und " +
+        "Source-Policy. Ohne verfügbaren SourceRoot ist die Capability explizit unsupported. " +
+        "Die Assembly wird weder geladen noch ausgefuehrt.";
 
     private static void AddInspectAssembly(
         McpServerPrimitiveCollection<McpServerTool> tools,

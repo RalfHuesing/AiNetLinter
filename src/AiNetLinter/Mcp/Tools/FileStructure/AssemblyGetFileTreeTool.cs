@@ -30,7 +30,7 @@ internal static class AssemblyGetFileTreeTool
         return GetFileTreeTool.ExecuteAsync(root, input, cancellationToken);
     }
 
-    private static string? ResolveRoot(AssemblyAnalysisLease lease)
+    internal static string? ResolveRoot(AssemblyAnalysisLease lease)
     {
         var generatedRoot = lease.Context.DecompiledProjectPaths?.DecompiledSourceRoot;
         if (!string.IsNullOrWhiteSpace(generatedRoot) && Directory.Exists(generatedRoot))

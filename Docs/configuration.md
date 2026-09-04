@@ -1708,6 +1708,12 @@ strukturierte Diagnose; bei fehlendem Abschnitt gelten die Defaults.
 `ResponseBudgetBytes` steuert das Standardbudget serialisierter Assembly-Antworten;
 zulässig sind 1 bis 32768 Bytes. Ein einzelner MCP-Call kann das Budget zusätzlich
 über `maxResponseBytes` sowie die Detailstufe `compact`/`standard`/`full` anfordern.
+Dieses Budget gilt auch für `search_assembly`. Die Suche verwendet den verifizierten
+Source- oder dekompilierten SourceRoot, liefert relative Trefferpfade und stabile
+Treffer-IDs und weist Paging über `continuationToken` sowie `truncatedBy` aus.
+`searchKind` kann `text`, `data_access` oder `external_calls` sein; die beiden
+fachlichen Modi haben ohne eigenes Pattern ein eingebautes, dokumentiertes Regex.
+`search_pattern` bleibt projektgebunden und ist kein Ersatz für eine Assembly-Suche.
 
 Ein Checkout muss vor der Source-Materialisierung bereits restauriert sein; der
 MCP-/Daemon-Pfad startet keinen impliziten Restore und führt keine Assembly aus.

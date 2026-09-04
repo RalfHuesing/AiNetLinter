@@ -125,6 +125,50 @@ public sealed class McpServerAssemblyHealthE2ETests
         var rg = await RunRipgrepAsync(sourceRoot!, nameof(McpCodeGraphServer));
         Assert.Equal(0, rg.ExitCode);
         Assert.NotEmpty(rg.Output);
+
+        var search = await _fixture.Client.CallToolAsync(
+            "search_assembly",
+            new Dictionary<string, object?>
+            {
+                ["targetType"] = "assembly",
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["pattern"] = nameof(McpCodeGraphServer),
+                ["maxResults"] = 3,
+                ["maxResponseBytes"] = 16_384,
+            });
+        Assert.False(search.IsError == true, string.Join("\n", search.Content.OfType<TextContentBlock>().Select(block => block.Text)));
+        Assert.NotNull(search.StructuredContent);
+        var searchPayload = search.StructuredContent!.Value.GetProperty("assemblySearch");
+        Assert.Equal("text", searchPayload.GetProperty("searchKind").GetString());
+        Assert.NotEmpty(searchPayload.GetProperty("results").EnumerateArray());
+        var completeness = searchPayload.GetProperty("completeness").GetString();
+        Assert.Contains(completeness, new[] { "complete", "truncated", "partial" });
+        if (completeness == "truncated")
+        {
+            Assert.True(searchPayload.TryGetProperty("continuationToken", out var continuation));
+            Assert.False(string.IsNullOrWhiteSpace(continuation.GetString()));
+        }
+        Assert.All(
+            searchPayload.GetProperty("results").EnumerateArray(),
+            result =>
+            {
+                Assert.StartsWith("asm-search:", result.GetProperty("id").GetString(), StringComparison.Ordinal);
+                Assert.DoesNotContain("\\", result.GetProperty("filePath").GetString(), StringComparison.Ordinal);
+            });
+
+        var dataAccess = await _fixture.Client.CallToolAsync(
+            "search_assembly",
+            new Dictionary<string, object?>
+            {
+                ["targetType"] = "assembly",
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["searchKind"] = "data_access",
+                ["maxResults"] = 2,
+            });
+        Assert.False(dataAccess.IsError == true, string.Join("\n", dataAccess.Content.OfType<TextContentBlock>().Select(block => block.Text)));
+        Assert.Equal(
+            "data_access",
+            dataAccess.StructuredContent!.Value.GetProperty("assemblySearch").GetProperty("searchKind").GetString());
     }
 
     private static async Task<(int ExitCode, string Output)> RunRipgrepAsync(string root, string pattern)
@@ -218,6 +262,12 @@ public sealed class McpServerAssemblyHealthE2ETests
         Assert.Contains("maxDiagnostics", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("includeSessions", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("maxSessions", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
+
+        var searchTool = Assert.Single((await _fixture.Client.ListToolsAsync())
+            .Where(candidate => candidate.ProtocolTool.Name == "search_assembly"));
+        Assert.Contains("data_access", searchTool.ProtocolTool.Description, StringComparison.Ordinal);
+        Assert.Contains("external_calls", searchTool.ProtocolTool.Description, StringComparison.Ordinal);
+        Assert.Contains("continuationToken", searchTool.ProtocolTool.Description, StringComparison.Ordinal);
     }
 
     [Fact]

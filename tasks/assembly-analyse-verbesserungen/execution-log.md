@@ -340,6 +340,14 @@
 - Reviewer: Sartre (`01a06a04-9035-77e2-a7e3-ad09e13f9d9a`).
 - Vorgabe: keine Produktionsänderungen und kein Commit; nur offensichtliche task-lokale `code-map.md`-Korrekturen zulässig. P0/P1 blockieren, P2/P3 werden als Tech Debt erfasst.
 
+## Run 2026-09-04 / Epic 3 / Implementierer
+
+- Status: running; Epic 3 nach der Epic-2-Freigabe gestartet.
+- Baseline: `2866bd40` (`chore(assembly-analyse-verbesserungen): Schließe Epic 2 ab`).
+- Scope: Assembly-Volltext-/Muster-/Datenzugriffs-Suche, Capability-/MCP-Registrierungen, echte E2E-/Mehrdaemon-Regressionen und konsistente Dokumentation.
+- Implementierer: Wegener (`01a06a6c-5f26-7da3-994b-b16a834e1830`).
+- Vorgabe: kein Commit; keine externen Assemblies/Repos; MCP-first; Konzeptbereiche A/A1/A2/A3/A4, B, C, D, E, F und G mit realen Nachweisen oder dokumentiertem Fallback prüfen; `code-map.md` aktualisieren.
+
 ## Run 2026-09-04 / Epic 2 / Folge-Reviewer 2 – Abschluss
 
 - Status: completed; Folge-Reviewerbericht terminal eingegangen.
@@ -349,3 +357,12 @@
 - Source-Provenienz: `SourceMode` läuft durch Selection, Registry und Context; `analysis.sourcePolicy` sowie Header sind für Default `source_preferred` und `decompilation_allowed` gesetzt; `source_required` fällt kontrolliert ohne Dekompilation fehl. Relevante MCP-Kontext-/Call-Tree-Abfragen: 0 Violations.
 - P2: Der IPC-Nachweis liegt als versteckter Probe-Pfad in `Program.cs:69` / `ExternalSourceCacheLeaseProbeCommand.cs:16` und akzeptiert frei gewählte Markerpfade; aktuell kein konkretes Sicherheits-/Cleanup-Fehlverhalten nachgewiesen. Langfristig separaten Test-Worker erwägen.
 - Nächste Aktion: Epic 2 als abgeschlossen markieren, Review-Checkpoint committen und Epic 3 starten.
+
+## Run 2026-09-04 / Epic 3 / Implementierer – Abschluss
+
+- Status: completed; Implementiererbericht terminal eingegangen, ohne Commit.
+- Urteil: Epic-3-Implementierung abgeschlossen; unabhängige Review erforderlich.
+- Bericht: Neue Assembly-only-MCP-Suche mit Modi `text`, `data_access` und `external_calls`, relativen Trefferpfaden, stabilen SHA-256-IDs, Kontextzeilen, `maxResults`/`maxFiles`/`cursor`/`continuationToken`, Completeness-/Truncation-/Source-/Origin-/Generation-/Budget-Envelope und explizitem `unsupported` ohne freigegebenen Assembly-Root. Registrierung, Capabilities, Server-Instructions, Dateibaum-Root/Lease und Tool-Contracts wurden synchronisiert; echte MCP-E2E-Regressionen sowie Dokumentation in `Docs/agent-api.md`, `Docs/integration.md` und `Docs/configuration.md` ergänzt; `code-map.md` aktualisiert.
+- Verifikation: `dotnet build --no-restore` 0 Warnungen/0 Fehler; Wiring-/Server-Instructions-Tests 22/22; Assembly-MCP-E2E plus Tool-Contract 6/6; FastTests ohne Stress 2445/2447 mit 2 Plattform-Skips; IntegrationTests ohne Stress 427/427; MCP `find_symbol` neue Klasse gefunden; `get_feature_context` Budgets/0 Datei-Violations; `get_violations` Scope `src/AiNetLinter/Mcp` 0; `find_dead_code` 0; `find_magic_values` 0; `git diff --check` sauber.
+- Offene Risiken: laufende MCP-Daemons benötigen Neustart für den neuen Discovery-Stand (frischer Prozess: 31 Tools); nicht gemappte Assemblies bleiben erwartungsgemäß decompiled/partial; vier bestehende Duplicate-Cluster im Budget-Code bleiben Tech Debt.
+- Nächste Aktion: Checkpoint-Commit, danach frische unabhängige Epic-3-Review.

@@ -34,7 +34,7 @@ public sealed class WiringToolCollectionContractTests
                     AssemblyAnalysisDispatcher.CreateRoute(composition.Sessions))),
             McpServerResourceCollectionFactory.Build(registry));
         var tools = options.ToolCollection!.ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool);
-        Assert.Equal(30, tools.Count);
+        Assert.Equal(31, tools.Count);
         foreach (var tool in tools.Values)
         {
             var required = GetRequiredProperties(tool.InputSchema);
@@ -52,7 +52,7 @@ public sealed class WiringToolCollectionContractTests
                 Assert.Contains("\"targetPath\"", tool.InputSchema.ToString(), StringComparison.Ordinal);
                 Assert.DoesNotContain("projectRoot", tool.InputSchema.ToString(), StringComparison.Ordinal);
             }
-            else if (tool.Name is "inspect_assembly" or "find_assembly_extensions" or "get_assembly_context")
+            else if (tool.Name is "inspect_assembly" or "find_assembly_extensions" or "search_assembly" or "get_assembly_context")
             {
                 Assert.DoesNotContain("targetType", required);
                 Assert.Contains("targetPath", required);
@@ -111,7 +111,7 @@ public sealed class WiringToolCollectionContractTests
             Assert.Contains("ausdrücklich unsupported", description, StringComparison.Ordinal);
         }
 
-        foreach (var name in new[] { "inspect_assembly", "find_assembly_extensions", "get_assembly_context" })
+        foreach (var name in new[] { "inspect_assembly", "find_assembly_extensions", "search_assembly", "get_assembly_context" })
         {
             var description = tools[name].Description;
             Assert.Contains("targetType='assembly'", description, StringComparison.Ordinal);
@@ -233,6 +233,7 @@ public sealed class WiringToolCollectionContractTests
         {
             ["dependency_graph"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["find_assembly_extensions"] = ToolAnnotationExpectation.ReadOnlyProfile,
+            ["search_assembly"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["find_dead_code"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["find_duplicates"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["find_magic_values"] = ToolAnnotationExpectation.ReadOnlyProfile,
