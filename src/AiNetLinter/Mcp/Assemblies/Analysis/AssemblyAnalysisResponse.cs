@@ -403,14 +403,30 @@ internal static partial class AssemblyAnalysisResponse
 
     internal static string TrimUtf8(string value, int maxBytes)
     {
+        if (string.IsNullOrEmpty(value) || maxBytes <= 0) return string.Empty;
         if (Encoding.UTF8.GetByteCount(value) <= maxBytes) return value;
-        var limit = Math.Max(1, maxBytes - Encoding.UTF8.GetByteCount("…"));
-        while (limit > 0 && Encoding.UTF8.GetByteCount(value[..limit]) > maxBytes - Encoding.UTF8.GetByteCount("…"))
+
+        const string ellipsis = "…";
+        var ellipsisBytes = Encoding.UTF8.GetByteCount(ellipsis);
+        var targetBytes = maxBytes - ellipsisBytes;
+
+        if (targetBytes < 0)
+        {
+            return maxBytes >= 1 ? "." : string.Empty;
+        }
+
+        var limit = Math.Min(value.Length, targetBytes);
+        while (limit > 0 && Encoding.UTF8.GetByteCount(value[..limit]) > targetBytes)
         {
             limit--;
         }
 
-        return value[..limit] + "…";
+        if (limit > 0 && char.IsHighSurrogate(value[limit - 1]))
+        {
+            limit--;
+        }
+
+        return value[..limit] + ellipsis;
     }
 
     internal static CallToolResult Unsupported(string canonicalPath)

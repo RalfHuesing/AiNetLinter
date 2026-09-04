@@ -480,4 +480,27 @@ public sealed partial class AssemblyAnalysisToolTests
         Assert.Contains("# Klasse MyType", projectedText, StringComparison.Ordinal);
         Assert.DoesNotContain("StructuredContent ist die kanonische Nutzlast", projectedText, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void TrimUtf8_HandlesMultiByteAndEdgeCasesWithoutException()
+    {
+        // Multi-byte string (100 'ä' = 200 Bytes in UTF-8, aber nur 100 Zeichen lang)
+        var umlautText = new string('ä', 100);
+        // maxBytes = 150: früher Absturz mit ArgumentOutOfRangeException wegen limit = 147 > value.Length (100)
+        var trimmedUmlaut = AssemblyAnalysisResponse.TrimUtf8(umlautText, 150);
+        Assert.EndsWith("…", trimmedUmlaut, StringComparison.Ordinal);
+        Assert.True(Encoding.UTF8.GetByteCount(trimmedUmlaut) <= 150);
+
+        // Sehr kleine Budgets
+        Assert.Equal(string.Empty, AssemblyAnalysisResponse.TrimUtf8("Hallo", 0));
+        Assert.Equal(".", AssemblyAnalysisResponse.TrimUtf8("Hallo", 1));
+        Assert.Equal(".", AssemblyAnalysisResponse.TrimUtf8("Hallo", 2));
+        Assert.Equal("…", AssemblyAnalysisResponse.TrimUtf8("Hallo", 3));
+
+        // Surrogate pair
+        var emojiText = "A\U0001F600B"; // 4 Bytes fuer Emoji
+        var trimmedEmoji = AssemblyAnalysisResponse.TrimUtf8(emojiText, 6);
+        Assert.True(Encoding.UTF8.GetByteCount(trimmedEmoji) <= 6);
+    }
 }
+
