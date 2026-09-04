@@ -30,6 +30,23 @@ public sealed class AnalysisTargetResolverTests
     }
 
     [Theory]
+    [InlineData("Project")]
+    [InlineData("PROJECT")]
+    [InlineData(" project ")]
+    public void Resolve_TargetType_IsCaseInsensitiveAndTrimmed(string targetType)
+    {
+        using var tempDir = TestTempDirectory.Create("analysis-target-case-");
+        var projectRoot = Directory.CreateDirectory(Path.Combine(tempDir.DirectoryPath, "project")).FullName;
+        var request = new AnalysisTargetRequest(targetType, projectRoot);
+
+        var result = AnalysisTargetResolver.Resolve(request);
+
+        Assert.Null(result.Error);
+        Assert.NotNull(result.Target);
+        Assert.Equal(AnalysisTargetType.Project, result.Target!.TargetType);
+    }
+
+    [Theory]
     [InlineData(null, null)]
     [InlineData("", "C:\\project")]
     [InlineData("invalid", "C:\\project")]

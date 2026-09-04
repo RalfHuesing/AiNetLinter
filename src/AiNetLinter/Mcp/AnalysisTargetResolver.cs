@@ -65,7 +65,7 @@ internal static class AnalysisTargetResolver
     }
 
     private static AnalysisTargetType? ResolveTargetType(string targetType) =>
-        targetType switch
+        targetType.Trim().ToLowerInvariant() switch
         {
             "project" => AnalysisTargetType.Project,
             "assembly" => AnalysisTargetType.Assembly,
@@ -94,7 +94,7 @@ internal static class AnalysisTargetResolver
     private static AnalysisTargetResolution Invalid(string message, string? hint = null) =>
         new(null, McpToolResults.InvalidArgument(
             message,
-            hint ?? "targetType und targetPath gemäß Spezifikation übergeben."));
+            hint ?? "targetType ('project' oder 'assembly') und targetPath (absoluter Pfad) gemäß Spezifikation übergeben."));
 
     private sealed record PathResolution(string? CanonicalPath, string? Error);
 }

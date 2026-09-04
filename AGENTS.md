@@ -42,9 +42,10 @@ registriert:
 
 Im jeweiligen Projektroot liegt `ainetlinter.project.json` mit den Pflichtfeldern
 `solution` und `rules`. Beide Pfade werden relativ zu dieser Definitionsdatei
-aufgelöst und müssen auf vorhandene Dateien zeigen. Jeder projektgebundene
-Tool-Aufruf erhält zusätzlich den absoluten Parameter `projectRoot`; der einzige
-optionale Filter ist `get_server_health`.
+aufgelöst und müssen auf vorhandene Dateien zeigen. Jeder zielgebundene
+Tool-Aufruf verwendet den absoluten Zielpfad als `targetPath` und die Zielart als
+`targetType` (`project` für Source-Solution/Projektroot oder `assembly` für .dll/.exe);
+der einzige optionale Filter ist `get_server_health`.
 
 Kopierfähiges Definitionsdatei-Template:
 
