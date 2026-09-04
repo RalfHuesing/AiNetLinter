@@ -298,6 +298,14 @@
 - Reviewer: Anscombe (`01a06a38-f4f1-7c03-bc94-d4003143610a`).
 - Vorgabe: keine Produktionsänderungen und kein Commit; nur offensichtliche task-lokale `code-map.md`-Korrekturen zulässig. P0/P1 blockieren, P2/P3 werden als Tech Debt erfasst.
 
+## Run 2026-09-04 / Epic 2 / Folge-Reviewer 2
+
+- Status: running; frischer Folge-Review nach Korrekturrunde 2 gestartet.
+- Baseline: `b0b28e2c` (`fix(assembly-analyse-verbesserungen): Schließe Clone- und Lease-Lücken`).
+- Scope: `GitClone/StderrClassification`, `CacheGeneration/ReaderLease` und `SourcePolicy/ProvenancePropagation`, einschließlich echter Zwei-Prozess-/IPC-Regression und möglicher Risiken des Lease-Probe-Kommandos.
+- Reviewer: Dalton (`01a06a65-1653-7ec2-bc25-e4a20f1baf72`).
+- Vorgabe: keine Produktionsänderungen und kein Commit; nur offensichtliche task-lokale `code-map.md`-Korrekturen zulässig. P0/P1 blockieren, P2/P3 werden als Tech Debt erfasst.
+
 ## Run 2026-09-04 / Epic 2 / Korrektur-Implementierer 2 – Abschluss
 
 - Status: completed; zweiter Korrekturbericht terminal eingegangen, ohne Commit.
@@ -331,3 +339,13 @@
 - Scope: Source-Policy und Fallback-Härte, verifizierter Git-Checkout, deterministische Cache-/Daemon-Isolation, Locks/Leases/Generationen, Cleanup/ReadOnly/Quarantäne, Health-Diagnostik, bounded Reference-Sessions, Tests und Dokumentation.
 - Reviewer: Sartre (`01a06a04-9035-77e2-a7e3-ad09e13f9d9a`).
 - Vorgabe: keine Produktionsänderungen und kein Commit; nur offensichtliche task-lokale `code-map.md`-Korrekturen zulässig. P0/P1 blockieren, P2/P3 werden als Tech Debt erfasst.
+
+## Run 2026-09-04 / Epic 2 / Folge-Reviewer 2 – Abschluss
+
+- Status: completed; Folge-Reviewerbericht terminal eingegangen.
+- Urteil: `approved`; keine P0/P1-Befunde.
+- Git: `ExternalSourceGitProcessOutputPolicy.cs:27` akzeptiert nur exakt bekannte Clone-/Status-Ausgaben; unbekannte `warning:`-/`hint:`-/Integrity-/Security-Meldungen bleiben bei Exit 0 fail-closed. Positive und negative Regressionen sind vorhanden.
+- Cache-Lease: `ExternalSourceRepositoryCacheReader.cs:44` übernimmt die generationsbezogene Lease vor dem Lesen; `ExternalSourceRepositoryCacheReuse.cs:87` hält sie bis nach Materialisierung; Retention nutzt einen exklusiven Lösch-Lock. Der IPC-Test startet zweimal die echte `AiNetLinter.exe` und prüft Retention, Materialisierung, Cancellation sowie Lock-/Cleanup-Freigabe; gezielt 1/1 bestanden.
+- Source-Provenienz: `SourceMode` läuft durch Selection, Registry und Context; `analysis.sourcePolicy` sowie Header sind für Default `source_preferred` und `decompilation_allowed` gesetzt; `source_required` fällt kontrolliert ohne Dekompilation fehl. Relevante MCP-Kontext-/Call-Tree-Abfragen: 0 Violations.
+- P2: Der IPC-Nachweis liegt als versteckter Probe-Pfad in `Program.cs:69` / `ExternalSourceCacheLeaseProbeCommand.cs:16` und akzeptiert frei gewählte Markerpfade; aktuell kein konkretes Sicherheits-/Cleanup-Fehlverhalten nachgewiesen. Langfristig separaten Test-Worker erwägen.
+- Nächste Aktion: Epic 2 als abgeschlossen markieren, Review-Checkpoint committen und Epic 3 starten.

@@ -113,9 +113,9 @@ Die unabhängige Review hat drei voneinander unabhängige Ursachen mit P1-Schwer
 - Beschreibung: Erfolgreiche Git-Clone-Ausgaben auf normalem `stderr` werden als Checkout-Fehler verworfen.
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/ExternalSource/ProcessExecution/ExternalSourceGitProcessOutputPolicy.cs`, `GiteaGitRepositoryTransport.cs`.
 - Evidenz: Erfolgreicher lokaler `git clone --no-local --no-hardlinks` mit Exit-Code 0 und `Cloning into '...'...` auf `stderr` wird abgelehnt; bestehende Tests verwenden nur leeres `stderr`.
-- Disposition: fix-now
-- Nächster Schritt: Clone-Ausgabe operationsspezifisch klassifizieren oder kontrolliert unterdrücken; Sicherheits-/Fehlerausgaben fail-closed belassen und reale Regression ergänzen.
-- Attempts: 1
+- Disposition: fixed
+- Nächster Schritt: keine; positive und negative Clone-/Status-Regressionen vorhanden.
+- Attempts: 2
 - Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 2 / Reviewer – Abschluss, Signatur `GitClone/StderrClassification`.
 
 ### P1 – CacheGeneration/ReaderLease
@@ -124,9 +124,9 @@ Die unabhängige Review hat drei voneinander unabhängige Ursachen mit P1-Schwer
 - Beschreibung: Zwischen dem Lesen einer Cache-Generation und ihrer Materialisierung besteht keine generationsbezogene Leser-Lease.
 - Scope/Fundstelle: `ExternalSourceRepositoryCacheReuse.TryAcquire`, `ExternalSourceRepositoryCacheMaterializer.Materialize`, `ExternalSourceRepositoryCacheWriterLifecycle.cs`.
 - Evidenz: Ein zweiter Daemon kann Generationen publizieren und Retention kann die von Daemon A gelesene Generation vor dem Kopieren löschen.
-- Disposition: fix-now
-- Nächster Schritt: Leser-Lease oder generationsbezogenen Cross-Process-Lock bis zum Materialisierungsende halten und Retention für geleaste Generationen sperren; Interleaving-Regression ergänzen.
-- Attempts: 1
+- Disposition: fixed
+- Nächster Schritt: keine; echter Zwei-Prozess-/IPC-Interleaving-, Cancellation- und Cleanup-Nachweis vorhanden.
+- Attempts: 2
 - Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 2 / Reviewer – Abschluss, Signatur `CacheGeneration/ReaderLease`.
 
 ### P1 – SourcePolicy/ProvenancePropagation
@@ -135,9 +135,9 @@ Die unabhängige Review hat drei voneinander unabhängige Ursachen mit P1-Schwer
 - Beschreibung: SourceMode wird nicht durch Selection, Fallback und Context geführt; Herkunft kann im Fallback beim Default `source_preferred` bleiben und im `analysis`-Envelope fehlen.
 - Scope/Fundstelle: `AssemblyAnalysisFallbackEntryCreationParameters`, `AssemblyAnalysisContextFactory.cs`, `AssemblyAnalysisResponse.cs`, `AssemblyAnalysisSourceToolSupport.cs`.
 - Evidenz: Bei `decompilation_allowed` und kontrolliertem Source-Fallback bleibt `AssemblyOrigin.SourcePolicy` auf `source_preferred`; der gemeinsame maschinenlesbare Envelope verwirft das Feld.
-- Disposition: fix-now
-- Nächster Schritt: SourceMode unveränderlich weiterreichen, Origin/SourcePolicy in allen Pfaden explizit setzen sowie im Header und strukturierten `analysis`-Envelope ausgeben; Regression für Fallback-Provenienz ergänzen.
-- Attempts: 1
+- Disposition: fixed
+- Nächster Schritt: keine; Default- und `decompilation_allowed`-Fallback-Regressionen vorhanden.
+- Attempts: 2
 - Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 2 / Reviewer – Abschluss, Signatur `SourcePolicy/ProvenancePropagation`.
 
 Korrektur-Implementierer 1 meldet alle drei Epic-2-P1-Ursachen behoben; Disposition bleibt bis zum Folge-Review `fix-now`, Attempts bleiben bei 1. Der Implementierer weist ausdrücklich darauf hin, dass `source_preferred` im strukturierten `analysis`-Envelope aus Wire-Budget-/Kompatibilitätsgründen fehlt und nur im Header sichtbar bleibt; dieser Punkt ist im Folge-Review als mögliche Restursache zu verifizieren.
@@ -145,3 +145,16 @@ Korrektur-Implementierer 1 meldet alle drei Epic-2-P1-Ursachen behoben; Disposit
 Folge-Reviewer 1 bestätigt alle drei P1-Ursachen weiterhin als offen: Clone-Policy akzeptiert unbekannte Warnungen/Hints, der Lease-Nachweis deckt kein echtes Mehrdaemon-/Cancellation-Interleaving ab, und `analysis.sourcePolicy` fehlt beim Default `source_preferred`. Korrekturrunde 2 wird mit Attempts 2 gestartet.
 
 Korrektur-Implementierer 2 meldet alle drei Ursachen behoben; Disposition bleibt bis zum Folge-Review `fix-now`, Attempts bleiben bei 2. Der Implementierer weist als verbleibendes Risiko aus, dass Cancellation vor Beginn, nicht mitten in einer großen Kopieroperation geprüft wird; unbekannte Git-Ausgaben bleiben bewusst fail-closed.
+
+Folge-Reviewer 2 bestätigt alle drei Epic-2-P1-Ursachen als `fixed`; der gezielte IPC-Test startet zweimal die echte `AiNetLinter.exe` und prüft Retention, Materialisierung, Cancellation sowie Lock-/Cleanup-Freigabe. Der Implementierer-Hinweis zur Cancellation vor Beginn einer großen Kopieroperation bleibt als nicht-blockierendes Betriebsrisiko dokumentiert.
+
+## P2 – IPC-Test-Probe im Produktionsbinary
+
+- Schweregrad: P2
+- Beschreibung: Der echte Zwei-Prozess-Lease-Nachweis nutzt einen versteckten Probe-Pfad in der Produkt-EXE und akzeptiert frei gewählte Markerpfade.
+- Scope/Fundstelle: `src/AiNetLinter/Program.cs:69`, `src/AiNetLinter/Commands/ExternalSourceCacheLeaseProbeCommand.cs:16`.
+- Evidenz: Folge-Reviewer 2 sieht aktuell kein konkretes Sicherheits- oder Cleanup-Fehlverhalten; ein separater Test-Worker würde den Produktionsumfang langfristig reduzieren.
+- Disposition: accepted-deferred
+- Nächster Schritt: Bei einer späteren Testinfrastruktur-Runde Probe aus dem Produktionsbinary herauslösen, ohne den echten Prozess-/Lease-Nachweis zu schwächen.
+- Attempts: 0
+- Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 2 / Folge-Reviewer 2 – Abschluss.
