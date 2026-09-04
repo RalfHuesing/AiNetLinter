@@ -191,9 +191,9 @@ Die unabhängige Epic-3-Review hat drei voneinander unabhängige P1-Ursachen gef
 - Beschreibung: Der Handshake prüft nur eine feste, hashfreie `ExecutableVersion`; ein alter Daemon kann einen neuen ThinClient akzeptieren und eine Tool-Liste ohne `search_assembly` liefern.
 - Scope/Fundstelle: `src/AiNetLinter/AiNetLinter.csproj:5`, `src/AiNetLinter/Mcp/Composition/McpServerVersion.cs:17`, `src/AiNetLinter/Mcp/Daemon/DaemonHandshake.cs:75`.
 - Evidenz: Discovery wird beim Daemonstart aufgebaut, die feste Projektversion bleibt trotz neuer Toolregistrierung gleich; Dokumentation nennt nur manuellen Neustart.
-- Disposition: fixed
-- Nächster Schritt: keine; deterministischer MVID-Fingerprint und Alt-/Neu-Vertrag regressionsgetestet.
-- Attempts: 1
+- Disposition: fix-now
+- Nächster Schritt: fingerprintloses Welcome eines alten Daemons im ThinClient kontrolliert behandeln; kein generischer Readiness-Retry ohne Recovery/terminales Ergebnis; echten Alt-/Neu-Test ergänzen.
+- Attempts: 2
 - Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 3 / Reviewer – Abschluss, Signatur `DaemonDiscovery/ExecutableVersionFingerprint`.
 
 ## P2 – Epic-3-Such- und Discovery-Nachweis
@@ -208,6 +208,8 @@ Die unabhängige Epic-3-Review hat drei voneinander unabhängige P1-Ursachen gef
 - Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 3 / Reviewer – Abschluss.
 
 Korrektur-Implementierer 1 meldet alle drei Epic-3-P1-Ursachen behoben; Disposition bleibt bis zum Folge-Review `fix-now`, Attempts bleiben bei 1. Die bestehende `AIContextFootprint`-Warnung in `DaemonHost` (2530 > 2500) bleibt außerhalb der P1-Ursachen und wird als nicht-blockierendes Tech Debt weitergeführt.
+
+Folge-Reviewer 1 bestätigt `SearchBudget/EnvelopeReachability` und `SearchPaging/MaxFilesContinuation` als `fixed`. `DaemonDiscovery/ExecutableVersionFingerprint` bleibt P1 offen, weil ein fingerprintloses Welcome des alten Daemons im generischen Retrypfad bis zum Readiness-Timeout läuft. Korrekturrunde 2 wird mit Attempts 2 ausschließlich für diese Ursache gestartet.
 
 ## P2 – AIContextFootprint im DaemonHost
 

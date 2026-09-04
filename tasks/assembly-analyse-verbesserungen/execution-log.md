@@ -307,6 +307,24 @@
 - Offenes nicht-blockierendes Risiko: bestehende `AIContextFootprint`-Warnung in `DaemonHost` (2530 > 2500), nicht durch die drei P1-Ursachen verursacht; vier bestehende Duplicate-Cluster im Budget-Code bleiben außerhalb des Suchcodes.
 - Nächste Aktion: Checkpoint-Commit, danach frischer Folge-Review 1.
 
+## Run 2026-09-04 / Epic 3 / Folge-Reviewer 1 – Abschluss
+
+- Status: completed; Folge-Reviewerbericht terminal eingegangen.
+- Urteil: `issues`; keine P0-, aber ein verbleibender P1-Befund.
+- `SearchBudget/EnvelopeReachability` und `SearchPaging/MaxFilesContinuation` sind nach Quellprüfung und gezielten Regressionen behoben; keine brittle Produktions-/Testkopplung festgestellt.
+- P1 `DaemonDiscovery/ExecutableVersionFingerprint`: MVID-Fingerprint ist korrekt und ohne hardcodierten Toolcount, aber ein alter Daemon ignoriert das neue Hello-Feld und liefert Welcome ohne Fingerprint. `ThinClientProxy.ReadHandshakeResponse` verwirft dieses Welcome; die Exception läuft durch den generischen IOException-Retrypfad, ohne alten Daemon zu stoppen oder terminal zu melden, bis zum Readiness-Timeout. Empfehlung: eigener kontrollierter Recovery-/Terminalpfad sowie realer Alt-Daemon/Neu-Client-Test.
+- P2 `AIContextFootprint`: bestehender `DaemonHost`-Verstoß 2530 > 2500, ohne Bezug zu den drei P1-Ursachen.
+- MCP-Nachweis: relevante Quell-/Symbolprüfung und `get_violations` ohne neue violations; `code-map.md` um eine Faktenpräzisierung ergänzt.
+- Nächste Aktion: Review-Checkpoint committen; danach Korrektur-Implementierer 2 ausschließlich für `DaemonDiscovery/ExecutableVersionFingerprint`.
+
+## Run 2026-09-04 / Epic 3 / Folge-Reviewer 1
+
+- Status: running; frischer Folge-Review nach Korrekturrunde 1 gestartet.
+- Baseline: `47fe9768` (`fix(assembly-analyse-verbesserungen): Stabilisiere Suchhülle und Daemon-Discovery`).
+- Scope: Suchbudget/-Envelope, terminales `maxFiles`-Paging, deterministischer MVID-Handshake-Fingerprint, Regressionstiefe und P2-Abgrenzungen.
+- Reviewer: Dewey (`01a06acb-5813-7170-bb66-ef5a61459d48`).
+- Vorgabe: keine Produktionsänderungen und kein Commit; nur offensichtliche task-lokale `code-map.md`-Korrekturen zulässig. P0/P1 blockieren, P2/P3 werden als Tech Debt erfasst.
+
 ## Run 2026-09-04 / Epic 2 / Folge-Reviewer 2
 
 - Status: running; frischer Folge-Review nach Korrekturrunde 2 gestartet.
