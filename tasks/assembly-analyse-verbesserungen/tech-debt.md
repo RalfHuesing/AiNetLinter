@@ -158,3 +158,51 @@ Folge-Reviewer 2 bestätigt alle drei Epic-2-P1-Ursachen als `fixed`; der geziel
 - Nächster Schritt: Bei einer späteren Testinfrastruktur-Runde Probe aus dem Produktionsbinary herauslösen, ohne den echten Prozess-/Lease-Nachweis zu schwächen.
 - Attempts: 0
 - Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 2 / Folge-Reviewer 2 – Abschluss.
+
+## Aktive P1-Findings – Epic 3 Review, Korrekturrunde 1
+
+Die unabhängige Epic-3-Review hat drei voneinander unabhängige P1-Ursachen gefunden. Sie werden getrennt korrigiert und jeweils erneut reviewed.
+
+### P1 – SearchBudget/EnvelopeReachability
+
+- Schweregrad: P1
+- Beschreibung: Der `assemblySearch`-Payload wird bei kleinem `maxResponseBytes` als unbekannter Container vollständig entfernt; Results, Counts und Paging fehlen statt eines nutzbaren gekürzten Envelopes.
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisResponse.cs:301,317,358`.
+- Evidenz: Der Container fehlt in `IsTrimContainer` und bekannten Ergebniscontainern; Reviewer reproduziert vollständiges Entfernen bei kleinem Budget.
+- Disposition: fix-now
+- Nächster Schritt: Suchcontainer rekursiv trimmen und internes Results-/Paging-Envelope rekonstruieren; Budget-Regression ergänzen.
+- Attempts: 1
+- Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 3 / Reviewer – Abschluss, Signatur `SearchBudget/EnvelopeReachability`.
+
+### P1 – SearchPaging/MaxFilesContinuation
+
+- Schweregrad: P1
+- Beschreibung: `maxFiles` kann am Ende des eingeschränkten Dateiscopes `isTruncated=true` und denselben Cursor erneut liefern; Paging macht keinen Fortschritt.
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblySearchTool.cs:184`.
+- Evidenz: Reviewer reproduziert wiederholbaren Token nach Ende des `maxFiles`-Scopes.
+- Disposition: fix-now
+- Nächster Schritt: echten dateibasierten Cursor über den vollständigen Trefferbestand implementieren oder für reine `maxFiles`-Trunkierung keinen wiederholbaren Token ausgeben.
+- Attempts: 1
+- Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 3 / Reviewer – Abschluss, Signatur `SearchPaging/MaxFilesContinuation`.
+
+### P1 – DaemonDiscovery/ExecutableVersionFingerprint
+
+- Schweregrad: P1
+- Beschreibung: Der Handshake prüft nur eine feste, hashfreie `ExecutableVersion`; ein alter Daemon kann einen neuen ThinClient akzeptieren und eine Tool-Liste ohne `search_assembly` liefern.
+- Scope/Fundstelle: `src/AiNetLinter/AiNetLinter.csproj:5`, `src/AiNetLinter/Mcp/Composition/McpServerVersion.cs:17`, `src/AiNetLinter/Mcp/Daemon/DaemonHandshake.cs:75`.
+- Evidenz: Discovery wird beim Daemonstart aufgebaut, die feste Projektversion bleibt trotz neuer Toolregistrierung gleich; Dokumentation nennt nur manuellen Neustart.
+- Disposition: fix-now
+- Nächster Schritt: Tool-Contract-/Build-Fingerprint in den Handshake aufnehmen oder Discovery-Mismatch kontrolliert reconnecten; Regression für alten/neuen Discovery-Stand ergänzen.
+- Attempts: 1
+- Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 3 / Reviewer – Abschluss, Signatur `DaemonDiscovery/ExecutableVersionFingerprint`.
+
+## P2 – Epic-3-Such- und Discovery-Nachweis
+
+- Schweregrad: P2
+- Beschreibung: Cursor sind noch nicht an Query/Root/Generation gebunden; der Assembly-Header kann absolute Pfade/Repository-URLs enthalten; `ServerInstructions` dokumentiert nicht alle vier Assembly-only-Tools; E2E deckt nicht alle Suchmodi und Fehlerfälle ab.
+- Scope/Fundstelle: `AssemblySearchTool.cs`, `AssemblyAnalysisResponse.cs`, `ServerInstructions.cs`, `McpServerAssemblyHealthE2ETests.cs`.
+- Evidenz: Folge-Reviewer 1 nennt konkrete Lücken bei `external_calls`, fehlendem Root, Budget, `maxFiles`, ungültigen Cursorn und Source-backed Suche; kein konkreter Secret-Leak nachgewiesen.
+- Disposition: accepted-deferred
+- Nächster Schritt: Nach Freigabe der P1-Korrekturen Cursor-Bindung, logische Diagnose-IDs, Capability-Doku und ergänzende E2E-Fälle in einem fokussierten Nachlauf bewerten.
+- Attempts: 0
+- Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 3 / Reviewer – Abschluss.

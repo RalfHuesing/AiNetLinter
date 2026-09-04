@@ -366,3 +366,22 @@
 - Verifikation: `dotnet build --no-restore` 0 Warnungen/0 Fehler; Wiring-/Server-Instructions-Tests 22/22; Assembly-MCP-E2E plus Tool-Contract 6/6; FastTests ohne Stress 2445/2447 mit 2 Plattform-Skips; IntegrationTests ohne Stress 427/427; MCP `find_symbol` neue Klasse gefunden; `get_feature_context` Budgets/0 Datei-Violations; `get_violations` Scope `src/AiNetLinter/Mcp` 0; `find_dead_code` 0; `find_magic_values` 0; `git diff --check` sauber.
 - Offene Risiken: laufende MCP-Daemons benötigen Neustart für den neuen Discovery-Stand (frischer Prozess: 31 Tools); nicht gemappte Assemblies bleiben erwartungsgemäß decompiled/partial; vier bestehende Duplicate-Cluster im Budget-Code bleiben Tech Debt.
 - Nächste Aktion: Checkpoint-Commit, danach frische unabhängige Epic-3-Review.
+
+## Run 2026-09-04 / Epic 3 / Reviewer – Abschluss
+
+- Status: completed; unabhängiger Epic-3-Reviewerbericht terminal eingegangen.
+- Ersturteil: `issues`; drei blockierende P1-Befunde, keine P0-Befunde.
+- P1 `SearchBudget/EnvelopeReachability`: `assemblySearch` ist in `AssemblyAnalysisResponse.cs:301,317,358` nicht als trimbarer Container bekannt; bei kleinem `maxResponseBytes` wird der gesamte Suchpayload entfernt, einschließlich `results`, Counts und `continuationToken`. Korrektur: Suchcontainer rekursiv trimmen und internes Results-/Paging-Envelope rekonstruieren, Regression ergänzen.
+- P1 `SearchPaging/MaxFilesContinuation`: `AssemblySearchTool.cs:184` kann bei `maxFiles` am Ende des eingeschränkten Dateiscopes `isTruncated=true` und denselben Cursor erneut liefern. Korrektur: keinen wiederholbaren Token für diese Situation ausgeben oder echten dateibasierten Cursor über den vollständigen Bestand implementieren.
+- P1 `DaemonDiscovery/ExecutableVersionFingerprint`: Handshake prüft nur die feste `ExecutableVersion` (`AiNetLinter.csproj`, `McpServerVersion.cs`, `DaemonHandshake.cs`); alter Daemon kann neuen ThinClient akzeptieren und `search_assembly` unterschlagen. Korrektur: Tool-Contract-/Build-Fingerprint in Handshake oder kontrollierter Discovery-Reconnect.
+- P2: ungebundener numerischer Cursor; absolute Target-/Source-Pfade und Repository-URLs im gemeinsamen Header; unvollständige `ServerInstructions`-Capability-Doku; E2E-Lücken für `external_calls`, fehlenden Root, Budget, `maxFiles`, ungültige Cursor und Source-backed Suche.
+- MCP-Nachweise: `find_symbol`, `get_feature_context`, `get_symbol_body`, `get_impact`, `get_violations` im MCP-Scope 0; keine `code-map.md`-Korrektur.
+- Nächste Aktion: Review-Checkpoint committen; danach frischer Korrektur-Implementierer für drei P1-Ursachen (Attempt 1).
+
+## Run 2026-09-04 / Epic 3 / Reviewer
+
+- Status: running; unabhängige Review nach Epic-3-Implementierungscheckpoint gestartet.
+- Baseline: `2b074fc4` (`feat(assembly-analyse-verbesserungen): Ergänze agentenfreundliche Assembly-Suche`).
+- Scope: Assembly-Suche, Capabilities/Registrierungen, echte MCP-E2E-/Mehrdaemon-Regressionspfade, Vertragskonsistenz, Dokumentation und Konzeptbereiche A/A1/A2/A3/A4 bis G.
+- Reviewer: Herschel (`01a06a88-ad1c-7663-8449-75fdc683c251`).
+- Vorgabe: keine Produktionsänderungen und kein Commit; nur offensichtliche task-lokale `code-map.md`-Korrekturen zulässig. P0/P1 blockieren, P2/P3 werden als Tech Debt erfasst.
