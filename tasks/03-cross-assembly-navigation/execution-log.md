@@ -30,3 +30,24 @@
   - MCP `get_violations` (Scope `TestCoverageAssemblyShortCircuitTests`): 0 Verstöße
 - Ergebnis: EPIC-01 erfolgreich abgeschlossen. Decompilierte Assemblies ohne Testreferenzen brechen Test-Scans sofort (<100ms) ab.
 - Nächste Aktion: Start von EPIC-02 (`search_assembly` Deklarations- & Symbolart-Filter)
+
+## [RUN-03] EPIC-02: `search_assembly` Deklarations- & Symbolart-Filter
+- Datum: 2026-09-04
+- Rolle: Implementierer & Orchestrator
+- Status: completed
+- Primäraufgabe: Cross-Assembly-Navigation und Typauflösung im MCP-Server
+- Geänderte Bereiche:
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblySearchTool.cs`: Deklarationsfilterung & Kind-Filter integriert, Zerlegung in `ScanSingleLine`
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblySearchDeclarationFilter.cs`: Syntax-basierte Deklarationsprüfung (`InitSyntaxTree`, `FilterDeclarationRanges`, `ResolveCallableHeader`, `ResolveMemberHeader`, `ResolveTypeHeader`)
+  - `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblySearchModels.cs`: Argument- und Match-Records ausgelagert
+  - `src/AiNetLinter/Mcp/Registration/AssemblyAnalysisToolRegistrations.cs`: Neue MCP-Parameter `declarationOnly` und `kind` (`method`, `type`, `property`) registriert
+  - `src/AiNetLinter.FastTests/Mcp/Tools/AssemblyAnalysis/AssemblySearchDeclarationFilterTests.cs`: 8 neue Unit-Tests
+  - `tasks/03-cross-assembly-navigation/code-map.md`, `roadmap.md`
+- Durchgeführte Prüfungen (nach letzter Codeänderung):
+  - `dotnet build`: 0 Fehler, 0 Warnungen
+  - `dotnet test src/AiNetLinter.FastTests --filter Category=Unit`: 1483 erfolgreich
+  - `dotnet test src/AiNetLinter.FastTests --filter Category=Component`: 658 erfolgreich
+  - MCP `get_violations` (Scope `AssemblySearch`): 0 Verstöße
+- Ergebnis: EPIC-02 erfolgreich abgeschlossen. `search_assembly` unterstützt präzises Auffinden von Methoden-, Typ- und Property-Deklarationen ohne Störgeräusche durch Aufrufe, Strings oder Kommentare.
+- Nächste Aktion: Start von EPIC-03 (MCP-Tool `resolve_type_origin`)
+

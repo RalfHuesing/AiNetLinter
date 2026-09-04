@@ -1,8 +1,8 @@
 # Roadmap: 03-cross-assembly-navigation
 
 Status: executing
-Current Epic: EPIC-02
-Letzter Commit: bb636742 (EPIC-01 abgeschlossen)
+Current Epic: EPIC-03
+Letzter Commit: ausstehend (EPIC-02 abgeschlossen)
 Blocker: keine
 
 ## Primäraufgabe
@@ -21,10 +21,10 @@ Cross-Assembly-Navigation und Typauflösung im MCP-Server
 ### EPIC-02: `search_assembly` Deklarations- & Symbolart-Filter
 - **Ziel**: `search_assembly` um `declarationOnly` (`boolean`, Default `false`) und `kind` (`method`, `type`, `property`) erweitern.
 - **Abhängigkeiten**: Keine.
-- **Betroffene Bereiche**: `AssemblySearchTool.cs`, `AssemblyAnalysisToolRegistrations.cs`, FastTests.
+- **Betroffene Bereiche**: `AssemblySearchTool.cs`, `AssemblySearchDeclarationFilter.cs`, `AssemblySearchModels.cs`, `AssemblyAnalysisToolRegistrations.cs`, FastTests.
 - **Muss-Kriterien**: `declarationOnly=true` filtert Treffer in Strings, Kommentaren und XML-Docs heraus; `kind` schränkt auf Symbolart ein; Default-Verhalten unverändert.
 - **Verifikation**: FastTests mit dekompilierter Test-Assembly; `get_violations`.
-- **Status**: open
+- **Status**: done
 
 ### EPIC-03: MCP-Tool `resolve_type_origin`
 - **Ziel**: Eigenständiges Tool zur schnellen Auflösung von Typnamen zu definierender Assembly und absolutem DLL-Pfad über Roslyn `Compilation.References`.

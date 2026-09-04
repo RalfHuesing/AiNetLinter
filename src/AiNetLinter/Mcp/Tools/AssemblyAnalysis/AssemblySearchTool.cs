@@ -71,12 +71,28 @@ internal static class AssemblySearchTool
         }
     }
 
+    internal static CallToolResult? ValidateArguments(AssemblySearchArguments arguments) => Validate(arguments);
+
     private static CallToolResult? Validate(AssemblySearchArguments arguments)
     {
         var kind = NormalizeKind(arguments.SearchKind);
         return ValidateKind(kind, arguments.Pattern)
+            ?? ValidateSymbolKind(arguments.Kind)
             ?? ValidateLimits(arguments)
             ?? ValidateCursor(arguments.EffectiveCursor);
+    }
+
+    private static CallToolResult? ValidateSymbolKind(string? kind)
+    {
+        if (string.IsNullOrWhiteSpace(kind)) return null;
+
+        var normalized = kind.Trim().ToLowerInvariant();
+        return normalized is "method" or "type" or "property"
+            ? null
+            : McpToolResults.Recoverable(
+                LinterErrorCodes.InvalidArgument,
+                $"Ungueltiger kind-Wert '{kind}'. Erlaubt sind 'method', 'type' und 'property'.",
+                hint: "kind weglassen oder einen der erlaubten Werte ('method', 'type', 'property') uebergeben.");
     }
 
     private static CallToolResult? ValidateKind(string? kind, string? pattern)
@@ -126,7 +142,7 @@ internal static class AssemblySearchTool
             : McpToolResults.InvalidArgument("cursor muss ein nichtnegativer numerischer Offset sein.");
     }
 
-    private static AssemblySearchPayload Scan(
+    internal static AssemblySearchPayload Scan(
         string root,
         AssemblySearchArguments arguments,
         CancellationToken cancellationToken)
@@ -266,6 +282,9 @@ internal static class AssemblySearchTool
     {
         var relativePath = NormalizeRelativePath(Path.GetRelativePath(options.Root, options.FilePath));
         if (ShouldSkip(relativePath, options.FileFilter)) return;
+        var requiresDeclFilter = options.Arguments.DeclarationOnly || !string.IsNullOrEmpty(options.Arguments.Kind);
+        if (requiresDeclFilter && !relativePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)) return;
+
         var read = SearchPatternScanner.TryReadLines(options.FilePath);
         if (read.Status == SearchFileReadStatus.Binary)
         {
@@ -288,6 +307,12 @@ internal static class AssemblySearchTool
         AssemblySearchFileParameters options,
         AssemblySearchAccumulator accumulator)
     {
+        var requiresDeclFilter = options.Arguments.DeclarationOnly || !string.IsNullOrEmpty(options.Arguments.Kind);
+        var syntaxContext = requiresDeclFilter
+            ? AssemblySearchDeclarationFilter.InitSyntaxTree(lines, options)
+            : default;
+        if (requiresDeclFilter && !syntaxContext.HasValue) return;
+
         for (var index = 0; index < lines.Count; index++)
         {
             if (options.CancellationToken.IsCancellationRequested)
@@ -296,18 +321,40 @@ internal static class AssemblySearchTool
                 return;
             }
 
-            try
+            if (!ScanSingleLine(relativePath, lines, index, options, syntaxContext))
             {
-                var ranges = FindRanges(lines[index], options.Regex);
-                if (ranges.Count == 0) continue;
-                accumulator.MatchedFiles.Add(relativePath);
-                accumulator.Matches.Add(CreateMatch(relativePath, lines, index, ranges, options.ContextLines, options.Pattern));
-            }
-            catch (RegexMatchTimeoutException)
-            {
-                accumulator.RegexTimedOut = true;
                 return;
             }
+        }
+    }
+
+    private static bool ScanSingleLine(
+        string relativePath,
+        IReadOnlyList<string> lines,
+        int index,
+        AssemblySearchFileParameters options,
+        AssemblySyntaxContext syntaxContext)
+    {
+        try
+        {
+            var ranges = FindRanges(lines[index], options.Regex);
+            if (ranges.Count == 0) return true;
+
+            if (syntaxContext.HasValue)
+            {
+                ranges = AssemblySearchDeclarationFilter.FilterDeclarationRanges(
+                    syntaxContext, index, ranges, options.Arguments.Kind);
+                if (ranges.Count == 0) return true;
+            }
+
+            options.Accumulator.MatchedFiles.Add(relativePath);
+            options.Accumulator.Matches.Add(CreateMatch(relativePath, lines, index, ranges, options.ContextLines, options.Pattern));
+            return true;
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            options.Accumulator.RegexTimedOut = true;
+            return false;
         }
     }
 
@@ -388,82 +435,3 @@ internal static class AssemblySearchTool
         return string.IsNullOrEmpty(normalized) ? "." : normalized;
     }
 }
-
-internal sealed record AssemblySearchArguments(
-    string? Pattern,
-    bool IsRegex,
-    string? SearchKind,
-    int MaxResults,
-    int MaxFiles,
-    int ContextLines,
-    int MaxResponseBytes,
-    string? FileFilter,
-    string? Cursor,
-    string? ContinuationToken = null)
-{
-    internal string? EffectiveCursor => Cursor ?? ContinuationToken;
-}
-
-internal sealed class AssemblySearchAccumulator(FileSystemEnumerationResult enumeration)
-{
-    internal IReadOnlyList<string> Files { get; } = enumeration.Files.ToArray();
-    internal int EnumerationErrorCount { get; } = enumeration.ErrorCount;
-    internal List<AssemblySearchMatch> Matches { get; } = [];
-    internal HashSet<string> MatchedFiles { get; } = new(StringComparer.OrdinalIgnoreCase);
-    internal int SkippedBinary { get; set; }
-    internal int SkippedUnreadable { get; set; }
-    internal bool CancellationRequested { get; set; }
-    internal bool RegexTimedOut { get; set; }
-    internal bool Stop => CancellationRequested || RegexTimedOut;
-}
-
-internal sealed record AssemblySearchFileParameters(
-    string Root,
-    string FilePath,
-    AssemblySearchArguments Arguments,
-    string Pattern,
-    Regex Regex,
-    AssemblyFileFilter? FileFilter,
-    AssemblySearchAccumulator Accumulator,
-    CancellationToken CancellationToken)
-{
-    internal int ContextLines => Arguments.ContextLines;
-}
-
-internal sealed record AssemblySearchSelection(
-    int TotalCount,
-    AssemblySearchMatch[] VisibleMatches,
-    int NextOffset,
-    bool IsTruncated,
-    bool MaxFilesTruncated,
-    bool HasMoreVisibleMatches);
-
-internal sealed record AssemblySearchPayload(
-    string SearchKind,
-    string Query,
-    string Root,
-    string Scope,
-    IReadOnlyList<AssemblySearchMatch> Results,
-    int TotalCount,
-    int ReturnedCount,
-    bool IsTruncated,
-    string Completeness,
-    IReadOnlyList<string> TruncatedBy,
-    string? ContinuationToken,
-    int MatchedFileCount,
-    int ReturnedFileCount,
-    int SkippedBinaryFileCount,
-    int SkippedUnreadableFileCount,
-    int EnumerationErrorCount,
-    string? DetailHint);
-
-internal sealed record AssemblySearchMatch(
-    string Id,
-    string FilePath,
-    int Line,
-    IReadOnlyList<AssemblySearchMatchRange> MatchRanges,
-    string LineText,
-    IReadOnlyList<string> ContextBefore,
-    IReadOnlyList<string> ContextAfter);
-
-internal sealed record AssemblySearchMatchRange(int Column, int Length);

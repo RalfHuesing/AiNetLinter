@@ -48,6 +48,8 @@ internal static class AssemblyAnalysisToolRegistrations
                 int maxResponseBytes = 0,
                 string? cursor = null,
                 string? continuationToken = null,
+                bool declarationOnly = false,
+                string? kind = null,
                 CancellationToken ct = default) =>
             {
                 var effectiveCursor = cursor ?? continuationToken;
@@ -68,7 +70,9 @@ internal static class AssemblyAnalysisToolRegistrations
                                     maxResponseBytes,
                                     fileFilter,
                                     effectiveCursor,
-                                    continuationToken),
+                                    continuationToken,
+                                    declarationOnly,
+                                    kind),
                                 ct),
                             MaxResponseBytes: maxResponseBytes,
                             Cursor: effectiveCursor),
@@ -84,6 +88,8 @@ internal static class AssemblyAnalysisToolRegistrations
         "'data_access' fuer typische Datenbank-/Datei-/Transaktionsaufrufe oder 'external_calls' " +
         "fuer typische HTTP-/RPC-/Socket-/Prozessaufrufe; die beiden Fachmodi verwenden ohne pattern " +
         "ein eingebautes, sichtbares Regex. isRegex gilt fuer ein eigenes pattern. " +
+        "declarationOnly: schliesst Treffer in Kommentaren, Strings und XML-Docs aus. " +
+        "kind: schraenkt Treffer auf eine bestimmte Symbolart ein ('method', 'type', 'property'). " +
         "maxResults (Default 50, Cap 1000), maxFiles, contextLines (Cap 5), fileFilter als Glob (z. B. '*.cs', '!*Designer*') oder Regex, " +
         "maxResponseBytes und cursor begrenzen die Antwort. StructuredContent.assemblySearch liefert " +
         "relative Trefferpfade, stabile IDs, Matchbereiche, totalCount/returnedCount, " +

@@ -10,7 +10,9 @@
 ## Betroffene Dateien und Symbole
 - `TestDetector.cs`: `HasTestFrameworkReferences`, `IsTestFrameworkReference`, `IsDecompiledAssemblyProject`.
 - `TestCoverageBatchScan.cs`: `FindTestsForSymbolsCoreAsync`, `ScanAllTestDocumentsAsync`, `ShouldScanProject`.
-- `AssemblySearchTool.cs`: `declarationOnly`, `kind`-Filter in `ExecuteAsync` / `SearchMembers`.
+- `AssemblySearchTool.cs`: `declarationOnly`, `kind`-Filter in `ExecuteAsync` / `ScanLines`.
+- `AssemblySearchDeclarationFilter.cs`: Syntax-basierte Deklarationsprüfung (`InitSyntaxTree`, `FilterDeclarationRanges`, `ResolveCallableHeader`, `ResolveMemberHeader`, `ResolveTypeHeader`).
+- `AssemblySearchModels.cs`: Argument- und Match-Records für `AssemblySearchTool`.
 - `ResolveTypeOriginTool.cs`: `ResolveTypeOriginRequest`, `ResolveTypeOriginResultDto`.
 - `OutgoingCallScanner.cs`: Behandlung externer Symbole (`symbol.ContainingAssembly != compilation.Assembly`), `includeBcl`-Flag.
 - `GetCallTreeTool.cs` / `AssemblyGetCallTreeTool.cs` / `CallTreeMermaidRenderer.cs`: Referenzknoten `[ref: Assembly]`.
