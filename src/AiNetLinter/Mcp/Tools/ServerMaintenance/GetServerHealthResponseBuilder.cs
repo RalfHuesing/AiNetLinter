@@ -37,6 +37,7 @@ internal static class GetServerHealthResponseBuilder
         var version = McpServerVersion.Get();
         var response = new HealthResponseData(
             version,
+            McpServerVersion.RepositoryUrl,
             snapshots,
             daemonPayload,
             shownAssemblies,
@@ -68,6 +69,7 @@ internal static class GetServerHealthResponseBuilder
         builder.AppendLine("# AiNetLinter MCP-Server — Health");
         builder.AppendLine();
         builder.AppendLine($"- Version: {response.Version}");
+        builder.AppendLine($"- Repository: {response.RepositoryUrl}");
         GetServerHealthFormatter.AppendDaemonSection(builder, response.Daemon);
         builder.AppendLine();
         builder.AppendLine($"## Projekte ({response.Snapshots.Count})");
@@ -112,6 +114,7 @@ internal static class GetServerHealthResponseBuilder
         new(
             Version: response.Version,
             Projects: response.Snapshots.Select(ProjectHealthProjection.FromSnapshot).ToList(),
+            Repository: response.RepositoryUrl,
             Daemon: response.Daemon,
             Assemblies: response.ShownAssemblies,
             DiagnosticsIncluded: response.Options.IncludeDiagnostics,
@@ -126,6 +129,7 @@ internal static class GetServerHealthResponseBuilder
 
     private sealed record HealthResponseData(
         string Version,
+        string RepositoryUrl,
         IReadOnlyList<ProjectSnapshot> Snapshots,
         DaemonHealthPayload? Daemon,
         IReadOnlyList<AssemblyHealthEntry>? ShownAssemblies,

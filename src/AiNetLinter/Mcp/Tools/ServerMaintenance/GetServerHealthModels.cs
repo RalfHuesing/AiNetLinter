@@ -64,6 +64,7 @@ internal sealed record AssemblyHealthEntry(
 internal sealed record ServerHealthAggregatePayload(
     string Version,
     IReadOnlyList<ProjectHealthEntry> Projects,
+    string? Repository = null,
     DaemonHealthPayload? Daemon = null,
     IReadOnlyList<AssemblyHealthEntry>? Assemblies = null,
     bool DiagnosticsIncluded = false,

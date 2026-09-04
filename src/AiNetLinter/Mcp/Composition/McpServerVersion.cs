@@ -6,6 +6,8 @@ namespace AiNetLinter.Mcp.Composition;
 
 internal static class McpServerVersion
 {
+    internal const string RepositoryUrl = "https://github.com/RalfHuesing/AiNetLinter";
+
     internal static string Get()
     {
         var assembly = typeof(McpServerVersion).Assembly;
