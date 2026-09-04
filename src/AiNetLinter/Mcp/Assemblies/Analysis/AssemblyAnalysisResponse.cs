@@ -438,7 +438,7 @@ internal static partial class AssemblyAnalysisResponse
     }
 
     private static string FormatHeader(AssemblyResponseMetadata metadata) =>
-        $"[ASSEMBLY] targetType=assembly; targetPath={metadata.TargetPath}; origin={metadata.Origin}; " +
+        $"[ASSEMBLY] targetType=assembly; targetPath={metadata.TargetPath}; generatedPath={metadata.GeneratedPath}; origin={metadata.Origin}; " +
         $"confidence={metadata.Confidence}; generation={metadata.Generation}; " +
         $"status={metadata.Status}; completeness={metadata.Completeness}; " +
         $"bodyAvailability={metadata.BodyAvailability}; contentMode={metadata.ContentMode}\n\n";
