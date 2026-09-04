@@ -279,6 +279,25 @@
 - Verbleibendes Risiko: `source_preferred` wird im strukturierten Envelope aus Wire-Budget-/Kompatibilitätsgründen weggelassen, bleibt aber im Header sichtbar; Stress-Tests nicht ausgeführt.
 - Nächste Aktion: Checkpoint-Commit, danach frischer Folge-Review 1 mit expliziter Prüfung des strukturierten `analysis`-Envelope und echter Cache-Lease-Grenze.
 
+## Run 2026-09-04 / Epic 2 / Folge-Reviewer 1 – Abschluss
+
+- Status: completed; Folge-Reviewerbericht terminal eingegangen.
+- Urteil: `issues`; drei P1-Befunde bleiben offen, keine P0-Befunde.
+- P1 `GitClone/StderrClassification`: `ExternalSourceGitProcessOutputPolicy.cs:27-30` akzeptiert beliebige `warning:`-/`hint:`-Zeilen; ein Exit-Code-0-Clone mit `warning: repository integrity could not be verified` wird erfolgreich behandelt. Der neue Test deckt nur die positive `Cloning into`-Zeile ab. Korrektur: ausschließlich exakt bekannte harmlose Meldungen erlauben und unbekannte Warnungen/Hints fail-closed behandeln, mit negativen Regressionen.
+- P1 `CacheGeneration/ReaderLease`: Semantik von `TryReadCurrent`/`TryAcquire`/Materialisierung und exklusiver Retention ist plausibel, aber der Test hält nur manuell ein `ReadResult`; kein echter Materialisierungsstillstand zwischen zwei Daemons und keine Cancellation-Freigabe werden nachgewiesen. Korrektur: realer Zwei-Prozess-/Daemon-Interleaving-Test sowie Cancellation und anschließende Lock-/Cleanup-Freigabe.
+- P1 `SourcePolicy/ProvenancePropagation`: `AssemblyAnalysisResponse.cs:77` setzt `source_preferred` absichtlich auf `null`; wegen Null-Ignorierung fehlt `analysis.sourcePolicy` im strukturierten Default-Envelope, obwohl der Header es ausgibt. Korrektur: immer nicht-null in den Envelope übernehmen und Default-Regression ergänzen.
+- P2: still geschluckte Cleanup-Fehlerbehandlung in `ExternalSourceRepositoryCacheWriterLifecycle.cs:218-220` bleibt Tech Debt.
+- Reviewer-Nachweis: vorhandene Implementierer-Volltests frisch grün; keine redundanten Volltests wegen gezielter statischer Gegenhypothesen; keine Produktionsänderungen und keine `code-map.md`-Korrektur.
+- Nächste Aktion: Review-Checkpoint committen; danach Korrektur-Implementierer 2 für die drei Ursachen.
+
+## Run 2026-09-04 / Epic 2 / Folge-Reviewer 1
+
+- Status: running; frischer Folge-Review nach Korrekturrunde 1 gestartet.
+- Baseline: `ee81ef2e` (`fix(assembly-analyse-verbesserungen): Härte Clone-Cache- und Provenienzrennen`).
+- Scope: drei P1-Ursachen `GitClone/StderrClassification`, `CacheGeneration/ReaderLease` und `SourcePolicy/ProvenancePropagation`, insbesondere die im Implementiererbericht verbliebene Envelope-Abweichung für `source_preferred`.
+- Reviewer: Anscombe (`01a06a38-f4f1-7c03-bc94-d4003143610a`).
+- Vorgabe: keine Produktionsänderungen und kein Commit; nur offensichtliche task-lokale `code-map.md`-Korrekturen zulässig. P0/P1 blockieren, P2/P3 werden als Tech Debt erfasst.
+
 ## Run 2026-09-04 / Epic 2 / Korrektur-Implementierer 1
 
 - Status: running; erste Epic-2-Korrekturrunde nach unabhängiger Review gestartet.

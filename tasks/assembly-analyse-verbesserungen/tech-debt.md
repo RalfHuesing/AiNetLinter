@@ -141,3 +141,5 @@ Die unabhängige Review hat drei voneinander unabhängige Ursachen mit P1-Schwer
 - Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 2 / Reviewer – Abschluss, Signatur `SourcePolicy/ProvenancePropagation`.
 
 Korrektur-Implementierer 1 meldet alle drei Epic-2-P1-Ursachen behoben; Disposition bleibt bis zum Folge-Review `fix-now`, Attempts bleiben bei 1. Der Implementierer weist ausdrücklich darauf hin, dass `source_preferred` im strukturierten `analysis`-Envelope aus Wire-Budget-/Kompatibilitätsgründen fehlt und nur im Header sichtbar bleibt; dieser Punkt ist im Folge-Review als mögliche Restursache zu verifizieren.
+
+Folge-Reviewer 1 bestätigt alle drei P1-Ursachen weiterhin als offen: Clone-Policy akzeptiert unbekannte Warnungen/Hints, der Lease-Nachweis deckt kein echtes Mehrdaemon-/Cancellation-Interleaving ab, und `analysis.sourcePolicy` fehlt beim Default `source_preferred`. Korrekturrunde 2 wird mit Attempts 2 gestartet.
