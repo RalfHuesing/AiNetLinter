@@ -6,7 +6,7 @@ status: ready
 
 ## 1. Ziel & Nutzen
 
-Bei der statischen Analyse fremder oder mehrteiliger .NET-Ökosysteme (wie Sage 100, Plugins oder verteilten Klassenbibliotheken) stoßen Coding-Agenten regelmäßig an Assembly-Grenzen. Bislang muss ein Agent bei unbekannten Schnittstellen (z. B. `IGenericConnection`, `GenericCommand`) raten oder manuelle Text-Grep-Suchen über Dutzende referenzierte DLLs ausführen, um die definierende Assembly oder konkrete Implementierungen zu finden. Auch in normalen Source-Projekten ist das Auffinden konkreter Implementierungen von Schnittstellen oder Basisklassen oft mühsam.
+Bei der statischen Analyse komplexer oder mehrteiliger .NET-Ökosysteme (wie Unternehmensanwendungen, Plugin-Architekturen oder verteilten Klassenbibliotheken) stoßen Coding-Agenten regelmäßig an Assembly-Grenzen. Bislang muss ein Agent bei unbekannten Schnittstellen (z. B. `IDataProvider`, `BaseCommand`) raten oder manuelle Text-Grep-Suchen über Dutzende referenzierte DLLs ausführen, um die definierende Assembly oder konkrete Implementierungen zu finden. Auch in normalen Source-Projekten ist das Auffinden konkreter Implementierungen von Schnittstellen oder Basisklassen oft mühsam.
 
 **Ziel**: Der AiNetLinter MCP-Server wird um dedizierte, Roslyn-gestützte Cross-Assembly- und Typnavigationsfähigkeiten sowie Performance-Optimierungen bei Fremd-Assemblies erweitert, damit Agenten Aufrufketten und Typbeziehungen ohne Rätselraten, ohne Laden/Ausführen von Fremdbinärdateien und mit minimalem Token-/Turn-Aufwand sowohl über Assembly-Grenzen hinweg als auch im Quellcode-Projekt verfolgen können.
 
@@ -32,9 +32,9 @@ Bei der statischen Analyse fremder oder mehrteiliger .NET-Ökosysteme (wie Sage 
 ## 3. Geplante Fähigkeiten & Muss-Kriterien
 
 ### Feature 1: Eigenständiges MCP-Tool `resolve_type_origin`
-- **Muss-Kriterium**: Zu einem angegebenen Typnamen (z. B. `IGenericConnection` oder `Sagede.OfficeLine.Data.GenericCommand`) ermittelt das Tool über die Roslyn-`Compilation.References` sofort:
-  1. Den einfachen Assembly-Namen (z. B. `Sagede.OfficeLine.Data`),
-  2. Den vollständigen, absoluten Dateipfad der DLL auf der Festplatte (`C:\...\Sagede.OfficeLine.Data.dll`),
+- **Muss-Kriterium**: Zu einem angegebenen Typnamen (z. B. `IDataProvider` oder `Vendor.Data.BaseCommand`) ermittelt das Tool über die Roslyn-`Compilation.References` sofort:
+  1. Den einfachen Assembly-Namen (z. B. `Vendor.Data`),
+  2. Den vollständigen, absoluten Dateipfad der DLL auf der Festplatte (`C:\...\Vendor.Data.dll`),
   3. Den vollqualifizierten Typnamen und Symbol-Kind (Interface, Class, Struct).
 - **Fehlerbehandlung**: Wenn der Typ in keiner der referenzierten Assemblies auffindbar ist, liefert das Tool ein klares `SYMBOL_NOT_FOUND` mit einer Liste durchsuchter Referenz-Assemblies (gekürzt) statt einer Exception.
 - **Schnittstelle**:
@@ -42,14 +42,14 @@ Bei der statischen Analyse fremder oder mehrteiliger .NET-Ökosysteme (wie Sage 
 
 ### Feature 2: Outgoing Cross-Assembly Call-Leaves in `get_call_tree` mit BCL-Filterung
 - **Muss-Kriterium**: In `OutgoingCallScanner` werden Aufrufe auf Methoden/Properties, die in referenzierten Assemblies deklariert sind, nicht mehr verworfen (`symbol.Locations.All(!IsInSource)`), sondern als referenzierte Blätter erfasst.
-- **Darstellung**: Im gerenderten Call-Tree werden sie eindeutig als externe/referenzierte Ziele gekennzeichnet (z. B. `[ref: Sagede.OfficeLine.Data] IGenericCommand.ExecuteReader`).
+- **Darstellung**: Im gerenderten Call-Tree werden sie eindeutig als externe/referenzierte Ziele gekennzeichnet (z. B. `[ref: Vendor.Data] IBaseCommand.Execute`).
 - **Rausch-Unterdrückung**: Standard-Framework-Typen (`System.*`, `Microsoft.NETCore.*`) werden standardmäßig herausgefiltert (`includeBcl: false`), um den Baum nicht mit Primitives (`string.IndexOf`, `List.Add`, `object.ToString`) zu überfluten. Über den optionalen Parameter `includeBcl: true` können sie bei Bedarf sichtbar gemacht werden.
 
 ### Feature 3: Eigenständiges MCP-Tool `find_implementations` (für Project & Assembly)
 - **Muss-Kriterium**: Zu einer Schnittstelle (`interface`) oder abstrakten Klasse/Methode werden alle implementierenden Klassen und konkreten `override`-Methoden innerhalb der untersuchten Compilation/Assembly aufgelistet.
 - **Dualer Zielvertrag**: Unterstützt sowohl `targetType=project` (Entwicklung im eigenen Code) als auch `targetType=assembly` (Fremdcode-Erkundung).
 - **Schnittstelle**:
-  - Parameter: `symbolIdentifier` (z. B. `Sagede.OfficeLine.Data.GenericCommand.ExecuteReader` oder `IGenericConnection`), Zielvertrag (`targetType=assembly|project`, `targetPath`).
+  - Parameter: `symbolIdentifier` (z. B. `Vendor.Data.BaseCommand.Execute` oder `IDataProvider`), Zielvertrag (`targetType=assembly|project`, `targetPath`).
   - Rückgabe: Strukturierte Liste mit implementierender Klasse, Methode, Datei- und Zeilenposition sowie Ausweisung, ob die Implementierung `concrete`, `abstract` oder `virtual` ist.
 
 ### Feature 4: `search_assembly` Deklarations- & Symbolart-Filter
@@ -74,7 +74,7 @@ Bei der statischen Analyse fremder oder mehrteiliger .NET-Ökosysteme (wie Sage 
 
 1. `resolve_type_origin` beantwortet Typ-Anfragen in < 100 ms für ein Projekt mit > 50 Referenzen deterministisch mit Assembly-Name und Dateipfad.
 2. `get_call_tree(direction="outgoing")` bricht nicht mehr an der Assembly-Grenze ab, sondern zeigt Calls in Fremd-Assemblies als `[ref: <Assembly>] <Typ>.<Member>` an (bei Standard `includeBcl=false` ohne System-Rauschen).
-3. `find_implementations` findet sowohl in Quellcode-Projekten als auch in Assemblies konkrete Implementierungen und Overrides mit Datei- und Zeilenangabe (z. B. zu `GenericCommand.ExecuteReader` direkt `AdoNetCommand.ExecuteReader`).
+3. `find_implementations` findet sowohl in Quellcode-Projekten als auch in Assemblies konkrete Implementierungen und Overrides mit Datei- und Zeilenangabe (z. B. zu `BaseCommand.Execute` direkt `ConcreteSqlCommand.Execute`).
 4. `search_assembly` liefert mit `declarationOnly=true` bei Begriffen wie `Execute` nur echte Methodensignaturen/Typen und keine Treffer in XML-Docs oder Kommentaren.
 5. `get_impact` und `get_assembly_context` auf Fremd-Assemblies ohne Testreferenzen schließen durch Short-Circuiting in < 3 Sekunden statt ~28 Sekunden ab.
 6. Alle FastTests (`Category=Unit`, `Category=Component`) und IntegrationTests (`Category!=Stress`) laufen warnungs- und fehlerfrei durch (`TreatWarningsAsErrors = true`).
