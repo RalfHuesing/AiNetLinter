@@ -35,4 +35,14 @@ internal static class RoslynSymbolExtensions
             return null;
         }
     }
+
+    /// <summary>
+    /// Prüft, ob ein <see cref="SyntaxTrivia"/> ein Kommentar oder XML-Dokumentations-Trivia ist.
+    /// </summary>
+    public static bool IsCommentOrDocTrivia(this SyntaxTrivia trivia) =>
+        trivia.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.SingleLineCommentTrivia)
+        || trivia.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.MultiLineCommentTrivia)
+        || trivia.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.SingleLineDocumentationCommentTrivia)
+        || trivia.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.MultiLineDocumentationCommentTrivia)
+        || trivia.IsKind(Microsoft.CodeAnalysis.CSharp.SyntaxKind.DocumentationCommentExteriorTrivia);
 }

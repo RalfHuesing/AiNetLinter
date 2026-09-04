@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
+using AiNetLinter.Core;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
@@ -73,7 +74,7 @@ internal static class AssemblySearchDeclarationFilter
         var span = new TextSpan(charPosition, length);
 
         var trivia = root.FindTrivia(charPosition);
-        if (trivia != default && IsCommentOrDocTrivia(trivia))
+        if (trivia != default && trivia.IsCommentOrDocTrivia())
         {
             return false;
         }
@@ -218,13 +219,6 @@ internal static class AssemblySearchDeclarationFilter
                 return null;
         }
     }
-
-    private static bool IsCommentOrDocTrivia(SyntaxTrivia trivia) =>
-        trivia.IsKind(SyntaxKind.SingleLineCommentTrivia)
-        || trivia.IsKind(SyntaxKind.MultiLineCommentTrivia)
-        || trivia.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia)
-        || trivia.IsKind(SyntaxKind.MultiLineDocumentationCommentTrivia)
-        || trivia.IsKind(SyntaxKind.DocumentationCommentExteriorTrivia);
 
     private static bool IsCommentOrDocToken(SyntaxToken token) =>
         token.IsKind(SyntaxKind.XmlTextLiteralToken)

@@ -173,7 +173,7 @@ internal static class SearchPatternRoslynEnricher
         CancellationToken ct)
     {
         var trivia = root.FindTrivia(position, findInsideTrivia: true);
-        if (IsComment(trivia)) return new("comment", "not_applicable", null);
+        if (trivia.IsCommentOrDocTrivia()) return new("comment", "not_applicable", null);
 
         var token = root.FindToken(position, findInsideTrivia: true);
         if (IsString(token)) return new("string", "not_applicable", null);
@@ -249,13 +249,6 @@ internal static class SearchPatternRoslynEnricher
 
     private static SimpleNameSyntax? FindReferenceNode(SyntaxToken token) =>
         token.Parent?.AncestorsAndSelf().OfType<SimpleNameSyntax>().FirstOrDefault();
-
-    private static bool IsComment(SyntaxTrivia trivia) =>
-        trivia.IsKind(SyntaxKind.SingleLineCommentTrivia)
-        || trivia.IsKind(SyntaxKind.MultiLineCommentTrivia)
-        || trivia.IsKind(SyntaxKind.SingleLineDocumentationCommentTrivia)
-        || trivia.IsKind(SyntaxKind.MultiLineDocumentationCommentTrivia)
-        || trivia.IsKind(SyntaxKind.DocumentationCommentExteriorTrivia);
 
     private static bool IsString(SyntaxToken token) =>
         token.IsKind(SyntaxKind.StringLiteralToken)

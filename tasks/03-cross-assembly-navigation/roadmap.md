@@ -2,7 +2,7 @@
 
 Status: completed
 Current Epic: keine (alle Epics abgeschlossen)
-Letzter Commit: in Arbeit (EPIC-06 abgeschlossen)
+Letzter Commit: e3ff6e39 (EPIC-06 abgeschlossen; Audit-Abschluss bereit)
 Blocker: keine
 
 ## Primäraufgabe

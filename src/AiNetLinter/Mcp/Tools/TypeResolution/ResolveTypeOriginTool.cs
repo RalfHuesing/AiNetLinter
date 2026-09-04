@@ -178,26 +178,6 @@ internal static class ResolveTypeOriginTool
         return BuildSuccess(type, asmName, path, isSource, [asmName]);
     }
 
-    private static CallToolResult FallbackAssemblySearch(ResolveContext context)
-    {
-        var searched = new List<string>();
-        if (context.AssemblyReferences is not null)
-        {
-            foreach (var reference in context.AssemblyReferences)
-            {
-                searched.Add(reference.Name);
-                if (string.Equals(reference.Name, context.NormalizedName, StringComparison.OrdinalIgnoreCase))
-                {
-                    var path = reference.ResolvedPath ?? reference.Name + ".dll";
-                    var origin = new TypeOriginInfoDto(reference.Name, path, context.NormalizedName, "assembly", false, "");
-                    return SuccessResult(new ResolveTypeOriginResultDto(context.TypeName, true, origin, searched));
-                }
-            }
-        }
-
-        return NotFoundResult(context.TypeName, searched);
-    }
-
     private static INamedTypeSymbol? FindWithArity(Compilation compilation, string name)
     {
         var bracketIndex = name.IndexOf('<');
