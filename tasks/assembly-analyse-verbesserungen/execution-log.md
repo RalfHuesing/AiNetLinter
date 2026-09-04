@@ -298,6 +298,24 @@
 - Reviewer: Anscombe (`01a06a38-f4f1-7c03-bc94-d4003143610a`).
 - Vorgabe: keine Produktionsänderungen und kein Commit; nur offensichtliche task-lokale `code-map.md`-Korrekturen zulässig. P0/P1 blockieren, P2/P3 werden als Tech Debt erfasst.
 
+## Run 2026-09-04 / Epic 2 / Korrektur-Implementierer 2 – Abschluss
+
+- Status: completed; zweiter Korrekturbericht terminal eingegangen, ohne Commit.
+- Urteil: Implementierer meldet die drei P1-Ursachen behoben; Folge-Review erforderlich.
+- Bericht: Clone-Stderr akzeptiert nur exakt bekannte Clone-/Statusmeldungen; unbekannte Integrity-/Security-Warnings und Hints bleiben fail-closed. Ein echter Zwei-Prozess-Cache-Lease-Test pausiert den Reader, lässt Writer-Retention laufen, materialisiert die gehaltene Generation und prüft Cancellation sowie Lock-/Cleanup-Freigabe. `analysis.sourcePolicy` ist auf allen relevanten strukturierten Assembly-Envelopes einschließlich Default `source_preferred` nicht-null; Header und JSON werden getestet. `code-map.md` aktualisiert.
+- Geänderte Bereiche: Git-Policy, Checkout-Status, Response-Envelope, Program-/IPC-Testworker, Git-/Source-Policy-/Cache-Lease-Regressionen.
+- Verifikation nach letzter Codeänderung: `dotnet build --no-restore` 0 Warnungen/0 Fehler; FastTests `Category!=Stress` 2445 bestanden/2 übersprungen; IntegrationTests `Category!=Stress` 427 bestanden; Git-Regressionen 27 bestanden; Lease-/Source-Policy-/Wire-Regressionen 3 bestanden; `safeguard` ExternalSource 10,00/10; `get_violations` geänderte Scopes 0; `git diff --check` sauber.
+- Verbleibendes Risiko: Cancellation wird vor Beginn, nicht mitten in einer großen Kopieroperation geprüft; unbekannte Git-Ausgaben bleiben bewusst fail-closed. Stress-Tests nicht ausgeführt.
+- Nächste Aktion: Checkpoint-Commit, danach frischer Folge-Review 2.
+
+## Run 2026-09-04 / Epic 2 / Korrektur-Implementierer 2
+
+- Status: running; zweite Epic-2-Korrekturrunde gestartet.
+- Baseline: `37768c3a` (`chore(assembly-analyse-verbesserungen): Präzisiere Epic-2-Folgeprüfung`).
+- Scope: nur `GitClone/StderrClassification`, `CacheGeneration/ReaderLease` und `SourcePolicy/ProvenancePropagation`; Schwerpunkt auf fail-closed-Clone-Warnungen, echtem Mehrdaemon-/Cancellation-Nachweis und nicht-null `analysis.sourcePolicy` beim Default.
+- Implementierer: Galileo (`01a06a40-e9a8-7562-bce9-0da9d8dcb140`).
+- Vorgabe: kein Commit; keine externen Assemblies/Repos; MCP-first für C#-Semantik; vorhandene Mehrdaemon-/MCP-Testinfrastruktur verwenden; `code-map.md` aktualisieren.
+
 ## Run 2026-09-04 / Epic 2 / Korrektur-Implementierer 1
 
 - Status: running; erste Epic-2-Korrekturrunde nach unabhängiger Review gestartet.

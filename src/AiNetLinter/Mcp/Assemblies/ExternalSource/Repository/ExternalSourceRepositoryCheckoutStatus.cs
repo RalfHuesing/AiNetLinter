@@ -55,7 +55,9 @@ internal static class ExternalSourceRepositoryCheckoutStatus
             || processResult.WasTimedOut
             || processResult.StandardOutputTruncated
             || processResult.StandardErrorTruncated
-            || !ExternalSourceGitProcessOutputPolicy.IsHarmlessStandardError(processResult.StandardError))
+            || !ExternalSourceGitProcessOutputPolicy.IsHarmlessStandardError(
+                processResult.StandardError,
+                operation: "status"))
         {
             return Failure(
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutUnverified,

@@ -48,6 +48,27 @@ public sealed class GiteaGitRepositoryTransportTests
         Assert.Equal(3, executor.Requests.Count);
     }
 
+    [Theory]
+    [InlineData("warning: repository integrity could not be verified")]
+    [InlineData("hint: verify the repository before continuing")]
+    public async Task CloneDefaultBranchAsync_RejectsUnknownWarningsAndHintsOnStandardError(
+        string standardError)
+    {
+        using var temp = TestTempDirectory.Create("gitea-transport-clone-output-policy-");
+        var destination = temp.CreateSubdirectory("checkout");
+        var executor = new RecordingGitExecutor((request, _) =>
+            Task.FromResult(request.Arguments[0] is "clone"
+                ? new ExternalSourceGitProcessResult(0, string.Empty, standardError)
+                : CompletedProcess()));
+        var transport = new GiteaGitRepositoryTransport(processExecutor: executor);
+
+        var result = await transport.CloneDefaultBranchAsync(CreateMapping(), destination);
+
+        Assert.False(result.IsAvailable);
+        Assert.Equal(ExternalSourceProviderFailureKind.InvalidResponse, result.FailureKind);
+        Assert.Single(executor.Requests);
+    }
+
     [Fact]
     public async Task CloneDefaultBranchAsync_UsesSingleBranchNoTagsAndReturnsHeadRevision()
     {

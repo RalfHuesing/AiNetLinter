@@ -25,13 +25,21 @@ internal static class ExternalSourceGitProcessOutputPolicy
     }
 
     private static bool IsAllowedStandardErrorLine(string line, string? operation) =>
-        line.StartsWith("warning:", StringComparison.OrdinalIgnoreCase)
-        || line.StartsWith("hint:", StringComparison.OrdinalIgnoreCase)
-        || operation is "clone" && IsCloneProgressLine(line);
+        operation switch
+        {
+            "clone" => IsCloneProgressLine(line),
+            "status" => string.Equals(
+                line,
+                "warning: repository maintenance is disabled",
+                StringComparison.Ordinal),
+            _ => false,
+        };
 
     private static bool IsCloneProgressLine(string line) =>
-        line.StartsWith("Cloning into '", StringComparison.Ordinal)
-        && line.EndsWith("'...", StringComparison.Ordinal);
+        string.Equals(
+            line,
+            "Cloning into '.ainetlinter-git-clone'...",
+            StringComparison.Ordinal);
 
     private static bool ContainsRepositorySafetyError(string line) =>
         line.Contains("dubious ownership", StringComparison.OrdinalIgnoreCase)

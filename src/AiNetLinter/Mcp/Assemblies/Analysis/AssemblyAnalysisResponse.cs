@@ -74,7 +74,7 @@ internal static partial class AssemblyAnalysisResponse
             CreateSourceDiagnosticsSummary(origin.SourceDiagnostics),
             origin.BodyAvailability,
             origin.ContentMode,
-            origin.SourcePolicy == ExternalSourceSourceMode.SourcePreferred.ToWireValue() ? null : origin.SourcePolicy);
+            origin.SourcePolicy);
 
         JsonElement? structured = result.StructuredContent;
         if (structured is { ValueKind: JsonValueKind.Object })
@@ -481,7 +481,7 @@ internal static partial class AssemblyAnalysisResponse
         SourceSnapshotIdentity? SourceSnapshot,
         string? FallbackReason,
         AssemblySourceDiagnosticsSummary SourceDiagnosticsSummary,
-        string BodyAvailability, string ContentMode, string? SourcePolicy)
+        string BodyAvailability, string ContentMode, string SourcePolicy)
     {
         public string TargetType => "assembly";
     }

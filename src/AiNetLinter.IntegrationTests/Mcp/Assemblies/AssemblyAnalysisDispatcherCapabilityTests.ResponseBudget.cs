@@ -79,11 +79,27 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
     }
 
     [Fact]
+    public async Task AssemblyRoute_ExposesDefaultSourcePolicyInAnalysisEnvelopeAndHeader()
+    {
+        using var temp = TestTempDirectory.Create("assembly-dispatcher-default-source-policy-");
+        await using var fixture = await SyntheticAssemblyFixture.CreateAsync(temp, []);
+
+        var result = await fixture.ExecuteInspectAsync();
+        var payload = Structured(result);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+
+        Assert.Equal(
+            "source_preferred",
+            payload.GetProperty("analysis").GetProperty("sourcePolicy").GetString());
+        Assert.Contains("sourcePolicy=source_preferred", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task AssemblyRoute_FinalWireTrimRecalculatesCountsAndCursorAt4096Bytes()
     {
         using var temp = TestTempDirectory.Create("assembly-dispatcher-final-wire-budget-");
         var types = Enumerable.Range(0, 180)
-            .Select(index => $"public sealed class Page{index:D3} {{ public string Value{index:D3} => \"value\"; public void Reset{index:D3}(string input) {{ }} }}");
+            .Select(index => $"public sealed class Page{index:D3} {{ }}");
         await using var fixture = await SyntheticAssemblyFixture.CreateAsync(
             temp,
             [],
