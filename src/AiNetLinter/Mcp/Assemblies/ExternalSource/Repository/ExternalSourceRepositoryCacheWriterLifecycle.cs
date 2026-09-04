@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Assemblies.Locking;
 
 namespace AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 
@@ -15,6 +16,7 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter
         PublishContext context,
         bool published,
         ExternalSourceRepositoryCacheKeyLockLease? lockLease,
+        AssemblyArtifactFileLockLease? processLock,
         Func<Task>? afterLeaseReleasedAsync)
     {
         try
@@ -43,6 +45,7 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter
         finally
         {
             lockLease?.Dispose();
+            processLock?.Dispose();
             await InvokeTestHookAsync(afterLeaseReleasedAsync).ConfigureAwait(false);
         }
     }

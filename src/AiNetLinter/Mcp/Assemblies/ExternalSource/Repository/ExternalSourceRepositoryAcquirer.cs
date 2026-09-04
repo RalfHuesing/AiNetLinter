@@ -153,10 +153,13 @@ internal sealed partial class ExternalSourceRepositoryAcquirer : IExternalSource
         }
         catch (OperationCanceledException)
         {
-            if (!ownership.TryCleanup())
+            if (!ownership.TryCleanupOrQuarantine(
+                    "Checkout konnte nach Cancellation nicht sicher bereinigt werden.",
+                    out var quarantine))
             {
                 logger.Warning(
-                    "Externer Repository-Checkout konnte nach Cancellation nicht bereinigt werden. Code={Code}",
+                    "Externer Repository-Checkout konnte nach Cancellation nicht bereinigt werden. Status={Status} Code={Code}",
+                    quarantine is null ? "quarantäne-fehlgeschlagen" : "quarantiniert",
                     ExternalSourceConfigurationDiagnosticCodes.RepositoryCleanupFailed);
             }
 
@@ -293,34 +296,17 @@ internal sealed partial class ExternalSourceRepositoryAcquirer : IExternalSource
         }
     }
 
-    private async Task<ExternalSourceRepositoryTransportResult?> ExecuteTransportAsync(
+    private Task<ExternalSourceRepositoryTransportResult> ExecuteTransportAsync(
         ExternalSourceMapping mapping,
         string checkoutPath,
         CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await transport.CloneDefaultBranchAsync(
+        => ExternalSourceRepositoryTransportExecution.ExecuteAsync(
+            new(
                 mapping,
                 checkoutPath,
-                cancellationToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            return new ExternalSourceRepositoryTransportResult(
-                isAvailable: false,
-                loadedRevision: null,
-                diagnostics: [CreateDiagnostic(
-                    ExternalSourceRepositoryFailurePolicy.GetTransportDiagnosticCode(exception),
-                    "Die Repository-Akquisition ist fehlgeschlagen.")],
-                state: ExternalSourceRepositoryResultState.Create(
-                    ExternalSourceRepositoryFailurePolicy.ClassifyTransportException(exception)));
-        }
-    }
+                cancellationToken,
+                transport.CloneDefaultBranchAsync,
+                "Die Repository-Akquisition ist fehlgeschlagen."));
 
     private static bool TryValidateMapping(
         ExternalSourceMapping mapping,

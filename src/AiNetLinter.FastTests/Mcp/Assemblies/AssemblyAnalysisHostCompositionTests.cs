@@ -18,6 +18,41 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies;
 [Trait("Category", "Component")]
 public sealed class AssemblyAnalysisHostCompositionTests
 {
+    // @covers AssemblyAnalysisHealthSnapshotProvider
+    [Fact]
+    public async Task Composition_SourceRequiredFailsWithoutDecompilationWhenProviderFails()
+    {
+        using var temp = TestTempDirectory.Create("assembly-host-composition-source-required-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "RequiredSourceAssembly",
+            "namespace RequiredSource; public sealed class TargetOnly { }");
+        var mappingsPath = temp.CreateFile(
+            "mappings.json",
+            "{ \"repositories\": [{ \"url\": \"https://gitea.example/shared.git\", \"solutionPath\": \"src/Shared.slnx\", \"assemblies\": [\"RequiredSourceAssembly\"] }] }");
+        var settingsPath = temp.CreateFile(
+            "appsettings.json",
+            "{ \"ExternalSources\": { \"MappingsPath\": \"mappings.json\", \"SourceMode\": \"source_required\" } }");
+        await using var composition = AssemblyAnalysisHostComposition.Create(
+            settingsPath,
+            new UnavailableExternalSourceProvider());
+        using (var sourceScope = await composition.Orchestrator.ResolveAsync(assemblyPath))
+        {
+            Assert.Equal(ExternalSourceSourceMode.SourceRequired, sourceScope.SourceMode);
+        }
+
+        var result = await InspectAssemblyToolDispatch.ExecuteAsync(
+            null,
+            new InspectAssemblyArguments(assemblyPath, null, "TargetOnly", null, true, 10, true, null, 10),
+            CancellationToken.None,
+            composition.Orchestrator);
+
+        Assert.NotNull(result.Content);
+        Assert.Contains(ExternalSourceConfigurationDiagnosticCodes.SourceRequiredUnavailable, TextOf(result), StringComparison.Ordinal);
+        Assert.DoesNotContain("decompiled", TextOf(result), StringComparison.Ordinal);
+        Assert.Equal(0, composition.Sessions.ResidentCount);
+    }
+
     [Fact]
     public async Task Composition_UsesOneHostContextForBothAssemblyToolsAndPreservesFallback()
     {

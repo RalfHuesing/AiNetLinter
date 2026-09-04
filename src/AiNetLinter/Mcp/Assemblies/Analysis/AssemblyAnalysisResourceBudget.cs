@@ -8,6 +8,10 @@ using AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
+internal sealed record AssemblyAnalysisRegistryRuntimeOptions(
+    AssemblyDecompilationConfiguration? DecompilationConfiguration = null,
+    string? DaemonProfile = null);
+
 internal static class ExternalResourceRegistryDefaults
 {
     internal const long MaxDiskBytes = ExternalSourceResourceOptions.DefaultMaxDiskBytes;

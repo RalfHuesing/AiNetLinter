@@ -144,11 +144,15 @@ internal static class ExternalSourceRepositorySourcePolicy
         ArgumentNullException.ThrowIfNull(parameters);
         ArgumentNullException.ThrowIfNull(parameters.Ownership);
         var resultDiagnostics = new List<ExternalSourceConfigurationDiagnostic>(parameters.Diagnostics);
-        if (!parameters.Ownership.TryCleanup())
+        if (!parameters.Ownership.TryCleanupOrQuarantine(
+                "Checkout konnte nach einem Repository-Fehler nicht sicher bereinigt werden.",
+                out var quarantine))
         {
             resultDiagnostics.Add(ExternalSourceConfigurationDiagnostic.CreateError(
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryCleanupFailed,
-                "Der eigene unvollständige Checkout konnte nicht vollständig bereinigt werden.",
+                quarantine is null
+                    ? "Der eigene unvollständige Checkout konnte nicht vollständig bereinigt werden; Quarantäne konnte nicht angelegt werden."
+                    : $"Der eigene unvollständige Checkout wurde bis {quarantine.ExpiresUtc:O} unter Quarantäne gestellt.",
                 nameof(ExternalSourceRepositorySourcePolicy),
                 "$repository"));
         }

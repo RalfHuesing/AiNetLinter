@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp.Daemon;
 
 namespace AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 
@@ -22,11 +23,16 @@ internal sealed record ExternalSourceRepositoryCacheConstruction(
 internal static class ExternalSourceRepositoryCacheOptionsFactory
 {
     internal static ExternalSourceRepositoryCacheConstruction Create(
-        ExternalSourceCacheOptions options)
+        ExternalSourceCacheOptions options,
+        string? daemonProfile = null)
     {
         ArgumentNullException.ThrowIfNull(options);
+        var normalizedProfile = DaemonInstanceId.Normalize(daemonProfile);
+        var configuredCacheRoot = normalizedProfile is null
+            ? options.CacheRoot
+            : options.CacheRoot + "." + normalizedProfile;
         var cacheRoot = ExternalSourceConfigurationPath.TryCanonicalizeCacheRoot(
-            options.CacheRoot)
+            configuredCacheRoot)
             ?? throw new ArgumentException(
                 ExternalSourceCacheOptions.InvalidCacheRootMessage,
                 nameof(options));

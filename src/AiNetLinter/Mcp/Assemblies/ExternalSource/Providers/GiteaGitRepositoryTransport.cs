@@ -6,6 +6,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp.Assemblies.ExternalSource.ProcessExecution;
 
 namespace AiNetLinter.Mcp.Assemblies.ExternalSource.Providers;
 
@@ -255,7 +256,7 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
             ],
             destinationPath,
             processTimeout,
-            CreateEnvironment(credential));
+            CreateEnvironment(credential, destinationPath));
         var processResult = await processExecutor.ExecuteAsync(request, cancellationToken)
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
@@ -282,7 +283,7 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
             ["fetch", GitNoTagsArgument, "origin"],
             destinationPath,
             processTimeout,
-            CreateEnvironment(credential));
+            CreateEnvironment(credential, destinationPath));
         var processResult = await processExecutor.ExecuteAsync(request, cancellationToken)
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
@@ -298,7 +299,7 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
             ["reset", "--hard", "origin/HEAD"],
             destinationPath,
             processTimeout,
-            CreateEnvironment(credential: null));
+            CreateEnvironment(credential: null, destinationPath));
         var processResult = await processExecutor.ExecuteAsync(request, cancellationToken)
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
@@ -314,7 +315,7 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
             ["rev-parse", "--verify", "HEAD"],
             destinationPath,
             processTimeout,
-            CreateEnvironment(credential: null));
+            CreateEnvironment(credential: null, destinationPath));
         var processResult = await processExecutor.ExecuteAsync(request, cancellationToken)
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
@@ -347,7 +348,10 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryTransportResultInvalid);
         }
 
-        if (processResult.ExitCode == 0 && !processResult.WasTimedOut)
+        if (processResult.ExitCode == 0
+            && !processResult.WasTimedOut
+            && !processResult.StandardErrorTruncated
+            && ExternalSourceGitProcessOutputPolicy.IsHarmlessStandardError(processResult.StandardError))
         {
             return null;
         }
@@ -407,7 +411,8 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
     }
 
     private static Dictionary<string, string> CreateEnvironment(
-        ExternalSourceCredential? credential)
+        ExternalSourceCredential? credential,
+        string destinationPath)
     {
         var environment = new Dictionary<string, string>(StringComparer.Ordinal)
         {
@@ -416,12 +421,14 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
             [GitConfigNoSystemVariable] = "1",
             [GitConfigGlobalVariable] = GetGitNullConfigPath(),
             [GitConfigSystemVariable] = GetGitNullConfigPath(),
-            [GitConfigCountVariable] = credential is null ? "0" : "1",
+            [GitConfigCountVariable] = credential is null ? "1" : "2",
+            [GitConfigKeyPrefix] = "safe.directory",
+            [GitConfigValuePrefix] = Path.GetFullPath(destinationPath),
         };
         if (credential is not null)
         {
-            environment[GitConfigKeyPrefix] = "credential.helper";
-            environment[GitConfigValuePrefix] = CredentialHelperValue;
+            environment["GIT_CONFIG_KEY_1"] = "credential.helper";
+            environment["GIT_CONFIG_VALUE_1"] = CredentialHelperValue;
             environment[CredentialUsernameVariable] = credential.Username;
             environment[CredentialSecretVariable] = credential.Secret;
         }

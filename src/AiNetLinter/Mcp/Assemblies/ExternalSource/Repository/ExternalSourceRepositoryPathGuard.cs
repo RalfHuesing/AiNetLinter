@@ -179,6 +179,7 @@ internal static class ExternalSourceRepositoryPathGuard
 
         if (IsReparsePointAttribute(attributes))
         {
+            TryClearReadOnly(path, attributes);
             return TryDeleteReparsePoint(path, attributes);
         }
 
@@ -192,10 +193,12 @@ internal static class ExternalSourceRepositoryPathGuard
                 }
             }
 
+            TryClearReadOnly(path, attributes);
             Directory.Delete(path);
             return TryGetAttributes(path, out _, out var stillExists) && !stillExists;
         }
 
+        TryClearReadOnly(path, attributes);
         File.Delete(path);
         return TryGetAttributes(path, out _, out var fileStillExists) && !fileStillExists;
     }
@@ -212,6 +215,21 @@ internal static class ExternalSourceRepositoryPathGuard
         }
 
         return TryGetAttributes(path, out _, out var stillExists) && !stillExists;
+    }
+
+    private static void TryClearReadOnly(string path, FileAttributes attributes)
+    {
+        if (!attributes.HasFlag(FileAttributes.ReadOnly)) return;
+        try
+        {
+            File.SetAttributes(path, attributes & ~FileAttributes.ReadOnly);
+        }
+        catch (Exception ignored) when (
+            ExternalSourceRepositoryFailurePolicy.IsFileSystemException(ignored))
+        {
+            // The delete below remains authoritative and reports an unsuccessful cleanup.
+            _ = ignored;
+        }
     }
 
     private static bool TryGetAttributes(

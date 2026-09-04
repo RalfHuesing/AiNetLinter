@@ -54,8 +54,9 @@ public sealed class GiteaGitRepositoryTransportTests
             cloneRequest.Arguments);
         Assert.DoesNotContain("--branch", cloneRequest.Arguments);
         Assert.Equal(destination, cloneRequest.WorkingDirectory);
-        Assert.Equal("1", cloneRequest.Environment["GIT_CONFIG_COUNT"]);
-        Assert.Equal("credential.helper", cloneRequest.Environment["GIT_CONFIG_KEY_0"]);
+        Assert.Equal("2", cloneRequest.Environment["GIT_CONFIG_COUNT"]);
+        Assert.Equal("safe.directory", cloneRequest.Environment["GIT_CONFIG_KEY_0"]);
+        Assert.Equal("credential.helper", cloneRequest.Environment["GIT_CONFIG_KEY_1"]);
         Assert.Equal(CredentialSecret, cloneRequest.Environment[SecretEnvironmentVariable]);
         Assert.DoesNotContain(CredentialSecret, string.Join(" ", cloneRequest.Arguments));
         Assert.False(resolver.CancellationToken.CanBeCanceled);
@@ -94,7 +95,8 @@ public sealed class GiteaGitRepositoryTransportTests
         Assert.True(result.IsAvailable);
         Assert.Equal(Revision, result.LoadedRevision);
         var environment = executor.Requests[0].Environment;
-        Assert.Equal("0", environment["GIT_CONFIG_COUNT"]);
+        Assert.Equal("1", environment["GIT_CONFIG_COUNT"]);
+        Assert.Equal("safe.directory", environment["GIT_CONFIG_KEY_0"]);
         Assert.Equal("0", environment["GIT_TERMINAL_PROMPT"]);
         Assert.Equal(string.Empty, environment["GIT_ASKPASS"]);
         Assert.DoesNotContain(SecretEnvironmentVariable, environment.Keys);

@@ -48,6 +48,14 @@ public sealed class ExternalSourceRepositoryCancellationTests
         Assert.False(File.Exists(Path.Combine(
             destinationPath,
             ExternalSourceCheckoutOwnership.OwnershipMarkerFileName)));
+        var quarantineRoot = Path.Combine(staging.DirectoryPath, ".quarantine");
+        var quarantineMetadata = Assert.Single(Directory.EnumerateFiles(
+            quarantineRoot,
+            "checkout-*.json"));
+        var quarantineText = File.ReadAllText(quarantineMetadata);
+        Assert.Contains("ainetlinter-source-acquirer", quarantineText, StringComparison.Ordinal);
+        Assert.Contains("Checkout konnte", quarantineText, StringComparison.Ordinal);
+        Assert.Contains("ExpiresUtc", quarantineText, StringComparison.Ordinal);
 
         var logEvent = Assert.Single(sink.Events);
         Assert.Equal(LogEventLevel.Warning, logEvent.Level);

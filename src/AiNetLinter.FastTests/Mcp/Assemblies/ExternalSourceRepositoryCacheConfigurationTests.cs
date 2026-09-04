@@ -15,6 +15,27 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies;
 public sealed class ExternalSourceRepositoryCacheConfigurationTests
 {
     [Fact]
+    public void CacheOptionsFactory_UsesStableDaemonProfileSuffixWithoutPid()
+    {
+        using var tempDir = TestTempDirectory.Create("external-source-cache-profile-");
+        var options = new ExternalSourceCacheOptions(
+            tempDir.GetPath("cache"),
+            TimeSpan.FromMinutes(1));
+
+        var first = ExternalSourceRepositoryCacheOptionsFactory.Create(options, "Codex");
+        var same = ExternalSourceRepositoryCacheOptionsFactory.Create(options, "codex");
+        var other = ExternalSourceRepositoryCacheOptionsFactory.Create(options, "review");
+
+        Assert.Equal(first.CacheRoot, same.CacheRoot);
+        Assert.EndsWith("cache.codex", first.CacheRoot, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(Environment.ProcessId.ToString(), first.CacheRoot, StringComparison.Ordinal);
+        Assert.NotEqual(first.CacheRoot, other.CacheRoot);
+        Assert.Equal(
+            Path.Combine(first.CacheRoot, ExternalSourceRepositoryCacheContract.SourceDirectoryName),
+            first.SourceRoot);
+    }
+
+    [Fact]
     public async Task LoadedCacheOptions_UseSourceRootAndConfiguredRefreshInterval()
     {
         using var tempDir = TestTempDirectory.Create("external-source-cache-options-");

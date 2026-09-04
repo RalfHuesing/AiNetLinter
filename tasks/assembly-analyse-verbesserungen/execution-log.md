@@ -133,6 +133,14 @@
 - Subagent: `01a069c8-d1d4-79a1-82ad-d08d4a2e8c2d` (Turing)
 - Auftrag: tatsächlichen Diff, unbekannte Arrays, beide Directory-/File-Truncation-Richtungen, frühere Vertragskorrekturen, Code-Map und Nachweise prüfen; kein Produktionscode und kein Commit.
 
+## Run 2026-09-04 / Epic 2 / Implementierer
+
+- Status: running
+- Diff-Baseline: `7438515a` (Epic-1-Abschlusscheckpoint)
+- Scope: Source-Policy, Git-Checkout, Cache-/Mehrdaemon-Koordination, Cleanup/Quarantäne, Health-Diagnose und Referenz-Sessions
+- Subagent: `01a069d1-06c6-77e0-8dda-086d35557963` (Popper)
+- Auftrag: Epic 2 als zusammenhängendes Paket gemäß Konzept implementieren, verifizieren und `code-map.md` aktualisieren; kein Commit.
+
 ## Run 2026-09-04 / Epic 1 / Folge-Reviewer 2 – Abschluss
 
 - Status: completed; Folge-Reviewerbericht terminal eingegangen.
@@ -240,3 +248,12 @@
 - Betroffene Navigation: `GetFileTreeScanner.cs` im `FileTreeAccumulator` und `AssemblyAnalysisResponseEnvelope.cs` bei der FileTree-Rekonstruktion. Code-Map wurde ausschließlich um diese Fakten korrigiert.
 - Verifikation: Frische Nachweise Fast 28/28, Dispatcher 17/17, Build 0/0, Fast Nicht-Stress 2429/2, Integration Nicht-Stress 424/424, MCP-Audits und `get_violations` 0 wurden mangels Gegenhypothese nicht redundant wiederholt. Shared Wire-Budget/Mindestbudget, Composite-Statusmerge, `topN` und Body-Provenienz ohne neue P1-Regression.
 - Nächste Aktion: Checkpoint-Commit, Epic 1 mit deferred P1 abschließen und Epic 2 starten.
+
+## Run 2026-09-04 / Epic 2 / Implementierer – Abschluss
+
+- Status: completed; Implementiererbericht terminal eingegangen.
+- Urteil: Epic-2-Implementierung abgeschlossen; unabhängiger Review erforderlich.
+- Bericht: Source-Policy `source_required`/`source_preferred`/`decompilation_allowed` mit kontrolliertem Recoverable-Fallback; Git-Verifikation mit konkretem `safe.directory`, stderr-Klassifikation und Checkout-Zustandsprüfung; deterministische daemonprofilbasierte, PID-freie Cache-Identität und prozessübergreifende Locks; ReadOnly-resilientes Cleanup und sichtbare Quarantäne mit Besitzer/Ursache/TTL; Health-/Diagnosefelder für Checkout-Key, redigierte Repository-ID, Revision, Ursprung, Generation, Profil, Locks, Leases und Cleanup; bounded Reference-Session-Lifecycle; `code-map.md` aktualisiert.
+- Verifikation jeweils nach der letzten Codeänderung: `dotnet build --no-restore` mit 0 Warnungen/0 Fehlern; FastTests vollständig 2440 bestanden, 2 plattformbedingte Skips; IntegrationTests vollständig 424/424; Epic-2-Zieltests 89 bestanden, 1 erwarteter Windows-/Reparse-Skip; Safeguard 10,00/10; `find_duplicates` 0 Duplikat-Cluster; vollständiger `get_violations` mit absolutem `targetType=project`-Scope 0 Verstöße in 915 Dateien; `find_dead_code` 34 LOW-Felder nur in nativen Windows-Interop-Strukturen; `find_magic_values` 2 bekannte Konstantenkandidaten; `git diff --check` ohne Inhaltsfehler.
+- Offenes Risiko: erster gezielter Integrationslauf hatte transienten Windows-Test-Harness-Fehler beim Prozess-Kill; isolierte Wiederholung und vollständiger Lauf waren danach grün. Zwei Magic-Value-Kandidaten werden als P2 weitergeführt.
+- Nächste Aktion: Checkpoint-Commit, danach frischer unabhängiger Review von Epic 2.

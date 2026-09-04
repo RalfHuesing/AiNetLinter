@@ -9,7 +9,8 @@ internal sealed record DaemonRuntimeSnapshot(
     int ProcessId,
     TimeSpan Uptime,
     IReadOnlyList<string> Keys,
-    string DaemonVersion);
+    string DaemonVersion,
+    string? DaemonProfile = null);
 
 internal sealed class DaemonRuntimeContext
 {

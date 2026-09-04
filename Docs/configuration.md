@@ -1596,6 +1596,7 @@ Mapping-Datei benennen:
 {
   "ExternalSources": {
     "MappingsPath": "config/external-sources.json",
+    "SourceMode": "source_preferred",
     "CacheRoot": "cache",
     "RefreshIntervalMinutes": 60,
     "MaxDiskBytes": 536870912,
@@ -1640,7 +1641,14 @@ optionale Abschnitt, bleibt die Mapping-Konfiguration leer. `ainetlinter.project
 und `rules.json` erhalten keine External-Source-Felder; `.csproj`, Commit und Branch
 sind keine Bestandteile dieses Vertrags.
 
-`CacheRoot` und `RefreshIntervalMinutes` sind optionale Felder des Abschnitts.
+`SourceMode`, `CacheRoot` und `RefreshIntervalMinutes` sind optionale Felder des Abschnitts.
+`SourceMode` akzeptiert `source_required`, `source_preferred` oder
+`decompilation_allowed`. Bei `source_required` wird eine nicht verifizierte,
+nicht erreichbare oder nicht eindeutig gemappte Originalquelle als sichtbare,
+recoverable Diagnose gemeldet; es findet keine stille Dekompilation statt.
+`source_preferred` verwendet die Originalquelle, fällt bei einem klassifizierten
+Source-Fehler mit Diagnose zurück und `decompilation_allowed` erlaubt den
+Fallback grundsätzlich. Fehlt das Feld, gilt `source_preferred`.
 Fehlen sie, gilt als Cache-Elternwurzel `<AppContext.BaseDirectory>/cache` und als
 Refresh-Intervall `60` Minuten. Relative `CacheRoot`-Pfade werden gegen das
 Verzeichnis der gelesenen `appsettings.json` aufgelöst; absolute Pfade werden
@@ -1649,6 +1657,10 @@ kanonisiert. Der externe Repository-Cache liegt anschließend ausschließlich un
 Pfade mit unsicheren `.`-/`..`-Segmenten oder URI-artige Werte werden abgelehnt;
 die vorhandenen Reparse- und Besitzprüfungen entscheiden weiterhin beim Cachezugriff
 über die Dateisystemsicherheit.
+Ein Daemon-Profil wird deterministisch als Suffix an die Cache-Wurzel angehängt
+(beispielsweise `cache.codex`); Prozesse mit demselben Profil koordinieren sich
+über persistente Artefakt-Locks, unterschiedliche Profile verwenden getrennte
+Cache-Generationen. Prozess-IDs werden nicht als Cache-Identität verwendet.
 
 `RefreshIntervalMinutes` akzeptiert ausschließlich positive JSON-Ganzzahlen bis
 zur unterstützten ganzminütigen `TimeSpan`-Grenze. Strings, Boolean- oder

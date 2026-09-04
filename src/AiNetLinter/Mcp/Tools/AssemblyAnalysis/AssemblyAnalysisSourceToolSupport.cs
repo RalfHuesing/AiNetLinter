@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Assemblies.Analysis;
@@ -38,6 +39,12 @@ internal static class AssemblyAnalysisSourceToolSupport
             return AssemblyAnalysisSourceConfigurationSupport.CreateConfigurationFailureResult(source, fullPath!);
         }
 
+        if (source.Selection is null
+            && source.SourceMode is ExternalSourceSourceMode.SourceRequired)
+        {
+            return CreateSourceRequiredFailure(fullPath!, source.Diagnostics);
+        }
+
         var (context, error) = await AssemblyAnalysisService.CreateContextAsync(
             new AssemblyAnalysisContextRequest(
                 fullPath!,
@@ -49,19 +56,54 @@ internal static class AssemblyAnalysisSourceToolSupport
         if (context is null)
         {
             var diagnosticText = AssemblyAnalysisDiagnostics.FormatExternalDiagnostics(source.Diagnostics);
+            if (source.SourceMode is ExternalSourceSourceMode.SourceRequired)
+            {
+                return CreateSourceRequiredFailure(fullPath!, source.Diagnostics, error);
+            }
+
             return McpToolResults.CompilationError(
                 AssemblyAnalysisSourceConfigurationSupport.AppendDiagnostics(
                     error ?? "Assembly konnte nicht analysiert werden.", diagnosticText),
                 fullPath);
         }
 
-        var diagnostics = context.Diagnostics
-            .Concat(AssemblyAnalysisDiagnostics.FormatExternalDiagnostics(source.Diagnostics))
+        var enrichedContext = EnrichContext(context, source.Diagnostics);
+        if (source.SourceMode is ExternalSourceSourceMode.SourceRequired
+            && enrichedContext.Origin.IsDecompiled)
+        {
+            return CreateSourceRequiredFailure(fullPath!, source.Diagnostics);
+        }
+
+        return parameters.BuildResult(fullPath!, enrichedContext, parameters.MaxResults);
+    }
+
+    private static AssemblyContext EnrichContext(
+        AssemblyContext context,
+        System.Collections.Generic.IReadOnlyList<ExternalSourceConfigurationDiagnostic> diagnostics)
+    {
+        var mergedDiagnostics = context.Diagnostics
+            .Concat(AssemblyAnalysisDiagnostics.FormatExternalDiagnostics(diagnostics))
             .Where(diagnostic => !string.IsNullOrWhiteSpace(diagnostic))
             .Distinct(StringComparer.Ordinal)
             .Take(100)
             .ToList();
-        var enrichedContext = context with { Diagnostics = diagnostics };
-        return parameters.BuildResult(fullPath!, enrichedContext, parameters.MaxResults);
+        return context with { Diagnostics = mergedDiagnostics };
+    }
+
+    private static CallToolResult CreateSourceRequiredFailure(
+        string fullPath,
+        System.Collections.Generic.IReadOnlyList<ExternalSourceConfigurationDiagnostic> diagnostics,
+        string? additionalReason = null)
+    {
+        var details = AssemblyAnalysisDiagnostics.FormatExternalDiagnostics(diagnostics)
+            .Concat(additionalReason is null ? Array.Empty<string>() : [additionalReason])
+            .Where(detail => !string.IsNullOrWhiteSpace(detail))
+            .Take(3);
+        return McpToolResults.Recoverable(
+            ExternalSourceConfigurationDiagnosticCodes.SourceRequiredUnavailable,
+            $"Source-Policy source_required verweigert die Dekompilation für '{fullPath}': " +
+            string.Join(" ", details),
+            context: fullPath,
+            hint: "Originalquelle, Revision und Mapping prüfen; source_preferred oder decompilation_allowed nur bewusst verwenden.");
     }
 }

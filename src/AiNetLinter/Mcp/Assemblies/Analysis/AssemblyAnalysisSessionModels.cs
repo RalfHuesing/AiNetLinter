@@ -31,7 +31,8 @@ internal sealed record AssemblyOrigin(
     string BodyAvailability = "unavailable",
     string ContentMode = "metadata",
     string? FallbackReason = null,
-    IReadOnlyList<ExternalSourceConfigurationDiagnostic>? SourceDiagnostics = null)
+    IReadOnlyList<ExternalSourceConfigurationDiagnostic>? SourceDiagnostics = null,
+    string SourcePolicy = "source_preferred")
 {
     /// <summary>Interner Kompatibilitätsalias; im MCP-Payload ist <see cref="OriginKind"/> maßgeblich.</summary>
     internal string Kind => OriginKind;
@@ -285,7 +286,23 @@ internal sealed record AssemblyAnalysisHealthSnapshot(
     string? Confidence = null,
     string? Trust = null,
     long? Generation = null,
-    IReadOnlyList<string>? Diagnostics = null);
+    IReadOnlyList<string>? Diagnostics = null,
+    string? LogicalCheckoutKey = null,
+    string? RepositoryId = null,
+    string? Revision = null,
+    string? CheckoutStatus = null,
+    string? MappingStatus = null,
+    string? AnalysisOrigin = null,
+    string? SourcePolicy = null,
+    string? DaemonProfile = null,
+    string? LockStatus = null,
+    string? LeaseStatus = null,
+    string? CleanupStatus = null,
+    string? QuarantineStatus = null,
+    string? ErrorCode = null,
+    string? ErrorPhase = null,
+    string? ErrorCause = null,
+    string? NextAction = null);
 
 internal sealed record AssemblySessionRefreshResult(
     AssemblySessionStatus Status,
@@ -297,6 +314,7 @@ internal sealed record AssemblySessionRefreshResult(
 internal enum AssemblySessionFailureKind
 {
     MetadataUnavailable,
+    SourceUnavailable,
 }
 
 internal sealed record AssemblySessionFailure(

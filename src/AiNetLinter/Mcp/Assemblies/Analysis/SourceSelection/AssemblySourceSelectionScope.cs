@@ -45,6 +45,7 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
         LastGoodRevision = ExternalSourceRepositorySourcePolicy.NormalizeLastGoodRevision(state.LastGoodRevision);
         Diagnostics = LoaderDiagnostics.AddRange(ProviderDiagnostics).Distinct().ToImmutableArray();
         Fallback = parameters.Fallback;
+        SourceMode = configuration.SourceMode;
         SourceDiagnostics = (parameters.SourceDiagnostics ?? ProviderDiagnostics).Distinct().ToImmutableArray();
         lease = parameters.Lease;
     }
@@ -80,6 +81,8 @@ internal sealed class AssemblySourceSelectionScope : IDisposable
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> Diagnostics { get; }
 
     internal AssemblySourceFallbackMetadata? Fallback { get; }
+
+    internal ExternalSourceSourceMode SourceMode { get; }
 
     internal ImmutableArray<ExternalSourceConfigurationDiagnostic> SourceDiagnostics { get; }
 

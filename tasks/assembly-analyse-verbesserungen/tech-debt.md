@@ -91,3 +91,14 @@ Folge-Reviewer 4 bestätigt `BudgetProjection/Envelope` weiterhin als P1 offen: 
 Korrektur-Implementierer 5 (letzter Versuch) meldet `BudgetProjection/Envelope` behoben; Disposition bleibt bis zum Folge-Review 5 `fix-now`, Attempts bleiben bei 5.
 
 Folge-Reviewer 5 bestätigt `BudgetProjection/Envelope` weiterhin als P1 offen. Nach fünf Versuchen wird der Eintrag gemäß Queue-Regel mit Attempts 0 als `accepted-deferred` hinten eingereiht; Epic 2 läuft unabhängig weiter.
+
+## P2 – Zwei bestehende Magic-Value-Kandidaten
+
+- Schweregrad: P2
+- Beschreibung: Zwei bestehende Konstantenkandidaten im Epic-2-Scope wurden durch den Magic-Values-Audit gemeldet.
+- Scope/Fundstelle: `src/AiNetLinter/Mcp` (konkrete Kandidaten laut Audit; keine neue sichere Änderung identifiziert).
+- Evidenz: Epic-2-Implementierer meldet zwei bekannte Kandidaten nach der letzten Codeänderung.
+- Disposition: accepted-deferred
+- Nächster Schritt: In einem gezielten Konfigurations-/Konstanten-Review fachlich bewerten; nicht aus dem Source-/Cache-Epic heraus generalisieren.
+- Attempts: 0
+- Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 2 / Implementierer – Abschluss.

@@ -40,12 +40,14 @@ internal static class DaemonHostCommand
             maxProjects,
             args.McpProjectTtlMinutes is { } ttl ? TimeSpan.FromMinutes((double)ttl) : default));
         await using var assemblyComposition = AssemblyAnalysisHostComposition.Create(
-            resourceOverrides: new ExternalResourceRegistryOverrides(
-                args.McpExternalMaxDiskBytes,
-                args.McpExternalMaxMemoryBytes,
-                args.McpExternalMaxParallelOperations,
-                args.McpExternalMaxResidentResources,
-                args.McpExternalIdleTtlMinutes));
+            new AssemblyAnalysisHostCreationParameters(
+                ResourceOverrides: new ExternalResourceRegistryOverrides(
+                    args.McpExternalMaxDiskBytes,
+                    args.McpExternalMaxMemoryBytes,
+                    args.McpExternalMaxParallelOperations,
+                    args.McpExternalMaxResidentResources,
+                    args.McpExternalIdleTtlMinutes),
+                DaemonProfile: args.DaemonInstance));
         var session = new DaemonMcpSession(
             runtimeContext => McpServerToolCollectionFactory.Build(
                 projectRegistry,
@@ -64,7 +66,8 @@ internal static class DaemonHostCommand
             TimeSpan.FromMinutes((double)idleMinutes),
             CreateDaemonConfiguration(assemblyComposition, maxProjects, idleMinutes),
             daemonConsole,
-            SessionRunner: session.RunAsync));
+            SessionRunner: session.RunAsync,
+            DaemonProfile: DaemonInstanceId.Normalize(args.DaemonInstance)));
 
         await using var activeHost = host;
         Log.Information("Daemon: Host startet (IdleExit={IdleExitMinutes} Min, MaxProjects={MaxProjects})", idleMinutes, maxProjects);

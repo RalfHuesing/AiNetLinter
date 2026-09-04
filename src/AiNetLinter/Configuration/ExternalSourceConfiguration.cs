@@ -115,16 +115,20 @@ internal sealed record ExternalSourceConfiguration
 {
     internal ExternalSourceConfiguration(
         IEnumerable<ExternalSourceMapping> mappings,
-        ExternalSourceCacheOptions? cacheOptions = null)
+        ExternalSourceCacheOptions? cacheOptions = null,
+        ExternalSourceSourceMode sourceMode = ExternalSourceSourceMode.SourcePreferred)
     {
         ArgumentNullException.ThrowIfNull(mappings);
         Mappings = mappings.ToImmutableArray();
         CacheOptions = cacheOptions ?? ExternalSourceCacheOptions.Default;
+        SourceMode = sourceMode;
     }
 
     internal ImmutableArray<ExternalSourceMapping> Mappings { get; }
 
     internal ExternalSourceCacheOptions CacheOptions { get; }
+
+    internal ExternalSourceSourceMode SourceMode { get; }
 
     internal bool IsEmpty => Mappings.IsEmpty;
 
@@ -246,6 +250,7 @@ internal static class ExternalSourceConfigurationDiagnosticCodes
     internal const string SourceProjectAmbiguous = "external-source-project-ambiguous";
     internal const string RepositoryLockStall = "external-source-repository-lock-stall";
     internal const string CheckoutLockStall = "external-source-checkout-lock-stall";
+    internal const string SourceRequiredUnavailable = "external-source-required-unavailable";
 }
 
 internal static class ExternalSourceConfigurationPath

@@ -4,6 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp.Assemblies.ExternalSource.ProcessExecution;
 
 namespace AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 
@@ -45,7 +46,7 @@ internal static class ExternalSourceRepositoryCheckoutStatus
             [StatusCommand, StatusPorcelainOption, StatusUntrackedOption, StatusIgnoredOption],
             destinationPath,
             processTimeout,
-            CreateEnvironment());
+            CreateEnvironment(destinationPath));
         var processResult = await processExecutor.ExecuteAsync(request, cancellationToken)
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
@@ -54,7 +55,7 @@ internal static class ExternalSourceRepositoryCheckoutStatus
             || processResult.WasTimedOut
             || processResult.StandardOutputTruncated
             || processResult.StandardErrorTruncated
-            || !string.IsNullOrWhiteSpace(processResult.StandardError))
+            || !ExternalSourceGitProcessOutputPolicy.IsHarmlessStandardError(processResult.StandardError))
         {
             return Failure(
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryCheckoutUnverified,
@@ -160,7 +161,7 @@ internal static class ExternalSourceRepositoryCheckoutStatus
             state: ExternalSourceRepositoryResultState.Create(
                 ExternalSourceProviderFailureKind.InvalidResponse));
 
-    private static System.Collections.Generic.Dictionary<string, string> CreateEnvironment() =>
+    private static System.Collections.Generic.Dictionary<string, string> CreateEnvironment(string destinationPath) =>
         new(StringComparer.Ordinal)
         {
             [GitTerminalPromptVariable] = "0",
@@ -168,6 +169,8 @@ internal static class ExternalSourceRepositoryCheckoutStatus
             [GitConfigNoSystemVariable] = "1",
             [GitConfigGlobalVariable] = OperatingSystem.IsWindows() ? "NUL" : "/dev/null",
             [GitConfigSystemVariable] = OperatingSystem.IsWindows() ? "NUL" : "/dev/null",
-            [GitConfigCountVariable] = "0",
+            [GitConfigCountVariable] = "1",
+            ["GIT_CONFIG_KEY_0"] = "safe.directory",
+            ["GIT_CONFIG_VALUE_0"] = Path.GetFullPath(destinationPath),
         };
 }

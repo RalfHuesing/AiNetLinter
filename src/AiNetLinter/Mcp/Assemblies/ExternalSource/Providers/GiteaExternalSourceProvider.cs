@@ -167,11 +167,14 @@ internal sealed class GiteaExternalSourceProvider : IExternalSourceProvider
             "error",
             "$repository"));
         DisposeFailedResources(snapshot, checkout);
-        if (checkout?.CleanupState is ExternalSourceCheckoutCleanupState.RepositoryCleanupFailed)
+        if (checkout?.CleanupState is ExternalSourceCheckoutCleanupState.RepositoryCleanupFailed
+            or ExternalSourceCheckoutCleanupState.Quarantined)
         {
             diagnostics.Add(new(
                 ExternalSourceConfigurationDiagnosticCodes.RepositoryCleanupFailed,
-                string.Empty,
+                checkout.Quarantine is { } quarantine
+                    ? $"Checkout quarantined until {quarantine.ExpiresUtc:O}; reason: {quarantine.Reason}"
+                    : string.Empty,
                 "error",
                 "$repository"));
         }

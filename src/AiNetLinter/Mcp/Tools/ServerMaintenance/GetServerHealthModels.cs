@@ -50,7 +50,23 @@ internal sealed record AssemblyHealthEntry(
     IReadOnlyList<string>? Diagnostics,
     AssemblyDiagnosticsSummary? DiagnosticsSummary = null,
     string? Completeness = null,
-    IReadOnlyList<string>? TransitiveDiagnostics = null);
+    IReadOnlyList<string>? TransitiveDiagnostics = null,
+    string? LogicalCheckoutKey = null,
+    string? RepositoryId = null,
+    string? Revision = null,
+    string? CheckoutStatus = null,
+    string? MappingStatus = null,
+    string? AnalysisOrigin = null,
+    string? SourcePolicy = null,
+    string? DaemonProfile = null,
+    string? LockStatus = null,
+    string? LeaseStatus = null,
+    string? CleanupStatus = null,
+    string? QuarantineStatus = null,
+    string? ErrorCode = null,
+    string? ErrorPhase = null,
+    string? ErrorCause = null,
+    string? NextAction = null);
 
 /// <summary>
 /// StructuredContent-Payload fuer <c>get_server_health</c>: ein Eintrag je residentem
@@ -78,4 +94,5 @@ internal sealed record DaemonHealthPayload(
     int ProcessId,
     double UptimeSeconds,
     IReadOnlyList<string> Keys,
-    string DaemonVersion);
+    string DaemonVersion,
+    string? DaemonProfile = null);

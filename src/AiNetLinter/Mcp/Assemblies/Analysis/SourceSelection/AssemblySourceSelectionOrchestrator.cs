@@ -37,7 +37,8 @@ internal static class AssemblySourceFallbackReasons
 internal sealed record AssemblySourceSelectionConfiguration(
     bool Succeeded,
     ImmutableArray<ExternalSourceMapping> Mappings,
-    ImmutableArray<ExternalSourceConfigurationDiagnostic> LoaderDiagnostics);
+    ImmutableArray<ExternalSourceConfigurationDiagnostic> LoaderDiagnostics,
+    ExternalSourceSourceMode SourceMode = ExternalSourceSourceMode.SourcePreferred);
 
 internal sealed class AssemblySourceSelectionOrchestrator :
     IAssemblySourceResolver,
@@ -214,7 +215,7 @@ internal sealed class AssemblySourceSelectionOrchestrator :
         CancellationToken cancellationToken)
     {
         var scope = await ResolveAsync(assemblyPath, cancellationToken).ConfigureAwait(false);
-        return new(scope.Selection, scope, scope.Diagnostics, scope.Fallback);
+        return new(scope.Selection, scope, scope.Diagnostics, scope.Fallback, scope.SourceMode);
     }
 
     Task<AssemblySourceSelectionScope> IAssemblySourceSelectionResolver.ResolveAsync(

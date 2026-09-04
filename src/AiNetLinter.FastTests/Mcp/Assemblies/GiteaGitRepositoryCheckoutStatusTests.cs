@@ -14,6 +14,47 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies;
 [Trait("Category", "Component")]
 public sealed class GiteaGitRepositoryCheckoutStatusTests
 {
+    [Fact]
+    public async Task FetchDefaultBranchAsync_AllowsHarmlessGitWarningButSetsConcreteSafeDirectory()
+    {
+        using var temp = TestTempDirectory.Create("gitea-transport-warning-");
+        var destination = temp.CreateSubdirectory("checkout");
+        Directory.CreateDirectory(Path.Combine(destination, ".git"));
+        var executor = new RecordingGitExecutor((request, _) =>
+            Task.FromResult(request.Arguments[0] is "status"
+                ? new ExternalSourceGitProcessResult(0, string.Empty, "warning: repository maintenance is disabled\n")
+                : request.Arguments[0] is "rev-parse"
+                    ? CompletedProcess(ValidRevision)
+                    : CompletedProcess()));
+        var transport = new GiteaGitRepositoryTransport(processExecutor: executor);
+
+        var result = await transport.FetchDefaultBranchAsync(CreateMapping(), destination);
+
+        Assert.True(result.IsAvailable);
+        Assert.Equal("1", executor.Requests[0].Environment["GIT_CONFIG_COUNT"]);
+        Assert.Equal("safe.directory", executor.Requests[0].Environment["GIT_CONFIG_KEY_0"]);
+        Assert.Equal(Path.GetFullPath(destination), executor.Requests[0].Environment["GIT_CONFIG_VALUE_0"]);
+    }
+
+    [Fact]
+    public async Task FetchDefaultBranchAsync_RejectsUnsafeRepositoryWarning()
+    {
+        using var temp = TestTempDirectory.Create("gitea-transport-unsafe-warning-");
+        var destination = temp.CreateSubdirectory("checkout");
+        Directory.CreateDirectory(Path.Combine(destination, ".git"));
+        var executor = new RecordingGitExecutor((request, _) =>
+            Task.FromResult(request.Arguments[0] is "status"
+                ? new ExternalSourceGitProcessResult(0, string.Empty, "warning: detected dubious ownership in repository\n")
+                : CompletedProcess()));
+        var transport = new GiteaGitRepositoryTransport(processExecutor: executor);
+
+        var result = await transport.FetchDefaultBranchAsync(CreateMapping(), destination);
+
+        Assert.False(result.IsAvailable);
+        Assert.Equal(ExternalSourceCheckoutTrust.Unverified, result.CheckoutTrust);
+        Assert.Single(executor.Requests);
+    }
+
     [Theory]
     [InlineData(" M BaselineMini.slnx", 0, (int)ExternalSourceCheckoutTrust.Dirty, "external-source-repository-checkout-dirty")]
     [InlineData("!! ignored.txt", 0, (int)ExternalSourceCheckoutTrust.Dirty, "external-source-repository-checkout-dirty")]

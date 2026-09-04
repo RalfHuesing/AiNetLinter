@@ -308,6 +308,7 @@ public sealed class ExternalSourceRepositoryAcquirerTests
             checkout.CleanupState);
     }
 
+
     private async Task AssertTransportExceptionMapsAsync(
         Exception exception,
         ExternalSourceProviderFailureKind expectedFailureKind,

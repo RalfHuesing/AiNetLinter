@@ -17,6 +17,7 @@ internal static class DaemonHealthProjection
             snapshot.ProcessId,
             snapshot.Uptime.TotalSeconds,
             snapshot.Keys,
-            snapshot.DaemonVersion);
+            snapshot.DaemonVersion,
+            snapshot.DaemonProfile);
     }
 }

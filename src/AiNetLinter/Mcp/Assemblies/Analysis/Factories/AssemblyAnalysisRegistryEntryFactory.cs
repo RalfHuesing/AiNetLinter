@@ -22,6 +22,14 @@ internal sealed record AssemblyAnalysisFallbackEntryCreationParameters(
     AssemblySourceSelection? SourceSelection,
     AssemblySourceFallbackMetadata? Fallback = null);
 
+internal sealed record AssemblyAnalysisSourceEntryCreationParameters(
+    string CanonicalPath,
+    long Generation,
+    CancellationToken CreationToken,
+    ExternalResourceLease? ResourceLease,
+    AssemblySourceResolution Resolution,
+    IReadOnlyList<string> Diagnostics);
+
 internal sealed class AssemblyAnalysisRegistryEntryFactory
 {
     private readonly IAssemblySourceResolver? sourceOrchestrator;
@@ -159,24 +167,61 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
 
         var resolution = await sourceOrchestrator.ResolveForRegistryAsync(canonicalPath, creationToken).ConfigureAwait(false);
         var diagnostics = AssemblyAnalysisDiagnostics.FormatExternalDiagnostics(resolution.Diagnostics).ToArray();
-        if (resolution.Selection is null) return (null, resolution.Lifetime, diagnostics, null, resolution.Fallback);
+        if (resolution.Selection is null)
+        {
+            if (resolution.SourceMode is ExternalSourceSourceMode.SourceRequired)
+            {
+                resolution.Lifetime?.Dispose();
+                throw SourceRequiredFailure(canonicalPath, diagnostics, resolution.Fallback);
+            }
 
+            return (null, resolution.Lifetime, diagnostics, null, resolution.Fallback);
+        }
+
+        return await CreateSourceEntryFromSelectionAsync(new AssemblyAnalysisSourceEntryCreationParameters(
+            canonicalPath,
+            generation,
+            creationToken,
+            resourceLease,
+            resolution,
+            diagnostics)).ConfigureAwait(false);
+    }
+
+    private async Task<(AssemblyAnalysisEntry? Entry, IDisposable? Scope, IReadOnlyList<string> Diagnostics, AssemblySourceSelection? Selection, AssemblySourceFallbackMetadata? Fallback)> CreateSourceEntryFromSelectionAsync(
+        AssemblyAnalysisSourceEntryCreationParameters parameters)
+    {
+        var resolution = parameters.Resolution;
         try
         {
             var sourceResult = await AssemblyAnalysisContextFactory.CreateAsync(
                 new AssemblyAnalysisContextRequest(
-                    canonicalPath,
+                    parameters.CanonicalPath,
                     ConsumerSolution: null,
                     ReceiverType: null,
-                    resolution.Selection,
-                    creationToken,
+                    resolution.Selection!,
+                    parameters.CreationToken,
                     resolution.Fallback)).ConfigureAwait(false);
-            if (sourceResult.Context is null) return (null, resolution.Lifetime, diagnostics, null, resolution.Fallback);
+            if (sourceResult.Context is null)
+            {
+                if (resolution.SourceMode is ExternalSourceSourceMode.SourceRequired)
+                {
+                    resolution.Lifetime?.Dispose();
+                    throw SourceRequiredFailure(parameters.CanonicalPath, parameters.Diagnostics, resolution.Fallback);
+                }
+
+                return (null, resolution.Lifetime, parameters.Diagnostics, null, resolution.Fallback);
+            }
 
             if (sourceResult.Context.Origin.IsDecompiled)
             {
+                if (resolution.SourceMode is ExternalSourceSourceMode.SourceRequired)
+                {
+                    resolution.Lifetime?.Dispose();
+                    throw SourceRequiredFailure(parameters.CanonicalPath, parameters.Diagnostics, resolution.Fallback);
+                }
+
                 var fallback = CreateFallbackMetadata(sourceResult.Context.Origin, resolution.Fallback);
-                var fallbackDiagnostics = diagnostics
+                var fallbackDiagnostics = parameters.Diagnostics
                     .Concat(sourceResult.Context.Diagnostics)
                     .Distinct(StringComparer.Ordinal)
                     .Take(100)
@@ -184,33 +229,59 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                 return (null, resolution.Lifetime, fallbackDiagnostics, null, fallback);
             }
 
-            var context = sourceResult.Context with
-            {
-                Generation = generation,
-                Diagnostics = sourceResult.Context.Diagnostics
-                    .Concat(diagnostics)
-                    .Distinct(StringComparer.Ordinal)
-                    .Take(100)
-                    .ToList(),
-                ResponseBudgetBytes = decompilationConfiguration?.ResponseBudgetBytes
-                    ?? AssemblyAnalysisResponseLimits.DefaultResponseBytes,
-            };
+            var context = CreateSourceContext(sourceResult.Context, parameters);
             var entry = AssemblyAnalysisEntryFactory.Create(new AssemblyAnalysisEntryCreateParameters(
-                canonicalPath,
-                resolution.Selection.SourceLease.Snapshot.Solution,
+                parameters.CanonicalPath,
+                resolution.Selection!.SourceLease.Snapshot.Solution,
                 context,
                 resolution.Lifetime,
-                resourceLease,
+                parameters.ResourceLease,
                 referenceLeaseFactory(resolution.Selection),
                 resourceBudget.Clock,
                 requestTemporaryReferenceEviction));
-            return (entry, null, diagnostics, resolution.Selection, resolution.Fallback);
+            return (entry, null, parameters.Diagnostics, resolution.Selection, resolution.Fallback);
         }
         catch
         {
             AssemblyAnalysisRegistryDisposal.TryDispose(resolution.Lifetime, "Source-Selection-Scope nach Creation-Fehler");
             throw;
         }
+    }
+
+    private AssemblyContext CreateSourceContext(
+        AssemblyContext context,
+        AssemblyAnalysisSourceEntryCreationParameters parameters) =>
+        context with
+        {
+            Generation = parameters.Generation,
+            Diagnostics = context.Diagnostics
+                .Concat(parameters.Diagnostics)
+                .Distinct(StringComparer.Ordinal)
+                .Take(100)
+                .ToList(),
+            Origin = context.Origin with
+            {
+                SourcePolicy = parameters.Resolution.SourceMode.ToWireValue(),
+            },
+            ResponseBudgetBytes = decompilationConfiguration?.ResponseBudgetBytes
+                ?? AssemblyAnalysisResponseLimits.DefaultResponseBytes,
+        };
+
+    private static AssemblyAnalysisRegistryRecoverableFailureException SourceRequiredFailure(
+        string canonicalPath,
+        IReadOnlyList<string> diagnostics,
+        AssemblySourceFallbackMetadata? fallback)
+    {
+        var reason = fallback?.Reason ?? "source-unavailable";
+        var detail = diagnostics.Count == 0
+            ? "Keine verifizierte Originalquelle konnte geladen werden."
+            : string.Join(" ", diagnostics.Take(3));
+        return new(new AssemblySessionFailure(
+            AssemblySessionFailureKind.SourceUnavailable,
+            new AssemblySessionDiagnostic(
+                ExternalSourceConfigurationDiagnosticCodes.SourceRequiredUnavailable,
+                $"Source-Policy source_required verweigert die Dekompilation für '{canonicalPath}': {detail} Ursache={reason}.",
+                AssemblyDiagnosticSeverity.Error)));
     }
 
     private static AssemblySourceFallbackMetadata? CreateFallbackMetadata(

@@ -6,9 +6,45 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Configuration;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
+using AiNetLinter.Output;
 using Serilog;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
+
+internal sealed partial class AssemblyAnalysisRegistry
+{
+    private static AssemblyAnalysisLeaseResult Failure(string message, bool isError = true) =>
+        new(null, isError
+            ? McpToolResults.Error(LinterErrorCodes.AnalysisFailed, message)
+            : McpToolResults.Recoverable(LinterErrorCodes.AnalysisFailed, message));
+
+    private AssemblyAnalysisLeaseResult RecoverableMetadataFailure(
+        string canonicalPath,
+        AssemblyAnalysisRegistryEntryCreation creation,
+        AssemblySessionFailure failure)
+    {
+        RemoveFailedEntry(canonicalPath, creation);
+        if (failure.Kind is AssemblySessionFailureKind.SourceUnavailable)
+        {
+            return new(
+                null,
+                McpToolResults.Recoverable(
+                    ExternalSourceConfigurationDiagnosticCodes.SourceRequiredUnavailable,
+                    failure.Diagnostic.Message,
+                    context: canonicalPath,
+                    hint: "Originalquelle, Revision und Mapping prüfen; source_preferred oder decompilation_allowed nur bewusst verwenden."));
+        }
+
+        return new(
+            null,
+            McpToolResults.NativePeAssembly(
+                failure.Diagnostic.Message,
+                canonicalPath));
+    }
+}
 
 internal sealed class ExternalResourceCapacityContext<T>
 {

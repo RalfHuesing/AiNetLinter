@@ -10,6 +10,7 @@ using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
 using AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
 using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Output;
 using Serilog;
@@ -21,7 +22,7 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 /// Target-Key; parallele Erstzugriffe teilen die Creation-Task und erhalten
 /// anschliessend eigene, read-only Leases auf denselben Roslyn-Snapshot.
 /// </summary>
-internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAssemblyAnalysisTemporaryReferenceEvictor
+internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAssemblyAnalysisTemporaryReferenceEvictor
 {
     internal const int MaxFingerprintRetries = 3;
 
@@ -47,7 +48,23 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAss
         ExternalResourceRegistry? resourceRegistry = null,
         Func<AssemblyAnalysisEntry, Task>? beforeRetirementAsync = null,
         AssemblyDecompilationConfiguration? decompilationConfiguration = null)
+        : this(
+            sourceOrchestrator,
+            fingerprintFactory,
+            resourceRegistry,
+            beforeRetirementAsync,
+            new AssemblyAnalysisRegistryRuntimeOptions(decompilationConfiguration))
     {
+    }
+
+    internal AssemblyAnalysisRegistry(
+        IAssemblySourceResolver? sourceOrchestrator,
+        Func<string, AssemblyFingerprint>? fingerprintFactory,
+        ExternalResourceRegistry? resourceRegistry,
+        Func<AssemblyAnalysisEntry, Task>? beforeRetirementAsync,
+        AssemblyAnalysisRegistryRuntimeOptions runtimeOptions)
+    {
+        ArgumentNullException.ThrowIfNull(runtimeOptions);
         this.sourceOrchestrator = sourceOrchestrator;
         this.fingerprintFactory = fingerprintFactory;
         this.beforeRetirementAsync = beforeRetirementAsync;
@@ -57,7 +74,7 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAss
             resourceBudget,
             CreateReferenceLeaseFactory,
             RequestTemporaryReferenceEviction,
-            decompilationConfiguration);
+            runtimeOptions.DecompilationConfiguration);
         var sourceProjectEntryFactory = new AssemblyAnalysisSourceProjectEntryFactory(
             resourceBudget,
             CreateReferenceLeaseFactory,
@@ -94,7 +111,7 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAss
             evictionCoordinator,
             evictionCandidates.GetCompletedTemporaryEvictionCandidates);
         sourceProjectLeaseCoordinator = new(coordinatorContext);
-        healthSnapshotProvider = new(gate, entries);
+        healthSnapshotProvider = new(gate, entries, runtimeOptions.DaemonProfile);
     }
 
     internal int ResidentCount { get { lock (gate) return entries.Count; } }
@@ -479,21 +496,4 @@ internal sealed class AssemblyAnalysisRegistry : IAssemblyAnalysisRegistry, IAss
         }
     }
 
-    private AssemblyAnalysisLeaseResult RecoverableMetadataFailure(
-        string canonicalPath,
-        AssemblyAnalysisRegistryEntryCreation creation,
-        AssemblySessionFailure failure)
-    {
-        RemoveFailedEntry(canonicalPath, creation);
-        return new(
-            null,
-            McpToolResults.NativePeAssembly(
-                failure.Diagnostic.Message,
-                canonicalPath));
-    }
-
-    private static AssemblyAnalysisLeaseResult Failure(string message, bool isError = true) =>
-        new(null, isError
-            ? McpToolResults.Error(LinterErrorCodes.AnalysisFailed, message)
-            : McpToolResults.Recoverable(LinterErrorCodes.AnalysisFailed, message));
 }

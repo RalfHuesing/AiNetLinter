@@ -151,10 +151,13 @@ internal sealed class ExternalSourceRepositoryCacheRefresh
         }
         catch (OperationCanceledException)
         {
-            if (!ownership.TryCleanup())
+            if (!ownership.TryCleanupOrQuarantine(
+                    "Checkout konnte nach Refresh-Cancellation nicht sicher bereinigt werden.",
+                    out var quarantine))
             {
                 logger.Warning(
-                    "Externer Repository-Refresh-Checkout konnte nach Cancellation nicht bereinigt werden. Code={Code}",
+                    "Externer Repository-Refresh-Checkout konnte nach Cancellation nicht bereinigt werden. Status={Status} Code={Code}",
+                    quarantine is null ? "quarantäne-fehlgeschlagen" : "quarantiniert",
                     ExternalSourceConfigurationDiagnosticCodes.RepositoryCleanupFailed);
             }
 
@@ -320,35 +323,17 @@ internal sealed class ExternalSourceRepositoryCacheRefresh
             publishResult.CheckoutTrust);
     }
 
-    private async Task<ExternalSourceRepositoryTransportResult> ExecuteFetchAsync(
+    private Task<ExternalSourceRepositoryTransportResult> ExecuteFetchAsync(
         ExternalSourceMapping mapping,
         string checkoutPath,
         CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await transport.FetchDefaultBranchAsync(
-                    mapping,
-                    checkoutPath,
-                    cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            return new ExternalSourceRepositoryTransportResult(
-                isAvailable: false,
-                loadedRevision: null,
-                diagnostics: [CreateDiagnostic(
-                    ExternalSourceRepositoryFailurePolicy.GetTransportDiagnosticCode(exception),
-                    "Die Repository-Aktualisierung ist fehlgeschlagen.")],
-                state: ExternalSourceRepositoryResultState.Create(
-                    ExternalSourceRepositoryFailurePolicy.ClassifyTransportException(exception)));
-        }
-    }
+        => ExternalSourceRepositoryTransportExecution.ExecuteAsync(
+            new(
+                mapping,
+                checkoutPath,
+                cancellationToken,
+                transport.FetchDefaultBranchAsync,
+                "Die Repository-Aktualisierung ist fehlgeschlagen."));
 
     private ExternalSourceRepositoryAcquisitionResult? TryReuseFreshCurrentAfterRace(
         ExternalSourceMapping mapping,

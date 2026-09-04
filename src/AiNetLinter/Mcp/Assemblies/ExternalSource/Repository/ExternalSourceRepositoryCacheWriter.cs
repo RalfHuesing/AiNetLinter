@@ -4,6 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp.Assemblies.Locking;
 
 namespace AiNetLinter.Mcp.Assemblies.ExternalSource.Repository;
 
@@ -19,6 +20,7 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter :
     IExternalSourceRepositoryCacheReader
 {
     private static readonly ExternalSourceRepositoryCacheKeyLockRegistry Locks = new();
+    private static readonly AssemblyArtifactFileLockRegistry ProcessLocks = new("cache.lock");
     private readonly string cacheRoot;
 
     internal LocalExternalSourceRepositoryCacheWriter(string? cacheRoot = null)
@@ -65,15 +67,17 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter :
         var context = CreatePublishContext(request, key!);
         var published = false;
         ExternalSourceRepositoryCacheKeyLockLease? lockLease = null;
+        AssemblyArtifactFileLockLease? processLock = null;
         ExternalSourceCheckoutMaterializationUse? materializationUse = null;
         try
         {
-            lockLease = await AcquireLockAsync(context.EntryDirectory, cancellationToken).ConfigureAwait(false);
-            cancellationToken.ThrowIfCancellationRequested();
-            materializationUse = context.Request.Checkout.TryAcquireMaterializationUse(cancellationToken);
-            if (materializationUse is null)
+            var acquisition = await AcquirePublishResourcesAsync(context, cancellationToken).ConfigureAwait(false);
+            lockLease = acquisition.LockLease;
+            processLock = acquisition.ProcessLock;
+            materializationUse = acquisition.MaterializationUse;
+            if (acquisition.Failure is not null)
             {
-                return CreateFailure(ExternalSourceRepositoryCachePublishFailureKind.UnsafeSource);
+                return acquisition.Failure;
             }
 
             var result = await PublishGeneration(
@@ -105,10 +109,29 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter :
                         context,
                         published,
                         lockLease,
+                        processLock,
                         testSeam?.AfterLeaseReleasedAsync),
                     materializationUse)
                 .ConfigureAwait(false);
         }
+    }
+
+    private async Task<(ExternalSourceRepositoryCacheKeyLockLease? LockLease, AssemblyArtifactFileLockLease? ProcessLock, ExternalSourceCheckoutMaterializationUse? MaterializationUse, ExternalSourceRepositoryCachePublishResult? Failure)> AcquirePublishResourcesAsync(
+        PublishContext context,
+        CancellationToken cancellationToken)
+    {
+        var lockLease = await AcquireLockAsync(context.EntryDirectory, cancellationToken).ConfigureAwait(false);
+        var processLock = await ProcessLocks.AcquireAsync(context.EntryDirectory, cancellationToken).ConfigureAwait(false);
+        if (processLock.IsStalled)
+        {
+            return (lockLease, processLock, null, CreateFailure(ExternalSourceRepositoryCachePublishFailureKind.WriteFailed));
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var materializationUse = context.Request.Checkout.TryAcquireMaterializationUse(cancellationToken);
+        return materializationUse is null
+            ? (lockLease, processLock, null, CreateFailure(ExternalSourceRepositoryCachePublishFailureKind.UnsafeSource))
+            : (lockLease, processLock, materializationUse, null);
     }
 
     private PublishContext CreatePublishContext(

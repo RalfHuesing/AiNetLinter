@@ -75,11 +75,15 @@ internal sealed class AssemblyAnalysisHostComposition : IAsyncDisposable
         IExternalSourceProvider? provider = null,
         IExternalSourceCredentialResolver? credentialResolver = null,
         ExternalResourceRegistryOverrides? resourceOverrides = null)
-        => AssemblyAnalysisHostFactory.Create(
+        => Create(new AssemblyAnalysisHostCreationParameters(
             settingsPath,
             provider,
             credentialResolver,
-            resourceOverrides);
+            resourceOverrides));
+
+    internal static AssemblyAnalysisHostComposition Create(
+        AssemblyAnalysisHostCreationParameters parameters)
+        => AssemblyAnalysisHostFactory.Create(parameters);
 
     public ValueTask DisposeAsync() => new(StartDispose());
 
@@ -175,45 +179,59 @@ internal sealed class AssemblyAnalysisHostDependencies
     internal required IAssemblyAnalysisRegistry Sessions { get; init; }
 }
 
+internal sealed record AssemblyAnalysisHostCreationParameters(
+    string? SettingsPath = null,
+    IExternalSourceProvider? Provider = null,
+    IExternalSourceCredentialResolver? CredentialResolver = null,
+    ExternalResourceRegistryOverrides? ResourceOverrides = null,
+    string? DaemonProfile = null);
+
+internal sealed record AssemblyAnalysisDefaultProviderCreationParameters(
+    ExternalSourceConfigurationLoadResult ConfigurationResult,
+    IExternalSourceCredentialResolver? CredentialResolver,
+    ExternalResourceRegistry SourceResources,
+    IExternalSourceSnapshotResourceCoordinator ResourceCoordinator,
+    string? DaemonProfile);
+
 internal static class AssemblyAnalysisHostFactory
 {
     internal static AssemblyAnalysisHostComposition Create(
-        string? settingsPath,
-        IExternalSourceProvider? provider,
-        IExternalSourceCredentialResolver? credentialResolver,
-        ExternalResourceRegistryOverrides? resourceOverrides)
+        AssemblyAnalysisHostCreationParameters parameters)
     {
-        var configurationResult = ExternalSourceConfigurationLoader.Load(settingsPath);
-        var assemblyConfigurationResult = AssemblyAnalysisConfigurationLoader.Load(settingsPath);
+        var configurationResult = ExternalSourceConfigurationLoader.Load(parameters.SettingsPath);
+        var assemblyConfigurationResult = AssemblyAnalysisConfigurationLoader.Load(parameters.SettingsPath);
         var configuredResources = configurationResult.Configuration?.CacheOptions.ResourceOptions
             ?? ExternalSourceResourceOptions.Default;
         var resourceOptions = ExternalResourceRegistryOptionsFactory.Create(
             configuredResources,
-            resourceOverrides);
+            parameters.ResourceOverrides);
         var sourceResources = new ExternalResourceRegistry(resourceOptions);
         var registry = new SourceSnapshotRegistry(sourceResources);
         var resources = new ExternalResourceRegistry(resourceOptions);
-        var sourceProvider = provider ?? AssemblyAnalysisHostProviderFactory.CreateDefaultProvider(
-            configurationResult,
-            credentialResolver,
-            sourceResources,
-            registry);
+        var sourceProvider = parameters.Provider ?? AssemblyAnalysisHostProviderFactory.CreateDefaultProvider(
+            new AssemblyAnalysisDefaultProviderCreationParameters(
+                configurationResult,
+                parameters.CredentialResolver,
+                sourceResources,
+                registry,
+                parameters.DaemonProfile));
         var sourceConfiguration = new AssemblySourceSelectionConfiguration(
             configurationResult.Succeeded,
             configurationResult.Configuration?.Mappings ?? [],
-            configurationResult.Diagnostics);
+            configurationResult.Diagnostics,
+            configurationResult.Configuration?.SourceMode ?? ExternalSourceSourceMode.SourcePreferred);
         var providerCoordinator = new AssemblySourceProviderCoordinator(sourceProvider, registry);
         var sourceOrchestrator = new AssemblySourceSelectionOrchestrator(
             sourceConfiguration,
             providerCoordinator);
-        var assemblyDecompilationConfiguration = new AssemblyDecompilationConfiguration(
-            new AssemblyDecompilationOptions(Timeout: assemblyConfigurationResult.Options.DecompilationTimeout),
-            assemblyConfigurationResult.Options.CacheRoot,
-            assemblyConfigurationResult.Options.ResponseBudgetBytes);
-        var sessions = new AssemblyAnalysisRegistry(
+        var assemblyDecompilationConfiguration = CreateDecompilationConfiguration(
+            assemblyConfigurationResult,
+            parameters.DaemonProfile);
+        var sessions = CreateRegistry(
             sourceOrchestrator,
-            resourceRegistry: resources,
-            decompilationConfiguration: assemblyDecompilationConfiguration);
+            resources,
+            assemblyDecompilationConfiguration,
+            parameters.DaemonProfile);
         return new AssemblyAnalysisHostComposition(
             new AssemblyAnalysisHostConfiguration(
                 configurationResult.Succeeded,
@@ -231,23 +249,56 @@ internal static class AssemblyAnalysisHostFactory
                 Sessions = sessions,
             });
     }
+
+    private static AssemblyDecompilationConfiguration CreateDecompilationConfiguration(
+        AssemblyAnalysisConfigurationLoadResult configurationResult,
+        string? daemonProfile)
+    {
+        var cacheRoot = configurationResult.Options.CacheRoot;
+        if (daemonProfile is not null)
+        {
+            cacheRoot += "." + AiNetLinter.Mcp.Daemon.DaemonInstanceId.Normalize(daemonProfile);
+        }
+
+        return new(
+            new AssemblyDecompilationOptions(Timeout: configurationResult.Options.DecompilationTimeout),
+            cacheRoot,
+            configurationResult.Options.ResponseBudgetBytes);
+    }
+
+    private static AssemblyAnalysisRegistry CreateRegistry(
+        IAssemblySourceResolver sourceOrchestrator,
+        ExternalResourceRegistry resources,
+        AssemblyDecompilationConfiguration decompilationConfiguration,
+        string? daemonProfile) =>
+        new(
+            sourceOrchestrator,
+            null,
+            resources,
+            null,
+            new AssemblyAnalysisRegistryRuntimeOptions(
+                decompilationConfiguration,
+                daemonProfile is null
+                    ? null
+                    : AiNetLinter.Mcp.Daemon.DaemonInstanceId.Normalize(daemonProfile)));
 }
 
 internal static class AssemblyAnalysisHostProviderFactory
 {
     internal static IExternalSourceProvider CreateDefaultProvider(
-        ExternalSourceConfigurationLoadResult configurationResult,
-        IExternalSourceCredentialResolver? credentialResolver,
-        ExternalResourceRegistry sourceResources,
-        IExternalSourceSnapshotResourceCoordinator resourceCoordinator)
+        AssemblyAnalysisDefaultProviderCreationParameters parameters)
     {
-        var cacheOptions = configurationResult.Configuration?.CacheOptions
+        var cacheOptions = parameters.ConfigurationResult.Configuration?.CacheOptions
             ?? ExternalSourceCacheOptions.Default;
-        var cacheConstruction = ExternalSourceRepositoryCacheOptionsFactory.Create(cacheOptions);
+        var cacheConstruction = ExternalSourceRepositoryCacheOptionsFactory.Create(cacheOptions, parameters.DaemonProfile);
+        cacheOptions = new ExternalSourceCacheOptions(
+            cacheConstruction.CacheRoot,
+            cacheOptions.RefreshInterval,
+            cacheOptions.ResourceOptions);
         var stagingRoot = Path.Combine(
             cacheConstruction.CacheRoot,
             ExternalSourceRepositoryCacheContract.CheckoutDirectoryName);
-        var transport = new GiteaGitRepositoryTransport(credentialResolver);
+        var transport = new GiteaGitRepositoryTransport(parameters.CredentialResolver);
         var acquirer = ExternalSourceRepositoryAcquirerFactory.CreateConfigured(
             transport,
             stagingRoot,
@@ -255,6 +306,6 @@ internal static class AssemblyAnalysisHostProviderFactory
             cacheConstruction.CreateRefreshPolicy());
         return new GiteaExternalSourceProvider(
             acquirer,
-            new ExternalSourceSnapshotMaterializer(sourceResources, resourceCoordinator));
+            new ExternalSourceSnapshotMaterializer(parameters.SourceResources, parameters.ResourceCoordinator));
     }
 }

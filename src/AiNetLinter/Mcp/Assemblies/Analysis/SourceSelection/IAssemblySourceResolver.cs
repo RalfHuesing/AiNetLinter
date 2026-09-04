@@ -52,4 +52,5 @@ internal sealed record AssemblySourceResolution(
     AssemblySourceSelection? Selection,
     IDisposable? Lifetime,
     IReadOnlyList<ExternalSourceConfigurationDiagnostic> Diagnostics,
-    AssemblySourceFallbackMetadata? Fallback = null);
+    AssemblySourceFallbackMetadata? Fallback = null,
+    ExternalSourceSourceMode SourceMode = ExternalSourceSourceMode.SourcePreferred);

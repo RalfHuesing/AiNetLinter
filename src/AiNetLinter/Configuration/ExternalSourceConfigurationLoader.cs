@@ -15,6 +15,7 @@ internal static class ExternalSourceConfigurationLoader
     private const string MappingsPathName = "MappingsPath";
     private const string CacheRootName = "CacheRoot";
     private const string RefreshIntervalMinutesName = "RefreshIntervalMinutes";
+    private const string SourceModeName = "SourceMode";
 
     internal static ExternalSourceConfigurationLoadResult Load() =>
         Load(Path.Combine(AppContext.BaseDirectory, AppSettingsFileName));
@@ -116,6 +117,7 @@ internal static class ExternalSourceConfigurationLoader
                 MappingsPathName,
                 CacheRootName,
                 RefreshIntervalMinutesName,
+                SourceModeName,
                 ..ExternalSourceResourceOptionsLoader.AllowedNames]);
         if (!validation.Diagnostics.IsEmpty)
         {
@@ -129,6 +131,15 @@ internal static class ExternalSourceConfigurationLoader
                 out var cacheDiagnostic))
         {
             return ExternalSourceConfigurationLoadResult.Failure([cacheDiagnostic!]);
+        }
+
+        if (!TryReadSourceMode(
+                validation,
+                settingsPath,
+                out var sourceMode,
+                out var sourceModeDiagnostic))
+        {
+            return ExternalSourceConfigurationLoadResult.Failure([sourceModeDiagnostic!]);
         }
 
         if (!TryResolveMappingsPath(
@@ -149,7 +160,39 @@ internal static class ExternalSourceConfigurationLoader
         return ExternalSourceConfigurationLoadResult.Success(
             new ExternalSourceConfiguration(
                 mappingsResult.Configuration!.Mappings,
-                cacheOptions));
+                cacheOptions,
+                sourceMode));
+    }
+
+    private static bool TryReadSourceMode(
+        ExternalSourceJsonObjectValidation validation,
+        string settingsPath,
+        out ExternalSourceSourceMode sourceMode,
+        out ExternalSourceConfigurationDiagnostic? diagnostic)
+    {
+        sourceMode = ExternalSourceSourceMode.SourcePreferred;
+        diagnostic = null;
+        var property = validation.GetProperty(SourceModeName);
+        if (property.Status is ExternalSourceJsonPropertyStatus.Missing)
+        {
+            return true;
+        }
+
+        var value = property.Value.ValueKind is JsonValueKind.String
+            ? property.Value.GetString()
+            : null;
+        if (ExternalSourceSourceModeExtensions.TryParse(value, out var mode))
+        {
+            sourceMode = mode;
+            return true;
+        }
+
+        diagnostic = ExternalSourceConfigurationDiagnostic.CreateError(
+            ExternalSourceConfigurationDiagnosticCodes.InvalidFieldType,
+            $"'{ExternalSourcesSectionName}:{SourceModeName}' muss source_required, source_preferred oder decompilation_allowed sein.",
+            settingsPath,
+            "$.ExternalSources.SourceMode");
+        return false;
     }
 
     private static bool TryResolveMappingsPath(
@@ -400,5 +443,51 @@ internal static class ExternalSourceConfigurationLoader
                 "$");
             return false;
         }
+    }
+}
+
+internal enum ExternalSourceSourceMode
+{
+    SourceRequired,
+    SourcePreferred,
+    DecompilationAllowed,
+}
+
+internal static class ExternalSourceSourceModeExtensions
+{
+    internal const string SourceRequiredWireValue = "source_required";
+    internal const string SourcePreferredWireValue = "source_preferred";
+    internal const string DecompilationAllowedWireValue = "decompilation_allowed";
+
+    internal static string ToWireValue(this ExternalSourceSourceMode mode) => mode switch
+    {
+        ExternalSourceSourceMode.SourceRequired => SourceRequiredWireValue,
+        ExternalSourceSourceMode.SourcePreferred => SourcePreferredWireValue,
+        ExternalSourceSourceMode.DecompilationAllowed => DecompilationAllowedWireValue,
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unbekannter Source-Modus."),
+    };
+
+    internal static bool TryParse(string? value, out ExternalSourceSourceMode mode)
+    {
+        mode = default;
+        if (string.Equals(value, SourceRequiredWireValue, StringComparison.OrdinalIgnoreCase))
+        {
+            mode = ExternalSourceSourceMode.SourceRequired;
+            return true;
+        }
+
+        if (string.Equals(value, SourcePreferredWireValue, StringComparison.OrdinalIgnoreCase))
+        {
+            mode = ExternalSourceSourceMode.SourcePreferred;
+            return true;
+        }
+
+        if (string.Equals(value, DecompilationAllowedWireValue, StringComparison.OrdinalIgnoreCase))
+        {
+            mode = ExternalSourceSourceMode.DecompilationAllowed;
+            return true;
+        }
+
+        return false;
     }
 }

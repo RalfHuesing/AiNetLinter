@@ -24,7 +24,7 @@ Großkonzept-Modus. Grundlage ist `Konzept.md` mit `status: ready`.
 - Betroffene Bereiche: Source-Provider, Repository-Acquirer, Cache/Generation/Locking, Health/Diagnose, Referenz-Session-Lebenszyklus, Tests.
 - Muss-/Akzeptanzkriterien: Konzept-Kriterien 1–9, 18–19, 27–29; insbesondere kein unbestätigter Source- oder Cachezustand und Windows-resiliente Bereinigung.
 - Verifikation: Source-Backed- und Fehler-Matrix, Cache-/Cleanup-/Mehrdaemon-Integration sowie gezielte MCP-Prüfungen.
-- Status: open
+- Status: in_progress (Implementierung abgeschlossen; Review ausstehend)
 
 ### Epic 3: Suche, E2E-Verifikation und Dokumentation
 
@@ -45,9 +45,8 @@ Großkonzept-Modus. Grundlage ist `Konzept.md` mit `status: ready`.
 
 ## Ausführungsstand
 
-- current_epic: Epic 2
-- letzter Commit: `69e4ca3e` (Korrektur-Checkpoint 5); Review-Checkpoint folgt
+- current_epic: Epic 2 Review
+- letzter Commit: `7438515a` (Epic-1-Abschlusscheckpoint); Epic-2-Checkpoint folgt
 - current_debt_item: P1 `BudgetProjection/Envelope` in `tech-debt.md`, `accepted-deferred`, Attempts 0
-- current_debt_item: P2-DRY-Cluster in `AssemblyAnalysisResponseLimits.Budget.cs`
 - debt_attempts: 0
 - Blocker: keiner

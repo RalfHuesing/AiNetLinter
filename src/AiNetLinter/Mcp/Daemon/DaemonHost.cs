@@ -16,7 +16,8 @@ internal sealed record DaemonHostOptions(
     Func<DaemonPipeConnection, Task> SessionRunner,
     IDaemonIdentityProvider? IdentityProvider = null,
     TimeSpan? IdlePollInterval = null,
-    IDaemonInstanceLock? InstanceLock = null);
+    IDaemonInstanceLock? InstanceLock = null,
+    string? DaemonProfile = null);
 
 internal sealed class DaemonHost : IAsyncDisposable
 {
@@ -477,6 +478,7 @@ internal sealed class DaemonHost : IAsyncDisposable
             Environment.ProcessId,
             options.Clock.GetUtcNow() - startedAt,
             keys,
-            McpServerOptionsFactory.GetServerVersion());
+            McpServerOptionsFactory.GetServerVersion(),
+            options.DaemonProfile);
     }
 }
