@@ -168,4 +168,40 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
         Assert.Equal(1, payload.GetProperty("callers").GetProperty("callSites").GetArrayLength());
         Assert.True(payload.GetProperty("impact").GetProperty("completeness").GetProperty("shownCallSiteCount").GetInt32() <= 1);
     }
+
+    [Fact]
+    public async Task AssemblyContext_RendersSectionContentInText()
+    {
+        using var temp = TestTempDirectory.Create("assembly-context-text-");
+        await using var fixture = await SyntheticAssemblyFixture.CreateAsync(
+            temp,
+            [],
+            sourceCode: "namespace Probe; public static class Probe { public static int Run() => 42; }");
+
+        var result = await fixture.ExecuteRootOnlyAsync(lease => AssemblyAnalysisContextTool.ExecuteAsync(
+            lease,
+            new AssemblyAnalysisContextArguments(
+                "Probe.Run",
+                IncludeMetrics: true,
+                IncludeReferences: false,
+                IncludeCallers: false,
+                IncludeImpact: false,
+                IncludeBody: true,
+                IncludeClassStructure: false,
+                MaxResults: 100,
+                MaxBodyLines: 80,
+                MaxCallers: 100,
+                Depth: 1,
+                TopN: 10,
+                MaxResponseBytes: 0,
+                DetailLevel: null,
+                Cursor: null),
+            CancellationToken.None));
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Abschnitt: metrics", text, StringComparison.Ordinal);
+        Assert.Contains("Abschnitt: body", text, StringComparison.Ordinal);
+        Assert.Contains("return 42;", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Abschnitt: truncatedBy", text, StringComparison.Ordinal);
+    }
 }

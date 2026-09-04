@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -46,12 +47,13 @@ internal static class AssemblyAnalysisContextTool
                 arguments.MaxResponseBytes,
                 arguments.DetailLevel,
                 lease.Context.ResponseBudgetBytes);
+            var sectionTexts = new Dictionary<string, string>(StringComparer.Ordinal);
             var root = CreateRoot(lease, arguments);
             await AddAssemblyAnalysisAsync(root, lease, arguments, budget).ConfigureAwait(false);
-            await AddSymbolSectionsAsync(root, lease, arguments, cancellationToken).ConfigureAwait(false);
+            await AddSymbolSectionsAsync(root, lease, arguments, sectionTexts, cancellationToken).ConfigureAwait(false);
             AddEnvelope(root);
             return AssemblyAnalysisResponse.ApplyWireBudget(
-                McpToolResults.Text(RenderText(root), root),
+                McpToolResults.Text(RenderText(root, sectionTexts), root),
                 budget,
                 AssemblyPaging.ReadOffset(arguments.Cursor));
         }
@@ -96,39 +98,59 @@ internal static class AssemblyAnalysisContextTool
         JsonObject root,
         AssemblyAnalysisLease lease,
         AssemblyAnalysisContextArguments arguments,
+        Dictionary<string, string> sectionTexts,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(arguments.SymbolIdentifier)) return;
         if (arguments.IncludeMetrics)
         {
-            root["metrics"] = Serialize((await MetricsLookupTool.ExecuteAsync(
-                lease.Server, [arguments.SymbolIdentifier], cancellationToken).ConfigureAwait(false)).StructuredContent);
+            var result = await MetricsLookupTool.ExecuteAsync(
+                lease.Server, [arguments.SymbolIdentifier], cancellationToken).ConfigureAwait(false);
+            root["metrics"] = Serialize(result.StructuredContent);
+            RecordText(sectionTexts, "metrics", result);
         }
         if (arguments.IncludeBody)
         {
-            root["body"] = Serialize((await GetSymbolBodyTool.ExecuteAsync(
-                lease, [arguments.SymbolIdentifier], Math.Clamp(arguments.MaxBodyLines, 1, 1000), cancellationToken).ConfigureAwait(false)).StructuredContent);
+            var result = await GetSymbolBodyTool.ExecuteAsync(
+                lease, [arguments.SymbolIdentifier], Math.Clamp(arguments.MaxBodyLines, 1, 1000), cancellationToken).ConfigureAwait(false);
+            root["body"] = Serialize(result.StructuredContent);
+            RecordText(sectionTexts, "body", result);
         }
         if (arguments.IncludeClassStructure)
         {
-            root["classStructure"] = Serialize((await GetClassStructureTool.ExecuteAsync(
+            var result = await GetClassStructureTool.ExecuteAsync(
                 lease.Server,
                 new GetClassStructureArgs(arguments.SymbolIdentifier, "lines", Math.Clamp(arguments.MaxResults, 1, GetClassStructureTool.MaxMembersCap)),
-                cancellationToken).ConfigureAwait(false)).StructuredContent);
+                cancellationToken).ConfigureAwait(false);
+            root["classStructure"] = Serialize(result.StructuredContent);
+            RecordText(sectionTexts, "classStructure", result);
         }
         if (arguments.IncludeCallers)
         {
-            root["callers"] = Serialize((await AssemblyFindReferencesTool.ExecuteAsync(
+            var result = await AssemblyFindReferencesTool.ExecuteAsync(
                 lease,
                 new AssemblyFindReferencesRequest(arguments.SymbolIdentifier, SelectionLimit(arguments), Math.Clamp(arguments.Depth, 1, 3), true),
-                cancellationToken).ConfigureAwait(false)).StructuredContent);
+                cancellationToken).ConfigureAwait(false);
+            root["callers"] = Serialize(result.StructuredContent);
+            RecordText(sectionTexts, "callers", result);
         }
         if (arguments.IncludeImpact)
         {
-            root["impact"] = Serialize((await GetImpactTool.ExecuteAsync(
+            var result = await GetImpactTool.ExecuteAsync(
                 lease.Server,
                 new GetImpactInput(null, arguments.SymbolIdentifier, SelectionLimit(arguments), Math.Clamp(arguments.Depth, 1, 3)),
-                cancellationToken).ConfigureAwait(false)).StructuredContent);
+                cancellationToken).ConfigureAwait(false);
+            root["impact"] = Serialize(result.StructuredContent);
+            RecordText(sectionTexts, "impact", result);
+        }
+    }
+
+    private static void RecordText(Dictionary<string, string> sectionTexts, string key, CallToolResult result)
+    {
+        var text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text;
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            sectionTexts[key] = text;
         }
     }
 
@@ -159,16 +181,20 @@ internal static class AssemblyAnalysisContextTool
     private static JsonNode? Serialize<T>(T value) =>
         value is null ? null : JsonSerializer.SerializeToNode(value, McpJsonOptions.Default);
 
-    private static string RenderText(JsonObject root)
+    private static string RenderText(JsonObject root, Dictionary<string, string> sectionTexts)
     {
         var builder = new StringBuilder();
         builder.AppendLine($"Assembly-Kontext: {root["returnedCount"]} von {root["totalCount"]}");
         builder.AppendLine($"Scope: {root["scope"]}; Vollständigkeit: {root["completeness"]}");
         if (root["symbolIdentifier"] is not null) builder.AppendLine($"Symbol: {root["symbolIdentifier"]}");
         foreach (var property in root.Select(pair => pair.Key)
-            .Where(key => key is not ("contextId" or "targetType" or "targetPath" or "scope" or "completeness" or "symbolIdentifier" or "identity" or "origin" or "assemblyAnalysis" or "analysis" or "totalCount" or "returnedCount" or "isTruncated" or "continuationToken")))
+            .Where(key => key is not ("contextId" or "targetType" or "targetPath" or "scope" or "completeness" or "symbolIdentifier" or "identity" or "origin" or "assemblyAnalysis" or "analysis" or "totalCount" or "returnedCount" or "isTruncated" or "continuationToken" or "wireBudget" or "truncatedBy")))
         {
             builder.AppendLine($"Abschnitt: {property}");
+            if (sectionTexts.TryGetValue(property, out var content) && !string.IsNullOrWhiteSpace(content))
+            {
+                builder.AppendLine(content.Trim());
+            }
         }
         if (root["isTruncated"]?.GetValue<bool>() == true)
         {
