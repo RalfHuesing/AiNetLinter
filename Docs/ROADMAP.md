@@ -968,4 +968,24 @@ Generische False-Positive-Reduktion und Holder-Bewusstsein für das On-Demand-Au
 
 ---
 
+## Cross-Assembly-Navigation & Typauflösung im MCP-Server (Task 03)
+
+Roslyn-gestützte Cross-Assembly- & Typauflösungsfähigkeiten im AiNetLinter MCP-Server:
+
+- [x] **EPIC-01 — Performance Short-Circuit für Test-Scans bei Fremd-Assemblies:**
+  - `TestDetector` & `TestCoverageBatchScan`: Schneller Abbruch bei Fremd-Assemblies ohne Testframework-Referenzen (`xunit.*`, `nunit.*`, `MSTest.*`, etc.) in < 3 Sekunden statt ~28 Sekunden.
+- [x] **EPIC-02 — `search_assembly` Deklarations- & Symbolart-Filter:**
+  - `declarationOnly` (`boolean`, Default `false`): Schließt Treffer in Kommentaren, Strings und XML-Docs aus.
+  - `kind` (`string`): Schränkt Treffer auf Symbolarten ein (`method`, `type`, `property`).
+- [x] **EPIC-03 — MCP-Tool `resolve_type_origin`:**
+  - Ermittelt zu einem Typnamen deterministisch über Roslyn-Compilation und Metadaten-Referenzen sofort Assembly-Name, absoluten DLL-Pfad auf der Festplatte, vollqualifizierten Typnamen und Symbol-Kind.
+- [x] **EPIC-04 — Outgoing Cross-Assembly Call-Leaves in `get_call_tree` mit BCL-Filter:**
+  - `OutgoingCallScanner`: Externe Aufrufe in referenzierte Fremd-Assemblies werden als `[ref: Assembly] Type.Member` ausgewiesen; BCL-Rauschen standardmäßig gefiltert (`includeBcl: false`, optional einblendbar).
+- [x] **EPIC-05 — MCP-Tool `find_implementations`:**
+  - Findet konkrete Implementierungen und Overrides von Interfaces, abstrakten Klassen, virtuellen Methoden oder Properties in Quellcode-Projekten (`targetType=project`) und dekompilierten Assemblies (`targetType=assembly`) mit Status (`concrete`/`abstract`/`virtual`) und Zeilenposition.
+- [x] **EPIC-06 — Tool-Registrierung, Schemas & Dokumentations-Sync:**
+  - Registrierung in `SymbolGraphToolRegistrations`, Inventar-Freeze auf 33 Tools mit ReadOnlyProfile-Annotation, Doku in `Docs/agent-api.md`, Workflow-Regeln in `.agents/rules/AiNetLinter-McpWorkflow.mdc`.
+
+---
+
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

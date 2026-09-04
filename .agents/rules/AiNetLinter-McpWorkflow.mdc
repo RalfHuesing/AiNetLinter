@@ -21,6 +21,8 @@ Referenzen und Abhängigkeiten.
 > | Aufrufbaum einer Methode verstehen | `get_call_tree` (outgoing/incoming) |
 > | Methodenrumpf lesen | `get_symbol_body` mit Symbol-ID |
 > | Symbol/Klasse suchen | `find_symbol` (namePattern + kind) |
+> | Definierende Assembly & DLL-Pfad eines Typs ermitteln | `resolve_type_origin` |
+> | Konkrete Implementierungen/Overrides finden | `find_implementations` |
 > | Klassenstruktur / Members | `get_class_structure` |
 > | Regelverstöße, Impact, Hotspots | `get_violations`, `get_impact`, `get_hotspots` |
 > | Text in Nicht-C#-Dateien suchen (`.md`, `.json`, `.yml`) | `grep_search` / `rg` |
@@ -96,8 +98,11 @@ vollständige Tool-Rohantworten gehören nicht in die Map.
 | :--- | :--- |
 | Physische Projektstruktur und Nicht-C#-Dateien entdecken | `get_file_tree` (`view="summary"` oder `treeDepth <= 2`) |
 | C#-Symbol oder Feature verstehen | `get_feature_context`; bei unbekanntem Namen `find_symbol` |
+| Definierende Assembly und DLL-Pfad eines Typs ermitteln | `resolve_type_origin` |
+| Konkrete Implementierungen oder Overrides finden | `find_implementations` |
 | Signaturen und Struktur überblicken | `get_file_skeleton`, `get_class_structure`, dann `get_symbol_body` |
 | Öffentliche API einer lokalen .NET-Assembly (.dll/.exe) untersuchen | `inspect_assembly` |
+| Text-/Mustersuche in dekompilierten Fremd-Assemblies | `search_assembly` (`declarationOnly=true` für Symbole) |
 | Klassische Extension-Methoden einer lokalen .NET-Assembly (.dll/.exe) prüfen | `find_assembly_extensions` |
 | Aufrufer, Abhängigkeiten oder Tests prüfen | `find_references`, `get_impact`, `dependency_graph`, `get_test_context` |
 | Nach C#-Änderungen gezielt prüfen | `get_impact`, `get_violations`; bei Bedarf `metrics_lookup` |

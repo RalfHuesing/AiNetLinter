@@ -1,8 +1,8 @@
 # Roadmap: 03-cross-assembly-navigation
 
-Status: executing
-Current Epic: EPIC-06
-Letzter Commit: in Arbeit (EPIC-05 abgeschlossen)
+Status: completed
+Current Epic: keine (alle Epics abgeschlossen)
+Letzter Commit: in Arbeit (EPIC-06 abgeschlossen)
 Blocker: keine
 
 ## Primäraufgabe
@@ -56,7 +56,7 @@ Cross-Assembly-Navigation und Typauflösung im MCP-Server
 - **Betroffene Bereiche**: ToolRegistrations, `Docs/configuration.md`, `.agents/rules/AiNetLinter-McpWorkflow.mdc`, IntegrationTests.
 - **Muss-Kriterien**: E2E-Integrationstests über MCP-Client; Sync von Agent-Rules; alle Gates grün.
 - **Verifikation**: `dotnet build`, `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress`, `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress`, `audit`-Skill.
-- **Status**: open
+- **Status**: done
 
 ## Abschluss-Checkliste (aus Konzept.md)
 - [x] `resolve_type_origin` antwortet deterministisch in < 100 ms mit Assembly-Name und Dateipfad.
@@ -64,5 +64,5 @@ Cross-Assembly-Navigation und Typauflösung im MCP-Server
 - [x] `find_implementations` findet konkrete Implementierungen/Overrides in Quellcode und Assemblies mit Zeilenangaben.
 - [x] `search_assembly` liefert mit `declarationOnly=true` keine Treffer in XML-Docs oder Kommentaren.
 - [x] `get_impact` und `get_assembly_context` schließen bei Fremd-Assemblies ohne Testreferenzen in < 3 s ab.
-- [ ] FastTests (`Category!=Stress`) und IntegrationTests (`Category!=Stress`) laufen warnungs- und fehlerfrei.
-- [ ] Dokumentation & MCP-Schemas synchronisiert (`Docs/configuration.md`, `.agents/rules/AiNetLinter-McpWorkflow.mdc`, `AiNetLinter.mdc`).
+- [x] FastTests (`Category!=Stress`) und IntegrationTests (`Category!=Stress`) laufen warnungs- und fehlerfrei.
+- [x] Dokumentation & MCP-Schemas synchronisiert (`Docs/configuration.md`, `.agents/rules/AiNetLinter-McpWorkflow.mdc`, `AiNetLinter.mdc`).
