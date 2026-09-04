@@ -83,18 +83,10 @@ internal static class GetServerHealthFormatter
         }
         builder.AppendLine($"- Origin: {assembly.OriginKind ?? "unbekannt"}");
         builder.AppendLine($"- Generation: {assembly.Generation?.ToString() ?? "unbekannt"}");
-        AppendOptionalAssemblyValue(builder, "Logical-Checkout-Key", assembly.LogicalCheckoutKey);
-        AppendOptionalAssemblyValue(builder, "Repository-ID", assembly.RepositoryId);
-        AppendOptionalAssemblyValue(builder, "Revision", assembly.Revision);
-        AppendOptionalAssemblyValue(builder, "Checkout-Status", assembly.CheckoutStatus);
-        AppendOptionalAssemblyValue(builder, "Mapping-Status", assembly.MappingStatus);
-        AppendOptionalAssemblyValue(builder, "Analyse-Ursprung", assembly.AnalysisOrigin);
-        AppendOptionalAssemblyValue(builder, "Source-Policy", assembly.SourcePolicy);
         AppendOptionalAssemblyValue(builder, "Daemon-Profil", assembly.DaemonProfile);
         AppendOptionalAssemblyValue(builder, "Lock-Status", assembly.LockStatus);
         AppendOptionalAssemblyValue(builder, "Lease-Status", assembly.LeaseStatus);
         AppendOptionalAssemblyValue(builder, "Cleanup-Status", assembly.CleanupStatus);
-        AppendOptionalAssemblyValue(builder, "Quarantäne-Status", assembly.QuarantineStatus);
         AppendOptionalAssemblyValue(builder, "Fehlercode", assembly.ErrorCode);
         AppendOptionalAssemblyValue(builder, "Fehlerphase", assembly.ErrorPhase);
         AppendOptionalAssemblyValue(builder, "Fehlerursache", assembly.ErrorCause);
@@ -103,20 +95,18 @@ internal static class GetServerHealthFormatter
 
     private static void AppendAssemblySourceDetails(StringBuilder builder, AssemblyHealthEntry assembly)
     {
-        if (!string.IsNullOrWhiteSpace(assembly.SourceProjectPath))
+        if (string.Equals(assembly.OriginKind, "decompiled", StringComparison.OrdinalIgnoreCase))
         {
-            builder.AppendLine($"- Source-Projekt: {assembly.SourceProjectPath}");
+            builder.AppendLine("- Quelle: Dekompilat");
         }
-
-        if (assembly.SourceSnapshot is { } snapshot)
+        else if (!string.IsNullOrWhiteSpace(assembly.OriginKind))
         {
-            builder.AppendLine($"- Source-Snapshot: {snapshot.RepositoryUrl} @ {snapshot.LoadedRevision} — Solution {snapshot.SolutionPath}");
+            builder.AppendLine($"- Quelle: {assembly.OriginKind}");
         }
 
         AppendOptionalAssemblyValue(builder, "Hash", assembly.ContentHash);
         AppendOptionalAssemblyValue(builder, "GeneratedPath", assembly.GeneratedDocumentPath);
         AppendOptionalAssemblyValue(builder, "Confidence", assembly.Confidence);
-        AppendOptionalAssemblyValue(builder, "Trust", assembly.Trust);
     }
 
     private static void AppendOptionalAssemblyValue(

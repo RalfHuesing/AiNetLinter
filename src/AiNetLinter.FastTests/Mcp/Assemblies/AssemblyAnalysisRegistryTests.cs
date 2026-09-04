@@ -11,7 +11,6 @@ using AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
-using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.TestKit;
@@ -77,15 +76,18 @@ public sealed class AssemblyAnalysisRegistryTests
             "RegistryInternalCancel",
             "namespace Probe; public sealed class Value { }");
         var attempts = 0;
-        var orchestrator = new TestRegistrySourceResolver((_, _) =>
-        {
-            if (Interlocked.Increment(ref attempts) == 1)
+        AssemblyAnalysisRegistry? registryRef = null;
+        await using var registry = new AssemblyAnalysisRegistry(
+            entryFactoryOverride: async (path, gen, ct, lease) =>
             {
-                throw new OperationCanceledException("internal creation aborted");
-            }
-            return Task.FromResult(new AssemblySourceResolution(null, null, []));
-        });
-        await using var registry = new AssemblyAnalysisRegistry(orchestrator);
+                if (Interlocked.Increment(ref attempts) == 1)
+                {
+                    await Task.Yield();
+                    throw new OperationCanceledException("internal creation aborted");
+                }
+                return await registryRef!.CreateEntryDirectAsync(path, gen, ct, lease);
+            });
+        registryRef = registry;
 
         var failed = await registry.LeaseAsync(assemblyPath, CancellationToken.None);
 
@@ -450,12 +452,4 @@ public sealed class AssemblyAnalysisRegistryTests
 
         public override DateTimeOffset GetUtcNow() => utcNow;
     }
-
-    private sealed class TestRegistrySourceResolver(
-        Func<string, CancellationToken, Task<AssemblySourceResolution>> resolveFunc) : IAssemblySourceResolver
-    {
-        public Task<AssemblySourceResolution> ResolveForRegistryAsync(string assemblyPath, CancellationToken cancellationToken) =>
-            resolveFunc(assemblyPath, cancellationToken);
-    }
-
 }

@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
 using AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
-using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -31,69 +30,48 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
     private readonly Dictionary<string, long> nextGenerations = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<Task> retiredEntries = [];
     private readonly Func<string, AssemblyFingerprint>? fingerprintFactory;
-    private readonly IAssemblySourceResolver? sourceOrchestrator;
     private readonly AssemblyAnalysisResourceBudget resourceBudget;
     private readonly AssemblyAnalysisRegistryEntryFactory entryFactory;
-    private readonly AssemblyAnalysisSourceProjectLeaseCoordinator sourceProjectLeaseCoordinator;
     private readonly AssemblyAnalysisRegistryEvictionCandidates evictionCandidates;
     private readonly AssemblyAnalysisRegistryEvictionCoordinator evictionCoordinator;
     private readonly AssemblyAnalysisRegistryReferenceEviction referenceEviction;
     private readonly AssemblyAnalysisHealthSnapshotProvider healthSnapshotProvider;
     private readonly Func<AssemblyAnalysisEntry, Task>? beforeRetirementAsync;
+    private readonly Func<string, long, CancellationToken, ExternalResourceLease?, Task<AssemblyAnalysisEntry>>? entryFactoryOverride;
     private int disposed;
 
     internal AssemblyAnalysisRegistry(
-        IAssemblySourceResolver? sourceOrchestrator = null,
         Func<string, AssemblyFingerprint>? fingerprintFactory = null,
         ExternalResourceRegistry? resourceRegistry = null,
         Func<AssemblyAnalysisEntry, Task>? beforeRetirementAsync = null,
-        AssemblyDecompilationConfiguration? decompilationConfiguration = null)
+        AssemblyDecompilationConfiguration? decompilationConfiguration = null,
+        Func<string, long, CancellationToken, ExternalResourceLease?, Task<AssemblyAnalysisEntry>>? entryFactoryOverride = null)
         : this(
-            sourceOrchestrator,
             fingerprintFactory,
             resourceRegistry,
             beforeRetirementAsync,
-            new AssemblyAnalysisRegistryRuntimeOptions(decompilationConfiguration))
+            new AssemblyAnalysisRegistryRuntimeOptions(decompilationConfiguration),
+            entryFactoryOverride)
     {
     }
 
     internal AssemblyAnalysisRegistry(
-        IAssemblySourceResolver? sourceOrchestrator,
         Func<string, AssemblyFingerprint>? fingerprintFactory,
         ExternalResourceRegistry? resourceRegistry,
         Func<AssemblyAnalysisEntry, Task>? beforeRetirementAsync,
-        AssemblyAnalysisRegistryRuntimeOptions runtimeOptions)
+        AssemblyAnalysisRegistryRuntimeOptions runtimeOptions,
+        Func<string, long, CancellationToken, ExternalResourceLease?, Task<AssemblyAnalysisEntry>>? entryFactoryOverride = null)
     {
         ArgumentNullException.ThrowIfNull(runtimeOptions);
-        this.sourceOrchestrator = sourceOrchestrator;
         this.fingerprintFactory = fingerprintFactory;
         this.beforeRetirementAsync = beforeRetirementAsync;
+        this.entryFactoryOverride = entryFactoryOverride;
         resourceBudget = new(resourceRegistry);
         entryFactory = new(
-            sourceOrchestrator,
             resourceBudget,
             CreateReferenceLeaseFactory,
             RequestTemporaryReferenceEviction,
             runtimeOptions.DecompilationConfiguration);
-        var sourceProjectEntryFactory = new AssemblyAnalysisSourceProjectEntryFactory(
-            resourceBudget,
-            CreateReferenceLeaseFactory,
-            RequestTemporaryReferenceEviction);
-        var coordinatorContext = new AssemblyAnalysisRegistryCoordinatorContext
-        {
-            Gate = gate,
-            Entries = entries,
-            NextGenerations = nextGenerations,
-            RetiredEntries = retiredEntries,
-            IsDisposed = () => Volatile.Read(ref disposed) != 0,
-            ResourceBudget = resourceBudget,
-            SourceProjectEntryFactory = sourceProjectEntryFactory,
-            ObserveCreation = ObserveCreation,
-            RemoveFailedEntry = RemoveFailedEntry,
-            RunEvictionTick = (forceCapacity, requiredPath, cancellationToken) =>
-                RunEvictionTickAsync(forceCapacity, requiredPath, cancellationToken),
-            Failure = Failure,
-        };
         evictionCandidates = new(
             GetCompletedEvictionCreations,
             beforeRetirementAsync is null
@@ -110,7 +88,6 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         referenceEviction = new(
             evictionCoordinator,
             evictionCandidates.GetCompletedTemporaryEvictionCandidates);
-        sourceProjectLeaseCoordinator = new(coordinatorContext);
         healthSnapshotProvider = new(gate, entries, runtimeOptions.DaemonProfile);
     }
 
@@ -212,20 +189,12 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         }
 
         var entry = creationAttempt.Entry!;
-        var sourceSnapshotIdentity = creationResult.WasExisting
-            ? await AssemblyAnalysisRegistryIdentity.ResolveCurrentSourceSnapshotIdentityAsync(
-                    sourceOrchestrator,
-                    canonicalPath,
-                    cancellationToken)
-                .ConfigureAwait(false)
-            : entry.Context.Origin.SourceSnapshotIdentity?.StableValue;
         return TryLeaseEntry(
             canonicalPath,
             creation,
             entry,
             fingerprint,
-            refreshOnMismatch,
-            sourceSnapshotIdentity);
+            refreshOnMismatch);
     }
 
     private async Task<(AssemblyAnalysisEntry? Entry, AssemblyAnalysisLeaseResult? Result, bool Retry)> AwaitCreationAsync(
@@ -294,8 +263,7 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         AssemblyAnalysisRegistryEntryCreation creation,
         AssemblyAnalysisEntry entry,
         AssemblyFingerprint fingerprint,
-        bool refreshOnMismatch,
-        string? sourceSnapshotIdentity)
+        bool refreshOnMismatch)
     {
         lock (gate)
         {
@@ -305,10 +273,7 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
                 return (null, true);
             }
 
-            if (!entry.Matches(
-                    fingerprint,
-                    sourceSnapshotIdentity,
-                    compareSourceSnapshotIdentity: sourceOrchestrator is not null))
+            if (!entry.Matches(fingerprint))
             {
                 if (!refreshOnMismatch)
                 {
@@ -328,15 +293,9 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
     }
 
     private Task<AssemblyAnalysisLeaseResult> LeaseReferencedAsync(
-        AssemblySourceSelection? sourceSelection,
         AssemblyReferenceDto reference,
         CancellationToken cancellationToken)
     {
-        if (reference.ResolutionState == "source_project")
-        {
-            return sourceProjectLeaseCoordinator.LeaseAsync(sourceSelection, reference, cancellationToken);
-        }
-
         if (string.IsNullOrWhiteSpace(reference.ResolvedPath))
         {
             return Task.FromResult(Failure(
@@ -347,9 +306,9 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
         return LeaseAsync(reference.ResolvedPath, cancellationToken);
     }
 
-    private AssemblyReferenceLeaseFactory CreateReferenceLeaseFactory(AssemblySourceSelection? sourceSelection) =>
+    private AssemblyReferenceLeaseFactory CreateReferenceLeaseFactory() =>
         (reference, cancellationToken) =>
-            LeaseReferencedAsync(sourceSelection, reference, cancellationToken);
+            LeaseReferencedAsync(reference, cancellationToken);
 
     Task<IReadOnlyList<AssemblyAnalysisHealthSnapshot>> IAssemblyAnalysisRegistry.SnapshotsAsync() =>
         SnapshotsAsync();
@@ -452,12 +411,22 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
             return rejected;
         }
 
+        var creationTask = entryFactoryOverride is not null
+            ? entryFactoryOverride(canonicalPath, generation, creationLifetime.Token, resourceLease)
+            : entryFactory.CreateAsync(canonicalPath, generation, creationLifetime.Token, resourceLease);
         var creation = new AssemblyAnalysisRegistryEntryCreation(
             creationLifetime,
-            entryFactory.CreateAsync(canonicalPath, generation, creationLifetime.Token, resourceLease));
+            creationTask);
         ObserveCreation(canonicalPath, creation);
         return creation;
     }
+
+    internal Task<AssemblyAnalysisEntry> CreateEntryDirectAsync(
+        string canonicalPath,
+        long targetGeneration,
+        CancellationToken creationToken,
+        ExternalResourceLease? resourceLease) =>
+        entryFactory.CreateAsync(canonicalPath, targetGeneration, creationToken, resourceLease);
 
     private void ObserveCreation(string canonicalPath, AssemblyAnalysisRegistryEntryCreation creation)
     {

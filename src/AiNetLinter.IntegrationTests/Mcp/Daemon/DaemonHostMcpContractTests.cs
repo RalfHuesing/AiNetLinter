@@ -1,8 +1,12 @@
 #nullable enable
 
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
@@ -12,6 +16,7 @@ using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
+using Xunit;
 
 namespace AiNetLinter.IntegrationTests.Mcp.Daemon;
 
@@ -39,74 +44,38 @@ public sealed class DaemonHostMcpContractTests
         var assemblyPath = AssemblyTestHelper.EmitAssembly(
             temp,
             "TargetAssembly",
-            "namespace Target; public sealed class TargetOnly { }");
-        var mapping = new ExternalSourceMapping(
-            "https://gitea.example/shared.git",
-            "src/Shared.slnx",
-            ["TargetAssembly"]);
-        using var snapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
-            temp.DirectoryPath,
-            mapping,
-            new ExternalSourceProjectSpec(
-                "SourceProject",
-                "TargetAssembly",
-                """
-                namespace Source;
-                public sealed class SourceOnly
-                {
-                    public void SelectedMember() { }
-                    public void UnselectedMember() { }
-                }
-
-                public static class SourceExtensions
-                {
-                    public static string SourceOnlyExtension(this string value) => value;
-                    public static string SourceOnlySecondaryExtension(this string value) => value;
-                }
-                """));
-        var settingsPath = CreateSettings(temp);
-        var providerDiagnostic = new ExternalSourceConfigurationDiagnostic(
-            "provider-diagnostic",
-            "Kontrollierte Providerdiagnose",
-            "warning",
-            "test-provider");
-        var provider = new RecordingProvider(new ExternalSourceProviderResult(
-            isAvailable: true,
-            diagnostics: [providerDiagnostic],
-            sourceSnapshot: snapshot));
-        await using var composition = AssemblyAnalysisHostComposition.Create(settingsPath, provider);
+            """
+            namespace Target;
+            public sealed class TargetOnly
+            {
+                public void SelectedMember() { }
+                public void UnselectedMember() { }
+            }
+            public static class TargetExtensions
+            {
+                public static string TargetOnlyExtension(this string value) => value;
+            }
+            """);
+        await using var composition = AssemblyAnalysisHostComposition.Create();
         await using var registry = ProjectWiringFixtures.CreateLoadedRegistry(TimeProvider.System);
-        var hostRegistry = composition.Registry;
+        var hostRegistry = composition.Sessions;
 
         for (var session = 0; session < 2; session++)
         {
             var results = await RunAssemblySessionAsync(assemblyPath, registry, composition);
 
-            AssertSourceBackedInspection(results.Inspect, providerDiagnostic);
-            AssertSourceBackedExtensions(results.Extensions, providerDiagnostic);
+            AssertDecompiledInspection(results.Inspect);
+            AssertDecompiledExtensions(results.Extensions);
             Assert.False(composition.IsDisposed);
-            Assert.Same(hostRegistry, composition.Registry);
-            Assert.Equal(1, composition.Registry.ResidentCount);
-            // Die Root-Assembly bleibt resident; die temporäre Source-Project-Referenz wird
-            // nach dem Dispatcher-Aufruf über den normalen Retirement-Pfad freigegeben.
+            Assert.Same(hostRegistry, composition.Sessions);
             Assert.Equal(1, composition.Sessions.ResidentCount);
-            Assert.False(snapshot.IsDisposed);
         }
-
-        Assert.Equal(1, provider.CallCount);
-        Assert.NotNull(provider.FirstMapping);
-        Assert.All(provider.Mappings, observed => Assert.Same(provider.FirstMapping, observed));
-        Assert.All(provider.Mappings, observed => Assert.Equal("TargetAssembly", observed.Assemblies.Single()));
-        Assert.Equal(1, provider.CancellationTokens.Count);
-        Assert.All(provider.CancellationTokens, token => Assert.True(token.CanBeCanceled));
 
         await composition.DisposeAsync();
         await composition.DisposeAsync();
 
         Assert.True(composition.IsDisposed);
-        Assert.Equal(0, composition.Registry.ResidentCount);
-        Assert.True(snapshot.IsDisposed);
-        Assert.Throws<ObjectDisposedException>(() => _ = composition.Orchestrator);
+        Assert.Equal(0, hostRegistry.ResidentCount);
     }
 
     [Fact]
@@ -136,16 +105,6 @@ public sealed class DaemonHostMcpContractTests
         Assert.True(payload.GetProperty("recoverable").GetBoolean());
     }
 
-    private static string CreateSettings(TestTempDirectory temp)
-    {
-        temp.CreateFile(
-            "mappings.json",
-            "{ \"repositories\": [{ \"url\": \"https://gitea.example/shared.git\", \"solutionPath\": \"src/Shared.slnx\", \"assemblies\": [\"TargetAssembly\"] }] }");
-        return temp.CreateFile(
-            "appsettings.json",
-            "{ \"ExternalSources\": { \"MappingsPath\": \"mappings.json\" } }");
-    }
-
     private static async Task<(CallToolResult Inspect, CallToolResult Extensions)> RunAssemblySessionAsync(
         string assemblyPath,
         ProjectRegistry registry,
@@ -154,8 +113,6 @@ public sealed class DaemonHostMcpContractTests
         var (clientStream, daemonStream) = ThinClientPipeTestDoubles.CreateDuplexPair();
         await using var clientConnection = clientStream;
         await using var daemonConnection = new DaemonPipeConnection(daemonStream);
-        // Eager Assembly-Materialisierung darf unter paralleler Suite-Last dem
-        // konfigurierten Produktions-Timeout von 180 Sekunden entsprechen.
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(180));
         var serverTask = CreateSession(registry, composition).RunAsync(daemonConnection);
         CallToolResult inspect;
@@ -176,7 +133,7 @@ public sealed class DaemonHostMcpContractTests
                     {
                         ["targetType"] = "assembly",
                         ["targetPath"] = assemblyPath,
-                        ["typeName"] = "SourceOnly",
+                        ["typeName"] = "TargetOnly",
                         ["exactTypeName"] = true,
                         ["memberName"] = "Member",
                         ["maxResults"] = 1,
@@ -189,10 +146,10 @@ public sealed class DaemonHostMcpContractTests
                     {
                         ["targetType"] = "assembly",
                         ["targetPath"] = assemblyPath,
-                        ["extensionName"] = "SourceOnly",
-                        ["namespace"] = "Source",
+                        ["extensionName"] = "TargetOnly",
+                        ["namespace"] = "Target",
                         ["maxResults"] = 1,
-                        ["includeReferences"] = true,
+                        ["includeReferences"] = false,
                     },
                     cancellationToken: timeout.Token).ConfigureAwait(false);
             }
@@ -257,48 +214,36 @@ public sealed class DaemonHostMcpContractTests
                 runtimeContext),
             () => McpServerResourceCollectionFactory.Build(registry));
 
-    private static void AssertSourceBackedInspection(
-        CallToolResult result,
-        ExternalSourceConfigurationDiagnostic providerDiagnostic)
+    private static void AssertDecompiledInspection(CallToolResult result)
     {
         Assert.NotEqual(true, result.IsError);
         var text = TextOf(result);
-        Assert.Contains("Herkunft: `source-backed`", text, StringComparison.Ordinal);
-        Assert.Contains("SourceOnly", text, StringComparison.Ordinal);
-        Assert.Contains(providerDiagnostic.Code, text, StringComparison.Ordinal);
-        Assert.Contains(providerDiagnostic.Message, text, StringComparison.Ordinal);
-        Assert.DoesNotContain("TargetOnly", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("decompiled", text, StringComparison.Ordinal);
+        Assert.Contains("Quelle: Dekompilat", text, StringComparison.Ordinal);
+        Assert.Contains("TargetOnly", text, StringComparison.Ordinal);
 
         var payload = StructuredOf(result);
-        Assert.Equal("source-backed", payload.GetProperty("origin").GetProperty("originKind").GetString());
+        Assert.Equal("decompiled", payload.GetProperty("origin").GetProperty("originKind").GetString());
         var type = Assert.Single(payload.GetProperty("types").EnumerateArray());
-        Assert.Equal("SourceOnly", type.GetProperty("name").GetString());
+        Assert.Equal("TargetOnly", type.GetProperty("name").GetString());
         Assert.Equal(1, type.GetProperty("members").GetArrayLength());
         Assert.Equal(2, type.GetProperty("totalMembers").GetInt32());
         Assert.True(type.GetProperty("membersTruncated").GetBoolean());
         Assert.Equal("SelectedMember", type.GetProperty("members")[0].GetProperty("name").GetString());
     }
 
-    private static void AssertSourceBackedExtensions(
-        CallToolResult result,
-        ExternalSourceConfigurationDiagnostic providerDiagnostic)
+    private static void AssertDecompiledExtensions(CallToolResult result)
     {
         Assert.NotEqual(true, result.IsError);
         var text = TextOf(result);
-        Assert.Contains("Herkunft: `source-backed`", text, StringComparison.Ordinal);
-        Assert.Contains("SourceOnlyExtension", text, StringComparison.Ordinal);
-        Assert.Contains(providerDiagnostic.Code, text, StringComparison.Ordinal);
-        Assert.Contains(providerDiagnostic.Message, text, StringComparison.Ordinal);
-        Assert.DoesNotContain("decompiled", text, StringComparison.Ordinal);
+        Assert.Contains("Quelle: Dekompilat", text, StringComparison.Ordinal);
+        Assert.Contains("TargetOnlyExtension", text, StringComparison.Ordinal);
 
         var payload = StructuredOf(result);
-        Assert.Equal("source-backed", payload.GetProperty("origin").GetProperty("originKind").GetString());
-        Assert.Equal(2, payload.GetProperty("totalExtensions").GetInt32());
-        Assert.True(payload.GetProperty("truncated").GetBoolean());
+        Assert.Equal("decompiled", payload.GetProperty("origin").GetProperty("originKind").GetString());
+        Assert.Equal(1, payload.GetProperty("totalExtensions").GetInt32());
         var extension = Assert.Single(payload.GetProperty("extensions").EnumerateArray());
-        Assert.Equal("SourceOnlyExtension", extension.GetProperty("name").GetString());
-        Assert.Equal("Source", extension.GetProperty("namespace").GetString());
+        Assert.Equal("TargetOnlyExtension", extension.GetProperty("name").GetString());
+        Assert.Equal("Target", extension.GetProperty("namespace").GetString());
     }
 
     private static string TextOf(CallToolResult result) =>
@@ -308,30 +253,5 @@ public sealed class DaemonHostMcpContractTests
     {
         Assert.NotNull(result.StructuredContent);
         return result.StructuredContent!.Value;
-    }
-
-    private sealed class RecordingProvider : IExternalSourceProvider
-    {
-        private readonly ExternalSourceProviderResult result;
-
-        internal RecordingProvider(ExternalSourceProviderResult result) => this.result = result;
-
-        internal int CallCount { get; private set; }
-
-        internal List<ExternalSourceMapping> Mappings { get; } = [];
-
-        internal List<CancellationToken> CancellationTokens { get; } = [];
-
-        internal ExternalSourceMapping? FirstMapping => Mappings.FirstOrDefault();
-
-        public ValueTask<ExternalSourceProviderResult> ResolveAsync(
-            ExternalSourceMapping mapping,
-            CancellationToken cancellationToken = default)
-        {
-            CallCount++;
-            Mappings.Add(mapping);
-            CancellationTokens.Add(cancellationToken);
-            return ValueTask.FromResult(result);
-        }
     }
 }

@@ -97,9 +97,6 @@ public sealed class GetServerHealthToolTests
             null,
             null,
             null,
-            null,
-            null,
-            null,
             ["health-root-0", "health-root-1"],
             TransitiveDiagnostics: ["health-transitive-0", "health-transitive-1"]);
 
@@ -162,9 +159,6 @@ public sealed class GetServerHealthToolTests
             "C:\\fixtures\\health-detail.dll",
             "complete",
             "decompiled",
-            null,
-            null,
-            null,
             null,
             null,
             null,

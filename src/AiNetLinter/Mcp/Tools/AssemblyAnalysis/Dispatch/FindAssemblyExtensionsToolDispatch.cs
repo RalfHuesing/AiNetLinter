@@ -19,14 +19,6 @@ internal static class FindAssemblyExtensionsToolDispatch
         AssemblyAnalysisToolSupport.ExecuteAsync(
             CreateParameters(state, arguments, cancellationToken));
 
-    internal static Task<CallToolResult> ExecuteAsync(
-        McpCodeGraphServer? state,
-        FindAssemblyExtensionsArguments arguments,
-        CancellationToken cancellationToken,
-        IAssemblySourceSelectionResolver sourceSelection) =>
-        AssemblyAnalysisSourceToolSupport.ExecuteAsync(
-            CreateParameters(state, arguments, cancellationToken),
-            sourceSelection);
 
     private static AssemblyToolExecutionParameters CreateParameters(
         McpCodeGraphServer? state,

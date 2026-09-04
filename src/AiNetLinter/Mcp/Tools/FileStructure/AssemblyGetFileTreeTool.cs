@@ -33,16 +33,8 @@ internal static class AssemblyGetFileTreeTool
     internal static string? ResolveRoot(AssemblyAnalysisLease lease)
     {
         var generatedRoot = lease.Context.DecompiledProjectPaths?.DecompiledSourceRoot;
-        if (!string.IsNullOrWhiteSpace(generatedRoot) && Directory.Exists(generatedRoot))
-        {
-            return generatedRoot;
-        }
-
-        var sourceProject = lease.Context.Origin.SourceProjectPath;
-        if (string.IsNullOrWhiteSpace(sourceProject)) return null;
-        var sourceRoot = Path.GetDirectoryName(sourceProject);
-        return !string.IsNullOrWhiteSpace(sourceRoot) && Directory.Exists(sourceRoot)
-            ? sourceRoot
+        return !string.IsNullOrWhiteSpace(generatedRoot) && Directory.Exists(generatedRoot)
+            ? generatedRoot
             : null;
     }
 }

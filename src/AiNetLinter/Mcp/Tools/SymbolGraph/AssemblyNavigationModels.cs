@@ -40,8 +40,7 @@ internal sealed record AssemblyNavigationOrigin(
     string CanonicalPath,
     string ContentHash,
     string GeneratedDocumentPath,
-    string Confidence,
-    string Trust);
+    string Confidence);
 
 internal sealed record AssemblyNavigationSummary(
     bool IncludeReferences,

@@ -32,10 +32,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- System-Logging- und External-Sources-Konfiguration: bewusst als lose Datei ausgeliefert (nicht eingebettet),
+    <!-- System-Logging-Konfiguration: bewusst als lose Datei ausgeliefert (nicht eingebettet),
          damit sie im Deployment ohne Neubuild angepasst werden kann. -->
     <Content Include="..\..\appsettings.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <Content Include="..\..\external-sources.json" Link="external-sources.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

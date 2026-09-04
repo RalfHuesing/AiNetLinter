@@ -128,11 +128,6 @@ try {
         Copy-Item $appSettingsFile (Join-Path $publishDir 'appsettings.json') -Force
     }
 
-    $externalSourcesFile = Join-Path $repoRoot 'external-sources.json'
-    if (Test-Path $externalSourcesFile) {
-        Copy-Item $externalSourcesFile (Join-Path $publishDir 'external-sources.json') -Force
-    }
-
     $readmeFile = Join-Path $repoRoot 'README.md'
     if (Test-Path $readmeFile) {
         Copy-Item $readmeFile (Join-Path $publishDir 'README.md') -Force

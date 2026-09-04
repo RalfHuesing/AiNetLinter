@@ -320,12 +320,9 @@ absolute `.dll`- oder `.exe`-Datei.
 ### Capability-Matrix und gemeinsame Session
 
 Alle Assembly-fähigen Abfragen verwenden denselben Target-Resolver, die gemeinsame
-Assembly-Registry und denselben read-only Roslyn-Snapshot wie `inspect_assembly`.
-Eine source-backed Assembly-Session stammt aus einer explizit gemappten Source-
-Solution; ohne verwendbare Zuordnung liefert die Registry eine dekompilierte
-Session. Beide Varianten kennzeichnen `origin`, `sourcePath`/Snapshot, Assembly-
-Hash, `generatedPath`, Confidence, Trust, Generation, Status, Vollständigkeit und
-Diagnosen. Die Assembly wird nicht geladen oder ausgeführt. Die Aussage zu
+Assembly-Registry und denselben autarken Dekompilierungspfad wie `inspect_assembly`.
+Assemblies (.dll / .exe) werden ausschließlich über dekompilierte Sessions analysiert
+(`Quelle: Dekompilat`). Die Assembly wird nicht geladen oder ausgeführt. Die Aussage zu
 `includeReferences` gilt nur für Assembly-Tools, deren öffentliche Registrierung
 diesen Parameter anbietet: Dort bleibt `includeReferences=false` strikt root-only;
 Referenzexpansion wird nur mit `includeReferences=true` und innerhalb der
@@ -333,16 +330,16 @@ dokumentierten Session-/Ergebnislimits aktiviert. `get_impact` hat für Assembly
 Targets keinen öffentlichen `includeReferences`-Parameter; seine interne
 Reference-Expansion ist im eigenen Toolabschnitt beschrieben.
 
-| MCP-Familie | Projekt | source-backed Assembly | dekompilierte Assembly | Grenze |
-| :--- | :---: | :---: | :---: | :--- |
-| `find_symbol`, `get_namespace_tree`, `get_file_skeleton`, `get_class_structure` | supported | supported | supported | read-only Symbol-/Struktur-Snapshot |
-| `get_symbol_body`, `find_references`, `get_call_tree`, `get_type_hierarchy`, `dependency_graph` | supported | supported | supported | nur statisch auflösbare Nodes; Diagnosen bleiben sichtbar |
-| `metrics_tree`, `metrics_lookup` | supported | supported | supported | berechnet auf dem jeweiligen Snapshot |
-| `inspect_assembly`, `find_assembly_extensions` | n/a | supported | supported | Assembly-Target-only; Extensions ohne Consumer ggf. `not_decidable` |
-| `search_assembly` | n/a | supported | supported | Assembly-Target-only; durchsucht den verifizierten Source-/Decompiler-Root, ohne Root explizit `unsupported` |
-| `get_file_tree` | supported | supported | supported | physischer Projekt-, Source- oder dekompilierter SourceRoot-Dateibestand; bei Assembly ohne Root explizit `unsupported` |
-| `get_index_scope`, `get_hotspots` | supported | unsupported | unsupported | physischer Projekt-Dateibestand |
-| `get_violations`, `safeguard`, `pattern_detect`, `find_magic_values`, `find_dead_code` | supported | unsupported | unsupported | Regeln/Audits gelten nur für den Projekt-Key |
+| MCP-Familie | Projekt | dekompilierte Assembly | Grenze |
+| :--- | :---: | :---: | :--- |
+| `find_symbol`, `get_namespace_tree`, `get_file_skeleton`, `get_class_structure` | supported | supported | read-only Symbol-/Struktur-Snapshot |
+| `get_symbol_body`, `find_references`, `get_call_tree`, `get_type_hierarchy`, `dependency_graph` | supported | supported | nur statisch auflösbare Nodes; Diagnosen bleiben sichtbar |
+| `metrics_tree`, `metrics_lookup` | supported | supported | berechnet auf dem jeweiligen Snapshot |
+| `inspect_assembly`, `find_assembly_extensions` | n/a | supported | Assembly-Target-only; Extensions ohne Consumer ggf. `not_decidable` |
+| `search_assembly` | n/a | supported | Assembly-Target-only; durchsucht den Decompiler-Root, ohne Root explizit `unsupported` |
+| `get_file_tree` | supported | supported | physischer Projekt- oder dekompilierter SourceRoot-Dateibestand; bei Assembly ohne Root explizit `unsupported` |
+| `get_index_scope`, `get_hotspots` | supported | unsupported | physischer Projekt-Dateibestand |
+| `get_violations`, `safeguard`, `pattern_detect`, `find_magic_values`, `find_dead_code` | supported | unsupported | Regeln/Audits gelten nur für den Projekt-Key |
 | `get_feature_context`, `get_test_context` | supported | unsupported | unsupported | Testbezug ist statische Zuordnung; keine Testausführung |
 | `get_impact` | supported | supported | supported | Assembly: nur `symbolIdentifier`; kein Git-Diff/`gitRef` |
 | `find_duplicates`, `search_pattern` | supported | unsupported | unsupported | Audit-/Dateisuche bleibt projektgebunden |
@@ -484,14 +481,9 @@ negative Werte und Werte außerhalb der jeweiligen Zeilenbreite liefern den
 recoverable Fehler `INVALID_ARGUMENT` mit einem Bereichshinweis. Workspace- oder
 Roslyn-Fehler bleiben davon getrennte `WORKSPACE_DIAGNOSTIC`-Fehler.
 
-Eine source-backed Session wird nur aus einer gültig restaurierten, explizit
-gemappten Source-Solution materialisiert. Es gibt keinen impliziten Restore. Wenn
-die Materialisierung nicht sicher möglich ist, bleibt der dekompilierte Fallback
-zulässig; Herkunft, Snapshot, Status und eine redigierte sichere Ursache bleiben
-dabei sichtbar. Öffentliche Repository-URLs sind absolute HTTP(S)-URLs ohne
-Credentials, Query oder Fragment. Geschützte oder anderweitig nicht unterstützte
-Remotes werden fail-closed und recoverable gemeldet; Credentials werden nicht in
-URLs, Logs, Exceptions oder MCP-Payloads übernommen.
+Assemblies (.dll / .exe) werden ausschließlich über den autarken Dekompilierungspfad
+(ILSpy / Roslyn-In-Memory-Workspaces) analysiert. Bei dekompiliertem Code meldet
+die Herkunftsausgabe kurz und bündig `Quelle: Dekompilat`.
 
 `get_server_health` liefert ohne Target standardmäßig ein kleines Aggregat:
 `sessionsIncluded=false`, `shownSessionCount=0` und keine Sessionliste; sichtbar
@@ -510,11 +502,10 @@ enthält `assemblyPath`, `identity`, `namespaces`, `references`, `types`,
 Defaultwert. `FindAssemblyExtensionsPayload` verwendet analog `extensions`,
 `totalExtensions`, `shownCount` und die gemeinsamen Diagnose-/Trunkierungsfelder.
 Assembly-fähige Symbol- und Strukturtools erhalten zusätzlich ein `analysis`-Objekt
-mit Herkunft, absolutem Target, Hash, Snapshot/Generation, Status, Vollständigkeit,
-`fallbackReason`, `bodyAvailability`, `contentMode` und `sourcePolicy`. Source-backed Projekte und
-dekompilierte Assembly-Projekte liefern ihre Bodies aus den bereits geladenen
-Roslyn-Syntaxbäumen; beim dekompilierten Fallback ist der Snapshot mit
-`analysis.contentMode=decompiledProject` ausgewiesen und entsteht eager mit
+mit Herkunft, absolutem Target, Hash, Generation, Status, Vollständigkeit,
+`bodyAvailability` und `contentMode`. Dekompilierte Assembly-Projekte liefern ihre
+Bodies aus den bereits geladenen Roslyn-Syntaxbäumen; der Snapshot ist mit
+`analysis.contentMode=decompiledProject` ausgewiesen, entsteht eager mit
 `WholeProjectDecompiler` und wird als echte Roslyn-Dokumente in einem
 `AdhocWorkspace` geführt. `get_symbol_body` weist den direkten
 `SourceSymbolBodyResolver`-Pfad mit `contentMode=source` aus und meldet nicht
@@ -597,7 +588,7 @@ Bei `targetType="assembly"` bleiben `includeReferences=false` und der bisherige 
 
 **`get_impact` (Symbol-Branch) — Assembly-Vertrag:** Mit `targetType="assembly"` ist ausschließlich `symbolIdentifier` zulässig; ein leerer Aufruf oder `gitRef` liefert einen recoverable `INVALID_ARGUMENT`. Die öffentliche Registrierung und `GetImpactInput` besitzen keinen `includeReferences`-Parameter. Die Assembly-Registrierung setzt die interne Dispatch-Option `ExpandAssemblyReferences=true`, damit die Route ihre Referenz-Sessions vor der Analyse vorbereiten kann; daraus entsteht keine öffentlich wählbare `includeReferences`-Option. Das 32-Session-Limit und die `navigation`-Payload des `find_references`-Vertrags werden daher nicht als `get_impact`-Antwortvertrag wiederholt.
 
-Die tatsächliche Symbol-Antwort enthält `callSites` und `completeness` aus `ReferenceTraversalResult`. Bei einem Assembly-Target ergänzt `AssemblyAnalysisResponse.Enrich` den strukturierten Payload um `analysis` mit `targetType`, absolutem `targetPath`, `origin` (`source-backed` oder `decompiled`), optionalem Source-/Snapshot-Kontext sowie Hash, Generation, Status, Vollständigkeit, Fallbackgrund, Body-Verfügbarkeit, Content-Modus und `sourcePolicy`. Die Herkunft und Source-Policy stehen damit im `analysis`-Objekt beziehungsweise im `[ASSEMBLY]`-Textheader; die Call-Site-Einträge dieser Route tragen keine separate `navigation`- oder `origin`-Struktur.
+Die tatsächliche Symbol-Antwort enthält `callSites` und `completeness` aus `ReferenceTraversalResult`. Bei einem Assembly-Target ergänzt `AssemblyAnalysisResponse.Enrich` den strukturierten Payload um `analysis` mit `targetType`, absolutem `targetPath`, `origin` (`decompiled`), Hash, Generation, Status, Vollständigkeit, Body-Verfügbarkeit und Content-Modus. Die Herkunft (`Quelle: Dekompilat`) steht damit im `analysis`-Objekt beziehungsweise im `[ASSEMBLY]`-Textheader; die Call-Site-Einträge dieser Route tragen keine separate `navigation`- oder `origin`-Struktur.
 
 **`get_impact` (`detailLevel=change-context`) — Structured Output im Detail:** Der Git-Diff-Zweig liefert bei `detailLevel="change-context"` ein eigenes Payload-Objekt statt der `CallSiteEntry`-Liste des Default-Modus. `StructuredContent` liefert:
 

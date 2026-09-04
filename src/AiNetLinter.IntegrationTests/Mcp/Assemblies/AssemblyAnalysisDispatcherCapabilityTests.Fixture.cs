@@ -45,8 +45,7 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
             IReadOnlyList<AssemblyReferenceDto> references,
             AssemblyReferenceLeaseFactory? referenceLeaseFactory = null,
             IReadOnlyList<string>? diagnostics = null,
-            string? sourceCode = null,
-            string? sourcePolicy = null)
+            string? sourceCode = null)
         {
             var assemblyPath = AssemblyTestHelper.EmitAssembly(
                 temp,
@@ -60,9 +59,6 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
             {
                 References = references,
                 Diagnostics = diagnostics ?? Array.Empty<string>(),
-                Origin = sourcePolicy is null
-                    ? backingLease.Context.Origin
-                    : backingLease.Context.Origin with { SourcePolicy = sourcePolicy },
             };
             var entry = AssemblyAnalysisEntryFactory.Create(new AssemblyAnalysisEntryCreateParameters(
                 backingLease.CanonicalPath,

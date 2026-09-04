@@ -53,18 +53,6 @@ internal sealed class AssemblyReferenceResolver
         }
     }
 
-    internal SourceProjectReferenceResolution ResolveSourceProjectReferences(
-        Project rootProject,
-        Solution solution,
-        IReadOnlyList<AssemblyReferenceDto> existingReferences)
-    {
-        ArgumentNullException.ThrowIfNull(rootProject);
-        ArgumentNullException.ThrowIfNull(solution);
-        ArgumentNullException.ThrowIfNull(existingReferences);
-
-        return new SourceProjectReferenceGraph(solution, existingReferences).Resolve(rootProject);
-    }
-
     private static ReferenceGraph BuildReferenceGraph(
         string canonicalPath,
         AssemblyMetadata metadata,

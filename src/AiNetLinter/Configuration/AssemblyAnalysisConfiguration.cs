@@ -23,12 +23,14 @@ internal sealed record AssemblyAnalysisConfigurationOptions
     internal static readonly long MaxDecompilationTimeoutSeconds =
         AssemblyDecompilationOptions.MaxCancelAfterMilliseconds / 1000;
 
+    internal const string AppSettingsFileName = "appsettings.json";
+
     internal AssemblyAnalysisConfigurationOptions(
         string cacheRoot,
         TimeSpan decompilationTimeout,
         int responseBudgetBytes = DefaultResponseBudgetBytes)
     {
-        CacheRoot = ExternalSourceConfigurationPath.TryCanonicalizeAbsoluteRoot(cacheRoot)
+        CacheRoot = TryCanonicalizeAbsoluteRoot(cacheRoot)
             ?? throw new ArgumentException("Die Assembly-Cache-Wurzel muss ein gültiger absoluter Pfad sein.", nameof(cacheRoot));
         if (!AssemblyDecompilationOptions.IsSupportedTimeout(decompilationTimeout))
         {
@@ -50,6 +52,20 @@ internal sealed record AssemblyAnalysisConfigurationOptions
 
     internal int ResponseBudgetBytes { get; }
 
+    internal static string? TryCanonicalizeAbsoluteRoot(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return null;
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+            return Path.IsPathFullyQualified(fullPath) ? fullPath : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     internal static AssemblyAnalysisConfigurationOptions Default(string? settingsPath = null) =>
         new(
             ResolveDefaultCacheRoot(settingsPath),
@@ -65,24 +81,32 @@ internal sealed record AssemblyAnalysisConfigurationOptions
     }
 }
 
+internal sealed record AssemblyAnalysisConfigurationDiagnostic(
+    string Code,
+    string Message,
+    string Severity,
+    string Location);
+
 internal sealed record AssemblyAnalysisConfigurationLoadResult(
     AssemblyAnalysisConfigurationOptions Options,
-    IReadOnlyList<ExternalSourceConfigurationDiagnostic> Diagnostics)
+    IReadOnlyList<AssemblyAnalysisConfigurationDiagnostic> Diagnostics)
 {
     internal bool Succeeded => Diagnostics.Count == 0;
 }
 
 internal static class AssemblyAnalysisConfigurationLoader
 {
+    internal const string AppSettingsFileName = AssemblyAnalysisConfigurationOptions.AppSettingsFileName;
+
     internal static AssemblyAnalysisConfigurationLoadResult Load() =>
-        Load(Path.Combine(AppContext.BaseDirectory, ExternalSourceConfigurationLoader.AppSettingsFileName));
+        Load(Path.Combine(AppContext.BaseDirectory, AppSettingsFileName));
 
     internal static AssemblyAnalysisConfigurationLoadResult Load(string? settingsPath)
     {
         var canonicalPath = CanonicalizeSettingsPath(settingsPath);
         if (canonicalPath is null)
         {
-            return Failure(settingsPath ?? ExternalSourceConfigurationLoader.AppSettingsFileName, "$", "Der Pfad der appsettings.json konnte nicht kanonisiert werden.");
+            return Failure(settingsPath ?? AppSettingsFileName, "$", "Der Pfad der appsettings.json konnte nicht kanonisiert werden.");
         }
 
         if (!File.Exists(canonicalPath))
@@ -217,7 +241,7 @@ internal static class AssemblyAnalysisConfigurationLoader
             var candidate = Path.IsPathFullyQualified(trimmed)
                 ? trimmed
                 : Path.Combine(Path.GetDirectoryName(settingsPath) ?? AppContext.BaseDirectory, trimmed);
-            cacheRoot = ExternalSourceConfigurationPath.TryCanonicalizeAbsoluteRoot(candidate) ?? string.Empty;
+            cacheRoot = AssemblyAnalysisConfigurationOptions.TryCanonicalizeAbsoluteRoot(candidate) ?? string.Empty;
             return cacheRoot.Length > 0;
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or NotSupportedException)
@@ -232,7 +256,7 @@ internal static class AssemblyAnalysisConfigurationLoader
         {
             return Path.GetFullPath(
                 string.IsNullOrWhiteSpace(settingsPath)
-                    ? Path.Combine(AppContext.BaseDirectory, ExternalSourceConfigurationLoader.AppSettingsFileName)
+                    ? Path.Combine(AppContext.BaseDirectory, AppSettingsFileName)
                     : settingsPath);
         }
         catch (Exception exception) when (exception is ArgumentException or IOException or NotSupportedException)
@@ -242,7 +266,7 @@ internal static class AssemblyAnalysisConfigurationLoader
     }
 
     private static AssemblyAnalysisConfigurationLoadResult Success(AssemblyAnalysisConfigurationOptions options) =>
-        new(options, Array.Empty<ExternalSourceConfigurationDiagnostic>());
+        new(options, Array.Empty<AssemblyAnalysisConfigurationDiagnostic>());
 
     private static AssemblyAnalysisConfigurationLoadResult Failure(
         string sourcePath,
@@ -250,5 +274,5 @@ internal static class AssemblyAnalysisConfigurationLoader
         string message) =>
         new(
             AssemblyAnalysisConfigurationOptions.Default(sourcePath),
-            [new("assembly-analysis-configuration-invalid", message, "error", $"{sourcePath} ({jsonPath})")]);
+            [new AssemblyAnalysisConfigurationDiagnostic("assembly-analysis-configuration-invalid", message, "error", $"{sourcePath} ({jsonPath})")]);
 }

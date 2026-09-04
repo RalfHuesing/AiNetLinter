@@ -45,7 +45,7 @@ Referenzen und Abhängigkeiten.
   `.dll`-/`.exe`-`targetPath` wird dort als `assembly` inferiert. `tools/list`
   weist je Tool aus, ob der gemeinsame read-only Projekt-/Assembly-Sessionpfad,
   nur der Projektpfad oder nur der Assemblypfad unterstützt wird; Symbolgraph,
-  Struktur und Metriken können Assemblys über source-backed oder dekompilierte
+  Struktur und Metriken können Assemblys über dekompilierte
   Sessions abfragen.
 - `get_server_health` ist die einzige Ausnahme mit einem optionalen Target:
   `targetType` und `targetPath` müssen paarweise angegeben werden; ohne Target

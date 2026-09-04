@@ -59,40 +59,6 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
         Assert.Equal(payload.GetProperty("types").GetArrayLength(), payload.GetProperty("shownCount").GetInt32());
     }
 
-    [Fact]
-    public async Task AssemblyRoute_ExposesSourcePolicyInAnalysisEnvelopeAndHeader()
-    {
-        using var temp = TestTempDirectory.Create("assembly-dispatcher-source-policy-");
-        await using var fixture = await SyntheticAssemblyFixture.CreateAsync(
-            temp,
-            [],
-            sourcePolicy: "decompilation_allowed");
-
-        var result = await fixture.ExecuteInspectAsync();
-        var payload = Structured(result);
-        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-
-        Assert.Equal(
-            "decompilation_allowed",
-            payload.GetProperty("analysis").GetProperty("sourcePolicy").GetString());
-        Assert.Contains("sourcePolicy=decompilation_allowed", text, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task AssemblyRoute_ExposesDefaultSourcePolicyInAnalysisEnvelopeAndHeader()
-    {
-        using var temp = TestTempDirectory.Create("assembly-dispatcher-default-source-policy-");
-        await using var fixture = await SyntheticAssemblyFixture.CreateAsync(temp, []);
-
-        var result = await fixture.ExecuteInspectAsync();
-        var payload = Structured(result);
-        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-
-        Assert.Equal(
-            "source_preferred",
-            payload.GetProperty("analysis").GetProperty("sourcePolicy").GetString());
-        Assert.Contains("sourcePolicy=source_preferred", text, StringComparison.Ordinal);
-    }
 
     [Fact]
     public async Task AssemblyRoute_FinalWireTrimRecalculatesCountsAndCursorAt4096Bytes()

@@ -66,13 +66,6 @@ public static class Program
             cancellation.Cancel();
         };
 
-        if (ExternalSourceCacheLeaseProbeCommand.IsMatch(args))
-        {
-            return await ExternalSourceCacheLeaseProbeCommand
-                .RunAsync(args, cancellation.Token)
-                .ConfigureAwait(false);
-        }
-
         var (root, options) = CliCommandBuilder.Build();
         root.SetAction(parseResult => RunParsedCommandAsync(parseResult, options, cancellation.Token));
         var parseResult = root.Parse(args);

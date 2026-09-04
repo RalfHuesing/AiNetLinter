@@ -2,6 +2,7 @@
 
 using System;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Daemon;
 
 namespace AiNetLinter.Cli;
@@ -245,14 +246,14 @@ public sealed class LinterArgs
 
     private string? ValidateExternalResourceOverrides()
     {
-        if (McpExternalMaxDiskBytes is <= 0 or > ExternalSourceResourceOptions.MaxConfiguredBytes)
+        if (McpExternalMaxDiskBytes is <= 0 or > ExternalResourceRegistryDefaults.MaxConfiguredBytes)
         {
-            return $"[ERROR]: --mcp-external-max-disk-bytes muss zwischen 1 und {ExternalSourceResourceOptions.MaxConfiguredBytes} liegen.";
+            return $"[ERROR]: --mcp-external-max-disk-bytes muss zwischen 1 und {ExternalResourceRegistryDefaults.MaxConfiguredBytes} liegen.";
         }
 
-        if (McpExternalMaxMemoryBytes is <= 0 or > ExternalSourceResourceOptions.MaxConfiguredBytes)
+        if (McpExternalMaxMemoryBytes is <= 0 or > ExternalResourceRegistryDefaults.MaxConfiguredBytes)
         {
-            return $"[ERROR]: --mcp-external-max-memory-bytes muss zwischen 1 und {ExternalSourceResourceOptions.MaxConfiguredBytes} liegen.";
+            return $"[ERROR]: --mcp-external-max-memory-bytes muss zwischen 1 und {ExternalResourceRegistryDefaults.MaxConfiguredBytes} liegen.";
         }
 
         if (McpExternalMaxParallelOperations is <= 0)

@@ -61,20 +61,14 @@ internal static partial class AssemblyAnalysisResponse
         var metadata = new AssemblyResponseMetadata(
             lease.CanonicalPath,
             origin.OriginKind,
-            origin.SourceProjectPath,
             origin.ContentHash,
             origin.GeneratedDocumentPath,
             origin.Confidence,
-            origin.Trust,
             lease.Context.Generation,
             effectiveStatus.ToWireValue(),
             effectiveStatus.ToCompletenessLabel(),
-            origin.SourceSnapshotIdentity,
-            origin.FallbackReason,
-            CreateSourceDiagnosticsSummary(origin.SourceDiagnostics),
             origin.BodyAvailability,
-            origin.ContentMode,
-            origin.SourcePolicy);
+            origin.ContentMode);
 
         JsonElement? structured = result.StructuredContent;
         if (structured is { ValueKind: JsonValueKind.Object })
@@ -445,52 +439,24 @@ internal static partial class AssemblyAnalysisResponse
 
     private static string FormatHeader(AssemblyResponseMetadata metadata) =>
         $"[ASSEMBLY] targetType=assembly; targetPath={metadata.TargetPath}; origin={metadata.Origin}; " +
-        $"sourcePath={metadata.SourcePath ?? "none"}; snapshot={FormatSnapshot(metadata.SourceSnapshot)}; " +
-        $"confidence={metadata.Confidence}; trust={metadata.Trust}; generation={metadata.Generation}; " +
+        $"confidence={metadata.Confidence}; generation={metadata.Generation}; " +
         $"status={metadata.Status}; completeness={metadata.Completeness}; " +
-        $"fallbackReason={metadata.FallbackReason ?? "none"}; bodyAvailability={metadata.BodyAvailability}; " +
-        $"contentMode={metadata.ContentMode}; sourcePolicy={metadata.SourcePolicy ?? ExternalSourceSourceMode.SourcePreferred.ToWireValue()}; " +
-        $"sourceDiagnostics={metadata.SourceDiagnosticsSummary.ShownCount}/" +
-        $"{metadata.SourceDiagnosticsSummary.TotalCount}\n\n";
-
-    private static AssemblySourceDiagnosticsSummary CreateSourceDiagnosticsSummary(
-        IReadOnlyList<ExternalSourceConfigurationDiagnostic>? diagnostics)
-    {
-        var source = diagnostics ?? [];
-        var samples = source
-            .Take(5)
-            .Select(diagnostic => $"{diagnostic.Code}: {AssemblyAnalysisResponseLimits.NormalizeForDisplay(diagnostic.Message)}")
-            .ToArray();
-        return new(source.Count, samples.Length, source.Count > samples.Length, samples);
-    }
-
-    private static string FormatSnapshot(SourceSnapshotIdentity? snapshot) =>
-        snapshot is null ? "none" : $"{snapshot.RepositoryUrl}@{snapshot.LoadedRevision}";
+        $"bodyAvailability={metadata.BodyAvailability}; contentMode={metadata.ContentMode}\n\n";
 
     private sealed record AssemblyResponseMetadata(
         string TargetPath,
         string Origin,
-        string? SourcePath,
         string AssemblyHash,
         string GeneratedPath,
         string Confidence,
-        string Trust,
         long Generation,
         string Status,
         string Completeness,
-        SourceSnapshotIdentity? SourceSnapshot,
-        string? FallbackReason,
-        AssemblySourceDiagnosticsSummary SourceDiagnosticsSummary,
-        string BodyAvailability, string ContentMode, string SourcePolicy)
+        string BodyAvailability,
+        string ContentMode)
     {
         public string TargetType => "assembly";
     }
-
-    private sealed record AssemblySourceDiagnosticsSummary(
-        int TotalCount,
-        int ShownCount,
-        bool Truncated,
-        IReadOnlyList<string> Samples);
 
     private readonly record struct WireBudgetMeasurement(int TextBytes, int StructuredBytes)
     {

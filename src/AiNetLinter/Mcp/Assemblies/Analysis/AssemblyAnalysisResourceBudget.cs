@@ -6,6 +6,9 @@ using System.Threading;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
 
+using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
+
 namespace AiNetLinter.Mcp.Assemblies.Analysis;
 
 internal sealed record AssemblyAnalysisRegistryRuntimeOptions(
@@ -14,11 +17,22 @@ internal sealed record AssemblyAnalysisRegistryRuntimeOptions(
 
 internal static class ExternalResourceRegistryDefaults
 {
-    internal const long MaxDiskBytes = ExternalSourceResourceOptions.DefaultMaxDiskBytes;
-    internal const long MaxMemoryBytes = ExternalSourceResourceOptions.DefaultMaxMemoryBytes;
-    internal const int MaxParallelOperations = ExternalSourceResourceOptions.DefaultMaxParallelOperations;
-    internal const int MaxResidentResources = ExternalSourceResourceOptions.DefaultMaxResidentResources;
-    internal static readonly TimeSpan IdleTtl = ExternalSourceResourceOptions.DefaultIdleTtl;
+    internal const long MaxConfiguredBytes = long.MaxValue / 2;
+    internal const long MaxDiskBytes = 2L * 1024 * 1024 * 1024;
+    internal const long MaxMemoryBytes = 512L * 1024 * 1024;
+    internal const int MaxParallelOperations = 4;
+    internal const int MaxResidentResources = 16;
+    internal static readonly TimeSpan IdleTtl = TimeSpan.FromMinutes(15);
+}
+
+internal static class DisposeFailureAggregator
+{
+    internal static void ThrowIfAny(List<Exception> failures)
+    {
+        if (failures.Count == 0) return;
+        if (failures.Count == 1) ExceptionDispatchInfo.Capture(failures[0]).Throw();
+        throw new AggregateException(failures);
+    }
 }
 
 internal sealed record ExternalResourceRegistryOptions(
@@ -72,16 +86,14 @@ internal sealed record ExternalResourceRegistryOverrides(
 internal static class ExternalResourceRegistryOptionsFactory
 {
     internal static ExternalResourceRegistryOptions Create(
-        ExternalSourceResourceOptions configured,
         ExternalResourceRegistryOverrides? overrides = null)
     {
-        ArgumentNullException.ThrowIfNull(configured);
-        var idleTtl = ResolveIdleTtl(configured.IdleTtl, overrides?.IdleTtlMinutes);
+        var idleTtl = ResolveIdleTtl(ExternalResourceRegistryDefaults.IdleTtl, overrides?.IdleTtlMinutes);
         return new(
-            overrides?.MaxDiskBytes ?? configured.MaxDiskBytes,
-            overrides?.MaxMemoryBytes ?? configured.MaxMemoryBytes,
-            overrides?.MaxParallelOperations ?? configured.MaxParallelOperations,
-            overrides?.MaxResidentResources ?? configured.MaxResidentResources,
+            overrides?.MaxDiskBytes ?? ExternalResourceRegistryDefaults.MaxDiskBytes,
+            overrides?.MaxMemoryBytes ?? ExternalResourceRegistryDefaults.MaxMemoryBytes,
+            overrides?.MaxParallelOperations ?? ExternalResourceRegistryDefaults.MaxParallelOperations,
+            overrides?.MaxResidentResources ?? ExternalResourceRegistryDefaults.MaxResidentResources,
             idleTtl);
     }
 

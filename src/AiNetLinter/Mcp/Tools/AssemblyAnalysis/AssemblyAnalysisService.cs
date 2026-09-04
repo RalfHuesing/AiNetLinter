@@ -44,6 +44,7 @@ internal static class AssemblyAnalysisService
             error = $"Der Parameter 'assemblyPath' ist kein gültiger lokaler Pfad: '{assemblyPath}' ({ex.Message}).";
             return false;
         }
+
         if (!AssemblyPathValidation.IsSupportedAssemblyPath(fullPath))
         {
             error = $"Der Assembly-Pfad muss auf eine .dll- oder .exe-Datei zeigen: '{assemblyPath}'.";
@@ -70,10 +71,6 @@ internal static class AssemblyAnalysisService
     {
         return await AssemblyAnalysisContextFactory.CreateAsync(assemblyPath, consumerSolution, receiverType, ct);
     }
-
-    internal static Task<(AssemblyContext? Context, string? Error)> CreateContextAsync(
-        AssemblyAnalysisContextRequest request) =>
-        AssemblyAnalysisContextFactory.CreateAsync(request);
 
     internal static AssemblyTypeSelection Inspect(
         AssemblyContext context,

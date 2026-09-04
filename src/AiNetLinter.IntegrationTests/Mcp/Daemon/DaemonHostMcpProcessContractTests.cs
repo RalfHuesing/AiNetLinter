@@ -63,7 +63,7 @@ public sealed class DaemonHostMcpProcessContractTests
                 cancellationToken: cancellation.Token);
             Assert.NotEqual(true, inspect.IsError);
             Assert.Contains(
-                "Herkunft: `decompiled`",
+                "Quelle: Dekompilat",
                 Assert.IsType<TextContentBlock>(Assert.Single(inspect.Content)).Text,
                 StringComparison.Ordinal);
 

@@ -48,8 +48,7 @@ internal static class AssemblyNavigationLeaseAccess
                 origin.CanonicalPath,
                 origin.ContentHash,
                 origin.GeneratedDocumentPath,
-                origin.Confidence,
-                origin.Trust),
+                origin.Confidence),
             lease.ReferenceSessions,
             lease.ReferenceExpansionDiagnostics);
     }

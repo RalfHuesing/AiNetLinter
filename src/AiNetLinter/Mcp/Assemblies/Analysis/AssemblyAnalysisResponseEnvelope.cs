@@ -131,10 +131,9 @@ internal static class AssemblyAnalysisResponseEnvelope
             obj["returnedCount"] = returned;
             obj["isTruncated"] = truncated;
             obj["truncated"] = truncated;
+            AssemblyAnalysisSearchEnvelope.UpdateKnownContinuation(
+                obj, (collectionName, truncated, returned, total.Value, offset));
         }
-
-        AssemblyAnalysisSearchEnvelope.UpdateKnownContinuation(
-            obj, (collectionName, truncated, returned, total.Value, offset));
 
         UpdateNestedCollectionEnvelope(obj, collectionName, total.Value, returned, truncated, offset);
     }

@@ -5,7 +5,6 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis;
-using AiNetLinter.Mcp.Assemblies.ExternalSource.Snapshots;
 
 namespace AiNetLinter.Mcp.Assemblies.Analysis.Coordinators;
 
@@ -36,52 +35,6 @@ internal static class AssemblyAnalysisRegistryIdentity
                 $"Assembly-Fingerprint konnte nicht berechnet werden: {exception.Message}",
                 AssemblyDiagnosticSeverity.Error);
             return false;
-        }
-    }
-
-    internal static async Task<string?> ResolveCurrentSourceSnapshotIdentityAsync(
-        IAssemblySourceResolver? sourceOrchestrator,
-        string canonicalPath,
-        CancellationToken cancellationToken)
-    {
-        if (sourceOrchestrator is null) return null;
-
-        if (sourceOrchestrator is IAssemblySourceSnapshotIdentityCache identityCache
-            && identityCache.TryGetCachedSourceSnapshotIdentity(
-                canonicalPath,
-                out var cachedIdentity))
-        {
-            return cachedIdentity;
-        }
-
-        AssemblySourceResolution resolution;
-        try
-        {
-            resolution = await sourceOrchestrator.ResolveForRegistryAsync(
-                    canonicalPath,
-                    cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch
-        {
-            // Ein nicht ermittelbarer aktueller Source-Stand darf keinen
-            // veralteten source-backed Eintrag als frisch erscheinen lassen.
-            return null;
-        }
-
-        try
-        {
-            return resolution.Selection?.SourceLease.Snapshot.Identity.StableValue;
-        }
-        finally
-        {
-            AssemblyAnalysisRegistryDisposal.TryDispose(
-                resolution.Lifetime,
-                "Source-Selection-Scope nach Freshness-Probe");
         }
     }
 }

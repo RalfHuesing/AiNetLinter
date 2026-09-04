@@ -67,7 +67,7 @@ ungültig, liefert der Server `PROJECT_NOT_INITIALIZED` bzw. `RULES_INVALID` mit
 einem konkreten Wiederherstellungshinweis. `tools/list` weist je Tool aus, ob
 der gemeinsame read-only Projekt-/Assembly-Sessionpfad, nur der Projektpfad
 oder nur der Assemblypfad unterstützt wird. Symbolgraph-, Struktur- und
-Metrikabfragen verwenden für Assemblys eine source-backed oder dekompilierte
+Metrikabfragen verwenden für Assemblys eine dekompilierte
 read-only Session; Regeln, Audits, Dateisuche, Tests und Git-Impact bleiben
 projektgebunden. `get_server_health` kann ohne Target aggregieren oder gezielt
 eine Projekt- bzw. Assembly-Session anzeigen. Target-Aufrufe verwenden keine

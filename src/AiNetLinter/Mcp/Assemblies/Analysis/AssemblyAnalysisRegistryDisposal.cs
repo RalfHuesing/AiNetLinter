@@ -27,17 +27,6 @@ internal sealed partial class AssemblyAnalysisRegistry
         AssemblySessionFailure failure)
     {
         RemoveFailedEntry(canonicalPath, creation);
-        if (failure.Kind is AssemblySessionFailureKind.SourceUnavailable)
-        {
-            return new(
-                null,
-                McpToolResults.Recoverable(
-                    ExternalSourceConfigurationDiagnosticCodes.SourceRequiredUnavailable,
-                    failure.Diagnostic.Message,
-                    context: canonicalPath,
-                    hint: "Originalquelle, Revision und Mapping prüfen; source_preferred oder decompilation_allowed nur bewusst verwenden."));
-        }
-
         return new(
             null,
             McpToolResults.NativePeAssembly(

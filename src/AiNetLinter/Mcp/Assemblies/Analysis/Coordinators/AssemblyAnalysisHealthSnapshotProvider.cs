@@ -3,8 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 
@@ -61,7 +59,7 @@ internal sealed class AssemblyAnalysisHealthSnapshotProvider
                 ErrorCode: "assembly-session-failed",
                 ErrorPhase: "session-creation",
                 ErrorCause: exception?.Message,
-                NextAction: "Mapping, Source-Status und letzte Diagnose prüfen.");
+                NextAction: "Letzte Diagnose prüfen.");
         }
 
         if (creation.Task.IsCanceled)
@@ -86,46 +84,22 @@ internal sealed class AssemblyAnalysisHealthSnapshotProvider
         string? daemonProfile)
     {
         var context = entry.Context;
-        var source = context.Origin.SourceSnapshotIdentity;
-        var repositoryId = source is null ? null : CreateRepositoryId(source.RepositoryUrl);
-        var checkoutKey = source is null ? null : CreateCheckoutKey(source.StableValue);
         return new(
             entry.CanonicalPath,
             context.Status.ToWireValue(),
             context.Origin.OriginKind,
-            context.Origin.SourceProjectPath,
-            context.Origin.SourceSnapshotIdentity,
             context.Origin.ContentHash,
             context.Origin.GeneratedDocumentPath,
             context.Origin.Confidence,
-            context.Origin.Trust,
             context.Generation,
             context.Diagnostics,
-            checkoutKey,
-            repositoryId,
-            source?.LoadedRevision,
-            context.Origin.IsDecompiled ? "not-applicable" : "verified",
-            source is null ? "not-configured" : "verified",
-            context.Origin.OriginKind,
-            context.Origin.SourcePolicy,
             daemonProfile,
             "released",
             "bounded",
             "not-observed",
-            "none",
             context.Diagnostics.FirstOrDefault()?.Split(':').FirstOrDefault(),
-            context.Origin.IsDecompiled ? "decompilation" : "source-analysis",
+            "decompilation",
             context.Diagnostics.FirstOrDefault(),
-            context.Origin.IsDecompiled ? "Source-Mapping/Provider prüfen." : "Keine Aktion erforderlich.");
+            "Keine Aktion erforderlich.");
     }
-
-    private static string CreateRepositoryId(string repositoryUrl) =>
-        "repo-" + Convert.ToHexString(
-                SHA256.HashData(Encoding.UTF8.GetBytes(repositoryUrl)))
-            .ToLowerInvariant()[..12];
-
-    private static string CreateCheckoutKey(string identity) =>
-        "checkout-" + Convert.ToHexString(
-                SHA256.HashData(Encoding.UTF8.GetBytes(identity)))
-            .ToLowerInvariant()[..16];
 }
