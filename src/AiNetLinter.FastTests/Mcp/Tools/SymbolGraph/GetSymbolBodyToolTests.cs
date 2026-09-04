@@ -280,6 +280,12 @@ public sealed class GetSymbolBodyToolTests
 
         Assert.Equal(2, request.EffectiveMaxBodyLines);
 
+        var invertedRequest = new GetSymbolBodyRequest(
+            SymbolIdentifiers: [stableId!],
+            StartLine: 10,
+            EndLine: 5);
+        Assert.Equal(1, invertedRequest.EffectiveMaxBodyLines);
+
         var result = await GetSymbolBodyTool.ExecuteAsync(state, request, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);

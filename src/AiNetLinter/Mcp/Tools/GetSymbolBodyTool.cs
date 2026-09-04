@@ -273,7 +273,7 @@ internal sealed record GetSymbolBodyRequest(
     int? EndLine = null)
 {
     internal int EffectiveMaxBodyLines =>
-        EndLine.HasValue && EndLine.Value >= StartLine
-            ? EndLine.Value - StartLine + 1
+        EndLine.HasValue
+            ? Math.Max(1, EndLine.Value - Math.Max(1, StartLine) + 1)
             : MaxBodyLines;
 }
