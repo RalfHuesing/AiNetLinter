@@ -87,3 +87,5 @@ Folge-Reviewer 3 bestätigt `AssemblyWireBudget/Coverage`, `CompositeBudget/Enri
 Korrektur-Implementierer 4 meldet `BudgetProjection/Envelope` behoben; Disposition bleibt bis zum letzten Folge-Review 4 `fix-now`, Attempts bleiben bei 4.
 
 Folge-Reviewer 4 bestätigt `BudgetProjection/Envelope` weiterhin als P1 offen: collection-spezifische Truncation von `fileTree.files` und `fileTree.directories` wird vermischt. Korrekturrunde 5 ist der letzte Versuch; bei erneutem Offenbleiben wird der Eintrag mit Attempts 0 als `accepted-deferred` hinten eingereiht.
+
+Korrektur-Implementierer 5 (letzter Versuch) meldet `BudgetProjection/Envelope` behoben; Disposition bleibt bis zum Folge-Review 5 `fix-now`, Attempts bleiben bei 5.

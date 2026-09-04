@@ -3,7 +3,6 @@
 using System;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
 using System.Threading;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;

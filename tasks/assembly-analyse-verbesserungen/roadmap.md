@@ -15,7 +15,7 @@ Großkonzept-Modus. Grundlage ist `Konzept.md` mit `status: ready`.
 - Betroffene Bereiche: Assembly-Analyse-MCP, DTOs/Envelopes, Navigation, Capabilities, Fast-/Integration-Tests.
 - Muss-/Akzeptanzkriterien: Konzept-Kriterien 1, 4, 8, 10–19, 21–26, 30; insbesondere rückwärtskompatible CLR-/Wire-Verträge und sichtbare Truncation/Scope-/Provenienzangaben.
 - Verifikation: gezielte MCP-Checks, Contract-/Fast-Tests und passende Integrationstests nach der letzten Codeänderung.
-- Status: in_progress (Folge-Review 4: letzter P1-Korrekturversuch ausstehend)
+- Status: in_progress (Korrekturrunde 5 implementiert; letzter Folge-Review ausstehend)
 
 ### Epic 2: Source, Cache und Mehrdaemon-Betrieb
 
@@ -45,8 +45,8 @@ Großkonzept-Modus. Grundlage ist `Konzept.md` mit `status: ready`.
 
 ## Ausführungsstand
 
-- current_epic: Epic 1 Korrekturrunde 5
-- letzter Commit: `4f6f9e00` (Korrektur-Checkpoint 4); Review-Checkpoint folgt
+- current_epic: Epic 1 Folge-Review 5
+- letzter Commit: `79ec25ea` (Folge-Review-Checkpoint 4); Korrektur-Checkpoint folgt
 - current_debt_item: P2-DRY-Cluster in `AssemblyAnalysisResponseLimits.Budget.cs`
 - debt_attempts: 0
 - Blocker: keiner

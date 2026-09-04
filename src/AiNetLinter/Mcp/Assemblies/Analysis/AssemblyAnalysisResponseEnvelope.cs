@@ -98,7 +98,7 @@ internal static class AssemblyAnalysisResponseEnvelope
         var returnedBeforeTrim = GetReturnedBeforeTrim(obj, collectionName);
         var returned = GetReturnedCount(obj, collectionName);
         var offset = GetContinuationOffset(obj, collectionName, returnedBeforeTrim, fallbackCursorOffset);
-        var truncated = IsTruncated(obj, returned, total);
+        var truncated = IsTruncated(obj, collectionName, returned, total);
 
         UpdateCounts(obj, returned, truncated);
         SetIntIfPresent(obj, "totalCount", total);
@@ -118,7 +118,7 @@ internal static class AssemblyAnalysisResponseEnvelope
         var returnedBeforeTrim = GetReturnedBeforeTrim(obj, collectionName);
         var returned = collection.Count;
         var offset = GetContinuationOffset(obj, collectionName, returnedBeforeTrim, fallbackCursorOffset);
-        var truncated = IsTruncated(obj, returned, total.Value) || ContainsTruncatedChild(collection);
+        var truncated = IsTruncated(obj, collectionName, returned, total.Value) || ContainsTruncatedChild(collection);
 
         if (collectionName == "directories")
         {
@@ -150,7 +150,7 @@ internal static class AssemblyAnalysisResponseEnvelope
         obj["totalDirectoryCount"] = total;
         obj["returnedDirectoryCount"] = returned;
         obj["directoriesTruncated"] = truncated;
-        obj["directoriesTruncatedBy"] = CreateReasons(obj, truncated);
+        obj["directoriesTruncatedBy"] = CreateDirectoryReasons(obj, truncated);
         obj["directoriesContinuationToken"] = truncated
             ? AssemblyPaging.CreateToken(Math.Max(0, offset) + returned)
             : null;
@@ -257,50 +257,40 @@ internal static class AssemblyAnalysisResponseEnvelope
         completeness["totalDirectoryCount"] = total;
         completeness["shownDirectoryCount"] = returned;
         completeness["directoryTruncated"] = truncated;
-        completeness["directoryTruncatedBy"] = CreateReasons(completeness, truncated);
+        completeness["directoryTruncatedBy"] = CreateDirectoryReasons(obj, truncated);
         completeness["directoryContinuationToken"] = truncated
             ? AssemblyPaging.CreateToken(Math.Max(0, offset) + returned)
             : null;
         completeness["directoryDetailHint"] = truncated
             ? "Verzeichnisse wurden wegen des Antwortbudgets gekürzt; maxResponseBytes erhöhen oder die Verzeichnisabfrage gezielt erneut anfordern."
             : null;
-        if (!truncated) return;
-
-        completeness["scanCompleted"] = false;
-        completeness["truncated"] = true;
-        AddReason(completeness, "responseBudget");
     }
 
-    private static JsonArray CreateReasons(JsonObject obj, bool responseBudgetTruncated)
+    private static JsonArray CreateDirectoryReasons(JsonObject obj, bool responseBudgetTruncated)
     {
-        var reasons = new JsonArray();
-        var existing = obj["truncatedBy"] as JsonArray
-            ?? (obj["completeness"] as JsonObject)?["truncatedBy"] as JsonArray;
-        if (existing is not null)
-        {
-            foreach (var reason in existing)
-            {
-                if (reason is not null) reasons.Add(reason.DeepClone());
-            }
-        }
-
+        var reasons = MergeReasons(
+            obj["directoriesTruncatedBy"],
+            (obj["completeness"] as JsonObject)?["directoryTruncatedBy"]);
         if (responseBudgetTruncated
-            && !reasons.Any(item => string.Equals(item?.GetValue<string>(), "responseBudget", StringComparison.Ordinal)))
+            && !reasons.Contains("responseBudget", StringComparer.Ordinal))
         {
             reasons.Add("responseBudget");
         }
 
-        return reasons;
+        return new JsonArray(reasons.Select(reason => JsonValue.Create(reason)).ToArray());
     }
     private static void UpdateFileTreeEnvelope(JsonObject obj, int total, int returned, bool truncated, int offset)
     {
         if (obj["completeness"] is not JsonObject completeness) return;
         completeness["shownFileCount"] = returned;
         completeness["truncated"] = truncated || GetBool(completeness, "truncated") == true;
-        if (truncated) AddReason(completeness, "responseBudget");
+        if (truncated)
+        {
+            AddReason(completeness, "responseBudget");
+            obj["detailHint"] = "Dateien wurden wegen des Antwortbudgets gekürzt; maxResponseBytes erhöhen oder die Dateiabfrage gezielt erneut anfordern.";
+        }
         SetContinuation(completeness, returned, total, offset);
     }
-
     private static void UpdateCallSiteEnvelope(JsonObject obj, int total, int returned, bool truncated, int offset)
     {
         if (obj["completeness"] is not JsonObject completeness) return;
@@ -312,7 +302,6 @@ internal static class AssemblyAnalysisResponseEnvelope
         if (nestedTruncated) AddReason(completeness, "responseBudget");
         SetContinuation(completeness, returned, total, offset);
     }
-
     private static void UpdateMemberEnvelope(JsonObject obj, bool truncated)
     {
         obj["membersTruncated"] = truncated || GetBool(obj, "membersTruncated") == true;
@@ -346,23 +335,35 @@ internal static class AssemblyAnalysisResponseEnvelope
         if (truncated) AddReason(summary, "responseBudget");
         SetContinuation(summary, returned, total, offset);
     }
+    private static int GetReturnedBeforeTrim(JsonObject obj, string collectionName)
+    {
+        if (collectionName == "directories")
+        {
+            return GetInt(obj, "returnedDirectoryCount")
+                ?? GetNestedInt(obj, "completeness", "shownDirectoryCount")
+                ?? 0;
+        }
 
-    private static int GetReturnedBeforeTrim(JsonObject obj, string collectionName) =>
-        (collectionName == "directories" ? GetInt(obj, "returnedDirectoryCount") : null)
-            ?? (collectionName == "directories" ? GetNestedInt(obj, "completeness", "shownDirectoryCount") : null)
-            ?? GetInt(obj, "returnedCount")
+        return GetInt(obj, "returnedCount")
             ?? GetInt(obj, "shownCount")
             ?? GetInt(obj, collectionName)
             ?? 0;
+    }
 
     private static int GetReturnedCount(JsonObject obj, string collectionName) =>
         obj[collectionName] is JsonArray items ? items.Count : 0;
 
-    private static bool IsTruncated(JsonObject obj, int returned, int total) =>
-        (GetBool(obj, "truncated") ?? false)
-            || (GetBool(obj, "isTruncated") ?? false)
-            || (GetBool(obj, "directoriesTruncated") ?? false)
-            || returned < total;
+    private static bool IsTruncated(JsonObject obj, string collectionName, int returned, int total)
+    {
+        var collectionTruncated = collectionName == "directories"
+            ? (GetBool(obj, "directoriesTruncated") ?? false)
+                || (obj["completeness"] is JsonObject completeness
+                    && GetBool(completeness, "directoryTruncated") == true)
+            : (GetBool(obj, "truncated") ?? false)
+                || (GetBool(obj, "isTruncated") ?? false);
+
+        return collectionTruncated || returned < total;
+    }
 
     private static bool ContainsTruncatedChild(JsonArray collection) =>
         collection.Any(item => item is JsonObject child
@@ -453,7 +454,7 @@ internal static class AssemblyAnalysisResponseEnvelope
         int fallback)
     {
         foreach (var propertyName in collectionName == "directories"
-            ? new[] { "directoriesContinuationToken", "continuationToken" }
+            ? new[] { "directoriesContinuationToken" }
             : new[] { "continuationToken" })
         {
             if (obj[propertyName] is JsonValue token

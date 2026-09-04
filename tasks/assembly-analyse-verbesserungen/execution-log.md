@@ -117,6 +117,14 @@
 - Subagent: `01a069b2-ba17-70e0-bc52-e37197d75a39` (Schrodinger)
 - Auftrag: tatsächlichen Diff, kritische Array-/Directory-Fälle, frühere Vertragskorrekturen, Code-Map und Verifikationsnachweise prüfen; kein Produktionscode und kein Commit.
 
+## Run 2026-09-04 / Epic 1 / Korrektur-Implementierer 5
+
+- Status: running
+- Diff-Baseline: `79ec25ea` (Folge-Review-Checkpoint 4)
+- Scope: letzter P1-Korrekturversuch `BudgetProjection/Envelope`, collection-spezifische `files`-/`directories`-Truncation
+- Subagent: `01a069b9-8f57-75f2-8cac-ea3b54d339e0` (Hypatia)
+- Auftrag: Flags, Counts, Gründe und Cursor zwischen `fileTree.files` und `fileTree.directories` entkoppeln und beide Richtungen regressionsprüfen.
+
 ## Run 2026-09-04 / Epic 1 / Folge-Reviewer 2 – Abschluss
 
 - Status: completed; Folge-Reviewerbericht terminal eingegangen.
@@ -206,3 +214,12 @@
 - Betroffene Navigation: `AssemblyAnalysisResponseEnvelope.cs` bei der Collection-Rekonstruktion und dem `fileTree`-Envelope. Code-Map wurde ausschließlich um diese konkreten Fakten korrigiert.
 - Verifikation: Frische Nachweise Build 0/0, gezielte FastTests 26/26, gezielte IntegrationTests 17/17, FastTests Nicht-Stress 2429/2, MCP-Audits und `get_violations` 0 wurden mangels Gegenhypothese nicht redundant wiederholt; `git diff --check` grün. Shared Wire-Budget/Mindestbudget, Composite-Statusmerge, `topN` und Body-Provenienz ohne neue Regression.
 - Nächste Aktion: Checkpoint-Commit, danach letzter frischer Korrektur-Implementierer für `BudgetProjection/Envelope` (Attempt 5).
+
+## Run 2026-09-04 / Epic 1 / Korrektur-Implementierer 5 – Abschluss
+
+- Status: completed; letzter Korrekturbericht terminal eingegangen.
+- Urteil: Implementierer meldet `BudgetProjection/Envelope` behoben.
+- Bericht: `fileTree.files` und `fileTree.directories` verwenden getrennte Flags, Gründe, Counts, Cursor und Detailhinweise; Directory-Gründe werden dedupliziert; Regressionen decken beide Truncation-Richtungen ab; `code-map.md` aktualisiert.
+- Verifikation jeweils nach der letzten Codeänderung: FastTests `FullyQualifiedName~AssemblyAnalysisToolTests`: 28/28; IntegrationTests `FullyQualifiedName~AssemblyAnalysisDispatcherCapabilityTests`: 17/17; `dotnet build --no-restore`: 0 Warnungen/0 Fehler; FastTests vollständig `Category!=Stress`: 2429 bestanden, 2 übersprungen; IntegrationTests vollständig `Category!=Stress`: 424/424; `find_duplicates` im Scope `src/AiNetLinter/Mcp`, Production/Clone/Fuzzy, `minTokens=30`, `maxResults=50`: 9 bestehende Cluster ohne sicheren Scope-Fix; `find_dead_code` gleicher Scope, `private_internal`, `both`, `members`, Tests ausgeschlossen, `maxResults=50`: 39 LOW/0 HIGH; `find_magic_values` gleicher Scope, alle Kategorien/Werte, `minOccurrences=2`, `maxResults=50`, Tests/Suppressed ausgeschlossen: 7 bestehende Befunde; letzter `get_violations` mit `targetType=project`, absolutem Projektpfad, `scopeFilter=AssemblyAnalysis`, `includeSnippet=true`, `contextLines=2`, `maxResults=200`: 0 Verstöße.
+- Offene Tech Debt: nur bestehende P2-DRY-Cluster, `accepted-deferred`; keine neue sichere Bereinigung.
+- Nächste Aktion: Checkpoint-Commit und letzter unabhängiger Review der P1-Ursache.
