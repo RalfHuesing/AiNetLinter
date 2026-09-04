@@ -215,7 +215,10 @@ internal static class MagicValuesStringHeuristics
 
         // Heuristik 2: umgebender Symbol-Name deutet auf Secret/Token/Credential.
         var symbolName = ResolveSurroundingName(literal);
-        if (symbolName is not null && SecurityNameKeywords.Any(k => symbolName.Contains(k, StringComparison.OrdinalIgnoreCase)))
+        if (symbolName is not null
+            && !IsNonSecretToken(symbolName)
+            && !IsNonSecretToken(literalText)
+            && SecurityNameKeywords.Any(k => symbolName.Contains(k, StringComparison.OrdinalIgnoreCase)))
         {
             return new MagicValueClassification(
                 true,
@@ -228,7 +231,7 @@ internal static class MagicValuesStringHeuristics
         // Z. B. Connect("password") wo "password" direkt als Argument-Wert ein Secret
         // andeutet. Bewusst auf exakte Gleichheit beschraenkt (OrdinalIgnoreCase),
         // um False Positives wie 'publicKeyToken' oder 'CancellationToken' auszuschliessen.
-        if (SecurityNameKeywords.Contains(literalText))
+        if (SecurityNameKeywords.Contains(literalText) && !IsNonSecretToken(literalText))
         {
             return new MagicValueClassification(
                 true,
@@ -239,6 +242,12 @@ internal static class MagicValuesStringHeuristics
 
         return null;
     }
+
+    private static bool IsNonSecretToken(string text) =>
+        text.Contains("cancellation", StringComparison.OrdinalIgnoreCase)
+        || text.Contains("continuation", StringComparison.OrdinalIgnoreCase)
+        || text.Contains("syntax", StringComparison.OrdinalIgnoreCase)
+        || text.Contains("publicKey", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Prueft, ob ein numerisches Literal einer Well-known Buffer-Konstante
     /// entspricht (1024/2048/4096/8192) und im umgebenden Kontext einen entsprechenden

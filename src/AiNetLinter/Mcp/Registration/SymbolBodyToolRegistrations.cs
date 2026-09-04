@@ -32,14 +32,14 @@ internal static class SymbolBodyToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string[]? symbolIdentifiers = null, string? symbolIdentifier = null, int maxBodyLines = 80, int startLine = 1, CancellationToken ct = default) =>
+            async (string targetType, string targetPath, string[]? symbolIdentifiers = null, string? symbolIdentifier = null, int maxBodyLines = 80, int startLine = 1, int? endLine = null, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, new GetSymbolBodyRequest(symbolIdentifiers, symbolIdentifier, maxBodyLines, startLine), ct),
-                            AssemblySessionCall: lease => GetSymbolBodyTool.ExecuteAsync(lease, new GetSymbolBodyRequest(symbolIdentifiers, symbolIdentifier, maxBodyLines, startLine), ct)),
+                            ProjectCall: lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, new GetSymbolBodyRequest(symbolIdentifiers, symbolIdentifier, maxBodyLines, startLine, endLine), ct),
+                            AssemblySessionCall: lease => GetSymbolBodyTool.ExecuteAsync(lease, new GetSymbolBodyRequest(symbolIdentifiers, symbolIdentifier, maxBodyLines, startLine, endLine), ct)),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("get_symbol_body", GetSymbolBodyDescription)));
     }
@@ -50,5 +50,6 @@ internal static class SymbolBodyToolRegistrations
         "\"M:Namespace.Klasse.Methode\", " +
         "\"Datei.cs:Zeile:Spalte\", \"Datei.cs:Zeile\" oder \"Klasse.Methode\". " +
         "maxBodyLines: Begrenzung der Zeilenanzahl je Symbol-Body (Default 80). " +
-        "startLine: 1-basierte Startzeile innerhalb des Methoden-Bodys fuer gezieltes Windowing langer Methoden (Default 1).";
+        "startLine: 1-basierte Startzeile innerhalb des Methoden-Bodys fuer gezieltes Windowing langer Methoden (Default 1). " +
+        "endLine: optionale 1-basierte Endzeile innerhalb des Methoden-Bodys (berechnet maxBodyLines als endLine - startLine + 1).";
 }

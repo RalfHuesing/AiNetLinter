@@ -263,5 +263,28 @@ public sealed class GetSymbolBodyToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("liegt ausserhalb der Methode", textContent.Text, System.StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_WithEndLine_CalculatesEffectiveMaxBodyLines()
+    {
+        var state = _fixture.CreateServer();
+
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
+            _fixture.Solution, "Greeter.Greet", CancellationToken.None);
+        var stableId = Microsoft.CodeAnalysis.DocumentationCommentId.CreateDeclarationId(symbol!);
+
+        var request = new GetSymbolBodyRequest(
+            SymbolIdentifiers: [stableId!],
+            StartLine: 1,
+            EndLine: 2);
+
+        Assert.Equal(2, request.EffectiveMaxBodyLines);
+
+        var result = await GetSymbolBodyTool.ExecuteAsync(state, request, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Zeilen: 1-2 von", textContent.Text, System.StringComparison.Ordinal);
+    }
 }
 

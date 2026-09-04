@@ -354,5 +354,23 @@ public sealed class Foo
 
         Assert.Empty(result.Payload!.MagicValues);
     }
+
+    [Fact]
+    public async Task Classify_SecurityCandidate_CancellationTokenOrContinuationToken_NotReportedAsSecurityCandidate()
+    {
+        const string source = @"
+namespace Test;
+public sealed class Foo
+{
+    public void M()
+    {
+        var continuationToken = ""token-offset-123"";
+        var cancellationToken = ""cancel-me"";
+    }
+}";
+        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.SecurityCandidates);
+
+        Assert.Empty(result.Payload!.MagicValues);
+    }
 }
 

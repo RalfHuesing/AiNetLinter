@@ -52,7 +52,7 @@ internal static class GetSymbolBodyTool
 
         try
         {
-            return await RenderSymbolBodiesAsync(solution, identifiers, request.MaxBodyLines, request.StartLine, state.AssemblySymbolIdentity, null, ct);
+            return await RenderSymbolBodiesAsync(solution, identifiers, request.EffectiveMaxBodyLines, request.StartLine, state.AssemblySymbolIdentity, null, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -87,7 +87,7 @@ internal static class GetSymbolBodyTool
         }
 
         return RenderSymbolBodiesAsync(
-            solution, identifiers, request.MaxBodyLines, request.StartLine, lease.AssemblySymbolIdentity, lease.Origin, ct);
+            solution, identifiers, request.EffectiveMaxBodyLines, request.StartLine, lease.AssemblySymbolIdentity, lease.Origin, ct);
     }
 
     internal static Task<CallToolResult> ExecuteAsync(
@@ -269,4 +269,11 @@ internal sealed record GetSymbolBodyRequest(
     string[]? SymbolIdentifiers = null,
     string? SymbolIdentifier = null,
     int MaxBodyLines = GetSymbolBodyTool.DefaultMaxBodyLines,
-    int StartLine = 1);
+    int StartLine = 1,
+    int? EndLine = null)
+{
+    internal int EffectiveMaxBodyLines =>
+        EndLine.HasValue && EndLine.Value >= StartLine
+            ? EndLine.Value - StartLine + 1
+            : MaxBodyLines;
+}
