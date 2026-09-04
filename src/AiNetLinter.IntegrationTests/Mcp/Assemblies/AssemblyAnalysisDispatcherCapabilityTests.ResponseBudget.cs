@@ -60,6 +60,25 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
     }
 
     [Fact]
+    public async Task AssemblyRoute_ExposesSourcePolicyInAnalysisEnvelopeAndHeader()
+    {
+        using var temp = TestTempDirectory.Create("assembly-dispatcher-source-policy-");
+        await using var fixture = await SyntheticAssemblyFixture.CreateAsync(
+            temp,
+            [],
+            sourcePolicy: "decompilation_allowed");
+
+        var result = await fixture.ExecuteInspectAsync();
+        var payload = Structured(result);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+
+        Assert.Equal(
+            "decompilation_allowed",
+            payload.GetProperty("analysis").GetProperty("sourcePolicy").GetString());
+        Assert.Contains("sourcePolicy=decompilation_allowed", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task AssemblyRoute_FinalWireTrimRecalculatesCountsAndCursorAt4096Bytes()
     {
         using var temp = TestTempDirectory.Create("assembly-dispatcher-final-wire-budget-");
@@ -83,7 +102,6 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
         var second = Structured(await fixture.ExecuteInspectAsync(
             maxResponseBytes: 4096,
             cursor: firstToken));
-
         Assert.NotEmpty(second.GetProperty("types").EnumerateArray());
         Assert.DoesNotContain(
             second.GetProperty("types").EnumerateArray().Select(type => type.GetProperty("id").GetString()),

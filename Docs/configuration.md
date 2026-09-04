@@ -1660,7 +1660,9 @@ die vorhandenen Reparse- und Besitzprüfungen entscheiden weiterhin beim Cachezu
 Ein Daemon-Profil wird deterministisch als Suffix an die Cache-Wurzel angehängt
 (beispielsweise `cache.codex`); Prozesse mit demselben Profil koordinieren sich
 über persistente Artefakt-Locks, unterschiedliche Profile verwenden getrennte
-Cache-Generationen. Prozess-IDs werden nicht als Cache-Identität verwendet.
+Cache-Generationen. Während eine Generation gelesen und materialisiert wird,
+schützt eine generationsbezogene Leser-Lease sie vor Retention; Prozess-IDs werden
+nicht als Cache-Identität verwendet.
 
 `RefreshIntervalMinutes` akzeptiert ausschließlich positive JSON-Ganzzahlen bis
 zur unterstützten ganzminütigen `TimeSpan`-Grenze. Strings, Boolean- oder

@@ -407,9 +407,7 @@ internal static class ExternalSourceRepositoryCacheStorage
 
     internal static void EnsureSafeDirectory(string path)
     {
-        if (File.Exists(path)
-            || !Directory.Exists(path)
-            || ContainsReparsePoint(path))
+        if (File.Exists(path) || !Directory.Exists(path) || ContainsReparsePoint(path))
         {
             throw new InvalidDataException("Ein kontrollierter Cachepfad ist unsicher.");
         }
@@ -427,17 +425,31 @@ internal static class ExternalSourceRepositoryCacheStorage
 
     internal static void TryDeleteGeneration(string entryDirectory, string generationDirectory)
     {
+        var generationName = Path.GetFileName(generationDirectory);
+        if (!Directory.Exists(generationDirectory)
+            || !ExternalSourceRepositoryPathGuard.IsDescendantPath(entryDirectory, generationDirectory)
+            || !ExternalSourceRepositoryCacheContract.IsSafeGenerationName(generationName)
+            || IsCurrentGeneration(entryDirectory, generationName)
+            || ContainsReparsePoint(generationDirectory)
+            || ExternalSourceRepositoryPathGuard.ContainsReparsePointInTree(generationDirectory)) return;
+
         try
         {
-            var generationName = Path.GetFileName(generationDirectory);
-            if (Directory.Exists(generationDirectory)
-                && ExternalSourceRepositoryPathGuard.IsDescendantPath(entryDirectory, generationDirectory)
-                && IsSafeGenerationName(generationName)
-                && !IsCurrentGeneration(entryDirectory, generationName)
-                && !ContainsReparsePoint(generationDirectory)
-                && !ExternalSourceRepositoryPathGuard.ContainsReparsePointInTree(generationDirectory))
+            if (!ExternalSourceRepositoryCacheGenerationLease.TryAcquireDeletion(
+                    entryDirectory,
+                    generationName,
+                    out var deletionLease)
+                || deletionLease is null) return;
+
+            try
             {
                 Directory.Delete(generationDirectory, recursive: true);
+            }
+            finally
+            {
+                deletionLease.Dispose();
+                ExternalSourceRepositoryCacheCleanup.TryDeleteFile(
+                    ExternalSourceRepositoryCacheGenerationLease.GetLockPath(entryDirectory, generationName));
             }
         }
         catch (Exception ignored) when (IsCacheException(ignored))
@@ -445,20 +457,11 @@ internal static class ExternalSourceRepositoryCacheStorage
         }
     }
 
-    private static bool IsCurrentGeneration(string entryDirectory, string generationName)
-    {
-        var pointerPath = Path.Combine(
-            entryDirectory,
-            ExternalSourceRepositoryCacheContract.CurrentPointerFileName);
-        return ExternalSourceRepositoryCacheReader.TryReadPointer(
-            pointerPath,
+    private static bool IsCurrentGeneration(string entryDirectory, string generationName) =>
+        ExternalSourceRepositoryCacheReader.TryReadPointer(
+            Path.Combine(entryDirectory, ExternalSourceRepositoryCacheContract.CurrentPointerFileName),
             out var currentGeneration)
-            && string.Equals(currentGeneration, generationName, StringComparison.Ordinal);
-    }
-
-    private static bool IsSafeGenerationName(string? value) =>
-        value is not null
-        && ExternalSourceRepositoryCacheContract.IsSafeGenerationName(value);
+        && string.Equals(currentGeneration, generationName, StringComparison.Ordinal);
 
     internal static bool IsCacheException(Exception exception) =>
         exception is IOException

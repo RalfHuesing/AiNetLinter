@@ -258,4 +258,8 @@ internal sealed class ExternalSourceRepositoryCacheReadRequest
 
 internal sealed record ExternalSourceRepositoryCacheReadResult(
     ExternalSourceRepositoryCacheManifest Manifest,
-    string GenerationPath);
+    string GenerationPath,
+    ExternalSourceRepositoryCacheGenerationLease? ReaderLease = null) : IDisposable
+{
+    public void Dispose() => ReaderLease?.Dispose();
+}

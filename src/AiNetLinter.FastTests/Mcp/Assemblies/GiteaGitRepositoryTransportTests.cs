@@ -20,6 +20,35 @@ public sealed class GiteaGitRepositoryTransportTests
     private const string UsernameEnvironmentVariable = "AINETLINTER_GIT_USERNAME";
 
     [Fact]
+    public async Task CloneDefaultBranchAsync_AllowsNormalCloneProgressOnStandardError()
+    {
+        using var temp = TestTempDirectory.Create("gitea-transport-clone-progress-");
+        var destination = temp.CreateSubdirectory("checkout");
+        var executor = new RecordingGitExecutor((request, _) =>
+        {
+            if (request.Arguments[0] is "clone")
+            {
+                CreateCloneTree(request.WorkingDirectory);
+                return Task.FromResult(new ExternalSourceGitProcessResult(
+                    exitCode: 0,
+                    standardOutput: string.Empty,
+                    standardError: "Cloning into '.ainetlinter-git-clone'...\n"));
+            }
+
+            return Task.FromResult(request.Arguments[0] is "status"
+                ? CompletedProcess("?? .ainetlinter-owner\n")
+                : CompletedProcess(Revision + Environment.NewLine));
+        });
+        var transport = new GiteaGitRepositoryTransport(processExecutor: executor);
+
+        var result = await transport.CloneDefaultBranchAsync(CreateMapping(), destination);
+
+        Assert.True(result.IsAvailable);
+        Assert.Equal(Revision, result.LoadedRevision);
+        Assert.Equal(3, executor.Requests.Count);
+    }
+
+    [Fact]
     public async Task CloneDefaultBranchAsync_UsesSingleBranchNoTagsAndReturnsHeadRevision()
     {
         using var temp = TestTempDirectory.Create("gitea-transport-success-");

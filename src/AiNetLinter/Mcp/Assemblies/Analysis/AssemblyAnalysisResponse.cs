@@ -17,7 +17,6 @@ internal sealed record AssemblyAnalysisResponseRequest(
     int MaxResponseBytes = 0,
     string? DetailLevel = null,
     string? Cursor = null);
-
 internal static partial class AssemblyAnalysisResponse
 {
     internal static bool FitsResponseBudget(CallToolResult result, AssemblyAnalysisLease lease, int responseBudgetBytes = 0)
@@ -74,7 +73,8 @@ internal static partial class AssemblyAnalysisResponse
             origin.FallbackReason,
             CreateSourceDiagnosticsSummary(origin.SourceDiagnostics),
             origin.BodyAvailability,
-            origin.ContentMode);
+            origin.ContentMode,
+            origin.SourcePolicy == ExternalSourceSourceMode.SourcePreferred.ToWireValue() ? null : origin.SourcePolicy);
 
         JsonElement? structured = result.StructuredContent;
         if (structured is { ValueKind: JsonValueKind.Object })
@@ -449,7 +449,8 @@ internal static partial class AssemblyAnalysisResponse
         $"confidence={metadata.Confidence}; trust={metadata.Trust}; generation={metadata.Generation}; " +
         $"status={metadata.Status}; completeness={metadata.Completeness}; " +
         $"fallbackReason={metadata.FallbackReason ?? "none"}; bodyAvailability={metadata.BodyAvailability}; " +
-        $"contentMode={metadata.ContentMode}; sourceDiagnostics={metadata.SourceDiagnosticsSummary.ShownCount}/" +
+        $"contentMode={metadata.ContentMode}; sourcePolicy={metadata.SourcePolicy ?? ExternalSourceSourceMode.SourcePreferred.ToWireValue()}; " +
+        $"sourceDiagnostics={metadata.SourceDiagnosticsSummary.ShownCount}/" +
         $"{metadata.SourceDiagnosticsSummary.TotalCount}\n\n";
 
     private static AssemblySourceDiagnosticsSummary CreateSourceDiagnosticsSummary(
@@ -480,8 +481,7 @@ internal static partial class AssemblyAnalysisResponse
         SourceSnapshotIdentity? SourceSnapshot,
         string? FallbackReason,
         AssemblySourceDiagnosticsSummary SourceDiagnosticsSummary,
-        string BodyAvailability,
-        string ContentMode)
+        string BodyAvailability, string ContentMode, string? SourcePolicy)
     {
         public string TargetType => "assembly";
     }

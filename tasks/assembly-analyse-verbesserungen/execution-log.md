@@ -269,6 +269,24 @@
 - Reviewer-Nachweis: MCP-Verletzungsabfrage im External-Source-Scope 0 Verstöße; Implementierer-Volltests nicht redundant wiederholt, da die Gegenhypothesen reale Git-Ausgabe und Cache-Interleaving betreffen.
 - Nächste Aktion: Review-Checkpoint committen; danach frischer Korrektur-Implementierer für die drei getrennten P1-Ursachen (Attempt 1).
 
+## Run 2026-09-04 / Epic 2 / Korrektur-Implementierer 1 – Abschluss
+
+- Status: completed; Korrekturbericht terminal eingegangen, ohne Commit.
+- Urteil: Implementierer meldet die drei P1-Ursachen `GitClone/StderrClassification`, `CacheGeneration/ReaderLease` und `SourcePolicy/ProvenancePropagation` behoben; Folge-Review erforderlich.
+- Bericht: Normale Clone-Fortschrittszeile auf `stderr` wird operationsspezifisch toleriert, Sicherheits-/Fehlerausgaben bleiben fail-closed; generationsbezogene Leser-Lease mit Cross-Process-Locks schützt Materialisierung vor Retention-Löschung; `SourceMode` wird unveränderlich geführt und `AssemblyOrigin.SourcePolicy` explizit propagiert sowie im Header und für Nicht-Default-Policies im Analysis-Envelope ausgegeben; Regressionen ergänzt; `code-map.md` aktualisiert.
+- Geänderte Dokumentation: `Docs/agent-api.md` und `Docs/configuration.md`.
+- Verifikation nach letzter Codeänderung: `dotnet build --no-restore` 0 Warnungen/0 Fehler; FastTests `Category!=Stress` 2443 bestanden/2 übersprungen; IntegrationTests `Category!=Stress` 425 bestanden/0 übersprungen; betroffene Regressionen 93 bestanden/1 plattformbedingt übersprungen; MCP-Lint im ExternalSource-/Analysis-Scope 0 Verstöße; MCP-Duplikate 0 Cluster; Magic Values 0; Dead-Code 34 LOW-Native-Interop-Felder im bestehenden Scope; `git diff --check` sauber.
+- Verbleibendes Risiko: `source_preferred` wird im strukturierten Envelope aus Wire-Budget-/Kompatibilitätsgründen weggelassen, bleibt aber im Header sichtbar; Stress-Tests nicht ausgeführt.
+- Nächste Aktion: Checkpoint-Commit, danach frischer Folge-Review 1 mit expliziter Prüfung des strukturierten `analysis`-Envelope und echter Cache-Lease-Grenze.
+
+## Run 2026-09-04 / Epic 2 / Korrektur-Implementierer 1
+
+- Status: running; erste Epic-2-Korrekturrunde nach unabhängiger Review gestartet.
+- Baseline: `b1ecadb2` (`chore(assembly-analyse-verbesserungen): Dokumentiere Epic-2-Reviewbefunde`).
+- Scope: `GitClone/StderrClassification`, `CacheGeneration/ReaderLease` und `SourcePolicy/ProvenancePropagation` einschließlich gezielter Regressionen.
+- Implementierer: Erdos (`01a06a12-297d-7dd1-a16f-32d11ad19cea`).
+- Vorgabe: kein Commit; keine Änderungen an externen Assemblies/Repos; MCP-first für C#-Semantik; `code-map.md` mit konkreten Vertragsfakten aktualisieren.
+
 ## Run 2026-09-04 / Epic 2 / Reviewer
 
 - Status: running; unabhängige Review nach Orchestrator-Checkpoint gestartet.

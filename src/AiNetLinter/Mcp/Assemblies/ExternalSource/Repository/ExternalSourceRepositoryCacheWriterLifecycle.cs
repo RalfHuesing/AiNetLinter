@@ -220,3 +220,170 @@ internal static class ExternalSourceRepositoryCacheRetention
         }
     }
 }
+
+internal sealed class ExternalSourceRepositoryCacheGenerationLease : IDisposable
+{
+    private readonly FileStream generationStream;
+    private int disposed;
+
+    private ExternalSourceRepositoryCacheGenerationLease(FileStream generationStream)
+    {
+        this.generationStream = generationStream;
+    }
+
+    internal static bool TryAcquireReader(
+        string entryDirectory,
+        string generationName,
+        out ExternalSourceRepositoryCacheGenerationLease? lease)
+    {
+        lease = null;
+        if (!TryOpenProcessReadLock(entryDirectory, out var processReadStream)
+            || processReadStream is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            if (!TryOpenGeneration(
+                    entryDirectory,
+                    generationName,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    out var generationStream)
+                || generationStream is null)
+            {
+                return false;
+            }
+
+            lease = new ExternalSourceRepositoryCacheGenerationLease(generationStream);
+            return true;
+        }
+        finally
+        {
+            processReadStream.Dispose();
+        }
+    }
+
+    internal static bool TryAcquireDeletion(
+        string entryDirectory,
+        string generationName,
+        out ExternalSourceRepositoryCacheGenerationLease? lease)
+    {
+        lease = null;
+        if (!TryOpenGeneration(
+                entryDirectory,
+                generationName,
+                FileAccess.ReadWrite,
+                FileShare.None,
+                out var generationStream)
+            || generationStream is null)
+        {
+            return false;
+        }
+
+        lease = new ExternalSourceRepositoryCacheGenerationLease(generationStream);
+        return true;
+    }
+
+    internal static string GetLockPath(string entryDirectory, string generationName) =>
+        Path.Combine(entryDirectory, generationName + ".reader.lock");
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref disposed, 1) != 0)
+        {
+            return;
+        }
+
+        generationStream.Dispose();
+    }
+
+    private static bool TryOpenProcessReadLock(
+        string entryDirectory,
+        out FileStream? stream)
+    {
+        stream = null;
+        if (string.IsNullOrWhiteSpace(entryDirectory)
+            || !Directory.Exists(entryDirectory)
+            || ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(entryDirectory))
+        {
+            return false;
+        }
+
+        var lockPath = Path.Combine(
+            entryDirectory,
+            ExternalSourceRepositoryCacheContract.ProcessLockFileName);
+        if (Directory.Exists(lockPath)
+            || File.Exists(lockPath)
+                && ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(lockPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            stream = new FileStream(
+                lockPath,
+                FileMode.OpenOrCreate,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: 1,
+                FileOptions.SequentialScan);
+            return true;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryOpenGeneration(
+        string entryDirectory,
+        string generationName,
+        FileAccess access,
+        FileShare share,
+        out FileStream? stream)
+    {
+        stream = null;
+        if (string.IsNullOrWhiteSpace(entryDirectory)
+            || !Directory.Exists(entryDirectory)
+            || !ExternalSourceRepositoryCacheContract.IsSafeGenerationName(generationName)
+            || ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(entryDirectory))
+        {
+            return false;
+        }
+
+        var lockPath = GetLockPath(entryDirectory, generationName);
+        if (Directory.Exists(lockPath)
+            || File.Exists(lockPath)
+                && ExternalSourceRepositoryPathGuard.ContainsReparsePointOnPath(lockPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            stream = new FileStream(
+                lockPath,
+                FileMode.OpenOrCreate,
+                access,
+                share,
+                bufferSize: 1,
+                FileOptions.SequentialScan);
+            return true;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+}

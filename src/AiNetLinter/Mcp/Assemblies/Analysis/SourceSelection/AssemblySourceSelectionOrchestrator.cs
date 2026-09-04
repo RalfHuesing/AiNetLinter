@@ -166,7 +166,8 @@ internal sealed class AssemblySourceSelectionOrchestrator :
                     match,
                     providerResult.Health,
                     providerResult.CheckoutTrust,
-                    providerResult.IsAttested));
+                    providerResult.IsAttested,
+                    configuration.SourceMode));
             var matchDiagnostics = CreateMatchDiagnostics(match.State);
             var scope = new AssemblySourceSelectionScope(new(
                 selection,

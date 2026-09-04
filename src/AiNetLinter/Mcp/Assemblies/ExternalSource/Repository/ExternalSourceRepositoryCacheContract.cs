@@ -17,6 +17,7 @@ internal static class ExternalSourceRepositoryCacheContract
     internal const string ManifestFileName = "manifest.json";
     internal const string InventoryFileName = "inventory.json";
     internal const string CurrentPointerFileName = "current";
+    internal const string ProcessLockFileName = "cache.lock";
     internal const string GenerationDirectoryPrefix = "generation-";
     internal const string PointerGenerationPropertyName = "generation";
     internal const string PublishFailedDiagnosticCode = "external-source-repository-cache-publish-failed";

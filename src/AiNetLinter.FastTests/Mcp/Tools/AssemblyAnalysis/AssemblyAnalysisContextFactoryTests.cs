@@ -169,6 +169,49 @@ public sealed class AssemblyAnalysisContextFactoryTests
     }
 
     [Fact]
+    public async Task CreateAsync_DecompilationAllowedPreservesPolicyWhenSourceProvenanceIsUnavailable()
+    {
+        using var temp = TestTempDirectory.Create("assembly-context-policy-fallback-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "TargetAssembly",
+            "namespace Target; public sealed class TargetOnly { }");
+        var mapping = CreateMapping(
+            "https://gitea.example/missing-source.git",
+            "src/Missing.slnx",
+            ["OtherAssembly"]);
+        using var snapshot = ExternalSourceSnapshotTestFactory.CreateSnapshot(
+            temp.DirectoryPath,
+            mapping,
+            new ExternalSourceProjectSpec("MissingProject", "TargetAssembly", "namespace Source; public sealed class SourceOnly { }"));
+        using var registry = new SourceSnapshotRegistry();
+        using var lease = registry.Acquire(snapshot);
+        var match = AssemblySourceMatchResolver.Resolve(lease, mapping, "TargetAssembly");
+        var selection = AssemblySourceSelection.Create(new(
+            lease,
+            match,
+            SourceMode: ExternalSourceSourceMode.DecompilationAllowed));
+        Assert.NotNull(selection);
+
+        var result = await AssemblyAnalysisContextFactory.CreateAsync(new AssemblyAnalysisContextRequest(
+            assemblyPath,
+            null,
+            null,
+            selection,
+            CancellationToken.None,
+            Fallback: null,
+            SourceMode: ExternalSourceSourceMode.DecompilationAllowed));
+
+        var context = AssertContext(result);
+        Assert.True(context.Origin.IsDecompiled);
+        Assert.Equal(
+            ExternalSourceSourceMode.DecompilationAllowed.ToWireValue(),
+            context.Origin.SourcePolicy);
+        Assert.Null(context.Origin.SourceSnapshotIdentity);
+        Assert.Null(context.Origin.SourceProjectPath);
+    }
+
+    [Fact]
     public async Task CreateAsync_UsesDecompilationForIdentityMismatchDisposedLeaseAndMissingProject()
     {
         using var temp = TestTempDirectory.Create("assembly-context-invalid-selection-");

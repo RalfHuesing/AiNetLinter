@@ -79,6 +79,7 @@ internal sealed class ExternalSourceRepositoryCacheRefresh
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        using var readResultLifetime = readResult;
         if (!policy.IsStale(readResult.Manifest))
         {
             return cacheReuse.TryAcquire(mapping.Url, solutionPath, cancellationToken);

@@ -42,7 +42,7 @@ internal static class AssemblyAnalysisSourceToolSupport
         if (source.Selection is null
             && source.SourceMode is ExternalSourceSourceMode.SourceRequired)
         {
-            return CreateSourceRequiredFailure(fullPath!, source.Diagnostics);
+            return CreateSourceRequiredFailure(fullPath!, source.Diagnostics, sourceMode: source.SourceMode);
         }
 
         var (context, error) = await AssemblyAnalysisService.CreateContextAsync(
@@ -52,13 +52,14 @@ internal static class AssemblyAnalysisSourceToolSupport
                 parameters.ReceiverType,
                 source.Selection,
                 parameters.CancellationToken,
-                source.Fallback)).ConfigureAwait(false);
+                source.Fallback,
+                source.SourceMode)).ConfigureAwait(false);
         if (context is null)
         {
             var diagnosticText = AssemblyAnalysisDiagnostics.FormatExternalDiagnostics(source.Diagnostics);
             if (source.SourceMode is ExternalSourceSourceMode.SourceRequired)
             {
-                return CreateSourceRequiredFailure(fullPath!, source.Diagnostics, error);
+                return CreateSourceRequiredFailure(fullPath!, source.Diagnostics, error, source.SourceMode);
             }
 
             return McpToolResults.CompilationError(
@@ -67,11 +68,11 @@ internal static class AssemblyAnalysisSourceToolSupport
                 fullPath);
         }
 
-        var enrichedContext = EnrichContext(context, source.Diagnostics);
+        var enrichedContext = EnrichContext(context, source.Diagnostics, source.SourceMode);
         if (source.SourceMode is ExternalSourceSourceMode.SourceRequired
             && enrichedContext.Origin.IsDecompiled)
         {
-            return CreateSourceRequiredFailure(fullPath!, source.Diagnostics);
+            return CreateSourceRequiredFailure(fullPath!, source.Diagnostics, sourceMode: source.SourceMode);
         }
 
         return parameters.BuildResult(fullPath!, enrichedContext, parameters.MaxResults);
@@ -79,7 +80,8 @@ internal static class AssemblyAnalysisSourceToolSupport
 
     private static AssemblyContext EnrichContext(
         AssemblyContext context,
-        System.Collections.Generic.IReadOnlyList<ExternalSourceConfigurationDiagnostic> diagnostics)
+        System.Collections.Generic.IReadOnlyList<ExternalSourceConfigurationDiagnostic> diagnostics,
+        ExternalSourceSourceMode sourceMode)
     {
         var mergedDiagnostics = context.Diagnostics
             .Concat(AssemblyAnalysisDiagnostics.FormatExternalDiagnostics(diagnostics))
@@ -87,13 +89,21 @@ internal static class AssemblyAnalysisSourceToolSupport
             .Distinct(StringComparer.Ordinal)
             .Take(100)
             .ToList();
-        return context with { Diagnostics = mergedDiagnostics };
+        return context with
+        {
+            Diagnostics = mergedDiagnostics,
+            Origin = context.Origin with
+            {
+                SourcePolicy = sourceMode.ToWireValue(),
+            },
+        };
     }
 
     private static CallToolResult CreateSourceRequiredFailure(
         string fullPath,
         System.Collections.Generic.IReadOnlyList<ExternalSourceConfigurationDiagnostic> diagnostics,
-        string? additionalReason = null)
+        string? additionalReason = null,
+        ExternalSourceSourceMode sourceMode = ExternalSourceSourceMode.SourceRequired)
     {
         var details = AssemblyAnalysisDiagnostics.FormatExternalDiagnostics(diagnostics)
             .Concat(additionalReason is null ? Array.Empty<string>() : [additionalReason])
@@ -101,7 +111,7 @@ internal static class AssemblyAnalysisSourceToolSupport
             .Take(3);
         return McpToolResults.Recoverable(
             ExternalSourceConfigurationDiagnosticCodes.SourceRequiredUnavailable,
-            $"Source-Policy source_required verweigert die Dekompilation für '{fullPath}': " +
+            $"Source-Policy {sourceMode.ToWireValue()} verweigert die Dekompilation für '{fullPath}': " +
             string.Join(" ", details),
             context: fullPath,
             hint: "Originalquelle, Revision und Mapping prüfen; source_preferred oder decompilation_allowed nur bewusst verwenden.");

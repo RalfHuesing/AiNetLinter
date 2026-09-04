@@ -260,7 +260,7 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
         var processResult = await processExecutor.ExecuteAsync(request, cancellationToken)
             .ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
-        var failure = CreateProcessFailure(processResult, credential is not null);
+        var failure = CreateProcessFailure(processResult, credential is not null, operation: "clone");
         if (failure is not null)
         {
             return failure;
@@ -339,7 +339,8 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
 
     private static ExternalSourceRepositoryTransportResult? CreateProcessFailure(
         ExternalSourceGitProcessResult? processResult,
-        bool hasCredential)
+        bool hasCredential,
+        string? operation = null)
     {
         if (processResult is null)
         {
@@ -351,7 +352,9 @@ internal sealed class GiteaGitRepositoryTransport : IGiteaRepositoryTransport
         if (processResult.ExitCode == 0
             && !processResult.WasTimedOut
             && !processResult.StandardErrorTruncated
-            && ExternalSourceGitProcessOutputPolicy.IsHarmlessStandardError(processResult.StandardError))
+            && ExternalSourceGitProcessOutputPolicy.IsHarmlessStandardError(
+                processResult.StandardError,
+                operation))
         {
             return null;
         }

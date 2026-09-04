@@ -471,7 +471,7 @@ Defaultwert. `FindAssemblyExtensionsPayload` verwendet analog `extensions`,
 `totalExtensions`, `shownCount` und die gemeinsamen Diagnose-/Trunkierungsfelder.
 Assembly-fähige Symbol- und Strukturtools erhalten zusätzlich ein `analysis`-Objekt
 mit Herkunft, absolutem Target, Hash, Snapshot/Generation, Status, Vollständigkeit,
-`fallbackReason`, `bodyAvailability` und `contentMode`. Source-backed Projekte und
+`fallbackReason`, `bodyAvailability`, `contentMode` und `sourcePolicy`. Source-backed Projekte und
 dekompilierte Assembly-Projekte liefern ihre Bodies aus den bereits geladenen
 Roslyn-Syntaxbäumen; beim dekompilierten Fallback ist der Snapshot mit
 `analysis.contentMode=decompiledProject` ausgewiesen und entsteht eager mit
@@ -557,7 +557,7 @@ Bei `targetType="assembly"` bleiben `includeReferences=false` und der bisherige 
 
 **`get_impact` (Symbol-Branch) — Assembly-Vertrag:** Mit `targetType="assembly"` ist ausschließlich `symbolIdentifier` zulässig; ein leerer Aufruf oder `gitRef` liefert einen recoverable `INVALID_ARGUMENT`. Die öffentliche Registrierung und `GetImpactInput` besitzen keinen `includeReferences`-Parameter. Die Assembly-Registrierung setzt die interne Dispatch-Option `ExpandAssemblyReferences=true`, damit die Route ihre Referenz-Sessions vor der Analyse vorbereiten kann; daraus entsteht keine öffentlich wählbare `includeReferences`-Option. Das 32-Session-Limit und die `navigation`-Payload des `find_references`-Vertrags werden daher nicht als `get_impact`-Antwortvertrag wiederholt.
 
-Die tatsächliche Symbol-Antwort enthält `callSites` und `completeness` aus `ReferenceTraversalResult`. Bei einem Assembly-Target ergänzt `AssemblyAnalysisResponse.Enrich` den strukturierten Payload um `analysis` mit `targetType`, absolutem `targetPath`, `origin` (`source-backed` oder `decompiled`), optionalem Source-/Snapshot-Kontext sowie Hash, Generation, Status, Vollständigkeit, Fallbackgrund, Body-Verfügbarkeit und Content-Modus. Die Herkunft steht damit im `analysis`-Objekt beziehungsweise im `[ASSEMBLY]`-Textheader; die Call-Site-Einträge dieser Route tragen keine separate `navigation`- oder `origin`-Struktur.
+Die tatsächliche Symbol-Antwort enthält `callSites` und `completeness` aus `ReferenceTraversalResult`. Bei einem Assembly-Target ergänzt `AssemblyAnalysisResponse.Enrich` den strukturierten Payload um `analysis` mit `targetType`, absolutem `targetPath`, `origin` (`source-backed` oder `decompiled`), optionalem Source-/Snapshot-Kontext sowie Hash, Generation, Status, Vollständigkeit, Fallbackgrund, Body-Verfügbarkeit, Content-Modus und `sourcePolicy`. Die Herkunft und Source-Policy stehen damit im `analysis`-Objekt beziehungsweise im `[ASSEMBLY]`-Textheader; die Call-Site-Einträge dieser Route tragen keine separate `navigation`- oder `origin`-Struktur.
 
 **`get_impact` (`detailLevel=change-context`) — Structured Output im Detail:** Der Git-Diff-Zweig liefert bei `detailLevel="change-context"` ein eigenes Payload-Objekt statt der `CallSiteEntry`-Liste des Default-Modus. `StructuredContent` liefert:
 

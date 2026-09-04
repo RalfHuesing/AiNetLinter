@@ -65,9 +65,10 @@ internal sealed class ExternalSourceRepositoryCacheReuse
         checkout = null;
         cleanupFailed = false;
         ExternalSourceCheckoutOwnership? ownership = null;
+        ExternalSourceRepositoryCacheReadResult? readResult = null;
         try
         {
-            if (!reader!.TryReadCurrent(key, out var readResult, out _)
+            if (!reader!.TryReadCurrent(key, out readResult, out _)
                 || readResult is null)
             {
                 return false;
@@ -113,6 +114,10 @@ internal sealed class ExternalSourceRepositoryCacheReuse
             }
 
             return false;
+        }
+        finally
+        {
+            readResult?.Dispose();
         }
     }
 

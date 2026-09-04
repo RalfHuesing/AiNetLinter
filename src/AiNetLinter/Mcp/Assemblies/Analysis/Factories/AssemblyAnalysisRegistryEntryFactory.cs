@@ -20,7 +20,8 @@ internal sealed record AssemblyAnalysisFallbackEntryCreationParameters(
     ExternalResourceLease? ResourceLease,
     IReadOnlyList<string> Diagnostics,
     AssemblySourceSelection? SourceSelection,
-    AssemblySourceFallbackMetadata? Fallback = null);
+    AssemblySourceFallbackMetadata? Fallback = null,
+    ExternalSourceSourceMode SourceMode = ExternalSourceSourceMode.SourcePreferred);
 
 internal sealed record AssemblyAnalysisSourceEntryCreationParameters(
     string CanonicalPath,
@@ -86,7 +87,8 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                     resourceLease,
                     sourceAttempt.Diagnostics,
                     sourceAttempt.Selection,
-                    sourceAttempt.Fallback)).ConfigureAwait(false);
+                    sourceAttempt.Fallback,
+                    sourceAttempt.SourceMode)).ConfigureAwait(false);
             resourceTransferred = true;
             return fallbackEntry;
         }
@@ -132,6 +134,7 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                 {
                     FallbackReason = parameters.Fallback?.Reason,
                     SourceDiagnostics = parameters.Fallback?.Diagnostics,
+                    SourcePolicy = parameters.SourceMode.ToWireValue(),
                 },
                 ResponseBudgetBytes = decompilationConfiguration?.ResponseBudgetBytes
                     ?? AssemblyAnalysisResponseLimits.DefaultResponseBytes,
@@ -157,13 +160,16 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
         }
     }
 
-    private async Task<(AssemblyAnalysisEntry? Entry, IDisposable? Scope, IReadOnlyList<string> Diagnostics, AssemblySourceSelection? Selection, AssemblySourceFallbackMetadata? Fallback)> TryCreateSourceEntryAsync(
+    private async Task<(AssemblyAnalysisEntry? Entry, IDisposable? Scope, IReadOnlyList<string> Diagnostics, AssemblySourceSelection? Selection, AssemblySourceFallbackMetadata? Fallback, ExternalSourceSourceMode SourceMode)> TryCreateSourceEntryAsync(
         string canonicalPath,
         long generation,
         CancellationToken creationToken,
         ExternalResourceLease? resourceLease)
     {
-        if (sourceOrchestrator is null) return (null, null, Array.Empty<string>(), null, null);
+        if (sourceOrchestrator is null)
+        {
+            return (null, null, Array.Empty<string>(), null, null, ExternalSourceSourceMode.SourcePreferred);
+        }
 
         var resolution = await sourceOrchestrator.ResolveForRegistryAsync(canonicalPath, creationToken).ConfigureAwait(false);
         var diagnostics = AssemblyAnalysisDiagnostics.FormatExternalDiagnostics(resolution.Diagnostics).ToArray();
@@ -172,10 +178,10 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
             if (resolution.SourceMode is ExternalSourceSourceMode.SourceRequired)
             {
                 resolution.Lifetime?.Dispose();
-                throw SourceRequiredFailure(canonicalPath, diagnostics, resolution.Fallback);
+                throw SourceRequiredFailure(canonicalPath, diagnostics, resolution.Fallback, resolution.SourceMode);
             }
 
-            return (null, resolution.Lifetime, diagnostics, null, resolution.Fallback);
+            return (null, resolution.Lifetime, diagnostics, null, resolution.Fallback, resolution.SourceMode);
         }
 
         return await CreateSourceEntryFromSelectionAsync(new AssemblyAnalysisSourceEntryCreationParameters(
@@ -187,7 +193,7 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
             diagnostics)).ConfigureAwait(false);
     }
 
-    private async Task<(AssemblyAnalysisEntry? Entry, IDisposable? Scope, IReadOnlyList<string> Diagnostics, AssemblySourceSelection? Selection, AssemblySourceFallbackMetadata? Fallback)> CreateSourceEntryFromSelectionAsync(
+    private async Task<(AssemblyAnalysisEntry? Entry, IDisposable? Scope, IReadOnlyList<string> Diagnostics, AssemblySourceSelection? Selection, AssemblySourceFallbackMetadata? Fallback, ExternalSourceSourceMode SourceMode)> CreateSourceEntryFromSelectionAsync(
         AssemblyAnalysisSourceEntryCreationParameters parameters)
     {
         var resolution = parameters.Resolution;
@@ -200,16 +206,17 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                     ReceiverType: null,
                     resolution.Selection!,
                     parameters.CreationToken,
-                    resolution.Fallback)).ConfigureAwait(false);
+                    resolution.Fallback,
+                    resolution.SourceMode)).ConfigureAwait(false);
             if (sourceResult.Context is null)
             {
                 if (resolution.SourceMode is ExternalSourceSourceMode.SourceRequired)
                 {
                     resolution.Lifetime?.Dispose();
-                    throw SourceRequiredFailure(parameters.CanonicalPath, parameters.Diagnostics, resolution.Fallback);
+                    throw SourceRequiredFailure(parameters.CanonicalPath, parameters.Diagnostics, resolution.Fallback, resolution.SourceMode);
                 }
 
-                return (null, resolution.Lifetime, parameters.Diagnostics, null, resolution.Fallback);
+                return (null, resolution.Lifetime, parameters.Diagnostics, null, resolution.Fallback, resolution.SourceMode);
             }
 
             if (sourceResult.Context.Origin.IsDecompiled)
@@ -217,7 +224,7 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                 if (resolution.SourceMode is ExternalSourceSourceMode.SourceRequired)
                 {
                     resolution.Lifetime?.Dispose();
-                    throw SourceRequiredFailure(parameters.CanonicalPath, parameters.Diagnostics, resolution.Fallback);
+                    throw SourceRequiredFailure(parameters.CanonicalPath, parameters.Diagnostics, resolution.Fallback, resolution.SourceMode);
                 }
 
                 var fallback = CreateFallbackMetadata(sourceResult.Context.Origin, resolution.Fallback);
@@ -226,7 +233,7 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                     .Distinct(StringComparer.Ordinal)
                     .Take(100)
                     .ToArray();
-                return (null, resolution.Lifetime, fallbackDiagnostics, null, fallback);
+                return (null, resolution.Lifetime, fallbackDiagnostics, null, fallback, resolution.SourceMode);
             }
 
             var context = CreateSourceContext(sourceResult.Context, parameters);
@@ -239,7 +246,7 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
                 referenceLeaseFactory(resolution.Selection),
                 resourceBudget.Clock,
                 requestTemporaryReferenceEviction));
-            return (entry, null, parameters.Diagnostics, resolution.Selection, resolution.Fallback);
+            return (entry, null, parameters.Diagnostics, resolution.Selection, resolution.Fallback, resolution.SourceMode);
         }
         catch
         {
@@ -270,7 +277,8 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
     private static AssemblyAnalysisRegistryRecoverableFailureException SourceRequiredFailure(
         string canonicalPath,
         IReadOnlyList<string> diagnostics,
-        AssemblySourceFallbackMetadata? fallback)
+        AssemblySourceFallbackMetadata? fallback,
+        ExternalSourceSourceMode sourceMode)
     {
         var reason = fallback?.Reason ?? "source-unavailable";
         var detail = diagnostics.Count == 0
@@ -280,7 +288,7 @@ internal sealed class AssemblyAnalysisRegistryEntryFactory
             AssemblySessionFailureKind.SourceUnavailable,
             new AssemblySessionDiagnostic(
                 ExternalSourceConfigurationDiagnosticCodes.SourceRequiredUnavailable,
-                $"Source-Policy source_required verweigert die Dekompilation für '{canonicalPath}': {detail} Ursache={reason}.",
+                $"Source-Policy {sourceMode.ToWireValue()} verweigert die Dekompilation für '{canonicalPath}': {detail} Ursache={reason}.",
                 AssemblyDiagnosticSeverity.Error)));
     }
 

@@ -16,6 +16,7 @@ namespace AiNetLinter.FastTests.Mcp.Assemblies;
 
 // @covers ExternalSourceRepositoryCacheKey
 // @covers LocalExternalSourceRepositoryCacheWriter
+// @covers ExternalSourceRepositoryCacheGenerationLease
 [Trait("Category", "Component")]
 public sealed partial class ExternalSourceRepositoryCacheWriterTests
 {
@@ -377,6 +378,44 @@ public sealed partial class ExternalSourceRepositoryCacheWriterTests
             generations,
             path => string.Equals(Path.GetFileName(path), third.GenerationName, StringComparison.Ordinal));
         Assert.Equal(0, LocalExternalSourceRepositoryCacheWriter.ActiveLockCount);
+    }
+
+    [Fact]
+    public async Task PublishAsync_RetentionSkipsGenerationHeldByReaderUntilMaterializationCompletes()
+    {
+        using var source = SourceFixture.Create(Revision);
+        using var cache = TestTempDirectory.Create("external-source-cache-reader-lease-");
+        var writer = new LocalExternalSourceRepositoryCacheWriter(cache.DirectoryPath);
+
+        var first = await writer.PublishAsync(source.Request);
+        Assert.True(first.Succeeded);
+        Assert.True(writer.TryReadCurrent(
+            source.Key,
+            out var heldRead,
+            out var diagnostic));
+        Assert.Null(diagnostic);
+        using (heldRead!)
+        {
+            Assert.True((await writer.PublishAsync(source.Request)).Succeeded);
+            Assert.True((await writer.PublishAsync(source.Request)).Succeeded);
+
+            var duringMaterialization = Directory.EnumerateDirectories(
+                    writer.GetEntryDirectory(source.Key),
+                    ExternalSourceRepositoryCacheContract.GenerationDirectoryPrefix + "*",
+                    SearchOption.TopDirectoryOnly)
+                .ToArray();
+            Assert.Equal(3, duringMaterialization.Length);
+            Assert.Contains(first.GenerationPath!, duringMaterialization, StringComparer.OrdinalIgnoreCase);
+        }
+
+        Assert.True((await writer.PublishAsync(source.Request)).Succeeded);
+        var afterMaterialization = Directory.EnumerateDirectories(
+                writer.GetEntryDirectory(source.Key),
+                ExternalSourceRepositoryCacheContract.GenerationDirectoryPrefix + "*",
+                SearchOption.TopDirectoryOnly)
+            .ToArray();
+        Assert.Equal(2, afterMaterialization.Length);
+        Assert.DoesNotContain(first.GenerationPath!, afterMaterialization, StringComparer.OrdinalIgnoreCase);
     }
 
     [Fact]

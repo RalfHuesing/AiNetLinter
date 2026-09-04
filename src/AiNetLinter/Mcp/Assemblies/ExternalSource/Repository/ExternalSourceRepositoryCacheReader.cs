@@ -42,8 +42,26 @@ internal static class ExternalSourceRepositoryCacheReader
         }
 
         var generationName = ReadPointer(pointerPath, request.OpenReadStream);
-        result = ReadGeneration(request, generationName);
-        return true;
+        if (!ExternalSourceRepositoryCacheGenerationLease.TryAcquireReader(
+                request.EntryDirectory,
+                generationName,
+                out var readerLease)
+            || readerLease is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            var readResult = ReadGeneration(request, generationName);
+            result = readResult with { ReaderLease = readerLease };
+            readerLease = null;
+            return true;
+        }
+        finally
+        {
+            readerLease?.Dispose();
+        }
     }
 
     internal static bool TryReadPointer(string pointerPath, out string? generationName)

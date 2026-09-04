@@ -44,7 +44,10 @@ internal static partial class AssemblyAnalysisContextFactory
                 return (null, FormatFailure(refresh.Diagnostics));
             }
 
-            context = ApplyFallback(FromGeneration(generation), sourceAttempt.Fallback ?? request.Fallback);
+            context = ApplyFallback(
+                FromGeneration(generation),
+                sourceAttempt.Fallback ?? request.Fallback,
+                request.SourceMode);
         }
 
         var contextDiagnostics = context.Diagnostics.ToList();
@@ -56,6 +59,10 @@ internal static partial class AssemblyAnalysisContextFactory
             Diagnostics = DistinctDiagnostics(contextDiagnostics),
             Receiver = consumer.Receiver,
             ConsumerProject = consumer.ProjectName,
+            Origin = context.Origin with
+            {
+                SourcePolicy = request.SourceMode.ToWireValue(),
+            },
         }, null);
     }
 
@@ -216,7 +223,8 @@ internal static partial class AssemblyAnalysisContextFactory
             "source",
             "source",
             null,
-            request.SourceDiagnostics);
+            request.SourceDiagnostics,
+            request.Selection.SourceMode.ToWireValue());
         return new(
             request.Compilation.Assembly!,
             new AssemblyIdentityDto(assemblyName, "0.0.0.0", "neutral", string.Empty),
@@ -247,7 +255,8 @@ internal static partial class AssemblyAnalysisContextFactory
             "source",
             "source",
             request.ContextRequest.Fallback?.Reason,
-            request.SourceDiagnostics);
+            request.SourceDiagnostics,
+            request.ContextRequest.SourceMode.ToWireValue());
         return new(
             request.Compilation.Assembly!,
             request.References.Identity!,
@@ -263,7 +272,8 @@ internal static partial class AssemblyAnalysisContextFactory
 
     private static AssemblyContext ApplyFallback(
         AssemblyContext context,
-        AssemblySourceFallbackMetadata? fallback)
+        AssemblySourceFallbackMetadata? fallback,
+        ExternalSourceSourceMode sourceMode)
     {
         if (fallback is null) return context;
         var diagnostics = context.Diagnostics
@@ -278,6 +288,7 @@ internal static partial class AssemblyAnalysisContextFactory
             {
                 FallbackReason = fallback.Reason,
                 SourceDiagnostics = fallback.Diagnostics,
+                SourcePolicy = sourceMode.ToWireValue(),
             },
         };
     }

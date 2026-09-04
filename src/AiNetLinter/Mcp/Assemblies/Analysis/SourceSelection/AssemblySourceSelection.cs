@@ -37,6 +37,8 @@ internal sealed record AssemblySourceSelection
 
     internal bool IsAttested { get; }
 
+    internal ExternalSourceSourceMode SourceMode { get; private init; } = ExternalSourceSourceMode.SourcePreferred;
+
     internal AssemblySourceSelection? ForProject(
         SourceSnapshotLease projectLease,
         Project project)
@@ -65,7 +67,8 @@ internal sealed record AssemblySourceSelection
             match,
             ProviderHealth,
             CheckoutTrust,
-            IsAttested));
+            IsAttested,
+            SourceMode));
     }
 
     internal static AssemblySourceSelection? Create(AssemblySourceSelectionParameters parameters)
@@ -99,7 +102,10 @@ internal sealed record AssemblySourceSelection
             matchResult,
             parameters.ProviderHealth,
             parameters.CheckoutTrust,
-            parameters.IsAttested ?? sourceLease.Snapshot.IsAttested);
+            parameters.IsAttested ?? sourceLease.Snapshot.IsAttested)
+        {
+            SourceMode = parameters.SourceMode,
+        };
     }
 }
 
@@ -108,7 +114,8 @@ internal sealed record AssemblySourceSelectionParameters(
     ExternalSourceMatchResult MatchResult,
     ExternalSourceRepositoryHealth ProviderHealth = ExternalSourceRepositoryHealth.Verified,
     ExternalSourceCheckoutTrust CheckoutTrust = ExternalSourceCheckoutTrust.Clean,
-    bool? IsAttested = null);
+    bool? IsAttested = null,
+    ExternalSourceSourceMode SourceMode = ExternalSourceSourceMode.SourcePreferred);
 
 internal sealed record AssemblySourceFallbackMetadata(
     string Reason,
@@ -120,7 +127,8 @@ internal sealed record AssemblyAnalysisContextRequest(
     string? ReceiverType,
     AssemblySourceSelection? SourceSelection,
     CancellationToken CancellationToken,
-    AssemblySourceFallbackMetadata? Fallback = null);
+    AssemblySourceFallbackMetadata? Fallback = null,
+    ExternalSourceSourceMode SourceMode = ExternalSourceSourceMode.SourcePreferred);
 
 internal sealed class AssemblySourceProviderCreation
 {

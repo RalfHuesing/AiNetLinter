@@ -20,7 +20,8 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter :
     IExternalSourceRepositoryCacheReader
 {
     private static readonly ExternalSourceRepositoryCacheKeyLockRegistry Locks = new();
-    private static readonly AssemblyArtifactFileLockRegistry ProcessLocks = new("cache.lock");
+    private static readonly AssemblyArtifactFileLockRegistry ProcessLocks = new(
+        ExternalSourceRepositoryCacheContract.ProcessLockFileName);
     private readonly string cacheRoot;
 
     internal LocalExternalSourceRepositoryCacheWriter(string? cacheRoot = null)
@@ -98,7 +99,7 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter :
                 ExternalSourceRepositoryCachePublishFailureKind.UnsafeSource,
                 exception.CheckoutTrust);
         }
-        catch (Exception exception) when (ExternalSourceRepositoryCacheStorage.IsCacheException(exception))
+        catch (Exception ignored) when (ExternalSourceRepositoryCacheStorage.IsCacheException(ignored))
         {
             return CreateFailure(ExternalSourceRepositoryCachePublishFailureKind.WriteFailed);
         }
@@ -214,17 +215,28 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter :
         PublishContext context,
         out ExternalSourceRepositoryCachePublishResult? failure)
     {
-        var hasCurrent = TryReadCurrent(
-            new ExternalSourceRepositoryCacheReadRequest
-            {
-                Key = context.Key,
-                EntryDirectory = context.EntryDirectory,
-            },
-            out var previousCurrent,
-            out _);
+        ExternalSourceRepositoryCacheReadResult? previousCurrent = null;
+        try
+        {
+            previousCurrent = ReadGeneration(
+                new ExternalSourceRepositoryCacheReadRequest
+                {
+                    Key = context.Key,
+                    EntryDirectory = context.EntryDirectory,
+                },
+                generationName: null);
+        }
+        catch (Exception ignored) when (ExternalSourceRepositoryCacheStorage.IsCacheException(ignored))
+        {
+            // Unter dem exklusiven Publish-Lock ist ein direkter Read stabil genug;
+            // die öffentliche Leseroute würde am eigenen Prozess-Lock scheitern.
+        }
+
+        var hasCurrent = previousCurrent is not null;
         context.PreviousGeneration = hasCurrent
             ? previousCurrent!.Manifest.GenerationName
             : null;
+        previousCurrent?.Dispose();
         failure = null;
         if (context.Request.ExpectedCurrentGeneration is not null
             && !string.Equals(
@@ -348,7 +360,7 @@ internal sealed partial class LocalExternalSourceRepositoryCacheWriter :
 
     private static ExternalSourceRepositoryCacheReadResult ReadGeneration(
         ExternalSourceRepositoryCacheReadRequest request,
-        string generationName) =>
+        string? generationName = null) =>
         ExternalSourceRepositoryCacheReader.ReadGeneration(request, generationName);
 
     private static async Task<ExternalSourceRepositoryCacheKeyLockLease> AcquireLockAsync(
