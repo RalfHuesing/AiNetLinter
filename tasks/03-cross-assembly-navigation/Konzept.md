@@ -8,7 +8,7 @@ status: ready
 
 Bei der statischen Analyse fremder oder mehrteiliger .NET-Ökosysteme (wie Sage 100, Plugins oder verteilten Klassenbibliotheken) stoßen Coding-Agenten regelmäßig an Assembly-Grenzen. Bislang muss ein Agent bei unbekannten Schnittstellen (z. B. `IGenericConnection`, `GenericCommand`) raten oder manuelle Text-Grep-Suchen über Dutzende referenzierte DLLs ausführen, um die definierende Assembly oder konkrete Implementierungen zu finden. Auch in normalen Source-Projekten ist das Auffinden konkreter Implementierungen von Schnittstellen oder Basisklassen oft mühsam.
 
-**Ziel**: Der AiNetLinter MCP-Server wird um dedizierte, Roslyn-gestützte Cross-Assembly- und Typnavigationsfähigkeiten erweitert, damit Agenten Aufrufketten und Typbeziehungen ohne Rätselraten, ohne Laden/Ausführen von Fremdbinärdateien und mit minimalem Token-/Turn-Aufwand sowohl über Assembly-Grenzen hinweg als auch im Quellcode-Projekt verfolgen können.
+**Ziel**: Der AiNetLinter MCP-Server wird um dedizierte, Roslyn-gestützte Cross-Assembly- und Typnavigationsfähigkeiten sowie Performance-Optimierungen bei Fremd-Assemblies erweitert, damit Agenten Aufrufketten und Typbeziehungen ohne Rätselraten, ohne Laden/Ausführen von Fremdbinärdateien und mit minimalem Token-/Turn-Aufwand sowohl über Assembly-Grenzen hinweg als auch im Quellcode-Projekt verfolgen können.
 
 ---
 
@@ -20,10 +20,11 @@ Bei der statischen Analyse fremder oder mehrteiliger .NET-Ökosysteme (wie Sage 
   - `CallTree/`: `GetCallTreeTool.cs` & `AssemblyGetCallTreeTool.cs` (Darstellung externer Referenz-Knoten mit `[ref: Assembly]`).
   - `TypeHierarchy/`: Neues MCP-Tool `FindImplementationsTool.cs` (Interface-/Abstract-Member → konkrete Überschreibungen und Implementierungen) für `project`- und `assembly`-Ziele.
   - `AssemblyInspection/`: `SearchAssemblyTool.cs` (Erweiterung um `declarationOnly: true` und `kind`).
+  - `Impact/` & `FeatureContext/`: `GetImpactTool.cs` & `GetAssemblyContextTool.cs` (Short-Circuiting von Test-Scans bei Assembly-Zielen ohne Testframework-Referenzen).
 - **`src/AiNetLinter/Mcp/Assemblies/`**:
   - Wiederverwendung von `AssemblyAnalysisLease`, `AssemblyRegistry` und den bereits vorhandenen `MetadataReference`-Pfaden der Roslyn-`Compilation`.
 - **Tests**:
-  - `src/AiNetLinter.FastTests/`: Unit- und Component-Tests für alle 4 Tools via InMemory-Roslyn-Workspaces mit Metadaten-Referenzen.
+  - `src/AiNetLinter.FastTests/`: Unit- und Component-Tests für alle Tools via InMemory-Roslyn-Workspaces mit Metadaten-Referenzen.
   - `src/AiNetLinter.IntegrationTests/`: End-to-End-Tests über MCP-Client mit realen referenzierten Assemblies und Source-Projekten.
 
 ---
@@ -56,6 +57,10 @@ Bei der statischen Analyse fremder oder mehrteiliger .NET-Ökosysteme (wie Sage 
   - `declarationOnly` (`boolean`, Default `false`): Schließt Treffer in Kommentaren, Strings und XML-Docs aus.
   - `kind` (`string`, optional: `method`, `type`, `property`): Schränkt Treffer auf die jeweilige Symbolart ein.
 
+### Feature 5: Performance Short-Circuit für Test-Scans bei `targetType=assembly` (Übernahme aus Audit-Befund 2.3)
+- **Problem**: Bei dekompilierten Fremd-Assemblies verursachten `get_impact` und `get_assembly_context` Latenzen von 20–30 Sekunden, weil sie die gesamte Assembly nach Testmethoden und Test-Referenzen durchforsteten, obwohl Produktions-Assemblies typischerweise keine Testframework-Referenzen besitzen.
+- **Muss-Kriterium**: Prüfung, ob die untersuchte Assembly Referenzen auf bekannte Testframeworks (`xunit.*`, `nunit.*`, `Microsoft.VisualStudio.TestPlatform.*`, `MSTest.*`) besitzt. Ist keine Testreferenz vorhanden, wird der Test-Referenz-Scan sofort abgebrochen (Short-Circuit) und eine leere Test-Menge zurückgegeben.
+
 ---
 
 ## 4. Non-Goals & Scope-Grenzen
@@ -71,13 +76,14 @@ Bei der statischen Analyse fremder oder mehrteiliger .NET-Ökosysteme (wie Sage 
 2. `get_call_tree(direction="outgoing")` bricht nicht mehr an der Assembly-Grenze ab, sondern zeigt Calls in Fremd-Assemblies als `[ref: <Assembly>] <Typ>.<Member>` an (bei Standard `includeBcl=false` ohne System-Rauschen).
 3. `find_implementations` findet sowohl in Quellcode-Projekten als auch in Assemblies konkrete Implementierungen und Overrides mit Datei- und Zeilenangabe (z. B. zu `GenericCommand.ExecuteReader` direkt `AdoNetCommand.ExecuteReader`).
 4. `search_assembly` liefert mit `declarationOnly=true` bei Begriffen wie `Execute` nur echte Methodensignaturen/Typen und keine Treffer in XML-Docs oder Kommentaren.
-5. Alle FastTests (`Category=Unit`, `Category=Component`) und IntegrationTests (`Category!=Stress`) laufen warnungs- und fehlerfrei durch (`TreatWarningsAsErrors = true`).
+5. `get_impact` und `get_assembly_context` auf Fremd-Assemblies ohne Testreferenzen schließen durch Short-Circuiting in < 3 Sekunden statt ~28 Sekunden ab.
+6. Alle FastTests (`Category=Unit`, `Category=Component`) und IntegrationTests (`Category!=Stress`) laufen warnungs- und fehlerfrei durch (`TreatWarningsAsErrors = true`).
 
 ---
 
 ## 6. Verifikation & Dokumentation
 
-- **Unit-Tests**: InMemory-Workspaces in `AiNetLinter.FastTests` mit abhängigen Assemblies (Projekt A referenziert Metadaten-DLL B) sowie Interface-Implementierungs-Hierarchien.
+- **Unit-Tests**: InMemory-Workspaces in `AiNetLinter.FastTests` mit abhängigen Assemblies (Projekt A referenziert Metadaten-DLL B) sowie Interface-Implementierungs-Hierarchien und Test-Short-Circuiting.
 - **Integration-Tests**: E2E-Szenario über den MCP-Server (Projekt- und Assembly-Target).
 - **Dokumentation**:
   - `README.md`: Aktualisierung der Feature-Übersicht und Tool-Listen bei Bedarf.
