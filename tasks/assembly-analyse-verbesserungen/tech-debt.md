@@ -102,3 +102,40 @@ Folge-Reviewer 5 bestätigt `BudgetProjection/Envelope` weiterhin als P1 offen. 
 - Nächster Schritt: In einem gezielten Konfigurations-/Konstanten-Review fachlich bewerten; nicht aus dem Source-/Cache-Epic heraus generalisieren.
 - Attempts: 0
 - Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 2 / Implementierer – Abschluss.
+
+## Aktive P1-Findings – Epic 2 Review, Korrekturrunde 1
+
+Die unabhängige Review hat drei voneinander unabhängige Ursachen mit P1-Schweregrad gefunden. Sie werden getrennt korrigiert und jeweils erneut reviewed.
+
+### P1 – GitClone/StderrClassification
+
+- Schweregrad: P1
+- Beschreibung: Erfolgreiche Git-Clone-Ausgaben auf normalem `stderr` werden als Checkout-Fehler verworfen.
+- Scope/Fundstelle: `src/AiNetLinter/Mcp/Assemblies/ExternalSource/ProcessExecution/ExternalSourceGitProcessOutputPolicy.cs`, `GiteaGitRepositoryTransport.cs`.
+- Evidenz: Erfolgreicher lokaler `git clone --no-local --no-hardlinks` mit Exit-Code 0 und `Cloning into '...'...` auf `stderr` wird abgelehnt; bestehende Tests verwenden nur leeres `stderr`.
+- Disposition: fix-now
+- Nächster Schritt: Clone-Ausgabe operationsspezifisch klassifizieren oder kontrolliert unterdrücken; Sicherheits-/Fehlerausgaben fail-closed belassen und reale Regression ergänzen.
+- Attempts: 1
+- Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 2 / Reviewer – Abschluss, Signatur `GitClone/StderrClassification`.
+
+### P1 – CacheGeneration/ReaderLease
+
+- Schweregrad: P1
+- Beschreibung: Zwischen dem Lesen einer Cache-Generation und ihrer Materialisierung besteht keine generationsbezogene Leser-Lease.
+- Scope/Fundstelle: `ExternalSourceRepositoryCacheReuse.TryAcquire`, `ExternalSourceRepositoryCacheMaterializer.Materialize`, `ExternalSourceRepositoryCacheWriterLifecycle.cs`.
+- Evidenz: Ein zweiter Daemon kann Generationen publizieren und Retention kann die von Daemon A gelesene Generation vor dem Kopieren löschen.
+- Disposition: fix-now
+- Nächster Schritt: Leser-Lease oder generationsbezogenen Cross-Process-Lock bis zum Materialisierungsende halten und Retention für geleaste Generationen sperren; Interleaving-Regression ergänzen.
+- Attempts: 1
+- Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 2 / Reviewer – Abschluss, Signatur `CacheGeneration/ReaderLease`.
+
+### P1 – SourcePolicy/ProvenancePropagation
+
+- Schweregrad: P1
+- Beschreibung: SourceMode wird nicht durch Selection, Fallback und Context geführt; Herkunft kann im Fallback beim Default `source_preferred` bleiben und im `analysis`-Envelope fehlen.
+- Scope/Fundstelle: `AssemblyAnalysisFallbackEntryCreationParameters`, `AssemblyAnalysisContextFactory.cs`, `AssemblyAnalysisResponse.cs`, `AssemblyAnalysisSourceToolSupport.cs`.
+- Evidenz: Bei `decompilation_allowed` und kontrolliertem Source-Fallback bleibt `AssemblyOrigin.SourcePolicy` auf `source_preferred`; der gemeinsame maschinenlesbare Envelope verwirft das Feld.
+- Disposition: fix-now
+- Nächster Schritt: SourceMode unveränderlich weiterreichen, Origin/SourcePolicy in allen Pfaden explizit setzen sowie im Header und strukturierten `analysis`-Envelope ausgeben; Regression für Fallback-Provenienz ergänzen.
+- Attempts: 1
+- Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 2 / Reviewer – Abschluss, Signatur `SourcePolicy/ProvenancePropagation`.

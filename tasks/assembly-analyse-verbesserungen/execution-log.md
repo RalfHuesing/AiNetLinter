@@ -257,3 +257,22 @@
 - Verifikation jeweils nach der letzten Codeänderung: `dotnet build --no-restore` mit 0 Warnungen/0 Fehlern; FastTests vollständig 2440 bestanden, 2 plattformbedingte Skips; IntegrationTests vollständig 424/424; Epic-2-Zieltests 89 bestanden, 1 erwarteter Windows-/Reparse-Skip; Safeguard 10,00/10; `find_duplicates` 0 Duplikat-Cluster; vollständiger `get_violations` mit absolutem `targetType=project`-Scope 0 Verstöße in 915 Dateien; `find_dead_code` 34 LOW-Felder nur in nativen Windows-Interop-Strukturen; `find_magic_values` 2 bekannte Konstantenkandidaten; `git diff --check` ohne Inhaltsfehler.
 - Offenes Risiko: erster gezielter Integrationslauf hatte transienten Windows-Test-Harness-Fehler beim Prozess-Kill; isolierte Wiederholung und vollständiger Lauf waren danach grün. Zwei Magic-Value-Kandidaten werden als P2 weitergeführt.
 - Nächste Aktion: Checkpoint-Commit, danach frischer unabhängiger Review von Epic 2.
+
+## Run 2026-09-04 / Epic 2 / Reviewer – Abschluss
+
+- Status: completed; unabhängiger Reviewerbericht terminal eingegangen.
+- Ersturteil: `issues`; Epic 2 nicht freigabefähig. Keine P0-, aber drei P1-Befunde.
+- P1 `GitClone/StderrClassification`: `ExternalSourceGitProcessOutputPolicy.cs:9-24` akzeptiert für den Clone nur `warning:`/`hint:`; normale erfolgreiche Ausgabe `Cloning into '...'...` auf `stderr` wird trotz Exit-Code 0 als Fehler klassifiziert. Empfohlene Korrektur: operationsspezifische Klassifikation oder kontrolliertes `--quiet`, mit fail-closed Behandlung sicherheitsrelevanter Ausgaben, plus realer Clone-Regression.
+- P1 `CacheGeneration/ReaderLease`: `ExternalSourceRepositoryCacheReuse.TryAcquire` liest eine Generation vor der Materialisierung; die Retention kann diese Generation zwischen Lesen und Kopieren löschen. Empfohlene Korrektur: generationsbezogene Leser-Lease beziehungsweise Cross-Process-Lock bis zum Ende der Materialisierung und Retention-Schutz für geleaste Generationen, plus Interleaving-Regression.
+- P1 `SourcePolicy/ProvenancePropagation`: `AssemblyAnalysisFallbackEntryCreationParameters` führt keinen `SourceMode`; Fallback-/Context-Pfade verwenden dadurch weiterhin den Default `source_preferred`, und der gemeinsame `analysis`-Envelope verwirft das Feld. Empfohlene Korrektur: SourceMode unveränderlich durch Selection/Fallback/Context führen, `AssemblyOrigin.SourcePolicy` überall setzen und in Header sowie strukturiertem Envelope ausgeben.
+- P2: still geschluckte Cleanup-Fehlerbehandlung in `ExternalSourceRepositoryCacheWriterLifecycle.cs:218-220`; Owner/Ursache/TTL für liegengebliebene Generationen weiter sichtbar machen.
+- Reviewer-Nachweis: MCP-Verletzungsabfrage im External-Source-Scope 0 Verstöße; Implementierer-Volltests nicht redundant wiederholt, da die Gegenhypothesen reale Git-Ausgabe und Cache-Interleaving betreffen.
+- Nächste Aktion: Review-Checkpoint committen; danach frischer Korrektur-Implementierer für die drei getrennten P1-Ursachen (Attempt 1).
+
+## Run 2026-09-04 / Epic 2 / Reviewer
+
+- Status: running; unabhängige Review nach Orchestrator-Checkpoint gestartet.
+- Baseline: `c9d46407` (`feat(assembly-analyse-verbesserungen): Sichere Source- und Daemon-Cacheverträge`).
+- Scope: Source-Policy und Fallback-Härte, verifizierter Git-Checkout, deterministische Cache-/Daemon-Isolation, Locks/Leases/Generationen, Cleanup/ReadOnly/Quarantäne, Health-Diagnostik, bounded Reference-Sessions, Tests und Dokumentation.
+- Reviewer: Sartre (`01a06a04-9035-77e2-a7e3-ad09e13f9d9a`).
+- Vorgabe: keine Produktionsänderungen und kein Commit; nur offensichtliche task-lokale `code-map.md`-Korrekturen zulässig. P0/P1 blockieren, P2/P3 werden als Tech Debt erfasst.
