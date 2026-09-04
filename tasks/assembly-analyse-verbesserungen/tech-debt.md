@@ -224,6 +224,19 @@ Folge-Reviewer 2 bestätigt `DaemonDiscovery/ExecutableVersionFingerprint` als `
 - Attempts: 0
 - Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 3 / Folge-Reviewer 2 – Abschluss.
 
+Abschlussaudit bestätigt den Helper-Klon als bestehendes P2-DRY-Finding (`accepted-deferred`) und identifiziert keinen sicheren Produktions-Refactor.
+
+## P2/LOW – Audit-Dead-Code und Magic-Value-Befunde
+
+- Schweregrad: P2/LOW
+- Beschreibung: 39 LOW-Dead-Code-Kandidaten (34 native Win32-Interop-Felder, fünf interne Symbole) sowie 20 Magic-Value-Treffer in 10 Einträgen.
+- Scope/Fundstelle: primär `ExternalSourceGitProcessNativeMethods.cs`, interne Symbole `ResourceHealth`, `Enrich`, `Kind`, `IsHeld`, `AcquireAsync`; öffentliche Wire-Schlüssel und Heuristik-Bufferwerte im Audit-Scope.
+- Evidenz: einmaliger Abschlussaudit mit `find_dead_code`, bestätigenden `find_references`/`get_impact` und `find_magic_values`; keine sicheren Aufrufstellen für die geprüften internen Kandidaten, aber mögliche InternalsVisibleTo-/Serializer-/Options-/ABI-Bindungen.
+- Disposition: native Layout-Felder `not-applicable` für automatische Entfernung; übrige LOW-/Diagnosebefunde `accepted-deferred`; öffentliche Wire-/Heuristikwerte `rejected/not-applicable`.
+- Nächster Schritt: Nur in separatem Interop-/Konfigurations- oder Test-DRY-Scope bewerten; keine Scope-Erweiterung dieses Tasks.
+- Attempts: 0
+- Log-Anker: `execution-log.md`, Run 2026-09-04 / Abschlussaudit – Abschluss.
+
 Folge-Reviewer 1 bestätigt `SearchBudget/EnvelopeReachability` und `SearchPaging/MaxFilesContinuation` als `fixed`. `DaemonDiscovery/ExecutableVersionFingerprint` bleibt P1 offen, weil ein fingerprintloses Welcome des alten Daemons im generischen Retrypfad bis zum Readiness-Timeout läuft. Korrekturrunde 2 wird mit Attempts 2 ausschließlich für diese Ursache gestartet.
 
 ## P2 – AIContextFootprint im DaemonHost
