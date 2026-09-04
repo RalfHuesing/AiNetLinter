@@ -63,13 +63,34 @@ internal static class FindSymbolScanner
         }
 
         var outputRoot = Path.GetDirectoryName(request.Solution.FilePath) ?? string.Empty;
-        var allEntries = filtered
-            .SelectMany(symbol => FindSymbolTool.FormatSymbolLocationEntries(symbol, outputRoot, request.AssemblyIdentity))
-            .ToList();
-        var lines = allEntries.Select(FindSymbolTool.FormatEntry).ToList();
-        var text = McpTruncation.TruncateLines(lines, lines.Count, request.MaxResults);
-        var shownEntries = allEntries.Count <= request.MaxResults ? allEntries : allEntries.Take(request.MaxResults).ToList();
-        return (text, shownEntries);
+        var collectedEntries = new List<SymbolLocationEntry>();
+        var hasMore = false;
+
+        foreach (var symbol in filtered)
+        {
+            foreach (var entry in FindSymbolTool.FormatSymbolLocationEntries(symbol, outputRoot, request.AssemblyIdentity))
+            {
+                if (collectedEntries.Count < request.MaxResults)
+                {
+                    collectedEntries.Add(entry);
+                }
+                else
+                {
+                    hasMore = true;
+                    break;
+                }
+            }
+
+            if (hasMore)
+            {
+                break;
+            }
+        }
+
+        var lines = collectedEntries.Select(FindSymbolTool.FormatEntry).ToList();
+        var totalMatches = hasMore ? request.MaxResults + 1 : collectedEntries.Count;
+        var text = McpTruncation.TruncateLines(lines, totalMatches, request.MaxResults);
+        return (text, collectedEntries);
     }
 
     private static async Task<string> AppendMissHintAsync(

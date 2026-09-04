@@ -84,6 +84,19 @@ public sealed class FindSymbolScannerTests
         Assert.Contains("Ähnliche Symbole im Projekt", result);
         Assert.Contains("Greeter", result);
     }
+
+    [Fact]
+    public async Task FindMatchesWithEntriesAsync_ShortCircuitsAtMaxResults()
+    {
+        using var fixture = new McpInMemoryTestContext();
+
+        var (text, entries) = await FindSymbolScanner.FindMatchesWithEntriesAsync(
+            new FindSymbolScanRequest(fixture.Solution, "Greet", null, 1));
+
+        Assert.Single(entries);
+        Assert.Contains("Treffer gesamt", text);
+        Assert.Contains("1 gezeigt", text);
+    }
 }
 
 [Trait("Category", "Unit")]
