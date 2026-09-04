@@ -474,3 +474,16 @@
 - MCP-Abfragen: `find_duplicates` (project/absoluter Pfad/exact), zusätzlicher Testscope, `find_dead_code`, bestätigende `find_references`/`get_impact`, `find_magic_values`.
 - Audit-Verifikation: `dotnet build` erfolgreich; FastTests `Category!=Stress` 2448 bestanden/2 Plattform-Skips; IntegrationTests `Category!=Stress` 428 bestanden; `git diff --check` sauber; Stress nicht ausgeführt.
 - Nächste Aktion: Audit-Checkpoint committen; danach finale Orchestrator-Gates und Konzept-Verifikation auf dem letzten Codezustand.
+
+## Run 2026-09-04 / Finale Orchestrator-Gates – Abschluss
+
+- Status: completed; alle verpflichtenden Nicht-Stress-Gates und die Konzept-Verifikation sind auf dem letzten Code-/Auditstand abgeschlossen.
+- MCP-Health: Daemon `1.0.165`, Projektroot geladen; `get_index_scope` meldet 921 C#-Dateien vollständig vom Symbolgraph abgedeckt.
+- MCP-Semantik: `find_symbol` mit `targetType=project` und absolutem Projektroot findet `AssemblySearchTool` eindeutig; `get_violations` für `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis` meldet 0 Verstöße.
+- Build: `dotnet build` erfolgreich, 0 Warnungen / 0 Fehler.
+- FastTests: `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` erfolgreich, 2448 bestanden / 2 plattformbedingte Skips.
+- IntegrationTests: Ein erster Wiederholungsversuch wurde durch MSB3027/MSB3021 wegen exakt identifizierter verwaister Testprozesse blockiert. Nach deren gezielter Bereinigung lief der saubere Wiederholungslauf erfolgreich: 428 bestanden / 0 übersprungen / 0 Fehler, Dauer 5:27 Minuten. Es gab keine fehlgeschlagene Testassertion.
+- Konzeptbereiche A/A1/A2/A3/A4 bis G: durch Rollenberichte, Contract-/E2E-Tests, Build, MCP-Health, Indexscope, Symbolsuche und Scope-Lintnachweis abgedeckt; der initiale MCP-Timeout mit Solution-Pfad ist als Diagnose dokumentiert, die Wiederholung am Projektroot war erfolgreich.
+- Stresstests: gemäß Vorgabe nicht ausgeführt.
+- Disposition: keine neuen P0/P1-Befunde; bestehende P1/P2-Einträge und Audit-Findings bleiben gemäß `tech-debt.md` disponiert.
+- Nächste Aktion: finalen Task-Artefakt-Checkpoint committen; kein Push.

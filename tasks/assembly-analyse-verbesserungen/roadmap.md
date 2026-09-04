@@ -37,16 +37,26 @@ Großkonzept-Modus. Grundlage ist `Konzept.md` mit `status: ready`.
 
 ## Abschluss-Checkliste
 
-- [ ] Konzept-Verifikationsbereiche A/A1/A2/A3/A4, B, C, D, E, F und G ausgeführt oder gemäß Konzept-Fallback dokumentiert.
-- [ ] `dotnet build` nach dem letzten Codezustand grün.
-- [ ] `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` nach dem letzten Codezustand grün.
-- [ ] `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` nach dem letzten Codezustand grün.
+- [x] Konzept-Verifikationsbereiche A/A1/A2/A3/A4, B, C, D, E, F und G ausgeführt oder gemäß Konzept-Fallback dokumentiert.
+- [x] `dotnet build` nach dem letzten Codezustand grün.
+- [x] `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` nach dem letzten Codezustand grün.
+- [x] `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` nach dem letzten Codezustand grün.
 - [x] Abschluss-Audit ausgeführt und Findings disponiert.
 
 ## Ausführungsstand
 
 - current_epic: Finale Orchestrator-Gates
-- letzter Commit: `9de8ffaf` (Epic-3-Abschlusscheckpoint); Audit-Checkpoint folgt
+- letzter fachlicher Commit: `bbe0d2dc` (Audit-Checkpoint); finaler Artefakt-Checkpoint folgt
 - current_debt_item: P1 `BudgetProjection/Envelope` in `tech-debt.md`, `accepted-deferred`, Attempts 0
 - debt_attempts: 0
-- Blocker: keiner
+- Blocker: keiner; MCP-Symbol-/Violations-Nachweis am Projektroot erfolgreich, initialer Solution-Pfad- und Timeout-Versuch als Diagnose dokumentiert
+
+## Finale Verifikation
+
+- MCP-Health: Daemon `1.0.165`, Projekt `C:\Daten\Entwicklung\Ralf\AiNetLinter` geladen; Indexscope vollständig für 921 C#-Dateien.
+- MCP-Semantik: `find_symbol(AssemblySearchTool)` liefert den eindeutigen Typ `AiNetLinter.Mcp.Tools.AssemblyAnalysis.AssemblySearchTool`; `get_violations` im Scope `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis` liefert 0 Verstöße.
+- Build: `dotnet build` erfolgreich mit 0 Warnungen und 0 Fehlern.
+- FastTests: `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` erfolgreich, 2448 bestanden, 2 plattformbedingte Skips.
+- IntegrationTests: Nach Bereinigung exakt zuordenbarer, verwaister Testprozesse lief der saubere Wiederholungslauf `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` erfolgreich mit 428 bestanden, 0 Skips, 0 Fehlern (5:27 Minuten). Der vorherige Versuch scheiterte ausschließlich an MSB3027/MSB3021-Dateisperren durch diese Prozesse, nicht an Testassertions.
+- Konzept-Fallback: Die von den Rollen gelieferten MCP-/E2E-/Contract-Nachweise decken A/A1/A2/A3/A4 bis G ab; ein früher `find_symbol`-Aufruf mit Solution-Pfad lief nach 300 Sekunden in ein MCP-Timeout und wurde nach Korrektur auf den Projektroot erfolgreich wiederholt.
+- Stresstests wurden gemäß Task-Regel nicht ausgeführt.
