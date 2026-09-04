@@ -125,6 +125,14 @@
 - Subagent: `01a069b9-8f57-75f2-8cac-ea3b54d339e0` (Hypatia)
 - Auftrag: Flags, Counts, Gründe und Cursor zwischen `fileTree.files` und `fileTree.directories` entkoppeln und beide Richtungen regressionsprüfen.
 
+## Run 2026-09-04 / Epic 1 / Folge-Reviewer 5
+
+- Status: running
+- Diff-Baseline: `69e4ca3e` (Korrektur-Checkpoint 5)
+- Scope: letzter P1-Befund `BudgetProjection/Envelope`, collection-spezifische `files`-/`directories`-Truncation und Regressionserhalt
+- Subagent: `01a069c8-d1d4-79a1-82ad-d08d4a2e8c2d` (Turing)
+- Auftrag: tatsächlichen Diff, unbekannte Arrays, beide Directory-/File-Truncation-Richtungen, frühere Vertragskorrekturen, Code-Map und Nachweise prüfen; kein Produktionscode und kein Commit.
+
 ## Run 2026-09-04 / Epic 1 / Folge-Reviewer 2 – Abschluss
 
 - Status: completed; Folge-Reviewerbericht terminal eingegangen.
@@ -223,3 +231,12 @@
 - Verifikation jeweils nach der letzten Codeänderung: FastTests `FullyQualifiedName~AssemblyAnalysisToolTests`: 28/28; IntegrationTests `FullyQualifiedName~AssemblyAnalysisDispatcherCapabilityTests`: 17/17; `dotnet build --no-restore`: 0 Warnungen/0 Fehler; FastTests vollständig `Category!=Stress`: 2429 bestanden, 2 übersprungen; IntegrationTests vollständig `Category!=Stress`: 424/424; `find_duplicates` im Scope `src/AiNetLinter/Mcp`, Production/Clone/Fuzzy, `minTokens=30`, `maxResults=50`: 9 bestehende Cluster ohne sicheren Scope-Fix; `find_dead_code` gleicher Scope, `private_internal`, `both`, `members`, Tests ausgeschlossen, `maxResults=50`: 39 LOW/0 HIGH; `find_magic_values` gleicher Scope, alle Kategorien/Werte, `minOccurrences=2`, `maxResults=50`, Tests/Suppressed ausgeschlossen: 7 bestehende Befunde; letzter `get_violations` mit `targetType=project`, absolutem Projektpfad, `scopeFilter=AssemblyAnalysis`, `includeSnippet=true`, `contextLines=2`, `maxResults=200`: 0 Verstöße.
 - Offene Tech Debt: nur bestehende P2-DRY-Cluster, `accepted-deferred`; keine neue sichere Bereinigung.
 - Nächste Aktion: Checkpoint-Commit und letzter unabhängiger Review der P1-Ursache.
+
+## Run 2026-09-04 / Epic 1 / Folge-Reviewer 5 – Abschluss
+
+- Status: completed; letzter Folge-Reviewerbericht terminal eingegangen.
+- Urteil: `issues`; `BudgetProjection/Envelope` bleibt nach fünf Korrekturversuchen P1 offen und wird gemäß Fünferregel als `accepted-deferred` eingereiht.
+- Befund: `FileTreeAccumulator` setzt bei ausschließlich gekürzten Verzeichnissen das gemeinsame `FileTreeCompleteness.Truncated`/`TruncatedBy`; `UpdateFileTreeEnvelope` übernimmt diesen globalen Status auch bei vollständigen Dateien. Damit können vollständige `files` weiterhin als gekürzt mit Directory-Grund `maxResults` erscheinen. Der Gegenrichtungstest setzt den Status synthetisch und bildet den realen Scannerzustand nicht ab.
+- Betroffene Navigation: `GetFileTreeScanner.cs` im `FileTreeAccumulator` und `AssemblyAnalysisResponseEnvelope.cs` bei der FileTree-Rekonstruktion. Code-Map wurde ausschließlich um diese Fakten korrigiert.
+- Verifikation: Frische Nachweise Fast 28/28, Dispatcher 17/17, Build 0/0, Fast Nicht-Stress 2429/2, Integration Nicht-Stress 424/424, MCP-Audits und `get_violations` 0 wurden mangels Gegenhypothese nicht redundant wiederholt. Shared Wire-Budget/Mindestbudget, Composite-Statusmerge, `topN` und Body-Provenienz ohne neue P1-Regression.
+- Nächste Aktion: Checkpoint-Commit, Epic 1 mit deferred P1 abschließen und Epic 2 starten.

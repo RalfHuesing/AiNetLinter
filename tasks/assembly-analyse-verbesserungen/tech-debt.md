@@ -25,10 +25,10 @@ Implementierer Korrekturrunde 1 meldet alle fünf als behoben; Disposition bleib
 - Beschreibung: Budget-Trim und kanonische Paging-/Legacy-Felder werden nicht gemeinsam neu berechnet.
 - Scope/Fundstelle: `InspectAssemblyResponseBuilder.cs`, `FindAssemblyExtensionsResponseBuilder.cs`, `AssemblyAnalysisResponseLimits.Budget.cs`.
 - Evidenz: Reviewer reproduziert übersprungene oder unerreichbare Ergebnisse bei kleinem `maxResponseBytes`.
-- Disposition: fix-now (aktive Korrekturrunde)
-- Nächster Schritt: Rückgabeoffset, Counts, Truncation und Continuation-Token nach der finalen Projektion gemeinsam ableiten; Regressionstest ergänzen.
-- Attempts: 5
-- Log-Anker: `execution-log.md`, Run 2026-09-03 / Epic 1 / Reviewer – Abschluss, Signatur `BudgetProjection/Envelope`.
+- Disposition: accepted-deferred
+- Nächster Schritt: FileTree-Scanner- und Wire-Completeness für Dateien/Verzeichnisse in einem späteren gezielten Durchlauf vollständig trennen; reale Scanner-Regression mit beiden Richtungen ergänzen.
+- Attempts: 0
+- Log-Anker: `execution-log.md`, Run 2026-09-04 / Epic 1 / Folge-Reviewer 5 – Abschluss, Signatur `BudgetProjection/Envelope`.
 
 ### P1 – AssemblyWireBudget/Coverage
 
@@ -89,3 +89,5 @@ Korrektur-Implementierer 4 meldet `BudgetProjection/Envelope` behoben; Dispositi
 Folge-Reviewer 4 bestätigt `BudgetProjection/Envelope` weiterhin als P1 offen: collection-spezifische Truncation von `fileTree.files` und `fileTree.directories` wird vermischt. Korrekturrunde 5 ist der letzte Versuch; bei erneutem Offenbleiben wird der Eintrag mit Attempts 0 als `accepted-deferred` hinten eingereiht.
 
 Korrektur-Implementierer 5 (letzter Versuch) meldet `BudgetProjection/Envelope` behoben; Disposition bleibt bis zum Folge-Review 5 `fix-now`, Attempts bleiben bei 5.
+
+Folge-Reviewer 5 bestätigt `BudgetProjection/Envelope` weiterhin als P1 offen. Nach fünf Versuchen wird der Eintrag gemäß Queue-Regel mit Attempts 0 als `accepted-deferred` hinten eingereiht; Epic 2 läuft unabhängig weiter.
