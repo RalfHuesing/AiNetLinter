@@ -50,11 +50,16 @@ Dieses Konzept verfeinert die inhaltliche semantische Analyse und Suche in exter
    - Liefert Metadaten: `totalBodyLines`, `displayedStartLine`, `displayedEndLine`, `hasMoreLines`.
 4. **Erweiterter `get_call_tree`**:
    - Unterstützt Paginierung der Knoten je Ebene (`maxChildrenPerNode`) und filtert Framework-/System-Aufrufe standardmäßig heraus, sofern nicht explizit `includeSystem: true` gesetzt ist.
+5. **Kryptografisch gebundene Such-Cursor**:
+   - Ein `continuationToken` in `search_assembly` wird kryptografisch/strukturiert an `(query, searchKind, scopeRoot, generation)` gebunden, um fehlerhafte Wiederverwendung alter Token bei geänderten Suchparametern sicher abzuwehren.
+6. **Unterstützung für `searchKind: "external_calls"`**:
+   - Erkennt verlässlich externe Schnittstellenaufrufe (P/Invoke `[DllImport]`, HTTP-Client-Calls, COM-Interop).
 
 ### 3.2 Akzeptanzkriterien (Verifikation)
 - [ ] Ein Test beweist: Ein C#-Codeabschnitt mit `items.Select(x => x.Name)` wird bei `searchKind: "data_access"` **nicht** gematcht, während `context.Database.SqlQuery("SELECT Name FROM...")` sicher gefunden wird.
 - [ ] Ein Test beweist: `fileFilter: "*.cs"` filtert alle Nicht-C#-Dateien sauber heraus.
 - [ ] Ein Test beweist: `get_symbol_body` mit `startLine: 81, maxBodyLines: 50` liefert exakt die zweite Hälfte einer 130-Zeilen-Methode inklusive korrekter Zeilennummern.
+- [ ] Ein Test beweist: Ein `continuationToken`, der für Query A erzeugt wurde, wird bei Query B mit `INVALID_ARGUMENT` abgewiesen.
 
 ---
 

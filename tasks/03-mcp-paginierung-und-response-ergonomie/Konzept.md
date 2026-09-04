@@ -68,11 +68,16 @@ Dieses Konzept löst das fundamentale Usability-Problem für KI-Agenten: **Die E
    - Statt leerer Überschriften liefert das Tool eine aussagekräftige Vorschau (z. B. Top 5 Klassen, Anzahl Methoden, Schlüsselmetriken) und verweist für Vollständigkeit auf die Einzeltools.
 6. **Relative Pfade in `find_symbol`**:
    - Pfade innerhalb des Assembly-Caches werden relativ zum Assembly-/Quellcode-Root formatiert (z. B. `src/Core/OrderService.cs:45` statt `C:\Daten\Tools\AiNetLinter-win-x64\cache\asm...`).
+7. **Getrennte Truncation für `get_file_tree` (Auflösung Tech-Debt)**:
+   - `fileTree.files` und `fileTree.directories` erhalten vollständig getrennte Zähler, Truncation-Flags (`filesTruncated`, `directoriesTruncated`) und Cursor, damit gekürzte Verzeichnisse nicht fälschlicherweise die Datei-Vollständigkeit als beschnitten markieren.
+8. **Wirksamer `topN`-Parameter in `get_assembly_context`**:
+   - Der Parameter `topN` steuert die Anzahl der Caller- und Impact-Einträge in der Vorschau tatsächlich semantisch, statt ignoriert zu werden.
 
 ### 3.2 Akzeptanzkriterien (Verifikation)
 - [ ] Ein Test beweist: Ein Aufruf von `search_assembly` mit vielen Treffern liefert im Textfeld verständliche Trefferzeilen und **keine** `StructuredContent ist die kanonische Nutzlast`-Meldung.
 - [ ] Ein Test beweist: Aufruf mit `page=1, pageSize=5` und anschließend `page=2, pageSize=5` liefert disjunkte, lückenlose Ergebnisse in deterministischer Reihenfolge.
 - [ ] Die nächtliche While-Schleifen-DOM-Kürzung in `AssemblyAnalysisResponse.cs` ist entfernt und durch Budget-Checks ersetzt.
+- [ ] `get_file_tree` meldet getrennte, korrekte Status für `files` und `directories`.
 
 ---
 

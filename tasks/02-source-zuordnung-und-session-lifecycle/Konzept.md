@@ -55,13 +55,19 @@ Dieses Konzept verbindet die physisch bereitgestellten Git-Repositories (aus Tas
 3. **Config-Reload & Cache-Invalidierung**:
    - Das MCP-Tool `reload_config` wird erweitert: Es lädt neben `rules.json` auch `appsettings.json` und `external-sources.json` frisch von der Platte.
    - Bei Reload werden alle negativen Cache-Einträge (`cachedNegativeFallback`) gelöscht, sodass ein erneuter Abruf sofort die neuen Einstellungen nutzt.
-4. **Schlanker Orchestrator**:
+4. **SourceMode-Policy Durchsetzung**:
+   - `source_required`: Schlägt der Quellcode-Download oder die Projekt-Zuordnung fehl, wird Decompilation **verweigert** und ein deterministischer Fehler (`SourceRequiredUnavailable`) zurückgegeben.
+   - `source_preferred` (Default): Schlägt Quellcode fehl, erfolgt ein geregelter Fallback auf Dekompilation mit transparentem `AnalysisOrigin: "decompiled"` und Angabe des konkreten Fallback-Grunds.
+   - `analysis.sourcePolicy` muss in allen Responses stets als nicht-leeres Feld erhalten bleiben.
+5. **Schlanker Orchestrator & Workspace-Laden**:
    - Direkte Kopplung von `GitEngine` (aus Task 01) und Roslyn-Workspace ohne Zwischen-Koordinatoren.
+   - Quellprojekte werden mit ihren Referenzen in den Roslyn-Analysekontext geladen, sodass `find_symbol`, `get_symbol_body` etc. direkt auf den Original-C#-Dateien operieren.
 
 ### 3.2 Akzeptanzkriterien (Verifikation)
 - [ ] Unit-Tests in `AiNetLinter.FastTests` belegen: Wenn ein Mapping existiert, aber der Clone fehlschlägt, meldet `get_server_health` `clone-failed` und **nicht** `not-configured`.
 - [ ] Ein Test beweist: Nach Aufruf von `reload_config` wird eine nachträglich in `external-sources.json` eingetragene Assembly sofort erkannt.
-- [ ] Ein Test beweist: Eine Assembly wird erfolgreich der richtigen `.csproj` innerhalb einer Test-Solution zugeordnet.
+- [ ] Ein Test beweist: Eine Assembly wird erfolgreich der richtigen `.csproj` innerhalb einer Test-Solution zugeordnet (über Dateiname oder `<AssemblyName>`).
+- [ ] Ein Test beweist: Bei `SourceMode: source_required` wird Dekompilation im Fehlerfall verweigert.
 
 ---
 
