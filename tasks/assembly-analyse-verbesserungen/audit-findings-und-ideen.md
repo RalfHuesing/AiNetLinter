@@ -236,11 +236,79 @@ public sealed record PagedResult<T>(
 
 ## 6. Zusammenfassende Handlungsempfehlungen
 
-1. **Sofort-Fixes (P0 & P1)**:
+1. **Tech-Debt-Entrümpelung (Priorität 1 - Fundament)**:
+   - Radikaler Rückbau der 10 Abstraktionsschichten rund um Git-Download und Caching.
+   - Einführung einer einzigen, schlanken `GitEngine` (~150-200 Zeilen C#).
+   - Echte Integrationstests mit `git.exe` gegen lokale Bare-Repositories (keine reinen Mocks mehr).
+2. **Sofort-Fixes (P0 & P1)**:
    - **`MCP-TEXT-BLACK-HOLE`**: Textdarstellung niemals komplett durch den Einzeiler ersetzen, sondern Text gekürzt mit Paging-Hinweis ausgeben.
    - **`GIT-PROGRESS-ABORT`**: `--quiet` bei `git clone` übergeben und `LC_ALL=C` setzen.
+   - **`EXTERNAL-SOURCE-HEALTH-MISLEADING`**: Saubere Status-Meldungen statt pauschalem `not-configured`.
    - **`DATA-ACCESS-LINQ`**: C#-LINQ-Keywords aus der SQL-Regex von `search_assembly` entfernen.
-2. **Architektur-Umbau (P2)**:
+3. **Architektur-Umbau (P2)**:
    - Ersetzen der nächtlichen JSON-DOM-Trimm-Schleife durch echte Paginierung an den Datenquellen.
-3. **Paging-Standard einführen**:
+4. **Paging-Standard einführen**:
    - `PaginationArgs` und `PagedResult<T>` als verbindliches Muster für alle listenbasierten MCP-Tools ausrollen.
+
+---
+
+## 7. Architektur-Refactoring & Tech-Debt: Radikale Entrümpelung des Git-Subsystems
+
+### 7.1 Das Kernproblem: 10 Schichten Enterprise-Overkill für `git clone`
+Der nächtliche autonome Agent hat für den simplen Vorgang, ein Git-Repository bereitzustellen, eine monumentale 10-Stufen-Kaskade geschaffen:
+```text
+GiteaGitRepositoryTransport
+  → ExternalSourceRepositoryAcquirer
+    → ExternalSourceRepositoryCache
+      → ExternalResourceRegistry
+        → SourceSnapshotRegistry
+          → AssemblySourceProviderCoordinator
+            → AssemblySourceSelectionOrchestrator
+              → AssemblyAnalysisHostComposition
+                → AssemblyAnalysisSession
+                  → AssemblyAnalysisHostSessionRegistry
+```
+**Die negativen Konsequenzen:**
+- **Verwischte Fehlerursachen**: Schlägt `git clone` fehl, verliert sich der Fehler über 8 Schichten und kommt in `AssemblyHealthProjection` als `source == null` an, was als `not-configured` ausgegeben wird.
+- **Wartungsalbtraum**: 1500 Zeilen Boilerplate, Leases, Overrides, Quarantänen und Fake-Memory-Counter.
+- **Pseudo-Sicherheit**: Ein aufwändiges stderr-Zeilen-Whitelisting, das in der Realität sofort abbricht, sobald Git eine Standard-Progress-Zeile ausgibt.
+
+### 7.2 Fundamentale Erkenntnis: „Das Dateisystem ist die Single Source of Truth“
+Am Ende des Tages liegt irgendwo im Dateisystem schlicht ein Verzeichnis mit einem Git-Repository.
+- Wir benötigen **keine** In-Memory-Lease-Tracker, Quarantäne-Zustandsmaschinen oder simulierte RAM-Byte-Counter für Dateien auf der Festplatte.
+- **Zustandslogik**:
+  1. Ist der Zielordner da und enthält ein valides `.git`? -> Fertig (optional `git pull` / `git fetch`).
+  2. Fehlt der Ordner? -> `git clone --quiet <url> <zielordner>`.
+  3. Ist die Festplatte voll? -> Ein simples 20-Zeilen-LRU-Cleanup (lösche Verzeichnisse mit ältestem `LastAccessTimeUtc`).
+
+### 7.3 Lösungsoptionen: NuGet (LibGit2Sharp) vs. Schlanke `GitEngine` (CLI)
+
+| Kriterium | Option A: `LibGit2Sharp` (NuGet) | Option B: Schlanke `GitEngine` (CLI-Wrapper via `ProcessStartInfo`) |
+|:---|:---|:---|
+| **Abhängigkeiten** | Schwergewichtig: Bringt native `libgit2.dll`/`.so`-Binaries mit; potenzielle Plattform-/Architektur-Probleme (x64, ARM, Linux). | **Leichtgewichtig**: 0 externe Dependencies; nutzt das vorhandene System-`git`. |
+| **Authentifizierung** | Oft sperrig mit internen C-Callbacks / Credential-Helpers. | **Standardisiert**: Nutzt automatisch Git-Credential-Manager oder übergebene Tokens via `GIT_ASKPASS`/Env. |
+| **Code-Umfang** | ~100 Zeilen C# (aber 50 MB Native-Binaries). | **~150–200 Zeilen C# in genau 1 Klasse** (keine weiteren Dateien nötig). |
+| **Fehler-Transparenz** | Exzellent (native C#-Exceptions). | Sehr gut, wenn ExitCode != 0 ungefiltert die vollständige `stderr`-Ausgabe liefert. |
+
+> **Empfehlung:** **Option B (`GitEngine`)**. Sie vermeidet native DLL-Abhängigkeiten in der Linter-Binary und lässt sich in einer einzigen, testbaren Klasse kapseln.
+
+### 7.4 Vorgehensmodell: Schmale vertikale Slices statt „Mega-Nacht-Runs“
+Statt ein riesiges 3-Epics-Dokument über Nacht laufen zu lassen, wird das Thema in strikt getrennte, testgetriebene Slices zerlegt:
+
+```text
+Slice 1: Die schlanke GitEngine (Isoliert & Real)
+- Erstelle eine einzige Klasse `GitEngine.cs` (Clone, Fetch, HeadCommit, Clean).
+- Implementiere echte Integrationstests in `AiNetLinter.IntegrationTests`, die mit `git init --bare`
+  ein lokales Test-Repository aufsetzen und klonen (KEINE Mocks!).
+- Tor-Kriterium: Echter Git-Clone funktioniert lokal deterministisch in < 500 ms.
+
+Slice 2: Bereinigung & Austausch
+- Ersetze die 10 alten Klassen durch Aufrufe der neuen `GitEngine`.
+- Lösche den Alt-Code (`ExternalSourceRepositoryAcquirer`, `ExternalResourceRegistry`, etc.).
+- Tor-Kriterium: Alle bestehenden Fast- & Integrationstests laufen fehlerfrei.
+
+Slice 3: Roslyn-Projekt-Matcher & Live-Smoke-Test
+- Direkte Zuordnung der Assembly zu Projekten im geklonten Verzeichnis.
+- Tor-Kriterium: Live-Abfrage einer Test-DLL gegen das lokale Gitea-Repository liefert
+  den echten Quellcode statt Dekompilierung.
+```
