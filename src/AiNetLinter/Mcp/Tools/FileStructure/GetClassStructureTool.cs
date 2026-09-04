@@ -23,7 +23,14 @@ internal sealed record GetClassStructureArgs(
     string? SortBy = "lines",
     int MaxMembers = GetClassStructureTool.DefaultMaxMembers,
     string? KindFilter = null,
-    string? NameFilter = null);
+    string? NameFilter = null,
+    string? Symbol = null)
+{
+    internal string? EffectiveSymbolIdentifier =>
+        !string.IsNullOrWhiteSpace(SymbolIdentifier)
+            ? SymbolIdentifier
+            : Symbol;
+}
 
 /// <summary>
 /// MCP-Tool <c>get_class_structure</c>: liefert eine tabellarische Übersicht über alle Member eines
@@ -57,11 +64,12 @@ internal static class GetClassStructureTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        if (string.IsNullOrWhiteSpace(args.SymbolIdentifier))
+        var effectiveIdentifier = args.EffectiveSymbolIdentifier;
+        if (string.IsNullOrWhiteSpace(effectiveIdentifier))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
+                "Pflichtparameter 'symbolIdentifier' (oder 'symbol') fehlt oder ist leer.",
                 hint: "symbolIdentifier angeben: z. B. 'MyClass', 'Namespace.MyClass' oder 'Datei.cs:42:10'.");
         }
 
@@ -71,11 +79,11 @@ internal static class GetClassStructureTool
         {
             var (resolvedSymbol, error) = await FindReferencesTool.ResolveSymbolAsync(
                 solution,
-                args.SymbolIdentifier,
+                effectiveIdentifier,
                 ct,
                 state.AssemblySymbolIdentity);
             if (error is not null) return error;
-            if (resolvedSymbol is null) return McpToolResults.SymbolNotFound(args.SymbolIdentifier);
+            if (resolvedSymbol is null) return McpToolResults.SymbolNotFound(effectiveIdentifier);
 
             if (!TryResolveNamedType(resolvedSymbol, out var namedType) || namedType is null)
             {

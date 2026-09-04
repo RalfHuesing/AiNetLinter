@@ -150,7 +150,7 @@ internal static class FileStructureToolRegistrations
         AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? symbolIdentifier = null, string? sortBy = "lines",
+            async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? sortBy = "lines",
                 int maxMembers = GetClassStructureTool.DefaultMaxMembers,
                 string? kindFilter = null,
                 string? nameFilter = null,
@@ -161,8 +161,8 @@ internal static class FileStructureToolRegistrations
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter), ct),
-                            AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter), ct),
+                            ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter, symbol), ct),
+                            AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter, symbol), ct),
                             MaxResponseBytes: maxResponseBytes),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("get_class_structure", GetClassStructureDescription)));
@@ -172,7 +172,7 @@ internal static class FileStructureToolRegistrations
         "Wann nutzen: Tabellarische Uebersicht ueber alle Member einer Klasse/eines Typs inkl. " +
         "Kind, Name, Visibility, Start-/End-Zeile, Zeilenanzahl und Signatur (z. B. zur Analyse " +
         "vor Refactorings oder zur Identifikation langer Member; bei Records inkl. Primary-Constructor-Parametern). " +
-        "symbolIdentifier (Pflicht): Typname, Datei.cs:Zeile:Spalte oder DocCommentId. " +
+        "symbolIdentifier (Pflicht, oder Alias symbol): Typname, Datei.cs:Zeile:Spalte oder DocCommentId. " +
         "sortBy: 'lines' (Default), 'kind', 'name'. kindFilter: optionaler Filter nach Member-Kind (z. B. Method, Property, Field, Constructor, all). " +
         "nameFilter: optionaler Substring-Filter nach Member-Namen. maxMembers: Begrenzung der sichtbaren Member " +
         "(Default 50, Cap " + GetClassStructureTool.MaxMembersCap + "); bei Ueberschreitung " +

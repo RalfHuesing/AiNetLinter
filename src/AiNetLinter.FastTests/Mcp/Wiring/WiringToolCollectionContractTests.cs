@@ -202,6 +202,18 @@ public sealed class WiringToolCollectionContractTests
         Assert.Contains("symbolIdentifier", testContext.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("symbol", testContext.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier (primaer", testContext.Description, StringComparison.Ordinal);
+
+        var metricsLookup = tools["metrics_lookup"];
+        Assert.Contains("symbolIdentifier", metricsLookup.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("symbol", metricsLookup.InputSchema.ToString(), StringComparison.Ordinal);
+
+        var symbolBody = tools["get_symbol_body"];
+        Assert.Contains("symbolIdentifier", symbolBody.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("symbol", symbolBody.InputSchema.ToString(), StringComparison.Ordinal);
+
+        var classStructure = tools["get_class_structure"];
+        Assert.Contains("symbolIdentifier", classStructure.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("symbol", classStructure.InputSchema.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]

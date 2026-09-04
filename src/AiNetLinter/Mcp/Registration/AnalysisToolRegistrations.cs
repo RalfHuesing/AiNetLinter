@@ -172,23 +172,32 @@ internal static class AnalysisToolRegistrations
         AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string[]? symbolIdentifiers = null, CancellationToken ct = default) =>
+            async (string targetType, string targetPath, string[]? symbolIdentifiers = null, string? symbolIdentifier = null, string? symbol = null, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => MetricsLookupTool.ExecuteAsync(lease.Server, symbolIdentifiers, ct),
-                            AssemblySessionCall: lease => MetricsLookupTool.ExecuteAsync(lease.Server, symbolIdentifiers, ct)),
+                            ProjectCall: lease => MetricsLookupTool.ExecuteAsync(lease.Server, ResolveMetricsLookupIdentifiers(symbolIdentifiers, symbolIdentifier, symbol), ct),
+                            AssemblySessionCall: lease => MetricsLookupTool.ExecuteAsync(lease.Server, ResolveMetricsLookupIdentifiers(symbolIdentifiers, symbolIdentifier, symbol), ct)),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("metrics_lookup", MetricsLookupDescription)));
     }
+
+    private static string[]? ResolveMetricsLookupIdentifiers(string[]? symbolIdentifiers, string? symbolIdentifier, string? symbol) =>
+        symbolIdentifiers is { Length: > 0 }
+            ? symbolIdentifiers
+            : !string.IsNullOrWhiteSpace(symbolIdentifier)
+                ? [symbolIdentifier.Trim()]
+                : !string.IsNullOrWhiteSpace(symbol)
+                    ? [symbol.Trim()]
+                    : null;
 
     private const string MetricsLookupDescription =
         "Wann nutzen: punktgenaue Metriken (LOC, zyklomatische/kognitive Komplexitaet, " +
         "Parameteranzahl, AI-Context-Footprint, Member-Statistiken) und Schwellwert-Abgleich " +
         "fuer ein oder mehrere C#-Symbole (Batch-Support in 1 Turn) abrufen. " +
-        "symbolIdentifiers: Array von Symbol-IDs (auch fuer genau ein Symbol): " +
+        "symbolIdentifiers: Array von Symbol-IDs oder symbolIdentifier / symbol als String-Alias fuer genau ein Symbol: " +
         "DocCommentId (\"M:Namespace.Class.Method\"), \"Datei.cs:Zeile:Spalte\", " +
         "\"Datei.cs:Zeile\" oder qualifizierter Name. Liefert MetricsLookupBatchDto in structuredContent.";
 

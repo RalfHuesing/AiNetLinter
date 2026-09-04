@@ -32,21 +32,21 @@ internal static class SymbolBodyToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string[]? symbolIdentifiers = null, string? symbolIdentifier = null, int maxBodyLines = 80, int startLine = 1, int? endLine = null, CancellationToken ct = default) =>
+            async (string targetType, string targetPath, string[]? symbolIdentifiers = null, string? symbolIdentifier = null, string? symbol = null, int maxBodyLines = 80, int startLine = 1, int? endLine = null, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, new GetSymbolBodyRequest(symbolIdentifiers, symbolIdentifier, maxBodyLines, startLine, endLine), ct),
-                            AssemblySessionCall: lease => GetSymbolBodyTool.ExecuteAsync(lease, new GetSymbolBodyRequest(symbolIdentifiers, symbolIdentifier, maxBodyLines, startLine, endLine), ct)),
+                            ProjectCall: lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, new GetSymbolBodyRequest(symbolIdentifiers, symbolIdentifier, maxBodyLines, startLine, endLine, symbol), ct),
+                            AssemblySessionCall: lease => GetSymbolBodyTool.ExecuteAsync(lease, new GetSymbolBodyRequest(symbolIdentifiers, symbolIdentifier, maxBodyLines, startLine, endLine, symbol), ct)),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("get_symbol_body", GetSymbolBodyDescription)));
     }
 
     private const string GetSymbolBodyDescription =
         "Wann nutzen: Source-Body eines oder mehrerer C#-Symbole lesen (Batch-Support in 1 Turn). " +
-        "symbolIdentifiers: Array von Symbol-IDs oder symbolIdentifier als String-Alias fuer genau ein Symbol: " +
+        "symbolIdentifiers: Array von Symbol-IDs oder symbolIdentifier / symbol als String-Alias fuer genau ein Symbol: " +
         "\"M:Namespace.Klasse.Methode\", " +
         "\"Datei.cs:Zeile:Spalte\", \"Datei.cs:Zeile\" oder \"Klasse.Methode\". " +
         "maxBodyLines: Begrenzung der Zeilenanzahl je Symbol-Body (Default 80). " +

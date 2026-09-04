@@ -59,6 +59,21 @@ public sealed class GetClassStructureToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_SymbolAlias_ResolvesClassStructure()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetClassStructureTool.ExecuteAsync(
+            state,
+            new GetClassStructureArgs(null, "lines", Symbol: "Greeter"),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("# Typ: SymbolGraphMini.Greeter", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ValidClass_ReturnsHeaderAndMemberTable()
     {
         var state = _fixture.CreateServer();

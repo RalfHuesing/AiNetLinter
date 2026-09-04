@@ -41,7 +41,7 @@ internal static class GetSymbolBodyTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var identifiers = NormalizeIdentifiers(request.SymbolIdentifiers, request.SymbolIdentifier);
+        var identifiers = NormalizeIdentifiers(request.SymbolIdentifiers, request.EffectiveSymbolIdentifier);
         if (identifiers.Count == 0)
         {
             return McpToolResults.Recoverable(
@@ -77,7 +77,7 @@ internal static class GetSymbolBodyTool
         ArgumentNullException.ThrowIfNull(lease);
         var solution = lease.Solution;
         if (solution is null) return Task.FromResult(McpToolResults.SolutionNotLoaded());
-        var identifiers = NormalizeIdentifiers(request.SymbolIdentifiers, request.SymbolIdentifier);
+        var identifiers = NormalizeIdentifiers(request.SymbolIdentifiers, request.EffectiveSymbolIdentifier);
         if (identifiers.Count == 0)
         {
             return Task.FromResult(McpToolResults.Recoverable(
@@ -270,8 +270,14 @@ internal sealed record GetSymbolBodyRequest(
     string? SymbolIdentifier = null,
     int MaxBodyLines = GetSymbolBodyTool.DefaultMaxBodyLines,
     int StartLine = 1,
-    int? EndLine = null)
+    int? EndLine = null,
+    string? Symbol = null)
 {
+    internal string? EffectiveSymbolIdentifier =>
+        !string.IsNullOrWhiteSpace(SymbolIdentifier)
+            ? SymbolIdentifier
+            : Symbol;
+
     internal int EffectiveMaxBodyLines =>
         EndLine.HasValue
             ? Math.Max(1, EndLine.Value - Math.Max(1, StartLine) + 1)
