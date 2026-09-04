@@ -47,7 +47,7 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string[]? namePatterns = null, string? namePattern = null, string? symbol = null, string? kind = null, int maxResults = 50, bool includeReferences = false, CancellationToken ct = default) =>
+            async (string targetType, string targetPath, string[]? namePatterns = null, string? namePattern = null, string? symbol = null, string? kind = null, int maxResults = 50, bool includeReferences = false, int maxResponseBytes = 0, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
@@ -63,7 +63,8 @@ internal static class SymbolGraphToolRegistrations
                                      maxResults,
                                      includeReferences),
                                  ct),
-                             ExpandAssemblyReferences: includeReferences),
+                             ExpandAssemblyReferences: includeReferences,
+                             MaxResponseBytes: maxResponseBytes),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("find_symbol", FindSymbolDescription)));
     }

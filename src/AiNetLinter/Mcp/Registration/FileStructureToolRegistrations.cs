@@ -90,6 +90,7 @@ internal static class FileStructureToolRegistrations
                 new AnalysisTargetRequest(targetType, targetPath),
                 canonicalRoot => GetFileTreeTool.ExecuteAsync(canonicalRoot, input, cancellationToken));
 
+
     private const string GetFileTreeDescription =
         "Wann nutzen: physische Dateilandkarte eines absoluten Projekt- oder dekompilierten " +
         "SourceRoots als ersten Discovery-Schritt fuer Agenten. root, fileFilter und " +
@@ -114,6 +115,7 @@ internal static class FileStructureToolRegistrations
                 bool includeTypes = true,
                 string? kind = "all",
                 int maxResults = GetNamespaceTreeTool.DefaultMaxResults,
+                int maxResponseBytes = 0,
                 CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
@@ -127,7 +129,8 @@ internal static class FileStructureToolRegistrations
                             AssemblySessionCall: lease => GetNamespaceTreeTool.ExecuteAsync(
                                 lease.Server,
                                 new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults),
-                                ct)),
+                                ct),
+                            MaxResponseBytes: maxResponseBytes),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("get_namespace_tree", GetNamespaceTreeDescription)));
     }
@@ -138,7 +141,8 @@ internal static class FileStructureToolRegistrations
         "Uebersicht. project: Namespaces eines Projekts filtern. namespacePrefix: Einstiegspunkt fuer " +
         "Drilldown. depth: 1-3 Namespace-Ebenen (Default 1). includeTypes: Typen ausgeben (Default true) " +
         "oder nur Sub-Namespaces. kind: class/interface/record/struct/enum/all (Default all). " +
-        "maxResults: Obergrenze der Eintraege (Default 50, Cap 200).";
+        "maxResults: Obergrenze der Eintraege (Default 50, Cap 200). " +
+        "maxResponseBytes: Begrenzung des Antwortbudgets (Default 0 = Standardbudget).";
 
     private static void AddGetClassStructure(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -150,6 +154,7 @@ internal static class FileStructureToolRegistrations
                 int maxMembers = GetClassStructureTool.DefaultMaxMembers,
                 string? kindFilter = null,
                 string? nameFilter = null,
+                int maxResponseBytes = 0,
                 CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
@@ -157,7 +162,8 @@ internal static class FileStructureToolRegistrations
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter), ct),
-                            AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter), ct)),
+                            AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter), ct),
+                            MaxResponseBytes: maxResponseBytes),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("get_class_structure", GetClassStructureDescription)));
     }
@@ -170,7 +176,8 @@ internal static class FileStructureToolRegistrations
         "sortBy: 'lines' (Default), 'kind', 'name'. kindFilter: optionaler Filter nach Member-Kind (z. B. Method, Property, Field, Constructor, all). " +
         "nameFilter: optionaler Substring-Filter nach Member-Namen. maxMembers: Begrenzung der sichtbaren Member " +
         "(Default 50, Cap " + GetClassStructureTool.MaxMembersCap + "); bei Ueberschreitung " +
-        "Truncation-Meta-Zeile und TotalMemberCount vs. ShownMemberCount im structuredContent.";
+        "Truncation-Meta-Zeile und TotalMemberCount vs. ShownMemberCount im structuredContent. " +
+        "maxResponseBytes: Begrenzung des Antwortbudgets (Default 0 = Standardbudget).";
 
     private static void AddGetFileSkeleton(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -178,14 +185,15 @@ internal static class FileStructureToolRegistrations
         AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string[]? filePaths = null, string? filePath = null, CancellationToken ct = default) =>
+            async (string targetType, string targetPath, string[]? filePaths = null, string? filePath = null, int maxResponseBytes = 0, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, ResolveFilePaths(filePaths, filePath), ct),
-                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, ResolveFilePaths(filePaths, filePath), ct)),
+                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, ResolveFilePaths(filePaths, filePath), ct),
+                            MaxResponseBytes: maxResponseBytes),
                         ct)),
             McpToolRegistrationOptions.TargetedReadOnlyTool("get_file_skeleton", GetFileSkeletonDescription)));
     }
@@ -194,7 +202,8 @@ internal static class FileStructureToolRegistrations
         "Wann nutzen: Ueberblick ueber Typen und Signaturen einer oder mehrerer C#-Dateien (Batch in 1 Turn) " +
         "ohne die Bodies zu lesen — jede Signatur traegt eine stabile id: fuer einen Folge-Call an get_symbol_body. " +
         "filePaths: Array von Dateipfaden (auch fuer genau eine Datei), relativ oder absolut; " +
-        "filePath: String-Alias fuer genau eine Datei, wenn kein filePaths-Array uebergeben wird.";
+        "filePath: String-Alias fuer genau eine Datei, wenn kein filePaths-Array uebergeben wird. " +
+        "maxResponseBytes: Begrenzung des Antwortbudgets (Default 0 = Standardbudget).";
 
     private static string[]? ResolveFilePaths(string[]? filePaths, string? filePath) =>
         filePaths is { Length: > 0 }

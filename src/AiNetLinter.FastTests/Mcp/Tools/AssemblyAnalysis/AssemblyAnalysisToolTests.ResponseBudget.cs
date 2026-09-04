@@ -461,4 +461,23 @@ public sealed partial class AssemblyAnalysisToolTests
             second.Types.Select(type => type.Id),
             id => first.Types.Any(type => type.Id == id));
     }
+
+    [Fact]
+    public void ApplyWireBudget_PreservesReadableTextInsteadOfDeletingIt()
+    {
+        var text = "# Klasse MyType\n| Kind | Name | Lines |\n| Method | DoWork | 1-10 |\n";
+        var result = McpToolResults.Text(
+            text,
+            new
+            {
+                types = Enumerable.Range(0, 50).Select(index => new { id = $"T{index}", name = $"Type{index}" }).ToArray(),
+                members = Enumerable.Range(0, 50).Select(index => new { id = $"M{index}", name = $"Member{index}" }).ToArray(),
+            });
+
+        var projected = AssemblyAnalysisResponse.ApplyWireBudget(result, 4096, 0);
+        var projectedText = AssemblyAnalysisTestSupport.TextOf(projected);
+
+        Assert.Contains("# Klasse MyType", projectedText, StringComparison.Ordinal);
+        Assert.DoesNotContain("StructuredContent ist die kanonische Nutzlast", projectedText, StringComparison.Ordinal);
+    }
 }

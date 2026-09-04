@@ -16,10 +16,10 @@ internal static partial class AssemblyAnalysisResponseLimits
     internal const int MaxReferences = 32;
     internal const int MaxReferenceSessions = 32;
     internal const int MaxSessionDiagnostics = 3;
-    internal const int DefaultResponseBytes = 16 * 1024;
+    internal const int DefaultResponseBytes = 32 * 1024;
     internal const int MinimumResponseBytes = 2 * 1024;
 
-    internal const int MaxResponseBytes = 32 * 1024;
+    internal const int MaxResponseBytes = 64 * 1024;
 
     internal static bool IsBelowMinimumResponseBudget(int requested) =>
         requested > 0 && requested < MinimumResponseBytes;

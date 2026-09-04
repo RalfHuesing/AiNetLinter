@@ -110,12 +110,6 @@ internal static partial class AssemblyAnalysisResponse
             IsStructuredTruncated(result.StructuredContent));
         if (Measure(withBudget).TotalBytes <= budget) return withBudget;
 
-        withBudget = ReplaceText(
-            withBudget,
-            "[ASSEMBLY] StructuredContent ist die kanonische Nutzlast; " +
-            "die Textdarstellung wurde wegen des gemeinsamen Wire-Budgets gekürzt.");
-        withBudget = AddWireBudgetMetadata(withBudget, budget, isTruncated: true);
-
         for (var attempt = 0; attempt < 128 && Measure(withBudget).TotalBytes > budget; attempt++)
         {
             if (withBudget.StructuredContent is not { ValueKind: JsonValueKind.Object } structured)
@@ -129,7 +123,9 @@ internal static partial class AssemblyAnalysisResponse
             var trimmed = TrimStructured(structured, available, cursorOffset);
             if (trimmed.GetRawText() == structured.GetRawText())
             {
-                withBudget = ReplaceText(withBudget, string.Empty);
+                var text = withBudget.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
+                var remainingForText = Math.Max(1, budget - Measure(withBudget).StructuredBytes);
+                withBudget = ReplaceText(withBudget, TrimUtf8(text, remainingForText));
                 break;
             }
             withBudget = ReplaceStructured(withBudget, trimmed);
@@ -146,7 +142,9 @@ internal static partial class AssemblyAnalysisResponse
                 ["truncatedBy"] = new JsonArray("responseBudget"),
                 ["detailHint"] = "Die strukturierte Nutzlast wurde auf den minimalen Antwortumfang gekürzt; maxResponseBytes erhöhen oder die Detailabfrage gezielt erneut anfordern.",
             }, McpJsonOptions.Default));
-            withBudget = ReplaceText(withBudget, string.Empty);
+            var text = withBudget.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
+            var remainingForText = Math.Max(1, budget - Measure(withBudget).StructuredBytes);
+            withBudget = ReplaceText(withBudget, TrimUtf8(text, remainingForText));
             withBudget = AddWireBudgetMetadata(withBudget, budget, isTruncated: true);
         }
 
