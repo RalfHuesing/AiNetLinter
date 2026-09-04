@@ -1,5 +1,5 @@
 ---
-status: ready
+status: implemented
 task: 01-agent-ergonomie-und-assembly-analyse
 priority: 1
 ---
