@@ -44,7 +44,7 @@ Die neuen und erweiterten MCP-Tools wurden in Version `1.0.166` interaktiv gegen
 | Priorität | ID | Betroffenes Tool | Beobachtetes Verhalten | Auswirkung auf den Agenten |
 |:---|:---|:---|:---|:---|
 | **P0** | `MCP-TEXT-BLACK-HOLE` | `search_assembly`, `get_assembly_context`, `get_call_tree` | Sobald das 16-KiB-Wire-Budget überschritten wird, ersetzt der Server den gesamten Textinhalt durch: `"[ASSEMBLY] StructuredContent ist die kanonische Nutzlast; die Textdarstellung wurde wegen des gemeinsamen Wire-Budgets gekürzt."` | **Vollständige Erblindung des Agenten**: Die meisten LLM-Clients (Cursor, Antigravity, Claude Desktop) lesen primär `content[0].text`. Der Agent sieht **0 Treffer**, obwohl Treffer vorhanden sind. |
-| **P1** | `EXTERNAL-SOURCE-UNMAPPED` | `get_server_health` / Assembly-Engine | DLL A meldet `Mapping-Status: not-configured` und `fallbackReason: provider-unavailable`. | In `external-sources.json` fehlte der Eintrag für DLL A. Es fand gar kein Clone-Versuch statt; die Meldung `provider-unavailable` ist irreführend (suggeriert Server-Ausfall statt Mapping-Fehlen). |
+| **P0** | `EXTERNAL-SOURCE-HEALTH-MISLEADING` | [AssemblyHealthProjection.cs:72](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/ServerMaintenance/Projection/AssemblyHealthProjection.cs#L72) & [ExternalSourceGitProcessOutputPolicy.cs:38-42](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/ExternalSource/ProcessExecution/ExternalSourceGitProcessOutputPolicy.cs#L38-L42) | DLL A meldet `Mapping-Status: not-configured` und `fallbackReason: provider-unavailable`, obwohl `external-sources.json` vollkommen korrekt konfiguriert ist. | **Irreführung des Nutzers & stiller Fallback**: 1. `AssemblyHealthProjection` setzt bei fehlgeschlagener Snapshot-Erzeugung pauschal `source == null ? "not-configured" : "verified"`. 2. Der eigentliche Git-Clone scheitert am `stderr`-Progress-Check (`GIT-PROGRESS-ABORT`). 3. Der Daemon lädt geänderte JSON-Konfigurationen nicht zur Laufzeit neu. |
 | **P1** | `COMPOSITE-TEXT-EMPTY` | `get_assembly_context` | Die Textdarstellung (`RenderText`) gibt nur Eigenschaftsnamen aus (`Abschnitt: metrics`), aber keinerlei fachlichen Inhalt (weder Typen, Signaturen noch Metrikwerte). | Das Composite-Tool liefert im Textmodus keinen Mehrwert. Der Agent muss erst recht Einzeltools aufrufen. |
 | **P1** | `DATA-ACCESS-LINQ-POLLUTION` | `search_assembly (data_access)` | Der Regex-Filter enthält `\bSELECT\b` (case-insensitive). In C# matcht das gewöhnliche LINQ-Aufrufe (`.Select(...)` und `select x`). | 80 % der Suchergebnisse für `data_access` waren einfache LINQ-Listenoperationen und keine Datenbankaufrufe. |
 | **P2** | `FIND-SYMBOL-ABSOLUTE-PATH` | `find_symbol` (Assembly-Modus) | Gibt vor jedem Treffer den vollen ~180 Zeichen langen internen Cache-Pfad (`C:\Daten\Tools\AiNetLinter-win-x64\cache\asm...`) aus. | Hoher unnötiger Token-Verbrauch; `search_assembly` macht es mit relativen Pfaden bereits besser. |
@@ -77,6 +77,58 @@ Die neuen und erweiterten MCP-Tools wurden in Version `1.0.166` interaktiv gegen
   [AssemblySearchTool.cs:37](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblySearchTool.cs#L37) enthält `SELECT`. Da Regex case-insensitive läuft, wird jedes LINQ-Statement gematcht.
 * **[VORSCHLAG]**:
   In C#-Codebases sollte `SELECT` nur gematcht werden, wenn es von typischen SQL-Strukturen begleitet ist (z. B. `\bSELECT\s+.*?\s+FROM\b` oder innerhalb von String-Literalen), während LINQ-Keywords ignoriert werden.
+
+#### 3. `EXTERNAL-SOURCE-HEALTH-MISLEADING` & `GIT-PROGRESS-ABORT` (P0 – Root-Cause-Analyse)
+* **Beobachtung**:
+  Die Konfigurationen in `c:\Daten\Tools\AiNetLinter-win-x64\appsettings.json` und `external-sources.json` sind syntaktisch und semantisch einwandfrei gepflegt:
+  ```json
+  // appsettings.json
+  {
+    "ExternalSources": {
+      "MappingsPath": "external-sources.json",
+      "CacheRoot": "cache",
+      "RefreshIntervalMinutes": 60,
+      "MaxDiskBytes": 536870912,
+      "MaxMemoryBytes": 536870912,
+      "MaxParallelOperations": 4,
+      "MaxResidentResources": 128,
+      "IdleTtlMinutes": 45
+    }
+  }
+  ```
+  ```json
+  // external-sources.json
+  {
+    "repositories": [
+      {
+        "url": "http://ol80:3000/SAN/San.OfficeLine.Core",
+        "solutionPath": "San.OfficeLine.Core.sln",
+        "assemblies": [
+          "San.OfficeLine.Core.dll",
+          "San.OfficeLine.Core.Test.dll"
+        ]
+      }
+    ]
+  }
+  ```
+  Trotzdem meldet `get_server_health`:
+  ```text
+  Mapping-Status: not-configured
+  Checkout-Status: not-applicable
+  Next-Action: Source-Mapping/Provider prüfen.
+  ```
+* **Ursachen-Kette (3 interagierende Faktoren)**:
+  1. **Falsche Health-Projektion ([AssemblyHealthProjection.cs:72](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/ServerMaintenance/Projection/AssemblyHealthProjection.cs#L72))**:
+     `MappingStatus: source is null ? "not-configured" : "verified"`.
+     `source` ist die `origin.SourceSnapshotIdentity`. Wenn die Source-Bereitstellung fehlschlägt, ist `source == null` und der Server fällt auf Decompilation zurück (`origin.IsDecompiled = true`). Die Health-Ausgabe gibt daraufhin fälschlich `"not-configured"` aus – selbst wenn das Mapping sauber existiert!
+  2. **Echter Clone-Abbruch wegen Git-Progress ([ExternalSourceGitProcessOutputPolicy.cs:38-42](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/ExternalSource/ProcessExecution/ExternalSourceGitProcessOutputPolicy.cs#L38-L42))**:
+     `GiteaGitRepositoryTransport.ExecuteCloneAsync` ruft `git clone` ohne `--quiet` / `--no-progress` auf. Git schreibt Fortschritt auf `stderr` (`remote: Enumerating objects...`, `Receiving objects...`). Die Policy verwirft jede Zeile außer der ersten (`Cloning into '.ainetlinter-git-clone'...`) und markiert den Clone trotz ExitCode 0 als fehlerhaft (`InvalidResponse`), wodurch der Provider als `provider-unavailable` deklariert wird.
+  3. **Kein Config-Reload im Daemon ([AssemblyAnalysisHostComposition.cs:201](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisHostComposition.cs#L201))**:
+     Der Daemon liest `appsettings.json` und `external-sources.json` nur einmalig beim Prozessstart. Nachträgliche Änderungen in den Dateien erfordern zwingend einen Neustart des Daemon-Prozesses; `reload_config` lädt nur `rules.json` neu. Zudem cacht der Orchestrator negative Ergebnisse (`cachedNegativeFallback`) für die Dauer der Session.
+* **[VORSCHLAG]**:
+  1. `ExternalSourceGitProcessOutputPolicy`: Git-Progress-Zeilen auf `stderr` tolerieren oder `git clone` mit `-q` / `--no-progress` ausführen.
+  2. `AssemblyHealthProjection`: Saubere Unterscheidung zwischen `"not-configured"`, `"configured-checkout-failed"` und `"verified"`.
+  3. Daemon-Lebenszyklus: CLI- oder Tool-Kommando bereitstellen, um externe Source-Konfigurationen und Caches ohne Daemon-Kill neu einzulesen.
 
 ---
 
