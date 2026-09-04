@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
+using AiNetLinter.Core.Documents;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -327,7 +328,7 @@ internal static class DependencyGraphScanner
     private static string ToRelativePath(Solution solution, string absolutePath)
     {
         if (string.IsNullOrEmpty(absolutePath)) return absolutePath;
-        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
+        var solutionDir = SolutionDocumentPathResolver.GetSolutionDirectory(solution) ?? "";
         return PathNormalizer.ToRelative(solutionDir, absolutePath);
     }
 

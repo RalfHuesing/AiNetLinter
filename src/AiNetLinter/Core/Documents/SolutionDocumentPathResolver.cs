@@ -38,6 +38,13 @@ internal static class SolutionDocumentPathResolver
             .ToList();
         if (virtualMatches.Count > 0) return virtualMatches;
 
+        var suffixMatches = solution.Projects
+            .SelectMany(project => project.Documents)
+            .Where(document => document.FilePath is not null
+                && NormalizeVirtualPath(document.FilePath).EndsWith("/" + NormalizeVirtualPath(filePath), StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (suffixMatches.Count > 0) return suffixMatches;
+
         return IsBareFileName(filePath)
             ? solution.Projects
                 .SelectMany(project => project.Documents)
@@ -70,15 +77,29 @@ internal static class SolutionDocumentPathResolver
         }
     }
 
-    private static string? GetSolutionDirectory(Solution solution)
+    internal static string? GetSolutionDirectory(Solution solution)
     {
-        if (string.IsNullOrWhiteSpace(solution.FilePath)
-            || !Path.IsPathFullyQualified(solution.FilePath))
+        if (!string.IsNullOrWhiteSpace(solution.FilePath)
+            && Path.IsPathFullyQualified(solution.FilePath))
         {
-            return null;
+            return Path.GetDirectoryName(solution.FilePath);
         }
 
-        return Path.GetDirectoryName(solution.FilePath);
+        var projectWithDir = solution.Projects.FirstOrDefault(p =>
+            !string.IsNullOrWhiteSpace(p.FilePath) && Path.IsPathFullyQualified(p.FilePath));
+        if (projectWithDir is not null)
+        {
+            return Path.GetDirectoryName(projectWithDir.FilePath);
+        }
+
+        var firstDoc = solution.Projects.SelectMany(p => p.Documents).FirstOrDefault(d =>
+            !string.IsNullOrWhiteSpace(d.FilePath) && Path.IsPathFullyQualified(d.FilePath));
+        if (firstDoc is not null)
+        {
+            return Path.GetDirectoryName(firstDoc.FilePath);
+        }
+
+        return null;
     }
 
     private static string NormalizeVirtualPath(string? path)

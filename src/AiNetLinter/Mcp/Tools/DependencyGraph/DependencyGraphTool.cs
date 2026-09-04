@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
+using AiNetLinter.Core.Documents;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -91,7 +92,7 @@ internal static class DependencyGraphTool
         bool absolutePaths,
         CancellationToken ct)
     {
-        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
+        var solutionDir = SolutionDocumentPathResolver.GetSolutionDirectory(solution) ?? "";
         var absolutePath = Path.GetFullPath(Path.Combine(solutionDir, input.FilePath!));
         var document = DiffImpactAnalyzer.FindDocumentByPath(solution, input.FilePath!);
         if (document is null) return McpToolResults.FileNotFound(input.FilePath!);
@@ -140,7 +141,7 @@ internal static class DependencyGraphTool
     {
         var location = type.Locations.FirstOrDefault(l => l.IsInSource && l.SourceTree is not null);
         if (location is null) return type.Name;
-        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
+        var solutionDir = SolutionDocumentPathResolver.GetSolutionDirectory(solution) ?? "";
         return absolutePath
             ? Path.GetFullPath(location.SourceTree!.FilePath)
             : PathNormalizer.ToRelative(solutionDir, location.SourceTree!.FilePath);
@@ -163,7 +164,7 @@ internal static class DependencyGraphTool
     private static string ToAbsolutePath(Solution solution, string path)
     {
         if (Path.IsPathFullyQualified(path)) return Path.GetFullPath(path);
-        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
+        var solutionDir = SolutionDocumentPathResolver.GetSolutionDirectory(solution) ?? "";
         return Path.GetFullPath(Path.Combine(solutionDir, path));
     }
 

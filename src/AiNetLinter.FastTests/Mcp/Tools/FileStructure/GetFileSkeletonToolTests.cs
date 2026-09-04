@@ -147,4 +147,18 @@ public sealed class GetFileSkeletonToolTests
         Assert.Contains("Greeter", text, StringComparison.Ordinal);
         Assert.Contains("Datei nicht gefunden: `src/SymbolGraphMini/NonExistent.cs`", text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void SolutionDocumentPathResolver_ResolvesRelativePathWhenSolutionFilePathIsNull()
+    {
+        var ws = new Microsoft.CodeAnalysis.AdhocWorkspace();
+        var proj = ws.CurrentSolution.AddProject("AsmProj", "AsmProj", Microsoft.CodeAnalysis.LanguageNames.CSharp);
+        var doc = proj.AddDocument("Greeter.cs", "public class Greeter {}", filePath: @"C:\Cache\SubDir\Greeter.cs");
+
+        Assert.Null(doc.Project.Solution.FilePath);
+        var resolved = AiNetLinter.Core.Documents.SolutionDocumentPathResolver.Find(doc.Project.Solution, "SubDir/Greeter.cs");
+
+        Assert.NotNull(resolved);
+        Assert.Equal("Greeter.cs", resolved.Name);
+    }
 }

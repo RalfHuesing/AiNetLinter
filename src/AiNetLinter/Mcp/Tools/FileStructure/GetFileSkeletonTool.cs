@@ -58,7 +58,7 @@ internal static class GetFileSkeletonTool
         AnalysisSymbolIdentity? assemblyIdentity,
         CancellationToken ct)
     {
-        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
+        var solutionDir = SolutionDocumentPathResolver.GetSolutionDirectory(solution) ?? "";
         var mb = new MarkdownBuilder();
 
         for (var i = 0; i < paths.Count; i++)
