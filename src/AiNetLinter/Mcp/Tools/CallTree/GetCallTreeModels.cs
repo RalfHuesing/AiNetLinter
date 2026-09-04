@@ -32,7 +32,12 @@ internal sealed record GetCallTreeInput(
     int Depth,
     string? Format,
     int TopN,
-    string? Direction = null);
+    string? Direction = null,
+    string? Symbol = null)
+{
+    public string? EffectiveSymbolIdentifier =>
+        !string.IsNullOrWhiteSpace(SymbolIdentifier) ? SymbolIdentifier : Symbol;
+}
 
 internal sealed record CallTreeBuildRequest(
     Solution Solution,

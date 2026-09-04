@@ -38,7 +38,7 @@ internal static class DependencyGraphTool
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
         var hasFilePath = !string.IsNullOrEmpty(input.FilePath);
-        var hasSymbolIdentifier = !string.IsNullOrEmpty(input.SymbolIdentifier);
+        var hasSymbolIdentifier = !string.IsNullOrEmpty(input.EffectiveSymbolIdentifier);
         if (hasFilePath == hasSymbolIdentifier)
         {
             return McpToolResults.InvalidArgument(
@@ -115,7 +115,8 @@ internal static class DependencyGraphTool
         AnalysisSymbolIdentity? assemblyIdentity,
         CancellationToken ct)
     {
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, input.SymbolIdentifier!, ct, assemblyIdentity);
+        var symbolIdentifier = input.EffectiveSymbolIdentifier!;
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, symbolIdentifier, ct, assemblyIdentity);
         if (error is not null) return error;
 
         // Nicht-Typ-Symbole (Methode/Property/Feld) auf den einschliessenden Typ normalisieren —
@@ -124,8 +125,8 @@ internal static class DependencyGraphTool
         if (targetType is null)
         {
             return McpToolResults.InvalidArgument(
-                $"'{input.SymbolIdentifier}' loest zu '{symbol!.Kind}' auf — kein Typ und kein Mitglied mit einschliessendem Typ.",
-                hint: "symbolIdentifier muss auf einen Typen oder Typ-Member verweisen.");
+                $"'{symbolIdentifier}' loest zu '{symbol!.Kind}' auf — kein Typ und kein Mitglied mit einschliessendem Typ.",
+                hint: "symbolIdentifier (oder symbol) muss auf einen Typen oder Typ-Member verweisen.");
         }
 
         var request = new DependencyGraphScanRequest(solution, includeOutgoing, includeIncoming, input.Depth, input.MaxResults);

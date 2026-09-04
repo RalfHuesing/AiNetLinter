@@ -42,11 +42,12 @@ internal static class GetCallTreeTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        if (string.IsNullOrEmpty(input.SymbolIdentifier))
+        var symbolIdentifier = input.EffectiveSymbolIdentifier;
+        if (string.IsNullOrEmpty(symbolIdentifier))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
+                "Pflichtparameter 'symbolIdentifier' (oder 'symbol') fehlt oder ist leer.",
                 hint: McpToolResults.SymbolIdentifierHint);
         }
 
@@ -62,7 +63,7 @@ internal static class GetCallTreeTool
         {
             var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
                 solution,
-                input.SymbolIdentifier,
+                symbolIdentifier,
                 ct,
                 state.AssemblySymbolIdentity);
             if (error is not null) return error;
@@ -100,7 +101,7 @@ internal static class GetCallTreeTool
         {
             return McpToolResults.CompilationError(
                 $"Unerwarteter Fehler in get_call_tree: {ex.Message}",
-                context: input.SymbolIdentifier);
+                context: symbolIdentifier);
         }
     }
 

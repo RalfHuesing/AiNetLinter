@@ -19,7 +19,12 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 internal sealed record FindReferencesRequest(
     string? SymbolIdentifier,
     int MaxResults,
-    int Depth);
+    int Depth,
+    string? Symbol = null)
+{
+    public string? EffectiveSymbolIdentifier =>
+        !string.IsNullOrWhiteSpace(SymbolIdentifier) ? SymbolIdentifier : Symbol;
+}
 
 /// <summary>
 /// MCP-Tool <c>find_references</c>: loest einen Symbol-Identifikator (stabile
@@ -58,11 +63,12 @@ internal static class FindReferencesTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        if (string.IsNullOrEmpty(request.SymbolIdentifier))
+        var symbolIdentifier = request.EffectiveSymbolIdentifier;
+        if (string.IsNullOrEmpty(symbolIdentifier))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
+                "Pflichtparameter 'symbolIdentifier' (oder 'symbol') fehlt oder ist leer.",
                 hint: McpToolResults.SymbolIdentifierHint);
         }
 
@@ -70,7 +76,7 @@ internal static class FindReferencesTool
         {
             var (symbol, error) = await ResolveSymbolAsync(
                 solution,
-                request.SymbolIdentifier,
+                symbolIdentifier,
                 ct,
                 state.AssemblySymbolIdentity);
             if (error is not null) return error;
@@ -87,7 +93,7 @@ internal static class FindReferencesTool
             var formatted = TransitiveCallGraphFormatter.FormatResponse(
                 traversal,
                 traversal.Completeness.TotalCallSiteCount == 0
-                    ? $"Keine Aufrufstellen gefunden fuer '{request.SymbolIdentifier}'"
+                    ? $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"
                     : null);
 
             var finalBody = TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
@@ -99,7 +105,7 @@ internal static class FindReferencesTool
         {
             return McpToolResults.CompilationError(
                 $"Unerwarteter Fehler in find_references: {ex.Message}",
-                context: request.SymbolIdentifier);
+                context: symbolIdentifier);
         }
     }
 

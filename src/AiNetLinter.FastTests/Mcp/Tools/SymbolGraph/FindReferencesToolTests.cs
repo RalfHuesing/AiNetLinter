@@ -452,4 +452,18 @@ public sealed class FindReferencesToolTests
         Assert.Contains("Caller.cs", textContent.Text, System.StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WithSymbolAlias_ResolvesReferences()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await FindReferencesTool.ExecuteAsync(
+            state,
+            new FindReferencesRequest(null, MaxResults: 50, Depth: 1, Symbol: "Greeter.Greet"),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Caller.cs", textContent.Text, System.StringComparison.Ordinal);
+    }
 }

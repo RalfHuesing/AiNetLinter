@@ -22,28 +22,29 @@ internal static class GetTypeHierarchyTool
     internal const int DefaultMaxResults = 50;
 
     internal static async Task<CallToolResult> ExecuteAsync(
-        ISolutionStateProvider state, string? symbolIdentifier, int maxResults, CancellationToken ct)
+        ISolutionStateProvider state, string? symbolIdentifier, int maxResults, CancellationToken ct, string? symbol = null)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        if (string.IsNullOrEmpty(symbolIdentifier))
+        var effectiveIdentifier = !string.IsNullOrWhiteSpace(symbolIdentifier) ? symbolIdentifier : symbol;
+        if (string.IsNullOrEmpty(effectiveIdentifier))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
+                "Pflichtparameter 'symbolIdentifier' (oder 'symbol') fehlt oder ist leer.",
                 hint: "symbolIdentifier angeben: \"T:Namespace.Klasse\", \"Datei.cs:10:5\" oder \"Klasse\".");
         }
 
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
-            solution, symbolIdentifier, ct, state.AssemblySymbolIdentity);
+        var (resolvedSymbol, error) = await FindReferencesTool.ResolveSymbolAsync(
+            solution, effectiveIdentifier, ct, state.AssemblySymbolIdentity);
         if (error is not null) return error;
 
-        if (symbol is not INamedTypeSymbol type)
+        if (resolvedSymbol is not INamedTypeSymbol type)
         {
             return McpToolResults.InvalidArgument(
-                $"'{symbolIdentifier}' loest zu '{symbol!.Kind}' auf, nicht zu einem Typ (Klasse/Interface/Struct).");
+                $"'{effectiveIdentifier}' loest zu '{resolvedSymbol!.Kind}' auf, nicht zu einem Typ (Klasse/Interface/Struct).");
         }
 
         var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;

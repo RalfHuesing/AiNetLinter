@@ -45,7 +45,7 @@ internal static class GetImpactTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
         var hasGitRef = !string.IsNullOrEmpty(input.GitRef);
-        var hasSymbolIdentifier = !string.IsNullOrEmpty(input.SymbolIdentifier);
+        var hasSymbolIdentifier = !string.IsNullOrEmpty(input.EffectiveSymbolIdentifier);
         var isAssemblyTarget = state.AssemblySymbolIdentity is not null;
         var targetError = ValidateTargetArguments(isAssemblyTarget, hasGitRef, hasSymbolIdentifier);
         if (targetError is not null) return targetError;
@@ -144,8 +144,9 @@ internal static class GetImpactTool
         AnalysisSymbolIdentity? assemblyIdentity,
         CancellationToken ct)
     {
+        var symbolIdentifier = input.EffectiveSymbolIdentifier!;
         var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
-            solution, input.SymbolIdentifier!, ct, assemblyIdentity);
+            solution, symbolIdentifier, ct, assemblyIdentity);
         if (error is not null) return error;
 
         var effectiveMax = input.MaxResults < 1 ? 1 : input.MaxResults;
@@ -160,7 +161,7 @@ internal static class GetImpactTool
         var formatted = TransitiveCallGraphFormatter.FormatResponse(
             traversal,
             traversal.Completeness.TotalCallSiteCount == 0
-                ? $"Keine Aufrufstellen gefunden fuer '{input.SymbolIdentifier}'"
+                ? $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"
                 : null);
 
         // Wie find_references: auch ein leeres, aber vollstaendiges Ergebnis gilt als
@@ -370,4 +371,9 @@ internal sealed record GetImpactInput(
     int Depth,
     string? DetailLevel = null,
     int MaxChangedSymbols = ChangeContextContract.DefaultMaxChangedSymbols,
-    int MaxTestsPerSymbol = ChangeContextContract.DefaultMaxTestsPerSymbol);
+    int MaxTestsPerSymbol = ChangeContextContract.DefaultMaxTestsPerSymbol,
+    string? Symbol = null)
+{
+    public string? EffectiveSymbolIdentifier =>
+        !string.IsNullOrWhiteSpace(SymbolIdentifier) ? SymbolIdentifier : Symbol;
+}

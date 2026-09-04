@@ -14,7 +14,12 @@ internal sealed record AssemblyFindReferencesRequest(
     string? SymbolIdentifier,
     int MaxResults,
     int Depth,
-    bool IncludeReferences);
+    bool IncludeReferences,
+    string? Symbol = null)
+{
+    public string? EffectiveSymbolIdentifier =>
+        !string.IsNullOrWhiteSpace(SymbolIdentifier) ? SymbolIdentifier : Symbol;
+}
 
 internal static class AssemblyFindReferencesTool
 {
@@ -27,7 +32,7 @@ internal static class AssemblyFindReferencesTool
             : FindReferencesTool.ExecuteAsync(
                 lease.Server,
                 new FindReferencesRequest(
-                    request.SymbolIdentifier,
+                    request.EffectiveSymbolIdentifier,
                     request.MaxResults,
                     request.Depth),
                 cancellationToken);
@@ -37,11 +42,12 @@ internal static class AssemblyFindReferencesTool
         AssemblyFindReferencesRequest request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrEmpty(request.SymbolIdentifier))
+        var symbolIdentifier = request.EffectiveSymbolIdentifier;
+        if (string.IsNullOrEmpty(symbolIdentifier))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
+                "Pflichtparameter 'symbolIdentifier' (oder 'symbol') fehlt oder ist leer.",
                 hint: McpToolResults.SymbolIdentifierHint);
         }
 
@@ -49,7 +55,7 @@ internal static class AssemblyFindReferencesTool
         {
             var (target, error, navigation) = await AssemblySymbolResolver.ResolveAsync(
                 lease,
-                request.SymbolIdentifier,
+                symbolIdentifier,
                 cancellationToken).ConfigureAwait(false);
             if (error is not null) return error;
 
