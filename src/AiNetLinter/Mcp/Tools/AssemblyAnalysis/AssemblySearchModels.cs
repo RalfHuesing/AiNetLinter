@@ -11,14 +11,14 @@ namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
 internal sealed record AssemblySearchArguments(
     string? Pattern,
-    bool IsRegex,
-    string? SearchKind,
-    int MaxResults,
-    int MaxFiles,
-    int ContextLines,
-    int MaxResponseBytes,
-    string? FileFilter,
-    string? Cursor,
+    bool? IsRegex = null,
+    string? SearchKind = null,
+    int MaxResults = 50,
+    int MaxFiles = 0,
+    int ContextLines = 0,
+    int MaxResponseBytes = 0,
+    string? FileFilter = null,
+    string? Cursor = null,
     string? ContinuationToken = null,
     bool DeclarationOnly = false,
     string? Kind = null)

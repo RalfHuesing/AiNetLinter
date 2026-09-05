@@ -99,7 +99,7 @@ internal static class AnalysisToolRegistrations
                 string targetType,
                 string targetPath,
                 string? pattern = null,
-                bool isRegex = false,
+                bool? isRegex = null,
                 int maxResults = 50,
                 int maxFiles = 0,
                 int contextLines = 0,
@@ -135,7 +135,8 @@ internal static class AnalysisToolRegistrations
     private const string SearchPatternDescription =
         "Wann nutzen: Fallback fuer Namen/Strings ausserhalb des C#-Symbolgraphs (z. B. " +
         "JS-Funktionen, Razor-Komponenten, WPF-Elemente, Config-Eintraege) oder allgemeine Textsuche. " +
-        "pattern: Suchtext oder Regex. isRegex=true fuer Regex statt case-insensitive Substring (Default false). " +
+        "pattern: Suchtext oder Regex. isRegex: optional (Default null = 'auto' mit automatischer Regex-Erkennung " +
+        "und Promotion bei 0 Treffern; true = explizit Regex, false = explizit Plain-Substring). " +
         "scopeType: 'all' (Default), 'production' (schliesst Tests aus) oder 'tests'. " +
         "maxResults: Treffer-Limit (Default 50). maxFiles, contextLines und maxResponseBytes begrenzen " +
         "die strukturierte Nutzlast. scope, includePatterns und excludePatterns steuern den Scope. " +

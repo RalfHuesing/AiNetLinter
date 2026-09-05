@@ -9,29 +9,29 @@ namespace AiNetLinter.Mcp.Tools.Analysis;
 
 internal sealed record SearchPatternToolArguments(
     string? Pattern,
-    bool IsRegex,
-    int MaxResults,
-    int MaxFiles,
-    int ContextLines,
-    int MaxResponseBytes,
-    string? Scope,
-    string[]? IncludePatterns,
-    string[]? ExcludePatterns,
+    bool? IsRegex = null,
+    int MaxResults = 50,
+    int MaxFiles = 0,
+    int ContextLines = 0,
+    int MaxResponseBytes = 0,
+    string? Scope = null,
+    string[]? IncludePatterns = null,
+    string[]? ExcludePatterns = null,
     bool EnrichCSharp = false,
     string? ScopeType = null);
 
 internal sealed record SearchPatternScannerParameters(
     Solution Solution,
     string Pattern,
-    bool IsRegex,
-    int MaxResults,
-    int MaxFiles,
-    int ContextLines,
-    int MaxResponseBytes,
-    string? Scope,
-    IReadOnlyList<string>? IncludePatterns,
-    IReadOnlyList<string>? ExcludePatterns,
-    CancellationToken CancellationToken,
+    bool? IsRegex = null,
+    int MaxResults = 50,
+    int MaxFiles = 0,
+    int ContextLines = 0,
+    int MaxResponseBytes = 0,
+    string? Scope = null,
+    IReadOnlyList<string>? IncludePatterns = null,
+    IReadOnlyList<string>? ExcludePatterns = null,
+    CancellationToken CancellationToken = default,
     bool EnrichCSharp = false,
     string? ScopeType = null);
 
@@ -48,7 +48,8 @@ internal sealed record SearchPatternScanResult(
     int MaxFiles,
     int MaxResponseBytes,
     string Pattern = "",
-    bool IsRegex = false);
+    bool? IsRegex = null,
+    bool IsRegexAutoPromoted = false);
 
 internal sealed record SearchPatternFileScanResult(
     SearchPatternFileScanStatus Status,

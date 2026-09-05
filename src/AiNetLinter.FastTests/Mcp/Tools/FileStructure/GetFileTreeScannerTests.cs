@@ -218,6 +218,23 @@ public sealed class GetFileTreeScannerTests
         Assert.Contains("cancellation", result.Completeness.TruncatedBy);
     }
 
+    [Fact]
+    public void Scan_FileFilterWithoutSlash_MatchesRecursivelyAgainstFileName()
+    {
+        using var tempDir = TestTempDirectory.Create("file-tree-recursive-filter-");
+        var root = CreateFixture(tempDir.DirectoryPath);
+        var input = GetFileTreeTestData.Input() with
+        {
+            FileFilter = "*.cs",
+        };
+
+        var result = GetFileTreeScanner.Scan(root, input, CancellationToken.None).Payload;
+
+        // Findet src/Project/Project.cs in Unterverzeichnissen, obwohl der Filter "*.cs" keinen Slash enthaelt
+        var file = Assert.Single(result.Files);
+        Assert.Equal("src/Project/Project.cs", file.Path);
+    }
+
     private static string CreateFixture(string root)
     {
         Directory.CreateDirectory(Path.Combine(root, "Docs"));

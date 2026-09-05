@@ -93,6 +93,19 @@ public sealed class MetricsTreeToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_WithWildcardFileFilter_FiltersCorrectly()
+    {
+        var state = NewState();
+
+        var result = await MetricsTreeTool.ExecuteAsync(
+            state, new MetricsTreeToolArgs("src/SymbolGraphMini", "code_size", 1, 10, "*.cs"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Hierarchy.cs", text);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_CodeSizeMode_ReturnsTreeSortedByLocDescending()
     {
         var state = NewState();

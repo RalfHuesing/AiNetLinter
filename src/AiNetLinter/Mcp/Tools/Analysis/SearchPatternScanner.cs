@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Tools.Common;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.Analysis;
@@ -31,16 +32,29 @@ internal static partial class SearchPatternScanner
         var effectiveScope = NormalizeScope(parameters.Scope, solutionRoot);
         var includes = NormalizePatterns(parameters.IncludePatterns, "includePatterns");
         var excludes = NormalizePatterns(parameters.ExcludePatterns, "excludePatterns");
-        var regex = parameters.IsRegex
-            ? new Regex(parameters.Pattern, CompiledIgnoreCase, RegexTimeout)
-            : null;
-        var aggregation = ScanFiles(new(
+
+        var regex = ResolveInitialRegex(parameters.Pattern, parameters.IsRegex, out var effectiveIsRegex);
+        var isAutoPromoted = false;
+
+        var scanOptions = new SearchPatternScanFilesParameters(
             solutionRoot,
             parameters,
             effectiveScope,
             includes,
             excludes,
-            regex));
+            regex);
+
+        var aggregation = ScanFiles(scanOptions);
+
+        if (parameters.IsRegex is null && effectiveIsRegex != true && aggregation.Files.Count == 0 && !aggregation.ScanFlags.Stop)
+        {
+            if (TryPromoteRegex(parameters.Pattern, scanOptions, out var promotedAggregation))
+            {
+                aggregation = promotedAggregation;
+                effectiveIsRegex = true;
+                isAutoPromoted = true;
+            }
+        }
 
         return BuildScanResult(new(
             parameters,
@@ -51,7 +65,60 @@ internal static partial class SearchPatternScanner
             aggregation.SkippedBinary,
             aggregation.SkippedUnreadable,
             aggregation.EnumerationErrors,
-            aggregation.ScanFlags));
+            aggregation.ScanFlags),
+            effectiveIsRegex,
+            isAutoPromoted);
+    }
+
+    private static Regex? ResolveInitialRegex(string pattern, bool? isRegex, out bool? effectiveIsRegex)
+    {
+        effectiveIsRegex = isRegex;
+        if (isRegex == true)
+        {
+            return new Regex(pattern, CompiledIgnoreCase, RegexTimeout);
+        }
+
+        if (isRegex == false)
+        {
+            return null;
+        }
+
+        if (RegexAutoDetector.IsLikelyRegex(pattern) &&
+            RegexAutoDetector.IsValidRegex(pattern, out var detectedRegex, RegexTimeout))
+        {
+            effectiveIsRegex = true;
+            return detectedRegex;
+        }
+
+        return null;
+    }
+
+    private static bool TryPromoteRegex(
+        string pattern,
+        SearchPatternScanFilesParameters baseOptions,
+        out SearchPatternFileScanAggregation promotedAggregation)
+    {
+        promotedAggregation = default!;
+        if (!RegexAutoDetector.HasRegexMetaCharacters(pattern)) return false;
+
+        Regex? promotionRegex = null;
+        if (RegexAutoDetector.IsValidRegex(pattern, out var validRegex, RegexTimeout))
+        {
+            promotionRegex = validRegex;
+        }
+        else if (pattern.Contains('*') || pattern.Contains('?'))
+        {
+            var wildcardRegexStr = RegexAutoDetector.ConvertWildcardToRegex(pattern);
+            RegexAutoDetector.IsValidRegex(wildcardRegexStr, out promotionRegex, RegexTimeout);
+        }
+
+        if (promotionRegex is null) return false;
+
+        var result = ScanFiles(baseOptions with { Regex = promotionRegex });
+        if (result.Files.Count == 0) return false;
+
+        promotedAggregation = result;
+        return true;
     }
 
     private static SearchPatternFileScanAggregation ScanFiles(SearchPatternScanFilesParameters options)
@@ -133,7 +200,10 @@ internal static partial class SearchPatternScanner
         };
     }
 
-    private static SearchPatternScanResult BuildScanResult(SearchPatternAggregationParameters options)
+    private static SearchPatternScanResult BuildScanResult(
+        SearchPatternAggregationParameters options,
+        bool? effectiveIsRegex = null,
+        bool isAutoPromoted = false)
     {
         var totalLines = options.Files.Sum(file => file.Lines.Count);
         var visibleFiles = SelectVisibleFiles(options.Files, options.ScannerParameters.MaxFiles);
@@ -189,7 +259,8 @@ internal static partial class SearchPatternScanner
             options.ScannerParameters.MaxFiles,
             options.ScannerParameters.MaxResponseBytes,
             options.ScannerParameters.Pattern,
-            options.ScannerParameters.IsRegex);
+            effectiveIsRegex ?? options.ScannerParameters.IsRegex,
+            isAutoPromoted);
     }
 
     private static SearchPatternFileScanResult ScanFile(SearchPatternScanFileParameters options)

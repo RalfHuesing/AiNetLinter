@@ -13,7 +13,7 @@ internal static class SearchPatternTool
     internal static Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
         string? pattern,
-        bool isRegex,
+        bool? isRegex,
         int maxResults,
         CancellationToken ct) =>
         ExecuteAsync(
@@ -103,5 +103,5 @@ internal static class SearchPatternTool
         SearchPatternToolArguments arguments,
         ArgumentException exception) =>
         string.Equals(exception.ParamName, "pattern", StringComparison.Ordinal)
-        || (arguments.IsRegex && exception.Message.Contains("Invalid pattern", StringComparison.Ordinal));
+        || (arguments.IsRegex == true && exception.Message.Contains("Invalid pattern", StringComparison.Ordinal));
 }

@@ -15,7 +15,7 @@ internal static class SearchPatternLegacyFormatter
         if (completeness.TotalMatchedLineCount == 0)
         {
             var text = "0 Treffer fuer das angegebene Pattern.";
-            if (!result.IsRegex && !string.IsNullOrEmpty(result.Pattern) && (result.Pattern.Contains('*') || result.Pattern.Contains('?')))
+            if (result.IsRegex == false && !string.IsNullOrEmpty(result.Pattern) && (result.Pattern.Contains('*') || result.Pattern.Contains('?')))
             {
                 text += "\nHinweis: Das Pattern enthaelt Wildcard-Zeichen ('*' oder '?'), aber isRegex=false. Fuer Wildcards/Regex bitte isRegex: true setzen.";
             }
@@ -26,7 +26,13 @@ internal static class SearchPatternLegacyFormatter
         var hitLines = result.Payload.Matches
             .Select(match => $"{match.FilePath}:{match.Line}: {match.LineText.TrimEnd()}")
             .ToList();
-        return AppendHints(FormatHitLines(result, hitLines), result, hitLines);
+        var formatted = FormatHitLines(result, hitLines);
+        if (result.IsRegexAutoPromoted)
+        {
+            formatted = "[Auto-Detect: Suchmuster automatisch als Regex ausgefuehrt]\n" + formatted;
+        }
+
+        return AppendHints(formatted, result, hitLines);
     }
 
     private static string FormatHitLines(

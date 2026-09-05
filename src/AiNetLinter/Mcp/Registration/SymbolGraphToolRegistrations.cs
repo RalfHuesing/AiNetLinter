@@ -51,18 +51,18 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string[]? namePatterns = null, string? namePattern = null, string? symbol = null, string? kind = null, int maxResults = 50, bool includeReferences = false, int maxResponseBytes = 0, CancellationToken ct = default) =>
+            async (string targetType, string targetPath, string[]? namePatterns = null, string? namePattern = null, string? symbol = null, string? pattern = null, string? kind = null, int maxResults = 50, bool includeReferences = false, int maxResponseBytes = 0, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => FindSymbolTool.ExecuteAsync(
-                                new FindSymbolRequest(lease.Server, namePatterns, kind, maxResults, ct, namePattern, symbol)),
+                                new FindSymbolRequest(lease.Server, namePatterns, kind, maxResults, ct, namePattern, symbol, pattern)),
                              AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(
                                  lease,
                                  new AssemblyFindSymbolRequest(
-                                     FindSymbolTool.NormalizeNamePatterns(namePatterns, namePattern, symbol).ToArray(),
+                                     FindSymbolTool.NormalizeNamePatterns(namePatterns, namePattern, symbol, pattern).ToArray(),
                                      kind,
                                      maxResults,
                                      includeReferences),
@@ -75,10 +75,10 @@ internal static class SymbolGraphToolRegistrations
 
     private const string FindSymbolDescription =
         "Wann nutzen: Fundstelle(n) von C#-Symbolen per Namens-Substring finden, wenn der " +
-        "exakte Ort unbekannt ist. namePatterns: Array von Namens-Mustern oder namePattern als " +
+        "exakte Ort unbekannt ist. namePatterns: Array von Namens-Mustern oder namePattern bzw. pattern als " +
         "String-Alias fuer genau ein Muster; symbol bleibt ein kompatibler String-Alias. " +
         "Batch loest N sequentielle Calls ab, max. 10 pro Call, z. B. namePatterns: [\"Greeter\"] " +
-        "oder namePattern: \"Greeter\". " +
+        "oder pattern: \"Greeter\". " +
         "kind: optionaler Typfilter (Class, Record, Method, Property, Interface, Struct, Enum; " +
         "deutsche und englische Werte). maxResults: Begrenzung der Trefferliste (Default 50). " +
         "includeReferences (Default false): bei targetType=assembly auch die bounded Referenz-Assemblies " +

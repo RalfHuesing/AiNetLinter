@@ -412,7 +412,7 @@ public sealed class SearchPatternScannerTests
         using var tempDir = TestTempDirectory.Create("search-pattern-hint-");
         using var solution = CreateSolution(tempDir.DirectoryPath);
 
-        var result = SearchPatternScanner.Scan(CreateParameters(solution.Solution, new("*NonExistent*")));
+        var result = SearchPatternScanner.Scan(CreateParameters(solution.Solution, new("*NonExistent*") { IsRegex = false }));
         var formatted = SearchPatternLegacyFormatter.Format(result);
 
         Assert.Contains("0 Treffer", formatted);
@@ -420,9 +420,57 @@ public sealed class SearchPatternScannerTests
         Assert.Contains("isRegex: true", formatted);
     }
 
+    [Fact]
+    public void Scan_LikelyRegexPatternWithoutIsRegex_AutoDetectsAndFindsHits()
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-autodetect-");
+        using var solution = CreateSolution(tempDir.DirectoryPath);
+        var path = Path.Combine(tempDir.DirectoryPath, "src", "Project", "Service.cs");
+        File.WriteAllText(path, "public class AnchorService {}");
+
+        // Sucht mit \s+ und \w+ ohne isRegex anzugeben
+        var result = SearchPatternScanner.Scan(CreateParameters(solution.Solution, new(@"class\s+\w+Service")));
+
+        Assert.Single(result.Payload.Matches);
+        Assert.True(result.IsRegex);
+    }
+
+    [Fact]
+    public void Scan_PlainPatternWithCSharpCode_FindsHitsWithoutRegexFalsePositives()
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-plain-code-");
+        using var solution = CreateSolution(tempDir.DirectoryPath);
+        var path = Path.Combine(tempDir.DirectoryPath, "src", "Project", "Code.cs");
+        File.WriteAllText(path, "int[] buffer = new int[10];");
+
+        // int[] enthaelt eckige Klammern (in Regex eine Zeichenklasse), soll aber als C#-Code literal matchen
+        var result = SearchPatternScanner.Scan(CreateParameters(solution.Solution, new("int[]")));
+
+        var match = Assert.Single(result.Payload.Matches);
+        Assert.Contains("int[]", match.LineText);
+        Assert.False(result.IsRegexAutoPromoted);
+    }
+
+    [Fact]
+    public void Scan_ZeroPlainHitsWithWildcard_AutoPromotesToRegexAndFindsHits()
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-autopromote-");
+        using var solution = CreateSolution(tempDir.DirectoryPath);
+        var path = Path.Combine(tempDir.DirectoryPath, "src", "Project", "Customer.cs");
+        File.WriteAllText(path, "public class CustomerService {}");
+
+        // *Service enthaelt kein Literal-Sternchen im Quelltext, Plain-Suche liefert 0 Treffer
+        // Auto-Promotion erkennt die Wildcard und findet CustomerService
+        var result = SearchPatternScanner.Scan(CreateParameters(solution.Solution, new("*Service")));
+
+        var match = Assert.Single(result.Payload.Matches);
+        Assert.Contains("CustomerService", match.LineText);
+        Assert.True(result.IsRegexAutoPromoted);
+    }
+
     private sealed record SearchPatternTestOptions(string Pattern)
     {
-        internal bool IsRegex { get; init; }
+        internal bool? IsRegex { get; init; }
         internal int MaxResults { get; init; } = 50;
         internal int MaxFiles { get; init; }
         internal int ContextLines { get; init; }

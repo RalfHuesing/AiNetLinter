@@ -38,13 +38,23 @@ internal static class FileTreeFilter
         }
 
         if (!string.IsNullOrWhiteSpace(criteria.FileFilter) &&
-            !PathGlobMatcher.Matches(criteria.RelativePath, criteria.FileFilter))
+            !MatchesPathOrFileName(criteria.RelativePath, criteria.FileFilter))
         {
             return false;
         }
 
         return !criteria.ExcludePatterns.Any(pattern =>
-            PathGlobMatcher.Matches(criteria.RelativePath, pattern));
+            MatchesPathOrFileName(criteria.RelativePath, pattern));
+    }
+
+    private static bool MatchesPathOrFileName(string relativePath, string pattern)
+    {
+        var trimmed = pattern.Trim();
+        var matchTarget = (!trimmed.Contains('/') && !trimmed.Contains('\\'))
+            ? Path.GetFileName(relativePath)
+            : relativePath;
+
+        return PathGlobMatcher.Matches(matchTarget, trimmed);
     }
 
     internal static bool IsValidExtension(string? extension)

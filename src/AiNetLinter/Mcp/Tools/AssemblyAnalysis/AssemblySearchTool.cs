@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.Analysis;
+using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
@@ -149,10 +150,59 @@ internal static class AssemblySearchTool
     {
         var kind = NormalizeKind(arguments.SearchKind)!;
         var pattern = ResolvePattern(kind, arguments.Pattern);
-        var regex = CreateRegex(pattern, arguments.IsRegex || arguments.Pattern is null);
         var fileFilter = AssemblyFileFilter.Create(arguments.FileFilter, "fileFilter");
+
+        var useRegex = DetermineUseRegex(arguments.Pattern, arguments.IsRegex, pattern);
+        var regex = CreateRegex(pattern, useRegex);
         var accumulator = ScanFiles(root, arguments, pattern, regex, fileFilter, cancellationToken);
+
+        if (arguments.Pattern is not null && arguments.IsRegex is null && !useRegex && accumulator.Matches.Count == 0 && !accumulator.Stop)
+        {
+            if (TryPromoteRegex(root, arguments, pattern, fileFilter, cancellationToken, out var promoted))
+            {
+                accumulator = promoted;
+            }
+        }
+
         return BuildPayload(kind, pattern, arguments, accumulator);
+    }
+
+    private static bool DetermineUseRegex(string? argumentPattern, bool? isRegex, string resolvedPattern)
+    {
+        if (argumentPattern is null || isRegex == true) return true;
+        if (isRegex == false) return false;
+        return RegexAutoDetector.IsLikelyRegex(resolvedPattern);
+    }
+
+    private static bool TryPromoteRegex(
+        string root,
+        AssemblySearchArguments arguments,
+        string pattern,
+        AssemblyFileFilter? fileFilter,
+        CancellationToken ct,
+        out AssemblySearchAccumulator promotedAccumulator)
+    {
+        promotedAccumulator = default!;
+        if (!RegexAutoDetector.HasRegexMetaCharacters(pattern)) return false;
+
+        Regex? promotionRegex = null;
+        if (RegexAutoDetector.IsValidRegex(pattern, out var validRegex, RegexTimeout))
+        {
+            promotionRegex = validRegex;
+        }
+        else if (pattern.Contains('*') || pattern.Contains('?'))
+        {
+            var wildcardRegexStr = RegexAutoDetector.ConvertWildcardToRegex(pattern);
+            RegexAutoDetector.IsValidRegex(wildcardRegexStr, out promotionRegex, RegexTimeout);
+        }
+
+        if (promotionRegex is null) return false;
+
+        var result = ScanFiles(root, arguments, pattern, promotionRegex, fileFilter, ct);
+        if (result.Matches.Count == 0) return false;
+
+        promotedAccumulator = result;
+        return true;
     }
 
     private static AssemblySearchPayload BuildPayload(

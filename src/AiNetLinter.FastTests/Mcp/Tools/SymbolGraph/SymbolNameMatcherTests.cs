@@ -43,4 +43,23 @@ public sealed class SymbolNameMatcherTests
         Assert.True(filter("FindSymbolTool"));
         Assert.False(filter("OtherClass"));
     }
+
+    [Theory]
+    [InlineData("IRepository<T>", "IRepository")]
+    [InlineData("Dictionary<TKey, TValue>", "Dictionary")]
+    [InlineData("List<>", "List")]
+    public void CleanPattern_StripsGenerics(string raw, string expected)
+    {
+        Assert.Equal(expected, SymbolNameMatcher.CleanPattern(raw));
+    }
+
+    [Theory]
+    [InlineData(@"^I.*Service$", "IOrderService", true)]
+    [InlineData(@"^I.*Service$", "OrderService", false)]
+    [InlineData(@"\bExecute\b", "Execute", true)]
+    public void CreateDeclarationNameFilter_RegexAutoDetected_MatchesCorrectly(string pattern, string symbolName, bool expected)
+    {
+        var filter = SymbolNameMatcher.CreateDeclarationNameFilter(pattern);
+        Assert.Equal(expected, filter(symbolName));
+    }
 }

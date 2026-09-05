@@ -222,4 +222,22 @@ public sealed partial class AssemblyAnalysisToolTests
         var trimmedEmoji = AssemblyAnalysisResponse.TrimUtf8(emojiText, 6);
         Assert.True(Encoding.UTF8.GetByteCount(trimmedEmoji) <= 6);
     }
+
+    [Fact]
+    public void AssemblySearch_AutoDetectsRegexAndPromotes()
+    {
+        using var temp = TestTempDirectory.Create("asm-search-autodetect-");
+        var filePath = Path.Combine(temp.DirectoryPath, "Service.cs");
+        File.WriteAllText(filePath, "public class OrderService { public void Process() {} }");
+
+        // 1. Eindeutige Regex (\s, \w) ohne IsRegex
+        var regexArgs = new AssemblySearchArguments(@"class\s+\w+Service", IsRegex: null, SearchKind: "text", MaxResults: 50, MaxFiles: 0, ContextLines: 0, MaxResponseBytes: 0, FileFilter: null, Cursor: null);
+        var regexPayload = AssemblySearchTool.Scan(temp.DirectoryPath, regexArgs, CancellationToken.None);
+        Assert.Single(regexPayload.Results);
+
+        // 2. Wildcard (*Service) ohne IsRegex (Auto-Promotion)
+        var wildcardArgs = new AssemblySearchArguments("*Service", IsRegex: null, SearchKind: "text", MaxResults: 50, MaxFiles: 0, ContextLines: 0, MaxResponseBytes: 0, FileFilter: null, Cursor: null);
+        var wildcardPayload = AssemblySearchTool.Scan(temp.DirectoryPath, wildcardArgs, CancellationToken.None);
+        Assert.Single(wildcardPayload.Results);
+    }
 }

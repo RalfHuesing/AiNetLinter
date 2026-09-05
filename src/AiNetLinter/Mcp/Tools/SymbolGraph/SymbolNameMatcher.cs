@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Tools.Common;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
 
@@ -26,6 +27,12 @@ internal static class SymbolNameMatcher
         if (trimmed.EndsWith("()", StringComparison.Ordinal))
         {
             trimmed = trimmed[..^2].Trim();
+        }
+
+        var angleBracketIndex = trimmed.IndexOf('<');
+        if (angleBracketIndex > 0 && trimmed.EndsWith('>'))
+        {
+            trimmed = trimmed[..angleBracketIndex].Trim();
         }
 
         return trimmed;
@@ -122,11 +129,16 @@ internal static class SymbolNameMatcher
 
         if (pattern.Contains('*') || pattern.Contains('?'))
         {
-            var regexPattern = "^" + Regex.Escape(pattern)
-                .Replace("\\*", ".*")
-                .Replace("\\?", ".") + "$";
-            var regex = new Regex(regexPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-            return name => regex.IsMatch(name);
+            var regexPattern = RegexAutoDetector.ConvertWildcardToRegex(pattern, anchored: true);
+            if (RegexAutoDetector.IsValidRegex(regexPattern, out var globRegex))
+            {
+                return name => globRegex!.IsMatch(name);
+            }
+        }
+
+        if (RegexAutoDetector.IsLikelyRegex(pattern) && RegexAutoDetector.IsValidRegex(pattern, out var likelyRegex))
+        {
+            return name => likelyRegex!.IsMatch(name);
         }
 
         return name => name.Contains(pattern, StringComparison.OrdinalIgnoreCase);
@@ -142,10 +154,16 @@ internal static class SymbolNameMatcher
 
         if (pattern.Contains('*') || pattern.Contains('?'))
         {
-            var regexPattern = "^" + Regex.Escape(pattern)
-                .Replace("\\*", ".*")
-                .Replace("\\?", ".") + "$";
-            return Regex.IsMatch(name, regexPattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            var regexPattern = RegexAutoDetector.ConvertWildcardToRegex(pattern, anchored: true);
+            if (RegexAutoDetector.IsValidRegex(regexPattern, out var globRegex))
+            {
+                return globRegex!.IsMatch(name);
+            }
+        }
+
+        if (RegexAutoDetector.IsLikelyRegex(pattern) && RegexAutoDetector.IsValidRegex(pattern, out var likelyRegex))
+        {
+            return likelyRegex!.IsMatch(name);
         }
 
         return name.Contains(pattern, StringComparison.OrdinalIgnoreCase);

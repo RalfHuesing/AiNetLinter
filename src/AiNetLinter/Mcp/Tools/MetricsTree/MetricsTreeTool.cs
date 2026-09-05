@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
@@ -100,15 +101,13 @@ internal static class MetricsTreeTool
     {
         if (string.IsNullOrWhiteSpace(fileFilter)) return (null, null);
 
-        try
-        {
-            return (new Regex(fileFilter, RegexOptions.IgnoreCase), null);
-        }
-        catch (ArgumentException ex)
+        if (!RegexAutoDetector.TryCreateFilterRegex(fileFilter, out var regex, out _, out var errorMessage))
         {
             return (null, McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument,
-                $"file_filter ist kein gueltiger regulaerer Ausdruck: {ex.Message}",
-                hint: "Regex-Syntax pruefen."));
+                $"file_filter ist kein gueltiger regulaerer Ausdruck: {errorMessage}",
+                hint: "Glob- oder Regex-Syntax pruefen."));
         }
+
+        return (regex, null);
     }
 }

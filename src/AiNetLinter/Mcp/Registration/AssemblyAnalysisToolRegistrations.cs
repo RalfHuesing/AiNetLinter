@@ -39,7 +39,7 @@ internal static class AssemblyAnalysisToolRegistrations
                 string targetPath,
                 string? targetType = null,
                 string? pattern = null,
-                bool isRegex = false,
+                bool? isRegex = null,
                 string? searchKind = null,
                 int maxResults = AssemblySearchTool.DefaultMaxResults,
                 int maxFiles = 0,
@@ -87,7 +87,8 @@ internal static class AssemblyAnalysisToolRegistrations
         "targetType ist optional und wird inferiert. searchKind: 'text' fuer ein eigenes pattern, " +
         "'data_access' fuer typische Datenbank-/Datei-/Transaktionsaufrufe oder 'external_calls' " +
         "fuer typische HTTP-/RPC-/Socket-/Prozessaufrufe; die beiden Fachmodi verwenden ohne pattern " +
-        "ein eingebautes, sichtbares Regex. isRegex gilt fuer ein eigenes pattern. " +
+        "ein eingebautes, sichtbares Regex. isRegex gilt fuer ein eigenes pattern (Default null = 'auto' mit automatischer " +
+        "Regex-Erkennung und Promotion; true = explizit Regex, false = explizit Plain-Substring). " +
         "declarationOnly: schliesst Treffer in Kommentaren, Strings und XML-Docs aus. " +
         "kind: schraenkt Treffer auf eine bestimmte Symbolart ein ('method', 'type', 'property'). " +
         "maxResults (Default 50, Cap 1000), maxFiles, contextLines (Cap 5), fileFilter als Glob (z. B. '*.cs', '!*Designer*') oder Regex, " +

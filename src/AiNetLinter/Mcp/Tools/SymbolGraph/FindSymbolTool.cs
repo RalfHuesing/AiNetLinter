@@ -20,7 +20,8 @@ internal sealed record FindSymbolRequest(
     int MaxResults,
     CancellationToken CancellationToken,
     string? NamePattern = null,
-    string? Symbol = null);
+    string? Symbol = null,
+    string? Pattern = null);
 
 /// <summary>
 /// MCP-Tool <c>find_symbol</c>: durchsucht die resident gehaltene Solution per Substring auf
@@ -49,12 +50,15 @@ internal static class FindSymbolTool
     internal static IReadOnlyList<string> NormalizeNamePatterns(
         string[]? namePatterns,
         string? namePattern = null,
-        string? symbol = null)
+        string? symbol = null,
+        string? pattern = null)
     {
         var patterns = McpBatchArguments.Normalize(namePatterns);
         if (patterns.Count > 0) return patterns;
 
-        var scalar = string.IsNullOrWhiteSpace(namePattern) ? symbol : namePattern;
+        var scalar = !string.IsNullOrWhiteSpace(namePattern)
+            ? namePattern
+            : (!string.IsNullOrWhiteSpace(symbol) ? symbol : pattern);
         return string.IsNullOrWhiteSpace(scalar) ? patterns : [scalar];
     }
 
@@ -99,7 +103,7 @@ internal static class FindSymbolTool
 
     internal static async Task<CallToolResult> ExecuteAsync(FindSymbolRequest request)
     {
-        var patterns = NormalizeNamePatterns(request.NamePatterns, request.NamePattern, request.Symbol);
+        var patterns = NormalizeNamePatterns(request.NamePatterns, request.NamePattern, request.Symbol, request.Pattern);
         var validationError = ValidateNamePatterns(patterns) ?? ValidateKind(request.Kind);
         if (validationError is not null) return validationError;
 
