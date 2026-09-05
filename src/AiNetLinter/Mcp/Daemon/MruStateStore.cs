@@ -13,7 +13,7 @@ internal sealed record MruStateStoreOptions(
     TimeSpan? Debounce = null,
     int MaxProjects = 4);
 
-internal sealed class MruStateStore : IAsyncDisposable
+internal sealed class MruStateStore : IMruStateStore
 {
     private static readonly TimeSpan DefaultDebounce = TimeSpan.FromSeconds(30);
     private readonly object gate = new();
@@ -58,6 +58,12 @@ internal sealed class MruStateStore : IAsyncDisposable
 
         return Path.Combine(localAppData, "RalfHuesing", "AiNetLinter", $"daemon-state.{normalizedInstance}.json");
     }
+
+    IReadOnlyList<MruStateEntry> IMruStateStore.Read(int maxProjects) => Read(maxProjects);
+
+    void IMruStateStore.Touch(string rootPath, DateTime? lastUsedUtc) => Touch(rootPath, lastUsedUtc);
+
+    void IMruStateStore.Remove(string rootPath) => Remove(rootPath);
 
     internal IReadOnlyList<MruStateEntry> Read(int maxProjects)
     {

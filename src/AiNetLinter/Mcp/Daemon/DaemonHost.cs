@@ -7,7 +7,7 @@ namespace AiNetLinter.Mcp.Daemon;
 
 internal sealed record DaemonHostOptions(
     IDaemonRegistry Registry,
-    MruStateStore MruState,
+    IMruStateStore MruState,
     IDaemonPipeTransport Transport,
     TimeProvider Clock,
     TimeSpan IdleExit,

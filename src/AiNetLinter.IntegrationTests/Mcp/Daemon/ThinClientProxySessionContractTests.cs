@@ -118,8 +118,8 @@ public sealed class ThinClientProxySessionContractTests
         }
         finally
         {
-            await CompleteAsync(stdin).ConfigureAwait(false);
-            await CompleteAsync(stdout).ConfigureAwait(false);
+            await ThinClientPipeTestDoubles.CompleteAsync(stdin).ConfigureAwait(false);
+            await ThinClientPipeTestDoubles.CompleteAsync(stdout).ConfigureAwait(false);
         }
     }
 
@@ -168,8 +168,8 @@ public sealed class ThinClientProxySessionContractTests
         }
         finally
         {
-            await CompleteAsync(stdin).ConfigureAwait(false);
-            await CompleteAsync(stdout).ConfigureAwait(false);
+            await ThinClientPipeTestDoubles.CompleteAsync(stdin).ConfigureAwait(false);
+            await ThinClientPipeTestDoubles.CompleteAsync(stdout).ConfigureAwait(false);
         }
     }
 
@@ -200,12 +200,6 @@ public sealed class ThinClientProxySessionContractTests
             .ReadFrameAsync(server.Stream)
             .WaitAsync(TimeSpan.FromSeconds(5))
             .ConfigureAwait(false);
-
-    private static async Task CompleteAsync(Pipe pipe)
-    {
-        await pipe.Writer.CompleteAsync().ConfigureAwait(false);
-        await pipe.Reader.CompleteAsync().ConfigureAwait(false);
-    }
 
     private static ThinClientLaunchOptions CreateLaunchOptions() =>
         new(null, null, null);

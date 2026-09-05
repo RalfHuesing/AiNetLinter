@@ -110,8 +110,8 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
 
     private void ClearTemporaryReferenceEvictionRequest(IAssemblyAnalysisEvictionEntry entry) =>
         referenceEviction.ClearRequest(entry);
-    internal ExternalResourceHealthSnapshot? ResourceHealth => resourceBudget.Health;
-    internal Task<int> RunEvictionTickAsync() =>
+
+    private Task<int> RunEvictionTickAsync() =>
         evictionCoordinator.RunAsync(false, null, CancellationToken.None);
 
     private Task<int> RunEvictionTickAsync(
@@ -311,9 +311,6 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
             LeaseReferencedAsync(reference, cancellationToken);
 
     Task<IReadOnlyList<AssemblyAnalysisHealthSnapshot>> IAssemblyAnalysisRegistry.SnapshotsAsync() =>
-        SnapshotsAsync();
-
-    internal Task<IReadOnlyList<AssemblyAnalysisHealthSnapshot>> SnapshotsAsync() =>
         healthSnapshotProvider.GetSnapshotsAsync();
 
     private async Task<IReadOnlyList<AssemblyAnalysisEvictionCreation>> GetCompletedEvictionCreations()

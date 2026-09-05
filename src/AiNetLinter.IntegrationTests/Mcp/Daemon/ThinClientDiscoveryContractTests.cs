@@ -62,8 +62,8 @@ public sealed class ThinClientDiscoveryContractTests
         }
         finally
         {
-            await CompleteAsync(input).ConfigureAwait(false);
-            await CompleteAsync(output).ConfigureAwait(false);
+            await ThinClientPipeTestDoubles.CompleteAsync(input).ConfigureAwait(false);
+            await ThinClientPipeTestDoubles.CompleteAsync(output).ConfigureAwait(false);
             serverCancellation.Cancel();
             try
             {
@@ -96,11 +96,5 @@ public sealed class ThinClientDiscoveryContractTests
             cancellationToken).ConfigureAwait(false);
 
         Assert.Null(await connection.ReadFrameAsync(cancellationToken).ConfigureAwait(false));
-    }
-
-    private static async Task CompleteAsync(Pipe pipe)
-    {
-        await pipe.Writer.CompleteAsync().ConfigureAwait(false);
-        await pipe.Reader.CompleteAsync().ConfigureAwait(false);
     }
 }

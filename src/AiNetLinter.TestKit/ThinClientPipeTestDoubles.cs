@@ -33,6 +33,12 @@ internal static class ThinClientPipeTestDoubles
 
         throw new EndOfStreamException();
     }
+
+    internal static async Task CompleteAsync(Pipe pipe)
+    {
+        await pipe.Writer.CompleteAsync().ConfigureAwait(false);
+        await pipe.Reader.CompleteAsync().ConfigureAwait(false);
+    }
 }
 
 // Duplex-Adapter ueber zwei gekreuzte Pipes: Lesen und Schreiben laufen auf
