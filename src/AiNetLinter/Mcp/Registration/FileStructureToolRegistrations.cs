@@ -57,7 +57,7 @@ internal static class FileStructureToolRegistrations
                 string? fileFilter = null,
                 string[]? excludePatterns = null,
                 int? maxDepth = null,
-                int treeDepth = 2,
+                int? treeDepth = null,
                 int maxResults = GetFileTreeTool.DefaultMaxResults,
                 string sortBy = "path",
                 bool includeMetadata = true,
@@ -97,7 +97,7 @@ internal static class FileStructureToolRegistrations
         "excludePatterns sind relativ zu " +
         "targetPath; fileFilter ist ein Pfad-Glob, keine Inhaltssuche. view: 'tree' [Default], " +
         "'summary', 'files'. includeExtensions: Extensionen wie ['.cs'] oder ['*']. " +
-        "maxDepth und treeDepth: 0 bis 32 (effektive Tiefe = maxDepth ?? treeDepth, 0 = Root-Ebene, Default treeDepth 2; maxDepth hat Vorrang). " +
+        "maxDepth und treeDepth: 0 bis 32 (effektive Tiefe = maxDepth ?? treeDepth; bei aktivem fileFilter, gezieltem Unterverzeichnis-Root oder view='summary' wird standardmaessig bis zum Limit gescannt, wenn weder maxDepth noch treeDepth gesetzt sind; maxDepth hat Vorrang). " +
         "targetType='project' oder targetType='assembly'; maxResults: Begrenzung (Default 200, Maximum 2000). Für Assembly-Ziele wird der " +
         "vorhandene Source- oder dekompilierte SourceRoot verwendet; ohne solchen Root ist die " +
         "Capability unsupported. Snapshot/Generation bleiben im Assembly-Response-Envelope sichtbar. " +

@@ -11,7 +11,7 @@ internal sealed record GetFileTreeInput(
     string? FileFilter,
     IReadOnlyList<string>? ExcludePatterns,
     int? MaxDepth,
-    int TreeDepth,
+    int? TreeDepth,
     int MaxResults,
     string SortBy,
     bool IncludeMetadata,

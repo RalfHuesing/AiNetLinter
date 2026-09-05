@@ -20,20 +20,24 @@ Referenzen und Abhängigkeiten.
 > |---|---|
 > | Aufrufbaum einer Methode verstehen | `get_call_tree` (outgoing/incoming) |
 > | Methodenrumpf lesen | `get_symbol_body` mit Symbol-ID |
-> | Symbol/Klasse suchen | `find_symbol` (namePattern + kind) |
+> | Symbol/Klasse suchen | `find_symbol` (pattern, namePattern, kind) |
 > | Definierende Assembly & DLL-Pfad eines Typs ermitteln | `resolve_type_origin` |
 > | Konkrete Implementierungen/Overrides finden | `find_implementations` |
+> | Klassenhierarchie, Basisklassen & Interfaces | `get_type_hierarchy` |
 > | Klassenstruktur / Members | `get_class_structure` |
+> | Signaturen & Dateiüberblick | `get_file_skeleton` |
 > | Regelverstöße, Impact, Hotspots | `get_violations`, `get_impact`, `get_hotspots` |
-> | Text in Nicht-C#-Dateien suchen (`.md`, `.json`, `.yml`) | `grep_search` / `rg` |
+> | Text/Strings/Razor/Config projektweit oder Fallback | `search_pattern` (pattern, scopeType, isRegex auto) |
+> | Physische Dateistruktur / Dateisuche | `get_file_tree` (fileFilter, view="summary"/"tree"/"files") |
+> | Codebase-Metriken (Größe, Komplexität, Violations) | `metrics_tree` (mode, fileFilter, depth) |
+> | Namespace- & Typhierarchie erkunden | `get_namespace_tree` (namespacePrefix, depth) |
 > | Kleiner, exakt bekannter Codeausschnitt editieren | `view_file` (gezielt, wenige Zeilen) |
-> | Exakter Textmatch über viele Dateitypen | `grep_search` (wenn MCP-Symbol-Suche keinen Treffer liefert) |
 > | Konfiguration, Projektstruktur | `list_dir`, `view_file` |
 >
 > **Wann rg/view_file trotzdem sinnvoll sein können:**
-> - MCP liefert keinen Treffer (Symbol existiert nur als String-Literal, generierter Code, Nicht-C#-Datei).
-> - Exakter Zeilenbereich für einen minimalen Edit bereits bekannt → `view_file` günstiger als MCP-Roundtrip.
-> - Textuelle Muster über Dateiarten hinweg (z. B. alle `*.json` nach einem Wert durchsuchen).
+> - Exakter Zeilenbereich für einen minimalen Edit bereits bekannt → `view_file` (gezielt, wenige Zeilen) günstiger als MCP-Roundtrip.
+> - Textuelle Suchen außerhalb des analysierten Projekt-Repositories oder in reinen Nicht-Code-Verzeichnissen.
+> - Spezialisierte Batch-Ersetzungen über Systemtools.
 >
 > **Was vermieden werden soll:** Reflexartig *alle* Dateien einer Aufrufkette seitenweise einlesen, anstatt `get_call_tree` + `get_symbol_body` zu nutzen. Das verbrennt unnötig Kontext.
 
@@ -64,17 +68,21 @@ Referenzen und Abhängigkeiten.
   (typischerweise über `tools/list` bereitgestellt); diese Regel dupliziert keine
   Toolschemas.
 - Für `get_feature_context` und `get_test_context` ist `symbolIdentifier` der
-  primäre Parametername. Der bestehende Parameter `symbol` bleibt als
-  kompatibler Alias verfügbar.
-- Nach einem vollständigen MCP-Ergebnis dieselbe semantische Frage nicht
-  redundant mit Read/rg/grep nachprüfen; bei Trunkierung den Scope oder die
-  Limits des MCP-Aufrufs verfeinern.
-- `get_file_tree` token-effizient und kontextschonend nutzen: Auf Projekt-Root-Ebene
-  (`root="."` oder weggelassen) NIEMALS ungefiltert mit `view="files"` oder
-  `maxResults > 100` aufrufen (verhindert massives Token-Flooding von 15k+ Tokens).
+  primäre Parametername (`symbol` bleibt kompatibler Alias).
+- Für `find_symbol` ist `pattern` (oder `namePattern`/`namePatterns` für Batch)
+  das primäre Suchmuster; unterstützt Substring, Glob (`*`, `?`), Regex (`^...$`)
+  und generische Typen (`<T>` wird tolerant bereinigt).
+- Für `search_pattern` und `search_assembly` ist `pattern` das Suchmuster mit
+  automatischem Regex-Autodetect (`isRegex: null` als Standard-Tri-State; Plain-First
+  verhindert False-Positives bei typischer C#-Syntax, automatische Promotion bei 0
+  Plain-Treffern). `scopeType` steuert den Suchraum (`all` [Default], `production`, `tests`).
+- `get_file_tree` token-effizient und kontextschonend nutzen: `fileFilter` durchsucht
+  den Teilbaum rekursiv nach Dateipfaden/Globs (z. B. `*.cs` oder `*Service*`).
+  Auf Projekt-Root-Ebene (`root="."` oder weggelassen) OHNE Filter NIEMALS ungefiltert
+  mit `view="files"` oder `maxResults > 100` aufrufen (verhindert Token-Flooding von 15k+ Tokens).
   Zur initialen Orientierung immer `view="summary"` (~250 Tokens) oder `view="tree"`
   mit `treeDepth <= 2` einsetzen. Die Dateiansicht `view="files"` ist gezielten
-  Unterpfaden vorbehalten (z. B. `root="src/MeinModul"`). Für C#-Code-Suchen
+  Unterpfaden oder aktiven `fileFilter`-Abfragen vorbehalten. Für C#-Code-Suchen
   direkt `find_symbol` oder `get_feature_context` verwenden.
 
 ## MCP-first-Kontextphase
@@ -96,13 +104,17 @@ vollständige Tool-Rohantworten gehören nicht in die Map.
 
 | Anliegen | Zuerst verwenden |
 | :--- | :--- |
-| Physische Projektstruktur und Nicht-C#-Dateien entdecken | `get_file_tree` (`view="summary"` oder `treeDepth <= 2`) |
+| Physische Projektstruktur und gezielte Dateisuche | `get_file_tree` (`fileFilter` für Dateien; `view="summary"` oder `treeDepth <= 2` für Übersicht) |
 | C#-Symbol oder Feature verstehen | `get_feature_context`; bei unbekanntem Namen `find_symbol` |
+| Text, String-Literale, Razor/Config oder Fallback bei 0 Symboltreffern | `search_pattern` (`pattern`, `scopeType`, `isRegex: null` auto) |
+| Codebase nach Größe, Komplexität oder Violations erkunden | `metrics_tree` (`mode`, `fileFilter`, `depth`) |
+| Semantische Solution-, Namespace- und Typhierarchie erkunden | `get_namespace_tree` (`namespacePrefix`, `depth`) |
 | Definierende Assembly und DLL-Pfad eines Typs ermitteln | `resolve_type_origin` |
 | Konkrete Implementierungen oder Overrides finden | `find_implementations` |
+| Klassenhierarchie, Basisklassen & Interfaces eines Typs | `get_type_hierarchy` |
 | Signaturen und Struktur überblicken | `get_file_skeleton`, `get_class_structure`, dann `get_symbol_body` |
 | Öffentliche API einer lokalen .NET-Assembly (.dll/.exe) untersuchen | `inspect_assembly` |
-| Text-/Mustersuche in dekompilierten Fremd-Assemblies | `search_assembly` (`declarationOnly=true` für Symbole) |
+| Text-/Mustersuche in dekompilierten Fremd-Assemblies | `search_assembly` (`declarationOnly=true` für Symbole, `data_access`, `external_calls`) |
 | Klassische Extension-Methoden einer lokalen .NET-Assembly (.dll/.exe) prüfen | `find_assembly_extensions` |
 | Aufrufer, Abhängigkeiten oder Tests prüfen | `find_references`, `get_impact`, `dependency_graph`, `get_test_context` |
 | Nach C#-Änderungen gezielt prüfen | `get_impact`, `get_violations`; bei Bedarf `metrics_lookup` |

@@ -235,6 +235,52 @@ public sealed class GetFileTreeScannerTests
         Assert.Equal("src/Project/Project.cs", file.Path);
     }
 
+    [Fact]
+    public void Scan_FileFilterWithNullTreeDepth_ScansRecursivelyIntoDeepDirectories()
+    {
+        using var tempDir = TestTempDirectory.Create("file-tree-deep-filter-");
+        var root = tempDir.DirectoryPath;
+        var deepDir = Path.Combine(root, "src", "A", "B", "C", "D");
+        Directory.CreateDirectory(deepDir);
+        File.WriteAllText(Path.Combine(deepDir, "DeepFile.cs"), "class DeepFile {}");
+
+        var input = GetFileTreeTestData.Input() with
+        {
+            TreeDepth = null,
+            MaxDepth = null,
+            FileFilter = "DeepFile.cs",
+        };
+
+        var result = GetFileTreeScanner.Scan(root, input, CancellationToken.None).Payload;
+
+        var file = Assert.Single(result.Files);
+        Assert.Equal("src/A/B/C/D/DeepFile.cs", file.Path);
+        Assert.False(result.Completeness.Truncated);
+    }
+
+    [Fact]
+    public void Scan_SubdirectoryRootWithNullTreeDepth_ReachesNestedFiles()
+    {
+        using var tempDir = TestTempDirectory.Create("file-tree-deep-subdir-");
+        var root = tempDir.DirectoryPath;
+        var deepDir = Path.Combine(root, "src", "Modul", "Sub1", "Sub2", "Sub3");
+        Directory.CreateDirectory(deepDir);
+        File.WriteAllText(Path.Combine(deepDir, "Nested.cs"), "class Nested {}");
+
+        var input = GetFileTreeTestData.Input() with
+        {
+            Root = "src/Modul",
+            TreeDepth = null,
+            MaxDepth = null,
+            View = "files",
+        };
+
+        var result = GetFileTreeScanner.Scan(root, input, CancellationToken.None).Payload;
+
+        Assert.Contains(result.Files, f => f.Path.EndsWith("Nested.cs", StringComparison.Ordinal));
+        Assert.False(result.Completeness.Truncated);
+    }
+
     private static string CreateFixture(string root)
     {
         Directory.CreateDirectory(Path.Combine(root, "Docs"));
