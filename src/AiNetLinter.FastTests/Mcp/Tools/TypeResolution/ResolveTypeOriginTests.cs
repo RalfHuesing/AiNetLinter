@@ -153,6 +153,20 @@ public sealed class ResolveTypeOriginTests
         Assert.Contains("TargetProbe", text);
     }
 
+    [Fact]
+    public void ResolveTypeOrigin_ResolvesUnqualifiedGenericType()
+    {
+        var compilation = CreateTestCompilation("public class Worker { }");
+
+        var result = ResolveTypeOriginTool.ExecuteCompilation(
+            compilation, "Action<T>", "dummy.cs", null, CancellationToken.None);
+
+        Assert.True(result.IsError is null or false);
+        var text = GetText(result);
+        Assert.Contains("System.Action<T>", text);
+        Assert.Contains("delegate", text);
+    }
+
     private static Compilation CreateTestCompilation(string source, MetadataReference[]? additionalRefs = null)
     {
         var tree = CSharpSyntaxTree.ParseText(source);

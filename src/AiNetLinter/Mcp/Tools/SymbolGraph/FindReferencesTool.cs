@@ -298,20 +298,168 @@ internal static class FindReferencesTool
         AnalysisSymbolIdentity? assemblyIdentity,
         CancellationToken ct)
     {
-        var lastSegment = SymbolIdentifierResolver.StripParameterList(identifier).Split('.')[^1];
+        var unparameterized = SymbolIdentifierResolver.StripParameterList(identifier);
+        var ungenericIdentifier = SymbolIdentifierResolver.StripGenerics(unparameterized);
+        var lastSegment = ungenericIdentifier.Split('.')[^1];
+
         var symbols = await SymbolFinder.FindSourceDeclarationsAsync(
-            solution, name => name == lastSegment, SymbolFilter.TypeAndMember, ct);
+            solution, name => name == lastSegment, SymbolFilter.TypeAndMember, ct).ConfigureAwait(false);
 
         var candidates = symbols
-            .Where(s => SymbolIdentifierResolver.StripParameterList(s.ToDisplayString())
-                .EndsWith(identifier, StringComparison.Ordinal))
+            .Where(s => IsSymbolMatch(s, identifier, unparameterized, ungenericIdentifier))
             .ToList();
 
-        if (candidates.Count == 0) return (null, McpToolResults.SymbolNotFound(identifier));
         if (candidates.Count == 1) return (candidates[0], null);
+        if (candidates.Count > 1)
+        {
+            var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
+            var lines = candidates.SelectMany(s => FindSymbolTool.FormatSymbolLocations(s, outputRoot, assemblyIdentity));
+            return (null, McpToolResults.AmbiguousSymbol(identifier, lines));
+        }
 
-        var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var lines = candidates.SelectMany(s => FindSymbolTool.FormatSymbolLocations(s, outputRoot, assemblyIdentity));
-        return (null, McpToolResults.AmbiguousSymbol(identifier, lines));
+        var metadataCandidate = await TryResolveMetadataTypeAsync(solution, unparameterized, ungenericIdentifier, ct).ConfigureAwait(false);
+        if (metadataCandidate is not null) return (metadataCandidate, null);
+
+        return (null, McpToolResults.SymbolNotFound(identifier));
+    }
+
+    private static bool IsSymbolMatch(
+        ISymbol symbol,
+        string rawIdentifier,
+        string unparameterized,
+        string ungenericIdentifier)
+    {
+        var display = SymbolIdentifierResolver.StripParameterList(symbol.ToDisplayString());
+        if (display.EndsWith(rawIdentifier, StringComparison.Ordinal)
+            || display.EndsWith(unparameterized, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        var ungenericDisplay = SymbolIdentifierResolver.StripGenerics(display);
+        return ungenericDisplay.EndsWith(ungenericIdentifier, StringComparison.Ordinal);
+    }
+
+    private static async Task<INamedTypeSymbol?> TryResolveMetadataTypeAsync(
+        Solution solution,
+        string unparameterized,
+        string ungenericIdentifier,
+        CancellationToken ct)
+    {
+        var normalized = ungenericIdentifier.Trim().Replace("global::", string.Empty, StringComparison.Ordinal);
+        var isQualified = normalized.Contains('.');
+        var bracketIndex = unparameterized.IndexOf('<');
+        var arity = bracketIndex >= 0 ? unparameterized.Count(c => c == ',') + 1 : 0;
+
+        foreach (var project in solution.Projects)
+        {
+            ct.ThrowIfCancellationRequested();
+            var compilation = await project.GetCompilationAsync(ct).ConfigureAwait(false);
+            if (compilation is null) continue;
+
+            var resolved = ResolveMetadataTypeFromCompilation(compilation, normalized, isQualified, arity, ct);
+            if (resolved is not null) return resolved;
+        }
+
+        return null;
+    }
+
+    private static INamedTypeSymbol? ResolveMetadataTypeFromCompilation(
+        Compilation compilation,
+        string normalizedName,
+        bool isQualified,
+        int arity,
+        CancellationToken ct) =>
+        isQualified
+            ? ResolveQualifiedMetadataType(compilation, normalizedName, arity, ct)
+            : ResolveUnqualifiedMetadataType(compilation, normalizedName, arity, ct);
+
+    private static INamedTypeSymbol? ResolveQualifiedMetadataType(
+        Compilation compilation,
+        string normalizedName,
+        int arity,
+        CancellationToken ct)
+    {
+        var direct = compilation.GetTypeByMetadataName(normalizedName)
+            ?? (arity > 0 ? compilation.GetTypeByMetadataName($"{normalizedName}`{arity}") : null);
+        if (direct is not null) return direct;
+
+        foreach (var metadataRef in compilation.References)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (compilation.GetAssemblyOrModuleSymbol(metadataRef) is not IAssemblySymbol asm) continue;
+
+            var refType = asm.GetTypeByMetadataName(normalizedName)
+                ?? (arity > 0 ? asm.GetTypeByMetadataName($"{normalizedName}`{arity}") : null);
+            if (refType is not null) return refType;
+        }
+
+        return null;
+    }
+
+    private static INamedTypeSymbol? ResolveUnqualifiedMetadataType(
+        Compilation compilation,
+        string normalizedName,
+        int arity,
+        CancellationToken ct)
+    {
+        foreach (var metadataRef in compilation.References)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (compilation.GetAssemblyOrModuleSymbol(metadataRef) is not IAssemblySymbol asm) continue;
+
+            var refType = FindMetadataTypeInNamespace(asm.GlobalNamespace, normalizedName, arity, ct);
+            if (refType is not null) return refType;
+        }
+
+        return FindMetadataTypeInNamespace(compilation.Assembly.GlobalNamespace, normalizedName, arity, ct);
+    }
+
+    private static INamedTypeSymbol? FindMetadataTypeInNamespace(
+        INamespaceSymbol ns,
+        string simpleName,
+        int arity,
+        CancellationToken ct)
+    {
+        foreach (var member in ns.GetTypeMembers())
+        {
+            ct.ThrowIfCancellationRequested();
+            if (string.Equals(member.Name, simpleName, StringComparison.OrdinalIgnoreCase)
+                && (arity == 0 || member.Arity == arity))
+            {
+                return member;
+            }
+
+            var nested = FindNestedMetadataType(member, simpleName, arity, ct);
+            if (nested is not null) return nested;
+        }
+
+        foreach (var child in ns.GetNamespaceMembers())
+        {
+            ct.ThrowIfCancellationRequested();
+            var match = FindMetadataTypeInNamespace(child, simpleName, arity, ct);
+            if (match is not null) return match;
+        }
+
+        return null;
+    }
+
+    private static INamedTypeSymbol? FindNestedMetadataType(
+        INamedTypeSymbol parent,
+        string simpleName,
+        int arity,
+        CancellationToken ct)
+    {
+        foreach (var member in parent.GetTypeMembers())
+        {
+            ct.ThrowIfCancellationRequested();
+            if (string.Equals(member.Name, simpleName, StringComparison.OrdinalIgnoreCase)
+                && (arity == 0 || member.Arity == arity))
+            {
+                return member;
+            }
+        }
+
+        return null;
     }
 }

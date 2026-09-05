@@ -119,6 +119,16 @@ internal static class SymbolIdentifierResolver
     }
 
     /// <summary>
+    /// Entfernt Typparameter/Generics (inkl. Spitzenklammern) aus einem Bezeichner,
+    /// z. B. "IPipelineStep<T>" -> "IPipelineStep".
+    /// </summary>
+    internal static string StripGenerics(string identifier)
+    {
+        var bracketIndex = identifier.IndexOf('<');
+        return bracketIndex < 0 ? identifier : identifier[..bracketIndex].Trim();
+    }
+
+    /// <summary>
     /// Loest einen stabilen Symbol-Identifikator (DocumentationCommentId, z. B. <c>M:Ns.Type.Method(System.Int32)</c>)
     /// zu genau einem <see cref="ISymbol"/> auf. Iteriert dazu ueber alle
     /// <see cref="Microsoft.CodeAnalysis.DeclaredSymbolInfo"/>s aller Projekte, weil

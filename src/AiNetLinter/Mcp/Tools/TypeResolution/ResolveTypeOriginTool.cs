@@ -235,9 +235,22 @@ internal static class ResolveTypeOriginTool
         return null;
     }
 
-    private static bool IsTypeMatch(INamedTypeSymbol type, string typeName) =>
-        string.Equals(type.Name, typeName, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(type.MetadataName, typeName, StringComparison.OrdinalIgnoreCase);
+    private static bool IsTypeMatch(INamedTypeSymbol type, string typeName)
+    {
+        if (string.Equals(type.Name, typeName, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(type.MetadataName, typeName, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var bracketIndex = typeName.IndexOf('<');
+        if (bracketIndex < 0) return false;
+
+        var baseName = typeName[..bracketIndex].Trim();
+        var arity = typeName.Count(c => c == ',') + 1;
+        return string.Equals(type.Name, baseName, StringComparison.OrdinalIgnoreCase)
+            && type.Arity == arity;
+    }
 
     private static string? ResolvePathFromReferences(
         string assemblyName,

@@ -209,4 +209,59 @@ public sealed class FindImplementationsTests
         Assert.Equal(1, dto!.TotalCount);
         Assert.Contains(dto.Implementations, i => i.TypeName.Contains("EnglishGreeter", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public async Task ExecuteAsync_MetadataInterface_ReturnsImplementingClasses()
+    {
+        var code = """
+            using System;
+            namespace App;
+            public class DisposableWorker : IDisposable
+            {
+                public void Dispose() { }
+            }
+            """;
+
+        using var solution = RoslynTestSolutionFactory.CreateSolution(code, "App", "Worker.cs");
+        using var fixture = new McpInMemoryTestContext(solution);
+        var server = fixture.CreateServer();
+
+        var result = await FindImplementationsTool.ExecuteAsync(
+            server, "IDisposable", maxResults: 50, ct: CancellationToken.None);
+
+        Assert.True(result.IsError is null or false);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("DisposableWorker", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_GenericInterface_ReturnsImplementingClasses()
+    {
+        var code = """
+            namespace App;
+            public interface IRepository<T> { void Save(T item); }
+            public class OrderRepository : IRepository<string>
+            {
+                public void Save(string item) { }
+            }
+            """;
+
+        using var solution = RoslynTestSolutionFactory.CreateSolution(code, "App", "Repo.cs");
+        using var fixture = new McpInMemoryTestContext(solution);
+        var server = fixture.CreateServer();
+
+        var resultWithGenericParam = await FindImplementationsTool.ExecuteAsync(
+            server, "IRepository<T>", maxResults: 50, ct: CancellationToken.None);
+
+        Assert.True(resultWithGenericParam.IsError is null or false);
+        var textWithParam = Assert.IsType<TextContentBlock>(Assert.Single(resultWithGenericParam.Content));
+        Assert.Contains("OrderRepository", textWithParam.Text, StringComparison.Ordinal);
+
+        var resultWithoutGenericParam = await FindImplementationsTool.ExecuteAsync(
+            server, "IRepository", maxResults: 50, ct: CancellationToken.None);
+
+        Assert.True(resultWithoutGenericParam.IsError is null or false);
+        var textWithoutParam = Assert.IsType<TextContentBlock>(Assert.Single(resultWithoutGenericParam.Content));
+        Assert.Contains("OrderRepository", textWithoutParam.Text, StringComparison.Ordinal);
+    }
 }
