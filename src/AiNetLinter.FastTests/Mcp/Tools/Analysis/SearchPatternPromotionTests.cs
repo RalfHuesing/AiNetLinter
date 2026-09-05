@@ -71,6 +71,42 @@ public sealed class SearchPatternPromotionTests
         Assert.True(result.IsRegexAutoPromoted);
     }
 
+    [Theory]
+    [InlineData("`CalculateAsync()`")]
+    [InlineData("\"CalculateAsync()\"")]
+    [InlineData("'CalculateAsync()'")]
+    public void Scan_ZeroPlainHitsWithQuotedMethodParentheses_AutoPromotesToMethodCallRegex(string pattern)
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-quoted-method-");
+        using var solution = CreateSolution(tempDir.DirectoryPath);
+        var path = Path.Combine(tempDir.DirectoryPath, "src", "Project", "Worker.cs");
+        File.WriteAllText(path, "public async Task<int> CalculateAsync(int x, int y) { return x + y; }");
+
+        var result = SearchPatternScanner.Scan(CreateParameters(solution.Solution, new(pattern)));
+
+        var match = Assert.Single(result.Payload.Matches);
+        Assert.Contains("CalculateAsync(int x, int y)", match.LineText);
+        Assert.True(result.IsRegexAutoPromoted);
+    }
+
+    [Theory]
+    [InlineData("`IRepository<T>`")]
+    [InlineData("\"IRepository<T>\"")]
+    [InlineData("'IRepository<T>'")]
+    public void Scan_ZeroPlainHitsWithQuotedGenericType_AutoPromotesToGenericRegex(string pattern)
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-quoted-generic-");
+        using var solution = CreateSolution(tempDir.DirectoryPath);
+        var path = Path.Combine(tempDir.DirectoryPath, "src", "Project", "Repo.cs");
+        File.WriteAllText(path, "public sealed class ResultRepository : IRepository<Customer> { }");
+
+        var result = SearchPatternScanner.Scan(CreateParameters(solution.Solution, new(pattern)));
+
+        var match = Assert.Single(result.Payload.Matches);
+        Assert.Contains("IRepository<Customer>", match.LineText);
+        Assert.True(result.IsRegexAutoPromoted);
+    }
+
     [Fact]
     public void Scan_ScopeWithAbsolutePathInsideSolutionRoot_NormalizesAndMatches()
     {

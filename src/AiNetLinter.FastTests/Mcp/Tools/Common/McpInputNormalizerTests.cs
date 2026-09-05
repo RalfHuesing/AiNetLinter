@@ -67,4 +67,20 @@ public sealed class McpInputNormalizerTests
 
         Assert.Equal("src/Services/Worker.cs", result);
     }
+
+    [Theory]
+    [InlineData("CalculateAsync()", @"\bCalculateAsync\s*\(")]
+    [InlineData("`CalculateAsync()`", @"\bCalculateAsync\s*\(")]
+    [InlineData("\"CalculateAsync()\"", @"\bCalculateAsync\s*\(")]
+    [InlineData("IRepository<T>", @"\bIRepository\s*<")]
+    [InlineData("`IRepository<T>`", @"\bIRepository\s*<")]
+    [InlineData("`OrderProcessor`", @"\bOrderProcessor")]
+    [InlineData("*Service", @".*Service")]
+    public void TryBuildPromotedRegex_BuildsExpectedRegex(string input, string expectedPattern)
+    {
+        var success = McpInputNormalizer.TryBuildPromotedRegex(input, out var regex);
+        Assert.True(success);
+        Assert.NotNull(regex);
+        Assert.Equal(expectedPattern, regex.ToString());
+    }
 }

@@ -113,10 +113,13 @@ internal static class McpInputNormalizer
     {
         promotedRegex = null;
 
-        if (TryBuildMetaOrWildcardRegex(pattern, out promotedRegex)) return true;
-        if (TryBuildMethodParenthesesRegex(pattern, out promotedRegex)) return true;
-        if (TryBuildGenericTypeRegex(pattern, out promotedRegex)) return true;
-        if (TryBuildUnquotedRegex(pattern, out promotedRegex)) return true;
+        var unquoted = StripEnclosingQuotesAndBackticks(pattern);
+        var candidate = !string.IsNullOrWhiteSpace(unquoted) ? unquoted : pattern;
+
+        if (TryBuildMethodParenthesesRegex(candidate, out promotedRegex)) return true;
+        if (TryBuildGenericTypeRegex(candidate, out promotedRegex)) return true;
+        if (TryBuildMetaOrWildcardRegex(candidate, out promotedRegex)) return true;
+        if (candidate != pattern && TryBuildUnquotedRegex(pattern, out promotedRegex)) return true;
 
         return false;
     }
