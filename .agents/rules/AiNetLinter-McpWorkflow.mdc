@@ -46,7 +46,8 @@ Referenzen und Abhängigkeiten.
 
 - Jeder zielgebundene MCP-Tool-Aufruf verwendet einen absoluten `targetPath` und
   die im aktuellen Toolschema vorgesehene `targetType`-Zuordnung (`project` oder
-  `assembly`). `targetType=project` adressiert den Projektroot. Für die beiden
+  `assembly`). `targetType=project` adressiert den absoluten Projektroot des jeweiligen
+  Repositories (wo `ainetlinter.project.json` liegt). Für die beiden
   Assembly-only-Tools darf `targetType` gemäß ihrem Schema entfallen; ein
   `.dll`-/`.exe`-`targetPath` wird dort als `assembly` inferiert. `tools/list`
   weist je Tool aus, ob der gemeinsame read-only Projekt-/Assembly-Sessionpfad,
@@ -97,7 +98,7 @@ Abhängigkeiten, Tests oder Violations.
 Der Implementierer entscheidet anhand der sichtbaren Befunde, wann der Kontext
 ausreicht. Es gibt weder einen vorgelagerten Scout noch eine feste Mindestzahl
 oder starre Reihenfolge von MCP-Aufrufen. Relevante Befunde, Trunkierungen und
-Unsicherheiten werden knapp in der task-lokalen `code-map.md` festgehalten;
+Unsicherheiten werden knapp im Arbeitsgedächtnis bzw. der Task-Notiz (z. B. `code-map.md`) festgehalten;
 vollständige Tool-Rohantworten gehören nicht in die Map.
 
 ## Werkzeugwahl
