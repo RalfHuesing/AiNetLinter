@@ -50,14 +50,12 @@ internal sealed record FindSymbolRequest(
 internal static class FindSymbolTool
 {
     /// <summary>
-    /// Gueltige Werte fuer den optionalen <c>kind</c>-Filter — Deutsch (dokumentiertes Format
-    /// aus <c>Docs/agent-api.md</c>, identisch zur eigenen Output-Vokabular "Klasse:"/"Methode:")
-    /// und Englisch (interne <see cref="FindSymbolScanner.FilterByKind"/>-Schluesselwoerter)
-    /// gleichermassen zugelassen, case-insensitive.
+    /// Gueltige Werte fuer den optionalen <c>kind</c>-Filter — kanonische C#/Roslyn-Bezeichner,
+    /// case-insensitive.
     /// </summary>
     private static readonly HashSet<string> ValidKinds = new(StringComparer.OrdinalIgnoreCase)
     {
-        "class", "klasse", "interface", "method", "methode", "property", "record",
+        "class", "interface", "record", "record class", "record struct", "struct", "enum", "delegate", "method", "property",
     };
 
     internal const int MaxPatternsPerCall = 10;
@@ -112,7 +110,7 @@ internal static class FindSymbolTool
             ? McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
                 $"Unbekannter kind-Filter '{kind}'.",
-                hint: "Gueltige Werte: Klasse/class, Methode/method, Interface/interface, Property/property, Record/record.")
+                hint: "Gueltige Werte: class, method, interface, property, record, struct, enum, delegate.")
             : null;
 
     /// <summary>

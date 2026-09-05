@@ -20,7 +20,7 @@ public sealed class FindSymbolScannerTests
             new FindSymbolScanRequest(fixture.Solution, "Greeter", null, 50));
 
         Assert.Contains("Greeter.cs", result);
-        Assert.Contains("Klasse", result);
+        Assert.Contains("class", result);
     }
 
     [Fact]
@@ -33,7 +33,7 @@ public sealed class FindSymbolScannerTests
             new FindSymbolScanRequest(fixture.Solution, "`Greeter`", null, 50));
 
         Assert.Contains("Greeter.cs", result);
-        Assert.Contains("Klasse", result);
+        Assert.Contains("class", result);
     }
 
     [Fact]

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Tools.FileStructure;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
 
@@ -126,7 +127,7 @@ internal static class GetTypeHierarchyFormatter
             return sourceLines;
         }
 
-        var kindLabel = symbol.TypeKind == TypeKind.Interface ? "Interface" : "Klasse";
+        var kindLabel = SymbolKindClassifier.DescribeNamedTypeKind(symbol);
         return new[] { $"{kindLabel}: {symbol.ToDisplayString()} (extern, keine Datei im Repo)" };
     }
 

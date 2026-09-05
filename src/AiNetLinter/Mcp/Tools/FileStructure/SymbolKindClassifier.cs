@@ -14,12 +14,12 @@ internal static class SymbolKindClassifier
 {
     private static readonly HashSet<string> ValidTypeKinds = new(StringComparer.OrdinalIgnoreCase)
     {
-        "class", "klasse", "interface", "record", "record class", "record struct", "struct", "enum", "delegate", "all",
+        "class", "interface", "record", "record class", "record struct", "struct", "enum", "delegate", "all",
     };
 
     private static readonly HashSet<string> ValidSymbolKinds = new(StringComparer.OrdinalIgnoreCase)
     {
-        "class", "klasse", "interface", "record", "record class", "record struct", "struct", "enum", "delegate", "method", "methode", "property", "all",
+        "class", "interface", "record", "record class", "record struct", "struct", "enum", "delegate", "method", "property", "all",
     };
 
     internal static bool IsValidTypeKind(string? kind)
@@ -48,7 +48,7 @@ internal static class SymbolKindClassifier
 
         return kind.ToLowerInvariant() switch
         {
-            "class" or "klasse" => type.TypeKind == TypeKind.Class,
+            "class" => type.TypeKind == TypeKind.Class,
             "interface" => type.TypeKind == TypeKind.Interface,
             "struct" => type.TypeKind == TypeKind.Struct,
             "enum" => type.TypeKind == TypeKind.Enum,
@@ -78,8 +78,7 @@ internal static class SymbolKindClassifier
 
         if (symbol is IMethodSymbol)
         {
-            return kind.Equals("method", StringComparison.OrdinalIgnoreCase)
-                || kind.Equals("methode", StringComparison.OrdinalIgnoreCase);
+            return kind.Equals("method", StringComparison.OrdinalIgnoreCase);
         }
 
         if (symbol is IPropertySymbol)
@@ -104,7 +103,7 @@ internal static class SymbolKindClassifier
     {
         return kind.ToLowerInvariant() switch
         {
-            "class" or "klasse" => typeSymbol.TypeKind == TypeKind.Class,
+            "class" => typeSymbol.TypeKind == TypeKind.Class,
             "interface" => typeSymbol.TypeKind == TypeKind.Interface,
             "struct" => typeSymbol.TypeKind == TypeKind.Struct,
             "enum" => typeSymbol.TypeKind == TypeKind.Enum,
@@ -113,16 +112,16 @@ internal static class SymbolKindClassifier
         };
     }
 
-    internal static string DescribeNamedTypeKind(INamedTypeSymbol namedType, bool englishClass = false)
+    internal static string DescribeNamedTypeKind(INamedTypeSymbol namedType, bool specificRecord = false)
     {
         if (namedType.IsRecord)
         {
-            return namedType.TypeKind == TypeKind.Struct ? "record struct" : (englishClass ? "record class" : "record");
+            return namedType.TypeKind == TypeKind.Struct ? "record struct" : (specificRecord ? "record class" : "record");
         }
 
         return namedType.TypeKind switch
         {
-            TypeKind.Class => englishClass ? "class" : "Klasse",
+            TypeKind.Class => "class",
             TypeKind.Struct => "struct",
             TypeKind.Interface => "interface",
             TypeKind.Enum => "enum",
@@ -135,13 +134,13 @@ internal static class SymbolKindClassifier
     {
         if (symbol is INamedTypeSymbol named)
         {
-            return DescribeNamedTypeKind(named, englishClass: false);
+            return DescribeNamedTypeKind(named);
         }
 
-        if (symbol is ITypeSymbol { TypeKind: TypeKind.Class }) return "Klasse";
-        if (symbol is ITypeSymbol { TypeKind: TypeKind.Interface }) return "Interface";
-        if (symbol.Kind == SymbolKind.Method) return "Methode";
-        if (symbol.Kind == SymbolKind.Property) return "Property";
-        return symbol.Kind.ToString();
+        if (symbol is ITypeSymbol { TypeKind: TypeKind.Class }) return "class";
+        if (symbol is ITypeSymbol { TypeKind: TypeKind.Interface }) return "interface";
+        if (symbol.Kind == SymbolKind.Method) return "method";
+        if (symbol.Kind == SymbolKind.Property) return "property";
+        return symbol.Kind.ToString().ToLowerInvariant();
     }
 }

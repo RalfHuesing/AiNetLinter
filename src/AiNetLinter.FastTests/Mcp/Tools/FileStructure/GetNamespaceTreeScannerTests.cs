@@ -357,8 +357,7 @@ public sealed class GetNamespaceTreeScannerTests
             parameters,
             ct: CancellationToken.None);
 
-        Assert.Contains("RootClass (Klasse)", text);
+        Assert.Contains("RootClass (class)", text);
         Assert.Contains("[Hinweis: Unter 'App.Core' existieren 1 weitere Sub-Namespaces (App.Core.Sub)", text);
     }
 }
-

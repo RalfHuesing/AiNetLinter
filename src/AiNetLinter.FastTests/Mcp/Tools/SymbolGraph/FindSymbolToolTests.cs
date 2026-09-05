@@ -94,7 +94,7 @@ public sealed class FindSymbolToolTests
         Assert.NotNull(batch);
         var singleResult = Assert.Single(batch.Results);
         Assert.Equal("Greeter", singleResult.NamePattern);
-        Assert.Contains(singleResult.Matches, entry => entry.FilePath.Contains("Greeter.cs", System.StringComparison.Ordinal) && entry.Kind == "Klasse");
+        Assert.Contains(singleResult.Matches, entry => entry.FilePath.Contains("Greeter.cs", System.StringComparison.Ordinal) && entry.Kind == "class");
     }
 
     [Fact]
@@ -265,31 +265,31 @@ public sealed class FindSymbolToolTests
             new FindSymbolScanRequest(fixture.Solution, "Greeter", null, 50));
 
         Assert.Contains("Greeter.cs", result);
-        Assert.Contains("Klasse", result);
+        Assert.Contains("class", result);
         Assert.Contains(":", result);
     }
 
     [Fact]
-    public async Task FindMatchesAndFormat_GermanKindKlasse_BehavesLikeEnglishClass()
+    public async Task FindMatchesAndFormat_KindClass_MatchesClass()
     {
         using var fixture = new McpInMemoryTestContext();
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            new FindSymbolScanRequest(fixture.Solution, "Greeter", "Klasse", 50));
+            new FindSymbolScanRequest(fixture.Solution, "Greeter", "class", 50));
 
         Assert.Contains("Greeter.cs", result);
-        Assert.Contains("Klasse", result);
+        Assert.Contains("class", result);
     }
 
     [Fact]
     public async Task ExecuteAsync_UnknownKind_ReturnsRecoverableInvalidArgument()
     {
         using var fixture = new McpInMemoryTestContext();
-        var result = await FindSymbolTool.ExecuteAsync(fixture.CreateServer(), namePatterns: ["Greeter"], kind: "Enum", maxResults: 50, CancellationToken.None);
+        var result = await FindSymbolTool.ExecuteAsync(fixture.CreateServer(), namePatterns: ["Greeter"], kind: "invalid_kind", maxResults: 50, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Contains("Enum", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("invalid_kind", textContent.Text, System.StringComparison.Ordinal);
     }
 
     [Fact]

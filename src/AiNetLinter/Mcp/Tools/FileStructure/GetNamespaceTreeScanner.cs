@@ -355,7 +355,7 @@ internal static class GetNamespaceTreeScanner
             ? PathNormalizer.ToRelative(solutionDir, location.SourceTree.FilePath)
             : string.Empty;
         var line = (location?.GetLineSpan().StartLinePosition.Line ?? 0) + 1;
-        return new TypeNodeEntry(t.Name, SymbolKindClassifier.DescribeNamedTypeKind(t, englishClass: false), filePath, line, SymbolVisibilityResolver.ResolveVisibility(t));
+        return new TypeNodeEntry(t.Name, SymbolKindClassifier.DescribeNamedTypeKind(t), filePath, line, SymbolVisibilityResolver.ResolveVisibility(t));
     }
 
     internal static bool HasAnySourceTypesInHierarchy(INamespaceSymbol ns, HashSet<SyntaxTree> projectTrees)

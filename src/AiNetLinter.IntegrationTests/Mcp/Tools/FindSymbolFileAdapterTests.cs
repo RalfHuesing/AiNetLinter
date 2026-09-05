@@ -53,19 +53,10 @@ public sealed class FindSymbolFileAdapterTests : IClassFixture<FindSymbolFileAda
     }
 
     [Fact]
-    public async Task FindMatchesAndFormat_ToolKindFilterExcludesNonMatchingKind()
+    public async Task FindMatchesAndFormat_UnknownKindFilter_ReturnsNoResultsText()
     {
         var result = await FindSymbolScanner.FindMatchesAndFormat(
-            new FindSymbolScanRequest(fixture.Solution, "Greeter", "method", 50));
-
-        Assert.Contains("Keine Treffer", result);
-    }
-
-    [Fact]
-    public async Task FindMatchesAndFormat_GermanKindMethode_BehavesLikeEnglishMethod()
-    {
-        var result = await FindSymbolScanner.FindMatchesAndFormat(
-            new FindSymbolScanRequest(fixture.Solution, "Greeter", "Methode", 50));
+            new FindSymbolScanRequest(fixture.Solution, "Greeter", "unknown_kind", 50));
 
         Assert.Contains("Keine Treffer", result);
     }

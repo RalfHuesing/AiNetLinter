@@ -104,7 +104,7 @@ internal static class GetClassStructureTool
 
             var payload = new ClassStructurePayload(
                 TypeName: namedType.ToDisplayString(),
-                Kind: SymbolKindClassifier.DescribeNamedTypeKind(namedType, englishClass: true),
+                Kind: SymbolKindClassifier.DescribeNamedTypeKind(namedType, specificRecord: true),
                 Files: files,
                 TotalLines: totalLines,
                 TotalMemberCount: sortedMembers.Count,

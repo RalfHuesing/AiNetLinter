@@ -72,7 +72,8 @@ Referenzen und Abhängigkeiten.
   primäre Parametername (`symbol` bleibt kompatibler Alias).
 - Für `find_symbol` ist `pattern` (oder `namePattern`/`namePatterns` für Batch)
   das primäre Suchmuster; unterstützt Substring, Glob (`*`, `?`), Regex (`^...$`)
-  und generische Typen (`<T>` wird tolerant bereinigt).
+  und generische Typen (`<T>` wird tolerant bereinigt). `kind` filtert optional
+  nach kanonischen C#-Arten (`class`, `method`, `interface`, `record`, `struct`, `enum`, `delegate`, `property`).
 - Für `search_pattern` und `search_assembly` ist `pattern` das Suchmuster mit
   automatischem Regex-Autodetect (`isRegex: null` als Standard-Tri-State; Plain-First
   verhindert False-Positives bei typischer C#-Syntax, automatische Promotion bei 0
