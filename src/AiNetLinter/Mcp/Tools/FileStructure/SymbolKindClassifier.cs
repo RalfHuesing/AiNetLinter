@@ -14,13 +14,24 @@ internal static class SymbolKindClassifier
 {
     private static readonly HashSet<string> ValidTypeKinds = new(StringComparer.OrdinalIgnoreCase)
     {
-        "class", "klasse", "interface", "record", "struct", "enum", "delegate", "all",
+        "class", "klasse", "interface", "record", "record class", "record struct", "struct", "enum", "delegate", "all",
+    };
+
+    private static readonly HashSet<string> ValidSymbolKinds = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "class", "klasse", "interface", "record", "record class", "record struct", "struct", "enum", "delegate", "method", "methode", "property", "all",
     };
 
     internal static bool IsValidTypeKind(string? kind)
     {
         if (string.IsNullOrWhiteSpace(kind)) return true;
         return ValidTypeKinds.Contains(kind);
+    }
+
+    internal static bool IsValidSymbolKind(string? kind)
+    {
+        if (string.IsNullOrWhiteSpace(kind)) return true;
+        return ValidSymbolKinds.Contains(kind);
     }
 
     internal static bool MatchesTypeKind(INamedTypeSymbol type, string? kind)
@@ -30,14 +41,30 @@ internal static class SymbolKindClassifier
             return true;
         }
 
+        if (kind.StartsWith("record", StringComparison.OrdinalIgnoreCase))
+        {
+            return MatchesRecordKind(type, kind);
+        }
+
         return kind.ToLowerInvariant() switch
         {
             "class" or "klasse" => type.TypeKind == TypeKind.Class,
             "interface" => type.TypeKind == TypeKind.Interface,
-            "record" => type.IsRecord,
             "struct" => type.TypeKind == TypeKind.Struct,
             "enum" => type.TypeKind == TypeKind.Enum,
             "delegate" => type.TypeKind == TypeKind.Delegate,
+            _ => false,
+        };
+    }
+
+    private static bool MatchesRecordKind(INamedTypeSymbol type, string kind)
+    {
+        if (!type.IsRecord) return false;
+        return kind.ToLowerInvariant() switch
+        {
+            "record" => true,
+            "record class" => type.TypeKind == TypeKind.Class,
+            "record struct" => type.TypeKind == TypeKind.Struct,
             _ => false,
         };
     }
@@ -49,17 +76,40 @@ internal static class SymbolKindClassifier
             return true;
         }
 
+        if (symbol is IMethodSymbol)
+        {
+            return kind.Equals("method", StringComparison.OrdinalIgnoreCase)
+                || kind.Equals("methode", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (symbol is IPropertySymbol)
+        {
+            return kind.Equals("property", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (symbol is INamedTypeSymbol namedType)
+        {
+            return MatchesTypeKind(namedType, kind);
+        }
+
+        if (symbol is ITypeSymbol typeSymbol)
+        {
+            return MatchesTypeKindFallback(typeSymbol, kind);
+        }
+
+        return true;
+    }
+
+    private static bool MatchesTypeKindFallback(ITypeSymbol typeSymbol, string kind)
+    {
         return kind.ToLowerInvariant() switch
         {
-            "class" or "klasse" => symbol is ITypeSymbol { TypeKind: TypeKind.Class },
-            "interface" => symbol is ITypeSymbol { TypeKind: TypeKind.Interface },
-            "record" => symbol is INamedTypeSymbol { IsRecord: true },
-            "struct" => symbol is ITypeSymbol { TypeKind: TypeKind.Struct },
-            "enum" => symbol is ITypeSymbol { TypeKind: TypeKind.Enum },
-            "delegate" => symbol is ITypeSymbol { TypeKind: TypeKind.Delegate },
-            "method" or "methode" => symbol is IMethodSymbol,
-            "property" => symbol is IPropertySymbol,
-            _ => true,
+            "class" or "klasse" => typeSymbol.TypeKind == TypeKind.Class,
+            "interface" => typeSymbol.TypeKind == TypeKind.Interface,
+            "struct" => typeSymbol.TypeKind == TypeKind.Struct,
+            "enum" => typeSymbol.TypeKind == TypeKind.Enum,
+            "delegate" => typeSymbol.TypeKind == TypeKind.Delegate,
+            _ => false,
         };
     }
 

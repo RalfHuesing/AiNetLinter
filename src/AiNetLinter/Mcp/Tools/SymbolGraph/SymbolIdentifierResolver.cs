@@ -342,28 +342,36 @@ internal static class SymbolIdentifierResolver
     internal static ISymbol? TryFindEnclosingMember(SyntaxNode root, TextSpan lineSpan, SemanticModel semanticModel)
     {
         var node = root.FindNode(lineSpan, findInsideTrivia: false, getInnermostNodeForTie: true);
-        var enclosingNode = node.AncestorsAndSelf()
-            .FirstOrDefault(n => n is MethodDeclarationSyntax
-                              or PropertyDeclarationSyntax
-                              or ConstructorDeclarationSyntax
-                              or IndexerDeclarationSyntax
-                              or EventDeclarationSyntax
-                              or AccessorDeclarationSyntax);
-
-        if (enclosingNode is not null)
-        {
-            return semanticModel.GetDeclaredSymbol(enclosingNode);
-        }
+        var symbol = FindEnclosingDeclarationSymbol(node, semanticModel);
+        if (symbol is not null) return symbol;
 
         var token = root.FindToken(lineSpan.Start);
-        enclosingNode = token.Parent?.AncestorsAndSelf()
+        if (token.Parent is not null)
+        {
+            symbol = FindEnclosingDeclarationSymbol(token.Parent, semanticModel);
+            if (symbol is not null) return symbol;
+        }
+
+        return null;
+    }
+
+    private static ISymbol? FindEnclosingDeclarationSymbol(SyntaxNode startNode, SemanticModel semanticModel)
+    {
+        var member = startNode.AncestorsAndSelf()
             .FirstOrDefault(n => n is MethodDeclarationSyntax
                               or PropertyDeclarationSyntax
                               or ConstructorDeclarationSyntax
                               or IndexerDeclarationSyntax
                               or EventDeclarationSyntax
-                              or AccessorDeclarationSyntax);
+                              or AccessorDeclarationSyntax
+                              or LocalFunctionStatementSyntax);
 
-        return enclosingNode is not null ? semanticModel.GetDeclaredSymbol(enclosingNode) : null;
+        if (member is not null)
+        {
+            return semanticModel.GetDeclaredSymbol(member);
+        }
+
+        var type = startNode.AncestorsAndSelf().FirstOrDefault(n => n is BaseTypeDeclarationSyntax);
+        return type is not null ? semanticModel.GetDeclaredSymbol(type) : null;
     }
 }

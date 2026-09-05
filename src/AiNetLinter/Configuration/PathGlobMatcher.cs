@@ -61,7 +61,7 @@ internal static class PathGlobMatcher
         {
             if (i > 0) builder.Append('|');
             builder.Append("(?:");
-            var part = parts[i];
+            var part = parts[i].Trim();
             for (var p = 0; p < part.Length; p++)
             {
                 var ch = part[p];

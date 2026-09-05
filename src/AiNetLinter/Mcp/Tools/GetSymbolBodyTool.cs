@@ -148,7 +148,7 @@ internal static class GetSymbolBodyTool
         var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
             solution, request.Identifier, ct, request.AssemblyIdentity);
 
-        if (symbol is null || error is not null)
+        if (symbol is null || error is not null || symbol is ILocalSymbol or IParameterSymbol)
         {
             var enclosing = await TryResolveEnclosingMemberForBodyAsync(solution, request.Identifier, ct).ConfigureAwait(false);
             if (enclosing is not null)
@@ -170,15 +170,8 @@ internal static class GetSymbolBodyTool
         string identifier,
         CancellationToken ct)
     {
-        string path;
-        int line;
-        if (SymbolIdentifierResolver.TryParsePosition(identifier, out path, out line, out _))
-        {
-        }
-        else if (SymbolIdentifierResolver.TryParseLineOnlyPosition(identifier, out path, out line))
-        {
-        }
-        else
+        if (!SymbolIdentifierResolver.TryParsePosition(identifier, out var path, out var line, out _)
+            && !SymbolIdentifierResolver.TryParseLineOnlyPosition(identifier, out path, out line))
         {
             return null;
         }

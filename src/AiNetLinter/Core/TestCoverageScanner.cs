@@ -139,16 +139,21 @@ public static partial class TestCoverageScanner
             return CreationUsesTargetType(creation, targetType, semanticModel);
         }
 
+        var targetOriginal = targetType.OriginalDefinition ?? targetType;
         if (node is InvocationExpressionSyntax invocation)
         {
             var symbol = semanticModel.GetSymbolInfo(invocation).Symbol;
-            return symbol != null && SymbolEqualityComparer.Default.Equals(symbol.ContainingType, targetType);
+            return symbol != null && SymbolEqualityComparer.Default.Equals(
+                symbol.ContainingType?.OriginalDefinition ?? symbol.ContainingType,
+                targetOriginal);
         }
 
         if (node is MemberAccessExpressionSyntax memberAccess)
         {
             var symbol = semanticModel.GetSymbolInfo(memberAccess).Symbol;
-            return symbol != null && SymbolEqualityComparer.Default.Equals(symbol.ContainingType, targetType);
+            return symbol != null && SymbolEqualityComparer.Default.Equals(
+                symbol.ContainingType?.OriginalDefinition ?? symbol.ContainingType,
+                targetOriginal);
         }
 
         return false;
@@ -159,14 +164,19 @@ public static partial class TestCoverageScanner
         INamedTypeSymbol targetType,
         SemanticModel semanticModel)
     {
+        var targetOriginal = targetType.OriginalDefinition ?? targetType;
         var symbol = semanticModel.GetSymbolInfo(creation).Symbol;
-        if (symbol is IMethodSymbol ctor && SymbolEqualityComparer.Default.Equals(ctor.ContainingType, targetType))
+        if (symbol is IMethodSymbol ctor && SymbolEqualityComparer.Default.Equals(
+            ctor.ContainingType?.OriginalDefinition ?? ctor.ContainingType,
+            targetOriginal))
         {
             return true;
         }
 
         var type = semanticModel.GetTypeInfo(creation).Type;
-        return SymbolEqualityComparer.Default.Equals(type, targetType);
+        return SymbolEqualityComparer.Default.Equals(
+            type?.OriginalDefinition ?? type,
+            targetOriginal);
     }
 
     private static bool IsNamedAfterMember(string testMethodName, string targetMemberName)

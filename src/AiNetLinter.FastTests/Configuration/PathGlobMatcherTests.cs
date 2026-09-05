@@ -52,6 +52,8 @@ public sealed class PathGlobMatcherTests
 
     [Theory]
     [InlineData("ConnectionPage.xaml", "**/*.{xaml,cs}", true)]
+    [InlineData("ConnectionPage.xaml", "**/*.{xaml, cs}", true)]
+    [InlineData("WizardShellViewModel.cs", "**/*.{xaml, cs}", true)]
     [InlineData("WizardShellViewModel.cs", "**/*.{xaml,cs}", true)]
     [InlineData("image.png", "**/*.{xaml,cs}", false)]
     [InlineData("src/views/Page.xaml", "**/*.{xaml,cs}", true)]

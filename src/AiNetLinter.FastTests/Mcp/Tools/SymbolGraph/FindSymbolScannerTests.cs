@@ -124,6 +124,17 @@ public sealed class FindSymbolScannerTests
     }
 
     [Fact]
+    public async Task FindMatchesAndFormat_KindRecordClass_FindsRecordClass()
+    {
+        using var fixture = new McpInMemoryTestContext();
+
+        var result = await FindSymbolScanner.FindMatchesAndFormat(
+            new FindSymbolScanRequest(fixture.Solution, "GreetingRecord", "record class", 50));
+
+        Assert.Contains("GreetingRecord", result);
+    }
+
+    [Fact]
     public async Task FindMatchesAndFormat_KindFilterMismatch_ExplainsKindExclusionInsteadOfMissingFromGraph()
     {
         using var fixture = new McpInMemoryTestContext();

@@ -179,32 +179,39 @@ public sealed class DiffImpactAnalyzer
 
     private static (int ExitCode, string Stdout, string Stderr) RunGitProcess(string repoRoot, string args)
     {
-        var startInfo = new ProcessStartInfo
+        try
         {
-            FileName = GitCommand,
-            Arguments = args,
-            WorkingDirectory = repoRoot,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            RedirectStandardInput = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = GitCommand,
+                Arguments = args,
+                WorkingDirectory = repoRoot,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                RedirectStandardInput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
 
-        using var process = Process.Start(startInfo);
-        if (process == null) return (-1, string.Empty, string.Empty);
+            using var process = Process.Start(startInfo);
+            if (process == null) return (-1, string.Empty, string.Empty);
 
-        process.StandardInput.Close();
+            process.StandardInput.Close();
 
-        var stdout = new StringBuilder();
-        var stderr = new StringBuilder();
-        process.OutputDataReceived += (_, e) => { if (e.Data != null) stdout.Append(e.Data).Append('\n'); };
-        process.ErrorDataReceived += (_, e) => { if (e.Data != null) stderr.Append(e.Data).Append('\n'); };
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
+            var stdout = new StringBuilder();
+            var stderr = new StringBuilder();
+            process.OutputDataReceived += (_, e) => { if (e.Data != null) stdout.Append(e.Data).Append('\n'); };
+            process.ErrorDataReceived += (_, e) => { if (e.Data != null) stderr.Append(e.Data).Append('\n'); };
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
 
-        process.WaitForExit();
-        return (process.ExitCode, stdout.ToString(), stderr.ToString());
+            process.WaitForExit();
+            return (process.ExitCode, stdout.ToString(), stderr.ToString());
+        }
+        catch (Exception ex)
+        {
+            return (-1, string.Empty, ex.Message);
+        }
     }
 
     /// <summary>

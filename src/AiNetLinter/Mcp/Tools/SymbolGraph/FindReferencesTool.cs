@@ -315,6 +315,15 @@ internal static class FindReferencesTool
             .Where(s => IsSymbolMatch(s, cleanIdentifier, unparameterized, ungenericIdentifier))
             .ToList();
 
+        if (candidates.Count > 1 && cleanIdentifier.Contains('('))
+        {
+            var exactMatches = candidates
+                .Where(s => s.ToDisplayString().EndsWith(cleanIdentifier, StringComparison.Ordinal))
+                .ToList();
+            if (exactMatches.Count == 1) return (exactMatches[0], null);
+            if (exactMatches.Count > 1) candidates = exactMatches;
+        }
+
         if (candidates.Count == 1) return (candidates[0], null);
         if (candidates.Count > 1)
         {
