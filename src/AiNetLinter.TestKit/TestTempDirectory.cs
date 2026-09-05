@@ -19,7 +19,7 @@ public sealed class TestTempDirectory : IDisposable
     private const string DefaultPrefix = "ainet-test-";
     private const string TempFolderName = "temp";
     private const string OwnerMarkerFilePrefix = ".ainet-test-owner-";
-    private static readonly TimeSpan StaleDirectoryAge = TimeSpan.FromHours(24);
+    private static readonly TimeSpan StaleDirectoryAge = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan[] DeleteRetryDelays =
     [
         TimeSpan.Zero,
@@ -141,8 +141,19 @@ public sealed class TestTempDirectory : IDisposable
             DisposeOwnerMarker(ownerMarker);
         }
 
-        DeleteOwnerMarker(DirectoryPath);
-        TryDeleteDirectory(DirectoryPath);
+        if (TryDeleteDirectory(DirectoryPath))
+        {
+            DeleteOwnerMarker(DirectoryPath);
+            return;
+        }
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+
+        if (TryDeleteDirectory(DirectoryPath))
+        {
+            DeleteOwnerMarker(DirectoryPath);
+        }
     }
 
     private static FileStream CreateOwnerMarker(string directoryPath)
@@ -315,8 +326,10 @@ public sealed class TestTempDirectory : IDisposable
                 DisposeOwnerMarker(ownerMarker);
             }
 
-            DeleteOwnerMarker(pair.Key);
-            TryDeleteDirectory(pair.Key);
+            if (TryDeleteDirectory(pair.Key))
+            {
+                DeleteOwnerMarker(pair.Key);
+            }
         }
     }
 
