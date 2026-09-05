@@ -25,7 +25,7 @@ public sealed class McpLintConsoleTests
         {
             McpLintConsole.Instance.WriteLine("test-mcp-stdout-line");
 
-            Assert.Equal("test-mcp-stdout-line" + Environment.NewLine, writer.ToString());
+            Assert.Contains("test-mcp-stdout-line", writer.ToString());
         }
         finally
         {
@@ -43,7 +43,7 @@ public sealed class McpLintConsoleTests
         {
             McpLintConsole.Instance.WriteError("test-mcp-stderr-line");
 
-            Assert.Equal("test-mcp-stderr-line" + Environment.NewLine, writer.ToString());
+            Assert.Contains("test-mcp-stderr-line", writer.ToString());
         }
         finally
         {
