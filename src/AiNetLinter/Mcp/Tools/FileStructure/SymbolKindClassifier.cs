@@ -32,10 +32,10 @@ internal static class SymbolKindClassifier
 
         return kind.ToLowerInvariant() switch
         {
-            "class" or "klasse" => type.TypeKind == TypeKind.Class && !type.IsRecord,
+            "class" or "klasse" => type.TypeKind == TypeKind.Class,
             "interface" => type.TypeKind == TypeKind.Interface,
             "record" => type.IsRecord,
-            "struct" => type.TypeKind == TypeKind.Struct && !type.IsRecord,
+            "struct" => type.TypeKind == TypeKind.Struct,
             "enum" => type.TypeKind == TypeKind.Enum,
             "delegate" => type.TypeKind == TypeKind.Delegate,
             _ => false,
@@ -51,10 +51,10 @@ internal static class SymbolKindClassifier
 
         return kind.ToLowerInvariant() switch
         {
-            "class" or "klasse" => symbol is ITypeSymbol { TypeKind: TypeKind.Class } and not INamedTypeSymbol { IsRecord: true },
+            "class" or "klasse" => symbol is ITypeSymbol { TypeKind: TypeKind.Class },
             "interface" => symbol is ITypeSymbol { TypeKind: TypeKind.Interface },
             "record" => symbol is INamedTypeSymbol { IsRecord: true },
-            "struct" => symbol is ITypeSymbol { TypeKind: TypeKind.Struct } and not INamedTypeSymbol { IsRecord: true },
+            "struct" => symbol is ITypeSymbol { TypeKind: TypeKind.Struct },
             "enum" => symbol is ITypeSymbol { TypeKind: TypeKind.Enum },
             "delegate" => symbol is ITypeSymbol { TypeKind: TypeKind.Delegate },
             "method" or "methode" => symbol is IMethodSymbol,

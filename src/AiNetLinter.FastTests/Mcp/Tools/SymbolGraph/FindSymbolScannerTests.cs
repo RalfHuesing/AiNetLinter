@@ -110,6 +110,31 @@ public sealed class FindSymbolScannerTests
         Assert.Contains("Treffer gesamt", text);
         Assert.Contains("1 gezeigt", text);
     }
+
+    [Fact]
+    public async Task FindMatchesAndFormat_KindClass_FindsRecords()
+    {
+        using var fixture = new McpInMemoryTestContext();
+
+        var result = await FindSymbolScanner.FindMatchesAndFormat(
+            new FindSymbolScanRequest(fixture.Solution, "GreetingRecord", "class", 50));
+
+        Assert.Contains("GreetingRecord", result);
+        Assert.Contains("record", result);
+    }
+
+    [Fact]
+    public async Task FindMatchesAndFormat_KindFilterMismatch_ExplainsKindExclusionInsteadOfMissingFromGraph()
+    {
+        using var fixture = new McpInMemoryTestContext();
+
+        var result = await FindSymbolScanner.FindMatchesAndFormat(
+            new FindSymbolScanRequest(fixture.Solution, "Greeter", "interface", 50));
+
+        Assert.Contains("Kind-Filter: interface", result);
+        Assert.Contains("abweichendem Kind", result);
+        Assert.DoesNotContain("nicht Teil des Symbolgraphs", result);
+    }
 }
 
 [Trait("Category", "Unit")]

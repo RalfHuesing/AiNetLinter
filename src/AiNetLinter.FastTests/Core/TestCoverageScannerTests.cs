@@ -172,4 +172,50 @@ public sealed class TestCoverageScannerTests
         Assert.Equal(0, result.TotalMatchingTests);
         Assert.Empty(result.TestFiles);
     }
+
+    [Fact]
+    public async Task FindTestsForSymbolAsync_TypeUsageInTestClassWithDifferentName_FindsCallingTests()
+    {
+        using var solutionOwner = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\Solution.slnx",
+            new ProjectSpec("App", [
+                ("SqlPackSelector.cs", """
+                    namespace App;
+                    public class SqlPackSelector
+                    {
+                        public void Select() {}
+                    }
+                    """)
+            ]),
+            new ProjectSpec("App.Tests", [
+                ("FeatureAndConnectionTests.cs", """
+                    namespace App.Tests;
+                    public class FeatureAndConnectionTests
+                    {
+                        [Xunit.Fact]
+                        public void TestSelectorInvocation()
+                        {
+                            var selector = new App.SqlPackSelector();
+                            selector.Select();
+                        }
+
+                        [Xunit.Fact]
+                        public void OtherTest() {}
+                    }
+                    """)
+            ], ["App"])
+        );
+
+        var compilation = await solutionOwner.Solution.Projects.First(p => p.Name == "App").GetCompilationAsync();
+        var selectorType = compilation!.GetTypeByMetadataName("App.SqlPackSelector")!;
+
+        var result = await TestCoverageScanner.FindTestsForSymbolAsync(selectorType, solutionOwner.Solution, CancellationToken.None);
+
+        Assert.True(result.TotalMatchingTests >= 1);
+        var testFile = Assert.Single(result.TestFiles);
+        Assert.Equal("FeatureAndConnectionTests", testFile.TestClassName);
+        Assert.Contains("TestSelectorInvocation", testFile.TestMethods);
+        Assert.DoesNotContain("OtherTest", testFile.TestMethods);
+        Assert.Equal(TestCoverageMatchReasons.DirectTypeUsage, testFile.MatchReason);
+    }
 }

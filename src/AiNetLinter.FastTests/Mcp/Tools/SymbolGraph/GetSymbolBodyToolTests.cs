@@ -309,5 +309,54 @@ public sealed class GetSymbolBodyToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Zeilen: 1-2 von", textContent.Text, System.StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_FileLineInsideMethodBody_ResolvesEnclosingMethod()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetSymbolBodyTool.ExecuteAsync(
+            state,
+            ["Caller.cs:9"],
+            80,
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Run", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DocCommentIdWithoutParameters_ResolvesMethod()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetSymbolBodyTool.ExecuteAsync(
+            state,
+            ["M:SymbolGraphMini.Greeter.Greet"],
+            80,
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Greet", text, StringComparison.Ordinal);
+        Assert.Contains("Hello", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DocCommentIdWithWrongParameters_ResolvesOrSuggestsCorrectMethod()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetSymbolBodyTool.ExecuteAsync(
+            state,
+            ["M:SymbolGraphMini.Greeter.Greet(System.Int32)"],
+            80,
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Greet", text, StringComparison.Ordinal);
+    }
 }
 

@@ -102,14 +102,71 @@ public static partial class TestCoverageScanner
             if (!TestDetector.IsTestMethod(method)) continue;
 
             var methodName = method.Identifier.Text;
-            var isMethodMatch = targetMemberName != null &&
-                (IsNamedAfterMember(methodName, targetMemberName) ||
-                 CallsTargetSymbol(method, targetSymbol, targetMemberName, semanticModel));
+            var isMethodMatch = targetMemberName != null
+                ? (IsNamedAfterMember(methodName, targetMemberName) ||
+                   CallsTargetSymbol(method, targetSymbol, targetMemberName, semanticModel))
+                : CallsOrUsesTargetType(method, targetSymbol, semanticModel);
 
             list.Add((methodName, isMethodMatch));
         }
 
         return list;
+    }
+
+    private static bool CallsOrUsesTargetType(
+        MethodDeclarationSyntax method,
+        ISymbol targetSymbol,
+        SemanticModel semanticModel)
+    {
+        var targetType = targetSymbol as INamedTypeSymbol ?? targetSymbol.ContainingType;
+        if (targetType is null) return false;
+
+        foreach (var node in method.DescendantNodes())
+        {
+            if (NodeUsesTargetType(node, targetType, semanticModel))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool NodeUsesTargetType(SyntaxNode node, INamedTypeSymbol targetType, SemanticModel semanticModel)
+    {
+        if (node is BaseObjectCreationExpressionSyntax creation)
+        {
+            return CreationUsesTargetType(creation, targetType, semanticModel);
+        }
+
+        if (node is InvocationExpressionSyntax invocation)
+        {
+            var symbol = semanticModel.GetSymbolInfo(invocation).Symbol;
+            return symbol != null && SymbolEqualityComparer.Default.Equals(symbol.ContainingType, targetType);
+        }
+
+        if (node is MemberAccessExpressionSyntax memberAccess)
+        {
+            var symbol = semanticModel.GetSymbolInfo(memberAccess).Symbol;
+            return symbol != null && SymbolEqualityComparer.Default.Equals(symbol.ContainingType, targetType);
+        }
+
+        return false;
+    }
+
+    private static bool CreationUsesTargetType(
+        BaseObjectCreationExpressionSyntax creation,
+        INamedTypeSymbol targetType,
+        SemanticModel semanticModel)
+    {
+        var symbol = semanticModel.GetSymbolInfo(creation).Symbol;
+        if (symbol is IMethodSymbol ctor && SymbolEqualityComparer.Default.Equals(ctor.ContainingType, targetType))
+        {
+            return true;
+        }
+
+        var type = semanticModel.GetTypeInfo(creation).Type;
+        return SymbolEqualityComparer.Default.Equals(type, targetType);
     }
 
     private static bool IsNamedAfterMember(string testMethodName, string targetMemberName)
@@ -125,13 +182,17 @@ public static partial class TestCoverageScanner
         bool hasCovers,
         bool hasTypeof)
     {
+        var directMatches = testMethods.Where(m => m.IsDirectMatch).Select(m => m.Name).ToList();
         if (targetMemberName != null)
         {
-            var directMatches = testMethods.Where(m => m.IsDirectMatch).Select(m => m.Name).ToList();
             if (directMatches.Count > 0)
             {
                 return (true, TestCoverageMatchReasons.DirectMemberMatch, directMatches, testMethods.Count);
             }
+        }
+        else if (directMatches.Count > 0 && !classNameMatches && !hasCovers && !hasTypeof)
+        {
+            return (true, TestCoverageMatchReasons.DirectTypeUsage, directMatches, testMethods.Count);
         }
 
         var allNames = testMethods.Select(m => m.Name).ToList();
@@ -146,6 +207,10 @@ public static partial class TestCoverageScanner
         if (hasTypeof)
         {
             return (true, TestCoverageMatchReasons.DirectTypeofReference, allNames, testMethods.Count);
+        }
+        if (directMatches.Count > 0)
+        {
+            return (true, TestCoverageMatchReasons.DirectTypeUsage, directMatches, testMethods.Count);
         }
 
         return (false, string.Empty, [], testMethods.Count);
@@ -259,10 +324,11 @@ public static partial class TestCoverageScanner
     private static int GetMatchReasonPriority(string reason) => reason switch
     {
         TestCoverageMatchReasons.DirectMemberMatch => 1,
-        TestCoverageMatchReasons.NamingConventionMatch => 2,
-        TestCoverageMatchReasons.ExplicitCoversComment => 3,
-        TestCoverageMatchReasons.DirectTypeofReference => 4,
-        _ => 5
+        TestCoverageMatchReasons.DirectTypeUsage => 2,
+        TestCoverageMatchReasons.NamingConventionMatch => 3,
+        TestCoverageMatchReasons.ExplicitCoversComment => 4,
+        TestCoverageMatchReasons.DirectTypeofReference => 5,
+        _ => 6
     };
 
     [GeneratedRegex(@"//\s*(?:@covers|covers)\s+([\w\.]+)", RegexOptions.CultureInvariant)]
@@ -275,6 +341,7 @@ public static partial class TestCoverageScanner
 public static class TestCoverageMatchReasons
 {
     public const string DirectMemberMatch = "Direct Member Match / Invocation";
+    public const string DirectTypeUsage = "Direct Type Usage / Invocation";
     public const string NamingConventionMatch = "Naming Convention Match";
     public const string ExplicitCoversComment = "Explicit @covers Comment";
     public const string DirectTypeofReference = "Direct typeof Reference";

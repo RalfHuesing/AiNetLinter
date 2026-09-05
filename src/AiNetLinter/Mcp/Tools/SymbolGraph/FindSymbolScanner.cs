@@ -50,16 +50,16 @@ internal static class FindSymbolScanner
             SymbolFilter.TypeAndMember,
             ct).ConfigureAwait(false);
 
-        var filtered = FilterByKind(symbols, request.Kind)
+        var nameMatches = symbols
             .Where(symbol => SymbolNameMatcher.MatchesSymbol(symbol, request.NamePattern))
             .ToList();
 
+        var filtered = FilterByKind(nameMatches, request.Kind).ToList();
+
         if (filtered.Count == 0)
         {
-            var kindSuffix = request.Kind is null ? string.Empty : $" (Kind-Filter: {request.Kind})";
-            var baseText = $"Keine Treffer fuer '{request.NamePattern}'{kindSuffix}";
-            var textWithHint = await AppendMissHintAsync(request.Solution, request.NamePattern, baseText, ct).ConfigureAwait(false);
-            return (textWithHint, Array.Empty<SymbolLocationEntry>());
+            var missMessage = await FormatMissMessageAsync(request, nameMatches, ct).ConfigureAwait(false);
+            return (missMessage, Array.Empty<SymbolLocationEntry>());
         }
 
         var outputRoot = Path.GetDirectoryName(request.Solution.FilePath) ?? string.Empty;
@@ -140,5 +140,28 @@ internal static class FindSymbolScanner
     {
         if (kind is null) return symbols;
         return symbols.Where(s => SymbolKindClassifier.MatchesSymbolKind(s, kind));
+    }
+
+    private static async Task<string> FormatMissMessageAsync(
+        FindSymbolScanRequest request,
+        IReadOnlyList<ISymbol> nameMatches,
+        CancellationToken ct)
+    {
+        if (nameMatches.Count > 0 && request.Kind is not null)
+        {
+            var kindsFound = nameMatches
+                .Select(SymbolKindClassifier.DescribeSymbolKind)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var kindList = string.Join(", ", kindsFound);
+            var sample = nameMatches[0];
+            var loc = sample.Locations.FirstOrDefault(l => l.IsInSource);
+            var fileInfo = loc?.SourceTree != null ? $" in {Path.GetFileName(loc.SourceTree.FilePath)}" : string.Empty;
+            return $"Keine Treffer fuer '{request.NamePattern}' (Kind-Filter: {request.Kind}). Gefundene Symbole mit abweichendem Kind: {kindList}{fileInfo}.";
+        }
+
+        var kindSuffix = request.Kind is null ? string.Empty : $" (Kind-Filter: {request.Kind})";
+        var missBaseText = $"Keine Treffer fuer '{request.NamePattern}'{kindSuffix}";
+        return await AppendMissHintAsync(request.Solution, request.NamePattern, missBaseText, ct).ConfigureAwait(false);
     }
 }

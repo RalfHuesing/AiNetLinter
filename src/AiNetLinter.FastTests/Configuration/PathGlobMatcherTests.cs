@@ -49,4 +49,16 @@ public sealed class PathGlobMatcherTests
     {
         Assert.False(PathGlobMatcher.Matches(input, pattern));
     }
+
+    [Theory]
+    [InlineData("ConnectionPage.xaml", "**/*.{xaml,cs}", true)]
+    [InlineData("WizardShellViewModel.cs", "**/*.{xaml,cs}", true)]
+    [InlineData("image.png", "**/*.{xaml,cs}", false)]
+    [InlineData("src/views/Page.xaml", "**/*.{xaml,cs}", true)]
+    [InlineData("src/views/Page.cs", "src/**/*.{xaml,cs}", true)]
+    [InlineData("src/views/Page.txt", "src/**/*.{xaml,cs}", false)]
+    public void Matches_BraceExpansion_MatchesAlternatives(string input, string pattern, bool expected)
+    {
+        Assert.Equal(expected, PathGlobMatcher.Matches(input, pattern));
+    }
 }

@@ -452,6 +452,29 @@ public sealed class SearchPatternScannerTests
         Assert.False(result.IsRegexAutoPromoted);
     }
 
+    [Fact]
+    public void Scan_BraceGlobIncludePattern_MatchesBothExtensions()
+    {
+        using var tempDir = TestTempDirectory.Create("search-pattern-brace-glob-");
+        using var solution = CreateSolution(tempDir.DirectoryPath);
+        var projectDir = Path.Combine(tempDir.DirectoryPath, "src", "Project");
+        File.WriteAllText(Path.Combine(projectDir, "Page.xaml"), "<Button Content=\"ShowAuthOverride\" />");
+        File.WriteAllText(Path.Combine(projectDir, "Model.cs"), "private bool _mitarbeiterPlantafel;");
+        File.WriteAllText(Path.Combine(projectDir, "Other.txt"), "ShowAuthOverride in txt");
+
+        var result = SearchPatternScanner.Scan(CreateParameters(
+            solution.Solution,
+            new("ShowAuthOverride|_mitarbeiterPlantafel")
+            {
+                IsRegex = true,
+                IncludePatterns = ["**/*.{xaml,cs}"],
+            }));
+
+        Assert.Equal(2, result.Payload.Matches.Count);
+        Assert.Contains(result.Payload.Matches, m => m.FilePath.EndsWith("Page.xaml"));
+        Assert.Contains(result.Payload.Matches, m => m.FilePath.EndsWith("Model.cs"));
+        Assert.DoesNotContain(result.Payload.Matches, m => m.FilePath.EndsWith("Other.txt"));
+    }
 
     private sealed record SearchPatternTestOptions(string Pattern)
     {

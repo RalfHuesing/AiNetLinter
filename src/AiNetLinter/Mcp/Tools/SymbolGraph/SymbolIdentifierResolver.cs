@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis.Text;
 using ModelContextProtocol.Protocol;
@@ -328,7 +329,7 @@ internal static class SymbolIdentifierResolver
             $"Die Assembly-Symbol-ID '{identifier}' gehört nicht zur aktuellen Assembly-Generation.",
             hint: "Eine aktuelle assembly:<sha256>:<generation>:<symbolId>-ID aus dem Assembly-Ziel verwenden.");
 
-    private static bool HasKnownDocumentationCommentIdPrefix(string id)
+    internal static bool HasKnownDocumentationCommentIdPrefix(string id)
     {
         return id.StartsWith("M:", StringComparison.Ordinal)
             || id.StartsWith("T:", StringComparison.Ordinal)
@@ -336,5 +337,33 @@ internal static class SymbolIdentifierResolver
             || id.StartsWith("F:", StringComparison.Ordinal)
             || id.StartsWith("E:", StringComparison.Ordinal)
             || id.StartsWith("!:", StringComparison.Ordinal);
+    }
+
+    internal static ISymbol? TryFindEnclosingMember(SyntaxNode root, TextSpan lineSpan, SemanticModel semanticModel)
+    {
+        var node = root.FindNode(lineSpan, findInsideTrivia: false, getInnermostNodeForTie: true);
+        var enclosingNode = node.AncestorsAndSelf()
+            .FirstOrDefault(n => n is MethodDeclarationSyntax
+                              or PropertyDeclarationSyntax
+                              or ConstructorDeclarationSyntax
+                              or IndexerDeclarationSyntax
+                              or EventDeclarationSyntax
+                              or AccessorDeclarationSyntax);
+
+        if (enclosingNode is not null)
+        {
+            return semanticModel.GetDeclaredSymbol(enclosingNode);
+        }
+
+        var token = root.FindToken(lineSpan.Start);
+        enclosingNode = token.Parent?.AncestorsAndSelf()
+            .FirstOrDefault(n => n is MethodDeclarationSyntax
+                              or PropertyDeclarationSyntax
+                              or ConstructorDeclarationSyntax
+                              or IndexerDeclarationSyntax
+                              or EventDeclarationSyntax
+                              or AccessorDeclarationSyntax);
+
+        return enclosingNode is not null ? semanticModel.GetDeclaredSymbol(enclosingNode) : null;
     }
 }

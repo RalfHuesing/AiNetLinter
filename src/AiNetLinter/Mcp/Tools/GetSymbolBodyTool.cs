@@ -148,11 +148,53 @@ internal static class GetSymbolBodyTool
         var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
             solution, request.Identifier, ct, request.AssemblyIdentity);
 
+        if (symbol is null || error is not null)
+        {
+            var enclosing = await TryResolveEnclosingMemberForBodyAsync(solution, request.Identifier, ct).ConfigureAwait(false);
+            if (enclosing is not null)
+            {
+                symbol = enclosing;
+                error = null;
+            }
+        }
+
         if (error is not null) return RenderResolutionError(request, error);
 
         if (symbol is null) return RenderMissingSymbol(request);
 
         return RenderResolvedSymbol(request, symbol);
+    }
+
+    private static async Task<ISymbol?> TryResolveEnclosingMemberForBodyAsync(
+        Solution solution,
+        string identifier,
+        CancellationToken ct)
+    {
+        string path;
+        int line;
+        if (SymbolIdentifierResolver.TryParsePosition(identifier, out path, out line, out _))
+        {
+        }
+        else if (SymbolIdentifierResolver.TryParseLineOnlyPosition(identifier, out path, out line))
+        {
+        }
+        else
+        {
+            return null;
+        }
+
+        var document = DiffImpactAnalyzer.FindDocumentByPath(solution, path);
+        if (document is null) return null;
+
+        var text = await document.GetTextAsync(ct).ConfigureAwait(false);
+        if (text is null || line < 1 || line > text.Lines.Count) return null;
+
+        var root = await document.GetSyntaxRootAsync(ct).ConfigureAwait(false);
+        var sm = await document.GetSemanticModelAsync(ct).ConfigureAwait(false);
+        if (root is null || sm is null) return null;
+
+        var lineSpan = text.Lines[line - 1].Span;
+        return SymbolIdentifierResolver.TryFindEnclosingMember(root, lineSpan, sm);
     }
 
     private static CallToolResult? RenderResolutionError(

@@ -35,11 +35,50 @@ internal static class PathGlobMatcher
                 continue;
             }
 
+            if (character == '{' && TryAppendBracePattern(builder, pattern, ref index))
+            {
+                continue;
+            }
+
             builder.Append(character == '?' ? "[^/]" : Regex.Escape(character.ToString()));
         }
 
         builder.Append('$');
         return builder.ToString();
+    }
+
+    private static bool TryAppendBracePattern(StringBuilder builder, string pattern, ref int index)
+    {
+        var closingIndex = pattern.IndexOf('}', index + 1);
+        if (closingIndex < 0) return false;
+
+        var content = pattern.Substring(index + 1, closingIndex - index - 1);
+        if (!content.Contains(',')) return false;
+
+        var parts = content.Split(',');
+        builder.Append("(?:");
+        for (var i = 0; i < parts.Length; i++)
+        {
+            if (i > 0) builder.Append('|');
+            builder.Append("(?:");
+            var part = parts[i];
+            for (var p = 0; p < part.Length; p++)
+            {
+                var ch = part[p];
+                if (ch == '*')
+                {
+                    AppendStarPattern(builder, part, ref p);
+                }
+                else
+                {
+                    builder.Append(ch == '?' ? "[^/]" : Regex.Escape(ch.ToString()));
+                }
+            }
+            builder.Append(')');
+        }
+        builder.Append(')');
+        index = closingIndex;
+        return true;
     }
 
     private static void AppendStarPattern(StringBuilder builder, string pattern, ref int index)

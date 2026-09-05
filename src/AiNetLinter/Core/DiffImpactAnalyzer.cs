@@ -154,7 +154,31 @@ public sealed class DiffImpactAnalyzer
     // git-diff-Mechanik nicht dupliziert wird.
     internal static string? RunGitDiff(string repoRoot, string? gitSinceRef)
     {
-        var args = string.IsNullOrEmpty(gitSinceRef) ? "diff -U0 -- *.cs" : $"diff -U0 {gitSinceRef} -- *.cs";
+        if (string.IsNullOrEmpty(gitSinceRef))
+        {
+            var (headExit, headStdout, _) = RunGitProcess(repoRoot, "diff -U0 HEAD -- *.cs");
+            if (headExit == 0) return headStdout;
+
+            var (_, unstaged, _) = RunGitProcess(repoRoot, "diff -U0 -- *.cs");
+            var (_, cached, _) = RunGitProcess(repoRoot, "diff -U0 --cached -- *.cs");
+            var combined = (unstaged ?? "") + "\n" + (cached ?? "");
+            return string.IsNullOrWhiteSpace(combined) ? null : combined;
+        }
+
+        var (exitCode, stdout, stderr) = RunGitProcess(repoRoot, $"diff -U0 {gitSinceRef} -- *.cs");
+        if (exitCode == 0) return stdout;
+
+        throw new GitDiffFailedException(gitSinceRef, stderr.Trim());
+    }
+
+    internal static string? RunGitUntrackedFiles(string repoRoot)
+    {
+        var (exitCode, stdout, _) = RunGitProcess(repoRoot, "ls-files --others --exclude-standard -- *.cs");
+        return exitCode == 0 ? stdout : null;
+    }
+
+    private static (int ExitCode, string Stdout, string Stderr) RunGitProcess(string repoRoot, string args)
+    {
         var startInfo = new ProcessStartInfo
         {
             FileName = GitCommand,
@@ -168,7 +192,7 @@ public sealed class DiffImpactAnalyzer
         };
 
         using var process = Process.Start(startInfo);
-        if (process == null) return null;
+        if (process == null) return (-1, string.Empty, string.Empty);
 
         process.StandardInput.Close();
 
@@ -180,21 +204,7 @@ public sealed class DiffImpactAnalyzer
         process.BeginErrorReadLine();
 
         process.WaitForExit();
-
-        if (process.ExitCode == 0) return stdout.ToString();
-
-        // Ein explizit angegebener gitRef, der nicht aufloest (Tippfehler, geloeschter Branch),
-        // darf nicht mit einem leeren-aber-validen Diff verwechselt werden — sonst sieht ein
-        // Tippfehler identisch aus wie "keine Aenderungen" (stiller Fehlschlag). Fehlt gitSinceRef
-        // (uncommittete-Aenderungen-Modus), bleibt das bisherige tolerante Verhalten (null =
-        // wie ein leerer Diff behandelt), weil es dort keinen vom Aufrufer waehlbaren Wert gibt,
-        // der "falsch" sein koennte.
-        if (!string.IsNullOrEmpty(gitSinceRef))
-        {
-            throw new GitDiffFailedException(gitSinceRef, stderr.ToString().Trim());
-        }
-
-        return null;
+        return (process.ExitCode, stdout.ToString(), stderr.ToString());
     }
 
     /// <summary>

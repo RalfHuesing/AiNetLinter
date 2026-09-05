@@ -17,16 +17,6 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 
-internal sealed record FindReferencesRequest(
-    string? SymbolIdentifier,
-    int MaxResults,
-    int Depth,
-    string? Symbol = null)
-{
-    public string? EffectiveSymbolIdentifier =>
-        !string.IsNullOrWhiteSpace(SymbolIdentifier) ? SymbolIdentifier : Symbol;
-}
-
 /// <summary>
 /// MCP-Tool <c>find_references</c>: loest einen Symbol-Identifikator (stabile
 /// DocumentationCommentId, Datei:Zeile:Spalte oder qualifizierter/teil-qualifizierter Name) zu
@@ -289,6 +279,15 @@ internal static class FindReferencesTool
         if (memberDeclarations.Count == 1) return (memberDeclarations[0], null);
         if (declarationsOnLine.Count == 1) return (declarationsOnLine[0], null);
 
+        if (symbols.Count == 1) return (symbols[0], null);
+
+        if (symbols.Count == 0)
+        {
+            var enclosing = SymbolIdentifierResolver.TryFindEnclosingMember(root!, lineSpan, semanticModel!);
+            if (enclosing is not null) return (enclosing, null);
+            return (null, McpToolResults.SymbolNotFound(identifier));
+        }
+
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
         var lines = symbols.SelectMany(s => FindSymbolTool.FormatSymbolLocations(s, outputRoot, assemblyIdentity));
         return (null, McpToolResults.AmbiguousSymbol(identifier, lines));
@@ -300,7 +299,12 @@ internal static class FindReferencesTool
         AnalysisSymbolIdentity? assemblyIdentity,
         CancellationToken ct)
     {
-        var unparameterized = SymbolIdentifierResolver.StripParameterList(identifier);
+        var cleanIdentifier = SymbolIdentifierResolver.HasKnownDocumentationCommentIdPrefix(identifier)
+            ? identifier[2..]
+            : identifier;
+        cleanIdentifier = SymbolIdentifierResolver.NormalizeDocCommentId(cleanIdentifier);
+
+        var unparameterized = SymbolIdentifierResolver.StripParameterList(cleanIdentifier);
         var ungenericIdentifier = SymbolIdentifierResolver.StripGenerics(unparameterized);
         var lastSegment = ungenericIdentifier.Split('.')[^1];
 
@@ -308,7 +312,7 @@ internal static class FindReferencesTool
             solution, name => name == lastSegment, SymbolFilter.TypeAndMember, ct).ConfigureAwait(false);
 
         var candidates = symbols
-            .Where(s => IsSymbolMatch(s, identifier, unparameterized, ungenericIdentifier))
+            .Where(s => IsSymbolMatch(s, cleanIdentifier, unparameterized, ungenericIdentifier))
             .ToList();
 
         if (candidates.Count == 1) return (candidates[0], null);

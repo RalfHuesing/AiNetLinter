@@ -99,35 +99,61 @@ internal static class FindMagicValuesScanner
     private static async Task<HashSet<string>> ResolveChangedFilesAsync(
         Solution solution, CancellationToken ct)
     {
-        return await Task.Run(() =>
+        return await Task.Run(() => CollectChangedFiles(solution, ct), ct);
+    }
+
+    private static HashSet<string> CollectChangedFiles(Solution solution, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
+        if (solutionDir.Length == 0) return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var repoRoot = GitRepositoryLocator.FindRoot(solutionDir);
+        if (repoRoot is null) return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var diffOutput = DiffImpactAnalyzer.RunGitDiff(repoRoot, gitSinceRef: null);
+        var untracked = DiffImpactAnalyzer.RunGitUntrackedFiles(repoRoot);
+        if (string.IsNullOrEmpty(diffOutput) && string.IsNullOrEmpty(untracked))
         {
-            ct.ThrowIfCancellationRequested();
-            var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
-            if (solutionDir.Length == 0) return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
 
-            var repoRoot = GitRepositoryLocator.FindRoot(solutionDir);
-            if (repoRoot is null) return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var relative = Path.GetRelativePath(repoRoot, solutionDir).Replace('\\', '/');
+        var changed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            var diffOutput = DiffImpactAnalyzer.RunGitDiff(repoRoot, gitSinceRef: null);
-            if (string.IsNullOrEmpty(diffOutput)) return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        CollectDiffFiles(changed, diffOutput, relative);
+        CollectUntrackedFiles(changed, untracked, relative);
 
-            var relative = Path.GetRelativePath(repoRoot, solutionDir).Replace('\\', '/');
-            var changed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var key in DiffImpactAnalyzer.ParseGitDiffHunks(diffOutput).Keys)
-            {
-                // ParseGitDiffHunks liefert repo-relative Pfade; das ChangedFiles-Set braucht
-                // solution-relative Pfade, weil SelectDocuments mit dem relativen Pfad zur
-                // solutionDir filtert. Praefix-Strip + Separator-Normalisierung.
-                var normalized = key.Replace('\\', '/');
-                if (relative.Length > 0 && !relative.Equals(".", StringComparison.Ordinal)
-                    && normalized.StartsWith(relative + "/", StringComparison.OrdinalIgnoreCase))
-                {
-                    normalized = normalized.Substring(relative.Length + 1);
-                }
-                changed.Add(normalized);
-            }
-            return changed;
-        }, ct);
+        return changed;
+    }
+
+    private static void CollectDiffFiles(HashSet<string> changed, string? diffOutput, string relative)
+    {
+        if (string.IsNullOrEmpty(diffOutput)) return;
+        foreach (var key in DiffImpactAnalyzer.ParseGitDiffHunks(diffOutput).Keys)
+        {
+            AddNormalizedRepoPath(changed, key, relative);
+        }
+    }
+
+    private static void CollectUntrackedFiles(HashSet<string> changed, string? untracked, string relative)
+    {
+        if (string.IsNullOrEmpty(untracked)) return;
+        foreach (var line in untracked.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            AddNormalizedRepoPath(changed, line, relative);
+        }
+    }
+
+    private static void AddNormalizedRepoPath(HashSet<string> changed, string key, string relativeToSolution)
+    {
+        var normalized = key.Replace('\\', '/');
+        if (relativeToSolution.Length > 0 && !relativeToSolution.Equals(".", StringComparison.Ordinal)
+            && normalized.StartsWith(relativeToSolution + "/", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized.Substring(relativeToSolution.Length + 1);
+        }
+        changed.Add(normalized);
     }
 
     private static string BuildEmptyScopeText(string? scopeFilter, bool changedOnly, bool includeTests)
