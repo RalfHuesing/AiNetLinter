@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using AiNetLinter.Mcp.Tools.Common;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.Analysis;
@@ -62,7 +63,7 @@ internal static partial class SearchPatternScanner
             fullPath = Path.GetFullPath(Path.Combine(solutionRoot, scope));
         }
 
-        if (!IsWithinRoot(fullPath, solutionRoot))
+        if (!McpInputNormalizer.IsWithinRoot(fullPath, solutionRoot))
         {
             throw new ArgumentException("scope muss innerhalb des Solution-Roots liegen.", nameof(scope));
         }
@@ -121,17 +122,8 @@ internal static partial class SearchPatternScanner
     private static string? ToRelativePath(string solutionRoot, string filePath)
     {
         var fullPath = Path.GetFullPath(filePath);
-        if (!IsWithinRoot(fullPath, solutionRoot)) return null;
+        if (!McpInputNormalizer.IsWithinRoot(fullPath, solutionRoot)) return null;
         return Path.GetRelativePath(solutionRoot, fullPath).Replace('\\', '/');
-    }
-
-    private static bool IsWithinRoot(string path, string root)
-    {
-        var fullPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        var fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        var normalizedRoot = fullRoot + Path.DirectorySeparatorChar;
-        return fullPath.Equals(fullRoot, StringComparison.OrdinalIgnoreCase)
-            || fullPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string? GetProjectName(Solution solution, string filePath)
@@ -143,7 +135,7 @@ internal static partial class SearchPatternScanner
                 project.Name,
                 Directory = Path.GetDirectoryName(Path.GetFullPath(project.FilePath!)),
             })
-            .Where(project => project.Directory is not null && IsWithinRoot(filePath, project.Directory))
+            .Where(project => project.Directory is not null && McpInputNormalizer.IsWithinRoot(filePath, project.Directory))
             .OrderByDescending(project => project.Directory!.Length)
             .Select(project => project.Name)
             .FirstOrDefault();

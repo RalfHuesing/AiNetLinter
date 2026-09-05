@@ -53,19 +53,23 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? scopeFilter = null, string? ruleId = null, string? minSeverity = null, int maxResults = GetViolationsScanner.DefaultMaxResults, int contextLines = 2, bool includeSnippet = false, CancellationToken ct = default) =>
-                await ProjectAnalysisDispatcher.ExecuteAsync(
+            async (string targetType, string targetPath, string? scopeFilter = null, string? scope = null, string? path = null, string? ruleId = null, string? rule = null, string? minSeverity = null, int maxResults = GetViolationsScanner.DefaultMaxResults, int contextLines = 2, bool includeSnippet = false, CancellationToken ct = default) =>
+            {
+                var effectiveScope = scopeFilter ?? scope ?? path;
+                var effectiveRule = ruleId ?? rule;
+                return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
-                    lease => GetViolationsTool.ExecuteAsync(lease.Server, new GetViolationsToolExecutionOptions(scopeFilter, maxResults, contextLines, includeSnippet, ruleId, minSeverity), ct)),
+                    lease => GetViolationsTool.ExecuteAsync(lease.Server, new GetViolationsToolExecutionOptions(effectiveScope, maxResults, contextLines, includeSnippet, effectiveRule, minSeverity), ct));
+            },
             McpToolRegistrationOptions.ReadOnlyTool("get_violations", GetViolationsDescription)));
     }
 
     private const string GetViolationsDescription =
         "Wann nutzen: aktuelle Lint-Regelverstoesse der Solution abfragen — nach jedem Edit " +
-        "erneut aufrufbar, kein Disk-Cache. scopeFilter: Projekt-Name oder Pfad-Substring zur " +
-        "Eingrenzung. ruleId: Filter auf bestimmte Regel (z. B. 'ANL0021'). minSeverity: 'info', 'warning' oder 'error'. " +
+        "erneut aufrufbar, kein Disk-Cache. scopeFilter (oder Aliase scope, path): Projekt-Name oder Pfad-Substring zur " +
+        "Eingrenzung. ruleId (oder Alias rule): Filter auf bestimmte Regel (z. B. 'ANL0021'). minSeverity: 'info', 'warning' oder 'error'. " +
         "maxResults: Begrenzung der Trefferliste (Default 50). " +
         "includeSnippet=true gibt den Quellcode-Ausschnitt mit (contextLines 0-5, Default 2).";
 
@@ -74,19 +78,22 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? scopeFilter = null, double minScore = SafeguardScanner.DefaultMinScoreThreshold, int maxViolations = SafeguardScanner.DefaultMaxRemediationEntries, CancellationToken ct = default) =>
-                await ProjectAnalysisDispatcher.ExecuteAsync(
+            async (string targetType, string targetPath, string? scopeFilter = null, string? scope = null, string? path = null, double minScore = SafeguardScanner.DefaultMinScoreThreshold, int maxViolations = SafeguardScanner.DefaultMaxRemediationEntries, CancellationToken ct = default) =>
+            {
+                var effectiveScope = scopeFilter ?? scope ?? path;
+                return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
-                    lease => SafeguardTool.ExecuteAsync(lease.Server, scopeFilter, minScore, maxViolations, ct)),
+                    lease => SafeguardTool.ExecuteAsync(lease.Server, effectiveScope, minScore, maxViolations, ct));
+            },
             McpToolRegistrationOptions.ReadOnlyTool("safeguard", SafeguardDescription)));
     }
 
     private const string SafeguardDescription =
         "Wann nutzen: Quality-Gate-Wert vor CI-Merge pruefen — deterministischer " +
         "0-10-Score + Pass/Fail-Threshold + Top-Violations + Remediation-Hints fuer " +
-        "die geladene Solution. scopeFilter: Projekt-Name oder Pfad-Substring zur " +
+        "die geladene Solution. scopeFilter (oder Aliase scope, path): Projekt-Name oder Pfad-Substring zur " +
         "Eingrenzung, minScore: Schwellwert (Default 8.0), maxViolations: Begrenzung " +
         "der Top-Violations-Liste (Default 20).";
 
@@ -224,12 +231,16 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string[]? patterns = null, string? scopeFilter = null, int maxResultsPerPattern = PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken ct = default) =>
-                await ProjectAnalysisDispatcher.ExecuteAsync(
+            async (string targetType, string targetPath, string[]? patterns = null, string? pattern = null, string? scopeFilter = null, string? scope = null, string? path = null, int maxResultsPerPattern = PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken ct = default) =>
+            {
+                var effectiveScope = scopeFilter ?? scope ?? path;
+                var effectivePatterns = patterns ?? (pattern is not null ? [pattern] : null);
+                return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
-                    lease => PatternDetectTool.ExecuteAsync(lease.Server, patterns, scopeFilter, maxResultsPerPattern, ct)),
+                    lease => PatternDetectTool.ExecuteAsync(lease.Server, effectivePatterns, effectiveScope, maxResultsPerPattern, ct));
+            },
             McpToolRegistrationOptions.ReadOnlyTool("pattern_detect", PatternDetectDescription)));
     }
 
@@ -237,8 +248,8 @@ internal static class AnalysisToolRegistrations
         "Wann nutzen: Solution-weite Audit-Suche nach Code-Patterns (God-Classes, async-void, " +
         "lange Methoden, Public-API ohne Doc, leere Catch-Bloecke, Feature-Envy/Middle-Man) " +
         "statt der flachen Datei-Liste von get_violations — nach Pattern-Kategorie gruppiert. " +
-        "patterns: Pattern-IDs (Default alle 6: god-class, async-void, long-method, public-without-doc, " +
-        "empty-catch, feature-envy). scopeFilter: Projekt-Name oder Pfad-Substring zur Eingrenzung, " +
+        "patterns (oder Alias pattern): Pattern-IDs (Default alle 6: god-class, async-void, long-method, public-without-doc, " +
+        "empty-catch, feature-envy). scopeFilter (oder Aliase scope, path): Projekt-Name oder Pfad-Substring zur Eingrenzung, " +
         "maxResultsPerPattern: Begrenzung der Trefferliste je Pattern (Default 20).";
 
     private static void AddFindMagicValues(
@@ -250,6 +261,8 @@ internal static class AnalysisToolRegistrations
                 string targetType,
                 string targetPath,
                 string? scopeFilter = null,
+                string? scope = null,
+                string? path = null,
                 string? valueType = "all",
                 string? categoryFilter = "all",
                 int minOccurrences = 2,
@@ -259,14 +272,16 @@ internal static class AnalysisToolRegistrations
                 bool includeSuppressed = false,
                 bool changedOnly = false,
                 CancellationToken ct = default) =>
-                await ProjectAnalysisDispatcher.ExecuteAsync(
+            {
+                var effectiveScope = scopeFilter ?? scope ?? path;
+                return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
                     lease =>
                     {
                         var effective = new FindMagicValuesToolArgs(
-                            ScopeFilter: scopeFilter,
+                            ScopeFilter: effectiveScope,
                             ValueType: valueType ?? "all",
                             CategoryFilter: categoryFilter ?? "all",
                             MinOccurrences: minOccurrences,
@@ -276,7 +291,8 @@ internal static class AnalysisToolRegistrations
                             IncludeSuppressed: includeSuppressed,
                             ChangedOnly: changedOnly);
                         return FindMagicValuesTool.ExecuteAsync(lease.Server, effective, ct);
-                    }),
+                    });
+            },
             McpToolRegistrationOptions.ReadOnlyTool("find_magic_values", FindMagicValuesDescription)));
     }
 
@@ -290,7 +306,7 @@ internal static class AnalysisToolRegistrations
         "ignoreNumbers: projektspezifische Ignorier-Zahlen. includeTests: Tests einbeziehen (Default false). " +
         "includeSuppressed: Fundstellen mit '// ainetlinter-disable MagicValues' einbeziehen (Default false). " +
         "changedOnly: Git-Diff-Einschraenkung auf geaenderte Dateien (Default false). " +
-        "scopeFilter: Projekt-Name oder Pfad-Substring zur Eingrenzung.";
+        "scopeFilter (oder Aliase scope, path): Projekt-Name oder Pfad-Substring zur Eingrenzung.";
 
     private static void AddFindDeadCode(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -304,11 +320,15 @@ internal static class AnalysisToolRegistrations
                 string? confidence = "both",
                 string? kind = "all",
                 string? scopeFilter = null,
+                string? scope = null,
+                string? path = null,
                 bool includeTests = false,
                 string? mode = "members",
                 int maxResults = 50,
                 CancellationToken ct = default) =>
-                await ProjectAnalysisDispatcher.ExecuteAsync(
+            {
+                var effectiveScope = scopeFilter ?? scope ?? path;
+                return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
@@ -318,12 +338,13 @@ internal static class AnalysisToolRegistrations
                             Accessibility: accessibility,
                             Confidence: confidence,
                             Kind: kind,
-                            ScopeFilter: scopeFilter,
+                            ScopeFilter: effectiveScope,
                             IncludeTests: includeTests,
                             Mode: mode,
                             MaxResults: maxResults);
                         return FindDeadCodeTool.ExecuteAsync(lease.Server, effective, ct);
-                    }),
+                    });
+            },
             McpToolRegistrationOptions.ReadOnlyTool("find_dead_code", FindDeadCodeDescription)));
     }
 
@@ -333,7 +354,7 @@ internal static class AnalysisToolRegistrations
         "entfernbaren privaten/internen Code, low fuer Public-API/Framework-Kandidaten). " +
         "accessibility: 'private_internal' [Default], 'all', 'private', 'internal', 'public'. " +
         "confidence: 'both' [Default], 'high', 'low'. kind: 'all' [Default], 'type', 'class', 'method', " +
-        "'field', 'property', 'event', 'delegate'. scopeFilter: Projekt-Name oder Pfad-Substring. " +
+        "'field', 'property', 'event', 'delegate'. scopeFilter (oder Aliase scope, path): Projekt-Name oder Pfad-Substring. " +
         "includeTests: Tests einbeziehen (Default false). mode: 'members' [Default], 'locals', 'both'. maxResults: Begrenzung (Default 50).";
 
     private static void AddGetFeatureContext(
@@ -341,30 +362,33 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, bool includeCallers = true, bool includeTests = true, bool includeMetrics = true, bool includeViolations = true, int maxCallers = 10, int maxTests = 10, CancellationToken ct = default) =>
-                await ProjectAnalysisDispatcher.ExecuteAsync(
+            async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, bool includeCallers = true, bool includeTests = true, bool includeMetrics = true, bool includeViolations = true, int maxCallers = 10, int maxTests = 10, CancellationToken ct = default) =>
+            {
+                var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? name;
+                return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
                     lease => GetFeatureContextTool.ExecuteAsync(
                         lease.Server,
                         new FeatureContextOptions(
-                            Symbol: symbol,
-                            SymbolIdentifier: symbolIdentifier,
+                            Symbol: effectiveIdentifier,
+                            SymbolIdentifier: effectiveIdentifier,
                             IncludeCallers: includeCallers,
                             IncludeTests: includeTests,
                             IncludeMetrics: includeMetrics,
                             IncludeViolations: includeViolations,
                             MaxCallers: maxCallers,
                             MaxTests: maxTests),
-                        ct)),
+                        ct));
+            },
             McpToolRegistrationOptions.ReadOnlyTool("get_feature_context", GetFeatureContextDescription)));
     }
 
     private const string GetFeatureContextDescription =
         "Wann nutzen: Composite One-Shot-Exploration fuer ein beliebiges C#-Symbol vor Edits oder Refactorings — " +
         "buendelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, statische Test-Zuordnung und Linter-Violations) " +
-        "in einem einzigen residenten Aufruf. symbolIdentifier (primaer; symbol bleibt kompatibler Alias): 'Namespace.Klasse.Methode', 'Datei.cs:Zeile' oder DocCommentId. " +
+        "in einem einzigen residenten Aufruf. symbolIdentifier (primaer; Aliase symbol, identifier, name): 'Namespace.Klasse.Methode', 'Datei.cs:Zeile' oder DocCommentId. " +
         "includeCallers, includeTests, includeMetrics, includeViolations: Teilbereiche (Default true). " +
         "maxCallers und maxTests: Limits (Default 10, Cap 50).";
 
@@ -373,24 +397,27 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, int maxResults = 30, CancellationToken ct = default) =>
-                await ProjectAnalysisDispatcher.ExecuteAsync(
+            async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, int maxResults = 30, CancellationToken ct = default) =>
+            {
+                var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? name;
+                return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
                     lease => GetTestContextTool.ExecuteAsync(
                         lease.Server,
                         new TestContextOptions(
-                            Symbol: symbol,
-                            SymbolIdentifier: symbolIdentifier,
+                            Symbol: effectiveIdentifier,
+                            SymbolIdentifier: effectiveIdentifier,
                             MaxResults: maxResults),
-                        ct)),
+                        ct));
+            },
             McpToolRegistrationOptions.ReadOnlyTool("get_test_context", GetTestContextDescription)));
     }
 
     private const string GetTestContextDescription =
         "Wann nutzen: Test-Dateien, Test-Klassen und Test-Methoden fuer ein gegebenes Produktions-Symbol " +
-        "(Klasse, Methode, Datei.cs:Zeile oder DocCommentId) abfragen. symbolIdentifier (primaer; symbol bleibt kompatibler Alias): Ziel-Symbol, " +
+        "(Klasse, Methode, Datei.cs:Zeile oder DocCommentId) abfragen. symbolIdentifier (primaer; Aliase symbol, identifier, name): Ziel-Symbol, " +
         "maxResults: Begrenzung der Testdateien (Default 30). Liefert statische Zuordnungsgruende, Test-Kategorien " +
         "(Unit/Integration), kopierbare dotnet test Filterbefehle und Hinweis bei fehlender Zuordnung.";
 }

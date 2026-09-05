@@ -21,22 +21,8 @@ internal static class SymbolNameMatcher
     private const int MinWordLengthForSuggestions = 4;
     private const int MaxSuggestions = 5;
 
-    internal static string CleanPattern(string rawPattern)
-    {
-        var trimmed = rawPattern.Trim();
-        if (trimmed.EndsWith("()", StringComparison.Ordinal))
-        {
-            trimmed = trimmed[..^2].Trim();
-        }
-
-        var angleBracketIndex = trimmed.IndexOf('<');
-        if (angleBracketIndex > 0 && trimmed.EndsWith('>'))
-        {
-            trimmed = trimmed[..angleBracketIndex].Trim();
-        }
-
-        return trimmed;
-    }
+    internal static string CleanPattern(string rawPattern) =>
+        McpInputNormalizer.NormalizeSymbolIdentifier(rawPattern);
 
     internal static Func<string, bool> CreateDeclarationNameFilter(string pattern)
     {

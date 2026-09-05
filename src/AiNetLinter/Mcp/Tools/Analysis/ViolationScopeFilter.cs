@@ -45,10 +45,15 @@ internal static class ViolationScopeFilter
     internal static bool MatchesScope(string filePath, string projectName, string solutionDir, string? scopeFilter)
     {
         if (string.IsNullOrEmpty(scopeFilter)) return true;
-        if (projectName.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase)) return true;
+        var cleaned = Common.McpInputNormalizer.StripEnclosingQuotesAndBackticks(scopeFilter);
+        if (projectName.Contains(cleaned, StringComparison.OrdinalIgnoreCase)) return true;
 
         var relativePath = PathNormalizer.ToRelative(solutionDir, filePath);
-        return PathNormalizer.MatchesScope(relativePath, scopeFilter);
+        var effectiveFilter = Path.IsPathRooted(cleaned)
+            ? Common.McpInputNormalizer.NormalizePathOrScope(cleaned, solutionDir)
+            : cleaned;
+
+        return PathNormalizer.MatchesScope(relativePath, effectiveFilter);
     }
 
     /// <summary>Anzahl der Dateien aus <paramref name="fileToProject"/>, die <paramref name="scopeFilter"/> matchen.</summary>

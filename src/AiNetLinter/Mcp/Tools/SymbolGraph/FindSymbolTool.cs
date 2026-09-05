@@ -6,12 +6,21 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.SymbolGraph;
+
+internal sealed record FindSymbolPatternOptions(
+    string[]? NamePatterns = null,
+    string? NamePattern = null,
+    string? Symbol = null,
+    string? Pattern = null,
+    string? Query = null,
+    string? Name = null);
 
 internal sealed record FindSymbolRequest(
     ISolutionStateProvider State,
@@ -21,7 +30,13 @@ internal sealed record FindSymbolRequest(
     CancellationToken CancellationToken,
     string? NamePattern = null,
     string? Symbol = null,
-    string? Pattern = null);
+    string? Pattern = null,
+    string? Query = null,
+    string? Name = null)
+{
+    internal FindSymbolPatternOptions ToPatternOptions() =>
+        new(NamePatterns, NamePattern, Symbol, Pattern, Query, Name);
+}
 
 /// <summary>
 /// MCP-Tool <c>find_symbol</c>: durchsucht die resident gehaltene Solution per Substring auf
@@ -47,20 +62,32 @@ internal static class FindSymbolTool
 
     internal const int MaxPatternsPerCall = 10;
 
-    internal static IReadOnlyList<string> NormalizeNamePatterns(
-        string[]? namePatterns,
-        string? namePattern = null,
-        string? symbol = null,
-        string? pattern = null)
+    internal static IReadOnlyList<string> NormalizeNamePatterns(FindSymbolPatternOptions options)
     {
-        var patterns = McpBatchArguments.Normalize(namePatterns);
-        if (patterns.Count > 0) return patterns;
+        var patterns = McpBatchArguments.Normalize(options.NamePatterns);
+        if (patterns.Count > 0)
+        {
+            return patterns
+                .Select(McpInputNormalizer.NormalizeSymbolIdentifier)
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .ToList();
+        }
 
-        var scalar = !string.IsNullOrWhiteSpace(namePattern)
-            ? namePattern
-            : (!string.IsNullOrWhiteSpace(symbol) ? symbol : pattern);
-        return string.IsNullOrWhiteSpace(scalar) ? patterns : [scalar];
+        var scalar = !string.IsNullOrWhiteSpace(options.NamePattern)
+            ? options.NamePattern
+            : (!string.IsNullOrWhiteSpace(options.Symbol)
+                ? options.Symbol
+                : (!string.IsNullOrWhiteSpace(options.Pattern)
+                    ? options.Pattern
+                    : (!string.IsNullOrWhiteSpace(options.Query) ? options.Query : options.Name)));
+
+        if (string.IsNullOrWhiteSpace(scalar)) return patterns;
+        var cleaned = McpInputNormalizer.NormalizeSymbolIdentifier(scalar);
+        return string.IsNullOrWhiteSpace(cleaned) ? patterns : [cleaned];
     }
+
+    internal static IReadOnlyList<string> NormalizeNamePatterns(string[]? namePatterns, string? scalar = null) =>
+        NormalizeNamePatterns(new FindSymbolPatternOptions(namePatterns, NamePattern: scalar));
 
     internal static CallToolResult? ValidateNamePatterns(IReadOnlyList<string> patterns)
     {
@@ -103,7 +130,7 @@ internal static class FindSymbolTool
 
     internal static async Task<CallToolResult> ExecuteAsync(FindSymbolRequest request)
     {
-        var patterns = NormalizeNamePatterns(request.NamePatterns, request.NamePattern, request.Symbol, request.Pattern);
+        var patterns = NormalizeNamePatterns(request.ToPatternOptions());
         var validationError = ValidateNamePatterns(patterns) ?? ValidateKind(request.Kind);
         if (validationError is not null) return validationError;
 

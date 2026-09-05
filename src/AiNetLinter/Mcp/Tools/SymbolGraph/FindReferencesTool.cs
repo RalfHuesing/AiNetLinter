@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
@@ -125,7 +126,8 @@ internal static class FindReferencesTool
         CancellationToken ct,
         AnalysisSymbolIdentity? assemblyIdentity = null)
     {
-        var (symbol, error) = await ResolveSymbolCoreAsync(solution, identifier, ct, assemblyIdentity);
+        var cleaned = McpInputNormalizer.StripEnclosingQuotesAndBackticks(identifier);
+        var (symbol, error) = await ResolveSymbolCoreAsync(solution, cleaned, ct, assemblyIdentity);
         return (symbol.NormalizeToOwningMember(), error);
     }
 

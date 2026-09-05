@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
@@ -271,12 +272,22 @@ internal sealed record GetSymbolBodyRequest(
     int MaxBodyLines = GetSymbolBodyTool.DefaultMaxBodyLines,
     int StartLine = 1,
     int? EndLine = null,
-    string? Symbol = null)
+    string? Symbol = null,
+    string? Identifier = null,
+    string? Name = null)
 {
-    internal string? EffectiveSymbolIdentifier =>
-        !string.IsNullOrWhiteSpace(SymbolIdentifier)
-            ? SymbolIdentifier
-            : Symbol;
+    internal string? EffectiveSymbolIdentifier
+    {
+        get
+        {
+            var raw = !string.IsNullOrWhiteSpace(SymbolIdentifier)
+                ? SymbolIdentifier
+                : (!string.IsNullOrWhiteSpace(Symbol)
+                    ? Symbol
+                    : (!string.IsNullOrWhiteSpace(Identifier) ? Identifier : Name));
+            return string.IsNullOrWhiteSpace(raw) ? null : McpInputNormalizer.NormalizeSymbolIdentifier(raw);
+        }
+    }
 
     internal int EffectiveMaxBodyLines =>
         EndLine.HasValue

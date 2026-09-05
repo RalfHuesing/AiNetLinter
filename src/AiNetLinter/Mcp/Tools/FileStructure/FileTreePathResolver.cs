@@ -14,6 +14,9 @@ internal static class FileTreePathResolver
         }
 
         var requestedRoot = string.IsNullOrWhiteSpace(relativeRoot) ? "." : relativeRoot;
+        requestedRoot = Common.McpInputNormalizer.StripEnclosingQuotesAndBackticks(requestedRoot);
+        if (string.IsNullOrWhiteSpace(requestedRoot)) requestedRoot = ".";
+
         if (Path.IsPathRooted(requestedRoot))
         {
             return FileTreePathResolution.Invalid(
@@ -30,6 +33,7 @@ internal static class FileTreePathResolver
         {
             var fullProjectRoot = Path.GetFullPath(projectRoot);
             var candidate = Path.GetFullPath(Path.Combine(fullProjectRoot, requestedRoot));
+
             var relative = PathNormalizer.NormalizeSeparators(
                 Path.GetRelativePath(fullProjectRoot, candidate));
 

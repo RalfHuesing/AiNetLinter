@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using ModelContextProtocol.Server;
 using ModelContextProtocol.Protocol;
@@ -52,9 +53,13 @@ internal static class FileStructureToolRegistrations
                 string targetType,
                 string targetPath,
                 string? root = null,
+                string? path = null,
+                string? directory = null,
                 string view = "tree",
                 string[]? includeExtensions = null,
                 string? fileFilter = null,
+                string? filter = null,
+                string? pattern = null,
                 string[]? excludePatterns = null,
                 int? maxDepth = null,
                 int? treeDepth = null,
@@ -63,12 +68,17 @@ internal static class FileStructureToolRegistrations
                 bool includeMetadata = true,
                 bool includeLineCount = false,
                 CancellationToken ct = default) =>
-                await ExecuteFileTreeAsync(
+            {
+                var rawRoot = root ?? path ?? directory ?? ".";
+                var effectiveRoot = McpInputNormalizer.NormalizePathOrScope(rawRoot, targetPath);
+                var effectiveFilter = fileFilter ?? filter ?? pattern;
+                return await ExecuteFileTreeAsync(
                     targetRoute,
                     targetType,
                     targetPath,
-                    new GetFileTreeInput(root ?? ".", view, includeExtensions, fileFilter, excludePatterns, maxDepth, treeDepth, maxResults, sortBy, includeMetadata, includeLineCount),
-                    ct),
+                    new GetFileTreeInput(effectiveRoot, view, includeExtensions, effectiveFilter, excludePatterns, maxDepth, treeDepth, maxResults, sortBy, includeMetadata, includeLineCount),
+                    ct);
+            },
             McpToolRegistrationOptions.TargetedReadOnlyTool("get_file_tree", GetFileTreeDescription)));
     }
 
@@ -150,21 +160,24 @@ internal static class FileStructureToolRegistrations
         AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? sortBy = "lines",
+            async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? className = null, string? identifier = null, string? type = null, string? name = null, string? sortBy = "lines",
                 int maxMembers = GetClassStructureTool.DefaultMaxMembers,
                 string? kindFilter = null,
                 string? nameFilter = null,
                 int maxResponseBytes = 0,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteRouted(
+            {
+                var effectiveIdentifier = symbolIdentifier ?? symbol ?? className ?? identifier ?? type ?? name;
+                return await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter, symbol), ct),
-                            AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter, symbol), ct),
+                            ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(effectiveIdentifier, sortBy, maxMembers, kindFilter, nameFilter, symbol), ct),
+                            AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(effectiveIdentifier, sortBy, maxMembers, kindFilter, nameFilter, symbol), ct),
                             MaxResponseBytes: maxResponseBytes),
-                        ct)),
+                        ct));
+            },
             McpToolRegistrationOptions.TargetedReadOnlyTool("get_class_structure", GetClassStructureDescription)));
     }
 
@@ -172,7 +185,7 @@ internal static class FileStructureToolRegistrations
         "Wann nutzen: Tabellarische Uebersicht ueber alle Member einer Klasse/eines Typs inkl. " +
         "Kind, Name, Visibility, Start-/End-Zeile, Zeilenanzahl und Signatur (z. B. zur Analyse " +
         "vor Refactorings oder zur Identifikation langer Member; bei Records inkl. Primary-Constructor-Parametern). " +
-        "symbolIdentifier (Pflicht, oder Alias symbol): Typname, Datei.cs:Zeile:Spalte oder DocCommentId. " +
+        "symbolIdentifier (Pflicht, oder Aliase symbol, className, identifier, type, name): Typname, Datei.cs:Zeile:Spalte oder DocCommentId. " +
         "sortBy: 'lines' (Default), 'kind', 'name'. kindFilter: optionaler Filter nach Member-Kind (z. B. Method, Property, Field, Constructor, all). " +
         "nameFilter: optionaler Substring-Filter nach Member-Namen. maxMembers: Begrenzung der sichtbaren Member " +
         "(Default 50, Cap " + GetClassStructureTool.MaxMembersCap + "); bei Ueberschreitung " +
@@ -185,16 +198,19 @@ internal static class FileStructureToolRegistrations
         AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string[]? filePaths = null, string? filePath = null, int maxResponseBytes = 0, CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteRouted(
+            async (string targetType, string targetPath, string[]? filePaths = null, string? filePath = null, string? path = null, string? file = null, int maxResponseBytes = 0, CancellationToken ct = default) =>
+            {
+                var effectivePath = filePath ?? path ?? file;
+                return await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetType, targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, ResolveFilePaths(filePaths, filePath), ct),
-                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, ResolveFilePaths(filePaths, filePath), ct),
+                            ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, ResolveFilePaths(filePaths, effectivePath), ct),
+                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, ResolveFilePaths(filePaths, effectivePath), ct),
                             MaxResponseBytes: maxResponseBytes),
-                        ct)),
+                        ct));
+            },
             McpToolRegistrationOptions.TargetedReadOnlyTool("get_file_skeleton", GetFileSkeletonDescription)));
     }
 
@@ -202,7 +218,7 @@ internal static class FileStructureToolRegistrations
         "Wann nutzen: Ueberblick ueber Typen und Signaturen einer oder mehrerer C#-Dateien (Batch in 1 Turn) " +
         "ohne die Bodies zu lesen — jede Signatur traegt eine stabile id: fuer einen Folge-Call an get_symbol_body. " +
         "filePaths: Array von Dateipfaden (auch fuer genau eine Datei), relativ oder absolut; " +
-        "filePath: String-Alias fuer genau eine Datei, wenn kein filePaths-Array uebergeben wird. " +
+        "filePath (oder Aliase path, file): String-Alias fuer genau eine Datei, wenn kein filePaths-Array uebergeben wird. " +
         "maxResponseBytes: Begrenzung des Antwortbudgets (Default 0 = Standardbudget).";
 
     private static string[]? ResolveFilePaths(string[]? filePaths, string? filePath) =>

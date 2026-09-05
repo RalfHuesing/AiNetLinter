@@ -59,8 +59,19 @@ public static class PathNormalizer
         if (string.IsNullOrWhiteSpace(filePath)) return false;
 
         var normalizedPath = NormalizeSeparators(filePath);
-        var normalizedFilter = NormalizeSeparators(scopeFilter);
+        var normalizedFilter = NormalizeSeparators(scopeFilter.Trim());
 
-        return normalizedPath.Contains(normalizedFilter, StringComparison.OrdinalIgnoreCase);
+        if (normalizedPath.Contains(normalizedFilter, StringComparison.OrdinalIgnoreCase)) return true;
+
+        if (Path.IsPathRooted(normalizedFilter))
+        {
+            var fileName = Path.GetFileName(normalizedFilter);
+            if (!string.IsNullOrEmpty(fileName) && normalizedPath.Contains(fileName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

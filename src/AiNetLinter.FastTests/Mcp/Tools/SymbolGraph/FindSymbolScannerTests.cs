@@ -24,6 +24,19 @@ public sealed class FindSymbolScannerTests
     }
 
     [Fact]
+    public async Task FindMatchesAndFormat_WithBackticks_FindsMatches()
+    {
+        using var fixture = new McpInMemoryTestContext();
+
+        // LLM übergibt Symbol mit Backticks aus Markdown: `Greeter`
+        var result = await FindSymbolScanner.FindMatchesAndFormat(
+            new FindSymbolScanRequest(fixture.Solution, "`Greeter`", null, 50));
+
+        Assert.Contains("Greeter.cs", result);
+        Assert.Contains("Klasse", result);
+    }
+
+    [Fact]
     public async Task FindMatchesAndFormat_TruncatesAtMaxResults_AppendsMetaLine()
     {
         using var fixture = new McpInMemoryTestContext();
