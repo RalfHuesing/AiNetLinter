@@ -127,6 +127,14 @@ public sealed class McpServerCommandContractTests
         await AssertTextAsync("search_pattern", new Dictionary<string, object?> { ["pattern"] = "Greeter" }, "Greeter.cs");
 
     [Fact]
+    public async Task RunAsync_ValidFixture_SearchPatternQueryAliasReturnsExpectedHit() =>
+        await AssertTextAsync("search_pattern", new Dictionary<string, object?> { ["query"] = "Greeter" }, "Greeter.cs");
+
+    [Fact]
+    public async Task RunAsync_ValidFixture_SearchPatternFileFilterAliasFiltersResults() =>
+        await AssertTextAsync("search_pattern", new Dictionary<string, object?> { ["pattern"] = "Greeter", ["fileFilter"] = "*.cs" }, "Greeter.cs");
+
+    [Fact]
     public async Task RunAsync_ValidFixture_SearchPatternStructuredArgumentsBind()
     {
         var result = await (await fixture.GetHostAsync()).CallToolAsync(

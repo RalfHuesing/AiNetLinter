@@ -50,8 +50,18 @@ internal static partial class SearchPatternScanner
     private static string NormalizeScope(string? scope, string solutionRoot)
     {
         if (string.IsNullOrWhiteSpace(scope)) return ".";
-        ValidateRelativeValue(scope, nameof(scope));
-        var fullPath = Path.GetFullPath(Path.Combine(solutionRoot, scope));
+
+        string fullPath;
+        if (Path.IsPathRooted(scope))
+        {
+            fullPath = Path.GetFullPath(scope);
+        }
+        else
+        {
+            ValidateRelativeValue(scope, nameof(scope));
+            fullPath = Path.GetFullPath(Path.Combine(solutionRoot, scope));
+        }
+
         if (!IsWithinRoot(fullPath, solutionRoot))
         {
             throw new ArgumentException("scope muss innerhalb des Solution-Roots liegen.", nameof(scope));
@@ -117,9 +127,11 @@ internal static partial class SearchPatternScanner
 
     private static bool IsWithinRoot(string path, string root)
     {
-        var normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        return path.Equals(root, StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
+        var fullPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var normalizedRoot = fullRoot + Path.DirectorySeparatorChar;
+        return fullPath.Equals(fullRoot, StringComparison.OrdinalIgnoreCase)
+            || fullPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string? GetProjectName(Solution solution, string filePath)

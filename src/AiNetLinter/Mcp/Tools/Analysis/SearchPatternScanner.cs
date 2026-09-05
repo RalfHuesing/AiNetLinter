@@ -99,26 +99,99 @@ internal static partial class SearchPatternScanner
         out SearchPatternFileScanAggregation promotedAggregation)
     {
         promotedAggregation = default!;
-        if (!RegexAutoDetector.HasRegexMetaCharacters(pattern)) return false;
 
-        Regex? promotionRegex = null;
-        if (RegexAutoDetector.IsValidRegex(pattern, out var validRegex, RegexTimeout))
+        // 1. Regex-Metazeichen oder Wildcards (*, ?)
+        if (RegexAutoDetector.HasRegexMetaCharacters(pattern))
         {
-            promotionRegex = validRegex;
+            Regex? promotionRegex = null;
+            if (RegexAutoDetector.IsValidRegex(pattern, out var validRegex, RegexTimeout))
+            {
+                promotionRegex = validRegex;
+            }
+            else if (pattern.Contains('*') || pattern.Contains('?'))
+            {
+                var wildcardRegexStr = RegexAutoDetector.ConvertWildcardToRegex(pattern);
+                RegexAutoDetector.IsValidRegex(wildcardRegexStr, out promotionRegex, RegexTimeout);
+            }
+
+            if (promotionRegex is not null)
+            {
+                var result = ScanFiles(baseOptions with { Regex = promotionRegex });
+                if (result.Files.Count > 0)
+                {
+                    promotedAggregation = result;
+                    return true;
+                }
+            }
         }
-        else if (pattern.Contains('*') || pattern.Contains('?'))
+
+        var trimmed = pattern.Trim();
+
+        // 2. Methoden-Aufruf / -Definition mit Klammern: z. B. "CalculateAsync()" oder "CalculateAsync( )"
+        var parenMatch = Regex.Match(trimmed, @"^(.+?)\s*\(\s*\)$");
+        if (parenMatch.Success)
         {
-            var wildcardRegexStr = RegexAutoDetector.ConvertWildcardToRegex(pattern);
-            RegexAutoDetector.IsValidRegex(wildcardRegexStr, out promotionRegex, RegexTimeout);
+            var target = parenMatch.Groups[1].Value.TrimEnd();
+            if (!string.IsNullOrWhiteSpace(target))
+            {
+                var wordBoundary = char.IsLetterOrDigit(target[0]) || target[0] == '_' ? @"\b" : "";
+                var regexPattern = $@"{wordBoundary}{Regex.Escape(target)}\s*\(";
+                if (RegexAutoDetector.IsValidRegex(regexPattern, out var methodRegex, RegexTimeout))
+                {
+                    var result = ScanFiles(baseOptions with { Regex = methodRegex });
+                    if (result.Files.Count > 0)
+                    {
+                        promotedAggregation = result;
+                        return true;
+                    }
+                }
+            }
         }
 
-        if (promotionRegex is null) return false;
+        // 3. Generischer Typ mit <T> / <...>: z. B. "IRepository<T>" oder "List<string>"
+        var genericMatch = Regex.Match(trimmed, @"^(.+?)\s*<.*?>$");
+        if (genericMatch.Success)
+        {
+            var typeName = genericMatch.Groups[1].Value.TrimEnd();
+            if (!string.IsNullOrWhiteSpace(typeName))
+            {
+                var wordBoundary = char.IsLetterOrDigit(typeName[0]) || typeName[0] == '_' ? @"\b" : "";
+                var regexPattern = $@"{wordBoundary}{Regex.Escape(typeName)}\s*<";
+                if (RegexAutoDetector.IsValidRegex(regexPattern, out var genericRegex, RegexTimeout))
+                {
+                    var result = ScanFiles(baseOptions with { Regex = genericRegex });
+                    if (result.Files.Count > 0)
+                    {
+                        promotedAggregation = result;
+                        return true;
+                    }
+                }
+            }
+        }
 
-        var result = ScanFiles(baseOptions with { Regex = promotionRegex });
-        if (result.Files.Count == 0) return false;
+        // 4. Anfuehrungszeichen / Backticks entfernen falls Agent Code-Identifier gequotet hat (z. B. `CustomerService` oder "CustomerService")
+        if ((trimmed.StartsWith('`') && trimmed.EndsWith('`')) ||
+            (trimmed.StartsWith('"') && trimmed.EndsWith('"')) ||
+            (trimmed.StartsWith('\'') && trimmed.EndsWith('\'')))
+        {
+            var unquoted = trimmed[1..^1].Trim();
+            if (!string.IsNullOrWhiteSpace(unquoted))
+            {
+                var wordBoundary = char.IsLetterOrDigit(unquoted[0]) || unquoted[0] == '_' ? @"\b" : "";
+                var regexPattern = $@"{wordBoundary}{Regex.Escape(unquoted)}";
+                if (RegexAutoDetector.IsValidRegex(regexPattern, out var unquotedRegex, RegexTimeout))
+                {
+                    var result = ScanFiles(baseOptions with { Regex = unquotedRegex });
+                    if (result.Files.Count > 0)
+                    {
+                        promotedAggregation = result;
+                        return true;
+                    }
+                }
+            }
+        }
 
-        promotedAggregation = result;
-        return true;
+        return false;
     }
 
     private static SearchPatternFileScanAggregation ScanFiles(SearchPatternScanFilesParameters options)

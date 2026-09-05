@@ -99,6 +99,8 @@ internal static class AnalysisToolRegistrations
                 string targetType,
                 string targetPath,
                 string? pattern = null,
+                string? query = null,
+                string? searchPattern = null,
                 bool? isRegex = null,
                 int maxResults = 50,
                 int maxFiles = 0,
@@ -107,39 +109,54 @@ internal static class AnalysisToolRegistrations
                 string? scope = null,
                 string[]? includePatterns = null,
                 string[]? excludePatterns = null,
+                string? fileFilter = null,
+                string? includePattern = null,
                 bool enrichCSharp = false,
                 string? scopeType = null,
                 CancellationToken ct = default) =>
-                await ProjectAnalysisDispatcher.ExecuteAsync(
+            {
+                var effectivePattern = pattern ?? query ?? searchPattern;
+                var effectiveIncludes = includePatterns;
+                if (effectiveIncludes is null || effectiveIncludes.Length == 0)
+                {
+                    var singleInclude = fileFilter ?? includePattern;
+                    if (!string.IsNullOrWhiteSpace(singleInclude))
+                    {
+                        effectiveIncludes = [singleInclude];
+                    }
+                }
+
+                return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     targetType,
                     targetPath,
                     lease => SearchPatternTool.ExecuteAsync(
                         lease.Server,
                         new SearchPatternToolArguments(
-                            pattern,
+                            effectivePattern,
                             isRegex,
                             maxResults,
                             maxFiles,
                             contextLines,
                             maxResponseBytes,
                             scope,
-                            includePatterns,
+                            effectiveIncludes,
                             excludePatterns,
                             enrichCSharp,
                             scopeType),
-                        ct)),
+                        ct));
+            },
             McpToolRegistrationOptions.ReadOnlyTool("search_pattern", SearchPatternDescription)));
     }
 
     private const string SearchPatternDescription =
         "Wann nutzen: Fallback fuer Namen/Strings ausserhalb des C#-Symbolgraphs (z. B. " +
         "JS-Funktionen, Razor-Komponenten, WPF-Elemente, Config-Eintraege) oder allgemeine Textsuche. " +
-        "pattern: Suchtext oder Regex. isRegex: optional (Default null = 'auto' mit automatischer Regex-Erkennung " +
+        "pattern: Suchtext oder Regex (Aliase: query, searchPattern). isRegex: optional (Default null = 'auto' mit automatischer Regex-Erkennung " +
         "und Promotion bei 0 Treffern; true = explizit Regex, false = explizit Plain-Substring). " +
         "scopeType: 'all' (Default), 'production' (schliesst Tests aus) oder 'tests'. " +
         "maxResults: Treffer-Limit (Default 50). maxFiles, contextLines und maxResponseBytes begrenzen " +
-        "die strukturierte Nutzlast. scope, includePatterns und excludePatterns steuern den Scope. " +
+        "die strukturierte Nutzlast. scope, includePatterns (oder fileFilter als String) und excludePatterns steuern den Scope. " +
         "enrichCSharp=true reichert sichtbare C#-Treffer opt-in semantisch an (semantic-Feld; resolution: resolved, not_applicable, unknown, ambiguous, unavailable).";
 
     private static void AddMetricsTree(

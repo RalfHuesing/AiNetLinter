@@ -47,7 +47,7 @@ Referenzen und Abhängigkeiten.
 - Jeder zielgebundene MCP-Tool-Aufruf verwendet einen absoluten `targetPath` und
   die im aktuellen Toolschema vorgesehene `targetType`-Zuordnung (`project` oder
   `assembly`). `targetType=project` adressiert den absoluten Projektroot des jeweiligen
-  Repositories (wo `ainetlinter.project.json` liegt). Für die beiden
+  Repositories (den Projekt-/Arbeitsbereichs-Root). Für die beiden
   Assembly-only-Tools darf `targetType` gemäß ihrem Schema entfallen; ein
   `.dll`-/`.exe`-`targetPath` wird dort als `assembly` inferiert. `tools/list`
   weist je Tool aus, ob der gemeinsame read-only Projekt-/Assembly-Sessionpfad,
