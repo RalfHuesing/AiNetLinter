@@ -35,7 +35,6 @@ Frameworkspezifische Beziehungen werden erst danach und ausschließlich als kont
 
 | Priorität | Datei | Inhalt | Empfehlung |
 |---|---|---|---|
-| P1 | 01-csharp-kontext-exploration.md | Kompakter, zusammenhängender Symbol-/Änderungskontext | umsetzen |
 | P1 | 02-freshness-snapshot-vertrag.md | Aktualität, Snapshot und degradierte Analysezustände | umsetzen |
 | P1 | 03-provenance-confidence.md | Herkunft und Vertrauensgrad von Beziehungen | umsetzen |
 | P1 | 04-mcp-response-budgets.md | Größenlimits, Ranking und Vollständigkeit | umsetzen |
@@ -140,10 +139,9 @@ Zusätzlich: relevanter MCP-Workflow und abschließender Audit auf DRY, Dead Cod
 
 ## Offene Punkte
 
-1. Soll Kontext zuerst bestehende Tools erweitern oder einen eigenen Explore-Namen erhalten? Empfehlung: bestehende Tools erweitern.
-2. Soll das harte Antwortbudget in Bytes, Zeichen oder Profilen angegeben werden? Empfehlung: internes Byte-Limit plus strukturierte Truncation.
-3. Welche Framework-Inferenz ist nach P1 produktrelevant? Empfehlung: DI und ASP.NET-Routen getrennt bewerten.
-4. Welche Confidence-Schwellen gelten? Empfehlung: erst nach positiven und negativen Testfällen festlegen.
+1. Soll das harte Antwortbudget in Bytes, Zeichen oder Profilen angegeben werden? Empfehlung: internes Byte-Limit plus strukturierte Truncation.
+2. Welche Framework-Inferenz ist nach P1 produktrelevant? Empfehlung: DI und ASP.NET-Routen getrennt bewerten.
+3. Welche Confidence-Schwellen gelten? Empfehlung: erst nach positiven und negativen Testfällen festlegen.
 
 ## Arbeitsgedächtnis (nur Draft)
 
