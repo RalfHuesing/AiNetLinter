@@ -415,8 +415,3 @@ internal sealed class AssemblyReferenceResolver
         IReadOnlyList<MetadataReference> References,
         IReadOnlySet<string> SuccessfulPaths);
 }
-
-internal sealed record SourceProjectReferenceResolution(
-    IReadOnlyList<AssemblyReferenceDto> References,
-    IReadOnlySet<string> AssemblyNames,
-    IReadOnlyList<AssemblySessionDiagnostic> Diagnostics);

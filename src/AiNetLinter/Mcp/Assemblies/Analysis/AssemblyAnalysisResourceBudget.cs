@@ -121,8 +121,6 @@ internal sealed class AssemblyAnalysisResourceBudget(ExternalResourceRegistry? r
 
     internal DateTime UtcNow => Clock.GetUtcNow().UtcDateTime;
 
-    internal ExternalResourceHealthSnapshot? Health => registry?.Health;
-
     internal (ExternalResourceLease? Lease, string? FailureReason) Acquire(string path)
     {
         if (registry is null)

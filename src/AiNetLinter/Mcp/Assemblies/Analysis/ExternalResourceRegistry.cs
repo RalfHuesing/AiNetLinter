@@ -331,19 +331,6 @@ internal sealed class ExternalResourceRegistry : IDisposable
         }
     }
 
-    internal bool Remove(string identity)
-    {
-        lock (gate)
-        {
-            if (!entries.TryGetValue(identity, out var entry) || entry.LeaseCount != 0)
-            {
-                return false;
-            }
-
-            return entries.Remove(identity);
-        }
-    }
-
     internal void EndOperation()
     {
         lock (gate)

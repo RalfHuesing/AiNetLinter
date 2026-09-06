@@ -253,18 +253,6 @@ internal static class AssemblyAnalysisRegistryDisposal
         }
     }
 
-    internal static void TryDispose(IDisposable? disposable, string resource)
-    {
-        try
-        {
-            disposable?.Dispose();
-        }
-        catch (Exception exception)
-        {
-            Log.Warning(exception, "Assembly-Registry-Cleanup fehlgeschlagen: Ressource={Resource}", resource);
-        }
-    }
-
     internal static async ValueTask TryDisposeAsync(IAsyncDisposable disposable, string resource)
     {
         try

@@ -185,8 +185,6 @@ internal sealed class AssemblyArtifactFileLockEntry
 
     internal string Key { get; }
     internal int ReferenceCount { get; set; }
-    internal bool IsHeld => lockStream is not null;
-
     internal AssemblyArtifactFileLockEntry(string key)
     {
         Key = key;
