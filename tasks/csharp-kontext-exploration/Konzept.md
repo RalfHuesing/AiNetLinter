@@ -1,5 +1,5 @@
 ---
-status: ready
+status: draft
 title: C#-Kontext-Exploration als One-Shot-Arbeitskontext
 created: 2026-09-06
 updated: 2026-09-06
@@ -795,8 +795,345 @@ teuren Unterlauf ist kein guter One-Shot-Kontext.
 - Die bestehenden Aufrufparameter und semantischen Kernbereiche bleiben
   kompatibel; eine Parameterflut wird nicht eingeführt.
 
-Der konkrete Budgetwert und eine eventuelle spätere Default-Umstellung sind
-Ergebnisse der automatisierten Umsetzungsevaluation, keine offenen
-Konzeptentscheidungen und kein Grund, die Umsetzung zu blockieren. Das
-Konzept ist für den begrenzten ersten Scope freigegeben; der Orchestrator wird
-nicht automatisch gestartet.
+Der konkrete Budgetwert und eine eventuelle spätere Default-Umstellung waren
+ursprünglich als Ergebnisse der automatisierten Umsetzungsevaluation und nicht
+als offene Konzeptentscheidungen eingeordnet. Diese Freigabeentscheidung ist
+durch den nachfolgenden Red-Team-Audit aufgehoben. Das Konzept ist erneut ein
+Draft; der Orchestrator darf auf dieser Grundlage nicht gestartet werden.
+
+## Arbeitsgedächtnis (nur Draft)
+
+### Übergabestatus
+
+Das Konzept wurde auf ausdrücklichen Nutzerwunsch nach einem unabhängigen
+Red-Team-Audit erneut geöffnet. Die vorhandenen Entscheidungen bleiben als
+Ausgangsbasis erhalten, sind aber nicht mehr freigegeben. In einer späteren
+Planungssession sind insbesondere Budgetvertrag, Teilfehler-/Cancellation-
+Semantik, Snapshot/Freshness, Rückwärtskompatibilität und Eval-Methodik zu
+schärfen.
+
+### Audit 1: Executive Summary
+
+**Entscheidung: Conditional-Go für die Produktidee, No-Go für die Umsetzung auf
+Basis des bisherigen `status: ready`.**
+
+Die Grundrichtung ist tragfähig: Ein kleiner, deterministischer und ehrlich
+begrenzter Arbeitskontext kann Agentenarbeit verbessern. Das Konzept ist aber
+noch nicht implementierungsreif, weil vier Grundlagen nicht belastbar
+definiert sind:
+
+- Server-Antwortgröße, MCP-Transportgröße und tatsächlich modell-sichtbarer
+  Kontext werden vermischt.
+- Fehler-, Abbruch- und Freshness-Semantik widersprechen teilweise dem heutigen
+  Code.
+- Der geplante erste Scope kombiniert Protokollumbau, Snapshot-Architektur,
+  Kompaktionsalgorithmus und eine wissenschaftlich noch nicht belastbare
+  Agentenevaluation.
+- Die numerischen Promotion-Gates sind derzeit Zielwerte ohne empirische oder
+  statistische Herleitung.
+
+Empfehlung: Zunächst einen kleinen Truthfulness-/Contract-Slice definieren.
+Erst danach soll ein opt-in `compact-v1` end-to-end evaluiert werden.
+
+### Audit 2: Top fünf Risiken
+
+| Schwere | Befund und Evidenz | Relevanz | Empfehlung | Blockiert ersten Scope? |
+|---|---|---|---|---|
+| **Blocker** | **Das Budget misst nicht zuverlässig den modell-sichtbaren Kontext.** `[Code-verifiziert]` `McpToolResults.Text<T>` erzeugt verschiedenes Markdown in `Content` und JSON in `StructuredContent`. `[Dokumentations-verifiziert]` Text-only-Clients dürfen Structured Content ignorieren. Die MCP-Spezifikation empfiehlt gerade deshalb einen Text-Fallback für Structured Content; sie garantiert nicht, dass jeder Host beide Repräsentationen identisch in den Modellkontext übernimmt. | `UTF8(Text)+UTF8(StructuredContent.RawText)` ist ein definierbares internes Datenbudget, aber weder exakte JSON-RPC-Transportgröße noch Tokenverbrauch des Agenten. Dadurch kann die automatische Budgetwahl auf der falschen Zielgröße optimieren. | Drei Kennzahlen trennen: vollständig serialisierte `CallToolResult`-Bytes nach allen Wrappern; Bytes je Repräsentation; modell-/host-spezifische Prompt-Tokens nur in der Evaluation. Text-only, structured-aware und dual-rendering als getrennte Clientszenarien testen. | **Ja** |
+| **Blocker** | **Partial-Failure und Cancellation sind aktuell sicherheitsrelevant falsch.** `[Code-verifiziert]` `CollectViolationsAsync` fängt pauschal `Exception` und gibt einen leeren Violationsreport zurück. Damit wird auch `OperationCanceledException` als `0 Violations` maskiert. Bei fehlender Quelldatei entsteht ebenfalls ein leerer Report statt `notApplicable`/`unavailable`. | Ein abgebrochener oder fehlgeschlagener Linterlauf kann als geprüfte Regelkonformität erscheinen. Das widerspricht dem zentralen Konzeptversprechen „Unsicherheit explizit“. | Cancellation immer weiterwerfen. Pro Bereich expliziten Status einführen: `notRequested`, `complete`, `truncated`, `unavailable`, `failed`; dazu stabiler `reasonCode`. „Keine Treffer“ nur nach erfolgreicher Prüfung. | **Ja** |
+| **Blocker** | **Freshness und Hard Budget sind nicht atomar definiert.** `[Code-verifiziert]` Ein Toolaufruf erhält zwar eine immutable `Solution`, aber keine zugehörige Generation oder Snapshot-ID. Bei Refresh-Problemen wird der letzte gute Stand behalten. Der Degraded-Hinweis wird erst nach der Toolantwort außen vorangestellt. | Ein innerhalb des Tools geprüftes Budget kann durch den äußeren Warntext überschritten werden. Gleichzeitig kann Structured Content „frisch“ aussehen, während nur der Text eine Degraded-Warnung enthält. | Snapshot-Metadaten atomar zusammen mit der `Solution` erfassen. Budgetierung erst auf dem endgültigen Resultat nach Degraded-/Warn-Wrappern durchführen oder dafür einen exakt reservierten Overhead verwenden. | **Ja** |
+| **Blocker für Default-Umschaltung** | **Die Eval-Gates sind nicht statistisch belastbar.** `[Konzept-verifiziert]` 30 %, 95 %, 90 %, 5 Prozentpunkte und 10 % sind ohne Stichprobengröße, Varianz, Konfidenzintervall oder Fehlertoleranz festgelegt. `[Externe Primärquelle]` OpenAI empfiehlt reale Verteilungen, kontinuierliche Evaluation und die Kalibrierung automatischer Verfahren mit menschlichen Urteilen. Anthropic empfiehlt mehrere Trials und die Kombination aus deterministischen, Modell- und Human-Gradern. | Ein Kandidat kann zufällig gewinnen, obwohl er fachlich schlechter ist. „Keine sicherheitskritische Fehlentscheidung beobachtet“ belegt bei kleinen Stichproben nicht, dass die Fehlerrate akzeptabel ist. | Gepaarte Baseline-/Kandidatenläufe, mehrere Trials, Konfidenzintervalle und vorab definierte Nichtunterlegenheitsgrenzen. Kernentscheidungen regelbasiert bewerten; Modellrichter nur für subjektive Qualität und gegen Human Labels kalibrieren. | **Nein** für Contract-Slice, **ja** für automatische Budgetwahl/Default |
+| **Hoch** | **Der erste Scope ist kein einzelner Implementierungsslice.** `[Konzept-verifiziert]` Er umfasst DTO-Vertrag, Kompaktion, globales Budget, Snapshot/Freshness, Partial Failure, Performance, große Fixtures, Agententraces und automatische Budgetwahl; gleichzeitig werden Source und Callees als Kandidaten evaluiert, obwohl sie als Nichtziel gelten. | Zu viele unabhängige Fehlerursachen erschweren Review, Regressionserkennung und eine ehrliche Go/No-Go-Entscheidung. | In Truthfulness/Contract, opt-in Compact Projection und Agent Evaluation aufteilen. Source/Callees vollständig aus dem ersten Scope entfernen. | **Ja** |
+
+### Audit 3: Verifizierte Stärken
+
+| Schwere | Positiver Befund und Evidenz | Relevanz | Empfehlung | Blockiert? |
+|---|---|---|---|---|
+| **Niedrig – positiv** | **Die Progressive-Disclosure-Richtung ist gut begründet.** `[Externe Primärquelle]` Tool-Design-Empfehlungen unterstützen sinnvolle Defaults, Filter, Pagination und hilfreiche Trunkierung. Long-Context-Forschung zeigt, dass mehr Kontext nicht automatisch besser genutzt wird. | Das unterstützt „kleinster hinreichender Kontext“, nicht jedoch die konkreten Byte-Grenzen. | Leitprinzip beibehalten, numerische Werte empirisch ermitteln. | Nein |
+| **Niedrig – positiv** | **Ein gemeinsames deterministisches Bytebudget ist technisch machbar.** `[Code-/Test-verifiziert]` Die Assembly-Analyse besitzt bereits Projektion, Trunkierung und kombinierte UTF-8-Messung. | Es existiert wiederverwendbares Wissen und Testmuster. | Semantik übernehmen, nicht blind die payload-spezifische Implementierung verallgemeinern. | Nein |
+| **Niedrig – positiv** | **Das Konzept schützt den bisherigen Default, wenn kein Kandidat alle Gates erfüllt.** `[Konzept-verifiziert]` | Das verhindert einen erzwungenen Rollout aufgrund einer fehlgeschlagenen Evaluation. | Beibehalten; nur der Promotion-Job soll dann scheitern, nicht notwendigerweise jeder normale CI-Lauf. | Nein |
+| **Niedrig – positiv** | **Trunkierung und Bereichsstatus werden als fachliche Information erkannt.** `[Konzept-verifiziert]` | Das ist für Agenten wichtiger als bloß kleinere JSON-Strukturen. | Statusmodell präzisieren und zuerst unabhängig von Kompaktion umsetzen. | Nein |
+| **Niedrig – positiv** | **Der bestehende Vertrag ist bereits brauchbar dokumentiert und komponentengetestet.** `[Test-verifiziert]` Flags, Deserialisierung und Limits werden geprüft; die fünf aktuellen Dimensionen sind dokumentiert. | Damit gibt es eine klare Baseline für Kompatibilitäts- und Größenvergleiche. | Bestehende Tests als Legacy-Contract einfrieren und um Live-MCP-Tests ergänzen. | Nein |
+
+### Audit 4: Kritische falsche oder unbelegte Annahmen
+
+| Schwere | Annahme, Evidenz und Bewertung | Relevanz | Empfehlung | Blockiert? |
+|---|---|---|---|---|
+| **Hoch** | **„Direct callers“ seien tatsächliche Aufrufer.** `[Code-verifiziert]` Die Implementierung übernimmt Roslyn-Referenzstellen aus `SymbolFinder.FindReferencesAsync` und begrenzt sie anschließend. Das umfasst statische Referenzen, nicht ausschließlich ausgeführte Aufrufe. | Methodengruppen, Delegates, `nameof`, Konstruktionen und andere Referenzformen können fachlich anders zu bewerten sein. Runtime-Dispatch ist nicht bewiesen. | In `references`/`callSites` umbenennen und `relationKind` aus Syntax/`IOperation` ergänzen. „Caller“ nur für nachgewiesene Invocation-/Object-Creation-Stellen verwenden. | **Ja**, wenn Caller fachlicher Gold-Standard werden |
+| **Hoch** | **Ein fixiertes Modell, Prompt und Tool-Layout machten die Evaluation reproduzierbar.** `[Externe Quelle]` Agenten- und Modellgrader bleiben nondeterministisch; mehrere Trials und menschliche Kalibrierung sind erforderlich. | Einzelne Läufe können Gewinner und Verlierer vertauschen; Provider-Updates erzeugen zusätzliche zeitliche Drift. | Modell-Snapshot, Harness-Version und Prompt hashen; mehrere gepaarte Läufe und Unsicherheitsintervalle verwenden. | Ja für Promotion |
+| **Mittel** | **Die „kleinster Vertrag“-Aussage sei eine konkrete offizielle OpenAI-Empfehlung.** `[Externe Quellenprüfung]` Die geprüften offiziellen OpenAI-Evalleitlinien unterstützen aufgabenspezifische, realitätsnahe und kalibrierte Evals, aber nicht den behaupteten spezifischen Byte-/Payload-Vertrag. Die nähere Primärquelle ist Anthropic. | Eine falsche Quellenzuschreibung schwächt die Begründung, obwohl die Richtung plausibel ist. | Quellenbehauptung präzisieren: „durch Tool-Design- und Long-Context-Evidenz gestützte Architekturhypothese“. | Nein |
+| **Hoch** | **Synthetische Lösungen plus wenige Dogfood-Fälle repräsentierten eine universelle Default-Verteilung.** `[Architekturannahme]` Die Matrix deckt Formen ab, aber keine nachgewiesene Nutzungshäufigkeit und kaum reale Repository-Topologien. | Ein universeller Default kann auf kleinen Fixtures gewinnen und in Multi-TFM-, Generator- oder Monorepo-Szenarien verlieren. | Synthetische Grenzfälle mit mehreren versioniert gepinnten realen Fixture-Repositories kombinieren. | Ja für universellen Default |
+| **Hoch** | **Eine rein interne Compact-Variante reiche für den realen MCP-Nutzenbeleg.** `[Code-/Protokollableitung]` Host und Client entscheiden, wie Text und Structured Content weitergereicht werden. | Interne Projektion misst nicht die tatsächliche Clientdarstellung, Toolfolge oder Tokenisierung. | Nach dem Contract-Slice einen expliziten opt-in `compact-v1`-Pfad für echte Client-/Host-Evaluation anbieten. | Ja für End-to-End-Nachweis |
+| **Hoch** | **`0 Violations` bedeute immer erfolgreich geprüft.** `[Code-verifiziert]` Fehler und fehlende Quelldateien können heute denselben leeren Report erzeugen. | Dies kann sicherheitsrelevante Fehlentscheidungen auslösen. | Ergebnisstatus von Treffermenge trennen. | Ja |
+
+### Audit 5: Technische Machbarkeit für C# und Roslyn
+
+| Thema | Einstufung | Schwere / Evidenz | Empfehlung | Blockiert? |
+|---|---|---|---|---|
+| Gemeinsames Hard Budget | **Technisch gut lösbar, mit relevanter Komplexität** | **Hoch.** `[Code-verifiziert]` Assembly-Projektion beweist Machbarkeit. Der äußere Degraded-Wrapper wird heute aber später angewandt. | Endgültige `CallToolResult`-Serialisierung budgetieren; zusätzlich Einzelgrößen ausweisen. | Ja |
+| Text/Structured-Content-Konsistenz | **Serverseitig lösbar; Client-Sichtbarkeit clientabhängig** | **Hoch.** Unterschiedliche Repräsentationen existieren absichtlich. | Beide aus einem kanonischen DTO projizieren und semantische Parität testen; Clientszenarien getrennt messen. | Ja |
+| Deterministische Priorisierung | **Technisch gut lösbar** | **Mittel.** Call Sites werden vor `Take` nicht sichtbar stabil sortiert; Violations nur nach Zeile. | Vollständige Tie-Breaker: normalisierter Pfad, Zeile, Spalte, Symbol-/Rule-ID, Message. Wiederholungstests mit permutierter Eingangsreihenfolge. | Ja für reproduzierbares Budget |
+| Extension Methods, Overloads, statisch gebundene Generics | **Technisch gut lösbar** | **Mittel.** Roslyn kann die im aktiven Compilation-Kontext gebundenen Symbole auflösen. | SymbolKey/OriginalDefinition plus konkrete Substitutionen getrennt ausweisen. | Nein |
+| Partial Types | **Technisch lösbar, mit relevanter Komplexität** | **Mittel.** Symbolreferenz ist möglich, aber Declaration-, Source- und Dateiprovenienz können mehrere Orte haben. | Mehrere Deklarationsorte explizit modellieren; keinen zufälligen Hauptteil als vollständig ausgeben. | Nein |
+| Virtual/Interface Dispatch | **Nur statisch vollständig, zur Laufzeit heuristisch** | **Hoch.** Compile-time-Referenzen und Implementierungen sind analysierbar; tatsächliche Runtime-Ziele nicht allgemein. | `staticReference`, `implementationCandidate` und `runtimeTargetUnknown` unterscheiden. | Ja, falls „vollständige Caller“ behauptet werden |
+| Delegates | **Heuristisch** | **Hoch.** Zuweisungen sind statisch auffindbar; Invocation-Target erfordert Flow-Analyse und bleibt bei Mutation unvollständig. | Nicht als sichere Caller-Beziehung verkaufen; Provenienz/Confidence angeben. | Nein, wenn korrekt deklariert |
+| `dynamic`, Reflection, String-DI/Convention Routing | **Im allgemeinen ersten Scope ungeeignet** | **Hoch.** `[Plausible Sprach-/Architekturgrenze]` Die Laufzeitbeziehung ist nicht vollständig aus dem Roslyn-Symbolgraphen ableitbar. | Explizit `notObservableStatically`; keine Vollständigkeitsbehauptung. | Ja für harte Vollständigkeitsgarantie |
+| Source Generators und Conditional Compilation | **Konfigurationsabhängig** | **Hoch.** Analysiert wird die geladene Solution/Compilation, nicht automatisch jede TFM-, Symbol- oder Generatorvariante. | `project`, `TFM/configuration` und Generated-Source-Provenienz im Snapshot ausweisen. | Ja für projektweite Completeness |
+| Source Preview | **Technisch lösbar, aber semantisch/sicherheitlich riskant** | **Mittel.** `get_symbol_body` besitzt bereits begrenzte Körperausgabe; standardmäßiges Einbetten erhöht jedoch unbeabsichtigte Codeoffenlegung und Trunkierungsrisiken. | Außerhalb des ersten Scopes lassen; später explizit opt-in mit Herkunft und Trunkierungsmarkern. | Nein |
+| Snapshot/Freshness Envelope | **Technisch lösbar, mit relevanter Architekturarbeit** | **Hoch.** Der Server hat Refresh-/Last-good-Zustand, aber keine atomare Analyse-Generation in der Feature-Antwort. | `serverInstanceId`, monotone Generation, `capturedAt`, `freshness`, `degradedReason` zusammen mit der Solution erfassen. | Ja |
+| Violations-Teilfehler/Cancellation | **Technisch leicht lösbar, fachlich zwingend** | **Blocker.** Broad Catch maskiert Cancellation. | `OperationCanceledException` weiterwerfen; Fehler taxonomisieren. | Ja |
+| Assembly-Ziele | **Derzeit nicht unterstützt** | **Mittel.** `[Schema-/Dokumentations-verifiziert]` `get_feature_context` ist projektbezogen. | Im Konzept ausdrücklich `project only` festhalten; Assembly-Verhalten nicht implizit offenlassen. | Nein |
+| Parallele Sessions | **Grundsätzlich lösbar** | **Mittel.** Immutable Solutions helfen, Registry-/Refresh-Metadaten müssen jedoch zum Snapshot passen. | Concurrency-Test auf Generation, Degraded State und finalen Budgetwert ergänzen. | Ja für Freshness-Vertrag |
+| Violations mit `noCache: true` | **Funktional, aber potentieller Latenzblocker** | **Hoch.** Jeder Feature-Aufruf startet den Linter ohne Cache. | Absolute Warm-/Cold-Latenz messen. Entweder Snapshot-Diagnostik wiederverwenden oder Violations bei Überschreitung als verzögert/unavailable kennzeichnen. | Ja für Anspruch „effizienter One-Shot“ |
+
+### Audit 6: Budget- und Eval-Methodik
+
+#### Befunde
+
+| Schwere | Befund und Evidenz | Relevanz | Empfehlung | Blockiert? |
+|---|---|---|---|---|
+| **Hoch** | Bytebudget und Agentenkosten werden konzeptionell zu eng gekoppelt. `[Konzept-verifiziert]` | UTF-8-Bytes sind deterministisch, Tokens und Modellsichtbarkeit jedoch host- und tokenizerabhängig. | Bytes als Server-/Transportvertrag, Tokens als separate Evalmetrik. | Ja |
+| **Hoch** | Die Aufgaben `Understand`, `Prepare-Edit` und `Refactoring` sind überlappend und lassen ihre korrekte Folgeaktion nicht eindeutig ableiten. | Ein Grader kann Schreibstil statt tatsächliche Entscheidung belohnen. | Szenarien über erwartete Aktion und benötigte Fakten definieren. | Ja |
+| **Hoch** | Prozentgates haben keine Unsicherheitsbehandlung. | Kleine Datensätze erzeugen Scheingenauigkeit. | Gepaarte Auswertung, mehrere Trials, Konfidenzintervalle und vorab festgelegte Nichtunterlegenheitsgrenze. | Ja für Promotion |
+| **Mittel** | Ein LLM-as-Judge wäre für symbolische Fakten unnötig und potentiell verzerrt. `[Externe Primärquelle]` Modellgrader sind skalierbar, aber nondeterministisch und müssen kalibriert werden. | Symbol, Count, Status und Toolfolge sind deterministisch prüfbar. | Regelgrader für Kernentscheidungen; Modellgrader nur für Erklärungsqualität. | Nein |
+
+#### Empfohlener Evaluationsaufbau
+
+1. **Primärziel:** korrekte Taskentscheidung und korrektes Endergebnis. Größe,
+   Toolanzahl und Latenz sind Sekundärmetriken.
+2. **Szenarioklassen:** Antwort allein möglich; `get_symbol_body` zwingend;
+   Impact/Referenzanalyse zwingend; Tests/Violations separat nötig; Symbol
+   mehrdeutig; Bereich fehlgeschlagen/stale/partiell; Negativfall mit tatsächlich
+   nutzlosem Folgeaufruf.
+3. **Gold Standard:** keine vollständige Musterprosa, sondern erwartete bzw.
+   erlaubte Aktion, zwingende Fakten, verbotene Behauptungen, erlaubte
+   Folgewerkzeuge, Sicherheitsklassifikation und task-spezifische
+   Erfolgsprüfung.
+4. **Unnötiger Folgeaufruf:** nur dann zählen, wenn bereits alle erforderlichen
+   Signale vorlagen, das weitere Tool keine notwendige Information lieferte und
+   der Task ohne den Aufruf korrekt abschließbar war.
+5. **Schädliche Fehlentscheidung:** deterministisch definieren, etwa falsches
+   Symbol, `keine Violations` bei `failed/unavailable`, Ignorieren von
+   Trunkierung oder Nutzung eines stale Snapshot ohne Kennzeichnung.
+6. **Stichprobe:** Pilot zur Varianzschätzung; anschließend erforderliche Fall-
+   und Trial-Anzahl bestimmen. Baseline und Kandidat gepaart ausführen und die
+   Reihenfolge randomisieren.
+7. **Fixture-Mix:** synthetische Grenzfälle plus mehrere gepinnte reale
+   Repositories; Multi-TFM, Generated Code, kaputte Compilation, große Fan-outs,
+   unterschiedliche Testframeworks und Unicode-/Pfadfälle einschließen.
+8. **Automatisierung:** pro PR deterministische Contract-/Serialisierungs-/
+   Trunkierungs-/Cancellation-Tests; stabiler Performance-Slice; Agenteneval
+   nightly oder manuell; Promotion nur nach Contract- und statistischen Gates.
+9. **Budgetauswahl:** zuerst Pflichtanteil und Größenverteilung bestimmen. Der
+   kleinste qualifizierte Kandidat gewinnt. Falls keiner qualifiziert ist,
+   bleibt der heutige Default unverändert.
+10. **Source/Callee-Gates:** erst später separat untersuchen. `+5 Prozentpunkte`
+    und `-10 % Folgeaufrufe` sind derzeit unbelegte Zielwerte.
+
+### Audit 7: Rückwärtskompatibilität
+
+| Schwere | Befund und Evidenz | Relevanz | Empfehlung | Blockiert? |
+|---|---|---|---|---|
+| **Hoch** | Die aktuellen Listen, Feldformen, Markdown-Abschnitte und `null`-Semantiken sind beobachtbares Verhalten. `[Test-/Dokumentations-verifiziert]` | Eine kürzere Liste mit neuem Count ist für bestehende Konsumenten nicht automatisch kompatibel. | Legacy-Default unverändert einfrieren. Neue Statusfelder additiv ergänzen. | Ja |
+| **Hoch** | Ein interner Evaluationspfad prüft keine realen MCP-Clients. | Text-only- und Structured-aware-Clients können unterschiedliche Ergebnisse sehen. | Für den Pilot ist ein expliziter öffentlicher Opt-in wie `responseProfile: "compact-v1"` sinnvoll. | Ja für End-to-End-Pilot |
+| **Mittel** | Eine automatische spätere Default-Umschaltung ist trotz identischem Input-Schema eine Verhaltensänderung. | Agenten und Parser können auf Detailmenge und Markdown-Struktur angewiesen sein. | Version, Release Notes, Deprecation-Fenster und Rückfallmöglichkeit vorsehen. | Ja für Default-Umschaltung |
+| **Mittel** | Additive JSON-Felder sind überwiegend kompatibel, zusätzlicher Text dagegen weniger sicher. | Textparser können Abschnittspositionen oder Formulierungen erwarten. | Legacy-Markdown im Default nicht verändern; neue Metadaten primär strukturiert ergänzen. | Nein |
+
+Zwingend zu erhalten sind zunächst bestehende Input-Aliase und Flags,
+Declaration- und Metrics-Felder, bestehende Caller-/Test-/Violation-Einträge im
+Legacy-Profil, die derzeitige Bedeutung von `null` bei nicht angeforderten
+Bereichen und die dokumentierten Markdown-Abschnitte. Counts, Status und
+`isTruncated` sind gute Ergänzungen, aber kein kompatibler Ersatz für heute
+ausgelieferte Einträge.
+
+### Audit 8: Fehlende Punkte
+
+| Schwere | Fehlender Punkt | Evidenz / Relevanz | Empfehlung | Blockiert? |
+|---|---|---|---|---|
+| **Blocker** | Cancellation-Vertrag | `[Code-verifiziert]` Abbruch kann als leerer Violationsreport erscheinen. | Expliziter Abschnitt im Konzept samt Testpflicht. | Ja |
+| **Hoch** | Budget nach äußeren MCP-Wrappern | `[Code-verifiziert]` Degraded Header entsteht nach der Feature-Projektion. | Budgetgrenze auf endgültige Resultatstruktur beziehen. | Ja |
+| **Hoch** | Absolute Latenzgrenze | Ein relatives `p95 <= +10 %` akzeptiert auch eine bereits unbrauchbar langsame Baseline. | Zusätzlich absolute Warm-/Cold-Ziele und Timeouts definieren. | Ja für One-Shot-Anspruch |
+| **Hoch** | Configuration-/TFM-/Generator-Provenienz | Roslyn-Antworten gelten nur für die geladene Compilation. | Snapshot muss analysierte Konfiguration ausweisen. | Ja für Completeness |
+| **Hoch** | Stabile Tie-Breaker | Aktuelle Reihenfolgen sind nicht vollständig normiert. | Deterministische Sortierspezifikation und Wiederholungstests. | Ja |
+| **Mittel** | Source-Preview-Datenschutz | Codekörper können Secrets, proprietäre Logik oder generierte Inhalte enthalten. | Source weiterhin separat und opt-in halten; keine ungefragte Aufnahme. | Nein |
+| **Mittel** | Große reale Fixture-Repositories | Synthetische Matrix bildet Verteilungen nicht ab. | Gepinnte OSS-Fixtures mit Lizenz-, Commit- und Toolchain-Metadaten. | Ja für Default-Promotion |
+| **Mittel** | Fehlercodes und Diagnosefähigkeit | Freitextgründe sind schlecht stabil testbar. | Stabile Codes wie `source_unavailable`, `analysis_failed`, `stale_snapshot`, `budget_truncated`. | Ja |
+| **Mittel** | Verhalten bei Assembly-Zielen | `get_feature_context` unterstützt diese derzeit nicht. | Explizit als Nichtziel festhalten. | Nein |
+| **Mittel** | Release-/Rollback-Plan | Automatische Default-Auswahl allein beschreibt keinen sicheren Rollout. | Opt-in, Feedback soweit zulässig und dokumentierter Rollback auf Legacy. | Ja für Default |
+
+### Audit 9: Minimal sinnvoller erster Scope
+
+Der kleinste belastbare erste Scope ist noch keine automatische
+Kontextkompaktion, sondern eine verlässliche Wahrheits- und Snapshot-Schicht.
+
+#### Phase 1 – Truthfulness/Contract
+
+- Legacy-Ausgabe unverändert lassen.
+- Cancellation korrekt propagieren.
+- Violations und andere Bereiche mit explizitem Status statt mehrdeutigem
+  Leerwert versehen.
+- Atomaren Snapshot-Identifier und Freshness-/Degraded-Metadaten ausgeben.
+- Caller als Referenzen/Call Sites korrekt benennen oder klassifizieren.
+- Alle Sammlungen vollständig deterministisch sortieren.
+- Component- und Live-MCP-Tests für Fehler, Cancellation, Freshness und
+  Text/Structured-Parität ergänzen.
+
+#### Phase 2 – Compact Pilot
+
+- Opt-in `compact-v1`.
+- Gemeinsame kanonische Projektion für Text und Structured Content.
+- Exaktes Budget am finalen Resultat.
+- Counts, Trunkierung und Follow-up-Hinweise je Bereich.
+- Keine Source Preview, keine Callees, keine automatische Default-Umschaltung.
+
+#### Phase 3 – Agent Evaluation und Promotion
+
+- Reale Host-/Client-Varianten.
+- Gepaarte Multi-Trial-Evaluation.
+- Statistisch definierte Promotion-Gates.
+- Erst dann Entscheidung über den Default.
+
+Die einzelne Änderung mit dem besten Risiko-/Nutzen-Verhältnis ist, den
+pauschalen Exception-Catch bei Violations durch korrekte Cancellation- und
+Statussemantik zu ersetzen. Sie beseitigt eine potenziell sicherheitsrelevante
+Falschaussage, ohne den öffentlichen Detailumfang zu verändern.
+
+### Audit 10: Konkrete Konzeptänderungen für die nächste Session
+
+1. Budgetvertrag in `responseDataBytes` der vollständig serialisierten
+   `CallToolResult`, diagnostische `textBytes`/`structuredBytes` und eine
+   getrennte Evalmetrik `modelVisibleTokens` aufteilen.
+2. Truthfulness/Contract, Compact Pilot und Default Promotion als getrennte
+   Meilensteine definieren.
+3. Source und Callees aus allen Kandidaten und Gates des ersten Scopes
+   entfernen.
+4. „Direct callers“ durch statische Referenz-/Call-Site-Beziehungen ersetzen
+   und `relationKind` festlegen.
+5. Pro Bereich mindestens `notRequested`, `complete`, `truncated`,
+   `unavailable`, `failed` definieren; Treffermenge vom Status trennen.
+6. Festlegen, dass `OperationCanceledException` nie zu einer partiellen
+   Erfolgsantwort konvertiert wird.
+7. Atomare Snapshotfelder für Instanz, Generation, Erfassungszeit, analysierte
+   Konfiguration und Degraded State definieren.
+8. Legacy als unveränderten Default festschreiben und einen versionierten
+   opt-in Compact-Pfad für reale Evaluation zulassen.
+9. Numerische Gates als vorläufige Hypothesen markieren; Stichproben-/Trial-
+   Ermittlung, gepaarte Tests, Konfidenzgrenzen und regelbasierte Gold-
+   Entscheidungen festlegen; absolute Latenzgrenze ergänzen.
+10. Eval-Matrix um Multi-TFM, Preprocessor-Konfiguration, Source Generators,
+    Generated Code, kaputte Compilation, Linked Files, Records/Accessors,
+    Interface/Virtual/Delegate/Dynamic/Reflection und mehrere Testframeworks
+    ergänzen.
+
+### Audit 11: Entscheidung und Wiederfreigabebedingungen
+
+**Status bleibt `draft`.** Eine erneute Freigabe ist erst sinnvoll, wenn:
+
+- Server-/Transportbudget und Modellkontext getrennt sind;
+- Cancellation, Partial Failure und Freshness einen widerspruchsfreien Vertrag
+  besitzen;
+- die äußere Degraded-Anreicherung Teil der Budget- und Paritätsprüfung ist;
+- Caller nicht länger mit statischen Referenzen gleichgesetzt werden;
+- der erste Scope auf den Contract-/Truthfulness-Slice reduziert ist;
+- die Evaluation reale Fixtures, mehrere Trials, regelbasierte
+  Gold-Entscheidungen und statistische Promotion-Gates besitzt;
+- ein Legacy-kompatibler opt-in-Pilotpfad festgelegt ist.
+
+### Geprüfte Evidenzanker
+
+- `src/AiNetLinter/Mcp/Tools/FeatureContext/GetFeatureContextTool.cs`
+- `src/AiNetLinter/Mcp/Tools/FeatureContext/FeatureContextScanner.cs`
+- `src/AiNetLinter/Mcp/Tools/FeatureContext/FeatureContextModels.cs`
+- `src/AiNetLinter/Mcp/Tools/FeatureContext/FeatureContextFormatter.cs`
+- `src/AiNetLinter/Mcp/McpToolResults.cs`
+- `src/AiNetLinter/Mcp/Projects/ProjectToolCall.cs`
+- `src/AiNetLinter/Mcp/McpCodeGraphServer.cs`
+- `src/AiNetLinter/Mcp/Tools/AssemblyAnalysis/AssemblyAnalysisResponseLimits.Budget.cs`
+- `src/AiNetLinter.FastTests/Mcp/Tools/FeatureContext/GetFeatureContextToolTests.cs`
+- `Docs/agent-api.md`
+- [MCP Tools Specification 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)
+- [OpenAI Evaluation Best Practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices)
+- [Anthropic: Writing Effective Tools for Agents](https://www.anthropic.com/engineering/writing-tools-for-agents)
+- [Anthropic: Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)
+- [Lost in the Middle](https://arxiv.org/abs/2307.03172)
+
+### Nächster Planungsschritt
+
+In der nächsten Session zuerst Phase 1 (Truthfulness/Contract) als kleinsten
+Scope schärfen. Danach den Budgetvertrag und erst anschließend die Eval-
+Methodik behandeln. Source, Callees und Default-Promotion bis dahin nicht
+erneut in den ersten Scope aufnehmen.
+
+### Planer-Einordnung nach dem Frontier-Audit
+
+Diese Einordnung ergänzt den Audit als Diskussionsgrundlage und ersetzt oder
+verändert dessen Befunde nicht.
+
+Das bestehende System funktioniert. Das Vorhaben ist eine Optimierung eines
+brauchbaren Werkzeugs, keine grundlegende Rettung einer unbrauchbaren
+Architektur. Der Frontier-Audit hat wichtige Risiken sichtbar gemacht, aber
+aus einer breiten Prüfbitte fast jede denkbare Unsicherheit als Blocker
+behandelt. Dadurch ist der Text für eine Umsetzung deutlich größer geworden
+als der ursprünglich zu lösende Nutzen rechtfertigt.
+
+Die Befunde sind daher unterschiedlich zu gewichten:
+
+- **Unmittelbar realer Fehler:** Der pauschale Exception-Catch beim
+  Violations-Scan kann Fehler und Cancellation als leeres Ergebnis darstellen.
+  Das ist ein sinnvoller, kleiner und separat verifizierbarer Fix, aber kein
+  Grund, die gesamte Kontextarchitektur neu zu entwerfen.
+- **Reales Änderungsrisiko:** Eine Verdichtung des heutigen Defaults kann
+  beobachtbares Verhalten verändern. Der aktuelle Default sollte deshalb bis
+  zu einem konkreten Nachweis unverändert bleiben.
+- **Valide, aber nicht blockierende Modellfrage:** Bytes, StructuredContent
+  und tatsächlich modell-sichtbare Tokens sind unterschiedliche Größen. Für
+  eine erste technische Projektion genügt eine klar benannte Byte-Messung als
+  Engineering-Signal; eine vollständige Host-/Client-/Tokenizer-Forschung ist
+  dafür nicht erforderlich.
+- **Überdehnung des Scopes:** Gepinnte externe Repositories, Human-Grading,
+  statistische Promotion, vollständige Caller-/Callee-Taxonomien, Multi-TFM-
+  und Generator-Matrizen sowie eine automatische Default-Promotion sind
+  wertvolle spätere Prüfungen, aber keine notwendige Vorbedingung für eine
+  kleine reversible Verbesserung.
+
+Für eine spätere Wiederaufnahme gilt daher die engere Empfehlung:
+
+1. Den bestehenden Default nicht verändern.
+2. Keine Source-, Callee-, Multi-Symbol- oder Snapshot-Großarchitektur in den
+   ersten Änderungsscope aufnehmen.
+3. Zuerst höchstens eine kleine, intern oder opt-in prüfbare Projektion der
+   vorhandenen Antwort gegen den Legacy-Output vergleichen.
+4. Nur wenn diese Projektion einen klaren Nutzen bei vertretbarem Risiko zeigt,
+   über einen produktiven Default oder weitere Datenquellen sprechen.
+5. Den Violations-Cancellation-/Fehlerstatus bei Bedarf als eigenes kleines
+   Thema behandeln, nicht als versteckte Voraussetzung für alles andere.
+
+Der numerische Budgetwert muss erst existieren, wenn eine konkrete Projektion
+gemessen werden kann. Vorher ist jede Zahl — auch ein Kandidatenraster — nur
+eine Hypothese. Nach Beginn einer Umsetzung kann die Codebasis den Wert
+automatisch aus festen synthetischen Fixtures und wenigen Dogfood-Fällen
+ermitteln. Der Nutzer muss daraus keine Fremdrepository-Audits ableiten.
+
+### Einordnung der Modellwahl
+
+Das Ergebnis ist nicht ausschließlich ein Modellproblem. Ein Frontier-Modell
+optimiert eine breit formulierte Auditaufgabe konsequent und listet deshalb
+auch seltene Randfälle, zukünftige Betriebsfragen und wissenschaftliche
+Absicherungen auf. Das ist für einen Red-Team-Review nützlich, aber als
+Erstentwurf eines kleinen Features leicht überdimensioniert.
+
+Für dieses Vorhaben wäre ein pragmatischer Modellmix sinnvoll:
+
+- schnelles Modell für einen begrenzten ersten Entwurf und lokale
+  Code-/MCP-Messungen;
+- Frontier-Modell nur für einen gezielten Red-Team-Audit mit der Vorgabe
+  „maximal fünf echte Blocker und keine neue Roadmap“;
+- danach wieder ein kompaktes Modell zur Konsolidierung in einen kleinen,
+  umsetzbaren Scope.
+
+Der Lernpunkt ist daher nicht, dass das schnelle Modell automatisch besser
+gewesen wäre. Wahrscheinlich hätte es weniger Randfälle ausgearbeitet und
+damit schneller zu einer Entscheidung geführt. Die entscheidende Steuerung
+ist der Auftrag: „kleinste reversible Änderung, bestehendes Verhalten
+schützen, nach einem automatischen Testlauf abbrechen“, nicht „alle denkbaren
+Risiken vollständig untersuchen“.
