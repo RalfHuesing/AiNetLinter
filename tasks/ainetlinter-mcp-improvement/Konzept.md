@@ -148,6 +148,106 @@ gesamte Implementierung.** Das reduziert Folge-Call- und False-Green-Risiken,
 ohne die bereits getesteten Concurrency-/Lifecycle-Grenzen oder die
 fachlichen Unterschiede von Projekt und Assembly zu verwischen.
 
+## Internes MCP-Schema und ausführbare Contract-Tests
+
+Die MCP-Tools sind über mehrere Entwicklungsphasen gewachsen. Die Prüfung zeigt
+bereits unterschiedliche Reifegrade, aber auch einen vorhandenen Ansatz für
+Verträge: `McpHandshakeToolRegistrationTests` prüft `tools/list`,
+`McpServerCommandContractTests` prüft Registrierungs- und Call-Verhalten,
+`McpToolResultsTests` prüft zentrale Ergebnisregeln, und mehrere Tool-/Raw-Wire-
+Tests prüfen StructuredContent und JSON-RPC-Framing. Das Problem ist daher
+nicht, dass überhaupt keine Tests existieren, sondern dass sie noch nicht aus
+einem gemeinsamen Zielvertrag abgeleitet sind.
+
+### Nicht ein großes JSON-Schema, sondern drei Vertragsebenen
+
+Ein einzelnes, globales JSON-Schema wäre zu grob. Die MCP-Tools haben
+unterschiedliche fachliche Nutzlasten; ein erzwungenes identisches Output-
+Schema würde sinnvolle Unterschiede verstecken oder in optionale Felder
+auflösen, die niemand mehr ernsthaft prüft. Sinnvoll ist ein interner,
+ausführbarer Vertrag in drei Ebenen:
+
+1. **Input-/Discovery-Vertrag:** Toolname, Pflichtparameter, Aliase,
+   Target-Capability, Annotationen, Beschreibung und das vom SDK erzeugte
+   InputSchema. Die Runtime-Prüfung muss dieselbe Capability wie `tools/list`
+   durchsetzen.
+2. **Output-Strukturvertrag:** erlaubte Root-Form, typisierte Payload, Status,
+   IDs, Scope/Freshness, Completeness und Truncation. Tool-spezifische Felder
+   bleiben frei; gemeinsame Metadaten und ihre Bedeutung sind verbindlich.
+3. **Verhaltensvertrag:** Welche Aussage ist bei leer, vollständig, partial,
+   truncated, unsupported und not_decidable zulässig? Wann ist `IsError=true`?
+   Ist eine ausgegebene ID im vorgesehenen Folge-Tool tatsächlich verwendbar?
+   Dieser Teil kann ein reines JSON-Schema nicht ausdrücken.
+
+### Empfohlene interne Form
+
+Die Zieldefinition soll als typisierter, statisch kompilierten Vertragskatalog
+oder als kleine Sammlung von Contract-Records im Test-/MCP-Bereich entstehen.
+Sie beschreibt pro Tool mindestens:
+
+- unterstützte Targets und Capability-Grenzen;
+- erwartete Pflichtargumente und relevante Aliase;
+- erwartete Payload-Wurzel und die fachliche Bedeutung von Status-/Completeness-
+  Feldern;
+- ID-Erzeuger und erlaubte Folge-Tools;
+- zulässige Fehlerklasse und `IsError`-Semantik;
+- ob eine Restmenge per Continuation oder ausschließlich per Drilldown
+  weiterbearbeitet wird.
+
+Die Input-Schemas sollten nicht zusätzlich vollständig als handgeschriebene
+JSON-Dateien gepflegt werden, wenn sie bereits aus den registrierten C#-
+Signaturen erzeugt werden. Der Test soll das tatsächlich registrierte Schema
+gegen den Katalog prüfen. So entsteht eine Quelle der Wahrheit für
+Vertragsentscheidungen, ohne die SDK-Schemagenerierung zu duplizieren.
+
+### Contract-Test-Schichten
+
+- **Schnelle Invarianten-Tests:** reine Prüfer für Status-/Completeness-
+  Kombinationen, StructuredContent als Objekt, Fehlerpolitik, ID-Formate,
+  Text-/StructuredContent-Parität und widerspruchsfreie Counts.
+- **Registrierungstests:** die tatsächlich gebaute Tool-Collection gegen den
+  Katalog prüfen: keine doppelten Namen, Pflicht-Targets, Annotations,
+  Beschreibungshinweise und InputSchema.
+- **Representative Tool-Family-Tests:** je Familie mindestens ein Projekt-
+  und, wo unterstützt, ein Assembly-Call. Nicht jeder Spezialfall muss in
+  jedem Test doppelt abgebildet werden.
+- **Folge-Call-Tests:** ID aus `find_symbol`/Skeleton/Assembly-Kontext direkt
+  an das vorgesehene Folge-Tool übergeben; kein Test darf nur das Vorhandensein
+  einer ID prüfen.
+- **Raw-Wire-Tests:** wenige, gezielte Tests für JSON-RPC-Framing und die
+  tatsächliche MCP-Serialisierung. Diese sind teurer und bleiben Integration,
+  nicht der Default für jede Fachregel.
+
+### Umgang mit zunächst roten Tests
+
+„Schema zuerst, Tests sofort rot“ ist als Entwicklungsmodus sinnvoll, aber nur
+sliceweise. Ein globaler Vertrag für alle 33 Tools mit hunderten roten Tests
+würde die Ursache nicht mehr erkennen lassen und Agenten zu mechanischem
+Abhaken verleiten.
+
+Die Reihenfolge sollte daher sein:
+
+1. gemeinsame Contract-Typen und Test-Assertions definieren;
+2. zunächst Discovery- und Response-Grundlagen für Slice 01 anschließen;
+3. nur die zu diesem Slice gehörenden Tools auf `must pass` setzen;
+4. weitere Toolfamilien erst beim jeweiligen Slice in den Katalog aufnehmen;
+5. am Ende einen Vollständigkeits-Test verlangen, der sicherstellt, dass kein
+   registriertes Tool ohne Vertrag bleibt.
+
+Damit sind rote Tests echte Wegweiser im aktiven Slice und kein dauerhaft roter
+Gesamtbestand. Das ist ein üblicher Contract-Testing-Ansatz: Zielverträge
+werden vor der Implementierung festgelegt, aber ihre Gültigkeit wird in
+beherrschbaren Gruppen hergestellt.
+
+### Entscheidung
+
+Ja, ein internes Schema mit sofort ausführbaren Tests ist hier sinnvoll und
+fachlich üblich. Es sollte aber als **Contract-Katalog plus Invariant- und
+Integrationstests** umgesetzt werden, nicht als eine einzige große JSON-
+Snapshot-Datei. JSON-Schema kann die maschinenlesbare Struktur ergänzen; es
+ersetzt nicht die Semantik von Vollständigkeit, Folge-Calls, Target-Grenzen und
+„kein falsches Grün“.
+
 ## Priorisierte Umsetzungspakete
 
 | Prio | Paket | Hauptziel | Ausgangsbefunde |
