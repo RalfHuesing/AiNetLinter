@@ -28,9 +28,10 @@
 ## Relevante Tests, Konfiguration und Dokumentation
 
 - `src/AiNetLinter.FastTests/Mcp/Tools/FeatureContext/GetFeatureContextToolTests.cs` — Feature-Context-
-  Status-, Cancellation-, Sortier- und Methoden-Cap-Verträge; die Regressionen
-  decken `maxTests`, den Per-Datei-Cap und den globalen Cap jeweils isoliert ab.
-  Eine direkte Matrix der kombinierten Cap-Fälle ist nicht enthalten.
+  Status-, Cancellation- und Sortierverträge; 18 bestehende Tests bleiben unverändert.
+- `src/AiNetLinter.FastTests/Mcp/Tools/FeatureContext/GetFeatureContextToolCapTests.cs` — kompakte
+  Theory mit sieben direkten Cap-Fällen: isolierte Caps sowie alle relevanten Kombinationen;
+  Text-/StructuredContent-Ausgabe, Counts, Verteilung und exakte Gründe werden geprüft.
 - `src/AiNetLinter.FastTests/Mcp/Wiring/WiringProjectContractTests.cs` — Freshness-Text-/Structured-
   Content-Parität des projektgebundenen Wrappers.
 - `src/AiNetLinter.IntegrationTests/Mcp/McpLiveRepositoryTests.cs` — Live-MCP-Vertrag für
@@ -68,6 +69,14 @@
   FastTests Nicht-Stress 2278/2278 grün. Integration Nicht-Stress 411/412;
   der einzige Fehler ist die `MaxLineCount`-Violation in
   `GetFeatureContextToolTests.cs` (527 statt maximal 500 Zeilen).
+- Korrekturrunde 2: Die ursprüngliche Testklasse ist auf 400 Zeilen reduziert; die neue Cap-Datei
+  umfasst 101 Zeilen. Der benannte Fehler ist damit scope-seitig behoben; die kombinatorischen
+  Regressionen laufen als 7 Theory-Fälle in insgesamt 22 gezielten Tests.
+- Nach der letzten Codeänderung: gezielte FastTests 22/22 grün; benannter Live-Dogfood-Test
+  `LiveDogfood_GetFeatureContext_ReturnsTextStructuredParity` 1/1 grün.
+- Danach `find_duplicates` (2 bestehende fuzzy Cluster, keine Änderung), `find_dead_code` (0)
+  und `find_magic_values` (0); abschließend `get_violations` für Produktions- und Testscope
+  jeweils 0. Vollständige Build-/Nicht-Stress-Gates verbleiben beim Orchestrator.
 - Frischer Implementierer-`get_violations`-Check war auf `src/AiNetLinter/Mcp`
   begrenzt und meldete 0. Der reviewer-seitige Test-Scope-Check mit
   `targetType=project`, absolutem Repository-Root und

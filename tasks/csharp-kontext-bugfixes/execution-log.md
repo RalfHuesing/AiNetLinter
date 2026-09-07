@@ -148,3 +148,34 @@
 - Code-Map: um konkrete Symbole, Caps und Verifikationsangaben ergänzt.
 - Nächste Aktion: frischer Implementierer für P1-Dateilimit und P2-Matrix,
   anschließend frischer Review.
+
+## 2026-09-07 — Korrektur-Implementierer 2 gestartet
+
+- Status: running
+- Run-ID: csharp-kontext-bugfixes-20260907
+- Rolle: frischer Implementierer (P1-Korrekturrunde 2/5)
+- Subagent-ID: `01a07ad2-0341-76a1-996d-89c85c9d401d` (Boyle)
+- Diff-Baseline: `d9e1bcc2` (Reviewer-Checkpoint)
+- Ursachensignaturen: Testdatei über `MaxLineCount`; fehlende direkte
+  kombinierte Cap-Regression.
+
+## 2026-09-07 — Korrektur-Implementierer 2 abgeschlossen
+
+- Status: completed
+- Subagent-ID: `01a07ad2-0341-76a1-996d-89c85c9d401d` (Boyle)
+- Urteil: Findings behoben; Produktionscode blieb unverändert.
+- Geändert: `GetFeatureContextToolTests.cs` auf 400 Zeilen reduziert;
+  `GetFeatureContextToolCapTests.cs` mit sieben Cap-Kombinationen sowie
+  Text-/StructuredContent-Assertions ergänzt; `code-map.md` aktualisiert.
+- Verifikation nach letzter Codeänderung: gezielte FastTests 22/22 bestanden;
+  benannter Live-Dogfood-Test 1/1 bestanden; `find_duplicates` meldete 2
+  bestehende fuzzy Cluster außerhalb des Findings; `find_dead_code` 0;
+  `find_magic_values` 0; abschließendes `get_violations` mit
+  `targetType=project` und absolutem Repository-Root meldete 0 Violations in
+  Produktion und Testscope. Alle Prüfungen erfolgten nach der letzten
+  Codeänderung.
+- Ursache des früheren Integration-Fehlers: `MaxLineCount`-Violation; der
+  betroffene Live-Test ist nun grün.
+- Nicht ausgeführt: vollständiger Build und vollständige Nicht-Stress-Gates;
+  diese folgen am Gesamtabschluss.
+- Nächste Aktion: Korrektur-Checkpoint, danach frischer Review.

@@ -7,7 +7,7 @@
 - Scope/Fundstelle: durch `find_duplicates` im Projekt; keine konkrete eigene
   Änderung des aktuellen Feature-Context-Pakets erforderlich.
 - Evidenz: Implementierer-Audit und Korrektur-Audit am 2026-09-07; zuletzt
-  10 bestehende Cluster, scope-fern bzw. semantisch unklarer Altbestand.
+  2 bestehende fuzzy Cluster, scope-fern bzw. semantisch unklarer Altbestand.
 - Disposition: accepted-deferred
 - Nächster Schritt: Bei einer passenden Änderung der betroffenen Bereiche
   erneut fachlich bewerten; kein breiter Cleanup in diesem Task.
@@ -23,7 +23,7 @@
   die Beschreibung wurde synchronisiert; der frische Review bestätigt die
   Korrektur fachlich.
 - Disposition: fixed
-- Nächster Schritt: Durch frischen Review bestätigen.
+- Nächster Schritt: Abschluss-Review und Gesamt-Gates.
 - Log-Anker: Reviewerbericht und Korrekturbericht vom 2026-09-07.
 
 ## TD-004 — Testmethoden-Truncation-Gründe bei kombinierten Caps falsch
@@ -36,7 +36,7 @@
   tatsächliche Auslösung pro Datei/global wurde korrigiert; der frische Review
   bestätigt die Korrektur fachlich.
 - Disposition: fixed
-- Nächster Schritt: Durch frischen Review bestätigen.
+- Nächster Schritt: Abschluss-Review und Gesamt-Gates.
 - Log-Anker: Reviewerbericht und Korrekturbericht vom 2026-09-07.
 
 ## TD-002 — Low-Confidence-Dead-Code-Kandidaten außerhalb des Scopes
@@ -73,10 +73,10 @@
   maximal 500 Zeilen und verletzt damit den Abschluss-Qualitätscheck.
 - Scope/Fundstelle: `src/AiNetLinter.FastTests/Mcp/Tools/FeatureContext/GetFeatureContextToolTests.cs`.
 - Evidenz: Frischer Review am 2026-09-07; 1 Test-Scope-Violation.
-- Disposition: in Arbeit
-- Nächster Schritt: Tests gezielt aufteilen oder die Datei unter das Limit
-  bringen und `get_violations` für Test-/Produktionsscope wiederholen.
-- Log-Anker: Reviewerbericht Korrekturrunde 1 vom 2026-09-07.
+- Disposition: fixed
+- Nächster Schritt: Abschluss-Review und Gesamt-Gates.
+- Log-Anker: Reviewerbericht Korrekturrunde 1 und Korrekturbericht 2 vom
+  2026-09-07.
 
 ## TD-007 — Direkte kombinierte Cap-Regression fehlt
 
@@ -87,7 +87,7 @@
   `FeatureContextScanner.CollectTestsAsync`.
 - Evidenz: Frischer Review am 2026-09-07; isolierte Caps sind getestet,
   Kombinationen nicht.
-- Disposition: in Arbeit
-- Nächster Schritt: Kompakte Tests für relevante `maxTests`-/Per-File-/Global-
-  Cap-Kombinationen ergänzen.
-- Log-Anker: Reviewerbericht Korrekturrunde 1 vom 2026-09-07.
+- Disposition: fixed
+- Nächster Schritt: Abschluss-Review und Gesamt-Gates.
+- Log-Anker: Reviewerbericht Korrekturrunde 1 und Korrekturbericht 2 vom
+  2026-09-07.
