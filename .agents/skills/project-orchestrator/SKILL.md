@@ -10,6 +10,9 @@ Orchestrator ausführen lassen oder Implementer, Reviewer beziehungsweise
 Auditor einsetzen möchte. Der Standard ist der vollständige freigegebene Task,
 nicht nur der erste Slice.
 
+Nutzeranweisungen haben Vorrang vor allgemeinen Skill-Vorgaben. Der Skill darf
+den Auftrag nicht ohne konkreten Risiko- oder Scopegrund stoppen oder erweitern.
+
 ## Vor der Delegation
 
 1. Lies `AGENTS.md`, die relevanten `.agents/rules/`, diesen Skill und die
@@ -29,7 +32,18 @@ nicht nur der erste Slice.
 - Der Implementer ändert den Slice.
 - Der Reviewer prüft read-only.
 - Der Auditor wird bei größeren Tasks am Ende des Scopes eingesetzt.
-- Jeder neue Korrekturversuch erhält einen frischen Implementer.
+- Bei geändertem Scope, anderer Ursache oder verlorenem Kontext erhält ein
+  Korrekturversuch einen frischen Implementer; bei unverändertem Scope darf
+  derselbe Agent fortgesetzt werden.
+
+## Delegationsvertrag
+
+Jeder Rollenauftrag nennt knapp:
+
+- erwartetes Ergebnis und fachlichen Scope
+- erlaubte und verbotene Pfade beziehungsweise Nebenwirkungen
+- Akzeptanzkriterien und erforderliche Checks
+- Stop-Bedingung und erwartetes Berichtsformat
 
 Für C#-Semantik lesen Implementer, Reviewer und Auditor
 `.agents/rules/AiNetLinter-McpWorkflow.mdc` und verwenden aktuelle MCP-Schemas.
@@ -50,6 +64,9 @@ Für C#-Semantik lesen Implementer, Reviewer und Auditor
    Auswahl und committe erst nach erneuter Prüfung von Index und Diff. Nutze
    niemals `git add .`, `git add -A` oder `git commit -a`; fremde staged oder
    nicht sicher trennbare parallele Änderungen blockieren den Auto-Commit.
+   Wenn ein anderer schreibender Agent im selben Working Tree aktiv ist, darf
+   der Commit nur mit einer exklusiven Staging-/Commit-Sperre erfolgen;
+   andernfalls separaten Worktree verwenden oder den Commit zurückstellen.
 9. Nach einem erfolgreichen Slice den nächsten bereiten Slice bestimmen; erst
    bei erfüllter Task-Abschlussbedingung den Task beenden.
 

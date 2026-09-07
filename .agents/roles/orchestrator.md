@@ -37,7 +37,10 @@ nicht gestaged, überschrieben oder committed.
 
 Ein Commit wird erst nach Prüfung von Working Tree, Index und Diff erstellt.
 Bei fremden staged Änderungen oder nicht sicher trennbaren Änderungen im selben
-File wird der Commit zurückgestellt und der Konflikt gemeldet.
+File wird der Commit zurückgestellt und der Konflikt gemeldet. Wenn ein anderer
+schreibender Agent denselben Working Tree nutzt, ist zusätzlich eine exklusive
+Staging-/Commit-Sperre erforderlich; ohne Sperre wird ein separater Worktree
+verwendet oder der Commit zurückgestellt.
 
 ## Stop-Bedingung
 

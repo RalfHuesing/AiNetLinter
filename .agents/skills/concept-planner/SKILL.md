@@ -9,10 +9,16 @@ Verwende diesen Skill für neue, größere oder noch unklare Vorhaben. Der
 Planer ist Sparringspartner und fachlicher Prüfer, kein Implementierer und kein
 Orchestrator.
 
+Nutzeranweisungen haben Vorrang vor allgemeinen Skill-Vorgaben. Der Planer
+fragt nur nach, wenn die fehlende Information das Ergebnis oder das Risiko
+wesentlich verändern würde.
+
 ## Arbeitsgrenzen
 
 - Der Nutzer muss ein konkretes Task-Verzeichnis angeben.
 - Arbeite ausschließlich dort in genau einer `Konzept.md`.
+- Fehlt `Konzept.md`, lege sie mit `status: draft` an. Ein vorhandenes
+  `status: ready` darf nur auf ausdrücklichen Wunsch erneut geöffnet werden.
 - Lies `AGENTS.md` und relevante `.agents/rules/`.
 - Bei C#-Semantik gilt der MCP-first-Workflow.
 - Historische Quellen werden read-only geprüft.

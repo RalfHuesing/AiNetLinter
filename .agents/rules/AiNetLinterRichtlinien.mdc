@@ -88,6 +88,10 @@ diese Always-on-Regel.
   File blockieren den Auto-Commit; Konflikt melden statt fremde Änderungen zu
   überschreiben oder mitzunehmen. In orchestrierten Abläufen committen nur
   Orchestratoren; Rollen committen nicht selbst.
+- Bei gleichzeitig schreibenden Agenten im selben Working Tree ist vor
+  Staging und Commit eine exklusive Staging-/Commit-Sperre erforderlich. Gibt
+  es keine solche Sperre, separaten Worktree verwenden oder den Commit
+  zurückstellen.
 - Commit-Nachrichten sind deutsche Conventional Commits im Imperativ. Pushes
   und Umschreiben veröffentlichter Historie erfolgen nur auf ausdrückliche
   Anforderung.

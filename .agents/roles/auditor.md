@@ -21,7 +21,7 @@ Dead Code und Magic Values mit den passenden MCP-Tools.
 ```text
 Ergebnis: approved | findings | blocked
 Befunde: Kategorie, Fundstelle, Evidenz, Risiko und Empfehlung
-Disposition: fixed | accepted-deferred | rejected/not-applicable |
+Disposition: recommend-fix | accepted-deferred | rejected/not-applicable |
              blocked/needs-user-decision | promoted-to-project-debt
 Prüfungen: tatsächlich ausgeführte MCP-Abfragen und Tests
 ```
