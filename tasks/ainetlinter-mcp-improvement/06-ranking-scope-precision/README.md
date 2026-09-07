@@ -1,5 +1,32 @@
 # 06 – Ranking, Scope & Precision
 
-Relevante Treffer, korrekte Scopes und weniger irreführende False Negatives/False Positives.
+## Ziel
 
-Ausgangsbefunde: Caller-Ranking, Partial-Klassen, Glob-/Scope-, Metrik- und Pattern-Befunde.
+Ein Agent soll aus Ergebnissen keine riskante fachliche Entscheidung ableiten, weil Ranking, Scope oder Heuristik die falschen Treffer nach vorne stellt.
+
+## Scope
+
+- Produktion/Test/Artefakte deterministisch und sichtbar unterscheiden;
+- Scope-Filter auf Score, Top-Befunde und Completeness gleichermaßen anwenden;
+- Kandidaten, Heuristik und echte Violations visuell trennen;
+- Partial-Klassen, Attribute, DI/Reflection und lokale Sprachkonstrukte konservativ behandeln;
+- Security-/Refactoring-Empfehlungen nur bei belastbarer Kategorie ausgeben.
+
+## Ausgangsbefunde
+
+`find_dead_code`, `find_duplicates`, `find_magic_values`, `pattern_detect`, `safeguard` sowie Ranking-/Scope-Teile aus `get_impact`, `get_feature_context` und `combo-impact-lint`.
+
+## Voraussichtliche Quellbereiche
+
+`Tools/DeadCode/*`, `DuplicateDetection/*`, `MagicValues/*`, `PatternDetect/*`, `Safeguard/*`, `Metrics*`, `TestCoverageScanner` und gemeinsame Scope-/Path-Filter.
+
+## Abhängigkeiten
+
+Die grundlegende Identitäts- und Completeness-Semantik aus 02/03; Änderungen an Regeln selbst sind kein implizites Ziel.
+
+## Abnahme
+
+- Tests werden nicht als Produktions-Impact verkauft;
+- scoped Quality-Gates zeigen nur scoped Top-Befunde;
+- leere Pattern-Kategorien sind sichtbar oder ausdrücklich als nicht geprüft markiert;
+- Kandidatenlisten enthalten Confidence und keine Löschanweisung ohne Einschränkung.

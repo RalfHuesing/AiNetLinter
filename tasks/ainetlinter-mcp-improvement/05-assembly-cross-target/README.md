@@ -1,5 +1,32 @@
 # 05 – Assembly & Cross-Target
 
-Robuster Vertrag für externe DLL-/EXE-Snapshots, Herkunft, IDs und Cross-Target-Folgeaufrufe.
+## Ziel
 
-Ausgangsbefunde: Assembly-Tools, `resolve_type_origin`, `combo-assembly`, `combo-cross-target`.
+Externe DLL-/EXE-Analyse soll als statischer Snapshot nützlich und ehrlich sein, ohne Projektsemantik, Laufzeitwissen oder Consumer-Kontext vorzutäuschen.
+
+## Scope
+
+- konsistente Assembly-Identität, Herkunft, Generation und stale-Fehler;
+- Katalog → Typ → Member/Body/Graph als funktionierende Kette;
+- Diagnose-/BCL-/Referenzdaten budgetieren und als partiell markieren;
+- `not_decidable` bei Extension-Anwendbarkeit sichtbar halten;
+- project-only-Tools mit echtem Capability-Fehler statt irreführender DLL-Validierung.
+
+## Ausgangsbefunde
+
+`inspect_assembly`, `search_assembly`, `get_assembly_context`, `find_assembly_extensions`, `resolve_type_origin`, `combo-assembly`, `combo-cross-target`.
+
+## Voraussichtliche Quellbereiche
+
+`Mcp/Assemblies/Analysis/*`, `Tools/AssemblyAnalysis/*`, `Tools/SymbolGraph/Assembly*`, `TypeResolution/*`, `AnalysisSymbolIdentity` und Assembly-Response-Builder.
+
+## Abhängigkeiten
+
+Pakete 01–03 und die Kompatibilitätsentscheidung für Assembly-IDs. Assembly-Parität ist kein Vorab-Blocker für die erste Projektlieferung.
+
+## Abnahme
+
+- ein Assembly-Typ lässt sich aus dem Katalog mit einer kopierbaren ID weiterverfolgen;
+- alte/aktuelle Generationen sind eindeutig und nicht mit Target-Mismatch verwechselt;
+- `partial`, Diagnostics und Body-/Member-Limits sind sichtbar und wahr;
+- keine Antwort behauptet Laufzeit- oder Consumer-Anwendbarkeit, die statisch nicht entscheidbar ist.

@@ -46,6 +46,40 @@ Das Audit bleibt Evidenzarchiv. Dieses Konzept bündelt wiederkehrende Root Caus
 
 Die Pakete 01–06 enthalten jeweils ihre eigene Schema-/Dokumentations- und Testarbeit. Paket 07 ist nur für verbleibende, nicht paketgebundene Bereinigung vorgesehen.
 
+## 360°-Bewertung aus Agentensicht
+
+### 1. Erreichbarkeit und Routing
+
+Der Agent muss zuerst wissen, welches Tool für Projektstruktur, C#-Symbole, Nicht-C#-Dateien, Assemblys und Betriebsstatus zuständig ist. Falsche Dateibäume, unvollständige Tool-Kataloge oder fehlende Fallback-Hints sind deshalb höher zu bewerten als ein einzelner Spezialfehler.
+
+### 2. Semantisches Vertrauen
+
+Eine formal erfolgreiche Antwort ist gefährlich, wenn sie falsche Elternbeziehungen, falsche Scopes, Testtreffer statt Produktionsnutzer, widersprüchliche Lint-/Metrik-Werte oder „keine Treffer“ trotz unvollständiger Analyse zeigt. Die Definition von „leer“, „vollständig“, „nicht unterstützt“ und „teilweise“ ist ein Produktvertrag, kein reiner Formatter-Aspekt.
+
+### 3. Folge-Call und Identität
+
+Der zentrale Agentenwert ist nicht die erste Antwort, sondern die Fähigkeit, daraus den nächsten Call ohne Raten zu bauen. Jede relevante Ausgabe braucht daher entweder eine kopierbare kanonische ID oder einen expliziten Hinweis, warum kein Handoff möglich ist. Projekt- und Assembly-Identitäten dürfen nicht stillschweigend austauschbar sein.
+
+### 4. Token- und Latenzbudget
+
+Große Antworten sind nicht automatisch besser. Defaults müssen die fachlich relevanten Treffer priorisieren, Diagnose-/Referenzrauschen begrenzen und eine sichere Fortsetzung anbieten. Composite-Tools dürfen keine mehrfachen Vollberichte erzeugen, wenn ein gezielter Drilldown genügt.
+
+### 5. Projekt- und Assembly-Semantik
+
+Eine dekompilierte Assembly ist ein statischer Snapshot ohne Consumer-Projekt und ohne Laufzeitbeweis. Diese Grenze ist akzeptabel, muss aber in Herkunft, `partial`, `not_decidable`, BCL-/Referenzfiltern und Capability-Fehlern sichtbar sein. Projekt-Tools dürfen nicht so tun, als hätten sie Assembly-Parität, wenn sie sie nicht besitzen.
+
+### 6. Betriebs- und Lebenszeitsemantik
+
+Health, Overview, Rules, Bootstrap, Daemon/stdio und Session-Generationen müssen einen konsistenten Betriebszustand beschreiben. Ein Agent darf aus einer Pfadbestätigung nicht auf „ready“ schließen und darf einen Bootstrap mit potenziellen Schreibschritten nicht ungefragt starten.
+
+### 7. Sicherheits- und Schadensgrenze
+
+Die Analyse bleibt read-only und führt Assemblys nicht aus. Besonders gefährlich sind nicht nur technische Crashes, sondern Agentenentscheidungen wie falsches Löschen von angeblich totem Code, falsche Lint-Entwarnung, falsche Produktions-Impact-Annahmen oder ungefragte Projektintegration. Diese Fälle brauchen konservative Beschreibungen und explizite Confidence-/Scope-Hinweise.
+
+### 8. Wartbarkeit und Vertragsdrift
+
+Schema, Registrierung, Formatter, StructuredContent, Runtime-Instructions, `Docs/agent-api.md` und Tests müssen aus derselben Verhaltensentscheidung aktualisiert werden. Ein einzelner Fix im Formatter ohne Vertrags- und Regressionstest würde die beobachtete Drift nur verschieben.
+
 ## Entscheidungsmodell für Findings
 
 Jeder Befund erhält in der Synthese genau eine Disposition:
@@ -77,6 +111,17 @@ Das dauerhafte Synthese-Artefakt ist eine Befundmatrix im neuen Verbesserungs-Ta
 - **Gate C – Priorität:** Die Reihenfolge erklärt sich aus Agentennutzen und Abhängigkeiten, nicht aus der Dateireihenfolge.
 - **Gate D – Umsetzung:** Kein Paket startet ohne überprüfbare Akzeptanzkriterien und passende Verifikation.
 - **Gate E – Abschluss:** Nach der Umsetzung gelten Build, Nicht-Stress-Testläufe, MCP-Nachweise und der passende Audit gemäß `AGENTS.md`.
+
+## Entscheidungen, die vor der Umsetzung benötigt werden
+
+Die Synthese ist bis hierhin autonom möglich. Vor dem ersten Produktionspaket bleiben diese Produktentscheidungen offen:
+
+1. **Kompatibilität:** Dürfen öffentliche Response-Formate und ID-Semantik breaking geändert werden? Empfehlung: zunächst additive Felder und Übergangskompatibilität; alte IDs nur entfernen, wenn ein klarer Versions-/Migrationspfad existiert.
+2. **Priorität der Targets:** Soll der Projekt-C#-Pfad zuerst vollständig agententauglich werden und Assembly danach folgen? Empfehlung: ja; Assembly bleibt im Scope, blockiert aber nicht die erste Projektlieferung.
+3. **Paging-Vertrag:** Soll ein gemeinsamer `continuationToken`-/Completeness-Envelope für alle begrenzten Tools eingeführt werden? Empfehlung: ja, statt pro Tool eigene Offset- oder „maxResults erhöhen“-Workarounds zu behalten.
+4. **Text versus StructuredContent:** Ist die sichtbare Agentenoberfläche primär Markdown/Text, oder dürfen wir StructuredContent als führenden Vertrag voraussetzen? Empfehlung: beide aus derselben typisierten Aggregation erzeugen; kein wichtiges Follow-up nur in StructuredContent verstecken.
+5. **Abnahmeschwelle:** Sollen „kein manuelles ID-Raten“ und „kein falsches Grün bei `complete`/leer“ harte Release-Kriterien sein? Empfehlung: ja.
+6. **Scope der Wünsche:** Sollen Ranking- und Heuristikverbesserungen (`dead_code`, `magic_values`, Testzuordnung, Produktionspriorisierung) Bestandteil der ersten Lieferung sein? Empfehlung: die gefährlichen False Positives/Negatives ja, reine Komfort-Wishes später.
 
 ## Nächster Planungsschritt
 
@@ -113,3 +158,5 @@ Als nächstes wird die Befundmatrix aus den vorhandenen Einzel- und Combo-Findin
 - Vor der Freigabe dieses Konzepts müssen Findings normalisiert und auf die Problemgruppen abgebildet werden.
 - Der nächste konkrete Arbeitsgegenstand ist eine Befundmatrix; sie ersetzt keine Umsetzung und keine Änderung am read-only Audit.
 - Die Synthese wird iterativ mit dem Nutzer abgestimmt; das Konzept bleibt bis zur ausdrücklichen Freigabe `draft`.
+- Die 45/45-Befunde sind in `Befundmatrix.md` genau einmal einer primären Problemgruppe und Disposition zugeordnet.
+- Die verbleibende Blockade ist keine Informationslücke im Audit, sondern eine Produktentscheidung zu Kompatibilität, Target-Reihenfolge, Paging, sichtbarer Antwortoberfläche und Abnahmeschwelle.
