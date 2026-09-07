@@ -74,13 +74,13 @@ internal static class FeatureContextFormatter
         if (callers == null) return;
 
         var header = callers.TotalCallers == 1
-            ? "## 3. Direkte Aufrufer (1 Fundstelle)"
-            : $"## 3. Direkte Aufrufer ({callers.TotalCallers} Fundstellen)";
+            ? $"## 3. Statische Referenzen/Call-Sites (1 Fundstelle; {callers.Semantics})"
+            : $"## 3. Statische Referenzen/Call-Sites ({callers.TotalCallers} Fundstellen; {callers.Semantics})";
         sb.AppendLine(header);
 
         if (callers.CallSites.Count == 0)
         {
-            sb.AppendLine("- Keine direkten Aufrufer gefunden.");
+            sb.AppendLine("- Keine statischen Referenzen/Call-Sites gefunden.");
         }
         else
         {
@@ -94,7 +94,7 @@ internal static class FeatureContextFormatter
 
             if (callers.IsTruncated)
             {
-                sb.AppendLine($"- *(Zeige {callers.CallSites.Count} von {callers.TotalCallers} Aufrufern — maxCallers erhoehen fuer alle)*");
+                sb.AppendLine($"- *(Zeige {callers.CallSites.Count} von {callers.TotalCallers} statischen Referenzen — Begrenzung: {string.Join(", ", callers.TruncatedBy ?? [])})*");
             }
         }
         sb.AppendLine();
@@ -115,7 +115,7 @@ internal static class FeatureContextFormatter
         {
             foreach (var file in tests.TestFiles)
             {
-                sb.AppendLine($"- `{file.FilePath}` ({file.Category}, {file.TestMethods.Count} Tests — {file.MatchReason})");
+                sb.AppendLine($"- `{file.FilePath}` ({file.Category}, {file.TestMethods.Count} von {file.TotalMatchingMethods} zugeordneten Tests — {file.MatchReason})");
                 foreach (var method in file.TestMethods)
                 {
                     sb.AppendLine($"  - `{method}()`");
@@ -124,7 +124,7 @@ internal static class FeatureContextFormatter
 
             if (tests.IsTruncated)
             {
-                sb.AppendLine($"- *(Zeige {tests.TestFiles.Count} von {tests.TotalTestFiles} Testdateien — maxTests erhoehen fuer alle)*");
+                sb.AppendLine($"- *(Zeige {tests.TestFiles.Count} von {tests.TotalTestFiles} Testdateien und {tests.DisplayedTestMethods} von {tests.TotalMatchingTests} Testmethoden — Begrenzung: {string.Join(", ", tests.TruncatedBy ?? [])})*");
             }
         }
         sb.AppendLine();
@@ -134,8 +134,15 @@ internal static class FeatureContextFormatter
     {
         if (v == null) return;
 
-        var header = $"## 5. Offene Violations auf dieser Datei ({v.TotalViolationsOnFile} Verstoesse)";
+        var header = $"## 5. Offene Violations auf dieser Datei ({v.TotalViolationsOnFile} Verstoesse, Status: {v.Status})";
         sb.AppendLine(header);
+
+        if (v.Status is FeatureContextStatus.Unavailable or FeatureContextStatus.Failed or FeatureContextStatus.NotApplicable)
+        {
+            sb.AppendLine($"- Violations nicht verfügbar (ReasonCode: `{v.ReasonCode}`).");
+            sb.AppendLine();
+            return;
+        }
 
         if (v.Violations.Count == 0)
         {
@@ -151,7 +158,7 @@ internal static class FeatureContextFormatter
 
             if (v.IsTruncated)
             {
-                sb.AppendLine($"- *(Zeige {v.Violations.Count} von {v.TotalViolationsOnFile} Verstoessen)*");
+                sb.AppendLine($"- *(Zeige {v.Violations.Count} von {v.TotalViolationsOnFile} Verstoessen — Begrenzung: {string.Join(", ", v.TruncatedBy ?? [])})*");
             }
         }
         sb.AppendLine();

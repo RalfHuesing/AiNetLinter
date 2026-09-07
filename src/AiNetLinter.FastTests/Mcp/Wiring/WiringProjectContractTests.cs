@@ -257,6 +257,9 @@ public sealed class WiringProjectContractTests
         Assert.Contains("kernantwort", degradedText, StringComparison.Ordinal);
         Assert.NotNull(degraded.StructuredContent);
         Assert.Equal("payload", degraded.StructuredContent!.Value.GetProperty("value").GetString());
+        Assert.True(degraded.StructuredContent.Value.GetProperty("degraded").GetBoolean());
+        Assert.Equal("stale", degraded.StructuredContent.Value.GetProperty("freshness").GetString());
+        Assert.Equal("refresh-failed", degraded.StructuredContent.Value.GetProperty("degradedReason").GetString());
         Assert.True(await server.ReloadSolutionAsync(CancellationToken.None));
         Assert.False(server.HasDegradedAnswerState);
         var healed = await ExecuteProjectAsync(

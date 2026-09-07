@@ -2,10 +2,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
+using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -55,6 +57,35 @@ public sealed class McpLiveRepositoryTests
 
         Assert.NotNull(text);
         Assert.NotEmpty(text);
+    }
+
+    [Fact]
+    public async Task LiveDogfood_GetFeatureContext_ReturnsTextStructuredParity()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_feature_context",
+            new Dictionary<string, object?>
+            {
+                ["symbolIdentifier"] = "FeatureContextScanner.ScanAsync",
+                ["includeCallers"] = false,
+                ["includeTests"] = false,
+                ["includeMetrics"] = false,
+                ["includeViolations"] = true,
+            });
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.NotNull(result.StructuredContent);
+        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
+        var declaration = json["declaration"]!.AsObject();
+        Assert.Contains((string)declaration["name"]!, text, StringComparison.Ordinal);
+
+        var violations = json["violations"]!.AsObject();
+        var status = (string)violations["status"]!;
+        var totalViolations = (int)violations["totalViolationsOnFile"]!;
+        Assert.Contains($"Status: {status}", text, StringComparison.Ordinal);
+        Assert.Contains($"({totalViolations} Verstoesse", text, StringComparison.Ordinal);
+        Assert.False(json.ContainsKey("degraded"));
     }
 
     [Fact]

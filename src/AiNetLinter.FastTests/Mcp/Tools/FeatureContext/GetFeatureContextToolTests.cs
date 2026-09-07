@@ -1,9 +1,11 @@
 #nullable enable
 
 using System.Text.Json;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using AiNetLinter.Core;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.FeatureContext;
@@ -142,7 +144,7 @@ public sealed class GetFeatureContextToolTests
         Assert.Contains("Budget verbleibend", text);
 
         // 3. Callers
-        Assert.Contains("## 3. Direkte Aufrufer", text);
+        Assert.Contains("## 3. Statische Referenzen/Call-Sites", text);
         Assert.Contains("Consumer.cs", text);
         Assert.Contains("Consumer.Run()", text);
         Assert.Contains("Consumer.RunOther()", text);
@@ -167,9 +169,11 @@ public sealed class GetFeatureContextToolTests
         Assert.NotNull(payload.Metrics);
         Assert.NotNull(payload.Callers);
         Assert.Equal(2, payload.Callers.TotalCallers);
+        Assert.Equal("static-references/call-sites", payload.Callers.Semantics);
         Assert.NotNull(payload.Tests);
         Assert.True(payload.Tests.TotalMatchingTests >= 1);
         Assert.NotNull(payload.Violations);
+        Assert.Equal("complete", payload.Violations.Status);
     }
 
     [Fact]
@@ -272,7 +276,7 @@ public sealed class GetFeatureContextToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         var text = textContent.Text;
 
-        Assert.Contains("Zeige 1 von 2 Aufrufern", text);
+        Assert.Contains("Zeige 1 von 2 statischen Referenzen", text);
 
         Assert.NotNull(result.StructuredContent);
         var payload = JsonSerializer.Deserialize<FeatureContextPayload>(
@@ -283,6 +287,7 @@ public sealed class GetFeatureContextToolTests
         Assert.True(payload.Callers.IsTruncated);
         Assert.Single(payload.Callers.CallSites);
         Assert.Equal(2, payload.Callers.TotalCallers);
+        Assert.Equal(new[] { "maxCallers" }, payload.Callers.TruncatedBy);
     }
 
     [Fact]
@@ -382,5 +387,106 @@ public sealed class GetFeatureContextToolTests
         Assert.True(payload.Tests.IsTruncated);
         Assert.Single(payload.Tests.TestFiles);
         Assert.Equal(2, payload.Tests.TotalTestFiles);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_LargeTestFileIsBoundedByMethodCaps()
+    {
+        using var scenario = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\LargeTestScenario.slnx",
+            new ProjectSpec("Lib", [
+                ("Service.cs", "namespace Lib; public class Service { public void Execute() {} }")
+            ], VirtualProjectDirectory: "src/Lib"),
+            new ProjectSpec("Lib.Tests", [
+                ("ServiceTests.cs", "namespace Lib.Tests; public class ServiceTests {" +
+                    string.Join("", Enumerable.Range(1, 220).Select(i =>
+                        $"[Xunit.Fact] public void Execute_Case{i:000}() {{ new Lib.Service().Execute(); }}")) +
+                    "}")
+            ], VirtualProjectDirectory: "tests/Lib.Tests"));
+
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+        var result = await GetFeatureContextTool.ExecuteAsync(
+            state,
+            new FeatureContextOptions("Service.Execute", IncludeMetrics: false, IncludeViolations: false),
+            CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        var payload = JsonSerializer.Deserialize<FeatureContextPayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload?.Tests);
+        Assert.Equal(220, payload.Tests.TotalMatchingTests);
+        Assert.Equal(50, payload.Tests.DisplayedTestMethods);
+        Assert.Single(payload.Tests.TestFiles);
+        Assert.Equal(50, payload.Tests.TestFiles[0].TestMethods.Count);
+        Assert.Contains("maxTestMethodsPerFile", payload.Tests!.TruncatedBy!);
+        Assert.Contains("maxTestMethodsTotal", payload.Tests.TruncatedBy!);
+        Assert.Contains("220 Testmethoden", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CancellationDoesNotReturnPartialPayload()
+    {
+        using var scenario = CreateFullTestScenario();
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            GetFeatureContextTool.ExecuteAsync(state, new FeatureContextOptions("Calculator.Add"), cancellation.Token));
+    }
+
+    [Fact]
+    public async Task CallerSearch_CancellationIsForwardedToRoslyn()
+    {
+        using var scenario = CreateFullTestScenario();
+        var project = scenario.Solution.Projects.Single(p => p.Name == "CoreLib");
+        var compilation = await project.GetCompilationAsync();
+        var calculator = compilation!.GetTypeByMetadataName("CoreLib.Calculator")!;
+        var symbol = calculator.GetMembers("Add").Single();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            DiffImpactAnalyzer.FindCallSiteEntriesAsync(symbol, scenario.Solution, cancellation.Token));
+    }
+
+    [Fact]
+    public void FormatReport_DoesNotPresentUnavailableViolationsAsEmpty()
+    {
+        var declaration = new SymbolDeclarationDto(
+            "Missing", "Method", "public", "Missing.cs", 1, 1, 1, null, "void", [], null);
+        var payload = new FeatureContextPayload(
+            declaration,
+            null,
+            null,
+            null,
+            new ViolationsReportDto(
+                0, 0, [], false, FeatureContextStatus.Unavailable,
+                FeatureContextReasonCodes.SourceFileUnavailable));
+
+        var text = FeatureContextFormatter.FormatReport(payload);
+
+        Assert.Contains("Status: unavailable", text, StringComparison.Ordinal);
+        Assert.Contains("ReasonCode: `source-file-unavailable`", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Keine Linter-Verstoesse", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_StaticReferencesAreNotDescribedAsRuntimeCoverage()
+    {
+        using var scenario = CreateFullTestScenario();
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+
+        var result = await GetFeatureContextTool.ExecuteAsync(
+            state,
+            new FeatureContextOptions("Calculator.Add", IncludeTests: false, IncludeMetrics: false, IncludeViolations: false),
+            CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Statische Referenzen/Call-Sites", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Laufzeit-Coverage", text, StringComparison.OrdinalIgnoreCase);
     }
 }

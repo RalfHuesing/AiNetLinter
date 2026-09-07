@@ -50,7 +50,9 @@ internal sealed record SymbolDeclarationDto(
 internal sealed record CallersReportDto(
     int TotalCallers,
     IReadOnlyList<CallSiteEntry> CallSites,
-    bool IsTruncated
+    bool IsTruncated,
+    IReadOnlyList<string>? TruncatedBy = null,
+    string Semantics = FeatureContextSemantics.StaticCallSites
 );
 
 /// <summary>
@@ -60,7 +62,9 @@ internal sealed record TestCoverageReportDto(
     int TotalMatchingTests,
     int TotalTestFiles,
     IReadOnlyList<TestFileCoverageDto> TestFiles,
-    bool IsTruncated
+    bool IsTruncated,
+    int DisplayedTestMethods = 0,
+    IReadOnlyList<string>? TruncatedBy = null
 );
 
 /// <summary>
@@ -72,7 +76,8 @@ internal sealed record TestFileCoverageDto(
     string Category,
     string MatchReason,
     IReadOnlyList<string> TestMethods,
-    int TotalClassTests
+    int TotalClassTests,
+    int TotalMatchingMethods = 0
 );
 
 /// <summary>
@@ -82,7 +87,10 @@ internal sealed record ViolationsReportDto(
     int TotalViolationsOnFile,
     int ViolationsOnSymbol,
     IReadOnlyList<ViolationItemDto> Violations,
-    bool IsTruncated
+    bool IsTruncated,
+    string Status = FeatureContextStatus.Complete,
+    string? ReasonCode = null,
+    IReadOnlyList<string>? TruncatedBy = null
 );
 
 /// <summary>
@@ -105,3 +113,24 @@ internal sealed record FeatureContextPayload(
     TestCoverageReportDto? Tests,
     ViolationsReportDto? Violations
 );
+
+internal static class FeatureContextStatus
+{
+    internal const string Complete = "complete";
+    internal const string Truncated = "truncated";
+    internal const string Unavailable = "unavailable";
+    internal const string Failed = "failed";
+    internal const string NotApplicable = "notApplicable";
+}
+
+internal static class FeatureContextReasonCodes
+{
+    internal const string ViolationsScanFailed = "violations-scan-failed";
+    internal const string SourceFileUnavailable = "source-file-unavailable";
+    internal const string OperationCanceled = "operation-canceled";
+}
+
+internal static class FeatureContextSemantics
+{
+    internal const string StaticCallSites = "static-references/call-sites";
+}

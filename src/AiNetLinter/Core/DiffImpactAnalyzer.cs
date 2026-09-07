@@ -409,9 +409,10 @@ public sealed class DiffImpactAnalyzer
     /// Wrapper um <see cref="FindCallSiteEntriesAsync"/> (bestehende Signatur/bestehendes
     /// Verhalten unveraendert).
     /// </summary>
-    internal static async Task<List<string>> FindCallSitesAsync(ISymbol symbol, Solution solution)
+    internal static async Task<List<string>> FindCallSitesAsync(
+        ISymbol symbol, Solution solution, CancellationToken ct = default)
     {
-        var entries = await FindCallSiteEntriesAsync(symbol, solution);
+        var entries = await FindCallSiteEntriesAsync(symbol, solution, ct);
         return entries.Select(FormatCallSite).ToList();
     }
 
@@ -420,20 +421,23 @@ public sealed class DiffImpactAnalyzer
     /// statt fertig formatierter Strings — Grundlage fuer <c>find_references</c>/<c>get_impact</c>s
     /// <c>StructuredContent</c> (depth=1-Flachfall bzw. Symbol-Branch).
     /// </summary>
-    internal static async Task<List<CallSiteEntry>> FindCallSiteEntriesAsync(ISymbol symbol, Solution solution)
+    internal static async Task<List<CallSiteEntry>> FindCallSiteEntriesAsync(
+        ISymbol symbol, Solution solution, CancellationToken ct = default)
     {
         var entries = new List<CallSiteEntry>();
-        var references = await SymbolFinder.FindReferencesAsync(symbol, solution).ConfigureAwait(false);
+        var references = await SymbolFinder.FindReferencesAsync(symbol, solution, ct).ConfigureAwait(false);
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
 
         foreach (var reference in references)
         {
+            ct.ThrowIfCancellationRequested();
             foreach (var location in reference.Locations)
             {
+                ct.ThrowIfCancellationRequested();
                 var lineSpan = location.Location.GetLineSpan();
                 var relativePath = PathNormalizer.ToRelative(outputRoot, lineSpan.Path);
                 var line = lineSpan.StartLinePosition.Line + 1;
-                var callerMemberName = await ResolveCallerMemberNameAsync(location).ConfigureAwait(false);
+                var callerMemberName = await ResolveCallerMemberNameAsync(location, ct).ConfigureAwait(false);
 
                 entries.Add(new CallSiteEntry(
                     relativePath, line, FormatMemberDisplayName(symbol), location.Document.Project.Name, callerMemberName));
@@ -443,11 +447,12 @@ public sealed class DiffImpactAnalyzer
         return entries;
     }
 
-    private static async Task<string?> ResolveCallerMemberNameAsync(ReferenceLocation location)
+    private static async Task<string?> ResolveCallerMemberNameAsync(
+        ReferenceLocation location, CancellationToken ct)
     {
         if (location.Document is not { } doc) return null;
 
-        var semanticModel = await doc.GetSemanticModelAsync().ConfigureAwait(false);
+        var semanticModel = await doc.GetSemanticModelAsync(ct).ConfigureAwait(false);
         var enclosingSymbol = semanticModel?.GetEnclosingSymbol(location.Location.SourceSpan.Start);
         return enclosingSymbol switch
         {

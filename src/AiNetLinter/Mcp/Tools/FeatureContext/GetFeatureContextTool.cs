@@ -57,6 +57,11 @@ internal static class GetFeatureContextTool
             var markdown = FeatureContextFormatter.FormatReport(payload);
             return McpToolResults.Text(markdown, payload);
         }
+        catch (OperationCanceledException exception)
+        {
+            exception.Data["featureContextReasonCode"] = FeatureContextReasonCodes.OperationCanceled;
+            throw;
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return McpToolResults.CompilationError(

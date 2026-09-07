@@ -39,6 +39,7 @@ public static partial class TestCoverageScanner
         DiffImpactCounters? counters,
         CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         var targets = NormalizeTargets(targetSymbols);
         if (targets.Count == 0)
         {
@@ -94,7 +95,7 @@ public static partial class TestCoverageScanner
 
         foreach (var project in solution.Projects)
         {
-            if (ct.IsCancellationRequested) break;
+            ct.ThrowIfCancellationRequested();
             if (!ShouldScanProject(project)) continue;
 
             await ScanProjectDocumentsAsync(project, solutionDir, states, ct).ConfigureAwait(false);
@@ -122,7 +123,7 @@ public static partial class TestCoverageScanner
         var isTestProject = TestDetector.IsTestProject(project);
         foreach (var document in project.Documents)
         {
-            if (ct.IsCancellationRequested) break;
+            ct.ThrowIfCancellationRequested();
             if (!isTestProject && !TestDetector.IsTestFile(document.FilePath ?? "")) continue;
             await ScanDocumentAgainstTargetsAsync(document, solutionDir, states, ct).ConfigureAwait(false);
         }
