@@ -49,6 +49,21 @@ Für C#-Semantik lesen Implementer, Reviewer und Auditor
 `.agents/rules/AiNetLinter-McpWorkflow.mdc` und verwenden aktuelle MCP-Schemas.
 `rg` bleibt für Nicht-C#-Text, Konfiguration und exakte Diff-Arbeit erlaubt.
 
+## Testnachweise
+
+Der Implementer führt die zum Slice passenden Prüfungen nach seiner letzten
+Codeänderung aus und übergibt Befehl/Filter, Scope und Ergebnis. Der Reviewer
+prüft diesen Nachweis gegen den tatsächlichen Diff. Ein frischer, erfolgreicher
+und scope-passender Lauf wird von Folgeagenten wiederverwendet und nicht blind
+wiederholt.
+
+Ein Nachweis wird durch relevante Produktions-, Test-, Projekt- oder
+Konfigurationsänderungen ungültig. Ebenfalls erneut prüfen bei unzureichendem
+Scope, fehlgeschlagenem/abgeschnittenem/flaky Lauf oder konkreter
+Gegenhypothese. Reine Dokumentationsänderungen entwerten Code-Testnachweise
+nicht. Die vollständigen Abschluss-Gates laufen einmal nach der letzten
+relevanten Codeänderung.
+
 ## Ablauf
 
 1. Task- und Slice-Vertrag festlegen.

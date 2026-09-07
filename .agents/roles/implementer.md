@@ -18,7 +18,8 @@ MCP-first-Workflow mit absolutem `targetPath` und passendem `targetType`.
 
 - umgesetzte Änderung
 - betroffene Dateien und zentrale Entscheidungen
-- relevante Tests, Builds und MCP-Prüfungen
+- relevante Tests, Builds und MCP-Prüfungen; je Prüfung Befehl/Filter, Scope,
+  Ergebnis und Hinweis, dass sie nach der letzten Codeänderung lief
 - bekannte Risiken, offene Findings und nicht ausgeführte Checks
 
 ## Stop-Bedingung

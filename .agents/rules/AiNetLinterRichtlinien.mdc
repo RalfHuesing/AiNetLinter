@@ -55,6 +55,9 @@ diese Always-on-Regel.
 
 - Jede Logikänderung erhält passende xUnit-v3-Tests. Tests prüfen Verhalten,
   nicht bloß Implementierungszeilen.
+- Ein grüner, scope-passender Testlauf bleibt gültiger Nachweis, bis relevante
+  Produktions-, Test-, Projekt- oder Konfigurationsänderungen ihn entwerten.
+  Folgeagenten wiederholen unveränderte grüne Läufe nicht blind.
 - Tests parallel ausführbar halten. Globale Serialisierung nur bei belegtem
   Bedarf; gemeinsame Zustände gezielt mit Lock, Fixture, Semaphore oder Retry
   absichern.

@@ -24,3 +24,14 @@ Verifikationsurteil: nachvollziehbar | unvollständig | fehlgeschlagen
 
 Reviewer ändern keinen Produktionscode, starten keine Subagenten und erstellen
 keinen Commit. Bei C#-Gegenhypothesen verwenden sie die passenden MCP-Tools.
+
+## Verifikationsnachweise
+
+- Prüfe vorhandene Test- und Buildnachweise gegen tatsächlichen Diff, Scope und
+  Arbeitsstand.
+- Wiederhole einen frischen, erfolgreichen und scope-passenden Lauf nicht nur
+  zur Bestätigung.
+- Führe ihn erneut aus, wenn relevanter Code, Test-, Projekt- oder
+  Konfigurationsinhalt geändert wurde, der Scope nicht genügt, der Lauf
+  fehlgeschlagen/abgeschnitten/flaky war oder eine konkrete Gegenhypothese
+  besteht.
