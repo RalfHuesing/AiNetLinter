@@ -6,7 +6,9 @@
 
 ## Betroffene Dateien und Symbole
 
-- `src/AiNetLinter/Mcp/Tools/FeatureContext/` — Modelle, Scanner, Formatter und Tool-Registrierung.
+- `src/AiNetLinter/Mcp/Tools/FeatureContext/` — Modelle, Scanner, Formatter und Tool.
+- `src/AiNetLinter/Mcp/Registration/AnalysisToolRegistrations.cs` — Registrierung und Beschreibung
+  von `get_feature_context`.
 - `src/AiNetLinter/Core/DiffImpactAnalyzer.cs` — wiederverwendete Caller-Suche.
 - `src/AiNetLinter/Core/TestCoverageScanner.cs` und `TestCoverageBatchScan.cs` — statische Testzuordnung und Cancellation-Grenzen.
 - `src/AiNetLinter/Mcp/Projects/ProjectToolCall.cs` — gemeinsamer Antwort-Wrapper.

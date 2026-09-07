@@ -47,3 +47,40 @@
   Low-Confidence-Dead-Code-Kandidaten liegen außerhalb des Scopes und wurden
   nicht geändert.
 - Nächste Aktion: Implementierungs-Checkpoint, danach unabhängiger Review.
+
+## 2026-09-07 — Reviewer gestartet
+
+- Status: running
+- Run-ID: csharp-kontext-bugfixes-20260907
+- Rolle: unabhängiger Reviewer
+- Subagent-ID: `01a07ab1-d202-7c12-afc7-dacb17800a5a` (Confucius)
+- Diff-Baseline: `0ecc241d` (Implementierungs-Checkpoint)
+- Auftrag: tatsächlichen Diff, Konzept-Muss-Kriterien und Implementierer-
+  Nachweise prüfen; keine Produktionsänderungen, nur konkrete Code-Map-
+  Korrekturen zulässig.
+
+## 2026-09-07 — Reviewer abgeschlossen
+
+- Status: completed
+- Subagent-ID: `01a07ab1-d202-7c12-afc7-dacb17800a5a` (Confucius)
+- Urteil: `issues`
+- P1-Finding 1: `AnalysisToolRegistrations.AddGetFeatureContext` beschreibt
+  weiterhin direkte Aufrufer und nicht statische Referenzen/Call-Sites; die
+  zusätzlichen Methoden-Caps fehlen. Das widerspricht Kriterium 3.5 und der
+  Doku-Synchronisation.
+- P1-Finding 2: `FeatureContextScanner` setzt in Kombinationen falsche
+  maschinenlesbare Truncation-Gründe (`maxTestMethodsPerFile` bzw.
+  `maxTestMethodsTotal`), wenn der jeweilige Cap nicht tatsächlich die
+  Auswahl begrenzt.
+- Bestätigte Kriterien: Violations-Status/Cancellation, Caller- und
+  Violations-Sortierung, strukturierte Freshness-Metadaten sowie die übrige
+  statische Referenzdarstellung bestanden.
+- Verifikation: `dotnet build` 0 Warnungen/0 Fehler; vollständige
+  Nicht-Stress-FastTests 2277/2277; vollständige Nicht-Stress-IntegrationTests
+  412/412; `git diff --check` sauber. Der Implementierer-
+  `get_violations`-Nachweis (0 in 831 Dateien) bleibt frisch und wurde nicht
+  redundant wiederholt. Diese Prüfungen lagen nach der letzten Codeänderung
+  des Implementierers und vor dem Review.
+- Code-Map: nur der Registrierungs-Pfad wurde navigationsbezogen korrigiert.
+- Nächste Aktion: frischer Implementierer für beide P1-Findings, danach
+  frischer Review.
