@@ -11,6 +11,7 @@ depends_on:
   - tasks/ainetlinter-mcp-usage-audit/Konzept.md
 related_tasks:
   - tasks/ainetlinter-mcp-usage-audit
+  - tasks/mcp-unified-analysis-target
 supersedes: null
 ---
 
@@ -261,7 +262,50 @@ ersetzt nicht die Semantik von Vollständigkeit, Folge-Calls, Target-Grenzen und
 | 07 | Schema & Documentation | JSON-Schema, Fehlertexte, Runtime-Instructions und Referenzdoku synchronisieren | `tool-discovery`, Resources, `Docs/agent-api.md`, README, MCP-Regeln |
 | 08 | Keep & Defer | Funktionierendes schützen, Wünsche und geringe Risiken bewusst zurückstellen | `ok`-Befunde, kosmetische Reibung, unbelegte `wish`-Forderungen |
 
-Die Pakete 01–06 enthalten jeweils ihre eigene Schema-/Dokumentations- und Testarbeit. Paket 07 ist nur für verbleibende, nicht paketgebundene Bereinigung vorgesehen. Alle Pakete gehören zu diesem einen Verbesserungs-Task; die Nummern beschreiben Abhängigkeiten und Liefer-Slices, keine getrennten Produktvorhaben.
+Die Pakete 01–06 enthalten jeweils ihre eigene Schema-/Dokumentations- und Testarbeit. Paket 07 ist nur für verbleibende, nicht paketgebundene Bereinigung vorgesehen. Dieses Dokument bleibt der gemeinsame Verbesserungsplan. Die Nummern beschreiben fachliche Pakete; umgesetzt und veröffentlicht werden daraus mehrere eigenständige Release-Tasks. Ein Release-Task darf intern mehrere Pakete bündeln, wenn er einen klaren, testbaren Agentennutzen liefert.
+
+## Release- und Task-Schnitt
+
+Die Umsetzung soll weder als ein Big Bang noch als ein Task pro Audit-Finding
+erfolgen. Empfohlen ist eine Folge kleiner vertikaler Releases. Jedes Release
+hat einen sichtbaren Agentennutzen, einen eigenen Commit, ein eigenes
+Abnahme-Gate und kann danach produktiv getestet werden.
+
+### Empfohlene Reihenfolge
+
+| Release | Eigenständiger Task | Inhalt | Warum jetzt? |
+| --- | --- | --- | --- |
+| R1 | MCP-Discovery-Contract | Paket 01 plus die minimale gemeinsame Status-/Capability-Grundlage | Verbessert den ersten Agenten-Call und verhindert falsches Routing. |
+| R2 | MCP-Symbol-Navigation | Paket 02 für den Source-/Projektpfad; bestehende Assembly-Navigation nur regressionssichern | Der tägliche Wert entsteht durch `find_symbol` → Body/Referenzen/Call-Tree ohne ID-Raten. |
+| R3 | MCP-Completeness-Contract | Paket 03 zunächst für die meistgenutzten Struktur-, Symbol- und Violation-Tools | Verhindert falsches Grün und macht begrenzte Antworten verlässlich. |
+| R4 | MCP-Development-Workflow | Paket 04 plus der sicherheitsrelevante Kern aus Paket 06: Produktions-/Test-Scope, scoped Top-Befunde und konservative Findings | Das ist der höchste Nutzen für Agenten während der Entwicklung. |
+| R5 | MCP-Unified-Source-Contract | Der öffentliche `targetPath`-Schnitt aus `mcp-unified-analysis-target`; Assembly-Verhalten bleibt funktional, wird aber nicht fachlich neu entwickelt | Der inkompatible Vertragswechsel wird isoliert testbar und kann auf den stabilen Antwortverträgen aus R1–R4 aufsetzen. |
+| R6 | MCP-Assembly-Quality | Paket 05 und verbleibende Assembly-/Decompiler-Lifecycle-Verbesserungen; Rest aus Paket 06 nach Nutzen | Seltene Nutzung, hoher Aufwand und eigene Snapshot-/Completeness-Risiken. |
+
+R5 ist der einzige bewusst breitere Release-Schnitt: Wenn `targetType` und
+`ainetlinter.project.json` ohne Kompatibilität entfernt werden, müssen alle
+öffentlichen Schemas, Dispatcher, Ressourcen und Tests konsistent umgestellt
+werden. Diese notwendige Vertragsbreite soll aber nicht zusätzlich mit neuer
+Decompiler-Funktionalität vermischt werden.
+
+### Was kein eigener Release-Task wird
+
+- Paket 07 wird pro Release mitgeliefert; eine nachträgliche reine
+  Dokumentationsphase gibt es nur für tatsächlich übrig gebliebene Drift.
+- Paket 08 ist eine Keep-/Defer-Entscheidung und kein Produktpaket.
+- Einzelne Audit-Findings werden nicht zu eigenen Tasks, wenn sie dieselbe
+  Root Cause und dasselbe Abnahme-Gate besitzen.
+- Assembly-Parität wird nicht künstlich als Voraussetzung für die täglichen
+  Source-/Agenten-Releases behandelt.
+
+### Stabile Naht zur späteren Vertragsumstellung
+
+R1–R4 sollen die gemeinsame Ergebnis-, Status-, Completeness- und
+Capability-Semantik intern so schneiden, dass R5 primär den Zielresolver und
+den öffentlichen Inputvertrag austauscht. Die fachlichen Tools dürfen in R5
+nicht erneut grundlegend umgebaut werden. So bleibt der frühe Nutzwert
+erhalten, ohne den späteren Unified-Target-Schnitt mit einem zweiten
+Antwort-Refactoring zu bezahlen.
 
 ## 360°-Bewertung aus Agentensicht
 
@@ -347,7 +391,7 @@ Das dauerhafte Synthese-Artefakt ist eine Befundmatrix im neuen Verbesserungs-Ta
 Die folgenden Entscheidungen stammen aus dem Sparring und gelten für dieses Konzept:
 
 1. **Keine Migrations- oder Kompatibilitätslast:** Die MCP-Verträge dürfen für den sauberen Zielzustand geändert werden. Es muss keine alte ID- oder Response-Form parallel gepflegt werden. Die Umsetzung muss trotzdem einen konsistenten Endzustand herstellen; halbe Übergangsformen sind kein Ziel.
-2. **Projekt und Assembly gehören in denselben Task:** Assembly ist kein späteres separates Produktvorhaben. Die Umsetzung darf aber in abhängigen Slices erfolgen: gemeinsame Verträge zuerst, danach Projekt- und Assembly-Adapter bzw. gezielte Parität.
+2. **Projekt und Assembly gehören in denselben Produktplan:** Assembly ist kein separates Produktvorhaben, muss aber wegen des seltenen Nutzens und der eigenen Snapshot-/Lifecycle-Risiken nicht im selben Release-Task wie die täglichen Source-/Agentenverbesserungen umgesetzt werden. Gemeinsame Verträge kommen zuerst; Assembly-Adapter und gezielte Parität folgen in einem eigenen Release.
 3. **Paging ist kein Seitenbrowser:** Es gilt der oben beschriebene bounded-/drilldown-orientierte Vertrag. Ein Cursor ist nur dort Pflicht, wo eine geordnete Restmenge tatsächlich sinnvoll fortgesetzt werden kann; 10 kleine Seiten als Standard-UX sind ausdrücklich nicht das Ziel.
 4. **Text und StructuredContent:** Beide werden fachlich gleichwertig aus derselben typisierten Ergebnisaggregation erzeugt, soweit das im jeweiligen Kontext sinnvoll ist. Keine kritische Folgeinformation darf nur in einem für den Agenten unsichtbaren Kanal liegen.
 5. **Harte Agenten-Abnahme:** „Kein manuelles ID-Raten“ und „kein falsches Grün bei `complete`/leer“ sind Release-Kriterien, nicht bloße Wünsche.
@@ -373,21 +417,28 @@ Die erste Lieferung soll keine vollständige Neuentwicklung aller Heuristiken er
 - kosmetische Tabellen-, Nummerierungs- oder Formatierungsverbesserungen;
 - zusätzliche Komfort-Wishes, die weder falsche Entscheidungen noch unnötige Roundtrips verursachen.
 
-Die gefährlichen Präzisionsfixes bleiben damit im Scope dieses Gesamt-Tasks, werden aber nach den Vertragsgrundlagen umgesetzt und nicht zum Vorwand für eine unendliche Heuristik-Neuentwicklung.
+Die gefährlichen Präzisionsfixes bleiben damit im Scope dieses Gesamtplans, werden aber nach den Vertragsgrundlagen umgesetzt und nicht zum Vorwand für eine unendliche Heuristik-Neuentwicklung.
 
 ## Empfohlene Ausführungsstrategie
 
-Der Gesamtumfang bleibt ein Task, wird aber nicht als unbegrenzter 24/7-Lauf ausgeführt. Empfohlen ist **autonome Umsetzung innerhalb klarer Slices mit Live-Gate nach jedem Slice**:
+Der Gesamtumfang bleibt ein gemeinsamer Plan, wird aber in eigenständige
+Release-Tasks umgesetzt. Innerhalb jedes Release-Tasks ist autonome Umsetzung
+bis zum Live-Gate sinnvoll; nach dem Gate entsteht ein testbarer Stand und der
+nächste Task startet erst nach bewusster Auswahl.
 
 | Slice | Inhalt | Live-Gate vor dem nächsten Slice |
 | --- | --- | --- |
-| A | Discovery Contract plus die dafür nötige gemeinsame Status-/Envelope-Grundlage | `tool-discovery`, `get_file_tree`, `get_index_scope`, `search_pattern`, `combo-discovery-fallback` |
-| B | Symbol-IDs und Navigation; danach symbolbezogenes bounded Paging | `find_symbol`, `get_file_skeleton`, `get_symbol_body`, `get_class_structure`, `find_references`, `get_call_tree`, Batch-/Typ-Navigation |
-| C | Core-Agent-Workflows und gefährliche Präzisionsheuristiken | `get_feature_context`, `get_impact`, `get_violations`, `metrics_lookup`, `get_test_context`, `safeguard`, Pattern-/Dead-Code-/Magic-/Duplicate-Proben |
-| D | Assembly- und Cross-Target-Adapter auf denselben Verträgen | `inspect_assembly`, `search_assembly`, `get_assembly_context`, `find_assembly_extensions`, `resolve_type_origin`, Assembly-/Cross-Target-Combos |
-| E | Health, Resources, Restdokumentation und Gesamtsynchronisation | vollständiger zielgerichteter MCP-Retest; anschließend kompletter Audit-Lauf |
+| R1 | Discovery Contract plus minimale gemeinsame Status-/Capability-Grundlage | `tool-discovery`, `get_file_tree`, `get_index_scope`, `search_pattern`, `combo-discovery-fallback` |
+| R2 | Symbol-IDs und Navigation | `find_symbol`, `get_file_skeleton`, `get_symbol_body`, `get_class_structure`, `find_references`, `get_call_tree`, Batch-/Typ-Navigation |
+| R3 | Bounded Completeness und ehrliche Truncation | zuerst die meistgenutzten Struktur-, Symbol- und Violation-Tools |
+| R4 | Core-Agent-Workflows und gefährliche Präzisionsheuristiken | `get_feature_context`, `get_impact`, `get_violations`, `metrics_lookup`, `get_test_context`, `safeguard` sowie der sicherheitsrelevante Teil von Paket 06 |
+| R5 | Öffentlicher Unified-Target-Schnitt | `targetPath`, Entfernen von `targetType`/Projektmanifest, Ressourcen, Dispatcher und Vertrags-Tests; keine neue Decompiler-Funktionalität |
+| R6 | Assembly- und Cross-Target-Qualität | `inspect_assembly`, `search_assembly`, `get_assembly_context`, `find_assembly_extensions`, `resolve_type_origin`, Snapshot-/Lifecycle- und Rest-Precision-Themen |
 
-Ein Slice darf intern mehrere Dateien, Tools und Tests ändern. Er endet aber mit einem nachvollziehbaren Commit und einem Live-Nachweis. Der Agent startet den nächsten Slice nicht automatisch, wenn das Gate rot ist.
+Ein Release-Task darf intern mehrere Dateien, Tools und Tests ändern. Er endet
+aber mit einem nachvollziehbaren Commit, dem vollständigen Nicht-Stress-Gate
+und einem fokussierten Live-Nachweis. Der nächste Release-Task startet nicht
+automatisch, wenn das Gate rot ist.
 
 ### Warum kein unbegrenzter 24/7-Lauf?
 
@@ -412,7 +463,12 @@ Autonomie ist sinnvoll innerhalb des Slices. Die Begrenzung ist ein Qualitätsme
 
 ### Audit-Strategie
 
-Der vorhandene 45-Finding-Audit ist die Baseline, nicht der tägliche Volltest. Nach jedem Slice läuft ein fokussierter Live-Audit auf den betroffenen Toolketten. Nach Slice E läuft der vollständige Audit erneut, damit keine Quervertragsregression zwischen den Paketen übersehen wird.
+Der vorhandene 45-Finding-Audit ist die Baseline, nicht der tägliche Volltest.
+Nach jedem Release läuft ein fokussierter Live-Audit auf den betroffenen
+Toolketten. Nach R5 läuft zusätzlich ein Vertrags-Scan über produktiven
+MCP-Code, Tests, `Docs/` und `.agents/`. Nach R6 läuft der vollständige Audit
+erneut, damit keine Quervertragsregression zwischen den Releases übersehen
+wird.
 
 ## Entscheidungen, die vor der Umsetzung benötigt werden
 
@@ -420,7 +476,11 @@ Die fachlichen Entscheidungen sind damit getroffen. Vor der Umsetzung bleibt nur
 
 ## Nächster Planungsschritt
 
-Die Befundmatrix ist aufgebaut. Nach der Freigabe startet die Umsetzung als ein Gesamt-Task in abhängigen Slices: zuerst Discovery/Vertragsgrundlagen, dann IDs und bounded Completeness, anschließend die Core-Workflows und Assembly-Pfade; die gefährlichen Heuristikfixes folgen innerhalb desselben Gesamtumfangs.
+Die Befundmatrix ist aufgebaut. Nach der Freigabe wird zuerst R1 als eigener
+Release-Task umgesetzt. Danach wird jeweils nur der nächste grüne,
+abhängigkeitsfreie Release-Task gestartet. R5 bleibt als separater
+inkompatibler Vertragsrelease zwischen den täglichen Source-/Agenten-Releases
+und der nachrangigen Assembly-Qualität isoliert.
 
 ## Muss-Kriterien
 
