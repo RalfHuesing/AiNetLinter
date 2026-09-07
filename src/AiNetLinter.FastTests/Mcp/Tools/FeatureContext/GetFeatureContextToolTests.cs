@@ -357,14 +357,10 @@ public sealed class GetFeatureContextToolTests
                     """)
             ], VirtualProjectDirectory: "tests/Lib.Tests1"),
             new ProjectSpec("Lib.Tests2", [
-                ("ServiceTests2.cs", """
-                    namespace Lib.Tests2;
-                    public class ServiceTests2
-                    {
-                        [Xunit.Fact]
-                        public void Test2() { var s = new Lib.Service(); s.Execute(); }
-                    }
-                    """)
+                ("ServiceTests2.cs", "namespace Lib.Tests2; public class ServiceTests2{" +
+                    string.Join("", Enumerable.Range(1, 220).Select(i =>
+                        $"[Xunit.Fact] public void Execute_Case{i:000}() {{ new Lib.Service().Execute(); }}")) +
+                    "}")
             ], VirtualProjectDirectory: "tests/Lib.Tests2")
         );
 
@@ -387,6 +383,7 @@ public sealed class GetFeatureContextToolTests
         Assert.True(payload.Tests.IsTruncated);
         Assert.Single(payload.Tests.TestFiles);
         Assert.Equal(2, payload.Tests.TotalTestFiles);
+        Assert.Equal(new[] { "maxTests" }, payload.Tests.TruncatedBy);
     }
 
     [Fact]
@@ -419,9 +416,46 @@ public sealed class GetFeatureContextToolTests
         Assert.Equal(50, payload.Tests.DisplayedTestMethods);
         Assert.Single(payload.Tests.TestFiles);
         Assert.Equal(50, payload.Tests.TestFiles[0].TestMethods.Count);
-        Assert.Contains("maxTestMethodsPerFile", payload.Tests!.TruncatedBy!);
-        Assert.Contains("maxTestMethodsTotal", payload.Tests.TruncatedBy!);
+        Assert.Equal(new[] { "maxTestMethodsPerFile" }, payload.Tests!.TruncatedBy);
         Assert.Contains("220 Testmethoden", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_GlobalMethodCapDoesNotReportPerFileCapWhenOnlyGlobalCapLimitsSelection()
+    {
+        var testProjects = Enumerable.Range(1, 5)
+            .Select(i => new ProjectSpec(
+                $"Lib.Tests{i}",
+                [($"ServiceTests{i}.cs", "namespace Lib.Tests; public class ServiceTests{" +
+                    string.Join("", Enumerable.Range(1, 50).Select(j =>
+                        $"[Xunit.Fact] public void Execute_Case{j:000}() {{ new Lib.Service().Execute(); }}")) +
+                    "}")],
+                VirtualProjectDirectory: $"tests/Lib.Tests{i}"))
+            .ToArray();
+        using var scenario = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\GlobalMethodCapScenario.slnx",
+            [
+                new ProjectSpec("Lib", [
+                    ("Service.cs", "namespace Lib; public class Service { public void Execute() {} }")
+                ], VirtualProjectDirectory: "src/Lib"),
+                .. testProjects
+            ]);
+
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+        var result = await GetFeatureContextTool.ExecuteAsync(
+            state,
+            new FeatureContextOptions("Service.Execute", IncludeMetrics: false, IncludeViolations: false),
+            CancellationToken.None);
+
+        var payload = JsonSerializer.Deserialize<FeatureContextPayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload?.Tests);
+        Assert.Equal(250, payload.Tests.TotalMatchingTests);
+        Assert.Equal(200, payload.Tests.DisplayedTestMethods);
+        Assert.Equal(new[] { "maxTestMethodsTotal" }, payload.Tests.TruncatedBy);
+        Assert.All(payload.Tests.TestFiles.Take(4), file => Assert.Equal(50, file.TestMethods.Count));
+        Assert.Empty(payload.Tests.TestFiles[4].TestMethods);
     }
 
     [Fact]

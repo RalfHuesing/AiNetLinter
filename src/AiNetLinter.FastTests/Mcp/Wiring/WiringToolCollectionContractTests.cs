@@ -197,6 +197,10 @@ public sealed class WiringToolCollectionContractTests
         Assert.Contains("symbolIdentifier", featureContext.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("symbol", featureContext.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier (primaer", featureContext.Description, StringComparison.Ordinal);
+        Assert.Contains("statische Referenzen/Call-Sites", featureContext.Description, StringComparison.Ordinal);
+        Assert.Contains("keine Laufzeit-Coverage", featureContext.Description, StringComparison.Ordinal);
+        Assert.Contains("maxTests bleibt ein Dateilimit", featureContext.Description, StringComparison.Ordinal);
+        Assert.Contains("je Datei auf 50 und insgesamt auf 200 begrenzt", featureContext.Description, StringComparison.Ordinal);
 
         var testContext = tools["get_test_context"];
         Assert.Contains("symbolIdentifier", testContext.InputSchema.ToString(), StringComparison.Ordinal);

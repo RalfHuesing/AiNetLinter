@@ -84,3 +84,34 @@
 - Code-Map: nur der Registrierungs-Pfad wurde navigationsbezogen korrigiert.
 - Nächste Aktion: frischer Implementierer für beide P1-Findings, danach
   frischer Review.
+
+## 2026-09-07 — Korrektur-Implementierer 1 gestartet
+
+- Status: running
+- Run-ID: csharp-kontext-bugfixes-20260907
+- Rolle: frischer Implementierer (P1-Korrekturrunde 1/5)
+- Subagent-ID: `01a07abc-8bca-7f31-be82-c3095635b703` (Einstein)
+- Diff-Baseline: `8ede3c7b` (Reviewer-Checkpoint)
+- Ursachensignaturen: veraltete `get_feature_context`-Toolbeschreibung;
+  irreführende kombinierte Testmethoden-Truncation-Gründe.
+
+## 2026-09-07 — Korrektur-Implementierer 1 abgeschlossen
+
+- Status: completed
+- Subagent-ID: `01a07abc-8bca-7f31-be82-c3095635b703` (Einstein)
+- Urteil: Beide P1-Findings behoben; Arbeitsstand ohne Commit übergeben.
+- Geändert: `AnalysisToolRegistrations.GetFeatureContextDescription`,
+  `FeatureContextScanner.CollectTestsAsync`, Regressionstests in
+  `GetFeatureContextToolTests` und `WiringToolCollectionContractTests`.
+- Verifikation nach letzter Codeänderung: gezielte FastTests 27/27 bestanden;
+  `find_duplicates` meldete 10 bestehende Cluster ohne sichere scope-nahe
+  Korrektur; `find_dead_code` 3 Low-Confidence-Kandidaten außerhalb des
+  Änderungsbereichs; `find_magic_values` 10 bestehende Funde außerhalb des
+  Änderungsbereichs; letzter `get_violations` mit `targetType=project`,
+  absolutem Repository-Root, `scopeFilter=src/AiNetLinter/Mcp`,
+  `minSeverity=info`, `includeSnippet=true`, `contextLines=2`,
+  `maxResults=200` meldete 0 Violations. Alle diese Prüfungen wurden nach
+  der letzten Codeänderung ausgeführt.
+- Nicht ausgeführt: `dotnet build` und vollständige Nicht-Stress-Gates in
+  dieser Korrekturrunde; sie bleiben Abschlussprüfungen.
+- Nächste Aktion: Korrektur-Checkpoint, danach frischer Review.

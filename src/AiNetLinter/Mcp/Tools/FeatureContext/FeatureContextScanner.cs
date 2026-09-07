@@ -94,13 +94,15 @@ internal static class FeatureContextScanner
         var remainingMethods = MaxTestMethodsTotal;
         var displayedTestMethods = 0;
         var dtos = new List<TestFileCoverageDto>(testFiles.Count);
+        var methodsAfterPerFileCaps = testFiles.Sum(file => Math.Min(file.TestMethods.Count, MaxTestMethodsPerFile));
 
         foreach (var file in testFiles)
         {
             var totalMatchingMethods = file.TestMethods.Count;
             var take = Math.Min(Math.Min(totalMatchingMethods, MaxTestMethodsPerFile), remainingMethods);
             var methods = file.TestMethods.Take(take).ToList();
-            if (take < totalMatchingMethods)
+            var takeWithoutPerFileCap = Math.Min(totalMatchingMethods, remainingMethods);
+            if (take < takeWithoutPerFileCap)
             {
                 isTruncated = true;
                 if (!truncationReasons.Contains("maxTestMethodsPerFile", StringComparer.Ordinal))
@@ -121,7 +123,7 @@ internal static class FeatureContextScanner
                 TotalMatchingMethods: totalMatchingMethods));
         }
 
-        if (testResults.TotalMatchingTests > MaxTestMethodsTotal)
+        if (methodsAfterPerFileCaps > MaxTestMethodsTotal)
         {
             isTruncated = true;
             if (!truncationReasons.Contains("maxTestMethodsTotal", StringComparer.Ordinal))
