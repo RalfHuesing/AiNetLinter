@@ -20,7 +20,8 @@
   Methoden-Caps nicht korrekt.
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Registration/AnalysisToolRegistrations.cs`.
 - Evidenz: unabhängiger Review und Korrektur-Implementierer am 2026-09-07;
-  die Beschreibung wurde synchronisiert, der frische Review steht noch aus.
+  die Beschreibung wurde synchronisiert; der frische Review bestätigt die
+  Korrektur fachlich.
 - Disposition: fixed
 - Nächster Schritt: Durch frischen Review bestätigen.
 - Log-Anker: Reviewerbericht und Korrekturbericht vom 2026-09-07.
@@ -32,8 +33,8 @@
   anderer Cap die Auswahl begrenzt hat.
 - Scope/Fundstelle: `src/AiNetLinter/Mcp/Tools/FeatureContext/FeatureContextScanner.cs`.
 - Evidenz: unabhängiger Review und Korrektur-Implementierer am 2026-09-07;
-  tatsächliche Auslösung pro Datei/global wurde korrigiert, der frische Review
-  steht noch aus.
+  tatsächliche Auslösung pro Datei/global wurde korrigiert; der frische Review
+  bestätigt die Korrektur fachlich.
 - Disposition: fixed
 - Nächster Schritt: Durch frischen Review bestätigen.
 - Log-Anker: Reviewerbericht und Korrekturbericht vom 2026-09-07.
@@ -64,3 +65,29 @@
 - Nächster Schritt: Bei einer passenden Änderung mit fachlicher Identitäts-
   und Vertragsprüfung bewerten.
 - Log-Anker: Korrekturbericht vom 2026-09-07.
+
+## TD-006 — FastTest-Datei überschreitet MaxLineCount
+
+- Schweregrad: P1
+- Beschreibung: Die Testdatei `GetFeatureContextToolTests.cs` hat 527 statt
+  maximal 500 Zeilen und verletzt damit den Abschluss-Qualitätscheck.
+- Scope/Fundstelle: `src/AiNetLinter.FastTests/Mcp/Tools/FeatureContext/GetFeatureContextToolTests.cs`.
+- Evidenz: Frischer Review am 2026-09-07; 1 Test-Scope-Violation.
+- Disposition: in Arbeit
+- Nächster Schritt: Tests gezielt aufteilen oder die Datei unter das Limit
+  bringen und `get_violations` für Test-/Produktionsscope wiederholen.
+- Log-Anker: Reviewerbericht Korrekturrunde 1 vom 2026-09-07.
+
+## TD-007 — Direkte kombinierte Cap-Regression fehlt
+
+- Schweregrad: P2
+- Beschreibung: Die korrekte kombinierte Cap-Logik ist nicht durch eine
+  direkte Regressionstest-Matrix abgesichert.
+- Scope/Fundstelle: `GetFeatureContextToolTests` und
+  `FeatureContextScanner.CollectTestsAsync`.
+- Evidenz: Frischer Review am 2026-09-07; isolierte Caps sind getestet,
+  Kombinationen nicht.
+- Disposition: in Arbeit
+- Nächster Schritt: Kompakte Tests für relevante `maxTests`-/Per-File-/Global-
+  Cap-Kombinationen ergänzen.
+- Log-Anker: Reviewerbericht Korrekturrunde 1 vom 2026-09-07.

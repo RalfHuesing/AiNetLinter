@@ -6,7 +6,8 @@
 
 ## Betroffene Dateien und Symbole
 
-- `src/AiNetLinter/Mcp/Tools/FeatureContext/` — Modelle, Scanner, Formatter und Tool.
+- `src/AiNetLinter/Mcp/Tools/FeatureContext/` — Modelle, Scanner, Formatter und Tool;
+  insbesondere `FeatureContextScanner.CollectTestsAsync` fuer die drei Test-Caps.
 - `src/AiNetLinter/Mcp/Registration/AnalysisToolRegistrations.cs` — Registrierung und Beschreibung
   von `get_feature_context`.
 - `src/AiNetLinter/Core/DiffImpactAnalyzer.cs` — wiederverwendete Caller-Suche.
@@ -27,7 +28,9 @@
 ## Relevante Tests, Konfiguration und Dokumentation
 
 - `src/AiNetLinter.FastTests/Mcp/Tools/FeatureContext/GetFeatureContextToolTests.cs` — Feature-Context-
-  Status-, Cancellation-, Sortier- und Methoden-Cap-Verträge.
+  Status-, Cancellation-, Sortier- und Methoden-Cap-Verträge; die Regressionen
+  decken `maxTests`, den Per-Datei-Cap und den globalen Cap jeweils isoliert ab.
+  Eine direkte Matrix der kombinierten Cap-Fälle ist nicht enthalten.
 - `src/AiNetLinter.FastTests/Mcp/Wiring/WiringProjectContractTests.cs` — Freshness-Text-/Structured-
   Content-Parität des projektgebundenen Wrappers.
 - `src/AiNetLinter.IntegrationTests/Mcp/McpLiveRepositoryTests.cs` — Live-MCP-Vertrag für
@@ -45,7 +48,10 @@
 - Caller und Violations werden vor der Kappung deterministisch sortiert. Callers bleiben
   statische Referenzen/Call-Sites, nicht Runtime-Coverage.
 - `maxTests` bleibt Dateilimit; zusätzlich begrenzen Methoden-Caps die ausgegebenen
-  Methodennamen. Truncation-Grund und Counts bleiben sichtbar.
+  Methodennamen. `maxTestMethodsPerFile` wird nur bei einer konkreten Kürzung
+  gegenüber dem verbleibenden Gesamtbudget gemeldet; `maxTestMethodsTotal` nur,
+  wenn die nach dem Datei-Cap verfügbare Auswahl das Gesamtbudget überschreitet.
+  Truncation-Grund und Counts bleiben sichtbar.
 - Cancellation darf keine partielle Erfolgs-Payload erzeugen.
 - Text und StructuredContent müssen dieselbe begrenzte Auswahl und denselben
   Freshness-/Statuszustand zeigen.
@@ -55,13 +61,16 @@
 - MCP-Kontextaufnahme am 2026-09-07: `get_feature_context` für
   `FeatureContextScanner.ScanAsync`, `DiffImpactAnalyzer.FindCallSiteEntriesAsync` und
   `ProjectToolCall.WithDegradedHeader`; alle drei vollständig im Projektindex sichtbar.
-- Implementierung abgeschlossen. Nach letzter Codeänderung grün: 17 Feature-Context-Tests,
-  16 DiffImpactAnalyzer-Tests, 1 Degraded-Wiring-Test und 1 Live-MCP-Vertragstest.
-- Nach letzter Codeänderung ausgeführter Audit: 13 bestehende, scope-ferne/unklare
-  Duplikat-Cluster; 3 bestehende Low-Confidence-Dead-Code-Kandidaten; 0 Magic Values.
-  Der einzige eigene Low-Confidence-Cancellation-Befund wurde durch tatsächliche Nutzung
-  des Reason-Codes in `Exception.Data` erledigt.
-- Abschließender letzter codebezogener MCP-Check: `get_violations` mit
-  `targetType=project`, absolutem Repository-Root, `scopeFilter=src/AiNetLinter`,
-  `minSeverity=info`, `includeSnippet=true`, `contextLines=2`, `maxResults=200` —
-  0 Violations in 831 Dateien.
+- Korrekturrunde 1: `GetFeatureContextToolTests.cs` enthält 18 Tests; der frische
+  Implementierer meldete 27/27 gezielte Tests, der aktuelle MCP-Check der
+  Toolbeschreibung und `CollectTestsAsync` ist vollständig aufgelöst.
+- Abschlussprüfung des Reviewers: `dotnet build` grün (0 Warnungen/0 Fehler),
+  FastTests Nicht-Stress 2278/2278 grün. Integration Nicht-Stress 411/412;
+  der einzige Fehler ist die `MaxLineCount`-Violation in
+  `GetFeatureContextToolTests.cs` (527 statt maximal 500 Zeilen).
+- Frischer Implementierer-`get_violations`-Check war auf `src/AiNetLinter/Mcp`
+  begrenzt und meldete 0. Der reviewer-seitige Test-Scope-Check mit
+  `targetType=project`, absolutem Repository-Root und
+  `scopeFilter=src/AiNetLinter.FastTests/Mcp/Tools/FeatureContext` meldet
+  1 `MaxLineCount`-Violation; Produktionscode bleibt im gemeldeten Scope
+  violationsfrei.

@@ -115,3 +115,36 @@
 - Nicht ausgeführt: `dotnet build` und vollständige Nicht-Stress-Gates in
   dieser Korrekturrunde; sie bleiben Abschlussprüfungen.
 - Nächste Aktion: Korrektur-Checkpoint, danach frischer Review.
+
+## 2026-09-07 — Reviewer Korrekturrunde 1 gestartet
+
+- Status: running
+- Run-ID: csharp-kontext-bugfixes-20260907
+- Rolle: frischer Reviewer nach P1-Korrektur
+- Subagent-ID: `01a07ac4-4225-7c62-971f-98bcd621299c` (Schrodinger)
+- Diff-Baseline: `4590208a` (Korrektur-Checkpoint)
+- Auftrag: beide P1-Fixes sowie alle betroffenen Muss-Kriterien unabhängig
+  gegen den tatsächlichen Diff und das Konzept prüfen.
+
+## 2026-09-07 — Reviewer Korrekturrunde 1 abgeschlossen
+
+- Status: completed
+- Subagent-ID: `01a07ac4-4225-7c62-971f-98bcd621299c` (Schrodinger)
+- Urteil: `issues`
+- P1-Finding: `GetFeatureContextToolTests.cs` überschreitet mit 527 Zeilen
+  das MCP-`MaxLineCount`-Limit von 500; der frische Check meldete eine
+  Test-Scope-Violation. Empfehlung: Datei verkleinern oder gezielt aufteilen.
+- P2-Finding: Die Logik für kombinierte Testmethoden-Caps ist korrekt, aber
+  die direkte Regressionstest-Matrix für `maxTests` plus Per-File-/Global-Cap
+  fehlt. Empfehlung: kompakte Kombinationstests ergänzen.
+- Muss-Kriterien 1–6: fachlich bestanden, mit der genannten Testabdeckungslücke
+  bei Kriterium 4.
+- Verifikation: `dotnet build` 0 Warnungen/0 Fehler; FastTests
+  Nicht-Stress 2278/2278; IntegrationTests Nicht-Stress 411/412, einziger
+  Fehler `CliRepositoryDogfoodTests.RunLinterCli_OnWholeSolution_ReturnsSuccess`;
+  MCP meldete die eine Test-Scope-Violation. Der Implementierer-
+  Produktionsscope-Check bleibt gültig, war für den Gesamtabschluss aber nicht
+  ausreichend. Prüfungen wurden nach dem Korrekturcode ausgeführt.
+- Code-Map: um konkrete Symbole, Caps und Verifikationsangaben ergänzt.
+- Nächste Aktion: frischer Implementierer für P1-Dateilimit und P2-Matrix,
+  anschließend frischer Review.
