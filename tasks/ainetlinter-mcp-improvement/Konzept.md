@@ -30,6 +30,124 @@ Das Audit bleibt Evidenzarchiv. Dieses Konzept bündelt wiederkehrende Root Caus
 - Produktionsänderungen erfolgen erst in den priorisierten Umsetzungspaketen.
 - Die bestehende Roslyn-/statische Analysegrenze bleibt erhalten.
 
+## Architekturreview des bestehenden Codes
+
+Die Überlegungen basieren nicht nur auf den Audit-Dokumenten. Die relevanten
+MCP-Laufzeitgrenzen und zentrale Aufrufpfade wurden im bestehenden Code geprüft.
+Das Ergebnis ist eine gezielte Vertrags- und Adapterverbesserung, kein
+Grundsatzumbau der Anwendung.
+
+### Was bereits als tragfähige Infrastruktur vorhanden ist
+
+- Der Composition Root ist explizit: `McpServerCommand` und `DaemonHostCommand`
+  erzeugen Registry-/Session-Lebenszyklen und übergeben sie an
+  `McpServerToolCollectionFactory`. Die Toolregistrierung ist nach Fachgruppen
+  getrennt und nicht in einer einzelnen God-Klasse konzentriert.
+- `AnalysisTargetResolver`, `AnalysisToolCall` sowie Project- und Assembly-
+  Dispatcher bilden bereits eine gemeinsame Target-Grenze. Projekt- und
+  Assembly-Aufrufe dürfen daher denselben fachlichen Toolvertrag teilen, ohne
+  die beiden Roslyn-Modelle künstlich zu einem identischen Backend zu machen.
+- Project-Leases und `McpCodeGraphServer` kapseln Residency, Loading,
+  Refresh, Degraded-State und Eviction. `IAssemblyAnalysisRegistry` kapselt
+  parallele Assembly-Erzeugung, Generationen, Leases, Ressourcenbudget und
+  Eviction. Beide Lebenszyklusgrenzen sind eigene Subsysteme und sollen nicht
+  in einen generischen Session-Service verschmolzen werden.
+- `McpToolResults` und `McpJsonOptions` zentralisieren bereits Fehlerpolitik,
+  Basisantworten und JSON-Serialisierung. `SymbolIdentifierResolver` und
+  `AnalysisSymbolIdentity` zentralisieren wesentliche Teile der Symbol- und
+  Assembly-ID-Auflösung.
+- Tests decken die riskanten Lebenszyklusstellen bereits gezielt ab, unter
+  anderem Project-Registry-Races, Refresh/Load-Zustände, Assembly-Lease-
+  Concurrency, Generationen, TTL/Kapazität und stale IDs. Diese Grenzen sind
+  zu bewahren; ein großflächiger Umbau würde vorhandene Sicherheit unnötig
+  gefährden.
+
+### Die eigentliche architektonische Lücke
+
+Die Infrastruktur ist bei Lebenszyklus und Routing stärker zentralisiert als
+bei der Antwortsemantik. Es gibt zwar gemeinsame Helfer, aber keinen kleinen,
+toolübergreifend verbindlichen Vertragskern für:
+
+1. Status und Fehlerklasse (`empty`, `complete`, `partial`, `truncated`,
+   `unsupported`, `not_decidable`, echte Fehlfunktion),
+2. Vollständigkeitsdaten (`totalCount`, `returnedCount`, Scope, Gründe),
+3. fachlich sinnvolle Fortsetzung oder Drilldown,
+4. identische Wahrheit in Markdown und `StructuredContent`,
+5. Target-/Snapshot-/Generation-Metadaten, soweit sie für Folge-Calls nötig
+   sind.
+
+Die Folge ist beobachtbare Vertragsdrift: `McpToolResults` baut einfache
+Antworten, `McpTruncation` erzeugt Plain-Text-Meta-Zeilen, Such- und Projekt-
+Tools besitzen eigene Completeness-Records, während Assembly-Antworten einen
+zusätzlichen JSON-Envelope nachträglich transformieren. Das ist kein Argument
+für einen universellen Mega-Envelope mit identischen Feldern für jedes Tool;
+es ist ein Argument für gemeinsame typisierte Metadaten und eine gemeinsame
+Projektion aus einer fachlichen Aggregation.
+
+### Empfohlene Zielarchitektur
+
+Die Umsetzung erhält vier explizite Schichten:
+
+1. **Composition und Lifecycle:** bestehende direkte Instanziierung,
+   `ProjectRegistry`, Project-Lease, Assembly-Registry und Assembly-Lease.
+2. **Target-/Capability-Routing:** bestehende Target-Auflösung und Dispatcher,
+   erweitert um eine überprüfbare Capability-/Contract-Beschreibung pro Tool.
+3. **Fachliche Aggregation:** Scanner und Resolver liefern typisierte Daten,
+   inklusive Scope, Confidence, Status und Vollständigkeit. Hier liegen die
+   Heuristik- und Roslyn-Entscheidungen.
+4. **MCP-Projektion:** ein gemeinsamer, kleiner Response-/Completeness-Kern
+   erzeugt Markdown und StructuredContent aus derselben Aggregation. Tool-
+   spezifische Nutzlasten bleiben erlaubt; nur die gemeinsame Metasemantik
+   wird vereinheitlicht.
+
+Konkret soll Slice 01 daher neben Discovery auch die minimal nötigen Verträge
+für Result-Status, Scope/Freshness, Completeness/Truncation und Capability-
+Fehler etablieren. Slice 03 ergänzt die Fortsetzungssemantik nur dort, wo eine
+sortierte Restmenge fachlich sinnvoll ist. Die Assembly-Schicht adaptiert diese
+Verträge in Slice 05; ihre bestehende Response-Budget-/Envelope-Logik wird
+nicht parallel als zweites allgemeines Framework weitergebaut.
+
+### DI, Interfaces und Generalisierung
+
+- **Kein eigener DI-Container:** Die Repository-Regeln verlangen ein schlankes,
+  statisch kompiliertes Monolith-Design ohne DI-Overhead. Die vorhandene
+  `ServiceCollection` in `DaemonMcpSession` und `McpServerCommand` ist die
+  notwendige SDK-Bootstrap-/MCP-Serverintegration, nicht der Anlass für eine
+  allgemeine Anwendungskomposition über Services.
+- **Interfaces nur an Lebenszyklusgrenzen:** `ISolutionStateProvider`,
+  `IAssemblyAnalysisRegistry` und die vorhandenen Console-/Transport-Ports
+  sind sinnvoll, weil sie Zustands- bzw. Ressourcenbesitz kapseln. Für reine
+  stateless Formatter, Scanner oder Resolver wären zusätzliche `I...`-
+  Interfaces voraussichtlich nur Test- und Navigationsrauschen.
+- **Keine gemeinsame `IAnalysisSession` als niedrigster Nenner:** Projekt-
+  Roslyn-Solution und dekompilierte Assembly haben unterschiedliche
+  Fähigkeiten und Beweisgrenzen. Gemeinsame Status-/Target-/Response-Verträge
+  ja; eine künstlich identische Session-API nein.
+- **Keine generische `McpToolBase`/Reflection-Registrierung:** Die expliziten
+  Registrierungsgruppen sind nachvollziehbar und statisch. Verbesserungsbedarf
+  besteht bei Contract-Drift zwischen Beschreibung, Schema, Dispatcher und
+  Output — nicht bei fehlender Abstraktion um jeden Preis.
+- **Keine globale Zentralisierung aller Toollogik:** Zentralisiert werden nur
+  nachweislich gemeinsame Cross-Cutting-Verträge. Scanner, Resolver und
+  fachliche Projektionen bleiben nahe am jeweiligen Tool, damit Scope- und
+  Heuristikfehler nicht in einer untestbaren Sammelklasse verschwinden.
+
+### Architekturmaßnahmen mit Priorität
+
+| Prio | Maßnahme | Entscheidung |
+| --- | --- | --- |
+| A | Gemeinsamer typisierter MCP-Contract-Kern für Status, Completeness, Scope/Freshness und Projektion | Umsetzen; Fundament für 01–05 |
+| B | Target-/Capability-Vertrag aus Registrierung und Runtime-Prüfung ableiten | Umsetzen; verhindert Schema-/Dispatcher-Drift |
+| C | Symbol-ID-/Snapshot-Vertrag auf bestehende Resolver/Identität konzentrieren | Umsetzen; keine zweite ID-Infrastruktur |
+| D | Project-/Assembly-Lifecycle unverändert als getrennte Lease-Subsysteme erhalten | Bewusst nicht vereinheitlichen |
+| E | `McpCodeGraphServer` und `AssemblyAnalysisRegistry` nur bei konkretem Vertragsbedarf weiter aufteilen | Kein Vorab-Refactoring |
+| F | Eigene DI-, Plugin-, Reflection- oder generische Command-Bus-Schicht | Verwerfen |
+
+Die Architekturentscheidung ist damit: **Verträge generalisieren, nicht die
+gesamte Implementierung.** Das reduziert Folge-Call- und False-Green-Risiken,
+ohne die bereits getesteten Concurrency-/Lifecycle-Grenzen oder die
+fachlichen Unterschiede von Projekt und Assembly zu verwischen.
+
 ## Priorisierte Umsetzungspakete
 
 | Prio | Paket | Hauptziel | Ausgangsbefunde |
