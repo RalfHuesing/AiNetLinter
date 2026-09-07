@@ -157,6 +157,45 @@ Die erste Lieferung soll keine vollständige Neuentwicklung aller Heuristiken er
 
 Die gefährlichen Präzisionsfixes bleiben damit im Scope dieses Gesamt-Tasks, werden aber nach den Vertragsgrundlagen umgesetzt und nicht zum Vorwand für eine unendliche Heuristik-Neuentwicklung.
 
+## Empfohlene Ausführungsstrategie
+
+Der Gesamtumfang bleibt ein Task, wird aber nicht als unbegrenzter 24/7-Lauf ausgeführt. Empfohlen ist **autonome Umsetzung innerhalb klarer Slices mit Live-Gate nach jedem Slice**:
+
+| Slice | Inhalt | Live-Gate vor dem nächsten Slice |
+| --- | --- | --- |
+| A | Discovery Contract plus die dafür nötige gemeinsame Status-/Envelope-Grundlage | `tool-discovery`, `get_file_tree`, `get_index_scope`, `search_pattern`, `combo-discovery-fallback` |
+| B | Symbol-IDs und Navigation; danach symbolbezogenes bounded Paging | `find_symbol`, `get_file_skeleton`, `get_symbol_body`, `get_class_structure`, `find_references`, `get_call_tree`, Batch-/Typ-Navigation |
+| C | Core-Agent-Workflows und gefährliche Präzisionsheuristiken | `get_feature_context`, `get_impact`, `get_violations`, `metrics_lookup`, `get_test_context`, `safeguard`, Pattern-/Dead-Code-/Magic-/Duplicate-Proben |
+| D | Assembly- und Cross-Target-Adapter auf denselben Verträgen | `inspect_assembly`, `search_assembly`, `get_assembly_context`, `find_assembly_extensions`, `resolve_type_origin`, Assembly-/Cross-Target-Combos |
+| E | Health, Resources, Restdokumentation und Gesamtsynchronisation | vollständiger zielgerichteter MCP-Retest; anschließend kompletter Audit-Lauf |
+
+Ein Slice darf intern mehrere Dateien, Tools und Tests ändern. Er endet aber mit einem nachvollziehbaren Commit und einem Live-Nachweis. Der Agent startet den nächsten Slice nicht automatisch, wenn das Gate rot ist.
+
+### Warum kein unbegrenzter 24/7-Lauf?
+
+Ein langer Agentenlauf erhöht hier nicht proportional den Nutzen. Er kann:
+
+- dieselbe nicht erfüllbare Annahme über mehrere Tools hinweg immer wieder „reparieren“;
+- einen Formatterfehler mit immer mehr Spezialfällen kaschieren;
+- bei widersprüchlichen Tests zwischen Schema, Text und StructuredContent pendeln;
+- nach einer MCP-/Daemon-Neustart- oder Binary-Stale-Situation falsche Live-Ergebnisse interpretieren;
+- Assembly-Verhalten erzwingen wollen, das ohne Consumer-Projekt statisch nicht entscheidbar ist;
+- durch zu breite Scope-Ausweitung Regressionen erzeugen, bevor ein brauchbarer Zwischenstand vorliegt.
+
+Autonomie ist sinnvoll innerhalb des Slices. Die Begrenzung ist ein Qualitätsmechanismus, keine manuelle Mikrokontrolle.
+
+### Abbruch- und Blockerregeln für den Agenten
+
+- Nach zwei erfolglosen Reparaturversuchen mit derselben Root Cause muss der Agent den Befund als Blocker dokumentieren und die Slice-Grenze einhalten.
+- `not_decidable`, `unsupported` und fehlende externe Testvoraussetzungen werden als fachliches Ergebnis behandelt, nicht durch Spekulation oder Endlos-Retries „wegimplementiert“.
+- Ein Live-Test zählt nur gegen eine frisch gebaute/gestartete Serverinstanz; stale Binary, alte Session oder falsches Target sind vor der Bewertung auszuschließen.
+- Ein rotes Live-Gate stoppt den Fortschritt. Der Agent darf keine nachgelagerten Pakete beginnen, um einen früheren Vertragsfehler zu verdecken.
+- Jeder Slice committe nur die eigenen Änderungen; das read-only Audit und fremde Worktree-Änderungen bleiben unangetastet.
+
+### Audit-Strategie
+
+Der vorhandene 45-Finding-Audit ist die Baseline, nicht der tägliche Volltest. Nach jedem Slice läuft ein fokussierter Live-Audit auf den betroffenen Toolketten. Nach Slice E läuft der vollständige Audit erneut, damit keine Quervertragsregression zwischen den Paketen übersehen wird.
+
 ## Entscheidungen, die vor der Umsetzung benötigt werden
 
 Die fachlichen Entscheidungen sind damit getroffen. Vor der Umsetzung bleibt nur die formale Freigabe dieses Drafts als `ready`.
@@ -192,10 +231,11 @@ Die Befundmatrix ist aufgebaut. Nach der Freigabe startet die Umsetzung als ein 
 
 - Das Audit-Konzept ist `status: ready` und bleibt unverändert.
 - Die neue Struktur ist als Folge-Task angelegt; noch keine produktive Änderung.
-- Die vorläufige Reihenfolge priorisiert zuerst Vertrauenswürdigkeit und Folge-Call-Verträge, danach Vollständigkeit und fachliche Workflows.
+- Die Reihenfolge priorisiert zuerst Vertrauenswürdigkeit und Folge-Call-Verträge, danach Vollständigkeit und fachliche Workflows.
 - Findings sind normalisiert und auf die Problemgruppen abgebildet.
 - Die Befundmatrix ersetzt keine Umsetzung und ändert das read-only Audit nicht.
 - Die Synthese wird iterativ mit dem Nutzer abgestimmt; das Konzept bleibt bis zur ausdrücklichen Freigabe `draft`.
 - Die 45/45-Befunde sind in `Befundmatrix.md` genau einmal einer primären Problemgruppe und Disposition zugeordnet.
 - Die Produktentscheidungen zu Kompatibilität, Targets, bounded Paging, Antwortkanälen, Abnahmeschwelle und Heuristik-Scope sind im Draft eingearbeitet.
+- Die Umsetzung soll autonom, aber slice-begrenzt erfolgen; Live-Gates, Commit-Grenzen und Wiederholungs-Abbruchregeln sind festgelegt.
 - Die einzige verbleibende Blockade ist die ausdrückliche Freigabe des Konzepts als `ready`.
