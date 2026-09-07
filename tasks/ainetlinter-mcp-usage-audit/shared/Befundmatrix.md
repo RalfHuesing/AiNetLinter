@@ -17,7 +17,9 @@ Diese Matrix ist die Synthese der 45 Audit-Dateien: 33 Tool-Findings, 3 Resource
 
 ## Prioritätslogik
 
-Die Paketnummer ist die vorläufige Lieferreihenfolge. Sie kombiniert:
+Die Paketnummer ist die vorläufige fachliche Gruppierung. Die daraus
+abgeleiteten Release-Tasks sind in `tasks/01-*` bis `tasks/04-*` beschrieben.
+Die Gruppierung kombiniert:
 
 - **Agentenwirkung:** Verhindert der Befund den nächsten sinnvollen Call oder erzeugt er falsches Vertrauen?
 - **Reichweite:** Betrifft er viele Tools oder nur einen Spezialpfad?
@@ -26,7 +28,9 @@ Die Paketnummer ist die vorläufige Lieferreihenfolge. Sie kombiniert:
 
 Severity bleibt der Befundstatus aus dem Audit. `Mittel` bzw. fehlende kanonische Schwere wird bewusst als Normalisierungsproblem markiert.
 
-Die Reihenfolge ist eine Slice-Reihenfolge innerhalb eines Gesamt-Tasks. Sie bedeutet nicht, dass Assembly-Funktionalität aus dem Scope fällt. Gemeinsame Verträge werden zuerst stabilisiert; Projekt- und Assembly-Implementierungen werden danach im selben Vorhaben umgesetzt.
+Die Reihenfolge dient der Abhängigkeits- und Releaseplanung. Eng verbundene
+Pakete liegen in einem gemeinsamen Task-Ordner; Assembly-Qualität bleibt wegen
+ihres separaten Lifecycles und der seltenen Nutzung ein späterer eigener Task.
 
 ## Bounded Exploration statt Seitenbrowser
 
