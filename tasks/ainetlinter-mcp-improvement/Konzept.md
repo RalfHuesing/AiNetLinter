@@ -58,6 +58,30 @@ Jeder Befund erhält in der Synthese genau eine Disposition:
 
 Severity und Priorität werden getrennt behandelt. Ein `friction`-Befund kann wegen seiner Wirkung auf den ersten Agenten-Call hoch priorisiert werden; ein `wish`-Befund ist nicht automatisch umzusetzen.
 
+## Arbeitsablauf der Synthese
+
+Die Ausarbeitung erfolgt in fünf Planungsrunden, bevor Produktionscode geändert wird:
+
+1. **Inventar und Normalisierung:** Alle Audit-Dateien werden read-only gelesen. Pro Finding werden primäre Schwere, Verdict, Nutzbarkeit, konkrete Evidenz, vermutete Root Cause und betroffene Umsetzungspakete extrahiert. Nicht-kanonische Angaben wie `Mittel` oder fehlende Primär-Schwere werden markiert, nicht stillschweigend umgedeutet.
+2. **Deduplizierung und Clustering:** Einzelbefunde und Combos werden nicht addiert, wenn sie dieselbe Ursache belegen. Ein Root Cause erscheint einmal als Problem, die übrigen Findings bleiben als Evidenzverweise erhalten.
+3. **Nutzen-/Risiko-Bewertung:** Jede Problemgruppe wird nach Agentenwirkung, Reichweite, Risiko falscher Schlussfolgerungen, Abhängigkeiten und Umsetzungsaufwand bewertet. Severity bleibt dabei ein Befundmerkmal und wird nicht zur alleinigen Prioritätsformel.
+4. **Paketverträge:** Für jedes `fix`-Paket werden Scope, Non-Goals, betroffene Symbole/Dateien, API-Vertrag, Regressionstests, Dokumentationsänderungen und Abnahmekriterien festgelegt. `keep`, `document`, `defer` und `discard` werden begründet.
+5. **Nutzerfreigabe:** Erst wenn Matrix, Prioritäten und Paketgrenzen konsistent sind, wird dieses Konzept ausdrücklich auf `ready` gesetzt. Danach entscheidet der Nutzer, ob Paket 01 umgesetzt oder zunächst ein anderes Paket gestartet wird.
+
+Das dauerhafte Synthese-Artefakt ist eine Befundmatrix im neuen Verbesserungs-Task. Sie enthält mindestens `Finding`, `Root Cause`, `Disposition`, `Paket`, `Priorität`, `Nutzen`, `Risiko`, `Evidence`, `Quellbereich`, `Testbedarf` und `Doku-Bedarf`.
+
+## Entscheidungs- und Übergabegates
+
+- **Gate A – Evidenz:** Jede Aussage in der Synthese verweist auf mindestens ein Audit-Finding; das Audit selbst bleibt unverändert.
+- **Gate B – Root Cause:** Kein Umsetzungspaket enthält nur Symptome oder doppelte Befunde ohne gemeinsame Ursache.
+- **Gate C – Priorität:** Die Reihenfolge erklärt sich aus Agentennutzen und Abhängigkeiten, nicht aus der Dateireihenfolge.
+- **Gate D – Umsetzung:** Kein Paket startet ohne überprüfbare Akzeptanzkriterien und passende Verifikation.
+- **Gate E – Abschluss:** Nach der Umsetzung gelten Build, Nicht-Stress-Testläufe, MCP-Nachweise und der passende Audit gemäß `AGENTS.md`.
+
+## Nächster Planungsschritt
+
+Als nächstes wird die Befundmatrix aus den vorhandenen Einzel- und Combo-Findings aufgebaut. Danach prüfen wir zuerst die Cluster `Discovery Contract`, `Symbol IDs & Navigation` und `Completeness & Paging` gegeneinander, weil sie die stärksten Querverbindungen und Abhängigkeiten haben.
+
 ## Muss-Kriterien
 
 - Jeder nicht-triviale Audit-Befund ist genau einer Problemgruppe oder `keep/defer/discard` zugeordnet.
@@ -87,3 +111,5 @@ Severity und Priorität werden getrennt behandelt. Ein `friction`-Befund kann we
 - Die neue Struktur ist als Folge-Task angelegt; noch keine produktive Änderung.
 - Die vorläufige Reihenfolge priorisiert zuerst Vertrauenswürdigkeit und Folge-Call-Verträge, danach Vollständigkeit und fachliche Workflows.
 - Vor der Freigabe dieses Konzepts müssen Findings normalisiert und auf die Problemgruppen abgebildet werden.
+- Der nächste konkrete Arbeitsgegenstand ist eine Befundmatrix; sie ersetzt keine Umsetzung und keine Änderung am read-only Audit.
+- Die Synthese wird iterativ mit dem Nutzer abgestimmt; das Konzept bleibt bis zur ausdrücklichen Freigabe `draft`.
