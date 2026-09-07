@@ -1,6 +1,6 @@
-status: executing
+status: done
 current_epic: csharp-feature-context-bugfixes
-last_checkpoint: planning
+last_checkpoint: final-verification
 current_debt_item: none
 debt_attempts: 0
 
@@ -21,16 +21,16 @@ Primäraufgabe: Klare Fehlerkorrekturen im C#-Feature-Kontext
   `dotnet build`, vollständige Nicht-Stress-FastTests und IntegrationTests,
   mindestens ein Live-MCP-Vertragstest mit Text-/StructuredContent-Parität und
   Degraded-Fall.
-- Status: in_progress
+- Status: done
 
 ## Abschluss-Checkliste
 
-- [ ] Fehlerstatus und Cancellation-Semantik
-- [ ] Tokenisierte und abbrechbare Caller-Suche
-- [ ] Deterministische Caller-/Violations-Reihenfolge und Truncation
-- [ ] Begrenzte Testmethoden-Ausgabe
-- [ ] Vorsichtige statische Referenzsemantik
-- [ ] Strukturierte Freshness-/Degraded-Hinweise
-- [ ] Live-MCP-Vertragstest
-- [ ] Dokumentation synchronisiert
-- [ ] Abschluss-Gates grün
+- [x] Fehlerstatus und Cancellation-Semantik
+- [x] Tokenisierte und abbrechbare Caller-Suche
+- [x] Deterministische Caller-/Violations-Reihenfolge und Truncation
+- [x] Begrenzte Testmethoden-Ausgabe
+- [x] Vorsichtige statische Referenzsemantik
+- [x] Strukturierte Freshness-/Degraded-Hinweise
+- [x] Live-MCP-Vertragstest
+- [x] Dokumentation synchronisiert
+- [x] Abschluss-Gates grün
