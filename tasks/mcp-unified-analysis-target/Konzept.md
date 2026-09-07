@@ -264,6 +264,42 @@ Der aktuelle Stand trennt Source- und Assemblyziele noch sichtbar:
 
 Die Vereinfachung soll den öffentlichen Vertrag zentralisieren. Sie verlangt nicht zwingend, Assembly-Registry und Source-Registry intern physisch zusammenzulegen. Gemeinsamer Analysekontext und gemeinsamer Resolver sind wichtiger als identische Speicherverwaltung.
 
+## Refactor-Grenze: vollständiger MCP-Schnitt statt lokaler Reparatur
+
+Die Umstellung muss bewusst über alle Schichten des MCP-Vertrags erfolgen. Ein Austausch nur von `AnalysisTargetResolver` oder einzelner Toolmethoden wäre nicht sinnvoll, weil der aktuelle Zielvertrag an mehreren unabhängigen Stellen modelliert und validiert wird.
+
+### Verbindlich umzubauende Schichten
+
+| Schicht | Aktueller Anker | Erforderliche Änderung |
+|---|---|---|
+| Öffentlicher MCP-Vertrag | Toolregistrierungen, Parameterrecords, `tools/list`, `ServerInstructions` | Nur `targetPath`; kein `targetType`, kein `projectRoot` als Zielalias, keine Projektdefinitionsparameter |
+| Zielauflösung | `AnalysisTarget`, `AnalysisTargetRequest`, `AnalysisTargetResolver` | Direkte Dateiauflösung nach absolutem Pfad und Endung; Ergebnis ist ein normalisierter Analysekontext mit `origin` und Capabilities |
+| Dispatch | `AnalysisToolCall`, Projekt-/Assembly-Routen, Toolregistrierungs-Lambdas | Routing nach dem aufgelösten Kontext statt nach einem vom Agenten gelieferten Zieltyp |
+| Source-Session | `ProjectRegistry`, `ProjectToolCall`, `ProjectLease`, `ProjectEntry` | Registry-Key auf konkrete Solution und wirksame Regelidentität umstellen; `projectRoot` bleibt höchstens internes, abgeleitetes SourceRoot-Feld |
+| Projektdefinition | `ProjectDefinition`, `ProjectDefinitionLoader`, `ProjectDefinitionLoadResult`, projektbezogene Fehlercodes | Aus dem MCP-Ladepfad entfernen; Solution direkt laden, benachbarte Regeldatei optional erkennen |
+| Regelmaterialisierung | `ProjectInstanceFactory`, `reload_config` | Optionale feste Nachbardatei, zentrale Dateinamenskonstante, kein freier Config-Override, klare `active`/`not_configured`-Semantik |
+| Assembly-Session | Assembly-Registry, Decompiler, Snapshot-/Resource-Lifecycle | In denselben Analyse-Envelope einordnen, aber eigene Hash-, Referenz-, Ressourcen- und Cleanup-Semantik behalten |
+| Antwortprojektion | Assembly-Response, Project-/Daemon-Health, Composite-Tools | `targetType` und alte Zielbegriffe entfernen; `origin`, `lintStatus`, `operationStatus`, `completeness` und Abschnittsstatus standardisieren |
+| Ressourcen | Overview-/Rules-Registrierung, Resource-Lease und Formatter | `targetPath` statt `projectRoot`; zielgebundene URIs benötigen eine konkrete Datei; Assembly-Regelresource ist `unsupported` |
+| Tests | Resolver-, Wiring-, Registry-, Resource-, Daemon-, Assembly- und MCP-E2E-Tests | Alte Verträge löschen/ersetzen; keine Paralleltests, die den Altvertrag weiterhin als gültig festschreiben |
+| Dokumentation/Agentenregeln | `Docs/*`, `.agents/rules/*`, Bootstrap-/Servertexte | Ein einziger neuer Vertrag; veraltete Beispiele, Fehlercodes und Setup-Anweisungen vollständig entfernen |
+
+### Bewusste interne Grenze
+
+Der Refactor vereinheitlicht die Auflösung, das Analysemodell und die Agentenantworten. Er erzwingt nicht, dass Source- und Assembly-Sessions denselben Registry-Code verwenden. Die Assembly-Registry darf wegen Decompiler-Snapshots, Referenzexpansion und externen Ressourcenlimits separat bleiben, solange sie denselben `ResolvedAnalysisContext`- und Antwortvertrag erfüllt.
+
+Eine gemeinsame Registry wäre nur dann sinnvoll, wenn sie ohne künstliche Sonderfälle dieselben Lease-, Eviction- und Fehlersemantiken tragen kann. Das ist kein Ziel dieses Konzepts und darf nicht als Nebenprodukt erzwungen werden.
+
+### Scope-Grenze zur Batch-CLI
+
+Die neue Konvention `ainetlinter-rules.json` betrifft die automatische MCP-Auflösung neben einer übergebenen Solution. Der Batch-CLI-Vertrag mit explizitem `--config` bleibt davon getrennt; ein expliziter CLI-Regelpfad darf weiterhin frei benannt sein. Dadurch wird der MCP-Schnitt nicht unnötig zu einer globalen CLI-Migrationsaufgabe erweitert.
+
+Die MCP-Implementierung darf die alte Projektdefinitionslogik trotzdem nicht als versteckten Fallback behalten. Für MCP gibt es nach dem Schnitt genau einen Source-Einstieg: konkrete Solution-Datei plus optionale benachbarte `ainetlinter-rules.json`.
+
+### Refactor-Abschlusskriterium
+
+Der Refactor ist erst abgeschlossen, wenn eine Suche über produktiven MCP-Code, MCP-Tests, MCP-Dokumentation und Agentenregeln keinen aktiven Vertragsrest von `targetType`, `projectRoot` als Zielparameter oder `ainetlinter.project.json` mehr findet. Historische Changelog-/Roadmap-Hinweise dürfen den entfernten Vertrag als Historie erwähnen, aber nicht als nutzbaren Pfad beschreiben.
+
 ### Konkrete Umsetzungsleitplanken
 
 - Es gibt genau einen öffentlichen `targetPath`-Resolver. Die MCP-Tool-Dispatcher erhalten keinen vom Agenten gelieferten Zieltyp mehr.
@@ -463,6 +499,8 @@ Nach der späteren Implementierungsfreigabe sind mindestens folgende Nachweise e
 
 Die Implementierung muss zusätzlich den in `AGENTS.md` geforderten Build und die vollständigen Nicht-Stress-Testläufe über `FastTests` und `IntegrationTests` grün durchlaufen. Wegen der MCP-Vertragsänderung sind außerdem gezielte MCP-Handshake-, Tool-Schema-, Source- und Assembly-Integrationstests erforderlich.
 
+Zusätzlich ist ein abschließender Vertrags-Scan mit `rg` über produktiven MCP-Code, MCP-Tests, `Docs/` und `.agents/` verpflichtend. Er muss aktive Vertragsvorkommen von `targetType`, `projectRoot` als MCP-Zielparameter und `ainetlinter.project.json` auf null reduzieren; rein lokale C#-Variablennamen wie ein fachlich anderes `targetType` sowie klar markierte historische Dokumentation oder der Konzeptentwurf selbst sind davon ausgenommen.
+
 Betroffene Dokumentation muss nach der Implementierung aktualisiert werden, insbesondere `Docs/agent-api.md`, `Docs/integration.md`, `Docs/configuration.md` und die MCP-Arbeitsregeldatei.
 
 ## Arbeitsgedächtnis (nur Draft)
@@ -480,6 +518,7 @@ Betroffene Dokumentation muss nach der Implementierung aktualisiert werden, insb
 - Eine DLL aktiviert den Decompiled-Modus automatisch; Assembly-Linting ist deaktiviert und nicht verfügbar.
 - Es wird kein `<assembly-name>.project.json` erzeugt.
 - Technische Dekompilierungsartefakte bleiben intern und werden über Herkunft, Vollständigkeit und Identität transparent gemacht.
+- Die MCP-Umstellung wird als vollständiger Refactor aller betroffenen Vertrags-, Session-, Ressourcen-, Test- und Dokumentationsschichten umgesetzt; ein lokaler Resolver-Patch ist ausdrücklich nicht ausreichend.
 
 ### Relevante geprüfte Evidenz
 
@@ -487,6 +526,7 @@ Betroffene Dokumentation muss nach der Implementierung aktualisiert werden, insb
 - Der aktuelle `ProjectDefinitionLoader` verlangt eine feste `ainetlinter.project.json` mit `solution` und `rules`.
 - Die bestehende Assemblyanalyse besitzt bereits getrennte Registry-/Snapshot- und Ressourcenpfade.
 - Die aktuelle MCP-Dokumentation beschreibt Source- und Assembly-Tools mit unterschiedlichen Capabilities.
+- Die aktuelle Code-/Dokumentationssuche zeigt aktive Vertragsverweise in Registrierungen, Dispatch, ProjectRegistry/Leases, Ressourcen, ServerInstructions, Tests, E2E-Harness und mehreren Dokumentationen; damit ist ein Querschnittsrefactor sachlich begründet.
 - Die Repository-Regeln verlangen MCP-first für C#-Semantik, aber dieses Konzept betrifft primär den externen Vertrag und wurde deshalb anhand der vorhandenen Resolver-, Loader- und Dokumentationsstrukturen geprüft.
 
 ### Vorläufige Empfehlungen
@@ -499,4 +539,4 @@ Betroffene Dokumentation muss nach der Implementierung aktualisiert werden, insb
 
 ### Nächste fachliche Klärung
 
-Die fachlichen Scope-Entscheidungen sind bestätigt. Als nächster Planerschritt müssen die verbleibenden Statuswerte, Capability-Namen und die genaue Zuordnung der bestehenden Tools zum neuen Analysekontext geprüft werden, damit kein Tool stillschweigend eine alte Projekt-/Assembly-Semantik behält.
+Die fachlichen Scope-Entscheidungen sind bestätigt. Der 360°-Review bestätigt den vollständigen MCP-Refactor als sinnvollen Scope. Vor einer Freigabe ist nur noch zu prüfen, ob die beschriebene Matrix und die Verifikationsanforderungen als ausreichender Übergabevertrag für die Umsetzung akzeptiert werden.
