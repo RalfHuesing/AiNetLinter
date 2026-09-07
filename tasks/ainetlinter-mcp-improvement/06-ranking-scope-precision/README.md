@@ -12,6 +12,8 @@ Ein Agent soll aus Ergebnissen keine riskante fachliche Entscheidung ableiten, w
 - Partial-Klassen, Attribute, DI/Reflection und lokale Sprachkonstrukte konservativ behandeln;
 - Security-/Refactoring-Empfehlungen nur bei belastbarer Kategorie ausgeben.
 
+Gefährliche Präzisionsfehler gehören in die erste Lieferung: Produktions-/Test-Scope, scoped Top-Befunde, versteckte Null-Kategorien, Dead-Code-Confidence, Magic-Value-Kategorien und Duplicate-Scope. Eine vollständige Neuentwicklung der zugrunde liegenden Heuristiken ist dagegen kein Muss.
+
 ## Ausgangsbefunde
 
 `find_dead_code`, `find_duplicates`, `find_magic_values`, `pattern_detect`, `safeguard` sowie Ranking-/Scope-Teile aus `get_impact`, `get_feature_context` und `combo-impact-lint`.

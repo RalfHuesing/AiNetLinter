@@ -22,7 +22,7 @@ Ein Agent soll eine gefundene Definition, Memberstruktur oder Call-Site ohne man
 
 ## Abhängigkeiten
 
-Die öffentliche Kompatibilitätsentscheidung und der gemeinsame Completeness-/Paging-Vertrag müssen vor der Umsetzung feststehen.
+Der kanonische Endzustand der Identifier und der gemeinsame Completeness-/Paging-Vertrag müssen vor der Umsetzung feststehen; eine Übergangskompatibilität ist nicht erforderlich.
 
 ## Abnahme
 

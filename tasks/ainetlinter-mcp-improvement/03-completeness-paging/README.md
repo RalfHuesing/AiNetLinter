@@ -2,7 +2,7 @@
 
 ## Ziel
 
-Ein Agent soll erkennen, ob eine Antwort leer, vollständig, begrenzt, nicht unterstützt oder fehlgeschlagen ist, und bei Begrenzung deterministisch fortsetzen können.
+Ein Agent soll erkennen, ob eine Antwort leer, vollständig, begrenzt, nicht unterstützt oder fehlgeschlagen ist, und bei Begrenzung eine belastbare nächste Entscheidung treffen können. Das Paket baut keinen klassischen Seitenbrowser.
 
 ## Scope
 
@@ -10,7 +10,9 @@ Ein Agent soll erkennen, ob eine Antwort leer, vollständig, begrenzt, nicht unt
 - keine „vollständig“-Aussage bei sichtbarer oder fachlicher Kappung;
 - getrennte Zählung konkurrierender Richtungen und Abschnitte;
 - sichtbare Budgets für Markdown und StructuredContent;
-- tokenarme Defaults plus explizite Fortsetzung statt blindem `maxResults`-Hochsetzen.
+- tokenarme, fachlich gerankte Defaults plus gezielter Drilldown statt blindem `maxResults`-Hochsetzen;
+- bei massenhaften oder nicht sinnvoll rankbaren Ergebnissen ein maschinenlesbarer Scope-/Filter-Hinweis;
+- Cursor nur für einen sinnvollen weiteren Ausschnitt, nicht als Erwartung, dass ein Agent zehn Seiten abarbeitet.
 
 ## Ausgangsbefunde
 
@@ -22,7 +24,7 @@ Ein Agent soll erkennen, ob eine Antwort leer, vollständig, begrenzt, nicht unt
 
 ## Abhängigkeiten
 
-Benötigt Entscheidungen zu Text/StructuredContent und zur gemeinsamen Paging-Semantik. Paket 02 muss die Identifier für Fortsetzungs- und Folgecalls festlegen.
+Die Entscheidungen zu Text/StructuredContent und bounded Exploration sind getroffen. Paket 02 muss die Identifier für Fortsetzungs- und Folgecalls festlegen.
 
 ## Abnahme
 

@@ -26,6 +26,20 @@ Die Paketnummer ist die vorläufige Lieferreihenfolge. Sie kombiniert:
 
 Severity bleibt der Befundstatus aus dem Audit. `Mittel` bzw. fehlende kanonische Schwere wird bewusst als Normalisierungsproblem markiert.
 
+Die Reihenfolge ist eine Slice-Reihenfolge innerhalb eines Gesamt-Tasks. Sie bedeutet nicht, dass Assembly-Funktionalität aus dem Scope fällt. Gemeinsame Verträge werden zuerst stabilisiert; Projekt- und Assembly-Implementierungen werden danach im selben Vorhaben umgesetzt.
+
+## Bounded Exploration statt Seitenbrowser
+
+Die Matrix bewertet Paging nicht als „Agent muss Seite 1 bis N lesen“. Für große Ergebnismengen gilt:
+
+- kleine, fachlich gerankte Defaults;
+- ehrliche `totalCount`-/`returnedCount`-/`completeness`-/`truncatedBy`-Metadaten;
+- bevorzugt Filter, Scope, Richtung, Detaillevel oder Zusammenfassung als nächster Schritt;
+- opaker `continuationToken` nur für einen sinnvollen weiteren Ausschnitt;
+- bei nicht sinnvoll rankbaren Massenmengen ein expliziter Scope-/Filter-Hinweis statt beliebiger erster Treffer.
+
+Das Ziel ist eine belastbare nächste Agentenentscheidung, nicht die vollständige Übertragung der Datenmenge in den Kontext.
+
 ## Matrix
 
 ### 01 – Discovery Contract

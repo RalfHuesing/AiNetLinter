@@ -22,7 +22,7 @@ Externe DLL-/EXE-Analyse soll als statischer Snapshot nützlich und ehrlich sein
 
 ## Abhängigkeiten
 
-Pakete 01–03 und die Kompatibilitätsentscheidung für Assembly-IDs. Assembly-Parität ist kein Vorab-Blocker für die erste Projektlieferung.
+Pakete 01–03 liefern die gemeinsamen Verträge. Assembly-Parität ist Bestandteil dieses Gesamt-Tasks; die Slice-Reihenfolge verhindert nur, dass dieselben Verträge zweimal unterschiedlich implementiert werden.
 
 ## Abnahme
 

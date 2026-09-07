@@ -6,8 +6,7 @@ estimated_scope: large
 rules_dir: .agents/rules
 last_updated: 2026-09-07
 open_questions:
-  - Welche systemischen Befunde werden nach der Normalisierung tatsächlich behoben?
-  - Welche API-Verträge dürfen zugunsten einer kleineren Agentenoberfläche geändert werden?
+  - Soll das konkretisierte Konzept jetzt ausdrücklich als `ready` freigegeben werden?
 depends_on:
   - tasks/ainetlinter-mcp-usage-audit/Konzept.md
 related_tasks:
@@ -44,7 +43,7 @@ Das Audit bleibt Evidenzarchiv. Dieses Konzept bündelt wiederkehrende Root Caus
 | 07 | Schema & Documentation | JSON-Schema, Fehlertexte, Runtime-Instructions und Referenzdoku synchronisieren | `tool-discovery`, Resources, `Docs/agent-api.md`, README, MCP-Regeln |
 | 08 | Keep & Defer | Funktionierendes schützen, Wünsche und geringe Risiken bewusst zurückstellen | `ok`-Befunde, kosmetische Reibung, unbelegte `wish`-Forderungen |
 
-Die Pakete 01–06 enthalten jeweils ihre eigene Schema-/Dokumentations- und Testarbeit. Paket 07 ist nur für verbleibende, nicht paketgebundene Bereinigung vorgesehen.
+Die Pakete 01–06 enthalten jeweils ihre eigene Schema-/Dokumentations- und Testarbeit. Paket 07 ist nur für verbleibende, nicht paketgebundene Bereinigung vorgesehen. Alle Pakete gehören zu diesem einen Verbesserungs-Task; die Nummern beschreiben Abhängigkeiten und Liefer-Slices, keine getrennten Produktvorhaben.
 
 ## 360°-Bewertung aus Agentensicht
 
@@ -80,6 +79,19 @@ Die Analyse bleibt read-only und führt Assemblys nicht aus. Besonders gefährli
 
 Schema, Registrierung, Formatter, StructuredContent, Runtime-Instructions, `Docs/agent-api.md` und Tests müssen aus derselben Verhaltensentscheidung aktualisiert werden. Ein einzelner Fix im Formatter ohne Vertrags- und Regressionstest würde die beobachtete Drift nur verschieben.
 
+## Agententaugliche Begrenzung großer Ergebnismengen
+
+Ein klassisches „Seite 4 von 10“-Modell ist nicht das primäre UX-Ziel. Ein Agent wird bei zehn Seiten mit je zehn Einträgen meist nicht sinnvoll durchblättern. Der Server muss deshalb zwischen **Begrenzung** und **Navigation** unterscheiden:
+
+- **Bounded default:** Jeder Standardcall liefert eine kleine, fachlich gerankte und für die nächste Entscheidung ausreichende Antwort.
+- **Ehrlicher Status:** Die Antwort nennt `totalCount`, `returnedCount`, `completeness` und `truncatedBy`. Ein begrenzter Ausschnitt darf niemals als globale Negativaussage oder als vollständig geprüft erscheinen.
+- **Gezielter Drilldown:** Der bevorzugte nächste Schritt ist ein engerer Scope, eine Richtung, ein Symbolkind, ein Detaillevel oder eine Zusammenfassung – nicht das blinde Laden der nächsten Seite.
+- **Continuation nur als Werkzeug:** Wo eine geordnete Restmenge fachlich sinnvoll ist, gibt es einen opaken `continuationToken` für einen weiteren begrenzten Ausschnitt. Der Agent muss damit nicht die gesamte Datenmenge konsumieren; der Token ist ein gezielter Drilldown, kein UI-Seitenbrowser.
+- **Übergroße offene Abfragen:** Wenn ohne Filter keine sinnvolle Top-Menge bestimmbar ist, soll das Tool eine kompakte Zusammenfassung oder `requiresScope`/einen vergleichbaren maschinenlesbaren Hinweis liefern. Es darf nicht willkürlich die ersten zehn Treffer als repräsentativ verkaufen.
+- **Gemeinsames Prinzip, nicht zwangsläufig identische Parameter:** Alle Tools teilen die Statussemantik und das Fortsetzungsprinzip. Die konkrete Filter- und Drilldown-Sprache darf fachlich je Tool verschieden bleiben.
+
+Damit wird das eigentliche Problem adressiert: nicht „wie kann der Agent Millionen Treffer lesen?“, sondern „wie bekommt er eine belastbare nächste Entscheidung, ohne dass der Kontext flutet oder ein Ausschnitt als Wahrheit missverstanden wird?“
+
 ## Entscheidungsmodell für Findings
 
 Jeder Befund erhält in der Synthese genau eine Disposition:
@@ -112,20 +124,46 @@ Das dauerhafte Synthese-Artefakt ist eine Befundmatrix im neuen Verbesserungs-Ta
 - **Gate D – Umsetzung:** Kein Paket startet ohne überprüfbare Akzeptanzkriterien und passende Verifikation.
 - **Gate E – Abschluss:** Nach der Umsetzung gelten Build, Nicht-Stress-Testläufe, MCP-Nachweise und der passende Audit gemäß `AGENTS.md`.
 
+## Getroffene Produktentscheidungen
+
+Die folgenden Entscheidungen stammen aus dem Sparring und gelten für dieses Konzept:
+
+1. **Keine Migrations- oder Kompatibilitätslast:** Die MCP-Verträge dürfen für den sauberen Zielzustand geändert werden. Es muss keine alte ID- oder Response-Form parallel gepflegt werden. Die Umsetzung muss trotzdem einen konsistenten Endzustand herstellen; halbe Übergangsformen sind kein Ziel.
+2. **Projekt und Assembly gehören in denselben Task:** Assembly ist kein späteres separates Produktvorhaben. Die Umsetzung darf aber in abhängigen Slices erfolgen: gemeinsame Verträge zuerst, danach Projekt- und Assembly-Adapter bzw. gezielte Parität.
+3. **Paging ist kein Seitenbrowser:** Es gilt der oben beschriebene bounded-/drilldown-orientierte Vertrag. Ein Cursor ist nur dort Pflicht, wo eine geordnete Restmenge tatsächlich sinnvoll fortgesetzt werden kann; 10 kleine Seiten als Standard-UX sind ausdrücklich nicht das Ziel.
+4. **Text und StructuredContent:** Beide werden fachlich gleichwertig aus derselben typisierten Ergebnisaggregation erzeugt, soweit das im jeweiligen Kontext sinnvoll ist. Keine kritische Folgeinformation darf nur in einem für den Agenten unsichtbaren Kanal liegen.
+5. **Harte Agenten-Abnahme:** „Kein manuelles ID-Raten“ und „kein falsches Grün bei `complete`/leer“ sind Release-Kriterien, nicht bloße Wünsche.
+
+## Heuristik-Scope für die erste Lieferung
+
+Die erste Lieferung soll keine vollständige Neuentwicklung aller Heuristiken erzwingen. Sie muss aber alle beobachteten Heuristiken entschärfen, die zu einer schädlichen Agentenentscheidung führen können:
+
+### Muss in die erste Lieferung
+
+- Produktions-/Test-Ranking und `scopeType=production` müssen tatsächlich den versprochenen Scope liefern.
+- `get_impact`, `get_feature_context`, `get_violations` und `metrics_lookup` dürfen für denselben Anker keine widersprüchliche Vollständigkeit oder Violation-Wahrheit ausgeben.
+- `safeguard` muss scoped Top-Befunde tatsächlich auf den Scope begrenzen.
+- `pattern_detect` muss leere Kategorien sichtbar bzw. als geprüft/keine Treffer kennzeichnen; ein Default darf nicht fünf Kategorien stillschweigend grün erscheinen lassen.
+- `find_dead_code` muss Confidence, Reflection/DI-/Routing-Grenzen und „Kandidat, nicht Löschauftrag“ so ausgeben, dass kein direktes Löschen nahegelegt wird.
+- `find_magic_values` muss Zahlen-/String-/Security-Kategorien fachlich korrekt trennen; irreführende Security-Labels sind zu entfernen oder zu begrenzen.
+- `find_duplicates` muss Scope und Kandidatenstatus klar machen und Test-/Artefaktfluten verhindern.
+
+### Nachgelagert, sofern kein Release-Kriterium betroffen
+
+- neue oder feinere Ranking-Algorithmen ohne reproduzierten Agentenschaden;
+- vollständige Recall-Verbesserungen für Reflection, Source Generators oder dynamische DI;
+- kosmetische Tabellen-, Nummerierungs- oder Formatierungsverbesserungen;
+- zusätzliche Komfort-Wishes, die weder falsche Entscheidungen noch unnötige Roundtrips verursachen.
+
+Die gefährlichen Präzisionsfixes bleiben damit im Scope dieses Gesamt-Tasks, werden aber nach den Vertragsgrundlagen umgesetzt und nicht zum Vorwand für eine unendliche Heuristik-Neuentwicklung.
+
 ## Entscheidungen, die vor der Umsetzung benötigt werden
 
-Die Synthese ist bis hierhin autonom möglich. Vor dem ersten Produktionspaket bleiben diese Produktentscheidungen offen:
-
-1. **Kompatibilität:** Dürfen öffentliche Response-Formate und ID-Semantik breaking geändert werden? Empfehlung: zunächst additive Felder und Übergangskompatibilität; alte IDs nur entfernen, wenn ein klarer Versions-/Migrationspfad existiert.
-2. **Priorität der Targets:** Soll der Projekt-C#-Pfad zuerst vollständig agententauglich werden und Assembly danach folgen? Empfehlung: ja; Assembly bleibt im Scope, blockiert aber nicht die erste Projektlieferung.
-3. **Paging-Vertrag:** Soll ein gemeinsamer `continuationToken`-/Completeness-Envelope für alle begrenzten Tools eingeführt werden? Empfehlung: ja, statt pro Tool eigene Offset- oder „maxResults erhöhen“-Workarounds zu behalten.
-4. **Text versus StructuredContent:** Ist die sichtbare Agentenoberfläche primär Markdown/Text, oder dürfen wir StructuredContent als führenden Vertrag voraussetzen? Empfehlung: beide aus derselben typisierten Aggregation erzeugen; kein wichtiges Follow-up nur in StructuredContent verstecken.
-5. **Abnahmeschwelle:** Sollen „kein manuelles ID-Raten“ und „kein falsches Grün bei `complete`/leer“ harte Release-Kriterien sein? Empfehlung: ja.
-6. **Scope der Wünsche:** Sollen Ranking- und Heuristikverbesserungen (`dead_code`, `magic_values`, Testzuordnung, Produktionspriorisierung) Bestandteil der ersten Lieferung sein? Empfehlung: die gefährlichen False Positives/Negatives ja, reine Komfort-Wishes später.
+Die fachlichen Entscheidungen sind damit getroffen. Vor der Umsetzung bleibt nur die formale Freigabe dieses Drafts als `ready`.
 
 ## Nächster Planungsschritt
 
-Als nächstes wird die Befundmatrix aus den vorhandenen Einzel- und Combo-Findings aufgebaut. Danach prüfen wir zuerst die Cluster `Discovery Contract`, `Symbol IDs & Navigation` und `Completeness & Paging` gegeneinander, weil sie die stärksten Querverbindungen und Abhängigkeiten haben.
+Die Befundmatrix ist aufgebaut. Nach der Freigabe startet die Umsetzung als ein Gesamt-Task in abhängigen Slices: zuerst Discovery/Vertragsgrundlagen, dann IDs und bounded Completeness, anschließend die Core-Workflows und Assembly-Pfade; die gefährlichen Heuristikfixes folgen innerhalb desselben Gesamtumfangs.
 
 ## Muss-Kriterien
 
@@ -155,8 +193,9 @@ Als nächstes wird die Befundmatrix aus den vorhandenen Einzel- und Combo-Findin
 - Das Audit-Konzept ist `status: ready` und bleibt unverändert.
 - Die neue Struktur ist als Folge-Task angelegt; noch keine produktive Änderung.
 - Die vorläufige Reihenfolge priorisiert zuerst Vertrauenswürdigkeit und Folge-Call-Verträge, danach Vollständigkeit und fachliche Workflows.
-- Vor der Freigabe dieses Konzepts müssen Findings normalisiert und auf die Problemgruppen abgebildet werden.
-- Der nächste konkrete Arbeitsgegenstand ist eine Befundmatrix; sie ersetzt keine Umsetzung und keine Änderung am read-only Audit.
+- Findings sind normalisiert und auf die Problemgruppen abgebildet.
+- Die Befundmatrix ersetzt keine Umsetzung und ändert das read-only Audit nicht.
 - Die Synthese wird iterativ mit dem Nutzer abgestimmt; das Konzept bleibt bis zur ausdrücklichen Freigabe `draft`.
 - Die 45/45-Befunde sind in `Befundmatrix.md` genau einmal einer primären Problemgruppe und Disposition zugeordnet.
-- Die verbleibende Blockade ist keine Informationslücke im Audit, sondern eine Produktentscheidung zu Kompatibilität, Target-Reihenfolge, Paging, sichtbarer Antwortoberfläche und Abnahmeschwelle.
+- Die Produktentscheidungen zu Kompatibilität, Targets, bounded Paging, Antwortkanälen, Abnahmeschwelle und Heuristik-Scope sind im Draft eingearbeitet.
+- Die einzige verbleibende Blockade ist die ausdrückliche Freigabe des Konzepts als `ready`.
