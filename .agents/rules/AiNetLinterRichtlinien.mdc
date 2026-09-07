@@ -1,121 +1,93 @@
 ---
-description: AI coding guidelines, constraints, and documentation rules for the AiNetLinter project.
+description: Verbindliche Architektur-, Qualitäts-, Test- und Arbeitsregeln für AiNetLinter.
 globs: *
 alwaysApply: true
 ---
-# AiNetLinter Architecture & Workflow Guidelines
 
-Strikte Leitplanken für Code-Erstellung, Refactorings, Builds und Releases in `AiNetLinter` (.NET 10).
+# AiNetLinter-Richtlinien
 
-> [!NOTE]
-> Die allgemeinen Code-Qualitätsmetriken, Grenzwerte und aktiven Linter-Regeln werden automatisch über die Regeldatei [AiNetLinter.mdc](AiNetLinter.mdc) synchronisiert.
+Diese Datei enthält dauerhafte Regeln für das Repository. Nutzeranweisungen
+haben Vorrang. Kontextabhängige Abläufe gehören in Skills und Rollen, nicht in
+diese Always-on-Regel.
 
-## 1. Grundprinzipien (Design Philosophy)
+## Architektur
 
-- **Monolithisch & schlank bleiben**: AiNetLinter ist und bleibt ein einzelnes, eigenständiges CLI-Tool. Keine Plugin-Architektur, kein dynamisches Laden von Erweiterungen.
-- **Statische Kompilierung bevorzugen**: Kein `AssemblyLoadContext` oder Reflection-basiertes Laden zur Laufzeit.
-- **Einfachheit vor Abstraktion**: Bevorzuge direkte, verständliche Lösungen. Abstraktion nur dort, wo sie echten Mehrwert liefert (Wiederverwendung + Verständlichkeit).
-- **Wenig Magic**: Vermeide versteckte Mechanismen, die nur durch Lesen des generierten Codes verständlich sind.
-- **Immutability & Performance**: Record-Types für unveränderliche Datenstrukturen bevorzugen. Roslyn-`SyntaxTree`-/`SemanticModel`-Zugriffe sparsam halten (teuer).
-- **Dokumentation als Kontext nutzen**: Vor tiefgreifenden Änderungen oder Refactorings die Dokumentation im Ordner `Docs/` konsultieren:
-  - `Docs/configuration.md`: Sämtliche CLI-Optionen, Konfigurationsschemata und Linter-Regeln.
-  - `Docs/agent-api.md`: Spezifikation der Agenten-Schnittstellen und Formate.
-  - `Docs/integration.md`: Integrationsleitfaden für IDEs und externe Tools.
-  - `Docs/ROADMAP.md`: Entwicklungshistorie und Fortschritt (abgeschlossene Epics).
-  - `Docs/rationale.md`: Hintergründe und Motive zu Architektur-Entscheidungen.
-- **Dokumentations-Objektivität (verbindlich für README.md, `Docs/*.md`, `.agents/rules/*.mdc`):**
-  - **Nur Implementiertes dokumentieren.** Geplante, entfernte oder abgebrochene Features werden nicht als aktiv beschrieben. Ein Feature, das laut `ROADMAP.md` „(Entfernt)" ist, darf in keiner anderen Doku-Datei mehr als vorhanden referenziert werden (auch nicht als Pfad-Link auf eine nicht mehr existierende Datei).
-  - **Sachlich, nicht wertend — in beide Richtungen.** Keine Qualitäts- oder Wirkungsurteile ohne Beleg, weder positiv noch negativ. Verboten: unbelegte Superlative und Marketing-Adjektive („mächtig", „hervorragend", „extrem hoch", „bahnbrechend", „state-of-the-art"), aber auch abwertende Formulierungen. Erlaubt: messbare, nachprüfbare Aussagen (Zahlen, Zitate mit Quellenangabe wie in `rationale.md`, Verhalten das der Code tatsächlich zeigt).
-  - **Prüfpflicht bei Doku-Änderungen:** Wer eine CLI-Option, ein Config-Feld, eine Regel-ID oder ein MCP-Tool in der Doku beschreibt, verifiziert die Beschreibung gegen den aktuellen Code (Grep/Read), nicht gegen die eigene Erinnerung oder eine ältere Doku-Version.
+- AiNetLinter bleibt ein eigenständiges, statisch kompiliertes CLI-/MCP-Tool.
+  Kein Plugin-System, kein dynamisches Laden von Assemblies oder
+  `AssemblyLoadContext`, kein DI-Container.
+- Bevorzuge direkte, verständliche Lösungen und unveränderliche Datenmodelle.
+  Abstraktionen brauchen konkreten Mehrwert für Wiederverwendung,
+  Verständlichkeit oder Testbarkeit.
+- Engine, Analyzer, Formatter und MCP-Tools bleiben generisch. Keine
+  repo-, projekt- oder pfadspezifischen Literale hardcodieren; Strukturen und
+  Testbereiche aus geladenen Roslyn-/Projektmetadaten ableiten.
+- Teure Roslyn-Zugriffe auf `SyntaxTree` und `SemanticModel` gezielt und nicht
+  wiederholt ausführen.
 
-## 2. Architektur-Verbote (Constraints)
-- **AssemblyLoadContext (ALC):** Kein dynamisches Laden von DLLs zur Laufzeit. Statische Kompilierung ist Pflicht.
-- **Kein Plugin-System:** Das Tool bleibt ein monolithisches, schlankes CLI-Werkzeug.
-- **Kein Dependency Injection Overhead:** Kein DI-Container verwenden. Nutze statische Klassen oder direkte Instanziierung.
-- **Allgemeingültigkeit (Keine repo-spezifischen Hardcodings):** AiNetLinter ist ein universeller Linter und MCP-Server für beliebige .NET-Solutions. In der Engine, den Analyzern, Formattern und MCP-Tools dürfen NIEMALS repo-spezifische Annahmen, Projekt- oder Pfadliterale (wie `AiNetLinter`, `AiNetLinter.FastTests`, feste Pfade wie `src/AiNetLinter/`) hartcodiert werden. Alle Erkennungen (Testprojekte, Testdateien, Projektpfade, Testbefehle, Ordnerstrukturen) MÜSSEN generisch über Roslyn-Metadaten (`Project`, `Document`), einheitliche Heuristiken (`TestProjectDetector`, `PathNormalizer`) oder über die geladene Solution-Struktur ermittelt werden.
+## C#-Analyse und Dokumentation
 
-## 3. Windows-Umgebung & Tool-Regeln
+- Für C#-Symbole, Referenzen, Aufrufketten, Abhängigkeiten, Impact und
+  Regelverstöße gilt zusätzlich `.agents/rules/AiNetLinter-McpWorkflow.mdc`.
+  Dessen aktuelle MCP-Schemas sowie absolute `targetPath`-/`targetType`-Werte
+  verwenden.
+- Dokumentiere nur implementiertes, belegbares Verhalten. Keine Marketing-
+  wertungen oder veralteten Pfade. CLI-, Konfigurations-, Regel- und
+  MCP-Beschreibungen gegen den aktuellen Code prüfen.
+- Bei Änderungen an CLI, Konfiguration, Regeln oder MCP-Verträgen die
+  betroffenen Dateien unter `Docs/`, `rules.json` und gegebenenfalls die
+  Roadmap synchronisieren.
+- `README.md` nur ändern, wenn sie ausdrücklich im Auftrag liegt; bestehende
+  Änderungen anderer Agenten erhalten.
 
-Diese Entwicklungsumgebung läuft **ausschließlich unter Windows**. Alle Shell-Befehle und Tool-Aufrufe müssen Windows-kompatibel sein.
+## Windows und Dateien
 
-### Shell
-- **Shell:** PowerShell 7 (`pwsh`) — kein Bash, kein `sh`, kein WSL.
-- Pfad-Trenner: Backslash `\` (oder forward slash `/` in .NET/git-Kontexten).
-- Keine Linux-Befehle wie `ls`, `cat`, `touch`, `find`, `grep` (als eigenständige Befehle), `rm -rf` etc.
+- Windows/PowerShell 7 verwenden. Git-Agentenbefehle immer mit `--no-pager`
+  ausführen; keine globale Pager-Konfiguration voraussetzen. Für Textsuche
+  zuerst `rg` verwenden.
+- Dateien mit `apply_patch` ändern. Keine breiten oder destruktiven Befehle;
+  bestehende Nutzer- und Parallel-Agentenänderungen erhalten.
+- Keine externen Source-Repositories oder untersuchten Assemblies ändern.
+- Credentials gehören niemals in Diagnosen, Logs oder Toolantworten.
+- Bei fehlgeschlagenen oder abgeschnittenen Testausgaben eine TRX-Datei zur
+  Diagnose verwenden, statt denselben Lauf ungezielt zu wiederholen.
 
-### Verfügbare Tools
-| Tool | Befehl | Hinweis |
-|:-----|:-------|:--------|
-| PowerShell 7 | `pwsh` | Primäre Shell |
-| Git | `git` | Immer mit `--no-pager` ausführen (siehe unten) |
-| Ripgrep | `rg` | Datei-Suche bevorzugt statt `grep` |
-| Python | `python` oder `py` | Für Hilfsskripte |
-| .NET SDK | `dotnet` | Funktioniert ohne Pfadangabe |
-| Node.js / npm | `node`, `npm` | Verfügbar |
-| GitHub CLI | `gh` | Für GitHub-Operationen |
-| curl | `curl` | HTTP-Anfragen |
+## Code und Tests
 
-### Git: Immer ohne Pager
-Git muss **immer** mit `--no-pager` aufgerufen werden, sonst hängt die Shell:
-```powershell
-git --no-pager log --oneline -10
-git --no-pager diff
-git --no-pager show HEAD
-```
-Alternativ als globale Session-Variable setzen: `$env:GIT_PAGER = ''`
+- Jede Logikänderung erhält passende xUnit-v3-Tests. Tests prüfen Verhalten,
+  nicht bloß Implementierungszeilen.
+- Tests parallel ausführbar halten. Globale Serialisierung nur bei belegtem
+  Bedarf; gemeinsame Zustände gezielt mit Lock, Fixture, Semaphore oder Retry
+  absichern.
+- Testtemporärdateien ausschließlich über
+  `AiNetLinter.TestKit.TestTempDirectory` im ignorierten Repository-Temp.
+  Keine Ad-hoc-Pfade im System-Temp.
+- MCP- und Dogfood-Verifikation ausschließlich über die vorhandene C#-
+  Testinfrastruktur; keine Ad-hoc-Skripte oder privaten Daten committen.
+- Keine Compilerwarnungen einführen. Fehlgeschlagene Tests nicht abschwächen
+  oder auskommentieren; die Ursache beheben.
+- Erwartete Fehler möglichst explizit als `Result<T>` modellieren; Exceptions
+  bleiben echten exogenen Fehlern wie IO- oder Netzwerkausfällen vorbehalten.
+- DRY, Magic Values und Dead Code im betroffenen Bereich fachlich bewerten.
+  Sichere, scope-nahe Bereinigungen sind erlaubt; keine breiten Cleanups oder
+  Abstraktionen nur wegen formaler Ähnlichkeit. Indirekte Nutzung über
+  Reflection, Serialisierung, DI, öffentliche APIs und Tests berücksichtigen.
+- Kommentare erklären nur nicht offensichtliches „Why“ oder Workarounds;
+  keine Task-, Ticket-, Prompt- oder Refactoring-Historie im Produktionscode.
 
-### Datei-Bearbeitung
-- **Kein `sed -i` / `awk` für Inline-Edits** — verursacht unter Windows Zeilenende-Probleme (CRLF vs LF).
-- Dateien entweder über das **Edit-Tool** des Agenten bearbeiten oder via PowerShell (`(Get-Content ...) -replace ... | Set-Content ...`).
-- Bei neuen Dateien: `New-Item -ItemType File` oder direkt schreiben — kein `touch`.
+## Git und parallele Agenten
 
-### Build & Test
-```powershell
-dotnet build          # Kompilieren
-dotnet test           # Tests ausführen
-dotnet run            # Starten
-```
-* **Test-Logging & Fehlerdiagnose:** Testläufe können über `--logger "trx;LogFileName=<Name>.trx"` diagnostiziert werden. Bei Testfehlern oder langem/abgeschnittenem Terminal-Output im Konsolenfenster soll der Agent die generierte TRX-Datei in `TestResults/` zur gezielten Fehlerdiagnose auslesen, anstatt den Testlauf unvollständig erneut zu starten. Welche `dotnet test`-Befehle aktuell den maßgeblichen Standard-Gate-Pfad bilden, steht ausschließlich in `AGENTS.md` — nicht hier zusätzlich pflegen.
-* **Test-Performance & Iterations-Workflow:** Während der schnellen Entwicklungsiteration ausschließlich in-memory Unit-/Component-Slices ausführen (`dotnet test src/AiNetLinter.FastTests --filter Category=Unit` bzw. `Category=Component`, <10s). Volle Integrationsläufe (`AiNetLinter.IntegrationTests --filter Category!=Stress`) starten Dutzende echte Subprozesse (`AiNetLinter.exe`), führen Roslyn-Workspace-Loads durch und dogfooden die gesamte Solution (~2 Minuten Laufzeit). Sie sind ausschließlich für die finale Gate-Verifikation vor dem Abschluss eines Steps oder Tasks bestimmt.
-
-## 4. Updates & Tests
-- **xUnit v3 Tests:** Pflicht für jede Logik-Änderung.
-- **Testsuite-Parallelität bewahren:** Neue Testklassen werden standardmäßig
-  **nicht** in eine zwangsserialisierende Collection (`[Collection("ConsoleTestCollection")]`,
-  `DisableParallelization = true` o. ä.) aufgenommen. Ausnahme nur bei echtem,
-  im Code (XML-Doc-Kommentar an der Klasse) begründetem Bedarf — z. B. globale
-  `Console.Out`/`Console.Error`-Umleitung, die sich mit parallel laufenden
-  Tests gegenseitig stören würde. Vermutete Nebenläufigkeits-Probleme bei
-  MSBuild-/Subprozess-basierten Tests (`MSBuildLocator`-Registrierung,
-  parallele `AiNetLinter.exe`-Starts) werden gezielt gelöst (statisches Lock,
-  eigene Fixture, Retry-Logik, begrenzende `SemaphoreSlim`) — die gesamte
-  Collection zwangsserialisieren ist die teuerste und am wenigsten
-  zielgerichtete Lösung und braucht vor jedem Einsatz eine explizite
-  Begründung, warum die gezielte Lösung nicht reicht.
-- **Zentrales Test-Temp-Verzeichnis (`TestTempDirectory`):** Tests dürfen niemals eigene Ad-hoc-Pfade im Betriebssystem-Temp-Verzeichnis anlegen (`Path.GetTempPath()`, `Path.GetTempFileName()`, `Directory.CreateTempSubdirectory()`). Stattdessen MUSS immer die zentrale Helferklasse `AiNetLinter.TestKit.TestTempDirectory` (bzw. `using var tempDir = TestTempDirectory.Create("prefix-")`) verwendet werden, welche Unterordner im git-ignorierten Repo-Temp-Verzeichnis (`<RepoRoot>/temp/`) anlegt und per `IDisposable` am Testende automatisch und resilient bereinigt.
-- **MCP & Dogfood Testing:** MCP-Funktionalitäten und Live-Verifikationen (Dogfooding gegen das eigene Repo) werden ausschließlich über die C#-Testinfrastruktur umgesetzt (u. a. `McpHandshakeToolRegistrationTests` und `McpLiveRepositoryTests` in `AiNetLinter.IntegrationTests`). Das Anlegen von Ad-hoc-Skripten (z. B. im `.todos/`-Ordner) ist verboten.
-- **Dokumentations-Synchronisation:** Bei Änderungen an Features, CLI, Konfiguration, Regeln oder MCP-Verträgen sind die fachlich betroffenen Dateien unter `Docs/` sowie gegebenenfalls `Docs/ROADMAP.md` und `rules.json` ohne gesonderte Aufforderung zu aktualisieren. Eine Änderung an `README.md` ist davon ausgenommen und unterliegt der folgenden Ownership-Regel.
-- **README-Ownership:** `README.md` ist ein gemeinsam genutztes, bewusst kuratiertes GitHub-Aushängeschild. Nur der Agent, dessen aktuelle Aufgabe die README ausdrücklich umfasst, darf sie ändern. Feature-, API- oder Refactoring-Aufgaben dürfen sie nicht opportunistisch mitaktualisieren; solche Details gehören in die fachlich zuständigen Dokumente unter `Docs/`. Bei parallelen Änderungen werden bestehende README-Änderungen anderer Agenten erhalten und nicht eigenmächtig zurückgesetzt.
-- **Automatische Commits:** Jede Änderung an versionierten Dateien wird nach den für den Änderungsumfang passenden Prüfungen automatisch committed. Das gilt auch für reine Dokumentations-, Markdown- und Agenteninfrastrukturänderungen. Vor der Änderung werden `HEAD` und der Working-Tree-Status als Baseline geprüft. Ein Commit darf ausschließlich die eigenen, auftragsbezogenen Änderungen seit dieser Baseline enthalten; fremde, parallele oder bereits vorhandene Änderungen müssen erhalten bleiben. Niemals pauschal `git add .`, `git add -A` oder `git commit -a` verwenden. Vor dem Commit sind Staging-Bereich und Diff auf fremde Änderungen zu prüfen; bei fremden staged Änderungen oder nicht sicher trennbaren Änderungen im selben File wird nicht automatisch committed, sondern der Konflikt gemeldet. In orchestrierten Abläufen committen ausschließlich Orchestratoren; Implementer, Reviewer und Auditoren liefern beziehungsweise prüfen den Arbeitsstand ohne eigene Commits. Commits verwenden deutsche Conventional Commits im Imperativ. Pushes erfolgen nur auf ausdrückliche Anforderung; veröffentlichte Commits werden nicht nachträglich umgeschrieben.
-
-## 5. Qualitätsdrift-Prävention
-
-- **Zero-Warning-Direktive:** Alle Projekte sind mit `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` konfiguriert. Neuer Code darf keine Compiler-Warnungen einführen — kein Commit mit rotem Build.
-- **Result-Pattern bevorzugen:** Fehlerfälle explizit als `Result<T>` modellieren statt Exceptions zu werfen. Exceptions nur für echte, exogene Ausnahmefälle (z. B. Netzwerkausfall, IO-Fehler). Der Linter erzwingt dies nicht — die Einhaltung liegt beim Entwickler und der KI.
-- **Symptom-Fixing verboten:** Fehlschlagende Tests nicht auskommentieren oder Assertions abschwächen, um sie grün zu bekommen. Ursache immer in der zugrunde liegenden Engine bzw. im Rule-Processor beheben.
-- **Proaktiver Tech-Debt- & Drift-Abbau (DRY, Magic Values, Dead Code):** Code-Duplizierung, Magic Values und toter Code sind technische Schulden, die proaktiv im Zuge von Änderungen, Audits und Refactorings behoben werden müssen:
-  - **DRY & Refactoring-Drift:** Duplizierte Codeblöcke und driftende Hilfslogik (z. B. Neuerstellung bereits vorhandener Helper) in gemeinsame, wiederverwendbare Helfer konsolidieren.
-  - **Magic Values:** Wiederholte Magic Strings, magische Zahlen und verdächtige Hardcodings proaktiv in typisierte Konstanten (`const`), Enums oder Konfigurationen auslagern.
-  - **Dead Code:** Unreferenzierte Methoden, ungenutzte private Felder und verwaiste Klassen proaktiv aufspüren und bereinigen.
-- **Sparsamer Einsatz von Code-Kommentaren (Clean Code):** Self-Documenting Code bevorzugen; im Zweifelsfall keine Kommentare schreiben.
-  - **Verboten:** Jede Referenz auf Task-/Planungsartefakte, die den Code überleben soll — `step-008`, `TD-005`, `EPIC-06`, `unit 009`, Ticket-/Issue-IDs o. Ä. Diese Ordner/Dokumente werden nach Task-Abschluss gelöscht; der Verweis wird dann bedeutungslos. Architektur-Rationale gehört als ID-freier *Why*-Kommentar in den Code — z. B. "Formatierung ausgelagert, damit die Klasse unter dem Kopplungslimit bleibt" statt "TD-005-Muster, siehe step-007".
-  - **Verboten:** Refactoring-Historie (`war früher private`), Agenten-/Prompt-Regeln im Code.
-  - **Verboten:** Redundante Nacherzeugung des Bezeichners — ein Kommentar, der nur in Worten wiederholt, was Name/Signatur bereits sagen (Beispiel: `// Listet alle Tools auf` über einer Methode `ListTools()`). Bei sprechendem Namen und überschaubarer Methode: kein Kommentar.
-  - **Ausnahme:** Nur notwendige Erklärungen für unkonventionelles *Why* (Workarounds, technische Sonderfälle, nicht offensichtliche Constraints).
-  - **Aufräumen erlaubt:** Trifft ein Agent im Zuge einer Änderung im berührten Code auf eine bestehende Verletzung dieser Regel, darf er sie im selben Zug entfernen bzw. umschreiben — auch wenn das nicht Teil des eigentlichen Auftrags war.
-
-## 6. Agenten-Arbeitsstil
-
-- **Erst Mitdenken, dann Umsetzen:** Bei größeren Vorhaben oder neuen Features erst kurz im Sparring-Modus die Idee spiegeln und Vor-/Nachteile abwägen.
-- **Kompakte Antworten:** Antworten prägnant halten – Fazit und Kernaussage zuerst.
-- **Subagent-Lebenszyklus:** Orchestrierte Subagenten laufen strikt nacheinander in jeweils frischen, unabhängigen Tasks. Kein Rollen- oder Korrekturaufruf darf einen alten Subagenten fortsetzen. Eigene terminal abgeschlossene oder fehlgeschlagene Tasks werden vor dem nächsten Aufruf archiviert bzw. entfernt; laufende Tasks werden nicht allein wegen Dauer, Langsamkeit oder eines Wartefensters beendet. Eine Beendigung eines lebenden Tasks erfolgt nur nach ausdrücklicher Nutzer-Cancellation, nachweislichem Prozessabsturz oder terminalem Toolfehler; fremde Nutzer-Tasks bleiben unberührt.
+- Jede Änderung an versionierten Dateien wird nach passenden Prüfungen
+  automatisch committed, auch reine Markdown- oder Agenteninfrastruktur.
+- Vor Änderungen `HEAD` und Working-Tree-Status als Baseline erfassen. Ein
+  Commit enthält ausschließlich eigene, auftragsbezogene Änderungen seit
+  dieser Baseline.
+- Niemals pauschal `git add .`, `git add -A` oder `git commit -a` verwenden.
+  Nur explizite Pfade oder ausgewählte Hunks stagen und vor dem Commit Index
+  und Diff auf fremde Änderungen prüfen.
+- Fremde staged Änderungen oder nicht sicher trennbare Änderungen im selben
+  File blockieren den Auto-Commit; Konflikt melden statt fremde Änderungen zu
+  überschreiben oder mitzunehmen. In orchestrierten Abläufen committen nur
+  Orchestratoren; Rollen committen nicht selbst.
+- Commit-Nachrichten sind deutsche Conventional Commits im Imperativ. Pushes
+  und Umschreiben veröffentlichter Historie erfolgen nur auf ausdrückliche
+  Anforderung.
