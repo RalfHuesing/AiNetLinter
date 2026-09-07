@@ -5,11 +5,7 @@ project_kind: brownfield
 estimated_scope: large
 rules_dir: .agents/rules
 last_updated: 2026-09-07
-open_questions:
-  - Exakter Name der optionalen Regeldatei: `ainetlinter-rules.json` oder ein anderer kanonischer Name.
-  - Soll eine direkt neben einer DLL liegende Regeldatei im Decompiled-Modus automatisch gelten?
-  - Soll der harte Eingabevertrag nur `.sln`/`.slnx` und `.dll`/`.exe` akzeptieren oder zusätzlich explizite Verzeichnisse?
-  - Sollen Lint-Tools im Decompiled-Modus unterstützt werden oder ist dieser Modus zunächst ausschließlich Navigation/Analyse?
+open_questions: []
 depends_on: []
 related_tasks: []
 supersedes: null
@@ -61,21 +57,74 @@ Unterstützte direkte Eingaben:
 - `.slnx` oder `.sln`: Quellcode-Solution
 - `.dll` oder `.exe`: Assembly, die im Decompiled-Modus analysiert wird
 
-Ein explizit übergebenes Verzeichnis ist zunächst kein eigener Vertrag. Dadurch wird vermieden, dass der Server bei mehreren Solutions oder unklaren Layouts rät. Eine spätere Erweiterung kann Verzeichnisse deterministisch erlauben, ist aber kein Bestandteil des ersten Schnitts.
+Ein gültiger `targetPath` muss auf eine vorhandene Datei mit einer unterstützten Endung zeigen. Verzeichnisse sind kein Zielvertrag; der Server durchsucht sie nicht nach einer passenden Solution.
 
 Die Auflösung erfolgt ausschließlich anhand des vorhandenen Pfads und seiner Endung. Bei unbekannter Endung, fehlender Datei oder relativem Pfad liefert der Server einen deterministischen Invalid-Argument-Fehler.
+
+`targetPath` bezeichnet immer die konkrete Eingabedatei, nicht den Projektroot:
+
+```text
+targetPath = C:\\repo\\MyProject.slnx
+targetPath = C:\\libs\\ThirdParty.dll
+```
+
+Damit muss ein Agent nicht aus einem Verzeichnisinhalt erraten, welche Solution gemeint ist. Die kanonische Identität des Source-Kontexts basiert auf der aufgelösten Solution-Datei; die kanonische Identität des Decompiled-Kontexts basiert auf der Assemblydatei und ihrem Inhalt.
+
+## Agentenvertrag
+
+Der Agent soll für jede zielgebundene MCP-Abfrage denselben einfachen Vertrag verwenden:
+
+```json
+{
+  "targetPath": "C:\\repo\\MyProject.slnx"
+}
+```
+
+oder:
+
+```json
+{
+  "targetPath": "C:\\libs\\ThirdParty.dll"
+}
+```
+
+Die Antwort jedes zielgebundenen Tools muss, direkt oder über den gemeinsamen Analyse-Envelope, ausreichend Kontext liefern:
+
+```json
+{
+  "analysis": {
+    "inputPath": "C:\\libs\\ThirdParty.dll",
+    "origin": "decompiled",
+    "rulesConfigured": false,
+    "lintStatus": "unsupported",
+    "analysisMode": "navigation-only",
+    "completeness": "partial",
+    "capabilities": {
+      "symbolNavigation": true,
+      "lintViolations": false,
+      "gitImpact": false
+    }
+  }
+}
+```
+
+Der Agent darf nicht aus einer leeren Ergebnisliste ableiten müssen, ob die Analyse vollständig war, die Capability fehlte oder schlicht kein Treffer existierte. `origin`, `completeness`, `rulesConfigured` und relevante Capabilities sind deshalb Vertragsbestandteile und keine reine Formatierungsfrage.
+
+Die öffentlichen Toolschemas enthalten keine parallelen Projekt-/Assembly-Parameter. Unterschiede werden ausschließlich im normalisierten Analysekontext und in der jeweiligen Capability-Antwort dargestellt.
 
 ## Regelkonfiguration
 
 ### Kanonischer Name
 
-Die Regeldatei soll einen AiNetLinter-spezifischen, transparenten Namen erhalten. Arbeitshypothese:
+Die Regeldatei erhält den AiNetLinter-spezifischen, transparenten Namen:
 
 ```text
 ainetlinter-rules.json
 ```
 
 Der Name ist bewusst nicht nur `rules.json`, weil `rules` in fremden Projekten zu unspezifisch ist und die Herkunft der Datei für Agenten und Menschen nicht erkennbar macht.
+
+Der Dateiname wird im Code genau einmal als zentrale Konstante definiert und von Resolver, Tests und allen internen Dateinamensprüfungen wiederverwendet. Der Literalwert `ainetlinter-rules.json` darf nicht an vielen Stellen unabhängig als String wiederholt werden.
 
 ### Source-Modus
 
@@ -102,9 +151,11 @@ Insbesondere darf `get_violations` bei fehlender Konfiguration nicht erfolgreich
 
 ### Decompiled-Modus
 
-Eine Assembly hat zunächst kein automatisch zugeordnetes Regelwerk. Die Assembly wird als Analyse-/Navigationsziel behandelt; die Regelzuordnung für dekompilierten Code ist eine offene Produktentscheidung.
+Eine Assembly hat zunächst kein automatisch zugeordnetes Regelwerk. Die Assembly wird als Analyse-/Navigationsziel behandelt.
 
-Falls später Regeln für Assemblies zugelassen werden, muss die Zuordnung explizit und deterministisch erfolgen. Eine automatische Suche nach beliebigen `rules.json`-Dateien neben der DLL ist nicht vorgesehen.
+Assemblies sind keine Lint-Ziele. Linting ist für Assembly-Kontexte deaktiviert und nicht verfügbar. Das ist eine fachliche Grenze: Regelverstöße gegen dekompilierten Code würden leicht als Aussagen über den ursprünglichen Quellcode missverstanden. Verfügbar sind Navigation, Struktur, Referenzen, Bodies, Assembly-Metadaten und rohe Metriken, soweit der Snapshot sie belastbar liefert.
+
+Eine Assembly-Antwort muss deshalb zwischen „keine Regeln konfiguriert“ bei einem Source-Kontext und „Linting für diesen Zieltyp nicht verfügbar“ bei einem Assembly-Kontext unterscheiden. Dafür ist ein strukturierter Status wie `lintStatus: unsupported` erforderlich.
 
 ## Einheitliches internes Modell
 
@@ -147,7 +198,7 @@ Die gemeinsame Abstraktion bedeutet nicht, dass alle Fähigkeiten identisch sind
 | Build/Test | ja | nein |
 | Originalzeilen/Source-Link | ja | nein |
 | Assembly-Metadaten | indirekt | ja |
-| Lint-Verstöße | mit Regeldatei | separat zu entscheiden |
+| Lint-Verstöße | mit Regeldatei | nein |
 
 Die Toolschemas sollen nicht wieder zwei getrennte Benutzerpfade einführen. Unterschiede werden über `capabilities`, `origin`, `completeness` und klare Fehler-/Statuswerte ausgedrückt.
 
@@ -194,15 +245,29 @@ Der aktuelle Stand trennt Source- und Assemblyziele noch sichtbar:
 
 Die Vereinfachung soll den öffentlichen Vertrag zentralisieren. Sie verlangt nicht zwingend, Assembly-Registry und Source-Registry intern physisch zusammenzulegen. Gemeinsamer Analysekontext und gemeinsamer Resolver sind wichtiger als identische Speicherverwaltung.
 
+### Konkrete Umsetzungsleitplanken
+
+- Es gibt genau einen öffentlichen `targetPath`-Resolver. Die MCP-Tool-Dispatcher erhalten keinen vom Agenten gelieferten Zieltyp mehr.
+- Der Resolver entscheidet zunächst anhand von Existenz und Endung, danach materialisiert der passende Source- oder Decompiled-Provider einen gemeinsamen Analysekontext.
+- Für eine `.sln`/`.slnx` wird ausschließlich die benachbarte `ainetlinter-rules.json` betrachtet.
+- Für eine DLL wird kein Regelwerk automatisch entdeckt, Linting wird deaktiviert und kein user-facing Projektmanifest erzeugt.
+- Der kanonische Regeldateiname wird über genau eine zentrale Konstante bereitgestellt; Resolver und Tests verwenden diese Konstante statt eigener String-Literale.
+- `projectRoot` darf nicht als versteckter Parallelvertrag fortbestehen. Ressourcen und Tools müssen auf den neuen konkreten `targetPath`-Vertrag umgestellt werden.
+- Session- und Registry-Schlüssel müssen den normalisierten Kontext identifizieren. Bei Assemblies gehören mindestens Assemblypfad und Inhaltsidentität dazu; bei Source-Kontexten mindestens Solutionpfad und die wirksame Regelkonfiguration.
+- Der Resolver darf nicht durch Fallbacks, Parent-Suche oder Dateinamensraten eine andere Solution oder Regeldatei auswählen.
+- Die Antwortprojektion darf Capability-Information nicht nur als Freitext liefern. Für Agenten relevante Zustände benötigen strukturierte Felder und stabile Statuswerte.
+
 ## Muss-Kriterien
 
 - Der Agent kann eine `.sln`/`.slnx` oder `.dll`/`.exe` ausschließlich über `targetPath` adressieren.
+- `targetPath` adressiert die konkrete Datei, nicht ein Verzeichnis oder einen implizit ermittelten Projektroot.
 - `targetType` ist aus MCP-Schemas, Toolargumenten, Ressourcenverträgen und relevanter Dokumentation entfernt.
 - `ainetlinter.project.json` wird nicht mehr gelesen, erzeugt oder als Setup-Voraussetzung beschrieben.
 - Eine Source-Solution funktioniert ohne Regeldatei im Navigationsmodus.
 - Der kanonische Regeldateiname ist transparent und ausschließlich relativ zum Solution-Verzeichnis auflösbar.
 - Ungültige vorhandene Regeldateien führen zu einem klaren Konfigurationsfehler und nicht zu Default-Regeln.
 - Eine DLL aktiviert automatisch den Decompiled-Modus.
+- Assembly-Kontexte unterstützen grundsätzlich keine regulären Lint-Verstöße.
 - Der Decompiled-Modus erzeugt keine user-facing Projektdefinition.
 - Source- und Decompiled-Kontexte verwenden denselben öffentlichen Ziel- und Analysevertrag.
 - Herkunft, Vollständigkeit, Content-Identität und Capabilities bleiben maschinenlesbar.
@@ -217,7 +282,7 @@ Die Vereinfachung soll den öffentlichen Vertrag zentralisieren. Sie verlangt ni
 - Keine Behauptung, dass dekompilierter Code Originalquellcode ersetzt.
 - Keine automatische Ausführung oder dynamische Laufzeitladung von Assemblies.
 - Keine Gleichsetzung der Toolfähigkeiten für Git, Build, Tests und Originalzeilen.
-- Keine Entscheidung in diesem Konzept, wie Lint-Regeln auf Decompiled Code angewendet werden.
+- Keine Lint-Funktionalität für Assembly-Kontexte.
 - Keine Implementierung oder Freigabe dieses Konzepts in diesem Arbeitsschritt.
 
 ## Fehler- und Statussemantik
@@ -230,6 +295,7 @@ Der Resolver muss Fehler früh und verständlich melden:
 - `.sln`/`.slnx` ohne ladbare Solution: Source-Load-Fehler
 - ungültige `ainetlinter-rules.json`: Konfigurationsfehler
 - fehlende Regeldatei: kein Fehler, aber `rulesConfigured=false`
+- Lint-Aufruf auf Assembly-Kontext: `unsupported`, niemals leere Erfolgsmeldung
 - partielle Assembly-Referenzen: Analyseergebnis mit `completeness=partial` und Diagnostics
 - nicht unterstützte Operation im jeweiligen Kontext: maschinenlesbares `unsupported` mit Begründung
 
@@ -287,10 +353,11 @@ Betroffene Dokumentation muss nach der Implementierung aktualisiert werden, insb
 - Harte Schnitte sind gewünscht, keine Kompatibilitätsschicht.
 - `targetType` wird vollständig entfernt.
 - `ainetlinter.project.json` wird vollständig entfernt.
-- Regeldateien erhalten einen transparenten AiNetLinter-Namen; `ainetlinter-rules.json` ist die aktuelle Arbeitshypothese.
+- Die Regeldatei heißt verbindlich `ainetlinter-rules.json`.
+- Der Regeldateiname wird im Code über eine zentrale Konstante verwendet und nicht an vielen Stellen als String-Literal dupliziert.
 - Die Regeldatei liegt bei Source-Projekten neben der `.sln`/`.slnx` und ist optional.
 - Bei fehlender Regeldatei läuft der MCP-Kontext für Navigation/Analyse weiter.
-- Eine DLL aktiviert den Decompiled-Modus automatisch.
+- Eine DLL aktiviert den Decompiled-Modus automatisch; Assembly-Linting ist deaktiviert und nicht verfügbar.
 - Es wird kein `<assembly-name>.project.json` erzeugt.
 - Technische Dekompilierungsartefakte bleiben intern und werden über Herkunft, Vollständigkeit und Identität transparent gemacht.
 
@@ -304,11 +371,12 @@ Betroffene Dokumentation muss nach der Implementierung aktualisiert werden, insb
 
 ### Vorläufige Empfehlungen
 
-- Für den ersten harten Schnitt nur explizite Solution- und Assemblydateien akzeptieren, keine Verzeichnisheuristik.
+- Nur bestehende konkrete Dateien mit unterstützter Endung akzeptieren: `.sln`/`.slnx` oder `.dll`/`.exe`; keine Verzeichnisheuristik.
 - Fehlende Regeln als `navigation`, nicht als erfolgreiche leere Lint-Auswertung behandeln.
+- Assembly-Kontexte nicht linten; die Lint-Semantik würde sonst Aussagen über generierten statt originalen Code nahelegen.
 - Den Assembly-Cache content-basiert identifizieren.
 - Einen gemeinsamen `ResolvedAnalysisContext` einführen, ohne alle internen Registry-Implementierungen künstlich zu verschmelzen.
 
 ### Nächste fachliche Klärung
 
-Zuerst muss entschieden werden, ob der Decompiled-Modus im ersten Schnitt ausschließlich Navigation/Analyse liefert oder ob `ainetlinter-rules.json` auch auf dekompilierten Code angewendet werden soll. Davon hängen Regelauflösung, Capability-Vertrag und mehrere Tests ab.
+Die fachlichen Scope-Entscheidungen sind bestätigt. Als nächster Planerschritt müssen die verbleibenden Statuswerte, Capability-Namen und die genaue Zuordnung der bestehenden Tools zum neuen Analysekontext geprüft werden, damit kein Tool stillschweigend eine alte Projekt-/Assembly-Semantik behält.
