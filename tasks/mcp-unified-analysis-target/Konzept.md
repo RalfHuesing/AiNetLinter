@@ -97,7 +97,7 @@ Die Antwort jedes zielgebundenen Tools muss, direkt oder über den gemeinsamen A
     "origin": "decompiled",
     "rulesConfigured": false,
     "lintStatus": "unsupported",
-    "analysisMode": "navigation-only",
+    "analysisMode": "navigation",
     "completeness": "partial",
     "capabilities": {
       "symbolNavigation": true,
@@ -112,6 +112,24 @@ Der Agent darf nicht aus einer leeren Ergebnisliste ableiten müssen, ob die Ana
 
 Die öffentlichen Toolschemas enthalten keine parallelen Projekt-/Assembly-Parameter. Unterschiede werden ausschließlich im normalisierten Analysekontext und in der jeweiligen Capability-Antwort dargestellt.
 
+### Status- und Capability-Vertrag
+
+Die Herkunft des Kontexts und der Status der Lint-Funktionalität sind getrennte Dimensionen:
+
+| Feld | Zulässige Werte | Bedeutung |
+|---|---|---|
+| `origin` | `source`, `decompiled` | Herkunft des analysierten Kontexts |
+| `analysisMode` | `navigation`, `navigation_and_lint` | `navigation_and_lint` nur bei Source plus gültiger Regeldatei |
+| `lintStatus` | `active`, `not_configured`, `unsupported` | `active` nur bei Source plus gültiger Regeldatei; `not_configured` bei Source ohne Regeldatei; `unsupported` bei Assemblies |
+| `completeness` | `complete`, `partial`, `failed` | Vollständigkeit des Kontextes bzw. Ergebnisses |
+| Operationstatus | `ok`, `unsupported`, `not_configured`, `invalid_argument`, `failed` | Status des konkreten Toolaufrufs, wenn `ok` nicht zutrifft |
+
+`rulesConfigured=false` allein reicht für den Agenten nicht aus: Bei einer Assembly ist Linting strukturell nicht verfügbar, bei einer Source-Solution ohne Regeldatei nur noch nicht konfiguriert. Die strukturierte Antwort muss diese Fälle unterscheiden.
+
+Ein Composite-Tool darf wegen einer nicht verfügbaren Teilfähigkeit nicht den gesamten Analysekontext als fehlgeschlagen ausgeben. Es liefert die verfügbaren Abschnitte und markiert den einzelnen Abschnitt mit `status` und `reasonCode`, zum Beispiel `tests: unsupported` oder `violations: not_configured`.
+
+Ein unbekanntes oder explizit verbotenerweise mitgesendetes `targetType` gehört nicht zum neuen Schema. Der harte Schnitt wird als Schema- und Semantikbruch umgesetzt: Es gibt keinen Resolverpfad, der den Wert auswertet, und ein strikter Argumentvalidator soll den unbekannten Parameter als ungültige Eingabe melden statt ihn stillschweigend als Kompatibilitätsalias zu akzeptieren.
+
 ## Regelkonfiguration
 
 ### Kanonischer Name
@@ -124,7 +142,7 @@ ainetlinter-rules.json
 
 Der Name ist bewusst nicht nur `rules.json`, weil `rules` in fremden Projekten zu unspezifisch ist und die Herkunft der Datei für Agenten und Menschen nicht erkennbar macht.
 
-Der Dateiname wird im Code genau einmal als zentrale Konstante definiert und von Resolver, Tests und allen internen Dateinamensprüfungen wiederverwendet. Der Literalwert `ainetlinter-rules.json` darf nicht an vielen Stellen unabhängig als String wiederholt werden.
+Der Dateiname wird im Code genau einmal als zentrale Konstante definiert, beispielsweise `AiNetLinterFileNames.RulesFileName`, und von Resolver, Tests und allen internen Dateinamensprüfungen wiederverwendet. Der Literalwert `ainetlinter-rules.json` darf nicht an vielen Stellen unabhängig als String wiederholt werden.
 
 ### Source-Modus
 
@@ -240,6 +258,7 @@ Der aktuelle Stand trennt Source- und Assemblyziele noch sichtbar:
 - `src/AiNetLinter/Mcp/Projects/ProjectDefinitionLoader.cs` lädt aktuell zwingend `ainetlinter.project.json` mit `solution` und `rules`.
 - `src/AiNetLinter/Mcp/Projects/ProjectInstanceFactory.cs` materialisiert Regeln und unterscheidet derzeit zwischen Default-/Batch-Semantik und strengem Registry-Pfad.
 - Assembly-Registry, Decompiler und Snapshot-Lifecycle existieren bereits als eigener technischer Pfad.
+- Die bisherige Projektdefinitionskette (`ProjectDefinition`, `ProjectDefinitionLoader`, projektdefinitionsbezogene Fehler- und Factory-Pfade) ist nach dem Schnitt kein versteckter MCP-Einstiegspunkt mehr; obsolete Teile werden entfernt oder auf den neuen direkten Solution-/Regelpfad umgebaut.
 - `Docs/agent-api.md`, `Docs/integration.md` und gegebenenfalls `Docs/configuration.md` dokumentieren noch den alten Vertrag.
 - `.agents/rules/AiNetLinter-McpWorkflow.mdc` beschreibt derzeit `targetType`; diese Regeln müssen nach der fachlichen Freigabe synchronisiert werden.
 
@@ -256,6 +275,30 @@ Die Vereinfachung soll den öffentlichen Vertrag zentralisieren. Sie verlangt ni
 - Session- und Registry-Schlüssel müssen den normalisierten Kontext identifizieren. Bei Assemblies gehören mindestens Assemblypfad und Inhaltsidentität dazu; bei Source-Kontexten mindestens Solutionpfad und die wirksame Regelkonfiguration.
 - Der Resolver darf nicht durch Fallbacks, Parent-Suche oder Dateinamensraten eine andere Solution oder Regeldatei auswählen.
 - Die Antwortprojektion darf Capability-Information nicht nur als Freitext liefern. Für Agenten relevante Zustände benötigen strukturierte Felder und stabile Statuswerte.
+
+### Tool- und Ressourcen-Matrix
+
+Der harte Schnitt entfernt nicht zwingend spezialisierte Tools. Er entfernt den vom Agenten zu liefernden Zieltyp. Ein assembly-spezifisches Tool darf weiterhin existieren, erhält aber nur `targetPath` und validiert anhand der Endung selbst, ob es auf eine Assembly angewendet werden kann.
+
+| Gruppe | Beispiele | Verhalten im neuen Vertrag |
+|---|---|---|
+| Gemeinsame Navigation | `get_file_tree`, `get_namespace_tree`, `find_symbol`, `find_references`, `get_call_tree`, `get_type_hierarchy`, `find_implementations`, `get_class_structure`, `get_symbol_body` | `targetPath` ist ein Solution- oder Assemblypfad; Ergebnis enthält den gemeinsamen Analyse-Envelope und ggf. partielle Decompiled-Diagnostics. |
+| Gemeinsame Suche/Struktur | `search_pattern`, `metrics_tree` mit nicht regelabhängigen Modi, `dependency_graph` und weitere statische Strukturabfragen, soweit der jeweilige Scanner einen Decompiled-Snapshot unterstützt | Die Capability wird pro Tool explizit ausgewiesen. Ein fehlender Decompiled-Support liefert `unsupported`, keinen leeren Erfolg. |
+| Assembly-spezifische Analyse | `inspect_assembly`, `find_assembly_extensions`, `search_assembly`, `get_assembly_context` | `targetPath` muss eine `.dll`/`.exe` sein; kein `targetType`; der Resolver aktiviert automatisch den Decompiled-/Assemblykontext. |
+| Source-/Regelwerk | `get_violations`, `safeguard`, `pattern_detect`, regelabhängige `metrics_lookup`- und `metrics_tree`-Modi, `reload_config` | Nur Source-Kontext. Ohne `ainetlinter-rules.json`: `not_configured`; bei Assembly: `unsupported`. |
+| Source-/Git-/Testsemantik | Git-Zweig von `get_impact`, `get_test_context`, Testabschnitte in Composite-Tools | Nur Source-Kontext. Der Symbol-Zweig von `get_impact` kann für Assemblies als Navigation unterstützt werden; der Git-Zweig ist dort `unsupported`. |
+| Ungebundene Verwaltung | `get_server_health`, `report_observability_feedback`, Agent-Guide | Kein Target für globale Aufrufe. Wenn ein Kontext angegeben wird, heißt der optionale Parameter ebenfalls `targetPath`; `projectRoot` entfällt. |
+| Ressourcen | `ainetlinter://overview`, `ainetlinter://rules` | URI-Query heißt `targetPath` und enthält einen URL-kodierten konkreten absoluten Pfad. Beide zielgebundenen Ressourcen benötigen `targetPath`; Overview funktioniert für Source und Assembly, Rules liefert bei Assembly `unsupported` und bei Source ohne Regeldatei `not_configured`. |
+
+Die endgültige Zuordnung wird im Implementierungspaket gegen die tatsächlich registrierten Tools geprüft. Sie darf nicht durch eine veraltete `targetType`-Matrix aus der bestehenden Dokumentation ersetzt werden.
+
+### Spezielle Composite-Fälle
+
+- `get_feature_context` kann bei einer Assembly Navigation und Metriken liefern, markiert aber Violations und Testzuordnung als `unsupported`, ohne den gesamten Kontext zu verwerfen. Bei einer Source-Solution ohne Regeldatei ist nur der Violations-Abschnitt `not_configured`.
+- `get_impact` unterscheidet anhand der angeforderten Operation: Symbol-Impact kann im Assembly-Snapshot möglich sein; Git-Diff und Change-Context sind `unsupported`.
+- `reload_config` besitzt keinen freien `configPath`-Override mehr. Es lädt ausschließlich die feste benachbarte `ainetlinter-rules.json`; fehlt diese, wechselt der Source-Kontext zu `not_configured`. Auf Assemblies ist das Tool `unsupported`.
+- `get_server_health` ohne `targetPath` bleibt ein globaler Aggregat-Aufruf. Mit `targetPath` wird der Typ automatisch erkannt und die entsprechende Source- oder Assembly-Session detailliert ausgegeben.
+- `report_observability_feedback` erhält keinen `projectRoot`-Parameter. Ein optionaler `targetPath` ist nur Kontext und darf keinen Analyse- oder Registry-Eintrag implizit erzeugen.
 
 ## Muss-Kriterien
 
@@ -310,6 +353,71 @@ Ein leerer Ergebnissatz darf nur dann als fachliche Leere gelten, wenn der Konte
 - Cache- und Snapshotpfade müssen eindeutig, bereinigbar und gegen veraltete Inhalte geschützt sein.
 - Die Einführung des neuen Vertrags darf keine zufällige Suche außerhalb des definierten Zielverzeichnisses verursachen.
 
+## 360°-Review und Edge Cases
+
+### Pfad- und Dateiauflösung
+
+- Die Endung wird unter Windows case-insensitive geprüft: `.DLL`, `.Dll` und `.dll` sind gleichwertig.
+- Relative Pfade, leere Werte, Whitespace, Verzeichnisse, nicht existierende Dateien und nicht unterstützte Endungen werden vor jeder Session-Erzeugung abgelehnt.
+- UNC-Pfade und Pfade mit Leerzeichen sind gültige absolute Pfade, sofern die Datei erreichbar ist.
+- Zwei Solutions im selben Verzeichnis sind unproblematisch, weil der Agent die konkrete Datei übergibt; es gibt keine Discovery-Reihenfolge.
+- Eine Solution darf Projekte außerhalb ihres eigenen Verzeichnisses referenzieren. Die Regeldatei bleibt trotzdem ausschließlich die Datei neben der übergebenen Solution.
+- Ein Pfad zu einer vorhandenen `.dll`/`.exe`, die kein gültiges verwaltetes .NET-Assembly ist, wird als Assemblyziel erkannt und anschließend mit einem spezifischen Assembly-Formatfehler beendet; er fällt nicht auf Source- oder Verzeichnisanalyse zurück.
+- Ein vorhandener Pfad mit falscher Endung wird nicht anhand seines Inhalts umgedeutet. Der Vertrag bleibt endungsbasiert und deterministisch.
+- Die Pfadnormalisierung muss für Windows-Vergleiche stabil sein. Session-Schlüssel dürfen nicht durch triviale Schreibweisen oder Groß-/Kleinschreibung doppelte Source-Sessions erzeugen.
+
+### Regeldatei und Lintstatus
+
+- Die Regeldatei wird ausschließlich als `<solution-directory>\\ainetlinter-rules.json` aufgelöst.
+- Eine gleichnamige Regeldatei in einem Parent-, Child- oder Arbeitsverzeichnis wird ignoriert.
+- Eine fehlende Datei ist bei Source kein Fehler. Eine vorhandene, nicht lesbare oder ungültige Datei ist ein harter Konfigurationsfehler.
+- Eine leere, aber syntaktisch gültige Regeldatei wird nach der normalen Config-Semantik bewertet; sie darf nicht mit „Datei fehlt“ verwechselt werden.
+- Es werden bei fehlender oder ungültiger Konfiguration keine Default-Regeln heimlich aktiviert.
+- `reload_config` darf keine beliebige externe Datei einschleusen. Die feste Nachbardatei ist die einzige Quelle.
+- Der Regeldateiname wird über eine zentrale Konstante bereitgestellt. Ein Test muss sicherstellen, dass der Resolver und die dokumentierte Konvention denselben kanonischen Namen verwenden.
+
+### Assembly- und Decompiled-Verhalten
+
+- `.dll` und `.exe` starten immer den Assembly-/Decompiled-Resolver; Assembly-Linting bleibt `unsupported` unabhängig davon, ob neben der Datei eine Regeldatei liegt.
+- Fehlende PDBs, fehlende Referenz-Assemblies, obfuscierter Code, Native-Abhängigkeiten, Trimming/AOT-Artefakte oder unvollständige Metadaten führen zu `partial` und Diagnostics, soweit die Analyse noch nutzbar ist.
+- Ein nicht dekompilierbarer Root-Snapshot ist kein leerer Analyseerfolg. Der Kontext wird `failed` oder liefert ein explizites Toolfehlerresultat.
+- Referenz-Assemblies werden nur innerhalb der bestehenden Limits und mit ihrer eigenen Herkunft analysiert. Ein fehlender Consumer-Kontext darf nicht als globale Aussage über alle Verwendungen ausgegeben werden.
+- Generierte `.cs`-Dateien und eine mögliche interne `.slnx` sind nicht user-facing. Antworten dürfen sie nur als Diagnose-/Herkunftsinformation nennen, nicht als neuen Setup-Schritt verlangen.
+- Der Quelltext einer Assembly ist untrusted Analyseinput. Inhalte aus Kommentaren, Strings, Typnamen und dekompilierten Bodies dürfen keine Agenten- oder Serverinstruktionen überschreiben.
+
+### Identität, Cache und Nebenläufigkeit
+
+- Eine Assembly-Session wird nicht nur über den Dateinamen identifiziert. Mindestens kanonischer Eingabepfad, Assembly-Content-Hash und Decompiler-/Snapshot-Generation gehören zur Identität.
+- Derselbe Assemblypfad mit verändertem Inhalt erzeugt eine neue Generation. Ein bestehender Snapshot wird nicht stillschweigend mutiert.
+- Gleicher Inhalt an unterschiedlichen Orten darf nicht automatisch dieselbe Session erzwingen, weil relative Referenzauflösung und benachbarte Laufzeitdateien unterschiedlich sein können.
+- Wenn die Assembly während Hashing oder Dekompilierung verändert wird, muss der Server einen stabilen Snapshot herstellen oder den Vorgang mit einem klaren Stale-/Retry-Fehler beenden.
+- Zwei gleichzeitige Erstzugriffe auf denselben Assemblypfad dürfen keine konkurrierenden, inkonsistenten Snapshots erzeugen.
+- Abgebrochene oder fehlgeschlagene Dekompilationen müssen ihre temporären Artefakte gemäß dem bestehenden Cleanup-/Diskbudget wieder freigeben.
+- Resident- und Idle-Limits gelten auch für Decompiled-Kontexte. Health-Antworten müssen Origin, Generation, Status und Cleanup-Zustand unterscheiden können.
+
+### MCP-Schema, Ressourcen und Agentenverhalten
+
+- Kein öffentliches Toolschema enthält `targetType`, `projectRoot`, `ainetlinter.project.json` oder einen freien Config-Pfad als Ersatzvertrag.
+- Ein strikter Inputtest muss einen Aufruf mit `targetType` als ungültig erkennen; bloßes Ignorieren wäre für den bewusst harten Schnitt zu still.
+- Ressourcen-URIs müssen `targetPath` URL-kodieren. Windows-Laufwerksbuchstaben, Backslashes, Leerzeichen, `#`, `?` und `%` dürfen die URI nicht verfälschen.
+- `ainetlinter://overview` und `ainetlinter://rules` benötigen immer den konkreten `targetPath`; ein targetloser Resource-Aggregatvertrag ist nicht vorgesehen. Der globale Aggregatfall bleibt ausschließlich `get_server_health` vorbehalten.
+- `ainetlinter://rules` darf bei Assembly nicht so aussehen, als gäbe es ein fehlendes Regelwerk, sondern muss `unsupported` ausweisen.
+- Ein Source-Tool auf einer DLL und ein Assembly-Tool auf einer Solution liefern spezifische `unsupported`-Fehler; sie fallen nicht in eine leere Ergebnisliste.
+- Composite-Tools liefern verfügbare Abschnitte trotz einzelner nicht verfügbarer Abschnitte und kennzeichnen jeden Abschnitt separat.
+- Absolute Pfade in Payloads sind konsistent normalisiert; relative Trefferpfade bleiben relativ zum jeweils ausgewiesenen SourceRoot.
+
+### Semantische Grenzen
+
+- „Keine Regeln konfiguriert“ ist nur bei Source ein sinnvoller Zustand; bei Assemblies ist die Lint-Capability strukturell nicht verfügbar.
+- „Keine Treffer“ ist erst dann eine fachliche Aussage, wenn `operationStatus=ok`, die Capability aktiv und `completeness` ausreichend ist.
+- Decompiled-Zeilen sind Snapshot-Zeilen, keine Originalzeilen. Toolbeschreibungen und Payloads müssen diese Herkunft sichtbar halten.
+- Fehlende Caller, Referenzen oder Tests sind bei einem partiellen Snapshot keine globale Negativaussage.
+- Git- und Build-/Test-Aussagen dürfen bei Assemblies nicht aus dem generierten Cacheprojekt abgeleitet werden.
+
+### Review-Verdikt
+
+Die Vereinfachung ist tragfähig, wenn „ein Analyseziel“ als gemeinsamer Agentenvertrag verstanden wird und nicht als Behauptung identischer Fähigkeiten. Der gefährlichste Fehler wäre, `targetType` zwar zu entfernen, aber alte Projektroot-, Regel- oder Assemblyannahmen in Ressourcen, Composite-Tools und Fehlerwerten weiterzuführen. Der Konzeptumfang deckt deshalb bewusst auch diese scheinbar sekundären Verträge ab.
+
 ## Verifikation
 
 Nach der späteren Implementierungsfreigabe sind mindestens folgende Nachweise erforderlich:
@@ -321,23 +429,35 @@ Nach der späteren Implementierungsfreigabe sind mindestens folgende Nachweise e
 - ungültige Regeldatei
 - DLL und EXE als Decompiled-Eingabe
 - unbekannte Endung, relativer Pfad und fehlende Datei
+- Groß-/Kleinschreibung der Endung, Leerzeichen im Pfad, UNC-Pfad und Verzeichnis als ungültiges Ziel
+- gültige Solution mit Projektreferenzen außerhalb des Solution-Verzeichnisses
+- vorhandene DLL/EXE ohne gültige verwaltete Assembly-Metadaten
 - keine Akzeptanz von `targetType`
 - keine Akzeptanz oder Erzeugung von `ainetlinter.project.json`
+- keine Suche nach Regeldateien außerhalb des Solution-Verzeichnisses
+- zentrale Regeldateikonstante wird von Resolver und Tests gemeinsam verwendet
 
 ### Assembly-Lifecycle
 
 - gleichnamige Assemblies aus verschiedenen Verzeichnissen
 - gleicher Assemblyname mit verändertem Inhalt
+- Assemblyänderung während Hashing/Dekompilierung
+- parallele Erstöffnung desselben Assemblyziels
 - fehlende und partielle Referenzen
+- fehlende PDBs und nicht dekompilierbare Snapshots
 - Snapshot-Wiederverwendung und Bereinigung
 - transparente Herkunfts-, Hash-, Generation- und Completeness-Angaben
 
 ### Agentenvertrag
 
 - `tools/list`, Ressourcen und Toolbeschreibungen enthalten keinen alten `targetType`-Pfad.
+- `projectRoot` und `configPath` sind nicht als versteckte Ersatzparameter vorhanden.
 - Navigation funktioniert ohne Regeldatei.
-- regelabhängige Tools melden fehlende Konfiguration eindeutig.
+- Source-Regeltools melden fehlende Konfiguration eindeutig; Assembly-Lint-Aufrufe melden `unsupported`.
 - Source- und Decompiled-Aufrufe verwenden denselben `targetPath`-Vertrag.
+- `get_server_health` funktioniert global ohne Target und zielgebunden mit automatisch erkanntem Target.
+- Resource-URIs mit Windows-Pfaden werden korrekt URL-kodiert.
+- Composite-Tools liefern partielle Abschnitte mit eigenen Statuswerten.
 
 ### Projektabschluss
 
