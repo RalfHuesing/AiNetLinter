@@ -17,8 +17,10 @@ Diese Matrix ist die Synthese der 45 Audit-Dateien: 33 Tool-Findings, 3 Resource
 
 ## Prioritätslogik
 
-Die Paketnummer ist die vorläufige fachliche Gruppierung. Die daraus
-abgeleiteten Release-Tasks sind in `tasks/01-*` bis `tasks/04-*` beschrieben.
+Die Paketnummer ist ausschließlich die fachliche Auditgruppierung, nicht die
+Release-Reihenfolge. Die verbindlichen Release-Schnitte stehen in
+`shared/MCP-Verbesserungsrahmen.md`: Targetvertrag (Task 01), Handoff
+(Task 02), Source-Workflow (Task 03), Assemblyqualität (Task 04).
 Die Gruppierung kombiniert:
 
 - **Agentenwirkung:** Verhindert der Befund den nächsten sinnvollen Call oder erzeugt er falsches Vertrauen?
@@ -97,10 +99,10 @@ Das Ziel ist eine belastbare nächste Agentenentscheidung, nicht die vollständi
 
 | Finding | Audit-Schwere | Disposition | Root Cause / Agentenwirkung | Evidenz |
 | --- | --- | --- | --- | --- |
-| `inspect_assembly` | `degraded` | `fix` | Siehe Paket 03; Assembly-Default ist als API-Katalog für Agenten ungeeignet und Diagnose-/Budgetdaten dominieren die Nutzdaten. | `findings/inspect_assembly.md` |
-| `search_assembly` | `degraded` | `fix` | Siehe Paket 03; FQN-Suche und Default-Root führen zu False Negatives bzw. Artefakt-Treffern. | `findings/search_assembly.md` |
-| `get_assembly_context` | `broken`/`degraded` | `fix` | Siehe Paket 03; der Assembly-Composite muss dieselbe ID-, Envelope- und sichtbare Textsemantik wie Projekttools erhalten. | `findings/get_assembly_context.md` |
-| `find_assembly_extensions` | `degraded` | `fix` | Siehe Paket 03; ohne Consumer-Projekt bleibt Anwendbarkeit korrekt `not_decidable`, darf aber nicht wie ein vollständiger Agentenpfad wirken. | `findings/find_assembly_extensions.md` |
+| `inspect_assembly` | `degraded` | `fix` | Task 04; Assembly-Default ist als API-Katalog für Agenten ungeeignet und Diagnose-/Budgetdaten dominieren die Nutzdaten. | `findings/inspect_assembly.md` |
+| `search_assembly` | `degraded` | `fix` | Task 04; FQN-Suche und Default-Root führen zu False Negatives bzw. Artefakt-Treffern. | `findings/search_assembly.md` |
+| `get_assembly_context` | `broken`/`degraded` | `fix` | Task 04; der Assembly-Composite muss dieselbe ID-, Envelope- und sichtbare Textsemantik wie Projekttools erhalten. | `findings/get_assembly_context.md` |
+| `find_assembly_extensions` | `degraded` | `fix` | Task 04; ohne Consumer-Projekt bleibt Anwendbarkeit korrekt `not_decidable`, darf aber nicht wie ein vollständiger Agentenpfad wirken. | `findings/find_assembly_extensions.md` |
 | `resolve_type_origin` | `degraded`/`friction` | `fix` | Herkunft, DLL-Pfad, Solution-interne Referenzen und Kurzname-Kollisionen werden uneinheitlich dargestellt; Folge-Target kann falsch gewählt werden. | `findings/resolve_type_origin.md` |
 | `combo-assembly` | `degraded` | `fix` | Inspect/Search/Extensions/Context bilden keinen stabilen Katalog→Typ→Detail-Vertrag. | `findings/combo-assembly.md` |
 | `combo-cross-target` | `degraded`/`broken` | `fix` | Project- und Assembly-ID-Familien sind nicht falsch vermischt, aber Generation, Fehlertexte und Completeness führen zu falscher Reparatur. | `findings/combo-cross-target.md` |
@@ -139,11 +141,11 @@ Viele Fehler entstehen nicht in der Roslyn-Abfrage selbst, sondern weil JSON-`re
 
 ### B – Ein Ergebnis ist nicht automatisch ein Agenten-Handoff
 
-Pfade, Zeilen, Membernamen und sichtbare Tabellen sehen für Menschen plausibel aus, sind aber oft keine gültigen Folge-IDs. Wo IDs existieren, wechseln sie zwischen Projekt, Assembly und Generation. Paket 02 muss deshalb einen kanonischen Handoff-Vertrag definieren.
+Pfade, Zeilen, Membernamen und sichtbare Tabellen sehen für Menschen plausibel aus, sind aber oft keine gültigen Folge-IDs. Wo IDs existieren, wechseln sie zwischen Projekt, Assembly und Generation. Task 02 definiert deshalb einen kanonischen Handoff-Vertrag.
 
 ### C – `complete`/`partial`/`empty` ist nicht durchgängig belastbar
 
-Falsche oder zu starke Completeness-Sätze sind gefährlicher als sichtbare Fehler: Ein Agent unterlässt dann die Gegenprobe. Paket 03 muss die Semantik zentralisieren und die Toolbeschreibungen daran ausrichten.
+Falsche oder zu starke Completeness-Sätze sind gefährlicher als sichtbare Fehler: Ein Agent unterlässt dann die Gegenprobe. Der gemeinsame Rahmen zentralisiert die Semantik; Task 02 richtet die Navigations-Toolbeschreibungen daran aus.
 
 ### D – Defaultwerte sind für Menschen plausibel, aber für Agenten riskant
 

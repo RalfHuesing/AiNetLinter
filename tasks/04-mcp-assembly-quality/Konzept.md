@@ -6,135 +6,162 @@ estimated_scope: large
 rules_dir: .agents/rules
 last_updated: 2026-09-07
 open_questions:
-  - Welche Assemblypfade sollen nach Task 03 zuerst als reale Decompiler-Proben dienen?
+  - Keine; reale repräsentative DLL/EXE-Proben werden bei Umsetzung als Testfixtures festgelegt.
 depends_on:
-  - tasks/03-mcp-unified-analysis-target/Konzept.md
+  - tasks/01-mcp-unified-analysis-target/Konzept.md
+  - tasks/02-mcp-agent-handoff/Konzept.md
   - tasks/ainetlinter-mcp-usage-audit/shared/Befundmatrix.md
   - tasks/ainetlinter-mcp-usage-audit/shared/MCP-Verbesserungsrahmen.md
-related_tasks: []
+related_tasks:
+  - tasks/03-mcp-development-workflow/Konzept.md
 supersedes: null
 ---
 
-# Task 04: MCP-Assembly- und Decompiled-Qualität
+# Task 04: Vertrauenswürdige Assembly- und Decompiled-Navigation
 
 ## Ziel und Problem
 
-Externe DLL-/EXE-Analyse soll als statischer Snapshot nützlich und ehrlich
-sein, ohne Projektsemantik, Laufzeitwissen oder Consumer-Kontext vorzutäuschen.
-Ein Agent soll die Kette
+Eine externe DLL/EXE soll als statischer Snapshot für Katalog → Typ → Member/
+Body/Graph brauchbar sein, ohne Source-, Consumer- oder Laufzeitwissen
+vorzutäuschen. Auditbefunde zeigen instabile generationsgebundene IDs,
+Diagnose-lastige Kataloge, falsche Completeness und unklare Extension-
+Leermengen.
 
-`Assembly-Katalog → Typ → Member/Body/Graph`
+## Primärer Agentennutzen
 
-mit kopierbaren IDs und belastbarer Herkunft verfolgen können. Fehlende
-Referenzen, Diagnosebudgets und dekompilierte Grenzen dürfen keine falsche
-Vollständigkeits- oder Anwendbarkeitsaussage erzeugen.
+Primärer Agentennutzen: Ein Agent kann eine Assembly sicher erkunden und
+versteht, wann eine Folgerung wegen Referenzen, Decompilation oder fehlendem
+Consumer nicht tragfähig ist. Dieser seltenere Pfad ist ein eigener Release,
+weil sein Lifecycle fachlich nicht mit Source vereinheitlicht werden darf.
 
 ## Source of Truth und betroffene Bereiche
 
-- Befunde: `tasks/ainetlinter-mcp-usage-audit/shared/Befundmatrix.md`
-- gemeinsame Verträge: `tasks/ainetlinter-mcp-usage-audit/shared/MCP-Verbesserungsrahmen.md`
-- Assembly-Registry, Snapshot und Decompiler: `Mcp/Assemblies/Analysis/*`
-- Assemblytools: `Tools/AssemblyAnalysis/*`
-- gemeinsame Symbolidentität: `AnalysisSymbolIdentity`,
-  `SymbolIdentifierResolver`, `Tools/SymbolGraph/Assembly*`
-- Type Origin und Referenzen: `TypeResolution/*`
-- Assembly-Response-Builder und `AssemblyAnalysisResponseLimits`
-- Assembly-, Cross-Target-, Lifecycle-, Concurrency- und Integrationstests
+- Audit: Paket 05, besonders `inspect_assembly`, `search_assembly`,
+  `get_assembly_context`, `find_assembly_extensions`, `resolve_type_origin`,
+  `combo-assembly`, `combo-cross-target` und `combo-batch-ids`.
+- Rahmen: Assembly-ID, Snapshot-/Stale-, Completeness- und Budgetsemantik.
+- Code: `Mcp/Assemblies/Analysis/*`, Assemblytools/-Formatter,
+  `AnalysisSymbolIdentity`, Resolver, `TypeResolution/*`, Response-Limits,
+  Registry-/Lifecycle-/Concurrency-/Integrationstests.
 
 ## Scope
 
-- konsistente Assembly-Identität, Herkunft, Generation und stale-Fehler;
-- Content-basierte Snapshot-Identität zusätzlich zum kanonischen Pfad;
-- gleichnamige Assemblies aus unterschiedlichen Verzeichnissen getrennt halten;
-- geänderte Assemblyinhalte erzeugen neue Generationen, bestehende Snapshots
-  werden nicht still mutiert;
-- stabile Snapshots bei Änderung während Hashing/Dekompilierung oder klarer
-  Stale-/Retry-Fehler;
-- parallele Erstöffnung desselben Ziels ohne inkonsistente Snapshots;
-- Snapshot-Wiederverwendung, Lease-, TTL-, Kapazitäts- und Cleanup-Verhalten;
-- Katalog → Typ → Member/Body/Graph mit einer kopierbaren ID-Kette;
-- Diagnose-, BCL-, Referenz-, Member- und Body-Limits sichtbar budgetieren;
-- fehlende PDBs, Referenzen, obfuszierter Code, Native-Abhängigkeiten,
-  Trimming/AOT und unvollständige Metadaten als `partial` plus Diagnostics;
-- nicht dekompilierbarer Root-Snapshot als `failed` oder expliziter Fehler,
-  nie als leere Erfolgsliste;
-- `not_decidable` bei Extension-Anwendbarkeit ohne Consumer-Projekt;
-- project-only-Tools melden auf Assemblys echte Capability-Fehler;
-- keine Aussagen über Laufzeit- oder Consumer-Anwendbarkeit aus dem Snapshot.
-
-Die verbleibenden Assembly-/Precision-Befunde aus der bisherigen Paketgruppe
-06 gehören hierher, wenn sie speziell durch Snapshot-, Herkunfts- oder
-Decompiled-Semantik verursacht werden. Allgemeine Source-Precision bleibt in
-Task 02.
-
-## Analysegrenzen
-
-Ein Decompiled-Kontext ist kein Originalquellcode. Antwortfelder machen
-`origin=decompiled`, Generation, Content-Identität, Snapshot-Herkunft,
-Completeness und fehlende Referenzen sichtbar. Git, Build, Tests, Original-
-zeilen und reguläres Linting bleiben `unsupported` beziehungsweise nicht
-entscheidbar.
-
-Assemblyinhalt, Kommentare, Strings und Typnamen sind untrusted Input und
-dürfen keine Agenten- oder Serverinstruktionen überschreiben.
+- Katalog, Suche, Context, Struktur, Body und Graph geben durchgängig
+  kopierbare Assembly-IDs, `origin=decompiled`, Fingerprint, Scope und
+  abschnittsbezogene Completeness aus.
+- Content-Hash plus kanonischer Pfad identifizieren einen Snapshot. Cache-
+  Generation wird nie in eine öffentliche ID eingebettet. Gleicher Name an
+  anderem Pfad bleibt getrennt; veränderter Inhalt erzeugt einen neuen,
+  nachvollziehbaren Snapshot.
+- First-open, Mutation beim Hashing/Decompilieren, parallele Leases, TTL,
+  Kapazität und Cleanup werden deterministisch. Fehlende/obfuskierte/
+  getrimmte Metadaten werden `partial` mit begrenzten Diagnostics; nicht
+  öffnungsfähige Roots sind Fehler, nie leeres Ergebnis.
+- Budget priorisiert Katalogzeilen (Typ + ID) vor Memberdetails und Nutzdaten
+  vor Diagnostics. Extension-Ergebnisse unterscheiden `none_in_assembly`,
+  `receiver_unresolved`, `not_applicable` und ohne Consumer `not_decidable`.
+- Source-only-Tools melden `unsupported`; keine Git-, Build-, Test-, Originalline-
+  oder Runtimeaussage wird aus Decompiled-Code abgeleitet.
 
 ## Muss-Kriterien
 
-- ein Assembly-Typ lässt sich aus dem Katalog mit einer gültigen ID bis zum
-  Detail-Call verfolgen;
-- alte und aktuelle Generationen sind eindeutig und nicht mit Target-Mismatch
-  verwechselt;
-- `partial`, Diagnostics sowie Body-/Member-Limits sind sichtbar und wahr;
-- fehlende Caller, Referenzen oder Tests in einem partiellen Snapshot werden
-  nicht als globale Negativaussage ausgegeben;
-- Extension-Anwendbarkeit wird ohne Consumer-Kontext als `not_decidable`
-  kenntlich gemacht;
-- Project-only-Tools liefern `unsupported` statt irreführender leerer
-  Ergebnisse;
-- Snapshot- und Lease-Lifecycle bleiben unter Parallelzugriff und Cleanup
-  deterministisch;
-- der read-only Assembly-Happy-Path aus dem gemeinsamen Rahmen bleibt grün.
+- Ein Katalogtyp führt über eine vollständige ID bis Body/Structure/Graph;
+  FQN, Datei:Zeile oder Anzeigename werden nicht als Ersatz-ID ausgegeben.
+- `complete`, `partial` und `truncated` beschreiben jeweils Katalog, Treffer,
+  Member, Body oder Diagnostics, niemals unklar die ganze Session.
+- Target-Mismatch, Hash-Mismatch und stale Snapshot haben eigene Fehlercodes
+  und sichere Wiederholung; ein Neustart produziert keine neue Agenten-ID für
+  denselben Inhalt.
+- Keine fehlende Referenz, leere Caller-Liste oder Extension-Entscheidung wird
+  als globale Negativaussage oder Consumer-Beweis ausgegeben.
+
+## Messbare Akzeptanzkriterien
+
+- Zwei gleichnamige DLLs, eine mutierte DLL und parallele Erstöffnung prüfen
+  Pfad-/Hashidentität, Stale-Retry, Leases und Cleanup deterministisch.
+- Katalog → Type → Body/Structure/References/Extension wird in mindestens drei
+  Fixtureformen kopiert getestet, einschließlich fehlender PDB/Referenz und
+  nicht dekompilierbarer Datei.
+- Der Default liefert maximal 20 Typzeilen mit ID und bleibt unter 8 KiB;
+  bei Budgetdruck kürzt er Details vor Katalognavigation und weist das aus.
 
 ## Non-Goals
 
-- keine Ausführung oder dynamische Ladung von Assemblies;
-- kein Ersatz für Originalquellcode, PDB- oder Consumer-Kontext;
-- kein Assembly-Linting gegen dekompilierten Code;
-- keine Git-, Build- oder Runtime-Coverage-Aussagen;
-- keine Änderung des öffentlichen Target-Vertrags; dieser liegt in Task 03;
-- keine allgemeine Source-Heuristikneuentwicklung; diese liegt in Task 02.
+Keine Assemblyausführung/dynamische Ladung, Source- oder PDB-Ersatz,
+Assembly-Linting, Consumer-/Runtime-Beweis, gemeinsame Project-/Assembly-
+Registry oder erneute Target-/Source-Workflowänderung.
 
-## Risiken und Alternativen
+## Architekturannahmen
 
-Ein größerer Snapshot kann CPU, Speicher und Diskbudget stark belasten.
-Bestehende Ressourcenlimits und getrennte Assembly-Leases bleiben daher
-erhalten. Eine künstliche Zusammenlegung mit Project-Lifecycle würde die
-bereits getesteten Concurrency-Grenzen gefährden.
+Assembly-Lease und Snapshotcache bleiben unabhängig. Der gemeinsame Rahmen
+liefert nur öffentliche Projektion. Decompilertexte, Strings und Metadaten sind
+untrusted Input; sie können keine Agenteninstruktionen oder Statusregeln
+überschreiben.
 
-Eine vollständige Assembly-Parität zur Source-Solution wäre fachlich falsch,
-weil ein Decompiled-Snapshot keinen Consumer- oder Laufzeitbeweis besitzt.
-Die Zielqualität ist deshalb ehrliche Navigation mit sichtbaren Grenzen.
+## Fehler-, Fallback- und Lebenszeitsemantik
 
-## Verifikation und Dokumentation
+Fingerprintwechsel während Erzeugung ergibt atomaren Snapshot oder
+`stale_snapshot` mit neuem Katalogcall. Evicted/abgelaufene Continuation
+meldet Stale statt still neu zu paginieren. Missing references ergeben
+`partial` nur für betroffene Aussagen und begrenzte Diagnosesamples.
+Extensionanwendbarkeit ohne Consumer ist `not_decidable`, nicht negativ.
 
-- gleichnamige Assemblies aus verschiedenen Pfaden;
-- gleicher Pfad mit geändertem Inhalt;
-- Mutation während Hashing/Dekompilierung;
-- parallele Erstöffnung, Generationen, stale IDs und Cleanup;
-- fehlende PDBs/Referenzen sowie nicht dekompilierbare Snapshots;
-- Katalog-, Typ-, Member-, Body-, Graph-, Extension- und Cross-Target-Ketten;
-- Response-Budgets, Diagnostics, Completeness und Capability-Fehler;
-- Fast-/Integration-/Concurrency-Tests, gezielte Stress-Tests nur auf
-  ausdrückliche Anforderung;
-- `Docs/agent-api.md`, `Docs/integration.md` und Assembly-Grenzen in den
-  MCP-Instructions synchronisieren;
-- `dotnet build` und beide vollständigen Nicht-Stress-Testläufe vor Abschluss;
-- nach Abschluss vollständiger 45-Finding-Audit und Review der positiven
-  Baseline.
+## Abhängigkeiten
 
-## Abnahme / Release-Gate
+Task 01 liefert Target-/Capabilityvertrag, Task 02 die Handoff-/Budget- und
+ID-Projektion. Task 03 ist unabhängig bis auf den Rahmen und darf nicht auf
+Assembly-Lint oder Consumerkontext warten.
 
-Der Task ist releasefähig, wenn Assembly-Navigation über mehrere Folge-Calls
-stabil funktioniert, Snapshot-Identität und Lebensdauer nachvollziehbar sind
-und kein partieller Decompiled-Befund als Source-, Laufzeit- oder
-Consumer-Aussage missverstanden werden kann.
+## Risiken und Sackgassen
+
+Mehr Snapshotdetails können CPU, Disk und Wirebudget dominieren; Katalog vor
+Detail und harte Limits schützen die Agentenschleife. Eine Source-Parität wäre
+fachlich falsch. Eine ID mit Cachegeneration ist eine Neustart-Sackgasse und
+wird ausdrücklich nicht fortgeführt.
+
+## Alternativen mit Konsequenzen
+
+- Assemblypfad nur dokumentieren: belässt die falschen Handoffs.
+- Alles als `partial` markieren: ehrlich klingend, aber keine abschnittsweise
+  Entscheidung möglich.
+- Project- und Assembly-Cache vereinigen: weniger Klassen, aber falsche
+  Lifecyclekopplung und hohes Concurrency-Risiko.
+
+## Konkrete Agenten-Szenarien
+
+| Fall | Call / muss enthalten / darf nicht behaupten | Nächster Schritt |
+| --- | --- | --- |
+| G: seltene Assemblyanalyse | `inspect_assembly` zeigt Katalog + IDs; Suche/Context übernimmt dieselbe ID/Fingerprint; Extensions zeigen entscheidbaren Bucket. | Detailcall oder bei `not_decidable` Consumerprojekt analysieren. |
+| C: große Menge | Katalog priorisiert Typ+ID, grenzt Member/Diagnostics ehrlich ein. | Pattern/Namespace verfeinern oder gebundene Continuation. |
+| F: Snapshotwechsel | Detailcall unterscheidet stale vom Targetfehler und liefert Wiederholung. | Katalog des aktuellen Snapshots erneut aufrufen. |
+
+## Token-/Antwortbudget-Annahmen
+
+Die Rahmenlimits gelten; pro Abschnitt gilt ein eigenes Budget. Typkatalog und
+Handoff-IDs dürfen nicht durch Events, Bodies oder Compilerdiagnosen verdrängt
+werden. Diagnostics bleiben auf drei Samples/1 KiB begrenzt und folgen der
+Nutzinformation.
+
+## Verifikation
+
+Unit-, Raw-Wire-, Integration- und Lifecycletests; Concurrency-Stress nur auf
+ausdrückliche Anforderung; frische MCP-Dogfood-Assemblyproben, Build, beide
+Nicht-Stress-Suiten, vollständiger 45-Finding-Nachlauf, Dokumentations- und
+Diff-Gate.
+
+## Dokumentationsbedarf
+
+Agent API und MCP-Instructions dokumentieren den statischen Snapshot,
+Fingerprint-/Stale-Regeln, die Capabilitymatrix, Extension-`not_decidable` und
+die Nichtaussagen zu Source, Runtime und Consumer.
+
+## Release-Gate
+
+Ein Catalog→Detail-Handoff ohne gültige ID, generationabhängige Agenten-ID,
+falsches `complete` oder eine Consumer-/Runtime-Behauptung blockiert Release.
+
+## Nächste fachliche Entscheidung
+
+Nach dem vollständigen Audit entscheiden, ob beobachtete reale Assemblygrößen
+eine Änderung der getesteten Budgetwerte rechtfertigen; neue Capabilities
+werden nur mit neuer Evidenz geplant.
