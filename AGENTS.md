@@ -119,7 +119,7 @@ Die produktive Testsuite ist auf `src/AiNetLinter.FastTests` (`Unit`/`Component`
 ## 4. Commit- & PR-Konventionen
 
 - Conventional Commits **auf Deutsch**, imperativ (z. B. `feat:`, `fix:`, `docs:`, `chore:`).
-- Änderungen an versionierten Dateien werden automatisch committed; Details stehen in `.agents/rules/AiNetLinterRichtlinien.mdc` §4.
+- Änderungen an versionierten Dateien werden automatisch committed; ausschließlich eigene auftragsbezogene Änderungen dürfen in den Commit gelangen. Details zu Baseline-, Staging- und Parallel-Agenten-Schutz stehen in `.agents/rules/AiNetLinterRichtlinien.mdc` §4.
 
 ---
 

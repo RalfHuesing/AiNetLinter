@@ -14,7 +14,8 @@ nicht nur der erste Slice.
 
 1. Lies `AGENTS.md`, die relevanten `.agents/rules/`, diesen Skill und die
    benötigten Dateien unter `.agents/roles/`.
-2. Prüfe Working Tree, Branch, Diff und vorhandene Nutzeränderungen.
+2. Prüfe Working Tree, Branch, Index, Diff und vorhandene Nutzeränderungen und
+   halte `HEAD` sowie den Ausgangsstatus als Baseline fest.
 3. Definiere Task-Ziel, Scope, Ausschlüsse, Abschlussbedingung und nötige
    Verifikation. Erfinde keinen Taskpfad oder zusätzliche Anforderungen.
 4. Wähle den nächsten fachlich zusammenhängenden Slice. Task-lokale Roadmaps
@@ -44,8 +45,11 @@ Für C#-Semantik lesen Implementer, Reviewer und Auditor
 6. Bei einem größeren Task den Auditor ausführen und Befunde disponieren.
 7. Die maßgeblichen Abschluss-Gates aus `AGENTS.md` nach der letzten
    Codeänderung ausführen.
-8. `git diff --check` und `git status` prüfen und den fachlich abgeschlossenen
-   Slice committen.
+8. `git diff --check` und `git status` prüfen. Stage ausschließlich die eigene,
+   seit der Baseline entstandene Änderung über explizite Pfade oder Hunk-
+   Auswahl und committe erst nach erneuter Prüfung von Index und Diff. Nutze
+   niemals `git add .`, `git add -A` oder `git commit -a`; fremde staged oder
+   nicht sicher trennbare parallele Änderungen blockieren den Auto-Commit.
 9. Nach einem erfolgreichen Slice den nächsten bereiten Slice bestimmen; erst
    bei erfüllter Task-Abschlussbedingung den Task beenden.
 

@@ -20,7 +20,10 @@ Ergebnisse und fahre bis zur Task-Abschlussbedingung fort.
 - Task-Notizen, sofern der Task solche verwendet
 
 Produktionscode wird bevorzugt vom Implementer geändert. Der Orchestrator
-entscheidet über Scope, Review, Verifikation, Korrekturen und Commit.
+entscheidet über Scope, Review, Verifikation, Korrekturen und Commit. Vor der
+Änderung wird eine Git-Baseline erfasst; ein Commit enthält ausschließlich die
+eigene auftragsbezogene Änderung. Fremde oder parallele Änderungen werden
+nicht gestaged, überschrieben oder committed.
 
 ## Muss liefern
 
@@ -31,6 +34,10 @@ entscheidet über Scope, Review, Verifikation, Korrekturen und Commit.
 - ausgeführte Prüfungen und verbleibende Risiken
 - Commit pro fachlich abgeschlossenem Slice
 - abschließender Task-Status
+
+Ein Commit wird erst nach Prüfung von Working Tree, Index und Diff erstellt.
+Bei fremden staged Änderungen oder nicht sicher trennbaren Änderungen im selben
+File wird der Commit zurückgestellt und der Konflikt gemeldet.
 
 ## Stop-Bedingung
 
