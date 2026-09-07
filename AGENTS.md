@@ -6,7 +6,7 @@ Willkommen beim **AiNetLinter**-Projekt! Dieses Dokument dient KI-Agenten (Antig
 
 ## 1. Projekt-Überblick & Architektur
 
-**AiNetLinter** ist eine Roslyn-basierte C#/.NET 9 Statische-Code-Analyse- & Linter-Engine zur Durchsetzung von Architekturregeln, Clean-Code-Standards und Konventionen.
+**AiNetLinter** ist eine Roslyn-basierte C#/.NET 10 Statische-Code-Analyse- & Linter-Engine zur Durchsetzung von Architekturregeln, Clean-Code-Standards und Konventionen.
 
 ### Schlüsselkomponenten:
 - **Engine & Core CLI**: `src/AiNetLinter/`
@@ -74,14 +74,14 @@ Die produktive Testsuite ist auf `src/AiNetLinter.FastTests` (`Unit`/`Component`
    dotnet test src/AiNetLinter.FastTests --filter Category=Unit
    ```
 
-2. **Abschluss-Verifikation (vor Task-Beendigung)**:
-   Vor dem Beenden eines Tasks MUSS ein vollständiger Testlauf über beide Zielprojekte grün durchgeführt werden — das schließt `Unit`/`Component` und `Integration`/`Dogfood`/`Performance` ein, NICHT `Stress` (siehe Punkt 4):
+2. **Abschluss-Verifikation bei Codeänderungen**:
+   Bei Änderungen an Produktions- oder Testcode MUSS vor dem Beenden eines Tasks ein vollständiger Testlauf über beide Zielprojekte grün durchgeführt werden — das schließt `Unit`/`Component` und `Integration`/`Dogfood`/`Performance` ein, NICHT `Stress` (siehe Punkt 4):
    ```bash
    dotnet test src/AiNetLinter.FastTests --filter Category!=Stress
    dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress
    ```
 
-3. **Build prüfen**:
+3. **Build prüfen bei Codeänderungen**:
    ```bash
    dotnet build
    ```
@@ -97,8 +97,8 @@ Die produktive Testsuite ist auf `src/AiNetLinter.FastTests` (`Unit`/`Component`
 5. **Test-Ergebnisse & Logging**:
    Testläufe können mit `--logger "trx;LogFileName=<Name>.trx"` diagnostiziert werden (Details siehe `.agents/rules/AiNetLinterRichtlinien.mdc` §3).
 
-> [!IMPORTANT]
-> Beende einen Task erst, wenn sowohl `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` als auch `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` grün durchgelaufen sind!
+ > [!IMPORTANT]
+ > Für reine Dokumentations-, Markdown- oder Agenteninfrastrukturänderungen sind Build und Tests nicht erforderlich. Dafür genügen relevante Referenzprüfungen, `git diff --check` und eine sachliche Diff-Prüfung. Bei Produktions- oder Testcodeänderungen bleiben die vollständigen Nicht-Stress-Gates verbindlich.
 
 ---
 
@@ -119,15 +119,15 @@ Die produktive Testsuite ist auf `src/AiNetLinter.FastTests` (`Unit`/`Component`
 ## 4. Commit- & PR-Konventionen
 
 - Conventional Commits **auf Deutsch**, imperativ (z. B. `feat:`, `fix:`, `docs:`, `chore:`).
-- Weitere Format-Pflichten (u. a. Pflicht-`### Commit-Vorschlag`-Block): siehe `.agents/rules/AiNetLinterRichtlinien.mdc` §4.
+- Änderungen an versionierten Dateien werden automatisch committed; Details stehen in `.agents/rules/AiNetLinterRichtlinien.mdc` §4.
 
 ---
 
 ## 5. Task-Orchestration
 
-- Bei größeren oder unklaren Vorhaben zuerst den manuellen Konzept-Task mit `.agents/skills/concept-planner/SKILL.md` abschließen (`Konzept.md` mit `status: ready`); danach den autonomen Orchestrator verwenden.
-- Für zusammenhängende Features, Refactorings und andere mehrstufige Aufgaben: den manuellen Orchestrator-Prompt `.agents/prompts/orchestrator.md` verwenden.
-- Vor Abschluss eines größeren Tasks: `.agents/skills/audit/SKILL.md` einmal ausführen (DRY-, Refactoring-Drift-, Dead-Code- und Magic-Value-Audit über die passenden MCP-Tools). Innerhalb eines Epics ist er nur auf ausdrücklichen Auftrag oder bei einer eigenständigen Lieferung erforderlich.
+- Bei größeren oder unklaren Vorhaben zuerst den `concept-planner`-Skill mit einem konkreten Task-Verzeichnis verwenden (`Konzept.md` mit `status: ready`); danach den Orchestrator-Skill nur bei ausdrücklichem Wunsch einsetzen.
+- Für zusammenhängende Features, Refactorings und andere mehrstufige Aufgaben: `.agents/skills/project-orchestrator/SKILL.md` sowie die benötigten Rollen unter `.agents/roles/` verwenden.
+- Vor Abschluss eines größeren orchestrierten Tasks: die `auditor`-Rolle einmal für DRY-, Refactoring-Drift-, Dead-Code- und Magic-Value-Prüfungen über die passenden MCP-Tools einsetzen.
 
 ---
 

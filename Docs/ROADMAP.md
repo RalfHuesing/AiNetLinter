@@ -598,7 +598,7 @@ Code-Clone-Detection (CCFinder/Jaccard-N-Gram-Ansatz, Method-Granularitaet, sieh
   waeren aber zu viel Rauschen fuer automatisches Lint (Live-Dogfood-Befund: `near` allein erzeugte
   ~23 Einzel-Funde auf diesem Repo). Respektiert die dateiweite `// ainetlinter-disable
   DuplicateCode`-Suppression-Konvention ueber alle Cluster-Mitglieder.
-- [x] **Self-Audit-Skill** `.agents/skills/audit/SKILL.md` (Idee F, eigenständig im Projekt
+- [x] **Self-Audit-Rolle** `.agents/roles/auditor.md` (Idee F, eigenständig im Projekt
   gepflegt) — konsolidierter Abschlusscheck für DRY,
   Refactoring-Drift, Dead Code und Magic Values; Cadence pro Epic verpflichtend / pro Step
   optional (Hinweis in `AGENTS.md`).
