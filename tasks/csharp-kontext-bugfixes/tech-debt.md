@@ -91,3 +91,17 @@
 - Nächster Schritt: Abschluss-Review und Gesamt-Gates.
 - Log-Anker: Reviewerbericht Korrekturrunde 1 und Korrekturbericht 2 vom
   2026-09-07.
+
+## TD-008 — Zusätzliche Symbolauflösungs-Aliase nicht vollständig dokumentiert
+
+- Schweregrad: P2
+- Beschreibung: Die Dokumentation nennt nur den Alias `symbol`, die
+  Registrierung akzeptiert zusätzlich `identifier` und `name`.
+- Scope/Fundstelle: `Docs/agent-api.md`, `Docs/integration.md` sowie die
+  Feature-Context-Registrierung.
+- Evidenz: Abschluss-Review am 2026-09-07; kein Einfluss auf die korrigierte
+  Feature-Context-Fehlersemantik, aber Doku-/Vertragsdrift.
+- Disposition: promoted-to-project-debt
+- Nächster Schritt: In einem separaten Dokumentations-/API-Vertragstask
+  synchronisieren; nicht in diesem Bugfix-Scope erweitern.
+- Log-Anker: Reviewerbericht Korrekturrunde 2 vom 2026-09-07.

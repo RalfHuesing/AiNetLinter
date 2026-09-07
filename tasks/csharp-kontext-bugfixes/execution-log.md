@@ -116,6 +116,42 @@
   dieser Korrekturrunde; sie bleiben Abschlussprüfungen.
 - Nächste Aktion: Korrektur-Checkpoint, danach frischer Review.
 
+## 2026-09-07 — Reviewer Korrekturrunde 2 gestartet
+
+- Status: running
+- Run-ID: csharp-kontext-bugfixes-20260907
+- Rolle: frischer Reviewer nach Test-/Gate-Korrektur
+- Subagent-ID: `01a07adb-8fa4-7eb0-8b77-f4a95969fcb6` (Hume)
+- Diff-Baseline: `b14a719f` (Korrektur-Checkpoint)
+- Auftrag: MaxLineCount-Fix, Cap-Matrix und Gesamtvertrag gegen Konzept und
+  tatsächlichen Diff prüfen.
+
+## 2026-09-07 — Reviewer Korrekturrunde 2 abgeschlossen
+
+- Status: completed
+- Subagent-ID: `01a07adb-8fa4-7eb0-8b77-f4a95969fcb6` (Hume)
+- Urteil: `approved`; keine belegten P0/P1-Findings.
+- Bestätigt: alle sechs Muss-Kriterien, einschließlich sieben direkter
+  Cap-Kombinationsfälle und tatsächlicher Truncation-Gründe; Text-/Structured-
+  Content-Parität; synchronisierte MCP-Toolbeschreibung; Freshness-/Degraded-
+  Semantik.
+- MCP-Kontextchecks mit absolutem `targetPath` und `targetType=project`:
+  vollständig, 0 Violations. Verifizierte Bereiche: `FeatureContextScanner`,
+  `DiffImpactAnalyzer`, `AnalysisToolRegistrations`, `ProjectToolCall`.
+- Verifikation: Testdateien 400 bzw. 101 Zeilen und damit unter
+  `MaxLineCount=500`; gezielte FastTests 22/22; Live-MCP-Test 1/1;
+  `get_violations` 0; `git diff --check` sauber. Der Korrektur-Nachweis war
+  frisch nach der letzten Codeänderung und wurde nicht redundant wiederholt.
+- Zulässige Code-Map-Korrektur: veraltete Testanzahl und alte
+  `MaxLineCount`-Violation berichtigt.
+- Nichtblockierender P2-Befund: `Docs/agent-api.md` und `Docs/integration.md`
+  nennen bei der Symbolauflösung nur den Alias `symbol`, obwohl die
+  Registrierung zusätzlich `identifier` und `name` akzeptiert; als
+  `promoted-to-project-debt` erfasst.
+- Abschluss-Gates: `dotnet build`, vollständige Nicht-Stress-FastTests und
+  vollständige Nicht-Stress-IntegrationTests stehen noch aus.
+- Nächste Aktion: Abschluss-Audit, danach finale Gates und Abschluss-Commit.
+
 ## 2026-09-07 — Reviewer Korrekturrunde 1 gestartet
 
 - Status: running

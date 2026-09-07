@@ -28,7 +28,7 @@
 ## Relevante Tests, Konfiguration und Dokumentation
 
 - `src/AiNetLinter.FastTests/Mcp/Tools/FeatureContext/GetFeatureContextToolTests.cs` — Feature-Context-
-  Status-, Cancellation- und Sortierverträge; 18 bestehende Tests bleiben unverändert.
+  Status-, Cancellation- und Semantikverträge; aktuell 15 xUnit-Tests in 400 physischen Zeilen.
 - `src/AiNetLinter.FastTests/Mcp/Tools/FeatureContext/GetFeatureContextToolCapTests.cs` — kompakte
   Theory mit sieben direkten Cap-Fällen: isolierte Caps sowie alle relevanten Kombinationen;
   Text-/StructuredContent-Ausgabe, Counts, Verteilung und exakte Gründe werden geprüft.
@@ -62,9 +62,8 @@
 - MCP-Kontextaufnahme am 2026-09-07: `get_feature_context` für
   `FeatureContextScanner.ScanAsync`, `DiffImpactAnalyzer.FindCallSiteEntriesAsync` und
   `ProjectToolCall.WithDegradedHeader`; alle drei vollständig im Projektindex sichtbar.
-- Korrekturrunde 1: `GetFeatureContextToolTests.cs` enthält 18 Tests; der frische
-  Implementierer meldete 27/27 gezielte Tests, der aktuelle MCP-Check der
-  Toolbeschreibung und `CollectTestsAsync` ist vollständig aufgelöst.
+- Korrekturrunde 1: Der frische Implementierer meldete 27/27 gezielte Tests; der
+  MCP-Check der Toolbeschreibung und `CollectTestsAsync` war vollständig aufgelöst.
 - Abschlussprüfung des Reviewers: `dotnet build` grün (0 Warnungen/0 Fehler),
   FastTests Nicht-Stress 2278/2278 grün. Integration Nicht-Stress 411/412;
   der einzige Fehler ist die `MaxLineCount`-Violation in
@@ -77,9 +76,14 @@
 - Danach `find_duplicates` (2 bestehende fuzzy Cluster, keine Änderung), `find_dead_code` (0)
   und `find_magic_values` (0); abschließend `get_violations` für Produktions- und Testscope
   jeweils 0. Vollständige Build-/Nicht-Stress-Gates verbleiben beim Orchestrator.
-- Frischer Implementierer-`get_violations`-Check war auf `src/AiNetLinter/Mcp`
-  begrenzt und meldete 0. Der reviewer-seitige Test-Scope-Check mit
-  `targetType=project`, absolutem Repository-Root und
-  `scopeFilter=src/AiNetLinter.FastTests/Mcp/Tools/FeatureContext` meldet
-  1 `MaxLineCount`-Violation; Produktionscode bleibt im gemeldeten Scope
-  violationsfrei.
+- Frischer Review-MCP-Kontext bestätigt für `GetFeatureContextToolTests.cs`
+  383 Zeilen im Symbolbereich, `MaxLineCount` 500 und 0 Datei-Violations; die
+  Cap-Datei liegt bei 87 Zeilen im Symbolbereich und ebenfalls 0 Violations.
+  `WiringToolCollectionContractTests.cs` liegt bei 285 Zeilen im Symbolbereich
+  und 0 Violations. Der frühere `MaxLineCount`-Befund (527 physische Zeilen)
+  ist damit behoben.
+- Die MCP- und Doku-Beschreibung wurde im Review gegen den aktuellen
+  Registrierungs-Body und `Docs/agent-api.md` geprüft; die sieben Cap-Fälle und
+  die drei Methoden-Cap-Namen sind im aktuellen Code und den Tests abgebildet.
+- Der Working Tree seit `b14a719f` enthält ausschließlich den Reviewer-Startvermerk
+  in `execution-log.md`; Produktions- und Testcode blieben unverändert.
