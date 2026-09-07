@@ -5,8 +5,7 @@ project_kind: brownfield
 estimated_scope: large
 rules_dir: .agents/rules
 last_updated: 2026-09-07
-open_questions:
-  - Keine; die Produktentscheidung ist der harte, dateibasierte Zielvertrag.
+open_questions: []
 depends_on:
   - tasks/ainetlinter-mcp-usage-audit/Konzept.md
   - tasks/ainetlinter-mcp-usage-audit/shared/Befundmatrix.md
@@ -55,6 +54,15 @@ zweimal implementiert und getestet.
 - Ein Resolver validiert absolute vorhandene Dateien und Endungen ohne
   Verzeichnissuche. Er liefert Ursprung, kanonischen Pfad, Fingerprint,
   Capability und Source-Regelstatus an getrennte Project-/Assembly-Leases.
+- Eine Source-Session ist genau an die übergebene Solution gebunden.
+  `analysisRoot` für dateiorientierte Tools ist ausschließlich deren
+  normalisiertes Elternverzeichnis; der Server steigt niemals in ein
+  übergeordnetes Repository auf und wählt bei mehreren Solutions nie selbst.
+  Projektverweise außerhalb dieses Verzeichnisses bleiben semantische
+  Abhängigkeiten, aber erweitern keinen Dateibaum stillschweigend.
+- Vor dem ersten zielgebundenen Call wählt der Agent die konkrete Solution aus
+  der hostsichtbaren Workspace-Dateiliste. Eine targetfreie MCP-Solution-Suche
+  ist bewusst kein Ersatzvertrag und kein Bestandteil dieses Releases.
 - Source liest ausschließlich optionale `ainetlinter-rules.json` neben der
   Solution: fehlt = Navigation `not_configured` für Lint; ungültig/nicht lesbar
   = Konfigurationsfehler; keine Arbeitsverzeichnis-, Eltern- oder Defaultsache.
@@ -86,6 +94,9 @@ zweimal implementiert und getestet.
 - Je eine Solution mit gültigen, fehlenden und fehlerhaften Nachbarregeln,
   zwei DLLs/EXE, UNC-/Leerzeichenpfad und ein falscher Targettyp laufen durch
   E2E. Erwartete Status stehen in Testdaten, nicht nur im Markdown.
+- Ein Workspace mit zwei Solutions beweist: Der übergebene Pfad bestimmt
+  `analysisRoot` und Semantik; keine Parent-/Sibling-Solution wird geraten
+  oder still einbezogen.
 - Ein neuer Serverprozess löst denselben Target-Fingerprint gleich auf;
   zielgebundenes Health, Overview und Rules stimmen mit Toolantworten überein.
 
@@ -120,10 +131,10 @@ dass sie `targetType`-Adapter oder doppelte Resource-/Schema-Tests einführen.
 
 Der Schnitt bricht Clients. Ein Alias würde aber genau die Mehrdeutigkeit
 konservieren und ist ausgeschlossen. Der Hauptschutz ist atomare Migration
-aller Registrierungen, nicht ein „teilweise“ umgestellter Resolver. Falls die
-feste Nachbarregeldatei nicht akzeptabel ist, muss vor Implementation die
-Produktentscheidung geändert werden; ein versteckter Override ist keine
-Fallback-Option.
+aller Registrierungen, nicht ein „teilweise“ umgestellter Resolver. Fehlt die
+feste Nachbarregeldatei oder ist sie ungültig, ist `not_configured` bzw. ein
+Konfigurationsfehler das beabsichtigte Ergebnis; ein versteckter Override ist
+keine Fallback-Option.
 
 ## Alternativen mit Konsequenzen
 
@@ -168,5 +179,6 @@ Suche oder ein `empty` statt Capability-/Konfigurationsstatus nachweisbar ist.
 
 ## Nächste fachliche Entscheidung
 
-Nach dem Dogfood-Release bestätigen, dass der harte Dateivertrag extern
-akzeptiert ist; danach beginnt Task 02 ohne Compatibility-Arbeit.
+Keine weitere Produktentscheidung: Der harte dateibasierte Vertrag ist
+akzeptiert. Der Dogfood-Release belegt nur dessen Umsetzung; danach beginnt
+Task 02 ohne Compatibility-Arbeit.

@@ -17,6 +17,17 @@ Task darf weder einen früheren öffentlichen Vertrag reparieren noch dessen
 Ergebnis stillschweigend voraussetzen. Dokumentation reist mit dem
 vertragsändernden Release; es gibt keinen Restdokumentations-Task.
 
+## Öffentlicher Zielvertrag
+
+`targetPath` ist der einzige öffentliche Input für eine zielgebundene
+Operation. Eine existierende absolute `.sln`/`.slnx` aktiviert Source-Analyse,
+eine `.dll`/`.exe` Decompiled-Analyse; der Server leitet die Herkunft ab.
+`targetType`, `projectRoot`, Projektdefinitionsdateien und Kompatibilitäts-
+Aliase gehören nicht zum neuen Vertrag. Bei mehreren Solutions wählt der
+Agent vor dem ersten MCP-Call die konkrete Datei aus der hostsichtbaren
+Workspace-Dateiliste; der Server rät nicht. Die Zielart ist Antwortmetadatum,
+nie eine zweite Agenteneingabe.
+
 ## Verbindlicher Antwortkern
 
 Alle zielgebundenen Antworten enthalten, soweit die Capability erreichbar ist,
