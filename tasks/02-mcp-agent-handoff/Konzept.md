@@ -8,7 +8,6 @@ rules_dir: .agents/rules
 last_updated: 2026-09-08
 open_questions: []
 depends_on:
-  - tasks/01-mcp-unified-analysis-target/Konzept.md
   - tasks/ainetlinter-mcp-usage-audit/shared/Befundmatrix.md
   - tasks/ainetlinter-mcp-usage-audit/shared/MCP-Verbesserungsrahmen.md
 related_tasks:
@@ -21,16 +20,17 @@ supersedes: null
 
 ## Ergebnis der Kursprüfung
 
-Die Release-Reihenfolge bleibt richtig: Task 01 liefert den einzigen
-`targetPath`-Einstieg, Task 02 setzt darauf Discovery, IDs und begrenzte
-Navigation auf. Der Draft ist noch nicht freigegeben, weil die vorhandene
-Statusprojektion noch kein vollständiger Handoffvertrag ist.
+Der aktive MCP-Vertrag besitzt genau einen `targetPath`-Einstieg. Dieser Task
+umfasst den Vertrag vollständig: Discovery, IDs, Status, begrenzte Navigation
+und die restlose Bereinigung aller noch offenen Befunde aus dem erledigten
+Ausgangsstand. Es gibt dafür keine vorgelagerte oder ausgelagerte Nacharbeit.
+Der Draft ist noch nicht freigegeben, weil die vorhandene Statusprojektion noch
+kein vollständiger Handoffvertrag ist.
 
-Der MCP-Server 1.0.177 bestätigt die Task-01-Basis: `.slnx`, `.dll` und
-zielgebundene Antworten werden aufgelöst; `navigation` enthält Target, Origin,
-Fingerprint, Capability und Status. Die Live-Kette `find_symbol →
-get_symbol_body` funktioniert für eine Source-ID ebenso wie für eine
-Assembly-ID.
+Der MCP-Server 1.0.177 löst `.slnx`, `.dll` und zielgebundene Antworten auf;
+`navigation` enthält Target, Origin, Fingerprint, Capability und Status. Die
+Live-Kette `find_symbol → get_symbol_body` funktioniert für eine Source-ID
+ebenso wie für eine Assembly-ID.
 
 Für Task 02 fehlen oder widersprechen sich jedoch noch zentrale Eigenschaften:
 
@@ -59,9 +59,9 @@ Für Task 02 fehlen oder widersprechen sich jedoch noch zentrale Eigenschaften:
   Konfigurationspfad und alle dazugehörigen Modelle, Tests und
   Dokumentationsreste werden entfernt.
 
-Daher lautet die Empfehlung: Task 02 beibehalten, den Hard Cut aber als
-verbindliche Abschlussbedingung aufnehmen. Nach der Umsetzung und expliziten
-Freigabe kann der Draft auf `status: ready` gestellt werden.
+Daher ist der Hard Cut verbindliche Abschlussbedingung dieses Tasks. Nach der
+Umsetzung und expliziten Freigabe kann der Draft auf `status: ready` gestellt
+werden.
 
 ## Ziel und Problem
 
@@ -95,11 +95,14 @@ keine Lintregel und kein Quality Gate.
 - Code: `Tools/FileStructure/*`, `SearchPatternScanner`, Symbolgraph,
   `AnalysisSymbolIdentity`, `SymbolIdentifierResolver`, Snapshot-/ID-Projektion,
   Truncation, Formatter und Registrierungs-/Raw-Wire-Tests.
-- Hard-Cut-Voraussetzung: Der aktive MCP-Vertrag enthält ausschließlich
-  `targetPath`, kanonische Parameternamen und kanonische Handoff-IDs. Alte
-  Eingabefelder, Aliasnamen, Default-/Fallbackpfade, Dual-Read-, Dual-Write-
-  oder Kompatibilitätsadapter sind entfernt. Der regelose Source-Pfad liefert
-  ausschließlich `not_configured` für Lint.
+- Übernommene Task-01-Findings: Alle offenen Ziel-, Konfigurations-, Schema-,
+  Alias- und Handoff-Reste des erledigten Ausgangsstands werden in diesem Task
+  vollständig beseitigt. Sie sind kein externes Vorbedingungs- oder Folgepaket.
+- Task-02-Hard-Cut-Scope: Der aktive MCP-Vertrag enthält ausschließlich
+  `targetPath`, kanonische Parameternamen und kanonische Handoff-IDs. Nicht mehr
+  benötigte Eingabefelder, Aliasnamen, Default-/Fallbackpfade, Dual-Read-,
+  Dual-Write- oder Kompatibilitätsadapter werden entfernt. Der regelose
+  Source-Pfad liefert ausschließlich `not_configured` für Lint.
 - Jeder semantische Input besitzt genau einen Parameternamen aus dem aktiven
   Schema: insbesondere `targetPath`, `pattern`, `symbolIdentifier`,
   `symbolIdentifiers`, `filePaths`, `root` und `fileFilter` dort, wo das
@@ -176,6 +179,8 @@ Seiten.
 
 ## Hard-Cut-Regeln
 
+- Alle in diesem Konzept genannten Findings werden innerhalb dieses Tasks
+  erledigt. Kein Befund wird zur Nacharbeit an einen anderen Task delegiert.
 - Der neue Vertrag ist der einzige aktive Vertrag. Nicht mehr benötigte
   Parameter, Felder, Aliasnamen, Parserzweige, Adapter, DTOs, Registrierungen,
   Tests und Dokumentationsabschnitte werden vollständig gelöscht.
@@ -299,8 +304,10 @@ Verbindlich sind Fast-, Integration-, Schema- und Raw-Wire-Folgecall-Tests,
 C#/Razor/JS-Proben, Root-/Glob-/Empty-/Truncation-/Stale-Proben, ein frisch
 gestarteter MCP-Dogfood-Call, `dotnet build`, beide Nicht-Stress-Suiten,
 Dokumentationsabgleich und `git diff --check`. Der zugeordnete Auditkatalog
-und die positive Baseline werden geschützt; der vollständige 45-Finding-
-Nachlauf bleibt Task 04 vorbehalten.
+und die positive Baseline werden geschützt. Alle Handoff-, Target-, Snapshot-,
+Status-, Contract- und Hard-Cut-Befunde gehören zum Abschluss dieses Tasks;
+fachliche Assemblyqualität, Decompiler-Qualität und Assembly-Lease-Lifecycle
+bleiben außerhalb dieses Scopes.
 
 Ein Release ist blockiert, solange ein als Handoff deklarierter Wert nicht
 kopierbar ist, ein Call-Site-/Knotenwert keine belastbare ID besitzt,
@@ -319,7 +326,18 @@ Assembly-Folgebeispiel. Vollständige Rohschemas bleiben beim Schema-Endpoint;
 die Beschreibung darf keine zweite Contract-Wahrheit, Migrationssprache,
 veraltete Feldnamen oder historische Zustände enthalten.
 
-## Nächste fachliche Entscheidung
+## Noch offene Entscheidungen
+
+Es gibt keine offenen technischen Produkt-, Architektur- oder Scope-
+Entscheidungen. `open_questions: []` ist damit korrekt. Implementierungsdetails
+werden innerhalb des festgelegten Vertrags autonom entschieden und anhand der
+Akzeptanz- und Release-Gates verifiziert.
+
+Die einzige verbleibende Entscheidung ist die explizite Nutzerfreigabe nach
+vollständiger Umsetzung und Verifikation. Sie ist eine Releasefreigabe und
+keine offene Fachentscheidung.
+
+## Freigabestatus
 
 Nach Umsetzung des Hard Cuts und expliziter Nutzerfreigabe wird dieser Draft
 mit `status: ready`, `execution_mode: autonomous` und `open_questions: []`
