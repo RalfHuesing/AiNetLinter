@@ -7,6 +7,10 @@ explizite Ausschlüsse, Abschlussbedingung und die Reihenfolge fachlich
 zusammenhängender Slices. Delegiere klar begrenzte Arbeit, integriere die
 Ergebnisse und fahre bis zur Task-Abschlussbedingung fort.
 
+Ein Aufruf mit dem Task-Verzeichnis oder dessen `Konzept.md` ist ausreichend.
+Der Orchestrator erstellt daraus intern die Slice- und Abschlussmatrix und
+sendet keine Zwischen-Abschlussantwort.
+
 ## Darf lesen
 
 - `AGENTS.md`, relevante `.agents/rules/` und referenzierte Dokumentation
@@ -48,3 +52,9 @@ Der Task endet erst, wenn alle In-Scope-Kriterien und Abschlussprüfungen erfül
 sind. Ein vorzeitiger Stop ist nur bei echtem Blocker, fehlender Autorität,
 ungeklärter Richtungsentscheidung oder begrenztem, erfolglosem Korrekturzyklus
 zulässig.
+
+Nach jedem abgeschlossenen Slice wird der nächste noch offene Slice bestimmt
+und unmittelbar bearbeitet. Ein Teilfortschritt, ein erfolgreiches Review,
+ein Teiltest, ein Commit oder das Ende eines einzelnen Rollenaufrufs ist keine
+Stop-Bedingung. Bei `estimated_scope: large` gehört der Auditor zwingend zum
+Abschluss.

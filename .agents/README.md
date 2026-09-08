@@ -28,12 +28,13 @@ Nach der ausdrücklichen Konzeptfreigabe für die Umsetzung:
 ```text
 $project-orchestrator
 
-Setze den vollständigen Task aus
-tasks\mcp-unified-analysis-target\Konzept.md
-als orchestrierten Task um. Verwende Implementer, Reviewer und bei Bedarf
-Auditor.
+tasks\mcp-unified-analysis-target
 ```
 
 Der Task-Pfad ist beim `concept-planner` verpflichtend. Beim
-`project-orchestrator` verweist er auf das freigegebene Konzept oder die
-zugehörigen Task-Dokumente.
+`project-orchestrator` verweist er auf das Task-Verzeichnis oder dessen
+`Konzept.md`. Ein zusätzlicher Ablaufprompt ist nicht erforderlich. Der
+Orchestrator setzt einen Task mit `status: ready`,
+`execution_mode: autonomous` und `open_questions: []` vollständig bis zum
+Release-Gate um. Er beendet sich nicht nach dem ersten Slice oder einem
+Zwischenreview.

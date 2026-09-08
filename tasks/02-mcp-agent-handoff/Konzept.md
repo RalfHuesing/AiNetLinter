@@ -1,12 +1,12 @@
 ---
-status: draft
+status: ready
 type: konzept
 project_kind: brownfield
 estimated_scope: large
+execution_mode: autonomous
 rules_dir: .agents/rules
 last_updated: 2026-09-07
-open_questions:
-  - Keine; nur im Rahmen definierte handoff-fähige Ergebnisse erhalten Continuation.
+open_questions: []
 depends_on:
   - tasks/01-mcp-unified-analysis-target/Konzept.md
   - tasks/ainetlinter-mcp-usage-audit/shared/Befundmatrix.md

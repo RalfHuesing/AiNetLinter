@@ -5,6 +5,9 @@ Task:
 
 Task scope:
 
+Execution mode: autonomous
+Release status: ready
+
 Explicit exclusions:
 
 Task completion condition:
@@ -30,6 +33,10 @@ Continue condition:
 Slice stop condition:
 
 Task-level stop condition:
+
+Autonomous continuation rule: Continue with the next incomplete slice until
+the task completion condition and all release gates are satisfied. Do not
+return an intermediate completion result after a single slice.
 
 Slice result: pass | findings | blocked
 Task result: complete | blocked | in_progress

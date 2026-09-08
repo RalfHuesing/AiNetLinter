@@ -1,8 +1,9 @@
 ---
-status: draft
+status: ready
 type: konzept
 project_kind: brownfield
 estimated_scope: large
+execution_mode: autonomous
 rules_dir: .agents/rules
 last_updated: 2026-09-07
 open_questions: []

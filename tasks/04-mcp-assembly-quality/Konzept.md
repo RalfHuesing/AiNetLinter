@@ -1,12 +1,12 @@
 ---
-status: draft
+status: ready
 type: konzept
 project_kind: brownfield
 estimated_scope: large
+execution_mode: autonomous
 rules_dir: .agents/rules
 last_updated: 2026-09-07
-open_questions:
-  - Keine; reale repräsentative DLL/EXE-Proben werden bei Umsetzung als Testfixtures festgelegt.
+open_questions: []
 depends_on:
   - tasks/01-mcp-unified-analysis-target/Konzept.md
   - tasks/02-mcp-agent-handoff/Konzept.md

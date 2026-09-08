@@ -10,6 +10,11 @@ Orchestrator ausführen lassen oder Implementer, Reviewer beziehungsweise
 Auditor einsetzen möchte. Der Standard ist der vollständige freigegebene Task,
 nicht nur der erste Slice.
 
+Der Nutzer muss dafür keinen Ablaufprompt verfassen. Ein Aufruf mit dem
+Task-Verzeichnis oder dessen `Konzept.md` genügt. Der Orchestrator liest den
+Taskvertrag, erstellt daraus intern die Slice- und Abschlussmatrix und arbeitet
+bis zum Release-Gate weiter.
+
 Nutzeranweisungen haben Vorrang vor allgemeinen Skill-Vorgaben. Der Skill darf
 den Auftrag nicht ohne konkreten Risiko- oder Scopegrund stoppen oder erweitern.
 
@@ -21,8 +26,14 @@ den Auftrag nicht ohne konkreten Risiko- oder Scopegrund stoppen oder erweitern.
    halte `HEAD` sowie den Ausgangsstatus als Baseline fest.
 3. Definiere Task-Ziel, Scope, Ausschlüsse, Abschlussbedingung und nötige
    Verifikation. Erfinde keinen Taskpfad oder zusätzliche Anforderungen.
-4. Wähle den nächsten fachlich zusammenhängenden Slice. Task-lokale Roadmaps
-   oder Notizen sind optional und werden nur bei echtem Bedarf verwendet.
+4. Prüfe den Freigabevertrag des Konzepts: `status: ready`,
+   `execution_mode: autonomous` und `open_questions: []`. Bei fehlender
+   Freigabe nicht implementieren, sondern den konkreten Freigabemangel nennen.
+5. Erzeuge aus Muss-Kriterien, Akzeptanzkriterien, Verifikation,
+   Dokumentationsbedarf und Release-Gate eine interne Abschlussmatrix und
+   teile den Scope in fachlich zusammenhängende Slices. Eine Slice-Datei oder
+   ein künstliches Übergabearchiv ist dafür nicht erforderlich.
+6. Wähle den nächsten noch nicht erfüllten Slice.
 
 ## Delegation
 
@@ -84,6 +95,29 @@ relevanten Codeänderung.
    andernfalls separaten Worktree verwenden oder den Commit zurückstellen.
 9. Nach einem erfolgreichen Slice den nächsten bereiten Slice bestimmen; erst
    bei erfüllter Task-Abschlussbedingung den Task beenden.
+
+## Verbindliche Fortsetzungsschleife
+
+Die Schritte 2 bis 9 bilden eine verpflichtende Schleife über alle noch nicht
+erfüllten Slices. Nach jedem Rollenbericht, Review, Korrekturversuch,
+Teiltest oder Slice-Commit muss der Orchestrator die Abschlussmatrix neu
+bewerten und den nächsten offenen Slice unmittelbar bearbeiten. Er darf nach
+dem ersten Slice, einem erfolgreichen Review, einem Teiltest oder einem
+Zwischenbericht keine Abschlussantwort senden.
+
+Normale Testfehler, Reviewer-Findings, unvollständige Nachweise und technische
+Korrekturen sind kein Task-Stop. Sie werden innerhalb der begrenzten
+Korrekturzyklen behandelt; danach folgt der nächste Slice. Bei einem großen
+Task (`estimated_scope: large`) ist der Auditor am Ende des Scopes
+verpflichtend, auch wenn der Nutzer im Aufruf nur „bei Bedarf“ erwähnt.
+
+Eine Abschlussantwort ist erst zulässig, wenn alle Muss- und
+Akzeptanzkriterien, der Auditor (falls verpflichtend), die Abschluss-Gates,
+`git diff --check`, die Statusprüfung und die zulässige Commit-Entscheidung
+erledigt sind. Ein vorzeitiger Stop ist ausschließlich bei einem echten
+externen Blocker, fehlender Autorität oder einer nicht im Konzept auflösbaren
+Nutzerentscheidung zulässig. Fehlender Fortschritt oder das Ende eines
+einzelnen Delegationscalls ist kein Blocker.
 
 ## AiNetLinter-Abschluss
 

@@ -1,6 +1,6 @@
 ---
 name: concept-planner
-description: Entwickle interaktiv ein belastbares AiNetLinter-Konzept, spiegle Ziele kritisch, prüfe Annahmen und halte einen freigabepflichtigen Draft im angegebenen Task-Verzeichnis.
+description: Entwickle ein belastbares AiNetLinter-Konzept mit eindeutigem Freigabe- und Autonomievertrag für die anschließende vollständige Umsetzung.
 ---
 
 # Mitdenkender Konzeptplaner
@@ -24,6 +24,30 @@ wesentlich verändern würde.
 - Historische Quellen werden read-only geprüft.
 - Kein Produktionscode, keine Roadmap, keine Step-Dateien und keine
   Subagenten starten.
+
+## Umsetzungsvertrag
+
+Jedes Konzept erhält im YAML-Frontmatter mindestens:
+
+```yaml
+status: draft
+execution_mode: autonomous
+open_questions: []
+```
+
+`execution_mode: autonomous` bedeutet, dass der spätere Orchestrator den
+gesamten Task innerhalb des beschriebenen Scopes selbstständig bis zum
+Release-Gate umsetzen darf und keine Rückfrage zwischen Slices benötigt.
+Bleibt eine echte Nutzerentscheidung offen, bleibt `status: draft` und
+`execution_mode` wird auf `requires_user_decision` gesetzt. Ein Konzept darf
+nicht mit `status: ready` freigegeben werden, solange eine solche Entscheidung
+oder ein nicht auflösbarer Scopekonflikt besteht.
+
+Ein autonom umsetzbares Konzept beschreibt ausdrücklich Muss-Kriterien,
+Akzeptanzkriterien, Non-Goals, Verifikation, Dokumentationsbedarf und
+Release-Gate. Fachliche Implementierungsdetails, die innerhalb dieser Grenzen
+liegen, sind keine offenen Nutzerentscheidungen; der Orchestrator darf sie
+innerhalb des Scopes entscheiden.
 
 ## Mitdenken statt Formularpflege
 
@@ -59,5 +83,7 @@ zulässig, muss vor der Freigabe entfernt werden.
 
 Der Status bleibt `draft`, bis der Nutzer ausdrücklich freigibt. Vor der
 Freigabe werden vorläufige Notizen, veraltete Aussagen und Redundanzen entfernt.
-Erst danach wird `status: ready` gesetzt. Der Orchestrator startet nicht
-automatisch.
+Erst danach wird `status: ready` gesetzt. Bei der Freigabe müssen
+`execution_mode: autonomous` und `open_questions: []` erhalten bleiben. Der
+Orchestrator startet nicht automatisch; er wird anschließend mit dem
+Task-Verzeichnis aufgerufen.
