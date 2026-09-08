@@ -27,9 +27,9 @@ public sealed class LinterErrorFormatterTests
         var result = LinterErrorFormatter.Format(
             LinterErrorCodes.ConfigInvalid,
             "Fehler.",
-            context: "rules.json");
+            context: "ainetlinter-rules.json");
 
-        Assert.Contains("context: rules.json", result);
+        Assert.Contains("context: ainetlinter-rules.json", result);
     }
 
     [Fact]

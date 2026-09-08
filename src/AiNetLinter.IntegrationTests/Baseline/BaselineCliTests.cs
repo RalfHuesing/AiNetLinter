@@ -40,7 +40,7 @@ public sealed class BaselineCliTests
         var fixtureRoot = GetFixtureRoot();
         using var tempDir = TestTempDirectory.Create("ainetlinter-baseline-");
         var baselinePath = tempDir.GetPath("baseline.json");
-        var configPath = Path.Combine(fixtureRoot, "rules.json");
+        var configPath = Path.Combine(fixtureRoot, "ainetlinter-rules.json");
 
         var createArgs = new LinterArgs
         {

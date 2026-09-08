@@ -24,7 +24,7 @@ Integriere AiNetLinter **als Unterverzeichnis im bestehenden Testprojekt** — k
 <TestProjekt>/
   AiNetLinter/
     docs/          ← versionierte Tool-Dokumentation (Schritt 2)
-    rules/         ← Konfigurationsdateien (Schritt 3 + 6)
+    ainetlinter-rules.json ← einzige Projektkonfiguration (Schritt 3)
     output/        ← Lint-Reports (gitignored, Schritt 4)
 ```
 
@@ -51,10 +51,10 @@ Diese Dateien versionieren — sie geben dem Agenten Kontext ohne Netz-Zugriff.
 Dumpe die eingebettete Default-Konfiguration als Ausgangspunkt:
 
 ```cmd
-cmd /c "AiNetLinter.exe --docs rules-json > <TestProjekt>\AiNetLinter\rules\<projektname>.rules.json"
+cmd /c "AiNetLinter.exe --docs ainetlinter-rules-json > <TestProjekt>\ainetlinter-rules.json"
 ```
 
-Die erzeugte `rules.json` enthält alle Schalter mit sinnvollen Defaults. **Noch nicht anpassen** — das passiert in Schritt 8 nach dem ersten echten Lauf.
+Die erzeugte `ainetlinter-rules.json` enthält alle Schalter mit sinnvollen Defaults. **Noch nicht anpassen** — das passiert in Schritt 8 nach dem ersten echten Lauf.
 
 ---
 
@@ -86,7 +86,7 @@ TEST "LintReport wird erzeugt und ist grün":
        — nicht fehlschlagen, damit CI ohne lokales Tool grün bleibt
 
   3. Argumente zusammensetzen:
-       --config  <Pfad zur rules.json>
+       --config  <Pfad zur ainetlinter-rules.json>
        --path    <Solution-Root>
        --baseline <Pfad zur Baseline-JSON>   ← nach Schritt 6 verfügbar
        --sync-agent-rules                   ← synchronisiert .agents/rules/AiNetLinter.mdc (Pfad anpassbar über --agent-rules-path)
@@ -113,7 +113,7 @@ TEST "LintReport wird erzeugt und ist grün":
 Führe AiNetLinter **einmalig ohne Baseline** aus, um das Ist-Inventar zu sehen:
 
 ```cmd
-AiNetLinter.exe --config <rules.json> --path <solution-root>
+AiNetLinter.exe --config <ainetlinter-rules.json> --path <solution-root>
 ```
 
 Dieser Lauf zeigt alle aktuellen Verstösse. Es ist normal, dass ein bestehendes Projekt viele Verstösse hat — die Baseline friert sie ein, sodass nur **neue** Verstösse im geänderten Code den Test blockieren.
@@ -121,7 +121,7 @@ Dieser Lauf zeigt alle aktuellen Verstösse. Es ist normal, dass ein bestehendes
 Baseline erzeugen und versionieren:
 
 ```cmd
-AiNetLinter.exe --config <rules.json> --path <solution-root> --create-baseline <TestProjekt>\AiNetLinter\rules\<projektname>-baseline.json
+AiNetLinter.exe --config <ainetlinter-rules.json> --path <solution-root> --create-baseline <TestProjekt>\AiNetLinter\<projektname>-baseline.json
 ```
 
 Die erzeugte `<projektname>-baseline.json` **in git einchecken**. Sie ist der Ratchet: Dateien die sich nicht ändern, werden nicht geprüft.
@@ -132,7 +132,7 @@ Die erzeugte `<projektname>-baseline.json` **in git einchecken**. Sie ist der Ra
 
 `--sync-agent-rules` (bereits im Test-Aufruf aus Schritt 5 enthalten) erzeugt automatisch:
 
-- `.agents/rules/AiNetLinter.mdc` (Default-Pfad) — Metriken und aktive Regeln aus der `rules.json`
+- `.agents/rules/AiNetLinter.mdc` (Default-Pfad) — Metriken und aktive Regeln aus der `ainetlinter-rules.json`
 
 Diese Datei macht die konfigurierten Grenzwerte für AI-Agenten direkt sichtbar, ohne dass der Agent eine extra Datei lesen muss. **Versioniere diese Datei.**
 
@@ -142,12 +142,12 @@ Agent-Regeln synchronisieren:
 
 - Nur Agent-Regeln aktualisieren (schneller Pfad ohne Lint-Lauf):
   ```cmd
-  AiNetLinter.exe --config <rules.json> --path <solution-root> --sync-agent-rules-only
+  AiNetLinter.exe --config <ainetlinter-rules.json> --path <solution-root> --sync-agent-rules-only
   ```
-  Ohne `--config` wird `rules.json` per Auto-Discovery im `--path`-Verzeichnis gesucht.
+  Ohne `--config` wird `ainetlinter-rules.json` per Auto-Discovery im `--path`-Verzeichnis gesucht.
 - Kombinierter Lauf (Linter-Prüfung + Agent-Regeln aktualisieren):
   ```cmd
-  AiNetLinter.exe --config <rules.json> --path <solution-root> --sync-agent-rules
+  AiNetLinter.exe --config <ainetlinter-rules.json> --path <solution-root> --sync-agent-rules
   ```
 
 > [!NOTE]
@@ -157,7 +157,7 @@ Agent-Regeln synchronisieren:
 
 ---
 
-## Schritt 8: rules.json an das Projekt anpassen
+## Schritt 8: ainetlinter-rules.json an das Projekt anpassen
 
 Nach dem ersten Lauf gibt es typischerweise **False Positives** — Verstösse die strukturell korrekt sind, aber gegen eine Standardregel verstossen. Diese Phase erfordert Abstimmung mit dem Projektverantwortlichen.
 
@@ -165,7 +165,7 @@ Nach dem ersten Lauf gibt es typischerweise **False Positives** — Verstösse d
 
 1. Voll-Inventar analysieren (ohne `--baseline`):
    ```cmd
-   AiNetLinter.exe --config <rules.json> --path <solution-root> > output\voll-inventar.md
+   AiNetLinter.exe --config <ainetlinter-rules.json> --path <solution-root> > output\voll-inventar.md
    ```
 
 2. Muster identifizieren — welche Regeln produzieren systematisch False Positives?
@@ -181,7 +181,7 @@ Nach dem ersten Lauf gibt es typischerweise **False Positives** — Verstösse d
    | **Alternative verworfen** | Warum nicht Code-Fix, Suppression oder engeres Limit |
    | **Prod-Schutz** | Produktionscode bleibt weiter unter globalem Limit |
 
-4. Anpassung in `rules.json` vornehmen, danach Baseline neu erzeugen.
+4. Anpassung in `ainetlinter-rules.json` vornehmen, danach Baseline neu erzeugen.
 
 **Verboten:** Limits anheben oder Regeln abschalten, **nur** damit der Test grün wird — ohne dokumentiertes False Positive.
 
@@ -197,8 +197,8 @@ Nach dem ersten Lauf gibt es typischerweise **False Positives** — Verstösse d
 
 | Was | Wo | Versioniert? |
 |---|---|---|
-| Startkonfiguration | `AiNetLinter/rules/<projektname>.rules.json` | Ja |
-| Baseline (Ratchet) | `AiNetLinter/rules/<projektname>-baseline.json` | Ja |
+| Projektkonfiguration | `ainetlinter-rules.json` | Ja |
+| Baseline (Ratchet) | `AiNetLinter/<projektname>-baseline.json` | Ja |
 | Tool-Dokumentation | `AiNetLinter/docs/*.md` | Ja |
 | Agent-Regeln | `.agents/rules/AiNetLinter.mdc` | Ja |
 | Lint-Reports | `AiNetLinter/output/` | **Nein** (gitignored) |
@@ -211,7 +211,7 @@ Nach dem ersten Lauf gibt es typischerweise **False Positives** — Verstösse d
 AiNetLinter.exe --docs readme          ← Schnellstart, Feature-Übersicht
 AiNetLinter.exe --docs configuration   ← Vollständige Config-Referenz, alle Felder
 AiNetLinter.exe --docs agent-api       ← Alle CLI-Flags, Workflows, Fehlerformat
-AiNetLinter.exe --docs rules-json      ← Default-Konfiguration als JSON
+AiNetLinter.exe --docs ainetlinter-rules-json      ← Default-Konfiguration als JSON
 AiNetLinter.exe --list-rules           ← Alle Regeln als Tabelle
 AiNetLinter.exe --describe-rule <Id>   ← Eine Regel vollständig erklären
 ```

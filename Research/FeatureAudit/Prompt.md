@@ -11,7 +11,7 @@
 AiNetLinter ist ein .NET 10 CLI-Tool, das C#-Codebases per Roslyn-Syntaxanalyse auf Qualitätsregeln prüft. Der zentrale Unterschied zu anderen Lintern: Die Regeln sind nicht primär für menschliche Entwickler optimiert, sondern für **LLM-Agenten** wie Claude Code, Cursor oder GitHub Copilot. Ziel ist es, die Fehlerrate autonomer Agenten beim Bearbeiten von C#-Code zu senken — "AI-Readability".
 
 Die zu evaluierenden Features stammen aus zwei Quellen:
-- `rules.json` — konfigurierbare numerische Metriken und Boolean-Schalter
+- `ainetlinter-rules.json` — konfigurierbare numerische Metriken und Boolean-Schalter
 - CLI-Parameter — Workflow-Features wie `--baseline`, `--fix`, `--list-rules`
 
 Alle Features sind in `FeatureList.md` vollständig beschrieben. Lies diese Datei **bevor** du mit Phase 2 beginnst.
@@ -480,7 +480,7 @@ Betrifft Features: [z.B. M01, M02, M04, M05, R01]
 # [Feature-Name] ([ID])
 
 **Kategorie:** [CLI-Feature / Konfigurationsfeature]  
-**CLI-Flag / Konfiguration:** [--flag oder rules.json → Pfad]  
+**CLI-Flag / Konfiguration:** [--flag oder ainetlinter-rules.json → Pfad]
 **Status:** [vorhanden/aktiv/leer]
 
 ---
@@ -535,7 +535,7 @@ Betrifft Features: [z.B. M01, M02, M04, M05, R01]
 
 **Kategorie:** Neuer Feature-Vorschlag  
 **Typ:** [Numerische Metrik | Boolean-Regel | CLI-Feature]  
-**Vorgeschlagener rules.json-Schlüssel:** [z.B. MaxLinqChainLength]  
+**Vorgeschlagener ainetlinter-rules.json-Schlüssel:** [z.B. MaxLinqChainLength]
 **Implementierungsaufwand:** [Gering / Mittel / Hoch]
 
 ---

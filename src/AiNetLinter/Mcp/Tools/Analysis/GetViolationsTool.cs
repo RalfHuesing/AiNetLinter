@@ -10,7 +10,7 @@ namespace AiNetLinter.Mcp.Tools.Analysis;
 /// <summary>
 /// MCP-Tool <c>get_violations</c>: liefert alle aktuellen Lint-Regelverstoesse der resident gehaltenen
 /// Solution — dieselbe Kennzahl wie der bestehende CLI-/Batch-Lint-Lauf
-/// (<c>ainetlinter --config rules.json --path .</c>), aber im MCP-Modus aus der
+/// (<c>ainetlinter --config ainetlinter-rules.json --path .</c>), aber im MCP-Modus aus der
 /// benachbarten <c>ainetlinter-rules.json</c> und granular gegen die geladene Solution statt
 /// als Einmal-Komplettlauf, inkl. optionalem Scope-Filter (Projekt-Name oder solution-relativer Pfad)
 /// und ohne Disk-Cache. Bewusst duenner Dispatch auf

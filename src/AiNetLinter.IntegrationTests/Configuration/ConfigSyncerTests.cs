@@ -30,7 +30,7 @@ public sealed class ConfigSyncerTests
     [Fact]
     public void SyncIfNeeded_AddsNewOption_WhenMissingFromUserFile()
     {
-        // rules.json ohne BanPublicNestedTypes (simuliert "vor Einführung des Keys")
+        // ainetlinter-rules.json ohne BanPublicNestedTypes (simuliert "vor Einführung des Keys")
         const string oldJson = """
             {
               "Global": { "EnforceSealedClasses": true },

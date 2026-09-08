@@ -29,7 +29,6 @@ public sealed class ProjectDefinitionLoaderTests
     {
         using var tempDir = TestTempDirectory.Create("project-def-loader-missing-rules-");
         var solutionPath = tempDir.CreateFile("workspace/app.slnx", "");
-        tempDir.CreateFile("workspace/rules.json", "{}");
         tempDir.CreateFile("ainetlinter-rules.json", "{}");
 
         var loaded = AsLoaded(ProjectDefinitionLoader.LoadSolutionTarget(solutionPath));

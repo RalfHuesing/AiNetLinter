@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Concurrent;
@@ -179,7 +179,7 @@ internal static class PostAnalysisChecks
                 LineNumber = cls.LineNumber,
                 RuleName = nameof(effectiveConfig.Metrics.MaxInheritanceDepth),
                 Details = $"Die Klasse '{cls.Name}' hat eine Vererbungstiefe von {depth} (erlaubt sind maximal {effectiveConfig.Metrics.MaxInheritanceDepth}).",
-                Guidance = "Ersetze tiefe Vererbung durch Komposition: Deklariere Instanzen der Basisklassen als private Felder und delegiere Methoden-Aufrufe explizit (z. B. 'private readonly BaseService _base; void DoX() => _base.DoX()'). Extrahiere gemeinsames Verhalten alternativ in einen eigenen Service. Falls die Tiefe durch Framework-Basisklassen (ASP.NET, EF Core, xUnit) entsteht: Namespace-Praefix in 'rules.json → Metrics.InheritanceDepthFrameworkPrefixes' eintragen, um False Positives auszuschliessen."
+                Guidance = "Ersetze tiefe Vererbung durch Komposition: Deklariere Instanzen der Basisklassen als private Felder und delegiere Methoden-Aufrufe explizit (z. B. 'private readonly BaseService _base; void DoX() => _base.DoX()'). Extrahiere gemeinsames Verhalten alternativ in einen eigenen Service. Falls die Tiefe durch Framework-Basisklassen (ASP.NET, EF Core, xUnit) entsteht: Namespace-Praefix in 'ainetlinter-rules.json → Metrics.InheritanceDepthFrameworkPrefixes' eintragen, um False Positives auszuschliessen."
             });
         }
     }

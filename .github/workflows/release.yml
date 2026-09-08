@@ -34,9 +34,9 @@ jobs:
       - name: Prepare Release Archive
         shell: pwsh
         run: |
-          # rules.json ins Publish-Verzeichnis kopieren
-          if (Test-Path "rules.json") {
-            Copy-Item "rules.json" "./publish/rules.json"
+          # ainetlinter-rules.json ins Publish-Verzeichnis kopieren
+          if (Test-Path "ainetlinter-rules.json") {
+            Copy-Item "ainetlinter-rules.json" "./publish/ainetlinter-rules.json"
           }
 
           # README.md ins Publish-Verzeichnis kopieren

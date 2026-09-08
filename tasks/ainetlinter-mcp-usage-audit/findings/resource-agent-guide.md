@@ -13,7 +13,7 @@ Aufruf aus Agentensicht: `FetchMcpResource` mit `server=user-AiNetLinter`, `uri=
 
 Ohne diese Texte müsste ein Agent die URI raten. Query-Parameter (`?projectRoot=`) sind laut eingebettetem Text **nicht** für diese Resource vorgesehen (nur `overview` / `rules`).
 
-Der Text steuert den Call **korrekt zur Integration** (Projektroot, `ainetlinter.project.json`, `rules.json`, Host-Rule, MCP-Registrierung, Health-Check) und **warnt** vor ungefragtem Bootstrap. Er führt aber in genau die Aktionen, die dieses Audit als Non-Goal verbietet. Ein Agent, der die Resource „nur zum Verstehen“ lädt und die Schritte ausführt, integriert das Projekt.
+Der Text steuert den Call **korrekt zur Integration** (Projektroot, `ainetlinter.project.json`, `ainetlinter-rules.json`, Host-Rule, MCP-Registrierung, Health-Check) und **warnt** vor ungefragtem Bootstrap. Er führt aber in genau die Aktionen, die dieses Audit als Non-Goal verbietet. Ein Agent, der die Resource „nur zum Verstehen“ lädt und die Schritte ausführt, integriert das Projekt.
 
 ## 2 Ausgeführte Calls
 
@@ -78,7 +78,7 @@ Stichprobe Laufzeitpfad vs. bekannter Binary-Ort `C:\Daten\Tools\AiNetLinter-win
 
 - Bootstrap + Vertrag + Laufzeitblock allein wären klein und folgetauglich.
 - Der **volle Rule-Dump** macht den Großteil der ~12–14k Zeichen. Für einen bereits integrierten Workspace (diese Platform) ist das redundant.
-- Folge-Hints im Text: `get_server_health`, `ainetlinter --docs rules-json` / `mcp-rule`, Resource-URIs `ainetlinter://overview{?projectRoot}` und `ainetlinter://rules{?projectRoot}` (URL-kodierter absoluter `projectRoot`). Keine Symbol-IDs, kein `continuationToken`.
+- Folge-Hints im Text: `get_server_health`, `ainetlinter --docs ainetlinter-rules-json` / `mcp-rule`, Resource-URIs `ainetlinter://overview{?projectRoot}` und `ainetlinter://rules{?projectRoot}` (URL-kodierter absoluter `projectRoot`). Keine Symbol-IDs, kein `continuationToken`.
 - StructuredContent: nicht sichtbar; reine Markdown-Resource.
 - Fehler-Call liefert **keinen** Hint „meintest du `ainetlinter://agent-guide`?“.
 
@@ -120,7 +120,7 @@ Welle 3, read-only `C:\Daten\Entwicklung\Ralf\AiNetLinter`. Kein Patch.
 
 ### Gefährliche Folge: Bootstrap-Checkliste nach Fetch
 
-- **Pfad:** `Docs\mcp-bootstrap.md` (Ablauf 2–5: `rules.json` erzeugen, `ainetlinter.project.json` anlegen, Host-Rule, MCP-Registrierung)
+- **Pfad:** `Docs\mcp-bootstrap.md` (Ablauf 2–5: `ainetlinter-rules.json` erzeugen, `ainetlinter.project.json` anlegen, Host-Rule, MCP-Registrierung)
 - **Symbol:** `McpAgentGuideRegistration.BootstrapResourceName`; Inhalt wird in `BuildGuideText` ungekürzt vorangestellt
 - **Ansatz:** Bootstrap belassen (Integrationsauftrag). Kopf bereits „nur bei ausdrücklichem Auftrag“. Kopplung zum Rule-Dump lösen (Befund oben), damit Alltag-Fetch nicht die Schreibschritte mitsendet. Keine neue Integration in diesem Task.
 

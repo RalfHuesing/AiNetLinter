@@ -1,7 +1,7 @@
 # UiSeparation — Blazor / WPF (F06)
 
 **Kategorie:** Konfigurationsfeature  
-**CLI-Flag / Konfiguration:** `rules.json → UiSeparation`  
+**CLI-Flag / Konfiguration:** `ainetlinter-rules.json → UiSeparation`
 **Status:** Vorhanden
 
 ---
@@ -54,7 +54,7 @@ LLM-Agenten generieren bei UI-Code besonders häufig Anti-Pattern, weil die Gren
 | **Roslyn Analyzers** | Keine UI-Architektur-Regeln | Syntax-Level; keine Cross-File-Strukturprüfung |
 | **FxCop** | Keine UI-spezifischen Regeln | Generische .NET-Regeln |
 | **NetArchTest** | Nur in Unit-Tests | Architektur-Tests müssen manuell geschrieben werden |
-| **AiNetLinter** | UiSeparation in rules.json | Direktes CLI-basiertes Enforcement; Blazor + WPF |
+| **AiNetLinter** | UiSeparation in ainetlinter-rules.json | Direktes CLI-basiertes Enforcement; Blazor + WPF |
 
 AiNetLinter ist hier einzigartig: Kein anderes der verglichenen Tools bietet eine direkte, konfigurierbare Regel für die Code-Behind-Trennung in Blazor/WPF als CLI-Feature. Das ist ein echter Differenzierungspunkt.
 

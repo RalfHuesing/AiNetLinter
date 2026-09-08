@@ -1,7 +1,7 @@
 # FileFilters (F07)
 
 **Kategorie:** Konfigurationsfeature  
-**CLI-Flag / Konfiguration:** `rules.json → FileFilters`  
+**CLI-Flag / Konfiguration:** `ainetlinter-rules.json → FileFilters`
 **Status:** Vorhanden
 
 ---
@@ -52,7 +52,7 @@ Ohne FileFilters würden all diese Fälle zu massiven Falsch-Positiven führen, 
 | **SonarQube** | Source Exclusions + `[GeneratedCode]` | Konfigurierbar; auch `[GeneratedCode]`-Unterstützung |
 | **StyleCop** | `stylecop.json` ExcludedFiles | Dateinamen- und Pattern-basiert |
 | **Roslyn Analyzers** | `[GeneratedCode]`-Attribut | Standard-Mechanismus; IDE-integriert |
-| **AiNetLinter** | FileFilters in `rules.json` | Dateinamen + Verzeichnisse + Attribut; vollständig |
+| **AiNetLinter** | FileFilters in `ainetlinter-rules.json` | Dateinamen + Verzeichnisse + Attribut; vollständig |
 
 AiNetLinters Ansatz entspricht dem Industriestandard. Die Kombination aus Dateinamen-Mustern, Verzeichnis-Ausschlüssen und dem `[GeneratedCode]`-Attribut-Matching deckt alle relevanten Szenarien ab.
 

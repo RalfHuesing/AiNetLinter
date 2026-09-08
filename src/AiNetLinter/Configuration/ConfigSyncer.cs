@@ -8,7 +8,7 @@ using System.Text.Json.Serialization;
 namespace AiNetLinter.Configuration;
 
 /// <summary>
-/// Gleicht eine Nutzer-rules.json mit dem aktuellen Schema ab:
+/// Gleicht eine Nutzer-ainetlinter-rules.json mit dem aktuellen Schema ab:
 /// fehlende Optionen werden mit Standardwerten ergänzt, entfernte Optionen verschwinden.
 /// Nutzer-Werte bleiben erhalten. Wird beim Laden immer ausgeführt.
 /// </summary>
@@ -36,12 +36,12 @@ public static class ConfigSyncer
                 return false;
 
             File.WriteAllText(configPath, syncedContent);
-            Console.WriteLine($"[INFO]: rules.json synchronisiert (neue/entfernte Optionen): {configPath}");
+            Console.WriteLine($"[INFO]: ainetlinter-rules.json synchronisiert (neue/entfernte Optionen): {configPath}");
             return true;
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[WARNING]: rules.json-Sync fehlgeschlagen: {ex.Message}");
+            Console.Error.WriteLine($"[WARNING]: ainetlinter-rules.json-Sync fehlgeschlagen: {ex.Message}");
             return false;
         }
     }

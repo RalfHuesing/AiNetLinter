@@ -34,7 +34,7 @@ public sealed class McpServerCommandTests
     [Fact]
     public void Validate_McpServerWithConfig_IsHardError()
     {
-        var args = new LinterArgs { McpServer = true, ConfigPath = "rules.json", TargetPath = string.Empty, Verbose = false };
+        var args = new LinterArgs { McpServer = true, ConfigPath = "ainetlinter-rules.json", TargetPath = string.Empty, Verbose = false };
 
         var error = args.Validate();
 

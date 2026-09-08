@@ -19,7 +19,7 @@ public sealed class CliRepositoryDogfoodTests
     {
         var rootDir = SolutionRootLocator.Find();
         var linterDllPath = CliProcessRunner.FindLinterDll(rootDir);
-        var configPath = Path.Combine(rootDir, "rules.json");
+        var configPath = Path.Combine(rootDir, "ainetlinter-rules.json");
         var targetPath = rootDir;
 
         Assert.True(File.Exists(linterDllPath), $"Linter-DLL nicht gefunden unter: {linterDllPath}");
@@ -33,10 +33,10 @@ public sealed class CliRepositoryDogfoodTests
     }
 
     [Fact]
-    public void SyncAgentRules_CommittedRules_AreInSyncWithRulesJson()
+    public void SyncAgentRules_CommittedRules_AreInSyncWithConfigContent()
     {
         var rootDir = SolutionRootLocator.Find();
-        var configPath = Path.Combine(rootDir, "rules.json");
+        var configPath = Path.Combine(rootDir, "ainetlinter-rules.json");
 
         Assert.True(File.Exists(configPath), $"Config nicht gefunden: {configPath}");
 
@@ -56,7 +56,7 @@ public sealed class CliRepositoryDogfoodTests
     }
 
     [Fact]
-    public void SyncAgentRules_WithoutConfigPath_DiscoversRulesJsonInTargetDirectory()
+    public void SyncAgentRules_WithoutConfigPath_DiscoversConfigContentInTargetDirectory()
     {
         var rootDir = SolutionRootLocator.Find();
 

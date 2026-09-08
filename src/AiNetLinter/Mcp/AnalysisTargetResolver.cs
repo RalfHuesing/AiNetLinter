@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
+using AiNetLinter.Configuration;
 using AiNetLinter.Output;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -52,7 +53,7 @@ internal static class AnalysisTargetResolver
         var analysisRoot = Path.GetDirectoryName(canonicalPath)!;
         var isSource = targetKind == AnalysisTargetType.Project;
         var rulesPath = isSource
-            ? Path.Combine(analysisRoot, "ainetlinter-rules.json")
+            ? Path.Combine(analysisRoot, ConfigLoader.FileName)
             : null;
         var fingerprint = CreateFingerprint(canonicalPath);
         var target = new AnalysisTarget(targetKind.Value, canonicalPath, request)

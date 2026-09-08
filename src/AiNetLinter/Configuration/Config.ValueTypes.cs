@@ -26,7 +26,7 @@ public sealed record FileFiltersConfig
 
 /// <summary>
 /// Optionale Überschreibungen für die Web-Konfiguration (pro Projekt).
-/// Wird in der rules.json unter ProjectOverrides.*.Web eingebunden.
+/// Wird in der ainetlinter-rules.json unter ProjectOverrides.*.Web eingebunden.
 /// </summary>
 public sealed record WebConfigOverride
 {
@@ -44,7 +44,7 @@ public sealed record WebConfigOverride
 
 /// <summary>
 /// Optionale Überschreibungen für die CSS-Konfiguration (pro Projekt).
-/// Wird in der rules.json unter ProjectOverrides.*.Web.Css eingebunden.
+/// Wird in der ainetlinter-rules.json unter ProjectOverrides.*.Web.Css eingebunden.
 /// </summary>
 public sealed record CssConfigOverride
 {
@@ -61,7 +61,7 @@ public sealed record CssConfigOverride
 
 /// <summary>
 /// Optionale Überschreibungen für die JavaScript-Konfiguration (pro Projekt).
-/// Wird in der rules.json unter ProjectOverrides.*.Web.Js eingebunden.
+/// Wird in der ainetlinter-rules.json unter ProjectOverrides.*.Web.Js eingebunden.
 /// </summary>
 public sealed record JsConfigOverride
 {
@@ -74,7 +74,7 @@ public sealed record JsConfigOverride
 
 /// <summary>
 /// Optionale Überschreibungen für die Razor-Konfiguration (pro Projekt).
-/// Wird in der rules.json unter ProjectOverrides.*.Web.Razor eingebunden.
+/// Wird in der ainetlinter-rules.json unter ProjectOverrides.*.Web.Razor eingebunden.
 /// </summary>
 public sealed record RazorConfigOverride
 {

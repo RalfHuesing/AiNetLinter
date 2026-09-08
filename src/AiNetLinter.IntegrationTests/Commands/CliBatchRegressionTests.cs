@@ -24,7 +24,7 @@ public sealed class CliBatchRegressionTests
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
 
         var rootDir = SolutionRootLocator.Find();
-        var configPath = Path.Combine(rootDir, "rules.json");
+        var configPath = Path.Combine(rootDir, "ainetlinter-rules.json");
 
         Assert.True(File.Exists(configPath), $"Konfiguration nicht gefunden: {configPath}");
 

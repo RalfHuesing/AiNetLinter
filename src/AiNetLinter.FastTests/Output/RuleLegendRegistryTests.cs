@@ -58,7 +58,7 @@ public sealed class RuleLegendRegistryTests
     public void Render_IncludesConfigKeyHintWhenPresent()
     {
         var rendered = RuleLegendRegistry.Render("MaxPartialClassFiles", 1, "agent-context");
-        Assert.Contains("**Konfiguration:** `rules.json → Metrics.MaxPartialClassFiles", rendered);
+        Assert.Contains("**Konfiguration:** `ainetlinter-rules.json → Metrics.MaxPartialClassFiles", rendered);
     }
 
     [Fact]

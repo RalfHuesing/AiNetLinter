@@ -475,7 +475,7 @@ public sealed class ProjectRegistryTests
     private static string CreateSolutionPath(TestTempDirectory tempDir, string name)
     {
         var solutionPath = tempDir.CreateFile(Path.Combine(name, "app.slnx"), string.Empty);
-        tempDir.CreateFile(Path.Combine(name, ProjectDefinitionLoader.RulesFileName), "{}");
+        tempDir.CreateFile(Path.Combine(name, ConfigLoader.FileName), "{}");
         return solutionPath;
     }
 }

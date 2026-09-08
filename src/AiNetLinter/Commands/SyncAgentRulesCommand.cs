@@ -33,13 +33,13 @@ internal static class SyncAgentRulesCommand
         var agentRulesDir = Path.GetDirectoryName(mdcPath) ?? "";
 
         bool hasBaseline = AgentRulesGenerator.DetectBaselineUsage(baseDir, args.BaselinePath);
-        var content = AgentRulesGenerator.GenerateContent(config, args.ConfigPath ?? "rules.json", hasBaseline: hasBaseline);
+        var content = AgentRulesGenerator.GenerateContent(config, args.ConfigPath ?? ConfigLoader.FileName, hasBaseline: hasBaseline);
 
         return RunWrite(agentRulesDir, mdcPath, content, c);
     }
 
     /// <summary>
-    /// Lädt die Konfiguration für den Sync. Ohne <c>--config</c> wird <c>rules.json</c> im
+    /// Lädt die Konfiguration für den Sync. Ohne <c>--config</c> wird <c>ainetlinter-rules.json</c> im
     /// Zielverzeichnis per Auto-Discovery gesucht — damit funktioniert der dokumentierte
     /// Aufruf <c>--sync-agent-rules-only</c> im Repo-Root ohne weitere Argumente, statt mit
     /// der Audit-Fehlermeldung <c>CONFIG_REQUIRED</c> zu scheitern.
@@ -51,13 +51,13 @@ internal static class SyncAgentRulesCommand
             return ConfigLoader.TryLoadConfig(args.ConfigPath, isRequired: true);
         }
 
-        var discovered = Path.Combine(baseDir, "rules.json");
+        var discovered = Path.Combine(baseDir, ConfigLoader.FileName);
         if (!File.Exists(discovered))
         {
             c.WriteError(LinterErrorFormatter.Format(LinterErrorCodes.ConfigNotFound,
-                "Keine rules.json gefunden (weder --config noch Auto-Discovery im Zielverzeichnis).",
+                "Keine ainetlinter-rules.json gefunden (weder --config noch Auto-Discovery im Zielverzeichnis).",
                 context: discovered,
-                hint: "--config <pfad> angeben oder im Verzeichnis mit rules.json ausfuehren."));
+                hint: "--config <pfad> angeben oder im Verzeichnis mit ainetlinter-rules.json ausfuehren."));
             return null;
         }
 

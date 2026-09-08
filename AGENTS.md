@@ -17,8 +17,8 @@ Willkommen beim **AiNetLinter**-Projekt! Dieses Dokument dient KI-Agenten (Antig
 - **Fast Tests**: `src/AiNetLinter.FastTests/` (xUnit, Unit- und Component-Tests, rein in-memory / Roslyn Adhoc-Workspaces, < 10s Laufzeit).
 - **Integration Tests**: `src/AiNetLinter.IntegrationTests/` (xUnit, Datei-I/O-, CLI-, Dogfood-, Performance- und Stress-Tests).
 - **TestKit**: `src/AiNetLinter.TestKit/` (Wiederverwendbare Test-Infrastruktur, Fixtures, InMemory-Lösungen und Assertions).
-- **Konfiguration**: `rules.json` definiert das aktive Regelwerk und Parameter.
-- **Agent-Regeln (`.agents/rules/`)**: primäre Quelle für Coding-/Architektur-/Verhaltensregeln — `AiNetLinter.mdc` (auto-generiert aus `rules.json`, Linter-Metriken), `AiNetLinterRichtlinien.mdc` (Architektur, Workflow, Kommentar- und Verhaltensregeln, manuell gepflegt) und `AiNetLinter-McpWorkflow.mdc` (MCP-Entscheidungshilfe und Entwicklungszyklus für AiNetLinter). Details siehe Abschnitt 6.
+- **Konfiguration**: `ainetlinter-rules.json` definiert das aktive Regelwerk und Parameter.
+- **Agent-Regeln (`.agents/rules/`)**: primäre Quelle für Coding-/Architektur-/Verhaltensregeln — `AiNetLinter.mdc` (auto-generiert aus `ainetlinter-rules.json`, Linter-Metriken), `AiNetLinterRichtlinien.mdc` (Architektur, Workflow, Kommentar- und Verhaltensregeln, manuell gepflegt) und `AiNetLinter-McpWorkflow.mdc` (MCP-Entscheidungshilfe und Entwicklungszyklus für AiNetLinter). Details siehe Abschnitt 6.
 - **Dokumentation**: `Docs/` enthält Systemdokumentation, CLI-Referenzen und Anleitungen.
 
 > [!IMPORTANT]
@@ -99,11 +99,11 @@ Die produktive Testsuite ist auf `src/AiNetLinter.FastTests` (`Unit`/`Component`
 ## 3. Dokumentations- & Regel-Synchronisation
 
 - **Regel- oder CLI-Änderungen**:
-  Wenn CLI-Optionen, `rules.json`-Schemata oder Regel-Verhalten geändert werden, MÜSSEN folgende Dokumente aktualisiert werden:
+  Wenn CLI-Optionen, `ainetlinter-rules.json`-Schemata oder Regel-Verhalten geändert werden, MÜSSEN folgende Dokumente aktualisiert werden:
   - `Docs/configuration.md`
   - `Docs/ROADMAP.md` (falls Meilensteine betroffen sind)
 - **Agenten-Regeln Sync**:
-  Die Agenten-Regeldatei `.agents/rules/AiNetLinter.mdc` wird aus `rules.json` generiert und kann mit folgenden Befehlen synchronisiert werden:
+  Die Agenten-Regeldatei `.agents/rules/AiNetLinter.mdc` wird aus `ainetlinter-rules.json` generiert und kann mit folgenden Befehlen synchronisiert werden:
   ```bash
   dotnet run --project src/AiNetLinter -- --sync-agent-rules-only
   ```

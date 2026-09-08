@@ -34,7 +34,7 @@ public sealed class RulesResourceRegistrationTests
 
         Assert.StartsWith("# AiNetLinter — effektive Regelkonfiguration", text, StringComparison.Ordinal);
         Assert.Contains($"- targetPath: `{harness.RootPath}`", text, StringComparison.Ordinal);
-        Assert.Contains("- Konfigurationsquelle: `C:\\Projekt\\rules.json`", text, StringComparison.Ordinal);
+        Assert.Contains("- Konfigurationsquelle: `C:\\Projekt\\ainetlinter-rules.json`", text, StringComparison.Ordinal);
         Assert.Contains("## Aktive Regeln", text, StringComparison.Ordinal);
         Assert.Contains("`EnforceSealedClasses`", text, StringComparison.Ordinal);
         Assert.Contains("## Effektive Schwellwerte", text, StringComparison.Ordinal);
@@ -61,13 +61,13 @@ public sealed class RulesResourceRegistrationTests
                 Metrics = new MetricsConfig { MaxLineCount = 99 },
             },
             usedDefaultConfig: false,
-            resolvedConfigPath: @"C:\Projekt\updated-rules.json");
+            resolvedConfigPath: @"C:\Projekt\ainetlinter-rules.json");
         var after = RulesResourceRegistration.BuildRulesText(harness.Snapshot);
 
         Assert.Contains("| `MaxLineCount` | 42 |", before, StringComparison.Ordinal);
         Assert.Contains("| `MaxLineCount` | 99 |", after, StringComparison.Ordinal);
         Assert.DoesNotContain("| `MaxLineCount` | 42 |", after, StringComparison.Ordinal);
-        Assert.Contains("`C:\\Projekt\\updated-rules.json`", after, StringComparison.Ordinal);
+        Assert.Contains("`C:\\Projekt\\ainetlinter-rules.json`", after, StringComparison.Ordinal);
         Assert.Contains("`EnforceXmlDocumentation`", after, StringComparison.Ordinal);
     }
 
@@ -119,7 +119,7 @@ public sealed class RulesResourceRegistrationTests
     private static McpCodeGraphServer CreateServer(
         Config config,
         bool usedDefaultConfig = false,
-        string? resolvedConfigPath = @"C:\Projekt\rules.json") =>
+        string? resolvedConfigPath = @"C:\Projekt\ainetlinter-rules.json") =>
         new(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(
                 null,

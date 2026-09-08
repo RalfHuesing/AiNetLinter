@@ -257,7 +257,7 @@ public sealed class DeveloperExperienceTests
             }
         };
 
-        var content = AgentRulesGenerator.GenerateContent(config, "rules.json");
+        var content = AgentRulesGenerator.GenerateContent(config, "ainetlinter-rules.json");
 
         Assert.Contains("## Compound Suppressions (kontextabhängige Limiten)", content);
         Assert.Contains("| `MaxMethodLineCount` | CyclomaticComplexity ≤ 3 | **150** | — | Test reason here |", content);
@@ -274,7 +274,7 @@ public sealed class DeveloperExperienceTests
             }
         };
 
-        var content = AgentRulesGenerator.GenerateContent(config, "rules.json");
+        var content = AgentRulesGenerator.GenerateContent(config, "ainetlinter-rules.json");
 
         Assert.DoesNotContain("## Compound Suppressions (kontextabhängige Limiten)", content);
     }

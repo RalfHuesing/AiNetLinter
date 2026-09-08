@@ -230,12 +230,7 @@ internal static class McpFixtureTargetSetup
         var adjacentRulesPath = Path.Combine(Path.GetDirectoryName(solutionPath)!, "ainetlinter-rules.json");
         if (!File.Exists(adjacentRulesPath))
         {
-            var sourceRulesPath = Path.Combine(Path.GetDirectoryName(solutionPath)!, "rules.json");
-            if (!File.Exists(sourceRulesPath))
-            {
-                sourceRulesPath = Path.Combine(SolutionRootLocator.Find(), "rules.json");
-            }
-
+            var sourceRulesPath = Path.Combine(SolutionRootLocator.Find(), "ainetlinter-rules.json");
             File.Copy(sourceRulesPath, adjacentRulesPath);
         }
 

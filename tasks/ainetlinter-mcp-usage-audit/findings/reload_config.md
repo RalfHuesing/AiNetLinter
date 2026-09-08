@@ -1,10 +1,10 @@
 # Finding: `reload_config`
 
-Audit-Stand: 2026-09-07. Nur Schema-Lookup (`GetDynamicTools`) plus Calls dieses Tools. Kein anderes MCP-Tool, kein Build, kein Test. `rules.json` wurde **nicht** geschrieben; `configPath` zeigte nie auf eine andere gültige Regeldatei als die bereits aktive.
+Audit-Stand: 2026-09-07. Nur Schema-Lookup (`GetDynamicTools`) plus Calls dieses Tools. Kein anderes MCP-Tool, kein Build, kein Test. `ainetlinter-rules.json` wurde **nicht** geschrieben; `configPath` zeigte nie auf eine andere gültige Regeldatei als die bereits aktive.
 
 ## 1 Schema-Kurzfazit
 
-Beschreibung steuert den Happy Path **richtig**: nach Änderung an `rules.json` neu einlesen, ohne Server-Neustart. Ohne `configPath` kommt der Rules-Pfad aus `ainetlinter.project.json`; mit `configPath` temporärer Override. Ungültiger Pfad/JSON: bisherige Konfiguration bleibt aktiv. Zielvertrag: `targetType='project'`, `targetPath` absolut/kanonisch. Assembly **ausdrücklich unsupported**.
+Beschreibung steuert den Happy Path **richtig**: nach Änderung an `ainetlinter-rules.json` neu einlesen, ohne Server-Neustart. Ohne `configPath` kommt der Rules-Pfad aus `ainetlinter.project.json`; mit `configPath` temporärer Override. Ungültiger Pfad/JSON: bisherige Konfiguration bleibt aktiv. Zielvertrag: `targetType='project'`, `targetPath` absolut/kanonisch. Assembly **ausdrücklich unsupported**.
 
 JSON-Schema schwächer als die Prosa:
 
@@ -22,10 +22,10 @@ Projektroot: `C:\Workspace\Sample.Project`. Alle erreichten AiNetLinter-Calls **
 
 | # | Absicht | Argumente | Größe | Ergebnis |
 |---|---|---|---|---|
-| 1 | Happy Path, kein Override | `project` + Root, ohne `configPath` | 3 Zeilen, ~280 Zeichen | Erfolg. Vorher/Nachher dieselbe Datei `…\Tests.Logic\AiNetLinter\rules\platform-default.rules.json`, **18** aktivierte Regeln, **unveraendert**. |
+| 1 | Happy Path, kein Override | `project` + Root, ohne `configPath` | 3 Zeilen, ~280 Zeichen | Erfolg. Vorher/Nachher dieselbe Datei `…\Tests.Logic\ainetlinter-rules.json`, **18** aktivierte Regeln, **unveraendert**. |
 | 2 | Pflichtfelder fehlen | `{}` | 1 Zeile | Generisch: `An error occurred invoking 'reload_config'.` Kein Code, kein Hint. |
 | 3 | Assembly + echte externe Assembly | `assembly` + `Example.External.Process.dll` | ~6 Zeilen | `[ERROR]: ASSEMBLY_TARGET_UNSUPPORTED` + Hint auf `project` / andere Roslyn-Abfrage. |
-| 4 | Ungültiger Override | `configPath` = nicht existierende `does-not-exist-rules.json` | ~5 Zeilen | `CONFIG_NOT_FOUND`. Hint: bisherige Konfiguration bleibt aktiv. |
+| 4 | Ungültiger Override | `configPath` = nicht existierende `ainetlinter-rules.json` | ~5 Zeilen | `CONFIG_NOT_FOUND`. Hint: bisherige Konfiguration bleibt aktiv. |
 | 5 | Pflicht `targetType` fehlt | nur `targetPath` | 1 Zeile | Wie Call 2: generischer Invoke-Fehler. |
 | 6 | Pflicht `targetPath` fehlt | nur `targetType=project` | 1 Zeile | Wie Call 2. |
 | 7 | Relativer `targetPath` | `Sample.Project` | ~3 Zeilen | `INVALID_ARGUMENT`: muss absolut sein. Hint nennt fälschlich `'project' oder 'assembly'`. |
@@ -35,9 +35,9 @@ Projektroot: `C:\Workspace\Sample.Project`. Alle erreichten AiNetLinter-Calls **
 | 11 | Leeres `configPath` | `configPath=""` | wie Call 1 | **Erfolg**, identisch Happy Path. Leerstring = kein Override. |
 | 12 | Verzeichnis als `configPath` | `configPath=…\Docs` | ~5 Zeilen | `CONFIG_NOT_FOUND` (nicht „ist ein Verzeichnis“). Bisherige Config bleibt. |
 | 13 | Case / Canonical | `targetType=Project`, `targetPath` kleingeschrieben | wie Call 1 | Erfolg, 18 Regeln unverändert. |
-| 14 | Relatives `configPath` | `platform-default.rules.json` | ~5 Zeilen | `CONFIG_NOT_FOUND` auf den Relativstring. Kein `INVALID_ARGUMENT`, keine Auflösung gegen Projektroot. |
+| 14 | Relatives `configPath` | `ainetlinter-rules.json` | ~5 Zeilen | `CONFIG_NOT_FOUND` auf den Relativstring. Kein `INVALID_ARGUMENT`, keine Auflösung gegen Projektroot. |
 | 15 | Extra-Arg | wie Call 1 plus `bogusParam=true` | wie Call 1 | Erfolg, Extra-Arg still ignoriert. |
-| 16 | Override = aktuelle Rules | `configPath` = derselbe `platform-default.rules.json`-Pfad | wie Call 1 | Erfolg, Vorher/Nachher identisch, 18 Regeln unverändert. Kein Write. |
+| 16 | Override = aktuelle Rules | `configPath` = derselbe `ainetlinter-rules.json`-Pfad | wie Call 1 | Erfolg, Vorher/Nachher identisch, 18 Regeln unverändert. Kein Write. |
 | 17 | Leerer `targetPath` | `targetPath=""` | ~3 Zeilen | `INVALID_ARGUMENT`: Parameter ist erforderlich. (Besser als Call 2/5/6.) |
 | 18 | `assembly` + Projektverzeichnis | `assembly` + Root (kein DLL) | ~3 Zeilen | `INVALID_ARGUMENT`: Assembly-Pfad muss vorhandene Datei sein, Hint `.dll`/`.exe`. **Nicht** `ASSEMBLY_TARGET_UNSUPPORTED`. |
 | 19 | Explizit `configPath=null` | wie Call 1 | wie Call 1 | Erfolg, identisch Happy Path. |
@@ -59,7 +59,7 @@ Happy Path ist korrekt, klein und für den dokumentierten Zweck brauchbar. Reibu
 
 ## 5 Nutzbarkeit
 
-**ja** — nach einer `rules.json`-Änderung (durch den Menschen, nicht durch diesen Agenten) genau das richtige Tool, ohne Server-Neustart.
+**ja** — nach einer `ainetlinter-rules.json`-Änderung (durch den Menschen, nicht durch diesen Agenten) genau das richtige Tool, ohne Server-Neustart.
 
 Workaround: Beschreibung lesen, nie `targetType=assembly`; `targetPath` absolut auf den Repo-Root mit `ainetlinter.project.json`; `configPath` weglassen oder absolut auf **dieselbe** Rules-Datei; fehlende Pflichtfelder nicht am generischen Invoke-Text debuggen. `PROJECT_NOT_INITIALIZED`-Vorlage nicht wörtlich in einem Unterordner anlegen.
 
@@ -77,7 +77,7 @@ Workaround: Beschreibung lesen, nie `targetType=assembly`; `targetPath` absolut 
 | `PROJECT_NOT_INITIALIZED` legt nahe, `ainetlinter.project.json` im **falschen** Ordner zu erzeugen | Hint-Risiko | 10 |
 | Cursor Auto-review blockt `targetPath` außerhalb des Workspace vor AiNetLinter | Wrapper, nicht Server | Fremd-Root |
 
-Kein beobachtetes False Positive der Form „Config geändert“: Calls 1, 11, 13, 15, 16, 19 alle **18 Regeln unverändert**. Fehler 4, 9, 12, 14 sagen explizit Stay-Active. Kein Write an `rules.json`.
+Kein beobachtetes False Positive der Form „Config geändert“: Calls 1, 11, 13, 15, 16, 19 alle **18 Regeln unverändert**. Fehler 4, 9, 12, 14 sagen explizit Stay-Active. Kein Write an `ainetlinter-rules.json`.
 
 False Negative: kein Nachweis, ob *anderes gültiges* JSON als Override angenommen würde (bewusst nicht getestet).
 

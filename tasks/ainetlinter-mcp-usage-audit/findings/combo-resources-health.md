@@ -23,7 +23,7 @@ Alle Calls **schnell** (kein Timeout). Größen grob nach sichtbarer Markdown-An
 
 | # | Absicht | Argumente / URI | Größe / Completeness | Ergebnis |
 |---|---|---|---|---|
-| 1 | Health global, Default | kein Target | ~1,3k Zeichen, kompakt | Version **1.0.173**, **Mode: daemon**, Profil `cursor`, 1 Projekt **Loaded**, Config=`platform-default.rules.json`. **Assembly-Sessions (16)**: Details unterdrückt, Hint `includeSessions=true`. Status `complete=1, partial=15`. Diagnosen gesamt **37**. Kein Resource-Hint. |
+| 1 | Health global, Default | kein Target | ~1,3k Zeichen, kompakt | Version **1.0.173**, **Mode: daemon**, Profil `cursor`, 1 Projekt **Loaded**, Config=`ainetlinter-rules.json`. **Assembly-Sessions (16)**: Details unterdrückt, Hint `includeSessions=true`. Status `complete=1, partial=15`. Diagnosen gesamt **37**. Kein Resource-Hint. |
 | 2 | Health Projekt-Target | `project` + Root | ~1,2k, kompakt | Gleiches Projekt; **Assembly-Sessions (0)**. Kein Diagnoseblock, kein Hint auf Overview/Rules. |
 | 3 | Resource agent-guide | `ainetlinter://agent-guide` | **groß** (~15–20k Zeichen): Bootstrap + vollständige `AiNetLinter-McpWorkflow`-Regel + Runtime-JSON | Warnung „nur bei Integrationsauftrag“, danach Dump der Always-on-Regel. Step 6: Prüfung via `get_server_health`. Query-Encoding für Overview/Rules dokumentiert. |
 | 4 | Resource overview | `ainetlinter://overview?projectRoot=C%3A%5C…Platform` | ~0,5k, vollständig klein | **„laeuft als stdio-MCP-Server“**. Solution + Regeln-Pfad + Zuletzt genutzt. **Kein** LoadState, keine Sessions, keine Staleness. Weiter: **agent-guide**, `tools/list`, `get_impact`/`get_violations`. |
@@ -44,7 +44,7 @@ Alle Calls **schnell** (kein Timeout). Größen grob nach sichtbarer Markdown-An
 
 **Teilweise wie beschrieben** — jedes Stück einzeln oft formal ok, die **Kette steuert falsch**.
 
-Stimmt: Health Default kompakt; Target-Paar erzwungen; `includeSessions` listet Sessions; `includeDiagnostics` füllt Samples **nur wenn Sessions sichtbar sind**; Overview/Rules mit Query liefern Status bzw. Regelkatalog; gleicher `rules.json`-Pfad in Health, Overview und Rules; agent-guide nennt Health zur Prüfung nach Setup.
+Stimmt: Health Default kompakt; Target-Paar erzwungen; `includeSessions` listet Sessions; `includeDiagnostics` füllt Samples **nur wenn Sessions sichtbar sind**; Overview/Rules mit Query liefern Status bzw. Regelkatalog; gleicher `ainetlinter-rules.json`-Pfad in Health, Overview und Rules; agent-guide nennt Health zur Prüfung nach Setup.
 
 Abweichungen der Kombination:
 
@@ -71,7 +71,7 @@ Nicht `broken`: Default-Health und kodiertes Overview/Rules antworten schnell un
 
 - **Ja:** `get_server_health` ohne Target (Ist-Zustand, Version, Loaded). Kodiertes oder unkodiertes Overview nur als Mini-Bestätigung von Solution/Regeln-Pfad. Rules-Resource als **Katalog** aktiver Regelnamen, nicht als effektive Per-Projekt-Wahrheit.
 - **Nein:** agent-guide als Folgeschritt nach Overview auf einem integrierten Projekt. Health mit nur `project`-Target als Aussage „keine Assemblies“. `includeDiagnostics` ohne `includeSessions`. Overview/Rules als Ersatz für Health-Fehlercodes.
-- Workaround: Resources **nicht** nacheinander „zur Orientierung“ fetchen. `agent-guide` nur bei echtem `PROJECT_NOT_INITIALIZED`. Sessions über global Health + `includeSessions=true`. Overrides in der genannten `rules.json` lesen (Call 5 sagt das, ohne Tool-Hint). Nicht neu integrieren.
+- Workaround: Resources **nicht** nacheinander „zur Orientierung“ fetchen. `agent-guide` nur bei echtem `PROJECT_NOT_INITIALIZED`. Sessions über global Health + `includeSessions=true`. Overrides in der genannten `ainetlinter-rules.json` lesen (Call 5 sagt das, ohne Tool-Hint). Nicht neu integrieren.
 
 ## 6 Bugs+FP/FN
 
@@ -92,7 +92,7 @@ Nicht `broken`: Default-Health und kodiertes Overview/Rules antworten schnell un
 | Feldnamen Session-Block global ≠ Assembly-Target | Undokumentiertes Dual-Schema | 7 vs. 12 |
 | Health-Hint bei unbekanntem Root: lazy Key via `ainetlinter.project.json` vs. Guide „keine ungefragte Integration“ | Steuerungskonflikt | 16 vs. 3 |
 
-**Stichprobe intern (ohne zweites Tool):** Config-Pfad in Call 1/4/5 ist derselbe `platform-default.rules.json` unter `Tests.Logic\AiNetLinter\rules\` — Overview/Health/Rules sind hier konsistent. Solution-`.slnx`-Pfad ebenfalls. Die 16→2-Sessions und die extern-Pfade stammen aus Health-Text, nicht aus einem zweiten Tool. `Example.External.Core.dll` (im Konzept als drittes Assembly-Ziel) war in Call 1 in der 16er-Menge implizit möglich, in Call 7 **nicht** mehr gelistet — kein Beweis, nur Verschwinden der Menge.
+**Stichprobe intern (ohne zweites Tool):** Config-Pfad in Call 1/4/5 ist derselbe `ainetlinter-rules.json`-Pfad unter `Tests.Logic` — Overview/Health/Rules sind hier konsistent. Solution-`.slnx`-Pfad ebenfalls. Die 16→2-Sessions und die extern-Pfade stammen aus Health-Text, nicht aus einem zweiten Tool. `Example.External.Core.dll` (im Konzept als drittes Assembly-Ziel) war in Call 1 in der 16er-Menge implizit möglich, in Call 7 **nicht** mehr gelistet — kein Beweis, nur Verschwinden der Menge.
 
 Leermenge Overview ohne Query ist **kein** „Projekt unbekannt“, sondern Cursor-„resource not found“. Health unterscheidet das (Call 16).
 
@@ -106,13 +106,13 @@ Leermenge Overview ohne Query ist **kein** „Projekt unbekannt“, sondern Curs
 | Rules | mittel (Tabellen), akzeptabel | Overrides fehlen statt zu fluten |
 | agent-guide | **Flood**: Bootstrap + komplette Always-on-Regel | Jeder Overview-Folgeschritt wiederholt Host-Kontext, der in `.cursor/rules` schon liegt |
 
-Keine Symbol-IDs, kein Cursor, kein StructuredContent in der Agent-Ansicht (nur Markdown). Stabile Anker: absoluter Projektroot, Solution-Pfad, `rules.json`-Pfad, Assembly-Vollpfad, Hash, `GeneratedPath`.
+Keine Symbol-IDs, kein Cursor, kein StructuredContent in der Agent-Ansicht (nur Markdown). Stabile Anker: absoluter Projektroot, Solution-Pfad, `ainetlinter-rules.json`-Pfad, Assembly-Vollpfad, Hash, `GeneratedPath`.
 
 **Fehlende Hints zum nächsten Call (Kern der Kombi):**
 
 - Health Default → nicht `ainetlinter://overview`, nicht `ainetlinter://rules`, nicht „Diagnosen nur mit beiden Flags“.
 - Overview → nicht Health, nicht Rules; **stattdessen** agent-guide (falsche Richtung) und `tools/list` (nicht die Cursor-`GetDynamicTools`-Oberfläche).
-- Rules → nicht `get_violations`/`safeguard`; Overrides nur „siehe rules.json“.
+- Rules → nicht `get_violations`/`safeguard`; Overrides nur „siehe ainetlinter-rules.json“.
 - Resource-404 → kein Beispiel `overview?projectRoot=<url-encoded absolut>`.
 - agent-guide Step 6 → Health ja; Overview/Rules unerwähnt als Alltags-Status.
 
@@ -126,7 +126,7 @@ Keine Symbol-IDs, kein Cursor, kein StructuredContent in der Agent-Ansicht (nur 
 - `includeDiagnostics` ohne Sessions: explizit „0 Samples, setze includeSessions“ statt still nichts.
 - Session-Schema vereinheitlichen (Feldnamen, Diagnosen-Nenner, Profil `cursor` vs. `released`).
 - `partial` + Decompiler-Flut: eine Zeile Cap („1766 Diagnosen, Sample N“) statt denselben CS0234-Block in drei Feldern; „Keine Aktion erforderlich“ nur wenn Completeness für Tool-Calls reicht.
-- Rules-Resource: Override-Muster wenigstens als Pfad-Glob + abweichendes Limit listen, oder klar „nicht effektiv, lies rules.json / `reload_config`“.
+- Rules-Resource: Override-Muster wenigstens als Pfad-Glob + abweichendes Limit listen, oder klar „nicht effektiv, lies ainetlinter-rules.json / `reload_config`“.
 - Query-Encoding als Empfehlung, nicht als harte Pflicht, wenn unkodierte Absolute Pfade akzeptiert werden.
 - Health-Footer: Resource-URIs mit bereits bekanntem Root (kodiert).
 

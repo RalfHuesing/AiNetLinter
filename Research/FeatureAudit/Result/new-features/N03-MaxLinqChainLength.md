@@ -2,7 +2,7 @@
 
 **Kategorie:** Neuer Feature-Vorschlag  
 **Typ:** Numerische Metrik  
-**Vorgeschlagener rules.json-Schlüssel:** `MaxLinqChainLength`  
+**Vorgeschlagener ainetlinter-rules.json-Schlüssel:** `MaxLinqChainLength`
 **Implementierungsaufwand:** Mittel
 
 ---
@@ -30,7 +30,7 @@ var result = orders
     .Take(10);
 ```
 
-**Konfigurationsbeispiel in rules.json:**
+**Konfigurationsbeispiel in ainetlinter-rules.json:**
 ```json
 "MaxLinqChainLength": 5,
 "MaxLinqChainLengthSeverity": "warning"

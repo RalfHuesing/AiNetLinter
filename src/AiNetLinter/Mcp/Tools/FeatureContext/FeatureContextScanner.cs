@@ -244,7 +244,7 @@ internal static class FeatureContextScanner
         try
         {
             var concreteConfig = (Config)config;
-            var engine = new LinterEngine(concreteConfig, rulesJsonContent: null, profiler: null, console: console);
+            var engine = new LinterEngine(concreteConfig, configContent: null, profiler: null, console: console);
             var allViolations = await engine.RunAsync(solution, noCache: true, cacheTtlMinutes: 0, ct);
 
             return FilterViolationsForFile(allViolations, declaration);

@@ -14,6 +14,8 @@ namespace AiNetLinter.Configuration;
 /// </summary>
 public static class ConfigLoader
 {
+    internal const string FileName = "ainetlinter-rules.json";
+
     /// <summary>
     /// Versucht, die Konfiguration aus der angegebenen Datei zu laden.
     /// </summary>
@@ -26,7 +28,7 @@ public static class ConfigLoader
                 Console.Error.WriteLine(LinterErrorFormatter.Format(
                     LinterErrorCodes.ConfigRequired,
                     "--config ist erforderlich fuer den Audit-Lauf.",
-                    hint: "Nutze --config <pfad> um rules.json anzugeben."));
+                    hint: "Nutze --config <pfad> um ainetlinter-rules.json anzugeben."));
             }
             return null;
         }
@@ -37,7 +39,7 @@ public static class ConfigLoader
                 LinterErrorCodes.ConfigNotFound,
                 "Konfigurationsdatei nicht gefunden.",
                 context: configPath,
-                hint: "Pfad pruefen oder rules.json anlegen."));
+                hint: "Pfad pruefen oder ainetlinter-rules.json anlegen."));
             return null;
         }
 
@@ -91,7 +93,7 @@ public static class ConfigLoader
     /// Liest den Inhalt der Config-Datei für die Cache-Invalidierung.
     /// Gibt null zurück wenn der Pfad leer oder die Datei nicht vorhanden ist.
     /// </summary>
-    public static string? LoadRulesJsonContent(string? configPath)
+    public static string? LoadConfigContent(string? configPath)
     {
         if (string.IsNullOrEmpty(configPath) || !File.Exists(configPath))
             return null;

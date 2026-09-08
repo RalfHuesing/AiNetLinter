@@ -25,8 +25,8 @@ public sealed class ProjectOverrideRealSolutionTests
     public async Task RealSolutionProjects_NewTestProjectNames_ResolveOverrideAndAreDetectedAsTest()
     {
         var rootDir = SolutionRootLocator.Find();
-        var rulesJsonPath = Path.Combine(rootDir, "rules.json");
-        var globalConfig = ConfigLoader.TryLoadConfig(rulesJsonPath, isRequired: true);
+        var configContentPath = Path.Combine(rootDir, "ainetlinter-rules.json");
+        var globalConfig = ConfigLoader.TryLoadConfig(configContentPath, isRequired: true);
         Assert.NotNull(globalConfig);
 
         using var catalog = await LoadedFixture.LoadCatalogAsync(rootDir);

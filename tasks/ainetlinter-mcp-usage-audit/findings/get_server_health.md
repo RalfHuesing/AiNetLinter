@@ -25,7 +25,7 @@ Alle Calls schnell (Subsekunde–wenige Sekunden, kein Timeout). Server: Version
 
 | # | Absicht | Argumente | Ergebnis | Größe / Truncation |
 |---|---|---|---|---|
-| 1 | Aggregation ohne Target | `{}` | Erfolg. 1 Projekt `Loaded` (Platform-`slnx`, Rules unter `Tests.Logic\AiNetLinter\rules\platform-default.rules.json`). Assembly-Sessions: 2, Details unterdrückt, `partial=2`, `Diagnosen gesamt: 51`. | ~35 Zeilen, kompakt. |
+| 1 | Aggregation ohne Target | `{}` | Erfolg. 1 Projekt `Loaded` (Platform-`slnx`, Rules unter `Tests.Logic\ainetlinter-rules.json`). Assembly-Sessions: 2, Details unterdrückt, `partial=2`, `Diagnosen gesamt: 51`. | ~35 Zeilen, kompakt. |
 | 2 | Projektziel | `targetType=project`, `targetPath=C:\Workspace\Sample.Project` | Erfolg. `Projekte (1)` wie Call 1. `Assembly-Sessions (0)` — Assemblys werden ausgeblendet. | ~28 Zeilen. |
 | 3 | Assemblyziel extern | `targetType=assembly`, `targetPath=C:\ExternalAssemblies\Version-9\Example.External.Process.dll` | Erfolg. `Projekte (0)`. Session: `LoadState/Vollständigkeit: partial`, `Origin: decompiled`, `Generation: 6`, Labels korrekt (`Lock-Status: released`, `Lease-Status: bounded`, `Cleanup-Status: not-observed`, `Fehlerphase: decompilation`, `Nächste Aktion: Keine Aktion erforderlich.`). Hash + `GeneratedPath` unter `C:\Daten\Tools\AiNetLinter-win-x64\cache\asm.cursor\…`. `Confidence: medium`. | ~30 Zeilen. `Diagnosen: 0 von 111 (gekürzt)` **ohne** Samples. |
 | 4 | Aggregation + Diagnostics | `includeDiagnostics=true` | Formal Erfolg, **identisch** zu Call 1 (gleiche Zähler, keine Sample-Liste). | ~35 Zeilen. Beschreibung verfehlt. |
@@ -83,7 +83,7 @@ Happy Path (lebt der Daemon? ist Platform `Loaded`?) ist nutzbar. Sessiondetails
 | JSON-Schema kodiert den Paarzwang nicht. | friction | — | Laufzeit fängt es ab (`INVALID_ARGUMENT`, Call 7/9). |
 | `targetType` ohne Enum im Schema. | friction | — | Hint in Call 7 nennt die Werte. |
 
-Ground Truth (kleine Stichprobe, kein Vollabgleich): Platform-Root existiert, `Sample.Project.slnx` und `platform-default.rules.json` unter `Tests.Logic\AiNetLinter\rules\` sind plausible Health-Fakten. externe Assembly-Pfad existiert; `partial`/`decompiled` passt zu fehlenden Refs (Polly 8 vs. 7 am Disk-Pfad, extern-Shared nicht auflösbar). Label-Shift ist intern widersprüchlich zur zielgebundenen Antwort, kein Datei-Vergleich nötig.
+Ground Truth (kleine Stichprobe, kein Vollabgleich): Platform-Root existiert, `Sample.Project.slnx` und `ainetlinter-rules.json` unter `Tests.Logic` sind plausible Health-Fakten. externe Assembly-Pfad existiert; `partial`/`decompiled` passt zu fehlenden Refs (Polly 8 vs. 7 am Disk-Pfad, extern-Shared nicht auflösbar). Label-Shift ist intern widersprüchlich zur zielgebundenen Antwort, kein Datei-Vergleich nötig.
 
 ## 7 Token/IDs
 

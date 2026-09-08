@@ -47,7 +47,7 @@ internal static class PatternDetectScanner
         {
             var engine = new LinterEngine(
                 config: concreteConfig,
-                rulesJsonContent: null,
+                configContent: null,
                 profiler: null,
                 console: console);
             violations = await engine.RunAsync(solution, noCache: true, cacheTtlMinutes: 0, ct);

@@ -98,10 +98,10 @@ public class MyUnsealedClass
         var config = CreateDefaultConfig();
         // _tempDir contains a unique GUID → unique cache-file name per test run.
         // Without this, stale cache from a failed Dispose causes flakiness on re-runs.
-        var rulesJson = $"{{ \"Global\": {{ \"EnforceSealedClasses\": true }}, \"_testRun\": \"{_tempDir.DirectoryPath.Replace("\\", "\\\\")}\" }}";
+        var configContent = $"{{ \"Global\": {{ \"EnforceSealedClasses\": true }}, \"_testRun\": \"{_tempDir.DirectoryPath.Replace("\\", "\\\\")}\" }}";
 
         // 2. Run engine first time — cache miss → fresh analysis
-        var engine = new LinterEngine(config, rulesJson);
+        var engine = new LinterEngine(config, configContent);
         var violations1 = await engine.RunAsync(solution);
 
         Assert.Single(violations1);
@@ -112,7 +112,7 @@ public class MyUnsealedClass
         //    since solution.FilePath is null for in-memory solutions.
         var filePath = Path.Combine(_tempDir, fileName);
         var checksum = FileChecksumCalculator.ComputeSha256Hex(filePath);
-        var cacheManager = AnalysisCacheManager.Load(_exeDir, "AdhocWorkspace", rulesJson, TimeSpan.FromMinutes(60));
+        var cacheManager = AnalysisCacheManager.Load(_exeDir, "AdhocWorkspace", configContent, TimeSpan.FromMinutes(60));
         var fakeEntry = new AnalysisCacheEntry
         {
             RelativePath = fileName,
@@ -150,13 +150,13 @@ public class MyUnsealedClass
         var fileName = "MyUnsealedClass.cs";
         var solution = await CreateSolutionWithFileOnDiskAsync(fileName, source);
         var config = CreateDefaultConfig();
-        var rulesJson = $"{{\"Global\": {{\"EnforceSealedClasses\": true}}, \"_testRun\": \"{_tempDir.DirectoryPath.Replace("\\", "\\\\")}\"}}";
+        var configContent = $"{{\"Global\": {{\"EnforceSealedClasses\": true}}, \"_testRun\": \"{_tempDir.DirectoryPath.Replace("\\", "\\\\")}\"}}";
 
         // 2. Wrap solution in a catalog that has loading errors
         var catalog = new SourceFileCatalog(solution, hasLoadingErrors: true);
 
         // 3. Run engine - because it has loading errors, cache should not be saved
-        var engine = new LinterEngine(config, rulesJson);
+        var engine = new LinterEngine(config, configContent);
         var violations = await engine.RunAsync(catalog);
 
         Assert.Single(violations);
@@ -164,7 +164,7 @@ public class MyUnsealedClass
         // 4. Verify that cache file was NOT created or doesn't exist
         var solutionPath = solution.FilePath ?? solution.Workspace.GetType().Name;
         var solutionName = Path.GetFileNameWithoutExtension(solutionPath);
-        var hashInput = solutionPath.ToLowerInvariant() + rulesJson;
+        var hashInput = solutionPath.ToLowerInvariant() + configContent;
         var hashBytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(hashInput));
         var hash8 = Convert.ToHexString(hashBytes)[..8].ToLowerInvariant();
         var cacheFileName = $"{solutionName}-{hash8}.json";

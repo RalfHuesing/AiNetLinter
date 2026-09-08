@@ -1,5 +1,6 @@
 #nullable enable
 
+using AiNetLinter.Configuration;
 using AiNetLinter.Output;
 
 namespace AiNetLinter.Mcp.Projects;
@@ -11,8 +12,6 @@ namespace AiNetLinter.Mcp.Projects;
 /// </summary>
 internal static class ProjectDefinitionLoader
 {
-    internal const string RulesFileName = "ainetlinter-rules.json";
-
     internal static ProjectDefinitionLoadResult LoadSolutionTarget(string? solutionPath)
     {
         if (string.IsNullOrWhiteSpace(solutionPath))
@@ -35,7 +34,7 @@ internal static class ProjectDefinitionLoader
 
         var rulesPath = Path.Combine(
             Path.GetDirectoryName(canonicalSolutionPath)!,
-            RulesFileName);
+            ConfigLoader.FileName);
         return ProjectDefinitionLoadResult.Success(
             new ProjectDefinition(canonicalSolutionPath, File.Exists(rulesPath) ? rulesPath : string.Empty));
     }

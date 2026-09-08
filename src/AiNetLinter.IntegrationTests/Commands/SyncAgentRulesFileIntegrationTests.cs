@@ -20,7 +20,7 @@ public sealed class SyncAgentRulesFileIntegrationTests
     public void Run_WriteMode_CreatesFile()
     {
         using var tempDir = TestTempDirectory.Create("SyncAgentRulesTest_");
-        var rulesPath = Path.Combine(SolutionRootLocator.Find(), "rules.json");
+        var rulesPath = Path.Combine(SolutionRootLocator.Find(), "ainetlinter-rules.json");
 
         var args = new LinterArgs
         {

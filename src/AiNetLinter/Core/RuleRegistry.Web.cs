@@ -52,7 +52,7 @@ internal static partial class RuleRegistry
         IsMetric: true,
         IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Css.MaxCssLineCount,
-        ConfigKeyHint: "rules.json → Web.Css.MaxCssLineCount (Web.IsEnabled muss true sein)"
+        ConfigKeyHint: "ainetlinter-rules.json → Web.Css.MaxCssLineCount (Web.IsEnabled muss true sein)"
     );
 
     private static RuleMetadata BuildCssPreferScopedCss() => new(
@@ -74,7 +74,7 @@ internal static partial class RuleRegistry
         IsEnabled: c => c.Web.IsEnabled && c.Web.Css.PreferScopedCss,
         IsMetric: false,
         IncludeInAgentRules: true,
-        ConfigKeyHint: "rules.json → Web.Css.PreferScopedCss | Web.Css.PreferScopedCssMinRuleCount"
+        ConfigKeyHint: "ainetlinter-rules.json → Web.Css.PreferScopedCss | Web.Css.PreferScopedCssMinRuleCount"
     );
 
     private static RuleMetadata BuildCssMaxCssSelectorComplexity() => new(
@@ -97,7 +97,7 @@ internal static partial class RuleRegistry
         IsMetric: true,
         IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Css.MaxCssSelectorComplexity,
-        ConfigKeyHint: "rules.json → Web.Css.MaxCssSelectorComplexity (Web.IsEnabled muss true sein)"
+        ConfigKeyHint: "ainetlinter-rules.json → Web.Css.MaxCssSelectorComplexity (Web.IsEnabled muss true sein)"
     );
 
     private static RuleMetadata BuildCssParseError() => new(
@@ -140,7 +140,7 @@ internal static partial class RuleRegistry
         IsMetric: true,
         IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Js.MaxJsLineCount,
-        ConfigKeyHint: "rules.json → Web.Js.MaxJsLineCount (Web.IsEnabled muss true sein)"
+        ConfigKeyHint: "ainetlinter-rules.json → Web.Js.MaxJsLineCount (Web.IsEnabled muss true sein)"
     );
 
     private static RuleMetadata BuildJsEnforceJsModules() => new(
@@ -162,7 +162,7 @@ internal static partial class RuleRegistry
         IsEnabled: c => c.Web.IsEnabled && c.Web.Js.EnforceJsModules,
         IsMetric: false,
         IncludeInAgentRules: true,
-        ConfigKeyHint: "rules.json → Web.Js.EnforceJsModules"
+        ConfigKeyHint: "ainetlinter-rules.json → Web.Js.EnforceJsModules"
     );
 
     private static RuleMetadata BuildJsSyntaxError() => new(
@@ -205,7 +205,7 @@ internal static partial class RuleRegistry
         IsMetric: true,
         IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Razor.MaxRazorLineCount,
-        ConfigKeyHint: "rules.json → Web.Razor.MaxRazorLineCount (Web.IsEnabled muss true sein)"
+        ConfigKeyHint: "ainetlinter-rules.json → Web.Razor.MaxRazorLineCount (Web.IsEnabled muss true sein)"
     );
 
     private static RuleMetadata BuildRazorMaxRazorCodeBlockLines() => new(
@@ -228,7 +228,7 @@ internal static partial class RuleRegistry
         IsMetric: true,
         IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Razor.MaxRazorCodeBlockLines,
-        ConfigKeyHint: "rules.json → Web.Razor.MaxRazorCodeBlockLines"
+        ConfigKeyHint: "ainetlinter-rules.json → Web.Razor.MaxRazorCodeBlockLines"
     );
 
     private static RuleMetadata BuildRazorMaxMarkupNestingDepth() => new(
@@ -251,7 +251,7 @@ internal static partial class RuleRegistry
         IsMetric: true,
         IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Razor.MaxMarkupNestingDepth,
-        ConfigKeyHint: "rules.json → Web.Razor.MaxMarkupNestingDepth"
+        ConfigKeyHint: "ainetlinter-rules.json → Web.Razor.MaxMarkupNestingDepth"
     );
 
     private static RuleMetadata BuildRazorBanInlineEventLambdas() => new(
@@ -273,7 +273,7 @@ internal static partial class RuleRegistry
         IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.BanInlineEventLambdas,
         IsMetric: false,
         IncludeInAgentRules: true,
-        ConfigKeyHint: "rules.json → Web.Razor.BanInlineEventLambdas"
+        ConfigKeyHint: "ainetlinter-rules.json → Web.Razor.BanInlineEventLambdas"
     );
 
     private static RuleMetadata BuildRazorMaxControlFlowBlocks() => new(
@@ -296,7 +296,7 @@ internal static partial class RuleRegistry
         IsMetric: true,
         IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Razor.MaxControlFlowBlocks,
-        ConfigKeyHint: "rules.json → Web.Razor.MaxControlFlowBlocks"
+        ConfigKeyHint: "ainetlinter-rules.json → Web.Razor.MaxControlFlowBlocks"
     );
 
     private static RuleMetadata BuildRazorMaxForeachNestingDepth() => new(
@@ -319,7 +319,7 @@ internal static partial class RuleRegistry
         IsMetric: true,
         IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Razor.MaxForeachNestingDepth,
-        ConfigKeyHint: "rules.json → Web.Razor.MaxForeachNestingDepth"
+        ConfigKeyHint: "ainetlinter-rules.json → Web.Razor.MaxForeachNestingDepth"
     );
 
     private static RuleMetadata BuildRazorMaxComponentParameterCount() => new(
@@ -342,7 +342,7 @@ internal static partial class RuleRegistry
         IsMetric: true,
         IncludeInAgentRules: true,
         GetMetricLimit: c => c.Web.Razor.MaxComponentParameterCount,
-        ConfigKeyHint: "rules.json → Web.Razor.MaxComponentParameterCount"
+        ConfigKeyHint: "ainetlinter-rules.json → Web.Razor.MaxComponentParameterCount"
     );
 
     private static RuleMetadata BuildRazorBanInlineTernaryInAttributes() => new(
@@ -364,6 +364,6 @@ internal static partial class RuleRegistry
         IsEnabled: c => c.Web.IsEnabled && c.Web.Razor.BanInlineTernaryInAttributes,
         IsMetric: false,
         IncludeInAgentRules: true,
-        ConfigKeyHint: "rules.json → Web.Razor.BanInlineTernaryInAttributes"
+        ConfigKeyHint: "ainetlinter-rules.json → Web.Razor.BanInlineTernaryInAttributes"
     );
 }

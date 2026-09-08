@@ -1,7 +1,7 @@
 # ForbiddenNamespaceDependencies (F08)
 
 **Kategorie:** Konfigurationsfeature  
-**CLI-Flag / Konfiguration:** `rules.json → ForbiddenNamespaceDependencies`  
+**CLI-Flag / Konfiguration:** `ainetlinter-rules.json → ForbiddenNamespaceDependencies`
 **Status:** Vorhanden, aktuell leer (keine Verbote konfiguriert)
 
 ---

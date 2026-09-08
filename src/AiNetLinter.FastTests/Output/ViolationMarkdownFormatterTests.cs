@@ -405,7 +405,7 @@ public sealed class ViolationMarkdownFormatterTests
 
         var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
 
-        Assert.Contains("**Konfiguration:** `rules.json → Metrics.MaxPartialClassFiles", result);
+        Assert.Contains("**Konfiguration:** `ainetlinter-rules.json → Metrics.MaxPartialClassFiles", result);
     }
 
     [Fact]
@@ -418,7 +418,7 @@ public sealed class ViolationMarkdownFormatterTests
 
         var result = ViolationMarkdownFormatter.Format(violations, OutputRoot);
 
-        Assert.Contains("**Konfiguration:** `rules.json → Metrics.MaxAIContextFootprint", result);
+        Assert.Contains("**Konfiguration:** `ainetlinter-rules.json → Metrics.MaxAIContextFootprint", result);
     }
 
     [Fact]

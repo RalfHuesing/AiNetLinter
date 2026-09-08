@@ -27,7 +27,7 @@ internal static class CliOptionFactory
 
     internal static Option<string?> CreateConfigOption() => new("--config", "-c")
     {
-        Description = "Pfad zur JSON-Konfigurationsdatei (rules.json)",
+        Description = "Pfad zur JSON-Konfigurationsdatei (ainetlinter-rules.json)",
     };
 
     internal static Option<string?> CreatePathOption() => new Option<string?>("--path", "-p")
@@ -77,12 +77,12 @@ internal static class CliOptionFactory
 
     internal static Option<bool> CreateSyncAgentRulesOption() => new("--sync-agent-rules", "-sar")
     {
-        Description = "Synchronisiert die rules.json Konfiguration als .agents/rules/AiNetLinter.mdc Datei",
+        Description = "Synchronisiert die ainetlinter-rules.json Konfiguration als .agents/rules/AiNetLinter.mdc Datei",
     };
 
     internal static Option<bool> CreateSyncAgentRulesOnlyOption() => new("--sync-agent-rules-only", "-saro")
     {
-        Description = "Synchronisiert die rules.json Konfiguration als .agents/rules/AiNetLinter.mdc Datei und beendet das Programm (schneller Pfad ohne Lint-Lauf)",
+        Description = "Synchronisiert die ainetlinter-rules.json Konfiguration als .agents/rules/AiNetLinter.mdc Datei und beendet das Programm (schneller Pfad ohne Lint-Lauf)",
     };
 
     internal static Option<string?> CreateAgentRulesPathOption() => new("--agent-rules-path", "-arp")
@@ -92,7 +92,7 @@ internal static class CliOptionFactory
 
     internal static Option<string?> CreateDocsOption() => new("--docs", "-d")
     {
-        Description = "Gibt eine integrierte Dokumentationsdatei aus (Optionen: integration, readme, agent-api, configuration, rationale, roadmap, rules-json, mcp-bootstrap, mcp-rule; case-insensitive). 'mcp-bootstrap' erklaert die einmalige MCP-Projektintegration.",
+        Description = "Gibt eine integrierte Dokumentationsdatei aus (Optionen: integration, readme, agent-api, configuration, rationale, roadmap, ainetlinter-rules-json, mcp-bootstrap, mcp-rule; case-insensitive). 'mcp-bootstrap' erklaert die einmalige MCP-Projektintegration.",
     };
 
     internal static Option<bool> CreateListRulesOption() => new("--list-rules")

@@ -1,7 +1,7 @@
 # PathOverrides (F05)
 
 **Kategorie:** Konfigurationsfeature  
-**CLI-Flag / Konfiguration:** `rules.json → PathOverrides`  
+**CLI-Flag / Konfiguration:** `ainetlinter-rules.json → PathOverrides`
 **Status:** Vorhanden, aktuell leer
 
 ---
@@ -51,7 +51,7 @@ Das deutet darauf hin, dass die bestehende Kombination aus F04 und F07 die meist
 | **dotnet format** | `.editorconfig` per Verzeichnis | Vererbbare Konfiguration; sehr granular |
 | **StyleCop** | Dateiebene-Suppressions | Keine Verzeichnis-Konfiguration; nur Datei-Attribut |
 | **SonarQube** | Source Exclusions per Path-Pattern | Ausschluss ganzer Verzeichnisse; keine Regelanpassung |
-| **AiNetLinter** | `PathOverrides` in `rules.json` | Verzeichnis-Granularität; aktuell ungenutzt |
+| **AiNetLinter** | `PathOverrides` in `ainetlinter-rules.json` | Verzeichnis-Granularität; aktuell ungenutzt |
 
 ESLints Ansatz (Glob auf Dateiebene) ist mächtiger als AiNetLinters PathOverrides — ESLint erlaubt unterschiedliche Regeln für beliebige Datei-Patterns. AiNetLinters PathOverrides hat einen engeren Scope (Verzeichnisse, keine Einzel-Dateien per Pattern), was einfacher zu konfigurieren aber weniger flexibel ist.
 

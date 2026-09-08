@@ -65,14 +65,14 @@ public sealed class PerformanceProfilerTests
             Directory.Delete(measurementsDir, true);
         }
 
-        var mockArgs = new[] { "--path", "testProj", "--config", "rules.json" };
+        var mockArgs = new[] { "--path", "testProj", "--config", "ainetlinter-rules.json" };
         var profiler = new PerformanceProfiler(true, mockArgs);
 
         profiler.StartPhase("TestPhase");
         profiler.StopPhase("TestPhase");
         profiler.RecordDocumentAnalysis("testFile.cs", 15.0, 2);
 
-        profiler.WriteReport("testProj", "C:\\mock\\solution.sln", "C:\\mock\\rules.json");
+        profiler.WriteReport("testProj", "C:\\mock\\solution.sln", "C:\\mock\\ainetlinter-rules.json");
 
         Assert.True(Directory.Exists(measurementsDir));
 
@@ -86,14 +86,14 @@ public sealed class PerformanceProfilerTests
         var jsonContent = File.ReadAllText(jsonFiles[0]);
 
         Assert.Contains("Solution File: C:\\mock\\solution.sln", logContent);
-        Assert.Contains("Rules File: C:\\mock\\rules.json", logContent);
-        Assert.Contains("Arguments: --path testProj --config rules.json", logContent);
+        Assert.Contains("Rules File: C:\\mock\\ainetlinter-rules.json", logContent);
+        Assert.Contains("Arguments: --path testProj --config ainetlinter-rules.json", logContent);
 
         var report = JsonSerializer.Deserialize<ProfilerJsonReport>(jsonContent);
         Assert.NotNull(report);
         Assert.Equal("C:\\mock\\solution.sln", report.SolutionPath);
-        Assert.Equal("C:\\mock\\rules.json", report.RulesPath);
-        Assert.Equal("--path testProj --config rules.json", report.Arguments);
+        Assert.Equal("C:\\mock\\ainetlinter-rules.json", report.RulesPath);
+        Assert.Equal("--path testProj --config ainetlinter-rules.json", report.Arguments);
 
         Directory.Delete(measurementsDir, true);
     }

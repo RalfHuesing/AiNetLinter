@@ -21,10 +21,10 @@ public sealed class WebBaselineTests
         using var tempDir = TestTempDirectory.Create("ainetlinter-web-baseline-");
         var baselinePath = tempDir.GetPath("baseline.json");
 
-        // 1. Enable Web features in rules.json
-        var rulesJson = File.ReadAllText(workspace.ConfigPath);
-        rulesJson = rulesJson.Replace("\"IsEnabled\": false", "\"IsEnabled\": true");
-        File.WriteAllText(workspace.ConfigPath, rulesJson);
+        // 1. Enable Web features in ainetlinter-rules.json
+        var configContent = File.ReadAllText(workspace.ConfigPath);
+        configContent = configContent.Replace("\"IsEnabled\": false", "\"IsEnabled\": true");
+        File.WriteAllText(workspace.ConfigPath, configContent);
 
         // 2. Create some web files in the workspace project directory
         var projectDir = Path.Combine(workspace.RootPath, "src", "BaselineMini");
@@ -65,11 +65,11 @@ public sealed class WebBaselineTests
         using var tempDir = TestTempDirectory.Create("ainetlinter-web-baseline-");
         var baselinePath = tempDir.GetPath("baseline.json");
 
-        // 1. Enable Web features in rules.json and set MaxCssLineCount to a small value (e.g., 2)
-        var rulesJson = File.ReadAllText(workspace.ConfigPath);
-        rulesJson = rulesJson.Replace("\"IsEnabled\": false", "\"IsEnabled\": true");
-        rulesJson = rulesJson.Replace("\"MaxCssLineCount\": 300", "\"MaxCssLineCount\": 2");
-        File.WriteAllText(workspace.ConfigPath, rulesJson);
+        // 1. Enable Web features in ainetlinter-rules.json and set MaxCssLineCount to a small value (e.g., 2)
+        var configContent = File.ReadAllText(workspace.ConfigPath);
+        configContent = configContent.Replace("\"IsEnabled\": false", "\"IsEnabled\": true");
+        configContent = configContent.Replace("\"MaxCssLineCount\": 300", "\"MaxCssLineCount\": 2");
+        File.WriteAllText(workspace.ConfigPath, configContent);
 
         // 2. Create web files in the workspace project directory
         var projectDir = Path.Combine(workspace.RootPath, "src", "BaselineMini");

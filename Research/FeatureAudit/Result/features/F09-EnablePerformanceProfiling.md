@@ -1,7 +1,7 @@
 # EnablePerformanceProfiling (F09)
 
 **Kategorie:** Konfigurationsfeature  
-**CLI-Flag / Konfiguration:** `rules.json → Global.EnablePerformanceProfiling: true`  
+**CLI-Flag / Konfiguration:** `ainetlinter-rules.json → Global.EnablePerformanceProfiling: true`
 **Status:** Aktiv
 
 ---

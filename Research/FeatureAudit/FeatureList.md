@@ -342,42 +342,42 @@ Vollständige Eingabeliste für den Research-Agenten.
 - **Result-Datei:** `Result\features\F03-Discovery.md`
 
 ### F04 — ProjectOverrides
-- **Konfiguration:** `rules.json → ProjectOverrides`
+- **Konfiguration:** `ainetlinter-rules.json → ProjectOverrides`
 - **Status:** Vorhanden (aktives Beispiel: `*.Tests` mit lockeren Limits)
 - **Beschreibung:** Projektscharfe Regelabweichungen per Glob-Pattern
 - **Relevante Paper-Cluster:** D, E
 - **Result-Datei:** `Result\features\F04-ProjectOverrides.md`
 
 ### F05 — PathOverrides
-- **Konfiguration:** `rules.json → PathOverrides`
+- **Konfiguration:** `ainetlinter-rules.json → PathOverrides`
 - **Status:** Vorhanden, aktuell leer
 - **Beschreibung:** Pfadbezogene Regelabweichungen, granularer als ProjectOverrides
 - **Relevante Paper-Cluster:** D
 - **Result-Datei:** `Result\features\F05-PathOverrides.md`
 
 ### F06 — UiSeparation (Blazor / WPF)
-- **Konfiguration:** `rules.json → UiSeparation`
+- **Konfiguration:** `ainetlinter-rules.json → UiSeparation`
 - **Status:** Vorhanden
 - **Beschreibung:** Erzwingt Code-Behind-Trennung für Blazor (`.razor.cs`) und minimalen Code-Behind für WPF; optional CSS-Isolation
 - **Relevante Paper-Cluster:** D, C
 - **Result-Datei:** `Result\features\F06-UiSeparation.md`
 
 ### F07 — FileFilters
-- **Konfiguration:** `rules.json → FileFilters`
+- **Konfiguration:** `ainetlinter-rules.json → FileFilters`
 - **Status:** Vorhanden
 - **Beschreibung:** Ausschluss generierter Dateien (`*.g.cs`, `*.generated.cs`, `AssemblyInfo.cs`) und Verzeichnisse (`obj/`, `bin/`) sowie Klassen mit `[GeneratedCode]`-Attribut
 - **Relevante Paper-Cluster:** D
 - **Result-Datei:** `Result\features\F07-FileFilters.md`
 
 ### F08 — ForbiddenNamespaceDependencies
-- **Konfiguration:** `rules.json → ForbiddenNamespaceDependencies`
+- **Konfiguration:** `ainetlinter-rules.json → ForbiddenNamespaceDependencies`
 - **Status:** Vorhanden, aktuell leer (keine Verbote konfiguriert)
 - **Beschreibung:** Erlaubt das Verbieten von Namespace-Abhängigkeiten (z.B. Infrastructure darf nicht Domain direkt importieren — Onion/Clean-Architecture-Erzwingung)
 - **Relevante Paper-Cluster:** E, C
 - **Result-Datei:** `Result\features\F08-ForbiddenNamespaceDependencies.md`
 
 ### F09 — EnablePerformanceProfiling
-- **Konfiguration:** `rules.json → Global.EnablePerformanceProfiling: true`
+- **Konfiguration:** `ainetlinter-rules.json → Global.EnablePerformanceProfiling: true`
 - **Status:** Aktiv
 - **Beschreibung:** Schreibt Performance-Messungen pro Lint-Lauf in `measurements/` — hilft Bottlenecks im Linter selbst zu identifizieren
 - **Relevante Paper-Cluster:** (kein Paper-Cluster — rein internes Tool-Feature)

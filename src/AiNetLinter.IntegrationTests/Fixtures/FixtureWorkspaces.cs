@@ -41,7 +41,7 @@ internal abstract class FixtureWorkspace : IDisposable
 internal sealed class BaselineMiniFixtureWorkspace : FixtureWorkspace
 {
     public BaselineMiniFixtureWorkspace() : base("BaselineMini") { }
-    public string ConfigPath => Path.Combine(RootPath, "rules.json");
+    public string ConfigPath => Path.Combine(RootPath, "ainetlinter-rules.json");
     public string ViolatingClassPath => Path.Combine(RootPath, "src", "BaselineMini", "ViolatingClass.cs");
 }
 

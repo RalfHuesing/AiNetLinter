@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.IO;
 using System.Threading;
@@ -52,8 +52,8 @@ internal static class MaintenanceCommand
 
         LinterLogger.LogDisableAllInject(args.Verbose, args.TargetPath, c);
 
-        string? rulesJsonContent = ConfigLoader.LoadRulesJsonContent(args.ConfigPath);
-        var engine = new LinterEngine(config, rulesJsonContent);
+        string? configContent = ConfigLoader.LoadConfigContent(args.ConfigPath);
+        var engine = new LinterEngine(config, configContent);
         var violations = await engine.RunAsync(args.TargetPath, args.NoCache, args.CacheTtlMinutes, ct);
         var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
         var violatingPaths = ViolationPathResolver.ResolveAbsolutePaths(violations, outputRoot);
@@ -99,7 +99,7 @@ internal static class MaintenanceCommand
                 : Path.GetDirectoryName(args.TargetPath);
             if (!string.IsNullOrEmpty(targetDir))
             {
-                var candidate = Path.Combine(targetDir, "rules.json");
+                var candidate = Path.Combine(targetDir, ConfigLoader.FileName);
                 if (File.Exists(candidate))
                 {
                     configPath = candidate;

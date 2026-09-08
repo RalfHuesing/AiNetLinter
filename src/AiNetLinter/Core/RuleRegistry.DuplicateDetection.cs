@@ -27,7 +27,7 @@ internal static partial class RuleRegistry
             IsEnabled: c => c.Global.EnableDuplicateCodeCheck,
             IsMetric: false,
             IncludeInAgentRules: true,
-            ConfigKeyHint: "rules.json → Global.DuplicateCode* (MinTokens, ExactThreshold, MaxResults, ...) | find_duplicates-MCP-Tool fuer near/fuzzy-Kandidaten"
+            ConfigKeyHint: "ainetlinter-rules.json → Global.DuplicateCode* (MinTokens, ExactThreshold, MaxResults, ...) | find_duplicates-MCP-Tool fuer near/fuzzy-Kandidaten"
         ),
     ];
 }

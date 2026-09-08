@@ -1,7 +1,7 @@
 # ProjectOverrides (F04)
 
 **Kategorie:** Konfigurationsfeature  
-**CLI-Flag / Konfiguration:** `rules.json → ProjectOverrides`  
+**CLI-Flag / Konfiguration:** `ainetlinter-rules.json → ProjectOverrides`
 **Status:** Vorhanden (aktives Beispiel: `*.Tests` mit lockeren Limits)
 
 ---
@@ -10,7 +10,7 @@
 
 🟢 **WERTVOLL**
 
-**Fazit:** Projektscharfe Regelabweichungen per Glob-Pattern sind ein essenzielles Feature für Mono-Repository-Setups und heterogene Codebases — ohne sie müsste jedes Teilprojekt eine eigene rules.json führen, was die zentrale Konfigurierbarkeit torpediert.
+**Fazit:** Projektscharfe Regelabweichungen per Glob-Pattern sind ein essenzielles Feature für Mono-Repository-Setups und heterogene Codebases — ohne sie müsste jedes Teilprojekt eine eigene ainetlinter-rules.json führen, was die zentrale Konfigurierbarkeit torpediert.
 
 ---
 
@@ -46,7 +46,7 @@ ProjectOverrides ermöglicht projektspezifische Regelabweichungen durch Glob-Pat
 | **StyleCop** | `stylecop.json` pro Projekt | Separate Konfigurationsdatei; keine Vererbung |
 | **dotnet format** | `.editorconfig` + Vererbung | Verzeichnis-basierte Konfiguration; gut für Mono-Repos |
 | **NDepend** | Rules per Projekt-Snapshot | Projekt-Ebene; komplexere Konfiguration |
-| **AiNetLinter** | `ProjectOverrides` in `rules.json` | Zentralisiert; Glob-Pattern; einfach konfigurierbar |
+| **AiNetLinter** | `ProjectOverrides` in `ainetlinter-rules.json` | Zentralisiert; Glob-Pattern; einfach konfigurierbar |
 
 AiNetLinters Ansatz — zentralisierte Konfiguration mit Glob-Pattern — ist ähnlich wie ESLints `overrides`-Array, aber in einer einzigen Konfigurationsdatei. Das ist ein Vorteil gegenüber dem StyleCop-Ansatz (separate Dateien pro Projekt), aber eine Einschränkung gegenüber ESLint (ESLint erlaubt auch regex-basierte Dateiname-Muster, nicht nur Projektname-Globs).
 

@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Output;
 
@@ -22,7 +23,7 @@ internal static class DocsCommand
         { "configuration", "Docs/configuration.md" },
         { "rationale", "Docs/rationale.md" },
         { "roadmap", "Docs/ROADMAP.md" },
-        { "rules-json", "rules.json" },
+        { "ainetlinter-rules-json", ConfigLoader.FileName },
         { McpBootstrapDocument, "Docs/mcp-bootstrap.md" },
         { "mcp-rule", "AgentRules/AiNetLinter-McpWorkflow.mdc" }
     };

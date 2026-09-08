@@ -53,7 +53,7 @@ public sealed class ReloadConfigToolTests
 
         var result = await ReloadConfigTool.ExecuteAsync(state, missingPath, CancellationToken.None);
 
-        // isError-Policy: eine fehlende rules.json ist ein behebbarer Pfadfehler (Tippfehler,
+        // isError-Policy: eine fehlende ainetlinter-rules.json ist ein behebbarer Pfadfehler (Tippfehler,
         // falscher Ordner) — IsError bleibt false, siehe IsErrorPolicy.md.
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -157,30 +157,6 @@ public sealed class ReloadConfigToolTests
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("CONFIG_NOT_FOUND", text);
         Assert.True(state.UsedDefaultConfig);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_RootRulesJson_IsNotUsedAsNeighborRules()
-    {
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(catalog, Config: CreateConfig(), UsedDefaultConfig: true)));
-
-        // Die alte rules.json ist kein Fallback fuer die benannte Nachbardatei.
-        var discoveredPath = Path.Combine(fixture.RootPath, "rules.json");
-        await File.WriteAllTextAsync(discoveredPath, "{ \"Global\": { \"BanAsyncVoid\": false }, \"Metrics\": {} }");
-
-        var result = await ReloadConfigTool.ExecuteAsync(
-            state,
-            Path.Combine(fixture.RootPath, "ainetlinter-rules.json"),
-            CancellationToken.None);
-
-        Assert.NotEqual(true, result.IsError);
-        Assert.Contains("CONFIG_NOT_FOUND", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
-        Assert.True(state.UsedDefaultConfig);
-        Assert.Null(state.ResolvedConfigPath);
-        Assert.True(state.Config.Global.BanAsyncVoid);
     }
 
     [Fact]

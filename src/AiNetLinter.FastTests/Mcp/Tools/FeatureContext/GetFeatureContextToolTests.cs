@@ -139,7 +139,6 @@ public sealed class GetFeatureContextToolTests
 
         // 2. Metriken
         Assert.Contains("## 2. Metriken & Budget (ainetlinter-rules.json)", text);
-        Assert.DoesNotContain("Metriken & Budget (rules.json)", text);
         Assert.Contains("Cyclomatic Complexity", text);
         Assert.Contains("Cognitive Complexity", text);
         Assert.Contains("Budget verbleibend", text);

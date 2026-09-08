@@ -8,11 +8,11 @@ URI-Muster laut Auftrag: `ainetlinter://rules{?projectRoot}` mit absolutem, URL-
 
 ## 1. Schema-Kurzfazit
 
-`ainetlinter://rules` ist eine **projektgebundene Markdown-Resource** der **effektiven** AiNetLinter-Regelkonfiguration — kein Roh-Dump von `rules.json`.
+`ainetlinter://rules` ist eine **projektgebundene Markdown-Resource** der **effektiven** AiNetLinter-Regelkonfiguration — kein Roh-Dump von `ainetlinter-rules.json`.
 
 Mit gültigem `projectRoot` kommt `text/markdown` mit:
 
-- Projektroot und Konfigurationsquelle (hier: `Sample.Project.Tests.Logic\AiNetLinter\rules\platform-default.rules.json`)
+- Projektroot und Konfigurationsquelle (hier: `Sample.Project.Tests.Logic\ainetlinter-rules.json`)
 - Tabelle **Aktive Regeln** (Name, Intent, Severity, Kurzbeschreibung, Config-Zeiger)
 - Tabelle **Effektive Schwellwerte** (Limit, Status aktiv/deaktiviert, Config-Zeiger)
 - Liste **Deaktivierte Regeln** (nur Namen)
@@ -39,7 +39,7 @@ Call A (Auszug, Kopf):
 - Aktive Regeln u. a. `EnforceNoSilentCatch`, `BanAsyncVoid`, `BanBlockingTaskAccess`, `DetectAndBanPhantomDependencies`, `EnforceSealedClasses`, `StaticTestSentinel`
 - Schwellwerte u. a. `MaxLineCount=600`, `MaxMethodLineCount=60`, `AIContextFootprint=5000`; `MaxDirectoryChildren=0` und `MaxLinqChainLength=0` als **deaktiviert** markiert
 - Deaktiviert namentlich u. a. `EnforceXmlDocumentation`, `EnforceNamespaceDirectoryMapping`, `CSS_PreferScopedCss`
-- Overrides: **1** Projekt-Muster, **30** Pfad-Muster — Inhalte nicht expandiert, Verweis auf `rules.json`
+- Overrides: **1** Projekt-Muster, **30** Pfad-Muster — Inhalte nicht expandiert, Verweis auf `ainetlinter-rules.json`
 
 ---
 
@@ -67,7 +67,7 @@ Geeignet um:
 - zu sehen, welche Regeln **aktiv** sind und mit welcher Severity
 - Limits vs. deaktivierte Metriken (`0` = aus) zu lesen
 - Intent-Gruppen zu erkennen (`agent-resilience`, `agent-context`, `architecture`, `aspnet-binding`, `test-coverage`, `general`)
-- die physische `rules.json` zu finden, ohne sie zu öffnen
+- die physische `ainetlinter-rules.json` zu finden, ohne sie zu öffnen
 
 Nicht geeignet als alleinige Policy-Quelle für:
 
@@ -81,8 +81,8 @@ Nicht geeignet als alleinige Policy-Quelle für:
 
 1. **Query-loser URI ist „not found“** statt „missing required query `projectRoot`“. Wirkt wie eine unbekannte Resource-ID.
 2. **Falscher `projectRoot` ebenfalls „not found“** — dieselbe Fehlerklasse wie (1). Kein projektbezogener Fehlercode, kein Hinweis auf `ainetlinter://overview` oder Agent-Guide.
-3. **Override-Inhalte absichtlich weggelassen** (30 Pfad-Muster). Für Agenten, die eine Datei gegen Overrides prüfen wollen, reicht die Resource nicht; sie müssen `rules.json` extra lesen. Das ist eher Produktentscheidung als Crash, aber undokumentiert in der Resource selbst außer einem Satz.
-4. **Compound-Limits fehlen** in der Markdown-Zusammenfassung (z. B. relaxiertes `MaxMethodLineCount` bei niedriger Komplexität). Effektive Policy ist damit unvollständig gegenüber `rules.json` / Cursor-Rule `AiNetLinter.mdc`.
+3. **Override-Inhalte absichtlich weggelassen** (30 Pfad-Muster). Für Agenten, die eine Datei gegen Overrides prüfen wollen, reicht die Resource nicht; sie müssen `ainetlinter-rules.json` extra lesen. Das ist eher Produktentscheidung als Crash, aber undokumentiert in der Resource selbst außer einem Satz.
+4. **Compound-Limits fehlen** in der Markdown-Zusammenfassung (z. B. relaxiertes `MaxMethodLineCount` bei niedriger Komplexität). Effektive Policy ist damit unvollständig gegenüber `ainetlinter-rules.json` / Cursor-Rule `AiNetLinter.mdc`.
 5. Kein MIME-/Schema-Feld „required query parameters“ in der Fehlerantwort — nur der URI-String im Fehlertext.
 
 Kein Inhalt-Crash, keine Token-Explosion, keine falschen Limits im Happy-Path-Sample (sichtbare Zahlen wirken konsistent mit der bekannten Platform-Default-Policy).
@@ -95,7 +95,7 @@ Kein Inhalt-Crash, keine Token-Explosion, keine falschen Limits im Happy-Path-Sa
 
 Steering-Qualität:
 
-- Positiv: Tabellen, Config-Zeiger (`rules.json → Global.*` / `Metrics.*` / `Web.*`), Status aktiv/deaktiviert, Intent-Spalte, expliziter Verweis „Details stehen in der referenzierten rules.json“.
+- Positiv: Tabellen, Config-Zeiger (`ainetlinter-rules.json → Global.*` / `Metrics.*` / `Web.*`), Status aktiv/deaktiviert, Intent-Spalte, expliziter Verweis „Details stehen in der referenzierten ainetlinter-rules.json“.
 - Positiv: Overrides als **Anzahl**, nicht 30 Musterblöcke — das verhindert genau die befürchtete Flut.
 - Lücke: keine Compound-Suppressions, keine Ausnahme-Listen, kein „so bindest du diese Resource“-Hinweis im Erfolgspayload (Query-Pflicht steht nur implizit, weil ohne Query nichts kommt).
 
@@ -106,7 +106,7 @@ Hint für Agenten: immer `ainetlinter://rules?projectRoot=<absolut URL-kodiert>`
 ## 8. Roslyn-Wünsche
 
 - Fehler bei fehlendem/ungültigem `projectRoot` differenzieren: `MISSING_QUERY_PROJECT_ROOT` vs. `PROJECT_NOT_FOUND` / `PROJECT_NOT_INITIALIZED`, inkl. kurzem erwarteten URI-Muster.
-- Optional: eine Zeile zu Compound-Suppressions (Regel, Bedingung, effektives Limit) oder explizit „Compound: siehe rules.json“, damit die Resource nicht als vollständige effektive Policy missverstanden wird.
+- Optional: eine Zeile zu Compound-Suppressions (Regel, Bedingung, effektives Limit) oder explizit „Compound: siehe ainetlinter-rules.json“, damit die Resource nicht als vollständige effektive Policy missverstanden wird.
 - Optional: Override-Muster als kurze Namensliste oder `get_violations`-Verweis, ohne die volle JSON zu dumpen.
 - Resource-Katalog/`resources/list`: Query-Pflicht und Beispiel-URI sichtbar machen, damit Variante B nicht als „Server hat die Resource nicht“ gelesen wird.
 
@@ -114,7 +114,7 @@ Hint für Agenten: immer `ainetlinter://rules?projectRoot=<absolut URL-kodiert>`
 
 ## 9. Phase 3 (AiNetLinter-Quellzeiger)
 
-Welle 3, read-only `C:\Daten\Entwicklung\Ralf\AiNetLinter`. Kein Patch. Die Platform-`rules.json` ist nur die Live-Quelle aus Call A, nicht der Handler.
+Welle 3, read-only `C:\Daten\Entwicklung\Ralf\AiNetLinter`. Kein Patch. Die Platform-`ainetlinter-rules.json` ist nur die Live-Quelle aus Call A, nicht der Handler.
 
 ### Query-loser URI und falscher Root → dieselbe Klasse `MCP resource not found`
 
@@ -126,7 +126,7 @@ Welle 3, read-only `C:\Daten\Entwicklung\Ralf\AiNetLinter`. Kein Patch. Die Plat
 
 - **Pfad:** `src\AiNetLinter\Mcp\Registration\RulesResourceFormatter.cs`; Wiederverwendung `src\AiNetLinter\Generators\AgentRulesGenerator.cs`; Modell `src\AiNetLinter\Configuration\Config.cs`, `ProjectOverrideEntry.cs`
 - **Symbol:** `RulesResourceFormatter.AppendProjectOverrides` (nur `config.ProjectOverrides.Count` / `PathOverrides.Count`); `AgentRulesGenerator.AppendProjectOverridesDelta` + `CollectOverrideParts` listen bereits Key + abweichende Limits
-- **Ansatz:** Formatter um eine kompakte Namensliste erweitern: Dictionary-Keys (Glob/Projektname) plus `CollectOverrideParts` (oder extrahierte gemeinsame Hilfsfunktion). Eine Zeile pro Muster, kein volles JSON. Token-Deckel: bei vielen Pfaden erste N Keys + Restzahl + Satz „Details in rules.json“. Reine Config-Projektion, kein Compilation-Walk.
+- **Ansatz:** Formatter um eine kompakte Namensliste erweitern: Dictionary-Keys (Glob/Projektname) plus `CollectOverrideParts` (oder extrahierte gemeinsame Hilfsfunktion). Eine Zeile pro Muster, kein volles JSON. Token-Deckel: bei vielen Pfaden erste N Keys + Restzahl + Satz „Details in ainetlinter-rules.json“. Reine Config-Projektion, kein Compilation-Walk.
 
 ### Compound-Limits fehlen in der Markdown-Zusammenfassung
 

@@ -71,7 +71,7 @@ public static class TestCoverageResolver
         {
             throw new InvalidOperationException(
                 "TestSentinel.ClassNamePatterns ist nicht konfiguriert. " +
-                "Setze mindestens ein Pattern wie \"{Name}Tests\" in rules.json.");
+                "Setze mindestens ein Pattern wie \"{Name}Tests\" in ainetlinter-rules.json.");
         }
     }
 

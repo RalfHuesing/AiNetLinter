@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Projects;
@@ -55,7 +56,7 @@ internal static class ServerMaintenanceToolRegistrations
                     new AnalysisTargetRequest(targetPath),
                     lease => ReloadConfigTool.ExecuteAsync(
                         lease.Server,
-                        Path.Combine(Path.GetDirectoryName(targetPath)!, "ainetlinter-rules.json"),
+                        Path.Combine(Path.GetDirectoryName(targetPath)!, ConfigLoader.FileName),
                         ct));
             },
             TargetPathToolRegistrationOptions.ReloadConfigTool("reload_config", ReloadConfigDescription)));

@@ -6,7 +6,7 @@ namespace AiNetLinter.Configuration;
 
 /// <summary>
 /// Web-Konfiguration fuer CSS-, JS- und Razor-Linting (Phase 1: CSS, Phase 2: JS, Phase 3: Razor).
-/// Wird parallel zu Global/Metrics/TestSentinel/UiSeparation in der rules.json unter "Web" eingebunden.
+/// Wird parallel zu Global/Metrics/TestSentinel/UiSeparation in der ainetlinter-rules.json unter "Web" eingebunden.
 /// </summary>
 public sealed record WebConfig
 {
@@ -32,7 +32,7 @@ public sealed record WebConfig
 // Test-Sentinel: CssConfig ist ueber CssAnalyzerTests.cs mit // @covers abgedeckt
 // (siehe Test-Datei; StaticTestSentinel akzeptiert @covers in Test-Dateien).
 /// <summary>
-/// CSS-spezifische Konfiguration. Wird in der rules.json unter Web.Css gepflegt.
+/// CSS-spezifische Konfiguration. Wird in der ainetlinter-rules.json unter Web.Css gepflegt.
 /// </summary>
 public sealed record CssConfig
 {
@@ -77,7 +77,7 @@ public sealed record CssConfig
 // (siehe Test-Datei; StaticTestSentinel akzeptiert @covers in Test-Dateien).
 /// <summary>
 /// JavaScript-spezifische Konfiguration (Phase 2 der Extend-Web-Features-Epic).
-/// Wird in der rules.json unter Web.Js gepflegt.
+/// Wird in der ainetlinter-rules.json unter Web.Js gepflegt.
 /// </summary>
 public sealed record JsConfig
 {
@@ -110,7 +110,7 @@ public sealed record JsConfig
 // (siehe Test-Datei; StaticTestSentinel akzeptiert @covers in Test-Dateien).
 /// <summary>
 /// Razor/Blazor-spezifische Konfiguration (Phase 3 der Extend-Web-Features-Epic).
-/// Wird in der rules.json unter Web.Razor gepflegt.
+/// Wird in der ainetlinter-rules.json unter Web.Razor gepflegt.
 /// Implementiert die Markup-Qualitaets-Regeln aus Research/Extend-Web-Features/03_Razor_Linting.md.
 /// </summary>
 public sealed record RazorConfig

@@ -43,7 +43,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] Initialisierung der Projektstruktur mit `.slnx` (Solution) und `.csproj`
 - [x] Einrichtung der globalen AI-Richtlinien (`.agents/rules/AiNetLinterRichtlinien.mdc`)
 - [x] Definition der Konfigurationsstruktur (`Config.cs`)
-- [x] **Automatischer rules.json-Sync:** Beim Laden via `--config` werden fehlende Optionen mit Standardwerten ergänzt und veraltete Optionen entfernt; Nutzer-Werte bleiben erhalten (`ConfigSyncer`)
+- [x] **Automatischer ainetlinter-rules.json-Sync:** Beim Laden via `--config` werden fehlende Optionen mit Standardwerten ergänzt und veraltete Optionen entfernt; Nutzer-Werte bleiben erhalten (`ConfigSyncer`)
 - [x] Definition der Fehlermodelle (`RuleViolation.cs`)
 - [x] Implementierung des CLI-Einstiegspunkts (`Program.cs`) mit Argument-Parsing
 - [x] Setup des xUnit v3 Testprojekts (`AiNetLinter.Tests`) und Integration in die Solution
@@ -83,7 +83,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 
 ## Epic 5: Self-Testing CLI Integration (Dogfooding)
 
-- [x] Erstellung einer zentralen `rules.json` für den Eigenlauf des Tools
+- [x] Erstellung einer zentralen `ainetlinter-rules.json` für den Eigenlauf des Tools
 - [x] Implementierung von Integrationstests, die den kompilierten Linter (`AiNetLinter.dll` / `.exe`) auf die eigene Codebase loslassen
 - [x] Automatisches Einbinden des Linters in den `dotnet test` Build-Prozess (Integrationstest führt CLI auf gesamtem src/ Ordner aus)
 
@@ -124,7 +124,7 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 
 ### Architektur-Pflege (Code-Audit 2026-06)
 
-- [x] **DRY-Fix:** `LoadRulesJsonContent` in `ConfigLoader` zentralisiert (Plan 01)
+- [x] **DRY-Fix:** `LoadConfigContent` in `ConfigLoader` zentralisiert (Plan 01)
 - [x] **Namespace-Konsistenz:** `DisableAllDetector` nach `AiNetLinter.Suppression` verschoben (Plan 02)
 - [x] **Namespace-Konsistenz:** `UiFileSeparationChecker` nach `AiNetLinter.Core.Checkers` (Plan 03)
 - [x] **Core-Entschlackung:** `AiNetLinter.Generators`-Namespace extrahiert (Plan 04)
@@ -171,14 +171,14 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 ## GitHub Release
 
 - [x] **Release-Infrastruktur & ZIP-Archive reparieren:**
-  - **Ziel:** Nur noch 3 Plattform-ZIP-Ablagen (Windows, Linux, macOS) im Release bereitstellen. Keine losen Binärdateien oder `rules.json` daneben.
+  - **Ziel:** Nur noch 3 Plattform-ZIP-Ablagen (Windows, Linux, macOS) im Release bereitstellen. Keine losen Binärdateien oder `ainetlinter-rules.json` daneben.
   - **Status:** Abgeschlossen. Der Release-Prozess über GitHub Actions erzeugt 3 Plattform-ZIP-Archive inkl. BuildHost-DLLs.
 
 ---
 
 ## Epic 13: Scope-Verwirrung & Immutability (Scope- & Zustands-Leitplanken)
 
-_Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein (Aktivierung und Schwellenwerte)._
+_Hinweis: Alle Regeln müssen über die `ainetlinter-rules.json` konfigurierbar sein (Aktivierung und Schwellenwerte)._
 
 - [x] **Variable Shadowing (Verdeckung) verbieten:**
   - Statische Prüfung (über `SemanticModel` / `SyntaxTree`), ob lokale Variablen oder Parameter Felder/Eigenschaften der Klasse oder Parameter äußerer Methoden verdecken (`Shadowing`).
@@ -200,13 +200,12 @@ _Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein (Aktivi
 
 ## Epic 14: Topologische Kopplung & Magic Values (Kopplung & Semantik)
 
-_Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein._
+_Hinweis: Alle Regeln müssen über die `ainetlinter-rules.json` konfigurierbar sein._
 
 - [x] **Efferent Coupling limitieren (Constructor Dependencies):**
   - Überprüfe die Anzahl der Konstruktor-Parameter (injected Dependencies). Warnung bei Überschreitung von `MaxConstructorDependencies` (Standard: 5).
   - Zu viele Abhängigkeiten verletzen das Single Responsibility Principle und vergrößern das RAG-Kontextfenster.
   - Konfigurierbar unter `MetricsConfig` (z. B. `MaxConstructorDependencies`).
-- [ ] ~~**Vermeidung von Magic Values (Numbers & Strings):**~~ **Entfernt am 2026-06-19** (Commit `764281a`, Begründung laut Commit-Message: *"Regel greift kein konkretes LLM-Failure-Pattern"*). `MagicValuesChecker`, `MagicValuesConfig`, `MagicValuesConfigOverride` sowie alle Konfigurationsfelder (`EnforceNoMagicValues`) wurden vollständig entfernt, inkl. Tests, Docs und `rules.json`-Einträgen. Ursprünglich geplant: literale Werte (`status == 4`, `role == "Admin"`) direkt in Methodenkörpern finden, mit Ausnahmen für `0`/`1`/`-1`/leere Strings, und stattdessen Konstanten/`static readonly`/`enum`s erzwingen. Ein gezielteres On-Demand-Audit-Tool (MCP-Tool statt Build-Regel, mit fachlicher Klassifizierung und Security-Fokus) ist im aktuellen `find_magic_values`-Tool umgesetzt.
 
 ---
 
@@ -230,7 +229,7 @@ _Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein._
 - [x] **MaxMethodParameterCount Override-Exemption:** `override`- und Interface-Implementierungen ausgenommen (Signatur nicht änderbar)
 - [x] **Tech-Debt-Report (historisch):** Parsebarer Report nach Ordnern und wave-ready Kandidaten
 - [x] **Wellen-Scope-Filter:** `--wave-ready`, `--only-changed` (mit `--baseline`)
-- [x] **Regel-Metadaten (Severity + Intent):** `RuleMetadata` in rules.json, Intent-Spalte in Summary, SARIF level
+- [x] **Regel-Metadaten (Severity + Intent):** `RuleMetadata` in ainetlinter-rules.json, Intent-Spalte in Summary, SARIF level
 - [x] **Minimal-API-[AsParameters]-Check:** Opt-in via `EnforceMinimalApiAsParameters`
 - [x] **Partial-Class-Aggregation:** `AggregatePartialClassLineCount` summiert Zeilen über partial-Teile
 - [x] **Erweiterte kognitive Guidance:** Konkrete Extract-Method-Hints bei starker Komplexitätsüberschreitung
@@ -239,7 +238,7 @@ _Hinweis: Alle Regeln müssen über die `rules.json` konfigurierbar sein._
 
 ## Epic 15: Kontrollfluss-Brüche (Control Flow Resilience)
 
-_Hinweis: Konfigurierbar über die `rules.json`._
+_Hinweis: Konfigurierbar über die `ainetlinter-rules.json`._
 
 - [x] **Exceptions for Control Flow verbieten:**
   - Warnung bei der Verwendung von `throw` in Methoden, die keine Konstruktoren oder explizite Validierungs-Guards (z. B. Methoden mit Suffix `Guard` oder `Validate`) sind.
@@ -265,7 +264,7 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 - [x] **Roslyn-basierter CLI Auto-Fixer (`--fix`):** Automatische Behebung einfacher Verstöße (z. B. Hinzufügen von `sealed`, `readonly`, oder XML-Skeletten) direkt über die CLI, via `CodeFixProvider`/`Workspace.TryApplyChanges`.
 - [x] **Semantische Diff-Impact-Analyse:** Analyse geänderter Methoden-Signaturen im Git Diff und Auflistung aller betroffenen Call-Sites über das MCP-Tool `get_impact` mit `DiffImpactAnalyzer` und `SymbolFinder.FindReferencesAsync`.
 - [x] **Dynamischer, LLM-orientierter Codegraph (Entfernt):** Generierte einen Software-Abhängigkeitsgraphen im Mermaid-Format aus Typdeklarationen, Basisklassen, Interface-Implementierungen und Feld-/Konstruktor-Abhängigkeiten.
-- [x] **Projekt-spezifische Regel-Konfiguration (Project Overrides):** Unterstützung von projekt- oder namensraumspezifischen Regel-Überschreibungen in der `rules.json` (z. B. Deaktivieren von `EnforceSealedClasses` für Testprojekte).
+- [x] **Projekt-spezifische Regel-Konfiguration (Project Overrides):** Unterstützung von projekt- oder namensraumspezifischen Regel-Überschreibungen in der `ainetlinter-rules.json` (z. B. Deaktivieren von `EnforceSealedClasses` für Testprojekte).
 - [x] **`find_magic_values` MCP-Tool (On-Demand-Magic-Value-Audit):** 20. MCP-Tool — Roslyn-basierter On-Demand-Audit über alle `.cs`-Dokumente der Solution, klassifiziert Literale (URLs, Pfade, Connection-Strings, Timeouts, Format-Strings, Schwellenwerte, HTTP-Statuscodes) mit Ziel-Empfehlungen (`appsettings.json`, `Constants.cs`, `StatusCodes.StatusXXX...`). Trivial-/Attribut-/Index-/Loop-/GetHashCode-Filter, `ignoreNumbers`-Erweiterung. Erweiterte Heuristiken (`enum_candidates`/`nameof_candidates`/`localization_candidates`/`security_candidates`, duplizierte `private const`-Erkennung, Suppression via `SyntaxTrivia`, `changedOnly`) sind in einer Folgeversion geplant. Stand 2026-08-14.
 
 ---
@@ -317,7 +316,7 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 
 ## Epic 24: Agent-Readability — Strukturelle Top-Level-Pflicht
 
-_Hinweis: Konfigurierbar über die `rules.json`._
+_Hinweis: Konfigurierbar über die `ainetlinter-rules.json`._
 
 - [x] **Regel: BanPublicNestedTypes** – Verbietet `public` und `internal` nested Typen (Klassen, Structs, Records, Enums) innerhalb anderer Typen. Private nested Typen bleiben standardmäßig erlaubt (Implementierungsdetail). Verbessert die Grep-/File-Listing-Navigation für KI-Agenten und verhindert FQN-Halluzinationen (`PaymentStatus` statt `PaymentProcessor.PaymentStatus`). Konfigurierbar unter `Global.BanPublicNestedTypes` (Default `true`) und `Global.BanPublicNestedTypesAllowPrivate` (Default `true`). Severity: `error`, Intent: `agent-context`.
 
@@ -347,7 +346,7 @@ _Hinweis: Konfigurierbar über die `rules.json`._
 
 ## Epic 27: Feature-Audit 2026-06 — Default-Kalibrierung
 
-Ergebnisse des empirischen Feature-Audits (46 Features bewertet, Cluster A–H, Papers 2018–2026). Die Kalibrierung wurde in der projekteigenen `rules.json` (Dogfooding-Config dieses Repos) umgesetzt. Die eingebauten Code-Defaults in `MetricsConfig.cs`/`GlobalConfig.cs` (das, was ein Nutzer ohne eigene `rules.json` erhält) tragen weiterhin die alten Werte — dieser Teil der Kalibrierung steht noch aus.
+Ergebnisse des empirischen Feature-Audits (46 Features bewertet, Cluster A–H, Papers 2018–2026). Die Kalibrierung wurde in der projekteigenen `ainetlinter-rules.json` (Dogfooding-Config dieses Repos) umgesetzt. Die eingebauten Code-Defaults in `MetricsConfig.cs`/`GlobalConfig.cs` (das, was ein Nutzer ohne eigene `ainetlinter-rules.json` erhält) tragen weiterhin die alten Werte — dieser Teil der Kalibrierung steht noch aus.
 
 - [x] **M01 — MaxLineCount: 500 statt Code-Default 700** — praktische Kalibrierung auf einen gängigen Mittelwert, motiviert durch das allgemeine „Lost in the Middle"-Phänomen (Liu et al. 2023, siehe `rationale.md` Regel 1); kein direkt aus einer Studie abgeleiteter Wert. *(Korrektur 2026-08-13: der zuvor hier genannte Beleg "Ardito et al. 2020" war falsch zugeordnet — dieses Paper ist ein Survey über Maintainability-Metriken/-Tools ohne LOC-Schwellenwert-Aussage und erschien 2020, drei Jahre vor Liu et al. 2023, kann das "Lost in the Middle"-Konzept also chronologisch nicht stützen.)*
 - [x] **M06 — MaxInheritanceDepth: 3 statt Code-Default 2** — Wert 2 erzeugt False Positives für ASP.NET-Controller, EF-Entities, xUnit-Testklassen ohne korrekte `InheritanceDepthFrameworkPrefixes`.
@@ -372,7 +371,7 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 ### Phase 1 — CSS (umgesetzt)
 
 - [x] **NuGet-Abhaengigkeit:** ExCSS 4.1.4 (MIT-Lizenz) als reines CSS-Parsing-Backend fuer die Selektor-Analyse.
-- [x] **Konfigurations-Sektion `Web` / `Web.Css`:** Neue Sektion in `rules.json` (master switch `Web.IsEnabled`, plus `MaxCssLineCount`, `PreferScopedCss`, `PreferScopedCssMinRuleCount`, `MaxCssSelectorComplexity`, `ExemptPaths`).
+- [x] **Konfigurations-Sektion `Web` / `Web.Css`:** Neue Sektion in `ainetlinter-rules.json` (master switch `Web.IsEnabled`, plus `MaxCssLineCount`, `PreferScopedCss`, `PreferScopedCssMinRuleCount`, `MaxCssSelectorComplexity`, `ExemptPaths`).
 - [x] **`WebFileCatalog`:** Enumeriert `.css`/`.razor.css`-Dateien aus den Projektverzeichnissen der Solution (parallel zur Roslyn-Solution, kein zweites MSBuild-Laden). Filtert `obj/`, `bin/`, `node_modules/` und CSS-spezifische `ExemptPaths` heraus.
 - [x] **`CssAnalyzer`:** AST-Walk ueber ExCSS-Stylesheet. Prueft Zeilenlimit, Selektor-Komplexitaet (Anzahl Segmente, getrennt durch Komma/Whitespace/Combinators) und Scoped-CSS-Empfehlung fuer globale Dateien. Erzeugt `CSS_ParseError` bei Syntax-Fehlern.
 - [x] **`WebFileSeparationChecker`:** Post-Analysis-Check (parallel zu `UiFileSeparationChecker`), der die CSS-Regeln ausfuehrt und Per-File Suppression (`/* ainetlinter-disable RuleId */`, `/* ainetlinter-disable all */`) anwendet.
@@ -387,7 +386,7 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 ### Phase 2 — JavaScript (umgesetzt)
 
 - [x] **NuGet-Abhaengigkeit:** Esprima 3.0.6 (BSD-3-Clause-Lizenz) als standardkonformer ECMAScript-Parser.
-- [x] **Konfigurations-Sektion `Web.Js`:** `MaxJsLineCount` (Standard 150), `EnforceJsModules` (Standard `true`), `ExemptPaths` in `rules.json` synchronisiert.
+- [x] **Konfigurations-Sektion `Web.Js`:** `MaxJsLineCount` (Standard 150), `EnforceJsModules` (Standard `true`), `ExemptPaths` in `ainetlinter-rules.json` synchronisiert.
 - [x] **`JsAnalyzer`:** `JavaScriptParser.ParseModule()` zuerst, Fallback auf `ParseScript()`. Eine Datei gilt nur dann als ES6-Modul, wenn `ParseModule` gelingt UND der Body mindestens eine `Import`-/`Export`-Deklaration enthaelt (Esprima 3.x parst Skript-Code sonst ebenfalls als Modul). Prueft `JS_MaxJsLineCount`, `JS_EnforceJsModules` (fehlende `export`-Statements UND `window.xyz = ...`-Zuweisungen in Modulen) und `JS_SyntaxError`.
 - [x] **Regel-IDs:** `JS_MaxJsLineCount`, `JS_EnforceJsModules`, `JS_SyntaxError` in `LinterRuleIds` und `RuleRegistry.Web.cs` registriert (Severity: error / error / error, Intent: agent-context / agent-context / general).
 - [x] **Project-Overrides:** `JsConfigOverride` mit `MaxJsLineCount`, `EnforceJsModules`, `ExemptPaths`; `ProjectConfigResolver.MergeConfig` reicht den `Js`-Override-Tree durch.
@@ -400,7 +399,7 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 ### Phase 3 — Razor (umgesetzt)
 
 - [x] **NuGet-Abhaengigkeit:** Keine (gestrichen — textbasierter Ansatz gewaehlt. Da die Regeln auf einfachem Pattern-Counting wie Block-Anzahl, Verschachtelung und Attributen basieren, ist kein voller AST-Parser noetig. Vermeidet NuGet-Versionierungs- und BuildHost-Komplexitaeten).
-- [x] **Konfigurations-Sektion `Web.Razor`:** `MaxRazorLineCount`, `MaxRazorCodeBlockLines`, `BanInlineEventLambdas`, `MaxMarkupNestingDepth`, `MaxControlFlowBlocks`, `MaxForeachNestingDepth`, `MaxComponentParameterCount`, `BanInlineTernaryInAttributes` in `rules.json` integriert und per `WebConfig` unterstuetzt.
+- [x] **Konfigurations-Sektion `Web.Razor`:** `MaxRazorLineCount`, `MaxRazorCodeBlockLines`, `BanInlineEventLambdas`, `MaxMarkupNestingDepth`, `MaxControlFlowBlocks`, `MaxForeachNestingDepth`, `MaxComponentParameterCount`, `BanInlineTernaryInAttributes` in `ainetlinter-rules.json` integriert und per `WebConfig` unterstuetzt.
 - [x] **`RazorAnalyzer`:** Textbasierter Analyzer, der Razor-Markup effizient auf Dateigroesse, HTML-Verschachtelungstiefe, Event-Lambdas, Control-Flow-Komplexitaet (Schleifen und Verzweigungen) sowie Inline-Ternaries in Attributen scannt.
 - [x] **Regel-IDs:** Die acht Regeln (`RAZOR_MaxRazorLineCount`, `RAZOR_MaxRazorCodeBlockLines`, `RAZOR_MaxMarkupNestingDepth`, `RAZOR_BanInlineEventLambdas`, `RAZOR_MaxControlFlowBlocks`, `RAZOR_MaxForeachNestingDepth`, `RAZOR_MaxComponentParameterCount`, `RAZOR_BanInlineTernaryInAttributes`) sind in `LinterRuleIds` deklariert und in der Rule-Registry registriert.
 - [x] **Project-Overrides:** Volle Unterstuetzung fuer Project-Overrides (z. B. Deaktivierung der Razor-Regeln fuer Testprojekte via `ProjectOverrides`).
@@ -428,11 +427,10 @@ Erweitert den Linter um AI-spezifische Regeln fuer Web-Assets (Phase 1: CSS umge
 
 ---
 
-## Epic 32: Globales Projekt- & Namespace-Filtering (historisch)
+## Epic 32: Globales Projekt- & Namespace-Filtering
 
-Die frühere CLI-Filterung des Analyse-Scopes wurde im Folge-Refactoring ersatzlos entfernt. Aktuelle Einschränkungen erfolgen über `rules.json`-ProjectOverrides sowie MCP-Scopes.
+Analysebereiche werden über `ProjectOverrides` in `ainetlinter-rules.json` sowie über MCP-Scopes eingeschränkt.
 
-- [x] **Historische Scope-Filterung:** Die frühere CLI-Infrastruktur, Projekt-/Test- und Namespace-Filterung sowie die optionale Sichtbarkeitsfilterung wurden entfernt.
 ## Epic 33: Bedingte Baseline-Dokumentation in Agent-Rules (`--sync-agent-rules`)
 
 Erweitert die generierten `.agents/rules/AiNetLinter.mdc`-Dateien um eine projekt-agnostische Erklärung der Baseline-Mechanik (`--create-baseline`), wenn im Zielprojekt eine Baseline verwendet wird.
@@ -525,7 +523,7 @@ Aus dem Konzept übernommene Erweiterungen, die nach EPIC-08 angegangen werden. 
 - **Kaltstart entkoppeln** — stdio-Transport zuerst aufsetzen, Solution-Load als Hintergrund-Task; `McpCodeGraphServer` bekommt dritten Zustand „lädt noch", Tools antworten in dieser Zeit mit einer strukturierten „Solution wird noch geladen"-Antwort. Status: **umgesetzt in EPIC-05** (B.4).
 - **Neu angelegte/gelöschte `.cs`-Dateien sichtbar machen** — zusätzlicher Verzeichnis-Sweep, der Dokumente ohne Datei entfernt und neue Dateien über die Roslyn-Solution-API einhängt (Projekt-Zuordnung über längsten gemeinsamen Pfad-Präfix). Bekannte Einschränkung: `<Compile Remove=...>`-Ausschlüsse werden nicht erkannt. Status: **umgesetzt in EPIC-05** (B.2).
 - **Staleness-Sweep über Verzeichnis-`mtime` kurzschließen** — Verzeichnis-`mtime` cachen, unveränderte Verzeichnisse komplett überspringen; deckt zusammen mit dem vorigen Punkt den Datei-Sweep ab. Status: **umgesetzt in EPIC-05** (B.5).
-- **`rules.json`-Auto-Discovery** — ohne `--config` neben der aufgelösten Solution-Datei nach `rules.json` suchen; wird keine gefunden, `[WARN]` auf stderr **und** Vermerk in `get_violations`-Antwort. Status: **umgesetzt in EPIC-04** (B.1).
+- **`ainetlinter-rules.json`-Auto-Discovery** — ohne `--config` neben der aufgelösten Solution-Datei nach `ainetlinter-rules.json` suchen; wird keine gefunden, `[WARN]` auf stderr **und** Vermerk in `get_violations`-Antwort. Status: **umgesetzt in EPIC-04** (B.1).
 - **stdout strukturell als reiner Protokollkanal** — eigene `ILintConsole`-Implementierung für den MCP-Modus, die auch `WriteLine` nach stderr leitet. Status: **umgesetzt in EPIC-06** (B.6) — `McpLintConsole` mit `Instance`-Singleton, Aktivierung in `Program.cs:43`, E2E-Regressions-Test in `McpServerCommandJsonRpcFramingTests` (Integration, spawned `AiNetLinter.exe` und verifiziert jede stdout-Zeile als gültigen JSON-RPC-Frame).
 - **Generierte Last-Fixture** — synthetische Solution definierter Größe (z. B. 500/5.000 Dateien) als Skalierungsnachweis; Messlauf für Kaltstart-Zeit und Tool-Call-Dauer. Status: **umgesetzt in EPIC-05** (B.3).
 - **Tool-vs-`rg`-Empfehlung in `Docs/integration.md`** — reine Doku, kein Code. Status: **umgesetzt in 008** (siehe `integration.md#mcp-server-registrieren`).
@@ -604,7 +602,7 @@ Code-Clone-Detection (CCFinder/Jaccard-N-Gram-Ansatz, Method-Granularitaet, sieh
   gepflegt) — konsolidierter Abschlusscheck für DRY,
   Refactoring-Drift, Dead Code und Magic Values; Cadence pro Epic verpflichtend / pro Step
   optional (Hinweis in `AGENTS.md`).
-- [x] `rules.json`-Config (`Global.DuplicateCode*`, 9 Keys + `StructuralDuplicate*Threshold`, 3 Keys)
+- [x] `ainetlinter-rules.json`-Config (`Global.DuplicateCode*`, 9 Keys + `StructuralDuplicate*Threshold`, 3 Keys)
   + `RuleRegistry`-Eintrag (`--list-rules`/`--describe-rule`/`--search-rules`).
 - [x] 75+ neue Unit-/Integrationstests (Engine, Checker, Tool, Refactoring-Drift, Suppression,
   Structural-Detector, Structural-Tool) + Live-Repo-Tests. Vollstaendige Tool-Referenz:
@@ -812,7 +810,7 @@ Punktgenaue Symbol-Analyse (Methoden, Konstruktoren, Properties, Typen) in einem
 - [x] **Symbol-Auflösung & Metriken:**
   - Unterstützt DocCommentId (`M:...`), `Datei.cs:Zeile:Spalte`, `Datei.cs:Zeile`, qualifizierte und unqualifizierte Namen via `FindReferencesTool.ResolveSymbolAsync`.
   - Liefert Netto-Codezeilen (`MethodLineCounter`), zyklomatische & kognitive Komplexität (`ComplexityCalculator`), Parameteranzahl (brutto/effektiv mit Ignored-Types-Filterung) und `AIContextFootprint` (`AIContextFootprintCalculator.CalculateDetailed`).
-  - Schwellwert-Abgleich gegen aktive `rules.json` (`[OK]`, `[WARN]`, `[VIOLATION]`).
+  - Schwellwert-Abgleich gegen aktive `ainetlinter-rules.json` (`[OK]`, `[WARN]`, `[VIOLATION]`).
 - [x] **Generalisierung von `ComplexityCalculator`:**
   - `SyntaxNode`-Überladungen für Konstruktoren, Property-Accessoren und Lambdas.
 - [x] **Structured Output & Tests:**

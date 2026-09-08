@@ -18,7 +18,7 @@ public sealed record AgentRulesSyncOptions(
     string TargetPath,
     Config Config,
     bool Verbose,
-    string ConfigPath = "rules.json",
+    string ConfigPath = ConfigLoader.FileName,
     string? AgentRulesPath = null,
     string? BaselinePath = null,
     bool? HasBaseline = null);
@@ -64,9 +64,9 @@ public static class AgentRulesGenerator
     }
 
     /// <summary>
-    /// Generiert die MDC-Datei und schreibt sie nach dem ermittelten Pfad (Überladung für Rückwärtskompatibilität).
+    /// Generiert die MDC-Datei und schreibt sie nach dem ermittelten Pfad.
     /// </summary>
-    public static void Sync(string targetPath, Config config, bool verbose, string configPath = "rules.json")
+    public static void Sync(string targetPath, Config config, bool verbose, string configPath = ConfigLoader.FileName)
     {
         Sync(new AgentRulesSyncOptions(targetPath, config, verbose, configPath));
     }
@@ -159,7 +159,7 @@ public static class AgentRulesGenerator
         AppendActiveRulesByIntent(sb, config);
         AppendDisabledCompact(sb, config);
         AppendProjectOverridesDelta(sb, config);
-        sb.AppendLine("Details: `rules.json`, `AiNetLinter.exe --docs <name>`.");
+        sb.AppendLine("Details: `ainetlinter-rules.json`, `AiNetLinter.exe --docs <name>`.");
 
         return sb.ToString();
     }
@@ -207,7 +207,7 @@ public static class AgentRulesGenerator
     private static void AppendFrontmatter(StringBuilder sb, string configPath)
     {
         var configFileName = string.IsNullOrWhiteSpace(configPath)
-            ? "rules.json"
+            ? ConfigLoader.FileName
             : Path.GetFileName(configPath);
         if (string.IsNullOrWhiteSpace(configFileName))
         {
@@ -321,7 +321,7 @@ public static class AgentRulesGenerator
             sb.AppendLine();
         }
 
-        sb.AppendLine("Ausnahmelisten (Immutability, Sealed, Namespace-Segmente): `rules.json`.");
+        sb.AppendLine("Ausnahmelisten (Immutability, Sealed, Namespace-Segmente): `ainetlinter-rules.json`.");
         sb.AppendLine();
     }
 
@@ -359,7 +359,7 @@ public static class AgentRulesGenerator
         {
             var parts = CollectOverrideParts(pair.Value);
             if (parts.Count > 0)
-                sb.AppendLine($"**`{pair.Key}`:** {string.Join("; ", parts)}. Details: `rules.json`.");
+                sb.AppendLine($"**`{pair.Key}`:** {string.Join("; ", parts)}. Details: `ainetlinter-rules.json`.");
         }
 
         sb.AppendLine();

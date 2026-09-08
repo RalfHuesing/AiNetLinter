@@ -77,7 +77,7 @@ Für den Projektstart stellt `ainetlinter://agent-guide` den Bootstrap bereit;
 ### Als CLI-Linter ausführen
 
 ```powershell
-ainetlinter --config rules.json --path .\src\MeinProjekt.slnx
+ainetlinter --config ainetlinter-rules.json --path .\src\MeinProjekt.slnx
 ```
 
 Der Lauf liefert einen Markdown-Report und einen Exit-Code: `0`, wenn keine
@@ -92,7 +92,7 @@ können außerdem Agenten-Regeln synchronisiert werden.
 | :--- | :--- |
 | [MCP- und CLI-Referenz](Docs/agent-api.md) | Tools, Parameter, Antworten, Fehler und Capability-Matrix. |
 | [Integration](Docs/integration.md) | Einbindung in ein bestehendes Projekt, Baseline, CI und MCP-Registrierung. |
-| [Konfiguration](Docs/configuration.md) | `rules.json`, Regel-IDs, Defaults und `ExternalSources`. |
+| [Konfiguration](Docs/configuration.md) | `ainetlinter-rules.json`, Regel-IDs, Defaults und `ExternalSources`. |
 | [MCP-Bootstrap](Docs/mcp-bootstrap.md) | Einmalige Einrichtung für Agenten und MCP-Hosts. |
 
 > [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

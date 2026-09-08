@@ -11,7 +11,7 @@ namespace AiNetLinter.IntegrationTests.Migration;
 /// Dauerhafte Architektur-Invariante: das zusätzliche Testprojekt
 /// <c>AiNetLinter.Tests</c> darf weder in der Solution noch im Dateisystem
 /// vorhanden sein. Wenn diese Annahme bricht, ist die Projektstruktur-Invariante
-/// (StaticTestSentinel, IVT, rules.json-ProjectOverrides) verletzt.
+/// (StaticTestSentinel, IVT, ainetlinter-rules.json-ProjectOverrides) verletzt.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class ProjectAbsenceInvariantTests

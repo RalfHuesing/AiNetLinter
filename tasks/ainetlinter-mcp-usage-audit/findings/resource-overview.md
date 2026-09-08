@@ -22,14 +22,14 @@ Server: `user-AiNetLinter`. Kein `downloadPath`. Projektroot-Ist: `C:\Workspace\
 
 | # | Absicht | URI | Größe | Truncation | Wartezeit | Ergebnis |
 |---|---|---|---|---|---|---|
-| 1 | Happy Path, kodierter Root | `ainetlinter://overview?projectRoot=C%3A%5CDaten%5CEntwicklung%5CSample%5CSample.Project` | Header `Resource: … (text/markdown)`. Körper grob **~700–850 Zeichen**, **~15–20 Zeilen** | keine (`truncated`/`completeness` fehlen; Dokument endet geschlossen) | **schnell** (sofort im Turn) | Erfolg. Titel „Projektstatus“. Solution-Pfad `…\Sample.Project.slnx`. Regeln `…\Tests.Logic\AiNetLinter\rules\platform-default.rules.json`. „Zuletzt genutzt (UTC): 2026-09-07 09:35:06“. Block „Weiter“: `ainetlinter://agent-guide`, `tools/list`, `get_impact` / `get_violations`. Intro: Server analysiert die Solution „semantisch ueber Roslyn“. |
+| 1 | Happy Path, kodierter Root | `ainetlinter://overview?projectRoot=C%3A%5CDaten%5CEntwicklung%5CSample%5CSample.Project` | Header `Resource: … (text/markdown)`. Körper grob **~700–850 Zeichen**, **~15–20 Zeilen** | keine (`truncated`/`completeness` fehlen; Dokument endet geschlossen) | **schnell** (sofort im Turn) | Erfolg. Titel „Projektstatus“. Solution-Pfad `…\Sample.Project.slnx`. Regeln `…\Tests.Logic\ainetlinter-rules.json`. „Zuletzt genutzt (UTC): 2026-09-07 09:35:06“. Block „Weiter“: `ainetlinter://agent-guide`, `tools/list`, `get_impact` / `get_violations`. Intro: Server analysiert die Solution „semantisch ueber Roslyn“. |
 | 2 | Ohne Query | `ainetlinter://overview` | wenige Zeilen | n/a | **schnell** | Fehler: `Error reading MCP resource: MCP resource not found: ainetlinter://overview` |
 | 3 | Falsch **und** unkodiert | `ainetlinter://overview?projectRoot=C:\DoesNotExist` | wenige Zeilen | n/a | **schnell** | Fehler: `Error reading MCP resource: MCP resource not found: ainetlinter://overview?projectRoot=C:\DoesNotExist`. Host hat die unkodierten Backslashes **nicht** vorab als URI-Syntax verworfen. |
 
 Call 1 (Körper, vollständig — so klein, dass Kürzen unnötig ist):
 
 - Solution: `C:\Workspace\Sample.Project\Sample.Project.slnx`
-- Regeln: `C:\Workspace\Sample.Project\Sample.Project.Tests.Logic\AiNetLinter\rules\platform-default.rules.json`
+- Regeln: `C:\Workspace\Sample.Project\Sample.Project.Tests.Logic\ainetlinter-rules.json`
 - Zuletzt genutzt (UTC): `2026-09-07 09:35:06`
 - Hints: `ainetlinter://agent-guide`, `tools/list`, `get_impact` und `get_violations`
 
@@ -39,7 +39,7 @@ Kein vierter Call. Encoded-falsch vs. unencoded-korrekt wurden **nicht** getrenn
 
 ## 3 Verdict
 
-**Teilweise wie beschrieben.** Mit korrekt kodiertem absolutem `projectRoot` antwortet die Resource sofort, kompakt und mit plausiblen Pfaden (`.slnx` und `platform-default.rules.json` liegen so im Workspace). Query-Pflicht ist live: ohne Query gibt es die Resource nicht.
+**Teilweise wie beschrieben.** Mit korrekt kodiertem absolutem `projectRoot` antwortet die Resource sofort, kompakt und mit plausiblen Pfaden (`.slnx` und `ainetlinter-rules.json` liegen so im Workspace). Query-Pflicht ist live: ohne Query gibt es die Resource nicht.
 
 Abweichungen / Reibung:
 
@@ -65,7 +65,7 @@ Risiko **falsches Grün**: ein Agent, der Overview als Health-Check nach Integra
 
 **Nur mit Workaround**, sobald der kodierte `projectRoot` bekannt ist.
 
-- **Ja** für: schnell prüfen, **welche** Solution und **welche** `rules.json` der Server an diesen Root bindet.
+- **Ja** für: schnell prüfen, **welche** Solution und **welche** `ainetlinter-rules.json` der Server an diesen Root bindet.
 - **Nein** für: Resource-Entdeckung, Diagnose „warum geht find_symbol nicht“, Unterscheidung Query-Fehler vs. unbekanntes Projekt, Ersatz für `get_server_health` / `get_index_scope`.
 - Workaround: URI aus der Workflow-Rule kopieren; `projectRoot` als `C%3A%5C…` kodieren; echten Betriebsstatus über Health/Index-Tools holen; `agent-guide` nach Overview **nicht** mitfetchen.
 
@@ -84,7 +84,7 @@ Risiko **falsches Grün**: ein Agent, der Overview als Health-Check nach Integra
 | Intro „laeuft“ / „ueber“ (ASCII-faltiges Deutsch) | Kosmetik, kein Fetch-Bug | 1 |
 | Kein Completeness-Feld | kein Bug bei dieser Größe | 1 |
 
-Stichprobe Pfade vs. bekanntes Workspace-Layout: Solution-`.slnx` und `platform-default.rules.json` unter Tests.Logic **treffen**. Timestamp nicht unabhängig verifiziert (Auftrag: nur diese Resource).
+Stichprobe Pfade vs. bekanntes Workspace-Layout: Solution-`.slnx` und `ainetlinter-rules.json` unter Tests.Logic **treffen**. Timestamp nicht unabhängig verifiziert (Auftrag: nur diese Resource).
 
 ---
 

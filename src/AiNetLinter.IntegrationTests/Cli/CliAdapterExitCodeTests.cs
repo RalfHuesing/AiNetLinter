@@ -13,7 +13,7 @@ namespace AiNetLinter.IntegrationTests.Cli;
 /// Kopien der Mini-Fixture <c>tests/Fixtures/BaselineMini</c> -- eine mit unveraendertem
 /// (unsealed) <c>ViolatingClass.cs</c> fuer den Verstoss-Fall, eine mit einer sealed-Variante fuer
 /// den sauberen Fall -- und prueft den resultierenden Prozess-Exit-Code. Die kopierte
-/// <c>rules.json</c> wird durch eine minimale, vollstaendig kontrollierte Konfiguration ersetzt
+/// <c>ainetlinter-rules.json</c> wird durch eine minimale, vollstaendig kontrollierte Konfiguration ersetzt
 /// (nur EnforceSealedClasses aktiv, alle anderen Regeln bewusst deaktiviert bzw. grosszuegig),
 /// damit der Exit-Code-Kontrast ausschliesslich vom sealed/unsealed-Unterschied abhaengt und nicht
 /// von zufaelligen Treffern anderer, in der Original-Fixture ebenfalls aktiver Regeln.
@@ -21,7 +21,7 @@ namespace AiNetLinter.IntegrationTests.Cli;
 [Trait("Category", "Integration")]
 public sealed class CliAdapterExitCodeTests
 {
-    private const string PermissiveRulesJson = """
+    private const string PermissiveConfigContent = """
         {
           "Global": {
             "EnforceSealedClasses": true,
@@ -103,8 +103,8 @@ public sealed class CliAdapterExitCodeTests
         var destinationRoot = Path.Combine(TestTempDirectory.RootTempDirectory, $"ainetlinter-cli-adapter-{Guid.NewGuid():N}");
         CopyFixtureDirectory(sourceRoot, destinationRoot);
 
-        var configPath = Path.Combine(destinationRoot, "rules.json");
-        File.WriteAllText(configPath, PermissiveRulesJson);
+        var configPath = Path.Combine(destinationRoot, "ainetlinter-rules.json");
+        File.WriteAllText(configPath, PermissiveConfigContent);
 
         if (makeCompliant)
         {

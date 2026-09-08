@@ -2,7 +2,7 @@
 
 **Kategorie:** Neuer Feature-Vorschlag  
 **Typ:** Boolean-Regel  
-**Vorgeschlagener rules.json-Schlüssel:** `BanAsyncVoid`  
+**Vorgeschlagener ainetlinter-rules.json-Schlüssel:** `BanAsyncVoid`
 **Implementierungsaufwand:** Gering
 
 ---
@@ -25,7 +25,7 @@ Die Regel meldet einen Fehler (`error`) für jede Methode oder Lambda die:
 - Event-Handler-Signaturen: `async void Handler(object sender, EventArgs e)` — das einzige legitime Einsatzszenario
 - Konfigurierbar via `AsyncVoidEventHandlerSuffixExceptions` (z.B. `Clicked`, `Changed`, `Handler`)
 
-**Konfigurationsbeispiel in rules.json:**
+**Konfigurationsbeispiel in ainetlinter-rules.json:**
 ```json
 "BanAsyncVoid": true,
 "AsyncVoidAllowEventHandlers": true

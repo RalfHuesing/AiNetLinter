@@ -27,14 +27,14 @@ namespace AiNetLinter.Core;
 public sealed class LinterEngine
 {
     private readonly Config _config;
-    private readonly string? _rulesJsonContent;
+    private readonly string? _configContent;
     private readonly IPerformanceProfiler _profiler;
     private readonly ILintConsole _console;
 
-    internal LinterEngine(Config config, string? rulesJsonContent = null, IPerformanceProfiler? profiler = null, ILintConsole? console = null)
+    internal LinterEngine(Config config, string? configContent = null, IPerformanceProfiler? profiler = null, ILintConsole? console = null)
     {
         _config = config;
-        _rulesJsonContent = rulesJsonContent;
+        _configContent = configContent;
         _profiler = profiler ?? NullPerformanceProfiler.Instance;
         _console = console ?? LinterConsole.Instance;
     }
@@ -68,7 +68,7 @@ public sealed class LinterEngine
 
     private AnalysisCacheManager? BuildCache(SourceFileCatalog? catalog, string path, int cacheTtlMinutes)
     {
-        if (string.IsNullOrEmpty(_rulesJsonContent))
+        if (string.IsNullOrEmpty(_configContent))
         {
             return null;
         }
@@ -76,7 +76,7 @@ public sealed class LinterEngine
             System.Reflection.Assembly.GetExecutingAssembly().Location)!;
         var solutionPath = catalog?.Solution?.FilePath ?? path;
         var ttl = cacheTtlMinutes > 0 ? TimeSpan.FromMinutes(cacheTtlMinutes) : TimeSpan.Zero;
-        return AnalysisCacheManager.Load(exeDir, solutionPath, _rulesJsonContent, ttl);
+        return AnalysisCacheManager.Load(exeDir, solutionPath, _configContent, ttl);
     }
 
     /// <summary>

@@ -247,7 +247,7 @@ internal static partial class RuleRegistry
             IsMetric: true,
             IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxAIContextFootprint,
-            ConfigKeyHint: "rules.json → Metrics.MaxAIContextFootprint | Ausnahmen via PathOverrides"
+            ConfigKeyHint: "ainetlinter-rules.json → Metrics.MaxAIContextFootprint | Ausnahmen via PathOverrides"
         ),
     ];
 
@@ -335,7 +335,7 @@ internal static partial class RuleRegistry
             IsMetric: true,
             IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxPartialClassFiles,
-            ConfigKeyHint: "rules.json → Metrics.MaxPartialClassFiles | Ausnahmen via PathOverrides"
+            ConfigKeyHint: "ainetlinter-rules.json → Metrics.MaxPartialClassFiles | Ausnahmen via PathOverrides"
         ),
         new(
             RuleId: LinterRuleIds.MaxPublicMembersPerType,
@@ -358,7 +358,7 @@ internal static partial class RuleRegistry
             IsMetric: true,
             IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxPublicMembersPerType,
-            ConfigKeyHint: "rules.json → Metrics.MaxPublicMembersPerType | Ausnahmen via PathOverrides"
+            ConfigKeyHint: "ainetlinter-rules.json → Metrics.MaxPublicMembersPerType | Ausnahmen via PathOverrides"
         ),
         new(
             RuleId: LinterRuleIds.MaxLinqChainLength,
@@ -383,7 +383,7 @@ internal static partial class RuleRegistry
             IsMetric: true,
             IncludeInAgentRules: true,
             GetMetricLimit: c => c.Metrics.MaxLinqChainLength,
-            ConfigKeyHint: "rules.json → Metrics.MaxLinqChainLength | Metrics.LinqMethodNames"
+            ConfigKeyHint: "ainetlinter-rules.json → Metrics.MaxLinqChainLength | Metrics.LinqMethodNames"
         ),
     ];
 
@@ -430,7 +430,7 @@ internal static partial class RuleRegistry
             IsEnabled: c => c.Global.BanAsyncVoid,
             IsMetric: false,
             IncludeInAgentRules: true,
-            ConfigKeyHint: "rules.json → Global.BanAsyncVoid | Global.AsyncVoidAllowEventHandlers"
+            ConfigKeyHint: "ainetlinter-rules.json → Global.BanAsyncVoid | Global.AsyncVoidAllowEventHandlers"
         ),
         new(
             RuleId: LinterRuleIds.BanBlockingTaskAccess,
@@ -454,7 +454,7 @@ internal static partial class RuleRegistry
             IsEnabled: c => c.Global.BanBlockingTaskAccess,
             IsMetric: false,
             IncludeInAgentRules: true,
-            ConfigKeyHint: "rules.json → Global.BanBlockingTaskAccess | BanBlockingTaskAccessAllowInMain | BanBlockingTaskAccessAllowInTests"
+            ConfigKeyHint: "ainetlinter-rules.json → Global.BanBlockingTaskAccess | BanBlockingTaskAccessAllowInMain | BanBlockingTaskAccessAllowInTests"
         ),
     ];
 }

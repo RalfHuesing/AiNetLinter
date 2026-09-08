@@ -59,5 +59,5 @@ public sealed class ProjectLeaseTests
         Assert.Equal(0, entry.InFlightCount);
     }
 
-    private static ProjectDefinition MinimalDefinition() => new("app.slnx", "rules.json");
+    private static ProjectDefinition MinimalDefinition() => new("app.slnx", "ainetlinter-rules.json");
 }

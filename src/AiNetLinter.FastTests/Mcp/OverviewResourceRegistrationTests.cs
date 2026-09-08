@@ -45,12 +45,12 @@ public sealed class OverviewResourceRegistrationTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(
-                null, UsedDefaultConfig: false, ResolvedConfigPath: @"C:\Projekt\rules.json")));
+                null, UsedDefaultConfig: false, ResolvedConfigPath: @"C:\Projekt\ainetlinter-rules.json")));
         using var harness = OverviewSnapshotHarness.Create(state);
 
         var text = OverviewResourceRegistration.BuildOverviewText(harness.Snapshot);
 
-        Assert.Contains(@"C:\Projekt\rules.json", text, StringComparison.Ordinal);
+        Assert.Contains(@"C:\Projekt\ainetlinter-rules.json", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Default-Regeln", text, StringComparison.Ordinal);
     }
 

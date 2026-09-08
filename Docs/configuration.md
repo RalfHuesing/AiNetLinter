@@ -30,15 +30,15 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 - **Analyse-Cache (Inkrementelle Optimierung):** Cache zur Vermeidung wiederholter semantischer Analysen für unveränderte C#-Dateien. Reduziert die Ausführungszeit bei inkrementellen Agenten-Runs. Standardmäßig aktiv; deaktivierbar über `--no-cache`.
 - **Performance-Profiling & Zeitmessung:** Erfassung der Ausführungszeiten aller Linter-Phasen (Workspace-Laden, Dateianalyse, Post-Checks) und automatische Generierung strukturierter Berichte (`performance.log` & `performance.json`) unter `measurements/` zur Analyse von Performance-Engpässen.
 - **MCP-Discovery-Kontextbudget:** Die globale Server-Anleitung wird in `initialize` und `server/discover` (MCP `2026-07-28`) ohne vollständige Tool-Aufzählung oder Bootstrap-Schritte übertragen. Sie verweist bei Bedarf auf den einmaligen Bootstrap unter `ainetlinter://agent-guide`; Tool-Schemas bleiben in `tools/list`, der Target-Status in `ainetlinter://overview`. Das Engineering-Budget der Anleitung beträgt 2.557 UTF-8-Bytes.
-- **MCP-Tool-Annotations:** `tools/list` beschreibt für jedes Tool explizit Read-only-, Destructive-, Idempotenz- und Open-World-Hinweise. Diese Werte sind Protokollhinweise für Hosts und keine Zugriffssteuerung; sie werden nicht über `rules.json` konfiguriert.
+- **MCP-Tool-Annotations:** `tools/list` beschreibt für jedes Tool explizit Read-only-, Destructive-, Idempotenz- und Open-World-Hinweise. Diese Werte sind Protokollhinweise für Hosts und keine Zugriffssteuerung; sie werden nicht über `ainetlinter-rules.json` konfiguriert.
 - **MCP-Regelkonfiguration-Resource:** `ainetlinter://rules{?targetPath}` stellt die effektive Regelkonfiguration des übergebenen Solution-Targets als frisch generiertes Markdown bereit. Die Ausgabe enthält die Herkunft (`ainetlinter-rules.json` neben der Solution oder `not_configured`), aktive/deaktivierte Regeln und effektive Metrik-Schwellwerte; sie liest den atomaren Regel-Snapshot der residenten MCP-Instanz.
 - **Metadata-only Assembly-Analyse:** `inspect_assembly` listet die öffentliche API einer exakt angegebenen absoluten lokalen `.dll`- oder `.exe`-Datei; zusätzlich sind exakte Typauswahl, `memberNames` als case-insensitive exakte OR-Auswahl, der Teiltextfilter `memberName`, Member-Limits sowie strukturierte Parameterdaten aus den .NET-Metadaten verfügbar. `find_assembly_extensions` findet klassische C#-Extensions; Referenz-Assemblies werden nur mit `includeReferences=true` einbezogen (Default: `false`), und ohne Consumer-Projekt wird ihre Roslyn-Anwendbarkeit als `not_decidable` ausgewiesen. Keine der beiden Funktionen lädt oder führt die Assembly aus. Typen sind standardmäßig auf 100 Einträge, maximal 1000, und Member je Typ standardmäßig auf 100, maximal 1000, begrenzt; fehlende Abhängigkeiten werden als `partial` diagnostiziert. Diagnostics-Samples werden whitespace-normalisiert, auf 256 Zeichen je Meldung und standardmäßig 16 KiB je Antwort (per `ResponseBudgetBytes` bis maximal 32 KiB konfigurierbar) begrenzt; Referenzen und Referenz-Sessions auf jeweils 32 Einträge. `get_server_health` liefert standardmäßig nur Metadaten und Diagnosezähler; `includeDiagnostics=true` aktiviert begrenzte Samples mit `maxDiagnostics` (Default 20, Cap 50).
 
-## 3. Konfiguration (`rules.json`)
+## 3. Konfiguration (`ainetlinter-rules.json`)
 
 Die Konfiguration erfolgt über eine flache JSON-Struktur. Beispiel einer vollständigen Konfiguration:
 
-> **Hinweis:** Dieses Beispiel zeigt keine Code-Defaults, sondern ein bewusst strenges Beispielprofil — teils die in `Docs/ROADMAP.md` Epic 27 empirisch kalibrierten Werte (z. B. `MaxLineCount: 500`, `MaxInheritanceDepth: 3`), teils noch strengere Werte aus dem "Strict"-Profil weiter unten (z. B. `MaxCyclomaticComplexity`/`MaxCognitiveComplexity: 5` statt Code-Default 12/15). Die tatsächlichen Code-Defaults (das, was ohne eigene `rules.json` gilt) stehen ausschließlich in der Regel-Tabelle unten.
+> **Hinweis:** Dieses Beispiel zeigt keine Code-Defaults, sondern ein bewusst strenges Beispielprofil — teils die in `Docs/ROADMAP.md` Epic 27 empirisch kalibrierten Werte (z. B. `MaxLineCount: 500`, `MaxInheritanceDepth: 3`), teils noch strengere Werte aus dem "Strict"-Profil weiter unten (z. B. `MaxCyclomaticComplexity`/`MaxCognitiveComplexity: 5` statt Code-Default 12/15). Die tatsächlichen Code-Defaults (das, was ohne eigene `ainetlinter-rules.json` gilt) stehen ausschließlich in der Regel-Tabelle unten.
 
 ```json
 {
@@ -260,7 +260,7 @@ Die Konfiguration erfolgt über eine flache JSON-Struktur. Beispiel einer vollst
 
 ### Projekt-spezifische Regel-Konfiguration (Project Overrides)
 
-In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsanforderungen haben. Über die Sektion `"ProjectOverrides"` in der `rules.json` können Regeln gezielt für bestimmte Projekte (z. B. über Wildcards wie `*.Tests`) überschrieben werden:
+In großen Solutions können verschiedene Projekte unterschiedliche Qualitätsanforderungen haben. Über die Sektion `"ProjectOverrides"` in der `ainetlinter-rules.json` können Regeln gezielt für bestimmte Projekte (z. B. über Wildcards wie `*.Tests`) überschrieben werden:
 
 ```json
   "ProjectOverrides": {
@@ -433,7 +433,7 @@ Begrenzt die Anzahl verketteter LINQ-Methoden in einer einzelnen Ausdruckskette.
 ```
 
 > Evidenz: moderat (keine dedizierte Studie zu LINQ-Kettenlänge und LLM-Fehlerrate).
-> Deshalb Standard-deaktiviert — bewusstes Opt-in via `rules.json`.
+> Deshalb Standard-deaktiviert — bewusstes Opt-in via `ainetlinter-rules.json`.
 
 ### AI-Context-Footprint (Metrik)
 
@@ -453,7 +453,7 @@ Hierfür stehen folgende Konfigurationsoptionen zur Verfügung:
 
 #### Empfohlene Konfiguration für WPF- und UI-Projekte:
 
-Da WPF-Templates standardmäßig unsealed partial Klassen generieren, empfiehlt sich ein Projekt-Override in der `rules.json`:
+Da WPF-Templates standardmäßig unsealed partial Klassen generieren, empfiehlt sich ein Projekt-Override in der `ainetlinter-rules.json`:
 
 ```json
 "ProjectOverrides": {
@@ -823,7 +823,7 @@ Der WebFileCatalog enumeriert Web-Dateien ueber das Dateisystem (Roslyn sieht `.
 
 ### Datei- und Verzeichnis-Ausschlüsse (FileFilters)
 
-Bei auto-generiertem Code oder temporären Build-Dateien sind viele Linter-Regeln nicht sinnvoll. Über die Sektion `"FileFilters"` in der `rules.json` können bestimmte Dateien und Verzeichnis-Segmente von der Analyse ausgeschlossen werden.
+Bei auto-generiertem Code oder temporären Build-Dateien sind viele Linter-Regeln nicht sinnvoll. Über die Sektion `"FileFilters"` in der `ainetlinter-rules.json` können bestimmte Dateien und Verzeichnis-Segmente von der Analyse ausgeschlossen werden.
 
 #### Einstellungsoptionen
 
@@ -962,9 +962,9 @@ Eine Methode oder Property wird als **Weiterleitung (Pure Forwarder)** gewertet,
 
 ### Profil-Vorlagen
 
-Für häufige Einsatzszenarien können alle oben genannten Exemptions als vollständige `rules.json`-Datei zusammengestellt werden.
+Für häufige Einsatzszenarien können alle oben genannten Exemptions als vollständige `ainetlinter-rules.json`-Datei zusammengestellt werden.
 
-#### WPF-Profil (`wpf.rules.json`)
+#### WPF-Profil
 
 ```json
 {
@@ -1021,7 +1021,7 @@ Für häufige Einsatzszenarien können alle oben genannten Exemptions als vollst
 }
 ```
 
-#### Blazor-Profil (`blazor.rules.json`)
+#### Blazor-Profil
 
 ```json
 {
@@ -1141,12 +1141,12 @@ Diese Ordner werden standardmäßig beim `dotnet publish` automatisch erzeugt. *
 ### Aufruf-Syntax
 
 ```bash
-ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichnis> [Optionen]
+ainetlinter --config <Pfad-zur-ainetlinter-rules.json> --path <Pfad-zur-slnx-oder-Verzeichnis> [Optionen]
 ```
 
 ### Parameter
 
-- `-c`, `--config` (Pfad): Der Pfad zur `rules.json` (Erforderlich für Audit-Läufe; nicht nötig mit `--create-baseline`).
+- `-c`, `--config` (Pfad): Der Pfad zur `ainetlinter-rules.json` (Erforderlich für Audit-Läufe; nicht nötig mit `--create-baseline`).
 - `-p`, `--path` (Pfad): Der Pfad zur Solution-Datei (.sln / .slnx) oder ein Verzeichnis (Erforderlich).
 - `--create-baseline` (Pfad): Erzeugt eine Baseline-JSON mit SHA-256-Checksummen aller `.cs`- sowie Web-Dateien (CSS, JS, Razor) (Optional).
 - `--baseline` (Pfad): Pfad zur Baseline-JSON für inkrementelle Migration — unterdrückt Verstöße in unveränderten Dateien (Optional).
@@ -1156,8 +1156,8 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 - `--wave-ready` (Flag): Nur Verstöße in Dateien ohne `// ainetlinter-disable all` (Optional).
 - `--only-changed` (Flag): Nur geänderte Dateien — erfordert `--baseline` (Optional).
 - `--fix` (Flag): Automatische Behebung einfacher Verstöße (z. B. `sealed`, `readonly`, `#nullable enable`) direkt über die CLI (Optional).
-- `-sar`, `--sync-agent-rules` (Flag): Synchronisiert die `rules.json` Konfiguration als Regeldatei im Rahmen eines Linter-Laufs (Optional).
-- `-saro`, `--sync-agent-rules-only` (Flag): Synchronisiert die `rules.json` Konfiguration als Regeldatei und beendet das Programm sofort (schneller Pfad ohne Lint-Lauf) (Optional). Ohne `--config` wird `rules.json` per Auto-Discovery im `--path`-Verzeichnis (Fallback: aktuelles Arbeitsverzeichnis) gesucht.
+- `-sar`, `--sync-agent-rules` (Flag): Synchronisiert die `ainetlinter-rules.json` Konfiguration als Regeldatei im Rahmen eines Linter-Laufs (Optional).
+- `-saro`, `--sync-agent-rules-only` (Flag): Synchronisiert die `ainetlinter-rules.json` Konfiguration als Regeldatei und beendet das Programm sofort (schneller Pfad ohne Lint-Lauf) (Optional). Ohne `--config` wird `ainetlinter-rules.json` per Auto-Discovery im `--path`-Verzeichnis (Fallback: aktuelles Arbeitsverzeichnis) gesucht.
 - `-arp`, `--agent-rules-path` (Pfad): Benutzerdefinierter Pfad (Verzeichnis oder `.mdc`-Datei) für die Synchronisation der Agent-Regeln (Optional).
 - `--parent-pid <pid>` (MCP-Modus): Der ThinClient überwacht die angegebene Parent-Prozess-ID und beendet sich bei deren Ende sauber.
 - `--mcp-project-ttl-minutes <minuten>` (MCP-Modus): Idle-TTL der Projektregistry in Minuten (Standard: `45`).
@@ -1173,9 +1173,9 @@ ainetlinter --config <Pfad-zur-rules.json> --path <Pfad-zur-slnx-oder-Verzeichni
 - `--search-rules <Stichwort>` (String): Durchsucht Regeln nach Stichwort (Optional).
 - `--mcp-server` (Flag): Startet den ThinClient des stdio-basierten MCP-Servers (Optional).
 
-### Automatischer rules.json-Sync
+### Automatischer ainetlinter-rules.json-Sync
 
-Beim Laden einer `rules.json` via `--config` gleicht der Linter die Datei **automatisch** mit dem aktuellen Schema ab:
+Beim Laden einer `ainetlinter-rules.json` via `--config` gleicht der Linter die Datei **automatisch** mit dem aktuellen Schema ab:
 
 - **Fehlende Optionen** werden mit ihren C#-Standardwerten ergänzt.
 - **Entfernte/umbenannte Optionen** (nicht mehr im Schema) werden kommentarlos gelöscht.
@@ -1190,7 +1190,7 @@ Für schrittweise Freischaltung von Code:
 
 ```bash
 # Nur bereits freigeschaltete Dateien mit Verstößen
-ainetlinter --config rules.json --path ./MeinProjekt.slnx --wave-ready
+ainetlinter --config ainetlinter-rules.json --path ./MeinProjekt.slnx --wave-ready
 ```
 
 ### Inkrementelle Migration (Baseline / Ratchet)
@@ -1206,7 +1206,7 @@ ainetlinter --config rules.json --path ./MeinProjekt.slnx --wave-ready
 2. **Baseline ins Repository committen** — die Datei `ainetlinter-baseline.json` versionieren.
 3. **Regulärer Lauf / CI** — nur Verstöße in geänderten Dateien melden:
    ```bash
-   ainetlinter --config rules.json --path ./MeinProjekt.slnx --baseline ainetlinter-baseline.json
+   ainetlinter --config ainetlinter-rules.json --path ./MeinProjekt.slnx --baseline ainetlinter-baseline.json
    ```
 4. **Datei bearbeiten** — Verstöße nur in dieser Datei werden ausgegeben; die Baseline wird automatisch mit den aktuellen Checksummen aktualisiert (weicher Ratchet).
 
@@ -1297,12 +1297,12 @@ catch (Exception) // ainetlinter-disable EnforceNoSilentCatch
 Für Codebasen, in denen vorerst nur Dateien mit aktuellen Verstößen ausgeschlossen werden sollen:
 
 ```bash
-ainetlinter --config rules.json --path ./MeinProjekt.slnx --add-disable-all
+ainetlinter --config ainetlinter-rules.json --path ./MeinProjekt.slnx --add-disable-all
 ```
 
 **Ablauf:**
 
-1. Vollständiger Audit-Lauf mit der angegebenen `rules.json`
+1. Vollständiger Audit-Lauf mit der angegebenen `ainetlinter-rules.json`
 2. Ermittlung aller Dateien mit mindestens einem Verstoß
 3. Einfügen von `// ainetlinter-disable all` am Dateianfang — nur in diesen Dateien
 4. Bereits markierte Dateien werden übersprungen
@@ -1339,7 +1339,7 @@ public sealed class ArchitectureTests
     {
         // Pfade relativ zu diesem Testprojekt auflösen
         var solutionPath = Path.GetFullPath("../../../MyProject.slnx");
-        var configPath = Path.GetFullPath("../../../rules.json");
+        var configPath = Path.GetFullPath("../../../ainetlinter-rules.json");
         var baselinePath = Path.GetFullPath("../../../ainetlinter-baseline.json");
 
         // Pfad zur bereitgestellten AiNetLinter.exe (samt den BuildHost-Ordnern im selben Pfad)
@@ -1395,7 +1395,7 @@ Dieser Abschnitt beschreibt, wie ein autonomer AI-Agent `AiNetLinter` selbständ
 2. **Nach einer Änderung:** Linter ausführen
 
    ```powershell
-   AiNetLinter.exe --path . --config rules.json
+   AiNetLinter.exe --path . --config ainetlinter-rules.json
    ```
 
 3. **Verstöße interpretieren** (anhand `RuleMetadata.intent`):
@@ -1422,14 +1422,14 @@ Dieser Abschnitt beschreibt, wie ein autonomer AI-Agent `AiNetLinter` selbständ
 
 ### Agent-Regeln synchronisieren
 
-Nach jeder `rules.json`-Änderung muss `.agents/rules/AiNetLinter.mdc` neu generiert werden.
+Nach jeder `ainetlinter-rules.json`-Änderung muss `.agents/rules/AiNetLinter.mdc` neu generiert werden.
 
 ```
 
 **Kombinierter Lauf (Lint + Synchronisation in einem Schritt):**
 
 ```powershell
-AiNetLinter.exe --path . --config rules.json --sync-agent-rules
+AiNetLinter.exe --path . --config ainetlinter-rules.json --sync-agent-rules
 ```
 
 ---
@@ -1447,7 +1447,7 @@ AiNetLinter.exe --path . --config rules.json --sync-agent-rules
 
 Für die produktive Integration von `AiNetLinter` in ein bestehendes Projekt empfiehlt sich folgendes Vorgehen:
 
-1. **Konfiguration anlegen:** Erstelle eine `rules.json` mit den gewünschten Abweichungen von den Standardwerten. Fehlende Keys werden beim nächsten Lauf automatisch mit Standardwerten ergänzt (Auto-Sync, s. u.). Entfernte oder umbenannte Keys werden ebenfalls automatisch bereinigt.
+1. **Konfiguration anlegen:** Erstelle eine `ainetlinter-rules.json` mit den gewünschten Abweichungen von den Standardwerten. Fehlende Keys werden beim nächsten Lauf automatisch mit Standardwerten ergänzt (Auto-Sync, s. u.). Entfernte oder umbenannte Keys werden ebenfalls automatisch bereinigt.
 2. **Projekt-Overrides für Tests:** Definiere unter `ProjectOverrides` (z. B. für `*.Tests`) pragmatischere Schwellenwerte. So dürfen im Testcode Literale (Magic Values) verwendet werden und das Sealing konkreter Klassen kann deaktiviert werden.
 3. **Synchronisation der MDC-Dateien:** Nutze `--sync-agent-rules` im Pre-Commit- oder CI-Schritt, um die `.agents/rules/AiNetLinter.mdc` automatisch aktuell zu halten. Workflow-Richtlinien und organisatorische Regeln sollten getrennt in einer separaten, manuell gepflegten Datei wie `.agents/rules/CodeQualitaet.mdc` verwaltet werden.
 4. **Integrationstests statt Blockade:** Binde die Linter-Prüfung in die Unit-Test-Suite ein (siehe Sektion 7). Es empfiehlt sich in der Migrationsphase, den Test bei Verstößen nicht zwingend fehlschlagen zu lassen (Exit 0/1 als Information), sondern den Report als Orientierung für Entwickler zu nutzen.
@@ -1485,7 +1485,7 @@ Wenn das Profiling aktiv ist, misst der Linter automatisch die Ausführungszeit 
 
 ### Konfiguration
 
-Das Feature ist standardmäßig aktiviert und kann über die Konfigurationsdatei `rules.json` deaktiviert werden:
+Das Feature ist standardmäßig aktiviert und kann über die Konfigurationsdatei `ainetlinter-rules.json` deaktiviert werden:
 
 ```json
 "Global": {
@@ -1514,13 +1514,13 @@ Der Cache wird im Unterordner `cache/` direkt neben der ausführbaren Datei (`Ai
   └── OtherSolution-f9e7c123.json
 ```
 
-Der 8-stellige Datei-Hash (`hash8`) basiert auf dem normalisierten absoluten Pfad der Solution-Datei und dem exakten Inhalt der verwendeten Konfigurationsdatei (`rules.json`).
+Der 8-stellige Datei-Hash (`hash8`) basiert auf dem normalisierten absoluten Pfad der Solution-Datei und dem exakten Inhalt der verwendeten Konfigurationsdatei (`ainetlinter-rules.json`).
 
 ### Cache-Invalidierung
 
 Die Cache-Validierung erfolgt vollautomatisch:
 
-- **Konfigurationsänderungen:** Eine Anpassung der Linter-Regeln in der `rules.json` ändert den Datei-Hash im Cache-Dateinamen. Es wird automatisch eine neue Cache-Datei erzeugt.
+- **Konfigurationsänderungen:** Eine Anpassung der Linter-Regeln in der `ainetlinter-rules.json` ändert den Datei-Hash im Cache-Dateinamen. Es wird automatisch eine neue Cache-Datei erzeugt.
 - **Dateiveränderungen:** Geänderte Dateien besitzen einen neuen Inhalts-Hash und werden automatisch neu analysiert; ihr Cache-Eintrag wird aktualisiert.
 - **Tool-Updates:** Bei Schema-Änderungen des Linters wird der Cache über eine interne `SchemaVersion` automatisch vollständig invalidiert.
 
@@ -1530,13 +1530,13 @@ Beim Start jedes Analyse-Runs bereinigt `AiNetLinter` automatisch alle Cache-Dat
 
 ```powershell
 # Standardlauf: Cache-Dateien älter als 60 Minuten werden gelöscht
-AiNetLinter.exe --config rules.json --path .
+AiNetLinter.exe --config ainetlinter-rules.json --path .
 
 # Längere Lebensdauer für CI/CD oder manuelle Nutzung
-AiNetLinter.exe --config rules.json --path . --cache-ttl 240
+AiNetLinter.exe --config ainetlinter-rules.json --path . --cache-ttl 240
 
 # Kein automatisches Löschen
-AiNetLinter.exe --config rules.json --path . --cache-ttl 0
+AiNetLinter.exe --config ainetlinter-rules.json --path . --cache-ttl 0
 ```
 
 | `--cache-ttl`   | Verhalten                                             |
@@ -1550,7 +1550,7 @@ AiNetLinter.exe --config rules.json --path . --cache-ttl 0
 Der Cache ist standardmäßig **aktiviert**. Wenn eine vollständige Neu-Analyse aller Dateien erzwungen werden soll:
 
 ```powershell
-AiNetLinter.exe --path . --config rules.json --no-cache
+AiNetLinter.exe --path . --config ainetlinter-rules.json --no-cache
 ```
 
 ---

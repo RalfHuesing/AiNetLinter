@@ -22,7 +22,7 @@ public sealed class SyncAgentRulesPolicyTests
     public void ResolveBaseDirectory_ExistingFile_ReturnsParentDirectory()
     {
         using var tempDir = TestTempDirectory.Create("SyncBaseFile_");
-        var tmpFile = tempDir.CreateFile("rules.json", "{}");
+        var tmpFile = tempDir.CreateFile("ainetlinter-rules.json", "{}");
         var result = AgentRulesGenerator.ResolveBaseDirectory(tmpFile);
         Assert.Equal(tempDir.DirectoryPath, result);
     }
@@ -86,7 +86,7 @@ public sealed class SyncAgentRulesPolicyTests
             Global = new AiNetLinter.Configuration.GlobalConfig(),
             Metrics = new AiNetLinter.Configuration.MetricsConfig(),
         };
-        var content = AgentRulesGenerator.GenerateContent(config, "rules.json", hasBaseline: true);
+        var content = AgentRulesGenerator.GenerateContent(config, "ainetlinter-rules.json", hasBaseline: true);
         Assert.Contains("## Baseline-Mechanik (Inkrementelle Analyse)", content);
         Assert.Contains("--create-baseline", content);
     }
@@ -99,7 +99,7 @@ public sealed class SyncAgentRulesPolicyTests
             Global = new AiNetLinter.Configuration.GlobalConfig(),
             Metrics = new AiNetLinter.Configuration.MetricsConfig(),
         };
-        var content = AgentRulesGenerator.GenerateContent(config, "rules.json", hasBaseline: false);
+        var content = AgentRulesGenerator.GenerateContent(config, "ainetlinter-rules.json", hasBaseline: false);
         Assert.DoesNotContain("## Baseline-Mechanik", content);
     }
 
@@ -111,10 +111,10 @@ public sealed class SyncAgentRulesPolicyTests
             Global = new AiNetLinter.Configuration.GlobalConfig(),
             Metrics = new AiNetLinter.Configuration.MetricsConfig(),
         };
-        var fullPath = @"C:\Daten\Entwicklung\SAN\San.smart.Planner.Platform\San.smart.Planner.Platform.Tests.Logic\AiNetLinter\rules\platform-default.rules.json";
+        var fullPath = @"C:\Daten\Entwicklung\SAN\San.smart.Planner.Platform\San.smart.Planner.Platform.Tests.Logic\AiNetLinter\ainetlinter-rules.json";
         var content = AgentRulesGenerator.GenerateContent(config, fullPath);
 
-        Assert.Contains("aus `platform-default.rules.json`.", content);
+        Assert.Contains("aus `ainetlinter-rules.json`.", content);
         Assert.DoesNotContain(@"C:\Daten\", content);
     }
 }

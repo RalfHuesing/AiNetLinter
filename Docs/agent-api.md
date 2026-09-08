@@ -34,7 +34,7 @@ ainetlinter --docs configuration
 
 ### Schritt 1: Startkonfiguration holen
 ```bash
-ainetlinter --docs rules-json > rules.json
+ainetlinter --docs ainetlinter-rules-json > ainetlinter-rules.json
 ```
 Dumpt die eingebettete Default-Konfiguration — sofort einsatzbereit, lokal anpassbar.
 
@@ -42,10 +42,10 @@ Dumpt die eingebettete Default-Konfiguration — sofort einsatzbereit, lokal anp
 
 ```bash
 # Schritt 1: Lint-Lauf
-ainetlinter --config rules.json --path ./src/MeinProjekt.slnx
+ainetlinter --config ainetlinter-rules.json --path ./src/MeinProjekt.slnx
 
 # Schritt 2: Fix anwenden
-ainetlinter --config rules.json --path ./src/MeinProjekt.slnx --fix
+ainetlinter --config ainetlinter-rules.json --path ./src/MeinProjekt.slnx --fix
 ```
 
 Auto-fixbare Regeln: `EnforceSealedClasses`, `EnforcePascalCase`, `EnforceNullableEnable`
@@ -56,10 +56,10 @@ Friert bestehende Verstösse ein; nur neue/geänderte Dateien werden geprüft.
 
 ```bash
 # Schritt 1: Baseline anlegen
-ainetlinter --config rules.json --path ./src/ --create-baseline baseline.json
+ainetlinter --config ainetlinter-rules.json --path ./src/ --create-baseline baseline.json
 
 # Schritt 2: Lint mit Baseline (nur Neu-Verstösse)
-ainetlinter --config rules.json --path ./src/ --baseline baseline.json
+ainetlinter --config ainetlinter-rules.json --path ./src/ --baseline baseline.json
 ```
 
 Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `baseline.json` automatisch neu — kein separater Update-Befehl nötig.
@@ -70,7 +70,7 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 
 | Flag | Typ | Beschreibung |
 | :--- | :--- | :--- |
-| `--config <pfad>` | string | Pfad zur `rules.json` (erforderlich für Audit) |
+| `--config <pfad>` | string | Pfad zur `ainetlinter-rules.json` (erforderlich für Audit) |
 | `--path <pfad>` | string | Pfad zur `.slnx`/`.sln`/Verzeichnis |
 | `--fix` | bool | Auto-Fixer aktivieren |
 | `--baseline <pfad>` | string | Baseline-Datei für Ratchet-Modus. Bei erkannter Checksum-Abweichung wird die Datei automatisch neu geschrieben (kein separater Update-Befehl nötig) |
@@ -97,7 +97,7 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 | `--list-rules` | bool | Alle Regeln auflisten (kein `--path` nötig) |
 | `--describe-rule <RuleId>` | string | Eine Regel vollständig beschreiben |
 | `--search-rules <Begriff>` | string | Regeln durchsuchen |
-| `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation ausgeben (Optionen: readme, agent-api, configuration, rationale, roadmap, rules-json, mcp-bootstrap, mcp-rule; case-insensitive) |
+| `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation ausgeben (Optionen: readme, agent-api, configuration, rationale, roadmap, ainetlinter-rules-json, mcp-bootstrap, mcp-rule; case-insensitive) |
 
 ## Strukturiertes Error-Format (L9)
 
@@ -114,8 +114,8 @@ Fehlermeldungen sind maschinenlesbar:
 | Code | Bedeutung |
 | :--- | :--- |
 | `CONFIG_REQUIRED` | `--config` fehlt (für Audit-Lauf) |
-| `CONFIG_NOT_FOUND` | `rules.json` nicht gefunden |
-| `CONFIG_INVALID` | `rules.json` nicht parsebar |
+| `CONFIG_NOT_FOUND` | `ainetlinter-rules.json` nicht gefunden |
+| `CONFIG_INVALID` | `ainetlinter-rules.json` nicht parsebar |
 | `CONFIG_SMELL` | Konfigurationsgeruch (z. B. zu breite Ausnahmen) |
 | `BASELINE_NOT_FOUND` | Baseline-Datei nicht gefunden |
 | `BASELINE_INVALID` | Baseline-Datei nicht parsebar |

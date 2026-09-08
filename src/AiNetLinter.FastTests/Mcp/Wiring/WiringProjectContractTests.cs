@@ -110,7 +110,6 @@ public sealed class WiringProjectContractTests
         var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
 
         Assert.True(File.Exists(Path.Combine(root, "ainetlinter-rules.json")));
-        Assert.False(File.Exists(Path.Combine(root, "rules.json")));
     }
 
     [Fact]

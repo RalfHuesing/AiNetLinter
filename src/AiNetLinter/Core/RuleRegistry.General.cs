@@ -35,7 +35,7 @@ internal static partial class RuleRegistry
             SicherheitsHinweis: null,
             Intent: RuleIntents.General,
             Severity: "error",
-            AgentHint: "`sealed` für konkrete Klassen; Ausnahmen: Suffixe in `rules.json → SealedClassExemptSuffixes`.",
+            AgentHint: "`sealed` für konkrete Klassen; Ausnahmen: Suffixe in `ainetlinter-rules.json → SealedClassExemptSuffixes`.",
             HasAutoFix: true,
             IsEnabled: c => c.Global.EnforceSealedClasses,
             IsMetric: false,
@@ -60,7 +60,7 @@ internal static partial class RuleRegistry
             IsEnabled: c => c.Global.AvoidExcessiveMiddleMen,
             IsMetric: false,
             IncludeInAgentRules: true,
-            ConfigKeyHint: "rules.json → Global.MaxMiddleManForwardingRatio"
+            ConfigKeyHint: "ainetlinter-rules.json → Global.MaxMiddleManForwardingRatio"
         ),
         new(
             RuleId: LinterRuleIds.BanPublicNestedTypes,
@@ -81,7 +81,7 @@ internal static partial class RuleRegistry
             IsEnabled: c => c.Global.BanPublicNestedTypes,
             IsMetric: false,
             IncludeInAgentRules: false,
-            ConfigKeyHint: "rules.json → Global.NestedTypeExemptSuffixes"
+            ConfigKeyHint: "ainetlinter-rules.json → Global.NestedTypeExemptSuffixes"
         ),
         new(
             RuleId: LinterRuleIds.EnforcePascalCase,

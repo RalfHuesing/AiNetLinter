@@ -15,7 +15,7 @@ public sealed class ProgramParsingTests
     public void CliCommandBuilder_Parses_AgentRulesPath()
     {
         var (root, options) = CliCommandBuilder.Build();
-        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "--agent-rules-path", "my-rules-dir" });
+        var result = root.Parse(new[] { "--config", "ainetlinter-rules.json", "--path", ".", "--agent-rules-path", "my-rules-dir" });
         var parsed = CliCommandBuilder.Parse(result, options);
         Assert.Equal("my-rules-dir", parsed.AgentRulesPath);
     }
@@ -24,7 +24,7 @@ public sealed class ProgramParsingTests
     public void CliCommandBuilder_Parses_AgentRulesPath_WithAlias()
     {
         var (root, options) = CliCommandBuilder.Build();
-        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "-arp", "my-rules-dir" });
+        var result = root.Parse(new[] { "--config", "ainetlinter-rules.json", "--path", ".", "-arp", "my-rules-dir" });
         var parsed = CliCommandBuilder.Parse(result, options);
         Assert.Equal("my-rules-dir", parsed.AgentRulesPath);
     }
@@ -33,7 +33,7 @@ public sealed class ProgramParsingTests
     public void CliCommandBuilder_Parses_SyncAgentRulesOnly()
     {
         var (root, options) = CliCommandBuilder.Build();
-        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "--sync-agent-rules-only" });
+        var result = root.Parse(new[] { "--config", "ainetlinter-rules.json", "--path", ".", "--sync-agent-rules-only" });
         var parsed = CliCommandBuilder.Parse(result, options);
         Assert.True(parsed.SyncAgentRulesOnly);
     }
@@ -42,7 +42,7 @@ public sealed class ProgramParsingTests
     public void CliCommandBuilder_Parses_SyncAgentRulesOnly_WithAlias()
     {
         var (root, options) = CliCommandBuilder.Build();
-        var result = root.Parse(new[] { "--config", "rules.json", "--path", ".", "-saro" });
+        var result = root.Parse(new[] { "--config", "ainetlinter-rules.json", "--path", ".", "-saro" });
         var parsed = CliCommandBuilder.Parse(result, options);
         Assert.True(parsed.SyncAgentRulesOnly);
     }

@@ -128,7 +128,7 @@ StructuredContent laut Beschreibung Batch-DTO; sichtbar war nur Markdown. `[HINW
 - Partial-Typen: ein Match pro `T:`-Id; Ort mit allen Partial-Dateien; LOC-Summe beibehalten, Zeilenbereich nicht `:9-9`.
 - Schema: Identifikator-Pflicht oder dokumentierte One-of-Gruppe; Enum `targetType`; `maxResults`+Truncation-Footer für Batches.
 - Alias-Konflikt: `INVALID_ARGUMENT` oder mergen, nicht still verwerfen.
-- Assembly-Sessions: Quality-Schwellwerte der **Consumer-rules.json** nicht auf Dekompilat anwenden, oder Metriken ohne VIOLATION-Status (nur Rohwerte). MaxLineCount-Quelle in der Antwort nennen.
+- Assembly-Sessions: Quality-Schwellwerte der **Consumer-ainetlinter-rules.json** nicht auf Dekompilat anwenden, oder Metriken ohne VIOLATION-Status (nur Rohwerte). MaxLineCount-Quelle in der Antwort nennen.
 - Completeness: Header und „vollständig“-Hinweis dieselbe Wahrheit.
 - `project`+Datei-`.dll`: `INVALID_ARGUMENT` (Pfad ist Assembly, nicht Projektroot), nicht `PROJECT_NOT_INITIALIZED` mit JSON unter der DLL.
 
@@ -182,7 +182,7 @@ AiNetLinter-Root: `C:\Daten\Entwicklung\Ralf\AiNetLinter`. Je Nicht-ok-Befund: P
 
 - **Pfad:** `src\AiNetLinter\Mcp\Assemblies\Analysis\Factories\AssemblyAnalysisEntryFactory.cs`, `src\AiNetLinter\Configuration\MetricsConfig.cs`, `src\AiNetLinter\Mcp\Tools\MetricsLookup\MetricsLookupScanner.cs`
 - **Symbol:** `CreateReadOnlyStateProvider` (`new Config { Metrics = new MetricsConfig() }`), `MetricsConfig.MaxLineCount` Default 700, `MaxPublicMembersPerType` Default 15, `ScanType` / `CheckThreshold`
-- **Ansatz:** Assembly-Session: Metriken ohne VIOLATION-Status (Rohwerte), oder eigene Assembly-Limits (`MaxLineCount=0` = kein Check). Consumer-`rules.json` nicht auf Fremd-Dekompilat anwenden. In der Tabelle Limit-Quelle nennen (`UsedDefaultConfig` aus `GetConfigSnapshot`).
+- **Ansatz:** Assembly-Session: Metriken ohne VIOLATION-Status (Rohwerte), oder eigene Assembly-Limits (`MaxLineCount=0` = kein Check). Consumer-`ainetlinter-rules.json` nicht auf Fremd-Dekompilat anwenden. In der Tabelle Limit-Quelle nennen (`UsedDefaultConfig` aus `GetConfigSnapshot`).
 
 ### Schema: Identifikator optional, Runtime Pflicht; leerer String = fehlt (Call 2, 17, 30)
 

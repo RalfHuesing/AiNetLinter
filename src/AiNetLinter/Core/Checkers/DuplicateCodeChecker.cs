@@ -115,6 +115,6 @@ internal static class DuplicateCodeChecker
                "Aehnlichkeit beabsichtigt ist (z. B. strukturell gleiche, aber fachlich unterschiedliche " +
                "Methoden): '// ainetlinter-disable DuplicateCode' in einer der beteiligten Dateien " +
                "platzieren (idealerweise mit kurzer Begruendung in derselben Zeile/direkt darueber) " +
-               "statt die Regel global in rules.json ueber 'EnableDuplicateCodeCheck' zu deaktivieren.";
+               "statt die Regel global in ainetlinter-rules.json ueber 'EnableDuplicateCodeCheck' zu deaktivieren.";
     }
 }

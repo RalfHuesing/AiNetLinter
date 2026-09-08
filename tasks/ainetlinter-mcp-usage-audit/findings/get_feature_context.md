@@ -123,7 +123,7 @@ Stichprobe gegen bekannte Platform-Fakten (kein `rg`/Folgetool; Evidenz aus dens
 | `ComponentRegistrationAttribute`: 0 Tests, aber Call-Sites in `*Tests.cs` (Call 8/23) | FN Test-Dimension | 8, 23 | Caller-Dimension sieht Tests; Test-Zuordnung nicht. Naming-Convention matcht den Attributtyp nicht. |
 | `GetNextExternalSystemTransactionAsync`: 6 `ExecuteMutationWithVersionCheck_*` per „Naming Convention Match“ | FP Test-Zuordnung | 22 | Dateiname `DataExecutorOptimisticConcurrencyIntegrationTests` matcht den Container, nicht die Methode. |
 | Display `AdminAiExplorationPlatformSupport()` / `FirmenkalenderPersistenceStore.()` / `AiWorkspaceBunitSupport.()` | FP der Call-Site-Beschriftung | 6, 13, 22 | Wirkt wie Konstruktoraufruf; oft DI-Property/Parameter. Extra-Punkt `Type.()`. |
-| AI-Context-Footprint 0 für `DataExecutor` | verdächtig / möglicher FN der Metrik | 6 | Kleines Attribut hat 14. Ohne Folgetool nicht gegen rules.json verifiziert; für Agenten wirkt der Typ „entkoppelt“. |
+| AI-Context-Footprint 0 für `DataExecutor` | verdächtig / möglicher FN der Metrik | 6 | Kleines Attribut hat 14. Ohne Folgetool nicht gegen ainetlinter-rules.json verifiziert; für Agenten wirkt der Typ „entkoppelt“. |
 | `targetType=assembly` nicht als Tool-Unsupported | Vertrag | 16, 21 | Wie bei anderen Tools: DLL-Validator. Existierende externe Assembly hier nicht geprüft. |
 | Schema required ohne Symbol | Vertrag | 5, 14 | Laufzeit fängt es sauber als `INVALID_ARGUMENT` — besser als generischer Invoke-Fehler. |
 | Include-Flags lassen Sektionsnummern springen (1, dann 3) | Kosmetik | 11, 25 | Kein Funktionsbug. |

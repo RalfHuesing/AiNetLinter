@@ -57,7 +57,7 @@ Technischer Rahmen (nicht verhandelbar):
 - Keine Zusammenführung / Priorisierung zu einem Gesamtbericht (Folge-Audit).
 - Keine Wünsche außerhalb statischer Roslyn-Analyse.
 - `mcp_auth` nicht prüfen; keine neue Projektintegration.
-- `reload_config` darf `rules.json` nicht dauerhaft verändern.
+- `reload_config` darf `ainetlinter-rules.json` nicht dauerhaft verändern.
 - Standard-Prompt `.cursor/prompts/orchestrator.md` ist **nicht** das Ausführungsmodell.
 
 ## Schicht und Domain-Platzierung
@@ -123,7 +123,7 @@ Keine Datei fasst andere Findings zusammen. Ground Truth ist Platform-Quelltext 
   - `C:\ExternalAssemblies\Version-9\Example.External.Business.dll`
   - `C:\ExternalAssemblies\Version-9\Example.External.Core.dll`
 - `report_observability_feedback`: ein als Probe markierter Call oder Fehlerpfad, kein Spam.
-- `reload_config`: ohne dauerhafte `rules.json`-Änderung.
+- `reload_config`: ohne dauerhafte `ainetlinter-rules.json`-Änderung.
 
 ## Wie (grober Ansatz)
 

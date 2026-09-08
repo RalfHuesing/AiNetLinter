@@ -34,14 +34,14 @@ internal sealed class AnalysisCacheManager
     /// </summary>
     internal string CachePath => _cachePath;
 
-    public static AnalysisCacheManager Load(string exeDir, string solutionPath, string rulesJsonContent, TimeSpan cacheTtl)
+    public static AnalysisCacheManager Load(string exeDir, string solutionPath, string configContent, TimeSpan cacheTtl)
     {
         var cacheDir = Path.Combine(exeDir, "cache");
         Directory.CreateDirectory(cacheDir);
 
         PurgeStale(cacheDir, cacheTtl);
 
-        var prefix = BuildCacheFilePrefix(solutionPath, rulesJsonContent);
+        var prefix = BuildCacheFilePrefix(solutionPath, configContent);
         var fileName = $"{prefix}-{GetBuildTimestamp()}.json";
         var cachePath = Path.Combine(cacheDir, fileName);
 
@@ -101,10 +101,10 @@ internal sealed class AnalysisCacheManager
         _dirty = false;
     }
 
-    private static string BuildCacheFilePrefix(string solutionPath, string rulesJsonContent)
+    private static string BuildCacheFilePrefix(string solutionPath, string configContent)
     {
         var solutionName = Path.GetFileNameWithoutExtension(solutionPath);
-        var hashInput = solutionPath.ToLowerInvariant() + rulesJsonContent;
+        var hashInput = solutionPath.ToLowerInvariant() + configContent;
         var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(hashInput));
         var hash8 = Convert.ToHexString(hashBytes)[..8].ToLowerInvariant();
         return $"{solutionName}-{hash8}";

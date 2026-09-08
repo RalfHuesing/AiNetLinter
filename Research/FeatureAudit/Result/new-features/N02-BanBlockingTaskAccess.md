@@ -2,7 +2,7 @@
 
 **Kategorie:** Neuer Feature-Vorschlag  
 **Typ:** Boolean-Regel  
-**Vorgeschlagener rules.json-Schlüssel:** `BanBlockingTaskAccess`  
+**Vorgeschlagener ainetlinter-rules.json-Schlüssel:** `BanBlockingTaskAccess`
 **Implementierungsaufwand:** Gering
 
 ---
@@ -27,7 +27,7 @@ Die Regel meldet einen Fehler (`error`) für jeden Aufruf von:
 - Methoden mit explizitem Suppression-Kommentar (via CompoundSuppression-Mechanismus)
 - Test-Setup-/Teardown-Methoden die kein `async`-Support haben (konfigurierbar via `AllowInTestSyncMethods: true`)
 
-**Konfigurationsbeispiel in rules.json:**
+**Konfigurationsbeispiel in ainetlinter-rules.json:**
 ```json
 "BanBlockingTaskAccess": true,
 "BanBlockingTaskAccessAllowInMain": true,
