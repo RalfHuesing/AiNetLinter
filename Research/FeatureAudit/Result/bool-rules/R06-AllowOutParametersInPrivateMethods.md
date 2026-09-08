@@ -11,7 +11,7 @@
 
 🟡 **UNPRAKTIKABEL** (in der aktuellen Form zu weit gefasst)
 
-**Fazit:** Die vollständige Ausnahme für alle privaten Methoden untergräbt den zentralen Zweck von R03 zu sehr — private Methoden mit `out`-Parametern sind in modernem C#-Code ein Code-Smell der genauso vermieden werden sollte, aber die pragmatische Entscheidung ist verständlich und macht den Linter in Legacy-Codebases einsetzbar.
+**Fazit:** Die vollständige Ausnahme für alle privaten Methoden untergräbt den zentralen Zweck von R03 zu sehr — private Methoden mit `out`-Parametern sind in modernem C#-Code ein Code-Smell, der genauso vermieden werden sollte. Die pragmatische Entscheidung macht den Linter in heterogenen Codebases einsetzbar.
 
 ---
 

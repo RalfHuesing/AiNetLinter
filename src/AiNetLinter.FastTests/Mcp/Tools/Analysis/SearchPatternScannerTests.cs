@@ -312,14 +312,14 @@ public sealed class SearchPatternScannerTests
     }
 
     [Fact]
-    public void LegacyScan_RegexTimeout_IsExposedAsStatus()
+    public void FileHitScan_RegexTimeout_IsExposedAsStatus()
     {
         using var tempDir = TestTempDirectory.Create("search-pattern-");
         using var solution = CreateSolution(tempDir.DirectoryPath);
-        var path = Path.Combine(tempDir.DirectoryPath, "src", "Project", "legacy-timeout.txt");
+        var path = Path.Combine(tempDir.DirectoryPath, "src", "Project", "timeout-input.txt");
         File.WriteAllText(path, string.Concat(Enumerable.Repeat("a", 100_000)) + "!");
 
-        var result = SearchPatternLegacyFileHitScanner.Scan(solution.Solution, "^(a+)+$", isRegex: true);
+        var result = SearchPatternFileHitScanner.Scan(solution.Solution, "^(a+)+$", isRegex: true);
 
         Assert.True(result.RegexTimedOut);
         Assert.True(result.HasErrors);
@@ -414,7 +414,7 @@ public sealed class SearchPatternScannerTests
         using var solution = CreateSolution(tempDir.DirectoryPath);
 
         var result = SearchPatternScanner.Scan(CreateParameters(solution.Solution, new("*NonExistent*") { IsRegex = false }));
-        var formatted = SearchPatternLegacyFormatter.Format(result);
+        var formatted = SearchPatternTextFormatter.Format(result);
 
         Assert.Contains("0 Treffer", formatted);
         Assert.Contains("Wildcard", formatted);

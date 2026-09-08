@@ -220,7 +220,7 @@ internal sealed partial class AssemblyDecompilationCache
             entryDirectory,
             AssemblyCacheContract.GenerationDirectoryPrefix + Guid.NewGuid().ToString("N") + AssemblyCacheContract.StagingDirectorySuffix);
         Directory.CreateDirectory(stagingDirectory);
-        var documents = WriteLegacyDocuments(stagingDirectory, request.Decompilation.Documents);
+        var documents = WriteDecompiledDocuments(stagingDirectory, request.Decompilation.Documents);
         var projectFilePath = WriteSyntheticProject(stagingDirectory);
         return request with
         {
@@ -293,7 +293,7 @@ internal sealed partial class AssemblyDecompilationCache
         }
     }
 
-    private static IReadOnlyList<DecompiledDocument> WriteLegacyDocuments(
+    private static IReadOnlyList<DecompiledDocument> WriteDecompiledDocuments(
         string generationDirectory,
         IReadOnlyList<DecompiledDocument> documents)
     {

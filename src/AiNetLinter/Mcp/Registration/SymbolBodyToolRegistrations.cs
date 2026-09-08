@@ -35,8 +35,8 @@ internal static class SymbolBodyToolRegistrations
         tools.Add(McpServerTool.Create(
             async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? symbolIdentifiers = null, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, int maxBodyLines = 80, int startLine = 1, int? endLine = null, CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 var request = new GetSymbolBodyRequest(symbolIdentifiers, symbolIdentifier, maxBodyLines, startLine, endLine, symbol, identifier, name);
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,

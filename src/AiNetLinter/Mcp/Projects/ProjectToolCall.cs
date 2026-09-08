@@ -137,7 +137,7 @@ internal static class ProjectToolCall
             return result;
         }
 
-        const string header = "[WARN]: Ein frueherer inkrementeller Refresh schlug fehl; die Antwort " +
+        const string header = "[WARN]: Der letzte inkrementelle Refresh schlug fehl; die Antwort " +
                               "basiert auf dem letzten guten Solution-Stand.\n\n";
         var content = new List<ContentBlock>();
         foreach (var block in result.Content)

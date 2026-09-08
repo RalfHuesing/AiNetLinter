@@ -57,7 +57,7 @@ internal sealed record SearchPatternFileScanResult(
     bool RegexTimedOut,
     bool CancellationRequested);
 
-internal sealed record SearchPatternLegacyFileHitScanResult(
+internal sealed record SearchPatternFileHitScanResult(
     IReadOnlyList<string> Files,
     int FileReadErrorCount,
     bool RegexTimedOut)
@@ -65,7 +65,7 @@ internal sealed record SearchPatternLegacyFileHitScanResult(
     internal bool HasErrors => FileReadErrorCount > 0 || RegexTimedOut;
 }
 
-internal sealed record SearchPatternLegacyFileMatchResult(
+internal sealed record SearchPatternFileHitMatchResult(
     bool Matches,
     bool FileReadError,
     bool RegexTimedOut);

@@ -323,7 +323,7 @@ Vollständige Eingabeliste für den Research-Agenten.
 ### F01 — Baseline / Ratchet-Mechanismus
 - **CLI-Flag:** `--baseline <pfad>`
 - **Status:** Vorhanden
-- **Beschreibung:** Friert bestehende Verstöße per SHA-256 ein. Nur geänderte Dateien werden gegen neue Regeln geprüft. Erlaubt sofortiges Onboarding in Legacy-Projekten.
+- **Beschreibung:** Friert vorhandene Verstöße per SHA-256 ein. Nur geänderte Dateien werden gegen neue Regeln geprüft. Unterstützt die schrittweise Einführung in großen Projekten.
 - **Relevante Paper-Cluster:** C (Vergleich mit anderen Linter-Tools)
 - **Result-Datei:** `Result\features\F01-Baseline-Ratchet.md`
 

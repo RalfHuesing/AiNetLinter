@@ -152,7 +152,7 @@ internal static partial class RuleRegistry
         [
             "**ES6-Export hinzufuegen**: 'export function myHelper() { ... }' oder 'export { myHelper };'.",
             "**Dynamic Import nutzen**: 'await JSRuntime.InvokeAsync<IJSObjectReference>(\"import\", \"./myModule.js\")'.",
-            "**Suppression** (bei Legacy-Bridge): `// ainetlinter-disable JS_EnforceJsModules`."
+            "**Suppression** (bei bewusstem Ausnahmebedarf): `// ainetlinter-disable JS_EnforceJsModules`."
         ],
         SicherheitsHinweis: null,
         Intent: RuleIntents.AgentContext,
@@ -194,7 +194,7 @@ internal static partial class RuleRegistry
         [
             "**Komponente aufteilen**: Eigenstaendige UI-Bereiche in separate Blazor-Komponenten extrahieren.",
             "**Partial Views / ChildContent**: Wiederkehrende Markup-Bloecke in wiederverwendbare Teilkomponenten verschieben.",
-            "**Suppression** (bei Legacy-Komponenten): `@* ainetlinter-disable RAZOR_MaxRazorLineCount *@`."
+            "**Suppression** (bei bewusstem Ausnahmebedarf): `@* ainetlinter-disable RAZOR_MaxRazorLineCount *@`."
         ],
         SicherheitsHinweis: null,
         Intent: RuleIntents.AgentContext,
@@ -217,7 +217,7 @@ internal static partial class RuleRegistry
         [
             "**Logik in Code-Behind verschieben**: 'partial class' in '.razor.cs' verwenden (Empfehlung).",
             "**@functions extrahieren**: Bei sehr grossen Helper-Klassen separate Service-Klasse anlegen.",
-            "**Suppression** (bei Legacy): `@* ainetlinter-disable RAZOR_MaxRazorCodeBlockLines *@`."
+            "**Suppression** (bei bewusstem Ausnahmebedarf): `@* ainetlinter-disable RAZOR_MaxRazorCodeBlockLines *@`."
         ],
         SicherheitsHinweis: null,
         Intent: RuleIntents.AgentContext,
@@ -285,7 +285,7 @@ internal static partial class RuleRegistry
         [
             "**Teilbereiche extrahieren**: Konditionale Bereiche in eigene Komponenten mit klar definierten Parametern auslagern.",
             "**Render-Fragments verwenden**: '@ChildContent' / 'RenderFragment' fuer flexible Wiederverwendung.",
-            "**Suppression** (bei Legacy-Komponenten): `@* ainetlinter-disable RAZOR_MaxControlFlowBlocks *@`."
+            "**Suppression** (bei bewusstem Ausnahmebedarf): `@* ainetlinter-disable RAZOR_MaxControlFlowBlocks *@`."
         ],
         SicherheitsHinweis: null,
         Intent: RuleIntents.AgentContext,
@@ -331,7 +331,7 @@ internal static partial class RuleRegistry
         [
             "**Parameter-Objekt einfuehren**: Verwandte Parameter in einem 'record' buendeln ('<MyComp Config=\"@cfg\" />').",
             "**Oeffentliche API reduzieren**: Nicht zwingend benoetigte Properties aus der Komponente entfernen.",
-            "**Suppression** (bei Legacy-Komponenten): `@* ainetlinter-disable RAZOR_MaxComponentParameterCount *@`."
+            "**Suppression** (bei bewusstem Ausnahmebedarf): `@* ainetlinter-disable RAZOR_MaxComponentParameterCount *@`."
         ],
         SicherheitsHinweis: null,
         Intent: RuleIntents.AgentContext,

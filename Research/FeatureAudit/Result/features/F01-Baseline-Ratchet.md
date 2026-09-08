@@ -10,14 +10,14 @@
 
 🟢 **WERTVOLL**
 
-**Fazit:** Der Ratchet-Mechanismus ist State of the Art für die inkrementelle Einführung von Linting in Legacy-Projekten — jeder führende Linter bietet eine vergleichbare Funktionalität, und ohne ihn ist AiNetLinter in Legacy-Kontexten praktisch nicht einsetzbar.
+**Fazit:** Der Ratchet-Mechanismus unterstützt die inkrementelle Einführung von Linting in großen Projekten — vergleichbare Funktionen sind in etablierten Linter-Tools verbreitet.
 
 ---
 
 ## Empfehlung
 
 **Aktion:** Beibehalten  
-**Begründung:** Ohne Baseline-Mechanismus würden Legacy-Codebases beim ersten Lauf Hunderte von Verstößen erzeugen, was die Adoption blockiert. Der SHA-256-basierte Ansatz (nur geänderte Dateien werden gegen neue Regeln geprüft) ist eine praxiserprobte Lösung — identisch mit dem Vorgehen von ESLint, SonarQube und Roslyn Analyzers.
+**Begründung:** Ohne Baseline-Mechanismus können beim ersten Lauf viele bestehende Verstöße entstehen, was die Einführung blockiert. Der SHA-256-basierte Ansatz (nur geänderte Dateien werden gegen neue Regeln geprüft) ist eine praxiserprobte Lösung — vergleichbar mit Ansätzen aus ESLint, SonarQube und Roslyn Analyzers.
 
 ---
 
@@ -30,7 +30,7 @@ Der Baseline-Mechanismus löst ein fundamentales Adoptionsproblem: Ein neuer Lin
 3. **Selektive Durchsetzung:** Teams können entscheiden, welche Verstöße sie in der Baseline einfrieren und welche sie sofort angehen. Das ermöglicht priorisierte Migration.
 
 **Szenarien wo es wertvoll ist:**
-- Migration eines Legacy-Projekts auf AiNetLinter
+- Einführung von AiNetLinter in einem bestehenden Projekt
 - Einführung neuer Regeln in einem laufenden Projekt
 - Schrittweise Verschärfung von Schwellenwerten
 
@@ -45,7 +45,7 @@ Der Baseline-Mechanismus löst ein fundamentales Adoptionsproblem: Ein neuer Lin
 | Tool | Baseline-Mechanismus | Ansatz |
 |------|---------------------|--------|
 | **ESLint** | `eslint --cache` + `.eslintcache` | Datei-Hash-basiertes Caching, nicht dasselbe wie ein Freeze-Mechanismus |
-| **SonarQube** | New Code Definition | Nur neue Commits werden analysiert; bestehende Issues als "Legacy" markiert |
+| **SonarQube** | New Code Definition | Nur neue Commits werden analysiert; vorhandene Issues werden getrennt ausgewiesen |
 | **StyleCop / Roslyn** | `.editorconfig` Suppression + Baseline-Dateien | Manuelle Suppression, kein automatischer Freeze |
 | **NDepend** | Baseline Snapshot | Vergleich von Snapshot zu Snapshot; Trend-Analyse |
 | **AiNetLinter** | SHA-256 Freeze per Datei | Granularer als SonarQube (Dateiebene), einfacher als NDepend |
@@ -72,7 +72,7 @@ Die Studie "On the Impact of AGENTS.md Files" (arXiv:2601.20404, 2025) zeigt, da
 
 **Grundlagenstabilität:** Zeitlos
 
-Der Bedarf, neue Qualitätsregeln inkrementell in bestehende Codebases einzuführen, ist unabhängig von der Modellgeneration ein strukturelles Problem jeder Software-Engineering-Organisation. Auch deutlich bessere LLM-Modelle werden Legacy-Codebases vorfinden, die nicht vollständig neu geschrieben werden können. Der Baseline-Mechanismus bleibt daher dauerhaft relevant.
+Der Bedarf, neue Qualitätsregeln inkrementell in bestehende Codebases einzuführen, ist unabhängig von der Modellgeneration ein strukturelles Problem jeder Software-Engineering-Organisation. Auch deutlich bessere LLM-Modelle werden Codebases vorfinden, die nicht vollständig neu geschrieben werden können. Der Baseline-Mechanismus bleibt daher dauerhaft relevant.
 
 ---
 

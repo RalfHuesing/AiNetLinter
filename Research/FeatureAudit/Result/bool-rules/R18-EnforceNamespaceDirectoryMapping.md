@@ -56,7 +56,7 @@ Namespace-Verzeichnis-Mapping ist eine strukturelle .NET-Konvention die seit .NE
 
 ## Risiken / Gegenargumente
 
-**Legacy-Projekte mit historischen Namespaces:** Ältere Projekte haben oft Namespaces, die aus historischen Gründen nicht der Verzeichnisstruktur entsprechen. Der Baseline-Mechanismus (F01) löst diesen Fall.
+**Projekte mit abweichenden Namespaces:** Namespaces entsprechen nicht in jedem Projekt der Verzeichnisstruktur. Der Baseline-Mechanismus (F01) löst diesen Fall.
 
 **Mono-Repo-Strukturen:** In Mono-Repos mit mehreren Produkten kann die Root-Namespace-Konvention von der Verzeichnisstruktur abweichen. Der `suffix-match`-Modus mit konfigurierbaren ignorierten Segmenten ist genau für diesen Fall gedacht — die Konfiguration muss sorgfältig gepflegt werden.
 

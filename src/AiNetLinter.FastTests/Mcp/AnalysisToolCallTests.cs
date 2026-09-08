@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
@@ -53,29 +52,6 @@ public sealed class AnalysisToolCallTests
         Assert.Equal(AnalysisCapabilityStatus.Supported, target.Capabilities.Navigation);
         Assert.Equal(AnalysisCapabilityStatus.Unsupported, target.Capabilities.Lint);
         Assert.Null(target.RulesPath);
-    }
-
-    [Theory]
-    [InlineData("targetType")]
-    [InlineData("projectRoot")]
-    [InlineData("configPath")]
-    [InlineData("assemblyPath")]
-    public void ResolveTargetPathOnly_RejectsLegacyArgumentWithFieldAndHint(string legacyKey)
-    {
-        var result = AnalysisTargetResolver.Resolve(AnalysisTargetRequest.FromArguments(
-            new Dictionary<string, object?>
-            {
-                ["targetPath"] = Path.Combine(Path.GetTempPath(), "sample.slnx"),
-                [legacyKey] = "legacy-value",
-            }));
-
-        Assert.Null(result.Target);
-        Assert.NotNull(result.Error);
-        var error = result.Error!;
-        var text = TextOf(error);
-        Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
-        Assert.Contains(legacyKey, text, StringComparison.Ordinal);
-        Assert.Contains("targetPath", text, StringComparison.Ordinal);
     }
 
     [Fact]

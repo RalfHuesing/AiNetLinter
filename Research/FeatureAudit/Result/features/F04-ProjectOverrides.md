@@ -29,7 +29,7 @@ ProjectOverrides ermöglicht projektspezifische Regelabweichungen durch Glob-Pat
 
 2. **Generator-Projekte:** Generierter Code (z.B. EF Migrations, Protobuf-Stubs, Swagger-generierte Clients) kann per ProjectOverride aus bestimmten Regeln ausgenommen werden, ohne dass der Entwickler jede Datei einzeln suppressieren muss.
 
-3. **Legacy-Projekte im Mono-Repo:** Ein Teilprojekt das noch nicht auf moderne Standards migriert wurde, kann temporär mit lockereren Grenzwerten geführt werden — als Zwischenschritt zur vollständigen Compliance.
+3. **Teilprojekte im Mono-Repo:** Ein Teilprojekt mit bewusst abweichenden Anforderungen kann mit eigenen Grenzwerten geführt werden.
 
 **Szenarien wo es irrelevant ist:**
 - Single-Projekt-Repositories ohne Teilprojekte
@@ -68,7 +68,7 @@ Für LLM-Agenten ist ProjectOverrides ein wichtiges Konfigurationsfeature, aber 
 
 **Grundlagenstabilität:** Zeitlos
 
-Der Bedarf nach projektspezifischen Konfigurationsabweichungen in Multi-Projekt-Setups ist strukturell und unabhängig von Modellgenerationen. Er entsteht aus der heterogenen Natur realer Software-Repositories (Test vs. Produktion, Generated vs. Handgeschrieben, Legacy vs. Modern).
+Der Bedarf nach projektspezifischen Konfigurationsabweichungen in Multi-Projekt-Setups ist strukturell und unabhängig von Modellgenerationen. Er entsteht aus der heterogenen Natur realer Software-Repositories (Test vs. Produktion, Generated vs. Handgeschrieben, unterschiedliche Qualitätsprofile).
 
 ---
 

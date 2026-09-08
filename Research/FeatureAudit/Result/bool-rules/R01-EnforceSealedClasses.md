@@ -46,7 +46,7 @@ Zusätzlich neigen LLM-Agenten bei nicht versiegelten Klassen dazu, fälschliche
 
 ## Risiken / Gegenargumente
 
-Das häufigste Gegenargument: `sealed` verhindert Testbarkeit, da Mocking-Frameworks (Moq, NSubstitute) keine versiegelten Klassen mocken können. Dies ist ein reales Problem in Test-Projekten — daher ist die Deaktivierung in `*.Tests`-Projekten korrekt und notwendig. In Produktions-Code ist die Einschränkung jedoch als Design-Signal erwünscht: Wenn eine Klasse gemockt werden muss, sollte sie hinter einem Interface stehen, nicht vererbt werden. Dieses Gegenargument ist bekannt und gut gehandhabt. Ein weiteres Argument: Legacy-Code-Migration kann schwierig sein, wenn vorhandener Code von nicht-versiegelten Klassen ableitet — hier greift der Baseline/Ratchet-Mechanismus (F01) als Übergangslösung.
+Das häufigste Gegenargument: `sealed` verhindert Testbarkeit, da Mocking-Frameworks (Moq, NSubstitute) keine versiegelten Klassen mocken können. Dies ist ein reales Problem in Test-Projekten — daher ist die Deaktivierung in `*.Tests`-Projekten korrekt und notwendig. In Produktions-Code ist die Einschränkung jedoch als Design-Signal erwünscht: Wenn eine Klasse gemockt werden muss, sollte sie hinter einem Interface stehen, nicht vererbt werden. Dieses Gegenargument ist bekannt und gut gehandhabt. Ein weiteres Argument: Die Umstellung auf versiegelte Klassen kann schwierig sein, wenn vorhandener Code von nicht-versiegelten Klassen ableitet — hier greift der Baseline/Ratchet-Mechanismus (F01) als Übergangslösung.
 
 ---
 

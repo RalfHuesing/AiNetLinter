@@ -152,10 +152,10 @@ Assembly-`targetPath` der Root-Snapshot der Default. Nur
 Diagnostics sind dabei zu beachten. Decompilierte API-Stubs können ohne sichtbare
 Call-Sites bleiben, ohne dass daraus eine globale Negativaussage folgt.
 
-Target-Aufrufe verwenden keine Legacy-Pfadparameter. Die alten Schlüssel
-`targetType`, `projectRoot`, `configPath` und `ainetlinter.project.json` werden
-als `invalid_argument` abgelehnt; sie werden nicht ignoriert oder als Alias
-verwendet.
+Target-Aufrufe verwenden ausschließlich Properties aus dem jeweils über
+`tools/list` veröffentlichten Schema. Unbekannte Properties werden sofort als
+`invalid_argument` mit ihrem Feldnamen abgelehnt; aktuelle, im Schema
+veröffentlichte Alias-Felder bleiben erlaubt.
 
 Bei `RULES_INVALID` nicht ungefragt eine Projektintegration durchführen. Nur bei
 einem ausdrücklichen Integrationsauftrag den einmaligen Leitfaden über

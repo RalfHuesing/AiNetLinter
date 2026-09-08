@@ -34,8 +34,8 @@ internal static class DuplicateDetectionToolRegistrations
                 string? scopeType = "production",
                 CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 var effectiveScopeDir = scopeDir ?? scope ?? path;
                 var effectiveHelper = helperSymbol ?? helper ?? symbol;
                 return await ProjectAnalysisDispatcher.ExecuteAsync(

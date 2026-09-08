@@ -26,10 +26,10 @@
 PathOverrides adressiert ein spezifischeres Granularitätsniveau als ProjectOverrides:
 
 - **ProjectOverrides** = Ausnahme für ein ganzes Teilprojekt (z.B. `*.Tests`)
-- **PathOverrides** = Ausnahme für ein bestimmtes Verzeichnis oder Datei-Pattern innerhalb eines Projekts (z.B. `src/MyProject/Legacy/**`)
+- **PathOverrides** = Ausnahme für ein bestimmtes Verzeichnis oder Datei-Pattern innerhalb eines Projekts (z.B. `src/MyProject/Generated/**`)
 
 **Szenarien wo es wertvoll sein könnte:**
-- Ein bestimmtes Unterverzeichnis enthält Legacy-Code, der nicht aktuell migriert werden kann, aber kein eigenes Teilprojekt ist.
+- Ein bestimmtes Unterverzeichnis enthält Code mit abweichenden Anforderungen, der nicht als eigenes Teilprojekt geführt wird.
 - Spezielle Verzeichnisse wie `Migrations/` haben andere Regeln als der Rest des Projekts.
 - Framework-generierte Dateien die nicht per Dateiname (`*.g.cs`) identifizierbar sind, aber in einem bekannten Verzeichnis liegen.
 
@@ -61,9 +61,9 @@ ESLints Ansatz (Glob auf Dateiebene) ist mächtiger als AiNetLinters PathOverrid
 
 PathOverrides hat für LLM-Agenten einen indirekten Nutzen:
 
-1. **Reduzierung von Konfigurations-Rauschen:** Wenn ein Agent einen Linter-Fehler erhält, der auf Legacy-Code in einem bekannten Verzeichnis zurückzuführen ist, sollte dieser via PathOverride ausgenommen sein — damit der Agent nicht versucht, unzumutbaren Legacy-Code zu reparieren.
+1. **Reduzierung von Konfigurations-Rauschen:** Wenn ein Agent einen Linter-Fehler aus einem bekannten Verzeichnis mit abweichenden Anforderungen erhält, sollte dieser via PathOverride ausgenommen sein — damit der Agent keine absichtlich abweichende Struktur repariert.
 
-2. **Konfigurierbarkeit durch Agenten:** Ein Agent könnte PathOverrides selbst setzen — z.B. beim Einrichten von AiNetLinter in einem Projekt mit einem bekannten Legacy-Unterverzeichnis. Dafür wäre maschinenlesbares Discovery des PathOverrides-Formats hilfreich.
+2. **Konfigurierbarkeit durch Agenten:** Ein Agent könnte PathOverrides selbst setzen — z.B. beim Einrichten von AiNetLinter in einem Projekt mit einem bekannten Sonderverzeichnis. Dafür wäre maschinenlesbares Discovery des PathOverrides-Formats hilfreich.
 
 Der Nutzen ist real aber nicht dringend — solange PathOverrides leer bleibt, hat es keinen direkten Einfluss auf den agentic Workflow.
 
@@ -73,7 +73,7 @@ Der Nutzen ist real aber nicht dringend — solange PathOverrides leer bleibt, h
 
 **Grundlagenstabilität:** Zeitlos
 
-Der Bedarf nach pfadgranularen Ausnahmen ist strukturell (Legacy-Verzeichnisse, Framework-generierter Code in regulären Projekten). Das Feature bleibt nützlich, sobald Use-Cases auftreten.
+Der Bedarf nach pfadgranularen Ausnahmen ist strukturell (Sonderverzeichnisse, Framework-generierter Code in regulären Projekten). Das Feature bleibt nützlich, sobald Use-Cases auftreten.
 
 ---
 

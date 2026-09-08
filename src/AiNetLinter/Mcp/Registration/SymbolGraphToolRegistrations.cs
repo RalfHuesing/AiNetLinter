@@ -53,7 +53,7 @@ internal static class SymbolGraphToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? namePatterns = null, string? namePattern = null, string? symbol = null, string? pattern = null, string? query = null, string? name = null, string? kind = null, int maxResults = 50, bool includeReferences = false, int maxResponseBytes = 0, CancellationToken ct = default) =>
-                await TargetPathToolRegistrationOptions.ExecuteWithLegacyGuardAsync(context, () => AnalysisToolCall.ExecuteRouted(
+                await TargetPathToolRegistrationOptions.ExecuteWithUnknownArgumentGuardAsync(context, () => AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
@@ -94,8 +94,8 @@ internal static class SymbolGraphToolRegistrations
         tools.Add(McpServerTool.Create(
             async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, int maxResults = 50, int depth = 1, bool includeReferences = false, CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? name;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
@@ -132,8 +132,8 @@ internal static class SymbolGraphToolRegistrations
         tools.Add(McpServerTool.Create(
             async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, bool includeReferences = false, bool includeBcl = false, CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? name;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
@@ -176,8 +176,8 @@ internal static class SymbolGraphToolRegistrations
                 int maxTestsPerSymbol = ChangeContextContract.DefaultMaxTestsPerSymbol,
                 CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? name;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
@@ -216,8 +216,8 @@ internal static class SymbolGraphToolRegistrations
         tools.Add(McpServerTool.Create(
             async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? typeName = null, string? name = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? typeName ?? name;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
@@ -246,8 +246,8 @@ internal static class SymbolGraphToolRegistrations
             async (RequestContext<CallToolRequestParams> context, string targetPath, string? filePath = null, string? path = null, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, string? direction = null,
                 int depth = 1, int maxResults = 50, CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 var effectivePath = filePath ?? path;
                 var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? name;
                 return await AnalysisToolCall.ExecuteRouted(
@@ -277,7 +277,7 @@ internal static class SymbolGraphToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (RequestContext<CallToolRequestParams> context, string targetPath, string typeName, CancellationToken ct = default) =>
-                await TargetPathToolRegistrationOptions.ExecuteWithLegacyGuardAsync(context, () => AnalysisToolCall.ExecuteRouted(
+                await TargetPathToolRegistrationOptions.ExecuteWithUnknownArgumentGuardAsync(context, () => AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
@@ -300,8 +300,8 @@ internal static class SymbolGraphToolRegistrations
         tools.Add(McpServerTool.Create(
             async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, int maxResults = FindImplementationsTool.DefaultMaxResults, CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? name;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,

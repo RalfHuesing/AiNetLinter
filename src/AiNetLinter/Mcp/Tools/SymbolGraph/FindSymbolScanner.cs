@@ -100,7 +100,7 @@ internal static class FindSymbolScanner
         CancellationToken ct)
     {
         var clean = SymbolNameMatcher.CleanPattern(namePattern).Trim('*', '?');
-        var missScan = SearchPatternLegacyFileHitScanner.Scan(
+        var missScan = SearchPatternFileHitScanner.Scan(
             solution, string.IsNullOrWhiteSpace(clean) ? namePattern : clean, isRegex: false);
 
         var suggestions = await SymbolNameMatcher.FindSimilarSymbolNamesAsync(solution, namePattern, ct).ConfigureAwait(false);
@@ -113,10 +113,10 @@ internal static class FindSymbolScanner
             return baseText + suggestionText;
         }
 
-        var status = FormatLegacySearchStatus(missScan);
+        var status = FormatSearchStatus(missScan);
         if (missScan.Files.Count == 0)
         {
-            return $"{baseText}\nHinweis: Die Legacy-Textsuche konnte keine Treffer auswerten ({status}).{suggestionText}";
+            return $"{baseText}\nHinweis: Die ergänzende Textsuche konnte keine Treffer auswerten ({status}).{suggestionText}";
         }
 
         var fileList = McpTruncation.TruncateFileList(missScan.Files, missScan.Files.Count);
@@ -125,7 +125,7 @@ internal static class FindSymbolScanner
             (string.IsNullOrEmpty(status) ? string.Empty : $" {status}") + suggestionText;
     }
 
-    private static string FormatLegacySearchStatus(SearchPatternLegacyFileHitScanResult scan)
+    private static string FormatSearchStatus(SearchPatternFileHitScanResult scan)
     {
         var status = new List<string>();
         if (scan.FileReadErrorCount > 0)

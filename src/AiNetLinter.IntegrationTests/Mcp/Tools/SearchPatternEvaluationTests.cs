@@ -51,7 +51,7 @@ public sealed class SearchPatternEvaluationTests
 
         var enriched = await ObserveAsync(state, Arguments(new("Greeter") { EnrichCSharp = true }));
         Assert.Contains("\"resolution\":\"resolved\"", enriched.StructuredJson, StringComparison.Ordinal);
-        Assert.Contains("Greeter.cs", enriched.LegacyText, StringComparison.Ordinal);
+        Assert.Contains("Greeter.cs", enriched.TextPayload, StringComparison.Ordinal);
         var mixedTypes = await ObserveAsync(state, Arguments(new("userService")));
         Assert.Equal(3, mixedTypes.MatchedFileCount);
         Assert.Contains(mixedTypes.Paths, path => path.EndsWith(".js", StringComparison.Ordinal));
@@ -95,7 +95,7 @@ public sealed class SearchPatternEvaluationTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_OverlayProblemFiles_ReportsSkipsAndKeepsLegacyText()
+    public async Task ExecuteAsync_OverlayProblemFiles_ReportsSkipsAndKeepsTextPayload()
     {
         using var isolated = new SymbolGraphMiniFixtureWorkspace();
         CreateFile(isolated.RootPath, "visible-evaluation.txt", "problem-anchor");
@@ -112,8 +112,8 @@ public sealed class SearchPatternEvaluationTests
         Assert.Equal(new[] { "visible-evaluation.txt" }, result.Paths.Select(path => path.Split('/').Last()));
         Assert.Equal(1, result.SkippedBinaryFileCount);
         Assert.Equal(1, result.SkippedUnreadableFileCount);
-        Assert.DoesNotContain("Generated.g.cs", result.LegacyText, StringComparison.Ordinal);
-        Assert.DoesNotContain("bundle.min.js", result.LegacyText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Generated.g.cs", result.TextPayload, StringComparison.Ordinal);
+        Assert.DoesNotContain("bundle.min.js", result.TextPayload, StringComparison.Ordinal);
         Assert.True(result.CombinedToolUtf8Bytes > result.StructuredPayloadUtf8Bytes);
     }
 
@@ -143,7 +143,7 @@ public sealed class SearchPatternEvaluationTests
     }
 
     private void WriteBytes(string caseId, ToolObservation observation) => output.WriteLine(
-        $"{caseId} bytes: legacy={observation.LegacyUtf8Bytes} structured={observation.StructuredPayloadUtf8Bytes} combined={observation.CombinedToolUtf8Bytes}");
+        $"{caseId} bytes: text={observation.TextUtf8Bytes} structured={observation.StructuredPayloadUtf8Bytes} combined={observation.CombinedToolUtf8Bytes}");
 
     private static void CreateFile(string rootPath, string relativePath, string content)
     {
@@ -216,7 +216,7 @@ public sealed class SearchPatternEvaluationTests
     }
 
     private sealed record ToolObservation(
-        string LegacyText,
+        string TextPayload,
         string StructuredJson,
         IReadOnlyList<string> Paths,
         int MatchedFileCount,
@@ -228,7 +228,7 @@ public sealed class SearchPatternEvaluationTests
         int SkippedBinaryFileCount,
         int SkippedUnreadableFileCount,
         int FollowUpCalls,
-        int LegacyUtf8Bytes,
+        int TextUtf8Bytes,
         int StructuredPayloadUtf8Bytes,
         int CombinedToolUtf8Bytes);
 }

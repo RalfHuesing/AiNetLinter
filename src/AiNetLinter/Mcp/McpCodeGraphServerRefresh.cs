@@ -109,13 +109,9 @@ internal static class McpCodeGraphServerRefresh
             if (SourceFileCatalog.IsGeneratedPath(path)) continue;
             if (knownPaths.Contains(path)) continue;
 
-            // Kein Directory-Praefix-Treffer auf ein bekanntes Projekt bedeutet: die Datei
-            // gehoert erkennbar zu keinem der geladenen Projekte (z. B. ein unabhaengiges
-            // Test-Fixture-Projekt an anderer Stelle im selben Solution-Verzeichnis-Baum,
-            // ausserhalb jeder Projekt-Ordnerstruktur). Frueher fiel dieser Fall auf "erstes
-            // Projekt der Solution" zurueck — das haengte projektfremde Dateien (inkl. bewusst
-            // regelverletzender Test-Fixtures) lautlos an ein beliebiges Projekt und machte
-            // Lint-/Safeguard-Ergebnisse nicht-deterministisch, sobald der Sweep unter Last
+            // Ohne eindeutige Projektzuordnung bleibt die Datei unsichtbar fuer den
+            // projektbezogenen Snapshot. Eine Zuordnung zu einem beliebigen Projekt
+            // wuerde Lint- und Safeguard-Ergebnisse nicht-deterministisch machen.
             // (Directory-mtime-Aenderungen irgendwo im Repo) auslöste. Ohne Praefix-Treffer wird
             // die Datei jetzt uebersprungen statt willkuerlich zugeordnet.
             var projectId = PickProjectForNewFile(updated, path);

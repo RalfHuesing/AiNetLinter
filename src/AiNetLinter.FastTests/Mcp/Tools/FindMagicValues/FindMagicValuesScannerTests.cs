@@ -91,7 +91,7 @@ public sealed class Foo
     [Route(""/api/v1/users"")]
     public void M() {}
 
-    [Obsolete(""legacy"")]
+    [Obsolete(""obsolete-member"")]
     public void M2() {}
 }";
         var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));

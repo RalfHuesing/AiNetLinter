@@ -108,7 +108,7 @@ public sealed class DiffImpactAnalyzerTests
     }
 
     [Fact]
-    public void ExpandHunkRanges_ProducesLegacyExpandedLines()
+    public void ExpandHunkRanges_ProducesExpandedLines()
     {
         const string diffOutput = """
             diff --git a/src/A.cs b/src/A.cs
@@ -126,13 +126,13 @@ public sealed class DiffImpactAnalyzerTests
             - gone
             """;
 
-        var legacy = DiffImpactAnalyzer.ParseGitDiffHunks(diffOutput);
+        var ranges = DiffImpactAnalyzer.ParseGitDiffHunks(diffOutput);
         var fromRanges = DiffImpactAnalyzer.ParseGitDiffHunkRanges(diffOutput)
             .ToDictionary(
                 pair => pair.Key,
                 pair => DiffImpactAnalyzer.ExpandHunkRanges(pair.Value));
 
-        Assert.Equal(legacy, fromRanges);
+        Assert.Equal(ranges, fromRanges);
         Assert.Equal(new List<int> { 20 }, fromRanges[Path.Combine("src", "B.cs")]);
         Assert.Empty(fromRanges[Path.Combine("src", "B.cs")].Skip(1));
     }

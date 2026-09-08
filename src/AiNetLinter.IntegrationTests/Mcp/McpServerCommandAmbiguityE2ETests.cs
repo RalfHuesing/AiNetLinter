@@ -11,7 +11,7 @@ namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
 /// E2E-Test fuer: ein Zielverzeichnis
-/// mit dem verbotenen Legacy-Argument <c>--path</c> auf eine Datei fuehrt
+/// mit dem im MCP-Modus verbotenen CLI-Argument <c>--path</c> auf eine Datei fuehrt
 /// zu einem deterministischen Server-Start-Abbruch mit klarer Fehlermeldung auf stderr.
 /// beweist die Helper-Logik; dieser Test beweist das Verhalten des realen Server-Subprozesses.
 ///

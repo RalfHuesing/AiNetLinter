@@ -46,7 +46,7 @@ Das Problem der impliziten Null-Annahmen in Typsystemen ist sprachstrukturell �
 
 ## Risiken / Gegenargumente
 
-**Nachträgliche Aktivierung in Legacy-Projekten:** In großen Bestandsprojekten ohne NRT kann das Einschalten eine Flutwelle von Warnungen und Fehlern erzeugen. AiNetLinters Baseline-Mechanismus (F01) löst dieses Problem: Bestandsverstöße können eingefroren werden; neue Dateien müssen `#nullable enable` tragen.
+**Aktivierung in großen Projekten:** In Projekten ohne NRT kann das Einschalten eine Flutwelle von Warnungen und Fehlern erzeugen. AiNetLinters Baseline-Mechanismus (F01) löst dieses Problem: Vorhandene Verstöße können eingefroren werden; neue Dateien müssen `#nullable enable` tragen.
 
 **Ausnahmen für generierte Dateien:** Generierter Code (z.B. EF Core Migrations, Blazor-Codegen) folgt oft nicht den NRT-Konventionen. AiNetLinters FileFilters (F07) schließen diese Dateien bereits aus — das Zusammenspiel ist korrekt konfiguriert.
 

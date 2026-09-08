@@ -31,8 +31,6 @@ public sealed class McpServerOptionsFactoryTests
 
         Assert.False(string.IsNullOrEmpty(options.ServerInstructions));
         Assert.Contains("targetPath", options.ServerInstructions, StringComparison.Ordinal);
-        Assert.DoesNotContain("targetType", options.ServerInstructions, StringComparison.Ordinal);
-        Assert.DoesNotContain("projectRoot", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".slnx", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".dll", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".exe", options.ServerInstructions, StringComparison.Ordinal);
@@ -78,7 +76,6 @@ public sealed class McpServerOptionsFactoryTests
         Assert.Contains("enrichCSharp=true", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("RULES_INVALID", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("PROJECT_NOT_INITIALIZED", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("ainetlinter.project.json", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("kopierfaehigem Template", ServerInstructions.Text, StringComparison.Ordinal);
     }
 }

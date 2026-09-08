@@ -15,7 +15,7 @@ namespace AiNetLinter.IntegrationTests.Mcp;
 
 /// <summary>
 /// First-Principles-E2E-Test fuer das JSON-RPC-Framing des MCP-Servers: spawnt einen
-/// <c>AiNetLinter.exe --mcp-server</c>-Subprozess, schreibt Legacy-<c>initialize</c> oder
+/// <c>AiNetLinter.exe --mcp-server</c>-Subprozess, schreibt <c>initialize</c> oder
 /// modernes <c>server/discover</c> sowie <c>tools/list</c> und <c>tools/call</c> manuell als
 /// newline-delimited JSON auf stdin, liest stdout zeilenweise roh zurueck und verifiziert
 /// <b>jede</b> Zeile als gueltigen JSON-RPC-Frame (<c>jsonrpc == "2.0"</c>).
@@ -91,7 +91,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
     }
 
     [Fact]
-    public async Task SearchPatternCall_RawStructuredContentIsObjectAndLegacyTextRemains()
+    public async Task SearchPatternCall_RawStructuredContentIsObjectAndTextRemains()
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
         var frames = new List<string>
@@ -290,34 +290,34 @@ public sealed class McpServerCommandJsonRpcFramingTests
     }
 
     [Fact]
-    public async Task LegacyAndModernDiscovery_ExposeSameInstructionsAndRegisteredToolsWithinBudget()
+    public async Task InitializeAndModernDiscovery_ExposeSameInstructionsAndRegisteredToolsWithinBudget()
     {
-        using var legacyFixture = new SymbolGraphMiniFixtureWorkspace();
+        using var initializeFixture = new SymbolGraphMiniFixtureWorkspace();
         using var modernFixture = new SymbolGraphMiniFixtureWorkspace();
         var expectedToolNames = await GetRegisteredToolNames();
-        var legacy = await ReadDiscoverySnapshotAsync(legacyFixture.SolutionPath, modern: false);
+        var initialize = await ReadDiscoverySnapshotAsync(initializeFixture.SolutionPath, modern: false);
         var modern = await ReadDiscoverySnapshotAsync(modernFixture.SolutionPath, modern: true);
 
-        Assert.Equal(legacy.Instructions, modern.Instructions);
-        Assert.Equal(legacy.InstructionsSize, modern.InstructionsSize);
-        Assert.True(expectedToolNames.SetEquals(legacy.ToolNames));
+        Assert.Equal(initialize.Instructions, modern.Instructions);
+        Assert.Equal(initialize.InstructionsSize, modern.InstructionsSize);
+        Assert.True(expectedToolNames.SetEquals(initialize.ToolNames));
         Assert.True(expectedToolNames.SetEquals(modern.ToolNames));
-        Assert.True(legacy.ToolNames.SetEquals(modern.ToolNames));
+        Assert.True(initialize.ToolNames.SetEquals(modern.ToolNames));
         Assert.True(
-           legacy.InstructionsSize.Utf8Bytes <= ServerInstructions.MaxUtf8Bytes,
-           $"ServerInstructions: {legacy.InstructionsSize.Utf8Bytes} Bytes, " +
+           initialize.InstructionsSize.Utf8Bytes <= ServerInstructions.MaxUtf8Bytes,
+           $"ServerInstructions: {initialize.InstructionsSize.Utf8Bytes} Bytes, " +
            $"Budget: {ServerInstructions.MaxUtf8Bytes} Bytes.");
         Assert.True(modern.InstructionsSize.Utf8Bytes <= ServerInstructions.MaxUtf8Bytes);
 
-        output.WriteLine($"Legacy discovery: {legacy.DiscoveryPayload}");
-        output.WriteLine($"Legacy tools/list: {legacy.ToolsListPayload}");
+        output.WriteLine($"initialize discovery: {initialize.DiscoveryPayload}");
+        output.WriteLine($"initialize tools/list: {initialize.ToolsListPayload}");
         output.WriteLine($"Modern discovery: {modern.DiscoveryPayload}");
         output.WriteLine($"Modern tools/list: {modern.ToolsListPayload}");
-        output.WriteLine($"Instructions: {legacy.InstructionsSize}");
+        output.WriteLine($"Instructions: {initialize.InstructionsSize}");
         output.WriteLine(
-            $"Annotation payload delta (Legacy tools/list): " +
-            $"{legacy.ToolsListPayload.Utf8Bytes - AnnotationPayloadBaselineUtf8Bytes:+#;-#;0} UTF-8-Bytes " +
-            $"({AnnotationPayloadBaselineUtf8Bytes} -> {legacy.ToolsListPayload.Utf8Bytes}; " +
+            $"Annotation payload delta (initialize tools/list): " +
+            $"{initialize.ToolsListPayload.Utf8Bytes - AnnotationPayloadBaselineUtf8Bytes:+#;-#;0} UTF-8-Bytes " +
+            $"({AnnotationPayloadBaselineUtf8Bytes} -> {initialize.ToolsListPayload.Utf8Bytes}; " +
             "Baseline 2026-08-20)");
     }
 

@@ -99,13 +99,13 @@ public sealed class SymbolIdentifierResolverTests
             .OfType<IMethodSymbol>()
             .Single();
         var rawId = DocumentationCommentId.CreateDeclarationId(symbol)!;
-        var legacyId = rawId.Replace("Missing.Type", "~?Missing.Type", StringComparison.Ordinal);
-        if (legacyId == rawId) legacyId = rawId.Insert(2, "~?");
+        var unresolvedId = rawId.Replace("Missing.Type", "~?Missing.Type", StringComparison.Ordinal);
+        if (unresolvedId == rawId) unresolvedId = rawId.Insert(2, "~?");
         var identity = new AnalysisSymbolIdentity(new string('c', 64), 6);
 
         var (resolved, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
             owner.Solution,
-            identity.Format(legacyId)!,
+            identity.Format(unresolvedId)!,
             CancellationToken.None,
             identity);
 
@@ -184,11 +184,8 @@ public sealed class SymbolIdentifierResolverTests
     [Fact]
     public void TryParseLineOnlyPosition_WindowsDriveLetterPathWithLineOnly_ReconstructsDriveLetterPath()
     {
-        // Kernfall der Format-Ambiguitaet: "C:\Datei.cs:91" hat nach Split durch ':' drei
-        // Segmente ("C", "\Datei.cs", "91"). Die 2-Segment-Beschraenkung aus einer frueheren
-        // Fassung haette das faelschlich abgelehnt — auf einem reinen Windows-Projekt sind
-        // absolute Laufwerksbuchstaben-Pfade der Normalfall, kein Sonderfall. Von hinten geparst
-        // (letztes Segment = Zeile) wird der Laufwerksbuchstabe korrekt wieder Teil des Pfads.
+        // Ein Windows-Pfad mit Laufwerksbuchstabe enthält nach dem Split durch ':' drei Segmente.
+        // Von hinten geparst (letztes Segment = Zeile) bleibt der Laufwerksbuchstabe Teil des Pfads.
         var ok = SymbolIdentifierResolver.TryParseLineOnlyPosition("C:\\Datei.cs:91", out var path, out var line);
 
         Assert.True(ok);

@@ -246,9 +246,9 @@ public sealed class GetImpactToolTests
     [InlineData("")]
     [InlineData("callers")]
     [InlineData("CALLERS")]
-    public async Task ExecuteAsync_DetailLevelCallersVariants_SelectLegacyGitBranch(string? detailLevel)
+    public async Task ExecuteAsync_DetailLevelCallersVariants_SelectDefaultGitBranch(string? detailLevel)
     {
-        // null/leer/"callers" (auch gross/klein) waehlt den unveraenderten Bestands-Pfad.
+        // null/leer/"callers" (auch gross/klein) waehlt den Git-Branch ohne Detailfilter.
         var state = _fixture.CreateServer();
 
         var result = await GetImpactTool.ExecuteAsync(

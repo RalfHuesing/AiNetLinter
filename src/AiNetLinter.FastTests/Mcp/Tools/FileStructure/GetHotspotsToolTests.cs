@@ -89,9 +89,7 @@ public sealed class GetHotspotsToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("im gruenen Bereich", textContent.Text, StringComparison.Ordinal);
-        // Regression: "ok"-Dateien duerfen nicht in StructuredContent landen (fruehere Fassung
-        // listete dort ALLE gescannten Dateien, nicht nur critical/warning — blaehte die Antwort
-        // bei einer grossen Solution auf mehrere zehntausend Zeichen auf).
+        // StructuredContent enthält nur critical/warning-Dateien und bleibt für grüne Solutions leer.
         Assert.NotNull(result.StructuredContent);
         var entries = result.StructuredContent!.Value.GetProperty("hotspots")
             .Deserialize<List<HotspotEntry>>(McpJsonOptions.Default);

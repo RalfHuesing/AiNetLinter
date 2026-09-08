@@ -206,7 +206,7 @@ public sealed class SearchPatternToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_StructuredContent_PreservesLegacyTextAndReturnsObjectPayload()
+    public async Task ExecuteAsync_StructuredContent_PreservesTextPayloadAndReturnsObjectPayload()
     {
         using var state = _fixture.CreateReadOnlyServer();
 
@@ -229,7 +229,7 @@ public sealed class SearchPatternToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_EnrichCSharp_ReturnsSemanticObjectAndKeepsLegacyText()
+    public async Task ExecuteAsync_EnrichCSharp_ReturnsSemanticObjectAndKeepsTextPayload()
     {
         using var state = _fixture.CreateReadOnlyServer();
 
@@ -346,7 +346,7 @@ public sealed class SearchPatternToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_DefaultCall_RetainsLegacyOutputSemantics()
+    public async Task ExecuteAsync_DefaultCall_RetainsTextOutputSemantics()
     {
         using var state = _fixture.CreateReadOnlyServer();
 

@@ -122,7 +122,7 @@ public sealed class RefactoringDriftScannerTests
         """;
 
     [Fact]
-    public async Task ScanAsync_HistoricalRegression_FindsInlineDuplicatesButNotCorrectCallersOrHelperItself()
+    public async Task ScanAsync_FindsInlineDuplicatesButNotCorrectCallersOrHelperItself()
     {
         using var testSolution = CreateFullSolution();
 

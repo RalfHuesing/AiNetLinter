@@ -7,7 +7,7 @@ using AiNetLinter.Mcp;
 
 namespace AiNetLinter.Mcp.Tools.Analysis;
 
-internal static class SearchPatternLegacyFormatter
+internal static class SearchPatternTextFormatter
 {
     internal static string Format(SearchPatternScanResult result)
     {

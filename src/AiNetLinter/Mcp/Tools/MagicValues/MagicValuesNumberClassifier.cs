@@ -227,8 +227,8 @@ internal static class MagicValuesNumberClassifier
     {
         if (model is null) return false;
         var typeInfo = model.GetTypeInfo(literal);
-        return typeInfo.ConvertedType is { } targetType
-            && targetType.Name.Contains("HttpStatusCode", StringComparison.OrdinalIgnoreCase);
+        return typeInfo.ConvertedType is { } convertedType
+            && convertedType.Name.Contains("HttpStatusCode", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsStatusCodeIdentifier(string? name)

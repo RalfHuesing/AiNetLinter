@@ -30,10 +30,10 @@ Diese Roadmap dokumentiert den aktuellen Entwicklungsstand des `AiNetLinter`-Pro
 - [x] `reload_config` und `report_observability_feedback` sind als eigene
   Seiteneffektprofile klassifiziert; ein zentraler Vertragstest schlägt bei neuen,
   nicht klassifizierten Toolnamen fehl.
-- [x] Legacy- und moderner Raw-Wire-`tools/list`-Test prüfen die semantisch gleichen
+- [x] Die Raw-Wire-Tests für `tools/list` prüfen die semantisch gleichen
   Annotationen exemplarisch und für den vollständigen registrierten Bestand.
-- [x] Historische Payload-Messung des 26er-Toolbestands: 20.836 → 26.887 UTF-8-Bytes
-  im Legacy-`tools/list`-Response (Delta +6.051 Bytes); der moderne Response misst
+- [x] Payload-Messung des 26er-Toolbestands: 20.836 → 26.887 UTF-8-Bytes
+  im annotierten `tools/list`-Response (Delta +6.051 Bytes); der Discovery-Response misst
   27.034 Bytes. Die Annotationen sind Hinweise und keine Security-Garantie.
 
 ---
@@ -444,26 +444,22 @@ Erweitert die generierten `.agents/rules/AiNetLinter.mdc`-Dateien um eine projek
 
 ---
 
-## MCP-Codegraph-Server (EPIC-01..08)
+## MCP-Codegraph-Server (EPIC-01..11)
 
-Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn-basierte Solution-Analyse als granular abfragbare Tools für AI-Coding-Agenten bereitstellt (historischer Stand nach EPIC-08: 13 Tools). Diese EPICs sind **separat** von den oben gelisteten Epics 1-33 zu lesen — sie beziehen sich auf den MCP-Server-Modus (`ainetlinter --mcp-server`), nicht auf den CLI-Batch-Modus. EPIC-01 bis EPIC-07 wurden mit dem damaligen Stand von 9 Tools umgesetzt; EPIC-08 erweiterte den Symbolgraphen um `get_symbol_body` sowie `depth`/DI-Hinweis-Erweiterungen, EPIC-09 um das System-Log-Call-Logging. Vollständige, aktuelle Tool-Referenz: [Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).
-
-> **Historischer Vertrag:** Die folgenden EPIC-Abschnitte dokumentieren
-> frühere Implementierungsstände. Ihre Beispiele mit `ainetlinter.project.json`,
-> `projectRoot` oder `targetType` sind nicht normativ und dürfen nicht als
-> aktueller MCP-Vertrag verwendet werden. Der aktuelle Vertrag ist der
-> `targetPath`-only-Stand in [Docs/agent-api.md](agent-api.md).
+Der stdio-basierte MCP-Server stellt die Roslyn-basierte Solution-Analyse als
+granular abfragbare Tools für AI-Coding-Agenten bereit. Die MCP-Epics sind
+separat von den CLI-Epics zu lesen und beschreiben den MCP-Server-Modus
+(`ainetlinter --mcp-server`). Die vollständige, aktuelle Tool-Referenz steht in
+[Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).
 
 ### EPIC-A — Projektregistry und transportneutrales Multi-Solution-Routing (umgesetzt am 2026-08-24)
 
-- [x] Eine `ainetlinter.project.json` mit den Pflichtfeldern `solution` und
-  `rules` bindet beide Pfade relativ zur Definitionsdatei; MCP-Registrierungen
-  verwenden nur `command` und `--mcp-server`.
-- [x] Die MCP-Tools sowie die Overview- und Regelkonfigurations-Resources adressieren Projekte über einen
-  absoluten `projectRoot` und nutzen die projektbezogene Registry mit Lease-,
-  Load- und Eviction-Verträgen.
+- [x] MCP-Registrierungen verwenden nur `command` und `--mcp-server`; jeder
+  zielgebundene Aufruf adressiert den absoluten Pfad des konkreten Targets.
+- [x] Die MCP-Tools sowie die Overview- und Regelkonfigurations-Resources
+  nutzen die projektbezogene Registry mit Lease-, Load- und Eviction-Verträgen.
 - [x] Die Overview ist als Resource-Template
-  `ainetlinter://overview{?projectRoot}` registriert. Die C#-Live-Teststrecke
+  `ainetlinter://overview{?targetPath}` registriert. Die C#-Live-Teststrecke
   prüft Discovery sowie den Read der URL-kodierten Repository-URI und bestätigt
   einen `text/markdown`-Snapshot mit Root-, Solution- und Regelstatus.
 ### EPIC-B — Geteilter Daemon mit ThinClient (umgesetzt am 2026-08-24)
@@ -487,16 +483,16 @@ Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn
 ### EPIC-C — Agent-Bootstrap und MCP-Resources (umgesetzt am 2026-08-25)
 
 - [x] Statischer Erstkontakt-Leitfaden `ainetlinter://agent-guide`, ohne
-  `projectRoot` lesbar und aus einer eigenen Bootstrap-Dokumentation sowie
+  Target-Kontext lesbar und aus einer eigenen Bootstrap-Dokumentation sowie
   der separat eingebetteten dauerhaften MCP-Regel aufgebaut.
-- [x] Der Leitfaden beschreibt die Auswahl vorhandener oder Erzeugung einer
-  `rules.json`, die Pflichtdefinition `ainetlinter.project.json`, die MCP-
-  Registrierung sowie das Kopieren nach `.agents/rules` oder `.cursor/rules`.
+- [x] Der Leitfaden beschreibt die optionale benachbarte
+  `ainetlinter-rules.json`, die MCP-Registrierung sowie das Kopieren nach
+  `.agents/rules` oder `.cursor/rules`.
 - [x] `ainetlinter --docs mcp-bootstrap` gibt den einmaligen Bootstrap offline
   aus; `ainetlinter --docs mcp-rule` gibt die dauerhaft geladene Regel aus.
-- [x] `ainetlinter://overview?projectRoot=...` ist auf Projektstatus und nächste
+- [x] `ainetlinter://overview?targetPath=...` ist auf Projektstatus und nächste
   Einstiegspunkte reduziert; Toolschemas bleiben in `tools/list`.
-- [x] `ainetlinter://rules?projectRoot=...` liefert bei jedem Read eine Markdown-
+- [x] `ainetlinter://rules?targetPath=...` liefert bei jedem Read eine Markdown-
   Karte aus dem effektiven Config-Snapshot des adressierten Registry-Keys mit
   Konfigurationsherkunft, aktiven Regeln und Metrik-Schwellwerten.
 
@@ -510,7 +506,7 @@ Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn
 - [x] **EPIC-06 — Fehlerbehandlung:** Nicht-ladbare Solution führt zu Server-Start mit `[WARN]` und Tool-Calls liefern `SOLUTION_NOT_LOADED` statt Crash; Defensiv-Wrapper fangen unerwartete Roslyn-Exceptions ab; erfolgreiche Tool-Antworten bleiben frei von automatisch aggregierten oder datei-spezifischen Compile-Fehler-Hinweisen.
 - [x] **EPIC-07 — Test-Infrastruktur:** 9 neue Test-Klassen + Erweiterung der `McpLiveRepositoryTests`/`McpTestClient`-Harness + neue Fixtures (`CompileErrorMiniFixture`, `McpLiveRepositoryFixture`, u. a.); Volllauf 1161/1161 grün.
 - [x] **EPIC-08 — Doku & Symbolgraph-Erweiterungen:** Sektion „MCP-Server-Modus" in `agent-api.md`, „MCP-Server registrieren" in `integration.md` inkl. Tool-vs-`rg`-Empfehlung, README-Hinweis; verifiziert durch `McpDocumentationSmokeTests`. Zusätzlich: `get_symbol_body` mit stabilen Symbol-IDs, `depth`-Parameter für `find_references`/`get_impact`, DI-Registrierungs-Hinweis in `get_type_hierarchy` (siehe „Nächste Phase" unten für Details).
-- [x] **EPIC-10 — `get_call_tree` (echter Baum, ASCII/Mermaid): umgesetzt** — fuenftes Symbolgraph-Tool (`SymbolGraphToolRegistrations`), Caller-Tree-Traversierung ueber `CallGraphTraversal.BuildTreeAsync` (eigene Grenzwerte: depth hard cap 5, Knoten hard cap 250, `topN`-Fan-Out-Kappung pro Ebene), Ausgabe als ASCII-Baum (`MetricsTreeRenderer`/`MetricsTreeNode` aus `metrics_tree` wiederverwendet statt eines dritten ASCII-Renderers) oder Mermaid-`flowchart TD` (neuer `CallTreeMermaidRenderer`). Revidiert die in `02-ainetlinter-mcp-current.md` dokumentierte fruehere Konzept-Entscheidung ("bewusst kein `get_call_tree`").
+- [x] **EPIC-10 — `get_call_tree` (echter Baum, ASCII/Mermaid): umgesetzt** — fuenftes Symbolgraph-Tool (`SymbolGraphToolRegistrations`), Caller-Tree-Traversierung ueber `CallGraphTraversal.BuildTreeAsync` (eigene Grenzwerte: depth hard cap 5, Knoten hard cap 250, `topN`-Fan-Out-Kappung pro Ebene), Ausgabe als ASCII-Baum (`MetricsTreeRenderer`/`MetricsTreeNode` aus `metrics_tree` wiederverwendet statt eines dritten ASCII-Renderers) oder Mermaid-`flowchart TD` (neuer `CallTreeMermaidRenderer`).
 - [x] **EPIC-10-Erweiterung — `direction` fuer `get_call_tree`:** `incoming` bleibt der Default; `outgoing` traversiert InvocationExpressions, ObjectCreation und MemberAccess per SemanticModel transitiv, `both` liefert beide Richtungen abwechselnd innerhalb des Fan-Outs. ASCII/Mermaid, `topN` und der 250-Knoten-Hardcap gelten fuer alle Richtungen; ungueltige Werte liefern recoverable `INVALID_ARGUMENT`.
 - [x] **EPIC-11 — MCP-Server-Lebenszyklus:** Parent-Prozess-Watchdog mit automatischer PID-Ermittlung (Windows `NtQueryInformationProcess`, Linux `/proc`, macOS `getppid()`), optionaler CLI-Option `--parent-pid <pid>`, CancellationToken-Verknüpfung und Exit-Code `0` bei Parent-Exit. Fast-Tests für Erkennung/Watchdog sowie ein E2E-Test für die Prozessbeendigung sichern das Verhalten ab.
 
@@ -533,7 +529,7 @@ Aus dem Konzept übernommene Erweiterungen, die nach EPIC-08 angegangen werden. 
 - **stdout strukturell als reiner Protokollkanal** — eigene `ILintConsole`-Implementierung für den MCP-Modus, die auch `WriteLine` nach stderr leitet. Status: **umgesetzt in EPIC-06** (B.6) — `McpLintConsole` mit `Instance`-Singleton, Aktivierung in `Program.cs:43`, E2E-Regressions-Test in `McpServerCommandJsonRpcFramingTests` (Integration, spawned `AiNetLinter.exe` und verifiziert jede stdout-Zeile als gültigen JSON-RPC-Frame).
 - **Generierte Last-Fixture** — synthetische Solution definierter Größe (z. B. 500/5.000 Dateien) als Skalierungsnachweis; Messlauf für Kaltstart-Zeit und Tool-Call-Dauer. Status: **umgesetzt in EPIC-05** (B.3).
 - **Tool-vs-`rg`-Empfehlung in `Docs/integration.md`** — reine Doku, kein Code. Status: **umgesetzt in 008** (siehe `integration.md#mcp-server-registrieren`).
-- **Discovery-Kontextbudget und Protokollpfade** — globale `ServerInstructions` auf 724 UTF-8-Bytes gekürzt; Legacy-`initialize` sowie MCP-2026-07-28-`server/discover` und jeweils `tools/list` per Raw-Wire gegen die registrierte Toolcollection geprüft. Status: **umgesetzt am 2026-08-20** (Aufgabe `tasks/mcp-agenten-effizienz/02`).
+- **Discovery-Kontextbudget und Protokollpfade** — globale `ServerInstructions` auf 724 UTF-8-Bytes gekürzt; `initialize` sowie MCP-2026-07-28-`server/discover` und jeweils `tools/list` per Raw-Wire gegen die registrierte Toolcollection geprüft. Status: **umgesetzt am 2026-08-20** (Aufgabe `tasks/mcp-agenten-effizienz/02`).
 - **Transitive Symbolgraph-Ausgaben** — `find_references` und der Symbol-Branch von `get_impact` liefern für jede erlaubte Tiefe dieselbe strukturierte `callSites`/`completeness`-Antwort; Trunkierung nach `maxResults`, besuchten Knoten und Depth-Clamp wird getrennt ausgewiesen. Status: **umgesetzt am 2026-08-21** (Aufgabe `tasks/mcp-agenten-effizienz/03`).
 - **Opt-in C#-Roslyn-Enrichment für `search_pattern`** — `enrichCSharp=false` bleibt der kompatible Default; sichtbare Treffer können bei expliziter Aktivierung als Deklaration, Symbolreferenz, Kommentar, String, Code oder unbekannt eingeordnet werden. Stabile `symbolId`-Werte sowie `ambiguous`-/`unavailable`-Zustände bleiben auf den residenten Snapshot und eindeutig zuordenbare Dokumente begrenzt. Status: **umgesetzt am 2026-08-21** (Aufgabe `tasks/mcp-agenten-effizienz/04_repositoryweite-hybridsuche-und-kontextbudget`).
 - **`get_symbol_body` + stabile Symbol-IDs in `get_file_skeleton` (E.1)** — neues Tool liefert den Source-Body eines C#-Symbols per stabiler Roslyn-`DocumentationCommentId` (überlebt Refactorings solange FQN stabil); `get_file_skeleton`-Output wird um stabile `id:`-Felder pro `SkeletonTypeInfo`/`SkeletonMemberInfo` erweitert. Status: **umgesetzt in EPIC-08** (step-012) — neue 4. Registrar-Klasse `SymbolBodyToolRegistrations` (eigene Klasse, weil `SymbolGraphToolRegistrations` bereits am 2850-PathOverride hängt), `GetSymbolBodyTool` + `SymbolIdentifierResolver` mit `TryResolveByStableIdAsync`.
@@ -758,7 +754,7 @@ Vollständige Neustrukturierung und Beschleunigung der Testsuite (.NET 10 / xUni
   - `src/AiNetLinter.TestKit`: Wiederverwendbare Test-Infrastruktur, Fixtures (`RoslynTestSolutionFactory`, `IsolatedFixtureLease`, `RecordingLintConsole`).
 - [x] **Vollständige Migration aller 183 Testklassen / 1259+ Tests:**
   - 100% der Klassen methodengenau und verhaltensgetreu migriert.
-  - Altes Legacy-Projekt `src/AiNetLinter.Tests` vollständig aus Solution und Dateisystem entfernt.
+  - Das zusätzliche Testprojekt `src/AiNetLinter.Tests` ist weder in der Solution noch im Dateisystem vorhanden.
 - [x] **Kategorisierung & Selektive Testläufe:**
   - Schnelle Entwicklungsschleife über `Category=Unit` oder `Category=Component`.
   - Normales CI/Verifikations-Gate über `Category!=Stress`.

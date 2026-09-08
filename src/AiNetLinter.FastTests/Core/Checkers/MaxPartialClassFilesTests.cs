@@ -95,10 +95,10 @@ public sealed class MaxPartialClassFilesTests
     public async Task ExemptType_BySimpleName_NoViolation()
     {
         var solution = CreateAdhocSolution(
-            ("LegacyClass.cs", "namespace App; public partial class LegacyClass { public void A() {} }"),
-            ("LegacyClass.Part2.cs", "namespace App; public partial class LegacyClass { public void B() {} }"),
-            ("LegacyClass.Part3.cs", "namespace App; public partial class LegacyClass { public void C() {} }"));
-        var config = CreateConfig(limit: 2, exemptTypes: ["LegacyClass"]);
+            ("SampleClass.cs", "namespace App; public partial class SampleClass { public void A() {} }"),
+            ("SampleClass.Part2.cs", "namespace App; public partial class SampleClass { public void B() {} }"),
+            ("SampleClass.Part3.cs", "namespace App; public partial class SampleClass { public void C() {} }"));
+        var config = CreateConfig(limit: 2, exemptTypes: ["SampleClass"]);
         var engine = new LinterEngine(config);
         var violations = await engine.RunAsync(solution);
         Assert.Empty(violations.Where(v => v.RuleName == nameof(MetricsConfig.MaxPartialClassFiles)));

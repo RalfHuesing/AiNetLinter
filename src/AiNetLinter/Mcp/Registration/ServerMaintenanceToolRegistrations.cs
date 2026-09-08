@@ -48,8 +48,8 @@ internal static class ServerMaintenanceToolRegistrations
         tools.Add(McpServerTool.Create(
             async (RequestContext<CallToolRequestParams> context, string targetPath, CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     new AnalysisTargetRequest(targetPath),
@@ -83,8 +83,8 @@ internal static class ServerMaintenanceToolRegistrations
                 int maxSessions = GetServerHealthTool.DefaultMaxSessions,
                  CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 return await ExecuteGetServerHealthAsync(
                     registry,
                     runtimeContext,
@@ -168,8 +168,8 @@ internal static class ServerMaintenanceToolRegistrations
              string? additionalContext = null,
              CancellationToken ct = default) =>
             {
-                 var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                  if (legacyError is not null) return Task.FromResult(legacyError);
+                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                  if (unknownError is not null) return Task.FromResult(unknownError);
                   return ReportObservabilityFeedbackTool.ExecuteAsync(
                     new ReportObservabilityFeedbackParameters(
                         feedbackType,

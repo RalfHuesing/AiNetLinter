@@ -121,8 +121,8 @@ internal static class DependencyGraphTool
 
         // Nicht-Typ-Symbole (Methode/Property/Feld) auf den einschliessenden Typ normalisieren —
         // macht symbolIdentifier fuer "Klasse.Member"-Eingaben genauso nutzbar wie fuer reine Typnamen.
-        var targetType = symbol as INamedTypeSymbol ?? symbol!.ContainingType;
-        if (targetType is null)
+        var resolvedTypeSymbol = symbol as INamedTypeSymbol ?? symbol!.ContainingType;
+        if (resolvedTypeSymbol is null)
         {
             return McpToolResults.InvalidArgument(
                 $"'{symbolIdentifier}' loest zu '{symbol!.Kind}' auf — kein Typ und kein Mitglied mit einschliessendem Typ.",
@@ -130,9 +130,9 @@ internal static class DependencyGraphTool
         }
 
         var request = new DependencyGraphScanRequest(solution, includeOutgoing, includeIncoming, input.Depth, input.MaxResults);
-        var result = await DependencyGraphScanner.ScanTypeAsync(targetType, request, ct);
-        var declaringPath = FormatDeclaringPath(solution, targetType, assemblyIdentity is not null);
-        var target = new DependencyGraphTarget("type", declaringPath, targetType.Name);
+        var result = await DependencyGraphScanner.ScanTypeAsync(resolvedTypeSymbol, request, ct);
+        var declaringPath = FormatDeclaringPath(solution, resolvedTypeSymbol, assemblyIdentity is not null);
+        var target = new DependencyGraphTarget("type", declaringPath, resolvedTypeSymbol.Name);
         return BuildResponse(
             target,
             assemblyIdentity is null ? result : ToAbsolutePaths(result, solution));

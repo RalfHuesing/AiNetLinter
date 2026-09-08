@@ -45,8 +45,8 @@ internal static class AssemblyAnalysisToolRegistrations
                 string? kind = null,
                 CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 var effectiveCursor = cursor ?? continuationToken;
                 return await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
@@ -116,8 +116,8 @@ internal static class AssemblyAnalysisToolRegistrations
                 string? continuationToken = null,
                 CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 var effectiveCursor = cursor ?? continuationToken;
                 return await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
@@ -187,8 +187,8 @@ internal static class AssemblyAnalysisToolRegistrations
                 string? continuationToken = null,
                 CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 var effectiveCursor = cursor ?? continuationToken;
                 return await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
@@ -288,8 +288,8 @@ internal static class AssemblyAnalysisToolRegistrations
         AnalysisToolRoute assemblyRoute,
         AssemblyContextExecutionParameters parameters)
     {
-        var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-        if (legacyError is not null) return legacyError;
+        var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+        if (unknownError is not null) return unknownError;
         var effectiveCursor = parameters.Cursor ?? parameters.ContinuationToken;
         return await AnalysisToolCall.ExecuteRouted(
             assemblyRoute,

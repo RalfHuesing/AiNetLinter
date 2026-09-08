@@ -67,10 +67,10 @@ und [MCP- und CLI-Referenz](Docs/agent-api.md).
 
 Zielgebundene MCP-Aufrufe adressieren ausschließlich die konkrete vorhandene
 Solution-, Assembly- oder Exe-Datei über einen absoluten `targetPath`. Die
-Herkunft wird deterministisch aus der Dateiendung abgeleitet; `targetType`,
-`projectRoot`, `configPath` und Projektdefinitionsdateien gehören nicht zum
-aktiven Vertrag. Bei Source-Targets wird ausschließlich die optionale
-`ainetlinter-rules.json` direkt neben der adressierten Solution gelesen.
+Herkunft wird deterministisch aus der Dateiendung abgeleitet. Für Source-Targets
+wird ausschließlich die optionale `ainetlinter-rules.json` direkt neben der
+adressierten Solution gelesen. Jedes Tool veröffentlicht sein aktuelles
+Argument-Schema über `tools/list`; zusätzliche Argumente werden abgewiesen.
 Für den Projektstart stellt `ainetlinter://agent-guide` den Bootstrap bereit;
 `tools/list` beschreibt die aktuell registrierten Tools und ihre Parameter.
 

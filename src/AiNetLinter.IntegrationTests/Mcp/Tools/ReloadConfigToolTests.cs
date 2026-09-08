@@ -160,7 +160,7 @@ public sealed class ReloadConfigToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_LegacyRulesJson_IsNotUsedAsNeighborRules()
+    public async Task ExecuteAsync_RootRulesJson_IsNotUsedAsNeighborRules()
     {
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
         var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);

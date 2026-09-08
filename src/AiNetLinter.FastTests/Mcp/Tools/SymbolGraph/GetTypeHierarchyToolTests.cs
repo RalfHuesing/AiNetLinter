@@ -104,10 +104,8 @@ public sealed class GetTypeHierarchyToolTests
     [Fact]
     public async Task ExecuteAsync_InterfaceWithMultipleImplementers_MaxResultsBelowCount_TruncatesAndSuppressesSufficiencyHint()
     {
-        // Regression: get_type_hierarchy trunkierte "Abgeleitete Klassen:"/"Implementierende
-        // Typen:" frueher nie — bei einem weit implementierten Interface (z. B. IDisposable in
-        // einem fremden Projekt) konnte das den Client-Token-Guard sprengen (dieselbe Bug-Klasse
-        // wie get_violations/get_hotspots). IGreeting hat in dieser Fixture zwei transitive
+        // Bei vielen Implementierern muss get_type_hierarchy seine Ausgabe begrenzen, damit
+        // der Client-Token-Guard nicht ueberlaufen kann. IGreeting hat in dieser Fixture zwei transitive
         // Implementierer (BaseGreeting direkt, SpecialGreeting via Vererbung von BaseGreeting).
         var state = _fixture.CreateServer();
 

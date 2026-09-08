@@ -66,7 +66,7 @@ internal static class SearchPatternTool
                 hint: hint);
         }
 
-        var text = SearchPatternLegacyFormatter.Format(scan);
+        var text = SearchPatternTextFormatter.Format(scan);
         if (scan.Payload.Completeness.CancellationRequested)
         {
             return McpToolResults.Text(text, scan.Payload);

@@ -71,14 +71,9 @@ public sealed class McpCodeGraphServerStalenessMtimeCacheTests
     [Fact]
     public async Task GetCurrentSolution_NewFileOutsideAnyProjectDirectory_IsNotAnnexedToFirstProject()
     {
-        // Determinismus-Regressionstest: der Verzeichnis-Sweep (Phase 2) darf eine neu
-        // entdeckte .cs-Datei nur einem Projekt einghaengen, dessen eigenes Verzeichnis die
-        // Datei tatsaechlich enthaelt. Fruehere Implementierung fiel bei fehlendem
-        // Praefix-Treffer auf "erstes Projekt der Solution" zurueck — dadurch konnten
-        // projektfremde Dateien (z. B. andere, unabhaengige Test-Fixture-Projekte im selben
-        // Solution-Verzeichnis-Baum) lautlos an ein beliebiges Projekt haengen und dessen
-        // Lint-/Score-Ergebnisse verfaelschen, sobald der Sweep unter Last (irgendeine
-        // Directory-mtime-Aenderung im Baum) auslöste.
+        // Der Verzeichnis-Sweep darf eine neue .cs-Datei nur einem Projekt zuordnen, dessen
+        // eigenes Verzeichnis die Datei tatsächlich enthält. Dateien ohne Präfix-Treffer
+        // bleiben aus dem projektbezogenen Snapshot ausgeschlossen.
         using var fixture = new BaselineMiniFixtureWorkspace();
         var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         using var server = new McpCodeGraphServer(McpCodeGraphServerOptions.From(

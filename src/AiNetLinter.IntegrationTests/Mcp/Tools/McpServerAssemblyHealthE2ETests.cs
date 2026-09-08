@@ -105,7 +105,6 @@ public sealed class McpServerAssemblyHealthE2ETests
                 ["fileFilter"] = "**/*.cs",
                 ["maxDepth"] = 32,
                 ["maxResults"] = 2000,
-                ["maxResponseBytes"] = 1_000_000,
             });
 
         Assert.NotEqual(true, tree.IsError);

@@ -29,7 +29,7 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 - **Roslyn-basierter CLI Auto-Fixer (`--fix`):** Vollautomatische Behebung trivialer Linter-Verstöße (z. B. fehlendes `sealed`, `readonly` oder `#nullable enable`) über Syntaxbaum-Transformationen.
 - **Analyse-Cache (Inkrementelle Optimierung):** Cache zur Vermeidung wiederholter semantischer Analysen für unveränderte C#-Dateien. Reduziert die Ausführungszeit bei inkrementellen Agenten-Runs. Standardmäßig aktiv; deaktivierbar über `--no-cache`.
 - **Performance-Profiling & Zeitmessung:** Erfassung der Ausführungszeiten aller Linter-Phasen (Workspace-Laden, Dateianalyse, Post-Checks) und automatische Generierung strukturierter Berichte (`performance.log` & `performance.json`) unter `measurements/` zur Analyse von Performance-Engpässen.
-- **MCP-Discovery-Kontextbudget:** Die globale Server-Anleitung wird in `initialize` (Legacy) und `server/discover` (MCP `2026-07-28`) ohne vollständige Tool-Aufzählung oder Bootstrap-Schritte übertragen. Sie verweist bei Bedarf auf den einmaligen Bootstrap unter `ainetlinter://agent-guide`; Tool-Schemas bleiben in `tools/list`, der Target-Status in `ainetlinter://overview`. Das Engineering-Budget der Anleitung beträgt 2.557 UTF-8-Bytes.
+- **MCP-Discovery-Kontextbudget:** Die globale Server-Anleitung wird in `initialize` und `server/discover` (MCP `2026-07-28`) ohne vollständige Tool-Aufzählung oder Bootstrap-Schritte übertragen. Sie verweist bei Bedarf auf den einmaligen Bootstrap unter `ainetlinter://agent-guide`; Tool-Schemas bleiben in `tools/list`, der Target-Status in `ainetlinter://overview`. Das Engineering-Budget der Anleitung beträgt 2.557 UTF-8-Bytes.
 - **MCP-Tool-Annotations:** `tools/list` beschreibt für jedes Tool explizit Read-only-, Destructive-, Idempotenz- und Open-World-Hinweise. Diese Werte sind Protokollhinweise für Hosts und keine Zugriffssteuerung; sie werden nicht über `rules.json` konfiguriert.
 - **MCP-Regelkonfiguration-Resource:** `ainetlinter://rules{?targetPath}` stellt die effektive Regelkonfiguration des übergebenen Solution-Targets als frisch generiertes Markdown bereit. Die Ausgabe enthält die Herkunft (`ainetlinter-rules.json` neben der Solution oder `not_configured`), aktive/deaktivierte Regeln und effektive Metrik-Schwellwerte; sie liest den atomaren Regel-Snapshot der residenten MCP-Instanz.
 - **Metadata-only Assembly-Analyse:** `inspect_assembly` listet die öffentliche API einer exakt angegebenen absoluten lokalen `.dll`- oder `.exe`-Datei; zusätzlich sind exakte Typauswahl, `memberNames` als case-insensitive exakte OR-Auswahl, der Teiltextfilter `memberName`, Member-Limits sowie strukturierte Parameterdaten aus den .NET-Metadaten verfügbar. `find_assembly_extensions` findet klassische C#-Extensions; Referenz-Assemblies werden nur mit `includeReferences=true` einbezogen (Default: `false`), und ohne Consumer-Projekt wird ihre Roslyn-Anwendbarkeit als `not_decidable` ausgewiesen. Keine der beiden Funktionen lädt oder führt die Assembly aus. Typen sind standardmäßig auf 100 Einträge, maximal 1000, und Member je Typ standardmäßig auf 100, maximal 1000, begrenzt; fehlende Abhängigkeiten werden als `partial` diagnostiziert. Diagnostics-Samples werden whitespace-normalisiert, auf 256 Zeichen je Meldung und standardmäßig 16 KiB je Antwort (per `ResponseBudgetBytes` bis maximal 32 KiB konfigurierbar) begrenzt; Referenzen und Referenz-Sessions auf jeweils 32 Einträge. `get_server_health` liefert standardmäßig nur Metadaten und Diagnosezähler; `includeDiagnostics=true` aktiviert begrenzte Samples mit `maxDiagnostics` (Default 20, Cap 50).
@@ -731,7 +731,7 @@ In `.css`-Dateien wird die Standard-CSS-Kommentar-Syntax verwendet, in `.js`-Dat
 
 ```css
 /* ainetlinter-disable CSS_MaxCssLineCount */
-/* Komplexes Legacy-Stylesheet wird in Sprint 3 migriert */
+/* Komplexes Stylesheet wird in Sprint 3 migriert */
 
 /* ainetlinter-disable CSS_MaxCssSelectorComplexity */
 .container .sub-container .panel .content .button {
@@ -746,13 +746,13 @@ In `.css`-Dateien wird die Standard-CSS-Kommentar-Syntax verwendet, in `.js`-Dat
 
 ```javascript
 // ainetlinter-disable JS_MaxJsLineCount
-export function hugeLegacyWrapper() {
+export function hugeWrapper() {
   // Wird in Sprint 4 aufgeteilt
 }
 
 // ainetlinter-disable JS_EnforceJsModules
-window.myLegacyFunction = function () {
-  console.log("Legacy-Integration, wird migriert");
+window.myIntegrationFunction = function () {
+  console.log("Integration wird migriert");
 };
 
 // ainetlinter-disable all
@@ -1186,7 +1186,7 @@ Beim Laden einer `rules.json` via `--config` gleicht der Linter die Datei **auto
 
 ### Wellen-Workflow (Agent-Migration)
 
-Für schrittweise Freischaltung von Legacy-Code:
+Für schrittweise Freischaltung von Code:
 
 ```bash
 # Nur bereits freigeschaltete Dateien mit Verstößen
@@ -1277,7 +1277,7 @@ Sollte es notwendig sein, bestimmte Regeln für eine Datei oder Zeile zu deaktiv
 // ainetlinter-disable MaxLineCount
 // Deaktiviert nur die MaxLineCount-Prüfung dateiweit.
 
-public void LegacyMethod(int a, int b, int c, int d, int e) // ainetlinter-disable MaxMethodParameterCount
+public void HighParameterMethod(int a, int b, int c, int d, int e) // ainetlinter-disable MaxMethodParameterCount
 {
     // Deaktiviert den Parameter-Count-Linter exklusiv für diese Zeile
 }
@@ -1294,7 +1294,7 @@ catch (Exception) // ainetlinter-disable EnforceNoSilentCatch
 
 ### Gezielter Bulk-Ausschluss (nur betroffene Dateien)
 
-Für Legacy-Codebases, in denen vorerst nur Dateien mit aktuellen Verstößen ausgeschlossen werden sollen:
+Für Codebasen, in denen vorerst nur Dateien mit aktuellen Verstößen ausgeschlossen werden sollen:
 
 ```bash
 ainetlinter --config rules.json --path ./MeinProjekt.slnx --add-disable-all
@@ -1388,9 +1388,7 @@ Dieser Abschnitt beschreibt, wie ein autonomer AI-Agent `AiNetLinter` selbständ
 
    Zielgebundene MCP-Aufrufe verwenden ausschließlich den absoluten Pfad einer
    vorhandenen `.sln`/`.slnx`-Datei (Source) oder `.dll`/`.exe`-Datei
-   (Decompiled-Assembly). Die Endung bestimmt die Herkunft; `targetType`,
-   `projectRoot`, `configPath` und `ainetlinter.project.json` sind kein aktiver
-   Vertrag. Source liest nur die optionale benachbarte
+   (Decompiled-Assembly). Die Endung bestimmt die Herkunft. Source liest nur die optionale benachbarte
    `ainetlinter-rules.json`; fehlt sie, ist der Lint-Status `not_configured`,
    nicht ein scheinbar sauberer Lauf.
 
@@ -1464,7 +1462,7 @@ Bei größeren Migrations-Szenarien sollten viele Regeln schrittweise eingeführ
 | `DetectAndBanPhantomDependencies`    | **on**    | **on**   | Verhindert, dass KIs nicht-existente Typen/Namespaces oder dynamische Reflektion erzeugen.                          |
 | `MaxAIContextFootprint`              | **5000**  | **4000** | Schont das RAG-Kontextbudget der LLM-Modelle.                                                                       |
 | `AllowUnsealedPartialClasses`        | **on**    | **on**   | Erforderlich für UI-Frameworks wie Blazor (Komponenten-Klassen).                                                    |
-| `EnforceExplicitStateImmutability`   | **off**   | **on**   | Sollte bei Legacy-Projekten zunächst deaktiviert bleiben und erst bei refaktorierter Immutability aktiviert werden. |
+| `EnforceExplicitStateImmutability`   | **off**   | **on**   | Sollte bei Projekten zunächst deaktiviert bleiben und erst bei refaktorierter Immutability aktiviert werden. |
 | `EnforceNamespaceDirectoryMapping`   | **off**   | **on**   | Bei Feature-Foldern oder älteren Namespace-Strukturen deaktivieren.                                                 |
 | `EnforceResultPatternOverExceptions` | **off**   | **on**   | Deaktivieren, falls im Altsystem noch weitreichend Exceptions geworfen werden (z. B. zur Validierung).              |
 | `MaxCyclomaticComplexity`            | **8**     | **5**    | Ein pragmatischerer Wert (8) verhindert übermäßiges Aufsplittern bei komplexen Altrechner-Methoden.                 |

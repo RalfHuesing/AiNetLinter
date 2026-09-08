@@ -1,6 +1,8 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using ModelContextProtocol.Protocol;
@@ -61,24 +63,44 @@ internal static class TargetPathToolRegistrationOptions
     internal static McpServerToolCreateOptions FeedbackTool(string name, string description) =>
         Create(name, description, FeedbackValues);
 
-    internal static CallToolResult? RejectLegacyArguments(
+    internal static CallToolResult? RejectUnknownArguments(
         RequestContext<CallToolRequestParams> context)
     {
-        var legacyKeys = AnalysisTargetRequest.FindLegacyArgumentNames(
-            context.Params.Arguments?.Keys ?? Array.Empty<string>());
-        return legacyKeys is not { Length: > 0 }
+        var arguments = context.Params.Arguments;
+        if (arguments is null || arguments.Count == 0)
+        {
+            return null;
+        }
+
+        if (context.MatchedPrimitive is not McpServerTool tool
+            || !tool.ProtocolTool.InputSchema.TryGetProperty("properties", out var properties)
+            || properties.ValueKind != System.Text.Json.JsonValueKind.Object)
+        {
+            return McpToolResults.InvalidArgument(
+                "Das aktuelle Tool-Schema ist nicht verfügbar.",
+                "Nur Argumente aus dem von tools/list gelieferten Schema verwenden.");
+        }
+
+        var allowedNames = properties.EnumerateObject()
+            .Select(property => property.Name)
+            .ToHashSet(StringComparer.Ordinal);
+        var unknownNames = arguments.Keys
+            .Where(name => !allowedNames.Contains(name))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+        return unknownNames is not { Length: > 0 }
             ? null
             : McpToolResults.InvalidArgument(
-                $"Legacy-Argumente sind im targetPath-only Vertrag nicht zulaessig: {string.Join(", ", legacyKeys)}.",
-                "Nur targetPath mit dem absoluten Pfad der konkreten .sln/.slnx/.dll/.exe-Datei uebergeben.");
+                string.Join("\n", unknownNames.Select(name => $"Unbekanntes Argument: {name}")),
+                "Nur Argumente aus dem von tools/list gelieferten Schema verwenden.");
     }
 
-    internal static async Task<CallToolResult> ExecuteWithLegacyGuardAsync(
+    internal static async Task<CallToolResult> ExecuteWithUnknownArgumentGuardAsync(
         RequestContext<CallToolRequestParams> context,
         Func<Task<CallToolResult>> execute)
     {
-        var legacyError = RejectLegacyArguments(context);
-        return legacyError ?? await execute();
+        var unknownError = RejectUnknownArguments(context);
+        return unknownError ?? await execute();
     }
 
     private static McpServerToolCreateOptions Create(

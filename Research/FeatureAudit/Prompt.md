@@ -489,7 +489,7 @@ Betrifft Features: [z.B. M01, M02, M04, M05, R01]
 
 🟢 **WERTVOLL** / 🟡 **UNPRAKTIKABEL** / 🔴 **NUTZLOS**
 
-**Fazit:** [Ein Satz. Beispiel: "Ratchet-Mechanismus ist State of the Art für Legacy-Integration — alle führenden Linter bieten dies, Behalten."]
+**Fazit:** [Ein Satz. Beispiel: "Der Ratchet-Mechanismus unterstützt die inkrementelle Einführung von Regeln — Beibehalten."]
 
 ---
 

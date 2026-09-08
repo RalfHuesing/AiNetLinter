@@ -206,7 +206,7 @@ public sealed partial class AssemblyAnalysisToolTests
     {
         // Multi-byte string (100 'ä' = 200 Bytes in UTF-8, aber nur 100 Zeichen lang)
         var umlautText = new string('ä', 100);
-        // maxBytes = 150: früher Absturz mit ArgumentOutOfRangeException wegen limit = 147 > value.Length (100)
+        // Das Zeichenlimit wird vor dem UTF-8-Trimmen auf eine gueltige Zeichenposition begrenzt.
         var trimmedUmlaut = AssemblyAnalysisResponse.TrimUtf8(umlautText, 150);
         Assert.EndsWith("…", trimmedUmlaut, StringComparison.Ordinal);
         Assert.True(Encoding.UTF8.GetByteCount(trimmedUmlaut) <= 150);

@@ -11,13 +11,13 @@ namespace AiNetLinter.IntegrationTests.Mcp.Daemon;
 public sealed class ThinClientDiscoveryContractTests
 {
     [Fact]
-    public async Task NewClient_StopsAfterLegacyWelcomeWithoutFingerprint_WithoutReadinessRetry()
+    public async Task NewClient_StopsAfterWelcomeWithoutFingerprint_WithoutReadinessRetry()
     {
-        var instance = "legacy-" + Guid.NewGuid().ToString("N")[..12];
+        var instance = "instance-" + Guid.NewGuid().ToString("N")[..12];
         var transport = new DaemonPipeTransport(daemonInstance: instance);
         await using var serverStream = transport.CreateServerStream();
         using var serverCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var server = ServeLegacyWelcomeAsync(serverStream, serverCancellation.Token);
+        var server = ServeWelcomeAsync(serverStream, serverCancellation.Token);
         var console = new RecordingLintConsole();
         var input = new Pipe();
         var output = new Pipe();
@@ -27,7 +27,7 @@ public sealed class ThinClientDiscoveryContractTests
             CancellationToken.None,
             console,
             new ThinClientSessionOptions(
-                _ => throw new InvalidOperationException("Der Legacy-Test muss den Instanz-Transport verwenden."),
+                _ => throw new InvalidOperationException("Der Test muss den Instanz-Transport verwenden."),
                 (_, _) =>
                 {
                     Interlocked.Increment(ref detachedStarts);
@@ -75,7 +75,7 @@ public sealed class ThinClientDiscoveryContractTests
         }
     }
 
-    private static async Task ServeLegacyWelcomeAsync(
+    private static async Task ServeWelcomeAsync(
         Stream serverStream,
         CancellationToken cancellationToken)
     {

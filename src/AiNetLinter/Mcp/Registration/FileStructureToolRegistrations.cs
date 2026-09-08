@@ -69,8 +69,8 @@ internal static class FileStructureToolRegistrations
                 bool includeLineCount = false,
                 CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 var rawRoot = root ?? path ?? directory ?? ".";
                 var effectiveRoot = McpInputNormalizer.NormalizePathOrScope(rawRoot, targetPath);
                 var effectiveFilter = fileFilter ?? filter ?? pattern;
@@ -124,7 +124,7 @@ internal static class FileStructureToolRegistrations
                 int maxResults = GetNamespaceTreeTool.DefaultMaxResults,
                 int maxResponseBytes = 0,
                 CancellationToken ct = default) =>
-                await ExecuteWithLegacyGuardAsync(
+                await ExecuteWithUnknownArgumentGuardAsync(
                     context,
                     () => AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
@@ -166,8 +166,8 @@ internal static class FileStructureToolRegistrations
                 int maxResponseBytes = 0,
                 CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 var effectiveIdentifier = symbolIdentifier ?? symbol ?? className ?? identifier ?? type ?? name;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
@@ -201,8 +201,8 @@ internal static class FileStructureToolRegistrations
         tools.Add(McpServerTool.Create(
             async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? filePaths = null, string? filePath = null, string? path = null, string? file = null, int maxResponseBytes = 0, CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 var effectivePath = filePath ?? path ?? file;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
@@ -238,8 +238,8 @@ internal static class FileStructureToolRegistrations
         tools.Add(McpServerTool.Create(
             async (RequestContext<CallToolRequestParams> context, string targetPath, CancellationToken ct = default) =>
             {
-                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                if (legacyError is not null) return legacyError;
+                var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                if (unknownError is not null) return unknownError;
                 return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     new AnalysisTargetRequest(targetPath),
@@ -267,8 +267,8 @@ internal static class FileStructureToolRegistrations
                 string? scopeType = GetHotspotsScanner.DefaultScopeType,
                 CancellationToken ct = default) =>
                 {
-                    var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-                    if (legacyError is not null) return legacyError;
+                    var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+                    if (unknownError is not null) return unknownError;
                     return await ProjectAnalysisDispatcher.ExecuteAsync(
                         registry,
                         new AnalysisTargetRequest(targetPath),
@@ -293,11 +293,11 @@ internal static class FileStructureToolRegistrations
         "deterministisch nach absteigender Zeilenzahl und Pfad sortiert; StructuredContent " +
          "weist Gesamtzahl, Anzeigezahl und Trunkierung aus.";
 
-    private static async Task<CallToolResult> ExecuteWithLegacyGuardAsync(
+    private static async Task<CallToolResult> ExecuteWithUnknownArgumentGuardAsync(
         RequestContext<CallToolRequestParams> context,
         Func<Task<CallToolResult>> execute)
     {
-        var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
-        return legacyError ?? await execute();
+        var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+        return unknownError ?? await execute();
     }
 }

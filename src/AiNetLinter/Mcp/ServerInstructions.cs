@@ -4,7 +4,7 @@ namespace AiNetLinter.Mcp;
 
 /// <summary>
 /// Zentrale globale Anleitung fuer die Discovery-Antworten des MCP-Servers. Das SDK stellt sie
-/// ueber <see cref="McpServerOptionsFactory"/> sowohl im Legacy-<c>initialize</c>-Handshake als
+/// ueber <see cref="McpServerOptionsFactory"/> sowohl im <c>initialize</c>-Handshake als
 /// auch in <c>server/discover</c> bereit. Der statische Erstkontakt-Leitfaden steht unter
 /// <c>ainetlinter://agent-guide</c>; der kompakte Status je Projekt-Key unter
 /// <c>ainetlinter://overview?targetPath=...</c>. Tool-Schemas bleiben in <c>tools/list</c>.

@@ -81,16 +81,18 @@ public sealed class McpServerArgumentValidationE2ETests
         Assert.Contains("symbolIdentifier", textContent.Text, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task GetTypeHierarchy_WrongParameterName_ReturnsRecoverableInvalidArgumentInsteadOfCrashing()
+    [Theory]
+    [InlineData("wrongParam")]
+    [InlineData("anotherUnknownField")]
+    public async Task GetTypeHierarchy_UnknownParameter_ReturnsRecoverableInvalidArgument(string unknownName)
     {
         var result = await _fixture.Client.CallToolAsync(
-            "get_type_hierarchy", new Dictionary<string, object?> { ["wrongParam"] = "Greeter" });
+            "get_type_hierarchy", new Dictionary<string, object?> { [unknownName] = "Greeter" });
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("symbolIdentifier", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains($"Unbekanntes Argument: {unknownName}", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -152,37 +154,20 @@ public sealed class McpServerArgumentValidationE2ETests
     }
 
     [Theory]
-    [InlineData("get_feature_context", "targetType")]
-    [InlineData("get_feature_context", "projectRoot")]
-    [InlineData("get_feature_context", "configPath")]
-    [InlineData("get_feature_context", "assemblyPath")]
-    [InlineData("get_feature_context", "ainetlinter.project.json")]
-    [InlineData("get_violations", "targetType")]
-    [InlineData("get_violations", "projectRoot")]
-    [InlineData("get_violations", "configPath")]
-    [InlineData("get_violations", "assemblyPath")]
-    [InlineData("get_violations", "ainetlinter.project.json")]
-    [InlineData("metrics_tree", "targetType")]
-    [InlineData("metrics_tree", "projectRoot")]
-    [InlineData("metrics_tree", "configPath")]
-    [InlineData("metrics_tree", "assemblyPath")]
-    [InlineData("metrics_tree", "ainetlinter.project.json")]
-    [InlineData("find_symbol", "targetType")]
-    [InlineData("find_symbol", "projectRoot")]
-    [InlineData("find_symbol", "configPath")]
-    [InlineData("find_symbol", "assemblyPath")]
-    [InlineData("find_symbol", "ainetlinter.project.json")]
-    public async Task TargetPathTools_RejectEveryLegacyArgument(string toolName, string legacyKey)
+    [InlineData("get_feature_context", "unexpectedOption")]
+    [InlineData("get_violations", "unrecognizedField")]
+    [InlineData("metrics_tree", "futureParameter")]
+    [InlineData("find_symbol", "unknownInput")]
+    public async Task TargetPathTools_RejectUnknownArguments(string toolName, string unknownKey)
     {
         var result = await _fixture.Client.CallToolAsync(
             toolName,
-            new Dictionary<string, object?> { [legacyKey] = "legacy" });
+            new Dictionary<string, object?> { [unknownKey] = "unknown" });
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains(legacyKey, textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("targetPath", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains($"Unbekanntes Argument: {unknownKey}", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

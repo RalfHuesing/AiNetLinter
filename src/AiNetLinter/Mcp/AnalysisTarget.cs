@@ -1,8 +1,6 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis;
@@ -45,36 +43,6 @@ internal sealed record AnalysisTargetRequest
 
     internal string? TargetPath { get; }
 
-    internal bool HasLegacyArguments => LegacyKeys.Count > 0;
-
-    internal IReadOnlySet<string> LegacyKeys { get; init; } = EmptyLegacyKeys;
-
-    internal static AnalysisTargetRequest FromArguments(
-        IReadOnlyDictionary<string, object?> arguments)
-    {
-        ArgumentNullException.ThrowIfNull(arguments);
-        var targetPath = arguments.TryGetValue("targetPath", out var rawTargetPath)
-            ? rawTargetPath as string
-            : null;
-        var legacyKeys = FindLegacyArgumentNames(arguments.Keys)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return new AnalysisTargetRequest(targetPath)
-        {
-            LegacyKeys = legacyKeys,
-        };
-    }
-
-    internal static string[] FindLegacyArgumentNames(IEnumerable<string> argumentNames) =>
-        argumentNames
-            .Where(key => LegacyArgumentNames.Contains(key, StringComparer.OrdinalIgnoreCase))
-            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-    private static readonly IReadOnlySet<string> EmptyLegacyKeys =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-    private static readonly string[] LegacyArgumentNames =
-        ["targetType", "projectRoot", "configPath", "assemblyPath", "ainetlinter.project.json"];
 }
 
 internal sealed record AnalysisTarget(

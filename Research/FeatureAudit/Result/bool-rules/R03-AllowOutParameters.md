@@ -32,7 +32,7 @@
 
 Microsoft Roslyn Quality Analyzer CA1021 ("Vermeiden Sie out-Parameter") und die Community-Literatur (albertherd.com 2017) bestätigen diesen Konsens. Dedizierte empirische Studien mit Fehlerraten existieren nicht — die Evidenz ist designbasiert und normativ.
 
-Die Severity `warning` statt `error` ist bei einem Verbot ungewöhnlich. Es deutet darauf hin, dass die Regel absichtlich als Hinweis statt als harte Grenze gesetzt wurde — möglicherweise weil Legacy-Code oder Framework-Aufrufe Ausnahmen brauchen, die nicht durch R04 und R06 abgedeckt sind. Dies erscheint pragmatisch.
+Die Severity `warning` statt `error` ist bei einem Verbot ungewöhnlich. Es deutet darauf hin, dass die Regel absichtlich als Hinweis statt als harte Grenze gesetzt wurde — möglicherweise weil Framework-Aufrufe Ausnahmen brauchen, die nicht durch R04 und R06 abgedeckt sind. Dies erscheint pragmatisch.
 
 ## KI-Agenten-Perspektive
 
@@ -46,7 +46,7 @@ Das strukturelle Problem — `out` blockiert async und erzeugt Lesbarkeits-Overh
 
 ## Risiken / Gegenargumente
 
-Das wichtigste Gegenargument: Einige .NET-APIs aus der Standardbibliothek und vielen NuGet-Paketen verwenden `out`-Parameter (z.B. `Dictionary.TryGetValue`, `int.TryParse`). Diese können ohne Wrapper-Code nicht vermieden werden. In der Praxis heißt das: Jeder Aufruf von Framework-Methoden mit `out` würde eine Warnung erzeugen, wenn R04 diese nicht ausreichend abdeckt. Die Ausnahmen via R04 (Try-Pattern) und R06 (private Methoden) decken die häufigsten legitimen Fälle ab; die Severity `warning` (statt `error`) dämpft den Rausch in Legacy-Grenzfällen. Ein verbleibender Rausch bei Framework-Interop-Aufrufen ist möglich und sollte beobachtet werden.
+Das wichtigste Gegenargument: Einige .NET-APIs aus der Standardbibliothek und vielen NuGet-Paketen verwenden `out`-Parameter (z.B. `Dictionary.TryGetValue`, `int.TryParse`). Diese können ohne Wrapper-Code nicht vermieden werden. In der Praxis heißt das: Jeder Aufruf von Framework-Methoden mit `out` würde eine Warnung erzeugen, wenn R04 diese nicht ausreichend abdeckt. Die Ausnahmen via R04 (Try-Pattern) und R06 (private Methoden) decken die häufigsten legitimen Fälle ab; die Severity `warning` (statt `error`) dämpft den Rausch bei Framework-Interop. Ein verbleibender Rausch bei Framework-Interop-Aufrufen ist möglich und sollte beobachtet werden.
 
 ---
 

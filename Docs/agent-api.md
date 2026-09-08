@@ -185,7 +185,7 @@ ainetlinter --mcp-server --parent-pid <pid>       # optionale explizite Parent-P
 ainetlinter --mcp-server --daemon-instance beta   # isolierter MCP-Daemon-Endpunkt
 ```
 
-Bei Legacy-MCP `initialize` (Handshake) hält der Daemon mehrere Projekt-Keys
+Bei MCP-`initialize` (Handshake) hält der Daemon mehrere Projekt-Keys
 resident. Der registrierte `--mcp-server`-Prozess arbeitet dabei als ThinClient:
 Er verbindet sich zuerst mit dem Named-Pipe-Daemon und startet genau einen
 detached `--daemon-start`, falls kein Endpunkt erreichbar ist. Nach `hello` /
@@ -193,8 +193,7 @@ detached `--daemon-start`, falls kein Endpunkt erreichbar ist. Nach `hello` /
 weitergereicht; stdout bleibt ausschließlich MCP-Protokoll. Jeder
 zielgebundene Tool-Aufruf erhält genau den absoluten, existierenden
 `targetPath` einer konkreten `.sln`/`.slnx`-, `.dll`- oder `.exe`-Datei. Die
-Endung bestimmt Source oder Decompiled-Assembly; `targetType`, `projectRoot`,
-`configPath` und `ainetlinter.project.json` sind kein aktiver Vertrag. Relative,
+Endung bestimmt Source oder Decompiled-Assembly. Relative,
 fehlende, nicht unterstützte oder auf ein Verzeichnis zeigende Pfade liefern
 `invalid_argument` mit Feldpfad und nächstem Schritt. `--path` und `--config`
 sind im MCP-Modus harte Fehler und bleiben dem Batch-Modus vorbehalten.
@@ -282,7 +281,7 @@ Fehler), bleibt der Server trotzdem verfügbar — der adressierte Tool-Call lie
 
 ### Scope-Hinweis (C#-only)
 
-Der Server schickt bei Legacy-`initialize` und modernem `server/discover` denselben zentralen `ServerInstructions`-Text an den Agent. Er enthält nur globale Regeln: den `targetPath`-Vertrag, den optionalen Verweis auf den einmaligen Bootstrap über `ainetlinter://agent-guide`, die C#-Symbolgraph-Grenze mit `search_pattern`-Fallback, die Sufficiency-/Truncation-Regel und die `isError`-Policy. Der vollständige Bootstrap wird nicht bei jeder Discovery übertragen. Die vollständigen Tool- und Parameterschemas bleiben in `tools/list`; der Zielstatus steht in der Overview-Resource.
+Der Server schickt bei `initialize` und modernem `server/discover` denselben zentralen `ServerInstructions`-Text an den Agent. Er enthält nur globale Regeln: den `targetPath`-Vertrag, den optionalen Verweis auf den einmaligen Bootstrap über `ainetlinter://agent-guide`, die C#-Symbolgraph-Grenze mit `search_pattern`-Fallback, die Sufficiency-/Truncation-Regel und die `isError`-Policy. Der vollständige Bootstrap wird nicht bei jeder Discovery übertragen. Die vollständigen Tool- und Parameterschemas bleiben in `tools/list`; der Zielstatus steht in der Overview-Resource.
 
 Das Engineering-Budget für diesen globalen Text beträgt 2.557 UTF-8-Bytes und
 wird durch Tests mit `Encoding.UTF8.GetByteCount` abgesichert; daraus wird keine
@@ -297,10 +296,10 @@ Symbol-, Metrik- und Health-Abfragen liefern `true/false/true/false`,
 `report_observability_feedback` `false/false/false/false` (jeweils in der genannten
 Reihenfolge). Die Hints beschreiben erwartete Seiteneffekte und die geschlossene
 Systemgrenze; sie sind keine Zugriffssteuerung und keine Sicherheitsgarantie und
-ersetzen keine Berechtigungs- oder Pfadprüfung. Legacy-`initialize` und modernes `server/discover` übertragen für
+ersetzen keine Berechtigungs- oder Pfadprüfung. `initialize` und modernes `server/discover` übertragen für
 `tools/list` dieselben Annotationen.
 
-Die Annotationen vergrößern den gemessenen Legacy-`tools/list`-Payload von 20.836
+Die Annotationen vergrößern den gemessenen `initialize`-`tools/list`-Payload von 20.836
 auf 26.887 UTF-8-Bytes (Delta +6.051 Bytes, Baseline-Messung 2026-08-20; Messung
 über `McpPayloadMeasurement`). Der moderne Payload beträgt in derselben Prüfung
 27.034 UTF-8-Bytes. Daraus wird keine Tokenersparnis abgeleitet.
@@ -380,7 +379,7 @@ Source-backed Checkout-/Snapshot-Erzeugung und Decompilation bleiben read-only.
 | `find_dead_code` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `accessibility?` (`private_internal` Default / `all` / `private` / `internal` / `public`), `confidence?` (`both` Default / `high` / `low`), `kind?` (`all` Default / `type` / `class` / `method` / `field` / `property` / `event` / `delegate`), `scopeFilter?`, `includeTests?` (Default `false`), `mode?` (`members` Default / `locals` / `both`), `maxResults?` (Default 50) | Statische Kandidaten für unreferenzierte Typen, Member, Felder, Events oder Locals mit Confidence-Stufe und ausgewiesenen Grenzen der Analyse, etwa bei Reflection, DI, Serializern und Routing | ja | ja |
 | `get_symbol_body` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifiers` (Array stabiler IDs/Namen/Dateizeilen fuer Batch in 1 Turn) **oder** `symbolIdentifier` (String-Alias fuer genau ein Symbol; bei gemischter Eingabe hat das Array Vorrang), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body bzw. -Bodies, getrennt durch Divider, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator; zusätzlich liefert `structuredContent.results` pro Eintrag `requestedIdentifier`, stabile `id`, relativen `filePath`, `startLine`, `bodyAvailability`, `contentMode`, Body und `isTruncated`. Bei dekompilierten Assembly-Targets stammen verfügbare Bodies aus dem eager `WholeProjectDecompiler`-Projekt-Snapshot und den darin geladenen echten Roslyn-Dokumenten. Interface- sowie abstract-/extern-Member bleiben `bodyAvailability=unavailable` | ja | nein (Body) |
 | `search_pattern` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `pattern` (Text oder Regex; Aliase `query`, `searchPattern`), `isRegex?` (Default `null` = Auto-Erkennung und Promotion bei 0 Treffern; `true` = explizit Regex, `false` = Plain-Substring), `scopeType?` (`all` [Default], `production` schliesst Tests aus, `tests`), `maxResults?` (Default 50), `maxFiles?`, `contextLines?`, `maxResponseBytes?`, `scope?`, `includePatterns?` (Aliase `fileFilter`, `includePattern`), `excludePatterns?`, `enrichCSharp?` (Default `false`) | Treffer im Dateibestand (alle Dateitypen) mit Match-Bereichen, optionalem Kontext und `completeness`; bei `isRegex=null` automatische Regex-Erkennung und Promotion bei 0 Plain-Treffern (Methodenklammern `()`, Generics `<T>`, gequotete Identifier, Wildcards); bei `enrichCSharp=true` zusätzlich `semantic` für sichtbare Treffer geladener C#-Dokumente | nein (Fallback) | ja |
-| `reload_config` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad) | Liest ausschließlich die optionale `ainetlinter-rules.json` neben der adressierten Solution neu. Fehlt sie, bleibt der Status `not_configured`; ein `configPath`-Override ist nicht vorgesehen. Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
+| `reload_config` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad) | Liest ausschließlich die optionale `ainetlinter-rules.json` neben der adressierten Solution neu. Fehlt sie, bleibt der Status `not_configured`; ein Konfigurationspfad-Override ist nicht vorgesehen. Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
 | `get_server_health` | kein Target (globale Aggregation) oder `targetPath?` (absoluter vorhandener `.sln`/`.slnx`/`.dll`/`.exe`-Pfad), `includeSessions?` (Default `false`), `maxSessions?` (Default 20, Cap 50), `includeDiagnostics?` (Default `false`), `maxDiagnostics?` (Default 20, Cap 50) | ohne Target kleines globales Aggregat mit Session-, Status- und Diagnosezählern; `includeSessions=true` ergänzt eine auf `maxSessions` begrenzte Sessionliste. Mit `targetPath` bleibt der Aufruf detailliert; `includeDiagnostics=true` begrenzt Diagnosesamples über `maxDiagnostics`; `diagnosticsSummary` weist Counts/Truncation aus | nein | ja |
 | `report_observability_feedback` | `feedbackType` (Pflicht), `title` (Pflicht), `description` (Pflicht), `relatedTool?`, `severity?` (Default `medium`), `expectedBehavior?`, `actualBehavior?`, `additionalContext?` | Schreibt Fehlerberichte, unerwartete Ausgaben, False Positives oder Feature-Wünsche von KI-Agenten unbeschränkt ins System-Log zur Analyse (nicht für normale Leermengen wie nicht existierende Symbole); liefert Bestätigung und typisiertes DTO. Das Tool ist ungebunden und akzeptiert keinen Target-/Projektparameter | ja | nein |
 | `find_duplicates` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `mode?` (`clone` Default, `refactoring-drift` oder `structural`), `scopeType?` (`production` Default, `all`, `tests`), `minTokens?` (Default aus `ainetlinter-rules.json`, 30), `similarityThreshold?` (`exact`/`near`/`fuzzy`, Default `fuzzy` — niedrigste noch angezeigte Stufe, bei `mode=clone` und `mode=structural`), `normalizeIdentifiers?` (Default `false`, nur `mode=clone`), `scopeDir?` (Default Solution-Root), `maxResults?` (Default 20), `helperSymbol?` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte, stabile DocumentationCommentId oder qualifizierter Name wie bei `find_references`; Pflicht bei `mode=refactoring-drift`, bei `mode=structural` ignoriert) | `mode=clone`: Token-basierte Code-Clone-Detection (Jaccard-N-Gram, Method-Granularität) als transitiv gruppierte Cluster (nicht isolierte Paare), gestaffelt nach exact/near/fuzzy-Ähnlichkeit (inkl. Top-Cluster-Übersicht bei >20 Treffern). `mode=refactoring-drift`: Methoden, die den per `helperSymbol` angegebenen Helper strukturell nachbauen statt ihn aufzurufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005) — als Kandidaten (nicht Verstöße) gelistet, siehe Detail-Abschnitt unten. `mode=structural`: Erkennt semantisch ähnliche Hilfsmethoden anhand eines Roslyn-Strukturprofils und Cosine-Similarity (Typ-4/Intended Duplication), liefert manuell zu prüfende Kandidatencluster mit Strukturprofil-Kurzfassung — keine automatische `DuplicateCode`-Violation, eigene Cosine-Schwellwerte aus `ainetlinter-rules.json` (`StructuralDuplicate*Threshold`) | ja | ja |
@@ -560,7 +559,7 @@ und, wenn Roslyn eine stabile ID liefert, `symbolId`:
 Kommentare und String-Literale werden nicht als Symbolreferenzen ausgegeben. Die Anreicherung nutzt
 nur eindeutig zuordenbare Dokumente des residenten Roslyn-Snapshots; fehlende Dokumente oder ein
 abweichender Snapshot-Zeilentext werden als `unavailable`, mehrdeutige Symbolkandidaten als
-`ambiguous` sichtbar. Die lexikalische Treffer-, Scope- und Budgetauswahl sowie der Legacy-Text
+`ambiguous` sichtbar. Die lexikalische Treffer-, Scope- und Budgetauswahl sowie die Textausgabe
 bleiben unverändert. Bei Trunkierung oder `unavailable`/`ambiguous` sind Scope-Verfeinerung,
 niedrigere Limits oder ein gezielter semantischer Folgeaufruf der vorgesehene nächste Schritt.
 
@@ -893,7 +892,7 @@ Im MCP-Server-Modus ist `stdout` der Transport-Kanal des JSON-RPC-Protokolls. Be
 
 Der Schutz ist **strukturell**, nicht ueber Disziplin geloest: im MCP-Modus wird statt `LinterConsole` die `McpLintConsole`-Implementierung aktiviert (in `Program.cs` als expliziter Parameter an `McpServerCommand.RunAsync` uebergeben), die `ILintConsole.WriteLine(...)` zwingend nach `stderr` umleitet. Ein unbeabsichtigter `Console.WriteLine`-Call in einer Tool-Implementierung oder einem Helper wuerde weiterhin ein Leak sein, aber der zentrale `ILintConsole`-Pfad ist abgesichert.
 
-Regressions-Schutz: E2E-Framing-Tests in `McpServerCommandJsonRpcFramingTests` spawnen `AiNetLinter.exe` als Subprozess und schreiben Legacy-`initialize` beziehungsweise modernes `server/discover` mit anschließendem `tools/list` manuell auf stdin. Sie prüfen **jede** Zeile auf stdout als gültigen JSON-RPC-Frame (`jsonrpc == "2.0"`), vergleichen Instructions und Toolnamen mit der registrierten Collection und messen Zeichen sowie UTF-8-Bytes. Kein SDK-Parser zwischen Subprozess und Assertions — ein zukünftiger Leak würde als nicht-JSON-Zeile sichtbar.
+Regressions-Schutz: E2E-Framing-Tests in `McpServerCommandJsonRpcFramingTests` spawnen `AiNetLinter.exe` als Subprozess und schreiben `initialize` beziehungsweise modernes `server/discover` mit anschließendem `tools/list` manuell auf stdin. Sie prüfen **jede** Zeile auf stdout als gültigen JSON-RPC-Frame (`jsonrpc == "2.0"`), vergleichen Instructions und Toolnamen mit der registrierten Collection und messen Zeichen sowie UTF-8-Bytes. Kein SDK-Parser zwischen Subprozess und Assertions — ein unerwarteter Leak würde als nicht-JSON-Zeile sichtbar.
 
 ### Compile-Diagnostics
 

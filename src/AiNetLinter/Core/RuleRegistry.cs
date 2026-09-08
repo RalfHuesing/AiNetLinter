@@ -420,7 +420,7 @@ internal static partial class RuleRegistry
             [
                 "**'async Task' statt 'async void'**: Minimale Aenderung — Rückgabetyp ersetzen, Aufrufer await ergaenzen.",
                 "**Event-Handler-Ausnahme**: Signaturen mit '(object sender, EventArgs e)' bleiben erlaubt.",
-                "**Suppression** (letztes Mittel): '// ainetlinter-disable BanAsyncVoid' fuer Legacy-Code."
+                "**Suppression** (letztes Mittel): '// ainetlinter-disable BanAsyncVoid' bei bewusstem Ausnahmebedarf."
             ],
             SicherheitsHinweis: null,
             Intent: RuleIntents.AgentResilience,

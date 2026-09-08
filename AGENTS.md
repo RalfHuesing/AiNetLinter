@@ -43,9 +43,9 @@ registriert:
 Jeder zielgebundene Tool- oder Resource-Aufruf verwendet ausschließlich den
 absoluten `targetPath` einer vorhandenen `.sln`/`.slnx` (Source) oder `.dll`/`.exe`
 (dekompilierte Assembly). Die Herkunft wird deterministisch aus der Endung
-abgeleitet; `targetType`, `projectRoot`, freie `configPath` und
-`ainetlinter.project.json` gehören nicht zum aktiven MCP-Vertrag und werden als
-`invalid_argument` abgelehnt. Die einzige zielgebundene Ausnahme im MCP-Modus
+abgeleitet. Die jeweils aktuellen Tool-Argumente werden über `tools/list`
+veröffentlicht; zusätzliche Argumente werden als `invalid_argument` abgelehnt.
+Die einzige zielgebundene Ausnahme im MCP-Modus
 ist `get_server_health` als globale Health-Abfrage; `report_observability_feedback`
 bleibt ungebunden. Eine optionale `ainetlinter-rules.json` liegt direkt neben
 der adressierten Source-Solution.

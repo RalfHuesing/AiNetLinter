@@ -279,7 +279,7 @@ public sealed class RazorAnalyzerTests
             """;
         var config = new RazorConfig { MaxControlFlowBlocks = 8 };
 
-        var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Legacy.razor", config);
+        var violations = RazorAnalyzer.Analyze(razor, "C:\\app\\Pages\\Example.razor", config);
 
         Assert.Single(violations);
         Assert.Equal("RAZOR_MaxControlFlowBlocks", violations[0].RuleName);

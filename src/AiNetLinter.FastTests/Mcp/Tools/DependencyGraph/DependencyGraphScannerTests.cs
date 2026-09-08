@@ -63,11 +63,8 @@ public sealed class DependencyGraphScannerTests
     [Fact]
     public async Task ScanFileAsync_ProductionAndTestReferencers_ProductionEdgeSortsBeforeTestEdgeWhenTruncated()
     {
-        // Regression: "MyProject.Tests/..." sortiert ordinal VOR "ZZZProd.cs" ('.' < 'Z' as
-        // Zeichen ist hier nicht der Punkt, sondern dass Testpfade zufaellig alphabetisch frueher
-        // liegen koennen als Produktionscode) — ohne die Test-Projekt-Nachrangigkeit wuerde
-        // maxResults=1 die alphabetisch fruehere Test-Kante zeigen statt der fuer die
-        // Blast-Radius-Frage relevanteren Produktionscode-Kante.
+        // Produktionskanten werden vor Testkanten priorisiert, damit maxResults=1 bei einer
+        // Blast-Radius-Abfrage die fachlich relevante Produktionskante zeigt.
         using var testSolution = CreateSolution(
             ("FileA.cs", "public class A {}"),
             ("ZZZProd.cs", "public class ZZZProd { public A? Other; }"),

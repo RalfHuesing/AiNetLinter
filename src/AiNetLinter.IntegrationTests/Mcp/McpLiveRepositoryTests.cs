@@ -419,7 +419,7 @@ public sealed class McpLiveRepositoryTests
             "find_duplicates",
             new Dictionary<string, object?>
             {
-                ["scopeFilter"] = "DeadCode",
+                ["scopeDir"] = "DeadCode",
                 ["maxResults"] = 50
             });
 

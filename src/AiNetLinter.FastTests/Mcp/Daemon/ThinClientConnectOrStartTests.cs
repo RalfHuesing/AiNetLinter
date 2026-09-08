@@ -138,7 +138,7 @@ public sealed class ThinClientConnectOrStartTests
     }
 
     [Fact]
-    public async Task ConnectOrStart_RejectsLegacySeamsForInstanceInsteadOfUsingDefaultPipeOrGate()
+    public async Task ConnectOrStart_RejectsUnconfiguredInstanceSeamsInsteadOfUsingDefaultPipeOrGate()
     {
         var transport = new ScriptedMockPipeTransport(initialConnectFailures: 0);
         var console = new RecordingLintConsole();

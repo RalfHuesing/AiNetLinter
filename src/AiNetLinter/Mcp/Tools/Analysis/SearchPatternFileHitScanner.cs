@@ -10,9 +10,9 @@ using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.Analysis;
 
-internal static class SearchPatternLegacyFileHitScanner
+internal static class SearchPatternFileHitScanner
 {
-    internal static SearchPatternLegacyFileHitScanResult Scan(
+    internal static SearchPatternFileHitScanResult Scan(
         Solution solution,
         string pattern,
         bool isRegex)
@@ -44,7 +44,7 @@ internal static class SearchPatternLegacyFileHitScanner
     }
 
 
-    private static SearchPatternLegacyFileMatchResult FileMatches(
+    private static SearchPatternFileHitMatchResult FileMatches(
         string filePath,
         string pattern,
         Regex? regex)

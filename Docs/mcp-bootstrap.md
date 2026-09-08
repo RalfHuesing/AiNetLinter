@@ -43,8 +43,8 @@ und keine Suche im Arbeitsverzeichnis.
 
    Die Herkunft wird ausschließlich aus der Endung bestimmt. Ein relativer,
    fehlender, nicht unterstützter oder auf ein Verzeichnis zeigender Pfad ist
-   `invalid_argument`. `targetType`, `projectRoot`, `configPath` und
-   `ainetlinter.project.json` gehören nicht zum aktiven Vertrag.
+   `invalid_argument`. Zusätzliche Properties außerhalb des aktuellen
+   `tools/list`-Schemas gehören nicht zum aktiven Vertrag.
 6. Prüfe die Einrichtung mit `get_server_health` ohne Target (global) oder mit
    einem optionalen `targetPath`; ein kleiner zielgebundener Tool-Aufruf ist
    ebenfalls möglich.
@@ -85,6 +85,6 @@ ainetlinter://rules{?targetPath}
 
 `get_server_health` akzeptiert global keinen Target-Block oder optional einen
 `targetPath`. `report_observability_feedback` bleibt ungebunden und erhält
-keinen Target- oder Projektkontextparameter. Alte Schlüssel wie `targetType`,
-`projectRoot`, `configPath` oder `ainetlinter.project.json` werden nicht still
-ignoriert, sondern als `invalid_argument` mit nächstem Schritt abgelehnt.
+keinen Target- oder Projektkontextparameter. Unbekannte Properties werden nicht
+still ignoriert, sondern gegen das aktuelle `tools/list`-Schema geprüft und als
+`invalid_argument` mit Feldnamen abgelehnt.

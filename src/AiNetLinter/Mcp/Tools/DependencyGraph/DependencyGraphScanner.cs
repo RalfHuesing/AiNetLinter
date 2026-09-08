@@ -58,15 +58,15 @@ internal static class DependencyGraphScanner
     }
 
     internal static async Task<DependencyGraphResult> ScanTypeAsync(
-        INamedTypeSymbol targetType, DependencyGraphScanRequest request, CancellationToken ct)
+        INamedTypeSymbol resolvedTypeSymbol, DependencyGraphScanRequest request, CancellationToken ct)
     {
-        var targetFile = GetRelativeFilePath(request.Solution, targetType)
+        var targetFile = GetRelativeFilePath(request.Solution, resolvedTypeSymbol)
             ?? throw new InvalidOperationException(
-                $"Zieltyp '{targetType.Name}' hat keine Quell-Location — dependency_graph erwartet einen aufgeloesten Typ mit Deklaration.");
+                $"Zieltyp '{resolvedTypeSymbol.Name}' hat keine Quell-Location — dependency_graph erwartet einen aufgeloesten Typ mit Deklaration.");
         var core = await ScanCoreAsync(
             targetFile,
-            request.IncludeOutgoing ? c => ScanTypeOutgoingAsync(request.Solution, targetType, c) : null,
-            request.IncludeIncoming ? c => ScanTypeIncomingAsync(request.Solution, targetType, c) : null,
+            request.IncludeOutgoing ? c => ScanTypeOutgoingAsync(request.Solution, resolvedTypeSymbol, c) : null,
+            request.IncludeIncoming ? c => ScanTypeIncomingAsync(request.Solution, resolvedTypeSymbol, c) : null,
             request, ct);
         return core;
     }
@@ -150,10 +150,10 @@ internal static class DependencyGraphScanner
     // alle DeclaringSyntaxReferences), enger als eine ganze Datei. ---
 
     private static async Task<Dictionary<string, EdgeAccumulator>> ScanTypeOutgoingAsync(
-        Solution solution, INamedTypeSymbol targetType, CancellationToken ct)
+        Solution solution, INamedTypeSymbol resolvedTypeSymbol, CancellationToken ct)
     {
         var edges = new Dictionary<string, EdgeAccumulator>(StringComparer.OrdinalIgnoreCase);
-        foreach (var syntaxRef in targetType.DeclaringSyntaxReferences)
+        foreach (var syntaxRef in resolvedTypeSymbol.DeclaringSyntaxReferences)
         {
             var document = solution.GetDocument(syntaxRef.SyntaxTree);
             var semanticModel = document is null ? null : await document.GetSemanticModelAsync(ct);
@@ -162,7 +162,7 @@ internal static class DependencyGraphScanner
 
             foreach (var referencedType in CollectReferencedTypes(node, semanticModel, ct))
             {
-                AddOutgoingTypeEdgeIfEligible(solution, edges, targetType, referencedType);
+                AddOutgoingTypeEdgeIfEligible(solution, edges, resolvedTypeSymbol, referencedType);
             }
         }
         return edges;
@@ -172,9 +172,9 @@ internal static class DependencyGraphScanner
     /// <see cref="ScanTypeOutgoingAsync"/> unter <c>MaxCognitiveComplexity</c> bleibt (sonst zwei
     /// verschachtelte Ebenen).</summary>
     private static void AddOutgoingTypeEdgeIfEligible(
-        Solution solution, Dictionary<string, EdgeAccumulator> edges, INamedTypeSymbol targetType, INamedTypeSymbol referencedType)
+        Solution solution, Dictionary<string, EdgeAccumulator> edges, INamedTypeSymbol resolvedTypeSymbol, INamedTypeSymbol referencedType)
     {
-        if (SymbolEqualityComparer.Default.Equals(referencedType, targetType)) return;
+        if (SymbolEqualityComparer.Default.Equals(referencedType, resolvedTypeSymbol)) return;
         if (!IsDeclaredInSource(referencedType)) return;
         var declFile = GetRelativeFilePath(solution, referencedType);
         if (declFile is null) return;
@@ -182,14 +182,14 @@ internal static class DependencyGraphScanner
     }
 
     private static async Task<Dictionary<string, EdgeAccumulator>> ScanTypeIncomingAsync(
-        Solution solution, INamedTypeSymbol targetType, CancellationToken ct)
+        Solution solution, INamedTypeSymbol resolvedTypeSymbol, CancellationToken ct)
     {
         var edges = new Dictionary<string, EdgeAccumulator>(StringComparer.OrdinalIgnoreCase);
-        var ownSpans = targetType.DeclaringSyntaxReferences
+        var ownSpans = resolvedTypeSymbol.DeclaringSyntaxReferences
             .Select(r => (r.SyntaxTree, r.Span))
             .ToList();
 
-        var refs = await SymbolFinder.FindReferencesAsync(targetType, solution, ct);
+        var refs = await SymbolFinder.FindReferencesAsync(resolvedTypeSymbol, solution, ct);
         foreach (var reference in refs)
         {
             foreach (var referenceLocation in reference.Locations)
@@ -202,7 +202,7 @@ internal static class DependencyGraphScanner
                 // durchaus referenzieren, das ist im Typ-Scope kein Selbstbezug.
                 if (ownSpans.Any(s => s.SyntaxTree == location.SourceTree && s.Span.Contains(location.SourceSpan))) continue;
                 var file = ToRelativePath(solution, location.SourceTree.FilePath);
-                AddEdge(edges, file, targetType.Name);
+                AddEdge(edges, file, resolvedTypeSymbol.Name);
             }
         }
         return edges;

@@ -52,13 +52,13 @@ public sealed class JsAnalyzerTests
     public void Analyze_ReportsEnforceJsModules_WhenNotAModule()
     {
         const string js = """
-            function legacyHelper() {
+            function helper() {
                 return 42;
             }
             """;
         var config = NewJsConfig();
 
-        var violations = JsAnalyzer.Analyze(js, "C:\\app\\wwwroot\\js\\legacy.js", config);
+        var violations = JsAnalyzer.Analyze(js, "C:\\app\\wwwroot\\js\\module.js", config);
 
         Assert.Single(violations);
         Assert.Equal("JS_EnforceJsModules", violations[0].RuleName);
@@ -149,9 +149,9 @@ public sealed class JsAnalyzerTests
         Assert.Empty(violations);
     }
 
-    // Szenario H — Legacy-Script ohne export und ohne window-Zuweisung → JS_EnforceJsModules
+    // Szenario H — Script ohne export und ohne window-Zuweisung → JS_EnforceJsModules
     [Fact]
-    public void Analyze_ReportsEnforceJsModules_ForLegacyScriptWithoutExports()
+    public void Analyze_ReportsEnforceJsModules_ForScriptWithoutExports()
     {
         const string js = """
             'use strict';
@@ -206,13 +206,13 @@ public sealed class JsAnalyzerTests
     public void Analyze_NoEnforceJsModules_WhenDisabled()
     {
         const string js = """
-            function legacy() {
+            function helper() {
                 return 42;
             }
             """;
         var config = NewJsConfig(enforceModules: false);
 
-        var violations = JsAnalyzer.Analyze(js, "C:\\app\\wwwroot\\js\\legacy.js", config);
+        var violations = JsAnalyzer.Analyze(js, "C:\\app\\wwwroot\\js\\module.js", config);
 
         Assert.Empty(violations);
     }
@@ -246,7 +246,7 @@ public sealed class JsAnalyzerTests
             """;
         var config = NewJsConfig();
 
-        var violations = JsAnalyzer.Analyze(js, "C:\\app\\wwwroot\\js\\legacy.js", config);
+        var violations = JsAnalyzer.Analyze(js, "C:\\app\\wwwroot\\js\\module.js", config);
 
         Assert.Single(violations);
         Assert.Equal("JS_EnforceJsModules", violations[0].RuleName);

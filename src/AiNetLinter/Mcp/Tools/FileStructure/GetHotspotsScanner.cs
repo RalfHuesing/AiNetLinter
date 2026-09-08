@@ -132,10 +132,8 @@ internal static class GetHotspotsScanner
     /// Baut <see cref="HotspotEntry"/>s nur fuer <paramref name="critical"/>/<paramref name="warning"/>
     /// — dieselben Listen, die auch <see cref="FormatReport"/> fuer die Text-Sektionen verwendet,
     /// damit Text und StructuredContent nie in der Kategorisierung auseinanderdriften. Dateien im
-    /// gruenen Bereich ("ok") werden bewusst NICHT aufgenommen: fruehere Fassung listete alle
-    /// gescannten Dateien (auch "ok") in StructuredContent, was bei einer grossen Solution die
-    /// Antwort auf mehrere zehntausend Zeichen aufblaehte und den Client-Token-Guard sprengte —
-    /// genau das Gegenteil vom Zweck eines Hotspot-Reports (nur die Dateien nahe/ueber dem Limit).
+    /// gruenen Bereich ("ok") werden bewusst NICHT aufgenommen, damit StructuredContent auf
+    /// die Dateien nahe oder ueber dem angeforderten Limit begrenzt bleibt.
     /// </summary>
     private static IReadOnlyList<HotspotEntry> BuildEntries(
         IReadOnlyList<HotspotFileInfo> files,

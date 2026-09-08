@@ -299,9 +299,8 @@ AiNetLinter-DLL als erstes Argument.
 
 Jeder zielgebundene Analyse-, Wartungs- oder Audit-Aufruf erhält genau einen
 absoluten, vorhandenen `targetPath` zu einer konkreten `.sln`/`.slnx`-, `.dll`-
-oder `.exe`-Datei. Die Endung bestimmt Source oder Decompiled-Assembly;
-`targetType`, `projectRoot`, `configPath` und `ainetlinter.project.json` sind
-kein aktiver Vertrag. Relative, fehlende, nicht unterstützte oder auf ein
+oder `.exe`-Datei. Die Endung bestimmt Source oder Decompiled-Assembly.
+Relative, fehlende, nicht unterstützte oder auf ein
 Verzeichnis zeigende Pfade liefern `invalid_argument` mit Feldpfad und
 nächstem Schritt.
 
@@ -357,7 +356,7 @@ antwortet das Tool explizit mit `unsupported`. Für
 Semantik eines Treffers folgt ein Assembly-`find_symbol`-/Body-/Referenz-/Call-Tree-
 oder Impact-Aufruf. `search_pattern` bleibt auf Projektziele beschränkt.
 
-Für Legacy-MCP wird der Server über `initialize` ausgehandelt. Clients der Protokollversion `2026-07-28` verwenden stattdessen `server/discover` ohne separaten `initialized`-Schritt. Dieser Request trägt unter `params._meta` die Protokollversion, Client-Info und Client-Capabilities; dieselben Metadaten gehören auch in nachfolgende Requests wie `tools/list`.
+Für den MCP-Transport wird der Server über `initialize` ausgehandelt. Clients der Protokollversion `2026-07-28` verwenden stattdessen `server/discover` ohne separaten `initialized`-Schritt. Dieser Request trägt unter `params._meta` die Protokollversion, Client-Info und Client-Capabilities; dieselben Metadaten gehören auch in nachfolgende Requests wie `tools/list`.
 
 ### MCP-Tool-Annotations
 
@@ -375,7 +374,7 @@ Zugriffssteuerung und keine Sicherheitsgarantie. Unvertrauenswürdige Server kö
 Annotations falsch setzen; tatsächliche Berechtigungs- und Pfadprüfungen bleiben
 unabhängig davon aktiv.
 
-Die Raw-Wire-Messung über `McpPayloadMeasurement` ergab für Legacy-`tools/list`
+Die Raw-Wire-Messung über `McpPayloadMeasurement` ergab für den `tools/list`-Pfad
 20.836 Bytes vor und 26.887 Bytes nach der Annotationserweiterung, also +6.051
 UTF-8-Bytes. Der moderne `tools/list`-Payload beträgt 27.034 UTF-8-Bytes. Die
 Werte sind Byte-Messungen, keine Token-Schätzungen.
@@ -421,7 +420,7 @@ MCP-SDK-Interpretation getrennt: `hello`/`welcome` tragen Protokollversion,
 Versions-/PID-Daten, einen deterministischen Build-/Tool-Contract-Fingerprint
 und die effektive Daemon-Konfiguration einschließlich der fünf externen
 Ressourcenlimits. Der Fingerprint wird aus dem laufenden Binary gebildet; damit
-akzeptiert ein neuer ThinClient keinen alten Daemon mit veralteter Discovery.
+akzeptiert ein ThinClient keinen Daemon mit abweichender Discovery.
 Meldet ein bestehender Daemon im `welcome` keinen Fingerprint oder einen anderen
 Fingerprint, wird dieser Discovery-Mismatch als terminaler, agentenlesbarer
 Fehler auf `stderr` (`DISCOVERY_FINGERPRINT_MISMATCH`) mit Exit-Code 2 beendet.
@@ -481,7 +480,7 @@ Herkunft. Damit können mehrere Targets in einer Serverinstanz resident sein.
 
 ### Start-Sequenzen: initialize und server/discover
 
-Der Legacy-MCP-Transport-Handshake (`initialize`) antwortet **sofort** — die Lösung wird parallel im Hintergrund geladen. Damit erkennen Hosts mit kurzem Startup-Timeout den Server zuverlässig als „bereit", ohne auf die `MSBuildWorkspace.OpenSolutionAsync`-Latenz warten zu müssen.
+Der MCP-Transport-Handshake (`initialize`) antwortet **sofort** — die Lösung wird parallel im Hintergrund geladen. Damit erkennen Hosts mit kurzem Startup-Timeout den Server zuverlässig als „bereit", ohne auf die `MSBuildWorkspace.OpenSolutionAsync`-Latenz warten zu müssen.
 
 Im MCP-2026-07-28-Pfad antwortet `server/discover` sofort mit den unterstützten Versionen, Server-Capabilities und demselben globalen Instructions-Text. Die globale Anleitung verweist bei Bedarf auf den einmaligen Bootstrap unter `ainetlinter://agent-guide`, danach auf `tools/list` und `ainetlinter://overview`; Tool-Schemas bleiben in `tools/list`. Der globale Text enthält keinen vollständigen Bootstrap und bleibt unter dem Engineering-Budget von 2.557 Bytes.
 
@@ -490,14 +489,14 @@ Tool-Calls, die während des Hintergrund-Loads eintreffen, erhalten in beiden Pf
 ### Projektauflösung im MCP-Modus
 
 Der MCP-Modus löst keine Solution aus dem Host-`cwd` auf und akzeptiert keine
-Legacy-Projektargumente. `--path` oder `--config` in der Registrierung führen
-zu einem deterministischen Startfehler. Stattdessen übergibt jeder Aufruf den
-absoluten `targetPath` der konkreten vorhandenen Datei. Die alten Schlüssel
-`targetType`, `projectRoot`, `configPath` und `ainetlinter.project.json` werden
-als `invalid_argument` abgelehnt.
+zusätzlichen Projektargumente. `--path` oder `--config` in der Registrierung
+führen zu einem deterministischen Startfehler. Stattdessen übergibt jeder
+Aufruf den absoluten `targetPath` der konkreten vorhandenen Datei. Unbekannte
+Tool-Properties werden gegen das aktuelle `tools/list`-Schema geprüft und als
+`invalid_argument` mit Feldnamen abgelehnt.
 
-Die frühere Mehrdeutigkeitsprüfung mehrerer `.sln`/`.slnx`-Dateien bleibt dem
-Batch-Modus vorbehalten; dort gelten weiterhin `--path` und die dokumentierte
+Die Prüfung mehrerer `.sln`/`.slnx`-Dateien bleibt dem Batch-Modus vorbehalten;
+dort gelten weiterhin `--path` und die dokumentierte
 Auto-Discovery.
 
 ### Tool-vs-`rg`-Empfehlung für Agent-Loops

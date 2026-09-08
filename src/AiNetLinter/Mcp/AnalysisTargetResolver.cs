@@ -26,14 +26,6 @@ internal static class AnalysisTargetResolver
     internal static AnalysisTargetResolution ResolveTargetPathOnly(AnalysisTargetRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        if (request.HasLegacyArguments)
-        {
-            var keys = string.Join(", ", request.LegacyKeys.Order(StringComparer.OrdinalIgnoreCase));
-            return Invalid(
-                $"Legacy-Argumente sind im targetPath-only Vertrag nicht zulaessig: {keys}.",
-                "Nur targetPath mit dem absoluten Pfad der konkreten .sln/.slnx/.dll/.exe-Datei uebergeben.");
-        }
-
         if (string.IsNullOrWhiteSpace(request.TargetPath))
         {
             return Invalid(
@@ -48,9 +40,9 @@ internal static class AnalysisTargetResolver
         }
 
         var canonicalPath = path.CanonicalPath!;
-        var targetType = ResolveTargetTypeFromExtension(canonicalPath);
+        var targetKind = ResolveTargetTypeFromExtension(canonicalPath);
 
-        if (targetType is null)
+        if (targetKind is null)
         {
             return Invalid(
                 $"Der Parameter 'targetPath' hat eine nicht unterstuetzte Endung: '{canonicalPath}'.",
@@ -58,12 +50,12 @@ internal static class AnalysisTargetResolver
         }
 
         var analysisRoot = Path.GetDirectoryName(canonicalPath)!;
-        var isSource = targetType == AnalysisTargetType.Project;
+        var isSource = targetKind == AnalysisTargetType.Project;
         var rulesPath = isSource
             ? Path.Combine(analysisRoot, "ainetlinter-rules.json")
             : null;
         var fingerprint = CreateFingerprint(canonicalPath);
-        var target = new AnalysisTarget(targetType.Value, canonicalPath, request)
+        var target = new AnalysisTarget(targetKind.Value, canonicalPath, request)
         {
             AnalysisRoot = analysisRoot,
             Fingerprint = fingerprint,
@@ -106,7 +98,7 @@ internal static class AnalysisTargetResolver
     internal static AnalysisTargetResolution ResolveOptional(AnalysisTargetRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
-        if (request.TargetPath is null && !request.HasLegacyArguments)
+        if (request.TargetPath is null)
         {
             return new(null, null);
         }

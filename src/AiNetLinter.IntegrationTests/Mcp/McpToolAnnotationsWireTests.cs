@@ -14,26 +14,26 @@ namespace AiNetLinter.IntegrationTests.Mcp;
 public sealed class McpToolAnnotationsWireTests
 {
     [Fact]
-    public async Task LegacyAndModernToolsList_ExposeEquivalentAnnotations()
+    public async Task InitializeAndModernToolsList_ExposeEquivalentAnnotations()
     {
-        using var legacyFixture = new SymbolGraphMiniFixtureWorkspace();
+        using var initializeFixture = new SymbolGraphMiniFixtureWorkspace();
         using var modernFixture = new SymbolGraphMiniFixtureWorkspace();
 
-        var legacy = await ReadToolAnnotationsAsync(legacyFixture.SolutionPath, modern: false);
+        var initialize = await ReadToolAnnotationsAsync(initializeFixture.SolutionPath, modern: false);
         var modern = await ReadToolAnnotationsAsync(modernFixture.SolutionPath, modern: true);
 
         Assert.Equal(
-            legacy.Keys.OrderBy(name => name, StringComparer.Ordinal),
+            initialize.Keys.OrderBy(name => name, StringComparer.Ordinal),
             modern.Keys.OrderBy(name => name, StringComparer.Ordinal));
 
-        foreach (var name in legacy.Keys)
+        foreach (var name in initialize.Keys)
         {
-            Assert.Equal(legacy[name].GetRawText(), modern[name].GetRawText());
+            Assert.Equal(initialize[name].GetRawText(), modern[name].GetRawText());
         }
 
-        AssertAnnotation(legacy, "find_symbol", readOnly: true, destructive: false, idempotent: true, openWorld: false);
-        AssertAnnotation(legacy, "reload_config", readOnly: false, destructive: false, idempotent: true, openWorld: false);
-        AssertAnnotation(legacy, "report_observability_feedback", readOnly: false, destructive: false, idempotent: false, openWorld: false);
+        AssertAnnotation(initialize, "find_symbol", readOnly: true, destructive: false, idempotent: true, openWorld: false);
+        AssertAnnotation(initialize, "reload_config", readOnly: false, destructive: false, idempotent: true, openWorld: false);
+        AssertAnnotation(initialize, "report_observability_feedback", readOnly: false, destructive: false, idempotent: false, openWorld: false);
     }
 
     private static async Task<IReadOnlyDictionary<string, JsonElement>> ReadToolAnnotationsAsync(

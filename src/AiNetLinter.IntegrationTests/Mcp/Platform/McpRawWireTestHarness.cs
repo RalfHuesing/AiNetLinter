@@ -30,7 +30,7 @@ internal sealed record McpRawWireRunOptions
 
 internal static class McpRawWireTestHarness
 {
-    private const string LegacyProtocolVersion = "2024-11-05";
+    private const string InitializeProtocolVersion = "2024-11-05";
     private const string ModernProtocolVersion = "2026-07-28";
     private const string ClientName = "FramingTestClient";
     private const string ClientVersion = "1.0.0";
@@ -58,7 +58,7 @@ internal static class McpRawWireTestHarness
                 method = "initialize",
                 @params = new
                 {
-                    protocolVersion = LegacyProtocolVersion,
+                    protocolVersion = InitializeProtocolVersion,
                     capabilities = new { },
                     clientInfo = new { name = ClientName, version = ClientVersion },
                 },

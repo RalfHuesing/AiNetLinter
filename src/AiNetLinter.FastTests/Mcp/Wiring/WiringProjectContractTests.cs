@@ -87,7 +87,6 @@ public sealed class WiringProjectContractTests
     {
         var byteCount = System.Text.Encoding.UTF8.GetByteCount(ServerInstructions.Text);
         Assert.True(byteCount <= ServerInstructions.MaxUtf8Bytes, $"Instructions-Budget gerissen: {byteCount} > {ServerInstructions.MaxUtf8Bytes}");
-        Assert.DoesNotContain("targetType", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("targetPath", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("ainetlinter://agent-guide", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("get_server_health", ServerInstructions.Text, StringComparison.Ordinal);
@@ -101,18 +100,16 @@ public sealed class WiringProjectContractTests
         Assert.All(assemblyCapabilityMatrix, toolName => Assert.Contains(toolName, ServerInstructions.Text, StringComparison.Ordinal));
         Assert.Contains("Assembly-only: inspect_assembly, find_assembly_extensions, search_assembly", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("get_impact akzeptiert fuer Assemblys nur symbolIdentifier", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("ainetlinter.project.json", ServerInstructions.Text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void TestKitProjectRoot_UsesAdjacentMcpRulesWithoutProjectDefinition()
+    public void TestKitProjectRoot_UsesAdjacentMcpRulesOnly()
     {
         using var tempDir = TestTempDirectory.Create("wiring-project-root-");
 
         var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
 
         Assert.True(File.Exists(Path.Combine(root, "ainetlinter-rules.json")));
-        Assert.False(File.Exists(Path.Combine(root, "ainetlinter.project.json")));
         Assert.False(File.Exists(Path.Combine(root, "rules.json")));
     }
 

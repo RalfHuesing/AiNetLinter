@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using AiNetLinter.Mcp;
 using AiNetLinter.TestKit;
@@ -60,28 +59,6 @@ public sealed class AnalysisTargetResolverTests
             Assert.Null(result.Target);
             Assert.Contains("INVALID_ARGUMENT", TextOf(result.Error!), StringComparison.Ordinal);
         }
-    }
-
-    [Theory]
-    [InlineData("targetType")]
-    [InlineData("projectRoot")]
-    [InlineData("configPath")]
-    [InlineData("assemblyPath")]
-    [InlineData("ainetlinter.project.json")]
-    public void Resolve_FromArguments_RejectsLegacyKeys(string legacyKey)
-    {
-        var result = AnalysisTargetResolver.Resolve(AnalysisTargetRequest.FromArguments(
-            new Dictionary<string, object?>
-            {
-                ["targetPath"] = "C:\\workspace\\sample.slnx",
-                [legacyKey] = "legacy"
-            }));
-
-        Assert.Null(result.Target);
-        var text = TextOf(result.Error!);
-        Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
-        Assert.Contains(legacyKey, text, StringComparison.Ordinal);
-        Assert.Contains("targetPath", text, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -29,7 +29,7 @@ FileFilters deckt vier Kategorien ab:
 
 2. **Dateinamen-basierte Generierungs-Muster:** `*.g.cs`, `*.generated.cs` — Standardkonventionen für Roslyn Source Generators und T4-Vorlagen. Der Entwickler hat keinen direkten Einfluss auf diesen Code.
 
-3. **Spezifische Dateien:** `AssemblyInfo.cs` ist eine Legacy-.NET-Datei, die automatisch generiert oder per MSBuild-Property verwaltet wird.
+3. **Spezifische Dateien:** `AssemblyInfo.cs` ist eine automatisch generierte .NET-Datei, die per MSBuild-Property verwaltet werden kann.
 
 4. **Attribut-basierter Ausschluss:** Klassen mit `[System.CodeDom.Compiler.GeneratedCode]`-Attribut werden ausgeschlossen — das ist die offizielle .NET-Konvention für generierten Code und deckt auch Fälle ab, die durch Dateinamen-Muster nicht erkannt werden.
 
