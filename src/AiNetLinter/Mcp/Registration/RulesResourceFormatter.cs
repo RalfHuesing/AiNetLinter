@@ -86,7 +86,7 @@ internal static class RulesResourceFormatter
                 metadata.Intent,
                 metadata.Severity,
                 rule.GetShortDescription(config),
-                rule.ConfigKeyHint ?? $"rules.json → Global.{rule.RuleId}");
+                rule.ConfigKeyHint ?? $"ainetlinter-rules.json → Global.{rule.RuleId}");
         }
 
         var markdown = new MarkdownBuilder();
@@ -114,7 +114,7 @@ internal static class RulesResourceFormatter
                 $"`{rule.RuleId}`",
                 limit,
                 rule.IsEnabled(config) ? "aktiv" : "deaktiviert",
-                rule.ConfigKeyHint ?? $"rules.json → Metrics.{rule.RuleId}");
+                rule.ConfigKeyHint ?? $"ainetlinter-rules.json → Metrics.{rule.RuleId}");
         }
 
         var markdown = new MarkdownBuilder();
@@ -157,7 +157,7 @@ internal static class RulesResourceFormatter
         {
             builder.AppendLine($"- Pfad-Overrides: {config.PathOverrides.Count} Muster");
         }
-        builder.AppendLine("Die konkrete Anwendung erfolgt pro Roslyn-Projekt bzw. Datei; Details stehen in der referenzierten rules.json.");
+        builder.AppendLine("Die konkrete Anwendung erfolgt pro Roslyn-Projekt bzw. Datei; Details stehen in der referenzierten ainetlinter-rules.json.");
         builder.AppendLine();
     }
 }

@@ -21,7 +21,7 @@ public sealed class DaemonHostProcessContractTests
         using var endpointLease = await DaemonProcessContractHarness
             .AcquireEndpointAsync(cancellation.Token)
             .ConfigureAwait(false);
-        var spec = new DaemonProcessSpec(fixture.RootPath, temp.DirectoryPath, 0.1m);
+        var spec = new DaemonProcessSpec(fixture.SolutionPath, temp.DirectoryPath, 0.1m);
 
         await using var first = await DaemonProcessContractHarness
             .StartAsync(spec, cancellation.Token)
@@ -64,7 +64,7 @@ public sealed class DaemonHostProcessContractTests
         var beta = "beta-" + suffix[..12];
         var gamma = "gamma-" + suffix[..12];
         var firstSpec = new DaemonProcessSpec(
-            fixture.RootPath,
+            fixture.SolutionPath,
             temp.DirectoryPath,
             0.1m,
             DaemonInstance: beta);

@@ -15,10 +15,11 @@ using ModelContextProtocol.Protocol;
 namespace AiNetLinter.IntegrationTests.Mcp.Platform;
 
 internal sealed record McpProcessTarget(
-    string RootPath,
-    IDisposable? Owner = null,
-    string TargetType = "project",
-    string? TargetPath = null);
+    string TargetPath,
+    IDisposable? Owner = null)
+{
+    internal string WorkingDirectory => Path.GetDirectoryName(Path.GetFullPath(TargetPath))!;
+}
 
 internal sealed class McpProcessHost : IAsyncDisposable
 {
@@ -46,8 +47,8 @@ internal sealed class McpProcessHost : IAsyncDisposable
         TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {
-        McpFixtureProjectDefinition.Ensure(workspace.RootPath);
-        return StartAsync(new McpProcessTarget(workspace.RootPath, workspace), timeout, cancellationToken);
+        McpFixtureTargetSetup.Ensure(workspace.SolutionPath);
+        return StartAsync(new McpProcessTarget(workspace.SolutionPath, workspace), timeout, cancellationToken);
     }
 
     public static async Task<McpProcessHost> StartAsync(
@@ -55,10 +56,7 @@ internal sealed class McpProcessHost : IAsyncDisposable
         TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {
-        if (Directory.Exists(target.RootPath))
-        {
-            McpFixtureProjectDefinition.Ensure(target.RootPath);
-        }
+        McpFixtureTargetSetup.Ensure(target.TargetPath);
 
         var lease = await SubprocessLifetimeBudget.Shared.AcquireAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -74,7 +72,7 @@ internal sealed class McpProcessHost : IAsyncDisposable
                         Name = "ainetlinter-integration-mcp-host",
                         Command = exePath,
                         Arguments = ["--mcp-server"],
-                        WorkingDirectory = target.RootPath,
+                        WorkingDirectory = target.WorkingDirectory,
                         EnvironmentVariables = new Dictionary<string, string?>
                         {
                             ["AINETLINTER_NO_DAEMON"] = "1",
@@ -135,7 +133,7 @@ internal sealed class McpProcessHost : IAsyncDisposable
         CancellationToken cancellationToken = default) =>
         client.ListResourceTemplatesAsync(cancellationToken: cancellationToken);
 
-    internal string TargetPath => target.TargetPath ?? McpFixtureProjectDefinition.ResolveTargetPath(target.RootPath, target.TargetType);
+    internal string TargetPath => target.TargetPath;
 
     public ValueTask<ReadResourceResult> ReadResourceAsync(
         string uri,
@@ -166,7 +164,6 @@ internal sealed class McpProcessHost : IAsyncDisposable
         var effective = arguments is null
             ? new Dictionary<string, object?>()
             : new Dictionary<string, object?>(arguments);
-        effective.Remove("targetType");
         effective.TryAdd("targetPath", TargetPath);
         return effective;
     }
@@ -213,11 +210,23 @@ internal sealed class McpProcessHost : IAsyncDisposable
     }
 }
 
-internal static class McpFixtureProjectDefinition
+internal static class McpFixtureTargetSetup
 {
-    internal static void Ensure(string rootPath)
+    internal static void Ensure(string targetPath)
     {
-        var solutionPath = ResolveTargetPath(rootPath, "project");
+        if (!Path.IsPathFullyQualified(targetPath))
+        {
+            throw new ArgumentException("MCP-Fixture-Ziele muessen absolute Pfade sein.", nameof(targetPath));
+        }
+
+        var solutionPath = Path.GetFullPath(targetPath);
+        var extension = Path.GetExtension(solutionPath);
+        if (!File.Exists(solutionPath) ||
+            (extension is not ".slnx" and not ".sln"))
+        {
+            throw new FileNotFoundException($"MCP-Fixture-Solution nicht gefunden: {solutionPath}", solutionPath);
+        }
+
         var adjacentRulesPath = Path.Combine(Path.GetDirectoryName(solutionPath)!, "ainetlinter-rules.json");
         if (!File.Exists(adjacentRulesPath))
         {
@@ -231,27 +240,6 @@ internal static class McpFixtureProjectDefinition
         }
 
         RestoreProjectsIfNeeded(solutionPath);
-    }
-
-    internal static string ResolveTargetPath(string rootPath, string targetType)
-    {
-        if (File.Exists(rootPath)) return Path.GetFullPath(rootPath);
-
-        if (string.Equals(targetType, "assembly", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new FileNotFoundException($"Assembly-Ziel nicht gefunden: {rootPath}", rootPath);
-        }
-
-        var candidates = Directory.EnumerateFiles(rootPath, "*.slnx", SearchOption.TopDirectoryOnly)
-            .Concat(Directory.EnumerateFiles(rootPath, "*.sln", SearchOption.TopDirectoryOnly))
-            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        return candidates.Length switch
-        {
-            1 => Path.GetFullPath(candidates[0]),
-            0 => throw new FileNotFoundException($"Keine Solution im Zielverzeichnis gefunden: {rootPath}"),
-            _ => throw new InvalidOperationException($"Mehrere Solutions im Zielverzeichnis gefunden: {rootPath}"),
-        };
     }
 
     private static void RestoreProjectsIfNeeded(string solutionPath)

@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
 using AiNetLinter.IntegrationTests.Platform;
@@ -93,6 +94,41 @@ public sealed class McpDocumentationSmokeTests
         Assert.Contains("`includeSessions=true`", docText, StringComparison.Ordinal);
         Assert.Contains("`maxSessions`", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("ohne Target getrennte Projekt-/Assembly-Session-Listen", docText, StringComparison.Ordinal);
+
+        var normalizedDocText = docText.Replace("\r\n", "\n", StringComparison.Ordinal);
+        var matrixStart = normalizedDocText.IndexOf("| Tool | Input | Output |", StringComparison.Ordinal);
+        Assert.True(matrixStart >= 0, "Die MCP-Tool-Matrix fehlt in der Agent-API-Dokumentation.");
+        var matrixEnd = normalizedDocText.IndexOf("\n\n", matrixStart, StringComparison.Ordinal);
+        Assert.True(matrixEnd > matrixStart, "Das Ende der MCP-Tool-Matrix wurde nicht gefunden.");
+        var matrix = normalizedDocText.Substring(matrixStart, matrixEnd - matrixStart);
+        var targetBoundTools = new[]
+        {
+            "get_file_tree", "get_namespace_tree", "inspect_assembly", "find_assembly_extensions",
+            "get_assembly_context", "search_assembly", "resolve_type_origin", "find_implementations",
+            "find_symbol", "find_references", "get_call_tree", "get_impact", "get_type_hierarchy",
+            "dependency_graph", "get_file_skeleton", "get_class_structure", "get_index_scope",
+            "get_hotspots", "metrics_tree", "metrics_lookup", "get_feature_context", "get_test_context",
+            "get_violations", "safeguard", "pattern_detect", "find_magic_values", "find_dead_code",
+            "get_symbol_body", "search_pattern", "reload_config", "find_duplicates",
+        };
+
+        foreach (var toolName in targetBoundTools)
+        {
+            var row = matrix.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                .FirstOrDefault(candidate => candidate.StartsWith($"| `{toolName}` |", StringComparison.Ordinal));
+            Assert.NotNull(row);
+            var columns = row!.Split('|');
+            Assert.True(columns.Length >= 4, $"Ungültige Matrixzeile für {toolName}.");
+            Assert.Contains("targetPath", columns[2], StringComparison.Ordinal);
+            Assert.Contains("Pflicht", columns[2], StringComparison.Ordinal);
+        }
+
+        var globalHealthRow = matrix.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Single(candidate => candidate.StartsWith("| `get_server_health` |", StringComparison.Ordinal));
+        Assert.Contains("targetPath?", globalHealthRow, StringComparison.Ordinal);
+        var feedbackRow = matrix.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Single(candidate => candidate.StartsWith("| `report_observability_feedback` |", StringComparison.Ordinal));
+        Assert.DoesNotContain("targetPath", feedbackRow, StringComparison.Ordinal);
 
         var getImpactStart = docText.IndexOf(
             "**`get_impact` (Symbol-Branch) — Assembly-Vertrag:**", StringComparison.Ordinal);

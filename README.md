@@ -34,8 +34,9 @@ Grenzen wie nicht auflösbare Abhängigkeiten oder gekürzte Ergebnisse sichtbar
 
 `inspect_assembly` und `find_assembly_extensions` untersuchen eine lokale
 `.dll` oder `.exe` statisch über Roslyn-Metadaten. Bei diesen beiden
-Assembly-Tools kann `targetType` entfallen; `targetPath` reicht aus und wird als
-Assembly-Ziel behandelt. Die Assembly wird dafür nicht geladen oder ausgeführt.
+Bei diesen beiden Assembly-Tools reicht `targetPath` aus; ein absoluter `.dll`-
+oder `.exe`-Pfad wird als Assembly-Ziel behandelt. Die Assembly wird dafür nicht
+geladen oder ausgeführt.
 Ohne verfügbare Quelle erzeugt AiNetLinter eine
 dekompilierte, schreibgeschützte Analyse-Session.
 
@@ -64,21 +65,14 @@ und [MCP- und CLI-Referenz](Docs/agent-api.md).
 }
 ```
 
-Im Projektroot liegt die Definition der zu analysierenden Solution und
-Regeldatei:
-
-```json
-{
-  "solution": "src/MeinProjekt.slnx",
-  "rules": "rules.json"
-}
-```
-
-Speichere diese Datei als `ainetlinter.project.json`. Zielgebundene MCP-Aufrufe
-verwenden anschließend `targetType` (`project` oder `assembly`) und einen
-absoluten `targetPath`. Für den Projektstart stellt
-`ainetlinter://agent-guide` den Bootstrap bereit; `tools/list` beschreibt die
-aktuell registrierten Tools und ihre Parameter.
+Zielgebundene MCP-Aufrufe adressieren ausschließlich die konkrete vorhandene
+Solution-, Assembly- oder Exe-Datei über einen absoluten `targetPath`. Die
+Herkunft wird deterministisch aus der Dateiendung abgeleitet; `targetType`,
+`projectRoot`, `configPath` und Projektdefinitionsdateien gehören nicht zum
+aktiven Vertrag. Bei Source-Targets wird ausschließlich die optionale
+`ainetlinter-rules.json` direkt neben der adressierten Solution gelesen.
+Für den Projektstart stellt `ainetlinter://agent-guide` den Bootstrap bereit;
+`tools/list` beschreibt die aktuell registrierten Tools und ihre Parameter.
 
 ### Als CLI-Linter ausführen
 

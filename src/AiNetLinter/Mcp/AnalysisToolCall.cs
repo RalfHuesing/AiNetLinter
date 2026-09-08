@@ -59,21 +59,6 @@ internal static class ProjectAnalysisDispatcher
         return UnsupportedAssemblyTarget(target.CanonicalPath);
     }
 
-    private static async Task<CallToolResult> ExecuteAssemblyAsync(
-        AnalysisTargetRequest request,
-        Func<string, Task<CallToolResult>> assemblyCall)
-    {
-        var resolution = AnalysisTargetResolver.ResolveTargetPathOnly(request);
-        if (resolution.Error is not null)
-        {
-            return resolution.Error;
-        }
-
-        return resolution.Target!.TargetType == AnalysisTargetType.Assembly
-            ? await assemblyCall(resolution.Target.CanonicalPath)
-            : UnsupportedProjectTarget();
-    }
-
     internal static async Task<CallToolResult> ExecuteFilesystemAsync(
         ProjectRegistry registry,
         AnalysisTargetRequest request,
@@ -99,7 +84,7 @@ internal static class ProjectAnalysisDispatcher
     /// <summary>
     /// Resolves a physical project target without leasing a Roslyn project session. This is the
     /// direct route for read-only filesystem discovery, including materialized decompiler roots
-    /// that deliberately have no <c>ainetlinter.project.json</c> registration of their own.
+    /// that deliberately do not materialize a Roslyn project session.
     /// </summary>
     internal static async Task<CallToolResult> ExecutePhysicalFilesystemAsync(
         AnalysisTargetRequest request,

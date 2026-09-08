@@ -38,11 +38,6 @@ internal static class ProjectDefinitionLoader
             new ProjectDefinition(canonicalSolutionPath, File.Exists(rulesPath) ? rulesPath : string.Empty));
     }
 
-    // Interne Übergangskompatibilität für noch nicht migrierte Aufrufer; auch dieser
-    // Einstieg akzeptiert ausschließlich den konkreten Solution-Dateipfad.
-    internal static ProjectDefinitionLoadResult Load(string? solutionPath) =>
-        LoadSolutionTarget(solutionPath);
-
     private static string? Canonicalize(string path)
     {
         try

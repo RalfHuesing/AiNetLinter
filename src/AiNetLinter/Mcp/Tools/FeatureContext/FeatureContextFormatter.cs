@@ -64,7 +64,7 @@ internal static class FeatureContextFormatter
     {
         if (metrics == null) return;
 
-        sb.AppendLine("## 2. Metriken & Budget (rules.json)");
+        sb.AppendLine("## 2. Metriken & Budget (ainetlinter-rules.json)");
         FormatMetricsChecks(sb, metrics);
         sb.AppendLine();
     }

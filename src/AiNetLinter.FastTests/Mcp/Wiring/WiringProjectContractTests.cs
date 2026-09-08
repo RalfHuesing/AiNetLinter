@@ -105,12 +105,24 @@ public sealed class WiringProjectContractTests
     }
 
     [Fact]
+    public void TestKitProjectRoot_UsesAdjacentMcpRulesWithoutProjectDefinition()
+    {
+        using var tempDir = TestTempDirectory.Create("wiring-project-root-");
+
+        var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
+
+        Assert.True(File.Exists(Path.Combine(root, "ainetlinter-rules.json")));
+        Assert.False(File.Exists(Path.Combine(root, "ainetlinter.project.json")));
+        Assert.False(File.Exists(Path.Combine(root, "rules.json")));
+    }
+
+    [Fact]
     public void Registry_ReadableButInvalidRules_FailsDeterministicallyWithRulesInvalid()
     {
         using var tempDir = TestTempDirectory.Create("wiring-rules-invalid-");
         var solutionPath = CreateSolutionPath(tempDir, "proj");
         File.WriteAllText(RulesPath(solutionPath), "{ this is not valid json ");
-        var loadResult = ProjectDefinitionLoader.Load(solutionPath);
+        var loadResult = ProjectDefinitionLoader.LoadSolutionTarget(solutionPath);
         Assert.True(loadResult.Succeeded, loadResult.Message);
         var creation = ProjectInstanceFactory.TryCreate(
             loadResult.Definition!,
@@ -126,7 +138,7 @@ public sealed class WiringProjectContractTests
         using var tempDir = TestTempDirectory.Create("wiring-rules-valid-");
         var solutionPath = CreateSolutionPath(tempDir, "proj");
         File.WriteAllText(RulesPath(solutionPath), "{ \"Global\": {}, \"Metrics\": { \"MaxLineCount\": 42 } }");
-        var definition = ProjectDefinitionLoader.Load(solutionPath).Definition!;
+        var definition = ProjectDefinitionLoader.LoadSolutionTarget(solutionPath).Definition!;
         McpCodeGraphServerOptions? captured = null;
         var creation = ProjectInstanceFactory.TryCreate(definition, options =>
         {

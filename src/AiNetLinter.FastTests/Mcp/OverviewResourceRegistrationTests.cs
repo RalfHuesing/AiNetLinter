@@ -113,7 +113,7 @@ internal sealed class OverviewSnapshotHarness : IDisposable
         Server = server;
         fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "SymbolGraphMini");
         RootPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
-        var definition = ProjectDefinitionLoader.Load(RootPath).Definition!;
+        var definition = ProjectDefinitionLoader.LoadSolutionTarget(RootPath).Definition!;
         Snapshot = new ProjectSnapshot(RootPath, definition, DateTime.UtcNow, server);
     }
 

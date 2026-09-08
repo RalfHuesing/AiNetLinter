@@ -62,7 +62,7 @@ internal static class ServerMaintenanceToolRegistrations
     }
 
     private const string ReloadConfigDescription =
-        "Wann nutzen: rules.json wurde waehrend des Server-Laufs geaendert und get_violations " +
+        "Wann nutzen: ainetlinter-rules.json wurde waehrend des Server-Laufs geaendert und get_violations " +
         "soll die neuen Regeln sofort respektieren, ohne den Server neu zu starten. Gelesen wird " +
         "ausschliesslich die optionale ainetlinter-rules.json neben der adressierten Solution. " +
         "Bei ungueltigem Pfad/JSON bleibt die bisherige Konfiguration aktiv.";

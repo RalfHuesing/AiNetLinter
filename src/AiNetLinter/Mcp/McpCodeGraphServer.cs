@@ -104,21 +104,21 @@ internal sealed class McpCodeGraphServer : ISolutionStateProvider, IDisposable, 
     };
 
     internal Task<SourceFileCatalog?>? LoadTask => _loadTask;
-    /// <summary>Zeilen-Grenzwert aus <c>rules.json</c> bzw. <see cref="MetricsConfig"/>-Default.</summary>
+    /// <summary>Zeilen-Grenzwert aus <c>ainetlinter-rules.json</c> bzw. <see cref="MetricsConfig"/>-Default.</summary>
     public int MaxLineCount { get; }
 
-    /// <summary>Vollstaendige Linter-Konfiguration (aus <c>rules.json</c> via <c>--config</c> oder Default).
+    /// <summary>Vollstaendige Linter-Konfiguration (aus <c>ainetlinter-rules.json</c> oder Default).
     /// Privates Setter statt <see langword="init"/>, weil <see cref="ReloadConfig"/> diese zur
     /// Laufzeit austauscht (<c>reload_config</c>-Tool). Isolierter Zugriff auf NUR dieses
     /// Property ist unkritisch; zusammen mit <see cref="UsedDefaultConfig"/>/<see cref="ResolvedConfigPath"/>
     /// immer <see cref="GetConfigSnapshot"/> nutzen (Begruendung dort).</summary>
     public ILinterEngineConfig Config { get; private set; }
 
-    /// <summary>True, wenn der Server mit der Config-Default-Konfiguration laeuft (kein <c>rules.json</c> gefunden).
+    /// <summary>True, wenn der Server mit der Config-Default-Konfiguration laeuft (kein <c>ainetlinter-rules.json</c> gefunden).
     /// Kombinierte Lesezugriffe: siehe <see cref="GetConfigSnapshot"/>.</summary>
     public bool UsedDefaultConfig { get; private set; }
 
-    /// <summary>Pfad der tatsaechlich geladenen <c>rules.json</c>, oder <see langword="null"/> wenn
+    /// <summary>Pfad der tatsaechlich geladenen <c>ainetlinter-rules.json</c>, oder <see langword="null"/> wenn
     /// <see cref="UsedDefaultConfig"/> <see langword="true"/> ist. Kombinierte Lesezugriffe: siehe
     /// <see cref="GetConfigSnapshot"/>.</summary>
     public string? ResolvedConfigPath { get; private set; }

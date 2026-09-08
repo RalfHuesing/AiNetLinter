@@ -23,7 +23,7 @@ public sealed class ThinClientMcpProcessContractTests
         };
 
         var lines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
-            fixture.RootPath,
+            fixture.SolutionPath,
             frames,
             new McpRawWireRunOptions { NoDaemon = true });
 
@@ -50,7 +50,7 @@ public sealed class ThinClientMcpProcessContractTests
         };
 
         var lines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
-            fixture.RootPath,
+            fixture.SolutionPath,
             frames,
             new McpRawWireRunOptions
             {
@@ -84,7 +84,7 @@ public sealed class ThinClientMcpProcessContractTests
             .AcquireEndpointAsync(cancellation.Token)
             .ConfigureAwait(false);
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
+        var solutionPath = fixture.SolutionPath;
         using var isolatedState = TestTempDirectory.Create("thin-client-project-health-");
         string[] warmupFrames =
         [
@@ -134,7 +134,7 @@ public sealed class ThinClientMcpProcessContractTests
         try
         {
             var warmup = await McpRawWireTestHarness.RunAndCollectWithDiagnosticsAsync(
-                fixture.RootPath,
+                fixture.SolutionPath,
                 warmupFrames,
                 runOptions);
 
@@ -150,7 +150,7 @@ public sealed class ThinClientMcpProcessContractTests
             }
 
             var result = await McpRawWireTestHarness.RunAndCollectWithDiagnosticsAsync(
-                fixture.RootPath,
+                fixture.SolutionPath,
                 healthFrames,
                 runOptions);
 

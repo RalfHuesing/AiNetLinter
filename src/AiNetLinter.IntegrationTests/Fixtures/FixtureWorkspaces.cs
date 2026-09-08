@@ -13,9 +13,14 @@ internal abstract class FixtureWorkspace : IDisposable
     private readonly IsolatedFixtureLease lease;
     private int disposed;
 
-    protected FixtureWorkspace(string fixtureName) => lease = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), fixtureName);
+    protected FixtureWorkspace(string fixtureName)
+    {
+        lease = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), fixtureName);
+        SolutionPath = Path.Combine(lease.RootPath, $"{fixtureName}.slnx");
+    }
 
     public string RootPath => lease.RootPath;
+    public string SolutionPath { get; }
 
     public void Dispose()
     {

@@ -934,7 +934,7 @@ Einzelabfragen bleiben skalare, optionale Aliases kompatibel:
 - [x] **F-01 Assembly-Disambiguierung:** Bare DocumentationCommentIds aus Ambiguitätshinweisen werden in der aktuellen Assembly-Generation akzeptiert; Kandidaten zeigen direkt generationgebundene `assembly:<hash>:<generation>:<symbolId>`-IDs.
 - [x] **F-02 Einzelabfragen:** `get_symbol_body` und `find_symbol` bieten optionale skalare Aliases bei unverändertem Batch-Vertrag.
 - [x] **F-03 Hotspot-Scope:** `get_hotspots` unterstützt `scopeType=production|tests|all` mit Produktions-Default.
-- [x] **F-04 Assembly-Defaults:** `inspect_assembly` und `find_assembly_extensions` inferieren Assembly-Ziele ohne redundantes `targetType`.
+- [x] **F-04 Assembly-Defaults:** `inspect_assembly` und `find_assembly_extensions` inferieren die Assembly-Zielart direkt aus dem absoluten `targetPath`.
 - [x] **F-05 Kompakter Pattern-Report:** Null-Treffer-Ausgaben von `pattern_detect` bleiben bei mehreren Patterns kompakt; Ein-Pattern-Abfragen behalten Details.
 - [x] **F-06 Dynamischer Index-Scope:** `get_index_scope` listet vorhandene Dateiendungen dynamisch, unterdrückt Null-Einträge und weist Nicht-C#-Dateien aus.
 
@@ -988,7 +988,7 @@ Roslyn-gestützte Cross-Assembly- & Typauflösungsfähigkeiten im AiNetLinter MC
 - [x] **EPIC-04 — Outgoing Cross-Assembly Call-Leaves in `get_call_tree` mit BCL-Filter:**
   - `OutgoingCallScanner`: Externe Aufrufe in referenzierte Fremd-Assemblies werden als `[ref: Assembly] Type.Member` ausgewiesen; BCL-Rauschen standardmäßig gefiltert (`includeBcl: false`, optional einblendbar).
 - [x] **EPIC-05 — MCP-Tool `find_implementations`:**
-  - Findet konkrete Implementierungen und Overrides von Interfaces, abstrakten Klassen, virtuellen Methoden oder Properties in Quellcode-Projekten (`targetType=project`) und dekompilierten Assemblies (`targetType=assembly`) mit Status (`concrete`/`abstract`/`virtual`) und Zeilenposition.
+  - Findet konkrete Implementierungen und Overrides von Interfaces, abstrakten Klassen, virtuellen Methoden oder Properties in Source- und Assembly-Zielen; die Zielart wird aus dem absoluten `targetPath` abgeleitet. Status (`concrete`/`abstract`/`virtual`) und Zeilenposition bleiben sichtbar.
 - [x] **EPIC-06 — Tool-Registrierung, Schemas & Dokumentations-Sync:**
   - Registrierung in `SymbolGraphToolRegistrations`, Inventar-Freeze auf 33 Tools mit ReadOnlyProfile-Annotation, Doku in `Docs/agent-api.md`, Workflow-Regeln in `.agents/rules/AiNetLinter-McpWorkflow.mdc`.
 

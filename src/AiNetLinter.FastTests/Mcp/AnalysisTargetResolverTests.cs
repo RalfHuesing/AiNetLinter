@@ -66,6 +66,7 @@ public sealed class AnalysisTargetResolverTests
     [InlineData("targetType")]
     [InlineData("projectRoot")]
     [InlineData("configPath")]
+    [InlineData("assemblyPath")]
     [InlineData("ainetlinter.project.json")]
     public void Resolve_FromArguments_RejectsLegacyKeys(string legacyKey)
     {

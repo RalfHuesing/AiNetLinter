@@ -95,24 +95,24 @@ internal static class McpRawWireTestHarness
     }
 
     internal static async Task<List<string>> RunAndCollectStdoutAsync(
-        string targetDirectory,
+        string targetPath,
         string[] frames,
         McpRawWireRunOptions? options = null)
     {
         var result = await RunAndCollectWithDiagnosticsAsync(
-            targetDirectory,
+            targetPath,
             frames,
             options).ConfigureAwait(false);
         return result.StdoutLines.ToList();
     }
 
     internal static async Task<McpRawWireRunResult> RunAndCollectWithDiagnosticsAsync(
-        string targetDirectory,
+        string targetPath,
         string[] frames,
         McpRawWireRunOptions? options = null)
     {
         options ??= new McpRawWireRunOptions();
-        McpFixtureProjectDefinition.Ensure(targetDirectory);
+        McpFixtureTargetSetup.Ensure(targetPath);
         using var lease = await SubprocessLifetimeBudget.Shared.AcquireAsync(CancellationToken.None);
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
         if (!File.Exists(exePath))
@@ -122,7 +122,7 @@ internal static class McpRawWireTestHarness
                 "Test laeuft nur nach dotnet build.");
         }
 
-        var psi = CreateProcessStartInfo(exePath, targetDirectory, options);
+        var psi = CreateProcessStartInfo(exePath, targetPath, options);
 
         using var process = Process.Start(psi)
             ?? throw new InvalidOperationException("AiNetLinter-Subprozess konnte nicht gestartet werden.");
@@ -130,7 +130,7 @@ internal static class McpRawWireTestHarness
         var stderrTask = process.StandardError.ReadToEndAsync();
         var expectedResponses = CountExpectedResponses(frames);
         var writer = process.StandardInput;
-        var writerTask = WriteFramesAsync(writer, frames, targetDirectory, options.InterFrameDelay);
+        var writerTask = WriteFramesAsync(writer, frames, targetPath, options.InterFrameDelay);
 
         var observed = new List<string>();
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
@@ -161,7 +161,7 @@ internal static class McpRawWireTestHarness
 
     private static ProcessStartInfo CreateProcessStartInfo(
         string exePath,
-        string targetDirectory,
+        string targetPath,
         McpRawWireRunOptions options)
     {
         var psi = new ProcessStartInfo
@@ -172,7 +172,7 @@ internal static class McpRawWireTestHarness
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             CreateNoWindow = true,
-            WorkingDirectory = targetDirectory,
+            WorkingDirectory = Path.GetDirectoryName(Path.GetFullPath(targetPath))!,
         };
         psi.ArgumentList.Add("--mcp-server");
         // Der Raw-Wire-Harness nutzt bewusst den ThinClient; ein kurzer Idle-Exit
@@ -203,12 +203,12 @@ internal static class McpRawWireTestHarness
     private static async Task WriteFramesAsync(
         StreamWriter writer,
         IEnumerable<string> frames,
-        string targetDirectory,
+        string targetPath,
         TimeSpan? interFrameDelay)
     {
         foreach (var frame in frames)
         {
-            await writer.WriteLineAsync(AddTargetToToolCall(frame, targetDirectory));
+            await writer.WriteLineAsync(AddTargetToToolCall(frame, targetPath));
             await writer.FlushAsync();
             if (interFrameDelay is { } delay)
             {
@@ -236,7 +236,7 @@ internal static class McpRawWireTestHarness
             var arguments = parameters?["arguments"]?.AsObject();
             if (arguments is null || arguments.ContainsKey("targetPath")) return frame;
 
-            arguments["targetPath"] = McpFixtureProjectDefinition.ResolveTargetPath(targetPath, "project");
+            arguments["targetPath"] = Path.GetFullPath(targetPath);
             return root.ToJsonString();
         }
         catch (JsonException)

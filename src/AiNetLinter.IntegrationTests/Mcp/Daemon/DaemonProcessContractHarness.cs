@@ -9,12 +9,13 @@ using AiNetLinter.IntegrationTests.Mcp.Platform;
 namespace AiNetLinter.IntegrationTests.Mcp.Daemon;
 
 internal sealed record DaemonProcessSpec(
-    string WorkingDirectory,
+    string TargetPath,
     string LocalAppData,
     decimal IdleExitMinutes,
     int MaxProjects = 1,
     string? DaemonInstance = null)
 {
+    internal string WorkingDirectory => Path.GetDirectoryName(Path.GetFullPath(TargetPath))!;
     internal string EffectiveDaemonInstance => DaemonInstance ?? DaemonEndpointJanitor.TestDaemonInstance;
 
     internal EffectiveDaemonConfiguration Configuration => new(
@@ -60,7 +61,7 @@ internal static class DaemonProcessContractHarness
         DaemonProcessSpec spec,
         CancellationToken cancellationToken)
     {
-        McpFixtureProjectDefinition.Ensure(spec.WorkingDirectory);
+        McpFixtureTargetSetup.Ensure(spec.TargetPath);
         var lifetime = await SubprocessLifetimeBudget.Shared
             .AcquireAsync(cancellationToken)
             .ConfigureAwait(false);

@@ -16,8 +16,8 @@ namespace AiNetLinter.FastTests.Mcp;
 [Trait("Category", "Unit")]
 public sealed class McpServerCommandTests
 {
-    // Harter Cut: im MCP-Modus traegt jeder zielgebundene Aufruf seinen Target-Bezug selbst
-    // (targetType + targetPath); --path/--config sind harte Startfehler.
+    // Harter Cut: im MCP-Modus traegt jeder zielgebundene Aufruf seinen absoluten targetPath
+    // selbst; --path/--config sind harte Startfehler.
 
     [Fact]
     public void Validate_McpServerWithPath_IsHardError()
@@ -97,66 +97,6 @@ public sealed class McpServerCommandTests
 
         Assert.NotNull(error);
         Assert.Contains("--path ist erforderlich", error, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void ResolveMaxLineCount_ConfigWithCustomMaxLineCount_ReturnsConfiguredValue()
-    {
-        using var tempDir = TestTempDirectory.Create("ainetlinter-mcp-test-");
-        var configPath = tempDir.CreateFile("rules.json", """{ "Global": {}, "Metrics": { "MaxLineCount": 5 } }""");
-        var args = new LinterArgs { ConfigPath = configPath, TargetPath = tempDir.DirectoryPath, Verbose = false };
-
-        var result = McpServerCommand.ResolveMaxLineCount(args);
-
-        Assert.Equal(5, result);
-    }
-
-    [Fact]
-    public void ResolveMaxLineCount_NoConfigPath_ReturnsMetricsConfigDefault()
-    {
-        var args = new LinterArgs { ConfigPath = null, TargetPath = "", Verbose = false };
-
-        var result = McpServerCommand.ResolveMaxLineCount(args);
-
-        Assert.Equal(new AiNetLinter.Configuration.MetricsConfig().MaxLineCount, result);
-    }
-
-    [Fact]
-    public void ResolveConfig_ConfigWithCustomMaxLineCount_UsesConfigFromArgs()
-    {
-        using var tempDir = TestTempDirectory.Create("ainetlinter-mcp-test-");
-        var configPath = tempDir.CreateFile("rules.json", """{ "Global": {}, "Metrics": { "MaxLineCount": 5 } }""");
-        var args = new LinterArgs { ConfigPath = configPath, TargetPath = tempDir.DirectoryPath, Verbose = false };
-
-        var result = McpServerCommand.ResolveConfig(args);
-
-        Assert.NotNull(result);
-        Assert.Equal(5, result.Metrics.MaxLineCount);
-    }
-
-    [Fact]
-    public void ResolveConfig_NoConfigPath_ReturnsDefaultConfig()
-    {
-        var args = new LinterArgs { ConfigPath = null, TargetPath = "", Verbose = false };
-
-        var result = McpServerCommand.ResolveConfig(args);
-
-        Assert.NotNull(result);
-        Assert.Equal(new AiNetLinter.Configuration.MetricsConfig().MaxLineCount, result.Metrics.MaxLineCount);
-    }
-
-    [Fact]
-    public void ResolveConfig_BatchResolutionStaysExplicitOverGivenResolvedPath()
-    {
-        using var explicitDir = TestTempDirectory.Create("ainetlinter-mcp-exp-");
-
-        var explicitConfigPath = explicitDir.CreateFile("rules.json", """{ "Global": {}, "Metrics": { "MaxLineCount": 5 } }""");
-
-        var args = new LinterArgs { ConfigPath = explicitConfigPath, TargetPath = "", Verbose = false };
-
-        var config = McpServerCommand.ResolveConfig(args, explicitConfigPath);
-        Assert.NotNull(config);
-        Assert.Equal(5, config.Metrics.MaxLineCount);
     }
 
     [Fact]

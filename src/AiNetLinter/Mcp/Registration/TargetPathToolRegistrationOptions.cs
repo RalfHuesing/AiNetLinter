@@ -1,7 +1,7 @@
 #nullable enable
 
 using System;
-using System.Linq;
+using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -13,9 +13,6 @@ namespace AiNetLinter.Mcp.Registration;
 /// </summary>
 internal static class TargetPathToolRegistrationOptions
 {
-    private static readonly string[] LegacyArgumentNames =
-        ["targetType", "projectRoot", "configPath", "assemblyPath", "ainetlinter.project.json"];
-
     private const string SourceTargetContract =
         " Zielvertrag: targetPath als absoluter, existierender Pfad einer .sln- oder .slnx-Datei. " +
         "Die Quelle wird aus der Dateiendung bestimmt; Assembly-Ziele sind fuer dieses Tool unsupported.";
@@ -67,15 +64,21 @@ internal static class TargetPathToolRegistrationOptions
     internal static CallToolResult? RejectLegacyArguments(
         RequestContext<CallToolRequestParams> context)
     {
-        var legacyKeys = context.Params.Arguments?.Keys
-            .Where(key => LegacyArgumentNames.Contains(key, StringComparer.OrdinalIgnoreCase))
-            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var legacyKeys = AnalysisTargetRequest.FindLegacyArgumentNames(
+            context.Params.Arguments?.Keys ?? Array.Empty<string>());
         return legacyKeys is not { Length: > 0 }
             ? null
             : McpToolResults.InvalidArgument(
                 $"Legacy-Argumente sind im targetPath-only Vertrag nicht zulaessig: {string.Join(", ", legacyKeys)}.",
                 "Nur targetPath mit dem absoluten Pfad der konkreten .sln/.slnx/.dll/.exe-Datei uebergeben.");
+    }
+
+    internal static async Task<CallToolResult> ExecuteWithLegacyGuardAsync(
+        RequestContext<CallToolRequestParams> context,
+        Func<Task<CallToolResult>> execute)
+    {
+        var legacyError = RejectLegacyArguments(context);
+        return legacyError ?? await execute();
     }
 
     private static McpServerToolCreateOptions Create(

@@ -213,10 +213,10 @@ internal static class GetViolationsScanner
         if (usedDefaultConfig)
         {
             // Sichtbarer Marker fuer den Agent-LLM: die Lint-Ergebnisse stammen NICHT aus der
-            // projekteigenen rules.json (sondern aus den Code-Defaults). Wird nur dann
+            // projekteigenen ainetlinter-rules.json (sondern aus den Code-Defaults). Wird nur dann
             // ausgegeben, wenn der Server ohne --config gestartet wurde und neben der Solution
-            // keine rules.json gefunden hat.
-            sb.AppendLine("Basis: Default-Regeln, keine rules.json gefunden");
+            // keine ainetlinter-rules.json gefunden hat.
+            sb.AppendLine("Basis: Default-Regeln, keine ainetlinter-rules.json gefunden");
             sb.AppendLine();
         }
         var filterDetails = new List<string>();

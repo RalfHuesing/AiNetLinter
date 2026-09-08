@@ -20,7 +20,7 @@ public sealed class McpServerLifetimeTests
     {
         using var lease = await SubprocessLifetimeBudget.Shared.AcquireAsync(CancellationToken.None);
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
-        McpFixtureProjectDefinition.Ensure(fixture.RootPath);
+        McpFixtureTargetSetup.Ensure(fixture.SolutionPath);
         using var parentProcess = StartLongRunningParentProcess();
         var serverProcess = StartMcpServer(fixture.RootPath, parentProcess.Id);
         var stderrTask = serverProcess.StandardError.ReadToEndAsync();

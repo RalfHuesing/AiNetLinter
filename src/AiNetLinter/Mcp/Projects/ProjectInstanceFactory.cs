@@ -92,7 +92,7 @@ internal static class ProjectInstanceFactory
                 detail is null ? null : $"Konfigurationsfehler: {detail}",
                 "JSON-Syntax und Felder gegen das Schema pruefen; es wurden bewusst keine " +
                 "Default-Regeln geladen.",
-                "Minimale gueltige rules.json zum Kopieren:",
+                "Minimale gueltige ainetlinter-rules.json zum Kopieren:",
                 "{",
                 "  \"Global\": {},",
                 "  \"Metrics\": { \"MaxLineCount\": 700 }",

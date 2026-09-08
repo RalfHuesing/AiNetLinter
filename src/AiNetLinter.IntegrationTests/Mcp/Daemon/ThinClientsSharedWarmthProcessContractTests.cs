@@ -28,7 +28,7 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
         try
         {
             using var fixture = new SymbolGraphMiniFixtureWorkspace();
-            var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
+            var solutionPath = fixture.SolutionPath;
             using var isolatedState = TestTempDirectory.Create("thin-client-shared-state-");
             var clientFrames = CreateClientFrames();
 
@@ -37,7 +37,7 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
             // Bewusst sequenziell: Client B muss nach A laufen, damit die Server-Uptime
             // streng weitergewachsen ist (Beweis fuer dieselbe warme Instanz).
             var first = await McpRawWireTestHarness.RunAndCollectWithDiagnosticsAsync(
-                fixture.RootPath,
+                fixture.SolutionPath,
                 clientFrames,
                 new McpRawWireRunOptions
                 {
@@ -48,7 +48,7 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
                     DaemonInstance = DaemonEndpointJanitor.TestDaemonInstance,
                 }).ConfigureAwait(false);
             var second = await McpRawWireTestHarness.RunAndCollectWithDiagnosticsAsync(
-                fixture.RootPath,
+                fixture.SolutionPath,
                 CreateClientFrames(primary: false),
                 new McpRawWireRunOptions
                 {

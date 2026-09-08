@@ -26,7 +26,7 @@ public sealed class DaemonHostMcpProcessContractTests
         using var endpointLease = await DaemonProcessContractHarness
             .AcquireEndpointAsync(cancellation.Token)
             .ConfigureAwait(false);
-        var spec = new DaemonProcessSpec(fixture.RootPath, temp.DirectoryPath, 0.1m);
+        var spec = new DaemonProcessSpec(fixture.SolutionPath, temp.DirectoryPath, 0.1m);
 
         await using var daemon = await DaemonProcessContractHarness
             .StartAsync(spec, cancellation.Token)

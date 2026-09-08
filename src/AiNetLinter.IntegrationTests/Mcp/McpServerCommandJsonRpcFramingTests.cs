@@ -52,7 +52,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
             "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\"}",
         };
 
-        var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(fixture.RootPath, frames);
+        var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(fixture.SolutionPath, frames);
 
         Assert.NotEmpty(observedLines);
         foreach (var line in observedLines)
@@ -79,7 +79,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
                 "\"name\":\"find_symbol\",\"arguments\":{\"namePatterns\":[\"Greeter\"]}}}",
         };
 
-        var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(fixture.RootPath, frames);
+        var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(fixture.SolutionPath, frames);
 
         Assert.NotEmpty(observedLines);
         foreach (var line in observedLines)
@@ -117,7 +117,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
         }
 
         var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
-            fixture.RootPath,
+            fixture.SolutionPath,
             frames.ToArray(),
             new McpRawWireRunOptions { InterFrameDelay = TimeSpan.FromSeconds(5) });
         JsonElement? result = null;
@@ -171,7 +171,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
         }
 
         var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
-            fixture.RootPath,
+            fixture.SolutionPath,
             frames.ToArray(),
             new McpRawWireRunOptions { InterFrameDelay = TimeSpan.FromSeconds(1) });
         JsonElement? response = null;
@@ -241,7 +241,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
             id++;
         }
 
-        var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(fixture.RootPath, frameList.ToArray());
+        var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(fixture.SolutionPath, frameList.ToArray());
 
         Assert.NotEmpty(observedLines);
         foreach (var line in observedLines)
@@ -271,7 +271,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
             "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
         };
 
-        var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(fixture.RootPath, frames);
+        var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(fixture.SolutionPath, frames);
 
         string? instructions = null;
         foreach (var line in observedLines)
@@ -295,8 +295,8 @@ public sealed class McpServerCommandJsonRpcFramingTests
         using var legacyFixture = new SymbolGraphMiniFixtureWorkspace();
         using var modernFixture = new SymbolGraphMiniFixtureWorkspace();
         var expectedToolNames = await GetRegisteredToolNames();
-        var legacy = await ReadDiscoverySnapshotAsync(legacyFixture.RootPath, modern: false);
-        var modern = await ReadDiscoverySnapshotAsync(modernFixture.RootPath, modern: true);
+        var legacy = await ReadDiscoverySnapshotAsync(legacyFixture.SolutionPath, modern: false);
+        var modern = await ReadDiscoverySnapshotAsync(modernFixture.SolutionPath, modern: true);
 
         Assert.Equal(legacy.Instructions, modern.Instructions);
         Assert.Equal(legacy.InstructionsSize, modern.InstructionsSize);
@@ -322,10 +322,10 @@ public sealed class McpServerCommandJsonRpcFramingTests
     }
 
     private static async Task<McpWireDiscoverySnapshot> ReadDiscoverySnapshotAsync(
-        string targetDirectory, bool modern)
+        string targetPath, bool modern)
     {
         var lines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
-            targetDirectory,
+            targetPath,
             McpRawWireTestHarness.BuildDiscoveryFrames(modern));
         var discoveryResponse = McpRawWireTestHarness.FindResponse(lines, 1);
         var toolsResponse = McpRawWireTestHarness.FindResponse(lines, 2);

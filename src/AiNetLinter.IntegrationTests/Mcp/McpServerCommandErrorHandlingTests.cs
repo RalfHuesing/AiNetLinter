@@ -82,7 +82,7 @@ public sealed class McpServerCommandErrorHandlingTests
     public async Task RunAsync_CompileErrorMini_GetFileSkeleton_ReturnsWithoutCompileErrorHint()
     {
         using var fixture = new CompileErrorMiniFixtureWorkspace();
-        McpFixtureProjectDefinition.Ensure(fixture.RootPath);
+        McpFixtureTargetSetup.Ensure(fixture.SolutionPath);
         var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
         Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
 
@@ -91,7 +91,7 @@ public sealed class McpServerCommandErrorHandlingTests
             Name = "ainetlinter-mcp-compile-error-test-client",
             Command = exePath,
             Arguments = ["--mcp-server"],
-            WorkingDirectory = fixture.RootPath,
+            WorkingDirectory = Path.GetDirectoryName(fixture.SolutionPath)!,
             EnvironmentVariables = new Dictionary<string, string?>
             {
                 ["AINETLINTER_NO_DAEMON"] = "1",
@@ -108,7 +108,7 @@ public sealed class McpServerCommandErrorHandlingTests
             new Dictionary<string, object?>
             {
                 ["filePaths"] = new[] { "src/CompileErrorMini/BrokenClassA.cs" },
-                ["targetPath"] = Path.Combine(fixture.RootPath, "CompileErrorMini.slnx"),
+                ["targetPath"] = fixture.SolutionPath,
             },
             cts.Token);
 

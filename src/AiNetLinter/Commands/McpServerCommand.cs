@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
-using AiNetLinter.Configuration;
 using AiNetLinter.Logging;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
@@ -105,7 +104,7 @@ internal static class McpServerCommand
 
     /// <summary>
     /// Komposition des Factory-Delegaten je Key: Die Regeldatei wird streng geladen (eine lesbare,
-    /// aber ungueltige rules.json scheitert deterministisch statt Default-Regeln einzusetzen);
+    /// aber ungueltige ainetlinter-rules.json scheitert deterministisch statt Default-Regeln einzusetzen);
     /// erst bei Erfolg entsteht eine Server-Instanz, deren Hintergrund-Load die Solution der
     /// Definition laedt. Dedupe und Lock-Hygiene liegen in der Registry bzw. im Instanzmuster.
     /// </summary>
@@ -128,33 +127,6 @@ internal static class McpServerCommand
                 ResolvedConfigPath = baseOptions.ResolvedConfigPath,
                 LoadFunc = loadFunc ?? (innerCt => TryLoadSolutionAsync(definition.SolutionPath, innerCt, console)),
             })));
-
-    /// <summary>
-    /// Loest den konfigurierten Zeilen-Grenzwert auf — bei gesetztem <paramref name="resolvedConfigPath"/>
-    /// wird die zugehoerige <c>rules.json</c> geladen (best effort), sonst der
-    /// <see cref="MetricsConfig"/>-Default verwendet — derselbe Grenzwert, den auch ein CLI-Lint-Lauf
-    /// auf derselben Solution respektieren wuerde. Das Laden der Regeldatei inklusive Defaults
-    /// delegiert an <see cref="AiNetLinter.Mcp.Projects.ProjectInstanceFactory.MaterializeRules"/>,
-    /// denselben geteilten Kern wie der Registry-Pfad.
-    /// </summary>
-    internal static int ResolveMaxLineCount(LinterArgs args, string? resolvedConfigPath = null) =>
-        ProjectInstanceFactory.MaterializeRules(
-            resolvedConfigPath ?? args.ConfigPath,
-            isRequired: false).MaxLineCount;
-
-    /// <summary>
-    /// Loest die vollstaendige Linter-<see cref="Config"/> auf — bei gesetztem
-    /// <paramref name="resolvedConfigPath"/> wird die zugehoerige <c>rules.json</c> geladen (best
-    /// effort), sonst der <see cref="Config"/>-Default verwendet — dieselbe Config, die auch ein
-    /// CLI-Lint-Lauf auf derselben Solution respektieren wuerde. Das Laden der Regeldatei inklusive
-    /// Defaults delegiert an
-    /// <see cref="AiNetLinter.Mcp.Projects.ProjectInstanceFactory.MaterializeRules"/>, denselben
-    /// geteilten Kern wie der Registry-Pfad.
-    /// </summary>
-    internal static Config ResolveConfig(LinterArgs args, string? resolvedConfigPath = null) =>
-        ProjectInstanceFactory.MaterializeRules(
-            resolvedConfigPath ?? args.ConfigPath,
-            isRequired: false).Config;
 
     /// <summary>
     /// Laedt die Solution best-effort. Schlaegt das Laden fehl, wird der Fehler nach dem Warn-Log

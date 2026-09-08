@@ -2,8 +2,6 @@
 
 using System;
 using System.IO;
-using AiNetLinter.Cli;
-using AiNetLinter.Commands;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
@@ -36,23 +34,6 @@ public sealed class ProjectInstanceFactoryTests
     }
 
     [Fact]
-    public void TryCreate_MaxLineCount_MatchesLegacyBatchPipeline()
-    {
-        using var tempDir = TestTempDirectory.Create("project-factory-legacy-");
-        var solutionPath = tempDir.CreateFile("proj/app.slnx", "");
-        var rulesPath = tempDir.CreateFile(
-            "proj/ainetlinter-rules.json",
-            """{ "Global": {}, "Metrics": { "MaxLineCount": 7 } }""");
-
-        var captured = CaptureOptions(LoadDefinition(solutionPath));
-        var legacy = McpServerCommand.ResolveMaxLineCount(
-            new LinterArgs { TargetPath = tempDir.DirectoryPath, Verbose = false },
-            rulesPath);
-
-        Assert.Equal(legacy, captured.Options!.MaxLineCount);
-    }
-
-    [Fact]
     public void TryCreate_InvalidNeighborRules_FailsWithRulesInvalidInsteadOfDefaults()
     {
         using var tempDir = TestTempDirectory.Create("project-factory-invalid-");
@@ -69,7 +50,7 @@ public sealed class ProjectInstanceFactoryTests
         Assert.Equal(ProjectErrorCodes.RulesInvalid, creation.ErrorCode);
         Assert.Contains(rulesPath, creation.ErrorMessage, StringComparison.Ordinal);
         Assert.Contains("keine Default-Regeln geladen", creation.ErrorMessage, StringComparison.Ordinal);
-        // Kopierfaehige Bauanleitung: minimales, gueltiges rules.json-Skelett im Fehlertext.
+        // Kopierfaehige Bauanleitung: minimales, gueltiges ainetlinter-rules.json-Skelett im Fehlertext.
         Assert.Contains("\"Global\": {},", creation.ErrorMessage, StringComparison.Ordinal);
         Assert.Contains("\"MaxLineCount\": 700", creation.ErrorMessage, StringComparison.Ordinal);
     }

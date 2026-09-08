@@ -19,8 +19,8 @@ public sealed class McpToolAnnotationsWireTests
         using var legacyFixture = new SymbolGraphMiniFixtureWorkspace();
         using var modernFixture = new SymbolGraphMiniFixtureWorkspace();
 
-        var legacy = await ReadToolAnnotationsAsync(legacyFixture.RootPath, modern: false);
-        var modern = await ReadToolAnnotationsAsync(modernFixture.RootPath, modern: true);
+        var legacy = await ReadToolAnnotationsAsync(legacyFixture.SolutionPath, modern: false);
+        var modern = await ReadToolAnnotationsAsync(modernFixture.SolutionPath, modern: true);
 
         Assert.Equal(
             legacy.Keys.OrderBy(name => name, StringComparer.Ordinal),
@@ -37,11 +37,11 @@ public sealed class McpToolAnnotationsWireTests
     }
 
     private static async Task<IReadOnlyDictionary<string, JsonElement>> ReadToolAnnotationsAsync(
-        string targetDirectory,
+        string targetPath,
         bool modern)
     {
         var lines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
-            targetDirectory,
+            targetPath,
             McpRawWireTestHarness.BuildDiscoveryFrames(modern));
         var response = McpRawWireTestHarness.FindResponse(lines, 2);
         var tools = response.GetProperty("result").GetProperty("tools");

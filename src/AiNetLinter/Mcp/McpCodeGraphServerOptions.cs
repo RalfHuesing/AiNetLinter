@@ -28,14 +28,14 @@ internal sealed record McpCodeGraphServerOptions
     /// (siehe <c>MetricsConfig.MaxLineCount</c>).</summary>
     public int MaxLineCount { get; init; } = 700;
 
-    /// <summary>Vollstaendige Linter-Konfiguration aus <c>rules.json</c> via <c>--config</c>,
+    /// <summary>Vollstaendige Linter-Konfiguration aus <c>ainetlinter-rules.json</c> neben der adressierten Solution,
     /// sonst Default-<see cref="Config"/>. Exposed als schmale Lese-Sicht
     /// (<see cref="ILinterEngineConfig"/>), damit der vollstaendige <c>Configuration</c>-Namespace
     /// nicht in den Footprint der <c>McpCodeGraphServer</c>-Konsumenten gezogen wird.</summary>
     public required ILinterEngineConfig Config { get; init; }
 
     /// <summary>
-    /// True, wenn <c>McpServerCommand</c> keine <c>rules.json</c> neben der aufgeloesten
+    /// True, wenn <c>McpServerCommand</c> keine <c>ainetlinter-rules.json</c> neben der aufgeloesten
     /// Solution-Datei finden konnte und der Server mit der <see cref="Config"/>-Default-
     /// Konfiguration laeuft. <c>get_violations</c> zeigt in diesem Fall eine sichtbare
     /// Header-Zeile an. Siehe <see cref="McpCodeGraphServer.UsedDefaultConfig"/>.
@@ -43,8 +43,8 @@ internal sealed record McpCodeGraphServerOptions
     public bool UsedDefaultConfig { get; init; }
 
     /// <summary>
-    /// Absoluter oder relativer Pfad der tatsaechlich geladenen <c>rules.json</c> — entweder
-    /// explizit per <c>--config</c> angegeben oder per Auto-Discovery neben der Solution
+    /// Absoluter oder relativer Pfad der tatsaechlich geladenen <c>ainetlinter-rules.json</c>
+    /// per Auto-Discovery neben der Solution
     /// gefunden. <see langword="null"/>, wenn <see cref="UsedDefaultConfig"/> <see langword="true"/>
     /// ist. Rein informativ (z. B. fuer die <c>ainetlinter://overview</c>-Resource) — die
     /// eigentliche Config-Aufloesung ist bereits in <see cref="Config"/> abgeschlossen.

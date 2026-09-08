@@ -151,6 +151,40 @@ public sealed class McpServerArgumentValidationE2ETests
         Assert.Equal("code_size", result.StructuredContent!.Value.GetProperty("mode").GetString());
     }
 
+    [Theory]
+    [InlineData("get_feature_context", "targetType")]
+    [InlineData("get_feature_context", "projectRoot")]
+    [InlineData("get_feature_context", "configPath")]
+    [InlineData("get_feature_context", "assemblyPath")]
+    [InlineData("get_feature_context", "ainetlinter.project.json")]
+    [InlineData("get_violations", "targetType")]
+    [InlineData("get_violations", "projectRoot")]
+    [InlineData("get_violations", "configPath")]
+    [InlineData("get_violations", "assemblyPath")]
+    [InlineData("get_violations", "ainetlinter.project.json")]
+    [InlineData("metrics_tree", "targetType")]
+    [InlineData("metrics_tree", "projectRoot")]
+    [InlineData("metrics_tree", "configPath")]
+    [InlineData("metrics_tree", "assemblyPath")]
+    [InlineData("metrics_tree", "ainetlinter.project.json")]
+    [InlineData("find_symbol", "targetType")]
+    [InlineData("find_symbol", "projectRoot")]
+    [InlineData("find_symbol", "configPath")]
+    [InlineData("find_symbol", "assemblyPath")]
+    [InlineData("find_symbol", "ainetlinter.project.json")]
+    public async Task TargetPathTools_RejectEveryLegacyArgument(string toolName, string legacyKey)
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            toolName,
+            new Dictionary<string, object?> { [legacyKey] = "legacy" });
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains(legacyKey, textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("targetPath", textContent.Text, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task FindDuplicates_RefactoringDriftModeWithoutHelperSymbol_ReturnsRecoverableInvalidArgument()
     {

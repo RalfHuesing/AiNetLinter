@@ -7,7 +7,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
-using AiNetLinter.Cli;
 using AiNetLinter.Commands;
 using AiNetLinter.Configuration;
 using AiNetLinter.IntegrationTests.Fixtures;
@@ -87,20 +86,6 @@ public sealed class McpServerCommandContractTests
         using var retryLease = retry.Lease;
         Assert.Equal(2, scenario.FactoryCalls);
         Assert.NotSame(failedServer, retryLease!.Server);
-    }
-
-    [Fact]
-    public async Task ResolveConfig_NoExplicitConfigPath_NoRulesJsonFound_UsesDefault()
-    {
-        var path = CreateTempDir();
-        try
-        {
-            File.WriteAllText(Path.Combine(path, "Only.slnx"), "");
-            var args = new LinterArgs { ConfigPath = null, TargetPath = path, Verbose = false };
-
-            Assert.NotNull(McpServerCommand.ResolveConfig(args, null));
-        }
-        finally { Directory.Delete(path, recursive: true); }
     }
 
     [Fact]

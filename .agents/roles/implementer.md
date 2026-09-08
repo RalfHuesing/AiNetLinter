@@ -4,7 +4,8 @@
 
 Setze genau den übergebenen Slice um. Lies zuerst die bestehende Struktur,
 `AGENTS.md` und die relevanten Regeln. Bei C#-Semantik gilt zusätzlich der
-MCP-first-Workflow mit absolutem `targetPath` und passendem `targetType`.
+MCP-first-Workflow mit dem absoluten `targetPath`; die Zielart wird aus der
+Dateiendung abgeleitet.
 
 ## Regeln
 

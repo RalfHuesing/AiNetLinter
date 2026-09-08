@@ -57,7 +57,7 @@ internal static class DuplicateDetectionToolRegistrations
         "aehnliche Methodencluster), 'refactoring-drift' (findet Methoden, die helperSymbol nachbauen statt es aufzurufen), " +
         "'structural' (semantisch aehnliche Hilfsmethoden per Roslyn-Strukturprofil & Cosine-Similarity). " +
         "helperSymbol: Ziel-Helper (Pflicht bei mode='refactoring-drift': Datei:Zeile:Spalte, DocCommentId oder Name). " +
-        "minTokens: Mindest-Tokens (Default aus rules.json, 30). similarityThreshold: 'exact' (>=0.95), 'near' (>=0.80), " +
+        "minTokens: Mindest-Tokens (MCP-Default 30). similarityThreshold: 'exact' (>=0.95), 'near' (>=0.80), " +
         "'fuzzy' (>=0.65 [Default]). normalizeIdentifiers: Klone mit umbenannten Variablen erkennen (Default false). " +
         "scopeDir: Verzeichnispfad zur Eingrenzung. scopeType: 'production' [Default], 'all', 'tests'. maxResults: Begrenzung (Default 20).";
 }

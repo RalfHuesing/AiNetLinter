@@ -59,6 +59,7 @@ public sealed class AnalysisToolCallTests
     [InlineData("targetType")]
     [InlineData("projectRoot")]
     [InlineData("configPath")]
+    [InlineData("assemblyPath")]
     public void ResolveTargetPathOnly_RejectsLegacyArgumentWithFieldAndHint(string legacyKey)
     {
         var result = AnalysisTargetResolver.Resolve(AnalysisTargetRequest.FromArguments(

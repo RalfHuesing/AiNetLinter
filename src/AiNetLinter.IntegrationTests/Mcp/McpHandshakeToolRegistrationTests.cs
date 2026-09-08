@@ -29,15 +29,14 @@ public sealed class McpHandshakeToolRegistrationTests
         Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht in BaseDirectory gefunden: {exePath}");
 
         using var fixture = new BaselineMiniFixtureWorkspace();
-        var fixtureRoot = fixture.RootPath;
-        McpFixtureProjectDefinition.Ensure(fixtureRoot);
+        var solutionPath = fixture.SolutionPath;
 
         var transport = new StdioClientTransport(new StdioClientTransportOptions
         {
             Name = "ainetlinter-mse-mcp-handshake-test",
             Command = exePath,
             Arguments = ["--mcp-server"],
-            WorkingDirectory = fixtureRoot,
+            WorkingDirectory = Path.GetDirectoryName(solutionPath)!,
             EnvironmentVariables = new Dictionary<string, string?>
             {
                 ["AINETLINTER_NO_DAEMON"] = "1",
