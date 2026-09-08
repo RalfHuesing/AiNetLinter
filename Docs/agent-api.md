@@ -198,6 +198,14 @@ fehlende, nicht unterstützte oder auf ein Verzeichnis zeigende Pfade liefern
 `invalid_argument` mit Feldpfad und nächstem Schritt. `--path` und `--config`
 sind im MCP-Modus harte Fehler und bleiben dem Batch-Modus vorbehalten.
 
+Jede zielgebundene Toolantwort enthält additiv unter
+`structuredContent.navigation` den gemeinsamen Handoff-Kern:
+`target` (`targetPath`, `analysisRoot`, `fingerprint`), `origin`, `snapshot`,
+`capabilities` (`navigation`/`lint`), `operationStatus`, `result`,
+`completeness` und `next`. Das fachliche Payload bleibt am Root erhalten.
+Zielgebundene Health-Antworten verwenden denselben Block; der globale
+Health-Modus und ungebundenes Observability-Feedback bleiben ohne Target.
+
 Für Source ist die übergebene Solution bindend. Regeln werden ausschließlich
 aus der optionalen Datei `ainetlinter-rules.json` direkt neben ihr gelesen;
 fehlt sie, bleibt Navigation möglich und die Lint-Capability ist
@@ -596,7 +604,7 @@ Bei einem Assembly-`targetPath` bleiben `includeReferences=false` und der bisher
 
 `totalCallSiteCount` zählt die ungekappte Menge innerhalb des Traversierungs-Hard-Caps; `shownCallSiteCount` zählt die tatsächlich in `callSites` enthaltenen Einträge. `truncatedByMaxResults`, `truncatedByNodeLimit` und `depthWasClamped` sind unabhängig voneinander und können gleichzeitig `true` sein. Die Textantwort wird aus derselben gezeigten Trefferliste formatiert und bleibt für Textclients kompatibel.
 
-**`get_impact` (Symbol-Branch) — Assembly-Vertrag:** Bei einem Assembly-`targetPath` ist ausschließlich `symbolIdentifier` zulässig; ein leerer Aufruf oder `gitRef` liefert einen recoverable `INVALID_ARGUMENT`. Die öffentliche Registrierung und `GetImpactInput` besitzen keinen `includeReferences`-Parameter. Die Assembly-Registrierung setzt die interne Dispatch-Option `ExpandAssemblyReferences=true`, damit die Route ihre Referenz-Sessions vor der Analyse vorbereiten kann; daraus entsteht keine öffentlich wählbare `includeReferences`-Option. Das 32-Session-Limit und die `navigation`-Payload des `find_references`-Vertrags werden daher nicht als `get_impact`-Antwortvertrag wiederholt.
+**`get_impact` (Symbol-Branch) — Assembly-Vertrag:** Bei einem Assembly-`targetPath` ist ausschließlich `symbolIdentifier` zulässig; ein leerer Aufruf oder `gitRef` liefert einen recoverable `INVALID_ARGUMENT`. Die öffentliche Registrierung und `GetImpactInput` besitzen keinen `includeReferences`-Parameter. Die Assembly-Registrierung setzt die interne Dispatch-Option `ExpandAssemblyReferences=true`, damit die Route ihre Referenz-Sessions vor der Analyse vorbereiten kann; daraus entsteht keine öffentlich wählbare `includeReferences`-Option. Das 32-Session-Limit wird nicht als `get_impact`-Antwortvertrag wiederholt; der gemeinsame `navigation`-Block bleibt auch hier vorhanden.
 
 Die tatsächliche Symbol-Antwort enthält `callSites` und `completeness` aus `ReferenceTraversalResult`. Bei einem Assembly-Target ergänzt `AssemblyAnalysisResponse.Enrich` den strukturierten Payload um `analysis` mit absolutem `targetPath`, `origin` (`decompiled`), Hash, Generation, Status, Vollständigkeit, Body-Verfügbarkeit und Content-Modus. Die Herkunft (`Quelle: Dekompilat`) steht damit im `analysis`-Objekt beziehungsweise im `[ASSEMBLY]`-Textheader; die Call-Site-Einträge dieser Route tragen keine separate `navigation`- oder `origin`-Struktur.
 
@@ -886,6 +894,11 @@ die konkrete Anwendung erfolgt weiterhin pro Roslyn-Projekt bzw. Datei. Beispiel
 Die Ausgabe spiegelt auch Änderungen wider, die über `reload_config` in denselben
 residenten Solution-Key geladen wurden.
 
+Beide Status-Resources enthalten zusätzlich Textmetadaten des gemeinsamen
+Navigationskerns: `targetPath`, `origin`, Snapshot-Fingerprint, `capabilities`,
+`operationStatus`, `completeness` und `next`. Die URI bleibt auf den
+URL-kodierten absoluten `targetPath` beschränkt.
+
 ### stdout-Schutz (strukturelle JSON-RPC-Absicherung)
 
 Im MCP-Server-Modus ist `stdout` der Transport-Kanal des JSON-RPC-Protokolls. Bereits ein einziger `Console.WriteLine(...)`-Call aus irgendeiner wiederverwendeten CLI-Klasse wuerde das Framing der gesamten Session zerstoeren, weil die naechste JSON-RPC-Zeile von einem nicht-JSON-Leak praefixiert waere und der MCP-Host den Frame nicht mehr parsen kann.
@@ -1028,9 +1041,7 @@ Fehlermeldungen folgen dem bestehenden strukturierten Format auf `stderr` und im
 | `DRIFT_DETECTED` | Generierter Inhalt weicht von gespeicherter Datei ab |
 | `SYMBOL_NOT_FOUND` | `symbolIdentifier` / `typeIdentifier` löst zu keinem Symbol auf |
 | `AMBIGUOUS_SYMBOL` | `symbolIdentifier` löst zu mehreren Symbolen auf (Kandidaten in `context`) |
-| `INVALID_ARGUMENT` | Leeres Pattern, ungültige Regex, exklusive Parameter verletzt (`get_impact`), Pflichtparameter fehlt/falsch benannt |
-| `TARGET_PATH_REQUIRED` | `targetPath` fehlt; ein absoluter Pfad einer vorhandenen `.sln`/`.slnx`/`.dll`/`.exe`-Datei ist erforderlich |
-| `TARGET_PATH_INVALID` | `targetPath` ist nicht absolut, nicht vorhanden, ein Verzeichnis oder hat eine nicht unterstützte Endung |
+| `INVALID_ARGUMENT` | Leeres Pattern, ungültige Regex, exklusive Parameter verletzt (`get_impact`), Pflichtparameter fehlt/falsch benannt; `targetPath` fehlt, ist relativ, nicht vorhanden, ein Verzeichnis oder hat eine nicht unterstützte Endung |
 | `ASSEMBLY_TARGET_UNSUPPORTED` | Das angegebene Tool unterstützt kein Assembly-Target; ein `.dll`-/`.exe`-Target ist für dieses Tool unsupported |
 | `SOLUTION_NOT_FOUND` | Die über `targetPath` angegebene `.sln`-/`.slnx`-Datei existiert nicht oder wird nicht unterstützt |
 | `RULES_INVALID` | Die optionale benachbarte `ainetlinter-rules.json` ist lesbar, aber nicht gültig; es werden keine Default-Regeln als Ersatz geladen |

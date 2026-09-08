@@ -1,7 +1,11 @@
 #nullable enable
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -117,7 +121,8 @@ internal static class McpToolResults
                     parameters.Context,
                     parameters.Hint,
                     Recoverable: !isError,
-                    parameters.TargetPath),
+                    parameters.TargetPath,
+                    parameters.FieldPath),
                 McpJsonOptions.Default),
         };
     }
@@ -170,12 +175,17 @@ internal static class McpToolResults
     /// IsError=false (recoverable) — ein Nutzer-/Agentenfehler bei den Argumenten, kein
     /// Tool-Ausfall.
     /// </summary>
-    internal static CallToolResult InvalidArgument(string message, string? hint = null)
+    internal static CallToolResult InvalidArgument(
+        string message,
+        string? hint = null,
+        string? fieldPath = null)
     {
         return Recoverable(
             LinterErrorCodes.InvalidArgument,
             message,
-            hint: hint ?? "Parameter pruefen und gemaess Spezifikation uebergeben.");
+            new McpErrorParameters(
+                Hint: hint ?? "Parameter pruefen und gemaess Spezifikation uebergeben.",
+                FieldPath: fieldPath));
     }
 
     /// <summary>
@@ -228,6 +238,43 @@ internal static class McpToolResults
         return new CallToolResult
         {
             Content = new List<ContentBlock> { new TextContentBlock { Text = text } },
+            StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
+        };
+    }
+
+    /// <summary>
+    /// Ergaenzt eine zielgebundene Antwort um den gemeinsamen Navigation-Kern. Die vorhandene
+    /// tool-spezifische StructuredContent-Nutzlast bleibt dabei unveraendert am Root; dadurch
+    /// bleiben bestehende Clients kompatibel, waehrend Agenten einen einheitlichen Handoff
+    /// unter <c>navigation</c> erhalten.
+    /// </summary>
+    internal static CallToolResult WithNavigation(CallToolResult result, AnalysisTarget target)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(target);
+
+        var navigation = McpNavigationProjection.Create(result, target);
+        var payload = result.StructuredContent is { ValueKind: JsonValueKind.Object } structured
+            ? JsonNode.Parse(structured.GetRawText()) as JsonObject ?? new JsonObject()
+            : new JsonObject();
+        var navigationNode = JsonSerializer.SerializeToNode(navigation, McpJsonOptions.Default) as JsonObject
+            ?? new JsonObject();
+        if (payload["navigation"] is JsonObject existingNavigation)
+        {
+            foreach (var property in navigationNode)
+            {
+                existingNavigation[property.Key] = property.Value?.DeepClone();
+            }
+        }
+        else
+        {
+            payload["navigation"] = navigationNode;
+        }
+
+        return new CallToolResult
+        {
+            IsError = result.IsError,
+            Content = result.Content,
             StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
         };
     }
@@ -291,7 +338,8 @@ internal static class McpToolResults
 internal readonly record struct McpErrorParameters(
     string? Context = null,
     string? Hint = null,
-    string? TargetPath = null);
+    string? TargetPath = null,
+    string? FieldPath = null);
 
 /// <summary>
 /// Typisierter Fehlervertrag fuer MCP-Antworten. Die Payload wird fuer harte und recoverable
@@ -304,4 +352,5 @@ internal sealed record McpErrorPayload(
     string? Context,
     string? Hint,
     bool Recoverable,
-    string? TargetPath = null);
+    string? TargetPath = null,
+    string? FieldPath = null);

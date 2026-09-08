@@ -108,6 +108,10 @@ public sealed class RulesResourceRegistrationTests
         Assert.Equal($"ainetlinter://rules?targetPath={Uri.EscapeDataString(solutionPath)}", content.Uri);
         Assert.Equal("text/markdown", content.MimeType);
         Assert.Contains("| `MaxLineCount` | 42 |", content.Text, StringComparison.Ordinal);
+        Assert.Contains($"- targetPath: `{solutionPath}`", content.Text, StringComparison.Ordinal);
+        Assert.Contains("- origin: `source`", content.Text, StringComparison.Ordinal);
+        Assert.Contains("- capabilities: navigation=`supported`", content.Text, StringComparison.Ordinal);
+        Assert.Contains("- operationStatus: `ok`", content.Text, StringComparison.Ordinal);
         Assert.Throws<ModelContextProtocol.McpException>(
             () => RulesResourceRegistration.BuildTemplatedResult(registry, "relative/path"));
     }

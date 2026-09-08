@@ -1,8 +1,10 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
 using AiNetLinter.Mcp;
+using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -65,5 +67,41 @@ public sealed class McpToolResultsTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("WORKSPACE_DIAGNOSTIC", textContent.Text);
         Assert.Contains("BrokenClassA", textContent.Text);
+    }
+
+    [Fact]
+    public void WithNavigation_AddsStableTargetSnapshotCapabilitiesAndCompleteness()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.Text("Keine Treffer", new { Matches = Array.Empty<object>() }),
+            target);
+
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+        Assert.Equal(target.CanonicalPath, navigation.GetProperty("target").GetProperty("targetPath").GetString());
+        Assert.Equal(target.AnalysisRoot, navigation.GetProperty("target").GetProperty("analysisRoot").GetString());
+        Assert.Equal(target.Fingerprint, navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString());
+        Assert.Equal("source", navigation.GetProperty("origin").GetString());
+        Assert.Equal("supported", navigation.GetProperty("capabilities").GetProperty("navigation").GetString());
+        Assert.Equal("not_configured", navigation.GetProperty("capabilities").GetProperty("lint").GetString());
+        Assert.Equal("ok", navigation.GetProperty("operationStatus").GetString());
+        Assert.Equal("empty", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("none", navigation.GetProperty("next").GetProperty("kind").GetString());
+        Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.ValueKind);
+    }
+
+    [Fact]
+    public void InvalidArgument_PreservesFieldPathInStructuredError()
+    {
+        var result = McpToolResults.InvalidArgument(
+            "Unbekanntes Argument: projectRoot",
+            fieldPath: "$.projectRoot");
+
+        Assert.Equal("$.projectRoot", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
     }
 }

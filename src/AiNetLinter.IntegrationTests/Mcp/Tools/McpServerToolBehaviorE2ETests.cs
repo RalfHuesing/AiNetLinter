@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
 using ModelContextProtocol.Protocol;
@@ -195,9 +196,34 @@ public sealed class McpServerToolBehaviorE2ETests
         Assert.Equal(System.Text.Json.JsonValueKind.Object, structured.ValueKind);
         Assert.Equal(System.Text.Json.JsonValueKind.Array, structured.GetProperty("matches").ValueKind);
         Assert.Equal(System.Text.Json.JsonValueKind.Object, structured.GetProperty("completeness").ValueKind);
+        var navigation = structured.GetProperty("navigation");
+        Assert.Equal("source", navigation.GetProperty("origin").GetString());
+        Assert.Equal("ok", navigation.GetProperty("operationStatus").GetString());
+        Assert.Equal("supported", navigation.GetProperty("capabilities").GetProperty("navigation").GetString());
+        Assert.Equal("complete", navigation.GetProperty("completeness").GetString());
+        Assert.Equal(
+            navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString(),
+            navigation.GetProperty("target").GetProperty("fingerprint").GetString());
         Assert.Contains(
             "userService",
             Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text,
             StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task GetServerHealth_TargetedResponse_UsesCommonNavigationProjection()
+    {
+        await _fixture.Client.CallToolGetTextAsync("get_hotspots");
+        var targetPath = await _fixture.Client.GetTargetPathAsync();
+        var result = await _fixture.Client.CallToolAsync(
+            "get_server_health",
+            new Dictionary<string, object?> { ["targetPath"] = Path.GetFullPath(targetPath) });
+
+        Assert.NotEqual(true, result.IsError);
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+        Assert.Equal("source", navigation.GetProperty("origin").GetString());
+        Assert.Equal("ok", navigation.GetProperty("operationStatus").GetString());
+        Assert.Equal("supported", navigation.GetProperty("capabilities").GetProperty("navigation").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(navigation.GetProperty("target").GetProperty("targetPath").GetString()));
     }
 }

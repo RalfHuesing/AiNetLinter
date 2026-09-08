@@ -17,12 +17,12 @@ public sealed class FileTreePathResolverTests
     public void ResolveRoot_DefaultRoot_ReturnsProjectRoot(string? relativeRoot)
     {
         using var tempDir = TestTempDirectory.Create("file-tree-resolver-default-");
-        var projectRoot = tempDir.CreateSubdirectory("repo");
+        var analysisRoot = tempDir.CreateSubdirectory("repo");
 
-        var result = FileTreePathResolver.ResolveRoot(projectRoot, relativeRoot);
+        var result = FileTreePathResolver.ResolveRoot(analysisRoot, relativeRoot);
 
         Assert.True(result.Succeeded);
-        Assert.Equal(Path.GetFullPath(projectRoot), result.EffectiveRoot);
+        Assert.Equal(Path.GetFullPath(analysisRoot), result.EffectiveRoot);
         Assert.Null(result.ErrorCode);
         Assert.Null(result.ErrorMessage);
     }
@@ -33,10 +33,10 @@ public sealed class FileTreePathResolverTests
     public void ResolveRoot_NestedRelativeRoot_ReturnsCanonicalAbsolutePath(string relativeRoot)
     {
         using var tempDir = TestTempDirectory.Create("file-tree-resolver-nested-");
-        var projectRoot = tempDir.CreateSubdirectory("repo");
-        var expected = Path.GetFullPath(Path.Combine(projectRoot, "src", "tools"));
+        var analysisRoot = tempDir.CreateSubdirectory("repo");
+        var expected = Path.GetFullPath(Path.Combine(analysisRoot, "src", "tools"));
 
-        var result = FileTreePathResolver.ResolveRoot(projectRoot, relativeRoot);
+        var result = FileTreePathResolver.ResolveRoot(analysisRoot, relativeRoot);
 
         Assert.True(result.Succeeded);
         Assert.Equal(expected, result.EffectiveRoot);
@@ -46,10 +46,10 @@ public sealed class FileTreePathResolverTests
     public void ResolveRoot_AbsoluteRoot_ReturnsInvalidArgumentWithoutThrowing()
     {
         using var tempDir = TestTempDirectory.Create("file-tree-resolver-absolute-");
-        var projectRoot = tempDir.CreateSubdirectory("repo");
-        var absoluteRoot = Path.Combine(projectRoot, "other");
+        var analysisRoot = tempDir.CreateSubdirectory("repo");
+        var absoluteRoot = Path.Combine(analysisRoot, "other");
 
-        var result = FileTreePathResolver.ResolveRoot(projectRoot, absoluteRoot);
+        var result = FileTreePathResolver.ResolveRoot(analysisRoot, absoluteRoot);
 
         AssertInvalidArgument(result);
         Assert.Contains("relativ", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
@@ -61,35 +61,35 @@ public sealed class FileTreePathResolverTests
     public void ResolveRoot_PathOutsideProjectRoot_ReturnsInvalidArgument(string relativeRoot)
     {
         using var tempDir = TestTempDirectory.Create("file-tree-resolver-outside-");
-        var projectRoot = tempDir.CreateSubdirectory("repo");
+        var analysisRoot = tempDir.CreateSubdirectory("repo");
 
-        var result = FileTreePathResolver.ResolveRoot(projectRoot, relativeRoot);
+        var result = FileTreePathResolver.ResolveRoot(analysisRoot, relativeRoot);
 
         AssertInvalidArgument(result);
-        Assert.Contains("projectRoot", result.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("analysisRoot", result.ErrorMessage, StringComparison.Ordinal);
     }
 
     [Fact]
     public void ResolveRoot_RootPrefixSibling_IsOutsideProjectRoot()
     {
         using var tempDir = TestTempDirectory.Create("file-tree-resolver-sibling-");
-        var projectRoot = tempDir.CreateSubdirectory("repo");
-        var siblingRoot = projectRoot + "-sibling";
-        var relativeRoot = Path.GetRelativePath(projectRoot, siblingRoot);
+        var analysisRoot = tempDir.CreateSubdirectory("repo");
+        var siblingRoot = analysisRoot + "-sibling";
+        var relativeRoot = Path.GetRelativePath(analysisRoot, siblingRoot);
 
-        var result = FileTreePathResolver.ResolveRoot(projectRoot, relativeRoot);
+        var result = FileTreePathResolver.ResolveRoot(analysisRoot, relativeRoot);
 
         AssertInvalidArgument(result);
-        Assert.Contains("projectRoot", result.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("analysisRoot", result.ErrorMessage, StringComparison.Ordinal);
     }
 
     [Fact]
     public void ResolveRoot_InvalidPath_ReturnsInvalidArgumentWithoutThrowing()
     {
         using var tempDir = TestTempDirectory.Create("file-tree-resolver-invalid-");
-        var projectRoot = tempDir.CreateSubdirectory("repo");
+        var analysisRoot = tempDir.CreateSubdirectory("repo");
 
-        var result = FileTreePathResolver.ResolveRoot(projectRoot, "invalid\0");
+        var result = FileTreePathResolver.ResolveRoot(analysisRoot, "invalid\0");
 
         AssertInvalidArgument(result);
     }

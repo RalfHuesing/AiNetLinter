@@ -51,7 +51,15 @@ internal static class RulesResourceRegistration
                 {
                     Uri = BuildCanonicalUri(Path.GetFullPath(snapshot.Definition.SolutionPath)),
                     MimeType = "text/markdown",
-                    Text = BuildRulesText(snapshot),
+            Text = BuildRulesText(snapshot) + Environment.NewLine + Environment.NewLine +
+                McpResourceNavigationText.Format(new McpResourceNavigationParameters(
+                    AnalysisTargetResolver.ResolveRequiredSourceTarget(snapshot.Definition.SolutionPath),
+                    snapshot.Server.GetConfigSnapshot().UsedDefaultConfig ? "not_configured" : "ok",
+                    snapshot.Server.GetConfigSnapshot().UsedDefaultConfig ? "not_configured" : "complete",
+                    snapshot.Server.GetConfigSnapshot().UsedDefaultConfig ? "request_detail" : "none",
+                    snapshot.Server.GetConfigSnapshot().UsedDefaultConfig
+                        ? "ainetlinter-rules.json neben dem adressierten Target anlegen und die Resource erneut lesen."
+                        : "Kein weiterer Schritt erforderlich.")),
                 },
             ],
         };

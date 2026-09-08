@@ -21,7 +21,7 @@ namespace AiNetLinter.Mcp.Registration;
 /// frisch generierter Markdown-Status fuer Agenten, die den Server bereits adressieren — mit
 /// welcher Solution/Config-Quelle der adressierte Key tatsaechlich laeuft. MCP-Resources nehmen keine
 /// Tool-Argumente, daher adressiert der URL-kodierte Projektroot den Registry-Key; Guards und
-/// Fehlervertraege entsprechen denen der Tools (PROJECT_ROOT_REQUIRED/_INVALID,
+/// Fehlervertraege entsprechen denen der Tools (INVALID_ARGUMENT,
 /// PROJECT_NOT_INITIALIZED). Der Erstkontakt ohne Projektdefinition erfolgt ueber die direkte
 /// Resource <c>ainetlinter://agent-guide</c>; Tool-Schemas stehen in <c>tools/list</c>.
 /// </summary>
@@ -76,7 +76,21 @@ internal static class OverviewResourceRegistration
                 {
                     Uri = BuildCanonicalUri(targetPath),
                     MimeType = "text/markdown",
-                    Text = BuildOverviewText(snapshot),
+                    Text = BuildOverviewText(snapshot) + Environment.NewLine + Environment.NewLine +
+                        McpResourceNavigationText.Format(new McpResourceNavigationParameters(
+                            AnalysisTargetResolver.ResolveRequiredSourceTarget(targetPath),
+                            snapshot.Server.LoadState switch
+                            {
+                                ServerLoadState.Loading => "loading",
+                                ServerLoadState.LoadFailed => "target_mismatch",
+                                _ when snapshot.Server.GetConfigSnapshot().UsedDefaultConfig => "not_configured",
+                                _ => "ok",
+                            },
+                            snapshot.Server.LoadState == ServerLoadState.LoadFailed ? "not_applicable" : "complete",
+                            snapshot.Server.LoadState == ServerLoadState.LoadFailed ? "request_detail" : "none",
+                            snapshot.Server.LoadState == ServerLoadState.LoadFailed
+                                ? "Solution-Loadfehler beheben und den Target-Call wiederholen."
+                                : "Kein weiterer Schritt erforderlich.")),
                 },
             ],
         };

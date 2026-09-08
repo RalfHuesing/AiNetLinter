@@ -193,7 +193,7 @@ internal static class ProjectToolCall
             ProjectErrorCodes.SolutionNotFound =>
                 "Einen absoluten, vorhandenen Pfad der konkreten .sln- oder .slnx-Datei " +
                 "uebergeben; es wird keine andere Solution gesucht.",
-            ProjectErrorCodes.ProjectRootRequired or ProjectErrorCodes.ProjectRootInvalid =>
+            LinterErrorCodes.InvalidArgument =>
                 "Den absoluten Pfad einer vorhandenen .sln- oder .slnx-Datei uebergeben.",
             _ => null,
         };

@@ -113,15 +113,24 @@ internal static class ServerMaintenanceToolRegistrations
         var options = CreateHealthOptions(resolution.Target, runtimeContext, request);
         if (resolution.Target?.TargetType == AnalysisTargetType.Project && runtimeContext is not null)
         {
-            return await GetServerHealthTool.ExecuteDaemonProjectAsync(
+            var result = await GetServerHealthTool.ExecuteDaemonProjectAsync(
                 runtimeContext,
                 resolution.Target.CanonicalPath,
                 options);
+            return McpToolResults.WithNavigation(result, resolution.Target);
         }
 
-        return resolution.Target is null
-            ? await GetServerHealthTool.ExecuteAsync(registry, assemblyRegistry, options)
-            : await GetServerHealthTool.ExecuteAsync(registry, assemblyRegistry, options, request.CancellationToken);
+        if (resolution.Target is null)
+        {
+            return await GetServerHealthTool.ExecuteAsync(registry, assemblyRegistry, options);
+        }
+
+        var targetedResult = await GetServerHealthTool.ExecuteAsync(
+            registry,
+            assemblyRegistry,
+            options,
+            request.CancellationToken);
+        return McpToolResults.WithNavigation(targetedResult, resolution.Target);
     }
 
     private static GetServerHealthOptions CreateHealthOptions(

@@ -34,6 +34,6 @@ internal sealed class DaemonRuntimeContext
 
     internal DaemonRuntimeSnapshot Snapshot => snapshotProvider();
 
-    internal ProjectSnapshot? FindProjectSnapshot(string projectRoot) =>
-        projectSnapshotProvider?.Invoke(projectRoot);
+    internal ProjectSnapshot? FindProjectSnapshot(string analysisRoot) =>
+        projectSnapshotProvider?.Invoke(analysisRoot);
 }

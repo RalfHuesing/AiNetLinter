@@ -6,11 +6,11 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 
 internal static class FileTreePathResolver
 {
-    internal static FileTreePathResolution ResolveRoot(string? projectRoot, string? relativeRoot)
+    internal static FileTreePathResolution ResolveRoot(string? analysisRoot, string? relativeRoot)
     {
-        if (string.IsNullOrWhiteSpace(projectRoot))
+        if (string.IsNullOrWhiteSpace(analysisRoot))
         {
-            return FileTreePathResolution.Invalid("Der Parameter 'projectRoot' ist erforderlich und muss absolut sein.");
+            return FileTreePathResolution.Invalid("Der Parameter 'analysisRoot' ist erforderlich und muss absolut sein.");
         }
 
         var requestedRoot = string.IsNullOrWhiteSpace(relativeRoot) ? "." : relativeRoot;
@@ -20,44 +20,44 @@ internal static class FileTreePathResolver
         if (Path.IsPathRooted(requestedRoot))
         {
             return FileTreePathResolution.Invalid(
-                $"Der Parameter 'root' muss relativ zum projectRoot sein: '{relativeRoot}'.");
+                $"Der Parameter 'root' muss relativ zum analysisRoot sein: '{relativeRoot}'.");
         }
 
-        if (!Path.IsPathRooted(projectRoot))
+        if (!Path.IsPathRooted(analysisRoot))
         {
             return FileTreePathResolution.Invalid(
-                $"Der Parameter 'projectRoot' muss absolut sein: '{projectRoot}'.");
+                $"Der Parameter 'analysisRoot' muss absolut sein: '{analysisRoot}'.");
         }
 
         try
         {
-            var fullProjectRoot = Path.GetFullPath(projectRoot);
-            var candidate = Path.GetFullPath(Path.Combine(fullProjectRoot, requestedRoot));
+            var fullAnalysisRoot = Path.GetFullPath(analysisRoot);
+            var candidate = Path.GetFullPath(Path.Combine(fullAnalysisRoot, requestedRoot));
 
             var relative = PathNormalizer.NormalizeSeparators(
-                Path.GetRelativePath(fullProjectRoot, candidate));
+                Path.GetRelativePath(fullAnalysisRoot, candidate));
 
             if (relative == ".."
                 || relative.StartsWith("../", StringComparison.Ordinal)
                 || Path.IsPathRooted(relative))
             {
                 return FileTreePathResolution.Invalid(
-                    $"Der Parameter 'root' liegt außerhalb des projectRoot: '{relative}'.");
+                    $"Der Parameter 'root' liegt außerhalb des analysisRoot: '{relative}'.");
             }
 
             return FileTreePathResolution.Success(candidate);
         }
         catch (ArgumentException)
         {
-            return FileTreePathResolution.Invalid("projectRoot und root müssen gültige Pfade sein.");
+            return FileTreePathResolution.Invalid("analysisRoot und root müssen gültige Pfade sein.");
         }
         catch (IOException)
         {
-            return FileTreePathResolution.Invalid("projectRoot und root konnten nicht normalisiert werden.");
+            return FileTreePathResolution.Invalid("analysisRoot und root konnten nicht normalisiert werden.");
         }
         catch (NotSupportedException)
         {
-            return FileTreePathResolution.Invalid("projectRoot und root müssen gültige Pfade sein.");
+            return FileTreePathResolution.Invalid("analysisRoot und root müssen gültige Pfade sein.");
         }
     }
 }

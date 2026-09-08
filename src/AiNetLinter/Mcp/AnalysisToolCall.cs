@@ -53,10 +53,11 @@ internal static class ProjectAnalysisDispatcher
         var target = resolution.Target!;
         if (target.TargetType == AnalysisTargetType.Project)
         {
-            return await ProjectToolCall.ExecuteAsync(registry, target.CanonicalPath, projectCall);
+            var result = await ProjectToolCall.ExecuteAsync(registry, target.CanonicalPath, projectCall);
+            return McpToolResults.WithNavigation(result, target);
         }
 
-        return UnsupportedAssemblyTarget(target.CanonicalPath);
+        return McpToolResults.WithNavigation(UnsupportedAssemblyTarget(target.CanonicalPath), target);
     }
 
     internal static async Task<CallToolResult> ExecuteFilesystemAsync(
@@ -72,13 +73,16 @@ internal static class ProjectAnalysisDispatcher
 
         if (resolution.Target!.TargetType == AnalysisTargetType.Assembly)
         {
-            return UnsupportedAssemblyTarget(resolution.Target.CanonicalPath);
+            return McpToolResults.WithNavigation(
+                UnsupportedAssemblyTarget(resolution.Target.CanonicalPath),
+                resolution.Target);
         }
 
-        return await ProjectToolCall.ExecuteFilesystemAsync(
+        var result = await ProjectToolCall.ExecuteFilesystemAsync(
             registry,
             resolution.Target.CanonicalPath,
             projectCall);
+        return McpToolResults.WithNavigation(result, resolution.Target);
     }
 
     /// <summary>
@@ -98,8 +102,8 @@ internal static class ProjectAnalysisDispatcher
 
         var target = resolution.Target!;
         return target.TargetType == AnalysisTargetType.Project
-            ? await filesystemCall(target.CanonicalPath)
-            : UnsupportedAssemblyTarget(target.CanonicalPath);
+            ? McpToolResults.WithNavigation(await filesystemCall(target.CanonicalPath), target)
+            : McpToolResults.WithNavigation(UnsupportedAssemblyTarget(target.CanonicalPath), target);
     }
 
     internal static CallToolResult UnsupportedAssemblyTarget(string? canonicalPath = null) =>
@@ -144,7 +148,7 @@ internal static class AssemblyAnalysisDispatcher
         var result = resolution.Target!.TargetType == AnalysisTargetType.Assembly
             ? UnsupportedAssemblyTarget(resolution.Target.CanonicalPath)
             : UnsupportedProjectTarget();
-        return Task.FromResult(result);
+        return Task.FromResult(McpToolResults.WithNavigation(result, resolution.Target));
     }
 
     internal static async Task<CallToolResult> ExecuteAsync(
@@ -162,18 +166,18 @@ internal static class AssemblyAnalysisDispatcher
         var target = resolution.Target!;
         if (target.TargetType == AnalysisTargetType.Project)
         {
-            return UnsupportedProjectTarget();
+            return McpToolResults.WithNavigation(UnsupportedProjectTarget(), target);
         }
 
         if (assemblyRegistry is null)
         {
-            return UnsupportedAssemblyTarget(target.CanonicalPath);
+            return McpToolResults.WithNavigation(UnsupportedAssemblyTarget(target.CanonicalPath), target);
         }
 
         var leaseResult = await assemblyRegistry.LeaseAsync(target.CanonicalPath, options.CancellationToken).ConfigureAwait(false);
         if (leaseResult.Error is not null)
         {
-            return leaseResult.Error;
+            return McpToolResults.WithNavigation(leaseResult.Error, target);
         }
 
         var lease = leaseResult.Lease!;
@@ -186,7 +190,7 @@ internal static class AssemblyAnalysisDispatcher
 
             var result = await assemblyCall(lease).ConfigureAwait(false);
             return AssemblyAnalysisResponse.Enrich(
-                result,
+                McpToolResults.WithNavigation(result, target),
                 lease,
                 new AssemblyAnalysisResponseRequest(
                     options.MaxResponseBytes,
@@ -195,9 +199,11 @@ internal static class AssemblyAnalysisDispatcher
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            return McpToolResults.CompilationError(
-                $"Unerwarteter Fehler in der Assembly-Roslyn-Route: {exception.Message}",
-                target.CanonicalPath);
+            return McpToolResults.WithNavigation(
+                McpToolResults.CompilationError(
+                    $"Unerwarteter Fehler in der Assembly-Roslyn-Route: {exception.Message}",
+                    target.CanonicalPath),
+                target);
         }
         finally
         {
@@ -260,20 +266,22 @@ internal static class AnalysisToolCall
     /// werden strukturell als unsupported gemeldet und nie an den Source-Lease
     /// weitergereicht.
     /// </summary>
-    internal static Task<CallToolResult> ExecuteLintAsync(
+    internal static async Task<CallToolResult> ExecuteLintAsync(
         AnalysisTargetRequest request,
         Func<AnalysisTarget, Task<CallToolResult>> sourceCall)
     {
         var resolution = AnalysisTargetResolver.ResolveTargetPathOnly(request);
         if (resolution.Error is not null)
         {
-            return Task.FromResult(resolution.Error);
+            return resolution.Error;
         }
 
         var target = resolution.Target!;
         return target.Origin == AnalysisTargetOrigin.Decompiled
-            ? Task.FromResult(AssemblyAnalysisDispatcher.UnsupportedAssemblyTarget(target.CanonicalPath))
-            : sourceCall(target);
+            ? McpToolResults.WithNavigation(
+                AssemblyAnalysisDispatcher.UnsupportedAssemblyTarget(target.CanonicalPath),
+                target)
+            : McpToolResults.WithNavigation(await sourceCall(target), target);
     }
 
     internal static AnalysisToolRoute CreateTargetRoute(

@@ -15,18 +15,18 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 internal static class GetFileTreeScanner
 {
     internal static FileTreeScanResult Scan(
-        string projectRoot,
+        string analysisRoot,
         GetFileTreeInput input,
         CancellationToken cancellationToken)
     {
-        var resolution = FileTreePathResolver.ResolveRoot(projectRoot, input.Root);
+        var resolution = FileTreePathResolver.ResolveRoot(analysisRoot, input.Root);
         if (!resolution.Succeeded)
         {
             throw new ArgumentException(resolution.ErrorMessage ?? "root ist ungueltig.", nameof(input));
         }
 
         var displayTreeDepth = DetermineDisplayTreeDepth(input);
-        var accumulator = new FileTreeAccumulator(projectRoot, resolution.EffectiveRoot!, input, displayTreeDepth);
+        var accumulator = new FileTreeAccumulator(analysisRoot, resolution.EffectiveRoot!, input, displayTreeDepth);
         if (FileSystemExclusionHelpers.IsExcludedDirectoryName(Path.GetFileName(resolution.EffectiveRoot)))
         {
             return accumulator.Build(new TreeWalkStats([]) { SkippedExcludedDirectoryCount = 1 });
@@ -77,7 +77,7 @@ internal static class GetFileTreeScanner
 
 internal sealed class FileTreeAccumulator
 {
-    private readonly string _projectRoot;
+    private readonly string _analysisRoot;
     private readonly string _effectiveRoot;
     private readonly string _rootRelativePath;
     private readonly GetFileTreeInput _input;
@@ -89,11 +89,11 @@ internal sealed class FileTreeAccumulator
     private int _scannedFileCount;
     private int _scannedDirectoryCount;
 
-    internal FileTreeAccumulator(string projectRoot, string effectiveRoot, GetFileTreeInput input, int displayTreeDepth)
+    internal FileTreeAccumulator(string analysisRoot, string effectiveRoot, GetFileTreeInput input, int displayTreeDepth)
     {
-        _projectRoot = Path.GetFullPath(projectRoot);
+        _analysisRoot = Path.GetFullPath(analysisRoot);
         _effectiveRoot = Path.GetFullPath(effectiveRoot);
-        _rootRelativePath = NormalizeRelativePath(Path.GetRelativePath(_projectRoot, _effectiveRoot));
+        _rootRelativePath = NormalizeRelativePath(Path.GetRelativePath(_analysisRoot, _effectiveRoot));
         _input = input;
         _displayTreeDepth = displayTreeDepth;
         _extensions = FileTreeFilter.NormalizeExtensions(input.IncludeExtensions);
@@ -285,7 +285,7 @@ internal sealed class FileTreeAccumulator
         };
 
     private string ToProjectRelativePath(string absolutePath) =>
-        NormalizeRelativePath(Path.GetRelativePath(_projectRoot, absolutePath));
+            NormalizeRelativePath(Path.GetRelativePath(_analysisRoot, absolutePath));
 
     private static string NormalizePath(string path) => path.Replace('\\', '/');
 

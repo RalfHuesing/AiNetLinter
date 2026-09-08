@@ -126,7 +126,9 @@ public sealed class McpServerCommandJsonRpcFramingTests
             if (string.IsNullOrWhiteSpace(line)) continue;
             using var document = JsonDocument.Parse(line);
             if (!document.RootElement.TryGetProperty("result", out var candidate)
-                || !candidate.TryGetProperty("structuredContent", out _)) continue;
+                || !candidate.TryGetProperty("structuredContent", out var candidateStructured)
+                || candidateStructured.ValueKind != JsonValueKind.Object
+                || !candidateStructured.TryGetProperty("matches", out _)) continue;
             result = candidate.Clone();
             break;
         }
@@ -134,10 +136,11 @@ public sealed class McpServerCommandJsonRpcFramingTests
         Assert.True(result.HasValue, "Kein structured search_pattern-Result auf dem Raw-Wire gefunden.");
         var structured = result.Value.GetProperty("structuredContent");
         Assert.Equal(JsonValueKind.Object, structured.ValueKind);
-        Assert.Equal(JsonValueKind.Array, structured.GetProperty("matches").ValueKind);
+        Assert.True(structured.TryGetProperty("matches", out var matches), structured.GetRawText());
+        Assert.Equal(JsonValueKind.Array, matches.ValueKind);
         Assert.Equal(JsonValueKind.Object, structured.GetProperty("completeness").ValueKind);
         Assert.Contains(
-            structured.GetProperty("matches").EnumerateArray(),
+            matches.EnumerateArray(),
             match => match.TryGetProperty("semantic", out var semantic)
                 && semantic.ValueKind == JsonValueKind.Object);
         Assert.Contains("Greeter", result.Value.GetProperty("content")[0].GetProperty("text").GetString(), StringComparison.Ordinal);
@@ -180,7 +183,9 @@ public sealed class McpServerCommandJsonRpcFramingTests
             if (string.IsNullOrWhiteSpace(line)) continue;
             using var document = JsonDocument.Parse(line);
             if (!document.RootElement.TryGetProperty("result", out var result) ||
-                !result.TryGetProperty("structuredContent", out _)) continue;
+                !result.TryGetProperty("structuredContent", out var candidateStructured) ||
+                candidateStructured.ValueKind != JsonValueKind.Object ||
+                !candidateStructured.TryGetProperty("callSites", out _)) continue;
             response = document.RootElement.Clone();
             break;
         }
@@ -189,7 +194,8 @@ public sealed class McpServerCommandJsonRpcFramingTests
         var structuredContent = response.Value.GetProperty("result").GetProperty("structuredContent");
 
         Assert.Equal(JsonValueKind.Object, structuredContent.ValueKind);
-        Assert.Equal(JsonValueKind.Array, structuredContent.GetProperty("callSites").ValueKind);
+        Assert.True(structuredContent.TryGetProperty("callSites", out var callSites), structuredContent.GetRawText());
+        Assert.Equal(JsonValueKind.Array, callSites.ValueKind);
         Assert.Equal(JsonValueKind.Object, structuredContent.GetProperty("completeness").ValueKind);
         Assert.Equal(2, structuredContent.GetProperty("completeness").GetProperty("effectiveDepth").GetInt32());
     }

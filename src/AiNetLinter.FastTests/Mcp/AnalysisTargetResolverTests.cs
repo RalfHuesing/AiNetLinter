@@ -44,6 +44,30 @@ public sealed class AnalysisTargetResolverTests
         Assert.Null(result.Target);
         Assert.Contains("INVALID_ARGUMENT", TextOf(result.Error!), StringComparison.Ordinal);
         Assert.Contains("Endung", TextOf(result.Error!), StringComparison.Ordinal);
+        Assert.Equal("$.targetPath", result.Error!.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Theory]
+    [InlineData("sample.sln", "Project")]
+    [InlineData("sample.slnx", "Project")]
+    [InlineData("sample.dll", "Assembly")]
+    [InlineData("sample.exe", "Assembly")]
+    public void Resolve_TargetPathOnly_AcceptsSupportedFileKinds(string fileName, string expectedTypeName)
+    {
+        using var tempDir = TestTempDirectory.Create("analysis-target-kinds-");
+        var path = Path.Combine(tempDir.DirectoryPath, "folder with spaces", fileName);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllBytes(path, new byte[] { 1, 2, 3 });
+
+        var result = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest(path));
+
+        Assert.Null(result.Error);
+        Assert.NotNull(result.Target);
+        var target = result.Target!;
+        var expectedType = Enum.Parse<AnalysisTargetType>(expectedTypeName);
+        Assert.Equal(expectedType, target.TargetType);
+        Assert.Equal(Path.GetDirectoryName(Path.GetFullPath(path)), target.AnalysisRoot);
+        Assert.Equal(expectedType == AnalysisTargetType.Project ? AnalysisTargetOrigin.Source : AnalysisTargetOrigin.Decompiled, target.Origin);
     }
 
     [Fact]

@@ -1,5 +1,7 @@
 #nullable enable
 
+using AiNetLinter.Output;
+
 namespace AiNetLinter.Mcp.Projects;
 
 /// <summary>
@@ -16,7 +18,7 @@ internal static class ProjectDefinitionLoader
         if (string.IsNullOrWhiteSpace(solutionPath))
         {
             return Fail(
-                ProjectErrorCodes.ProjectRootRequired,
+                LinterErrorCodes.InvalidArgument,
                 "Der Parameter 'targetPath' ist erforderlich; übergib den absoluten Pfad einer vorhandenen .sln- oder .slnx-Datei.");
         }
 

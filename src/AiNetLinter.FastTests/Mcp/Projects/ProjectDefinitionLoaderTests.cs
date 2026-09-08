@@ -61,7 +61,7 @@ public sealed class ProjectDefinitionLoaderTests
     {
         var failed = AsFailed(ProjectDefinitionLoader.LoadSolutionTarget(targetPath));
 
-        Assert.Equal(ProjectErrorCodes.ProjectRootRequired, failed.ErrorCode);
+        Assert.Equal(AiNetLinter.Output.LinterErrorCodes.InvalidArgument, failed.ErrorCode);
         Assert.Contains("targetPath", failed.Message, StringComparison.Ordinal);
     }
 

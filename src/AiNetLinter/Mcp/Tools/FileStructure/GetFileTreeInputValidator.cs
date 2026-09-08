@@ -13,16 +13,16 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 
 internal static class GetFileTreeInputValidator
 {
-    internal static CallToolResult? Validate(string projectRoot, GetFileTreeInput input)
+    internal static CallToolResult? Validate(string analysisRoot, GetFileTreeInput input)
     {
-        if (string.IsNullOrWhiteSpace(projectRoot) || !Path.IsPathFullyQualified(projectRoot))
+        if (string.IsNullOrWhiteSpace(analysisRoot) || !Path.IsPathFullyQualified(analysisRoot))
         {
             return McpToolResults.InvalidArgument(
                 "Der interne AnalysisRoot muss absolut sein.",
                 "targetPath als absolute vorhandene .sln/.slnx-Datei angeben.");
         }
 
-        var path = FileTreePathResolver.ResolveRoot(projectRoot, input.Root);
+        var path = FileTreePathResolver.ResolveRoot(analysisRoot, input.Root);
         if (!path.Succeeded)
         {
             return McpToolResults.Recoverable(

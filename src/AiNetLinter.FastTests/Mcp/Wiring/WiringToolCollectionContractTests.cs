@@ -38,6 +38,9 @@ public sealed class WiringToolCollectionContractTests
         {
             var required = GetRequiredProperties(tool.InputSchema);
             var properties = GetProperties(tool.InputSchema);
+            Assert.DoesNotContain("targetType", properties);
+            Assert.DoesNotContain("projectRoot", properties);
+            Assert.DoesNotContain("configPath", properties);
             if (tool.Name == "report_observability_feedback")
             {
                 Assert.DoesNotContain("targetPath", properties);

@@ -68,6 +68,12 @@ Referenzen und Abhängigkeiten.
 - Die aktuellen Tool- und Parameterschemas aus der MCP-Tooldefinition verwenden
   (typischerweise über `tools/list` bereitgestellt); diese Regel dupliziert keine
   Toolschemas.
+- Bei zielgebundenen Toolantworten den gemeinsamen
+  `structuredContent.navigation`-Block auswerten: `target`, `origin`, `snapshot`,
+  `capabilities`, `operationStatus`, `result`, `completeness` und `next` sind
+  die verbindlichen Handoff-/Statusfelder; der fachliche Payload bleibt
+  tool-spezifisch daneben erhalten. Resources liefern dieselben Informationen
+  als Textmetadaten.
 - Für `get_feature_context` und `get_test_context` ist `symbolIdentifier` der
   primäre Parametername (`symbol` bleibt kompatibler Alias).
 - Für `find_symbol` ist `pattern` (oder `namePattern`/`namePatterns` für Batch)

@@ -304,6 +304,14 @@ Relative, fehlende, nicht unterstützte oder auf ein
 Verzeichnis zeigende Pfade liefern `invalid_argument` mit Feldpfad und
 nächstem Schritt.
 
+Jede zielgebundene Toolantwort stellt zusätzlich unter
+`structuredContent.navigation` denselben maschinenlesbaren Kern bereit:
+`target` (`targetPath`, `analysisRoot`, `fingerprint`), `origin`, `snapshot`,
+`capabilities`, `operationStatus`, `result`, `completeness` und `next`.
+Das tool-spezifische Ergebnis bleibt daneben am Root erhalten. Die beiden
+Resources spiegeln diesen Kern als Textmetadaten; `get_server_health` liefert
+ihn auch bei optionalem Target, nicht aber im globalen ungebundenen Modus.
+
 Für Source ist die konkrete Solution bindend: Der Analyse-Root ist nur ihr
 normalisiertes Elternverzeichnis, eine andere Solution wird nicht geraten.
 Regeln werden ausschließlich aus der optionalen Datei

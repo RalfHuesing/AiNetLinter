@@ -92,7 +92,8 @@ internal static class TargetPathToolRegistrationOptions
             ? null
             : McpToolResults.InvalidArgument(
                 string.Join("\n", unknownNames.Select(name => $"Unbekanntes Argument: {name}")),
-                "Nur Argumente aus dem von tools/list gelieferten Schema verwenden.");
+                "Nur Argumente aus dem von tools/list gelieferten Schema verwenden.",
+                fieldPath: unknownNames.Length == 1 ? $"$.{unknownNames[0]}" : "$.<argument>");
     }
 
     internal static async Task<CallToolResult> ExecuteWithUnknownArgumentGuardAsync(

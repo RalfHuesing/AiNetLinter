@@ -152,7 +152,8 @@ internal static class AnalysisTargetResolver
     private static AnalysisTargetResolution Invalid(string message, string? hint = null) =>
         new(null, McpToolResults.InvalidArgument(
             message,
-            hint ?? "targetPath mit dem absoluten Pfad einer vorhandenen .sln/.slnx/.dll/.exe-Datei übergeben."));
+            hint ?? "targetPath mit dem absoluten Pfad einer vorhandenen .sln/.slnx/.dll/.exe-Datei übergeben.",
+            fieldPath: "$.targetPath"));
 
     private sealed record PathResolution(string? CanonicalPath, string? Error, string? Hint = null);
 }

@@ -168,6 +168,9 @@ public sealed class McpServerArgumentValidationE2ETests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains($"Unbekanntes Argument: {unknownKey}", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal(
+            $"$.{unknownKey}",
+            result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
     }
 
     [Fact]
