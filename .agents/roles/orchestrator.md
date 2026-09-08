@@ -11,6 +11,11 @@ Ein Aufruf mit dem Task-Verzeichnis oder dessen `Konzept.md` ist ausreichend.
 Der Orchestrator erstellt daraus intern die Slice- und Abschlussmatrix und
 sendet keine Zwischen-Abschlussantwort.
 
+Die Abarbeitung ist strikt seriell: Pro Task läuft höchstens ein delegierter
+Agent. Währenddessen startet der Orchestrator keine weitere Rolle und keinen
+parallelen Build, Test- oder MCP-Check. Die nächste Rolle beginnt erst nach
+vollständiger Beendigung der vorherigen.
+
 ## Darf lesen
 
 - `AGENTS.md`, relevante `.agents/rules/` und referenzierte Dokumentation

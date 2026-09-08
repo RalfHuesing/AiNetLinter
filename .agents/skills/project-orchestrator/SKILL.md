@@ -35,17 +35,20 @@ den Auftrag nicht ohne konkreten Risiko- oder Scopegrund stoppen oder erweitern.
    ein künstliches Übergabearchiv ist dafür nicht erforderlich.
 6. Wähle den nächsten noch nicht erfüllten Slice.
 
-## Delegation
+## Strikt serielle Delegation
 
-- Höchstens drei aktive Subagenten pro Slice.
-- Schreibende Arbeit bleibt im gemeinsamen Working Tree sequentiell.
+- Pro Task ist höchstens ein delegierter Agent gleichzeitig aktiv.
+- Der Orchestrator wartet auf dessen vollständige Beendigung, bevor er einen
+  Reviewer, Auditor oder Korrektur-Implementer startet.
+- Während ein delegierter Agent läuft, startet der Orchestrator keinen weiteren
+  Agenten und führt keinen parallelen Build, Test- oder MCP-Check aus.
+- Auch read-only Reviewer und Auditoren laufen nicht parallel zu Änderungen,
+  Tests oder anderen Rollen.
 - Rollen delegieren niemals selbst weiter.
-- Der Implementer ändert den Slice.
-- Der Reviewer prüft read-only.
-- Der Auditor wird bei größeren Tasks am Ende des Scopes eingesetzt.
+- Der Implementer ändert den Slice; Reviewer und Auditor prüfen read-only.
 - Bei geändertem Scope, anderer Ursache oder verlorenem Kontext erhält ein
   Korrekturversuch einen frischen Implementer; bei unverändertem Scope darf
-  derselbe Agent fortgesetzt werden.
+  derselbe Agent fortgesetzt werden — jeweils erst nach Ende des Vorgängers.
 
 ## Delegationsvertrag
 
@@ -90,9 +93,9 @@ relevanten Codeänderung.
    Auswahl und committe erst nach erneuter Prüfung von Index und Diff. Nutze
    niemals `git add .`, `git add -A` oder `git commit -a`; fremde staged oder
    nicht sicher trennbare parallele Änderungen blockieren den Auto-Commit.
-   Wenn ein anderer schreibender Agent im selben Working Tree aktiv ist, darf
-   der Commit nur mit einer exklusiven Staging-/Commit-Sperre erfolgen;
-   andernfalls separaten Worktree verwenden oder den Commit zurückstellen.
+   Wenn ein anderer Agent im selben Working Tree aktiv ist, wird nicht parallel
+   gearbeitet; der Commit wird bis zu dessen vollständiger Beendigung
+   zurückgestellt.
 9. Nach einem erfolgreichen Slice den nächsten bereiten Slice bestimmen; erst
    bei erfüllter Task-Abschlussbedingung den Task beenden.
 

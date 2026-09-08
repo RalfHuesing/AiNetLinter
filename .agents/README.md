@@ -37,4 +37,5 @@ Der Task-Pfad ist beim `concept-planner` verpflichtend. Beim
 Orchestrator setzt einen Task mit `status: ready`,
 `execution_mode: autonomous` und `open_questions: []` vollständig bis zum
 Release-Gate um. Er beendet sich nicht nach dem ersten Slice oder einem
-Zwischenreview.
+Zwischenreview. Die Rollen, Builds, Tests und MCP-Prüfungen laufen dabei strikt
+seriell; pro Task ist höchstens ein delegierter Agent gleichzeitig aktiv.

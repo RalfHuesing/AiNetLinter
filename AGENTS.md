@@ -128,6 +128,7 @@ Die produktive Testsuite ist auf `src/AiNetLinter.FastTests` (`Unit`/`Component`
 - Bei größeren oder unklaren Vorhaben zuerst den `concept-planner`-Skill mit einem konkreten Task-Verzeichnis verwenden. Ein umsetzungsbereites Konzept trägt `status: ready`, `execution_mode: autonomous` und `open_questions: []`; danach den Orchestrator-Skill nur bei ausdrücklichem Wunsch einsetzen.
 - Für zusammenhängende Features, Refactorings und andere mehrstufige Aufgaben: `.agents/skills/project-orchestrator/SKILL.md` sowie die benötigten Rollen unter `.agents/roles/` verwenden.
 - Der Orchestrator wird nur mit dem Task-Verzeichnis oder dessen `Konzept.md` aufgerufen und arbeitet autonom über alle Slices bis zur Task-Abschlussbedingung. Ein Zwischenabschluss nach einem einzelnen Slice ist nicht zulässig.
+- Innerhalb eines Tasks gilt strikt serielle Abarbeitung: höchstens ein delegierter Agent gleichzeitig; keine parallelen Rollen, Builds, Tests oder MCP-Prüfungen. Die nächste Rolle startet erst nach vollständiger Beendigung der vorherigen.
 - Vor Abschluss eines größeren orchestrierten Tasks: die `auditor`-Rolle einmal für DRY-, Refactoring-Drift-, Dead-Code- und Magic-Value-Prüfungen über die passenden MCP-Tools einsetzen.
 
 ---

@@ -7,6 +7,7 @@ Task scope:
 
 Execution mode: autonomous
 Release status: ready
+Execution scheduling: strictly sequential; one delegated agent at a time
 
 Explicit exclusions:
 

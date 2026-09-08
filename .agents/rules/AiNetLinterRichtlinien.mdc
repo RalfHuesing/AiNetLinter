@@ -79,6 +79,11 @@ diese Always-on-Regel.
 
 ## Git und parallele Agenten
 
+- Innerhalb eines AiNetLinter-Tasks gilt strikt serielle Abarbeitung: höchstens
+  ein delegierter Agent ist gleichzeitig aktiv. Rollen, Builds, Tests und
+  MCP-Prüfungen werden nicht überlappend ausgeführt; die nächste Aktivität
+  beginnt erst nach vollständiger Beendigung der vorherigen.
+
 - Jede Änderung an versionierten Dateien wird nach passenden Prüfungen
   automatisch committed, auch reine Markdown- oder Agenteninfrastruktur.
 - Vor Änderungen `HEAD` und Working-Tree-Status als Baseline erfassen. Ein
