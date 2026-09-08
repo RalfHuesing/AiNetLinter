@@ -123,7 +123,7 @@ internal static class CliOptionFactory
 
     internal static Option<bool> CreateMcpServerOption() => new(McpServer)
     {
-        Description = "Startet einen stdio-basierten MCP-Server ohne eigenen Projektbezug: Jeder zielgebundene Tool-Aufruf adressiert per targetType und absolutem targetPath ein Projekt oder eine lokale Assembly.",
+        Description = "Startet einen stdio-basierten MCP-Server ohne eigenen Projektbezug: Jeder zielgebundene Tool-Aufruf adressiert per absolutem targetPath eine konkrete Solution oder lokale Assembly.",
     };
 
     internal static Option<bool> CreateDaemonStartOption() => new(DaemonStart)

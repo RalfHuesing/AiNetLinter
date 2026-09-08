@@ -60,6 +60,7 @@ internal static class DaemonProcessContractHarness
         DaemonProcessSpec spec,
         CancellationToken cancellationToken)
     {
+        McpFixtureProjectDefinition.Ensure(spec.WorkingDirectory);
         var lifetime = await SubprocessLifetimeBudget.Shared
             .AcquireAsync(cancellationToken)
             .ConfigureAwait(false);

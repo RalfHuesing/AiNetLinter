@@ -25,7 +25,7 @@ public sealed class OverviewResourceLeaseContractTests
     public async Task LoadFailed_UsesToolContractAndReleasesAfterExplicitToolResponse()
     {
         using var tempDir = TestTempDirectory.Create("overview-failed-");
-        var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
+        var root = CreateSolutionTarget(tempDir, "proj");
         var load = new TaskCompletionSource<SourceFileCatalog?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var firstServer = new McpCodeGraphServer(new McpCodeGraphServerOptions
         {
@@ -51,7 +51,7 @@ public sealed class OverviewResourceLeaseContractTests
 
         Assert.Contains(ProjectErrorCodes.ProjectLoadFailed, exception.Message, StringComparison.Ordinal);
         Assert.Contains("Overview-Kalt-Load-Fehler", exception.Message, StringComparison.Ordinal);
-        Assert.Contains(Path.Combine(root, "app.slnx"), exception.Message, StringComparison.Ordinal);
+        Assert.Contains(root, exception.Message, StringComparison.Ordinal);
         Assert.Contains("automatisch neu", exception.Message, StringComparison.Ordinal);
 
         await ProjectToolCall.ExecuteAsync(
@@ -69,9 +69,9 @@ public sealed class OverviewResourceLeaseContractTests
     public async Task RenderingLeaseProtectsServerFromEvictionUntilRenderingCompletes()
     {
         using var tempDir = TestTempDirectory.Create("overview-lease-");
-        var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
-        var otherRoot = ProjectRegistryFixture.CreateProjectRoot(tempDir, "other");
-        var replacementRoot = ProjectRegistryFixture.CreateProjectRoot(tempDir, "replacement");
+        var root = CreateSolutionTarget(tempDir, "proj");
+        var otherRoot = CreateSolutionTarget(tempDir, "other");
+        var replacementRoot = CreateSolutionTarget(tempDir, "replacement");
         await using var registry = ProjectRegistryFixture.Create(
             _ => ProjectInstanceCreation.Resident(OverviewTestServers.PendingLoadServer()),
             maxProjects: 1);
@@ -117,6 +117,13 @@ public sealed class OverviewResourceLeaseContractTests
 
         Assert.True(replacement.Succeeded);
         Assert.True(renderingServer.LoadTask!.IsCanceled);
+    }
+
+    private static string CreateSolutionTarget(TestTempDirectory tempDir, string name)
+    {
+        tempDir.CreateFile(Path.Combine(name, "app.slnx"), string.Empty);
+        tempDir.CreateFile(Path.Combine(name, "ainetlinter-rules.json"), "{}");
+        return tempDir.GetPath(Path.Combine(name, "app.slnx"));
     }
 
 }

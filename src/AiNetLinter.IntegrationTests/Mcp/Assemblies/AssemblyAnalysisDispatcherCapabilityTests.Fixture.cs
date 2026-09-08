@@ -79,7 +79,7 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
             return await AnalysisToolCall.ExecuteRouted(
                 route,
                 new AnalysisToolCallRequest(
-                    new AnalysisTargetRequest("assembly", AssemblyPath),
+                    new AnalysisTargetRequest(AssemblyPath),
                     new AnalysisToolDispatch(
                         AssemblySessionCall: lease => InspectAssemblyTool.ExecuteAsync(
                             lease,
@@ -106,7 +106,7 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
             return await AnalysisToolCall.ExecuteRouted(
                 route,
                 new AnalysisToolCallRequest(
-                    new AnalysisTargetRequest("assembly", AssemblyPath),
+                    new AnalysisTargetRequest(AssemblyPath),
                     new AnalysisToolDispatch(
                         AssemblySessionCall: lease => FindAssemblyExtensionsTool.ExecuteAsync(
                             lease,
@@ -131,7 +131,7 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
             return AnalysisToolCall.ExecuteRouted(
                 route,
                 new AnalysisToolCallRequest(
-                    new AnalysisTargetRequest("assembly", AssemblyPath),
+                    new AnalysisTargetRequest(AssemblyPath),
                     new AnalysisToolDispatch(
                         AssemblySessionCall: call,
                         MaxResponseBytes: maxResponseBytes,

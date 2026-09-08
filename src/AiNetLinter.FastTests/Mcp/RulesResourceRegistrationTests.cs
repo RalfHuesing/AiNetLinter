@@ -33,7 +33,7 @@ public sealed class RulesResourceRegistrationTests
         var text = RulesResourceRegistration.BuildRulesText(harness.Snapshot);
 
         Assert.StartsWith("# AiNetLinter — effektive Regelkonfiguration", text, StringComparison.Ordinal);
-        Assert.Contains($"- Projektroot: `{harness.RootPath}`", text, StringComparison.Ordinal);
+        Assert.Contains($"- targetPath: `{harness.RootPath}`", text, StringComparison.Ordinal);
         Assert.Contains("- Konfigurationsquelle: `C:\\Projekt\\rules.json`", text, StringComparison.Ordinal);
         Assert.Contains("## Aktive Regeln", text, StringComparison.Ordinal);
         Assert.Contains("`EnforceSealedClasses`", text, StringComparison.Ordinal);
@@ -83,28 +83,29 @@ public sealed class RulesResourceRegistrationTests
 
         var text = RulesResourceRegistration.BuildRulesText(harness.Snapshot);
 
-        Assert.Contains("Konfigurationsquelle: `eingebaute Default-Konfiguration`", text, StringComparison.Ordinal);
+        Assert.Contains("Konfigurationsquelle: `not_configured (ainetlinter-rules.json fehlt)`", text, StringComparison.Ordinal);
+        Assert.Contains("Navigation bleibt verfügbar", text, StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task BuildTemplatedResult_UsesRulesUriAndSharedProjectGuards()
     {
-        using var tempDir = TestTempDirectory.Create("rules-resource-");
-        var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
+        using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "SymbolGraphMini");
+        var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
         var state = CreatePendingServer(new Config
         {
             Global = new GlobalConfig(),
             Metrics = new MetricsConfig { MaxLineCount = 42 },
         });
         await using var registry = ProjectRegistryFixture.Create(_ => ProjectInstanceCreation.Resident(state));
-        var lease = registry.Lease(root);
+        var lease = registry.Lease(solutionPath);
         Assert.True(lease.Succeeded);
         lease.Lease!.Dispose();
 
-        var result = RulesResourceRegistration.BuildTemplatedResult(registry, root);
+        var result = RulesResourceRegistration.BuildTemplatedResult(registry, solutionPath);
         var content = Assert.IsType<TextResourceContents>(Assert.Single(result.Contents));
 
-        Assert.Equal($"ainetlinter://rules?projectRoot={Uri.EscapeDataString(root)}", content.Uri);
+        Assert.Equal($"ainetlinter://rules?targetPath={Uri.EscapeDataString(solutionPath)}", content.Uri);
         Assert.Equal("text/markdown", content.MimeType);
         Assert.Contains("| `MaxLineCount` | 42 |", content.Text, StringComparison.Ordinal);
         Assert.Throws<ModelContextProtocol.McpException>(

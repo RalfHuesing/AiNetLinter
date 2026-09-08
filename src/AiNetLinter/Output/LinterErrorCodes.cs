@@ -10,6 +10,7 @@ internal static class LinterErrorCodes
     internal const string ConfigRequired      = "CONFIG_REQUIRED";
     internal const string ConfigNotFound      = "CONFIG_NOT_FOUND";
     internal const string ConfigInvalid       = "CONFIG_INVALID";
+    internal const string NotConfigured      = "NOT_CONFIGURED";
     internal const string ConfigSmell         = "CONFIG_SMELL";
     internal const string BaselineNotFound    = "BASELINE_NOT_FOUND";
     internal const string BaselineInvalid     = "BASELINE_INVALID";

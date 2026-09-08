@@ -62,12 +62,8 @@ public sealed class ProjectRegistryCapacityContractTests
 
     private static string WriteMinimalProject(TestTempDirectory tempDir, string name)
     {
-        var root = System.IO.Path.Combine(tempDir.DirectoryPath, name);
         tempDir.CreateFile(System.IO.Path.Combine(name, "app.slnx"), string.Empty);
-        tempDir.CreateFile(System.IO.Path.Combine(name, "rules.json"), "{}");
-        tempDir.CreateFile(
-            System.IO.Path.Combine(name, "ainetlinter.project.json"),
-            "{ \"solution\": \"app.slnx\", \"rules\": \"rules.json\" }");
-        return root;
+        tempDir.CreateFile(System.IO.Path.Combine(name, "ainetlinter-rules.json"), "{}");
+        return tempDir.GetPath(System.IO.Path.Combine(name, "app.slnx"));
     }
 }

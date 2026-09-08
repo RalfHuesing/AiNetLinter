@@ -30,8 +30,10 @@ public sealed class McpServerOptionsFactoryTests
             McpServerResourceCollectionFactory.Build(registry));
 
         Assert.False(string.IsNullOrEmpty(options.ServerInstructions));
-        Assert.Contains("targetType", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains("targetPath", options.ServerInstructions, StringComparison.Ordinal);
+        Assert.DoesNotContain("targetType", options.ServerInstructions, StringComparison.Ordinal);
+        Assert.DoesNotContain("projectRoot", options.ServerInstructions, StringComparison.Ordinal);
+        Assert.Contains(".slnx", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".dll", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".exe", options.ServerInstructions, StringComparison.Ordinal);
         Assert.Contains(".cs", options.ServerInstructions, StringComparison.Ordinal);

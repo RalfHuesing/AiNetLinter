@@ -16,15 +16,14 @@ namespace AiNetLinter.FastTests.Mcp.Projects;
 public sealed class ProjectInstanceFactoryTests
 {
     [Fact]
-    public void TryCreate_FromDefinition_MaterializesConfigFromDefinitionRulesPath()
+    public void TryCreate_ConfiguredNeighbor_MaterializesConfigFromSolutionDirectory()
     {
         using var tempDir = TestTempDirectory.Create("project-factory-");
-        tempDir.CreateFile("proj/app.slnx", "");
+        var solutionPath = tempDir.CreateFile("proj/app.slnx", "");
         tempDir.CreateFile(
-            "proj/config/rules.json",
+            "proj/ainetlinter-rules.json",
             """{ "Global": {}, "Metrics": { "MaxLineCount": 42 } }""");
-        WriteDefinition(tempDir);
-        var definition = LoadDefinition(tempDir);
+        var definition = LoadDefinition(solutionPath);
 
         var captured = CaptureOptions(definition);
 
@@ -40,13 +39,12 @@ public sealed class ProjectInstanceFactoryTests
     public void TryCreate_MaxLineCount_MatchesLegacyBatchPipeline()
     {
         using var tempDir = TestTempDirectory.Create("project-factory-legacy-");
-        tempDir.CreateFile("proj/app.slnx", "");
+        var solutionPath = tempDir.CreateFile("proj/app.slnx", "");
         var rulesPath = tempDir.CreateFile(
-            "proj/config/rules.json",
+            "proj/ainetlinter-rules.json",
             """{ "Global": {}, "Metrics": { "MaxLineCount": 7 } }""");
-        WriteDefinition(tempDir);
 
-        var captured = CaptureOptions(LoadDefinition(tempDir));
+        var captured = CaptureOptions(LoadDefinition(solutionPath));
         var legacy = McpServerCommand.ResolveMaxLineCount(
             new LinterArgs { TargetPath = tempDir.DirectoryPath, Verbose = false },
             rulesPath);
@@ -55,13 +53,12 @@ public sealed class ProjectInstanceFactoryTests
     }
 
     [Fact]
-    public void TryCreate_ReadableButInvalidRules_FailsWithRulesInvalidInsteadOfDefaults()
+    public void TryCreate_InvalidNeighborRules_FailsWithRulesInvalidInsteadOfDefaults()
     {
         using var tempDir = TestTempDirectory.Create("project-factory-invalid-");
-        tempDir.CreateFile("proj/app.slnx", "");
-        tempDir.CreateFile("proj/config/rules.json", "{ this is not valid json ");
-        WriteDefinition(tempDir);
-        var definition = LoadDefinition(tempDir);
+        var solutionPath = tempDir.CreateFile("proj/app.slnx", "");
+        var rulesPath = tempDir.CreateFile("proj/ainetlinter-rules.json", "{ this is not valid json ");
+        var definition = LoadDefinition(solutionPath);
 
         var creation = ProjectInstanceFactory.TryCreate(
             definition,
@@ -70,7 +67,7 @@ public sealed class ProjectInstanceFactoryTests
         Assert.False(creation.Succeeded);
         Assert.Null(creation.Server);
         Assert.Equal(ProjectErrorCodes.RulesInvalid, creation.ErrorCode);
-        Assert.Contains(definition.RulesPath, creation.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains(rulesPath, creation.ErrorMessage, StringComparison.Ordinal);
         Assert.Contains("keine Default-Regeln geladen", creation.ErrorMessage, StringComparison.Ordinal);
         // Kopierfaehige Bauanleitung: minimales, gueltiges rules.json-Skelett im Fehlertext.
         Assert.Contains("\"Global\": {},", creation.ErrorMessage, StringComparison.Ordinal);
@@ -78,21 +75,40 @@ public sealed class ProjectInstanceFactoryTests
     }
 
     [Fact]
-    public void TryCreate_MissingRulesFile_FailsWithRulesNotFound()
+    public void TryCreate_NonexistentConfiguredRules_FailsWithRulesInvalid()
     {
         using var tempDir = TestTempDirectory.Create("project-factory-missing-");
-        tempDir.CreateFile("proj/app.slnx", "");
-        WriteDefinition(tempDir, rulesRelative: "config/fehlt.json");
+        var solutionPath = tempDir.CreateFile("proj/app.slnx", "");
+        var missingRulesPath = Path.Combine(tempDir.DirectoryPath, "proj", "ainetlinter-rules.json");
         var definition = new ProjectDefinition(
-            Path.Combine(tempDir.DirectoryPath, "proj", "app.slnx"),
-            Path.Combine(tempDir.DirectoryPath, "proj", "config", "fehlt.json"));
+            solutionPath,
+            missingRulesPath);
 
         var creation = ProjectInstanceFactory.TryCreate(
             definition,
             _ => throw new InvalidOperationException("Fehlende Regeldatei darf keine Options erzeugen."));
 
         Assert.False(creation.Succeeded);
-        Assert.Equal(ProjectErrorCodes.RulesNotFound, creation.ErrorCode);
+        Assert.Equal(ProjectErrorCodes.RulesInvalid, creation.ErrorCode);
+        Assert.Contains(missingRulesPath, creation.ErrorMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TryCreate_MissingNeighborRules_CreatesNavigationSessionWithNotConfiguredMetadata()
+    {
+        using var tempDir = TestTempDirectory.Create("project-factory-not-configured-");
+        var solutionPath = tempDir.CreateFile("proj/app.slnx", "");
+        var definition = LoadDefinition(solutionPath);
+
+        var captured = CaptureOptions(definition);
+
+        Assert.False(captured.Creation.Succeeded);
+        Assert.Equal("TEST_CAPTURE", captured.Creation.ErrorCode);
+        Assert.NotNull(captured.Options);
+        Assert.True(captured.Options!.UsedDefaultConfig);
+        Assert.Null(captured.Options.ResolvedConfigPath);
+        Assert.Equal(new MetricsConfig().MaxLineCount, captured.Options.MaxLineCount);
+        Assert.Equal(new MetricsConfig().MaxLineCount, captured.Options.Config.Metrics.MaxLineCount);
     }
 
     [Fact]
@@ -120,15 +136,10 @@ public sealed class ProjectInstanceFactoryTests
         return (creation, captured);
     }
 
-    private static ProjectDefinition LoadDefinition(TestTempDirectory tempDir)
+    private static ProjectDefinition LoadDefinition(string solutionPath)
     {
-        var result = ProjectDefinitionLoader.Load(Path.Combine(tempDir.DirectoryPath, "proj"));
+        var result = ProjectDefinitionLoader.LoadSolutionTarget(solutionPath);
         Assert.True(result.Succeeded, result.Message);
         return result.Definition!;
     }
-
-    private static void WriteDefinition(TestTempDirectory tempDir, string rulesRelative = "config/rules.json") =>
-        tempDir.CreateFile(
-            Path.Combine("proj", "ainetlinter.project.json"),
-            $$"""{ "solution": "app.slnx", "rules": "{{rulesRelative}}" }""");
 }

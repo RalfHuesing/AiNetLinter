@@ -18,7 +18,7 @@ using Xunit;
 namespace AiNetLinter.FastTests.Mcp;
 
 /// <summary>
-/// Tests fuer die MCP-Resource <c>ainetlinter://overview?projectRoot=...</c>
+/// Tests fuer die MCP-Resource <c>ainetlinter://overview?targetPath=...</c>
 /// (<see cref="OverviewResourceRegistration"/>): dynamischer Status-Text je Projekt-Key
 /// (Solution-Pfad, Config-Quelle, Loading-Zustand) und Guards/Fehlervertraege des Templates.
 /// </summary>
@@ -34,8 +34,8 @@ public sealed class OverviewResourceRegistrationTests
 
         var text = OverviewResourceRegistration.BuildOverviewText(harness.Snapshot);
 
-        Assert.Contains("keine rules.json gefunden", text, StringComparison.Ordinal);
-        Assert.Contains("Default-Regeln", text, StringComparison.Ordinal);
+        Assert.Contains("not_configured", text, StringComparison.Ordinal);
+        Assert.Contains("ainetlinter-rules.json", text, StringComparison.Ordinal);
         Assert.Contains(harness.RootPath, text, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Zuletzt genutzt (UTC):", text, StringComparison.Ordinal);
     }
@@ -69,17 +69,17 @@ public sealed class OverviewResourceRegistrationTests
     }
 
     [Fact]
-    public void BuildTemplatedResult_UnknownKey_ThrowsProjectNotInitialized()
+    public void BuildTemplatedResult_MissingSolution_ThrowsInvalidArgument()
     {
-        using var tempDir = TestTempDirectory.Create("overview-template-");
+        using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "SymbolGraphMini");
         var registry = ProjectRegistryFixture.CreateInspectionRegistry();
 
-        var unknown = Path.Combine(tempDir.DirectoryPath, "nirgends");
+        var unknown = Path.Combine(fixture.RootPath, "nirgends.slnx");
         var exception = Assert.Throws<McpException>(
             () => OverviewResourceRegistration.BuildTemplatedResult(registry, unknown));
 
-        Assert.Contains("PROJECT_NOT_INITIALIZED", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("ainetlinter.project.json", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("INVALID_ARGUMENT", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("targetPath", exception.Message, StringComparison.Ordinal);
     }
 
     private static McpCodeGraphServer PendingLoadServer() =>
@@ -102,15 +102,19 @@ public sealed class OverviewResourceRegistrationTests
         });
 }
 
-/// <summary>Kombiniert einen Server mit einem echten Definitionsdatensatz zu einem Snapshot.</summary>
+/// <summary>Kombiniert einen Server mit einer echten Solution-Fixture zu einem Snapshot.</summary>
 internal sealed class OverviewSnapshotHarness : IDisposable
 {
-    private readonly TestTempDirectory tempDir = TestTempDirectory.Create("overview-snap-");
+    private readonly IsolatedFixtureLease fixture;
     private bool disposed;
 
     private OverviewSnapshotHarness(McpCodeGraphServer server)
     {
         Server = server;
+        fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "SymbolGraphMini");
+        RootPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
+        var definition = ProjectDefinitionLoader.Load(RootPath).Definition!;
+        Snapshot = new ProjectSnapshot(RootPath, definition, DateTime.UtcNow, server);
     }
 
     public McpCodeGraphServer Server { get; }
@@ -122,12 +126,7 @@ internal sealed class OverviewSnapshotHarness : IDisposable
 
     public static OverviewSnapshotHarness Create(McpCodeGraphServer server)
     {
-        var harness = new OverviewSnapshotHarness(server);
-        var root = ProjectRegistryFixture.CreateProjectRoot(harness.tempDir, "proj");
-        var definition = ProjectDefinitionLoader.Load(root).Definition!;
-        harness.RootPath = root;
-        harness.Snapshot = new ProjectSnapshot(root, definition, DateTime.UtcNow, server);
-        return harness;
+        return new OverviewSnapshotHarness(server);
     }
 
     public void Dispose()
@@ -135,6 +134,6 @@ internal sealed class OverviewSnapshotHarness : IDisposable
         if (disposed) return;
         disposed = true;
         Server.Dispose();
-        tempDir.Dispose();
+        fixture.Dispose();
     }
 }

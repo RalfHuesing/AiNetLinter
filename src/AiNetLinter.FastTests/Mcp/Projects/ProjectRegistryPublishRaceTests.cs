@@ -49,7 +49,7 @@ public sealed class ProjectRegistryPublishRaceTests
             registry = new ProjectRegistry(new ProjectRegistryOptions(
                 definition => string.Equals(
                     Path.GetDirectoryName(definition.SolutionPath),
-                    Path.GetFullPath(root),
+                    Path.GetDirectoryName(Path.GetFullPath(root)),
                     StringComparison.OrdinalIgnoreCase)
                     ? factory.Factory(definition)
                     : otherFactory.Factory(definition),
@@ -167,11 +167,8 @@ public sealed class ProjectRegistryPublishRaceTests
         private string CreateProjectRoot(string name)
         {
             tempDir.CreateFile(Path.Combine(name, "app.slnx"), string.Empty);
-            tempDir.CreateFile(Path.Combine(name, "rules.json"), "{}");
-            tempDir.CreateFile(
-                Path.Combine(name, "ainetlinter.project.json"),
-                "{ \"solution\": \"app.slnx\", \"rules\": \"rules.json\" }");
-            return Path.Combine(tempDir.DirectoryPath, name);
+            tempDir.CreateFile(Path.Combine(name, "ainetlinter-rules.json"), "{}");
+            return Path.Combine(tempDir.DirectoryPath, name, "app.slnx");
         }
     }
 }

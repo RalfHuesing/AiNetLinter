@@ -2,8 +2,12 @@
 
 using System;
 using System.IO;
+using System.Threading.Tasks;
+using AiNetLinter.Baseline;
 using AiNetLinter.Cli;
 using AiNetLinter.Commands;
+using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Output;
 using AiNetLinter.TestKit;
 using Xunit;
 
@@ -154,4 +158,44 @@ public sealed class McpServerCommandTests
         Assert.NotNull(config);
         Assert.Equal(5, config.Metrics.MaxLineCount);
     }
+
+    [Fact]
+    public async Task CreateResidentInstance_MissingNeighborRules_PropagatesDefaultConfigStatus()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-server-factory-default-status-");
+        var solutionPath = tempDir.CreateFile("app.slnx", string.Empty);
+        var definition = new ProjectDefinition(solutionPath, string.Empty);
+
+        var creation = McpServerCommand.CreateResidentInstance(
+            definition,
+            LinterConsole.Instance,
+            static _ => Task.FromResult<SourceFileCatalog?>(null));
+        using var server = Assert.IsType<AiNetLinter.Mcp.McpCodeGraphServer>(creation.Server);
+        await server.LoadTask!.WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.True(server.UsedDefaultConfig);
+        Assert.Null(server.ResolvedConfigPath);
+    }
+
+    [Fact]
+    public async Task CreateResidentInstance_ConfiguredNeighborRules_PropagatesResolvedConfigStatus()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-server-factory-config-status-");
+        var solutionPath = tempDir.CreateFile("app.slnx", string.Empty);
+        var rulesPath = tempDir.CreateFile(
+            "ainetlinter-rules.json",
+            "{ \"Global\": {}, \"Metrics\": { \"MaxLineCount\": 42 } }");
+        var definition = new ProjectDefinition(solutionPath, rulesPath);
+
+        var creation = McpServerCommand.CreateResidentInstance(
+            definition,
+            LinterConsole.Instance,
+            static _ => Task.FromResult<SourceFileCatalog?>(null));
+        using var server = Assert.IsType<AiNetLinter.Mcp.McpCodeGraphServer>(creation.Server);
+        await server.LoadTask!.WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.False(server.UsedDefaultConfig);
+        Assert.Equal(rulesPath, server.ResolvedConfigPath);
+    }
+
 }

@@ -17,7 +17,7 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 /// (<see cref="LastGoodStateUtc"/>/<see cref="LastLoadError"/>).
 /// </summary>
 internal sealed record ProjectHealthEntry(
-    string ProjectRoot,
+    string TargetPath,
     string LoadState,
     string? SolutionPath,
     bool UsedDefaultConfig,

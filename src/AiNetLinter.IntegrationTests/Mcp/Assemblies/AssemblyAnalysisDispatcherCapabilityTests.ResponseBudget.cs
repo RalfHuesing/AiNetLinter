@@ -55,7 +55,7 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
         Assert.Equal(structuredBytes, wireBudget.GetProperty("structuredBytes").GetInt32());
         Assert.Equal(textBytes + structuredBytes, wireBudget.GetProperty("totalBytes").GetInt32());
         Assert.Equal(AssemblyAnalysisResponseLimits.DefaultResponseBytes, wireBudget.GetProperty("limitBytes").GetInt32());
-        Assert.Equal("assembly", payload.GetProperty("analysis").GetProperty("targetType").GetString());
+        Assert.Equal("decompiled", payload.GetProperty("analysis").GetProperty("origin").GetString());
         Assert.Equal(payload.GetProperty("types").GetArrayLength(), payload.GetProperty("shownCount").GetInt32());
     }
 

@@ -39,7 +39,6 @@ public sealed class McpServerCommandGetImpactTests
             "get_impact",
             new Dictionary<string, object?>
             {
-                ["targetType"] = "assembly",
                 ["targetPath"] = typeof(AiNetLinter.Mcp.McpCodeGraphServer).Assembly.Location,
                 ["symbolIdentifier"] = "McpCodeGraphServer.GetCurrentSolution",
                 ["maxResults"] = 10,
@@ -48,7 +47,7 @@ public sealed class McpServerCommandGetImpactTests
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
         var analysis = result.StructuredContent!.Value.GetProperty("analysis");
-        Assert.Equal("assembly", analysis.GetProperty("targetType").GetString());
+        Assert.Equal("decompiled", analysis.GetProperty("origin").GetString());
         Assert.Equal("decompiled", analysis.GetProperty("origin").GetString());
         Assert.DoesNotContain(
             "ASSEMBLY_TARGET_UNSUPPORTED",
@@ -63,7 +62,6 @@ public sealed class McpServerCommandGetImpactTests
             "get_impact",
             new Dictionary<string, object?>
             {
-                ["targetType"] = "assembly",
                 ["targetPath"] = typeof(AiNetLinter.Mcp.McpCodeGraphServer).Assembly.Location,
             });
 

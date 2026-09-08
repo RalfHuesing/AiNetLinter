@@ -8,7 +8,6 @@ using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Composition;
-using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.TestKit;
 using Xunit;
@@ -22,7 +21,7 @@ namespace AiNetLinter.FastTests.Mcp.Wiring;
 public sealed class WiringToolCollectionContractTests
 {
     [Fact]
-    public async Task ToolCollection_FreezesInventoryAndProjectRootContract()
+    public async Task ToolCollection_FreezesTargetPathOnlyContract()
     {
         await using var composition = AssemblyAnalysisHostComposition.Create();
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
@@ -38,33 +37,33 @@ public sealed class WiringToolCollectionContractTests
         foreach (var tool in tools.Values)
         {
             var required = GetRequiredProperties(tool.InputSchema);
+            var properties = GetProperties(tool.InputSchema);
             if (tool.Name == "report_observability_feedback")
             {
-                Assert.DoesNotContain("targetType", tool.InputSchema.ToString(), StringComparison.Ordinal);
-                Assert.DoesNotContain("targetPath", tool.InputSchema.ToString(), StringComparison.Ordinal);
-                Assert.Contains("\"projectRoot\"", tool.InputSchema.ToString(), StringComparison.Ordinal);
+                Assert.DoesNotContain("targetType", properties);
+                Assert.DoesNotContain("targetPath", properties);
+                Assert.DoesNotContain("projectRoot", properties);
+                Assert.DoesNotContain("assemblyPath", properties);
+                Assert.DoesNotContain("configPath", properties);
             }
             else if (tool.Name == "get_server_health")
             {
                 Assert.DoesNotContain("targetType", required);
                 Assert.DoesNotContain("targetPath", required);
-                Assert.Contains("\"targetType\"", tool.InputSchema.ToString(), StringComparison.Ordinal);
-                Assert.Contains("\"targetPath\"", tool.InputSchema.ToString(), StringComparison.Ordinal);
-                Assert.DoesNotContain("projectRoot", tool.InputSchema.ToString(), StringComparison.Ordinal);
-            }
-            else if (tool.Name is "inspect_assembly" or "find_assembly_extensions" or "search_assembly" or "get_assembly_context")
-            {
-                Assert.DoesNotContain("targetType", required);
-                Assert.Contains("targetPath", required);
-                Assert.Contains("\"targetType\"", tool.InputSchema.ToString(), StringComparison.Ordinal);
-                Assert.DoesNotContain("projectRoot", tool.InputSchema.ToString(), StringComparison.Ordinal);
+                Assert.Contains("targetPath", properties);
+                Assert.DoesNotContain("targetType", properties);
+                Assert.DoesNotContain("projectRoot", properties);
+                Assert.DoesNotContain("assemblyPath", properties);
+                Assert.DoesNotContain("configPath", properties);
             }
             else
             {
-                Assert.Contains("targetType", required);
                 Assert.Contains("targetPath", required);
-                Assert.DoesNotContain("projectRoot", tool.InputSchema.ToString(), StringComparison.Ordinal);
-                Assert.DoesNotContain("assemblyPath", tool.InputSchema.ToString(), StringComparison.Ordinal);
+                Assert.Contains("targetPath", properties);
+                Assert.DoesNotContain("targetType", properties);
+                Assert.DoesNotContain("projectRoot", properties);
+                Assert.DoesNotContain("assemblyPath", properties);
+                Assert.DoesNotContain("configPath", properties);
             }
         }
     }
@@ -98,42 +97,33 @@ public sealed class WiringToolCollectionContractTests
         foreach (var name in projectAndAssembly)
         {
             var description = tools[name].Description;
-            Assert.Contains("targetType='project'", description, StringComparison.Ordinal);
-            Assert.Contains("targetType='assembly'", description, StringComparison.Ordinal);
+            Assert.Contains("targetPath als absoluter, existierender Pfad", description, StringComparison.Ordinal);
+            Assert.Contains("Source- oder Assembly-Route wird aus targetPath bestimmt", description, StringComparison.Ordinal);
             Assert.Contains("Snapshot/Generation", description, StringComparison.Ordinal);
-            Assert.DoesNotContain("ausdrücklich unsupported", description, StringComparison.Ordinal);
+            Assert.DoesNotContain("targetType", description, StringComparison.Ordinal);
         }
 
         foreach (var name in projectOnly)
         {
             var description = tools[name].Description;
-            Assert.Contains("targetType='project'", description, StringComparison.Ordinal);
-            Assert.Contains("ausdrücklich unsupported", description, StringComparison.Ordinal);
+            Assert.Contains("targetPath als absoluter, existierender Pfad einer .sln- oder .slnx-Datei", description, StringComparison.Ordinal);
+            Assert.Contains("Assembly-Ziele sind fuer dieses Tool unsupported", description, StringComparison.Ordinal);
+            Assert.DoesNotContain("targetType", description, StringComparison.Ordinal);
         }
 
         foreach (var name in new[] { "inspect_assembly", "find_assembly_extensions", "search_assembly", "get_assembly_context" })
         {
             var description = tools[name].Description;
-            Assert.Contains("targetType='assembly'", description, StringComparison.Ordinal);
-            Assert.DoesNotContain("targetType='project'", description, StringComparison.Ordinal);
+            Assert.Contains("targetPath als absoluter, existierender .dll- oder .exe-Pfad", description, StringComparison.Ordinal);
+            Assert.DoesNotContain("targetType", description, StringComparison.Ordinal);
             Assert.Contains(".dll", description, StringComparison.Ordinal);
             Assert.Contains(".exe", description, StringComparison.Ordinal);
-            Assert.Contains("targetType ist optional", description, StringComparison.Ordinal);
         }
 
         Assert.Contains("Projekt- und Assembly-Sessions", tools["get_server_health"].Description, StringComparison.Ordinal);
-        Assert.Contains("targetType='assembly'", tools["get_server_health"].Description, StringComparison.Ordinal);
-    }
-
-    [Theory]
-    [InlineData(null, "C:\\build\\Library.dll", "assembly")]
-    [InlineData(null, "C:\\build\\Tool.exe", "assembly")]
-    [InlineData("project", "C:\\build\\Library.dll", "assembly")]
-    [InlineData("assembly", "C:\\build\\Library", "assembly")]
-    public void AssemblyOnlyTools_ResolveAssemblyTargetByDefaultOrExtension(
-        string? targetType, string targetPath, string expected)
-    {
-        Assert.Equal(expected, AssemblyAnalysisToolRegistrations.ResolveTargetType(targetType, targetPath));
+        Assert.Contains("Ohne targetPath", tools["get_server_health"].Description, StringComparison.Ordinal);
+        Assert.Contains("Mit targetPath", tools["get_server_health"].Description, StringComparison.Ordinal);
+        Assert.DoesNotContain("targetType", tools["get_server_health"].Description, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -301,5 +291,17 @@ public sealed class WiringToolCollectionContractTests
         }
 
         return required.EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray();
+    }
+
+    private static string[] GetProperties(System.Text.Json.JsonElement inputSchema)
+    {
+        using var document = System.Text.Json.JsonDocument.Parse(inputSchema.ToString());
+        if (!document.RootElement.TryGetProperty("properties", out var properties)
+            || properties.ValueKind != System.Text.Json.JsonValueKind.Object)
+        {
+            return [];
+        }
+
+        return properties.EnumerateObject().Select(property => property.Name).ToArray();
     }
 }

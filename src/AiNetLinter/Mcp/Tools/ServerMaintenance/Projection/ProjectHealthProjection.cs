@@ -12,7 +12,7 @@ internal static class ProjectHealthProjection
         var (_, usedDefaultConfig, resolvedConfigPath) = server.GetConfigSnapshot();
         var staleness = server.LastStalenessStats;
         return new ProjectHealthEntry(
-            ProjectRoot: snapshot.RootPath,
+            TargetPath: snapshot.Definition.SolutionPath,
             LoadState: server.LoadState.ToString(),
             SolutionPath: server.LoadState == ServerLoadState.Loading ? null : server.GetCurrentSolution()?.FilePath,
             UsedDefaultConfig: usedDefaultConfig,

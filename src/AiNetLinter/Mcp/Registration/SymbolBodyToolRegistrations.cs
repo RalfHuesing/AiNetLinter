@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp.Registration;
@@ -32,19 +33,21 @@ internal static class SymbolBodyToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string[]? symbolIdentifiers = null, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, int maxBodyLines = 80, int startLine = 1, int? endLine = null, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? symbolIdentifiers = null, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, int maxBodyLines = 80, int startLine = 1, int? endLine = null, CancellationToken ct = default) =>
             {
+                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
+                if (legacyError is not null) return legacyError;
                 var request = new GetSymbolBodyRequest(symbolIdentifiers, symbolIdentifier, maxBodyLines, startLine, endLine, symbol, identifier, name);
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
-                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, request, ct),
                             AssemblySessionCall: lease => GetSymbolBodyTool.ExecuteAsync(lease, request, ct)),
                         ct));
             },
-            McpToolRegistrationOptions.TargetedReadOnlyTool("get_symbol_body", GetSymbolBodyDescription)));
+            TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_symbol_body", GetSymbolBodyDescription)));
     }
 
     private const string GetSymbolBodyDescription =

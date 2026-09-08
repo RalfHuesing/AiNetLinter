@@ -131,7 +131,6 @@ public sealed class DaemonHostMcpContractTests
                     "inspect_assembly",
                     new Dictionary<string, object?>
                     {
-                        ["targetType"] = "assembly",
                         ["targetPath"] = assemblyPath,
                         ["typeName"] = "TargetOnly",
                         ["exactTypeName"] = true,
@@ -144,7 +143,6 @@ public sealed class DaemonHostMcpContractTests
                     "find_assembly_extensions",
                     new Dictionary<string, object?>
                     {
-                        ["targetType"] = "assembly",
                         ["targetPath"] = assemblyPath,
                         ["extensionName"] = "TargetOnly",
                         ["namespace"] = "Target",
@@ -187,7 +185,6 @@ public sealed class DaemonHostMcpContractTests
                 toolName,
                 new Dictionary<string, object?>
                 {
-                    ["targetType"] = "assembly",
                     ["targetPath"] = assemblyPath,
                 },
                 cancellationToken: timeout.Token).ConfigureAwait(false);
@@ -211,7 +208,8 @@ public sealed class DaemonHostMcpContractTests
                 AnalysisToolCall.CreateTargetRoute(
                     ProjectAnalysisDispatcher.CreateRoute(registry),
                     AssemblyAnalysisDispatcher.CreateRoute(composition.Sessions)),
-                runtimeContext),
+                runtimeContext,
+                composition.Sessions),
             () => McpServerResourceCollectionFactory.Build(registry));
 
     private static void AssertDecompiledInspection(CallToolResult result)

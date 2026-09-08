@@ -180,7 +180,7 @@ Neben dem CLI-Batch-Modus kann AiNetLinter auch als **stdio-basierter MCP-Server
 Der Server läuft als stdio-Transport, gesteuert vom MCP-Host (Claude Code, Cursor, eigene Agent-Loops). Start:
 
 ```bash
-ainetlinter --mcp-server                         # targetType/targetPath kommen je Tool-Aufruf
+ainetlinter --mcp-server                         # targetPath kommt je Tool-Aufruf
 ainetlinter --mcp-server --parent-pid <pid>       # optionale explizite Parent-PID
 ainetlinter --mcp-server --daemon-instance beta   # isolierter MCP-Daemon-Endpunkt
 ```
@@ -191,25 +191,25 @@ Er verbindet sich zuerst mit dem Named-Pipe-Daemon und startet genau einen
 detached `--daemon-start`, falls kein Endpunkt erreichbar ist. Nach `hello` /
 `welcome` werden stdio-Frames ohne MCP-SDK- oder JSON-RPC-Interpretation
 weitergereicht; stdout bleibt ausschließlich MCP-Protokoll. Jeder
-zielgebundene Tool-Aufruf erhält `targetType` und den absoluten `targetPath`;
-`get_server_health` kann diesen Target-Block weglassen oder einen vollständigen
-Projekt- oder Assembly-Target-Block erhalten. Ohne Target liefert es standardmäßig
-ein kleines Aggregat; `includeSessions=true` fordert begrenzte Sessiondetails an,
-`maxSessions` begrenzt deren Anzahl. Ein zielgebundener Aufruf bleibt detailliert.
-Im Projektroot liegt
-`ainetlinter.project.json` mit `solution` und `rules`:
+zielgebundene Tool-Aufruf erhält genau den absoluten, existierenden
+`targetPath` einer konkreten `.sln`/`.slnx`-, `.dll`- oder `.exe`-Datei. Die
+Endung bestimmt Source oder Decompiled-Assembly; `targetType`, `projectRoot`,
+`configPath` und `ainetlinter.project.json` sind kein aktiver Vertrag. Relative,
+fehlende, nicht unterstützte oder auf ein Verzeichnis zeigende Pfade liefern
+`invalid_argument` mit Feldpfad und nächstem Schritt. `--path` und `--config`
+sind im MCP-Modus harte Fehler und bleiben dem Batch-Modus vorbehalten.
 
-```json
-{
-  "solution": "src/MeinProjekt.slnx",
-  "rules": "rules.json"
-}
-```
+Für Source ist die übergebene Solution bindend. Regeln werden ausschließlich
+aus der optionalen Datei `ainetlinter-rules.json` direkt neben ihr gelesen;
+fehlt sie, bleibt Navigation möglich und die Lint-Capability ist
+`not_configured`. Ungültige oder nicht lesbare Regeln sind ein
+Konfigurationsfehler, kein Fallback auf Default- oder Elternpfade.
 
-Relative Pfade werden zur Definitionsdatei aufgelöst. Fehlt die Datei oder ist
-ein Ziel ungültig, antwortet der adressierte Key mit einem deterministischen
-Fehlervertrag statt mit geratenen Defaults. `--path` und `--config` sind im
-MCP-Modus harte Fehler und bleiben dem Batch-Modus vorbehalten.
+`get_server_health` kann ohne Target global aggregieren oder optional einen
+`targetPath` erhalten. Ohne Target liefert es standardmäßig ein kleines
+Aggregat; `includeSessions=true` fordert begrenzte Sessiondetails an,
+`maxSessions` begrenzt deren Anzahl. Ein zielgebundener Aufruf bleibt
+detailliert. `report_observability_feedback` ist ungebunden.
 
 MCP `2026-07-28` verwendet stattdessen `server/discover`: Der Request enthält unter `params._meta` die Protokollversion sowie Client-Info und Client-Capabilities. Nach der Discovery müssen auch Folge-Requests wie `tools/list` diese Metadaten mitsenden. Beide Pfade liefern denselben globalen Instructions-Text.
 
@@ -256,7 +256,7 @@ opak weiter.
 - Die Pipe-Level-Nachrichten `hello`, `welcome` und `shutdown` verwenden
   Protokollversion `1`. `welcome` enthält `daemonVersion`,
   `executableVersion`, `processId` und die effektive `configuration` mit
-  `maxProjects` und `idleExitMinutes`. `projectRoot` gehört nicht
+  `maxProjects` und `idleExitMinutes`. Ein `targetPath` gehört nicht
   in diesen Handshake.
 - Eine nicht unterstützte Protokollversion wird mit
   `PROTOCOL_VERSION_UNSUPPORTED` abgewiesen. Bei abweichender
@@ -267,7 +267,7 @@ opak weiter.
 - Weicht die vom Client gemeldete Konfiguration von der effektiven
   Daemon-Konfiguration ab, wird ein strukturiertes
   `CONFIGURATION_DIVERGENCE`-Warnereignis höchstens einmal je
-  Handshake-State-Machine ausgelöst. Es ändert weder `projectRoot` noch die
+  Handshake-State-Machine ausgelöst. Es ändert weder Target-Auflösung noch die
   Registry-Semantik.
 - Jede `DaemonPipeConnection` besitzt ein eigenes Cancellation-Token.
   Disconnect bricht nur die in-flight Lese-/Schreibarbeit dieser Verbindung
@@ -282,7 +282,7 @@ Fehler), bleibt der Server trotzdem verfügbar — der adressierte Tool-Call lie
 
 ### Scope-Hinweis (C#-only)
 
-Der Server schickt bei Legacy-`initialize` und modernem `server/discover` denselben zentralen `ServerInstructions`-Text an den Agent. Er enthält nur globale Regeln: den `targetType`/`targetPath`-Vertrag, den optionalen Verweis auf den einmaligen Bootstrap über `ainetlinter://agent-guide`, die C#-Symbolgraph-Grenze mit `search_pattern`-Fallback, die Sufficiency-/Truncation-Regel und die `isError`-Policy. Der vollständige Bootstrap wird nicht bei jeder Discovery übertragen. Die vollständigen Tool- und Parameterschemas bleiben in `tools/list`; der Projektstatus steht in der Overview-Resource.
+Der Server schickt bei Legacy-`initialize` und modernem `server/discover` denselben zentralen `ServerInstructions`-Text an den Agent. Er enthält nur globale Regeln: den `targetPath`-Vertrag, den optionalen Verweis auf den einmaligen Bootstrap über `ainetlinter://agent-guide`, die C#-Symbolgraph-Grenze mit `search_pattern`-Fallback, die Sufficiency-/Truncation-Regel und die `isError`-Policy. Der vollständige Bootstrap wird nicht bei jeder Discovery übertragen. Die vollständigen Tool- und Parameterschemas bleiben in `tools/list`; der Zielstatus steht in der Overview-Resource.
 
 Das Engineering-Budget für diesen globalen Text beträgt 2.557 UTF-8-Bytes und
 wird durch Tests mit `Encoding.UTF8.GetByteCount` abgesichert; daraus wird keine
@@ -307,15 +307,13 @@ auf 26.887 UTF-8-Bytes (Delta +6.051 Bytes, Baseline-Messung 2026-08-20; Messung
 
 ### Tool-Referenz
 
-Für jedes zielgebundene Tool sind `targetType` und der absolute `targetPath`
+Für jedes zielgebundene Tool ist der absolute, vorhandene `targetPath`
 Pflichtparameter; die folgenden Zeilen listen die jeweiligen fachlichen
-Zusatzparameter. `targetType=project` adressiert einen Projektroot und
-`targetType=assembly` eine vorhandene lokale `.dll`- oder `.exe`-Datei. `tools/list` weist explizit
-aus, ob ein Tool beide Target-Arten, nur Projekte oder nur Assemblys unterstützt.
-`get_server_health` kann ohne Target aggregieren oder einen vollständigen
-`targetType=project`- oder `targetType=assembly`-Target-Block erhalten; Feedback
-bleibt nicht zielgebunden. Beim Assembly-Target ist `targetPath` eine vorhandene
-absolute `.dll`- oder `.exe`-Datei.
+Zusatzparameter. Die Endung bestimmt Source (`.sln`/`.slnx`) oder Assembly
+(`.dll`/`.exe`); `tools/list` weist aus, ob ein Tool beide Herkunftsarten,
+nur Source oder nur Assembly unterstützt. `get_server_health` kann ohne Target
+global aggregieren oder optional einen `targetPath` erhalten; Feedback bleibt
+ungebunden.
 
 ### Capability-Matrix und gemeinsame Session
 
@@ -343,7 +341,7 @@ Targets keinen öffentlichen `includeReferences`-Parameter; seine interne
 | `find_duplicates`, `search_pattern` | supported | unsupported | unsupported | Audit-/Dateisuche bleibt projektgebunden |
 | `reload_config` | supported | unsupported | unsupported | lädt nur die Projekt-Regelkonfiguration neu |
 | `get_server_health` | supported | supported | supported | ohne Target kleines Aggregat; `includeSessions=true` blendet begrenzte Sessiondetails ein; zielgebunden detailliert |
-| `report_observability_feedback` | unbound | unbound | unbound | kein Target-Vertrag; `projectRoot` ist nur optionaler Feedback-Kontext |
+| `report_observability_feedback` | unbound | unbound | unbound | kein Target-Vertrag und kein Projektkontext |
 
 `unsupported` ist ein expliziter Capability-Status und keine leere erfolgreiche
 Antwort. `get_violations`/`safeguard` führen weder fremde Regeln noch Tests aus;
@@ -353,18 +351,18 @@ Source-backed Checkout-/Snapshot-Erzeugung und Decompilation bleiben read-only.
 
 | Tool | Input | Output | C#-only | Trunkierung |
 | :--- | :--- | :--- | :--- | :--- | :---: |
-| `get_file_tree` | `targetType` (`project` oder `assembly`), `targetPath` (Pflicht, absoluter Projektroot bzw. Assembly-Pfad), `root?` (relativ zum effektiven SourceRoot, Default `.`), `view?` (`tree` Default, `summary` oder `files`), `includeExtensions?`, `fileFilter?` und `excludePatterns?` (relative Pfad-Globs), `maxDepth?` (0–32), `treeDepth?` (0–32, Default 2), `maxResults?` (Default 200, 1–2.000), `sortBy?`, `includeMetadata?` (Default `true`), `includeLineCount?` (Default `false`) | Physische Dateilandkarte mit Dateipfaden, Aggregation und `completeness`. Bei Assembly wird der vorhandene Source- oder dekompilierte SourceRoot aus der Session verwendet; fehlt er, ist `unsupported`. | nein | ja |
+| `get_file_tree` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `root?` (relativ zum effektiven SourceRoot, Default `.`), `view?` (`tree` Default, `summary` oder `files`), `includeExtensions?`, `fileFilter?` und `excludePatterns?` (relative Pfad-Globs), `maxDepth?` (0–32), `treeDepth?` (0–32, Default 2), `maxResults?` (Default 200, 1–2.000), `sortBy?`, `includeMetadata?` (Default `true`), `includeLineCount?` (Default `false`) | Physische Dateilandkarte mit Dateipfaden, Aggregation und `completeness`. Bei Assembly wird der vorhandene Source- oder dekompilierte SourceRoot aus der Session verwendet; fehlt er, ist `unsupported`. | nein | ja |
 | `get_namespace_tree` | `project?` (Projektname/Substring), `namespacePrefix?` (Start-Namespace), `depth?` (1-3, Default 1), `includeTypes?` (Default true), `kind?` (class/interface/record/struct/enum/all, Default all), `maxResults?` (Default 50, Cap 200) | Hierarchischer Namespace- und Typ-Baum (3 Zoom-Stufen: Solution-Overview, Namespaces, Typ-Liste mit Datei/Zeile/Sichtbarkeit); Assembly-Targets beginnen mit `# Assembly Overview: <Name>` | ja | ja |
-| `inspect_assembly` | `targetPath` (Pflicht, absoluter lokaler `.dll`- oder `.exe`-Pfad), `targetType?` (Default `"assembly"`; bei `.dll`/`.exe` wird Assembly ebenfalls inferiert), `namespace?`, `typeName?`, `exactTypeName?` (Default `false`, einfache oder vollqualifizierte Exaktsuche), `memberName?` (case-insensitive Teiltext), `memberNames?` (case-insensitive exakte OR-Auswahl), `publicOnly?` (Default `true`), `includeReferences?` (Default kontextabhängig; für explizite Referenzdetails `true`/`false` setzen), `maxResults?` (Typen, Default 100, Cap 1000), `maxMembers?` (Member je Typ, Default 100, Cap 1000) | Assembly-Identität/-Referenzen sowie gefilterte Typen und Member (Methodensignaturen mit Parameternamen, strukturierte Parameter mit Typ, `ref`-Art, Optionalität und Defaultwert, Generics/Constraints, Properties, Felder, Events, Attribute); jeder Typ weist `totalMembers` und `membersTruncated` aus. Bei dekompilierten Assemblies weist der kompakte Text-Header die absoluten Pfade `decompiledProjectDirectory`, `decompiledProjectPath` und `decompiledSourceRoot` aus; dieselben drei Felder stehen im strukturierten Payload auf Top-Level. Referenzen und Referenz-Sessions sind zusätzlich auf 32 Einträge begrenzt und liefern `referenceSummary`; `diagnostics` sind Samples mit `diagnosticsSummary` (Root/transitiv, Counts, Samples, `truncatedBy`). Bei Diagnosen wird `completeness` auf `partial` projiziert; das additive `analysis`-Objekt beschreibt Herkunft, Snapshot/Generation, Status sowie `bodyAvailability` und `contentMode` | nein | ja |
-| `find_assembly_extensions` | `targetPath` (Pflicht, absoluter lokaler `.dll`- oder `.exe`-Pfad), `targetType?` (Default `"assembly"`), `receiverType?`, `extensionName?`, `namespace?`, `maxResults?` (Default 100, Cap 1000), `includeReferences?`, `maxResponseBytes?`, `detailLevel?`, `cursor?` | Klassische C#-Extensions mit strukturierten Parametern, Referenz-/Diagnose-Summaries und additivem Budget-/Paging-Envelope. | nein | ja |
-| `get_assembly_context` | `targetType="assembly"`, `targetPath` (Pflicht), `symbolIdentifier?` oder Alias `symbol?`, optionale Abschnitte für Metrics, References, Callers, Impact, Body und Class Structure, `maxResults?`, `maxBodyLines?`, `maxCallers?`, `depth?`, `topN?`, `maxResponseBytes?`, `detailLevel?` (`compact`, `standard`, `full`) und `cursor?` | Kompakter Composite-Vertrag mit stabiler `contextId`, Identität, Herkunft, Scope, Completeness und `assemblyAnalysis`. Envelope-Felder `totalCount`, `returnedCount`, `isTruncated` und `continuationToken` bleiben maschinenlesbar. | nein | ja |
-| `search_assembly` | `targetPath` (Pflicht, absoluter lokaler `.dll`- oder `.exe`-Pfad), `targetType?`, `pattern?`, `isRegex?`, `searchKind?` (`text` Default, `data_access`, `external_calls`), `declarationOnly?` (Default `false`), `kind?` (`method`, `type`, `property`), `maxResults?` (Default 50, Cap 1000), `maxFiles?`, `contextLines?` (Cap 5), `fileFilter?` (Regex), `maxResponseBytes?`, `cursor?` | Read-only Suche im verifizierten Source- oder dekompilierten SourceRoot. `declarationOnly=true` schließt Treffer in Kommentaren, Strings und XML-Docs aus; `kind` schränkt auf Symbolarten ein. `text` benötigt ein eigenes Pattern; `data_access` und `external_calls` liefern ohne Pattern sichtbare eingebaute Regexe für typische Datenbank-/Datei-/Transaktions- bzw. HTTP-/RPC-/Socket-/Prozessaufrufe. `structuredContent.assemblySearch` enthält relative Trefferpfade, stabile `id`, Matchbereiche, Kontext, `totalCount`, `returnedCount`, `completeness`, `truncatedBy` und `continuationToken`; der gemeinsame `analysis`-Block enthält Ursprung, Generation und Source-Policy. | nein | ja |
-| `resolve_type_origin` | `typeName` (Pflicht), `targetType` (`project` oder `assembly`), `targetPath` (Pflicht) | Ermittelt deterministisch in < 100 ms den einfachen Assembly-Namen, absoluten DLL-Pfad auf der Festplatte, vollqualifizierten Typnamen und Symbol-Kind über Roslyn-Metadatenreferenzen. | ja | nein |
-| `find_implementations` | `symbolIdentifier` (wie `find_references`, oder Alias `symbol`), `maxResults?` (Default 50), `targetType` (`project` oder `assembly`), `targetPath` (Pflicht) | Findet konkrete Implementierungen und Overrides von Interfaces, abstrakten Klassen, virtuellen Methoden oder Properties in Quellcode-Projekten oder dekompilierten Assemblies mit Status (`concrete`/`abstract`/`virtual`) und Quelltext-/Zeilenposition. | ja | ja |
-| `find_symbol` | `namePatterns` (Array von Namens-Mustern) **oder** `namePattern`/`symbol` (skalare String-Aliase fuer genau ein Muster; bei gemischter Eingabe hat das Array Vorrang), max. 10 Patterns pro Call; unterstuetzt Substrings, Wildcards `*` und `?`, punktseparierte Pfade wie `Type.Member` sowie `Method()`; `kind?` (`class`/`method`/`property`/`interface`/`record`/`struct`/`enum`/`delegate`), `maxResults?` (Default 50), `includeReferences?` (Default `false`; bei `targetType="assembly"` bounded Referenz-Assemblies durchsuchen) | Fundstellen als `Datei:Zeile - Kind: Signatur` je Pattern; StructuredContent liefert immer `FindSymbolBatchDto` (`results: [{ namePattern, matches: [...] }]`); bei 0 Treffern schlaegt das Tool aehnliche Symbole im Projekt vor; mit `includeReferences=true` enthalten Treffer `origin` und das Payload eine begrenzte `navigation`-Zusammenfassung | ja | ja |
-| `find_references` | `symbolIdentifier` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte oder qualifizierter Name), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3), `includeReferences?` (Default `false`; bei `targetType="assembly"` bounded Referenz-Assemblies traversieren) | Alle Aufrufstellen; jede erfolgreiche Tiefe liefert `structuredContent.callSites` plus `completeness` mit Tiefe, Herkunft, besuchten Knoten und getrennten Trunkierungsgründen; Assembly-Antworten markieren `navigation` und partielle Diagnostics | ja | ja |
+| `inspect_assembly` | `targetPath` (Pflicht, absoluter vorhandener `.dll`- oder `.exe`-Pfad), `namespace?`, `typeName?`, `exactTypeName?` (Default `false`, einfache oder vollqualifizierte Exaktsuche), `memberName?` (case-insensitive Teiltext), `memberNames?` (case-insensitive exakte OR-Auswahl), `publicOnly?` (Default `true`), `includeReferences?` (Default kontextabhängig; für explizite Referenzdetails `true`/`false` setzen), `maxResults?` (Typen, Default 100, Cap 1000), `maxMembers?` (Member je Typ, Default 100, Cap 1000) | Assembly-Identität/-Referenzen sowie gefilterte Typen und Member (Methodensignaturen mit Parameternamen, strukturierte Parameter mit Typ, `ref`-Art, Optionalität und Defaultwert, Generics/Constraints, Properties, Felder, Events, Attribute); jeder Typ weist `totalMembers` und `membersTruncated` aus. Bei dekompilierten Assemblies weist der kompakte Text-Header die absoluten Pfade `decompiledProjectDirectory`, `decompiledProjectPath` und `decompiledSourceRoot` aus; dieselben drei Felder stehen im strukturierten Payload auf Top-Level. Referenzen und Referenz-Sessions sind zusätzlich auf 32 Einträge begrenzt und liefern `referenceSummary`; `diagnostics` sind Samples mit `diagnosticsSummary` (Root/transitiv, Counts, Samples, `truncatedBy`). Bei Diagnosen wird `completeness` auf `partial` projiziert; das additive `analysis`-Objekt beschreibt Herkunft, Snapshot/Generation, Status sowie `bodyAvailability` und `contentMode` | nein | ja |
+| `find_assembly_extensions` | `targetPath` (Pflicht, absoluter vorhandener `.dll`- oder `.exe`-Pfad), `receiverType?`, `extensionName?`, `namespace?`, `maxResults?` (Default 100, Cap 1000), `includeReferences?`, `maxResponseBytes?`, `detailLevel?`, `cursor?` | Klassische C#-Extensions mit strukturierten Parametern, Referenz-/Diagnose-Summaries und additivem Budget-/Paging-Envelope. | nein | ja |
+| `get_assembly_context` | `targetPath` (Pflicht, absoluter vorhandener `.dll`- oder `.exe`-Pfad), `symbolIdentifier?` oder Alias `symbol?`, optionale Abschnitte für Metrics, References, Callers, Impact, Body und Class Structure, `maxResults?`, `maxBodyLines?`, `maxCallers?`, `depth?`, `topN?`, `maxResponseBytes?`, `detailLevel?` (`compact`, `standard`, `full`) und `cursor?` | Kompakter Composite-Vertrag mit stabiler `contextId`, Identität, Herkunft, Scope, Completeness und `assemblyAnalysis`. Envelope-Felder `totalCount`, `returnedCount`, `isTruncated` und `continuationToken` bleiben maschinenlesbar. | nein | ja |
+| `search_assembly` | `targetPath` (Pflicht, absoluter vorhandener `.dll`- oder `.exe`-Pfad), `pattern?`, `isRegex?`, `searchKind?` (`text` Default, `data_access`, `external_calls`), `declarationOnly?` (Default `false`), `kind?` (`method`, `type`, `property`), `maxResults?` (Default 50, Cap 1000), `maxFiles?`, `contextLines?` (Cap 5), `fileFilter?` (Regex), `maxResponseBytes?`, `cursor?` | Read-only Suche im verifizierten dekompilierten SourceRoot. `declarationOnly=true` schließt Treffer in Kommentaren, Strings und XML-Docs aus; `kind` schränkt auf Symbolarten ein. `text` benötigt ein eigenes Pattern; `data_access` und `external_calls` liefern ohne Pattern sichtbare eingebaute Regexe für typische Datenbank-/Datei-/Transaktions- bzw. HTTP-/RPC-/Socket-/Prozessaufrufe. `structuredContent.assemblySearch` enthält relative Trefferpfade, stabile `id`, Matchbereiche, Kontext, `totalCount`, `returnedCount`, `completeness`, `truncatedBy` und `continuationToken`; der gemeinsame `analysis`-Block enthält Ursprung, Generation und Source-Policy. | nein | ja |
+| `resolve_type_origin` | `typeName` (Pflicht), `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad) | Ermittelt deterministisch in < 100 ms den einfachen Assembly-Namen, absoluten DLL-Pfad auf der Festplatte, vollqualifizierten Typnamen und Symbol-Kind über Roslyn-Metadatenreferenzen. | ja | nein |
+| `find_implementations` | `symbolIdentifier` (wie `find_references`, oder Alias `symbol`), `maxResults?` (Default 50), `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad) | Findet konkrete Implementierungen und Overrides von Interfaces, abstrakten Klassen, virtuellen Methoden oder Properties in Quellcode-Projekten oder dekompilierten Assemblies mit Status (`concrete`/`abstract`/`virtual`) und Quelltext-/Zeilenposition. | ja | ja |
+| `find_symbol` | `namePatterns` (Array von Namens-Mustern) **oder** `namePattern`/`symbol` (skalare String-Aliase fuer genau ein Muster; bei gemischter Eingabe hat das Array Vorrang), max. 10 Patterns pro Call; unterstuetzt Substrings, Wildcards `*` und `?`, punktseparierte Pfade wie `Type.Member` sowie `Method()`; `kind?` (`class`/`method`/`property`/`interface`/`record`/`struct`/`enum`/`delegate`), `maxResults?` (Default 50), `includeReferences?` (Default `false`; bei einem Assembly-Target bounded Referenz-Assemblies durchsuchen) | Fundstellen als `Datei:Zeile - Kind: Signatur` je Pattern; StructuredContent liefert immer `FindSymbolBatchDto` (`results: [{ namePattern, matches: [...] }]`); bei 0 Treffern schlaegt das Tool aehnliche Symbole im Projekt vor; mit `includeReferences=true` enthalten Treffer `origin` und das Payload eine begrenzte `navigation`-Zusammenfassung | ja | ja |
+| `find_references` | `symbolIdentifier` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte oder qualifizierter Name), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3), `includeReferences?` (Default `false`; bei einem Assembly-Target bounded Referenz-Assemblies traversieren) | Alle Aufrufstellen; jede erfolgreiche Tiefe liefert `structuredContent.callSites` plus `completeness` mit Tiefe, Herkunft, besuchten Knoten und getrennten Trunkierungsgründen; Assembly-Antworten markieren `navigation` und partielle Diagnostics | ja | ja |
 | `get_call_tree` | `symbolIdentifier` (wie `find_references`), `depth?` (Default 2, hard cap 5), `format?` (`ascii` Default oder `mermaid`), `topN?` (Default 10, Fan-Out-Kappung pro Ebene), `direction?` (`incoming` Default, `outgoing` oder `both`), `includeReferences?` (Default `false`), `includeBcl?` (Default `false`) | Echter Aufrufer- oder Aufgerufene-Baum (Eltern-Kind-Struktur) als ASCII-Baum oder Mermaid-`flowchart TD`; `incoming` fragt, wer das Symbol aufruft, `outgoing` fragt, welche Symbole es aufruft (inkl. Cross-Assembly-Leaves `[ref: Assembly]`, BCL bei `includeBcl=true`), `both` liefert beide Richtungen abwechselnd; Traversierung hart begrenzt auf 250 Knoten; Assembly-Nodes tragen Herkunft und partielle Diagnostics | ja | ja |chtung vollständig aus der sichtbaren Ebene verdrängt; Traversierung hart begrenzt auf 250 Knoten; Assembly-Nodes tragen Herkunft und partielle Diagnostics | ja | ja |
-| `get_impact` | `gitRef?` (Git-Commit-Ref; ohne jeden Parameter aufgerufen = Standardfall: uncommittete Änderungen) **oder** `symbolIdentifier?` (exklusiv!), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3; nur Symbol-Branch, im gesamten Git-Branch (callers UND change-context) wirkungslos), `detailLevel?` (`"callers"` Default oder `"change-context"`, case-insensitive; nur im Git-Diff-Modus, nie zusammen mit `symbolIdentifier`), `maxChangedSymbols?` (Default 20, Cap 100), `maxTestsPerSymbol?` (Default 10, Cap 50). Bei `targetType="assembly"` ausschließlich `symbolIdentifier`; kein öffentliches `includeReferences` verwenden. | `callers` (Default): betroffene Call-Sites; der Symbol-Branch verwendet für jede Tiefe dieselbe `callSites`/`completeness`-Struktur wie `find_references`. Bei Assembly-Zielen ergänzt der gemeinsame Wrapper ein `analysis`-Objekt mit Target, Herkunft, Snapshot/Generation, Status und Vollständigkeit; `navigation`/`origin` werden nicht als `get_impact`-eigene Call-Site-Struktur ausgegeben. `change-context`: strukturiertes Objekt mit geänderten Dateien und Symbolen, Call-Sites, statisch zugeordneten Tests, diffbezogenen Violations, empfohlenen `dotnet test`-Befehlen und Completeness-Metadaten (siehe Detailabschnitt unten) | ja | ja |
+| `get_impact` | `gitRef?` (Git-Commit-Ref; ohne jeden Parameter aufgerufen = Standardfall: uncommittete Änderungen) **oder** `symbolIdentifier?` (exklusiv!), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3; nur Symbol-Branch, im gesamten Git-Branch (callers UND change-context) wirkungslos), `detailLevel?` (`"callers"` Default oder `"change-context"`, case-insensitive; nur im Git-Diff-Modus, nie zusammen mit `symbolIdentifier`), `maxChangedSymbols?` (Default 20, Cap 100), `maxTestsPerSymbol?` (Default 10, Cap 50). Bei einem Assembly-Target ausschließlich `symbolIdentifier`; kein öffentliches `includeReferences` verwenden. | `callers` (Default): betroffene Call-Sites; der Symbol-Branch verwendet für jede Tiefe dieselbe `callSites`/`completeness`-Struktur wie `find_references`. Bei Assembly-Zielen ergänzt der gemeinsame Wrapper ein `analysis`-Objekt mit Target, Herkunft, Snapshot/Generation, Status und Vollständigkeit; `navigation`/`origin` werden nicht als `get_impact`-eigene Call-Site-Struktur ausgegeben. `change-context`: strukturiertes Objekt mit geänderten Dateien und Symbolen, Call-Sites, statisch zugeordneten Tests, diffbezogenen Violations, empfohlenen `dotnet test`-Befehlen und Completeness-Metadaten (siehe Detailabschnitt unten) | ja | ja |
 | `get_type_hierarchy` | `symbolIdentifier` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte oder qualifizierter Name), `maxResults?` (Default 50, nur für abgeleitete/implementierende Typen) | Basisklassen, implementierte Interfaces (untrunkiert), abgeleitete/implementierende Typen (trunkiert), heuristische DI-Registrierungen (letzte Sektion) | ja | ja (nur abgeleitete/implementierende Typen) |
 | `dependency_graph` | `filePath?` (ganze Datei) **oder** `symbolIdentifier?` (ein Typ, engerer Scope, exklusiv!), `direction?` (`incoming`/`outgoing`/`both`, Default `both`), `depth?` (Default 1, hard cap 3, transitiv auf Datei-Ebene, hart begrenzt auf 150 besuchte Dateien), `maxResults?` (Default 50) | Datei-zu-Datei-Abhängigkeitskanten (annotiert mit den zugrunde liegenden Typnamen und Referenzzahl), abgeleitet aus echten `SemanticModel`-Typreferenzen statt `using`-Direktiven; optional Projekt-Referenzen des Zielprojekts | ja | ja |
 | `get_file_skeleton` | `filePaths` (Array von Pfaden fuer Batch in 1 Turn) oder `filePath` (String-Alias fuer genau eine Datei; jeweils relativ oder absolut) | Struktur-Skelett (Typen, Signaturen ohne Bodies, jeweils mit stabiler `id:` für `get_symbol_body`) | ja | nein |
@@ -375,16 +373,16 @@ Source-backed Checkout-/Snapshot-Erzeugung und Decompilation bleiben read-only.
 | `metrics_lookup` | `symbolIdentifiers` (Array von Symbol-IDs/Namen fuer Batch in 1 Turn; auch fuer genau ein Symbol) | Punktgenaue Metriken (Netto-LOC, zyklomatische/kognitive Komplexität, effektive Parameteranzahl, AI-Context-Footprint, Member-Counts) und Schwellwert-Abgleich gegen aktive `rules.json` für ein oder mehrere C#-Symbole; liefert lesbares Markdown mit Status-Badges (`[OK]`, `[WARN]`, `[VIOLATION]`) und stark typisiertes `MetricsLookupBatchDto` in `structuredContent` | ja | nein |
 | `get_feature_context` | `symbolIdentifier` (primär und Pflicht: Typname, Methode, Property, Datei:Zeile oder DocCommentId), `symbol?` (kompatibler Alias), `includeCallers?` (Default `true`), `includeTests?` (Default `true`), `includeMetrics?` (Default `true`), `includeViolations?` (Default `true`), `maxCallers?` (Default 10, Cap 50), `maxTests?` (Default 10, Cap 50) | Composite One-Shot-Exploration für ein C#-Symbol vor Edits/Refactorings: bündelt 5 Dimensionen (Deklaration, Metriken & Budget, statische Referenzen/Call-Sites und statische Test-Zuordnung sowie Linter-Violations) in einem einzigen Aufruf; liefert strukturiertes Markdown und typisiertes `FeatureContextPayload` in `structuredContent`. Der Caller-Report trägt `semantics="static-references/call-sites"`; Referenzen/Call-Sites sind keine Laufzeit-Coverage. Violations weisen `status` (`complete`, `truncated`, `unavailable`, `failed`, `notApplicable`), getrennte Counts/Items, `reasonCode` bei Fehlern und `truncatedBy` aus. `maxTests` bleibt ein Dateilimit; Testmethoden sind zusätzlich je Datei auf 50 und insgesamt auf 200 begrenzt, mit `displayedTestMethods`, `totalMatchingMethods` und `truncatedBy` | ja | ja |
 | `get_test_context` | `symbolIdentifier` (primär und Pflicht: Typname, Methode, Datei:Zeile oder DocCommentId), `symbol?` (kompatibler Alias), `maxResults?` (Default 30, Cap 100) | Statische Test-Zuordnung für ein C#-Symbol: ermittelt zielgerichtet alle zugeordneten Testdateien, Testklassen, Testmethoden, Test-Kategorien (Unit/Integration), Zuordnungsgründe und direkt ausführbare `dotnet test` Filterbefehle; liefert strukturiertes Markdown und typisiertes `TestContextPayload` in `structuredContent` | ja | ja |
-| `get_violations` | `targetType="project"`, `targetPath` (Pflicht, absoluter Projektroot), `scopeFilter?`, `maxResults?` (Default 50), `contextLines?` (0-5, Default 2), `includeSnippet?` (Default `false`) | Aktuelle Lint-Verstöße für den adressierten Projekt-Key inkl. Regel-ID und optionalen Quellcode-Snippets | ja | ja |
+| `get_violations` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `scopeFilter?`, `maxResults?` (Default 50), `contextLines?` (0-5, Default 2), `includeSnippet?` (Default `false`) | Aktuelle Lint-Verstöße für die adressierte Solution inkl. Regel-ID und optionalen Quellcode-Snippets; ohne benachbarte Regeln `not_configured`, nicht „0 Violations“ | ja | ja |
 | `safeguard` | `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `minScore?` (Default 8.0), `maxViolations?` (Default 20) | Structured JSON (siehe unten): deterministischer 0-10-Quality-Score, Pass/Fail gegen `minScore`, Top-Violations, strukturierter Remediation-Hint | ja | nein |
 | `pattern_detect` | `patterns?` (Default: alle 6 — god-class, async-void, long-method, public-without-doc, empty-catch, feature-envy), `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `maxResultsPerPattern?` (Default 20) | Structured JSON + Text: Lint-Verstöße nach Pattern-Kategorie gruppiert statt flacher Datei-Liste; bei mehreren Patterns ohne Treffer bleibt der Text bei Zusammenfassung plus „Keine Auffälligkeiten gefunden.“, Detailsektionen erscheinen nur bei Treffern (oder bei genau einem angeforderten Pattern) | ja | ja (je Pattern) |
 | `find_magic_values` | `scopeFilter?` (Projekt-Name oder Pfad-Substring), `valueType?` (`all` Default / `strings` / `numbers`), `categoryFilter?` (`all` Default / `config_candidates` / `constant_candidates` / `enum_candidates` / `nameof_candidates` / `localization_candidates` / `standard_candidates` / `security_candidates`), `minOccurrences?` (Default 2, Mindestvorkommen; 1 für Einzelvorkommen), `maxResults?` (Default 50), `ignoreNumbers?` (optional), `includeTests?` (Default false; filtert `/Tests/`, `/FastTests/` aus dem relativen Pfad), `includeSuppressed?` (Default false; wirksam via `SyntaxTrivia`-Auswertung am Literal), `changedOnly?` (Default false; nutzt `DiffImpactAnalyzer.RunGitDiff` + `ParseGitDiffHunks`, leere Diffs → 0 Dateien) | Strukturierte Funde (URLs, Pfade, Timeouts, Format-Strings, Schwellenwerte, HTTP-Statuscodes, Buffer-Konstanten, duplizierte `const`-Felder, enum-Kaskaden, `nameof`-Kandidaten, Security-Secrets, User-Facing-Exception-Messages) mit Ziel-Empfehlung (`appsettings.json`, `Constants.cs`, `StatusCodes.StatusXXX…`); alle 7 Heuristik-Kategorien aktiv (siehe unten) | ja | ja |
 | `find_dead_code` | `accessibility?` (`private_internal` Default / `all` / `private` / `internal` / `public`), `confidence?` (`both` Default / `high` / `low`), `kind?` (`all` Default / `type` / `class` / `method` / `field` / `property` / `event` / `delegate`), `scopeFilter?`, `includeTests?` (Default `false`), `mode?` (`members` Default / `locals` / `both`), `maxResults?` (Default 50) | Statische Kandidaten für unreferenzierte Typen, Member, Felder, Events oder Locals mit Confidence-Stufe und ausgewiesenen Grenzen der Analyse, etwa bei Reflection, DI, Serializern und Routing | ja | ja |
 | `get_symbol_body` | `symbolIdentifiers` (Array stabiler IDs/Namen/Dateizeilen fuer Batch in 1 Turn) **oder** `symbolIdentifier` (String-Alias fuer genau ein Symbol; bei gemischter Eingabe hat das Array Vorrang), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body bzw. -Bodies, getrennt durch Divider, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator; zusätzlich liefert `structuredContent.results` pro Eintrag `requestedIdentifier`, stabile `id`, relativen `filePath`, `startLine`, `bodyAvailability`, `contentMode`, Body und `isTruncated`. Bei dekompilierten Assembly-Targets stammen verfügbare Bodies aus dem eager `WholeProjectDecompiler`-Projekt-Snapshot und den darin geladenen echten Roslyn-Dokumenten. Interface- sowie abstract-/extern-Member bleiben `bodyAvailability=unavailable` | ja | nein (Body) |
 | `search_pattern` | `pattern` (Text oder Regex; Aliase `query`, `searchPattern`), `isRegex?` (Default `null` = Auto-Erkennung und Promotion bei 0 Treffern; `true` = explizit Regex, `false` = Plain-Substring), `scopeType?` (`all` [Default], `production` schliesst Tests aus, `tests`), `maxResults?` (Default 50), `maxFiles?`, `contextLines?`, `maxResponseBytes?`, `scope?`, `includePatterns?` (Aliase `fileFilter`, `includePattern`), `excludePatterns?`, `enrichCSharp?` (Default `false`) | Treffer im Dateibestand (alle Dateitypen) mit Match-Bereichen, optionalem Kontext und `completeness`; bei `isRegex=null` automatische Regex-Erkennung und Promotion bei 0 Plain-Treffern (Methodenklammern `()`, Generics `<T>`, gequotete Identifier, Wildcards); bei `enrichCSharp=true` zusätzlich `semantic` für sichtbare Treffer geladener C#-Dokumente | nein (Fallback) | ja |
-| `reload_config` | `targetType="project"`, `targetPath` (Pflicht, absoluter Projektroot), `configPath?` (optional, Override für diesen Key) | Liest standardmäßig die `rules`-Datei des adressierten Keys neu ein; ein expliziter `configPath` ist ein Hot-Swap-Override. Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
-| `get_server_health` | kein Target (Aggregation) oder `targetType="project"`/`targetType="assembly"` plus vollständiger `targetPath`, `includeSessions?` (Default `false`), `maxSessions?` (Default 20, Cap 50), `includeDiagnostics?` (Default `false`), `maxDiagnostics?` (Default 20, Cap 50) | ohne Target kleines Aggregat mit Session-, Status- und Diagnosezählern; `includeSessions=true` ergänzt eine auf `maxSessions` begrenzte Sessionliste. Ein zielgebundener Projekt- oder Assembly-Aufruf bleibt detailliert; `includeDiagnostics=true` begrenzt Diagnosesamples über `maxDiagnostics`; `diagnosticsSummary` weist Counts/Truncation aus | nein | ja |
-| `report_observability_feedback` | `feedbackType` (Pflicht), `title` (Pflicht), `description` (Pflicht), `relatedTool?`, `severity?` (Default `medium`), `expectedBehavior?`, `actualBehavior?`, `additionalContext?`, `projectRoot?` | Schreibt Fehlerberichte, unerwartete Ausgaben, False Positives oder Feature-Wünsche von KI-Agenten unbeschränkt ins System-Log zur Analyse (nicht für normale Leermengen wie nicht existierende Symbole); liefert Bestätigung und typisiertes DTO | ja | nein |
+| `reload_config` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad) | Liest ausschließlich die optionale `ainetlinter-rules.json` neben der adressierten Solution neu. Fehlt sie, bleibt der Status `not_configured`; ein `configPath`-Override ist nicht vorgesehen. Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
+| `get_server_health` | kein Target (globale Aggregation) oder `targetPath?` (absoluter vorhandener `.sln`/`.slnx`/`.dll`/`.exe`-Pfad), `includeSessions?` (Default `false`), `maxSessions?` (Default 20, Cap 50), `includeDiagnostics?` (Default `false`), `maxDiagnostics?` (Default 20, Cap 50) | ohne Target kleines globales Aggregat mit Session-, Status- und Diagnosezählern; `includeSessions=true` ergänzt eine auf `maxSessions` begrenzte Sessionliste. Mit `targetPath` bleibt der Aufruf detailliert; `includeDiagnostics=true` begrenzt Diagnosesamples über `maxDiagnostics`; `diagnosticsSummary` weist Counts/Truncation aus | nein | ja |
+| `report_observability_feedback` | `feedbackType` (Pflicht), `title` (Pflicht), `description` (Pflicht), `relatedTool?`, `severity?` (Default `medium`), `expectedBehavior?`, `actualBehavior?`, `additionalContext?` | Schreibt Fehlerberichte, unerwartete Ausgaben, False Positives oder Feature-Wünsche von KI-Agenten unbeschränkt ins System-Log zur Analyse (nicht für normale Leermengen wie nicht existierende Symbole); liefert Bestätigung und typisiertes DTO. Das Tool ist ungebunden und akzeptiert keinen Target-/Projektparameter | ja | nein |
 | `find_duplicates` | `mode?` (`clone` Default, `refactoring-drift` oder `structural`), `scopeType?` (`production` Default, `all`, `tests`), `minTokens?` (Default aus `rules.json`, 30), `similarityThreshold?` (`exact`/`near`/`fuzzy`, Default `fuzzy` — niedrigste noch angezeigte Stufe, bei `mode=clone` und `mode=structural`), `normalizeIdentifiers?` (Default `false`, nur `mode=clone`), `scopeDir?` (Default Solution-Root), `maxResults?` (Default 20), `helperSymbol?` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte, stabile DocumentationCommentId oder qualifizierter Name wie bei `find_references`; Pflicht bei `mode=refactoring-drift`, bei `mode=structural` ignoriert) | `mode=clone`: Token-basierte Code-Clone-Detection (Jaccard-N-Gram, Method-Granularität) als transitiv gruppierte Cluster (nicht isolierte Paare), gestaffelt nach exact/near/fuzzy-Ähnlichkeit (inkl. Top-Cluster-Übersicht bei >20 Treffern). `mode=refactoring-drift`: Methoden, die den per `helperSymbol` angegebenen Helper strukturell nachbauen statt ihn aufzurufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005) — als Kandidaten (nicht Verstöße) gelistet, siehe Detail-Abschnitt unten. `mode=structural`: Erkennt semantisch ähnliche Hilfsmethoden anhand eines Roslyn-Strukturprofils und Cosine-Similarity (Typ-4/Intended Duplication), liefert manuell zu prüfende Kandidatencluster mit Strukturprofil-Kurzfassung — keine automatische `DuplicateCode`-Violation, eigene Cosine-Schwellwerte aus `rules.json` (`StructuralDuplicate*Threshold`) | ja | ja |
 
 Die Testinformationen von `get_feature_context`, `get_test_context` und `get_impact` mit `detailLevel="change-context"` (`testAssociations`) sind eine **statische Test-Zuordnung**. Der Scanner führt keine instrumentierte Laufzeit-Coverage durch und liest keine Coverage-Dateien. Der Testbezug sagt daher nicht aus, ob ein Test den Zielpfad tatsächlich ausführt oder Assertions für diesen Pfad enthält.
@@ -568,7 +566,7 @@ niedrigere Limits oder ein gezielter semantischer Folgeaufruf der vorgesehene n�
 
 **`find_references` — transitive Structured Response:** Das Tool liefert ein JSON-Objekt mit deterministisch sortierten und deduplizierten Treffern. `filePath` ist solution-relativ mit Forward-Slashes; `depth` ist die Traversierungsstufe; `reachedFromSymbolId` ist die stabile `DocumentationCommentId` des in diesem Schritt untersuchten Symbols (bei fehlender ID ein deterministischer qualifizierter Anzeigename). Call-Sites, deren Aufrufer eine lokale Funktion ist, tragen in `reachedFromSymbolId` die eindeutige Sonderform `<ID des einschließenden Members>#lf:<Name>@<Zeile>:<Spalte>` — ohne diesen Sonderfall wuerde die Doc-ID der lokalen Funktion mit der ihres einschliessenden Members kollidieren; der String-Wert aenderte sich dadurch von der (geerbten, mehrdeutigen) Methoden-ID zu einer eindeutigen ID.
 
-Bei `targetType="assembly"` bleiben `includeReferences=false` und der bisherige Root-Snapshot der Default. Mit `includeReferences=true` werden höchstens 32 eröffnete Root-/Referenz-Sessions geprüft. Jede Assembly-Herkunft bleibt über `origin` an Treffern beziehungsweise über `navigation` am Payload sichtbar; `navigation.completeness` wird bei Session-Diagnostics, nicht auflösbaren Referenzen oder dem Session-Limit auf `partial` gesetzt. Der dekompilierte Root-Snapshot wird beim Öffnen der Session eager mit `WholeProjectDecompiler` als Projekt materialisiert; die erzeugten `.cs`-Dateien werden als echte Roslyn-Dokumente geladen. Fehlende Call-Sites sind deshalb ein begrenztes Ergebnis des geladenen Snapshots und der Traversierungsgrenzen, kein Beleg dafür, dass außerhalb dieses Scopes keine Aufrufer existieren. `get_symbol_body` liest verfügbare Bodies aus diesen bereits geladenen Syntaxbäumen über den direkten `SourceSymbolBodyResolver`-Pfad und weist `contentMode=source` aus; eine nachträgliche Dekompilierung einzelner Bodies findet nicht statt. Interface- sowie abstract-/extern-Member bleiben als `bodyAvailability=unavailable` mit Hinweis sichtbar.
+Bei einem Assembly-`targetPath` bleiben `includeReferences=false` und der bisherige Root-Snapshot der Default. Mit `includeReferences=true` werden höchstens 32 eröffnete Root-/Referenz-Sessions geprüft. Jede Assembly-Herkunft bleibt über `origin` an Treffern beziehungsweise über `navigation` am Payload sichtbar; `navigation.completeness` wird bei Session-Diagnostics, nicht auflösbaren Referenzen oder dem Session-Limit auf `partial` gesetzt. Der dekompilierte Root-Snapshot wird beim Öffnen der Session eager mit `WholeProjectDecompiler` als Projekt materialisiert; die erzeugten `.cs`-Dateien werden als echte Roslyn-Dokumente geladen. Fehlende Call-Sites sind deshalb ein begrenztes Ergebnis des geladenen Snapshots und der Traversierungsgrenzen, kein Beleg dafür, dass außerhalb dieses Scopes keine Aufrufer existieren. `get_symbol_body` liest verfügbare Bodies aus diesen bereits geladenen Syntaxbäumen über den direkten `SourceSymbolBodyResolver`-Pfad und weist `contentMode=source` aus; eine nachträgliche Dekompilierung einzelner Bodies findet nicht statt. Interface- sowie abstract-/extern-Member bleiben als `bodyAvailability=unavailable` mit Hinweis sichtbar.
 
 **Gemeinsamer Traversal-Datentyp von `find_references` und dem Symbol-Branch von `get_impact`:** Beide Ergebnisse verwenden die folgende `callSites`-/`completeness`-Struktur. Der Assembly-spezifische Vertrag von `get_impact` steht im nächsten Abschnitt; die dort beschriebene `navigation`-Erweiterung gehört ausschließlich zu `find_references`.
 
@@ -599,9 +597,9 @@ Bei `targetType="assembly"` bleiben `includeReferences=false` und der bisherige 
 
 `totalCallSiteCount` zählt die ungekappte Menge innerhalb des Traversierungs-Hard-Caps; `shownCallSiteCount` zählt die tatsächlich in `callSites` enthaltenen Einträge. `truncatedByMaxResults`, `truncatedByNodeLimit` und `depthWasClamped` sind unabhängig voneinander und können gleichzeitig `true` sein. Die Textantwort wird aus derselben gezeigten Trefferliste formatiert und bleibt für Textclients kompatibel.
 
-**`get_impact` (Symbol-Branch) — Assembly-Vertrag:** Mit `targetType="assembly"` ist ausschließlich `symbolIdentifier` zulässig; ein leerer Aufruf oder `gitRef` liefert einen recoverable `INVALID_ARGUMENT`. Die öffentliche Registrierung und `GetImpactInput` besitzen keinen `includeReferences`-Parameter. Die Assembly-Registrierung setzt die interne Dispatch-Option `ExpandAssemblyReferences=true`, damit die Route ihre Referenz-Sessions vor der Analyse vorbereiten kann; daraus entsteht keine öffentlich wählbare `includeReferences`-Option. Das 32-Session-Limit und die `navigation`-Payload des `find_references`-Vertrags werden daher nicht als `get_impact`-Antwortvertrag wiederholt.
+**`get_impact` (Symbol-Branch) — Assembly-Vertrag:** Bei einem Assembly-`targetPath` ist ausschließlich `symbolIdentifier` zulässig; ein leerer Aufruf oder `gitRef` liefert einen recoverable `INVALID_ARGUMENT`. Die öffentliche Registrierung und `GetImpactInput` besitzen keinen `includeReferences`-Parameter. Die Assembly-Registrierung setzt die interne Dispatch-Option `ExpandAssemblyReferences=true`, damit die Route ihre Referenz-Sessions vor der Analyse vorbereiten kann; daraus entsteht keine öffentlich wählbare `includeReferences`-Option. Das 32-Session-Limit und die `navigation`-Payload des `find_references`-Vertrags werden daher nicht als `get_impact`-Antwortvertrag wiederholt.
 
-Die tatsächliche Symbol-Antwort enthält `callSites` und `completeness` aus `ReferenceTraversalResult`. Bei einem Assembly-Target ergänzt `AssemblyAnalysisResponse.Enrich` den strukturierten Payload um `analysis` mit `targetType`, absolutem `targetPath`, `origin` (`decompiled`), Hash, Generation, Status, Vollständigkeit, Body-Verfügbarkeit und Content-Modus. Die Herkunft (`Quelle: Dekompilat`) steht damit im `analysis`-Objekt beziehungsweise im `[ASSEMBLY]`-Textheader; die Call-Site-Einträge dieser Route tragen keine separate `navigation`- oder `origin`-Struktur.
+Die tatsächliche Symbol-Antwort enthält `callSites` und `completeness` aus `ReferenceTraversalResult`. Bei einem Assembly-Target ergänzt `AssemblyAnalysisResponse.Enrich` den strukturierten Payload um `analysis` mit absolutem `targetPath`, `origin` (`decompiled`), Hash, Generation, Status, Vollständigkeit, Body-Verfügbarkeit und Content-Modus. Die Herkunft (`Quelle: Dekompilat`) steht damit im `analysis`-Objekt beziehungsweise im `[ASSEMBLY]`-Textheader; die Call-Site-Einträge dieser Route tragen keine separate `navigation`- oder `origin`-Struktur.
 
 **`get_impact` (`detailLevel=change-context`) — Structured Output im Detail:** Der Git-Diff-Zweig liefert bei `detailLevel="change-context"` ein eigenes Payload-Objekt statt der `CallSiteEntry`-Liste des Default-Modus. `StructuredContent` liefert:
 
@@ -827,8 +825,7 @@ Beispiel-Aufruf (JSON-RPC über stdio):
   "params": {
     "name": "find_symbol",
     "arguments": {
-      "targetType": "project",
-      "targetPath": "C:\\Projects\\MyApp",
+      "targetPath": "C:\\Projects\\MyApp\\MyApp.slnx",
       "namePatterns": ["LinterEngine"],
       "maxResults": 5
     }
@@ -863,32 +860,32 @@ Wenn `find_symbol` mit einem Pattern ohne C#-Treffer aufgerufen wird, liefert da
 ### Resources für Agenten
 
 Für eine neue Integration ist die direkte Resource `ainetlinter://agent-guide`
-der erste Einstieg. Sie ist ohne `projectRoot` und damit auch ohne vorhandene
-`ainetlinter.project.json` lesbar. Ihr Inhalt entspricht der eingebetteten
+der erste Einstieg. Sie ist ohne Target lesbar. Ihr Inhalt entspricht der eingebetteten
 Bootstrap-Dokumentation `Docs/mcp-bootstrap.md` und enthält anschließend die
 separat eingebettete dauerhafte `AiNetLinter-McpWorkflow.mdc`. Sie beschreibt
-Solution-/Regeldatei-Ermittlung, `ainetlinter.project.json`, MCP-Registrierung
-und das Kopieren der Regeldatei nach `.agents/rules` oder `.cursor/rules`.
+die Auswahl eines absoluten vorhandenen Targets, die optionale benachbarte
+`ainetlinter-rules.json`, MCP-Registrierung und das Kopieren der Regeldatei nach
+`.agents/rules` oder `.cursor/rules`.
 Abruf: `resources/read` mit `{"uri": "ainetlinter://agent-guide"}`. Offline
 stehen `ainetlinter --docs mcp-bootstrap` für den Bootstrap und
 `ainetlinter --docs mcp-rule` für die dauerhafte Regel zur Verfügung.
 
 Nach dem Bootstrap liefert die Status-Resource `ainetlinter://overview` unter
-`ainetlinter://overview?projectRoot=<url-encoded>` bei jedem `resources/read`
-eine frisch erzeugte kurze Statuskarte: Projektroot,
+`ainetlinter://overview?targetPath=<url-encoded>` bei jedem `resources/read`
+eine frisch erzeugte kurze Statuskarte: Target-Pfad,
 geladene Solution, verwendete Regelquelle und nächste Einstiegspunkte. Die
 vollständigen Tool- und Parameterschemas stehen in `tools/list`. Beispiel:
-`{"uri": "ainetlinter://overview?projectRoot=C%3A%2Frepos%2Fmein-projekt"}`.
+`{"uri": "ainetlinter://overview?targetPath=C%3A%2Frepos%2Fmein-projekt%2Fsrc%2Fmein-projekt.slnx"}`.
 
-Die Resource `ainetlinter://rules{?projectRoot}` liefert für denselben adressierten
-Projekt-Key bei jedem `resources/read` eine frisch aus dessen atomarem Config-Snapshot
-generierte Markdown-Karte. Sie enthält die Konfigurationsherkunft (eingebaute Defaults
-oder aufgelöster `rules.json`-Pfad), aktive und deaktivierte Regeln sowie die effektiven
+Die Resource `ainetlinter://rules{?targetPath}` liefert für denselben adressierten
+Solution-Key bei jedem `resources/read` eine frisch aus dessen atomarem Regel-Snapshot
+generierte Markdown-Karte. Sie enthält die Regelherkunft (benachbarte
+`ainetlinter-rules.json` oder `not_configured`), aktive und deaktivierte Regeln sowie die effektiven
 Metrik-Schwellwerte. Projekt- und Pfad-Overrides werden als vorhandene Muster ausgewiesen;
 die konkrete Anwendung erfolgt weiterhin pro Roslyn-Projekt bzw. Datei. Beispiel:
-`{"uri": "ainetlinter://rules?projectRoot=C%3A%2Frepos%2Fmein-projekt"}`.
+`{"uri": "ainetlinter://rules?targetPath=C%3A%2Frepos%2Fmein-projekt%2Fsrc%2Fmein-projekt.slnx"}`.
 Die Ausgabe spiegelt auch Änderungen wider, die über `reload_config` in denselben
-residenten Projekt-Key geladen wurden.
+residenten Solution-Key geladen wurden.
 
 ### stdout-Schutz (strukturelle JSON-RPC-Absicherung)
 
@@ -1002,14 +999,11 @@ Hierarchie-Typs enthalten. Convention-basierte und Factory-basierte
 Registrierungen werden bewusst nicht über Reflection erkannt. Bei
 0 Treffern wird die Sektion weggelassen.
 
-Wenn die Definitionsdatei auf keine gültige Regeldatei zeigt, wird der Projekt-Key
-nicht mit Default-Regeln angelegt. Der Fehler enthält den betroffenen Pfad und
-die Bauanleitung; ein `reload_config`-Fehler bleibt recoverable und lässt die
-aktive Config unverändert.
-
-Eine fehlende oder ungültige Definition ist über `PROJECT_NOT_INITIALIZED`,
-`PROJECT_DEFINITION_INVALID`, `SOLUTION_NOT_FOUND`, `RULES_NOT_FOUND` oder
-`RULES_INVALID` sichtbar; es gibt keine Nachbarsuche und keinen stillen Default-
+Fehlt die optionale `ainetlinter-rules.json` neben einer Source-Solution, wird
+Navigation trotzdem aufgebaut und die Lint-Capability als `not_configured`
+ausgewiesen; ein Lint-Resultat darf daraus keine scheinbare leere oder saubere
+Analyse machen. Eine ungültige oder nicht lesbare Regeldatei ist ein
+Konfigurationsfehler; es gibt keine Nachbarsuche und keinen stillen Default-
 Fallback.
 
 ### Error-Reporting
@@ -1040,15 +1034,12 @@ Fehlermeldungen folgen dem bestehenden strukturierten Format auf `stderr` und im
 | `SYMBOL_NOT_FOUND` | `symbolIdentifier` / `typeIdentifier` löst zu keinem Symbol auf |
 | `AMBIGUOUS_SYMBOL` | `symbolIdentifier` löst zu mehreren Symbolen auf (Kandidaten in `context`) |
 | `INVALID_ARGUMENT` | Leeres Pattern, ungültige Regex, exklusive Parameter verletzt (`get_impact`), Pflichtparameter fehlt/falsch benannt |
-| `PROJECT_ROOT_REQUIRED` | Interne Projektdefinition oder Resource ohne erforderlichen Projektroot |
-| `PROJECT_ROOT_INVALID` | Projektroot einer Resource oder Definition ist kein absoluter Pfad |
-| `ASSEMBLY_TARGET_UNSUPPORTED` | Das angegebene Tool unterstützt kein Assembly-Target; spezialisierte Assembly-Tools verwenden `targetType="assembly"` |
-| `PROJECT_NOT_INITIALIZED` | Keine `ainetlinter.project.json` im adressierten Projektroot; Antwort enthält ein kopierfähiges Template |
-| `PROJECT_DEFINITION_INVALID` | Definitionsdatei ist ungültig oder enthält nicht die Pflichtfelder `solution` und `rules` |
-| `SOLUTION_NOT_FOUND` | Die Solution aus der Definitionsdatei existiert nicht |
-| `RULES_NOT_FOUND` | Die Regeldatei aus der Definitionsdatei existiert nicht |
-| `RULES_INVALID` | Die Regeldatei ist lesbar, aber nicht gültig; es werden keine Default-Regeln geladen |
-| `PROJECT_LOAD_FAILED` | Kalt-Load eines Projekt-Keys fehlgeschlagen; der nächste Aufruf versucht den Load erneut |
+| `TARGET_PATH_REQUIRED` | `targetPath` fehlt; ein absoluter Pfad einer vorhandenen `.sln`/`.slnx`/`.dll`/`.exe`-Datei ist erforderlich |
+| `TARGET_PATH_INVALID` | `targetPath` ist nicht absolut, nicht vorhanden, ein Verzeichnis oder hat eine nicht unterstützte Endung |
+| `ASSEMBLY_TARGET_UNSUPPORTED` | Das angegebene Tool unterstützt kein Assembly-Target; ein `.dll`-/`.exe`-Target ist für dieses Tool unsupported |
+| `SOLUTION_NOT_FOUND` | Die über `targetPath` angegebene `.sln`-/`.slnx`-Datei existiert nicht oder wird nicht unterstützt |
+| `RULES_INVALID` | Die optionale benachbarte `ainetlinter-rules.json` ist lesbar, aber nicht gültig; es werden keine Default-Regeln als Ersatz geladen |
+| `PROJECT_LOAD_FAILED` | Laden der über `targetPath` adressierten Solution fehlgeschlagen; der nächste Aufruf versucht den Load erneut |
 
 ### Verhalten bei fehlendem oder falsch benanntem Pflichtparameter
 

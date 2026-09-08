@@ -448,6 +448,12 @@ Erweitert die generierten `.agents/rules/AiNetLinter.mdc`-Dateien um eine projek
 
 Seit 2026-08 schrittweise aufgebauter stdio-basierter MCP-Server, der die Roslyn-basierte Solution-Analyse als granular abfragbare Tools für AI-Coding-Agenten bereitstellt (historischer Stand nach EPIC-08: 13 Tools). Diese EPICs sind **separat** von den oben gelisteten Epics 1-33 zu lesen — sie beziehen sich auf den MCP-Server-Modus (`ainetlinter --mcp-server`), nicht auf den CLI-Batch-Modus. EPIC-01 bis EPIC-07 wurden mit dem damaligen Stand von 9 Tools umgesetzt; EPIC-08 erweiterte den Symbolgraphen um `get_symbol_body` sowie `depth`/DI-Hinweis-Erweiterungen, EPIC-09 um das System-Log-Call-Logging. Vollständige, aktuelle Tool-Referenz: [Docs/agent-api.md#mcp-server-modus](agent-api.md#mcp-server-modus).
 
+> **Historischer Vertrag:** Die folgenden EPIC-Abschnitte dokumentieren
+> frühere Implementierungsstände. Ihre Beispiele mit `ainetlinter.project.json`,
+> `projectRoot` oder `targetType` sind nicht normativ und dürfen nicht als
+> aktueller MCP-Vertrag verwendet werden. Der aktuelle Vertrag ist der
+> `targetPath`-only-Stand in [Docs/agent-api.md](agent-api.md).
+
 ### EPIC-A — Projektregistry und transportneutrales Multi-Solution-Routing (umgesetzt am 2026-08-24)
 
 - [x] Eine `ainetlinter.project.json` mit den Pflichtfeldern `solution` und

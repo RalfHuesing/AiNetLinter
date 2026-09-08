@@ -6,6 +6,7 @@ using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.DuplicateDetection;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace AiNetLinter.Mcp.Registration;
@@ -19,7 +20,7 @@ namespace AiNetLinter.Mcp.Registration;
 /// Symbolgraph-Tools teilt — es nutzt ausschliesslich die eigenstaendige
 /// <see cref="AiNetLinter.Core.DuplicateDetection.DuplicateDetectionEngine"/> (Core/DuplicateDetection/, auch
 /// vom Linter-Checker <c>DuplicateCodeChecker</c> genutzt). Das Lambda ist projektgebunden:
-/// <c>targetType</c> und <c>targetPath</c> sind Pflicht und adressieren den gemeinsamen Dispatch.
+/// <c>targetPath</c> ist Pflicht und adressiert den gemeinsamen Dispatch.
 /// </summary>
 internal static class DuplicateDetectionToolRegistrations
 {
@@ -28,17 +29,18 @@ internal static class DuplicateDetectionToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, int? minTokens = null, string? similarityThreshold = null, bool? normalizeIdentifiers = null,
+            async (RequestContext<CallToolRequestParams> context, string targetPath, int? minTokens = null, string? similarityThreshold = null, bool? normalizeIdentifiers = null,
                 string? scopeDir = null, string? scope = null, string? path = null, int? maxResults = null, string? mode = null, string? helperSymbol = null, string? helper = null, string? symbol = null,
                 string? scopeType = "production",
                 CancellationToken ct = default) =>
             {
+                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
+                if (legacyError is not null) return legacyError;
                 var effectiveScopeDir = scopeDir ?? scope ?? path;
                 var effectiveHelper = helperSymbol ?? helper ?? symbol;
                 return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
-                    targetType,
-                    targetPath,
+                    new AnalysisTargetRequest(targetPath),
                     lease =>
                     {
                         var input = new DuplicateDetectionInput(
@@ -46,7 +48,7 @@ internal static class DuplicateDetectionToolRegistrations
                         return DuplicateDetectionTool.ExecuteAsync(lease.Server, input, ct);
                     });
             },
-            McpToolRegistrationOptions.ReadOnlyTool("find_duplicates", FindDuplicatesDescription)));
+            TargetPathToolRegistrationOptions.SourceReadOnlyTool("find_duplicates", FindDuplicatesDescription)));
     }
 
     private const string FindDuplicatesDescription =

@@ -1,12 +1,12 @@
 #nullable enable
 
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Projects;
-using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
 using ModelContextProtocol.Protocol;
@@ -46,20 +46,25 @@ internal static class ServerMaintenanceToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? configPath = null, CancellationToken ct = default) =>
-                await ProjectAnalysisDispatcher.ExecuteAsync(
+            async (RequestContext<CallToolRequestParams> context, string targetPath, CancellationToken ct = default) =>
+            {
+                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
+                if (legacyError is not null) return legacyError;
+                return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
-                    targetType,
-                    targetPath,
-                    lease => ReloadConfigTool.ExecuteAsync(lease.Server, lease.Definition.RulesPath, configPath, ct)),
-            McpToolRegistrationOptions.ReloadConfigTool("reload_config", ReloadConfigDescription)));
+                    new AnalysisTargetRequest(targetPath),
+                    lease => ReloadConfigTool.ExecuteAsync(
+                        lease.Server,
+                        Path.Combine(Path.GetDirectoryName(targetPath)!, "ainetlinter-rules.json"),
+                        ct));
+            },
+            TargetPathToolRegistrationOptions.ReloadConfigTool("reload_config", ReloadConfigDescription)));
     }
 
     private const string ReloadConfigDescription =
         "Wann nutzen: rules.json wurde waehrend des Server-Laufs geaendert und get_violations " +
-        "soll die neuen Regeln sofort respektieren, ohne den Server neu zu starten. Ohne " +
-        "configPath wird der rules-Pfad aus der Definitionsdatei (ainetlinter.project.json) des " +
-        "adressierten Projekts neu eingelesen; mit configPath gilt der Pfad als temporaerer Override. " +
+        "soll die neuen Regeln sofort respektieren, ohne den Server neu zu starten. Gelesen wird " +
+        "ausschliesslich die optionale ainetlinter-rules.json neben der adressierten Solution. " +
         "Bei ungueltigem Pfad/JSON bleibt die bisherige Konfiguration aktiv.";
 
     private static void AddGetServerHealth(
@@ -69,26 +74,30 @@ internal static class ServerMaintenanceToolRegistrations
         IAssemblyAnalysisRegistry? assemblyRegistry)
     {
         tools.Add(McpServerTool.Create(
-            (
-                string? targetType = null,
+            async (
+                RequestContext<CallToolRequestParams> context,
                 string? targetPath = null,
                 bool includeDiagnostics = false,
                 int maxDiagnostics = AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics,
                 bool includeSessions = false,
                 int maxSessions = GetServerHealthTool.DefaultMaxSessions,
-                CancellationToken ct = default) => ExecuteGetServerHealthAsync(
+                 CancellationToken ct = default) =>
+            {
+                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
+                if (legacyError is not null) return legacyError;
+                return await ExecuteGetServerHealthAsync(
                     registry,
                     runtimeContext,
                     assemblyRegistry,
                     new GetServerHealthRequest(
-                        targetType,
                         targetPath,
                         includeDiagnostics,
                         maxDiagnostics,
                         includeSessions,
                         maxSessions,
-                        ct)),
-            McpToolRegistrationOptions.ServerHealthTool("get_server_health", GetServerHealthDescription)));
+                        ct));
+            },
+            TargetPathToolRegistrationOptions.ServerHealthTool("get_server_health", GetServerHealthDescription)));
     }
 
     private static async Task<CallToolResult> ExecuteGetServerHealthAsync(
@@ -98,7 +107,7 @@ internal static class ServerMaintenanceToolRegistrations
         GetServerHealthRequest request)
     {
         var resolution = AnalysisTargetResolver.ResolveOptional(
-            new AnalysisTargetRequest(request.TargetType, request.TargetPath));
+            new AnalysisTargetRequest(request.TargetPath));
         if (resolution.Error is not null) return resolution.Error;
 
         var options = CreateHealthOptions(resolution.Target, runtimeContext, request);
@@ -120,7 +129,7 @@ internal static class ServerMaintenanceToolRegistrations
         Daemon.DaemonRuntimeContext? runtimeContext,
         GetServerHealthRequest request) =>
         new(
-            ProjectRoot: target?.TargetType == AnalysisTargetType.Project ? target.CanonicalPath : null,
+            TargetPath: target?.TargetType == AnalysisTargetType.Project ? target.CanonicalPath : null,
             RuntimeContext: runtimeContext,
             AssemblyPath: target?.TargetType == AnalysisTargetType.Assembly ? target.CanonicalPath : null,
             IncludeDiagnostics: request.IncludeDiagnostics,
@@ -129,7 +138,6 @@ internal static class ServerMaintenanceToolRegistrations
             MaxSessions: request.MaxSessions);
 
     private sealed record GetServerHealthRequest(
-        string? TargetType,
         string? TargetPath,
         bool IncludeDiagnostics,
         int MaxDiagnostics,
@@ -139,10 +147,8 @@ internal static class ServerMaintenanceToolRegistrations
 
     private static readonly string GetServerHealthDescription =
         "Wann nutzen: pruefen, ob der Server laeuft und welche Projekt- und Assembly-Sessions " +
-        "resident sind. Ohne targetType und targetPath: globaler Status fuer alle Projekt-Keys " +
-        "und Assembly-Sessions. Mit targetType='project' und absolutem targetPath: gezielter Status fuer diesen Key. " +
-        "Mit targetType='assembly' und absolutem .dll- oder .exe-Pfad: gezielter Status fuer diese Assembly-Session. " +
-        "targetType und targetPath muessen entweder beide gesetzt oder beide weggelassen werden. " +
+        "resident sind. Ohne targetPath: globaler Status fuer alle Projekt-Keys und Assembly-Sessions. " +
+        "Mit targetPath als .sln/.slnx wird der Projekt-Key, mit .dll/.exe die Assembly-Session gezielt geprueft. " +
          "Standardmaessig werden global nur Aggregat, Status- und Diagnosezaehler geliefert; " +
          "includeSessions=true fordert begrenzte Sessiondetails an, maxSessions wird serverseitig " +
          $"auf {GetServerHealthTool.MaxSessions} gedeckelt. includeDiagnostics=true fordert begrenzte " +
@@ -151,7 +157,8 @@ internal static class ServerMaintenanceToolRegistrations
     private static void AddReportObservabilityFeedback(McpServerPrimitiveCollection<McpServerTool> tools)
     {
         tools.Add(McpServerTool.Create(
-            (string feedbackType,
+             (RequestContext<CallToolRequestParams> context,
+             string feedbackType,
              string title,
              string description,
              string? relatedTool = null,
@@ -159,9 +166,11 @@ internal static class ServerMaintenanceToolRegistrations
              string? expectedBehavior = null,
              string? actualBehavior = null,
              string? additionalContext = null,
-             string? projectRoot = null,
              CancellationToken ct = default) =>
-                ReportObservabilityFeedbackTool.ExecuteAsync(
+            {
+                 var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
+                  if (legacyError is not null) return Task.FromResult(legacyError);
+                  return ReportObservabilityFeedbackTool.ExecuteAsync(
                     new ReportObservabilityFeedbackParameters(
                         feedbackType,
                         title,
@@ -170,9 +179,10 @@ internal static class ServerMaintenanceToolRegistrations
                         severity,
                         expectedBehavior,
                         actualBehavior,
-                        additionalContext,
-                        projectRoot)),
-            McpToolRegistrationOptions.FeedbackTool("report_observability_feedback", ReportObservabilityFeedbackDescription)));
+                         additionalContext,
+                          ProjectRoot: null));
+            },
+            TargetPathToolRegistrationOptions.FeedbackTool("report_observability_feedback", ReportObservabilityFeedbackDescription)));
     }
 
     private const string ReportObservabilityFeedbackDescription =

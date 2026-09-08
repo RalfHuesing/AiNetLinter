@@ -57,9 +57,9 @@ internal sealed class ProjectRegistry : IAsyncDisposable
         tickTask = Task.Run(() => MonitorLoopAsync(tickInterval));
     }
 
-    internal ProjectLeaseResult Lease(string projectRoot)
+    internal ProjectLeaseResult Lease(string solutionPath)
     {
-        var key = Canonicalize(projectRoot);
+        var key = Canonicalize(solutionPath);
         var retired = new List<McpCodeGraphServer>();
         var result = TryAdoptOrCreate(key, retired);
         foreach (var server in retired)
@@ -81,9 +81,9 @@ internal sealed class ProjectRegistry : IAsyncDisposable
         }
     }
 
-    internal int PendingCreationWaiters(string projectRoot)
+    internal int PendingCreationWaiters(string solutionPath)
     {
-        var key = Canonicalize(projectRoot);
+        var key = Canonicalize(solutionPath);
         lock (gate)
         {
             return reservations.TryGetValue(key, out var reservation) ? reservation.WaiterCount : 0;
@@ -225,7 +225,7 @@ internal sealed class ProjectRegistry : IAsyncDisposable
 
     private ProjectCreationAttempt CreateInstance(string key)
     {
-        var definition = ProjectDefinitionLoader.Load(key);
+        var definition = ProjectDefinitionLoader.LoadSolutionTarget(key);
         if (!definition.Succeeded)
         {
             return new(null, ProjectInstanceCreation.Failed(definition.ErrorCode!, definition.Message!));
@@ -311,9 +311,9 @@ internal sealed class ProjectRegistry : IAsyncDisposable
         }
     }
 
-    internal ProjectSnapshot? FindSnapshot(string projectRoot)
+    internal ProjectSnapshot? FindSnapshot(string solutionPath)
     {
-        var key = Canonicalize(projectRoot);
+        var key = Canonicalize(solutionPath);
         lock (gate)
         {
             return projects.TryGetValue(key, out var entry) ? SnapshotOf(entry) : null;
@@ -436,9 +436,13 @@ internal sealed class ProjectRegistry : IAsyncDisposable
     private static TimeSpan ResolvePositive(TimeSpan value, TimeSpan fallback) =>
         value > TimeSpan.Zero ? value : fallback;
 
-    private static string Canonicalize(string projectRoot)
+    private static string Canonicalize(string solutionPath)
     {
-        var fullPath = Path.GetFullPath(projectRoot);
-        return fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (!Path.IsPathFullyQualified(solutionPath))
+        {
+            throw new ArgumentException("Der Solution-Pfad muss absolut sein.", nameof(solutionPath));
+        }
+
+        return Path.GetFullPath(solutionPath);
     }
 }

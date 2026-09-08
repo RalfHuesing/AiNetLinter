@@ -7,7 +7,6 @@ using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.FastTests.Mcp.Projects;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
-using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.Output;
 using AiNetLinter.TestKit;
 using static AiNetLinter.TestKit.McpTestResultText;
@@ -20,14 +19,14 @@ namespace AiNetLinter.FastTests.Mcp;
 public sealed class WiringFilesystemContractTests
 {
     [Fact]
-    public async Task FilesystemDispatch_MissingOrRelativeProjectRoot_ReturnsArgumentErrorWithoutLease()
+    public async Task FilesystemDispatch_MissingOrRelativeTargetPath_ReturnsArgumentErrorWithoutLease()
     {
         await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
         foreach (var root in new string?[] { null, "   ", "relativ/projekt" })
         {
             var result = await ProjectAnalysisDispatcher.ExecuteFilesystemAsync(
                 registry,
-                new AnalysisTargetRequest("project", root),
+                new AnalysisTargetRequest(root),
                 ThrowingFilesystemCallback);
             Assert.NotEqual(true, result.IsError);
             Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(result), StringComparison.Ordinal);
@@ -47,7 +46,7 @@ public sealed class WiringFilesystemContractTests
 
         var result = await ProjectAnalysisDispatcher.ExecuteFilesystemAsync(
             registry,
-            new AnalysisTargetRequest("assembly", assemblyPath),
+            new AnalysisTargetRequest(assemblyPath),
             ThrowingFilesystemCallback);
 
         Assert.NotEqual(true, result.IsError);
@@ -60,14 +59,14 @@ public sealed class WiringFilesystemContractTests
     [Fact]
     public async Task FilesystemDispatch_InvokesCallbackWhileServerIsLoading()
     {
-        using var tempDir = TestTempDirectory.Create("wiring-filesystem-loading-");
-        var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
+        using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "SymbolGraphMini");
+        var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
         var pendingServer = OverviewTestServers.PendingLoadServer();
         await using var registry = ProjectRegistryFixture.Create(_ => ProjectInstanceCreation.Resident(pendingServer));
         var result = await ProjectAnalysisDispatcher.ExecuteFilesystemAsync(
             registry,
-            new AnalysisTargetRequest("project", root),
-            lease => AssertFilesystemCallback(lease, ServerLoadState.Loading, root));
+            new AnalysisTargetRequest(Path.Combine(fixture.RootPath, ".", "SymbolGraphMini.slnx")),
+            lease => AssertFilesystemCallback(lease, ServerLoadState.Loading, solutionPath));
 
         Assert.NotEqual(true, result.IsError);
         Assert.Equal("physisch", TextOf(result));
@@ -76,15 +75,15 @@ public sealed class WiringFilesystemContractTests
     [Fact]
     public async Task FilesystemDispatch_InvokesCallbackAfterLoadFailure()
     {
-        using var tempDir = TestTempDirectory.Create("wiring-filesystem-failed-");
-        var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
+        using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "SymbolGraphMini");
+        var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
         var console = new RecordingLintConsole();
         var faultingServer = OverviewTestServers.FaultingLoadServer(console);
         await using var registry = ProjectRegistryFixture.Create(_ => ProjectInstanceCreation.Resident(faultingServer));
         await TestWaiter.WaitForConditionAsync(() => faultingServer.LoadState == ServerLoadState.LoadFailed, TimeSpan.FromSeconds(15));
         var result = await ProjectAnalysisDispatcher.ExecuteFilesystemAsync(
             registry,
-            new AnalysisTargetRequest("project", root),
+            new AnalysisTargetRequest(solutionPath),
             lease => AssertFilesystemCallback(lease, ServerLoadState.LoadFailed));
 
         Assert.NotEqual(true, result.IsError);
@@ -95,54 +94,37 @@ public sealed class WiringFilesystemContractTests
     [Fact]
     public async Task FilesystemDispatch_HoldsLeaseUntilCallbackCompletes()
     {
-        using var tempDir = TestTempDirectory.Create("wiring-filesystem-lease-");
-        var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "proj");
+        using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "SymbolGraphMini");
+        var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
         var clock = new FakeClock();
         await using var registry = ProjectWiringFixtures.CreateLoadedRegistry(clock);
         var result = await ProjectAnalysisDispatcher.ExecuteFilesystemAsync(
             registry,
-            new AnalysisTargetRequest("project", root),
-            _ => HoldFilesystemLeaseAsync(registry, root, clock)).WaitAsync(TimeSpan.FromSeconds(15));
+            new AnalysisTargetRequest(solutionPath),
+            _ => HoldFilesystemLeaseAsync(registry, solutionPath, clock)).WaitAsync(TimeSpan.FromSeconds(15));
 
         Assert.Equal("ok", TextOf(result));
         clock.AdvanceMinutes(60);
         await registry.RunEvictionTickAsync();
-        Assert.Null(registry.FindSnapshot(root));
+        Assert.Null(registry.FindSnapshot(solutionPath));
     }
 
     [Fact]
-    public async Task PhysicalFilesystemDispatch_EnumeratesUnregisteredSourceRootDirectly()
+    public async Task PhysicalFilesystemDispatch_RoutesExistingSolutionTargetDirectly()
     {
-        using var tempDir = TestTempDirectory.Create("wiring-filesystem-source-root-");
-        var sourceRoot = tempDir.DirectoryPath;
-        var sourcePath = Path.Combine(sourceRoot, "Generated.cs");
-        File.WriteAllText(sourcePath, "public sealed class Generated { }");
+        using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "SymbolGraphMini");
+        var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
 
         var result = await ProjectAnalysisDispatcher.ExecutePhysicalFilesystemAsync(
-            new AnalysisTargetRequest("project", sourceRoot),
-            canonicalRoot => GetFileTreeTool.ExecuteAsync(
-                canonicalRoot,
-                new GetFileTreeInput(
-                    ".",
-                    "files",
-                    [".cs"],
-                    "**/*.cs",
-                    null,
-                    32,
-                    2,
-                    GetFileTreeTool.DefaultMaxResults,
-                    "path",
-                    true,
-                    false),
-                CancellationToken.None));
+            new AnalysisTargetRequest(Path.Combine(fixture.RootPath, ".", "SymbolGraphMini.slnx")),
+            canonicalPath =>
+            {
+                Assert.Equal(solutionPath, canonicalPath);
+                return Task.FromResult(McpToolResults.Text("physisch"));
+            });
 
         Assert.NotEqual(true, result.IsError);
-        Assert.Contains("Generated.cs", TextOf(result), StringComparison.Ordinal);
-        var payload = result.StructuredContent!.Value.GetProperty("fileTree");
-        Assert.Contains(
-            payload.GetProperty("files").EnumerateArray(),
-            file => file.GetProperty("path").GetString()?.EndsWith("Generated.cs", StringComparison.Ordinal) == true);
-        Assert.True(File.Exists(sourcePath));
+        Assert.Equal("physisch", TextOf(result));
     }
 
     private static Task<CallToolResult> ThrowingFilesystemCallback(ProjectLease _) =>

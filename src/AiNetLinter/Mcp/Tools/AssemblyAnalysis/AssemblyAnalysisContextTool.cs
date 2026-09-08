@@ -68,7 +68,6 @@ internal static class AssemblyAnalysisContextTool
     private static JsonObject CreateRoot(AssemblyAnalysisLease lease, AssemblyAnalysisContextArguments arguments) => new()
     {
         ["contextId"] = $"asm:{lease.Context.Origin.ContentHash}:{lease.Context.Generation}",
-        ["targetType"] = "assembly",
         ["targetPath"] = lease.CanonicalPath,
         ["scope"] = arguments.IncludeReferences || arguments.IncludeCallers || arguments.IncludeImpact ? "root+references" : "root",
         ["completeness"] = lease.Context.Status.ResolveEffectiveStatus(
@@ -188,7 +187,7 @@ internal static class AssemblyAnalysisContextTool
         builder.AppendLine($"Scope: {root["scope"]}; Vollständigkeit: {root["completeness"]}");
         if (root["symbolIdentifier"] is not null) builder.AppendLine($"Symbol: {root["symbolIdentifier"]}");
         foreach (var property in root.Select(pair => pair.Key)
-            .Where(key => key is not ("contextId" or "targetType" or "targetPath" or "scope" or "completeness" or "symbolIdentifier" or "identity" or "origin" or "assemblyAnalysis" or "analysis" or "totalCount" or "returnedCount" or "isTruncated" or "continuationToken" or "wireBudget" or "truncatedBy")))
+            .Where(key => key is not ("contextId" or "targetPath" or "scope" or "completeness" or "symbolIdentifier" or "identity" or "origin" or "assemblyAnalysis" or "analysis" or "totalCount" or "returnedCount" or "isTruncated" or "continuationToken" or "wireBudget" or "truncatedBy")))
         {
             builder.AppendLine($"Abschnitt: {property}");
             if (sectionTexts.TryGetValue(property, out var content) && !string.IsNullOrWhiteSpace(content))

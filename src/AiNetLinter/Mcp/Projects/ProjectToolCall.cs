@@ -10,19 +10,20 @@ using AiNetLinter.Output;
 
 /// <summary>
 /// Gemeinsamer Dispatch-Weg aller projektgebundenen Tool-Aufrufe: validiert den
-/// Pflicht-Parameter <c>projectRoot</c> auf Argumentebene (Defense-in-Depth zur
-/// Schema-Validierung des SDK), bindet den Aufruf per Lease an einen Registry-Key und
-/// uebersetzt die Zustandsmaschine der Instanz in die Tool-Fehlervertraege (Loading,
-/// PROJECT_LOAD_FAILED, [WARN]-Kopf bei ueberschattetem gutem Stand).
+/// konkreten Solution-Dateipfad auf Argumentebene (Defense-in-Depth zur
+/// Schema-Validierung des SDK), bindet den Aufruf per Lease an genau diesen
+/// Registry-Key und uebersetzt die Zustandsmaschine der Instanz in die
+/// Tool-Fehlervertraege (Loading, PROJECT_LOAD_FAILED, [WARN]-Kopf bei
+/// ueberschattetem gutem Stand).
 /// </summary>
 internal static class ProjectToolCall
 {
     internal static async Task<CallToolResult> ExecuteAsync(
         ProjectRegistry registry,
-        string? projectRoot,
+        string? targetPath,
         Func<ProjectLease, Task<CallToolResult>> call)
     {
-        var leaseResolution = ResolveLease(registry, projectRoot);
+        var leaseResolution = ResolveLease(registry, targetPath);
         if (leaseResolution.Error is not null)
         {
             return leaseResolution.Error;
@@ -46,10 +47,10 @@ internal static class ProjectToolCall
 
     internal static async Task<CallToolResult> ExecuteFilesystemAsync(
         ProjectRegistry registry,
-        string? projectRoot,
+        string? targetPath,
         Func<ProjectLease, Task<CallToolResult>> call)
     {
-        var leaseResolution = ResolveLease(registry, projectRoot);
+        var leaseResolution = ResolveLease(registry, targetPath);
         if (leaseResolution.Error is not null)
         {
             return leaseResolution.Error;
@@ -59,15 +60,22 @@ internal static class ProjectToolCall
         return await call(lease);
     }
 
-    private static LeaseResolution ResolveLease(ProjectRegistry registry, string? projectRoot)
+    private static LeaseResolution ResolveLease(ProjectRegistry registry, string? targetPath)
     {
-        var guard = GuardRequiredAbsoluteRoot(projectRoot);
-        if (guard is not null)
+        var definition = ProjectDefinitionLoader.LoadSolutionTarget(targetPath);
+        if (!definition.Succeeded || definition.Definition is null)
         {
-            return new(null, GuardResult(guard));
+            var error = McpToolResults.Recoverable(
+                definition.ErrorCode!,
+                definition.Message!,
+                hint: RecoverHint(definition.ErrorCode!));
+            return new(null, error);
         }
 
-        var leaseResult = registry.Lease(projectRoot!);
+        // The registry key is always the canonical Solution file. The containing
+        // directory is intentionally not used here; it is only a filesystem scope
+        // for tools that explicitly operate on physical files.
+        var leaseResult = registry.Lease(definition.Definition.SolutionPath);
         if (!leaseResult.Succeeded || leaseResult.Lease is null)
         {
             var error = McpToolResults.Recoverable(
@@ -81,33 +89,22 @@ internal static class ProjectToolCall
     }
 
     /// <summary>Der SDK-Schema-Check ist der Normalfall; dieser Code-Guard ist die
-    /// Ruefallebene fuer direkte Resolver-Aufrufe (Tools) und die Pflichtpruefung der
-    /// Overview-Resource. Liefert null bei validem absolutem Projektroot.</summary>
-    internal static ProjectRootGuardFailure? GuardRequiredAbsoluteRoot(string? projectRoot)
+    /// Ruefallebene fuer direkte Resolver-Aufrufe (Tools) und bestehende Resource-/Datei-
+    /// Adapter. Liefert null bei einer vorhandenen, konkreten Solution-Datei.</summary>
+    internal static ProjectRootGuardFailure? GuardRequiredAbsoluteRoot(string? targetPath)
     {
-        if (string.IsNullOrWhiteSpace(projectRoot))
+        var definition = ProjectDefinitionLoader.LoadSolutionTarget(targetPath);
+        if (definition.Succeeded)
         {
-            return new ProjectRootGuardFailure(
-                ProjectErrorCodes.ProjectRootRequired,
-                "Der Parameter 'projectRoot' ist erforderlich.",
-                "Absoluten Projektroot uebergeben, z. B. C:/repos/mein-projekt.");
+            return null;
         }
 
-        if (!Path.IsPathRooted(projectRoot))
-        {
-            return new ProjectRootGuardFailure(
-                ProjectErrorCodes.ProjectRootInvalid,
-                $"Der Parameter 'projectRoot' muss ein absoluter Verzeichnispfad sein: '{projectRoot}'.",
-                "Relativpfade sind nicht zulaessig; Projektroot absolut angeben.");
-        }
-
-        return null;
+        return new ProjectRootGuardFailure(
+            definition.ErrorCode!,
+            definition.Message!,
+            RecoverHint(definition.ErrorCode!) ??
+            "Den absoluten Pfad einer vorhandenen .sln- oder .slnx-Datei uebergeben.");
     }
-
-    /// <summary>Fehlerinfo eines verletzten Root-Guards; Konsumenten wandeln sie in ihren
-    /// jeweiligen Antwortkanal um (Tool-Ergebnis bzw. Resource-Fehler).</summary>
-    private static CallToolResult GuardResult(ProjectRootGuardFailure guard) =>
-        McpToolResults.Error(guard.Code, guard.Message, hint: guard.Hint);
 
     internal static string FormatGuard(ProjectRootGuardFailure guard) =>
         LinterErrorFormatter.Format(guard.Code, guard.Message, hint: guard.Hint);
@@ -191,10 +188,13 @@ internal static class ProjectToolCall
         return errorCode switch
         {
             ProjectErrorCodes.RulesInvalid or ProjectErrorCodes.RulesNotFound =>
-                "Definitionsdatei ainetlinter.project.json und die referenzierte rules.json im " +
-                "Projektroot pruefen und korrigieren; der naechste Aufruf versucht es erneut.",
+                "Die optionale ainetlinter-rules.json direkt neben der adressierten Solution " +
+                "pruefen und korrigieren; der naechste Aufruf versucht es erneut.",
             ProjectErrorCodes.SolutionNotFound =>
-                "Solution-Pfad in der Definitionsdatei ainetlinter.project.json pruefen.",
+                "Einen absoluten, vorhandenen Pfad der konkreten .sln- oder .slnx-Datei " +
+                "uebergeben; es wird keine andere Solution gesucht.",
+            ProjectErrorCodes.ProjectRootRequired or ProjectErrorCodes.ProjectRootInvalid =>
+                "Den absoluten Pfad einer vorhandenen .sln- oder .slnx-Datei uebergeben.",
             _ => null,
         };
     }

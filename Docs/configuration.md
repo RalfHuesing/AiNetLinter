@@ -29,9 +29,9 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 - **Roslyn-basierter CLI Auto-Fixer (`--fix`):** Vollautomatische Behebung trivialer Linter-Verstöße (z. B. fehlendes `sealed`, `readonly` oder `#nullable enable`) über Syntaxbaum-Transformationen.
 - **Analyse-Cache (Inkrementelle Optimierung):** Cache zur Vermeidung wiederholter semantischer Analysen für unveränderte C#-Dateien. Reduziert die Ausführungszeit bei inkrementellen Agenten-Runs. Standardmäßig aktiv; deaktivierbar über `--no-cache`.
 - **Performance-Profiling & Zeitmessung:** Erfassung der Ausführungszeiten aller Linter-Phasen (Workspace-Laden, Dateianalyse, Post-Checks) und automatische Generierung strukturierter Berichte (`performance.log` & `performance.json`) unter `measurements/` zur Analyse von Performance-Engpässen.
-- **MCP-Discovery-Kontextbudget:** Die globale Server-Anleitung wird in `initialize` (Legacy) und `server/discover` (MCP `2026-07-28`) ohne vollständige Tool-Aufzählung oder Bootstrap-Schritte übertragen. Sie verweist bei Bedarf auf den einmaligen Bootstrap unter `ainetlinter://agent-guide`; Tool-Schemas bleiben in `tools/list`, der Projektstatus in `ainetlinter://overview`. Das Engineering-Budget der Anleitung beträgt 2.557 UTF-8-Bytes.
+- **MCP-Discovery-Kontextbudget:** Die globale Server-Anleitung wird in `initialize` (Legacy) und `server/discover` (MCP `2026-07-28`) ohne vollständige Tool-Aufzählung oder Bootstrap-Schritte übertragen. Sie verweist bei Bedarf auf den einmaligen Bootstrap unter `ainetlinter://agent-guide`; Tool-Schemas bleiben in `tools/list`, der Target-Status in `ainetlinter://overview`. Das Engineering-Budget der Anleitung beträgt 2.557 UTF-8-Bytes.
 - **MCP-Tool-Annotations:** `tools/list` beschreibt für jedes Tool explizit Read-only-, Destructive-, Idempotenz- und Open-World-Hinweise. Diese Werte sind Protokollhinweise für Hosts und keine Zugriffssteuerung; sie werden nicht über `rules.json` konfiguriert.
-- **MCP-Regelkonfiguration-Resource:** `ainetlinter://rules{?projectRoot}` stellt die effektive Konfiguration des adressierten Registry-Keys als frisch generiertes Markdown bereit. Die Ausgabe enthält Herkunft, aktive/deaktivierte Regeln und effektive Metrik-Schwellwerte; sie liest den atomaren Config-Snapshot der residenten MCP-Instanz.
+- **MCP-Regelkonfiguration-Resource:** `ainetlinter://rules{?targetPath}` stellt die effektive Regelkonfiguration des übergebenen Solution-Targets als frisch generiertes Markdown bereit. Die Ausgabe enthält die Herkunft (`ainetlinter-rules.json` neben der Solution oder `not_configured`), aktive/deaktivierte Regeln und effektive Metrik-Schwellwerte; sie liest den atomaren Regel-Snapshot der residenten MCP-Instanz.
 - **Metadata-only Assembly-Analyse:** `inspect_assembly` listet die öffentliche API einer exakt angegebenen absoluten lokalen `.dll`- oder `.exe`-Datei; zusätzlich sind exakte Typauswahl, `memberNames` als case-insensitive exakte OR-Auswahl, der Teiltextfilter `memberName`, Member-Limits sowie strukturierte Parameterdaten aus den .NET-Metadaten verfügbar. `find_assembly_extensions` findet klassische C#-Extensions; Referenz-Assemblies werden nur mit `includeReferences=true` einbezogen (Default: `false`), und ohne Consumer-Projekt wird ihre Roslyn-Anwendbarkeit als `not_decidable` ausgewiesen. Keine der beiden Funktionen lädt oder führt die Assembly aus. Typen sind standardmäßig auf 100 Einträge, maximal 1000, und Member je Typ standardmäßig auf 100, maximal 1000, begrenzt; fehlende Abhängigkeiten werden als `partial` diagnostiziert. Diagnostics-Samples werden whitespace-normalisiert, auf 256 Zeichen je Meldung und standardmäßig 16 KiB je Antwort (per `ResponseBudgetBytes` bis maximal 32 KiB konfigurierbar) begrenzt; Referenzen und Referenz-Sessions auf jeweils 32 Einträge. `get_server_health` liefert standardmäßig nur Metadaten und Diagnosezähler; `includeDiagnostics=true` aktiviert begrenzte Samples mit `maxDiagnostics` (Default 20, Cap 50).
 
 ## 3. Konfiguration (`rules.json`)
@@ -1379,12 +1379,20 @@ Dieser Abschnitt beschreibt, wie ein autonomer AI-Agent `AiNetLinter` selbständ
 
 ### Workflow für Agenten
 
-1. **Vor einer Änderung:** Kontext aus generierten Artefakten laden
+1. **Vor einer Änderung:** Kontext aus dem konkreten MCP-Target laden
 
    ```
-   ainetlinter://overview?projectRoot=<Projektroot> — Live-Projektstatus
+   ainetlinter://overview?targetPath=<url-encoded-absolute-solution-path> — Live-Targetstatus
    .agents/rules/AiNetLinter.mdc                    — Aktive Regeln und Limits
    ```
+
+   Zielgebundene MCP-Aufrufe verwenden ausschließlich den absoluten Pfad einer
+   vorhandenen `.sln`/`.slnx`-Datei (Source) oder `.dll`/`.exe`-Datei
+   (Decompiled-Assembly). Die Endung bestimmt die Herkunft; `targetType`,
+   `projectRoot`, `configPath` und `ainetlinter.project.json` sind kein aktiver
+   Vertrag. Source liest nur die optionale benachbarte
+   `ainetlinter-rules.json`; fehlt sie, ist der Lint-Status `not_configured`,
+   nicht ein scheinbar sauberer Lauf.
 
 2. **Nach einer Änderung:** Linter ausführen
 

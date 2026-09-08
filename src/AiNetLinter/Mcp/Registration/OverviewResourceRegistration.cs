@@ -1,6 +1,8 @@
 #nullable enable
 
 using System;
+using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,12 +11,13 @@ using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using ModelContextProtocol;
 
 namespace AiNetLinter.Mcp.Registration;
 
 /// <summary>
 /// Registriert die MCP-Resource <c>ainetlinter://overview</c> als Resource-Template mit dem
-/// Pflicht-Query-Parameter <c>projectRoot</c>: ein kurzer, bei jedem <c>resources/read</c>
+/// Pflicht-Query-Parameter <c>targetPath</c>: ein kurzer, bei jedem <c>resources/read</c>
 /// frisch generierter Markdown-Status fuer Agenten, die den Server bereits adressieren — mit
 /// welcher Solution/Config-Quelle der adressierte Key tatsaechlich laeuft. MCP-Resources nehmen keine
 /// Tool-Argumente, daher adressiert der URL-kodierte Projektroot den Registry-Key; Guards und
@@ -24,14 +27,14 @@ namespace AiNetLinter.Mcp.Registration;
 /// </summary>
 internal static class OverviewResourceRegistration
 {
-    // RFC-6570-Form-Expansion: ainetlinter://overview{?projectRoot} expandiert zu
-    // ainetlinter://overview?projectRoot=<url-encoded>.
-    private const string OverviewUriTemplate = "ainetlinter://overview{?projectRoot}";
+    // RFC-6570-Form-Expansion: ainetlinter://overview{?targetPath} expandiert zu
+    // ainetlinter://overview?targetPath=<url-encoded>.
+    private const string OverviewUriTemplate = "ainetlinter://overview{?targetPath}";
 
     internal static void Register(McpServerResourceCollection resources, ProjectRegistry registry)
     {
         resources.Add(McpServerResource.Create(
-            (string projectRoot) => BuildTemplatedResult(registry, projectRoot),
+            (string targetPath) => BuildTemplatedResult(registry, targetPath),
             new McpServerResourceCreateOptions
             {
                 UriTemplate = OverviewUriTemplate,
@@ -39,38 +42,48 @@ internal static class OverviewResourceRegistration
                 Description = "Projektstatus fuer Agenten (geladene Solution und Regelquelle). " +
                     "Der Erstkontakt ohne Projektdefinition erfolgt ueber " +
                     "ainetlinter://agent-guide. Pflicht: Query-Parameter " +
-                    "projectRoot mit absolutem Projektroot (URL-kodiert). Bei jedem Read frisch generiert.",
+                    "targetPath mit absolutem Pfad der konkreten .sln/.slnx-Datei (URL-kodiert). Bei jedem Read frisch generiert.",
                 MimeType = "text/markdown",
             }));
     }
 
-    internal static ReadResourceResult BuildTemplatedResult(ProjectRegistry registry, string? projectRoot) =>
-        BuildTemplatedResult(registry, projectRoot, BuildResult);
+    internal static ReadResourceResult BuildTemplatedResult(ProjectRegistry registry, string? targetPath) =>
+        BuildTemplatedResult(registry, targetPath, BuildResult);
 
     internal static ReadResourceResult BuildTemplatedResult(
         ProjectRegistry registry,
-        string? projectRoot,
+        string? targetPath,
         Func<ProjectSnapshot, ReadResourceResult> render)
-        => ProjectResourceLease.Execute(registry, projectRoot, render);
+    {
+        var target = ResolveTarget(targetPath);
+        return ProjectResourceLease.Execute(
+            registry,
+            target.CanonicalPath,
+            snapshot => render(snapshot));
+    }
 
-    private static string BuildCanonicalUri(string projectRoot) =>
-        $"ainetlinter://overview?projectRoot={Uri.EscapeDataString(projectRoot)}";
+    private static string BuildCanonicalUri(string targetPath) =>
+        $"ainetlinter://overview?targetPath={Uri.EscapeDataString(targetPath)}";
 
     private static ReadResourceResult BuildResult(ProjectSnapshot snapshot)
     {
+        var targetPath = Path.GetFullPath(snapshot.Definition.SolutionPath);
         return new ReadResourceResult
         {
             Contents =
             [
                 new TextResourceContents
                 {
-                    Uri = BuildCanonicalUri(snapshot.RootPath),
+                    Uri = BuildCanonicalUri(targetPath),
                     MimeType = "text/markdown",
                     Text = BuildOverviewText(snapshot),
                 },
             ],
         };
     }
+
+    private static AnalysisTarget ResolveTarget(string? targetPath)
+        => AnalysisTargetResolver.ResolveRequiredSourceTarget(targetPath);
 
     /// <summary>Reine Text-Bau-Funktion, direkt unit-testbar ohne MCP-Protokoll-Umweg.</summary>
     internal static string BuildOverviewText(ProjectSnapshot snapshot)
@@ -114,7 +127,7 @@ internal static class OverviewResourceRegistration
         // McpCodeGraphServer.GetConfigSnapshot).
         var (_, usedDefaultConfig, resolvedConfigPath) = mcpState.GetConfigSnapshot();
         return usedDefaultConfig
-            ? "keine rules.json gefunden — Server laeuft mit eingebauten Default-Regeln, nicht mit einer projekteigenen Konfiguration"
+            ? "not_configured — neben der adressierten Solution wurde keine ainetlinter-rules.json gefunden; Navigation bleibt verfügbar, Lint-Operationen sind nicht konfiguriert"
             : resolvedConfigPath ?? "unbekannt";
     }
 }

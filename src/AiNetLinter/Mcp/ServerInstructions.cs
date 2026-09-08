@@ -7,7 +7,7 @@ namespace AiNetLinter.Mcp;
 /// ueber <see cref="McpServerOptionsFactory"/> sowohl im Legacy-<c>initialize</c>-Handshake als
 /// auch in <c>server/discover</c> bereit. Der statische Erstkontakt-Leitfaden steht unter
 /// <c>ainetlinter://agent-guide</c>; der kompakte Status je Projekt-Key unter
-/// <c>ainetlinter://overview?projectRoot=...</c>. Tool-Schemas bleiben in <c>tools/list</c>.
+/// <c>ainetlinter://overview?targetPath=...</c>. Tool-Schemas bleiben in <c>tools/list</c>.
 /// </summary>
 internal static class ServerInstructions
 {
@@ -16,21 +16,22 @@ internal static class ServerInstructions
     /// <summary>Globale Regeln fuer MCP-Discovery; tool-spezifische Details stehen in <c>tools/list</c>.</summary>
     internal const string Text =
         "AiNetLinter analysiert .NET-Solutions mit Roslyn. JEDEM zielgebundenen Tool-Aufruf " +
-        "sind targetType und targetPath beizufuegen: targetType='project' fuer eine Source-" +
-        "Solution oder targetType='assembly' fuer eine lokale .dll- oder .exe-Datei; targetPath ist absolut. " +
-        "get_server_health darf ohne Ziel aggregieren, report_observability_feedback bleibt " +
+        "ist targetPath beizufuegen: ein absoluter Pfad zu einer vorhandenen .sln/.slnx-Datei " +
+        "fuer Source oder .dll/.exe-Datei fuer Assembly; Source-vs-Assembly wird ausschliesslich " +
+        "aus der Dateiendung bestimmt. get_server_health darf ohne Ziel aggregieren oder optional " +
+        "targetPath pruefen, report_observability_feedback bleibt " +
         "nicht zielgebunden.\n\n" +
         "Neue Integration nur bei ausdruecklichem Auftrag: ainetlinter://agent-guide lesen; " +
-        "den Projektstatus danach ueber ainetlinter://overview?projectRoot=<url-encoded> pruefen. " +
+        "den Projektstatus danach ueber ainetlinter://overview?targetPath=<url-encoded> pruefen. " +
         "PROJECT_NOT_INITIALIZED und RULES_INVALID bleiben deterministische Fehler.\n\n" +
         "C#-Symbolgraph-Grenze: C#-Symbole ueber die semantischen Tools abfragen; fuer " +
         "Text/Namen ausserhalb von .cs (z. B. .js, .razor, .cshtml, .xaml, .html, .css) " +
         "search_pattern verwenden. enrichCSharp=true reichert sichtbare Treffer geladener " +
         "C#-Dokumente opt-in an; ambiguous/unavailable bleiben sichtbar.\n\n" +
-        "Assembly-Capability-Matrix (13 Cross-Target-Tools): dependency_graph, find_references, " +
+        "Assembly-Capability-Matrix (12 Cross-Target-Tools): dependency_graph, find_references, " +
         "find_symbol, get_call_tree, get_class_structure, get_file_skeleton, get_impact, " +
-        "get_namespace_tree, get_symbol_body, get_type_hierarchy, metrics_lookup, metrics_tree " +
-        "und get_server_health. get_impact akzeptiert fuer Assemblys nur symbolIdentifier. " +
+        "get_namespace_tree, get_symbol_body, get_type_hierarchy, metrics_lookup und metrics_tree. " +
+        "get_impact akzeptiert fuer Assemblys nur symbolIdentifier. " +
         "Assembly-only: inspect_assembly, find_assembly_extensions, search_assembly; alle akzeptieren .dll/.exe.\n\n" +
         "Schemas und Toolzwecke: tools/list.\n\n" +
         "Sufficiency: Vollstaendige Ergebnisse nicht redundant per Read/Grep pruefen; bei " +

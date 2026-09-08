@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
@@ -16,6 +17,98 @@ namespace AiNetLinter.FastTests.Mcp;
 public sealed class AnalysisToolCallTests
 {
     [Fact]
+    public void ResolveTargetPathOnly_InfersSourceAndProjectsItsCapabilities()
+    {
+        using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "SymbolGraphMini");
+        var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
+
+        var result = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest(
+            Path.Combine(fixture.RootPath, ".", "SymbolGraphMini.slnx")));
+
+        Assert.Null(result.Error);
+        Assert.NotNull(result.Target);
+        var target = result.Target!;
+        Assert.Equal(AnalysisTargetType.Project, target.TargetType);
+        Assert.Equal(Path.GetFullPath(solutionPath), target.CanonicalPath);
+        Assert.Equal(Path.GetDirectoryName(target.CanonicalPath), target.AnalysisRoot);
+        Assert.Equal(AnalysisCapabilityStatus.Supported, target.Capabilities.Navigation);
+        Assert.Equal(AnalysisCapabilityStatus.NotConfigured, target.Capabilities.Lint);
+        Assert.NotEmpty(target.Fingerprint);
+    }
+
+    [Fact]
+    public void ResolveTargetPathOnly_InfersAssemblyAndMarksLintUnsupported()
+    {
+        using var tempDir = TestTempDirectory.Create("analysis-target-assembly-capability-");
+        var assemblyPath = Path.Combine(tempDir.DirectoryPath, "sample.exe");
+        File.WriteAllBytes(assemblyPath, [0]);
+
+        var result = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest(assemblyPath));
+
+        Assert.Null(result.Error);
+        Assert.NotNull(result.Target);
+        var target = result.Target!;
+        Assert.Equal(AnalysisTargetType.Assembly, target.TargetType);
+        Assert.Equal(AnalysisTargetOrigin.Decompiled, target.Origin);
+        Assert.Equal(AnalysisCapabilityStatus.Supported, target.Capabilities.Navigation);
+        Assert.Equal(AnalysisCapabilityStatus.Unsupported, target.Capabilities.Lint);
+        Assert.Null(target.RulesPath);
+    }
+
+    [Theory]
+    [InlineData("targetType")]
+    [InlineData("projectRoot")]
+    [InlineData("configPath")]
+    public void ResolveTargetPathOnly_RejectsLegacyArgumentWithFieldAndHint(string legacyKey)
+    {
+        var result = AnalysisTargetResolver.Resolve(AnalysisTargetRequest.FromArguments(
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = Path.Combine(Path.GetTempPath(), "sample.slnx"),
+                [legacyKey] = "legacy-value",
+            }));
+
+        Assert.Null(result.Target);
+        Assert.NotNull(result.Error);
+        var error = result.Error!;
+        var text = TextOf(error);
+        Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
+        Assert.Contains(legacyKey, text, StringComparison.Ordinal);
+        Assert.Contains("targetPath", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CreateTargetRoute_UsesCanonicalTargetPathAndInferredOrigin()
+    {
+        using var tempDir = TestTempDirectory.Create("analysis-target-route-");
+        var assemblyPath = Path.Combine(tempDir.DirectoryPath, "sample.dll");
+        File.WriteAllBytes(assemblyPath, [0]);
+        var requestPath = Path.Combine(tempDir.DirectoryPath, ".", "sample.dll");
+        string? receivedPath = null;
+
+        var route = AnalysisToolCall.CreateTargetRoute(
+            request =>
+            {
+                receivedPath = request.Target.TargetPath;
+                return Task.FromResult(McpToolResults.Text("source"));
+            },
+            request =>
+            {
+                receivedPath = request.Target.TargetPath;
+                return Task.FromResult(McpToolResults.Text("assembly"));
+            });
+
+        var result = await AnalysisToolCall.ExecuteRouted(
+            route,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest(requestPath),
+                new AnalysisToolDispatch()));
+
+        Assert.Equal("assembly", TextOf(result));
+        Assert.Equal(Path.GetFullPath(assemblyPath), receivedPath);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_AssemblyTargetReturnsRecoverableUnsupportedWithoutProjectLease()
     {
         using var tempDir = TestTempDirectory.Create("analysis-dispatch-assembly-");
@@ -26,7 +119,7 @@ public sealed class AnalysisToolCallTests
 
         var result = await ProjectAnalysisDispatcher.ExecuteAsync(
             registry,
-            new AnalysisTargetRequest("assembly", assemblyPath),
+            new AnalysisTargetRequest(assemblyPath),
             (new AnalysisToolDispatch(ProjectCall: _ =>
             {
                 projectCalled = true;
@@ -42,38 +135,39 @@ public sealed class AnalysisToolCallTests
     [Fact]
     public async Task ExecuteAsync_ProjectTargetPassesCanonicalPathToExistingRegistryLease()
     {
-        using var tempDir = TestTempDirectory.Create("analysis-dispatch-project-");
-        var projectRoot = ProjectRegistryFixture.CreateProjectRoot(tempDir, "project");
-        var requestPath = Path.Combine(projectRoot, ".", "sub", "..");
+        using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "SymbolGraphMini");
+        var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
+        var requestPath = Path.Combine(fixture.RootPath, ".", "SymbolGraphMini.slnx");
         await using var registry = ProjectWiringFixtures.CreateLoadedRegistry();
 
         var result = await ProjectAnalysisDispatcher.ExecuteAsync(
             registry,
-            new AnalysisTargetRequest("project", requestPath),
+            new AnalysisTargetRequest(requestPath),
             (new AnalysisToolDispatch(ProjectCall: lease =>
                 Task.FromResult(McpToolResults.Text(lease.RootPath)))).ProjectCall!);
 
-        Assert.Equal(Path.GetFullPath(projectRoot), TextOf(result));
+        Assert.Equal(Path.GetFullPath(solutionPath), TextOf(result));
     }
 
     [Fact]
-    public async Task ExecuteAssemblyAsync_PassesCanonicalPathToSpecializedAdapter()
+    public async Task CreateTargetPathRoute_PassesCanonicalPathToAssemblyAdapter()
     {
         using var tempDir = TestTempDirectory.Create("analysis-dispatch-specialized-");
         var assemblyPath = Path.Combine(tempDir.DirectoryPath, ".", "sample.dll");
         File.WriteAllBytes(Path.GetFullPath(assemblyPath), [0]);
-        await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
         string? receivedPath = null;
 
-        var result = await ProjectAnalysisDispatcher.ExecuteAssemblyAsync(
-            registry,
-            "assembly",
-            assemblyPath,
-            path =>
-            {
-                receivedPath = path;
-                return Task.FromResult(McpToolResults.Text("assembly"));
-            });
+        var result = await AnalysisToolCall.ExecuteRouted(
+            AnalysisToolCall.CreateTargetPathRoute(
+                _ => Task.FromResult(McpToolResults.Text("source")),
+                request =>
+                {
+                    receivedPath = request.Target.TargetPath;
+                    return Task.FromResult(McpToolResults.Text("assembly"));
+                }),
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest(assemblyPath),
+                new AnalysisToolDispatch()));
 
         Assert.Equal(Path.GetFullPath(assemblyPath), receivedPath);
         Assert.Equal("assembly", TextOf(result));

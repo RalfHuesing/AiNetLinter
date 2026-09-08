@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -236,7 +237,7 @@ public sealed class GetTypeHierarchyToolTests
 
         await using var assemblyRegistry = new AssemblyAnalysisRegistry();
         await using var projectRegistry = ProjectWiringFixtures.CreateLoadedRegistry();
-        var targetRoute = AnalysisToolCall.CreateTargetRoute(
+        var targetRoute = AnalysisToolCall.CreateTargetPathRoute(
             ProjectAnalysisDispatcher.CreateRoute(projectRegistry),
             AssemblyAnalysisDispatcher.CreateRoute(assemblyRegistry));
 
@@ -251,7 +252,7 @@ public sealed class GetTypeHierarchyToolTests
         var assemblyCallResult = await AnalysisToolCall.ExecuteRouted(
             targetRoute,
             new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("assembly", assemblyPath),
+                new AnalysisTargetRequest(assemblyPath),
                 new AnalysisToolDispatch(
                     ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default),
                     AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default))));
@@ -280,7 +281,7 @@ public sealed class GetTypeHierarchyToolTests
         var staleCallResult = await AnalysisToolCall.ExecuteRouted(
             targetRoute,
             new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("assembly", assemblyPath),
+                new AnalysisTargetRequest(assemblyPath),
                 new AnalysisToolDispatch(
                     ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default),
                     AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default))));
@@ -294,7 +295,7 @@ public sealed class GetTypeHierarchyToolTests
         var unwrappedCallResult = await AnalysisToolCall.ExecuteRouted(
             targetRoute,
             new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("assembly", assemblyPath),
+                new AnalysisTargetRequest(assemblyPath),
                 new AnalysisToolDispatch(
                     ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, "T:Probe.Service", GetTypeHierarchyTool.DefaultMaxResults, default),
                     AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, "T:Probe.Service", GetTypeHierarchyTool.DefaultMaxResults, default))));
@@ -303,12 +304,13 @@ public sealed class GetTypeHierarchyToolTests
         var unwrappedText = TextOf(unwrappedCallResult);
         Assert.Contains("IService", unwrappedText, StringComparison.Ordinal);
 
-        // 5. Projekt-ID auf Projekt-Ziel bleibt weiterhin erfolgreich
+        // 5. Konkreter Solution-Pfad auf Projekt-Ziel bleibt weiterhin erfolgreich
         var projectRoot = ProjectRegistryFixture.CreateProjectRoot(temp, "probe-proj");
+        var solutionPath = Path.Combine(projectRoot, "app.slnx");
         var projectCallResult = await AnalysisToolCall.ExecuteRouted(
             targetRoute,
             new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("project", projectRoot),
+                new AnalysisTargetRequest(solutionPath),
                 new AnalysisToolDispatch(
                     ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, "BaseGreeting", GetTypeHierarchyTool.DefaultMaxResults, default),
                     AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, "BaseGreeting", GetTypeHierarchyTool.DefaultMaxResults, default))));

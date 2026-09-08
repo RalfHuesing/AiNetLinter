@@ -44,7 +44,7 @@ public sealed class AssemblyNavigationResponseContractTests
         var result = await AnalysisToolCall.ExecuteRouted(
             AssemblyAnalysisDispatcher.CreateRoute(registry),
             new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("assembly", rootPath),
+                new AnalysisTargetRequest(rootPath),
                 new AnalysisToolDispatch(
                     AssemblySessionCall: lease => AssemblyFindReferencesTool.ExecuteAsync(
                         lease,

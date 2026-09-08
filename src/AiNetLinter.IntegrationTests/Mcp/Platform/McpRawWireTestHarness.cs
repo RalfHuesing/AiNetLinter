@@ -234,10 +234,9 @@ internal static class McpRawWireTestHarness
                 return frame;
 
             var arguments = parameters?["arguments"]?.AsObject();
-            if (arguments is null || arguments.ContainsKey("targetType") || arguments.ContainsKey("targetPath")) return frame;
+            if (arguments is null || arguments.ContainsKey("targetPath")) return frame;
 
-            arguments["targetType"] = "project";
-            arguments["targetPath"] = targetPath;
+            arguments["targetPath"] = McpFixtureProjectDefinition.ResolveTargetPath(targetPath, "project");
             return root.ToJsonString();
         }
         catch (JsonException)

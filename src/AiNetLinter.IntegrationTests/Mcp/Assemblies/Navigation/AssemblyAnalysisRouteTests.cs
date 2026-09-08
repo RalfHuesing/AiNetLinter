@@ -43,7 +43,7 @@ public sealed class AssemblyAnalysisRouteTests
         var rootResult = await AnalysisToolCall.ExecuteRouted(
             AssemblyAnalysisDispatcher.CreateRoute(registry),
             new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("assembly", rootPath),
+                new AnalysisTargetRequest(rootPath),
                 new AnalysisToolDispatch(
                     AssemblySessionCall: lease => InspectAssemblyTool.ExecuteAsync(
                         lease,
@@ -90,7 +90,7 @@ public sealed class AssemblyAnalysisRouteTests
         var symbolResult = await AnalysisToolCall.ExecuteRouted(
             route,
             new AnalysisToolCallRequest(
-                    new AnalysisTargetRequest("assembly", rootPath),
+                    new AnalysisTargetRequest(rootPath),
                 new AnalysisToolDispatch(
                     AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(
                         lease,
@@ -113,7 +113,7 @@ public sealed class AssemblyAnalysisRouteTests
         var impactResult = await AnalysisToolCall.ExecuteRouted(
             route,
             new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("assembly", rootPath),
+                new AnalysisTargetRequest(rootPath),
                 new AnalysisToolDispatch(
                     AssemblySessionCall: lease => GetImpactTool.ExecuteAsync(
                         lease.Server,
@@ -124,14 +124,13 @@ public sealed class AssemblyAnalysisRouteTests
 
         Assert.NotEqual(true, impactResult.IsError);
         var impactPayload = impactResult.StructuredContent!.Value;
-        Assert.Equal("assembly", impactPayload.GetProperty("analysis").GetProperty("targetType").GetString());
         Assert.Equal("decompiled", impactPayload.GetProperty("analysis").GetProperty("origin").GetString());
         Assert.DoesNotContain("ASSEMBLY_TARGET_UNSUPPORTED", Text(impactResult), StringComparison.Ordinal);
 
         var referenceResult = await AnalysisToolCall.ExecuteRouted(
             route,
             new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("assembly", rootPath),
+                new AnalysisTargetRequest(rootPath),
                 new AnalysisToolDispatch(
                     AssemblySessionCall: lease => AssemblyFindReferencesTool.ExecuteAsync(
                         lease,
@@ -151,7 +150,7 @@ public sealed class AssemblyAnalysisRouteTests
         var treeResult = await AnalysisToolCall.ExecuteRouted(
             route,
             new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("assembly", rootPath),
+                new AnalysisTargetRequest(rootPath),
                 new AnalysisToolDispatch(
                     AssemblySessionCall: lease => AssemblyGetCallTreeTool.ExecuteAsync(
                         lease,
@@ -181,7 +180,7 @@ public sealed class AssemblyAnalysisRouteTests
         var result = await AnalysisToolCall.ExecuteRouted(
             AssemblyAnalysisDispatcher.CreateRoute(registry),
             new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("assembly", assemblyPath),
+                new AnalysisTargetRequest(assemblyPath),
                 new AnalysisToolDispatch(
                     AssemblySessionCall: lease => GetImpactTool.ExecuteAsync(
                         lease.Server,
@@ -220,7 +219,7 @@ public sealed class AssemblyAnalysisRouteTests
         var result = await AnalysisToolCall.ExecuteRouted(
             AssemblyAnalysisDispatcher.CreateRoute(registry),
             new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("assembly", rootPath),
+                new AnalysisTargetRequest(rootPath),
                 new AnalysisToolDispatch(
                     AssemblySessionCall: lease => AssemblyGetCallTreeTool.ExecuteAsync(
                         lease,
@@ -265,7 +264,7 @@ public sealed class AssemblyAnalysisRouteTests
         var result = await AnalysisToolCall.ExecuteRouted(
             AssemblyAnalysisDispatcher.CreateRoute(registry),
             new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("assembly", assemblyPath),
+                new AnalysisTargetRequest(assemblyPath),
                 new AnalysisToolDispatch(
                     AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(
                         lease,

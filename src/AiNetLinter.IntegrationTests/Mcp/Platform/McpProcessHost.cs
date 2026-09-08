@@ -2,9 +2,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Fixtures;
@@ -17,7 +17,8 @@ namespace AiNetLinter.IntegrationTests.Mcp.Platform;
 internal sealed record McpProcessTarget(
     string RootPath,
     IDisposable? Owner = null,
-    string TargetType = "project");
+    string TargetType = "project",
+    string? TargetPath = null);
 
 internal sealed class McpProcessHost : IAsyncDisposable
 {
@@ -54,6 +55,11 @@ internal sealed class McpProcessHost : IAsyncDisposable
         TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {
+        if (Directory.Exists(target.RootPath))
+        {
+            McpFixtureProjectDefinition.Ensure(target.RootPath);
+        }
+
         var lease = await SubprocessLifetimeBudget.Shared.AcquireAsync(cancellationToken).ConfigureAwait(false);
         try
         {
@@ -129,7 +135,7 @@ internal sealed class McpProcessHost : IAsyncDisposable
         CancellationToken cancellationToken = default) =>
         client.ListResourceTemplatesAsync(cancellationToken: cancellationToken);
 
-    internal string TargetPath => target.RootPath;
+    internal string TargetPath => target.TargetPath ?? McpFixtureProjectDefinition.ResolveTargetPath(target.RootPath, target.TargetType);
 
     public ValueTask<ReadResourceResult> ReadResourceAsync(
         string uri,
@@ -160,8 +166,8 @@ internal sealed class McpProcessHost : IAsyncDisposable
         var effective = arguments is null
             ? new Dictionary<string, object?>()
             : new Dictionary<string, object?>(arguments);
-        effective.TryAdd("targetType", target.TargetType);
-        effective.TryAdd("targetPath", target.RootPath);
+        effective.Remove("targetType");
+        effective.TryAdd("targetPath", TargetPath);
         return effective;
     }
 
@@ -211,23 +217,77 @@ internal static class McpFixtureProjectDefinition
 {
     internal static void Ensure(string rootPath)
     {
-        var definitionPath = Path.Combine(rootPath, "ainetlinter.project.json");
-        if (File.Exists(definitionPath)) return;
-
-        var solutionPath = Directory.EnumerateFiles(rootPath, "*.slnx", SearchOption.TopDirectoryOnly).Single();
-        var rulesPath = Path.Combine(rootPath, "rules.json");
-        if (!File.Exists(rulesPath))
+        var solutionPath = ResolveTargetPath(rootPath, "project");
+        var adjacentRulesPath = Path.Combine(Path.GetDirectoryName(solutionPath)!, "ainetlinter-rules.json");
+        if (!File.Exists(adjacentRulesPath))
         {
-            var repositoryRulesPath = Path.Combine(SolutionRootLocator.Find(), "rules.json");
-            File.Copy(repositoryRulesPath, rulesPath);
+            var sourceRulesPath = Path.Combine(Path.GetDirectoryName(solutionPath)!, "rules.json");
+            if (!File.Exists(sourceRulesPath))
+            {
+                sourceRulesPath = Path.Combine(SolutionRootLocator.Find(), "rules.json");
+            }
+
+            File.Copy(sourceRulesPath, adjacentRulesPath);
         }
 
-        var definition = new
+        RestoreProjectsIfNeeded(solutionPath);
+    }
+
+    internal static string ResolveTargetPath(string rootPath, string targetType)
+    {
+        if (File.Exists(rootPath)) return Path.GetFullPath(rootPath);
+
+        if (string.Equals(targetType, "assembly", StringComparison.OrdinalIgnoreCase))
         {
-            solution = Path.GetRelativePath(rootPath, solutionPath),
-            rules = "rules.json",
+            throw new FileNotFoundException($"Assembly-Ziel nicht gefunden: {rootPath}", rootPath);
+        }
+
+        var candidates = Directory.EnumerateFiles(rootPath, "*.slnx", SearchOption.TopDirectoryOnly)
+            .Concat(Directory.EnumerateFiles(rootPath, "*.sln", SearchOption.TopDirectoryOnly))
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        return candidates.Length switch
+        {
+            1 => Path.GetFullPath(candidates[0]),
+            0 => throw new FileNotFoundException($"Keine Solution im Zielverzeichnis gefunden: {rootPath}"),
+            _ => throw new InvalidOperationException($"Mehrere Solutions im Zielverzeichnis gefunden: {rootPath}"),
         };
-        File.WriteAllText(definitionPath, JsonSerializer.Serialize(definition));
+    }
+
+    private static void RestoreProjectsIfNeeded(string solutionPath)
+    {
+        var solutionDirectory = Path.GetDirectoryName(solutionPath)!;
+        var projectsNeedRestore = Directory.EnumerateFiles(
+                solutionDirectory,
+                "*.csproj",
+                SearchOption.AllDirectories)
+            .Where(projectPath => !projectPath.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            .Any(projectPath =>
+            {
+                var assetsPath = Path.Combine(Path.GetDirectoryName(projectPath)!, "obj", "project.assets.json");
+                return !File.Exists(assetsPath) || File.GetLastWriteTimeUtc(projectPath) > File.GetLastWriteTimeUtc(assetsPath);
+            });
+
+        if (!projectsNeedRestore) return;
+
+        using var process = Process.Start(new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            WorkingDirectory = solutionDirectory,
+            Arguments = $"restore \"{solutionPath}\" --nologo --ignore-failed-sources",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        }) ?? throw new InvalidOperationException("dotnet restore konnte für die isolierte MCP-Fixture nicht gestartet werden.");
+
+        process.WaitForExit();
+        if (process.ExitCode != 0)
+        {
+            var error = process.StandardError.ReadToEnd();
+            throw new InvalidOperationException(
+                $"dotnet restore der isolierten MCP-Fixture fehlgeschlagen (ExitCode {process.ExitCode}): {error}");
+        }
     }
 }
 

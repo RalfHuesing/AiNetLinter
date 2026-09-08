@@ -42,6 +42,15 @@ internal static class GetViolationsTool
         // zweier getrennter Property-Zugriffe: ein gleichzeitiger reload_config-Aufruf koennte
         // sonst eine zerrissene Kombination liefern (Config schon neu, UsedDefaultConfig noch alt).
         var configSnapshot = state.GetConfigSnapshot();
+        if (configSnapshot.UsedDefaultConfig)
+        {
+            return McpToolResults.Recoverable(
+                LinterErrorCodes.NotConfigured,
+                "Lint ist für diese Solution nicht konfiguriert: neben der Solution wurde keine " +
+                "ainetlinter-rules.json gefunden.",
+                context: solution.FilePath,
+                hint: "ainetlinter-rules.json neben der adressierten .sln/.slnx anlegen und get_violations erneut aufrufen.");
+        }
         var normalizedMaxResults = options.MaxResults < 1 ? 1 : options.MaxResults;
         var result = await GetViolationsScanner.BuildViolationsTextAsync(
             new GetViolationsScannerParameters(

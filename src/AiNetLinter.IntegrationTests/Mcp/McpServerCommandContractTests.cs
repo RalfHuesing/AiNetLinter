@@ -56,7 +56,7 @@ public sealed class McpServerCommandContractTests
     public async Task ProductionColdLoad_BrokenSlnx_ReturnsOriginalLoadFailedContract()
     {
         await using var scenario = new BrokenColdLoadHarness();
-        var initial = scenario.Registry.Lease(scenario.Root);
+        var initial = scenario.Registry.Lease(scenario.SolutionPath);
         Assert.True(initial.Succeeded);
         await scenario.LoadStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
         initial.Lease!.Dispose();
@@ -64,7 +64,7 @@ public sealed class McpServerCommandContractTests
 
         var loading = await ProjectAnalysisDispatcher.ExecuteAsync(
             scenario.Registry,
-            new AnalysisTargetRequest("project", scenario.Root),
+            new AnalysisTargetRequest(scenario.SolutionPath),
             (new AnalysisToolDispatch(
                 ProjectCall: _ => Task.FromResult(McpToolResults.Text("unerwartet geladen")))).ProjectCall!);
         Assert.Contains("laedt die Solution noch", Assert.IsType<TextContentBlock>(Assert.Single(loading.Content)).Text, StringComparison.Ordinal);
@@ -83,7 +83,7 @@ public sealed class McpServerCommandContractTests
         Assert.Contains("automatisch neu", failedText, StringComparison.Ordinal);
 
         var failedServer = scenario.Server;
-        var retry = scenario.Registry.Lease(scenario.Root);
+        var retry = scenario.Registry.Lease(scenario.SolutionPath);
         using var retryLease = retry.Lease;
         Assert.Equal(2, scenario.FactoryCalls);
         Assert.NotSame(failedServer, retryLease!.Server);
@@ -400,7 +400,7 @@ public sealed class McpServerCommandContractTests
         {
             var result = await ProjectAnalysisDispatcher.ExecuteAsync(
                 scenario.Registry,
-                new AnalysisTargetRequest("project", scenario.Root),
+                new AnalysisTargetRequest(scenario.SolutionPath),
                 (new AnalysisToolDispatch(
                     ProjectCall: _ => Task.FromResult(McpToolResults.Text("unerwartet geladen")))).ProjectCall!);
             var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;

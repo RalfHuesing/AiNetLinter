@@ -28,8 +28,8 @@ diese Always-on-Regel.
 
 - Für C#-Symbole, Referenzen, Aufrufketten, Abhängigkeiten, Impact und
   Regelverstöße gilt zusätzlich `.agents/rules/AiNetLinter-McpWorkflow.mdc`.
-  Dessen aktuelle MCP-Schemas sowie absolute `targetPath`-/`targetType`-Werte
-  verwenden.
+  Dessen aktuelle MCP-Schemas sowie absolute `targetPath`-Werte verwenden;
+  die Zielherkunft wird aus der Dateiendung abgeleitet.
 - Dokumentiere nur implementiertes, belegbares Verhalten. Keine Marketing-
   wertungen oder veralteten Pfade. CLI-, Konfigurations-, Regel- und
   MCP-Beschreibungen gegen den aktuellen Code prüfen.

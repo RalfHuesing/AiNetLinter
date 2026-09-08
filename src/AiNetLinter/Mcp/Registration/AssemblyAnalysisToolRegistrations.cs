@@ -2,8 +2,6 @@
 
 using System.Threading;
 using System.Threading.Tasks;
-using System.Linq;
-using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Tools;
@@ -15,11 +13,6 @@ namespace AiNetLinter.Mcp.Registration;
 
 internal static class AssemblyAnalysisToolRegistrations
 {
-    internal static string ResolveTargetType(string? targetType, string targetPath) =>
-        AssemblyPathValidation.IsSupportedAssemblyPath(targetPath)
-            ? "assembly"
-            : string.IsNullOrWhiteSpace(targetType) ? "assembly" : targetType;
-
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
         AnalysisToolRoute assemblyRoute)
@@ -36,8 +29,8 @@ internal static class AssemblyAnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (
+                RequestContext<CallToolRequestParams> context,
                 string targetPath,
-                string? targetType = null,
                 string? pattern = null,
                 bool? isRegex = null,
                 string? searchKind = null,
@@ -52,11 +45,13 @@ internal static class AssemblyAnalysisToolRegistrations
                 string? kind = null,
                 CancellationToken ct = default) =>
             {
+                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
+                if (legacyError is not null) return legacyError;
                 var effectiveCursor = cursor ?? continuationToken;
                 return await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
                     new AnalysisToolCallRequest(
-                        new AnalysisTargetRequest(ResolveTargetType(targetType, targetPath), targetPath),
+                        new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
                             AssemblySessionCall: lease => AssemblySearchTool.ExecuteAsync(
                                 lease,
@@ -78,13 +73,13 @@ internal static class AssemblyAnalysisToolRegistrations
                             Cursor: effectiveCursor),
                         ct));
             },
-            McpToolRegistrationOptions.AssemblyTool("search_assembly", SearchAssemblyDescription)));
+            TargetPathToolRegistrationOptions.AssemblyTool("search_assembly", SearchAssemblyDescription)));
     }
 
     private const string SearchAssemblyDescription =
         "Wann nutzen: read-only Text-/Mustersuche im verifizierten Source- oder dekompilierten " +
         "Root einer lokalen Assembly. targetPath ist ein absoluter .dll- oder .exe-Pfad; " +
-        "targetType ist optional und wird inferiert. searchKind: 'text' fuer ein eigenes pattern, " +
+        "searchKind: 'text' fuer ein eigenes pattern, " +
         "'data_access' fuer typische Datenbank-/Datei-/Transaktionsaufrufe oder 'external_calls' " +
         "fuer typische HTTP-/RPC-/Socket-/Prozessaufrufe; die beiden Fachmodi verwenden ohne pattern " +
         "ein eingebautes, sichtbares Regex. isRegex gilt fuer ein eigenes pattern (Default null = 'auto' mit automatischer " +
@@ -104,8 +99,8 @@ internal static class AssemblyAnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (
+                RequestContext<CallToolRequestParams> context,
                 string targetPath,
-                string? targetType = null,
                 string? @namespace = null,
                 string? typeName = null,
                 string? memberName = null,
@@ -121,11 +116,13 @@ internal static class AssemblyAnalysisToolRegistrations
                 string? continuationToken = null,
                 CancellationToken ct = default) =>
             {
+                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
+                if (legacyError is not null) return legacyError;
                 var effectiveCursor = cursor ?? continuationToken;
                 return await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
                     new AnalysisToolCallRequest(
-                        new AnalysisTargetRequest(ResolveTargetType(targetType, targetPath), targetPath),
+                        new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
                             AssemblySessionCall: lease => InspectAssemblyTool.ExecuteAsync(
                                 lease,
@@ -149,13 +146,13 @@ internal static class AssemblyAnalysisToolRegistrations
                             Cursor: effectiveCursor),
                         ct));
             },
-            McpToolRegistrationOptions.AssemblyTool("inspect_assembly", InspectAssemblyDescription)));
+            TargetPathToolRegistrationOptions.AssemblyTool("inspect_assembly", InspectAssemblyDescription)));
     }
 
     private const string InspectAssemblyDescription =
         "Wann nutzen: oeffentliche API einer exakt angegebenen lokalen .NET-Assembly metadata-only " +
         "ueber Roslyn untersuchen. targetPath mit absolutem .dll- oder .exe-Pfad ist Pflicht; " +
-        "targetType ist optional und wird standardmaessig als 'assembly' behandelt. Ein Consumer-Projekt " +
+        "Ein Consumer-Projekt " +
         "wird in diesem Dispatch-Schritt nicht verwendet. " +
         "namespace, typeName und memberName filtern, publicOnly ist standardmaessig true, " +
         "exactTypeName schaltet fuer typeName von Teiltext- auf Exaktsuche um, memberNames " +
@@ -177,8 +174,8 @@ internal static class AssemblyAnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (
+                RequestContext<CallToolRequestParams> context,
                 string targetPath,
-                string? targetType = null,
                 string? receiverType = null,
                 string? extensionName = null,
                 string? @namespace = null,
@@ -190,11 +187,13 @@ internal static class AssemblyAnalysisToolRegistrations
                 string? continuationToken = null,
                 CancellationToken ct = default) =>
             {
+                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
+                if (legacyError is not null) return legacyError;
                 var effectiveCursor = cursor ?? continuationToken;
                 return await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
                     new AnalysisToolCallRequest(
-                        new AnalysisTargetRequest(ResolveTargetType(targetType, targetPath), targetPath),
+                        new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
                             AssemblySessionCall: lease => FindAssemblyExtensionsTool.ExecuteAsync(
                                 lease,
@@ -214,13 +213,13 @@ internal static class AssemblyAnalysisToolRegistrations
                             Cursor: effectiveCursor),
                         ct));
             },
-            McpToolRegistrationOptions.AssemblyTool("find_assembly_extensions", FindAssemblyExtensionsDescription)));
+            TargetPathToolRegistrationOptions.AssemblyTool("find_assembly_extensions", FindAssemblyExtensionsDescription)));
     }
 
     private const string FindAssemblyExtensionsDescription =
         "Wann nutzen: klassische C#-Extension-Methoden einer exakt angegebenen lokalen .NET-Assembly " +
         "metadata-only ueber Roslyn finden. targetPath mit absolutem .dll- oder .exe-Pfad ist Pflicht; " +
-        "targetType ist optional und wird standardmaessig als 'assembly' behandelt. Ein Consumer-Projekt " +
+        "Ein Consumer-Projekt " +
         "wird in diesem Dispatch-Schritt nicht verwendet. " +
         "receiverType grenzt den gewuenschten Empfaenger-Typ ein; ohne Consumer-Projekt " +
         "wird seine Roslyn-Anwendbarkeit als not_decidable ausgewiesen. extensionName und namespace filtern, " +
@@ -239,9 +238,8 @@ internal static class AssemblyAnalysisToolRegistrations
         AnalysisToolRoute assemblyRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (
+            (RequestContext<CallToolRequestParams> context,
                 string targetPath,
-                string? targetType = null,
                 string? symbolIdentifier = null,
                 string? symbol = null,
                 bool includeMetrics = true,
@@ -259,47 +257,93 @@ internal static class AssemblyAnalysisToolRegistrations
                 string? detailLevel = null,
                 string? cursor = null,
                 string? continuationToken = null,
-                CancellationToken ct = default) =>
-            {
-                var effectiveCursor = cursor ?? continuationToken;
-                return await AnalysisToolCall.ExecuteRouted(
+                CancellationToken ct = default) => ExecuteGetAssemblyContextAsync(
+                    context,
                     assemblyRoute,
-                    new AnalysisToolCallRequest(
-                        new AnalysisTargetRequest(ResolveTargetType(targetType, targetPath), targetPath),
-                        new AnalysisToolDispatch(
-                            AssemblySessionCall: lease => AssemblyAnalysisContextTool.ExecuteAsync(
-                                lease,
-                                new AssemblyAnalysisContextArguments(
-                                    symbolIdentifier ?? symbol,
-                                    includeMetrics,
-                                    includeReferences,
-                                    includeCallers,
-                                    includeImpact,
-                                    includeBody,
-                                    includeClassStructure,
-                                    maxResults,
-                                    maxBodyLines,
-                                    maxCallers,
-                                    depth,
-                                    topN,
-                                    maxResponseBytes,
-                                    detailLevel,
-                                    effectiveCursor),
-                                ct),
-                            ExpandAssemblyReferences: includeReferences || includeCallers || includeImpact,
-                            MaxResponseBytes: maxResponseBytes,
-                            DetailLevel: detailLevel,
-                            Cursor: effectiveCursor),
-                        ct));
-            },
-            McpToolRegistrationOptions.AssemblyTool("get_assembly_context", GetAssemblyContextDescription)));
+                    targetPath,
+                    symbolIdentifier,
+                    symbol,
+                    includeMetrics,
+                    includeReferences,
+                    includeCallers,
+                    includeImpact,
+                    includeBody,
+                    includeClassStructure,
+                    maxResults,
+                    maxBodyLines,
+                    maxCallers,
+                    depth,
+                    topN,
+                    maxResponseBytes,
+                    detailLevel,
+                    cursor,
+                    continuationToken,
+                    ct),
+            TargetPathToolRegistrationOptions.AssemblyTool("get_assembly_context", GetAssemblyContextDescription)));
+    }
+
+    private static async Task<CallToolResult> ExecuteGetAssemblyContextAsync(
+        RequestContext<CallToolRequestParams> context,
+        AnalysisToolRoute assemblyRoute,
+        string targetPath,
+        string? symbolIdentifier,
+        string? symbol,
+        bool includeMetrics,
+        bool includeReferences,
+        bool includeCallers,
+        bool includeImpact,
+        bool includeBody,
+        bool includeClassStructure,
+        int maxResults,
+        int maxBodyLines,
+        int maxCallers,
+        int depth,
+        int topN,
+        int maxResponseBytes,
+        string? detailLevel,
+        string? cursor,
+        string? continuationToken,
+        CancellationToken ct)
+    {
+        var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
+        if (legacyError is not null) return legacyError;
+        var effectiveCursor = cursor ?? continuationToken;
+        return await AnalysisToolCall.ExecuteRouted(
+            assemblyRoute,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest(targetPath),
+                new AnalysisToolDispatch(
+                    AssemblySessionCall: lease => AssemblyAnalysisContextTool.ExecuteAsync(
+                        lease,
+                        new AssemblyAnalysisContextArguments(
+                            symbolIdentifier ?? symbol,
+                            includeMetrics,
+                            includeReferences,
+                            includeCallers,
+                            includeImpact,
+                            includeBody,
+                            includeClassStructure,
+                            maxResults,
+                            maxBodyLines,
+                            maxCallers,
+                            depth,
+                            topN,
+                            maxResponseBytes,
+                            detailLevel,
+                            effectiveCursor),
+                        ct),
+                    ExpandAssemblyReferences: includeReferences || includeCallers || includeImpact,
+                    MaxResponseBytes: maxResponseBytes,
+                    DetailLevel: detailLevel,
+                    Cursor: effectiveCursor),
+                ct));
     }
 
     private const string GetAssemblyContextDescription =
         "Wann nutzen: kompakter Assembly-spezifischer Composite-Einstieg fuer Agenten. " +
         "Liefert Identitaet, Scope, Vollstaendigkeit und auf Wunsch Metriken, Referenzen, " +
         "Caller/Impact, Body und Klassenstruktur in einer strukturierten Antwort. " +
-        "targetType='assembly' und targetPath sind ein absoluter .dll- oder .exe-Pfad; targetType ist optional und wird inferiert; symbolIdentifier ist optional und " +
+        "targetPath ist ein absoluter .dll- oder .exe-Pfad; symbolIdentifier ist optional und " +
         "akzeptiert DocCommentId, Typname oder Datei:Zeile:Spalte. symbol ist ein Alias. " +
         "maxResponseBytes, detailLevel (compact/standard/full) und cursor steuern Budget und Paging; " +
         "unsupported/partial/complete sowie totalCount, returnedCount, isTruncated und continuationToken " +

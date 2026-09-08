@@ -22,8 +22,8 @@ public sealed class McpAgentGuideRegistrationTests
         Assert.Equal(McpAgentGuideRegistration.Uri, content.Uri);
         Assert.Equal("text/markdown", content.MimeType);
         Assert.Contains("AiNetLinter MCP-Bootstrap", content.Text, StringComparison.Ordinal);
-        Assert.Contains("ainetlinter.project.json", content.Text, StringComparison.Ordinal);
-        Assert.Contains("ainetlinter --docs rules-json", content.Text, StringComparison.Ordinal);
+        Assert.Contains("ainetlinter-rules.json", content.Text, StringComparison.Ordinal);
+        Assert.Contains("ainetlinter --docs mcp-rule", content.Text, StringComparison.Ordinal);
         Assert.Contains(".agents/rules", content.Text, StringComparison.Ordinal);
         Assert.Contains(".cursor/rules", content.Text, StringComparison.Ordinal);
         Assert.Contains("## Laufzeitpfad des MCP-Servers", content.Text, StringComparison.Ordinal);
@@ -38,13 +38,11 @@ public sealed class McpAgentGuideRegistrationTests
         Assert.True(workflowStart >= 0);
         var workflow = content.Text[(workflowStart + workflowMarker.Length)..];
         Assert.DoesNotContain("## Ablauf", workflow, StringComparison.Ordinal);
-        Assert.DoesNotContain("ainetlinter.project.json", workflow, StringComparison.Ordinal);
-        Assert.Contains("targetType", workflow, StringComparison.Ordinal);
         Assert.Contains("targetPath", workflow, StringComparison.Ordinal);
         Assert.Contains("get_server_health", workflow, StringComparison.Ordinal);
         Assert.Contains("report_observability_feedback", workflow, StringComparison.Ordinal);
-        Assert.Contains("nicht zielgebunden", workflow, StringComparison.Ordinal);
-        Assert.Contains("targetType: \"assembly\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("ungebunden", workflow, StringComparison.Ordinal);
+        Assert.Contains(".dll", workflow, StringComparison.Ordinal);
         Assert.Contains("metadata-only", workflow, StringComparison.Ordinal);
         Assert.Contains("not_decidable", workflow, StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier", workflow, StringComparison.Ordinal);
@@ -52,10 +50,8 @@ public sealed class McpAgentGuideRegistrationTests
         Assert.DoesNotContain("Consumer-Kontext", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("optionalen Consumer-Typ", workflow, StringComparison.Ordinal);
 
-        var workflowWithoutResourceUris = workflow
-            .Replace("ainetlinter://overview{?projectRoot}", "ainetlinter://overview", StringComparison.Ordinal)
-            .Replace("ainetlinter://rules{?projectRoot}", "ainetlinter://rules", StringComparison.Ordinal);
-        Assert.DoesNotContain("projectRoot", workflowWithoutResourceUris, StringComparison.Ordinal);
+        Assert.Contains("ainetlinter://overview{?targetPath}", workflow, StringComparison.Ordinal);
+        Assert.Contains("ainetlinter://rules{?targetPath}", workflow, StringComparison.Ordinal);
 
         var embeddedWorkflow = EmbeddedResourceReader
             .ReadRequired(McpAgentGuideRegistration.WorkflowResourceName)

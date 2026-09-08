@@ -21,14 +21,14 @@ internal static class RulesResourceFormatter
         }
 
         return BuildMarkdown(
-            snapshot.RootPath,
+            snapshot.Definition?.SolutionPath ?? snapshot.RootPath,
             config,
             configSnapshot.UsedDefaultConfig,
             configSnapshot.ResolvedConfigPath);
     }
 
     internal static string BuildMarkdown(
-        string projectRoot,
+        string targetPath,
         Config config,
         bool usedDefaultConfig,
         string? resolvedConfigPath)
@@ -36,10 +36,20 @@ internal static class RulesResourceFormatter
         var builder = new StringBuilder();
         builder.AppendLine("# AiNetLinter — effektive Regelkonfiguration");
         builder.AppendLine();
-        builder.AppendLine($"- Projektroot: `{projectRoot}`");
+        builder.AppendLine($"- targetPath: `{targetPath}`");
         builder.AppendLine($"- Konfigurationsquelle: {DescribeConfigOrigin(usedDefaultConfig, resolvedConfigPath)}");
         builder.AppendLine("- Grundlage: aktueller atomarer Config-Snapshot des adressierten Projekt-Keys.");
         builder.AppendLine();
+
+        if (usedDefaultConfig)
+        {
+            builder.AppendLine("## Status");
+            builder.AppendLine();
+            builder.AppendLine("`not_configured` — neben der adressierten Solution wurde keine `ainetlinter-rules.json` gefunden.");
+            builder.AppendLine("Navigation bleibt verfügbar; Lint-Operationen liefern keinen scheinbar sauberen Default-Lauf.");
+            builder.AppendLine("Nächster Schritt: `ainetlinter-rules.json` neben der adressierten `.sln`/`.slnx` anlegen und die Resource erneut lesen.");
+            return builder.ToString().TrimEnd();
+        }
 
         AppendActiveRules(builder, config);
         AppendThresholds(builder, config);
@@ -50,7 +60,7 @@ internal static class RulesResourceFormatter
 
     private static string DescribeConfigOrigin(bool usedDefaultConfig, string? resolvedConfigPath) =>
         usedDefaultConfig
-            ? "`eingebaute Default-Konfiguration`"
+            ? "`not_configured (ainetlinter-rules.json fehlt)`"
             : string.IsNullOrWhiteSpace(resolvedConfigPath)
                 ? "`unbekannt`"
                 : $"`{resolvedConfigPath}`";

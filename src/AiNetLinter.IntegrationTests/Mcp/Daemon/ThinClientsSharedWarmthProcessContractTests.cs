@@ -28,6 +28,7 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
         try
         {
             using var fixture = new SymbolGraphMiniFixtureWorkspace();
+            var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
             using var isolatedState = TestTempDirectory.Create("thin-client-shared-state-");
             var clientFrames = CreateClientFrames();
 
@@ -76,8 +77,8 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
             var projectsSecond = healthSecond.GetProperty("projects");
             // Bewusst Root-Match statt Single(): Der geteilte Daemon darf auch
             // fremde Keys resident halten, solange der Fixture-Key geteilt wird.
-            var entryFirst = SelectFixtureEntry(projectsFirst, fixture.RootPath);
-            var entrySecond = SelectFixtureEntry(projectsSecond, fixture.RootPath);
+            var entryFirst = SelectFixtureEntry(projectsFirst, solutionPath);
+            var entrySecond = SelectFixtureEntry(projectsSecond, solutionPath);
 
             // Shared-Warmth (B.6): beide Clients treffen dieselbe residente Projekt-Instanz —
             // kein zweiter vollstaendiger Load und kein Refresh dazwischen (identischer
@@ -94,7 +95,7 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
             var keys = daemonSecond.GetProperty("keys");
             Assert.Contains(
                 keys.EnumerateArray(),
-                key => string.Equals(key.GetString(), fixture.RootPath, StringComparison.OrdinalIgnoreCase));
+                key => string.Equals(key.GetString(), solutionPath, StringComparison.OrdinalIgnoreCase));
 
         }
         finally
@@ -171,7 +172,7 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
         foreach (var entry in projects.EnumerateArray())
         {
             if (string.Equals(
-                    entry.GetProperty("projectRoot").GetString(),
+                    entry.GetProperty("targetPath").GetString(),
                     fixtureRoot,
                     StringComparison.OrdinalIgnoreCase))
             {

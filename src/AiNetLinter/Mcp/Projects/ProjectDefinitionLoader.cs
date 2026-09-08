@@ -1,152 +1,65 @@
 #nullable enable
 
-using System.Text.Json;
-
 namespace AiNetLinter.Mcp.Projects;
 
 /// <summary>
-/// Lädt <c>ainetlinter.project.json</c> aus einem Projektroot: beide Felder sind Pflicht,
-/// relative Pfade werden ausschließlich relativ zur Definitionsdatei aufgelöst (nie zum
-/// cwd), beide Zieldateien werden auf Existenz geprüft — ohne Fallback und ohne Raten.
-/// Erwartbare Fehler kehren als <see cref="ProjectDefinitionLoadResult.Failed"/> zurück,
-/// nie als Exception.
+/// Lädt die Definition für eine konkrete, bereits aufgelöste Solution-Datei.
+/// Es gibt keine Projektdefinitionsdatei und keine Pfadsuche: Die optionale
+/// Regeldatei liegt ausschließlich direkt neben der adressierten Solution.
 /// </summary>
 internal static class ProjectDefinitionLoader
 {
-    internal const string DefinitionFileName = "ainetlinter.project.json";
+    internal const string RulesFileName = "ainetlinter-rules.json";
 
-    internal static ProjectDefinitionLoadResult Load(string? projectRoot)
+    internal static ProjectDefinitionLoadResult LoadSolutionTarget(string? solutionPath)
     {
-        if (string.IsNullOrWhiteSpace(projectRoot))
-            return Fail(ProjectErrorCodes.ProjectRootRequired, RootRequiredTemplate());
+        if (string.IsNullOrWhiteSpace(solutionPath))
+        {
+            return Fail(
+                ProjectErrorCodes.ProjectRootRequired,
+                "Der Parameter 'targetPath' ist erforderlich; übergib den absoluten Pfad einer vorhandenen .sln- oder .slnx-Datei.");
+        }
 
-        var definitionPath = Path.Combine(projectRoot, DefinitionFileName);
+        var canonicalSolutionPath = Canonicalize(solutionPath);
+        if (canonicalSolutionPath is null
+            || !File.Exists(canonicalSolutionPath)
+            || !IsSolutionPath(canonicalSolutionPath))
+        {
+            return Fail(
+                ProjectErrorCodes.SolutionNotFound,
+                $"Solution-Datei nicht gefunden oder nicht unterstützt: '{solutionPath}'. " +
+                "Erforderlich ist der absolute Pfad einer vorhandenen .sln- oder .slnx-Datei.");
+        }
 
-        if (!File.Exists(definitionPath))
-            return Fail(ProjectErrorCodes.ProjectNotInitialized, NotInitializedTemplate(definitionPath));
-
-        var parsed = TryParseObject(definitionPath);
-        if (parsed.Error is { } parseError)
-            return Fail(ProjectErrorCodes.ProjectDefinitionInvalid, parseError);
-
-        var fields = ReadFields(parsed.Value!, definitionPath);
-        if (fields.Error is { } fieldError)
-            return Fail(ProjectErrorCodes.ProjectDefinitionInvalid, fieldError);
-
-        var solutionPath = ResolveAgainstDefinition(fields.Value!.Solution, definitionPath);
-        if (!File.Exists(solutionPath))
-            return Fail(ProjectErrorCodes.SolutionNotFound, SolutionMissing(solutionPath, definitionPath));
-
-        var rulesPath = ResolveAgainstDefinition(fields.Value.Rules, definitionPath);
-        if (!File.Exists(rulesPath))
-            return Fail(ProjectErrorCodes.RulesNotFound, RulesMissing(rulesPath, definitionPath));
-
-        return ProjectDefinitionLoadResult.Success(new ProjectDefinition(solutionPath, rulesPath));
+        var rulesPath = Path.Combine(
+            Path.GetDirectoryName(canonicalSolutionPath)!,
+            RulesFileName);
+        return ProjectDefinitionLoadResult.Success(
+            new ProjectDefinition(canonicalSolutionPath, File.Exists(rulesPath) ? rulesPath : string.Empty));
     }
 
-    private static Outcome<JsonElement> TryParseObject(string definitionPath)
+    // Interne Übergangskompatibilität für noch nicht migrierte Aufrufer; auch dieser
+    // Einstieg akzeptiert ausschließlich den konkreten Solution-Dateipfad.
+    internal static ProjectDefinitionLoadResult Load(string? solutionPath) =>
+        LoadSolutionTarget(solutionPath);
+
+    private static string? Canonicalize(string path)
     {
-        string json;
         try
         {
-            json = File.ReadAllText(definitionPath);
+            return Path.IsPathFullyQualified(path)
+                ? Path.GetFullPath(path)
+                : null;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        catch (Exception ex) when (ex is ArgumentException or IOException or NotSupportedException)
         {
-            return Outcome<JsonElement>.Fail($"Project definition '{definitionPath}' could not be read: {ex.Message}");
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(json);
-            if (document.RootElement.ValueKind != JsonValueKind.Object)
-                return Outcome<JsonElement>.Fail(Invalid(definitionPath, "the root must be a JSON object."));
-
-            return Outcome<JsonElement>.Succeed(document.RootElement.Clone());
-        }
-        catch (JsonException ex)
-        {
-            return Outcome<JsonElement>.Fail(Invalid(definitionPath, $"not valid JSON ({ex.Message})."));
+            return null;
         }
     }
 
-    private static Outcome<(string Solution, string Rules)> ReadFields(JsonElement root, string definitionPath)
-    {
-        var solution = RequiredString(root, "solution", definitionPath);
-        if (solution.Error is { } solutionError)
-            return Outcome<(string, string)>.Fail(solutionError);
-
-        var rules = RequiredString(root, "rules", definitionPath);
-        if (rules.Error is { } rulesError)
-            return Outcome<(string, string)>.Fail(rulesError);
-
-        return Outcome<(string Solution, string Rules)>.Succeed((solution.Value!, rules.Value!));
-    }
-
-    private static Outcome<string> RequiredString(JsonElement root, string fieldName, string definitionPath)
-    {
-        if (!root.TryGetProperty(fieldName, out var property))
-            return Outcome<string>.Fail(Invalid(definitionPath, $"required field '{fieldName}' is missing."));
-
-        if (property.ValueKind != JsonValueKind.String
-            || property.GetString() is not { } value
-            || value.Trim().Length == 0)
-        {
-            return Outcome<string>.Fail(Invalid(definitionPath, $"field '{fieldName}' must be a non-empty string."));
-        }
-
-        return Outcome<string>.Succeed(value);
-    }
-
-    private static string ResolveAgainstDefinition(string value, string definitionPath)
-    {
-        if (Path.IsPathRooted(value))
-            return value;
-
-        var definitionDirectory = Path.GetDirectoryName(definitionPath) ?? string.Empty;
-        return Path.GetFullPath(Path.Combine(definitionDirectory, value));
-    }
-
-    private static string NotInitializedTemplate(string definitionPath) =>
-        string.Join(
-            Environment.NewLine,
-            $"No project definition found at '{definitionPath}'.",
-            $"Create {definitionPath} with:",
-            "{",
-            "  \"solution\": \"<path/to/your.slnx or .sln>\",  // relative to this file, or absolute",
-            "  \"rules\":    \"<path/to/rules.json>\"          // relative to this file, or absolute; MUST exist",
-            "}",
-            "Then retry the call with the same projectRoot.");
-
-    private static string RootRequiredTemplate() =>
-        string.Join(
-            Environment.NewLine,
-            "The parameter 'projectRoot' is required; null, empty or whitespace-only values are rejected.",
-            "Pass an absolute project root directory, e.g. C:/repos/mein-projekt.",
-            "If the project is not initialized yet, create ainetlinter.project.json in that root with:",
-            "{",
-            "  \"solution\": \"<path/to/your.slnx or .sln>\",  // relative to this file, or absolute",
-            "  \"rules\":    \"<path/to/rules.json>\"          // relative to this file, or absolute; MUST exist",
-            "}",
-            "Then retry the call with the same absolute projectRoot.");
+    private static bool IsSolutionPath(string path) =>
+        Path.GetExtension(path).ToLowerInvariant() is ".sln" or ".slnx";
 
     private static ProjectDefinitionLoadResult Fail(string errorCode, string message) =>
         ProjectDefinitionLoadResult.Failure(errorCode, message);
-
-    private static string Invalid(string definitionPath, string detail) =>
-        $"Project definition '{definitionPath}' is invalid: {detail}";
-
-    private static string SolutionMissing(string resolvedPath, string definitionPath) =>
-        $"Solution file not found: '{resolvedPath}' (resolved relative to the project definition at '{definitionPath}').";
-
-    private static string RulesMissing(string resolvedPath, string definitionPath) =>
-        $"Rules file not found: '{resolvedPath}' (resolved relative to the project definition at "
-        + $"'{definitionPath}'; no neighbor search, no default rules).";
-
-    private sealed record Outcome<T>(T? Value, string? Error)
-    {
-        internal static Outcome<T> Succeed(T value) => new(value, null);
-
-        internal static Outcome<T> Fail(string error) => new(default, error);
-    }
 }

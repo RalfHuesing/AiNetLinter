@@ -403,7 +403,7 @@ public sealed class AssemblyAnalysisPathContractTests
         return await AnalysisToolCall.ExecuteRouted(
             AssemblyAnalysisDispatcher.CreateRoute(registry),
             new AnalysisToolCallRequest(
-                new AnalysisTargetRequest("assembly", assemblyPath),
+                new AnalysisTargetRequest(assemblyPath),
                 new AnalysisToolDispatch(AssemblySessionCall: call),
                 CancellationToken.None));
     }

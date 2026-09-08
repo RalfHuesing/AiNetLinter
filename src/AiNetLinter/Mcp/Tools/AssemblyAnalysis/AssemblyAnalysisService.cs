@@ -25,13 +25,13 @@ internal static class AssemblyAnalysisService
         error = string.Empty;
         if (string.IsNullOrWhiteSpace(assemblyPath))
         {
-            error = "Pflichtparameter 'assemblyPath' fehlt oder ist leer.";
+                error = "Pflichtparameter 'targetPath' fehlt oder ist leer.";
             return false;
         }
 
         if (!Path.IsPathFullyQualified(assemblyPath))
         {
-            error = $"Der Parameter 'assemblyPath' muss ein absoluter lokaler Pfad sein: '{assemblyPath}'.";
+            error = $"Der Parameter 'targetPath' muss ein absoluter lokaler Pfad sein: '{assemblyPath}'.";
             return false;
         }
 
@@ -41,13 +41,13 @@ internal static class AssemblyAnalysisService
         }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
-            error = $"Der Parameter 'assemblyPath' ist kein gültiger lokaler Pfad: '{assemblyPath}' ({ex.Message}).";
+            error = $"Der Parameter 'targetPath' ist kein gültiger lokaler Pfad: '{assemblyPath}' ({ex.Message}).";
             return false;
         }
 
         if (!AssemblyPathValidation.IsSupportedAssemblyPath(fullPath))
         {
-            error = $"Der Assembly-Pfad muss auf eine .dll- oder .exe-Datei zeigen: '{assemblyPath}'.";
+            error = $"Der Parameter 'targetPath' muss auf eine .dll- oder .exe-Datei zeigen: '{assemblyPath}'.";
             return false;
         }
 

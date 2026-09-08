@@ -21,46 +21,41 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 internal static class ReloadConfigTool
 {
     /// <summary>
-    /// Ohne <paramref name="configPath"/> wird der <c>rules</c>-Pfad aus der Definitionsdatei des
-    /// adressierten Keys (<paramref name="defaultRulesPath"/>) erneut geladen; mit
-    /// <paramref name="configPath"/> gilt dieser Pfad als Hot-Swap-Override fuer genau diesen Key.
-    /// Es gibt keine Nachbar-Suche mehr. Datei fehlt oder ist ungueltiges JSON:
+    /// Lädt ausschließlich die optionale, zur adressierten Solution benachbarte Regeldatei.
+    /// Datei fehlt oder ist ungueltiges JSON:
     /// <see cref="McpToolResults.Recoverable"/> (IsErrorPolicy.md) — die aktive Config bleibt
     /// unveraendert, kein Datenverlust, kein Absturz.
     /// </summary>
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
-        string defaultRulesPath,
-        string? configPath,
+        string rulesPath,
         CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var targetPath = string.IsNullOrWhiteSpace(configPath) ? defaultRulesPath : configPath;
-        if (!File.Exists(targetPath))
+        if (!File.Exists(rulesPath))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.ConfigNotFound,
-                $"Konfigurationsdatei nicht gefunden: {targetPath}",
-                context: targetPath,
-                hint: "Pfad pruefen bzw. den rules-Pfad in der Definitionsdatei ainetlinter.project.json " +
-                      "korrigieren. Bisherige Konfiguration bleibt aktiv.");
+                $"Optionale Regeldatei nicht gefunden: {rulesPath}",
+                context: rulesPath,
+                hint: "ainetlinter-rules.json neben der adressierten Solution anlegen. Bisherige Konfiguration bleibt aktiv.");
         }
 
-        var newConfig = ConfigLoader.TryLoadConfig(targetPath, isRequired: false);
+        var newConfig = ConfigLoader.TryLoadConfig(rulesPath, isRequired: false);
         if (newConfig is null)
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.ConfigInvalid,
-                $"Konfigurationsdatei konnte nicht geladen werden (ungueltiges JSON?): {targetPath}",
-                context: targetPath,
-                hint: "JSON-Syntax der rules.json pruefen. Bisherige Konfiguration bleibt aktiv.");
+                $"Regeldatei konnte nicht geladen werden (ungueltiges JSON?): {rulesPath}",
+                context: rulesPath,
+                hint: "JSON-Syntax von ainetlinter-rules.json pruefen. Bisherige Konfiguration bleibt aktiv.");
         }
 
-        var payload = BuildPayload(state, targetPath, newConfig);
-        state.ReloadConfig(newConfig, usedDefaultConfig: false, resolvedConfigPath: targetPath);
+        var payload = BuildPayload(state, rulesPath, newConfig);
+        state.ReloadConfig(newConfig, usedDefaultConfig: false, resolvedConfigPath: rulesPath);
         await state.ReloadSolutionAsync(ct);
         return McpToolResults.Text(BuildSummary(payload), payload);
     }

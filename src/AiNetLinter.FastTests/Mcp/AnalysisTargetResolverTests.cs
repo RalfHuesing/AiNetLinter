@@ -1,10 +1,11 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using AiNetLinter.Mcp;
-using AiNetLinter.Output;
 using AiNetLinter.TestKit;
+using ModelContextProtocol.Protocol;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp;
@@ -13,127 +14,84 @@ namespace AiNetLinter.FastTests.Mcp;
 public sealed class AnalysisTargetResolverTests
 {
     [Fact]
-    public void Resolve_Project_CanonicalizesPathAndPreservesRawRequest()
+    public void Resolve_TargetPathOnly_InfersSolutionAndCanonicalizesExistingFile()
     {
-        using var tempDir = TestTempDirectory.Create("analysis-target-project-");
-        var projectRoot = Directory.CreateDirectory(Path.Combine(tempDir.DirectoryPath, "project")).FullName;
-        var rawPath = Path.Combine(projectRoot, ".", "sub", "..");
-        var request = new AnalysisTargetRequest("project", rawPath);
+        using var tempDir = TestTempDirectory.Create("analysis-target-solution-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace", "sub", "..", "sample.slnx");
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(solutionPath))!);
+        File.WriteAllText(Path.GetFullPath(solutionPath), string.Empty);
 
-        var result = AnalysisTargetResolver.Resolve(request);
+        var result = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest(solutionPath));
 
         Assert.Null(result.Error);
         Assert.NotNull(result.Target);
         Assert.Equal(AnalysisTargetType.Project, result.Target!.TargetType);
-        Assert.Equal(Path.GetFullPath(projectRoot), result.Target.CanonicalPath);
-        Assert.Same(request, result.Target.Request);
+        Assert.Equal(Path.GetFullPath(solutionPath), result.Target.CanonicalPath);
+        Assert.Equal(Path.GetDirectoryName(result.Target.CanonicalPath), result.Target.AnalysisRoot);
+        Assert.NotEmpty(result.Target.Fingerprint);
     }
 
     [Theory]
-    [InlineData("Project")]
-    [InlineData("PROJECT")]
-    [InlineData(" project ")]
-    public void Resolve_TargetType_IsCaseInsensitiveAndTrimmed(string targetType)
+    [InlineData("sample.txt")]
+    [InlineData("sample.bin")]
+    public void Resolve_TargetPathOnly_RejectsUnsupportedExtension(string fileName)
     {
-        using var tempDir = TestTempDirectory.Create("analysis-target-case-");
-        var projectRoot = Directory.CreateDirectory(Path.Combine(tempDir.DirectoryPath, "project")).FullName;
-        var request = new AnalysisTargetRequest(targetType, projectRoot);
+        using var tempDir = TestTempDirectory.Create("analysis-target-extension-");
+        var path = Path.Combine(tempDir.DirectoryPath, fileName);
+        File.WriteAllText(path, string.Empty);
 
-        var result = AnalysisTargetResolver.Resolve(request);
-
-        Assert.Null(result.Error);
-        Assert.NotNull(result.Target);
-        Assert.Equal(AnalysisTargetType.Project, result.Target!.TargetType);
-    }
-
-    [Theory]
-    [InlineData(null, null)]
-    [InlineData("", "C:\\project")]
-    [InlineData("invalid", "C:\\project")]
-    [InlineData("project", null)]
-    [InlineData("project", "relative\\project")]
-    public void Resolve_InvalidTarget_ReturnsRecoverableArgumentError(string? targetType, string? targetPath)
-    {
-        var result = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest(targetType, targetPath));
+        var result = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest(path));
 
         Assert.Null(result.Target);
-        Assert.NotNull(result.Error);
-        Assert.False(result.Error!.IsError);
-        Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(result.Error), StringComparison.Ordinal);
+        Assert.Contains("INVALID_ARGUMENT", TextOf(result.Error!), StringComparison.Ordinal);
+        Assert.Contains("Endung", TextOf(result.Error!), StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Resolve_Assembly_RequiresExistingDllFile()
+    public void Resolve_TargetPathOnly_RejectsRelativeMissingAndDirectoryPaths()
     {
-        using var tempDir = TestTempDirectory.Create("analysis-target-assembly-");
-        var assemblyPath = Path.Combine(tempDir.DirectoryPath, "sample.dll");
-        File.WriteAllBytes(assemblyPath, [0]);
+        using var tempDir = TestTempDirectory.Create("analysis-target-path-");
+        var directory = Directory.CreateDirectory(Path.Combine(tempDir.DirectoryPath, "sample.slnx")).FullName;
+        var missing = Path.Combine(tempDir.DirectoryPath, "missing.slnx");
 
-        var result = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest("assembly", assemblyPath));
+        foreach (var path in new[] { "relative.slnx", missing, directory })
+        {
+            var result = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest(path));
+            Assert.Null(result.Target);
+            Assert.Contains("INVALID_ARGUMENT", TextOf(result.Error!), StringComparison.Ordinal);
+        }
+    }
 
-        Assert.Null(result.Error);
-        Assert.Equal(AnalysisTargetType.Assembly, result.Target!.TargetType);
-        Assert.Equal(Path.GetFullPath(assemblyPath), result.Target.CanonicalPath);
+    [Theory]
+    [InlineData("targetType")]
+    [InlineData("projectRoot")]
+    [InlineData("configPath")]
+    [InlineData("ainetlinter.project.json")]
+    public void Resolve_FromArguments_RejectsLegacyKeys(string legacyKey)
+    {
+        var result = AnalysisTargetResolver.Resolve(AnalysisTargetRequest.FromArguments(
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = "C:\\workspace\\sample.slnx",
+                [legacyKey] = "legacy"
+            }));
+
+        Assert.Null(result.Target);
+        var text = TextOf(result.Error!);
+        Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
+        Assert.Contains(legacyKey, text, StringComparison.Ordinal);
+        Assert.Contains("targetPath", text, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Resolve_Assembly_AcceptsExistingExeFile()
+    public void ResolveOptional_WithoutTargetKeepsAggregateModeForHealth()
     {
-        using var tempDir = TestTempDirectory.Create("analysis-target-assembly-exe-");
-        var assemblyPath = Path.Combine(tempDir.DirectoryPath, "sample.exe");
-        File.WriteAllBytes(assemblyPath, [0]);
-
-        var result = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest("assembly", assemblyPath));
-
-        Assert.Null(result.Error);
-        Assert.Equal(AnalysisTargetType.Assembly, result.Target!.TargetType);
-        Assert.Equal(Path.GetFullPath(assemblyPath), result.Target.CanonicalPath);
-    }
-
-    [Fact]
-    public void Resolve_Assembly_RejectsDirectoryAndWrongExtension()
-    {
-        using var tempDir = TestTempDirectory.Create("analysis-target-invalid-assembly-");
-        var directoryPath = Directory.CreateDirectory(Path.Combine(tempDir.DirectoryPath, "directory.dll")).FullName;
-        var textPath = Path.Combine(tempDir.DirectoryPath, "sample.txt");
-        File.WriteAllText(textPath, "not an assembly");
-        var binaryPath = Path.Combine(tempDir.DirectoryPath, "sample.bin");
-        File.WriteAllBytes(binaryPath, [0]);
-
-        var directoryResult = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest("assembly", directoryPath));
-        var extensionResult = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest("assembly", textPath));
-        var binaryResult = AnalysisTargetResolver.Resolve(new AnalysisTargetRequest("assembly", binaryPath));
-
-        Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(directoryResult.Error!), StringComparison.Ordinal);
-        Assert.Contains("vorhandene Datei", TextOf(directoryResult.Error!), StringComparison.Ordinal);
-        Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(extensionResult.Error!), StringComparison.Ordinal);
-        Assert.Contains("auf eine .dll- oder .exe-Datei", TextOf(extensionResult.Error!), StringComparison.Ordinal);
-        Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(binaryResult.Error!), StringComparison.Ordinal);
-        Assert.Contains("auf eine .dll- oder .exe-Datei", TextOf(binaryResult.Error!), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void ResolveOptional_WithoutTargetKeepsAggregateMode()
-    {
-        var result = AnalysisTargetResolver.ResolveOptional(new AnalysisTargetRequest(null, null));
+        var result = AnalysisTargetResolver.ResolveOptional(new AnalysisTargetRequest(null));
 
         Assert.Null(result.Target);
         Assert.Null(result.Error);
     }
 
-    [Theory]
-    [InlineData("project", null)]
-    [InlineData(null, "C:\\project")]
-    public void ResolveOptional_HalfFilledTargetReturnsRecoverableArgumentError(string? targetType, string? targetPath)
-    {
-        var result = AnalysisTargetResolver.ResolveOptional(new AnalysisTargetRequest(targetType, targetPath));
-
-        Assert.Null(result.Target);
-        Assert.NotNull(result.Error);
-        Assert.False(result.Error!.IsError);
-        Assert.Contains("[ERROR]: INVALID_ARGUMENT", TextOf(result.Error), StringComparison.Ordinal);
-    }
-
-    private static string TextOf(ModelContextProtocol.Protocol.CallToolResult result) =>
-        Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content)).Text;
+    private static string TextOf(CallToolResult result) =>
+        Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
 }

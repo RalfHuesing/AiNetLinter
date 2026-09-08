@@ -206,18 +206,18 @@ public sealed class LinterArgs
             return "[ERROR]: --mcp-server und --daemon-start koennen nicht gemeinsam verwendet werden.";
         }
 
-        // Harter Cut: im MCP-Modus traegt jeder Aufruf seinen Projektbezug selbst (projectRoot +
-        // Definitionsdatei ainetlinter.project.json); --path/--config haben keinen Sinn mehr.
+        // Harter Cut: im MCP-Modus traegt jeder zielgebundene Aufruf seinen absoluten targetPath
+        // selbst; --path/--config haben keinen Sinn mehr.
         if (!string.IsNullOrWhiteSpace(TargetPath))
         {
             return "[ERROR]: --path ist im MCP-Modus (--mcp-server) nicht zulaessig. Der Projektbezug " +
-                   "kommt je Tool-Aufruf ueber projectRoot aus der Definitionsdatei ainetlinter.project.json im Projektroot.";
+                   "kommt je Tool-Aufruf ueber targetPath aus der adressierten Solution oder Assembly.";
         }
 
         if (!string.IsNullOrWhiteSpace(ConfigPath))
         {
             return "[ERROR]: --config ist im MCP-Modus (--mcp-server) nicht zulaessig. Regeldateien " +
-                   "werden je Key aus der Definitionsdatei gelesen; ein Override je Aufruf ist via reload_config moeglich.";
+                   "werden ausschliesslich aus ainetlinter-rules.json neben der adressierten Solution gelesen.";
         }
 
         if (McpProjectTtlMinutes is <= 0)

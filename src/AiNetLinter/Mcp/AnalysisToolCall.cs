@@ -24,26 +24,27 @@ internal static class ProjectAnalysisDispatcher
         Func<ProjectLease, Task<CallToolResult>> projectCall) =>
         ExecuteProjectAsync(registry, request, projectCall);
 
-    internal static Task<CallToolResult> ExecuteAsync(
+    internal static Task<CallToolResult> ExecuteConfiguredAsync(
         ProjectRegistry registry,
-        string? targetType,
-        string? targetPath,
+        AnalysisTargetRequest request,
         Func<ProjectLease, Task<CallToolResult>> projectCall) =>
-        ExecuteProjectAsync(registry, new AnalysisTargetRequest(targetType, targetPath), projectCall);
-
-    internal static Task<CallToolResult> ExecuteAssemblyAsync(
-        ProjectRegistry registry,
-        string? targetType,
-        string? targetPath,
-        Func<string, Task<CallToolResult>> assemblyCall) =>
-        ExecuteAssemblyAsync(new AnalysisTargetRequest(targetType, targetPath), assemblyCall);
+        ExecuteProjectAsync(
+            registry,
+            request,
+            lease => lease.Server.GetConfigSnapshot().UsedDefaultConfig
+                ? Task.FromResult(McpToolResults.Recoverable(
+                    LinterErrorCodes.NotConfigured,
+                    "Diese Lint-Operation ist für die Solution nicht konfiguriert: neben der Solution wurde keine ainetlinter-rules.json gefunden.",
+                    context: lease.Definition.SolutionPath,
+                    hint: "ainetlinter-rules.json neben der adressierten .sln/.slnx anlegen und den Aufruf erneut starten."))
+                : projectCall(lease));
 
     private static async Task<CallToolResult> ExecuteProjectAsync(
         ProjectRegistry registry,
         AnalysisTargetRequest request,
         Func<ProjectLease, Task<CallToolResult>> projectCall)
     {
-        var resolution = AnalysisTargetResolver.Resolve(request);
+        var resolution = AnalysisTargetResolver.ResolveTargetPathOnly(request);
         if (resolution.Error is not null)
         {
             return resolution.Error;
@@ -62,7 +63,7 @@ internal static class ProjectAnalysisDispatcher
         AnalysisTargetRequest request,
         Func<string, Task<CallToolResult>> assemblyCall)
     {
-        var resolution = AnalysisTargetResolver.Resolve(request);
+        var resolution = AnalysisTargetResolver.ResolveTargetPathOnly(request);
         if (resolution.Error is not null)
         {
             return resolution.Error;
@@ -78,7 +79,7 @@ internal static class ProjectAnalysisDispatcher
         AnalysisTargetRequest request,
         Func<ProjectLease, Task<CallToolResult>> projectCall)
     {
-        var resolution = AnalysisTargetResolver.Resolve(request);
+        var resolution = AnalysisTargetResolver.ResolveTargetPathOnly(request);
         if (resolution.Error is not null)
         {
             return resolution.Error;
@@ -104,7 +105,7 @@ internal static class ProjectAnalysisDispatcher
         AnalysisTargetRequest request,
         Func<string, Task<CallToolResult>> filesystemCall)
     {
-        var resolution = AnalysisTargetResolver.Resolve(request);
+        var resolution = AnalysisTargetResolver.ResolveTargetPathOnly(request);
         if (resolution.Error is not null)
         {
             return resolution.Error;
@@ -121,14 +122,14 @@ internal static class ProjectAnalysisDispatcher
             ? McpToolResults.Recoverable(
                 LinterErrorCodes.AssemblyTargetUnsupported,
                 "Ein Assembly-Ziel wird für dieses Tool noch nicht unterstützt.",
-                hint: "targetType='project' für dieses Tool verwenden.")
+                hint: "Eine unterstützte Source-Operation mit targetPath auf eine .sln/.slnx-Datei verwenden.")
             : AssemblyAnalysisResponse.Unsupported(canonicalPath);
 
     internal static CallToolResult UnsupportedProjectTarget() =>
         McpToolResults.Recoverable(
             LinterErrorCodes.InvalidArgument,
             "Dieses Tool unterstützt kein Projekt-Ziel.",
-            hint: "targetType='assembly' mit dem Pfad der zu untersuchenden DLL verwenden.");
+            hint: "targetPath auf eine vorhandene .dll/.exe-Datei setzen und eine Assembly-Operation verwenden.");
 }
 
 internal static class AssemblyAnalysisDispatcher
@@ -149,7 +150,7 @@ internal static class AssemblyAnalysisDispatcher
 
     private static Task<CallToolResult> UnsupportedRouteAsync(AnalysisToolCallRequest request)
     {
-        var resolution = AnalysisTargetResolver.Resolve(request.Target);
+        var resolution = AnalysisTargetResolver.ResolveTargetPathOnly(request.Target);
         if (resolution.Error is not null)
         {
             return Task.FromResult(resolution.Error);
@@ -167,7 +168,7 @@ internal static class AssemblyAnalysisDispatcher
         Func<AssemblyAnalysisLease, Task<CallToolResult>> assemblyCall,
         AssemblyAnalysisExecutionOptions options)
     {
-        var resolution = AnalysisTargetResolver.Resolve(request);
+        var resolution = AnalysisTargetResolver.ResolveTargetPathOnly(request);
         if (resolution.Error is not null)
         {
             return resolution.Error;
@@ -228,14 +229,14 @@ internal static class AssemblyAnalysisDispatcher
             ? McpToolResults.Recoverable(
                 LinterErrorCodes.AssemblyTargetUnsupported,
                 "Ein Assembly-Ziel wird für dieses Tool noch nicht unterstützt.",
-                hint: "targetType='project' für dieses Tool verwenden.")
+                hint: "Eine unterstützte Source-Operation mit targetPath auf eine .sln/.slnx-Datei verwenden.")
             : AssemblyAnalysisResponse.Unsupported(canonicalPath);
 
     private static CallToolResult UnsupportedProjectTarget() =>
         McpToolResults.Recoverable(
             LinterErrorCodes.InvalidArgument,
             "Dieses Tool unterstützt kein Projekt-Ziel.",
-            hint: "targetType='assembly' mit dem Pfad der zu untersuchenden DLL verwenden.");
+            hint: "targetPath auf eine vorhandene .dll/.exe-Datei setzen und eine Assembly-Operation verwenden.");
 }
 
 internal sealed record AnalysisToolCallRequest(
@@ -245,12 +246,55 @@ internal sealed record AnalysisToolCallRequest(
 
 internal static class AnalysisToolCall
 {
+    /// <summary>
+    /// Erstellt die neue Herkunftsroute. Die Auswahl erfolgt ausschliesslich aus
+    /// dem aufgeloesten targetPath, nicht aus einem zweiten Agentenparameter.
+    /// </summary>
+    internal static AnalysisToolRoute CreateTargetPathRoute(
+        AnalysisToolRoute sourceRoute,
+        AnalysisToolRoute assemblyRoute) => request =>
+    {
+        var resolution = AnalysisTargetResolver.ResolveTargetPathOnly(request.Target);
+        if (resolution.Error is not null)
+        {
+            return Task.FromResult(resolution.Error);
+        }
+
+        var target = resolution.Target!;
+        var canonicalRequest = request with
+        {
+            Target = new AnalysisTargetRequest(target.CanonicalPath),
+        };
+        return target.Origin == AnalysisTargetOrigin.Decompiled
+            ? assemblyRoute(canonicalRequest)
+            : sourceRoute(canonicalRequest);
+    };
+
+    /// <summary>
+    /// Gemeinsamer Lint-Einstieg fuer den neuen Vertrag. Decompiled-Targets
+    /// werden strukturell als unsupported gemeldet und nie an den Source-Lease
+    /// weitergereicht.
+    /// </summary>
+    internal static Task<CallToolResult> ExecuteLintAsync(
+        AnalysisTargetRequest request,
+        Func<AnalysisTarget, Task<CallToolResult>> sourceCall)
+    {
+        var resolution = AnalysisTargetResolver.ResolveTargetPathOnly(request);
+        if (resolution.Error is not null)
+        {
+            return Task.FromResult(resolution.Error);
+        }
+
+        var target = resolution.Target!;
+        return target.Origin == AnalysisTargetOrigin.Decompiled
+            ? Task.FromResult(AssemblyAnalysisDispatcher.UnsupportedAssemblyTarget(target.CanonicalPath))
+            : sourceCall(target);
+    }
+
     internal static AnalysisToolRoute CreateTargetRoute(
         AnalysisToolRoute projectRoute,
-        AnalysisToolRoute assemblyRoute) => request =>
-            string.Equals(request.Target.TargetType, "assembly", StringComparison.OrdinalIgnoreCase)
-                ? assemblyRoute(request)
-                : projectRoute(request);
+        AnalysisToolRoute assemblyRoute) =>
+        CreateTargetPathRoute(projectRoute, assemblyRoute);
 
     internal static Task<CallToolResult> ExecuteRouted(
         AnalysisToolRoute route,

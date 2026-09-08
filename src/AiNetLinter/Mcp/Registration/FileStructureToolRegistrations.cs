@@ -21,7 +21,7 @@ namespace AiNetLinter.Mcp.Registration;
 /// <c>get_violations</c>, <c>search_pattern</c> und <c>metrics_tree</c> sind in eine
 /// eigene <see cref="AnalysisToolRegistrations"/>-Klasse ausgelagert, weil ihr <c>LinterEngine</c>-
 /// bzw. Roslyn-Syntax-Pull-in den Footprint dieser Klasse ueber das 2500-Limit getrieben hat/haette.
-/// Alle Lambdas sind zielgebunden: <c>targetType</c> und <c>targetPath</c> sind Pflicht und
+/// Alle Lambdas sind zielgebunden: <c>targetPath</c> ist Pflicht und
 /// werden am gemeinsamen <see cref="AnalysisToolCall"/> validiert.
 /// </summary>
 internal static class FileStructureToolRegistrations
@@ -50,7 +50,7 @@ internal static class FileStructureToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (
-                string targetType,
+                RequestContext<CallToolRequestParams> context,
                 string targetPath,
                 string? root = null,
                 string? path = null,
@@ -69,36 +69,33 @@ internal static class FileStructureToolRegistrations
                 bool includeLineCount = false,
                 CancellationToken ct = default) =>
             {
+                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
+                if (legacyError is not null) return legacyError;
                 var rawRoot = root ?? path ?? directory ?? ".";
                 var effectiveRoot = McpInputNormalizer.NormalizePathOrScope(rawRoot, targetPath);
                 var effectiveFilter = fileFilter ?? filter ?? pattern;
                 return await ExecuteFileTreeAsync(
                     targetRoute,
-                    targetType,
                     targetPath,
                     new GetFileTreeInput(effectiveRoot, view, includeExtensions, effectiveFilter, excludePatterns, maxDepth, treeDepth, maxResults, sortBy, includeMetadata, includeLineCount),
                     ct);
             },
-            McpToolRegistrationOptions.TargetedReadOnlyTool("get_file_tree", GetFileTreeDescription)));
+            TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_file_tree", GetFileTreeDescription)));
     }
 
     private static Task<CallToolResult> ExecuteFileTreeAsync(
         AnalysisToolRoute? targetRoute,
-        string targetType,
         string targetPath,
         GetFileTreeInput input,
         CancellationToken cancellationToken) =>
-        string.Equals(targetType, "assembly", StringComparison.OrdinalIgnoreCase)
-            ? AnalysisToolCall.ExecuteRouted(
-                targetRoute!,
-                new AnalysisToolCallRequest(
-                    new AnalysisTargetRequest(targetType, targetPath),
-                    new AnalysisToolDispatch(
-                        AssemblySessionCall: lease => AssemblyGetFileTreeTool.ExecuteAsync(lease, input, cancellationToken)),
-                    cancellationToken))
-            : ProjectAnalysisDispatcher.ExecutePhysicalFilesystemAsync(
-                new AnalysisTargetRequest(targetType, targetPath),
-                canonicalRoot => GetFileTreeTool.ExecuteAsync(canonicalRoot, input, cancellationToken));
+        AnalysisToolCall.ExecuteRouted(
+            targetRoute!,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest(targetPath),
+                new AnalysisToolDispatch(
+                    ProjectCall: lease => GetFileTreeTool.ExecuteAsync(lease.RootPath, input, cancellationToken),
+                    AssemblySessionCall: lease => AssemblyGetFileTreeTool.ExecuteAsync(lease, input, cancellationToken)),
+                cancellationToken));
 
 
     private const string GetFileTreeDescription =
@@ -108,7 +105,7 @@ internal static class FileStructureToolRegistrations
         "targetPath; fileFilter ist ein Pfad-Glob, keine Inhaltssuche. view: 'tree' [Default], " +
         "'summary', 'files'. includeExtensions: Extensionen wie ['.cs'] oder ['*']. " +
         "maxDepth und treeDepth: 0 bis 32 (effektive Tiefe = maxDepth ?? treeDepth; bei aktivem fileFilter, gezieltem Unterverzeichnis-Root oder view='summary' wird standardmaessig bis zum Limit gescannt, wenn weder maxDepth noch treeDepth gesetzt sind; maxDepth hat Vorrang). " +
-        "targetType='project' oder targetType='assembly'; maxResults: Begrenzung (Default 200, Maximum 2000). Für Assembly-Ziele wird der " +
+        "maxResults: Begrenzung (Default 200, Maximum 2000). Für Assembly-Ziele wird der " +
         "vorhandene Source- oder dekompilierte SourceRoot verwendet; ohne solchen Root ist die " +
         "Capability unsupported. Snapshot/Generation bleiben im Assembly-Response-Envelope sichtbar. " +
         "sortBy: 'path' [Default], 'size_desc', 'extension'. includeMetadata: Dateigroessen (Default true), " +
@@ -120,17 +117,19 @@ internal static class FileStructureToolRegistrations
         AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? project = null, string? namespacePrefix = null,
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? project = null, string? namespacePrefix = null,
                 int depth = GetNamespaceTreeTool.DefaultDepth,
                 bool includeTypes = true,
                 string? kind = "all",
                 int maxResults = GetNamespaceTreeTool.DefaultMaxResults,
                 int maxResponseBytes = 0,
                 CancellationToken ct = default) =>
-                await AnalysisToolCall.ExecuteRouted(
+                await ExecuteWithLegacyGuardAsync(
+                    context,
+                    () => AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
                     new AnalysisToolCallRequest(
-                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => GetNamespaceTreeTool.ExecuteAsync(
                                 lease.Server,
@@ -141,8 +140,8 @@ internal static class FileStructureToolRegistrations
                                 new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults),
                                 ct),
                             MaxResponseBytes: maxResponseBytes),
-                        ct)),
-            McpToolRegistrationOptions.TargetedReadOnlyTool("get_namespace_tree", GetNamespaceTreeDescription)));
+                        ct))),
+            TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_namespace_tree", GetNamespaceTreeDescription)));
     }
 
     private static readonly string GetNamespaceTreeDescription =
@@ -160,25 +159,27 @@ internal static class FileStructureToolRegistrations
         AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? className = null, string? identifier = null, string? type = null, string? name = null, string? sortBy = "lines",
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? className = null, string? identifier = null, string? type = null, string? name = null, string? sortBy = "lines",
                 int maxMembers = GetClassStructureTool.DefaultMaxMembers,
                 string? kindFilter = null,
                 string? nameFilter = null,
                 int maxResponseBytes = 0,
                 CancellationToken ct = default) =>
             {
+                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
+                if (legacyError is not null) return legacyError;
                 var effectiveIdentifier = symbolIdentifier ?? symbol ?? className ?? identifier ?? type ?? name;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
                     new AnalysisToolCallRequest(
-                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(effectiveIdentifier, sortBy, maxMembers, kindFilter, nameFilter, symbol), ct),
                             AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(effectiveIdentifier, sortBy, maxMembers, kindFilter, nameFilter, symbol), ct),
                             MaxResponseBytes: maxResponseBytes),
                         ct));
             },
-            McpToolRegistrationOptions.TargetedReadOnlyTool("get_class_structure", GetClassStructureDescription)));
+            TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_class_structure", GetClassStructureDescription)));
     }
 
     private static readonly string GetClassStructureDescription =
@@ -198,20 +199,22 @@ internal static class FileStructureToolRegistrations
         AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string[]? filePaths = null, string? filePath = null, string? path = null, string? file = null, int maxResponseBytes = 0, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? filePaths = null, string? filePath = null, string? path = null, string? file = null, int maxResponseBytes = 0, CancellationToken ct = default) =>
             {
+                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
+                if (legacyError is not null) return legacyError;
                 var effectivePath = filePath ?? path ?? file;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
                     new AnalysisToolCallRequest(
-                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, ResolveFilePaths(filePaths, effectivePath), ct),
                             AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, ResolveFilePaths(filePaths, effectivePath), ct),
                             MaxResponseBytes: maxResponseBytes),
                         ct));
             },
-            McpToolRegistrationOptions.TargetedReadOnlyTool("get_file_skeleton", GetFileSkeletonDescription)));
+            TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_file_skeleton", GetFileSkeletonDescription)));
     }
 
     private const string GetFileSkeletonDescription =
@@ -233,13 +236,16 @@ internal static class FileStructureToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, CancellationToken ct = default) =>
-                await ProjectAnalysisDispatcher.ExecuteAsync(
+            async (RequestContext<CallToolRequestParams> context, string targetPath, CancellationToken ct = default) =>
+            {
+                var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
+                if (legacyError is not null) return legacyError;
+                return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
-                    targetType,
-                    targetPath,
-                    lease => GetIndexScopeTool.ExecuteAsync(lease.Server, ct)),
-            McpToolRegistrationOptions.ReadOnlyTool("get_index_scope", GetIndexScopeDescription)));
+                    new AnalysisTargetRequest(targetPath),
+                    lease => GetIndexScopeTool.ExecuteAsync(lease.Server, ct));
+            },
+            TargetPathToolRegistrationOptions.SourceReadOnlyTool("get_index_scope", GetIndexScopeDescription)));
     }
 
     private const string GetIndexScopeDescription =
@@ -253,26 +259,29 @@ internal static class FileStructureToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (
-                string targetType,
+                RequestContext<CallToolRequestParams> context,
                 string targetPath,
                 string? scopeFilter = null,
                 int maxResults = GetHotspotsScanner.DefaultMaxResults,
                 double minLinePercentage = GetHotspotsScanner.DefaultMinLinePercentage,
                 string? scopeType = GetHotspotsScanner.DefaultScopeType,
                 CancellationToken ct = default) =>
-                await ProjectAnalysisDispatcher.ExecuteAsync(
-                    registry,
-                    targetType,
-                    targetPath,
-                    lease => GetHotspotsTool.ExecuteAsync(
-                        new GetHotspotsRequest(
-                            lease.Server,
-                            scopeFilter,
-                            maxResults,
-                            minLinePercentage,
-                            scopeType,
-                            ct))),
-            McpToolRegistrationOptions.ReadOnlyTool("get_hotspots", GetHotspotsDescription)));
+                {
+                    var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
+                    if (legacyError is not null) return legacyError;
+                    return await ProjectAnalysisDispatcher.ExecuteAsync(
+                        registry,
+                        new AnalysisTargetRequest(targetPath),
+                        lease => GetHotspotsTool.ExecuteAsync(
+                            new GetHotspotsRequest(
+                                lease.Server,
+                                scopeFilter,
+                                maxResults,
+                                minLinePercentage,
+                                scopeType,
+                                ct)));
+                },
+            TargetPathToolRegistrationOptions.SourceReadOnlyTool("get_hotspots", GetHotspotsDescription)));
     }
 
     private const string GetHotspotsDescription =
@@ -282,5 +291,13 @@ internal static class FileStructureToolRegistrations
         "maxResults: sichtbare Hotspots (Default 50, Cap 200). minLinePercentage: untere " +
         "Auslastungsschwelle in Prozent (Default 80, Bereich 0-100). Ergebnisse bleiben " +
         "deterministisch nach absteigender Zeilenzahl und Pfad sortiert; StructuredContent " +
-        "weist Gesamtzahl, Anzeigezahl und Trunkierung aus.";
+         "weist Gesamtzahl, Anzeigezahl und Trunkierung aus.";
+
+    private static async Task<CallToolResult> ExecuteWithLegacyGuardAsync(
+        RequestContext<CallToolRequestParams> context,
+        Func<Task<CallToolResult>> execute)
+    {
+        var legacyError = TargetPathToolRegistrationOptions.RejectLegacyArguments(context);
+        return legacyError ?? await execute();
+    }
 }

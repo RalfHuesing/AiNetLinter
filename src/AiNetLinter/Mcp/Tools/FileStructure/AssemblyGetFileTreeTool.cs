@@ -27,7 +27,7 @@ internal static class AssemblyGetFileTreeTool
                 hint: "Source-Zuordnung oder dekompilierte Projektpfade bereitstellen; alternativ get_class_structure verwenden."));
         }
 
-        return GetFileTreeTool.ExecuteAsync(root, input, cancellationToken);
+        return GetFileTreeTool.ExecutePhysicalAsync(root, input, cancellationToken);
     }
 
     internal static string? ResolveRoot(AssemblyAnalysisLease lease)

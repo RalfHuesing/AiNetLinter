@@ -231,8 +231,8 @@ Agent den Bootstrap genau einmal pro Projekt lesen:
 ainetlinter://agent-guide
 ```
 
-Der Leitfaden enthält den vollständigen Ablauf für Solution, Regeldatei,
-`ainetlinter.project.json`, MCP-Registrierung und die dauerhafte
+Der Leitfaden enthält den vollständigen Ablauf für die konkrete Solution- oder
+Assembly-Datei, die optionale benachbarte Regeldatei, MCP-Registrierung und die dauerhafte
 `AiNetLinter-McpWorkflow.mdc`. Der Bootstrap ist auch offline verfügbar:
 
 ```cmd
@@ -286,7 +286,7 @@ auf 32 Zeichen begrenzt. Sie wird invariant in Kleinbuchstaben normalisiert;
 `BETA` und `beta` verwenden deshalb denselben Endpunkt, dasselbe Startup-Gate
 und dieselbe MRU-State-Datei.
 
-Der Pfad zur `ainetlinter`-Exe wird vom MCP-Host über `PATH` aufgelöst (oder über den host-spezifischen Wrapper wie `.cursor/mcp.json` / `.mcp.json`). **Kein expliziter `--path`- oder `--config`-Parameter nötig** — jeder zielgebundene Tool-Aufruf adressiert ein Projekt oder eine Assembly über `targetType` und den absoluten `targetPath`.
+Der Pfad zur `ainetlinter`-Exe wird vom MCP-Host über `PATH` aufgelöst (oder über den host-spezifischen Wrapper wie `.cursor/mcp.json` / `.mcp.json`). **Kein expliziter `--path`- oder `--config`-Parameter nötig** — jeder zielgebundene Tool-Aufruf adressiert eine konkrete vorhandene `.sln`/`.slnx`/`.dll`/`.exe`-Datei über den absoluten `targetPath`.
 
 Die laufend erzeugte Ausgabe von `ainetlinter://agent-guide` und
 `ainetlinter --docs mcp-bootstrap` enthält zusätzlich einen
@@ -295,32 +295,29 @@ Die laufend erzeugte Ausgabe von `ainetlinter://agent-guide` und
 `PATH` findet. Wird AiNetLinter über `dotnet` gestartet, enthält der Block die
 AiNetLinter-DLL als erstes Argument.
 
-### Projektdefinition
+### MCP-Zielvertrag
 
-Im adressierten Projektroot liegt `ainetlinter.project.json`:
+Jeder zielgebundene Analyse-, Wartungs- oder Audit-Aufruf erhält genau einen
+absoluten, vorhandenen `targetPath` zu einer konkreten `.sln`/`.slnx`-, `.dll`-
+oder `.exe`-Datei. Die Endung bestimmt Source oder Decompiled-Assembly;
+`targetType`, `projectRoot`, `configPath` und `ainetlinter.project.json` sind
+kein aktiver Vertrag. Relative, fehlende, nicht unterstützte oder auf ein
+Verzeichnis zeigende Pfade liefern `invalid_argument` mit Feldpfad und
+nächstem Schritt.
 
-```json
-{
-  "solution": "src/MeinProjekt.slnx",
-  "rules": "rules.json"
-}
-```
+Für Source ist die konkrete Solution bindend: Der Analyse-Root ist nur ihr
+normalisiertes Elternverzeichnis, eine andere Solution wird nicht geraten.
+Regeln werden ausschließlich aus der optionalen Datei
+`ainetlinter-rules.json` direkt neben der Solution gelesen. Fehlt sie, bleibt
+Navigation möglich und Lint erhält den Status `not_configured`; ungültige oder
+nicht lesbare Regeln sind ein Konfigurationsfehler. Es gibt keinen
+Arbeitsverzeichnis-, Eltern- oder Default-Fallback.
 
-`solution` und `rules` sind Pflichtfelder. Relative Pfade werden relativ zur
-Definitionsdatei aufgelöst; eine Nachbarsuche oder ein Default-Fallback findet
-im Registry-Pfad nicht statt. Zielgebundene Analyse-, Wartungs- und Audit-Tools
-erwarten `targetType` und `targetPath` als Pflichtparameter. `targetType=project`
-adressiert dabei den Projektroot; `targetType=assembly` ist für die in
-`tools/list` als Assembly-fähig beschriebenen read-only Symbol-, Struktur- und
-Metrikabfragen sowie für die spezialisierten Assembly-Tools verfügbar. Projekt-
-only-Tools weisen Assembly-Ziele ausdrücklich als unsupported aus. `get_server_health`
-akzeptiert keinen Target-Block für die Aggregation, optional einen vollständigen
-Projekt- oder Assembly-Target-Block. Ohne Target liefert es standardmäßig ein
-kleines Aggregat mit Session-, Status- und Diagnosezählern; `includeSessions=true`
-fordert begrenzte Sessiondetails an und `maxSessions` steuert deren Grenze
-(Default 20, Cap 50). Ein zielgebundener Aufruf bleibt detailliert.
-Unabhängig davon fordert `includeDiagnostics=true` begrenzte Samples an, deren
-Anzahl über `maxDiagnostics` (Default 20, Cap 50) gesteuert wird.
+`get_server_health` akzeptiert ohne Target einen globalen Status oder optional
+einen `targetPath`. Ohne Target liefert es das kompakte Aggregat; ein
+zielgebundener Aufruf bleibt detailliert. `includeDiagnostics=true` fordert
+begrenzte Samples an, `maxDiagnostics` wird serverseitig gedeckelt.
+`report_observability_feedback` bleibt ungebunden.
 
 Assembly-Targets sind verwaltete `.dll` oder `.exe`; die Analyse bleibt metadata-only
 und führt keine Assembly aus. `inspect_assembly` nutzt `publicOnly`, `exactTypeName`,
@@ -384,10 +381,10 @@ UTF-8-Bytes. Der moderne `tools/list`-Payload beträgt 27.034 UTF-8-Bytes. Die
 Werte sind Byte-Messungen, keine Token-Schätzungen.
 
 **`args: ["--mcp-server"]` ist die empfohlene Registrierung.** Der Server
-liest die Regeldatei aus `ainetlinter.project.json`; fehlt die Definition oder
-ist sie ungültig, liefert der adressierte Key einen deterministischen Fehler
-mit Template bzw. Restore-Hinweis. `--path` und `--config` werden im MCP-Modus
-abgelehnt. Die Projektregistry verwendet standardmäßig 45 Minuten Idle-TTL und
+liest bei Source ausschließlich die optionale `ainetlinter-rules.json` neben der
+übergebenen Solution; fehlt sie, bleibt Navigation möglich und der Lint-Status
+ist `not_configured`. `--path` und `--config` werden im MCP-Modus abgelehnt.
+Die Projektregistry verwendet standardmäßig 45 Minuten Idle-TTL und
 höchstens 4 Keys; beide Werte können über `--mcp-project-ttl-minutes` und
 `--mcp-max-projects` angepasst werden.
 
@@ -477,11 +474,10 @@ Die Option ist nur für den MCP-Modus relevant. Der Watchdog prüft den Parent-P
 
 ### cwd-Verhalten
 
-Der MCP-Server benötigt für projektgebundene Aufrufe keinen Projektbezug im
-Host-`cwd`. Das Projekt wird als `targetType=project` mit absolutem `targetPath`
-je Aufruf übergeben;
-die Definitionsdatei löst `solution` und `rules` relativ zu sich selbst auf.
-Damit können mehrere Projekt-Keys in einer Serverinstanz resident sein.
+Der MCP-Server benötigt für zielgebundene Aufrufe keinen Projektbezug im
+Host-`cwd`. Die konkrete vorhandene `.sln`/`.slnx`/`.dll`/`.exe`-Datei wird je
+Aufruf über den absoluten `targetPath` übergeben; die Endung bestimmt die
+Herkunft. Damit können mehrere Targets in einer Serverinstanz resident sein.
 
 ### Start-Sequenzen: initialize und server/discover
 
@@ -495,8 +491,10 @@ Tool-Calls, die während des Hintergrund-Loads eintreffen, erhalten in beiden Pf
 
 Der MCP-Modus löst keine Solution aus dem Host-`cwd` auf und akzeptiert keine
 Legacy-Projektargumente. `--path` oder `--config` in der Registrierung führen
-zu einem deterministischen Startfehler. Stattdessen müssen `solution` und
-`rules` in `ainetlinter.project.json` auf Dateien relativ zur Definition zeigen.
+zu einem deterministischen Startfehler. Stattdessen übergibt jeder Aufruf den
+absoluten `targetPath` der konkreten vorhandenen Datei. Die alten Schlüssel
+`targetType`, `projectRoot`, `configPath` und `ainetlinter.project.json` werden
+als `invalid_argument` abgelehnt.
 
 Die frühere Mehrdeutigkeitsprüfung mehrerer `.sln`/`.slnx`-Dateien bleibt dem
 Batch-Modus vorbehalten; dort gelten weiterhin `--path` und die dokumentierte
@@ -534,8 +532,8 @@ Konkret:
 - Feature-Kontext vor Edit abrufen (Deklaration, Metriken, Callers, Tests, Violations) → `get_feature_context(symbolIdentifier: "MyClass.MyMethod")`; `symbol` bleibt kompatibler Alias
 - Statische Test-Zuordnung & Test-Methoden für ein Symbol finden → `get_test_context(symbolIdentifier: "MyClass")`; `symbol` bleibt kompatibler Alias
 - Klassennamen suchen → `find_symbol(namePatterns: ["MyClass"], kind: "class")` oder bei genau einem Muster `find_symbol(namePattern: "MyClass", kind: "class")`; bei einem Assembly-Ziel Referenz-DLLs ausdrücklich mit `includeReferences: true` einbeziehen
-- Methoden-Aufrufer finden → `find_references(symbolIdentifier: "MyClass.MyMethod", depth: 2)`; `structuredContent.completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei `targetType: "assembly"` kann `find_references` mit `includeReferences: true` zusätzlich bounded Referenz-Assemblies und partielle Diagnostics einbeziehen.
-- Impact eines Symbols prüfen → `get_impact(symbolIdentifier: ..., depth: 2)`; `structuredContent.completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei `targetType: "assembly"` ausschließlich `symbolIdentifier` verwenden: `gitRef` oder ein leerer Aufruf sind nicht zulässig. Die Referenzexpansion ist intern festgelegt und nicht öffentlich wählbar.
+- Methoden-Aufrufer finden → `find_references(symbolIdentifier: "MyClass.MyMethod", depth: 2)`; `structuredContent.completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` kann `find_references` mit `includeReferences: true` zusätzlich bounded Referenz-Assemblies und partielle Diagnostics einbeziehen.
+- Impact eines Symbols prüfen → `get_impact(symbolIdentifier: ..., depth: 2)`; `structuredContent.completeness` prüfen, bevor weitere Folgeaufrufe geplant werden. Bei einem Assembly-`targetPath` ausschließlich `symbolIdentifier` verwenden: `gitRef` oder ein leerer Aufruf sind nicht zulässig. Die Referenzexpansion ist intern festgelegt und nicht öffentlich wählbar.
 - Treffer semantisch einordnen → `search_pattern(pattern: "MyClass", enrichCSharp: true)`; `semantic.resolution` prüfen und bei `ambiguous`/`unavailable` den Snapshot-/Projektbezug oder `find_symbol`/`get_feature_context` verwenden
 - Metriken & Komplexität eines Symbols prüfen → `metrics_lookup(symbolIdentifiers: ["MyClass.MyMethod"])`
 - Konfigwert in `.json` finden → `search_pattern(pattern: "MySetting")` (oder direkt `rg`, das ist hier äquivalent)
@@ -546,11 +544,11 @@ Konkret:
 
 ### Erstorientierung: Resources
 
-Für eine neue Projektintegration `ainetlinter://agent-guide` genau einmal ohne
-`projectRoot` lesen. Nach dem Anlegen der Projektdefinition liefert
-`ainetlinter://overview?projectRoot=<url-encoded>` nur noch die Statuskarte des
-adressierten Keys. `ainetlinter://rules?projectRoot=<url-encoded>` liefert zusätzlich
-die frisch aus dem effektiven Config-Snapshot erzeugte Regelkarte mit Herkunft,
+Für eine neue Integration `ainetlinter://agent-guide` genau einmal ohne
+Target lesen. Danach liefert
+`ainetlinter://overview?targetPath=<url-encoded>` die Statuskarte des
+adressierten Solution-Keys. `ainetlinter://rules?targetPath=<url-encoded>`
+liefert zusätzlich die frisch aus dem effektiven Regel-Snapshot erzeugte Karte mit Herkunft,
 aktiven Regeln und Schwellwerten. Details: [Docs/agent-api.md](agent-api.md).
 
 ### Mehrere parallele Server-Instanzen

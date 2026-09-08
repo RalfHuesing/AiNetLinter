@@ -84,6 +84,7 @@ public sealed class ThinClientMcpProcessContractTests
             .AcquireEndpointAsync(cancellation.Token)
             .ConfigureAwait(false);
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
         using var isolatedState = TestTempDirectory.Create("thin-client-project-health-");
         string[] warmupFrames =
         [
@@ -116,8 +117,7 @@ public sealed class ThinClientMcpProcessContractTests
                     name = "get_server_health",
                     arguments = new
                     {
-                        targetType = "project",
-                        targetPath = fixture.RootPath,
+                        targetPath = solutionPath,
                     },
                 },
             }),
@@ -167,10 +167,10 @@ public sealed class ThinClientMcpProcessContractTests
             Assert.Equal("daemon", daemon.GetProperty("mode").GetString());
             Assert.Contains(
                 daemon.GetProperty("keys").EnumerateArray(),
-                key => string.Equals(key.GetString(), fixture.RootPath, StringComparison.OrdinalIgnoreCase));
+                key => string.Equals(key.GetString(), solutionPath, StringComparison.OrdinalIgnoreCase));
 
             var project = Assert.Single(structured.GetProperty("projects").EnumerateArray());
-            Assert.Equal(fixture.RootPath, project.GetProperty("projectRoot").GetString(), ignoreCase: true);
+            Assert.Equal(solutionPath, project.GetProperty("targetPath").GetString(), ignoreCase: true);
             Assert.Equal("Loaded", project.GetProperty("loadState").GetString());
             Assert.False(string.IsNullOrWhiteSpace(project.GetProperty("solutionPath").GetString()));
         }

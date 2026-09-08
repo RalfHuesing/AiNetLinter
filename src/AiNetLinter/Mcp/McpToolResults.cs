@@ -117,7 +117,6 @@ internal static class McpToolResults
                     parameters.Context,
                     parameters.Hint,
                     Recoverable: !isError,
-                    parameters.TargetType,
                     parameters.TargetPath),
                 McpJsonOptions.Default),
         };
@@ -292,7 +291,6 @@ internal static class McpToolResults
 internal readonly record struct McpErrorParameters(
     string? Context = null,
     string? Hint = null,
-    string? TargetType = null,
     string? TargetPath = null);
 
 /// <summary>
@@ -306,5 +304,4 @@ internal sealed record McpErrorPayload(
     string? Context,
     string? Hint,
     bool Recoverable,
-    string? TargetType = null,
     string? TargetPath = null);

@@ -15,10 +15,11 @@ internal static class GetFileTreeInputValidator
 {
     internal static CallToolResult? Validate(string projectRoot, GetFileTreeInput input)
     {
-        var rootGuard = ProjectToolCall.GuardRequiredAbsoluteRoot(projectRoot);
-        if (rootGuard is not null)
+        if (string.IsNullOrWhiteSpace(projectRoot) || !Path.IsPathFullyQualified(projectRoot))
         {
-            return McpToolResults.Error(rootGuard.Code, rootGuard.Message, hint: rootGuard.Hint);
+            return McpToolResults.InvalidArgument(
+                "Der interne AnalysisRoot muss absolut sein.",
+                "targetPath als absolute vorhandene .sln/.slnx-Datei angeben.");
         }
 
         var path = FileTreePathResolver.ResolveRoot(projectRoot, input.Root);
@@ -27,11 +28,16 @@ internal static class GetFileTreeInputValidator
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
                 path.ErrorMessage ?? "root ist ungueltig.",
-                hint: "root relativ zum absoluten projectRoot angeben.");
+                hint: "root relativ zum normalisierten analysisRoot angeben.");
         }
 
         var rootError = ValidateRootDirectory(path.EffectiveRoot!);
         if (rootError is not null) return rootError;
+        return ValidateOptions(input);
+    }
+
+    private static CallToolResult? ValidateOptions(GetFileTreeInput input)
+    {
         if (!IsValidView(input.View)) return Invalid("view muss summary, tree oder files sein.");
         if (!IsValidSort(input.SortBy)) return Invalid("sortBy muss path, size_desc oder extension sein.");
         var maxDepthError = ValidateDepth(input.MaxDepth, GetFileTreeTool.MaxDepthCap, "maxDepth");
@@ -58,7 +64,7 @@ internal static class GetFileTreeInputValidator
                 LinterErrorCodes.ResourceNotFound,
                 $"Root-Verzeichnis '{root}' wurde nicht gefunden oder ist kein Verzeichnis.",
                 context: root,
-                hint: "root relativ zum projectRoot pruefen.");
+                hint: "root relativ zum normalisierten analysisRoot pruefen.");
         }
 
         try

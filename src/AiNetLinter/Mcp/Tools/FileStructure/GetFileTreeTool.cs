@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -21,16 +22,31 @@ internal static class GetFileTreeTool
     internal const int MaxDepthCap = 32;
 
     internal static Task<CallToolResult> ExecuteAsync(
-        string projectRoot,
+        string targetPath,
         GetFileTreeInput input,
         CancellationToken cancellationToken)
     {
-        var validation = GetFileTreeInputValidator.Validate(projectRoot, input);
+        var resolution = AnalysisTargetResolver.ResolveTargetPathOnly(new AnalysisTargetRequest(targetPath));
+        if (resolution.Error is not null) return Task.FromResult(resolution.Error);
+        if (resolution.Target!.Origin != AnalysisTargetOrigin.Source)
+        {
+            return Task.FromResult(AssemblyAnalysisDispatcher.UnsupportedAssemblyTarget(resolution.Target.CanonicalPath));
+        }
+
+        return ExecutePhysicalAsync(resolution.Target.AnalysisRoot, input, cancellationToken);
+    }
+
+    internal static Task<CallToolResult> ExecutePhysicalAsync(
+        string analysisRoot,
+        GetFileTreeInput input,
+        CancellationToken cancellationToken)
+    {
+        var validation = GetFileTreeInputValidator.Validate(analysisRoot, input);
         if (validation is not null) return Task.FromResult(validation);
 
         try
         {
-            var scan = GetFileTreeScanner.Scan(projectRoot, input, cancellationToken);
+            var scan = GetFileTreeScanner.Scan(analysisRoot, input, cancellationToken);
             var text = GetFileTreeRenderer.Render(scan);
             return Task.FromResult(McpToolResults.Text(text, new { fileTree = scan.Payload }));
         }
@@ -43,7 +59,7 @@ internal static class GetFileTreeTool
             return Task.FromResult(McpToolResults.Recoverable(
                 LinterErrorCodes.ResourceNotFound,
                 $"Dateisystem konnte nicht vollstaendig gelesen werden: {ex.Message}",
-                context: projectRoot,
+                context: analysisRoot,
                 hint: "Root, Berechtigungen und Ausschlussmuster pruefen."));
         }
     }

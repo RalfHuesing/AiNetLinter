@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
@@ -26,8 +27,9 @@ public sealed class McpLiveRepositoryResourceTests
     public async Task LiveDogfood_OverviewResourceRead_UsesEncodedRepositoryRoot()
     {
         var repoRoot = SolutionRootLocator.Find();
-        var resourceUri = $"ainetlinter://overview?projectRoot={Uri.EscapeDataString(repoRoot)}";
-        var rulesResourceUri = $"ainetlinter://rules?projectRoot={Uri.EscapeDataString(repoRoot)}";
+        var targetPath = Path.Combine(repoRoot, "AiNetLinter.slnx");
+        var resourceUri = $"ainetlinter://overview?targetPath={Uri.EscapeDataString(targetPath)}";
+        var rulesResourceUri = $"ainetlinter://rules?targetPath={Uri.EscapeDataString(targetPath)}";
         var templates = await _fixture.Client.ListResourceTemplatesAsync();
         var resources = await _fixture.Client.ListResourcesAsync();
         var tools = await _fixture.Client.ListToolsAsync();
@@ -47,8 +49,8 @@ public sealed class McpLiveRepositoryResourceTests
             new[] { "reload_config", "get_server_health", "report_observability_feedback" }
         };
 
-        Assert.Contains(templates, template => template.UriTemplate == "ainetlinter://overview{?projectRoot}");
-        Assert.Contains(templates, template => template.UriTemplate == "ainetlinter://rules{?projectRoot}");
+        Assert.Contains(templates, template => template.UriTemplate == "ainetlinter://overview{?targetPath}");
+        Assert.Contains(templates, template => template.UriTemplate == "ainetlinter://rules{?targetPath}");
         var guideResource = Assert.Single(resources);
         Assert.Equal("ainetlinter://agent-guide", guideResource.Uri);
         Assert.Equal(33, tools.Count);
@@ -67,7 +69,7 @@ public sealed class McpLiveRepositoryResourceTests
         Assert.Contains("| `MaxLineCount` | 500 | aktiv |", rulesContent.Text, StringComparison.Ordinal);
         Assert.Equal("ainetlinter://agent-guide", guideContent.Uri);
         Assert.Contains("AiNetLinter MCP-Bootstrap", guideContent.Text, StringComparison.Ordinal);
-        Assert.Contains("ainetlinter.project.json", guideContent.Text, StringComparison.Ordinal);
+        Assert.Contains("ainetlinter-rules.json", guideContent.Text, StringComparison.Ordinal);
         Assert.Contains(".agents/rules", guideContent.Text, StringComparison.Ordinal);
         Assert.Contains("Dauerhafte Agentenregel", guideContent.Text, StringComparison.Ordinal);
     }

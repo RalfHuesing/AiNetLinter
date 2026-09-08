@@ -26,7 +26,7 @@ internal static class GetServerHealthResponseBuilder
                 options.IncludeDiagnostics,
                 options.MaxDiagnostics))
             .ToList();
-        var targeted = options.ProjectRoot is not null || options.AssemblyPath is not null;
+        var targeted = options.TargetPath is not null || options.AssemblyPath is not null;
         var totalAssemblySessions = projectedAssemblies.Count;
         var shownAssemblies = SelectShownAssemblies(projectedAssemblies, targeted, options);
         var sessionsTruncated = shownAssemblies is not null && totalAssemblySessions > shownAssemblies.Count;

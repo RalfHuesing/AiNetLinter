@@ -12,16 +12,25 @@ internal static class ProjectResourceLease
 {
     internal static TResult Execute<TResult>(
         ProjectRegistry registry,
-        string? projectRoot,
+        string? targetPath,
         Func<ProjectSnapshot, TResult> render)
     {
-        var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(projectRoot);
+        var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(targetPath);
         if (guard is not null)
         {
             throw new McpException(ProjectToolCall.FormatGuard(guard));
         }
 
-        var leaseResult = registry.Lease(projectRoot!);
+        var definition = ProjectDefinitionLoader.LoadSolutionTarget(targetPath);
+        if (!definition.Succeeded || definition.Definition is null)
+        {
+            throw new McpException(LinterErrorFormatter.Format(
+                definition.ErrorCode!,
+                definition.Message!,
+                hint: ProjectToolCall.RecoverHint(definition.ErrorCode!)));
+        }
+
+        var leaseResult = registry.Lease(definition.Definition.SolutionPath);
         if (!leaseResult.Succeeded || leaseResult.Lease is null)
         {
             throw new McpException(LinterErrorFormatter.Format(

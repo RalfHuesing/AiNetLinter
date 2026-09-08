@@ -53,17 +53,16 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? scopeFilter = null, string? scope = null, string? path = null, string? ruleId = null, string? rule = null, string? minSeverity = null, int maxResults = GetViolationsScanner.DefaultMaxResults, int contextLines = 2, bool includeSnippet = false, CancellationToken ct = default) =>
+            async (string targetPath, string? scopeFilter = null, string? scope = null, string? path = null, string? ruleId = null, string? rule = null, string? minSeverity = null, int maxResults = GetViolationsScanner.DefaultMaxResults, int contextLines = 2, bool includeSnippet = false, CancellationToken ct = default) =>
             {
                 var effectiveScope = scopeFilter ?? scope ?? path;
                 var effectiveRule = ruleId ?? rule;
-                return await ProjectAnalysisDispatcher.ExecuteAsync(
+                return await ProjectAnalysisDispatcher.ExecuteConfiguredAsync(
                     registry,
-                    targetType,
-                    targetPath,
+                    new AnalysisTargetRequest(targetPath),
                     lease => GetViolationsTool.ExecuteAsync(lease.Server, new GetViolationsToolExecutionOptions(effectiveScope, maxResults, contextLines, includeSnippet, effectiveRule, minSeverity), ct));
             },
-            McpToolRegistrationOptions.ReadOnlyTool("get_violations", GetViolationsDescription)));
+            TargetPathToolRegistrationOptions.SourceReadOnlyTool("get_violations", GetViolationsDescription)));
     }
 
     private const string GetViolationsDescription =
@@ -78,16 +77,15 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? scopeFilter = null, string? scope = null, string? path = null, double minScore = SafeguardScanner.DefaultMinScoreThreshold, int maxViolations = SafeguardScanner.DefaultMaxRemediationEntries, CancellationToken ct = default) =>
+            async (string targetPath, string? scopeFilter = null, string? scope = null, string? path = null, double minScore = SafeguardScanner.DefaultMinScoreThreshold, int maxViolations = SafeguardScanner.DefaultMaxRemediationEntries, CancellationToken ct = default) =>
             {
                 var effectiveScope = scopeFilter ?? scope ?? path;
-                return await ProjectAnalysisDispatcher.ExecuteAsync(
+                return await ProjectAnalysisDispatcher.ExecuteConfiguredAsync(
                     registry,
-                    targetType,
-                    targetPath,
+                    new AnalysisTargetRequest(targetPath),
                     lease => SafeguardTool.ExecuteAsync(lease.Server, effectiveScope, minScore, maxViolations, ct));
             },
-            McpToolRegistrationOptions.ReadOnlyTool("safeguard", SafeguardDescription)));
+            TargetPathToolRegistrationOptions.SourceReadOnlyTool("safeguard", SafeguardDescription)));
     }
 
     private const string SafeguardDescription =
@@ -103,7 +101,6 @@ internal static class AnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (
-                string targetType,
                 string targetPath,
                 string? pattern = null,
                 string? query = null,
@@ -135,8 +132,7 @@ internal static class AnalysisToolRegistrations
 
                 return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
-                    targetType,
-                    targetPath,
+                    new AnalysisTargetRequest(targetPath),
                     lease => SearchPatternTool.ExecuteAsync(
                         lease.Server,
                         new SearchPatternToolArguments(
@@ -153,7 +149,7 @@ internal static class AnalysisToolRegistrations
                             scopeType),
                         ct));
             },
-            McpToolRegistrationOptions.ReadOnlyTool("search_pattern", SearchPatternDescription)));
+            TargetPathToolRegistrationOptions.SourceReadOnlyTool("search_pattern", SearchPatternDescription)));
     }
 
     private const string SearchPatternDescription =
@@ -172,16 +168,16 @@ internal static class AnalysisToolRegistrations
         AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? root = null, string? mode = "code_size", int depth = 1, int topN = 10, string? fileFilter = null, CancellationToken ct = default) =>
+            async (string targetPath, string? root = null, string? mode = "code_size", int depth = 1, int topN = 10, string? fileFilter = null, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
                     new AnalysisToolCallRequest(
-                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => MetricsTreeTool.ExecuteAsync(lease.Server, new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter), ct),
                             AssemblySessionCall: assemblyLease => MetricsTreeTool.ExecuteAsync(assemblyLease.Server, new MetricsTreeToolArgs(root, mode, depth, topN, fileFilter), ct)),
                         ct)),
-            McpToolRegistrationOptions.TargetedReadOnlyTool("metrics_tree", MetricsTreeDescription)));
+            TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("metrics_tree", MetricsTreeDescription)));
     }
 
     private const string MetricsTreeDescription =
@@ -197,16 +193,16 @@ internal static class AnalysisToolRegistrations
         AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string[]? symbolIdentifiers = null, string? symbolIdentifier = null, string? symbol = null, CancellationToken ct = default) =>
+            async (string targetPath, string[]? symbolIdentifiers = null, string? symbolIdentifier = null, string? symbol = null, CancellationToken ct = default) =>
                 await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
                     new AnalysisToolCallRequest(
-                        new AnalysisTargetRequest(targetType, targetPath),
+                        new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => MetricsLookupTool.ExecuteAsync(lease.Server, ResolveMetricsLookupIdentifiers(symbolIdentifiers, symbolIdentifier, symbol), ct),
                             AssemblySessionCall: lease => MetricsLookupTool.ExecuteAsync(lease.Server, ResolveMetricsLookupIdentifiers(symbolIdentifiers, symbolIdentifier, symbol), ct)),
                         ct)),
-            McpToolRegistrationOptions.TargetedReadOnlyTool("metrics_lookup", MetricsLookupDescription)));
+            TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("metrics_lookup", MetricsLookupDescription)));
     }
 
     private static string[]? ResolveMetricsLookupIdentifiers(string[]? symbolIdentifiers, string? symbolIdentifier, string? symbol) =>
@@ -231,17 +227,16 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string[]? patterns = null, string? pattern = null, string? scopeFilter = null, string? scope = null, string? path = null, int maxResultsPerPattern = PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken ct = default) =>
+            async (string targetPath, string[]? patterns = null, string? pattern = null, string? scopeFilter = null, string? scope = null, string? path = null, int maxResultsPerPattern = PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken ct = default) =>
             {
                 var effectiveScope = scopeFilter ?? scope ?? path;
                 var effectivePatterns = patterns ?? (pattern is not null ? [pattern] : null);
-                return await ProjectAnalysisDispatcher.ExecuteAsync(
+                return await ProjectAnalysisDispatcher.ExecuteConfiguredAsync(
                     registry,
-                    targetType,
-                    targetPath,
+                    new AnalysisTargetRequest(targetPath),
                     lease => PatternDetectTool.ExecuteAsync(lease.Server, effectivePatterns, effectiveScope, maxResultsPerPattern, ct));
             },
-            McpToolRegistrationOptions.ReadOnlyTool("pattern_detect", PatternDetectDescription)));
+            TargetPathToolRegistrationOptions.SourceReadOnlyTool("pattern_detect", PatternDetectDescription)));
     }
 
     private const string PatternDetectDescription =
@@ -258,7 +253,6 @@ internal static class AnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (
-                string targetType,
                 string targetPath,
                 string? scopeFilter = null,
                 string? scope = null,
@@ -274,10 +268,9 @@ internal static class AnalysisToolRegistrations
                 CancellationToken ct = default) =>
             {
                 var effectiveScope = scopeFilter ?? scope ?? path;
-                return await ProjectAnalysisDispatcher.ExecuteAsync(
+                return await ProjectAnalysisDispatcher.ExecuteConfiguredAsync(
                     registry,
-                    targetType,
-                    targetPath,
+                    new AnalysisTargetRequest(targetPath),
                     lease =>
                     {
                         var effective = new FindMagicValuesToolArgs(
@@ -293,7 +286,7 @@ internal static class AnalysisToolRegistrations
                         return FindMagicValuesTool.ExecuteAsync(lease.Server, effective, ct);
                     });
             },
-            McpToolRegistrationOptions.ReadOnlyTool("find_magic_values", FindMagicValuesDescription)));
+            TargetPathToolRegistrationOptions.SourceReadOnlyTool("find_magic_values", FindMagicValuesDescription)));
     }
 
     private const string FindMagicValuesDescription =
@@ -314,7 +307,6 @@ internal static class AnalysisToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (
-                string targetType,
                 string targetPath,
                 string? accessibility = "private_internal",
                 string? confidence = "both",
@@ -328,10 +320,9 @@ internal static class AnalysisToolRegistrations
                 CancellationToken ct = default) =>
             {
                 var effectiveScope = scopeFilter ?? scope ?? path;
-                return await ProjectAnalysisDispatcher.ExecuteAsync(
+                return await ProjectAnalysisDispatcher.ExecuteConfiguredAsync(
                     registry,
-                    targetType,
-                    targetPath,
+                    new AnalysisTargetRequest(targetPath),
                     lease =>
                     {
                         var effective = new FindDeadCodeToolArgs(
@@ -345,7 +336,7 @@ internal static class AnalysisToolRegistrations
                         return FindDeadCodeTool.ExecuteAsync(lease.Server, effective, ct);
                     });
             },
-            McpToolRegistrationOptions.ReadOnlyTool("find_dead_code", FindDeadCodeDescription)));
+            TargetPathToolRegistrationOptions.SourceReadOnlyTool("find_dead_code", FindDeadCodeDescription)));
     }
 
     private const string FindDeadCodeDescription =
@@ -362,13 +353,12 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, bool includeCallers = true, bool includeTests = true, bool includeMetrics = true, bool includeViolations = true, int maxCallers = 10, int maxTests = 10, CancellationToken ct = default) =>
+            async (string targetPath, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, bool includeCallers = true, bool includeTests = true, bool includeMetrics = true, bool includeViolations = true, int maxCallers = 10, int maxTests = 10, CancellationToken ct = default) =>
             {
                 var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? name;
                 return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
-                    targetType,
-                    targetPath,
+                    new AnalysisTargetRequest(targetPath),
                     lease => GetFeatureContextTool.ExecuteAsync(
                         lease.Server,
                         new FeatureContextOptions(
@@ -382,7 +372,7 @@ internal static class AnalysisToolRegistrations
                             MaxTests: maxTests),
                         ct));
             },
-            McpToolRegistrationOptions.ReadOnlyTool("get_feature_context", GetFeatureContextDescription)));
+            TargetPathToolRegistrationOptions.SourceReadOnlyTool("get_feature_context", GetFeatureContextDescription)));
     }
 
     private const string GetFeatureContextDescription =
@@ -399,13 +389,12 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (string targetType, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, int maxResults = 30, CancellationToken ct = default) =>
+            async (string targetPath, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, int maxResults = 30, CancellationToken ct = default) =>
             {
                 var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? name;
                 return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
-                    targetType,
-                    targetPath,
+                    new AnalysisTargetRequest(targetPath),
                     lease => GetTestContextTool.ExecuteAsync(
                         lease.Server,
                         new TestContextOptions(
@@ -414,7 +403,7 @@ internal static class AnalysisToolRegistrations
                             MaxResults: maxResults),
                         ct));
             },
-            McpToolRegistrationOptions.ReadOnlyTool("get_test_context", GetTestContextDescription)));
+            TargetPathToolRegistrationOptions.SourceReadOnlyTool("get_test_context", GetTestContextDescription)));
     }
 
     private const string GetTestContextDescription =

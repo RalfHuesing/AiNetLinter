@@ -436,8 +436,7 @@ internal static partial class AssemblyAnalysisResponse
             "Dieses Tool unterstützt das Assembly-Ziel nicht.",
             new McpErrorParameters(
                 Context: canonicalPath,
-                Hint: "Für dieses Assembly-Ziel eine unterstützte Roslyn-Abfrage oder targetType='project' verwenden.",
-                TargetType: "assembly",
+                Hint: "Für dieses Assembly-Ziel eine unterstützte Roslyn-Abfrage oder targetPath auf eine .sln/.slnx-Datei verwenden.",
                 TargetPath: canonicalPath));
         return new CallToolResult
         {
@@ -452,7 +451,7 @@ internal static partial class AssemblyAnalysisResponse
     }
 
     private static string FormatHeader(AssemblyResponseMetadata metadata) =>
-        $"[ASSEMBLY] targetType=assembly; targetPath={metadata.TargetPath}; generatedPath={metadata.GeneratedPath}; origin={metadata.Origin}; " +
+        $"[ASSEMBLY] targetPath={metadata.TargetPath}; generatedPath={metadata.GeneratedPath}; origin={metadata.Origin}; " +
         $"confidence={metadata.Confidence}; generation={metadata.Generation}; " +
         $"status={metadata.Status}; completeness={metadata.Completeness}; " +
         $"bodyAvailability={metadata.BodyAvailability}; contentMode={metadata.ContentMode}\n\n";
@@ -469,7 +468,6 @@ internal static partial class AssemblyAnalysisResponse
         string BodyAvailability,
         string ContentMode)
     {
-        public string TargetType => "assembly";
     }
 
     private readonly record struct WireBudgetMeasurement(int TextBytes, int StructuredBytes)

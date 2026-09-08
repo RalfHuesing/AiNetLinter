@@ -24,9 +24,9 @@ namespace AiNetLinter.Commands;
 
 /// <summary>
 /// Startet einen stdio-basierten MCP-Server ohne eigenen Projektbezug in der Client-Konfiguration:
-/// Jeder zielgebundene Tool-Aufruf adressiert per <c>targetType</c> und absolutem <c>targetPath</c>
+/// Jeder zielgebundene Tool-Aufruf adressiert per absolutem <c>targetPath</c>
 /// ein Projekt oder eine lokale Assembly; projektbezogene Keys bleiben Lease-geschuetzt und werden lazy aus einer
-/// Definitionsdatei (<c>ainetlinter.project.json</c> im Projektroot) erzeugt. Laeuft, bis der Client die
+/// per targetPath adressierte Solution erzeugt. Laeuft, bis der Client die
 /// Verbindung trennt oder das Cancellation-Token signalisiert wird.
 /// </summary>
 internal static class McpServerCommand
@@ -110,6 +110,12 @@ internal static class McpServerCommand
     /// Definition laedt. Dedupe und Lock-Hygiene liegen in der Registry bzw. im Instanzmuster.
     /// </summary>
     internal static ProjectInstanceCreation CreateResidentInstance(ProjectDefinition definition, ILintConsole console) =>
+        CreateResidentInstance(definition, console, loadFunc: null);
+
+    internal static ProjectInstanceCreation CreateResidentInstance(
+        ProjectDefinition definition,
+        ILintConsole console,
+        Func<CancellationToken, Task<SourceFileCatalog?>>? loadFunc) =>
         ProjectInstanceFactory.TryCreate(
             definition,
             baseOptions => ProjectInstanceCreation.Resident(new McpCodeGraphServer(new McpCodeGraphServerOptions
@@ -118,9 +124,9 @@ internal static class McpServerCommand
                 Console = console,
                 MaxLineCount = baseOptions.MaxLineCount,
                 Config = baseOptions.Config,
-                UsedDefaultConfig = false,
+                UsedDefaultConfig = baseOptions.UsedDefaultConfig,
                 ResolvedConfigPath = baseOptions.ResolvedConfigPath,
-                LoadFunc = innerCt => TryLoadSolutionAsync(definition.SolutionPath, innerCt, console),
+                LoadFunc = loadFunc ?? (innerCt => TryLoadSolutionAsync(definition.SolutionPath, innerCt, console)),
             })));
 
     /// <summary>

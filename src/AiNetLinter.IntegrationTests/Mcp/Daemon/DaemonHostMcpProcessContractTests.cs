@@ -54,7 +54,6 @@ public sealed class DaemonHostMcpProcessContractTests
                 "inspect_assembly",
                 new Dictionary<string, object?>
                 {
-                    ["targetType"] = "assembly",
                     ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
                     ["typeName"] = nameof(McpCodeGraphServer),
                     ["exactTypeName"] = true,
@@ -71,7 +70,6 @@ public sealed class DaemonHostMcpProcessContractTests
                 "find_assembly_extensions",
                 new Dictionary<string, object?>
                 {
-                    ["targetType"] = "assembly",
                     ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
                     ["maxResults"] = 10
                 },
@@ -86,7 +84,6 @@ public sealed class DaemonHostMcpProcessContractTests
                 "get_assembly_context",
                 new Dictionary<string, object?>
                 {
-                    ["targetType"] = "assembly",
                     ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
                     ["maxResults"] = 1,
                     ["includeMetrics"] = false,
@@ -94,7 +91,7 @@ public sealed class DaemonHostMcpProcessContractTests
                 cancellationToken: cancellation.Token);
             Assert.NotEqual(true, context.IsError);
             Assert.True(context.StructuredContent.HasValue);
-            Assert.Equal("assembly", context.StructuredContent!.Value.GetProperty("targetType").GetString());
+            Assert.Equal("decompiled", context.StructuredContent!.Value.GetProperty("analysis").GetProperty("origin").GetString());
             Assert.True(context.StructuredContent.Value.TryGetProperty("analysis", out _));
         }
 

@@ -15,7 +15,7 @@ using ModelContextProtocol.Protocol;
 namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 
 internal sealed record GetServerHealthOptions(
-    string? ProjectRoot = null,
+    string? TargetPath = null,
     DaemonRuntimeContext? RuntimeContext = null,
     string? AssemblyPath = null,
     bool IncludeDiagnostics = false,
@@ -35,9 +35,9 @@ internal static class GetServerHealthTool
 
     internal static Task<CallToolResult> ExecuteAsync(
         ProjectRegistry registry,
-        string? projectRoot = null,
+        string? targetPath = null,
         DaemonRuntimeContext? runtimeContext = null) =>
-        ExecuteAsync(registry, new GetServerHealthOptions(projectRoot, runtimeContext));
+        ExecuteAsync(registry, new GetServerHealthOptions(targetPath, runtimeContext));
 
     internal static Task<CallToolResult> ExecuteAsync(
         ProjectRegistry registry,
@@ -72,26 +72,26 @@ internal static class GetServerHealthTool
                 options);
         }
 
-        if (options.ProjectRoot is not null)
+        if (options.TargetPath is not null)
         {
             if (options.RuntimeContext is not null)
             {
                 return await ExecuteDaemonProjectAsync(
                     options.RuntimeContext,
-                    options.ProjectRoot,
+                    options.TargetPath,
                     options).ConfigureAwait(false);
             }
 
-            var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(options.ProjectRoot);
+            var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(options.TargetPath);
             if (guard is not null)
             {
                 return McpToolResults.Error(guard.Code, guard.Message, hint: guard.Hint);
             }
 
             var snapshot = options.RuntimeContext is null
-                ? registry.FindSnapshot(options.ProjectRoot)
-                : options.RuntimeContext.FindProjectSnapshot(options.ProjectRoot);
-            if (snapshot is null) return ProjectNotInitialized(options.ProjectRoot);
+                ? registry.FindSnapshot(options.TargetPath)
+                : options.RuntimeContext.FindProjectSnapshot(options.TargetPath);
+            if (snapshot is null) return ProjectNotInitialized(options.TargetPath);
             return GetServerHealthResponseBuilder.Build(
                 [snapshot],
                 Array.Empty<AssemblyHealthEntry>(),
@@ -109,33 +109,33 @@ internal static class GetServerHealthTool
 
     internal static Task<CallToolResult> ExecuteDaemonProjectAsync(
         DaemonRuntimeContext runtimeContext,
-        string projectRoot,
+        string targetPath,
         GetServerHealthOptions options)
     {
         ArgumentNullException.ThrowIfNull(runtimeContext);
-        ArgumentException.ThrowIfNullOrWhiteSpace(projectRoot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetPath);
         ArgumentNullException.ThrowIfNull(options);
 
-        var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(projectRoot);
+        var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(targetPath);
         if (guard is not null)
         {
             return Task.FromResult(McpToolResults.Error(guard.Code, guard.Message, hint: guard.Hint));
         }
 
-        var snapshot = runtimeContext.FindProjectSnapshot(projectRoot);
+        var snapshot = runtimeContext.FindProjectSnapshot(targetPath);
         return Task.FromResult(snapshot is null
-            ? ProjectNotInitialized(projectRoot)
+            ? ProjectNotInitialized(targetPath)
             : GetServerHealthResponseBuilder.Build(
                 [snapshot],
                 Array.Empty<AssemblyHealthEntry>(),
                 options));
     }
 
-    private static CallToolResult ProjectNotInitialized(string projectRoot) =>
+    private static CallToolResult ProjectNotInitialized(string targetPath) =>
         McpToolResults.Error(
             ProjectErrorCodes.ProjectNotInitialized,
-            $"Fuer '{projectRoot}' existiert kein residenter Projekt-Key.",
-            context: projectRoot,
-            hint: "Ersten Tool-Aufruf mit diesem targetPath senden; der Server legt den Key lazy " +
-                  "ueber eine Definitionsdatei ainetlinter.project.json im Projektroot an.");
+            $"Fuer '{targetPath}' existiert kein residenter Projekt-Key.",
+            context: targetPath,
+            hint: "Ersten zielgebundenen Tool-Aufruf mit diesem targetPath senden; die Solution wird " +
+                  "direkt geladen und optionale ainetlinter-rules.json daneben ausgewertet.");
 }

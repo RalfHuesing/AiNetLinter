@@ -44,27 +44,27 @@ Referenzen und Abhängigkeiten.
 
 ## Standard
 
-- Jeder zielgebundene MCP-Tool-Aufruf verwendet einen absoluten `targetPath` und
-  die im aktuellen Toolschema vorgesehene `targetType`-Zuordnung (`project` oder
-  `assembly`). `targetType=project` adressiert den absoluten Projektroot des jeweiligen
-  Repositories (den Projekt-/Arbeitsbereichs-Root). Für die beiden
-  Assembly-only-Tools darf `targetType` gemäß ihrem Schema entfallen; ein
-  `.dll`-/`.exe`-`targetPath` wird dort als `assembly` inferiert. `tools/list`
-  weist je Tool aus, ob der gemeinsame read-only Projekt-/Assembly-Sessionpfad,
-  nur der Projektpfad oder nur der Assemblypfad unterstützt wird; Symbolgraph,
-  Struktur und Metriken können Assemblys über dekompilierte
-  Sessions abfragen.
-- `get_server_health` ist die einzige Ausnahme mit einem optionalen Target:
-  `targetType` und `targetPath` müssen paarweise angegeben werden; ohne Target
-  aggregiert das Tool getrennte Projekt- und Assembly-Sessions. Der Default ist
-  kompakt; `includeDiagnostics=true` fordert begrenzte Samples an und
-  `maxDiagnostics` wird serverseitig gedeckelt. Regeln, Audits,
-  Dateisuche, Tests und Git-Impact bleiben projektgebunden; `report_observability_feedback` ist
-  nicht zielgebunden und erhält keinen Target-Block.
+- Jeder zielgebundene MCP-Tool-Aufruf verwendet genau einen absoluten,
+  existierenden `targetPath`. Die Endung bestimmt die Herkunft: `.sln`/`.slnx`
+  adressieren Source, `.dll`/`.exe` eine dekompilierte Assembly. Ein relativer,
+  fehlender, nicht unterstützter oder auf ein Verzeichnis zeigender Pfad ist
+  `invalid_argument`; der Server sucht keine andere Solution und keinen
+  übergeordneten Repository-Root.
+- Für Source liegt der Analyse-Root ausschließlich im normalisierten
+  Elternverzeichnis der übergebenen Solution. Regeln werden nur aus der
+  optionalen benachbarten `ainetlinter-rules.json` gelesen. Fehlt sie, bleibt
+  Navigation möglich und die Lint-Capability ist `not_configured`; ungültige
+  oder nicht lesbare Regeln sind ein Konfigurationsfehler. Es gibt keinen
+  Arbeitsverzeichnis-, Eltern- oder Default-Fallback. Assemblys haben
+  `origin=decompiled` und Lint ist `unsupported`.
+- `get_server_health` bleibt global ohne Target oder akzeptiert optional einen
+  `targetPath`; `includeDiagnostics=true` fordert begrenzte Samples an und
+  `maxDiagnostics` wird serverseitig gedeckelt. `report_observability_feedback`
+  ist ungebunden und erhält keinen Target-Block.
 - Das Query-Argument wird ausschließlich in den Resource-URIs
-  `ainetlinter://overview{?projectRoot}` und
-  `ainetlinter://rules{?projectRoot}` verwendet; dort ist es absolut und
-  URL-kodiert anzugeben.
+  `ainetlinter://overview{?targetPath}` und
+  `ainetlinter://rules{?targetPath}` verwendet; dort ist der absolute Pfad der
+  konkreten Solution URL-kodiert anzugeben.
 - Die aktuellen Tool- und Parameterschemas aus der MCP-Tooldefinition verwenden
   (typischerweise über `tools/list` bereitgestellt); diese Regel dupliziert keine
   Toolschemas.
@@ -136,8 +136,7 @@ Arbeit, Konfiguration und exakte Textarbeit erlaubt. Sie ersetzen bei
 C#-Symbol-, Referenz- und Impact-Fragen nicht die semantische MCP-Analyse.
 
 Für beide Assembly-Tools ist `targetPath` mit einem absoluten, lokalen `.dll`- oder
-`.exe`-Pfad Pflicht. `targetType` darf entfallen und wird als `assembly` behandelt;
-bei expliziter Angabe ist nur `assembly` zulässig. Die Spezialtools arbeiten
+`.exe`-Pfad Pflicht. Die Spezialtools arbeiten
 metadata-only, benötigen kein Consumer-Projekt und laden oder führen die Assembly
 nicht aus. Bei `inspect_assembly` zuerst die öffentliche API untersuchen;
 `find_assembly_extensions` prüft klassische C#-Extensions und weist ohne
@@ -146,17 +145,19 @@ Consumer-Projekt die Roslyn-Anwendbarkeit als `not_decidable` aus.
 Antworten begrenzen Diagnose-Samples und Referenz-/Session-Listen gemeinsam in
 Text und StructuredContent.
 
-Für `find_symbol`, `find_references` und `get_call_tree` bleibt bei
-`targetType: "assembly"` der Root-Snapshot der Default. Nur
+Für `find_symbol`, `find_references` und `get_call_tree` bleibt bei einem
+Assembly-`targetPath` der Root-Snapshot der Default. Nur
 `includeReferences: true` aktiviert die bounded Suche beziehungsweise Traversierung
 über eröffnete Referenz-Sessions; `origin`, `navigation.completeness` und partielle
 Diagnostics sind dabei zu beachten. Decompilierte API-Stubs können ohne sichtbare
 Call-Sites bleiben, ohne dass daraus eine globale Negativaussage folgt.
 
-Target-Aufrufe verwenden keine Legacy-Pfadparameter; historische Query-
-Parameter bleiben ausschließlich den projektbezogenen Resource-URIs vorbehalten.
+Target-Aufrufe verwenden keine Legacy-Pfadparameter. Die alten Schlüssel
+`targetType`, `projectRoot`, `configPath` und `ainetlinter.project.json` werden
+als `invalid_argument` abgelehnt; sie werden nicht ignoriert oder als Alias
+verwendet.
 
-Bei `PROJECT_NOT_INITIALIZED` oder `RULES_INVALID` nicht ungefragt eine
-Projektintegration durchführen. Nur bei einem ausdrücklichen
-Integrationsauftrag den einmaligen Leitfaden über `ainetlinter://agent-guide`
-lesen; er enthält den Bootstrap-Ablauf und die dauerhafte Regeldatei.
+Bei `RULES_INVALID` nicht ungefragt eine Projektintegration durchführen. Nur bei
+einem ausdrücklichen Integrationsauftrag den einmaligen Leitfaden über
+`ainetlinter://agent-guide` lesen; er enthält den Bootstrap-Ablauf und die
+dauerhafte Regeldatei.

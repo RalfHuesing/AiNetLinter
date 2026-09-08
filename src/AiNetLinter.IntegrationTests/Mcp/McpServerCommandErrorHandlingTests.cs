@@ -26,17 +26,14 @@ public sealed class McpServerCommandErrorHandlingTests
     private const string LoadingMessagePrefix = "[INFO]: Server laedt die Solution noch.";
 
     [Fact]
-    public async Task RunAsync_MissingSolutionInDefinition_ReturnsSolutionNotFoundError()
+    public async Task RunAsync_MissingSolutionTarget_ReturnsInvalidArgumentError()
     {
-        // Die MCP-Projektdefinition ist die einzige Quelle fuer die Solution. Eine fehlende
-        // Referenz muss als recoverable Registry-Fehler erscheinen, ohne den Server zu beenden.
+        // Ein fehlendes konkretes Solution-Ziel muss als recoverable Argumentfehler erscheinen,
+        // ohne den Server zu beenden.
         var tempDir = CreateTempDir();
         try
         {
-            File.Copy(Path.Combine(SolutionRootLocator.Find(), "rules.json"), Path.Combine(tempDir, "rules.json"));
-            File.WriteAllText(
-                Path.Combine(tempDir, "ainetlinter.project.json"),
-                "{\"solution\":\"Missing.slnx\",\"rules\":\"rules.json\"}");
+            var missingSolutionPath = Path.Combine(tempDir, "Missing.slnx");
 
             var exePath = Path.Combine(AppContext.BaseDirectory, "AiNetLinter.exe");
             Assert.True(File.Exists(exePath), $"Erwartete AiNetLinter.exe nicht gefunden: {exePath}");
@@ -66,14 +63,14 @@ public sealed class McpServerCommandErrorHandlingTests
                 new Dictionary<string, object?>
                 {
                     ["namePatterns"] = new[] { "Anything" },
-                    ["targetType"] = "project",
-                    ["targetPath"] = tempDir,
+                    ["targetPath"] = missingSolutionPath,
                 },
                 cts.Token);
 
             Assert.NotEqual(true, result.IsError);
             var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-            Assert.Contains("[ERROR]: SOLUTION_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
+            Assert.Contains("[ERROR]: INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+            Assert.Contains("targetPath", textContent.Text, StringComparison.Ordinal);
         }
         finally
         {
@@ -111,8 +108,7 @@ public sealed class McpServerCommandErrorHandlingTests
             new Dictionary<string, object?>
             {
                 ["filePaths"] = new[] { "src/CompileErrorMini/BrokenClassA.cs" },
-                ["targetType"] = "project",
-                ["targetPath"] = fixture.RootPath,
+                ["targetPath"] = Path.Combine(fixture.RootPath, "CompileErrorMini.slnx"),
             },
             cts.Token);
 

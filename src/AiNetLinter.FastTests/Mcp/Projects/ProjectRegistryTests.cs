@@ -19,25 +19,26 @@ namespace AiNetLinter.FastTests.Mcp.Projects;
 public sealed class ProjectRegistryTests
 {
     [Fact]
-    public async Task Lease_NormalizesRootSpellings_ToSingleResidentEntry()
+    public async Task Lease_NormalizesSolutionSpellings_ToSingleResidentEntry()
     {
         using var tempDir = TestTempDirectory.Create("project-registry-keys-");
-        var root = CreateProjectRoot(tempDir, "proj");
+        var solutionPath = CreateSolutionPath(tempDir, "proj");
         var factory = new TrackingServerFactory();
         await using var registry = CreateRegistry(factory, new FakeClock());
 
-        var first = registry.Lease(root);
+        var first = registry.Lease(solutionPath);
         using var firstLease = first.Lease;
-        var trailingSeparator = registry.Lease(root + Path.DirectorySeparatorChar);
-        using var trailingLease = trailingSeparator.Lease;
-        var uppercase = registry.Lease(root.ToUpperInvariant());
+        var alternateSpelling = registry.Lease(Path.Combine(
+            Path.GetDirectoryName(solutionPath)!, ".", Path.GetFileName(solutionPath)));
+        using var alternateLease = alternateSpelling.Lease;
+        var uppercase = registry.Lease(solutionPath.ToUpperInvariant());
         using var uppercaseLease = uppercase.Lease;
-        var forwardSlashes = registry.Lease(root.Replace('\\', '/'));
+        var forwardSlashes = registry.Lease(solutionPath.Replace('\\', '/'));
         using var forwardLease = forwardSlashes.Lease;
 
         Assert.True(first.Succeeded);
         Assert.Equal(1, factory.InstancesCreated);
-        Assert.Same(firstLease!.Server, trailingLease!.Server);
+        Assert.Same(firstLease!.Server, alternateLease!.Server);
         Assert.Same(firstLease!.Server, uppercaseLease!.Server);
         Assert.Same(firstLease!.Server, forwardLease!.Server);
     }
@@ -46,12 +47,12 @@ public sealed class ProjectRegistryTests
     public async Task Lease_HitTouchesLastUsedUtc_AndSurvivesTotalAgeBeyondTtl()
     {
         using var tempDir = TestTempDirectory.Create("project-registry-touch-");
-        var root = CreateProjectRoot(tempDir, "proj");
+        var solutionPath = CreateSolutionPath(tempDir, "proj");
         var factory = new TrackingServerFactory();
         var clock = new FakeClock();
         await using var registry = CreateRegistry(factory, clock, idleTtlMinutes: 15);
 
-        var initial = registry.Lease(root);
+        var initial = registry.Lease(solutionPath);
         var serverInitial = initial.Lease!.Server;
         initial.Lease!.Dispose();
         clock.AdvanceMinutes(14);
@@ -59,13 +60,13 @@ public sealed class ProjectRegistryTests
         Assert.Equal(0, factory.LoadsCancelled);
         Assert.Equal(1, factory.InstancesCreated);
 
-        var touched = registry.Lease(root);
+        var touched = registry.Lease(solutionPath);
         var serverTouched = touched.Lease!.Server;
         touched.Lease!.Dispose();
         clock.AdvanceMinutes(16);
         await registry.RunEvictionTickAsync();
 
-        var reloaded = registry.Lease(root);
+        var reloaded = registry.Lease(solutionPath);
         using var reloadedLease = reloaded.Lease;
 
         Assert.Same(serverInitial, serverTouched);
@@ -75,22 +76,22 @@ public sealed class ProjectRegistryTests
     }
 
     [Fact]
-    public async Task Lease_MissingDefinitionFile_ReturnsLoaderErrorWithoutResidentEntry()
+    public async Task Lease_MissingSolutionFile_ReturnsLoaderErrorWithoutResidentEntry()
     {
         using var tempDir = TestTempDirectory.Create("project-registry-uninit-");
-        var root = Path.Combine(tempDir.DirectoryPath, "proj");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "proj", "app.slnx");
         var factory = new TrackingServerFactory();
         await using var registry = CreateRegistry(factory, new FakeClock());
 
-        var failed = registry.Lease(root);
+        var failed = registry.Lease(solutionPath);
 
         Assert.False(failed.Succeeded);
         Assert.Null(failed.Lease);
-        Assert.Equal(ProjectErrorCodes.ProjectNotInitialized, failed.ErrorCode);
+        Assert.Equal(ProjectErrorCodes.SolutionNotFound, failed.ErrorCode);
         Assert.Equal(0, factory.InstancesCreated);
 
-        CreateProjectRoot(tempDir, "proj");
-        var retry = registry.Lease(root);
+        CreateSolutionPath(tempDir, "proj");
+        var retry = registry.Lease(solutionPath);
         using var retryLease = retry.Lease;
 
         Assert.True(retry.Succeeded);
@@ -101,7 +102,7 @@ public sealed class ProjectRegistryTests
     public async Task Lease_ParallelCallersOnSameRoot_CreateExactlyOneInstance()
     {
         using var tempDir = TestTempDirectory.Create("project-registry-dedupe-");
-        var root = CreateProjectRoot(tempDir, "proj");
+        var solutionPath = CreateSolutionPath(tempDir, "proj");
         var clock = new FakeClock();
         var factory = new TrackingServerFactory();
         var factoryEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -115,11 +116,11 @@ public sealed class ProjectRegistryTests
             },
             clock));
 
-        var firstCall = Task.Run(() => registry.Lease(root));
+        var firstCall = Task.Run(() => registry.Lease(solutionPath));
         await factoryEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        var secondCall = Task.Run(() => registry.Lease(root));
+        var secondCall = Task.Run(() => registry.Lease(solutionPath));
         Assert.True(SpinWait.SpinUntil(
-            () => registry.PendingCreationWaiters(root) >= 2,
+            () => registry.PendingCreationWaiters(solutionPath) >= 2,
             TimeSpan.FromSeconds(10)));
         Assert.False(secondCall.IsCompleted);
         releaseFactory.Set();
@@ -140,8 +141,8 @@ public sealed class ProjectRegistryTests
     public async Task Lease_AtomicLookupAndReservation_CreatesAndDisposesOnlyTheWinner()
     {
         using var tempDir = TestTempDirectory.Create("project-registry-atomic-reservation-");
-        var root = CreateProjectRoot(tempDir, "proj");
-        var otherRoot = CreateProjectRoot(tempDir, "other");
+        var solutionPath = CreateSolutionPath(tempDir, "proj");
+        var otherSolutionPath = CreateSolutionPath(tempDir, "other");
         var clock = new FakeClock();
         var factory = new TrackingServerFactory();
         var otherFactory = new TrackingServerFactory();
@@ -150,8 +151,8 @@ public sealed class ProjectRegistryTests
         var barrierCalls = 0;
         await using var registry = new ProjectRegistry(new ProjectRegistryOptions(
             definition => string.Equals(
-                Path.GetDirectoryName(definition.SolutionPath),
-                Path.GetFullPath(root),
+                definition.SolutionPath,
+                Path.GetFullPath(solutionPath),
                 StringComparison.OrdinalIgnoreCase)
                 ? factory.Factory(definition)
                 : otherFactory.Factory(definition),
@@ -167,10 +168,10 @@ public sealed class ProjectRegistryTests
             },
         });
 
-        var firstCall = Task.Run(() => registry.Lease(root));
+        var firstCall = Task.Run(() => registry.Lease(solutionPath));
         await lookupReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        var secondCall = Task.Run(() => registry.Lease(root));
-        var otherCall = Task.Run(() => registry.Lease(otherRoot));
+        var secondCall = Task.Run(() => registry.Lease(solutionPath));
+        var otherCall = Task.Run(() => registry.Lease(otherSolutionPath));
 
         var second = await secondCall.WaitAsync(TimeSpan.FromSeconds(15));
         var other = await otherCall.WaitAsync(TimeSpan.FromSeconds(15));
@@ -189,6 +190,9 @@ public sealed class ProjectRegistryTests
         Assert.Equal(1, factory.InstancesCreated);
         Assert.Equal(1, factory.LoadsStarted);
         Assert.Equal(0, factory.ServersDisposed);
+        Assert.True(SpinWait.SpinUntil(
+            () => otherFactory.LoadsStarted >= 1,
+            TimeSpan.FromSeconds(10)));
         Assert.Equal(1, otherFactory.LoadsStarted);
         Assert.Same(firstLease!.Server, secondLease!.Server);
 
@@ -201,16 +205,16 @@ public sealed class ProjectRegistryTests
     public async Task Lease_DuringRunningBackgroundLoad_OtherRootsStayServiceable()
     {
         using var tempDir = TestTempDirectory.Create("project-registry-hygiene-");
-        var loadingRoot = CreateProjectRoot(tempDir, "loading");
-        var otherRoot = CreateProjectRoot(tempDir, "other");
+        var loadingSolutionPath = CreateSolutionPath(tempDir, "loading");
+        var otherSolutionPath = CreateSolutionPath(tempDir, "other");
         var factory = new TrackingServerFactory();
         await using var registry = CreateRegistry(factory, new FakeClock());
 
-        var loading = registry.Lease(loadingRoot);
+        var loading = registry.Lease(loadingSolutionPath);
         using var loadingLease = loading.Lease;
         Assert.Equal(ServerLoadState.Loading, loadingLease!.Server.LoadState);
 
-        var other = await Task.Run(() => registry.Lease(otherRoot)).WaitAsync(TimeSpan.FromSeconds(15));
+        var other = await Task.Run(() => registry.Lease(otherSolutionPath)).WaitAsync(TimeSpan.FromSeconds(15));
         using var otherLease = other.Lease;
 
         Assert.True(other.Succeeded);
@@ -226,12 +230,12 @@ public sealed class ProjectRegistryTests
     public async Task EvictionTick_IdleBeyondTtl_DisposesAndReloadsFresh()
     {
         using var tempDir = TestTempDirectory.Create("project-registry-ttl-");
-        var root = CreateProjectRoot(tempDir, "proj");
+        var solutionPath = CreateSolutionPath(tempDir, "proj");
         var factory = new TrackingServerFactory();
         var clock = new FakeClock();
         await using var registry = CreateRegistry(factory, clock, idleTtlMinutes: 15);
 
-        var initial = registry.Lease(root);
+        var initial = registry.Lease(solutionPath);
         var serverInitial = initial.Lease!.Server;
         initial.Lease!.Dispose();
         clock.AdvanceMinutes(14);
@@ -239,13 +243,13 @@ public sealed class ProjectRegistryTests
         Assert.Equal(0, factory.LoadsCancelled);
         Assert.Equal(1, factory.InstancesCreated);
 
-        var touched = registry.Lease(root);
+        var touched = registry.Lease(solutionPath);
         var serverTouched = touched.Lease!.Server;
         touched.Lease!.Dispose();
 
         clock.AdvanceMinutes(16);
         await registry.RunEvictionTickAsync();
-        var reloaded = registry.Lease(root);
+        var reloaded = registry.Lease(solutionPath);
         using var reloadedLease = reloaded.Lease;
 
         Assert.Same(serverInitial, serverTouched);
@@ -258,24 +262,24 @@ public sealed class ProjectRegistryTests
     public async Task EvictionTick_BusyEntryMarkedPending_AdoptionDefersEvictionUntilIdleAndExpired()
     {
         using var tempDir = TestTempDirectory.Create("project-registry-busy-");
-        var root = CreateProjectRoot(tempDir, "proj");
+        var solutionPath = CreateSolutionPath(tempDir, "proj");
         var factory = new TrackingServerFactory();
         var clock = new FakeClock();
         await using var registry = CreateRegistry(factory, clock, idleTtlMinutes: 15);
 
-        var held = registry.Lease(root);
+        var held = registry.Lease(solutionPath);
         using var heldLease = held.Lease;
         clock.AdvanceMinutes(20);
         await registry.RunEvictionTickAsync();
 
-        var adopted = registry.Lease(root);
+        var adopted = registry.Lease(solutionPath);
         using var adoptedLease = adopted.Lease;
         Assert.Same(heldLease!.Server, adoptedLease!.Server);
         heldLease!.Dispose();
         adoptedLease!.Dispose();
         clock.AdvanceMinutes(5);
         await registry.RunEvictionTickAsync();
-        var rescued = registry.Lease(root);
+        var rescued = registry.Lease(solutionPath);
         Assert.Same(heldLease!.Server, rescued.Lease!.Server);
         rescued.Lease!.Dispose();
         Assert.Equal(0, factory.LoadsCancelled);
@@ -283,7 +287,7 @@ public sealed class ProjectRegistryTests
 
         clock.AdvanceMinutes(16);
         await registry.RunEvictionTickAsync();
-        var reloaded = registry.Lease(root);
+        var reloaded = registry.Lease(solutionPath);
         using var reloadedLease = reloaded.Lease;
 
         Assert.Equal(1, factory.LoadsCancelled);
@@ -295,12 +299,12 @@ public sealed class ProjectRegistryTests
     public async Task EvictionTick_PendingWithoutAdoption_DisposedOnNextTick()
     {
         using var tempDir = TestTempDirectory.Create("project-registry-pending-");
-        var root = CreateProjectRoot(tempDir, "proj");
+        var solutionPath = CreateSolutionPath(tempDir, "proj");
         var factory = new TrackingServerFactory();
         var clock = new FakeClock();
         await using var registry = CreateRegistry(factory, clock, idleTtlMinutes: 15);
 
-        var held = registry.Lease(root);
+        var held = registry.Lease(solutionPath);
         using var heldLease = held.Lease;
         clock.AdvanceMinutes(20);
         await registry.RunEvictionTickAsync();
@@ -308,7 +312,7 @@ public sealed class ProjectRegistryTests
 
         heldLease!.Dispose();
         await registry.RunEvictionTickAsync();
-        var reloaded = registry.Lease(root);
+        var reloaded = registry.Lease(solutionPath);
         using var reloadedLease = reloaded.Lease;
 
         Assert.Equal(1, factory.LoadsCancelled);
@@ -320,9 +324,9 @@ public sealed class ProjectRegistryTests
     public async Task Lease_AtCapacity_EvictsLeastRecentlyTouched()
     {
         using var tempDir = TestTempDirectory.Create("project-registry-lru-");
-        var rootA = CreateProjectRoot(tempDir, "alpha");
-        var rootB = CreateProjectRoot(tempDir, "beta");
-        var rootC = CreateProjectRoot(tempDir, "gamma");
+        var rootA = CreateSolutionPath(tempDir, "alpha");
+        var rootB = CreateSolutionPath(tempDir, "beta");
+        var rootC = CreateSolutionPath(tempDir, "gamma");
         var factory = new TrackingServerFactory();
         var clock = new FakeClock();
         await using var registry = CreateRegistry(factory, clock, maxProjects: 2);
@@ -360,9 +364,9 @@ public sealed class ProjectRegistryTests
     public async Task Lease_LruEviction_SkipsBusyEntriesUntilReleased()
     {
         using var tempDir = TestTempDirectory.Create("project-registry-lru-busy-");
-        var rootA = CreateProjectRoot(tempDir, "alpha");
-        var rootB = CreateProjectRoot(tempDir, "beta");
-        var rootC = CreateProjectRoot(tempDir, "gamma");
+        var rootA = CreateSolutionPath(tempDir, "alpha");
+        var rootB = CreateSolutionPath(tempDir, "beta");
+        var rootC = CreateSolutionPath(tempDir, "gamma");
         var factory = new TrackingServerFactory();
         var clock = new FakeClock();
         await using var registry = CreateRegistry(factory, clock, maxProjects: 1);
@@ -399,11 +403,11 @@ public sealed class ProjectRegistryTests
     public async Task Lease_AfterFailedColdLoad_NextHitStartsFreshLoad()
     {
         using var tempDir = TestTempDirectory.Create("project-registry-failed-hit-");
-        var root = CreateProjectRoot(tempDir, "proj");
+        var solutionPath = CreateSolutionPath(tempDir, "proj");
         var factory = new TrackingServerFactory { FailLoads = true };
         await using var registry = CreateRegistry(factory, new FakeClock());
 
-        var failed = registry.Lease(root);
+        var failed = registry.Lease(solutionPath);
         var failedServer = failed.Lease!.Server;
         await Assert.ThrowsAsync<InvalidOperationException>(() => failedServer.LoadTask!);
         Assert.Equal(ServerLoadState.LoadFailed, failedServer.LoadState);
@@ -411,7 +415,7 @@ public sealed class ProjectRegistryTests
         failed.Lease!.Dispose();
 
         factory.FailLoads = false;
-        var retry = registry.Lease(root);
+        var retry = registry.Lease(solutionPath);
         using var retryLease = retry.Lease;
 
         Assert.True(failed.Succeeded);
@@ -425,16 +429,16 @@ public sealed class ProjectRegistryTests
     public async Task EvictionTick_RemovesFailedMarker_IndependentOfLastUsed()
     {
         using var tempDir = TestTempDirectory.Create("project-registry-failed-tick-");
-        var root = CreateProjectRoot(tempDir, "proj");
+        var solutionPath = CreateSolutionPath(tempDir, "proj");
         var factory = new TrackingServerFactory { FailLoads = true };
         await using var registry = CreateRegistry(factory, new FakeClock());
 
-        var failed = registry.Lease(root);
+        var failed = registry.Lease(solutionPath);
         var failedServer = failed.Lease!.Server;
         await Assert.ThrowsAsync<InvalidOperationException>(() => failedServer.LoadTask!);
         await registry.RunEvictionTickAsync();
 
-        var stillFailed = registry.Lease(root);
+        var stillFailed = registry.Lease(solutionPath);
         using var stillFailedLease = stillFailed.Lease;
         Assert.Same(failedServer, stillFailedLease!.Server);
         Assert.Equal(1, factory.InstancesCreated);
@@ -445,7 +449,7 @@ public sealed class ProjectRegistryTests
         await registry.RunEvictionTickAsync();
 
         factory.FailLoads = false;
-        var reloaded = registry.Lease(root);
+        var reloaded = registry.Lease(solutionPath);
         using var reloadedLease = reloaded.Lease;
 
         Assert.Equal(ServerLoadState.LoadFailed, failedServer.LoadState);
@@ -468,14 +472,10 @@ public sealed class ProjectRegistryTests
             TimeSpan.FromMinutes(idleTtlMinutes)));
     }
 
-    private static string CreateProjectRoot(TestTempDirectory tempDir, string name)
+    private static string CreateSolutionPath(TestTempDirectory tempDir, string name)
     {
-        var root = Path.Combine(tempDir.DirectoryPath, name);
-        tempDir.CreateFile(Path.Combine(name, "app.slnx"), string.Empty);
-        tempDir.CreateFile(Path.Combine(name, "rules.json"), "{}");
-        tempDir.CreateFile(
-            Path.Combine(name, "ainetlinter.project.json"),
-            "{ \"solution\": \"app.slnx\", \"rules\": \"rules.json\" }");
-        return root;
+        var solutionPath = tempDir.CreateFile(Path.Combine(name, "app.slnx"), string.Empty);
+        tempDir.CreateFile(Path.Combine(name, ProjectDefinitionLoader.RulesFileName), "{}");
+        return solutionPath;
     }
 }

@@ -149,7 +149,6 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
         var payload = Structured(result);
         AssertPartialStatusConsistency(result);
         Assert.Contains(Diagnostics(payload), diagnostic => diagnostic.Contains("FailedExtensionDependency", StringComparison.Ordinal));
-        Assert.Equal("assembly", payload.GetProperty("analysis").GetProperty("targetType").GetString());
         Assert.Equal("decompiled", payload.GetProperty("analysis").GetProperty("origin").GetString());
         Assert.False(payload.GetProperty("analysis").TryGetProperty("diagnostics", out _));
         Assert.False(payload.GetProperty("analysis").TryGetProperty("diagnosticsSummary", out _));

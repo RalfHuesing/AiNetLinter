@@ -17,7 +17,9 @@ internal static class McpServerToolCollectionFactory
     {
         var tools = new McpServerPrimitiveCollection<McpServerTool>();
         SymbolGraphToolRegistrations.Register(tools, targetRoute);
-        AssemblyAnalysisToolRegistrations.Register(tools, targetRoute);
+        AssemblyAnalysisToolRegistrations.Register(
+            tools,
+            AssemblyAnalysisDispatcher.CreateRoute(assemblyRegistry));
         FileStructureToolRegistrations.Register(tools, registry, targetRoute);
         AnalysisToolRegistrations.Register(tools, registry, targetRoute);
         SymbolBodyToolRegistrations.Register(tools, targetRoute);

@@ -18,10 +18,11 @@ public sealed class GetFileTreeToolTests
     public async Task ExecuteAsync_ReturnsWrappedStructuredPayloadAndCompactText()
     {
         using var tempDir = TestTempDirectory.Create("file-tree-tool-");
+        var targetPath = tempDir.CreateFile("app.slnx", string.Empty);
         File.WriteAllText(Path.Combine(tempDir.DirectoryPath, "README.md"), "hello\n");
 
         var result = await GetFileTreeTool.ExecuteAsync(
-            tempDir.DirectoryPath,
+            targetPath,
             GetFileTreeTestData.Input(),
             CancellationToken.None);
 
@@ -32,19 +33,20 @@ public sealed class GetFileTreeToolTests
         Assert.NotNull(result.StructuredContent);
         var payload = result.StructuredContent!.Value.GetProperty("fileTree");
         Assert.Equal("files", payload.GetProperty("view").GetString());
-        Assert.Equal(1, payload.GetProperty("summary").GetProperty("matchedFileCount").GetInt32());
+        Assert.Equal(2, payload.GetProperty("summary").GetProperty("matchedFileCount").GetInt32());
     }
 
     [Fact]
     public async Task ExecuteAsync_TreeViewWithTreeDepthZeroShowsOnlyRootFiles()
     {
         using var tempDir = TestTempDirectory.Create("file-tree-tool-tree-");
+        var targetPath = tempDir.CreateFile("app.slnx", string.Empty);
         Directory.CreateDirectory(Path.Combine(tempDir.DirectoryPath, "nested"));
         File.WriteAllText(Path.Combine(tempDir.DirectoryPath, "nested", "deep.md"), "deep\n");
         File.WriteAllText(Path.Combine(tempDir.DirectoryPath, "README.md"), "hello\n");
 
         var result = await GetFileTreeTool.ExecuteAsync(
-            tempDir.DirectoryPath,
+            targetPath,
             GetFileTreeTestData.Input() with { View = "tree", TreeDepth = 0 },
             CancellationToken.None);
 
@@ -59,14 +61,15 @@ public sealed class GetFileTreeToolTests
     public async Task ExecuteAsync_SummaryViewExplainsThatFilesAreAggregated()
     {
         using var tempDir = TestTempDirectory.Create("file-tree-tool-summary-");
+        var targetPath = tempDir.CreateFile("app.slnx", string.Empty);
         File.WriteAllText(Path.Combine(tempDir.DirectoryPath, "README.md"), "hello\n");
 
         var result = await GetFileTreeTool.ExecuteAsync(
-            tempDir.DirectoryPath,
+            targetPath,
             GetFileTreeTestData.Input() with { View = "summary" },
             CancellationToken.None);
 
-        Assert.Contains("1 Dateien aggregiert", TextOf(result), StringComparison.Ordinal);
+        Assert.Contains("2 Dateien aggregiert", TextOf(result), StringComparison.Ordinal);
         Assert.DoesNotContain("Keine Dateitreffer", TextOf(result), StringComparison.Ordinal);
     }
 
@@ -74,9 +77,10 @@ public sealed class GetFileTreeToolTests
     public async Task ExecuteAsync_InvalidRootIsRecoverableAndDoesNotThrow()
     {
         using var tempDir = TestTempDirectory.Create("file-tree-tool-invalid-");
+        var targetPath = tempDir.CreateFile("app.slnx", string.Empty);
         var input = GetFileTreeTestData.Input() with { Root = "does-not-exist" };
 
-        var result = await GetFileTreeTool.ExecuteAsync(tempDir.DirectoryPath, input, CancellationToken.None);
+        var result = await GetFileTreeTool.ExecuteAsync(targetPath, input, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         Assert.Contains("RESOURCE_NOT_FOUND", TextOf(result), StringComparison.Ordinal);
@@ -86,10 +90,11 @@ public sealed class GetFileTreeToolTests
     public async Task ExecuteAsync_RejectsAbsoluteAndTraversalRoots()
     {
         using var tempDir = TestTempDirectory.Create("file-tree-tool-boundary-");
+        var targetPath = tempDir.CreateFile("app.slnx", string.Empty);
         foreach (var root in new[] { Path.Combine(tempDir.DirectoryPath, "nested"), "..\\outside" })
         {
             var result = await GetFileTreeTool.ExecuteAsync(
-                tempDir.DirectoryPath,
+                targetPath,
                 GetFileTreeTestData.Input() with { Root = root },
                 CancellationToken.None);
 
@@ -102,6 +107,7 @@ public sealed class GetFileTreeToolTests
     public async Task ExecuteAsync_RejectsInvalidViewBudgetAndGlob()
     {
         using var tempDir = TestTempDirectory.Create("file-tree-tool-arguments-");
+        var targetPath = tempDir.CreateFile("app.slnx", string.Empty);
         var cases = new[]
         {
             GetFileTreeTestData.Input() with { View = "unknown" },
@@ -113,7 +119,7 @@ public sealed class GetFileTreeToolTests
 
         foreach (var input in cases)
         {
-            var result = await GetFileTreeTool.ExecuteAsync(tempDir.DirectoryPath, input, CancellationToken.None);
+            var result = await GetFileTreeTool.ExecuteAsync(targetPath, input, CancellationToken.None);
             Assert.NotEqual(true, result.IsError);
             Assert.Contains("INVALID_ARGUMENT", TextOf(result), StringComparison.Ordinal);
         }
@@ -127,8 +133,8 @@ public sealed class GetFileTreeToolTests
             GetFileTreeTestData.Input(),
             CancellationToken.None);
 
-        Assert.True(result.IsError);
-        Assert.Contains("PROJECT_ROOT_INVALID", TextOf(result), StringComparison.Ordinal);
+        Assert.NotEqual(true, result.IsError);
+        Assert.Contains("INVALID_ARGUMENT", TextOf(result), StringComparison.Ordinal);
     }
 
     private static string TextOf(CallToolResult result) =>

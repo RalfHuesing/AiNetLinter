@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Text.Json;
+using System.IO;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
@@ -31,11 +32,15 @@ public sealed class GetServerHealthToolTests
     public async Task ExecuteAsync_LoadFailed_ReturnsErrorWithSolutionNotLoadedCode()
     {
         using var tempDir = TestTempDirectory.Create("mcp-health-unloaded-");
-        var root = ProjectRegistryFixture.CreateProjectRoot(tempDir, "unloaded");
-        await using var registry = CreateRegistry(root, new McpCodeGraphServer(
-            McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null))));
+        var root = ProjectRegistryFixture.CreateProjectRoot(
+            tempDir,
+            "unloaded",
+            rulesRelative: "ainetlinter-rules.json");
+        var solutionPath = Path.Combine(root, "app.slnx");
+        await using var registry = CreateRegistry(solutionPath, new McpCodeGraphServer(
+            McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null, UsedDefaultConfig: true))));
 
-        var result = await GetServerHealthTool.ExecuteAsync(registry, projectRoot: root);
+        var result = await GetServerHealthTool.ExecuteAsync(registry, targetPath: solutionPath);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -45,16 +50,20 @@ public sealed class GetServerHealthToolTests
     [Fact]
     public async Task ExecuteAsync_Loaded_ReportsLoadStateSolutionAndUptime()
     {
-        await using var registry = CreateRegistry(_fixture.RootPath, _fixture.CreateReadOnlyServer());
+        var solutionPath = SolutionPath(_fixture.RootPath);
+        var rulesPath = RulesPath(solutionPath);
+        File.WriteAllText(rulesPath, "{ \"Global\": {}, \"Metrics\": {} }");
+        await using var registry = CreateRegistry(solutionPath, CreateReadOnlyServer(rulesPath, _fixture.Snapshot));
 
-        var result = await GetServerHealthTool.ExecuteAsync(registry);
+        var result = await GetServerHealthTool.ExecuteAsync(registry, targetPath: solutionPath);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("Version:", text);
         Assert.Contains("Repository: https://github.com/RalfHuesing/AiNetLinter", text);
         Assert.Contains("Loaded", text);
-        Assert.Contains(_fixture.RootPath, text, System.StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(solutionPath, text, System.StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(rulesPath, text, System.StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Uptime", text);
         Assert.Contains("Solution-Refreshes seit Start: 0", text);
     }
@@ -62,9 +71,12 @@ public sealed class GetServerHealthToolTests
     [Fact]
     public async Task ExecuteAsync_Loaded_StructuredContentDeserializesToServerHealthPayload()
     {
-        await using var registry = CreateRegistry(_fixture.RootPath, _fixture.CreateReadOnlyServer());
+        var solutionPath = SolutionPath(_fixture.RootPath);
+        var rulesPath = RulesPath(solutionPath);
+        File.WriteAllText(rulesPath, "{ \"Global\": {}, \"Metrics\": {} }");
+        await using var registry = CreateRegistry(solutionPath, CreateReadOnlyServer(rulesPath, _fixture.Snapshot));
 
-        var result = await GetServerHealthTool.ExecuteAsync(registry);
+        var result = await GetServerHealthTool.ExecuteAsync(registry, targetPath: solutionPath);
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
@@ -73,19 +85,24 @@ public sealed class GetServerHealthToolTests
         Assert.NotNull(payload);
         Assert.False(string.IsNullOrWhiteSpace(payload!.Version));
         Assert.Equal("https://github.com/RalfHuesing/AiNetLinter", payload.Repository);
-        Assert.Equal("Loaded", Assert.Single(payload.Projects).LoadState);
-        Assert.Equal(0, Assert.Single(payload.Projects).RefreshCount);
+        var project = Assert.Single(payload.Projects);
+        Assert.Equal(solutionPath, project.TargetPath);
+        Assert.Equal("Loaded", project.LoadState);
+        Assert.Equal(rulesPath, project.ConfigPath);
+        Assert.False(project.UsedDefaultConfig);
+        Assert.Equal(0, project.RefreshCount);
     }
 
     [Fact]
     public async Task ExecuteAsync_UsedDefaultConfig_MentionsDefaultRules()
     {
-        await using var registry = CreateRegistry(_fixture.RootPath, _fixture.CreateReadOnlyServer(usedDefaultConfig: true));
+        var solutionPath = SolutionPath(_fixture.RootPath);
+        await using var registry = CreateRegistry(solutionPath, _fixture.CreateReadOnlyServer(usedDefaultConfig: true));
 
-        var result = await GetServerHealthTool.ExecuteAsync(registry);
+        var result = await GetServerHealthTool.ExecuteAsync(registry, targetPath: solutionPath);
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.Contains("Default-Regeln", text);
+        Assert.Contains("Config: not_configured", text);
     }
 
     [Fact]
@@ -218,11 +235,29 @@ public sealed class GetServerHealthToolTests
     private static AssemblyHealthEntry CreateAssemblyEntry(string targetPath) =>
         new(targetPath, "complete", "decompiled", null, null, null, null, null, null, null, null);
 
-    private static ProjectRegistry CreateRegistry(string root, McpCodeGraphServer server)
+    private static string SolutionPath(string root) => Path.Combine(root, "SymbolGraphMini.slnx");
+
+    private static string RulesPath(string solutionPath) =>
+        Path.Combine(Path.GetDirectoryName(solutionPath)!, "ainetlinter-rules.json");
+
+    private static McpCodeGraphServer CreateReadOnlyServer(
+        string rulesPath,
+        Microsoft.CodeAnalysis.Solution snapshot) =>
+        new(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(
+            Catalog: null,
+            Config: new AiNetLinter.Configuration.Config
+            {
+                Global = new AiNetLinter.Configuration.GlobalConfig(),
+                Metrics = new AiNetLinter.Configuration.MetricsConfig(),
+            },
+            UsedDefaultConfig: false,
+            ResolvedConfigPath: rulesPath,
+            ReadOnlySolutionSnapshot: snapshot)));
+
+    private static ProjectRegistry CreateRegistry(string solutionPath, McpCodeGraphServer server)
     {
-        ProjectRegistryFixture.EnsureDefinitionsFile(root);
         var registry = ProjectRegistryFixture.Create(_ => ProjectInstanceCreation.Resident(server));
-        var lease = registry.Lease(root);
+        var lease = registry.Lease(solutionPath);
         Assert.True(lease.Succeeded);
         lease.Lease!.Dispose();
         return registry;
