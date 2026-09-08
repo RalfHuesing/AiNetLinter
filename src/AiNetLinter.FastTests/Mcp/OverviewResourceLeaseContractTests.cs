@@ -1,7 +1,6 @@
 #nullable enable
 
 using System;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
@@ -25,7 +24,7 @@ public sealed class OverviewResourceLeaseContractTests
     public async Task LoadFailed_UsesToolContractAndReleasesAfterExplicitToolResponse()
     {
         using var tempDir = TestTempDirectory.Create("overview-failed-");
-        var root = CreateSolutionTarget(tempDir, "proj");
+        var root = McpTestTargetFactory.CreateSolutionTarget(tempDir, "proj");
         var load = new TaskCompletionSource<SourceFileCatalog?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var firstServer = new McpCodeGraphServer(new McpCodeGraphServerOptions
         {
@@ -69,9 +68,9 @@ public sealed class OverviewResourceLeaseContractTests
     public async Task RenderingLeaseProtectsServerFromEvictionUntilRenderingCompletes()
     {
         using var tempDir = TestTempDirectory.Create("overview-lease-");
-        var root = CreateSolutionTarget(tempDir, "proj");
-        var otherRoot = CreateSolutionTarget(tempDir, "other");
-        var replacementRoot = CreateSolutionTarget(tempDir, "replacement");
+        var root = McpTestTargetFactory.CreateSolutionTarget(tempDir, "proj");
+        var otherRoot = McpTestTargetFactory.CreateSolutionTarget(tempDir, "other");
+        var replacementRoot = McpTestTargetFactory.CreateSolutionTarget(tempDir, "replacement");
         await using var registry = ProjectRegistryFixture.Create(
             _ => ProjectInstanceCreation.Resident(OverviewTestServers.PendingLoadServer()),
             maxProjects: 1);
@@ -117,13 +116,6 @@ public sealed class OverviewResourceLeaseContractTests
 
         Assert.True(replacement.Succeeded);
         Assert.True(renderingServer.LoadTask!.IsCanceled);
-    }
-
-    private static string CreateSolutionTarget(TestTempDirectory tempDir, string name)
-    {
-        tempDir.CreateFile(Path.Combine(name, "app.slnx"), string.Empty);
-        tempDir.CreateFile(Path.Combine(name, "ainetlinter-rules.json"), "{}");
-        return tempDir.GetPath(Path.Combine(name, "app.slnx"));
     }
 
 }

@@ -16,7 +16,7 @@ public sealed class DaemonWarmupTests
     {
         using var temp = TestTempDirectory.Create("daemon-warmup-");
         var roots = Enumerable.Range(1, 4)
-            .Select(index => CreateSolutionTarget(temp, $"project-{index}"))
+            .Select(index => McpTestTargetFactory.CreateSolutionTarget(temp, $"project-{index}"))
             .ToArray();
         var factory = new TrackingServerFactory();
         var registry = ProjectRegistryFixture.Create(factory.Factory);
@@ -61,10 +61,4 @@ public sealed class DaemonWarmupTests
         Assert.True(condition(), "Die Warmup-Loads wurden nicht innerhalb des Testfensters gestartet.");
     }
 
-    private static string CreateSolutionTarget(TestTempDirectory tempDir, string name)
-    {
-        tempDir.CreateFile(Path.Combine(name, "app.slnx"), string.Empty);
-        tempDir.CreateFile(Path.Combine(name, "ainetlinter-rules.json"), "{}");
-        return tempDir.GetPath(Path.Combine(name, "app.slnx"));
-    }
 }
