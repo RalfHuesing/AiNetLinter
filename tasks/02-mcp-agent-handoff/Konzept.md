@@ -3,12 +3,10 @@ status: draft
 type: konzept
 project_kind: brownfield
 estimated_scope: large
-execution_mode: requires_user_decision
+execution_mode: autonomous
 rules_dir: .agents/rules
 last_updated: 2026-09-08
-open_questions:
-  - Task 01 muss den Widerspruch zwischen `usedDefaultConfig=true` im Health-Payload eines regelosen Source-Targets und dem öffentlichen `not_configured`-Vertrag auflösen oder ausdrücklich als internes Legacy-Feld markieren.
-  - Der öffentliche Handoff-ID-Vertrag muss vor der Umsetzung freigegeben werden: Empfehlung ist eine selbständige, target- und snapshotgebundene ID-Familie für Source und Assembly ohne öffentliche Cache-Generation.
+open_questions: []
 depends_on:
   - tasks/01-mcp-unified-analysis-target/Konzept.md
   - tasks/ainetlinter-mcp-usage-audit/shared/Befundmatrix.md
@@ -24,10 +22,9 @@ supersedes: null
 ## Ergebnis der Kursprüfung
 
 Die Release-Reihenfolge bleibt richtig: Task 01 liefert den einzigen
-`targetPath`-Einstieg, Task 02 muss darauf Discovery, IDs und begrenzte
-Navigation aufsetzen. Task 02 ist aber in der bisherigen Fassung noch nicht
-freigabefest, weil sie bereits vorhandene Statusprojektionen mit einem echten
-Handoffvertrag gleichsetzt.
+`targetPath`-Einstieg, Task 02 setzt darauf Discovery, IDs und begrenzte
+Navigation auf. Der Draft ist noch nicht freigegeben, weil die vorhandene
+Statusprojektion noch kein vollständiger Handoffvertrag ist.
 
 Der MCP-Server 1.0.177 bestätigt die Task-01-Basis: `.slnx`, `.dll` und
 zielgebundene Antworten werden aufgelöst; `navigation` enthält Target, Origin,
@@ -57,14 +54,14 @@ Für Task 02 fehlen oder widersprechen sich jedoch noch zentrale Eigenschaften:
   Root-Zeile als Aggregat sichtbar, ihr `childDirectoryCount` bleibt im
   Root-Fall jedoch 0.
 - Ein regeloses Fixture liefert fachlich korrekt `get_violations =
-  NOT_CONFIGURED`, aber Health weist weiterhin `usedDefaultConfig=true` aus.
-  Das ist mindestens ein widersprüchlicher öffentlicher Status und muss vor
-  Task 02 geklärt werden.
+  NOT_CONFIGURED`, aber Health weist `usedDefaultConfig=true` aus. Der
+  öffentliche Hard-Cut-Vertrag enthält dieses Feld nicht; der Default-
+  Konfigurationspfad und alle dazugehörigen Modelle, Tests und
+  Dokumentationsreste werden entfernt.
 
-Daher lautet die Empfehlung: Task 02 beibehalten, aber den bisherigen
-`status: ready`-Stand zurücknehmen. Nach der Task-01-Revalidierung und der
-Freigabe des ID-Schnitts kann der Draft wieder auf autonom umsetzbar gestellt
-werden.
+Daher lautet die Empfehlung: Task 02 beibehalten, den Hard Cut aber als
+verbindliche Abschlussbedingung aufnehmen. Nach der Umsetzung und expliziten
+Freigabe kann der Draft auf `status: ready` gestellt werden.
 
 ## Ziel und Problem
 
@@ -98,9 +95,16 @@ keine Lintregel und kein Quality Gate.
 - Code: `Tools/FileStructure/*`, `SearchPatternScanner`, Symbolgraph,
   `AnalysisSymbolIdentity`, `SymbolIdentifierResolver`, Snapshot-/ID-Projektion,
   Truncation, Formatter und Registrierungs-/Raw-Wire-Tests.
-- Vorbedingung: Task-01-Targetauflösung und der regelose `not_configured`-Pfad
-  werden nur revalidiert. Eine Reparatur des früheren Targetvertrags wird nicht
-  still in Task 02 eingeschoben.
+- Hard-Cut-Voraussetzung: Der aktive MCP-Vertrag enthält ausschließlich
+  `targetPath`, kanonische Parameternamen und kanonische Handoff-IDs. Alte
+  Eingabefelder, Aliasnamen, Default-/Fallbackpfade, Dual-Read-, Dual-Write-
+  oder Kompatibilitätsadapter sind entfernt. Der regelose Source-Pfad liefert
+  ausschließlich `not_configured` für Lint.
+- Jeder semantische Input besitzt genau einen Parameternamen aus dem aktiven
+  Schema: insbesondere `targetPath`, `pattern`, `symbolIdentifier`,
+  `symbolIdentifiers`, `filePaths`, `root` und `fileFilter` dort, wo das
+  jeweilige Tool ihn benötigt. Synonyme und parallele Aliasfelder werden nicht
+  registriert.
 
 ## Verbindlicher Schnitt
 
@@ -118,12 +122,13 @@ Target-Identität und Analyse-Snapshot werden getrennt geführt:
 
 ### Handoff-ID
 
-Eine Handoff-ID ist eine kanonische, kopierbare Zeichenkette, die neben der
-fachlichen Symbolidentität die erforderliche Target-/Snapshotbindung trägt.
-Sie wird im vorhandenen `symbolIdentifier`-/Batch-ID-Slot akzeptiert, sodass
-keine Markdown-Analyse erforderlich ist. Bare DocComment-IDs dürfen als
-explizite Benutzereingabe weiter unterstützt werden, werden aber nicht als
-Handoff deklariert, wenn die Zielbindung nicht beweisbar ist.
+Eine Handoff-ID ist die einzige kanonische, kopierbare Zeichenkette für einen
+Folgecall. Sie trägt neben der fachlichen Symbolidentität die erforderliche
+Target-/Snapshotbindung und wird ausschließlich im kanonischen
+`symbolIdentifier`-/Batch-ID-Slot akzeptiert. Markdown-Parsing, sichtbare
+Zeilen, FQNs, Pfadpositionen und ungebundene DocComment-IDs sind keine
+Folgecall-Alternativen. Nichtkanonische Werte werden als ungültiger Handoff
+abgelehnt.
 
 Source-IDs basieren auf der kanonischen DocComment-ID. Assembly-IDs binden
 kanonischen Assemblypfad, Content-Hash und DocComment-ID. Eine Cache-Generation
@@ -169,6 +174,27 @@ Query, Filter und Sortierung. Wo keine sinnvolle stabile Reihenfolge existiert,
 verweist `next` auf Scope-, Filter- oder Detailverfeinerung statt auf beliebige
 Seiten.
 
+## Hard-Cut-Regeln
+
+- Der neue Vertrag ist der einzige aktive Vertrag. Nicht mehr benötigte
+  Parameter, Felder, Aliasnamen, Parserzweige, Adapter, DTOs, Registrierungen,
+  Tests und Dokumentationsabschnitte werden vollständig gelöscht.
+- Es gibt keine Übergangsphase, keine stille Toleranz unbekannter Altkeys,
+  keine Aliasauflösung, keine Parallelverträge und kein Verhalten „erst alt,
+  dann neu“. Ein unbekannter oder nichtkanonischer Input ist ein expliziter
+  `invalid_argument` mit Feldpfad und nächstem Schritt.
+- Der aktive Codebestand enthält keine auskommentierten, unreferenzierten oder
+  nur für Kompatibilität vorgehaltenen Vertragsreste. Ein gezielter aktiver
+  Scan auf alte MCP-Felder, Aliasnamen und Defaultpfade muss 0 Treffer liefern.
+- `usedDefaultConfig`, automatische Regeldatei-Suche und Default-Konfiguration
+  gehören nicht zum öffentlichen oder internen Zielzustand; zugehörige Felder,
+  Ladezweige, Tests und Dokumentation werden gelöscht. Ein regeloses Target
+  besitzt ausschließlich die Capability `lint=not_configured`.
+- Die Dokumentation beschreibt ausschließlich den ausgelieferten Ist-Vertrag:
+  keine Migrationshinweise, keine veralteten Namen, keine historischen
+  Zustände, keine „deprecated“-Abschnitte und keine Beispiele außerhalb des
+  aktuellen Schemas.
+
 ## Muss-Kriterien
 
 - Eine ausgegebene Handoff-ID funktioniert im versprochenen Folgecall. Ein
@@ -187,6 +213,9 @@ Seiten.
   Artefakt- und Diagnosesegmente bleiben sichtbar getrennt.
 - Der Task führt keine öffentliche Cache-Generation als Agenteninput ein und
   ändert weder Assembly-Decompiler-Qualität noch Assembly-Lease-Lifecycle.
+- Nach dem Hard Cut sind `targetType`, `projectRoot`, alte Konfigurations-
+  schlüssel, Aliasparameter und ungebundene ID-Formate weder im aktiven
+  Schema noch in Runtime, Tests oder Dokumentation vorhanden.
 
 ## Messbare Akzeptanzkriterien
 
@@ -206,20 +235,21 @@ Seiten.
   enthalten Count, Ursache und genau einen validen Drilldown oder eine gebundene
   Continuation.
 - Für jede betroffene Registration beweisen Schema-Snapshot,
-  Runtime-Validator und Toolbeschreibung denselben Contract einschließlich
-  Required-Feldern, Enums, Alias-Slot, Capability und nächster Aktion.
+  Runtime-Validator und Toolbeschreibung denselben einzigen Contract
+  einschließlich Required-Feldern, Enums, kanonischem Parameternamen,
+  Capability und nächster Aktion.
 - Tests für unbekannt, ambig, target-fremd, stale, loading, empty, partial,
   unsupported, not_configured und truncation beweisen, dass kein Fall als
   scheinbar vollständiges `ok/complete` erscheint.
 
 ## Non-Goals
 
-Keine Targetmigration, keine Reparatur des Task-01-Vertrags ohne separaten
-Befund, keine Regeln-/Lintänderung, keine umfassende Such-Recall-Neuheit,
+Der Targetvertrag bleibt der harte `targetPath`-Vertrag; es gibt keinen zweiten
+Targetinput. Keine Regeln-/Lintänderung, keine umfassende Such-Recall-Neuheit,
 keine Quality-Heuristik, kein globaler Seitenbrowser und keine neue
 Assembly-Lifecycle-, Decompiler- oder Cache-Qualitätslogik. Task 04 übernimmt
-die fachliche Assemblyqualität und darf den hier festgelegten ID-/Statusschnitt
-nicht neu definieren.
+die fachliche Assemblyqualität und verwendet den hier festgelegten einzigen
+ID-/Statusschnitt.
 
 ## Architekturannahmen
 
@@ -232,7 +262,7 @@ Project- und Assembly-Leases bleiben getrennt. Task 02 definiert nur die
 öffentliche, lifecycleunabhängige Identitätsprojektion; interne Assembly-
 Generation, Eviction und Cleanup werden nicht zum Agentenvertrag.
 
-## Fehler-, Fallback-, Ownership- und Lebenszeitsemantik
+## Fehler-, Routing-, Ownership- und Lebenszeitsemantik
 
 Ein Resultat ohne Treffer ist nur dann `empty`, wenn der benannte Scope
 vollständig geprüft wurde. Nicht indexierbarer Nicht-C#-Content führt zum
@@ -253,16 +283,15 @@ stabiler Ordnung. Ein nachträgliches Formatter-Patching ist als alleinige
 Lösung ausgeschlossen, weil es Text und StructuredContent auseinanderlaufen
 lassen kann.
 
-Alternativen:
+Festgelegte Entscheidungen:
 
-- Nur `find_symbol` reparieren: löst weder Discovery noch Member-Handoff und
-  ist verworfen.
-- Alle Tools mit Cursor ausstatten: erhöht Token- und Statekosten ohne
-  fachlichen Nutzen und ist verworfen.
-- Generation in Assembly-IDs behalten: kurzfristig einfacher, aber
-  Neustart/Eviction wird zum Agentenproblem und widerspricht Task 04.
-- Nur Markdown-IDs dokumentieren: bricht bei StructuredContent-Hosts und ist
-  verworfen.
+- Der Handoffvertrag wird an einer gemeinsamen Aggregation vor Text und
+  StructuredContent erzeugt; Formatter-only- oder Markdown-only-Lösungen sind
+  ausgeschlossen.
+- Continuation gibt es nur bei stabiler Ordnung; ein universeller Cursor ist
+  ausgeschlossen.
+- Cache-Generation bleibt intern und wird weder in IDs noch in der
+  Dokumentation als Agenteninput geführt.
 
 ## Verifikation und Release-Gate
 
@@ -276,21 +305,24 @@ Nachlauf bleibt Task 04 vorbehalten.
 Ein Release ist blockiert, solange ein als Handoff deklarierter Wert nicht
 kopierbar ist, ein Call-Site-/Knotenwert keine belastbare ID besitzt,
 StructuredContent und Text widersprechen, Generation öffentlich erforderlich
-ist, Snapshotwechsel als `symbol_not_found` erscheint oder ein begrenztes
-Ergebnis `ok/complete` behauptet.
+ist, Snapshotwechsel als `symbol_not_found` erscheint, ein begrenztes Ergebnis
+`ok/complete` behauptet oder ein aktiver Scan einen entfernten Vertragsrest
+findet.
 
 ## Dokumentationsbedarf
 
-`Docs/agent-api.md`, `Docs/integration.md` und die MCP-Instructions erhalten
-eine kurze Discovery-Tabelle, Routingregeln, ID-/Target-/Snapshotregeln,
-präzise Empty-/Partial-/Truncation-/Stale-Semantik und je ein Source- und
+`Docs/agent-api.md`, `Docs/integration.md` und die MCP-Instructions beschreiben
+ausschließlich den ausgelieferten Ist-Vertrag: Discovery-Tabelle,
+Routingregeln, ID-/Target-/Snapshotregeln, präzise
+Empty-/Partial-/Truncation-/Stale-Semantik und je ein Source- und
 Assembly-Folgebeispiel. Vollständige Rohschemas bleiben beim Schema-Endpoint;
-die Beschreibung darf keine zweite Contract-Wahrheit enthalten.
+die Beschreibung darf keine zweite Contract-Wahrheit, Migrationssprache,
+veraltete Feldnamen oder historische Zustände enthalten.
 
 ## Nächste fachliche Entscheidung
 
-Nach Auflösung der beiden offenen Punkte wird dieser Draft mit
-`status: ready`, `execution_mode: autonomous` und `open_questions: []`
+Nach Umsetzung des Hard Cuts und expliziter Nutzerfreigabe wird dieser Draft
+mit `status: ready`, `execution_mode: autonomous` und `open_questions: []`
 freigegeben. Erst danach startet — auf ausdrücklichen Wunsch — der
 Project-Orchestrator für das gesamte Task-Verzeichnis. Task 03 bleibt bis zum
 Task-02-Release nachgeordnet.
