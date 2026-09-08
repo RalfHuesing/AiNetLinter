@@ -55,7 +55,7 @@ internal static class ReloadConfigTool
         }
 
         var payload = BuildPayload(state, rulesPath, newConfig);
-        state.ReloadConfig(newConfig, usedDefaultConfig: false, resolvedConfigPath: rulesPath);
+        state.ReloadConfig(newConfig, resolvedConfigPath: rulesPath);
         await state.ReloadSolutionAsync(ct);
         return McpToolResults.Text(BuildSummary(payload), payload);
     }
@@ -65,11 +65,9 @@ internal static class ReloadConfigTool
         // Atomarer Schnappschuss statt dreier getrennter Property-Zugriffe: sonst koennte ein
         // gleichzeitiger zweiter reload_config-Aufruf eine zerrissene "Vorher"-Kombination liefern
         // (siehe McpCodeGraphServer.GetConfigSnapshot).
-        var (oldConfig, oldUsedDefaultConfig, oldResolvedConfigPath) = state.GetConfigSnapshot();
-        var oldDescription = oldUsedDefaultConfig
-            ? "Default-Regeln (keine ainetlinter-rules.json)"
-            : oldResolvedConfigPath ?? "unbekannt";
-        var oldEnabledRules = CountEnabledRules(oldConfig.Global);
+        var (oldConfig, oldResolvedConfigPath) = state.GetConfigSnapshot();
+        var oldDescription = oldResolvedConfigPath ?? "not_configured";
+        var oldEnabledRules = oldConfig is null ? 0 : CountEnabledRules(oldConfig.Global);
         var newEnabledRules = CountEnabledRules(newConfig.Global);
         return new ReloadConfigPayload(
             oldDescription,

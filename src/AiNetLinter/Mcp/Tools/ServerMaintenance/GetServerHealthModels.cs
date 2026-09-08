@@ -20,7 +20,6 @@ internal sealed record ProjectHealthEntry(
     string TargetPath,
     string LoadState,
     string? SolutionPath,
-    bool UsedDefaultConfig,
     string? ConfigPath,
     DateTime? LastUsedUtc,
     double UptimeSeconds,

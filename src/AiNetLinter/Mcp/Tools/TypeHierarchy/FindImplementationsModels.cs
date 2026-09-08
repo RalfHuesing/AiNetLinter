@@ -15,7 +15,12 @@ public sealed record ImplementationItemDto(
     string? FilePath,
     int? Line,
     int? Column,
-    string DisplayLocation);
+    string DisplayLocation,
+    bool Handoff = false,
+    string? Id = null,
+    string? TargetPath = null,
+    string? Snapshot = null,
+    IReadOnlyList<string>? AllowedFollowUpTools = null);
 
 /// <summary>
 /// Strukturiertes Ergebnis für das MCP-Tool <c>find_implementations</c>.

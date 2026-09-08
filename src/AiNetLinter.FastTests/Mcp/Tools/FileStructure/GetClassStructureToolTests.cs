@@ -59,13 +59,13 @@ public sealed class GetClassStructureToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_SymbolAlias_ResolvesClassStructure()
+    public async Task ExecuteAsync_SymbolIdentifier_ResolvesClassStructure()
     {
         var state = _fixture.CreateServer();
 
         var result = await GetClassStructureTool.ExecuteAsync(
             state,
-            new GetClassStructureArgs(null, "lines", Symbol: "Greeter"),
+            new GetClassStructureArgs("Greeter", "lines"),
             CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);

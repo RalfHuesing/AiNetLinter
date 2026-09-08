@@ -127,9 +127,13 @@ internal static class TransitiveCallGraphFormatter
         var text = transitive
             ? $"{entry.FilePath}:{entry.Line} - transitiver Aufrufer"
             : $"{entry.FilePath}:{entry.Line} - Aufruf von '{entry.SymbolName}' in Projekt '{entry.ProjectName}'";
-        return entry.Origin is null
-            ? text
-            : $"{text} [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
+        var handoff = entry.Handoff && entry.Id is not null
+            ? $"handoff=true; id=`{entry.Id}`"
+            : "handoff=false; followUpTools=[]";
+        var origin = entry.Origin is null
+            ? string.Empty
+            : $" [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
+        return $"{text} [{handoff}]{origin}";
     }
 
     private static void AppendLimitMessages(

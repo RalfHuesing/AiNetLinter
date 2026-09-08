@@ -66,6 +66,7 @@ public sealed class SolutionStateProviderContractTests
         internal int GetCurrentSolutionCallCount { get; private set; }
 
         public AnalysisSymbolIdentity? AssemblySymbolIdentity => null;
+        public AnalysisSymbolIdentity? HandoffSymbolIdentity => null;
         public ServerLoadState LoadState => ServerLoadState.Loaded;
         public ILintConsole Console => null!;
 
@@ -75,7 +76,7 @@ public sealed class SolutionStateProviderContractTests
             return null;
         }
 
-        public (ILinterEngineConfig Config, bool UsedDefaultConfig, string? ResolvedConfigPath)
-            GetConfigSnapshot() => (null!, false, null);
+        public (ILinterEngineConfig? Config, string? ResolvedConfigPath)
+            GetConfigSnapshot() => (null!, null);
     }
 }

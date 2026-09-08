@@ -24,22 +24,54 @@ internal static class McpNavigationProjection
         var operationStatus = ResolveOperationStatus(code, response);
         var completeness = ResolveCompleteness(response.StructuredContent, code, operationStatus);
         var hint = ReadString(response.StructuredContent, "hint");
+        return Create(target, operationStatus, completeness, hint, code);
+    }
+
+    // ainetlinter-disable MaxMethodParameterCount — die Projektion wird nur intern mit dem bereits normalisierten Status aufgerufen.
+    internal static McpNavigationPayload Create(
+        AnalysisTarget target,
+        string operationStatus,
+        string completeness,
+        string? hint = null,
+        string? code = null)
+    {
         var next = CreateNext(operationStatus, completeness, hint);
         var lint = ResolveLintCapability(target, operationStatus);
+        var snapshotFingerprint = target.AnalysisSnapshotFingerprint ?? string.Empty;
+        var snapshotKind = target.AnalysisSnapshotFingerprint is null
+            ? "unavailable"
+            : target.AnalysisSnapshotKind;
 
         return new McpNavigationPayload(
             new McpNavigationTarget(target.CanonicalPath, target.AnalysisRoot, target.Fingerprint),
             target.Origin == AnalysisTargetOrigin.Source ? "source" : "decompiled",
-            new McpNavigationSnapshot(target.Fingerprint, "target-file", Fresh: true),
+            new McpNavigationSnapshot(
+                snapshotFingerprint,
+                snapshotKind,
+                target.AnalysisSnapshotFingerprint is not null && target.AnalysisSnapshotFresh),
             new McpNavigationCapabilities(
                 ToWire(target.Capabilities.Navigation),
                 ToWire(lint)),
             operationStatus,
             new McpNavigationResult(
-                Available: operationStatus is "ok" && completeness is not "not_configured" and not "unsupported",
+                Available: operationStatus is "ok"
+                    && completeness is not ("empty" or "not_configured" or "unsupported"),
                 Code: code),
             completeness,
             next);
+    }
+
+    internal static AnalysisTarget WithSourceSnapshot(AnalysisTarget target, McpCodeGraphServer server)
+    {
+        var identity = server.HandoffSymbolIdentity;
+        return identity is null
+            ? target
+            : target with
+            {
+                AnalysisSnapshotFingerprint = identity.ContentHash,
+                AnalysisSnapshotKind = "source-files",
+                AnalysisSnapshotFresh = true,
+            };
     }
 
     private static AnalysisCapabilityStatus ResolveLintCapability(
@@ -60,6 +92,10 @@ internal static class McpNavigationProjection
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
             [LinterErrorCodes.InvalidArgument] = "invalid_argument",
+            [LinterErrorCodes.SymbolNotFound] = "symbol_not_found",
+            [LinterErrorCodes.AmbiguousSymbol] = "ambiguous_symbol",
+            [McpHandoffErrorCodes.TargetMismatch] = "target_mismatch",
+            [McpHandoffErrorCodes.StaleSnapshot] = "stale_snapshot",
             [LinterErrorCodes.NotConfigured] = "not_configured",
             [LinterErrorCodes.AssemblyTargetUnsupported] = "unsupported",
             [ProjectErrorCodes.RulesInvalid] = "configuration_error",
@@ -89,9 +125,15 @@ internal static class McpNavigationProjection
         if (operationStatus == "not_configured") return "not_configured";
         if (operationStatus == "unsupported") return "unsupported";
         if (operationStatus == "configuration_error") return "configuration_error";
-        if (operationStatus is "invalid_argument" or "target_mismatch" or "stale_snapshot" or "error") return "not_applicable";
+        if (operationStatus is "invalid_argument" or "target_mismatch" or "stale_snapshot" or
+            "symbol_not_found" or "ambiguous_symbol" or "error") return "not_applicable";
 
-        if (TryFindCompleteness(structured, out var explicitValue)) return explicitValue;
+        if (TryFindCompleteness(structured, out var explicitValue))
+        {
+            return explicitValue == "complete" && IsKnownEmpty(structured)
+                ? "empty"
+                : explicitValue;
+        }
         if (HasTruncation(structured)) return "truncated";
         if (IsKnownEmpty(structured)) return "empty";
         return "complete";
@@ -220,13 +262,18 @@ internal static class McpNavigationProjection
             return new("request_detail", hint ?? "ainetlinter-rules.json korrigieren und denselben Target-Call wiederholen.");
         }
 
-        if (operationStatus is "invalid_argument" or "target_mismatch" or "stale_snapshot" or "error")
+        if (operationStatus is "invalid_argument" or "target_mismatch" or "stale_snapshot" or
+            "symbol_not_found" or "ambiguous_symbol" or "error")
         {
-            return new("request_detail", hint ?? "Argumente und Target prüfen und den sicheren nächsten Schritt aus der Fehlermeldung ausführen.");
+            return new(
+                operationStatus is "symbol_not_found" or "ambiguous_symbol" ? "refine_scope" : "request_detail",
+                hint ?? "Argumente und Target prüfen und den sicheren nächsten Schritt aus der Fehlermeldung ausführen.");
         }
 
         return completeness is "truncated" or "partial"
             ? new("request_detail", hint ?? "Scope oder Detaillevel verfeinern und die Antwort gezielt wiederholen.")
+            : completeness == "empty"
+                ? new("refine_scope", hint ?? "Keine Treffer im vollständig geprüften Scope; Suchmuster oder Scope verfeinern und erneut suchen.")
             : new("none", "Kein weiterer Schritt erforderlich.");
     }
 

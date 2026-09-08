@@ -90,7 +90,10 @@ public sealed class FindReferencesToolTests
     public async Task ResolveSymbolAsync_AmbiguousNameWithAssemblyIdentity_FormatsCurrentAssemblyIds()
     {
         using var context = new McpInMemoryTestContext();
-        var identity = new AnalysisSymbolIdentity(new string('e', 64), 8);
+        var identity = AnalysisSymbolIdentity.ForAssembly(
+            @"C:\Assemblies\SymbolGraphMini.dll",
+            new string('e', 64),
+            generation: 8);
 
         var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
             context.Solution,
@@ -100,7 +103,9 @@ public sealed class FindReferencesToolTests
 
         Assert.Null(symbol);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(error!.Content)).Text;
-        Assert.Contains($"assembly:{identity.ContentHash}:{identity.Generation}:M:", text, StringComparison.Ordinal);
+        Assert.Contains("assembly:", text, StringComparison.Ordinal);
+        Assert.Contains(identity.ContentHash, text, StringComparison.Ordinal);
+        Assert.DoesNotContain($":{identity.Generation}:M:", text, StringComparison.Ordinal);
         Assert.DoesNotContain("id: `M:", text, StringComparison.Ordinal);
     }
 
@@ -348,6 +353,18 @@ public sealed class FindReferencesToolTests
             context.Solution, "ChainProbe.Runner.MethodB", CancellationToken.None);
         Assert.NotNull(symbolB);
         using var state = context.CreateServer();
+        var discovery = await FindSymbolTool.ExecuteAsync(
+            state,
+            ["MethodB"],
+            kind: "method",
+            maxResults: 50,
+            CancellationToken.None);
+        var methodBHandoffId = discovery.StructuredContent!.Value
+            .GetProperty("results")[0]
+            .GetProperty("matches")[0]
+            .GetProperty("id")
+            .GetString();
+        Assert.StartsWith("source:", methodBHandoffId, StringComparison.Ordinal);
 
         var result = await FindReferencesTool.ExecuteAsync(
             state, "ChainProbe.Runner.MethodA", maxResults: 50, depth: 2, CancellationToken.None);
@@ -362,7 +379,7 @@ public sealed class FindReferencesToolTests
         Assert.Contains("Chain.cs", level1.FilePath, StringComparison.Ordinal);
         var level2 = entries!.Single(entry => entry.Depth == 2);
         Assert.Equal("Runner.MethodB", level2.SymbolName);
-        Assert.Equal(DocumentationCommentId.CreateDeclarationId(symbolB!), level2.ReachedFromSymbolId);
+        Assert.Equal(methodBHandoffId, level2.ReachedFromSymbolId);
     }
 
     [Fact]
@@ -453,13 +470,13 @@ public sealed class FindReferencesToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_WithSymbolAlias_ResolvesReferences()
+    public async Task ExecuteAsync_WithSymbolIdentifier_ResolvesReferences()
     {
         var state = _fixture.CreateServer();
 
         var result = await FindReferencesTool.ExecuteAsync(
             state,
-            new FindReferencesRequest(null, MaxResults: 50, Depth: 1, Symbol: "Greeter.Greet"),
+            new FindReferencesRequest("Greeter.Greet", MaxResults: 50, Depth: 1),
             CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);

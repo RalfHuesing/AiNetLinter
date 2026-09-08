@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.FeatureContext;
 using AiNetLinter.TestKit;
@@ -35,7 +36,10 @@ public sealed class GetFeatureContextToolCapTests
     {
         using var scenario = CreateScenario(testFileCount, methodsPerFile);
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+            new McpCodeGraphServerOptionsFromParameters(
+                null,
+                Config: new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
+                ReadOnlySolutionSnapshot: scenario.Solution)));
 
         var result = await GetFeatureContextTool.ExecuteAsync(
             state,

@@ -15,4 +15,5 @@ internal sealed record GetFileTreeInput(
     int MaxResults,
     string SortBy,
     bool IncludeMetadata,
-    bool IncludeLineCount);
+    bool IncludeLineCount,
+    int MaxResponseBytes = GetFileTreeTool.DefaultMaxResponseBytes);

@@ -52,18 +52,18 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? namePatterns = null, string? namePattern = null, string? symbol = null, string? pattern = null, string? query = null, string? name = null, string? kind = null, int maxResults = 50, bool includeReferences = false, int maxResponseBytes = 0, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? namePatterns = null, string? pattern = null, string? kind = null, int maxResults = 50, bool includeReferences = false, int maxResponseBytes = 0, CancellationToken ct = default) =>
                 await TargetPathToolRegistrationOptions.ExecuteWithUnknownArgumentGuardAsync(context, () => AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => FindSymbolTool.ExecuteAsync(
-                                new FindSymbolRequest(lease.Server, namePatterns, kind, maxResults, ct, namePattern, symbol, pattern, query, name)),
+                                new FindSymbolRequest(lease.Server, namePatterns, kind, maxResults, ct, pattern)),
                              AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(
                                  lease,
                                  new AssemblyFindSymbolRequest(
-                                     FindSymbolTool.NormalizeNamePatterns(new FindSymbolPatternOptions(namePatterns, namePattern, symbol, pattern, query, name)).ToArray(),
+                                     FindSymbolTool.NormalizeNamePatterns(new FindSymbolPatternOptions(namePatterns, pattern)).ToArray(),
                                      kind,
                                      maxResults,
                                      includeReferences),
@@ -76,8 +76,8 @@ internal static class SymbolGraphToolRegistrations
 
     private const string FindSymbolDescription =
         "Wann nutzen: Fundstelle(n) von C#-Symbolen per Namens-Substring finden, wenn der " +
-        "exakte Ort unbekannt ist. namePatterns: Array von Namens-Mustern oder namePattern bzw. pattern als " +
-        "String-Alias fuer genau ein Muster; symbol, query und name bleiben kompatible Aliase. " +
+        "exakte Ort unbekannt ist. namePatterns: Array von Namens-Mustern oder pattern als " +
+        "String fuer genau ein Muster. " +
         "Batch loest N sequentielle Calls ab, max. 10 pro Call, z. B. namePatterns: [\"Greeter\"] " +
         "oder pattern: \"Greeter\". " +
         "kind: optionaler Typfilter (Class, Record, Method, Property, Interface, Struct, Enum; " +
@@ -92,20 +92,19 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, int maxResults = 50, int depth = 1, bool includeReferences = false, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, bool includeReferences = false, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? name;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => FindReferencesTool.ExecuteAsync(lease.Server, effectiveIdentifier, maxResults, depth, ct),
+                            ProjectCall: lease => FindReferencesTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, depth, ct),
                             AssemblySessionCall: lease => AssemblyFindReferencesTool.ExecuteAsync(
                                 lease,
-                                new AssemblyFindReferencesRequest(effectiveIdentifier, maxResults, depth, includeReferences),
+                                new AssemblyFindReferencesRequest(symbolIdentifier, maxResults, depth, includeReferences),
                                 ct),
                             ExpandAssemblyReferences: includeReferences),
                         ct));
@@ -115,7 +114,7 @@ internal static class SymbolGraphToolRegistrations
 
     private const string FindReferencesDescription =
         "Wann nutzen: alle Aufrufstellen eines C#-Symbols finden, optional transitiv. " +
-        "symbolIdentifier (oder Alias symbol): \"M:Namespace.Klasse.Methode\" oder \"Datei.cs:42:10\" oder " +
+        "symbolIdentifier: \"M:Namespace.Klasse.Methode\" oder \"Datei.cs:42:10\" oder " +
         "\"Datei.cs:42\" (Zeile ohne Spalte — bei mehreren Symbolen auf der Zeile liefert das " +
         "Ergebnis eine Kandidatenliste statt eines Treffers) oder \"Klasse.Methode\". " +
         "maxResults: Begrenzung der Trefferliste (Default 50). " +
@@ -130,21 +129,20 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, bool includeReferences = false, bool includeBcl = false, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, bool includeReferences = false, bool includeBcl = false, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? name;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(effectiveIdentifier, depth, format, topN, direction, IncludeBcl: includeBcl), ct),
+                            ProjectCall: lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction, IncludeBcl: includeBcl), ct),
                             AssemblySessionCall: lease => AssemblyGetCallTreeTool.ExecuteAsync(
                                 lease,
                                 new AssemblyGetCallTreeRequest(
-                                    new GetCallTreeInput(effectiveIdentifier, depth, format, topN, direction, IncludeBcl: includeBcl),
+                                    new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction, IncludeBcl: includeBcl),
                                     includeReferences),
                                 ct),
                             ExpandAssemblyReferences: includeReferences),
@@ -156,7 +154,7 @@ internal static class SymbolGraphToolRegistrations
     private const string GetCallTreeDescription =
         "Wann nutzen: echten Aufrufer- oder Aufgerufene-Baum eines C#-Symbols sehen (wer ruft " +
         "dieses Symbol auf bzw. wen ruft es auf), transitiv als Eltern-Kind-Struktur. " +
-        "symbolIdentifier (oder Aliase symbol, identifier, name): Format wie find_references (\"M:Namespace.Klasse.Methode\", \"Datei.cs:Zeile:Spalte\", \"Klasse.Methode\"). " +
+        "symbolIdentifier: Format wie find_references (\"M:Namespace.Klasse.Methode\", \"Datei.cs:Zeile:Spalte\", \"Klasse.Methode\"). " +
         "depth: Traversierungstiefe (Default 2, hard cap 5). format: \"ascii\" (Default) oder " +
         "\"mermaid\" (flowchart TD). direction: \"incoming\" (Default: wer ruft das Symbol auf), " +
         "\"outgoing\" (wen ruft das Symbol auf) oder \"both\" (beide Richtungen abwechselnd). " +
@@ -170,7 +168,7 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? gitRef = null, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, int maxResults = 50, int depth = 1,
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? gitRef = null, string? symbolIdentifier = null, int maxResults = 50, int depth = 1,
                 string? detailLevel = null,
                 int maxChangedSymbols = ChangeContextContract.DefaultMaxChangedSymbols,
                 int maxTestsPerSymbol = ChangeContextContract.DefaultMaxTestsPerSymbol,
@@ -178,18 +176,17 @@ internal static class SymbolGraphToolRegistrations
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? name;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(ProjectCall: lease => GetImpactTool.ExecuteAsync(
                             lease.Server,
-                            new GetImpactInput(gitRef, effectiveIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
+                            new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
                             ct),
                             AssemblySessionCall: lease => GetImpactTool.ExecuteAsync(
                                 lease.Server,
-                                new GetImpactInput(gitRef, effectiveIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
+                                new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
                                 ct),
                             ExpandAssemblyReferences: true),
                         ct));
@@ -200,7 +197,7 @@ internal static class SymbolGraphToolRegistrations
     private const string GetImpactDescription =
         "Wann nutzen: pruefen, was eine geplante oder bereits gemachte Aenderung betrifft. " +
         "Ohne gitRef/symbolIdentifier: uncommittete lokale Aenderungen (Default). Sonst gitRef (Commit-Ref) " +
-        "ODER symbolIdentifier (oder Aliase symbol, identifier, name; Format wie find_references) angeben, nie beide. " +
+        "ODER symbolIdentifier (Format wie find_references) angeben, nie beide. " +
         "Bei Assembly-Zielen ist nur symbolIdentifier zulaessig; gitRef und leerer Aufruf " +
         "werden als recoverable InvalidArgument beantwortet. " +
         "detailLevel: 'callers' [Default] oder 'change-context' (nur im Git-Diff-Modus zulaessig: " +
@@ -214,18 +211,17 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? typeName = null, string? name = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? typeName ?? name;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, effectiveIdentifier, maxResults, ct),
-                            AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, effectiveIdentifier, maxResults, ct)),
+                            ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct),
+                            AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct)),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_type_hierarchy", GetTypeHierarchyDescription)));
@@ -234,7 +230,7 @@ internal static class SymbolGraphToolRegistrations
     private const string GetTypeHierarchyDescription =
         "Wann nutzen: Vererbungs- und Interface-Hierarchie eines C#-Typs analysieren (Basisklassen, " +
         "implementierte Interfaces, abgeleitete/implementierende Typen, heuristische DI-Registrierungen). " +
-        "symbolIdentifier (oder Alias symbol): \"T:Namespace.Klasse\", \"Datei.cs:10:5\", \"Datei.cs:10\" " +
+        "symbolIdentifier: \"T:Namespace.Klasse\", \"Datei.cs:10:5\", \"Datei.cs:10\" " +
         "(Zeile ohne Spalte) oder \"Klasse\". maxResults: Begrenzung der abgeleiteten/implementierenden " +
         "Typen (Default 50).";
 
@@ -243,20 +239,18 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? filePath = null, string? path = null, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, string? direction = null,
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? filePath = null, string? symbolIdentifier = null, string? direction = null,
                 int depth = 1, int maxResults = 50, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                var effectivePath = filePath ?? path;
-                var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? name;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => DependencyGraphTool.ExecuteAsync(lease.Server, new DependencyGraphInput(effectivePath, effectiveIdentifier, direction, depth, maxResults), ct),
-                            AssemblySessionCall: lease => DependencyGraphTool.ExecuteAsync(lease.Server, new DependencyGraphInput(effectivePath, effectiveIdentifier, direction, depth, maxResults), ct)),
+                            ProjectCall: lease => DependencyGraphTool.ExecuteAsync(lease.Server, new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults), ct),
+                            AssemblySessionCall: lease => DependencyGraphTool.ExecuteAsync(lease.Server, new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults), ct)),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("dependency_graph", DependencyGraphDescription)));
@@ -265,8 +259,8 @@ internal static class SymbolGraphToolRegistrations
     private const string DependencyGraphDescription =
         "Wann nutzen: Ermitteln, welche Dateien/Typen von einer Datei oder einem Typ abhaengen " +
         "(echte SemanticModel-Typreferenzen, nicht nur using-Direktiven) — beantwortet 'wer haengt von X " +
-        "ab' direkt statt mehrerer find_references-Umwege. filePath (oder Alias path, ganze Datei) ODER " +
-        "symbolIdentifier (oder Aliase symbol, identifier, name; ein Typ, engerer Scope) angeben, nie beide — symbolIdentifier-Format wie " +
+        "ab' direkt statt mehrerer find_references-Umwege. filePath (ganze Datei) ODER " +
+        "symbolIdentifier (ein Typ, engerer Scope) angeben, nie beide — symbolIdentifier-Format wie " +
         "find_references. direction: \"incoming\", \"outgoing\" oder \"both\" (Default). depth: " +
         "Traversierungstiefe (Default 1, hard cap 3, max. 150 besuchte Dateien). maxResults: " +
         "Begrenzung der angezeigten Kanten (Default 50).";
@@ -298,18 +292,17 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, int maxResults = FindImplementationsTool.DefaultMaxResults, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = FindImplementationsTool.DefaultMaxResults, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                var effectiveIdentifier = symbolIdentifier ?? symbol ?? identifier ?? name;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => FindImplementationsTool.ExecuteAsync(lease.Server, effectiveIdentifier, maxResults, ct),
-                            AssemblySessionCall: lease => FindImplementationsTool.ExecuteAsync(lease.Server, effectiveIdentifier, maxResults, ct)),
+                            ProjectCall: lease => FindImplementationsTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct),
+                            AssemblySessionCall: lease => FindImplementationsTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct)),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("find_implementations", FindImplementationsDescription)));
@@ -319,7 +312,7 @@ internal static class SymbolGraphToolRegistrations
         "Wann nutzen: Findet konkrete Implementierungen und Overrides von Interfaces, abstrakten Klassen, " +
         "virtuellen Methoden oder Properties in Quellcode-Projekten oder dekompilierten Assemblies. Liefert Typ, Member, " +
         "Status (concrete/abstract/virtual) und Zeilenposition. " +
-        "symbolIdentifier (oder Alias symbol): Format wie find_references (\"M:Namespace.Klasse.Methode\", \"IInterface\", \"BaseClass.Method\"). " +
+        "symbolIdentifier: Format wie find_references (\"M:Namespace.Klasse.Methode\", \"IInterface\", \"BaseClass.Method\"). " +
         "maxResults: Begrenzung der Trefferliste (Default 50).";
 }
 

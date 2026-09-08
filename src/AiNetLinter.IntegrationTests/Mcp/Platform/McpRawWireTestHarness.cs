@@ -94,6 +94,30 @@ internal static class McpRawWireTestHarness
         throw new InvalidOperationException($"Keine JSON-RPC-Antwort fuer id={id} gefunden.");
     }
 
+    internal static JsonElement FindResponseWithStructuredProperty(
+        IEnumerable<string> lines,
+        int id,
+        string propertyName)
+    {
+        foreach (var line in lines)
+        {
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            using var document = JsonDocument.Parse(line);
+            var root = document.RootElement;
+            if (!root.TryGetProperty("id", out var responseId)
+                || responseId.ValueKind != JsonValueKind.Number
+                || responseId.GetInt32() != id
+                || !root.TryGetProperty("result", out var result)
+                || !result.TryGetProperty("structuredContent", out var structured)
+                || !structured.TryGetProperty(propertyName, out _)) continue;
+
+            return root.Clone();
+        }
+
+        throw new InvalidOperationException(
+            $"Keine JSON-RPC-Antwort mit structuredContent.{propertyName} fuer id={id} gefunden.");
+    }
+
     internal static async Task<List<string>> RunAndCollectStdoutAsync(
         string targetPath,
         string[] frames,

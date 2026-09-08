@@ -198,7 +198,7 @@ public sealed class SafeguardToolTests
         // und die rohe Exception-Message im Text.
         using var faulty = new FaultingSolutionFixture();
         using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: faulty.Solution)));
+            new McpCodeGraphServerOptionsFromParameters(null, Config: TestHelper.CreateDefaultConfig(), ReadOnlySolutionSnapshot: faulty.Solution)));
 
         var result = await SafeguardTool.ExecuteAsync(state, null, 8.0, 20, CancellationToken.None);
 

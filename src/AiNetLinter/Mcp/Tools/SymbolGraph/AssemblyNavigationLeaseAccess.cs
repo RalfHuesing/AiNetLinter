@@ -42,7 +42,10 @@ internal static class AssemblyNavigationLeaseAccess
         return new(
             lease.CanonicalPath,
             lease.Server.GetCurrentSolution(),
-            new(origin.ContentHash, lease.Context.Generation),
+            AnalysisSymbolIdentity.ForAssembly(
+                origin.CanonicalPath,
+                origin.ContentHash,
+                lease.Context.Generation),
             new(
                 origin.OriginKind,
                 origin.CanonicalPath,

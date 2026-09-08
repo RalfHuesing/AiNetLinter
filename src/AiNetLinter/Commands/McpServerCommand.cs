@@ -123,7 +123,6 @@ internal static class McpServerCommand
                 Console = console,
                 MaxLineCount = baseOptions.MaxLineCount,
                 Config = baseOptions.Config,
-                UsedDefaultConfig = baseOptions.UsedDefaultConfig,
                 ResolvedConfigPath = baseOptions.ResolvedConfigPath,
                 LoadFunc = loadFunc ?? (innerCt => TryLoadSolutionAsync(definition.SolutionPath, innerCt, console)),
             })));

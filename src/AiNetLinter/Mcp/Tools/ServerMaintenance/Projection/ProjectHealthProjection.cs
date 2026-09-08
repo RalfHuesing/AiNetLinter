@@ -9,14 +9,13 @@ internal static class ProjectHealthProjection
     internal static ProjectHealthEntry FromSnapshot(ProjectSnapshot snapshot)
     {
         var server = snapshot.Server;
-        var (_, usedDefaultConfig, resolvedConfigPath) = server.GetConfigSnapshot();
+        var (_, resolvedConfigPath) = server.GetConfigSnapshot();
         var staleness = server.LastStalenessStats;
         return new ProjectHealthEntry(
             TargetPath: snapshot.Definition.SolutionPath,
             LoadState: server.LoadState.ToString(),
             SolutionPath: server.LoadState == ServerLoadState.Loading ? null : server.GetCurrentSolution()?.FilePath,
-            UsedDefaultConfig: usedDefaultConfig,
-            ConfigPath: usedDefaultConfig ? null : resolvedConfigPath,
+            ConfigPath: resolvedConfigPath,
             LastUsedUtc: snapshot.LastUsedUtc,
             UptimeSeconds: server.Uptime.TotalSeconds,
             RefreshCount: server.RefreshCount,

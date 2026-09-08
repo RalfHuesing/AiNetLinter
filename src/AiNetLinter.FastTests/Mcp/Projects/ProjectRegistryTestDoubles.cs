@@ -72,7 +72,6 @@ internal sealed class TrackingServerFactory
             Catalog = null,
             Console = LinterConsole.Instance,
             Config = MinimalConfig(),
-            UsedDefaultConfig = false,
             LoadFunc = token =>
             {
                 Interlocked.Increment(ref loadsStarted);
@@ -97,7 +96,6 @@ internal sealed class TrackingServerFactory
             Catalog = null,
             Console = LinterConsole.Instance,
             Config = MinimalConfig(),
-            UsedDefaultConfig = false,
             LoadFunc = token =>
             {
                 Interlocked.Increment(ref loadsStarted);

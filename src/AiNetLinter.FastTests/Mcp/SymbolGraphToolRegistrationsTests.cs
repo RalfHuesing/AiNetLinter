@@ -43,10 +43,15 @@ public sealed class SymbolGraphToolRegistrationsTests
             var tool = options.ToolCollection!.Single(item => item.ProtocolTool.Name == toolName);
             Assert.Contains("includeReferences", tool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
         }
-        foreach (var toolName in new[] { "find_references", "get_call_tree", "get_impact", "get_type_hierarchy", "dependency_graph", "get_symbol_body", "get_class_structure", "metrics_lookup" })
+        foreach (var toolName in new[] { "find_references", "get_call_tree", "get_impact", "get_type_hierarchy", "dependency_graph", "get_class_structure" })
         {
             var tool = options.ToolCollection!.Single(item => item.ProtocolTool.Name == toolName);
-            Assert.Contains("\"symbol\"", tool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
+            Assert.Contains("\"symbolIdentifier\"", tool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
+        }
+        foreach (var toolName in new[] { "get_symbol_body", "metrics_lookup" })
+        {
+            var tool = options.ToolCollection!.Single(item => item.ProtocolTool.Name == toolName);
+            Assert.Contains("\"symbolIdentifiers\"", tool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
         }
     }
 }

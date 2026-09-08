@@ -53,13 +53,9 @@ internal static class FileStructureToolRegistrations
                 RequestContext<CallToolRequestParams> context,
                 string targetPath,
                 string? root = null,
-                string? path = null,
-                string? directory = null,
                 string view = "tree",
                 string[]? includeExtensions = null,
                 string? fileFilter = null,
-                string? filter = null,
-                string? pattern = null,
                 string[]? excludePatterns = null,
                 int? maxDepth = null,
                 int? treeDepth = null,
@@ -67,17 +63,17 @@ internal static class FileStructureToolRegistrations
                 string sortBy = "path",
                 bool includeMetadata = true,
                 bool includeLineCount = false,
+                int maxResponseBytes = GetFileTreeTool.DefaultMaxResponseBytes,
                 CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                var rawRoot = root ?? path ?? directory ?? ".";
+                var rawRoot = root ?? ".";
                 var effectiveRoot = McpInputNormalizer.NormalizePathOrScope(rawRoot, targetPath);
-                var effectiveFilter = fileFilter ?? filter ?? pattern;
                 return await ExecuteFileTreeAsync(
                     targetRoute,
                     targetPath,
-                    new GetFileTreeInput(effectiveRoot, view, includeExtensions, effectiveFilter, excludePatterns, maxDepth, treeDepth, maxResults, sortBy, includeMetadata, includeLineCount),
+                    new GetFileTreeInput(effectiveRoot, view, includeExtensions, fileFilter, excludePatterns, maxDepth, treeDepth, maxResults, sortBy, includeMetadata, includeLineCount, maxResponseBytes),
                     ct);
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_file_tree", GetFileTreeDescription)));
@@ -105,7 +101,8 @@ internal static class FileStructureToolRegistrations
         "targetPath; fileFilter ist ein Pfad-Glob, keine Inhaltssuche. view: 'tree' [Default], " +
         "'summary', 'files'. includeExtensions: Extensionen wie ['.cs'] oder ['*']. " +
         "maxDepth und treeDepth: 0 bis 32 (effektive Tiefe = maxDepth ?? treeDepth; bei aktivem fileFilter, gezieltem Unterverzeichnis-Root oder view='summary' wird standardmaessig bis zum Limit gescannt, wenn weder maxDepth noch treeDepth gesetzt sind; maxDepth hat Vorrang). " +
-        "maxResults: Begrenzung (Default 200, Maximum 2000). Für Assembly-Ziele wird der " +
+        "maxResults: Begrenzung der primaeren Dateitreffer (Default 20, Maximum 2000). " +
+        "maxResponseBytes: serialisiertes Payload-Budget (Default 8192, Maximum 65536). Für Assembly-Ziele wird der " +
         "vorhandene Source- oder dekompilierte SourceRoot verwendet; ohne solchen Root ist die " +
         "Capability unsupported. Snapshot/Generation bleiben im Assembly-Response-Envelope sichtbar. " +
         "sortBy: 'path' [Default], 'size_desc', 'extension'. includeMetadata: Dateigroessen (Default true), " +
@@ -159,7 +156,7 @@ internal static class FileStructureToolRegistrations
         AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, string? symbol = null, string? className = null, string? identifier = null, string? type = null, string? name = null, string? sortBy = "lines",
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, string? sortBy = "lines",
                 int maxMembers = GetClassStructureTool.DefaultMaxMembers,
                 string? kindFilter = null,
                 string? nameFilter = null,
@@ -168,14 +165,13 @@ internal static class FileStructureToolRegistrations
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                var effectiveIdentifier = symbolIdentifier ?? symbol ?? className ?? identifier ?? type ?? name;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(effectiveIdentifier, sortBy, maxMembers, kindFilter, nameFilter, symbol), ct),
-                            AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(effectiveIdentifier, sortBy, maxMembers, kindFilter, nameFilter, symbol), ct),
+                            ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter), ct),
+                            AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter), ct),
                             MaxResponseBytes: maxResponseBytes),
                         ct));
             },
@@ -186,7 +182,7 @@ internal static class FileStructureToolRegistrations
         "Wann nutzen: Tabellarische Uebersicht ueber alle Member einer Klasse/eines Typs inkl. " +
         "Kind, Name, Visibility, Start-/End-Zeile, Zeilenanzahl und Signatur (z. B. zur Analyse " +
         "vor Refactorings oder zur Identifikation langer Member; bei Records inkl. Primary-Constructor-Parametern). " +
-        "symbolIdentifier (Pflicht, oder Aliase symbol, className, identifier, type, name): Typname, Datei.cs:Zeile:Spalte oder DocCommentId. " +
+        "symbolIdentifier (Pflicht): Typname, Datei.cs:Zeile:Spalte oder DocCommentId. " +
         "sortBy: 'lines' (Default), 'kind', 'name'. kindFilter: optionaler Filter nach Member-Kind (z. B. Method, Property, Field, Constructor, all). " +
         "nameFilter: optionaler Substring-Filter nach Member-Namen. maxMembers: Begrenzung der sichtbaren Member " +
         "(Default 50, Cap " + GetClassStructureTool.MaxMembersCap + "); bei Ueberschreitung " +
@@ -199,18 +195,17 @@ internal static class FileStructureToolRegistrations
         AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? filePaths = null, string? filePath = null, string? path = null, string? file = null, int maxResponseBytes = 0, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? filePaths = null, int maxResponseBytes = 0, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                var effectivePath = filePath ?? path ?? file;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, ResolveFilePaths(filePaths, effectivePath), ct),
-                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, ResolveFilePaths(filePaths, effectivePath), ct),
+                            ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, ct),
+                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, ct),
                             MaxResponseBytes: maxResponseBytes),
                         ct));
             },
@@ -220,16 +215,8 @@ internal static class FileStructureToolRegistrations
     private const string GetFileSkeletonDescription =
         "Wann nutzen: Ueberblick ueber Typen und Signaturen einer oder mehrerer C#-Dateien (Batch in 1 Turn) " +
         "ohne die Bodies zu lesen — jede Signatur traegt eine stabile id: fuer einen Folge-Call an get_symbol_body. " +
-        "filePaths: Array von Dateipfaden (auch fuer genau eine Datei), relativ oder absolut; " +
-        "filePath (oder Aliase path, file): String-Alias fuer genau eine Datei, wenn kein filePaths-Array uebergeben wird. " +
+        "filePaths: Array von Dateipfaden (auch fuer genau eine Datei), relativ oder absolut. " +
         "maxResponseBytes: Begrenzung des Antwortbudgets (Default 0 = Standardbudget).";
-
-    private static string[]? ResolveFilePaths(string[]? filePaths, string? filePath) =>
-        filePaths is { Length: > 0 }
-            ? filePaths
-            : string.IsNullOrWhiteSpace(filePath)
-                ? filePaths
-                : [filePath];
 
     private static void AddGetIndexScope(
         McpServerPrimitiveCollection<McpServerTool> tools,

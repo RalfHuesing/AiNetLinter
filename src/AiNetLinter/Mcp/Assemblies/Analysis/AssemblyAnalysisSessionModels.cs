@@ -28,9 +28,6 @@ internal sealed record AssemblyOrigin(
     string BodyAvailability = "available",
     string ContentMode = "decompiled")
 {
-    /// <summary>Interner Kompatibilitätsalias; im MCP-Payload ist <see cref="OriginKind"/> maßgeblich.</summary>
-    internal string Kind => OriginKind;
-
     internal bool IsDecompiled => string.Equals(OriginKind, "decompiled", StringComparison.Ordinal);
 }
 

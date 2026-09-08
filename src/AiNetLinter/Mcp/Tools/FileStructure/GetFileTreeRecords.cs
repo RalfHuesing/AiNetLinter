@@ -44,7 +44,11 @@ public sealed record FileTreeCompleteness(
     int InaccessibleSubtreeCount,
     int SkippedExcludedDirectoryCount,
     int SkippedReparsePointCount,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    int ReturnedDirectoryCount = 0);
+
+/// <summary>Genau ein sicherer Folgeschritt fuer einen begrenzten Discovery-Call.</summary>
+public sealed record FileTreeNext(string Kind, string Action);
 
 /// <summary>Kanonische strukturierte Antwort fuer <c>get_file_tree</c>.</summary>
 public sealed record FileTreePayload(
@@ -54,7 +58,8 @@ public sealed record FileTreePayload(
     FileTreeSummary Summary,
     IReadOnlyList<FileTreeDirectoryEntry> Directories,
     IReadOnlyList<FileTreeFileEntry> Files,
-    FileTreeCompleteness Completeness);
+    FileTreeCompleteness Completeness,
+    FileTreeNext Next);
 
 /// <summary>Internes Scanresult, das Renderer und Structured Content gemeinsam verwenden.</summary>
 internal sealed record FileTreeScanResult(FileTreePayload Payload, int TreeDepth);

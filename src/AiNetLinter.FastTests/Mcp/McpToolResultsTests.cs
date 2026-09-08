@@ -77,6 +77,13 @@ public sealed class McpToolResultsTests
         File.WriteAllText(solutionPath, string.Empty);
         var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
             new AnalysisTargetRequest(solutionPath)).Target);
+        var analysisSnapshot = new string('a', 64);
+        target = target with
+        {
+            AnalysisSnapshotFingerprint = analysisSnapshot,
+            AnalysisSnapshotKind = "source-files",
+            AnalysisSnapshotFresh = true,
+        };
 
         var result = McpToolResults.WithNavigation(
             McpToolResults.Text("Keine Treffer", new { Matches = Array.Empty<object>() }),
@@ -85,14 +92,42 @@ public sealed class McpToolResultsTests
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
         Assert.Equal(target.CanonicalPath, navigation.GetProperty("target").GetProperty("targetPath").GetString());
         Assert.Equal(target.AnalysisRoot, navigation.GetProperty("target").GetProperty("analysisRoot").GetString());
-        Assert.Equal(target.Fingerprint, navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString());
+        Assert.Equal(analysisSnapshot, navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString());
+        Assert.NotEqual(target.Fingerprint, navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString());
+        Assert.Equal("source-files", navigation.GetProperty("snapshot").GetProperty("kind").GetString());
+        Assert.True(navigation.GetProperty("snapshot").GetProperty("fresh").GetBoolean());
         Assert.Equal("source", navigation.GetProperty("origin").GetString());
         Assert.Equal("supported", navigation.GetProperty("capabilities").GetProperty("navigation").GetString());
         Assert.Equal("not_configured", navigation.GetProperty("capabilities").GetProperty("lint").GetString());
         Assert.Equal("ok", navigation.GetProperty("operationStatus").GetString());
         Assert.Equal("empty", navigation.GetProperty("completeness").GetString());
-        Assert.Equal("none", navigation.GetProperty("next").GetProperty("kind").GetString());
+        Assert.False(navigation.GetProperty("result").GetProperty("available").GetBoolean());
+        Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("operationStatus: `ok`", text, StringComparison.Ordinal);
+        Assert.Contains("completeness: `empty`", text, StringComparison.Ordinal);
+        Assert.Contains("next: `refine_scope`", text, StringComparison.Ordinal);
         Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.ValueKind);
+    }
+
+    [Fact]
+    public void WithNavigation_SymbolMissIsNotProjectedAsSuccessfulCompleteResult()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-miss-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.SymbolNotFound("M:Missing.Type.Member"),
+            target);
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+
+        Assert.Equal("symbol_not_found", navigation.GetProperty("operationStatus").GetString());
+        Assert.False(navigation.GetProperty("result").GetProperty("available").GetBoolean());
+        Assert.Equal("not_applicable", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
     }
 
     [Fact]

@@ -22,11 +22,22 @@ internal sealed class McpInMemoryTestContext : IDisposable
         this.owner = owner;
     }
 
-    public McpCodeGraphServer CreateServer(int? maxLineCount = null, Config? config = null) => new(
+    public McpCodeGraphServer CreateServer(
+        int? maxLineCount = null,
+        Config? config = null,
+        string? resolvedConfigPath = null,
+        bool includeConfig = true) => new(
         McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(
             null,
             MaxLineCount: maxLineCount ?? 700,
-            Config: config,
+            Config: includeConfig
+                ? config ?? new Config
+                {
+                    Global = new GlobalConfig(),
+                    Metrics = new MetricsConfig(),
+                }
+                : null,
+            ResolvedConfigPath: resolvedConfigPath,
             ReadOnlySolutionSnapshot: owner.Solution)));
 
     public Solution Solution => owner.Solution;

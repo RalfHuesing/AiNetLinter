@@ -138,7 +138,9 @@ internal static partial class SearchPatternScanner
         }
 
         aggregation = aggregation with { EnumerationErrors = enumeration.ErrorCount };
-        foreach (var filePath in filePaths.OrderBy(path => path, StringComparer.Ordinal))
+        foreach (var filePath in filePaths
+            .OrderBy(path => AiNetLinter.Core.TestDetector.IsTestFile(path))
+            .ThenBy(path => path, StringComparer.Ordinal))
         {
             if (aggregation.ScanFlags.Stop) break;
             if (options.ScannerParameters.CancellationToken.IsCancellationRequested)
@@ -196,6 +198,8 @@ internal static partial class SearchPatternScanner
         bool isAutoPromoted = false)
     {
         var totalLines = options.Files.Sum(file => file.Lines.Count);
+        var testFileCount = options.Files.Count(file => AiNetLinter.Core.TestDetector.IsTestFile(file.RelativePath));
+        var productionFileCount = options.Files.Count - testFileCount;
         var visibleFiles = SelectVisibleFiles(options.Files, options.ScannerParameters.MaxFiles);
         IReadOnlyList<SearchPatternMatch> visibleMatches =
             SelectVisibleMatches(visibleFiles, options.ScannerParameters.MaxResults, options.ScannerParameters.ContextLines);
@@ -219,7 +223,9 @@ internal static partial class SearchPatternScanner
             options.SkippedUnreadable,
             options.EnumerationErrors,
             options.ScanFlags.RegexTimedOut,
-            options.ScanFlags.CancellationRequested));
+            options.ScanFlags.CancellationRequested,
+            productionFileCount,
+            testFileCount));
         if (options.ScannerParameters.MaxResponseBytes > 0)
         {
             var budgetResult = SearchPatternScannerCompleteness.ApplyResponseBudget(new(
@@ -309,7 +315,17 @@ internal static partial class SearchPatternScanner
             new SearchPatternSnapshotMetadata(
                 "resident-solution",
                 Path.GetFileName(options.ScannerParameters.Solution.FilePath),
-                options.ScannerParameters.Solution.ProjectIds.Count));
+                options.ScannerParameters.Solution.ProjectIds.Count),
+            CreateNext(completeness.TruncatedBy));
+
+    private static SearchPatternNext CreateNext(IReadOnlyList<string> reasons) =>
+        reasons.Count == 0
+            ? new("none", "Kein weiterer Schritt erforderlich.")
+            : reasons.Contains("enumerationError", StringComparer.Ordinal)
+                ? new("refine_scope", "Scope oder fileFilter auf einen erreichbaren Teilbaum verfeinern.")
+                : reasons.Contains("regexTimeout", StringComparer.Ordinal)
+                    ? new("refine_scope", "Pattern vereinfachen oder Scope/includePatterns verfeinern.")
+                    : new("refine_scope", "Scope/includePatterns verfeinern oder maxResults/maxResponseBytes erhöhen.");
 
     private static List<SearchPatternFileMatches> SelectVisibleFiles(
         IReadOnlyList<SearchPatternFileMatches> files,

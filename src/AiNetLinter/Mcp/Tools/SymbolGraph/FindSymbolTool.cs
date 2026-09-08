@@ -16,11 +16,7 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 
 internal sealed record FindSymbolPatternOptions(
     string[]? NamePatterns = null,
-    string? NamePattern = null,
-    string? Symbol = null,
-    string? Pattern = null,
-    string? Query = null,
-    string? Name = null);
+    string? Pattern = null);
 
 internal sealed record FindSymbolRequest(
     ISolutionStateProvider State,
@@ -28,14 +24,10 @@ internal sealed record FindSymbolRequest(
     string? Kind,
     int MaxResults,
     CancellationToken CancellationToken,
-    string? NamePattern = null,
-    string? Symbol = null,
-    string? Pattern = null,
-    string? Query = null,
-    string? Name = null)
+    string? Pattern = null)
 {
     internal FindSymbolPatternOptions ToPatternOptions() =>
-        new(NamePatterns, NamePattern, Symbol, Pattern, Query, Name);
+        new(NamePatterns, Pattern);
 }
 
 /// <summary>
@@ -71,13 +63,7 @@ internal static class FindSymbolTool
                 .ToList();
         }
 
-        var scalar = !string.IsNullOrWhiteSpace(options.NamePattern)
-            ? options.NamePattern
-            : (!string.IsNullOrWhiteSpace(options.Symbol)
-                ? options.Symbol
-                : (!string.IsNullOrWhiteSpace(options.Pattern)
-                    ? options.Pattern
-                    : (!string.IsNullOrWhiteSpace(options.Query) ? options.Query : options.Name)));
+        var scalar = options.Pattern;
 
         if (string.IsNullOrWhiteSpace(scalar)) return patterns;
         var cleaned = McpInputNormalizer.NormalizeSymbolIdentifier(scalar);
@@ -85,7 +71,7 @@ internal static class FindSymbolTool
     }
 
     internal static IReadOnlyList<string> NormalizeNamePatterns(string[]? namePatterns, string? scalar = null) =>
-        NormalizeNamePatterns(new FindSymbolPatternOptions(namePatterns, NamePattern: scalar));
+        NormalizeNamePatterns(new FindSymbolPatternOptions(namePatterns, scalar));
 
     internal static CallToolResult? ValidateNamePatterns(IReadOnlyList<string> patterns)
     {
@@ -148,22 +134,41 @@ internal static class FindSymbolTool
                 request.CancellationToken.ThrowIfCancellationRequested();
                 if (i > 0) mb.Divider();
                 var pattern = patterns[i];
-                var (text, entries) = await FindSymbolScanner.FindMatchesWithEntriesAsync(
+                var scan = await FindSymbolScanner.FindMatchesWithDetailsAsync(
                     new FindSymbolScanRequest(
                         solution,
                         pattern,
                         request.Kind,
                         normalizedMaxResults,
-                        request.State.AssemblySymbolIdentity),
+                        request.State.HandoffSymbolIdentity),
                     request.CancellationToken);
-                results.Add(new FindSymbolPatternResultDto(pattern, entries));
+                results.Add(new FindSymbolPatternResultDto(
+                    pattern,
+                    scan.Entries,
+                    scan.TotalCount,
+                    scan.ReturnedCount,
+                    scan.IsTruncated,
+                    scan.TruncatedBy));
 
                 mb.Heading(3, $"Symbol-Suche: `{pattern}`").BlankLine();
-                mb.Line(text.TrimEnd());
+                mb.Line(scan.Text.TrimEnd());
             }
 
             var markdown = mb.Build().TrimEnd();
-            return McpToolResults.Text(markdown, new FindSymbolBatchDto(results));
+            var totalCount = results.Sum(result => result.TotalCount);
+            var returnedCount = results.Sum(result => result.ReturnedCount);
+            var truncatedBy = results
+                .SelectMany(result => result.TruncatedBy ?? [])
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            return McpToolResults.Text(
+                markdown,
+                new FindSymbolBatchDto(
+                    results,
+                    TotalCount: totalCount,
+                    ReturnedCount: returnedCount,
+                    IsTruncated: truncatedBy.Count > 0,
+                    TruncatedBy: truncatedBy));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -206,9 +211,7 @@ internal static class FindSymbolTool
         bool absolutePaths = false)
     {
         var kindLabel = SymbolKindClassifier.DescribeSymbolKind(symbol);
-        var symbolId = DocumentationCommentId.CreateDeclarationId(symbol)
-            ?? CallGraphTraversal.GetStableSymbolId(symbol);
-        var qualifiedId = assemblyIdentity?.Format(symbolId) ?? symbolId;
+        var qualifiedId = assemblyIdentity?.FormatHandoff(symbol);
         foreach (var location in symbol.Locations.Where(l => l.IsInSource))
         {
             var lineSpan = location.GetLineSpan();
@@ -217,7 +220,16 @@ internal static class FindSymbolTool
                 ? PathNormalizer.ToRelative(outputRoot, sourcePath)
                 : Path.GetFullPath(sourcePath);
             var line = lineSpan.StartLinePosition.Line + 1;
-            yield return new SymbolLocationEntry(displayPath, line, kindLabel, symbol.ToDisplayString(), qualifiedId);
+            yield return new SymbolLocationEntry(
+                displayPath,
+                line,
+                kindLabel,
+                symbol.ToDisplayString(),
+                qualifiedId,
+                Handoff: qualifiedId is not null,
+                TargetPath: assemblyIdentity?.CanonicalPath,
+                Snapshot: assemblyIdentity?.ContentHash,
+                AllowedFollowUpTools: qualifiedId is null ? [] : HandoffFollowUpTools.For(symbol));
         }
     }
 
@@ -226,7 +238,7 @@ internal static class FindSymbolTool
         var origin = entry.Origin is null
             ? string.Empty
             : $" [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
-        var id = entry.Id is null ? string.Empty : $" id: `{entry.Id}`";
+        var id = entry.Handoff && entry.Id is not null ? $" id: `{entry.Id}`" : " handoff=false";
         return $"{entry.FilePath}:{entry.Line} - {entry.Kind}: {entry.Name}{id}{origin}";
     }
 
@@ -237,12 +249,22 @@ internal static class FindSymbolTool
 /// </summary>
 internal sealed record FindSymbolBatchDto(
     IReadOnlyList<FindSymbolPatternResultDto> Results,
-    AssemblyNavigationSummary? Navigation = null);
+    AssemblyNavigationSummary? Navigation = null,
+    int TotalCount = 0,
+    int ReturnedCount = 0,
+    bool IsTruncated = false,
+    IReadOnlyList<string>? TruncatedBy = null);
 
 /// <summary>
 /// Ein Einzelergebnis für ein angefragtes Namens-Muster in <c>find_symbol</c>.
 /// </summary>
-internal sealed record FindSymbolPatternResultDto(string NamePattern, IReadOnlyList<SymbolLocationEntry> Matches);
+internal sealed record FindSymbolPatternResultDto(
+    string NamePattern,
+    IReadOnlyList<SymbolLocationEntry> Matches,
+    int TotalCount = 0,
+    int ReturnedCount = 0,
+    bool IsTruncated = false,
+    IReadOnlyList<string>? TruncatedBy = null);
 
 /// <summary>
 /// StructuredContent-Eintrag fuer <c>find_symbol</c> — eine Quell-Fundstelle eines Symbols
@@ -256,4 +278,8 @@ internal sealed record SymbolLocationEntry(
     string Kind,
     string Name,
     string? Id = null,
-    AssemblyNavigationOrigin? Origin = null);
+    AssemblyNavigationOrigin? Origin = null,
+    bool Handoff = false,
+    string? TargetPath = null,
+    string? Snapshot = null,
+    IReadOnlyList<string>? AllowedFollowUpTools = null);

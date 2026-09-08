@@ -10,10 +10,10 @@ namespace AiNetLinter.Mcp.Tools.Analysis;
 internal sealed record SearchPatternToolArguments(
     string? Pattern,
     bool? IsRegex = null,
-    int MaxResults = 50,
+    int MaxResults = SearchPatternTool.DefaultMaxResults,
     int MaxFiles = 0,
     int ContextLines = 0,
-    int MaxResponseBytes = 0,
+    int MaxResponseBytes = SearchPatternTool.DefaultMaxResponseBytes,
     string? Scope = null,
     string[]? IncludePatterns = null,
     string[]? ExcludePatterns = null,
@@ -24,10 +24,10 @@ internal sealed record SearchPatternScannerParameters(
     Solution Solution,
     string Pattern,
     bool? IsRegex = null,
-    int MaxResults = 50,
+    int MaxResults = SearchPatternTool.DefaultMaxResults,
     int MaxFiles = 0,
     int ContextLines = 0,
-    int MaxResponseBytes = 0,
+    int MaxResponseBytes = SearchPatternTool.DefaultMaxResponseBytes,
     string? Scope = null,
     IReadOnlyList<string>? IncludePatterns = null,
     IReadOnlyList<string>? ExcludePatterns = null,
@@ -112,7 +112,9 @@ internal sealed record SearchPatternCompletenessOptions(
     int SkippedUnreadable,
     int EnumerationErrors,
     bool RegexTimedOut,
-    bool CancellationRequested);
+    bool CancellationRequested,
+    int ProductionMatchedFileCount = 0,
+    int TestMatchedFileCount = 0);
 
 internal sealed record SearchPatternTruncationOptions(
     int TotalLines,
@@ -183,7 +185,10 @@ internal sealed record SearchPatternPayload(
     IReadOnlyList<SearchPatternMatch> Matches,
     SearchPatternCompleteness Completeness,
     SearchPatternScopeMetadata Scope,
-    SearchPatternSnapshotMetadata Snapshot);
+    SearchPatternSnapshotMetadata Snapshot,
+    SearchPatternNext Next);
+
+internal sealed record SearchPatternNext(string Kind, string Action);
 
 internal sealed record SearchPatternMatch(
     string FilePath,
@@ -214,7 +219,11 @@ internal sealed record SearchPatternCompleteness(
     int SkippedUnreadableFileCount,
     int EnumerationErrorCount,
     bool CancellationRequested,
-    bool RegexTimedOut);
+    bool RegexTimedOut,
+    int ProductionMatchedFileCount = 0,
+    int TestMatchedFileCount = 0,
+    int TotalCount = 0,
+    int ReturnedCount = 0);
 
 internal sealed record SearchPatternScopeMetadata(
     string SolutionRoot,

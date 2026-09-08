@@ -18,7 +18,6 @@ internal static class OverviewTestServers
             Catalog = null,
             Console = LinterConsole.Instance,
             Config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
-            UsedDefaultConfig = false,
             LoadFunc = token =>
             {
                 var pending = new TaskCompletionSource<SourceFileCatalog?>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -33,7 +32,6 @@ internal static class OverviewTestServers
             Catalog = null,
             Console = console,
             Config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
-            UsedDefaultConfig = false,
             LoadFunc = _ => Task.FromException<SourceFileCatalog?>(new InvalidOperationException("Simulierter Kalt-Load-Fehler")),
         });
 }

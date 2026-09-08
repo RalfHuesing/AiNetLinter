@@ -42,7 +42,7 @@ internal static class GetFileSkeletonTool
 
         try
         {
-            return await RenderFileSkeletonsAsync(solution, paths, state.AssemblySymbolIdentity, ct);
+            return await RenderFileSkeletonsAsync(solution, paths, state.HandoffSymbolIdentity, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

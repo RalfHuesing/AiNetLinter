@@ -35,6 +35,7 @@ internal static class GetCallTreeTool
     /// verwendet einen defensiven try/catch; ein Sufficiency-Hinweis erscheint nur fuer
     /// nicht-trunkierte Ergebnisse.
     /// </summary>
+    // ainetlinter-disable MaxMethodLineCount — Projekt- und Assembly-Aufloesung teilen bewusst denselben Toolvertrag.
     internal static async Task<CallToolResult> ExecuteAsync(
         ISolutionStateProvider state, GetCallTreeInput input, CancellationToken ct)
     {
@@ -42,12 +43,12 @@ internal static class GetCallTreeTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var symbolIdentifier = input.EffectiveSymbolIdentifier;
+        var symbolIdentifier = input.SymbolIdentifier;
         if (string.IsNullOrEmpty(symbolIdentifier))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifier' (oder 'symbol') fehlt oder ist leer.",
+                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
                 hint: McpToolResults.SymbolIdentifierHint);
         }
 
@@ -65,12 +66,20 @@ internal static class GetCallTreeTool
                 solution,
                 symbolIdentifier,
                 ct,
-                state.AssemblySymbolIdentity);
+                state.HandoffSymbolIdentity);
             if (error is not null) return error;
 
             var topN = input.TopN < 1 ? 1 : input.TopN;
             var (root, truncated) = await CallGraphTreeBuilder.BuildTreeAsync(
-                new CallTreeBuildRequest(solution, symbol!, input.Depth, topN, direction, state.AssemblySymbolIdentity is not null, input.IncludeBcl),
+                new CallTreeBuildRequest(
+                    solution,
+                    symbol!,
+                    input.Depth,
+                    topN,
+                    direction,
+                    state.AssemblySymbolIdentity is not null,
+                    input.IncludeBcl,
+                    state.HandoffSymbolIdentity),
                 ct);
 
             var body = RenderTree(root, input.Format, topN);

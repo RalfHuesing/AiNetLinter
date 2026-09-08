@@ -48,6 +48,10 @@ internal static class GetFileTreeInputValidator
         {
             return Invalid($"maxResults muss zwischen 1 und {GetFileTreeTool.MaxResultsCap} liegen.");
         }
+        if (input.MaxResponseBytes is < 1 or > GetFileTreeTool.MaxResponseBytesCap)
+        {
+            return Invalid($"maxResponseBytes muss zwischen 1 und {GetFileTreeTool.MaxResponseBytesCap} liegen.");
+        }
 
         var extensionError = ValidateExtensions(input.IncludeExtensions);
         if (extensionError is not null) return extensionError;

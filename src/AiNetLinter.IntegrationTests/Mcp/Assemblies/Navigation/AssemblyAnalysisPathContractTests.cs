@@ -101,7 +101,10 @@ public sealed class AssemblyAnalysisPathContractTests
         using var lease = leaseResult.Lease!;
         var method = Assert.Single(
             lease.Context.Compilation.GetTypeByMetadataName("Probe.Document")!.GetMembers("Read").OfType<IMethodSymbol>());
-        var methodId = new AnalysisSymbolIdentity(lease.Context.Origin.ContentHash, lease.Context.Generation)
+        var methodId = AnalysisSymbolIdentity.ForAssembly(
+                lease.CanonicalPath,
+                lease.Context.Origin.ContentHash,
+                lease.Context.Generation)
             .Format(DocumentationCommentId.CreateDeclarationId(method))!;
 
         var result = await DispatchAsync(
@@ -111,6 +114,7 @@ public sealed class AssemblyAnalysisPathContractTests
 
         Assert.NotEqual(true, result.IsError);
         var payload = result.StructuredContent!.Value;
+        Assert.Equal("decompiledProject", payload.GetProperty("results")[0].GetProperty("contentMode").GetString());
         Assert.Equal("decompiledProject", payload.GetProperty("results")[0].GetProperty("contentMode").GetString());
         Assert.Equal("decompiledProject", payload.GetProperty("analysis").GetProperty("contentMode").GetString());
     }
@@ -236,9 +240,12 @@ public sealed class AssemblyAnalysisPathContractTests
                 string.Equals(document.Name, "Document.cs", StringComparison.OrdinalIgnoreCase)));
         var type = lease.Context.Compilation.GetTypeByMetadataName("Probe.Document")!;
         var method = Assert.Single(type.GetMembers("Save").OfType<IMethodSymbol>());
-        var identity = new AnalysisSymbolIdentity(lease.Context.Origin.ContentHash, lease.Context.Generation);
-        var methodId = identity.Format(DocumentationCommentId.CreateDeclarationId(method))!;
-        var typeId = identity.Format(DocumentationCommentId.CreateDeclarationId(type))!;
+        var identity = AnalysisSymbolIdentity.ForAssembly(
+            lease.Context.Origin.CanonicalPath,
+            lease.Context.Origin.ContentHash,
+            lease.Context.Generation);
+        var methodId = identity.FormatHandoff(method)!;
+        var typeId = identity.FormatHandoff(type)!;
 
         var skeleton = await DispatchAsync(
             registry,
@@ -329,12 +336,12 @@ public sealed class AssemblyAnalysisPathContractTests
             new McpCodeGraphServerOptionsFromParameters(
                 null,
                 ReadOnlySolutionSnapshot: snapshot.Solution,
-                AssemblySymbolIdentity: new AnalysisSymbolIdentity(contentHash, 1))));
-        Assert.Equal(new AnalysisSymbolIdentity(contentHash, 1), server.AssemblySymbolIdentity);
+                 AssemblySymbolIdentity: AnalysisSymbolIdentity.ForAssembly(assemblyPath, contentHash, 1))));
+        Assert.Equal(AnalysisSymbolIdentity.ForAssembly(assemblyPath, contentHash, 1), server.AssemblySymbolIdentity);
         var method = Assert.Single(
             snapshot.Compilation.GetTypeByMetadataName("Probe.Document")!.GetMembers("Save").OfType<IMethodSymbol>());
-        var methodId = new AnalysisSymbolIdentity(contentHash, 1)
-            .Format(DocumentationCommentId.CreateDeclarationId(method))!;
+        var methodId = AnalysisSymbolIdentity.ForAssembly(assemblyPath, contentHash, 1)
+            .FormatHandoff(method)!;
 
         var skeleton = await GetFileSkeletonTool.ExecuteAsync(server, ["Document.cs"], CancellationToken.None);
         Assert.NotEqual(true, skeleton.IsError);
@@ -355,11 +362,14 @@ public sealed class AssemblyAnalysisPathContractTests
             CancellationToken.None);
         Assert.NotEqual(true, dependencyGraph.IsError);
 
-        var foreignId = new AnalysisSymbolIdentity(new string('b', 64), 1)
-            .Format(DocumentationCommentId.CreateDeclarationId(method))!;
+        var foreignId = AnalysisSymbolIdentity.ForAssembly(
+                assemblyPath,
+                new string('b', 64),
+                1)
+            .FormatHandoff(method)!;
         var foreignResult = await GetSymbolBodyTool.ExecuteAsync(server, [foreignId], 80, CancellationToken.None);
         Assert.NotEqual(true, foreignResult.IsError);
-        Assert.Contains("aktuellen Assembly-Generation", Text(foreignResult), StringComparison.Ordinal);
+        Assert.Contains("STALE_SNAPSHOT", Text(foreignResult), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -384,8 +394,12 @@ public sealed class AssemblyAnalysisPathContractTests
         var converter = lease.Context.Compilation.GetTypeByMetadataName("Probe.Converter")!;
         var method = Assert.Single(converter.GetMembers("Convert").OfType<IMethodSymbol>(), symbol =>
             symbol.Parameters.Single().Type.SpecialType == SpecialType.System_String);
-        var methodId = new AnalysisSymbolIdentity(lease.Context.Origin.ContentHash, lease.Context.Generation)
-            .Format(DocumentationCommentId.CreateDeclarationId(method))!;
+        var methodId = AnalysisSymbolIdentity.ForAssembly(
+                lease.CanonicalPath,
+                lease.Context.Origin.ContentHash,
+                lease.Context.Generation)
+            .FormatHandoff(method)!;
+        Assert.True(AnalysisSymbolIdentity.TryParse(methodId, out _, out _), methodId);
 
         var result = await GetSymbolBodyTool.ExecuteAsync(lease, [methodId], 80, CancellationToken.None);
 
@@ -415,7 +429,10 @@ public sealed class AssemblyAnalysisPathContractTests
     {
         var declarationId = DocumentationCommentId.CreateDeclarationId(symbol);
         Assert.NotNull(declarationId);
-        var identity = new AnalysisSymbolIdentity(lease.Context.Origin.ContentHash, lease.Context.Generation);
+        var identity = AnalysisSymbolIdentity.ForAssembly(
+            lease.CanonicalPath,
+            lease.Context.Origin.ContentHash,
+            lease.Context.Generation);
         var result = await GetSymbolBodyTool.ExecuteAsync(
             lease,
             [identity.Format(declarationId!)!],

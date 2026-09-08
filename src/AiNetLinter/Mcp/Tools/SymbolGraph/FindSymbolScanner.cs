@@ -43,6 +43,14 @@ internal static class FindSymbolScanner
         FindSymbolScanRequest request,
         CancellationToken ct = default)
     {
+        var result = await FindMatchesWithDetailsAsync(request, ct).ConfigureAwait(false);
+        return (result.Text, result.Entries);
+    }
+
+    internal static async Task<FindSymbolScanResult> FindMatchesWithDetailsAsync(
+        FindSymbolScanRequest request,
+        CancellationToken ct = default)
+    {
         var nameFilter = SymbolNameMatcher.CreateDeclarationNameFilter(request.NamePattern);
         var symbols = await SymbolFinder.FindSourceDeclarationsAsync(
             request.Solution,
@@ -59,38 +67,26 @@ internal static class FindSymbolScanner
         if (filtered.Count == 0)
         {
             var missMessage = await FormatMissMessageAsync(request, nameMatches, ct).ConfigureAwait(false);
-            return (missMessage, Array.Empty<SymbolLocationEntry>());
+            return new FindSymbolScanResult(missMessage, Array.Empty<SymbolLocationEntry>(), 0, 0, false, []);
         }
 
         var outputRoot = Path.GetDirectoryName(request.Solution.FilePath) ?? string.Empty;
-        var collectedEntries = new List<SymbolLocationEntry>();
-        var hasMore = false;
-
-        foreach (var symbol in filtered)
-        {
-            foreach (var entry in FindSymbolTool.FormatSymbolLocationEntries(symbol, outputRoot, request.AssemblyIdentity))
-            {
-                if (collectedEntries.Count < request.MaxResults)
-                {
-                    collectedEntries.Add(entry);
-                }
-                else
-                {
-                    hasMore = true;
-                    break;
-                }
-            }
-
-            if (hasMore)
-            {
-                break;
-            }
-        }
-
-        var lines = collectedEntries.Select(FindSymbolTool.FormatEntry).ToList();
-        var totalMatches = hasMore ? request.MaxResults + 1 : collectedEntries.Count;
-        var text = McpTruncation.TruncateLines(lines, totalMatches, request.MaxResults);
-        return (text, collectedEntries);
+        var allEntries = filtered
+            .SelectMany(symbol => FindSymbolTool.FormatSymbolLocationEntries(symbol, outputRoot, request.AssemblyIdentity))
+            .ToList();
+        var collectedEntries = allEntries.Take(Math.Max(request.MaxResults, 1)).ToList();
+        var isTruncated = allEntries.Count > collectedEntries.Count;
+        var text = McpTruncation.TruncateLines(
+            collectedEntries.Select(FindSymbolTool.FormatEntry).ToList(),
+            allEntries.Count,
+            request.MaxResults);
+        return new FindSymbolScanResult(
+            text,
+            collectedEntries,
+            allEntries.Count,
+            collectedEntries.Count,
+            isTruncated,
+            isTruncated ? ["maxResults"] : []);
     }
 
     private static async Task<string> AppendMissHintAsync(
@@ -165,3 +161,11 @@ internal static class FindSymbolScanner
         return await AppendMissHintAsync(request.Solution, request.NamePattern, missBaseText, ct).ConfigureAwait(false);
     }
 }
+
+internal sealed record FindSymbolScanResult(
+    string Text,
+    IReadOnlyList<SymbolLocationEntry> Entries,
+    int TotalCount,
+    int ReturnedCount,
+    bool IsTruncated,
+    IReadOnlyList<string> TruncatedBy);

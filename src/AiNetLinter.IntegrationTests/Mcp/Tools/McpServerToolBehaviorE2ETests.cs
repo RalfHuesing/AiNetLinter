@@ -201,9 +201,10 @@ public sealed class McpServerToolBehaviorE2ETests
         Assert.Equal("ok", navigation.GetProperty("operationStatus").GetString());
         Assert.Equal("supported", navigation.GetProperty("capabilities").GetProperty("navigation").GetString());
         Assert.Equal("complete", navigation.GetProperty("completeness").GetString());
-        Assert.Equal(
-            navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString(),
-            navigation.GetProperty("target").GetProperty("fingerprint").GetString());
+        Assert.Equal("source-files", navigation.GetProperty("snapshot").GetProperty("kind").GetString());
+        Assert.NotEqual(
+            navigation.GetProperty("target").GetProperty("fingerprint").GetString(),
+            navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString());
         Assert.Contains(
             "userService",
             Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text,

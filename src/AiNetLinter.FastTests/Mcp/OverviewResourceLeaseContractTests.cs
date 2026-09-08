@@ -31,7 +31,6 @@ public sealed class OverviewResourceLeaseContractTests
             Catalog = null,
             Console = LinterConsole.Instance,
             Config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
-            UsedDefaultConfig = false,
             LoadFunc = _ => load.Task,
         });
         var factoryCalls = 0;

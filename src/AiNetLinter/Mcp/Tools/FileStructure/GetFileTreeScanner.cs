@@ -5,9 +5,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp;
 using AiNetLinter.Output;
 
 namespace AiNetLinter.Mcp.Tools.FileStructure;
@@ -127,6 +129,7 @@ internal sealed class FileTreeAccumulator
         AddDirectoryMatch(relativePath, sizeBytes);
     }
 
+    // ainetlinter-disable MaxCognitiveComplexity — die Budget- und Cursorpfade werden hier gemeinsam rekalkuliert.
     internal FileTreeScanResult Build(TreeWalkStats walkStats)
     {
         EnsureDirectory(_rootRelativePath);
@@ -135,7 +138,7 @@ internal sealed class FileTreeAccumulator
         var shownMatches = exposesFiles ? sortedMatches.Take(_input.MaxResults).ToList() : [];
         var directoryCandidates = BuildDirectoryCandidates();
         var directoriesTruncated = directoryCandidates.Count > _input.MaxResults;
-        var directories = directoriesTruncated
+        var visibleDirectories = directoriesTruncated
             ? directoryCandidates.Take(_input.MaxResults).ToArray()
             : directoryCandidates;
         var truncationReasons = BuildTruncationReasons(
@@ -144,7 +147,61 @@ internal sealed class FileTreeAccumulator
             exposesFiles,
             directoriesTruncated);
         var warnings = walkStats.Warnings.Concat(_warnings).Distinct(StringComparer.Ordinal).Take(50).ToArray();
-        var payload = new FileTreePayload(
+        var next = CreateNext(truncationReasons);
+        var payload = CreatePayload(
+            shownMatches,
+            visibleDirectories,
+            sortedMatches,
+            truncationReasons,
+            warnings,
+            walkStats,
+            next);
+
+        if (_input.MaxResponseBytes > 0)
+        {
+            var responseTrimmed = false;
+            while (SerializedSize(payload) > _input.MaxResponseBytes && shownMatches.Count > 0)
+            {
+                shownMatches.RemoveAt(shownMatches.Count - 1);
+                responseTrimmed = true;
+                payload = CreatePayload(shownMatches, visibleDirectories, sortedMatches, truncationReasons, warnings, walkStats, next);
+            }
+
+            while (SerializedSize(payload) > _input.MaxResponseBytes && visibleDirectories.Count > 1)
+            {
+                var removeIndex = visibleDirectories.Count - 1;
+                if (visibleDirectories[removeIndex].Path.Equals(_rootRelativePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    removeIndex--;
+                }
+
+                if (removeIndex < 0) break;
+                visibleDirectories = visibleDirectories.Where((_, index) => index != removeIndex).ToArray();
+                responseTrimmed = true;
+                payload = CreatePayload(shownMatches, visibleDirectories, sortedMatches, truncationReasons, warnings, walkStats, next);
+            }
+
+            if (responseTrimmed)
+            {
+                truncationReasons = AddReason(truncationReasons, "maxResponseBytes").ToList();
+                next = CreateNext(truncationReasons);
+                payload = CreatePayload(shownMatches, visibleDirectories, sortedMatches, truncationReasons, warnings, walkStats, next);
+            }
+        }
+
+        return new FileTreeScanResult(payload, _displayTreeDepth);
+    }
+
+    // ainetlinter-disable MaxMethodParameterCount — die Payload-Felder stammen aus einer einzigen Scan-Phase.
+    private FileTreePayload CreatePayload(
+        IReadOnlyList<FileTreeCandidate> shownMatches,
+        IReadOnlyList<FileTreeDirectoryEntry> directories,
+        IReadOnlyList<FileTreeCandidate> sortedMatches,
+        IReadOnlyList<string> truncationReasons,
+        IReadOnlyList<string> warnings,
+        TreeWalkStats walkStats,
+        FileTreeNext next) =>
+        new(
             Root: NormalizeRoot(_input.Root),
             EffectiveRoot: NormalizePath(_effectiveRoot),
             View: _input.View.ToLowerInvariant(),
@@ -158,16 +215,33 @@ internal sealed class FileTreeAccumulator
             Directories: directories,
             Files: shownMatches.Select(ToFileEntry).ToArray(),
             Completeness: new FileTreeCompleteness(
-                ScanCompleted: !walkStats.CancellationRequested && walkStats.InaccessibleSubtreeCount == 0 && warnings.Length == 0,
+                ScanCompleted: !walkStats.CancellationRequested && walkStats.InaccessibleSubtreeCount == 0 && warnings.Count == 0,
                 Truncated: truncationReasons.Count > 0,
                 TruncatedBy: truncationReasons,
                 ShownFileCount: shownMatches.Count,
                 InaccessibleSubtreeCount: walkStats.InaccessibleSubtreeCount,
                 SkippedExcludedDirectoryCount: walkStats.SkippedExcludedDirectoryCount,
                 SkippedReparsePointCount: walkStats.SkippedReparsePointCount,
-                Warnings: warnings));
-        return new FileTreeScanResult(payload, _displayTreeDepth);
-    }
+                Warnings: warnings,
+                ReturnedDirectoryCount: directories.Count),
+            Next: next);
+
+    private static int SerializedSize(FileTreePayload payload) =>
+        JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length;
+
+    private static IReadOnlyList<string> AddReason(IReadOnlyList<string> reasons, string reason) =>
+        reasons.Contains(reason, StringComparer.Ordinal)
+            ? reasons
+            : reasons.Concat([reason]).ToArray();
+
+    private static FileTreeNext CreateNext(IReadOnlyList<string> reasons) =>
+        reasons.Count == 0
+            ? new("none", "Kein weiterer Schritt erforderlich.")
+            : reasons.Contains("inaccessibleSubtree", StringComparer.Ordinal)
+                ? new("refine_scope", "Einen erreichbaren root oder ein engeres fileFilter angeben und erneut prüfen.")
+                : reasons.Contains("maxDepth", StringComparer.Ordinal)
+                    ? new("refine_scope", "treeDepth oder maxDepth gezielt erhöhen.")
+                    : new("refine_scope", "root/fileFilter verfeinern oder maxResults/maxResponseBytes erhöhen.");
 
     private List<string> BuildTruncationReasons(
         TreeWalkStats stats,

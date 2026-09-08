@@ -62,6 +62,7 @@ internal sealed class TreeBuildState
         TopN = request.TopN;
         Direction = request.Direction;
         IncludeBcl = request.IncludeBcl;
+        HandoffIdentity = request.HandoffIdentity;
         Root = new CallTreeBuilderNode(request.SeedSymbol, CallGraphTraversal.FormatSymbolName(request.SeedSymbol), CallGraphTreeBuilder.FormatRootDisplay(request.SeedSymbol, request.Solution));
         _visited = new HashSet<(ISymbol Symbol, CallTreeDirection Direction)>(
             new DirectionAwareSymbolComparer())
@@ -77,6 +78,7 @@ internal sealed class TreeBuildState
     internal int TopN { get; }
     internal CallTreeDirection Direction { get; }
     internal bool IncludeBcl { get; }
+    internal AnalysisSymbolIdentity? HandoffIdentity { get; }
     internal bool AbsolutePaths { get; private set; }
     internal CallTreeBuilderNode Root { get; private set; }
     internal int NodeCount { get; set; }

@@ -1,4 +1,5 @@
 #nullable enable
+// ainetlinter-disable MaxLineCount — die Envelope-Rekalkulation hält die wire-budget-relevanten Projektionen zusammen.
 
 using System;
 using System.Collections.Generic;
@@ -37,6 +38,7 @@ internal static class AssemblyAnalysisResponseEnvelope
             RecalculateKnownCollectionEnvelope(obj, "namespaces", cursorOffset);
             RecalculateGenericCollectionEnvelopes(obj, cursorOffset);
             SyncCompositeEnvelope(obj);
+            SyncNavigationProjection(obj);
         }
         else if (node is JsonArray array)
         {
@@ -143,7 +145,10 @@ internal static class AssemblyAnalysisResponseEnvelope
         obj["totalDirectoryCount"] = total;
         obj["returnedDirectoryCount"] = returned;
         obj["directoriesTruncated"] = truncated;
-        obj["directoriesTruncatedBy"] = CreateDirectoryReasons(obj, truncated);
+        obj["directoriesTruncatedBy"] = CreateReasons(
+            truncated,
+            obj["directoriesTruncatedBy"],
+            (obj["completeness"] as JsonObject)?["directoryTruncatedBy"]);
         obj["directoriesContinuationToken"] = truncated
             ? AssemblyPaging.CreateToken(Math.Max(0, offset) + returned)
             : null;
@@ -249,7 +254,10 @@ internal static class AssemblyAnalysisResponseEnvelope
         completeness["totalDirectoryCount"] = total;
         completeness["shownDirectoryCount"] = returned;
         completeness["directoryTruncated"] = truncated;
-        completeness["directoryTruncatedBy"] = CreateDirectoryReasons(obj, truncated);
+        completeness["directoryTruncatedBy"] = CreateReasons(
+            truncated,
+            obj["directoriesTruncatedBy"],
+            completeness["directoryTruncatedBy"]);
         completeness["directoryContinuationToken"] = truncated
             ? AssemblyPaging.CreateToken(Math.Max(0, offset) + returned)
             : null;
@@ -258,13 +266,14 @@ internal static class AssemblyAnalysisResponseEnvelope
             : null;
     }
 
-    private static JsonArray CreateDirectoryReasons(JsonObject obj, bool responseBudgetTruncated)
+    private static JsonArray CreateReasons(
+        bool responseBudgetTruncated,
+        params JsonNode?[] sources)
     {
-        var reasons = MergeReasons(
-            obj["directoriesTruncatedBy"],
-            (obj["completeness"] as JsonObject)?["directoryTruncatedBy"]);
-        if (responseBudgetTruncated
-            && !reasons.Contains("responseBudget", StringComparer.Ordinal))
+        var reasons = sources.Aggregate(
+            new List<string>(),
+            (current, source) => MergeReasons(current, source));
+        if (responseBudgetTruncated && !reasons.Contains("responseBudget", StringComparer.Ordinal))
         {
             reasons.Add("responseBudget");
         }
@@ -321,11 +330,21 @@ internal static class AssemblyAnalysisResponseEnvelope
 
     private static void UpdateDiagnosticsEnvelope(JsonObject obj, int total, int returned, bool truncated, int offset)
     {
-        if (obj["diagnosticsSummary"] is not JsonObject summary) return;
-        summary["shownCount"] = returned;
-        summary["truncated"] = truncated;
-        if (truncated) AddReason(summary, "responseBudget");
-        SetContinuation(summary, returned, total, offset);
+        if (obj["diagnosticsSummary"] is JsonObject summary)
+        {
+            summary["shownCount"] = returned;
+            summary["truncated"] = truncated;
+            if (truncated) AddReason(summary, "responseBudget");
+            SetContinuation(summary, returned, total, offset);
+        }
+
+        if (obj["diagnosticTotalCount"] is null) return;
+        obj["diagnosticShownCount"] = returned;
+        obj["diagnosticsTruncated"] = truncated;
+        obj["diagnosticsTruncatedBy"] = CreateReasons(
+            truncated,
+            obj["diagnosticsTruncatedBy"],
+            obj["truncatedBy"]);
     }
     private static int GetReturnedBeforeTrim(JsonObject obj, string collectionName)
     {
@@ -390,7 +409,9 @@ internal static class AssemblyAnalysisResponseEnvelope
         obj["isTruncated"] = mergedTruncated;
         obj["truncated"] = mergedTruncated;
 
-        var reasons = MergeReasons(obj["truncatedBy"], analysis["truncatedBy"]);
+        var reasons = MergeReasons(
+            MergeReasons(new List<string>(), obj["truncatedBy"]),
+            analysis["truncatedBy"]);
         if (mergedTruncated && !reasons.Any()) reasons.Add("responseBudget");
         obj["truncatedBy"] = new JsonArray(reasons.Select(reason => JsonValue.Create(reason)).ToArray());
 
@@ -402,17 +423,63 @@ internal static class AssemblyAnalysisResponseEnvelope
         }
     }
 
+    // ainetlinter-disable MaxCyclomaticComplexity — die Synchronisierung bewahrt mehrere unabhängige Envelope-Felder atomar.
+    private static void SyncNavigationProjection(JsonObject obj)
+    {
+        if (obj["navigation"] is not JsonObject navigation
+            || obj["completeness"] is not JsonObject completeness) return;
+
+        foreach (var propertyName in new[]
+        {
+            "diagnostics", "diagnosticTotalCount", "diagnosticShownCount",
+            "diagnosticsTruncated", "diagnosticsTruncatedBy",
+        })
+        {
+            if (completeness[propertyName] is not null)
+            {
+                navigation[propertyName] = completeness[propertyName]!.DeepClone();
+            }
+        }
+
+        if (completeness["truncatedBy"] is not null)
+        {
+            navigation["truncatedBy"] = completeness["truncatedBy"]!.DeepClone();
+        }
+
+        var responseTruncated = GetBool(completeness, "truncated") == true
+            || GetBool(obj, "truncated") == true
+            || GetBool(obj, "isTruncated") == true;
+        if (responseTruncated
+            && navigation["completeness"] is JsonValue status
+            && status.TryGetValue<string>(out var currentStatus)
+            && string.Equals(currentStatus, "complete", StringComparison.Ordinal))
+        {
+            navigation["completeness"] = "truncated";
+        }
+
+        if (responseTruncated
+            && navigation["next"] is JsonObject next
+            && next["kind"] is JsonValue nextKind
+            && nextKind.TryGetValue<string>(out var kind)
+            && string.Equals(kind, "none", StringComparison.Ordinal))
+        {
+            navigation["next"] = new JsonObject
+            {
+                ["kind"] = "request_detail",
+                ["action"] = "Scope oder Detaillevel verfeinern und die Antwort gezielt wiederholen.",
+            };
+        }
+    }
+
     private static void CopyIfPresent(JsonObject target, JsonObject source, string name)
     {
         if (source[name] is not null) target[name] = source[name]!.DeepClone();
     }
 
-    private static List<string> MergeReasons(JsonNode? outer, JsonNode? inner)
+    private static List<string> MergeReasons(List<string> reasons, JsonNode? source)
     {
-        var reasons = new List<string>();
-        foreach (var source in new[] { outer, inner })
+        if (source is JsonArray values)
         {
-            if (source is not JsonArray values) continue;
             foreach (var value in values)
             {
                 if (value is JsonValue reason
@@ -484,7 +551,7 @@ internal static class AssemblyAnalysisResponseEnvelope
     }
 
     private static bool IsBudgetMetadata(string name) =>
-        name is "analysis" or "wireBudget" or "wireTruncated" or "truncatedBy";
+        name is "analysis" or "navigation" or "wireBudget" or "wireTruncated" or "truncatedBy";
 
     private static bool IsEnvelopeMetadata(string name) =>
         name.EndsWith("Envelope", StringComparison.Ordinal);

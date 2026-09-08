@@ -26,10 +26,10 @@ namespace AiNetLinter.FastTests.Mcp;
 public sealed class OverviewResourceRegistrationTests
 {
     [Fact]
-    public void BuildOverviewText_DefaultRules_MentionsDefaultRules()
+    public void BuildOverviewText_NoConfig_ReportsNotConfigured()
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, UsedDefaultConfig: true, ResolvedConfigPath: null)));
+            new McpCodeGraphServerOptionsFromParameters(null, ResolvedConfigPath: null)));
         using var harness = OverviewSnapshotHarness.Create(state);
 
         var text = OverviewResourceRegistration.BuildOverviewText(harness.Snapshot);
@@ -45,13 +45,19 @@ public sealed class OverviewResourceRegistrationTests
     {
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(
-                null, UsedDefaultConfig: false, ResolvedConfigPath: @"C:\Projekt\ainetlinter-rules.json")));
+                null,
+                Config: new AiNetLinter.Configuration.Config
+                {
+                    Global = new AiNetLinter.Configuration.GlobalConfig(),
+                    Metrics = new AiNetLinter.Configuration.MetricsConfig(),
+                },
+                ResolvedConfigPath: @"C:\Projekt\ainetlinter-rules.json")));
         using var harness = OverviewSnapshotHarness.Create(state);
 
         var text = OverviewResourceRegistration.BuildOverviewText(harness.Snapshot);
 
         Assert.Contains(@"C:\Projekt\ainetlinter-rules.json", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("Default-Regeln", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("not_configured", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -92,7 +98,6 @@ public sealed class OverviewResourceRegistrationTests
                 Global = new AiNetLinter.Configuration.GlobalConfig(),
                 Metrics = new AiNetLinter.Configuration.MetricsConfig(),
             },
-            UsedDefaultConfig = false,
             LoadFunc = token =>
             {
                 var pending = new TaskCompletionSource<SourceFileCatalog?>(TaskCreationOptions.RunContinuationsAsynchronously);

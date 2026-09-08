@@ -59,6 +59,11 @@ internal static class MetricsTreeTool
         if (filterResult.Error is not null) return filterResult.Error;
 
         var query = new MetricsTreeQuery(args.Root, parsedMode.Value, args.Depth, args.TopN, filterResult.Regex);
+        if (query.Mode is MetricsTreeMode.ViolationDensity or MetricsTreeMode.Complexity
+            && state.GetConfigSnapshot().Config is null)
+        {
+            return McpToolResults.NotConfigured(solution.FilePath);
+        }
         var scan = await BuildTreeResultAsync(state, solution, query, ct);
         if (scan.Root is null)
         {
@@ -94,7 +99,7 @@ internal static class MetricsTreeTool
 
         var configSnapshot = state.GetConfigSnapshot();
         return await MetricsTreeRoslynScanner.BuildTreeResultAsync(
-            new MetricsTreeRoslynScanParameters(solution, configSnapshot.Config, state.Console, ct), query);
+            new MetricsTreeRoslynScanParameters(solution, state.GetConfigSnapshot().Config!, state.Console, ct), query);
     }
 
     private static (Regex? Regex, CallToolResult? Error) TryBuildFileFilter(string? fileFilter)

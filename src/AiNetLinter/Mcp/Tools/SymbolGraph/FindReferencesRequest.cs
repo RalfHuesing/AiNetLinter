@@ -5,9 +5,8 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 internal sealed record FindReferencesRequest(
     string? SymbolIdentifier,
     int MaxResults,
-    int Depth,
-    string? Symbol = null)
+    int Depth)
 {
     public string? EffectiveSymbolIdentifier =>
-        !string.IsNullOrWhiteSpace(SymbolIdentifier) ? SymbolIdentifier : Symbol;
+        string.IsNullOrWhiteSpace(SymbolIdentifier) ? null : SymbolIdentifier;
 }

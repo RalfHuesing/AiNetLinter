@@ -44,7 +44,8 @@ internal static class MetricsLookupTool
         try
         {
             var configSnapshot = state.GetConfigSnapshot();
-            return await RenderMetricsLookupsAsync(solution, configSnapshot.Config, identifiers, state.AssemblySymbolIdentity, ct);
+            if (configSnapshot.Config is null) return McpToolResults.NotConfigured(solution.FilePath);
+            return await RenderMetricsLookupsAsync(solution, configSnapshot.Config, identifiers, state.HandoffSymbolIdentity, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

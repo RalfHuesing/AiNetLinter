@@ -10,7 +10,8 @@ internal interface ISolutionStateProvider
 {
     Solution? GetCurrentSolution();
     AnalysisSymbolIdentity? AssemblySymbolIdentity { get; }
+    AnalysisSymbolIdentity? HandoffSymbolIdentity { get; }
     ServerLoadState LoadState { get; }
     ILintConsole Console { get; }
-    (ILinterEngineConfig Config, bool UsedDefaultConfig, string? ResolvedConfigPath) GetConfigSnapshot();
+    (ILinterEngineConfig? Config, string? ResolvedConfigPath) GetConfigSnapshot();
 }

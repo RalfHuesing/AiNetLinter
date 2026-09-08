@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
@@ -28,24 +29,22 @@ internal static class FindImplementationsTool
         ISolutionStateProvider state,
         string? symbolIdentifier,
         int maxResults = DefaultMaxResults,
-        CancellationToken ct = default,
-        string? symbol = null)
+        CancellationToken ct = default)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var effectiveIdentifier = !string.IsNullOrWhiteSpace(symbolIdentifier) ? symbolIdentifier : symbol;
-        if (string.IsNullOrEmpty(effectiveIdentifier))
+        if (string.IsNullOrWhiteSpace(symbolIdentifier))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifier' (oder 'symbol') fehlt oder ist leer.",
+                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
                 hint: "symbolIdentifier angeben: z. B. \"IProcessor\", \"IProcessor.Execute\" oder \"BaseClass.Run\".");
         }
 
         var (resolvedSymbol, error) = await FindReferencesTool.ResolveSymbolAsync(
-            solution, effectiveIdentifier, ct, state.AssemblySymbolIdentity);
+            solution, symbolIdentifier, ct, state.HandoffSymbolIdentity);
         if (error is not null) return error;
 
         var (rawSymbols, errorMessage) = await FindRawImplementationsAsync(resolvedSymbol!, solution, ct);
@@ -54,9 +53,15 @@ internal static class FindImplementationsTool
             return McpToolResults.InvalidArgument(errorMessage);
         }
 
-        var absolutePaths = state.AssemblySymbolIdentity is not null;
+        var absolutePaths = state.HandoffSymbolIdentity?.IsAssembly == true;
         var normalizedMax = maxResults < 1 ? 1 : maxResults;
-        var resultDto = BuildResultDto(resolvedSymbol!, rawSymbols ?? [], solution, normalizedMax, absolutePaths);
+        var resultDto = BuildResultDto(
+            resolvedSymbol!,
+            rawSymbols ?? [],
+            solution,
+            normalizedMax,
+            absolutePaths,
+            state.HandoffSymbolIdentity);
         var text = FormatResultText(resultDto);
         var finalText = resultDto.IsTruncated ? text : McpSufficiencyHints.Append(text);
 
@@ -139,10 +144,11 @@ internal static class FindImplementationsTool
         IReadOnlyList<ISymbol> symbols,
         Solution solution,
         int maxResults,
-        bool absolutePaths)
+        bool absolutePaths,
+        AnalysisSymbolIdentity? handoffIdentity)
     {
         var items = symbols
-            .Select(s => MapToDto(s, solution, absolutePaths))
+            .Select(s => MapToDto(s, solution, absolutePaths, handoffIdentity))
             .OrderBy(item => item.TypeName, StringComparer.Ordinal)
             .ThenBy(item => item.MemberName ?? string.Empty, StringComparer.Ordinal)
             .ToList();
@@ -161,11 +167,18 @@ internal static class FindImplementationsTool
             isTruncated ? ["maxResults"] : []);
     }
 
-    private static ImplementationItemDto MapToDto(ISymbol symbol, Solution solution, bool absolutePaths)
+    private static ImplementationItemDto MapToDto(
+        ISymbol symbol,
+        Solution solution,
+        bool absolutePaths,
+        AnalysisSymbolIdentity? handoffIdentity)
     {
         var (typeName, memberName, kind) = DescribeSymbol(symbol);
         var status = DetermineStatus(symbol);
         var displayLoc = FormatLocation(symbol, solution, absolutePaths, out var filePath, out var line, out var column);
+        var id = handoffIdentity is null ? null : CallGraphTraversal.GetStableSymbolId(symbol, handoffIdentity);
+        var handoff = id is not null;
+        displayLoc += handoff ? $" [handoff=true; id=`{id}`]" : " [handoff=false; followUpTools=[]]";
 
         return new ImplementationItemDto(
             typeName,
@@ -175,7 +188,12 @@ internal static class FindImplementationsTool
             filePath,
             line,
             column,
-            displayLoc);
+            displayLoc,
+            handoff,
+            id,
+            handoffIdentity?.CanonicalPath,
+            handoffIdentity?.ContentHash,
+            handoff ? HandoffFollowUpTools.For(symbol) : []);
     }
 
     private static (string TypeName, string? MemberName, string Kind) DescribeSymbol(ISymbol symbol)
@@ -273,4 +291,5 @@ internal static class FindImplementationsTool
 
         return sb.ToString().TrimEnd();
     }
+
 }

@@ -122,7 +122,7 @@ public sealed class GetFeatureContextToolTests
     {
         using var scenario = CreateFullTestScenario();
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+            new McpCodeGraphServerOptionsFromParameters(null, Config: TestHelper.CreateDefaultConfig(), ReadOnlySolutionSnapshot: scenario.Solution)));
 
         var result = await GetFeatureContextTool.ExecuteAsync(state, new FeatureContextOptions("Calculator.Add"), CancellationToken.None);
 
@@ -181,7 +181,7 @@ public sealed class GetFeatureContextToolTests
     {
         using var scenario = CreateFullTestScenario();
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+            new McpCodeGraphServerOptionsFromParameters(null, Config: TestHelper.CreateDefaultConfig(), ReadOnlySolutionSnapshot: scenario.Solution)));
 
         var result = await GetFeatureContextTool.ExecuteAsync(
             state, new FeatureContextOptions(SymbolIdentifier: "Calculator.Add"), CancellationToken.None);
@@ -196,7 +196,7 @@ public sealed class GetFeatureContextToolTests
     {
         using var scenario = CreateFullTestScenario();
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+            new McpCodeGraphServerOptionsFromParameters(null, Config: TestHelper.CreateDefaultConfig(), ReadOnlySolutionSnapshot: scenario.Solution)));
 
         var result = await GetFeatureContextTool.ExecuteAsync(state, new FeatureContextOptions("Calculator"), CancellationToken.None);
 
@@ -224,10 +224,10 @@ public sealed class GetFeatureContextToolTests
     {
         using var scenario = CreateFullTestScenario();
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+            new McpCodeGraphServerOptionsFromParameters(null, Config: TestHelper.CreateDefaultConfig(), ReadOnlySolutionSnapshot: scenario.Solution)));
 
         var options = new FeatureContextOptions(
-            Symbol: "Calculator.Add",
+            SymbolIdentifier: "Calculator.Add",
             IncludeCallers: false,
             IncludeTests: false,
             IncludeMetrics: false,
@@ -263,10 +263,10 @@ public sealed class GetFeatureContextToolTests
     {
         using var scenario = CreateFullTestScenario();
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+            new McpCodeGraphServerOptionsFromParameters(null, Config: TestHelper.CreateDefaultConfig(), ReadOnlySolutionSnapshot: scenario.Solution)));
 
         var options = new FeatureContextOptions(
-            Symbol: "Calculator.Add",
+            SymbolIdentifier: "Calculator.Add",
             MaxCallers: 1
         );
 
@@ -308,7 +308,7 @@ public sealed class GetFeatureContextToolTests
     {
         using var scenario = CreateFullTestScenario();
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+            new McpCodeGraphServerOptionsFromParameters(null, Config: TestHelper.CreateDefaultConfig(), ReadOnlySolutionSnapshot: scenario.Solution)));
 
         var result = await GetFeatureContextTool.ExecuteAsync(
             state, new FeatureContextOptions("src/CoreLib/Calculator.cs:5"), CancellationToken.None);
@@ -337,7 +337,7 @@ public sealed class GetFeatureContextToolTests
     {
         using var scenario = CreateFullTestScenario();
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+            new McpCodeGraphServerOptionsFromParameters(null, Config: TestHelper.CreateDefaultConfig(), ReadOnlySolutionSnapshot: scenario.Solution)));
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
@@ -386,7 +386,7 @@ public sealed class GetFeatureContextToolTests
     {
         using var scenario = CreateFullTestScenario();
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+            new McpCodeGraphServerOptionsFromParameters(null, Config: TestHelper.CreateDefaultConfig(), ReadOnlySolutionSnapshot: scenario.Solution)));
 
         var result = await GetFeatureContextTool.ExecuteAsync(
             state,

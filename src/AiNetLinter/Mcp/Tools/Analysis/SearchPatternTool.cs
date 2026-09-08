@@ -10,6 +10,11 @@ namespace AiNetLinter.Mcp.Tools.Analysis;
 
 internal static class SearchPatternTool
 {
+    internal const int DefaultMaxResults = 20;
+    internal const int DefaultMaxResponseBytes = 8 * 1024;
+    internal const int MaxResultsCap = 2_000;
+    internal const int MaxResponseBytesCap = 64 * 1024;
+
     internal static Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
         string? pattern,
@@ -18,7 +23,7 @@ internal static class SearchPatternTool
         CancellationToken ct) =>
         ExecuteAsync(
             state,
-            new SearchPatternToolArguments(pattern, isRegex, maxResults, 0, 0, 0, null, null, null),
+            new SearchPatternToolArguments(pattern, isRegex, maxResults, 0, 0, DefaultMaxResponseBytes, null, null, null),
             ct);
 
     internal static async Task<CallToolResult> ExecuteAsync(
@@ -89,6 +94,30 @@ internal static class SearchPatternTool
         {
             return McpToolResults.InvalidArgument(
                 "maxFiles, contextLines und maxResponseBytes duerfen nicht negativ sein.");
+        }
+
+        if (arguments.MaxResults > MaxResultsCap)
+        {
+            return McpToolResults.InvalidArgument(
+                $"maxResults darf {MaxResultsCap} nicht überschreiten.",
+                fieldPath: "$.maxResults");
+        }
+
+        if (arguments.MaxResponseBytes > MaxResponseBytesCap)
+        {
+            return McpToolResults.InvalidArgument(
+                $"maxResponseBytes darf {MaxResponseBytesCap} nicht überschreiten.",
+                fieldPath: "$.maxResponseBytes");
+        }
+
+        if (!string.IsNullOrWhiteSpace(arguments.ScopeType)
+            && !arguments.ScopeType.Equals("all", StringComparison.OrdinalIgnoreCase)
+            && !arguments.ScopeType.Equals("production", StringComparison.OrdinalIgnoreCase)
+            && !arguments.ScopeType.Equals("tests", StringComparison.OrdinalIgnoreCase))
+        {
+            return McpToolResults.InvalidArgument(
+                "scopeType muss all, production oder tests sein.",
+                fieldPath: "$.scopeType");
         }
 
         return null;

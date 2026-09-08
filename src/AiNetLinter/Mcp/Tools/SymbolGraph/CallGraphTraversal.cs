@@ -109,17 +109,24 @@ internal static class CallGraphTraversal
     {
         var location = referenceLocation.Location;
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
-        var filePath = assemblyIdentity is null
+        var filePath = assemblyIdentity is null || !assemblyIdentity.IsAssembly
             ? PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath)
             : Path.GetFullPath(location.SourceTree!.FilePath);
         var line = location.GetLineSpan().StartLinePosition.Line + 1;
+        var handoffId = assemblyIdentity?.FormatHandoff(reference.Definition);
+        var handoff = handoffId is not null;
         return new TransitiveCallSiteEntry(
             filePath,
             line,
             FormatSymbolName(reference.Definition),
             referenceLocation.Document.Project.Name,
             depth,
-            GetStableSymbolId(reachedFromSymbol, assemblyIdentity));
+            FormatReachedFromSymbolId(reachedFromSymbol, assemblyIdentity),
+            Handoff: handoff,
+            Id: handoffId,
+            TargetPath: handoff ? assemblyIdentity!.CanonicalPath : null,
+            Snapshot: handoff ? assemblyIdentity!.ContentHash : null,
+            AllowedFollowUpTools: handoff ? HandoffFollowUpTools.For(reference.Definition) : []);
     }
 
     /// <summary>
@@ -227,6 +234,19 @@ internal static class CallGraphTraversal
         }
 
         return formatted;
+    }
+
+    private static string FormatReachedFromSymbolId(
+        ISymbol symbol,
+        AnalysisSymbolIdentity? assemblyIdentity)
+    {
+        if (assemblyIdentity is not null)
+        {
+            return assemblyIdentity.FormatHandoff(symbol) ?? string.Empty;
+        }
+
+        return DocumentationCommentId.CreateDeclarationId(symbol)
+            ?? GetStableSymbolId(symbol);
     }
 
     private static string DescribeAnonymousMethod(ISymbol symbol)

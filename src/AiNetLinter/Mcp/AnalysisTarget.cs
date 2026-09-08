@@ -59,6 +59,14 @@ internal sealed record AnalysisTarget(
 
     internal string Fingerprint { get; init; } = string.Empty;
 
+    // The target fingerprint identifies the requested file. The analysis snapshot is populated
+    // only after a project/assembly lease has produced an actual analysis result.
+    internal string? AnalysisSnapshotFingerprint { get; init; }
+
+    internal string AnalysisSnapshotKind { get; init; } = "target-file";
+
+    internal bool AnalysisSnapshotFresh { get; init; }
+
     internal string? RulesPath { get; init; }
 
     internal AnalysisTargetCapabilities Capabilities { get; init; } =

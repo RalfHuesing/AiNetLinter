@@ -167,11 +167,6 @@ internal static class SymbolIdentifierResolver
             return (null, null);
         }
 
-        if (expectedAssemblyIdentity is not null && !isAssemblyId)
-        {
-            return (null, StaleAssemblyId(stableId));
-        }
-
         var assemblyCandidates = isAssemblyId ? new List<ISymbol>() : null;
         var exactMatch = await FindExactStableIdAsync(solution, stableId, ct, assemblyCandidates);
         if (exactMatch is not null) return (exactMatch, null);
@@ -303,31 +298,44 @@ internal static class SymbolIdentifierResolver
         normalizedId = value;
         isAssemblyId = false;
         error = null;
-        if (!value.StartsWith(AnalysisSymbolIdentity.Prefix, StringComparison.Ordinal))
+        var isHandoffId = value.StartsWith(AnalysisSymbolIdentity.AssemblyPrefix, StringComparison.Ordinal)
+            || value.StartsWith(AnalysisSymbolIdentity.SourcePrefix, StringComparison.Ordinal);
+        if (!isHandoffId)
         {
-            isAssemblyId = expectedIdentity is not null && HasKnownDocumentationCommentIdPrefix(value);
+            // Unpräfixte Werte bleiben direkte fachliche Suchanfragen. Sie werden niemals als
+            // Handoff ausgegeben; nur source:/assembly:-Werte durchlaufen die gebundene ID-Prüfung.
+            isAssemblyId = false;
             return true;
         }
 
-        isAssemblyId = true;
+        isAssemblyId = value.StartsWith(AnalysisSymbolIdentity.AssemblyPrefix, StringComparison.Ordinal);
         if (!AnalysisSymbolIdentity.TryParse(value, out var providedIdentity, out var unwrappedId)
-            || providedIdentity is null
-            || expectedIdentity is null
-            || !expectedIdentity.Matches(providedIdentity))
+            || providedIdentity is null)
         {
-            error = StaleAssemblyId(value);
+            error = McpToolResults.InvalidArgument(
+                $"Die Handoff-ID '{value}' ist nicht kanonisch.",
+                hint: "Eine ID aus dem StructuredContent des aktuellen find_symbol-Ergebnisses kopieren.",
+                fieldPath: "$.symbolIdentifier");
+            return false;
+        }
+
+        if (expectedIdentity is null || expectedIdentity.IsAssembly != providedIdentity.IsAssembly ||
+            (!string.IsNullOrEmpty(providedIdentity.CanonicalPath) &&
+             !string.Equals(expectedIdentity.CanonicalPath, providedIdentity.CanonicalPath, StringComparison.OrdinalIgnoreCase)))
+        {
+            error = McpToolResults.TargetMismatch(value);
+            return false;
+        }
+
+        if (!string.Equals(expectedIdentity.ContentHash, providedIdentity.ContentHash, StringComparison.OrdinalIgnoreCase))
+        {
+            error = McpToolResults.StaleSnapshot(value);
             return false;
         }
 
         normalizedId = unwrappedId;
         return true;
     }
-
-    private static CallToolResult StaleAssemblyId(string identifier) =>
-        McpToolResults.Recoverable(
-            LinterErrorCodes.InvalidArgument,
-            $"Die Assembly-Symbol-ID '{identifier}' gehört nicht zur aktuellen Assembly-Generation.",
-            hint: "Eine aktuelle assembly:<sha256>:<generation>:<symbolId>-ID aus dem Assembly-Ziel verwenden.");
 
     internal static bool HasKnownDocumentationCommentIdPrefix(string id)
     {

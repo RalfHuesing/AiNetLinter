@@ -54,7 +54,6 @@ internal sealed class McpCodeGraphServer : ISolutionStateProvider, IDisposable, 
         _console = options.Console;
         MaxLineCount = options.MaxLineCount;
         Config = options.Config;
-        UsedDefaultConfig = options.UsedDefaultConfig;
         ResolvedConfigPath = options.ResolvedConfigPath;
         _assemblySymbolIdentity = options.AssemblySymbolIdentity;
         if (options.ReadOnlySolutionSnapshot is not null && (options.Catalog is not null || options.LoadFunc is not null))
@@ -107,19 +106,15 @@ internal sealed class McpCodeGraphServer : ISolutionStateProvider, IDisposable, 
     /// <summary>Zeilen-Grenzwert aus <c>ainetlinter-rules.json</c> bzw. <see cref="MetricsConfig"/>-Default.</summary>
     public int MaxLineCount { get; }
 
-    /// <summary>Vollstaendige Linter-Konfiguration (aus <c>ainetlinter-rules.json</c> oder Default).
+    /// <summary>Vollstaendige Linter-Konfiguration fuer den residenten Projekt-Key.
     /// Privates Setter statt <see langword="init"/>, weil <see cref="ReloadConfig"/> diese zur
     /// Laufzeit austauscht (<c>reload_config</c>-Tool). Isolierter Zugriff auf NUR dieses
-    /// Property ist unkritisch; zusammen mit <see cref="UsedDefaultConfig"/>/<see cref="ResolvedConfigPath"/>
+    /// Property ist unkritisch; zusammen mit <see cref="ResolvedConfigPath"/>
     /// immer <see cref="GetConfigSnapshot"/> nutzen (Begruendung dort).</summary>
-    public ILinterEngineConfig Config { get; private set; }
-
-    /// <summary>True, wenn der Server mit der Config-Default-Konfiguration laeuft (kein <c>ainetlinter-rules.json</c> gefunden).
-    /// Kombinierte Lesezugriffe: siehe <see cref="GetConfigSnapshot"/>.</summary>
-    public bool UsedDefaultConfig { get; private set; }
+    public ILinterEngineConfig? Config { get; private set; }
 
     /// <summary>Pfad der tatsaechlich geladenen <c>ainetlinter-rules.json</c>, oder <see langword="null"/> wenn
-    /// <see cref="UsedDefaultConfig"/> <see langword="true"/> ist. Kombinierte Lesezugriffe: siehe
+    /// <see cref="ResolvedConfigPath"/> <see langword="null"/> ist. Kombinierte Lesezugriffe: siehe
     /// <see cref="GetConfigSnapshot"/>.</summary>
     public string? ResolvedConfigPath { get; private set; }
 
@@ -128,6 +123,23 @@ internal sealed class McpCodeGraphServer : ISolutionStateProvider, IDisposable, 
 
     internal AnalysisSymbolIdentity? AssemblySymbolIdentity => _assemblySymbolIdentity;
     AnalysisSymbolIdentity? ISolutionStateProvider.AssemblySymbolIdentity => AssemblySymbolIdentity;
+
+    internal AnalysisSymbolIdentity? HandoffSymbolIdentity => GetHandoffSymbolIdentity();
+    AnalysisSymbolIdentity? ISolutionStateProvider.HandoffSymbolIdentity => HandoffSymbolIdentity;
+
+    private AnalysisSymbolIdentity? GetHandoffSymbolIdentity()
+    {
+        lock (_lock)
+        {
+            if (_assemblySymbolIdentity is not null) return _assemblySymbolIdentity;
+            if (_catalog?.Solution.FilePath is not { Length: > 0 } solutionPath) return null;
+
+            var canonicalPath = Path.GetFullPath(solutionPath);
+            return AnalysisSymbolIdentity.ForSource(
+                canonicalPath,
+                AnalysisSymbolIdentity.CreateSourceSnapshotHash(canonicalPath, _fileState));
+        }
+    }
 
     /// <summary>Zeit seit Konstruktion dieser Instanz — Proxy fuer die Server-Uptime, verwendet von
     /// <c>get_server_health</c>.</summary>
@@ -194,12 +206,11 @@ internal sealed class McpCodeGraphServer : ISolutionStateProvider, IDisposable, 
     /// (der liest Config gar nicht), sondern damit Snapshot-Leser nie eine halb ausgetauschte
     /// Kombination der drei Felder sehen.
     /// </summary>
-    internal void ReloadConfig(ILinterEngineConfig newConfig, bool usedDefaultConfig, string? resolvedConfigPath)
+    internal void ReloadConfig(ILinterEngineConfig newConfig, string? resolvedConfigPath)
     {
         lock (_lock)
         {
             Config = newConfig;
-            UsedDefaultConfig = usedDefaultConfig;
             ResolvedConfigPath = resolvedConfigPath;
         }
     }
@@ -259,20 +270,20 @@ internal sealed class McpCodeGraphServer : ISolutionStateProvider, IDisposable, 
     }
 
     /// <summary>
-    /// Atomarer Schnappschuss von <see cref="Config"/>/<see cref="UsedDefaultConfig"/>/
+    /// Atomarer Schnappschuss von <see cref="Config"/>/
     /// <see cref="ResolvedConfigPath"/> unter <see cref="_lock"/>. Pflicht fuer jeden Aufrufer, der
     /// mehr als eines der drei Felder zusammen braucht — sonst kann ein gleichzeitiger
     /// <see cref="ReloadConfig"/>-Aufruf eine zerrissene Kombination liefern.
     /// </summary>
-    internal (ILinterEngineConfig Config, bool UsedDefaultConfig, string? ResolvedConfigPath) GetConfigSnapshot()
+    internal (ILinterEngineConfig? Config, string? ResolvedConfigPath) GetConfigSnapshot()
     {
         lock (_lock)
         {
-            return (Config, UsedDefaultConfig, ResolvedConfigPath);
+            return (Config, ResolvedConfigPath);
         }
     }
 
-    (ILinterEngineConfig Config, bool UsedDefaultConfig, string? ResolvedConfigPath)
+    (ILinterEngineConfig? Config, string? ResolvedConfigPath)
         ISolutionStateProvider.GetConfigSnapshot() => GetConfigSnapshot();
 
     /// <summary>Liefert die aktuelle <see cref="Solution"/> oder <see langword="null"/>, wenn der

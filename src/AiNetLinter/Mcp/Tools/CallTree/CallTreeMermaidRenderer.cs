@@ -56,7 +56,17 @@ internal static class CallTreeMermaidRenderer
         sb.AppendLine($"    {id}[\"{EscapeLabel(FormatLabel(node))}\"]");
     }
 
-    private static string FormatLabel(MetricsTreeNode node) => $"{node.Name} — {node.DisplayLine}";
+    private static string FormatLabel(MetricsTreeNode node)
+    {
+        var handoff = node.Id is not null
+            ? $"handoff=true; id={node.Id}"
+            : node.SymbolKind is not null
+                ? "handoff=false; followUpTools=[]"
+                : string.Empty;
+        return string.IsNullOrEmpty(handoff)
+            ? $"{node.Name} — {node.DisplayLine}"
+            : $"{node.Name} — {node.DisplayLine} [{handoff}]";
+    }
 
     // Mermaid-Labels in eckigen Klammern vertragen kein Anfuehrungszeichen/keinen Zeilenumbruch —
     // ersetzen statt escapen, damit der Flowchart-Block syntaktisch gueltig bleibt.

@@ -22,29 +22,28 @@ internal static class GetTypeHierarchyTool
     internal const int DefaultMaxResults = 50;
 
     internal static async Task<CallToolResult> ExecuteAsync(
-        ISolutionStateProvider state, string? symbolIdentifier, int maxResults, CancellationToken ct, string? symbol = null)
+        ISolutionStateProvider state, string? symbolIdentifier, int maxResults, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var effectiveIdentifier = !string.IsNullOrWhiteSpace(symbolIdentifier) ? symbolIdentifier : symbol;
-        if (string.IsNullOrEmpty(effectiveIdentifier))
+        if (string.IsNullOrEmpty(symbolIdentifier))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifier' (oder 'symbol') fehlt oder ist leer.",
+                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
                 hint: "symbolIdentifier angeben: \"T:Namespace.Klasse\", \"Datei.cs:10:5\" oder \"Klasse\".");
         }
 
         var (resolvedSymbol, error) = await FindReferencesTool.ResolveSymbolAsync(
-            solution, effectiveIdentifier, ct, state.AssemblySymbolIdentity);
+            solution, symbolIdentifier, ct, state.HandoffSymbolIdentity);
         if (error is not null) return error;
 
         if (resolvedSymbol is not INamedTypeSymbol type)
         {
             return McpToolResults.InvalidArgument(
-                $"'{effectiveIdentifier}' loest zu '{resolvedSymbol!.Kind}' auf, nicht zu einem Typ (Klasse/Interface/Struct).");
+                $"'{symbolIdentifier}' loest zu '{resolvedSymbol!.Kind}' auf, nicht zu einem Typ (Klasse/Interface/Struct).");
         }
 
         var normalizedMaxResults = maxResults < 1 ? 1 : maxResults;
@@ -53,7 +52,8 @@ internal static class GetTypeHierarchyTool
             solution,
             normalizedMaxResults,
             ct,
-            absolutePaths: state.AssemblySymbolIdentity is not null);
+            absolutePaths: state.AssemblySymbolIdentity is not null,
+            handoffIdentity: state.HandoffSymbolIdentity);
         var text = GetTypeHierarchyFormatter.FormatText(payload);
         // Basisklassen/Interfaces trunkieren nie (durch die Deklaration des Typs selbst begrenzt),
         // aber abgeleitete/implementierende Typen sind transitiv ueber die gesamte Solution

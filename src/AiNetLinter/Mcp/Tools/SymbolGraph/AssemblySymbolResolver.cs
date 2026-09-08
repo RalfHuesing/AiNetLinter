@@ -16,6 +16,7 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 
 internal static class AssemblySymbolResolver
 {
+    // ainetlinter-disable MaxMethodLineCount — die Resolver-Pipeline bildet Diagnose, Identity und Navigation in einem Ergebnis.
     internal static async Task<(AssemblySymbolTarget? Target, CallToolResult? Error, AssemblyNavigationSummary Navigation)> ResolveAsync(
         AssemblyAnalysisLease root,
         string identifier,
@@ -23,6 +24,31 @@ internal static class AssemblySymbolResolver
     {
         var leaseSet = AssemblyNavigationLeaseAccess.GetLeases(root);
         var leases = leaseSet.Leases;
+        if (AnalysisSymbolIdentity.TryParse(identifier, out var providedIdentity, out _)
+            && providedIdentity is not null)
+        {
+            var exactTarget = leases.Any(lease =>
+                string.Equals(
+                    AssemblyNavigationLeaseAccess.CreateView(lease).CanonicalPath,
+                    providedIdentity.CanonicalPath,
+                    StringComparison.OrdinalIgnoreCase));
+            var exactSnapshot = leases.Any(lease =>
+                AssemblyNavigationSupport.MatchesLeaseIdentity(identifier, AssemblyNavigationLeaseAccess.CreateView(lease).Identity));
+            if (!string.IsNullOrEmpty(providedIdentity.CanonicalPath) && !exactTarget)
+            {
+                return (null, McpToolResults.TargetMismatch(identifier),
+                    AssemblyNavigationSupport.CreateSummary(new AssemblyNavigationSummaryRequest(
+                        leaseSet.TotalAssemblyCount, leases.Count, leaseSet.AssembliesTruncated, Array.Empty<string>())));
+            }
+
+            if (!exactSnapshot)
+            {
+                return (null, McpToolResults.StaleSnapshot(identifier),
+                    AssemblyNavigationSupport.CreateSummary(new AssemblyNavigationSummaryRequest(
+                        leaseSet.TotalAssemblyCount, leases.Count, leaseSet.AssembliesTruncated, Array.Empty<string>())));
+            }
+        }
+
         var diagnostics = AssemblyNavigationSupport.CreateExpansionDiagnostics(
             AssemblyNavigationLeaseAccess.CreateView(root));
         var candidates = await ResolveCandidatesAsync(

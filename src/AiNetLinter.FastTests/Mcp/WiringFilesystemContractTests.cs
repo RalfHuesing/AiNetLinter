@@ -69,7 +69,7 @@ public sealed class WiringFilesystemContractTests
             lease => AssertFilesystemCallback(lease, ServerLoadState.Loading, solutionPath));
 
         Assert.NotEqual(true, result.IsError);
-        Assert.Equal("physisch", TextOf(result));
+        Assert.StartsWith("physisch", TextOf(result), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public sealed class WiringFilesystemContractTests
             lease => AssertFilesystemCallback(lease, ServerLoadState.LoadFailed));
 
         Assert.NotEqual(true, result.IsError);
-        Assert.Equal("physisch", TextOf(result));
+        Assert.StartsWith("physisch", TextOf(result), StringComparison.Ordinal);
         Assert.DoesNotContain(ProjectErrorCodes.ProjectLoadFailed, TextOf(result), StringComparison.Ordinal);
     }
 
@@ -103,7 +103,7 @@ public sealed class WiringFilesystemContractTests
             new AnalysisTargetRequest(solutionPath),
             _ => HoldFilesystemLeaseAsync(registry, solutionPath, clock)).WaitAsync(TimeSpan.FromSeconds(15));
 
-        Assert.Equal("ok", TextOf(result));
+        Assert.StartsWith("ok", TextOf(result), StringComparison.Ordinal);
         clock.AdvanceMinutes(60);
         await registry.RunEvictionTickAsync();
         Assert.Null(registry.FindSnapshot(solutionPath));
@@ -124,7 +124,7 @@ public sealed class WiringFilesystemContractTests
             });
 
         Assert.NotEqual(true, result.IsError);
-        Assert.Equal("physisch", TextOf(result));
+        Assert.StartsWith("physisch", TextOf(result), StringComparison.Ordinal);
     }
 
     private static Task<CallToolResult> ThrowingFilesystemCallback(ProjectLease _) =>

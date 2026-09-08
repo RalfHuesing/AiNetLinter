@@ -17,8 +17,10 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 /// </summary>
 internal static class GetFileTreeTool
 {
-    internal const int DefaultMaxResults = 200;
+    internal const int DefaultMaxResults = 20;
+    internal const int DefaultMaxResponseBytes = 8 * 1024;
     internal const int MaxResultsCap = 2_000;
+    internal const int MaxResponseBytesCap = 64 * 1024;
     internal const int MaxDepthCap = 32;
 
     internal static Task<CallToolResult> ExecuteAsync(

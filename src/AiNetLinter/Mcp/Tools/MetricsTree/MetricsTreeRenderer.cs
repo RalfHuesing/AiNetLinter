@@ -18,7 +18,13 @@ internal sealed record MetricsTreeNode(
     int FileCount,
     double SortValue,
     string DisplayLine,
-    IReadOnlyList<MetricsTreeNode> Children);
+    IReadOnlyList<MetricsTreeNode> Children,
+    bool Handoff = false,
+    string? Id = null,
+    string? TargetPath = null,
+    string? Snapshot = null,
+    string? SymbolKind = null,
+    IReadOnlyList<string>? AllowedFollowUpTools = null);
 
 /// <summary>
 /// Rein formatierender ASCII-Tree-Renderer ueber einer bereits aggregierten
@@ -31,7 +37,7 @@ internal static class MetricsTreeRenderer
     internal static string Render(MetricsTreeNode root, int topN, bool sortDescending)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"{root.Name} — {root.DisplayLine}");
+        sb.AppendLine(FormatNode(root));
         RenderChildren(sb, root.Children, "", topN, sortDescending);
         return sb.ToString().TrimEnd();
     }
@@ -62,6 +68,18 @@ internal static class MetricsTreeRenderer
     private static void AppendNodeLine(StringBuilder sb, MetricsTreeNode node, string prefix, bool isLast)
     {
         var branch = isLast ? "└── " : "├── ";
-        sb.AppendLine($"{prefix}{branch}{node.Name} — {node.DisplayLine}");
+        sb.AppendLine($"{prefix}{branch}{FormatNode(node)}");
+    }
+
+    private static string FormatNode(MetricsTreeNode node)
+    {
+        var handoff = node.Id is not null
+            ? $"handoff=true; id=`{node.Id}`"
+            : node.SymbolKind is not null
+                ? "handoff=false; followUpTools=[]"
+                : string.Empty;
+        return string.IsNullOrEmpty(handoff)
+            ? $"{node.Name} — {node.DisplayLine}"
+            : $"{node.Name} — {node.DisplayLine} [{handoff}]";
     }
 }

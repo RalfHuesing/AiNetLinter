@@ -144,7 +144,6 @@ public sealed class WiringProjectContractTests
         Assert.Equal("TEST_CAPTURE", creation.ErrorCode);
         Assert.NotNull(captured);
         Assert.Equal(definition.RulesPath, captured!.ResolvedConfigPath);
-        Assert.False(captured.UsedDefaultConfig);
         Assert.Equal(42, captured.MaxLineCount);
     }
 
@@ -188,7 +187,7 @@ public sealed class WiringProjectContractTests
                 return McpToolResults.Text("ok");
             }));
         var result = await callTask.WaitAsync(TimeSpan.FromSeconds(15));
-        Assert.Equal("ok", TextOf(result));
+        Assert.StartsWith("ok", TextOf(result), StringComparison.Ordinal);
         clock.AdvanceMinutes(60);
         await registry.RunEvictionTickAsync();
         Assert.Null(registry.FindSnapshot(solutionPath));
@@ -239,7 +238,6 @@ public sealed class WiringProjectContractTests
             Catalog = CreateCatalog(),
             Console = console,
             Config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
-            UsedDefaultConfig = false,
             LoadFunc = _ =>
             {
                 if (Interlocked.Increment(ref attempt) == 1)

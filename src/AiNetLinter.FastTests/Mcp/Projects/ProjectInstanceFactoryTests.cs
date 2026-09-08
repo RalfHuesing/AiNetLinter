@@ -28,13 +28,12 @@ public sealed class ProjectInstanceFactoryTests
         Assert.False(captured.Creation.Succeeded);
         Assert.Equal("TEST_CAPTURE", captured.Creation.ErrorCode);
         Assert.Equal(definition.RulesPath, captured.Options!.ResolvedConfigPath);
-        Assert.False(captured.Options.UsedDefaultConfig);
         Assert.Equal(42, captured.Options.MaxLineCount);
-        Assert.Equal(42, captured.Options.Config.Metrics.MaxLineCount);
+        Assert.Equal(42, captured.Options.Config!.Metrics.MaxLineCount);
     }
 
     [Fact]
-    public void TryCreate_InvalidNeighborRules_FailsWithRulesInvalidInsteadOfDefaults()
+    public void TryCreate_InvalidNeighborRules_FailsWithRulesInvalidWithoutFallback()
     {
         using var tempDir = TestTempDirectory.Create("project-factory-invalid-");
         var solutionPath = tempDir.CreateFile("proj/app.slnx", "");
@@ -49,7 +48,7 @@ public sealed class ProjectInstanceFactoryTests
         Assert.Null(creation.Server);
         Assert.Equal(ProjectErrorCodes.RulesInvalid, creation.ErrorCode);
         Assert.Contains(rulesPath, creation.ErrorMessage, StringComparison.Ordinal);
-        Assert.Contains("keine Default-Regeln geladen", creation.ErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("keine technischen Ersatzregeln geladen", creation.ErrorMessage, StringComparison.Ordinal);
         // Kopierfaehige Bauanleitung: minimales, gueltiges ainetlinter-rules.json-Skelett im Fehlertext.
         Assert.Contains("\"Global\": {},", creation.ErrorMessage, StringComparison.Ordinal);
         Assert.Contains("\"MaxLineCount\": 700", creation.ErrorMessage, StringComparison.Ordinal);
@@ -86,19 +85,9 @@ public sealed class ProjectInstanceFactoryTests
         Assert.False(captured.Creation.Succeeded);
         Assert.Equal("TEST_CAPTURE", captured.Creation.ErrorCode);
         Assert.NotNull(captured.Options);
-        Assert.True(captured.Options!.UsedDefaultConfig);
         Assert.Null(captured.Options.ResolvedConfigPath);
         Assert.Equal(new MetricsConfig().MaxLineCount, captured.Options.MaxLineCount);
-        Assert.Equal(new MetricsConfig().MaxLineCount, captured.Options.Config.Metrics.MaxLineCount);
-    }
-
-    [Fact]
-    public void MaterializeRules_MissingPath_ReturnsMetricsDefaults()
-    {
-        var result = ProjectInstanceFactory.MaterializeRules(rulesPath: null, isRequired: false);
-
-        Assert.Equal(new MetricsConfig().MaxLineCount, result.MaxLineCount);
-        Assert.Equal(new MetricsConfig().MaxLineCount, result.Config.Metrics.MaxLineCount);
+        Assert.Null(captured.Options.Config);
     }
 
     /// <summary>

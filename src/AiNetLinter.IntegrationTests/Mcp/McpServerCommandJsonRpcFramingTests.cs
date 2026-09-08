@@ -139,11 +139,91 @@ public sealed class McpServerCommandJsonRpcFramingTests
         Assert.True(structured.TryGetProperty("matches", out var matches), structured.GetRawText());
         Assert.Equal(JsonValueKind.Array, matches.ValueKind);
         Assert.Equal(JsonValueKind.Object, structured.GetProperty("completeness").ValueKind);
+        Assert.True(structured.GetProperty("completeness").GetProperty("totalCount").GetInt32()
+            >= structured.GetProperty("completeness").GetProperty("returnedCount").GetInt32());
+        Assert.Equal(JsonValueKind.Object, structured.GetProperty("next").ValueKind);
         Assert.Contains(
             matches.EnumerateArray(),
             match => match.TryGetProperty("semantic", out var semantic)
                 && semantic.ValueKind == JsonValueKind.Object);
         Assert.Contains("Greeter", result.Value.GetProperty("content")[0].GetProperty("text").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DiscoveryTools_RawWireExposeRoutingAndBoundedFollowUpMetadata()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var frames = new List<string>
+        {
+            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{" +
+                "\"protocolVersion\":\"" + ProtocolVersion + "\",\"capabilities\":{}," +
+                "\"clientInfo\":{\"name\":\"" + ClientName + "\",\"version\":\"" + ClientVersion + "\"}}}",
+            "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
+        };
+        for (var id = 2; id <= 5; id++)
+        {
+            frames.Add(JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id,
+                method = "tools/call",
+                @params = new
+                {
+                    name = "get_file_tree",
+                    arguments = new { view = "files", maxResults = 1 },
+                },
+            }));
+        }
+        for (var id = 6; id <= 9; id++)
+        {
+            frames.Add(JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id,
+                method = "tools/call",
+                @params = new { name = "get_index_scope", arguments = new { } },
+            }));
+        }
+        for (var id = 10; id <= 13; id++)
+        {
+            frames.Add(JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id,
+                method = "tools/call",
+                @params = new
+                {
+                    name = "search_pattern",
+                    arguments = new { pattern = "Greeter", maxResults = 1 },
+                },
+            }));
+        }
+
+        var lines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
+            fixture.SolutionPath,
+            frames.ToArray(),
+            new McpRawWireRunOptions { InterFrameDelay = TimeSpan.FromSeconds(5) });
+
+        var fileTreeResponse = McpRawWireTestHarness.FindResponseWithStructuredProperty(lines, 5, "fileTree").GetProperty("result");
+        var fileTree = fileTreeResponse.GetProperty("structuredContent").GetProperty("fileTree");
+        Assert.Contains(
+            "maxResults",
+            fileTree.GetProperty("completeness").GetProperty("truncatedBy").EnumerateArray()
+                .Select(item => item.GetString()));
+        Assert.Equal(JsonValueKind.Object, fileTree.GetProperty("next").ValueKind);
+
+        var indexScope = McpRawWireTestHarness.FindResponseWithStructuredProperty(lines, 9, "routing").GetProperty("result")
+            .GetProperty("structuredContent");
+        Assert.Equal("ok", indexScope.GetProperty("status").GetString());
+        Assert.Equal("find_symbol", indexScope.GetProperty("routing").GetProperty("cSharp").GetProperty("tool").GetString());
+        Assert.Equal("search_pattern", indexScope.GetProperty("routing").GetProperty("nonCSharp").GetProperty("tool").GetString());
+
+        var search = McpRawWireTestHarness.FindResponseWithStructuredProperty(lines, 13, "next").GetProperty("result");
+        var searchStructured = search.GetProperty("structuredContent");
+        Assert.Equal(JsonValueKind.Object, searchStructured.GetProperty("next").ValueKind);
+        Assert.True(searchStructured.GetProperty("completeness").GetProperty("totalCount").GetInt32()
+            >= searchStructured.GetProperty("completeness").GetProperty("returnedCount").GetInt32());
+        Assert.Contains("[NEXT:", search.GetProperty("content")[0].GetProperty("text").GetString(), StringComparison.Ordinal);
     }
 
     [Fact]

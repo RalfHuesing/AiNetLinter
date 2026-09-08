@@ -68,6 +68,25 @@ internal static class OverviewResourceRegistration
     private static ReadResourceResult BuildResult(ProjectSnapshot snapshot)
     {
         var targetPath = Path.GetFullPath(snapshot.Definition.SolutionPath);
+        var configSnapshot = snapshot.Server.GetConfigSnapshot();
+        var notConfigured = configSnapshot.Config is null;
+        var target = McpNavigationProjection.WithSourceSnapshot(
+            AnalysisTargetResolver.ResolveRequiredSourceTarget(targetPath),
+            snapshot.Server);
+        var operationStatus = snapshot.Server.LoadState switch
+        {
+            ServerLoadState.Loading => "loading",
+            ServerLoadState.LoadFailed => "target_mismatch",
+            _ when notConfigured => "not_configured",
+            _ => "ok",
+        };
+        var navigation = McpNavigationProjection.Create(
+            target,
+            operationStatus,
+            snapshot.Server.LoadState == ServerLoadState.LoadFailed ? "not_applicable" : "complete",
+            snapshot.Server.LoadState == ServerLoadState.LoadFailed
+                ? "Solution-Loadfehler beheben und den Target-Call wiederholen."
+                : null);
         return new ReadResourceResult
         {
             Contents =
@@ -77,20 +96,7 @@ internal static class OverviewResourceRegistration
                     Uri = BuildCanonicalUri(targetPath),
                     MimeType = "text/markdown",
                     Text = BuildOverviewText(snapshot) + Environment.NewLine + Environment.NewLine +
-                        McpResourceNavigationText.Format(new McpResourceNavigationParameters(
-                            AnalysisTargetResolver.ResolveRequiredSourceTarget(targetPath),
-                            snapshot.Server.LoadState switch
-                            {
-                                ServerLoadState.Loading => "loading",
-                                ServerLoadState.LoadFailed => "target_mismatch",
-                                _ when snapshot.Server.GetConfigSnapshot().UsedDefaultConfig => "not_configured",
-                                _ => "ok",
-                            },
-                            snapshot.Server.LoadState == ServerLoadState.LoadFailed ? "not_applicable" : "complete",
-                            snapshot.Server.LoadState == ServerLoadState.LoadFailed ? "request_detail" : "none",
-                            snapshot.Server.LoadState == ServerLoadState.LoadFailed
-                                ? "Solution-Loadfehler beheben und den Target-Call wiederholen."
-                                : "Kein weiterer Schritt erforderlich.")),
+                        McpNavigationText.Format(navigation),
                 },
             ],
         };
@@ -139,8 +145,8 @@ internal static class OverviewResourceRegistration
         // Atomarer Schnappschuss statt zweier getrennter Property-Zugriffe: sonst koennte ein
         // gleichzeitiger reload_config-Aufruf eine zerrissene Kombination liefern (siehe
         // McpCodeGraphServer.GetConfigSnapshot).
-        var (_, usedDefaultConfig, resolvedConfigPath) = mcpState.GetConfigSnapshot();
-        return usedDefaultConfig
+        var (config, resolvedConfigPath) = mcpState.GetConfigSnapshot();
+        return resolvedConfigPath is null || config is null
             ? "not_configured — neben der adressierten Solution wurde keine ainetlinter-rules.json gefunden; Navigation bleibt verfügbar, Lint-Operationen sind nicht konfiguriert"
             : resolvedConfigPath ?? "unbekannt";
     }

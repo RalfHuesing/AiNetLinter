@@ -27,7 +27,10 @@ public sealed class SymbolIdentifierResolverTests
         var compilation = (await project.GetCompilationAsync())!;
         var symbol = compilation.GetTypeByMetadataName("Probe.Current")!;
         var rawId = DocumentationCommentId.CreateDeclarationId(symbol)!;
-        var identity = new AnalysisSymbolIdentity(new string('a', 64), 4);
+        var identity = AnalysisSymbolIdentity.ForAssembly(
+            @"C:\Assemblies\Probe.dll",
+            new string('a', 64),
+            generation: 4);
 
         var (resolved, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
             owner.Solution,
@@ -49,7 +52,10 @@ public sealed class SymbolIdentifierResolverTests
         var compilation = (await project.GetCompilationAsync())!;
         var symbol = compilation.GetTypeByMetadataName("Probe.Current")!;
         var rawId = DocumentationCommentId.CreateDeclarationId(symbol)!;
-        var identity = new AnalysisSymbolIdentity(new string('d', 64), 7);
+        var identity = AnalysisSymbolIdentity.ForAssembly(
+            @"C:\Assemblies\Probe.dll",
+            new string('d', 64),
+            generation: 7);
 
         var (resolved, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
             owner.Solution,
@@ -71,8 +77,14 @@ public sealed class SymbolIdentifierResolverTests
         var compilation = (await project.GetCompilationAsync())!;
         var symbol = compilation.GetTypeByMetadataName("Probe.Current")!;
         var rawId = DocumentationCommentId.CreateDeclarationId(symbol)!;
-        var currentIdentity = new AnalysisSymbolIdentity(new string('b', 64), 5);
-        var staleId = new AnalysisSymbolIdentity(new string('a', 64), 4).Format(rawId)!;
+        var currentIdentity = AnalysisSymbolIdentity.ForAssembly(
+            @"C:\Assemblies\Probe.dll",
+            new string('b', 64),
+            generation: 5);
+        var staleId = AnalysisSymbolIdentity.ForAssembly(
+            @"C:\Assemblies\Probe.dll",
+            new string('a', 64),
+            generation: 4).Format(rawId)!;
 
         var (resolved, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
             owner.Solution,
@@ -83,12 +95,100 @@ public sealed class SymbolIdentifierResolverTests
         Assert.Null(resolved);
         Assert.NotNull(error);
         Assert.Contains(
-            "aktuellen Assembly-Generation",
+            "STALE_SNAPSHOT",
             Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(error!.Content)).Text);
     }
 
     [Fact]
-    public async Task TryResolveByStableIdAsync_AssemblyFallbackToleratesSkeletonUnresolvedMarkers()
+    public void AnalysisSymbolIdentity_AssemblyFormatBindsPathAndHashWithoutGeneration()
+    {
+        var identity = AnalysisSymbolIdentity.ForAssembly(
+            @"C:\Assemblies\Probe.dll",
+            new string('a', 64),
+            generation: 42);
+
+        var id = identity.Format("T:Probe.Type")!;
+
+        Assert.StartsWith("assembly:", id, System.StringComparison.Ordinal);
+        Assert.DoesNotContain(":42:", id, System.StringComparison.Ordinal);
+        Assert.True(AnalysisSymbolIdentity.TryParse(id, out var parsed, out var rawId));
+        Assert.NotNull(parsed);
+        Assert.Equal(@"C:\Assemblies\Probe.dll", parsed!.CanonicalPath);
+        Assert.Equal(new string('a', 64), parsed.ContentHash);
+        Assert.Equal("T:Probe.Type", rawId);
+    }
+
+    [Fact]
+    public async Task TryResolveByStableIdAsync_SourceHandoffDistinguishesTargetAndSnapshot()
+    {
+        using var owner = RoslynTestSolutionFactory.CreateSolution(
+            "namespace Probe; public sealed class Current { public void Run() { } }");
+        var rawId = "T:Probe.Current";
+        var current = AnalysisSymbolIdentity.ForSource(
+            @"C:\current\workspace.slnx",
+            new string('b', 64));
+
+        var (_, targetError) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution,
+            AnalysisSymbolIdentity.ForSource(@"C:\other\workspace.slnx", new string('b', 64)).Format(rawId)!,
+            CancellationToken.None,
+            current);
+        var (_, staleError) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution,
+            AnalysisSymbolIdentity.ForSource(@"C:\current\workspace.slnx", new string('a', 64)).Format(rawId)!,
+            CancellationToken.None,
+            current);
+
+        Assert.Contains("TARGET_MISMATCH", Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(targetError!.Content)).Text);
+        Assert.Contains("STALE_SNAPSHOT", Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(staleError!.Content)).Text);
+    }
+
+    [Theory]
+    [InlineData("source:-:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:T:Probe.Current")]
+    public async Task TryResolveByStableIdAsync_NonCanonicalSourceHandoffIsInvalidArgument(string identifier)
+    {
+        using var owner = RoslynTestSolutionFactory.CreateSolution(
+            "namespace Probe; public sealed class Current { } ");
+        var current = AnalysisSymbolIdentity.ForSource(
+            @"C:\current\workspace.slnx",
+            new string('a', 64));
+
+        var (_, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution,
+            identifier,
+            CancellationToken.None,
+            current);
+
+        Assert.NotNull(error);
+        Assert.Equal(
+            "INVALID_ARGUMENT",
+            error!.StructuredContent!.Value.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task TryResolveByStableIdAsync_WrappedQualifiedNameIsInvalidArgument()
+    {
+        using var owner = RoslynTestSolutionFactory.CreateSolution(
+            "namespace Probe; public sealed class Current { } ");
+        var current = AnalysisSymbolIdentity.ForSource(
+            @"C:\current\workspace.slnx",
+            new string('a', 64));
+        var nonCanonical = current.Format("Probe.Current")!;
+
+        var (_, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution,
+            nonCanonical,
+            CancellationToken.None,
+            current);
+
+        Assert.NotNull(error);
+        Assert.Equal(
+            "INVALID_ARGUMENT",
+            error!.StructuredContent!.Value.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task TryResolveByStableIdAsync_NonCanonicalAssemblyHandoffIsRejected()
     {
         using var owner = RoslynTestSolutionFactory.CreateSolution(
             "namespace Probe; public sealed class Current { public void Run(Missing.Type value) { } }");
@@ -101,7 +201,10 @@ public sealed class SymbolIdentifierResolverTests
         var rawId = DocumentationCommentId.CreateDeclarationId(symbol)!;
         var unresolvedId = rawId.Replace("Missing.Type", "~?Missing.Type", StringComparison.Ordinal);
         if (unresolvedId == rawId) unresolvedId = rawId.Insert(2, "~?");
-        var identity = new AnalysisSymbolIdentity(new string('c', 64), 6);
+        var identity = AnalysisSymbolIdentity.ForAssembly(
+            @"C:\Assemblies\Probe.dll",
+            new string('c', 64),
+            generation: 6);
 
         var (resolved, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
             owner.Solution,
@@ -109,9 +212,11 @@ public sealed class SymbolIdentifierResolverTests
             CancellationToken.None,
             identity);
 
-        Assert.Null(error);
-        Assert.NotNull(resolved);
-        Assert.True(SymbolEqualityComparer.Default.Equals(symbol, resolved));
+        Assert.Null(resolved);
+        Assert.NotNull(error);
+        Assert.Equal(
+            "INVALID_ARGUMENT",
+            error!.StructuredContent!.Value.GetProperty("code").GetString());
     }
 
     [Fact]

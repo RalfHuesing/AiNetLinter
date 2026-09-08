@@ -33,11 +33,11 @@ internal static class SymbolBodyToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? symbolIdentifiers = null, string? symbolIdentifier = null, string? symbol = null, string? identifier = null, string? name = null, int maxBodyLines = 80, int startLine = 1, int? endLine = null, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? symbolIdentifiers = null, int maxBodyLines = 80, int startLine = 1, int? endLine = null, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                var request = new GetSymbolBodyRequest(symbolIdentifiers, symbolIdentifier, maxBodyLines, startLine, endLine, symbol, identifier, name);
+                var request = new GetSymbolBodyRequest(symbolIdentifiers, maxBodyLines, startLine, endLine);
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
@@ -52,7 +52,7 @@ internal static class SymbolBodyToolRegistrations
 
     private const string GetSymbolBodyDescription =
         "Wann nutzen: Source-Body eines oder mehrerer C#-Symbole lesen (Batch-Support in 1 Turn). " +
-        "symbolIdentifiers: Array von Symbol-IDs oder symbolIdentifier / symbol / identifier / name als String-Alias fuer genau ein Symbol: " +
+        "symbolIdentifiers: Array von Symbol-IDs: " +
         "\"M:Namespace.Klasse.Methode\", " +
         "\"Datei.cs:Zeile:Spalte\", \"Datei.cs:Zeile\" oder \"Klasse.Methode\". " +
         "maxBodyLines: Begrenzung der Zeilenanzahl je Symbol-Body (Default 80). " +

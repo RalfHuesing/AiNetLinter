@@ -26,13 +26,15 @@ internal static class GetFeatureContextTool
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
+        var configSnapshot = state.GetConfigSnapshot();
+        if (configSnapshot.Config is null) return McpToolResults.NotConfigured(solution.FilePath);
 
         var targetSymbol = options.EffectiveSymbol;
         if (string.IsNullOrWhiteSpace(targetSymbol))
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifier' (oder 'symbol') fehlt oder ist leer.",
+                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
                 hint: "symbolIdentifier angeben: z. B. \"Namespace.Klasse.Methode\", \"Datei.cs:42\" oder DocCommentId.");
         }
 
@@ -42,16 +44,16 @@ internal static class GetFeatureContextTool
                 solution,
                 targetSymbol,
                 ct,
-                state.AssemblySymbolIdentity);
+                state.HandoffSymbolIdentity);
             if (error is not null) return error;
             if (symbol is null) return McpToolResults.SymbolNotFound(targetSymbol);
 
             var scanContext = new FeatureContextScanContext(
                 solution,
-                state.Config,
+                configSnapshot.Config,
                 state.Console,
                 options,
-                state.AssemblySymbolIdentity);
+                state.HandoffSymbolIdentity);
             var payload = await FeatureContextScanner.ScanAsync(symbol, scanContext, ct);
 
             var markdown = FeatureContextFormatter.FormatReport(payload);

@@ -75,7 +75,7 @@ Referenzen und Abhängigkeiten.
   tool-spezifisch daneben erhalten. Resources liefern dieselben Informationen
   als Textmetadaten.
 - Für `get_feature_context` und `get_test_context` ist `symbolIdentifier` der
-  primäre Parametername (`symbol` bleibt kompatibler Alias).
+  einzige Parametername für das angefragte Symbol.
 - Für `find_symbol` ist `pattern` (oder `namePattern`/`namePatterns` für Batch)
   das primäre Suchmuster; unterstützt Substring, Glob (`*`, `?`), Regex (`^...$`)
   und generische Typen (`<T>` wird tolerant bereinigt). `kind` filtert optional
@@ -160,8 +160,8 @@ Call-Sites bleiben, ohne dass daraus eine globale Negativaussage folgt.
 
 Target-Aufrufe verwenden ausschließlich Properties aus dem jeweils über
 `tools/list` veröffentlichten Schema. Unbekannte Properties werden sofort als
-`invalid_argument` mit ihrem Feldnamen abgelehnt; aktuelle, im Schema
-veröffentlichte Alias-Felder bleiben erlaubt.
+`invalid_argument` mit ihrem Feldnamen abgelehnt; Aliasfelder gehören nicht zum
+aktiven Vertrag.
 
 Bei `RULES_INVALID` nicht ungefragt eine Projektintegration durchführen. Nur bei
 einem ausdrücklichen Integrationsauftrag den einmaligen Leitfaden über

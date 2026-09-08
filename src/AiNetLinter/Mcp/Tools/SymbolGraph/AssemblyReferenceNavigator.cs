@@ -66,6 +66,7 @@ internal static class AssemblyReferenceNavigator
             });
     }
 
+    // ainetlinter-disable MaxMethodLineCount — Referenz- und Call-Tree-Metadaten müssen gemeinsam begrenzt werden.
     internal static async Task<(MetricsTreeNode Root, bool Truncated, IReadOnlyList<string> Diagnostics)> BuildCallTreeAsync(
         IReadOnlyList<AssemblyNavigationSource> sources,
         ISymbol targetSymbol,
@@ -86,7 +87,8 @@ internal static class AssemblyReferenceNavigator
                         input.Depth,
                         Math.Max(input.TopN, 1),
                         AssemblyNavigationSupport.ParseDirection(input.Direction),
-                        AbsolutePaths: true),
+                        AbsolutePaths: true,
+                        HandoffIdentity: source.Identity),
                     cancellationToken).ConfigureAwait(false);
                 trees.Add((source, AssemblyNavigationSupport.AddOrigin(tree, source.Origin)));
                 if (truncated)

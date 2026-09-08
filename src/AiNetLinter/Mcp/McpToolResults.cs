@@ -110,6 +110,10 @@ internal static class McpToolResults
         bool isError)
     {
         var text = LinterErrorFormatter.Format(code, message, parameters.Context, parameters.Hint);
+        if (!string.IsNullOrWhiteSpace(parameters.FieldPath))
+        {
+            text += $"\n  fieldPath: {parameters.FieldPath}";
+        }
         return new CallToolResult
         {
             IsError = isError,
@@ -169,6 +173,27 @@ internal static class McpToolResults
             context: string.Join("\n", candidateLines),
             hint: "Identifikator praezisieren (voll qualifizierter Name oder Datei:Zeile:Spalte).");
     }
+
+    internal static CallToolResult NotConfigured(string? targetPath) =>
+        Recoverable(
+            LinterErrorCodes.NotConfigured,
+            "Diese Operation ist fuer die Solution nicht konfiguriert: neben der Solution wurde keine ainetlinter-rules.json gefunden.",
+            context: targetPath,
+            hint: "ainetlinter-rules.json neben der adressierten Solution anlegen und den Aufruf erneut starten.");
+
+    internal static CallToolResult TargetMismatch(string identifier) =>
+        Recoverable(
+            McpHandoffErrorCodes.TargetMismatch,
+            $"Die Handoff-ID '{identifier}' gehört zu einem anderen Target.",
+            context: identifier,
+            hint: "Eine Handoff-ID aus demselben targetPath verwenden.");
+
+    internal static CallToolResult StaleSnapshot(string identifier) =>
+        Recoverable(
+            McpHandoffErrorCodes.StaleSnapshot,
+            $"Die Handoff-ID '{identifier}' gehört zu einem veralteten Analyse-Snapshot.",
+            context: identifier,
+            hint: "Das Symbol im aktuellen Snapshot erneut mit 'find_symbol' suchen.");
 
     /// <summary>
     /// Kurzform fuer den Fall, dass ein Tool-Aufruf ungueltige oder unvollstaendige Argumente enthaelt.
@@ -271,10 +296,17 @@ internal static class McpToolResults
             payload["navigation"] = navigationNode;
         }
 
+        var navigationText = McpNavigationText.Format(navigation);
+        var text = result.Content
+            .Select(block => block is TextContentBlock textBlock
+                ? new TextContentBlock { Text = textBlock.Text.TrimEnd() + "\n\n" + navigationText }
+                : block)
+            .ToList();
+
         return new CallToolResult
         {
             IsError = result.IsError,
-            Content = result.Content,
+            Content = text,
             StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
         };
     }
@@ -354,3 +386,9 @@ internal sealed record McpErrorPayload(
     bool Recoverable,
     string? TargetPath = null,
     string? FieldPath = null);
+
+internal static class McpHandoffErrorCodes
+{
+    internal const string TargetMismatch = "TARGET_MISMATCH";
+    internal const string StaleSnapshot = "STALE_SNAPSHOT";
+}

@@ -60,7 +60,6 @@ internal static class GetViolationsScanner
         var console = p.Console;
         var scopeFilter = p.ScopeFilter;
         var ct = p.CancellationToken;
-        var usedDefaultConfig = p.UsedDefaultConfig;
         var maxResults = p.MaxResults < 1 ? 1 : p.MaxResults;
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var fileToProject = ViolationScopeFilter.BuildFileToProjectMap(solution, solutionDir);
@@ -103,7 +102,7 @@ internal static class GetViolationsScanner
             finalViolations = filtered;
         }
 
-        var reportText = FormatReport(solutionDir, fileToProject, finalViolations, filterOptions, usedDefaultConfig, maxResults);
+        var reportText = FormatReport(solutionDir, fileToProject, finalViolations, filterOptions, maxResults);
         var shown = isTruncated ? finalViolations.Take(maxResults).ToList() : finalViolations;
 
         return new GetViolationsResult(
@@ -189,16 +188,14 @@ internal static class GetViolationsScanner
         Dictionary<string, string> fileToProject,
         IReadOnlyCollection<RuleViolation> violations,
         string? scopeFilter,
-        bool usedDefaultConfig,
         int maxResults = DefaultMaxResults) =>
-        FormatReport(solutionDir, fileToProject, violations, new ViolationFilterOptions(scopeFilter), usedDefaultConfig, maxResults);
+        FormatReport(solutionDir, fileToProject, violations, new ViolationFilterOptions(scopeFilter), maxResults);
 
     internal static string FormatReport(
         string solutionDir,
         Dictionary<string, string> fileToProject,
         IReadOnlyCollection<RuleViolation> violations,
         ViolationFilterOptions filterOptions,
-        bool usedDefaultConfig,
         int maxResults = DefaultMaxResults)
     {
         var filtered = ViolationScopeFilter.FilterAndSortViolations(solutionDir, fileToProject, violations, filterOptions);
@@ -210,15 +207,6 @@ internal static class GetViolationsScanner
         }
 
         var sb = new StringBuilder();
-        if (usedDefaultConfig)
-        {
-            // Sichtbarer Marker fuer den Agent-LLM: die Lint-Ergebnisse stammen NICHT aus der
-            // projekteigenen ainetlinter-rules.json (sondern aus den Code-Defaults). Wird nur dann
-            // ausgegeben, wenn der Server ohne --config gestartet wurde und neben der Solution
-            // keine ainetlinter-rules.json gefunden hat.
-            sb.AppendLine("Basis: Default-Regeln, keine ainetlinter-rules.json gefunden");
-            sb.AppendLine();
-        }
         var filterDetails = new List<string>();
         if (!string.IsNullOrWhiteSpace(filterOptions.ScopeFilter)) filterDetails.Add($"Scope: '{filterOptions.ScopeFilter}'");
         if (!string.IsNullOrWhiteSpace(filterOptions.RuleId)) filterDetails.Add($"Regel: '{filterOptions.RuleId}'");
@@ -306,7 +294,6 @@ internal sealed record GetViolationsScannerParameters(
     ILintConsole Console,
     string? ScopeFilter,
     CancellationToken CancellationToken,
-    bool UsedDefaultConfig = false,
     int MaxResults = GetViolationsScanner.DefaultMaxResults,
     int ContextLines = 0,
     bool IncludeSnippet = false,

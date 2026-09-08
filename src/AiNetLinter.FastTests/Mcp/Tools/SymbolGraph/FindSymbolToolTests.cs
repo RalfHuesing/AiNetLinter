@@ -14,6 +14,9 @@ using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Tools.SymbolGraph;
 
+// @covers AnalysisSymbolIdentity
+// ainetlinter-disable DuplicateCode — die drei Tests sichern absichtlich getrennte Pattern-Verträge mit identischem Ablauf.
+
 [Trait("Category", "Component")]
 public sealed class FindSymbolToolTests
 {
@@ -98,7 +101,7 @@ public sealed class FindSymbolToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ScalarNamePatternAlias_ReturnsSinglePatternResult()
+    public async Task ExecuteAsync_ScalarPattern_ReturnsSinglePatternResult()
     {
         using var fixture = new McpInMemoryTestContext();
 
@@ -109,7 +112,7 @@ public sealed class FindSymbolToolTests
                 Kind: "class",
                 MaxResults: 50,
                 CancellationToken: CancellationToken.None,
-                NamePattern: "Greeter"));
+                Pattern: "Greeter"));
 
         Assert.NotEqual(true, result.IsError);
         var batch = JsonSerializer.Deserialize<FindSymbolBatchDto>(
@@ -119,7 +122,7 @@ public sealed class FindSymbolToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_CompatibleSymbolAlias_ReturnsSinglePatternResult()
+    public async Task ExecuteAsync_CanonicalPattern_ReturnsSinglePatternResult()
     {
         using var fixture = new McpInMemoryTestContext();
 
@@ -130,7 +133,7 @@ public sealed class FindSymbolToolTests
                 Kind: "class",
                 MaxResults: 50,
                 CancellationToken: CancellationToken.None,
-                Symbol: "Greeter"));
+                Pattern: "Greeter"));
 
         Assert.NotEqual(true, result.IsError);
         var batch = JsonSerializer.Deserialize<FindSymbolBatchDto>(
@@ -140,7 +143,7 @@ public sealed class FindSymbolToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_CompatiblePatternAlias_ReturnsSinglePatternResult()
+    public async Task ExecuteAsync_CanonicalPatternWithBackedRequest_ReturnsSinglePatternResult()
     {
         using var fixture = new McpInMemoryTestContext();
 

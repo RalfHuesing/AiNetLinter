@@ -30,21 +30,19 @@ internal static class DuplicateDetectionToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (RequestContext<CallToolRequestParams> context, string targetPath, int? minTokens = null, string? similarityThreshold = null, bool? normalizeIdentifiers = null,
-                string? scopeDir = null, string? scope = null, string? path = null, int? maxResults = null, string? mode = null, string? helperSymbol = null, string? helper = null, string? symbol = null,
+                string? scopeDir = null, int? maxResults = null, string? mode = null, string? helperSymbol = null,
                 string? scopeType = "production",
                 CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                var effectiveScopeDir = scopeDir ?? scope ?? path;
-                var effectiveHelper = helperSymbol ?? helper ?? symbol;
                 return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     new AnalysisTargetRequest(targetPath),
                     lease =>
                     {
                         var input = new DuplicateDetectionInput(
-                            minTokens, similarityThreshold, normalizeIdentifiers, effectiveScopeDir, maxResults, mode, effectiveHelper, scopeType);
+                            minTokens, similarityThreshold, normalizeIdentifiers, scopeDir, maxResults, mode, helperSymbol, scopeType);
                         return DuplicateDetectionTool.ExecuteAsync(lease.Server, input, ct);
                     });
             },

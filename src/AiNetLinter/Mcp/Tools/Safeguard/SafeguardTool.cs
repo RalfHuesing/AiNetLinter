@@ -39,6 +39,7 @@ internal static class SafeguardTool
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
         var configSnapshot = state.GetConfigSnapshot();
+        if (configSnapshot.Config is null) return McpToolResults.NotConfigured(solution.FilePath);
         var result = await SafeguardScanner.ComputeScoreAsync(new SafeguardScannerParameters(
             Solution: solution,
             Config: configSnapshot.Config,

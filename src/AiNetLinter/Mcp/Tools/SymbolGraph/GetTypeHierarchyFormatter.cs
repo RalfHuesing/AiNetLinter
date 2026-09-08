@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
@@ -40,18 +41,20 @@ internal static class GetTypeHierarchyFormatter
         return (FormatText(payload), payload.SubtypesTruncated);
     }
 
+    // ainetlinter-disable MaxMethodParameterCount — alle Parameter bilden den einen bounded Hierarchie-Aufruf.
     internal static async Task<TypeHierarchyPayload> BuildHierarchyAsync(
         INamedTypeSymbol type,
         Solution solution,
         int maxResults,
         CancellationToken ct,
-        bool absolutePaths = false)
+        bool absolutePaths = false,
+        AnalysisSymbolIdentity? handoffIdentity = null)
     {
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
 
-        var baseTypes = FormatBaseTypes(type, outputRoot, absolutePaths).ToList();
-        var interfaces = FormatInterfaces(type, outputRoot, absolutePaths).ToList();
-        var subtypeProjection = await ProjectSubtypesAsync(type, solution, outputRoot, maxResults, absolutePaths, ct);
+        var baseTypes = FormatBaseTypes(type, outputRoot, absolutePaths, handoffIdentity).ToList();
+        var interfaces = FormatInterfaces(type, outputRoot, absolutePaths, handoffIdentity).ToList();
+        var subtypeProjection = await ProjectSubtypesAsync(type, solution, outputRoot, maxResults, absolutePaths, handoffIdentity, ct);
         var diHits = await DiRegistrationHeuristics.FindRegistrationsAsync(solution, type, ct);
         return new(
             type.ToDisplayString(),
@@ -88,12 +91,16 @@ internal static class GetTypeHierarchyFormatter
         return $"{header}\n{string.Join("\n", hits)}";
     }
 
-    private static IEnumerable<string> FormatBaseTypes(INamedTypeSymbol type, string outputRoot, bool absolutePaths)
+    private static IEnumerable<string> FormatBaseTypes(
+        INamedTypeSymbol type,
+        string outputRoot,
+        bool absolutePaths,
+        AnalysisSymbolIdentity? handoffIdentity)
     {
         var current = type.BaseType;
         while (current is not null)
         {
-            foreach (var line in FormatHierarchyTypeReference(current, outputRoot, absolutePaths))
+            foreach (var line in FormatHierarchyTypeReference(current, outputRoot, absolutePaths, handoffIdentity))
             {
                 yield return line;
             }
@@ -102,9 +109,13 @@ internal static class GetTypeHierarchyFormatter
         }
     }
 
-    private static IEnumerable<string> FormatInterfaces(INamedTypeSymbol type, string outputRoot, bool absolutePaths)
+    private static IEnumerable<string> FormatInterfaces(
+        INamedTypeSymbol type,
+        string outputRoot,
+        bool absolutePaths,
+        AnalysisSymbolIdentity? handoffIdentity)
     {
-        return type.AllInterfaces.SelectMany(i => FormatHierarchyTypeReference(i, outputRoot, absolutePaths));
+        return type.AllInterfaces.SelectMany(i => FormatHierarchyTypeReference(i, outputRoot, absolutePaths, handoffIdentity));
     }
 
     /// <summary>
@@ -116,11 +127,15 @@ internal static class GetTypeHierarchyFormatter
     /// verschwinden.
     /// </summary>
     private static IEnumerable<string> FormatHierarchyTypeReference(
-        INamedTypeSymbol symbol, string outputRoot, bool absolutePaths)
+        INamedTypeSymbol symbol,
+        string outputRoot,
+        bool absolutePaths,
+        AnalysisSymbolIdentity? handoffIdentity)
     {
         var sourceLines = FindSymbolTool.FormatSymbolLocations(
             symbol,
             outputRoot,
+            handoffIdentity,
             absolutePaths: absolutePaths).ToList();
         if (sourceLines.Count > 0)
         {
@@ -128,7 +143,7 @@ internal static class GetTypeHierarchyFormatter
         }
 
         var kindLabel = SymbolKindClassifier.DescribeNamedTypeKind(symbol);
-        return new[] { $"{kindLabel}: {symbol.ToDisplayString()} (extern, keine Datei im Repo)" };
+        return new[] { $"{kindLabel}: {symbol.ToDisplayString()} (extern, keine Datei im Repo) [handoff=false; followUpTools=[]]" };
     }
 
     private static async Task<SubtypeProjection> ProjectSubtypesAsync(
@@ -137,18 +152,19 @@ internal static class GetTypeHierarchyFormatter
         string outputRoot,
         int maxResults,
         bool absolutePaths,
+        AnalysisSymbolIdentity? handoffIdentity,
         CancellationToken ct)
     {
         if (type.TypeKind == TypeKind.Interface)
         {
             var implementations = await SymbolFinder.FindImplementationsAsync(
                 type, solution, transitive: true, cancellationToken: ct);
-            return ProjectSubtypes(implementations.ToList(), outputRoot, maxResults, absolutePaths);
+            return ProjectSubtypes(implementations.ToList(), outputRoot, maxResults, absolutePaths, handoffIdentity);
         }
 
         var derived = await SymbolFinder.FindDerivedClassesAsync(
             type, solution, transitive: true, cancellationToken: ct);
-        return ProjectSubtypes(derived.ToList(), outputRoot, maxResults, absolutePaths);
+        return ProjectSubtypes(derived.ToList(), outputRoot, maxResults, absolutePaths, handoffIdentity);
     }
 
     /// <summary>
@@ -157,13 +173,18 @@ internal static class GetTypeHierarchyFormatter
     /// nennt die Gesamtzahl der TYPEN, nicht der formatierten Zeilen.
     /// </summary>
     private static SubtypeProjection ProjectSubtypes(
-        IReadOnlyList<ISymbol> types, string outputRoot, int maxResults, bool absolutePaths)
+        IReadOnlyList<ISymbol> types,
+        string outputRoot,
+        int maxResults,
+        bool absolutePaths,
+        AnalysisSymbolIdentity? handoffIdentity)
     {
         var isTruncated = types.Count > maxResults;
         var shown = isTruncated ? types.Take(maxResults).ToList() : types;
         var lines = shown.SelectMany(s => FindSymbolTool.FormatSymbolLocations(
             s,
             outputRoot,
+            handoffIdentity,
             absolutePaths: absolutePaths));
         return new(types.Count, shown.Count, isTruncated, lines.ToList());
     }

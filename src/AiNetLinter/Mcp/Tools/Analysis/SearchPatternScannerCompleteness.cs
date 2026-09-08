@@ -23,7 +23,11 @@ internal static class SearchPatternScannerCompleteness
             options.SkippedUnreadable,
             options.EnumerationErrors,
             options.CancellationRequested,
-            options.RegexTimedOut);
+            options.RegexTimedOut,
+            options.ProductionMatchedFileCount,
+            options.TestMatchedFileCount,
+            options.TotalLines,
+            options.VisibleMatches.Count);
 
     internal static SearchPatternCompleteness MarkCancellation(
         SearchPatternCompleteness completeness)
@@ -75,7 +79,9 @@ internal static class SearchPatternScannerCompleteness
             options.Completeness.SkippedUnreadableFileCount,
             options.Completeness.EnumerationErrorCount,
             options.Completeness.RegexTimedOut,
-            options.Completeness.CancellationRequested));
+            options.Completeness.CancellationRequested,
+            options.Completeness.ProductionMatchedFileCount,
+            options.Completeness.TestMatchedFileCount));
         return new SearchPatternResponseBudgetResult(visible, completeness);
     }
 
@@ -92,7 +98,9 @@ internal static class SearchPatternScannerCompleteness
             options.Completeness.SkippedUnreadableFileCount,
             options.Completeness.EnumerationErrorCount,
             options.Completeness.RegexTimedOut,
-            options.Completeness.CancellationRequested));
+            options.Completeness.CancellationRequested,
+            options.Completeness.ProductionMatchedFileCount,
+            options.Completeness.TestMatchedFileCount));
         var payload = SearchPatternScanner.BuildPayload(
             new(
                 options.ScannerParameters,

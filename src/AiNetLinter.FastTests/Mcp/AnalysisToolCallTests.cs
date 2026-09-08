@@ -123,7 +123,11 @@ public sealed class AnalysisToolCallTests
             (new AnalysisToolDispatch(ProjectCall: lease =>
                 Task.FromResult(McpToolResults.Text(lease.RootPath)))).ProjectCall!);
 
-        Assert.Equal(Path.GetFullPath(solutionPath), TextOf(result));
+        var text = TextOf(result);
+        Assert.StartsWith(Path.GetFullPath(solutionPath), text, StringComparison.Ordinal);
+        Assert.Contains("## Navigation", text, StringComparison.Ordinal);
+        Assert.Contains("- operationStatus: `ok`", text, StringComparison.Ordinal);
+        Assert.Contains("- completeness: `complete`", text, StringComparison.Ordinal);
     }
 
     [Fact]

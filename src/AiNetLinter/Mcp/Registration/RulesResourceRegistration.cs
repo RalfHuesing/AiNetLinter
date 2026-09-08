@@ -43,6 +43,18 @@ internal static class RulesResourceRegistration
 
     private static ReadResourceResult BuildResult(ProjectSnapshot snapshot)
     {
+        var configSnapshot = snapshot.Server.GetConfigSnapshot();
+        var notConfigured = configSnapshot.Config is null;
+        var target = McpNavigationProjection.WithSourceSnapshot(
+            AnalysisTargetResolver.ResolveRequiredSourceTarget(snapshot.Definition.SolutionPath),
+            snapshot.Server);
+        var navigation = McpNavigationProjection.Create(
+            target,
+            notConfigured ? "not_configured" : "ok",
+            notConfigured ? "not_configured" : "complete",
+            notConfigured
+                ? "ainetlinter-rules.json neben dem adressierten Target anlegen und die Resource erneut lesen."
+                : null);
         return new ReadResourceResult
         {
             Contents =
@@ -52,14 +64,7 @@ internal static class RulesResourceRegistration
                     Uri = BuildCanonicalUri(Path.GetFullPath(snapshot.Definition.SolutionPath)),
                     MimeType = "text/markdown",
             Text = BuildRulesText(snapshot) + Environment.NewLine + Environment.NewLine +
-                McpResourceNavigationText.Format(new McpResourceNavigationParameters(
-                    AnalysisTargetResolver.ResolveRequiredSourceTarget(snapshot.Definition.SolutionPath),
-                    snapshot.Server.GetConfigSnapshot().UsedDefaultConfig ? "not_configured" : "ok",
-                    snapshot.Server.GetConfigSnapshot().UsedDefaultConfig ? "not_configured" : "complete",
-                    snapshot.Server.GetConfigSnapshot().UsedDefaultConfig ? "request_detail" : "none",
-                    snapshot.Server.GetConfigSnapshot().UsedDefaultConfig
-                        ? "ainetlinter-rules.json neben dem adressierten Target anlegen und die Resource erneut lesen."
-                        : "Kein weiterer Schritt erforderlich.")),
+                McpNavigationText.Format(navigation),
                 },
             ],
         };

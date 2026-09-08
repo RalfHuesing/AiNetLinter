@@ -42,7 +42,6 @@ public sealed class McpServerCommandLoadingStateTests
                 Global = new AiNetLinter.Configuration.GlobalConfig(),
                 Metrics = new AiNetLinter.Configuration.MetricsConfig(),
             },
-            UsedDefaultConfig = false,
             LoadFunc = async token =>
             {
                 await neverCompletes.Task.WaitAsync(token);
@@ -76,7 +75,6 @@ public sealed class McpServerCommandLoadingStateTests
                 Global = new AiNetLinter.Configuration.GlobalConfig(),
                 Metrics = new AiNetLinter.Configuration.MetricsConfig(),
             },
-            UsedDefaultConfig = false,
             LoadFunc = async token =>
             {
                 loadStarted.TrySetResult(true);
@@ -121,7 +119,6 @@ public sealed class McpServerCommandLoadingStateTests
                 Global = new AiNetLinter.Configuration.GlobalConfig(),
                 Metrics = new AiNetLinter.Configuration.MetricsConfig(),
             },
-            UsedDefaultConfig = false,
             LoadFunc = _ => release.Task,
         });
 
@@ -172,7 +169,6 @@ public sealed class McpServerCommandLoadingStateTests
                 Global = new AiNetLinter.Configuration.GlobalConfig(),
                 Metrics = new AiNetLinter.Configuration.MetricsConfig(),
             },
-            UsedDefaultConfig = false,
             LoadFunc = _ => release.Task,
         });
 

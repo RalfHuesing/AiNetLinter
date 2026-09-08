@@ -20,10 +20,9 @@ public sealed class SymbolGraphCatalogFixture : IAsyncLifetime
 
     public async ValueTask InitializeAsync() => fixture = await LoadedFixture.CreateAsync("SymbolGraphMini");
 
-    internal McpCodeGraphServer CreateReadOnlyServer(bool usedDefaultConfig = false) =>
+    internal McpCodeGraphServer CreateReadOnlyServer() =>
         new(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(
             Catalog: null,
-            UsedDefaultConfig: usedDefaultConfig,
             ReadOnlySolutionSnapshot: Snapshot)));
 
     public async ValueTask DisposeAsync()

@@ -8,11 +8,9 @@ namespace AiNetLinter.Mcp.Tools.FeatureContext;
 
 /// <summary>
 /// Optionen fuer den Aufruf des MCP-Tools <c>get_feature_context</c>.
-/// <c>symbolIdentifier</c> ist die primaere Konvention; <c>symbol</c> bleibt als kompatibler Alias
-/// unterstuetzt. Die Record-Reihenfolge bleibt fuer bestehende interne Aufrufer kompatibel.
+/// <c>symbolIdentifier</c> ist der einzige fachliche Identifikator.
 /// </summary>
 internal sealed record FeatureContextOptions(
-    string? Symbol = null,
     string? SymbolIdentifier = null,
     bool IncludeCallers = true,
     bool IncludeTests = true,
@@ -22,9 +20,7 @@ internal sealed record FeatureContextOptions(
     int MaxTests = 10
 )
 {
-    public string EffectiveSymbol => !string.IsNullOrWhiteSpace(SymbolIdentifier)
-        ? SymbolIdentifier
-        : (Symbol ?? string.Empty);
+    public string EffectiveSymbol => SymbolIdentifier ?? string.Empty;
 }
 
 /// <summary>

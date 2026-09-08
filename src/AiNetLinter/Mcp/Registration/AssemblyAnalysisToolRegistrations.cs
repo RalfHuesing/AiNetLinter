@@ -241,7 +241,6 @@ internal static class AssemblyAnalysisToolRegistrations
             (RequestContext<CallToolRequestParams> context,
                 string targetPath,
                 string? symbolIdentifier = null,
-                string? symbol = null,
                 bool includeMetrics = true,
                 bool includeReferences = false,
                 bool includeCallers = false,
@@ -256,14 +255,12 @@ internal static class AssemblyAnalysisToolRegistrations
                 int maxResponseBytes = 0,
                 string? detailLevel = null,
                 string? cursor = null,
-                string? continuationToken = null,
                 CancellationToken ct = default) => ExecuteGetAssemblyContextAsync(
                     context,
                     assemblyRoute,
                     new AssemblyContextExecutionParameters(
                         targetPath,
                         symbolIdentifier,
-                        symbol,
                         includeMetrics,
                         includeReferences,
                         includeCallers,
@@ -278,7 +275,6 @@ internal static class AssemblyAnalysisToolRegistrations
                         maxResponseBytes,
                         detailLevel,
                         cursor,
-                        continuationToken,
                         ct)),
             TargetPathToolRegistrationOptions.AssemblyTool("get_assembly_context", GetAssemblyContextDescription)));
     }
@@ -290,7 +286,6 @@ internal static class AssemblyAnalysisToolRegistrations
     {
         var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
         if (unknownError is not null) return unknownError;
-        var effectiveCursor = parameters.Cursor ?? parameters.ContinuationToken;
         return await AnalysisToolCall.ExecuteRouted(
             assemblyRoute,
             new AnalysisToolCallRequest(
@@ -299,7 +294,7 @@ internal static class AssemblyAnalysisToolRegistrations
                     AssemblySessionCall: lease => AssemblyAnalysisContextTool.ExecuteAsync(
                         lease,
                         new AssemblyAnalysisContextArguments(
-                            parameters.SymbolIdentifier ?? parameters.Symbol,
+                            parameters.SymbolIdentifier,
                             parameters.IncludeMetrics,
                             parameters.IncludeReferences,
                             parameters.IncludeCallers,
@@ -313,19 +308,18 @@ internal static class AssemblyAnalysisToolRegistrations
                             parameters.TopN,
                             parameters.MaxResponseBytes,
                             parameters.DetailLevel,
-                            effectiveCursor),
+                            parameters.Cursor),
                         parameters.CancellationToken),
                     ExpandAssemblyReferences: parameters.IncludeReferences || parameters.IncludeCallers || parameters.IncludeImpact,
                     MaxResponseBytes: parameters.MaxResponseBytes,
                     DetailLevel: parameters.DetailLevel,
-                    Cursor: effectiveCursor),
+                    Cursor: parameters.Cursor),
                 parameters.CancellationToken));
     }
 
     private sealed record AssemblyContextExecutionParameters(
         string TargetPath,
         string? SymbolIdentifier,
-        string? Symbol,
         bool IncludeMetrics,
         bool IncludeReferences,
         bool IncludeCallers,
@@ -340,7 +334,6 @@ internal static class AssemblyAnalysisToolRegistrations
         int MaxResponseBytes,
         string? DetailLevel,
         string? Cursor,
-        string? ContinuationToken,
         CancellationToken CancellationToken);
 
     private const string GetAssemblyContextDescription =
@@ -348,7 +341,7 @@ internal static class AssemblyAnalysisToolRegistrations
         "Liefert Identitaet, Scope, Vollstaendigkeit und auf Wunsch Metriken, Referenzen, " +
         "Caller/Impact, Body und Klassenstruktur in einer strukturierten Antwort. " +
         "targetPath ist ein absoluter .dll- oder .exe-Pfad; symbolIdentifier ist optional und " +
-        "akzeptiert DocCommentId, Typname oder Datei:Zeile:Spalte. symbol ist ein Alias. " +
+        "akzeptiert DocCommentId, Typname oder Datei:Zeile:Spalte. " +
         "maxResponseBytes, detailLevel (compact/standard/full) und cursor steuern Budget und Paging; " +
         "unsupported/partial/complete sowie totalCount, returnedCount, isTruncated und continuationToken " +
         "bleiben maschinenlesbar sichtbar. Die Assembly wird weder geladen noch ausgefuehrt.";

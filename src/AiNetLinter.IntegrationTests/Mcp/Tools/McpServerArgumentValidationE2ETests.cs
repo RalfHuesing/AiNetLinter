@@ -158,6 +158,12 @@ public sealed class McpServerArgumentValidationE2ETests
     [InlineData("get_violations", "unrecognizedField")]
     [InlineData("metrics_tree", "futureParameter")]
     [InlineData("find_symbol", "unknownInput")]
+    [InlineData("find_references", "symbol")]
+    [InlineData("get_call_tree", "symbol")]
+    [InlineData("get_type_hierarchy", "symbol")]
+    [InlineData("dependency_graph", "symbol")]
+    [InlineData("search_pattern", "query")]
+    [InlineData("get_file_skeleton", "filePath")]
     public async Task TargetPathTools_RejectUnknownArguments(string toolName, string unknownKey)
     {
         var result = await _fixture.Client.CallToolAsync(

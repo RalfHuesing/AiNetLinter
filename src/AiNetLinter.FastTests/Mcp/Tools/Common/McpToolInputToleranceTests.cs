@@ -21,26 +21,21 @@ namespace AiNetLinter.FastTests.Mcp.Tools.Common;
 public sealed class McpToolInputToleranceTests
 {
     [Fact]
-    public void NormalizeNamePatterns_WithQueryOrNameAlias_ReturnsNormalizedPattern()
+    public void NormalizeNamePatterns_WithCanonicalPattern_ReturnsNormalizedPattern()
     {
-        // Query-Alias
-        var fromQuery = FindSymbolTool.NormalizeNamePatterns(new FindSymbolPatternOptions(Query: "Greeter"));
-        Assert.Equal(["Greeter"], fromQuery);
-
-        // Name-Alias
-        var fromName = FindSymbolTool.NormalizeNamePatterns(new FindSymbolPatternOptions(Name: "Greeter"));
-        Assert.Equal(["Greeter"], fromName);
+        var pattern = FindSymbolTool.NormalizeNamePatterns(new FindSymbolPatternOptions(Pattern: "Greeter"));
+        Assert.Equal(["Greeter"], pattern);
     }
 
     [Fact]
     public void NormalizeNamePatterns_WithBackticksAndMethodParentheses_CleansPattern()
     {
-        var cleaned = FindSymbolTool.NormalizeNamePatterns(new FindSymbolPatternOptions(Query: "`Greeter()`"));
+        var cleaned = FindSymbolTool.NormalizeNamePatterns(new FindSymbolPatternOptions(Pattern: "`Greeter()`"));
         Assert.Equal(["Greeter"], cleaned);
     }
 
     [Fact]
-    public async Task FindSymbol_ExecuteAsync_WithQueryAlias_FindsSymbol()
+    public async Task FindSymbol_ExecuteAsync_WithCanonicalPattern_FindsSymbol()
     {
         using var fixture = new McpInMemoryTestContext();
         var request = new FindSymbolRequest(
@@ -49,7 +44,7 @@ public sealed class McpToolInputToleranceTests
             Kind: "class",
             MaxResults: 50,
             CancellationToken: CancellationToken.None,
-            Query: "Greeter");
+            Pattern: "Greeter");
 
         var result = await FindSymbolTool.ExecuteAsync(request);
 
@@ -59,7 +54,7 @@ public sealed class McpToolInputToleranceTests
     }
 
     [Fact]
-    public async Task FindSymbol_ExecuteAsync_WithNameAliasAndBackticks_FindsSymbol()
+    public async Task FindSymbol_ExecuteAsync_WithCanonicalPatternAndBackticks_FindsSymbol()
     {
         using var fixture = new McpInMemoryTestContext();
         var request = new FindSymbolRequest(
@@ -68,7 +63,7 @@ public sealed class McpToolInputToleranceTests
             Kind: "class",
             MaxResults: 50,
             CancellationToken: CancellationToken.None,
-            Name: "`Greeter`");
+            Pattern: "`Greeter`");
 
         var result = await FindSymbolTool.ExecuteAsync(request);
 
@@ -78,17 +73,17 @@ public sealed class McpToolInputToleranceTests
     }
 
     [Fact]
-    public void GetSymbolBodyRequest_WithIdentifierOrNameAlias_ResolvesEffectiveSymbolIdentifier()
+    public void GetSymbolBodyRequest_UsesCanonicalSymbolIdentifiersArray()
     {
-        var req1 = new GetSymbolBodyRequest(Identifier: "`MyMethod()`");
-        Assert.Equal("MyMethod", req1.EffectiveSymbolIdentifier);
+        var req1 = new GetSymbolBodyRequest(SymbolIdentifiers: ["`MyMethod()`"]);
+        Assert.Equal(["`MyMethod()`"], req1.SymbolIdentifiers!);
 
-        var req2 = new GetSymbolBodyRequest(Name: "\"MyMethod\"");
-        Assert.Equal("MyMethod", req2.EffectiveSymbolIdentifier);
+        var req2 = new GetSymbolBodyRequest(SymbolIdentifiers: ["\"MyMethod\""]);
+        Assert.Equal(["\"MyMethod\""], req2.SymbolIdentifiers!);
     }
 
     [Fact]
-    public void ToolRegistrations_IncludeLlmParameterAliasesInInputSchema()
+    public void ToolRegistrations_ExposeCanonicalParameterNamesOnly()
     {
         var registry = ProjectRegistryFixture.CreateInspectionRegistry();
         var options = McpServerOptionsFactory.Create(
@@ -101,45 +96,22 @@ public sealed class McpToolInputToleranceTests
 
         var toolsByName = options.ToolCollection!.ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool.InputSchema.ToString());
 
-        // find_symbol
-        Assert.Contains("\"query\"", toolsByName["find_symbol"]);
-        Assert.Contains("\"name\"", toolsByName["find_symbol"]);
+        Assert.Contains("\"pattern\"", toolsByName["find_symbol"]);
+        Assert.Contains("\"symbolIdentifier\"", toolsByName["find_references"]);
+        Assert.Contains("\"symbolIdentifier\"", toolsByName["get_call_tree"]);
+        Assert.Contains("\"symbolIdentifier\"", toolsByName["get_class_structure"]);
+        Assert.Contains("\"root\"", toolsByName["get_file_tree"]);
+        Assert.Contains("\"fileFilter\"", toolsByName["get_file_tree"]);
+        Assert.Contains("\"filePaths\"", toolsByName["get_file_skeleton"]);
+        Assert.Contains("\"scopeFilter\"", toolsByName["get_violations"]);
+        Assert.Contains("\"ruleId\"", toolsByName["get_violations"]);
+        Assert.Contains("\"scopeFilter\"", toolsByName["safeguard"]);
+        Assert.Contains("\"symbolIdentifiers\"", toolsByName["get_symbol_body"]);
+        Assert.Contains("\"scopeDir\"", toolsByName["find_duplicates"]);
+        Assert.Contains("\"helperSymbol\"", toolsByName["find_duplicates"]);
 
-        // find_references & get_call_tree
-        Assert.Contains("\"identifier\"", toolsByName["find_references"]);
-        Assert.Contains("\"name\"", toolsByName["find_references"]);
-        Assert.Contains("\"identifier\"", toolsByName["get_call_tree"]);
-        Assert.Contains("\"name\"", toolsByName["get_call_tree"]);
-
-        // get_class_structure
-        Assert.Contains("\"className\"", toolsByName["get_class_structure"]);
-        Assert.Contains("\"identifier\"", toolsByName["get_class_structure"]);
-
-        // get_file_tree
-        Assert.Contains("\"path\"", toolsByName["get_file_tree"]);
-        Assert.Contains("\"directory\"", toolsByName["get_file_tree"]);
-        Assert.Contains("\"filter\"", toolsByName["get_file_tree"]);
-        Assert.Contains("\"pattern\"", toolsByName["get_file_tree"]);
-
-        // get_file_skeleton
-        Assert.Contains("\"path\"", toolsByName["get_file_skeleton"]);
-        Assert.Contains("\"file\"", toolsByName["get_file_skeleton"]);
-
-        // get_violations
-        Assert.Contains("\"scope\"", toolsByName["get_violations"]);
-        Assert.Contains("\"path\"", toolsByName["get_violations"]);
-        Assert.Contains("\"rule\"", toolsByName["get_violations"]);
-
-        // safeguard
-        Assert.Contains("\"scope\"", toolsByName["safeguard"]);
-        Assert.Contains("\"path\"", toolsByName["safeguard"]);
-
-        // get_symbol_body
-        Assert.Contains("\"identifier\"", toolsByName["get_symbol_body"]);
-        Assert.Contains("\"name\"", toolsByName["get_symbol_body"]);
-
-        // find_duplicates
-        Assert.Contains("\"scope\"", toolsByName["find_duplicates"]);
-        Assert.Contains("\"helper\"", toolsByName["find_duplicates"]);
+        Assert.DoesNotContain("\"query\"", toolsByName["find_symbol"]);
+        Assert.DoesNotContain("\"identifier\"", toolsByName["find_references"]);
+        Assert.DoesNotContain("\"file\"", toolsByName["get_file_skeleton"]);
     }
 }

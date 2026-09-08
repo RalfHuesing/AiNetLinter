@@ -38,7 +38,7 @@ public sealed class GetServerHealthToolTests
             rulesRelative: "ainetlinter-rules.json");
         var solutionPath = Path.Combine(root, "app.slnx");
         await using var registry = CreateRegistry(solutionPath, new McpCodeGraphServer(
-            McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null, UsedDefaultConfig: true))));
+            McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(null))));
 
         var result = await GetServerHealthTool.ExecuteAsync(registry, targetPath: solutionPath);
 
@@ -89,15 +89,14 @@ public sealed class GetServerHealthToolTests
         Assert.Equal(solutionPath, project.TargetPath);
         Assert.Equal("Loaded", project.LoadState);
         Assert.Equal(rulesPath, project.ConfigPath);
-        Assert.False(project.UsedDefaultConfig);
         Assert.Equal(0, project.RefreshCount);
     }
 
     [Fact]
-    public async Task ExecuteAsync_UsedDefaultConfig_MentionsDefaultRules()
+    public async Task ExecuteAsync_NoRulesFile_ReportsNotConfigured()
     {
         var solutionPath = SolutionPath(_fixture.RootPath);
-        await using var registry = CreateRegistry(solutionPath, _fixture.CreateReadOnlyServer(usedDefaultConfig: true));
+        await using var registry = CreateRegistry(solutionPath, _fixture.CreateReadOnlyServer());
 
         var result = await GetServerHealthTool.ExecuteAsync(registry, targetPath: solutionPath);
 
@@ -250,7 +249,6 @@ public sealed class GetServerHealthToolTests
                 Global = new AiNetLinter.Configuration.GlobalConfig(),
                 Metrics = new AiNetLinter.Configuration.MetricsConfig(),
             },
-            UsedDefaultConfig: false,
             ResolvedConfigPath: rulesPath,
             ReadOnlySolutionSnapshot: snapshot)));
 

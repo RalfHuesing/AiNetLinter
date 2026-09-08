@@ -60,7 +60,6 @@ public sealed class RulesResourceRegistrationTests
                 Global = new GlobalConfig { EnforceXmlDocumentation = true },
                 Metrics = new MetricsConfig { MaxLineCount = 99 },
             },
-            usedDefaultConfig: false,
             resolvedConfigPath: @"C:\Projekt\ainetlinter-rules.json");
         var after = RulesResourceRegistration.BuildRulesText(harness.Snapshot);
 
@@ -72,18 +71,18 @@ public sealed class RulesResourceRegistrationTests
     }
 
     [Fact]
-    public void BuildRulesText_DefaultConfigStatesBuiltInOrigin()
+    public void BuildRulesText_NoConfigStatesNotConfigured()
     {
         var state = CreateServer(new Config
         {
             Global = new GlobalConfig(),
             Metrics = new MetricsConfig(),
-        }, usedDefaultConfig: true, resolvedConfigPath: null);
+        }, resolvedConfigPath: null);
         using var harness = OverviewSnapshotHarness.Create(state);
 
         var text = RulesResourceRegistration.BuildRulesText(harness.Snapshot);
 
-        Assert.Contains("Konfigurationsquelle: `not_configured (ainetlinter-rules.json fehlt)`", text, StringComparison.Ordinal);
+        Assert.Contains("Konfigurationsquelle: `not_configured`", text, StringComparison.Ordinal);
         Assert.Contains("Navigation bleibt verfügbar", text, StringComparison.Ordinal);
     }
 
@@ -110,7 +109,7 @@ public sealed class RulesResourceRegistrationTests
         Assert.Contains("| `MaxLineCount` | 42 |", content.Text, StringComparison.Ordinal);
         Assert.Contains($"- targetPath: `{solutionPath}`", content.Text, StringComparison.Ordinal);
         Assert.Contains("- origin: `source`", content.Text, StringComparison.Ordinal);
-        Assert.Contains("- capabilities: navigation=`supported`", content.Text, StringComparison.Ordinal);
+        Assert.Contains("- snapshot: `", content.Text, StringComparison.Ordinal);
         Assert.Contains("- operationStatus: `ok`", content.Text, StringComparison.Ordinal);
         Assert.Throws<ModelContextProtocol.McpException>(
             () => RulesResourceRegistration.BuildTemplatedResult(registry, "relative/path"));
@@ -118,14 +117,12 @@ public sealed class RulesResourceRegistrationTests
 
     private static McpCodeGraphServer CreateServer(
         Config config,
-        bool usedDefaultConfig = false,
         string? resolvedConfigPath = @"C:\Projekt\ainetlinter-rules.json") =>
         new(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(
                 null,
                 Console: LinterConsole.Instance,
                 Config: config,
-                UsedDefaultConfig: usedDefaultConfig,
                 ResolvedConfigPath: resolvedConfigPath)));
 
     private static McpCodeGraphServer CreatePendingServer(Config config) =>
@@ -134,6 +131,7 @@ public sealed class RulesResourceRegistrationTests
             Catalog = null,
             Console = LinterConsole.Instance,
             Config = config,
+            ResolvedConfigPath = @"C:\Projekt\ainetlinter-rules.json",
             LoadFunc = token =>
             {
                 var pending = new TaskCompletionSource<SourceFileCatalog?>(TaskCreationOptions.RunContinuationsAsynchronously);

@@ -63,6 +63,7 @@ internal static class SearchPatternTextFormatter
 
         AppendBudgetHint(builder, completeness);
         AppendScanStateHint(builder, completeness);
+        builder.Append($"\n[NEXT: {result.Payload.Next.Kind}] {result.Payload.Next.Action}");
         return builder.ToString();
     }
 

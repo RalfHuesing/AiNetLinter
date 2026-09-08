@@ -46,7 +46,7 @@ public sealed class ReloadConfigToolTests
         var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         var originalConfig = CreateConfig();
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(catalog, Config: originalConfig, UsedDefaultConfig: true)));
+            new McpCodeGraphServerOptionsFromParameters(catalog, Config: originalConfig)));
 
         var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
         var missingPath = Path.Combine(Path.GetDirectoryName(solutionPath)!, "ainetlinter-rules.json");
@@ -61,7 +61,7 @@ public sealed class ReloadConfigToolTests
 
         // Bisherige Config bleibt unveraendert aktiv - kein Datenverlust, kein Absturz.
         Assert.Same(originalConfig, state.Config);
-        Assert.True(state.UsedDefaultConfig);
+        Assert.Null(state.ResolvedConfigPath);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public sealed class ReloadConfigToolTests
         var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         var originalConfig = CreateConfig();
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(catalog, Config: originalConfig, UsedDefaultConfig: true)));
+            new McpCodeGraphServerOptionsFromParameters(catalog, Config: originalConfig)));
 
         var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
         var invalidPath = Path.Combine(Path.GetDirectoryName(solutionPath)!, "ainetlinter-rules.json");
@@ -85,7 +85,7 @@ public sealed class ReloadConfigToolTests
 
         // Bisherige Config bleibt unveraendert aktiv - kein Datenverlust, kein Absturz.
         Assert.Same(originalConfig, state.Config);
-        Assert.True(state.UsedDefaultConfig);
+        Assert.Null(state.ResolvedConfigPath);
     }
 
     [Fact]
@@ -94,7 +94,7 @@ public sealed class ReloadConfigToolTests
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
         var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(catalog, Config: CreateConfig(), UsedDefaultConfig: true)));
+            new McpCodeGraphServerOptionsFromParameters(catalog, Config: CreateConfig())));
 
         var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
         var newPath = Path.Combine(Path.GetDirectoryName(solutionPath)!, "ainetlinter-rules.json");
@@ -113,9 +113,8 @@ public sealed class ReloadConfigToolTests
         Assert.Equal(17, payload.PreviousEnabledRuleCount);
         Assert.Equal(16, payload.EnabledRuleCount);
         Assert.Equal(-1, payload.EnabledRuleDelta);
-        Assert.False(state.UsedDefaultConfig);
         Assert.Equal(newPath, state.ResolvedConfigPath);
-        Assert.False(state.Config.Global.BanAsyncVoid);
+        Assert.False(state.Config!.Global.BanAsyncVoid);
     }
 
     [Fact]
@@ -128,7 +127,7 @@ public sealed class ReloadConfigToolTests
         await File.WriteAllTextAsync(existingPath, "{ \"Global\": {}, \"Metrics\": {} }");
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
             new McpCodeGraphServerOptionsFromParameters(
-                catalog, Config: CreateConfig(), UsedDefaultConfig: false, ResolvedConfigPath: existingPath)));
+                catalog, Config: CreateConfig(), ResolvedConfigPath: existingPath)));
 
         // Nutzer aendert die ainetlinter-rules.json waehrend der Server laeuft.
         await File.WriteAllTextAsync(existingPath, "{ \"Global\": { \"BanAsyncVoid\": false }, \"Metrics\": {} }");
@@ -136,7 +135,7 @@ public sealed class ReloadConfigToolTests
         var result = await ReloadConfigTool.ExecuteAsync(state, existingPath, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.False(state.Config.Global.BanAsyncVoid);
+        Assert.False(state.Config!.Global.BanAsyncVoid);
         Assert.Equal(existingPath, state.ResolvedConfigPath);
     }
 
@@ -146,7 +145,7 @@ public sealed class ReloadConfigToolTests
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
         var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(catalog, Config: CreateConfig(), UsedDefaultConfig: true)));
+            new McpCodeGraphServerOptionsFromParameters(catalog, Config: CreateConfig())));
 
         var result = await ReloadConfigTool.ExecuteAsync(
             state,
@@ -156,7 +155,7 @@ public sealed class ReloadConfigToolTests
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("CONFIG_NOT_FOUND", text);
-        Assert.True(state.UsedDefaultConfig);
+        Assert.Null(state.ResolvedConfigPath);
     }
 
     [Fact]
@@ -165,7 +164,7 @@ public sealed class ReloadConfigToolTests
         using var fixture = new SymbolGraphMiniFixtureWorkspace();
         var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
         var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(catalog, Config: CreateConfig(), UsedDefaultConfig: true)));
+            new McpCodeGraphServerOptionsFromParameters(catalog, Config: CreateConfig())));
 
         var initialRefreshCount = state.RefreshCount;
 

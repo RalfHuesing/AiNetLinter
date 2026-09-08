@@ -59,7 +59,7 @@ internal static class FindReferencesTool
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifier' (oder 'symbol') fehlt oder ist leer.",
+                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
                 hint: McpToolResults.SymbolIdentifierHint);
         }
 
@@ -69,7 +69,7 @@ internal static class FindReferencesTool
                 solution,
                 symbolIdentifier,
                 ct,
-                state.AssemblySymbolIdentity);
+                state.HandoffSymbolIdentity);
             if (error is not null) return error;
 
             var normalizedMaxResults = request.MaxResults < 1 ? 1 : request.MaxResults;
@@ -80,7 +80,7 @@ internal static class FindReferencesTool
                     request.Depth,
                     normalizedMaxResults,
                     ct,
-                    AssemblySymbolIdentity: state.AssemblySymbolIdentity));
+                    AssemblySymbolIdentity: state.HandoffSymbolIdentity));
             var formatted = TransitiveCallGraphFormatter.FormatResponse(
                 traversal,
                 traversal.Completeness.TotalCallSiteCount == 0

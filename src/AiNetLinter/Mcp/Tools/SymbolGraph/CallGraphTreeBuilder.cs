@@ -60,7 +60,7 @@ internal static class CallGraphTreeBuilder
         var state = new TreeBuildState(request, depth);
         state.SetPathDisplayMode(request.AbsolutePaths);
         await RunTreeBfsAsync(state, ct);
-        return (ToMetricsTreeNode(state.Root), state.Truncated);
+        return (ToMetricsTreeNode(state.Root, state.HandoffIdentity), state.Truncated);
     }
 
     private static async Task RunTreeBfsAsync(TreeBuildState state, CancellationToken ct)
@@ -86,7 +86,13 @@ internal static class CallGraphTreeBuilder
         foreach (var (group, direction) in groups)
         {
             var child = AddChild(
-                node, group, state.Solution, direction, state.Direction == CallTreeDirection.Both, state.AbsolutePaths);
+                node,
+                group,
+                state.Solution,
+                direction,
+                state.Direction == CallTreeDirection.Both,
+                state.AbsolutePaths,
+                state.HandoffIdentity);
             if (recursed >= state.TopN || !CanExpand(state, level, group.CallerSymbol, direction)) continue;
             recursed++;
             EnqueueOrTruncate(state, child, level + 1);
@@ -213,13 +219,15 @@ internal static class CallGraphTreeBuilder
         group.Locations.Add(location);
     }
 
+    // ainetlinter-disable MaxMethodParameterCount — der rekursive Builder übergibt die Traversierungsinvarianten explizit.
     private static CallTreeBuilderNode AddChild(
         CallTreeBuilderNode parent,
         CallerGroup group,
         Solution solution,
         CallTreeDirection direction,
         bool includeDirection,
-        bool absolutePaths)
+        bool absolutePaths,
+        AnalysisSymbolIdentity? handoffIdentity)
     {
         var displayLine = FormatGroupDisplay(group, solution, absolutePaths);
         var name = group.CallerSymbol is null
@@ -284,6 +292,25 @@ internal static class CallGraphTreeBuilder
             : PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath);
     }
 
-    private static MetricsTreeNode ToMetricsTreeNode(CallTreeBuilderNode node) =>
-        new(node.Name, "", 0, 0, node.DisplayLine, node.Children.Select(ToMetricsTreeNode).ToList());
+    private static MetricsTreeNode ToMetricsTreeNode(CallTreeBuilderNode node, AnalysisSymbolIdentity? identity = null)
+    {
+        var id = node.Symbol is null || identity is null
+            ? null
+            : identity.FormatHandoff(node.Symbol);
+        var handoff = id is not null;
+        return new(
+            node.Name,
+            "",
+            0,
+            0,
+            node.DisplayLine,
+            node.Children.Select(child => ToMetricsTreeNode(child, identity)).ToList(),
+            Handoff: handoff,
+            Id: handoff ? id : null,
+            TargetPath: handoff ? identity!.CanonicalPath : null,
+            Snapshot: handoff ? identity!.ContentHash : null,
+            SymbolKind: node.Symbol?.Kind.ToString().ToLowerInvariant(),
+            AllowedFollowUpTools: handoff ? HandoffFollowUpTools.For(node.Symbol!) : []);
+    }
+
 }

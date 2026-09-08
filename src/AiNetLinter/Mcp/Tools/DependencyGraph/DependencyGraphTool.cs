@@ -38,7 +38,7 @@ internal static class DependencyGraphTool
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
         var hasFilePath = !string.IsNullOrEmpty(input.FilePath);
-        var hasSymbolIdentifier = !string.IsNullOrEmpty(input.EffectiveSymbolIdentifier);
+        var hasSymbolIdentifier = !string.IsNullOrEmpty(input.SymbolIdentifier);
         if (hasFilePath == hasSymbolIdentifier)
         {
             return McpToolResults.InvalidArgument(
@@ -59,7 +59,7 @@ internal static class DependencyGraphTool
                     includeIncoming,
                     state.AssemblySymbolIdentity is not null,
                     ct)
-                : await ExecuteTypeScopeAsync(solution, input, includeOutgoing, includeIncoming, state.AssemblySymbolIdentity, ct);
+                : await ExecuteTypeScopeAsync(solution, input, includeOutgoing, includeIncoming, state.HandoffSymbolIdentity, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -115,7 +115,7 @@ internal static class DependencyGraphTool
         AnalysisSymbolIdentity? assemblyIdentity,
         CancellationToken ct)
     {
-        var symbolIdentifier = input.EffectiveSymbolIdentifier!;
+        var symbolIdentifier = input.SymbolIdentifier!;
         var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, symbolIdentifier, ct, assemblyIdentity);
         if (error is not null) return error;
 
@@ -126,7 +126,7 @@ internal static class DependencyGraphTool
         {
             return McpToolResults.InvalidArgument(
                 $"'{symbolIdentifier}' loest zu '{symbol!.Kind}' auf — kein Typ und kein Mitglied mit einschliessendem Typ.",
-                hint: "symbolIdentifier (oder symbol) muss auf einen Typen oder Typ-Member verweisen.");
+                hint: "symbolIdentifier muss auf einen Typen oder Typ-Member verweisen.");
         }
 
         var request = new DependencyGraphScanRequest(solution, includeOutgoing, includeIncoming, input.Depth, input.MaxResults);

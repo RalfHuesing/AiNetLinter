@@ -31,10 +31,27 @@ internal static class GetIndexScopeScanner
         var csCount = CountCsFiles(solution, solutionDir);
         var nonCSharpCounts = CountNonCSharpFiles(solution);
         var entries = new List<FileTypeBreakdownEntry>();
-        if (csCount > 0) entries.Add(new FileTypeBreakdownEntry(".cs", csCount, SymbolGraphCovered: true));
+        if (csCount > 0)
+        {
+            entries.Add(new FileTypeBreakdownEntry(
+                ".cs",
+                csCount,
+                SymbolGraphCovered: true,
+                RoutingTool: "find_symbol",
+                QueryField: "pattern",
+                ScopeType: null,
+                FileFilter: null));
+        }
         entries.AddRange(nonCSharpCounts
             .OrderBy(pair => pair.Key, StringComparer.Ordinal)
-            .Select(pair => new FileTypeBreakdownEntry(pair.Key, pair.Value, SymbolGraphCovered: false)));
+            .Select(pair => new FileTypeBreakdownEntry(
+                pair.Key,
+                pair.Value,
+                SymbolGraphCovered: false,
+                RoutingTool: "search_pattern",
+                QueryField: "pattern",
+                ScopeType: "all",
+                FileFilter: $"**/*{pair.Key}")));
 
         var text = FormatBreakdown(entries);
         return (text, entries);
@@ -94,13 +111,16 @@ internal static class GetIndexScopeScanner
         var suffix = entry.SymbolGraphCovered
             ? " (voll vom Symbolgraph abgedeckt)"
             : " (nicht vom Symbolgraph abgedeckt)";
-        return FormatFileCountLine(entry.Count, entry.Extension, suffix);
+        var route = entry.RoutingTool == "find_symbol"
+            ? "routing=find_symbol(pattern)"
+            : $"routing=search_pattern(pattern, scopeType={entry.ScopeType}, includePatterns={entry.FileFilter})";
+        return FormatFileCountLine(entry.Count, entry.Extension, suffix, route);
     }
 
-    private static string FormatFileCountLine(int count, string extension, string suffix)
+    private static string FormatFileCountLine(int count, string extension, string suffix, string route)
     {
         var fileLabel = count == 1 ? "Datei" : "Dateien";
-        return $"{extension}: {count} {fileLabel}{suffix}";
+        return $"{extension}: {count} {fileLabel}{suffix} | {route}";
     }
 }
 
@@ -109,4 +129,26 @@ internal static class GetIndexScopeScanner
 /// mit Anzahl und ob sie vom Roslyn-Symbolgraph abgedeckt ist (nur <c>.cs</c>; siehe Scope-Hinweis-
 /// Text der anderen C#-only-Tools).
 /// </summary>
-internal sealed record FileTypeBreakdownEntry(string Extension, int Count, bool SymbolGraphCovered);
+internal sealed record FileTypeBreakdownEntry(
+    string Extension,
+    int Count,
+    bool SymbolGraphCovered,
+    string RoutingTool,
+    string QueryField,
+    string? ScopeType,
+    string? FileFilter);
+
+internal sealed record IndexScopePayload(
+    IReadOnlyList<FileTypeBreakdownEntry> Breakdown,
+    string Status,
+    IndexScopeRouting Routing);
+
+internal sealed record IndexScopeRouting(
+    IndexScopeRoute CSharp,
+    IndexScopeRoute NonCSharp);
+
+internal sealed record IndexScopeRoute(
+    string Tool,
+    string QueryField,
+    string? ScopeType,
+    string? FileFilter);

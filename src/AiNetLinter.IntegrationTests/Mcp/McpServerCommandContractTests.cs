@@ -112,12 +112,15 @@ public sealed class McpServerCommandContractTests
         await AssertTextAsync("search_pattern", new Dictionary<string, object?> { ["pattern"] = "Greeter" }, "Greeter.cs");
 
     [Fact]
-    public async Task RunAsync_ValidFixture_SearchPatternQueryAliasReturnsExpectedHit() =>
-        await AssertTextAsync("search_pattern", new Dictionary<string, object?> { ["query"] = "Greeter" }, "Greeter.cs");
-
-    [Fact]
-    public async Task RunAsync_ValidFixture_SearchPatternFileFilterAliasFiltersResults() =>
-        await AssertTextAsync("search_pattern", new Dictionary<string, object?> { ["pattern"] = "Greeter", ["fileFilter"] = "*.cs" }, "Greeter.cs");
+    public async Task RunAsync_ValidFixture_SearchPatternIncludeGlobFiltersResults() =>
+        await AssertTextAsync(
+            "search_pattern",
+            new Dictionary<string, object?>
+            {
+                ["pattern"] = "Greeter",
+                ["includePatterns"] = new[] { "**/*.cs" },
+            },
+            "Greeter.cs");
 
     [Fact]
     public async Task RunAsync_ValidFixture_SearchPatternStructuredArgumentsBind()
@@ -160,6 +163,12 @@ public sealed class McpServerCommandContractTests
             .Single(candidate => candidate.ProtocolTool.Name == "search_pattern");
 
         Assert.Contains("enrichCSharp", tool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Default 20", tool.ProtocolTool.Description, StringComparison.Ordinal);
+        Assert.Contains("Default 8192", tool.ProtocolTool.Description, StringComparison.Ordinal);
+        Assert.Contains("Cap 65536", tool.ProtocolTool.Description, StringComparison.Ordinal);
+        Assert.DoesNotContain("fileFilter", tool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("query", tool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("searchPattern", tool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("enrichCSharp=true", tool.ProtocolTool.Description, StringComparison.Ordinal);
         Assert.Contains("ambiguous", tool.ProtocolTool.Description, StringComparison.Ordinal);
         Assert.Contains("unavailable", tool.ProtocolTool.Description, StringComparison.Ordinal);
@@ -196,10 +205,6 @@ public sealed class McpServerCommandContractTests
     [Fact]
     public async Task RunAsync_ValidFixture_GetFileSkeletonReturnsGreeterSignature() =>
         await AssertTextAsync("get_file_skeleton", new Dictionary<string, object?> { ["filePaths"] = new[] { "src/SymbolGraphMini/Greeter.cs" } }, "Greet");
-
-    [Fact]
-    public async Task RunAsync_ValidFixture_GetFileSkeletonAcceptsStringFilePathAlias() =>
-        await AssertTextAsync("get_file_skeleton", new Dictionary<string, object?> { ["filePath"] = "src/SymbolGraphMini/Greeter.cs" }, "Greet");
 
     [Fact]
     public async Task RunAsync_ValidFixture_GetFileTreeDiscoversPhysicalFilesAndStructuredPayload()
@@ -323,7 +328,6 @@ public sealed class McpServerCommandContractTests
                 Catalog = null,
                 Console = Console,
                 Config = new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
-                UsedDefaultConfig = false,
                 LoadFunc = LoadSolutionAsync,
             });
             return ProjectInstanceCreation.Resident(Server);

@@ -17,31 +17,46 @@ internal static class RulesResourceFormatter
         var configSnapshot = snapshot.Server.GetConfigSnapshot();
         if (configSnapshot.Config is not Config config)
         {
-            throw new InvalidOperationException("Die resident gehaltene MCP-Konfiguration ist keine Config-Instanz.");
+            return BuildNotConfiguredMarkdown(snapshot.Definition?.SolutionPath ?? snapshot.RootPath);
         }
 
         return BuildMarkdown(
             snapshot.Definition?.SolutionPath ?? snapshot.RootPath,
             config,
-            configSnapshot.UsedDefaultConfig,
             configSnapshot.ResolvedConfigPath);
+    }
+
+    private static string BuildNotConfiguredMarkdown(string targetPath)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("# AiNetLinter — effektive Regelkonfiguration");
+        builder.AppendLine();
+        builder.AppendLine($"- targetPath: `{targetPath}`");
+        builder.AppendLine("- Konfigurationsquelle: `not_configured`");
+        builder.AppendLine("- Grundlage: kein expliziter Config-Snapshot geladen.");
+        builder.AppendLine();
+        builder.AppendLine("## Status");
+        builder.AppendLine();
+        builder.AppendLine("`not_configured` — neben dem adressierten Target wurde keine gültige `ainetlinter-rules.json` geladen.");
+        builder.AppendLine("Navigation bleibt verfügbar; Lint-Operationen sind nicht konfiguriert.");
+        builder.AppendLine("Nächster Schritt: `ainetlinter-rules.json` neben dem adressierten Target anlegen und die Resource erneut lesen.");
+        return builder.ToString().TrimEnd();
     }
 
     internal static string BuildMarkdown(
         string targetPath,
         Config config,
-        bool usedDefaultConfig,
         string? resolvedConfigPath)
     {
         var builder = new StringBuilder();
         builder.AppendLine("# AiNetLinter — effektive Regelkonfiguration");
         builder.AppendLine();
         builder.AppendLine($"- targetPath: `{targetPath}`");
-        builder.AppendLine($"- Konfigurationsquelle: {DescribeConfigOrigin(usedDefaultConfig, resolvedConfigPath)}");
+        builder.AppendLine($"- Konfigurationsquelle: {DescribeConfigOrigin(resolvedConfigPath)}");
         builder.AppendLine("- Grundlage: aktueller atomarer Config-Snapshot des adressierten Projekt-Keys.");
         builder.AppendLine();
 
-        if (usedDefaultConfig)
+        if (resolvedConfigPath is null)
         {
             builder.AppendLine("## Status");
             builder.AppendLine();
@@ -58,12 +73,10 @@ internal static class RulesResourceFormatter
         return builder.ToString().TrimEnd();
     }
 
-    private static string DescribeConfigOrigin(bool usedDefaultConfig, string? resolvedConfigPath) =>
-        usedDefaultConfig
-            ? "`not_configured (ainetlinter-rules.json fehlt)`"
-            : string.IsNullOrWhiteSpace(resolvedConfigPath)
-                ? "`unbekannt`"
-                : $"`{resolvedConfigPath}`";
+    private static string DescribeConfigOrigin(string? resolvedConfigPath) =>
+        string.IsNullOrWhiteSpace(resolvedConfigPath)
+            ? "`not_configured`"
+            : $"`{resolvedConfigPath}`";
 
     private static void AppendActiveRules(StringBuilder builder, Config config)
     {

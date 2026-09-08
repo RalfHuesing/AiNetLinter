@@ -28,25 +28,17 @@ internal sealed record McpCodeGraphServerOptions
     /// (siehe <c>MetricsConfig.MaxLineCount</c>).</summary>
     public int MaxLineCount { get; init; } = 700;
 
-    /// <summary>Vollstaendige Linter-Konfiguration aus <c>ainetlinter-rules.json</c> neben der adressierten Solution,
-    /// sonst Default-<see cref="Config"/>. Exposed als schmale Lese-Sicht
+    /// <summary>Vollstaendige Linter-Konfiguration aus <c>ainetlinter-rules.json</c> neben der adressierten Solution.
+    /// Exposed als schmale Lese-Sicht
     /// (<see cref="ILinterEngineConfig"/>), damit der vollstaendige <c>Configuration</c>-Namespace
     /// nicht in den Footprint der <c>McpCodeGraphServer</c>-Konsumenten gezogen wird.</summary>
-    public required ILinterEngineConfig Config { get; init; }
-
-    /// <summary>
-    /// True, wenn <c>McpServerCommand</c> keine <c>ainetlinter-rules.json</c> neben der aufgeloesten
-    /// Solution-Datei finden konnte und der Server mit der <see cref="Config"/>-Default-
-    /// Konfiguration laeuft. <c>get_violations</c> zeigt in diesem Fall eine sichtbare
-    /// Header-Zeile an. Siehe <see cref="McpCodeGraphServer.UsedDefaultConfig"/>.
-    /// </summary>
-    public bool UsedDefaultConfig { get; init; }
+    public required ILinterEngineConfig? Config { get; init; }
 
     /// <summary>
     /// Absoluter oder relativer Pfad der tatsaechlich geladenen <c>ainetlinter-rules.json</c>
     /// per Auto-Discovery neben der Solution
-    /// gefunden. <see langword="null"/>, wenn <see cref="UsedDefaultConfig"/> <see langword="true"/>
-    /// ist. Rein informativ (z. B. fuer die <c>ainetlinter://overview</c>-Resource) — die
+    /// gefunden. <see langword="null"/>, wenn keine benachbarte Regeldatei geladen wurde.
+    /// Rein informativ (z. B. fuer die <c>ainetlinter://overview</c>-Resource) — die
     /// eigentliche Config-Aufloesung ist bereits in <see cref="Config"/> abgeschlossen.
     /// </summary>
     public string? ResolvedConfigPath { get; init; }
@@ -83,8 +75,7 @@ internal sealed record McpCodeGraphServerOptions
             Catalog = p.Catalog,
             Console = p.Console ?? LinterConsole.Instance,
             MaxLineCount = p.MaxLineCount,
-            Config = p.Config ?? new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
-            UsedDefaultConfig = p.UsedDefaultConfig,
+            Config = p.Config,
             ResolvedConfigPath = p.ResolvedConfigPath,
             ReadOnlySolutionSnapshot = p.ReadOnlySolutionSnapshot,
             AssemblySymbolIdentity = p.AssemblySymbolIdentity,
@@ -103,7 +94,6 @@ internal sealed record McpCodeGraphServerOptionsFromParameters(
     ILintConsole? Console = null,
     int MaxLineCount = 700,
     Config? Config = null,
-    bool UsedDefaultConfig = false,
     string? ResolvedConfigPath = null,
     Solution? ReadOnlySolutionSnapshot = null,
     AnalysisSymbolIdentity? AssemblySymbolIdentity = null);

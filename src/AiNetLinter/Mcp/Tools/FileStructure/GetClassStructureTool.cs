@@ -23,13 +23,10 @@ internal sealed record GetClassStructureArgs(
     string? SortBy = "lines",
     int MaxMembers = GetClassStructureTool.DefaultMaxMembers,
     string? KindFilter = null,
-    string? NameFilter = null,
-    string? Symbol = null)
+    string? NameFilter = null)
 {
     internal string? EffectiveSymbolIdentifier =>
-        !string.IsNullOrWhiteSpace(SymbolIdentifier)
-            ? SymbolIdentifier
-            : Symbol;
+        string.IsNullOrWhiteSpace(SymbolIdentifier) ? null : SymbolIdentifier;
 }
 
 /// <summary>
@@ -69,7 +66,7 @@ internal static class GetClassStructureTool
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifier' (oder 'symbol') fehlt oder ist leer.",
+                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
                 hint: "symbolIdentifier angeben: z. B. 'MyClass', 'Namespace.MyClass' oder 'Datei.cs:42:10'.");
         }
 
@@ -81,7 +78,7 @@ internal static class GetClassStructureTool
                 solution,
                 effectiveIdentifier,
                 ct,
-                state.AssemblySymbolIdentity);
+                state.HandoffSymbolIdentity);
             if (error is not null) return error;
             if (resolvedSymbol is null) return McpToolResults.SymbolNotFound(effectiveIdentifier);
 

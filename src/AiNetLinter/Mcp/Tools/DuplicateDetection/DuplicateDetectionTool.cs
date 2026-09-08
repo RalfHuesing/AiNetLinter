@@ -59,6 +59,7 @@ internal static class DuplicateDetectionTool
         }
 
         var configSnapshot = state.GetConfigSnapshot();
+        if (configSnapshot.Config is null) return McpToolResults.NotConfigured(solution.FilePath);
         var config = configSnapshot.Config.Global;
 
         try

@@ -223,6 +223,7 @@ public sealed class SearchPatternToolTests
         Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.GetProperty("completeness").ValueKind);
         Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.GetProperty("scope").ValueKind);
         Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.GetProperty("snapshot").ValueKind);
+        Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.GetProperty("next").ValueKind);
         Assert.DoesNotContain(
             result.StructuredContent.Value.GetProperty("matches").EnumerateArray(),
             match => match.TryGetProperty("semantic", out _));
@@ -284,6 +285,8 @@ public sealed class SearchPatternToolTests
         Assert.Contains(
             "maxFiles",
             completeness.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal(2, completeness.GetProperty("totalCount").GetInt32());
+        Assert.Equal(1, completeness.GetProperty("returnedCount").GetInt32());
     }
 
     [Fact]
@@ -343,6 +346,53 @@ public sealed class SearchPatternToolTests
             "INVALID_ARGUMENT",
             Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text,
             StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(2001, 0, "maxResults")]
+    [InlineData(50, 65537, "maxResponseBytes")]
+    public async Task ExecuteAsync_OverCap_ReturnsFieldBoundInvalidArgument(
+        int maxResults,
+        int maxResponseBytes,
+        string fieldPath)
+    {
+        using var state = _fixture.CreateReadOnlyServer();
+
+        var result = await SearchPatternTool.ExecuteAsync(
+            state,
+            new SearchPatternToolArguments(
+                "Greeter",
+                false,
+                maxResults,
+                0,
+                0,
+                maxResponseBytes,
+                null,
+                null,
+                null),
+            CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
+        Assert.Contains($"$.{fieldPath}", text, StringComparison.Ordinal);
+        Assert.Equal(
+            $"$.{fieldPath}",
+            result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_InvalidScopeType_ReturnsFieldBoundInvalidArgument()
+    {
+        using var state = _fixture.CreateReadOnlyServer();
+
+        var result = await SearchPatternTool.ExecuteAsync(
+            state,
+            new SearchPatternToolArguments("Greeter", false, 20, 0, 0, 8192, null, null, null, false, "staging"),
+            CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("INVALID_ARGUMENT", text, StringComparison.Ordinal);
+        Assert.Contains("$.scopeType", text, StringComparison.Ordinal);
     }
 
     [Fact]

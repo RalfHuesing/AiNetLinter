@@ -8,6 +8,7 @@ using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
 using AiNetLinter.Mcp.Tools.TypeHierarchy;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -40,6 +41,38 @@ public sealed class FindImplementationsTests
         Assert.Contains(dto.Implementations, i => i.TypeName.Contains("BaseProcessor", StringComparison.Ordinal));
         Assert.Contains(dto.Implementations, i => i.TypeName.Contains("DerivedProcessor", StringComparison.Ordinal));
         Assert.Contains(dto.Implementations, i => i.TypeName.Contains("MoreDerivedProcessor", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SourceHandoffIdFromFindSymbol_ReturnsImplementations()
+    {
+        using var fixture = new McpInMemoryTestContext(TransitiveSymbolGraphMiniSolutionSpec.Create());
+        var server = fixture.CreateServer();
+
+        var discovery = await FindSymbolTool.ExecuteAsync(
+            server,
+            ["IProcessor"],
+            kind: "interface",
+            maxResults: 50,
+            CancellationToken.None);
+        var handoffId = discovery.StructuredContent!.Value
+            .GetProperty("results")[0]
+            .GetProperty("matches")[0]
+            .GetProperty("id")
+            .GetString();
+        Assert.StartsWith("source:", handoffId, StringComparison.Ordinal);
+
+        var result = await FindImplementationsTool.ExecuteAsync(
+            server,
+            handoffId,
+            maxResults: 50,
+            ct: CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var dto = JsonSerializer.Deserialize<FindImplementationsResultDto>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(dto);
+        Assert.Equal(3, dto!.TotalCount);
     }
 
     [Fact]

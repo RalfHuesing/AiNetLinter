@@ -14,7 +14,12 @@ internal sealed record TransitiveCallSiteEntry(
     string ProjectName,
     int Depth,
     string ReachedFromSymbolId,
-    AssemblyNavigationOrigin? Origin = null);
+    AssemblyNavigationOrigin? Origin = null,
+    bool Handoff = false,
+    string? Id = null,
+    string? TargetPath = null,
+    string? Snapshot = null,
+    IReadOnlyList<string>? AllowedFollowUpTools = null);
 
 internal sealed record TraversalCompleteness(
     int RequestedDepth,

@@ -21,8 +21,7 @@ namespace AiNetLinter.Mcp.Tools;
 /// <summary>
 /// MCP-Tool <c>get_symbol_body</c>: liefert den vollstaendigen Body eines oder mehrerer C#-Symbole
 /// (Methode, Konstruktor, Property, Indexer, Event). Erwartet ausschliesslich das
-/// <c>symbolIdentifiers</c>-Array; <c>symbolIdentifier</c> bleibt als Alias fuer genau ein
-/// Symbol verfuegbar.
+/// <c>symbolIdentifiers</c>-Array.
 /// </summary>
 internal static class GetSymbolBodyTool
 {
@@ -42,7 +41,7 @@ internal static class GetSymbolBodyTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var identifiers = NormalizeIdentifiers(request.SymbolIdentifiers, request.EffectiveSymbolIdentifier);
+        var identifiers = McpBatchArguments.Normalize(request.SymbolIdentifiers, StringComparer.Ordinal);
         if (identifiers.Count == 0)
         {
             return McpToolResults.Recoverable(
@@ -53,7 +52,7 @@ internal static class GetSymbolBodyTool
 
         try
         {
-            return await RenderSymbolBodiesAsync(solution, identifiers, request.EffectiveMaxBodyLines, request.StartLine, state.AssemblySymbolIdentity, null, ct);
+            return await RenderSymbolBodiesAsync(solution, identifiers, request.EffectiveMaxBodyLines, request.StartLine, state.HandoffSymbolIdentity, null, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -78,7 +77,7 @@ internal static class GetSymbolBodyTool
         ArgumentNullException.ThrowIfNull(lease);
         var solution = lease.Solution;
         if (solution is null) return Task.FromResult(McpToolResults.SolutionNotLoaded());
-        var identifiers = NormalizeIdentifiers(request.SymbolIdentifiers, request.EffectiveSymbolIdentifier);
+        var identifiers = McpBatchArguments.Normalize(request.SymbolIdentifiers, StringComparer.Ordinal);
         if (identifiers.Count == 0)
         {
             return Task.FromResult(McpToolResults.Recoverable(
@@ -98,16 +97,6 @@ internal static class GetSymbolBodyTool
         CancellationToken ct) =>
         ExecuteAsync(lease, new GetSymbolBodyRequest(symbolIdentifiers, MaxBodyLines: maxBodyLines), ct);
 
-
-    private static IReadOnlyList<string> NormalizeIdentifiers(
-        string[]? symbolIdentifiers,
-        string? symbolIdentifier)
-    {
-        var identifiers = McpBatchArguments.Normalize(symbolIdentifiers, StringComparer.Ordinal);
-        return identifiers.Count > 0 || string.IsNullOrWhiteSpace(symbolIdentifier)
-            ? identifiers
-            : McpBatchArguments.Normalize([symbolIdentifier], StringComparer.Ordinal);
-    }
 
     private static async Task<CallToolResult> RenderSymbolBodiesAsync(
         Solution solution,
@@ -213,7 +202,7 @@ internal static class GetSymbolBodyTool
         RenderSingleSymbolRequest request,
         ISymbol symbol)
     {
-        var idSuffix = request.AssemblyIdentity?.Format(symbol.TryGetDocCommentId() ?? CallGraphTraversal.GetStableSymbolId(symbol))
+        var idSuffix = request.AssemblyIdentity?.FormatHandoff(symbol)
             ?? symbol.TryGetDocCommentId();
         var bodyResolution = SourceSymbolBodyResolver.Resolve(symbol, request.MaxBodyLines, request.AssemblyOrigin, request.StartLine);
 
@@ -303,27 +292,10 @@ internal sealed record SymbolBodyEntry(
 
 internal sealed record GetSymbolBodyRequest(
     string[]? SymbolIdentifiers = null,
-    string? SymbolIdentifier = null,
     int MaxBodyLines = GetSymbolBodyTool.DefaultMaxBodyLines,
     int StartLine = 1,
-    int? EndLine = null,
-    string? Symbol = null,
-    string? Identifier = null,
-    string? Name = null)
+    int? EndLine = null)
 {
-    internal string? EffectiveSymbolIdentifier
-    {
-        get
-        {
-            var raw = !string.IsNullOrWhiteSpace(SymbolIdentifier)
-                ? SymbolIdentifier
-                : (!string.IsNullOrWhiteSpace(Symbol)
-                    ? Symbol
-                    : (!string.IsNullOrWhiteSpace(Identifier) ? Identifier : Name));
-            return string.IsNullOrWhiteSpace(raw) ? null : McpInputNormalizer.NormalizeSymbolIdentifier(raw);
-        }
-    }
-
     internal int EffectiveMaxBodyLines =>
         EndLine.HasValue
             ? Math.Max(1, EndLine.Value - Math.Max(1, StartLine) + 1)

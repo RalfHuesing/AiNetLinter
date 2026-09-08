@@ -26,6 +26,12 @@ internal static class GetIndexScopeTool
         var (text, entries) = GetIndexScopeScanner.BuildBreakdown(solution);
         // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
         // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
-        return Task.FromResult(McpToolResults.Text(text, new { Breakdown = entries }));
+        var payload = new IndexScopePayload(
+            entries,
+            Status: "ok",
+            Routing: new IndexScopeRouting(
+                new IndexScopeRoute("find_symbol", "pattern", null, null),
+                new IndexScopeRoute("search_pattern", "pattern", "all", "**/*{extension}")));
+        return Task.FromResult(McpToolResults.Text(text, payload));
     }
 }

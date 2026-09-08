@@ -275,8 +275,8 @@ public sealed class GetTypeHierarchyToolTests
         var thirdLeaseResult = await assemblyRegistry.LeaseAsync(assemblyPath);
         thirdLeaseResult.Lease!.Dispose();
 
-        // 3. Alte Assembly-ID nach Generationwechsel wird als stale abgelehnt
-        var staleCallResult = await AnalysisToolCall.ExecuteRouted(
+        // 3. Derselbe Pfad-/Hash-Snapshot bleibt nach interner Generationseviction gültig.
+        var stableCallResult = await AnalysisToolCall.ExecuteRouted(
             targetRoute,
             new AnalysisToolCallRequest(
                 new AnalysisTargetRequest(assemblyPath),
@@ -284,12 +284,11 @@ public sealed class GetTypeHierarchyToolTests
                     ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default),
                     AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default))));
 
-        Assert.NotEqual(true, staleCallResult.IsError);
-        var staleText = TextOf(staleCallResult);
-        Assert.Contains("INVALID_ARGUMENT", staleText, StringComparison.Ordinal);
-        Assert.Contains("aktuellen Assembly-Generation", staleText, StringComparison.Ordinal);
+        Assert.NotEqual(true, stableCallResult.IsError);
+        var stableText = TextOf(stableCallResult);
+        Assert.Contains("IService", stableText, StringComparison.Ordinal);
 
-        // 4. Eine bare DocumentationCommentId wird auf die aktuelle Assembly-Generation bezogen
+        // 4. Eine bare DocumentationCommentId bleibt eine direkte fachliche Suchanfrage.
         var unwrappedCallResult = await AnalysisToolCall.ExecuteRouted(
             targetRoute,
             new AnalysisToolCallRequest(

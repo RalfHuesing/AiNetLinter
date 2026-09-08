@@ -68,6 +68,16 @@ public sealed class GetIndexScopeToolTests
         var cssEntry = entries.Single(e => e.Extension == ".css");
         Assert.Equal(1, cssEntry.Count);
         Assert.False(cssEntry.SymbolGraphCovered);
+        Assert.Equal("find_symbol", csEntry.RoutingTool);
+        Assert.Equal("pattern", csEntry.QueryField);
+        Assert.Equal("search_pattern", cssEntry.RoutingTool);
+        Assert.Equal("pattern", cssEntry.QueryField);
+        Assert.Equal("all", cssEntry.ScopeType);
+        Assert.Equal("**/*.css", cssEntry.FileFilter);
+
+        var routing = result.StructuredContent.Value.GetProperty("routing");
+        Assert.Equal("find_symbol", routing.GetProperty("cSharp").GetProperty("tool").GetString());
+        Assert.Equal("search_pattern", routing.GetProperty("nonCSharp").GetProperty("tool").GetString());
     }
 
     [Fact]
@@ -82,6 +92,7 @@ public sealed class GetIndexScopeToolTests
         Assert.Contains(BuildBreakdownLine(".css", 1, "(nicht vom Symbolgraph abgedeckt)"), textContent.Text, StringComparison.Ordinal);
         Assert.Contains(BuildBreakdownLine(".js", 1, "(nicht vom Symbolgraph abgedeckt)"), textContent.Text, StringComparison.Ordinal);
         Assert.Contains(BuildBreakdownLine(".razor", 1, "(nicht vom Symbolgraph abgedeckt)"), textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("routing=search_pattern(pattern, scopeType=all, includePatterns=**/*.razor)", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

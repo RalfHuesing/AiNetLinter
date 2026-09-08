@@ -32,11 +32,12 @@ internal static class PatternDetectTool
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
+        var configSnapshot = state.GetConfigSnapshot();
+        if (configSnapshot.Config is null) return McpToolResults.NotConfigured(solution.FilePath);
 
         var (resolvedPatterns, error) = ResolvePatterns(patterns);
         if (error is not null) return error;
 
-        var configSnapshot = state.GetConfigSnapshot();
         var result = await PatternDetectScanner.BuildReportAsync(new PatternDetectScannerParameters(
             Solution: solution,
             Config: configSnapshot.Config,

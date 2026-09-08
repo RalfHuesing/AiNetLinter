@@ -62,6 +62,11 @@ internal static class GetImpactTool
 
         var detailError = ValidateDetailLevel(detailLevel, hasSymbolIdentifier);
         if (detailError is not null) return detailError;
+        if (detailLevel == ChangeContextContract.DetailLevelChangeContext
+            && state.GetConfigSnapshot().Config is null)
+        {
+            return McpToolResults.NotConfigured(solution.FilePath);
+        }
 
         return await ExecuteBranchAsync(
             state,
@@ -119,7 +124,7 @@ internal static class GetImpactTool
         detailLevel == ChangeContextContract.DetailLevelChangeContext
             ? ExecuteChangeContextBranchAsync(state, solution, input, ct, counters)
             : hasSymbolIdentifier
-                ? ExecuteSymbolBranchAsync(solution, input, state.AssemblySymbolIdentity, ct)
+                ? ExecuteSymbolBranchAsync(solution, input, state.HandoffSymbolIdentity, ct)
                 : ExecuteGitRefBranchAsync(solution, input, ct);
 
     // Case-insensitive; null/leer waehlt den Bestands-Pfad (callers). Rueckgabe null = unbekannter Wert.
@@ -283,7 +288,7 @@ internal static class GetImpactTool
         var configSnapshot = state.GetConfigSnapshot();
         return DiffViolationScanner.CollectAsync(new DiffViolationScanRequest(
             solution,
-            configSnapshot.Config,
+            state.GetConfigSnapshot().Config!,
             state.Console,
             analysis.RepositoryRoot,
             analysis.ChangedFiles,
@@ -371,9 +376,8 @@ internal sealed record GetImpactInput(
     int Depth,
     string? DetailLevel = null,
     int MaxChangedSymbols = ChangeContextContract.DefaultMaxChangedSymbols,
-    int MaxTestsPerSymbol = ChangeContextContract.DefaultMaxTestsPerSymbol,
-    string? Symbol = null)
+    int MaxTestsPerSymbol = ChangeContextContract.DefaultMaxTestsPerSymbol)
 {
     public string? EffectiveSymbolIdentifier =>
-        !string.IsNullOrWhiteSpace(SymbolIdentifier) ? SymbolIdentifier : Symbol;
+        string.IsNullOrWhiteSpace(SymbolIdentifier) ? null : SymbolIdentifier;
 }

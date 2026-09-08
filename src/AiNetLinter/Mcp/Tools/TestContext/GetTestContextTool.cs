@@ -35,13 +35,17 @@ internal static class GetTestContextTool
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbol' (oder 'symbolIdentifier') fehlt oder ist leer.",
-                hint: "symbol angeben: z. B. \"Namespace.Klasse\", \"Namespace.Klasse.Methode\", \"Datei.cs:42\" oder DocCommentId.");
+                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
+                hint: "symbolIdentifier angeben: z. B. \"Namespace.Klasse\", \"Namespace.Klasse.Methode\", \"Datei.cs:42\" oder DocCommentId.");
         }
 
         try
         {
-            var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, targetSymbol, ct);
+            var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
+                solution,
+                targetSymbol,
+                ct,
+                state.HandoffSymbolIdentity);
             if (error is not null) return error;
             if (symbol is null) return McpToolResults.SymbolNotFound(targetSymbol);
 

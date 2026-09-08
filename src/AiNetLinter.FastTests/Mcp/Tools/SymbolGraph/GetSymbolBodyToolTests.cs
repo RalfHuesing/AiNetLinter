@@ -72,37 +72,21 @@ public sealed class GetSymbolBodyToolTests
         Assert.True(result.StructuredContent.HasValue);
         var structured = result.StructuredContent!.Value;
         var entry = Assert.Single(structured.GetProperty("results").EnumerateArray());
-        Assert.Equal(stableId, entry.GetProperty("id").GetString());
+        Assert.StartsWith("source:", entry.GetProperty("id").GetString(), System.StringComparison.Ordinal);
+        Assert.NotEqual(stableId, entry.GetProperty("id").GetString());
         Assert.False(entry.GetProperty("isTruncated").GetBoolean());
         // Sufficiency-Hinweis: vollstaendiger (nicht gekappter) Body ist final.
         Assert.Contains("vollstaendig", textContent.Text, System.StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ScalarSymbolIdentifierAlias_ReturnsBodyForMethod()
+    public async Task ExecuteAsync_ScalarSymbolIdentifier_ReturnsBodyForMethod()
     {
         var state = _fixture.CreateServer();
 
         var result = await GetSymbolBodyTool.ExecuteAsync(
             state,
-            new GetSymbolBodyRequest(SymbolIdentifier: "Greeter.Greet", MaxBodyLines: 80),
-            CancellationToken.None);
-
-        Assert.NotEqual(true, result.IsError);
-        Assert.Contains(
-            "Greet",
-            Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text,
-            StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_ScalarSymbolAlias_ReturnsBodyForMethod()
-    {
-        var state = _fixture.CreateServer();
-
-        var result = await GetSymbolBodyTool.ExecuteAsync(
-            state,
-            new GetSymbolBodyRequest(Symbol: "Greeter.Greet", MaxBodyLines: 80),
+            new GetSymbolBodyRequest(SymbolIdentifiers: ["Greeter.Greet"], MaxBodyLines: 80),
             CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
@@ -165,7 +149,7 @@ public sealed class GetSymbolBodyToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("id: `P:SymbolGraphMini.Greeter.Prefix`", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("id: `source:", textContent.Text, System.StringComparison.Ordinal);
         Assert.DoesNotContain("get_Prefix", textContent.Text, System.StringComparison.Ordinal);
     }
 
@@ -192,8 +176,7 @@ public sealed class GetSymbolBodyToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("Prefix", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Contains($"id: `{stableId1}`", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Contains($"id: `{stableId2}`", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Equal(2, textContent.Text.Split("id: `source:", System.StringSplitOptions.None).Length - 1);
         Assert.Contains("---", textContent.Text, System.StringComparison.Ordinal);
     }
 
@@ -212,8 +195,7 @@ public sealed class GetSymbolBodyToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("angefordert: `Greeter.Greet`", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("angefordert: `Greeter.Prefix`", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Contains("id: `M:SymbolGraphMini.Greeter.Greet", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Contains("id: `P:SymbolGraphMini.Greeter.Prefix`", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Equal(2, textContent.Text.Split("id: `source:", System.StringSplitOptions.None).Length - 1);
     }
 
     [Fact]
@@ -233,7 +215,7 @@ public sealed class GetSymbolBodyToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Contains($"id: `{stableId}`", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("id: `source:", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("DoesNotExistXyz", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("nicht aufgeloest", textContent.Text, System.StringComparison.Ordinal);
     }

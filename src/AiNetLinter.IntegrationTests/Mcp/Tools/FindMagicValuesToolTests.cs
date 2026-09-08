@@ -60,7 +60,6 @@ public sealed class FindMagicValuesToolTests
             Console = options.Console,
             MaxLineCount = options.MaxLineCount,
             Config = options.Config,
-            UsedDefaultConfig = options.UsedDefaultConfig,
             ResolvedConfigPath = options.ResolvedConfigPath,
             LoadFunc = async token =>
             {

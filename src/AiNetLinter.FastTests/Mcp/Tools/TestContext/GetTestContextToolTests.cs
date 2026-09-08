@@ -3,6 +3,7 @@
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.TestContext;
 using AiNetLinter.TestKit;
@@ -17,7 +18,10 @@ public sealed class GetTestContextToolTests
 {
     private static McpCodeGraphServer CreateServer(Solution? solution = null) =>
         new(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: solution)));
+            new McpCodeGraphServerOptionsFromParameters(
+                null,
+                Config: new Config { Global = new GlobalConfig(), Metrics = new MetricsConfig() },
+                ReadOnlySolutionSnapshot: solution)));
 
     private static RoslynTestSolution CreateTestScenario() => RoslynTestSolutionFactory.CreateSolution(
         @"C:\virtual\TestContextSolution.slnx",
@@ -175,6 +179,39 @@ public sealed class GetTestContextToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_SourceHandoffIdFromFindSymbol_ReturnsTestContext()
+    {
+        using var solutionOwner = CreateTestScenario();
+        var state = CreateServer(solutionOwner.Solution);
+
+        var discovery = await AiNetLinter.Mcp.Tools.SymbolGraph.FindSymbolTool.ExecuteAsync(
+            state,
+            ["Calculator"],
+            kind: "class",
+            maxResults: 50,
+            CancellationToken.None);
+        var handoffId = discovery.StructuredContent!.Value
+            .GetProperty("results")[0]
+            .GetProperty("matches")[0]
+            .GetProperty("id")
+            .GetString();
+        Assert.StartsWith("source:", handoffId, System.StringComparison.Ordinal);
+
+        var result = await GetTestContextTool.ExecuteAsync(
+            state,
+            new TestContextOptions(handoffId),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = JsonSerializer.Deserialize<TestContextPayload>(
+            result.StructuredContent!.Value.GetRawText(),
+            McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal("CoreLib.Calculator", payload!.TargetSymbol);
+        Assert.Equal(2, payload.TotalMatchingTests);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_DirectMethod_ReturnsOnlyMatchingMethod()
     {
         using var solutionOwner = CreateTestScenario();
@@ -265,12 +302,12 @@ public sealed class GetTestContextToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_SymbolIdentifierAlias_WorksEqually()
+    public async Task ExecuteAsync_SymbolIdentifier_Works()
     {
         using var solutionOwner = CreateTestScenario();
         var state = CreateServer(solutionOwner.Solution);
 
-        var result = await GetTestContextTool.ExecuteAsync(state, new TestContextOptions(Symbol: null, SymbolIdentifier: "Calculator"), CancellationToken.None);
+        var result = await GetTestContextTool.ExecuteAsync(state, new TestContextOptions(SymbolIdentifier: "Calculator"), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);

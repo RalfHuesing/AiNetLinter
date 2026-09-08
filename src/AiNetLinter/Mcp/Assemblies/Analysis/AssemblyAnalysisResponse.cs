@@ -368,6 +368,7 @@ internal static partial class AssemblyAnalysisResponse
         name is "totalTypes" or "totalExtensions" or "totalCount" or "returnedCount"
             or "shownCount" or "isTruncated" or "truncated" or "continuationToken"
             or "types" or "extensions" or "id" or "status" or "detailHint"
+            or "contentMode" or "bodyAvailability"
             || name.EndsWith("Envelope", StringComparison.Ordinal);
 
     private static CallToolResult ReplaceStructured(CallToolResult result, JsonElement structured) =>

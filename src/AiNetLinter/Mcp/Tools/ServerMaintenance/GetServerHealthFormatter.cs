@@ -36,9 +36,9 @@ internal static class GetServerHealthFormatter
         builder.AppendLine($"### {snapshot.Definition.SolutionPath}");
         builder.AppendLine($"- LoadState: {server.LoadState}");
         builder.AppendLine($"- Solution: {(server.LoadState == ServerLoadState.Loading ? "wird noch geladen" : server.GetCurrentSolution()?.FilePath ?? "unbekannt")}");
-        var (_, usedDefaultConfig, resolvedConfigPath) = server.GetConfigSnapshot();
+        var (_, resolvedConfigPath) = server.GetConfigSnapshot();
         builder.AppendLine($"- targetPath: {snapshot.Definition.SolutionPath}");
-        builder.AppendLine($"- Config: {(usedDefaultConfig ? "not_configured" : resolvedConfigPath ?? "unbekannt")}");
+        builder.AppendLine($"- Config: {resolvedConfigPath ?? "not_configured"}");
         builder.AppendLine($"- Zuletzt genutzt (UTC): {FormatTimestamp(snapshot.LastUsedUtc)}");
         builder.AppendLine($"- Uptime: {FormatUptime(server.Uptime)}");
         builder.AppendLine($"- Solution-Refreshes seit Start: {server.RefreshCount}");

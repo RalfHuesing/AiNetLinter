@@ -131,8 +131,8 @@ public sealed class WiringToolCollectionContractTests
 
         var skeleton = tools["get_file_skeleton"];
         Assert.Contains("filePaths", skeleton.InputSchema.ToString(), StringComparison.Ordinal);
-        Assert.Contains("filePath", skeleton.InputSchema.ToString(), StringComparison.Ordinal);
-        Assert.Contains("String-Alias", skeleton.Description, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"filePath\"", skeleton.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("String-Alias", skeleton.Description, StringComparison.Ordinal);
 
         var metrics = tools["metrics_tree"];
         Assert.Contains("\"mode\"", metrics.InputSchema.ToString(), StringComparison.Ordinal);
@@ -142,13 +142,13 @@ public sealed class WiringToolCollectionContractTests
         var symbolBody = tools["get_symbol_body"];
         Assert.Contains("symbolIdentifiers", symbolBody.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier", symbolBody.InputSchema.ToString(), StringComparison.Ordinal);
-        Assert.Contains("String-Alias", symbolBody.Description, StringComparison.Ordinal);
+        Assert.DoesNotContain("String-Alias", symbolBody.Description, StringComparison.Ordinal);
 
         var findSymbol = tools["find_symbol"];
         Assert.Contains("namePatterns", findSymbol.InputSchema.ToString(), StringComparison.Ordinal);
-        Assert.Contains("namePattern", findSymbol.InputSchema.ToString(), StringComparison.Ordinal);
-        Assert.Contains("symbol", findSymbol.InputSchema.ToString(), StringComparison.Ordinal);
-        Assert.Contains("String-Alias", findSymbol.Description, StringComparison.Ordinal);
+        Assert.Contains("pattern", findSymbol.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("\"namePattern\"", findSymbol.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("String-Alias", findSymbol.Description, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -171,8 +171,8 @@ public sealed class WiringToolCollectionContractTests
 
         var featureContext = tools["get_feature_context"];
         Assert.Contains("symbolIdentifier", featureContext.InputSchema.ToString(), StringComparison.Ordinal);
-        Assert.Contains("symbol", featureContext.InputSchema.ToString(), StringComparison.Ordinal);
-        Assert.Contains("symbolIdentifier (primaer", featureContext.Description, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"symbol\"", featureContext.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("symbolIdentifier:", featureContext.Description, StringComparison.Ordinal);
         Assert.Contains("statische Referenzen/Call-Sites", featureContext.Description, StringComparison.Ordinal);
         Assert.Contains("keine Laufzeit-Coverage", featureContext.Description, StringComparison.Ordinal);
         Assert.Contains("maxTests bleibt ein Dateilimit", featureContext.Description, StringComparison.Ordinal);
@@ -180,20 +180,20 @@ public sealed class WiringToolCollectionContractTests
 
         var testContext = tools["get_test_context"];
         Assert.Contains("symbolIdentifier", testContext.InputSchema.ToString(), StringComparison.Ordinal);
-        Assert.Contains("symbol", testContext.InputSchema.ToString(), StringComparison.Ordinal);
-        Assert.Contains("symbolIdentifier (primaer", testContext.Description, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"symbol\"", testContext.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("symbolIdentifier:", testContext.Description, StringComparison.Ordinal);
 
         var metricsLookup = tools["metrics_lookup"];
-        Assert.Contains("symbolIdentifier", metricsLookup.InputSchema.ToString(), StringComparison.Ordinal);
-        Assert.Contains("symbol", metricsLookup.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("symbolIdentifiers", metricsLookup.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("\"symbolIdentifier\"", metricsLookup.InputSchema.ToString(), StringComparison.Ordinal);
 
         var symbolBody = tools["get_symbol_body"];
         Assert.Contains("symbolIdentifier", symbolBody.InputSchema.ToString(), StringComparison.Ordinal);
-        Assert.Contains("symbol", symbolBody.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("\"symbol\"", symbolBody.InputSchema.ToString(), StringComparison.Ordinal);
 
         var classStructure = tools["get_class_structure"];
         Assert.Contains("symbolIdentifier", classStructure.InputSchema.ToString(), StringComparison.Ordinal);
-        Assert.Contains("symbol", classStructure.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("\"symbol\"", classStructure.InputSchema.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]

@@ -20,12 +20,7 @@ internal sealed record DependencyGraphInput(
     string? SymbolIdentifier,
     string? Direction,
     int Depth,
-    int MaxResults,
-    string? Symbol = null)
-{
-    public string? EffectiveSymbolIdentifier =>
-        !string.IsNullOrWhiteSpace(SymbolIdentifier) ? SymbolIdentifier : Symbol;
-}
+    int MaxResults);
 
 /// <summary>
 /// Buendelt die Scan-Konfiguration fuer <see cref="DependencyGraphScanner.ScanFileAsync"/> /

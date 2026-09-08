@@ -39,11 +39,12 @@ internal static class GetViolationsTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        // Config + UsedDefaultConfig als atomarer Schnappschuss (state.GetConfigSnapshot()) statt
+        // Config + Konfigurationspfad als atomarer Schnappschuss (state.GetConfigSnapshot()) statt
         // zweier getrennter Property-Zugriffe: ein gleichzeitiger reload_config-Aufruf koennte
-        // sonst eine zerrissene Kombination liefern (Config schon neu, UsedDefaultConfig noch alt).
+        // sonst eine zerrissene Kombination liefern.
         var configSnapshot = state.GetConfigSnapshot();
-        if (configSnapshot.UsedDefaultConfig)
+        var config = configSnapshot.Config;
+        if (configSnapshot.ResolvedConfigPath is null || config is null)
         {
             return McpToolResults.Recoverable(
                 LinterErrorCodes.NotConfigured,
@@ -56,11 +57,10 @@ internal static class GetViolationsTool
         var result = await GetViolationsScanner.BuildViolationsTextAsync(
             new GetViolationsScannerParameters(
                 Solution: solution,
-                Config: configSnapshot.Config,
+                Config: config,
                 Console: state.Console,
                 ScopeFilter: options.ScopeFilter,
                 CancellationToken: ct,
-                UsedDefaultConfig: configSnapshot.UsedDefaultConfig,
                 MaxResults: normalizedMaxResults,
                 ContextLines: options.ContextLines,
                 IncludeSnippet: options.IncludeSnippet,

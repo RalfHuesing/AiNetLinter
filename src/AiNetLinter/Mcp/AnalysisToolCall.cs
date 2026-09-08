@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -31,7 +32,8 @@ internal static class ProjectAnalysisDispatcher
         ExecuteProjectAsync(
             registry,
             request,
-            lease => lease.Server.GetConfigSnapshot().UsedDefaultConfig
+            lease => lease.Server.GetConfigSnapshot() is var configSnapshot &&
+                configSnapshot.Config is null
                 ? Task.FromResult(McpToolResults.Recoverable(
                     LinterErrorCodes.NotConfigured,
                     "Diese Lint-Operation ist für die Solution nicht konfiguriert: neben der Solution wurde keine ainetlinter-rules.json gefunden.",
@@ -53,8 +55,17 @@ internal static class ProjectAnalysisDispatcher
         var target = resolution.Target!;
         if (target.TargetType == AnalysisTargetType.Project)
         {
-            var result = await ProjectToolCall.ExecuteAsync(registry, target.CanonicalPath, projectCall);
-            return McpToolResults.WithNavigation(result, target);
+            AnalysisTarget? analysisTarget = null;
+            var result = await ProjectToolCall.ExecuteAsync(
+                registry,
+                target.CanonicalPath,
+                async lease =>
+                {
+                    var leasedResult = await projectCall(lease);
+                    analysisTarget = McpNavigationProjection.WithSourceSnapshot(target, lease.Server);
+                    return leasedResult;
+                });
+            return McpToolResults.WithNavigation(result, analysisTarget ?? target);
         }
 
         return McpToolResults.WithNavigation(UnsupportedAssemblyTarget(target.CanonicalPath), target);
@@ -78,11 +89,17 @@ internal static class ProjectAnalysisDispatcher
                 resolution.Target);
         }
 
+        AnalysisTarget? analysisTarget = null;
         var result = await ProjectToolCall.ExecuteFilesystemAsync(
             registry,
             resolution.Target.CanonicalPath,
-            projectCall);
-        return McpToolResults.WithNavigation(result, resolution.Target);
+            async lease =>
+            {
+                var leasedResult = await projectCall(lease);
+                analysisTarget = McpNavigationProjection.WithSourceSnapshot(resolution.Target, lease.Server);
+                return leasedResult;
+            });
+        return McpToolResults.WithNavigation(result, analysisTarget ?? resolution.Target);
     }
 
     /// <summary>
@@ -151,6 +168,7 @@ internal static class AssemblyAnalysisDispatcher
         return Task.FromResult(McpToolResults.WithNavigation(result, resolution.Target));
     }
 
+    // ainetlinter-disable MaxMethodLineCount — der gemeinsame Dispatch bündelt Target-Aufloesung, Lease, Enrichment und Navigation.
     internal static async Task<CallToolResult> ExecuteAsync(
         IAssemblyAnalysisRegistry? assemblyRegistry,
         AnalysisTargetRequest request,
@@ -189,8 +207,15 @@ internal static class AssemblyAnalysisDispatcher
             }
 
             var result = await assemblyCall(lease).ConfigureAwait(false);
+            var snapshotTarget = target with
+            {
+                AnalysisSnapshotFingerprint = lease.Context.Origin.ContentHash,
+                AnalysisSnapshotKind = "assembly",
+                AnalysisSnapshotFresh = true,
+            };
+            var navigated = McpToolResults.WithNavigation(result, snapshotTarget);
             return AssemblyAnalysisResponse.Enrich(
-                McpToolResults.WithNavigation(result, target),
+                navigated,
                 lease,
                 new AssemblyAnalysisResponseRequest(
                     options.MaxResponseBytes,
@@ -293,4 +318,5 @@ internal static class AnalysisToolCall
         AnalysisToolRoute route,
         AnalysisToolCallRequest request) =>
         route(request);
+
 }

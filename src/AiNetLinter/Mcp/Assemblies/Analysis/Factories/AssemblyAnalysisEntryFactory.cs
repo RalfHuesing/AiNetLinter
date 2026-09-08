@@ -1,6 +1,5 @@
 #nullable enable
 
-using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -32,13 +31,9 @@ internal static class AssemblyAnalysisEntryFactory
         AssemblyContext context) =>
         new(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(
             Catalog: null,
-            Config: new Config
-            {
-                Global = new GlobalConfig(),
-                Metrics = new MetricsConfig(),
-            },
             ReadOnlySolutionSnapshot: solution,
-            AssemblySymbolIdentity: new AnalysisSymbolIdentity(
+            AssemblySymbolIdentity: AnalysisSymbolIdentity.ForAssembly(
+                context.Origin.CanonicalPath,
                 context.Origin.ContentHash,
                 context.Generation))));
 }

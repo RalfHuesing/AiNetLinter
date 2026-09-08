@@ -100,7 +100,7 @@ public sealed class McpServerCommandTests
     }
 
     [Fact]
-    public async Task CreateResidentInstance_MissingNeighborRules_PropagatesDefaultConfigStatus()
+    public async Task CreateResidentInstance_MissingNeighborRules_ReportsNoConfigStatus()
     {
         using var tempDir = TestTempDirectory.Create("mcp-server-factory-default-status-");
         var solutionPath = tempDir.CreateFile("app.slnx", string.Empty);
@@ -113,7 +113,6 @@ public sealed class McpServerCommandTests
         using var server = Assert.IsType<AiNetLinter.Mcp.McpCodeGraphServer>(creation.Server);
         await server.LoadTask!.WaitAsync(TimeSpan.FromSeconds(30));
 
-        Assert.True(server.UsedDefaultConfig);
         Assert.Null(server.ResolvedConfigPath);
     }
 
@@ -134,7 +133,6 @@ public sealed class McpServerCommandTests
         using var server = Assert.IsType<AiNetLinter.Mcp.McpCodeGraphServer>(creation.Server);
         await server.LoadTask!.WaitAsync(TimeSpan.FromSeconds(30));
 
-        Assert.False(server.UsedDefaultConfig);
         Assert.Equal(rulesPath, server.ResolvedConfigPath);
     }
 

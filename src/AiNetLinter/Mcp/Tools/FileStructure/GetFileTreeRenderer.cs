@@ -35,6 +35,8 @@ internal static class GetFileTreeRenderer
         }
 
         AppendCompleteness(builder, payload);
+        builder.AppendLine();
+        builder.Append($"[NEXT: {payload.Next.Kind}] {payload.Next.Action}");
         return builder.ToString().TrimEnd();
     }
 
