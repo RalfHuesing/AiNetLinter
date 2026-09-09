@@ -51,6 +51,9 @@ internal static class GetServerHealthTool
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(options);
+        var validation = ValidateOptions(options);
+        if (validation is not null) return validation;
+
         if (options.AssemblyPath is not null)
         {
             if (assemblyRegistry is null)
@@ -105,6 +108,16 @@ internal static class GetServerHealthTool
             registry.Snapshots(),
             assemblySnapshots.Select(AssemblyHealthProjection.FromSnapshot).ToList(),
             options);
+    }
+
+    private static CallToolResult? ValidateOptions(GetServerHealthOptions options)
+    {
+        if (options.MaxDiagnostics > 0) return null;
+
+        return McpToolResults.InvalidArgument(
+            "maxDiagnostics muss mindestens 1 sein.",
+            hint: "Eine positive Anzahl von Diagnose-Samples angeben oder maxDiagnostics weglassen.",
+            fieldPath: "$.maxDiagnostics");
     }
 
     internal static Task<CallToolResult> ExecuteDaemonProjectAsync(
