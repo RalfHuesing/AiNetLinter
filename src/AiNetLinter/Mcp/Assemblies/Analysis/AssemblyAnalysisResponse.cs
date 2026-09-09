@@ -105,44 +105,14 @@ internal static partial class AssemblyAnalysisResponse
             result,
             budget,
             IsStructuredTruncated(result.StructuredContent));
+        withBudget = ReserveTextBudget(withBudget, budget);
         if (Measure(withBudget).TotalBytes <= budget) return withBudget;
 
-        for (var attempt = 0; attempt < 128 && Measure(withBudget).TotalBytes > budget; attempt++)
-        {
-            if (withBudget.StructuredContent is not { ValueKind: JsonValueKind.Object } structured)
-            {
-                var text = withBudget.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
-                withBudget = McpToolResults.ReplaceText(withBudget, TrimUtf8(text, Math.Max(1, budget - Measure(withBudget).StructuredBytes)));
-                break;
-            }
-
-            var available = Math.Max(1, budget - Measure(withBudget).TextBytes);
-            var trimmed = TrimStructured(structured, available, cursorOffset);
-            if (trimmed.GetRawText() == structured.GetRawText())
-            {
-                var text = withBudget.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
-                var remainingForText = Math.Max(1, budget - Measure(withBudget).StructuredBytes);
-                withBudget = McpToolResults.ReplaceText(withBudget, TrimUtf8(text, remainingForText));
-                break;
-            }
-            withBudget = ReplaceStructured(withBudget, trimmed);
-            withBudget = AddWireBudgetMetadata(withBudget, budget, isTruncated: true);
-        }
+        withBudget = TrimStructuredToBudget(withBudget, budget, cursorOffset);
 
         if (Measure(withBudget).TotalBytes > budget)
         {
-            withBudget = ReplaceStructured(withBudget, JsonSerializer.SerializeToElement(new JsonObject
-            {
-                ["isTruncated"] = true,
-                ["truncated"] = true,
-                ["wireTruncated"] = true,
-                ["truncatedBy"] = new JsonArray("responseBudget"),
-                ["detailHint"] = "Die strukturierte Nutzlast wurde auf den minimalen Antwortumfang gekürzt; maxResponseBytes erhöhen oder die Detailabfrage gezielt erneut anfordern.",
-            }, McpJsonOptions.Default));
-            var text = withBudget.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
-            var remainingForText = Math.Max(1, budget - Measure(withBudget).StructuredBytes);
-            withBudget = McpToolResults.ReplaceText(withBudget, TrimUtf8(text, remainingForText));
-            withBudget = AddWireBudgetMetadata(withBudget, budget, isTruncated: true);
+            withBudget = MinimizeEnvelope(withBudget, budget);
         }
 
         withBudget = AddWireBudgetMetadata(withBudget, budget, IsStructuredTruncated(withBudget.StructuredContent));
@@ -151,6 +121,68 @@ internal static partial class AssemblyAnalysisResponse
         return McpToolResults.InvalidArgument(
             $"Das Assembly-Antwortbudget von {budget} Bytes ist für den minimalen Wire-Envelope nicht repräsentierbar.",
             $"maxResponseBytes auf mindestens {AssemblyAnalysisResponseLimits.MinimumResponseBytes} Bytes erhöhen.");
+    }
+
+    private static CallToolResult ReserveTextBudget(CallToolResult result, int budget)
+    {
+        if (result.StructuredContent is not { ValueKind: JsonValueKind.Object }) return result;
+
+        var text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
+        var textBudget = Math.Max(1, budget / 4);
+        return Encoding.UTF8.GetByteCount(text) > textBudget
+            ? McpToolResults.ReplaceText(result, TrimTextPreservingNavigation(text, textBudget))
+            : result;
+    }
+
+    private static CallToolResult TrimStructuredToBudget(
+        CallToolResult result,
+        int budget,
+        int cursorOffset)
+    {
+        var current = result;
+        for (var attempt = 0; attempt < 128 && Measure(current).TotalBytes > budget; attempt++)
+        {
+            if (current.StructuredContent is not { ValueKind: JsonValueKind.Object } structured)
+            {
+                return TrimTextToBudget(current, budget - Measure(current).StructuredBytes);
+            }
+
+            var available = Math.Max(1, budget - Measure(current).TextBytes);
+            var trimmed = TrimStructured(structured, available, cursorOffset);
+            if (trimmed.GetRawText() == structured.GetRawText())
+            {
+                return TrimTextToBudget(current, budget - Measure(current).StructuredBytes);
+            }
+
+            current = AddWireBudgetMetadata(
+                ReplaceStructured(current, trimmed),
+                budget,
+                isTruncated: true);
+        }
+
+        return current;
+    }
+
+    private static CallToolResult TrimTextToBudget(CallToolResult result, int budget)
+    {
+        var text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
+        return McpToolResults.ReplaceText(result, TrimTextPreservingNavigation(text, Math.Max(1, budget)));
+    }
+
+    private static CallToolResult MinimizeEnvelope(CallToolResult result, int budget)
+    {
+        var minimal = ReplaceStructured(result, JsonSerializer.SerializeToElement(new JsonObject
+        {
+            ["isTruncated"] = true,
+            ["truncated"] = true,
+            ["wireTruncated"] = true,
+            ["truncatedBy"] = new JsonArray("responseBudget"),
+            ["detailHint"] = "Die strukturierte Nutzlast wurde auf den minimalen Antwortumfang gekürzt; maxResponseBytes erhöhen oder die Detailabfrage gezielt erneut anfordern.",
+        }, McpJsonOptions.Default));
+        return AddWireBudgetMetadata(
+            TrimTextToBudget(minimal, budget - Measure(minimal).StructuredBytes),
+            budget,
+            isTruncated: true);
     }
 
     private static CallToolResult AddWireBudgetMetadata(
@@ -389,34 +421,6 @@ internal static partial class AssemblyAnalysisResponse
             ? Encoding.UTF8.GetByteCount(structured.GetRawText())
             : 0;
         return new(textBytes, structuredBytes);
-    }
-
-    internal static string TrimUtf8(string value, int maxBytes)
-    {
-        if (string.IsNullOrEmpty(value) || maxBytes <= 0) return string.Empty;
-        if (Encoding.UTF8.GetByteCount(value) <= maxBytes) return value;
-
-        const string ellipsis = "…";
-        var ellipsisBytes = Encoding.UTF8.GetByteCount(ellipsis);
-        var targetBytes = maxBytes - ellipsisBytes;
-
-        if (targetBytes < 0)
-        {
-            return maxBytes >= 1 ? "." : string.Empty;
-        }
-
-        var limit = Math.Min(value.Length, targetBytes);
-        while (limit > 0 && Encoding.UTF8.GetByteCount(value[..limit]) > targetBytes)
-        {
-            limit--;
-        }
-
-        if (limit > 0 && char.IsHighSurrogate(value[limit - 1]))
-        {
-            limit--;
-        }
-
-        return value[..limit] + ellipsis;
     }
 
     internal static CallToolResult Unsupported(string canonicalPath)

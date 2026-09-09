@@ -37,7 +37,8 @@ public sealed class McpServerAssemblyHealthE2ETests
                 ["publicOnly"] = false,
                 ["exactTypeName"] = true,
                 ["memberNames"] = new[] { "Dispose" },
-                ["maxMembers"] = 10
+                ["maxMembers"] = 10,
+                ["maxResponseBytes"] = 12_000
             });
 
         Assert.NotEqual(true, result.IsError);
