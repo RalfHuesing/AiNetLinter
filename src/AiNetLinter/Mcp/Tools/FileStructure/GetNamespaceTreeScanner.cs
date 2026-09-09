@@ -254,7 +254,7 @@ internal static class GetNamespaceTreeScanner
             TotalCount: totalCount,
             ShownCount: shownList.Count,
             Truncated: truncated,
-            Namespaces: rootNodes);
+            Namespaces: rootNodes.Take(parameters.MaxResults).ToList());
 
         return (sb.ToString(), payload);
     }

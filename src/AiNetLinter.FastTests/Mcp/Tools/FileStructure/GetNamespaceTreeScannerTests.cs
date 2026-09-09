@@ -197,6 +197,40 @@ public sealed class GetNamespaceTreeScannerTests
     }
 
     [Fact]
+    public async Task ScanProjectNamespacesAsync_TruncatesStructuredNamespacesToMaxResults()
+    {
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\MySolution.slnx",
+            new ProjectSpec(
+                "App.Core",
+                [
+                    ("TypeA.cs", "namespace App.Core.A; public class TypeA {}"),
+                    ("TypeB.cs", "namespace App.Core.B; public class TypeB {}"),
+                    ("TypeC.cs", "namespace App.Core.C; public class TypeC {}"),
+                ]));
+
+        var project = testSolution.Solution.Projects.Single();
+        var parameters = new NamespaceTreeScanParameters(
+            Project: project,
+            NamespacePrefix: "App.Core",
+            Depth: 1,
+            IncludeTypes: false,
+            KindFilter: "all",
+            MaxResults: 2,
+            SolutionDir: @"C:\virtual");
+
+        var (_, payload) = await GetNamespaceTreeScanner.ScanProjectNamespacesAsync(
+            parameters,
+            ct: CancellationToken.None);
+
+        Assert.True(payload.Truncated);
+        Assert.Equal(3, payload.TotalCount);
+        Assert.Equal(2, payload.ShownCount);
+        Assert.NotNull(payload.Namespaces);
+        Assert.Equal(2, payload.Namespaces!.Count);
+    }
+
+    [Fact]
     public async Task ScanProjectNamespacesAsync_GlobalNamespace_ReturnsTypesInGlobalNamespace()
     {
         using var testSolution = RoslynTestSolutionFactory.CreateSolution(
