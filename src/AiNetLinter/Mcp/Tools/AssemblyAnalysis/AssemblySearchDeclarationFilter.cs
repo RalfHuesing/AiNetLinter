@@ -18,6 +18,8 @@ internal readonly record struct AssemblySyntaxContext(SyntaxNode? Root, SourceTe
 
 internal static class AssemblySearchDeclarationFilter
 {
+    private const string TypeDeclarationKind = "type";
+
     internal static AssemblySyntaxContext InitSyntaxTree(
         IReadOnlyList<string> lines,
         AssemblySearchFileParameters options)
@@ -211,10 +213,10 @@ internal static class AssemblySearchDeclarationFilter
             {
                 var headerEnd = type.OpenBraceToken.SpanStart;
                 if (headerEnd <= type.SpanStart) headerEnd = type.Span.End;
-                return new DeclarationHeaderInfo("type", TextSpan.FromBounds(type.SpanStart, headerEnd));
+                return new DeclarationHeaderInfo(TypeDeclarationKind, TextSpan.FromBounds(type.SpanStart, headerEnd));
             }
             case DelegateDeclarationSyntax del:
-                return new DeclarationHeaderInfo("type", del.Span);
+                return new DeclarationHeaderInfo(TypeDeclarationKind, del.Span);
             default:
                 return null;
         }

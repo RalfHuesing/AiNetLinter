@@ -1,5 +1,6 @@
 #nullable enable
 
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
@@ -109,7 +110,7 @@ internal static class AssemblyAnalysisToolRegistrations
                 bool exactTypeName = false,
                 string[]? memberNames = null,
                 int maxMembers = AssemblyAnalysisService.DefaultMaxMembers,
-                bool includeReferences = false,
+                bool? includeReferences = null,
                 int maxResponseBytes = 0,
                 string? detailLevel = null,
                 string? cursor = null,
@@ -119,6 +120,11 @@ internal static class AssemblyAnalysisToolRegistrations
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
                 var effectiveCursor = cursor ?? continuationToken;
+                var effectiveIncludeReferences = includeReferences ?? (
+                    string.IsNullOrWhiteSpace(@namespace)
+                    && string.IsNullOrWhiteSpace(typeName)
+                    && string.IsNullOrWhiteSpace(memberName)
+                    && (memberNames is null || memberNames.All(string.IsNullOrWhiteSpace)));
                 return await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
                     new AnalysisToolCallRequest(
@@ -136,11 +142,11 @@ internal static class AssemblyAnalysisToolRegistrations
                                     exactTypeName,
                                     memberNames,
                                     maxMembers,
-                                    includeReferences,
+                                    effectiveIncludeReferences,
                                     maxResponseBytes,
                                     detailLevel,
                                     effectiveCursor)),
-                            ExpandAssemblyReferences: includeReferences,
+                            ExpandAssemblyReferences: effectiveIncludeReferences,
                             MaxResponseBytes: maxResponseBytes,
                             DetailLevel: detailLevel,
                             Cursor: effectiveCursor),
@@ -157,7 +163,8 @@ internal static class AssemblyAnalysisToolRegistrations
         "namespace, typeName und memberName filtern, publicOnly ist standardmaessig true, " +
         "exactTypeName schaltet fuer typeName von Teiltext- auf Exaktsuche um, memberNames " +
         "ergaenzt den Teiltextfilter memberName um eine exakte OR-Auswahl, " +
-        "includeReferences (Default: bei Type-/Member-Filter false, sonst true) steuert " +
+        "includeReferences (wenn weggelassen: bei Type-/Member-Filter false, sonst true; " +
+        "true/false wird explizit respektiert) steuert " +
          "Referenzlisten und Referenz-Sessions; ohne Detailflag bleiben nur Summen sichtbar, " +
         "maxResults begrenzt Typen (Default 100, Maximum 1000), " +
         "maxMembers begrenzt Member je Typ (Default 100, Maximum 1000). Identitaet, " +

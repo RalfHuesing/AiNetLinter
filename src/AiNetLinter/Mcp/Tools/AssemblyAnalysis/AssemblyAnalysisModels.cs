@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -50,14 +51,16 @@ internal sealed record AssemblyInspectionOptions(
     IReadOnlyList<string>? MemberNames,
     int MaxResults,
     int MaxMembers,
-    int Offset = 0);
+    int Offset = 0,
+    AnalysisSymbolIdentity? HandoffIdentity = null);
 
 internal sealed record AssemblyExtensionSearchOptions(
     string? ExtensionName,
     string? NamespaceFilter,
     string? ReceiverType,
     int MaxResults,
-    int Offset = 0);
+    int Offset = 0,
+    AnalysisSymbolIdentity? HandoffIdentity = null);
 
 internal sealed record AssemblyTypeSelection(
     IReadOnlyList<AssemblyTypeDto> Items,
@@ -140,7 +143,8 @@ internal sealed record AssemblyExtensionDto(
     IReadOnlyList<AssemblyParameterDto> Parameters,
     string Applicability,
     string? ApplicabilityReason,
-    IReadOnlyList<string> Attributes);
+    IReadOnlyList<string> Attributes,
+    string? Id = null);
 
 internal sealed record InspectAssemblyPayload(
     string AssemblyPath,

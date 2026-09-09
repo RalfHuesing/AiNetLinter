@@ -66,7 +66,7 @@ internal static class InspectAssemblyResponseBuilder
                     AssemblyPaging.ReadOffset(arguments.Cursor) + selection.Items.Count,
                     CreatePagingBinding(request))
                 : null,
-            Scope = arguments.IncludeReferences == true ? "root+references" : "root",
+            Scope = arguments.IncludeReferenceDetails ? "root+references" : "root",
         };
     }
 
@@ -90,7 +90,11 @@ internal static class InspectAssemblyResponseBuilder
                 arguments.MemberNames,
                 request.MaxResults,
                 AssemblyAnalysisService.NormalizeLimit(arguments.MaxMembers, AssemblyAnalysisService.DefaultMaxMembers, AssemblyAnalysisService.MaxMembers),
-                AssemblyPaging.ReadOffset(arguments.Cursor)));
+                AssemblyPaging.ReadOffset(arguments.Cursor),
+                AnalysisSymbolIdentity.ForAssembly(
+                    request.Context.Origin.CanonicalPath,
+                    request.Context.Origin.ContentHash,
+                    request.Context.Generation)));
     }
 
     private static InspectReferenceProjection CreateReferences(InspectAssemblyBuildRequest request)

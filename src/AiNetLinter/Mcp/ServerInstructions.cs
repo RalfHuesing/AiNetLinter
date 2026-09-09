@@ -28,11 +28,13 @@ internal static class ServerInstructions
         "Text/Namen ausserhalb von .cs (z. B. .js, .razor, .cshtml, .xaml, .html, .css) " +
         "search_pattern verwenden. enrichCSharp=true reichert sichtbare Treffer geladener " +
         "C#-Dokumente opt-in an; ambiguous/unavailable bleiben sichtbar.\n\n" +
-        "Assembly-Capability-Matrix (12 Cross-Target-Tools): dependency_graph, find_references, " +
-        "find_symbol, get_call_tree, get_class_structure, get_file_skeleton, get_impact, " +
-        "get_namespace_tree, get_symbol_body, get_type_hierarchy, metrics_lookup und metrics_tree. " +
+        "Assembly-Capability-Matrix (15 Cross-Target-Tools): dependency_graph, find_references, " +
+        "find_symbol, get_call_tree, get_class_structure, get_file_skeleton, get_file_tree, " +
+        "get_impact, get_namespace_tree, get_symbol_body, get_type_hierarchy, " +
+        "resolve_type_origin, find_implementations, metrics_lookup und metrics_tree. " +
         "get_impact akzeptiert fuer Assemblys nur symbolIdentifier. " +
-        "Assembly-only: inspect_assembly, find_assembly_extensions, search_assembly; alle akzeptieren .dll/.exe.\n\n" +
+        "Assembly-only: inspect_assembly, find_assembly_extensions, search_assembly, get_assembly_context; " +
+        "alle akzeptieren .dll/.exe.\n\n" +
         "Schemas und Toolzwecke: tools/list.\n\n" +
         "Sufficiency: Vollstaendige Ergebnisse nicht redundant per Read/Grep pruefen; bei " +
         "truncated Limits oder Scope verfeinern.\n\n" +

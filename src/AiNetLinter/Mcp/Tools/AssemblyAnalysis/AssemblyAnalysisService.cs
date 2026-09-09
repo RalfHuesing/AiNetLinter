@@ -119,7 +119,7 @@ internal static class AssemblyAnalysisService
             .ToList();
 
         var limited = extensions.Skip(Math.Max(0, options.Offset)).Take(options.MaxResults).ToList();
-        var items = limited.Select(pair => ToExtensionDto(context, pair.Type, pair.Method)).ToList();
+        var items = limited.Select(pair => ToExtensionDto(context, pair.Type, pair.Method, options.HandoffIdentity)).ToList();
         return new AssemblyExtensionSelection(
             items,
             extensions.Count,
@@ -127,7 +127,11 @@ internal static class AssemblyAnalysisService
             Math.Max(0, options.Offset) + limited.Count < extensions.Count ? ["maxResults"] : []);
     }
 
-    private static AssemblyExtensionDto ToExtensionDto(AssemblyContext context, INamedTypeSymbol declaringType, IMethodSymbol method)
+    private static AssemblyExtensionDto ToExtensionDto(
+        AssemblyContext context,
+        INamedTypeSymbol declaringType,
+        IMethodSymbol method,
+        AnalysisSymbolIdentity? handoffIdentity)
     {
         var receiverType = method.Parameters.Length == 0
             ? "<unbekannt>"
@@ -171,7 +175,8 @@ internal static class AssemblyAnalysisService
             Parameters(method.Parameters),
             applicability,
             reason,
-            Attributes(method));
+            Attributes(method),
+            handoffIdentity?.FormatHandoff(method));
     }
 
     private static AssemblyTypeDto ToTypeDto(INamedTypeSymbol type, AssemblyInspectionOptions options)
@@ -181,7 +186,7 @@ internal static class AssemblyAnalysisService
             .Where(member => !IsAccessor(member))
             .Where(member => !options.PublicOnly || IsPublicApi(member))
             .Where(member => MatchesMember(member, options.MemberFilter, options.MemberNames))
-            .Select(ToMemberDto)
+            .Select(member => ToMemberDto(member, options.HandoffIdentity))
             .OrderBy(member => member.Kind, StringComparer.Ordinal)
             .ThenBy(member => member.Signature, StringComparer.Ordinal)
             .ToList();
@@ -198,10 +203,10 @@ internal static class AssemblyAnalysisService
             matchingMembers.Count,
             members.Count < matchingMembers.Count,
             members.Count < matchingMembers.Count ? ["maxMembers"] : [],
-            StableId(type));
+            StableId(type, options.HandoffIdentity));
     }
 
-    private static AssemblyMemberDto ToMemberDto(ISymbol member)
+    private static AssemblyMemberDto ToMemberDto(ISymbol member, AnalysisSymbolIdentity? handoffIdentity)
     {
         var method = member as IMethodSymbol;
         var parameters = member switch
@@ -219,11 +224,12 @@ internal static class AssemblyAnalysisService
             method is null ? Array.Empty<string>() : GenericParameters(method),
             method is null ? Array.Empty<string>() : Constraints(method.TypeParameters),
             Attributes(member),
-            StableId(member));
+            StableId(member, handoffIdentity));
     }
 
-    private static string StableId(ISymbol symbol) =>
-        symbol.GetDocumentationCommentId()
+    private static string StableId(ISymbol symbol, AnalysisSymbolIdentity? handoffIdentity) =>
+        handoffIdentity?.FormatHandoff(symbol)
+        ?? symbol.GetDocumentationCommentId()
         ?? $"{symbol.Kind}:{symbol.ContainingType?.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}.{symbol.ToDisplayString(SymbolDisplayFormat.CSharpErrorMessageFormat)}";
 
     private static string MethodSignature(IMethodSymbol method)

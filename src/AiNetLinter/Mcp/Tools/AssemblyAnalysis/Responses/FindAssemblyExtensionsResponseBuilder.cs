@@ -28,7 +28,11 @@ internal static class FindAssemblyExtensionsResponseBuilder
         var selection = AssemblyAnalysisService.FindExtensions(
             context,
             new AssemblyExtensionSearchOptions(arguments.ExtensionName, arguments.Namespace, arguments.ReceiverType,
-                request.MaxResults, AssemblyPaging.ReadOffset(arguments.Cursor)));
+                request.MaxResults, AssemblyPaging.ReadOffset(arguments.Cursor),
+                AnalysisSymbolIdentity.ForAssembly(
+                    context.Origin.CanonicalPath,
+                    context.Origin.ContentHash,
+                    context.Generation)));
         var diagnostics = AssemblyAnalysisResponseLimits.ProjectDiagnostics(context.Diagnostics, request.Lease?.ReferenceExpansionDiagnostics);
         var status = context.Status.ResolveEffectiveStatus(context.Diagnostics.Concat(request.Lease?.ReferenceExpansionDiagnostics ?? Array.Empty<string>()).ToArray());
         var includeReferences = arguments.IncludeReferences;
@@ -132,6 +136,7 @@ internal static class FindAssemblyExtensionsResponseBuilder
                 ? extension.Name
                 : $"{extension.Namespace}.{extension.Name}";
             builder.AppendLine($"- `{qualifiedName}` für `{extension.ReceiverType}` — {extension.Applicability}");
+            if (extension.Id is not null) builder.AppendLine($"  ID: `{extension.Id}`");
             builder.AppendLine($"  Signatur: `{extension.Signature}`");
             if (extension.ApplicabilityReason is not null) builder.AppendLine($"  Grund: {extension.ApplicabilityReason}");
         }

@@ -247,12 +247,13 @@ internal static partial class AssemblyAnalysisResponse
 
     private static bool TryTrimOptionalSections(JsonObject obj)
     {
-        foreach (var section in new[] { "body", "classStructure", "metrics", "impact", "callers" })
+        foreach (var section in new[] { "assemblyAnalysis", "body", "classStructure", "metrics", "impact", "callers" })
         {
             if (obj[section] is not { } original
-                || original is JsonObject sectionObject
-                    && (sectionObject["status"] is not null
-                        || ResultCollections.Any(collection => sectionObject[collection] is JsonArray))) continue;
+                || original is JsonObject sectionObject && sectionObject["status"] is not null
+                || section == "body"
+                    && original is JsonObject bodyObject
+                    && ResultCollections.Any(collection => bodyObject[collection] is JsonArray)) continue;
 
             obj[section] = new JsonObject
             {
@@ -272,7 +273,7 @@ internal static partial class AssemblyAnalysisResponse
     {
         foreach (var property in obj.ToList())
         {
-            if (IsBudgetMetadata(property.Key)) continue;
+            if (IsBudgetMetadata(property.Key) || IsEnvelopeMetadata(property.Key)) continue;
             if (property.Value is JsonValue value
                 && value.TryGetValue<string>(out var text)
                 && text.Length > 256)
