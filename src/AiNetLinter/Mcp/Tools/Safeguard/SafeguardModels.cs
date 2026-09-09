@@ -23,7 +23,22 @@ internal sealed record BuildScoreResultParameters(
     Config Config,
     double Threshold,
     int MaxRemediationEntries,
-    string SolutionDir);
+    string SolutionDir,
+    string Scope = "solution",
+    string Completeness = "complete",
+    string Status = "configured",
+    string? StatusCause = null);
+
+internal sealed record BuildSafeguardSummaryParameters(
+    double Score,
+    double Threshold,
+    bool Passed,
+    int TotalViolationCount,
+    int ShownViolationCount,
+    IReadOnlyList<ScannedClass> Classes,
+    string Scope,
+    string Completeness,
+    string Status);
 
 /// <summary>
 /// Parameter-Record fuer <see cref="SafeguardScanner.ComputeScoreAsync"/>. Kapselt 7
@@ -51,6 +66,12 @@ internal sealed record SafeguardScoreResult(
     bool IsMalfunction,
     string? Context = null);
 
+internal sealed record SafeguardScopeAssessment(
+    string Scope,
+    string Completeness,
+    string Status,
+    string StatusCause);
+
 /// <summary>
 /// Score-Aggregat-Container mit den vier Score-Komponenten (Violations/CC/Footprint/Sealed-Bonus)
 /// aggregiert in <see cref="Score"/>, der <see cref="Threshold"/> als Pass-Grenze, den
@@ -58,12 +79,17 @@ internal sealed record SafeguardScoreResult(
 /// und einer kompakten <see cref="Summary"/>-Zeile.
 /// </summary>
 internal sealed record ScoreResult(
-    bool Passed,
-    double Score,
+    bool? Passed,
+    double? Score,
     double Threshold,
     IReadOnlyList<ViolationEntry> Violations,
     RemediationHint Remediation,
     string Summary,
+    string Scope,
+    bool ScoreIsNotScope,
+    string Completeness,
+    string Status,
+    string? StatusCause = null,
     int TotalViolationCount = 0,
     int ShownViolationCount = 0,
     bool ViolationsTruncated = false);

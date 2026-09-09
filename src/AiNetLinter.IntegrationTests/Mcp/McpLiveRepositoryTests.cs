@@ -271,8 +271,6 @@ public sealed class McpLiveRepositoryTests
             result.StructuredContent!.Value.GetRawText())!;
         Assert.NotNull(json);
 
-        Assert.True(json.ContainsKey("passed"));
-        Assert.True(json.ContainsKey("score"));
         Assert.True(json.ContainsKey("threshold"));
         Assert.True(json.ContainsKey("violations"));
         Assert.True(json.ContainsKey("totalViolationCount"));
@@ -280,11 +278,22 @@ public sealed class McpLiveRepositoryTests
         Assert.True(json.ContainsKey("violationsTruncated"));
         Assert.True(json.ContainsKey("remediation"));
         Assert.True(json.ContainsKey("summary"));
+        Assert.True(json.ContainsKey("scope"));
+        Assert.True((bool)json["scoreIsNotScope"]!);
         Assert.IsType<JsonArray>(json["violations"]);
 
-        var score = (double)json["score"]!;
-        Assert.True(score >= 5.0,
-            $"Safeguard-Live-Score {score} unter Korridor >= 5.0");
+        if (json.ContainsKey("score"))
+        {
+            Assert.True(json.ContainsKey("passed"));
+            var score = (double)json["score"]!;
+            Assert.True(score >= 5.0,
+                $"Safeguard-Live-Score {score} unter Korridor >= 5.0");
+        }
+        else
+        {
+            Assert.Equal("not_decidable", (string)json["status"]!);
+            Assert.DoesNotContain("PASS", (string)json["summary"]!, StringComparison.Ordinal);
+        }
     }
 
     [Fact]

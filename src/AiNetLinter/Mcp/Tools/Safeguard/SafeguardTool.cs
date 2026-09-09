@@ -77,7 +77,10 @@ internal static class SafeguardTool
                 $"Severity: {violation.Severity}; Guidance: {violation.Guidance}"));
 
     private static string BuildSufficiencyHint(ScoreResult score)
-        => score.ViolationsTruncated
+        => score.Status is "not_decidable" or "not_configured"
+            ? "[HINWEIS]: Kein entscheidbarer Score — Scope, Dateiausschlüsse und Regelkonfiguration prüfen; " +
+              "daraus folgt weder 0 Violations noch PASS."
+            : score.ViolationsTruncated
             ? "[HINWEIS]: Angezeigt wird nur die deterministische Top-Auswahl wegen " +
               "maxViolations. Für vollständige Violations im Scope get_violations aufrufen."
             : "[HINWEIS]: Diese Daten sind vollständig für den angefragten Scope — kein zusätzliches " +

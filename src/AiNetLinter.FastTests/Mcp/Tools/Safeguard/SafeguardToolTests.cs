@@ -72,6 +72,12 @@ public sealed class SafeguardToolTests
         Assert.NotNull(json["violations"]);
         Assert.NotNull(json["remediation"]);
         Assert.NotNull(json["summary"]);
+        Assert.True((bool)json["scoreIsNotScope"]!);
+        Assert.Equal("solution", (string)json["scope"]!);
+        Assert.Equal("complete", (string)json["completeness"]!);
+        Assert.NotNull(json["statusCause"]);
+        Assert.Contains((string)json["summary"]!, textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("scoreIsNotScope=true", textContent.Text, StringComparison.Ordinal);
         Assert.NotNull(json["totalViolationCount"]);
         Assert.NotNull(json["shownViolationCount"]);
         Assert.NotNull(json["violationsTruncated"]);
@@ -142,6 +148,23 @@ public sealed class SafeguardToolTests
         Assert.Equal(false, (bool)json["passed"]!);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("FAIL", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MissingConfig_ReturnsNotConfiguredWithoutScore()
+    {
+        using var context = new McpInMemoryTestContext();
+        using var state = context.CreateServer(includeConfig: false);
+
+        var result = await SafeguardTool.ExecuteAsync(state, null, 8.0, 20, CancellationToken.None);
+
+        Assert.False(result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var structured = result.StructuredContent!.Value;
+        Assert.False(structured.TryGetProperty("score", out _));
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("NOT_CONFIGURED", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("PASS", text, StringComparison.Ordinal);
     }
 
     [Fact]

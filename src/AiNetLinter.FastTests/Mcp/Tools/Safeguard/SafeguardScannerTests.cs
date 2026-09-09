@@ -31,7 +31,7 @@ public sealed class SafeguardScannerTests
     public SafeguardScannerTests() { _fixture = new McpInMemoryTestContext(); }
 
     [Fact]
-    public async Task ComputeScoreAsync_EmptySolution_ReturnsHighScore()
+    public async Task ComputeScoreAsync_EmptySolution_ReturnsNotDecidableWithoutPassClaim()
     {
         using var testSolution = CreateSolution();
         var solution = testSolution.Solution;
@@ -42,9 +42,62 @@ public sealed class SafeguardScannerTests
 
         Assert.False(result.IsMalfunction);
         Assert.NotNull(result.Score);
-        Assert.True(result.Score!.Score >= 9.0, $"Score {result.Score.Score} sollte >= 9.0 sein.");
-        Assert.True(result.Score.Passed);
+        Assert.Null(result.Score!.Score);
+        Assert.Null(result.Score.Passed);
+        Assert.Equal("not_decidable", result.Score.Status);
+        Assert.DoesNotContain("PASS", result.Score.Summary, StringComparison.Ordinal);
         Assert.Empty(result.Score.Violations);
+    }
+
+    [Fact]
+    public async Task ComputeScoreAsync_ScopeFilter_FiltersViolationsAndClassMetricsTogether()
+    {
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\SafeguardScopeTests.slnx",
+            new ProjectSpec("InScope", [
+                ("InScope.cs", "namespace InScope; public sealed class Clean { public int Value() => 1; }")]),
+            new ProjectSpec("OutsideScope", [
+                ("Outside.cs", "namespace OutsideScope; public class Dirty { public int Value() => 1; }")]));
+
+        var result = await SafeguardScanner.ComputeScoreAsync(new SafeguardScannerParameters(
+            Solution: testSolution.Solution,
+            Config: CreateConfig(),
+            Console: NullConsole.Instance,
+            ScopeFilter: "InScope",
+            CancellationToken: CancellationToken.None,
+            MinScoreThreshold: 8.0));
+
+        Assert.False(result.IsMalfunction);
+        Assert.NotNull(result.Score);
+        var score = result.Score!;
+        Assert.NotNull(score.Score);
+        Assert.Equal("InScope", score.Scope);
+        Assert.True(score.ScoreIsNotScope);
+        Assert.Equal("complete", score.Completeness);
+        Assert.Contains("Quality-Gate", score.StatusCause, StringComparison.Ordinal);
+        Assert.DoesNotContain(score.Violations, v => v.FilePath.Contains("Outside.cs", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains("1 Klassen analysiert", score.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ComputeScoreAsync_ScopeFilterWithoutMatchingDocument_IsNotDecidable()
+    {
+        using var testSolution = CreateSolution(("Only.cs", "namespace Only; public sealed class Clean { }"));
+
+        var result = await SafeguardScanner.ComputeScoreAsync(new SafeguardScannerParameters(
+            Solution: testSolution.Solution,
+            Config: CreateConfig(),
+            Console: NullConsole.Instance,
+            ScopeFilter: "DoesNotExistAnywhere",
+            CancellationToken: CancellationToken.None));
+
+        Assert.NotNull(result.Score);
+        var score = result.Score!;
+        Assert.Null(score.Score);
+        Assert.Null(score.Passed);
+        Assert.Equal("not_decidable", score.Status);
+        Assert.DoesNotContain("PASS", score.Summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("0.00/10", score.Summary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -82,7 +135,7 @@ public class Greeter
 
         Assert.False(result.IsMalfunction);
         Assert.NotNull(result.Score);
-        Assert.InRange(result.Score!.Score, 0.0, 10.0);
+        Assert.InRange(result.Score!.Score!.Value, 0.0, 10.0);
         Assert.NotEmpty(result.Score.Violations);
         // ViolationTrigger provoziert deterministisch eine EnforceSealedClasses-Meldung.
         Assert.Contains(result.Score.Violations, v =>
@@ -353,7 +406,7 @@ public class Greeter { public string Hello() => ""hi""; }";
             Threshold: 8.0,
             MaxRemediationEntries: 20,
             SolutionDir: @"C:\Solution"));
-        Assert.InRange(highRaw.Score, 0.0, 10.0);
+        Assert.InRange(highRaw.Score!.Value, 0.0, 10.0);
 
         // Roh < 0: keine Klassen (Sealed-Bonus = 0), viele Errors, die den Score unter 0 druecken.
         var manyErrors = Enumerable.Range(0, 100)
@@ -374,7 +427,7 @@ public class Greeter { public string Hello() => ""hi""; }";
             Threshold: 8.0,
             MaxRemediationEntries: 20,
             SolutionDir: @"C:\Solution"));
-        Assert.InRange(lowRaw.Score, 0.0, 10.0);
+        Assert.InRange(lowRaw.Score!.Value, 0.0, 10.0);
         Assert.False(lowRaw.Passed);
     }
 

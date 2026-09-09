@@ -6,8 +6,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Baseline;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
+using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.Metrics;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
@@ -115,6 +117,17 @@ internal static class SafeguardScanner
         // und durchgereichte Sub-Properties); ILinterEngineConfig wird projektweit ausschliesslich
         // von Config implementiert, der Downcast ist daher nicht spekulativ.
         var concreteConfig = (Config)config;
+        var solutionDir = string.IsNullOrEmpty(solution.FilePath)
+            ? ""
+            : Path.GetDirectoryName(solution.FilePath) ?? "";
+        var scope = string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!;
+        var assessment = AssessScope(solution, solutionDir, scopeFilter, concreteConfig);
+        if (assessment.Status is not "configured")
+        {
+            return new SafeguardScoreResult(
+                Score: BuildUndecidableResult(assessment, p.MinScoreThreshold),
+                IsMalfunction: false);
+        }
 
         IReadOnlyCollection<RuleViolation> violations;
         IReadOnlyList<ScannedClass> classes;
@@ -126,12 +139,16 @@ internal static class SafeguardScanner
                 profiler: null,
                 console: console);
             violations = await engine.RunAsync(solution, noCache: true, cacheTtlMinutes: 0, ct);
+            var fileToProject = ViolationScopeFilter.BuildFileToProjectMap(solution, solutionDir);
+            violations = ViolationScopeFilter.FilterAndSortViolations(
+                solutionDir, fileToProject, violations, scopeFilter);
 
             // Im selben try/catch wie die LinterEngine: ein kompilierbares Projekt, das auch nach
             // Retries (siehe TryGetCompilationAsync) keine Compilation liefert, ist genauso eine
             // echte Malfunction wie eine LinterEngine-Exception — beides wuerde sonst entweder den
             // Score verfaelschen (stilles Ueberspringen) oder inkonsistent behandelt werden.
-            classes = await EnumerateConcreteClassesAsync(solution, scopeFilter, concreteConfig, ct);
+            classes = await EnumerateConcreteClassesAsync(
+                solution, scopeFilter, concreteConfig, solutionDir, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -145,11 +162,107 @@ internal static class SafeguardScanner
             Config: concreteConfig,
             Threshold: p.MinScoreThreshold,
             MaxRemediationEntries: p.MaxRemediationEntries,
-            SolutionDir: string.IsNullOrEmpty(solution.FilePath)
-                ? ""
-                : Path.GetDirectoryName(solution.FilePath) ?? ""));
+            SolutionDir: solutionDir,
+            Scope: scope,
+            Completeness: assessment.Completeness,
+            Status: assessment.Status,
+            StatusCause: assessment.StatusCause));
+        score = score with { Status = score.Passed == true ? "passed" : "failed" };
         return new SafeguardScoreResult(Score: score, IsMalfunction: false);
     }
+
+    private static SafeguardScopeAssessment AssessScope(
+        Solution solution, string solutionDir, string? scopeFilter, Config config)
+    {
+        var matchingDocuments = solution.Projects
+            .Where(project => project.SupportsCompilation)
+            .SelectMany(project => project.Documents)
+            .Where(document => SourceFileCatalog.IsValidDocument(document, solutionDir)
+                && ViolationScopeFilter.MatchesScope(
+                    document.FilePath ?? document.Name, document.Project.Name, solutionDir, scopeFilter))
+            .ToList();
+
+        if (matchingDocuments.Count == 0)
+        {
+            if (string.IsNullOrWhiteSpace(scopeFilter)
+                && solution.Projects.Any(project => project.SupportsCompilation
+                    && project.Documents.Any()))
+            {
+                return new SafeguardScopeAssessment(
+                    "solution",
+                    "complete",
+                    "configured",
+                    "Der Score ist ein Quality-Gate; die analysierten Quelldateien sind im Scope entscheidbar.");
+            }
+
+            return new SafeguardScopeAssessment(
+                string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!,
+                "not_decidable",
+                "not_decidable",
+                "Keine analysierbaren Dokumente im angeforderten Scope.");
+        }
+
+        var analyzableDocuments = matchingDocuments
+            .Where(document => !FileFilterEvaluator.IsExcluded(document.FilePath ?? document.Name, config.FileFilters))
+            .ToList();
+        if (analyzableDocuments.Count == 0 || analyzableDocuments.Count != matchingDocuments.Count)
+        {
+            return new SafeguardScopeAssessment(
+                string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!,
+                "not_decidable",
+                "not_decidable",
+                "Die Dokumentabdeckung ist wegen konfigurierter Dateiausschlüsse nicht entscheidbar.");
+        }
+
+        var enabledStates = analyzableDocuments
+            .Select(document => ProjectConfigResolver.ResolveForDocument(document, config, solutionDir))
+            .Select(effectiveConfig => RuleRegistry.All.Any(rule => rule.IsEnabled(effectiveConfig)))
+            .ToList();
+        if (enabledStates.All(enabled => !enabled))
+        {
+            return new SafeguardScopeAssessment(
+                string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!,
+                "not_configured",
+                "not_configured",
+                "Im angeforderten Scope ist keine Regel aktiviert.");
+        }
+
+        if (enabledStates.Any(enabled => !enabled))
+        {
+            return new SafeguardScopeAssessment(
+                string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!,
+                "not_decidable",
+                "not_decidable",
+                "Die Regelaktivierung ist im angeforderten Scope zwischen Dokumenten uneinheitlich.");
+        }
+
+        return new SafeguardScopeAssessment(
+            string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!,
+            "complete",
+            "configured",
+            "Der Score ist ein Quality-Gate; die analysierten Dokumente und Regeln sind im Scope entscheidbar.");
+    }
+
+    private static ScoreResult BuildUndecidableResult(
+        SafeguardScopeAssessment assessment, double threshold) =>
+        new(
+            Passed: null,
+            Score: null,
+            Threshold: threshold,
+            Violations: Array.Empty<ViolationEntry>(),
+            Remediation: new RemediationHint(
+                TopIssue: "Kein entscheidbarer Quality-Gate-Score.",
+                ActionableSteps: Array.Empty<string>(),
+                DocumentationHint: "Docs/configuration.md"),
+            Summary: $"Safeguard-Score: nicht entscheidbar. Quality-Gate, kein Scope-Vollständigkeitsbeweis " +
+                $"(scoreIsNotScope=true). Scope: '{assessment.Scope}'; " +
+                $"Vollständigkeit: {assessment.Completeness}; Status: {assessment.Status}. " +
+                assessment.StatusCause,
+            Scope: assessment.Scope,
+            ScoreIsNotScope: true,
+            Completeness: assessment.Completeness,
+            Status: assessment.Status,
+            StatusCause: assessment.StatusCause);
 
     /// <summary>
     /// Deterministische Score-Berechnung. Getrennt von <see cref="ComputeScoreAsync"/> fuer
@@ -166,6 +279,7 @@ internal static class SafeguardScanner
         var raw = 10.0 - violationPenalty - ccPenalty - footprintPenalty + sealedBonus;
         var score = Math.Clamp(raw, 0.0, 10.0);
         var passed = score >= p.Threshold;
+        var status = passed ? "passed" : "failed";
 
         // Sortierung: Errors zuerst, dann Warnings, dann Info; innerhalb gleicher Severity
         // stabil nach (FilePath, LineNumber, RuleName) — garantiert Byte-fuer-Byte-Identitaet
@@ -189,13 +303,16 @@ internal static class SafeguardScanner
             .ToList();
 
         var remediation = BuildRemediation(sortedViolations, p.Config);
-        var summary = BuildSummary(
-            score,
-            p.Threshold,
-            passed,
-            p.Violations.Count,
-            sortedViolations.Count,
-            p.Classes);
+        var summary = BuildSummary(new BuildSafeguardSummaryParameters(
+            Score: score,
+            Threshold: p.Threshold,
+            Passed: passed,
+            TotalViolationCount: p.Violations.Count,
+            ShownViolationCount: sortedViolations.Count,
+            Classes: p.Classes,
+            Scope: p.Scope,
+            Completeness: p.Completeness,
+            Status: status));
 
         return new ScoreResult(
             Passed: passed,
@@ -204,6 +321,11 @@ internal static class SafeguardScanner
             Violations: sortedViolations,
             Remediation: remediation,
             Summary: summary,
+            Scope: p.Scope,
+            ScoreIsNotScope: true,
+            Completeness: p.Completeness,
+            Status: status,
+            StatusCause: p.StatusCause,
             TotalViolationCount: p.Violations.Count,
             ShownViolationCount: sortedViolations.Count,
             ViolationsTruncated: sortedViolations.Count < p.Violations.Count);
@@ -302,21 +424,15 @@ internal static class SafeguardScanner
         return 2;
     }
 
-    private static string BuildSummary(
-        double score,
-        double threshold,
-        bool passed,
-        int totalViolationCount,
-        int shownViolationCount,
-        IReadOnlyList<ScannedClass> classes)
+    private static string BuildSummary(BuildSafeguardSummaryParameters p)
     {
-        var classCount = classes.Count;
-        var verdict = passed ? "PASS" : "FAIL";
-        var violationSummary = totalViolationCount == shownViolationCount
-            ? FormatViolationCount(totalViolationCount)
-            : $"{shownViolationCount} von {totalViolationCount} Verstößen (Top-Auswahl wegen maxViolations)";
-        return $"Safeguard-Score: {score:F2}/10 (Threshold {threshold:F2}) — {verdict}. " +
-               $"{violationSummary}, {classCount} Klassen analysiert.";
+        var violationSummary = p.TotalViolationCount == p.ShownViolationCount
+            ? FormatViolationCount(p.TotalViolationCount)
+            : $"{p.ShownViolationCount} von {p.TotalViolationCount} Verstößen (Top-Auswahl wegen maxViolations)";
+        return $"Safeguard-Score: {p.Score:F2}/10 (Threshold {p.Threshold:F2}) — {(p.Passed ? "PASS" : "FAIL")}. " +
+               $"{violationSummary}, {p.Classes.Count} Klassen analysiert. " +
+               $"Quality-Gate, kein Scope-Vollständigkeitsbeweis (scoreIsNotScope=true). " +
+               $"Scope: '{p.Scope}'; Vollständigkeit: {p.Completeness}; Status: {p.Status}.";
     }
 
     private static string FormatViolationCount(int count)
@@ -362,7 +478,7 @@ internal static class SafeguardScanner
             : $"Regel-Verstoss '{ruleName}' pruefen — Details in Docs/configuration.md.";
 
     private static async Task<IReadOnlyList<ScannedClass>> EnumerateConcreteClassesAsync(
-        Solution solution, string? scopeFilter, Config config, CancellationToken ct)
+        Solution solution, string? scopeFilter, Config config, string solutionDir, CancellationToken ct)
     {
         var collected = new List<ScannedClass>();
         foreach (var project in solution.Projects)
@@ -372,9 +488,17 @@ internal static class SafeguardScanner
 
             foreach (var document in project.Documents)
             {
-                if (!ShouldIncludeDocument(document, project, scopeFilter)) continue;
+                if (!SourceFileCatalog.IsValidDocument(document, solutionDir)
+                    || !ViolationScopeFilter.MatchesScope(
+                        document.FilePath ?? document.Name, project.Name, solutionDir, scopeFilter)
+                    || FileFilterEvaluator.IsExcluded(document.FilePath ?? document.Name, config.FileFilters))
+                {
+                    continue;
+                }
+
+                var effectiveConfig = ProjectConfigResolver.ResolveForDocument(document, config, solutionDir);
                 collected.AddRange(
-                    await CollectClassDeclarationsAsync(document, compilation, config, ct));
+                    await CollectClassDeclarationsAsync(document, compilation, effectiveConfig, ct));
             }
         }
         return collected;
@@ -436,13 +560,6 @@ internal static class SafeguardScanner
             "Versuchen fehl (SupportsCompilation=true, aber GetCompilationAsync lieferte wiederholt " +
             "keine Compilation).",
             lastError);
-    }
-
-    private static bool ShouldIncludeDocument(Document document, Project project, string? scopeFilter)
-    {
-        if (string.IsNullOrEmpty(scopeFilter)) return true;
-        if (document.FilePath is { } p && PathNormalizer.MatchesScope(p, scopeFilter)) return true;
-        return project.Name.Contains(scopeFilter, StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task<IReadOnlyList<ScannedClass>> CollectClassDeclarationsAsync(
