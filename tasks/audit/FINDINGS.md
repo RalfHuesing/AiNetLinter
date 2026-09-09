@@ -8,7 +8,7 @@
 | B-001 | Major | fixed | `get_namespace_tree` | Strukturierte Einträge ignorieren das angeforderte Ergebnislimit. |
 | B-002 | Major | fixed | `inspect_assembly`, `find_assembly_extensions` | Vollständigkeit der Trefferliste und Analyse-Diagnosen wird widersprüchlich vermischt. |
 | C-001 | Critical | fixed | `find_symbol`, `find_references`, `get_impact` | Assembly-Symbolketten können fremde Referenzen und Impacts liefern. |
-| C-002 | Major | open | `find_references`, `get_impact` | Navigation signalisiert vollständige Ergebnisse trotz Ergebnisbegrenzung. |
+| C-002 | Major | fixed | `find_references`, `get_impact` | Navigation signalisiert vollständige Ergebnisse trotz Ergebnisbegrenzung. |
 | C-003 | Major | open | `find_symbol` | Referenzsuche kann bei Standardbudget unbrauchbare, inkonsistente Antworten liefern. |
 | C-004 | Minor | open | `find_symbol` | Leere Einträge eines Musterbatches werden nicht sichtbar validiert. |
 | D-001 | Major | open | `find_symbol`, `get_file_tree`, `get_server_health` | Schema-Typfehler werden generisch statt handlungsweisend zurückgegeben. |

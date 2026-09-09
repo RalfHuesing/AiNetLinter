@@ -254,6 +254,45 @@ public sealed class McpToolResultsTests
     }
 
     [Theory]
+    [InlineData("find_references")]
+    [InlineData("get_impact")]
+    public void WithNavigation_SymbolTraversalMaxResultsProjectsTruncation(string toolName)
+    {
+        using var tempDir = TestTempDirectory.Create($"mcp-navigation-symbol-truncated-{toolName}-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        // Beide Symbolgraph-Tools liefern bei maxResults < Trefferzahl denselben
+        // TraversalCompleteness-Vertrag: die Trefferliste ist gekuerzt, weitere Daten
+        // sind ueber einen erneuten/erweiterten Call anzufordern.
+        var result = McpToolResults.Text(
+            $"{toolName}: 1 von 3 Treffern",
+            new
+            {
+                callSites = new[] { new { filePath = "Caller.cs", line = 1 } },
+                completeness = new
+                {
+                    requestedDepth = 1,
+                    effectiveDepth = 1,
+                    visitedNodeCount = 3,
+                    totalCallSiteCount = 3,
+                    shownCallSiteCount = 1,
+                    truncatedByMaxResults = true,
+                    truncatedByNodeLimit = false,
+                    depthWasClamped = false,
+                },
+            });
+
+        var navigated = McpToolResults.WithNavigation(result, target);
+        var navigation = navigated.StructuredContent!.Value.GetProperty("navigation");
+
+        Assert.Equal("truncated", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
+    }
+
+    [Theory]
     [InlineData("not_decidable")]
     [InlineData("truncated")]
     public void WithNavigation_PromotesSummaryCompleteness(string expectedCompleteness)

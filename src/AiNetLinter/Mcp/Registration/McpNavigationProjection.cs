@@ -246,7 +246,40 @@ internal static class McpNavigationProjection
         }
 
         return completeness.ValueKind == JsonValueKind.Object
-            && TryReadStringProperty(completeness, "status", out value);
+            && (TryReadStringProperty(completeness, "status", out value)
+                || TryReadTraversalCompleteness(completeness, out value));
+    }
+
+    private static bool TryReadTraversalCompleteness(JsonElement completeness, out string value)
+    {
+        value = string.Empty;
+        if (HasTrueFlag(completeness, "truncatedByMaxResults")
+            || HasTrueFlag(completeness, "truncatedByNodeLimit")
+            || HasTrueFlag(completeness, "depthWasClamped")
+            || HasTrueFlag(completeness, "truncated"))
+        {
+            value = "truncated";
+            return true;
+        }
+
+        if (TryReadNonNegativeInt64(completeness, "totalCallSiteCount", out var total)
+            && TryReadNonNegativeInt64(completeness, "shownCallSiteCount", out var shown)
+            && shown < total)
+        {
+            value = "truncated";
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryReadNonNegativeInt64(JsonElement owner, string propertyName, out long value)
+    {
+        value = 0;
+        return owner.TryGetProperty(propertyName, out var property)
+            && property.ValueKind == JsonValueKind.Number
+            && property.TryGetInt64(out value)
+            && value >= 0;
     }
 
     private static bool TryReadStringProperty(JsonElement owner, string propertyName, out string value)

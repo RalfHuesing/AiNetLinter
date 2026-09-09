@@ -6,3 +6,4 @@
 | A-001 | Bei explizit angeforderten Diagnostics bleibt die strukturierte Assembly-/Diagnose-Ausgabe auch ohne Sessions sichtbar. | `Build_IncludeDiagnosticsWithoutSessions_EmitsExplicitEmptyDiagnosticsArray`, `Build_DefaultHealthIsCompact_AndDetailDiagnosticsStayBounded` |
 | B-001 | Strukturierte Namespace-Ergebnisse folgen dem angeforderten Limit und stimmen mit Zählern und Trunkierung überein. | `ScanProjectNamespacesAsync_TruncatesStructuredNamespacesToMaxResults` |
 | B-002 | Assembly-Trefferlisten signalisieren ihre Vollständigkeit unabhängig von begrenzten Diagnose- oder Referenzdetails. | `AssemblyRoute_FilteredEmptyResultDoesNotInheritReferenceTruncationInNavigation` |
+| C-002 | Begrenzte Symbol-Traversierungen weisen Navigation und Folgeschritt konsistent als unvollständig aus. | `WithNavigation_SymbolTraversalMaxResultsProjectsTruncation` |
