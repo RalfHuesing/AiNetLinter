@@ -24,7 +24,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.Safeguard;
 /// deterministischen Score-Pfad, Threshold-Logik, Edge-Cases und den Malfunction-Pfad ab.
 /// </summary>
 [Trait("Category", "Component")]
-public sealed class SafeguardScannerTests
+public sealed partial class SafeguardScannerTests
 {
     private readonly McpInMemoryTestContext _fixture;
 
@@ -47,57 +47,6 @@ public sealed class SafeguardScannerTests
         Assert.Equal("not_decidable", result.Score.Status);
         Assert.DoesNotContain("PASS", result.Score.Summary, StringComparison.Ordinal);
         Assert.Empty(result.Score.Violations);
-    }
-
-    [Fact]
-    public async Task ComputeScoreAsync_ScopeFilter_FiltersViolationsAndClassMetricsTogether()
-    {
-        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
-            @"C:\ainetlinter-virtual\SafeguardScopeTests.slnx",
-            new ProjectSpec("InScope", [
-                ("InScope.cs", "namespace InScope; public sealed class Clean { public int Value() => 1; }")]),
-            new ProjectSpec("OutsideScope", [
-                ("Outside.cs", "namespace OutsideScope; public class Dirty { public int Value() => 1; }")]));
-
-        var result = await SafeguardScanner.ComputeScoreAsync(new SafeguardScannerParameters(
-            Solution: testSolution.Solution,
-            Config: CreateConfig(),
-            Console: NullConsole.Instance,
-            ScopeFilter: "InScope",
-            CancellationToken: CancellationToken.None,
-            MinScoreThreshold: 8.0));
-
-        Assert.False(result.IsMalfunction);
-        Assert.NotNull(result.Score);
-        var score = result.Score!;
-        Assert.NotNull(score.Score);
-        Assert.Equal("InScope", score.Scope);
-        Assert.True(score.ScoreIsNotScope);
-        Assert.Equal("complete", score.Completeness);
-        Assert.Contains("Quality-Gate", score.StatusCause, StringComparison.Ordinal);
-        Assert.DoesNotContain(score.Violations, v => v.FilePath.Contains("Outside.cs", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains("1 Klassen analysiert", score.Summary, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task ComputeScoreAsync_ScopeFilterWithoutMatchingDocument_IsNotDecidable()
-    {
-        using var testSolution = CreateSolution(("Only.cs", "namespace Only; public sealed class Clean { }"));
-
-        var result = await SafeguardScanner.ComputeScoreAsync(new SafeguardScannerParameters(
-            Solution: testSolution.Solution,
-            Config: CreateConfig(),
-            Console: NullConsole.Instance,
-            ScopeFilter: "DoesNotExistAnywhere",
-            CancellationToken: CancellationToken.None));
-
-        Assert.NotNull(result.Score);
-        var score = result.Score!;
-        Assert.Null(score.Score);
-        Assert.Null(score.Passed);
-        Assert.Equal("not_decidable", score.Status);
-        Assert.DoesNotContain("PASS", score.Summary, StringComparison.Ordinal);
-        Assert.DoesNotContain("0.00/10", score.Summary, StringComparison.Ordinal);
     }
 
     [Fact]

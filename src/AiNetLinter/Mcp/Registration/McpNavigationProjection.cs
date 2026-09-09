@@ -128,33 +128,35 @@ internal static class McpNavigationProjection
         string? code,
         string operationStatus)
     {
-        if (operationStatus == "not_configured") return "not_configured";
-        if (operationStatus == "unsupported") return "unsupported";
-        if (operationStatus == "configuration_error") return "configuration_error";
-        if (operationStatus == "error")
-        {
-            return HasFeatureContextSectionFailure(structured) ? "partial" : "not_applicable";
-        }
-        if (operationStatus is "invalid_argument" or "target_mismatch" or "stale_snapshot" or
-            "symbol_not_found" or "ambiguous_symbol") return "not_applicable";
-
+        var terminal = ResolveTerminalCompleteness(structured, operationStatus);
+        if (terminal is not null) return terminal;
         if (HasTruncation(structured)) return "truncated";
+        return ResolvePayloadCompleteness(structured);
+    }
 
-        if (TryFindCompleteness(structured, out var explicitValue))
+    private static string? ResolveTerminalCompleteness(JsonElement? structured, string operationStatus) =>
+        operationStatus switch
         {
-            if (explicitValue == "complete"
-                && TryFindNonCompleteNestedCompleteness(structured, out var nestedValue))
-            {
-                return nestedValue;
-            }
+            "not_configured" => "not_configured",
+            "unsupported" => "unsupported",
+            "configuration_error" => "configuration_error",
+            "error" => HasFeatureContextSectionFailure(structured) ? "partial" : "not_applicable",
+            "invalid_argument" or "target_mismatch" or "stale_snapshot" or
+                "symbol_not_found" or "ambiguous_symbol" => "not_applicable",
+            _ => null,
+        };
 
-            explicitValue = explicitValue == "error" ? "partial" : explicitValue;
-            return explicitValue == "complete" && IsKnownEmpty(structured)
-                ? "empty"
-                : explicitValue;
+    private static string ResolvePayloadCompleteness(JsonElement? structured)
+    {
+        if (!TryFindCompleteness(structured, out var explicitValue))
+            return IsKnownEmpty(structured) ? "empty" : "complete";
+        if (explicitValue == "complete"
+            && TryFindNonCompleteNestedCompleteness(structured, out var nestedValue))
+        {
+            return nestedValue;
         }
-        if (IsKnownEmpty(structured)) return "empty";
-        return "complete";
+        var normalized = explicitValue == "error" ? "partial" : explicitValue;
+        return normalized == "complete" && IsKnownEmpty(structured) ? "empty" : normalized;
     }
 
     private static bool TryFindCompleteness(JsonElement? element, out string value)
@@ -210,30 +212,31 @@ internal static class McpNavigationProjection
         string? candidate = null;
         foreach (var propertyName in new[] { "metrics", "testContext", "tests", "callers", "violations" })
         {
-            if (!owner.TryGetProperty(propertyName, out var section)
-                || section.ValueKind != JsonValueKind.Object)
-            {
-                continue;
-            }
-
-            if (!TryReadCompletenessProperty(section, out var sectionValue)
-                && !TryReadStringProperty(section, "status", out sectionValue))
-            {
-                continue;
-            }
-
-            if (sectionValue is "complete" or "empty") continue;
-            sectionValue = sectionValue == "error" ? "partial" : sectionValue;
-            if (candidate is null || CompletenessPriority(sectionValue) > CompletenessPriority(candidate))
-            {
-                candidate = sectionValue;
-            }
+            if (TryReadNestedSectionStatus(owner, propertyName, out var sectionValue))
+                candidate = SelectLessComplete(candidate, sectionValue);
         }
 
         if (candidate is null) return false;
         value = candidate;
         return true;
     }
+
+    private static bool TryReadNestedSectionStatus(JsonElement owner, string propertyName, out string value)
+    {
+        value = string.Empty;
+        if (!owner.TryGetProperty(propertyName, out var section)
+            || section.ValueKind != JsonValueKind.Object) return false;
+        if (!TryReadCompletenessProperty(section, out value)
+            && !TryReadStringProperty(section, "status", out value)) return false;
+        if (value is "complete" or "empty") return false;
+        value = value == "error" ? "partial" : value;
+        return true;
+    }
+
+    private static string SelectLessComplete(string? current, string candidate) =>
+        current is null || CompletenessPriority(candidate) > CompletenessPriority(current)
+            ? candidate
+            : current;
 
     private static int CompletenessPriority(string value) => value switch
     {
@@ -323,39 +326,29 @@ internal static class McpNavigationProjection
 
     private static McpNavigationNext CreateNext(string operationStatus, string completeness, string? hint)
     {
-        if (operationStatus == "not_configured")
+        return operationStatus switch
         {
-            return new("request_detail", "ainetlinter-rules.json neben dem adressierten Target anlegen und den Lint-Call wiederholen.");
-        }
+            "not_configured" => new("request_detail", "ainetlinter-rules.json neben dem adressierten Target anlegen und den Lint-Call wiederholen."),
+            "unsupported" => new("refine_scope", "Ein Tool verwenden, das die Target-Herkunft unterstützt."),
+            "configuration_error" => new("request_detail", hint ?? "ainetlinter-rules.json korrigieren und denselben Target-Call wiederholen."),
+            "invalid_argument" or "target_mismatch" or "stale_snapshot" or "symbol_not_found" or "ambiguous_symbol" or "error"
+                => CreateErrorNext(operationStatus, hint),
+            _ => CreateSuccessfulNext(completeness, hint),
+        };
+    }
 
-        if (operationStatus == "unsupported")
-        {
-            return new("refine_scope", "Ein Tool verwenden, das die Target-Herkunft unterstützt.");
-        }
+    private static McpNavigationNext CreateErrorNext(string operationStatus, string? hint) =>
+        new(operationStatus is "symbol_not_found" or "ambiguous_symbol" ? "refine_scope" : "request_detail",
+            hint ?? "Argumente und Target prüfen und den sicheren nächsten Schritt aus der Fehlermeldung ausführen.");
 
-        if (operationStatus == "configuration_error")
-        {
-            return new("request_detail", hint ?? "ainetlinter-rules.json korrigieren und denselben Target-Call wiederholen.");
-        }
-
-        if (operationStatus is "invalid_argument" or "target_mismatch" or "stale_snapshot" or
-            "symbol_not_found" or "ambiguous_symbol" or "error")
-        {
-            return new(
-                operationStatus is "symbol_not_found" or "ambiguous_symbol" ? "refine_scope" : "request_detail",
-                hint ?? "Argumente und Target prüfen und den sicheren nächsten Schritt aus der Fehlermeldung ausführen.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(hint))
-        {
-            return new("request_detail", hint);
-        }
-
+    private static McpNavigationNext CreateSuccessfulNext(string completeness, string? hint)
+    {
+        if (!string.IsNullOrWhiteSpace(hint)) return new("request_detail", hint);
         return completeness is "truncated" or "partial"
-            ? new("request_detail", hint ?? "Scope oder Detaillevel verfeinern und die Antwort gezielt wiederholen.")
+            ? new("request_detail", "Scope oder Detaillevel verfeinern und die Antwort gezielt wiederholen.")
             : completeness == "empty"
-                ? new("refine_scope", hint ?? "Keine Treffer im vollständig geprüften Scope; Suchmuster oder Scope verfeinern und erneut suchen.")
-            : new("none", "Kein weiterer Schritt erforderlich.");
+                ? new("refine_scope", "Keine Treffer im vollständig geprüften Scope; Suchmuster oder Scope verfeinern und erneut suchen.")
+                : new("none", "Kein weiterer Schritt erforderlich.");
     }
 
     private static string ToWire(AnalysisCapabilityStatus status) =>

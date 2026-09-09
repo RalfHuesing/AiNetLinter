@@ -227,27 +227,39 @@ internal sealed class MagicValueSyntaxWalker : CSharpSyntaxWalker
             var recommendation = $"enum {identifierName} {{ ... }}";
             foreach (var literal in pair.Value)
             {
-                if (enumClassifiedLiterals.Contains(literal)) continue;
-                if (!IsInScope(literal.Kind())) continue;
-                if (!context.IncludeSuppressed && MagicValuesClassifier.IsSuppressed(literal)) continue;
-                if (MagicValuesClassifier.IsFilteredOut(literal, context.IgnoreNumbers)) continue;
-                enumClassifiedLiterals.Add(literal);
-                var lineSpan = literal.GetLocation().GetLineSpan();
-                var line = lineSpan.StartLinePosition.Line + 1;
-                var column = lineSpan.StartLinePosition.Character + 1;
-                var value = literal.Token.ValueText;
-                var valueType = literal.Kind() == SyntaxKind.NumericLiteralExpression
-                    ? MagicValueValueType.Number
-                    : MagicValueValueType.String;
-                var classification = new MagicValueClassification(
-                    true,
-                    MagicValueCategory.EnumCandidates,
-                    recommendation,
-                    $"Diskretes Set gleicher Identifier-Vergleiche ({pair.Value.Count}x gegen '{pair.Key}')");
-                context.Sink.Add(new RawMagicValue(
-                    context.FilePath, line, column, valueType, value, classification));
+                TryAddEnumCandidate(literal, pair.Key, pair.Value.Count, recommendation);
             }
         }
+    }
+
+    private void TryAddEnumCandidate(
+        LiteralExpressionSyntax literal,
+        string identifierName,
+        int comparisonCount,
+        string recommendation)
+    {
+        if (enumClassifiedLiterals.Contains(literal)
+            || !IsInScope(literal.Kind())
+            || !context.IncludeSuppressed && MagicValuesClassifier.IsSuppressed(literal)
+            || MagicValuesClassifier.IsFilteredOut(literal, context.IgnoreNumbers)) return;
+
+        enumClassifiedLiterals.Add(literal);
+        var lineSpan = literal.GetLocation().GetLineSpan();
+        var valueType = literal.Kind() == SyntaxKind.NumericLiteralExpression
+            ? MagicValueValueType.Number
+            : MagicValueValueType.String;
+        var classification = new MagicValueClassification(
+            true,
+            MagicValueCategory.EnumCandidates,
+            recommendation,
+            $"Diskretes Set gleicher Identifier-Vergleiche ({comparisonCount}x gegen '{identifierName}')");
+        context.Sink.Add(new RawMagicValue(
+            context.FilePath,
+            lineSpan.StartLinePosition.Line + 1,
+            lineSpan.StartLinePosition.Character + 1,
+            valueType,
+            literal.Token.ValueText,
+            classification));
     }
 
     private static string ToPascalCase(string identifier)

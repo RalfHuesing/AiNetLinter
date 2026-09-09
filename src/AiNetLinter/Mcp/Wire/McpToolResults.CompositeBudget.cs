@@ -6,13 +6,14 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.Mcp;
+namespace AiNetLinter.Mcp.Wire;
 
-internal static partial class McpToolResults
+internal static partial class McpToolResultsWireBudget
 {
     private static void CollectArrays(JsonNode? node, string path, ICollection<ArrayCandidate> result)
     {
@@ -150,45 +151,61 @@ internal static partial class McpToolResults
         int maxBytes)
     {
         var builder = new StringBuilder();
+        AppendCompositeTitle(builder, payload);
+        AppendNavigationSummary(builder, payload);
+        AppendSectionSummaries(builder, payload, sectionNames, rootSectionName);
+        builder.AppendLine(hint);
+        return TrimUtf8(builder.ToString().TrimEnd(), maxBytes);
+    }
+
+    private static void AppendCompositeTitle(StringBuilder builder, JsonObject payload)
+    {
         var title = (payload["declaration"] as JsonObject)?["name"]?.GetValue<string>()
             ?? payload["targetSymbol"]?.GetValue<string>();
         builder.AppendLine(title is null
             ? "# Composite-Antwort (Wire-Budget)"
             : $"# Composite-Antwort (Wire-Budget): {title}");
-        if (payload["navigation"] is JsonObject navigation)
+    }
+
+    private static void AppendNavigationSummary(StringBuilder builder, JsonObject payload)
+    {
+        if (payload["navigation"] is not JsonObject navigation) return;
+        var operationStatus = ReadString(navigation, "operationStatus") ?? "ok";
+        var completeness = ReadString(navigation, "completeness") ?? "complete";
+        builder.AppendLine($"- **Navigation:** Status: {operationStatus}; Completeness: {completeness}");
+        if (navigation["next"] is not JsonObject next) return;
+        var nextKind = ReadString(next, "kind");
+        var nextAction = ReadString(next, "action");
+        if (!string.IsNullOrWhiteSpace(nextKind) || !string.IsNullOrWhiteSpace(nextAction))
         {
-            var operationStatus = ReadString(navigation, "operationStatus") ?? "ok";
-            var completeness = ReadString(navigation, "completeness") ?? "complete";
-            builder.AppendLine($"- **Navigation:** Status: {operationStatus}; Completeness: {completeness}");
-            if (navigation["next"] is JsonObject next)
-            {
-                var nextKind = ReadString(next, "kind");
-                var nextAction = ReadString(next, "action");
-                if (!string.IsNullOrWhiteSpace(nextKind) || !string.IsNullOrWhiteSpace(nextAction))
-                {
-                    builder.AppendLine($"- **Navigation next:** {nextKind ?? "none"} — {nextAction ?? ""}");
-                }
-            }
+            builder.AppendLine($"- **Navigation next:** {nextKind ?? "none"} — {nextAction ?? ""}");
         }
+    }
+
+    private static void AppendSectionSummaries(
+        StringBuilder builder,
+        JsonObject payload,
+        IReadOnlyList<string> sectionNames,
+        string? rootSectionName)
+    {
         foreach (var sectionName in sectionNames)
         {
             var section = FindCompositeSection(payload, sectionName, rootSectionName);
             if (section is null) continue;
-
-            var status = ReadString(section, "completeness")
-                ?? ReadString(section, "status")
-                ?? "complete";
-            builder.AppendLine($"- **Abschnitt {sectionName}:** Status: {status}");
-            AppendCountSummary(builder, section, sectionName);
-            var nextStep = ReadString(section, "nextStep");
-            if (!string.IsNullOrWhiteSpace(nextStep))
-            {
-                builder.AppendLine($"- **Nächster sicherer Schritt ({sectionName}):** {nextStep}");
-            }
+            AppendSectionSummary(builder, sectionName, section);
         }
+    }
 
-        builder.AppendLine(hint);
-        return TrimUtf8(builder.ToString().TrimEnd(), maxBytes);
+    private static void AppendSectionSummary(StringBuilder builder, string sectionName, JsonObject section)
+    {
+        var status = ReadString(section, "completeness") ?? ReadString(section, "status") ?? "complete";
+        builder.AppendLine($"- **Abschnitt {sectionName}:** Status: {status}");
+        AppendCountSummary(builder, section, sectionName);
+        var nextStep = ReadString(section, "nextStep");
+        if (!string.IsNullOrWhiteSpace(nextStep))
+        {
+            builder.AppendLine($"- **Nächster sicherer Schritt ({sectionName}):** {nextStep}");
+        }
     }
 
     private static void AppendCountSummary(StringBuilder builder, JsonObject section, string sectionName)
@@ -278,7 +295,7 @@ internal static partial class McpToolResults
         return candidate;
     }
 
-    private static CallToolResult ReapplyCompositeWireBudgetAfterNavigation(CallToolResult result)
+    internal static CallToolResult ReapplyCompositeWireBudgetAfterNavigation(CallToolResult result)
     {
         if (result.StructuredContent is not { ValueKind: JsonValueKind.Object } structured)
         {
@@ -413,5 +430,4 @@ internal static partial class McpToolResults
     private sealed record StringCandidate(JsonObject Parent, string Key, string Value, string Path);
 
     private readonly record struct CompositeMeasurement(int TextBytes, int StructuredBytes, int TotalBytes);
-
 }

@@ -1,6 +1,6 @@
 #nullable enable
 
-namespace AiNetLinter.Mcp;
+namespace AiNetLinter.Mcp.Tools.MetricsTree;
 
 /// <summary>
 /// Gegenlaeufiger Hinweistyp zu <see cref="McpSufficiencyHints"/>: <c>metrics_tree</c>-Output ist per

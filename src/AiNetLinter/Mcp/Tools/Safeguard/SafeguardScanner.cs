@@ -34,7 +34,7 @@ namespace AiNetLinter.Mcp.Tools.Safeguard;
 /// Tests und Dokumentation dieselben Werte sehen — Anpassung nur bei offensichtlich unplausiblen
 /// Test-Scores; die unten dokumentierten Gewichte sind die aktuell gueltigen.
 /// </summary>
-internal static class SafeguardScanner
+internal static partial class SafeguardScanner
 {
     /// <summary>Standard-Mindest-Score fuer <c>Passed</c>.</summary>
     internal const double DefaultMinScoreThreshold = 8.0;
@@ -174,6 +174,7 @@ internal static class SafeguardScanner
     private static SafeguardScopeAssessment AssessScope(
         Solution solution, string solutionDir, string? scopeFilter, Config config)
     {
+        var scope = string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!;
         var matchingDocuments = solution.Projects
             .Where(project => project.SupportsCompilation)
             .SelectMany(project => project.Documents)
@@ -182,66 +183,57 @@ internal static class SafeguardScanner
                     document.FilePath ?? document.Name, document.Project.Name, solutionDir, scopeFilter))
             .ToList();
 
-        if (matchingDocuments.Count == 0)
-        {
-            if (string.IsNullOrWhiteSpace(scopeFilter)
-                && solution.Projects.Any(project => project.SupportsCompilation
-                    && project.Documents.Any()))
-            {
-                return new SafeguardScopeAssessment(
-                    "solution",
-                    "complete",
-                    "configured",
-                    "Der Score ist ein Quality-Gate; die analysierten Quelldateien sind im Scope entscheidbar.");
-            }
-
-            return new SafeguardScopeAssessment(
-                string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!,
-                "not_decidable",
-                "not_decidable",
-                "Keine analysierbaren Dokumente im angeforderten Scope.");
-        }
+        if (matchingDocuments.Count == 0) return AssessEmptyScope(solution, scopeFilter, scope);
 
         var analyzableDocuments = matchingDocuments
             .Where(document => !FileFilterEvaluator.IsExcluded(document.FilePath ?? document.Name, config.FileFilters))
             .ToList();
         if (analyzableDocuments.Count == 0 || analyzableDocuments.Count != matchingDocuments.Count)
-        {
-            return new SafeguardScopeAssessment(
-                string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!,
-                "not_decidable",
-                "not_decidable",
-                "Die Dokumentabdeckung ist wegen konfigurierter Dateiausschlüsse nicht entscheidbar.");
-        }
+            return UndecidableScope(scope, "Die Dokumentabdeckung ist wegen konfigurierter Dateiausschlüsse nicht entscheidbar.");
 
         var enabledStates = analyzableDocuments
             .Select(document => ProjectConfigResolver.ResolveForDocument(document, config, solutionDir))
             .Select(effectiveConfig => RuleRegistry.All.Any(rule => rule.IsEnabled(effectiveConfig)))
             .ToList();
+        return AssessRuleConfiguration(scope, enabledStates);
+    }
+
+    private static SafeguardScopeAssessment AssessEmptyScope(
+        Solution solution, string? scopeFilter, string scope)
+    {
+        if (string.IsNullOrWhiteSpace(scopeFilter)
+            && solution.Projects.Any(project => project.SupportsCompilation && project.Documents.Any()))
+        {
+            return new SafeguardScopeAssessment(
+                scope,
+                "complete",
+                "configured",
+                "Der Score ist ein Quality-Gate; die analysierten Quelldateien sind im Scope entscheidbar.");
+        }
+        return UndecidableScope(scope, "Keine analysierbaren Dokumente im angeforderten Scope.");
+    }
+
+    private static SafeguardScopeAssessment AssessRuleConfiguration(
+        string scope, IReadOnlyList<bool> enabledStates)
+    {
         if (enabledStates.All(enabled => !enabled))
         {
             return new SafeguardScopeAssessment(
-                string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!,
-                "not_configured",
-                "not_configured",
-                "Im angeforderten Scope ist keine Regel aktiviert.");
+                scope, "not_configured", "not_configured", "Im angeforderten Scope ist keine Regel aktiviert.");
         }
-
         if (enabledStates.Any(enabled => !enabled))
         {
-            return new SafeguardScopeAssessment(
-                string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!,
-                "not_decidable",
-                "not_decidable",
-                "Die Regelaktivierung ist im angeforderten Scope zwischen Dokumenten uneinheitlich.");
+            return UndecidableScope(scope, "Die Regelaktivierung ist im angeforderten Scope zwischen Dokumenten uneinheitlich.");
         }
-
         return new SafeguardScopeAssessment(
-            string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!,
+            scope,
             "complete",
             "configured",
             "Der Score ist ein Quality-Gate; die analysierten Dokumente und Regeln sind im Scope entscheidbar.");
     }
+
+    private static SafeguardScopeAssessment UndecidableScope(string scope, string cause) =>
+        new(scope, "not_decidable", "not_decidable", cause);
 
     private static ScoreResult BuildUndecidableResult(
         SafeguardScopeAssessment assessment, double threshold) =>
@@ -442,168 +434,4 @@ internal static class SafeguardScanner
             _ => $"{count} Verstöße",
         };
 
-    /// <summary>Lookup-Tabelle pro bekannter Regel-ID; vermeidet <c>MaxSwitchArms</c>-Verstoss
-    /// und ermoeglicht das Hinzufuegen weiterer Regeln ohne Steuerungslogik-Aenderung.
-    /// Unbekannte RuleNames erhalten einen generischen Default-Hinweis.</summary>
-    private static readonly IReadOnlyDictionary<string, string> RuleHints =
-        new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            [LinterRuleIds.MaxLineCount] =
-                "Datei aufteilen — Klassen/Methoden extrahieren, Partial-Klassen pruefen.",
-            [LinterRuleIds.MaxMethodLineCount] =
-                "Methode aufteilen — Hilfsmethoden extrahieren, Verantwortlichkeit aufspalten.",
-            [LinterRuleIds.MaxMethodParameterCount] =
-                "Parameter-Record einfuehren — verwandte Argumente in einem Werteobjekt buendeln.",
-            [LinterRuleIds.MaxCyclomaticComplexity] =
-                "Komplexitaet reduzieren — fruehe Returns, kleinere Methoden, Polymorphie statt Switch.",
-            [LinterRuleIds.MaxCognitiveComplexity] =
-                "Komplexitaet reduzieren — fruehe Returns, kleinere Methoden, Polymorphie statt Switch.",
-            [LinterRuleIds.AIContextFootprint] =
-                "Footprint reduzieren — Abhaengigkeiten aufsloesen, kleine Typen favorisieren.",
-            [LinterRuleIds.EnforceSealedClasses] =
-                "Klasse versiegeln (`sealed`) — Vererbungsabsicht klaeren oder Blatt-Klasse markieren.",
-            [LinterRuleIds.MaxConstructorDependencies] =
-                "DI-Law-of-Demeter pruefen — Aggregate-Fassade einfuehren, Konstruktor-Injektion reduzieren.",
-            [LinterRuleIds.BanAsyncVoid] =
-                "Async void durch `async Task` ersetzen — Ausnahmen werden sonst verschluckt.",
-            [LinterRuleIds.BanBlockingTaskAccess] =
-                "Blocking-Calls (.Wait/.Result/.GetAwaiter().GetResult()) durch `await` ersetzen.",
-            [LinterRuleIds.EnforceNoSilentCatch] =
-                "Catch-Block sichtbar machen — Log schreiben oder Exception re-throwen.",
-        };
-
-    private static string ResolveHintForRule(string ruleName, Config config)
-        => RuleHints.TryGetValue(ruleName, out var hint)
-            ? hint
-            : $"Regel-Verstoss '{ruleName}' pruefen — Details in Docs/configuration.md.";
-
-    private static async Task<IReadOnlyList<ScannedClass>> EnumerateConcreteClassesAsync(
-        Solution solution, string? scopeFilter, Config config, string solutionDir, CancellationToken ct)
-    {
-        var collected = new List<ScannedClass>();
-        foreach (var project in solution.Projects)
-        {
-            var compilation = await TryGetCompilationAsync(project, ct);
-            if (compilation is null) continue;
-
-            foreach (var document in project.Documents)
-            {
-                if (!SourceFileCatalog.IsValidDocument(document, solutionDir)
-                    || !ViolationScopeFilter.MatchesScope(
-                        document.FilePath ?? document.Name, project.Name, solutionDir, scopeFilter)
-                    || FileFilterEvaluator.IsExcluded(document.FilePath ?? document.Name, config.FileFilters))
-                {
-                    continue;
-                }
-
-                var effectiveConfig = ProjectConfigResolver.ResolveForDocument(document, config, solutionDir);
-                collected.AddRange(
-                    await CollectClassDeclarationsAsync(document, compilation, effectiveConfig, ct));
-            }
-        }
-        return collected;
-    }
-
-    /// <summary>
-    /// Liefert die Compilation oder null, wenn das Projekt grundsaetzlich nicht kompilierbar ist
-    /// (<c>SupportsCompilation == false</c> — legitimer, erwartbarer Fall, z. B. echtes
-    /// Nicht-C#-Projekt). Fuer kompilierbare Projekte wird <see cref="GetCompilationWithRetryAsync"/>
-    /// aufgerufen, die transiente Fehlschlaege per Retry abfaengt und einen dauerhaften Fehlschlag
-    /// als <see cref="SafeguardCompilationException"/> wirft (von <see cref="ComputeScoreAsync"/>
-    /// als Malfunction behandelt).
-    /// </summary>
-    private static Task<Compilation?> TryGetCompilationAsync(Project project, CancellationToken ct)
-    {
-        if (!project.SupportsCompilation) return Task.FromResult<Compilation?>(null);
-        return GetCompilationWithRetryAsync(project.GetCompilationAsync, project.Name, ct);
-    }
-
-    /// <summary>
-    /// Retried eine Compilation-Beschaffungsfunktion bis zu <see cref="CompilationRetryAttempts"/> mal
-    /// (linearer Backoff via <see cref="CompilationRetryBaseDelayMs"/>), um transiente Fehlschlaege
-    /// (z. B. MSBuild-/Ressourcen-Kontention unter paralleler Last) von echten, dauerhaften
-    /// Compile-Problemen zu unterscheiden. <paramref name="getCompilation"/> statt direkt
-    /// <c>Project.GetCompilationAsync</c>, damit die Retry-/Backoff-Logik isoliert von einer echten
-    /// Roslyn-<c>Project</c>-Instanz testbar ist (Pattern konsistent mit <see cref="BuildScoreResult"/>).
-    /// Wirft nach dem letzten erfolglosen Versuch eine <see cref="SafeguardCompilationException"/>
-    /// statt still <c>null</c> zurueckzugeben — ein kompilierbares Projekt, das dauerhaft nicht
-    /// kompiliert, darf nicht lautlos aus der Klassen-Aggregation fallen (siehe Determinismus-Hinweis
-    /// an <see cref="TryGetCompilationAsync"/>).
-    /// </summary>
-    internal static async Task<Compilation?> GetCompilationWithRetryAsync(
-        Func<CancellationToken, Task<Compilation?>> getCompilation, string projectName, CancellationToken ct)
-    {
-        Exception? lastError = null;
-        for (var attempt = 1; attempt <= CompilationRetryAttempts; attempt++)
-        {
-            ct.ThrowIfCancellationRequested();
-            try
-            {
-                var compilation = await getCompilation(ct);
-                if (compilation is not null) return compilation;
-                lastError = null;
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
-            {
-                lastError = ex;
-            }
-
-            if (attempt < CompilationRetryAttempts)
-            {
-                await Task.Delay(CompilationRetryBaseDelayMs * attempt, ct);
-            }
-        }
-
-        throw new SafeguardCompilationException(
-            $"Compilation fuer Projekt '{projectName}' schlug nach {CompilationRetryAttempts} " +
-            "Versuchen fehl (SupportsCompilation=true, aber GetCompilationAsync lieferte wiederholt " +
-            "keine Compilation).",
-            lastError);
-    }
-
-    private static async Task<IReadOnlyList<ScannedClass>> CollectClassDeclarationsAsync(
-        Document document, Compilation compilation, Config config, CancellationToken ct)
-    {
-        var syntaxTree = await document.GetSyntaxTreeAsync(ct);
-        if (syntaxTree is null) return Array.Empty<ScannedClass>();
-
-        var semanticModel = compilation.GetSemanticModel(syntaxTree);
-        var root = await syntaxTree.GetRootAsync(ct);
-        var result = new List<ScannedClass>();
-        foreach (var classDecl in root.DescendantNodes().OfType<ClassDeclarationSyntax>())
-        {
-            if (TryBuildScannedClass(classDecl, semanticModel, config) is { } scanned) result.Add(scanned);
-        }
-        return result;
-    }
-
-    private static ScannedClass? TryBuildScannedClass(
-        ClassDeclarationSyntax classDecl, SemanticModel semanticModel, Config config)
-    {
-        var symbol = semanticModel.GetDeclaredSymbol(classDecl) as INamedTypeSymbol;
-        if (symbol is null || symbol.TypeKind != TypeKind.Class || symbol.IsAbstract) return null;
-        return BuildScannedClass(symbol, classDecl, config);
-    }
-
-    private static ScannedClass BuildScannedClass(
-        INamedTypeSymbol symbol, ClassDeclarationSyntax classDecl, Config config)
-    {
-        var maxCc = 0;
-        foreach (var method in classDecl.DescendantNodes().OfType<MethodDeclarationSyntax>())
-        {
-            maxCc = Math.Max(maxCc, ComplexityCalculator.GetCognitiveComplexity(method));
-        }
-
-        var footprint = AIContextFootprintCalculator.Calculate(
-            symbol,
-            config.Metrics.FootprintIgnoreNamespacePrefixes,
-            config.Metrics.FootprintIgnoreTypeNames);
-
-        return new ScannedClass(
-            Name: symbol.Name,
-            MaxCognitiveComplexity: maxCc,
-            AIContextFootprint: footprint,
-            IsSealed: symbol.IsSealed);
-    }
 }

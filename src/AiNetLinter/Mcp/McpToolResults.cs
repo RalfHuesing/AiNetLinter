@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text;
+using AiNetLinter.Mcp.Wire;
 using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
@@ -27,8 +28,8 @@ namespace AiNetLinter.Mcp;
 /// </summary>
 internal static partial class McpToolResults
 {
-    internal const int CompositeWireBudgetBytes = 12 * 1024;
-    internal const int CompositeSectionBudgetBytes = 4 * 1024;
+    internal const int CompositeWireBudgetBytes = McpToolResultsWireBudget.CompositeWireBudgetBytes;
+    internal const int CompositeSectionBudgetBytes = McpToolResultsWireBudget.CompositeSectionBudgetBytes;
 
     internal const string WorkspaceDiagnosticHint =
         "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung.";
@@ -271,6 +272,15 @@ internal static partial class McpToolResults
         };
     }
 
+    internal static CallToolResult ApplyCompositeWireBudget(
+        CallToolResult result,
+        IReadOnlyList<string> sectionNames,
+        string? rootSectionName = null) =>
+        McpToolResultsWireBudget.ApplyCompositeWireBudget(result, sectionNames, rootSectionName);
+
+    internal static CallToolResult ReplaceText(CallToolResult result, string text) =>
+        McpToolResultsWireBudget.ReplaceText(result, text);
+
     /// <summary>
     /// Wendet das gemeinsame UTF-8-Wirebudget fuer Source-Composites an. Die Projektion arbeitet
     /// ausschliesslich auf den bereits erzeugten StructuredContent-Objekten: Root-Felder bleiben
@@ -317,7 +327,7 @@ internal static partial class McpToolResults
             Content = text,
             StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
         };
-        return ReapplyCompositeWireBudgetAfterNavigation(navigated);
+        return McpToolResultsWireBudget.ReapplyCompositeWireBudgetAfterNavigation(navigated);
     }
 
     /// <summary>
