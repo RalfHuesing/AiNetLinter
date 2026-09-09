@@ -185,7 +185,7 @@ internal static class SymbolGraphToolRegistrations
                             new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
                             ct),
                             AssemblySessionCall: lease => GetImpactTool.ExecuteAsync(
-                                lease.Server,
+                                lease,
                                 new GetImpactInput(gitRef, symbolIdentifier, maxResults, depth, detailLevel, maxChangedSymbols, maxTestsPerSymbol),
                                 ct),
                             ExpandAssemblyReferences: true),

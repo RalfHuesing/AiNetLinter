@@ -39,6 +39,46 @@ internal static class GetImpactTool
         "gitRef pruefen (z. B. via 'git log'/'git branch') oder ohne gitRef aufrufen fuer uncommittete Aenderungen.";
 
     internal static async Task<CallToolResult> ExecuteAsync(
+        AssemblyAnalysisLease lease,
+        GetImpactInput input,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(input.EffectiveSymbolIdentifier))
+        {
+            return McpToolResults.InvalidArgument(
+                "Assembly-Ziele benoetigen symbolIdentifier; gitRef-basierter Impact ist fuer Assemblies nicht verfuegbar.",
+                hint: McpToolResults.SymbolIdentifierHint);
+        }
+
+        if (!string.IsNullOrEmpty(input.GitRef))
+        {
+            return McpToolResults.InvalidArgument(
+                "gitRef ist fuer Assembly-Ziele nicht zulaessig; nur symbolIdentifier verwenden.",
+                hint: McpToolResults.SymbolIdentifierHint);
+        }
+
+        var detailLevel = ResolveDetailLevel(input.DetailLevel);
+        if (detailLevel is null)
+        {
+            return McpToolResults.InvalidArgument(
+                $"Unbekannter detailLevel-Wert '{input.DetailLevel}' — erlaubt sind " +
+                $"'{ChangeContextContract.DetailLevelCallers}' (Default) und " +
+                $"'{ChangeContextContract.DetailLevelChangeContext}'.",
+                hint: "detailLevel weglassen oder einen der erlaubten Werte uebergeben.");
+        }
+
+        if (detailLevel == ChangeContextContract.DetailLevelChangeContext)
+        {
+            return McpToolResults.InvalidArgument(
+                "detailLevel='change-context' ist nur im Git-Diff-Modus zulaessig und kann nicht " +
+                "mit symbolIdentifier kombiniert werden.",
+                hint: "Fuer den Kontext eines einzelnen Symbols get_feature_context nutzen.");
+        }
+
+        return await ExecuteAssemblySymbolBranchAsync(lease, input, ct).ConfigureAwait(false);
+    }
+
+    internal static async Task<CallToolResult> ExecuteAsync(
         ISolutionStateProvider state, GetImpactInput input, CancellationToken ct, DiffImpactCounters? counters = null)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
@@ -171,6 +211,36 @@ internal static class GetImpactTool
 
         // Wie find_references: auch ein leeres, aber vollstaendiges Ergebnis gilt als
         // abschliessend und bekommt den Sufficiency-Hinweis statt stillschweigend zu enden.
+        var finalBody = TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
+            ? McpSufficiencyHints.Append(formatted.Text)
+            : formatted.Text;
+        return McpToolResults.Text(finalBody, formatted.Traversal);
+    }
+
+    private static async Task<CallToolResult> ExecuteAssemblySymbolBranchAsync(
+        AssemblyAnalysisLease lease,
+        GetImpactInput input,
+        CancellationToken ct)
+    {
+        var symbolIdentifier = input.EffectiveSymbolIdentifier!;
+        var (target, error, navigation) = await AssemblySymbolResolver.ResolveAsync(
+            lease,
+            symbolIdentifier,
+            ct).ConfigureAwait(false);
+        if (error is not null) return error;
+
+        var traversal = await AssemblyReferenceNavigator.FindReferencesAsync(
+            new AssemblyReferenceTraversalRequest(
+                AssemblyNavigationSourceFactory.CreateSources(lease, target!),
+                input.MaxResults,
+                input.Depth,
+                navigation),
+            ct).ConfigureAwait(false);
+        var formatted = TransitiveCallGraphFormatter.FormatResponse(
+            traversal,
+            traversal.Completeness.TotalCallSiteCount == 0
+                ? $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"
+                : null);
         var finalBody = TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
             ? McpSufficiencyHints.Append(formatted.Text)
             : formatted.Text;

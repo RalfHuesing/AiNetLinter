@@ -116,7 +116,7 @@ public sealed class AssemblyAnalysisRouteTests
                 new AnalysisTargetRequest(rootPath),
                 new AnalysisToolDispatch(
                     AssemblySessionCall: lease => GetImpactTool.ExecuteAsync(
-                        lease.Server,
+                        lease,
                         new GetImpactInput(null, "Probe.Root.Read", 50, 1),
                         CancellationToken.None),
                     ExpandAssemblyReferences: true),
@@ -168,6 +168,107 @@ public sealed class AssemblyAnalysisRouteTests
     }
 
     [Fact]
+    public async Task AssemblyRoute_FindSymbolHandoffIdStaysBoundToItsReferencedAssembly()
+    {
+        using var temp = TestTempDirectory.Create("assembly-route-symbol-handoff-");
+        var alphaPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "SemanticDependencyAlpha",
+            "namespace Probe; public sealed class SharedTarget { public int Read() => 1; } " +
+            "public sealed class AlphaCaller { public int Invoke() => new SharedTarget().Read(); } " +
+            "public sealed class AlphaMarker { }");
+        var betaPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "SemanticDependencyBeta",
+            "namespace Probe; public sealed class SharedTarget { public int Read() => 2; } " +
+            "public sealed class BetaCaller { public int Invoke() => new SharedTarget().Read(); } " +
+            "public sealed class BetaMarker { }");
+        var rootPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "SemanticNavigationRoot",
+            "namespace Probe; public sealed class Root { public AlphaMarker Alpha { get; } = new(); public BetaMarker Beta { get; } = new(); }",
+            betaPath,
+            alphaPath);
+        await using var registry = new AssemblyAnalysisRegistry();
+        var route = AssemblyAnalysisDispatcher.CreateRoute(registry);
+
+        var symbolResult = await AnalysisToolCall.ExecuteRouted(
+            route,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest(rootPath),
+                new AnalysisToolDispatch(
+                    AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(
+                        lease,
+                        new AssemblyFindSymbolRequest(["SharedTarget"], null, 50, true),
+                        CancellationToken.None),
+                    ExpandAssemblyReferences: true),
+                CancellationToken.None));
+
+        Assert.NotEqual(true, symbolResult.IsError);
+        var matches = symbolResult.StructuredContent!.Value.GetProperty("results")[0]
+            .GetProperty("matches").EnumerateArray();
+        Assert.True(matches.Any(), Text(symbolResult));
+        var alphaMatch = Assert.Single(
+            matches,
+            item => string.Equals(
+                item.GetProperty("origin").GetProperty("canonicalPath").GetString(),
+                Path.GetFullPath(alphaPath),
+                StringComparison.OrdinalIgnoreCase));
+        var symbolIdentifier = alphaMatch.GetProperty("id").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(symbolIdentifier));
+
+        var findReferencesResult = await AnalysisToolCall.ExecuteRouted(
+            route,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest(rootPath),
+                new AnalysisToolDispatch(
+                    AssemblySessionCall: lease => AssemblyFindReferencesTool.ExecuteAsync(
+                        lease,
+                        new AssemblyFindReferencesRequest(symbolIdentifier, 50, 1, true),
+                        CancellationToken.None),
+                    ExpandAssemblyReferences: true),
+                CancellationToken.None));
+
+        Assert.True(
+            findReferencesResult.IsError != true,
+            string.Join(
+                "\n",
+                findReferencesResult.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>()
+                    .Select(block => block.Text)));
+        var referencePaths = findReferencesResult.StructuredContent!.Value
+            .GetProperty("callSites").EnumerateArray()
+            .Select(item => item.GetProperty("filePath").GetString()!)
+            .ToArray();
+        Assert.Contains(referencePaths, path => path.EndsWith("AlphaCaller.cs", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(referencePaths, path => path.EndsWith("BetaCaller.cs", StringComparison.OrdinalIgnoreCase));
+
+        var getImpactResult = await AnalysisToolCall.ExecuteRouted(
+            route,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest(rootPath),
+                new AnalysisToolDispatch(
+                    AssemblySessionCall: lease => GetImpactTool.ExecuteAsync(
+                        lease,
+                        new GetImpactInput(null, symbolIdentifier, 50, 1),
+                        CancellationToken.None),
+                    ExpandAssemblyReferences: true),
+                CancellationToken.None));
+
+        Assert.True(
+            getImpactResult.IsError != true,
+            string.Join(
+                "\n",
+                getImpactResult.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>()
+                    .Select(block => block.Text)));
+        var impactPaths = getImpactResult.StructuredContent!.Value
+            .GetProperty("callSites").EnumerateArray()
+            .Select(item => item.GetProperty("filePath").GetString()!)
+            .ToArray();
+        Assert.Contains(impactPaths, path => path.EndsWith("AlphaCaller.cs", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(impactPaths, path => path.EndsWith("BetaCaller.cs", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task AssemblyRoute_GetImpactWithoutSymbolReturnsRecoverableInvalidArgument()
     {
         using var temp = TestTempDirectory.Create("assembly-route-impact-invalid-");
@@ -183,7 +284,7 @@ public sealed class AssemblyAnalysisRouteTests
                 new AnalysisTargetRequest(assemblyPath),
                 new AnalysisToolDispatch(
                     AssemblySessionCall: lease => GetImpactTool.ExecuteAsync(
-                        lease.Server,
+                        lease,
                         new GetImpactInput(null, null, 50, 1),
                         CancellationToken.None)),
                 CancellationToken.None));

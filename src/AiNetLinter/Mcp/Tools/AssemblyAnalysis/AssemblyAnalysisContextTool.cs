@@ -143,7 +143,7 @@ internal static class AssemblyAnalysisContextTool
         if (arguments.IncludeImpact)
         {
             var result = await GetImpactTool.ExecuteAsync(
-                lease.Server,
+                lease,
                 new GetImpactInput(null, arguments.SymbolIdentifier, SelectionLimit(arguments), Math.Clamp(arguments.Depth, 1, 3)),
                 cancellationToken).ConfigureAwait(false);
             root["impact"] = Serialize(result.StructuredContent);

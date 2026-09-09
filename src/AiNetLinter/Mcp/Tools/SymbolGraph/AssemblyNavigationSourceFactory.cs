@@ -43,22 +43,27 @@ internal static class AssemblyNavigationSourceFactory
         var declarationId = DocumentationCommentId.CreateDeclarationId(symbol);
         if (declarationId is not null)
         {
-            var mapped = DocumentationCommentId.GetFirstSymbolForDeclarationId(declarationId, compilation);
+            var targetAssembly = symbol.ContainingAssembly?.Identity;
+            var mapped = DocumentationCommentId.GetSymbolsForDeclarationId(declarationId, compilation)
+                .FirstOrDefault(candidate =>
+                    targetAssembly is null
+                    || candidate.ContainingAssembly?.Identity.Equals(targetAssembly) == true);
             if (mapped is not null) return mapped;
         }
 
         if (symbol is INamedTypeSymbol type)
         {
-            return compilation.GetTypeByMetadataName(GetMetadataTypeName(type));
+            var mappedNamedType = compilation.GetTypeByMetadataName(GetMetadataTypeName(type));
+            return IsFromTargetAssembly(mappedNamedType, symbol) ? mappedNamedType : null;
         }
 
         var containingType = symbol.ContainingType;
         if (containingType is null) return null;
 
-        var mappedType = compilation.GetTypeByMetadataName(GetMetadataTypeName(containingType));
-        if (mappedType is null) return null;
+        var mappedContainingType = compilation.GetTypeByMetadataName(GetMetadataTypeName(containingType));
+        if (mappedContainingType is null || !IsFromTargetAssembly(mappedContainingType, containingType)) return null;
 
-        var candidates = mappedType.GetMembers(symbol.Name)
+        var candidates = mappedContainingType.GetMembers(symbol.Name)
             .Where(candidate => candidate.Kind == symbol.Kind)
             .ToList();
         if (candidates.Count == 1) return candidates[0];
@@ -66,10 +71,18 @@ internal static class AssemblyNavigationSourceFactory
         return declarationId is null
             ? null
             : candidates.FirstOrDefault(candidate =>
+                IsFromTargetAssembly(candidate, symbol) &&
                 string.Equals(
                     DocumentationCommentId.CreateDeclarationId(candidate),
                     declarationId,
                     StringComparison.Ordinal));
+    }
+
+    private static bool IsFromTargetAssembly(ISymbol? candidate, ISymbol target)
+    {
+        var targetAssembly = target.ContainingAssembly?.Identity;
+        return candidate is not null
+            && (targetAssembly is null || candidate.ContainingAssembly?.Identity.Equals(targetAssembly) == true);
     }
 
     private static string GetMetadataTypeName(INamedTypeSymbol type) =>
