@@ -316,14 +316,16 @@ internal static partial class SearchPatternScanner
                 "resident-solution",
                 Path.GetFileName(options.ScannerParameters.Solution.FilePath),
                 options.ScannerParameters.Solution.ProjectIds.Count),
-            CreateNext(completeness.TruncatedBy));
+            CreateNext(completeness));
 
-    private static SearchPatternNext CreateNext(IReadOnlyList<string> reasons) =>
-        reasons.Count == 0
-            ? new("none", "Kein weiterer Schritt erforderlich.")
-            : reasons.Contains("enumerationError", StringComparer.Ordinal)
+    private static SearchPatternNext CreateNext(SearchPatternCompleteness completeness) =>
+        completeness.TruncatedBy.Count == 0
+            ? completeness.TotalMatchedLineCount == 0
+                ? new("refine_scope", "Keine Treffer im vollständig geprüften Scope; Suchmuster oder Scope verfeinern und erneut suchen.")
+                : new("none", "Kein weiterer Schritt erforderlich.")
+            : completeness.TruncatedBy.Contains("enumerationError", StringComparer.Ordinal)
                 ? new("refine_scope", "Scope oder fileFilter auf einen erreichbaren Teilbaum verfeinern.")
-                : reasons.Contains("regexTimeout", StringComparer.Ordinal)
+                : completeness.TruncatedBy.Contains("regexTimeout", StringComparer.Ordinal)
                     ? new("refine_scope", "Pattern vereinfachen oder Scope/includePatterns verfeinern.")
                     : new("refine_scope", "Scope/includePatterns verfeinern oder maxResults/maxResponseBytes erhöhen.");
 

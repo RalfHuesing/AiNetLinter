@@ -11,3 +11,4 @@
 | D-001 | Typfehler in MCP-Argumenten werden vor der Bindung feldgenau als strukturierte Eingabefehler behandelt. | `WrongArgumentType_ReturnsFieldAwareRecoverableInvalidArgument` |
 | D-002 | Ressourcenfehler werden in der Navigation als nicht verfügbare, nicht anwendbare Ergebnisse statt als Erfolg ausgewiesen. | `GetFileTree_NonExistentRoot_ReturnsResourceNotFoundWithErrorNavigation` |
 | D-003 | Konkurrierende Symbolsuchparameter werden vor der Suche eindeutig und feldgenau abgewiesen. | `FindSymbol_BothPatternFormsProvided_ReturnsRecoverableInvalidArgument` |
+| E-001 | Vollständige leere Textsuchen geben im Payload und in der Navigation dieselbe sinnvolle Folgeaktion aus. | `SearchPattern_EmptyResult_UsesSameNextActionInPayloadAndNavigation` |
