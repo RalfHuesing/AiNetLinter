@@ -132,8 +132,41 @@ internal static class McpNavigationProjection
     {
         var terminal = ResolveTerminalCompleteness(structured, operationStatus);
         if (terminal is not null) return terminal;
+        if (TryResolveAssemblyResultCompleteness(structured, out var assemblyCompleteness))
+            return assemblyCompleteness;
         if (HasTruncation(structured)) return "truncated";
         return ResolvePayloadCompleteness(structured);
+    }
+
+    private static bool TryResolveAssemblyResultCompleteness(JsonElement? structured, out string value)
+    {
+        value = string.Empty;
+        if (structured is not { ValueKind: JsonValueKind.Object } payload
+            || !payload.TryGetProperty("assemblyPath", out _))
+        {
+            return false;
+        }
+
+        foreach (var (itemsName, totalName) in new[]
+        {
+            ("types", "totalTypes"),
+            ("extensions", "totalExtensions"),
+        })
+        {
+            if (!payload.TryGetProperty(itemsName, out var items)
+                || items.ValueKind != JsonValueKind.Array
+                || !payload.TryGetProperty(totalName, out var total)
+                || total.ValueKind != JsonValueKind.Number
+                || !total.TryGetInt32(out var totalCount))
+            {
+                continue;
+            }
+
+            value = items.GetArrayLength() < totalCount ? "truncated" : "complete";
+            return true;
+        }
+
+        return false;
     }
 
     private static string? ResolveTerminalCompleteness(JsonElement? structured, string operationStatus) =>

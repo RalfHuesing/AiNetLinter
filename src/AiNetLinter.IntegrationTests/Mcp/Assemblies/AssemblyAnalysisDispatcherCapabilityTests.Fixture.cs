@@ -73,7 +73,8 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
         internal async Task<CallToolResult> ExecuteInspectAsync(
             int maxResponseBytes = 0,
             string? detailLevel = null,
-            string? cursor = null)
+            string? cursor = null,
+            string? typeName = null)
         {
             var route = AssemblyAnalysisDispatcher.CreateRoute(registry);
             return await AnalysisToolCall.ExecuteRouted(
@@ -86,7 +87,7 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
                             new InspectAssemblyArguments(
                                 lease.CanonicalPath,
                                 null,
-                                null,
+                                typeName,
                                 null,
                                 PublicOnly: true,
                                 MaxResults: 100,
@@ -100,7 +101,10 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
                     CancellationToken.None));
         }
 
-        internal async Task<CallToolResult> ExecuteExtensionsAsync(bool includeReferences = true)
+        internal async Task<CallToolResult> ExecuteExtensionsAsync(
+            bool includeReferences = true,
+            int maxResponseBytes = 0,
+            string? extensionName = null)
         {
             var route = AssemblyAnalysisDispatcher.CreateRoute(registry);
             return await AnalysisToolCall.ExecuteRouted(
@@ -113,11 +117,13 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
                             new FindAssemblyExtensionsArguments(
                                 lease.CanonicalPath,
                                 null,
-                                null,
+                                extensionName,
                                 null,
                                 100,
-                                includeReferences)),
-                        ExpandAssemblyReferences: includeReferences),
+                                includeReferences,
+                                MaxResponseBytes: maxResponseBytes)),
+                        ExpandAssemblyReferences: includeReferences,
+                        MaxResponseBytes: maxResponseBytes),
                     CancellationToken.None));
         }
 
