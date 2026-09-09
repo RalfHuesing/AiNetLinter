@@ -279,21 +279,15 @@ public sealed partial class McpLiveRepositoryTests
         Assert.True(json.ContainsKey("remediation"));
         Assert.True(json.ContainsKey("summary"));
         Assert.True(json.ContainsKey("scope"));
+        Assert.True(json.ContainsKey("excludedDocumentCount"));
         Assert.True((bool)json["scoreIsNotScope"]!);
         Assert.IsType<JsonArray>(json["violations"]);
-
-        if (json.ContainsKey("score"))
-        {
-            Assert.True(json.ContainsKey("passed"));
-            var score = (double)json["score"]!;
-            Assert.True(score >= 5.0,
-                $"Safeguard-Live-Score {score} unter Korridor >= 5.0");
-        }
-        else
-        {
-            Assert.Equal("not_decidable", (string)json["status"]!);
-            Assert.DoesNotContain("PASS", (string)json["summary"]!, StringComparison.Ordinal);
-        }
+        Assert.True(json.ContainsKey("score"),
+            "Bewusst ausgeschlossene/generated Dokumente dürfen den entscheidbaren Solution-Score nicht entfernen.");
+        Assert.True(json.ContainsKey("passed"));
+        var score = (double)json["score"]!;
+        Assert.True(score >= 5.0,
+            $"Safeguard-Live-Score {score} unter Korridor >= 5.0");
     }
 
     [Fact]
@@ -318,6 +312,9 @@ public sealed partial class McpLiveRepositoryTests
 
         var patterns = json["patterns"]!.AsArray();
         Assert.Equal(6, patterns.Count);
+        Assert.NotEqual("not_decidable", (string)json["summary"]!["completeness"]!);
+        Assert.All(patterns, pattern =>
+            Assert.NotEqual("not_decidable", (string)pattern!["status"]!));
         var ids = patterns.Select(p => (string)p!["id"]!).ToHashSet(StringComparer.Ordinal);
         foreach (var expected in new[] { "god-class", "async-void", "long-method", "public-without-doc", "empty-catch", "feature-envy" })
         {

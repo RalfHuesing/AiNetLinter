@@ -164,9 +164,31 @@ internal static class McpNavigationProjection
         value = string.Empty;
         if (element is not { ValueKind: JsonValueKind.Object } objectValue) return false;
 
-        return TryReadNestedCompleteness(objectValue, "analysis", out value)
+        return TryReadSummaryCompleteness(objectValue, out value)
+            || TryReadNestedCompleteness(objectValue, "analysis", out value)
             || TryReadNestedCompleteness(objectValue, "navigation", out value)
             || TryReadCompletenessProperty(objectValue, out value);
+    }
+
+    private static bool TryReadSummaryCompleteness(JsonElement owner, out string value)
+    {
+        value = string.Empty;
+        if (!owner.TryGetProperty("summary", out var summary)
+            || summary.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        if (TryReadStringProperty(summary, "completeness", out value)) return true;
+        if (!TryReadStringProperty(summary, "status", out var status)) return false;
+
+        value = status switch
+        {
+            "checked" => "complete",
+            "empty" or "truncated" or "partial" or "not_configured" or "not_decidable" => status,
+            _ => string.Empty,
+        };
+        return value.Length > 0;
     }
 
     private static bool TryReadNestedCompleteness(JsonElement owner, string propertyName, out string value)

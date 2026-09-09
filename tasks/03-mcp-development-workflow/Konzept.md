@@ -122,6 +122,11 @@ Rahmen entspricht. Andernfalls wird es entfernt, niemals als Alias geführt.
 - `get_violations`, `metrics_lookup` und `safeguard` verwenden denselben
   fachlichen Source-Scope. Fehlende oder ungültige Regeln können nicht als
   sauberes Lint- oder Quality-Ergebnis erscheinen.
+- Bewusst konfigurierte `FileFilters` definieren den effektiven Source-Scope:
+  ausgeschlossene Dokumente werden nicht bewertet, aber als Count ausgewiesen.
+  Sie machen einen ansonsten entscheidbaren Scope nicht `not_decidable`; das gilt
+  nur, wenn keine analysierbaren Dokumente verbleiben oder die effektive
+  Regelkonfiguration widersprüchlich ist.
 - `safeguard` zeigt nur Violations und Remediation aus seinem geprüften Scope.
   Ein Score ersetzt weder Scope noch Abschnittsstatus.
 - `pattern_detect` weist für jede angeforderte Kategorie aus, ob sie geprüft,

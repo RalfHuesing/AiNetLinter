@@ -3,6 +3,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Tools.Safeguard;
 using AiNetLinter.TestKit;
 using AiNetLinter.FastTests.Fixtures;
@@ -12,6 +13,38 @@ namespace AiNetLinter.FastTests.Mcp.Tools.Safeguard;
 
 public sealed partial class SafeguardScannerTests
 {
+    [Fact]
+    public async Task ComputeScoreAsync_ConfiguredGeneratedFileExclusion_DoesNotPoisonSolutionScore()
+    {
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\SafeguardGeneratedFileTests.slnx",
+            new ProjectSpec("InScope", [
+                ("Generated.designer.cs", "namespace Generated; public sealed class GeneratedType { }"),
+                ("Clean.cs", "namespace InScope; public sealed class Clean { public int Value() => 1; }") ]));
+
+        var result = await SafeguardScanner.ComputeScoreAsync(new SafeguardScannerParameters(
+            Solution: testSolution.Solution,
+            Config: TestHelper.CreateDefaultConfig() with
+            {
+                FileFilters = new FileFiltersConfig
+                {
+                    ExcludeFilePatterns = ["*.designer.cs"],
+                    ExcludeDirectoryPatterns = []
+                }
+            },
+            Console: NullConsole.Instance,
+            ScopeFilter: null,
+            CancellationToken: CancellationToken.None));
+
+        Assert.False(result.IsMalfunction);
+        var score = Assert.IsType<ScoreResult>(result.Score);
+        Assert.NotNull(score.Score);
+        Assert.Equal("complete", score.Completeness);
+        Assert.Equal("passed", score.Status);
+        Assert.Equal(1, score.ExcludedDocumentCount);
+        Assert.Contains("1 Dokumente bewusst ausgeschlossen", score.Summary, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task ComputeScoreAsync_ScopeFilter_FiltersViolationsAndClassMetricsTogether()
     {

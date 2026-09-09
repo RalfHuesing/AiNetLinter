@@ -139,7 +139,7 @@ internal static partial class SafeguardScanner
                 profiler: null,
                 console: console);
             violations = await engine.RunAsync(solution, noCache: true, cacheTtlMinutes: 0, ct);
-            var fileToProject = ViolationScopeFilter.BuildFileToProjectMap(solution, solutionDir);
+            var fileToProject = ViolationScopeFilter.BuildFileToProjectMap(solution, solutionDir, concreteConfig.FileFilters);
             violations = ViolationScopeFilter.FilterAndSortViolations(
                 solutionDir, fileToProject, violations, scopeFilter);
 
@@ -166,7 +166,8 @@ internal static partial class SafeguardScanner
             Scope: scope,
             Completeness: assessment.Completeness,
             Status: assessment.Status,
-            StatusCause: assessment.StatusCause));
+            StatusCause: assessment.StatusCause,
+            ExcludedDocumentCount: assessment.ExcludedDocumentCount));
         score = score with { Status = score.Passed == true ? "passed" : "failed" };
         return new SafeguardScoreResult(Score: score, IsMalfunction: false);
     }
@@ -188,14 +189,20 @@ internal static partial class SafeguardScanner
         var analyzableDocuments = matchingDocuments
             .Where(document => !FileFilterEvaluator.IsExcluded(document.FilePath ?? document.Name, config.FileFilters))
             .ToList();
-        if (analyzableDocuments.Count == 0 || analyzableDocuments.Count != matchingDocuments.Count)
-            return UndecidableScope(scope, "Die Dokumentabdeckung ist wegen konfigurierter Dateiausschlüsse nicht entscheidbar.");
+        var excludedDocumentCount = matchingDocuments.Count - analyzableDocuments.Count;
+        if (analyzableDocuments.Count == 0)
+        {
+            return UndecidableScope(
+                scope,
+                "Keine analysierbaren Dokumente im Scope; alle passenden Dokumente sind durch konfigurierte Dateiausschlüsse außerhalb des Scores.",
+                excludedDocumentCount);
+        }
 
         var enabledStates = analyzableDocuments
             .Select(document => ProjectConfigResolver.ResolveForDocument(document, config, solutionDir))
             .Select(effectiveConfig => RuleRegistry.All.Any(rule => rule.IsEnabled(effectiveConfig)))
             .ToList();
-        return AssessRuleConfiguration(scope, enabledStates);
+        return AssessRuleConfiguration(scope, enabledStates, excludedDocumentCount);
     }
 
     private static SafeguardScopeAssessment AssessEmptyScope(
@@ -214,26 +221,34 @@ internal static partial class SafeguardScanner
     }
 
     private static SafeguardScopeAssessment AssessRuleConfiguration(
-        string scope, IReadOnlyList<bool> enabledStates)
+        string scope, IReadOnlyList<bool> enabledStates, int excludedDocumentCount)
     {
         if (enabledStates.All(enabled => !enabled))
         {
             return new SafeguardScopeAssessment(
-                scope, "not_configured", "not_configured", "Im angeforderten Scope ist keine Regel aktiviert.");
+                scope, "not_configured", "not_configured", "Im angeforderten Scope ist keine Regel aktiviert.", excludedDocumentCount);
         }
         if (enabledStates.Any(enabled => !enabled))
         {
-            return UndecidableScope(scope, "Die Regelaktivierung ist im angeforderten Scope zwischen Dokumenten uneinheitlich.");
+            return UndecidableScope(
+                scope,
+                "Die Regelaktivierung ist im angeforderten Scope zwischen Dokumenten uneinheitlich.",
+                excludedDocumentCount);
         }
+        var exclusionNote = excludedDocumentCount == 0
+            ? ""
+            : $" {excludedDocumentCount} Dokumente sind durch konfigurierte Dateiausschlüsse bewusst außerhalb des Scores.";
         return new SafeguardScopeAssessment(
             scope,
             "complete",
             "configured",
-            "Der Score ist ein Quality-Gate; die analysierten Dokumente und Regeln sind im Scope entscheidbar.");
+            "Der Score ist ein Quality-Gate; die analysierten Dokumente und Regeln sind im Scope entscheidbar." + exclusionNote,
+            excludedDocumentCount);
     }
 
-    private static SafeguardScopeAssessment UndecidableScope(string scope, string cause) =>
-        new(scope, "not_decidable", "not_decidable", cause);
+    private static SafeguardScopeAssessment UndecidableScope(
+        string scope, string cause, int excludedDocumentCount = 0) =>
+        new(scope, "not_decidable", "not_decidable", cause, excludedDocumentCount);
 
     private static ScoreResult BuildUndecidableResult(
         SafeguardScopeAssessment assessment, double threshold) =>
@@ -254,7 +269,8 @@ internal static partial class SafeguardScanner
             ScoreIsNotScope: true,
             Completeness: assessment.Completeness,
             Status: assessment.Status,
-            StatusCause: assessment.StatusCause);
+            StatusCause: assessment.StatusCause,
+            ExcludedDocumentCount: assessment.ExcludedDocumentCount);
 
     /// <summary>
     /// Deterministische Score-Berechnung. Getrennt von <see cref="ComputeScoreAsync"/> fuer
@@ -304,7 +320,8 @@ internal static partial class SafeguardScanner
             Classes: p.Classes,
             Scope: p.Scope,
             Completeness: p.Completeness,
-            Status: status));
+            Status: status,
+            ExcludedDocumentCount: p.ExcludedDocumentCount));
 
         return new ScoreResult(
             Passed: passed,
@@ -320,7 +337,8 @@ internal static partial class SafeguardScanner
             StatusCause: p.StatusCause,
             TotalViolationCount: p.Violations.Count,
             ShownViolationCount: sortedViolations.Count,
-            ViolationsTruncated: sortedViolations.Count < p.Violations.Count);
+            ViolationsTruncated: sortedViolations.Count < p.Violations.Count,
+            ExcludedDocumentCount: p.ExcludedDocumentCount);
     }
 
     /// <summary>
@@ -423,6 +441,9 @@ internal static partial class SafeguardScanner
             : $"{p.ShownViolationCount} von {p.TotalViolationCount} Verstößen (Top-Auswahl wegen maxViolations)";
         return $"Safeguard-Score: {p.Score:F2}/10 (Threshold {p.Threshold:F2}) — {(p.Passed ? "PASS" : "FAIL")}. " +
                $"{violationSummary}, {p.Classes.Count} Klassen analysiert. " +
+               (p.ExcludedDocumentCount == 0
+                   ? ""
+                   : $"{p.ExcludedDocumentCount} Dokumente bewusst ausgeschlossen. ") +
                $"Quality-Gate, kein Scope-Vollständigkeitsbeweis (scoreIsNotScope=true). " +
                $"Scope: '{p.Scope}'; Vollständigkeit: {p.Completeness}; Status: {p.Status}.";
     }

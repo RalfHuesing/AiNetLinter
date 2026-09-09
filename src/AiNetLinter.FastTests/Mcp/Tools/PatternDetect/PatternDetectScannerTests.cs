@@ -26,6 +26,28 @@ namespace AiNetLinter.FastTests.Mcp.Tools.PatternDetect;
 public sealed class PatternDetectScannerTests
 {
     [Fact]
+    public async Task BuildReportAsync_ConfiguredGeneratedFileExclusion_DoesNotPoisonPatternStatus()
+    {
+        using var testSolution = CreateSolution(
+            ("Generated.designer.cs", "namespace Generated; public sealed class GeneratedType { }"),
+            ("Clean.cs", "namespace Test; public sealed class Clean { public int Value() => 1; }"));
+
+        var result = await RunAsync(testSolution.Solution, CreateConfig() with
+        {
+            FileFilters = new FileFiltersConfig
+            {
+                ExcludeFilePatterns = ["*.designer.cs"],
+                ExcludeDirectoryPatterns = []
+            }
+        },
+            PatternCatalog.Patterns.Where(p => p.Id == "async-void").ToList());
+
+        var asyncVoid = Assert.Single(result.Payload!.Patterns);
+        Assert.Equal("empty", asyncVoid.Status);
+        Assert.Equal("empty", result.Payload.Summary.Completeness);
+    }
+
+    [Fact]
     public async Task BuildReportAsync_MaxPublicMembersPerTypeViolation_AttributedToGodClassPattern()
     {
         const string source = @"

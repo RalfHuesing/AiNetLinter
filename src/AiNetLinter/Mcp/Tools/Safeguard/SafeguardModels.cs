@@ -27,7 +27,8 @@ internal sealed record BuildScoreResultParameters(
     string Scope = "solution",
     string Completeness = "complete",
     string Status = "configured",
-    string? StatusCause = null);
+    string? StatusCause = null,
+    int ExcludedDocumentCount = 0);
 
 internal sealed record BuildSafeguardSummaryParameters(
     double Score,
@@ -38,7 +39,8 @@ internal sealed record BuildSafeguardSummaryParameters(
     IReadOnlyList<ScannedClass> Classes,
     string Scope,
     string Completeness,
-    string Status);
+    string Status,
+    int ExcludedDocumentCount = 0);
 
 /// <summary>
 /// Parameter-Record fuer <see cref="SafeguardScanner.ComputeScoreAsync"/>. Kapselt 7
@@ -70,7 +72,8 @@ internal sealed record SafeguardScopeAssessment(
     string Scope,
     string Completeness,
     string Status,
-    string StatusCause);
+    string StatusCause,
+    int ExcludedDocumentCount = 0);
 
 /// <summary>
 /// Score-Aggregat-Container mit den vier Score-Komponenten (Violations/CC/Footprint/Sealed-Bonus)
@@ -92,7 +95,8 @@ internal sealed record ScoreResult(
     string? StatusCause = null,
     int TotalViolationCount = 0,
     int ShownViolationCount = 0,
-    bool ViolationsTruncated = false);
+    bool ViolationsTruncated = false,
+    int ExcludedDocumentCount = 0);
 
 /// <summary>
 /// 1:1-Mapping aus <see cref="RuleViolation"/> fuer den JSON-Schema-Output:

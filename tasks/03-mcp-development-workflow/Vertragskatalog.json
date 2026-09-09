@@ -41,7 +41,13 @@
     }
   },
   "precision": {
-    "safeguard": { "required": ["targetPath"], "missingRules": "not_configured", "scoreIsNotScope": true },
+    "safeguard": {
+      "required": ["targetPath"],
+      "missingRules": "not_configured",
+      "scoreIsNotScope": true,
+      "configuredFileFilters": "outside-effective-scope-and-reported",
+      "allMatchingDocumentsExcluded": "not_decidable"
+    },
     "pattern_detect": { "required": ["targetPath"], "perCategoryStatus": true },
     "find_dead_code": { "required": ["targetPath"], "resultType": "candidate", "deletionClaim": false },
     "find_duplicates": { "required": ["targetPath"], "resultType": "candidate", "deletionClaim": false },

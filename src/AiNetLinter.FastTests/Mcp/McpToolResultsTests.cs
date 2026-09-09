@@ -253,6 +253,27 @@ public sealed class McpToolResultsTests
             navigation.GetProperty("next").GetProperty("action").GetString());
     }
 
+    [Theory]
+    [InlineData("not_decidable")]
+    [InlineData("truncated")]
+    public void WithNavigation_PromotesSummaryCompleteness(string expectedCompleteness)
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-summary-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.Text(
+                "Audit",
+                new { summary = new { completeness = expectedCompleteness } }),
+            target);
+
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+        Assert.Equal(expectedCompleteness, navigation.GetProperty("completeness").GetString());
+    }
+
     [Fact]
     public void WithNavigation_FeatureContextSectionFailureIsNotAvailable()
     {

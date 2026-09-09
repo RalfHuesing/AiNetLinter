@@ -40,7 +40,7 @@ internal static class PatternDetectScanner
         var concreteConfig = (Config)p.Config;
 
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var fileToProject = ViolationScopeFilter.BuildFileToProjectMap(solution, solutionDir);
+        var fileToProject = ViolationScopeFilter.BuildFileToProjectMap(solution, solutionDir, concreteConfig.FileFilters);
 
         IReadOnlyCollection<RuleViolation> violations;
         try
@@ -95,8 +95,7 @@ internal static class PatternDetectScanner
             .ToList();
 
         return new PatternConfigurationScope(
-            effectiveConfigs,
-            HasExcludedDocuments: matchingDocuments.Count != analyzableDocuments.Count);
+            effectiveConfigs);
     }
 
     private static PatternReportBuild BuildPatternReport(PatternReportParameters report)
@@ -141,13 +140,6 @@ internal static class PatternDetectScanner
             return new PatternConfigurationState(
                 "not_decidable",
                 "Keine analysierbaren Dokumente im angeforderten Scope; die effektive Projekt-/Pfad-Konfiguration ist nicht entscheidbar.");
-        }
-
-        if (scope.HasExcludedDocuments)
-        {
-            return new PatternConfigurationState(
-                "not_decidable",
-                "Mindestens ein Dokument im Scope ist durch FileFilters ausgeschlossen; die Konfigurations-/Scope-Abdeckung ist daher nicht entscheidbar.");
         }
 
         var resolvedRules = metadata.OfType<RuleMetadata>().ToList();
@@ -214,8 +206,7 @@ internal static class PatternDetectScanner
         int MaxResultsPerPattern);
 
     private sealed record PatternConfigurationScope(
-        IReadOnlyList<Config> EffectiveConfigs,
-        bool HasExcludedDocuments);
+        IReadOnlyList<Config> EffectiveConfigs);
 
     private sealed record PatternConfigurationState(string Status, string Cause);
 

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.Analysis;
@@ -24,6 +25,18 @@ public sealed class GetViolationsToolTests
     private readonly McpInMemoryTestContext _fixture;
 
     public GetViolationsToolTests() { _fixture = new McpInMemoryTestContext(); }
+
+    [Fact]
+    public void BuildFileToProjectMap_ConfiguredFileFiltersDefineEffectiveLintScope()
+    {
+        var solution = _fixture.Solution;
+        var solutionDir = System.IO.Path.GetDirectoryName(solution.FilePath)!;
+        var filters = new FileFiltersConfig { ExcludeFilePatterns = ["*.cs"] };
+
+        var map = ViolationScopeFilter.BuildFileToProjectMap(solution, solutionDir, filters);
+
+        Assert.Empty(map);
+    }
 
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()

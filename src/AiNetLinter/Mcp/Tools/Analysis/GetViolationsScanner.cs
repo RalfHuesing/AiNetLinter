@@ -62,7 +62,7 @@ internal static class GetViolationsScanner
         var ct = p.CancellationToken;
         var maxResults = p.MaxResults < 1 ? 1 : p.MaxResults;
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var fileToProject = ViolationScopeFilter.BuildFileToProjectMap(solution, solutionDir);
+        var fileToProject = ViolationScopeFilter.BuildFileToProjectMap(solution, solutionDir, config.FileFilters);
 
         IReadOnlyCollection<RuleViolation> violations;
         try

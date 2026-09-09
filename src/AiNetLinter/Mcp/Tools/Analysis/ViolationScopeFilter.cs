@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AiNetLinter.Baseline;
+using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
@@ -21,8 +22,14 @@ namespace AiNetLinter.Mcp.Tools.Analysis;
 /// </summary>
 internal static class ViolationScopeFilter
 {
-    /// <summary>Baut eine Datei→Projekt-Zuordnung ueber alle gueltigen Dokumente der Solution.</summary>
-    internal static Dictionary<string, string> BuildFileToProjectMap(Solution solution, string solutionDir)
+    /// <summary>
+    /// Baut eine Datei→Projekt-Zuordnung ueber alle gueltigen Dokumente der Solution.
+    /// Bei gesetzten <paramref name="fileFilters"/> wird derselbe effektive Lint-Scope wie
+    /// in <see cref="LinterEngine"/> verwendet; bewusst ausgeschlossene Dateien zaehlen dann
+    /// weder als Scope-Datei noch als vollstaendig gepruefte Datei.
+    /// </summary>
+    internal static Dictionary<string, string> BuildFileToProjectMap(
+        Solution solution, string solutionDir, FileFiltersConfig? fileFilters = null)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var project in solution.Projects)
@@ -31,6 +38,11 @@ internal static class ViolationScopeFilter
             {
                 if (!SourceFileCatalog.IsValidDocument(document, solutionDir)) continue;
                 if (document.FilePath is null) continue;
+                if (fileFilters is not null
+                    && FileFilterEvaluator.IsExcluded(document.FilePath, fileFilters))
+                {
+                    continue;
+                }
                 map[document.FilePath] = project.Name;
             }
         }
