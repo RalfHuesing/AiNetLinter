@@ -169,8 +169,8 @@ public class MiddleManClass
         Assert.All(result.Payload!.Patterns, p => Assert.Equal(0, p.Occurrences));
         Assert.Equal(0, result.Payload.Summary.PatternsWithHits);
         Assert.Equal(0, result.Payload.Summary.TotalOccurrences);
-        Assert.Contains("Keine Auffälligkeiten gefunden.", result.Text!, StringComparison.Ordinal);
-        Assert.DoesNotContain("## ", result.Text!, StringComparison.Ordinal);
+        Assert.Contains("Vollstaendigkeitsstatus", result.Text!, StringComparison.Ordinal);
+        Assert.All(result.Payload!.Patterns, pattern => Assert.Contains($"## {pattern.Id}", result.Text!, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -183,11 +183,11 @@ public class MiddleManClass
             PatternCatalog.Patterns.Where(p => p.Id == "async-void").ToList());
 
         Assert.Contains("## async-void", result.Text!, StringComparison.Ordinal);
-        Assert.Contains("Keine.", result.Text!, StringComparison.Ordinal);
+        Assert.Contains("Keine Treffer in diesem Scope", result.Text!, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task BuildReportAsync_ScopeFilterMatchesNoFile_ReturnsExplicitMessageWithoutPayload()
+    public async Task BuildReportAsync_ScopeFilterMatchesNoFile_ReturnsPerPatternNotDecidablePayload()
     {
         const string source = "namespace Test; public sealed class Foo { }";
         using var testSolution = CreateSolution(("Foo.cs", source));
@@ -202,8 +202,9 @@ public class MiddleManClass
             CancellationToken: CancellationToken.None));
 
         Assert.False(result.IsMalfunction);
-        Assert.Null(result.Payload);
-        Assert.Contains("Keine Dateien im Scope", result.Text!, StringComparison.Ordinal);
+        Assert.NotNull(result.Payload);
+        Assert.Equal("not_decidable", result.Payload!.Summary.Completeness);
+        Assert.Contains("nicht entscheidbar", result.Text!, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -235,7 +236,7 @@ public sealed class Foo{i}
         Assert.Equal(2, asyncVoid.Items.Count);
         Assert.Contains("Treffer gesamt", result.Text!, StringComparison.Ordinal);
         Assert.Contains("gezeigt", result.Text!, StringComparison.Ordinal);
-        Assert.DoesNotContain("## empty-catch", result.Text!, StringComparison.Ordinal);
+        Assert.Contains("## empty-catch", result.Text!, StringComparison.Ordinal);
     }
 
     [Fact]

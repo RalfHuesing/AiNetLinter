@@ -347,7 +347,8 @@ public static class FindDeadCodeScanner
             Accessibility: accessibilityStr,
             Confidence: confidenceStr,
             Reason: reason,
-            LimitsApplies: limitsApplies);
+            LimitsApplies: limitsApplies,
+            Countercheck: ["Reflection", "DI", "Generatoren", "dynamic", "externe Consumer"]);
 
         context.DeadSymbols.Add(entry);
 
@@ -372,11 +373,21 @@ public static class FindDeadCodeScanner
             TotalDead: totalDead,
             High: highCount,
             Low: lowCount,
-            ByKind: context.ByKind);
+            ByKind: context.ByKind,
+            Status: isTruncated ? "truncated" : totalDead == 0 ? "empty" : "checked",
+            Cause: totalDead == 0
+                ? $"Keine Kandidaten in den {context.DocumentsInScope} Dokumenten des angeforderten Scopes; kein globaler Clean-Claim."
+                : "Statische Referenzsuche im angeforderten Scope.",
+            Confidence: isTruncated ? "medium" : "high",
+            ReturnedCandidates: paginatedSymbols.Count,
+            TruncatedBy: isTruncated ? totalDead - paginatedSymbols.Count : 0,
+            Next: new DeadCodeRecommendedNextAction(
+                isTruncated ? "continue" : "countercheck",
+                isTruncated ? "maxResults erhoehen oder Scope verfeinern." : "Reflection, DI, Generatoren, dynamic und externe Consumer pruefen."));
 
         var recommendedAction = new DeadCodeRecommendedNextAction(
             Action: "ask_user",
-            Reason: "Vor dem Loeschen von totem Code Rueckfrage halten (statische Heuristik; dynamische Framework-Bindungen koennen vorliegen).");
+            Reason: "Kandidaten manuell gegen Reflection, DI, Generatoren, dynamic und externe Consumer gegenpruefen; keine Loeschentscheidung.");
 
         return new DeadCodeScanResult(
             DeadSymbols: paginatedSymbols,

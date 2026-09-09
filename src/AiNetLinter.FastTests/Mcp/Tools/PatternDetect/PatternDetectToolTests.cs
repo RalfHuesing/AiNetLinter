@@ -49,6 +49,13 @@ public sealed class PatternDetectToolTests
         Assert.NotNull(result.StructuredContent);
         var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
         Assert.Equal(6, json["patterns"]!.AsArray().Count);
+        Assert.All(json["patterns"]!.AsArray(), pattern =>
+        {
+            Assert.NotNull(pattern!["status"]);
+            Assert.NotNull(pattern["cause"]);
+            Assert.NotNull(pattern["confidence"]);
+            Assert.NotNull(pattern["next"]);
+        });
     }
 
     [Fact]
@@ -94,16 +101,16 @@ public sealed class PatternDetectToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ScopeFilterMatchesNoFile_ReturnsExplicitNoScopeMessageWithoutStructuredContent()
+    public async Task ExecuteAsync_ScopeFilterMatchesNoFile_ReturnsPerPatternNotDecidableStatus()
     {
         var state = _fixture.CreateServer();
 
         var result = await PatternDetectTool.ExecuteAsync(state, null, "DoesNotExistAnywhere", PatternDetectScanner.DefaultMaxResultsPerPattern, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.Null(result.StructuredContent);
+        Assert.NotNull(result.StructuredContent);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("Keine Dateien im Scope", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("nicht entscheidbar", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -115,6 +122,6 @@ public sealed class PatternDetectToolTests
 
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Pattern-Detect:", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("vollstaendig", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Vollstaendigkeitsstatus:", textContent.Text, StringComparison.Ordinal);
     }
 }

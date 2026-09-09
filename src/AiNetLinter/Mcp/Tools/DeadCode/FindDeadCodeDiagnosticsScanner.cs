@@ -78,7 +78,8 @@ internal static class FindDeadCodeDiagnosticsScanner
             Accessibility: "private",
             Confidence: "high",
             Reason: $"Compiler-Diagnose {diag.Id}: {diag.GetMessage()}",
-            LimitsApplies: []);
+            LimitsApplies: [],
+            Countercheck: ["Reflection", "DI", "Generatoren", "dynamic", "externe Consumer"]);
 
         context.DeadSymbols.Add(entry);
         context.ScannedCount++;

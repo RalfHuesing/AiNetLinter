@@ -36,12 +36,17 @@ internal static class FindDeadCodeTool
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
+        if (!FindDeadCodeArgs.IsKnownAccessibility(rawArgs.Accessibility)) return McpToolResults.InvalidArgument("Unbekannter accessibility-Wert.", fieldPath: "$.accessibility");
+        if (!FindDeadCodeArgs.IsKnownConfidence(rawArgs.Confidence)) return McpToolResults.InvalidArgument("Unbekannter confidence-Wert.", fieldPath: "$.confidence");
+        if (!FindDeadCodeArgs.IsKnownKind(rawArgs.Kind)) return McpToolResults.InvalidArgument("Unbekannter kind-Wert.", fieldPath: "$.kind");
+        if (!FindDeadCodeArgs.IsKnownMode(rawArgs.Mode)) return McpToolResults.InvalidArgument("Unbekannter mode-Wert.", fieldPath: "$.mode");
+        if (rawArgs.MaxResults < 1) return McpToolResults.InvalidArgument("maxResults muss mindestens 1 sein.", fieldPath: "$.maxResults");
 
         var accessibility = FindDeadCodeArgs.ParseAccessibility(rawArgs.Accessibility);
         var confidence = FindDeadCodeArgs.ParseConfidence(rawArgs.Confidence);
         var kind = FindDeadCodeArgs.ParseKind(rawArgs.Kind);
         var mode = FindDeadCodeArgs.ParseMode(rawArgs.Mode);
-        var maxResults = Math.Max(1, rawArgs.MaxResults);
+        var maxResults = rawArgs.MaxResults;
 
         var args = new FindDeadCodeArgs(
             Accessibility: accessibility,
@@ -67,25 +72,22 @@ internal static class FindDeadCodeTool
         }
 
         var reportText = FormatTextReport(result, args);
-        var finalText = result.IsTruncated || result.Summary.DocumentsInScope == 0
-            ? reportText
-            : McpSufficiencyHints.Append(reportText);
+        var finalText = reportText;
 
         return McpToolResults.Text(finalText, new
         {
-            DeadSymbols = result.DeadSymbols,
+            Candidates = result.DeadSymbols,
             Summary = result.Summary,
-            Limits = result.Limits,
-            RecommendedNextAction = result.RecommendedNextAction,
-            IsTruncated = result.IsTruncated
+            ResultType = result.ResultType,
+            DeletionClaim = result.DeletionClaim
         });
     }
 
     private static string FormatTextReport(DeadCodeScanResult result, FindDeadCodeArgs args)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("# Dead-Code-Analyse (Heuristik-Audit)");
-        sb.AppendLine("Hinweis: Statische Dead-Code-Erkennung kann dynamische Bindungen (Reflection, DI, Serializer, Routing) nicht vollstaendig abbilden. Siehe 'limits' fuer Details.");
+        sb.AppendLine("# Dead-Code-Analyse: Kandidaten (Heuristik-Audit)");
+        sb.AppendLine("Ergebnisart: candidate; deletionClaim=false. Statische Referenzsuche beweist keine Loeschbarkeit. Reflection, DI, Generatoren und dynamic koennen ausserhalb der Evidenz liegen.");
         sb.AppendLine();
 
         AppendResultDetails(sb, result, args);
@@ -135,13 +137,15 @@ internal static class FindDeadCodeTool
 
     private static void AppendDeadSymbols(StringBuilder sb, DeadCodeScanResult result)
     {
-        sb.AppendLine($"## Gefundene tote Symbole ({result.DeadSymbols.Count}{(result.IsTruncated ? " gezeigt" : "")})");
+        sb.AppendLine($"## Kandidaten ({result.DeadSymbols.Count}{(result.IsTruncated ? " gezeigt" : "")})");
         sb.AppendLine();
 
         foreach (var sym in result.DeadSymbols)
         {
             sb.AppendLine($"- {sym.File}:{sym.Line}:{sym.Column} [{sym.Confidence.ToUpperInvariant()}] ({sym.Kind}, {sym.Accessibility}) - {sym.SymbolName} in '{sym.ContainerType}'");
             sb.AppendLine($"  Grund: {sym.Reason}");
+            sb.AppendLine($"  Evidenzgrenze: {sym.EvidenceBoundary}");
+            sb.AppendLine("  Countercheck: Reflection, DI, Generatoren, dynamic und externe Consumer pruefen.");
             if (sym.LimitsApplies.Count > 0)
             {
                 sb.AppendLine($"  Limits: {string.Join(", ", sym.LimitsApplies)}");
@@ -155,7 +159,7 @@ internal static class FindDeadCodeTool
         sb.AppendLine("## Zusammenfassung");
         sb.AppendLine($"- Zieldokumente im Scope: {result.Summary.DocumentsInScope}");
         sb.AppendLine($"- Gescannt: {result.Summary.ScannedSymbols} Symbole");
-        sb.AppendLine($"- Toter Code: {result.Summary.TotalDead} ({result.Summary.High} high, {result.Summary.Low} low)");
+        sb.AppendLine($"- Kandidaten: {result.Summary.TotalDead} ({result.Summary.High} high, {result.Summary.Low} low)");
         if (result.Summary.ByKind.Count > 0)
         {
             var kinds = string.Join(", ", result.Summary.ByKind.Select(kv => $"{kv.Key}: {kv.Value}"));

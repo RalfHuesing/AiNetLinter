@@ -136,7 +136,7 @@ internal static class DuplicateDetectionTool
     {
         var solutionDir = System.IO.Path.GetDirectoryName(solution.FilePath) ?? "";
         var body = RenderText(solutionDir, result, mode);
-        var finalText = result.Truncated ? body : McpSufficiencyHints.Append(body);
+        var finalText = body;
 
         var payload = new DuplicateDetectionPayload(
             Clusters: result.ShownClusters.Select(c => ToPayloadEntry(solutionDir, c)).ToList(),
@@ -145,7 +145,12 @@ internal static class DuplicateDetectionTool
                 TotalClusters: result.TotalClusters,
                 ShownClusters: result.ShownClusters.Count,
                 Truncated: result.Truncated,
-                Mode: mode));
+                Mode: mode,
+                Status: result.Truncated ? "truncated" : result.TotalClusters == 0 ? "empty" : "checked",
+                TruncatedBy: result.Truncated ? result.TotalClusters - result.ShownClusters.Count : 0,
+                Next: result.Truncated
+                    ? "continue: maxResults erhoehen oder scopeDir eingrenzen."
+                    : "review_candidates: Kandidaten manuell pruefen."));
 
         // In ein Objekt gewrappt statt eines nackten Arrays (siehe
         // McpToolResults.Text<T>-Doc-Kommentar).
@@ -164,7 +169,11 @@ internal static class DuplicateDetectionTool
             member.LineNumber,
             member.SignatureName,
             member.TokenCount,
-            member.StructureProfile);
+            member.StructureProfile,
+            ResultType: "candidate",
+            Confidence: member.TokenCount >= 80 ? "high" : "medium",
+            EvidenceBoundary: "statische Aehnlichkeit innerhalb des angeforderten Source-Scopes; keine semantische oder Laufzeitgleichheit",
+            Countercheck: ["Reflection", "DI", "Generatoren", "dynamic", "manuelle Semantikpruefung"]);
 
     private static string BucketLabel(DuplicateSimilarityBucket bucket) => bucket switch
     {
@@ -180,7 +189,7 @@ internal static class DuplicateDetectionTool
         {
             return isStructural
                 ? $"Keine strukturellen Kandidatencluster gefunden ({result.MethodsScanned} Methoden gescannt). Kandidaten, keine Verstoesse."
-                : $"Keine Duplikat-Cluster gefunden ({result.MethodsScanned} Methoden gescannt).";
+                : $"Keine Duplikat-Cluster bzw. Kandidatencluster im angeforderten Scope gefunden ({result.MethodsScanned} Methoden gescannt); kein globaler Clean-Claim.";
         }
 
         var sb = new StringBuilder();
@@ -191,7 +200,7 @@ internal static class DuplicateDetectionTool
         }
         else
         {
-            sb.Append($"{result.ShownClusters.Count} von {result.TotalClusters} Duplikat-Cluster(n) ({result.MethodsScanned} Methoden gescannt):");
+            sb.Append($"{result.ShownClusters.Count} von {result.TotalClusters} Duplikat-Kandidatencluster(n) ({result.MethodsScanned} Methoden gescannt):");
         }
 
         if (result.TotalClusters > 20 || result.ShownClusters.Count > 20)
@@ -219,6 +228,11 @@ internal static class DuplicateDetectionTool
             sb.Append($"[{result.TotalClusters} Cluster gesamt, {result.ShownClusters.Count} gezeigt — maxResults erhoehen oder scopeDir eingrenzen]");
         }
 
+        if (!result.Truncated)
+        {
+            sb.Append("\n\nDiese Daten sind vollstaendig fuer den angeforderten Scope; die Cluster bleiben Kandidaten.");
+        }
+
         return sb.ToString();
     }
 
@@ -228,11 +242,15 @@ internal static class DuplicateDetectionTool
         foreach (var member in cluster.Members)
         {
             var relativePath = PathNormalizer.ToRelative(solutionDir, member.FilePath);
-            sb.Append($"\n- {member.SignatureName} ({relativePath}:{member.LineNumber}, {member.TokenCount} Tokens)");
+            sb.Append($"\n- {member.SignatureName} ({relativePath}:{member.LineNumber}, {member.TokenCount} Tokens) — candidate, confidence={ConfidenceFor(member)}");
+            sb.Append("\n  Evidenzgrenze: statische Aehnlichkeit innerhalb des angeforderten Source-Scopes; keine semantische oder Laufzeitgleichheit.");
+            sb.Append("\n  Countercheck: Reflection, DI, Generatoren, dynamic und manuelle Semantikpruefung.");
             if (!string.IsNullOrEmpty(member.StructureProfile))
             {
                 sb.Append($"\n  Profil: {member.StructureProfile}");
             }
         }
     }
+
+    private static string ConfidenceFor(DuplicateClusterMember member) => member.TokenCount >= 80 ? "high" : "medium";
 }

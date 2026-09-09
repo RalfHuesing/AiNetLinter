@@ -59,15 +59,11 @@ internal static class PatternDetectScanner
 
         var scoped = ViolationScopeFilter.FilterAndSortViolations(solutionDir, fileToProject, violations, scopeFilter);
         var matchingFileCount = ViolationScopeFilter.CountMatchingFiles(fileToProject, solutionDir, scopeFilter);
-
-        if (matchingFileCount == 0 && !string.IsNullOrWhiteSpace(scopeFilter))
-        {
-            return new PatternDetectResult(
-                $"Keine Dateien im Scope (Filter: '{scopeFilter}') — Filter pruefen.", null, IsMalfunction: false);
-        }
+        var configurationScope = BuildConfigurationScope(solution, solutionDir, scopeFilter, concreteConfig);
 
         var reports = p.Patterns
-            .Select(pattern => BuildPatternReport(pattern, scoped, solutionDir, p.MaxResultsPerPattern))
+            .Select(pattern => BuildPatternReport(new PatternReportParameters(
+                pattern, scoped, solutionDir, configurationScope, matchingFileCount, scopeFilter, p.MaxResultsPerPattern)))
             .ToList();
 
         var text = FormatReport(matchingFileCount, scopeFilter, reports, p.MaxResultsPerPattern);
@@ -75,29 +71,160 @@ internal static class PatternDetectScanner
             reports.Select(r => r.Entry).ToList(),
             new PatternDetectSummary(
                 PatternsWithHits: reports.Count(r => r.Entry.Occurrences > 0),
-                TotalOccurrences: reports.Sum(r => r.Entry.Occurrences)));
+                TotalOccurrences: reports.Sum(r => r.Entry.Occurrences),
+                Completeness: DetermineCompleteness(reports)));
 
         return new PatternDetectResult(text, payload, IsMalfunction: false);
     }
 
-    private static PatternReportBuild BuildPatternReport(
-        PatternDefinition pattern, IReadOnlyList<RuleViolation> scoped, string solutionDir, int maxResultsPerPattern)
+    private static PatternConfigurationScope BuildConfigurationScope(
+        Solution solution, string solutionDir, string? scopeFilter, Config config)
     {
-        var ordered = scoped
-            .Where(v => pattern.RuleIds.Contains(v.RuleName))
+        var matchingDocuments = solution.Projects
+            .Where(project => project.SupportsCompilation)
+            .SelectMany(project => project.Documents)
+            .Where(document => SourceFileCatalog.IsValidDocument(document, solutionDir)
+                && ViolationScopeFilter.MatchesScope(
+                    document.FilePath ?? document.Name, document.Project.Name, solutionDir, scopeFilter))
+            .ToList();
+        var analyzableDocuments = matchingDocuments
+            .Where(document => !FileFilterEvaluator.IsExcluded(document.FilePath ?? document.Name, config.FileFilters))
+            .ToList();
+        var effectiveConfigs = analyzableDocuments
+            .Select(document => ProjectConfigResolver.ResolveForDocument(document, config, solutionDir))
+            .ToList();
+
+        return new PatternConfigurationScope(
+            effectiveConfigs,
+            HasExcludedDocuments: matchingDocuments.Count != analyzableDocuments.Count);
+    }
+
+    private static PatternReportBuild BuildPatternReport(PatternReportParameters report)
+    {
+        var ordered = report.ScopedViolations
+            .Where(v => report.Pattern.RuleIds.Contains(v.RuleName))
             .OrderBy(v => v.FilePath, StringComparer.OrdinalIgnoreCase)
             .ThenBy(v => v.LineNumber)
             .ThenBy(v => v.RuleName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var shown = ordered.Take(maxResultsPerPattern).ToList();
+        var shown = ordered.Take(report.MaxResultsPerPattern).ToList();
+        var configuration = DetermineConfiguration(report.Pattern, report.ConfigurationScope);
+        var isTruncated = shown.Count < ordered.Count;
+        var status = DetermineStatus(configuration.Status, ordered.Count, isTruncated);
         var entry = new PatternResultEntry(
-            pattern.Id,
-            pattern.Description,
+            report.Pattern.Id,
+            report.Pattern.Description,
             ordered.Count,
-            shown.Select(v => ToItem(solutionDir, v)).ToList());
+            shown.Select(v => ToItem(report.SolutionDir, v)).ToList(),
+            status,
+            DetermineCause(configuration, status, ordered.Count, shown.Count, report),
+            DetermineConfidence(configuration.Status, isTruncated),
+            BuildNextAction(status),
+            isTruncated ? ordered.Count - shown.Count : 0);
 
-        return new PatternReportBuild(entry, ordered.Select(v => FormatLine(solutionDir, v)).ToList());
+        return new PatternReportBuild(entry, ordered.Select(v => FormatLine(report.SolutionDir, v)).ToList());
+    }
+
+    private static PatternConfigurationState DetermineConfiguration(
+        PatternDefinition pattern, PatternConfigurationScope scope)
+    {
+        var metadata = pattern.RuleIds.Select(RuleRegistry.TryResolve).ToList();
+        if (metadata.Any(rule => rule is null))
+        {
+            return new PatternConfigurationState(
+                "not_decidable", "Mindestens eine zugeordnete Regel ist im Vertragskatalog nicht aufloesbar.");
+        }
+
+        if (scope.EffectiveConfigs.Count == 0)
+        {
+            return new PatternConfigurationState(
+                "not_decidable",
+                "Keine analysierbaren Dokumente im angeforderten Scope; die effektive Projekt-/Pfad-Konfiguration ist nicht entscheidbar.");
+        }
+
+        if (scope.HasExcludedDocuments)
+        {
+            return new PatternConfigurationState(
+                "not_decidable",
+                "Mindestens ein Dokument im Scope ist durch FileFilters ausgeschlossen; die Konfigurations-/Scope-Abdeckung ist daher nicht entscheidbar.");
+        }
+
+        var resolvedRules = metadata.OfType<RuleMetadata>().ToList();
+        var enabledStates = scope.EffectiveConfigs
+            .SelectMany(config => resolvedRules.Select(rule => rule.IsEnabled(config)))
+            .ToList();
+        if (enabledStates.All(enabled => !enabled))
+        {
+            var ruleNames = string.Join(", ", resolvedRules.Select(rule => rule.ConfigKeyHint ?? rule.RuleId));
+            return new PatternConfigurationState(
+                "not_configured", $"Keine zugeordnete Regel ist in der effektiven Projekt-/Pfad-Konfiguration aktiviert ({ruleNames}).");
+        }
+
+        if (enabledStates.Any(enabled => !enabled))
+        {
+            return new PatternConfigurationState(
+                "not_decidable",
+                "Zugeordnete Regeln sind über Projekt-/Pfad-Konfigurationen teils aktiviert und teils deaktiviert.");
+        }
+
+        return new PatternConfigurationState("configured", "");
+    }
+
+    private static string DetermineStatus(string configurationStatus, int occurrences, bool isTruncated) =>
+        configurationStatus != "configured"
+            ? configurationStatus
+            : occurrences == 0 ? "empty" : isTruncated ? "truncated" : "checked";
+
+    private static string DetermineCause(
+        PatternConfigurationState configuration, string status, int occurrences, int shown,
+        PatternReportParameters report)
+    {
+        if (status != "configured") return configuration.Cause;
+        if (occurrences == 0)
+        {
+            var scope = string.IsNullOrWhiteSpace(report.ScopeFilter) ? "" : $" ('{report.ScopeFilter}')";
+            return $"Keine Treffer in den {report.MatchingFileCount} Dateien des angeforderten Scopes{scope}; dies ist keine globale Abwesenheitsbehauptung.";
+        }
+
+        return shown < occurrences
+            ? $"{shown} von {occurrences} Treffern gezeigt; die Ausgabe ist begrenzt."
+            : $"Alle {occurrences} Treffer im angeforderten Scope wurden geprueft.";
+    }
+
+    private static string DetermineConfidence(string configurationStatus, bool isTruncated) =>
+        configurationStatus != "configured" ? "low" : isTruncated ? "medium" : "high";
+
+    private static PatternNextAction BuildNextAction(string status) => status switch
+    {
+        "truncated" => new PatternNextAction("continue", "maxResultsPerPattern erhoehen oder scopeFilter verfeinern."),
+        "not_configured" => new PatternNextAction("configure", "Zugeordnete Regel aktivieren oder Regelkonfiguration pruefen."),
+        "not_decidable" => new PatternNextAction("inspect", "Effektive Projekt-/Pfad-Konfiguration und Scope pruefen."),
+        "empty" => new PatternNextAction("refine_scope", "Bei Bedarf scopeFilter oder die Regelkonfiguration aendern."),
+        _ => new PatternNextAction("inspect", "Treffer im Detail pruefen; keine automatische Aenderung ableiten."),
+    };
+
+    private sealed record PatternReportParameters(
+        PatternDefinition Pattern,
+        IReadOnlyList<RuleViolation> ScopedViolations,
+        string SolutionDir,
+        PatternConfigurationScope ConfigurationScope,
+        int MatchingFileCount,
+        string? ScopeFilter,
+        int MaxResultsPerPattern);
+
+    private sealed record PatternConfigurationScope(
+        IReadOnlyList<Config> EffectiveConfigs,
+        bool HasExcludedDocuments);
+
+    private sealed record PatternConfigurationState(string Status, string Cause);
+
+    private static string DetermineCompleteness(IReadOnlyList<PatternReportBuild> reports)
+    {
+        if (reports.Any(r => r.Entry.Status == "not_decidable")) return "not_decidable";
+        if (reports.Any(r => r.Entry.Status == "not_configured")) return "not_configured";
+        if (reports.Any(r => r.Entry.Status == "truncated")) return "truncated";
+        return reports.All(r => r.Entry.Status == "empty") ? "empty" : "complete";
     }
 
     private static PatternItemEntry ToItem(string solutionDir, RuleViolation v)
@@ -123,20 +250,25 @@ internal static class PatternDetectScanner
         sb.AppendLine(
             $"Pattern-Detect: {patternsWithHits} von {reports.Count} Patterns mit Treffern, " +
             $"{totalOccurrences} Treffer gesamt in {matchingFileCount} Dateien im Scope{scopeSuffix}");
+        var completeness = DetermineCompleteness(reports);
+        sb.AppendLine($"Vollstaendigkeitsstatus: {completeness switch
+        {
+            "complete" => "vollstaendig",
+            "empty" => "leer",
+            "truncated" => "begrenzt",
+            "not_configured" => "nicht konfiguriert",
+            _ => "nicht entscheidbar"
+        }}");
         sb.AppendLine();
 
-        if (totalOccurrences == 0 && reports.Count != 1)
+        foreach (var report in reports)
         {
-            sb.AppendLine("Keine Auffälligkeiten gefunden.");
-            return sb.ToString().TrimEnd();
-        }
-
-        foreach (var report in reports.Where(report => reports.Count == 1 || report.Entry.Occurrences > 0))
-        {
-            sb.AppendLine($"## {report.Entry.Id} — {report.Entry.Description} ({report.Entry.Occurrences} Treffer)");
+            sb.AppendLine($"## {report.Entry.Id} — {report.Entry.Description} [{report.Entry.Status}, confidence={report.Entry.Confidence}]");
+            sb.AppendLine($"Ursache: {report.Entry.Cause}");
+            sb.AppendLine($"Naechster Schritt: {report.Entry.Next.Action} — {report.Entry.Next.Reason}");
             sb.AppendLine();
             sb.AppendLine(report.Entry.Occurrences == 0
-                ? "Keine."
+                ? "Keine Treffer in diesem Scope; daraus folgt kein globaler Clean-Claim."
                 : McpTruncation.TruncateLines(report.Lines, report.Entry.Occurrences, maxResultsPerPattern));
             sb.AppendLine();
         }
@@ -167,9 +299,8 @@ internal sealed record PatternDetectScannerParameters(
 /// <summary>
 /// Ergebnis-Record fuer <see cref="PatternDetectScanner.BuildReportAsync"/>. <see cref="IsMalfunction"/>
 /// unterscheidet eine echte Malfunction (unerwartete LinterEngine-Exception, <see cref="Context"/>
-/// non-null, <see cref="Payload"/> null) von einem normalen Report (auch "Keine Dateien im Scope"
-/// oder 0 Treffer zaehlen als normal — dort ist <see cref="Payload"/> ebenfalls null, weil dann kein
-/// strukturierter Report gebaut wird, aber <see cref="Text"/> die Erklaerung traegt).
+/// non-null, <see cref="Payload"/> null) von einem normalen Report. Auch ein leerer oder
+/// nicht entscheidbarer Scope bleibt ein normaler Report und traegt pro Pattern Statusmetadaten.
 /// </summary>
 internal sealed record PatternDetectResult(string? Text, PatternDetectPayload? Payload, bool IsMalfunction, string? Context = null);
 
@@ -180,7 +311,11 @@ internal sealed record PatternDetectPayload(IReadOnlyList<PatternResultEntry> Pa
 /// <summary>Ein Pattern-Treffer-Block: <see cref="Occurrences"/> ist die volle (ungekappte)
 /// Trefferzahl, <see cref="Items"/> ist auf <c>maxResultsPerPattern</c> gekappt (analog zur
 /// Text-Trunkierung via <see cref="McpTruncation"/>).</summary>
-internal sealed record PatternResultEntry(string Id, string Description, int Occurrences, IReadOnlyList<PatternItemEntry> Items);
+internal sealed record PatternResultEntry(
+    string Id, string Description, int Occurrences, IReadOnlyList<PatternItemEntry> Items,
+    string Status, string Cause, string Confidence, PatternNextAction Next, int TruncatedBy);
+
+internal sealed record PatternNextAction(string Action, string Reason);
 
 /// <summary>1:1-Mapping aus <see cref="RuleViolation"/> fuer den JSON-Schema-Output.</summary>
 internal sealed record PatternItemEntry(string FilePath, int Line, string RuleName, string Details);
@@ -188,4 +323,4 @@ internal sealed record PatternItemEntry(string FilePath, int Line, string RuleNa
 /// <summary>Gesamt-Summary ueber alle Patterns: <see cref="PatternsWithHits"/> zaehlt Patterns mit
 /// mindestens einem Treffer, <see cref="TotalOccurrences"/> die volle (ungekappte) Trefferzahl
 /// ueber alle Patterns summiert.</summary>
-internal sealed record PatternDetectSummary(int PatternsWithHits, int TotalOccurrences);
+internal sealed record PatternDetectSummary(int PatternsWithHits, int TotalOccurrences, string Completeness);

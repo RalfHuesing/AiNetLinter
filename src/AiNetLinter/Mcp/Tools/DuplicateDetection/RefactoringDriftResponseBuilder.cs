@@ -23,7 +23,7 @@ internal static class RefactoringDriftResponseBuilder
         var body = RenderText(solutionDir, result);
         // Trunkierungs-Meta-Zeile UND Sufficiency-Hinweis schliessen sich gegenseitig aus (siehe
         // McpSufficiencyHints-Doc-Kommentar) — nur bei vollstaendigem Ergebnis den Hinweis anhaengen.
-        var finalText = result.Truncated ? body : McpSufficiencyHints.Append(body);
+        var finalText = body;
 
         var payload = new RefactoringDriftPayload(
             Candidates: result.ShownCandidates.Select(c => ToEntry(solutionDir, c)).ToList(),
@@ -32,7 +32,12 @@ internal static class RefactoringDriftResponseBuilder
                 MethodsScanned: result.MethodsScanned,
                 TotalCandidates: result.TotalCandidates,
                 ShownCandidates: result.ShownCandidates.Count,
-                Truncated: result.Truncated));
+                Truncated: result.Truncated,
+                Status: result.Truncated ? "truncated" : result.TotalCandidates == 0 ? "empty" : "checked",
+                TruncatedBy: result.Truncated ? result.TotalCandidates - result.ShownCandidates.Count : 0,
+                Next: result.Truncated
+                    ? "continue: maxResults erhoehen oder scopeDir eingrenzen."
+                    : "review_candidates: Kandidaten manuell pruefen."));
 
         // In ein Objekt gewrappt statt eines nackten Arrays (siehe
         // McpToolResults.Text<T>-Doc-Kommentar).
@@ -45,7 +50,11 @@ internal static class RefactoringDriftResponseBuilder
             candidate.LineNumber,
             candidate.SignatureName,
             candidate.TokenCount,
-            candidate.Score);
+            candidate.Score,
+            ResultType: "candidate",
+            Confidence: candidate.Score >= 0.9 ? "high" : "medium",
+            EvidenceBoundary: "statische strukturelle Aehnlichkeit innerhalb des angeforderten Source-Scopes; kein Laufzeitbeweis",
+            Countercheck: ["Reflection", "DI", "Generatoren", "dynamic", "manuelle Semantikpruefung"]);
 
     private static string RenderText(string solutionDir, RefactoringDriftScanResultForTool result)
     {
@@ -70,7 +79,9 @@ internal static class RefactoringDriftResponseBuilder
             index++;
             var relativePath = PathNormalizer.ToRelative(solutionDir, candidate.FilePath);
             sb.Append($"\n{index}. {candidate.SignatureName} ({relativePath}:{candidate.LineNumber}, " +
-                      $"{candidate.TokenCount} Tokens, Score {candidate.Score:F2}) ruft '{result.HelperSymbolDisplayName}' nicht auf.");
+                      $"{candidate.TokenCount} Tokens, Score {candidate.Score:F2}) ruft '{result.HelperSymbolDisplayName}' nicht auf. " +
+                      "Evidenzgrenze: statische strukturelle Aehnlichkeit; kein Laufzeitbeweis. " +
+                      "Countercheck: Reflection, DI, Generatoren, dynamic und manuelle Semantikpruefung.");
         }
 
         if (result.Truncated)

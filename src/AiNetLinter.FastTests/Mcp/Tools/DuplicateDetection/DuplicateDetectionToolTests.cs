@@ -116,6 +116,10 @@ public sealed class DuplicateDetectionToolTests
         Assert.Contains("exact", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("A.cs", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("B.cs", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Evidenzgrenze", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Countercheck", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("candidate", result.StructuredContent!.Value.GetProperty("resultType").GetString());
+        Assert.False(result.StructuredContent.Value.GetProperty("deletionClaim").GetBoolean());
     }
 
     [Fact]

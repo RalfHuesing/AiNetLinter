@@ -20,7 +20,11 @@ internal sealed record RefactoringDriftCandidateEntry(
     int Line,
     string SignatureName,
     int TokenCount,
-    double Score);
+    double Score,
+    string ResultType = "candidate",
+    string Confidence = "medium",
+    string EvidenceBoundary = "statische strukturelle Aehnlichkeit innerhalb des angeforderten Source-Scopes",
+    IReadOnlyList<string>? Countercheck = null);
 
 /// <summary>Aggregat-Summary fuer den <c>refactoring-drift</c>-Zweig von <c>find_duplicates</c>.
 /// <see cref="HelperSymbol"/> ist der aufgeloeste, vollqualifizierte Anzeigename von <c>H</c>
@@ -32,7 +36,12 @@ internal sealed record RefactoringDriftSummary(
     int MethodsScanned,
     int TotalCandidates,
     int ShownCandidates,
-    bool Truncated);
+    bool Truncated,
+    string ResultType = "candidate",
+    bool DeletionClaim = false,
+    string Status = "checked",
+    int TruncatedBy = 0,
+    string Next = "Kandidaten manuell pruefen; keine automatische Umstellung oder Loeschentscheidung ableiten.");
 
 /// <summary>StructuredContent-Wurzel fuer den <c>refactoring-drift</c>-Zweig von
 /// <c>find_duplicates</c> — Feldname bewusst <see cref="Candidates"/>, nicht <c>Violations</c>
@@ -41,7 +50,9 @@ internal sealed record RefactoringDriftSummary(
 /// Arrays (siehe <see cref="McpToolResults.Text{T}"/>).</summary>
 internal sealed record RefactoringDriftPayload(
     IReadOnlyList<RefactoringDriftCandidateEntry> Candidates,
-    RefactoringDriftSummary Summary);
+    RefactoringDriftSummary Summary,
+    string ResultType = "candidate",
+    bool DeletionClaim = false);
 
 /// <summary>Ergebnis von <see cref="RefactoringDriftScanner.ScanAsync"/> — reine Daten, keine
 /// Text-/JSON-Formatierung (die macht <see cref="DuplicateDetectionTool"/>).</summary>

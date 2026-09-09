@@ -37,7 +37,11 @@ internal sealed record DuplicateClusterEntry(
     int Line,
     string SignatureName,
     int TokenCount,
-    string? StructureProfile = null);
+    string? StructureProfile = null,
+    string ResultType = "candidate",
+    string Confidence = "medium",
+    string EvidenceBoundary = "statische Aehnlichkeit innerhalb des angeforderten Source-Scopes",
+    IReadOnlyList<string>? Countercheck = null);
 
 /// <summary>Ein Klon-Cluster fuer die <c>find_duplicates</c>-Ausgabe. <see cref="Bucket"/> ist
 /// klein geschrieben (<c>exact</c>/<c>near</c>/<c>fuzzy</c>) fuer die JSON-Ausgabe.</summary>
@@ -54,14 +58,21 @@ internal sealed record DuplicateDetectionSummary(
     int TotalClusters,
     int ShownClusters,
     bool Truncated,
-    string Mode);
+    string Mode,
+    string ResultType = "candidate",
+    bool DeletionClaim = false,
+    string Status = "checked",
+    int TruncatedBy = 0,
+    string Next = "Kandidaten manuell pruefen; keine automatische Loeschentscheidung ableiten.");
 
 /// <summary>StructuredContent-Wurzel fuer <c>find_duplicates</c> — in ein benanntes Objekt
 /// gewrappt statt eines nackten Arrays (siehe <see cref="McpToolResults.Text{T}"/>-Doc-Kommentar).
 /// </summary>
 internal sealed record DuplicateDetectionPayload(
     IReadOnlyList<DuplicateClusterPayloadEntry> Clusters,
-    DuplicateDetectionSummary Summary);
+    DuplicateDetectionSummary Summary,
+    string ResultType = "candidate",
+    bool DeletionClaim = false);
 
 /// <summary>Ergebnis von <see cref="DuplicateDetectionScanner.ScanAsync"/> — reine Daten, keine
 /// Text-/JSON-Formatierung (die macht <see cref="DuplicateDetectionTool"/>, analog

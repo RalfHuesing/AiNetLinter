@@ -65,6 +65,11 @@ public sealed record FindDeadCodeArgs(
     DeadCodeMode Mode = DeadCodeMode.Members,
     int MaxResults = 50)
 {
+    public static bool IsKnownAccessibility(string? value) => value?.ToLowerInvariant() is "all" or "private" or "internal" or "public" or "private_internal";
+    public static bool IsKnownConfidence(string? value) => value?.ToLowerInvariant() is "both" or "high" or "low";
+    public static bool IsKnownKind(string? value) => value?.ToLowerInvariant() is "all" or "type" or "class" or "method" or "field" or "property" or "event" or "delegate";
+    public static bool IsKnownMode(string? value) => value?.ToLowerInvariant() is "members" or "locals" or "both";
+
     public static DeadCodeAccessibilityFilter ParseAccessibility(string? value) =>
         value?.ToLowerInvariant() switch
         {
@@ -123,7 +128,10 @@ public sealed record DeadCodeEntry(
     [property: JsonPropertyName("accessibility")] string Accessibility,
     [property: JsonPropertyName("confidence")] string Confidence,
     [property: JsonPropertyName("reason")] string Reason,
-    [property: JsonPropertyName("limitsApplies")] IReadOnlyList<string> LimitsApplies);
+    [property: JsonPropertyName("limitsApplies")] IReadOnlyList<string> LimitsApplies,
+    [property: JsonPropertyName("resultType")] string ResultType = "candidate",
+    [property: JsonPropertyName("evidenceBoundary")] string EvidenceBoundary = "statische Referenzsuche innerhalb der Solution; keine Laufzeit- oder externen Consumer-Beweise",
+    [property: JsonPropertyName("countercheck")] IReadOnlyList<string>? Countercheck = null);
 
 /// <summary>
 /// Zusammenfassende Statistik ueber den Dead-Code-Scan.
@@ -134,7 +142,13 @@ public sealed record DeadCodeSummary(
     [property: JsonPropertyName("totalDead")] int TotalDead,
     [property: JsonPropertyName("high")] int High,
     [property: JsonPropertyName("low")] int Low,
-    [property: JsonPropertyName("byKind")] IReadOnlyDictionary<string, int> ByKind);
+    [property: JsonPropertyName("byKind")] IReadOnlyDictionary<string, int> ByKind,
+    [property: JsonPropertyName("status")] string Status = "checked",
+    [property: JsonPropertyName("cause")] string Cause = "Statischer Scan im angeforderten Scope.",
+    [property: JsonPropertyName("confidence")] string Confidence = "medium",
+    [property: JsonPropertyName("returnedCandidates")] int ReturnedCandidates = 0,
+    [property: JsonPropertyName("truncatedBy")] int TruncatedBy = 0,
+    [property: JsonPropertyName("next")] DeadCodeRecommendedNextAction? Next = null);
 
 /// <summary>
 /// Empfohlene naechste Aktion fuer den aufrufenden Agenten (Trust-Modell).
@@ -147,11 +161,13 @@ public sealed record DeadCodeRecommendedNextAction(
 /// Gesamtergebnis des Dead-Code-Scanners.
 /// </summary>
 public sealed record DeadCodeScanResult(
-    [property: JsonPropertyName("deadSymbols")] IReadOnlyList<DeadCodeEntry> DeadSymbols,
+    [property: JsonPropertyName("candidates")] IReadOnlyList<DeadCodeEntry> DeadSymbols,
     [property: JsonPropertyName("summary")] DeadCodeSummary Summary,
     [property: JsonPropertyName("limits")] IReadOnlyList<string> Limits,
     [property: JsonPropertyName("recommendedNextAction")] DeadCodeRecommendedNextAction RecommendedNextAction,
-    [property: JsonPropertyName("isTruncated")] bool IsTruncated);
+    [property: JsonPropertyName("isTruncated")] bool IsTruncated,
+    [property: JsonPropertyName("resultType")] string ResultType = "candidate",
+    [property: JsonPropertyName("deletionClaim")] bool DeletionClaim = false);
 
 /// <summary>
 /// Konstante Standard-Limits fuer die Heuristik-Transparenz.

@@ -402,7 +402,7 @@ public sealed class McpLiveRepositoryTests
         Assert.NotNull(result.StructuredContent);
         var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
         Assert.NotNull(json["summary"]);
-        Assert.NotNull(json["deadSymbols"]);
+        Assert.NotNull(json["candidates"]);
     }
 
     [Fact]

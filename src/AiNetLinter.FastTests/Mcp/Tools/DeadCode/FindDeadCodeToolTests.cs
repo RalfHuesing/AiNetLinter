@@ -50,6 +50,10 @@ public sealed class FindDeadCodeToolTests
         Assert.Contains("Dead-Code-Analyse", textContent.Text);
         Assert.Contains("Zusammenfassung", textContent.Text);
         Assert.NotNull(result.StructuredContent);
+        var payload = result.StructuredContent!.Value;
+        Assert.Equal("candidate", payload.GetProperty("resultType").GetString());
+        Assert.False(payload.GetProperty("deletionClaim").GetBoolean());
+        Assert.True(payload.TryGetProperty("candidates", out _));
     }
 
     [Fact]

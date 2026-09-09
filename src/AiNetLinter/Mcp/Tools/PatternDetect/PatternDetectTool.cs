@@ -30,6 +30,13 @@ internal static class PatternDetectTool
         int maxResultsPerPattern, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
+        if (maxResultsPerPattern < 1)
+        {
+            return McpToolResults.InvalidArgument(
+                "maxResultsPerPattern muss mindestens 1 sein.",
+                hint: "Eine positive Ganzzahl angeben.",
+                fieldPath: "$.maxResultsPerPattern");
+        }
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
         var configSnapshot = state.GetConfigSnapshot();
@@ -45,7 +52,7 @@ internal static class PatternDetectTool
             ScopeFilter: scopeFilter,
             Patterns: resolvedPatterns!,
             CancellationToken: ct,
-            MaxResultsPerPattern: Math.Max(1, maxResultsPerPattern)));
+            MaxResultsPerPattern: maxResultsPerPattern));
 
         // Echte Malfunction (unerwartete Exception in der LinterEngine) -> IsError=true mit
         // Retry-once-Hinweis, siehe IsErrorPolicy.md — Pattern 1:1 von GetViolationsTool.
@@ -58,15 +65,8 @@ internal static class PatternDetectTool
                 hint: "Einmal erneut versuchen — bleibt der Fehler bestehen, LinterEngine-Log pruefen (workspace-load-Diagnosen?).");
         }
 
-        // "Keine Dateien im Scope" hat keinen strukturierten Payload (kein Report gebaut) —
-        // Text-only, analog get_violations. Der normale Report traegt sowohl Text als auch
-        // StructuredContent (Praezedenzfall, siehe SafeguardTool).
-        if (result.Payload is null)
-        {
-            return McpToolResults.Text(result.Text!);
-        }
-
-        var text = McpSufficiencyHints.Append(result.Text!);
+        if (result.Payload is null) return McpToolResults.Text(result.Text!);
+        var text = result.Text!;
         return new CallToolResult
         {
             IsError = false,
