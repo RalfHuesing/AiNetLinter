@@ -4,7 +4,9 @@
 - Quelle: `AiNetLinter.slnx` (Source-Modus); externe Referenzassemblys ausschließlich flüchtig in Tool-Aufrufen
 - Abgeschlossen: Discovery und Schemainventur
 - Abgeschlossen: Gruppen A–E – sämtliche Toolgruppen
-- Abgeschlossen: sämtliche Critical- und Major-Befunde – gezielte Regressionstests grün
-- Aktiv: Minor-Pass
-- Nächste Aktion: Minors C-004, A-002, A-003, E-002 und E-003 seriell bewerten und lokal beheben oder begründet zurückstellen
+- Abgeschlossen: sämtliche Toolgruppen sowie alle umsetzbaren Befunde
+- Aktiv: Abschlussdokumentation
+- Verifikation: `dotnet build` grün; FastTests ohne Stress grün (2305); IntegrationTests ohne Stress wurden seriell gestartet, aber von der Ausführungsumgebung vor Abschluss ohne TRX beendet.
+- Nächste Aktion: Audit-Artefakte committen; der vollständige Integration-Gate ist in einer ungekürzten lokalen Sitzung zu wiederholen
+- Offene Entscheidungen: E-003 ist deferred (öffentlicher, normierter Navigationsvertrag)
 - Offene Entscheidungen: keine

@@ -12,3 +12,7 @@
 | D-002 | Ressourcenfehler werden in der Navigation als nicht verfügbare, nicht anwendbare Ergebnisse statt als Erfolg ausgewiesen. | `GetFileTree_NonExistentRoot_ReturnsResourceNotFoundWithErrorNavigation` |
 | D-003 | Konkurrierende Symbolsuchparameter werden vor der Suche eindeutig und feldgenau abgewiesen. | `FindSymbol_BothPatternFormsProvided_ReturnsRecoverableInvalidArgument` |
 | E-001 | Vollständige leere Textsuchen geben im Payload und in der Navigation dieselbe sinnvolle Folgeaktion aus. | `SearchPattern_EmptyResult_UsesSameNextActionInPayloadAndNavigation` |
+| C-004 | Gemischte Symbolmuster-Batches mit leeren Elementen werden feldgenau abgewiesen. | `ExecuteAsync_NamePatternsWithEmptyElement_ReturnsRecoverableInvalidArgument` |
+| A-002 | Nichtpositive Diagnose-Limits werden als korrigierbarer Eingabefehler abgewiesen. | `MaxDiagnosticsNonPositive_ReturnsRecoverableInvalidArgument` |
+| A-003 | Partielle Assembly-Health verwendet dieselbe Folgeaktion im Payload und in der Navigation. | `Build_PartialAssemblyUsesSameNextActionAsNavigation` |
+| E-002 | Symbolergebnislimits unter eins werden in Projekt- und Assembly-Routen einheitlich validiert. | `ExecuteAsync_MaxResultsZero_ReturnsRecoverableInvalidArgument` |
