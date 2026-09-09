@@ -12,6 +12,7 @@ using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Composition;
 using AiNetLinter.Mcp.Lifetime;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Output;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -63,6 +64,7 @@ internal static class McpServerCommand
 
         var services = new ServiceCollection();
         var serverBuilder = services.AddMcpServer();
+        McpArgumentValidationFilter.Configure(serverBuilder);
         McpCallLoggingFilter.Configure(serverBuilder);
 
         using var serviceProvider = services.BuildServiceProvider();

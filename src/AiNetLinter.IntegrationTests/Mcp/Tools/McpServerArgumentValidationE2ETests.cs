@@ -194,4 +194,30 @@ public sealed class McpServerArgumentValidationE2ETests
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("helperSymbol", textContent.Text, StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData("find_symbol", "namePatterns", "array")]
+    [InlineData("get_file_tree", "includeExtensions", "array")]
+    [InlineData("get_server_health", "includeDiagnostics", "boolean")]
+    public async Task WrongArgumentType_ReturnsFieldAwareRecoverableInvalidArgument(
+        string toolName,
+        string fieldName,
+        string expectedType)
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            toolName,
+            new Dictionary<string, object?> { [fieldName] = "not-the-declared-type" });
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.False(result.IsError, textContent.Text);
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains(fieldName, textContent.Text, StringComparison.Ordinal);
+        Assert.Contains(expectedType, textContent.Text, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(
+            "INVALID_ARGUMENT",
+            result.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal(
+            $"$.{fieldName}",
+            result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+    }
 }

@@ -8,3 +8,4 @@
 | B-002 | Assembly-Trefferlisten signalisieren ihre Vollständigkeit unabhängig von begrenzten Diagnose- oder Referenzdetails. | `AssemblyRoute_FilteredEmptyResultDoesNotInheritReferenceTruncationInNavigation` |
 | C-002 | Begrenzte Symbol-Traversierungen weisen Navigation und Folgeschritt konsistent als unvollständig aus. | `WithNavigation_SymbolTraversalMaxResultsProjectsTruncation` |
 | C-003 | Assembly-Symbolsuchen melden Treffer-, Rückgabe- und Trunkierungszähler konsistent zum gelieferten Scope. | `AssemblyRoute_FindSymbolIncludeReferencesKeepsMatchCountsConsistentUnderStandardBudget` |
+| D-001 | Typfehler in MCP-Argumenten werden vor der Bindung feldgenau als strukturierte Eingabefehler behandelt. | `WrongArgumentType_ReturnsFieldAwareRecoverableInvalidArgument` |

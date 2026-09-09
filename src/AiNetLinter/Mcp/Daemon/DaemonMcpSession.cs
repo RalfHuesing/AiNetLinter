@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using AiNetLinter.Logging;
+using AiNetLinter.Mcp.Registration;
 
 namespace AiNetLinter.Mcp.Daemon;
 
@@ -31,6 +32,7 @@ internal sealed class DaemonMcpSession
         var runtimeContext = connection.RuntimeContext;
         Serilog.Log.Debug("Daemon: MCP-Session startet (ConnectionId={ConnectionId})", runtimeContext?.ConnectionId);
         var serverBuilder = services.AddMcpServer();
+        McpArgumentValidationFilter.Configure(serverBuilder);
         McpCallLoggingFilter.Configure(serverBuilder, runtimeContext?.ConnectionId);
         await using var serviceProvider = services.BuildServiceProvider();
         var serverOptions = serviceProvider.GetRequiredService<IOptions<McpServerOptions>>().Value;
