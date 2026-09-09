@@ -58,6 +58,9 @@ internal static class SymbolGraphToolRegistrations
                     new FindSymbolPatternOptions(namePatterns, pattern));
                 if (patternError is not null) return patternError;
 
+                var maxResultsError = FindSymbolTool.ValidateMaxResults(maxResults);
+                if (maxResultsError is not null) return maxResultsError;
+
                 return await TargetPathToolRegistrationOptions.ExecuteWithUnknownArgumentGuardAsync(context, () => AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(

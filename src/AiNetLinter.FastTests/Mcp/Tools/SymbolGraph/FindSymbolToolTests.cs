@@ -72,6 +72,25 @@ public sealed class FindSymbolToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_MaxResultsZero_ReturnsRecoverableInvalidArgument()
+    {
+        using var fixture = new McpInMemoryTestContext();
+
+        var result = await FindSymbolTool.ExecuteAsync(
+            fixture.CreateServer(),
+            namePatterns: ["Greeter"],
+            kind: null,
+            maxResults: 0,
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("maxResults muss mindestens 1 sein.", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("$.maxResults", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ExceedsMaxPatternsCap_ReturnsRecoverableInvalidArgument()
     {
         using var fixture = new McpInMemoryTestContext();

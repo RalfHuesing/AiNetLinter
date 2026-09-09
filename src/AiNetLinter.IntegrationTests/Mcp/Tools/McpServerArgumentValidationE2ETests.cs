@@ -108,6 +108,24 @@ public sealed class McpServerArgumentValidationE2ETests
     }
 
     [Fact]
+    public async Task FindSymbol_ZeroMaxResults_ReturnsRecoverableInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "find_symbol",
+            new Dictionary<string, object?>
+            {
+                ["namePatterns"] = new[] { "Greeter" },
+                ["maxResults"] = 0,
+            });
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("maxResults muss mindestens 1 sein.", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("$.maxResults", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Fact]
     public async Task GetSymbolBody_MissingSymbolIdentifiers_ReturnsRecoverableInvalidArgument()
     {
         var result = await _fixture.Client.CallToolAsync(

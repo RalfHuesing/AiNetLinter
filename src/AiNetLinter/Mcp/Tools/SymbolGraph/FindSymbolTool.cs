@@ -125,6 +125,14 @@ internal static class FindSymbolTool
                 hint: "Gueltige Werte: class, method, interface, property, record, struct, enum, delegate.")
             : null;
 
+    internal static CallToolResult? ValidateMaxResults(int maxResults) =>
+        maxResults < 1
+            ? McpToolResults.InvalidArgument(
+                "maxResults muss mindestens 1 sein.",
+                hint: "Eine positive Ganzzahl angeben.",
+                fieldPath: "$.maxResults")
+            : null;
+
     /// <summary>
     /// Tool-Einstiegspunkt: prueft, ob eine Solution geladen ist, und delegiert an den Scanner.
     /// Ein defensiver try/catch-Wrapper faengt unerwartete Roslyn-Exceptions ab und liefert
@@ -142,6 +150,9 @@ internal static class FindSymbolTool
     {
         var patternOptions = request.ToPatternOptions();
         var validationError = ValidatePatternArguments(patternOptions);
+        if (validationError is not null) return validationError;
+
+        validationError = ValidateMaxResults(request.MaxResults);
         if (validationError is not null) return validationError;
 
         var patterns = NormalizeNamePatterns(patternOptions);

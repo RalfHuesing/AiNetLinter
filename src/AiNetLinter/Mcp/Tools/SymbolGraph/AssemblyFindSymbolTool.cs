@@ -39,7 +39,9 @@ internal static class AssemblyFindSymbolTool
         CancellationToken cancellationToken)
     {
         var patterns = FindSymbolTool.NormalizeNamePatterns(request.NamePatterns);
-        var validationError = FindSymbolTool.ValidateNamePatterns(patterns) ?? FindSymbolTool.ValidateKind(request.Kind);
+        var validationError = FindSymbolTool.ValidateMaxResults(request.MaxResults)
+            ?? FindSymbolTool.ValidateNamePatterns(patterns)
+            ?? FindSymbolTool.ValidateKind(request.Kind);
         if (validationError is not null) return validationError;
 
         try
