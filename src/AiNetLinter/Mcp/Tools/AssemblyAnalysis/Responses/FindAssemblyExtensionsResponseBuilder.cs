@@ -54,10 +54,20 @@ internal static class FindAssemblyExtensionsResponseBuilder
             TotalCount = selection.Total,
             ReturnedCount = selection.Items.Count,
             IsTruncated = selection.Truncated,
-            ContinuationToken = selection.Truncated ? AssemblyPaging.CreateToken(AssemblyPaging.ReadOffset(arguments.Cursor) + selection.Items.Count) : null,
+            ContinuationToken = selection.Truncated
+                ? AssemblyPaging.CreateToken(
+                    AssemblyPaging.ReadOffset(arguments.Cursor) + selection.Items.Count,
+                    CreatePagingBinding(request))
+                : null,
             Scope = includeReferences ? "root+references" : "root",
         };
     }
+
+    private static string CreatePagingBinding(FindAssemblyExtensionsBuildRequest request) =>
+        AssemblyPaging.CreateExtensionsBinding(
+            request.FullPath,
+            request.Context.Origin.ContentHash,
+            request.Arguments);
 
     private static FindAssemblyExtensionsPayload ApplyResponseBudget(
         FindAssemblyExtensionsPayload payload,
@@ -81,7 +91,10 @@ internal static class FindAssemblyExtensionsResponseBuilder
                     McpToolResults.Text(FormatText(candidate), candidate),
                     request.Lease,
                     budget),
-            options: new(budget, AssemblyPaging.ReadOffset(request.Arguments.Cursor)));
+            options: new(
+                budget,
+                AssemblyPaging.ReadOffset(request.Arguments.Cursor),
+                CreatePagingBinding(request)));
     }
 
     internal static string FormatText(FindAssemblyExtensionsPayload payload)

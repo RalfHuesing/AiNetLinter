@@ -86,7 +86,7 @@ public sealed partial class AssemblyAnalysisToolTests
         Assert.Single(payload.Types);
         Assert.Equal(2, payload.TotalTypes);
         Assert.True(payload.Truncated);
-        Assert.Equal("1", payload.ContinuationToken);
+        Assert.StartsWith("v1.1.", payload.ContinuationToken, StringComparison.Ordinal);
         Assert.Equal(2, payload.TotalCount);
         Assert.Equal(1, payload.ReturnedCount);
         Assert.Equal("complete", payload.Completeness);
@@ -118,7 +118,7 @@ public sealed partial class AssemblyAnalysisToolTests
         Assert.NotEqual(firstPayload.Types[0].Id, secondPayload.Types[0].Id);
         Assert.Equal(3, secondPayload.TotalCount);
         Assert.Equal(1, secondPayload.ReturnedCount);
-        Assert.Equal("2", secondPayload.ContinuationToken);
+        Assert.StartsWith("v1.2.", secondPayload.ContinuationToken, StringComparison.Ordinal);
     }
 
     [Fact]

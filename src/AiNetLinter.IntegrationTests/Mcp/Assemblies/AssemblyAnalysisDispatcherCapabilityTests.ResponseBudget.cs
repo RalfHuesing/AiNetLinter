@@ -79,7 +79,7 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
         Assert.NotEmpty(firstTypes);
         Assert.Equal(firstTypes.Length, firstCount);
         Assert.True(first.GetProperty("totalCount").GetInt32() > firstCount);
-        Assert.Equal(firstCount.ToString(), firstToken);
+        Assert.StartsWith("v1.", firstToken, StringComparison.Ordinal);
 
         var second = Structured(await fixture.ExecuteInspectAsync(
             maxResponseBytes: 4096,

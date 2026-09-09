@@ -925,7 +925,7 @@ Einzelabfragen bleiben skalare, optionale Aliases kompatibel:
 
 ## MCP-Server Usability & Ergonomie (Findings v1.0.161)
 
-- [x] **F-01 Assembly-Disambiguierung:** Bare DocumentationCommentIds aus Ambiguitätshinweisen werden in der aktuellen Assembly-Generation akzeptiert; Kandidaten zeigen direkt generationgebundene `assembly:<hash>:<generation>:<symbolId>`-IDs.
+- [x] **F-01 Assembly-Disambiguierung:** Bare DocumentationCommentIds aus Ambiguitätshinweisen werden auf die adressierte Assembly gebunden; Kandidaten zeigen stabile `assembly:<path>:<hash>:<symbolId>`-IDs ohne öffentliche Cache-Generation.
 - [x] **F-02 Einzelabfragen:** `get_symbol_body` und `find_symbol` bieten optionale skalare Aliases bei unverändertem Batch-Vertrag.
 - [x] **F-03 Hotspot-Scope:** `get_hotspots` unterstützt `scopeType=production|tests|all` mit Produktions-Default.
 - [x] **F-04 Assembly-Defaults:** `inspect_assembly` und `find_assembly_extensions` inferieren die Assembly-Zielart direkt aus dem absoluten `targetPath`.

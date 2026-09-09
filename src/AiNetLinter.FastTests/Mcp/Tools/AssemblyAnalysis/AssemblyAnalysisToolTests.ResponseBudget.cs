@@ -448,7 +448,7 @@ public sealed partial class AssemblyAnalysisToolTests
 
         Assert.True(first.ReturnedCount > 0);
         Assert.True(first.IsTruncated);
-        Assert.Equal(first.ReturnedCount.ToString(), first.ContinuationToken);
+        Assert.StartsWith($"v1.{first.ReturnedCount}.", first.ContinuationToken, StringComparison.Ordinal);
 
         var second = AssemblyAnalysisTestSupport.Deserialize<InspectAssemblyPayload>(
             await InspectAssemblyToolDispatch.ExecuteAsync(

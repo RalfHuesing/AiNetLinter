@@ -191,6 +191,7 @@ internal static partial class AssemblyAnalysisResponse
     private static JsonElement TrimStructured(JsonElement structured, int budget, int cursorOffset)
     {
         var node = JsonNode.Parse(structured.GetRawText()) ?? new JsonObject();
+        var continuationBinding = AssemblyPaging.FindBinding(node);
         MarkStructuredTruncated(node);
         while (JsonSerializer.SerializeToUtf8Bytes(node, McpJsonOptions.Default).Length > budget
             && TryTrimNode(node))
@@ -199,6 +200,7 @@ internal static partial class AssemblyAnalysisResponse
         }
 
         AssemblyAnalysisResponseEnvelope.RecalculateEnvelopes(node, cursorOffset);
+        AssemblyPaging.RebindContinuationTokens(node, continuationBinding);
 
         return JsonSerializer.SerializeToElement(node, McpJsonOptions.Default);
     }

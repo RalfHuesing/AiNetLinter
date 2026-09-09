@@ -34,7 +34,7 @@ internal static partial class AssemblyAnalysisResponseLimits
 
         while (!fitsBudget(projected) && TryTrimInspect(ref projected)) { }
 
-        return RecalculateEnvelope(projected, options.CursorOffset);
+        return RecalculateEnvelope(projected, options.CursorOffset, options.CursorBinding);
     }
 
     internal static FindAssemblyExtensionsPayload ProjectResponseBudget(
@@ -58,7 +58,7 @@ internal static partial class AssemblyAnalysisResponseLimits
 
         while (!fitsBudget(projected) && TryTrimExtensions(ref projected)) { }
 
-        return RecalculateEnvelope(projected, options.CursorOffset);
+        return RecalculateEnvelope(projected, options.CursorOffset, options.CursorBinding);
     }
 
     private static bool TryTrimInspect(ref InspectAssemblyPayload payload) =>
@@ -134,7 +134,8 @@ internal static partial class AssemblyAnalysisResponseLimits
 
     private static InspectAssemblyPayload RecalculateEnvelope(
         InspectAssemblyPayload payload,
-        int cursorOffset)
+        int cursorOffset,
+        string? cursorBinding)
     {
         var returned = payload.Types.Count;
         var truncated = payload.Truncated || returned < payload.TotalTypes;
@@ -146,14 +147,15 @@ internal static partial class AssemblyAnalysisResponseLimits
             ReturnedCount = returned,
             IsTruncated = truncated,
             ContinuationToken = returned < payload.TotalTypes
-                ? AssemblyPaging.CreateToken(Math.Max(0, cursorOffset) + returned)
+                ? CreateContinuationToken(Math.Max(0, cursorOffset) + returned, cursorBinding)
                 : null,
         };
     }
 
     private static FindAssemblyExtensionsPayload RecalculateEnvelope(
         FindAssemblyExtensionsPayload payload,
-        int cursorOffset)
+        int cursorOffset,
+        string? cursorBinding)
     {
         var returned = payload.Extensions.Count;
         var truncated = payload.Truncated || returned < payload.TotalExtensions;
@@ -165,10 +167,15 @@ internal static partial class AssemblyAnalysisResponseLimits
             ReturnedCount = returned,
             IsTruncated = truncated,
             ContinuationToken = returned < payload.TotalExtensions
-                ? AssemblyPaging.CreateToken(Math.Max(0, cursorOffset) + returned)
+                ? CreateContinuationToken(Math.Max(0, cursorOffset) + returned, cursorBinding)
                 : null,
         };
     }
+
+    private static string CreateContinuationToken(int offset, string? binding) =>
+        binding is null
+            ? AssemblyPaging.CreateToken(offset)
+            : AssemblyPaging.CreateToken(offset, binding);
 
     private static bool TryRemoveLastReferenceSession(
         ref InspectAssemblyPayload payload,

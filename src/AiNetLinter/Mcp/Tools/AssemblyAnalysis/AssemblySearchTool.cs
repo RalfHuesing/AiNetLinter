@@ -19,7 +19,7 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
-internal static class AssemblySearchTool
+internal static partial class AssemblySearchTool
 {
     internal const string TextSearchKind = "text";
     internal const string DataAccessSearchKind = "data_access";
@@ -48,6 +48,14 @@ internal static class AssemblySearchTool
         var validation = Validate(arguments);
         if (validation is not null) return validation;
 
+        var binding = CreatePagingBinding(lease, arguments);
+        if (!AssemblyPaging.TryReadBoundOffset(arguments.EffectiveCursor, binding, out _))
+        {
+            return McpToolResults.InvalidArgument(
+                "cursor/continuationToken ist nicht an Target, Assembly-Hash und Abfrage gebunden oder abgelaufen.",
+                "den zuletzt gelieferten continuationToken unverändert mit derselben Abfrage wiederverwenden.");
+        }
+
         var root = AssemblyGetFileTreeTool.ResolveRoot(lease);
         if (root is null)
         {
@@ -57,7 +65,7 @@ internal static class AssemblySearchTool
         try
         {
             var payload = await Task.Run(
-                () => Scan(root, arguments, cancellationToken),
+                () => BuildPayloadWithBinding(root, arguments, binding, cancellationToken),
                 cancellationToken).ConfigureAwait(false);
             var text = RenderText(payload);
             return McpToolResults.Text(text, new { assemblySearch = payload });
@@ -139,6 +147,7 @@ internal static class AssemblySearchTool
     {
         return string.IsNullOrWhiteSpace(cursor)
             || int.TryParse(cursor, out var offset) && offset >= 0
+            || cursor.StartsWith("v1.", StringComparison.Ordinal)
             ? null
             : McpToolResults.InvalidArgument("cursor muss ein nichtnegativer numerischer Offset sein.");
     }

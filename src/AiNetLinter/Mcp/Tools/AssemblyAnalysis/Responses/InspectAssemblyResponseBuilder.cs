@@ -16,7 +16,7 @@ internal static class InspectAssemblyResponseBuilder
     internal static CallToolResult Build(InspectAssemblyBuildRequest request)
     {
         var payload = CreatePayload(request);
-        payload = ApplyResponseBudget(payload, request.Arguments, request.Lease);
+        payload = ApplyResponseBudget(payload, request);
         return McpToolResults.Text(
             InspectAssemblyFormatter.FormatText(payload, request.Arguments.PublicOnly),
             payload);
@@ -62,11 +62,19 @@ internal static class InspectAssemblyResponseBuilder
             ReturnedCount = selection.Items.Count,
             IsTruncated = selection.Truncated,
             ContinuationToken = selection.Truncated
-                ? AssemblyPaging.CreateToken(AssemblyPaging.ReadOffset(arguments.Cursor) + selection.Items.Count)
+                ? AssemblyPaging.CreateToken(
+                    AssemblyPaging.ReadOffset(arguments.Cursor) + selection.Items.Count,
+                    CreatePagingBinding(request))
                 : null,
             Scope = arguments.IncludeReferences == true ? "root+references" : "root",
         };
     }
+
+    private static string CreatePagingBinding(InspectAssemblyBuildRequest request) =>
+        AssemblyPaging.CreateInspectBinding(
+            request.FullPath,
+            request.Context.Origin.ContentHash,
+            request.Arguments);
 
     private static AssemblyTypeSelection CreateSelection(InspectAssemblyBuildRequest request)
     {
@@ -97,9 +105,10 @@ internal static class InspectAssemblyResponseBuilder
 
     private static InspectAssemblyPayload ApplyResponseBudget(
         InspectAssemblyPayload payload,
-        InspectAssemblyArguments arguments,
-        AssemblyAnalysisLease? lease)
+        InspectAssemblyBuildRequest request)
     {
+        var arguments = request.Arguments;
+        var lease = request.Lease;
         if (lease is not null
             && (arguments.MaxResponseBytes > 0 || arguments.DetailLevel is not null))
         {
@@ -119,7 +128,10 @@ internal static class InspectAssemblyResponseBuilder
                     McpToolResults.Text(InspectAssemblyFormatter.FormatText(candidate, arguments.PublicOnly), candidate),
                     lease,
                     budget),
-            options: new(budget, AssemblyPaging.ReadOffset(arguments.Cursor)));
+            options: new(
+                budget,
+                AssemblyPaging.ReadOffset(arguments.Cursor),
+                AssemblyPaging.CreateInspectBinding(request.FullPath, request.Context.Origin.ContentHash, arguments)));
     }
 
 }
