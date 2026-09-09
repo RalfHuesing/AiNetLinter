@@ -174,6 +174,8 @@ public sealed class GetFeatureContextToolTests
         Assert.True(payload.Tests.TotalMatchingTests >= 1);
         Assert.Equal("static-test-candidates-only", payload.Tests.EvidenceBoundary);
         Assert.Contains("testContext", result.StructuredContent.Value.GetRawText(), StringComparison.Ordinal);
+        Assert.Contains("\"impact\"", result.StructuredContent.Value.GetRawText(), StringComparison.Ordinal);
+        Assert.DoesNotContain("\"callers\"", result.StructuredContent.Value.GetRawText(), StringComparison.Ordinal);
         Assert.DoesNotContain("coverage", result.StructuredContent.Value.GetRawText(), StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(payload.Violations);
         Assert.Equal("complete", payload.Violations.Status);

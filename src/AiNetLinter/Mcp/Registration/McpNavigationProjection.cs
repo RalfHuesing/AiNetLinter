@@ -156,7 +156,7 @@ internal static class McpNavigationProjection
             return nestedValue;
         }
         var normalized = explicitValue == "error" ? "partial" : explicitValue;
-        return normalized == "complete" && IsKnownEmpty(structured) ? "empty" : normalized;
+        return normalized;
     }
 
     private static bool TryFindCompleteness(JsonElement? element, out string value)
@@ -232,7 +232,7 @@ internal static class McpNavigationProjection
         if (element is not { ValueKind: JsonValueKind.Object } owner) return false;
 
         string? candidate = null;
-        foreach (var propertyName in new[] { "metrics", "testContext", "tests", "callers", "violations" })
+        foreach (var propertyName in new[] { "metrics", "impact", "testContext", "tests", "callers", "violations" })
         {
             if (TryReadNestedSectionStatus(owner, propertyName, out var sectionValue))
                 candidate = SelectLessComplete(candidate, sectionValue);
@@ -366,6 +366,11 @@ internal static class McpNavigationProjection
     private static McpNavigationNext CreateSuccessfulNext(string completeness, string? hint)
     {
         if (!string.IsNullOrWhiteSpace(hint)) return new("request_detail", hint);
+        if (completeness is "not_configured" or "not_decidable" or "configuration_error")
+        {
+            return new("request_detail", "Die Entscheidbarkeit des angeforderten Scopes ist begrenzt; Konfiguration oder Scope prüfen und den Aufruf gezielt wiederholen.");
+        }
+
         return completeness is "truncated" or "partial"
             ? new("request_detail", "Scope oder Detaillevel verfeinern und die Antwort gezielt wiederholen.")
             : completeness == "empty"
@@ -392,18 +397,49 @@ internal static class McpNavigationProjection
     {
         if (structured is not { ValueKind: JsonValueKind.Object } value) return null;
 
-        foreach (var propertyName in new[] { "testContext", "tests", "callers", "violations" })
+        foreach (var propertyName in new[] { "summary", "impact", "testContext", "tests", "callers", "violations" })
         {
             if (value.TryGetProperty(propertyName, out var section)
                 && section.ValueKind == JsonValueKind.Object
-                && section.TryGetProperty("nextStep", out var nextStep)
-                && nextStep.ValueKind == JsonValueKind.String)
+                && TryReadNextStep(section, out var nextStep))
             {
                 return nextStep.GetString();
             }
         }
 
         return null;
+    }
+
+    private static bool TryReadNextStep(JsonElement section, out JsonElement nextStep)
+    {
+        if (section.TryGetProperty("nextStep", out nextStep)
+            && nextStep.ValueKind == JsonValueKind.String)
+        {
+            return true;
+        }
+
+        if (section.TryGetProperty("next", out var next)
+            && next.ValueKind == JsonValueKind.Object
+            && TryReadNextReason(next, out var reason))
+        {
+            nextStep = reason;
+            return true;
+        }
+
+        nextStep = default;
+        return false;
+    }
+
+    private static bool TryReadNextReason(JsonElement next, out JsonElement reason)
+    {
+        if (next.TryGetProperty("reason", out reason)
+            && reason.ValueKind == JsonValueKind.String)
+        {
+            return true;
+        }
+
+        reason = default;
+        return false;
     }
 }
 

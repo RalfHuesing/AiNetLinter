@@ -58,7 +58,7 @@ internal static class GetFeatureContextTool
             var markdown = FeatureContextFormatter.FormatReport(payload);
             return McpToolResults.ApplyCompositeWireBudget(
                 McpToolResults.Text(markdown, payload),
-                ["declaration", "metrics", "callers", "testContext", "violations"]);
+                ["declaration", "metrics", "impact", "testContext", "violations"]);
         }
         catch (OperationCanceledException exception)
         {

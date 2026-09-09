@@ -223,7 +223,7 @@ internal static partial class McpToolResultsWireBudget
 
     private static void AppendCountSummary(StringBuilder builder, JsonObject section, string sectionName)
     {
-        if (sectionName == "callers")
+        if (sectionName == "impact")
         {
             builder.AppendLine($"- **Counts:** {CountArray(section, "callSites")} von {ReadInt(section, "totalCallers", 0)} statischen Referenzen/Call-Sites zurückgegeben.");
             return;
@@ -321,13 +321,13 @@ internal static partial class McpToolResultsWireBudget
             return result;
         }
 
-        var hasFeatureShape = payload.ContainsKey("callers") && payload.ContainsKey("testContext");
+        var hasFeatureShape = payload.ContainsKey("impact") && payload.ContainsKey("testContext");
         var hasTestContextShape = !hasFeatureShape
             && payload.ContainsKey("testContext")
             && wireBudget["sections"] is JsonObject sections
             && sections.ContainsKey("testContext");
         return hasFeatureShape
-            ? ApplyCompositeWireBudget(result, ["declaration", "metrics", "callers", "testContext", "violations"])
+            ? ApplyCompositeWireBudget(result, ["declaration", "metrics", "impact", "testContext", "violations"])
             : hasTestContextShape
                 ? ApplyCompositeWireBudget(result, ["testContext"], "testContext")
                 : result;

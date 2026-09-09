@@ -60,7 +60,7 @@ public sealed class McpToolResultsTests
                 {
                     declaration = new { name = "Feature.Run", kind = "Method" },
                     metrics = new { metric = "complexity", value = 3 },
-                    callers = new
+                    impact = new
                     {
                         totalCallers = callers.Length,
                         callSites = callers,
@@ -84,7 +84,7 @@ public sealed class McpToolResultsTests
                     },
                     completeness = "complete",
                 }),
-            ["declaration", "metrics", "callers", "testContext", "violations"]);
+            ["declaration", "metrics", "impact", "testContext", "violations"]);
 
         var testContext = McpToolResults.ApplyCompositeWireBudget(
             McpToolResults.Text(
@@ -107,7 +107,7 @@ public sealed class McpToolResultsTests
             ["testContext"],
             rootSectionName: "testContext");
 
-        AssertCompositeWireBudget(feature, "callers", "testContext");
+        AssertCompositeWireBudget(feature, "impact", "testContext");
         AssertCompositeWireBudget(testContext, "testContext");
         Assert.Contains("Wire-Budget", Assert.IsType<TextContentBlock>(Assert.Single(feature.Content)).Text, StringComparison.Ordinal);
         Assert.Contains("responseBudget", feature.StructuredContent!.Value.GetRawText(), StringComparison.Ordinal);
@@ -272,6 +272,63 @@ public sealed class McpToolResultsTests
 
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
         Assert.Equal(expectedCompleteness, navigation.GetProperty("completeness").GetString());
+    }
+
+    [Fact]
+    public void WithNavigation_DecisionableEmptyViolationListRemainsComplete()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-safeguard-empty-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.Text(
+                "Safeguard",
+                new
+                {
+                    passed = true,
+                    score = 10.0,
+                    violations = Array.Empty<object>(),
+                    completeness = "complete",
+                    status = "passed",
+                }),
+            target);
+
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+        Assert.Equal("complete", navigation.GetProperty("completeness").GetString());
+        Assert.True(navigation.GetProperty("result").GetProperty("available").GetBoolean());
+        Assert.Equal("none", navigation.GetProperty("next").GetProperty("kind").GetString());
+    }
+
+    [Fact]
+    public void WithNavigation_UsesSummaryNextReasonAsSafeFollowUp()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-summary-next-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.Text(
+                "Audit",
+                new
+                {
+                    summary = new
+                    {
+                        status = "checked",
+                        next = new { action = "countercheck", reason = "Kandidaten manuell prüfen." },
+                    },
+                }),
+            target);
+
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+        Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
+        Assert.Equal(
+            "Kandidaten manuell prüfen.",
+            navigation.GetProperty("next").GetProperty("action").GetString());
     }
 
     [Fact]

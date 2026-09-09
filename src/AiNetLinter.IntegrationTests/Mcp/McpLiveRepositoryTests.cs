@@ -78,14 +78,14 @@ public sealed partial class McpLiveRepositoryTests
         var declaration = json["declaration"]!.AsObject();
         Assert.Contains((string)declaration["name"]!, text, StringComparison.Ordinal);
         Assert.Equal(
-            new[] { "callers", "completeness", "declaration", "isTruncated", "metrics", "metricsStatus", "nextStep", "testContext", "truncatedBy", "violations", "wireBudget" },
+            new[] { "completeness", "declaration", "impact", "isTruncated", "metrics", "metricsStatus", "nextStep", "testContext", "truncatedBy", "violations", "wireBudget" },
             json
                 .Where(property => !string.Equals(property.Key, "navigation", StringComparison.Ordinal))
                 .Select(property => property.Key)
                 .OrderBy(key => key, StringComparer.Ordinal));
         Assert.NotNull(json["navigation"]);
 
-        Assert.NotNull(json["callers"]);
+        Assert.NotNull(json["impact"]);
         Assert.NotNull(json["testContext"]);
         Assert.NotNull(json["metrics"]);
         Assert.NotNull(json["violations"]);

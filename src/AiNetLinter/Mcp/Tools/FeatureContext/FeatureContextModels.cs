@@ -113,7 +113,7 @@ internal sealed record ViolationItemDto(
 internal sealed record FeatureContextPayload(
     SymbolDeclarationDto Declaration,
     MetricsLookupResultDto? Metrics,
-    CallersReportDto? Callers,
+    [property: JsonPropertyName("impact")] CallersReportDto? Callers,
     [property: JsonPropertyName("testContext")] StaticTestContextReportDto? Tests,
     ViolationsReportDto? Violations,
     string? MetricsStatus = null,
