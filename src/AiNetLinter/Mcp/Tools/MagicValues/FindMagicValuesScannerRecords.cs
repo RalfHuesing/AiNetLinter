@@ -68,7 +68,9 @@ internal sealed record FindMagicValuesResult(
 /// Eintraege plus Aggregat-Summary.</summary>
 internal sealed record FindMagicValuesPayload(
     IReadOnlyList<MagicValueEntry> MagicValues,
-    MagicValuesSummary Summary);
+    IReadOnlyList<MagicValueCategorySummary> Categories,
+    MagicValuesSummary Summary,
+    string ResultType = "candidate");
 
 /// <summary>Ein aggregierter Magic-Value-Fund: <see cref="Occurrences"/> zaehlt identische
 /// Literale in derselben Datei, <see cref="Value"/> ist die normalisierte String-Repraesentation
@@ -82,7 +84,29 @@ internal sealed record MagicValueEntry(
     string Category,
     string Recommendation,
     string ContextHint,
-    int Occurrences);
+    int Occurrences,
+    string EvidenceBoundary = "",
+    string Scope = "",
+    string ResultType = "candidate");
+
+/// <summary>Normativer Status- und Evidenzblock je kanonischer Magic-Value-Kategorie.</summary>
+internal sealed record MagicValueCategorySummary(
+    string Category,
+    int Total,
+    int ReturnedCount,
+    string Status,
+    string Cause,
+    string Confidence,
+    MagicValueNextAction Next,
+    int TruncatedBy,
+    string EvidenceBoundary,
+    string Scope,
+    string Recommendation,
+    string ResultType = "candidate");
+
+/// <summary>Explizite, maschinenlesbare Folgeaktion fuer leere, begrenzte oder gepruefte
+/// Kategorien.</summary>
+internal sealed record MagicValueNextAction(string Action, string Reason);
 
 /// <summary>Aggregat-Stats: <see cref="Total"/> zaehlt die Eintrags-Anzahl (ungekappt),
 /// <see cref="ShownOccurrences"/> die im StructuredContent sichtbaren (nach Trunkierung).
@@ -92,7 +116,24 @@ internal sealed record MagicValuesSummary(
     int ShownOccurrences,
     int ByCategoryConfig,
     int ByCategoryConstant,
-    int ByCategoryStandard);
+    int ByCategoryStandard,
+    int ByCategoryEnum = 0,
+    int ByCategoryNameof = 0,
+    int ByCategoryLocalization = 0,
+    int ByCategorySecurity = 0,
+    int ReturnedCount = 0,
+    int TotalOccurrences = 0,
+    int ReturnedOccurrences = 0,
+    int FilesInScope = 0,
+    string Status = "checked",
+    string Cause = "",
+    string Confidence = "high",
+    MagicValueNextAction? Next = null,
+    int TruncatedBy = 0,
+    string EvidenceBoundary = "",
+    string Scope = "",
+    string Recommendation = "",
+    string ResultType = "candidate");
 
 /// <summary>
 /// String-Repraesentation fuer <see cref="MagicValueValueType"/> (Tool-Argumente und

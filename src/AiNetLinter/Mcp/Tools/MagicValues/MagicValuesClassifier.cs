@@ -87,31 +87,7 @@ internal static class MagicValuesClassifier
             return NotMagic();
         }
 
-        // Attribut-Isolierung: jedes Literal innerhalb eines Attributs (z. B. [Route("/api/v1")])
-        // ist semantisch vom Compiler-/Framework-Vertrag abhaengig und nicht refactorbar — nie melden.
-        if (literal.FirstAncestorOrSelf<AttributeSyntax>() is not null)
-        {
-            return NotMagic();
-        }
-
-        // GetHashCode-Sonderfall: Literale innerhalb eines GetHashCode-Overrides (typischerweise
-        // Primzahlen 17/23/31 in 'hash = hash * 31 + ...') sind idiomatisches Boilerplate, nicht
-        // Magic Values. Greift sowohl fuer eigene als auch fuer override-Methoden.
-        if (IsInsideGetHashCode(literal))
-        {
-            return NotMagic();
-        }
-
-        // Index/Loop-Ausnahme: Literale in Array-Index-Zugriffen (args[2]) oder als
-        // Schleifenzähler-Initialisierung (for (int i = 2; ...)) sind strukturelle Navigation,
-        // keine fachlichen Werte.
-        if (IsIndexLiteral(literal) || IsLoopInitializer(literal))
-        {
-            return NotMagic();
-        }
-
-        // Trivial-Filter.
-        if (IsTrivialLiteral(literal, ignoreNumbers))
+        if (IsFilteredOut(literal, ignoreNumbers))
         {
             return NotMagic();
         }
@@ -122,6 +98,16 @@ internal static class MagicValuesClassifier
 
     private static MagicValueClassification NotMagic() =>
         new(false, MagicValueCategory.ConfigCandidates, string.Empty, string.Empty);
+
+    /// <summary>Gemeinsame Syntax-/Trivialfilter fuer normale und Enum-Kandidaten.</summary>
+    internal static bool IsFilteredOut(LiteralExpressionSyntax literal, IReadOnlySet<int> ignoreNumbers)
+    {
+        return literal.FirstAncestorOrSelf<AttributeSyntax>() is not null
+            || IsInsideGetHashCode(literal)
+            || IsIndexLiteral(literal)
+            || IsLoopInitializer(literal)
+            || IsTrivialLiteral(literal, ignoreNumbers);
+    }
 
     private static bool IsTrivialLiteral(LiteralExpressionSyntax literal, IReadOnlySet<int> ignoreNumbers)
     {
@@ -308,6 +294,8 @@ internal static class MagicValuesClassifier
         // in der Praxis VOR der Deklaration, nicht am Literal selbst.
         return HasMarkerInEnclosingAncestors(literal, Marker);
     }
+
+    internal static bool IsSuppressed(LiteralExpressionSyntax literal) => HasDisableComment(literal);
 
     /// <summary>Prueft, ob mindestens eine Trivia in <paramref name="trivias"/> den
     /// Marker-Text enthaelt (Single- oder Multi-Line-Kommentar). Aus

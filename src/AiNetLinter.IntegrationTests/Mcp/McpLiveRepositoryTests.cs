@@ -462,6 +462,29 @@ public sealed class McpLiveRepositoryTests
     }
 
     [Fact]
+    public async Task LiveDogfood_FindMagicValues_ReturnsCandidateContractOverWire()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "find_magic_values",
+            new Dictionary<string, object?>
+            {
+                ["scopeFilter"] = "src/AiNetLinter/Mcp/Tools/DeadCode",
+                ["minOccurrences"] = 1,
+                ["maxResults"] = 20,
+            });
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("resultType=candidate", text, StringComparison.Ordinal);
+        Assert.NotNull(result.StructuredContent);
+        var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
+        Assert.Equal("candidate", (string?)json["resultType"]);
+        Assert.Equal(7, json["categories"]!.AsArray().Count);
+        Assert.NotNull(json["summary"]!["status"]);
+        Assert.NotNull(json["summary"]!["next"]);
+    }
+
+    [Fact]
     public async Task LiveDogfood_GetNamespaceTree_ReturnsProjectsAndNamespaces()
     {
         var overview = await _fixture.Client.CallToolGetTextAsync(

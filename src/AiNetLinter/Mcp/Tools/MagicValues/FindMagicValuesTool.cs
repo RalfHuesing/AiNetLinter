@@ -98,8 +98,9 @@ internal static class FindMagicValuesTool
                 hint: "Einmal erneut versuchen — bleibt der Fehler bestehen, LinterEngine-Log pruefen.");
         }
 
-        // "Keine Dateien im Scope" hat keinen strukturierten Payload (kein Report gebaut) —
-        // Text-only, analog get_violations/pattern_detect.
+        // Auch ein leerer oder nicht entscheidbarer Scope bleibt strukturiert. So kann ein
+        // Client zwischen `empty` (vollstaendig geprueft) und `not_decidable` (keine Datei im
+        // angeforderten Scope) unterscheiden, ohne die Textaussage heuristisch zu parsen.
         if (result.Payload is null)
         {
             return McpToolResults.Text(result.Text);
@@ -108,7 +109,13 @@ internal static class FindMagicValuesTool
         // StructuredContent als Objekt-Wrapper (NICHT das nackte Array) — siehe McpToolResults.Text<T>-Doc.
         return McpToolResults.Text(
             result.Text,
-            new { MagicValues = result.Payload.MagicValues, Summary = result.Payload.Summary });
+            new
+            {
+                MagicValues = result.Payload.MagicValues,
+                Categories = result.Payload.Categories,
+                Summary = result.Payload.Summary,
+                ResultType = result.Payload.ResultType,
+            });
     }
 
     private readonly struct ValueTypeResolution

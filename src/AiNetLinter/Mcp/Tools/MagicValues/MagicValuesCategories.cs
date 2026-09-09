@@ -67,4 +67,30 @@ internal static class MagicValueCategoryExtensions
             "standard_candidates",
             "security_candidates",
         ]);
+
+    internal static (string EvidenceBoundary, string Recommendation) Semantics(this MagicValueCategory category) => category switch
+    {
+        MagicValueCategory.ConfigCandidates => (
+            "Statisches URL-/Pfad-/Connection-String-/Timeout-Muster im angeforderten C#-Scope; kein Nachweis einer konkreten Laufzeitkonfiguration.",
+            "Konfigurationswert in appsettings.json oder eine typisierte Options-Klasse auslagern."),
+        MagicValueCategory.ConstantCandidates => (
+            "Statisches Format-String-/Schwellenwert-/Wiederholungs- oder const-Duplikat-Muster im angeforderten C#-Scope; keine Aussage über fachliche Änderungsfrequenz.",
+            "Wert als benannte Konstante in einer fachlich passenden Constants-Klasse bündeln."),
+        MagicValueCategory.EnumCandidates => (
+            "Statische Folge von mindestens drei Vergleichen desselben Identifiers im angeforderten C#-Scope; keine Aussage über weitere dynamische Werte.",
+            "Diskreten Wertebereich als Enum modellieren und die Vergleichskaskade darauf umstellen."),
+        MagicValueCategory.NameofCandidates => (
+            "Statischer exakter Abgleich eines String-Literals mit einem Symbolnamen im angeforderten C#-Scope; keine Laufzeit- oder Serialisierungssemantik.",
+            "String durch nameof(Symbol) ersetzen, sofern der externe Vertrag dadurch unverändert bleibt."),
+        MagicValueCategory.LocalizationCandidates => (
+            "Statischer langer Text als Argument eines Exception-Konstruktors im angeforderten C#-Scope; kein Nachweis der tatsächlichen Benutzeroberfläche.",
+            "Benutzerorientierten Text über IStringLocalizer oder eine .resx-Ressource beziehen."),
+        MagicValueCategory.StandardCandidates => (
+            "Statischer HTTP-Statuscode oder kontextgebundene Buffer-Größe im angeforderten C#-Scope; kein Nachweis der konkreten Framework-Version.",
+            "Verfügbare Framework-/Standardkonstante wie StatusCodes.StatusXXX oder eine benannte Buffer-Konstante verwenden."),
+        MagicValueCategory.SecurityCandidates => (
+            "Statisches Secret-/Credential-Muster im angeforderten C#-Scope; kein Nachweis, ob ein Secret-Store zur Laufzeit verwendet wird.",
+            "Credential aus dem Quelltext entfernen und über Secret-Store/KeyVault oder sichere Laufzeitkonfiguration beziehen."),
+        _ => ("Statische Magic-Value-Heuristik im angeforderten C#-Scope.", "Kandidaten manuell prüfen."),
+    };
 }

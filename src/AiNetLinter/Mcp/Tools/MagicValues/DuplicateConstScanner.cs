@@ -12,13 +12,17 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace AiNetLinter.Mcp.Tools.MagicValues;
 
 /// <summary>
-/// Erkennt duplizierte const-Felder (constant_candidates) über mehrere Dokumente.
+/// Erkennt duplizierte const-Felder (constant_candidates) über mehrere Dokumente. Suppression
+/// und die Ein-Kategorie-pro-Fundstelle-Regel werden hier explizit mit dem normalen Walker
+/// synchron gehalten.
 /// </summary>
 internal static class DuplicateConstScanner
 {
     internal static async Task DetectDuplicateConstFieldsAsync(
         List<RawMagicValue> sink,
         IReadOnlyList<(Document Document, string FilePath)> matchingDocuments,
+        MagicValueValueType? valueTypeFilter,
+        bool includeSuppressed,
         CancellationToken ct)
     {
         var groups = new Dictionary<(string Type, string FieldName, string Value), List<DuplicateConstEntry>>();
@@ -26,16 +30,17 @@ internal static class DuplicateConstScanner
         foreach (var (document, filePath) in matchingDocuments)
         {
             ct.ThrowIfCancellationRequested();
-            await CollectFromDocumentAsync(document, filePath, groups, ct).ConfigureAwait(false);
+            await CollectFromDocumentAsync(document, filePath, groups, includeSuppressed, ct).ConfigureAwait(false);
         }
 
-        EmitDuplicateConstGroups(sink, groups);
+        EmitDuplicateConstGroups(sink, groups, valueTypeFilter);
     }
 
     private static async Task CollectFromDocumentAsync(
         Document document,
         string filePath,
         Dictionary<(string Type, string FieldName, string Value), List<DuplicateConstEntry>> groups,
+        bool includeSuppressed,
         CancellationToken ct)
     {
         if (document.SourceCodeKind != SourceCodeKind.Regular) return;
@@ -45,20 +50,32 @@ internal static class DuplicateConstScanner
         var root = await tree.GetRootAsync(ct).ConfigureAwait(false);
         if (root.ContainsDiagnostics) return;
 
-        CollectDuplicateConstFields(root, filePath, groups);
+        CollectDuplicateConstFields(root, filePath, groups, includeSuppressed);
     }
 
     private static void EmitDuplicateConstGroups(
         List<RawMagicValue> sink,
-        Dictionary<(string Type, string FieldName, string Value), List<DuplicateConstEntry>> groups)
+        Dictionary<(string Type, string FieldName, string Value), List<DuplicateConstEntry>> groups,
+        MagicValueValueType? valueTypeFilter)
     {
         const int MinDifferentFiles = 2;
         foreach (var (key, entries) in groups)
         {
             if (!HasEnoughDistinctFiles(entries, MinDifferentFiles)) continue;
+            var valueType = key.Type.Contains("string", StringComparison.OrdinalIgnoreCase)
+                ? MagicValueValueType.String
+                : MagicValueValueType.Number;
+            if (valueTypeFilter is not null && valueTypeFilter != valueType) continue;
             var recommendation = BuildDuplicateConstRecommendation(entries);
             foreach (var entry in entries)
             {
+                // Ein const-Literal kann zusaetzlich etwa als URL-/Pfad-Kandidat durch den
+                // normalen Walker erkannt worden sein. Die Duplikat-Heuristik ist die
+                // spezifischere Kategorie; pro Fundstelle bleibt daher genau ein Kandidat.
+                sink.RemoveAll(existing =>
+                    string.Equals(existing.FilePath, entry.FilePath, StringComparison.OrdinalIgnoreCase)
+                    && existing.Line == entry.Line
+                    && existing.Column == entry.Column);
                 sink.Add(BuildDuplicateConstRawValue(entry, key, recommendation));
             }
         }
@@ -99,7 +116,8 @@ internal static class DuplicateConstScanner
     private static void CollectDuplicateConstFields(
         SyntaxNode root,
         string filePath,
-        Dictionary<(string Type, string FieldName, string Value), List<DuplicateConstEntry>> groups)
+        Dictionary<(string Type, string FieldName, string Value), List<DuplicateConstEntry>> groups,
+        bool includeSuppressed)
     {
         foreach (var fieldDecl in root.DescendantNodes().OfType<FieldDeclarationSyntax>())
         {
@@ -110,7 +128,7 @@ internal static class DuplicateConstScanner
 
             foreach (var variable in fieldDecl.Declaration.Variables)
             {
-                TryAddVariableToGroups(variable, fieldDecl, typeText, filePath, groups);
+                TryAddVariableToGroups(variable, fieldDecl, typeText, filePath, groups, includeSuppressed);
             }
         }
     }
@@ -125,11 +143,13 @@ internal static class DuplicateConstScanner
         FieldDeclarationSyntax fieldDecl,
         string typeText,
         string filePath,
-        Dictionary<(string Type, string FieldName, string Value), List<DuplicateConstEntry>> groups)
+        Dictionary<(string Type, string FieldName, string Value), List<DuplicateConstEntry>> groups,
+        bool includeSuppressed)
     {
         if (variable.Initializer?.Value is not LiteralExpressionSyntax literal) return;
         var value = literal.Token.ValueText;
         if (string.IsNullOrEmpty(value)) return;
+        if (!includeSuppressed && MagicValuesClassifier.IsSuppressed(literal)) return;
 
         var entry = CreateDuplicateConstEntry(variable, fieldDecl, literal, filePath);
         if (entry is null) return;

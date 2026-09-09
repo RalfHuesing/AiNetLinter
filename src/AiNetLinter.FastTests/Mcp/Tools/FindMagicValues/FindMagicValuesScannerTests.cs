@@ -281,7 +281,10 @@ public sealed class Bar
             CancellationToken: CancellationToken.None));
 
         Assert.False(result.IsMalfunction);
-        Assert.Null(result.Payload);
+        Assert.NotNull(result.Payload);
+        Assert.Equal("not_decidable", result.Payload!.Summary.Status);
+        Assert.Equal(0, result.Payload.Summary.FilesInScope);
+        Assert.Equal(7, result.Payload.Categories.Count);
         Assert.Contains("Keine Dateien im Scope", result.Text, StringComparison.Ordinal);
     }
 
@@ -314,6 +317,12 @@ public sealed class F{i}
         Assert.Equal(2, result.Payload!.MagicValues.Count);
         Assert.True(result.IsTruncated);
         Assert.Equal(5, result.Payload!.Summary.Total);
+        Assert.Equal("truncated", result.Payload.Summary.Status);
+        Assert.Equal(2, result.Payload.Summary.ReturnedCount);
+        Assert.Equal(3, result.Payload.Summary.TruncatedBy);
+        Assert.Equal("continue", result.Payload.Summary.Next!.Action);
+        Assert.Equal("truncated", Assert.Single(result.Payload.Categories,
+            category => category.Category == "config_candidates").Status);
         Assert.Contains("Treffer gesamt", result.Text, StringComparison.Ordinal);
     }
 
@@ -333,6 +342,11 @@ public sealed class Foo
         Assert.Equal("config_candidates", entry.Category);
         Assert.NotNull(result.Payload!.Summary);
         Assert.Equal(1, result.Payload!.Summary.Total);
+        Assert.Equal("checked", result.Payload.Summary.Status);
+        Assert.Equal("candidate", result.Payload.ResultType);
+        Assert.Equal("candidate", entry.ResultType);
+        Assert.NotEmpty(entry.EvidenceBoundary);
+        Assert.NotEmpty(entry.Scope);
     }
 }
 

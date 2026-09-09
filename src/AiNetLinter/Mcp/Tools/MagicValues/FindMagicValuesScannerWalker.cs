@@ -228,6 +228,9 @@ internal sealed class MagicValueSyntaxWalker : CSharpSyntaxWalker
             foreach (var literal in pair.Value)
             {
                 if (enumClassifiedLiterals.Contains(literal)) continue;
+                if (!IsInScope(literal.Kind())) continue;
+                if (!context.IncludeSuppressed && MagicValuesClassifier.IsSuppressed(literal)) continue;
+                if (MagicValuesClassifier.IsFilteredOut(literal, context.IgnoreNumbers)) continue;
                 enumClassifiedLiterals.Add(literal);
                 var lineSpan = literal.GetLocation().GetLineSpan();
                 var line = lineSpan.StartLinePosition.Line + 1;

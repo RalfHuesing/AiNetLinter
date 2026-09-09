@@ -49,15 +49,14 @@ internal static class FindMagicValuesScanner
 
         var matchingDocuments = SelectDocuments(p.Solution, p.ScopeFilter, p.IncludeTests, changedFiles);
 
-        if (matchingDocuments.Count == 0
-            && (!string.IsNullOrWhiteSpace(p.ScopeFilter) || p.ChangedOnly || !p.IncludeTests))
+        if (matchingDocuments.Count == 0)
         {
-            return new FindMagicValuesResult(
-                Text: BuildEmptyScopeText(p.ScopeFilter, p.ChangedOnly, p.IncludeTests),
-                Payload: null,
-                IsMalfunction: false,
-                IsTruncated: false,
-                Context: null);
+            return BuildResult(
+                [],
+                p,
+                matchingFileCount: 0,
+                scopeStatus: "not_decidable",
+                scopeCause: BuildEmptyScopeCause(p));
         }
 
         var ignoreNumbers = p.IgnoreNumbers is null
@@ -72,7 +71,8 @@ internal static class FindMagicValuesScanner
         // Per-Literal-SyntaxWalker, der pro Literal klassifiziert).
         if (raw.Count > 0 || malfunctionContext is null)
         {
-            await DuplicateConstScanner.DetectDuplicateConstFieldsAsync(raw, matchingDocuments, p.CancellationToken);
+            await DuplicateConstScanner.DetectDuplicateConstFieldsAsync(
+                raw, matchingDocuments, p.ValueType, p.IncludeSuppressed, p.CancellationToken);
         }
 
         // Wenn kein einziges Dokument erfolgreich war UND wir einen Fehler gesehen haben, ist
@@ -156,14 +156,15 @@ internal static class FindMagicValuesScanner
         changed.Add(normalized);
     }
 
-    private static string BuildEmptyScopeText(string? scopeFilter, bool changedOnly, bool includeTests)
+    private static string BuildEmptyScopeCause(FindMagicValuesScannerParameters p)
     {
         var reasons = new List<string>();
-        if (!string.IsNullOrWhiteSpace(scopeFilter)) reasons.Add($"Scope-Filter '{scopeFilter}'");
-        if (changedOnly) reasons.Add("changedOnly aktiv (kein Git-Diff oder keine geaenderten Dateien)");
-        if (!includeTests) reasons.Add("Test-Pfade ausgefiltert");
+        if (!string.IsNullOrWhiteSpace(p.ScopeFilter)) reasons.Add($"Scope-Filter '{p.ScopeFilter}'");
+        if (p.ChangedOnly) reasons.Add("changedOnly aktiv (kein Git-Diff oder keine geaenderten Dateien)");
+        if (!p.IncludeTests) reasons.Add("Test-Pfade ausgefiltert");
         var reasonText = reasons.Count == 0 ? "keine passenden Dateien" : string.Join(" + ", reasons);
-        return $"Keine Dateien im Scope ({reasonText}) — Filter pruefen.";
+        return $"Keine analysierbaren C#-Dateien im angeforderten Scope ({reasonText}); " +
+            "das Ergebnis ist nicht entscheidbar und keine Aussage über Dateien außerhalb des Scopes.";
     }
 
     /// <summary>Iteriert ueber alle matchenden Documents und sammelt Roh-Funde plus
@@ -216,11 +217,19 @@ internal static class FindMagicValuesScanner
     private static FindMagicValuesResult BuildResult(
         List<RawMagicValue> raw,
         FindMagicValuesScannerParameters p,
-        int matchingFileCount)
+        int matchingFileCount,
+        string? scopeStatus = null,
+        string? scopeCause = null)
     {
         var grouped = AggregateAndFilter(raw, p.MinOccurrences, p.Category);
-        var report = FormatReport(grouped, matchingFileCount, p.ScopeFilter, p.MaxResults);
-        var payload = BuildPayload(grouped, p.MaxResults);
+        var payload = BuildPayload(
+            grouped,
+            p.MaxResults,
+            p,
+            matchingFileCount,
+            scopeStatus,
+            scopeCause);
+        var report = FormatReport(grouped, payload, p.MaxResults);
 
         return new FindMagicValuesResult(
             Text: report,
@@ -340,38 +349,85 @@ internal static class FindMagicValuesScanner
 
     private static string FormatReport(
         IReadOnlyList<GroupedMagicValue> grouped,
-        int matchingFileCount,
-        string? scopeFilter,
+        FindMagicValuesPayload payload,
         int maxResults)
     {
-        var scopeSuffix = string.IsNullOrWhiteSpace(scopeFilter) ? "" : $" | Scope-Filter: '{scopeFilter}'";
-        var totalOccurrences = grouped.Sum(g => g.Occurrences);
-
         var sb = new StringBuilder();
-        sb.AppendLine(
-            $"Magic-Value-Audit: {totalOccurrences} Treffer in {grouped.Count} eindeutigen Einträgen " +
-            $"über {matchingFileCount} Dateien im Scope{scopeSuffix}");
+        var summary = payload.Summary;
+        sb.AppendLine($"Magic-Value-Audit: {summary.TotalOccurrences} Treffer gesamt in {summary.Total} eindeutigen Einträgen " +
+            $"über {summary.FilesInScope} Dateien im Scope");
+        sb.AppendLine($"Status: {summary.Status}; resultType={summary.ResultType}; Confidence: {summary.Confidence}");
+        sb.AppendLine($"Scope: {summary.Scope}");
+        sb.AppendLine($"Ursache: {summary.Cause}");
+        if (summary.Next is not null)
+        {
+            sb.AppendLine($"Naechster Schritt: {summary.Next.Action} — {summary.Next.Reason}");
+        }
+        sb.AppendLine($"Truncation: total={summary.Total}, returnedCount={summary.ReturnedCount}, " +
+            $"truncatedBy={summary.TruncatedBy}");
         sb.AppendLine();
 
+        sb.AppendLine("Kategorien:");
+        foreach (var category in payload.Categories)
+        {
+            sb.AppendLine($"- {category.Category}: status={category.Status}, total={category.Total}, " +
+                $"returnedCount={category.ReturnedCount}, truncatedBy={category.TruncatedBy}, " +
+                $"confidence={category.Confidence}");
+            sb.AppendLine($"  Ursache: {category.Cause}");
+            sb.AppendLine($"  Evidence: {category.EvidenceBoundary}");
+            sb.AppendLine($"  Scope: {category.Scope}");
+            sb.AppendLine($"  Empfehlung: {category.Recommendation}");
+            sb.AppendLine($"  Naechster Schritt: {category.Next.Action} — {category.Next.Reason}");
+        }
+
+        sb.AppendLine();
         if (grouped.Count == 0)
         {
-            sb.AppendLine("Keine Magic Values.");
+            sb.AppendLine(summary.Status == "not_decidable"
+                ? "Keine Dateien im Scope; dadurch ist der Scan nicht entscheidbar."
+                : "Keine Magic Values im geprüften Scope.");
             return sb.ToString().TrimEnd();
         }
 
         var lines = grouped
+            .Take(maxResults)
             .Select(g => $"{g.FilePath}:{g.FirstLine} - {g.Category.ToStringValue()}: " +
                          $"{(g.ValueType == MagicValueValueType.Number ? g.Value : $"\"{g.Value}\"")} " +
-                         $"({g.Occurrences}x, Empfehlung: {g.Recommendation})")
+                         $"({g.Occurrences}x, Empfehlung: {g.Recommendation}; " +
+                         $"Evidenz: {g.Category.Semantics().EvidenceBoundary}; Scope: {summary.Scope})")
             .ToList();
 
-        sb.AppendLine(McpTruncation.TruncateLines(lines, grouped.Count, maxResults));
+        sb.AppendLine(string.Join("\n", lines));
+        if (summary.TruncatedBy > 0)
+        {
+            sb.AppendLine($"[{summary.Total} Einträge gesamt, {summary.ReturnedCount} gezeigt — " +
+                $"{summary.Next!.Action}: {summary.Next.Reason}]");
+        }
         return sb.ToString().TrimEnd();
     }
 
-    private static FindMagicValuesPayload BuildPayload(IReadOnlyList<GroupedMagicValue> grouped, int maxResults)
+    private static FindMagicValuesPayload BuildPayload(
+        IReadOnlyList<GroupedMagicValue> grouped,
+        int maxResults,
+        FindMagicValuesScannerParameters p,
+        int matchingFileCount,
+        string? scopeStatus,
+        string? scopeCause)
     {
         var shown = grouped.Take(maxResults).ToList();
+        var scope = BuildScopeDescription(p, matchingFileCount);
+        var total = grouped.Count;
+        var returnedCount = shown.Count;
+        var totalOccurrences = grouped.Sum(g => g.Occurrences);
+        var returnedOccurrences = shown.Sum(g => g.Occurrences);
+        var status = scopeStatus ?? DetermineStatus(matchingFileCount, total, returnedCount);
+        var cause = scopeCause ?? DetermineCause(status, matchingFileCount, total, returnedCount);
+        var categories = Enum.GetValues<MagicValueCategory>()
+            .Select(category => BuildCategorySummary(category, grouped, shown, status, cause, scope, matchingFileCount))
+            .ToList();
+        var summarySemantics = ("Statische Syntax-/Semantik-Heuristik über C#-Literale im angeforderten Scope; " +
+            "keine Laufzeit-, externen Consumer- oder globale Abwesenheitsaussage.",
+            "Kandidaten manuell prüfen; keine automatische Änderung aus dem Audit ableiten.");
         return new FindMagicValuesPayload(
             MagicValues: shown.Select(g => new MagicValueEntry(
                 FilePath: g.FilePath,
@@ -382,12 +438,101 @@ internal static class FindMagicValuesScanner
                 Category: g.Category.ToStringValue(),
                 Recommendation: g.Recommendation,
                 ContextHint: g.ContextHint,
-                Occurrences: g.Occurrences)).ToList(),
+                Occurrences: g.Occurrences,
+                EvidenceBoundary: g.Category.Semantics().EvidenceBoundary,
+                Scope: scope)).ToList(),
+            Categories: categories,
             Summary: new MagicValuesSummary(
-                Total: grouped.Count,
-                ShownOccurrences: shown.Count,
+                Total: total,
+                ShownOccurrences: returnedCount,
                 ByCategoryConfig: grouped.Count(g => g.Category == MagicValueCategory.ConfigCandidates),
                 ByCategoryConstant: grouped.Count(g => g.Category == MagicValueCategory.ConstantCandidates),
-                ByCategoryStandard: grouped.Count(g => g.Category == MagicValueCategory.StandardCandidates)));
+                ByCategoryStandard: grouped.Count(g => g.Category == MagicValueCategory.StandardCandidates),
+                ByCategoryEnum: grouped.Count(g => g.Category == MagicValueCategory.EnumCandidates),
+                ByCategoryNameof: grouped.Count(g => g.Category == MagicValueCategory.NameofCandidates),
+                ByCategoryLocalization: grouped.Count(g => g.Category == MagicValueCategory.LocalizationCandidates),
+                ByCategorySecurity: grouped.Count(g => g.Category == MagicValueCategory.SecurityCandidates),
+                ReturnedCount: returnedCount,
+                TotalOccurrences: totalOccurrences,
+                ReturnedOccurrences: returnedOccurrences,
+                FilesInScope: matchingFileCount,
+                Status: status,
+                Cause: cause,
+                Confidence: DetermineConfidence(status),
+                Next: BuildNextAction(status),
+                TruncatedBy: total - returnedCount,
+                EvidenceBoundary: summarySemantics.Item1,
+                Scope: scope,
+                Recommendation: summarySemantics.Item2));
+    }
+
+    private static MagicValueCategorySummary BuildCategorySummary(
+        MagicValueCategory category,
+        IReadOnlyList<GroupedMagicValue> grouped,
+        IReadOnlyList<GroupedMagicValue> shown,
+        string overallStatus,
+        string overallCause,
+        string scope,
+        int matchingFileCount)
+    {
+        var categoryGroups = grouped.Where(g => g.Category == category).ToList();
+        var returned = shown.Count(g => g.Category == category);
+        var total = categoryGroups.Count;
+        var status = overallStatus == "not_decidable"
+            ? "not_decidable"
+            : DetermineStatus(total, returned);
+        var cause = overallStatus == "not_decidable"
+            ? overallCause
+            : DetermineCause(status, matchingFileCount, total, returned);
+        var semantics = category.Semantics();
+        return new MagicValueCategorySummary(
+            Category: category.ToStringValue(),
+            Total: total,
+            ReturnedCount: returned,
+            Status: status,
+            Cause: cause,
+            Confidence: DetermineConfidence(status),
+            Next: BuildNextAction(status),
+            TruncatedBy: total - returned,
+            EvidenceBoundary: semantics.EvidenceBoundary,
+            Scope: scope,
+            Recommendation: semantics.Recommendation);
+    }
+
+    private static string DetermineStatus(int matchingFileCount, int total, int returnedCount) =>
+        matchingFileCount == 0 ? "not_decidable" : DetermineStatus(total, returnedCount);
+
+    private static string DetermineStatus(int total, int returnedCount) =>
+        total == 0 ? "empty" : returnedCount < total ? "truncated" : "checked";
+
+    private static string DetermineCause(string status, int matchingFileCount, int total, int returnedCount) => status switch
+    {
+        "not_decidable" => "Keine analysierbaren C#-Dateien im angeforderten Scope; dies ist keine Aussage außerhalb des Scopes.",
+        "empty" => $"Keine Kandidaten in den {matchingFileCount} geprüften Dateien; dies ist keine globale Abwesenheitsbehauptung.",
+        "truncated" => $"{returnedCount} von {total} Kandidaten gezeigt; weitere Kandidaten sind durch maxResults ausgeblendet.",
+        _ => $"Alle {total} Kandidaten im angeforderten Scope wurden geprüft.",
+    };
+
+    private static string DetermineConfidence(string status) => status switch
+    {
+        "checked" or "empty" => "high",
+        "truncated" => "medium",
+        _ => "low",
+    };
+
+    private static MagicValueNextAction BuildNextAction(string status) => status switch
+    {
+        "not_decidable" => new("inspect_scope", "Scope-Filter, IncludeTests und changedOnly prüfen; danach den Scan wiederholen."),
+        "empty" => new("refine_scope", "Bei Bedarf Scope oder Heuristikfilter anpassen; kein globaler Clean-Claim."),
+        "truncated" => new("continue", "maxResults erhöhen oder den Scope beziehungsweise categoryFilter verfeinern."),
+        _ => new("review_candidates", "Kandidaten und Evidenz prüfen; keine automatische Änderung ableiten."),
+    };
+
+    private static string BuildScopeDescription(FindMagicValuesScannerParameters p, int matchingFileCount)
+    {
+        var filter = string.IsNullOrWhiteSpace(p.ScopeFilter) ? "ohne scopeFilter" : $"scopeFilter='{p.ScopeFilter}'";
+        var tests = p.IncludeTests ? "Tests eingeschlossen" : "Tests ausgeschlossen";
+        var changed = p.ChangedOnly ? "nur geänderte Dateien" : "alle passenden Dateien";
+        return $"{matchingFileCount} analysierbare C#-Dateien ({filter}; {tests}; {changed})";
     }
 }

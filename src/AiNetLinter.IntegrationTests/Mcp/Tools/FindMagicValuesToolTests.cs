@@ -151,10 +151,15 @@ public sealed class FindMagicValuesToolTests
         Assert.Equal(JsonValueKind.Array, magicValues.ValueKind);
         Assert.True(payload.TryGetProperty("summary", out var summary));
         Assert.Equal(JsonValueKind.Object, summary.ValueKind);
+        Assert.Equal("candidate", payload.GetProperty("resultType").GetString());
+        Assert.Equal(7, payload.GetProperty("categories").GetArrayLength());
+        Assert.True(summary.TryGetProperty("status", out _));
+        Assert.True(summary.TryGetProperty("next", out var next));
+        Assert.Equal(JsonValueKind.Object, next.ValueKind);
     }
 
     [Fact]
-    public async Task ExecuteAsync_ScopeFilterNoMatch_ReturnsIsErrorFalseWithoutStructuredContent()
+    public async Task ExecuteAsync_ScopeFilterNoMatch_ReturnsStructuredNotDecidableWithoutError()
     {
         using var state = _fixture.CreateReadOnlyServer();
 
@@ -162,7 +167,12 @@ public sealed class FindMagicValuesToolTests
         var result = await FindMagicValuesTool.ExecuteAsync(state, args, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
-        Assert.Null(result.StructuredContent);
+        Assert.NotNull(result.StructuredContent);
+        Assert.Equal("not_decidable", result.StructuredContent!.Value
+            .GetProperty("summary").GetProperty("status").GetString());
+        Assert.Equal(0, result.StructuredContent.Value.GetProperty("summary")
+            .GetProperty("filesInScope").GetInt32());
+        Assert.Equal(7, result.StructuredContent.Value.GetProperty("categories").GetArrayLength());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Keine Dateien im Scope", textContent.Text, StringComparison.Ordinal);
     }

@@ -225,6 +225,42 @@ public sealed class B
     }
 
     [Fact]
+    public async Task Classify_DuplicateConstFields_OverridesOverlappingUrlAndHonorsSuppression()
+    {
+        var source1 = @"
+namespace Test.One;
+public sealed class A
+{
+    // ainetlinter-disable MagicValues
+    private const string ApiUrl = ""https://api.example.test/v1"";
+}";
+        var source2 = @"
+namespace Test.Two;
+public sealed class B
+{
+    // ainetlinter-disable MagicValues
+    private const string ApiUrl = ""https://api.example.test/v1"";
+}";
+        using var testSolution = FindMagicValuesTestHelpers.CreateSolution(
+            ("A.cs", source1),
+            ("B.cs", source2));
+
+        var suppressed = await FindMagicValuesTestHelpers.RunAsync(testSolution.Solution);
+        Assert.Empty(suppressed.Payload!.MagicValues);
+
+        var included = await FindMagicValuesTestHelpers.RunAsync(
+            testSolution.Solution,
+            options: new FindMagicValuesRunOptions(IncludeSuppressed: true));
+
+        Assert.Equal(2, included.Payload!.MagicValues.Count);
+        Assert.All(included.Payload.MagicValues, entry =>
+        {
+            Assert.Equal("constant_candidates", entry.Category);
+            Assert.Equal("https://api.example.test/v1", entry.Value);
+        });
+    }
+
+    [Fact]
     public async Task Classify_DuplicateConstFields_OnlyOneOccurrence_IsNotReported()
     {
         // Nur ein const-Feld mit Wert 12345 â€” Schwelle ist â‰¥ 2 Vorkommen in â‰¥ 2 Files,
@@ -294,6 +330,33 @@ public sealed class Foo
             Assert.Equal("enum_candidates", e.Category);
             Assert.Contains("enum Status", e.Recommendation, StringComparison.Ordinal);
         });
+    }
+
+    [Fact]
+    public async Task Classify_EnumCandidates_HonorsIgnoreNumbersAndCommonFilters()
+    {
+        const string source = @"
+namespace Test;
+public sealed class Foo
+{
+    public bool IsKnown(int status)
+    {
+        if (status == 200) return true;
+        else if (status == 301) return true;
+        else if (status == 404) return true;
+        return false;
+    }
+}";
+
+        var result = await FindMagicValuesTestHelpers.RunAsync(
+            ("Foo.cs", source),
+            valueType: MagicValueValueType.Number,
+            category: MagicValueCategory.EnumCandidates,
+            ignoreNumbers: new HashSet<int> { 200, 301 });
+
+        var entry = Assert.Single(result.Payload!.MagicValues);
+        Assert.Equal("404", entry.Value);
+        Assert.Equal("enum_candidates", entry.Category);
     }
 
     [Fact]

@@ -163,6 +163,7 @@ public sealed class McpServerArgumentValidationE2ETests
     [InlineData("get_type_hierarchy", "symbol")]
     [InlineData("dependency_graph", "symbol")]
     [InlineData("search_pattern", "query")]
+    [InlineData("find_magic_values", "query")]
     [InlineData("get_file_skeleton", "filePath")]
     public async Task TargetPathTools_RejectUnknownArguments(string toolName, string unknownKey)
     {
