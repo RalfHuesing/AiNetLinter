@@ -2,10 +2,12 @@
 
 using System.Text.Json;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.ServerMaintenance;
 using AiNetLinter.IntegrationTests.Platform;
 using AiNetLinter.TestKit;
@@ -247,6 +249,43 @@ public sealed class GetServerHealthToolTests
         Assert.Contains(entries[0].TargetPath, text, StringComparison.Ordinal);
         Assert.Contains(entries[1].TargetPath, text, StringComparison.Ordinal);
         Assert.DoesNotContain(entries[2].TargetPath, text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_PartialAssemblyUsesSameNextActionAsNavigation()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-health-partial-next-");
+        var assemblyPath = Path.Combine(tempDir.DirectoryPath, "partial-health-probe.dll");
+        File.WriteAllBytes(assemblyPath, [0]);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(assemblyPath)).Target);
+        var diagnostics = Enumerable.Range(0, AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics + 1)
+            .Select(index => $"partial-decompilation-diagnostic-{index}")
+            .ToArray();
+        var raw = GetServerHealthResponseBuilder.Build(
+            Array.Empty<ProjectSnapshot>(),
+            [new AssemblyHealthEntry(
+                assemblyPath,
+                "partial",
+                "decompiled",
+                null,
+                null,
+                null,
+                null,
+                diagnostics,
+                Completeness: "partial",
+                NextAction: "Keine Aktion erforderlich.")],
+            new GetServerHealthOptions(IncludeDiagnostics: true));
+
+        var result = McpToolResults.WithNavigation(raw, target);
+        var payload = result.StructuredContent!.Value;
+        var assembly = Assert.Single(payload.GetProperty("assemblies").EnumerateArray());
+        var navigationNext = payload.GetProperty("navigation").GetProperty("next");
+
+        Assert.Equal("request_detail", navigationNext.GetProperty("kind").GetString());
+        Assert.Equal(
+            navigationNext.GetProperty("action").GetString(),
+            assembly.GetProperty("nextAction").GetString());
     }
 
     private static AssemblyHealthEntry CreateAssemblyEntry(string targetPath) =>

@@ -11,6 +11,8 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance.Projection;
 
 internal static class AssemblyHealthProjection
 {
+    private const string DetailNextAction = "Scope oder Detaillevel verfeinern und die Antwort gezielt wiederholen.";
+
     internal static AssemblyHealthEntry FromSnapshot(AssemblyAnalysisHealthSnapshot snapshot) =>
         new(
             snapshot.TargetPath,
@@ -79,8 +81,20 @@ internal static class AssemblyHealthProjection
             DiagnosticsSummary = summary,
             Completeness = effectiveCompleteness,
             TransitiveDiagnostics = null,
+            NextAction = ResolveNextAction(assembly.NextAction, effectiveLoadState, effectiveCompleteness, summary),
         };
     }
+
+    private static string? ResolveNextAction(
+        string? current,
+        string effectiveLoadState,
+        string effectiveCompleteness,
+        AssemblyDiagnosticsSummary summary) =>
+        effectiveLoadState is "partial" or "degraded"
+            || effectiveCompleteness is "partial" or "degraded"
+            || summary.Truncated
+            ? DetailNextAction
+            : current;
 
     internal static IReadOnlyDictionary<string, int> CountStatuses(
         IEnumerable<AssemblyHealthEntry> assemblies) =>
