@@ -11,6 +11,7 @@ using AiNetLinter.FastTests.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.TestKit;
@@ -196,45 +197,54 @@ public sealed class AssemblyAnalysisRegistryTests
             "RegistryAba",
             "namespace Probe; public sealed class First { public void Run() { } }");
         await using var registry = new AssemblyAnalysisRegistry();
+        AssemblyAnalysisLease? first = null;
+        AssemblyAnalysisLease? second = null;
+        AssemblyAnalysisLease? third = null;
+        try
+        {
+            first = (await registry.LeaseAsync(assemblyPath)).Lease!;
+            var firstSymbol = first.Context.Compilation.GetTypeByMetadataName("Probe.First")!;
+            var firstId = CallGraphTraversal.GetStableSymbolId(firstSymbol, first.Server.AssemblySymbolIdentity);
+            var firstGeneration = first.Context.Generation;
 
-        var first = (await registry.LeaseAsync(assemblyPath)).Lease!;
-        var firstSymbol = first.Context.Compilation.GetTypeByMetadataName("Probe.First")!;
-        var firstId = CallGraphTraversal.GetStableSymbolId(firstSymbol, first.Server.AssemblySymbolIdentity);
-        var firstGeneration = first.Context.Generation;
+            AssemblyTestHelper.EmitAssembly(
+                temp,
+                "RegistryAba",
+                "namespace Probe; public sealed class Second { public void Run() { } }");
+            second = (await registry.LeaseAsync(assemblyPath)).Lease!;
+            var secondGeneration = second.Context.Generation;
 
-        AssemblyTestHelper.EmitAssembly(
-            temp,
-            "RegistryAba",
-            "namespace Probe; public sealed class Second { public void Run() { } }");
-        var second = (await registry.LeaseAsync(assemblyPath)).Lease!;
-        var secondGeneration = second.Context.Generation;
+            second.Dispose();
+            second = null;
+            AssemblyTestHelper.EmitAssembly(
+                temp,
+                "RegistryAba",
+                "namespace Probe; public sealed class First { public void Run() { } }");
+            third = (await registry.LeaseAsync(assemblyPath)).Lease!;
+            var thirdGeneration = third.Context.Generation;
 
-        second.Dispose();
-        AssemblyTestHelper.EmitAssembly(
-            temp,
-            "RegistryAba",
-            "namespace Probe; public sealed class First { public void Run() { } }");
-        var third = (await registry.LeaseAsync(assemblyPath)).Lease!;
-        var thirdGeneration = third.Context.Generation;
+            Assert.True(firstGeneration < secondGeneration);
+            Assert.True(secondGeneration < thirdGeneration);
+            Assert.NotEqual(first.Server.AssemblySymbolIdentity, third.Server.AssemblySymbolIdentity);
 
-        Assert.True(firstGeneration < secondGeneration);
-        Assert.True(secondGeneration < thirdGeneration);
-        Assert.NotEqual(first.Server.AssemblySymbolIdentity, third.Server.AssemblySymbolIdentity);
+            var (staleSymbol, staleError) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+                third.Server.GetCurrentSolution()!,
+                firstId,
+                CancellationToken.None,
+                third.Server.AssemblySymbolIdentity);
 
-        var (staleSymbol, staleError) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
-            third.Server.GetCurrentSolution()!,
-            firstId,
-            CancellationToken.None,
-            third.Server.AssemblySymbolIdentity);
-
-        Assert.Null(staleSymbol);
-        Assert.NotNull(staleError);
-        Assert.Contains(
-            "aktuellen Assembly-Generation",
-            Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(staleError!.Content)).Text);
-
-        third.Dispose();
-        first.Dispose();
+            Assert.Null(staleSymbol);
+            Assert.NotNull(staleError);
+            Assert.Contains(
+                "STALE_SNAPSHOT",
+                Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(staleError!.Content)).Text);
+        }
+        finally
+        {
+            third?.Dispose();
+            second?.Dispose();
+            first?.Dispose();
+        }
     }
 
     [Fact]
