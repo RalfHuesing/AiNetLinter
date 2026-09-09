@@ -12,7 +12,7 @@
 | C-003 | Major | fixed | `find_symbol` | Referenzsuche kann bei Standardbudget unbrauchbare, inkonsistente Antworten liefern. |
 | C-004 | Minor | open | `find_symbol` | Leere Einträge eines Musterbatches werden nicht sichtbar validiert. |
 | D-001 | Major | fixed | `find_symbol`, `get_file_tree`, `get_server_health` | Schema-Typfehler werden generisch statt handlungsweisend zurückgegeben. |
-| D-002 | Major | open | `get_file_tree` | Ein Ressourcenfehler wird in der Navigation als erfolgreicher vollständiger Vorgang markiert. |
+| D-002 | Major | fixed | `get_file_tree` | Ein Ressourcenfehler wird in der Navigation als erfolgreicher vollständiger Vorgang markiert. |
 | D-003 | Major | open | `find_symbol` | Konkurrenz zwischen Suchparametern wird ohne Hinweis stillschweigend aufgelöst. |
 | E-001 | Major | open | `search_pattern` | Zwei Next-Hinweise widersprechen sich bei leeren Ergebnissen. |
 | E-002 | Minor | open | `find_symbol`, `get_file_tree` | Der Grenzwert null für Ergebnislimits wird uneinheitlich behandelt. |

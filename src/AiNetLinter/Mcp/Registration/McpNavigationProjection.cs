@@ -109,6 +109,7 @@ internal static class McpNavigationProjection
             [ProjectErrorCodes.RulesInvalid] = "error",
             [LinterErrorCodes.ConfigInvalid] = "error",
             [LinterErrorCodes.ConfigNotFound] = "error",
+            [LinterErrorCodes.ResourceNotFound] = "resource_not_found",
             [ProjectErrorCodes.ProjectNotInitialized] = "target_mismatch",
             [ProjectErrorCodes.ProjectLoadFailed] = "target_mismatch",
         };
@@ -178,7 +179,7 @@ internal static class McpNavigationProjection
             "error" => HasFeatureContextSectionFailure(structured) ? "partial" : "not_applicable",
             "invalid_argument" or "target_mismatch" or "stale_snapshot" or
                 "symbol_not_found" or "ambiguous_symbol" or "invalid_assembly" or
-                "target_unreadable" => "not_applicable",
+                "target_unreadable" or "resource_not_found" => "not_applicable",
             _ => null,
         };
 
