@@ -36,6 +36,11 @@ Der `targetPath` bestimmt den Modus:
 - `.sln` / `.slnx` → **Source-Modus**: voller Roslyn-Index, echte Symbol-IDs, Chaining vollständig möglich
 - `.dll` / `.exe` → **Assembly-Modus**: Decompile-Stubs, `find_symbol` nur snapshot-basiert, Chaining eingeschränkt ohne `includeReferences=true`
 
+Im Assembly-Modus funktioniert jede beliebige `.NET`-Assembly als Ziel — nicht
+nur der eigene Release-Build. Eine fremde DLL (z.B. eine Kunden-Assembly) zu
+übergeben ist ein nützlicher Vorab-Test: Der Audit zeigt ob AiNetLinter mit dem
+konkreten Assembly korrekt umgeht, bevor man es in der echten Entwicklung einsetzt.
+
 ---
 
 ## Subagenten-Architektur

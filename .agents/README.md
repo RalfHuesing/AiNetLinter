@@ -56,5 +56,7 @@ targetPath: C:\Daten\Entwicklung\Ralf\AiNetLinter\src\AiNetLinter\bin\Release\ne
 
 Ohne `targetPath` verwendet der Skill automatisch `AiNetLinter.slnx` im
 Repository-Root (Source-Modus). Mit `.exe`- oder `.dll`-Pfad läuft der Audit
-im Assembly-Modus gegen den Release-Build — sinnvoll nach einem Release um zu
-prüfen ob das Binary denselben Qualitätsstand hat wie der Quellcode.
+im Assembly-Modus — funktioniert mit dem eigenen Release-Build, aber auch mit
+jeder beliebigen fremden `.NET`-Assembly (z.B. `Newtonsoft.Json.dll` oder eine
+Kunden-DLL). So lässt sich vorab prüfen ob AiNetLinter mit einem konkreten
+Assembly ordentlich umgeht, bevor man es in der echten Entwicklung einsetzt.
