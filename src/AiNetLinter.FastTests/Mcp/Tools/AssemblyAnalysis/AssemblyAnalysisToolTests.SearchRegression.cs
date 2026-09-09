@@ -78,7 +78,7 @@ public sealed partial class AssemblyAnalysisToolTests
                 assemblySearch = new
                 {
                     searchKind = "text",
-                    query = "needle",
+                    pattern = "needle",
                     root = ".",
                     scope = "assembly-source-root",
                     results = Enumerable.Range(0, 80)

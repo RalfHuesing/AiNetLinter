@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using AiNetLinter.Output;
 using AiNetLinter.Configuration;
+using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using ModelContextProtocol.Protocol;
 using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
@@ -115,7 +116,7 @@ internal static partial class AssemblyAnalysisResponse
             if (withBudget.StructuredContent is not { ValueKind: JsonValueKind.Object } structured)
             {
                 var text = withBudget.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
-                withBudget = ReplaceText(withBudget, TrimUtf8(text, Math.Max(1, budget - Measure(withBudget).StructuredBytes)));
+                withBudget = McpToolResults.ReplaceText(withBudget, TrimUtf8(text, Math.Max(1, budget - Measure(withBudget).StructuredBytes)));
                 break;
             }
 
@@ -125,7 +126,7 @@ internal static partial class AssemblyAnalysisResponse
             {
                 var text = withBudget.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
                 var remainingForText = Math.Max(1, budget - Measure(withBudget).StructuredBytes);
-                withBudget = ReplaceText(withBudget, TrimUtf8(text, remainingForText));
+                withBudget = McpToolResults.ReplaceText(withBudget, TrimUtf8(text, remainingForText));
                 break;
             }
             withBudget = ReplaceStructured(withBudget, trimmed);
@@ -144,7 +145,7 @@ internal static partial class AssemblyAnalysisResponse
             }, McpJsonOptions.Default));
             var text = withBudget.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
             var remainingForText = Math.Max(1, budget - Measure(withBudget).StructuredBytes);
-            withBudget = ReplaceText(withBudget, TrimUtf8(text, remainingForText));
+            withBudget = McpToolResults.ReplaceText(withBudget, TrimUtf8(text, remainingForText));
             withBudget = AddWireBudgetMetadata(withBudget, budget, isTruncated: true);
         }
 
@@ -380,18 +381,6 @@ internal static partial class AssemblyAnalysisResponse
             IsError = result.IsError,
             Content = result.Content,
             StructuredContent = structured,
-        };
-
-    private static CallToolResult ReplaceText(CallToolResult result, string text) =>
-        new()
-        {
-            IsError = result.IsError,
-            Content = result.Content
-                .Select(block => block is TextContentBlock
-                    ? new TextContentBlock { Text = text }
-                    : block)
-                .ToList(),
-            StructuredContent = result.StructuredContent,
         };
 
     private static WireBudgetMeasurement Measure(CallToolResult result)

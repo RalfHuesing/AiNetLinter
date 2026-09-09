@@ -440,7 +440,7 @@ Dateiscope fortsetzt.
 {
   "assemblySearch": {
     "searchKind": "data_access",
-    "query": "...",
+    "pattern": "...",
     "scope": "assembly-source-root",
     "results": [{
       "id": "asm-search:...",

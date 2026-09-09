@@ -62,7 +62,7 @@ internal sealed record AssemblySearchSelection(
 
 internal sealed record AssemblySearchPayload(
     string SearchKind,
-    string Query,
+    string Pattern,
     string Root,
     string Scope,
     IReadOnlyList<AssemblySearchMatch> Results,
