@@ -167,9 +167,12 @@ public sealed class McpServerArgumentValidationE2ETests
     [InlineData("get_file_skeleton", "filePath")]
     public async Task TargetPathTools_RejectUnknownArguments(string toolName, string unknownKey)
     {
+        var arguments = new Dictionary<string, object?> { [unknownKey] = "unknown" };
+        if (toolName == "get_feature_context") arguments["symbolIdentifier"] = "Greeter.Greet";
+
         var result = await _fixture.Client.CallToolAsync(
             toolName,
-            new Dictionary<string, object?> { [unknownKey] = "unknown" });
+            arguments);
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
