@@ -10,3 +10,4 @@
 | C-003 | Assembly-Symbolsuchen melden Treffer-, Rückgabe- und Trunkierungszähler konsistent zum gelieferten Scope. | `AssemblyRoute_FindSymbolIncludeReferencesKeepsMatchCountsConsistentUnderStandardBudget` |
 | D-001 | Typfehler in MCP-Argumenten werden vor der Bindung feldgenau als strukturierte Eingabefehler behandelt. | `WrongArgumentType_ReturnsFieldAwareRecoverableInvalidArgument` |
 | D-002 | Ressourcenfehler werden in der Navigation als nicht verfügbare, nicht anwendbare Ergebnisse statt als Erfolg ausgewiesen. | `GetFileTree_NonExistentRoot_ReturnsResourceNotFoundWithErrorNavigation` |
+| D-003 | Konkurrierende Symbolsuchparameter werden vor der Suche eindeutig und feldgenau abgewiesen. | `FindSymbol_BothPatternFormsProvided_ReturnsRecoverableInvalidArgument` |

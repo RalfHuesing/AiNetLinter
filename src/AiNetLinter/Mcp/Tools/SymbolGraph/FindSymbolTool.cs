@@ -73,6 +73,13 @@ internal static class FindSymbolTool
     internal static IReadOnlyList<string> NormalizeNamePatterns(string[]? namePatterns, string? scalar = null) =>
         NormalizeNamePatterns(new FindSymbolPatternOptions(namePatterns, scalar));
 
+    internal static CallToolResult? ValidatePatternArguments(FindSymbolPatternOptions options) =>
+        options.NamePatterns is not null && !string.IsNullOrWhiteSpace(options.Pattern)
+            ? McpToolResults.InvalidArgument(
+                "namePatterns und pattern sind gegenseitig exklusiv — genau eines angeben.",
+                hint: "Entweder namePatterns (Array) ODER pattern (ein String) angeben, nie beide.")
+            : null;
+
     internal static CallToolResult? ValidateNamePatterns(IReadOnlyList<string> patterns)
     {
         if (patterns.Count == 0)
@@ -114,8 +121,12 @@ internal static class FindSymbolTool
 
     internal static async Task<CallToolResult> ExecuteAsync(FindSymbolRequest request)
     {
-        var patterns = NormalizeNamePatterns(request.ToPatternOptions());
-        var validationError = ValidateNamePatterns(patterns) ?? ValidateKind(request.Kind);
+        var patternOptions = request.ToPatternOptions();
+        var validationError = ValidatePatternArguments(patternOptions);
+        if (validationError is not null) return validationError;
+
+        var patterns = NormalizeNamePatterns(patternOptions);
+        validationError = ValidateNamePatterns(patterns) ?? ValidateKind(request.Kind);
         if (validationError is not null) return validationError;
 
         var normalizedMaxResults = request.MaxResults < 1 ? 1 : request.MaxResults;

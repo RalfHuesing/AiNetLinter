@@ -53,24 +53,30 @@ internal static class SymbolGraphToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? namePatterns = null, string? pattern = null, string? kind = null, int maxResults = 50, bool includeReferences = false, int maxResponseBytes = 0, CancellationToken ct = default) =>
-                await TargetPathToolRegistrationOptions.ExecuteWithUnknownArgumentGuardAsync(context, () => AnalysisToolCall.ExecuteRouted(
+            {
+                var patternError = FindSymbolTool.ValidatePatternArguments(
+                    new FindSymbolPatternOptions(namePatterns, pattern));
+                if (patternError is not null) return patternError;
+
+                return await TargetPathToolRegistrationOptions.ExecuteWithUnknownArgumentGuardAsync(context, () => AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => FindSymbolTool.ExecuteAsync(
                                 new FindSymbolRequest(lease.Server, namePatterns, kind, maxResults, ct, pattern)),
-                             AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(
-                                 lease,
-                                 new AssemblyFindSymbolRequest(
-                                     FindSymbolTool.NormalizeNamePatterns(new FindSymbolPatternOptions(namePatterns, pattern)).ToArray(),
-                                     kind,
-                                     maxResults,
-                                     includeReferences),
-                                 ct),
-                             ExpandAssemblyReferences: includeReferences,
-                             MaxResponseBytes: maxResponseBytes),
-                        ct))),
+                            AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(
+                                lease,
+                                new AssemblyFindSymbolRequest(
+                                    FindSymbolTool.NormalizeNamePatterns(new FindSymbolPatternOptions(namePatterns, pattern)).ToArray(),
+                                    kind,
+                                    maxResults,
+                                    includeReferences),
+                                ct),
+                            ExpandAssemblyReferences: includeReferences,
+                            MaxResponseBytes: maxResponseBytes),
+                        ct)));
+            },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("find_symbol", FindSymbolDescription)));
     }
 
