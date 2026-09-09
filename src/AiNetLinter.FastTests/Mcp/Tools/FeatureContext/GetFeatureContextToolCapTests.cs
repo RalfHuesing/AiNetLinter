@@ -61,6 +61,9 @@ public sealed class GetFeatureContextToolCapTests
         Assert.Equal(expectedDisplayedMethods, payload.Tests.DisplayedTestMethods);
         Assert.Equal(expectedReasons.Split(','), payload.Tests.TruncatedBy);
         Assert.True(payload.Tests.IsTruncated);
+        Assert.Equal("truncated", payload.Tests.Completeness);
+        Assert.Contains("testContext", text, StringComparison.Ordinal);
+        Assert.Contains("Nächster sicherer Schritt", text, StringComparison.Ordinal);
         Assert.Equal(expectedDisplayedMethods, payload.Tests.TestFiles.Sum(file => file.TestMethods.Count));
         Assert.Equal(
             Enumerable.Range(0, payload.Tests.TestFiles.Count)

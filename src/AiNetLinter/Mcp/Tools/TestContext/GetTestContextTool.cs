@@ -50,33 +50,13 @@ internal static class GetTestContextTool
             if (symbol is null) return McpToolResults.SymbolNotFound(targetSymbol);
 
             var testResults = await TestCoverageScanner.FindTestsForSymbolAsync(symbol, solution, ct);
-            var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-            var targetFilePath = ExtractFilePath(symbol, solutionDir);
-
-            var maxResults = Math.Clamp(options.MaxResults, 1, 100);
-            var isTruncated = testResults.TestFiles.Count > maxResults;
-            var testFiles = isTruncated ? testResults.TestFiles.Take(maxResults).ToList() : testResults.TestFiles;
-            var recommendedCommands = BuildRecommendedCommands(testResults.TestFiles);
-            var isUntested = testResults.TotalMatchingTests == 0 || testResults.TestFiles.Count == 0;
-            var suggestedTestPath = isUntested
-                ? SuggestTestFilePath(symbol, targetFilePath, solution, solutionDir)
-                : null;
-
-            var payload = new TestContextPayload(
-                TargetSymbol: symbol.ToDisplayString(),
-                TargetKind: symbol.Kind.ToString(),
-                TargetFilePath: targetFilePath,
-                TotalMatchingTests: testResults.TotalMatchingTests,
-                TotalTestFiles: testResults.TestFiles.Count,
-                TestFiles: testFiles,
-                RecommendedTestCommands: recommendedCommands,
-                IsUntested: isUntested,
-                IsTruncated: isTruncated,
-                SuggestedTestFilePath: suggestedTestPath
-            );
+            var payload = BuildPayload(symbol, solution, testResults, options.MaxResults);
 
             var markdown = TestContextFormatter.FormatReport(payload);
-            return McpToolResults.Text(markdown, payload);
+            return McpToolResults.ApplyCompositeWireBudget(
+                McpToolResults.Text(markdown, payload),
+                ["testContext"],
+                rootSectionName: "testContext");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -85,6 +65,55 @@ internal static class GetTestContextTool
                 context: targetSymbol);
         }
     }
+
+    private static TestContextPayload BuildPayload(
+        ISymbol symbol,
+        Solution solution,
+        TestCoverageScannerResult testResults,
+        int requestedMaxResults)
+    {
+        var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
+        var targetFilePath = ExtractFilePath(symbol, solutionDir);
+        var maxResults = Math.Clamp(requestedMaxResults, 1, 100);
+        var isTruncated = testResults.TestFiles.Count > maxResults;
+        var testFiles = isTruncated ? testResults.TestFiles.Take(maxResults).ToList() : testResults.TestFiles;
+        var isUntested = testResults.TotalMatchingTests == 0 || testResults.TestFiles.Count == 0;
+        var completeness = isUntested ? "empty" : isTruncated ? "truncated" : "complete";
+        var nextStep = isTruncated
+            ? "Abschnitt testContext: maxResults erhöhen und die statischen Testkandidaten erneut abfragen."
+            : null;
+        var suggestedTestPath = isUntested
+            ? SuggestTestFilePath(symbol, targetFilePath, solution, solutionDir)
+            : null;
+
+        return new TestContextPayload(
+            symbol.ToDisplayString(),
+            symbol.Kind.ToString(),
+            targetFilePath,
+            testResults.TotalMatchingTests,
+            testResults.TestFiles.Count,
+            testFiles.Select(ToStaticCandidate).ToList(),
+            BuildRecommendedCommands(testResults.TestFiles),
+            isUntested,
+            isTruncated,
+            suggestedTestPath,
+            completeness,
+            testFiles.Count,
+            testFiles.Sum(file => file.TestMethods.Count),
+            isTruncated ? ["maxResults"] : [],
+            "static-test-candidates-only",
+            nextStep);
+    }
+
+    private static StaticTestCandidateFile ToStaticCandidate(TestFileCoverageResult file) =>
+        new(
+            file.FilePath,
+            file.TestClassName,
+            file.Category,
+            file.MatchReason,
+            file.TestMethods,
+            file.TotalClassTests,
+            file.ProjectDirectory);
 
     private static string ExtractFilePath(ISymbol symbol, string solutionDir)
     {

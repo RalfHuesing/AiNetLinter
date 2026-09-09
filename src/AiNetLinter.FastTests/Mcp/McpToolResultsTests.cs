@@ -2,8 +2,12 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Projects;
 using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -21,6 +25,113 @@ public sealed class McpToolResultsTests
         Assert.True(result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("[ERROR]: TEST_CODE: Testnachricht", textContent.Text);
+    }
+
+    [Fact]
+    public void ApplyCompositeWireBudget_TrimsBothCompositeShapesWithinUtf8Budgets()
+    {
+        var callers = Enumerable.Range(0, 80)
+            .Select(index => new
+            {
+                filePath = $"src/Caller{index:D2}.cs",
+                line = index + 1,
+                callerMemberName = $"Caller{index:D2}.Run",
+                projectName = "AiNetLinter",
+                details = new string('ä', 160),
+            })
+            .ToArray();
+        var testFiles = Enumerable.Range(0, 80)
+            .Select(index => new
+            {
+                filePath = $"tests/Feature{index:D2}Tests.cs",
+                testClassName = $"Feature{index:D2}Tests",
+                category = "Unit",
+                matchReason = "symbol-reference",
+                testMethods = Enumerable.Range(0, 12).Select(method => $"Run_{index:D2}_{method:D2}").ToArray(),
+                totalClassTests = 12,
+                totalMatchingMethods = 12,
+            })
+            .ToArray();
+
+        var feature = McpToolResults.ApplyCompositeWireBudget(
+            McpToolResults.Text(
+                new string('x', 20_000),
+                new
+                {
+                    declaration = new { name = "Feature.Run", kind = "Method" },
+                    metrics = new { metric = "complexity", value = 3 },
+                    callers = new
+                    {
+                        totalCallers = callers.Length,
+                        callSites = callers,
+                        isTruncated = false,
+                        completeness = "complete",
+                    },
+                    testContext = new
+                    {
+                        totalMatchingTests = testFiles.Length * 12,
+                        totalTestFiles = testFiles.Length,
+                        testFiles,
+                        isTruncated = false,
+                        completeness = "complete",
+                    },
+                    violations = new
+                    {
+                        totalViolationsOnFile = 0,
+                        violations = Array.Empty<object>(),
+                        status = "complete",
+                        isTruncated = false,
+                    },
+                    completeness = "complete",
+                }),
+            ["declaration", "metrics", "callers", "testContext", "violations"]);
+
+        var testContext = McpToolResults.ApplyCompositeWireBudget(
+            McpToolResults.Text(
+                new string('y', 20_000),
+                new
+                {
+                    targetSymbol = "Feature.Run",
+                    targetKind = "Method",
+                    targetFilePath = "src/Feature.cs",
+                    totalMatchingTests = testFiles.Length * 12,
+                    totalTestFiles = testFiles.Length,
+                    testFiles,
+                    recommendedTestCommands = Enumerable.Range(0, 80)
+                        .Select(index => $"dotnet test --filter Feature{index:D2}")
+                        .ToArray(),
+                    isUntested = false,
+                    isTruncated = false,
+                    completeness = "complete",
+                }),
+            ["testContext"],
+            rootSectionName: "testContext");
+
+        AssertCompositeWireBudget(feature, "callers", "testContext");
+        AssertCompositeWireBudget(testContext, "testContext");
+        Assert.Contains("Wire-Budget", Assert.IsType<TextContentBlock>(Assert.Single(feature.Content)).Text, StringComparison.Ordinal);
+        Assert.Contains("responseBudget", feature.StructuredContent!.Value.GetRawText(), StringComparison.Ordinal);
+        Assert.Contains("Wire-Budget", Assert.IsType<TextContentBlock>(Assert.Single(testContext.Content)).Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WithNavigation_ConfigurationErrorsUseCatalogErrorStatus()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-config-error-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.Recoverable(ProjectErrorCodes.RulesInvalid, "Regelkonfiguration ist ungültig."),
+            target);
+
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+        Assert.Equal("error", navigation.GetProperty("operationStatus").GetString());
+        Assert.Equal("not_applicable", navigation.GetProperty("completeness").GetString());
+        Assert.False(navigation.GetProperty("result").GetProperty("available").GetBoolean());
+        Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
     }
 
     [Fact]
@@ -111,6 +222,72 @@ public sealed class McpToolResultsTests
     }
 
     [Fact]
+    public void WithNavigation_PreservesNestedSectionNextStepWhenRootIsComplete()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-section-next-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.Text(
+                "Feature-Kontext",
+                new
+                {
+                    completeness = "complete",
+                    testContext = new
+                    {
+                        completeness = "complete",
+                        nextStep = "Abschnitt testContext: Detail erneut anfordern.",
+                    },
+                }),
+            target);
+
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+
+        Assert.Equal("complete", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
+        Assert.Equal(
+            "Abschnitt testContext: Detail erneut anfordern.",
+            navigation.GetProperty("next").GetProperty("action").GetString());
+    }
+
+    [Fact]
+    public void WithNavigation_FeatureContextSectionFailureIsNotAvailable()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-feature-error-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.Text(
+                "Feature-Kontext",
+                new
+                {
+                    completeness = "partial",
+                    violations = new
+                    {
+                        status = "partial",
+                        reasonCode = "violations-scan-failed",
+                        nextStep = "Abschnitt violations: erneut anfordern.",
+                    },
+                }),
+            target);
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+
+        Assert.Equal("error", navigation.GetProperty("operationStatus").GetString());
+        Assert.Equal("partial", navigation.GetProperty("completeness").GetString());
+        Assert.False(navigation.GetProperty("result").GetProperty("available").GetBoolean());
+        Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
+        Assert.Equal(
+            "Abschnitt violations: erneut anfordern.",
+            navigation.GetProperty("next").GetProperty("action").GetString());
+    }
+
+    [Fact]
     public void WithNavigation_SymbolMissIsNotProjectedAsSuccessfulCompleteResult()
     {
         using var tempDir = TestTempDirectory.Create("mcp-navigation-miss-");
@@ -138,5 +315,33 @@ public sealed class McpToolResultsTests
             fieldPath: "$.projectRoot");
 
         Assert.Equal("$.projectRoot", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+    }
+
+    private static void AssertCompositeWireBudget(CallToolResult result, params string[] sectionNames)
+    {
+        var structured = result.StructuredContent!.Value;
+        Assert.Equal(JsonValueKind.Object, structured.ValueKind);
+        var wireBudget = structured.GetProperty("wireBudget");
+        Assert.True(
+            wireBudget.GetProperty("totalBytes").GetInt32() <= McpToolResults.CompositeWireBudgetBytes,
+            wireBudget.GetRawText());
+        Assert.True(wireBudget.GetProperty("structuredBytes").GetInt32() <= McpToolResults.CompositeWireBudgetBytes);
+
+        foreach (var sectionName in sectionNames)
+        {
+            var section = sectionName == "testContext"
+                && !structured.TryGetProperty("testContext", out _)
+                ? structured
+                : structured.GetProperty(sectionName);
+            Assert.True(
+                Encoding.UTF8.GetByteCount(section.GetRawText()) <= McpToolResults.CompositeSectionBudgetBytes,
+                $"Abschnitt {sectionName} überschreitet das Wirebudget.");
+            Assert.Equal("truncated", section.GetProperty("completeness").GetString());
+            Assert.True(section.GetProperty("isTruncated").GetBoolean());
+            Assert.Contains(
+                "responseBudget",
+                section.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
+            Assert.False(string.IsNullOrWhiteSpace(section.GetProperty("nextStep").GetString()));
+        }
     }
 }

@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
 
@@ -48,25 +49,31 @@ internal sealed record CallersReportDto(
     IReadOnlyList<CallSiteEntry> CallSites,
     bool IsTruncated,
     IReadOnlyList<string>? TruncatedBy = null,
-    string Semantics = FeatureContextSemantics.StaticCallSites
+    string Semantics = FeatureContextSemantics.StaticCallSites,
+    string Completeness = FeatureContextStatus.Complete,
+    string? NextStep = null
 );
 
 /// <summary>
-/// Testabdeckungs-Bericht fuer das Ziel-Symbol.
+/// Bericht statischer Testkandidaten fuer das Ziel-Symbol. Dies ist kein
+/// Laufzeit- oder Coverage-Nachweis.
 /// </summary>
-internal sealed record TestCoverageReportDto(
+internal sealed record StaticTestContextReportDto(
     int TotalMatchingTests,
     int TotalTestFiles,
-    IReadOnlyList<TestFileCoverageDto> TestFiles,
+    IReadOnlyList<StaticTestCandidateFileDto> TestFiles,
     bool IsTruncated,
     int DisplayedTestMethods = 0,
-    IReadOnlyList<string>? TruncatedBy = null
+    IReadOnlyList<string>? TruncatedBy = null,
+    string Completeness = FeatureContextStatus.Complete,
+    string EvidenceBoundary = FeatureContextSemantics.StaticTestCandidates,
+    string? NextStep = null
 );
 
 /// <summary>
-/// DTO fuer eine zugeordnete Testdatei.
+/// DTO fuer eine statisch zugeordnete Testdatei.
 /// </summary>
-internal sealed record TestFileCoverageDto(
+internal sealed record StaticTestCandidateFileDto(
     string FilePath,
     string TestClassName,
     string Category,
@@ -86,7 +93,8 @@ internal sealed record ViolationsReportDto(
     bool IsTruncated,
     string Status = FeatureContextStatus.Complete,
     string? ReasonCode = null,
-    IReadOnlyList<string>? TruncatedBy = null
+    IReadOnlyList<string>? TruncatedBy = null,
+    string? NextStep = null
 );
 
 /// <summary>
@@ -106,27 +114,35 @@ internal sealed record FeatureContextPayload(
     SymbolDeclarationDto Declaration,
     MetricsLookupResultDto? Metrics,
     CallersReportDto? Callers,
-    TestCoverageReportDto? Tests,
-    ViolationsReportDto? Violations
+    [property: JsonPropertyName("testContext")] StaticTestContextReportDto? Tests,
+    ViolationsReportDto? Violations,
+    string? MetricsStatus = null,
+    string Completeness = FeatureContextStatus.Complete,
+    string? NextStep = null
 );
 
 internal static class FeatureContextStatus
 {
     internal const string Complete = "complete";
+    internal const string Empty = "empty";
+    internal const string Partial = "partial";
     internal const string Truncated = "truncated";
-    internal const string Unavailable = "unavailable";
-    internal const string Failed = "failed";
-    internal const string NotApplicable = "notApplicable";
+    internal const string NotConfigured = "not_configured";
+    internal const string NotDecidable = "not_decidable";
+    internal const string Error = "error";
+    internal const string NotApplicable = "not_applicable";
 }
 
 internal static class FeatureContextReasonCodes
 {
     internal const string ViolationsScanFailed = "violations-scan-failed";
     internal const string SourceFileUnavailable = "source-file-unavailable";
+    internal const string RulesNotConfigured = "rules-not-configured";
     internal const string OperationCanceled = "operation-canceled";
 }
 
 internal static class FeatureContextSemantics
 {
     internal const string StaticCallSites = "static-references/call-sites";
+    internal const string StaticTestCandidates = "static-test-candidates-only";
 }

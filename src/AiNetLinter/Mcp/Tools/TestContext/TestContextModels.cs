@@ -26,9 +26,29 @@ public sealed record TestContextPayload(
     string TargetFilePath,
     int TotalMatchingTests,
     int TotalTestFiles,
-    IReadOnlyList<TestFileCoverageResult> TestFiles,
+    IReadOnlyList<StaticTestCandidateFile> TestFiles,
     IReadOnlyList<string> RecommendedTestCommands,
     bool IsUntested,
     bool IsTruncated,
-    string? SuggestedTestFilePath = null
+    string? SuggestedTestFilePath = null,
+    string Completeness = "complete",
+    int ReturnedTestFiles = 0,
+    int ReturnedTestMethods = 0,
+    IReadOnlyList<string>? TruncatedBy = null,
+    string EvidenceBoundary = "static-test-candidates-only",
+    string? NextStep = null
+);
+
+/// <summary>
+/// Wire-Modell fuer einen statischen Testkandidaten. Die Zuordnung basiert auf
+/// sichtbaren Source-Heuristiken und ist kein Laufzeit- oder Coverage-Nachweis.
+/// </summary>
+public sealed record StaticTestCandidateFile(
+    string FilePath,
+    string TestClassName,
+    string Category,
+    string MatchReason,
+    IReadOnlyList<string> TestMethods,
+    int TotalClassTests,
+    string? ProjectDirectory = null
 );

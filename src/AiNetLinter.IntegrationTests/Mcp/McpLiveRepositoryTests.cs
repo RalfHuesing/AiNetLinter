@@ -67,10 +67,8 @@ public sealed class McpLiveRepositoryTests
             new Dictionary<string, object?>
             {
                 ["symbolIdentifier"] = "FeatureContextScanner.ScanAsync",
-                ["includeCallers"] = false,
-                ["includeTests"] = false,
-                ["includeMetrics"] = false,
-                ["includeViolations"] = true,
+                ["maxCallers"] = 5,
+                ["maxTests"] = 5,
             });
 
         Assert.NotEqual(true, result.IsError);
@@ -79,6 +77,19 @@ public sealed class McpLiveRepositoryTests
         var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
         var declaration = json["declaration"]!.AsObject();
         Assert.Contains((string)declaration["name"]!, text, StringComparison.Ordinal);
+        Assert.Equal(
+            new[] { "callers", "completeness", "declaration", "isTruncated", "metrics", "metricsStatus", "nextStep", "testContext", "truncatedBy", "violations", "wireBudget" },
+            json
+                .Where(property => !string.Equals(property.Key, "navigation", StringComparison.Ordinal))
+                .Select(property => property.Key)
+                .OrderBy(key => key, StringComparer.Ordinal));
+        Assert.NotNull(json["navigation"]);
+
+        Assert.NotNull(json["callers"]);
+        Assert.NotNull(json["testContext"]);
+        Assert.NotNull(json["metrics"]);
+        Assert.NotNull(json["violations"]);
+        Assert.NotNull(json["completeness"]);
 
         var violations = json["violations"]!.AsObject();
         var status = (string)violations["status"]!;

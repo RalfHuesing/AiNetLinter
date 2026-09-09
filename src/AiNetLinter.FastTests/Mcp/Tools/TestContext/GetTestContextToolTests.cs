@@ -157,8 +157,8 @@ public sealed class GetTestContextToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("# Test-Kontext (statische Test-Zuordnung): CoreLib.Calculator", textContent.Text);
-        Assert.Contains("statische Test-Zuordnung", textContent.Text);
+        Assert.Contains("# Test-Kontext (statische Testkandidaten): CoreLib.Calculator", textContent.Text);
+        Assert.Contains("statische Testzuordnung", textContent.Text);
         Assert.Contains("CalculatorTests", textContent.Text);
         Assert.Contains("Add_ReturnsSum", textContent.Text);
         Assert.Contains("Multiply_ReturnsProduct", textContent.Text);
@@ -288,6 +288,7 @@ public sealed class GetTestContextToolTests
         Assert.Contains("In der statischen Test-Zuordnung wurden für dieses Symbol keine direkten Tests gefunden", textContent.Text);
         Assert.Contains("Empfehlung:", textContent.Text);
         Assert.Contains("tests/CoreLib.Tests/UntestedServiceTests.cs", textContent.Text);
+        Assert.DoesNotContain("vollständig", textContent.Text, StringComparison.OrdinalIgnoreCase);
 
         Assert.NotNull(result.StructuredContent);
         var structured = JsonSerializer.Deserialize<TestContextPayload>(
@@ -296,6 +297,8 @@ public sealed class GetTestContextToolTests
 
         Assert.NotNull(structured);
         Assert.True(structured.IsUntested);
+        Assert.Equal("empty", structured.Completeness);
+        Assert.Equal("static-test-candidates-only", structured.EvidenceBoundary);
         Assert.Equal(0, structured.TotalMatchingTests);
         Assert.Empty(structured.TestFiles);
         Assert.Equal("tests/CoreLib.Tests/UntestedServiceTests.cs", structured.SuggestedTestFilePath);
@@ -337,6 +340,100 @@ public sealed class GetTestContextToolTests
         Assert.NotNull(structured);
         Assert.Equal(2, structured.TotalMatchingTests);
         Assert.Single(structured.TestFiles);
+        Assert.Equal("complete", structured.Completeness);
+        Assert.Empty(structured.TruncatedBy!);
+        Assert.Equal(1, structured.ReturnedTestFiles);
+        Assert.Null(structured.NextStep);
+        Assert.Contains("vollständig", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void FormatReport_Truncated_DoesNotClaimCompleteScopeAndMirrorsMetadata()
+    {
+        var payload = new TestContextPayload(
+            "CoreLib.Calculator",
+            "NamedType",
+            "src/CoreLib/Calculator.cs",
+            4,
+            2,
+            [],
+            [],
+            false,
+            true,
+            Completeness: "truncated",
+            ReturnedTestFiles: 1,
+            ReturnedTestMethods: 3,
+            TruncatedBy: ["maxResults", "responseBudget"],
+            NextStep: "Abschnitt testContext: maxResults erhöhen.");
+
+        var text = TestContextFormatter.FormatReport(payload);
+
+        Assert.Contains("**Status:** `truncated`", text, StringComparison.Ordinal);
+        Assert.Contains("Counts:", text, StringComparison.Ordinal);
+        Assert.Contains("1 von 2 Testdateien", text, StringComparison.Ordinal);
+        Assert.Contains("**TruncatedBy:** `maxResults, responseBudget`", text, StringComparison.Ordinal);
+        Assert.Contains("Abschnitt testContext: maxResults erhöhen.", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("vollständig", text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MaxResults_ReportsStaticCandidateTruncationAndSafeNextStep()
+    {
+        using var solutionOwner = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\TestContextTruncation.slnx",
+            new ProjectSpec("CoreLib", [
+                ("Calculator.cs", "namespace CoreLib; public class Calculator { public int Add() => 1; }")
+            ], VirtualProjectDirectory: "src/CoreLib"),
+            new ProjectSpec("CoreLib.Tests", [
+                ("CalculatorTestsA.cs", "namespace CoreLib.Tests; public class CalculatorTestsA { [Xunit.Fact] public void Add_A() { new CoreLib.Calculator().Add(); } }")
+            ], VirtualProjectDirectory: "tests/CoreLib.Tests"),
+            new ProjectSpec("CoreLib.MoreTests", [
+                ("CalculatorTestsB.cs", "namespace CoreLib.MoreTests; public class CalculatorTestsB { [Xunit.Fact] public void Add_B() { new CoreLib.Calculator().Add(); } }")
+            ], VirtualProjectDirectory: "tests/CoreLib.MoreTests"));
+
+        var state = CreateServer(solutionOwner.Solution);
+        var result = await GetTestContextTool.ExecuteAsync(
+            state, new TestContextOptions("Calculator.Add", MaxResults: 1), CancellationToken.None);
+
+        var structured = JsonSerializer.Deserialize<TestContextPayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
+        Assert.Equal("truncated", structured.Completeness);
+        Assert.Equal(new[] { "maxResults" }, structured.TruncatedBy);
+        Assert.Equal(2, structured.TotalTestFiles);
+        Assert.Equal(1, structured.ReturnedTestFiles);
+        Assert.Contains("testContext", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
+        Assert.Contains("maxResults erhöhen", structured.NextStep, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void StructuredStaticCandidateStatus_IsProjectedBySharedNavigation()
+    {
+        using var tempDir = TestTempDirectory.Create("test-context-navigation-");
+        var solutionPath = tempDir.CreateFile("workspace.slnx", string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+        var payload = new TestContextPayload(
+            "CoreLib.Calculator",
+            "NamedType",
+            "src/CoreLib/Calculator.cs",
+            2,
+            2,
+            [],
+            [],
+            false,
+            true,
+            Completeness: "truncated",
+            ReturnedTestFiles: 0,
+            ReturnedTestMethods: 0,
+            TruncatedBy: ["maxResults"],
+            NextStep: "Abschnitt testContext: maxResults erhöhen.");
+
+        var result = McpToolResults.WithNavigation(McpToolResults.Text("statische Testkandidaten", payload), target);
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+
+        Assert.Equal("truncated", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
+        Assert.Contains("testContext", navigation.GetProperty("next").GetProperty("action").GetString(), StringComparison.Ordinal);
     }
 
     [Fact]

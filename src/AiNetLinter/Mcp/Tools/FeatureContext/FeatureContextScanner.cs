@@ -37,23 +37,84 @@ internal static class FeatureContextScanner
         var solutionDir = Path.GetDirectoryName(context.Solution.FilePath) ?? "";
         var declaration = ExtractDeclaration(symbol, solutionDir, context.AssemblySymbolIdentity);
 
-        var metrics = context.Options.IncludeMetrics
-            ? MetricsLookupScanner.ScanSymbol(symbol, context.Config, solutionDir, ct, context.AssemblySymbolIdentity)
-            : null;
-
+        var metrics = CollectMetrics(symbol, context, solutionDir, ct);
         var callers = context.Options.IncludeCallers
             ? await CollectCallersAsync(symbol, context.Solution, context.Options.MaxCallers, ct)
             : null;
-
         var tests = context.Options.IncludeTests
             ? await CollectTestsAsync(symbol, context.Solution, context.Options.MaxTests, ct)
             : null;
-
         var violations = context.Options.IncludeViolations
             ? await CollectViolationsAsync(context.Solution, declaration, context.Config, context.Console, ct)
             : null;
 
-        return new FeatureContextPayload(declaration, metrics, callers, tests, violations);
+        return BuildPayload(context, declaration, metrics, callers, tests, violations);
+    }
+
+    private static MetricsLookupResultDto? CollectMetrics(
+        ISymbol symbol,
+        FeatureContextScanContext context,
+        string solutionDir,
+        CancellationToken ct) =>
+        context.Options.IncludeMetrics && context.Config is not null
+            ? MetricsLookupScanner.ScanSymbol(symbol, context.Config, solutionDir, ct, context.AssemblySymbolIdentity)
+            : null;
+
+    private static FeatureContextPayload BuildPayload(
+        FeatureContextScanContext context,
+        SymbolDeclarationDto declaration,
+        MetricsLookupResultDto? metrics,
+        CallersReportDto? callers,
+        StaticTestContextReportDto? tests,
+        ViolationsReportDto? violations)
+    {
+        var metricsStatus = context.Options.IncludeMetrics
+            ? context.Config is null ? FeatureContextStatus.NotConfigured : FeatureContextStatus.Complete
+            : null;
+        var completeness = ResolveCompleteness(metricsStatus, callers, tests, violations);
+        var nextStep = tests?.NextStep
+            ?? callers?.NextStep
+            ?? violations?.NextStep
+            ?? (metricsStatus == FeatureContextStatus.NotConfigured
+                ? "Abschnitt metrics: ainetlinter-rules.json bereitstellen und den Metrik-Abschnitt erneut abfragen."
+                : null);
+        return new FeatureContextPayload(
+            declaration, metrics, callers, tests, violations,
+            metricsStatus, completeness, nextStep);
+    }
+
+    internal static string ResolveCompleteness(
+        string? metricsStatus,
+        CallersReportDto? callers,
+        StaticTestContextReportDto? tests,
+        ViolationsReportDto? violations)
+    {
+        var statuses = new[]
+        {
+            metricsStatus,
+            callers?.Completeness,
+            tests?.Completeness,
+            violations?.Status,
+        };
+
+        if (statuses.Contains(FeatureContextStatus.Error, StringComparer.Ordinal)) return FeatureContextStatus.Partial;
+        if (statuses.Contains(FeatureContextStatus.NotDecidable, StringComparer.Ordinal)) return FeatureContextStatus.NotDecidable;
+        if (statuses.Contains(FeatureContextStatus.NotConfigured, StringComparer.Ordinal)) return FeatureContextStatus.NotConfigured;
+        if (statuses.Contains(FeatureContextStatus.NotApplicable, StringComparer.Ordinal)) return FeatureContextStatus.NotApplicable;
+
+        if (callers?.Completeness == FeatureContextStatus.Truncated
+            || tests?.Completeness == FeatureContextStatus.Truncated
+            || violations?.Status == FeatureContextStatus.Truncated
+        )
+        {
+            return FeatureContextStatus.Truncated;
+        }
+
+        return callers?.Completeness == FeatureContextStatus.Partial
+                || tests?.Completeness == FeatureContextStatus.Partial
+                || violations?.Status == FeatureContextStatus.Partial
+            ? FeatureContextStatus.Partial
+            : FeatureContextStatus.Complete;
     }
 
     private static async Task<CallersReportDto> CollectCallersAsync(
@@ -77,10 +138,16 @@ internal static class FeatureContextScanner
             orderedCallers.Count,
             callersList,
             isTruncated,
-            isTruncated ? ["maxCallers"] : []);
+            isTruncated ? ["maxCallers"] : [],
+            Completeness: orderedCallers.Count == 0
+                ? FeatureContextStatus.Empty
+                : isTruncated ? FeatureContextStatus.Truncated : FeatureContextStatus.Complete,
+            NextStep: isTruncated
+                ? "Abschnitt impact: maxCallers erhöhen und die statischen Call-Sites erneut abfragen."
+                : null);
     }
 
-    private static async Task<TestCoverageReportDto> CollectTestsAsync(
+    private static async Task<StaticTestContextReportDto> CollectTestsAsync(
         ISymbol symbol,
         Solution solution,
         int requestedMaxTests,
@@ -90,56 +157,71 @@ internal static class FeatureContextScanner
         var maxTests = Math.Clamp(requestedMaxTests, 1, MaxTestFilesLimit);
         var isTruncated = testResults.TestFiles.Count > maxTests;
         var testFiles = isTruncated ? testResults.TestFiles.Take(maxTests).ToList() : testResults.TestFiles;
-        var truncationReasons = isTruncated ? new List<string> { "maxTests" } : [];
+        var projection = ProjectTestCandidates(testFiles, isTruncated);
+
+        return new StaticTestContextReportDto(
+            testResults.TotalMatchingTests,
+            testResults.TestFiles.Count,
+            projection.Files,
+            projection.IsTruncated,
+            projection.DisplayedTestMethods,
+            projection.TruncatedBy,
+            Completeness: testResults.TotalMatchingTests == 0
+                ? FeatureContextStatus.Empty
+                : projection.IsTruncated ? FeatureContextStatus.Truncated : FeatureContextStatus.Complete,
+            EvidenceBoundary: FeatureContextSemantics.StaticTestCandidates,
+            NextStep: projection.IsTruncated
+                ? "Abschnitt testContext: maxTests erhöhen und die statischen Testkandidaten erneut abfragen."
+                : null);
+    }
+
+    private static TestCandidateProjection ProjectTestCandidates(
+        IReadOnlyList<TestFileCoverageResult> testFiles,
+        bool isTruncated)
+    {
+        var reasons = isTruncated ? new List<string> { "maxTests" } : [];
         var remainingMethods = MaxTestMethodsTotal;
-        var displayedTestMethods = 0;
-        var dtos = new List<TestFileCoverageDto>(testFiles.Count);
+        var displayedMethods = 0;
+        var projectedFiles = new List<StaticTestCandidateFileDto>(testFiles.Count);
         var methodsAfterPerFileCaps = testFiles.Sum(file => Math.Min(file.TestMethods.Count, MaxTestMethodsPerFile));
 
         foreach (var file in testFiles)
         {
-            var totalMatchingMethods = file.TestMethods.Count;
-            var take = Math.Min(Math.Min(totalMatchingMethods, MaxTestMethodsPerFile), remainingMethods);
-            var methods = file.TestMethods.Take(take).ToList();
-            var takeWithoutPerFileCap = Math.Min(totalMatchingMethods, remainingMethods);
-            if (take < takeWithoutPerFileCap)
+            var totalMethods = file.TestMethods.Count;
+            var take = Math.Min(Math.Min(totalMethods, MaxTestMethodsPerFile), remainingMethods);
+            var takeWithoutPerFileCap = Math.Min(totalMethods, remainingMethods);
+            if (take < takeWithoutPerFileCap && !reasons.Contains("maxTestMethodsPerFile", StringComparer.Ordinal))
             {
                 isTruncated = true;
-                if (!truncationReasons.Contains("maxTestMethodsPerFile", StringComparer.Ordinal))
-                {
-                    truncationReasons.Add("maxTestMethodsPerFile");
-                }
+                reasons.Add("maxTestMethodsPerFile");
             }
 
             remainingMethods -= take;
-            displayedTestMethods += take;
-            dtos.Add(new TestFileCoverageDto(
-                FilePath: file.FilePath,
-                TestClassName: file.TestClassName,
-                Category: file.Category,
-                MatchReason: file.MatchReason,
-                TestMethods: methods,
-                TotalClassTests: file.TotalClassTests,
-                TotalMatchingMethods: totalMatchingMethods));
+            displayedMethods += take;
+            projectedFiles.Add(new StaticTestCandidateFileDto(
+                file.FilePath,
+                file.TestClassName,
+                file.Category,
+                file.MatchReason,
+                file.TestMethods.Take(take).ToList(),
+                file.TotalClassTests,
+                totalMethods));
         }
 
-        if (methodsAfterPerFileCaps > MaxTestMethodsTotal)
+        if (methodsAfterPerFileCaps > MaxTestMethodsTotal && !reasons.Contains("maxTestMethodsTotal", StringComparer.Ordinal))
         {
             isTruncated = true;
-            if (!truncationReasons.Contains("maxTestMethodsTotal", StringComparer.Ordinal))
-            {
-                truncationReasons.Add("maxTestMethodsTotal");
-            }
+            reasons.Add("maxTestMethodsTotal");
         }
 
-        return new TestCoverageReportDto(
-            testResults.TotalMatchingTests,
-            testResults.TestFiles.Count,
-            dtos,
-            isTruncated,
-            displayedTestMethods,
-            truncationReasons);
+        return new TestCandidateProjection(projectedFiles, displayedMethods, isTruncated, reasons);
     }
+
+    private sealed record TestCandidateProjection(
+        IReadOnlyList<StaticTestCandidateFileDto> Files,
+        int DisplayedTestMethods,
+        bool IsTruncated,
+        IReadOnlyList<string> TruncatedBy);
 
     private static SymbolDeclarationDto ExtractDeclaration(
         ISymbol symbol,
@@ -222,11 +304,20 @@ internal static class FeatureContextScanner
     private static async Task<ViolationsReportDto> CollectViolationsAsync(
         Solution solution,
         SymbolDeclarationDto declaration,
-        ILinterEngineConfig config,
+        ILinterEngineConfig? config,
         ILintConsole? console,
         CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
+        if (config is null)
+        {
+            return new ViolationsReportDto(
+                0, 0, [], false, FeatureContextStatus.NotConfigured,
+                FeatureContextReasonCodes.RulesNotConfigured,
+                [],
+                "Abschnitt violations: ainetlinter-rules.json bereitstellen und den Lint-Abschnitt erneut abfragen.");
+        }
+
         if (string.IsNullOrEmpty(declaration.FilePath))
         {
             return new ViolationsReportDto(
@@ -237,7 +328,7 @@ internal static class FeatureContextScanner
         if (DiffImpactAnalyzer.FindDocumentByPath(solution, declaration.FilePath) is null)
         {
             return new ViolationsReportDto(
-                0, 0, [], false, FeatureContextStatus.Unavailable,
+                0, 0, [], false, FeatureContextStatus.NotDecidable,
                 FeatureContextReasonCodes.SourceFileUnavailable);
         }
 
@@ -256,8 +347,10 @@ internal static class FeatureContextScanner
         catch (Exception)
         {
             return new ViolationsReportDto(
-                0, 0, [], false, FeatureContextStatus.Failed,
-                FeatureContextReasonCodes.ViolationsScanFailed);
+                0, 0, [], false, FeatureContextStatus.Partial,
+                FeatureContextReasonCodes.ViolationsScanFailed,
+                [],
+                "Abschnitt violations: den Lint-Abschnitt erneut anfordern und den Workspace-Fehler prüfen.");
         }
     }
 
@@ -292,7 +385,10 @@ internal static class FeatureContextScanner
             isTruncated,
             isTruncated ? FeatureContextStatus.Truncated : FeatureContextStatus.Complete,
             null,
-            isTruncated ? ["maxViolations"] : []);
+            isTruncated ? ["maxViolations"] : [],
+            isTruncated
+                ? "Abschnitt violations: maxViolations verfeinern und die Datei erneut prüfen."
+                : null);
     }
 
     private static bool IsMatchingFilePath(string filePath, string normalizedTarget)
@@ -309,7 +405,7 @@ internal static class FeatureContextScanner
 /// </summary>
 internal sealed record FeatureContextScanContext(
     Solution Solution,
-    ILinterEngineConfig Config,
+    ILinterEngineConfig? Config,
     ILintConsole? Console,
     FeatureContextOptions Options,
     AnalysisSymbolIdentity? AssemblySymbolIdentity = null

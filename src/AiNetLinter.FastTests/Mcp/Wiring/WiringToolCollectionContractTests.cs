@@ -172,15 +172,26 @@ public sealed class WiringToolCollectionContractTests
         var featureContext = tools["get_feature_context"];
         Assert.Contains("symbolIdentifier", featureContext.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain("\"symbol\"", featureContext.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("symbolIdentifier", GetRequiredProperties(featureContext.InputSchema));
+        Assert.Equal(
+            new[] { "maxCallers", "maxTests", "symbolIdentifier", "targetPath" },
+            GetProperties(featureContext.InputSchema).OrderBy(name => name, StringComparer.Ordinal));
+        Assert.DoesNotContain("includeCallers", GetProperties(featureContext.InputSchema));
+        Assert.DoesNotContain("includeTests", GetProperties(featureContext.InputSchema));
+        Assert.DoesNotContain("includeMetrics", GetProperties(featureContext.InputSchema));
+        Assert.DoesNotContain("includeViolations", GetProperties(featureContext.InputSchema));
         Assert.Contains("symbolIdentifier:", featureContext.Description, StringComparison.Ordinal);
         Assert.Contains("statische Referenzen/Call-Sites", featureContext.Description, StringComparison.Ordinal);
-        Assert.Contains("keine Laufzeit-Coverage", featureContext.Description, StringComparison.Ordinal);
         Assert.Contains("maxTests bleibt ein Dateilimit", featureContext.Description, StringComparison.Ordinal);
         Assert.Contains("je Datei auf 50 und insgesamt auf 200 begrenzt", featureContext.Description, StringComparison.Ordinal);
 
         var testContext = tools["get_test_context"];
         Assert.Contains("symbolIdentifier", testContext.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain("\"symbol\"", testContext.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("symbolIdentifier", GetRequiredProperties(testContext.InputSchema));
+        Assert.Equal(
+            new[] { "maxResults", "symbolIdentifier", "targetPath" },
+            GetProperties(testContext.InputSchema).OrderBy(name => name, StringComparer.Ordinal));
         Assert.Contains("symbolIdentifier:", testContext.Description, StringComparison.Ordinal);
 
         var metricsLookup = tools["metrics_lookup"];

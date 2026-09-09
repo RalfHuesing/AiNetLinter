@@ -22,8 +22,14 @@ internal static class McpNavigationProjection
     {
         var code = ReadString(response.StructuredContent, "code");
         var operationStatus = ResolveOperationStatus(code, response);
+        if (operationStatus == "ok" && HasFeatureContextSectionFailure(response.StructuredContent))
+        {
+            operationStatus = "error";
+        }
         var completeness = ResolveCompleteness(response.StructuredContent, code, operationStatus);
-        var hint = ReadString(response.StructuredContent, "hint");
+        var hint = ReadString(response.StructuredContent, "hint")
+            ?? ReadString(response.StructuredContent, "nextStep")
+            ?? ReadNestedNextStep(response.StructuredContent);
         return Create(target, operationStatus, completeness, hint, code);
     }
 
@@ -98,9 +104,9 @@ internal static class McpNavigationProjection
             [McpHandoffErrorCodes.StaleSnapshot] = "stale_snapshot",
             [LinterErrorCodes.NotConfigured] = "not_configured",
             [LinterErrorCodes.AssemblyTargetUnsupported] = "unsupported",
-            [ProjectErrorCodes.RulesInvalid] = "configuration_error",
-            [LinterErrorCodes.ConfigInvalid] = "configuration_error",
-            [LinterErrorCodes.ConfigNotFound] = "configuration_error",
+            [ProjectErrorCodes.RulesInvalid] = "error",
+            [LinterErrorCodes.ConfigInvalid] = "error",
+            [LinterErrorCodes.ConfigNotFound] = "error",
             [ProjectErrorCodes.ProjectNotInitialized] = "target_mismatch",
             [ProjectErrorCodes.ProjectLoadFailed] = "target_mismatch",
         };
@@ -125,16 +131,28 @@ internal static class McpNavigationProjection
         if (operationStatus == "not_configured") return "not_configured";
         if (operationStatus == "unsupported") return "unsupported";
         if (operationStatus == "configuration_error") return "configuration_error";
+        if (operationStatus == "error")
+        {
+            return HasFeatureContextSectionFailure(structured) ? "partial" : "not_applicable";
+        }
         if (operationStatus is "invalid_argument" or "target_mismatch" or "stale_snapshot" or
-            "symbol_not_found" or "ambiguous_symbol" or "error") return "not_applicable";
+            "symbol_not_found" or "ambiguous_symbol") return "not_applicable";
+
+        if (HasTruncation(structured)) return "truncated";
 
         if (TryFindCompleteness(structured, out var explicitValue))
         {
+            if (explicitValue == "complete"
+                && TryFindNonCompleteNestedCompleteness(structured, out var nestedValue))
+            {
+                return nestedValue;
+            }
+
+            explicitValue = explicitValue == "error" ? "partial" : explicitValue;
             return explicitValue == "complete" && IsKnownEmpty(structured)
                 ? "empty"
                 : explicitValue;
         }
-        if (HasTruncation(structured)) return "truncated";
         if (IsKnownEmpty(structured)) return "empty";
         return "complete";
     }
@@ -182,6 +200,64 @@ internal static class McpNavigationProjection
 
         value = property.GetString()!.ToLowerInvariant();
         return true;
+    }
+
+    private static bool TryFindNonCompleteNestedCompleteness(JsonElement? element, out string value)
+    {
+        value = string.Empty;
+        if (element is not { ValueKind: JsonValueKind.Object } owner) return false;
+
+        string? candidate = null;
+        foreach (var propertyName in new[] { "metrics", "testContext", "tests", "callers", "violations" })
+        {
+            if (!owner.TryGetProperty(propertyName, out var section)
+                || section.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            if (!TryReadCompletenessProperty(section, out var sectionValue)
+                && !TryReadStringProperty(section, "status", out sectionValue))
+            {
+                continue;
+            }
+
+            if (sectionValue is "complete" or "empty") continue;
+            sectionValue = sectionValue == "error" ? "partial" : sectionValue;
+            if (candidate is null || CompletenessPriority(sectionValue) > CompletenessPriority(candidate))
+            {
+                candidate = sectionValue;
+            }
+        }
+
+        if (candidate is null) return false;
+        value = candidate;
+        return true;
+    }
+
+    private static int CompletenessPriority(string value) => value switch
+    {
+        "error" => 5,
+        "not_decidable" => 4,
+        "not_configured" => 3,
+        "not_applicable" => 2,
+        "truncated" => 2,
+        "partial" => 1,
+        _ => 0,
+    };
+
+    private static bool HasFeatureContextSectionFailure(JsonElement? element)
+    {
+        if (element is not { ValueKind: JsonValueKind.Object } owner
+            || !owner.TryGetProperty("violations", out var violations)
+            || violations.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        return (TryReadStringProperty(violations, "status", out var status) && status == "error")
+            || (TryReadStringProperty(violations, "reasonCode", out var reasonCode)
+                && reasonCode == "violations-scan-failed");
     }
 
     private static bool HasTruncation(JsonElement? element)
@@ -270,6 +346,11 @@ internal static class McpNavigationProjection
                 hint ?? "Argumente und Target prüfen und den sicheren nächsten Schritt aus der Fehlermeldung ausführen.");
         }
 
+        if (!string.IsNullOrWhiteSpace(hint))
+        {
+            return new("request_detail", hint);
+        }
+
         return completeness is "truncated" or "partial"
             ? new("request_detail", hint ?? "Scope oder Detaillevel verfeinern und die Antwort gezielt wiederholen.")
             : completeness == "empty"
@@ -291,6 +372,24 @@ internal static class McpNavigationProjection
         && property.ValueKind == JsonValueKind.String
             ? property.GetString()
             : null;
+
+    private static string? ReadNestedNextStep(JsonElement? structured)
+    {
+        if (structured is not { ValueKind: JsonValueKind.Object } value) return null;
+
+        foreach (var propertyName in new[] { "testContext", "tests", "callers", "violations" })
+        {
+            if (value.TryGetProperty(propertyName, out var section)
+                && section.ValueKind == JsonValueKind.Object
+                && section.TryGetProperty("nextStep", out var nextStep)
+                && nextStep.ValueKind == JsonValueKind.String)
+            {
+                return nextStep.GetString();
+            }
+        }
+
+        return null;
+    }
 }
 
 internal sealed record McpNavigationPayload(

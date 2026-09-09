@@ -19,21 +19,33 @@ internal static class FeatureContextFormatter
     internal static string FormatReport(FeatureContextPayload payload)
     {
         var sb = new StringBuilder();
+        var completeness = ResolveDisplayCompleteness(payload);
         sb.AppendLine($"# Feature-Kontext: {payload.Declaration.Name}");
+        sb.AppendLine($"- **Composite-Completeness:** `{completeness}`");
+        if (payload.MetricsStatus is not null)
+        {
+            sb.AppendLine($"- **Metriken-Status:** `{payload.MetricsStatus}`");
+        }
+        if (!string.IsNullOrWhiteSpace(payload.NextStep))
+        {
+            sb.AppendLine($"- **Nächster sicherer Schritt:** {payload.NextStep}");
+        }
         sb.AppendLine();
 
         AppendDeclarationSection(sb, payload.Declaration);
-        AppendMetricsSection(sb, payload.Metrics);
+        AppendMetricsSection(sb, payload.Metrics, payload.MetricsStatus);
         AppendCallersSection(sb, payload.Callers);
         AppendTestsSection(sb, payload.Tests);
         AppendViolationsSection(sb, payload.Violations, payload.Declaration.FilePath);
 
         var text = sb.ToString().TrimEnd();
-        var hasTruncation = (payload.Callers?.IsTruncated == true) ||
+        var hasTruncation = completeness == FeatureContextStatus.Truncated ||
+                            (payload.Callers?.IsTruncated == true) ||
                             (payload.Tests?.IsTruncated == true) ||
                             (payload.Violations?.IsTruncated == true);
 
-        return hasTruncation ? text : McpSufficiencyHints.Append(text);
+        var canClaimCompleteScope = completeness is FeatureContextStatus.Complete or FeatureContextStatus.Empty;
+        return hasTruncation || !canClaimCompleteScope ? text : McpSufficiencyHints.Append(text);
     }
 
     private static void AppendDeclarationSection(StringBuilder sb, SymbolDeclarationDto decl)
@@ -60,9 +72,22 @@ internal static class FeatureContextFormatter
         sb.AppendLine();
     }
 
-    private static void AppendMetricsSection(StringBuilder sb, MetricsLookupResultDto? metrics)
+    private static void AppendMetricsSection(
+        StringBuilder sb,
+        MetricsLookupResultDto? metrics,
+        string? status)
     {
-        if (metrics == null) return;
+        if (metrics == null)
+        {
+            if (status == FeatureContextStatus.NotConfigured)
+            {
+                sb.AppendLine("## 2. Metriken & Budget (Status: not_configured)");
+                sb.AppendLine("- Metriken nicht bewertet: neben dem Target fehlt `ainetlinter-rules.json`.");
+                sb.AppendLine();
+            }
+
+            return;
+        }
 
         sb.AppendLine("## 2. Metriken & Budget (ainetlinter-rules.json)");
         FormatMetricsChecks(sb, metrics);
@@ -74,9 +99,10 @@ internal static class FeatureContextFormatter
         if (callers == null) return;
 
         var header = callers.TotalCallers == 1
-            ? $"## 3. Statische Referenzen/Call-Sites (1 Fundstelle; {callers.Semantics})"
-            : $"## 3. Statische Referenzen/Call-Sites ({callers.TotalCallers} Fundstellen; {callers.Semantics})";
+            ? $"## 3. Statische Referenzen/Call-Sites (1 Fundstelle; Status: {callers.Completeness}; {callers.Semantics})"
+            : $"## 3. Statische Referenzen/Call-Sites ({callers.TotalCallers} Fundstellen; Status: {callers.Completeness}; {callers.Semantics})";
         sb.AppendLine(header);
+        sb.AppendLine($"- **Counts:** {callers.CallSites.Count} von {callers.TotalCallers} statischen Referenzen/Call-Sites zurückgegeben.");
 
         if (callers.CallSites.Count == 0)
         {
@@ -92,40 +118,53 @@ internal static class FeatureContextFormatter
                 sb.AppendLine($"- `{call.FilePath}:{call.Line}` — {callerDesc}");
             }
 
-            if (callers.IsTruncated)
-            {
-                sb.AppendLine($"- *(Zeige {callers.CallSites.Count} von {callers.TotalCallers} statischen Referenzen — Begrenzung: {string.Join(", ", callers.TruncatedBy ?? [])})*");
-            }
+        }
+
+        if (callers.IsTruncated)
+        {
+            sb.AppendLine($"- *(Betroffener Abschnitt: impact; Zeige {callers.CallSites.Count} von {callers.TotalCallers} statischen Referenzen — Begrenzung: {string.Join(", ", callers.TruncatedBy ?? [])})*");
+            sb.AppendLine($"- **TruncatedBy:** `{string.Join(", ", callers.TruncatedBy ?? [])}`");
+        }
+        if (!string.IsNullOrWhiteSpace(callers.NextStep))
+        {
+            sb.AppendLine($"- **Nächster sicherer Schritt:** {callers.NextStep}");
         }
         sb.AppendLine();
     }
 
-    private static void AppendTestsSection(StringBuilder sb, TestCoverageReportDto? tests)
+    private static void AppendTestsSection(StringBuilder sb, StaticTestContextReportDto? tests)
     {
         if (tests == null) return;
 
-        var header = $"## 4. Test-Kontext (statische Test-Zuordnung: {tests.TotalTestFiles} Testdateien, {tests.TotalMatchingTests} Tests)";
+        var header = $"## 4. Test-Kontext (statische Testkandidaten: {tests.TotalTestFiles} Testdateien, {tests.TotalMatchingTests} Testmethoden, Status: {tests.Completeness})";
         sb.AppendLine(header);
+        sb.AppendLine($"- **Evidenzgrenze:** `{tests.EvidenceBoundary}`");
+        sb.AppendLine($"- **Counts:** {tests.TestFiles.Count} von {tests.TotalTestFiles} Testdateien und {tests.DisplayedTestMethods} von {tests.TotalMatchingTests} Testmethoden zurückgegeben.");
 
         if (tests.TestFiles.Count == 0)
         {
-            sb.AppendLine("- Keine Tests statisch zugeordnet.");
+            sb.AppendLine("- Keine statischen Testkandidaten zugeordnet.");
         }
         else
         {
             foreach (var file in tests.TestFiles)
             {
-                sb.AppendLine($"- `{file.FilePath}` ({file.Category}, {file.TestMethods.Count} von {file.TotalMatchingMethods} zugeordneten Tests — {file.MatchReason})");
+                sb.AppendLine($"- `{file.FilePath}` ({file.Category}, {file.TestMethods.Count} von {file.TotalMatchingMethods} statischen Kandidaten — {file.MatchReason})");
                 foreach (var method in file.TestMethods)
                 {
                     sb.AppendLine($"  - `{method}()`");
                 }
             }
 
-            if (tests.IsTruncated)
-            {
-                sb.AppendLine($"- *(Zeige {tests.TestFiles.Count} von {tests.TotalTestFiles} Testdateien und {tests.DisplayedTestMethods} von {tests.TotalMatchingTests} Testmethoden — Begrenzung: {string.Join(", ", tests.TruncatedBy ?? [])})*");
-            }
+        }
+
+        if (tests.IsTruncated)
+        {
+            sb.AppendLine($"- **TruncatedBy:** `{string.Join(", ", tests.TruncatedBy ?? [])}`");
+        }
+        if (!string.IsNullOrWhiteSpace(tests.NextStep))
+        {
+            sb.AppendLine($"- **Nächster sicherer Schritt:** {tests.NextStep}");
         }
         sb.AppendLine();
     }
@@ -134,22 +173,26 @@ internal static class FeatureContextFormatter
     {
         if (v == null) return;
 
-        var header = $"## 5. Offene Violations auf dieser Datei ({v.TotalViolationsOnFile} Verstoesse, Status: {v.Status})";
+        var header = v.Status is FeatureContextStatus.Complete or FeatureContextStatus.Truncated
+            ? $"## 5. Offene Violations auf dieser Datei ({v.TotalViolationsOnFile} Verstoesse, Status: {v.Status})"
+            : $"## 5. Offene Violations auf dieser Datei (Status: {v.Status})";
         sb.AppendLine(header);
 
-        if (v.Status is FeatureContextStatus.Unavailable or FeatureContextStatus.Failed or FeatureContextStatus.NotApplicable)
+        if (v.Status is FeatureContextStatus.NotConfigured or FeatureContextStatus.NotDecidable or FeatureContextStatus.Partial or FeatureContextStatus.Error or FeatureContextStatus.NotApplicable)
         {
-            sb.AppendLine($"- Violations nicht verfügbar (ReasonCode: `{v.ReasonCode}`).");
+            sb.AppendLine($"- Violations nicht bewertet; der Abschnitt liefert keine Aussage über die Anzahl (ReasonCode: `{v.ReasonCode}`).");
+            if (!string.IsNullOrWhiteSpace(v.NextStep)) sb.AppendLine($"- **Nächster sicherer Schritt:** {v.NextStep}");
             sb.AppendLine();
             return;
         }
 
         if (v.Violations.Count == 0)
         {
-            sb.AppendLine($"- Keine Linter-Verstoesse auf `{filePath}`.");
+            sb.AppendLine($"- Keine Linter-Verstoesse auf `{filePath}` im geprüften Scope (0 von {v.TotalViolationsOnFile}).");
         }
         else
         {
+            sb.AppendLine($"- **Count:** {v.Violations.Count} von {v.TotalViolationsOnFile} Violations im geprüften Scope.");
             foreach (var item in v.Violations)
             {
                 var marker = item.IsDirectlyOnSymbol ? " **[DIREKT AUF SYMBOL]**" : "";
@@ -158,10 +201,35 @@ internal static class FeatureContextFormatter
 
             if (v.IsTruncated)
             {
-                sb.AppendLine($"- *(Zeige {v.Violations.Count} von {v.TotalViolationsOnFile} Verstoessen — Begrenzung: {string.Join(", ", v.TruncatedBy ?? [])})*");
+                sb.AppendLine($"- *(Betroffener Abschnitt: violations; zeige {v.Violations.Count} von {v.TotalViolationsOnFile} Verstoessen — Begrenzung: {string.Join(", ", v.TruncatedBy ?? [])})*");
+                sb.AppendLine($"- **Nächster sicherer Schritt:** {v.NextStep}");
             }
         }
         sb.AppendLine();
+    }
+
+    private static string ResolveDisplayCompleteness(FeatureContextPayload payload)
+    {
+        if (payload.Completeness is not FeatureContextStatus.Complete)
+        {
+            return payload.Completeness;
+        }
+
+        var statuses = new[]
+        {
+            payload.MetricsStatus,
+            payload.Callers?.Completeness,
+            payload.Tests?.Completeness,
+            payload.Violations?.Status,
+        };
+
+        if (statuses.Contains(FeatureContextStatus.Error, StringComparer.Ordinal)) return FeatureContextStatus.Partial;
+        if (statuses.Contains(FeatureContextStatus.NotDecidable, StringComparer.Ordinal)) return FeatureContextStatus.NotDecidable;
+        if (statuses.Contains(FeatureContextStatus.NotConfigured, StringComparer.Ordinal)) return FeatureContextStatus.NotConfigured;
+        if (statuses.Contains(FeatureContextStatus.NotApplicable, StringComparer.Ordinal)) return FeatureContextStatus.NotApplicable;
+        if (statuses.Contains(FeatureContextStatus.Truncated, StringComparer.Ordinal)) return FeatureContextStatus.Truncated;
+        if (statuses.Contains(FeatureContextStatus.Partial, StringComparer.Ordinal)) return FeatureContextStatus.Partial;
+        return FeatureContextStatus.Complete;
     }
 
     private static void FormatMetricsChecks(StringBuilder sb, MetricsLookupResultDto metrics)

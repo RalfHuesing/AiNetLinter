@@ -337,7 +337,7 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, bool includeCallers = true, bool includeTests = true, bool includeMetrics = true, bool includeViolations = true, int maxCallers = 10, int maxTests = 10, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string symbolIdentifier, int maxCallers = 10, int maxTests = 10, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
@@ -348,10 +348,6 @@ internal static class AnalysisToolRegistrations
                         lease.Server,
                         new FeatureContextOptions(
                             SymbolIdentifier: symbolIdentifier,
-                            IncludeCallers: includeCallers,
-                            IncludeTests: includeTests,
-                            IncludeMetrics: includeMetrics,
-                            IncludeViolations: includeViolations,
                             MaxCallers: maxCallers,
                             MaxTests: maxTests),
                         ct));
@@ -363,8 +359,7 @@ internal static class AnalysisToolRegistrations
         "Wann nutzen: Composite One-Shot-Exploration fuer ein beliebiges C#-Symbol vor Edits oder Refactorings — " +
         "buendelt 5 Dimensionen (Deklaration, Metriken & Budget, statische Referenzen/Call-Sites, statische Test-Zuordnung und Linter-Violations) " +
         "in einem einzigen residenten Aufruf. symbolIdentifier: 'Namespace.Klasse.Methode', 'Datei.cs:Zeile' oder DocCommentId. " +
-        "includeCallers, includeTests, includeMetrics, includeViolations: Teilbereiche (Default true). " +
-        "Der Caller-Bereich basiert auf statischen Referenzen/Call-Sites; er ist keine Laufzeit-Coverage. " +
+        "Der Caller-Bereich basiert auf statischen Referenzen/Call-Sites; der Testbereich auf statischen Testkandidaten. " +
         "maxCallers: Limit (Default 10, Cap 50). maxTests bleibt ein Dateilimit (Default 10, Cap 50); " +
         "Testmethoden sind zusaetzlich je Datei auf 50 und insgesamt auf 200 begrenzt.";
 
@@ -373,7 +368,7 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = 30, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string symbolIdentifier, int maxResults = 30, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;

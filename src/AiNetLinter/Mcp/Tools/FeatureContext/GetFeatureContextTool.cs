@@ -27,7 +27,6 @@ internal static class GetFeatureContextTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
         var configSnapshot = state.GetConfigSnapshot();
-        if (configSnapshot.Config is null) return McpToolResults.NotConfigured(solution.FilePath);
 
         var targetSymbol = options.EffectiveSymbol;
         if (string.IsNullOrWhiteSpace(targetSymbol))
@@ -57,7 +56,9 @@ internal static class GetFeatureContextTool
             var payload = await FeatureContextScanner.ScanAsync(symbol, scanContext, ct);
 
             var markdown = FeatureContextFormatter.FormatReport(payload);
-            return McpToolResults.Text(markdown, payload);
+            return McpToolResults.ApplyCompositeWireBudget(
+                McpToolResults.Text(markdown, payload),
+                ["declaration", "metrics", "callers", "testContext", "violations"]);
         }
         catch (OperationCanceledException exception)
         {

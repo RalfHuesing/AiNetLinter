@@ -150,7 +150,7 @@ public sealed class GetFeatureContextToolTests
         Assert.Contains("Consumer.RunOther()", text);
 
         // 4. Test-Kontext
-        Assert.Contains("## 4. Test-Kontext (statische Test-Zuordnung", text);
+        Assert.Contains("## 4. Test-Kontext (statische Testkandidaten", text);
         Assert.Contains("CalculatorTests.cs", text);
         Assert.Contains("Add_PositiveNumbers_ReturnsSum", text);
 
@@ -172,8 +172,34 @@ public sealed class GetFeatureContextToolTests
         Assert.Equal("static-references/call-sites", payload.Callers.Semantics);
         Assert.NotNull(payload.Tests);
         Assert.True(payload.Tests.TotalMatchingTests >= 1);
+        Assert.Equal("static-test-candidates-only", payload.Tests.EvidenceBoundary);
+        Assert.Contains("testContext", result.StructuredContent.Value.GetRawText(), StringComparison.Ordinal);
+        Assert.DoesNotContain("coverage", result.StructuredContent.Value.GetRawText(), StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(payload.Violations);
         Assert.Equal("complete", payload.Violations.Status);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MissingRulesKeepsStaticSectionsAndDoesNotClaimCleanViolations()
+    {
+        using var scenario = CreateFullTestScenario();
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(null, ReadOnlySolutionSnapshot: scenario.Solution)));
+
+        var result = await GetFeatureContextTool.ExecuteAsync(
+            state, new FeatureContextOptions("Calculator.Add"), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = JsonSerializer.Deserialize<FeatureContextPayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.NotNull(payload!.Callers);
+        Assert.NotNull(payload.Tests);
+        Assert.Equal("not_configured", payload.MetricsStatus);
+        Assert.Equal("not_configured", payload.Violations!.Status);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.DoesNotContain("Keine Linter-Verstoesse", text, StringComparison.Ordinal);
+        Assert.Contains("nicht bewertet", text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -371,14 +397,51 @@ public sealed class GetFeatureContextToolTests
             null,
             null,
             new ViolationsReportDto(
-                0, 0, [], false, FeatureContextStatus.Unavailable,
+                0, 0, [], false, FeatureContextStatus.NotDecidable,
                 FeatureContextReasonCodes.SourceFileUnavailable));
 
         var text = FeatureContextFormatter.FormatReport(payload);
 
-        Assert.Contains("Status: unavailable", text, StringComparison.Ordinal);
+        Assert.Contains("Status: not_decidable", text, StringComparison.Ordinal);
         Assert.Contains("ReasonCode: `source-file-unavailable`", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Keine Linter-Verstoesse", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ResolveCompleteness_SectionFailureMapsRootToPartialWithCauseAndNextStep()
+    {
+        var declaration = new SymbolDeclarationDto(
+            "Broken", "Method", "public", "Broken.cs", 1, 1, 1, null, "void", [], null);
+        var violations = new ViolationsReportDto(
+            0,
+            0,
+            [],
+            false,
+            FeatureContextStatus.Error,
+            FeatureContextReasonCodes.ViolationsScanFailed,
+            [],
+            "Abschnitt violations: den Lint-Abschnitt erneut anfordern und den Workspace-Fehler prüfen.");
+
+        var completeness = FeatureContextScanner.ResolveCompleteness(
+            FeatureContextStatus.Complete,
+            callers: null,
+            tests: null,
+            violations: violations);
+        var payload = new FeatureContextPayload(
+            declaration,
+            null,
+            null,
+            null,
+            violations,
+            Completeness: completeness,
+            NextStep: violations.NextStep);
+        var text = FeatureContextFormatter.FormatReport(payload);
+
+        Assert.Equal(FeatureContextStatus.Partial, completeness);
+        Assert.Contains("**Composite-Completeness:** `partial`", text, StringComparison.Ordinal);
+        Assert.Contains("ReasonCode: `violations-scan-failed`", text, StringComparison.Ordinal);
+        Assert.Contains("Workspace-Fehler prüfen", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("**Composite-Completeness:** `error`", text, StringComparison.Ordinal);
     }
 
     [Fact]

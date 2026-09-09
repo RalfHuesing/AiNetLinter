@@ -826,8 +826,7 @@ Bündelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, statis
 - [x] **Symbol-Auflösung & Composite Facade:**
   - Unterstützt Name, `Datei.cs:Zeile`, `Datei.cs:Zeile:Spalte` und `DocCommentId` über `FindReferencesTool.ResolveSymbolAsync`.
   - Aggregiert Deklarationsdaten, `MetricsLookupScanner`, `DiffImpactAnalyzer.FindCallSiteEntriesAsync`, residenten `TestCoverageScanner` und `LinterEngine`-Violations.
-- [x] **Steuerungs-Flags & Structured Content:**
-  - `includeCallers`, `includeTests`, `includeMetrics`, `includeViolations` (jeweils Default `true`).
+- [x] **Structured Content & Limits:**
   - `maxCallers` und `maxTests` (Default 10, Cap 50) mit Truncation-Hinweisen.
   - Vollständiges, typisiertes `FeatureContextPayload` in `structuredContent`.
 - [x] **Tests & Integration:**
@@ -841,7 +840,7 @@ Bündelt 5 Dimensionen (Deklaration, Metriken & Budget, direkte Aufrufer, statis
 Ermittelt zielgerichtet zugeordnete Test-Dateien, Test-Klassen, Test-Methoden, Test-Kategorien (Unit/Integration) und direkt ausführbare `dotnet test` Filterbefehle für ein C#-Symbol:
 
 - [x] **Fokussiertes MCP-Tool `get_test_context`:**
-  - Parameter `symbol` und `symbolIdentifier` (Alias) mit flexibler Symbolauflösung via `FindReferencesTool.ResolveSymbolAsync`.
+  - Parameter `symbolIdentifier` mit flexibler Symbolauflösung via `FindReferencesTool.ResolveSymbolAsync`.
   - `maxResults` (Default 30, Cap 100) mit Truncation-Hinweisen.
 - [x] **Wiederverwendeter residenter Test-Scanner & Tech-Debt-Bereinigung:**
   - Nutzt `TestCoverageScanner.FindTestsForSymbolAsync` ohne Duplikation.
