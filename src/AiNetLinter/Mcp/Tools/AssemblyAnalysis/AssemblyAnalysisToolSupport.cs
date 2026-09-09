@@ -67,7 +67,7 @@ internal static class AssemblyAnalysisToolSupport
             var result = message.Contains(
                     AssemblyReferenceResolver.NativeMetadataFailureMessage,
                     StringComparison.Ordinal)
-                ? McpToolResults.NativePeAssembly(message, fullPath)
+                ? McpToolResults.InvalidAssembly(message, fullPath)
                 : McpToolResults.RecoverableWorkspaceDiagnostic(message, context: fullPath);
             return new(fullPath, null, result);
         }

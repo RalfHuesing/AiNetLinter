@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
@@ -111,7 +112,9 @@ internal sealed record AssemblyMemberDto(
     IReadOnlyList<string> GenericParameters,
     IReadOnlyList<string> Constraints,
     IReadOnlyList<string> Attributes,
-    string? Id = null);
+    string? Id = null,
+    bool Handoff = false,
+    IReadOnlyList<string>? AllowedFollowUpTools = null);
 
 internal sealed record AssemblyParameterDto(
     string Name,
@@ -130,7 +133,9 @@ internal sealed record AssemblyTypeDto(
     int TotalMembers = 0,
     bool MembersTruncated = false,
     IReadOnlyList<string>? TruncatedBy = null,
-    string? Id = null);
+    string? Id = null,
+    bool Handoff = false,
+    IReadOnlyList<string>? AllowedFollowUpTools = null);
 
 internal sealed record AssemblyExtensionDto(
     string Namespace,

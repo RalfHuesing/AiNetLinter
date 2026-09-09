@@ -161,11 +161,14 @@ internal sealed partial class AssemblyAnalysisSession : IDisposable, IAsyncDispo
                 diagnostic => diagnostic.Code == AssemblyDiagnosticCodes.MetadataMissing);
             return FailureResult(
                 references.Diagnostics,
-                metadataDiagnostic is null
-                    ? null
-                    : new AssemblySessionFailure(
-                        AssemblySessionFailureKind.MetadataUnavailable,
-                        metadataDiagnostic));
+                new AssemblySessionFailure(
+                    AssemblySessionFailureKind.MetadataUnavailable,
+                    metadataDiagnostic
+                        ?? references.Diagnostics.FirstOrDefault()
+                        ?? new AssemblySessionDiagnostic(
+                            AssemblyDiagnosticCodes.MetadataMissing,
+                            "Assembly-Metadaten konnten nicht gelesen werden.",
+                            AssemblyDiagnosticSeverity.Error)));
         }
 
         if (TryReadCache(key, fingerprint, references, out var cached, out var cacheDiagnostics) && cached is not null)

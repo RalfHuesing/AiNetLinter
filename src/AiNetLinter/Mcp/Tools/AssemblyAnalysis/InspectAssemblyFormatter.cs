@@ -31,12 +31,12 @@ internal static class InspectAssemblyFormatter
         var builder = new StringBuilder();
         AppendHeader(builder, payload);
         AppendNamespaces(builder, payload.Namespaces, payload.TotalNamespaces, publicOnly);
+        AppendTypes(builder, payload, publicOnly);
         AppendReferences(builder, payload.References, payload.ReferenceSummary);
         AppendReferenceSessions(
             builder,
             payload.ReferenceSessions ?? Array.Empty<AssemblyReferenceSessionDto>(),
             payload.ReferenceSummary);
-        AppendTypes(builder, payload, publicOnly);
         AssemblyAnalysisResponseLimits.AppendDiagnostics(builder, payload.Diagnostics, payload.DiagnosticsSummary);
 
         return builder.ToString().TrimEnd();

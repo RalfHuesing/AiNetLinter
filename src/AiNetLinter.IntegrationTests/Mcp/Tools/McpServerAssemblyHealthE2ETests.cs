@@ -51,6 +51,7 @@ public sealed class McpServerAssemblyHealthE2ETests
         Assert.DoesNotContain("Öffentliche API-Typen:", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Öffentliche Namespaces:", textContent.Text, StringComparison.Ordinal);
         AssertPublicAssemblyWire(result);
+        AssertAssemblyNavigation(result, textContent.Text);
 
         var extensions = await _fixture.Client.CallToolAsync(
             "find_assembly_extensions",
@@ -282,5 +283,20 @@ public sealed class McpServerAssemblyHealthE2ETests
             Assert.DoesNotContain(forbidden, structured, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain(forbidden, text, StringComparison.OrdinalIgnoreCase);
         }
+    }
+
+    private static void AssertAssemblyNavigation(CallToolResult result, string text)
+    {
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+        Assert.Equal("decompiled", navigation.GetProperty("origin").GetString());
+        Assert.Equal("ok", navigation.GetProperty("operationStatus").GetString());
+        Assert.Contains(
+            $"operationStatus: `{navigation.GetProperty("operationStatus").GetString()}`",
+            text,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            $"completeness: `{navigation.GetProperty("completeness").GetString()}`",
+            text,
+            StringComparison.Ordinal);
     }
 }

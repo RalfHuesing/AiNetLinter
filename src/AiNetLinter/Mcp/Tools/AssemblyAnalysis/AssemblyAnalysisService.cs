@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -203,7 +204,9 @@ internal static class AssemblyAnalysisService
             matchingMembers.Count,
             members.Count < matchingMembers.Count,
             members.Count < matchingMembers.Count ? ["maxMembers"] : [],
-            StableId(type, options.HandoffIdentity));
+            StableId(type, options.HandoffIdentity),
+            Handoff: options.HandoffIdentity is not null,
+            AllowedFollowUpTools: options.HandoffIdentity is null ? [] : HandoffFollowUpTools.For(type));
     }
 
     private static AssemblyMemberDto ToMemberDto(ISymbol member, AnalysisSymbolIdentity? handoffIdentity)
@@ -215,6 +218,7 @@ internal static class AssemblyAnalysisService
             IPropertySymbol propertySymbol => Parameters(propertySymbol.Parameters),
             _ => Array.Empty<AssemblyParameterDto>(),
         };
+        var handoff = handoffIdentity is not null;
         return new AssemblyMemberDto(
             MemberKind(member),
             member.Name,
@@ -224,7 +228,9 @@ internal static class AssemblyAnalysisService
             method is null ? Array.Empty<string>() : GenericParameters(method),
             method is null ? Array.Empty<string>() : Constraints(method.TypeParameters),
             Attributes(member),
-            StableId(member, handoffIdentity));
+            StableId(member, handoffIdentity),
+            Handoff: handoff,
+            AllowedFollowUpTools: handoff ? HandoffFollowUpTools.For(member) : []);
     }
 
     private static string StableId(ISymbol symbol, AnalysisSymbolIdentity? handoffIdentity) =>

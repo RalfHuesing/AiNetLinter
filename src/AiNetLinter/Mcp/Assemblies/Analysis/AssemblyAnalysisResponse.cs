@@ -362,12 +362,13 @@ internal static partial class AssemblyAnalysisResponse
             or "diagnosticsSummary";
 
     private static bool IsBudgetMetadata(string name) =>
-        name is "analysis" or "wireBudget" or "wireTruncated" or "truncatedBy";
+        name is "analysis" or "navigation" or "wireBudget" or "wireTruncated" or "truncatedBy";
 
     private static bool IsEnvelopeMetadata(string name) =>
         name is "totalTypes" or "totalExtensions" or "totalCount" or "returnedCount"
             or "shownCount" or "isTruncated" or "truncated" or "continuationToken"
-            or "types" or "extensions" or "id" or "status" or "detailHint"
+            or "types" or "extensions" or "id" or "handoff" or "allowedFollowUpTools"
+            or "name" or "namespace" or "kind" or "accessibility" or "status" or "detailHint"
             or "contentMode" or "bodyAvailability"
             || name.EndsWith("Envelope", StringComparison.Ordinal);
 

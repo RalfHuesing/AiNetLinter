@@ -44,7 +44,7 @@ public sealed class ManagedAssemblyBinaryTests
     }
 
     [Fact]
-    public async Task InspectAssembly_NativePeFailsWithTypedMetadataDiagnostic()
+    public async Task InspectAssembly_NativePeFailsWithTypedInvalidAssemblyDiagnostic()
     {
         var nativeAssemblyPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.System),
@@ -63,11 +63,11 @@ public sealed class ManagedAssemblyBinaryTests
             result.StructuredContent!.Value.GetRawText(),
             McpJsonOptions.Default);
         Assert.NotNull(payload);
-        Assert.Equal(LinterErrorCodes.WorkspaceDiagnostic, payload.Code);
+        Assert.Equal(LinterErrorCodes.InvalidAssembly, payload.Code);
         Assert.Equal(nativeAssemblyPath, payload.Context);
         Assert.Contains(".dll oder .exe mit IL", payload.Message, StringComparison.Ordinal);
         Assert.Equal(
-            McpToolResults.NativePeAssemblyHint,
+            McpToolResults.InvalidAssemblyHint,
             payload.Hint);
         Assert.True(payload.Recoverable);
     }

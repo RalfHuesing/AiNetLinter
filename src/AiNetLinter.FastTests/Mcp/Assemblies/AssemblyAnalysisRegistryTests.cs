@@ -14,6 +14,7 @@ using AiNetLinter.Mcp.Assemblies.Analysis.Factories;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.Output;
 using AiNetLinter.TestKit;
 using Xunit;
 
@@ -66,6 +67,27 @@ public sealed class AssemblyAnalysisRegistryTests
         Assert.NotNull(successful.Lease);
         Assert.Equal(1, registry.ResidentCount);
         successful.Lease!.Dispose();
+    }
+
+    [Fact]
+    public async Task LeaseAsync_UnreadableTargetReturnsTypedRecoverableDiagnostic()
+    {
+        using var temp = TestTempDirectory.Create("assembly-registry-unreadable-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "UnreadableTarget",
+            "namespace Probe; public sealed class Value { }");
+        await using var registry = new AssemblyAnalysisRegistry(
+            fingerprintFactory: _ => throw new IOException("read denied"));
+
+        var result = await registry.LeaseAsync(assemblyPath);
+
+        Assert.Null(result.Lease);
+        Assert.NotNull(result.Error);
+        Assert.False(result.Error!.IsError);
+        Assert.Equal(
+            LinterErrorCodes.TargetUnreadable,
+            result.Error.StructuredContent!.Value.GetProperty("code").GetString());
     }
 
     [Fact]

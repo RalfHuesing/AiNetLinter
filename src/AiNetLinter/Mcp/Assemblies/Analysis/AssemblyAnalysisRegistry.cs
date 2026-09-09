@@ -141,7 +141,11 @@ internal sealed partial class AssemblyAnalysisRegistry : IAssemblyAnalysisRegist
                     out var fingerprint,
                     out var fingerprintDiagnostic))
             {
-                return Failure(fingerprintDiagnostic?.Message ?? "Assembly-Fingerprint konnte nicht berechnet werden.");
+                return new(
+                    null,
+                    McpToolResults.TargetUnreadable(
+                        fingerprintDiagnostic?.Message ?? "Ziel konnte nicht gelesen werden.",
+                        canonicalPath));
             }
 
             var attempt = await TryLeaseCurrentAsync(

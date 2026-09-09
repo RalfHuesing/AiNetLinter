@@ -29,7 +29,7 @@ internal sealed partial class AssemblyAnalysisRegistry
         RemoveFailedEntry(canonicalPath, creation);
         return new(
             null,
-            McpToolResults.NativePeAssembly(
+            McpToolResults.InvalidAssembly(
                 failure.Diagnostic.Message,
                 canonicalPath));
     }

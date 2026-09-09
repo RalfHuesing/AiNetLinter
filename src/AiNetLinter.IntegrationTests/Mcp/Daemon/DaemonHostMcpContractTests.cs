@@ -96,11 +96,11 @@ public sealed class DaemonHostMcpContractTests
 
         Assert.False(result.IsError);
         var payload = StructuredOf(result);
-        Assert.Equal(LinterErrorCodes.WorkspaceDiagnostic, payload.GetProperty("code").GetString());
+        Assert.Equal(LinterErrorCodes.InvalidAssembly, payload.GetProperty("code").GetString());
         Assert.Equal(nativeAssemblyPath, payload.GetProperty("context").GetString());
         Assert.Contains(".dll oder .exe mit IL", payload.GetProperty("message").GetString(), StringComparison.Ordinal);
         Assert.Equal(
-            McpToolResults.NativePeAssemblyHint,
+            McpToolResults.InvalidAssemblyHint,
             payload.GetProperty("hint").GetString());
         Assert.True(payload.GetProperty("recoverable").GetBoolean());
     }

@@ -34,7 +34,7 @@ internal static partial class McpToolResults
     internal const string WorkspaceDiagnosticHint =
         "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung.";
 
-    internal const string NativePeAssemblyHint =
+    internal const string InvalidAssemblyHint =
         "Keine Wiederholung nötig: Das Ziel ist keine verwaltete .NET-Assembly mit IL; " +
         "eine passende .dll oder .exe mit .NET-Metadaten angeben.";
 
@@ -103,10 +103,23 @@ internal static partial class McpToolResults
             context: context,
             hint: hint ?? WorkspaceDiagnosticHint);
 
-    internal static CallToolResult NativePeAssembly(
+    internal static CallToolResult InvalidAssembly(
         string message,
         string? context = null) =>
-        RecoverableWorkspaceDiagnostic(message, context, NativePeAssemblyHint);
+        Recoverable(
+            LinterErrorCodes.InvalidAssembly,
+            message,
+            context,
+            InvalidAssemblyHint);
+
+    internal static CallToolResult TargetUnreadable(
+        string message,
+        string? context = null) =>
+        Recoverable(
+            LinterErrorCodes.TargetUnreadable,
+            message,
+            context,
+            "Ziel konnte nicht gelesen werden; Zugriffsrechte, Dateisperre und Lesbarkeit prüfen und danach erneut anfordern.");
 
     private static CallToolResult BuildResult(
         string code,

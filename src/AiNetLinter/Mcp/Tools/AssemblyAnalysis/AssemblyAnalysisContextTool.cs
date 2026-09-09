@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Security.Cryptography;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
@@ -67,7 +68,7 @@ internal static class AssemblyAnalysisContextTool
 
     private static JsonObject CreateRoot(AssemblyAnalysisLease lease, AssemblyAnalysisContextArguments arguments) => new()
     {
-        ["contextId"] = $"asm:{lease.Context.Origin.ContentHash}",
+        ["contextId"] = CreateContextId(lease),
         ["targetPath"] = lease.CanonicalPath,
         ["scope"] = arguments.IncludeReferences || arguments.IncludeCallers || arguments.IncludeImpact ? "root+references" : "root",
         ["completeness"] = lease.Context.Status.ResolveEffectiveStatus(
@@ -76,6 +77,12 @@ internal static class AssemblyAnalysisContextTool
         ["identity"] = Serialize(lease.Context.Identity),
         ["origin"] = Serialize(lease.Context.Origin),
     };
+
+    private static string CreateContextId(AssemblyAnalysisLease lease)
+    {
+        var value = $"{lease.CanonicalPath}\n{lease.Context.Origin.ContentHash}";
+        return $"asm:{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)))}";
+    }
 
     private static async Task AddAssemblyAnalysisAsync(
         JsonObject root,
