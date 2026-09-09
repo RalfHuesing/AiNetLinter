@@ -208,6 +208,7 @@ internal static partial class AssemblyAnalysisResponse
                 ["totalBytes"] = measurement.TotalBytes,
                 ["truncated"] = isTruncated,
             };
+            node["wireTruncated"] ??= false;
             var next = ReplaceStructured(candidate, JsonSerializer.SerializeToElement(node, McpJsonOptions.Default));
             if (Measure(next) == measurement
                 && next.StructuredContent?.GetRawText() == candidate.StructuredContent?.GetRawText()) return next;

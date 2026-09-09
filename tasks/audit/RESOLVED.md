@@ -7,3 +7,4 @@
 | B-001 | Strukturierte Namespace-Ergebnisse folgen dem angeforderten Limit und stimmen mit Zählern und Trunkierung überein. | `ScanProjectNamespacesAsync_TruncatesStructuredNamespacesToMaxResults` |
 | B-002 | Assembly-Trefferlisten signalisieren ihre Vollständigkeit unabhängig von begrenzten Diagnose- oder Referenzdetails. | `AssemblyRoute_FilteredEmptyResultDoesNotInheritReferenceTruncationInNavigation` |
 | C-002 | Begrenzte Symbol-Traversierungen weisen Navigation und Folgeschritt konsistent als unvollständig aus. | `WithNavigation_SymbolTraversalMaxResultsProjectsTruncation` |
+| C-003 | Assembly-Symbolsuchen melden Treffer-, Rückgabe- und Trunkierungszähler konsistent zum gelieferten Scope. | `AssemblyRoute_FindSymbolIncludeReferencesKeepsMatchCountsConsistentUnderStandardBudget` |

@@ -13,7 +13,11 @@ internal sealed record AssemblySymbolTarget(
 
 internal sealed record AssemblySymbolSearchResult(
     IReadOnlyList<SymbolLocationEntry> Entries,
-    AssemblyNavigationSummary Navigation);
+    AssemblyNavigationSummary Navigation,
+    int TotalCount,
+    int ReturnedCount,
+    bool IsTruncated,
+    IReadOnlyList<string> TruncatedBy);
 
 internal sealed record AssemblyNavigationLeaseSet(
     IReadOnlyList<AssemblyAnalysisLease> Leases,

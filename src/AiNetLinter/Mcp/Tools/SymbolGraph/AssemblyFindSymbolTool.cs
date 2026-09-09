@@ -82,7 +82,13 @@ internal static class AssemblyFindSymbolTool
             navigation = navigation is null
                 ? search.Navigation
                 : AssemblyNavigationSupport.MergeSummaries(navigation, search.Navigation);
-            results.Add(new FindSymbolPatternResultDto(pattern, search.Entries));
+            results.Add(new FindSymbolPatternResultDto(
+                pattern,
+                search.Entries,
+                search.TotalCount,
+                search.ReturnedCount,
+                search.IsTruncated,
+                search.TruncatedBy));
             markdown.Heading(3, $"Symbol-Suche: {pattern}").BlankLine();
             markdown.Line(search.Entries.Count == 0
                 ? $"Keine Treffer fuer '{pattern}' in Root- oder Referenz-Assemblies"
@@ -107,8 +113,21 @@ internal static class AssemblyFindSymbolTool
             markdown.Line($"Diagnosen{suffix}:");
             foreach (var diagnostic in shown) markdown.Line($"- {diagnostic}");
         }
+
+        var totalCount = results.Sum(result => result.TotalCount);
+        var returnedCount = results.Sum(result => result.ReturnedCount);
+        var truncatedBy = results
+            .SelectMany(result => result.TruncatedBy ?? [])
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
         return McpToolResults.Text(
             markdown.Build().TrimEnd(),
-            new FindSymbolBatchDto(results, summary));
+            new FindSymbolBatchDto(
+                results,
+                summary,
+                totalCount,
+                returnedCount,
+                truncatedBy.Count > 0,
+                truncatedBy));
     }
 }

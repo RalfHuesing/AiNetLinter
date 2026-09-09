@@ -66,7 +66,11 @@ internal static class AssemblySymbolSearch
                 searched,
                 leaseSet.AssembliesTruncated,
                 diagnostics,
-                ResultsTruncated: distinct.Count > shown.Count)));
+                ResultsTruncated: distinct.Count > shown.Count)),
+            distinct.Count,
+            shown.Count,
+            distinct.Count > shown.Count,
+            distinct.Count > shown.Count ? ["maxResults"] : []);
     }
 
     private static async Task<(IReadOnlyList<SymbolLocationEntry> Entries, bool Searched, string? Diagnostic)> SearchLeaseAsync(
