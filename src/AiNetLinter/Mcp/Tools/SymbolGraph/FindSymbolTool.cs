@@ -73,12 +73,31 @@ internal static class FindSymbolTool
     internal static IReadOnlyList<string> NormalizeNamePatterns(string[]? namePatterns, string? scalar = null) =>
         NormalizeNamePatterns(new FindSymbolPatternOptions(namePatterns, scalar));
 
-    internal static CallToolResult? ValidatePatternArguments(FindSymbolPatternOptions options) =>
-        options.NamePatterns is not null && !string.IsNullOrWhiteSpace(options.Pattern)
-            ? McpToolResults.InvalidArgument(
+    internal static CallToolResult? ValidatePatternArguments(FindSymbolPatternOptions options)
+    {
+        if (options.NamePatterns is not null && !string.IsNullOrWhiteSpace(options.Pattern))
+        {
+            return McpToolResults.InvalidArgument(
                 "namePatterns und pattern sind gegenseitig exklusiv — genau eines angeben.",
-                hint: "Entweder namePatterns (Array) ODER pattern (ein String) angeben, nie beide.")
-            : null;
+                hint: "Entweder namePatterns (Array) ODER pattern (ein String) angeben, nie beide.");
+        }
+
+        if (options.NamePatterns is not null
+            && options.NamePatterns.Any(IsEmptyNamePattern)
+            && options.NamePatterns.Any(pattern => !IsEmptyNamePattern(pattern)))
+        {
+            return McpToolResults.InvalidArgument(
+                "namePatterns darf keine leeren Elemente enthalten.",
+                hint: "Jedes Array-Element muss ein nicht-leeres Symbolmuster enthalten.",
+                fieldPath: "namePatterns");
+        }
+
+        return null;
+    }
+
+    private static bool IsEmptyNamePattern(string? pattern) =>
+        string.IsNullOrWhiteSpace(pattern)
+        || string.IsNullOrWhiteSpace(McpInputNormalizer.NormalizeSymbolIdentifier(pattern));
 
     internal static CallToolResult? ValidateNamePatterns(IReadOnlyList<string> patterns)
     {

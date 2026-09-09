@@ -54,6 +54,24 @@ public sealed class FindSymbolToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_NamePatternsWithEmptyElement_ReturnsRecoverableInvalidArgument()
+    {
+        using var fixture = new McpInMemoryTestContext();
+        var result = await FindSymbolTool.ExecuteAsync(
+            fixture.CreateServer(),
+            namePatterns: ["Greeter", "   ", "Caller"],
+            kind: null,
+            maxResults: 50,
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("namePatterns darf keine leeren Elemente enthalten.", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Equal("namePatterns", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ExceedsMaxPatternsCap_ReturnsRecoverableInvalidArgument()
     {
         using var fixture = new McpInMemoryTestContext();
