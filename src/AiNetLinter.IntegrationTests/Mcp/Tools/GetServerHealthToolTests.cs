@@ -146,11 +146,11 @@ public sealed class GetServerHealthToolTests
             new GetServerHealthOptions(IncludeDiagnostics: true, MaxDiagnostics: 2));
         var detailedPayload = JsonSerializer.Deserialize<ServerHealthAggregatePayload>(
             detailed.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
-        Assert.Null(detailedPayload.Assemblies);
+        Assert.NotNull(detailedPayload.Assemblies);
         Assert.True(detailedPayload.DiagnosticsIncluded);
         Assert.Equal(4, detailedPayload.AssemblyDiagnosticCount);
         Assert.Equal(1, detailedPayload.AssemblyStatusCounts!["partial"]);
-        Assert.DoesNotContain("health-root-0", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
+        Assert.Contains("health-root-0", Assert.IsType<TextContentBlock>(Assert.Single(detailed.Content)).Text, StringComparison.Ordinal);
 
         var sessionDetails = GetServerHealthResponseBuilder.Build(
             Array.Empty<ProjectSnapshot>(),
@@ -168,6 +168,24 @@ public sealed class GetServerHealthToolTests
         Assert.Contains("health-transitive-0", sessionDetailsText, StringComparison.Ordinal);
         Assert.DoesNotContain("health-root-1", sessionDetailsText, StringComparison.Ordinal);
         Assert.DoesNotContain("health-transitive-1", sessionDetailsText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Build_IncludeDiagnosticsWithoutSessions_EmitsExplicitEmptyDiagnosticsArray()
+    {
+        var entry = CreateAssemblyEntry("C:\\fixtures\\health-without-diagnostics.dll");
+
+        var result = GetServerHealthResponseBuilder.Build(
+            Array.Empty<ProjectSnapshot>(),
+            [entry],
+            new GetServerHealthOptions(IncludeDiagnostics: true));
+
+        var payload = result.StructuredContent!.Value;
+        Assert.True(payload.TryGetProperty("assemblies", out var assemblies));
+        var assembly = Assert.Single(assemblies.EnumerateArray());
+        Assert.True(assembly.TryGetProperty("diagnostics", out var diagnostics));
+        Assert.Equal(JsonValueKind.Array, diagnostics.ValueKind);
+        Assert.Empty(diagnostics.EnumerateArray());
     }
 
     [Fact]

@@ -62,7 +62,7 @@ internal static class GetServerHealthResponseBuilder
         bool targeted,
         GetServerHealthOptions options)
     {
-        if (!targeted && !options.IncludeSessions) return null;
+        if (!targeted && !options.IncludeSessions && !options.IncludeDiagnostics) return null;
         var maxSessions = Math.Clamp(options.MaxSessions, 1, GetServerHealthTool.MaxSessions);
         return assemblies.Take(maxSessions).ToList();
     }

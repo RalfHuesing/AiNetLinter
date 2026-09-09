@@ -2,7 +2,7 @@
 
 | ID | Schweregrad | Status | Betroffene Tools | Kurzbegründung |
 | --- | --- | --- | --- | --- |
-| A-001 | Major | open | `get_server_health` | Angeforderte leere Diagnose-Samples sind nicht strukturiert erkennbar. |
+| A-001 | Major | fixed | `get_server_health` | Angeforderte leere Diagnose-Samples sind nicht strukturiert erkennbar. |
 | A-002 | Minor | open | `get_server_health` | Nichtpositive Diagnose-Limits werden stillschweigend auf einen Default geändert. |
 | A-003 | Minor | open | `get_server_health` | Partieller Assembly-Zustand weist widersprüchliche nächste Aktionen aus. |
 | B-001 | Major | open | `get_namespace_tree` | Strukturierte Einträge ignorieren das angeforderte Ergebnislimit. |
