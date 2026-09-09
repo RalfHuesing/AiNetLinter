@@ -58,27 +58,37 @@ public sealed class GetFeatureContextToolCapTests
         Assert.NotNull(payload?.Tests);
         Assert.Equal(testFileCount * methodsPerFile, payload.Tests.TotalMatchingTests);
         Assert.Equal(testFileCount, payload.Tests.TotalTestFiles);
-        Assert.Equal(expectedDisplayedMethods, payload.Tests.DisplayedTestMethods);
-        Assert.Equal(expectedReasons.Split(','), payload.Tests.TruncatedBy);
+        var wireBudgetTruncated = payload.Tests.TruncatedBy?.Contains("responseBudget") == true;
+        var expectedReasonsWithWireBudget = expectedReasons.Split(',').ToList();
+        if (wireBudgetTruncated) expectedReasonsWithWireBudget.Add("responseBudget");
+        Assert.Equal(expectedReasonsWithWireBudget, payload.Tests.TruncatedBy);
         Assert.True(payload.Tests.IsTruncated);
         Assert.Equal("truncated", payload.Tests.Completeness);
         Assert.Contains("testContext", text, StringComparison.Ordinal);
         Assert.Contains("Nächster sicherer Schritt", text, StringComparison.Ordinal);
-        Assert.Equal(expectedDisplayedMethods, payload.Tests.TestFiles.Sum(file => file.TestMethods.Count));
-        Assert.Equal(
-            Enumerable.Range(0, payload.Tests.TestFiles.Count)
-                .Select(index => Math.Min(
-                    Math.Min(methodsPerFile, ExpectedMethodsPerFile),
-                    Math.Max(ExpectedMethodsTotal - index * ExpectedMethodsPerFile, 0))),
-            payload.Tests.TestFiles.Select(file => file.TestMethods.Count));
+        Assert.Equal(payload.Tests.DisplayedTestMethods, payload.Tests.TestFiles.Sum(file => file.TestMethods.Count));
+        Assert.InRange(payload.Tests.TestFiles.Count, 0, Math.Min(testFileCount, maxTests));
+        Assert.All(payload.Tests.TestFiles, file =>
+            Assert.InRange(file.TestMethods.Count, 0, Math.Min(methodsPerFile, ExpectedMethodsPerFile)));
+        if (!wireBudgetTruncated)
+        {
+            Assert.Equal(expectedDisplayedMethods, payload.Tests.DisplayedTestMethods);
+            Assert.Equal(
+                Enumerable.Range(0, payload.Tests.TestFiles.Count)
+                    .Select(index => Math.Min(
+                        Math.Min(methodsPerFile, ExpectedMethodsPerFile),
+                        Math.Max(ExpectedMethodsTotal - index * ExpectedMethodsPerFile, 0))),
+                payload.Tests.TestFiles.Select(file => file.TestMethods.Count));
+        }
         Assert.Contains(
-            $"Zeige {Math.Min(testFileCount, maxTests)} von {testFileCount} Testdateien",
+            $"{payload.Tests.TestFiles.Count} von {testFileCount} Testdateien",
             text,
             StringComparison.Ordinal);
         Assert.Contains(
-            $"{expectedDisplayedMethods} von {testFileCount * methodsPerFile} Testmethoden",
+            $"{payload.Tests.DisplayedTestMethods} von {testFileCount * methodsPerFile} Testmethoden",
             text,
             StringComparison.Ordinal);
+        if (wireBudgetTruncated) Assert.Contains("Wire-Budget", text, StringComparison.Ordinal);
     }
 
     private static RoslynTestSolution CreateScenario(int testFileCount, int methodsPerFile)

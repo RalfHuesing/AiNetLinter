@@ -90,8 +90,21 @@ internal static partial class McpToolResultsWireBudget
         section["completeness"] = "truncated";
         section["isTruncated"] = true;
         if (section.ContainsKey("status")) section["status"] = "truncated";
+        if (sectionName == "testContext") ReconcileTestContextCounts(section);
         AddReason(section, "responseBudget");
         section["nextStep"] = BuildSectionNextStep(sectionName, ReadString(section, "nextStep"));
+    }
+
+    private static void ReconcileTestContextCounts(JsonObject section)
+    {
+        if (section["testFiles"] is not JsonArray testFiles) return;
+
+        var returnedMethods = testFiles
+            .OfType<JsonObject>()
+            .Sum(file => (file["testMethods"] as JsonArray)?.Count ?? 0);
+        if (section.ContainsKey("returnedTestFiles")) section["returnedTestFiles"] = testFiles.Count;
+        if (section.ContainsKey("returnedTestMethods")) section["returnedTestMethods"] = returnedMethods;
+        if (section.ContainsKey("displayedTestMethods")) section["displayedTestMethods"] = returnedMethods;
     }
 
     private static void MarkRootTruncated(JsonObject payload, IEnumerable<string> sectionNames)
