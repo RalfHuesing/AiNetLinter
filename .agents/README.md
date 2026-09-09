@@ -39,3 +39,22 @@ Orchestrator setzt einen Task mit `status: ready`,
 Release-Gate um. Er beendet sich nicht nach dem ersten Slice oder einem
 Zwischenreview. Die Rollen, Builds, Tests und MCP-Prüfungen laufen dabei strikt
 seriell; pro Task ist höchstens ein delegierter Agent gleichzeitig aktiv.
+
+MCP-Server aus Agent-Sicht prüfen — Kurzform auf dem eigenen Projekt (Source-Modus):
+
+```text
+$mcp-ux-audit
+```
+
+Oder explizit mit einem Release-Build (Assembly-Modus, 360°-Sicht):
+
+```text
+$mcp-ux-audit
+
+targetPath: C:\Daten\Entwicklung\Ralf\AiNetLinter\src\AiNetLinter\bin\Release\net10.0\AiNetLinter.exe
+```
+
+Ohne `targetPath` verwendet der Skill automatisch `AiNetLinter.slnx` im
+Repository-Root (Source-Modus). Mit `.exe`- oder `.dll`-Pfad läuft der Audit
+im Assembly-Modus gegen den Release-Build — sinnvoll nach einem Release um zu
+prüfen ob das Binary denselben Qualitätsstand hat wie der Quellcode.

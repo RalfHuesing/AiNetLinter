@@ -14,6 +14,16 @@ Nutzeranweisungen haben Vorrang. Stoppe nicht nach der ersten Befund-Gruppe.
 
 ## Aufruf
 
+Ohne `targetPath` — Skill sucht automatisch nach der ersten `.sln`- oder `.slnx`-Datei
+im Repository-Root und führt den Audit im Source-Modus durch (Dogfood-Betrieb
+auf dem eigenen Projekt):
+
+```text
+$mcp-ux-audit
+```
+
+Mit explizitem Pfad:
+
 ```text
 $mcp-ux-audit
 
@@ -312,3 +322,4 @@ $mcp-ux-audit
 
 targetPath: C:\Daten\Entwicklung\Ralf\AiNetLinter\AiNetLinter.slnx
 ```
+
