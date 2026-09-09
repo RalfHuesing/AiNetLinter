@@ -931,6 +931,12 @@ Einzelabfragen bleiben skalare, optionale Aliases kompatibel:
 - [x] **F-05 Kompakter Pattern-Report:** Null-Treffer-Ausgaben von `pattern_detect` bleiben bei mehreren Patterns kompakt; Ein-Pattern-Abfragen behalten Details.
 - [x] **F-06 Dynamischer Index-Scope:** `get_index_scope` listet vorhandene Dateiendungen dynamisch, unterdrückt Null-Einträge und weist Nicht-C#-Dateien aus.
 
+## MCP Assembly Quality (Task 04)
+
+- [x] **Öffentlicher Assembly-Vertrag:** Absolute `.dll`-/`.exe`-Targets werden ausschließlich statisch als `origin=decompiled` analysiert; Handoff-IDs binden kanonischen Pfad und Content-Hash.
+- [x] **Antwort- und Health-Hygiene:** Materialisat-, Workspace-, Cache- und Generationsdetails bleiben intern; `continuationToken` ist die einzige öffentliche Fortsetzung und globales Health liefert nur serverweite Aggregate.
+- [x] **Wire-/Schema-Abgleich:** Assembly-Tools, StructuredContent, Textprojektion, Fixtures, Runtime-Checks und aktive Dokumentation teilen denselben Status-, Scope-, Count- und Completeness-Vertrag.
+
 ## Decompiled Bodies bei optionalen Parametern und Partial-Referenzen
 
 - [x] `get_symbol_body` ordnet dekompilierte C#-Syntaxsignaturen mit zusätzlichen

@@ -89,7 +89,7 @@ public sealed class WiringToolCollectionContractTests
             var description = tools[name].Description;
             Assert.Contains("targetPath als absoluter, existierender Pfad", description, StringComparison.Ordinal);
             Assert.Contains("Source- oder Assembly-Route wird aus targetPath bestimmt", description, StringComparison.Ordinal);
-            Assert.Contains("Snapshot/Generation", description, StringComparison.Ordinal);
+            Assert.Contains("Snapshotbindung", description, StringComparison.Ordinal);
         }
 
         foreach (var name in projectOnly)

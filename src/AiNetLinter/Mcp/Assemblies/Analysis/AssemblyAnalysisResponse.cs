@@ -29,9 +29,6 @@ internal static partial class AssemblyAnalysisResponse
         return Measure(CreateEnriched(result, lease)).TotalBytes <= budget;
     }
 
-    internal static CallToolResult Enrich(CallToolResult result, AssemblyAnalysisLease lease)
-        => Enrich(result, lease, new AssemblyAnalysisResponseRequest());
-
     internal static CallToolResult Enrich(
         CallToolResult result,
         AssemblyAnalysisLease lease,
@@ -49,7 +46,8 @@ internal static partial class AssemblyAnalysisResponse
             request.MaxResponseBytes,
             request.DetailLevel,
             lease.Context.ResponseBudgetBytes);
-        return ApplyWireBudget(enriched, budget, AssemblyPaging.ReadOffset(request.Cursor));
+        return AssemblyPublicContract.Project(
+            ApplyWireBudget(enriched, budget, AssemblyPaging.ReadOffset(request.Cursor)));
     }
 
     private static CallToolResult CreateEnriched(CallToolResult result, AssemblyAnalysisLease lease)
@@ -63,9 +61,7 @@ internal static partial class AssemblyAnalysisResponse
             lease.CanonicalPath,
             origin.OriginKind,
             origin.ContentHash,
-            origin.GeneratedDocumentPath,
             origin.Confidence,
-            lease.Context.Generation,
             effectiveStatus.ToWireValue(),
             effectiveStatus.ToCompletenessLabel(),
             origin.BodyAvailability,
@@ -444,8 +440,8 @@ internal static partial class AssemblyAnalysisResponse
     }
 
     private static string FormatHeader(AssemblyResponseMetadata metadata) =>
-        $"[ASSEMBLY] targetPath={metadata.TargetPath}; generatedPath={metadata.GeneratedPath}; origin={metadata.Origin}; " +
-        $"confidence={metadata.Confidence}; generation={metadata.Generation}; " +
+        $"[ASSEMBLY] targetPath={metadata.TargetPath}; origin={metadata.Origin}; " +
+        $"confidence={metadata.Confidence}; " +
         $"status={metadata.Status}; completeness={metadata.Completeness}; " +
         $"bodyAvailability={metadata.BodyAvailability}; contentMode={metadata.ContentMode}\n\n";
 
@@ -453,9 +449,7 @@ internal static partial class AssemblyAnalysisResponse
         string TargetPath,
         string Origin,
         string AssemblyHash,
-        string GeneratedPath,
         string Confidence,
-        long Generation,
         string Status,
         string Completeness,
         string BodyAvailability,

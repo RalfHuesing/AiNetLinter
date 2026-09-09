@@ -448,6 +448,6 @@ Der Release ist blockiert, sobald einer dieser Befunde verbleibt:
 ## Freigabestatus
 
 Die technische und fachliche Entscheidung ist vollständig beschrieben;
-`open_questions: []` und `execution_mode: autonomous` gelten. Der Status
-bleibt `draft`, bis die ausdrückliche Nutzerfreigabe vorliegt. Erst dann wird
-er auf `ready` gesetzt.
+`open_questions: []`, `execution_mode: autonomous` und die ausdrückliche
+Nutzerfreigabe gelten. Der Status ist `ready`; die Umsetzung darf autonom
+über alle Slices orchestriert werden.

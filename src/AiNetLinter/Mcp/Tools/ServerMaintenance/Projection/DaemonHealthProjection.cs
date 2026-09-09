@@ -7,7 +7,7 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance.Projection;
 
 internal static class DaemonHealthProjection
 {
-    internal static DaemonHealthPayload FromContext(DaemonRuntimeContext context)
+    internal static DaemonHealthPayload FromContext(DaemonRuntimeContext context, bool includeKeys = true)
     {
         var snapshot = context.Snapshot;
         return new DaemonHealthPayload(
@@ -16,7 +16,7 @@ internal static class DaemonHealthProjection
             snapshot.Connections,
             snapshot.ProcessId,
             snapshot.Uptime.TotalSeconds,
-            snapshot.Keys,
+            includeKeys ? snapshot.Keys : Array.Empty<string>(),
             snapshot.DaemonVersion,
             snapshot.DaemonProfile);
     }

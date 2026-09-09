@@ -52,7 +52,7 @@ internal static partial class AssemblySearchTool
         if (!AssemblyPaging.TryReadBoundOffset(arguments.EffectiveCursor, binding, out _))
         {
             return McpToolResults.InvalidArgument(
-                "cursor/continuationToken ist nicht an Target, Assembly-Hash und Abfrage gebunden oder abgelaufen.",
+                "continuationToken ist nicht an Target, Assembly-Hash und Abfrage gebunden oder abgelaufen.",
                 "den zuletzt gelieferten continuationToken unverändert mit derselben Abfrage wiederverwenden.");
         }
 
@@ -149,7 +149,7 @@ internal static partial class AssemblySearchTool
             || int.TryParse(cursor, out var offset) && offset >= 0
             || cursor.StartsWith("v1.", StringComparison.Ordinal)
             ? null
-            : McpToolResults.InvalidArgument("cursor muss ein nichtnegativer numerischer Offset sein.");
+            : McpToolResults.InvalidArgument("continuationToken muss ein gültiger ausgegebener Token sein.");
     }
 
     internal static AssemblySearchPayload Scan(
@@ -308,7 +308,7 @@ internal static partial class AssemblySearchTool
         maxFilesTruncated
             ? "maxFiles erhoehen, um weitere Dateien in den sichtbaren Suchscope aufzunehmen."
             : truncated
-                ? "cursor oder continuationToken mit derselben Suchanfrage verwenden oder maxResults erhoehen."
+                ? "continuationToken mit derselben Suchanfrage verwenden oder maxResults erhoehen."
                 : null;
 
     private static AssemblySearchAccumulator ScanFiles(
@@ -479,7 +479,7 @@ internal static partial class AssemblySearchTool
         {
             builder.AppendLine($"Ergebnis gekürzt ({string.Join(", ", payload.TruncatedBy)}); " +
                                (payload.ContinuationToken is null ? payload.DetailHint :
-                               $"cursor={payload.ContinuationToken}; continuationToken={payload.ContinuationToken}; {payload.DetailHint}"));
+                               $"continuationToken={payload.ContinuationToken}; {payload.DetailHint}"));
         }
 
         return builder.ToString().TrimEnd();

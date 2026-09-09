@@ -40,7 +40,6 @@ internal static class AssemblyAnalysisToolRegistrations
                 int contextLines = 0,
                 string? fileFilter = null,
                 int maxResponseBytes = 0,
-                string? cursor = null,
                 string? continuationToken = null,
                 bool declarationOnly = false,
                 string? kind = null,
@@ -48,7 +47,7 @@ internal static class AssemblyAnalysisToolRegistrations
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                var effectiveCursor = cursor ?? continuationToken;
+                var effectiveCursor = continuationToken;
                 return await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
                     new AnalysisToolCallRequest(
@@ -88,10 +87,10 @@ internal static class AssemblyAnalysisToolRegistrations
         "declarationOnly: schliesst Treffer in Kommentaren, Strings und XML-Docs aus. " +
         "kind: schraenkt Treffer auf eine bestimmte Symbolart ein ('method', 'type', 'property'). " +
         "maxResults (Default 50, Cap 1000), maxFiles, contextLines (Cap 5), fileFilter als Glob (z. B. '*.cs', '!*Designer*') oder Regex, " +
-        "maxResponseBytes und cursor begrenzen die Antwort. StructuredContent.assemblySearch liefert " +
+        "maxResponseBytes und continuationToken begrenzen die Antwort. StructuredContent.assemblySearch liefert " +
         "relative Trefferpfade, stabile IDs, Matchbereiche, totalCount/returnedCount, " +
-        "completeness, truncatedBy und continuationToken; analysis enthaelt Origin, Generation und " +
-        "Source-Policy. Ohne verfügbaren SourceRoot ist die Capability explizit unsupported. " +
+        "completeness, truncatedBy und continuationToken; analysis enthaelt Origin und " +
+        "die statische Source-Policy. Ohne verfügbaren SourceRoot ist die Capability explizit unsupported. " +
         "Die Assembly wird weder geladen noch ausgefuehrt.";
 
     private static void AddInspectAssembly(
@@ -113,13 +112,12 @@ internal static class AssemblyAnalysisToolRegistrations
                 bool? includeReferences = null,
                 int maxResponseBytes = 0,
                 string? detailLevel = null,
-                string? cursor = null,
                 string? continuationToken = null,
                 CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                var effectiveCursor = cursor ?? continuationToken;
+                var effectiveCursor = continuationToken;
                 var effectiveIncludeReferences = includeReferences ?? (
                     string.IsNullOrWhiteSpace(@namespace)
                     && string.IsNullOrWhiteSpace(typeName)
@@ -190,13 +188,12 @@ internal static class AssemblyAnalysisToolRegistrations
                 bool includeReferences = false,
                 int maxResponseBytes = 0,
                 string? detailLevel = null,
-                string? cursor = null,
                 string? continuationToken = null,
                 CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                var effectiveCursor = cursor ?? continuationToken;
+                var effectiveCursor = continuationToken;
                 return await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
                     new AnalysisToolCallRequest(
@@ -261,7 +258,7 @@ internal static class AssemblyAnalysisToolRegistrations
                 int topN = 10,
                 int maxResponseBytes = 0,
                 string? detailLevel = null,
-                string? cursor = null,
+                string? continuationToken = null,
                 CancellationToken ct = default) => ExecuteGetAssemblyContextAsync(
                     context,
                     assemblyRoute,
@@ -281,7 +278,7 @@ internal static class AssemblyAnalysisToolRegistrations
                         topN,
                         maxResponseBytes,
                         detailLevel,
-                        cursor,
+                        continuationToken,
                         ct)),
             TargetPathToolRegistrationOptions.AssemblyTool("get_assembly_context", GetAssemblyContextDescription)));
     }
@@ -315,12 +312,12 @@ internal static class AssemblyAnalysisToolRegistrations
                             parameters.TopN,
                             parameters.MaxResponseBytes,
                             parameters.DetailLevel,
-                            parameters.Cursor),
+                            parameters.ContinuationToken),
                         parameters.CancellationToken),
                     ExpandAssemblyReferences: parameters.IncludeReferences || parameters.IncludeCallers || parameters.IncludeImpact,
                     MaxResponseBytes: parameters.MaxResponseBytes,
                     DetailLevel: parameters.DetailLevel,
-                    Cursor: parameters.Cursor),
+                    Cursor: parameters.ContinuationToken),
                 parameters.CancellationToken));
     }
 
@@ -340,7 +337,7 @@ internal static class AssemblyAnalysisToolRegistrations
         int TopN,
         int MaxResponseBytes,
         string? DetailLevel,
-        string? Cursor,
+        string? ContinuationToken,
         CancellationToken CancellationToken);
 
     private const string GetAssemblyContextDescription =
@@ -349,7 +346,7 @@ internal static class AssemblyAnalysisToolRegistrations
         "Caller/Impact, Body und Klassenstruktur in einer strukturierten Antwort. " +
         "targetPath ist ein absoluter .dll- oder .exe-Pfad; symbolIdentifier ist optional und " +
         "akzeptiert DocCommentId, Typname oder Datei:Zeile:Spalte. " +
-        "maxResponseBytes, detailLevel (compact/standard/full) und cursor steuern Budget und Paging; " +
-        "unsupported/partial/complete sowie totalCount, returnedCount, isTruncated und continuationToken " +
+        "maxResponseBytes, detailLevel (compact/standard/full) und continuationToken steuern Budget und Paging; " +
+        "unsupported/partial/complete sowie totalCount, returnedCount und continuationToken " +
         "bleiben maschinenlesbar sichtbar. Die Assembly wird weder geladen noch ausgefuehrt.";
 }

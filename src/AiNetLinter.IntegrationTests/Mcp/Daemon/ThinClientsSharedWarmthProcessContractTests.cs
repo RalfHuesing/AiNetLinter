@@ -30,7 +30,7 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
             using var fixture = new SymbolGraphMiniFixtureWorkspace();
             var solutionPath = fixture.SolutionPath;
             using var isolatedState = TestTempDirectory.Create("thin-client-shared-state-");
-            var clientFrames = CreateClientFrames();
+            var clientFrames = CreateClientFrames(solutionPath);
 
             // Der lange Idle-Exit haelt den Daemon zwischen beiden Clients am Leben;
             // das Teardown killt ihn anhand der Welcome-PID, bevor das Fixture freigegeben wird.
@@ -49,7 +49,7 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
                 }).ConfigureAwait(false);
             var second = await McpRawWireTestHarness.RunAndCollectWithDiagnosticsAsync(
                 fixture.SolutionPath,
-                CreateClientFrames(primary: false),
+                CreateClientFrames(solutionPath, primary: false),
                 new McpRawWireRunOptions
                 {
                     InterFrameDelay = TimeSpan.FromMilliseconds(400),
@@ -107,7 +107,7 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
         }
     }
 
-    private static string[] CreateClientFrames(bool primary = true)
+    private static string[] CreateClientFrames(string targetPath, bool primary = true)
     {
         var lastHealthId = primary ? LastHealthId : SecondaryLastHealthId;
         var frames = new List<string>
@@ -118,9 +118,10 @@ public sealed class ThinClientsSharedWarmthProcessContractTests
         };
         for (var id = FirstHealthId; id <= lastHealthId; id++)
         {
+            var arguments = JsonSerializer.Serialize(new { targetPath });
             frames.Add(
                 "{\"jsonrpc\":\"2.0\",\"id\":" + id.ToString(System.Globalization.CultureInfo.InvariantCulture) +
-                ",\"method\":\"tools/call\",\"params\":{\"name\":\"get_server_health\",\"arguments\":{}}}");
+                ",\"method\":\"tools/call\",\"params\":{\"name\":\"get_server_health\",\"arguments\":" + arguments + "}}");
         }
 
         return [.. frames];

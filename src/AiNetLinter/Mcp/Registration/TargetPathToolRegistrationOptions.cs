@@ -21,7 +21,7 @@ internal static class TargetPathToolRegistrationOptions
 
     private const string ProjectAssemblyTargetContract =
         " Zielvertrag: targetPath als absoluter, existierender Pfad einer .sln-, .slnx-, .dll- oder .exe-Datei. " +
-        "Source- oder Assembly-Route wird aus targetPath bestimmt; Antworten weisen Herkunft, Snapshot/Generation, " +
+        "Source- oder Assembly-Route wird aus targetPath bestimmt; Antworten weisen Herkunft, Snapshotbindung, " +
         "Status und Vollstaendigkeit aus.";
 
     private const string AssemblyTargetContract =

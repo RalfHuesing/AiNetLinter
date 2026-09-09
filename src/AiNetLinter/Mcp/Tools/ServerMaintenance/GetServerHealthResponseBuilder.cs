@@ -20,25 +20,29 @@ internal static class GetServerHealthResponseBuilder
         GetServerHealthOptions options)
     {
         var runtimeContext = options.RuntimeContext;
+        var targeted = options.TargetPath is not null || options.AssemblyPath is not null;
+        // The registration removes the public global detail flags. Keeping the
+        // internal option semantics here preserves focused builder tests and
+        // legacy in-process callers without widening the public schema.
+        var includeDiagnostics = options.IncludeDiagnostics;
         var projectedAssemblies = assemblies
             .Select(assembly => AssemblyHealthProjection.Project(
                 assembly,
-                options.IncludeDiagnostics,
+                includeDiagnostics,
                 options.MaxDiagnostics))
             .ToList();
-        var targeted = options.TargetPath is not null || options.AssemblyPath is not null;
         var totalAssemblySessions = projectedAssemblies.Count;
         var shownAssemblies = SelectShownAssemblies(projectedAssemblies, targeted, options);
         var sessionsTruncated = shownAssemblies is not null && totalAssemblySessions > shownAssemblies.Count;
         var sessionsTruncatedBy = sessionsTruncated ? new[] { "maxSessions" } : Array.Empty<string>();
         var statusCounts = AssemblyHealthProjection.CountStatuses(projectedAssemblies);
         var diagnosticCount = projectedAssemblies.Sum(assembly => assembly.DiagnosticsSummary?.TotalCount ?? 0);
-        var daemonPayload = runtimeContext is null ? null : DaemonHealthProjection.FromContext(runtimeContext);
+        var daemonPayload = runtimeContext is null ? null : DaemonHealthProjection.FromContext(runtimeContext, targeted);
         var version = McpServerVersion.Get();
         var response = new HealthResponseData(
             version,
             McpServerVersion.RepositoryUrl,
-            snapshots,
+            targeted ? snapshots : Array.Empty<ProjectSnapshot>(),
             daemonPayload,
             shownAssemblies,
             options,
@@ -114,9 +118,9 @@ internal static class GetServerHealthResponseBuilder
         new(
             Version: response.Version,
             Projects: response.Snapshots.Select(ProjectHealthProjection.FromSnapshot).ToList(),
-            Repository: response.RepositoryUrl,
+            Repository: response.Targeted ? response.RepositoryUrl : null,
             Daemon: response.Daemon,
-            Assemblies: response.ShownAssemblies,
+            Assemblies: response.ShownAssemblies?.Select(AssemblyHealthProjection.ToPublicEntry).ToList(),
             DiagnosticsIncluded: response.Options.IncludeDiagnostics,
             DiagnosticLimit: AssemblyAnalysisResponseLimits.NormalizeDiagnosticLimit(response.Options.MaxDiagnostics),
             SessionsIncluded: response.ShownAssemblies is not null,
@@ -138,6 +142,9 @@ internal static class GetServerHealthResponseBuilder
         bool SessionsTruncated,
         IReadOnlyList<string> SessionsTruncatedBy,
         IReadOnlyDictionary<string, int> StatusCounts,
-        int DiagnosticCount);
+        int DiagnosticCount)
+    {
+        internal bool Targeted => Options.TargetPath is not null || Options.AssemblyPath is not null;
+    }
 
 }

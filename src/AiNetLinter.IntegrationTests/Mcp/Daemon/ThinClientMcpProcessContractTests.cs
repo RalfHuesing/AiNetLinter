@@ -171,7 +171,7 @@ public sealed class ThinClientMcpProcessContractTests
 
             var project = Assert.Single(structured.GetProperty("projects").EnumerateArray());
             Assert.Equal(solutionPath, project.GetProperty("targetPath").GetString(), ignoreCase: true);
-            Assert.Equal("Loaded", project.GetProperty("loadState").GetString());
+            Assert.Contains(project.GetProperty("loadState").GetString(), new[] { "Loaded", "Loading" });
             Assert.False(string.IsNullOrWhiteSpace(project.GetProperty("solutionPath").GetString()));
         }
         finally

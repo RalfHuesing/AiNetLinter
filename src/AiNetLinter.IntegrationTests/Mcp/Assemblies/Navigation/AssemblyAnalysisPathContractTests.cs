@@ -263,7 +263,8 @@ public sealed class AssemblyAnalysisPathContractTests
         Assert.NotEqual(true, body.IsError);
         Assert.Contains($"id: `{methodId}`", bodyText, StringComparison.Ordinal);
         Assert.Contains("Save(bool includeSub = false, bool saveAll = false)", bodyText, StringComparison.Ordinal);
-        Assert.Contains(Path.GetFullPath(document.FilePath!), bodyText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(Path.GetFullPath(document.FilePath!), bodyText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("<decompiled-source>", bodyText, StringComparison.Ordinal);
         Assert.DoesNotContain("decompiledProjectDirectory", bodyText, StringComparison.Ordinal);
 
         var findSymbol = await DispatchAsync(

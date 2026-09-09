@@ -2,8 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Platform;
@@ -52,6 +50,7 @@ public sealed class McpServerAssemblyHealthE2ETests
         Assert.Contains("API-Typen:", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Öffentliche API-Typen:", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Öffentliche Namespaces:", textContent.Text, StringComparison.Ordinal);
+        AssertPublicAssemblyWire(result);
 
         var extensions = await _fixture.Client.CallToolAsync(
             "find_assembly_extensions",
@@ -65,10 +64,21 @@ public sealed class McpServerAssemblyHealthE2ETests
             "Assembly-Extensions:",
             Assert.IsType<TextContentBlock>(Assert.Single(extensions.Content)).Text,
             StringComparison.Ordinal);
+        AssertPublicAssemblyWire(extensions);
+
+        var context = await _fixture.Client.CallToolAsync(
+            "get_assembly_context",
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["maxResults"] = 3,
+            });
+        Assert.False(context.IsError == true, string.Join("\n", context.Content.OfType<TextContentBlock>().Select(block => block.Text)));
+        AssertPublicAssemblyWire(context);
     }
 
     [Fact]
-    public async Task InspectAssembly_ExposesPhysicalPathsForRgAndFileTreeDiscovery()
+    public async Task InspectAssembly_DoesNotExposeMaterializationPaths()
     {
         var result = await _fixture.Client.CallToolAsync(
             "inspect_assembly",
@@ -84,16 +94,9 @@ public sealed class McpServerAssemblyHealthE2ETests
         Assert.False(result.IsError == true, string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text)));
         Assert.NotNull(result.StructuredContent);
         var payload = result.StructuredContent!.Value;
-        Assert.True(payload.TryGetProperty("decompiledProjectDirectory", out _), payload.GetRawText());
-        var projectDirectory = payload.GetProperty("decompiledProjectDirectory").GetString();
-        var projectPath = payload.GetProperty("decompiledProjectPath").GetString();
-        var sourceRoot = payload.GetProperty("decompiledSourceRoot").GetString();
-        Assert.All(
-            new[] { projectDirectory, projectPath, sourceRoot },
-            path => Assert.True(path is not null && Path.IsPathFullyQualified(path), $"Expected absolute path, got '{path}'."));
-        Assert.True(Directory.Exists(projectDirectory));
-        Assert.True(File.Exists(projectPath));
-        Assert.True(Directory.Exists(sourceRoot));
+        Assert.False(payload.TryGetProperty("decompiledProjectDirectory", out _), payload.GetRawText());
+        Assert.False(payload.TryGetProperty("decompiledProjectPath", out _), payload.GetRawText());
+        Assert.False(payload.TryGetProperty("decompiledSourceRoot", out _), payload.GetRawText());
 
         var tree = await _fixture.Client.CallToolAsync(
             "get_file_tree",
@@ -113,10 +116,6 @@ public sealed class McpServerAssemblyHealthE2ETests
         var files = treePayload.GetProperty("files").EnumerateArray().ToList();
         Assert.NotEmpty(files);
 
-        var rg = await RunRipgrepAsync(sourceRoot!, nameof(McpCodeGraphServer));
-        Assert.Equal(0, rg.ExitCode);
-        Assert.NotEmpty(rg.Output);
-
         var search = await _fixture.Client.CallToolAsync(
             "search_assembly",
             new Dictionary<string, object?>
@@ -129,6 +128,7 @@ public sealed class McpServerAssemblyHealthE2ETests
         Assert.False(search.IsError == true, string.Join("\n", search.Content.OfType<TextContentBlock>().Select(block => block.Text)));
         Assert.NotNull(search.StructuredContent);
         var searchPayload = search.StructuredContent!.Value.GetProperty("assemblySearch");
+        AssertPublicAssemblyWire(search);
         Assert.Equal("text", searchPayload.GetProperty("searchKind").GetString());
         Assert.NotEmpty(searchPayload.GetProperty("results").EnumerateArray());
         var completeness = searchPayload.GetProperty("completeness").GetString();
@@ -158,26 +158,7 @@ public sealed class McpServerAssemblyHealthE2ETests
         Assert.Equal(
             "data_access",
             dataAccess.StructuredContent!.Value.GetProperty("assemblySearch").GetProperty("searchKind").GetString());
-    }
-
-    private static async Task<(int ExitCode, string Output)> RunRipgrepAsync(string root, string pattern)
-    {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = "rg",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-        };
-        startInfo.ArgumentList.Add("--fixed-strings");
-        startInfo.ArgumentList.Add("--glob");
-        startInfo.ArgumentList.Add("*.cs");
-        startInfo.ArgumentList.Add(pattern);
-        startInfo.ArgumentList.Add(root);
-
-        var result = await CliProcessRunner.RunAsync(startInfo, TimeSpan.FromSeconds(15));
-        return (result.ExitCode, result.Output);
+        AssertPublicAssemblyWire(dataAccess);
     }
 
     [Fact]
@@ -190,6 +171,10 @@ public sealed class McpServerAssemblyHealthE2ETests
         Assert.False(aggregate.StructuredContent!.Value.GetProperty("sessionsIncluded").GetBoolean());
         Assert.Equal(0, aggregate.StructuredContent.Value.GetProperty("shownSessionCount").GetInt32());
         Assert.False(aggregate.StructuredContent.Value.TryGetProperty("assemblies", out _));
+        var aggregateText = Assert.IsType<TextContentBlock>(Assert.Single(aggregate.Content)).Text;
+        Assert.DoesNotContain("includeSessions", aggregateText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Generation", aggregateText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("GeneratedPath", aggregateText, StringComparison.OrdinalIgnoreCase);
 
         await _fixture.Client.CallToolAsync(
             "find_symbol",
@@ -215,8 +200,6 @@ public sealed class McpServerAssemblyHealthE2ETests
             new Dictionary<string, object?>
             {
                 ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
-                ["includeSessions"] = true,
-                ["maxSessions"] = 1,
             });
         Assert.False(
             assembly.IsError == true,
@@ -224,6 +207,8 @@ public sealed class McpServerAssemblyHealthE2ETests
         var assemblyText = Assert.IsType<TextContentBlock>(Assert.Single(assembly.Content)).Text;
         Assert.Contains("Assembly-Sessions (1)", assemblyText, StringComparison.Ordinal);
         Assert.Contains("Origin:", assemblyText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Generation", assemblyText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("GeneratedPath", assemblyText, StringComparison.OrdinalIgnoreCase);
         Assert.NotNull(assembly.StructuredContent);
         Assert.True(assembly.StructuredContent!.Value.GetProperty("sessionsIncluded").GetBoolean());
         Assert.Equal(1, assembly.StructuredContent.Value.GetProperty("shownSessionCount").GetInt32());
@@ -246,14 +231,25 @@ public sealed class McpServerAssemblyHealthE2ETests
             .Where(candidate => candidate.ProtocolTool.Name == "get_server_health"));
         Assert.Contains("includeDiagnostics", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("maxDiagnostics", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
-        Assert.Contains("includeSessions", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
-        Assert.Contains("maxSessions", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("includeSessions", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("maxSessions", healthTool.ProtocolTool.InputSchema.ToString(), StringComparison.Ordinal);
 
         var searchTool = Assert.Single((await _fixture.Client.ListToolsAsync())
             .Where(candidate => candidate.ProtocolTool.Name == "search_assembly"));
         Assert.Contains("data_access", searchTool.ProtocolTool.Description, StringComparison.Ordinal);
         Assert.Contains("external_calls", searchTool.ProtocolTool.Description, StringComparison.Ordinal);
         Assert.Contains("continuationToken", searchTool.ProtocolTool.Description, StringComparison.Ordinal);
+
+        foreach (var name in new[] { "inspect_assembly", "find_assembly_extensions", "search_assembly", "get_assembly_context" })
+        {
+            var candidate = Assert.Single((await _fixture.Client.ListToolsAsync())
+                .Where(tool => tool.ProtocolTool.Name == name));
+            var inputSchema = candidate.ProtocolTool.InputSchema.ToString();
+            Assert.DoesNotContain("\"cursor\"", inputSchema, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("includeSessions", inputSchema, StringComparison.Ordinal);
+            Assert.DoesNotContain("isTruncated", candidate.ProtocolTool.Description, StringComparison.Ordinal);
+            Assert.DoesNotContain("Generation", candidate.ProtocolTool.Description, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -275,5 +271,16 @@ public sealed class McpServerAssemblyHealthE2ETests
         Assert.NotNull(health.StructuredContent);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(health.Content)).Text;
         Assert.Contains(host.TargetPath, text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void AssertPublicAssemblyWire(CallToolResult result)
+    {
+        var structured = result.StructuredContent?.GetRawText() ?? string.Empty;
+        var text = string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text));
+        foreach (var forbidden in new[] { "cursor", "isTruncated", "generation", "generatedPath", "decompiledProjectDirectory", "decompiledProjectPath", "decompiledSourceRoot" })
+        {
+            Assert.DoesNotContain(forbidden, structured, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(forbidden, text, StringComparison.OrdinalIgnoreCase);
+        }
     }
 }

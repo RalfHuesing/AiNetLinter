@@ -347,9 +347,10 @@ beantwortet.
 `get_assembly_context` ist der Assembly-spezifische Composite-Einstieg für Agenten.
 Er bündelt die kompakte Assembly-Analyse und optional Metrics, Referenzen, Caller/Impact,
 Body und Klassenstruktur. `maxResponseBytes` bzw. `detailLevel` steuern das Budget;
-`cursor` setzt die Fortsetzung einer begrenzten Typ-/Extension-Auswahl fort. Jede
-Assembly-Payload weist additive `totalCount`, `returnedCount`, `isTruncated` und
-`continuationToken` sowie stabile Typ-/Member-IDs aus.
+`continuationToken` setzt die deterministische Fortsetzung eines begrenzten Abschnitts
+fort. Die öffentliche Assembly-Payload weist `totalCount`, `returnedCount`,
+`truncatedBy` und höchstens ein `continuationToken` sowie stabile Typ-/Member-IDs aus;
+`isTruncated` und `cursor` werden nicht veröffentlicht.
 
 Für eine Assembly-Volltextsuche wird `search_assembly` verwendet. `searchKind="text"`
 benötigt ein eigenes Pattern; `data_access` und `external_calls` verwenden ohne
@@ -358,7 +359,7 @@ effektiven Source-/Decompiler-Root und besitzen stabile IDs. `completeness`,
 `truncatedBy`, `totalCount`, `returnedCount` und `continuationToken` sind die
 verbindliche Folgeaufrufinformation. Ein `continuationToken` wird nur ausgegeben,
 wenn innerhalb des sichtbaren Dateiscopes weitere Treffer folgen; endet der
-Scope durch `maxFiles`, bleibt der Zustand ohne wiederholbaren Cursor
+Scope durch `maxFiles`, bleibt der Zustand ohne wiederholbaren Token
 `truncated` und der Dateiscope muss für weitere Treffer erhöht werden. Ohne Root
 antwortet das Tool explizit mit `unsupported`. Für
 Semantik eines Treffers folgt ein Assembly-`find_symbol`-/Body-/Referenz-/Call-Tree-
@@ -567,7 +568,7 @@ prozesssicher gelockten Cache; Generationen werden über Writer-/Reader-Leases u
 Retention geschützt. Unterschiedliche Profile, etwa `codex-a` und `codex-b`,
 erzeugen getrennte Cache-Stämme und sind für bewusst isolierte Instanzen zu
 verwenden. Prozess-IDs sind keine Cache-Identität. Health und Assembly-Antworten
-zeigen Profil, Generation, Lock-/Lease- und Cleanup-Status; private Repository-URLs
+zeigen keine Profil-, Generations-, Lock-, Lease- oder Cleanup-Details; private Repository-URLs
 und Credentials werden nicht ausgegeben. Bei stale oder nicht löschbaren Artefakten
 bleibt der Zustand als Quarantäne mit Ursache, Besitzer und TTL sichtbar und wird
 nicht als gültiger Checkout wiederverwendet.

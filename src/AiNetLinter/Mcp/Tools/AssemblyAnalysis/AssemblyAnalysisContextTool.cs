@@ -67,7 +67,7 @@ internal static class AssemblyAnalysisContextTool
 
     private static JsonObject CreateRoot(AssemblyAnalysisLease lease, AssemblyAnalysisContextArguments arguments) => new()
     {
-        ["contextId"] = $"asm:{lease.Context.Origin.ContentHash}:{lease.Context.Generation}",
+        ["contextId"] = $"asm:{lease.Context.Origin.ContentHash}",
         ["targetPath"] = lease.CanonicalPath,
         ["scope"] = arguments.IncludeReferences || arguments.IncludeCallers || arguments.IncludeImpact ? "root+references" : "root",
         ["completeness"] = lease.Context.Status.ResolveEffectiveStatus(

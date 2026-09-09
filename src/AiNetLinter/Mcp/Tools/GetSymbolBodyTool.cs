@@ -69,25 +69,27 @@ internal static class GetSymbolBodyTool
         CancellationToken ct) =>
         ExecuteAsync(state, new GetSymbolBodyRequest(symbolIdentifiers, MaxBodyLines: maxBodyLines), ct);
 
-    internal static Task<CallToolResult> ExecuteAsync(
+    internal static async Task<CallToolResult> ExecuteAsync(
         IAssemblyBodyContext lease,
         GetSymbolBodyRequest request,
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(lease);
         var solution = lease.Solution;
-        if (solution is null) return Task.FromResult(McpToolResults.SolutionNotLoaded());
+        if (solution is null) return McpToolResults.SolutionNotLoaded();
         var identifiers = McpBatchArguments.Normalize(request.SymbolIdentifiers, StringComparer.Ordinal);
         if (identifiers.Count == 0)
         {
-            return Task.FromResult(McpToolResults.Recoverable(
+            return McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
                 "Pflichtparameter 'symbolIdentifiers' fehlt oder ist leer.",
-                hint: McpToolResults.SymbolIdentifiersBatchHint));
+                hint: McpToolResults.SymbolIdentifiersBatchHint);
         }
 
-        return RenderSymbolBodiesAsync(
-            solution, identifiers, request.EffectiveMaxBodyLines, request.StartLine, lease.AssemblySymbolIdentity, lease.Origin, ct);
+        var result = await RenderSymbolBodiesAsync(
+            solution, identifiers, request.EffectiveMaxBodyLines, request.StartLine, lease.AssemblySymbolIdentity, lease.Origin, ct)
+            .ConfigureAwait(false);
+        return AssemblyPublicContract.Project(result);
     }
 
     internal static Task<CallToolResult> ExecuteAsync(

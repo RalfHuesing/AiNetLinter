@@ -91,9 +91,9 @@ public sealed class McpDocumentationSmokeTests
         Assert.Contains("contentMode", docText, StringComparison.Ordinal);
         Assert.Contains("minLinePercentage", docText, StringComparison.Ordinal);
         Assert.Contains("Progressive Disclosure", docText, StringComparison.Ordinal);
-        Assert.Contains("`includeSessions=true`", docText, StringComparison.Ordinal);
-        Assert.Contains("`maxSessions`", docText, StringComparison.Ordinal);
-        Assert.DoesNotContain("ohne Target getrennte Projekt-/Assembly-Session-Listen", docText, StringComparison.Ordinal);
+        Assert.Contains("`includeSessions` ist kein öffentlicher Input", docText, StringComparison.Ordinal);
+        Assert.Contains("ausschließlich serverweite", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("`includeSessions=true` fordert begrenzte Sessiondetails", docText, StringComparison.Ordinal);
 
         var normalizedDocText = docText.Replace("\r\n", "\n", StringComparison.Ordinal);
         var matrixStart = normalizedDocText.IndexOf("| Tool | Input | Output |", StringComparison.Ordinal);

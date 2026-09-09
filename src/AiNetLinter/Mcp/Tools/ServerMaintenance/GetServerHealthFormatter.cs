@@ -68,7 +68,7 @@ internal static class GetServerHealthFormatter
         IReadOnlyDictionary<string, int> statusCounts,
         int diagnosticCount)
     {
-        builder.AppendLine("- Sessiondetails unterdrückt; includeSessions=true für die Liste");
+        builder.AppendLine("- Sessiondetails global unterdrückt; nur serverweite Aggregate und Fehlerzähler");
         builder.AppendLine($"- Sessions gesamt: {totalSessions}");
         builder.AppendLine($"- Statusverteilung: {string.Join(", ", statusCounts.Select(pair => $"{pair.Key}={pair.Value}"))}");
         builder.AppendLine($"- Diagnosen gesamt: {diagnosticCount}");
@@ -83,7 +83,6 @@ internal static class GetServerHealthFormatter
             builder.AppendLine($"- Vollständigkeit: {assembly.Completeness}");
         }
         builder.AppendLine($"- Origin: {assembly.OriginKind ?? "unbekannt"}");
-        builder.AppendLine($"- Generation: {assembly.Generation?.ToString() ?? "unbekannt"}");
         AppendOptionalAssemblyValue(builder, "Daemon-Profil", assembly.DaemonProfile);
         AppendOptionalAssemblyValue(builder, "Lock-Status", assembly.LockStatus);
         AppendOptionalAssemblyValue(builder, "Lease-Status", assembly.LeaseStatus);
@@ -106,7 +105,6 @@ internal static class GetServerHealthFormatter
         }
 
         AppendOptionalAssemblyValue(builder, "Hash", assembly.ContentHash);
-        AppendOptionalAssemblyValue(builder, "GeneratedPath", assembly.GeneratedDocumentPath);
         AppendOptionalAssemblyValue(builder, "Confidence", assembly.Confidence);
     }
 

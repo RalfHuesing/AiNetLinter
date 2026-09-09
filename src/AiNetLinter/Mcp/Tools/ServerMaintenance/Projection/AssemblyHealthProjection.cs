@@ -89,6 +89,25 @@ internal static class AssemblyHealthProjection
             .OrderBy(group => group.Key, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
 
+    internal static AssemblyHealthPublicEntry ToPublicEntry(AssemblyHealthEntry assembly) =>
+        new(
+            assembly.TargetPath,
+            assembly.LoadState,
+            assembly.OriginKind,
+            assembly.ContentHash,
+            assembly.Confidence,
+            assembly.DiagnosticsSummary,
+            assembly.Completeness,
+            assembly.Diagnostics,
+            assembly.DaemonProfile,
+            assembly.LockStatus,
+            assembly.LeaseStatus,
+            assembly.CleanupStatus,
+            assembly.ErrorCode,
+            assembly.ErrorPhase,
+            assembly.ErrorCause,
+            assembly.NextAction);
+
     private static string ResolveEffectiveStatus(
         string statusValue,
         IReadOnlyCollection<string> diagnostics)

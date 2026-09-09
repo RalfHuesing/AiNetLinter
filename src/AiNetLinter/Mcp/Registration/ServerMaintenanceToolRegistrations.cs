@@ -80,8 +80,6 @@ internal static class ServerMaintenanceToolRegistrations
                 string? targetPath = null,
                 bool includeDiagnostics = false,
                 int maxDiagnostics = AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics,
-                bool includeSessions = false,
-                int maxSessions = GetServerHealthTool.DefaultMaxSessions,
                  CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
@@ -94,8 +92,8 @@ internal static class ServerMaintenanceToolRegistrations
                         targetPath,
                         includeDiagnostics,
                         maxDiagnostics,
-                        includeSessions,
-                        maxSessions,
+                        false,
+                        GetServerHealthTool.DefaultMaxSessions,
                         ct));
             },
             TargetPathToolRegistrationOptions.ServerHealthTool("get_server_health", GetServerHealthDescription)));
@@ -159,10 +157,9 @@ internal static class ServerMaintenanceToolRegistrations
         "Wann nutzen: pruefen, ob der Server laeuft und welche Projekt- und Assembly-Sessions " +
         "resident sind. Ohne targetPath: globaler Status fuer alle Projekt-Keys und Assembly-Sessions. " +
         "Mit targetPath als .sln/.slnx wird der Projekt-Key, mit .dll/.exe die Assembly-Session gezielt geprueft. " +
-         "Standardmaessig werden global nur Aggregat, Status- und Diagnosezaehler geliefert; " +
-         "includeSessions=true fordert begrenzte Sessiondetails an, maxSessions wird serverseitig " +
-         $"auf {GetServerHealthTool.MaxSessions} gedeckelt. includeDiagnostics=true fordert begrenzte " +
-         "Diagnose-Samples an, maxDiagnostics begrenzt deren Anzahl. Zielgebundene Antworten bleiben detailliert.";
+         "Global werden ausschließlich Aggregat-, Status- und begrenzte Fehlerzähler geliefert; " +
+         "includeDiagnostics=true fordert nur für ein konkretes targetPath begrenzte Diagnose-Samples an. " +
+         "Zielgebundene Antworten bleiben auf das angefragte Target begrenzt.";
 
     private static void AddReportObservabilityFeedback(McpServerPrimitiveCollection<McpServerTool> tools)
     {

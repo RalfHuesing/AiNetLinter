@@ -56,6 +56,25 @@ internal sealed record AssemblyHealthEntry(
     string? ErrorCause = null,
     string? NextAction = null);
 
+/// <summary>Stable public health projection without cache, workspace or generation fields.</summary>
+internal sealed record AssemblyHealthPublicEntry(
+    string TargetPath,
+    string LoadState,
+    string? OriginKind,
+    string? ContentHash,
+    string? Confidence,
+    AssemblyDiagnosticsSummary? DiagnosticsSummary = null,
+    string? Completeness = null,
+    IReadOnlyList<string>? Diagnostics = null,
+    string? DaemonProfile = null,
+    string? LockStatus = null,
+    string? LeaseStatus = null,
+    string? CleanupStatus = null,
+    string? ErrorCode = null,
+    string? ErrorPhase = null,
+    string? ErrorCause = null,
+    string? NextAction = null);
+
 /// <summary>
 /// StructuredContent-Payload fuer <c>get_server_health</c>: ein Eintrag je residentem
 /// Projekt-Key und optional die Laufzeitdaten des Daemons.
@@ -65,7 +84,7 @@ internal sealed record ServerHealthAggregatePayload(
     IReadOnlyList<ProjectHealthEntry> Projects,
     string? Repository = null,
     DaemonHealthPayload? Daemon = null,
-    IReadOnlyList<AssemblyHealthEntry>? Assemblies = null,
+    IReadOnlyList<AssemblyHealthPublicEntry>? Assemblies = null,
     bool DiagnosticsIncluded = false,
     int DiagnosticLimit = AssemblyAnalysisResponseLimits.DefaultMaxDiagnostics,
     bool SessionsIncluded = false,

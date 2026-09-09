@@ -244,20 +244,20 @@ public sealed class GetTypeHierarchyToolTests
         Assert.NotNull(firstLeaseResult.Lease);
         using var firstLease = firstLeaseResult.Lease!;
         var serviceSymbol = firstLease.Context.Compilation.GetTypeByMetadataName("Probe.Service")!;
-        var currentAssemblySymbolId = CallGraphTraversal.GetStableSymbolId(serviceSymbol, firstLease.Server.AssemblySymbolIdentity);
-        Assert.StartsWith("assembly:", currentAssemblySymbolId, StringComparison.Ordinal);
+        var firstAssemblySymbolId = CallGraphTraversal.GetStableSymbolId(serviceSymbol, firstLease.Server.AssemblySymbolIdentity);
+        Assert.StartsWith("assembly:", firstAssemblySymbolId, StringComparison.Ordinal);
 
         var assemblyCallResult = await AnalysisToolCall.ExecuteRouted(
             targetRoute,
             new AnalysisToolCallRequest(
                 new AnalysisTargetRequest(assemblyPath),
                 new AnalysisToolDispatch(
-                    ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default),
-                    AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, currentAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default))));
+                    ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, firstAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default),
+                    AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, firstAssemblySymbolId, GetTypeHierarchyTool.DefaultMaxResults, default))));
 
         Assert.NotEqual(true, assemblyCallResult.IsError);
         var assemblyText = TextOf(assemblyCallResult);
-        Assert.Contains("IService", assemblyText, StringComparison.Ordinal);
+        Assert.True(assemblyText.Contains("IService", StringComparison.Ordinal), assemblyText);
         Assert.Contains("Probe.IService", assemblyText, StringComparison.Ordinal);
 
         // 2. Generationenwechsel ueber A -> B -> A
@@ -273,9 +273,12 @@ public sealed class GetTypeHierarchyToolTests
             "HierarchyProbe",
             "namespace Probe; public interface IService { } public class Service : IService { }");
         var thirdLeaseResult = await assemblyRegistry.LeaseAsync(assemblyPath);
-        thirdLeaseResult.Lease!.Dispose();
+        var thirdLease = thirdLeaseResult.Lease!;
+        var currentServiceSymbol = thirdLease.Context.Compilation.GetTypeByMetadataName("Probe.Service")!;
+        var currentAssemblySymbolId = CallGraphTraversal.GetStableSymbolId(currentServiceSymbol, thirdLease.Server.AssemblySymbolIdentity);
+        thirdLease.Dispose();
 
-        // 3. Derselbe Pfad-/Hash-Snapshot bleibt nach interner Generationseviction gültig.
+        // 3. Die aktuelle Snapshot-ID bleibt nach interner Generationseviction gültig.
         var stableCallResult = await AnalysisToolCall.ExecuteRouted(
             targetRoute,
             new AnalysisToolCallRequest(
@@ -286,7 +289,7 @@ public sealed class GetTypeHierarchyToolTests
 
         Assert.NotEqual(true, stableCallResult.IsError);
         var stableText = TextOf(stableCallResult);
-        Assert.Contains("IService", stableText, StringComparison.Ordinal);
+        Assert.True(stableText.Contains("IService", StringComparison.Ordinal), stableText);
 
         // 4. Eine bare DocumentationCommentId bleibt eine direkte fachliche Suchanfrage.
         var unwrappedCallResult = await AnalysisToolCall.ExecuteRouted(
@@ -299,7 +302,7 @@ public sealed class GetTypeHierarchyToolTests
 
         Assert.NotEqual(true, unwrappedCallResult.IsError);
         var unwrappedText = TextOf(unwrappedCallResult);
-        Assert.Contains("IService", unwrappedText, StringComparison.Ordinal);
+        Assert.True(unwrappedText.Contains("IService", StringComparison.Ordinal), unwrappedText);
 
         // 5. Konkreter Solution-Pfad auf Projekt-Ziel bleibt weiterhin erfolgreich
         var projectRoot = ProjectRegistryFixture.CreateProjectRoot(temp, "probe-proj");

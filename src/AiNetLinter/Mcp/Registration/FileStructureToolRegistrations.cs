@@ -104,7 +104,7 @@ internal static class FileStructureToolRegistrations
         "maxResults: Begrenzung der primaeren Dateitreffer (Default 20, Maximum 2000). " +
         "maxResponseBytes: serialisiertes Payload-Budget (Default 8192, Maximum 65536). Für Assembly-Ziele wird der " +
         "vorhandene Source- oder dekompilierte SourceRoot verwendet; ohne solchen Root ist die " +
-        "Capability unsupported. Snapshot/Generation bleiben im Assembly-Response-Envelope sichtbar. " +
+        "Capability unsupported. Die Assembly-Navigation bleibt an Target und Snapshot gebunden. " +
         "sortBy: 'path' [Default], 'size_desc', 'extension'. includeMetadata: Dateigroessen (Default true), " +
         "includeLineCount: Zeilenzaehlung (Default false). structuredContent liegt unter fileTree.";
 
