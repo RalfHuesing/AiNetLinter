@@ -19,249 +19,288 @@ supersedes: null
 
 # Task 03: Sicherer MCP-Entwicklungsworkflow
 
-## Verbindliche Leitentscheidung: harter Schnitt
+## Verbindliche Leitentscheidung: atomarer Hard Cut
 
-Dieser Task ersetzt den bisherigen MCP-Entwicklungsworkflow innerhalb seines
-Scopes vollständig. Es gibt keinen Migrationspfad, keine Übergangsphase und
-keine Kompatibilität zu vorherigen Features, Request-Schemas, Response-Feldern,
-IDs, Konfigurationspfaden, Statuswerten oder Fallbacks.
+Dieser Task liefert den einzigen aktiven MCP-Entwicklungsworkflow für
+Source-Analyse aus. Es gibt keinen Migrationspfad, keine Übergangsphase und
+keine Kompatibilität zu einer vorherigen Vertragsgeneration. Alte Requests,
+Response-Felder, IDs, Statuswerte, Konfigurationspfade, Aliase, Adapter,
+Fallbacks, Dual-Read-/Dual-Write-Logik und Laufzeitumschaltungen werden weder
+akzeptiert, erzeugt noch still umgedeutet.
 
-Die Umsetzung darf und muss deshalb veraltete Runtime-Pfade, Adapter, Aliase,
-Dual-Read-/Dual-Write-Logik, tote Modelle, Registrierungen, Fixtures und Tests
-entfernen. Dasselbe gilt für aktive Dokumentation: `Docs/`, `README.md`,
-MCP-Instructions, Toolbeschreibungen und `.agents/rules/` dürfen keine frühere
-Vertragsvariante als aktuelle Möglichkeit, Beispiel oder Empfehlung stehen
-lassen. Generierte Regeldateien werden aus ihrer Source of Truth neu erzeugt;
-manuelle Parallelverträge sind nicht zulässig.
+Der Schnitt umfasst Runtime, öffentliche MCP-Schemas, StructuredContent,
+Formatter, Registrierungen, Tests, Fixtures, Sample-Payloads, aktive
+Dokumentation, README, MCP-Instructions und aktive Agentenregeln. Entfernte
+Verträge hinterlassen keine toten Modelle, Parserzweige, Serializer,
+Optionsmodelle oder Feature-Flags, die den alten Vertrag reaktivieren könnten.
+Generierte Regeldateien werden ausschließlich aus ihrer vorgesehenen Source of
+Truth erzeugt; ein manuell gepflegter Parallelvertrag ist unzulässig.
 
-Historische Auditbefunde und abgeschlossene Task-Konzepte bleiben
-read-only-Evidenz. Sie sind keine Runtime- oder Dokumentationsquelle und
-werden nicht durch Kompatibilitätslogik geschützt. Wird eine historische
-Aussage in einer aktiven Dokumentation wiederholt, muss die aktive Stelle
-entfernt oder auf den neuen Vertrag korrigiert werden.
+Historische Auditunterlagen und abgeschlossene Task-Konzepte sind read-only
+Evidenz. Sie dürfen alte Begriffe enthalten, sind aber weder Produktvertrag
+noch aktive Dokumentation und rechtfertigen keine Kompatibilitätslogik.
 
-## Ziel und Problem
+## Ziel und primärer Agentennutzen
 
-Vor einer Source-Änderung soll ein Agent belastbaren Kontext,
-Produktionsimpact und statische Testkandidaten erhalten; danach soll er Lint
-und Metriken ohne falsches Grün bewerten können. Der neue Vertrag muss diese
-Schleife mit genau einer konsistenten Scope-, Status- und Completeness-Wahrheit
-bilden. Alte, parallel weitergeführte Vertragsreste würden erneut
-unterschiedliche Interpretationen ermöglichen und sind deshalb ein
-Releasefehler.
+Vor einer Source-Änderung erhält ein Agent belastbaren Kontext,
+Produktionsimpact und statische Testkandidaten. Danach bewertet er Lint,
+Metriken und präzisionskritische Quality-Signale ohne falsches Grün. Die
+Schleife besitzt genau eine Scope-, Snapshot-, Status-, Completeness- und
+Handoff-Wahrheit:
 
-## Primärer Agentennutzen
+`Kontext → Impact → statische Testkandidaten → Änderung → Violations/Metriken → gezielte Quality-Prüfung`
 
-Der primäre Agentennutzen ist eine sichere, kopierbare Schleife:
+Ein sichtbarer Treffer ist nur dann ein Folgeinput, wenn er als solcher
+gekennzeichnet und für konkretes Target und Snapshot gültig ist. Statische
+Kandidaten sind niemals Runtime-, Coverage- oder Löschbeweise. Composites
+beschleunigen die Orientierung, ersetzen aber keinen erforderlichen Detailcall.
 
-`Kontext → Impact → statische Testkandidaten → Änderung → Violations/Metriken`
+## Verbindliche Entscheidungen und Ownership
 
-Jeder Schritt liefert nur den neuen Vertrag, eindeutig begrenzte Ergebnisse
-und gültige Detail-Handoffs. Assemblyqualität bleibt der eigenständige Scope
-von Task 04; daraus darf keine zweite Source-Workflow-Wahrheit entstehen.
+- Task 02 gilt fachlich als abgeschlossen. Jeder bei Task 03 noch vorgefundene
+  Task-02-Vertragsrest wird vollständig in diesem Task entfernt oder auf den
+  neuen Vertrag gebracht. Er wird nicht zurückdelegiert und erzeugt keinen
+  zweiten Release.
+- Task 01 und 02 liefern unveränderliche Rahmenbedingungen für `targetPath`,
+  Origin, ID, Snapshot, Status, Completeness, Budget und Handoff. Task 03 darf
+  ihre Restimplementierung abschließen, aber keinen zweiten Rahmen einführen.
+- Task 03 besitzt die Source-Fachsemantik der Workflow- und Precision-Tools.
+  Gemeinsame Infrastruktur darf für beide Origins bereinigt werden, wenn dies
+  für die Task-02-Restübernahme notwendig ist.
+- Task 04 besitzt ausschließlich Assembly-Fachqualität: Decompiled-Katalog,
+  -Navigation, Decompilerdiagnostik, Assembly-Snapshotqualität, Lease,
+  Lifecycle und Consumeraussagen. Task 03 verändert keine dieser
+  Assembly-Fachpayloads; sie erhalten Schutztests gegen Regression.
+- `Docs/` einschließlich `Docs/ROADMAP.md`, `README.md`, MCP-Resources,
+  Server-Instructions, Toolbeschreibungen und `.agents/rules/` sind aktiv und
+  keine historischen Ausnahmen.
 
-## Source of Truth und betroffene Bereiche
+## Source of Truth und Vertragskatalog
 
-- Der fachliche Zielvertrag sind die von Task 01 und Task 02 gelieferten
-  `targetPath`-, Scope-, ID-, Snapshot-, Status- und Budgetsemantiken.
-- Für die Workflow-Fachlichkeit sind die neuen Runtime-Modelle,
-  Toolregistrierungen und deren Contract-/Integrationstests die primäre
-  Implementierungsquelle.
-- Die aktive Dokumentation muss exakt den implementierten Vertrag abbilden:
-  `Docs/`, `README.md`, MCP-Instructions, Toolbeschreibungen,
-  `.agents/rules/` und gegebenenfalls `ainetlinter-rules.json` samt daraus
-  generierten Regeldateien.
-- Betroffen sind `FeatureContext/*`,
-  `SymbolGraph/GetImpactTool`, References, `TestContext/*`, Violations,
-  Metrics, `Safeguard`, DeadCode, Duplicates, MagicValues, PatternDetect
-  sowie alle zugehörigen Formatter, Registrierungen, Contract-, Wire-,
-  Integration-, Dogfood- und Fixture-Artefakte.
-- Auditmatrix und Verbesserungsrahmen werden nur zur Begründung und
-  Befundprüfung gelesen. Sie führen keine alte API und keinen Erhaltungszwang
-  in die neue Implementierung ein.
+Vor der ersten Runtime-Änderung wird für die gesamte betroffene Oberfläche ein
+einziger maschinenprüfbarer Vertragskatalog festgelegt. Er ist die normative
+Quelle. Runtime, Registrierung, `tools/list`, StructuredContent, Formatter,
+Resources, Dokumentation und Tests werden daraus abgeleitet oder dagegen
+geprüft. Vorhandene Code- oder Testformen sind keine konkurrierende Source of
+Truth.
+
+Der Katalog enthält je Toolfamilie:
+
+- kanonische Required-/Optional-Inputs mit Typ, Default, Cap und Ausschlüssen;
+- verbotene entfernte Inputs, Aliasnamen und Konfigurationspfade;
+- StructuredContent-Wurzel, `navigation` und tool-spezifische Payloadpfade;
+- Status-, Error-, Completeness-, Confidence- und `next`-Semantik je
+  Ergebnisfeld oder Composite-Abschnitt;
+- Scope, getrennte Counts, Ranking, Truncation und Handoff-Fähigkeit;
+- die zulässige Textprojektion. Text darf IDs, Counts, Status und den für einen
+  Folgecall nötigen nächsten Schritt weder verändern noch verschweigen.
+
+| Familie | Tooloberfläche | Task-03-Verantwortung |
+| --- | --- | --- |
+| Workflow | `get_feature_context`, `get_impact`, `get_test_context`, `get_violations`, `metrics_lookup` | Source vollständig |
+| Precision | `safeguard`, `pattern_detect`, `find_dead_code`, `find_duplicates`, `find_magic_values` | Source vollständig |
+| Gemeinsamer Rahmen | Registrierungen, Target-/Snapshot-/Handoff-Projektion, Formatter, Resources, Server-Instructions | Task-02-Reste und Source-Projektion |
+
+Ein bestehendes tool-spezifisches Feld bleibt nur erhalten, wenn es im Katalog
+als kanonisch bestätigt ist, genau eine Bedeutung hat und dem Task-01/02-
+Rahmen entspricht. Andernfalls wird es entfernt, niemals als Alias geführt.
 
 ## Scope
 
-- Einen gemeinsamen Source-Anker für Symbol, Datei sowie Produktions- und
-  Testscope in Context, Impact, Testcontext, Violations und Metrics verwenden.
-- Composite-Tools geben nur klar begrenzte Abschnitte aus, vermeiden doppelte
-  Caller-/Body-Daten und verweisen mit Handoff auf neue Detailcalls.
-- Impact trennt Produktions- und Testreferenzen. Git-/Change-Kontext ist eine
-  eigene Capability und erzeugt bei fehlenden Daten keine vollständige
-  Negativbehauptung.
-- Testcontext benennt statische Kandidaten, Heuristik, Scope und Truncation;
-  er behauptet nie Runtime-Coverage.
-- Lint, Metriken und Quality-Gates verwenden denselben Scope und zeigen
-  fehlende Regeln, nicht entscheidbare Teile und Partialität sichtbar.
-- Die präzisionskritischen Auditbefunde werden korrigiert: scoped Safeguard,
-  sichtbare ungeprüfte Patternkategorien, Kandidatenstatus/Confidence für
-  Dead Code und Duplicates sowie korrekte Magic-Value-Kategorien.
-- Alle durch den neuen Vertrag ersetzten Code-, Test-, Dokumentations- und
-  Regelreste werden in demselben Task entfernt. Es bleibt keine zweite
-  Vertragsoberfläche für vorherige Features bestehen.
+- Alle Workflowtools verwenden für Source dieselbe interne Scope-Projektion:
+  `targetPath`, geprüfter Snapshot, Produktions-/Test-/Artefaktklassifikation,
+  Datei-/Namespace-/Symbolbezug und gegebenenfalls Richtung. Das ist kein
+  zweiter öffentlicher Targetinput.
+- `get_feature_context` liefert begrenzte, nicht duplizierte Abschnitte für
+  Deklaration, Impact, statische Tests, Violations und Metriken.
+- `get_impact` trennt Symbolimpact und Git-/Change-Kontext als fachlich
+  getrennte Modi. Ein leerer Diff-Scope bedeutet nie „kein Impact im
+  Repository“. Fehlende Git-Evidenz erzeugt keine vollständige Negativaussage.
+- `get_test_context` liefert ausschließlich statische Testkandidaten samt
+  Heuristik, Scope, Count, Truncation, Confidence, Evidenzgrenze und sicherem
+  nächsten Schritt; nie Runtime-Coverage oder Testausführung.
+- `get_violations`, `metrics_lookup` und `safeguard` verwenden denselben
+  fachlichen Source-Scope. Fehlende oder ungültige Regeln können nicht als
+  sauberes Lint- oder Quality-Ergebnis erscheinen.
+- `safeguard` zeigt nur Violations und Remediation aus seinem geprüften Scope.
+  Ein Score ersetzt weder Scope noch Abschnittsstatus.
+- `pattern_detect` weist für jede angeforderte Kategorie aus, ob sie geprüft,
+  leer, begrenzt, nicht konfiguriert oder nicht entscheidbar ist.
+- `find_dead_code` und `find_duplicates` liefern Kandidaten statt
+  Löschaufträgen. Reflection, DI, Generatoren und dynamische Auflösung werden
+  als nachweisbare Evidenzgrenze behandelt.
+- `find_magic_values` verwendet ausschließlich disjunkte, im Vertragskatalog
+  festgelegte Kategorien. Kategorie, Evidenz, Scope und Empfehlung dürfen
+  Security-, Localization-, Framework- und Config-Aussagen nicht vermischen.
+
+## Status-, Fehler-, Snapshot- und Lebenszeitsemantik
+
+Die gemeinsame `navigation` enthält für erreichbare zielgebundene Antworten
+`target`, `origin`, `snapshot`, `capabilities`, `operationStatus`, `result`,
+`completeness` und `next`. `complete`, `partial` und `truncated` gelten immer
+für ein benanntes Ergebnisfeld oder einen Composite-Abschnitt, nie unpräzise
+für eine Session.
+
+| Fall | Verpflichtende Semantik |
+| --- | --- |
+| Vollständig geprüfte Leermenge | `operationStatus=ok`, Ergebnis `empty`, `totalCount=0`; keine Aussage außerhalb des Scopes. |
+| Begrenzter bekannter Rest | `truncated` mit `totalCount`, `returnedCount`, `truncatedBy` und genau einem passenden `next`. |
+| Fehlende Referenzen oder dynamische Grenze | betroffener Abschnitt `partial` oder `not_decidable`, mit Ursache, Confidence und sicherer Alternative. |
+| Fehlende Regeln | nur Lint-/Quality-Capability `not_configured`; Navigation bleibt nutzbar. |
+| Ungültige Regeln oder exogener Fehler | klarer Fehlercode, Ursache/Feldpfad und sicherer nächster Schritt; kein Default und kein stiller Retry. |
+| Falsches Target oder Capability | `target_mismatch` beziehungsweise `unsupported`, nie `empty`. |
+| Snapshotwechsel | `stale_snapshot` mit Wiederholungsanweisung, nie `symbol_not_found`. |
+| Unbekannter, alter oder nichtkanonischer Input | `invalid_argument`; keine Aliasauflösung und kein Umformen. |
+
+Workflow-DTOs besitzen keine Lease-, Session- oder Dateibesitzsemantik. Die
+Registry bleibt Besitzerin der Project- und Assembly-Leases. IDs und
+Continuations sind nur für gebundenes Target und Snapshot gültig; interne
+Cache-Generationen werden niemals Agenteninput.
+
+## Hard-Cut-Nachweis ohne falsche historische Treffer
+
+Vor der Implementierung wird im Task-Verzeichnis eine read-only
+Legacy-Entfernungsmatrix als Prüfgrundlage angelegt. Sie enthält alle konkret
+vorgefundenen alten API-Namen, Response-Felder, ID- und Statuswerte,
+Konfigurationspfade, Aliasrouten, Registrierungen, Fixtureformen und
+Dokumentationsbeispiele samt ihrer zulässigen historischen Evidenzquelle. Sie
+ist keine Produktdokumentation und keine Runtime-Abhängigkeit.
+
+Der Release-Scan prüft `src/`, produktive MCP-Test- und Fixturepfade, `Docs/`,
+`README.md`, `.agents/rules/`, `ainetlinter-rules.json`, MCP-Resources,
+Registrierungen und Server-Instructions. `tasks/**` einschließlich Audit und
+abgeschlossener Konzepte ist ausschließlich historische Evidenz und wird vom
+Aktivscan ausgenommen. Ein Treffer im aktiven Prüfpfad blockiert den Release.
+
+Alte Requests bleiben nicht als Fixtures erhalten. Ein generischer Raw-Wire-
+Test beweist die Ablehnung unbekannter Properties. Schema-/Response-Allowlist,
+Runtime-Validatoren und Aktivscan beweisen den vollständigen Hard Cut, ohne
+alte Namen in den Produkt- oder Testvertrag zurückzuholen.
 
 ## Muss-Kriterien
 
-- Produktion, Tests, Diagnosen und Artefakte sind jeweils getrennt gezählt,
-  gefiltert und gerankt.
-- `get_feature_context`, `get_impact`, `get_test_context`, `get_violations`
-  und `metrics_lookup` widersprechen sich für denselben neuen Anker nicht bei
-  Scope, Lintstatus oder Vollständigkeit.
-- Kein begrenztes oder teilweises Lint-, Pattern- oder Quality-Ergebnis
-  behauptet „sauber“, „keine“ oder vollständige Löschbarkeit.
-- Kandidaten enthalten Confidence, Evidenzgrenzen und sichere nächste Prüfung;
-  sie enthalten keinen Löschauftrag.
-- Die öffentliche Oberfläche akzeptiert ausschließlich den neuen Vertrag.
-  Alte Parameter, Aliasfelder, Statusprojektionen, IDs, Konfigurationspfade
-  und Response-Varianten werden weder gelesen noch erzeugt noch still
-  umgedeutet.
-- Entfernte Features hinterlassen keine ungenutzten Adapter, Serializer,
-  Registrierungen, Optionsmodelle, Test-Fixtures, Sample-Payloads oder
-  Dokumentationsfragmente in aktiven Pfaden.
-- Aktive Docs, README und Regeln nennen ausschließlich den neuen Vertrag.
-  Eine Migrations-, Deprecation- oder Kompatibilitätsanleitung wird nicht
-  erstellt.
-- Die Umsetzung enthält keine Feature-Flag- oder Fallback-Variante, mit der
-  der alte Vertrag zur Laufzeit wieder aktiviert werden könnte.
+- Für denselben Source-Scope widersprechen sich die fünf Workflowtools nicht
+  bei Target, Snapshot, Produktions-/Testtrennung, Lintstatus, Counts,
+  Completeness oder Handoff.
+- Produktion, Tests, Artefakte und Diagnostics werden getrennt gezählt,
+  gefiltert und gerankt. Produktion wird nicht durch Tests, Artefakte oder
+  Diagnostics verdrängt.
+- Jeder navigierbare Treffer enthält kanonische Handoff-ID, `handoff=true` und
+  erlaubte Folge-Tools. Nicht navigierbare Ergebnisse enthalten
+  `handoff=false`, Grund und sicheren nächsten Schritt.
+- Kein begrenztes, partielles oder nicht entscheidbares Ergebnis behauptet
+  Sauberkeit, globale Abwesenheit, Runtime-Coverage oder Löschbarkeit.
+- Dead-Code- und Duplicate-Kandidaten enthalten Confidence, Evidenzgrenze und
+  Gegenprüfung, aber keine Löschanweisung.
+- Die öffentliche Oberfläche akzeptiert ausschließlich den Vertragskatalog.
+  Entfernte Parameter, Response-Felder, IDs, Statuswerte, Config-Routen,
+  Aliasnamen und Varianten werden weder gelesen, erzeugt, registriert noch
+  dokumentiert.
+- Runtime, Schema, StructuredContent, Formatter, Resources,
+  Server-Instructions, Tests, Fixtures, Docs, README und Regeln enthalten
+  keine zweite Vertragsoberfläche.
+- Keine Feature-Flag-, Default- oder Fallback-Variante kann den entfernten
+  Vertrag wiederherstellen.
 
 ## Messbare Akzeptanzkriterien
 
-- Eine Fixture mit Produktion, Tests, generiertem Artefakt,
-  Reflection-/DI-Grenzfall und einer echten Violation hat in allen fünf
-  Workflowtools übereinstimmende Scope-Counts und erwartete Status.
-- Jede der fünf Precision-Familien erhält mindestens einen False-Green- und
-  einen `not_decidable`-/Partial-Wire-Test.
-- Composite-Antworten bleiben unter 12 KiB, verdoppeln keinen Body/Caller und
-  verweisen mit mindestens einer gültigen neuen ID auf den Detailcall.
-- Ein repositoryweiter Abgleich der aktiven Runtime-, Test-, Docs-, README-
-  und Regeloberfläche findet keinen alten Vertrag, keine Aliasroute und keine
-  alte Beispielpayload. Die konkrete Entfernungsliste wird während der
-  Umsetzung aus dem tatsächlich vorgefundenen Bestand abgeleitet; sie wird
-  nicht als neue Kompatibilitätsinventur im Produkt verewigt.
-- `tools/list`, StructuredContent, Formatter, Docs, README und aktive Regeln
-  beschreiben dieselben Feldnamen, Statuswerte, Scopebegriffe und nächsten
-  Schritte. Kein aktiver Text verweist auf einen nicht mehr implementierten
-  Pfad.
-- Alte Requests werden nicht als gültige Eingabe verarbeitet oder auf den
-  neuen Vertrag umgebogen. Ein notwendiger Schutztest prüft ausschließlich
-  die generische Ablehnung unbekannter oder nicht unterstützter Eingaben und
-  führt keine alte API als Fixture weiter.
+- Eine gemeinsame Source-Fixture enthält Produktion, Testprojekt, generiertes
+  Artefakt, echte Violation, Reflection-/DI-Grenze und statisches Testsignal.
+  Die Workflowtools liefern die im Katalog erwarteten getrennten Counts,
+  Status-, Scope- und Snapshotwerte.
+- Jede Precision-Familie besitzt mindestens einen False-Green-Schutztest und
+  einen Partial- oder `not_decidable`-Wire-Test. Jeder benennt erwarteten
+  Abschnittsstatus, Evidenzgrenze und verbotene positive Behauptung.
+- `tools/list`, Runtime-Validator, StructuredContent-Snapshot,
+  Formatter-/Text-Snapshot, Resource oder Server-Instructions und Dokumentation
+  beweisen je Tool dieselben kanonischen Namen, Enums, Status und nächsten
+  Schritte.
+- Jeder Composite bleibt bei UTF-8-Serialisierung seiner vollständigen
+  Nutzdaten innerhalb von 12 KiB und innerhalb von 4 KiB je Abschnitt.
+  Diagnostics zählen zum Budget und folgen den Nutzdaten. Doppelte Caller-/Body-
+  Nutzdaten sind verboten.
+- Jeder navigierbare Composite-Treffer wird per Raw-Wire-Folgecall aus
+  StructuredContent geprüft. Leere, nicht konfigurierte oder nicht
+  entscheidbare Abschnitte erzeugen keine künstliche ID.
+- Raw-Wire-Tests prüfen unbekannte Properties, target-fremde IDs, stale
+  Snapshots, fehlende/ungültige Regeln, `empty`, `partial`, `truncated`,
+  `unsupported` und `not_decidable` mit exaktem Code und sicherem nächsten
+  Schritt.
+- Entfernungsmatrix, Aktivscan und Schema-/Response-Allowlist ergeben für alle
+  aktiven Prüfpfade null alte Vertragsfragmente.
+- Wenn `ainetlinter-rules.json` betroffen ist, wird
+  `.agents/rules/AiNetLinter.mdc` ausschließlich über
+  `--sync-agent-rules-only` regeneriert und der Stand danach geprüft.
+- Source- und Assembly-Regressionstests beweisen, dass Task-03-Änderungen
+  keine Task-04-Assembly-Fachpayload, keinen Assembly-Lifecycle und keine
+  Decompilersemantik verändern.
 
 ## Non-Goals
 
-- Keine Migration, kein Adapter, keine Aliasunterstützung, kein Dual-Read,
-  kein Dual-Write und keine befristete Rückwärtskompatibilität.
-- Keine Deprecation-Phase, kein Migrationsleitfaden und keine Erhaltung alter
-  README-, Docs- oder Regeltexte aus Gründen der Nutzerkompatibilität.
-- Keine Runtime-Coverage, vollständige Reflection-/Generator-/DI-Analyse,
-  neue Lintregeln, Targetmigration, Decompiler-Parität oder kosmetische
-  Formatter-Arbeit ohne falsche Agentenentscheidung.
-- Keine Änderung der historischen Auditquellen oder abgeschlossenen
-  Task-Konzepte als Ersatz für die Bereinigung aktiver Oberflächen.
-- Kein allgemeines Repository-Cleanup ohne Bezug zur Entfernung des alten
-  MCP-Entwicklungsworkflows.
+- Keine Migration, Rückwärtskompatibilität, Deprecation-Phase, Alias-,
+  Adapter-, Dual-Read-/Dual-Write- oder Fallback-Unterstützung.
+- Keine Änderung historischer Auditquellen oder abgeschlossener Task-Konzepte.
+- Keine Runtime-Coverage, Testausführung, vollständige Reflection-/Generator-/
+  DI-Analyse, automatische Löschung oder automatische Refactorings.
+- Keine neuen Lintregeln, Targetmigration, allgemeine Repositorybereinigung
+  oder kosmetische Formatterarbeit ohne Einfluss auf eine Agentenentscheidung.
+- Keine Task-04-Arbeit an Decompiled-Qualität, Assembly-Consumerwissen,
+  Assembly-Leases, Cache, TTL, Eviction oder Lifecycle.
 
-## Architektur- und Betriebsannahmen
+## Risiken und verworfene Alternativen
 
-Der gemeinsame Anker ist eine fachliche Projektion über vorhandene Scanner,
-kein neues Analyse-Repository. Heuristiken bleiben konservativ; erwartete
-Grenzen modellieren Status und Confidence statt Exceptions. Composites
-koordinieren Payloads, ersetzen aber keine Detailtools.
+Ein Hard Cut kann externe Clients und lokale Skripte brechen. Das ist bewusst;
+ein Adapter oder Migrationsleitfaden würde Mehrdeutigkeit wieder einführen.
 
-Der Hard Cut wird atomar als neuer aktiver Vertrag ausgeliefert. Es gibt keine
-Koexistenz zweier Vertragsgenerationen, keine Laufzeitumschaltung und keinen
-Default, der einen entfernten Vertrag wiederherstellt. Fachliche
-Implementierungsdetails innerhalb dieses Rahmens entscheidet der spätere
-Orchestrator autonom.
+Ein Komplettscan ohne Trennung aktiver Oberflächen von historischer Evidenz
+liefert falsche Treffer. Ein Scan nur einzelner Runtime-Dateien übersieht Docs,
+Regeln und Fixtures. Deshalb sind Entfernungsmatrix und aktive Prüfpfade beide
+erforderlich.
 
-## Fehler-, Fallback-, Ownership- und Lebenszeitsemantik
+Verworfen sind:
 
-- Fehlende Regeln sind `not_configured`, Source-fremde Capability
-  `unsupported`, dynamische Beweisgrenzen `not_decidable` mit Confidence.
-- Ein ungültiger oder veralteter Request ist ein Vertragsfehler und wird nicht
-  durch Raten, Fallback oder stilles Umformen repariert.
-- Git-Diff ohne Änderungen ist nur ein leerer Diff-Scope, nicht „kein Impact“.
-- Alle Teilabschnitte tragen ihren eigenen Status; ein verfügbarer Abschnitt
-  bleibt nutzbar, wenn ein anderer fehlt.
-- IDs und Snapshotverhalten stammen aus Task 02. Sie dürfen nicht durch eine
-  parallel erhaltene alte ID- oder Generationsemantik ergänzt werden.
-- Neue Workflow-Objekte besitzen keine Lebensdauer- oder Ownership-Semantik,
-  die auf entfernte Legacy-Sessions oder Konfigurationsdefaults verweist.
+- nur Formattertexte ändern, weil Runtime und StructuredContent weiter
+  widersprechen könnten;
+- alte und neue Verträge parallel bedienen, weil Scope-, Status- und
+  ID-Wahrheiten divergieren;
+- die Toolfamilien in Mega-DTO oder gemeinsamen Scanner pressen, weil
+  Fachscanner und Toolpayloads getrennt bleiben müssen;
+- Task-04-Assemblyqualität in diesen Task ziehen, weil dies Lifecycle- und
+  Decompiled-Risiken mit der Source-Schleife vermischt.
 
-## Abhängigkeiten
+## Konkrete Agentenszenarien
 
-Task 01 liefert den einheitlichen Targetvertrag, Task 02 den ID-, Scope-,
-Status-, Snapshot- und Budgetvertrag. Task 04 verwendet für relevante
-Assembly-Capabilities dieselben Handoff-Grundsätze, darf aber die Source-
-Semantik dieses Tasks nicht verändern. Abhängigkeiten sind nur dann gültig,
-wenn ihre aktive Vertragsoberfläche ebenfalls frei von den hier entfernten
-Altpfaden ist; eine Kompatibilitätsschicht zwischen den Tasks ist nicht
-zulässig.
-
-## Risiken und Alternativen
-
-Ein harter Schnitt kann externe Nutzer oder lokale Skripte brechen. Das ist
-eine bewusste Folge und kein Anlass für einen Adapter; die aktive Dokumentation
-beschreibt nur den neuen Einstieg. Das größere Risiko wäre, alte Fragmente als
-scheinbar harmlose Fallbacks zu behalten und dadurch wieder mehrere Wahrheiten
-zu erzeugen.
-
-Ein „einfacher Gesamtscore“ verschleiert Scope-Fehler und darf nie die einzige
-Wahrheit sein. Zu aggressive konservative Filter können Recall senken, müssen
-aber als Begrenzung sichtbar sein. Ein vollständiger Heuristik-Umbau ist nicht
-releasefähig und bleibt außerhalb des Schnitts.
-
-Verworfene Alternativen:
-
-- Nur Formattertexte ändern: verhindert keine falschen
-  StructuredContent-Entscheidungen und lässt alte Runtimepfade bestehen.
-- Alten und neuen Vertrag parallel bedienen: verletzt den Hard Cut und erzeugt
-  erneut divergierende Status-, ID- und Scope-Wahrheiten.
-- Alle Quality-Tools in diesem Task neu erfinden: große, schlecht testbare
-  Sammlung ohne Bezug zur eigentlichen Konsistenzforderung.
-- Runtime-Coverage emulieren: fachlich unhaltbar.
-
-## Konkrete Agenten-Szenarien
-
-| Fall | Call / muss enthalten / darf nicht behaupten | Nächster Schritt |
-| --- | --- | --- |
-| Änderung an Symbol | Context liefert den neuen Anker; Impact trennt Prod/Test; Testcontext nennt statische Kandidaten; nach Änderung Violations und Metrics auf gleichem Scope. | Neue Detail-ID prüfen, ändern, danach gezielt linten. |
-| Große Menge | Impact/Violations zeigen getrennte Counts, Ranking und Kürzungsgrund. | Scope/Richtung verfeinern, statt „keine weiteren“ anzunehmen. |
-| Fehlende Regeln | Navigation/Impact ist nutzbar; Lintabschnitt ist `not_configured`. | Regel bereitstellen oder Linturteil aussetzen. |
-| Alter Einstieg | Der Request wird als nicht unterstützte/ungültige Eingabe beendet; kein Fallback und kein Umformen. | Ausschließlich den dokumentierten neuen Einstieg verwenden. |
-| Aktiver Alttext | Repositoryprüfung findet eine veraltete Beschreibung, ein Beispiel oder eine Regel. | Text entfernen oder auf den implementierten neuen Vertrag korrigieren; keine Migrationsanleitung ergänzen. |
-
-## Token- und Antwortbudget-Annahmen
-
-Rahmenlimits gelten. Featurecontext priorisiert Ziel, Status und höchstens
-einen repräsentativen Befund pro Abschnitt; vollständige Caller, Bodies und
-Viollisten sind Detailcalls. Diagnostics dürfen keine Produktionsbefunde
-verdrängen. Das Budget darf nicht durch parallele alte und neue Payloads
-verbraucht werden.
+| Fall | Muss enthalten | Darf nicht behaupten | Nächster Schritt |
+| --- | --- | --- | --- |
+| Änderung an Symbol | Kontextanker, Prod-/Testimpact, statische Testkandidaten und Handoffs | Runtime-Coverage oder vollständige Aufruferliste bei Truncation | Handoff prüfen, ändern, gezielt linten und metrisch prüfen. |
+| Leerer Git-Diff | expliziten leeren Diff-Scope samt Grenze | „Kein Impact im Repository“ | Symbolimpact oder anderen Diff-Scope anfordern. |
+| Fehlende Regeln | nutzbare Navigation und Lint-/Quality-Abschnitt `not_configured` | „0 Violations“ oder grünen Safeguard | Regeln bereitstellen oder Linturteil aussetzen. |
+| Reflection-/DI-Kandidat | Confidence, Evidenzgrenze und Gegenprüfung | Löschbarkeit oder Nichtexistenz einer Referenz | Registrierung, Referenzen oder Laufzeitkonfiguration prüfen. |
+| Alter Einstieg | `invalid_argument`, Feldpfad und neuen Einstieg | Aliasauflösung oder Umformen | Kanonischen Input verwenden. |
+| Aktiver Alttext | Treffer der Entfernungsmatrix | historische Ausnahme im aktiven Pfad | Text entfernen oder auf Istvertrag korrigieren. |
 
 ## Erforderliche Dokumentationsänderungen
 
-- `Docs/agent-api.md`, `Docs/integration.md` und alle betroffenen MCP-
-  Referenzen werden auf den neuen Ablauf mit Detailcalls, Scope-Labels,
-  Candidate/Confidence und ehrlichen Lintstatus aktualisiert.
-- `README.md` wird bereinigt, wenn es den betroffenen MCP-Einstieg oder die
-  entfernten Features erwähnt; alte Beispiele werden gelöscht, nicht als
-  Migration erklärt.
-- `.agents/rules/AiNetLinter-McpWorkflow.mdc` und alle weiteren betroffenen
-  aktiven Regeln werden synchronisiert. Die generierte
-  `.agents/rules/AiNetLinter.mdc` wird nur über ihre vorgesehene Source of
-  Truth aktualisiert.
-- `ainetlinter-rules.json` wird nur geändert, wenn der neue Vertrag oder die
-  Regeldefinition es tatsächlich erfordert; danach erfolgt der vorgeschriebene
-  Sync der generierten Agentenregeln.
-- Veraltete Dokumente, Beispiele, Snippets und aktive Regelpassagen werden
-  entfernt. Es wird kein separater Legacy- oder Migrationsabschnitt angelegt.
+- `Docs/agent-api.md`, `Docs/integration.md`, `Docs/ROADMAP.md`, README,
+  MCP-Resources, Toolbeschreibungen und Server-Instructions beschreiben nur den
+  ausgelieferten Vertrag. Alte Beispiele werden gelöscht oder fachlich ersetzt,
+  nie als Migration erklärt.
+- `.agents/rules/AiNetLinter-McpWorkflow.mdc` und weitere betroffene manuelle
+  Regeln beschreiben neuen Agentenablauf, Status, Handoffs und
+  Source-/Assembly-Grenzen.
+- `ainetlinter-rules.json` wird nur bei tatsächlichem Bedarf geändert. Danach
+  wird die generierte `.agents/rules/AiNetLinter.mdc` über den vorgesehenen
+  Generator synchronisiert.
+- Dokumentation erzeugt keine prosebasierte zweite Source of Truth;
+  vollständige Schemaformen stammen aus Vertragskatalog und Schema.
 
 ## Verifikation
 
-Die Umsetzung verwendet für C#-Semantik den MCP-first-Workflow und prüft
-gezielt Impact, Violations, Hotspots und vor dem Abschluss den passenden
-Safeguard. Für Produktions- oder Testcodeänderungen sind verbindlich:
+Die Umsetzung verwendet für C#-Semantik MCP-first. Vor Abschluss erfolgen
+passende `get_impact`-, `get_violations`-, `get_hotspots`- und `safeguard`-
+Prüfungen sowie der in den Regeln verlangte Auditor-Schritt.
+
+Bei Produktions- oder Testcodeänderungen sind verbindlich:
 
 ```text
 dotnet build
@@ -269,40 +308,39 @@ dotnet test src/AiNetLinter.FastTests --filter Category!=Stress
 dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress
 ```
 
-Zusätzlich erforderlich sind Paritäts-, Precision-, Scope-, Partial-, Empty-
-und Composite-Wire-Tests sowie ein frischer MCP-Workflow-Dogfood-Nachweis.
-Die aktive Oberfläche wird mit gezielter Text-/Dateisuche gegen die während
-der Umsetzung ermittelte Entfernungsliste geprüft. `tools/list`,
-StructuredContent, Formatter und Dokumentation werden auf Schema- und
-Statusgleichheit abgeglichen.
+Zusätzlich sind Contract-, Schema-, Response-Allowlist-, Raw-Wire-, Scope-,
+Empty-, Partial-, Truncation-, Precision-, Source-/Assembly-Regression- und
+Dogfood-Tests erforderlich. Ein frisch gestarteter MCP-Workflow führt die
+vollständige Agentenschleife gegen eine kontrollierte Source-Fixture aus.
 
-Bei ausschließlich Markdown-, Dokumentations- oder Agenteninfrastruktur-
-änderungen genügen relevante Referenzprüfungen, `git diff --check` und eine
-sachliche Diff-Prüfung; sobald Produktions- oder Testcode betroffen ist,
-gelten Build und beide vollständigen Nicht-Stress-Suiten.
+Für reine Markdown-, Dokumentations- oder Agenteninfrastrukturänderungen
+genügen relevante Referenzprüfungen, Aktivscan, `git diff --check` und eine
+sachliche Diff-Prüfung. Sobald Produktions- oder Testcode betroffen ist,
+bleiben Build und beide Nicht-Stress-Suiten Pflicht.
 
 ## Release-Gate
 
-Der Release ist blockiert, sobald einer der folgenden Befunde verbleibt:
+Der Release ist blockiert, sobald einer dieser Befunde verbleibt:
 
-- alter Request, alte Response, alte ID-, Status- oder Config-Route wird noch
-  akzeptiert, erzeugt, registriert oder still umgedeutet;
-- Legacy-Code, Adapter, tote Modelle, Fixtures, Sample-Payloads oder aktive
-  Docs-/README-/Regelreste bilden weiterhin eine zweite Vertragsoberfläche;
-- ein begrenztes Ergebnis behauptet vollständige Sauberkeit, globale
-  Negativität oder Löschbarkeit ohne Confidence;
-- Scope, Lintstatus, Completeness oder Handoff widersprechen sich zwischen den
-  fünf Workflowtools;
-- Build, vorgeschriebene Nicht-Stress-Suiten, Wire-/Dogfood-Prüfung,
-  Dokumentationsabgleich oder Diff-Gate sind nicht grün.
-
-Ein reproduzierbares False Green, Scope-Leak im Safeguard oder eine
-Löschbehauptung ohne Confidence blockiert den Release auch bei ansonsten
-grünen Tests.
+- ein alter Request, Response-Feld, ID-, Status- oder Konfigurationsroute wird
+  akzeptiert, erzeugt, registriert, dokumentiert oder still umgedeutet;
+- Entfernungsmatrix, Aktivscan oder Schema-/Response-Allowlist finden eine
+  zweite Vertragsoberfläche in einem aktiven Prüfpfad;
+- Scope, Snapshot, Lintstatus, Counts, Completeness, Handoff oder `next`
+  widersprechen sich zwischen Workflowtools oder zwischen Text und
+  StructuredContent;
+- ein begrenztes oder nicht entscheidbares Ergebnis behauptet Sauberkeit,
+  globale Negativität, Runtime-Coverage oder Löschbarkeit;
+- ein Composite überschreitet sein Wirebudget, dupliziert Nutzdaten oder
+  erfindet einen Handoff;
+- eine Task-04-Assembly-Fachpayload oder Lifecycle-Semantik wurde durch Task 03
+  verändert;
+- Generator-, Build-, Nicht-Stress-, Wire-, Dogfood-, Dokumentations- oder
+  Diff-Gate ist nicht grün.
 
 ## Nachgelagerte Beobachtung
 
-Nach dem Release wird an einer echten Änderung bewertet, ob die konservativen
-Kandidaten genügend Nutzen liefern. Ein Recall-Ausbau ist ein separater,
-evidenzbasierter Auftrag und darf nicht als nachträgliche Kompatibilitäts-
-oder Restarbeiten in diesen Hard-Cut-Task zurückfließen.
+Nach Release wird der Nutzen konservativer Kandidaten an echten
+Source-Änderungen bewertet. Ein Recall-Ausbau oder zusätzliche Analysefähigkeit
+ist ein separater evidenzbasierter Auftrag und darf nicht als
+Kompatibilitätsrest in diesen Hard-Cut-Task zurückfließen.
