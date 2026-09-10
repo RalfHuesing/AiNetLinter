@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Tools.Common;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -53,6 +54,7 @@ internal static class McpArgumentValidationFilter
         {
             ["get_impact"] = Set("maxChangedSymbols", "maxTestsPerSymbol"),
             ["get_file_tree"] = Set("maxDepth", "treeDepth", "maxResponseBytes"),
+            ["get_file_skeleton"] = Set("maxResponseBytes"),
             ["get_namespace_tree"] = Set("maxResponseBytes"),
             ["get_class_structure"] = Set("maxResponseBytes"),
             ["get_violations"] = Set("contextLines"),
@@ -66,21 +68,22 @@ internal static class McpArgumentValidationFilter
     private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> MaximumLimitArgumentsByTool =
         new Dictionary<string, IReadOnlyDictionary<string, int>>(StringComparer.Ordinal)
         {
-            ["get_namespace_tree"] = Limits(("maxResults", 200)),
-            ["get_file_tree"] = Limits(("maxResults", 2_000), ("maxDepth", 32), ("treeDepth", 32), ("maxResponseBytes", 64 * 1024)),
-            ["get_class_structure"] = Limits(("maxMembers", 200)),
+            ["get_file_tree"] = Limits(("maxResults", 2_000), ("maxDepth", 32), ("treeDepth", 32), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
+            ["get_class_structure"] = Limits(("maxMembers", 200), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
+            ["get_file_skeleton"] = Limits(("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
+            ["get_namespace_tree"] = Limits(("maxResults", 200), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["get_hotspots"] = Limits(("maxResults", 200)),
-            ["search_pattern"] = Limits(("maxResults", 2_000), ("maxResponseBytes", 64 * 1024)),
+            ["search_pattern"] = Limits(("maxResults", 2_000), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["metrics_tree"] = Limits(("depth", 5)),
             ["get_feature_context"] = Limits(("maxCallers", 50), ("maxTests", 50)),
             ["get_test_context"] = Limits(("maxResults", 100)),
             ["get_violations"] = Limits(("contextLines", 5)),
-            ["search_assembly"] = Limits(("maxResults", 1_000), ("maxFiles", 2_000), ("contextLines", 5), ("maxResponseBytes", 64 * 1024)),
-            ["inspect_assembly"] = Limits(("maxResults", 1_000), ("maxMembers", 1_000), ("maxResponseBytes", 64 * 1024)),
-            ["find_assembly_extensions"] = Limits(("maxResults", 1_000), ("maxResponseBytes", 64 * 1024)),
+            ["search_assembly"] = Limits(("maxResults", 1_000), ("maxFiles", 2_000), ("contextLines", 5), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
+            ["inspect_assembly"] = Limits(("maxResults", 1_000), ("maxMembers", 1_000), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
+            ["find_assembly_extensions"] = Limits(("maxResults", 1_000), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["get_assembly_context"] = Limits(
                 ("maxResults", 1_000),
-                ("maxResponseBytes", 64 * 1024),
+                ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes),
                 ("maxBodyLines", 1_000),
                 ("maxCallers", 200),
                 ("depth", 3),
@@ -183,6 +186,19 @@ internal static class McpArgumentValidationFilter
                 return McpToolResults.InvalidArgument(
                     $"{argument.Key} darf nicht negativ sein.",
                     $"'{argument.Key}' auf 0 oder einen positiven Wert setzen.",
+                    $"$.{argument.Key}");
+            }
+
+            if (argument.Value.ValueKind == JsonValueKind.Number
+                && argument.Value.TryGetInt32(out var responseBudget)
+                && responseBudget > 0
+                && responseBudget < McpResponseBudgetLimits.MinimumStructuredBytes
+                && string.Equals(argument.Key, "maxResponseBytes", StringComparison.Ordinal)
+                && (tool.ProtocolTool.Name is "get_namespace_tree" or "get_class_structure"))
+            {
+                return McpToolResults.InvalidArgument(
+                    $"{argument.Key} muss fuer eine markierte strukturierte Antwort mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} Bytes betragen.",
+                    $"'{argument.Key}' weglassen, 0 verwenden oder mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} setzen.",
                     $"$.{argument.Key}");
             }
 

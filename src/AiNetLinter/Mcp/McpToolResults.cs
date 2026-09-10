@@ -304,7 +304,11 @@ internal static partial class McpToolResults
     /// bleiben bestehende Clients kompatibel, waehrend Agenten einen einheitlichen Handoff
     /// unter <c>navigation</c> erhalten.
     /// </summary>
-    internal static CallToolResult WithNavigation(CallToolResult result, AnalysisTarget target)
+    internal static CallToolResult WithNavigation(
+        CallToolResult result,
+        AnalysisTarget target,
+        int maxResponseBytes = 0,
+        Func<CallToolResult, int, CallToolResult>? postNavigationResponseBudget = null)
     {
         ArgumentNullException.ThrowIfNull(result);
         ArgumentNullException.ThrowIfNull(target);
@@ -340,7 +344,10 @@ internal static partial class McpToolResults
             Content = text,
             StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
         };
-        return McpToolResultsWireBudget.ReapplyCompositeWireBudgetAfterNavigation(navigated);
+        var budgeted = McpToolResultsWireBudget.ReapplyCompositeWireBudgetAfterNavigation(navigated);
+        return postNavigationResponseBudget is null || maxResponseBytes <= 0
+            ? budgeted
+            : postNavigationResponseBudget(budgeted, maxResponseBytes);
     }
 
     /// <summary>

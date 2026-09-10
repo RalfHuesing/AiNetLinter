@@ -86,6 +86,96 @@ public sealed class McpServerAssemblyHealthE2ETests
     }
 
     [Fact]
+    public async Task AssemblyDiscovery_NegativeResponseBudgetIsRejectedOnAssemblyRoute()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_namespace_tree",
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["maxResponseBytes"] = -1,
+            });
+
+        Assert.False(result.IsError == true, result.ToString());
+        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal("$.maxResponseBytes", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Fact]
+    public async Task AssemblyDiscovery_CappedNamespaceTreePreservesNavigationAndWireEnvelope()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_namespace_tree",
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["maxResults"] = 200,
+                ["maxResponseBytes"] = 4096,
+            });
+
+        Assert.False(result.IsError == true, string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text)));
+        Assert.NotNull(result.StructuredContent);
+        var payload = result.StructuredContent!.Value;
+        Assert.True(payload.TryGetProperty("navigation", out var navigation), payload.GetRawText());
+        Assert.Equal("decompiled", navigation.GetProperty("origin").GetString());
+        Assert.True(payload.TryGetProperty("analysis", out var analysis), payload.GetRawText());
+        Assert.False(string.IsNullOrWhiteSpace(analysis.GetProperty("assemblyHash").GetString()));
+        Assert.True(payload.TryGetProperty("wireBudget", out var wireBudget), payload.GetRawText());
+        Assert.True(wireBudget.GetProperty("limitBytes").GetInt32() > 0);
+        Assert.Contains("[ASSEMBLY]", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AssemblyDiscovery_CappedClassStructurePreservesNavigationAndWireEnvelope()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_class_structure",
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["symbolIdentifier"] = nameof(McpCodeGraphServer),
+                ["maxMembers"] = 200,
+                ["maxResponseBytes"] = 4096,
+            });
+
+        Assert.False(result.IsError == true, string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text)));
+        var payload = result.StructuredContent!.Value;
+        Assert.Equal("decompiled", payload.GetProperty("navigation").GetProperty("origin").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(payload.GetProperty("analysis").GetProperty("assemblyHash").GetString()));
+        Assert.True(payload.GetProperty("wireBudget").GetProperty("limitBytes").GetInt32() > 0);
+        Assert.Contains("[ASSEMBLY]", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AssemblyDiscovery_CappedFileSkeletonPreservesNavigationEnvelope()
+    {
+        var tree = await _fixture.Client.CallToolAsync(
+            "get_file_tree",
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["view"] = "files",
+                ["includeExtensions"] = new[] { ".cs" },
+                ["maxResults"] = 1,
+            });
+        var filePath = tree.StructuredContent!.Value.GetProperty("fileTree").GetProperty("files")[0].GetProperty("path").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(filePath), tree.StructuredContent.Value.GetRawText());
+
+        var result = await _fixture.Client.CallToolAsync(
+            "get_file_skeleton",
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["filePaths"] = new[] { filePath },
+                ["maxResponseBytes"] = 4096,
+            });
+
+        Assert.False(result.IsError == true, string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text)));
+        Assert.Equal("decompiled", result.StructuredContent!.Value.GetProperty("navigation").GetProperty("origin").GetString());
+        Assert.Contains("[ASSEMBLY]", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task AssemblyRoute_ArrayElementTypeMismatchReturnsIndexedFieldAwareInvalidArgument()
     {
         var result = await _fixture.Client.CallToolAsync(

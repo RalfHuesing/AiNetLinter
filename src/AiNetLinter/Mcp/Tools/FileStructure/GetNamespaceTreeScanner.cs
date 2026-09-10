@@ -181,7 +181,9 @@ internal static class GetNamespaceTreeScanner
             TotalCount: totalCount,
             ShownCount: shownTypes.Count,
             Truncated: truncated,
-            Types: typeEntries);
+            Types: typeEntries,
+            TruncatedBy: truncated ? ["maxResults"] : null,
+            Next: truncated ? new NamespaceTreeNext("request_detail", "maxResults erhöhen oder namespacePrefix/kind verfeinern.") : null);
 
         return (sb.ToString(), payload);
     }
@@ -254,7 +256,9 @@ internal static class GetNamespaceTreeScanner
             TotalCount: totalCount,
             ShownCount: shownList.Count,
             Truncated: truncated,
-            Namespaces: rootNodes.Take(parameters.MaxResults).ToList());
+            Namespaces: rootNodes,
+            TruncatedBy: truncated ? ["maxResults"] : null,
+            Next: truncated ? new NamespaceTreeNext("request_detail", "maxResults erhöhen oder depth/namespacePrefix verfeinern.") : null);
 
         return (sb.ToString(), payload);
     }

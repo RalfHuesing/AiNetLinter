@@ -228,5 +228,29 @@ public sealed class GetNamespaceTreeToolTests
         Assert.Contains("INVALID_ARGUMENT", textContent.Text);
         Assert.Contains("NonExistent.Namespace", textContent.Text);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_MaxResponseBytes_ProjectsSameVisibleTypesIntoTextAndStructuredContent()
+    {
+        var source = "namespace BudgetNs {\n" + string.Join("\n", System.Linq.Enumerable.Range(1, 40)
+            .Select(i => $"public class Type{i} {{ }}")) + "\n}";
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\NamespaceBudget.slnx",
+            new ProjectSpec("BudgetProject", [("Budget.cs", source)])));
+        var result = await GetNamespaceTreeTool.ExecuteAsync(
+            context.CreateServer(),
+            new GetNamespaceTreeInput(Project: "BudgetProject", NamespacePrefix: "BudgetNs", MaxResponseBytes: 700),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.True(payload!.Truncated);
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText()) <= 700);
+        Assert.Contains("maxResponseBytes", payload.TruncatedBy!);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Equal(payload.ShownCount, payload.Types!.Count);
+        Assert.All(payload.Types, type => Assert.Contains(type.Name, text, StringComparison.Ordinal));
+    }
 }
 

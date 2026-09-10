@@ -70,10 +70,21 @@ internal static class MetricsTreeTool
             return McpToolResults.Text(scan.Message!);
         }
 
-        var text = MetricsTreeRenderer.Render(
-            scan.Root,
-            query.TopN,
-            MetricsTreeScanner.IsSortDescending(query.Mode));
+        var sortDescending = MetricsTreeScanner.IsSortDescending(query.Mode);
+        var visibleTree = MetricsTreeProjection.Project(scan.Root, query.TopN, sortDescending);
+        var totalCount = MetricsTreeProjection.CountNodes(scan.Root);
+        var returnedCount = MetricsTreeProjection.CountVisibleNodes(visibleTree);
+        var truncated = returnedCount < totalCount;
+        var completeness = new MetricsTreeCompleteness(
+            truncated ? "truncated" : "complete",
+            totalCount,
+            returnedCount,
+            truncated,
+            truncated ? ["topN"] : Array.Empty<string>());
+        var next = truncated
+            ? new MetricsTreeNext("request_detail", "topN erhöhen oder root/fileFilter verfeinern, um weitere Knoten zu sehen.")
+            : new MetricsTreeNext("none", "Kein weiterer Schritt erforderlich.");
+        var text = MetricsTreeRenderer.Render(visibleTree, int.MaxValue, sortDescending);
         var withHint = McpDrillDownHints.Append(text, args.Depth);
         return McpToolResults.Text(
             withHint,
@@ -82,7 +93,11 @@ internal static class MetricsTreeTool
                 query.Root,
                 query.Depth,
                 query.TopN,
-                scan.Root));
+                visibleTree,
+                totalCount,
+                returnedCount,
+                completeness,
+                next));
     }
 
     /// <summary>Dispatcht auf den passenden Scanner: die zwei Datei-Modi laufen synchron ohne

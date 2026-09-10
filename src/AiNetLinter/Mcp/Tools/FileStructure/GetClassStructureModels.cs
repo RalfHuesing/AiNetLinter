@@ -34,4 +34,8 @@ public sealed record ClassStructurePayload(
     int TotalMemberCount,
     int ShownMemberCount,
     bool Truncated,
-    IReadOnlyList<ClassStructureMemberEntry> Members);
+    IReadOnlyList<ClassStructureMemberEntry> Members,
+    IReadOnlyList<string>? TruncatedBy = null,
+    ClassStructureNext? Next = null);
+
+public sealed record ClassStructureNext(string Kind, string Reason);

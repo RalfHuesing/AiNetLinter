@@ -42,7 +42,8 @@ public sealed record GetNamespaceTreeInput(
     int Depth = 1,
     bool IncludeTypes = true,
     string? Kind = "all",
-    int MaxResults = 50);
+    int MaxResults = 50,
+    int MaxResponseBytes = 0);
 
 public sealed record NamespaceTreeScanParameters(
     Project Project,
@@ -68,7 +69,11 @@ public sealed record NamespaceTreePayload(
     IReadOnlyList<TypeNodeEntry>? Types = null,
     int? RequestedDepth = null,
     int? EffectiveDepth = null,
-    bool DepthWasClamped = false);
+    bool DepthWasClamped = false,
+    IReadOnlyList<string>? TruncatedBy = null,
+    NamespaceTreeNext? Next = null);
+
+public sealed record NamespaceTreeNext(string Kind, string Reason);
 
 internal sealed record NamespaceTreeTraverseContext(
     NamespaceTreeScanParameters Parameters,

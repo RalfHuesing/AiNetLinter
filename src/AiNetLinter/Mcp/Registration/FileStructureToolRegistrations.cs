@@ -130,13 +130,14 @@ internal static class FileStructureToolRegistrations
                         new AnalysisToolDispatch(
                             ProjectCall: lease => GetNamespaceTreeTool.ExecuteAsync(
                                 lease.Server,
-                                new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults),
+                                new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults, maxResponseBytes),
                                 ct),
                             AssemblySessionCall: lease => GetNamespaceTreeTool.ExecuteAsync(
                                 lease.Server,
-                                new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults),
+                                new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults, maxResponseBytes),
                                 ct),
-                            MaxResponseBytes: maxResponseBytes),
+                            MaxResponseBytes: maxResponseBytes,
+                            PostNavigationResponseBudget: GetNamespaceTreeTool.ApplyFinalResponseBudget),
                         ct))),
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_namespace_tree", GetNamespaceTreeDescription)));
     }
@@ -148,7 +149,7 @@ internal static class FileStructureToolRegistrations
         "Drilldown. depth: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), 1-3 Namespace-Ebenen (Default 1). includeTypes: Typen ausgeben (Default true) " +
         "oder nur Sub-Namespaces. kind: class/interface/record/struct/enum/all (Default all). " +
         "maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Obergrenze der Eintraege (Default 50, Cap 200). " +
-        "maxResponseBytes: Begrenzung des Antwortbudgets (Default 0 = Standardbudget).";
+        "maxResponseBytes: optionale Begrenzung der kombinierten UTF-8-Wire-Nutzlast aus finalem Text, StructuredContent, Navigation und Trunkierungsfooter (Default 0 = kein zusätzlicher Budget-Trim, Maximum 65536; positive Werte unter 512 liefern INVALID_ARGUMENT). Text und StructuredContent werden aus derselben Teilmenge erzeugt; das Budget wird nach Navigation nochmals geprüft.";
 
     private static void AddGetClassStructure(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -170,9 +171,10 @@ internal static class FileStructureToolRegistrations
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter), ct),
-                            AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter), ct),
-                            MaxResponseBytes: maxResponseBytes),
+                            ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter, maxResponseBytes), ct),
+                            AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter, maxResponseBytes), ct),
+                            MaxResponseBytes: maxResponseBytes,
+                            PostNavigationResponseBudget: GetClassStructureTool.ApplyFinalResponseBudget),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_class_structure", GetClassStructureDescription)));
@@ -187,7 +189,7 @@ internal static class FileStructureToolRegistrations
         "nameFilter: optionaler Substring-Filter nach Member-Namen. maxMembers: Begrenzung der sichtbaren Member " +
         "(mindestens 1; 0 oder negative Werte liefern INVALID_ARGUMENT; Default 50, Cap " + GetClassStructureTool.MaxMembersCap + "); bei Ueberschreitung " +
         "Truncation-Meta-Zeile und TotalMemberCount vs. ShownMemberCount im structuredContent. " +
-        "maxResponseBytes: Begrenzung des Antwortbudgets (Default 0 = Standardbudget).";
+        "maxResponseBytes: optionale Begrenzung der kombinierten UTF-8-Wire-Nutzlast aus finalem Text, StructuredContent, Navigation und Trunkierungsfooter (Default 0 = kein zusätzlicher Budget-Trim, Maximum 65536; positive Werte unter 512 liefern INVALID_ARGUMENT). Text und StructuredContent werden aus derselben Member-Teilmenge erzeugt; das Budget wird nach Navigation nochmals geprüft.";
 
     private static void AddGetFileSkeleton(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -204,9 +206,10 @@ internal static class FileStructureToolRegistrations
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, ct),
-                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, ct),
-                            MaxResponseBytes: maxResponseBytes),
+                            ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, maxResponseBytes, ct),
+                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, maxResponseBytes, ct),
+                            MaxResponseBytes: maxResponseBytes,
+                            PostNavigationResponseBudget: GetFileSkeletonTool.ApplyFinalResponseBudget),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_file_skeleton", GetFileSkeletonDescription)));
@@ -216,7 +219,7 @@ internal static class FileStructureToolRegistrations
         "Wann nutzen: Ueberblick ueber Typen und Signaturen einer oder mehrerer C#-Dateien (Batch in 1 Turn) " +
         "ohne die Bodies zu lesen — jede Signatur traegt eine stabile id: fuer einen Folge-Call an get_symbol_body. " +
         "filePaths: Array von Dateipfaden (auch fuer genau eine Datei), relativ oder absolut. " +
-        "maxResponseBytes: Begrenzung des Antwortbudgets (Default 0 = Standardbudget).";
+        "maxResponseBytes: optionale UTF-8-Begrenzung der finalen Wire-Nutzlast (Text inklusive Navigation und Trunkierungsfooter; Default 0 = kein zusätzlicher Budget-Trim, Maximum 65536); bei Trunkierung wird ein nächster Schritt genannt und nur an vollständigen Skeleton-Einheiten gekürzt.";
 
     private static void AddGetIndexScope(
         McpServerPrimitiveCollection<McpServerTool> tools,

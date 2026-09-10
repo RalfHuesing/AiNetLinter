@@ -147,6 +147,30 @@ public sealed class MetricsTreeToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_TopN_UsesSameVisibleChildrenInTextAndStructuredPayload()
+    {
+        var state = NewState();
+
+        var result = await MetricsTreeTool.ExecuteAsync(
+            state, new MetricsTreeToolArgs("src/SymbolGraphMini", "code_size", 1, 2, null), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        var payload = JsonSerializer.Deserialize<MetricsTreePayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal(2, payload!.Tree.Children.Count);
+        Assert.True(payload.Completeness.Truncated);
+        Assert.Equal(payload.Completeness.TotalCount, payload.TotalCount);
+        Assert.Equal(payload.Completeness.ReturnedCount, payload.ReturnedCount);
+        Assert.Contains("weitere", text, StringComparison.Ordinal);
+        foreach (var child in payload.Tree.Children)
+        {
+            Assert.Contains(child.Name, text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public async Task ExecuteAsync_MissingMode_UsesCodeSizeDefault()
     {
         var state = NewState();

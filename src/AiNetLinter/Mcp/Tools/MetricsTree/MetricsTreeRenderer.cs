@@ -24,7 +24,38 @@ internal sealed record MetricsTreeNode(
     string? TargetPath = null,
     string? Snapshot = null,
     string? SymbolKind = null,
-    IReadOnlyList<string>? AllowedFollowUpTools = null);
+    IReadOnlyList<string>? AllowedFollowUpTools = null,
+    // Anzahl der direkten Kinder, die in dieser Projektion nicht sichtbar sind.
+    // Verschachtelte Auslassungen bleiben am jeweiligen Elternknoten und werden
+    // nicht in diesen Wert eingerechnet.
+    int HiddenChildCount = 0);
+
+internal static class MetricsTreeProjection
+{
+    internal static MetricsTreeNode Project(
+        MetricsTreeNode node,
+        int topN,
+        bool sortDescending)
+    {
+        var sorted = sortDescending
+            ? node.Children.OrderByDescending(c => c.SortValue).ThenBy(c => c.RelativePath, StringComparer.OrdinalIgnoreCase).ToList()
+            : node.Children.OrderBy(c => c.SortValue).ThenBy(c => c.RelativePath, StringComparer.OrdinalIgnoreCase).ToList();
+        var visible = sorted.Take(topN)
+            .Select(child => Project(child, topN, sortDescending))
+            .ToList();
+        return node with
+        {
+            Children = visible,
+            HiddenChildCount = sorted.Count - visible.Count,
+        };
+    }
+
+    internal static int CountNodes(MetricsTreeNode node) =>
+        1 + node.Children.Sum(CountNodes) + node.HiddenChildCount;
+
+    internal static int CountVisibleNodes(MetricsTreeNode node) =>
+        1 + node.Children.Sum(CountVisibleNodes);
+}
 
 /// <summary>
 /// Rein formatierender ASCII-Tree-Renderer ueber einer bereits aggregierten
@@ -38,17 +69,18 @@ internal static class MetricsTreeRenderer
     {
         var sb = new StringBuilder();
         sb.AppendLine(FormatNode(root));
-        RenderChildren(sb, root.Children, "", topN, sortDescending);
+        RenderChildren(sb, root, "", topN, sortDescending);
         return sb.ToString().TrimEnd();
     }
 
     private static void RenderChildren(
-        StringBuilder sb, IReadOnlyList<MetricsTreeNode> children, string prefix,
+        StringBuilder sb, MetricsTreeNode owner, string prefix,
         int topN, bool sortDescending)
     {
+        var children = owner.Children;
         var sorted = sortDescending
-            ? children.OrderByDescending(c => c.SortValue).ToList()
-            : children.OrderBy(c => c.SortValue).ToList();
+            ? children.OrderByDescending(c => c.SortValue).ThenBy(c => c.RelativePath, System.StringComparer.OrdinalIgnoreCase).ToList()
+            : children.OrderBy(c => c.SortValue).ThenBy(c => c.RelativePath, System.StringComparer.OrdinalIgnoreCase).ToList();
         var visible = sorted.Take(topN).ToList();
 
         for (var i = 0; i < visible.Count; i++)
@@ -56,12 +88,13 @@ internal static class MetricsTreeRenderer
             var isLast = i == visible.Count - 1 && visible.Count == sorted.Count;
             AppendNodeLine(sb, visible[i], prefix, isLast);
             var childPrefix = prefix + (isLast ? "    " : "│   ");
-            RenderChildren(sb, visible[i].Children, childPrefix, topN, sortDescending);
+            RenderChildren(sb, visible[i], childPrefix, topN, sortDescending);
         }
 
-        if (sorted.Count > visible.Count)
+        var hiddenCount = owner.HiddenChildCount + Math.Max(0, sorted.Count - visible.Count);
+        if (hiddenCount > 0)
         {
-            sb.AppendLine($"{prefix}└── ... und {sorted.Count - visible.Count} weitere");
+            sb.AppendLine($"{prefix}└── ... und {hiddenCount} weitere");
         }
     }
 

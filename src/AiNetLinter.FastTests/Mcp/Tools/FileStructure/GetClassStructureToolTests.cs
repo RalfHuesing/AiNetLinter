@@ -388,4 +388,33 @@ public sealed class GetClassStructureToolTests
         Assert.Contains(payload.Members, m => m.Name == "ProcessPayment");
         Assert.DoesNotContain(payload.Members, m => m.Name == "CancelOrder");
     }
+
+    [Fact]
+    public async Task ExecuteAsync_MaxResponseBytes_UsesSameVisibleMembersInTextAndStructuredContent()
+    {
+        var methods = string.Join("\n", Enumerable.Range(1, 30).Select(i => $"    public void Method{i}() {{ }}"));
+        var source = $$"""
+            namespace BudgetNs;
+            public class BudgetClass
+            {
+            {{methods}}
+            }
+            """;
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\ClassBudget.slnx",
+            new ProjectSpec("BudgetProject", [("BudgetClass.cs", source)])));
+        var result = await GetClassStructureTool.ExecuteAsync(
+            context.CreateServer(),
+            new GetClassStructureArgs("BudgetClass", "name", MaxResponseBytes: 900),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value.Deserialize<ClassStructurePayload>(McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.True(payload!.Truncated);
+        Assert.Contains("maxResponseBytes", payload.TruncatedBy!);
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText()) <= 900);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.All(payload.Members, member => Assert.Contains(member.Name, text, StringComparison.Ordinal));
+    }
 }

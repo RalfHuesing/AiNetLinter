@@ -169,12 +169,12 @@ vollständige Tool-Rohantworten gehören nicht in die Map.
 | Physische Projektstruktur und gezielte Dateisuche | `get_file_tree` (`fileFilter` für Dateien; `view="summary"` oder `treeDepth <= 2` für Übersicht) |
 | C#-Symbol oder Feature verstehen | `get_feature_context`; bei unbekanntem Namen `find_symbol` |
 | Text, String-Literale, Razor/Config oder Fallback bei 0 Symboltreffern | `search_pattern` (`pattern`, `scopeType`, `isRegex: null` auto) |
-| Codebase nach Größe, Komplexität oder Violations erkunden | `metrics_tree` (`mode`, `fileFilter`, `depth`) |
+| Codebase nach Größe, Komplexität oder Violations erkunden | `metrics_tree` (`mode`, `fileFilter`, `depth`, `topN`); Text und `structuredContent.tree` enthalten dieselbe sichtbare Top-N-Projektion, `completeness`/`next` zeigen ausgelassene Knoten |
 | Semantische Solution-, Namespace- und Typhierarchie erkunden | `get_namespace_tree` (`namespacePrefix`, `depth`) |
 | Definierende Assembly und DLL-Pfad eines Typs ermitteln | `resolve_type_origin` |
 | Konkrete Implementierungen oder Overrides finden | `find_implementations` |
 | Klassenhierarchie, Basisklassen & Interfaces eines Typs | `get_type_hierarchy` |
-| Signaturen und Struktur überblicken | `get_file_skeleton`, `get_class_structure`, dann `get_symbol_body` |
+| Signaturen und Struktur überblicken | `get_file_skeleton` (`maxResponseBytes` bei großen Batch-Antworten), `get_class_structure` (`maxMembers`, `maxResponseBytes`), dann `get_symbol_body` |
 | Öffentliche API einer lokalen .NET-Assembly (.dll/.exe) untersuchen | `inspect_assembly` |
 | Text-/Mustersuche in dekompilierten Fremd-Assemblies | `search_assembly` (`declarationOnly=true` für Symbole, `data_access`, `external_calls`) |
 | Klassische Extension-Methoden einer lokalen .NET-Assembly (.dll/.exe) prüfen | `find_assembly_extensions` |
@@ -204,6 +204,14 @@ Consumer-Projekt die Roslyn-Anwendbarkeit als `not_decidable` aus.
 `completeness`, Diagnostics-Summaries sowie Trunkierungsangaben beachten. Die
 Antworten begrenzen Diagnose-Samples und Referenz-/Session-Listen gemeinsam in
 Text und StructuredContent.
+
+Bei `get_namespace_tree`, `get_class_structure` und `get_file_skeleton` zählt
+`maxResponseBytes` die finale kombinierte UTF-8-Wire-Nutzlast: Text,
+StructuredContent (falls vorhanden), den gemeinsamen Navigationsteil und den
+Trunkierungsfooter. Die sichtbare semantische Einheit wird zuerst gemeinsam
+für Text und StructuredContent bestimmt; nach dem Anhängen der Navigation wird
+das Budget nochmals geprüft. Bei Trunkierung niemals mitten in einer
+Skeleton-/Member-/Namespace-Einheit kürzen.
 
 Für `find_symbol`, `find_references` und `get_call_tree` bleibt bei einem
 Assembly-`targetPath` der Root-Snapshot der Default. Nur

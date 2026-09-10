@@ -324,6 +324,35 @@ public sealed class McpServerArgumentValidationE2ETests
     }
 
     [Theory]
+    [InlineData("get_namespace_tree")]
+    [InlineData("get_file_skeleton")]
+    [InlineData("get_class_structure")]
+    public async Task DiscoveryTools_NegativeResponseBudgetReturnsFieldAwareInvalidArgument(string toolName)
+    {
+        var arguments = new Dictionary<string, object?> { ["maxResponseBytes"] = -1 };
+        if (toolName == "get_file_skeleton") arguments["filePaths"] = new[] { "src/SymbolGraphMini/Greeter.cs" };
+        if (toolName == "get_class_structure") arguments["symbolIdentifier"] = "Greeter";
+
+        var result = await _fixture.Client.CallToolAsync(toolName, arguments);
+
+        Assert.False(result.IsError == true, result.ToString());
+        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal("$.maxResponseBytes", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Fact]
+    public async Task NamespaceTree_TinyPositiveResponseBudgetIsRejectedBeforeDispatch()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_namespace_tree",
+            new Dictionary<string, object?> { ["maxResponseBytes"] = 511 });
+
+        Assert.False(result.IsError == true, result.ToString());
+        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal("$.maxResponseBytes", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Theory]
     [InlineData(0)]
     [InlineData(-1)]
     public async Task Safeguard_NonPositiveMaxViolationsKeepsFeatureSemantics(int maxViolations)

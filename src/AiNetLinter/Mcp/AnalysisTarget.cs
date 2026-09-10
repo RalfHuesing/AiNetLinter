@@ -85,6 +85,7 @@ internal sealed record AnalysisToolDispatch(
     Func<AssemblyAnalysisLease, Task<CallToolResult>>? AssemblySessionCall = null,
     bool ExpandAssemblyReferences = false,
     int MaxResponseBytes = 0,
+    Func<CallToolResult, int, CallToolResult>? PostNavigationResponseBudget = null,
     string? DetailLevel = null,
     string? Cursor = null);
 
@@ -93,4 +94,5 @@ internal sealed record AssemblyAnalysisExecutionOptions(
     CancellationToken CancellationToken = default,
     int MaxResponseBytes = 0,
     string? DetailLevel = null,
-    string? Cursor = null);
+    string? Cursor = null,
+    Func<CallToolResult, int, CallToolResult>? PostNavigationResponseBudget = null);

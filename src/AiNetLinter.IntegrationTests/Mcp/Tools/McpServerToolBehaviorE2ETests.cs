@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
 using ModelContextProtocol.Protocol;
@@ -110,6 +111,56 @@ public sealed class McpServerToolBehaviorE2ETests
     }
 
     [Fact]
+    public async Task NamespaceTree_ResponseBudgetKeepsTextAndStructuredProjectionAligned()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_namespace_tree",
+            new Dictionary<string, object?>
+            {
+                ["project"] = "SymbolGraphMini",
+                ["namespacePrefix"] = "SymbolGraphMini",
+                ["maxResponseBytes"] = 2048,
+            });
+
+        Assert.False(result.IsError == true, result.ToString());
+        var payload = result.StructuredContent!.Value;
+        Assert.True(payload.GetProperty("truncated").GetBoolean());
+        Assert.Contains("maxResponseBytes", payload.GetProperty("truncatedBy").ToString(), StringComparison.Ordinal);
+        Assert.Equal("source", payload.GetProperty("navigation").GetProperty("origin").GetString());
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.True(
+            Encoding.UTF8.GetByteCount(text) + Encoding.UTF8.GetByteCount(payload.GetRawText()) <= 2048,
+            "Finale kombinierte Wire-Nutzlast darf maxResponseBytes inklusive Navigation nicht überschreiten.");
+        Assert.Contains("maxResponseBytes", text, StringComparison.Ordinal);
+        foreach (var type in payload.GetProperty("types").EnumerateArray())
+        {
+            Assert.Contains(type.GetProperty("name").GetString() ?? string.Empty, text, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public async Task ClassStructure_ResponseBudgetIncludesNavigationAndStructuredContent()
+    {
+        const int budget = 4096;
+        var result = await _fixture.Client.CallToolAsync(
+            "get_class_structure",
+            new Dictionary<string, object?>
+            {
+                ["symbolIdentifier"] = "Greeter",
+                ["maxMembers"] = 200,
+                ["maxResponseBytes"] = budget,
+            });
+
+        Assert.False(result.IsError == true, result.ToString());
+        var payload = result.StructuredContent!.Value;
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        var totalBytes = Encoding.UTF8.GetByteCount(text) + Encoding.UTF8.GetByteCount(payload.GetRawText());
+        Assert.True(totalBytes <= budget, $"Finale kombinierte Wire-Nutzlast überschreitet maxResponseBytes: {totalBytes} > {budget}.");
+        Assert.Contains("## Navigation", text, StringComparison.Ordinal);
+        Assert.Equal("source", payload.GetProperty("navigation").GetProperty("origin").GetString());
+    }
+
+    [Fact]
     public async Task DependencyGraph_ClampedDepthIsStructured()
     {
         var result = await _fixture.Client.CallToolAsync(
@@ -170,6 +221,24 @@ public sealed class McpServerToolBehaviorE2ETests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("RESOURCE_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetFileSkeleton_ResponseBudgetPreservesNavigationEnvelope()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_file_skeleton",
+            new Dictionary<string, object?>
+            {
+                ["filePaths"] = new[] { "src/SymbolGraphMini/Greeter.cs" },
+                ["maxResponseBytes"] = 2048,
+            });
+
+        Assert.False(result.IsError == true, result.ToString());
+        Assert.NotNull(result.StructuredContent);
+        Assert.Equal("source", result.StructuredContent!.Value.GetProperty("navigation").GetProperty("origin").GetString());
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.True(Encoding.UTF8.GetByteCount(text) + Encoding.UTF8.GetByteCount(result.StructuredContent.Value.GetRawText()) <= 2048);
     }
 
     [Fact]

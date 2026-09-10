@@ -5,9 +5,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -23,7 +26,8 @@ internal sealed record GetClassStructureArgs(
     string? SortBy = "lines",
     int MaxMembers = GetClassStructureTool.DefaultMaxMembers,
     string? KindFilter = null,
-    string? NameFilter = null)
+    string? NameFilter = null,
+    int MaxResponseBytes = 0)
 {
     internal string? EffectiveSymbolIdentifier =>
         string.IsNullOrWhiteSpace(SymbolIdentifier) ? null : SymbolIdentifier;
@@ -70,6 +74,28 @@ internal static class GetClassStructureTool
                 hint: "symbolIdentifier angeben: z. B. 'MyClass', 'Namespace.MyClass' oder 'Datei.cs:42:10'.");
         }
 
+        if (args.MaxResponseBytes < 0)
+        {
+            return McpToolResults.InvalidArgument(
+                "maxResponseBytes darf nicht negativ sein.",
+                "maxResponseBytes weglassen, 0 verwenden oder einen positiven Wert setzen.",
+                "$.maxResponseBytes");
+        }
+        if (args.MaxResponseBytes > McpResponseBudgetLimits.MaxBytes)
+        {
+            return McpToolResults.InvalidArgument(
+                $"maxResponseBytes darf höchstens {McpResponseBudgetLimits.MaxBytes} sein.",
+                $"maxResponseBytes auf höchstens {McpResponseBudgetLimits.MaxBytes} setzen.",
+                "$.maxResponseBytes");
+        }
+        if (args.MaxResponseBytes > 0 && args.MaxResponseBytes < McpResponseBudgetLimits.MinimumStructuredBytes)
+        {
+            return McpToolResults.InvalidArgument(
+                $"maxResponseBytes muss fuer eine markierte strukturierte Antwort mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} Bytes betragen.",
+                $"maxResponseBytes weglassen, 0 verwenden oder mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} setzen.",
+                "$.maxResponseBytes");
+        }
+
         var clampedMaxMembers = Math.Clamp(args.MaxMembers, 1, MaxMembersCap);
 
         try
@@ -99,6 +125,7 @@ internal static class GetClassStructureTool
                 ? sortedMembers.Take(clampedMaxMembers).ToList()
                 : sortedMembers;
 
+            var truncatedBy = truncated ? new List<string> { "maxMembers" } : new List<string>();
             var payload = new ClassStructurePayload(
                 TypeName: namedType.ToDisplayString(),
                 Kind: SymbolKindClassifier.DescribeNamedTypeKind(namedType, specificRecord: true),
@@ -107,16 +134,142 @@ internal static class GetClassStructureTool
                 TotalMemberCount: sortedMembers.Count,
                 ShownMemberCount: shownMembers.Count,
                 Truncated: truncated,
-                Members: shownMembers);
+                Members: shownMembers,
+                TruncatedBy: truncatedBy,
+                Next: truncated
+                    ? new ClassStructureNext("request_detail", "maxMembers erhöhen oder sortBy/kindFilter/nameFilter verfeinern.")
+                    : null);
+
+            while (args.MaxResponseBytes > 0 && payload.Members.Count > 0)
+            {
+                var budgetCandidate = payload with
+                {
+                    Truncated = true,
+                    TruncatedBy = truncatedBy.Append("maxResponseBytes").Distinct(StringComparer.Ordinal).ToArray(),
+                    Next = new ClassStructureNext("request_detail", "maxResponseBytes erhöhen oder symbolIdentifier/kindFilter/nameFilter verfeinern."),
+                };
+                if (CombinedResponseBytes(RenderBudgetText(budgetCandidate, string.Empty), budgetCandidate) <= args.MaxResponseBytes) break;
+                shownMembers.RemoveAt(shownMembers.Count - 1);
+                if (!truncatedBy.Contains("maxResponseBytes", StringComparer.Ordinal)) truncatedBy.Add("maxResponseBytes");
+                payload = payload with
+                {
+                    ShownMemberCount = shownMembers.Count,
+                    Truncated = true,
+                    Members = shownMembers.ToList(),
+                    TruncatedBy = truncatedBy,
+                    Next = new ClassStructureNext("request_detail", "maxResponseBytes erhöhen oder symbolIdentifier/kindFilter/nameFilter verfeinern."),
+                };
+            }
 
             var markdown = RenderMarkdown(payload);
-            return McpToolResults.Text(McpSufficiencyHints.Append(markdown), payload);
+            return McpToolResults.Text(payload.Truncated ? markdown : McpSufficiencyHints.Append(markdown), payload);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return McpToolResults.CompilationError($"Unerwarteter Fehler in get_class_structure: {ex.Message}");
         }
     }
+
+    internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
+    {
+        if (result.StructuredContent is not { ValueKind: JsonValueKind.Object } structured
+            || maxResponseBytes <= 0)
+        {
+            return result;
+        }
+
+        ClassStructurePayload? payload;
+        try
+        {
+            payload = JsonSerializer.Deserialize<ClassStructurePayload>(
+                structured.GetRawText(), McpJsonOptions.Default);
+        }
+        catch (JsonException)
+        {
+            return result;
+        }
+        var text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text;
+        var envelope = JsonNode.Parse(structured.GetRawText()) as JsonObject;
+        if (payload is null || payload.Members is null || payload.Files is null || text is null || envelope is null) return result;
+
+        var members = payload.Members.ToList();
+        var truncatedBy = (payload.TruncatedBy ?? Array.Empty<string>()).ToList();
+        var candidate = payload;
+        while (CombinedResponseBytes(RenderBudgetText(candidate, text), ProjectEnvelope(envelope, candidate)) > maxResponseBytes
+            && members.Count > 0)
+        {
+            members.RemoveAt(members.Count - 1);
+            if (!truncatedBy.Contains("maxResponseBytes", StringComparer.Ordinal)) truncatedBy.Add("maxResponseBytes");
+            candidate = candidate with
+            {
+                Members = members.ToList(),
+                ShownMemberCount = members.Count,
+                Truncated = true,
+                TruncatedBy = truncatedBy,
+                Next = new ClassStructureNext("request_detail", "maxResponseBytes erhöhen oder symbolIdentifier/kindFilter/nameFilter verfeinern."),
+            };
+        }
+
+        var finalText = RenderBudgetText(candidate, text);
+        var finalEnvelope = ProjectEnvelope(envelope, candidate);
+        if (CombinedResponseBytes(finalText, finalEnvelope) > maxResponseBytes)
+        {
+            return McpToolResults.InvalidArgument(
+                "maxResponseBytes ist zu klein, um den festen Navigation-/Trunkierungs-Envelope vollständig auszugeben.",
+                "maxResponseBytes erhöhen; die Antwort wird nur an vollständigen Member-Einheiten gekürzt.",
+                "$.maxResponseBytes");
+        }
+        return new CallToolResult
+        {
+            IsError = result.IsError,
+            Content = new List<ContentBlock> { new TextContentBlock { Text = finalText } },
+            StructuredContent = JsonSerializer.SerializeToElement(finalEnvelope, McpJsonOptions.Default),
+        };
+    }
+
+    private static JsonObject ProjectEnvelope(JsonObject original, ClassStructurePayload payload)
+    {
+        var projected = (JsonObject)original.DeepClone();
+        var payloadNode = JsonSerializer.SerializeToNode(payload, McpJsonOptions.Default) as JsonObject
+            ?? new JsonObject();
+        foreach (var name in ClassPayloadFields)
+        {
+            projected.Remove(name);
+            if (payloadNode[name] is { } value) projected[name] = value.DeepClone();
+        }
+        return projected;
+    }
+
+    private static readonly string[] ClassPayloadFields =
+    [
+        "typeName", "kind", "files", "totalLines", "totalMemberCount", "shownMemberCount",
+        "truncated", "members", "truncatedBy", "next",
+    ];
+
+    private static string RenderBudgetText(ClassStructurePayload payload, string fallbackText)
+    {
+        var rendered = payload.Truncated
+            ? RenderMarkdown(payload)
+            : McpSufficiencyHints.Append(RenderMarkdown(payload));
+        var headingIndex = rendered.IndexOf("# Typ:", StringComparison.Ordinal);
+        var originalHeading = fallbackText.IndexOf("# Typ:", StringComparison.Ordinal);
+        if (originalHeading > 0 && headingIndex == 0)
+        {
+            rendered = fallbackText[..originalHeading].TrimEnd() + "\n\n" + rendered;
+        }
+        var navigationIndex = fallbackText.IndexOf("## Navigation", StringComparison.Ordinal);
+        return navigationIndex < 0
+            ? rendered
+            : rendered.TrimEnd() + "\n\n" + fallbackText[navigationIndex..].Trim();
+    }
+
+    private static int CombinedResponseBytes(string text, ClassStructurePayload payload) =>
+        Encoding.UTF8.GetByteCount(text)
+        + JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length;
+
+    private static int CombinedResponseBytes(string text, JsonObject envelope) =>
+        Encoding.UTF8.GetByteCount(text)
+        + JsonSerializer.SerializeToUtf8Bytes(envelope, McpJsonOptions.Default).Length;
 
     private static List<ClassStructureMemberEntry> FilterMembers(
         List<ClassStructureMemberEntry> members, string? kindFilter, string? nameFilter)
@@ -350,7 +503,10 @@ internal static class GetClassStructureTool
         if (p.Truncated)
         {
             sb.AppendLine();
-            sb.AppendLine($"[{p.TotalMemberCount} Member gesamt, {p.ShownMemberCount} gezeigt — maxMembers erhöhen oder sortBy wechseln]");
+            var reason = p.TruncatedBy?.Contains("maxResponseBytes", StringComparer.Ordinal) == true
+                ? "maxResponseBytes erhöhen oder Filter verfeinern"
+                : "maxMembers erhöhen oder sortBy wechseln";
+            sb.AppendLine($"[{p.TotalMemberCount} Member gesamt, {p.ShownMemberCount} gezeigt — {reason}]");
         }
 
         return sb.ToString().TrimEnd();

@@ -17,13 +17,20 @@ internal static class ProjectAnalysisDispatcher
     internal static AnalysisToolRoute CreateRoute(ProjectRegistry registry) => request =>
         request.Dispatch.ProjectCall is null
             ? Task.FromResult(UnsupportedProjectTarget())
-            : ExecuteAsync(registry, request.Target, request.Dispatch.ProjectCall);
+            : ExecuteAsync(
+                registry,
+                request.Target,
+                request.Dispatch.ProjectCall,
+                request.Dispatch.MaxResponseBytes,
+                request.Dispatch.PostNavigationResponseBudget);
 
     internal static Task<CallToolResult> ExecuteAsync(
         ProjectRegistry registry,
         AnalysisTargetRequest request,
-        Func<ProjectLease, Task<CallToolResult>> projectCall) =>
-        ExecuteProjectAsync(registry, request, projectCall);
+        Func<ProjectLease, Task<CallToolResult>> projectCall,
+        int maxResponseBytes = 0,
+        Func<CallToolResult, int, CallToolResult>? postNavigationResponseBudget = null) =>
+        ExecuteProjectAsync(registry, request, projectCall, maxResponseBytes, postNavigationResponseBudget);
 
     internal static Task<CallToolResult> ExecuteConfiguredAsync(
         ProjectRegistry registry,
@@ -44,7 +51,9 @@ internal static class ProjectAnalysisDispatcher
     private static async Task<CallToolResult> ExecuteProjectAsync(
         ProjectRegistry registry,
         AnalysisTargetRequest request,
-        Func<ProjectLease, Task<CallToolResult>> projectCall)
+        Func<ProjectLease, Task<CallToolResult>> projectCall,
+        int maxResponseBytes = 0,
+        Func<CallToolResult, int, CallToolResult>? postNavigationResponseBudget = null)
     {
         var resolution = AnalysisTargetResolver.ResolveTargetPathOnly(request);
         if (resolution.Error is not null)
@@ -65,7 +74,11 @@ internal static class ProjectAnalysisDispatcher
                     analysisTarget = McpNavigationProjection.WithSourceSnapshot(target, lease.Server);
                     return leasedResult;
                 });
-            return McpToolResults.WithNavigation(result, analysisTarget ?? target);
+            return McpToolResults.WithNavigation(
+                result,
+                analysisTarget ?? target,
+                maxResponseBytes,
+                postNavigationResponseBudget);
         }
 
         return McpToolResults.WithNavigation(UnsupportedAssemblyTarget(target.CanonicalPath), target);
@@ -152,7 +165,8 @@ internal static class AssemblyAnalysisDispatcher
                     request.CancellationToken,
                     request.Dispatch.MaxResponseBytes,
                     request.Dispatch.DetailLevel,
-                    request.Dispatch.Cursor));
+                    request.Dispatch.Cursor,
+                    request.Dispatch.PostNavigationResponseBudget));
 
     private static Task<CallToolResult> UnsupportedRouteAsync(AnalysisToolCallRequest request)
     {
@@ -214,13 +228,16 @@ internal static class AssemblyAnalysisDispatcher
                 AnalysisSnapshotFresh = true,
             };
             var navigated = McpToolResults.WithNavigation(result, snapshotTarget);
-            return AssemblyAnalysisResponse.Enrich(
+            var enriched = AssemblyAnalysisResponse.Enrich(
                 navigated,
                 lease,
                 new AssemblyAnalysisResponseRequest(
                     options.MaxResponseBytes,
                     options.DetailLevel,
                     options.Cursor));
+            return options.PostNavigationResponseBudget is null || options.MaxResponseBytes <= 0
+                ? enriched
+                : options.PostNavigationResponseBudget(enriched, options.MaxResponseBytes);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
