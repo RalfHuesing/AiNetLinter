@@ -166,18 +166,18 @@ internal static partial class GetClassStructureTool
             return navigationText;
         }
 
-        return string.Join(
-            "\n",
-            navigationText
-                .Split('\n')
-                .Select(line => line.TrimEnd('\r') switch
-                {
-                    var value when completeness is not null && value.StartsWith("- completeness: ", StringComparison.Ordinal)
-                        => $"- completeness: `{completeness}`",
-                    var value when nextKind is not null && value.StartsWith("- next: ", StringComparison.Ordinal)
-                        => $"- next: `{nextKind}` — {nextAction ?? string.Empty}",
-                    var value => value,
-                }));
+        return string.Join("\n", navigationText.Split('\n')
+            .Select(line => RewriteNavigationLine(line, completeness, nextKind, nextAction)));
+    }
+
+    private static string RewriteNavigationLine(string line, string? completeness, string? nextKind, string? nextAction)
+    {
+        var value = line.TrimEnd('\r');
+        if (completeness is not null && value.StartsWith("- completeness: ", StringComparison.Ordinal))
+            return $"- completeness: `{completeness}`";
+        if (nextKind is not null && value.StartsWith("- next: ", StringComparison.Ordinal))
+            return $"- next: `{nextKind}` — {nextAction ?? string.Empty}";
+        return value;
     }
 
     private static string? ReadString(JsonObject owner, string propertyName) =>

@@ -35,30 +35,9 @@ internal static class MetricsTreeTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var parsedMode = MetricsTreeModeParser.TryParse(args.Mode ?? "code_size");
-        if (parsedMode is null)
-        {
-            return McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument,
-                $"Unbekannter mode '{args.Mode}'.",
-                hint: "Gueltige Werte: code_size, comment_density, violation_density, complexity.");
-        }
-
-        if (args.Depth is < 1 or > 5)
-        {
-            return McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument,
-                "depth muss zwischen 1 und 5 liegen.", hint: "depth anpassen.");
-        }
-
-        if (args.TopN < 1)
-        {
-            return McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument,
-                "top_n muss mindestens 1 sein.", hint: "top_n anpassen.");
-        }
-
-        var filterResult = TryBuildFileFilter(args.FileFilter);
-        if (filterResult.Error is not null) return filterResult.Error;
-
-        var query = new MetricsTreeQuery(args.Root, parsedMode.Value, args.Depth, args.TopN, filterResult.Regex);
+        var queryResult = TryBuildQuery(args);
+        if (queryResult.Error is not null) return queryResult.Error;
+        var query = queryResult.Query!;
         if (query.Mode is MetricsTreeMode.ViolationDensity or MetricsTreeMode.Complexity
             && state.GetConfigSnapshot().Config is null)
         {
@@ -115,6 +94,16 @@ internal static class MetricsTreeTool
         var configSnapshot = state.GetConfigSnapshot();
         return await MetricsTreeRoslynScanner.BuildTreeResultAsync(
             new MetricsTreeRoslynScanParameters(solution, state.GetConfigSnapshot().Config!, state.Console, ct), query);
+    }
+
+    private static (MetricsTreeQuery? Query, CallToolResult? Error) TryBuildQuery(MetricsTreeToolArgs args)
+    {
+        var mode = MetricsTreeModeParser.TryParse(args.Mode ?? "code_size");
+        if (mode is null) return (null, McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument, $"Unbekannter mode '{args.Mode}'.", hint: "Gueltige Werte: code_size, comment_density, violation_density, complexity."));
+        if (args.Depth is < 1 or > 5) return (null, McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument, "depth muss zwischen 1 und 5 liegen.", hint: "depth anpassen."));
+        if (args.TopN < 1) return (null, McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument, "top_n muss mindestens 1 sein.", hint: "top_n anpassen."));
+        var filter = TryBuildFileFilter(args.FileFilter);
+        return filter.Error is not null ? (null, filter.Error) : (new MetricsTreeQuery(args.Root, mode.Value, args.Depth, args.TopN, filter.Regex), null);
     }
 
     private static (Regex? Regex, CallToolResult? Error) TryBuildFileFilter(string? fileFilter)
