@@ -111,9 +111,13 @@ internal static class McpArgumentValidationFilter
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (context.MatchedPrimitive is not McpServerTool tool ||
-            !tool.ProtocolTool.InputSchema.TryGetProperty("properties", out var properties) ||
-            properties.ValueKind != JsonValueKind.Object)
+        if (context.MatchedPrimitive is not McpServerTool tool)
+        {
+            return null;
+        }
+
+        if (!tool.ProtocolTool.InputSchema.TryGetProperty("properties", out var properties)
+            || properties.ValueKind != JsonValueKind.Object)
         {
             return null;
         }
@@ -121,101 +125,176 @@ internal static class McpArgumentValidationFilter
         var arguments = context.Params?.Arguments
             ?? new Dictionary<string, JsonElement>(StringComparer.Ordinal);
 
-        if (tool.ProtocolTool.InputSchema.TryGetProperty("required", out var required)
-            && required.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var requiredProperty in required.EnumerateArray())
-            {
-                if (requiredProperty.ValueKind != JsonValueKind.String) continue;
-                var name = requiredProperty.GetString();
-                if (string.IsNullOrWhiteSpace(name)
-                    || (arguments.TryGetValue(name, out var value) && value.ValueKind != JsonValueKind.Null))
-                {
-                    continue;
-                }
-
-                return McpToolResults.InvalidArgument(
-                    $"Pflichtargument '{name}' fehlt oder ist null.",
-                    $"'{name}' mit dem im tools/list-Schema beschriebenen Wert angeben.",
-                    $"$.{name}");
-            }
-        }
+        var requiredError = ValidateRequiredArguments(tool, arguments);
+        if (requiredError is not null) return requiredError;
 
         foreach (var argument in arguments.OrderBy(pair => pair.Key, StringComparer.Ordinal))
         {
-            if (!properties.TryGetProperty(argument.Key, out var schema))
+            var argumentError = ValidateArgument(
+                tool.ProtocolTool.Name, properties, argument, arguments);
+            if (argumentError is not null)
             {
-                continue;
-            }
-
-            if (TryFindTypeMismatch(argument.Value, schema, $"$.{argument.Key}", out var mismatchPath, out var expected, out var actual))
-            {
-                return McpToolResults.InvalidArgument(
-                    $"Argument '{mismatchPath}' hat den JSON-Typ '{actual}', erwartet wird '{expected}'.",
-                    $"'{mismatchPath}' als {expected} uebergeben.",
-                    mismatchPath);
-            }
-
-            // The Git branch of get_impact deliberately ignores depth (both
-            // callers and change-context).  Keep that documented no-op
-            // backwards compatible: only the symbol branch has a positive
-            // depth contract.
-            var isIgnoredGitImpactDepth = tool.ProtocolTool.Name == "get_impact"
-                && string.Equals(argument.Key, "depth", StringComparison.Ordinal)
-                && !HasNonEmptyStringArgument(arguments, "symbolIdentifier");
-
-            if (!isIgnoredGitImpactDepth
-                && PositiveLimitArgumentsByTool.TryGetValue(tool.ProtocolTool.Name, out var positiveArguments)
-                && positiveArguments.Contains(argument.Key)
-                && argument.Value.ValueKind == JsonValueKind.Number
-                && argument.Value.TryGetInt32(out var requested)
-                && requested < 1)
-            {
-                return McpToolResults.InvalidArgument(
-                    $"{argument.Key} muss mindestens 1 sein.",
-                    $"'{argument.Key}' auf einen positiven Wert setzen.",
-                    $"$.{argument.Key}");
-            }
-
-            if (NonNegativeLimitArgumentsByTool.TryGetValue(tool.ProtocolTool.Name, out var nonNegativeArguments)
-                && nonNegativeArguments.Contains(argument.Key)
-                && argument.Value.ValueKind == JsonValueKind.Number
-                && argument.Value.TryGetInt32(out var nonNegativeRequest)
-                && nonNegativeRequest < 0)
-            {
-                return McpToolResults.InvalidArgument(
-                    $"{argument.Key} darf nicht negativ sein.",
-                    $"'{argument.Key}' auf 0 oder einen positiven Wert setzen.",
-                    $"$.{argument.Key}");
-            }
-
-            if (argument.Value.ValueKind == JsonValueKind.Number
-                && argument.Value.TryGetInt32(out var responseBudget)
-                && responseBudget > 0
-                && responseBudget < McpResponseBudgetLimits.MinimumStructuredBytes
-                && string.Equals(argument.Key, "maxResponseBytes", StringComparison.Ordinal)
-                && (tool.ProtocolTool.Name is "get_namespace_tree" or "get_class_structure"))
-            {
-                return McpToolResults.InvalidArgument(
-                    $"{argument.Key} muss fuer eine markierte strukturierte Antwort mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} Bytes betragen.",
-                    $"'{argument.Key}' weglassen, 0 verwenden oder mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} setzen.",
-                    $"$.{argument.Key}");
-            }
-
-            if (MaximumLimitArgumentsByTool.TryGetValue(tool.ProtocolTool.Name, out var maximumArguments)
-                && maximumArguments.TryGetValue(argument.Key, out var maximum)
-                && argument.Value.ValueKind == JsonValueKind.Number
-                && argument.Value.TryGetInt32(out var boundedRequest)
-                && boundedRequest > maximum)
-            {
-                return McpToolResults.InvalidArgument(
-                    $"{argument.Key} darf höchstens {maximum} sein.",
-                    $"'{argument.Key}' auf höchstens {maximum} setzen.",
-                    $"$.{argument.Key}");
+                return argumentError;
             }
         }
 
         return null;
+    }
+
+    private static CallToolResult? ValidateRequiredArguments(
+        McpServerTool tool,
+        IDictionary<string, JsonElement> arguments)
+    {
+        if (!tool.ProtocolTool.InputSchema.TryGetProperty("required", out var required)
+            || required.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        foreach (var requiredProperty in required.EnumerateArray())
+        {
+            if (requiredProperty.ValueKind != JsonValueKind.String) continue;
+            var name = requiredProperty.GetString();
+            if (string.IsNullOrWhiteSpace(name) || HasNonNullArgument(arguments, name)) continue;
+
+            return McpToolResults.InvalidArgument(
+                $"Pflichtargument '{name}' fehlt oder ist null.",
+                $"'{name}' mit dem im tools/list-Schema beschriebenen Wert angeben.",
+                $"$.{name}");
+        }
+
+        return null;
+    }
+
+    private static CallToolResult? ValidateArgument(
+        string toolName,
+        JsonElement properties,
+        KeyValuePair<string, JsonElement> argument,
+        IDictionary<string, JsonElement> arguments)
+    {
+        if (!properties.TryGetProperty(argument.Key, out var schema)) return null;
+
+        return ValidateType(argument.Key, argument.Value, schema)
+            ?? ValidatePositiveLimit(toolName, argument.Key, argument.Value, arguments)
+            ?? ValidateNonNegativeLimit(toolName, argument.Key, argument.Value)
+            ?? ValidateMinimumResponseBudget(toolName, argument.Key, argument.Value)
+            ?? ValidateMaximumLimit(toolName, argument.Key, argument.Value);
+    }
+
+    private static CallToolResult? ValidateType(
+        string argumentName,
+        JsonElement value,
+        JsonElement schema)
+    {
+        if (!TryFindTypeMismatch(
+                value, schema, $"$.{argumentName}", out var mismatchPath, out var expected, out var actual))
+        {
+            return null;
+        }
+
+        return McpToolResults.InvalidArgument(
+            $"Argument '{mismatchPath}' hat den JSON-Typ '{actual}', erwartet wird '{expected}'.",
+            $"'{mismatchPath}' als {expected} uebergeben.",
+            mismatchPath);
+    }
+
+    private static CallToolResult? ValidatePositiveLimit(
+        string toolName,
+        string argumentName,
+        JsonElement value,
+        IDictionary<string, JsonElement> arguments)
+    {
+        // The Git branch of get_impact deliberately ignores depth (both
+        // callers and change-context). Keep that documented no-op backwards
+        // compatible: only the symbol branch has a positive depth contract.
+        if (toolName == "get_impact"
+            && argumentName == "depth"
+            && !HasNonEmptyStringArgument(arguments, "symbolIdentifier"))
+        {
+            return null;
+        }
+
+        if (!PositiveLimitArgumentsByTool.TryGetValue(toolName, out var positiveArguments)
+            || !positiveArguments.Contains(argumentName)
+            || !TryGetInt32Number(value, out var requested)
+            || requested >= 1)
+        {
+            return null;
+        }
+
+        return McpToolResults.InvalidArgument(
+            $"{argumentName} muss mindestens 1 sein.",
+            $"'{argumentName}' auf einen positiven Wert setzen.",
+            $"$.{argumentName}");
+    }
+
+    private static CallToolResult? ValidateNonNegativeLimit(
+        string toolName,
+        string argumentName,
+        JsonElement value)
+    {
+        if (!NonNegativeLimitArgumentsByTool.TryGetValue(toolName, out var nonNegativeArguments)
+            || !nonNegativeArguments.Contains(argumentName)
+            || !TryGetInt32Number(value, out var requested)
+            || requested >= 0)
+        {
+            return null;
+        }
+
+        return McpToolResults.InvalidArgument(
+            $"{argumentName} darf nicht negativ sein.",
+            $"'{argumentName}' auf 0 oder einen positiven Wert setzen.",
+            $"$.{argumentName}");
+    }
+
+    private static CallToolResult? ValidateMinimumResponseBudget(
+        string toolName,
+        string argumentName,
+        JsonElement value)
+    {
+        if (argumentName != "maxResponseBytes"
+            || toolName is not ("get_namespace_tree" or "get_class_structure")
+            || !TryGetInt32Number(value, out var responseBudget)
+            || responseBudget <= 0
+            || responseBudget >= McpResponseBudgetLimits.MinimumStructuredBytes)
+        {
+            return null;
+        }
+
+        return McpToolResults.InvalidArgument(
+            $"{argumentName} muss fuer eine markierte strukturierte Antwort mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} Bytes betragen.",
+            $"'{argumentName}' weglassen, 0 verwenden oder mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} setzen.",
+            $"$.{argumentName}");
+    }
+
+    private static CallToolResult? ValidateMaximumLimit(
+        string toolName,
+        string argumentName,
+        JsonElement value)
+    {
+        if (!MaximumLimitArgumentsByTool.TryGetValue(toolName, out var maximumArguments)
+            || !maximumArguments.TryGetValue(argumentName, out var maximum)
+            || !TryGetInt32Number(value, out var requested)
+            || requested <= maximum)
+        {
+            return null;
+        }
+
+        return McpToolResults.InvalidArgument(
+            $"{argumentName} darf höchstens {maximum} sein.",
+            $"'{argumentName}' auf höchstens {maximum} setzen.",
+            $"$.{argumentName}");
+    }
+
+    private static bool HasNonNullArgument(
+        IDictionary<string, JsonElement> arguments,
+        string name) =>
+        arguments.TryGetValue(name, out var value) && value.ValueKind != JsonValueKind.Null;
+
+    private static bool TryGetInt32Number(JsonElement value, out int result)
+    {
+        result = 0;
+        return value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out result);
     }
 
     private static bool HasNonEmptyStringArgument(
