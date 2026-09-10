@@ -226,5 +226,20 @@ public sealed class McpServerToolBehaviorE2ETests
         Assert.Equal("ok", navigation.GetProperty("operationStatus").GetString());
         Assert.Equal("supported", navigation.GetProperty("capabilities").GetProperty("navigation").GetString());
         Assert.False(string.IsNullOrWhiteSpace(navigation.GetProperty("target").GetProperty("targetPath").GetString()));
+        Assert.Equal("source-files", navigation.GetProperty("snapshot").GetProperty("kind").GetString());
+        Assert.True(navigation.GetProperty("snapshot").GetProperty("fresh").GetBoolean());
+        Assert.False(string.IsNullOrWhiteSpace(navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString()));
+
+        var followUp = await _fixture.Client.CallToolAsync(
+            "find_symbol",
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = Path.GetFullPath(targetPath),
+                ["namePatterns"] = new[] { "Greeter" },
+            });
+        Assert.False(followUp.IsError == true, followUp.ToString());
+        Assert.Equal(
+            navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString(),
+            followUp.StructuredContent!.Value.GetProperty("navigation").GetProperty("snapshot").GetProperty("fingerprint").GetString());
     }
 }

@@ -105,6 +105,11 @@ internal static class ServerMaintenanceToolRegistrations
         IAssemblyAnalysisRegistry? assemblyRegistry,
         GetServerHealthRequest request)
     {
+        var validation = GetServerHealthTool.ValidateOptions(new GetServerHealthOptions(
+            IncludeDiagnostics: request.IncludeDiagnostics,
+            MaxDiagnostics: request.MaxDiagnostics));
+        if (validation is not null) return validation;
+
         var resolution = AnalysisTargetResolver.ResolveOptional(
             new AnalysisTargetRequest(request.TargetPath));
         if (resolution.Error is not null) return resolution.Error;
@@ -116,7 +121,9 @@ internal static class ServerMaintenanceToolRegistrations
                 runtimeContext,
                 resolution.Target.CanonicalPath,
                 options);
-            return McpToolResults.WithNavigation(result, resolution.Target);
+            return McpToolResults.WithNavigation(
+                result,
+                ResolveHealthNavigationTarget(resolution.Target, registry, runtimeContext, result));
         }
 
         if (resolution.Target is null)
@@ -129,7 +136,48 @@ internal static class ServerMaintenanceToolRegistrations
             assemblyRegistry,
             options,
             request.CancellationToken);
-        return McpToolResults.WithNavigation(targetedResult, resolution.Target);
+        return McpToolResults.WithNavigation(
+            targetedResult,
+            ResolveHealthNavigationTarget(resolution.Target, registry, runtimeContext, targetedResult));
+    }
+
+    private static AnalysisTarget ResolveHealthNavigationTarget(
+        AnalysisTarget target,
+        ProjectRegistry registry,
+        Daemon.DaemonRuntimeContext? runtimeContext,
+        CallToolResult result)
+    {
+        if (target.TargetType == AnalysisTargetType.Project)
+        {
+            var snapshot = runtimeContext?.FindProjectSnapshot(target.CanonicalPath)
+                ?? registry.FindSnapshot(target.CanonicalPath);
+            return snapshot is null
+                ? target
+                : McpNavigationProjection.WithSourceSnapshot(target, snapshot.Server);
+        }
+
+        if (result.StructuredContent is not { ValueKind: System.Text.Json.JsonValueKind.Object } payload
+            || !payload.TryGetProperty("assemblies", out var assemblies)
+            || assemblies.ValueKind != System.Text.Json.JsonValueKind.Array
+            || assemblies.GetArrayLength() == 0)
+        {
+            return target;
+        }
+
+        var assembly = assemblies[0];
+        if (!assembly.TryGetProperty("contentHash", out var contentHash)
+            || contentHash.ValueKind != System.Text.Json.JsonValueKind.String
+            || string.IsNullOrWhiteSpace(contentHash.GetString()))
+        {
+            return target;
+        }
+
+        return target with
+        {
+            AnalysisSnapshotFingerprint = contentHash.GetString(),
+            AnalysisSnapshotKind = "assembly",
+            AnalysisSnapshotFresh = true,
+        };
     }
 
     private static GetServerHealthOptions CreateHealthOptions(

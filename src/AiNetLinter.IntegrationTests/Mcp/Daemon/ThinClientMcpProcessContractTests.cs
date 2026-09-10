@@ -173,11 +173,81 @@ public sealed class ThinClientMcpProcessContractTests
             Assert.Equal(solutionPath, project.GetProperty("targetPath").GetString(), ignoreCase: true);
             Assert.Contains(project.GetProperty("loadState").GetString(), new[] { "Loaded", "Loading" });
             Assert.False(string.IsNullOrWhiteSpace(project.GetProperty("solutionPath").GetString()));
+            var navigation = structured.GetProperty("navigation");
+            Assert.Equal("source-files", navigation.GetProperty("snapshot").GetProperty("kind").GetString());
+            Assert.True(navigation.GetProperty("snapshot").GetProperty("fresh").GetBoolean());
+            Assert.False(string.IsNullOrWhiteSpace(navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString()));
+
         }
         finally
         {
             TryKillDaemon(daemonPid);
         }
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task ProjectTargetHealth_NonPositiveDiagnosticLimit_IsRejectedThroughDaemon(int maxDiagnostics)
+    {
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(240));
+        using var endpointLease = await DaemonProcessContractHarness
+            .AcquireEndpointAsync(cancellation.Token)
+            .ConfigureAwait(false);
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var solutionPath = fixture.SolutionPath;
+        var frames = new[]
+        {
+            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"clientInfo\":{\"name\":\"ThinClientHealthValidationContract\",\"version\":\"1\"}}}",
+            "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
+            JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id = 2,
+                method = "tools/call",
+                @params = new
+                {
+                    name = "get_file_skeleton",
+                    arguments = new { filePaths = new[] { "src/SymbolGraphMini/Greeter.cs" } },
+                },
+            }),
+            JsonSerializer.Serialize(new
+            {
+                jsonrpc = "2.0",
+                id = 3,
+                method = "tools/call",
+                @params = new
+                {
+                    name = "get_server_health",
+                    arguments = new
+                    {
+                        targetPath = solutionPath,
+                        includeDiagnostics = true,
+                        maxDiagnostics,
+                    },
+                },
+            }),
+        };
+
+        var result = await McpRawWireTestHarness.RunAndCollectWithDiagnosticsAsync(
+            solutionPath,
+            frames,
+            new McpRawWireRunOptions
+            {
+                NoDaemon = false,
+                DaemonInstance = DaemonEndpointJanitor.TestDaemonInstance,
+            });
+
+        Assert.Equal(0, result.ExitCode);
+        var response = McpRawWireTestHarness.FindResponse(result.StdoutLines, 3);
+        var payload = response.GetProperty("result");
+        Assert.False(payload.TryGetProperty("isError", out var isError) && isError.GetBoolean(), response.ToString());
+        Assert.Equal("INVALID_ARGUMENT", payload.GetProperty("structuredContent").GetProperty("code").GetString());
+        Assert.Equal("$.maxDiagnostics", payload.GetProperty("structuredContent").GetProperty("fieldPath").GetString());
+        Assert.Contains(
+            "INVALID_ARGUMENT",
+            payload.GetProperty("content")[0].GetProperty("text").GetString(),
+            StringComparison.Ordinal);
     }
 
     private static void TryKillDaemon(int processId)

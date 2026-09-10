@@ -59,7 +59,16 @@ Referenzen und Abhängigkeiten.
   `origin=decompiled` und Lint ist `unsupported`.
 - `get_server_health` bleibt global ohne Target oder akzeptiert optional einen
   `targetPath`; `includeDiagnostics=true` fordert begrenzte Samples an und
-  `maxDiagnostics` muss positiv sein und wird serverseitig gedeckelt. `report_observability_feedback`
+  `maxDiagnostics` muss positiv sein und wird serverseitig gedeckelt. Werte
+  `0` oder kleiner sind ein recoverable `INVALID_ARGUMENT` mit
+  `fieldPath=$.maxDiagnostics`; das gilt auf Global-, Source-, Assembly-,
+  Stdio- und Daemon-/Thin-Client-Routen identisch. Bei zielgebundenem Health
+  beschreibt `structuredContent.navigation.snapshot` den aktuell adressierbaren
+  Analyse-Snapshot; sein `fingerprint` muss mit einem direkt anschließenden
+  passenden Analysecall korrelieren. `fresh=true` bedeutet dabei einen
+  vorhandenen Snapshot, nicht zwingend vollständig aufgelöste Assembly-
+  Referenzen; bei `loading`, `failed` oder fehlendem Hash bleibt er nicht frisch.
+  `report_observability_feedback`
   ist ungebunden und erhält keinen Target-Block.
 - Das Query-Argument wird ausschließlich in den Resource-URIs
   `ainetlinter://overview{?targetPath}` und

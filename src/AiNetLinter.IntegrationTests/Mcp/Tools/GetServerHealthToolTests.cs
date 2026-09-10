@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
@@ -173,6 +174,35 @@ public sealed class GetServerHealthToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_GlobalHealthRemainsAggregateWhenDetailFlagIsSet()
+    {
+        await using var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        await using var assemblies = new SyntheticAssemblyHealthRegistry(
+            new AssemblyAnalysisHealthSnapshot(
+                "C:\\fixtures\\global-detail.dll",
+                "partial",
+                OriginKind: "decompiled",
+                ContentHash: "global-hash",
+                Diagnostics: ["global-detail-diagnostic", "global-transitive-diagnostic"]));
+
+        var result = await GetServerHealthTool.ExecuteAsync(
+            registry,
+            assemblies,
+            new GetServerHealthOptions(IncludeDiagnostics: true));
+
+        var payload = JsonSerializer.Deserialize<ServerHealthAggregatePayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default)!;
+        Assert.False(payload.DiagnosticsIncluded);
+        Assert.False(payload.SessionsIncluded);
+        Assert.Null(payload.Assemblies);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Diagnosen gesamt: 2", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("global-detail-diagnostic", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("global-transitive-diagnostic", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Build_IncludeDiagnosticsWithoutSessions_EmitsExplicitEmptyDiagnosticsArray()
     {
         var entry = CreateAssemblyEntry("C:\\fixtures\\health-without-diagnostics.dll");
@@ -316,5 +346,20 @@ public sealed class GetServerHealthToolTests
         Assert.True(lease.Succeeded);
         lease.Lease!.Dispose();
         return registry;
+    }
+
+    private sealed class SyntheticAssemblyHealthRegistry(AssemblyAnalysisHealthSnapshot snapshot) : IAssemblyAnalysisRegistry
+    {
+        public int ResidentCount => 1;
+
+        public Task<IReadOnlyList<AssemblyAnalysisHealthSnapshot>> SnapshotsAsync() =>
+            Task.FromResult<IReadOnlyList<AssemblyAnalysisHealthSnapshot>>([snapshot]);
+
+        public Task<AssemblyAnalysisLeaseResult> LeaseAsync(
+            string assemblyPath,
+            System.Threading.CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }

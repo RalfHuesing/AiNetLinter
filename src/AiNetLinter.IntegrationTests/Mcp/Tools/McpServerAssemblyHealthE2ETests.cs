@@ -215,6 +215,39 @@ public sealed class McpServerAssemblyHealthE2ETests
         Assert.True(assembly.StructuredContent!.Value.GetProperty("sessionsIncluded").GetBoolean());
         Assert.Equal(1, assembly.StructuredContent.Value.GetProperty("shownSessionCount").GetInt32());
         Assert.Single(assembly.StructuredContent!.Value.GetProperty("assemblies").EnumerateArray());
+        var assemblyNavigation = assembly.StructuredContent.Value.GetProperty("navigation");
+        Assert.Equal("assembly", assemblyNavigation.GetProperty("snapshot").GetProperty("kind").GetString());
+        Assert.True(assemblyNavigation.GetProperty("snapshot").GetProperty("fresh").GetBoolean());
+        Assert.False(string.IsNullOrWhiteSpace(assemblyNavigation.GetProperty("snapshot").GetProperty("fingerprint").GetString()));
+
+        var followUp = await _fixture.Client.CallToolAsync(
+            "inspect_assembly",
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["typeName"] = nameof(McpCodeGraphServer),
+                ["exactTypeName"] = true,
+                ["publicOnly"] = false,
+                ["maxMembers"] = 1,
+            });
+        Assert.False(followUp.IsError == true, followUp.ToString());
+        Assert.Equal(
+            assemblyNavigation.GetProperty("snapshot").GetProperty("fingerprint").GetString(),
+            followUp.StructuredContent!.Value.GetProperty("navigation").GetProperty("snapshot").GetProperty("fingerprint").GetString());
+
+        var globalDetail = await _fixture.Client.CallToolAsync(
+            "get_server_health",
+            new Dictionary<string, object?>
+            {
+                ["includeDiagnostics"] = true,
+                ["maxDiagnostics"] = 1,
+            });
+        Assert.False(globalDetail.IsError == true, globalDetail.ToString());
+        var globalPayload = globalDetail.StructuredContent!.Value;
+        Assert.False(globalPayload.GetProperty("diagnosticsIncluded").GetBoolean());
+        Assert.False(globalPayload.GetProperty("sessionsIncluded").GetBoolean());
+        Assert.False(globalPayload.TryGetProperty("assemblies", out _));
+        Assert.DoesNotContain("Origin:", Assert.IsType<TextContentBlock>(Assert.Single(globalDetail.Content)).Text, StringComparison.Ordinal);
     }
 
     [Fact]

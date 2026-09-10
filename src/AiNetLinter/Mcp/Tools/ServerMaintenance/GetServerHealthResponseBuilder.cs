@@ -21,9 +21,9 @@ internal static class GetServerHealthResponseBuilder
     {
         var runtimeContext = options.RuntimeContext;
         var targeted = options.TargetPath is not null || options.AssemblyPath is not null;
-        // The registration removes the public global detail flags. Keeping the
-        // internal option semantics here preserves focused builder tests and
-        // legacy in-process callers without widening the public schema.
+        // Public calls without a target are normalized by GetServerHealthTool before reaching
+        // the builder. Keeping the builder's explicit options semantics preserves focused
+        // in-process callers and makes targeted detail projections independently testable.
         var includeDiagnostics = options.IncludeDiagnostics;
         var projectedAssemblies = assemblies
             .Select(assembly => AssemblyHealthProjection.Project(

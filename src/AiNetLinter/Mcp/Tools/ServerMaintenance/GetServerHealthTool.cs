@@ -54,14 +54,18 @@ internal static class GetServerHealthTool
         var validation = ValidateOptions(options);
         if (validation is not null) return validation;
 
-        if (options.AssemblyPath is not null)
+        var effectiveOptions = options.TargetPath is null && options.AssemblyPath is null
+            ? options with { IncludeDiagnostics = false, IncludeSessions = false }
+            : options;
+
+        if (effectiveOptions.AssemblyPath is not null)
         {
             if (assemblyRegistry is null)
             {
-                return AssemblyAnalysisResponse.Unsupported(options.AssemblyPath);
+                return AssemblyAnalysisResponse.Unsupported(effectiveOptions.AssemblyPath);
             }
 
-            var leaseResult = await assemblyRegistry.LeaseAsync(options.AssemblyPath, cancellationToken).ConfigureAwait(false);
+            var leaseResult = await assemblyRegistry.LeaseAsync(effectiveOptions.AssemblyPath, cancellationToken).ConfigureAwait(false);
             if (leaseResult.Error is not null)
             {
                 return leaseResult.Error;
@@ -72,33 +76,33 @@ internal static class GetServerHealthTool
             return GetServerHealthResponseBuilder.Build(
                 Array.Empty<ProjectSnapshot>(),
                 [AssemblyHealthProjection.FromLease(lease)],
-                options);
+                effectiveOptions);
         }
 
-        if (options.TargetPath is not null)
+        if (effectiveOptions.TargetPath is not null)
         {
-            if (options.RuntimeContext is not null)
+            if (effectiveOptions.RuntimeContext is not null)
             {
                 return await ExecuteDaemonProjectAsync(
-                    options.RuntimeContext,
-                    options.TargetPath,
-                    options).ConfigureAwait(false);
+                    effectiveOptions.RuntimeContext,
+                    effectiveOptions.TargetPath,
+                    effectiveOptions).ConfigureAwait(false);
             }
 
-            var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(options.TargetPath);
+            var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(effectiveOptions.TargetPath);
             if (guard is not null)
             {
                 return McpToolResults.Error(guard.Code, guard.Message, hint: guard.Hint);
             }
 
-            var snapshot = options.RuntimeContext is null
-                ? registry.FindSnapshot(options.TargetPath)
-                : options.RuntimeContext.FindProjectSnapshot(options.TargetPath);
-            if (snapshot is null) return ProjectNotInitialized(options.TargetPath);
+            var snapshot = effectiveOptions.RuntimeContext is null
+                ? registry.FindSnapshot(effectiveOptions.TargetPath)
+                : effectiveOptions.RuntimeContext.FindProjectSnapshot(effectiveOptions.TargetPath);
+            if (snapshot is null) return ProjectNotInitialized(effectiveOptions.TargetPath);
             return GetServerHealthResponseBuilder.Build(
                 [snapshot],
                 Array.Empty<AssemblyHealthEntry>(),
-                options);
+                effectiveOptions);
         }
 
         var assemblySnapshots = assemblyRegistry is null
@@ -107,10 +111,10 @@ internal static class GetServerHealthTool
         return GetServerHealthResponseBuilder.Build(
             registry.Snapshots(),
             assemblySnapshots.Select(AssemblyHealthProjection.FromSnapshot).ToList(),
-            options);
+            effectiveOptions);
     }
 
-    private static CallToolResult? ValidateOptions(GetServerHealthOptions options)
+    internal static CallToolResult? ValidateOptions(GetServerHealthOptions options)
     {
         if (options.MaxDiagnostics > 0) return null;
 
@@ -128,6 +132,9 @@ internal static class GetServerHealthTool
         ArgumentNullException.ThrowIfNull(runtimeContext);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetPath);
         ArgumentNullException.ThrowIfNull(options);
+
+        var validation = ValidateOptions(options);
+        if (validation is not null) return Task.FromResult(validation);
 
         var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(targetPath);
         if (guard is not null)

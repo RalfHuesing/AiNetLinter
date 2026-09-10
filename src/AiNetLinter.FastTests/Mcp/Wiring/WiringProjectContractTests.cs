@@ -330,6 +330,34 @@ public sealed class WiringProjectContractTests
         Assert.Contains(solutionPath, text, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task Health_ProjectTarget_DaemonRouteRejectsNonPositiveDiagnosticLimit(int maxDiagnostics)
+    {
+        using var tempDir = TestTempDirectory.Create("wiring-health-daemon-validation-");
+        var solutionPath = CreateSolutionPath(tempDir, "daemon-project");
+        await using var daemonRegistry = ProjectWiringFixtures.CreateLoadedRegistry();
+        OpenAndCloseLease(daemonRegistry, solutionPath);
+        await using var localRegistry = ProjectWiringFixtures.CreateLoadedRegistry();
+        var runtimeContext = new DaemonRuntimeContext(
+            18,
+            () => new DaemonRuntimeSnapshot(1, 1234, TimeSpan.FromSeconds(3), [solutionPath], "test"),
+            daemonRegistry.FindSnapshot);
+
+        var result = await GetServerHealthTool.ExecuteAsync(
+            localRegistry,
+            new GetServerHealthOptions(
+                TargetPath: solutionPath,
+                RuntimeContext: runtimeContext,
+                IncludeDiagnostics: true,
+                MaxDiagnostics: maxDiagnostics));
+
+        Assert.False(result.IsError);
+        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal("$.maxDiagnostics", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+    }
+
     [Fact]
     public async Task Overview_TemplateResolvesKeyAndCarriesSameGuards()
     {

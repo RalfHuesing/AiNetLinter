@@ -206,6 +206,18 @@ Jede zielgebundene Toolantwort enthält additiv unter
 Zielgebundene Health-Antworten verwenden denselben Block; der globale
 Health-Modus und ungebundenes Observability-Feedback bleiben ohne Target.
 
+Bei einer zielgebundenen `get_server_health`-Antwort beschreibt
+`navigation.snapshot` den Snapshot, auf dem ein nachfolgender Analyseaufruf
+aufsetzen kann. Für Source ist `snapshot.kind=source-files`; für eine
+erfolgreich geladene Assembly `snapshot.kind=assembly`. `snapshot.fingerprint`
+ist dabei mit dem Fingerprint des nachfolgenden passenden Analyseaufrufs
+korrelierbar. `snapshot.fresh=true` bedeutet, dass ein aktuell geladener,
+adressierbarer Analyse-Snapshot mit diesem Fingerprint existiert — nicht, dass
+jede optionale Referenz ohne Diagnose geladen wurde. Eine Assembly darf deshalb
+auch bei `partial` oder `degraded` einen frischen Snapshot melden, sofern der
+Content-Hash und die analysierbare Generation vorhanden sind; bei `loading`,
+`failed` oder fehlendem Hash bleibt der Snapshot `unavailable` bzw. `fresh=false`.
+
 Kopierbare Folgecalls verwenden ausschließlich Einträge mit
 `handoff=true` und deren `id`-Wert aus `structuredContent`. Source-IDs binden
 kanonischen Solution-Pfad, Source-Snapshot und DocCommentId; Assembly-IDs binden
@@ -403,7 +415,7 @@ Source-backed Checkout-/Snapshot-Erzeugung und Decompilation bleiben read-only.
 | `get_symbol_body` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifiers` (Array stabiler IDs/Namen/Dateizeilen fuer Batch in 1 Turn), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body bzw. -Bodies, getrennt durch Divider, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator; zusätzlich liefert `structuredContent.results` pro Eintrag `requestedIdentifier`, stabile `id`, relativen `filePath`, `startLine`, `bodyAvailability`, `contentMode`, Body und Trunkierungs-/Vollständigkeitsangaben. Bei dekompilierten Assembly-Targets stammen verfügbare Bodies aus dem eager WholeProjectDecompiler-Projekt-Snapshot; interne Materialisatpfade werden nicht projiziert. Interface- sowie abstract-/extern-Member bleiben `bodyAvailability=unavailable` | ja | nein (Body) |
 | `search_pattern` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `pattern` (Text oder Regex), `isRegex?` (Default `null` = Auto-Erkennung und Promotion bei 0 Treffern; `true` = explizit Regex, `false` = Plain-Substring), `scopeType?` (`all` [Default], `production` schliesst Tests aus, `tests`), `maxResults?` (Default 20, Cap 2.000), `maxFiles?`, `contextLines?`, `maxResponseBytes?` (Default 8.192, Cap 65.536), `scope?`, `includePatterns?`, `excludePatterns?`, `enrichCSharp?` (Default `false`) | Begrenzte, deterministisch sortierte Treffer im Produktions-/Test-/All-Korpus (alle Dateitypen) mit Match-Bereichen, optionalem Kontext und `completeness` (`totalCount`, `returnedCount`, getrennte Produktions-/Test-Counts, `truncatedBy`) sowie genau einem `next`-Hinweis. `pattern` und die Include-/Exclude-Globfelder sind die kanonischen Suchfelder; Aliasfelder wie `query`, `searchPattern`, `fileFilter` oder `includePattern` werden nicht akzeptiert. Bei `isRegex=null` automatische Regex-Erkennung und Promotion bei 0 Plain-Treffern; bei `enrichCSharp=true` zusätzlich `semantic` für sichtbare Treffer geladener C#-Dokumente | nein (Fallback) | ja |
 | `reload_config` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad) | Liest ausschließlich die optionale `ainetlinter-rules.json` neben der adressierten Solution neu. Fehlt sie, bleibt der Status `not_configured`; ein Konfigurationspfad-Override ist nicht vorgesehen. Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
-| `get_server_health` | kein Target (globale Aggregation) oder `targetPath?` (absoluter vorhandener `.sln`/`.slnx`/`.dll`/`.exe`-Pfad), `includeDiagnostics?` (Default `false`, nur zielgebunden), `maxDiagnostics?` (Default 20, Cap 50) | ohne Target ausschließlich serverweite Aggregate, Kapazitätszustand und begrenzte Fehlerzähler; keine Targetpfade, Hashes, Diagnostics, Generationen oder Lease-Details. Mit `targetPath` bleibt der Aufruf auf dieses Target begrenzt; `includeDiagnostics=true` begrenzt dort Diagnosesamples über `maxDiagnostics` | nein | ja |
+| `get_server_health` | kein Target (globale Aggregation) oder `targetPath?` (absoluter vorhandener `.sln`/`.slnx`/`.dll`/`.exe`-Pfad), `includeDiagnostics?` (Default `false`, nur zielgebunden), `maxDiagnostics?` (Default 20, Cap 50; muss mindestens 1 sein) | ohne Target ausschließlich serverweite Aggregate, Kapazitätszustand und begrenzte Fehlerzähler; keine Targetpfade, Hashes, Diagnostics, Generationen oder Lease-Details. Mit `targetPath` bleibt der Aufruf auf dieses Target begrenzt; `includeDiagnostics=true` begrenzt dort Diagnosesamples über `maxDiagnostics`. `maxDiagnostics <= 0` ist auf Global-, Source-, Assembly-, Stdio- und Daemon-/Thin-Client-Routen ein recoverable `INVALID_ARGUMENT` mit `fieldPath=$.maxDiagnostics` | nein | ja |
 | `report_observability_feedback` | `feedbackType` (Pflicht), `title` (Pflicht), `description` (Pflicht), `relatedTool?`, `severity?` (Default `medium`), `expectedBehavior?`, `actualBehavior?`, `additionalContext?` | Schreibt Fehlerberichte, unerwartete Ausgaben, False Positives oder Feature-Wünsche von KI-Agenten unbeschränkt ins System-Log zur Analyse (nicht für normale Leermengen wie nicht existierende Symbole); liefert Bestätigung und typisiertes DTO. Das Tool ist ungebunden und akzeptiert keinen Target-/Projektparameter | ja | nein |
 | `find_duplicates` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `mode?` (`clone` Default, `refactoring-drift` oder `structural`), `scopeType?` (`production` Default, `all`, `tests`), `minTokens?` (Default aus `ainetlinter-rules.json`, 30), `similarityThreshold?` (`exact`/`near`/`fuzzy`, Default `fuzzy` — niedrigste noch angezeigte Stufe, bei `mode=clone` und `mode=structural`), `normalizeIdentifiers?` (Default `false`, nur `mode=clone`), `scopeDir?` (Default Solution-Root), `maxResults?` (Default 20), `helperSymbol?` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte, stabile DocumentationCommentId oder qualifizierter Name wie bei `find_references`; Pflicht bei `mode=refactoring-drift`, bei `mode=structural` ignoriert) | `mode=clone`: Token-basierte Code-Clone-Detection (Jaccard-N-Gram, Method-Granularität) als transitiv gruppierte Cluster (nicht isolierte Paare), gestaffelt nach exact/near/fuzzy-Ähnlichkeit (inkl. Top-Cluster-Übersicht bei >20 Treffern). `mode=refactoring-drift`: Methoden, die den per `helperSymbol` angegebenen Helper strukturell nachbauen statt ihn aufzurufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005) — als Kandidaten (nicht Verstöße) gelistet, siehe Detail-Abschnitt unten. `mode=structural`: Erkennt semantisch ähnliche Hilfsmethoden anhand eines Roslyn-Strukturprofils und Cosine-Similarity (Typ-4/Intended Duplication), liefert manuell zu prüfende Kandidatencluster mit Strukturprofil-Kurzfassung — keine automatische `DuplicateCode`-Violation, eigene Cosine-Schwellwerte aus `ainetlinter-rules.json` (`StructuralDuplicate*Threshold`) | ja | ja |
 
@@ -523,7 +535,13 @@ bleiben ausschließlich serverweite Gesamt- und Statuszähler sowie begrenzte
 Fehlerzähler. `includeSessions` ist kein öffentlicher Input. Ein zielgebundener
 Projekt- oder Assembly-Call bleibt auf das angefragte Target begrenzt; erst
 `includeDiagnostics=true` aktiviert dort begrenzte Samples und `maxDiagnostics`
-wird serverseitig auf 50 gedeckelt.
+wird serverseitig auf 50 gedeckelt. Der Wert muss positiv sein; `0` und negative
+Werte werden nicht stillschweigend ersetzt, sondern als recoverable
+`INVALID_ARGUMENT` mit `fieldPath=$.maxDiagnostics` zurückgegeben. Die gleiche
+Validierung gilt unabhängig davon, ob der Aufruf direkt über Stdio oder über den
+Thin-Client-/Daemon-Transport läuft. Bei einem zielgebundenen Aufruf enthält
+`navigation.snapshot` den korrelierbaren Snapshot-Fingerprint für den nächsten
+Analysecall (siehe Handoff-Kern oben).
 
 Die Assembly-StructuredContent-Payloads sind additive DTOs: `InspectAssemblyPayload`
 enthält `assemblyPath`, `identity`, `namespaces`, `references`, `types`,

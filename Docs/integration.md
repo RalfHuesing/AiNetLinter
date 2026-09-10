@@ -323,7 +323,13 @@ Arbeitsverzeichnis-, Eltern- oder Default-Fallback.
 `get_server_health` akzeptiert ohne Target einen globalen Status oder optional
 einen `targetPath`. Ohne Target liefert es das kompakte Aggregat; ein
 zielgebundener Aufruf bleibt detailliert. `includeDiagnostics=true` fordert
-begrenzte Samples an, `maxDiagnostics` wird serverseitig gedeckelt.
+begrenzte Samples an, `maxDiagnostics` wird serverseitig gedeckelt und muss
+positiv sein. `0` oder negative Werte liefern einen recoverable
+`INVALID_ARGUMENT`-Fehler mit `fieldPath=$.maxDiagnostics`; diese Validierung
+gilt über Stdio sowie den Thin-Client-/Daemon-Transport. Bei einem
+zielgebundenen Aufruf enthält `structuredContent.navigation.snapshot` die
+Felder `kind`, `fresh` und `fingerprint`. Der Fingerprint ist mit dem Snapshot
+des nachfolgenden passenden Analyseaufrufs korrelierbar.
 `report_observability_feedback` bleibt ungebunden.
 
 Assembly-Targets sind verwaltete `.dll` oder `.exe`; die Analyse bleibt metadata-only
