@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
@@ -81,6 +82,22 @@ public sealed class GetFileSkeletonToolTests
         Assert.DoesNotContain("Erzeugt:", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("Caller", textContent.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("OtherCaller", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ValidRelativePath_ReturnsStructuredTypesMembersAndStableIds()
+    {
+        var result = await GetFileSkeletonTool.ExecuteAsync(
+            _fixture.CreateServer(), ["src/SymbolGraphMini/Greeter.cs"], CancellationToken.None);
+
+        Assert.NotNull(result.StructuredContent);
+        var payload = result.StructuredContent!.Value;
+        var file = Assert.Single(payload.GetProperty("files").EnumerateArray());
+        var type = Assert.Single(file.GetProperty("types").EnumerateArray());
+        Assert.Contains("T:", type.GetProperty("id").GetString(), StringComparison.Ordinal);
+        var members = type.GetProperty("members").EnumerateArray().ToList();
+        Assert.Contains(members, member => member.GetProperty("signature").GetString()!.Contains("Greet", StringComparison.Ordinal));
+        Assert.All(members, member => Assert.Contains(":", member.GetProperty("id").GetString(), StringComparison.Ordinal));
     }
 
     [Fact]

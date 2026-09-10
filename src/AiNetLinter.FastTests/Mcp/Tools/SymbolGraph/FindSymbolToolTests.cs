@@ -218,6 +218,19 @@ public sealed class FindSymbolToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ClassKind_ExcludesRecordDeclarations()
+    {
+        using var fixture = new McpInMemoryTestContext();
+        var result = await FindSymbolTool.ExecuteAsync(
+            fixture.CreateServer(), ["GreetingRecord"], kind: "class", maxResults: 50, CancellationToken.None);
+
+        var batch = JsonSerializer.Deserialize<FindSymbolBatchDto>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(batch);
+        Assert.Empty(Assert.Single(batch!.Results).Matches);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_MultiplePatterns_ReturnsSectionsWithDividers()
     {
         using var fixture = new McpInMemoryTestContext();

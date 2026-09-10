@@ -217,7 +217,8 @@ internal static class FileStructureToolRegistrations
 
     private const string GetFileSkeletonDescription =
         "Wann nutzen: Ueberblick ueber Typen und Signaturen einer oder mehrerer C#-Dateien (Batch in 1 Turn) " +
-        "ohne die Bodies zu lesen — jede Signatur traegt eine stabile id: fuer einen Folge-Call an get_symbol_body. " +
+        "ohne die Bodies zu lesen — StructuredContent.files[].types[].members[] enthält dieselben Einheiten " +
+        "mit stabilen IDs fuer direkte Folge-Calls an get_symbol_body; das Markdown bleibt menschenlesbar. " +
         "filePaths: Array von Dateipfaden (auch fuer genau eine Datei), relativ oder absolut. " +
         "maxResponseBytes: optionale UTF-8-Begrenzung der finalen Wire-Nutzlast (Text inklusive Navigation und Trunkierungsfooter; Default 0 = kein zusätzlicher Budget-Trim, Maximum 65536); bei Trunkierung wird ein nächster Schritt genannt und nur an vollständigen Skeleton-Einheiten gekürzt.";
 

@@ -37,9 +37,12 @@ internal static class SymbolKindClassifier
 
         return kind.ToLowerInvariant() switch
         {
-            "class" => type.TypeKind == TypeKind.Class,
+            // Records have a Roslyn TypeKind of Class/Struct as well. They
+            // are distinct public MCP kinds and must not leak into a plain
+            // class/struct query.
+            "class" => type.TypeKind == TypeKind.Class && !type.IsRecord,
             "interface" => type.TypeKind == TypeKind.Interface,
-            "struct" => type.TypeKind == TypeKind.Struct,
+            "struct" => type.TypeKind == TypeKind.Struct && !type.IsRecord,
             "enum" => type.TypeKind == TypeKind.Enum,
             "delegate" => type.TypeKind == TypeKind.Delegate,
             _ => false,
@@ -85,7 +88,10 @@ internal static class SymbolKindClassifier
             return MatchesTypeKindFallback(typeSymbol, kind);
         }
 
-        return true;
+        // An explicit kind filter is a closed vocabulary. Fields, events,
+        // namespaces and other Roslyn symbols are not canonical find_symbol
+        // kinds and must never pass the filter accidentally.
+        return false;
     }
 
     private static bool MatchesTypeKindFallback(ITypeSymbol typeSymbol, string kind)

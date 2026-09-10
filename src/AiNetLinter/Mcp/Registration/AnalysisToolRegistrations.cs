@@ -359,7 +359,8 @@ internal static class AnalysisToolRegistrations
         "Wann nutzen: Composite One-Shot-Exploration fuer ein beliebiges C#-Symbol vor Edits oder Refactorings — " +
         "buendelt 5 Dimensionen (Deklaration, Metriken & Budget, statische Referenzen/Call-Sites, statische Test-Zuordnung und Linter-Violations) " +
         "in einem einzigen residenten Aufruf. symbolIdentifier: 'Namespace.Klasse.Methode', 'Datei.cs:Zeile' oder DocCommentId. " +
-        "Der Caller-Bereich basiert auf statischen Referenzen/Call-Sites; der Testbereich auf statischen Testkandidaten. " +
+        "Der Caller-Bereich basiert auf statischen Referenzen/Call-Sites; jede Call-Site enthält in StructuredContent " +
+        "additiv callerId und callerLocation fuer direkte Folge-Tools; der Testbereich basiert auf statischen Testkandidaten. " +
         "maxCallers: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Limit (Default 10, Cap 50). maxTests: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), maxTests bleibt ein Dateilimit (Default 10, Cap 50); " +
         "Testmethoden sind zusaetzlich je Datei auf 50 und insgesamt auf 200 begrenzt.";
 

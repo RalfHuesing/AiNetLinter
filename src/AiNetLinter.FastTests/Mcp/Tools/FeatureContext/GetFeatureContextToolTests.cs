@@ -170,6 +170,13 @@ public sealed class GetFeatureContextToolTests
         Assert.NotNull(payload.Callers);
         Assert.Equal(2, payload.Callers.TotalCallers);
         Assert.Equal("static-references/call-sites", payload.Callers.Semantics);
+        Assert.All(payload.Callers.CallSites, caller =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(caller.CallerId));
+            Assert.NotNull(caller.CallerLocation);
+            Assert.True(caller.CallerLocation!.StartLine > 0);
+            Assert.True(caller.CallerLocation.EndLine >= caller.CallerLocation.StartLine);
+        });
         Assert.NotNull(payload.Tests);
         Assert.True(payload.Tests.TotalMatchingTests >= 1);
         Assert.Equal("static-test-candidates-only", payload.Tests.EvidenceBoundary);

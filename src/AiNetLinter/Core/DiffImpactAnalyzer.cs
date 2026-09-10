@@ -437,29 +437,52 @@ public sealed class DiffImpactAnalyzer
                 var lineSpan = location.Location.GetLineSpan();
                 var relativePath = PathNormalizer.ToRelative(outputRoot, lineSpan.Path);
                 var line = lineSpan.StartLinePosition.Line + 1;
-                var callerMemberName = await ResolveCallerMemberNameAsync(location, ct).ConfigureAwait(false);
+                var caller = await ResolveCallerAsync(location, outputRoot, ct).ConfigureAwait(false);
 
                 entries.Add(new CallSiteEntry(
-                    relativePath, line, FormatMemberDisplayName(symbol), location.Document.Project.Name, callerMemberName));
+                    relativePath,
+                    line,
+                    FormatMemberDisplayName(symbol),
+                    location.Document.Project.Name,
+                    caller.Name,
+                    caller.Id,
+                    caller.Location));
             }
         }
 
         return entries;
     }
 
-    private static async Task<string?> ResolveCallerMemberNameAsync(
-        ReferenceLocation location, CancellationToken ct)
+    private static async Task<(string? Name, string? Id, CallerLocationDto? Location)> ResolveCallerAsync(
+        ReferenceLocation location,
+        string outputRoot,
+        CancellationToken ct)
     {
-        if (location.Document is not { } doc) return null;
+        if (location.Document is not { } doc) return (null, null, null);
 
         var semanticModel = await doc.GetSemanticModelAsync(ct).ConfigureAwait(false);
         var enclosingSymbol = semanticModel?.GetEnclosingSymbol(location.Location.SourceSpan.Start);
-        return enclosingSymbol switch
+        if (enclosingSymbol is null) return (null, null, null);
+
+        var name = enclosingSymbol switch
         {
             IMethodSymbol m => $"{m.ContainingType?.Name}.{m.Name}",
             IPropertySymbol p => $"{p.ContainingType?.Name}.{p.Name}",
             _ => enclosingSymbol?.Name
         };
+        var callerSymbol = enclosingSymbol!;
+        var id = CallGraphTraversal.GetStableSymbolId(callerSymbol);
+        var syntax = callerSymbol.DeclaringSyntaxReferences.FirstOrDefault();
+        if (syntax is null) return (name, id, null);
+
+        var lineSpan = syntax.SyntaxTree.GetLineSpan(syntax.Span);
+        return (
+            name,
+            id,
+            new CallerLocationDto(
+                PathNormalizer.ToRelative(outputRoot, lineSpan.Path),
+                lineSpan.StartLinePosition.Line + 1,
+                lineSpan.EndLinePosition.Line + 1));
     }
 
     /// <summary>Formatiert <see cref="CallSiteEntry"/> identisch zum bisherigen Text-Format von

@@ -83,18 +83,19 @@ internal static class GetFileSkeletonTool
         CancellationToken ct)
     {
         var solutionDir = SolutionDocumentPathResolver.GetSolutionDirectory(solution) ?? "";
-        var sections = new List<string>();
+        var units = new List<SkeletonRenderUnit>();
 
         for (var i = 0; i < paths.Count; i++)
         {
             var rendered = await RenderSingleFileSkeletonAsync(
                 new RenderSingleFileSkeletonRequest(solution, paths[i], solutionDir, paths.Count, assemblyIdentity), ct);
             if (rendered.Error is not null) return rendered.Error;
-            sections.AddRange(rendered.Sections);
+            units.AddRange(rendered.Units);
         }
 
-        var units = sections.Where(section => section.Length > 0).ToList();
-        var markdown = string.Join("\n\n---\n\n", units);
+        units = units.Where(unit => unit.Markdown.Length > 0).ToList();
+        var markdown = string.Join("\n\n---\n\n", units.Select(unit => unit.Markdown));
+        var visibleUnits = units;
         if (maxResponseBytes > 0 && Encoding.UTF8.GetByteCount(markdown) > maxResponseBytes)
         {
             const string markerFormat = "[Antwort wegen maxResponseBytes begrenzt — {0} vollständige Skeleton-Einheiten ausgelassen; maxResponseBytes erhöhen oder filePaths verfeinern]";
@@ -107,10 +108,10 @@ internal static class GetFileSkeletonTool
                     "$.maxResponseBytes");
             }
 
-            var kept = new List<string>();
+            var kept = new List<SkeletonRenderUnit>();
             foreach (var unit in units)
             {
-                var candidate = string.Join("\n\n---\n\n", kept.Append(unit));
+                var candidate = string.Join("\n\n---\n\n", kept.Select(item => item.Markdown).Concat([unit.Markdown]));
                 var remaining = units.Count - kept.Count - 1;
                 var marker = string.Format(markerFormat, remaining);
                 if (Encoding.UTF8.GetByteCount(candidate + "\n\n" + marker) > maxResponseBytes) break;
@@ -118,11 +119,13 @@ internal static class GetFileSkeletonTool
             }
 
             var omitted = units.Count - kept.Count;
-            markdown = string.Join("\n\n---\n\n", kept);
+            visibleUnits = kept;
+            markdown = string.Join("\n\n---\n\n", kept.Select(unit => unit.Markdown));
             var markerText = string.Format(markerFormat, omitted);
             markdown = string.IsNullOrEmpty(markdown) ? markerText : markdown + "\n\n" + markerText;
         }
-        return McpToolResults.Text(markdown);
+        var payload = FileSkeletonPayload.Create(visibleUnits, units.Count, visibleUnits.Count < units.Count);
+        return McpToolResults.Text(markdown, payload);
     }
 
     /// <summary>Reapplies the text budget after the shared navigation footer was appended.</summary>
@@ -144,6 +147,7 @@ internal static class GetFileSkeletonTool
         var prefix = skeletonIndex > 0 ? body[..skeletonIndex].TrimEnd() + "\n\n" : string.Empty;
         if (skeletonIndex > 0) body = body[skeletonIndex..];
         var units = body.Split("\n\n---\n\n", StringSplitOptions.RemoveEmptyEntries).ToList();
+        var payload = FileSkeletonPayload.From(structured);
         const string markerFormat = "[Antwort wegen maxResponseBytes begrenzt — {0} vollständige Skeleton-Einheiten ausgelassen; maxResponseBytes erhöhen oder filePaths verfeinern]";
         var kept = new List<string>();
         for (var i = 0; i < units.Count; i++)
@@ -151,7 +155,8 @@ internal static class GetFileSkeletonTool
             var omitted = units.Count - i - 1;
             var marker = string.Format(markerFormat, omitted);
             var candidate = prefix + string.Join("\n\n---\n\n", kept.Append(units[i])) + "\n\n" + marker + footer;
-            if (Encoding.UTF8.GetByteCount(candidate) + SerializedSize(structured) > maxResponseBytes) break;
+            var candidatePayload = payload.ProjectToText(candidate);
+            if (Encoding.UTF8.GetByteCount(candidate) + SerializedSize(candidatePayload) > maxResponseBytes) break;
             kept.Add(units[i]);
         }
 
@@ -161,7 +166,13 @@ internal static class GetFileSkeletonTool
         finalText = string.IsNullOrEmpty(finalText)
             ? finalMarker + footer
             : finalText + "\n\n" + finalMarker + footer;
-        if (Encoding.UTF8.GetByteCount(finalText) + SerializedSize(structured) > maxResponseBytes)
+        var finalPayload = payload.ProjectToText(finalText);
+        var finalNode = JsonSerializer.SerializeToNode(finalPayload, McpJsonOptions.Default) as JsonObject ?? new JsonObject();
+        if (structured["navigation"] is JsonNode finalNavigation)
+        {
+            finalNode["navigation"] = finalNavigation.DeepClone();
+        }
+        if (Encoding.UTF8.GetByteCount(finalText) + SerializedSize(finalNode) > maxResponseBytes)
         {
             return McpToolResults.InvalidArgument(
                 "maxResponseBytes ist zu klein, um den festen Navigation-/Trunkierungs-Envelope vollständig auszugeben.",
@@ -172,14 +183,14 @@ internal static class GetFileSkeletonTool
         {
             IsError = result.IsError,
             Content = new List<ContentBlock> { new TextContentBlock { Text = finalText } },
-            StructuredContent = JsonSerializer.SerializeToElement(structured, McpJsonOptions.Default),
+            StructuredContent = JsonSerializer.SerializeToElement(finalNode, McpJsonOptions.Default),
         };
     }
 
-    private static int SerializedSize(JsonObject envelope) =>
+    private static int SerializedSize(object envelope) =>
         JsonSerializer.SerializeToUtf8Bytes(envelope, McpJsonOptions.Default).Length;
 
-    private static async Task<(CallToolResult? Error, IReadOnlyList<string> Sections)> RenderSingleFileSkeletonAsync(
+    private static async Task<(CallToolResult? Error, IReadOnlyList<SkeletonRenderUnit> Units)> RenderSingleFileSkeletonAsync(
         RenderSingleFileSkeletonRequest request,
         CancellationToken ct)
     {
@@ -195,7 +206,7 @@ internal static class GetFileSkeletonTool
                 .Select(candidate => $"{candidate.Project.Name}/{candidate.Name}")
                 .ToList();
             if (totalCount == 1) return (McpToolResults.AmbiguousPath(path, candidateNames), []);
-            return (null, [$"### Datei nicht eindeutig: `{path}`\n\n" + McpToolResults.AmbiguousPath(path, candidateNames).Content.OfType<TextContentBlock>().Single().Text]);
+            return (null, [new SkeletonRenderUnit($"### Datei nicht eindeutig: `{path}`\n\n" + McpToolResults.AmbiguousPath(path, candidateNames).Content.OfType<TextContentBlock>().Single().Text, path, [])]);
         }
 
         var document = candidates.SingleOrDefault();
@@ -203,7 +214,7 @@ internal static class GetFileSkeletonTool
         if (document is null)
         {
             if (totalCount == 1) return (McpToolResults.FileNotFound(path), []);
-            return (null, [$"### Datei nicht gefunden: `{path}`\n\n[HINWEIS] Datei '{path}' existiert nicht in der Solution."]);
+            return (null, [new SkeletonRenderUnit($"### Datei nicht gefunden: `{path}`\n\n[HINWEIS] Datei '{path}' existiert nicht in der Solution.", path, [])]);
         }
 
         var types = await SkeletonMapBuilder.ExtractFromDocumentAsync(
@@ -214,9 +225,9 @@ internal static class GetFileSkeletonTool
 
         if (types.Count == 0)
         {
-            return (null, [$"### Skelett: `{path}`\n\nKeine Typen gefunden in '{path}'"]);
+            return (null, [new SkeletonRenderUnit($"### Skelett: `{path}`\n\nKeine Typen gefunden in '{path}'", path, [])]);
         }
-        return (null, types.Select(type => SkeletonMarkdownRenderer.Render([type], path).TrimEnd()).ToList());
+        return (null, types.Select(type => new SkeletonRenderUnit(SkeletonMarkdownRenderer.Render([type], path).TrimEnd(), path, [type])).ToList());
     }
 
     private sealed record RenderSingleFileSkeletonRequest(
@@ -225,4 +236,110 @@ internal static class GetFileSkeletonTool
         string SolutionDir,
         int TotalCount,
         AnalysisSymbolIdentity? AssemblyIdentity);
+
+    internal sealed record SkeletonRenderUnit(string Markdown, string Path, IReadOnlyList<SkeletonTypeInfo> Types);
+}
+
+/// <summary>Additive, machine-readable handoff payload for <c>get_file_skeleton</c>.</summary>
+internal sealed record FileSkeletonPayload(
+    IReadOnlyList<FileSkeletonFileDto> Files,
+    int TotalFiles,
+    int ShownFiles,
+    int TotalTypes,
+    int ShownTypes,
+    int TotalMembers,
+    int ShownMembers,
+    bool IsTruncated = false,
+    IReadOnlyList<string>? TruncatedBy = null,
+    string? NextStep = null)
+{
+    internal static FileSkeletonPayload Create(
+        IReadOnlyList<GetFileSkeletonTool.SkeletonRenderUnit> units,
+        int totalUnits,
+        bool isTruncated)
+    {
+        var files = units
+            .GroupBy(unit => unit.Path, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new FileSkeletonFileDto(
+                group.Key,
+                group.SelectMany(unit => unit.Types).Select(FileSkeletonTypeDto.From).ToList()))
+            .ToList();
+        var types = files.SelectMany(file => file.Types).ToList();
+        return new(
+            files,
+            files.Count,
+            files.Count,
+            totalUnits,
+            types.Count,
+            types.Sum(type => type.Members.Count),
+            types.Sum(type => type.Members.Count),
+            isTruncated,
+            isTruncated ? ["maxResponseBytes"] : [],
+            isTruncated ? "maxResponseBytes erhöhen oder filePaths verfeinern." : null);
+    }
+
+    internal static FileSkeletonPayload From(JsonObject value)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<FileSkeletonPayload>(value.ToJsonString(), McpJsonOptions.Default)
+                ?? new([], 0, 0, 0, 0, 0, 0);
+        }
+        catch
+        {
+            return new([], 0, 0, 0, 0, 0, 0);
+        }
+    }
+
+    internal FileSkeletonPayload ProjectToText(string text)
+    {
+        if (Files.Count == 0) return this;
+        var visibleFiles = Files
+            .Select(file => file with
+            {
+                Types = file.Types.Where(type =>
+                    (!string.IsNullOrEmpty(type.Id) && text.Contains(type.Id, StringComparison.Ordinal))
+                    || text.Contains($"### {type.Name}", StringComparison.Ordinal)).ToList()
+            })
+            .Where(file => file.Types.Count > 0)
+            .ToList();
+        var types = visibleFiles.SelectMany(file => file.Types).ToList();
+        return this with
+        {
+            Files = visibleFiles,
+            ShownFiles = visibleFiles.Count,
+            ShownTypes = types.Count,
+            ShownMembers = types.Sum(type => type.Members.Count),
+            IsTruncated = IsTruncated || visibleFiles.Count != Files.Count,
+            TruncatedBy = (TruncatedBy ?? []).Count > 0 ? TruncatedBy : ["maxResponseBytes"],
+            NextStep = NextStep ?? "maxResponseBytes erhöhen oder filePaths verfeinern."
+        };
+    }
+}
+
+internal sealed record FileSkeletonFileDto(string Path, IReadOnlyList<FileSkeletonTypeDto> Types);
+
+internal sealed record FileSkeletonTypeDto(
+    string Namespace,
+    string TypeKind,
+    string Modifiers,
+    string Name,
+    string? BaseTypes,
+    string RelativePath,
+    string? Id,
+    IReadOnlyList<FileSkeletonMemberDto> Members)
+{
+    internal static FileSkeletonTypeDto From(SkeletonTypeInfo type) => new(
+        type.Namespace, type.TypeKind, type.Modifiers, type.Name, type.BaseTypes,
+        type.RelativePath, type.Id, type.Members.Select(FileSkeletonMemberDto.From).ToList());
+}
+
+internal sealed record FileSkeletonMemberDto(
+    string Kind,
+    string Signature,
+    string? MetaComment,
+    string? Id)
+{
+    internal static FileSkeletonMemberDto From(SkeletonMemberInfo member) => new(
+        member.Kind.ToString(), member.Signature, member.MetaComment, member.Id);
 }

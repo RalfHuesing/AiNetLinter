@@ -225,6 +225,14 @@ Target-Aufrufe verwenden ausschließlich Properties aus dem jeweils über
 `invalid_argument` mit ihrem Feldnamen abgelehnt; Aliasfelder gehören nicht zum
 aktiven Vertrag.
 
+Für Handoffs gilt: `get_file_skeleton`-IDs stehen additiv in
+`structuredContent.files[].types[].members[]` und gehen direkt an
+`get_symbol_body.symbolIdentifiers`. Bei `get_feature_context` liefert jede
+statische Call-Site nach Möglichkeit `callerId` plus `callerLocation`; die
+Caller-ID kann direkt an ein symbolbezogenes Folge-Tool übergeben werden.
+Markdown bleibt für Menschen und Alt-Clients unverändert und darf nicht als
+ID-Quelle geparst werden, wenn StructuredContent verfügbar ist.
+
 Bei `RULES_INVALID` nicht ungefragt eine Projektintegration durchführen. Nur bei
 einem ausdrücklichen Integrationsauftrag den einmaligen Leitfaden über
 `ainetlinter://agent-guide` lesen; er enthält den Bootstrap-Ablauf und die

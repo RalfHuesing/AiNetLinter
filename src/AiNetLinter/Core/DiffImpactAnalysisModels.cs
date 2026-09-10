@@ -116,7 +116,17 @@ internal sealed record DiffAnalysisRequest(
 /// eines Symbols (Pfad, Zeile, aufgerufenes Symbol, Projekt). 1:1-Struktur zum Text-Format von
 /// <see cref="DiffImpactAnalyzer.FormatCallSite"/>.
 /// </summary>
-internal sealed record CallSiteEntry(string FilePath, int Line, string SymbolName, string ProjectName, string? CallerMemberName = null);
+internal sealed record CallSiteEntry(
+    string FilePath,
+    int Line,
+    string SymbolName,
+    string ProjectName,
+    string? CallerMemberName = null,
+    string? CallerId = null,
+    CallerLocationDto? CallerLocation = null);
+
+/// <summary>Stable, directly reusable declaration location for a call-site caller.</summary>
+internal sealed record CallerLocationDto(string FilePath, int StartLine, int EndLine);
 
 /// <summary>
 /// Signalisiert, dass ein explizit angegebener <c>gitRef</c> von <c>git diff</c> nicht aufgeloest
