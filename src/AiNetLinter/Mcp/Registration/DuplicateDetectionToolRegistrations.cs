@@ -57,5 +57,5 @@ internal static class DuplicateDetectionToolRegistrations
         "helperSymbol: Ziel-Helper (Pflicht bei mode='refactoring-drift': Datei:Zeile:Spalte, DocCommentId oder Name). " +
         "minTokens: Mindest-Tokens (MCP-Default 30). similarityThreshold: 'exact' (>=0.95), 'near' (>=0.80), " +
         "'fuzzy' (>=0.65 [Default]). normalizeIdentifiers: Klone mit umbenannten Variablen erkennen (Default false). " +
-        "scopeDir: Verzeichnispfad zur Eingrenzung. scopeType: 'production' [Default], 'all', 'tests'. maxResults: Begrenzung (Default 20).";
+        "scopeDir: Verzeichnispfad zur Eingrenzung. scopeType: 'production' [Default], 'all', 'tests'. maxResults: positive Begrenzung (Default 20; mindestens 1; 0 oder negative Werte liefern INVALID_ARGUMENT).";
 }

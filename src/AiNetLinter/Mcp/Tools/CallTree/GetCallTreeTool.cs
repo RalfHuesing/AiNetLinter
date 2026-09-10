@@ -60,6 +60,14 @@ internal static class GetCallTreeTool
                 hint: "direction muss 'incoming', 'outgoing' oder 'both' sein.");
         }
 
+        if (!TryParseFormat(input.Format, out _))
+        {
+            return McpToolResults.InvalidArgument(
+                $"Ungueltiger Wert fuer 'format': '{input.Format}'.",
+                "format muss 'ascii' oder 'mermaid' sein (Default: 'ascii').",
+                "$.format");
+        }
+
         try
         {
             var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
@@ -69,6 +77,7 @@ internal static class GetCallTreeTool
                 state.HandoffSymbolIdentity);
             if (error is not null) return error;
 
+            var effectiveDepth = Math.Clamp(input.Depth, 1, CallGraphTreeBuilder.MaxCallTreeDepth);
             var topN = input.TopN < 1 ? 1 : input.TopN;
             var (root, truncated) = await CallGraphTreeBuilder.BuildTreeAsync(
                 new CallTreeBuildRequest(
@@ -102,6 +111,8 @@ internal static class GetCallTreeTool
                     root,
                     CallTreeDirectionNames.For(direction),
                     input.Depth,
+                    effectiveDepth,
+                    input.Depth != effectiveDepth,
                     topN,
                     truncated || topNTruncated,
                     topNTruncated));
@@ -140,9 +151,28 @@ internal static class GetCallTreeTool
     }
 
     internal static string RenderTree(MetricsTreeNode root, string? format, int topN) =>
-        string.Equals(format, MermaidFormat, StringComparison.OrdinalIgnoreCase)
+        TryParseFormat(format, out var parsedFormat) && parsedFormat == MermaidFormat
             ? CallTreeMermaidRenderer.Render(root, topN)
             : MetricsTreeRenderer.Render(root, topN, sortDescending: false);
+
+    internal static bool TryParseFormat(string? value, out string format)
+    {
+        if (string.IsNullOrWhiteSpace(value)
+            || string.Equals(value, "ascii", StringComparison.OrdinalIgnoreCase))
+        {
+            format = "ascii";
+            return true;
+        }
+
+        if (string.Equals(value, MermaidFormat, StringComparison.OrdinalIgnoreCase))
+        {
+            format = MermaidFormat;
+            return true;
+        }
+
+        format = string.Empty;
+        return false;
+    }
 
     internal static bool HasTreeOverflow(MetricsTreeNode root, int topN) =>
         root.Children.Count > topN || root.Children.Any(child => HasTreeOverflow(child, topN));

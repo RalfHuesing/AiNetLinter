@@ -22,6 +22,10 @@ namespace AiNetLinter.Mcp.Tools.Analysis;
 /// </summary>
 internal static class ViolationScopeFilter
 {
+    internal static bool IsValidMinSeverity(string? minSeverity) =>
+        string.IsNullOrWhiteSpace(minSeverity)
+        || SeverityRank(minSeverity) > 0;
+
     /// <summary>
     /// Baut eine Datei→Projekt-Zuordnung ueber alle gueltigen Dokumente der Solution.
     /// Bei gesetzten <paramref name="fileFilters"/> wird derselbe effektive Lint-Scope wie

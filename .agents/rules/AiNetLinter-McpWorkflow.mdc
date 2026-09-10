@@ -92,6 +92,48 @@ Referenzen und Abhängigkeiten.
   Batch-Elemente dürfen nicht leer sein. `maxResults` muss mindestens 1 sein.
   `kind` filtert optional
   nach kanonischen C#-Arten (`class`, `method`, `interface`, `record`, `struct`, `enum`, `delegate`, `property`).
+- Für die normale öffentliche Listen-/Traversierungsfamilie sind die Grenzen
+  positiv: `maxResults`, `topN`, `maxMembers`, `maxBodyLines`, `maxCallers`,
+  `maxTests` und `depth` müssen mindestens `1` sein. `0` oder negative Werte
+  liefern ein recoverable `INVALID_ARGUMENT` mit dem konkreten JSON-Feldpfad;
+  sie werden nicht still auf einen Default oder `1` gesetzt. Explizite
+  Ausnahmen sind die vier Assembly-Tools: Bei `search_assembly`,
+  `inspect_assembly`, `find_assembly_extensions` und `get_assembly_context`
+  bedeutet `maxResults=0` den jeweiligen dokumentierten Default (50 bzw. 100),
+  während negative Werte weiterhin ungültig sind. Weitere Ausnahmen sind
+  `get_impact` im Git-Diff-Modus mit `detailLevel="change-context"`: Bei
+  `maxChangedSymbols` und `maxTestsPerSymbol` bedeutet `0` „keine explizite
+  Begrenzung“ und wird intern wie Weglassen auf den jeweiligen Default (20 bzw.
+  10) normalisiert; Werte über dem Cap werden auf 100 bzw. 50 gekappt. Das
+  `depth`-Feld ist im gesamten Git-Diff-Branch (callers und change-context)
+  wirkungslos; `0` oder negative Werte werden dort deshalb nicht vorab
+  abgelehnt. Nur im Symbol-Branch muss `depth` mindestens 1 sein.
+  Legacy-Tool `find_magic_values` behält seine Rückwärtskompatibilität:
+  `maxResults=0` oder ein negativer Wert wird auf 1 gekappt und nicht abgelehnt.
+  Diese Felder gehören daher nicht zur allgemeinen Positivregel. Array-Elemente
+  werden ebenfalls gegen das veröffentlichte Schema geprüft, bei Fehlern nennt
+  `fieldPath` den Index (z. B. `$.namePatterns[1]`).
+- `get_test_context.maxResults` ist auf 100 begrenzt; Werte über 100 liefern
+  vor dem Dispatch ein feldgenaues `INVALID_ARGUMENT`. Bei `get_violations`
+  liegt `contextLines` im Bereich 0–5; negative Werte oder Werte über 5 werden
+  ebenfalls feldgenau vor dem Dispatch abgelehnt.
+- `get_assembly_context` verwendet für `maxBodyLines`, `maxCallers`, `depth` und
+  `topN` dieselbe Positivregel und feste Obergrenzen: Body 1–1000, Caller 1–200,
+  Tiefe 1–3 und Fan-out 1–200. Werte außerhalb dieser Bereiche sind feldgenau
+  `INVALID_ARGUMENT`; sie werden vor dem Dispatch weder still auf einen Default
+  gesetzt noch im Handler gekappt.
+- `safeguard.maxViolations` ist dagegen eine nichtnegative Auswahlgrenze:
+  `0` schaltet nur die ausgegebenen Remediation-/Top-Violation-Einträge aus;
+  Score, Status und Completeness bleiben erhalten. Negative Werte werden auf
+  `0` gekappt.
+- Enumartige Parameter dürfen keine unbekannten Werte stillschweigend übernehmen:
+  `get_violations.minSeverity` akzeptiert nur `info`, `warning` oder `error`,
+  `get_call_tree.format` nur `ascii` oder `mermaid` (leerer Wert = dokumentierter
+  Default). Ungültige Werte liefern `INVALID_ARGUMENT`.
+- Bei Tools, die `depth` an eine interne Obergrenze clampen, StructuredContent
+  auswerten: `requestedDepth`, `effectiveDepth` und `depthWasClamped` zeigen den
+  tatsächlich verwendeten Wert. Text und StructuredContent verwenden denselben
+  effektiven Traversierungswert.
 - Für `search_pattern` und `search_assembly` ist `pattern` das Suchmuster mit
   automatischem Regex-Autodetect (`isRegex: null` als Standard-Tri-State; Plain-First
   verhindert False-Positives bei typischer C#-Syntax, automatische Promotion bei 0

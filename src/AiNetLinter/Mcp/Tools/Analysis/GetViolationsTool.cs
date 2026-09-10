@@ -39,6 +39,14 @@ internal static class GetViolationsTool
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
+        if (!ViolationScopeFilter.IsValidMinSeverity(options.MinSeverity))
+        {
+            return McpToolResults.InvalidArgument(
+                $"Ungueltiger Wert fuer 'minSeverity': '{options.MinSeverity}'.",
+                "minSeverity muss 'info', 'warning' oder 'error' sein.",
+                "$.minSeverity");
+        }
+
         // Config + Konfigurationspfad als atomarer Schnappschuss (state.GetConfigSnapshot()) statt
         // zweier getrennter Property-Zugriffe: ein gleichzeitiger reload_config-Aufruf koennte
         // sonst eine zerrissene Kombination liefern.

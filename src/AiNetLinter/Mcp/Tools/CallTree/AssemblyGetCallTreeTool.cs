@@ -59,7 +59,12 @@ internal static class AssemblyGetCallTreeTool
         }
 
         return GetCallTreeTool.TryParseDirection(input.Direction, out _)
-            ? null
+            ? GetCallTreeTool.TryParseFormat(input.Format, out _)
+                ? null
+                : McpToolResults.InvalidArgument(
+                    $"Ungueltiger Wert fuer 'format': '{input.Format}'.",
+                    "format muss 'ascii' oder 'mermaid' sein (Default: 'ascii').",
+                    "$.format")
             : McpToolResults.Recoverable(
                 LinterErrorCodes.InvalidArgument,
                 $"Ungueltiger Wert fuer 'direction': '{input.Direction}'.",
@@ -83,6 +88,7 @@ internal static class AssemblyGetCallTreeTool
             input,
             cancellationToken).ConfigureAwait(false);
         var topN = input.TopN < 1 ? 1 : input.TopN;
+        var effectiveDepth = Math.Clamp(input.Depth, 1, CallGraphTreeBuilder.MaxCallTreeDepth);
         var body = GetCallTreeTool.RenderTree(root, input.Format, topN);
         var topNTruncated = GetCallTreeTool.HasTreeOverflow(root, topN);
         var treeTruncationMessage = truncated
@@ -98,7 +104,10 @@ internal static class AssemblyGetCallTreeTool
                 diagnostics,
                 truncated,
                 topNTruncated,
-                treeTruncationMessage));
+                treeTruncationMessage,
+                input.Depth,
+                effectiveDepth,
+                input.Depth != effectiveDepth));
     }
 
     private static string BuildTruncationMeta() =>

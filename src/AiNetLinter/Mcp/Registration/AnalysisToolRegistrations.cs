@@ -70,8 +70,8 @@ internal static class AnalysisToolRegistrations
         "Wann nutzen: aktuelle Lint-Regelverstoesse der Solution abfragen — nach jedem Edit " +
         "erneut aufrufbar, kein Disk-Cache. scopeFilter: Projekt-Name oder Pfad-Substring zur " +
         "Eingrenzung. ruleId: Filter auf bestimmte Regel (z. B. 'ANL0021'). minSeverity: 'info', 'warning' oder 'error'. " +
-        "maxResults: Begrenzung der Trefferliste (Default 50). " +
-        "includeSnippet=true gibt den Quellcode-Ausschnitt mit (contextLines 0-5, Default 2).";
+        "maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Begrenzung der Trefferliste (Default 50). " +
+        "includeSnippet=true gibt den Quellcode-Ausschnitt mit (contextLines 0-5, Default 2; Werte außerhalb dieses Bereichs liefern INVALID_ARGUMENT).";
 
     private static void AddSafeguard(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -95,7 +95,7 @@ internal static class AnalysisToolRegistrations
         "0-10-Score + Pass/Fail-Threshold + Top-Violations + Remediation-Hints fuer " +
         "die geladene Solution. scopeFilter: Projekt-Name oder Pfad-Substring zur " +
         "Eingrenzung, minScore: Schwellwert (Default 8.0), maxViolations: Begrenzung " +
-        "der Top-Violations-Liste (Default 20).";
+        "der Top-Violations-Liste (0 = Liste abschalten; negative Werte werden aus Rueckwaertskompatibilitaet auf 0 gekappt; Default 20).";
 
     private static void AddSearchPattern(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -150,7 +150,7 @@ internal static class AnalysisToolRegistrations
         "pattern: Suchtext oder Regex. isRegex: optional (Default null = 'auto' mit automatischer Regex-Erkennung " +
         "und Promotion bei 0 Treffern; true = explizit Regex, false = explizit Plain-Substring). " +
         "scopeType: 'all' (Default), 'production' (schliesst Tests aus) oder 'tests'. " +
-        "maxResults: Treffer-Limit (Default 20, Cap 2000). maxFiles, contextLines und maxResponseBytes " +
+        "maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Treffer-Limit (Default 20, Cap 2000). maxFiles, contextLines und maxResponseBytes " +
         "(Default 8192, Cap 65536) begrenzen " +
         "die strukturierte Nutzlast. scope, includePatterns und excludePatterns steuern den Scope. " +
         "enrichCSharp=true reichert sichtbare C#-Treffer opt-in semantisch an (semantic-Feld; resolution: resolved, not_applicable, unknown, ambiguous, unavailable).";
@@ -177,8 +177,8 @@ internal static class AnalysisToolRegistrations
         "Wann nutzen: Verzeichnishierarchie einer unbekannten/grossen Codebase Ebene fuer Ebene " +
         "erkunden statt Komplett-Dump zu lesen — aggregierte Werte pro Knoten + sortierte " +
         "Top-N-Kinder. mode: code_size [Default], comment_density, violation_density, complexity. " +
-        "root: Teilbaum-Eingrenzung (Default: Root), depth: Baumtiefe (1-5, Default 1), " +
-        "topN: sichtbare Kinder pro Ebene (Default 10), fileFilter: Regex-Filter auf den Pfad.";
+        "root: Teilbaum-Eingrenzung (Default: Root), depth: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT; 1-5, Default 1), " +
+        "topN: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), sichtbare Kinder pro Ebene (Default 10), fileFilter: Regex-Filter auf den Pfad.";
 
     private static void AddMetricsLookup(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -229,7 +229,7 @@ internal static class AnalysisToolRegistrations
         "statt der flachen Datei-Liste von get_violations — nach Pattern-Kategorie gruppiert. " +
         "patterns: Pattern-IDs (Default alle 6: god-class, async-void, long-method, public-without-doc, " +
         "empty-catch, feature-envy). scopeFilter: Projekt-Name oder Pfad-Substring zur Eingrenzung, " +
-        "maxResultsPerPattern: Begrenzung der Trefferliste je Pattern (Default 20).";
+        "maxResultsPerPattern: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Begrenzung der Trefferliste je Pattern (Default 20).";
 
     private static void AddFindMagicValues(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -279,7 +279,7 @@ internal static class AnalysisToolRegistrations
         "valueType: Literal-Filter ('all' [Default], 'strings', 'numbers'). " +
         "categoryFilter: Refactoring-Kategorie ('all' [Default], 'config_candidates', 'constant_candidates', " +
         "'enum_candidates', 'nameof_candidates', 'localization_candidates', 'standard_candidates', 'security_candidates'). " +
-        "minOccurrences: Mindestvorkommen (Default 2), maxResults: Begrenzung (Default 50). " +
+        "minOccurrences: Mindestvorkommen (Default 2), maxResults: Begrenzung (Default 50; 0 oder negative Werte werden aus Rueckwaertskompatibilitaet auf 1 gekappt). " +
         "ignoreNumbers: projektspezifische Ignorier-Zahlen. includeTests: Tests einbeziehen (Default false). " +
         "includeSuppressed: Fundstellen mit '// ainetlinter-disable MagicValues' einbeziehen (Default false). " +
         "changedOnly: Git-Diff-Einschraenkung auf geaenderte Dateien (Default false). " +
@@ -330,7 +330,7 @@ internal static class AnalysisToolRegistrations
         "accessibility: 'private_internal' [Default], 'all', 'private', 'internal', 'public'. " +
         "confidence: 'both' [Default], 'high', 'low'. kind: 'all' [Default], 'type', 'class', 'method', " +
         "'field', 'property', 'event', 'delegate'. scopeFilter: Projekt-Name oder Pfad-Substring. " +
-        "includeTests: Tests einbeziehen (Default false). mode: 'members' [Default], 'locals', 'both'. maxResults: Begrenzung (Default 50).";
+        "includeTests: Tests einbeziehen (Default false). mode: 'members' [Default], 'locals', 'both'. maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Begrenzung (Default 50).";
 
     private static void AddGetFeatureContext(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -360,7 +360,7 @@ internal static class AnalysisToolRegistrations
         "buendelt 5 Dimensionen (Deklaration, Metriken & Budget, statische Referenzen/Call-Sites, statische Test-Zuordnung und Linter-Violations) " +
         "in einem einzigen residenten Aufruf. symbolIdentifier: 'Namespace.Klasse.Methode', 'Datei.cs:Zeile' oder DocCommentId. " +
         "Der Caller-Bereich basiert auf statischen Referenzen/Call-Sites; der Testbereich auf statischen Testkandidaten. " +
-        "maxCallers: Limit (Default 10, Cap 50). maxTests bleibt ein Dateilimit (Default 10, Cap 50); " +
+        "maxCallers: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Limit (Default 10, Cap 50). maxTests: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), maxTests bleibt ein Dateilimit (Default 10, Cap 50); " +
         "Testmethoden sind zusaetzlich je Datei auf 50 und insgesamt auf 200 begrenzt.";
 
     private static void AddGetTestContext(
@@ -388,6 +388,6 @@ internal static class AnalysisToolRegistrations
     private const string GetTestContextDescription =
         "Wann nutzen: Test-Dateien, Test-Klassen und Test-Methoden fuer ein gegebenes Produktions-Symbol " +
         "(Klasse, Methode, Datei.cs:Zeile oder DocCommentId) abfragen. symbolIdentifier: Ziel-Symbol, " +
-        "maxResults: Begrenzung der Testdateien (Default 30). Liefert statische Zuordnungsgruende, Test-Kategorien " +
+        "maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Begrenzung der Testdateien (Default 30, Cap 100; Werte über 100 liefern INVALID_ARGUMENT). Liefert statische Zuordnungsgruende, Test-Kategorien " +
         "(Unit/Integration), kopierbare dotnet test Filterbefehle und Hinweis bei fehlender Zuordnung.";
 }

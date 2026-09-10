@@ -101,7 +101,7 @@ internal static class FileStructureToolRegistrations
         "targetPath; fileFilter ist ein Pfad-Glob, keine Inhaltssuche. view: 'tree' [Default], " +
         "'summary', 'files'. includeExtensions: Extensionen wie ['.cs'] oder ['*']. " +
         "maxDepth und treeDepth: 0 bis 32 (effektive Tiefe = maxDepth ?? treeDepth; bei aktivem fileFilter, gezieltem Unterverzeichnis-Root oder view='summary' wird standardmaessig bis zum Limit gescannt, wenn weder maxDepth noch treeDepth gesetzt sind; maxDepth hat Vorrang). " +
-        "maxResults: Begrenzung der primaeren Dateitreffer (Default 20, Maximum 2000). " +
+        "maxResults: mindestens 1; 0 oder negative Werte liefern INVALID_ARGUMENT. Begrenzung der primaeren Dateitreffer (Default 20, Maximum 2000). " +
         "maxResponseBytes: serialisiertes Payload-Budget (Default 8192, Maximum 65536). Für Assembly-Ziele wird der " +
         "vorhandene Source- oder dekompilierte SourceRoot verwendet; ohne solchen Root ist die " +
         "Capability unsupported. Die Assembly-Navigation bleibt an Target und Snapshot gebunden. " +
@@ -145,9 +145,9 @@ internal static class FileStructureToolRegistrations
         "Wann nutzen: hierarchische semantische Exploration einer C#-Codebase (Solution -> Projekte " +
         "-> Namespaces -> Typen) nach dem Progressive-Disclosure-Prinzip. Ohne Parameter: Projekt-" +
         "Uebersicht. project: Namespaces eines Projekts filtern. namespacePrefix: Einstiegspunkt fuer " +
-        "Drilldown. depth: 1-3 Namespace-Ebenen (Default 1). includeTypes: Typen ausgeben (Default true) " +
+        "Drilldown. depth: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), 1-3 Namespace-Ebenen (Default 1). includeTypes: Typen ausgeben (Default true) " +
         "oder nur Sub-Namespaces. kind: class/interface/record/struct/enum/all (Default all). " +
-        "maxResults: Obergrenze der Eintraege (Default 50, Cap 200). " +
+        "maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Obergrenze der Eintraege (Default 50, Cap 200). " +
         "maxResponseBytes: Begrenzung des Antwortbudgets (Default 0 = Standardbudget).";
 
     private static void AddGetClassStructure(
@@ -185,7 +185,7 @@ internal static class FileStructureToolRegistrations
         "symbolIdentifier (Pflicht): Typname, Datei.cs:Zeile:Spalte oder DocCommentId. " +
         "sortBy: 'lines' (Default), 'kind', 'name'. kindFilter: optionaler Filter nach Member-Kind (z. B. Method, Property, Field, Constructor, all). " +
         "nameFilter: optionaler Substring-Filter nach Member-Namen. maxMembers: Begrenzung der sichtbaren Member " +
-        "(Default 50, Cap " + GetClassStructureTool.MaxMembersCap + "); bei Ueberschreitung " +
+        "(mindestens 1; 0 oder negative Werte liefern INVALID_ARGUMENT; Default 50, Cap " + GetClassStructureTool.MaxMembersCap + "); bei Ueberschreitung " +
         "Truncation-Meta-Zeile und TotalMemberCount vs. ShownMemberCount im structuredContent. " +
         "maxResponseBytes: Begrenzung des Antwortbudgets (Default 0 = Standardbudget).";
 
@@ -275,7 +275,7 @@ internal static class FileStructureToolRegistrations
         "Wann nutzen: vor einem geplanten Edit pruefen, ob eine Datei/ein Projekt sich dem " +
         "Zeilen-Limit (MaxLineCount) naehert. scopeFilter: Projekt-Name oder Pfad-Substring zur Eingrenzung. " +
         "scopeType: 'production' [Default], 'tests' oder 'all' zur Auswahl von Produktions- bzw. Testdateien. " +
-        "maxResults: sichtbare Hotspots (Default 50, Cap 200). minLinePercentage: untere " +
+        "maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), sichtbare Hotspots (Default 50, Cap 200). minLinePercentage: untere " +
         "Auslastungsschwelle in Prozent (Default 80, Bereich 0-100). Ergebnisse bleiben " +
         "deterministisch nach absteigender Zeilenzahl und Pfad sortiert; StructuredContent " +
          "weist Gesamtzahl, Anzeigezahl und Trunkierung aus.";

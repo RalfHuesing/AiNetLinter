@@ -50,6 +50,8 @@ internal sealed record CallTreePayload(
     MetricsTreeNode Root,
     string Direction,
     int RequestedDepth,
+    int EffectiveDepth,
+    bool DepthWasClamped,
     int TopN,
     bool Truncated,
     bool TopNTruncated);

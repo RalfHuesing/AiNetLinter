@@ -25,6 +25,82 @@ public sealed class McpServerAssemblyHealthE2ETests
         _fixture = fixture;
     }
 
+    [Theory]
+    [InlineData("maxBodyLines")]
+    [InlineData("maxCallers")]
+    [InlineData("depth")]
+    [InlineData("topN")]
+    public async Task GetAssemblyContext_ZeroPositiveLimitReturnsFieldAwareInvalidArgument(string fieldName)
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_assembly_context",
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                [fieldName] = 0,
+            });
+
+        Assert.False(result.IsError == true, result.ToString());
+        Assert.NotNull(result.StructuredContent);
+        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal($"$.{fieldName}", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+        Assert.Contains("mindestens 1", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("maxBodyLines", 1001)]
+    [InlineData("maxCallers", 201)]
+    [InlineData("depth", 4)]
+    [InlineData("topN", 201)]
+    public async Task GetAssemblyContext_UpperLimitReturnsFieldAwareInvalidArgument(string fieldName, int value)
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_assembly_context",
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                [fieldName] = value,
+            });
+
+        Assert.False(result.IsError == true, result.ToString());
+        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal($"$.{fieldName}", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+        Assert.Contains("höchstens", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AssemblyCallTree_InvalidFormatReturnsRecoverableInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_call_tree",
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["symbolIdentifier"] = nameof(McpCodeGraphServer),
+                ["format"] = "json",
+            });
+
+        Assert.False(result.IsError == true, result.ToString());
+        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal("$.format", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Fact]
+    public async Task AssemblyRoute_ArrayElementTypeMismatchReturnsIndexedFieldAwareInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "inspect_assembly",
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["memberNames"] = new object?[] { "Dispose", 42 },
+            });
+
+        Assert.False(result.IsError == true, result.ToString());
+        Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal("$.memberNames[1]", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+    }
+
     [Fact]
     public async Task InspectAssembly_StandaloneCallReturnsStructuredMetadata()
     {

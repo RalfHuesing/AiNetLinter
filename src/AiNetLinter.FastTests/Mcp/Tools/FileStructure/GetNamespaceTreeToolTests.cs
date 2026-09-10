@@ -106,6 +106,9 @@ public sealed class GetNamespaceTreeToolTests
         Assert.NotNull(payload);
         Assert.NotNull(payload!.Projects);
         Assert.NotEmpty(payload.Projects!);
+        Assert.Equal(1, payload.RequestedDepth);
+        Assert.Equal(1, payload.EffectiveDepth);
+        Assert.False(payload.DepthWasClamped);
     }
 
     [Fact]
@@ -120,6 +123,22 @@ public sealed class GetNamespaceTreeToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("# Namespaces in Projekt 'SymbolGraphMini'", textContent.Text);
         Assert.Contains("SymbolGraphMini", textContent.Text);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DepthAboveCap_ReportsRequestedAndEffectiveDepth()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetNamespaceTreeTool.ExecuteAsync(
+            state, new GetNamespaceTreeInput(Project: "SymbolGraphMini", Depth: 99, IncludeTypes: false), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.Equal(99, payload!.RequestedDepth);
+        Assert.Equal(GetNamespaceTreeTool.MaxDepthCap, payload.EffectiveDepth);
+        Assert.True(payload.DepthWasClamped);
     }
 
     [Fact]

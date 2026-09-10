@@ -55,7 +55,7 @@ internal static class SymbolBodyToolRegistrations
         "symbolIdentifiers: Array von Symbol-IDs: " +
         "\"M:Namespace.Klasse.Methode\", " +
         "\"Datei.cs:Zeile:Spalte\", \"Datei.cs:Zeile\" oder \"Klasse.Methode\". " +
-        "maxBodyLines: Begrenzung der Zeilenanzahl je Symbol-Body (Default 80). " +
+        "maxBodyLines: mindestens 1; 0 oder negative Werte liefern INVALID_ARGUMENT. Begrenzung der Zeilenanzahl je Symbol-Body (Default 80). " +
         "startLine: 1-basierte Startzeile innerhalb des Methoden-Bodys fuer gezieltes Windowing langer Methoden (Default 1). " +
         "endLine: optionale 1-basierte Endzeile innerhalb des Methoden-Bodys (berechnet maxBodyLines als endLine - startLine + 1).";
 }

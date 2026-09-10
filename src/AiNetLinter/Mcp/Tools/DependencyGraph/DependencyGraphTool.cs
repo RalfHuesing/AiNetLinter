@@ -183,6 +183,9 @@ internal static class DependencyGraphTool
             Direction = DirectionLabel(result),
             Edges = result.Edges,
             ProjectReferences = result.ProjectReferences,
+            RequestedDepth = result.RequestedDepth,
+            EffectiveDepth = result.ClampedDepth,
+            DepthWasClamped = result.DepthWasClamped,
             Truncated = result.Truncated,
         };
         // In ein Objekt gewrappt statt eines nackten Arrays — MCP-Clients validieren structuredContent

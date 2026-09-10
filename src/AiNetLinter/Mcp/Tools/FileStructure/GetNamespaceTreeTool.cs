@@ -54,7 +54,7 @@ internal static class GetNamespaceTreeTool
                     return AddAssemblyOverviewHeader(
                         state,
                         solution,
-                        await ExecuteSolutionOverviewAsync(solution, ct));
+                        await ExecuteSolutionOverviewAsync(solution, input, clampedDepth, ct));
                 }
 
                 return AddAssemblyOverviewHeader(
@@ -120,9 +120,15 @@ internal static class GetNamespaceTreeTool
     }
 
     private static async Task<CallToolResult> ExecuteSolutionOverviewAsync(
-        Solution solution, CancellationToken ct)
+        Solution solution, GetNamespaceTreeInput input, int effectiveDepth, CancellationToken ct)
     {
         var (overviewText, overviewPayload) = await GetNamespaceTreeScanner.ScanSolutionProjectsAsync(solution, ct);
+        overviewPayload = overviewPayload with
+        {
+            RequestedDepth = input.Depth,
+            EffectiveDepth = effectiveDepth,
+            DepthWasClamped = input.Depth != effectiveDepth,
+        };
         return McpToolResults.Text(overviewText, overviewPayload);
     }
 
@@ -253,6 +259,12 @@ internal static class GetNamespaceTreeTool
             SolutionDir: solutionDir);
 
         var (treeText, treePayload) = await GetNamespaceTreeScanner.ScanProjectNamespacesAsync(scanParams, ct);
+        treePayload = treePayload with
+        {
+            RequestedDepth = input.Depth,
+            EffectiveDepth = clampedDepth,
+            DepthWasClamped = input.Depth != clampedDepth,
+        };
         var finalText = treeText;
 
         if (!treePayload.Truncated)

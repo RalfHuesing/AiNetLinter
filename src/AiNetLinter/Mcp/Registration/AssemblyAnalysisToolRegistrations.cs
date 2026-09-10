@@ -86,7 +86,7 @@ internal static class AssemblyAnalysisToolRegistrations
         "Regex-Erkennung und Promotion; true = explizit Regex, false = explizit Plain-Substring). " +
         "declarationOnly: schliesst Treffer in Kommentaren, Strings und XML-Docs aus. " +
         "kind: schraenkt Treffer auf eine bestimmte Symbolart ein ('method', 'type', 'property'). " +
-        "maxResults (Default 50, Cap 1000), maxFiles, contextLines (Cap 5), fileFilter als Glob (z. B. '*.cs', '!*Designer*') oder Regex, " +
+        "maxResults (0 = Default 50, Cap 1000), maxFiles (0 = unbegrenzt), contextLines (0 = keine Kontextzeilen, Cap 5), fileFilter als Glob (z. B. '*.cs', '!*Designer*') oder Regex, " +
         "maxResponseBytes und continuationToken begrenzen die Antwort. StructuredContent.assemblySearch liefert " +
         "relative Trefferpfade, stabile IDs, Matchbereiche, totalCount/returnedCount, " +
         "completeness, truncatedBy und continuationToken; analysis enthaelt Origin und " +
@@ -164,8 +164,8 @@ internal static class AssemblyAnalysisToolRegistrations
         "includeReferences (wenn weggelassen: bei Type-/Member-Filter false, sonst true; " +
         "true/false wird explizit respektiert) steuert " +
          "Referenzlisten und Referenz-Sessions; ohne Detailflag bleiben nur Summen sichtbar, " +
-        "maxResults begrenzt Typen (Default 100, Maximum 1000), " +
-        "maxMembers begrenzt Member je Typ (Default 100, Maximum 1000). Identitaet, " +
+        "maxResults begrenzt Typen (0 = Default 100, Maximum 1000), " +
+        "maxMembers begrenzt Member je Typ (0 = Default 100, Maximum 1000). Identitaet, " +
         "Referenzen, Typen, Methoden, Properties, Felder, Events, Attribute und Diagnosen " +
         "werden ausgegeben; Methoden und Indexer liefern zusaetzlich strukturierte " +
         "Parameterdaten. Eine verfuegbare explizite Source-Zuordnung wird source-backed " +
@@ -232,7 +232,7 @@ internal static class AssemblyAnalysisToolRegistrations
         "Generics, Constraints und Konvertierungen werden dabei metadata-only beruecksichtigt. " +
         "Eine verfuegbare explizite Source-Zuordnung wird source-backed genutzt; sonst greift " +
         "die statische Decompilation. " +
-        "maxResults begrenzt (Default 100, Maximum 1000). Die Antwort trennt " +
+        "maxResults begrenzt (0 = Default 100, Maximum 1000). Die Antwort trennt " +
         "applicable, not_applicable und not_decidable und markiert fehlende Abhaengigkeiten " +
         "mit completeness partial. Methoden liefern zusaetzlich strukturierte Parameterdaten. " +
         "Die Assembly wird weder geladen noch ausgefuehrt.";
@@ -346,6 +346,8 @@ internal static class AssemblyAnalysisToolRegistrations
         "Caller/Impact, Body und Klassenstruktur in einer strukturierten Antwort. " +
         "targetPath ist ein absoluter .dll- oder .exe-Pfad; symbolIdentifier ist optional und " +
         "akzeptiert DocCommentId, Typname oder Datei:Zeile:Spalte. " +
+        "maxBodyLines, maxCallers, depth und topN sind Abschnitts-Limits und müssen jeweils mindestens 1 sein; " +
+        "0 oder negative Werte liefern INVALID_ARGUMENT (Caps: 1000, 200, 3 bzw. 200). " +
         "maxResponseBytes, detailLevel (compact/standard/full) und continuationToken steuern Budget und Paging; " +
         "unsupported/partial/complete sowie totalCount, returnedCount und continuationToken " +
         "bleiben maschinenlesbar sichtbar. Die Assembly wird weder geladen noch ausgefuehrt.";

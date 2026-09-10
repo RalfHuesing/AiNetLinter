@@ -62,4 +62,7 @@ internal sealed record AssemblyNavigationSummary(
 internal sealed record AssemblyCallTreeResult(
     MetricsTreeNode Root,
     AssemblyNavigationSummary Navigation,
-    bool Truncated);
+    bool Truncated,
+    int RequestedDepth = 1,
+    int EffectiveDepth = 1,
+    bool DepthWasClamped = false);

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
 using Xunit;
 
@@ -87,5 +88,31 @@ public sealed class McpServerCommandGetImpactTests
 
         Assert.Contains("Treffer gesamt", text, StringComparison.Ordinal);
         Assert.Contains("2 gezeigt", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_ChangeContextCapsAboveContractAreClampedByHandler()
+    {
+        using var workspace = new GitImpactMiniFixtureWorkspace();
+        workspace.ChangeCalculatorAddBodyWithoutCommitting();
+
+        await using var client = await McpProcessHost.StartAsync(workspace, TimeSpan.FromSeconds(60));
+
+        var result = await client.CallToolAsync(
+            "get_impact",
+            new Dictionary<string, object?>
+            {
+                ["detailLevel"] = "change-context",
+                // depth is intentionally ignored by the Git branch; zero must
+                // not be rejected by the generic positive-limit filter.
+                ["depth"] = 0,
+                ["maxChangedSymbols"] = 101,
+                ["maxTestsPerSymbol"] = 51,
+            });
+
+        Assert.False(result.IsError == true, string.Join("\n", result.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>().Select(block => block.Text)));
+        Assert.NotNull(result.StructuredContent);
+        Assert.Equal("gitDiff", result.StructuredContent!.Value.GetProperty("mode").GetString());
+        Assert.Equal("change-context", result.StructuredContent.Value.GetProperty("detailLevel").GetString());
     }
 }

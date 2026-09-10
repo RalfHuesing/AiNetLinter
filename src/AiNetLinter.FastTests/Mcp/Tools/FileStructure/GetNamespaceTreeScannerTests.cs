@@ -126,6 +126,31 @@ public sealed class GetNamespaceTreeScannerTests
     }
 
     [Fact]
+    public async Task ScanProjectNamespacesAsync_TrailingDotInNamespacePrefixMatchesCanonicalPrefix()
+    {
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\MySolution.slnx",
+            new ProjectSpec(
+                "App.Core",
+                [("Entities.cs", "namespace App.Core.Domain; public class User {}")]));
+
+        var project = testSolution.Solution.Projects.Single();
+        static NamespaceTreeScanParameters Parameters(Microsoft.CodeAnalysis.Project project, string prefix) =>
+            new(project, prefix, 1, true, "all", 50, @"C:\virtual");
+
+        var (_, withoutDot) = await GetNamespaceTreeScanner.ScanProjectNamespacesAsync(
+            Parameters(project, "App.Core.Domain"), CancellationToken.None);
+        var (_, withDot) = await GetNamespaceTreeScanner.ScanProjectNamespacesAsync(
+            Parameters(project, "App.Core.Domain."), CancellationToken.None);
+
+        Assert.NotNull(withoutDot.Types);
+        Assert.NotNull(withDot.Types);
+        Assert.Equal(withoutDot.Types!.Select(type => type.Name), withDot.Types!.Select(type => type.Name));
+        Assert.Single(withDot.Types);
+        Assert.Equal("User", withDot.Types[0].Name);
+    }
+
+    [Fact]
     public async Task ScanProjectNamespacesAsync_ExcludesCompilerGeneratedAndSyntheticTypes()
     {
         using var testSolution = RoslynTestSolutionFactory.CreateSolution(

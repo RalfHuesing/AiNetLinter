@@ -428,7 +428,9 @@ internal static class DependencyGraphScanner
             ProjectReferences: BuildProjectReferences(request.Solution, targetFile),
             IncludeOutgoing: request.IncludeOutgoing,
             IncludeIncoming: request.IncludeIncoming,
+            RequestedDepth: request.Depth,
             ClampedDepth: clampedDepth,
+            DepthWasClamped: request.Depth != clampedDepth,
             NodeCapReached: nodeCapReached,
             Truncated: truncated);
     }

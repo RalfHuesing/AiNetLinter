@@ -60,6 +60,75 @@ public sealed class McpServerToolBehaviorE2ETests
     }
 
     [Fact]
+    public async Task GetCallTree_ClampedDepthIsStructured()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_call_tree",
+            new Dictionary<string, object?>
+            {
+                ["symbolIdentifier"] = "Greeter.Greet",
+                ["depth"] = 99,
+            });
+
+        Assert.False(result.IsError == true, result.ToString());
+        var payload = result.StructuredContent!.Value;
+        Assert.Equal(99, payload.GetProperty("requestedDepth").GetInt32());
+        Assert.Equal(5, payload.GetProperty("effectiveDepth").GetInt32());
+        Assert.True(payload.GetProperty("depthWasClamped").GetBoolean());
+    }
+
+    [Fact]
+    public async Task FindReferences_ClampedDepthIsStructured()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "find_references",
+            new Dictionary<string, object?>
+            {
+                ["symbolIdentifier"] = "Greeter.Greet",
+                ["depth"] = 99,
+            });
+
+        Assert.False(result.IsError == true, result.ToString());
+        var completeness = result.StructuredContent!.Value.GetProperty("completeness");
+        Assert.Equal(99, completeness.GetProperty("requestedDepth").GetInt32());
+        Assert.Equal(3, completeness.GetProperty("effectiveDepth").GetInt32());
+        Assert.True(completeness.GetProperty("depthWasClamped").GetBoolean());
+    }
+
+    [Fact]
+    public async Task NamespaceTree_ClampedDepthIsStructured()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_namespace_tree",
+            new Dictionary<string, object?> { ["depth"] = 99 });
+
+        Assert.False(result.IsError == true, result.ToString());
+        var payload = result.StructuredContent!.Value;
+        Assert.Equal(99, payload.GetProperty("requestedDepth").GetInt32());
+        Assert.Equal(3, payload.GetProperty("effectiveDepth").GetInt32());
+        Assert.True(payload.GetProperty("depthWasClamped").GetBoolean());
+    }
+
+    [Fact]
+    public async Task DependencyGraph_ClampedDepthIsStructured()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "dependency_graph",
+            new Dictionary<string, object?>
+            {
+                ["filePath"] = "src/SymbolGraphMini/Greeter.cs",
+                ["depth"] = 99,
+                ["maxResults"] = 10,
+            });
+
+        Assert.False(result.IsError == true, result.ToString());
+        var payload = result.StructuredContent!.Value;
+        Assert.Equal(99, payload.GetProperty("requestedDepth").GetInt32());
+        Assert.Equal(3, payload.GetProperty("effectiveDepth").GetInt32());
+        Assert.True(payload.GetProperty("depthWasClamped").GetBoolean());
+    }
+
+    [Fact]
     public async Task GetTypeHierarchy_ValidType_ReturnsHierarchyInfo()
     {
         var text = await _fixture.Client.CallToolGetTextAsync(

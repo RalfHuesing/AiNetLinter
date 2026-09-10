@@ -93,7 +93,13 @@ internal static class TransitiveCallGraphFormatter
 
         return McpToolResults.Text(
             finalBody,
-            new AssemblyCallTreeResult(request.Root, effectiveNavigation, treeTruncated));
+            new AssemblyCallTreeResult(
+                request.Root,
+                effectiveNavigation,
+                treeTruncated,
+                request.RequestedDepth,
+                request.EffectiveDepth,
+                request.DepthWasClamped));
     }
 
     internal static DiagnosticProjection CreateDiagnosticProjection(IEnumerable<string>? diagnostics)
@@ -210,7 +216,10 @@ internal sealed record AssemblyCallTreeResponseRequest(
     IReadOnlyList<string> Diagnostics,
     bool Truncated,
     bool TopNTruncated,
-    string? TreeTruncationMessage);
+    string? TreeTruncationMessage,
+    int RequestedDepth = 1,
+    int EffectiveDepth = 1,
+    bool DepthWasClamped = false);
 
 internal sealed record TransitiveCallGraphFormatResult(
     ReferenceTraversalResult Traversal,

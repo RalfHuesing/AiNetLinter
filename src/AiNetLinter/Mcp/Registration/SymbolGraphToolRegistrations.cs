@@ -90,7 +90,8 @@ internal static class SymbolGraphToolRegistrations
         "Batch loest N sequentielle Calls ab, max. 10 pro Call, z. B. namePatterns: [\"Greeter\"] " +
         "oder pattern: \"Greeter\". " +
         "kind: optionaler Typfilter (Class, Record, Method, Property, Interface, Struct, Enum; " +
-        "deutsche und englische Werte). maxResults: Begrenzung der Trefferliste (Default 50). " +
+        "deutsche und englische Werte). maxResults: mindestens 1, Begrenzung der Trefferliste (Default 50); " +
+        "0 oder negative Werte liefern INVALID_ARGUMENT. " +
         "includeReferences (Default false): bei Assembly-Zielen auch die bounded Referenz-Assemblies " +
         "durchsuchen und Herkunft/Completeness in structuredContent ausgeben. " +
         "Bei 0 C#-Treffern Hinweis auf Textfunde in Nicht-C#-Dateien (Fallback search_pattern). " +
@@ -126,8 +127,8 @@ internal static class SymbolGraphToolRegistrations
         "symbolIdentifier: \"M:Namespace.Klasse.Methode\" oder \"Datei.cs:42:10\" oder " +
         "\"Datei.cs:42\" (Zeile ohne Spalte — bei mehreren Symbolen auf der Zeile liefert das " +
         "Ergebnis eine Kandidatenliste statt eines Treffers) oder \"Klasse.Methode\". " +
-        "maxResults: Begrenzung der Trefferliste (Default 50). " +
-        "depth (Default 1, hard cap 3) liefert immer structuredContent.callSites plus " +
+        "maxResults: mindestens 1, Begrenzung der Trefferliste (Default 50); 0 oder negative Werte liefern INVALID_ARGUMENT. " +
+        "depth: mindestens 1 (Default 1, hard cap 3; 0 oder negative Werte liefern INVALID_ARGUMENT) liefert immer structuredContent.callSites plus " +
         "completeness mit Tiefe, Herkunft und getrennten Trunkierungsgruenden; die " +
         "Traversierung ist hart auf 200 besuchte Knoten begrenzt. includeReferences (Default false): " +
         "bei Assembly-Zielen bounded Referenz-Assemblies einbeziehen und partielle Diagnosen " +
@@ -164,10 +165,10 @@ internal static class SymbolGraphToolRegistrations
         "Wann nutzen: echten Aufrufer- oder Aufgerufene-Baum eines C#-Symbols sehen (wer ruft " +
         "dieses Symbol auf bzw. wen ruft es auf), transitiv als Eltern-Kind-Struktur. " +
         "symbolIdentifier: Format wie find_references (\"M:Namespace.Klasse.Methode\", \"Datei.cs:Zeile:Spalte\", \"Klasse.Methode\"). " +
-        "depth: Traversierungstiefe (Default 2, hard cap 5). format: \"ascii\" (Default) oder " +
+        "depth: mindestens 1, Traversierungstiefe (Default 2, hard cap 5; 0 oder negative Werte liefern INVALID_ARGUMENT). format: \"ascii\" (Default) oder " +
         "\"mermaid\" (flowchart TD). direction: \"incoming\" (Default: wer ruft das Symbol auf), " +
         "\"outgoing\" (wen ruft das Symbol auf) oder \"both\" (beide Richtungen abwechselnd). " +
-        "topN: Fan-Out-Begrenzung pro Ebene (Default 10). Traversierung ist hart auf 250 Knoten begrenzt. " +
+        "topN: mindestens 1, Fan-Out-Begrenzung pro Ebene (Default 10; 0 oder negative Werte liefern INVALID_ARGUMENT). Traversierung ist hart auf 250 Knoten begrenzt. " +
         "includeReferences (Default false): bei Assembly-Zielen bounded Referenz-Assemblies " +
         "einbeziehen und Herkunft/partielle Diagnosen im Ergebnis ausgeben. " +
         "includeBcl (Default false): bei direction=outgoing auch BCL-/Framework-Symbole (z. B. System.*) als Leaves einbeziehen.";
@@ -211,9 +212,12 @@ internal static class SymbolGraphToolRegistrations
         "werden als recoverable InvalidArgument beantwortet. " +
         "detailLevel: 'callers' [Default] oder 'change-context' (nur im Git-Diff-Modus zulaessig: " +
         "liefert geaenderte Symbole, Call-Sites, zugeordnete Tests, diffbezogene Violations und dotnet test Filter). " +
-        "maxResults: Limit der Trefferliste (Default 50). depth: Traversierungstiefe im Symbol-Branch (Default 1, hard cap 3, hart begrenzt auf 200 besuchte Knoten). " +
-        "maxChangedSymbols: Begrenzung geaenderter Symbole im change-context (Default 20, Cap 100). " +
-        "maxTestsPerSymbol: Begrenzung der Tests je Symbol (Default 10, Cap 50).";
+        "maxResults: mindestens 1, Limit der Trefferliste (Default 50); 0 oder negative Werte liefern INVALID_ARGUMENT. " +
+        "depth: im Symbol-Branch mindestens 1 (Default 1, hard cap 3, hart begrenzt auf 200 besuchte Knoten); " +
+        "0 oder negative Werte liefern dort INVALID_ARGUMENT. Im gesamten Git-Diff-Branch (callers und " +
+        "change-context) ist depth wirkungslos und wird auch bei 0 nicht abgelehnt. " +
+        "maxChangedSymbols: Begrenzung geaenderter Symbole im change-context (0 = Default 20, Default 20, Cap 100). " +
+        "maxTestsPerSymbol: Begrenzung der Tests je Symbol (0 = Default 10, Default 10, Cap 50).";
 
     private static void AddGetTypeHierarchy(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -240,7 +244,7 @@ internal static class SymbolGraphToolRegistrations
         "Wann nutzen: Vererbungs- und Interface-Hierarchie eines C#-Typs analysieren (Basisklassen, " +
         "implementierte Interfaces, abgeleitete/implementierende Typen, heuristische DI-Registrierungen). " +
         "symbolIdentifier: \"T:Namespace.Klasse\", \"Datei.cs:10:5\", \"Datei.cs:10\" " +
-        "(Zeile ohne Spalte) oder \"Klasse\". maxResults: Begrenzung der abgeleiteten/implementierenden " +
+        "(Zeile ohne Spalte) oder \"Klasse\". maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Begrenzung der abgeleiteten/implementierenden " +
         "Typen (Default 50).";
 
     private static void AddDependencyGraph(
@@ -271,8 +275,9 @@ internal static class SymbolGraphToolRegistrations
         "ab' direkt statt mehrerer find_references-Umwege. filePath (ganze Datei) ODER " +
         "symbolIdentifier (ein Typ, engerer Scope) angeben, nie beide — symbolIdentifier-Format wie " +
         "find_references. direction: \"incoming\", \"outgoing\" oder \"both\" (Default). depth: " +
-        "Traversierungstiefe (Default 1, hard cap 3, max. 150 besuchte Dateien). maxResults: " +
-        "Begrenzung der angezeigten Kanten (Default 50).";
+        "depth: mindestens 1, Traversierungstiefe (Default 1, hard cap 3, max. 150 besuchte Dateien); " +
+        "0 oder negative Werte liefern INVALID_ARGUMENT. maxResults: mindestens 1, Begrenzung der " +
+        "angezeigten Kanten (Default 50); 0 oder negative Werte liefern INVALID_ARGUMENT.";
 
     private static void AddResolveTypeOrigin(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -322,6 +327,6 @@ internal static class SymbolGraphToolRegistrations
         "virtuellen Methoden oder Properties in Quellcode-Projekten oder dekompilierten Assemblies. Liefert Typ, Member, " +
         "Status (concrete/abstract/virtual) und Zeilenposition. " +
         "symbolIdentifier: Format wie find_references (\"M:Namespace.Klasse.Methode\", \"IInterface\", \"BaseClass.Method\"). " +
-        "maxResults: Begrenzung der Trefferliste (Default 50).";
+        "maxResults: mindestens 1, Begrenzung der Trefferliste (Default 50); 0 oder negative Werte liefern INVALID_ARGUMENT.";
 }
 

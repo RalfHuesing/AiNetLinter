@@ -58,6 +58,20 @@ public sealed class McpServerArgumentValidationE2ETests
     }
 
     [Fact]
+    public async Task TargetPathTool_MissingTargetPathReturnsFieldAwareInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolWithoutTargetAsync(
+            "find_symbol",
+            new Dictionary<string, object?> { ["namePatterns"] = new[] { "Greeter" } });
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.False(result.IsError, textContent.Text);
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("targetPath", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("$.targetPath", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Fact]
     public async Task GetCallTree_MissingSymbolIdentifier_ReturnsRecoverableInvalidArgument()
     {
         var result = await _fixture.Client.CallToolAsync(
@@ -237,5 +251,186 @@ public sealed class McpServerArgumentValidationE2ETests
         Assert.Equal(
             $"$.{fieldName}",
             result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Fact]
+    public async Task WrongArrayElementType_ReturnsIndexedFieldAwareInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "find_symbol",
+            new Dictionary<string, object?>
+            {
+                ["namePatterns"] = new object?[] { "Greeter", 42 },
+            });
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.False(result.IsError, textContent.Text);
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("namePatterns[1]", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("$.namePatterns[1]", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+        Assert.Contains("string", result.StructuredContent.Value.GetProperty("message").GetString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CallTree_InvalidFormatReturnsRecoverableInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_call_tree",
+            new Dictionary<string, object?>
+            {
+                ["symbolIdentifier"] = "Greeter.Greet",
+                ["format"] = "json",
+            });
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.False(result.IsError, textContent.Text);
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("$.format", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Fact]
+    public async Task CallTree_NonIntegerDepthReturnsFieldAwareInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_call_tree",
+            new Dictionary<string, object?>
+            {
+                ["symbolIdentifier"] = "Greeter.Greet",
+                ["depth"] = 1.5,
+            });
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.False(result.IsError, textContent.Text);
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("$.depth", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+        Assert.Contains("Int32", result.StructuredContent.Value.GetProperty("message").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task NamespaceTree_ExceedsAdvertisedCapReturnsFieldAwareInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_namespace_tree",
+            new Dictionary<string, object?>
+            {
+                ["project"] = "SymbolGraphMini",
+                ["maxResults"] = 201,
+            });
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.False(result.IsError, textContent.Text);
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("$.maxResults", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task Safeguard_NonPositiveMaxViolationsKeepsFeatureSemantics(int maxViolations)
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "safeguard",
+            new Dictionary<string, object?> { ["maxViolations"] = maxViolations });
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.False(result.IsError, textContent.Text);
+        Assert.DoesNotContain("maxViolations muss mindestens 1 sein", textContent.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task GetViolations_InvalidMinSeverityReturnsRecoverableInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_violations",
+            new Dictionary<string, object?>
+            {
+                ["minSeverity"] = "trace",
+            });
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.False(result.IsError, textContent.Text);
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("$.minSeverity", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(6)]
+    public async Task GetViolations_ContextLinesOutsideRangeReturnsFieldAwareInvalidArgument(int contextLines)
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_violations",
+            new Dictionary<string, object?> { ["contextLines"] = contextLines });
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.False(result.IsError, textContent.Text);
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("$.contextLines", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Fact]
+    public async Task GetTestContext_ExceedingMaxResultsCapReturnsFieldAwareInvalidArgument()
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_test_context",
+            new Dictionary<string, object?>
+            {
+                ["symbolIdentifier"] = "Greeter",
+                ["maxResults"] = 101,
+            });
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.False(result.IsError, textContent.Text);
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("$.maxResults", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Theory]
+    [InlineData("topN")]
+    [InlineData("depth")]
+    public async Task CallTree_NonPositiveLimitReturnsFieldAwareInvalidArgument(string fieldName)
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "get_call_tree",
+            new Dictionary<string, object?>
+            {
+                ["symbolIdentifier"] = "Greeter.Greet",
+                [fieldName] = 0,
+            });
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.False(result.IsError, textContent.Text);
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal($"$.{fieldName}", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public async Task FindDuplicates_NonPositiveMaxResultsReturnsFieldAwareInvalidArgument(int maxResults)
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "find_duplicates",
+            new Dictionary<string, object?> { ["maxResults"] = maxResults });
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.False(result.IsError, textContent.Text);
+        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("$.maxResults", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    public async Task FindMagicValues_NonPositiveMaxResultsPreservesClampCompatibility(int maxResults)
+    {
+        var result = await _fixture.Client.CallToolAsync(
+            "find_magic_values",
+            new Dictionary<string, object?> { ["maxResults"] = maxResults });
+
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.NotEqual(true, result.IsError);
+        Assert.DoesNotContain("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
+        Assert.NotNull(result.StructuredContent);
     }
 }

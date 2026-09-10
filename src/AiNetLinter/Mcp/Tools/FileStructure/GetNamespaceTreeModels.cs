@@ -65,7 +65,10 @@ public sealed record NamespaceTreePayload(
     bool Truncated,
     IReadOnlyList<ProjectOverviewEntry>? Projects = null,
     IReadOnlyList<NamespaceTreeNode>? Namespaces = null,
-    IReadOnlyList<TypeNodeEntry>? Types = null);
+    IReadOnlyList<TypeNodeEntry>? Types = null,
+    int? RequestedDepth = null,
+    int? EffectiveDepth = null,
+    bool DepthWasClamped = false);
 
 internal sealed record NamespaceTreeTraverseContext(
     NamespaceTreeScanParameters Parameters,

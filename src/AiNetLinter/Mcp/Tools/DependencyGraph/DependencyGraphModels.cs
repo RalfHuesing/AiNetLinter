@@ -77,6 +77,8 @@ internal sealed record DependencyGraphResult(
     IReadOnlyList<ProjectReferenceEntry> ProjectReferences,
     bool IncludeOutgoing,
     bool IncludeIncoming,
+    int RequestedDepth,
     int ClampedDepth,
+    bool DepthWasClamped,
     bool NodeCapReached,
     bool Truncated);

@@ -116,6 +116,12 @@ internal sealed class McpProcessHost : IAsyncDisposable
         return await client.CallToolAsync(toolName, effectiveArguments, cancellationToken: finalTimeout.Token).ConfigureAwait(false);
     }
 
+    internal ValueTask<CallToolResult> CallToolWithoutTargetAsync(
+        string toolName,
+        IReadOnlyDictionary<string, object?>? arguments = null,
+        CancellationToken cancellationToken = default) =>
+        client.CallToolAsync(toolName, arguments, cancellationToken: cancellationToken);
+
     public async Task<string> CallToolGetTextAsync(string toolName, IReadOnlyDictionary<string, object?>? arguments = null)
     {
         var result = await CallToolAsync(toolName, arguments).ConfigureAwait(false);
