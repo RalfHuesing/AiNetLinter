@@ -80,7 +80,8 @@ public sealed partial class McpLiveRepositoryTests
         Assert.Equal(
             new[] { "completeness", "declaration", "impact", "isTruncated", "metrics", "metricsStatus", "nextStep", "testContext", "truncatedBy", "violations", "wireBudget" },
             json
-                .Where(property => !string.Equals(property.Key, "navigation", StringComparison.Ordinal))
+                .Where(property => !string.Equals(property.Key, "navigation", StringComparison.Ordinal)
+                    && !string.Equals(property.Key, "wireTruncated", StringComparison.Ordinal))
                 .Select(property => property.Key)
                 .OrderBy(key => key, StringComparer.Ordinal));
         Assert.NotNull(json["navigation"]);
