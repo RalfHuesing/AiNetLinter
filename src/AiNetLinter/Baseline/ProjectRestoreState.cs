@@ -14,8 +14,9 @@ namespace AiNetLinter.Baseline;
 /// bleiben NuGet-Referenzen (PackageReference) im geladenen Project unaufloesbar; das sieht in der
 /// Analyse wie tausende echte using-Phantome aus, obwohl <c>dotnet build</c> fuer dasselbe Projekt
 /// fehlerfrei durchlaeuft. <c>obj/project.assets.json</c> ist der von jedem erfolgreichen
-/// <c>dotnet restore</c>-Lauf erzeugte Marker — fehlt er oder ist er aelter als die .csproj, war
-/// seit der letzten Projekt-Aenderung kein Restore mehr erfolgreich.
+/// <c>dotnet restore</c>-Lauf erzeugte Marker. Sein Zeitstempel ist kein belastbarer Restore-Status:
+/// inkrementelle Restore- und Build-Laeufe duerfen eine bereits passende Assets-Datei unveraendert
+/// lassen. Nur eine fehlende Datei signalisiert deshalb einen fehlenden Restore.
 /// </summary>
 internal static class ProjectRestoreState
 {
@@ -27,9 +28,7 @@ internal static class ProjectRestoreState
         if (string.IsNullOrEmpty(projectDir)) return false;
 
         var assetsPath = Path.Combine(projectDir, "obj", "project.assets.json");
-        if (!File.Exists(assetsPath)) return true;
-
-        return File.GetLastWriteTimeUtc(projectFilePath) > File.GetLastWriteTimeUtc(assetsPath);
+        return !File.Exists(assetsPath);
     }
 
     /// <summary>

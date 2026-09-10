@@ -55,16 +55,16 @@ public sealed class ProjectRestoreStateTests : IDisposable
     }
 
     [Fact]
-    public void NeedsRestore_ReturnsTrue_WhenProjectAssetsJsonOlderThanCsproj()
+    public void NeedsRestore_ReturnsFalse_WhenProjectAssetsJsonOlderThanCsproj()
     {
         var projectFile = CreateProjectFile();
         CreateFreshProjectAssetsJson(projectFile);
 
-        // .csproj nachtraeglich "anfassen" (z. B. PackageReference hinzugefuegt) — assets.json
-        // stammt jetzt aus einem Stand vor der Aenderung und ist damit veraltet.
+        // Inkrementelle Restore- und Build-Laeufe duerfen die vorhandene Assets-Datei unveraendert
+        // lassen. Ein abweichender Zeitstempel ist deshalb kein fehlender Restore.
         File.SetLastWriteTimeUtc(projectFile, DateTime.UtcNow.AddMinutes(10));
 
-        Assert.True(ProjectRestoreState.NeedsRestore(projectFile));
+        Assert.False(ProjectRestoreState.NeedsRestore(projectFile));
     }
 
     [Fact]
