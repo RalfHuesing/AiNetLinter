@@ -151,6 +151,7 @@ public sealed class ResolveTypeOriginTests
         Assert.Contains("Target.TargetWorker", text);
         Assert.Contains("class", text);
         Assert.Contains("TargetProbe", text);
+        Assert.Contains("Dekompilierte Assembly", text);
     }
 
     [Fact]

@@ -96,7 +96,14 @@ internal static class GetViolationsTool
                 hint: "Einmal erneut versuchen — bleibt der Fehler bestehen, LinterEngine-Log pruefen (workspace-load-Diagnosen?).");
         }
         var text = result.IsTruncated ? result.Text : McpSufficiencyHints.Append(result.Text);
-        return McpToolResults.Text(text, new { Violations = result.Violations! });
+        var completeness = result.NoFilesMatched ? "empty" : (result.IsTruncated ? "truncated" : "complete");
+        return McpToolResults.Text(text, new
+        {
+            completeness,
+            totalViolations = result.TotalViolations,
+            isTruncated = result.IsTruncated,
+            Violations = result.Violations!
+        });
     }
 }
 

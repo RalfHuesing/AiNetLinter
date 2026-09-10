@@ -335,14 +335,14 @@ internal static partial class McpNavigationProjection
             "not_configured" => new("request_detail", "ainetlinter-rules.json neben dem adressierten Target anlegen und den Lint-Call wiederholen."),
             "unsupported" => new("refine_scope", "Ein Tool verwenden, das die Target-Herkunft unterstützt."),
             "configuration_error" => new("request_detail", hint ?? "ainetlinter-rules.json korrigieren und denselben Target-Call wiederholen."),
-            "invalid_argument" or "target_mismatch" or "stale_snapshot" or "symbol_not_found" or "ambiguous_symbol" or "error"
+            "invalid_argument" or "target_mismatch" or "stale_snapshot" or "symbol_not_found" or "ambiguous_symbol" or "error" or "invalid_assembly"
                 => CreateErrorNext(operationStatus, hint),
             _ => CreateSuccessfulNext(completeness, hint),
         };
     }
 
     private static McpNavigationNext CreateErrorNext(string operationStatus, string? hint) =>
-        new(operationStatus is "symbol_not_found" or "ambiguous_symbol" ? "refine_scope" : "request_detail",
+        new(operationStatus is "symbol_not_found" or "ambiguous_symbol" or "invalid_assembly" ? "refine_scope" : "request_detail",
             hint ?? "Argumente und Target prüfen und den sicheren nächsten Schritt aus der Fehlermeldung ausführen.");
 
     private static McpNavigationNext CreateSuccessfulNext(string completeness, string? hint)

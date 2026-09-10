@@ -122,6 +122,8 @@ public sealed class GetViolationsToolTests
         var result = await GetViolationsTool.ExecuteAsync(state, "DoesNotExistAnywhere", GetViolationsScanner.DefaultMaxResults, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        Assert.Equal("empty", result.StructuredContent!.Value.GetProperty("completeness").GetString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Keine Dateien im Scope", textContent.Text, StringComparison.Ordinal);
     }
@@ -380,6 +382,10 @@ public sealed class GetViolationsToolTests
             state, new GetViolationsToolExecutionOptions(RuleId: "NonExistingRuleXyz"), CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        Assert.Equal("complete", result.StructuredContent!.Value.GetProperty("completeness").GetString());
+        Assert.Equal(0, result.StructuredContent!.Value.GetProperty("totalViolations").GetInt32());
+        Assert.False(result.StructuredContent!.Value.GetProperty("isTruncated").GetBoolean());
         var violations = result.StructuredContent!.Value.GetProperty("violations")
             .Deserialize<List<RuleViolation>>(McpJsonOptions.Default);
         Assert.NotNull(violations);

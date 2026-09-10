@@ -204,7 +204,15 @@ internal static class AssemblyAnalysisContextTool
         }
         if (root["isTruncated"]?.GetValue<bool>() == true)
         {
-            builder.AppendLine("Antwort gekürzt; continuationToken für die Fortsetzung verwenden.");
+            var token = root["continuationToken"]?.GetValue<string>();
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                builder.AppendLine($"Antwort gekürzt; continuationToken={token} für die Fortsetzung verwenden.");
+            }
+            else
+            {
+                builder.AppendLine("Antwort gekürzt; continuationToken für die Fortsetzung verwenden.");
+            }
         }
         return builder.ToString().TrimEnd();
     }

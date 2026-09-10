@@ -90,4 +90,23 @@ public sealed class ReportObservabilityFeedbackToolTests
         Assert.NotNull(text);
         Assert.Contains("[INFO]:", text.Text);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_UngueltigerFeedbackType_LiefertInvalidArgument()
+    {
+        var parameters = new ReportObservabilityFeedbackParameters(
+            FeedbackType: "unbekannter_typ",
+            Title: "Titel",
+            Description: "Beschreibung");
+
+        var result = await ReportObservabilityFeedbackTool.ExecuteAsync(parameters);
+
+        Assert.False(result.IsError);
+        Assert.NotNull(result.Content);
+        var text = Assert.Single(result.Content) as TextContentBlock;
+        Assert.NotNull(text);
+        Assert.Contains(LinterErrorCodes.InvalidArgument, text.Text);
+        Assert.Contains("Ungueltiger 'feedbackType'", text.Text);
+        Assert.Contains("performance", text.Text);
+    }
 }

@@ -316,6 +316,27 @@ public sealed partial class McpToolResultsTests
         Assert.Equal("$.projectRoot", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
     }
 
+    [Fact]
+    public void ApplyCompositeWireBudget_RepeatedApplication_DoesNotDuplicateNextStepNotice()
+    {
+        var sectionContent = string.Join("\n", Enumerable.Range(1, 1000).Select(i => $"Line {i}: excessive payload data"));
+        var payload = new System.Text.Json.Nodes.JsonObject
+        {
+            ["impact"] = new System.Text.Json.Nodes.JsonObject
+            {
+                ["details"] = sectionContent,
+                ["completeness"] = "complete"
+            }
+        };
+        var result = McpToolResults.Text("Test", payload);
+        var budgeted1 = McpToolResults.ApplyCompositeWireBudget(result, ["impact"]);
+        var budgeted2 = McpToolResults.ApplyCompositeWireBudget(budgeted1, ["impact"]);
+
+        var nextStep = budgeted2.StructuredContent!.Value.GetProperty("impact").GetProperty("nextStep").GetString()!;
+        var occurrences = (nextStep.Length - nextStep.Replace("Wire-Budget", "").Length) / "Wire-Budget".Length;
+        Assert.Equal(1, occurrences);
+    }
+
     private static void AssertCompositeWireBudget(CallToolResult result, params string[] sectionNames)
     {
         var structured = result.StructuredContent!.Value;

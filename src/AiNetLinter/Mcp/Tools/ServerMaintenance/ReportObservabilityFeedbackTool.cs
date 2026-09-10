@@ -72,27 +72,48 @@ internal static class ReportObservabilityFeedbackTool
         return Task.FromResult(McpToolResults.Text(responseText, payload));
     }
 
+    private static readonly HashSet<string> AllowedFeedbackTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "bug",
+        "issue",
+        "feature_request",
+        "confusing_output",
+        "false_positive",
+        "performance",
+    };
+
     private static CallToolResult? ValidateParameters(ReportObservabilityFeedbackParameters parameters)
     {
         if (string.IsNullOrWhiteSpace(parameters.FeedbackType))
         {
             return McpToolResults.InvalidArgument(
                 "Pflichtparameter 'feedbackType' fehlt oder ist leer.",
-                "Gueltige Werte: 'issue', 'feature_request', 'confusing_output', 'false_positive'.");
+                "Gueltige Werte: 'bug', 'issue', 'feature_request', 'confusing_output', 'false_positive', 'performance'.",
+                fieldPath: "$.feedbackType");
+        }
+
+        if (!AllowedFeedbackTypes.Contains(parameters.FeedbackType.Trim()))
+        {
+            return McpToolResults.InvalidArgument(
+                $"Ungueltiger 'feedbackType': '{parameters.FeedbackType}'.",
+                "Gueltige Werte: 'bug', 'issue', 'feature_request', 'confusing_output', 'false_positive', 'performance'.",
+                fieldPath: "$.feedbackType");
         }
 
         if (string.IsNullOrWhiteSpace(parameters.Title))
         {
             return McpToolResults.InvalidArgument(
                 "Pflichtparameter 'title' fehlt oder ist leer.",
-                "Kurzen, praegnanten Titel angeben (max. 120 Zeichen).");
+                "Kurzen, praegnanten Titel angeben (max. 120 Zeichen).",
+                fieldPath: "$.title");
         }
 
         if (string.IsNullOrWhiteSpace(parameters.Description))
         {
             return McpToolResults.InvalidArgument(
                 "Pflichtparameter 'description' fehlt oder ist leer.",
-                "Detaillierte Fehler- oder Wunschbeschreibung angeben.");
+                "Detaillierte Fehler- oder Wunschbeschreibung angeben.",
+                fieldPath: "$.description");
         }
 
         return null;

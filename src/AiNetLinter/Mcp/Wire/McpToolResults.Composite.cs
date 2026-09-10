@@ -67,7 +67,9 @@ internal static partial class McpToolResultsWireBudget
         JsonObject section,
         ISet<string> truncatedSections)
     {
-        while (MeasureSectionNode(section, string.Equals(sectionName, rootSectionName, StringComparison.Ordinal)) > CompositeSectionBudgetBytes)
+        var isRoot = string.Equals(sectionName, rootSectionName, StringComparison.Ordinal);
+        var budgetLimit = isRoot ? CompositeSectionBudgetBytes - 512 : CompositeSectionBudgetBytes;
+        while (MeasureSectionNode(section, isRoot) > budgetLimit)
         {
             if (TryTrimSectionOnce(section))
             {
@@ -75,7 +77,7 @@ internal static partial class McpToolResultsWireBudget
                 truncatedSections.Add(sectionName);
                 continue;
             }
-            if (!string.Equals(rootSectionName, sectionName, StringComparison.Ordinal))
+            if (!isRoot)
             {
                 payload[sectionName] = CreateTruncatedSection(sectionName);
                 MarkSectionTruncated((JsonObject)payload[sectionName]!, sectionName);

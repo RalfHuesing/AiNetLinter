@@ -82,6 +82,8 @@ internal static class GetViolationsScanner
 
         var filterOptions = new ViolationFilterOptions(scopeFilter, p.RuleId, p.MinSeverity);
         var filtered = ViolationScopeFilter.FilterAndSortViolations(solutionDir, fileToProject, violations, filterOptions);
+        var matchingFileCount = ViolationScopeFilter.CountMatchingFiles(fileToProject, solutionDir, filterOptions.ScopeFilter);
+        var noFilesMatched = matchingFileCount == 0 && !string.IsNullOrWhiteSpace(filterOptions.ScopeFilter);
         var isTruncated = filtered.Count > maxResults;
 
         IReadOnlyList<RuleViolation> finalViolations;
@@ -109,9 +111,9 @@ internal static class GetViolationsScanner
             reportText,
             IsMalfunction: false,
             IsTruncated: isTruncated,
-            // Gleiche Trunkierung wie FormatReport — StructuredContent zeigt exakt die Violations,
-            // die auch im Text-Report auftauchen.
-            Violations: shown);
+            Violations: shown,
+            NoFilesMatched: noFilesMatched,
+            TotalViolations: filtered.Count);
     }
 
     /// <summary>
@@ -321,4 +323,6 @@ internal sealed record GetViolationsResult(
     bool IsMalfunction,
     bool IsTruncated = false,
     string? Context = null,
-    IReadOnlyList<RuleViolation>? Violations = null);
+    IReadOnlyList<RuleViolation>? Violations = null,
+    bool NoFilesMatched = false,
+    int TotalViolations = 0);

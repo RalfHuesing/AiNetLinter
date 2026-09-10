@@ -146,10 +146,21 @@ internal static partial class McpToolResultsWireBudget
         }
     }
 
-    private static string BuildSectionNextStep(string sectionName, string? existing = null) =>
-        string.IsNullOrWhiteSpace(existing) || existing.Contains("responseBudget", StringComparison.OrdinalIgnoreCase)
-            ? $"Abschnitt {sectionName}: Wire-Budget erreicht; Detailabfrage mit kleinerem Scope oder engerem Limit wiederholen."
-            : $"{existing} Wire-Budget für Abschnitt {sectionName} erreicht; Detailabfrage gezielt wiederholen.";
+    private static string BuildSectionNextStep(string sectionName, string? existing = null)
+    {
+        if (string.IsNullOrWhiteSpace(existing) || existing.Contains("responseBudget", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"Abschnitt {sectionName}: Wire-Budget erreicht; Detailabfrage mit kleinerem Scope oder engerem Limit wiederholen.";
+        }
+
+        if (existing.Contains($"Wire-Budget für Abschnitt {sectionName} erreicht", StringComparison.OrdinalIgnoreCase)
+            || existing.Contains($"Abschnitt {sectionName}: Wire-Budget erreicht", StringComparison.OrdinalIgnoreCase))
+        {
+            return existing;
+        }
+
+        return $"{existing} Wire-Budget für Abschnitt {sectionName} erreicht; Detailabfrage gezielt wiederholen.";
+    }
 
     private static string BuildCompositeBudgetHint(ISet<string> sections, bool rootTruncated)
     {

@@ -230,4 +230,24 @@ public sealed partial class McpToolResultsTests
         Assert.Equal("not_applicable", navigation.GetProperty("completeness").GetString());
         Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
     }
+
+    [Fact]
+    public void WithNavigation_InvalidAssemblyProjectsRefineScope()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-invalid-asm-");
+        var dllPath = Path.Combine(tempDir.DirectoryPath, "corrupt.dll");
+        File.WriteAllText(dllPath, "not a real PE file");
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(dllPath)).Target);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.InvalidAssembly("Die angegebene Datei ist keine gültige .NET-Assembly.", "Anderes Target wählen."),
+            target);
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+
+        Assert.Equal("invalid_assembly", navigation.GetProperty("operationStatus").GetString());
+        Assert.False(navigation.GetProperty("result").GetProperty("available").GetBoolean());
+        Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
+        Assert.StartsWith("Keine Wiederholung nötig", navigation.GetProperty("next").GetProperty("action").GetString());
+    }
 }

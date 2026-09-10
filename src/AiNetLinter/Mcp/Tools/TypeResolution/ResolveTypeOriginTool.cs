@@ -34,7 +34,7 @@ internal static class ResolveTypeOriginTool
                 hint: "Vollqualifizierten oder einfachen Typnamen angeben, z. B. 'IDataProvider' oder 'Vendor.Data.BaseCommand'.");
         }
 
-        var context = CreateContext(typeName, solution.FilePath ?? ".", null, ct);
+        var context = CreateContext(typeName, solution.FilePath ?? ".", null, isAssemblyTarget: false, ct);
         var searchedAssemblies = new List<string>();
 
         foreach (var project in solution.Projects.OrderBy(p => p.Name, StringComparer.Ordinal))
@@ -62,7 +62,7 @@ internal static class ResolveTypeOriginTool
                 hint: "Vollqualifizierten oder einfachen Typnamen angeben, z. B. 'IDataProvider' oder 'Vendor.Data.BaseCommand'."));
         }
 
-        var context = CreateContext(typeName, lease.CanonicalPath, lease.Context.References, ct);
+        var context = CreateContext(typeName, lease.CanonicalPath, lease.Context.References, isAssemblyTarget: true, ct);
         var compilation = lease.Context.Compilation;
         var searchedAssemblies = new List<string>();
         var result = SearchInCompilation(compilation, context, searchedAssemblies);
@@ -85,7 +85,7 @@ internal static class ResolveTypeOriginTool
                 hint: "Vollqualifizierten oder einfachen Typnamen angeben, z. B. 'IDataProvider' oder 'Vendor.Data.BaseCommand'.");
         }
 
-        var context = CreateContext(typeName, fallbackPath, assemblyReferences, ct);
+        var context = CreateContext(typeName, fallbackPath, assemblyReferences, isAssemblyTarget: assemblyReferences is not null, ct);
         var searchedAssemblies = new List<string>();
         var result = SearchInCompilation(compilation, context, searchedAssemblies);
         return result ?? NotFoundResult(context.TypeName, searchedAssemblies);
@@ -95,11 +95,12 @@ internal static class ResolveTypeOriginTool
         string typeName,
         string fallbackPath,
         IReadOnlyList<AssemblyReferenceDto>? assemblyReferences,
+        bool isAssemblyTarget,
         CancellationToken ct)
     {
         var trimmed = typeName.Trim().Replace("global::", string.Empty, StringComparison.Ordinal);
         var isQualified = trimmed.Contains('.');
-        return new ResolveContext(typeName, trimmed, isQualified, fallbackPath, assemblyReferences, ct);
+        return new ResolveContext(typeName, trimmed, isQualified, fallbackPath, assemblyReferences, isAssemblyTarget, ct);
     }
 
     private static CallToolResult? SearchInCompilation(
@@ -147,7 +148,7 @@ internal static class ResolveTypeOriginTool
                 var dllPath = (metadataRef as PortableExecutableReference)?.FilePath
                     ?? ResolvePathFromReferences(asm.Name, context.AssemblyReferences)
                     ?? asm.Name + ".dll";
-                return BuildSuccess(refType, asm.Name, dllPath, isSource: false, searchedAssemblies);
+                return BuildSuccess(refType, asm.Name, dllPath, isSource: false, isAssemblyTarget: context.IsAssemblyTarget, searchedAssemblies);
             }
         }
 
@@ -175,7 +176,7 @@ internal static class ResolveTypeOriginTool
                 ?? asmName + ".dll";
         }
 
-        return BuildSuccess(type, asmName, path, isSource, [asmName]);
+        return BuildSuccess(type, asmName, path, isSource, context.IsAssemblyTarget, [asmName]);
     }
 
     private static INamedTypeSymbol? FindWithArity(Compilation compilation, string name)
@@ -267,6 +268,7 @@ internal static class ResolveTypeOriginTool
         string assemblyName,
         string assemblyPath,
         bool isSource,
+        bool isAssemblyTarget,
         IReadOnlyList<string> searched)
     {
         var origin = new TypeOriginInfoDto(
@@ -277,7 +279,7 @@ internal static class ResolveTypeOriginTool
             isSource,
             type.ContainingNamespace?.ToDisplayString() ?? "");
 
-        return SuccessResult(new ResolveTypeOriginResultDto(type.Name, true, origin, searched));
+        return SuccessResult(new ResolveTypeOriginResultDto(type.Name, true, origin, searched), isAssemblyTarget);
     }
 
     private static string FormatTypeKind(TypeKind kind) =>
@@ -291,9 +293,9 @@ internal static class ResolveTypeOriginTool
             _ => kind.ToString().ToLowerInvariant()
         };
 
-    private static CallToolResult SuccessResult(ResolveTypeOriginResultDto result)
+    private static CallToolResult SuccessResult(ResolveTypeOriginResultDto result, bool isAssemblyTarget)
     {
-        var text = RenderMarkdown(result);
+        var text = RenderMarkdown(result, isAssemblyTarget);
         return McpToolResults.Text(text, new { resolveTypeOrigin = result });
     }
 
@@ -312,7 +314,7 @@ internal static class ResolveTypeOriginTool
             hint: hint);
     }
 
-    private static string RenderMarkdown(ResolveTypeOriginResultDto result)
+    private static string RenderMarkdown(ResolveTypeOriginResultDto result, bool isAssemblyTarget)
     {
         if (!result.Found || result.Origin is null)
         {
@@ -320,7 +322,9 @@ internal static class ResolveTypeOriginTool
         }
 
         var origin = result.Origin;
-        var sourceLabel = origin.IsSource ? "Projekt-Quellcode" : "Referenzierte Assembly";
+        var sourceLabel = origin.IsSource
+            ? (isAssemblyTarget ? "Dekompilierte Assembly" : "Projekt-Quellcode")
+            : "Referenzierte Assembly";
         return $"""
             # Typ-Herkunft: `{result.TypeName}`
             - **Vollqualifizierter Name**: `{origin.FullName}`
@@ -337,5 +341,6 @@ internal static class ResolveTypeOriginTool
         bool IsQualified,
         string FallbackPath,
         IReadOnlyList<AssemblyReferenceDto>? AssemblyReferences,
+        bool IsAssemblyTarget,
         CancellationToken CancellationToken);
 }
