@@ -172,7 +172,7 @@ internal static partial class McpToolResultsWireBudget
         AppendNavigationSummary(builder, payload);
         AppendSectionSummaries(builder, payload, sectionNames, rootSectionName);
         builder.AppendLine(hint);
-        return TrimUtf8(builder.ToString().TrimEnd(), maxBytes);
+        return McpUtf8BudgetTrimmer.TrimWithoutEllipsis(builder.ToString().TrimEnd(), maxBytes);
     }
 
     private static void AppendCompositeTitle(StringBuilder builder, JsonObject payload)
@@ -432,30 +432,6 @@ internal static partial class McpToolResultsWireBudget
                 .ToList(),
             StructuredContent = result.StructuredContent,
         };
-
-    private static string TrimUtf8(string value, int maxBytes)
-    {
-        if (maxBytes <= 0) return string.Empty;
-        if (Encoding.UTF8.GetByteCount(value) <= maxBytes) return value;
-
-        var low = 0;
-        var high = value.Length;
-        while (low < high)
-        {
-            var middle = low + ((high - low + 1) / 2);
-            if (Encoding.UTF8.GetByteCount(value.AsSpan(0, middle)) <= maxBytes)
-            {
-                low = middle;
-            }
-            else
-            {
-                high = middle - 1;
-            }
-        }
-
-        if (low > 0 && low < value.Length && char.IsHighSurrogate(value[low - 1])) low--;
-        return value[..low];
-    }
 
     private sealed record ArrayCandidate(JsonArray Array, string Path, int LargestItemBytes);
 

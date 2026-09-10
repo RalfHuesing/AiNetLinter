@@ -230,7 +230,7 @@ internal static partial class McpToolResultsWireBudget
         if (stringCandidate is not null)
         {
             var currentBytes = Encoding.UTF8.GetByteCount(stringCandidate.Value);
-            stringCandidate.Parent[stringCandidate.Key] = TrimUtf8(
+            stringCandidate.Parent[stringCandidate.Key] = McpUtf8BudgetTrimmer.TrimWithoutEllipsis(
                 stringCandidate.Value,
                 Math.Max(1, currentBytes / 2));
             return true;

@@ -28,7 +28,7 @@ internal static partial class AssemblyAnalysisResponse
         return value[..limit] + ellipsis;
     }
 
-    private static string TrimTextPreservingNavigation(string value, int maxBytes)
+    internal static string TrimTextPreservingNavigation(string value, int maxBytes)
     {
         const string marker = "## Navigation";
         var markerIndex = value.LastIndexOf(marker, StringComparison.Ordinal);
