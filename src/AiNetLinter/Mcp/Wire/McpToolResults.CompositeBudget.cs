@@ -116,6 +116,10 @@ internal static partial class McpToolResultsWireBudget
         }
 
         payload["isTruncated"] = true;
+        if (payload["navigation"] is JsonObject navigation)
+        {
+            navigation["completeness"] = "truncated";
+        }
         AddReason(payload, "responseBudget");
         var sections = string.Join(", ", sectionNames.OrderBy(name => name, StringComparer.Ordinal));
         payload["nextStep"] =
@@ -265,6 +269,16 @@ internal static partial class McpToolResultsWireBudget
         string? rootSectionName,
         bool truncated)
     {
+        // Reapplying the composite budget happens after navigation is attached.  In that
+        // second pass there may be no new trim operation, but an earlier pass may already
+        // have truncated the response.  Preserve that fact across the metadata rebuild;
+        // otherwise wireBudget.truncated would be reset to false while the payload still
+        // represents a truncated response.
+        var existingWireTruncated = ReadBoolean(payload, "wireTruncated")
+            || (payload["wireBudget"] is JsonObject existingWireBudget
+                && ReadBoolean(existingWireBudget, "truncated"));
+        var effectiveTruncated = truncated || existingWireTruncated;
+
         var candidate = result;
         for (var attempt = 0; attempt < 16; attempt++)
         {
@@ -279,9 +293,14 @@ internal static partial class McpToolResultsWireBudget
                 ["textBytes"] = measurement.TextBytes,
                 ["structuredBytes"] = measurement.StructuredBytes,
                 ["totalBytes"] = 0,
-                ["truncated"] = truncated,
+                ["truncated"] = effectiveTruncated,
                 ["sections"] = BuildSectionBudgetMetadata(payload, sectionNames, rootSectionName),
             };
+
+            if (effectiveTruncated)
+            {
+                payload["wireTruncated"] = true;
+            }
 
             var next = ReplaceStructured(
                 provisional,

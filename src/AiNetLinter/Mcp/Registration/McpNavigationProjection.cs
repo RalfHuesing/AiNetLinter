@@ -131,12 +131,30 @@ internal static class McpNavigationProjection
         string? code,
         string operationStatus)
     {
+        // Eine echte Wire-/responseBudget-Kürzung ist die unmittelbarere Aussage über
+        // die ausgelieferte Antwort als ein fachlicher Partial-Status. Der Root-Payload
+        // behält die fachliche Ursache (z. B. violations.status=error), während die
+        // Navigation dem Agenten zusätzlich signalisiert, dass die Wire-Antwort selbst
+        // unvollständig ist.
+        if (HasWireBudgetTruncation(structured)) return "truncated";
+
         var terminal = ResolveTerminalCompleteness(structured, operationStatus);
         if (terminal is not null) return terminal;
+        if (TryReadToolOwnedNavigationCompleteness(structured, out var navigationCompleteness))
+            return navigationCompleteness;
         if (TryResolveAssemblyResultCompleteness(structured, out var assemblyCompleteness))
             return assemblyCompleteness;
         if (HasTruncation(structured)) return "truncated";
         return ResolvePayloadCompleteness(structured);
+    }
+
+    private static bool TryReadToolOwnedNavigationCompleteness(JsonElement? structured, out string value)
+    {
+        value = string.Empty;
+        return structured is { ValueKind: JsonValueKind.Object } payload
+            && payload.TryGetProperty("navigation", out var navigation)
+            && navigation.ValueKind == JsonValueKind.Object
+            && TryReadStringProperty(navigation, "completeness", out value);
     }
 
     private static bool TryResolveAssemblyResultCompleteness(JsonElement? structured, out string value)
@@ -382,6 +400,41 @@ internal static class McpNavigationProjection
         foreach (var item in value.EnumerateArray())
         {
             if (HasTruncation(item)) return true;
+        }
+
+        return false;
+    }
+
+    private static bool HasWireBudgetTruncation(JsonElement? element)
+    {
+        if (element is not { } value) return false;
+        return value.ValueKind switch
+        {
+            JsonValueKind.Object => HasWireBudgetTruncationInObject(value),
+            JsonValueKind.Array => value.EnumerateArray().Any(item => HasWireBudgetTruncation(item)),
+            _ => false,
+        };
+    }
+
+    private static bool HasWireBudgetTruncationInObject(JsonElement value)
+    {
+        if (HasTrueFlag(value, "wireTruncated")) return true;
+        if (value.TryGetProperty("wireBudget", out var wireBudget)
+            && wireBudget.ValueKind == JsonValueKind.Object
+            && HasTrueFlag(wireBudget, "truncated")) return true;
+        if (value.TryGetProperty("truncatedBy", out var truncatedBy)
+            && truncatedBy.ValueKind == JsonValueKind.Array
+            && truncatedBy.EnumerateArray().Any(item =>
+                item.ValueKind == JsonValueKind.String
+                && string.Equals(item.GetString(), "responseBudget", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        foreach (var property in value.EnumerateObject())
+        {
+            if (property.Value.ValueKind is JsonValueKind.Object or JsonValueKind.Array
+                && HasWireBudgetTruncation(property.Value)) return true;
         }
 
         return false;

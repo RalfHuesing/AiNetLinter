@@ -69,6 +69,50 @@ public sealed partial class AssemblyAnalysisToolTests
     }
 
     [Fact]
+    public void FinalWireTrim_OverridesExistingCompleteNavigation()
+    {
+        var result = McpToolResults.Text(
+            "assembly",
+            new
+            {
+                navigation = new { completeness = "complete" },
+                types = Enumerable.Range(0, 200)
+                    .Select(index => new { id = $"item-{index:D3}", value = new string('x', 80) }),
+            });
+
+        var projected = AssemblyAnalysisResponse.ApplyWireBudget(
+            result,
+            4096,
+            0);
+        var payload = projected.StructuredContent!.Value;
+
+        Assert.True(payload.GetProperty("wireTruncated").GetBoolean());
+        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("completeness").GetString());
+    }
+
+    [Fact]
+    public void TextOnlyWireTrim_MarksEnvelopeAndNavigationAsTruncated()
+    {
+        var result = McpToolResults.Text(
+            new string('x', 8_000),
+            new
+            {
+                navigation = new { completeness = "complete" },
+            });
+
+        var projected = AssemblyAnalysisResponse.ApplyWireBudget(result, 4096, 0);
+        var payload = projected.StructuredContent!.Value;
+        var wireBudget = payload.GetProperty("wireBudget");
+
+        Assert.Contains("…", AssemblyAnalysisTestSupport.TextOf(projected), StringComparison.Ordinal);
+        Assert.True(payload.GetProperty("wireTruncated").GetBoolean());
+        Assert.True(wireBudget.GetProperty("truncated").GetBoolean());
+        Assert.Contains("responseBudget", payload.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("completeness").GetString());
+        Assert.True(wireBudget.GetProperty("totalBytes").GetInt32() <= wireBudget.GetProperty("limitBytes").GetInt32());
+    }
+
+    [Fact]
     public void FinalWireTrim_PreservesUnknownArraysWithTruncationEnvelopes()
     {
         var result = McpToolResults.Text(

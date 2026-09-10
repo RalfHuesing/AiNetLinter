@@ -129,9 +129,15 @@ internal static partial class AssemblyAnalysisResponse
 
         var text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
         var textBudget = Math.Max(1, budget / 4);
-        return Encoding.UTF8.GetByteCount(text) > textBudget
-            ? McpToolResults.ReplaceText(result, TrimTextPreservingNavigation(text, textBudget))
-            : result;
+        if (Encoding.UTF8.GetByteCount(text) <= textBudget) return result;
+
+        // A text-only trim is already a wire-level truncation. Preserve that
+        // fact in the structured envelope as well, so consumers do not mistake
+        // the navigation metadata for a complete response.
+        return AddWireBudgetMetadata(
+            McpToolResults.ReplaceText(result, TrimTextPreservingNavigation(text, textBudget)),
+            budget,
+            isTruncated: true);
     }
 
     private static CallToolResult TrimStructuredToBudget(
@@ -171,14 +177,25 @@ internal static partial class AssemblyAnalysisResponse
 
     private static CallToolResult MinimizeEnvelope(CallToolResult result, int budget)
     {
-        var minimal = ReplaceStructured(result, JsonSerializer.SerializeToElement(new JsonObject
+        var minimalPayload = new JsonObject
         {
             ["isTruncated"] = true,
             ["truncated"] = true,
             ["wireTruncated"] = true,
             ["truncatedBy"] = new JsonArray("responseBudget"),
             ["detailHint"] = "Die strukturierte Nutzlast wurde auf den minimalen Antwortumfang gekürzt; maxResponseBytes erhöhen oder die Detailabfrage gezielt erneut anfordern.",
-        }, McpJsonOptions.Default));
+        };
+        if (result.StructuredContent is { ValueKind: JsonValueKind.Object } structured
+            && JsonNode.Parse(structured.GetRawText()) is JsonObject original
+            && original["navigation"] is JsonNode navigation)
+        {
+            minimalPayload["navigation"] = navigation.DeepClone();
+            MarkNavigationTruncated(minimalPayload);
+        }
+
+        var minimal = ReplaceStructured(
+            result,
+            JsonSerializer.SerializeToElement(minimalPayload, McpJsonOptions.Default));
         return AddWireBudgetMetadata(
             TrimTextToBudget(minimal, budget - Measure(minimal).StructuredBytes),
             budget,
@@ -200,15 +217,24 @@ internal static partial class AssemblyAnalysisResponse
         for (var attempt = 0; attempt < 16; attempt++)
         {
             var measurement = Measure(candidate);
+            var existingWireTruncation = node["wireTruncated"] is JsonValue existing
+                && existing.TryGetValue<bool>(out var existingValue)
+                && existingValue;
+            var wireTruncated = isTruncated || existingWireTruncation;
+            if (wireTruncated)
+            {
+                AssemblyAnalysisResponseEnvelope.AddReason(node, "responseBudget");
+                MarkNavigationTruncated(node);
+            }
             node["wireBudget"] = new JsonObject
             {
                 ["limitBytes"] = budget,
                 ["textBytes"] = measurement.TextBytes,
                 ["structuredBytes"] = measurement.StructuredBytes,
                 ["totalBytes"] = measurement.TotalBytes,
-                ["truncated"] = isTruncated,
+                ["truncated"] = wireTruncated,
             };
-            node["wireTruncated"] ??= false;
+            node["wireTruncated"] = wireTruncated;
             var next = ReplaceStructured(candidate, JsonSerializer.SerializeToElement(node, McpJsonOptions.Default));
             if (Measure(next) == measurement
                 && next.StructuredContent?.GetRawText() == candidate.StructuredContent?.GetRawText()) return next;
@@ -237,12 +263,8 @@ internal static partial class AssemblyAnalysisResponse
 
     private static bool IsStructuredTruncated(JsonElement? structured) =>
         structured is { ValueKind: JsonValueKind.Object } value
-        && ((value.TryGetProperty("wireTruncated", out var wireTruncated)
-             && wireTruncated.ValueKind == JsonValueKind.True)
-            || (value.TryGetProperty("isTruncated", out var isTruncated)
-                && isTruncated.ValueKind == JsonValueKind.True)
-            || (value.TryGetProperty("truncated", out var truncated)
-                && truncated.ValueKind == JsonValueKind.True));
+        && value.TryGetProperty("wireTruncated", out var wireTruncated)
+        && wireTruncated.ValueKind == JsonValueKind.True;
 
     private static bool TryTrimNode(JsonNode node, string? propertyName = null) =>
         node switch
@@ -378,6 +400,15 @@ internal static partial class AssemblyAnalysisResponse
         obj["truncated"] = true;
         obj["wireTruncated"] = true;
         AssemblyAnalysisResponseEnvelope.AddReason(obj, "responseBudget");
+        MarkNavigationTruncated(obj);
+    }
+
+    private static void MarkNavigationTruncated(JsonObject payload)
+    {
+        if (payload["navigation"] is JsonObject navigation)
+        {
+            navigation["completeness"] = "truncated";
+        }
     }
 
     private static readonly string[] ResultCollections =
