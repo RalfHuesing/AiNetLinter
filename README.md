@@ -79,3 +79,7 @@ AiNetLinter.exe --config .\ainetlinter-rules.json --path .\src\MeinProjekt.slnx
 
 Die eingebettete Kurzreferenz ist auch über `AiNetLinter.exe --docs <name>`
 verfügbar; die gültigen Namen stehen in `AiNetLinter.exe --help`.
+
+---
+
+> [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.

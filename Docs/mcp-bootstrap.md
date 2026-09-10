@@ -88,3 +88,7 @@ ainetlinter://rules{?targetPath}
 keinen Target- oder Projektkontextparameter. Unbekannte Properties werden nicht
 still ignoriert, sondern gegen das aktuelle `tools/list`-Schema geprüft und als
 `invalid_argument` mit Feldnamen abgelehnt.
+
+---
+
+> [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
