@@ -471,7 +471,7 @@ Beendigung. `get_server_health` zeigt in Daemon-Sessions Modus, Verbindungen,
 PID, Uptime, Keys, connectionId und Daemon-Version. `--parent-pid` gilt nur
 für den ThinClient, nicht für den detached Daemon.
 
-**Parent-Lebenszyklus:** Ohne weitere Argumente ermittelt der Server die PID des MCP-Hosts automatisch und beendet sich sauber, sobald dieser Prozess endet. Für Wrapper-Skripte kann die Ziel-PID mit `--parent-pid <pid>` explizit gesetzt werden:
+**Parent-Lebenszyklus:** Ohne weitere Argumente ermittelt der ThinClient unter Windows die PID des MCP-Hosts über `NtQueryInformationProcess` und beendet sich sauber, sobald dieser Prozess endet. Auf anderen Betriebssystemen ist keine automatische Parent-PID-Ermittlung implementiert. Für Wrapper-Skripte und diese Plattformen kann die Ziel-PID mit `--parent-pid <pid>` explizit gesetzt werden:
 
 ```json
 {
@@ -484,7 +484,7 @@ für den ThinClient, nicht für den detached Daemon.
 }
 ```
 
-Die Option ist nur für den MCP-Modus relevant. Der Watchdog prüft den Parent-Prozess über das jeweilige Betriebssystem und löst bei dessen Ende den Server-Shutdown aus; ein separates Idle-Timeout oder eine Job-Object-Konfiguration ist nicht erforderlich.
+Die Option ist nur für den MCP-Modus relevant. Sobald eine Parent-PID vorliegt, prüft der Watchdog den Prozess regelmäßig und löst bei dessen Ende den Server-Shutdown aus; ein separates Idle-Timeout oder eine Job-Object-Konfiguration ist nicht erforderlich.
 
 ### cwd-Verhalten
 

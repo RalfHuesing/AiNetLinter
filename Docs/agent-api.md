@@ -247,7 +247,7 @@ auf das angefragte Target begrenzt. `report_observability_feedback` ist ungebund
 
 MCP `2026-07-28` verwendet stattdessen `server/discover`: Der Request enthält unter `params._meta` die Protokollversion sowie Client-Info und Client-Capabilities. Nach der Discovery müssen auch Folge-Requests wie `tools/list` diese Metadaten mitsenden. Beide Pfade liefern denselben globalen Instructions-Text.
 
-Der MCP-Server ermittelt ohne zusätzliche Konfiguration die PID des aufrufenden Prozesses und überwacht dessen Lebenszeichen. Sobald der Parent-Prozess beendet oder nicht mehr erreichbar ist, wird der Server-CancellationToken ausgelöst und der Server beendet sich mit Exit-Code `0`. Wrapper-Skripte und Spezialumgebungen können die Ziel-PID mit `--parent-pid <pid>` explizit vorgeben. Die Überwachung verwendet unter Windows `NtQueryInformationProcess`, unter Linux `/proc/<pid>/stat` und unter macOS `getppid()`; ein `--idle-timeout` ist nicht Teil dieser Funktion.
+Der ThinClient ermittelt ohne zusätzliche Konfiguration unter Windows die PID des aufrufenden Prozesses über `NtQueryInformationProcess` und überwacht dessen Lebenszeichen. Auf anderen Betriebssystemen ist keine automatische Parent-PID-Ermittlung implementiert. Sobald eine automatisch ermittelte oder per `--parent-pid <pid>` vorgegebene Parent-PID beendet oder nicht mehr erreichbar ist, wird der Server-CancellationToken ausgelöst und der Server beendet sich mit Exit-Code `0`. Ein `--idle-timeout` ist nicht Teil dieser Funktion.
 
 Der interne Start `--daemon-start` startet den `DaemonHost` mit Named-Pipe-
 Handshake, geteilter Projektregistry und einer MCP-Session je Pipe-Verbindung.
