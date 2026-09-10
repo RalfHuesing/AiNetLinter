@@ -38,7 +38,7 @@ Die klassische Regel **DRY** (Don't Repeat Yourself) führt bei extremem Einsatz
 
 Die Konfiguration erfolgt über eine flache JSON-Struktur. Beispiel einer vollständigen Konfiguration:
 
-> **Hinweis:** Dieses Beispiel zeigt keine Code-Defaults, sondern ein bewusst strenges Beispielprofil — teils die in `Docs/ROADMAP.md` Epic 27 empirisch kalibrierten Werte (z. B. `MaxLineCount: 500`, `MaxInheritanceDepth: 3`), teils noch strengere Werte aus dem "Strict"-Profil weiter unten (z. B. `MaxCyclomaticComplexity`/`MaxCognitiveComplexity: 5` statt Code-Default 12/15). Die tatsächlichen Code-Defaults (das, was ohne eigene `ainetlinter-rules.json` gilt) stehen ausschließlich in der Regel-Tabelle unten.
+> **Hinweis:** Dieses Beispiel ist ein bewusst strenges Profil und zeigt keine Code-Defaults. Die tatsächlichen Code-Defaults gelten ohne eigene `ainetlinter-rules.json` und stehen ausschließlich in der Regel-Tabelle unten.
 
 ```json
 {
@@ -681,7 +681,7 @@ Erzwingt das Separation-of-Concerns-Prinzip für Blazor- und WPF-Projekte: Keine
 
 ### Web-Asset-Linting (Web / CSS, JS, Razor)
 
-Erweitert den Linter um Regeln fuer Web-Assets (Phase 1: CSS, Phase 2: JS, Phase 3: Razor). Web-Dateien werden nicht von Roslyn analysiert, sondern ueber einen parallelen File-System-Walk im PostAnalysis-Schritt geladen und mit dedizierten Analyzern verarbeitet (ExCSS fuer CSS, Esprima fuer JS, Microsoft.AspNetCore.Razor.Language fuer Razor). Opt-in: `Web.IsEnabled = true` schaltet das gesamte Web-Modul ein; ohne Aktivierung wird kein Web-Asset analysiert.
+Erweitert den Linter um Regeln fuer CSS-, JavaScript- und Razor-Dateien. Web-Dateien werden nicht von Roslyn analysiert, sondern ueber einen parallelen File-System-Walk im PostAnalysis-Schritt geladen und mit dedizierten Analyzern verarbeitet (ExCSS fuer CSS, Esprima fuer JS, Microsoft.AspNetCore.Razor.Language fuer Razor). Opt-in: `Web.IsEnabled = true` schaltet das gesamte Web-Modul ein; ohne Aktivierung wird kein Web-Asset analysiert.
 
 #### Einstellungsoptionen
 
@@ -731,7 +731,7 @@ In `.css`-Dateien wird die Standard-CSS-Kommentar-Syntax verwendet, in `.js`-Dat
 
 ```css
 /* ainetlinter-disable CSS_MaxCssLineCount */
-/* Komplexes Stylesheet wird in Sprint 3 migriert */
+/* Begründete Ausnahme für dieses Stylesheet */
 
 /* ainetlinter-disable CSS_MaxCssSelectorComplexity */
 .container .sub-container .panel .content .button {
@@ -747,7 +747,7 @@ In `.css`-Dateien wird die Standard-CSS-Kommentar-Syntax verwendet, in `.js`-Dat
 ```javascript
 // ainetlinter-disable JS_MaxJsLineCount
 export function hugeWrapper() {
-  // Wird in Sprint 4 aufgeteilt
+  // Begründete Ausnahme für diesen Wrapper
 }
 
 // ainetlinter-disable JS_EnforceJsModules
@@ -811,7 +811,7 @@ window.myIntegrationFunction = function () {
 }
 ```
 
-#### Abgrenzung zu Epic 22 (Blazor-UI-Datei-Trennung)
+#### Abgrenzung zur Blazor-UI-Datei-Trennung
 
 `UiSeparation` prueft die **Struktur** von Blazor-Dateien (hat `.razor` eine `.razor.cs`? Hat es eine `.razor.css`?). `Web.Css` prueft den **Inhalt** der CSS-Dateien (Zeilenanzahl, Selektor-Komplexitaet, Scoped-CSS-Empfehlung). Beide Ebenen sind komplementaer: ein Projekt mit korrekt strukturierten Begleitdateien kann trotzdem zu grosse oder zu komplexe CSS-Inhalte haben.
 
@@ -1434,14 +1434,7 @@ AiNetLinter.exe --path . --config ainetlinter-rules.json --sync-agent-rules
 
 ---
 
-## 9. Zukunfts-Roadmap (Ausblick)
-
-- **Erweiterte semantische Datenflussanalyse:** Statische Überprüfung komplexerer Datenflussketten, um veränderliche Zustandsänderungen über Klassengrenzen hinweg für KIs zu markieren.
-- **Weitere automatische CLI Code-Fixes:** Ausbau des Auto-Fixers zur Behebung komplexerer Strukturverletzungen (z. B. automatisches Auslagern übergroßer Methoden).
-
----
-
-## 10. Consumer-Setup & Pragmatic Defaults
+## 9. Consumer-Setup & Pragmatic Defaults
 
 ### Consumer-Setup-Checkliste
 
@@ -1469,7 +1462,7 @@ Bei größeren Migrations-Szenarien sollten viele Regeln schrittweise eingeführ
 
 ---
 
-## 11. Performance-Profiling & Zeitmessung
+## 10. Performance-Profiling & Zeitmessung
 
 Um Performance-Flaschenhälse in großen C#-Solutions gezielt zu analysieren, besitzt `AiNetLinter` ein integriertes Profiling-System.
 
@@ -1495,7 +1488,7 @@ Das Feature ist standardmäßig aktiviert und kann über die Konfigurationsdatei
 
 ---
 
-## 12. Analyse-Cache (Inkrementelle Laufzeitoptimierung)
+## 11. Analyse-Cache (Inkrementelle Laufzeitoptimierung)
 
 Um die Latenz im agentischen Entwicklungszyklus ("Agentic Feedback Loop") zu minimieren, besitzt `AiNetLinter` einen inkrementellen Analyse-Cache.
 
