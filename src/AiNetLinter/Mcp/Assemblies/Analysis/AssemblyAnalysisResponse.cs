@@ -109,6 +109,7 @@ internal static partial class AssemblyAnalysisResponse
         if (Measure(withBudget).TotalBytes <= budget) return withBudget;
 
         withBudget = TrimStructuredToBudget(withBudget, budget, cursorOffset);
+        withBudget = SynchronizeClassStructureText(withBudget);
 
         if (Measure(withBudget).TotalBytes > budget)
         {
@@ -173,6 +174,39 @@ internal static partial class AssemblyAnalysisResponse
     {
         var text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
         return McpToolResults.ReplaceText(result, TrimTextPreservingNavigation(text, Math.Max(1, budget)));
+    }
+
+    private static CallToolResult SynchronizeClassStructureText(CallToolResult result)
+    {
+        if (result.StructuredContent is not { ValueKind: JsonValueKind.Object } structured
+            || result.Content.OfType<TextContentBlock>().FirstOrDefault() is not { } textBlock)
+        {
+            return result;
+        }
+
+        var root = JsonNode.Parse(structured.GetRawText()) as JsonObject;
+        var classStructure = root?["classStructure"] as JsonObject;
+        if (classStructure?["members"] is not JsonArray members
+            || classStructure["totalMemberCount"] is not JsonValue totalValue
+            || !totalValue.TryGetValue<int>(out var totalMemberCount))
+        {
+            return result;
+        }
+
+        const string marker = "- Member Count: ";
+        var markerIndex = textBlock.Text.IndexOf(marker, StringComparison.Ordinal);
+        if (markerIndex < 0) return result;
+
+        var valueStart = markerIndex + marker.Length;
+        var separatorIndex = textBlock.Text.IndexOf(" von ", valueStart, StringComparison.Ordinal);
+        var lineEnd = textBlock.Text.IndexOf('\n', valueStart);
+        if (separatorIndex < valueStart || (lineEnd >= 0 && separatorIndex > lineEnd)) return result;
+
+        var shownMemberCount = members.Count;
+        var updatedText = textBlock.Text[..valueStart]
+            + shownMemberCount
+            + textBlock.Text[separatorIndex..];
+        return McpToolResults.ReplaceText(result, updatedText);
     }
 
     private static CallToolResult MinimizeEnvelope(CallToolResult result, int budget)

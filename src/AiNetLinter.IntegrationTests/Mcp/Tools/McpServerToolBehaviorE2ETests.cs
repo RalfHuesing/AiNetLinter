@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
 using ModelContextProtocol.Protocol;
@@ -177,6 +178,59 @@ public sealed class McpServerToolBehaviorE2ETests
         Assert.True(totalBytes <= budget, $"Finale kombinierte Wire-Nutzlast überschreitet maxResponseBytes: {totalBytes} > {budget}.");
         Assert.Contains("## Navigation", text, StringComparison.Ordinal);
         Assert.Equal("source", payload.GetProperty("navigation").GetProperty("origin").GetString());
+    }
+
+    [Fact]
+    public async Task ClassStructure_SourceNavigationOverhead_ReconcilesTruncationAndNextStep()
+    {
+        var baseline = await _fixture.Client.CallToolAsync(
+            "get_class_structure",
+            new Dictionary<string, object?>
+            {
+                ["symbolIdentifier"] = "Greeter",
+                ["maxMembers"] = 200,
+            });
+
+        Assert.False(baseline.IsError == true, baseline.ToString());
+        var baselinePayload = baseline.StructuredContent!.Value;
+        var baselineText = Assert.IsType<TextContentBlock>(Assert.Single(baseline.Content)).Text;
+        var navigationMarker = baselineText.IndexOf("## Navigation", StringComparison.Ordinal);
+        Assert.True(navigationMarker > 0, baselineText);
+        var sourcePayload = JsonNode.Parse(baselinePayload.GetRawText())!.AsObject();
+        sourcePayload.Remove("navigation");
+        var sourceText = baselineText[..navigationMarker].TrimEnd();
+        var sourceBytes = Encoding.UTF8.GetByteCount(sourceText)
+            + Encoding.UTF8.GetByteCount(sourcePayload.ToJsonString());
+        var unboundedBytes = Encoding.UTF8.GetByteCount(baselineText)
+            + Encoding.UTF8.GetByteCount(baselinePayload.GetRawText());
+        var budget = Math.Max(2_048, sourceBytes);
+        Assert.True(sourceBytes <= budget, $"Source-Nutzlast muss vor Navigation ins Budget passen: {sourceBytes} > {budget}.");
+        Assert.True(unboundedBytes > budget, $"Navigation muss den finalen Trim auslösen: {unboundedBytes} <= {budget}.");
+
+        var result = await _fixture.Client.CallToolAsync(
+            "get_class_structure",
+            new Dictionary<string, object?>
+            {
+                ["symbolIdentifier"] = "Greeter",
+                ["maxMembers"] = 200,
+                ["maxResponseBytes"] = budget,
+            });
+
+        Assert.False(result.IsError == true, result.ToString());
+        var payload = result.StructuredContent!.Value;
+        Assert.True(payload.TryGetProperty("navigation", out var navigation), payload.GetRawText());
+        var next = navigation.GetProperty("next");
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+
+        Assert.True(payload.GetProperty("truncated").GetBoolean(), payload.GetRawText());
+        Assert.Contains("maxResponseBytes", payload.GetProperty("truncatedBy").ToString(), StringComparison.Ordinal);
+        Assert.Equal("truncated", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("request_detail", next.GetProperty("kind").GetString());
+        Assert.Contains("- completeness: `truncated`", text, StringComparison.Ordinal);
+        Assert.Contains("- next: `request_detail`", text, StringComparison.Ordinal);
+        Assert.True(
+            Encoding.UTF8.GetByteCount(text) + Encoding.UTF8.GetByteCount(payload.GetRawText()) <= budget,
+            $"Finale Source-Wire-Nutzlast überschreitet maxResponseBytes: {Encoding.UTF8.GetByteCount(text) + Encoding.UTF8.GetByteCount(payload.GetRawText())} > {budget}.");
     }
 
     [Fact]

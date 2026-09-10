@@ -37,6 +37,7 @@ internal static class AssemblyAnalysisResponseEnvelope
             RecalculateKnownCollectionEnvelope(obj, "samples", cursorOffset);
             RecalculateKnownCollectionEnvelope(obj, "namespaces", cursorOffset);
             RecalculateGenericCollectionEnvelopes(obj, cursorOffset);
+            SyncClassStructureProjection(obj);
             SyncCompositeEnvelope(obj);
             SyncNavigationProjection(obj);
         }
@@ -307,6 +308,21 @@ internal static class AssemblyAnalysisResponseEnvelope
     {
         obj["membersTruncated"] = truncated || GetBool(obj, "membersTruncated") == true;
         if (truncated) AddReason(obj, "responseBudget");
+    }
+
+    private static void SyncClassStructureProjection(JsonObject obj)
+    {
+        if (obj["members"] is not JsonArray members
+            || GetInt(obj, "totalMemberCount") is not { } totalMemberCount
+            || obj["shownMemberCount"] is null) return;
+
+        var shownMemberCount = members.Count;
+        obj["shownMemberCount"] = shownMemberCount;
+        var truncated = GetBool(obj, "truncated") == true || shownMemberCount < totalMemberCount;
+        if (!truncated) return;
+
+        obj["truncated"] = true;
+        AddReason(obj, "responseBudget");
     }
 
     private static void UpdateReferenceEnvelope(

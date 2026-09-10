@@ -5,8 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
@@ -38,7 +36,7 @@ internal sealed record GetClassStructureArgs(
 /// C#-Typs (Kind, Name, Visibility, Start-/End-Zeile, Zeilenanzahl und Signatur). Unterstützt partial
 /// classes über mehrere Dateien.
 /// </summary>
-internal static class GetClassStructureTool
+internal static partial class GetClassStructureTool
 {
     private const string PrimaryConstructorParameterKind = "PrimaryCtor-Param";
 
@@ -66,6 +64,40 @@ internal static class GetClassStructureTool
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
         var effectiveIdentifier = args.EffectiveSymbolIdentifier;
+        var validationError = ValidateArguments(args, effectiveIdentifier);
+        if (validationError is not null) return validationError;
+
+        try
+        {
+            var (resolvedSymbol, error) = await FindReferencesTool.ResolveSymbolAsync(
+                solution,
+                effectiveIdentifier!,
+                ct,
+                state.HandoffSymbolIdentity);
+            if (error is not null) return error;
+            if (resolvedSymbol is null) return McpToolResults.SymbolNotFound(effectiveIdentifier!);
+
+            if (!TryResolveNamedType(resolvedSymbol, out var namedType) || namedType is null)
+            {
+                return McpToolResults.InvalidArgument(
+                    $"Symbol '{resolvedSymbol.ToDisplayString()}' ist kein Typ.",
+                    hint: "Typname (z. B. 'MyClass', 'Namespace.MyClass') oder Member darin angeben.");
+            }
+
+            var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
+            var payload = await BuildPayloadAsync(namedType, solutionDir, args, ct);
+
+            var markdown = RenderMarkdown(payload);
+            return McpToolResults.Text(payload.Truncated ? markdown : McpSufficiencyHints.Append(markdown), payload);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return McpToolResults.CompilationError($"Unerwarteter Fehler in get_class_structure: {ex.Message}");
+        }
+    }
+
+    private static CallToolResult? ValidateArguments(GetClassStructureArgs args, string? effectiveIdentifier)
+    {
         if (string.IsNullOrWhiteSpace(effectiveIdentifier))
         {
             return McpToolResults.Recoverable(
@@ -95,181 +127,79 @@ internal static class GetClassStructureTool
                 $"maxResponseBytes weglassen, 0 verwenden oder mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} setzen.",
                 "$.maxResponseBytes");
         }
-
-        var clampedMaxMembers = Math.Clamp(args.MaxMembers, 1, MaxMembersCap);
-
-        try
-        {
-            var (resolvedSymbol, error) = await FindReferencesTool.ResolveSymbolAsync(
-                solution,
-                effectiveIdentifier,
-                ct,
-                state.HandoffSymbolIdentity);
-            if (error is not null) return error;
-            if (resolvedSymbol is null) return McpToolResults.SymbolNotFound(effectiveIdentifier);
-
-            if (!TryResolveNamedType(resolvedSymbol, out var namedType) || namedType is null)
-            {
-                return McpToolResults.InvalidArgument(
-                    $"Symbol '{resolvedSymbol.ToDisplayString()}' ist kein Typ.",
-                    hint: "Typname (z. B. 'MyClass', 'Namespace.MyClass') oder Member darin angeben.");
-            }
-
-            var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-            var (files, totalLines) = await CollectDeclarationFilesAsync(namedType, solutionDir, ct);
-            var allMembers = ExtractMembers(namedType, solutionDir);
-            var filteredMembers = FilterMembers(allMembers, args.KindFilter, args.NameFilter);
-            var sortedMembers = SortMembers(filteredMembers, args.SortBy);
-            var truncated = sortedMembers.Count > clampedMaxMembers;
-            var shownMembers = truncated
-                ? sortedMembers.Take(clampedMaxMembers).ToList()
-                : sortedMembers;
-
-            var truncatedBy = truncated ? new List<string> { "maxMembers" } : new List<string>();
-            var payload = new ClassStructurePayload(
-                TypeName: namedType.ToDisplayString(),
-                Kind: SymbolKindClassifier.DescribeNamedTypeKind(namedType, specificRecord: true),
-                Files: files,
-                TotalLines: totalLines,
-                TotalMemberCount: sortedMembers.Count,
-                ShownMemberCount: shownMembers.Count,
-                Truncated: truncated,
-                Members: shownMembers,
-                TruncatedBy: truncatedBy,
-                Next: truncated
-                    ? new ClassStructureNext("request_detail", "maxMembers erhöhen oder sortBy/kindFilter/nameFilter verfeinern.")
-                    : null);
-
-            while (args.MaxResponseBytes > 0 && payload.Members.Count > 0)
-            {
-                var budgetCandidate = payload with
-                {
-                    Truncated = true,
-                    TruncatedBy = truncatedBy.Append("maxResponseBytes").Distinct(StringComparer.Ordinal).ToArray(),
-                    Next = new ClassStructureNext("request_detail", "maxResponseBytes erhöhen oder symbolIdentifier/kindFilter/nameFilter verfeinern."),
-                };
-                if (CombinedResponseBytes(RenderBudgetText(budgetCandidate, string.Empty), budgetCandidate) <= args.MaxResponseBytes) break;
-                shownMembers.RemoveAt(shownMembers.Count - 1);
-                if (!truncatedBy.Contains("maxResponseBytes", StringComparer.Ordinal)) truncatedBy.Add("maxResponseBytes");
-                payload = payload with
-                {
-                    ShownMemberCount = shownMembers.Count,
-                    Truncated = true,
-                    Members = shownMembers.ToList(),
-                    TruncatedBy = truncatedBy,
-                    Next = new ClassStructureNext("request_detail", "maxResponseBytes erhöhen oder symbolIdentifier/kindFilter/nameFilter verfeinern."),
-                };
-            }
-
-            var markdown = RenderMarkdown(payload);
-            return McpToolResults.Text(payload.Truncated ? markdown : McpSufficiencyHints.Append(markdown), payload);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            return McpToolResults.CompilationError($"Unerwarteter Fehler in get_class_structure: {ex.Message}");
-        }
+        return null;
     }
 
-    internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
+    private static async Task<ClassStructurePayload> BuildPayloadAsync(
+        INamedTypeSymbol namedType,
+        string solutionDir,
+        GetClassStructureArgs args,
+        CancellationToken ct)
     {
-        if (result.StructuredContent is not { ValueKind: JsonValueKind.Object } structured
-            || maxResponseBytes <= 0)
-        {
-            return result;
-        }
+        var (files, totalLines) = await CollectDeclarationFilesAsync(namedType, solutionDir, ct);
+        var sortedMembers = SortMembers(
+            FilterMembers(ExtractMembers(namedType, solutionDir), args.KindFilter, args.NameFilter),
+            args.SortBy);
+        var shownMembers = sortedMembers.Take(Math.Clamp(args.MaxMembers, 1, MaxMembersCap)).ToList();
+        var truncated = sortedMembers.Count > shownMembers.Count;
+        var truncatedBy = truncated ? new List<string> { "maxMembers" } : new List<string>();
+        var payload = new ClassStructurePayload(
+            TypeName: namedType.ToDisplayString(),
+            Kind: SymbolKindClassifier.DescribeNamedTypeKind(namedType, specificRecord: true),
+            Files: files,
+            TotalLines: totalLines,
+            TotalMemberCount: sortedMembers.Count,
+            ShownMemberCount: shownMembers.Count,
+            Truncated: truncated,
+            Members: shownMembers,
+            TruncatedBy: truncatedBy,
+            Next: truncated
+                ? new ClassStructureNext("request_detail", "maxMembers erhöhen oder sortBy/kindFilter/nameFilter verfeinern.")
+                : null);
+        return ApplyExecutionBudget(payload, args.MaxResponseBytes);
+    }
 
-        ClassStructurePayload? payload;
-        try
+    private static ClassStructurePayload ApplyExecutionBudget(ClassStructurePayload payload, int maxResponseBytes)
+    {
+        if (maxResponseBytes <= 0) return payload;
+
+        // A positive budget is a constraint, not an automatic truncation reason.
+        // In particular, preserve an existing maxMembers-only result when the
+        // complete visible response already fits the requested budget.
+        if (CombinedResponseBytes(RenderBudgetText(payload, string.Empty), payload) <= maxResponseBytes)
         {
-            payload = JsonSerializer.Deserialize<ClassStructurePayload>(
-                structured.GetRawText(), McpJsonOptions.Default);
+            return payload;
         }
-        catch (JsonException)
-        {
-            return result;
-        }
-        var text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text;
-        var envelope = JsonNode.Parse(structured.GetRawText()) as JsonObject;
-        if (payload is null || payload.Members is null || payload.Files is null || text is null || envelope is null) return result;
 
         var members = payload.Members.ToList();
         var truncatedBy = (payload.TruncatedBy ?? Array.Empty<string>()).ToList();
-        var candidate = payload;
-        while (CombinedResponseBytes(RenderBudgetText(candidate, text), ProjectEnvelope(envelope, candidate)) > maxResponseBytes
-            && members.Count > 0)
+        while (members.Count > 0)
         {
+            var candidateReasons = truncatedBy.Contains("maxResponseBytes", StringComparer.Ordinal)
+                ? truncatedBy
+                : truncatedBy.Append("maxResponseBytes").ToList();
+            var candidate = CreateBudgetCandidate(payload, members, candidateReasons);
+            if (CombinedResponseBytes(RenderBudgetText(candidate, string.Empty), candidate) <= maxResponseBytes) return candidate;
             members.RemoveAt(members.Count - 1);
             if (!truncatedBy.Contains("maxResponseBytes", StringComparer.Ordinal)) truncatedBy.Add("maxResponseBytes");
-            candidate = candidate with
-            {
-                Members = members.ToList(),
-                ShownMemberCount = members.Count,
-                Truncated = true,
-                TruncatedBy = truncatedBy,
-                Next = new ClassStructureNext("request_detail", "maxResponseBytes erhöhen oder symbolIdentifier/kindFilter/nameFilter verfeinern."),
-            };
         }
+        return CreateBudgetCandidate(payload, members, truncatedBy, forceTruncated: truncatedBy.Contains("maxResponseBytes", StringComparer.Ordinal));
+    }
 
-        var finalText = RenderBudgetText(candidate, text);
-        var finalEnvelope = ProjectEnvelope(envelope, candidate);
-        if (CombinedResponseBytes(finalText, finalEnvelope) > maxResponseBytes)
+    private static ClassStructurePayload CreateBudgetCandidate(
+        ClassStructurePayload payload,
+        List<ClassStructureMemberEntry> members,
+        List<string> truncatedBy,
+        bool forceTruncated = true) => payload with
         {
-            return McpToolResults.InvalidArgument(
-                "maxResponseBytes ist zu klein, um den festen Navigation-/Trunkierungs-Envelope vollständig auszugeben.",
-                "maxResponseBytes erhöhen; die Antwort wird nur an vollständigen Member-Einheiten gekürzt.",
-                "$.maxResponseBytes");
-        }
-        return new CallToolResult
-        {
-            IsError = result.IsError,
-            Content = new List<ContentBlock> { new TextContentBlock { Text = finalText } },
-            StructuredContent = JsonSerializer.SerializeToElement(finalEnvelope, McpJsonOptions.Default),
+            Members = members.ToList(),
+            ShownMemberCount = members.Count,
+            Truncated = forceTruncated || payload.Truncated,
+            TruncatedBy = truncatedBy,
+            Next = forceTruncated || payload.Truncated
+                ? new ClassStructureNext("request_detail", "maxResponseBytes erhöhen oder symbolIdentifier/kindFilter/nameFilter verfeinern.")
+                : payload.Next,
         };
-    }
-
-    private static JsonObject ProjectEnvelope(JsonObject original, ClassStructurePayload payload)
-    {
-        var projected = (JsonObject)original.DeepClone();
-        var payloadNode = JsonSerializer.SerializeToNode(payload, McpJsonOptions.Default) as JsonObject
-            ?? new JsonObject();
-        foreach (var name in ClassPayloadFields)
-        {
-            projected.Remove(name);
-            if (payloadNode[name] is { } value) projected[name] = value.DeepClone();
-        }
-        return projected;
-    }
-
-    private static readonly string[] ClassPayloadFields =
-    [
-        "typeName", "kind", "files", "totalLines", "totalMemberCount", "shownMemberCount",
-        "truncated", "members", "truncatedBy", "next",
-    ];
-
-    private static string RenderBudgetText(ClassStructurePayload payload, string fallbackText)
-    {
-        var rendered = payload.Truncated
-            ? RenderMarkdown(payload)
-            : McpSufficiencyHints.Append(RenderMarkdown(payload));
-        var headingIndex = rendered.IndexOf("# Typ:", StringComparison.Ordinal);
-        var originalHeading = fallbackText.IndexOf("# Typ:", StringComparison.Ordinal);
-        if (originalHeading > 0 && headingIndex == 0)
-        {
-            rendered = fallbackText[..originalHeading].TrimEnd() + "\n\n" + rendered;
-        }
-        var navigationIndex = fallbackText.IndexOf("## Navigation", StringComparison.Ordinal);
-        return navigationIndex < 0
-            ? rendered
-            : rendered.TrimEnd() + "\n\n" + fallbackText[navigationIndex..].Trim();
-    }
-
-    private static int CombinedResponseBytes(string text, ClassStructurePayload payload) =>
-        Encoding.UTF8.GetByteCount(text)
-        + JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length;
-
-    private static int CombinedResponseBytes(string text, JsonObject envelope) =>
-        Encoding.UTF8.GetByteCount(text)
-        + JsonSerializer.SerializeToUtf8Bytes(envelope, McpJsonOptions.Default).Length;
 
     private static List<ClassStructureMemberEntry> FilterMembers(
         List<ClassStructureMemberEntry> members, string? kindFilter, string? nameFilter)

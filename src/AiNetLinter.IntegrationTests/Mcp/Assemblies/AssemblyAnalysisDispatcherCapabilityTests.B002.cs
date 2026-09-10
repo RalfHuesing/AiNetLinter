@@ -15,13 +15,48 @@ namespace AiNetLinter.IntegrationTests.Mcp.Assemblies;
 
 public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
 {
+    [Fact]
+    public async Task AssemblyRoute_FilteredEmptyResultReportsActualWireTruncation()
+    {
+        using var temp = TestTempDirectory.Create("assembly-dispatcher-b002-wire-");
+        var references = Enumerable.Range(0, AssemblyAnalysisResponseLimits.MaxReferenceSessions + 8)
+            .Select(index => new AssemblyReferenceDto(
+                $"B002WireMissingDependency{index:D2}",
+                "1.0.0.0",
+                "neutral",
+                Resolved: true,
+                ResolvedPath: Path.Combine(temp.DirectoryPath, $"B002WireMissingDependency{index:D2}.dll")))
+            .ToArray();
+        await using var fixture = await SyntheticAssemblyFixture.CreateAsync(
+            temp,
+            references,
+            FailingReferenceFactory);
+
+        var result = await fixture.ExecuteExtensionsAsync(
+            maxResponseBytes: 4096,
+            extensionName: "NoSuchExtension");
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value;
+        if (payload.TryGetProperty("extensions", out var extensions))
+        {
+            Assert.Empty(extensions.EnumerateArray());
+        }
+        Assert.True(payload.GetProperty("wireTruncated").GetBoolean(), payload.GetRawText());
+        Assert.True(payload.GetProperty("wireBudget").GetProperty("truncated").GetBoolean(), payload.GetRawText());
+        Assert.Contains(
+            "responseBudget",
+            payload.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
+        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("completeness").GetString());
+    }
+
     [Theory]
     [InlineData("inspect_assembly")]
     [InlineData("find_assembly_extensions")]
     public async Task AssemblyRoute_FilteredEmptyResultDoesNotInheritReferenceTruncationInNavigation(string operation)
     {
         using var temp = TestTempDirectory.Create("assembly-dispatcher-b002-");
-        var references = Enumerable.Range(0, AssemblyAnalysisResponseLimits.MaxReferenceSessions + 1)
+        var references = Enumerable.Range(0, 1)
             .Select(index => new AssemblyReferenceDto(
                 $"B002MissingDependency{index:D2}",
                 "1.0.0.0",
