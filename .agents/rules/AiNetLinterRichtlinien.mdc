@@ -35,7 +35,7 @@ diese Always-on-Regel.
   MCP-Beschreibungen gegen den aktuellen Code prüfen.
 - Bei Änderungen an CLI, Konfiguration, Regeln oder MCP-Verträgen die
   betroffenen Dateien unter `Docs/`, `ainetlinter-rules.json` und gegebenenfalls die
-  Roadmap synchronisieren.
+  Agentenregeln synchronisieren.
 - `README.md` nur ändern, wenn sie ausdrücklich im Auftrag liegt; bestehende
   Änderungen anderer Agenten erhalten.
 

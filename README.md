@@ -1,98 +1,81 @@
 # AiNetLinter
 
-AiNetLinter ist ein Roslyn-basierter MCP-Server für C#-Solutions und lokale
-.NET-Assemblies (`.dll`/`.exe`). Er stellt Coding-Agenten gezielt abgefragten,
-strukturierten Kontext zu Symbolen, Abhängigkeiten, Auswirkungen, Tests,
-Metriken und Regelverstößen bereit.
+AiNetLinter ist ein Roslyn-basierter MCP-Server und CLI-Linter für C#-Solutions
+und lokale .NET-Assemblies. Der MCP-Server stellt Coding-Agents semantischen
+Codekontext, Auswirkungsanalysen, Metriken und regelbasierte Befunde bereit; die
+CLI führt dieselbe Analyse als Batch-Lauf oder Quality Gate aus.
 
-Die Antworten sind begrenzt und weisen ihren Vollständigkeitsstatus aus.
-Agenten können dadurch weitere Informationen gezielt nachladen, statt
-standardmäßig große Teile eines Repositorys als Kontext zu verwenden. Die
-zugrunde liegende Analyse-Engine ist zusätzlich als CLI-Linter für
-konfigurierbare Regeln, Baselines, automatische Fixes und Quality Gates
-verfügbar.
+Source-Targets (`.sln`, `.slnx`) werden über Roslyn analysiert. Lokale
+verwaltete Assemblies (`.dll`, `.exe`) werden für die Analyse metadata-only
+dekompiliert und nicht ausgeführt.
 
-## Für Entwicklungs- und Agentenworkflows
+## MCP-Server für Coding-Agents
 
-Der MCP-Server unterstützt die Analyse vor, während und nach einer Änderung:
+Der Server verwendet lokalen stdio-Transport über JSON-RPC 2.0. Er lässt sich in
+MCP-Hosts mit lokalem stdio-Support registrieren, etwa Cursor, Claude Code,
+Codex, GitHub Copilot oder Windsurf.
 
-| Situation | Beispiele | AiNetLinter liefert |
-| :--- | :--- | :--- |
-| Vor einer Änderung | `get_feature_context`, `get_class_structure` | Deklaration, Member-Struktur, Metriken, direkte Aufrufer, statische Testzuordnung und Regelverstöße für ein Symbol. |
-| Beim Nachvollziehen von Abhängigkeiten | `find_references`, `get_call_tree`, `get_type_hierarchy`, `dependency_graph` | Aufrufstellen, Aufrufer- und Aufgerufene-Bäume, Typ-Hierarchien und semantische Abhängigkeiten. |
-| Nach einer Änderung | `get_impact`, `get_test_context`, `safeguard` | Betroffene Symbole und Dateien, statisch zugeordnete Tests, diffbezogene Regelverstöße und ein Quality Gate. |
-| Beim Erkunden einer fremden Assembly | `inspect_assembly`, `find_assembly_extensions` | Öffentliche API, Typen, Member und klassische Extension-Methoden aus einer lokalen `.dll` oder `.exe`. |
+| Bereich | MCP-Fähigkeiten |
+| :--- | :--- |
+| Symbolnavigation | Symbolsuche, Member-Struktur, Quellcode-Fenster, Referenzen, Call-Trees sowie Typ-Hierarchien und Implementierungen. |
+| Änderungsanalyse | Git-Diff- und Symbol-Impact, Abhängigkeitsgraphen und statische Testzuordnung. |
+| Qualitätsanalyse | Konfigurierbare Regelverstöße, Metriken, Hotspots, Duplikate, Dead-Code- und Magic-Value-Kandidaten sowie Quality Gates. |
+| Assembly-Analyse | Öffentliche API, Signaturen, Extension-Methoden, Dekompilat und Metadaten lokaler `.dll`- und `.exe`-Dateien. |
 
-Die MCP-Tools geben zu begrenzten Ergebnissen und nicht auflösbaren
-Abhängigkeiten ihren Vollständigkeitsstatus aus. Agenten können ihren nächsten
-Schritt daran ausrichten, statt den gesamten Repository-Inhalt als Kontext zu
-laden. Build und Tests werden nicht ersetzt; sie bleiben eigenständige
-Prüfungen. Die semantischen MCP-Abfragen sind auf C# ausgerichtet und machen
-Grenzen wie nicht auflösbare Abhängigkeiten oder gekürzte Ergebnisse sichtbar.
+### MCP-Protokollvertrag für Agenten
 
-## Externe Assemblies statisch analysieren
-
-`inspect_assembly` und `find_assembly_extensions` untersuchen eine lokale
-`.dll` oder `.exe` statisch über Roslyn-Metadaten. Bei diesen beiden
-Assembly-Tools reicht `targetPath` aus; ein absoluter `.dll`-
-oder `.exe`-Pfad wird als Assembly-Ziel behandelt. Die Assembly wird dafür nicht
-geladen oder ausgeführt.
-Ohne verfügbare Quelle erzeugt AiNetLinter eine
-dekompilierte, schreibgeschützte Analyse-Session.
-
-Für eine eingebundene Fremd-Assembly kann zusätzlich eine passende
-Source-Solution aus einem konfigurierten öffentlichen Git-Repository
-zugeordnet werden. Dann arbeitet die Assembly-Analyse mit einem
-schreibgeschützten Source-Snapshot dieser Solution. Herkunft, Snapshot und
-mögliche unvollständige Abhängigkeiten bleiben im Ergebnis sichtbar.
-
-Details zum Verhalten, zu Filtern und zum Konfigurationsvertrag:
-[External-Source-Mapping](Docs/configuration.md#expliziter-external-source-mappingvertrag)
-und [MCP- und CLI-Referenz](Docs/agent-api.md).
+Jeder zielgebundene Aufruf verwendet einen absoluten `targetPath` zu einer
+Solution oder Assembly. Die Dateiendung bestimmt die Route: Source oder
+dekompilierte Assembly. Antworten enthalten lesbares Markdown und
+`structuredContent`; Symbol-IDs, Snapshot-Metadaten, Vollständigkeitsstatus,
+Trunkierung und gegebenenfalls Continuation-Tokens machen gezielte Folgeaufrufe
+maschinell auswertbar. Die aktuelle Tool- und Parameterschnittstelle wird über
+`tools/list` veröffentlicht.
 
 ## Schnellstart
 
-### Als MCP-Server registrieren
+1. Die [aktuelle Windows-x64-Release](https://github.com/RalfHuesing/AiNetLinter/releases/latest)
+   herunterladen und entpacken. Das Verzeichnis mit `AiNetLinter.exe` entweder
+   dem `PATH` hinzufügen oder im MCP-Host als absoluter Pfad verwenden.
+2. Den Server im MCP-Host registrieren:
 
 ```json
 {
   "mcpServers": {
     "ainetlinter": {
-      "command": "ainetlinter",
+      "command": "C:\\Tools\\AiNetLinter\\AiNetLinter.exe",
       "args": ["--mcp-server"]
     }
   }
 }
 ```
 
-Zielgebundene MCP-Aufrufe adressieren ausschließlich die konkrete vorhandene
-Solution-, Assembly- oder Exe-Datei über einen absoluten `targetPath`. Die
-Herkunft wird deterministisch aus der Dateiendung abgeleitet. Für Source-Targets
-wird ausschließlich die optionale `ainetlinter-rules.json` direkt neben der
-adressierten Solution gelesen. Jedes Tool veröffentlicht sein aktuelles
-Argument-Schema über `tools/list`; zusätzliche Argumente werden abgewiesen.
-Für den Projektstart stellt `ainetlinter://agent-guide` den Bootstrap bereit;
-`tools/list` beschreibt die aktuell registrierten Tools und ihre Parameter.
+3. Der Agent verwendet bei zielgebundenen Tool-Aufrufen einen absoluten
+   `targetPath`, beispielsweise `C:\\Code\\MeinProjekt\\MeinProjekt.slnx`.
 
-### Als CLI-Linter ausführen
+Eine Source-Solution kann direkt daneben eine optionale
+`ainetlinter-rules.json` enthalten. Sie aktiviert das Linting; die semantische
+Navigation bleibt ohne Regeldatei verfügbar.
+
+## CLI-Linter
+
+Der Batch-Modus prüft eine Solution gegen eine Regelkonfiguration und gibt
+Befunde mit Exit-Code aus. Er unterstützt Baselines für inkrementelle
+Einführung, automatische Roslyn-basierte Fixes, Caches und CI-Quality-Gates.
 
 ```powershell
-ainetlinter --config ainetlinter-rules.json --path .\src\MeinProjekt.slnx
+AiNetLinter.exe --config .\ainetlinter-rules.json --path .\src\MeinProjekt.slnx
 ```
-
-Der Lauf liefert einen Markdown-Report und einen Exit-Code: `0`, wenn keine
-neuen Verstöße gefunden werden, und `1`, wenn Verstöße vorliegen. Für die
-schrittweise Einführung stehen Baselines bereit; einfache Roslyn-basierte
-Korrekturen lassen sich mit `--fix` anwenden. Aus der Regelkonfiguration
-können außerdem Agenten-Regeln synchronisiert werden.
 
 ## Dokumentation
 
 | Dokument | Inhalt |
 | :--- | :--- |
-| [MCP- und CLI-Referenz](Docs/agent-api.md) | Tools, Parameter, Antworten, Fehler und Capability-Matrix. |
-| [Integration](Docs/integration.md) | Einbindung in ein bestehendes Projekt, Baseline, CI und MCP-Registrierung. |
-| [Konfiguration](Docs/configuration.md) | `ainetlinter-rules.json`, Regel-IDs, Defaults und `ExternalSources`. |
-| [MCP-Bootstrap](Docs/mcp-bootstrap.md) | Einmalige Einrichtung für Agenten und MCP-Hosts. |
+| [MCP-Bootstrap](Docs/mcp-bootstrap.md) | Einmalige Einrichtung eines Projekts für MCP-Hosts und Agents. |
+| [MCP- und CLI-Referenz](Docs/agent-api.md) | Aktuelle CLI-Optionen, Toolverträge, Antworten, Fehler und Capability-Matrix. |
+| [Projektintegration](Docs/integration.md) | Regeldatei, Baseline, CI und MCP-Registrierung. |
+| [Konfiguration](Docs/configuration.md) | `ainetlinter-rules.json`, Regeln, Defaults, Profile und External-Source-Mapping. |
+| [Rationale](Docs/rationale.md) | Grundlagen der Regelprinzipien. |
 
-> [AiNetLinter](https://github.com/RalfHuesing/AiNetLinter) — Quellcode, Changelog und Issues auf GitHub.
+Die eingebettete Kurzreferenz ist auch über `AiNetLinter.exe --docs <name>`
+verfügbar; die gültigen Namen stehen in `AiNetLinter.exe --help`.
