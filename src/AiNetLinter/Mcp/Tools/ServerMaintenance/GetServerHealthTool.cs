@@ -121,6 +121,21 @@ internal static class GetServerHealthTool
         }
 
         var snapshot = registry.FindSnapshot(options.TargetPath!);
+        if (snapshot is null)
+        {
+            var leaseResult = registry.Lease(options.TargetPath!);
+            if (!leaseResult.Succeeded || leaseResult.Lease is null)
+            {
+                return McpToolResults.Recoverable(
+                    leaseResult.ErrorCode!,
+                    leaseResult.ErrorMessage!,
+                    hint: ProjectToolCall.RecoverHint(leaseResult.ErrorCode!));
+            }
+
+            using var lease = leaseResult.Lease;
+            snapshot = registry.SnapshotFor(lease);
+        }
+
         return snapshot is null
             ? ProjectNotInitialized(options.TargetPath!)
             : GetServerHealthResponseBuilder.Build(
@@ -172,6 +187,23 @@ internal static class GetServerHealthTool
         }
 
         var snapshot = runtimeContext.FindProjectSnapshot(targetPath);
+        if (snapshot is null)
+        {
+            var leaseResult = runtimeContext.LeaseProject(targetPath);
+            if (leaseResult is not null)
+            {
+                if (!leaseResult.Succeeded || leaseResult.Lease is null)
+                {
+                    return Task.FromResult(McpToolResults.Recoverable(
+                        ProjectErrorCodes.ProjectLoadFailed,
+                        leaseResult.ErrorMessage ?? $"Projekt '{targetPath}' konnte nicht geladen werden."));
+                }
+
+                using var lease = leaseResult.Lease;
+                snapshot = runtimeContext.FindProjectSnapshot(targetPath);
+            }
+        }
+
         return Task.FromResult(snapshot is null
             ? ProjectNotInitialized(targetPath)
             : GetServerHealthResponseBuilder.Build(

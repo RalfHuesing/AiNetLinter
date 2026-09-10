@@ -7,15 +7,18 @@ Nach der intensiven Umsetzung der architektonischen Grundlagen in den vorangegan
 - **Task 02**: Agent Handoff (`structuredContent`, maschinenlesbare `navigation`-Blöcke, opake stabile IDs)
 - **Task 03**: Development Workflow (Konsolidierung der CLI-/MCP-Verträge, Legacy-Bereinigung)
 - **Task 04**: Verlässliche Assembly-Analyse (Metadata, Decompilation-Cache, Snapshot-Invarianz, bounded Reference-Sessions)
+- **UX-Audit Fix-Pakete 1 & 2**: Behebung aller 10 identifizierten Audit-Befunde (F-01 bis F-10)
 
-befindet sich der **AiNetLinter MCP-Server auf einem sehr hohen architektonischen und funktionalen Reifegrad**.
+befindet sich der **AiNetLinter MCP-Server auf einem exzellenten architektonischen und funktionalen Reifegrad ohne offene Befunde**.
 
-### Was bereits exzellent funktioniert:
+### Was exzellent funktioniert:
 1. **Target-Bindung & Idempotenz**: Alle 33 zielgebundenen Tools erzwingen deterministisch genau einen absoluten `targetPath`. Ein versehentliches Schweifen über das Repository oder Workspace-Verunreinigung ist ausgeschlossen ([AnalysisTargetResolver.cs](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/AnalysisTargetResolver.cs)).
 2. **Schema- & Typ-Sicherheit**: Der [McpArgumentValidationFilter.cs](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Registration/McpArgumentValidationFilter.cs) fängt Typ-Mismatches (z. B. String statt Array), fehlende Pflichtfelder und Grenzwerte (`maxResults <= 0`) sauber vor der Tool-Ausführung ab und liefert maschinenlesbare `INVALID_ARGUMENT`-Fehler mit JSON-Feldpfaden (`$.targetPath`, `$.maxResults`).
 3. **Unknown Argument Guard**: Unbekannte Argumente werden durch [TargetPathToolRegistrationOptions.cs](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Registration/TargetPathToolRegistrationOptions.cs#L66-L97) sofort abgewiesen (`Unbekanntes Argument: <name>`, `fieldPath: $.<name>`), was Phantom-Parameter verhindert.
-4. **Symbol-Chaining**: Die Verkettung `find_symbol` -> opake Symbol-ID -> `get_symbol_body` funktioniert sowohl im Source-Modus (`.slnx`) als auch im Assembly-Modus (`.dll`/`.exe`) auf echten Dekompilaten nahtlos und stabil.
-5. **Assembly-Analyse**: Bei lokalen Assemblies (`LOCAL-01`, `LOCAL-02`, `LOCAL-03`) arbeiten Metadata-Inspektion, Decompilation, Typ-/Member-Listen, Paging (`continuationToken` in `search_assembly`) und Fehlerbehandlung bei unmanaged Executables (`FALSE-01` -> `INVALID_ASSEMBLY`) absolut verlässlich.
+4. **Symbol-Chaining & Exploration**: Die Verkettung `find_symbol` -> opake Symbol-ID -> `get_symbol_body` funktioniert sowohl im Source-Modus (`.slnx`) als auch im Assembly-Modus (`.dll`/`.exe`) auf echten Dekompilaten nahtlos und stabil.
+5. **Semantischer Mehrwert**: `get_impact` liefert im Einzelsymbol-Modus betroffene Downstream-Projekte und zugeordnete Testmethoden; `get_feature_context` liefert vollständige Typ-, Interface- und Member-Deklarationen.
+6. **Health & Lifecycle**: `get_server_health` lädt noch nicht residente Source-Solutions transparent on-demand via Registry-/Runtime-Leasing, symmetrisch zum Assembly-Verhalten.
+7. **Assembly-Analyse**: Bei lokalen Assemblies (`LOCAL-01`, `LOCAL-02`, `LOCAL-03`) arbeiten Metadata-Inspektion, Decompilation, Typ-/Member-Listen, Paging (`continuationToken` in `search_assembly`) und Fehlerbehandlung bei unmanaged Executables (`FALSE-01` -> `INVALID_ASSEMBLY`) absolut verlässlich.
 
 ---
 
@@ -24,7 +27,7 @@ befindet sich der **AiNetLinter MCP-Server auf einem sehr hohen architektonische
 | Kategorie / Tool | Source (`.sln`/`.slnx`) | Assembly (`.dll`/`.exe`) | Reifegrad | Bemerkung |
 |---|---|---|---|---|
 | **Health & Meta** | | | | |
-| `get_server_health` | Unterstützt | Unterstützt | **Sehr gut** (Minor UX) | `PROJECT_NOT_INITIALIZED` bei frühem Source-Call |
+| `get_server_health` | Unterstützt | Unterstützt | **Exzellent** | On-Demand Leasing bei ungeladenem Target |
 | `report_observability_feedback` | Ungebunden | Ungebunden | **Exzellent** | Strikte FeedbackType-Validierung & synchrone Description |
 | Resource `ainetlinter://agent-guide` | Ungebunden | Ungebunden | **Exzellent** | Statischer Einstiegs-Guide |
 | Resource `ainetlinter://overview` | Unterstützt | Unsupported | **Gut** | URL-kodierter TargetPath |
@@ -44,7 +47,7 @@ befindet sich der **AiNetLinter MCP-Server auf einem sehr hohen architektonische
 | `get_file_skeleton` | Unterstützt | Unterstützt | **Exzellent** | Signaturen mit IDs für direkte Folgeschritte |
 | `find_references` | Unterstützt | Unterstützt | **Sehr gut** | Bounded im Assembly-Modus |
 | `get_call_tree` | Unterstützt | Unterstützt | **Exzellent** | Schneller Aufrufbaum mit Handoff-IDs |
-| `get_impact` | Unterstützt | Unterstützt | **Befriedigend** (Major) | Bei Einzelsymbol faktisch redundant zu `find_references` |
+| `get_impact` | Unterstützt | Unterstützt | **Exzellent** | Semantische Downstream- und Testkandidaten-Anreicherung |
 | `get_type_hierarchy` | Unterstützt | Unterstützt | **Exzellent** | Basisklassen, Interfaces, abgeleitete Klassen |
 | `find_implementations` | Unterstützt | Unterstützt | **Exzellent** | Findet alle Overrides/Implementierungen |
 | `resolve_type_origin` | Unterstützt | Unterstützt | **Exzellent** | Präzise Herkunftstrennung Quellcode vs. Dekompilierte Assembly |
@@ -59,30 +62,26 @@ befindet sich der **AiNetLinter MCP-Server auf einem sehr hohen architektonische
 | `metrics_tree` | Unterstützt | Unterstützt | **Exzellent** | Traversierung von LOC/Größe |
 | `metrics_lookup` | Unterstützt | Unterstützt | **Exzellent** | LOC, Footprint, Grenzwerte |
 | `get_hotspots` | Unterstützt | Unsupported | **Sehr gut** | Kritische Dateien nahe Zeilengrenzen |
-| `get_feature_context` | Unterstützt | Unsupported | **Befriedigend** (Major) | Fehlende Typ-Deklarationsdaten bei Klassen |
+| `get_feature_context` | Unterstützt | Unsupported | **Exzellent** | Typ- und Member-Deklarationen, bereinigtes Composite-Wire-Budget |
 | `get_test_context` | Unterstützt | Unsupported | **Exzellent** | Generiert sofort ausführbare `dotnet test` Filter |
-| `search_pattern` | Unterstützt | Unsupported | **Sehr gut** (Minor UX) | Regex/Text-Fallback für Non-C# |
+| `search_pattern` | Unterstützt | Unsupported | **Sehr gut** | Regex/Text-Fallback für Non-C# |
 | `reload_config` | Unterstützt | Unsupported | **Exzellent** | Heißes Nachladen der Rules-JSON |
 
 ---
 
-## 3. Klassifizierung der offenen Befunde
+## 3. Status aller Befunde
 
-Die noch offenen Detailbefunde sind in den thematischen Berichten dokumentiert:
+Alle identifizierten Befunde wurden behoben und durch automatisierte Tests verifiziert:
 
-| ID | Schweregrad | Kategorie | Kurztitel | Detaildatei |
-|---|---|---|---|---|
-| **F-03** | **Major** | Tool-Semantik / Exploration | `get_feature_context` liefert leere Typ-Deklarationsdaten bei Klassen (Counts: 0 sichtbare Treffer) | `03-befunde-gruppe-c...md` |
-| **F-04** | **Major** | Tool-Semantik | `get_impact` liefert bei Einzelsymbolen exakt identischen Output wie `find_references` (keine Downstream-/Testauswertung) | `03-befunde-gruppe-c...md` |
-| **F-05** | **Major** | Lifecycle / Session | `get_server_health` wirft `PROJECT_NOT_INITIALIZED` bei frischem Source-Target, während Assembly-Targets auto-geleast werden | `01-befunde-gruppe-a...md` |
+- **F-01**: Behoben (Navigation `result.available` bei 0 Violations).
+- **F-02**: Behoben (`pattern_detect` liefert partiell aggregierte Ergebnisse mit `available=true`).
+- **F-03**: Behoben (`get_feature_context` liefert vollständige Typ- und Memberdeklarationen sowie bereinigtes Wire-Budget).
+- **F-04**: Behoben (`get_impact` liefert im Einzelsymbol-Modus betroffene Downstream-Projekte und zugeordnete Testmethoden).
+- **F-05**: Behoben (`get_server_health` leaset ungeladene Source-Targets on-demand).
+- **F-06**: Behoben (`get_file_tree` Navigation-Sync).
+- **F-07**: Behoben (`get_file_tree` Root-Validation).
+- **F-08**: Behoben (`PROJECT_TARGET_UNSUPPORTED` für projekt-exklusive Tools).
+- **F-09**: Behoben (`report_observability_feedback` Type-Validierung).
+- **F-10**: Behoben (`search_pattern` Konsistenz).
 
----
-
-## 4. Fazit & Handlungsempfehlung für verbleibende offene Befunde
-
-1. **F-05 (Major — Lifecycle / Session)**:
-   - `get_server_health` mit Source-`targetPath` transparent laden oder Status `not_loaded` statt Exception-Fehler melden.
-2. **F-03 (Major — Tool-Semantik / Exploration)**:
-   - `get_feature_context` um echte Typ- und Member-Deklarationen bei Klassen/Interfaces anreichern.
-3. **F-04 (Major — Tool-Semantik)**:
-   - `get_impact` um Downstream-Projekt- und Testbezüge erweitern, um semantischen Mehrwert gegenüber `find_references` zu bieten.
+Aktuell liegen **keine offenen Befunde** vor.

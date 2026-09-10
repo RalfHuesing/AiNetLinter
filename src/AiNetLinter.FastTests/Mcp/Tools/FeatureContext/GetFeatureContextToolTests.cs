@@ -469,4 +469,30 @@ public sealed class GetFeatureContextToolTests
         Assert.Contains("Statische Referenzen/Call-Sites", text, StringComparison.Ordinal);
         Assert.DoesNotContain("Laufzeit-Coverage", text, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_ClassTarget_ReturnsMemberSignaturesInDeclaration()
+    {
+        using var scenario = CreateFullTestScenario();
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(null, Config: TestHelper.CreateDefaultConfig(), ReadOnlySolutionSnapshot: scenario.Solution)));
+
+        var result = await GetFeatureContextTool.ExecuteAsync(
+            state,
+            new FeatureContextOptions("CoreLib.Calculator", IncludeTests: false, IncludeMetrics: false, IncludeViolations: false),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("Member", text, StringComparison.Ordinal);
+        Assert.Contains("Add", text, StringComparison.Ordinal);
+        Assert.Contains("Multiply", text, StringComparison.Ordinal);
+
+        var declaration = result.StructuredContent!.Value.GetProperty("declaration");
+        Assert.True(declaration.TryGetProperty("members", out var membersProp));
+        var members = membersProp.EnumerateArray().Select(e => e.GetString()).ToList();
+        Assert.NotNull(members);
+        Assert.Contains(members, m => m!.Contains("Add", StringComparison.Ordinal));
+        Assert.Contains(members, m => m!.Contains("Multiply", StringComparison.Ordinal));
+    }
 }

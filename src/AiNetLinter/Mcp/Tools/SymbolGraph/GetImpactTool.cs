@@ -203,18 +203,26 @@ internal static class GetImpactTool
                 effectiveMax,
                 ct,
                 AssemblySymbolIdentity: assemblyIdentity));
+
+        var testCoverage = await TestCoverageScanner.FindTestsForSymbolAsync(symbol!, solution, ct);
+        var affectedProjects = TransitiveCallGraphFormatter.ResolveAffectedProjects(solution, symbol, traversal.CallSites);
         var formatted = TransitiveCallGraphFormatter.FormatResponse(
             traversal,
             traversal.Completeness.TotalCallSiteCount == 0
                 ? $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"
                 : null);
 
-        // Wie find_references: auch ein leeres, aber vollstaendiges Ergebnis gilt als
-        // abschliessend und bekommt den Sufficiency-Hinweis statt stillschweigend zu enden.
-        var finalBody = TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
-            ? McpSufficiencyHints.Append(formatted.Text)
-            : formatted.Text;
-        return McpToolResults.Text(finalBody, formatted.Traversal);
+        var finalBody = TransitiveCallGraphFormatter.FormatSymbolImpactText(
+            symbol!, affectedProjects, testCoverage, formatted);
+
+        var payload = new SymbolImpactPayload(
+            traversal.CallSites,
+            traversal.Completeness,
+            affectedProjects,
+            new SymbolTestImpactDto(testCoverage.TotalMatchingTests, testCoverage.TestFiles.Count, testCoverage.TestFiles),
+            traversal.Navigation);
+
+        return McpToolResults.Text(finalBody, payload);
     }
 
     private static async Task<CallToolResult> ExecuteAssemblySymbolBranchAsync(
@@ -236,11 +244,13 @@ internal static class GetImpactTool
                 input.Depth,
                 navigation),
             ct).ConfigureAwait(false);
+
         var formatted = TransitiveCallGraphFormatter.FormatResponse(
             traversal,
             traversal.Completeness.TotalCallSiteCount == 0
                 ? $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"
                 : null);
+
         var finalBody = TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
             ? McpSufficiencyHints.Append(formatted.Text)
             : formatted.Text;

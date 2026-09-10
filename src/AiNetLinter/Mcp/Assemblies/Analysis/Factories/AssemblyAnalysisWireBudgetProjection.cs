@@ -146,11 +146,18 @@ internal static class AssemblyAnalysisWireBudgetProjection
             ["detailHint"] = "Die strukturierte Nutzlast wurde auf den minimalen Antwortumfang gekürzt; maxResponseBytes erhöhen oder die Detailabfrage gezielt erneut anfordern.",
         };
         if (result.StructuredContent is { ValueKind: JsonValueKind.Object } structured
-            && JsonNode.Parse(structured.GetRawText()) is JsonObject original
-            && original["navigation"] is JsonNode navigation)
+            && JsonNode.Parse(structured.GetRawText()) is JsonObject original)
         {
-            minimalPayload["navigation"] = navigation.DeepClone();
-            MarkNavigationTruncated(minimalPayload);
+            if (original["navigation"] is JsonNode navigation)
+            {
+                minimalPayload["navigation"] = navigation.DeepClone();
+                MarkNavigationTruncated(minimalPayload);
+            }
+
+            if (original["analysis"] is JsonNode analysis)
+            {
+                minimalPayload["analysis"] = analysis.DeepClone();
+            }
         }
 
         var minimal = ReplaceStructured(

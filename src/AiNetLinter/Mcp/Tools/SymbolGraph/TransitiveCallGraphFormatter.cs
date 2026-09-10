@@ -2,10 +2,13 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System;
+using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Output;
+using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -197,6 +200,67 @@ internal static class TransitiveCallGraphFormatter
             : $"[{completeness.TotalCallSiteCount} Treffer gesamt " +
               $"(depth={completeness.EffectiveDepth}, hard-cap {CallGraphTraversal.MaxRecursionNodes}), " +
               $"{completeness.ShownCallSiteCount} gezeigt — depth reduzieren oder maxResults erhoehen]";
+    }
+
+    internal static IReadOnlyList<string> ResolveAffectedProjects(
+        Solution solution,
+        ISymbol? symbol,
+        IReadOnlyList<TransitiveCallSiteEntry> callSites)
+    {
+        var affectedProjects = callSites
+            .Select(cs => cs.ProjectName)
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (symbol?.ContainingAssembly is { } asm)
+        {
+            var sourceProj = solution.Projects.FirstOrDefault(p =>
+                string.Equals(p.AssemblyName, asm.Name, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(p.Name, asm.Name, StringComparison.OrdinalIgnoreCase));
+            if (sourceProj is not null && !affectedProjects.Contains(sourceProj.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                affectedProjects.Insert(0, sourceProj.Name);
+            }
+        }
+
+        return affectedProjects;
+    }
+
+    internal static string FormatSymbolImpactText(
+        ISymbol symbol,
+        IReadOnlyList<string> affectedProjects,
+        TestCoverageScannerResult testCoverage,
+        TransitiveCallGraphFormatResult formatted)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"# Auswirkungsanalyse (Impact): {symbol.ToDisplayString()}");
+        var projText = affectedProjects.Count > 0 ? string.Join(", ", affectedProjects) : "keine";
+        sb.AppendLine($"- **Betroffene Projekte ({affectedProjects.Count}):** {projText}");
+        sb.AppendLine($"- **Zugeordnete Tests:** {testCoverage.TotalMatchingTests} Testmethode(n) in {testCoverage.TestFiles.Count} Testdatei(en)");
+        sb.AppendLine($"- **Aufrufstellen:** {formatted.Traversal.Completeness.TotalCallSiteCount} statische Referenz(en) (gezeigt: {formatted.Traversal.CallSites.Count})");
+        sb.AppendLine();
+        sb.AppendLine("## Aufrufstellen");
+        sb.AppendLine(formatted.Text);
+
+        if (testCoverage.TestFiles.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine($"## Zugeordnete Testkandidaten ({testCoverage.TotalMatchingTests})");
+            foreach (var testFile in testCoverage.TestFiles.Take(10))
+            {
+                var methodsPreview = testFile.TestMethods.Count > 0
+                    ? $" ({string.Join(", ", testFile.TestMethods.Take(3))}{(testFile.TestMethods.Count > 3 ? ", ..." : "")})"
+                    : "";
+                sb.AppendLine($"- {testFile.FilePath}{methodsPreview}");
+            }
+        }
+
+        var fullText = sb.ToString().TrimEnd();
+        return IsComplete(formatted.Traversal)
+            ? McpSufficiencyHints.Append(fullText)
+            : fullText;
     }
 
     private static string NormalizeDiagnostic(string diagnostic) =>

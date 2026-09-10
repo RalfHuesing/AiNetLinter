@@ -16,16 +16,19 @@ internal sealed class DaemonRuntimeContext
 {
     private readonly Func<DaemonRuntimeSnapshot> snapshotProvider;
     private readonly Func<string, ProjectSnapshot?>? projectSnapshotProvider;
+    private readonly Func<string, DaemonRegistryLeaseResult>? projectLeaseProvider;
 
     internal DaemonRuntimeContext(
         int connectionId,
         Func<DaemonRuntimeSnapshot> snapshotProvider,
-        Func<string, ProjectSnapshot?>? projectSnapshotProvider = null)
+        Func<string, ProjectSnapshot?>? projectSnapshotProvider = null,
+        Func<string, DaemonRegistryLeaseResult>? projectLeaseProvider = null)
     {
         ArgumentNullException.ThrowIfNull(snapshotProvider);
         ConnectionId = connectionId;
         this.snapshotProvider = snapshotProvider;
         this.projectSnapshotProvider = projectSnapshotProvider;
+        this.projectLeaseProvider = projectLeaseProvider;
     }
 
     internal int ConnectionId { get; }
@@ -36,4 +39,7 @@ internal sealed class DaemonRuntimeContext
 
     internal ProjectSnapshot? FindProjectSnapshot(string analysisRoot) =>
         projectSnapshotProvider?.Invoke(analysisRoot);
+
+    internal DaemonRegistryLeaseResult? LeaseProject(string analysisRoot) =>
+        projectLeaseProvider?.Invoke(analysisRoot);
 }

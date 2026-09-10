@@ -9,33 +9,8 @@
 
 ---
 
-### [Major] Befund F-05: `get_server_health` wirft `PROJECT_NOT_INITIALIZED` bei noch nicht geladenem Source-Target (Asymmetrie zu Assemblies)
-- **Tool(s)**: `get_server_health`
-- **Quellcode**:
-  - [GetServerHealthTool.cs:123-125](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/ServerMaintenance/GetServerHealthTool.cs#L123-L125)
-  - [GetServerHealthTool.cs:91](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/ServerMaintenance/GetServerHealthTool.cs#L91)
-  - [ServerMaintenanceToolRegistrations.cs:87](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Registration/ServerMaintenanceToolRegistrations.cs#L87)
-- **Evidenz**:
-  Aufruf von `get_server_health` direkt nach dem Start des Daemon/Servers mit einem gültigen `.slnx`-Target:
-  ```text
-  [ERROR]: PROJECT_NOT_INITIALIZED: Fuer 'C:\Daten\Entwicklung\Ralf\AiNetLinter\AiNetLinter.slnx' existiert kein residenter Projekt-Key.
-  hint: Ersten zielgebundenen Tool-Aufruf mit diesem targetPath senden; die Solution wird direkt geladen...
-  ```
-  Dagegen Aufruf von `get_server_health` mit einem Assembly-Target (`LOCAL-01`):
-  ```text
-  # AiNetLinter MCP-Server — Health
-  ...
-  ## Assembly-Sessions (1)
-  ...
-  LoadState: partial, Vollständigkeit: partial, Hash: ...
-  ```
-- **Problem**: Ein Agent, der zu Beginn einer Session prüfen möchte, ob sein Projekt gesund ist (`get_server_health(targetPath)`), erhält einen verwirrenden Fehler `PROJECT_NOT_INITIALIZED`, weil `FindSnapshot` im In-Memory-Dictionary sucht, statt die Solution zu laden. Bei Assemblies hingegen führt `ExecuteAssemblyAsync` automatisch `assemblyRegistry.LeaseAsync` aus und lädt die Assembly on demand!
-- **Reproduktion**:
-  1. Server neu starten.
-  2. `get_server_health(targetPath: "<pfad-zu-solution>.slnx")` aufrufen.
-- **Empfehlung**:
-  In [GetServerHealthTool.cs:123](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/ServerMaintenance/GetServerHealthTool.cs#L123): Entweder wie bei Assemblies ein transparentes Lease/Laden auslösen oder in der Antwort ein strukturiertes Snapshot-DTO mit `LoadState: not_loaded` / `fresh: false` ohne harten Error-Return liefern.
-
+### Status Gruppe A
+Alle Befunde in Gruppe A (einschließlich F-05: On-Demand Leasing bei ungeladenem Source-Target in `get_server_health`) wurden erfolgreich behoben und verifiziert. Aktuell liegen keine offenen Befunde in Gruppe A vor.
 
 ---
 

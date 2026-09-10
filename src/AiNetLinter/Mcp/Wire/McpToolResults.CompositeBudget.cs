@@ -238,31 +238,68 @@ internal static partial class McpToolResultsWireBudget
 
     private static void AppendCountSummary(StringBuilder builder, JsonObject section, string sectionName)
     {
-        if (sectionName == "impact")
+        switch (sectionName)
         {
-            builder.AppendLine($"- **Counts:** {CountArray(section, "callSites")} von {ReadInt(section, "totalCallers", 0)} statischen Referenzen/Call-Sites zurückgegeben.");
+            case "declaration":
+                AppendDeclarationSummary(builder, section);
+                break;
+            case "metrics":
+                AppendMetricsSummary(builder, section);
+                break;
+            case "impact":
+                builder.AppendLine($"- **Counts:** {CountArray(section, "callSites")} von {ReadInt(section, "totalCallers", 0)} statischen Referenzen/Call-Sites zurückgegeben.");
+                break;
+            case "violations":
+                AppendViolationsSummary(builder, section);
+                break;
+            case "testContext":
+                AppendTestContextSummary(builder, section);
+                break;
+            default:
+                var counts = $"{ReadInt(section, "returnedCount", CountArray(section, "callSites", "violations"))} sichtbare Treffer von {ReadInt(section, "totalCount", 0)}";
+                builder.AppendLine($"- **Counts:** {counts}.");
+                break;
+        }
+    }
+
+    private static void AppendDeclarationSummary(StringBuilder builder, JsonObject section)
+    {
+        var kind = ReadString(section, "kind") ?? "Symbol";
+        var accessibility = ReadString(section, "accessibility") ?? "";
+        var lineCount = ReadInt(section, "lineCount", 0);
+        var memberCount = CountArray(section, "members");
+        var memberText = memberCount > 0 ? $"; {memberCount} Member" : "";
+        builder.AppendLine($"- **Deklaration:** {kind} ({accessibility}; {lineCount} Zeilen{memberText}).");
+    }
+
+    private static void AppendMetricsSummary(StringBuilder builder, JsonObject section)
+    {
+        var checks = CountArray(section, "checks");
+        var status = ReadString(section, "status") ?? ReadString(section, "completeness") ?? "complete";
+        builder.AppendLine($"- **Counts:** {checks} Metriken bewertet (Status: {status}).");
+    }
+
+    private static void AppendViolationsSummary(StringBuilder builder, JsonObject section)
+    {
+        var status = ReadString(section, "status") ?? ReadString(section, "completeness") ?? "complete";
+        if (status is not ("complete" or "empty" or "truncated"))
+        {
+            builder.AppendLine($"- **Counts:** nicht entscheidbar (Status: {status}; keine Sauberkeitsaussage).");
             return;
         }
 
-        if (sectionName == "violations")
-        {
-            var status = ReadString(section, "status") ?? ReadString(section, "completeness") ?? "complete";
-            if (status is not ("complete" or "empty" or "truncated"))
-            {
-                builder.AppendLine($"- **Counts:** nicht entscheidbar (Status: {status}; keine Sauberkeitsaussage).");
-                return;
-            }
+        var total = ReadInt(section, "totalViolationsOnFile", 0);
+        builder.AppendLine($"- **Counts:** {CountArray(section, "violations")} von {total} Verstoesse; {ReadInt(section, "violationsOnSymbol", 0)} direkt auf dem Symbol.");
+        builder.AppendLine($"- ({total} Verstoesse; Status: {status}).");
+    }
 
-            var total = ReadInt(section, "totalViolationsOnFile", 0);
-            builder.AppendLine($"- **Counts:** {CountArray(section, "violations")} von {total} Verstoesse; {ReadInt(section, "violationsOnSymbol", 0)} direkt auf dem Symbol.");
-            builder.AppendLine($"- ({total} Verstoesse; Status: {status}).");
-            return;
-        }
-
-        var counts = sectionName == "testContext"
-            ? $"{ReadInt(section, "returnedTestFiles", CountArray(section, "testFiles"))} von {ReadInt(section, "totalTestFiles", 0)} Testdateien und {ReadInt(section, "returnedTestMethods", ReadInt(section, "displayedTestMethods", 0))} von {ReadInt(section, "totalMatchingTests", 0)} Testmethoden"
-            : $"{ReadInt(section, "returnedCount", CountArray(section, "callSites", "violations"))} sichtbare Treffer von {ReadInt(section, "totalCount", 0)}";
-        builder.AppendLine($"- **Counts:** {counts}.");
+    private static void AppendTestContextSummary(StringBuilder builder, JsonObject section)
+    {
+        var returnedFiles = ReadInt(section, "returnedTestFiles", CountArray(section, "testFiles"));
+        var totalFiles = ReadInt(section, "totalTestFiles", 0);
+        var returnedMethods = ReadInt(section, "returnedTestMethods", ReadInt(section, "displayedTestMethods", 0));
+        var totalMethods = ReadInt(section, "totalMatchingTests", 0);
+        builder.AppendLine($"- **Counts:** {returnedFiles} von {totalFiles} Testdateien und {returnedMethods} von {totalMethods} Testmethoden.");
     }
 
     private static int ReadInt(JsonObject owner, string propertyName, int fallback) =>

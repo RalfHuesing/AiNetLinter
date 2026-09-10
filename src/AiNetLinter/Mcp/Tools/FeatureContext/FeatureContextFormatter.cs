@@ -61,9 +61,17 @@ internal static class FeatureContextFormatter
         {
             sb.AppendLine($"- **Container:** {decl.ContainerType}");
         }
+        if (decl.BaseTypes is { Count: > 0 })
+        {
+            sb.AppendLine($"- **Basis & Interfaces:** {string.Join(", ", decl.BaseTypes)}");
+        }
         if (decl.Parameters.Count > 0)
         {
             sb.AppendLine($"- **Parameter:** {string.Join(", ", decl.Parameters)}");
+        }
+        if (decl.Members is { Count: > 0 })
+        {
+            sb.AppendLine($"- **Member ({decl.Members.Count}):** {string.Join("; ", decl.Members)}");
         }
         if (!string.IsNullOrEmpty(decl.DocCommentId))
         {

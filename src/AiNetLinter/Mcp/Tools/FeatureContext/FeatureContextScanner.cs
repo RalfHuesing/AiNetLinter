@@ -230,7 +230,7 @@ internal static class FeatureContextScanner
     {
         var (filePath, startLine, endLine) = ExtractLocation(symbol, solutionDir);
         var lineCount = endLine >= startLine ? endLine - startLine + 1 : 0;
-        var (returnType, parameters) = ExtractTypeAndParameters(symbol);
+        var (returnType, parameters, baseTypes, members) = ExtractTypeAndParameters(symbol);
         var docCommentId = assemblyIdentity?.Format(
             symbol.TryGetDocCommentId() ?? CallGraphTraversal.GetStableSymbolId(symbol))
             ?? symbol.TryGetDocCommentId();
@@ -246,7 +246,9 @@ internal static class FeatureContextScanner
             ContainerType: symbol.ContainingType?.Name,
             ReturnType: returnType,
             Parameters: parameters,
-            DocCommentId: docCommentId
+            DocCommentId: docCommentId,
+            BaseTypes: baseTypes,
+            Members: members
         );
     }
 
@@ -276,7 +278,7 @@ internal static class FeatureContextScanner
         return ("", 0, 0);
     }
 
-    private static (string? ReturnType, IReadOnlyList<string> Parameters) ExtractTypeAndParameters(ISymbol symbol)
+    private static (string? ReturnType, IReadOnlyList<string> Parameters, IReadOnlyList<string>? BaseTypes, IReadOnlyList<string>? Members) ExtractTypeAndParameters(ISymbol symbol)
     {
         if (symbol is IMethodSymbol method)
         {
@@ -284,20 +286,68 @@ internal static class FeatureContextScanner
             var parameters = method.Parameters
                 .Select(p => $"{p.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} {p.Name}")
                 .ToList();
-            return (returnType, parameters);
+            return (returnType, parameters, null, null);
         }
 
         if (symbol is IPropertySymbol prop)
         {
-            return (prop.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), []);
+            return (prop.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), [], null, null);
         }
 
         if (symbol is IFieldSymbol field)
         {
-            return (field.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), []);
+            return (field.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), [], null, null);
         }
 
-        return (null, []);
+        if (symbol is INamedTypeSymbol namedType)
+        {
+            var baseTypes = new List<string>();
+            if (namedType.BaseType != null && namedType.BaseType.SpecialType != SpecialType.System_Object)
+            {
+                baseTypes.Add(namedType.BaseType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat));
+            }
+            foreach (var iface in namedType.Interfaces)
+            {
+                baseTypes.Add(iface.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat));
+            }
+
+            var members = namedType.GetMembers()
+                .Where(m => !m.IsImplicitlyDeclared && m.CanBeReferencedByName)
+                .Where(m => m is IMethodSymbol { MethodKind: MethodKind.Ordinary or MethodKind.Constructor }
+                         or IPropertySymbol
+                         or IEventSymbol)
+                .Select(FormatMemberSignature)
+                .Take(25)
+                .ToList();
+
+            return (null, [], baseTypes.Count > 0 ? baseTypes : null, members.Count > 0 ? members : null);
+        }
+
+        return (null, [], null, null);
+    }
+
+    private static string FormatMemberSignature(ISymbol member)
+    {
+        if (member is IMethodSymbol method)
+        {
+            var ret = method.ReturnType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+            var pars = string.Join(", ", method.Parameters.Select(p => $"{p.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} {p.Name}"));
+            return $"{method.Name}({pars}) : {ret}";
+        }
+
+        if (member is IPropertySymbol prop)
+        {
+            var propType = prop.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+            return $"{prop.Name} : {propType}";
+        }
+
+        if (member is IEventSymbol evt)
+        {
+            var evtType = evt.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+            return $"event {evt.Name} : {evtType}";
+        }
+
+        return member.Name;
     }
 
 

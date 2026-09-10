@@ -302,9 +302,11 @@ public sealed class WiringProjectContractTests
         Assert.Contains(solutionPathB, filteredText, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(solutionPathA, filteredText, StringComparison.OrdinalIgnoreCase);
         var unknown = tempDir.CreateFile("unbekannt.slnx", string.Empty);
-        var notInitialized = await GetServerHealthTool.ExecuteAsync(registry, targetPath: unknown);
-        Assert.True(notInitialized.IsError);
-        Assert.Contains("[ERROR]: PROJECT_NOT_INITIALIZED", TextOf(notInitialized), StringComparison.Ordinal);
+        var freshlyLoaded = await GetServerHealthTool.ExecuteAsync(registry, targetPath: unknown);
+        Assert.NotEqual(true, freshlyLoaded.IsError);
+        var freshlyLoadedText = TextOf(freshlyLoaded);
+        Assert.Contains(unknown, freshlyLoadedText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("## Projekte (1)", freshlyLoadedText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -319,6 +321,30 @@ public sealed class WiringProjectContractTests
             17,
             () => new DaemonRuntimeSnapshot(1, 1234, TimeSpan.FromSeconds(3), [solutionPath], "test"),
             daemonRegistry.FindSnapshot);
+
+        var result = await GetServerHealthTool.ExecuteAsync(
+            localRegistry,
+            new GetServerHealthOptions(TargetPath: solutionPath, RuntimeContext: runtimeContext));
+
+        Assert.NotEqual(true, result.IsError);
+        var text = TextOf(result);
+        Assert.Contains("## Projekte (1)", text, StringComparison.Ordinal);
+        Assert.Contains(solutionPath, text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Health_ProjectTarget_LoadsOnDemandViaDaemonLeaseProviderWhenSnapshotNotPresent()
+    {
+        using var tempDir = TestTempDirectory.Create("wiring-health-daemon-ondemand-");
+        var solutionPath = CreateSolutionPath(tempDir, "daemon-ondemand");
+        await using var daemonRegistry = ProjectWiringFixtures.CreateLoadedRegistry();
+        await using var localRegistry = ProjectWiringFixtures.CreateLoadedRegistry();
+        var adapter = new DaemonRegistryAdapter(daemonRegistry);
+        var runtimeContext = new DaemonRuntimeContext(
+            17,
+            () => new DaemonRuntimeSnapshot(1, 1234, TimeSpan.FromSeconds(3), [], "test"),
+            adapter.FindSnapshot,
+            adapter.Lease);
 
         var result = await GetServerHealthTool.ExecuteAsync(
             localRegistry,

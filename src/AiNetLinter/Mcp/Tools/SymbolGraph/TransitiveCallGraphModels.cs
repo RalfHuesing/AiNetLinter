@@ -36,6 +36,7 @@ internal sealed record TraversalCompleteness(
     bool DiagnosticsTruncated = false,
     IReadOnlyList<string>? DiagnosticsTruncatedBy = null);
 
+
 internal sealed record ReferenceTraversalResult(
     IReadOnlyList<TransitiveCallSiteEntry> CallSites,
     TraversalCompleteness Completeness,
@@ -49,3 +50,15 @@ internal sealed record ReferenceTraversalRequest(
     CancellationToken CancellationToken,
     int? NodeLimit = null,
     AnalysisSymbolIdentity? AssemblySymbolIdentity = null);
+
+internal sealed record SymbolImpactPayload(
+    IReadOnlyList<TransitiveCallSiteEntry> CallSites,
+    TraversalCompleteness Completeness,
+    IReadOnlyList<string> AffectedProjects,
+    SymbolTestImpactDto? TestImpact = null,
+    AssemblyNavigationSummary? Navigation = null);
+
+internal sealed record SymbolTestImpactDto(
+    int TotalMatchingTests,
+    int TotalTestFiles,
+    IReadOnlyList<AiNetLinter.Core.TestFileCoverageResult> TestFiles);

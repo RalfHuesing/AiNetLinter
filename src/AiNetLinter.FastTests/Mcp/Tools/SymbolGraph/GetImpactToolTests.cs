@@ -73,6 +73,25 @@ public sealed class GetImpactToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_SymbolIdentifier_EnrichesResponseWithAffectedProjectsAndTests()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, "Greeter.Greet", 50, 1), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
+        Assert.Contains("Auswirkungsanalyse (Impact)", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("Betroffene Projekte", textContent.Text, StringComparison.Ordinal);
+
+        Assert.NotNull(result.StructuredContent);
+        Assert.True(result.StructuredContent!.Value.TryGetProperty("affectedProjects", out var affectedProjectsProp));
+        var affectedProjects = affectedProjectsProp.Deserialize<List<string>>(McpJsonOptions.Default);
+        Assert.NotNull(affectedProjects);
+        Assert.True(result.StructuredContent!.Value.TryGetProperty("testImpact", out _));
+    }
+
+    [Fact]
     public async Task ExecuteAsync_StableSymbolIdentifierGiven_ReturnsCallSites()
     {
         var state = _fixture.CreateServer();

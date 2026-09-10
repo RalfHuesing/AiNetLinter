@@ -38,7 +38,9 @@ internal sealed record SymbolDeclarationDto(
     string? ContainerType,
     string? ReturnType,
     IReadOnlyList<string> Parameters,
-    string? DocCommentId
+    string? DocCommentId,
+    IReadOnlyList<string>? BaseTypes = null,
+    IReadOnlyList<string>? Members = null
 );
 
 /// <summary>
