@@ -252,5 +252,42 @@ public sealed class GetNamespaceTreeToolTests
         Assert.Equal(payload.ShownCount, payload.Types!.Count);
         Assert.All(payload.Types, type => Assert.Contains(type.Name, text, StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void ApplyFinalResponseBudget_WithSufficientPositiveBudget_PreservesCompleteResponseWithoutTruncationMetadata()
+    {
+        var payload = new NamespaceTreePayload(
+            SolutionName: "BudgetSolution",
+            Project: "BudgetProject",
+            NamespacePrefix: "BudgetNs",
+            KindFilter: "all",
+            Depth: 1,
+            IncludeTypes: true,
+            TotalCount: 1,
+            ShownCount: 1,
+            Truncated: false,
+            Types: [new TypeNodeEntry("Type1", "class", "Budget.cs", 1, "public")]);
+        var result = new CallToolResult
+        {
+            Content =
+            [
+                new TextContentBlock
+                {
+                    Text = "# Typen in Namespace 'BudgetNs' (Projekt: BudgetProject):\n\n- Type1 (class) — Budget.cs:1\n\n## Navigation\n\n- get_class_structure"
+                }
+            ],
+            StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
+        };
+
+        var projected = GetNamespaceTreeTool.ApplyFinalResponseBudget(result, 16_384);
+
+        Assert.Same(result, projected);
+        var projectedPayload = projected.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default);
+        Assert.NotNull(projectedPayload);
+        Assert.False(projectedPayload!.Truncated);
+        Assert.Null(projectedPayload.Next);
+        Assert.DoesNotContain("maxResponseBytes", projectedPayload.TruncatedBy ?? [], StringComparer.Ordinal);
+        Assert.DoesNotContain("maxResponseBytes", Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text, StringComparison.Ordinal);
+    }
 }
 

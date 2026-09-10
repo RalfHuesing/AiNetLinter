@@ -225,6 +225,7 @@ internal static class GetNamespaceTreeScanner
 
         var totalCount = flatListForOutput.Count;
         var shownList = flatListForOutput.Take(parameters.MaxResults).ToList();
+        var shownProjection = NamespaceTreeProjection.Take(rootNodes, parameters.MaxResults);
         var truncated = totalCount > parameters.MaxResults;
 
         var sb = new StringBuilder();
@@ -254,9 +255,9 @@ internal static class GetNamespaceTreeScanner
             Depth: parameters.Depth,
             IncludeTypes: parameters.IncludeTypes,
             TotalCount: totalCount,
-            ShownCount: shownList.Count,
+            ShownCount: shownProjection.Count,
             Truncated: truncated,
-            Namespaces: rootNodes,
+            Namespaces: shownProjection.Nodes,
             TruncatedBy: truncated ? ["maxResults"] : null,
             Next: truncated ? new NamespaceTreeNext("request_detail", "maxResults erhöhen oder depth/namespacePrefix verfeinern.") : null);
 
