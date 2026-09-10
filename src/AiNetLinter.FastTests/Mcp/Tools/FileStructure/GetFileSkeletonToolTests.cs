@@ -2,6 +2,7 @@
 
 using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
@@ -13,6 +14,7 @@ using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Tools.FileStructure;
 
+// @covers FileSkeletonPayload
 [Trait("Category", "Component")]
 public sealed class GetFileSkeletonToolTests
 {
@@ -110,6 +112,33 @@ public sealed class GetFileSkeletonToolTests
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.True(System.Text.Encoding.UTF8.GetByteCount(text) <= 180);
         Assert.Contains("maxResponseBytes", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ApplyFinalResponseBudget_WithoutStructuredContent_ReturnsOriginalResponse()
+    {
+        var result = new CallToolResult
+        {
+            Content = [new TextContentBlock { Text = new string('x', 256) }]
+        };
+
+        var projected = GetFileSkeletonTool.ApplyFinalResponseBudget(result, 64);
+
+        Assert.Same(result, projected);
+    }
+
+    [Fact]
+    public void ApplyFinalResponseBudget_WithNonObjectStructuredContent_ReturnsOriginalResponse()
+    {
+        var result = new CallToolResult
+        {
+            Content = [new TextContentBlock { Text = new string('x', 256) }],
+            StructuredContent = JsonSerializer.SerializeToElement(new[] { "not-an-object" })
+        };
+
+        var projected = GetFileSkeletonTool.ApplyFinalResponseBudget(result, 64);
+
+        Assert.Same(result, projected);
     }
 
     [Fact]

@@ -484,16 +484,6 @@ internal static class GetNamespaceTreeTool
     private static int CombinedResponseBytes(string text, JsonObject envelope) =>
         Encoding.UTF8.GetByteCount(text) + JsonSerializer.SerializeToUtf8Bytes(envelope, McpJsonOptions.Default).Length;
 
-    private static string TrimUtf8(string value, int maxBytes)
-    {
-        const string marker = "\n\n[Antwort wegen maxResponseBytes begrenzt — maxResponseBytes erhöhen oder den Scope verfeinern]";
-        var markerBytes = Encoding.UTF8.GetByteCount(marker);
-        var budget = Math.Max(0, maxBytes - markerBytes);
-        var slice = value.AsSpan();
-        while (slice.Length > 0 && Encoding.UTF8.GetByteCount(slice) > budget) slice = slice[..^1];
-        return markerBytes >= maxBytes ? slice.ToString() : slice.ToString().TrimEnd() + marker;
-    }
-
     private static bool HasVisibleEntries(NamespaceTreePayload payload) =>
         payload.Projects is { Count: > 0 } || payload.Types is { Count: > 0 } || payload.Namespaces is { Count: > 0 };
 

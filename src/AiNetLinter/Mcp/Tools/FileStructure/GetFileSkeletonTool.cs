@@ -132,46 +132,54 @@ internal static class GetFileSkeletonTool
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
     {
         if (maxResponseBytes <= 0) return result;
-        var text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text;
-        if (text is null) return result;
-        var structured = result.StructuredContent is { ValueKind: JsonValueKind.Object } value
-            ? JsonNode.Parse(value.GetRawText()) as JsonObject
-            : new JsonObject();
-        if (structured is null) return result;
-        if (Encoding.UTF8.GetByteCount(text) + SerializedSize(structured) <= maxResponseBytes) return result;
+        if (!TryReadBudgetResponse(result, out var text, out var structured)) return result;
+        if (FitsBudget(text, structured, maxResponseBytes)) return result;
 
-        var navigationIndex = text.IndexOf("## Navigation", StringComparison.Ordinal);
-        var footer = navigationIndex < 0 ? string.Empty : "\n\n" + text[navigationIndex..].Trim();
-        var body = navigationIndex < 0 ? text : text[..navigationIndex].TrimEnd();
-        var skeletonIndex = body.IndexOf("# AiNetLinter — Skeleton Map", StringComparison.Ordinal);
-        var prefix = skeletonIndex > 0 ? body[..skeletonIndex].TrimEnd() + "\n\n" : string.Empty;
-        if (skeletonIndex > 0) body = body[skeletonIndex..];
-        var units = body.Split("\n\n---\n\n", StringSplitOptions.RemoveEmptyEntries).ToList();
-        var payload = FileSkeletonPayload.From(structured);
-        const string markerFormat = "[Antwort wegen maxResponseBytes begrenzt — {0} vollständige Skeleton-Einheiten ausgelassen; maxResponseBytes erhöhen oder filePaths verfeinern]";
-        var kept = new List<string>();
-        for (var i = 0; i < units.Count; i++)
+        return BuildBudgetedResponse(result, text, structured, maxResponseBytes);
+    }
+
+    private static bool TryReadBudgetResponse(
+        CallToolResult result,
+        out string text,
+        out JsonObject structured)
+    {
+        text = string.Empty;
+        structured = new JsonObject();
+
+        var textBlock = result.Content.OfType<TextContentBlock>().FirstOrDefault();
+        if (textBlock is null || result.StructuredContent is not { ValueKind: JsonValueKind.Object } value)
         {
-            var omitted = units.Count - i - 1;
-            var marker = string.Format(markerFormat, omitted);
-            var candidate = prefix + string.Join("\n\n---\n\n", kept.Append(units[i])) + "\n\n" + marker + footer;
-            var candidatePayload = payload.ProjectToText(candidate);
-            if (Encoding.UTF8.GetByteCount(candidate) + SerializedSize(candidatePayload) > maxResponseBytes) break;
-            kept.Add(units[i]);
+            return false;
         }
 
-        var remaining = units.Count - kept.Count;
-        var finalMarker = string.Format(markerFormat, remaining);
-        var finalText = prefix + string.Join("\n\n---\n\n", kept);
-        finalText = string.IsNullOrEmpty(finalText)
-            ? finalMarker + footer
-            : finalText + "\n\n" + finalMarker + footer;
+        var parsed = JsonNode.Parse(value.GetRawText()) as JsonObject;
+        if (parsed is null)
+        {
+            return false;
+        }
+
+        text = textBlock.Text;
+        structured = parsed;
+        return true;
+    }
+
+    private static bool FitsBudget(string text, object structured, int maxResponseBytes) =>
+        Encoding.UTF8.GetByteCount(text) + SerializedSize(structured) <= maxResponseBytes;
+
+    private static CallToolResult BuildBudgetedResponse(
+        CallToolResult result,
+        string text,
+        JsonObject structured,
+        int maxResponseBytes)
+    {
+        var parts = SplitResponse(text);
+        var payload = FileSkeletonPayload.From(structured);
+        var kept = KeepUnits(parts, payload, maxResponseBytes);
+        var finalText = BuildFinalText(parts, kept);
         var finalPayload = payload.ProjectToText(finalText);
         var finalNode = JsonSerializer.SerializeToNode(finalPayload, McpJsonOptions.Default) as JsonObject ?? new JsonObject();
-        if (structured["navigation"] is JsonNode finalNavigation)
-        {
-            finalNode["navigation"] = finalNavigation.DeepClone();
-        }
+        PreserveNavigation(structured, finalNode);
+
         if (Encoding.UTF8.GetByteCount(finalText) + SerializedSize(finalNode) > maxResponseBytes)
         {
             return McpToolResults.InvalidArgument(
@@ -186,6 +194,54 @@ internal static class GetFileSkeletonTool
             StructuredContent = JsonSerializer.SerializeToElement(finalNode, McpJsonOptions.Default),
         };
     }
+
+    private static SkeletonResponseParts SplitResponse(string text)
+    {
+        var navigationIndex = text.IndexOf("## Navigation", StringComparison.Ordinal);
+        var footer = navigationIndex < 0 ? string.Empty : "\n\n" + text[navigationIndex..].Trim();
+        var body = navigationIndex < 0 ? text : text[..navigationIndex].TrimEnd();
+        var skeletonIndex = body.IndexOf("# AiNetLinter — Skeleton Map", StringComparison.Ordinal);
+        var prefix = skeletonIndex > 0 ? body[..skeletonIndex].TrimEnd() + "\n\n" : string.Empty;
+        if (skeletonIndex > 0) body = body[skeletonIndex..];
+        return new(prefix, footer, body.Split("\n\n---\n\n", StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    private static IReadOnlyList<string> KeepUnits(
+        SkeletonResponseParts parts,
+        FileSkeletonPayload payload,
+        int maxResponseBytes)
+    {
+        const string markerFormat = "[Antwort wegen maxResponseBytes begrenzt — {0} vollständige Skeleton-Einheiten ausgelassen; maxResponseBytes erhöhen oder filePaths verfeinern]";
+        var kept = new List<string>();
+        for (var i = 0; i < parts.Units.Count; i++)
+        {
+            var omitted = parts.Units.Count - i - 1;
+            var marker = string.Format(markerFormat, omitted);
+            var candidate = parts.Prefix + string.Join("\n\n---\n\n", kept.Append(parts.Units[i])) + "\n\n" + marker + parts.Footer;
+            if (!FitsBudget(candidate, payload.ProjectToText(candidate), maxResponseBytes)) break;
+            kept.Add(parts.Units[i]);
+        }
+        return kept;
+    }
+
+    private static string BuildFinalText(SkeletonResponseParts parts, IReadOnlyList<string> kept)
+    {
+        const string markerFormat = "[Antwort wegen maxResponseBytes begrenzt — {0} vollständige Skeleton-Einheiten ausgelassen; maxResponseBytes erhöhen oder filePaths verfeinern]";
+        var remaining = parts.Units.Count - kept.Count;
+        var marker = string.Format(markerFormat, remaining);
+        var body = parts.Prefix + string.Join("\n\n---\n\n", kept);
+        return string.IsNullOrEmpty(body) ? marker + parts.Footer : body + "\n\n" + marker + parts.Footer;
+    }
+
+    private static void PreserveNavigation(JsonObject source, JsonObject target)
+    {
+        if (source["navigation"] is JsonNode navigation)
+        {
+            target["navigation"] = navigation.DeepClone();
+        }
+    }
+
+    private sealed record SkeletonResponseParts(string Prefix, string Footer, IReadOnlyList<string> Units);
 
     private static int SerializedSize(object envelope) =>
         JsonSerializer.SerializeToUtf8Bytes(envelope, McpJsonOptions.Default).Length;
@@ -237,7 +293,6 @@ internal static class GetFileSkeletonTool
         int TotalCount,
         AnalysisSymbolIdentity? AssemblyIdentity);
 
-    internal sealed record SkeletonRenderUnit(string Markdown, string Path, IReadOnlyList<SkeletonTypeInfo> Types);
 }
 
 /// <summary>Additive, machine-readable handoff payload for <c>get_file_skeleton</c>.</summary>
@@ -254,7 +309,7 @@ internal sealed record FileSkeletonPayload(
     string? NextStep = null)
 {
     internal static FileSkeletonPayload Create(
-        IReadOnlyList<GetFileSkeletonTool.SkeletonRenderUnit> units,
+        IReadOnlyList<SkeletonRenderUnit> units,
         int totalUnits,
         bool isTruncated)
     {
