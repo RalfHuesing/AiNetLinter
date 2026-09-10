@@ -21,16 +21,22 @@ internal static class ProjectAnalysisDispatcher
                 registry,
                 request.Target,
                 request.Dispatch.ProjectCall,
-                request.Dispatch.MaxResponseBytes,
-                request.Dispatch.PostNavigationResponseBudget);
+                new ProjectAnalysisExecutionOptions(
+                    request.Dispatch.MaxResponseBytes,
+                    request.Dispatch.PostNavigationResponseBudget));
+
+    internal static Task<CallToolResult> ExecuteAsync(
+        ProjectRegistry registry,
+        AnalysisTargetRequest request,
+        Func<ProjectLease, Task<CallToolResult>> projectCall) =>
+        ExecuteAsync(registry, request, projectCall, new ProjectAnalysisExecutionOptions());
 
     internal static Task<CallToolResult> ExecuteAsync(
         ProjectRegistry registry,
         AnalysisTargetRequest request,
         Func<ProjectLease, Task<CallToolResult>> projectCall,
-        int maxResponseBytes = 0,
-        Func<CallToolResult, int, CallToolResult>? postNavigationResponseBudget = null) =>
-        ExecuteProjectAsync(registry, request, projectCall, maxResponseBytes, postNavigationResponseBudget);
+        ProjectAnalysisExecutionOptions options) =>
+        ExecuteProjectAsync(registry, request, projectCall, options);
 
     internal static Task<CallToolResult> ExecuteConfiguredAsync(
         ProjectRegistry registry,
@@ -46,14 +52,14 @@ internal static class ProjectAnalysisDispatcher
                     "Diese Lint-Operation ist für die Solution nicht konfiguriert: neben der Solution wurde keine ainetlinter-rules.json gefunden.",
                     context: lease.Definition.SolutionPath,
                     hint: "ainetlinter-rules.json neben der adressierten .sln/.slnx anlegen und den Aufruf erneut starten."))
-                : projectCall(lease));
+                : projectCall(lease),
+            new ProjectAnalysisExecutionOptions());
 
     private static async Task<CallToolResult> ExecuteProjectAsync(
         ProjectRegistry registry,
         AnalysisTargetRequest request,
         Func<ProjectLease, Task<CallToolResult>> projectCall,
-        int maxResponseBytes = 0,
-        Func<CallToolResult, int, CallToolResult>? postNavigationResponseBudget = null)
+        ProjectAnalysisExecutionOptions options)
     {
         var resolution = AnalysisTargetResolver.ResolveTargetPathOnly(request);
         if (resolution.Error is not null)
@@ -77,8 +83,8 @@ internal static class ProjectAnalysisDispatcher
             return McpToolResults.WithNavigation(
                 result,
                 analysisTarget ?? target,
-                maxResponseBytes,
-                postNavigationResponseBudget);
+                options.MaxResponseBytes,
+                options.PostNavigationResponseBudget);
         }
 
         return McpToolResults.WithNavigation(UnsupportedAssemblyTarget(target.CanonicalPath), target);

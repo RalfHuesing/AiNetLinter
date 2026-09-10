@@ -104,7 +104,7 @@ public sealed class AnalysisToolCallTests
             })).ProjectCall!);
 
         Assert.False(projectCalled);
-        Assert.False(result.IsError);
+        Assert.False(result.IsError ?? false);
         Assert.Contains("ASSEMBLY_TARGET_UNSUPPORTED", TextOf(result), StringComparison.Ordinal);
         Assert.Empty(registry.Snapshots());
     }
@@ -128,6 +128,37 @@ public sealed class AnalysisToolCallTests
         Assert.Contains("## Navigation", text, StringComparison.Ordinal);
         Assert.Contains("- operationStatus: `ok`", text, StringComparison.Ordinal);
         Assert.Contains("- completeness: `complete`", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_OptionsForwardBudgetAndDefaultsRemainUnbounded()
+    {
+        using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "SymbolGraphMini");
+        var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
+        await using var registry = ProjectWiringFixtures.CreateLoadedRegistry();
+        var callbackCount = 0;
+        var observedBudget = 0;
+
+        var result = await ProjectAnalysisDispatcher.ExecuteAsync(
+            registry,
+            new AnalysisTargetRequest(solutionPath),
+            _ => Task.FromResult(McpToolResults.Text("payload")),
+            new ProjectAnalysisExecutionOptions(
+                MaxResponseBytes: 128,
+                PostNavigationResponseBudget: (budgeted, maxBytes) =>
+                {
+                    callbackCount++;
+                    observedBudget = maxBytes;
+                    return budgeted;
+                }));
+
+        Assert.False(result.IsError ?? false);
+        Assert.Equal(1, callbackCount);
+        Assert.Equal(128, observedBudget);
+
+        var defaults = new ProjectAnalysisExecutionOptions();
+        Assert.Equal(0, defaults.MaxResponseBytes);
+        Assert.Null(defaults.PostNavigationResponseBudget);
     }
 
     [Fact]
