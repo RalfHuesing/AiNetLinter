@@ -36,30 +36,6 @@
 - **Empfehlung**:
   In [GetServerHealthTool.cs:123](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/ServerMaintenance/GetServerHealthTool.cs#L123): Entweder wie bei Assemblies ein transparentes Lease/Laden auslösen oder in der Antwort ein strukturiertes Snapshot-DTO mit `LoadState: not_loaded` / `fresh: false` ohne harten Error-Return liefern.
 
----
-
-### [Minor] Befund F-07: Schema-Description vs. Validierungs-Fehlermeldung bei `report_observability_feedback`
-- **Tool(s)**: `report_observability_feedback`
-- **Quellcode**:
-  - [ServerMaintenanceToolRegistrations.cs:246](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Registration/ServerMaintenanceToolRegistrations.cs#L246)
-  - [ReportObservabilityFeedbackTool.cs:81](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/ServerMaintenance/ReportObservabilityFeedbackTool.cs#L81)
-- **Evidenz**:
-  Tool-Description in der Registrierung:
-  ```text
-  "feedbackType: bug, false_positive, confusing_output, feature_request, performance."
-  ```
-  Validierungsfehler bei leerem/fehlendem Parameter in `ReportObservabilityFeedbackTool.ValidateParameters`:
-  ```text
-  "Gueltige Werte: 'issue', 'feature_request', 'confusing_output', 'false_positive'."
-  ```
-- **Problem**:
-  1. In der Description steht `bug`, in der Fehlermeldung `issue`.
-  2. `performance` steht in der Description, fehlt aber in der Fehlermeldung.
-  3. `ValidateParameters` prüft zur Laufzeit gar nicht auf die Enum-Werte, sondern lässt jeden beliebigen String durch (`string.IsNullOrWhiteSpace`).
-- **Reproduktion**:
-  `report_observability_feedback(feedbackType="", title="T", description="D")` aufrufen.
-- **Empfehlung**:
-  Wertebereich in [ReportObservabilityFeedbackTool.cs:81](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Tools/ServerMaintenance/ReportObservabilityFeedbackTool.cs#L81) und [ServerMaintenanceToolRegistrations.cs:246](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Registration/ServerMaintenanceToolRegistrations.cs#L246) abgleichen: `['bug', 'feature_request', 'confusing_output', 'false_positive', 'performance']` und optional als striktes String-Enum im Tool-Schema annotieren.
 
 ---
 
