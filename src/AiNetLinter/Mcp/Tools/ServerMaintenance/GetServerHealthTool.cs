@@ -54,64 +54,93 @@ internal static class GetServerHealthTool
         var validation = ValidateOptions(options);
         if (validation is not null) return validation;
 
-        var effectiveOptions = options.TargetPath is null && options.AssemblyPath is null
-            ? options with { IncludeDiagnostics = false, IncludeSessions = false }
-            : options;
-
+        var effectiveOptions = NormalizeOptions(options);
         if (effectiveOptions.AssemblyPath is not null)
         {
-            if (assemblyRegistry is null)
-            {
-                return AssemblyAnalysisResponse.Unsupported(effectiveOptions.AssemblyPath);
-            }
-
-            var leaseResult = await assemblyRegistry.LeaseAsync(effectiveOptions.AssemblyPath, cancellationToken).ConfigureAwait(false);
-            if (leaseResult.Error is not null)
-            {
-                return leaseResult.Error;
-            }
-
-            using var lease = leaseResult.Lease!;
-            await lease.ExpandReferencesAsync(cancellationToken).ConfigureAwait(false);
-            return GetServerHealthResponseBuilder.Build(
-                Array.Empty<ProjectSnapshot>(),
-                [AssemblyHealthProjection.FromLease(lease)],
-                effectiveOptions);
+            return await ExecuteAssemblyAsync(
+                assemblyRegistry,
+                effectiveOptions,
+                cancellationToken).ConfigureAwait(false);
         }
 
         if (effectiveOptions.TargetPath is not null)
         {
-            if (effectiveOptions.RuntimeContext is not null)
-            {
-                return await ExecuteDaemonProjectAsync(
-                    effectiveOptions.RuntimeContext,
-                    effectiveOptions.TargetPath,
-                    effectiveOptions).ConfigureAwait(false);
-            }
-
-            var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(effectiveOptions.TargetPath);
-            if (guard is not null)
-            {
-                return McpToolResults.Error(guard.Code, guard.Message, hint: guard.Hint);
-            }
-
-            var snapshot = effectiveOptions.RuntimeContext is null
-                ? registry.FindSnapshot(effectiveOptions.TargetPath)
-                : effectiveOptions.RuntimeContext.FindProjectSnapshot(effectiveOptions.TargetPath);
-            if (snapshot is null) return ProjectNotInitialized(effectiveOptions.TargetPath);
-            return GetServerHealthResponseBuilder.Build(
-                [snapshot],
-                Array.Empty<AssemblyHealthEntry>(),
-                effectiveOptions);
+            return await ExecuteTargetAsync(
+                registry,
+                effectiveOptions).ConfigureAwait(false);
         }
 
+        return await ExecuteGlobalAsync(registry, assemblyRegistry, effectiveOptions).ConfigureAwait(false);
+    }
+
+    private static GetServerHealthOptions NormalizeOptions(GetServerHealthOptions options) =>
+        options.TargetPath is null && options.AssemblyPath is null
+            ? options with { IncludeDiagnostics = false, IncludeSessions = false }
+            : options;
+
+    private static async Task<CallToolResult> ExecuteAssemblyAsync(
+        IAssemblyAnalysisRegistry? assemblyRegistry,
+        GetServerHealthOptions options,
+        CancellationToken cancellationToken)
+    {
+        if (assemblyRegistry is null)
+        {
+            return AssemblyAnalysisResponse.Unsupported(options.AssemblyPath!);
+        }
+
+        var leaseResult = await assemblyRegistry.LeaseAsync(options.AssemblyPath!, cancellationToken).ConfigureAwait(false);
+        if (leaseResult.Error is not null)
+        {
+            return leaseResult.Error;
+        }
+
+        using var lease = leaseResult.Lease!;
+        await lease.ExpandReferencesAsync(cancellationToken).ConfigureAwait(false);
+        return GetServerHealthResponseBuilder.Build(
+            Array.Empty<ProjectSnapshot>(),
+            [AssemblyHealthProjection.FromLease(lease)],
+            options);
+    }
+
+    private static async Task<CallToolResult> ExecuteTargetAsync(
+        ProjectRegistry registry,
+        GetServerHealthOptions options)
+    {
+        if (options.RuntimeContext is not null)
+        {
+            return await ExecuteDaemonProjectAsync(
+                options.RuntimeContext,
+                options.TargetPath!,
+                options).ConfigureAwait(false);
+        }
+
+        var guard = ProjectToolCall.GuardRequiredAbsoluteRoot(options.TargetPath!);
+        if (guard is not null)
+        {
+            return McpToolResults.Error(guard.Code, guard.Message, hint: guard.Hint);
+        }
+
+        var snapshot = registry.FindSnapshot(options.TargetPath!);
+        return snapshot is null
+            ? ProjectNotInitialized(options.TargetPath!)
+            : GetServerHealthResponseBuilder.Build(
+                [snapshot],
+                Array.Empty<AssemblyHealthEntry>(),
+                options);
+    }
+
+    private static async Task<CallToolResult> ExecuteGlobalAsync(
+        ProjectRegistry registry,
+        IAssemblyAnalysisRegistry? assemblyRegistry,
+        GetServerHealthOptions options)
+    {
         var assemblySnapshots = assemblyRegistry is null
             ? Array.Empty<AssemblyAnalysisHealthSnapshot>()
             : await assemblyRegistry.SnapshotsAsync().ConfigureAwait(false);
         return GetServerHealthResponseBuilder.Build(
             registry.Snapshots(),
             assemblySnapshots.Select(AssemblyHealthProjection.FromSnapshot).ToList(),
-            effectiveOptions);
+            options);
     }
 
     internal static CallToolResult? ValidateOptions(GetServerHealthOptions options)
