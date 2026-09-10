@@ -1,19 +1,21 @@
-# MCP-UX-Audit – Befunde
+# Offene MCP-UX-Befunde
 
-| ID | Schweregrad | Status | Betroffene Tools | Kurzbegründung |
-| --- | --- | --- | --- | --- |
-| A-001 | Major | fixed | `get_server_health` | Angeforderte leere Diagnose-Samples sind nicht strukturiert erkennbar. |
-| A-002 | Minor | fixed | `get_server_health` | Nichtpositive Diagnose-Limits werden stillschweigend auf einen Default geändert. |
-| A-003 | Minor | fixed | `get_server_health` | Partieller Assembly-Zustand weist widersprüchliche nächste Aktionen aus. |
-| B-001 | Major | fixed | `get_namespace_tree` | Strukturierte Einträge ignorieren das angeforderte Ergebnislimit. |
-| B-002 | Major | fixed | `inspect_assembly`, `find_assembly_extensions` | Vollständigkeit der Trefferliste und Analyse-Diagnosen wird widersprüchlich vermischt. |
-| C-001 | Critical | fixed | `find_symbol`, `find_references`, `get_impact` | Assembly-Symbolketten können fremde Referenzen und Impacts liefern. |
-| C-002 | Major | fixed | `find_references`, `get_impact` | Navigation signalisiert vollständige Ergebnisse trotz Ergebnisbegrenzung. |
-| C-003 | Major | fixed | `find_symbol` | Referenzsuche kann bei Standardbudget unbrauchbare, inkonsistente Antworten liefern. |
-| C-004 | Minor | fixed | `find_symbol` | Leere Einträge eines Musterbatches werden nicht sichtbar validiert. |
-| D-001 | Major | fixed | `find_symbol`, `get_file_tree`, `get_server_health` | Schema-Typfehler werden generisch statt handlungsweisend zurückgegeben. |
-| D-002 | Major | fixed | `get_file_tree` | Ein Ressourcenfehler wird in der Navigation als erfolgreicher vollständiger Vorgang markiert. |
-| D-003 | Major | fixed | `find_symbol` | Konkurrenz zwischen Suchparametern wird ohne Hinweis stillschweigend aufgelöst. |
-| E-001 | Major | fixed | `search_pattern` | Zwei Next-Hinweise widersprechen sich bei leeren Ergebnissen. |
-| E-002 | Minor | fixed | `find_symbol`, `get_file_tree` | Der Grenzwert null für Ergebnislimits wird uneinheitlich behandelt. |
-| E-003 | Minor | deferred | mehrere zielgebundene Tools | Öffentlicher, normierter Vertrag vermischt bewusst Ergebnis- und Verfügbarkeitszustände; eine Bereinigung wäre breaking und scope-erweiternd. |
+Stand: Live-360-Pruefung des laufenden Servers gegen ein zweites, unkonfiguriertes Source-Target sowie das konfigurierte Referenz-Target.
+
+Diese Datei enthaelt **ausschliesslich noch offene Befunde**. Historisch behobene Befunde wurden bewusst entfernt. Details und Reproduktionen stehen in [LIVE-360-FINDINGS.md](LIVE-360-FINDINGS.md).
+
+| ID | Schweregrad | Bereich | Kurzfassung |
+| --- | --- | --- | --- |
+| L360-001 | Major | Health | Globaler Health-Call kann mit Detailflag Sessiondetails statt nur Aggregate liefern. |
+| L360-002 | Major | Health | Nichtpositive Diagnose-Limits werden im Source-Pfad weiter still ersetzt. |
+| L360-003 | Major | Discovery | Namespace-Praefix benoetigt unerwartet einen abschliessenden Punkt. |
+| L360-004 | Major | Response-Budget | Mehrere Discovery-/Kontexttools ignorieren `maxResponseBytes`. |
+| L360-005 | Major | Metriken | `metrics_tree` begrenzt Text, nicht aber die strukturierte Nutzlast. |
+| L360-006 | Major | Symbolsuche | `find_symbol.kind` filtert nicht strikt nach Symbolart. |
+| L360-007 | Major | Limits | Mehrere Tools ersetzen oder ignorieren Null-Limits stillschweigend. |
+| L360-008 | Major | Chaining | Skeleton- und Feature-Context-Daten sind teilweise nicht strukturiert handoff-faehig. |
+| L360-009 | Major | Fehler-UX | Fehlendes `targetPath` und falsche Array-Elementtypen umgehen die feldgenaue Fehlerbehandlung. |
+| L360-010 | Minor | Navigation | Health-Snapshots sind nicht mit nachfolgenden Analyse-Snapshots korrelierbar. |
+| L360-011 | Minor | Filter | Ungueltige Severity-/Formatwerte werden teilweise still durch Defaults ersetzt. |
+| L360-012 | Minor | Clamping | Einige Tools weisen effektive Tiefe und Clamp nicht maschinenlesbar aus. |
+| E-003 | Deferred | Vertrag | `navigation.completeness` vermischt bewusst Ergebnis- und Verfuegbarkeitszustand; ein Fix waere breaking. |

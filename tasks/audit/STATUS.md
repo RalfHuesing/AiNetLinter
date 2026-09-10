@@ -1,12 +1,8 @@
-# MCP-UX-Audit – Status
+# MCP-UX-Audit – Aktueller Status
 
-- Phase: Toolgruppen-Audit
-- Quelle: `AiNetLinter.slnx` (Source-Modus); externe Referenzassemblys ausschließlich flüchtig in Tool-Aufrufen
-- Abgeschlossen: Discovery und Schemainventur
-- Abgeschlossen: Gruppen A–E – sämtliche Toolgruppen
-- Abgeschlossen: sämtliche Toolgruppen sowie alle umsetzbaren Befunde
-- Aktiv: Abschlussdokumentation
-- Verifikation: `dotnet build` grün; FastTests ohne Stress grün (2305); IntegrationTests ohne Stress wurden seriell gestartet, aber von der Ausführungsumgebung vor Abschluss ohne TRX beendet.
-- Nächste Aktion: Audit-Artefakte committen; der vollständige Integration-Gate ist in einer ungekürzten lokalen Sitzung zu wiederholen
-- Offene Entscheidungen: E-003 ist deferred (öffentlicher, normierter Navigationsvertrag)
-- Offene Entscheidungen: keine
+- Phase: Live-360-Nachaudit, read-only abgeschlossen
+- Ziele: ein konfiguriertes und ein unkonfiguriertes Source-Target; vorhandene Assembly-Session nur lesend
+- Ergebnis: 9 Major- und 3 Minor-Befunde offen, dazu der bewusst deferred Vertragsbefund E-003
+- Naechste Aktion: Open-Befunde nach Risiko und gemeinsamem Fixbereich priorisieren; zuerst Health-Routing, zentrale Argumentbindung, Response-Budgets und Limits
+- Wichtig: Der laufende Server entsprach zum Auditzeitpunkt dem Source-Stand. Die Live-Abweichungen sind daher keine Versionsdifferenzen, sondern Test-/Routing- oder Coverage-Luecken.
+- Keine aendernden Aktionen im Live-360-Nachaudit ausgefuehrt
