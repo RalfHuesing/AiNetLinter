@@ -156,6 +156,7 @@ internal static class SymbolIdentifierResolver
                 expectedAssemblyIdentity,
                 out var normalizedId,
                 out var isAssemblyId,
+                out var isHandoff,
                 out var assemblyError))
         {
             return (null, assemblyError);
@@ -169,8 +170,29 @@ internal static class SymbolIdentifierResolver
         }
 
         var assemblyCandidates = isAssemblyId ? new List<ISymbol>() : null;
-        var exactMatch = await FindExactStableIdAsync(solution, stableId, ct, assemblyCandidates);
-        if (exactMatch is not null) return (exactMatch, null);
+        var exactMatches = await FindExactStableIdAsync(solution, stableId, ct, assemblyCandidates);
+        if (exactMatches.Count == 1) return (exactMatches[0], null);
+
+        // Die Assembly-Route behält ihre bestehende Kandidatenpriorität; die Source-Route darf
+        // bei mehreren Roslyn-Deklarationen dagegen nie von der Iterationsreihenfolge abhängen.
+        if (isAssemblyId && exactMatches.Count > 0)
+        {
+            return (exactMatches[0], null);
+        }
+
+        if (!isAssemblyId && exactMatches.Count > 1)
+        {
+            return (
+                null,
+                McpToolResults.AmbiguousSymbol(
+                    SymbolHandoffIdentifier.ForError(stableId),
+                    FormatStableIdCandidates(exactMatches)));
+        }
+
+        if (!isAssemblyId && isHandoff)
+        {
+            return (null, McpToolResults.SymbolNotFound(SymbolHandoffIdentifier.ForError(stableId)));
+        }
 
         if (assemblyCandidates is not null)
         {
@@ -190,13 +212,14 @@ internal static class SymbolIdentifierResolver
         return tilde >= 0 ? id[..tilde] : id;
     }
 
-    private static async Task<ISymbol?> FindExactStableIdAsync(
+    private static async Task<IReadOnlyList<ISymbol>> FindExactStableIdAsync(
         Solution solution,
         string stableId,
         CancellationToken ct,
         ICollection<ISymbol>? assemblyCandidates)
     {
         var normalizedStableId = NormalizeDocCommentId(stableId);
+        var matches = new List<ISymbol>();
         foreach (var project in solution.Projects)
         {
             var declared = await SymbolFinder.FindSourceDeclarationsAsync(
@@ -208,7 +231,8 @@ internal static class SymbolIdentifierResolver
                 {
                     if (declarationId == stableId || NormalizeDocCommentId(declarationId) == normalizedStableId)
                     {
-                        return symbol;
+                        matches.Add(symbol);
+                        continue;
                     }
                 }
 
@@ -216,8 +240,20 @@ internal static class SymbolIdentifierResolver
             }
         }
 
-        return null;
+        return matches.Distinct(SymbolEqualityComparer.Default).ToArray();
     }
+
+    private static IEnumerable<string> FormatStableIdCandidates(IEnumerable<ISymbol> symbols) =>
+        symbols
+            .SelectMany(symbol => symbol.Locations
+                .Where(location => location.IsInSource)
+                .Select(location =>
+                {
+                    var line = location.GetLineSpan().StartLinePosition.Line + 1;
+                    return $"{location.SourceTree?.FilePath ?? "unbekannte Datei"}:{line}";
+                }))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(candidate => candidate, StringComparer.OrdinalIgnoreCase);
 
     private static bool MatchesAssemblyStableId(ISymbol symbol, string stableId)
     {
@@ -232,10 +268,12 @@ internal static class SymbolIdentifierResolver
         AnalysisSymbolIdentity? expectedIdentity,
         out string normalizedId,
         out bool isAssemblyId,
+        out bool isHandoff,
         out CallToolResult? error)
     {
         normalizedId = value;
         isAssemblyId = false;
+        isHandoff = false;
         error = null;
         if (!SymbolHandoffIdentifier.HasWirePrefix(value)
             && !SymbolHandoffIdentifier.HasUnsupportedPrefix(value))
@@ -255,6 +293,7 @@ internal static class SymbolIdentifierResolver
             return false;
         }
 
+        isHandoff = true;
         isAssemblyId = providedIdentifier.Origin == SymbolHandoffOrigin.Assembly;
         if (expectedIdentity is null
             || expectedIdentity.IsAssembly != isAssemblyId

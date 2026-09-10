@@ -144,6 +144,79 @@ public sealed class SymbolIdentifierResolverTests
         Assert.Contains("STALE_SNAPSHOT", Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(staleError!.Content)).Text);
     }
 
+    [Fact]
+    public async Task TryResolveByStableIdAsync_SourceHandoffDoesNotChooseFirstAmbiguousDeclaration()
+    {
+        using var owner = RoslynTestSolutionFactory.CreateSolution(
+            new ProjectSpec("First", [("First.cs", "namespace Probe; public sealed class Current { }")]),
+            new ProjectSpec("Second", [("Second.cs", "namespace Probe; public sealed class Current { }")]));
+        var firstProject = owner.Solution.Projects.Single(project => project.Name == "First");
+        var compilation = (await firstProject.GetCompilationAsync())!;
+        var rawId = DocumentationCommentId.CreateDeclarationId(
+            compilation.GetTypeByMetadataName("Probe.Current")!)!;
+        var identity = AnalysisSymbolIdentity.ForSource(
+            @"C:\current\workspace.slnx",
+            new string('b', 64));
+
+        var (resolved, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution,
+            identity.Format(rawId)!,
+            CancellationToken.None,
+            identity);
+
+        Assert.Null(resolved);
+        Assert.NotNull(error);
+        Assert.Equal(
+            "AMBIGUOUS_SYMBOL",
+            error!.StructuredContent!.Value.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task TryResolveByStableIdAsync_SourceHandoffMissingDeclarationReturnsSymbolNotFound()
+    {
+        using var owner = RoslynTestSolutionFactory.CreateSolution(
+            "namespace Probe; public sealed class Current { }");
+        var identity = AnalysisSymbolIdentity.ForSource(
+            @"C:\current\workspace.slnx",
+            new string('b', 64));
+
+        var (resolved, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution,
+            identity.Format("T:Probe.Missing")!,
+            CancellationToken.None,
+            identity);
+
+        Assert.Null(resolved);
+        Assert.NotNull(error);
+        Assert.Equal(
+            "SYMBOL_NOT_FOUND",
+            error!.StructuredContent!.Value.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task TryResolveByStableIdAsync_HandoffErrorsDoNotEchoLongIdentifier()
+    {
+        using var owner = RoslynTestSolutionFactory.CreateSolution(
+            "namespace Probe; public sealed class Current { }");
+        var current = AnalysisSymbolIdentity.ForSource(
+            @"C:\current\workspace.slnx",
+            new string('b', 64));
+        var longDocumentationId = "M:Probe.Current.Run(" + string.Join(",", Enumerable.Repeat("System.String", 20)) + ")";
+        var handoff = AnalysisSymbolIdentity.ForSource(
+            @"C:\other\workspace.slnx",
+            new string('b', 64)).Format(longDocumentationId)!;
+
+        var (_, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
+            owner.Solution,
+            handoff,
+            CancellationToken.None,
+            current);
+
+        var text = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(error!.Content)).Text;
+        Assert.DoesNotContain(handoff, text, StringComparison.Ordinal);
+        Assert.Contains("TARGET_MISMATCH", text, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("x:aaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:T:Probe.Current")]
     [InlineData("source:legacy:legacy:T:Probe.Current")]
