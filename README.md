@@ -34,7 +34,7 @@ Grenzen wie nicht auflösbare Abhängigkeiten oder gekürzte Ergebnisse sichtbar
 
 `inspect_assembly` und `find_assembly_extensions` untersuchen eine lokale
 `.dll` oder `.exe` statisch über Roslyn-Metadaten. Bei diesen beiden
-Bei diesen beiden Assembly-Tools reicht `targetPath` aus; ein absoluter `.dll`-
+Assembly-Tools reicht `targetPath` aus; ein absoluter `.dll`-
 oder `.exe`-Pfad wird als Assembly-Ziel behandelt. Die Assembly wird dafür nicht
 geladen oder ausgeführt.
 Ohne verfügbare Quelle erzeugt AiNetLinter eine
