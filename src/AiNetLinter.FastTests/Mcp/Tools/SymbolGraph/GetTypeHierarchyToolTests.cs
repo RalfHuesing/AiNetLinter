@@ -245,7 +245,7 @@ public sealed class GetTypeHierarchyToolTests
         using var firstLease = firstLeaseResult.Lease!;
         var serviceSymbol = firstLease.Context.Compilation.GetTypeByMetadataName("Probe.Service")!;
         var firstAssemblySymbolId = CallGraphTraversal.GetStableSymbolId(serviceSymbol, firstLease.Server.AssemblySymbolIdentity);
-        Assert.StartsWith("assembly:", firstAssemblySymbolId, StringComparison.Ordinal);
+        Assert.StartsWith("a:", firstAssemblySymbolId, StringComparison.Ordinal);
 
         var assemblyCallResult = await AnalysisToolCall.ExecuteRouted(
             targetRoute,

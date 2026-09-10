@@ -47,8 +47,8 @@ public sealed partial class AssemblyAnalysisToolTests
         var type = Assert.Single(payload.Types);
         Assert.Equal("Probe.Api", type.Namespace);
         Assert.Equal("PublicApi", type.Name);
-        Assert.StartsWith("assembly:", type.Id, StringComparison.Ordinal);
-        Assert.All(type.Members, member => Assert.StartsWith("assembly:", member.Id, StringComparison.Ordinal));
+        Assert.StartsWith("a:", type.Id, StringComparison.Ordinal);
+        Assert.All(type.Members, member => Assert.StartsWith("a:", member.Id, StringComparison.Ordinal));
         Assert.Equal(payload.TotalTypes, payload.TotalCount);
         Assert.Equal(payload.ShownCount, payload.ReturnedCount);
         Assert.Equal(payload.Truncated, payload.IsTruncated);
@@ -152,7 +152,7 @@ public sealed partial class AssemblyAnalysisToolTests
 
         var extension = Assert.Single(payload.Extensions);
         Assert.Equal("Mark", extension.Name);
-        Assert.StartsWith("assembly:", extension.Id, StringComparison.Ordinal);
+        Assert.StartsWith("a:", extension.Id, StringComparison.Ordinal);
         Assert.Equal("not_decidable", extension.Applicability);
         Assert.Equal(["value", "count"], extension.Parameters.Select(parameter => parameter.Name).ToArray());
         Assert.Equal("complete", payload.Completeness);

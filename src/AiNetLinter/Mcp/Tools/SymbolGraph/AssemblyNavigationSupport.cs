@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
@@ -74,9 +75,17 @@ internal static class AssemblyNavigationSupport
             .ToList();
 
     internal static bool MatchesLeaseIdentity(string identifier, AnalysisSymbolIdentity identity) =>
-        AnalysisSymbolIdentity.TryParse(identifier, out var provided, out _)
-        && provided is not null
-        && identity.Matches(provided);
+        SymbolHandoffIdentifier.TryParse(identifier, out var provided)
+        && provided.Origin == SymbolHandoffOrigin.Assembly
+        && SymbolHandoffToken.TryCreateTarget(identity.CanonicalPath, out var targetToken)
+        && SymbolHandoffToken.TryCreateContent(identity.ContentHash, out var contentToken)
+        && string.Equals(provided.TargetToken, targetToken, StringComparison.Ordinal)
+        && string.Equals(provided.ContentToken, contentToken, StringComparison.Ordinal);
+
+    internal static bool MatchesLeaseTarget(SymbolHandoffIdentifier identifier, AnalysisSymbolIdentity identity) =>
+        identifier.Origin == SymbolHandoffOrigin.Assembly
+        && SymbolHandoffToken.TryCreateTarget(identity.CanonicalPath, out var targetToken)
+        && string.Equals(identifier.TargetToken, targetToken, StringComparison.Ordinal);
 
     internal static MetricsTreeNode AddOrigin(MetricsTreeNode node, AssemblyNavigationOrigin origin)
     {

@@ -72,7 +72,7 @@ public sealed class GetSymbolBodyToolTests
         Assert.True(result.StructuredContent.HasValue);
         var structured = result.StructuredContent!.Value;
         var entry = Assert.Single(structured.GetProperty("results").EnumerateArray());
-        Assert.StartsWith("source:", entry.GetProperty("id").GetString(), System.StringComparison.Ordinal);
+        Assert.StartsWith("s:", entry.GetProperty("id").GetString(), System.StringComparison.Ordinal);
         Assert.NotEqual(stableId, entry.GetProperty("id").GetString());
         Assert.False(entry.GetProperty("isTruncated").GetBoolean());
         // Sufficiency-Hinweis: vollstaendiger (nicht gekappter) Body ist final.
@@ -149,7 +149,7 @@ public sealed class GetSymbolBodyToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("id: `source:", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("id: `s:", textContent.Text, System.StringComparison.Ordinal);
         Assert.DoesNotContain("get_Prefix", textContent.Text, System.StringComparison.Ordinal);
     }
 
@@ -176,7 +176,7 @@ public sealed class GetSymbolBodyToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("Prefix", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Equal(2, textContent.Text.Split("id: `source:", System.StringSplitOptions.None).Length - 1);
+        Assert.Equal(2, textContent.Text.Split("id: `s:", System.StringSplitOptions.None).Length - 1);
         Assert.Contains("---", textContent.Text, System.StringComparison.Ordinal);
     }
 
@@ -195,7 +195,7 @@ public sealed class GetSymbolBodyToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("angefordert: `Greeter.Greet`", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("angefordert: `Greeter.Prefix`", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Equal(2, textContent.Text.Split("id: `source:", System.StringSplitOptions.None).Length - 1);
+        Assert.Equal(2, textContent.Text.Split("id: `s:", System.StringSplitOptions.None).Length - 1);
     }
 
     [Fact]
@@ -215,7 +215,7 @@ public sealed class GetSymbolBodyToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Contains("id: `source:", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("id: `s:", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("DoesNotExistXyz", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("nicht aufgeloest", textContent.Text, System.StringComparison.Ordinal);
     }

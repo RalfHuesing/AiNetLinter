@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
@@ -24,26 +25,37 @@ internal static class AssemblySymbolResolver
     {
         var leaseSet = AssemblyNavigationLeaseAccess.GetLeases(root);
         var leases = leaseSet.Leases;
-        if (AnalysisSymbolIdentity.TryParse(identifier, out var providedIdentity, out _)
-            && providedIdentity is not null)
+        var looksLikeHandoff = SymbolHandoffIdentifier.HasWirePrefix(identifier)
+            || SymbolHandoffIdentifier.HasUnsupportedPrefix(identifier);
+        var providedIdentifier = default(SymbolHandoffIdentifier);
+        if (looksLikeHandoff && !SymbolHandoffIdentifier.TryParse(identifier, out providedIdentifier))
+        {
+            return (null, McpToolResults.InvalidArgument(
+                "Die Handoff-ID ist nicht kanonisch.",
+                hint: "Eine ID aus dem StructuredContent des aktuellen Ergebnisses kopieren.",
+                fieldPath: "$.symbolIdentifier"),
+                AssemblyNavigationSupport.CreateSummary(new AssemblyNavigationSummaryRequest(
+                    leaseSet.TotalAssemblyCount, leases.Count, leaseSet.AssembliesTruncated, Array.Empty<string>())));
+        }
+
+        if (looksLikeHandoff)
         {
             var exactTarget = leases.Any(lease =>
-                string.Equals(
-                    AssemblyNavigationLeaseAccess.CreateView(lease).CanonicalPath,
-                    providedIdentity.CanonicalPath,
-                    StringComparison.OrdinalIgnoreCase));
+                AssemblyNavigationSupport.MatchesLeaseTarget(
+                    providedIdentifier,
+                    AssemblyNavigationLeaseAccess.CreateView(lease).Identity));
             var exactSnapshot = leases.Any(lease =>
                 AssemblyNavigationSupport.MatchesLeaseIdentity(identifier, AssemblyNavigationLeaseAccess.CreateView(lease).Identity));
-            if (!string.IsNullOrEmpty(providedIdentity.CanonicalPath) && !exactTarget)
+            if (providedIdentifier.Origin != SymbolHandoffOrigin.Assembly || !exactTarget)
             {
-                return (null, McpToolResults.TargetMismatch(identifier),
+                return (null, McpToolResults.TargetMismatch(SymbolHandoffIdentifier.ForError(identifier)),
                     AssemblyNavigationSupport.CreateSummary(new AssemblyNavigationSummaryRequest(
                         leaseSet.TotalAssemblyCount, leases.Count, leaseSet.AssembliesTruncated, Array.Empty<string>())));
             }
 
             if (!exactSnapshot)
             {
-                return (null, McpToolResults.StaleSnapshot(identifier),
+                return (null, McpToolResults.StaleSnapshot(SymbolHandoffIdentifier.ForError(identifier)),
                     AssemblyNavigationSupport.CreateSummary(new AssemblyNavigationSummaryRequest(
                         leaseSet.TotalAssemblyCount, leases.Count, leaseSet.AssembliesTruncated, Array.Empty<string>())));
             }
@@ -93,7 +105,8 @@ internal static class AssemblySymbolResolver
         CancellationToken cancellationToken)
     {
         var candidates = new List<AssemblySymbolTarget>();
-        var hasAssemblyId = identifier.StartsWith(AnalysisSymbolIdentity.Prefix, StringComparison.Ordinal);
+        var hasAssemblyId = SymbolHandoffIdentifier.TryParse(identifier, out var parsedIdentifier)
+            && parsedIdentifier.Origin == SymbolHandoffOrigin.Assembly;
         foreach (var lease in leases)
         {
             cancellationToken.ThrowIfCancellationRequested();

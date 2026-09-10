@@ -103,8 +103,8 @@ public sealed class FindReferencesToolTests
 
         Assert.Null(symbol);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(error!.Content)).Text;
-        Assert.Contains("assembly:", text, StringComparison.Ordinal);
-        Assert.Contains(identity.ContentHash, text, StringComparison.Ordinal);
+        Assert.Contains("a:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain(identity.ContentHash, text, StringComparison.Ordinal);
         Assert.DoesNotContain($":{identity.Generation}:M:", text, StringComparison.Ordinal);
         Assert.DoesNotContain("id: `M:", text, StringComparison.Ordinal);
     }
@@ -364,7 +364,7 @@ public sealed class FindReferencesToolTests
             .GetProperty("matches")[0]
             .GetProperty("id")
             .GetString();
-        Assert.StartsWith("source:", methodBHandoffId, StringComparison.Ordinal);
+        Assert.StartsWith("s:", methodBHandoffId, StringComparison.Ordinal);
 
         var result = await FindReferencesTool.ExecuteAsync(
             state, "ChainProbe.Runner.MethodA", maxResults: 50, depth: 2, CancellationToken.None);

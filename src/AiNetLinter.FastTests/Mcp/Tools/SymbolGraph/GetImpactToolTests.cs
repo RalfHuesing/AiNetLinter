@@ -197,7 +197,7 @@ public sealed class GetImpactToolTests
         Assert.Contains("Chain.cs", level1.FilePath, StringComparison.Ordinal);
         var level2 = entries!.Single(entry => entry.Depth == 2);
         Assert.Equal("Runner.MethodB", level2.SymbolName);
-        Assert.StartsWith("source:", level2.ReachedFromSymbolId, StringComparison.Ordinal);
+        Assert.StartsWith("s:", level2.ReachedFromSymbolId, StringComparison.Ordinal);
         Assert.True(level2.Handoff);
         Assert.NotNull(level2.Id);
     }

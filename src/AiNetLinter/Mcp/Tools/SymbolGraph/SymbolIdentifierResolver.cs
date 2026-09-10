@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -150,7 +151,7 @@ internal static class SymbolIdentifierResolver
             return (null, null);
         }
 
-        if (!TryNormalizeAssemblyId(
+        if (!TryNormalizeHandoffId(
                 stableId,
                 expectedAssemblyIdentity,
                 out var normalizedId,
@@ -221,74 +222,12 @@ internal static class SymbolIdentifierResolver
     private static bool MatchesAssemblyStableId(ISymbol symbol, string stableId)
     {
         var declarationId = DocumentationCommentId.CreateDeclarationId(symbol);
-        if (declarationId is null) return false;
-
-        return string.Equals(
-                   NormalizeUnresolvedStableId(declarationId),
-                   NormalizeUnresolvedStableId(stableId),
-                   StringComparison.Ordinal)
-            || MatchesStableIdShape(declarationId, stableId);
+        return declarationId is not null
+            && (string.Equals(declarationId, stableId, StringComparison.Ordinal)
+                || string.Equals(NormalizeDocCommentId(declarationId), NormalizeDocCommentId(stableId), StringComparison.Ordinal));
     }
 
-    private static bool MatchesStableIdShape(string declarationId, string stableId)
-    {
-        if (!TryParseStableIdShape(declarationId, out var declarationShape)
-            || !TryParseStableIdShape(stableId, out var stableShape))
-        {
-            return false;
-        }
-
-        return declarationShape.Prefix == stableShape.Prefix
-            && string.Equals(declarationShape.Name, stableShape.Name, StringComparison.Ordinal)
-            && declarationShape.ParameterCount == stableShape.ParameterCount;
-    }
-
-    private static bool TryParseStableIdShape(string value, out StableIdShape shape)
-    {
-        shape = default;
-        if (value.Length < 3 || value[1] != ':') return false;
-
-        var payload = value[2..];
-        var tilde = payload.IndexOf('~');
-        if (tilde >= 0) payload = payload[..tilde];
-
-        var parameterStart = payload.IndexOf('(');
-        if (parameterStart < 0)
-        {
-            shape = new(value[0], NormalizeUnresolvedStableId(payload), null);
-            return !string.IsNullOrEmpty(shape.Name);
-        }
-
-        if (!payload.EndsWith(")", StringComparison.Ordinal)) return false;
-        var name = payload[..parameterStart];
-        var parameters = payload[(parameterStart + 1)..^1];
-        shape = new(value[0], NormalizeUnresolvedStableId(name), CountStableParameters(parameters));
-        return !string.IsNullOrEmpty(shape.Name);
-    }
-
-    private static int CountStableParameters(string parameters)
-    {
-        if (string.IsNullOrEmpty(parameters)) return 0;
-
-        var depth = 0;
-        var separators = 0;
-        foreach (var character in parameters)
-        {
-            if (character is '{' or '[' or '<' or '(') depth++;
-            else if (character is '}' or ']' or '>' or ')') depth = Math.Max(0, depth - 1);
-            else if (character == ',' && depth == 0) separators++;
-        }
-
-        return separators + 1;
-    }
-
-    private static string NormalizeUnresolvedStableId(string value) =>
-        value.Replace("~", string.Empty, StringComparison.Ordinal)
-            .Replace("?", string.Empty, StringComparison.Ordinal);
-
-    private readonly record struct StableIdShape(char Prefix, string Name, int? ParameterCount);
-
-    private static bool TryNormalizeAssemblyId(
+    private static bool TryNormalizeHandoffId(
         string value,
         AnalysisSymbolIdentity? expectedIdentity,
         out string normalizedId,
@@ -298,42 +237,42 @@ internal static class SymbolIdentifierResolver
         normalizedId = value;
         isAssemblyId = false;
         error = null;
-        var isHandoffId = value.StartsWith(AnalysisSymbolIdentity.AssemblyPrefix, StringComparison.Ordinal)
-            || value.StartsWith(AnalysisSymbolIdentity.SourcePrefix, StringComparison.Ordinal);
-        if (!isHandoffId)
+        if (!SymbolHandoffIdentifier.HasWirePrefix(value)
+            && !SymbolHandoffIdentifier.HasUnsupportedPrefix(value))
         {
             // Unpräfixte Werte bleiben direkte fachliche Suchanfragen. Sie werden niemals als
-            // Handoff ausgegeben; nur source:/assembly:-Werte durchlaufen die gebundene ID-Prüfung.
+            // Handoff ausgegeben; nur s:/a:-Werte durchlaufen die gebundene ID-Prüfung.
             isAssemblyId = false;
             return true;
         }
 
-        isAssemblyId = value.StartsWith(AnalysisSymbolIdentity.AssemblyPrefix, StringComparison.Ordinal);
-        if (!AnalysisSymbolIdentity.TryParse(value, out var providedIdentity, out var unwrappedId)
-            || providedIdentity is null)
+        if (!SymbolHandoffIdentifier.TryParse(value, out var providedIdentifier))
         {
             error = McpToolResults.InvalidArgument(
-                $"Die Handoff-ID '{value}' ist nicht kanonisch.",
+                "Die Handoff-ID ist nicht kanonisch.",
                 hint: "Eine ID aus dem StructuredContent des aktuellen find_symbol-Ergebnisses kopieren.",
                 fieldPath: "$.symbolIdentifier");
             return false;
         }
 
-        if (expectedIdentity is null || expectedIdentity.IsAssembly != providedIdentity.IsAssembly ||
-            (!string.IsNullOrEmpty(providedIdentity.CanonicalPath) &&
-             !string.Equals(expectedIdentity.CanonicalPath, providedIdentity.CanonicalPath, StringComparison.OrdinalIgnoreCase)))
+        isAssemblyId = providedIdentifier.Origin == SymbolHandoffOrigin.Assembly;
+        if (expectedIdentity is null
+            || expectedIdentity.IsAssembly != isAssemblyId
+            || !SymbolHandoffToken.TryCreateTarget(expectedIdentity.CanonicalPath, out var expectedTargetToken)
+            || !string.Equals(expectedTargetToken, providedIdentifier.TargetToken, StringComparison.Ordinal))
         {
-            error = McpToolResults.TargetMismatch(value);
+            error = McpToolResults.TargetMismatch(SymbolHandoffIdentifier.ForError(value));
             return false;
         }
 
-        if (!string.Equals(expectedIdentity.ContentHash, providedIdentity.ContentHash, StringComparison.OrdinalIgnoreCase))
+        if (!SymbolHandoffToken.TryCreateContent(expectedIdentity.ContentHash, out var expectedContentToken)
+            || !string.Equals(expectedContentToken, providedIdentifier.ContentToken, StringComparison.Ordinal))
         {
-            error = McpToolResults.StaleSnapshot(value);
+            error = McpToolResults.StaleSnapshot(SymbolHandoffIdentifier.ForError(value));
             return false;
         }
 
-        normalizedId = unwrappedId;
+        normalizedId = providedIdentifier.DocumentationCommentId;
         return true;
     }
 

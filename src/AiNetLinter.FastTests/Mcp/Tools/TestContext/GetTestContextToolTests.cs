@@ -195,7 +195,7 @@ public sealed class GetTestContextToolTests
             .GetProperty("matches")[0]
             .GetProperty("id")
             .GetString();
-        Assert.StartsWith("source:", handoffId, System.StringComparison.Ordinal);
+        Assert.StartsWith("s:", handoffId, System.StringComparison.Ordinal);
 
         var result = await GetTestContextTool.ExecuteAsync(
             state,

@@ -1,6 +1,7 @@
 #nullable enable
 
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.TestKit;
 using Microsoft.CodeAnalysis;
@@ -100,7 +101,7 @@ public sealed class SymbolIdentifierResolverTests
     }
 
     [Fact]
-    public void AnalysisSymbolIdentity_AssemblyFormatBindsPathAndHashWithoutGeneration()
+    public void AnalysisSymbolIdentity_AssemblyFormatUsesOpaqueTokensWithoutGeneration()
     {
         var identity = AnalysisSymbolIdentity.ForAssembly(
             @"C:\Assemblies\Probe.dll",
@@ -109,13 +110,13 @@ public sealed class SymbolIdentifierResolverTests
 
         var id = identity.Format("T:Probe.Type")!;
 
-        Assert.StartsWith("assembly:", id, System.StringComparison.Ordinal);
+        Assert.StartsWith("a:", id, System.StringComparison.Ordinal);
         Assert.DoesNotContain(":42:", id, System.StringComparison.Ordinal);
-        Assert.True(AnalysisSymbolIdentity.TryParse(id, out var parsed, out var rawId));
-        Assert.NotNull(parsed);
-        Assert.Equal(@"C:\Assemblies\Probe.dll", parsed!.CanonicalPath);
-        Assert.Equal(new string('a', 64), parsed.ContentHash);
-        Assert.Equal("T:Probe.Type", rawId);
+        Assert.True(SymbolHandoffIdentifier.TryParse(id, out var parsed));
+        Assert.Equal(SymbolHandoffOrigin.Assembly, parsed.Origin);
+        Assert.Equal("T:Probe.Type", parsed.DocumentationCommentId);
+        Assert.Equal(22, parsed.TargetToken.Length);
+        Assert.Equal(22, parsed.ContentToken.Length);
     }
 
     [Fact]
@@ -144,8 +145,11 @@ public sealed class SymbolIdentifierResolverTests
     }
 
     [Theory]
-    [InlineData("source:-:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:T:Probe.Current")]
-    public async Task TryResolveByStableIdAsync_NonCanonicalSourceHandoffIsInvalidArgument(string identifier)
+    [InlineData("x:aaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:T:Probe.Current")]
+    [InlineData("source:legacy:legacy:T:Probe.Current")]
+    [InlineData("assembly:legacy:legacy:T:Probe.Current")]
+    [InlineData("s:aaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:T:Probe.Current")]
+    public async Task TryResolveByStableIdAsync_NonCanonicalHandoffLikeInputIsInvalidArgument(string identifier)
     {
         using var owner = RoslynTestSolutionFactory.CreateSolution(
             "namespace Probe; public sealed class Current { } ");
@@ -163,6 +167,9 @@ public sealed class SymbolIdentifierResolverTests
         Assert.Equal(
             "INVALID_ARGUMENT",
             error!.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal(
+            "$.symbolIdentifier",
+            error.StructuredContent.Value.GetProperty("fieldPath").GetString());
     }
 
     [Fact]
@@ -173,7 +180,10 @@ public sealed class SymbolIdentifierResolverTests
         var current = AnalysisSymbolIdentity.ForSource(
             @"C:\current\workspace.slnx",
             new string('a', 64));
-        var nonCanonical = current.Format("Probe.Current")!;
+        var nonCanonical = current.Format("T:Probe.Current")!.Replace(
+            ":T:Probe.Current",
+            ":Probe.Current",
+            System.StringComparison.Ordinal);
 
         var (_, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
             owner.Solution,
@@ -199,8 +209,6 @@ public sealed class SymbolIdentifierResolverTests
             .OfType<IMethodSymbol>()
             .Single();
         var rawId = DocumentationCommentId.CreateDeclarationId(symbol)!;
-        var unresolvedId = rawId.Replace("Missing.Type", "~?Missing.Type", StringComparison.Ordinal);
-        if (unresolvedId == rawId) unresolvedId = rawId.Insert(2, "~?");
         var identity = AnalysisSymbolIdentity.ForAssembly(
             @"C:\Assemblies\Probe.dll",
             new string('c', 64),
@@ -208,7 +216,10 @@ public sealed class SymbolIdentifierResolverTests
 
         var (resolved, error) = await SymbolIdentifierResolver.TryResolveByStableIdAsync(
             owner.Solution,
-            identity.Format(unresolvedId)!,
+            identity.Format(rawId)!.Replace(
+                rawId,
+                rawId + "#lf:Local",
+                StringComparison.Ordinal),
             CancellationToken.None,
             identity);
 

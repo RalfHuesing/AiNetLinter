@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools;
@@ -25,6 +26,7 @@ namespace AiNetLinter.IntegrationTests.Mcp.Assemblies.Navigation;
 // @covers DiffImpactAnalyzer
 // @covers GetFileSkeletonTool
 // @covers GetSymbolBodyTool
+// @covers AssemblyFindReferencesTool
 // @covers GetCallTreeTool
 // @covers DependencyGraphTool
 // @covers DecompiledProjectPaths
@@ -117,6 +119,35 @@ public sealed class AssemblyAnalysisPathContractTests
         Assert.Equal("decompiledProject", payload.GetProperty("results")[0].GetProperty("contentMode").GetString());
         Assert.Equal("decompiledProject", payload.GetProperty("results")[0].GetProperty("contentMode").GetString());
         Assert.Equal("decompiledProject", payload.GetProperty("analysis").GetProperty("contentMode").GetString());
+    }
+
+    [Theory]
+    [InlineData("x:aaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbb:T:Probe.Document")]
+    [InlineData("source:legacy:legacy:T:Probe.Document")]
+    [InlineData("assembly:legacy:legacy:T:Probe.Document")]
+    public async Task AssemblyRoute_NonCanonicalHandoffLikeIdentifierIsInvalidArgument(string identifier)
+    {
+        using var temp = TestTempDirectory.Create("assembly-invalid-handoff-identifier-");
+        var assemblyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "InvalidHandoffIdentifierProbe",
+            "namespace Probe; public sealed class Document { public int Read() => 42; }");
+        await using var registry = new AssemblyAnalysisRegistry();
+
+        var result = await DispatchAsync(
+            registry,
+            assemblyPath,
+            lease => AssemblyFindReferencesTool.ExecuteAsync(
+                lease,
+                new AssemblyFindReferencesRequest(identifier, 10, 1, true),
+                CancellationToken.None));
+
+        Assert.Equal(
+            "INVALID_ARGUMENT",
+            result.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal(
+            "$.symbolIdentifier",
+            result.StructuredContent.Value.GetProperty("fieldPath").GetString());
     }
 
     [Fact]
@@ -400,7 +431,7 @@ public sealed class AssemblyAnalysisPathContractTests
                 lease.Context.Origin.ContentHash,
                 lease.Context.Generation)
             .FormatHandoff(method)!;
-        Assert.True(AnalysisSymbolIdentity.TryParse(methodId, out _, out _), methodId);
+        Assert.True(SymbolHandoffIdentifier.TryParse(methodId, out _), methodId);
 
         var result = await GetSymbolBodyTool.ExecuteAsync(lease, [methodId], 80, CancellationToken.None);
 

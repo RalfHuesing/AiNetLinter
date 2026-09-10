@@ -60,7 +60,7 @@ public sealed class FindImplementationsTests
             .GetProperty("matches")[0]
             .GetProperty("id")
             .GetString();
-        Assert.StartsWith("source:", handoffId, StringComparison.Ordinal);
+        Assert.StartsWith("s:", handoffId, StringComparison.Ordinal);
 
         var result = await FindImplementationsTool.ExecuteAsync(
             server,
