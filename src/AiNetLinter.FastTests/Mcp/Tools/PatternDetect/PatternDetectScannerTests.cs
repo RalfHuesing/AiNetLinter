@@ -294,6 +294,57 @@ public sealed class Foo{i}
         Assert.Contains("Simulierter Lesefehler", result.Context, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task BuildReportAsync_WhenOnePatternDisabled_ReturnsPartialCompleteness()
+    {
+        const string source = @"
+namespace Test;
+public sealed class Clean
+{
+    public int Value() => 1;
+}";
+        // QuietGlobal hat EnforceXmlDocumentation = false (1 Pattern not_configured),
+        // aber async-void und empty-catch sind aktiv (empty).
+        var config = CreateConfig();
+        var result = await RunAsync(("Clean.cs", source), config);
+
+        Assert.NotNull(result.Payload);
+        Assert.Equal("partial", result.Payload.Summary.Completeness);
+    }
+
+    [Fact]
+    public async Task BuildReportAsync_WhenAllPatternsDisabled_ReturnsNotConfiguredCompleteness()
+    {
+        const string source = @"
+namespace Test;
+public sealed class Clean
+{
+    public int Value() => 1;
+}";
+        var config = CreateConfig() with
+        {
+            Global = QuietGlobal() with
+            {
+                BanAsyncVoid = false,
+                EnforceNoSilentCatch = false,
+                AvoidExcessiveMiddleMen = false,
+            },
+            Metrics = new MetricsConfig
+            {
+                MaxMethodLineCount = 0,
+                MaxPublicMembersPerType = 0,
+                MaxLineCount = 0,
+                MaxAIContextFootprint = 0,
+                MaxCyclomaticComplexity = 0,
+                MaxCognitiveComplexity = 0,
+            }
+        };
+        var result = await RunAsync(("Clean.cs", source), config);
+
+        Assert.NotNull(result.Payload);
+        Assert.Equal("not_configured", result.Payload.Summary.Completeness);
+    }
+
     private static async Task<PatternDetectResult> RunAsync(
         (string FileName, string Source) file, Config config, IReadOnlyList<PatternDefinition>? patterns = null)
     {

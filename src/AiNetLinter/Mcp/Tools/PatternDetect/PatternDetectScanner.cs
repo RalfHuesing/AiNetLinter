@@ -212,9 +212,15 @@ internal static class PatternDetectScanner
 
     private static string DetermineCompleteness(IReadOnlyList<PatternReportBuild> reports)
     {
-        if (reports.Any(r => r.Entry.Status == "not_decidable")) return "not_decidable";
-        if (reports.Any(r => r.Entry.Status == "not_configured")) return "not_configured";
+        if (reports.Count == 0) return "empty";
+        if (reports.All(r => r.Entry.Status == "not_configured")) return "not_configured";
+        if (reports.All(r => r.Entry.Status == "not_decidable")) return "not_decidable";
+
+        var hasIncomplete = reports.Any(r => r.Entry.Status is "not_configured" or "not_decidable");
         if (reports.Any(r => r.Entry.Status == "truncated")) return "truncated";
+
+        if (hasIncomplete) return "partial";
+
         return reports.All(r => r.Entry.Status == "empty") ? "empty" : "complete";
     }
 
@@ -248,6 +254,7 @@ internal static class PatternDetectScanner
             "empty" => "leer",
             "truncated" => "begrenzt",
             "not_configured" => "nicht konfiguriert",
+            "partial" => "partiell",
             _ => "nicht entscheidbar"
         }}");
         sb.AppendLine();

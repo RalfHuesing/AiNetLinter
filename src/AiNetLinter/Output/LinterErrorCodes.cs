@@ -24,6 +24,7 @@ internal static class LinterErrorCodes
     internal const string AmbiguousSymbol     = "AMBIGUOUS_SYMBOL";
     internal const string InvalidArgument     = "INVALID_ARGUMENT";
     internal const string AssemblyTargetUnsupported = "ASSEMBLY_TARGET_UNSUPPORTED";
+    internal const string ProjectTargetUnsupported  = "PROJECT_TARGET_UNSUPPORTED";
     internal const string InvalidAssembly    = "INVALID_ASSEMBLY";
     internal const string TargetUnreadable   = "TARGET_UNREADABLE";
 }

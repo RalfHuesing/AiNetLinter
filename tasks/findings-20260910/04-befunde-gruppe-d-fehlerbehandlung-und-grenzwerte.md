@@ -18,37 +18,3 @@ Die Validierung im AiNetLinter MCP-Server gehört zu den robustesten Implementie
 1. **JSON-Feldpfade**: Alle Fehler nennen den genauen Feldpfad (`fieldPath: $.targetPath`, `fieldPath: $.namePatterns`, `fieldPath: $.maxResults`), was Agenten die automatische Korrektur enorm erleichtert.
 2. **Keine Stacktraces**: Kein einziger Fehlerfall leakt interne Exceptions oder Stacktraces. Alle Fehler werden kontrolliert als `McpToolResults.InvalidArgument` oder domänenspezifische Fehlercodes zurückgegeben.
 3. **Schutz vor Phantom-Parametern**: Übergebene Parameter, die nicht im Schema existieren, werden sofort mit `Unbekanntes Argument: <name>` und `fieldPath: $.<name>` abgewiesen ([TargetPathToolRegistrationOptions.cs:66](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Registration/TargetPathToolRegistrationOptions.cs#L66)).
-
----
-
-### [Minor] Befund F-08: Asymmetrie bei Cross-Target Fehlercodes
-- **Tool(s)**: Alle zielgebundenen Tools
-- **Quellcode**:
-  - [AnalysisToolCall.cs](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/AnalysisToolCall.cs)
-  - [AssemblyAnalysisDispatcher.cs](file:///c:/Daten/Entwicklung/Ralf/AiNetLinter/src/AiNetLinter/Mcp/Assemblies/Analysis/AssemblyAnalysisDispatcher.cs)
-- **Evidenz**:
-  Fall 1: Assembly-Target (`LOCAL-01`) an Source-Tool (`get_violations`) übergeben:
-  ```text
-  [ERROR]: ASSEMBLY_TARGET_UNSUPPORTED: Dieses Tool unterstützt das Assembly-Ziel nicht.
-  operationStatus: unsupported
-  code: ASSEMBLY_TARGET_UNSUPPORTED
-  completeness: unsupported
-  next: refine_scope — Ein Tool verwenden, das die Target-Herkunft unterstützt.
-  ```
-  Fall 2: Source-Target (`AiNetLinter.slnx`) an Assembly-Tool (`inspect_assembly`) übergeben:
-  ```text
-  [ERROR]: INVALID_ARGUMENT: Dieses Tool unterstützt kein Projekt-Ziel.
-  operationStatus: invalid_argument
-  code: INVALID_ARGUMENT
-  completeness: not_applicable
-  next: request_detail — targetPath auf eine vorhandene .dll/.exe-Datei setzen...
-  ```
-- **Problem**:
-  Beide Fälle sind semantisch identisch: Ein Target mit der falschen Herkunft wurde übergeben.
-  - Fall 1 liefert `ASSEMBLY_TARGET_UNSUPPORTED` mit `operationStatus: unsupported` und `completeness: unsupported`.
-  - Fall 2 liefert `INVALID_ARGUMENT` mit `operationStatus: invalid_argument` und `completeness: not_applicable`.
-  Für einen Agenten, der Fehler programmgesteuert auswertet, ist diese Diskrepanz schwer nachvollziehbar.
-- **Reproduktion**:
-  `get_violations` mit `.dll` aufrufen vs. `inspect_assembly` mit `.slnx` aufrufen.
-- **Empfehlung**:
-  Einheitlichen Fehlercode einführen, z. B. `SOURCE_TARGET_UNSUPPORTED` (analog zu `ASSEMBLY_TARGET_UNSUPPORTED`) oder beide Fälle einheitlich mit `operationStatus: unsupported` und passendem Hint behandeln.

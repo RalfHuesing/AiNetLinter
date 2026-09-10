@@ -328,8 +328,13 @@ internal static partial class McpNavigationProjection
         return true;
     }
 
-    private static McpNavigationNext CreateNext(string operationStatus, string completeness, string? hint)
+    private static McpNavigationNext CreateNext(string operationStatus, string completeness, string? hint, JsonElement? structured = null)
     {
+        if (operationStatus == "ok" && TryReadToolOwnedNext(structured, out var explicitNext))
+        {
+            return explicitNext;
+        }
+
         return operationStatus switch
         {
             "not_configured" => new("request_detail", "ainetlinter-rules.json neben dem adressierten Target anlegen und den Lint-Call wiederholen."),
@@ -339,6 +344,58 @@ internal static partial class McpNavigationProjection
                 => CreateErrorNext(operationStatus, hint),
             _ => CreateSuccessfulNext(completeness, hint),
         };
+    }
+
+    private static bool TryReadToolOwnedNext(JsonElement? structured, out McpNavigationNext next)
+    {
+        next = default!;
+        if (structured is not { ValueKind: JsonValueKind.Object } payload) return false;
+
+        if (TryReadNextObject(payload, "next", out next)) return true;
+
+        if (payload.TryGetProperty("navigation", out var nav) && nav.ValueKind == JsonValueKind.Object
+            && TryReadNextObject(nav, "next", out next)) return true;
+
+        foreach (var property in payload.EnumerateObject())
+        {
+            if (property.Value.ValueKind == JsonValueKind.Object
+                && TryReadNextObject(property.Value, "next", out next))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryReadNextObject(JsonElement owner, string propertyName, out McpNavigationNext next)
+    {
+        next = default!;
+        if (owner.TryGetProperty(propertyName, out var nextProp) && nextProp.ValueKind == JsonValueKind.Object)
+        {
+            if (TryReadStringProperty(nextProp, "kind", out var kind)
+                && TryReadRawStringProperty(nextProp, "action", out var action)
+                && !string.IsNullOrWhiteSpace(kind)
+                && !string.IsNullOrWhiteSpace(action))
+            {
+                next = new McpNavigationNext(kind, action);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool TryReadRawStringProperty(JsonElement owner, string propertyName, out string value)
+    {
+        value = string.Empty;
+        if (!owner.TryGetProperty(propertyName, out var property)
+            || property.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        value = property.GetString() ?? string.Empty;
+        return value.Length > 0;
     }
 
     private static McpNavigationNext CreateErrorNext(string operationStatus, string? hint) =>

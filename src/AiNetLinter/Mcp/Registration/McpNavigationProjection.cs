@@ -30,7 +30,7 @@ internal static partial class McpNavigationProjection
         var hint = ReadString(response.StructuredContent, "hint")
             ?? ReadString(response.StructuredContent, "nextStep")
             ?? ReadNestedNextStep(response.StructuredContent);
-        return Create(target, operationStatus, completeness, hint, code);
+        return Create(target, operationStatus, completeness, hint, code, response.StructuredContent);
     }
 
     // ainetlinter-disable MaxMethodParameterCount — die Projektion wird nur intern mit dem bereits normalisierten Status aufgerufen.
@@ -39,9 +39,10 @@ internal static partial class McpNavigationProjection
         string operationStatus,
         string completeness,
         string? hint = null,
-        string? code = null)
+        string? code = null,
+        JsonElement? structured = null)
     {
-        var next = CreateNext(operationStatus, completeness, hint);
+        var next = CreateNext(operationStatus, completeness, hint, structured);
         var lint = ResolveLintCapability(target, operationStatus);
         var snapshotFingerprint = target.AnalysisSnapshotFingerprint ?? string.Empty;
         var snapshotKind = target.AnalysisSnapshotFingerprint is null
@@ -104,6 +105,7 @@ internal static partial class McpNavigationProjection
             [McpHandoffErrorCodes.StaleSnapshot] = "stale_snapshot",
             [LinterErrorCodes.NotConfigured] = "not_configured",
             [LinterErrorCodes.AssemblyTargetUnsupported] = "unsupported",
+            [LinterErrorCodes.ProjectTargetUnsupported] = "unsupported",
             [LinterErrorCodes.InvalidAssembly] = "invalid_assembly",
             [LinterErrorCodes.TargetUnreadable] = "target_unreadable",
             [ProjectErrorCodes.RulesInvalid] = "error",

@@ -152,7 +152,7 @@ internal static class ProjectAnalysisDispatcher
 
     internal static CallToolResult UnsupportedProjectTarget() =>
         McpToolResults.Recoverable(
-            LinterErrorCodes.InvalidArgument,
+            LinterErrorCodes.ProjectTargetUnsupported,
             "Dieses Tool unterstützt kein Projekt-Ziel.",
             hint: "targetPath auf eine vorhandene .dll/.exe-Datei setzen und eine Assembly-Operation verwenden.");
 }
@@ -273,7 +273,7 @@ internal static class AssemblyAnalysisDispatcher
 
     private static CallToolResult UnsupportedProjectTarget() =>
         McpToolResults.Recoverable(
-            LinterErrorCodes.InvalidArgument,
+            LinterErrorCodes.ProjectTargetUnsupported,
             "Dieses Tool unterstützt kein Projekt-Ziel.",
             hint: "targetPath auf eine vorhandene .dll/.exe-Datei setzen und eine Assembly-Operation verwenden.");
 }

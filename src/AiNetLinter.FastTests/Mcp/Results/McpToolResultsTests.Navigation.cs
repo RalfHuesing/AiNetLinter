@@ -250,4 +250,65 @@ public sealed partial class McpToolResultsTests
         Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
         Assert.StartsWith("Keine Wiederholung nötig", navigation.GetProperty("next").GetProperty("action").GetString());
     }
+
+    [Fact]
+    public void WithNavigation_FileTreeTruncated_ProjectsMatchingToolOwnedNext()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-filetree-next-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        var result = McpToolResults.Text(
+            "get_file_tree: root=. view=files",
+            new
+            {
+                fileTree = new
+                {
+                    completeness = new
+                    {
+                        scanCompleted = true,
+                        truncated = true,
+                        truncatedBy = new[] { "maxResults" }
+                    },
+                    next = new
+                    {
+                        kind = "refine_scope",
+                        action = "root/fileFilter verfeinern oder maxResults/maxResponseBytes erhöhen."
+                    }
+                }
+            });
+
+        var navigated = McpToolResults.WithNavigation(result, target);
+        var navigation = navigated.StructuredContent!.Value.GetProperty("navigation");
+
+        Assert.Equal("truncated", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
+        Assert.Equal("root/fileFilter verfeinern oder maxResults/maxResponseBytes erhöhen.", navigation.GetProperty("next").GetProperty("action").GetString());
+    }
+
+    [Fact]
+    public void WithNavigation_ProjectTargetUnsupported_ProjectsUnsupportedOperationStatusAndNext()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-unsupported-project-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.Recoverable(
+                AiNetLinter.Output.LinterErrorCodes.ProjectTargetUnsupported,
+                "Dieses Tool unterstützt kein Projekt-Ziel.",
+                hint: "targetPath auf eine vorhandene .dll/.exe-Datei setzen und eine Assembly-Operation verwenden."),
+            target);
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+
+        Assert.Equal("unsupported", navigation.GetProperty("operationStatus").GetString());
+        Assert.Equal("unsupported", navigation.GetProperty("completeness").GetString());
+        Assert.False(navigation.GetProperty("result").GetProperty("available").GetBoolean());
+        Assert.Equal(AiNetLinter.Output.LinterErrorCodes.ProjectTargetUnsupported, navigation.GetProperty("result").GetProperty("code").GetString());
+        Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
+    }
 }

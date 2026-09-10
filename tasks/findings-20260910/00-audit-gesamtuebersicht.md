@@ -30,7 +30,7 @@ befindet sich der **AiNetLinter MCP-Server auf einem sehr hohen architektonische
 | Resource `ainetlinter://overview` | Unterstützt | Unsupported | **Gut** | URL-kodierter TargetPath |
 | Resource `ainetlinter://rules` | Unterstützt | Unsupported | **Gut** | Zeigt Linter-Konfiguration |
 | **Discovery & Scope** | | | | |
-| `get_file_tree` | Unterstützt | Unterstützt | **Sehr gut** (Minor UX) | Text vs. Navigation `next`-Inkonsistenz |
+| `get_file_tree` | Unterstützt | Unterstützt | **Exzellent** | Synchrones refine_scope bei Truncation |
 | `get_namespace_tree` | Unterstützt | Unterstützt | **Exzellent** | Schnelle hierarchische Typübersicht |
 | `get_index_scope` | Unterstützt | Unsupported | **Exzellent** | Liefert Routing-Empfehlungen für Non-C# |
 | `inspect_assembly` | Unsupported | Unterstützt | **Exzellent** | Detaillierte API-, Referenz- und Typanalyse |
@@ -52,7 +52,7 @@ befindet sich der **AiNetLinter MCP-Server auf einem sehr hohen architektonische
 | **Qualität, Linting & Metriken** | | | | |
 | `get_violations` | Unterstützt | Unsupported | **Exzellent** | 0 Violations liefert `complete`, `available=true`, `next=none` |
 | `safeguard` | Unterstützt | Unsupported | **Exzellent** | 0-10 Quality Gate Score |
-| `pattern_detect` | Unterstützt | Unsupported | **Major UX-Befund** | 1 inaktive Regel macht Gesamtstatus `not_configured` |
+| `pattern_detect` | Unterstützt | Unsupported | **Exzellent** | Partiell vollständige Aggregation mit available=true |
 | `find_dead_code` | Unterstützt | Unsupported | **Exzellent** | Klare Heuristik-Grenzen & `ask_user` |
 | `find_magic_values` | Unterstützt | Unsupported | **Exzellent** | Strukturierte Kategorien mit Handlungsanweisungen |
 | `find_duplicates` | Unterstützt | Unsupported | **Sehr gut** | Token- und AST-basierte Duplikatsuche |
@@ -72,23 +72,17 @@ Die noch offenen Detailbefunde sind in den thematischen Berichten dokumentiert:
 
 | ID | Schweregrad | Kategorie | Kurztitel | Detaildatei |
 |---|---|---|---|---|
-| **F-02** | **Major** | Agent-UX / Navigation | `pattern_detect` schaltet bei einer einzigen inaktiven Unterregel die Gesamtausgabe auf `not_configured` (`available=false`) | `05-befunde-gruppe-e...md` |
 | **F-03** | **Major** | Tool-Semantik / Exploration | `get_feature_context` liefert leere Typ-Deklarationsdaten bei Klassen (Counts: 0 sichtbare Treffer) | `03-befunde-gruppe-c...md` |
 | **F-04** | **Major** | Tool-Semantik | `get_impact` liefert bei Einzelsymbolen exakt identischen Output wie `find_references` (keine Downstream-/Testauswertung) | `03-befunde-gruppe-c...md` |
 | **F-05** | **Major** | Lifecycle / Session | `get_server_health` wirft `PROJECT_NOT_INITIALIZED` bei frischem Source-Target, während Assembly-Targets auto-geleast werden | `01-befunde-gruppe-a...md` |
-| **F-06** | **Minor** | Cross-Tool-Konsistenz | Text-Output `[NEXT: refine_scope]` widerspricht maschinenlesbarem Navigation-Feld `next: request_detail` in `get_file_tree` | `02-befunde-gruppe-b...md` |
-| **F-08** | **Minor** | Error-Codes | Asymmetrie bei Cross-Target-Fehlern: Assembly auf SourceTool liefert `ASSEMBLY_TARGET_UNSUPPORTED`, Source auf AssemblyTool liefert `INVALID_ARGUMENT` | `04-befunde-gruppe-d...md` |
 
 ---
 
-## 4. Fazit & Priorisierte Handlungsempfehlung für offene Befunde
+## 4. Fazit & Handlungsempfehlung für verbleibende offene Befunde
 
-1. **Priorität 1 (Agent-Decisioning & Exploration)**:
-   - **F-02**: `pattern_detect` darf den Gesamtstatus nicht auf `not_configured` kippen, wenn nur Teilpatterns nicht konfiguriert sind.
-   - **F-03**: `get_feature_context` um echte Typ- und Member-Deklarationen anreichern.
-2. **Priorität 2 (Tool-Semantik & Konsistenz)**:
-   - **F-04**: `get_impact` um Downstream-Projekt- und Testbezüge erweitern, um semantischen Mehrwert gegenüber `find_references` zu bieten.
-   - **F-06**: Vereinheitlichung der `next`-Aktionen zwischen Text-Hinweisen (`refine_scope`) und Navigation-DTO in `get_file_tree`.
-3. **Priorität 3 (Lifecycle & Fehlermodell)**:
-   - **F-05**: `get_server_health` mit Source-`targetPath` transparent laden oder Status `not_loaded` statt Exception-Fehler melden.
-   - **F-08**: Einheitliche Fehlercodes und `operationStatus` bei falscher Zielherkunft (`SOURCE_TARGET_UNSUPPORTED` vs. `ASSEMBLY_TARGET_UNSUPPORTED`).
+1. **F-05 (Major — Lifecycle / Session)**:
+   - `get_server_health` mit Source-`targetPath` transparent laden oder Status `not_loaded` statt Exception-Fehler melden.
+2. **F-03 (Major — Tool-Semantik / Exploration)**:
+   - `get_feature_context` um echte Typ- und Member-Deklarationen bei Klassen/Interfaces anreichern.
+3. **F-04 (Major — Tool-Semantik)**:
+   - `get_impact` um Downstream-Projekt- und Testbezüge erweitern, um semantischen Mehrwert gegenüber `find_references` zu bieten.
