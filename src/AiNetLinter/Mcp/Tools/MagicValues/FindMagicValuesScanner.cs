@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Core;
+using AiNetLinter.Core.Git;
 using AiNetLinter.Mcp;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;

@@ -2,7 +2,7 @@
 
 using System.IO;
 
-namespace AiNetLinter.Core;
+namespace AiNetLinter.Core.Git;
 
 /// <summary>
 /// Ermittelt das Wurzelverzeichnis eines Git-Repositories (Verzeichnis mit <c>.git</c>-Unterordner)
