@@ -36,7 +36,7 @@ internal sealed record FindSymbolRequest(
 /// Deckt nur .cs-Dateien ab (Roslyn-Symbolgraph). Trunkiert standardmaessig auf 50 Treffer,
 /// ueberschreibbar via <c>maxResults</c>. Argument-Validierung lebt im Tool (nicht im Scanner),
 /// damit der Scanner reine Daten bekommt und einfacher unit-testbar bleibt. Bewusst duenner
-/// Dispatch auf <see cref="FindSymbolScanner.FindMatchesAndFormat"/> — keine eigene Scan- oder
+/// Dispatch auf <see cref="FindSymbolScanner.FindMatchesWithDetailsAsync"/> — keine eigene Scan- oder
 /// Formatierungslogik, damit diese Klasse klein bleibt.
 /// </summary>
 internal static class FindSymbolTool
@@ -167,49 +167,7 @@ internal static class FindSymbolTool
 
         try
         {
-            var results = new List<FindSymbolPatternResultDto>(patterns.Count);
-            var mb = new MarkdownBuilder();
-
-            for (var i = 0; i < patterns.Count; i++)
-            {
-                request.CancellationToken.ThrowIfCancellationRequested();
-                if (i > 0) mb.Divider();
-                var pattern = patterns[i];
-                var scan = await FindSymbolScanner.FindMatchesWithDetailsAsync(
-                    new FindSymbolScanRequest(
-                        solution,
-                        pattern,
-                        request.Kind,
-                        normalizedMaxResults,
-                        request.State.HandoffSymbolIdentity),
-                    request.CancellationToken);
-                results.Add(new FindSymbolPatternResultDto(
-                    pattern,
-                    scan.Entries,
-                    scan.TotalCount,
-                    scan.ReturnedCount,
-                    scan.IsTruncated,
-                    scan.TruncatedBy));
-
-                mb.Heading(3, $"Symbol-Suche: `{pattern}`").BlankLine();
-                mb.Line(scan.Text.TrimEnd());
-            }
-
-            var markdown = mb.Build().TrimEnd();
-            var totalCount = results.Sum(result => result.TotalCount);
-            var returnedCount = results.Sum(result => result.ReturnedCount);
-            var truncatedBy = results
-                .SelectMany(result => result.TruncatedBy ?? [])
-                .Distinct(StringComparer.Ordinal)
-                .ToList();
-            return McpToolResults.Text(
-                markdown,
-                new FindSymbolBatchDto(
-                    results,
-                    TotalCount: totalCount,
-                    ReturnedCount: returnedCount,
-                    IsTruncated: truncatedBy.Count > 0,
-                    TruncatedBy: truncatedBy));
+            return await ExecuteSearchAsync(request, solution, patterns, normalizedMaxResults);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -272,6 +230,77 @@ internal static class FindSymbolTool
                 Snapshot: assemblyIdentity?.ContentHash,
                 AllowedFollowUpTools: qualifiedId is null ? [] : HandoffFollowUpTools.For(symbol));
         }
+    }
+
+    private static async Task<CallToolResult> ExecuteSearchAsync(
+        FindSymbolRequest request,
+        Solution solution,
+        IReadOnlyList<string> patterns,
+        int maxResults)
+    {
+        var results = new List<FindSymbolPatternResultDto>(patterns.Count);
+        var markdown = new MarkdownBuilder();
+
+        for (var i = 0; i < patterns.Count; i++)
+        {
+            request.CancellationToken.ThrowIfCancellationRequested();
+            if (i > 0) markdown.Divider();
+            var pattern = patterns[i];
+            var scan = await FindPatternAsync(request, solution, pattern, maxResults);
+            results.Add(CreatePatternResult(pattern, scan));
+            AppendPatternMarkdown(markdown, pattern, scan.Text);
+        }
+
+        return CreateBatchResponse(markdown, results);
+    }
+
+    private static Task<FindSymbolScanResult> FindPatternAsync(
+        FindSymbolRequest request,
+        Solution solution,
+        string pattern,
+        int maxResults) =>
+        FindSymbolScanner.FindMatchesWithDetailsAsync(
+            new FindSymbolScanRequest(
+                solution,
+                pattern,
+                request.Kind,
+                maxResults,
+                request.State.HandoffSymbolIdentity),
+            request.CancellationToken);
+
+    private static FindSymbolPatternResultDto CreatePatternResult(
+        string pattern,
+        FindSymbolScanResult scan) =>
+        new(
+            pattern,
+            scan.Entries,
+            scan.TotalCount,
+            scan.ReturnedCount,
+            scan.IsTruncated,
+            scan.TruncatedBy);
+
+    private static void AppendPatternMarkdown(MarkdownBuilder markdown, string pattern, string text)
+    {
+        markdown.Heading(3, $"Symbol-Suche: `{pattern}`").BlankLine();
+        markdown.Line(text.TrimEnd());
+    }
+
+    private static CallToolResult CreateBatchResponse(
+        MarkdownBuilder markdown,
+        IReadOnlyList<FindSymbolPatternResultDto> results)
+    {
+        var truncatedBy = results
+            .SelectMany(result => result.TruncatedBy ?? [])
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        return McpToolResults.Text(
+            markdown.Build().TrimEnd(),
+            new FindSymbolBatchDto(
+                results,
+                TotalCount: results.Sum(result => result.TotalCount),
+                ReturnedCount: results.Sum(result => result.ReturnedCount),
+                IsTruncated: truncatedBy.Count > 0,
+                TruncatedBy: truncatedBy));
     }
 
     internal static string FormatEntry(SymbolLocationEntry entry)

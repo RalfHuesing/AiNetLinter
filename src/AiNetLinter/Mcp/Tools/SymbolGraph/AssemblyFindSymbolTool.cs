@@ -75,49 +75,82 @@ internal static class AssemblyFindSymbolTool
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (results.Count > 0) markdown.Divider();
-            var search = await AssemblySymbolSearch.FindMatchesAsync(
-                lease,
-                pattern,
-                kind,
-                Math.Max(maxResults, 1),
-                cancellationToken).ConfigureAwait(false);
+            var search = await SearchPatternAsync(lease, pattern, kind, maxResults, cancellationToken).ConfigureAwait(false);
             navigation = navigation is null
                 ? search.Navigation
                 : AssemblyNavigationSupport.MergeSummaries(navigation, search.Navigation);
-            results.Add(new FindSymbolPatternResultDto(
-                pattern,
-                search.Entries,
-                search.TotalCount,
-                search.ReturnedCount,
-                search.IsTruncated,
-                search.TruncatedBy));
-            markdown.Heading(3, $"Symbol-Suche: {pattern}").BlankLine();
-            markdown.Line(search.Entries.Count == 0
-                ? $"Keine Treffer fuer '{pattern}' in Root- oder Referenz-Assemblies"
-                : string.Join("\n", search.Entries.Select(FindSymbolTool.FormatEntry)));
+            results.Add(CreatePatternResult(pattern, search));
+            AppendPatternMarkdown(markdown, pattern, search);
         }
 
         var summary = navigation ?? new AssemblyNavigationSummary(true, 1, 0, false, "partial", []);
+        AppendSummary(markdown, summary);
+        AppendDiagnostics(markdown, summary.Diagnostics);
+        return CreateResponse(markdown, results, summary);
+    }
+
+    private static Task<AssemblySymbolSearchResult> SearchPatternAsync(
+        AssemblyAnalysisLease lease,
+        string pattern,
+        string? kind,
+        int maxResults,
+        CancellationToken cancellationToken) =>
+        AssemblySymbolSearch.FindMatchesAsync(
+            lease,
+            pattern,
+            kind,
+            Math.Max(maxResults, 1),
+            cancellationToken);
+
+    private static FindSymbolPatternResultDto CreatePatternResult(
+        string pattern,
+        AssemblySymbolSearchResult search) =>
+        new(
+            pattern,
+            search.Entries,
+            search.TotalCount,
+            search.ReturnedCount,
+            search.IsTruncated,
+            search.TruncatedBy);
+
+    private static void AppendPatternMarkdown(
+        MarkdownBuilder markdown,
+        string pattern,
+        AssemblySymbolSearchResult search)
+    {
+        markdown.Heading(3, $"Symbol-Suche: {pattern}").BlankLine();
+        markdown.Line(search.Entries.Count == 0
+            ? $"Keine Treffer fuer '{pattern}' in Root- oder Referenz-Assemblies"
+            : string.Join("\n", search.Entries.Select(FindSymbolTool.FormatEntry)));
+    }
+
+    private static void AppendSummary(MarkdownBuilder markdown, AssemblyNavigationSummary summary)
+    {
         markdown.Heading(3, "Assembly-Referenzsuche").BlankLine();
         markdown.Line(
             $"includeReferences=true; Assemblies: {summary.SearchedAssemblyCount} von {summary.TotalAssemblyCount}; " +
             $"Vollständigkeit: {summary.Completeness}; " +
             $"Ergebnisse gekürzt: {summary.ResultsTruncated}");
+    }
 
-        var diagnostics = summary.Diagnostics
+    private static void AppendDiagnostics(MarkdownBuilder markdown, IReadOnlyList<string> sourceDiagnostics)
+    {
+        var diagnostics = sourceDiagnostics
             .Where(d => !d.Contains("verbleibenden", StringComparison.OrdinalIgnoreCase))
             .ToList();
+        if (diagnostics.Count == 0) return;
 
-        if (diagnostics.Count > 0)
-        {
-            var shown = diagnostics.Take(5).ToList();
-            var suffix = diagnostics.Count > 5 ? $" ({shown.Count} von {diagnostics.Count} gezeigt)" : string.Empty;
-            markdown.Line($"Diagnosen{suffix}:");
-            foreach (var diagnostic in shown) markdown.Line($"- {diagnostic}");
-        }
+        var shown = diagnostics.Take(5).ToList();
+        var suffix = diagnostics.Count > 5 ? $" ({shown.Count} von {diagnostics.Count} gezeigt)" : string.Empty;
+        markdown.Line($"Diagnosen{suffix}:");
+        foreach (var diagnostic in shown) markdown.Line($"- {diagnostic}");
+    }
 
-        var totalCount = results.Sum(result => result.TotalCount);
-        var returnedCount = results.Sum(result => result.ReturnedCount);
+    private static CallToolResult CreateResponse(
+        MarkdownBuilder markdown,
+        IReadOnlyList<FindSymbolPatternResultDto> results,
+        AssemblyNavigationSummary summary)
+    {
         var truncatedBy = results
             .SelectMany(result => result.TruncatedBy ?? [])
             .Distinct(StringComparer.Ordinal)
@@ -127,8 +160,8 @@ internal static class AssemblyFindSymbolTool
             new FindSymbolBatchDto(
                 results,
                 summary,
-                totalCount,
-                returnedCount,
+                results.Sum(result => result.TotalCount),
+                results.Sum(result => result.ReturnedCount),
                 truncatedBy.Count > 0,
                 truncatedBy));
     }
