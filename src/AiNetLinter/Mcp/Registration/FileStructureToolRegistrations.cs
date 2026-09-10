@@ -206,8 +206,11 @@ internal static class FileStructureToolRegistrations
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, maxResponseBytes, ct),
-                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, maxResponseBytes, ct),
+                            // The final budget is applied after the fixed navigation envelope is projected.
+                            // Passing the wire limit into the legacy skeleton pre-trim would spend the
+                            // 2,048-byte budget before navigation exists and can yield INVALID_ARGUMENT.
+                            ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, 0, ct),
+                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, 0, ct),
                             MaxResponseBytes: maxResponseBytes,
                             PostNavigationResponseBudget: GetFileSkeletonTool.ApplyFinalResponseBudget),
                         ct));

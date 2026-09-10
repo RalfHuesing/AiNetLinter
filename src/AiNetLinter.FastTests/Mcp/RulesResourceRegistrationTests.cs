@@ -110,7 +110,7 @@ public sealed class RulesResourceRegistrationTests
         Assert.Contains($"- targetPath: `{solutionPath}`", content.Text, StringComparison.Ordinal);
         Assert.Contains("- origin: `source`", content.Text, StringComparison.Ordinal);
         Assert.Contains("- snapshot: `", content.Text, StringComparison.Ordinal);
-        Assert.Contains("- operationStatus: `ok`", content.Text, StringComparison.Ordinal);
+        Assert.Contains("- status: operation=`ok`", content.Text, StringComparison.Ordinal);
         Assert.Throws<ModelContextProtocol.McpException>(
             () => RulesResourceRegistration.BuildTemplatedResult(registry, "relative/path"));
     }

@@ -374,7 +374,10 @@ internal static class AssemblyAnalysisWireBudgetProjection
     {
         if (payload["navigation"] is JsonObject navigation)
         {
-            navigation["completeness"] = "truncated";
+            if (navigation["status"] is JsonObject status)
+            {
+                status["completeness"] = "truncated";
+            }
         }
     }
 

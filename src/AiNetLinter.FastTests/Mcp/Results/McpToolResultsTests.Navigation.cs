@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.TestKit;
@@ -12,6 +13,98 @@ namespace AiNetLinter.FastTests.Mcp.Results;
 
 public sealed partial class McpToolResultsTests
 {
+    [Fact]
+    public void WithNavigation_ProjectsVersionedEnvelopeAndRemovesLegacyNavigationFields()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-envelope-v1-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target) with
+        {
+            AnalysisSnapshotFingerprint = new string('a', 64),
+            AnalysisSnapshotKind = "source",
+            AnalysisSnapshotFresh = true,
+        };
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.Text(
+                "ok",
+                new
+                {
+                    completeness = "complete",
+                    navigation = new
+                    {
+                        origin = "legacy",
+                        capabilities = new { navigation = "supported", lint = "supported" },
+                        operationStatus = "ok",
+                        result = new { available = true },
+                        next = new { kind = "none", action = "legacy" },
+                    },
+                }),
+            target);
+
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+        Assert.Equal(1, navigation.GetProperty("contractVersion").GetInt32());
+        Assert.Equal("source", navigation.GetProperty("target").GetProperty("origin").GetString());
+        Assert.Equal(target.CanonicalPath, navigation.GetProperty("target").GetProperty("targetPath").GetString());
+        Assert.Equal("ok", navigation.GetProperty("status").GetProperty("operation").GetString());
+        Assert.Equal("complete", navigation.GetProperty("status").GetProperty("completeness").GetString());
+        Assert.Equal(JsonValueKind.Null, navigation.GetProperty("next").ValueKind);
+        Assert.DoesNotContain("origin", navigation.EnumerateObject().Select(property => property.Name));
+        Assert.DoesNotContain("capabilities", navigation.EnumerateObject().Select(property => property.Name));
+        Assert.DoesNotContain("operationStatus", navigation.EnumerateObject().Select(property => property.Name));
+        Assert.DoesNotContain("result", navigation.EnumerateObject().Select(property => property.Name));
+        Assert.DoesNotContain("completeness", navigation.EnumerateObject().Select(property => property.Name));
+    }
+
+    [Fact]
+    public void WithNavigation_PreservesApplicableScopeAndHandoffContract()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-optional-contract-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.Text(
+                "ok",
+                new
+                {
+                    completeness = "complete",
+                    scope = new
+                    {
+                        requestedType = "all",
+                        includeGenerated = false,
+                    },
+                    handoff = new
+                    {
+                        acceptedAs = "symbolIdentifier",
+                        followUpsByKind = new
+                        {
+                            type = new[] { "get_type_hierarchy", "find_implementations" },
+                            member = new[] { "get_symbol_body", "find_references", "get_call_tree" },
+                        },
+                    },
+                }),
+            target);
+
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+        var scope = navigation.GetProperty("scope");
+        Assert.Equal("all", scope.GetProperty("requestedType").GetString());
+        Assert.False(scope.GetProperty("includeGenerated").GetBoolean());
+
+        var handoff = navigation.GetProperty("handoff");
+        Assert.Equal("symbolIdentifier", handoff.GetProperty("acceptedAs").GetString());
+        Assert.Equal(
+            new[] { "get_type_hierarchy", "find_implementations" },
+            handoff.GetProperty("followUpsByKind").GetProperty("type").Deserialize<string[]>());
+        Assert.Equal(
+            new[] { "get_symbol_body", "find_references", "get_call_tree" },
+            handoff.GetProperty("followUpsByKind").GetProperty("member").Deserialize<string[]>());
+    }
+
     [Fact]
     public void WithNavigation_WireTruncationOverridesFeaturePartialButPreservesFailureCause()
     {
@@ -52,7 +145,7 @@ public sealed partial class McpToolResultsTests
 
         Assert.True(payload.GetProperty("wireBudget").GetProperty("truncated").GetBoolean());
         Assert.True(payload.GetProperty("wireTruncated").GetBoolean());
-        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("completeness").GetString());
+        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal("partial", payload.GetProperty("completeness").GetString());
         Assert.Equal("error", payload.GetProperty("violations").GetProperty("status").GetString());
         Assert.Equal(
@@ -95,7 +188,7 @@ public sealed partial class McpToolResultsTests
         var navigated = McpToolResults.WithNavigation(result, target);
         var navigation = navigated.StructuredContent!.Value.GetProperty("navigation");
 
-        Assert.Equal("truncated", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("truncated", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
     }
 
@@ -117,7 +210,7 @@ public sealed partial class McpToolResultsTests
             target);
 
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
-        Assert.Equal(expectedCompleteness, navigation.GetProperty("completeness").GetString());
+        Assert.Equal(expectedCompleteness, navigation.GetProperty("status").GetProperty("completeness").GetString());
     }
 
     [Fact]
@@ -143,9 +236,8 @@ public sealed partial class McpToolResultsTests
             target);
 
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
-        Assert.Equal("complete", navigation.GetProperty("completeness").GetString());
-        Assert.True(navigation.GetProperty("result").GetProperty("available").GetBoolean());
-        Assert.Equal("none", navigation.GetProperty("next").GetProperty("kind").GetString());
+        Assert.Equal("complete", navigation.GetProperty("status").GetProperty("completeness").GetString());
+        Assert.Equal(JsonValueKind.Null, navigation.GetProperty("next").ValueKind);
     }
 
     [Fact]
@@ -202,9 +294,8 @@ public sealed partial class McpToolResultsTests
             target);
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
 
-        Assert.Equal("error", navigation.GetProperty("operationStatus").GetString());
-        Assert.Equal("partial", navigation.GetProperty("completeness").GetString());
-        Assert.False(navigation.GetProperty("result").GetProperty("available").GetBoolean());
+        Assert.Equal("error", navigation.GetProperty("status").GetProperty("operation").GetString());
+        Assert.Equal("partial", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
         Assert.Equal(
             "Abschnitt violations: erneut anfordern.",
@@ -225,9 +316,8 @@ public sealed partial class McpToolResultsTests
             target);
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
 
-        Assert.Equal("symbol_not_found", navigation.GetProperty("operationStatus").GetString());
-        Assert.False(navigation.GetProperty("result").GetProperty("available").GetBoolean());
-        Assert.Equal("not_applicable", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("symbol_not_found", navigation.GetProperty("status").GetProperty("operation").GetString());
+        Assert.Equal("not_applicable", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
     }
 
@@ -245,8 +335,7 @@ public sealed partial class McpToolResultsTests
             target);
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
 
-        Assert.Equal("invalid_assembly", navigation.GetProperty("operationStatus").GetString());
-        Assert.False(navigation.GetProperty("result").GetProperty("available").GetBoolean());
+        Assert.Equal("invalid_assembly", navigation.GetProperty("status").GetProperty("operation").GetString());
         Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
         Assert.StartsWith("Keine Wiederholung nötig", navigation.GetProperty("next").GetProperty("action").GetString());
     }
@@ -283,7 +372,7 @@ public sealed partial class McpToolResultsTests
         var navigated = McpToolResults.WithNavigation(result, target);
         var navigation = navigated.StructuredContent!.Value.GetProperty("navigation");
 
-        Assert.Equal("truncated", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("truncated", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
         Assert.Equal("root/fileFilter verfeinern oder maxResults/maxResponseBytes erhöhen.", navigation.GetProperty("next").GetProperty("action").GetString());
     }
@@ -305,10 +394,9 @@ public sealed partial class McpToolResultsTests
             target);
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
 
-        Assert.Equal("unsupported", navigation.GetProperty("operationStatus").GetString());
-        Assert.Equal("unsupported", navigation.GetProperty("completeness").GetString());
-        Assert.False(navigation.GetProperty("result").GetProperty("available").GetBoolean());
-        Assert.Equal(AiNetLinter.Output.LinterErrorCodes.ProjectTargetUnsupported, navigation.GetProperty("result").GetProperty("code").GetString());
+        Assert.Equal("unsupported", navigation.GetProperty("status").GetProperty("operation").GetString());
+        Assert.Equal("unsupported", navigation.GetProperty("status").GetProperty("completeness").GetString());
+        Assert.Equal(AiNetLinter.Output.LinterErrorCodes.ProjectTargetUnsupported, navigation.GetProperty("status").GetProperty("code").GetString());
         Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
     }
 }

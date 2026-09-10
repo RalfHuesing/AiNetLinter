@@ -431,7 +431,7 @@ public sealed class GetTestContextToolTests
         var result = McpToolResults.WithNavigation(McpToolResults.Text("statische Testkandidaten", payload), target);
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
 
-        Assert.Equal("truncated", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("truncated", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
         Assert.Contains("testContext", navigation.GetProperty("next").GetProperty("action").GetString(), StringComparison.Ordinal);
     }

@@ -300,9 +300,8 @@ internal static partial class McpToolResults
     /// erhalten, Listen werden deterministisch vom Ende her gekuerzt und es werden keine IDs oder
     /// Fortsetzungstoken erzeugt.
     /// Ergaenzt eine zielgebundene Antwort um den gemeinsamen Navigation-Kern. Die vorhandene
-    /// tool-spezifische StructuredContent-Nutzlast bleibt dabei unveraendert am Root; dadurch
-    /// bleiben bestehende Clients kompatibel, waehrend Agenten einen einheitlichen Handoff
-    /// unter <c>navigation</c> erhalten.
+    /// tool-spezifische StructuredContent-Nutzlast bleibt dabei unveraendert am Root; der
+    /// normalisierte Envelope wird atomar unter <c>navigation</c> geschrieben.
     /// </summary>
     internal static CallToolResult WithNavigation(
         CallToolResult result,
@@ -319,8 +318,29 @@ internal static partial class McpToolResults
             : new JsonObject();
         var navigationNode = JsonSerializer.SerializeToNode(navigation, McpJsonOptions.Default) as JsonObject
             ?? new JsonObject();
+        // McpJsonOptions omits nulls globally.  The v1 wire contract deliberately requires
+        // status.code and next to be present as null when no code/follow-up applies.
+        if (navigationNode["status"] is JsonObject statusNode && !statusNode.ContainsKey("code"))
+        {
+            statusNode["code"] = null;
+        }
+
+        if (!navigationNode.ContainsKey("next"))
+        {
+            navigationNode["next"] = null;
+        }
+
         if (payload["navigation"] is JsonObject existingNavigation)
         {
+            foreach (var propertyName in new[]
+            {
+                "contractVersion", "target", "snapshot", "status", "scope", "next", "handoff",
+                "origin", "capabilities", "operationStatus", "result", "completeness",
+            })
+            {
+                existingNavigation.Remove(propertyName);
+            }
+
             foreach (var property in navigationNode)
             {
                 existingNavigation[property.Key] = property.Value?.DeepClone();

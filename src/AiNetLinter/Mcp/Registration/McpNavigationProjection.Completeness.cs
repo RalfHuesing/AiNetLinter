@@ -13,7 +13,9 @@ internal static partial class McpNavigationProjection
         return structured is { ValueKind: JsonValueKind.Object } payload
             && payload.TryGetProperty("navigation", out var navigation)
             && navigation.ValueKind == JsonValueKind.Object
-            && TryReadStringProperty(navigation, "completeness", out value);
+            && navigation.TryGetProperty("status", out var status)
+            && status.ValueKind == JsonValueKind.Object
+            && TryReadStringProperty(status, "completeness", out value);
     }
 
     private static bool TryResolveAssemblyResultCompleteness(JsonElement? structured, out string value)
@@ -328,7 +330,7 @@ internal static partial class McpNavigationProjection
         return true;
     }
 
-    private static McpNavigationNext CreateNext(string operationStatus, string completeness, string? hint, JsonElement? structured = null)
+    private static McpNavigationNext? CreateNext(string operationStatus, string completeness, string? hint, JsonElement? structured = null)
     {
         if (operationStatus == "ok" && TryReadToolOwnedNext(structured, out var explicitNext))
         {
@@ -342,6 +344,7 @@ internal static partial class McpNavigationProjection
             "configuration_error" => new("request_detail", hint ?? "ainetlinter-rules.json korrigieren und denselben Target-Call wiederholen."),
             "invalid_argument" or "target_mismatch" or "stale_snapshot" or "symbol_not_found" or "ambiguous_symbol" or "error" or "invalid_assembly"
                 => CreateErrorNext(operationStatus, hint),
+            "loading" => new("request_detail", "Das Target wird noch geladen; den Aufruf nach Abschluss erneut anfordern."),
             _ => CreateSuccessfulNext(completeness, hint),
         };
     }
@@ -353,11 +356,15 @@ internal static partial class McpNavigationProjection
 
         if (TryReadNextObject(payload, "next", out next)) return true;
 
-        if (payload.TryGetProperty("navigation", out var nav) && nav.ValueKind == JsonValueKind.Object
+        if (payload.TryGetProperty("navigation", out var nav)
+            && nav.ValueKind == JsonValueKind.Object
+            && nav.TryGetProperty("status", out var status)
+            && status.ValueKind == JsonValueKind.Object
             && TryReadNextObject(nav, "next", out next)) return true;
 
         foreach (var property in payload.EnumerateObject())
         {
+            if (property.NameEquals("navigation")) continue;
             if (property.Value.ValueKind == JsonValueKind.Object
                 && TryReadNextObject(property.Value, "next", out next))
             {
@@ -402,7 +409,7 @@ internal static partial class McpNavigationProjection
         new(operationStatus is "symbol_not_found" or "ambiguous_symbol" or "invalid_assembly" ? "refine_scope" : "request_detail",
             hint ?? "Argumente und Target prüfen und den sicheren nächsten Schritt aus der Fehlermeldung ausführen.");
 
-    private static McpNavigationNext CreateSuccessfulNext(string completeness, string? hint)
+    private static McpNavigationNext? CreateSuccessfulNext(string completeness, string? hint)
     {
         if (!string.IsNullOrWhiteSpace(hint)) return new("request_detail", hint);
         if (completeness is "not_configured" or "not_decidable" or "configuration_error")
@@ -410,20 +417,14 @@ internal static partial class McpNavigationProjection
             return new("request_detail", "Die Entscheidbarkeit des angeforderten Scopes ist begrenzt; Konfiguration oder Scope prüfen und den Aufruf gezielt wiederholen.");
         }
 
-        return completeness is "truncated" or "partial"
+        return completeness == "complete"
+            ? null
+            : completeness is "truncated" or "partial"
             ? new("request_detail", "Scope oder Detaillevel verfeinern und die Antwort gezielt wiederholen.")
             : completeness == "empty"
                 ? new("refine_scope", "Keine Treffer im vollständig geprüften Scope; Suchmuster oder Scope verfeinern und erneut suchen.")
                 : new("none", "Kein weiterer Schritt erforderlich.");
     }
-
-    private static string ToWire(AnalysisCapabilityStatus status) =>
-        status switch
-        {
-            AnalysisCapabilityStatus.Supported => "supported",
-            AnalysisCapabilityStatus.NotConfigured => "not_configured",
-            _ => "unsupported",
-        };
 
     private static string? ReadString(JsonElement? structured, string propertyName) =>
         structured is { ValueKind: JsonValueKind.Object } value

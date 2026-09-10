@@ -146,7 +146,7 @@ public sealed partial class McpServerToolBehaviorE2ETests
         var payload = result.StructuredContent!.Value;
         Assert.True(payload.GetProperty("truncated").GetBoolean());
         Assert.Contains("maxResponseBytes", payload.GetProperty("truncatedBy").ToString(), StringComparison.Ordinal);
-        Assert.Equal("source", payload.GetProperty("navigation").GetProperty("origin").GetString());
+        Assert.Equal("source", payload.GetProperty("navigation").GetProperty("target").GetProperty("origin").GetString());
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.True(
             Encoding.UTF8.GetByteCount(text) + Encoding.UTF8.GetByteCount(payload.GetRawText()) <= 2048,
@@ -177,7 +177,7 @@ public sealed partial class McpServerToolBehaviorE2ETests
         var totalBytes = Encoding.UTF8.GetByteCount(text) + Encoding.UTF8.GetByteCount(payload.GetRawText());
         Assert.True(totalBytes <= budget, $"Finale kombinierte Wire-Nutzlast überschreitet maxResponseBytes: {totalBytes} > {budget}.");
         Assert.Contains("## Navigation", text, StringComparison.Ordinal);
-        Assert.Equal("source", payload.GetProperty("navigation").GetProperty("origin").GetString());
+        Assert.Equal("source", payload.GetProperty("navigation").GetProperty("target").GetProperty("origin").GetString());
     }
 
     [Fact]
@@ -224,9 +224,9 @@ public sealed partial class McpServerToolBehaviorE2ETests
 
         Assert.True(payload.GetProperty("truncated").GetBoolean(), payload.GetRawText());
         Assert.Contains("maxResponseBytes", payload.GetProperty("truncatedBy").ToString(), StringComparison.Ordinal);
-        Assert.Equal("truncated", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("truncated", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal("request_detail", next.GetProperty("kind").GetString());
-        Assert.Contains("- completeness: `truncated`", text, StringComparison.Ordinal);
+        Assert.Contains("completeness=`truncated`", text, StringComparison.Ordinal);
         Assert.Contains("- next: `request_detail`", text, StringComparison.Ordinal);
         Assert.True(
             Encoding.UTF8.GetByteCount(text) + Encoding.UTF8.GetByteCount(payload.GetRawText()) <= budget,
@@ -309,7 +309,8 @@ public sealed partial class McpServerToolBehaviorE2ETests
 
         Assert.False(result.IsError == true, result.ToString());
         Assert.NotNull(result.StructuredContent);
-        Assert.Equal("source", result.StructuredContent!.Value.GetProperty("navigation").GetProperty("origin").GetString());
+        var navigation = result.StructuredContent!.Value.GetProperty("navigation");
+        Assert.Equal("source", navigation.GetProperty("target").GetProperty("origin").GetString());
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.True(Encoding.UTF8.GetByteCount(text) + Encoding.UTF8.GetByteCount(result.StructuredContent.Value.GetRawText()) <= 2048);
     }

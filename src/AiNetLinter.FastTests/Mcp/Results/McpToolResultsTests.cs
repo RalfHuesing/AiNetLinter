@@ -128,9 +128,8 @@ public sealed partial class McpToolResultsTests
             target);
 
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
-        Assert.Equal("error", navigation.GetProperty("operationStatus").GetString());
-        Assert.Equal("not_applicable", navigation.GetProperty("completeness").GetString());
-        Assert.False(navigation.GetProperty("result").GetProperty("available").GetBoolean());
+        Assert.Equal("error", navigation.GetProperty("status").GetProperty("operation").GetString());
+        Assert.Equal("not_applicable", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
     }
 
@@ -205,18 +204,15 @@ public sealed partial class McpToolResultsTests
         Assert.Equal(target.AnalysisRoot, navigation.GetProperty("target").GetProperty("analysisRoot").GetString());
         Assert.Equal(analysisSnapshot, navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString());
         Assert.NotEqual(target.Fingerprint, navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString());
-        Assert.Equal("source-files", navigation.GetProperty("snapshot").GetProperty("kind").GetString());
+        Assert.Equal("source", navigation.GetProperty("snapshot").GetProperty("kind").GetString());
         Assert.True(navigation.GetProperty("snapshot").GetProperty("fresh").GetBoolean());
-        Assert.Equal("source", navigation.GetProperty("origin").GetString());
-        Assert.Equal("supported", navigation.GetProperty("capabilities").GetProperty("navigation").GetString());
-        Assert.Equal("not_configured", navigation.GetProperty("capabilities").GetProperty("lint").GetString());
-        Assert.Equal("ok", navigation.GetProperty("operationStatus").GetString());
-        Assert.Equal("empty", navigation.GetProperty("completeness").GetString());
-        Assert.False(navigation.GetProperty("result").GetProperty("available").GetBoolean());
+        Assert.Equal(1, navigation.GetProperty("contractVersion").GetInt32());
+        Assert.Equal("source", navigation.GetProperty("target").GetProperty("origin").GetString());
+        Assert.Equal("ok", navigation.GetProperty("status").GetProperty("operation").GetString());
+        Assert.Equal("empty", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.Contains("operationStatus: `ok`", text, StringComparison.Ordinal);
-        Assert.Contains("completeness: `empty`", text, StringComparison.Ordinal);
+        Assert.Contains("status: operation=`ok`, completeness=`empty`", text, StringComparison.Ordinal);
         Assert.Contains("next: `refine_scope`", text, StringComparison.Ordinal);
         Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.ValueKind);
     }
@@ -246,7 +242,7 @@ public sealed partial class McpToolResultsTests
 
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
 
-        Assert.Equal("complete", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("complete", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
         Assert.Equal(
             "Abschnitt testContext: Detail erneut anfordern.",
@@ -273,7 +269,7 @@ public sealed partial class McpToolResultsTests
             target);
 
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
-        Assert.Equal("truncated", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("truncated", navigation.GetProperty("status").GetProperty("completeness").GetString());
     }
 
     [Fact]
@@ -303,7 +299,7 @@ public sealed partial class McpToolResultsTests
 
         Assert.True(payload.GetProperty("wireBudget").GetProperty("truncated").GetBoolean());
         Assert.True(payload.GetProperty("wireTruncated").GetBoolean());
-        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("completeness").GetString());
+        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
     }
 
     [Fact]

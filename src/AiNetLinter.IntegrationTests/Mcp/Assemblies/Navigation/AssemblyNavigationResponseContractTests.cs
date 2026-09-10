@@ -92,7 +92,7 @@ internal static class AssemblyNavigationResponseAssertions
             .Select(item => item.GetString()!)
             .ToArray();
 
-        Assert.Equal("partial", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("partial", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal(5, samples.Length);
         Assert.Equal(5, shownCount);
         Assert.True(totalCount > shownCount, navigation.GetRawText());

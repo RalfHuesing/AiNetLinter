@@ -75,7 +75,7 @@ public sealed partial class AssemblyAnalysisToolTests
             "assembly",
             new
             {
-                navigation = new { completeness = "complete" },
+                navigation = new { contractVersion = 1, status = new { operation = "ok", completeness = "complete" } },
                 types = Enumerable.Range(0, 200)
                     .Select(index => new { id = $"item-{index:D3}", value = new string('x', 80) }),
             });
@@ -87,7 +87,7 @@ public sealed partial class AssemblyAnalysisToolTests
         var payload = projected.StructuredContent!.Value;
 
         Assert.True(payload.GetProperty("wireTruncated").GetBoolean());
-        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("completeness").GetString());
+        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public sealed partial class AssemblyAnalysisToolTests
             new string('x', 8_000),
             new
             {
-                navigation = new { completeness = "complete" },
+                navigation = new { contractVersion = 1, status = new { operation = "ok", completeness = "complete" } },
             });
 
         var projected = AssemblyAnalysisResponse.ApplyWireBudget(result, 4096, 0);
@@ -108,7 +108,7 @@ public sealed partial class AssemblyAnalysisToolTests
         Assert.True(payload.GetProperty("wireTruncated").GetBoolean());
         Assert.True(wireBudget.GetProperty("truncated").GetBoolean());
         Assert.Contains("responseBudget", payload.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
-        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("completeness").GetString());
+        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
         Assert.True(wireBudget.GetProperty("totalBytes").GetInt32() <= wireBudget.GetProperty("limitBytes").GetInt32());
     }
 

@@ -174,7 +174,7 @@ internal static class GetFileSkeletonTool
     {
         var parts = SplitResponse(text);
         var payload = FileSkeletonPayload.From(structured);
-        var kept = KeepUnits(parts, payload, maxResponseBytes);
+        var kept = KeepUnits(parts, payload, structured, maxResponseBytes);
         var finalText = BuildFinalText(parts, kept);
         var finalPayload = payload.ProjectToText(finalText);
         var finalNode = JsonSerializer.SerializeToNode(finalPayload, McpJsonOptions.Default) as JsonObject ?? new JsonObject();
@@ -209,6 +209,7 @@ internal static class GetFileSkeletonTool
     private static IReadOnlyList<string> KeepUnits(
         SkeletonResponseParts parts,
         FileSkeletonPayload payload,
+        JsonObject structured,
         int maxResponseBytes)
     {
         const string markerFormat = "[Antwort wegen maxResponseBytes begrenzt — {0} vollständige Skeleton-Einheiten ausgelassen; maxResponseBytes erhöhen oder filePaths verfeinern]";
@@ -218,7 +219,10 @@ internal static class GetFileSkeletonTool
             var omitted = parts.Units.Count - i - 1;
             var marker = string.Format(markerFormat, omitted);
             var candidate = parts.Prefix + string.Join("\n\n---\n\n", kept.Append(parts.Units[i])) + "\n\n" + marker + parts.Footer;
-            if (!FitsBudget(candidate, payload.ProjectToText(candidate), maxResponseBytes)) break;
+            var candidatePayload = JsonSerializer.SerializeToNode(payload.ProjectToText(candidate), McpJsonOptions.Default) as JsonObject
+                ?? new JsonObject();
+            PreserveNavigation(structured, candidatePayload);
+            if (!FitsBudget(candidate, candidatePayload, maxResponseBytes)) break;
             kept.Add(parts.Units[i]);
         }
         return kept;

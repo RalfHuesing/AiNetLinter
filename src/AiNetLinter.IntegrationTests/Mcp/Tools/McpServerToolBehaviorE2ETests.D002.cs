@@ -38,8 +38,7 @@ public sealed class McpServerToolBehaviorD002E2ETests
 
         Assert.NotNull(result.StructuredContent);
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
-        Assert.Equal("resource_not_found", navigation.GetProperty("operationStatus").GetString());
-        Assert.False(navigation.GetProperty("result").GetProperty("available").GetBoolean());
-        Assert.Equal("not_applicable", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("resource_not_found", navigation.GetProperty("status").GetProperty("operation").GetString());
+        Assert.Equal("not_applicable", navigation.GetProperty("status").GetProperty("completeness").GetString());
     }
 }

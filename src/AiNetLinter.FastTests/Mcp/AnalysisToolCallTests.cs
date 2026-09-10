@@ -126,8 +126,7 @@ public sealed class AnalysisToolCallTests
         var text = TextOf(result);
         Assert.StartsWith(Path.GetFullPath(solutionPath), text, StringComparison.Ordinal);
         Assert.Contains("## Navigation", text, StringComparison.Ordinal);
-        Assert.Contains("- operationStatus: `ok`", text, StringComparison.Ordinal);
-        Assert.Contains("- completeness: `complete`", text, StringComparison.Ordinal);
+        Assert.Contains("- status: operation=`ok`, completeness=`complete`", text, StringComparison.Ordinal);
     }
 
     [Fact]

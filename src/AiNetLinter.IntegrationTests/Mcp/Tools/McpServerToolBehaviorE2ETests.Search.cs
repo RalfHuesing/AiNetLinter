@@ -59,14 +59,12 @@ public sealed partial class McpServerToolBehaviorE2ETests
         Assert.Equal(System.Text.Json.JsonValueKind.Array, structured.GetProperty("matches").ValueKind);
         Assert.Equal(System.Text.Json.JsonValueKind.Object, structured.GetProperty("completeness").ValueKind);
         var navigation = structured.GetProperty("navigation");
-        Assert.Equal("source", navigation.GetProperty("origin").GetString());
-        Assert.Equal("ok", navigation.GetProperty("operationStatus").GetString());
-        Assert.Equal("supported", navigation.GetProperty("capabilities").GetProperty("navigation").GetString());
-        Assert.Equal("complete", navigation.GetProperty("completeness").GetString());
-        Assert.Equal("source-files", navigation.GetProperty("snapshot").GetProperty("kind").GetString());
-        Assert.NotEqual(
-            navigation.GetProperty("target").GetProperty("fingerprint").GetString(),
-            navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString());
+        Assert.Equal("source", navigation.GetProperty("target").GetProperty("origin").GetString());
+        Assert.Equal("ok", navigation.GetProperty("status").GetProperty("operation").GetString());
+        Assert.Equal("complete", navigation.GetProperty("status").GetProperty("completeness").GetString());
+        Assert.Equal("source", navigation.GetProperty("snapshot").GetProperty("kind").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(
+            navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString()));
         Assert.Contains(
             "userService",
             Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text,
@@ -84,11 +82,10 @@ public sealed partial class McpServerToolBehaviorE2ETests
 
         Assert.NotEqual(true, result.IsError);
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
-        Assert.Equal("source", navigation.GetProperty("origin").GetString());
-        Assert.Equal("ok", navigation.GetProperty("operationStatus").GetString());
-        Assert.Equal("supported", navigation.GetProperty("capabilities").GetProperty("navigation").GetString());
+        Assert.Equal("source", navigation.GetProperty("target").GetProperty("origin").GetString());
+        Assert.Equal("ok", navigation.GetProperty("status").GetProperty("operation").GetString());
         Assert.False(string.IsNullOrWhiteSpace(navigation.GetProperty("target").GetProperty("targetPath").GetString()));
-        Assert.Equal("source-files", navigation.GetProperty("snapshot").GetProperty("kind").GetString());
+        Assert.Equal("source", navigation.GetProperty("snapshot").GetProperty("kind").GetString());
         Assert.True(navigation.GetProperty("snapshot").GetProperty("fresh").GetBoolean());
         Assert.False(string.IsNullOrWhiteSpace(navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString()));
 

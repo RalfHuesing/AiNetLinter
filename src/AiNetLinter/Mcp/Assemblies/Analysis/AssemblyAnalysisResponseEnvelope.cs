@@ -466,18 +466,20 @@ internal static class AssemblyAnalysisResponseEnvelope
             || GetBool(obj, "truncated") == true
             || GetBool(obj, "isTruncated") == true;
         if (responseTruncated
-            && navigation["completeness"] is JsonValue status
+            && navigation["status"] is JsonObject navigationStatus
+            && navigationStatus["completeness"] is JsonValue status
             && status.TryGetValue<string>(out var currentStatus)
             && string.Equals(currentStatus, "complete", StringComparison.Ordinal))
         {
-            navigation["completeness"] = "truncated";
+            navigationStatus["completeness"] = "truncated";
         }
 
-        if (responseTruncated
-            && navigation["next"] is JsonObject next
-            && next["kind"] is JsonValue nextKind
-            && nextKind.TryGetValue<string>(out var kind)
-            && string.Equals(kind, "none", StringComparison.Ordinal))
+        var nextNeedsAction = navigation["next"] is null
+            || (navigation["next"] is JsonObject next
+                && next["kind"] is JsonValue nextKind
+                && nextKind.TryGetValue<string>(out var kind)
+                && string.Equals(kind, "none", StringComparison.Ordinal));
+        if (responseTruncated && nextNeedsAction)
         {
             navigation["next"] = new JsonObject
             {

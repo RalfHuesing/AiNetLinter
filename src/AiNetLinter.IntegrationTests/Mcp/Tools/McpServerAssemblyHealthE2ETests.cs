@@ -117,7 +117,7 @@ public sealed partial class McpServerAssemblyHealthE2ETests
         Assert.NotNull(result.StructuredContent);
         var payload = result.StructuredContent!.Value;
         Assert.True(payload.TryGetProperty("navigation", out var navigation), payload.GetRawText());
-        Assert.Equal("decompiled", navigation.GetProperty("origin").GetString());
+        Assert.Equal("assembly", navigation.GetProperty("target").GetProperty("origin").GetString());
         Assert.True(payload.TryGetProperty("analysis", out var analysis), payload.GetRawText());
         Assert.False(string.IsNullOrWhiteSpace(analysis.GetProperty("assemblyHash").GetString()));
         Assert.True(payload.TryGetProperty("wireBudget", out var wireBudget), payload.GetRawText());
@@ -140,7 +140,7 @@ public sealed partial class McpServerAssemblyHealthE2ETests
 
         Assert.False(result.IsError == true, string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text)));
         var payload = result.StructuredContent!.Value;
-        Assert.Equal("decompiled", payload.GetProperty("navigation").GetProperty("origin").GetString());
+        Assert.Equal("assembly", payload.GetProperty("navigation").GetProperty("target").GetProperty("origin").GetString());
         Assert.False(string.IsNullOrWhiteSpace(payload.GetProperty("analysis").GetProperty("assemblyHash").GetString()));
         Assert.True(payload.GetProperty("wireBudget").GetProperty("limitBytes").GetInt32() > 0);
         Assert.Contains("[ASSEMBLY]", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
@@ -171,7 +171,7 @@ public sealed partial class McpServerAssemblyHealthE2ETests
             });
 
         Assert.False(result.IsError == true, string.Join("\n", result.Content.OfType<TextContentBlock>().Select(block => block.Text)));
-        Assert.Equal("decompiled", result.StructuredContent!.Value.GetProperty("navigation").GetProperty("origin").GetString());
+        Assert.Equal("assembly", result.StructuredContent!.Value.GetProperty("navigation").GetProperty("target").GetProperty("origin").GetString());
         Assert.Contains("[ASSEMBLY]", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
     }
 
@@ -380,14 +380,14 @@ public sealed partial class McpServerAssemblyHealthE2ETests
     private static void AssertAssemblyNavigation(CallToolResult result, string text)
     {
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
-        Assert.Equal("decompiled", navigation.GetProperty("origin").GetString());
-        Assert.Equal("ok", navigation.GetProperty("operationStatus").GetString());
+        Assert.Equal("assembly", navigation.GetProperty("target").GetProperty("origin").GetString());
+        Assert.Equal("ok", navigation.GetProperty("status").GetProperty("operation").GetString());
         Assert.Contains(
-            $"operationStatus: `{navigation.GetProperty("operationStatus").GetString()}`",
+            $"status: operation=`{navigation.GetProperty("status").GetProperty("operation").GetString()}`",
             text,
             StringComparison.Ordinal);
         Assert.Contains(
-            $"completeness: `{navigation.GetProperty("completeness").GetString()}`",
+            $"completeness: `{navigation.GetProperty("status").GetProperty("completeness").GetString()}`",
             text,
             StringComparison.Ordinal);
     }

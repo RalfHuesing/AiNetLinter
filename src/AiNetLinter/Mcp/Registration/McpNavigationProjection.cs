@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using AiNetLinter;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
@@ -43,29 +44,25 @@ internal static partial class McpNavigationProjection
         JsonElement? structured = null)
     {
         var next = CreateNext(operationStatus, completeness, hint, structured);
-        var lint = ResolveLintCapability(target, operationStatus);
         var snapshotFingerprint = target.AnalysisSnapshotFingerprint ?? string.Empty;
         var snapshotKind = target.AnalysisSnapshotFingerprint is null
             ? "unavailable"
-            : target.AnalysisSnapshotKind;
+            : NormalizeSnapshotKind(target.AnalysisSnapshotKind);
 
         return new McpNavigationPayload(
-            new McpNavigationTarget(target.CanonicalPath, target.AnalysisRoot, target.Fingerprint),
-            target.Origin == AnalysisTargetOrigin.Source ? "source" : "decompiled",
+            ContractVersion: 1,
+            new McpNavigationTarget(
+                target.CanonicalPath,
+                target.AnalysisRoot,
+                target.Origin == AnalysisTargetOrigin.Source ? "source" : "assembly"),
             new McpNavigationSnapshot(
                 snapshotFingerprint,
                 snapshotKind,
                 target.AnalysisSnapshotFingerprint is not null && target.AnalysisSnapshotFresh),
-            new McpNavigationCapabilities(
-                ToWire(target.Capabilities.Navigation),
-                ToWire(lint)),
-            operationStatus,
-            new McpNavigationResult(
-                Available: operationStatus is "ok"
-                    && completeness is not ("empty" or "not_configured" or "unsupported"),
-                Code: code),
-            completeness,
-            next);
+            new McpNavigationStatus(operationStatus, completeness, code),
+            ReadOptionalObject(structured, "scope"),
+            next,
+            ReadOptionalObject(structured, "handoff"));
     }
 
     internal static AnalysisTarget WithSourceSnapshot(AnalysisTarget target, McpCodeGraphServer server)
@@ -76,17 +73,10 @@ internal static partial class McpNavigationProjection
             : target with
             {
                 AnalysisSnapshotFingerprint = identity.ContentHash,
-                AnalysisSnapshotKind = "source-files",
+                AnalysisSnapshotKind = "source",
                 AnalysisSnapshotFresh = true,
             };
     }
-
-    private static AnalysisCapabilityStatus ResolveLintCapability(
-        AnalysisTarget target,
-        string operationStatus) =>
-        operationStatus == "configuration_error"
-            ? AnalysisCapabilityStatus.NotConfigured
-            : target.Capabilities.Lint;
 
     private static string ResolveOperationStatus(string? code, CallToolResult response)
     {
@@ -149,24 +139,41 @@ internal static partial class McpNavigationProjection
         if (HasTruncation(structured)) return "truncated";
         return ResolvePayloadCompleteness(structured);
     }
+
+    private static JsonObject? ReadOptionalObject(JsonElement? structured, string propertyName)
+    {
+        if (structured is not { ValueKind: JsonValueKind.Object } payload
+            || !payload.TryGetProperty(propertyName, out var value)
+            || value.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        return JsonNode.Parse(value.GetRawText()) as JsonObject;
+    }
+
+    private static string NormalizeSnapshotKind(string value) =>
+        value switch
+        {
+            "source-files" => "source",
+            "decompiled" => "assembly",
+            _ => value,
+        };
 }
 
 internal sealed record McpNavigationPayload(
+    int ContractVersion,
     McpNavigationTarget Target,
-    string Origin,
     McpNavigationSnapshot Snapshot,
-    McpNavigationCapabilities Capabilities,
-    string OperationStatus,
-    McpNavigationResult Result,
-    string Completeness,
-    McpNavigationNext Next);
+    McpNavigationStatus Status,
+    JsonObject? Scope,
+    McpNavigationNext? Next,
+    JsonObject? Handoff);
 
-internal sealed record McpNavigationTarget(string TargetPath, string AnalysisRoot, string Fingerprint);
+internal sealed record McpNavigationTarget(string TargetPath, string AnalysisRoot, string Origin);
 
 internal sealed record McpNavigationSnapshot(string Fingerprint, string Kind, bool Fresh);
 
-internal sealed record McpNavigationCapabilities(string Navigation, string Lint);
-
-internal sealed record McpNavigationResult(bool Available, string? Code = null);
+internal sealed record McpNavigationStatus(string Operation, string Completeness, string? Code);
 
 internal sealed record McpNavigationNext(string Kind, string Action);

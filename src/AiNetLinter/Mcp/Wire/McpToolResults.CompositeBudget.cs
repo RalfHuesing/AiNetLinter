@@ -118,7 +118,8 @@ internal static partial class McpToolResultsWireBudget
         payload["isTruncated"] = true;
         if (payload["navigation"] is JsonObject navigation)
         {
-            navigation["completeness"] = "truncated";
+            var status = navigation["status"] as JsonObject;
+            if (status is not null) status["completeness"] = "truncated";
         }
         AddReason(payload, "responseBudget");
         var sections = string.Join(", ", sectionNames.OrderBy(name => name, StringComparer.Ordinal));
@@ -198,8 +199,9 @@ internal static partial class McpToolResultsWireBudget
     private static void AppendNavigationSummary(StringBuilder builder, JsonObject payload)
     {
         if (payload["navigation"] is not JsonObject navigation) return;
-        var operationStatus = ReadString(navigation, "operationStatus") ?? "ok";
-        var completeness = ReadString(navigation, "completeness") ?? "complete";
+        var status = navigation["status"] as JsonObject;
+        var operationStatus = status is null ? "ok" : ReadString(status, "operation") ?? "ok";
+        var completeness = status is null ? "complete" : ReadString(status, "completeness") ?? "complete";
         builder.AppendLine($"- **Navigation:** Status: {operationStatus}; Completeness: {completeness}");
         if (navigation["next"] is not JsonObject next) return;
         var nextKind = ReadString(next, "kind");

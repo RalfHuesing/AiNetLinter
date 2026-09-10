@@ -107,7 +107,7 @@ public sealed class AssemblyAnalysisRouteTests
         Assert.Equal("decompiled", symbolMatch.GetProperty("origin").GetProperty("originKind").GetString());
         Assert.True(symbolPayload.GetProperty("navigation").GetProperty("includeReferences").GetBoolean());
         Assert.True(symbolPayload.GetProperty("navigation").GetProperty("totalAssemblyCount").GetInt32() >= 3);
-        Assert.Equal("partial", symbolPayload.GetProperty("navigation").GetProperty("completeness").GetString());
+        Assert.Equal("partial", symbolPayload.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
         Assert.NotEmpty(symbolPayload.GetProperty("navigation").GetProperty("diagnostics").EnumerateArray());
 
         var impactResult = await AnalysisToolCall.ExecuteRouted(
@@ -144,7 +144,7 @@ public sealed class AssemblyAnalysisRouteTests
             string.Join("\n", referenceResult.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>().Select(block => block.Text)));
         var referencePayload = referenceResult.StructuredContent!.Value;
         Assert.True(referencePayload.GetProperty("navigation").GetProperty("includeReferences").GetBoolean());
-        Assert.Equal("partial", referencePayload.GetProperty("navigation").GetProperty("completeness").GetString());
+        Assert.Equal("partial", referencePayload.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
         Assert.True(referencePayload.TryGetProperty("callSites", out _));
 
         var treeResult = await AnalysisToolCall.ExecuteRouted(
@@ -362,7 +362,7 @@ public sealed class AssemblyAnalysisRouteTests
         var payload = result.StructuredContent!.Value;
         var navigation = payload.GetProperty("navigation");
 
-        Assert.Equal("partial", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("partial", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.False(payload.GetProperty("truncated").GetBoolean());
         AssemblyNavigationResponseAssertions.AssertDiagnosticProjection(
             navigation,
@@ -401,7 +401,7 @@ public sealed class AssemblyAnalysisRouteTests
         Assert.NotEqual(true, result.IsError);
         var payload = result.StructuredContent!.Value;
         var navigation = payload.GetProperty("navigation");
-        Assert.Equal("partial", navigation.GetProperty("completeness").GetString());
+        Assert.Equal("truncated", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.False(navigation.GetProperty("assembliesTruncated").GetBoolean());
         Assert.True(navigation.GetProperty("resultsTruncated").GetBoolean());
         Assert.False(payload.GetProperty("wireTruncated").GetBoolean());
@@ -443,7 +443,7 @@ public sealed class AssemblyAnalysisRouteTests
         var wireBudget = payload.GetProperty("wireBudget");
         Assert.True(wireBudget.GetProperty("truncated").GetBoolean(), payload.GetRawText());
         Assert.True(payload.GetProperty("wireTruncated").GetBoolean(), payload.GetRawText());
-        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("completeness").GetString());
+        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
         Assert.Contains(
             "responseBudget",
             payload.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));

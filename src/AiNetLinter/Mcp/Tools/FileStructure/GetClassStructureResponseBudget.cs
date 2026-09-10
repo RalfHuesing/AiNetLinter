@@ -112,7 +112,10 @@ internal static partial class GetClassStructureTool
         if (payload.TruncatedBy?.Contains("maxResponseBytes", StringComparer.Ordinal) == true
             && projected["navigation"] is JsonObject navigation)
         {
-            navigation["completeness"] = "truncated";
+            if (navigation["status"] is JsonObject status)
+            {
+                status["completeness"] = "truncated";
+            }
             navigation["next"] = new JsonObject
             {
                 ["kind"] = BudgetNext.Kind,
@@ -157,7 +160,9 @@ internal static partial class GetClassStructureTool
             return navigationText;
         }
 
-        var completeness = ReadString(navigation, "completeness");
+        var completeness = (navigation["status"] as JsonObject) is { } status
+            ? ReadString(status, "completeness")
+            : null;
         var next = navigation["next"] as JsonObject;
         var nextKind = next is null ? null : ReadString(next, "kind");
         var nextAction = next is null ? null : ReadString(next, "action");
@@ -173,6 +178,8 @@ internal static partial class GetClassStructureTool
     private static string RewriteNavigationLine(string line, string? completeness, string? nextKind, string? nextAction)
     {
         var value = line.TrimEnd('\r');
+        if (completeness is not null && value.StartsWith("- status: ", StringComparison.Ordinal))
+            return $"- status: operation=`ok`, completeness=`{completeness}`";
         if (completeness is not null && value.StartsWith("- completeness: ", StringComparison.Ordinal))
             return $"- completeness: `{completeness}`";
         if (nextKind is not null && value.StartsWith("- next: ", StringComparison.Ordinal))

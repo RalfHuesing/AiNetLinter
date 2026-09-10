@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
@@ -47,7 +48,7 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
         Assert.Contains(
             "responseBudget",
             payload.GetProperty("truncatedBy").EnumerateArray().Select(item => item.GetString()));
-        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("completeness").GetString());
+        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
     }
 
     [Theory]
@@ -85,7 +86,7 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
         Assert.Empty(items.EnumerateArray());
         Assert.Equal(0, payload.GetProperty(totalName).GetInt32());
         var navigation = payload.GetProperty("navigation");
-        Assert.Equal("complete", navigation.GetProperty("completeness").GetString());
-        Assert.Equal("none", navigation.GetProperty("next").GetProperty("kind").GetString());
+        Assert.Equal("complete", navigation.GetProperty("status").GetProperty("completeness").GetString());
+        Assert.Equal(JsonValueKind.Null, navigation.GetProperty("next").ValueKind);
     }
 }
