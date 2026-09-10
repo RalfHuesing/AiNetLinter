@@ -40,13 +40,15 @@ internal static class AssemblySymbolResolver
 
         if (looksLikeHandoff)
         {
-            var exactTarget = leases.Any(lease =>
+            var targetLease = leases.FirstOrDefault(lease =>
                 AssemblyNavigationSupport.MatchesLeaseTarget(
                     providedIdentifier,
                     AssemblyNavigationLeaseAccess.CreateView(lease).Identity));
-            var exactSnapshot = leases.Any(lease =>
-                AssemblyNavigationSupport.MatchesLeaseIdentity(identifier, AssemblyNavigationLeaseAccess.CreateView(lease).Identity));
-            if (providedIdentifier.Origin != SymbolHandoffOrigin.Assembly || !exactTarget)
+            var exactSnapshot = targetLease is not null
+                && AssemblyNavigationSupport.MatchesLeaseIdentity(
+                    providedIdentifier,
+                    AssemblyNavigationLeaseAccess.CreateView(targetLease).Identity);
+            if (providedIdentifier.Origin != SymbolHandoffOrigin.Assembly || targetLease is null)
             {
                 return (null, McpToolResults.TargetMismatch(SymbolHandoffIdentifier.ForError(identifier)),
                     AssemblyNavigationSupport.CreateSummary(new AssemblyNavigationSummaryRequest(
@@ -66,6 +68,7 @@ internal static class AssemblySymbolResolver
         var candidates = await ResolveCandidatesAsync(
             leases,
             identifier,
+            looksLikeHandoff ? providedIdentifier : null,
             diagnostics,
             cancellationToken).ConfigureAwait(false);
 
@@ -101,17 +104,17 @@ internal static class AssemblySymbolResolver
     private static async Task<List<AssemblySymbolTarget>> ResolveCandidatesAsync(
         IReadOnlyList<AssemblyAnalysisLease> leases,
         string identifier,
+        SymbolHandoffIdentifier? handoff,
         List<string> diagnostics,
         CancellationToken cancellationToken)
     {
         var candidates = new List<AssemblySymbolTarget>();
-        var hasAssemblyId = SymbolHandoffIdentifier.TryParse(identifier, out var parsedIdentifier)
-            && parsedIdentifier.Origin == SymbolHandoffOrigin.Assembly;
+        var hasAssemblyId = handoff is { Origin: SymbolHandoffOrigin.Assembly };
         foreach (var lease in leases)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var view = AssemblyNavigationLeaseAccess.CreateView(lease);
-            if (hasAssemblyId && !AssemblyNavigationSupport.MatchesLeaseIdentity(identifier, view.Identity)) continue;
+            if (hasAssemblyId && !AssemblyNavigationSupport.MatchesLeaseIdentity(handoff!.Value, view.Identity)) continue;
 
             var solution = lease.Server.GetCurrentSolution();
             if (solution is null)

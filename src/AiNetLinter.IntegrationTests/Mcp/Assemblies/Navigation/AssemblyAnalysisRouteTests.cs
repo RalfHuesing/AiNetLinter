@@ -242,6 +242,30 @@ public sealed class AssemblyAnalysisRouteTests
         Assert.Contains(referencePaths, path => path.EndsWith("AlphaCaller.cs", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(referencePaths, path => path.EndsWith("BetaCaller.cs", StringComparison.OrdinalIgnoreCase));
 
+        var defaultFollowUpResult = await AnalysisToolCall.ExecuteRouted(
+            route,
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest(rootPath),
+                new AnalysisToolDispatch(
+                    AssemblySessionCall: lease => AssemblyFindReferencesTool.ExecuteAsync(
+                        lease,
+                        new AssemblyFindReferencesRequest(symbolIdentifier, 50, 1, false),
+                        CancellationToken.None)),
+                CancellationToken.None));
+
+        Assert.True(
+            defaultFollowUpResult.IsError != true,
+            string.Join(
+                "\n",
+                defaultFollowUpResult.Content.OfType<ModelContextProtocol.Protocol.TextContentBlock>()
+                    .Select(block => block.Text)));
+        var defaultFollowUpPaths = defaultFollowUpResult.StructuredContent!.Value
+            .GetProperty("callSites").EnumerateArray()
+            .Select(item => item.GetProperty("filePath").GetString()!)
+            .ToArray();
+        Assert.Contains(defaultFollowUpPaths, path => path.EndsWith("AlphaCaller.cs", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(defaultFollowUpPaths, path => path.EndsWith("BetaCaller.cs", StringComparison.OrdinalIgnoreCase));
+
         var getImpactResult = await AnalysisToolCall.ExecuteRouted(
             route,
             new AnalysisToolCallRequest(

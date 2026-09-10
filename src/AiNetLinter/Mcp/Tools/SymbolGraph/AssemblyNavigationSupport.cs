@@ -74,9 +74,10 @@ internal static class AssemblyNavigationSupport
             .Take(MaxNavigationDiagnostics)
             .ToList();
 
-    internal static bool MatchesLeaseIdentity(string identifier, AnalysisSymbolIdentity identity) =>
-        SymbolHandoffIdentifier.TryParse(identifier, out var provided)
-        && provided.Origin == SymbolHandoffOrigin.Assembly
+    internal static bool MatchesLeaseIdentity(
+        SymbolHandoffIdentifier provided,
+        AnalysisSymbolIdentity identity) =>
+        provided.Origin == SymbolHandoffOrigin.Assembly
         && SymbolHandoffToken.TryCreateTarget(identity.CanonicalPath, out var targetToken)
         && SymbolHandoffToken.TryCreateContent(identity.ContentHash, out var contentToken)
         && string.Equals(provided.TargetToken, targetToken, StringComparison.Ordinal)

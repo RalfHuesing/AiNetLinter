@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -18,19 +19,35 @@ internal sealed record AssemblyFindReferencesRequest(
 
 internal static class AssemblyFindReferencesTool
 {
-    internal static Task<CallToolResult> ExecuteAsync(
+    internal static async Task<CallToolResult> ExecuteAsync(
         AssemblyAnalysisLease lease,
         AssemblyFindReferencesRequest request,
-        CancellationToken cancellationToken) =>
-        request.IncludeReferences
-            ? ExecuteWithReferencesAsync(lease, request, cancellationToken)
-            : FindReferencesTool.ExecuteAsync(
-                lease.Server,
-                new FindReferencesRequest(
-                    request.SymbolIdentifier,
-                    request.MaxResults,
-                    request.Depth),
-                cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        var requiresReferenceExpansion = IsAssemblyHandoff(request.SymbolIdentifier);
+        if (request.IncludeReferences || requiresReferenceExpansion)
+        {
+            if (requiresReferenceExpansion && !request.IncludeReferences)
+            {
+                await lease.ExpandReferencesAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            return await ExecuteWithReferencesAsync(lease, request, cancellationToken).ConfigureAwait(false);
+        }
+
+        return await FindReferencesTool.ExecuteAsync(
+            lease.Server,
+            new FindReferencesRequest(
+                request.SymbolIdentifier,
+                request.MaxResults,
+                request.Depth),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static bool IsAssemblyHandoff(string? symbolIdentifier) =>
+        symbolIdentifier is not null
+        && SymbolHandoffIdentifier.TryParse(symbolIdentifier, out var handoff)
+        && handoff.Origin == SymbolHandoffOrigin.Assembly;
 
     private static async Task<CallToolResult> ExecuteWithReferencesAsync(
         AssemblyAnalysisLease lease,
