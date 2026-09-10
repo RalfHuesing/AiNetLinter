@@ -96,3 +96,7 @@ internal sealed record AssemblyAnalysisExecutionOptions(
     string? DetailLevel = null,
     string? Cursor = null,
     Func<CallToolResult, int, CallToolResult>? PostNavigationResponseBudget = null);
+
+internal sealed record ProjectAnalysisExecutionOptions(
+    int MaxResponseBytes = 0,
+    Func<CallToolResult, int, CallToolResult>? PostNavigationResponseBudget = null);
