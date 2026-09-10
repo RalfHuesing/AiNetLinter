@@ -1,10 +1,9 @@
 # isError-Policy fuer AiNetLinter MCP-Tools
 
-**Kontext:** CodeGraphs empirisch validierte Lehre (siehe `tasks/features/01-codegraph-recon.md`
-und `tasks/features/05-roadmap.md` §3 Q1): 1-2 `isError: true`-Antworten am Session-Anfang und
-ein Agent gibt das betroffene Tool auf, selbst wenn die Bedingung trivial behebbar gewesen waere
+**Kontext:** Wiederholte `isError: true`-Antworten am Session-Anfang können dazu führen, dass
+ein Agent ein Tool aufgibt, selbst wenn die Bedingung trivial behebbar wäre
 (Tippfehler im Symbolnamen, mehrdeutiger Identifikator, leeres Argument). Das MCP-Protokollflag
-`CallToolResult.IsError` ist das Signal, das den Agenten diese Entscheidung treffen laesst — nicht
+`CallToolResult.IsError` ist das Signal, das den Agenten diese Entscheidung treffen lässt — nicht
 der Text-Inhalt. Diese Policy legt fest, wann `IsError=true` gerechtfertigt ist und wann eine
 erwartbare Bedingung stattdessen `IsError=false` mit einer Handlungsanleitung im Text liefert.
 

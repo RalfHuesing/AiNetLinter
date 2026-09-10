@@ -97,7 +97,7 @@ Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `
 | `--list-rules` | bool | Alle Regeln auflisten (kein `--path` nötig) |
 | `--describe-rule <RuleId>` | string | Eine Regel vollständig beschreiben |
 | `--search-rules <Begriff>` | string | Regeln durchsuchen |
-| `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation ausgeben (Optionen: readme, agent-api, configuration, rationale, roadmap, ainetlinter-rules-json, mcp-bootstrap, mcp-rule; case-insensitive) |
+| `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation ausgeben (Optionen: readme, agent-api, configuration, rationale, ainetlinter-rules-json, mcp-bootstrap, mcp-rule; case-insensitive) |
 
 ## Strukturiertes Error-Format (L9)
 

@@ -10,10 +10,8 @@ namespace AiNetLinter.Mcp.Tools.DuplicateDetection;
 
 /// <summary>
 /// Text-/JSON-Formatierung fuer den <c>mode="refactoring-drift"</c>-Zweig von
-/// <c>find_duplicates</c> (Teil C) — aus <see cref="DuplicateDetectionTool"/> ausgelagert (eigene
-/// Datei statt Anhaengen an dessen bereits vorhandene <c>clone</c>-Formatierung), damit die
-/// "Kandidaten statt Verstoesse"-Formulierung (Roadmap "Teil C" Punkt 4) an einer Stelle lebt statt
-/// mit der Cluster-Formatierung von Teil A vermischt zu werden.
+/// <c>find_duplicates</c> — aus <see cref="DuplicateDetectionTool"/> ausgelagert, damit die
+/// "Kandidaten statt Verstoesse"-Formulierung getrennt von der Cluster-Formatierung bleibt.
 /// </summary>
 internal static class RefactoringDriftResponseBuilder
 {

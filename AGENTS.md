@@ -101,7 +101,6 @@ Die produktive Testsuite ist auf `src/AiNetLinter.FastTests` (`Unit`/`Component`
 - **Regel- oder CLI-Änderungen**:
   Wenn CLI-Optionen, `ainetlinter-rules.json`-Schemata oder Regel-Verhalten geändert werden, MÜSSEN folgende Dokumente aktualisiert werden:
   - `Docs/configuration.md`
-  - `Docs/ROADMAP.md` (falls Meilensteine betroffen sind)
 - **Agenten-Regeln Sync**:
   Die Agenten-Regeldatei `.agents/rules/AiNetLinter.mdc` wird aus `ainetlinter-rules.json` generiert und kann mit folgenden Befehlen synchronisiert werden:
   ```bash

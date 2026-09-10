@@ -22,7 +22,6 @@ internal static class DocsCommand
         { "agent-api", "Docs/agent-api.md" },
         { "configuration", "Docs/configuration.md" },
         { "rationale", "Docs/rationale.md" },
-        { "roadmap", "Docs/ROADMAP.md" },
         { "ainetlinter-rules-json", ConfigLoader.FileName },
         { McpBootstrapDocument, "Docs/mcp-bootstrap.md" },
         { "mcp-rule", "AgentRules/AiNetLinter-McpWorkflow.mdc" }

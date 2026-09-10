@@ -436,7 +436,7 @@ internal static class DependencyGraphScanner
     }
 
     /// <summary>
-    /// Optionale Projekt-Ebene (siehe Roadmap-Scope-Entscheidung): guenstig zu ermitteln
+    /// Optionale Projekt-Ebene: guenstig zu ermitteln
     /// (<c>Project.ProjectReferences</c>, keine NuGet-Aufrufe), daher immer mitgeliefert, wenn das
     /// Zielprojekt aufloest. Liefert genau einen Eintrag (das Zielprojekt selbst mit seinen
     /// direkten Projekt-Referenzen) statt eines vollstaendigen Projektgraphen — das waere ausserhalb

@@ -25,7 +25,6 @@
     <EmbeddedResource Include="..\..\Docs\agent-api.md" LogicalName="Docs/agent-api.md" />
     <EmbeddedResource Include="..\..\Docs\configuration.md" LogicalName="Docs/configuration.md" />
     <EmbeddedResource Include="..\..\Docs\rationale.md" LogicalName="Docs/rationale.md" />
-    <EmbeddedResource Include="..\..\Docs\ROADMAP.md" LogicalName="Docs/ROADMAP.md" />
     <EmbeddedResource Include="..\..\Docs\mcp-bootstrap.md" LogicalName="Docs/mcp-bootstrap.md" />
     <EmbeddedResource Include="..\..\ainetlinter-rules.json" LogicalName="ainetlinter-rules.json" />
     <EmbeddedResource Include="..\..\.agents\rules\AiNetLinter-McpWorkflow.mdc" LogicalName="AgentRules/AiNetLinter-McpWorkflow.mdc" />

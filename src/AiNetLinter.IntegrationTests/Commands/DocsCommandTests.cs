@@ -23,14 +23,12 @@ public sealed class DocsCommandTests
     [InlineData("agent-api")]
     [InlineData("configuration")]
     [InlineData("rationale")]
-    [InlineData("roadmap")]
     [InlineData("ainetlinter-rules-json")]
     [InlineData("mcp-bootstrap")]
     [InlineData("mcp-rule")]
     [InlineData("Readme")]
     [InlineData("AGENT-API")]
     [InlineData("Configuration")]
-    [InlineData("roadmap ")]
     public void Run_WithValidDocs_ReturnsZeroAndWritesContent(string docName)
     {
         var originalOut = Console.Out;
@@ -134,7 +132,6 @@ public sealed class DocsCommandTests
             Assert.Contains("- agent-api", output);
             Assert.Contains("- configuration", output);
             Assert.Contains("- rationale", output);
-            Assert.Contains("- roadmap", output);
             Assert.Contains("- ainetlinter-rules-json", output);
             Assert.Contains("- mcp-bootstrap", output);
             Assert.Contains("- mcp-rule", output);
