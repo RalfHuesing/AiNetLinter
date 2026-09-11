@@ -282,7 +282,7 @@ internal static class GetNamespaceTreeTool
             EffectiveDepth = clampedDepth,
             DepthWasClamped = input.Depth != clampedDepth,
         };
-        var finalText = treePayload.Truncated ? treeText : McpSufficiencyHints.Append(treeText);
+        var finalText = treeText;
         return ApplyResponseBudget(finalText, treePayload, input.MaxResponseBytes);
     }
 

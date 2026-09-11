@@ -103,7 +103,7 @@ internal static class GetCallTreeTool
                 ? body + "\n\n" + BuildTruncationMeta()
                 : topNTruncated
                     ? body + "\n\n" + BuildTopNTruncationMeta()
-                    : McpSufficiencyHints.Append(body);
+                    : body;
 
             return McpToolResults.Text(
                 finalBody,

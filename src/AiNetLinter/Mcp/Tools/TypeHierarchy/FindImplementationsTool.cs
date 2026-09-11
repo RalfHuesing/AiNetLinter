@@ -63,7 +63,7 @@ internal static class FindImplementationsTool
             absolutePaths,
             state.HandoffSymbolIdentity);
         var text = FormatResultText(resultDto);
-        var finalText = resultDto.IsTruncated ? text : McpSufficiencyHints.Append(text);
+        var finalText = text;
 
         return McpToolResults.Text(finalText, resultDto);
     }

@@ -87,10 +87,7 @@ internal static class FindReferencesTool
                     ? $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"
                     : null);
 
-            var finalBody = TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
-                ? McpSufficiencyHints.Append(formatted.Text)
-                : formatted.Text;
-            return McpToolResults.Text(finalBody, formatted.Traversal);
+            return McpToolResults.Text(formatted.Text, formatted.Traversal);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

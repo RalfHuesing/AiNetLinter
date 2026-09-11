@@ -176,7 +176,7 @@ internal static class DependencyGraphTool
         var body = RenderText(target, result);
         // Sufficiency-Hinweis nur fuer nicht-trunkierte Ergebnisse — trunkiert durch
         // maxResults ODER durch den Traversierungs-Hard-Cap (NodeCapReached), beides zaehlt.
-        var finalBody = result.Truncated ? body : McpSufficiencyHints.Append(body);
+        var finalBody = body;
         var payload = new
         {
             Target = target,

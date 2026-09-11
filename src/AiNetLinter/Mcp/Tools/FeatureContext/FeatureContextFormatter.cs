@@ -39,13 +39,7 @@ internal static class FeatureContextFormatter
         AppendViolationsSection(sb, payload.Violations, payload.Declaration.FilePath);
 
         var text = sb.ToString().TrimEnd();
-        var hasTruncation = completeness == FeatureContextStatus.Truncated ||
-                            (payload.Callers?.IsTruncated == true) ||
-                            (payload.Tests?.IsTruncated == true) ||
-                            (payload.Violations?.IsTruncated == true);
-
-        var canClaimCompleteScope = completeness is FeatureContextStatus.Complete or FeatureContextStatus.Empty;
-        return hasTruncation || !canClaimCompleteScope ? text : McpSufficiencyHints.Append(text);
+        return text;
     }
 
     private static void AppendDeclarationSection(StringBuilder sb, SymbolDeclarationDto decl)

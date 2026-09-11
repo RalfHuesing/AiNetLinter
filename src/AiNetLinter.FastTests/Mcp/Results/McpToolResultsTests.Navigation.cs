@@ -7,12 +7,127 @@ using System.Text.Json;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.TestKit;
+using ModelContextProtocol.Protocol;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Results;
 
 public sealed partial class McpToolResultsTests
 {
+    [Fact]
+    public void WithNavigation_CompleteSuccessHasNoTextNavigationFooter()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-text-complete-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.Text("body", new { completeness = "complete" }),
+            target);
+
+        Assert.Equal("body", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
+        Assert.DoesNotContain("Navigation", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void WithNavigation_EmptyIncludesScopeAndCountHint()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-text-empty-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.Text(
+                "body",
+                new
+                {
+                    completeness = "empty",
+                    scope = new { requestedType = "production", includeGenerated = false },
+                    totalCount = 0,
+                    shownCount = 0,
+                }),
+            target);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("production", text, StringComparison.Ordinal);
+        Assert.Contains("0", text, StringComparison.Ordinal);
+        Assert.Equal("empty", result.StructuredContent!.Value.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
+    }
+
+    [Theory]
+    [InlineData("{\"completeness\":\"empty\",\"scope\":{\"effectiveScope\":\"src/empty\"},\"totalCount\":0}", "src/empty", 0)]
+    [InlineData("{\"summary\":{\"completeness\":\"empty\",\"scope\":\"production\",\"total\":7}}", "production", 7)]
+    [InlineData("{\"completeness\":{\"status\":\"empty\",\"totalCount\":4}}", "angeforderter Scope", 4)]
+    public void WithNavigation_EmptyReadsNestedScopeAndCountShapes(string json, string expectedScope, int expectedTotal)
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-text-empty-shapes-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+        var payload = JsonSerializer.Deserialize<JsonElement>(json);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.Text("body", payload),
+            target);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains($"keine Treffer im Scope {expectedScope} (0 von {expectedTotal} Treffern).", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WithNavigation_TruncatedIncludesExactlyOneActionWithoutBlankSeparator()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-text-truncated-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.Text(
+                "body",
+                new
+                {
+                    completeness = "truncated",
+                    totalCount = 3,
+                    shownCount = 1,
+                }),
+            target);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.DoesNotContain("\n\n", text, StringComparison.Ordinal);
+        Assert.Contains("truncated", text, StringComparison.Ordinal);
+        Assert.Contains("maxResults", text, StringComparison.Ordinal);
+        Assert.Equal(2, text.Split('\n').Length);
+        Assert.Equal("truncated", result.StructuredContent!.Value.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
+    }
+
+    [Fact]
+    public void WithNavigation_RecoverableUsesStatusAndOneActionWithoutIdentifierEcho()
+    {
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-text-recoverable-");
+        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
+        File.WriteAllText(solutionPath, string.Empty);
+        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
+            new AnalysisTargetRequest(solutionPath)).Target);
+
+        var result = McpToolResults.WithNavigation(
+            McpToolResults.Recoverable("INVALID_ARGUMENT", "Argument ist ungueltig.", hint: "Scope verfeinern."),
+            target);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("invalid_argument", text, StringComparison.Ordinal);
+        Assert.Contains("Scope verfeinern", text, StringComparison.Ordinal);
+        Assert.DoesNotContain(target.CanonicalPath, text, StringComparison.Ordinal);
+        Assert.DoesNotContain("snapshot", text, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("invalid_argument", result.StructuredContent!.Value.GetProperty("navigation").GetProperty("status").GetProperty("operation").GetString());
+    }
+
     [Fact]
     public void WithNavigation_ProjectsVersionedEnvelopeAndRemovesLegacyNavigationFields()
     {

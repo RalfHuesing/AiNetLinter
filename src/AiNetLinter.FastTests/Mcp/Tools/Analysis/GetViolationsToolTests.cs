@@ -80,8 +80,7 @@ public sealed class GetViolationsToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("ViolationTrigger", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("Lint-Violations:", textContent.Text, StringComparison.Ordinal);
-        // Sufficiency-Hinweis: get_violations liefert immer den vollstaendigen Report fuer den Scope.
-        Assert.Contains("vollstaendig", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

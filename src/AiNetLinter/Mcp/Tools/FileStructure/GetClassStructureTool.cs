@@ -88,7 +88,7 @@ internal static partial class GetClassStructureTool
             var payload = await BuildPayloadAsync(namedType, solutionDir, args, ct);
 
             var markdown = RenderMarkdown(payload);
-            return McpToolResults.Text(payload.Truncated ? markdown : McpSufficiencyHints.Append(markdown), payload);
+            return McpToolResults.Text(markdown, payload);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

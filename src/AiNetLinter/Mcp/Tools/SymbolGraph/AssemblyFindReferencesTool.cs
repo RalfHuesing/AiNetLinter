@@ -83,10 +83,7 @@ internal static class AssemblyFindReferencesTool
                 traversal.Completeness.TotalCallSiteCount == 0
                     ? $"Keine Aufrufstellen gefunden fuer '{request.SymbolIdentifier}'"
                     : null);
-            var finalBody = TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
-                ? McpSufficiencyHints.Append(formatted.Text)
-                : formatted.Text;
-            return McpToolResults.Text(finalBody, formatted.Traversal);
+            return McpToolResults.Text(formatted.Text, formatted.Traversal);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

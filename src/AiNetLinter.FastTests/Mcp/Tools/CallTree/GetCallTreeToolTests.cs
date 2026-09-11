@@ -74,8 +74,7 @@ public sealed class GetCallTreeToolTests
         Assert.Contains("Caller.cs", textContent.Text, StringComparison.Ordinal);
         // ASCII-Baum: Kindzeilen tragen den Renderer-eigenen Praefix.
         Assert.Contains("├──", textContent.Text, StringComparison.Ordinal);
-        // Sufficiency-Hinweis fuer nicht-trunkierte Ergebnisse.
-        Assert.Contains("vollstaendig", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -75,8 +75,7 @@ public sealed class GetSymbolBodyToolTests
         Assert.StartsWith("s:", entry.GetProperty("id").GetString(), System.StringComparison.Ordinal);
         Assert.NotEqual(stableId, entry.GetProperty("id").GetString());
         Assert.False(entry.GetProperty("isTruncated").GetBoolean());
-        // Sufficiency-Hinweis: vollstaendiger (nicht gekappter) Body ist final.
-        Assert.Contains("vollstaendig", textContent.Text, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("Diese Daten sind vollstaendig", textContent.Text, System.StringComparison.Ordinal);
     }
 
     [Fact]

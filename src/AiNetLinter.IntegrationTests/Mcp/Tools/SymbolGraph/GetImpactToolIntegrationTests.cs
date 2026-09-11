@@ -207,10 +207,10 @@ public sealed class GetImpactToolIntegrationTests
         // Violations sind strikt diffbezogen: nur aus Hunks oder Spannen GEZEIGTER Symbole.
         AssertViolationsWithinHunksOrShownSpans(structured, workspace.RootPath);
 
-        // Textform: Counts-Zeile plus Sufficiency-Hint (vollstaendiges Ergebnis).
+        // Textform: Counts-Zeile ohne redundanten Erfolgs-Hinweis.
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.StartsWith("Change-Context:", text, StringComparison.Ordinal);
-        Assert.Contains("[HINWEIS]: Diese Daten sind vollstaendig", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("[HINWEIS]: Diese Daten sind vollstaendig", text, StringComparison.Ordinal);
     }
 
     [Fact]

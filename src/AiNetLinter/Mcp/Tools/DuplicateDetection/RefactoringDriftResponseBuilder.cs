@@ -19,8 +19,6 @@ internal static class RefactoringDriftResponseBuilder
     {
         var solutionDir = System.IO.Path.GetDirectoryName(solution.FilePath) ?? "";
         var body = RenderText(solutionDir, result);
-        // Trunkierungs-Meta-Zeile UND Sufficiency-Hinweis schliessen sich gegenseitig aus (siehe
-        // McpSufficiencyHints-Doc-Kommentar) — nur bei vollstaendigem Ergebnis den Hinweis anhaengen.
         var finalText = body;
 
         var payload = new RefactoringDriftPayload(

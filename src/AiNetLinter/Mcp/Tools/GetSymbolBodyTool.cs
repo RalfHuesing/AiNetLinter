@@ -29,7 +29,7 @@ internal static class GetSymbolBodyTool
 
     /// <summary>Textmarker, den <see cref="ExtractSymbolBody"/> nur bei tatsaechlicher
     /// maxBodyLines-Kappung anhaengt — Grundlage fuer die Sufficiency-Hinweis-Entscheidung in
-    /// <see cref="ExecuteAsync"/> (siehe <see cref="McpSufficiencyHints"/>).</summary>
+    /// <see cref="ExecuteAsync"/>).</summary>
     private const string TruncationMarker = "// ... truncated, total ";
 
     internal static async Task<CallToolResult> ExecuteAsync(
@@ -126,8 +126,7 @@ internal static class GetSymbolBodyTool
         }
 
         var markdown = mb.Build().TrimEnd();
-        var isTruncated = markdown.Contains(TruncationMarker, StringComparison.Ordinal);
-        var final = isTruncated ? markdown : McpSufficiencyHints.Append(markdown);
+        var final = markdown;
         return McpToolResults.Text(final, new SymbolBodyBatchDto(entries, identifiers.Count));
     }
 

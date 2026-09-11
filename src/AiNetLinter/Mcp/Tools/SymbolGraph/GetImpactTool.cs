@@ -251,10 +251,7 @@ internal static class GetImpactTool
                 ? $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"
                 : null);
 
-        var finalBody = TransitiveCallGraphFormatter.IsComplete(formatted.Traversal)
-            ? McpSufficiencyHints.Append(formatted.Text)
-            : formatted.Text;
-        return McpToolResults.Text(finalBody, formatted.Traversal);
+        return McpToolResults.Text(formatted.Text, formatted.Traversal);
     }
 
     private static async Task<CallToolResult> ExecuteGitRefBranchAsync(Solution solution, GetImpactInput input, CancellationToken ct)
@@ -335,7 +332,7 @@ internal static class GetImpactTool
         if (analysis is null)
         {
             return McpToolResults.Text(
-                McpSufficiencyHints.Append("Kein Git-Repository oder leerer Diff — keine geaenderten Dateien/Symbole."),
+                "Kein Git-Repository oder leerer Diff — keine geaenderten Dateien/Symbole.",
                 ChangeContextResponseMapper.BuildEmptyPayload());
         }
 
@@ -405,7 +402,7 @@ internal static class GetImpactTool
         lines.AddRange(payload.RecommendedTestCommands.Select(command => $"Empfohlen: {command}"));
         var text = string.Join("\n", lines);
         return IsComplete(payload, effectiveMax)
-            ? McpSufficiencyHints.Append(text)
+            ? text
             : $"{text}\n{BuildTruncationMeta(completeness, effectiveMax, payload.ChangedSymbols.Count)}";
     }
 

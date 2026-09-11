@@ -227,8 +227,7 @@ public sealed class FindReferencesToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Caller.cs", textContent.Text, StringComparison.Ordinal);
-        // Sufficiency-Hinweis: nicht-trunkiertes Ergebnis ist vollstaendig, kein Read/Grep noetig.
-        Assert.Contains("vollstaendig", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

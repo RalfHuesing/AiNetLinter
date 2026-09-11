@@ -3,8 +3,7 @@
 namespace AiNetLinter.Mcp.Tools.MetricsTree;
 
 /// <summary>
-/// Gegenlaeufiger Hinweistyp zu <see cref="McpSufficiencyHints"/>: <c>metrics_tree</c>-Output ist per
-/// Definition nie vollstaendig (immer Top-N, nie alle Kinder) — <see cref="McpSufficiencyHints.Append"/>
+/// <c>metrics_tree</c>-Output ist per Definition nie vollstaendig (immer Top-N, nie alle Kinder).
 /// waere hier irrefuehrend. Sibling-Datei, gleiches Kurz-Prinzip (ein einheitlicher Text, keine
 /// tool-spezifischen Varianten).
 /// </summary>

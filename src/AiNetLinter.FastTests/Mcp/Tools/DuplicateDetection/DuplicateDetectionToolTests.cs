@@ -146,7 +146,7 @@ public sealed class DuplicateDetectionToolTests
             state, new DuplicateDetectionInput(null, null, null, null, null), CancellationToken.None);
 
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

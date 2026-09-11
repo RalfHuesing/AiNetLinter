@@ -59,7 +59,9 @@ internal static class SafeguardTool
         }
 
         var score = result.Score!;
-        var text = score.Summary + BuildTopViolationText(score) + "\n\n" + BuildSufficiencyHint(score);
+        var hint = BuildSufficiencyHint(score);
+        var text = score.Summary + BuildTopViolationText(score) +
+            (string.IsNullOrEmpty(hint) ? string.Empty : "\n\n" + hint);
         return new CallToolResult
         {
             IsError = false,
@@ -83,8 +85,7 @@ internal static class SafeguardTool
             : score.ViolationsTruncated
             ? "[HINWEIS]: Angezeigt wird nur die deterministische Top-Auswahl wegen " +
               "maxViolations. Für vollständige Violations im Scope get_violations aufrufen."
-            : "[HINWEIS]: Diese Daten sind vollständig für den angefragten Scope — kein zusätzliches " +
-              "Read/Grep nötig.";
+            : string.Empty;
 }
 
 /// <summary>

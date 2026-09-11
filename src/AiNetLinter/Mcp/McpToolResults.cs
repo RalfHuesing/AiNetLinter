@@ -351,10 +351,17 @@ internal static partial class McpToolResults
             payload["navigation"] = navigationNode;
         }
 
-        var navigationText = McpNavigationText.Format(navigation);
+        var navigationText = McpNavigationText.Format(navigation, result.StructuredContent);
         var text = result.Content
             .Select(block => block is TextContentBlock textBlock
-                ? new TextContentBlock { Text = textBlock.Text.TrimEnd() + "\n\n" + navigationText }
+                ? new TextContentBlock
+                {
+                    Text = string.IsNullOrEmpty(navigationText)
+                        ? textBlock.Text.TrimEnd()
+                        : string.IsNullOrWhiteSpace(textBlock.Text)
+                            ? navigationText
+                            : textBlock.Text.TrimEnd() + "\n" + navigationText,
+                }
                 : block)
             .ToList();
 

@@ -228,11 +228,6 @@ internal static class DuplicateDetectionTool
             sb.Append($"[{result.TotalClusters} Cluster gesamt, {result.ShownClusters.Count} gezeigt — maxResults erhoehen oder scopeDir eingrenzen]");
         }
 
-        if (!result.Truncated)
-        {
-            sb.Append("\n\nDiese Daten sind vollstaendig fuer den angeforderten Scope; die Cluster bleiben Kandidaten.");
-        }
-
         return sb.ToString();
     }
 

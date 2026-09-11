@@ -60,7 +60,7 @@ internal static class GetTypeHierarchyTool
         // aufgeloest und koennen bei weit verbreiteten Basistypen/Interfaces (z. B. IDisposable)
         // das maxResults-Limit ueberschreiten — Sufficiency-Hinweis daher nur im nicht-trunkierten
         // Fall (analog zu FindReferencesTool/GetViolationsTool).
-        var finalText = payload.SubtypesTruncated ? text : McpSufficiencyHints.Append(text);
+        var finalText = text;
         return McpToolResults.Text(finalText, payload);
     }
 }

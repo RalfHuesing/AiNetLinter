@@ -80,7 +80,7 @@ internal static class MetricsLookupTool
         }
 
         var markdown = mb.Build().TrimEnd();
-        var final = McpSufficiencyHints.Append(markdown);
+        var final = markdown;
         return McpToolResults.Text(final, new MetricsLookupBatchDto(dtos, identifiers.Count));
     }
 

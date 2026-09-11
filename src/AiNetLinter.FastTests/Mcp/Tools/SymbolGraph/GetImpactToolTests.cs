@@ -205,8 +205,7 @@ public sealed class GetImpactToolTests
     [Fact]
     public async Task ExecuteAsync_SymbolIdentifierCompleteResult_AppendsSufficiencyHint()
     {
-        // Hint-Paritaet zum find_references-Zweig: ein vollstaendiges (nicht trunkiertes)
-        // Ergebnis traegt den Sufficiency-Hinweis, damit der Agent nicht redundant nachliest.
+        // Ein vollstaendiges Ergebnis benoetigt keinen redundanten Text-Hinweis.
         var state = _fixture.CreateServer();
 
         var result = await GetImpactTool.ExecuteAsync(
@@ -214,7 +213,7 @@ public sealed class GetImpactToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("[HINWEIS]: Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("[HINWEIS]: Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -292,7 +291,7 @@ public sealed class GetImpactToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("[HINWEIS]: Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("[HINWEIS]: Diese Daten sind vollstaendig", textContent.Text, StringComparison.Ordinal);
 
         Assert.NotNull(result.StructuredContent);
         var structured = result.StructuredContent!.Value;

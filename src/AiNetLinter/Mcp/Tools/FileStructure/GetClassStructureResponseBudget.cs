@@ -138,7 +138,7 @@ internal static partial class GetClassStructureTool
     {
         var rendered = payload.Truncated
             ? RenderMarkdown(payload)
-            : McpSufficiencyHints.Append(RenderMarkdown(payload));
+            : RenderMarkdown(payload);
         var headingIndex = rendered.IndexOf("# Typ:", StringComparison.Ordinal);
         var originalHeading = fallbackText.IndexOf("# Typ:", StringComparison.Ordinal);
         if (originalHeading > 0 && headingIndex == 0)

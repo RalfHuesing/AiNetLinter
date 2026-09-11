@@ -212,8 +212,9 @@ public sealed partial class McpToolResultsTests
         Assert.Equal("empty", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.Contains("status: operation=`ok`, completeness=`empty`", text, StringComparison.Ordinal);
-        Assert.Contains("next: `refine_scope`", text, StringComparison.Ordinal);
+        Assert.Contains("Status: operation=ok, completeness=empty", text, StringComparison.Ordinal);
+        Assert.Contains("keine Treffer im Scope", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("## Navigation", text, StringComparison.Ordinal);
         Assert.Equal(JsonValueKind.Object, result.StructuredContent.Value.ValueKind);
     }
 

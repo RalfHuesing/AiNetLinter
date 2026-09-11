@@ -92,7 +92,7 @@ internal static class TransitiveCallGraphFormatter
         AppendDiagnosticMetadata(metadata, projection);
         var finalBody = metadata.Count > 0
             ? request.Body + "\n\n" + string.Join("\n", metadata)
-            : McpSufficiencyHints.Append(request.Body);
+            : request.Body;
 
         return McpToolResults.Text(
             finalBody,
@@ -117,15 +117,6 @@ internal static class TransitiveCallGraphFormatter
             ? new[] { "maxDiagnostics" }
             : Array.Empty<string>();
         return new DiagnosticProjection(normalized.Count, samples, truncatedBy.Length > 0, truncatedBy);
-    }
-
-    internal static bool IsComplete(ReferenceTraversalResult result)
-    {
-        var completeness = result.Completeness;
-        return !completeness.TruncatedByMaxResults &&
-               !completeness.TruncatedByNodeLimit &&
-               !completeness.DepthWasClamped &&
-               completeness.Diagnostics is not { Count: > 0 };
     }
 
     internal static string Format(ReferenceTraversalResult result)
@@ -258,9 +249,7 @@ internal static class TransitiveCallGraphFormatter
         }
 
         var fullText = sb.ToString().TrimEnd();
-        return IsComplete(formatted.Traversal)
-            ? McpSufficiencyHints.Append(fullText)
-            : fullText;
+        return fullText;
     }
 
     private static string NormalizeDiagnostic(string diagnostic) =>
