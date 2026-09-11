@@ -37,7 +37,8 @@ public sealed class TestCoverageBatchScannerTests
         var namingFile = placeAsyncResult.TestFiles[1];
         Assert.Equal(TestCoverageMatchReasons.NamingConventionMatch, namingFile.MatchReason);
         Assert.Equal($"App.Tests/{ChangeContextScenarioFactory.OrderServiceTestsFileName}", namingFile.FilePath);
-        Assert.Equal(["PlaceOrder_PersistsDraft"], namingFile.TestMethods);
+        Assert.Empty(namingFile.TestMethods);
+        Assert.Equal(TestEvidenceKind.TypeNamingConvention, namingFile.EvidenceKind);
     }
 
     [Fact]
@@ -56,7 +57,8 @@ public sealed class TestCoverageBatchScannerTests
         Assert.Equal(TestCoverageMatchReasons.NamingConventionMatch, testFile.MatchReason);
         Assert.Equal($"App.Tests/{ChangeContextScenarioFactory.AuditLoggerTestsFileName}", testFile.FilePath);
         Assert.Equal(ChangeContextScenarioFactory.TestClassNameForPrivateMethod, testFile.TestClassName);
-        Assert.Equal(["WritesEntry_ForEveryMessage"], testFile.TestMethods);
+        Assert.Empty(testFile.TestMethods);
+        Assert.Equal(TestEvidenceKind.TypeNamingConvention, testFile.EvidenceKind);
     }
 
     [Fact]

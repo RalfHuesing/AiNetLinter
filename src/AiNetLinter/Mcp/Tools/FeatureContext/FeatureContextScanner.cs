@@ -205,7 +205,11 @@ internal static class FeatureContextScanner
                 file.MatchReason,
                 file.TestMethods.Take(take).ToList(),
                 file.TotalClassTests,
-                totalMethods));
+                totalMethods,
+                TestEvidenceKindNames.ToWire(file.EvidenceKind),
+                file.Confidence,
+                file.TotalClassTests,
+                file.TestClassNames));
         }
 
         if (methodsAfterPerFileCaps > MaxTestMethodsTotal && !reasons.Contains("maxTestMethodsTotal", StringComparer.Ordinal))

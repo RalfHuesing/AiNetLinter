@@ -31,7 +31,10 @@ internal static class TestContextFormatter
         sb.AppendLine($"- **Status:** `{payload.Completeness}`");
         sb.AppendLine($"- **Evidenzgrenze:** `{payload.EvidenceBoundary}`");
         sb.AppendLine("- **statische Testzuordnung:** Kandidaten aus statischen Heuristiken, kein Ausführungsnachweis.");
-        sb.AppendLine($"- **Counts:** {payload.ReturnedTestFiles} von {payload.TotalTestFiles} Testdateien und {payload.ReturnedTestMethods} von {payload.TotalMatchingTests} Testmethoden zurückgegeben.");
+        var countLabel = payload.TestFiles.Count > 0 && payload.TestFiles.All(file => file.TestMethods.Count > 0)
+            ? "Testmethoden"
+            : "Evidenztreffer";
+        sb.AppendLine($"- **Counts:** {payload.ReturnedTestFiles} von {payload.TotalTestFiles} Testdateien und {payload.ReturnedTestMethods} von {payload.TotalMatchingTests} {countLabel} zurückgegeben.");
     }
 
     private static void AppendTestAssociations(StringBuilder sb, TestContextPayload payload)
@@ -45,7 +48,10 @@ internal static class TestContextFormatter
             return;
         }
 
-        sb.AppendLine($"- **Statische Kandidaten:** {payload.TotalMatchingTests} Testmethode(n) in {payload.TotalTestFiles} Testdatei(en)");
+        var candidateLabel = payload.TestFiles.Count > 0 && payload.TestFiles.All(file => file.TestMethods.Count > 0)
+            ? "Testmethode(n)"
+            : "Evidenztreffer";
+        sb.AppendLine($"- **Statische Kandidaten:** {payload.TotalMatchingTests} {candidateLabel} in {payload.TotalTestFiles} Testdatei(en)");
         sb.AppendLine();
         sb.AppendLine("### Zugeordnete Testdateien");
         foreach (var file in payload.TestFiles) AppendTestFile(sb, file);
@@ -54,7 +60,11 @@ internal static class TestContextFormatter
 
     private static void AppendTestFile(StringBuilder sb, StaticTestCandidateFile file)
     {
-        sb.AppendLine($"- `{file.FilePath}` ({file.Category}, {file.TestMethods.Count} statische Kandidaten — {file.MatchReason})");
+        var evidence = $"{file.EvidenceKind}, confidence={file.Confidence}";
+        var candidateDescription = file.TestMethods.Count > 0
+            ? $"{file.TestMethods.Count} konkrete Methoden"
+            : $"{file.TotalTestCount} Tests auf Klassenebene; keine Methode behauptet";
+        sb.AppendLine($"- `{file.FilePath}` ({file.Category}, {candidateDescription} — {evidence}; {file.MatchReason})");
         foreach (var method in file.TestMethods) sb.AppendLine($"  - `{method}()`");
     }
 

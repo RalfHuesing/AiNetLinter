@@ -82,7 +82,11 @@ internal sealed record StaticTestCandidateFileDto(
     string MatchReason,
     IReadOnlyList<string> TestMethods,
     int TotalClassTests,
-    int TotalMatchingMethods = 0
+    int TotalMatchingMethods = 0,
+    string EvidenceKind = "typeNamingConvention",
+    string Confidence = "low",
+    int TotalTestCount = 0,
+    IReadOnlyList<string>? TestClassNames = null
 );
 
 /// <summary>

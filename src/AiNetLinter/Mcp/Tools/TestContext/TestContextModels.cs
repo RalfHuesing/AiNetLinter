@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using AiNetLinter.Core;
 
 namespace AiNetLinter.Mcp.Tools.TestContext;
@@ -50,5 +51,9 @@ public sealed record StaticTestCandidateFile(
     string MatchReason,
     IReadOnlyList<string> TestMethods,
     int TotalClassTests,
-    string? ProjectDirectory = null
+    string? ProjectDirectory = null,
+    [property: JsonPropertyName("evidenceKind")] string EvidenceKind = "typeNamingConvention",
+    string Confidence = "low",
+    [property: JsonPropertyName("totalTestCount")] int TotalTestCount = 0,
+    [property: JsonPropertyName("testClassNames")] IReadOnlyList<string>? TestClassNames = null
 );

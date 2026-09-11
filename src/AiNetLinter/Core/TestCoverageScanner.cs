@@ -47,10 +47,13 @@ public static partial class TestCoverageScanner
         LoadedTestDocument loadedDocument,
         string reason,
         List<string> matchingMethods,
-        int totalClassTests)
+        int matchingTestCount,
+        int totalClassTests,
+        IReadOnlyList<string> matchingClassNames)
     {
         var category = TestDetector.DetermineCategory(loadedDocument.Root, loadedDocument.RelativePath);
-        var className = ExtractFirstTestClassName(loadedDocument.Root)
+        var className = matchingClassNames.FirstOrDefault()
+            ?? ExtractFirstTestClassName(loadedDocument.Root)
             ?? Path.GetFileNameWithoutExtension(loadedDocument.RelativePath);
         var projectDir = TestDetector.GetProjectDirectory(
             loadedDocument.Document.Project,
@@ -63,54 +66,169 @@ public static partial class TestCoverageScanner
             MatchReason: reason,
             TestMethods: matchingMethods,
             TotalClassTests: totalClassTests,
-            ProjectDirectory: projectDir
+            ProjectDirectory: projectDir,
+            EvidenceKind: TestCoverageMatchReasons.ToEvidenceKind(reason),
+            Confidence: TestEvidenceKindNames.ToConfidence(TestCoverageMatchReasons.ToEvidenceKind(reason)),
+            MatchingTestCount: matchingTestCount,
+            TestClassNames: matchingClassNames
         );
     }
 
-    private static (bool Matched, string Reason, List<string> MatchingMethods, int TotalTests) AnalyzeDocument(
+    private static (bool Matched, string Reason, List<string> MatchingMethods, int MatchingTests, int TotalClassTests, IReadOnlyList<string> MatchingClassNames) AnalyzeDocument(
         SyntaxNode root,
         SemanticModel semanticModel,
         ISymbol targetSymbol,
         string targetTypeName,
         string? targetMemberName)
     {
-        var testMethods = FindTestMethods(root, targetSymbol, targetMemberName, semanticModel);
+        var testMethods = root.DescendantNodes()
+            .OfType<MethodDeclarationSyntax>()
+            .Where(TestDetector.IsTestMethod)
+            .ToList();
         if (testMethods.Count == 0)
         {
-            return (false, string.Empty, [], 0);
+            return (false, string.Empty, [], 0, 0, []);
         }
 
         var classNameMatches = MatchesAnyClassName(root, targetTypeName);
-        var hasCovers = HasCoversComment(root, targetTypeName);
-        var hasTypeof = HasTypeofReference(root, targetSymbol, targetTypeName, semanticModel);
-
-        return SelectMatchingMethodsAndReason(
-            testMethods, targetMemberName, classNameMatches, hasCovers, hasTypeof);
-    }
-
-    private static List<(string Name, bool IsDirectMatch)> FindTestMethods(
-        SyntaxNode root,
-        ISymbol targetSymbol,
-        string? targetMemberName,
-        SemanticModel semanticModel)
-    {
-        var list = new List<(string Name, bool IsDirectMatch)>();
-        var allMethods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
-
-        foreach (var method in allMethods)
+        if (targetMemberName is not null)
         {
-            if (!TestDetector.IsTestMethod(method)) continue;
-
-            var methodName = method.Identifier.Text;
-            var isMethodMatch = targetMemberName != null
-                ? (IsNamedAfterMember(methodName, targetMemberName) ||
-                   CallsTargetSymbol(method, targetSymbol, targetMemberName, semanticModel))
-                : CallsOrUsesTargetType(method, targetSymbol, semanticModel);
-
-            list.Add((methodName, isMethodMatch));
+            return AnalyzeMemberEvidence(new MemberEvidenceInput(
+                root, testMethods, targetSymbol, targetTypeName, targetMemberName, semanticModel, classNameMatches));
         }
 
-        return list;
+        return AnalyzeTypeEvidence(testMethods, root, targetSymbol, targetTypeName, semanticModel, classNameMatches);
+    }
+
+    private static (bool Matched, string Reason, List<string> MatchingMethods, int MatchingTests, int TotalClassTests, IReadOnlyList<string> MatchingClassNames) AnalyzeMemberEvidence(
+        MemberEvidenceInput input)
+    {
+        var direct = input.TestMethods
+            .Where(method => CallsTargetSymbol(method, input.TargetSymbol, input.SemanticModel))
+            .Select(method => method.Identifier.Text)
+            .ToList();
+        if (direct.Count > 0)
+        {
+            var matchingMethods = input.TestMethods
+                .Where(method => CallsTargetSymbol(method, input.TargetSymbol, input.SemanticModel))
+                .ToList();
+            return CreateEvidence(TestEvidenceKind.DirectInvocation, direct, direct.Count, input.TestMethods.Count,
+                matchingMethods, input.TestMethods);
+        }
+
+        var explicitMember = input.TestMethods
+            .Where(method => HasMemberCoverageComment(method, input.TargetTypeName, input.TargetMemberName))
+            .Select(method => method.Identifier.Text)
+            .ToList();
+        if (explicitMember.Count > 0)
+        {
+            var matchingMethods = input.TestMethods
+                .Where(method => HasMemberCoverageComment(method, input.TargetTypeName, input.TargetMemberName))
+                .ToList();
+            return CreateEvidence(TestEvidenceKind.ExplicitMemberCoverage, explicitMember, explicitMember.Count, input.TestMethods.Count,
+                matchingMethods, input.TestMethods);
+        }
+
+        var nameMatches = input.TestMethods
+            .Where(method => IsNamedAfterMember(method.Identifier.Text, input.TargetMemberName))
+            .Select(method => method.Identifier.Text)
+            .ToList();
+        if (nameMatches.Count > 0)
+        {
+            var matchingMethods = input.TestMethods
+                .Where(method => IsNamedAfterMember(method.Identifier.Text, input.TargetMemberName))
+                .ToList();
+            return CreateEvidence(TestEvidenceKind.MemberNameMatch, nameMatches, nameMatches.Count,
+                input.TestMethods.Count, matchingMethods, input.TestMethods);
+        }
+
+        if (HasMemberCoverageComment(input.Root, input.TargetTypeName, input.TargetMemberName))
+        {
+            return CreateEvidence(TestEvidenceKind.ExplicitMemberCoverage, [], input.TestMethods.Count, input.TestMethods.Count,
+                ExtractTestClassNames(input.Root));
+        }
+
+        var matchingClassNames = ExtractMatchingTestClassNames(input.Root, input.TargetTypeName);
+        var matchingClassTests = CountMatchingTestClassMethods(input.Root, input.TargetTypeName);
+        return input.ClassNameMatches && matchingClassTests > 0
+            ? CreateEvidence(TestEvidenceKind.TypeNamingConvention, [], matchingClassTests, matchingClassTests,
+                matchingClassNames)
+            : (false, string.Empty, [], 0, input.TestMethods.Count, []);
+    }
+
+    private static (bool Matched, string Reason, List<string> MatchingMethods, int MatchingTests, int TotalClassTests, IReadOnlyList<string> MatchingClassNames) AnalyzeTypeEvidence(
+        IReadOnlyList<MethodDeclarationSyntax> testMethods,
+        SyntaxNode root,
+        ISymbol targetSymbol,
+        string targetTypeName,
+        SemanticModel semanticModel,
+        bool classNameMatches)
+    {
+        var directTypeUseCount = testMethods.Count(method => CallsOrUsesTargetType(method, targetSymbol, semanticModel));
+        if (directTypeUseCount > 0)
+        {
+            return CreateEvidence(TestEvidenceKind.DirectTypeUse, [], directTypeUseCount, testMethods.Count,
+                testMethods.Where(method => CallsOrUsesTargetType(method, targetSymbol, semanticModel)));
+        }
+
+        if (HasExplicitTypeCoverage(root, targetSymbol, targetTypeName, semanticModel))
+        {
+            return CreateEvidence(TestEvidenceKind.ExplicitTypeCoverage, [], testMethods.Count, testMethods.Count,
+                ExtractTestClassNames(root));
+        }
+
+        var matchingClassNames = ExtractMatchingTestClassNames(root, targetTypeName);
+        var matchingClassTests = CountMatchingTestClassMethods(root, targetTypeName);
+        return classNameMatches && matchingClassTests > 0
+            ? CreateEvidence(TestEvidenceKind.TypeNamingConvention, [], matchingClassTests, matchingClassTests,
+                matchingClassNames)
+            : (false, string.Empty, [], 0, testMethods.Count, []);
+    }
+
+    private static (bool Matched, string Reason, List<string> MatchingMethods, int MatchingTests, int TotalClassTests, IReadOnlyList<string> MatchingClassNames) CreateEvidence(
+        TestEvidenceKind kind,
+        List<string> methods,
+        int matchingTests,
+        int totalClassTests,
+        IEnumerable<MethodDeclarationSyntax> matchingMethods,
+        IReadOnlyList<MethodDeclarationSyntax>? allTestMethods = null)
+    {
+        var matchingMethodList = matchingMethods.ToList();
+        var scopedTotal = allTestMethods is null
+            ? totalClassTests
+            : CountTestsInContainingClasses(allTestMethods, matchingMethodList);
+        return (true, TestCoverageMatchReasons.For(kind), methods, matchingTests, scopedTotal,
+            matchingMethodList
+                .Select(GetContainingTestClassName)
+                .Where(name => name is not null)
+                .Select(name => name!)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToList());
+    }
+
+    private static int CountTestsInContainingClasses(
+        IReadOnlyList<MethodDeclarationSyntax> allTestMethods,
+        IReadOnlyList<MethodDeclarationSyntax> matchingMethods)
+    {
+        var matchingClasses = matchingMethods
+            .Select(method => method.Ancestors().OfType<ClassDeclarationSyntax>().FirstOrDefault())
+            .Where(declaration => declaration is not null)
+            .ToHashSet();
+        return allTestMethods.Count(method =>
+            method.Ancestors().OfType<ClassDeclarationSyntax>().FirstOrDefault() is { } declaration
+            && matchingClasses.Contains(declaration));
+    }
+
+    private static (bool Matched, string Reason, List<string> MatchingMethods, int MatchingTests, int TotalClassTests, IReadOnlyList<string> MatchingClassNames) CreateEvidence(
+        TestEvidenceKind kind,
+        List<string> methods,
+        int matchingTests,
+        int totalClassTests,
+        IReadOnlyList<string> matchingClassNames)
+    {
+        return (true, TestCoverageMatchReasons.For(kind), methods, matchingTests, totalClassTests,
+            matchingClassNames.Distinct(StringComparer.Ordinal).OrderBy(name => name, StringComparer.Ordinal).ToList());
     }
 
     private static bool CallsOrUsesTargetType(
@@ -185,60 +303,47 @@ public static partial class TestCoverageScanner
                testMethodName.Contains(targetMemberName, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static (bool Matched, string Reason, List<string> MatchingMethods, int TotalTests) SelectMatchingMethodsAndReason(
-        List<(string Name, bool IsDirectMatch)> testMethods,
-        string? targetMemberName,
-        bool classNameMatches,
-        bool hasCovers,
-        bool hasTypeof)
-    {
-        var directMatches = testMethods.Where(m => m.IsDirectMatch).Select(m => m.Name).ToList();
-        if (targetMemberName != null)
-        {
-            if (directMatches.Count > 0)
-            {
-                return (true, TestCoverageMatchReasons.DirectMemberMatch, directMatches, testMethods.Count);
-            }
-        }
-        else if (directMatches.Count > 0 && !classNameMatches && !hasCovers && !hasTypeof)
-        {
-            return (true, TestCoverageMatchReasons.DirectTypeUsage, directMatches, testMethods.Count);
-        }
-
-        var allNames = testMethods.Select(m => m.Name).ToList();
-        if (classNameMatches)
-        {
-            return (true, TestCoverageMatchReasons.NamingConventionMatch, allNames, testMethods.Count);
-        }
-        if (hasCovers)
-        {
-            return (true, TestCoverageMatchReasons.ExplicitCoversComment, allNames, testMethods.Count);
-        }
-        if (hasTypeof)
-        {
-            return (true, TestCoverageMatchReasons.DirectTypeofReference, allNames, testMethods.Count);
-        }
-        if (directMatches.Count > 0)
-        {
-            return (true, TestCoverageMatchReasons.DirectTypeUsage, directMatches, testMethods.Count);
-        }
-
-        return (false, string.Empty, [], testMethods.Count);
-    }
-
     private static bool MatchesAnyClassName(SyntaxNode root, string targetTypeName)
     {
         return root.DescendantNodes()
             .OfType<ClassDeclarationSyntax>()
+            .Where(HasTestMethods)
             .Any(c => TestDetector.MatchesTestClassName(c.Identifier.Text, targetTypeName));
     }
 
-    private static bool HasCoversComment(SyntaxNode root, string targetTypeName)
-    {
-        return ExtractCoversComments(root).Any(c => string.Equals(c, targetTypeName, StringComparison.OrdinalIgnoreCase));
-    }
+    private static IReadOnlyList<string> ExtractTestClassNames(SyntaxNode root) =>
+        root.DescendantNodes()
+            .OfType<ClassDeclarationSyntax>()
+            .Where(HasTestMethods)
+            .Select(c => c.Identifier.Text)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToList();
 
-    private static bool HasTypeofReference(
+    private static IReadOnlyList<string> ExtractMatchingTestClassNames(SyntaxNode root, string targetTypeName) =>
+        root.DescendantNodes()
+            .OfType<ClassDeclarationSyntax>()
+            .Where(HasTestMethods)
+            .Where(c => TestDetector.MatchesTestClassName(c.Identifier.Text, targetTypeName))
+            .Select(c => c.Identifier.Text)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToList();
+
+    private static int CountMatchingTestClassMethods(SyntaxNode root, string targetTypeName) =>
+        root.DescendantNodes()
+            .OfType<MethodDeclarationSyntax>()
+            .Where(TestDetector.IsTestMethod)
+            .Count(method => method.Ancestors().OfType<ClassDeclarationSyntax>().FirstOrDefault() is { } declaration
+                && TestDetector.MatchesTestClassName(declaration.Identifier.Text, targetTypeName));
+
+    private static bool HasTestMethods(ClassDeclarationSyntax declaration) =>
+        declaration.DescendantNodes().OfType<MethodDeclarationSyntax>().Any(TestDetector.IsTestMethod);
+
+    private static string? GetContainingTestClassName(MethodDeclarationSyntax method) =>
+        method.Ancestors().OfType<ClassDeclarationSyntax>().FirstOrDefault()?.Identifier.Text;
+
+    private static bool HasExplicitTypeCoverage(
         SyntaxNode root,
         ISymbol targetSymbol,
         string targetTypeName,
@@ -260,8 +365,20 @@ public static partial class TestCoverageScanner
             }
         }
 
-        return HasNameofReference(root, targetTypeName);
+        if (HasNameofReference(root, targetTypeName)) return true;
+        return ExtractCoversComments(root).Any(c => MatchesTypeCoverage(c, targetTypeName));
     }
+
+    private static bool HasMemberCoverageComment(SyntaxNode root, string targetTypeName, string targetMemberName) =>
+        ExtractCoversComments(root).Any(c => MatchesMemberCoverage(c, targetTypeName, targetMemberName));
+
+    private static bool MatchesMemberCoverage(string covered, string targetTypeName, string targetMemberName) =>
+        covered.EndsWith("." + targetMemberName, StringComparison.OrdinalIgnoreCase)
+        && covered.Contains(targetTypeName, StringComparison.OrdinalIgnoreCase);
+
+    private static bool MatchesTypeCoverage(string covered, string targetTypeName) =>
+        string.Equals(covered, targetTypeName, StringComparison.OrdinalIgnoreCase)
+        || covered.EndsWith("." + targetTypeName, StringComparison.OrdinalIgnoreCase);
 
     private static bool HasNameofReference(SyntaxNode root, string targetTypeName)
     {
@@ -284,7 +401,6 @@ public static partial class TestCoverageScanner
     private static bool CallsTargetSymbol(
         MethodDeclarationSyntax method,
         ISymbol targetSymbol,
-        string targetMemberName,
         SemanticModel semanticModel)
     {
         foreach (var invocation in method.DescendantNodes().OfType<InvocationExpressionSyntax>())
@@ -295,12 +411,6 @@ public static partial class TestCoverageScanner
                 return true;
             }
 
-            var text = invocation.Expression.ToString();
-            if (text.EndsWith("." + targetMemberName, StringComparison.Ordinal) ||
-                text.Equals(targetMemberName, StringComparison.Ordinal))
-            {
-                return true;
-            }
         }
 
         return false;
@@ -333,13 +443,24 @@ public static partial class TestCoverageScanner
 
     private static int GetMatchReasonPriority(string reason) => reason switch
     {
-        TestCoverageMatchReasons.DirectMemberMatch => 1,
-        TestCoverageMatchReasons.DirectTypeUsage => 2,
-        TestCoverageMatchReasons.NamingConventionMatch => 3,
+        TestCoverageMatchReasons.DirectMemberMatch => 0,
+        TestCoverageMatchReasons.ExplicitMemberCoverage => 1,
+        TestCoverageMatchReasons.MemberNameMatch => 2,
+        TestCoverageMatchReasons.DirectTypeUsage => 3,
         TestCoverageMatchReasons.ExplicitCoversComment => 4,
-        TestCoverageMatchReasons.DirectTypeofReference => 5,
+        TestCoverageMatchReasons.DirectTypeofReference => 4,
+        TestCoverageMatchReasons.NamingConventionMatch => 5,
         _ => 6
     };
+
+    private sealed record MemberEvidenceInput(
+        SyntaxNode Root,
+        IReadOnlyList<MethodDeclarationSyntax> TestMethods,
+        ISymbol TargetSymbol,
+        string TargetTypeName,
+        string TargetMemberName,
+        SemanticModel SemanticModel,
+        bool ClassNameMatches);
 
     [GeneratedRegex(@"//\s*(?:@covers|covers)\s+([\w\.]+)", RegexOptions.CultureInvariant)]
     private static partial Regex CoversRegex();
@@ -351,10 +472,34 @@ public static partial class TestCoverageScanner
 public static class TestCoverageMatchReasons
 {
     public const string DirectMemberMatch = "Direct Member Match / Invocation";
+    public const string ExplicitMemberCoverage = "Explicit Member Coverage";
+    public const string MemberNameMatch = "Member Name Match";
     public const string DirectTypeUsage = "Direct Type Usage / Invocation";
     public const string NamingConventionMatch = "Naming Convention Match";
     public const string ExplicitCoversComment = "Explicit @covers Comment";
     public const string DirectTypeofReference = "Direct typeof Reference";
+
+    internal static string For(TestEvidenceKind kind) => kind switch
+    {
+        TestEvidenceKind.DirectInvocation => DirectMemberMatch,
+        TestEvidenceKind.ExplicitMemberCoverage => ExplicitMemberCoverage,
+        TestEvidenceKind.MemberNameMatch => MemberNameMatch,
+        TestEvidenceKind.DirectTypeUse => DirectTypeUsage,
+        TestEvidenceKind.ExplicitTypeCoverage => ExplicitCoversComment,
+        TestEvidenceKind.TypeNamingConvention => NamingConventionMatch,
+        _ => NamingConventionMatch,
+    };
+
+    internal static TestEvidenceKind ToEvidenceKind(string reason) => reason switch
+    {
+        DirectMemberMatch => TestEvidenceKind.DirectInvocation,
+        ExplicitMemberCoverage => TestEvidenceKind.ExplicitMemberCoverage,
+        MemberNameMatch => TestEvidenceKind.MemberNameMatch,
+        DirectTypeUsage => TestEvidenceKind.DirectTypeUse,
+        ExplicitCoversComment or DirectTypeofReference => TestEvidenceKind.ExplicitTypeCoverage,
+        NamingConventionMatch => TestEvidenceKind.TypeNamingConvention,
+        _ => TestEvidenceKind.TypeNamingConvention,
+    };
 }
 
 /// <summary>
@@ -385,7 +530,11 @@ public sealed record TestFileCoverageResult(
     string MatchReason,
     IReadOnlyList<string> TestMethods,
     int TotalClassTests,
-    string? ProjectDirectory = null
+    string? ProjectDirectory = null,
+    TestEvidenceKind EvidenceKind = TestEvidenceKind.TypeNamingConvention,
+    string Confidence = "low",
+    int? MatchingTestCount = null,
+    IReadOnlyList<string> TestClassNames = null!
 );
 
 /// <summary>

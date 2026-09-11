@@ -138,10 +138,10 @@ internal static class FeatureContextFormatter
     {
         if (tests == null) return;
 
-        var header = $"## 4. Test-Kontext (statische Testkandidaten: {tests.TotalTestFiles} Testdateien, {tests.TotalMatchingTests} Testmethoden, Status: {tests.Completeness})";
+        var header = $"## 4. Test-Kontext (statische Testkandidaten: {tests.TotalTestFiles} Testdateien, {tests.TotalMatchingTests} Testkandidaten, Status: {tests.Completeness})";
         sb.AppendLine(header);
         sb.AppendLine($"- **Evidenzgrenze:** `{tests.EvidenceBoundary}`");
-        sb.AppendLine($"- **Counts:** {tests.TestFiles.Count} von {tests.TotalTestFiles} Testdateien und {tests.DisplayedTestMethods} von {tests.TotalMatchingTests} Testmethoden zurückgegeben.");
+        sb.AppendLine($"- **Counts:** {tests.TestFiles.Count} von {tests.TotalTestFiles} Testdateien und {tests.TotalMatchingTests} Testkandidaten zurückgegeben.");
 
         if (tests.TestFiles.Count == 0)
         {
@@ -151,7 +151,13 @@ internal static class FeatureContextFormatter
         {
             foreach (var file in tests.TestFiles)
             {
-                sb.AppendLine($"- `{file.FilePath}` ({file.Category}, {file.TestMethods.Count} von {file.TotalMatchingMethods} statischen Kandidaten — {file.MatchReason})");
+                var classCount = file.TestClassNames?.Count
+                    ?? (string.IsNullOrWhiteSpace(file.TestClassName) ? 0 : 1);
+                var evidence = $"{file.EvidenceKind}, confidence={file.Confidence}";
+                var candidateDescription = file.TestMethods.Count > 0
+                    ? $"{file.TestMethods.Count} von {file.TotalMatchingMethods} konkrete Testmethoden"
+                    : $"{file.TotalTestCount} Tests auf Klassenebene ({classCount} Testklasse(n)); keine Methode behauptet";
+                sb.AppendLine($"- `{file.FilePath}` ({file.Category}, {candidateDescription} — {evidence}; {file.MatchReason})");
                 foreach (var method in file.TestMethods)
                 {
                     sb.AppendLine($"  - `{method}()`");

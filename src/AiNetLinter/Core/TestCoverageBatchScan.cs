@@ -148,12 +148,12 @@ public static partial class TestCoverageScanner
         var loadedDocument = new LoadedTestDocument(document, relativePath, syntaxRoot);
         foreach (var state in states)
         {
-            var (fileMatches, reason, matchingMethods, totalClassTests) = AnalyzeDocument(
+            var (fileMatches, reason, matchingMethods, matchingTestCount, totalClassTests, matchingClassNames) = AnalyzeDocument(
                 syntaxRoot, semanticModel, state.Target.Symbol, state.Target.TypeName, state.Target.MemberName);
-            if (!fileMatches || matchingMethods.Count == 0) continue;
+            if (!fileMatches || matchingTestCount == 0) continue;
 
             state.Files.Add(BuildFileCoverageResult(
-                loadedDocument, reason, matchingMethods, totalClassTests));
+                loadedDocument, reason, matchingMethods, matchingTestCount, totalClassTests, matchingClassNames));
         }
     }
 
@@ -166,11 +166,11 @@ public static partial class TestCoverageScanner
         {
             var sorted = matchesPerTarget[i]
                 .OrderBy(r => GetMatchReasonPriority(r.MatchReason))
-                .ThenBy(r => r.FilePath)
+                .ThenBy(r => r.FilePath, StringComparer.Ordinal)
                 .ToList();
             symbols.Add(new TestCoverageBatchSymbolResult(
                 targets[i].SymbolId,
-                sorted.Sum(r => r.TestMethods.Count),
+                sorted.Sum(r => r.MatchingTestCount ?? r.TestMethods.Count),
                 sorted));
         }
 

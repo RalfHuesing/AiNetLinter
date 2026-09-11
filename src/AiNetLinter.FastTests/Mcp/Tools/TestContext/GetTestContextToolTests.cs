@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
+using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.TestContext;
 using AiNetLinter.TestKit;
@@ -160,8 +161,8 @@ public sealed class GetTestContextToolTests
         Assert.Contains("# Test-Kontext (statische Testkandidaten): CoreLib.Calculator", textContent.Text);
         Assert.Contains("statische Testzuordnung", textContent.Text);
         Assert.Contains("CalculatorTests", textContent.Text);
-        Assert.Contains("Add_ReturnsSum", textContent.Text);
-        Assert.Contains("Multiply_ReturnsProduct", textContent.Text);
+        Assert.DoesNotContain("Add_ReturnsSum", textContent.Text);
+        Assert.DoesNotContain("Multiply_ReturnsProduct", textContent.Text);
         Assert.Contains("dotnet test", textContent.Text);
         Assert.Contains("--filter FullyQualifiedName~CalculatorTests", textContent.Text);
 
@@ -176,6 +177,54 @@ public sealed class GetTestContextToolTests
         Assert.Equal(2, structured.TotalMatchingTests);
         var testFile = Assert.Single(structured.TestFiles);
         Assert.Equal("CalculatorTests", testFile.TestClassName);
+        Assert.Equal("typeNamingConvention", testFile.EvidenceKind);
+        Assert.Equal("low", testFile.Confidence);
+        Assert.Equal(2, testFile.TotalTestCount);
+        Assert.Empty(testFile.TestMethods);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_TypeConvention_RendersClassEvidenceWithoutMethodCount()
+    {
+        using var solutionOwner = CreateTestScenario();
+        var state = CreateServer(solutionOwner.Solution);
+
+        var result = await GetTestContextTool.ExecuteAsync(
+            state, new TestContextOptions("Calculator"), CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("typeNamingConvention", text, StringComparison.Ordinal);
+        Assert.Contains("confidence=low", text, StringComparison.Ordinal);
+        Assert.Contains("2 Tests auf Klassenebene", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("0 von 2 Testmethoden", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void FormatReport_MixedEvidenceUsesNeutralAggregateLabel()
+    {
+        var payload = new TestContextPayload(
+            "CoreLib.Calculator",
+            "NamedType",
+            "src/CoreLib/Calculator.cs",
+            3,
+            2,
+            [
+                new StaticTestCandidateFile("tests/CalculatorTests.cs", "CalculatorTests", "Unit",
+                    TestCoverageMatchReasons.DirectMemberMatch, ["Add_Works"], 1),
+                new StaticTestCandidateFile("tests/CalculatorMoreTests.cs", "CalculatorMoreTests", "Unit",
+                    TestCoverageMatchReasons.NamingConventionMatch, [], 2, EvidenceKind: "typeNamingConvention",
+                    Confidence: "low", TotalTestCount: 2)
+            ],
+            [],
+            false,
+            false,
+            ReturnedTestFiles: 2,
+            ReturnedTestMethods: 1);
+
+        var text = TestContextFormatter.FormatReport(payload);
+
+        Assert.Contains("Evidenztreffer", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("1 von 3 Testmethoden", text, StringComparison.Ordinal);
     }
 
     [Fact]

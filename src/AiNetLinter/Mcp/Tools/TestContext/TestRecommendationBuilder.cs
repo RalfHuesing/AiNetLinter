@@ -40,8 +40,6 @@ internal static class TestRecommendationBuilder
 
         foreach (var file in testFiles)
         {
-            if (string.IsNullOrWhiteSpace(file.TestClassName)) continue;
-
             var projectDir = NormalizeProjectDirectory(file.ProjectDirectory);
             if (!classNamesByProject.TryGetValue(projectDir, out var classNames))
             {
@@ -49,7 +47,13 @@ internal static class TestRecommendationBuilder
                 classNamesByProject[projectDir] = classNames;
             }
 
-            classNames.Add(file.TestClassName);
+            var names = file.TestClassNames is { Count: > 0 }
+                ? file.TestClassNames
+                : string.IsNullOrWhiteSpace(file.TestClassName) ? [] : [file.TestClassName];
+            foreach (var name in names)
+            {
+                if (!string.IsNullOrWhiteSpace(name)) classNames.Add(name);
+            }
         }
 
         return classNamesByProject.ToDictionary(

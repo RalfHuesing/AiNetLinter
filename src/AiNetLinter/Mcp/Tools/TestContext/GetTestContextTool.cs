@@ -113,7 +113,11 @@ internal static class GetTestContextTool
             file.MatchReason,
             file.TestMethods,
             file.TotalClassTests,
-            file.ProjectDirectory);
+            file.ProjectDirectory,
+            TestEvidenceKindNames.ToWire(file.EvidenceKind),
+            file.Confidence,
+            file.TotalClassTests,
+            file.TestClassNames);
 
     private static string ExtractFilePath(ISymbol symbol, string solutionDir)
     {

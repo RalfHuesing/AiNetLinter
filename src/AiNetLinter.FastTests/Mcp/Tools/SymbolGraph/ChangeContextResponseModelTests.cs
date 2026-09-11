@@ -93,7 +93,7 @@ public sealed class ChangeContextResponseModelTests
 
         var association = Assert.Single(json.GetProperty("testAssociations").EnumerateArray().ToArray());
         Assert.Equal(
-            new[] { "symbolId", "filePath", "testMethods", "matchReason" },
+                new[] { "symbolId", "filePath", "testMethods", "matchReason", "evidenceKind", "confidence", "totalTestCount" },
             association.EnumerateObject().Select(property => property.Name).ToArray());
         Assert.Equal(PlaceAsyncId, association.GetProperty("symbolId").GetString());
 
@@ -113,6 +113,35 @@ public sealed class ChangeContextResponseModelTests
         var violation = Assert.Single(payload.Violations);
         Assert.Equal("error", violation.Severity);
         Assert.True(violation.Details.Length > 0);
+    }
+
+    [Fact]
+    public void BuildPayload_PreservesTypeEvidenceWhenNoMethodsAreClaimed()
+    {
+        var file = new TestFileCoverageResult(
+            "tests/App.Tests/OrderServiceTests.cs",
+            "OrderServiceTests",
+            "Unit",
+            TestCoverageMatchReasons.NamingConventionMatch,
+            [],
+            25,
+            @"C:\repo\tests\App.Tests",
+            TestEvidenceKind.TypeNamingConvention,
+            "low",
+            MatchingTestCount: 25,
+            TestClassNames: ["OrderServiceTests", "OrderServiceMoreTests"]);
+        var batch = new TestCoverageBatchScanResult(
+            [new TestCoverageBatchSymbolResult(PlaceAsyncId, 25, [file])], 1, [file.FilePath]);
+
+        var payload = ChangeContextResponseMapper.BuildPayload(new ChangeContextResponseInput(
+            CreateAnalysis(changedSymbolsTotal: 1), batch, [], MaxTestsPerSymbol: 10));
+
+        var association = Assert.Single(payload.TestAssociations);
+        Assert.Empty(association.TestMethods);
+        Assert.Equal("typeNamingConvention", association.EvidenceKind);
+        Assert.Equal("low", association.Confidence);
+        Assert.Equal(25, association.TotalTestCount);
+        Assert.Equal(["OrderServiceTests", "OrderServiceMoreTests"], association.TestClassNames);
     }
 
     [Fact]

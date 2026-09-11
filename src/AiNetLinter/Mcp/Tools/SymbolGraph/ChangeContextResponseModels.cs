@@ -79,7 +79,11 @@ internal sealed record TestAssociationPayload(
     string SymbolId,
     string FilePath,
     IReadOnlyList<string> TestMethods,
-    string MatchReason);
+    string MatchReason,
+    string EvidenceKind = "typeNamingConvention",
+    string Confidence = "low",
+    int TotalTestCount = 0,
+    IReadOnlyList<string>? TestClassNames = null);
 
 /// <summary>Kompakter Violation-Eintrag — bewusst OHNE Snippet/Source-Ausschnitt.</summary>
 internal sealed record ViolationPayload(
@@ -195,7 +199,15 @@ internal static class ChangeContextResponseMapper
                     : file.TestMethods.Take(remaining).ToList();
                 remaining -= taken.Count;
                 testsTruncated |= taken.Count < file.TestMethods.Count;
-                associations.Add(new TestAssociationPayload(symbol.SymbolId, file.FilePath, taken, file.MatchReason));
+                associations.Add(new TestAssociationPayload(
+                    symbol.SymbolId,
+                    file.FilePath,
+                    taken,
+                    file.MatchReason,
+                    TestEvidenceKindNames.ToWire(file.EvidenceKind),
+                    file.Confidence,
+                    file.MatchingTestCount ?? file.TotalClassTests,
+                    file.TestClassNames));
                 shownTestFiles.Add(file);
             }
         }

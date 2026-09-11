@@ -417,6 +417,36 @@ public sealed class GetFeatureContextToolTests
     }
 
     [Fact]
+    public void FormatReport_TypeConventionUsesClassCountInsteadOfMethodCount()
+    {
+        var declaration = new SymbolDeclarationDto(
+            "CoreLib.Calculator", "NamedType", "public", "src/CoreLib/Calculator.cs", 1, 10, 10, null, null, [], null);
+        var tests = new StaticTestContextReportDto(
+            25,
+            1,
+            [new StaticTestCandidateFileDto(
+                "tests/CoreLib.Tests/CalculatorTests.cs",
+                "CalculatorTests",
+                "Unit",
+                TestCoverageMatchReasons.NamingConventionMatch,
+                [],
+                25,
+                0,
+                "typeNamingConvention",
+                "low",
+                25)],
+            false,
+            0);
+        var text = FeatureContextFormatter.FormatReport(new FeatureContextPayload(
+            declaration, null, null, tests, null));
+
+        Assert.Contains("typeNamingConvention", text, StringComparison.Ordinal);
+        Assert.Contains("confidence=low", text, StringComparison.Ordinal);
+        Assert.Contains("25 Tests auf Klassenebene", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("0 von 0", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ResolveCompleteness_SectionFailureMapsRootToPartialWithCauseAndNextStep()
     {
         var declaration = new SymbolDeclarationDto(
