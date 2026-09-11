@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Platform;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
+using AiNetLinter.Mcp.Validation;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -189,6 +191,85 @@ public sealed partial class McpServerAssemblyHealthE2ETests
         Assert.False(result.IsError == true, result.ToString());
         Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
         Assert.Equal("$.memberNames[1]", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Fact]
+    public async Task AssemblyDetailLevel_InvalidValueReturnsBeforeAnalysis_AndValidRetrySucceeds()
+    {
+        var invalid = await _fixture.Client.CallToolAsync(
+            "inspect_assembly",
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["detailLevel"] = "verbose",
+            });
+
+        Assert.Equal("INVALID_ARGUMENT", invalid.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal("$.detailLevel", invalid.StructuredContent.Value.GetProperty("fieldPath").GetString());
+        Assert.False(invalid.StructuredContent.Value.TryGetProperty("types", out _), invalid.StructuredContent.Value.GetRawText());
+        Assert.False(invalid.StructuredContent.Value.TryGetProperty("analysis", out _), invalid.StructuredContent.Value.GetRawText());
+
+        var retry = await _fixture.Client.CallToolAsync(
+            "inspect_assembly",
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = typeof(McpCodeGraphServer).Assembly.Location,
+                ["detailLevel"] = "standard",
+                ["maxResults"] = 1,
+            });
+
+        Assert.False(retry.IsError == true, retry.ToString());
+        Assert.True(retry.StructuredContent!.Value.TryGetProperty("types", out _), retry.StructuredContent.Value.GetRawText());
+    }
+
+    [Theory]
+    [InlineData("find_assembly_extensions")]
+    [InlineData("get_assembly_context")]
+    public async Task AssemblyDetailLevel_OtherAssemblyToolsRejectInvalidValue_AndAllowRetry(string toolName)
+    {
+        var targetPath = typeof(McpCodeGraphServer).Assembly.Location;
+        var invalid = await _fixture.Client.CallToolAsync(
+            toolName,
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = targetPath,
+                ["detailLevel"] = "verbose",
+            });
+
+        Assert.Equal("INVALID_ARGUMENT", invalid.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal("$.detailLevel", invalid.StructuredContent.Value.GetProperty("fieldPath").GetString());
+        Assert.False(invalid.StructuredContent.Value.TryGetProperty("analysis", out _), invalid.StructuredContent.Value.GetRawText());
+
+        var retry = await _fixture.Client.CallToolAsync(
+            toolName,
+            new Dictionary<string, object?>
+            {
+                ["targetPath"] = targetPath,
+                ["detailLevel"] = McpEnumValues.AssemblyDetailLevelStandard,
+                ["maxResults"] = 1,
+            });
+
+        Assert.False(retry.IsError == true, retry.ToString());
+        Assert.NotNull(retry.StructuredContent);
+    }
+
+    [Fact]
+    public async Task AssemblyDetailLevelContract_UsesCanonicalValuesForToolsAndValidator()
+    {
+        var expectedDescription = $"detailLevel ({McpEnumValues.AssemblyDetailLevelsHint})";
+        var tools = await _fixture.Client.ListToolsAsync();
+        foreach (var toolName in new[] { "inspect_assembly", "find_assembly_extensions", "get_assembly_context" })
+        {
+            var tool = Assert.Single(tools.Where(candidate => candidate.ProtocolTool.Name == toolName));
+            Assert.Contains(expectedDescription, tool.ProtocolTool.Description, StringComparison.Ordinal);
+        }
+
+        foreach (var detailLevel in McpEnumValues.AssemblyDetailLevels)
+        {
+            Assert.Null(AssemblyAnalysisResponseLimits.ValidateDetailLevel(detailLevel));
+        }
+
+        Assert.NotNull(AssemblyAnalysisResponseLimits.ValidateDetailLevel("verbose"));
     }
 
     [Fact]

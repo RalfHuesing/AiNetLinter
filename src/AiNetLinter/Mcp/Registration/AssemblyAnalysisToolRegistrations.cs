@@ -7,6 +7,7 @@ using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
+using AiNetLinter.Mcp.Validation;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -117,6 +118,7 @@ internal static class AssemblyAnalysisToolRegistrations
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
+                if (AssemblyAnalysisResponseLimits.ValidateDetailLevel(detailLevel) is { } detailLevelError) return detailLevelError;
                 var effectiveCursor = continuationToken;
                 var effectiveIncludeReferences = includeReferences ?? (
                     string.IsNullOrWhiteSpace(@namespace)
@@ -153,7 +155,7 @@ internal static class AssemblyAnalysisToolRegistrations
             TargetPathToolRegistrationOptions.AssemblyTool("inspect_assembly", InspectAssemblyDescription)));
     }
 
-    private const string InspectAssemblyDescription =
+    private static readonly string InspectAssemblyDescription =
         "Wann nutzen: oeffentliche API einer exakt angegebenen lokalen .NET-Assembly metadata-only " +
         "ueber Roslyn untersuchen. targetPath mit absolutem .dll- oder .exe-Pfad ist Pflicht; " +
         "Ein Consumer-Projekt " +
@@ -163,7 +165,8 @@ internal static class AssemblyAnalysisToolRegistrations
         "ergaenzt den Teiltextfilter memberName um eine exakte OR-Auswahl, " +
         "includeReferences (wenn weggelassen: bei Type-/Member-Filter false, sonst true; " +
         "true/false wird explizit respektiert) steuert " +
-         "Referenzlisten und Referenz-Sessions; ohne Detailflag bleiben nur Summen sichtbar, " +
+        "Referenzlisten und Referenz-Sessions; ohne Detailflag bleiben nur Summen sichtbar, " +
+        $"detailLevel ({McpEnumValues.AssemblyDetailLevelsHint}) steuert das Antwortbudget; " +
         "maxResults begrenzt Typen (0 = Default 100, Maximum 1000), " +
         "maxMembers begrenzt Member je Typ (0 = Default 100, Maximum 1000). Identitaet, " +
         "Referenzen, Typen, Methoden, Properties, Felder, Events, Attribute und Diagnosen " +
@@ -193,6 +196,8 @@ internal static class AssemblyAnalysisToolRegistrations
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
+                var detailLevelError = AssemblyAnalysisResponseLimits.ValidateDetailLevel(detailLevel);
+                if (detailLevelError is not null) return detailLevelError;
                 var effectiveCursor = continuationToken;
                 return await AnalysisToolCall.ExecuteRouted(
                     assemblyRoute,
@@ -220,7 +225,7 @@ internal static class AssemblyAnalysisToolRegistrations
             TargetPathToolRegistrationOptions.AssemblyTool("find_assembly_extensions", FindAssemblyExtensionsDescription)));
     }
 
-    private const string FindAssemblyExtensionsDescription =
+    private static readonly string FindAssemblyExtensionsDescription =
         "Wann nutzen: klassische C#-Extension-Methoden einer exakt angegebenen lokalen .NET-Assembly " +
         "metadata-only ueber Roslyn finden. targetPath mit absolutem .dll- oder .exe-Pfad ist Pflicht; " +
         "Ein Consumer-Projekt " +
@@ -233,6 +238,7 @@ internal static class AssemblyAnalysisToolRegistrations
         "Eine verfuegbare explizite Source-Zuordnung wird source-backed genutzt; sonst greift " +
         "die statische Decompilation. " +
         "maxResults begrenzt (0 = Default 100, Maximum 1000). Die Antwort trennt " +
+        $"detailLevel ({McpEnumValues.AssemblyDetailLevelsHint}) steuert das Antwortbudget. " +
         "applicable, not_applicable und not_decidable und markiert fehlende Abhaengigkeiten " +
         "mit completeness partial. Methoden liefern zusaetzlich strukturierte Parameterdaten. " +
         "Die Assembly wird weder geladen noch ausgefuehrt.";
@@ -290,6 +296,8 @@ internal static class AssemblyAnalysisToolRegistrations
     {
         var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
         if (unknownError is not null) return unknownError;
+        var detailLevelError = AssemblyAnalysisResponseLimits.ValidateDetailLevel(parameters.DetailLevel);
+        if (detailLevelError is not null) return detailLevelError;
         return await AnalysisToolCall.ExecuteRouted(
             assemblyRoute,
             new AnalysisToolCallRequest(
@@ -340,7 +348,7 @@ internal static class AssemblyAnalysisToolRegistrations
         string? ContinuationToken,
         CancellationToken CancellationToken);
 
-    private const string GetAssemblyContextDescription =
+    private static readonly string GetAssemblyContextDescription =
         "Wann nutzen: kompakter Assembly-spezifischer Composite-Einstieg fuer Agenten. " +
         "Liefert Identitaet, Scope, Vollstaendigkeit und auf Wunsch Metriken, Referenzen, " +
         "Caller/Impact, Body und Klassenstruktur in einer strukturierten Antwort. " +
@@ -348,7 +356,7 @@ internal static class AssemblyAnalysisToolRegistrations
         "akzeptiert DocCommentId, Typname oder Datei:Zeile:Spalte. " +
         "maxBodyLines, maxCallers, depth und topN sind Abschnitts-Limits und müssen jeweils mindestens 1 sein; " +
         "0 oder negative Werte liefern INVALID_ARGUMENT (Caps: 1000, 200, 3 bzw. 200). " +
-        "maxResponseBytes, detailLevel (compact/standard/full) und continuationToken steuern Budget und Paging; " +
+        $"maxResponseBytes, detailLevel ({McpEnumValues.AssemblyDetailLevelsHint}) und continuationToken steuern Budget und Paging; " +
         "unsupported/partial/complete sowie totalCount, returnedCount und continuationToken " +
         "bleiben maschinenlesbar sichtbar. Die Assembly wird weder geladen noch ausgefuehrt.";
 }

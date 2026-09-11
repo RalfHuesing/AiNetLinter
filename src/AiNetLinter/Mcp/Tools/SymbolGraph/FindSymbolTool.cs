@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.Common;
+using AiNetLinter.Mcp.Validation;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -45,15 +46,6 @@ internal sealed record FindSymbolRequest(
 /// </summary>
 internal static class FindSymbolTool
 {
-    /// <summary>
-    /// Gueltige Werte fuer den optionalen <c>kind</c>-Filter — kanonische C#/Roslyn-Bezeichner,
-    /// case-insensitive.
-    /// </summary>
-    private static readonly HashSet<string> ValidKinds = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "class", "interface", "record", "record class", "record struct", "struct", "enum", "delegate", "method", "property",
-    };
-
     internal const int MaxPatternsPerCall = 10;
     internal const int DefaultMaxResponseBytes = 16 * 1024;
 
@@ -83,21 +75,53 @@ internal static class FindSymbolTool
 
     internal static CallToolResult? ValidatePatternArguments(FindSymbolPatternOptions options)
     {
-        if (options.NamePatterns is not null && !string.IsNullOrWhiteSpace(options.Pattern))
+        if (options.NamePatterns is not null && options.Pattern is not null)
         {
             return McpToolResults.InvalidArgument(
                 "namePatterns und pattern sind gegenseitig exklusiv — genau eines angeben.",
-                hint: "Entweder namePatterns (Array) ODER pattern (ein String) angeben, nie beide.");
+                hint: "Entweder namePatterns (Array) ODER pattern (ein String) angeben, nie beide.",
+                fieldPath: "$.namePatterns");
         }
 
-        if (options.NamePatterns is not null
-            && options.NamePatterns.Any(IsEmptyNamePattern)
-            && options.NamePatterns.Any(pattern => !IsEmptyNamePattern(pattern)))
+        if (options.NamePatterns is null)
+        {
+            return options.Pattern is null
+                ? McpToolResults.InvalidArgument(
+                    "Pflichtparameter 'namePatterns' oder 'pattern' fehlt.",
+                    McpToolResults.NamePatternsBatchHint,
+                    "$.namePatterns")
+                : IsEmptyNamePattern(options.Pattern)
+                    ? McpToolResults.InvalidArgument(
+                        "pattern darf nicht leer sein.",
+                        "Ein nicht-leeres Symbolmuster angeben.",
+                        "$.pattern")
+                    : null;
+        }
+
+        if (options.NamePatterns.Length == 0)
         {
             return McpToolResults.InvalidArgument(
+                "namePatterns darf nicht leer sein.",
+                McpToolResults.NamePatternsBatchHint,
+                "$.namePatterns");
+        }
+
+        if (options.NamePatterns.Length > MaxPatternsPerCall)
+        {
+            return McpToolResults.InvalidArgument(
+                $"Maximal {MaxPatternsPerCall} namePatterns pro Call erlaubt (angefordert: {options.NamePatterns.Length}).",
+                "Auf mehrere Calls aufteilen (z. B. 2x 5-10 Patterns).",
+                "$.namePatterns");
+        }
+
+        for (var index = 0; index < options.NamePatterns.Length; index++)
+        {
+            if (!IsEmptyNamePattern(options.NamePatterns[index])) continue;
+
+            return McpToolResults.InvalidArgument(
                 "namePatterns darf keine leeren Elemente enthalten.",
-                hint: "Jedes Array-Element muss ein nicht-leeres Symbolmuster enthalten.",
-                fieldPath: "namePatterns");
+                "Jedes Array-Element muss ein nicht-leeres Symbolmuster enthalten.",
+                $"$.namePatterns[{index}]");
         }
 
         return null;
@@ -111,26 +135,26 @@ internal static class FindSymbolTool
     {
         if (patterns.Count == 0)
         {
-            return McpToolResults.Recoverable(
-                LinterErrorCodes.InvalidArgument,
+            return McpToolResults.InvalidArgument(
                 "Pflichtparameter 'namePatterns' fehlt oder ist leer.",
-                hint: McpToolResults.NamePatternsBatchHint);
+                McpToolResults.NamePatternsBatchHint,
+                "$.namePatterns");
         }
 
         return patterns.Count > MaxPatternsPerCall
-            ? McpToolResults.Recoverable(
-                LinterErrorCodes.InvalidArgument,
+            ? McpToolResults.InvalidArgument(
                 $"Maximal {MaxPatternsPerCall} namePatterns pro Call erlaubt (angefordert: {patterns.Count}).",
-                hint: "Auf mehrere Calls aufteilen (z. B. 2x 5-10 Patterns).")
+                "Auf mehrere Calls aufteilen (z. B. 2x 5-10 Patterns).",
+                "$.namePatterns")
             : null;
     }
 
     internal static CallToolResult? ValidateKind(string? kind) =>
-        kind is not null && !ValidKinds.Contains(kind)
-            ? McpToolResults.Recoverable(
-                LinterErrorCodes.InvalidArgument,
+        kind is not null && (string.IsNullOrWhiteSpace(kind) || !McpEnumValues.IsFindSymbolKind(kind))
+            ? McpToolResults.InvalidArgument(
                 $"Unbekannter kind-Filter '{kind}'.",
-                hint: "Gueltige Werte: class, method, interface, property, record, struct, enum, delegate.")
+                $"Gueltige Werte: {McpEnumValues.FindSymbolKindsHint}.",
+                "$.kind")
             : null;
 
     internal static CallToolResult? ValidateMaxResults(int maxResults) =>

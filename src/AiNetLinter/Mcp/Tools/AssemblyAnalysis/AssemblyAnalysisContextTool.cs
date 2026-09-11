@@ -47,6 +47,9 @@ internal static class AssemblyAnalysisContextTool
         AssemblyAnalysisContextArguments arguments,
         CancellationToken cancellationToken)
     {
+        var detailLevelError = AssemblyAnalysisResponseLimits.ValidateDetailLevel(arguments.DetailLevel);
+        if (detailLevelError is not null) return detailLevelError;
+
         try
         {
             var budget = AssemblyAnalysisResponseLimits.ResolveResponseBudget(

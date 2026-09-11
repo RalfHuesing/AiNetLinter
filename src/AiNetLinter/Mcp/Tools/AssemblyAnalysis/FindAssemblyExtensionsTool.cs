@@ -12,15 +12,16 @@ internal static class FindAssemblyExtensionsTool
     internal static Task<CallToolResult> ExecuteAsync(
         AssemblyAnalysisLease lease,
         FindAssemblyExtensionsArguments arguments) =>
-        !AssemblyPaging.TryReadBoundOffset(
+        AssemblyAnalysisResponseLimits.ValidateDetailLevel(arguments.DetailLevel) is { } detailLevelError
+            ? Task.FromResult(detailLevelError)
+            : !AssemblyPaging.TryReadBoundOffset(
             arguments.Cursor,
             AssemblyPaging.CreateExtensionsBinding(lease.CanonicalPath, lease.Context.Origin.ContentHash, arguments),
             out _)
             ? Task.FromResult(McpToolResults.InvalidArgument(
                 "continuationToken ist nicht an Target, Assembly-Hash und Abfrage gebunden oder abgelaufen.",
                 "den zuletzt gelieferten continuationToken unverändert mit derselben Abfrage wiederverwenden."))
-            :
-        AssemblyAnalysisToolSupport.ExecuteLeaseAsync(
+            : AssemblyAnalysisToolSupport.ExecuteLeaseAsync(
             lease,
             arguments,
             arguments.MaxResults,

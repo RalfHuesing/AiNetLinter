@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using AiNetLinter.Mcp.Validation;
+using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 
@@ -31,13 +33,21 @@ internal static partial class AssemblyAnalysisResponseLimits
     {
         if (requested > 0) return NormalizeResponseBudget(requested);
         var standard = Math.Clamp(configuredDefault, 1, MaxResponseBytes);
-        return detailLevel?.Trim().ToLowerInvariant() switch
+        return McpEnumValues.NormalizeAssemblyDetailLevel(detailLevel) switch
         {
-            "compact" => Math.Min(DefaultResponseBytes, standard),
-            "full" => MaxResponseBytes,
+            McpEnumValues.AssemblyDetailLevelCompact => Math.Min(DefaultResponseBytes, standard),
+            McpEnumValues.AssemblyDetailLevelFull => MaxResponseBytes,
             _ => standard,
         };
     }
+
+    internal static CallToolResult? ValidateDetailLevel(string? detailLevel) =>
+        detailLevel is not null && McpEnumValues.NormalizeAssemblyDetailLevel(detailLevel) is null
+            ? McpToolResults.InvalidArgument(
+                $"Ungueltige detailLevel-Stufe '{detailLevel}'.",
+                $"detailLevel muss {McpEnumValues.AssemblyDetailLevelsHint} sein.",
+                "$.detailLevel")
+            : null;
 
     internal static int NormalizeDiagnosticLimit(int requested) =>
         requested <= 0 ? DefaultMaxDiagnostics : Math.Clamp(requested, 1, MaxDiagnostics);

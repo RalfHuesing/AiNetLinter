@@ -163,6 +163,9 @@ internal static class McpArgumentValidationFilter
         var arguments = context.Params?.Arguments
             ?? new Dictionary<string, JsonElement>(StringComparer.Ordinal);
 
+        var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
+        if (unknownError is not null) return unknownError;
+
         var requiredError = ValidateRequiredArguments(tool, arguments);
         if (requiredError is not null) return requiredError;
 

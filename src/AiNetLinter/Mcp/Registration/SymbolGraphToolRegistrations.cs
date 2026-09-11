@@ -11,6 +11,7 @@ using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.DependencyGraph;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.Mcp.Validation;
 using AiNetLinter.Mcp.Tools.TypeHierarchy;
 using AiNetLinter.Mcp.Tools.TypeResolution;
 using ModelContextProtocol.Protocol;
@@ -59,8 +60,15 @@ internal static class SymbolGraphToolRegistrations
                     new FindSymbolPatternOptions(namePatterns, pattern));
                 if (patternError is not null) return patternError;
 
+                var patterns = FindSymbolTool.NormalizeNamePatterns(new FindSymbolPatternOptions(namePatterns, pattern));
+                var namePatternsError = FindSymbolTool.ValidateNamePatterns(patterns);
+                if (namePatternsError is not null) return namePatternsError;
+
                 var maxResultsError = FindSymbolTool.ValidateMaxResults(maxResults);
                 if (maxResultsError is not null) return maxResultsError;
+
+                var kindError = FindSymbolTool.ValidateKind(kind);
+                if (kindError is not null) return kindError;
 
                 var scopeValidation = FindSymbolTool.ValidateScopeType(scopeType);
                 if (scopeValidation.Error is not null) return scopeValidation.Error;
@@ -83,7 +91,7 @@ internal static class SymbolGraphToolRegistrations
                             AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(
                                 lease,
                                 new AssemblyFindSymbolRequest(
-                                    FindSymbolTool.NormalizeNamePatterns(new FindSymbolPatternOptions(namePatterns, pattern)).ToArray(),
+                                    patterns.ToArray(),
                                     kind,
                                     maxResults,
                                     includeReferences,
@@ -98,14 +106,14 @@ internal static class SymbolGraphToolRegistrations
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("find_symbol", FindSymbolDescription)));
     }
 
-    private const string FindSymbolDescription =
+    private static readonly string FindSymbolDescription =
         "Wann nutzen: Fundstelle(n) von C#-Symbolen per Namens-Substring finden, wenn der " +
         "exakte Ort unbekannt ist. namePatterns: Array von Namens-Mustern oder pattern als " +
         "String fuer genau ein Muster. " +
         "Batch loest N sequentielle Calls ab, max. 10 pro Call, z. B. namePatterns: [\"Greeter\"] " +
         "oder pattern: \"Greeter\". " +
-        "kind: optionaler Typfilter (Class, Record, Method, Property, Interface, Struct, Enum; " +
-        "deutsche und englische Werte). scopeType: 'all' (Default), 'production' oder 'tests'; " +
+        $"kind: optionaler Typfilter ({McpEnumValues.FindSymbolKindsHint}; " +
+        "C#/Roslyn-Werte). scopeType: 'all' (Default), 'production' oder 'tests'; " +
         "includeGenerated: false (Default), nur bei true generierte Dokumente einbeziehen. " +
         "maxResults: mindestens 1, Begrenzung der Trefferliste (Default 50); " +
         "0 oder negative Werte liefern INVALID_ARGUMENT. " +

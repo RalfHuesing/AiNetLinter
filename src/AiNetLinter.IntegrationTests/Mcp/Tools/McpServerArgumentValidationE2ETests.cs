@@ -14,7 +14,7 @@ namespace AiNetLinter.IntegrationTests.Mcp.Tools;
 /// E2E-Vertraege fuer fehlende, widerspruechliche und ungueltige Toolargumente.
 /// </summary>
 [Trait("Category", "Integration")]
-public sealed class McpServerArgumentValidationE2ETests
+public sealed partial class McpServerArgumentValidationE2ETests
 {
     private readonly ReadOnlyMcpHostFixture _fixture;
 
@@ -119,6 +119,7 @@ public sealed class McpServerArgumentValidationE2ETests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("namePatterns", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("$.namePatterns", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
     }
 
     [Fact]
@@ -137,6 +138,39 @@ public sealed class McpServerArgumentValidationE2ETests
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("maxResults muss mindestens 1 sein.", textContent.Text, StringComparison.Ordinal);
         Assert.Equal("$.maxResults", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+    }
+
+    [Fact]
+    public async Task FindSymbol_InvalidKindAndEmptyBatchElementReturnPrecisePaths_AndValidRetrySucceeds()
+    {
+        var invalidKind = await _fixture.Client.CallToolAsync(
+            "find_symbol",
+            new Dictionary<string, object?>
+            {
+                ["namePatterns"] = new[] { "Greeter" },
+                ["kind"] = "trait",
+            });
+
+        Assert.Equal("INVALID_ARGUMENT", invalidKind.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal("$.kind", invalidKind.StructuredContent.Value.GetProperty("fieldPath").GetString());
+
+        var emptyElement = await _fixture.Client.CallToolAsync(
+            "find_symbol",
+            new Dictionary<string, object?> { ["namePatterns"] = new[] { "" } });
+
+        Assert.Equal("INVALID_ARGUMENT", emptyElement.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal("$.namePatterns[0]", emptyElement.StructuredContent.Value.GetProperty("fieldPath").GetString());
+
+        var retry = await _fixture.Client.CallToolAsync(
+            "find_symbol",
+            new Dictionary<string, object?>
+            {
+                ["namePatterns"] = new[] { "Greeter" },
+                ["kind"] = "class",
+            });
+
+        Assert.False(retry.IsError == true, retry.ToString());
+        Assert.True(retry.StructuredContent!.Value.TryGetProperty("results", out _), retry.StructuredContent.Value.GetRawText());
     }
 
     [Fact]
