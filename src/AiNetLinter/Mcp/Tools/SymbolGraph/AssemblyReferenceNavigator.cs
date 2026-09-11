@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
+using AiNetLinter.Mcp.Scope;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -16,7 +17,8 @@ internal sealed record AssemblyReferenceTraversalRequest(
     int MaxResults,
     int RequestedDepth,
     AssemblyNavigationSummary Navigation,
-    string? RootCanonicalPath = null);
+    string? RootCanonicalPath = null,
+    McpScopeFilter? ScopeFilter = null);
 
 internal static class AssemblyReferenceNavigator
 {
@@ -38,7 +40,8 @@ internal static class AssemblyReferenceNavigator
                         request.RequestedDepth,
                         Math.Max(request.MaxResults, 1),
                         cancellationToken,
-                        AssemblySymbolIdentity: source.Identity)).ConfigureAwait(false);
+                        AssemblySymbolIdentity: source.Identity,
+                        ScopeFilter: request.ScopeFilter)).ConfigureAwait(false);
                 results.Add(traversal with
                 {
                         CallSites = traversal.CallSites
@@ -69,7 +72,12 @@ internal static class AssemblyReferenceNavigator
             {
                 Completeness = partialDiagnostics.Count == 0 ? "complete" : "partial",
                 Diagnostics = AssemblyNavigationSupport.DistinctDiagnostics(partialDiagnostics),
-            });
+            },
+            request.ScopeFilter is null
+                ? null
+                : new FindSymbolScopeDto(
+                    McpScopeValues.ToWireValue(request.ScopeFilter.RequestedType),
+                    request.ScopeFilter.IncludeGenerated));
     }
 
     // ainetlinter-disable MaxMethodLineCount — Referenz- und Call-Tree-Metadaten müssen gemeinsam begrenzt werden.
@@ -141,7 +149,8 @@ internal static class AssemblyReferenceNavigator
         IReadOnlyList<ReferenceTraversalResult> traversals,
         int requestedDepth,
         int maxResults,
-        AssemblyNavigationSummary navigation)
+        AssemblyNavigationSummary navigation,
+        FindSymbolScopeDto? scope)
     {
         var effectiveDepth = traversals.Count == 0
             ? Math.Clamp(requestedDepth, 1, CallGraphTraversal.MaxRecursionDepth)
@@ -167,6 +176,6 @@ internal static class AssemblyReferenceNavigator
             traversals.Any(item => item.Completeness.TruncatedByNodeLimit),
             requestedDepth != effectiveDepth || traversals.Any(item => item.Completeness.DepthWasClamped),
             diagnostics);
-        return new(shown, completeness, navigation);
+        return new(shown, completeness, navigation, scope);
     }
 }

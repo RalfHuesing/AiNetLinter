@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -30,7 +31,23 @@ internal static class FindImplementationsTool
         string? symbolIdentifier,
         int maxResults = DefaultMaxResults,
         CancellationToken ct = default)
+        => await ExecuteAsync(new FindImplementationsRequest(
+            state,
+            symbolIdentifier,
+            maxResults,
+            McpScopeType.All,
+            IncludeGenerated: false,
+            ct)).ConfigureAwait(false);
+
+    internal static async Task<CallToolResult> ExecuteAsync(
+        FindImplementationsRequest request)
     {
+        var state = request.State;
+        var symbolIdentifier = request.SymbolIdentifier;
+        var maxResults = request.MaxResults;
+        var scopeType = request.ScopeType;
+        var includeGenerated = request.IncludeGenerated;
+        var ct = request.CancellationToken;
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
@@ -55,13 +72,18 @@ internal static class FindImplementationsTool
 
         var absolutePaths = state.HandoffSymbolIdentity?.IsAssembly == true;
         var normalizedMax = maxResults < 1 ? 1 : maxResults;
-        var resultDto = BuildResultDto(
-            resolvedSymbol!,
-            rawSymbols ?? [],
-            solution,
-            normalizedMax,
-            absolutePaths,
-            state.HandoffSymbolIdentity);
+        var resultDto = await BuildResultDtoAsync(
+            new BuildResultRequest(
+                resolvedSymbol!,
+                rawSymbols ?? [],
+                solution,
+                normalizedMax,
+                absolutePaths,
+                state.HandoffSymbolIdentity,
+                scopeType,
+                includeGenerated,
+                new McpScopeClassifier()),
+            ct).ConfigureAwait(false);
         var text = FormatResultText(resultDto);
         var finalText = text;
 
@@ -139,17 +161,33 @@ internal static class FindImplementationsTool
         return (null, $"Eigenschaft '{prop.ToDisplayString()}' ist weder Teil eines Interface noch virtuell/abstrakt.");
     }
 
-    private static FindImplementationsResultDto BuildResultDto(
-        ISymbol targetSymbol,
-        IReadOnlyList<ISymbol> symbols,
-        Solution solution,
-        int maxResults,
-        bool absolutePaths,
-        AnalysisSymbolIdentity? handoffIdentity)
+    private static async Task<FindImplementationsResultDto> BuildResultDtoAsync(
+        BuildResultRequest request,
+        CancellationToken cancellationToken)
     {
-        var items = symbols
-            .Select(s => MapToDto(s, solution, absolutePaths, handoffIdentity))
-            .OrderBy(item => item.TypeName, StringComparer.Ordinal)
+        var targetSymbol = request.TargetSymbol;
+        var symbols = request.Symbols;
+        var solution = request.Solution;
+        var maxResults = request.MaxResults;
+        var absolutePaths = request.AbsolutePaths;
+        var handoffIdentity = request.HandoffIdentity;
+        var scopeType = request.ScopeType;
+        var includeGenerated = request.IncludeGenerated;
+        var classifier = request.Classifier;
+        var scoped = new List<(ISymbol Symbol, McpSymbolScope Scope)>();
+        foreach (var symbol in symbols)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var scope = await classifier.ClassifySymbolAsync(
+                symbol, solution, scopeType, includeGenerated, cancellationToken).ConfigureAwait(false);
+            if (scope.IsVisible) scoped.Add((symbol, scope));
+        }
+
+        var items = scoped
+            .Select(item => MapToDto(item.Symbol, item.Scope, solution, absolutePaths, handoffIdentity))
+            .OrderBy(item => ProjectRank(item.ScopeType))
+            .ThenBy(item => SourceRank(item.SourceKind))
+            .ThenBy(item => item.TypeName, StringComparer.Ordinal)
             .ThenBy(item => item.MemberName ?? string.Empty, StringComparer.Ordinal)
             .ToList();
 
@@ -164,11 +202,13 @@ internal static class FindImplementationsTool
             total,
             shown.Count,
             isTruncated,
-            isTruncated ? ["maxResults"] : []);
+            isTruncated ? ["maxResults"] : [],
+            new FindSymbolScopeDto(McpScopeValues.ToWireValue(scopeType), includeGenerated));
     }
 
     private static ImplementationItemDto MapToDto(
         ISymbol symbol,
+        McpSymbolScope scope,
         Solution solution,
         bool absolutePaths,
         AnalysisSymbolIdentity? handoffIdentity)
@@ -189,8 +229,30 @@ internal static class FindImplementationsTool
             column,
             displayLoc,
             id,
-            handoffKind);
+            handoffKind,
+            McpScopeValues.ToWireValue(scope.ProjectKind),
+            McpScopeValues.ToWireValue(scope.SourceKind));
     }
+
+    private static int ProjectRank(string? scopeType) => scopeType switch
+    {
+        "production" => 0,
+        "tests" => 1,
+        _ => 2,
+    };
+
+    private static int SourceRank(string? sourceKind) => sourceKind == "editable" ? 0 : 1;
+
+    private sealed record BuildResultRequest(
+        ISymbol TargetSymbol,
+        IReadOnlyList<ISymbol> Symbols,
+        Solution Solution,
+        int MaxResults,
+        bool AbsolutePaths,
+        AnalysisSymbolIdentity? HandoffIdentity,
+        McpScopeType ScopeType,
+        bool IncludeGenerated,
+        McpScopeClassifier Classifier);
 
     private static (string TypeName, string? MemberName, string Kind) DescribeSymbol(ISymbol symbol)
     {

@@ -51,6 +51,31 @@ public sealed class SymbolGraphToolRegistrationsTests
     }
 
     [Fact]
+    public void ReferencesHierarchyAndImplementationsSchemas_AdvertiseScopeAndGeneratedControls()
+    {
+        var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        var options = McpServerOptionsFactory.Create(
+            McpServerToolCollectionFactory.Build(
+                registry,
+                AnalysisToolCall.CreateTargetRoute(
+                    ProjectAnalysisDispatcher.CreateRoute(registry),
+                    AssemblyAnalysisDispatcher.CreateRoute(null))),
+            McpServerResourceCollectionFactory.Build(registry));
+
+        foreach (var toolName in new[] { "find_references", "get_type_hierarchy", "find_implementations" })
+        {
+            var tool = options.ToolCollection!.Single(item => item.ProtocolTool.Name == toolName).ProtocolTool;
+            var properties = tool.InputSchema.GetProperty("properties");
+            Assert.True(properties.TryGetProperty("scopeType", out var scopeType));
+            Assert.Contains("string", scopeType.GetProperty("type").ToString(), StringComparison.Ordinal);
+            Assert.True(properties.TryGetProperty("includeGenerated", out var includeGenerated));
+            Assert.Equal("boolean", includeGenerated.GetProperty("type").GetString());
+            Assert.Contains("scopeType", tool.Description, StringComparison.Ordinal);
+            Assert.Contains("includeGenerated", tool.Description, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void ToolDescriptions_FindReferencesAndGetImpact_MentionNodeHardCap()
     {
         var registry = ProjectRegistryFixture.CreateInspectionRegistry();

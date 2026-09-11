@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.FastTests.Fixtures;
@@ -24,6 +25,38 @@ public sealed class FindReferencesToolTests
     private readonly McpInMemoryTestContext _fixture;
 
     public FindReferencesToolTests() { _fixture = new McpInMemoryTestContext(); }
+
+    [Fact]
+    public async Task ExecuteAsync_ScopeFiltersBeforeLimit_AndRanksProductionFirst()
+    {
+        using var solution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\ScopeReferences.slnx",
+            new ProjectSpec("App", [
+                ("Service.cs", "namespace App; public class Service { public void Run() {} }"),
+                ("ProductionCaller.cs", "namespace App; public class ProductionCaller { public void Call(Service service) => service.Run(); }")]),
+            new ProjectSpec("App.Tests", [
+                ("ServiceTests.cs", "namespace App.Tests; public class ServiceTests { public void Call(App.Service service) => service.Run(); }")],
+                ["App"]));
+        using var fixture = new McpInMemoryTestContext(solution);
+        var state = fixture.CreateServer();
+
+        var all = await FindReferencesTool.ExecuteAsync(
+            state,
+            new FindReferencesRequest("App.Service.Run", 1, 1, McpScopeType.All, false),
+            CancellationToken.None);
+        var allPayload = all.StructuredContent!.Value;
+        Assert.Equal(2, allPayload.GetProperty("completeness").GetProperty("totalCallSiteCount").GetInt32());
+        Assert.Equal("production", allPayload.GetProperty("callSites")[0].GetProperty("scopeType").GetString());
+        Assert.Equal("all", allPayload.GetProperty("scope").GetProperty("requestedType").GetString());
+
+        var tests = await FindReferencesTool.ExecuteAsync(
+            state,
+            new FindReferencesRequest("App.Service.Run", 1, 1, McpScopeType.Tests, false),
+            CancellationToken.None);
+        var testsPayload = tests.StructuredContent!.Value;
+        Assert.Equal(1, testsPayload.GetProperty("completeness").GetProperty("totalCallSiteCount").GetInt32());
+        Assert.Equal("tests", testsPayload.GetProperty("callSites")[0].GetProperty("scopeType").GetString());
+    }
 
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()

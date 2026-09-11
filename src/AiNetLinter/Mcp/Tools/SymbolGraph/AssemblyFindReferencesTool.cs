@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Handoffs;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -15,7 +16,10 @@ internal sealed record AssemblyFindReferencesRequest(
     string? SymbolIdentifier,
     int MaxResults,
     int Depth,
-    bool IncludeReferences);
+    bool IncludeReferences,
+    McpScopeType ScopeType = McpScopeType.All,
+    bool IncludeGenerated = false,
+    McpScopeClassifier? ScopeClassifier = null);
 
 internal static class AssemblyFindReferencesTool
 {
@@ -40,7 +44,10 @@ internal static class AssemblyFindReferencesTool
             new FindReferencesRequest(
                 request.SymbolIdentifier,
                 request.MaxResults,
-                request.Depth),
+                request.Depth,
+                request.ScopeType,
+                request.IncludeGenerated,
+                request.ScopeClassifier),
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -77,7 +84,11 @@ internal static class AssemblyFindReferencesTool
                     request.MaxResults,
                     request.Depth,
                     navigation,
-                    lease.CanonicalPath),
+                    lease.CanonicalPath,
+                    new(
+                        request.ScopeType,
+                        request.IncludeGenerated,
+                        request.ScopeClassifier ?? new McpScopeClassifier())),
                 cancellationToken).ConfigureAwait(false);
             var formatted = TransitiveCallGraphFormatter.FormatResponse(
                 traversal,

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -65,6 +66,10 @@ internal static class FindReferencesTool
 
         try
         {
+            var scopeFilter = new McpScopeFilter(
+                request.ScopeType,
+                request.IncludeGenerated,
+                request.ScopeClassifier ?? new McpScopeClassifier());
             var (symbol, error) = await ResolveSymbolAsync(
                 solution,
                 symbolIdentifier,
@@ -80,7 +85,14 @@ internal static class FindReferencesTool
                     request.Depth,
                     normalizedMaxResults,
                     ct,
-                    AssemblySymbolIdentity: state.HandoffSymbolIdentity));
+                    AssemblySymbolIdentity: state.HandoffSymbolIdentity,
+                    ScopeFilter: scopeFilter));
+            traversal = traversal with
+            {
+                Scope = new FindSymbolScopeDto(
+                    McpScopeValues.ToWireValue(request.ScopeType),
+                    request.IncludeGenerated),
+            };
             var formatted = TransitiveCallGraphFormatter.FormatResponse(
                 traversal,
                 traversal.Completeness.TotalCallSiteCount == 0

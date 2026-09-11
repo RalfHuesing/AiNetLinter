@@ -3,6 +3,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
@@ -23,7 +24,24 @@ internal static class GetTypeHierarchyTool
 
     internal static async Task<CallToolResult> ExecuteAsync(
         ISolutionStateProvider state, string? symbolIdentifier, int maxResults, CancellationToken ct)
+        => await ExecuteAsync(
+            new GetTypeHierarchyRequest(
+                state,
+                symbolIdentifier,
+                maxResults,
+                McpScopeType.All,
+                IncludeGenerated: false,
+                CancellationToken: ct)).ConfigureAwait(false);
+
+    internal static async Task<CallToolResult> ExecuteAsync(
+        GetTypeHierarchyRequest request)
     {
+        var state = request.State;
+        var symbolIdentifier = request.SymbolIdentifier;
+        var maxResults = request.MaxResults;
+        var scopeType = request.ScopeType;
+        var includeGenerated = request.IncludeGenerated;
+        var ct = request.CancellationToken;
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
@@ -52,8 +70,12 @@ internal static class GetTypeHierarchyTool
             solution,
             normalizedMaxResults,
             ct,
-            absolutePaths: state.AssemblySymbolIdentity is not null,
-            handoffIdentity: state.HandoffSymbolIdentity);
+            new HierarchyBuildOptions(
+                AbsolutePaths: state.AssemblySymbolIdentity is not null,
+                HandoffIdentity: state.HandoffSymbolIdentity,
+                ScopeType: scopeType,
+                IncludeGenerated: includeGenerated,
+                ScopeClassifier: new McpScopeClassifier()));
         var text = GetTypeHierarchyFormatter.FormatText(payload);
         // Basisklassen/Interfaces trunkieren nie (durch die Deklaration des Typs selbst begrenzt),
         // aber abgeleitete/implementierende Typen sind transitiv ueber die gesamte Solution

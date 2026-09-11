@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Output;
 using AiNetLinter.Mcp.Tools.CallTree;
 using Microsoft.CodeAnalysis;
@@ -48,7 +49,12 @@ internal static class CallGraphTraversal
         }
 
         var state = new TraversalState(request.SeedSymbol, effectiveDepth, effectiveNodeLimit);
-        await TraverseAsync(request.Solution, state, request.AssemblySymbolIdentity, request.CancellationToken);
+        await TraverseAsync(
+            request.Solution,
+            state,
+            request.AssemblySymbolIdentity,
+            request.ScopeFilter,
+            request.CancellationToken);
         return state.CreateResult(
             request.RequestedDepth, effectiveDepth, Math.Max(request.MaxResults, 1));
     }
@@ -57,6 +63,7 @@ internal static class CallGraphTraversal
         Solution solution,
         TraversalState state,
         AnalysisSymbolIdentity? assemblyIdentity,
+        McpScopeFilter? scopeFilter,
         CancellationToken ct)
     {
         while (state.HasMore)
@@ -71,20 +78,25 @@ internal static class CallGraphTraversal
             var (current, level) = state.Dequeue();
             state.MarkVisited();
             var refs = await SymbolFinder.FindReferencesAsync(current, solution, ct);
-            AppendReferenceLocations(refs, solution, current, level, assemblyIdentity, state);
-            await EnqueueChildrenAsync(refs, level, state, ct);
+            await AppendReferenceLocationsAsync(
+                new AppendReferenceLocationsRequest(
+                    refs,
+                    solution,
+                    current,
+                    level,
+                    assemblyIdentity,
+                    scopeFilter,
+                    state),
+                ct).ConfigureAwait(false);
+            await EnqueueChildrenAsync(refs, level, state, scopeFilter, ct).ConfigureAwait(false);
         }
     }
 
-    private static void AppendReferenceLocations(
-        IEnumerable<ReferencedSymbol> refs,
-        Solution solution,
-        ISymbol reachedFromSymbol,
-        int depth,
-        AnalysisSymbolIdentity? assemblyIdentity,
-        TraversalState state)
+    private static async Task AppendReferenceLocationsAsync(
+        AppendReferenceLocationsRequest request,
+        CancellationToken cancellationToken)
     {
-        foreach (var reference in refs)
+        foreach (var reference in request.References)
         {
             foreach (var referenceLocation in reference.Locations)
             {
@@ -93,36 +105,62 @@ internal static class CallGraphTraversal
                     continue;
                 }
 
-                state.Add(CreateCallSiteEntry(
-                    reference, referenceLocation, solution, reachedFromSymbol, depth, assemblyIdentity));
+                var documentScope = await ClassifyLocationAsync(
+                    referenceLocation,
+                    request.ScopeFilter,
+                    cancellationToken).ConfigureAwait(false);
+                if (request.ScopeFilter is not null && documentScope is null) continue;
+
+                request.State.Add(CreateCallSiteEntry(
+                    new CreateCallSiteEntryRequest(
+                        reference,
+                        referenceLocation,
+                        request.Solution,
+                        request.ReachedFromSymbol,
+                        request.Depth,
+                        request.AssemblyIdentity,
+                        documentScope)));
             }
         }
     }
 
-    private static TransitiveCallSiteEntry CreateCallSiteEntry(
-        ReferencedSymbol reference,
-        ReferenceLocation referenceLocation,
-        Solution solution,
-        ISymbol reachedFromSymbol,
-        int depth,
-        AnalysisSymbolIdentity? assemblyIdentity)
+    private static async Task<McpDocumentScope?> ClassifyLocationAsync(
+        ReferenceLocation location,
+        McpScopeFilter? scopeFilter,
+        CancellationToken cancellationToken)
     {
-        var location = referenceLocation.Location;
-        var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
-        var filePath = assemblyIdentity is null || !assemblyIdentity.IsAssembly
+        if (scopeFilter is null) return null;
+
+        var scope = await scopeFilter.Classifier
+            .ClassifyAsync(location.Document, cancellationToken)
+            .ConfigureAwait(false);
+        return scopeFilter.Classifier.MatchesScope(scope, scopeFilter.RequestedType)
+            && (scopeFilter.IncludeGenerated || scope.SourceKind != McpSourceKind.Generated)
+            ? scope
+            : null;
+    }
+
+    private static TransitiveCallSiteEntry CreateCallSiteEntry(
+        CreateCallSiteEntryRequest request)
+    {
+        var location = request.ReferenceLocation.Location;
+        var outputRoot = Path.GetDirectoryName(request.Solution.FilePath) ?? string.Empty;
+        var filePath = request.AssemblyIdentity is null || !request.AssemblyIdentity.IsAssembly
             ? PathNormalizer.ToRelative(outputRoot, location.SourceTree!.FilePath)
             : Path.GetFullPath(location.SourceTree!.FilePath);
         var line = location.GetLineSpan().StartLinePosition.Line + 1;
-        var handoffId = assemblyIdentity?.FormatHandoff(reference.Definition);
+        var handoffId = request.AssemblyIdentity?.FormatHandoff(request.Reference.Definition);
         return new TransitiveCallSiteEntry(
             filePath,
             line,
-            FormatSymbolName(reference.Definition),
-            referenceLocation.Document.Project.Name,
-            depth,
-            FormatReachedFromSymbolId(reachedFromSymbol, assemblyIdentity),
+            FormatSymbolName(request.Reference.Definition),
+            request.ReferenceLocation.Document.Project.Name,
+            request.Depth,
+            FormatReachedFromSymbolId(request.ReachedFromSymbol, request.AssemblyIdentity),
             Id: handoffId,
-            HandoffKind: handoffId is null ? null : reference.Definition is INamedTypeSymbol ? "type" : "member");
+            HandoffKind: handoffId is null ? null : request.Reference.Definition is INamedTypeSymbol ? "type" : "member",
+            ScopeType: request.DocumentScope is { } scope ? McpScopeValues.ToWireValue(scope.ProjectKind) : null,
+            SourceKind: request.DocumentScope is { } source ? McpScopeValues.ToWireValue(source.SourceKind) : null);
     }
 
     /// <summary>
@@ -170,7 +208,11 @@ internal static class CallGraphTraversal
     /// bleiben Call-Sites der aktuellen Ebene und werden nicht expandiert.
     /// </summary>
     private static async Task EnqueueChildrenAsync(
-        IEnumerable<ReferencedSymbol> refs, int currentLevel, TraversalState state, CancellationToken ct)
+        IEnumerable<ReferencedSymbol> refs,
+        int currentLevel,
+        TraversalState state,
+        McpScopeFilter? scopeFilter,
+        CancellationToken ct)
     {
         if (currentLevel >= state.Depth) return;
         foreach (var reference in refs)
@@ -178,6 +220,12 @@ internal static class CallGraphTraversal
             foreach (var referenceLocation in reference.Locations)
             {
                 if (!referenceLocation.Location.IsInSource || referenceLocation.Location.SourceTree is null)
+                {
+                    continue;
+                }
+
+                if (scopeFilter is not null
+                    && await ClassifyLocationAsync(referenceLocation, scopeFilter, ct).ConfigureAwait(false) is null)
                 {
                     continue;
                 }
@@ -293,6 +341,8 @@ internal static class CallGraphTraversal
             var ordered = Locations
                 .Distinct()
                 .OrderBy(location => location.Depth)
+                .ThenBy(location => ProjectRank(location.ScopeType))
+                .ThenBy(location => SourceRank(location.SourceKind))
                 .ThenBy(location => location.FilePath, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(location => location.FilePath, StringComparer.Ordinal)
                 .ThenBy(location => location.Line)
@@ -312,5 +362,32 @@ internal static class CallGraphTraversal
                 requestedDepth != effectiveDepth);
             return new ReferenceTraversalResult(shown, completeness);
         }
+
+        private static int ProjectRank(string? scopeType) => scopeType switch
+        {
+            "production" => 0,
+            "tests" => 1,
+            _ => 2,
+        };
+
+        private static int SourceRank(string? sourceKind) => sourceKind == "editable" ? 0 : 1;
     }
+
+    private sealed record AppendReferenceLocationsRequest(
+        IEnumerable<ReferencedSymbol> References,
+        Solution Solution,
+        ISymbol ReachedFromSymbol,
+        int Depth,
+        AnalysisSymbolIdentity? AssemblyIdentity,
+        McpScopeFilter? ScopeFilter,
+        TraversalState State);
+
+    private sealed record CreateCallSiteEntryRequest(
+        ReferencedSymbol Reference,
+        ReferenceLocation ReferenceLocation,
+        Solution Solution,
+        ISymbol ReachedFromSymbol,
+        int Depth,
+        AnalysisSymbolIdentity? AssemblyIdentity,
+        McpDocumentScope? DocumentScope);
 }

@@ -10,6 +10,7 @@ using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.TypeHierarchy;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -26,6 +27,44 @@ public sealed class GetTypeHierarchyToolTests
     private readonly McpInMemoryTestContext _fixture;
 
     public GetTypeHierarchyToolTests() { _fixture = new McpInMemoryTestContext(); }
+
+    [Fact]
+    public async Task ExecuteAsync_ScopeFiltersGeneratedAndTestSubtypesBeforeLimit()
+    {
+        using var solution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\ScopeHierarchy.slnx",
+            new ProjectSpec("App", [
+                ("Contracts.cs", "namespace App; public interface IService { void Run(); }"),
+                ("Production.cs", "namespace App; public class ProductionService : IService { public void Run() {} }")]),
+            new ProjectSpec("App.Tests", [
+                ("ServiceTests.cs", "namespace App.Tests; public class TestService : App.IService { public void Run() {} }")],
+                ["App"]),
+            new ProjectSpec("Generated", [
+                ("Generated.g.cs", "namespace App; public class GeneratedService : IService { public void Run() {} }")],
+                ["App"]));
+        using var fixture = new McpInMemoryTestContext(solution);
+
+        var all = await GetTypeHierarchyTool.ExecuteAsync(
+            new GetTypeHierarchyRequest(
+                fixture.CreateServer(), "App.IService", 1, McpScopeType.All, false, CancellationToken.None));
+        Assert.Equal(2, all.StructuredContent!.Value.GetProperty("totalSubtypeCount").GetInt32());
+        Assert.Contains("ProductionService", all.StructuredContent!.Value.GetProperty("subtypes")[0].GetProperty("name").GetString(), StringComparison.Ordinal);
+        Assert.Equal("all", all.StructuredContent!.Value.GetProperty("scope").GetProperty("requestedType").GetString());
+
+        var tests = await GetTypeHierarchyTool.ExecuteAsync(
+            new GetTypeHierarchyRequest(
+                fixture.CreateServer(), "App.IService", 50, McpScopeType.Tests, false, CancellationToken.None));
+        Assert.Equal(1, tests.StructuredContent!.Value.GetProperty("totalSubtypeCount").GetInt32());
+        Assert.Equal("tests", tests.StructuredContent!.Value.GetProperty("subtypes")[0].GetProperty("scopeType").GetString());
+
+        var generated = await GetTypeHierarchyTool.ExecuteAsync(
+            new GetTypeHierarchyRequest(
+                fixture.CreateServer(), "App.IService", 50, McpScopeType.All, true, CancellationToken.None));
+        Assert.Equal(3, generated.StructuredContent!.Value.GetProperty("totalSubtypeCount").GetInt32());
+        Assert.Contains(
+            generated.StructuredContent!.Value.GetProperty("subtypes").EnumerateArray(),
+            item => item.GetProperty("sourceKind").GetString() == "generated");
+    }
 
     [Fact]
     public async Task ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode()

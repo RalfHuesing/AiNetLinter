@@ -380,7 +380,7 @@ internal sealed record FindSymbolPatternResultDto(
     IReadOnlyList<string>? TruncatedBy = null,
     IReadOnlyList<string>? KindAlternatives = null);
 
-internal sealed record FindSymbolScopeDto(string RequestedType, bool IncludeGenerated);
+public sealed record FindSymbolScopeDto(string RequestedType, bool IncludeGenerated);
 
 internal sealed record SymbolSourceLocation(
     string FilePath,

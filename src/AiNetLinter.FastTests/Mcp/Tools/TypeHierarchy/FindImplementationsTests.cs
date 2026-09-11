@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.TypeHierarchy;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.TestKit;
@@ -18,6 +19,44 @@ namespace AiNetLinter.FastTests.Mcp.Tools.TypeHierarchy;
 [Trait("Category", "Component")]
 public sealed class FindImplementationsTests
 {
+    [Fact]
+    public async Task ExecuteAsync_ScopeFiltersGeneratedAndTestImplementationsBeforeLimit()
+    {
+        using var solution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\ainetlinter-virtual\ScopeImplementations.slnx",
+            new ProjectSpec("App", [
+                ("Contracts.cs", "namespace App; public interface IService { void Run(); }"),
+                ("Production.cs", "namespace App; public class ProductionService : IService { public void Run() {} }")]),
+            new ProjectSpec("App.Tests", [
+                ("ServiceTests.cs", "namespace App.Tests; public class TestService : App.IService { public void Run() {} }")],
+                ["App"]),
+            new ProjectSpec("Generated", [
+                ("Generated.g.cs", "namespace App; public class GeneratedService : IService { public void Run() {} }")],
+                ["App"]));
+        using var fixture = new McpInMemoryTestContext(solution);
+        var state = fixture.CreateServer();
+
+        var productionFirst = await FindImplementationsTool.ExecuteAsync(
+            new FindImplementationsRequest(
+                state, "App.IService", 1, McpScopeType.All, false, CancellationToken.None));
+        var productionPayload = productionFirst.StructuredContent!.Value;
+        Assert.Equal(2, productionPayload.GetProperty("totalCount").GetInt32());
+        Assert.Contains("ProductionService", productionPayload.GetProperty("implementations")[0].GetProperty("typeName").GetString(), StringComparison.Ordinal);
+
+        var tests = await FindImplementationsTool.ExecuteAsync(
+            new FindImplementationsRequest(
+                state, "App.IService", 50, McpScopeType.Tests, false, CancellationToken.None));
+        Assert.Equal(1, tests.StructuredContent!.Value.GetProperty("totalCount").GetInt32());
+        Assert.Equal("tests", tests.StructuredContent!.Value.GetProperty("implementations")[0].GetProperty("scopeType").GetString());
+
+        var generated = await FindImplementationsTool.ExecuteAsync(
+            new FindImplementationsRequest(
+                state, "App.IService", 50, McpScopeType.All, true, CancellationToken.None));
+        Assert.Equal(3, generated.StructuredContent!.Value.GetProperty("totalCount").GetInt32());
+        Assert.Contains(
+            generated.StructuredContent!.Value.GetProperty("implementations").EnumerateArray(),
+            item => item.GetProperty("sourceKind").GetString() == "generated");
+    }
     [Fact]
     public async Task ExecuteAsync_InterfaceType_ReturnsAllImplementingClasses()
     {

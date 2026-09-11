@@ -3,6 +3,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
@@ -51,6 +53,56 @@ internal sealed class McpScopeClassifier
             McpScopeType.Tests => scope.ProjectKind == McpProjectKind.Tests,
             _ => false,
         };
+
+    internal async Task<McpSymbolScope> ClassifySymbolAsync(
+        ISymbol symbol,
+        Solution solution,
+        McpScopeType requestedScope,
+        bool includeGenerated,
+        CancellationToken cancellationToken)
+    {
+        var locations = symbol.Locations.Where(location => location.IsInSource).ToList();
+        if (locations.Count == 0)
+        {
+            return new(
+                McpProjectKind.Unknown,
+                McpSourceKind.Editable,
+                HasSourceLocation: false,
+                IsVisible: requestedScope == McpScopeType.All);
+        }
+
+        var classified = new List<McpDocumentScope>(locations.Count);
+        foreach (var location in locations)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var document = solution.GetDocument(location.SourceTree!);
+            if (document is null) continue;
+            classified.Add(await ClassifyAsync(document, cancellationToken).ConfigureAwait(false));
+        }
+
+        if (classified.Count == 0)
+        {
+            return new(McpProjectKind.Unknown, McpSourceKind.Editable, true, requestedScope == McpScopeType.All);
+        }
+
+        var preferred = classified
+            .OrderBy(scope => ProjectRank(scope.ProjectKind))
+            .ThenBy(scope => SourceRank(scope.SourceKind))
+            .First();
+        var visible = classified.Any(scope =>
+            MatchesScope(scope, requestedScope)
+            && (includeGenerated || scope.SourceKind != McpSourceKind.Generated));
+        return new(preferred.ProjectKind, preferred.SourceKind, true, visible);
+    }
+
+    private static int ProjectRank(McpProjectKind kind) => kind switch
+    {
+        McpProjectKind.Production => 0,
+        McpProjectKind.Tests => 1,
+        _ => 2,
+    };
+
+    private static int SourceRank(McpSourceKind kind) => kind == McpSourceKind.Editable ? 0 : 1;
 
     private static McpProjectKind ClassifyProjectKind(Document document)
     {

@@ -120,19 +120,35 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, bool includeReferences = false, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, bool includeReferences = false, string scopeType = "all", bool includeGenerated = false, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
+                var scopeValidation = FindSymbolTool.ValidateScopeType(scopeType);
+                if (scopeValidation.Error is not null) return scopeValidation.Error;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => FindReferencesTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, depth, ct),
+                            ProjectCall: lease => FindReferencesTool.ExecuteAsync(
+                                lease.Server,
+                                new FindReferencesRequest(
+                                    symbolIdentifier,
+                                    maxResults,
+                                    depth,
+                                    scopeValidation.ScopeType,
+                                    includeGenerated),
+                                ct),
                             AssemblySessionCall: lease => AssemblyFindReferencesTool.ExecuteAsync(
                                 lease,
-                                new AssemblyFindReferencesRequest(symbolIdentifier, maxResults, depth, includeReferences),
+                                new AssemblyFindReferencesRequest(
+                                    symbolIdentifier,
+                                    maxResults,
+                                    depth,
+                                    includeReferences,
+                                    scopeValidation.ScopeType,
+                                    includeGenerated),
                                 ct),
                             ExpandAssemblyReferences: includeReferences),
                         ct));
@@ -150,7 +166,8 @@ internal static class SymbolGraphToolRegistrations
         "completeness mit Tiefe, Herkunft und getrennten Trunkierungsgruenden; die " +
         "Traversierung ist hart auf 200 besuchte Knoten begrenzt. includeReferences (Default false): " +
         "bei Assembly-Zielen bounded Referenz-Assemblies einbeziehen und partielle Diagnosen " +
-        "sowie Herkunft in structuredContent ausgeben.";
+        "sowie Herkunft in structuredContent ausgeben. scopeType: 'all' (Default), 'production' oder 'tests'; " +
+        "includeGenerated: false (Default), generierte Dokumente nur bei true einbeziehen.";
 
     private static void AddGetCallTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -242,17 +259,33 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, string scopeType = "all", bool includeGenerated = false, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
+                var scopeValidation = FindSymbolTool.ValidateScopeType(scopeType);
+                if (scopeValidation.Error is not null) return scopeValidation.Error;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct),
-                            AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct)),
+                            ProjectCall: lease => GetTypeHierarchyTool.ExecuteAsync(
+                                new GetTypeHierarchyRequest(
+                                    lease.Server,
+                                    symbolIdentifier,
+                                    maxResults,
+                                    scopeValidation.ScopeType,
+                                    includeGenerated,
+                                    ct)),
+                            AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(
+                                new GetTypeHierarchyRequest(
+                                    lease.Server,
+                                    symbolIdentifier,
+                                    maxResults,
+                                    scopeValidation.ScopeType,
+                                    includeGenerated,
+                                    ct))),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_type_hierarchy", GetTypeHierarchyDescription)));
@@ -263,7 +296,7 @@ internal static class SymbolGraphToolRegistrations
         "implementierte Interfaces, abgeleitete/implementierende Typen, heuristische DI-Registrierungen). " +
         "symbolIdentifier: \"T:Namespace.Klasse\", \"Datei.cs:10:5\", \"Datei.cs:10\" " +
         "(Zeile ohne Spalte) oder \"Klasse\". maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Begrenzung der abgeleiteten/implementierenden " +
-        "Typen (Default 50).";
+        "Typen (Default 50). scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default).";
 
     private static void AddDependencyGraph(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -324,17 +357,33 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = FindImplementationsTool.DefaultMaxResults, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = FindImplementationsTool.DefaultMaxResults, string scopeType = "all", bool includeGenerated = false, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
+                var scopeValidation = FindSymbolTool.ValidateScopeType(scopeType);
+                if (scopeValidation.Error is not null) return scopeValidation.Error;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => FindImplementationsTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct),
-                            AssemblySessionCall: lease => FindImplementationsTool.ExecuteAsync(lease.Server, symbolIdentifier, maxResults, ct)),
+                            ProjectCall: lease => FindImplementationsTool.ExecuteAsync(
+                                new FindImplementationsRequest(
+                                    lease.Server,
+                                    symbolIdentifier,
+                                    maxResults,
+                                    scopeValidation.ScopeType,
+                                    includeGenerated,
+                                    ct)),
+                            AssemblySessionCall: lease => FindImplementationsTool.ExecuteAsync(
+                                new FindImplementationsRequest(
+                                    lease.Server,
+                                    symbolIdentifier,
+                                    maxResults,
+                                    scopeValidation.ScopeType,
+                                    includeGenerated,
+                                    ct))),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("find_implementations", FindImplementationsDescription)));
@@ -345,6 +394,7 @@ internal static class SymbolGraphToolRegistrations
         "virtuellen Methoden oder Properties in Quellcode-Projekten oder dekompilierten Assemblies. Liefert Typ, Member, " +
         "Status (concrete/abstract/virtual) und Zeilenposition. " +
         "symbolIdentifier: Format wie find_references (\"M:Namespace.Klasse.Methode\", \"IInterface\", \"BaseClass.Method\"). " +
-        "maxResults: mindestens 1, Begrenzung der Trefferliste (Default 50); 0 oder negative Werte liefern INVALID_ARGUMENT.";
+        "maxResults: mindestens 1, Begrenzung der Trefferliste (Default 50); 0 oder negative Werte liefern INVALID_ARGUMENT. " +
+        "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default).";
 }
 

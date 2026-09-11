@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using AiNetLinter.Mcp.Scope;
 
 namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 
@@ -14,7 +15,8 @@ internal sealed record TypeHierarchyPayload(
     int ShownSubtypeCount,
     bool SubtypesTruncated,
     IReadOnlyList<string> SubtypesTruncatedBy,
-    IReadOnlyList<string> DiRegistrations);
+    IReadOnlyList<string> DiRegistrations,
+    FindSymbolScopeDto? Scope = null);
 
 internal sealed record TypeHierarchyEntryDto(
     string Name,
@@ -23,4 +25,6 @@ internal sealed record TypeHierarchyEntryDto(
     int? Line = null,
     string? Id = null,
     string? HandoffKind = null,
-    AssemblyNavigationOrigin? Origin = null);
+    AssemblyNavigationOrigin? Origin = null,
+    string? ScopeType = null,
+    string? SourceKind = null);

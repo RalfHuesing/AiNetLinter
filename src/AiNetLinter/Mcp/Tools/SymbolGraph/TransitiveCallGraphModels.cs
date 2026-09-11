@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using System.Threading;
+using AiNetLinter.Mcp.Scope;
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Mcp;
 
@@ -16,7 +17,9 @@ internal sealed record TransitiveCallSiteEntry(
     string ReachedFromSymbolId,
     AssemblyNavigationOrigin? Origin = null,
     string? Id = null,
-    string? HandoffKind = null);
+    string? HandoffKind = null,
+    string? ScopeType = null,
+    string? SourceKind = null);
 
 internal sealed record FindReferencesCallSiteEntry(
     string FilePath,
@@ -27,13 +30,16 @@ internal sealed record FindReferencesCallSiteEntry(
     string ReachedFromSymbolId,
     string? Id = null,
     string? HandoffKind = null,
-    AssemblyNavigationOrigin? Origin = null);
+    AssemblyNavigationOrigin? Origin = null,
+    string? ScopeType = null,
+    string? SourceKind = null);
 
 internal sealed record FindReferencesResultPayload(
     IReadOnlyList<FindReferencesCallSiteEntry> CallSites,
     TraversalCompleteness Completeness,
     AssemblyNavigationSummary? Navigation = null,
-    SymbolHandoffPayload? Handoff = null);
+    SymbolHandoffPayload? Handoff = null,
+    FindSymbolScopeDto? Scope = null);
 
 internal sealed record SymbolHandoffPayload(
     string AcceptedAs,
@@ -58,7 +64,8 @@ internal sealed record TraversalCompleteness(
 internal sealed record ReferenceTraversalResult(
     IReadOnlyList<TransitiveCallSiteEntry> CallSites,
     TraversalCompleteness Completeness,
-    AssemblyNavigationSummary? Navigation = null);
+    AssemblyNavigationSummary? Navigation = null,
+    FindSymbolScopeDto? Scope = null);
 
 internal sealed record ReferenceTraversalRequest(
     Solution Solution,
@@ -67,7 +74,8 @@ internal sealed record ReferenceTraversalRequest(
     int MaxResults,
     CancellationToken CancellationToken,
     int? NodeLimit = null,
-    AnalysisSymbolIdentity? AssemblySymbolIdentity = null);
+    AnalysisSymbolIdentity? AssemblySymbolIdentity = null,
+    McpScopeFilter? ScopeFilter = null);
 
 internal sealed record SymbolImpactPayload(
     IReadOnlyList<TransitiveCallSiteEntry> CallSites,

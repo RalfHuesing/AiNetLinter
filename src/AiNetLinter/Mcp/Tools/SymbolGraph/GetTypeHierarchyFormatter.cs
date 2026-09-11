@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
@@ -47,15 +48,33 @@ internal static class GetTypeHierarchyFormatter
         Solution solution,
         int maxResults,
         CancellationToken ct,
-        bool absolutePaths = false,
-        AnalysisSymbolIdentity? handoffIdentity = null)
+        HierarchyBuildOptions? options = null)
     {
+        options ??= new HierarchyBuildOptions();
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
+        var classifier = options.ScopeClassifier ?? new McpScopeClassifier();
 
-        var baseTypes = FormatBaseTypes(type, outputRoot, absolutePaths, handoffIdentity).ToList();
-        var interfaces = FormatInterfaces(type, outputRoot, absolutePaths, handoffIdentity).ToList();
-        var subtypeProjection = await ProjectSubtypesAsync(type, solution, outputRoot, maxResults, absolutePaths, handoffIdentity, ct);
-        var diHits = await DiRegistrationHeuristics.FindRegistrationsAsync(solution, type, ct);
+        var baseTypes = FormatBaseTypes(type, outputRoot, options.AbsolutePaths, options.HandoffIdentity).ToList();
+        var interfaces = FormatInterfaces(type, outputRoot, options.AbsolutePaths, options.HandoffIdentity).ToList();
+        var subtypeProjection = await ProjectSubtypesAsync(
+            type,
+            solution,
+            outputRoot,
+            maxResults,
+            options.AbsolutePaths,
+            options.HandoffIdentity,
+            options.ScopeType,
+            options.IncludeGenerated,
+            classifier,
+            ct);
+        var diHits = await DiRegistrationHeuristics.FindRegistrationsAsync(
+            new FindRegistrationsRequest(
+                solution,
+                type,
+                options.ScopeType,
+                options.IncludeGenerated,
+                classifier),
+            ct);
         return new(
             type.ToDisplayString(),
             baseTypes,
@@ -66,7 +85,8 @@ internal static class GetTypeHierarchyFormatter
             subtypeProjection.ShownCount,
             subtypeProjection.IsTruncated,
             subtypeProjection.IsTruncated ? ["maxResults"] : [],
-            diHits);
+            diHits,
+            new FindSymbolScopeDto(McpScopeValues.ToWireValue(options.ScopeType), options.IncludeGenerated));
     }
 
     internal static string FormatText(TypeHierarchyPayload payload)
@@ -169,18 +189,25 @@ internal static class GetTypeHierarchyFormatter
         int maxResults,
         bool absolutePaths,
         AnalysisSymbolIdentity? handoffIdentity,
+        McpScopeType scopeType,
+        bool includeGenerated,
+        McpScopeClassifier classifier,
         CancellationToken ct)
     {
         if (type.TypeKind == TypeKind.Interface)
         {
             var implementations = await SymbolFinder.FindImplementationsAsync(
                 type, solution, transitive: true, cancellationToken: ct);
-            return ProjectSubtypes(implementations.ToList(), outputRoot, maxResults, absolutePaths, handoffIdentity);
+            return await ProjectSubtypesAsync(
+                implementations.ToList(), solution, outputRoot, maxResults, absolutePaths, handoffIdentity,
+                scopeType, includeGenerated, classifier, ct).ConfigureAwait(false);
         }
 
         var derived = await SymbolFinder.FindDerivedClassesAsync(
             type, solution, transitive: true, cancellationToken: ct);
-        return ProjectSubtypes(derived.ToList(), outputRoot, maxResults, absolutePaths, handoffIdentity);
+        return await ProjectSubtypesAsync(
+            derived.ToList(), solution, outputRoot, maxResults, absolutePaths, handoffIdentity,
+            scopeType, includeGenerated, classifier, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -188,30 +215,76 @@ internal static class GetTypeHierarchyFormatter
     /// (z. B. <c>partial class</c>) darf nicht mehrere "Slots" im Limit verbrauchen. Meta-Zeile
     /// nennt die Gesamtzahl der TYPEN, nicht der formatierten Zeilen.
     /// </summary>
-    private static SubtypeProjection ProjectSubtypes(
+    private static async Task<SubtypeProjection> ProjectSubtypesAsync(
         IReadOnlyList<ISymbol> types,
+        Solution solution,
         string outputRoot,
         int maxResults,
         bool absolutePaths,
+        AnalysisSymbolIdentity? handoffIdentity,
+        McpScopeType scopeType,
+        bool includeGenerated,
+        McpScopeClassifier classifier,
+        CancellationToken cancellationToken)
+    {
+        var scoped = new List<(ISymbol Symbol, McpSymbolScope Scope)>();
+        foreach (var symbol in types)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var scope = await classifier.ClassifySymbolAsync(
+                symbol, solution, scopeType, includeGenerated, cancellationToken).ConfigureAwait(false);
+            if (scope.IsVisible) scoped.Add((symbol, scope));
+        }
+
+        var ordered = scoped
+            .OrderBy(item => ProjectRank(item.Scope.ProjectKind))
+            .ThenBy(item => SourceRank(item.Scope.SourceKind))
+            .ThenBy(item => item.Symbol.ToDisplayString(), StringComparer.Ordinal)
+            .ToList();
+        var isTruncated = ordered.Count > maxResults;
+        var shown = isTruncated ? ordered.Take(maxResults).ToList() : ordered;
+        var entries = shown.SelectMany(item => FormatSubtype(item.Symbol, item.Scope, outputRoot, absolutePaths, handoffIdentity));
+        return new(ordered.Count, shown.Count, isTruncated, entries.ToList());
+    }
+
+    private static IEnumerable<TypeHierarchyEntryDto> FormatSubtype(
+        ISymbol symbol,
+        McpSymbolScope scope,
+        string outputRoot,
+        bool absolutePaths,
         AnalysisSymbolIdentity? handoffIdentity)
     {
-        var isTruncated = types.Count > maxResults;
-        var shown = isTruncated ? types.Take(maxResults).ToList() : types;
-        var entries = shown.SelectMany(s => FindSymbolTool.FormatSymbolLocationEntries(
-            s,
-            outputRoot,
-            handoffIdentity,
-            absolutePaths: absolutePaths)
-            .Select(entry => new TypeHierarchyEntryDto(
-                entry.Name,
-                entry.Kind,
-                entry.FilePath,
-                entry.Line,
-                entry.Id,
-                entry.HandoffKind,
-                entry.Origin)));
-        return new(types.Count, shown.Count, isTruncated, entries.ToList());
+        var entry = FindSymbolTool.FormatSymbolLocationEntries(
+                symbol, outputRoot, handoffIdentity, absolutePaths)
+            .FirstOrDefault();
+        if (entry is null)
+        {
+            yield return new TypeHierarchyEntryDto(
+                symbol.ToDisplayString(),
+                SymbolKindClassifier.DescribeNamedTypeKind((INamedTypeSymbol)symbol));
+            yield break;
+        }
+
+        yield return new TypeHierarchyEntryDto(
+            entry.Name,
+            entry.Kind,
+            entry.FilePath,
+            entry.Line,
+            entry.Id,
+            entry.HandoffKind,
+            entry.Origin,
+            McpScopeValues.ToWireValue(scope.ProjectKind),
+            McpScopeValues.ToWireValue(scope.SourceKind));
     }
+
+    private static int ProjectRank(McpProjectKind kind) => kind switch
+    {
+        McpProjectKind.Production => 0,
+        McpProjectKind.Tests => 1,
+        _ => 2,
+    };
+
+    private static int SourceRank(McpSourceKind kind) => kind == McpSourceKind.Editable ? 0 : 1;
 
     private static string FormatSubtypesSection(TypeHierarchyPayload payload)
     {

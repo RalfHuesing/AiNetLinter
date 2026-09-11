@@ -3,10 +3,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Output;
+using AiNetLinter.Mcp.Scope;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 
@@ -36,25 +38,58 @@ internal static class DiRegistrationHeuristics
         @"\bAddTransient<\s*([\w\.\?\,\s]+?)\s*>",
         RegexOptions.Compiled);
 
-    internal static async Task<IReadOnlyList<string>> FindRegistrationsAsync(
-        Solution solution, INamedTypeSymbol type, CancellationToken ct)
-    {
-        var typeNames = BuildTypeNameSet(type);
-        var hits = new List<string>();
-        var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
+    internal static Task<IReadOnlyList<string>> FindRegistrationsAsync(
+        Solution solution,
+        INamedTypeSymbol type,
+        CancellationToken ct) =>
+        FindRegistrationsAsync(
+            new FindRegistrationsRequest(
+                solution,
+                type,
+                McpScopeType.All,
+                IncludeGenerated: false,
+                new McpScopeClassifier()),
+            ct);
 
-        foreach (var project in solution.Projects)
+    internal static async Task<IReadOnlyList<string>> FindRegistrationsAsync(
+        FindRegistrationsRequest request,
+        CancellationToken ct)
+    {
+        var typeNames = BuildTypeNameSet(request.Type);
+        var hits = new List<string>();
+        var outputRoot = Path.GetDirectoryName(request.Solution.FilePath) ?? "";
+
+        var documents = new List<(Document Document, McpDocumentScope Scope)>();
+        foreach (var project in request.Solution.Projects)
         {
             foreach (var document in project.Documents)
             {
                 if (document.FilePath?.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) != true) continue;
                 ct.ThrowIfCancellationRequested();
-                if (await ScanDocumentAsync(document, typeNames, outputRoot, hits, ct)) return hits;
+                var scope = await request.Classifier.ClassifyAsync(document, ct).ConfigureAwait(false);
+                if (!request.Classifier.MatchesScope(scope, request.ScopeType)
+                    || (!request.IncludeGenerated && scope.SourceKind == McpSourceKind.Generated)) continue;
+                documents.Add((document, scope));
             }
+        }
+
+        foreach (var (document, _) in documents
+            .OrderBy(item => ProjectRank(item.Scope.ProjectKind))
+            .ThenBy(item => item.Scope.SourceKind == McpSourceKind.Editable ? 0 : 1)
+            .ThenBy(item => item.Document.FilePath, StringComparer.OrdinalIgnoreCase))
+        {
+            if (await ScanDocumentAsync(document, typeNames, outputRoot, hits, ct).ConfigureAwait(false)) return hits;
         }
 
         return hits;
     }
+
+    private static int ProjectRank(McpProjectKind kind) => kind switch
+    {
+        McpProjectKind.Production => 0,
+        McpProjectKind.Tests => 1,
+        _ => 2,
+    };
 
     private static async Task<bool> ScanDocumentAsync(
         Document document,

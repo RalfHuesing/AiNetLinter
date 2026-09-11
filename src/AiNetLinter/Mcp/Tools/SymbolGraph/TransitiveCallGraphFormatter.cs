@@ -76,10 +76,13 @@ internal static class TransitiveCallGraphFormatter
                 entry.ReachedFromSymbolId,
                 entry.Id,
                 entry.HandoffKind,
-                entry.Origin)).ToList(),
+                entry.Origin,
+                entry.ScopeType,
+                entry.SourceKind)).ToList(),
             result.Completeness,
             result.Navigation,
-            CreateHandoffPayload(result.CallSites));
+            CreateHandoffPayload(result.CallSites),
+            result.Scope);
 
     private static SymbolHandoffPayload? CreateHandoffPayload(
         IReadOnlyList<TransitiveCallSiteEntry> callSites)
