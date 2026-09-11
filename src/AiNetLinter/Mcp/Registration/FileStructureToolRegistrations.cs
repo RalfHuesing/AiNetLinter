@@ -186,7 +186,7 @@ internal static class FileStructureToolRegistrations
                             ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter, maxResponseBytes, scope), ct),
                             AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter, maxResponseBytes, scope), ct),
                             MaxResponseBytes: maxResponseBytes,
-                            PostNavigationResponseBudget: GetClassStructureTool.ApplyFinalResponseBudget),
+                            PostNavigationResponseBudget: GetClassStructureResponseBudget.ApplyFinalResponseBudget),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_class_structure", GetClassStructureDescription)));

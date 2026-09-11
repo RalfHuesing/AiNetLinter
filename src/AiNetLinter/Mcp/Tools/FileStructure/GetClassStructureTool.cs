@@ -161,7 +161,7 @@ internal static partial class GetClassStructureTool
         // A positive budget is a constraint, not an automatic truncation reason.
         // In particular, preserve an existing maxMembers-only result when the
         // complete visible response already fits the requested budget.
-        if (CombinedResponseBytes(RenderBudgetText(payload, string.Empty), payload) <= maxResponseBytes)
+        if (GetClassStructureResponseBudget.CombinedResponseBytes(GetClassStructureResponseBudget.RenderBudgetText(payload, string.Empty), payload) <= maxResponseBytes)
         {
             return payload;
         }
@@ -174,7 +174,7 @@ internal static partial class GetClassStructureTool
                 ? truncatedBy
                 : truncatedBy.Append("maxResponseBytes").ToList();
             var candidate = CreateBudgetCandidate(payload, members, candidateReasons);
-            if (CombinedResponseBytes(RenderBudgetText(candidate, string.Empty), candidate) <= maxResponseBytes) return candidate;
+            if (GetClassStructureResponseBudget.CombinedResponseBytes(GetClassStructureResponseBudget.RenderBudgetText(candidate, string.Empty), candidate) <= maxResponseBytes) return candidate;
             members.RemoveAt(members.Count - 1);
             if (!truncatedBy.Contains("maxResponseBytes", StringComparer.Ordinal)) truncatedBy.Add("maxResponseBytes");
         }
@@ -373,7 +373,7 @@ internal static partial class GetClassStructureTool
         };
     }
 
-    private static string RenderMarkdown(ClassStructurePayload p)
+    internal static string RenderMarkdown(ClassStructurePayload p)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"# Typ: {p.TypeName}");

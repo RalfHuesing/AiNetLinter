@@ -11,7 +11,7 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.FileStructure;
 
-internal static partial class GetClassStructureTool
+internal static class GetClassStructureResponseBudget
 {
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
     {
@@ -131,14 +131,12 @@ internal static partial class GetClassStructureTool
         "truncated", "members", "truncatedBy", "next",
     ];
 
-    private static string RenderBudgetText(
+    internal static string RenderBudgetText(
         ClassStructurePayload payload,
         string fallbackText,
         JsonObject? finalEnvelope = null)
     {
-        var rendered = payload.Truncated
-            ? RenderMarkdown(payload)
-            : RenderMarkdown(payload);
+        var rendered = GetClassStructureTool.RenderMarkdown(payload);
         var headingIndex = rendered.IndexOf("# Typ:", StringComparison.Ordinal);
         var originalHeading = fallbackText.IndexOf("# Typ:", StringComparison.Ordinal);
         if (originalHeading > 0 && headingIndex == 0)
@@ -212,11 +210,11 @@ internal static partial class GetClassStructureTool
             ? text
             : null;
 
-    private static int CombinedResponseBytes(string text, ClassStructurePayload payload) =>
+    internal static int CombinedResponseBytes(string text, ClassStructurePayload payload) =>
         Encoding.UTF8.GetByteCount(text)
         + JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length;
 
-    private static int CombinedResponseBytes(string text, JsonObject envelope) =>
+    internal static int CombinedResponseBytes(string text, JsonObject envelope) =>
         Encoding.UTF8.GetByteCount(text)
         + JsonSerializer.SerializeToUtf8Bytes(envelope, McpJsonOptions.Default).Length;
 

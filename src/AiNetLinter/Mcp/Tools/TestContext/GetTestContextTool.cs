@@ -13,8 +13,7 @@ using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
-
-namespace AiNetLinter.Mcp.Tools.TestContext;
+namespace AiNetLinter.Mcp.Tools.TestContext;
 
 /// <summary>
 /// MCP-Tool <c>get_test_context</c>: Ermittelt zielgerichtet alle Test-Dateien, Test-Klassen,
@@ -54,7 +53,7 @@ internal static class GetTestContextTool
 
             var testResults = await TestCoverageScanner.FindTestsForSymbolAsync(symbol, solution, ct);
             var scoped = await FilterTestFilesAsync(testResults.TestFiles, solution, options.Scope, ct);
-            var payload = BuildPayload(symbol, solution, scoped.Visible, scoped.Scopes, options.MaxResults, options.Scope, scoped.ExcludedCount);
+            var payload = BuildPayload(symbol, solution, scoped.Visible, scoped.Scopes, options, scoped.ExcludedCount);
             return TestContextResponseBudget.Apply(payload, options.MaxResponseBytes);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -70,13 +69,12 @@ internal static class GetTestContextTool
         Solution solution,
         IReadOnlyList<TestFileCoverageResult> scopedTestFiles,
         IReadOnlyDictionary<string, McpDocumentScope> testFileScopes,
-        int requestedMaxResults,
-        McpScopeInput scopeInput,
+        TestContextOptions options,
         int excludedTestFileCount)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var targetFilePath = ExtractFilePath(symbol, solutionDir);
-        var maxResults = Math.Clamp(requestedMaxResults, 1, MaxResultsCap);
+        var maxResults = Math.Clamp(options.MaxResults, 1, MaxResultsCap);
         var isTruncated = scopedTestFiles.Count > maxResults;
         var testFiles = isTruncated ? scopedTestFiles.Take(maxResults).ToList() : scopedTestFiles;
         var totalMatchingTests = scopedTestFiles.Sum(file => file.MatchingTestCount ?? file.TestMethods.Count);
@@ -106,7 +104,7 @@ internal static class GetTestContextTool
             isTruncated ? ["maxResults"] : [],
             "static-test-candidates-only",
             nextStep,
-            scopeInput.ToMetadata(),
+            options.Scope.ToMetadata(),
             excludedTestFileCount);
     }
 

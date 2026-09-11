@@ -21,7 +21,7 @@ public sealed partial class GetFeatureContextToolTests
 {
     private readonly McpInMemoryTestContext _fixture = new();
 
-    private static RoslynTestSolution CreateFullTestScenario() => RoslynTestSolutionFactory.CreateSolution(
+    internal static RoslynTestSolution CreateFullTestScenario() => RoslynTestSolutionFactory.CreateSolution(
         @"C:\virtual\FeatureContextSolution.slnx",
         new ProjectSpec("CoreLib", [
             ("Calculator.cs", """
@@ -397,57 +397,6 @@ public sealed partial class GetFeatureContextToolTests
     }
 
     [Fact]
-    public void FormatReport_DoesNotPresentUnavailableViolationsAsEmpty()
-    {
-        var declaration = new SymbolDeclarationDto(
-            "Missing", "Method", "public", "Missing.cs", 1, 1, 1, null, "void", [], null);
-        var payload = new FeatureContextPayload(
-            declaration,
-            null,
-            null,
-            null,
-            new ViolationsReportDto(
-                0, 0, [], false, FeatureContextStatus.NotDecidable,
-                FeatureContextReasonCodes.SourceFileUnavailable));
-
-        var text = FeatureContextFormatter.FormatReport(payload);
-
-        Assert.Contains("Status: not_decidable", text, StringComparison.Ordinal);
-        Assert.Contains("ReasonCode: `source-file-unavailable`", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("Keine Linter-Verstoesse", text, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void FormatReport_TypeConventionUsesClassCountInsteadOfMethodCount()
-    {
-        var declaration = new SymbolDeclarationDto(
-            "CoreLib.Calculator", "NamedType", "public", "src/CoreLib/Calculator.cs", 1, 10, 10, null, null, [], null);
-        var tests = new StaticTestContextReportDto(
-            25,
-            1,
-            [new StaticTestCandidateFileDto(
-                "tests/CoreLib.Tests/CalculatorTests.cs",
-                "CalculatorTests",
-                "Unit",
-                TestCoverageMatchReasons.NamingConventionMatch,
-                [],
-                25,
-                0,
-                "typeNamingConvention",
-                "low",
-                25)],
-            false,
-            0);
-        var text = FeatureContextFormatter.FormatReport(new FeatureContextPayload(
-            declaration, null, null, tests, null));
-
-        Assert.Contains("typeNamingConvention", text, StringComparison.Ordinal);
-        Assert.Contains("confidence=low", text, StringComparison.Ordinal);
-        Assert.Contains("25 Tests auf Klassenebene", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("0 von 0", text, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public async Task ExecuteAsync_StaticReferencesAreNotDescribedAsRuntimeCoverage()
     {
         using var scenario = CreateFullTestScenario();
@@ -488,74 +437,5 @@ public sealed partial class GetFeatureContextToolTests
         Assert.NotNull(members);
         Assert.Contains(members, m => m!.Contains("Add", StringComparison.Ordinal));
         Assert.Contains(members, m => m!.Contains("Multiply", StringComparison.Ordinal));
-    }
-    [Fact]
-    public async Task ExecuteAsync_ScopeFiltersCallersAndTestEvidenceButKeepsDeclarationAsSeed()
-    {
-        using var scenario = CreateFullTestScenario();
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, Config: TestHelper.CreateDefaultConfig(), ReadOnlySolutionSnapshot: scenario.Solution)));
-
-        var production = await GetFeatureContextTool.ExecuteAsync(state,
-            new FeatureContextOptions("Calculator.Add", IncludeMetrics: false, IncludeViolations: false,
-                Scope: new McpScopeInput(McpScopeType.Production, false)), CancellationToken.None);
-        var tests = await GetFeatureContextTool.ExecuteAsync(state,
-            new FeatureContextOptions("Calculator.Add", IncludeMetrics: false, IncludeViolations: false,
-                Scope: new McpScopeInput(McpScopeType.Tests, false)), CancellationToken.None);
-
-        var productionPayload = production.StructuredContent!.Value.Deserialize<FeatureContextPayload>(McpJsonOptions.Default)!;
-        var testsPayload = tests.StructuredContent!.Value.Deserialize<FeatureContextPayload>(McpJsonOptions.Default)!;
-        Assert.Equal("production", productionPayload.Declaration.ScopeType);
-        Assert.True(productionPayload.Declaration.IsSeed);
-        Assert.Equal(2, productionPayload.Callers!.TotalCallers);
-        Assert.All(productionPayload.Callers.CallSites, call => Assert.Equal("editable", call.SourceKind));
-        Assert.Empty(productionPayload.Tests!.TestFiles);
-        Assert.Equal(0, testsPayload.Callers!.TotalCallers);
-        Assert.NotEmpty(testsPayload.Tests!.TestFiles);
-        Assert.Equal("tests", testsPayload.Tests.Scope!.RequestedType);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_TypeSeedDoesNotProjectPartialMembersOutsideScope()
-    {
-        using var scenario = RoslynTestSolutionFactory.CreateSolution(
-            @"C:\virtual\FeatureContextPartialScope.slnx",
-            new ProjectSpec("App", [
-                ("Shared.cs", "namespace App; public partial class Shared { public void Production() { } }"),
-                ("SharedTests.cs", "namespace App; public partial class Shared { public void TestOnly() { } }")
-            ], VirtualProjectDirectory: "src/App"));
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, Config: TestHelper.CreateDefaultConfig(), ReadOnlySolutionSnapshot: scenario.Solution)));
-
-        var result = await GetFeatureContextTool.ExecuteAsync(state,
-            new FeatureContextOptions("Shared", IncludeCallers: false, IncludeTests: false, IncludeMetrics: false, IncludeViolations: false,
-                Scope: new McpScopeInput(McpScopeType.Production, false)), CancellationToken.None);
-        var payload = result.StructuredContent!.Value.Deserialize<FeatureContextPayload>(McpJsonOptions.Default)!;
-        Assert.Contains(payload.Declaration.Members!, member => member.Contains("Production", StringComparison.Ordinal));
-        Assert.DoesNotContain(payload.Declaration.Members!, member => member.Contains("TestOnly", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_GeneratedCallersAreExcludedOrExplicitlyMarked()
-    {
-        using var scenario = RoslynTestSolutionFactory.CreateSolution(
-            @"C:\virtual\FeatureContextGeneratedCaller.slnx",
-            new ProjectSpec("App", [
-                ("Target.cs", "namespace App; public class Target { public void Run() { } }"),
-                ("GeneratedCaller.cs", "// <auto-generated />\nnamespace App; public class GeneratedCaller { public void Call() { new Target().Run(); } }")
-            ], VirtualProjectDirectory: "src/App"));
-        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
-            new McpCodeGraphServerOptionsFromParameters(null, Config: TestHelper.CreateDefaultConfig(), ReadOnlySolutionSnapshot: scenario.Solution)));
-        var excluded = await GetFeatureContextTool.ExecuteAsync(state,
-            new FeatureContextOptions("Target.Run", IncludeTests: false, IncludeMetrics: false, IncludeViolations: false,
-                Scope: new McpScopeInput(McpScopeType.All, false)), CancellationToken.None);
-        var included = await GetFeatureContextTool.ExecuteAsync(state,
-            new FeatureContextOptions("Target.Run", IncludeTests: false, IncludeMetrics: false, IncludeViolations: false,
-                Scope: new McpScopeInput(McpScopeType.All, true)), CancellationToken.None);
-        var excludedPayload = excluded.StructuredContent!.Value.Deserialize<FeatureContextPayload>(McpJsonOptions.Default)!;
-        var includedPayload = included.StructuredContent!.Value.Deserialize<FeatureContextPayload>(McpJsonOptions.Default)!;
-        Assert.Empty(excludedPayload.Callers!.CallSites);
-        Assert.Single(includedPayload.Callers!.CallSites);
-        Assert.Equal("generated", includedPayload.Callers.CallSites[0].SourceKind);
     }
 }

@@ -299,84 +299,29 @@ internal static partial class FeatureContextScanner
         McpScopeInput scopeInput,
         CancellationToken ct)
     {
-        if (symbol is IMethodSymbol method)
+        return symbol switch
         {
-            var returnType = method.ReturnType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-            var parameters = method.Parameters
-                .Select(p => $"{p.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} {p.Name}")
-                .ToList();
-            return (returnType, parameters, null, null);
-        }
-
-        if (symbol is IPropertySymbol prop)
-        {
-            return (prop.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), [], null, null);
-        }
-
-        if (symbol is IFieldSymbol field)
-        {
-            return (field.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat), [], null, null);
-        }
-
-        if (symbol is INamedTypeSymbol namedType)
-        {
-            var baseTypes = new List<string>();
-            if (namedType.BaseType != null && namedType.BaseType.SpecialType != SpecialType.System_Object)
-            {
-                baseTypes.Add(namedType.BaseType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat));
-            }
-            foreach (var iface in namedType.Interfaces)
-            {
-                baseTypes.Add(iface.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat));
-            }
-
-            var members = new List<string>();
-            foreach (var member in namedType.GetMembers()
-                .Where(m => !m.IsImplicitlyDeclared && m.CanBeReferencedByName)
-                .Where(m => m is IMethodSymbol { MethodKind: MethodKind.Ordinary or MethodKind.Constructor }
-                         or IPropertySymbol
-                         or IEventSymbol))
-            {
-                var location = member.Locations.FirstOrDefault(value => value.IsInSource);
-                var document = location?.SourceTree is null ? null : solution.GetDocument(location.SourceTree);
-                var memberScope = document is null
-                    ? new McpDocumentScope(McpProjectKind.Unknown, McpSourceKind.Editable)
-                    : await classifier.ClassifyAsync(document, ct).ConfigureAwait(false);
-                if (!classifier.IsVisible(memberScope, scopeInput)) continue;
-                members.Add(FormatMemberSignature(member));
-                if (members.Count == 25) break;
-            }
-
-            return (null, [], baseTypes.Count > 0 ? baseTypes : null, members.Count > 0 ? members : null);
-        }
-
-        return (null, [], null, null);
+            IMethodSymbol method => (
+                method.ReturnType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
+                method.Parameters
+                    .Select(p => $"{p.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} {p.Name}")
+                    .ToList(),
+                null,
+                null),
+            IPropertySymbol prop => (
+                prop.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
+                [],
+                null,
+                null),
+            IFieldSymbol field => (
+                field.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
+                [],
+                null,
+                null),
+            INamedTypeSymbol namedType => await ExtractNamedTypeDetailsAsync(namedType, solution, classifier, scopeInput, ct).ConfigureAwait(false),
+            _ => (null, [], null, null)
+        };
     }
-
-    private static string FormatMemberSignature(ISymbol member)
-    {
-        if (member is IMethodSymbol method)
-        {
-            var ret = method.ReturnType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-            var pars = string.Join(", ", method.Parameters.Select(p => $"{p.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} {p.Name}"));
-            return $"{method.Name}({pars}) : {ret}";
-        }
-
-        if (member is IPropertySymbol prop)
-        {
-            var propType = prop.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-            return $"{prop.Name} : {propType}";
-        }
-
-        if (member is IEventSymbol evt)
-        {
-            var evtType = evt.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-            return $"event {evt.Name} : {evtType}";
-        }
-
-        return member.Name;
-    }
-
 
     private static async Task<ViolationsReportDto> CollectViolationsAsync(
         Solution solution,
