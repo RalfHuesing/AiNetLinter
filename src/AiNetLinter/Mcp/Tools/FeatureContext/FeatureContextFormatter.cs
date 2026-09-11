@@ -117,7 +117,7 @@ internal static class FeatureContextFormatter
                 var callerDesc = !string.IsNullOrEmpty(call.CallerMemberName)
                     ? $"`{call.CallerMemberName}()` in `{call.ProjectName}`"
                     : $"Aufruf in `{call.ProjectName}`";
-                sb.AppendLine($"- `{call.FilePath}:{call.Line}` — {callerDesc}");
+                sb.AppendLine($"- `{call.FilePath}:{call.Line}` — {callerDesc}; scope={call.ScopeType}; sourceKind={call.SourceKind}");
             }
 
         }
@@ -167,7 +167,7 @@ internal static class FeatureContextFormatter
                 var candidateDescription = file.TestMethods.Count > 0
                     ? $"{file.TestMethods.Count} von {file.TotalMatchingMethods} konkrete Testmethoden"
                     : $"{file.TotalTestCount} Tests auf Klassenebene ({classCount} Testklasse(n)); keine Methode behauptet";
-                sb.AppendLine($"- `{file.FilePath}` ({file.Category}, {candidateDescription} — {evidence}; {file.MatchReason})");
+                sb.AppendLine($"- `{file.FilePath}` ({file.Category}, {candidateDescription} — {evidence}; {file.MatchReason}; scope={file.ScopeType}; sourceKind={file.SourceKind})");
                 foreach (var method in file.TestMethods)
                 {
                     sb.AppendLine($"  - `{method}()`");

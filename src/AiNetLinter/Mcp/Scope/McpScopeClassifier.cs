@@ -54,6 +54,10 @@ internal sealed class McpScopeClassifier
             _ => false,
         };
 
+    internal bool IsVisible(McpDocumentScope scope, McpScopeInput input) =>
+        MatchesScope(scope, input.ScopeType)
+        && (input.IncludeGenerated || scope.SourceKind != McpSourceKind.Generated);
+
     internal async Task<McpSymbolScope> ClassifySymbolAsync(
         ISymbol symbol,
         Solution solution,

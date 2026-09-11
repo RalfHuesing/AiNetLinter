@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using AiNetLinter.Mcp.Scope;
 
 namespace AiNetLinter.Mcp.Tools.FileStructure;
 
@@ -15,7 +16,16 @@ public sealed record ClassStructureMemberEntry(
     int EndLine,
     int LineCount,
     string Signature,
-    string FilePath);
+    string FilePath,
+    string ScopeType = "unknown",
+    string SourceKind = "editable");
+
+/// <summary>Eine Partial-Deklaration des angefragten Typs; der Seed bleibt sichtbar.</summary>
+public sealed record ClassStructureLocation(
+    string FilePath,
+    string ScopeType,
+    string SourceKind,
+    bool IsSeed);
 
 /// <summary>
 /// Structured-Content-Wurzel für das MCP-Tool <c>get_class_structure</c>.
@@ -36,6 +46,9 @@ public sealed record ClassStructurePayload(
     bool Truncated,
     IReadOnlyList<ClassStructureMemberEntry> Members,
     IReadOnlyList<string>? TruncatedBy = null,
-    ClassStructureNext? Next = null);
+    ClassStructureNext? Next = null,
+    IReadOnlyList<ClassStructureLocation>? Locations = null,
+    McpScopeMetadata? Scope = null,
+    int ExcludedMemberCount = 0);
 
 public sealed record ClassStructureNext(string Kind, string Reason);

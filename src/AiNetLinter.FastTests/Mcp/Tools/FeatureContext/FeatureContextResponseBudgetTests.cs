@@ -194,7 +194,9 @@ public sealed class FeatureContextResponseBudgetTests
         return new FeatureContextPayload(
             declaration,
             metrics,
-            new CallersReportDto(callers.Count, callers, false),
+            new CallersReportDto(callers.Count, callers.Select(call => new FeatureCallSiteDto(
+                call.FilePath, call.Line, call.SymbolName, call.ProjectName, call.CallerMemberName, call.CallerId, call.CallerLocation,
+                "production", "editable")).ToList(), false),
             new StaticTestContextReportDto(testFiles.Count, testFiles.Count, testFiles, false),
             new ViolationsReportDto(violations.Count, 1, violations, false));
     }

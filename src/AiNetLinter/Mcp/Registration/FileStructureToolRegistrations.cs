@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.FileStructure;
@@ -162,18 +163,28 @@ internal static class FileStructureToolRegistrations
                 int maxMembers = GetClassStructureTool.DefaultMaxMembers,
                 string? kindFilter = null,
                 string? nameFilter = null,
+                string scopeType = "all",
+                bool includeGenerated = false,
                 int maxResponseBytes = McpResponseBudgetLimits.DefaultBytes,
                 CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
+                if (!McpScopeTypeValidator.TryParse(scopeType, out var parsedScope, out var fieldPath))
+                {
+                    return McpToolResults.InvalidArgument(
+                        "scopeType muss 'all', 'production' oder 'tests' sein.",
+                        "Einen der veröffentlichten scopeType-Werte angeben.",
+                        fieldPath);
+                }
+                var scope = new McpScopeInput(parsedScope, includeGenerated);
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute!,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter, maxResponseBytes), ct),
-                            AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter, maxResponseBytes), ct),
+                            ProjectCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter, maxResponseBytes, scope), ct),
+                            AssemblySessionCall: lease => GetClassStructureTool.ExecuteAsync(lease.Server, new GetClassStructureArgs(symbolIdentifier, sortBy, maxMembers, kindFilter, nameFilter, maxResponseBytes, scope), ct),
                             MaxResponseBytes: maxResponseBytes,
                             PostNavigationResponseBudget: GetClassStructureTool.ApplyFinalResponseBudget),
                         ct));
@@ -190,6 +201,7 @@ internal static class FileStructureToolRegistrations
         "nameFilter: optionaler Substring-Filter nach Member-Namen. maxMembers: Begrenzung der sichtbaren Member " +
         "(mindestens 1; 0 oder negative Werte liefern INVALID_ARGUMENT; Default 50, Cap " + GetClassStructureTool.MaxMembersCap + "); bei Ueberschreitung " +
         "Truncation-Meta-Zeile und TotalMemberCount vs. ShownMemberCount im structuredContent. " +
+        "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). Der angefragte Typ bleibt als markierter Seed sichtbar, auch wenn eine Partial-Location außerhalb des Scopes liegt. " +
         "maxResponseBytes: kombinierte UTF-8-Grenze für finalen Text, StructuredContent, Navigation und Trunkierungsfooter (Default 16384, Minimum 512, Maximum 65536). Text und StructuredContent werden aus derselben Member-Teilmenge erzeugt; das Budget wird nach Navigation nochmals geprüft.";
 
     private static void AddGetFileSkeleton(

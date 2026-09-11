@@ -49,8 +49,8 @@ public sealed class FindSymbolToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Contains("Pflichtparameter 'namePatterns' fehlt oder ist leer.", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Contains("namePatterns: [\"Greeter\"]", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Contains("fieldPath:", textContent.Text, System.StringComparison.Ordinal);
+        Assert.StartsWith("$.namePatterns", result.StructuredContent!.Value.GetProperty("fieldPath").GetString(), System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public sealed class FindSymbolToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("namePatterns darf keine leeren Elemente enthalten.", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Equal("namePatterns", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+        Assert.Equal("$.namePatterns[1]", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
     }
 
     [Fact]

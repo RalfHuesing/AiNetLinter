@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using AiNetLinter.Core;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
 
 namespace AiNetLinter.Mcp.Tools.FeatureContext;
@@ -19,7 +20,8 @@ internal sealed record FeatureContextOptions(
     bool IncludeViolations = true,
     int MaxCallers = 10,
     int MaxTests = 10,
-    int MaxResponseBytes = FeatureContextResponseBudget.DefaultMaxResponseBytes
+    int MaxResponseBytes = FeatureContextResponseBudget.DefaultMaxResponseBytes,
+    McpScopeInput Scope = default
 )
 {
     public string EffectiveSymbol => SymbolIdentifier ?? string.Empty;
@@ -41,7 +43,10 @@ internal sealed record SymbolDeclarationDto(
     IReadOnlyList<string> Parameters,
     string? DocCommentId,
     IReadOnlyList<string>? BaseTypes = null,
-    IReadOnlyList<string>? Members = null
+    IReadOnlyList<string>? Members = null,
+    string ScopeType = "unknown",
+    string SourceKind = "editable",
+    bool IsSeed = true
 );
 
 /// <summary>
@@ -49,13 +54,26 @@ internal sealed record SymbolDeclarationDto(
 /// </summary>
 internal sealed record CallersReportDto(
     int TotalCallers,
-    IReadOnlyList<CallSiteEntry> CallSites,
+    IReadOnlyList<FeatureCallSiteDto> CallSites,
     bool IsTruncated,
     IReadOnlyList<string>? TruncatedBy = null,
     string Semantics = FeatureContextSemantics.StaticCallSites,
     string Completeness = FeatureContextStatus.Complete,
-    string? NextStep = null
+    string? NextStep = null,
+    McpScopeMetadata? Scope = null,
+    int ExcludedCount = 0
 );
+
+internal sealed record FeatureCallSiteDto(
+    string FilePath,
+    int Line,
+    string SymbolName,
+    string ProjectName,
+    string? CallerMemberName,
+    string? CallerId,
+    CallerLocationDto? CallerLocation,
+    string ScopeType,
+    string SourceKind);
 
 /// <summary>
 /// Bericht statischer Testkandidaten fuer das Ziel-Symbol. Dies ist kein
@@ -70,7 +88,9 @@ internal sealed record StaticTestContextReportDto(
     IReadOnlyList<string>? TruncatedBy = null,
     string Completeness = FeatureContextStatus.Complete,
     string EvidenceBoundary = FeatureContextSemantics.StaticTestCandidates,
-    string? NextStep = null
+    string? NextStep = null,
+    McpScopeMetadata? Scope = null,
+    int ExcludedCount = 0
 );
 
 /// <summary>
@@ -87,7 +107,9 @@ internal sealed record StaticTestCandidateFileDto(
     string EvidenceKind = "typeNamingConvention",
     string Confidence = "low",
     int TotalTestCount = 0,
-    IReadOnlyList<string>? TestClassNames = null
+    IReadOnlyList<string>? TestClassNames = null,
+    string ScopeType = "unknown",
+    string SourceKind = "editable"
 );
 
 /// <summary>
@@ -101,7 +123,8 @@ internal sealed record ViolationsReportDto(
     string Status = FeatureContextStatus.Complete,
     string? ReasonCode = null,
     IReadOnlyList<string>? TruncatedBy = null,
-    string? NextStep = null
+    string? NextStep = null,
+    McpScopeMetadata? Scope = null
 );
 
 /// <summary>

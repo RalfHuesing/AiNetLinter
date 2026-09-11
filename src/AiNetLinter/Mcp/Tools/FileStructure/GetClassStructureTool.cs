@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
@@ -25,7 +26,8 @@ internal sealed record GetClassStructureArgs(
     int MaxMembers = GetClassStructureTool.DefaultMaxMembers,
     string? KindFilter = null,
     string? NameFilter = null,
-    int MaxResponseBytes = McpResponseBudgetLimits.DefaultBytes)
+    int MaxResponseBytes = McpResponseBudgetLimits.DefaultBytes,
+    McpScopeInput Scope = default)
 {
     internal string? EffectiveSymbolIdentifier =>
         string.IsNullOrWhiteSpace(SymbolIdentifier) ? null : SymbolIdentifier;
@@ -85,7 +87,7 @@ internal static partial class GetClassStructureTool
             }
 
             var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
-            var payload = await BuildPayloadAsync(namedType, solutionDir, args, ct);
+            var payload = await BuildPayloadAsync(namedType, solution, solutionDir, args, ct);
 
             var markdown = RenderMarkdown(payload);
             return McpToolResults.Text(markdown, payload);
@@ -118,13 +120,17 @@ internal static partial class GetClassStructureTool
 
     private static async Task<ClassStructurePayload> BuildPayloadAsync(
         INamedTypeSymbol namedType,
+        Solution solution,
         string solutionDir,
         GetClassStructureArgs args,
         CancellationToken ct)
     {
-        var (files, totalLines) = await CollectDeclarationFilesAsync(namedType, solutionDir, ct);
+        var classifier = new McpScopeClassifier();
+        var (files, locations, totalLines) = await CollectDeclarationFilesAsync(namedType, solution, solutionDir, classifier, args.Scope, ct);
+        var extractedMembers = ExtractMembers(namedType, solutionDir);
+        var scopedMembers = await FilterMembersByScopeAsync(extractedMembers, solution, solutionDir, classifier, args.Scope, ct);
         var sortedMembers = SortMembers(
-            FilterMembers(ExtractMembers(namedType, solutionDir), args.KindFilter, args.NameFilter),
+            FilterMembers(scopedMembers.VisibleMembers, args.KindFilter, args.NameFilter),
             args.SortBy);
         var shownMembers = sortedMembers.Take(Math.Clamp(args.MaxMembers, 1, MaxMembersCap)).ToList();
         var truncated = sortedMembers.Count > shownMembers.Count;
@@ -141,7 +147,10 @@ internal static partial class GetClassStructureTool
             TruncatedBy: truncatedBy,
             Next: truncated
                 ? new ClassStructureNext("request_detail", "maxMembers erhöhen oder sortBy/kindFilter/nameFilter verfeinern.")
-                : null);
+                : null,
+            Locations: locations,
+            Scope: args.Scope.ToMetadata(),
+            ExcludedMemberCount: scopedMembers.ExcludedCount);
         return ApplyExecutionBudget(payload, args.MaxResponseBytes);
     }
 
@@ -224,38 +233,6 @@ internal static partial class GetClassStructureTool
     {
         namedType = symbol as INamedTypeSymbol ?? symbol.ContainingType;
         return namedType is not null;
-    }
-
-    private static async Task<(List<string> Files, int TotalLines)> CollectDeclarationFilesAsync(
-        INamedTypeSymbol namedType, string solutionDir, CancellationToken ct)
-    {
-        var files = new List<string>();
-        int totalLines = 0;
-
-        foreach (var syntaxRef in namedType.DeclaringSyntaxReferences)
-        {
-            var tree = syntaxRef.SyntaxTree;
-            if (!string.IsNullOrEmpty(tree.FilePath))
-            {
-                files.Add(PathNormalizer.ToRelative(solutionDir, tree.FilePath));
-            }
-            var rootNode = await syntaxRef.GetSyntaxAsync(ct);
-            var span = rootNode.GetLocation().GetLineSpan();
-            totalLines += span.EndLinePosition.Line - span.StartLinePosition.Line + 1;
-        }
-
-        if (files.Count == 0 && namedType.Locations.Length > 0)
-        {
-            foreach (var loc in namedType.Locations)
-            {
-                if (loc.SourceTree is not null)
-                {
-                    files.Add(PathNormalizer.ToRelative(solutionDir, loc.SourceTree.FilePath));
-                }
-            }
-        }
-
-        return (files.Distinct(StringComparer.OrdinalIgnoreCase).ToList(), totalLines);
     }
 
     private static List<ClassStructureMemberEntry> ExtractMembers(INamedTypeSymbol namedType, string solutionDir)

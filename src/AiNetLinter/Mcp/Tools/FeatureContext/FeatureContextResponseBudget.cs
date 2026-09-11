@@ -406,8 +406,8 @@ internal static class FeatureContextResponseBudget
         : status.Equals(ThresholdStatus.Warn, StringComparison.OrdinalIgnoreCase) ? 1
         : 2;
 
-    private static bool IsTestCaller(CallSiteEntry call) =>
-        TestDetector.IsTestFile(call.FilePath)
+    private static bool IsTestCaller(FeatureCallSiteDto call) =>
+        call.ScopeType.Equals("tests", StringComparison.Ordinal)
         || call.ProjectName.Contains("test", StringComparison.OrdinalIgnoreCase);
 
 }

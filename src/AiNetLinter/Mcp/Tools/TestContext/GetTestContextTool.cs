@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -52,7 +53,8 @@ internal static class GetTestContextTool
             if (symbol is null) return McpToolResults.SymbolNotFound(targetSymbol);
 
             var testResults = await TestCoverageScanner.FindTestsForSymbolAsync(symbol, solution, ct);
-            var payload = BuildPayload(symbol, solution, testResults, options.MaxResults);
+            var scoped = await FilterTestFilesAsync(testResults.TestFiles, solution, options.Scope, ct);
+            var payload = BuildPayload(symbol, solution, scoped.Visible, scoped.Scopes, options.MaxResults, options.Scope, scoped.ExcludedCount);
             return TestContextResponseBudget.Apply(payload, options.MaxResponseBytes);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -66,15 +68,19 @@ internal static class GetTestContextTool
     private static TestContextPayload BuildPayload(
         ISymbol symbol,
         Solution solution,
-        TestCoverageScannerResult testResults,
-        int requestedMaxResults)
+        IReadOnlyList<TestFileCoverageResult> scopedTestFiles,
+        IReadOnlyDictionary<string, McpDocumentScope> testFileScopes,
+        int requestedMaxResults,
+        McpScopeInput scopeInput,
+        int excludedTestFileCount)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var targetFilePath = ExtractFilePath(symbol, solutionDir);
         var maxResults = Math.Clamp(requestedMaxResults, 1, MaxResultsCap);
-        var isTruncated = testResults.TestFiles.Count > maxResults;
-        var testFiles = isTruncated ? testResults.TestFiles.Take(maxResults).ToList() : testResults.TestFiles;
-        var isUntested = testResults.TotalMatchingTests == 0 || testResults.TestFiles.Count == 0;
+        var isTruncated = scopedTestFiles.Count > maxResults;
+        var testFiles = isTruncated ? scopedTestFiles.Take(maxResults).ToList() : scopedTestFiles;
+        var totalMatchingTests = scopedTestFiles.Sum(file => file.MatchingTestCount ?? file.TestMethods.Count);
+        var isUntested = totalMatchingTests == 0 || scopedTestFiles.Count == 0;
         var completeness = isUntested ? "empty" : isTruncated ? "truncated" : "complete";
         var nextStep = isTruncated
             ? "Abschnitt testContext: maxResults erhöhen und die statischen Testkandidaten erneut abfragen."
@@ -87,10 +93,10 @@ internal static class GetTestContextTool
             symbol.ToDisplayString(),
             symbol.Kind.ToString(),
             targetFilePath,
-            testResults.TotalMatchingTests,
-            testResults.TestFiles.Count,
-            testFiles.Select(ToStaticCandidate).ToList(),
-            BuildRecommendedCommands(testResults.TestFiles),
+            totalMatchingTests,
+            scopedTestFiles.Count,
+            testFiles.Select(file => ToStaticCandidate(file, testFileScopes[file.FilePath])).ToList(),
+            BuildRecommendedCommands(scopedTestFiles),
             isUntested,
             isTruncated,
             suggestedTestPath,
@@ -99,10 +105,42 @@ internal static class GetTestContextTool
             testFiles.Sum(file => file.TestMethods.Count),
             isTruncated ? ["maxResults"] : [],
             "static-test-candidates-only",
-            nextStep);
+            nextStep,
+            scopeInput.ToMetadata(),
+            excludedTestFileCount);
     }
 
-    private static StaticTestCandidateFile ToStaticCandidate(TestFileCoverageResult file) =>
+    private static async Task<(List<TestFileCoverageResult> Visible, IReadOnlyDictionary<string, McpDocumentScope> Scopes, int ExcludedCount)> FilterTestFilesAsync(
+        IReadOnlyList<TestFileCoverageResult> testFiles,
+        Solution solution,
+        McpScopeInput scopeInput,
+        CancellationToken ct)
+    {
+        var classifier = new McpScopeClassifier();
+        var visible = new List<TestFileCoverageResult>(testFiles.Count);
+        var scopes = new Dictionary<string, McpDocumentScope>(StringComparer.OrdinalIgnoreCase);
+        var excluded = 0;
+        foreach (var testFile in testFiles)
+        {
+            var document = DiffImpactAnalyzer.FindDocumentByPath(solution, testFile.FilePath);
+            var documentScope = document is null
+                ? new McpDocumentScope(McpProjectKind.Unknown, McpSourceKind.Editable)
+                : await classifier.ClassifyAsync(document, ct).ConfigureAwait(false);
+            if (classifier.IsVisible(documentScope, scopeInput))
+            {
+                visible.Add(testFile);
+                scopes[testFile.FilePath] = documentScope;
+            }
+            else
+            {
+                excluded++;
+            }
+        }
+
+        return (visible, scopes, excluded);
+    }
+
+    private static StaticTestCandidateFile ToStaticCandidate(TestFileCoverageResult file, McpDocumentScope scope) =>
         new(
             file.FilePath,
             file.TestClassName,
@@ -114,7 +152,9 @@ internal static class GetTestContextTool
             TestEvidenceKindNames.ToWire(file.EvidenceKind),
             file.Confidence,
             file.TotalClassTests,
-            file.TestClassNames);
+            file.TestClassNames,
+            McpScopeValues.ToWireValue(scope.ProjectKind),
+            McpScopeValues.ToWireValue(scope.SourceKind));
 
     private static string ExtractFilePath(ISymbol symbol, string solutionDir)
     {

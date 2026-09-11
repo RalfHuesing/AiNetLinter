@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.Mcp.Tools.DeadCode;
@@ -293,10 +294,14 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string symbolIdentifier, int maxCallers = 10, int maxTests = 10, int maxResponseBytes = FeatureContextResponseBudget.DefaultMaxResponseBytes, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string symbolIdentifier, int maxCallers = 10, int maxTests = 10, string scopeType = "all", bool includeGenerated = false, int maxResponseBytes = FeatureContextResponseBudget.DefaultMaxResponseBytes, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
+                if (!McpScopeTypeValidator.TryParse(scopeType, out var parsedScope, out var fieldPath))
+                {
+                    return McpToolResults.InvalidArgument("scopeType muss 'all', 'production' oder 'tests' sein.", "Einen der veröffentlichten scopeType-Werte angeben.", fieldPath);
+                }
                 return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     new AnalysisTargetRequest(targetPath),
@@ -306,7 +311,8 @@ internal static class AnalysisToolRegistrations
                             SymbolIdentifier: symbolIdentifier,
                             MaxCallers: maxCallers,
                             MaxTests: maxTests,
-                            MaxResponseBytes: maxResponseBytes),
+                            MaxResponseBytes: maxResponseBytes,
+                            Scope: new McpScopeInput(parsedScope, includeGenerated)),
                         ct),
                     new ProjectAnalysisExecutionOptions(
                         maxResponseBytes,
@@ -316,17 +322,21 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string GetFeatureContextDescription =
-        "Wann nutzen: One-Shot-Kontext fuer C#-Symbol: Deklaration, Metriken, Caller, Tests, Violations. Antwortbudget wahrt Einheiten.";
+        "Wann nutzen: One-Shot-Kontext fuer C#-Symbol: Deklaration, Metriken, Caller, Tests, Violations. scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). Die Deklaration bleibt als markierter Seed sichtbar. Antwortbudget wahrt Einheiten.";
 
     private static void AddGetTestContext(
         McpServerPrimitiveCollection<McpServerTool> tools,
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string symbolIdentifier, int maxResults = 30, int maxResponseBytes = TestContextResponseBudget.DefaultMaxResponseBytes, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string symbolIdentifier, int maxResults = 30, string scopeType = "all", bool includeGenerated = false, int maxResponseBytes = TestContextResponseBudget.DefaultMaxResponseBytes, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
+                if (!McpScopeTypeValidator.TryParse(scopeType, out var parsedScope, out var fieldPath))
+                {
+                    return McpToolResults.InvalidArgument("scopeType muss 'all', 'production' oder 'tests' sein.", "Einen der veröffentlichten scopeType-Werte angeben.", fieldPath);
+                }
                 return await ProjectAnalysisDispatcher.ExecuteAsync(
                     registry,
                     new AnalysisTargetRequest(targetPath),
@@ -335,7 +345,8 @@ internal static class AnalysisToolRegistrations
                         new TestContextOptions(
                             SymbolIdentifier: symbolIdentifier,
                             MaxResults: maxResults,
-                            MaxResponseBytes: maxResponseBytes),
+                            MaxResponseBytes: maxResponseBytes,
+                            Scope: new McpScopeInput(parsedScope, includeGenerated)),
                         ct),
                     new ProjectAnalysisExecutionOptions(
                         maxResponseBytes,
@@ -345,5 +356,5 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string GetTestContextDescription =
-        "Wann nutzen: Statische Testkandidaten fuer C#-Symbol mit Zuordnung und Kategorie; Budget wahrt Kandidaten.";
+        "Wann nutzen: Statische Testkandidaten fuer C#-Symbol mit Zuordnung und Kategorie. scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). production liefert ohne definierte Production-Testevidenz eine echte leere Menge. Budget wahrt Kandidaten.";
 }

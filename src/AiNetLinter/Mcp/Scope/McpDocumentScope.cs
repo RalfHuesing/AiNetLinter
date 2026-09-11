@@ -13,7 +13,17 @@ internal readonly record struct McpSymbolScope(
     bool HasSourceLocation,
     bool IsVisible);
 
-internal sealed record McpScopeMetadata(string RequestedType, bool IncludeGenerated);
+public sealed record McpScopeMetadata(string RequestedType, bool IncludeGenerated);
+
+/// <summary>Gemeinsame, bereits validierte Scope-Eingabe aller Symbol- und Composite-Tools.</summary>
+internal readonly record struct McpScopeInput(
+    McpScopeType ScopeType = McpScopeType.All,
+    bool IncludeGenerated = false)
+{
+    internal McpScopeMetadata ToMetadata() => new(
+        McpScopeValues.ToWireValue(ScopeType),
+        IncludeGenerated);
+}
 
 internal sealed record McpScopeFilter(
     McpScopeType RequestedType,

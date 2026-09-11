@@ -169,7 +169,7 @@ public sealed class WiringToolCollectionContractTests
         Assert.DoesNotContain("\"symbol\"", featureContext.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier", GetRequiredProperties(featureContext.InputSchema));
         Assert.Equal(
-            new[] { "maxCallers", "maxResponseBytes", "maxTests", "symbolIdentifier", "targetPath" },
+            new[] { "includeGenerated", "maxCallers", "maxResponseBytes", "maxTests", "scopeType", "symbolIdentifier", "targetPath" },
             GetProperties(featureContext.InputSchema).OrderBy(name => name, StringComparer.Ordinal));
         Assert.DoesNotContain("includeCallers", GetProperties(featureContext.InputSchema));
         Assert.DoesNotContain("includeTests", GetProperties(featureContext.InputSchema));
@@ -182,7 +182,7 @@ public sealed class WiringToolCollectionContractTests
         Assert.DoesNotContain("\"symbol\"", testContext.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier", GetRequiredProperties(testContext.InputSchema));
         Assert.Equal(
-            new[] { "maxResponseBytes", "maxResults", "symbolIdentifier", "targetPath" },
+            new[] { "includeGenerated", "maxResponseBytes", "maxResults", "scopeType", "symbolIdentifier", "targetPath" },
             GetProperties(testContext.InputSchema).OrderBy(name => name, StringComparer.Ordinal));
         Assert.Contains("Wann nutzen", testContext.Description, StringComparison.Ordinal);
 
@@ -196,6 +196,8 @@ public sealed class WiringToolCollectionContractTests
 
         var classStructure = tools["get_class_structure"];
         Assert.Contains("symbolIdentifier", classStructure.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("scopeType", classStructure.InputSchema.ToString(), StringComparison.Ordinal);
+        Assert.Contains("includeGenerated", classStructure.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain("\"symbol\"", classStructure.InputSchema.ToString(), StringComparison.Ordinal);
     }
 

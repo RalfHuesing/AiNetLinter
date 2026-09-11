@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using AiNetLinter.Core;
+using AiNetLinter.Mcp.Scope;
 
 namespace AiNetLinter.Mcp.Tools.TestContext;
 
@@ -13,7 +14,8 @@ namespace AiNetLinter.Mcp.Tools.TestContext;
 internal sealed record TestContextOptions(
     string? SymbolIdentifier = null,
     int MaxResults = 30,
-    int MaxResponseBytes = TestContextResponseBudget.DefaultMaxResponseBytes
+    int MaxResponseBytes = TestContextResponseBudget.DefaultMaxResponseBytes,
+    McpScopeInput Scope = default
 )
 {
     public string EffectiveSymbol => SymbolIdentifier ?? string.Empty;
@@ -38,7 +40,9 @@ public sealed record TestContextPayload(
     int ReturnedTestMethods = 0,
     IReadOnlyList<string>? TruncatedBy = null,
     string EvidenceBoundary = "static-test-candidates-only",
-    string? NextStep = null
+    string? NextStep = null,
+    McpScopeMetadata? Scope = null,
+    int ExcludedTestFileCount = 0
 );
 
 /// <summary>
@@ -56,5 +60,7 @@ public sealed record StaticTestCandidateFile(
     [property: JsonPropertyName("evidenceKind")] string EvidenceKind = "typeNamingConvention",
     string Confidence = "low",
     [property: JsonPropertyName("totalTestCount")] int TotalTestCount = 0,
-    [property: JsonPropertyName("testClassNames")] IReadOnlyList<string>? TestClassNames = null
+    [property: JsonPropertyName("testClassNames")] IReadOnlyList<string>? TestClassNames = null,
+    string ScopeType = "unknown",
+    string SourceKind = "editable"
 );

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Models;
@@ -20,7 +21,7 @@ namespace AiNetLinter.Mcp.Tools.FeatureContext;
 /// <summary>
 /// Koordiniert die Aggregation der fuenf Feature-Kontext-Dimensionen fuer ein Roslyn-Symbol.
 /// </summary>
-internal static class FeatureContextScanner
+internal static partial class FeatureContextScanner
 {
     internal const int MaxCallersLimit = 50;
     internal const int MaxTestFilesLimit = 50;
@@ -35,14 +36,15 @@ internal static class FeatureContextScanner
     {
         ct.ThrowIfCancellationRequested();
         var solutionDir = Path.GetDirectoryName(context.Solution.FilePath) ?? "";
-        var declaration = ExtractDeclaration(symbol, solutionDir, context.AssemblySymbolIdentity);
+        var classifier = new McpScopeClassifier();
+        var declaration = await ExtractDeclarationAsync(symbol, context.Solution, solutionDir, context.AssemblySymbolIdentity, classifier, context.Options.Scope, ct);
 
         var metrics = CollectMetrics(symbol, context, solutionDir, ct);
         var callers = context.Options.IncludeCallers
-            ? await CollectCallersAsync(symbol, context.Solution, context.Options.MaxCallers, ct)
+            ? await CollectCallersAsync(symbol, context.Solution, context.Options.MaxCallers, context.Options.Scope, classifier, ct)
             : null;
         var tests = context.Options.IncludeTests
-            ? await CollectTestsAsync(symbol, context.Solution, context.Options.MaxTests, ct)
+            ? await CollectTestsAsync(symbol, context.Solution, context.Options.MaxTests, context.Options.Scope, classifier, ct)
             : null;
         var violations = context.Options.IncludeViolations
             ? await CollectViolationsAsync(context.Solution, declaration, context.Config, context.Console, ct)
@@ -121,10 +123,13 @@ internal static class FeatureContextScanner
         ISymbol symbol,
         Solution solution,
         int requestedMaxCallers,
+        McpScopeInput scopeInput,
+        McpScopeClassifier classifier,
         CancellationToken ct)
     {
         var allCallers = await DiffImpactAnalyzer.FindCallSiteEntriesAsync(symbol, solution, ct);
-        var orderedCallers = allCallers
+        var scoped = await FilterCallersAsync(allCallers, solution, scopeInput, classifier, ct);
+        var orderedCallers = scoped.Visible
             .OrderBy(c => PathNormalizer.NormalizeSeparators(c.FilePath), StringComparer.OrdinalIgnoreCase)
             .ThenBy(c => c.Line)
             .ThenBy(c => c.ProjectName, StringComparer.Ordinal)
@@ -133,7 +138,9 @@ internal static class FeatureContextScanner
             .ToList();
         var maxCallers = Math.Clamp(requestedMaxCallers, 1, MaxCallersLimit);
         var isTruncated = orderedCallers.Count > maxCallers;
-        var callersList = isTruncated ? orderedCallers.Take(maxCallers).ToList() : orderedCallers;
+        var callersList = (isTruncated ? orderedCallers.Take(maxCallers) : orderedCallers)
+            .Select(call => ToFeatureCallSite(call, scoped.Scopes[call]))
+            .ToList();
         return new CallersReportDto(
             orderedCallers.Count,
             callersList,
@@ -144,39 +151,48 @@ internal static class FeatureContextScanner
                 : isTruncated ? FeatureContextStatus.Truncated : FeatureContextStatus.Complete,
             NextStep: isTruncated
                 ? "Abschnitt impact: maxCallers erhöhen und die statischen Call-Sites erneut abfragen."
-                : null);
+                : null,
+            Scope: scopeInput.ToMetadata(),
+            ExcludedCount: scoped.ExcludedCount);
     }
 
     private static async Task<StaticTestContextReportDto> CollectTestsAsync(
         ISymbol symbol,
         Solution solution,
         int requestedMaxTests,
+        McpScopeInput scopeInput,
+        McpScopeClassifier classifier,
         CancellationToken ct)
     {
         var testResults = await TestCoverageScanner.FindTestsForSymbolAsync(symbol, solution, ct);
+        var scoped = await FilterTestFilesAsync(testResults.TestFiles, solution, scopeInput, classifier, ct);
         var maxTests = Math.Clamp(requestedMaxTests, 1, MaxTestFilesLimit);
-        var isTruncated = testResults.TestFiles.Count > maxTests;
-        var testFiles = isTruncated ? testResults.TestFiles.Take(maxTests).ToList() : testResults.TestFiles;
-        var projection = ProjectTestCandidates(testFiles, isTruncated);
+        var isTruncated = scoped.Visible.Count > maxTests;
+        var testFiles = isTruncated ? scoped.Visible.Take(maxTests).ToList() : scoped.Visible;
+        var projection = ProjectTestCandidates(testFiles, scoped.Scopes, isTruncated);
+        var totalMatchingTests = scoped.Visible.Sum(file => file.MatchingTestCount ?? file.TestMethods.Count);
 
         return new StaticTestContextReportDto(
-            testResults.TotalMatchingTests,
-            testResults.TestFiles.Count,
+            totalMatchingTests,
+            scoped.Visible.Count,
             projection.Files,
             projection.IsTruncated,
             projection.DisplayedTestMethods,
             projection.TruncatedBy,
-            Completeness: testResults.TotalMatchingTests == 0
+            Completeness: totalMatchingTests == 0
                 ? FeatureContextStatus.Empty
                 : projection.IsTruncated ? FeatureContextStatus.Truncated : FeatureContextStatus.Complete,
             EvidenceBoundary: FeatureContextSemantics.StaticTestCandidates,
             NextStep: projection.IsTruncated
                 ? "Abschnitt testContext: maxTests erhöhen und die statischen Testkandidaten erneut abfragen."
-                : null);
+                : null,
+            Scope: scopeInput.ToMetadata(),
+            ExcludedCount: scoped.ExcludedCount);
     }
 
     private static TestCandidateProjection ProjectTestCandidates(
         IReadOnlyList<TestFileCoverageResult> testFiles,
+        IReadOnlyDictionary<string, McpDocumentScope> scopes,
         bool isTruncated)
     {
         var reasons = isTruncated ? new List<string> { "maxTests" } : [];
@@ -198,6 +214,7 @@ internal static class FeatureContextScanner
 
             remainingMethods -= take;
             displayedMethods += take;
+            var scope = scopes[file.FilePath];
             projectedFiles.Add(new StaticTestCandidateFileDto(
                 file.FilePath,
                 file.TestClassName,
@@ -209,7 +226,9 @@ internal static class FeatureContextScanner
                 TestEvidenceKindNames.ToWire(file.EvidenceKind),
                 file.Confidence,
                 file.TotalClassTests,
-                file.TestClassNames));
+                file.TestClassNames,
+                McpScopeValues.ToWireValue(scope.ProjectKind),
+                McpScopeValues.ToWireValue(scope.SourceKind)));
         }
 
         if (methodsAfterPerFileCaps > MaxTestMethodsTotal && !reasons.Contains("maxTestMethodsTotal", StringComparer.Ordinal))
@@ -227,18 +246,32 @@ internal static class FeatureContextScanner
         bool IsTruncated,
         IReadOnlyList<string> TruncatedBy);
 
-    private static SymbolDeclarationDto ExtractDeclaration(
+    private static FeatureCallSiteDto ToFeatureCallSite(CallSiteEntry call, McpDocumentScope scope) => new(
+        call.FilePath, call.Line, call.SymbolName, call.ProjectName, call.CallerMemberName, call.CallerId, call.CallerLocation,
+        McpScopeValues.ToWireValue(scope.ProjectKind), McpScopeValues.ToWireValue(scope.SourceKind));
+
+    private static async Task<SymbolDeclarationDto> ExtractDeclarationAsync(
         ISymbol symbol,
+        Solution solution,
         string solutionDir,
-        AnalysisSymbolIdentity? assemblyIdentity)
+        AnalysisSymbolIdentity? assemblyIdentity,
+        McpScopeClassifier classifier,
+        McpScopeInput scopeInput,
+        CancellationToken ct)
     {
         var (filePath, startLine, endLine) = ExtractLocation(symbol, solutionDir);
         var lineCount = endLine >= startLine ? endLine - startLine + 1 : 0;
-        var (returnType, parameters, baseTypes, members) = ExtractTypeAndParameters(symbol);
+        var (returnType, parameters, baseTypes, members) = await ExtractTypeAndParametersAsync(
+            symbol, solution, classifier, scopeInput, ct).ConfigureAwait(false);
         var docCommentId = assemblyIdentity?.Format(
             symbol.TryGetDocCommentId() ?? CallGraphTraversal.GetStableSymbolId(symbol))
             ?? symbol.TryGetDocCommentId();
 
+        var location = symbol.Locations.FirstOrDefault(value => value.IsInSource);
+        var document = location?.SourceTree is null ? null : solution.GetDocument(location.SourceTree);
+        var scope = document is null
+            ? new McpDocumentScope(McpProjectKind.Unknown, McpSourceKind.Editable)
+            : await classifier.ClassifyAsync(document, ct).ConfigureAwait(false);
         return new SymbolDeclarationDto(
             Name: symbol.ToDisplayString(),
             Kind: symbol.Kind.ToString(),
@@ -252,37 +285,19 @@ internal static class FeatureContextScanner
             Parameters: parameters,
             DocCommentId: docCommentId,
             BaseTypes: baseTypes,
-            Members: members
+            Members: members,
+            ScopeType: McpScopeValues.ToWireValue(scope.ProjectKind),
+            SourceKind: McpScopeValues.ToWireValue(scope.SourceKind),
+            IsSeed: true
         );
     }
 
-    private static (string FilePath, int StartLine, int EndLine) ExtractLocation(ISymbol symbol, string solutionDir)
-    {
-        var syntaxRef = symbol.DeclaringSyntaxReferences.FirstOrDefault();
-        if (syntaxRef != null)
-        {
-            var syntax = syntaxRef.GetSyntax();
-            var lineSpan = syntax.GetLocation().GetLineSpan();
-            var filePath = PathNormalizer.ToRelative(solutionDir, lineSpan.Path);
-            var start = lineSpan.StartLinePosition.Line + 1;
-            var end = lineSpan.EndLinePosition.Line + 1;
-            return (filePath, start, end);
-        }
-
-        var loc = symbol.Locations.FirstOrDefault(l => l.IsInSource);
-        if (loc?.SourceTree != null)
-        {
-            var filePath = PathNormalizer.ToRelative(solutionDir, loc.SourceTree.FilePath);
-            var lineSpan = loc.GetLineSpan();
-            var start = lineSpan.StartLinePosition.Line + 1;
-            var end = lineSpan.EndLinePosition.Line + 1;
-            return (filePath, start, end);
-        }
-
-        return ("", 0, 0);
-    }
-
-    private static (string? ReturnType, IReadOnlyList<string> Parameters, IReadOnlyList<string>? BaseTypes, IReadOnlyList<string>? Members) ExtractTypeAndParameters(ISymbol symbol)
+    private static async Task<(string? ReturnType, IReadOnlyList<string> Parameters, IReadOnlyList<string>? BaseTypes, IReadOnlyList<string>? Members)> ExtractTypeAndParametersAsync(
+        ISymbol symbol,
+        Solution solution,
+        McpScopeClassifier classifier,
+        McpScopeInput scopeInput,
+        CancellationToken ct)
     {
         if (symbol is IMethodSymbol method)
         {
@@ -315,14 +330,22 @@ internal static class FeatureContextScanner
                 baseTypes.Add(iface.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat));
             }
 
-            var members = namedType.GetMembers()
+            var members = new List<string>();
+            foreach (var member in namedType.GetMembers()
                 .Where(m => !m.IsImplicitlyDeclared && m.CanBeReferencedByName)
                 .Where(m => m is IMethodSymbol { MethodKind: MethodKind.Ordinary or MethodKind.Constructor }
                          or IPropertySymbol
-                         or IEventSymbol)
-                .Select(FormatMemberSignature)
-                .Take(25)
-                .ToList();
+                         or IEventSymbol))
+            {
+                var location = member.Locations.FirstOrDefault(value => value.IsInSource);
+                var document = location?.SourceTree is null ? null : solution.GetDocument(location.SourceTree);
+                var memberScope = document is null
+                    ? new McpDocumentScope(McpProjectKind.Unknown, McpSourceKind.Editable)
+                    : await classifier.ClassifyAsync(document, ct).ConfigureAwait(false);
+                if (!classifier.IsVisible(memberScope, scopeInput)) continue;
+                members.Add(FormatMemberSignature(member));
+                if (members.Count == 25) break;
+            }
 
             return (null, [], baseTypes.Count > 0 ? baseTypes : null, members.Count > 0 ? members : null);
         }
