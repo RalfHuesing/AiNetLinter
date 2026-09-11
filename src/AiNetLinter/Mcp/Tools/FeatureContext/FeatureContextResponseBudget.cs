@@ -3,10 +3,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AiNetLinter.Core;
+using AiNetLinter.Mcp.Wire;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
@@ -330,13 +330,13 @@ internal static class FeatureContextResponseBudget
         int budget,
         JsonNode? navigation,
         string? navigationText) =>
-        CombinedBytes(CreateResult(payload, navigation, navigationText)) <= budget;
+        McpResponseSize.From(CreateResult(payload, navigation, navigationText)).TotalBytes <= budget;
 
     private static int MinimumBytes(
         FeatureContextPayload payload,
         JsonNode? navigation,
         string? navigationText) =>
-        CombinedBytes(CreateResult(payload, navigation, navigationText));
+        McpResponseSize.From(CreateResult(payload, navigation, navigationText)).TotalBytes;
 
     private static CallToolResult CreateResult(
         FeatureContextPayload payload,
@@ -363,15 +363,6 @@ internal static class FeatureContextResponseBudget
             new McpErrorParameters(
                 Hint: $"maxResponseBytes auf mindestens {minimumBytes} setzen; die Antwort wird nur an vollständigen Feature-/Caller-/Test-/Violation-Einheiten gekürzt.",
                 FieldPath: "$.maxResponseBytes"));
-
-    private static int CombinedBytes(CallToolResult result)
-    {
-        var textBytes = result.Content.OfType<TextContentBlock>().Sum(block => Encoding.UTF8.GetByteCount(block.Text));
-        var structuredBytes = result.StructuredContent is { } structured
-            ? Encoding.UTF8.GetByteCount(structured.GetRawText())
-            : 0;
-        return textBytes + structuredBytes;
-    }
 
     private static string? ExtractNavigationText(string text)
     {

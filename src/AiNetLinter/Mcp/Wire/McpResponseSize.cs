@@ -6,11 +6,12 @@ using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Wire;
 
-internal readonly record struct McpWireBudgetMeasurement(int TextBytes, int StructuredBytes)
+/// <summary>Misst die kombinierte UTF-8-Nutzlast einer MCP-Antwort ohne sie zu verändern.</summary>
+internal readonly record struct McpResponseSize(int TextBytes, int StructuredBytes)
 {
     internal int TotalBytes => TextBytes + StructuredBytes;
 
-    internal static McpWireBudgetMeasurement From(CallToolResult result)
+    internal static McpResponseSize From(CallToolResult result)
     {
         var textBytes = result.Content
             .OfType<TextContentBlock>()

@@ -51,12 +51,7 @@ internal static class GetTestContextTool
 
             var testResults = await TestCoverageScanner.FindTestsForSymbolAsync(symbol, solution, ct);
             var payload = BuildPayload(symbol, solution, testResults, options.MaxResults);
-
-            var markdown = TestContextFormatter.FormatReport(payload);
-            return McpToolResults.ApplyCompositeWireBudget(
-                McpToolResults.Text(markdown, payload),
-                ["testContext"],
-                rootSectionName: "testContext");
+            return TestContextResponseBudget.Apply(payload, options.MaxResponseBytes);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

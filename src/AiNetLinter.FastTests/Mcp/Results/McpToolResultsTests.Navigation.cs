@@ -220,54 +220,6 @@ public sealed partial class McpToolResultsTests
             handoff.GetProperty("followUpsByKind").GetProperty("member").Deserialize<string[]>());
     }
 
-    [Fact]
-    public void WithNavigation_WireTruncationOverridesFeaturePartialButPreservesFailureCause()
-    {
-        using var tempDir = TestTempDirectory.Create("mcp-navigation-feature-partial-wire-");
-        var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
-        File.WriteAllText(solutionPath, string.Empty);
-        var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
-            new AnalysisTargetRequest(solutionPath)).Target);
-
-        var budgeted = McpToolResults.ApplyCompositeWireBudget(
-            McpToolResults.Text(
-                "Feature-Kontext",
-                new
-                {
-                    completeness = "partial",
-                    impact = new
-                    {
-                        callSites = Enumerable.Range(0, 200)
-                            .Select(index => new
-                            {
-                                filePath = $"src/Caller{index:D3}.cs",
-                                line = index + 1,
-                                details = new string('ä', 80),
-                            }),
-                        totalCallers = 200,
-                        completeness = "complete",
-                    },
-                    violations = new
-                    {
-                        status = "error",
-                        reasonCode = "violations-scan-failed",
-                    },
-                }),
-            ["impact", "violations"]);
-
-        var result = McpToolResults.WithNavigation(budgeted, target);
-        var payload = result.StructuredContent!.Value;
-
-        Assert.True(payload.GetProperty("wireBudget").GetProperty("truncated").GetBoolean());
-        Assert.True(payload.GetProperty("wireTruncated").GetBoolean());
-        Assert.Equal("truncated", payload.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
-        Assert.Equal("partial", payload.GetProperty("completeness").GetString());
-        Assert.Equal("error", payload.GetProperty("violations").GetProperty("status").GetString());
-        Assert.Equal(
-            "violations-scan-failed",
-            payload.GetProperty("violations").GetProperty("reasonCode").GetString());
-    }
-
     [Theory]
     [InlineData("find_references")]
     [InlineData("get_impact")]

@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Tools.TestContext;
+using AiNetLinter.Output;
 using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
 using Xunit;
@@ -158,6 +160,34 @@ public sealed class AnalysisToolCallTests
         var defaults = new ProjectAnalysisExecutionOptions();
         Assert.Equal(0, defaults.MaxResponseBytes);
         Assert.Null(defaults.PostNavigationResponseBudget);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_TestContextMinimumBudgetErrorSurvivesPostNavigationProjection()
+    {
+        using var fixture = IsolatedFixtureLease.CopyFixture(SolutionRootLocator.Find(), "SymbolGraphMini");
+        var solutionPath = Path.Combine(fixture.RootPath, "SymbolGraphMini.slnx");
+        await using var registry = ProjectWiringFixtures.CreateLoadedRegistry();
+
+        var result = await ProjectAnalysisDispatcher.ExecuteAsync(
+            registry,
+            new AnalysisTargetRequest(solutionPath),
+            _ => Task.FromResult(McpToolResults.Recoverable(
+                LinterErrorCodes.ResponseBudgetTooSmall,
+                "maxResponseBytes=512 ist zu klein für die fachliche Mindestprojektion.",
+                new McpErrorParameters(FieldPath: "$.maxResponseBytes"))),
+            new ProjectAnalysisExecutionOptions(
+                MaxResponseBytes: 512,
+                PostNavigationResponseBudget: TestContextResponseBudget.ApplyFinal));
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.Equal(
+            LinterErrorCodes.ResponseBudgetTooSmall,
+            result.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.True(result.StructuredContent.Value.TryGetProperty("navigation", out var navigation));
+        Assert.False(string.IsNullOrWhiteSpace(
+            navigation.GetProperty("status").GetProperty("operation").GetString()));
+        Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", TextOf(result), StringComparison.Ordinal);
     }
 
     [Fact]

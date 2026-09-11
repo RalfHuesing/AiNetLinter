@@ -12,7 +12,8 @@ namespace AiNetLinter.Mcp.Tools.TestContext;
 /// </summary>
 internal sealed record TestContextOptions(
     string? SymbolIdentifier = null,
-    int MaxResults = 30
+    int MaxResults = 30,
+    int MaxResponseBytes = TestContextResponseBudget.DefaultMaxResponseBytes
 )
 {
     public string EffectiveSymbol => SymbolIdentifier ?? string.Empty;

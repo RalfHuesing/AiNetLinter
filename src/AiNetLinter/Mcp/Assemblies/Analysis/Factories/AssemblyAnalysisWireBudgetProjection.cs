@@ -32,18 +32,18 @@ internal static class AssemblyAnalysisWireBudgetProjection
             budget,
             IsStructuredTruncated(result.StructuredContent));
         withBudget = ReserveTextBudget(withBudget, budget);
-        if (McpWireBudgetMeasurement.From(withBudget).TotalBytes <= budget) return withBudget;
+        if (McpResponseSize.From(withBudget).TotalBytes <= budget) return withBudget;
 
         withBudget = TrimStructuredToBudget(withBudget, budget, cursorOffset);
         withBudget = SynchronizeClassStructureText(withBudget);
 
-        if (McpWireBudgetMeasurement.From(withBudget).TotalBytes > budget)
+        if (McpResponseSize.From(withBudget).TotalBytes > budget)
         {
             withBudget = MinimizeEnvelope(withBudget, budget);
         }
 
         withBudget = AddWireBudgetMetadata(withBudget, budget, IsStructuredTruncated(withBudget.StructuredContent));
-        if (McpWireBudgetMeasurement.From(withBudget).TotalBytes <= budget) return withBudget;
+        if (McpResponseSize.From(withBudget).TotalBytes <= budget) return withBudget;
 
         return McpToolResults.InvalidArgument(
             $"Das Assembly-Antwortbudget von {budget} Bytes ist für den minimalen Wire-Envelope nicht repräsentierbar.",
@@ -73,18 +73,18 @@ internal static class AssemblyAnalysisWireBudgetProjection
         int cursorOffset)
     {
         var current = result;
-        for (var attempt = 0; attempt < 128 && McpWireBudgetMeasurement.From(current).TotalBytes > budget; attempt++)
+        for (var attempt = 0; attempt < 128 && McpResponseSize.From(current).TotalBytes > budget; attempt++)
         {
             if (current.StructuredContent is not { ValueKind: JsonValueKind.Object } structured)
             {
-                return TrimTextToBudget(current, budget - McpWireBudgetMeasurement.From(current).StructuredBytes);
+                return TrimTextToBudget(current, budget - McpResponseSize.From(current).StructuredBytes);
             }
 
-            var available = Math.Max(1, budget - McpWireBudgetMeasurement.From(current).TextBytes);
+            var available = Math.Max(1, budget - McpResponseSize.From(current).TextBytes);
             var trimmed = TrimStructured(structured, available, cursorOffset);
             if (trimmed.GetRawText() == structured.GetRawText())
             {
-                return TrimTextToBudget(current, budget - McpWireBudgetMeasurement.From(current).StructuredBytes);
+                return TrimTextToBudget(current, budget - McpResponseSize.From(current).StructuredBytes);
             }
 
             current = AddWireBudgetMetadata(
@@ -164,7 +164,7 @@ internal static class AssemblyAnalysisWireBudgetProjection
             result,
             JsonSerializer.SerializeToElement(minimalPayload, McpJsonOptions.Default));
         return AddWireBudgetMetadata(
-            TrimTextToBudget(minimal, budget - McpWireBudgetMeasurement.From(minimal).StructuredBytes),
+            TrimTextToBudget(minimal, budget - McpResponseSize.From(minimal).StructuredBytes),
             budget,
             isTruncated: true);
     }
@@ -183,7 +183,7 @@ internal static class AssemblyAnalysisWireBudgetProjection
         var candidate = result;
         for (var attempt = 0; attempt < 16; attempt++)
         {
-            var measurement = McpWireBudgetMeasurement.From(candidate);
+            var measurement = McpResponseSize.From(candidate);
             var existingWireTruncation = node["wireTruncated"] is JsonValue existing
                 && existing.TryGetValue<bool>(out var existingValue)
                 && existingValue;
@@ -203,7 +203,7 @@ internal static class AssemblyAnalysisWireBudgetProjection
             };
             node["wireTruncated"] = wireTruncated;
             var next = ReplaceStructured(candidate, JsonSerializer.SerializeToElement(node, McpJsonOptions.Default));
-            if (McpWireBudgetMeasurement.From(next) == measurement
+            if (McpResponseSize.From(next) == measurement
                 && next.StructuredContent?.GetRawText() == candidate.StructuredContent?.GetRawText()) return next;
             candidate = next;
         }

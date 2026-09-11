@@ -190,9 +190,11 @@ public sealed class WiringToolCollectionContractTests
         Assert.DoesNotContain("\"symbol\"", testContext.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier", GetRequiredProperties(testContext.InputSchema));
         Assert.Equal(
-            new[] { "maxResults", "symbolIdentifier", "targetPath" },
+            new[] { "maxResponseBytes", "maxResults", "symbolIdentifier", "targetPath" },
             GetProperties(testContext.InputSchema).OrderBy(name => name, StringComparer.Ordinal));
         Assert.Contains("symbolIdentifier:", testContext.Description, StringComparison.Ordinal);
+        Assert.Contains("maxResponseBytes:", testContext.Description, StringComparison.Ordinal);
+        Assert.Contains("Default 24576", testContext.Description, StringComparison.Ordinal);
 
         var metricsLookup = tools["metrics_lookup"];
         Assert.Contains("symbolIdentifiers", metricsLookup.InputSchema.ToString(), StringComparison.Ordinal);

@@ -29,7 +29,7 @@ internal static partial class AssemblyAnalysisResponse
             responseBudgetBytes,
             null,
             lease.Context.ResponseBudgetBytes);
-        return McpWireBudgetMeasurement.From(CreateEnriched(result, lease)).TotalBytes <= budget;
+        return McpResponseSize.From(CreateEnriched(result, lease)).TotalBytes <= budget;
     }
 
     internal static CallToolResult Enrich(

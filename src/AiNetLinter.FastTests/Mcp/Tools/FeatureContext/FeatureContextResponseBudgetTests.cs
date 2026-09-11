@@ -9,6 +9,7 @@ using AiNetLinter.Core;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools.FeatureContext;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
+using AiNetLinter.Mcp.Wire;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -69,8 +70,8 @@ public sealed class FeatureContextResponseBudgetTests
         Assert.True(CountVisibleTests(smallPayload) <= CountVisibleTests(largePayload));
         Assert.Contains("Production", Assert.IsType<TextContentBlock>(Assert.Single(small.Content)).Text, StringComparison.Ordinal);
         Assert.Contains("directInvocation", Assert.IsType<TextContentBlock>(Assert.Single(small.Content)).Text, StringComparison.Ordinal);
-        Assert.True(CombinedBytes(small) <= 5_500);
-        Assert.True(CombinedBytes(large) <= 12_000);
+        Assert.True(McpResponseSize.From(small).TotalBytes <= 5_500);
+        Assert.True(McpResponseSize.From(large).TotalBytes <= 12_000);
     }
 
     [Fact]
@@ -128,7 +129,7 @@ public sealed class FeatureContextResponseBudgetTests
         Assert.NotNull(projected.StructuredContent);
         Assert.True(projected.StructuredContent.Value.TryGetProperty("navigation", out _));
         Assert.Contains("## Navigation", Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text, StringComparison.Ordinal);
-        Assert.True(CombinedBytes(projected) <= 8_192);
+        Assert.True(McpResponseSize.From(projected).TotalBytes <= 8_192);
     }
 
     private static FeatureContextPayload CreatePayload(int extraEntries = 8)
@@ -204,15 +205,6 @@ public sealed class FeatureContextResponseBudgetTests
 
     private static int CountVisibleTests(FeatureContextPayload payload) =>
         payload.Tests?.TestFiles.Sum(file => file.TestMethods.Count) ?? 0;
-
-    private static int CombinedBytes(CallToolResult result)
-    {
-        var textBytes = result.Content.OfType<TextContentBlock>().Sum(block => Encoding.UTF8.GetByteCount(block.Text));
-        var structuredBytes = result.StructuredContent is { } structured
-            ? Encoding.UTF8.GetByteCount(structured.GetRawText())
-            : 0;
-        return textBytes + structuredBytes;
-    }
 
     private sealed class JsonObjectBuilder
     {

@@ -28,9 +28,6 @@ namespace AiNetLinter.Mcp;
 /// </summary>
 internal static partial class McpToolResults
 {
-    internal const int CompositeWireBudgetBytes = McpToolResultsWireBudget.CompositeWireBudgetBytes;
-    internal const int CompositeSectionBudgetBytes = McpToolResultsWireBudget.CompositeSectionBudgetBytes;
-
     internal const string WorkspaceDiagnosticHint =
         "Einmal erneut versuchen; bleibt der Fehler bestehen, Datei pruefen — Compile-Fehler blockieren Symbolaufloesung.";
 
@@ -285,20 +282,17 @@ internal static partial class McpToolResults
         };
     }
 
-    internal static CallToolResult ApplyCompositeWireBudget(
-        CallToolResult result,
-        IReadOnlyList<string> sectionNames,
-        string? rootSectionName = null) =>
-        McpToolResultsWireBudget.ApplyCompositeWireBudget(result, sectionNames, rootSectionName);
-
-    internal static CallToolResult ReplaceText(CallToolResult result, string text) =>
-        McpToolResultsWireBudget.ReplaceText(result, text);
+    internal static CallToolResult ReplaceText(CallToolResult result, string text) => new()
+    {
+        IsError = result.IsError,
+        Content = result.Content.Select(block => block is TextContentBlock
+            ? new TextContentBlock { Text = text }
+            : block).ToList(),
+        StructuredContent = result.StructuredContent,
+    };
 
     /// <summary>
-    /// Wendet das gemeinsame UTF-8-Wirebudget fuer Source-Composites an. Die Projektion arbeitet
-    /// ausschliesslich auf den bereits erzeugten StructuredContent-Objekten: Root-Felder bleiben
-    /// erhalten, Listen werden deterministisch vom Ende her gekuerzt und es werden keine IDs oder
-    /// Fortsetzungstoken erzeugt.
+    /// Ergaenzt eine zielgebundene Antwort um den gemeinsamen Navigation-Kern.
     /// Ergaenzt eine zielgebundene Antwort um den gemeinsamen Navigation-Kern. Die vorhandene
     /// tool-spezifische StructuredContent-Nutzlast bleibt dabei unveraendert am Root; der
     /// normalisierte Envelope wird atomar unter <c>navigation</c> geschrieben.
@@ -371,10 +365,9 @@ internal static partial class McpToolResults
             Content = text,
             StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
         };
-        var budgeted = McpToolResultsWireBudget.ReapplyCompositeWireBudgetAfterNavigation(navigated);
         return postNavigationResponseBudget is null || maxResponseBytes <= 0
-            ? budgeted
-            : postNavigationResponseBudget(budgeted, maxResponseBytes);
+            ? navigated
+            : postNavigationResponseBudget(navigated, maxResponseBytes);
     }
 
     /// <summary>

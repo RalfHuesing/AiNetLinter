@@ -373,7 +373,7 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string symbolIdentifier, int maxResults = 30, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string symbolIdentifier, int maxResults = 30, int maxResponseBytes = TestContextResponseBudget.DefaultMaxResponseBytes, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
@@ -384,8 +384,12 @@ internal static class AnalysisToolRegistrations
                         lease.Server,
                         new TestContextOptions(
                             SymbolIdentifier: symbolIdentifier,
-                            MaxResults: maxResults),
-                        ct));
+                            MaxResults: maxResults,
+                            MaxResponseBytes: maxResponseBytes),
+                        ct),
+                    new ProjectAnalysisExecutionOptions(
+                        maxResponseBytes,
+                        TestContextResponseBudget.ApplyFinal));
             },
             TargetPathToolRegistrationOptions.SourceReadOnlyTool("get_test_context", GetTestContextDescription)));
     }
@@ -393,6 +397,6 @@ internal static class AnalysisToolRegistrations
     private const string GetTestContextDescription =
         "Wann nutzen: Test-Dateien, Test-Klassen und Test-Methoden fuer ein gegebenes Produktions-Symbol " +
         "(Klasse, Methode, Datei.cs:Zeile oder DocCommentId) abfragen. symbolIdentifier: Ziel-Symbol, " +
-        "maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Begrenzung der Testdateien (Default 30, Cap 100; Werte über 100 liefern INVALID_ARGUMENT). Liefert statische Zuordnungsgruende, Test-Kategorien " +
+        "maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Begrenzung der Testdateien (Default 30, Cap 100; Werte über 100 liefern INVALID_ARGUMENT). maxResponseBytes: gemeinsames UTF-8-Budget fuer Text, StructuredContent und Navigation (Default 24576, Cap 65536); es kuerzt nur vollstaendige Testkandidaten und meldet ein zu kleines Mindestbudget. Liefert statische Zuordnungsgruende, Test-Kategorien " +
         "(Unit/Integration), kopierbare dotnet test Filterbefehle und Hinweis bei fehlender Zuordnung.";
 }
