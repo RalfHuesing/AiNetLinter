@@ -6,26 +6,25 @@ alwaysApply: true
 
 # AiNetLinter-Richtlinien
 
-Nutzeranweisungen haben Vorrang. Kontextabhängige Workflows gehören in Skills und Rollen, nicht in diese Always-on-Regel.
+Nutzeranweisungen haben Vorrang.
 
 ## Architektur
 
 - AiNetLinter ist ein eigenständiges, statisch kompiliertes CLI-/MCP-Tool. Kein Plugin-System, kein dynamisches Assembly-Laden (`AssemblyLoadContext`), kein DI-Container.
-- **Universelles Tool & agentischer Fokus**: AiNetLinter dient der Analyse beliebiger externer C#/.NET-Codebasen. Niemals auf Besonderheiten von AiNetLinter überoptimieren (kein Dogfooding-Overfitting). Das Gesamtbild der agentischen Nutzung steht im Fokus: MCP-Tools, Metriken und Formate müssen für aufrufende KI-Agenten maximale Informationsdichte, Ergonomie und Signal-to-Noise-Ratio bieten.
+- **Universelles Tool & agentischer Fokus**: AiNetLinter dient der Analyse beliebiger externer C#/.NET-Codebasen. Niemals auf Besonderheiten von AiNetLinter überoptimieren (kein Dogfooding-Overfitting); Engine, Formatter und MCP-Tools bleiben generisch ohne hardcodierte repo-/projektspezifische Literale. Das Gesamtbild der agentischen Nutzung steht im Fokus: MCP-Tools, Metriken und Formate müssen maximale Informationsdichte, Ergonomie und Signal-to-Noise-Ratio für aufrufende KI-Agenten bieten.
 - Bevorzuge direkte Lösungen und unveränderliche Datenmodelle. Abstraktionen erfordern konkreten Mehrwert für Wiederverwendung, Verständlichkeit oder Testbarkeit.
-- Engine, Analyzer, Formatter und MCP-Tools bleiben generisch: Keine repo-, projekt- oder pfadspezifischen Literale hardcodieren; Projektstrukturen dynamisch aus Roslyn-Metadaten ableiten.
 - Teure Roslyn-Zugriffe (`SyntaxTree`, `SemanticModel`) gezielt und nicht wiederholt ausführen.
 
 ## C#-Analyse und Dokumentation
 
 - Für C#-Symbole, Referenzen, Aufrufketten, Abhängigkeiten, Impact und Verstöße gilt `.agents/rules/AiNetLinter-McpWorkflow.mdc`. Dessen Schemas und absolute `targetPath`-Werte nutzen (Herkunft deterministisch aus Dateiendung).
-- Nur implementiertes, belegbares Verhalten dokumentieren (keine Marketingaussagen). CLI-, Konfigurations-, Regel- und MCP-Beschreibungen gegen aktuellen Code prüfen.
+- Nur implementiertes, belegbares Verhalten dokumentieren. CLI-, Konfigurations-, Regel- und MCP-Beschreibungen gegen aktuellen Code prüfen.
 - Bei Änderungen an CLI, Konfiguration, Regeln oder MCP-Verträgen `Docs/`, `ainetlinter-rules.json` und Agentenregeln synchronisieren.
 - `README.md` nur bei ausdrücklichem Auftrag ändern; Fremdänderungen erhalten.
 
 ## Windows und Dateien
 
-- Windows/PowerShell 7 verwenden. Git-Befehle immer mit `--no-pager` ausführen. Für Textsuche zuerst `rg` verwenden.
+- Für Textsuche zuerst `rg` verwenden.
 - Keine externen Source-Repositories oder analysierten Ziel-Assemblies modifizieren.
 - Credentials gehören niemals in Diagnosen, Logs oder Toolantworten.
 - Bei unklaren oder abgeschnittenen Testausgaben eine TRX-Datei zur Diagnose nutzen, statt denselben Lauf ungezielt zu wiederholen.
@@ -47,8 +46,6 @@ Nutzeranweisungen haben Vorrang. Kontextabhängige Workflows gehören in Skills 
 
 - **Strikt serielle Abarbeitung**: Pro Task höchstens ein aktiver Agent. Keine überlappenden Rollen, Builds, Tests oder MCP-Prüfungen; nächste Aktivität erst nach vollständigem Abschluss der vorherigen.
 - Jede Änderung an versionierten Dateien nach passenden Prüfungen automatisch committen (auch Markdown/Agentenregeln).
-- Vor Änderungen `HEAD` und Working-Tree-Status als Baseline erfassen. Ein Commit enthält ausschließlich eigene, auftragsbezogene Änderungen seit dieser Baseline.
-- Niemals pauschal `git add .`, `git add -A` oder `git commit -a` nutzen. Nur explizite Pfade stagen und vor Commit Index sowie Diff prüfen.
-- Fremde Staged-Änderungen oder Dateikonflikte blockieren den Auto-Commit (Konflikt melden). In orchestrierten Tasks committen nur Orchestratoren, keine Rollen.
-- Bei mehreren Worktrees/Agenten exklusive Staging-Sperre beachten oder Commit zurückstellen.
+- Vor Änderungen `HEAD` und Working-Tree als Baseline erfassen. Ein Commit enthält ausschließlich eigene auftragsbezogene Änderungen seit dieser Baseline.
+- Niemals pauschal `git add .`, `git add -A` oder `git commit -a` nutzen. Nur explizite Pfade stagen; fremde Staged-Änderungen oder Dateikonflikte blockieren den Commit (Konflikt melden).
 - Commit-Nachrichten als deutsche Conventional Commits im Imperativ (`feat:`, `fix:`, `docs:`, `chore:`). Pushes und Umschreiben veröffentlichter Historie erfolgen nur auf ausdrückliche Anforderung.
