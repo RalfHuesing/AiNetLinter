@@ -6,6 +6,14 @@ open_questions: []
 
 # Agentenwert und Tokenökonomie der AiNetLinter-MCP-Antworten
 
+## Übergabe und Fortsetzung
+
+Bei einer Fortsetzung nach einem Modell- oder Agentenwechsel zuerst
+[`Handover.md`](Handover.md) vollständig lesen. Die Datei beschreibt den
+aktuellen Git-/Arbeitsbaumstand, offene Slices, Verifikationslücken und die
+wiederholt korrigierten Risikostellen. Sie ergänzt dieses Konzept und ersetzt
+weder den Umsetzungsvertrag noch die Projektregeln.
+
 ## Umsetzungsvertrag
 
 AiNetLinter erhält einen einzigen kompakten, agentengerechten MCP-Vertrag:
