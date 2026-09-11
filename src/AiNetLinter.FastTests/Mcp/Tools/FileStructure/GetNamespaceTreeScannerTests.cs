@@ -126,6 +126,63 @@ public sealed class GetNamespaceTreeScannerTests
     }
 
     [Fact]
+    public async Task ScanProjectNamespacesAsync_ExactLeafNamespaceRemainsStructuredRoot()
+    {
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\MySolution.slnx",
+            new ProjectSpec("App.Core", [("Leaf.cs", "namespace App.Leaf; public class LeafType {}")]));
+        var project = testSolution.Solution.Projects.Single();
+
+        var (_, payload) = await GetNamespaceTreeScanner.ScanProjectNamespacesAsync(
+            new NamespaceTreeScanParameters(project, "App.Leaf", 1, true, "all", 50, @"C:\virtual"),
+            CancellationToken.None);
+
+        var root = Assert.Single(payload.Namespaces!);
+        Assert.Equal("App.Leaf", root.Namespace);
+        Assert.Single(root.Types!);
+        Assert.Null(root.SubNamespaces);
+    }
+
+    [Fact]
+    public async Task ScanProjectNamespacesAsync_ExactRootKeepsDirectTypesAlongsideChildren()
+    {
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\MySolution.slnx",
+            new ProjectSpec("App.Core",
+            [
+                ("Root.cs", "namespace App.Root; public class RootType {}"),
+                ("Child.cs", "namespace App.Root.Child; public class ChildType {}"),
+            ]));
+        var project = testSolution.Solution.Projects.Single();
+
+        var (_, payload) = await GetNamespaceTreeScanner.ScanProjectNamespacesAsync(
+            new NamespaceTreeScanParameters(project, "App.Root", 2, true, "all", 50, @"C:\virtual"),
+            CancellationToken.None);
+
+        var root = Assert.Single(payload.Namespaces!);
+        Assert.Contains(root.Types!, type => type.Name == "RootType");
+        Assert.Contains(root.SubNamespaces!, child => child.Namespace == "App.Root.Child");
+    }
+
+    [Fact]
+    public async Task ScanProjectNamespacesAsync_EmptyExactNamespaceRemainsRootWithChildren()
+    {
+        using var testSolution = RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\MySolution.slnx",
+            new ProjectSpec("App.Core", [("Child.cs", "namespace App.Empty.Child; public class ChildType {}")]));
+        var project = testSolution.Solution.Projects.Single();
+
+        var (_, payload) = await GetNamespaceTreeScanner.ScanProjectNamespacesAsync(
+            new NamespaceTreeScanParameters(project, "App.Empty", 1, true, "all", 50, @"C:\virtual"),
+            CancellationToken.None);
+
+        var root = Assert.Single(payload.Namespaces!);
+        Assert.Equal("App.Empty", root.Namespace);
+        Assert.Empty(root.Types!);
+        Assert.Contains(root.SubNamespaces!, child => child.Namespace == "App.Empty.Child");
+    }
+
+    [Fact]
     public async Task ScanProjectNamespacesAsync_TrailingDotInNamespacePrefixMatchesCanonicalPrefix()
     {
         using var testSolution = RoslynTestSolutionFactory.CreateSolution(
@@ -252,7 +309,10 @@ public sealed class GetNamespaceTreeScannerTests
         Assert.Equal(3, payload.TotalCount);
         Assert.Equal(2, payload.ShownCount);
         Assert.NotNull(payload.Namespaces);
-        Assert.Equal(2, payload.Namespaces!.Count);
+        var root = Assert.Single(payload.Namespaces!);
+        Assert.Equal("App.Core", root.Namespace);
+        Assert.NotNull(root.SubNamespaces);
+        Assert.Equal(2, root.SubNamespaces!.Count);
     }
 
     [Fact]

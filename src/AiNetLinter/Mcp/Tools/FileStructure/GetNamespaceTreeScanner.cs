@@ -182,6 +182,14 @@ internal static class GetNamespaceTreeScanner
             ShownCount: shownTypes.Count,
             Truncated: truncated,
             Types: typeEntries,
+            Namespaces:
+            [
+                new NamespaceTreeNode(
+                    ns.ToDisplayString(),
+                    totalCount,
+                    typeEntries,
+                    DirectSubNamespaces(ns, projectTrees)),
+            ],
             TruncatedBy: truncated ? ["maxResults"] : null,
             Next: truncated ? new NamespaceTreeNext("request_detail", "maxResults erhöhen oder namespacePrefix/kind verfeinern.") : null);
 
@@ -207,6 +215,20 @@ internal static class GetNamespaceTreeScanner
         sb.Append($"[Hinweis: Unter '{namespacePrefix}' existieren {directSubNamespaces.Count} weitere Sub-Namespaces ({examples}) — nutze depth=2 oder includeTypes=false fuer den Namespace-Baum]");
     }
 
+    private static IReadOnlyList<NamespaceTreeNode>? DirectSubNamespaces(
+        INamespaceSymbol ns,
+        HashSet<SyntaxTree> projectTrees)
+    {
+        var nodes = ns.GetNamespaceMembers()
+            .Where(sub => HasAnySourceTypesInHierarchy(sub, projectTrees))
+            .OrderBy(sub => sub.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(sub => new NamespaceTreeNode(
+                sub.ToDisplayString(),
+                CollectSourceTypes(sub, projectTrees).Count()))
+            .ToList();
+        return nodes.Count == 0 ? null : nodes;
+    }
+
     private static (string Text, NamespaceTreePayload Payload) RenderNamespaceTree(
         NamespaceTreeScanParameters parameters,
         INamespaceSymbol startNs,
@@ -215,17 +237,48 @@ internal static class GetNamespaceTreeScanner
         var rootNodes = new List<NamespaceTreeNode>();
         var flatListForOutput = new List<(string DisplayName, int TypeCount, int Indent)>();
         var traverseContext = new NamespaceTreeTraverseContext(parameters, projectTrees, flatListForOutput);
+        var hasExactRoot = !string.IsNullOrWhiteSpace(parameters.NamespacePrefix);
+
+        if (hasExactRoot)
+        {
+            var directTypes = CollectSourceTypes(startNs, projectTrees)
+                .Where(type => SymbolKindClassifier.MatchesTypeKind(type, parameters.KindFilter))
+                .ToList();
+            flatListForOutput.Add((startNs.ToDisplayString(), directTypes.Count, 0));
+        }
 
         CollectNamespaceTreeNodes(
             startNs,
             traverseContext,
             currentDepth: 1,
             resultNodes: rootNodes,
-            currentIndent: 0);
+            currentIndent: hasExactRoot ? 1 : 0);
 
-        var totalCount = flatListForOutput.Count;
-        var shownList = flatListForOutput.Take(parameters.MaxResults).ToList();
-        var shownProjection = NamespaceTreeProjection.Take(rootNodes, parameters.MaxResults);
+        if (hasExactRoot)
+        {
+            var directTypes = CollectSourceTypes(startNs, projectTrees)
+                .Where(type => SymbolKindClassifier.MatchesTypeKind(type, parameters.KindFilter))
+                .ToList();
+            rootNodes =
+            [
+                new NamespaceTreeNode(
+                    startNs.ToDisplayString(),
+                    directTypes.Count,
+                    parameters.IncludeTypes
+                        ? directTypes.Select(type => ToTypeEntry(type, parameters.SolutionDir, projectTrees)).ToList()
+                        : null,
+                    rootNodes.Count > 0 ? rootNodes : null),
+            ];
+        }
+
+        // The requested namespace is context, not an additional result.  Its root
+        // node is still retained in the structured tree so exact queries are
+        // navigable even when it is a leaf.
+        var totalCount = flatListForOutput.Count - (hasExactRoot ? 1 : 0);
+        var shownList = flatListForOutput.Take(parameters.MaxResults + (hasExactRoot ? 1 : 0)).ToList();
+        var shownProjection = hasExactRoot
+            ? TakeExactRootProjection(rootNodes, parameters.MaxResults)
+            : NamespaceTreeProjection.Take(rootNodes, parameters.MaxResults);
         var truncated = totalCount > parameters.MaxResults;
 
         var sb = new StringBuilder();
@@ -262,6 +315,17 @@ internal static class GetNamespaceTreeScanner
             Next: truncated ? new NamespaceTreeNext("request_detail", "maxResults erhöhen oder depth/namespacePrefix verfeinern.") : null);
 
         return (sb.ToString(), payload);
+    }
+
+    private static (IReadOnlyList<NamespaceTreeNode> Nodes, int Count) TakeExactRootProjection(
+        IReadOnlyList<NamespaceTreeNode> rootNodes,
+        int maxResults)
+    {
+        var root = rootNodes.Single();
+        var children = root.SubNamespaces is null
+            ? (Nodes: (IReadOnlyList<NamespaceTreeNode>)[], Count: 0)
+            : NamespaceTreeProjection.Take(root.SubNamespaces, maxResults);
+        return ([root with { SubNamespaces = children.Nodes.Count > 0 ? children.Nodes : null }], children.Count);
     }
 
     private static void AppendNamespaceTreeSummary(

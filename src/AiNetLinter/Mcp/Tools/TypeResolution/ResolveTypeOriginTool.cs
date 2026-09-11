@@ -43,7 +43,7 @@ internal static class ResolveTypeOriginTool
             var compilation = await project.GetCompilationAsync(ct).ConfigureAwait(false);
             if (compilation is null) continue;
 
-            var result = SearchInCompilation(compilation, context, searchedAssemblies);
+            var result = SearchInCompilation(compilation, context, searchedAssemblies, project);
             if (result is not null) return result;
         }
 
@@ -65,7 +65,7 @@ internal static class ResolveTypeOriginTool
         var context = CreateContext(typeName, lease.CanonicalPath, lease.Context.References, isAssemblyTarget: true, ct);
         var compilation = lease.Context.Compilation;
         var searchedAssemblies = new List<string>();
-        var result = SearchInCompilation(compilation, context, searchedAssemblies);
+        var result = SearchInCompilation(compilation, context, searchedAssemblies, project: null);
         if (result is not null) return Task.FromResult(result);
 
         return Task.FromResult(NotFoundResult(context.TypeName, searchedAssemblies));
@@ -87,7 +87,7 @@ internal static class ResolveTypeOriginTool
 
         var context = CreateContext(typeName, fallbackPath, assemblyReferences, isAssemblyTarget: assemblyReferences is not null, ct);
         var searchedAssemblies = new List<string>();
-        var result = SearchInCompilation(compilation, context, searchedAssemblies);
+        var result = SearchInCompilation(compilation, context, searchedAssemblies, project: null);
         return result ?? NotFoundResult(context.TypeName, searchedAssemblies);
     }
 
@@ -106,12 +106,13 @@ internal static class ResolveTypeOriginTool
     private static CallToolResult? SearchInCompilation(
         Compilation compilation,
         ResolveContext context,
-        List<string> searchedAssemblies)
+        List<string> searchedAssemblies,
+        Project? project)
     {
         var direct = SearchDirectType(compilation, context);
         if (direct is not null)
         {
-            return BuildDirectResult(direct, compilation, context);
+            return BuildDirectResult(direct, compilation, context, project);
         }
 
         return SearchReferencedAssemblies(compilation, context, searchedAssemblies);
@@ -148,7 +149,7 @@ internal static class ResolveTypeOriginTool
                 var dllPath = (metadataRef as PortableExecutableReference)?.FilePath
                     ?? ResolvePathFromReferences(asm.Name, context.AssemblyReferences)
                     ?? asm.Name + ".dll";
-                return BuildSuccess(refType, asm.Name, dllPath, isSource: false, isAssemblyTarget: context.IsAssemblyTarget, searchedAssemblies);
+                return BuildSuccess(refType, dllPath, isSource: false, context, project: null, searchedAssemblies);
             }
         }
 
@@ -158,7 +159,8 @@ internal static class ResolveTypeOriginTool
     private static CallToolResult BuildDirectResult(
         INamedTypeSymbol type,
         Compilation compilation,
-        ResolveContext context)
+        ResolveContext context,
+        Project? project)
     {
         var isSource = SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, compilation.Assembly);
         var asmName = type.ContainingAssembly.Name;
@@ -176,7 +178,10 @@ internal static class ResolveTypeOriginTool
                 ?? asmName + ".dll";
         }
 
-        return BuildSuccess(type, asmName, path, isSource, context.IsAssemblyTarget, [asmName]);
+        var outputAssembly = isSource
+            ? context.IsAssemblyTarget ? context.FallbackPath : project?.OutputFilePath
+            : path;
+        return BuildSuccess(type, outputAssembly, isSource, context, project, [asmName]);
     }
 
     private static INamedTypeSymbol? FindWithArity(Compilation compilation, string name)
@@ -265,22 +270,37 @@ internal static class ResolveTypeOriginTool
 
     private static CallToolResult BuildSuccess(
         INamedTypeSymbol type,
-        string assemblyName,
-        string assemblyPath,
+        string? outputAssembly,
         bool isSource,
-        bool isAssemblyTarget,
+        ResolveContext context,
+        Project? project,
         IReadOnlyList<string> searched)
     {
         var origin = new TypeOriginInfoDto(
-            assemblyName,
-            assemblyPath,
             type.ToDisplayString(),
             FormatTypeKind(type.TypeKind),
-            isSource,
+            context.FallbackPath,
+            isSource ? project?.Name : null,
+            GetSourceLocations(type),
+            isSource ? (context.IsAssemblyTarget ? "assembly" : "source") : "reference",
+            outputAssembly,
             type.ContainingNamespace?.ToDisplayString() ?? "");
 
-        return SuccessResult(new ResolveTypeOriginResultDto(type.Name, true, origin, searched), isAssemblyTarget);
+        return SuccessResult(new ResolveTypeOriginResultDto(type.Name, true, origin, searched), context.IsAssemblyTarget);
     }
+
+    private static IReadOnlyList<TypeOriginSourceLocationDto> GetSourceLocations(INamedTypeSymbol type) =>
+        type.Locations
+            .Where(location => location.IsInSource && location.SourceTree?.FilePath is not null)
+            .Select(location =>
+            {
+                var span = location.GetLineSpan().StartLinePosition;
+                return new TypeOriginSourceLocationDto(location.SourceTree!.FilePath, span.Line + 1, span.Character + 1);
+            })
+            .OrderBy(location => location.Path, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(location => location.Line)
+            .ThenBy(location => location.Column)
+            .ToList();
 
     private static string FormatTypeKind(TypeKind kind) =>
         kind switch
@@ -322,15 +342,17 @@ internal static class ResolveTypeOriginTool
         }
 
         var origin = result.Origin;
-        var sourceLabel = origin.IsSource
+        var sourceLabel = origin.AssemblyOrigin is "source" or "assembly"
             ? (isAssemblyTarget ? "Dekompilierte Assembly" : "Projekt-Quellcode")
             : "Referenzierte Assembly";
         return $"""
             # Typ-Herkunft: `{result.TypeName}`
             - **Vollqualifizierter Name**: `{origin.FullName}`
             - **Symbol-Art**: `{origin.Kind}`
-            - **Assembly**: `{origin.AssemblyName}`
-            - **Dateipfad**: `{origin.AssemblyPath}`
+            - **Analyseziel**: `{origin.TargetPath}`
+            - **Projekt**: `{origin.ProjectName ?? "—"}`
+            - **Assembly-Herkunft**: `{origin.AssemblyOrigin}`
+            - **Output-Assembly**: `{origin.OutputAssembly ?? "—"}`
             - **Herkunft**: {sourceLabel}
             """;
     }

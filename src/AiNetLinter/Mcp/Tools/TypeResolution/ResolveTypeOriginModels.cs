@@ -4,12 +4,16 @@ using System.Collections.Generic;
 
 namespace AiNetLinter.Mcp.Tools.TypeResolution;
 
+internal sealed record TypeOriginSourceLocationDto(string Path, int Line, int Column);
+
 internal sealed record TypeOriginInfoDto(
-    string AssemblyName,
-    string AssemblyPath,
     string FullName,
     string Kind,
-    bool IsSource,
+    string TargetPath,
+    string? ProjectName,
+    IReadOnlyList<TypeOriginSourceLocationDto> SourceLocations,
+    string AssemblyOrigin,
+    string? OutputAssembly,
     string ContainingNamespace);
 
 internal sealed record ResolveTypeOriginResultDto(

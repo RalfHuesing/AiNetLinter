@@ -437,6 +437,39 @@ public sealed partial class McpLiveRepositoryTests
     }
 
     [Fact]
+    public async Task LiveDogfood_ExactNamespaceAndTypeOrigin_ReturnCanonicalEvidence()
+    {
+        var namespaceResult = await _fixture.Client.CallToolAsync(
+            "get_namespace_tree",
+            new Dictionary<string, object?>
+            {
+                ["project"] = "AiNetLinter",
+                ["namespacePrefix"] = "AiNetLinter.Mcp.Tools.TestContext",
+                ["depth"] = 1,
+                ["includeTypes"] = true,
+            });
+        Assert.NotEqual(true, namespaceResult.IsError);
+        var namespaceJson = JsonNode.Parse(namespaceResult.StructuredContent!.Value.GetRawText())!.AsObject();
+        var namespacePayload = namespaceJson["namespaces"]!.AsArray();
+        Assert.Single(namespacePayload);
+        var root = namespacePayload[0]!.AsObject();
+        Assert.Equal("AiNetLinter.Mcp.Tools.TestContext", (string?)root["namespace"]);
+        Assert.NotNull(root["types"]);
+
+        var typeOrigin = await _fixture.Client.CallToolAsync(
+            "resolve_type_origin",
+            new Dictionary<string, object?> { ["typeName"] = "AiNetLinter.Mcp.AnalysisSymbolIdentity" });
+        Assert.NotEqual(true, typeOrigin.IsError);
+        var origin = JsonNode.Parse(typeOrigin.StructuredContent!.Value.GetRawText())!
+            .AsObject()["resolveTypeOrigin"]!.AsObject()["origin"]!.AsObject();
+        Assert.NotNull(origin["targetPath"]);
+        Assert.NotNull(origin["projectName"]);
+        Assert.NotNull(origin["sourceLocations"]);
+        Assert.Equal("source", (string?)origin["assemblyOrigin"]);
+        Assert.EndsWith(".dll", (string?)origin["outputAssembly"], StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task LiveDogfood_FindDuplicates_StructuralMode_ReturnsValidSchema()
     {
         var result = await _fixture.Client.CallToolAsync(

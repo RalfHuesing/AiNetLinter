@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
@@ -62,6 +63,14 @@ public sealed class ResolveTypeOriginTests
         Assert.Contains("interface", text);
         Assert.Contains("Projekt-Quellcode", text);
         Assert.Contains("C:/App/App.csproj", text);
+
+        using var payload = JsonDocument.Parse(result.StructuredContent!.Value.GetRawText());
+        var origin = payload.RootElement.GetProperty("resolveTypeOrigin").GetProperty("origin");
+        Assert.Equal("C:/App/App.csproj", origin.GetProperty("targetPath").GetString());
+        Assert.False(origin.TryGetProperty("projectName", out _));
+        Assert.Equal(1, origin.GetProperty("sourceLocations").GetArrayLength());
+        Assert.Equal("source", origin.GetProperty("assemblyOrigin").GetString());
+        Assert.False(origin.TryGetProperty("outputAssembly", out _));
     }
 
     [Fact]
@@ -92,6 +101,30 @@ public sealed class ResolveTypeOriginTests
         Assert.Contains(depDllPath, text);
         Assert.Contains("interface", text);
         Assert.Contains("Referenzierte Assembly", text);
+    }
+
+    [Fact]
+    public void ResolveTypeOrigin_SourcePartialTypeReportsEverySourceLocation()
+    {
+        var references = new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) };
+        var compilation = CSharpCompilation.Create(
+            "App",
+            [
+                CSharpSyntaxTree.ParseText("namespace App; public partial class Split {}", path: @"C:\App\One.cs"),
+                CSharpSyntaxTree.ParseText("namespace App; public partial class Split {}", path: @"C:\App\Two.cs"),
+            ],
+            references,
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var result = ResolveTypeOriginTool.ExecuteCompilation(
+            compilation, "App.Split", @"C:\App\App.slnx", null, CancellationToken.None);
+
+        using var payload = JsonDocument.Parse(result.StructuredContent!.Value.GetRawText());
+        var locations = payload.RootElement
+            .GetProperty("resolveTypeOrigin").GetProperty("origin").GetProperty("sourceLocations");
+        Assert.Equal(2, locations.GetArrayLength());
+        Assert.Equal(@"C:\App\One.cs", locations[0].GetProperty("path").GetString());
+        Assert.Equal(@"C:\App\Two.cs", locations[1].GetProperty("path").GetString());
     }
 
     [Fact]
@@ -152,6 +185,13 @@ public sealed class ResolveTypeOriginTests
         Assert.Contains("class", text);
         Assert.Contains("TargetProbe", text);
         Assert.Contains("Dekompilierte Assembly", text);
+
+        using var payload = JsonDocument.Parse(result.StructuredContent!.Value.GetRawText());
+        var origin = payload.RootElement.GetProperty("resolveTypeOrigin").GetProperty("origin");
+        Assert.Equal(assemblyPath, origin.GetProperty("targetPath").GetString());
+        Assert.False(origin.TryGetProperty("projectName", out _));
+        Assert.Equal("assembly", origin.GetProperty("assemblyOrigin").GetString());
+        Assert.Equal(assemblyPath, origin.GetProperty("outputAssembly").GetString());
     }
 
     [Fact]
