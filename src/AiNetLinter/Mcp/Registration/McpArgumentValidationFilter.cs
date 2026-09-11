@@ -66,6 +66,7 @@ internal static class McpArgumentValidationFilter
             ["inspect_assembly"] = Set("maxResults", "maxMembers", "maxResponseBytes"),
             ["find_assembly_extensions"] = Set("maxResults", "maxResponseBytes"),
             ["get_assembly_context"] = Set("maxResults", "maxResponseBytes"),
+            ["get_feature_context"] = Set("maxResponseBytes"),
         };
 
     private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> MaximumLimitArgumentsByTool =
@@ -81,7 +82,7 @@ internal static class McpArgumentValidationFilter
             ["get_hotspots"] = Limits(("maxResults", 200)),
             ["search_pattern"] = Limits(("maxResults", 2_000), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["metrics_tree"] = Limits(("depth", 5)),
-            ["get_feature_context"] = Limits(("maxCallers", 50), ("maxTests", 50)),
+            ["get_feature_context"] = Limits(("maxCallers", 50), ("maxTests", 50), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["get_test_context"] = Limits(("maxResults", 100)),
             ["get_violations"] = Limits(("contextLines", 5)),
             ["search_assembly"] = Limits(("maxResults", 1_000), ("maxFiles", 2_000), ("contextLines", 5), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),

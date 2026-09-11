@@ -337,7 +337,7 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string symbolIdentifier, int maxCallers = 10, int maxTests = 10, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string symbolIdentifier, int maxCallers = 10, int maxTests = 10, int maxResponseBytes = FeatureContextResponseBudget.DefaultMaxResponseBytes, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
@@ -349,8 +349,12 @@ internal static class AnalysisToolRegistrations
                         new FeatureContextOptions(
                             SymbolIdentifier: symbolIdentifier,
                             MaxCallers: maxCallers,
-                            MaxTests: maxTests),
-                        ct));
+                            MaxTests: maxTests,
+                            MaxResponseBytes: maxResponseBytes),
+                        ct),
+                    new ProjectAnalysisExecutionOptions(
+                        maxResponseBytes,
+                        FeatureContextResponseBudget.ApplyFinal));
             },
             TargetPathToolRegistrationOptions.SourceReadOnlyTool("get_feature_context", GetFeatureContextDescription)));
     }
@@ -362,7 +366,7 @@ internal static class AnalysisToolRegistrations
         "Der Caller-Bereich basiert auf statischen Referenzen/Call-Sites; jede Call-Site enthält in StructuredContent " +
         "additiv callerId und callerLocation fuer direkte Folge-Tools; der Testbereich basiert auf statischen Testkandidaten. " +
         "maxCallers: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Limit (Default 10, Cap 50). maxTests: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), maxTests bleibt ein Dateilimit (Default 10, Cap 50); " +
-        "Testmethoden sind zusaetzlich je Datei auf 50 und insgesamt auf 200 begrenzt.";
+        "Testmethoden sind zusaetzlich je Datei auf 50 und insgesamt auf 200 begrenzt. maxResponseBytes: gemeinsames UTF-8-Budget fuer Text, StructuredContent und Navigation (Default 32768, Cap 65536); kuerzt nur vollstaendige Feature-/Caller-/Test-/Violation-Einheiten und meldet ein zu kleines Mindestbudget.";
 
     private static void AddGetTestContext(
         McpServerPrimitiveCollection<McpServerTool> tools,

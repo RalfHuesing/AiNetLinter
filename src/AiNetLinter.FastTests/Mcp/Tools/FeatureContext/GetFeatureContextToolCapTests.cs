@@ -47,7 +47,8 @@ public sealed class GetFeatureContextToolCapTests
                 "Service.Execute",
                 IncludeMetrics: false,
                 IncludeViolations: false,
-                MaxTests: maxTests),
+                MaxTests: maxTests,
+                MaxResponseBytes: 64 * 1024),
             CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
@@ -85,9 +86,14 @@ public sealed class GetFeatureContextToolCapTests
             text,
             StringComparison.Ordinal);
         Assert.Contains(
-            $"{payload.Tests.DisplayedTestMethods} von {testFileCount * methodsPerFile} Testmethoden",
+            $"{payload.Tests.TestFiles.Count} von {payload.Tests.TotalTestFiles} Testdateien zurückgegeben; {payload.Tests.DisplayedTestMethods} konkrete Testmethoden sichtbar. Insgesamt {payload.Tests.TotalMatchingTests} Testkandidaten gefunden.",
             text,
             StringComparison.Ordinal);
+        Assert.All(payload.Tests.TestFiles, file =>
+            Assert.Contains(
+                $"{file.TestMethods.Count} von {file.TotalMatchingMethods} konkrete Testmethoden",
+                text,
+                StringComparison.Ordinal));
         if (wireBudgetTruncated) Assert.Contains("Wire-Budget", text, StringComparison.Ordinal);
     }
 

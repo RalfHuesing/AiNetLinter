@@ -23,6 +23,7 @@ internal static class LinterErrorCodes
     internal const string SymbolNotFound      = "SYMBOL_NOT_FOUND";
     internal const string AmbiguousSymbol     = "AMBIGUOUS_SYMBOL";
     internal const string InvalidArgument     = "INVALID_ARGUMENT";
+    internal const string ResponseBudgetTooSmall = "RESPONSE_BUDGET_TOO_SMALL";
     internal const string AssemblyTargetUnsupported = "ASSEMBLY_TARGET_UNSUPPORTED";
     internal const string ProjectTargetUnsupported  = "PROJECT_TARGET_UNSUPPORTED";
     internal const string InvalidAssembly    = "INVALID_ASSEMBLY";

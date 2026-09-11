@@ -55,10 +55,7 @@ internal static class GetFeatureContextTool
                 state.HandoffSymbolIdentity);
             var payload = await FeatureContextScanner.ScanAsync(symbol, scanContext, ct);
 
-            var markdown = FeatureContextFormatter.FormatReport(payload);
-            return McpToolResults.ApplyCompositeWireBudget(
-                McpToolResults.Text(markdown, payload),
-                ["declaration", "metrics", "impact", "testContext", "violations"]);
+            return FeatureContextResponseBudget.Apply(payload, options.MaxResponseBytes);
         }
         catch (OperationCanceledException exception)
         {

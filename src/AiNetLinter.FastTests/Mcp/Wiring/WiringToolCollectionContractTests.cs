@@ -174,7 +174,7 @@ public sealed class WiringToolCollectionContractTests
         Assert.DoesNotContain("\"symbol\"", featureContext.InputSchema.ToString(), StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier", GetRequiredProperties(featureContext.InputSchema));
         Assert.Equal(
-            new[] { "maxCallers", "maxTests", "symbolIdentifier", "targetPath" },
+            new[] { "maxCallers", "maxResponseBytes", "maxTests", "symbolIdentifier", "targetPath" },
             GetProperties(featureContext.InputSchema).OrderBy(name => name, StringComparer.Ordinal));
         Assert.DoesNotContain("includeCallers", GetProperties(featureContext.InputSchema));
         Assert.DoesNotContain("includeTests", GetProperties(featureContext.InputSchema));

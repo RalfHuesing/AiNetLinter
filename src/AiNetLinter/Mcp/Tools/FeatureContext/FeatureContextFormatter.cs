@@ -141,7 +141,7 @@ internal static class FeatureContextFormatter
         var header = $"## 4. Test-Kontext (statische Testkandidaten: {tests.TotalTestFiles} Testdateien, {tests.TotalMatchingTests} Testkandidaten, Status: {tests.Completeness})";
         sb.AppendLine(header);
         sb.AppendLine($"- **Evidenzgrenze:** `{tests.EvidenceBoundary}`");
-        sb.AppendLine($"- **Counts:** {tests.TestFiles.Count} von {tests.TotalTestFiles} Testdateien und {tests.TotalMatchingTests} Testkandidaten zurückgegeben.");
+        sb.AppendLine($"- **Counts:** {tests.TestFiles.Count} von {tests.TotalTestFiles} Testdateien zurückgegeben; {tests.DisplayedTestMethods} konkrete Testmethoden sichtbar. Insgesamt {tests.TotalMatchingTests} Testkandidaten gefunden.");
 
         if (tests.TestFiles.Count == 0)
         {

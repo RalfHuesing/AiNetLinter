@@ -18,7 +18,8 @@ internal sealed record FeatureContextOptions(
     bool IncludeMetrics = true,
     bool IncludeViolations = true,
     int MaxCallers = 10,
-    int MaxTests = 10
+    int MaxTests = 10,
+    int MaxResponseBytes = FeatureContextResponseBudget.DefaultMaxResponseBytes
 )
 {
     public string EffectiveSymbol => SymbolIdentifier ?? string.Empty;
