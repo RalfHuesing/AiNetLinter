@@ -198,13 +198,11 @@ fehlende, nicht unterstützte oder auf ein Verzeichnis zeigende Pfade liefern
 `invalid_argument` mit Feldpfad und nächstem Schritt. `--path` und `--config`
 sind im MCP-Modus harte Fehler und bleiben dem Batch-Modus vorbehalten.
 
-Jede zielgebundene Toolantwort enthält additiv unter
-`structuredContent.navigation` den gemeinsamen Handoff-Kern:
-`target` (`targetPath`, `analysisRoot`, `fingerprint`), `origin`, `snapshot`,
-`capabilities` (`navigation`/`lint`), `operationStatus`, `result`,
-`completeness` und `next`. Das fachliche Payload bleibt am Root erhalten.
-Zielgebundene Health-Antworten verwenden denselben Block; der globale
-Health-Modus und ungebundenes Observability-Feedback bleiben ohne Target.
+Jede zielgebundene Toolantwort enthält unter `structuredContent.navigation` den
+gemeinsamen finalen Envelope: `contractVersion`, `target`, `snapshot`, `status`,
+`scope` und `next`. Das fachliche Payload bleibt am Root erhalten. Zielgebundene
+Health-Antworten verwenden denselben Block; der globale Health-Modus und
+ungebundenes Observability-Feedback bleiben ohne Target.
 
 Bei einer zielgebundenen `get_server_health`-Antwort beschreibt
 `navigation.snapshot` den Snapshot, auf dem ein nachfolgender Analyseaufruf
@@ -218,19 +216,16 @@ auch bei `partial` oder `degraded` einen frischen Snapshot melden, sofern der
 Content-Hash und die analysierbare Generation vorhanden sind; bei `loading`,
 `failed` oder fehlendem Hash bleibt der Snapshot `unavailable` bzw. `fresh=false`.
 
-Kopierbare Folgecalls verwenden ausschließlich Einträge mit
-`handoff=true` und deren `id`-Wert aus `structuredContent`. Source-IDs binden
-kanonischen Solution-Pfad, Source-Snapshot und DocCommentId; Assembly-IDs binden
-kanonischen Assembly-Pfad, Content-Hash und DocCommentId. FQNs, DocCommentIds,
-Datei-/Positionsangaben und sichtbare Markdown-Zeilen sind keine Folgeinputs.
-Das interne Cache-/Lease-Generation-Detail ist nie Bestandteil einer Handoff-ID.
-Ein fremdes Target liefert `TARGET_MISMATCH`, ein veralteter Snapshot
-`STALE_SNAPSHOT`; beide Fälle sind von `SYMBOL_NOT_FOUND` getrennt.
+Kopierbare Folgecalls verwenden ausschließlich den `id`-Wert aus
+`structuredContent`. IDs binden Target, Snapshot und Symbolidentität. FQNs,
+DocCommentIds, Datei-/Positionsangaben und sichtbare Markdown-Zeilen sind keine
+Folgeinputs. Ein fremdes Target liefert `TARGET_MISMATCH`, ein veralteter
+Snapshot `STALE_SNAPSHOT`; beide Fälle sind von `SYMBOL_NOT_FOUND` getrennt.
 
-Ein recoverable Symbol-Miss wird im gemeinsamen Block als
-`operationStatus=symbol_not_found`, `result.available=false` und
-`completeness=not_applicable` mit `next.kind=refine_scope` projiziert. Ein
-erfolgreicher, geprüfter Scope ohne Treffer bleibt dagegen `empty`.
+Ein recoverable Symbol-Miss wird im Envelope mit
+`status.operation=symbol_not_found`, `status.completeness=not_applicable` und
+`next.kind=refine_scope` projiziert. Ein erfolgreicher, geprüfter Scope ohne
+Treffer bleibt dagegen `empty`.
 
 Für Source ist die übergebene Solution bindend. Regeln werden ausschließlich
 aus der optionalen Datei `ainetlinter-rules.json` direkt neben ihr gelesen;
@@ -318,9 +313,9 @@ Fehler), bleibt der Server trotzdem verfügbar — der adressierte Tool-Call lie
 
 Der Server schickt bei `initialize` und modernem `server/discover` denselben zentralen `ServerInstructions`-Text an den Agent. Er enthält nur globale Regeln: den `targetPath`-Vertrag, den optionalen Verweis auf den einmaligen Bootstrap über `ainetlinter://agent-guide`, die C#-Symbolgraph-Grenze mit `search_pattern`-Fallback, die Sufficiency-/Truncation-Regel und die `isError`-Policy. Der vollständige Bootstrap wird nicht bei jeder Discovery übertragen. Die vollständigen Tool- und Parameterschemas bleiben in `tools/list`; der Zielstatus steht in der Overview-Resource.
 
-Das Engineering-Budget für diesen globalen Text beträgt 2.557 UTF-8-Bytes und
-wird durch Tests mit `Encoding.UTF8.GetByteCount` abgesichert; daraus wird keine
-exakte Tokenersparnis abgeleitet.
+Der globale Text ist auf höchstens 1.200 UTF-8-Bytes begrenzt. Tool-spezifische
+Parameter, Defaults und Grenzen sind deshalb ausschließlich dem aktuellen
+`tools/list` zu entnehmen.
 
 ### Tool-Annotations
 
@@ -333,11 +328,6 @@ Reihenfolge). Die Hints beschreiben erwartete Seiteneffekte und die geschlossene
 Systemgrenze; sie sind keine Zugriffssteuerung und keine Sicherheitsgarantie und
 ersetzen keine Berechtigungs- oder Pfadprüfung. `initialize` und modernes `server/discover` übertragen für
 `tools/list` dieselben Annotationen.
-
-Die Annotationen vergrößern den gemessenen `initialize`-`tools/list`-Payload von 20.836
-auf 26.887 UTF-8-Bytes (Delta +6.051 Bytes, Baseline-Messung 2026-08-20; Messung
-über `McpPayloadMeasurement`). Der moderne Payload beträgt in derselben Prüfung
-27.034 UTF-8-Bytes. Daraus wird keine Tokenersparnis abgeleitet.
 
 ### Tool-Referenz
 
@@ -392,20 +382,20 @@ Source-backed Checkout-/Snapshot-Erzeugung und Decompilation bleiben read-only.
 | `get_assembly_context` | `targetPath` (Pflicht, absoluter vorhandener `.dll`- oder `.exe`-Pfad), `symbolIdentifier?`, optionale Abschnitte für Metrics, References, Callers, Impact, Body und Class Structure, `maxResults?` (Default 100, Cap 1000; `0` = Default, negative Werte ungültig), `maxBodyLines?` (Default 80, Hard-Cap 1000), `maxCallers?` (Default 10, Hard-Cap 200), `depth?` (Default 1, Hard-Cap 3 für Caller/Impact), `topN?` (Default 10, Hard-Cap 200), `maxResponseBytes?`, `detailLevel?` (`compact`, `standard`, `full`) und `continuationToken?` | Kompakter Composite-Vertrag mit stabiler `contextId`, Identität, Herkunft, Scope, Completeness und `assemblyAnalysis`. `totalCount`, `returnedCount`, `truncatedBy` und genau ein `continuationToken` beschreiben begrenzte Abschnitte; `isTruncated` wird nicht veröffentlicht. Die vier positiv begrenzten Abschnitts-Limits `maxBodyLines`, `maxCallers`, `depth` und `topN` müssen mindestens `1` sein; `0` und negative Werte sowie Werte oberhalb des jeweiligen Hard-Caps liefern vor dem Dispatch feldgenau `INVALID_ARGUMENT`. | nein | ja |
 | `search_assembly` | `targetPath` (Pflicht, absoluter vorhandener `.dll`- oder `.exe`-Pfad), `pattern?`, `isRegex?`, `searchKind?` (`text` Default, `data_access`, `external_calls`), `declarationOnly?` (Default `false`), `kind?` (`method`, `type`, `property`), `maxResults?` (Default 50, Cap 1000; `0` = Default, negative Werte ungültig), `maxFiles?`, `contextLines?` (Cap 5), `fileFilter?` (Regex), `maxResponseBytes?`, `continuationToken?` | Read-only Suche im verifizierten dekompilierten SourceRoot. `declarationOnly=true` schließt Treffer in Kommentaren, Strings und XML-Docs aus; `kind` schränkt auf Symbolarten ein. `text` benötigt ein eigenes Pattern; `data_access` und `external_calls` liefern ohne Pattern sichtbare eingebaute Regexe für typische Datenbank-/Datei-/Transaktions- bzw. HTTP-/RPC-/Socket-/Prozessaufrufe. `structuredContent.assemblySearch` enthält relative Trefferpfade, stabile `id`, Matchbereiche, Kontext, `totalCount`, `returnedCount`, `completeness`, `truncatedBy` und genau ein `continuationToken`; der gemeinsame `analysis`-Block enthält Ursprung, Snapshot und Source-Policy. | nein | ja |
 | `resolve_type_origin` | `typeName` (Pflicht), `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad) | Ermittelt deterministisch in < 100 ms den einfachen Assembly-Namen, absoluten DLL-Pfad auf der Festplatte, vollqualifizierten Typnamen und Symbol-Kind über Roslyn-Metadatenreferenzen. | ja | nein |
-| `find_implementations` | `symbolIdentifier` (kanonische `handoff=true`-ID aus `structuredContent`), `maxResults?` (Default 50), `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad) | Findet konkrete Implementierungen und Overrides von Interfaces, abstrakten Klassen, virtuellen Methoden oder Properties in Quellcode-Projekten oder dekompilierten Assemblies. Jeder Treffer weist `handoff`, `id`, Target-/Snapshotbindung, Symbolart und erlaubte Folge-Tools aus. | ja | ja |
-| `find_symbol` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `namePatterns` (Array von Namens-Mustern), max. 10 Patterns pro Call; unterstützt Substrings, Wildcards `*` und `?`, punktseparierte Pfade wie `Type.Member` sowie `Method()`; `kind?` (`class`/`method`/`property`/`interface`/`record`/`struct`/`enum`/`delegate`), `maxResults?` (Default 50), `includeReferences?` (Default `false`; bei einem Assembly-Target bounded Referenz-Assemblies durchsuchen) | Fundstellen als `Datei:Zeile - Kind: Signatur` je Pattern; StructuredContent liefert immer `FindSymbolBatchDto` (`results: [{ namePattern, matches: [...] }]`); bei 0 Treffern schlaegt das Tool aehnliche Symbole im Projekt vor; mit `includeReferences=true` enthalten Treffer `origin` und das Payload eine begrenzte `navigation`-Zusammenfassung | ja | ja |
-| `find_references` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifier` (kanonische `handoff=true`-ID aus `structuredContent`), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3), `includeReferences?` (Default `false`; bei einem Assembly-Target bounded Referenz-Assemblies traversieren) | Alle Aufrufstellen; jede Zeile weist `handoff`, kopierbare `id`, Target-/Snapshotbindung, Symbolart und erlaubte Folge-Tools aus. `completeness` enthält Tiefe, Counts und getrennte Trunkierungsgründe. | ja | ja |
-| `get_call_tree` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifier` (kanonische `handoff=true`-ID aus `structuredContent`), `depth?` (Default 2, hard cap 5), `format?` (`ascii` Default oder `mermaid`), `topN?` (Default 10, Fan-Out-Kappung pro Ebene), `direction?` (`incoming` Default, `outgoing` oder `both`), `includeReferences?` (Default `false`), `includeBcl?` (Default `false`) | Echter Aufrufer- oder Aufgerufene-Baum; jeder Symbolknoten weist `handoff`, kopierbare `id`, Target-/Snapshotbindung, Symbolart und erlaubte Folge-Tools aus. Nicht auflösbare Blätter sind explizit `handoff=false`. | ja | ja |
+| `find_implementations` | `symbolIdentifier` (ID aus `structuredContent`), `maxResults?` (Default 50), `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad) | Findet konkrete Implementierungen und Overrides. Sichtbare Einträge enthalten nur im StructuredContent stabile IDs für Folgeaufrufe. | ja | ja |
+| `find_symbol` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `namePatterns` (Array von Namens-Mustern), max. 10 Patterns pro Call; unterstützt Substrings, Wildcards `*` und `?`, punktseparierte Pfade wie `Type.Member` sowie `Method()`; `kind?` (`class`/`method`/`property`/`interface`/`record`/`struct`/`enum`/`delegate`), `maxResults?` (Default 50), `scopeType?`, `includeGenerated?`, `includeReferences?` (Default `false`; bei einem Assembly-Target bounded Referenz-Assemblies durchsuchen), `maxResponseBytes?` | Fundstellen und strukturierte Treffer. Scope, Generated-Opt-in und Budget begrenzen die sichtbare Menge; `status.completeness` und `next` beschreiben Trunkierung. | ja | ja |
+| `find_references` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifier` (ID aus `structuredContent`), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3), `scopeType?`, `includeGenerated?`, `includeReferences?` (Default `false`), `maxResponseBytes?` | Statische Aufrufstellen mit IDs ausschließlich im StructuredContent. Scope, Tiefe und Budget bestimmen die sichtbaren Einträge; `status.completeness` nennt Trunkierungsgründe. | ja | ja |
+| `get_call_tree` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifier` (ID aus `structuredContent`), `depth?` (Default 2, hard cap 5), `format?` (`ascii` Default oder `mermaid`), `topN?` (Default 10), `direction?`, `scopeType?`, `includeGenerated?`, `includeReferences?`, `includeBcl?`, `maxResponseBytes?` | Statischer Graph mit `nodes` und `edges`. Scope, Generated-Opt-in, Tiefe, Fan-out und Budget bestimmen die sichtbaren ganzen Kanten; `status.completeness` und `next` zeigen Begrenzungen. | ja | ja |
 | `get_impact` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `gitRef?` (Git-Commit-Ref; ohne jeden Parameter aufgerufen = Standardfall: uncommittete Änderungen) **oder** `symbolIdentifier?` (exklusiv!), `maxResults?` (mindestens 1; `0` oder negative Werte = recoverable `INVALID_ARGUMENT`, Default 50), `depth?` (Symbol-Branch: mindestens 1; `0` oder negative Werte = recoverable `INVALID_ARGUMENT`, Default 1, hard cap 3; im gesamten Git-Branch (callers UND change-context) wirkungslos und auch bei `0` zulässig), `detailLevel?` (`"callers"` Default oder `"change-context"`, case-insensitive; nur im Git-Diff-Modus, nie zusammen mit `symbolIdentifier`), `maxChangedSymbols?` (Default 20, Cap 100; `0` = keine explizite Begrenzung, intern Default), `maxTestsPerSymbol?` (Default 10, Cap 50; `0` = keine explizite Begrenzung, intern Default). Bei einem Assembly-Target ausschließlich `symbolIdentifier`; kein öffentliches `includeReferences` verwenden. | `callers` (Default): betroffene Call-Sites; der Symbol-Branch verwendet für jede Tiefe dieselbe `callSites`/`completeness`-Struktur wie `find_references`. Bei Assembly-Zielen ergänzt der gemeinsame Wrapper ein `analysis`-Objekt mit Target, Herkunft, Snapshot, Status und Vollständigkeit; `navigation`/`origin` werden nicht als `get_impact`-eigene Call-Site-Struktur ausgegeben. `change-context`: strukturiertes Objekt mit geänderten Dateien und Symbolen, Call-Sites, statisch zugeordneten Tests, diffbezogenen Violations, empfohlenen `dotnet test`-Befehlen und Completeness-Metadaten (siehe Detailabschnitt unten) | ja | ja |
-| `get_type_hierarchy` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifier` (kanonische `handoff=true`-ID aus `structuredContent`), `maxResults?` (Default 50, nur für abgeleitete/implementierende Typen) | Basisklassen, implementierte Interfaces und abgeleitete/implementierende Typen; jede Strukturzeile weist `handoff=true` mit kopierbarer `id` oder explizit `handoff=false` aus. | ja | ja (nur abgeleitete/implementierende Typen) |
+| `get_type_hierarchy` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifier` (ID aus `structuredContent`), `maxResults?` (Default 50), `scopeType?`, `includeGenerated?`, `maxResponseBytes?` | Basisklassen, Interfaces sowie abgeleitete und implementierende Typen; sichtbare Einträge enthalten nur im StructuredContent stabile IDs. | ja | ja |
 | `dependency_graph` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `filePath?` (ganze Datei) **oder** `symbolIdentifier?` (ein Typ, engerer Scope, exklusiv!), `direction?` (`incoming`/`outgoing`/`both`, Default `both`), `depth?` (Default 1, hard cap 3, transitiv auf Datei-Ebene, hart begrenzt auf 150 besuchte Dateien), `maxResults?` (Default 50) | Datei-zu-Datei-Abhängigkeitskanten (annotiert mit den zugrunde liegenden Typnamen und Referenzzahl), abgeleitet aus echten `SemanticModel`-Typreferenzen statt `using`-Direktiven; optional Projekt-Referenzen des Zielprojekts | ja | ja |
-| `get_file_skeleton` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `filePaths` (Array von Pfaden fuer Batch in 1 Turn), `maxResponseBytes?` (Default 0, Cap 65.536; negative Werte/Überschreitung feldgenau `INVALID_ARGUMENT`) | Struktur-Skelett (Typen, Signaturen ohne Bodies) als bestehendes Markdown und additiv als `structuredContent.files[].types[].members[]`. Typen und Member enthalten stabile `id`-Werte, die direkt an `get_symbol_body.symbolIdentifiers` übergeben werden können; die Payload enthält zudem Pfad, Namespace, Symbolart, Signatur und Member-Metadaten. Bei gesetztem Budget gilt die kombinierte finale UTF-8-Wire-Nutzlast des Textes inklusive Navigation, StructuredContent und Trunkierungsfooter; Text und Payload zeigen dieselbe sichtbare Typ-/Datei-Teilmenge. | ja | ja |
-| `get_class_structure` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifier` (kanonische `handoff=true`-ID aus `structuredContent`), `sortBy?` (`lines` [Default], `kind`, `name`), `maxMembers?` (Default 50, Cap 200), `maxResponseBytes?` (Default 0, Cap 65.536; negative Werte und positive Werte unter 512 sind feldgenau `INVALID_ARGUMENT`) | Tabellarische Übersicht über alle Member eines Typs; jede Memberzeile weist `handoff`, `id`, Target-/Snapshotbindung, Symbolart und erlaubte Folge-Tools auf. `maxResponseBytes` misst die kombinierte finale UTF-8-Wire-Nutzlast aus Text, StructuredContent, Navigation und Trunkierungsfooter. Budget- oder Membertrunkierung projiziert Text und StructuredContent auf dieselben Member und weist `totalMemberCount`, `shownMemberCount`, `truncatedBy` und `next` aus; nach Navigation erfolgt eine abschließende Budgetprüfung. | ja | nein |
+| `get_file_skeleton` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `filePaths` (Array von Pfaden fuer Batch in 1 Turn), `maxResponseBytes?` (Default 0, Cap 65.536) | Struktur-Skelett (Typen, Signaturen ohne Bodies). `structuredContent.files[].types[].members[]` enthält stabile IDs für `get_symbol_body.symbolIdentifiers`; das Budget hält Text, StructuredContent und finalen Envelope in derselben sichtbaren Teilmenge. | ja | ja |
+| `get_class_structure` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifier` (ID aus `structuredContent`), `sortBy?`, `maxMembers?`, `maxResponseBytes?` | Tabellarische Memberübersicht. `maxResponseBytes` begrenzt Text, StructuredContent und finalen Envelope gemeinsam; die sichtbaren Member und IDs bleiben synchron. | ja | nein |
 | `get_index_scope` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad) | Dynamische Aufschlüsselung jeder tatsächlich vorhandenen Dateiendung in den Projektverzeichnissen (generierte Pfade und Null-Einträge entfallen); `.cs` ist als einzige Kategorie vollständig vom Symbolgraphen abgedeckt. `structuredContent.routing` und jeder Breakdown-Eintrag geben für C# `find_symbol(pattern)` bzw. für Nicht-C# `search_pattern(pattern, scopeType, fileFilter)` maschinenlesbar an; Status-/Bindungsfehler werden als klarer Status ausgegeben. | nein | nein |
 | `get_hotspots` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `maxResults?` (Default 50, Cap 200), `minLinePercentage?` (Default 80, Bereich 0–100), `scopeType?` (`production` Default, `tests` oder `all`) | `.cs`-Dateien des gewählten Scopes ab der angeforderten Auslastungsschwelle; `StructuredContent` enthält nur `critical`/`warning`-Dateien (kein `ok`-Eintrag pro Datei), bleibt nach absteigender Zeilenzahl und Pfad deterministisch sortiert und weist `totalHotspots`, `shownHotspots`, `truncated`, die effektiven Parameter sowie die Einträge aus | nein | ja |
 | `metrics_tree` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `root?` (Teilbaum, Default Solution-Root), `mode?` (`code_size` [Default], `comment_density`, `violation_density`, `complexity`; fehlend/null wird zu `code_size`), `depth?` (1-5, Default 1), `topN?` (Default 10), `fileFilter?` (Regex auf den Pfad) | ASCII-Baum und `structuredContent.tree` werden aus derselben Top-N-pro-Ebene-Projektion erzeugt. `structuredContent` enthält zusätzlich `totalCount`, `returnedCount`, `completeness` (`status`, Counts, `truncated`, `truncatedBy`) und `next`; bei Trunkierung nennt der Text die Anzahl der ausgelassenen Knoten. | nein (zwei der vier Modi sind reiner Datei-Walk) | ja (Top-N pro Ebene) |
 | `metrics_lookup` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifiers` (Array von Symbol-IDs/Namen fuer Batch in 1 Turn; auch fuer genau ein Symbol) | Punktgenaue Metriken (Netto-LOC, zyklomatische/kognitive Komplexität, effektive Parameteranzahl, AI-Context-Footprint, Member-Counts) und Schwellwert-Abgleich gegen aktive `ainetlinter-rules.json` für ein oder mehrere C#-Symbole; liefert lesbares Markdown mit Status-Badges (`[OK]`, `[WARN]`, `[VIOLATION]`) und stark typisiertes `MetricsLookupBatchDto` in `structuredContent` | ja | nein |
-| `get_feature_context` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `symbolIdentifier` (Pflicht: Typname, Methode, Property, Datei:Zeile oder DocCommentId), `maxCallers?` (Default 10, Cap 50), `maxTests?` (Default 10, Cap 50) | Composite One-Shot-Exploration für ein C#-Symbol vor Edits/Refactorings: bündelt Deklaration, Metriken & Budget, statischen Impact, statische Testkandidaten und Linter-Violations in einem einzigen Aufruf; liefert strukturiertes Markdown und typisiertes `FeatureContextPayload` in `structuredContent`. `impact.callSites[]` enthält additiv `callerId` und `callerLocation` (`filePath`, `startLine`, `endLine`) für direkte Folgeaufrufe; die bestehende Call-Site-Position (`filePath`, `line`) bleibt unverändert. `impact` und `testContext` weisen jeweils Status, Counts, `truncatedBy` und `nextStep` aus; `completeness` im Root spiegelt den unsichersten Abschnitt. Der Impact-Report trägt `semantics="static-references/call-sites"`; der Test-Report trägt `evidenceBoundary="static-test-candidates-only"`. `maxTests` bleibt ein Dateilimit; Testmethoden sind zusätzlich je Datei auf 50 und insgesamt auf 200 begrenzt, mit `displayedTestMethods`, `totalMatchingMethods` und `truncatedBy` | ja | ja |
+| `get_feature_context` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `symbolIdentifier` (Pflicht), `maxCallers?`, `maxTests?`, `maxResponseBytes?` | Composite-Kontext für Deklaration, Metriken, statischen Impact, Testevidenz und Violations. `callerId` und `callerLocation` stehen im StructuredContent für direkte Folgeaufrufe; Budget und Status benennen unvollständige Abschnitte. | ja | ja |
 | `get_test_context` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `symbolIdentifier` (Pflicht: Typname, Methode, Datei:Zeile oder DocCommentId), `maxResults?` (Default 30, Cap 100; mindestens 1, Werte über 100 liefern vor dem Dispatch feldgenau `INVALID_ARGUMENT`) | Statische Test-Zuordnung für ein C#-Symbol: ermittelt zielgerichtet alle zugeordneten Testdateien, Testklassen, Testmethoden, Test-Kategorien (Unit/Integration), Zuordnungsgründe und direkt ausführbare `dotnet test` Filterbefehle; liefert strukturiertes Markdown und typisiertes `TestContextPayload` in `structuredContent` | ja | ja |
 | `get_violations` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `scopeFilter?`, `maxResults?` (Default 50), `contextLines?` (0-5, Default 2; Werte außerhalb des Bereichs liefern vor dem Dispatch feldgenau `INVALID_ARGUMENT`), `includeSnippet?` (Default `false`) | Aktuelle Lint-Verstöße für die adressierte Solution inkl. Regel-ID und optionalen Quellcode-Snippets; ohne benachbarte Regeln `not_configured`, nicht „0 Violations“ | ja | ja |
 | `safeguard` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `minScore?` (Default 8.0), `maxViolations?` (Default 20; `0` schaltet nur Remediation-/Top-Violation-Einträge aus; negative Werte werden rückwärtskompatibel auf `0` gekappt, nicht als `INVALID_ARGUMENT` abgelehnt) | Structured JSON (siehe unten): deterministischer Quality-Gate-Score für den geprüften Scope, Pass/Fail gegen `minScore`, Top-Violations, strukturierter Remediation-Hint. Konfigurierte `FileFilters` definieren den effektiven Scope: bewusst ausgeschlossene Dokumente werden nicht bewertet, aber in `excludedDocumentCount` ausgewiesen und machen einen ansonsten entscheidbaren Scope nicht unentscheidbar. `scoreIsNotScope=true` verhindert, dass der Score als Vollständigkeitsbeweis gelesen wird; bei nicht entscheidbarem/unkonfiguriertem Scope fehlen `score` und `passed` statt einer falschen 0-/PASS-Aussage. | ja | nein |
@@ -608,7 +598,10 @@ Bei Tools mit öffentlichem `includeReferences`-Parameter sind
 `includeReferences=true` und Assembly-Detailflags bewusst explizite Folgeschritte;
 breite Assembly-Listen nicht als ersten Call ungegrenzt anfordern.
 
-Neben dem in der Tabelle oben dokumentierten Text-Output liefern `get_file_tree`, `get_namespace_tree`, `get_violations`, `get_class_structure`, `metrics_lookup`, `get_feature_context`, `get_test_context`, `get_hotspots`, `get_server_health`, `report_observability_feedback`, `get_index_scope`, `find_symbol`, `find_references` (alle erlaubten `depth`-Werte), `get_impact` (Symbol- und Git-Diff-Branch), `dependency_graph` (alle `depth`-Werte), `find_duplicates`, `find_magic_values` und `search_pattern` zusaetzlich ein `structuredContent`-Feld (MCP-Protokoll-Feature) mit denselben Daten als JSON — additiv, ohne den Text-Vertrag zu aendern. Clients, die nur den Text konsumieren, ignorieren das Feld einfach. `safeguard` (siehe unten) ist das Vorbild fuer dieses Muster. Bei `get_file_tree` liegt die Payload als Objekt unter `fileTree`; bei `includeMetadata=false` wird `sizeBytes` pro Dateieintrag intern nicht gesetzt und wegen der gemeinsamen MCP-JSON-Optionen im ausgegebenen `structuredContent` ausgelassen, waehrend Summary-/Directory-Aggregate fuer Sortierung und Orientierung erhalten bleiben. `find_references` und der Symbol-Branch von `get_impact` liefern bei jeder erlaubten Tiefe dieselbe strukturierte Transitivantwort; der Git-Diff-Branch von `get_impact` behaelt im Default `detailLevel="callers"` seine bestehende `CallSiteEntry`-Form, mit `detailLevel="change-context"` liefert er stattdessen ein eigenes Payload-Objekt (siehe Detailabschnitt unten).
+Der vollständige Maschinenvertrag steht pro Tool in `tools/list`. Zielgebundene
+Antworten verwenden `structuredContent` für den finalen Envelope und für stabile
+IDs. `get_file_tree` legt seine Payload unter `fileTree` ab; bei
+`includeMetadata=false` fehlen `sizeBytes` an Dateieinträgen.
 
 **`search_pattern` — strukturierte Treffer und C#-Enrichment:** Die gemeinsame sichtbare Match-Liste
 liefert `filePath`, 1-basierte `line`-/`matchRanges`-Positionen, unveränderten `lineText`, optional
@@ -1005,10 +998,9 @@ die konkrete Anwendung erfolgt weiterhin pro Roslyn-Projekt bzw. Datei. Beispiel
 Die Ausgabe spiegelt auch Änderungen wider, die über `reload_config` in denselben
 residenten Solution-Key geladen wurden.
 
-Beide Status-Resources enthalten zusätzlich Textmetadaten des gemeinsamen
-Navigationskerns: `targetPath`, `origin`, Snapshot-Fingerprint, `capabilities`,
-`operationStatus`, `completeness` und `next`. Die URI bleibt auf den
-URL-kodierten absoluten `targetPath` beschränkt.
+Beide Status-Resources enthalten Textmetadaten des gemeinsamen Envelopes:
+`contractVersion`, `target`, `snapshot`, `status`, `scope` und `next`. Die URI
+bleibt auf den URL-kodierten absoluten `targetPath` beschränkt.
 
 ### stdout-Schutz (strukturelle JSON-RPC-Absicherung)
 
@@ -1198,20 +1190,19 @@ Der `Loading`-Zustand ist bewusst **kein** Fehler (`isError == false`), weil der
 
 ---
 
-### Additive Handoff-Payloads fuer Symbol-Chaining
+### Strukturierte IDs für Symbol-Chaining
 
-`get_file_skeleton` liefert neben dem unveränderten Markdown ein Objekt unter
-`structuredContent.files`. Jede Datei enthält `types`; jeder Typ enthält
+`get_file_skeleton` liefert unter `structuredContent.files` Dateien mit `types`.
+Jeder Typ enthält
 `namespace`, `typeKind`, `name`, `relativePath`, eine stabile `id` sowie
 `members`. Member enthalten `kind`, `signature` und — sofern Roslyn eine
 Identität vergeben kann — eine stabile `id`. Diese IDs können ohne Markdown-
 Parsing direkt als `get_symbol_body.symbolIdentifiers` verwendet werden.
 
-`get_feature_context.structuredContent.impact.callSites[]` enthält additiv
-`callerId` und `callerLocation` (`filePath`, `startLine`, `endLine`).
-`callerId` ist die stabile Handoff-ID des aufrufenden Symbols und kann direkt
-an symbolbezogene Folge-Tools übergeben werden. Die bestehende Call-Site-
-Position (`filePath`, `line`) und alle bisherigen Textzeilen bleiben erhalten.
+`get_feature_context.structuredContent.impact.callSites[]` enthält `callerId`
+und `callerLocation` (`filePath`, `startLine`, `endLine`). `callerId` ist eine
+stabile Structured-ID des aufrufenden Symbols und kann direkt an symbolbezogene
+Folge-Tools übergeben werden.
 
 ## Vollständige Rule-ID-Tabelle
 

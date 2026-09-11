@@ -46,7 +46,14 @@ public sealed class McpAgentGuideRegistrationTests
         Assert.Contains("metadata-only", workflow, StringComparison.Ordinal);
         Assert.Contains("not_decidable", workflow, StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier", workflow, StringComparison.Ordinal);
+        Assert.Contains("lokaler Datei-/Zeilenleser", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("assemblyPath", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("`view_file`", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("`list_dir`", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("deutlich weniger Kontext", workflow, StringComparison.Ordinal);
+        Assert.Contains("`contractVersion`, `target`,", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("operationStatus", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("`capabilities`", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("Consumer-Kontext", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("optionalen Consumer-Typ", workflow, StringComparison.Ordinal);
 

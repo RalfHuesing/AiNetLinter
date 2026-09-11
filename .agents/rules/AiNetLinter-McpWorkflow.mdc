@@ -12,7 +12,7 @@ Referenzen und Abhängigkeiten.
 
 ## Verbindliche Priorität (MCP-first, pragmatisch)
 
-> **Standard: AiNetLinter-MCP-Tools verwenden** — bei jeder C#-Aufgabe (Symbole, Typen, Aufrufketten, Referenzen, Abhängigkeiten, Regelverstöße) MUSS zuerst das passende MCP-Tool gewählt werden. Sie liefern semantisch aufgelöste, kompakte Ergebnisse und verbrauchen deutlich weniger Kontext als seitenweises Dateilesen.
+> **Standard: AiNetLinter-MCP-Tools verwenden** — bei jeder C#-Aufgabe (Symbole, Typen, Aufrufketten, Referenzen, Abhängigkeiten, Regelverstöße) MUSS zuerst das passende MCP-Tool gewählt werden. Sie liefern semantisch aufgelöste Ergebnisse für die jeweilige Fragestellung.
 >
 > **Werkzeugwahl nach Stärken — kein blindes Verbot:**
 >
@@ -31,15 +31,15 @@ Referenzen und Abhängigkeiten.
 > | Physische Dateistruktur / Dateisuche | `get_file_tree` (fileFilter, view="summary"/"tree"/"files") |
 > | Codebase-Metriken (Größe, Komplexität, Violations) | `metrics_tree` (mode, fileFilter, depth) |
 > | Namespace- & Typhierarchie erkunden | `get_namespace_tree` (namespacePrefix, depth) |
-> | Kleiner, exakt bekannter Codeausschnitt editieren | `view_file` (gezielt, wenige Zeilen) |
-> | Konfiguration, Projektstruktur | `list_dir`, `view_file` |
+> | Kleinen, exakt bekannten Codeausschnitt lesen oder editieren | lokaler Datei-/Zeilenleser (gezielt, wenige Zeilen) |
+> | Konfiguration | lokaler Datei-/Zeilenleser |
 >
-> **Wann rg/view_file trotzdem sinnvoll sein können:**
-> - Exakter Zeilenbereich für einen minimalen Edit bereits bekannt → `view_file` (gezielt, wenige Zeilen) günstiger als MCP-Roundtrip.
+> **Wann lokale Textwerkzeuge trotzdem sinnvoll sein können:**
+> - Exakter Zeilenbereich für einen minimalen Edit bereits bekannt → einen lokalen Datei-/Zeilenleser gezielt für diesen Ausschnitt verwenden.
 > - Textuelle Suchen außerhalb des analysierten Projekt-Repositories oder in reinen Nicht-Code-Verzeichnissen.
 > - Spezialisierte Batch-Ersetzungen über Systemtools.
 >
-> **Was vermieden werden soll:** Reflexartig *alle* Dateien einer Aufrufkette seitenweise einlesen, anstatt `get_call_tree` + `get_symbol_body` zu nutzen. Das verbrennt unnötig Kontext.
+> **Was vermieden werden soll:** Reflexartig *alle* Dateien einer Aufrufkette seitenweise einlesen, anstatt `get_call_tree` + `get_symbol_body` für die semantische Einordnung zu nutzen.
 
 
 ## Standard
@@ -56,7 +56,7 @@ Referenzen und Abhängigkeiten.
   Navigation möglich und die Lint-Capability ist `not_configured`; ungültige
   oder nicht lesbare Regeln sind ein Konfigurationsfehler. Es gibt keinen
   Arbeitsverzeichnis-, Eltern- oder Default-Fallback. Assemblys haben
-  `origin=decompiled` und Lint ist `unsupported`.
+  die Assembly-Herkunft ist dekompiliert und Lint ist `unsupported`.
 - `get_server_health` bleibt global ohne Target oder akzeptiert optional einen
   `targetPath`; `includeDiagnostics=true` fordert begrenzte Samples an und
   `maxDiagnostics` muss positiv sein und wird serverseitig gedeckelt. Werte
@@ -78,10 +78,10 @@ Referenzen und Abhängigkeiten.
   (typischerweise über `tools/list` bereitgestellt); diese Regel dupliziert keine
   Toolschemas.
 - Bei zielgebundenen Toolantworten den gemeinsamen
-  `structuredContent.navigation`-Block auswerten: `target`, `origin`, `snapshot`,
-  `capabilities`, `operationStatus`, `result`, `completeness` und `next` sind
-  die verbindlichen Handoff-/Statusfelder; der fachliche Payload bleibt
-  tool-spezifisch daneben erhalten. Resources liefern dieselben Informationen
+  `structuredContent.navigation`-Block auswerten: `contractVersion`, `target`,
+  `snapshot`, `status`, `scope` und `next` beschreiben den finalen Envelope;
+  der fachliche Payload bleibt tool-spezifisch daneben erhalten. IDs stehen
+  ausschließlich im StructuredContent. Resources liefern dieselben Informationen
   als Textmetadaten.
 - Für `get_feature_context` und `get_test_context` ist `symbolIdentifier` der
   einzige Parametername für das angefragte Symbol.
@@ -186,10 +186,10 @@ vollständige Tool-Rohantworten gehören nicht in die Map.
 `get_file_tree` ist der erste Discovery-Schritt für die physische Projektstruktur:
 Er liefert relative Pfade, Verzeichnisaggregation, optionale Metadaten und
 sichtbare Completeness-/Trunkierungsangaben auch für Dateien außerhalb des
-Roslyn-Solutionindexes. **Token-Effizienz beachten:** Für die Übersicht auf
-Root-Ebene immer `view="summary"` oder `view="tree"` (`treeDepth <= 2`) nutzen;
-`view="files"` auf Root-Ebene ist verboten. Danach sind `get_index_scope`
-(Indexabdeckung), `search_pattern` (Inhalt/Text) und die semantischen C#-Tools
+Roslyn-Solutionindexes. Für die Übersicht auf Root-Ebene immer
+`view="summary"` oder `view="tree"` (`treeDepth <= 2`) nutzen;
+`view="files"` auf Root-Ebene ist verboten. Danach sind `search_pattern`
+(Inhalt/Text) und die semantischen C#-Tools
 gezielt einzusetzen.
 `rg`/`grep`, Read und interne Agenten-Tools bleiben für konkrete Edit-/Diff-
 Arbeit, Konfiguration und exakte Textarbeit erlaubt. Sie ersetzen bei
@@ -216,7 +216,7 @@ Skeleton-/Member-/Namespace-Einheit kürzen.
 Für `find_symbol`, `find_references` und `get_call_tree` bleibt bei einem
 Assembly-`targetPath` der Root-Snapshot der Default. Nur
 `includeReferences: true` aktiviert die bounded Suche beziehungsweise Traversierung
-über eröffnete Referenz-Sessions; `origin`, `navigation.completeness` und partielle
+über eröffnete Referenz-Sessions; Scope, Status und partielle
 Diagnostics sind dabei zu beachten. Decompilierte API-Stubs können ohne sichtbare
 Call-Sites bleiben, ohne dass daraus eine globale Negativaussage folgt.
 
@@ -225,13 +225,13 @@ Target-Aufrufe verwenden ausschließlich Properties aus dem jeweils über
 `invalid_argument` mit ihrem Feldnamen abgelehnt; Aliasfelder gehören nicht zum
 aktiven Vertrag.
 
-Für Handoffs gilt: `get_file_skeleton`-IDs stehen additiv in
-`structuredContent.files[].types[].members[]` und gehen direkt an
+Für Folgeaufrufe gelten ausschließlich IDs aus
+`structuredContent.files[].types[].members[]`; sie gehen direkt an
 `get_symbol_body.symbolIdentifiers`. Bei `get_feature_context` liefert jede
-statische Call-Site nach Möglichkeit `callerId` plus `callerLocation`; die
-Caller-ID kann direkt an ein symbolbezogenes Folge-Tool übergeben werden.
-Markdown bleibt für Menschen und Alt-Clients unverändert und darf nicht als
-ID-Quelle geparst werden, wenn StructuredContent verfügbar ist.
+statische Call-Site nach Möglichkeit `callerId` plus `callerLocation`; die ID
+kann direkt an ein symbolbezogenes Folge-Tool übergeben werden. Markdown bleibt
+menschenlesbar und darf nicht als ID-Quelle geparst werden, wenn StructuredContent
+verfügbar ist.
 
 Bei `RULES_INVALID` nicht ungefragt eine Projektintegration durchführen. Nur bei
 einem ausdrücklichen Integrationsauftrag den einmaligen Leitfaden über

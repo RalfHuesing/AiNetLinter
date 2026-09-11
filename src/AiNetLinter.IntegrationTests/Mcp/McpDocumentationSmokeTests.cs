@@ -94,6 +94,17 @@ public sealed class McpDocumentationSmokeTests
         Assert.Contains("`includeSessions` ist kein öffentlicher Input", docText, StringComparison.Ordinal);
         Assert.Contains("ausschließlich serverweite", docText, StringComparison.Ordinal);
         Assert.DoesNotContain("`includeSessions=true` fordert begrenzte Sessiondetails", docText, StringComparison.Ordinal);
+        Assert.Contains("höchstens 1.200 UTF-8-Bytes", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("McpPayloadMeasurement", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Tokenersparnis", docText, StringComparison.Ordinal);
+        Assert.Contains("`contractVersion`, `target`, `snapshot`, `status`,", docText, StringComparison.Ordinal);
+        Assert.Contains("`scope` und `next`", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("operationStatus", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("`capabilities`", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("`handoff=true`", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Additive Handoff-Payloads", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Clients, die nur den Text konsumieren", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("additiv, ohne den Text-Vertrag", docText, StringComparison.Ordinal);
 
         var normalizedDocText = docText.Replace("\r\n", "\n", StringComparison.Ordinal);
         var matrixStart = normalizedDocText.IndexOf("| Tool | Input | Output |", StringComparison.Ordinal);
@@ -182,5 +193,22 @@ public sealed class McpDocumentationSmokeTests
         Assert.Contains("ausschließlich `symbolIdentifier`", getImpactSection, StringComparison.Ordinal);
         Assert.Contains("Referenzexpansion ist intern festgelegt und nicht öffentlich wählbar", getImpactSection, StringComparison.Ordinal);
         Assert.DoesNotContain("includeReferences", getImpactSection, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IntegrationGuide_UsesPublishedToolsAndFinalDiscoveryContract()
+    {
+        var docPath = Path.Combine(SolutionRootLocator.Find(), "Docs", "integration.md");
+        var docText = File.ReadAllText(docPath);
+
+        Assert.Contains("`get_file_tree(view: \"summary\")`", docText, StringComparison.Ordinal);
+        Assert.Contains("Engineering-Budget von 1.200 Bytes", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("McpPayloadMeasurement", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Token-Schätzungen", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Ein alter Client", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("ältere Partner", docText, StringComparison.Ordinal);
+        Assert.Contains("`contractVersion`, `target`,", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("operationStatus", docText, StringComparison.Ordinal);
+        Assert.DoesNotContain("`capabilities`", docText, StringComparison.Ordinal);
     }
 }

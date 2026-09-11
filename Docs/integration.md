@@ -304,13 +304,13 @@ Relative, fehlende, nicht unterstützte oder auf ein
 Verzeichnis zeigende Pfade liefern `invalid_argument` mit Feldpfad und
 nächstem Schritt.
 
-Jede zielgebundene Toolantwort stellt zusätzlich unter
-`structuredContent.navigation` denselben maschinenlesbaren Kern bereit:
-`target` (`targetPath`, `analysisRoot`, `fingerprint`), `origin`, `snapshot`,
-`capabilities`, `operationStatus`, `result`, `completeness` und `next`.
-Das tool-spezifische Ergebnis bleibt daneben am Root erhalten. Die beiden
-Resources spiegeln diesen Kern als Textmetadaten; `get_server_health` liefert
-ihn auch bei optionalem Target, nicht aber im globalen ungebundenen Modus.
+Jede zielgebundene Toolantwort stellt unter `structuredContent.navigation` den
+finalen maschinenlesbaren Envelope bereit: `contractVersion`, `target`,
+`snapshot`, `status`, `scope` und `next`. Das tool-spezifische Ergebnis bleibt
+daneben am Root erhalten. IDs werden ausschließlich aus StructuredContent für
+Folgeaufrufe übernommen. Die beiden Resources spiegeln den Status als
+Textmetadaten; `get_server_health` liefert ihn auch bei optionalem Target,
+nicht aber im globalen ungebundenen Modus.
 
 Für Source ist die konkrete Solution bindend: Der Analyse-Root ist nur ihr
 normalisiertes Elternverzeichnis, eine andere Solution wird nicht geraten.
@@ -389,11 +389,6 @@ Zugriffssteuerung und keine Sicherheitsgarantie. Unvertrauenswürdige Server kö
 Annotations falsch setzen; tatsächliche Berechtigungs- und Pfadprüfungen bleiben
 unabhängig davon aktiv.
 
-Die Raw-Wire-Messung über `McpPayloadMeasurement` ergab für den `tools/list`-Pfad
-20.836 Bytes vor und 26.887 Bytes nach der Annotationserweiterung, also +6.051
-UTF-8-Bytes. Der moderne `tools/list`-Payload beträgt 27.034 UTF-8-Bytes. Die
-Werte sind Byte-Messungen, keine Token-Schätzungen.
-
 **`args: ["--mcp-server"]` ist die empfohlene Registrierung.** Der Server
 liest bei Source ausschließlich die optionale `ainetlinter-rules.json` neben der
 übergebenen Solution; fehlt sie, bleibt Navigation möglich und der Lint-Status
@@ -431,29 +426,13 @@ und der detached `--daemon-start` verwenden dabei dieselbe Instanz-ID. Der
 MRU-State bleibt ohne ID unter `%LOCALAPPDATA%\RalfHuesing\AiNetLinter\daemon-state.json`;
 eine ID erhält eine eigene Datei wie `daemon-state.beta.json`. Beide verwenden
 newline-delimited JSON-Objekte. Der Pipe-Level-Handshake ist von der
-MCP-SDK-Interpretation getrennt: `hello`/`welcome` tragen Protokollversion,
-Versions-/PID-Daten, einen deterministischen Build-/Tool-Contract-Fingerprint
-und die effektive Daemon-Konfiguration einschließlich der fünf externen
-Ressourcenlimits. Der Fingerprint wird aus dem laufenden Binary gebildet; damit
-akzeptiert ein ThinClient keinen Daemon mit abweichender Discovery.
+MCP-SDK-Interpretation getrennt. Der ThinClient akzeptiert nur einen Daemon mit
+passendem Discovery-Fingerprint.
 Meldet ein bestehender Daemon im `welcome` keinen Fingerprint oder einen anderen
 Fingerprint, wird dieser Discovery-Mismatch als terminaler, agentenlesbarer
 Fehler auf `stderr` (`DISCOVERY_FINGERPRINT_MISMATCH`) mit Exit-Code 2 beendet.
-Der ThinClient startet in diesem Fall keinen weiteren Daemon und wiederholt den
-Handshake nicht ohne Zustandsaenderung; so bleibt ein inkompatibler alter
-Daemon nicht in einer Readiness-Retryschleife. Ein alter Client darf dagegen
-das optionale Fingerprint-Feld im `hello` weiterhin auslassen und wird von einem
-neuen Daemon akzeptiert.
-Explizit gesetzte externe ThinClient-Limits
-werden auch beim Verbinden mit einem bereits laufenden Daemon verglichen und
-als einmalige Konfigurationswarnung gemeldet; sie ändern den Daemon nicht.
-Die neuen Felder sind wire-seitig optional, damit ältere Partner, die sie
-nicht senden, kompatibel bleiben. Eine unbekannte
-Protokollversion wird abgewiesen; ein Versions-Mismatch entscheidet bei null
-weiteren Verbindungen höchstens einmal über `shutdown` und liefert bei
-konkurrierenden oder weiteren Verbindungen `VERSION_CONFLICT`. Eine
-Konfigurationsdivergenz ist als einmaliges strukturiertes Warnereignis
-auswertbar. Die Cancellation-Grenze liegt pro Pipe-Verbindung; opake
+Der ThinClient startet in diesem Fall keinen weiteren Daemon. Die
+Cancellation-Grenze liegt pro Pipe-Verbindung; opake
 MCP-/JSON-RPC-Bytes werden nach dem Handshake nicht interpretiert oder
 umgeschrieben.
 
@@ -497,7 +476,7 @@ Herkunft. Damit können mehrere Targets in einer Serverinstanz resident sein.
 
 Der MCP-Transport-Handshake (`initialize`) antwortet **sofort** — die Lösung wird parallel im Hintergrund geladen. Damit erkennen Hosts mit kurzem Startup-Timeout den Server zuverlässig als „bereit", ohne auf die `MSBuildWorkspace.OpenSolutionAsync`-Latenz warten zu müssen.
 
-Im MCP-2026-07-28-Pfad antwortet `server/discover` sofort mit den unterstützten Versionen, Server-Capabilities und demselben globalen Instructions-Text. Die globale Anleitung verweist bei Bedarf auf den einmaligen Bootstrap unter `ainetlinter://agent-guide`, danach auf `tools/list` und `ainetlinter://overview`; Tool-Schemas bleiben in `tools/list`. Der globale Text enthält keinen vollständigen Bootstrap und bleibt unter dem Engineering-Budget von 2.557 Bytes.
+`server/discover` antwortet sofort mit Server-Capabilities und demselben globalen Instructions-Text. Die globale Anleitung verweist bei Bedarf auf den einmaligen Bootstrap unter `ainetlinter://agent-guide`, danach auf `tools/list` und `ainetlinter://overview`; Tool-Schemas bleiben in `tools/list`. Der globale Text enthält keinen vollständigen Bootstrap und bleibt unter dem Engineering-Budget von 1.200 Bytes.
 
 Tool-Calls, die während des Hintergrund-Loads eintreffen, erhalten in beiden Pfaden einen Loading-Info-Text (`[INFO]: Server laedt die Solution noch. ...`, kein Fehler); sobald der Load abgeschlossen ist, liefern dieselben Tools reguläre Ergebnisse. Vollständige Beschreibung der drei Zustände (`Loading` / `Loaded` / `LoadFailed`) und der Retry-Empfehlung für Agent-Loops: [Docs/agent-api.md](agent-api.md#drei-zustands-lifecycle-des-mcp-servers).
 
@@ -537,7 +516,7 @@ weitere Detailflags anfordern. Für `get_hotspots` begrenzt `maxResults` die sic
 Einträge, `minLinePercentage` filtert die Auslastung (Default 80, Bereich 0–100); die
 Ausgabe ist nach absteigender Zeilenzahl und Pfad deterministisch sortiert.
 
-1. **Zuerst** `get_index_scope` für die Dateityp- und Routingübersicht, danach C#-Symbole mit `find_symbol` und den semantischen Folge-Tools. Das vermeidet, dass Nicht-C#-Dateien als leere C#-Symbolabfrage fehlinterpretiert werden. Diese Tools liefern **semantisch präzise, getypte** Ergebnisse.
+1. **Zuerst** `get_file_tree(view: "summary")` für die Dateityp- und Routingübersicht, danach C#-Symbole mit `find_symbol` und den semantischen Folge-Tools. Das vermeidet, dass Nicht-C#-Dateien als leere C#-Symbolabfrage fehlinterpretiert werden.
 2. **Für Nicht-C# oder Textsuche** (z. B. `.json`/`.yml`/`.md`/`.razor`/`.xaml`/`.html`/`.css` oder Konfigurations-/Kommentar-/String-Suche): `search_pattern` mit dem kanonischen `pattern` und `scopeType` (`production`, `tests` oder `all`); Include-/Exclude-Globs laufen über `includePatterns`/`excludePatterns`. Der Default ist `maxResults=20` und `maxResponseBytes=8192`; serverseitige Caps sind 2000 Treffer und 65536 Bytes. `completeness.totalCount`/`returnedCount`/`truncatedBy` sowie der eine `next`-Hinweis sind zu prüfen. Aliasfelder wie `query`, `searchPattern`, `fileFilter` und `includePattern` gehören nicht zum Vertrag. Für sichtbare C#-Treffer kann `enrichCSharp=true` die Syntax-/Symbolkategorie und eine stabile `symbolId` ergänzen; der Default bleibt `false`.
 3. **Ergänzend** `rg` / `grep` für **C#-Symbole** nur dann, wenn eine semantische MCP-Abfrage nicht passt oder konkrete Text-/Dateiarbeit gefragt ist. Für reine Symbol-, Referenz- und Impact-Fragen bleibt MCP die bevorzugte Quelle.
 
@@ -554,7 +533,7 @@ Konkret:
 - TODO-Kommentare listen → `search_pattern(pattern: "TODO", isRegex: false)` (oder `rg "TODO"`)
 - Text in einer externen Assembly suchen → `search_assembly(targetPath: "C:/libs/Library.dll", searchKind: "text", pattern: "Repository", maxResults: 20)`; für typische Persistenz-/Datenzugriffe `searchKind: "data_access"`, für HTTP/RPC/Socket/Prozessaufrufe `searchKind: "external_calls"`
 - Lint-Stand einer Datei → `get_violations(scopeFilter: "src/MeinProjekt/Service.cs")`
-- Produktions-Hotspots isolieren → `get_hotspots(scopeType: "production")`; `tests` und `all` sind ebenfalls möglich. `get_index_scope` zeigt die tatsächlich vorhandenen Dateiendungen einschließlich Nicht-C#-Dateien ohne künstliche Null-Einträge.
+- Produktions-Hotspots isolieren → `get_hotspots(scopeType: "production")`; `tests` und `all` sind ebenfalls möglich. Für Dateitypen und Pfade dient `get_file_tree(view: "summary")`.
 
 ### Erstorientierung: Resources
 
