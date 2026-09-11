@@ -6,100 +6,50 @@ alwaysApply: true
 
 # AiNetLinter-Richtlinien
 
-Diese Datei enthält dauerhafte Regeln für das Repository. Nutzeranweisungen
-haben Vorrang. Kontextabhängige Abläufe gehören in Skills und Rollen, nicht in
-diese Always-on-Regel.
+Nutzeranweisungen haben Vorrang. Kontextabhängige Workflows gehören in Skills und Rollen, nicht in diese Always-on-Regel.
 
 ## Architektur
 
-- AiNetLinter bleibt ein eigenständiges, statisch kompiliertes CLI-/MCP-Tool.
-  Kein Plugin-System, kein dynamisches Laden von Assemblies oder
-  `AssemblyLoadContext`, kein DI-Container.
-- Bevorzuge direkte, verständliche Lösungen und unveränderliche Datenmodelle.
-  Abstraktionen brauchen konkreten Mehrwert für Wiederverwendung,
-  Verständlichkeit oder Testbarkeit.
-- Engine, Analyzer, Formatter und MCP-Tools bleiben generisch. Keine
-  repo-, projekt- oder pfadspezifischen Literale hardcodieren; Strukturen und
-  Testbereiche aus geladenen Roslyn-/Projektmetadaten ableiten.
-- Teure Roslyn-Zugriffe auf `SyntaxTree` und `SemanticModel` gezielt und nicht
-  wiederholt ausführen.
+- AiNetLinter ist ein eigenständiges, statisch kompiliertes CLI-/MCP-Tool. Kein Plugin-System, kein dynamisches Assembly-Laden (`AssemblyLoadContext`), kein DI-Container.
+- **Universelles Tool & agentischer Fokus**: AiNetLinter dient der Analyse beliebiger externer C#/.NET-Codebasen. Niemals auf Besonderheiten von AiNetLinter überoptimieren (kein Dogfooding-Overfitting). Das Gesamtbild der agentischen Nutzung steht im Fokus: MCP-Tools, Metriken und Formate müssen für aufrufende KI-Agenten maximale Informationsdichte, Ergonomie und Signal-to-Noise-Ratio bieten.
+- Bevorzuge direkte Lösungen und unveränderliche Datenmodelle. Abstraktionen erfordern konkreten Mehrwert für Wiederverwendung, Verständlichkeit oder Testbarkeit.
+- Engine, Analyzer, Formatter und MCP-Tools bleiben generisch: Keine repo-, projekt- oder pfadspezifischen Literale hardcodieren; Projektstrukturen dynamisch aus Roslyn-Metadaten ableiten.
+- Teure Roslyn-Zugriffe (`SyntaxTree`, `SemanticModel`) gezielt und nicht wiederholt ausführen.
 
 ## C#-Analyse und Dokumentation
 
-- Für C#-Symbole, Referenzen, Aufrufketten, Abhängigkeiten, Impact und
-  Regelverstöße gilt zusätzlich `.agents/rules/AiNetLinter-McpWorkflow.mdc`.
-  Dessen aktuelle MCP-Schemas sowie absolute `targetPath`-Werte verwenden;
-  die Zielherkunft wird aus der Dateiendung abgeleitet.
-- Dokumentiere nur implementiertes, belegbares Verhalten. Keine Marketing-
-  wertungen oder veralteten Pfade. CLI-, Konfigurations-, Regel- und
-  MCP-Beschreibungen gegen den aktuellen Code prüfen.
-- Bei Änderungen an CLI, Konfiguration, Regeln oder MCP-Verträgen die
-  betroffenen Dateien unter `Docs/`, `ainetlinter-rules.json` und gegebenenfalls die
-  Agentenregeln synchronisieren.
-- `README.md` nur ändern, wenn sie ausdrücklich im Auftrag liegt; bestehende
-  Änderungen anderer Agenten erhalten.
+- Für C#-Symbole, Referenzen, Aufrufketten, Abhängigkeiten, Impact und Verstöße gilt `.agents/rules/AiNetLinter-McpWorkflow.mdc`. Dessen Schemas und absolute `targetPath`-Werte nutzen (Herkunft deterministisch aus Dateiendung).
+- Nur implementiertes, belegbares Verhalten dokumentieren (keine Marketingaussagen). CLI-, Konfigurations-, Regel- und MCP-Beschreibungen gegen aktuellen Code prüfen.
+- Bei Änderungen an CLI, Konfiguration, Regeln oder MCP-Verträgen `Docs/`, `ainetlinter-rules.json` und Agentenregeln synchronisieren.
+- `README.md` nur bei ausdrücklichem Auftrag ändern; Fremdänderungen erhalten.
 
 ## Windows und Dateien
 
-- Windows/PowerShell 7 verwenden. Git-Agentenbefehle immer mit `--no-pager`
-  ausführen; keine globale Pager-Konfiguration voraussetzen. Für Textsuche
-  zuerst `rg` verwenden.
-- Dateien mit `apply_patch` ändern. Keine breiten oder destruktiven Befehle;
-  bestehende Nutzer- und Parallel-Agentenänderungen erhalten.
-- Keine externen Source-Repositories oder untersuchten Assemblies ändern.
+- Windows/PowerShell 7 verwenden. Git-Befehle immer mit `--no-pager` ausführen. Für Textsuche zuerst `rg` verwenden.
+- Dateien punktuell und minimal ändern. Keine breiten/destruktiven Befehle; bestehende Nutzer- und Parallel-Agentenänderungen erhalten.
+- Keine externen Source-Repositories oder analysierten Ziel-Assemblies modifizieren.
 - Credentials gehören niemals in Diagnosen, Logs oder Toolantworten.
-- Bei fehlgeschlagenen oder abgeschnittenen Testausgaben eine TRX-Datei zur
-  Diagnose verwenden, statt denselben Lauf ungezielt zu wiederholen.
+- Bei unklaren oder abgeschnittenen Testausgaben eine TRX-Datei zur Diagnose nutzen, statt denselben Lauf ungezielt zu wiederholen.
 
 ## Code und Tests
 
-- Jede Logikänderung erhält passende xUnit-v3-Tests. Tests prüfen Verhalten,
-  nicht bloß Implementierungszeilen.
-- Ein grüner, scope-passender Testlauf bleibt gültiger Nachweis, bis relevante
-  Produktions-, Test-, Projekt- oder Konfigurationsänderungen ihn entwerten.
-  Folgeagenten wiederholen unveränderte grüne Läufe nicht blind.
-- Tests parallel ausführbar halten. Globale Serialisierung nur bei belegtem
-  Bedarf; gemeinsame Zustände gezielt mit Lock, Fixture, Semaphore oder Retry
-  absichern.
-- Testtemporärdateien ausschließlich über
-  `AiNetLinter.TestKit.TestTempDirectory` im ignorierten Repository-Temp.
-  Keine Ad-hoc-Pfade im System-Temp.
-- MCP- und Dogfood-Verifikation ausschließlich über die vorhandene C#-
-  Testinfrastruktur; keine Ad-hoc-Skripte oder privaten Daten committen.
-- Keine Compilerwarnungen einführen. Fehlgeschlagene Tests nicht abschwächen
-  oder auskommentieren; die Ursache beheben.
-- Erwartete Fehler möglichst explizit als `Result<T>` modellieren; Exceptions
-  bleiben echten exogenen Fehlern wie IO- oder Netzwerkausfällen vorbehalten.
-- DRY, Magic Values und Dead Code im betroffenen Bereich fachlich bewerten.
-  Sichere, scope-nahe Bereinigungen sind erlaubt; keine breiten Cleanups oder
-  Abstraktionen nur wegen formaler Ähnlichkeit. Indirekte Nutzung über
-  Reflection, Serialisierung, DI, öffentliche APIs und Tests berücksichtigen.
-- Kommentare erklären nur nicht offensichtliches „Why“ oder Workarounds;
-  keine Task-, Ticket-, Prompt- oder Refactoring-Historie im Produktionscode.
+- **Red-Test-First bei Bugs**: Bei Fehlern oder unerwartetem Verhalten zuerst einen isolierten fehlschlagenden xUnit-v3-Test (Rot-Test / Reproduktionstest) schreiben. Erst danach gezielt beheben, bis der Test grün ist (dauerhafter Regressionsschutz).
+- Jede Logikänderung erhält xUnit-v3-Tests, die Verhalten statt Implementierungsdetails prüfen.
+- Ein grüner, scope-passender Testlauf bleibt gültiger Nachweis bis zur nächsten Code- oder Konfigurationsänderung; nicht blind wiederholen.
+- Tests parallelisierbar halten (globale Serialisierung nur bei belegtem Bedarf; gemeinsame Zustände via Lock, Fixture oder Semaphore sichern).
+- Testtemporärdateien ausschließlich über `AiNetLinter.TestKit.TestTempDirectory` im ignorierten Repo-Temp anlegen (nie im System-Temp).
+- MCP- und Dogfood-Verifikation ausschließlich über die vorhandene C#-Testinfrastruktur (keine Ad-hoc-Skripte committen).
+- Keine Compilerwarnungen einführen (`TreatWarningsAsErrors`). Tests niemals abschwächen oder auskommentieren; stets Ursache beheben.
+- Erwartete Fehler als `Result<T>` modellieren; Exceptions bleiben echten exogenen Fehlern (z. B. IO/Netzwerk) vorbehalten.
+- DRY, Magic Values und Dead Code im Scope fachlich bewerten. Bereinigungen nur bei klarem Nutzen; indirekte Nutzung über Reflection, Serialisierung, DI, APIs und Tests beachten.
+- Kommentare erklären nur nicht offensichtliches „Why“; keine Ticket-, Prompt- oder Refactoring-Historie im Produktionscode.
 
 ## Git und parallele Agenten
 
-- Innerhalb eines AiNetLinter-Tasks gilt strikt serielle Abarbeitung: höchstens
-  ein delegierter Agent ist gleichzeitig aktiv. Rollen, Builds, Tests und
-  MCP-Prüfungen werden nicht überlappend ausgeführt; die nächste Aktivität
-  beginnt erst nach vollständiger Beendigung der vorherigen.
-
-- Jede Änderung an versionierten Dateien wird nach passenden Prüfungen
-  automatisch committed, auch reine Markdown- oder Agenteninfrastruktur.
-- Vor Änderungen `HEAD` und Working-Tree-Status als Baseline erfassen. Ein
-  Commit enthält ausschließlich eigene, auftragsbezogene Änderungen seit
-  dieser Baseline.
-- Niemals pauschal `git add .`, `git add -A` oder `git commit -a` verwenden.
-  Nur explizite Pfade oder ausgewählte Hunks stagen und vor dem Commit Index
-  und Diff auf fremde Änderungen prüfen.
-- Fremde staged Änderungen oder nicht sicher trennbare Änderungen im selben
-  File blockieren den Auto-Commit; Konflikt melden statt fremde Änderungen zu
-  überschreiben oder mitzunehmen. In orchestrierten Abläufen committen nur
-  Orchestratoren; Rollen committen nicht selbst.
-- Bei gleichzeitig schreibenden Agenten im selben Working Tree ist vor
-  Staging und Commit eine exklusive Staging-/Commit-Sperre erforderlich. Gibt
-  es keine solche Sperre, separaten Worktree verwenden oder den Commit
-  zurückstellen.
-- Commit-Nachrichten sind deutsche Conventional Commits im Imperativ. Pushes
-  und Umschreiben veröffentlichter Historie erfolgen nur auf ausdrückliche
-  Anforderung.
+- **Strikt serielle Abarbeitung**: Pro Task höchstens ein aktiver Agent. Keine überlappenden Rollen, Builds, Tests oder MCP-Prüfungen; nächste Aktivität erst nach vollständigem Abschluss der vorherigen.
+- Jede Änderung an versionierten Dateien nach passenden Prüfungen automatisch committen (auch Markdown/Agentenregeln).
+- Vor Änderungen `HEAD` und Working-Tree-Status als Baseline erfassen. Ein Commit enthält ausschließlich eigene, auftragsbezogene Änderungen seit dieser Baseline.
+- Niemals pauschal `git add .`, `git add -A` oder `git commit -a` nutzen. Nur explizite Pfade stagen und vor Commit Index sowie Diff prüfen.
+- Fremde Staged-Änderungen oder Dateikonflikte blockieren den Auto-Commit (Konflikt melden). In orchestrierten Tasks committen nur Orchestratoren, keine Rollen.
+- Bei mehreren Worktrees/Agenten exklusive Staging-Sperre beachten oder Commit zurückstellen.
+- Commit-Nachrichten als deutsche Conventional Commits im Imperativ (`feat:`, `fix:`, `docs:`, `chore:`). Pushes und Umschreiben veröffentlichter Historie erfolgen nur auf ausdrückliche Anforderung.
