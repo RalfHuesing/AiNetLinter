@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using ModelContextProtocol.Protocol;
@@ -16,16 +17,13 @@ namespace AiNetLinter.Mcp.Registration;
 internal static class TargetPathToolRegistrationOptions
 {
     private const string SourceTargetContract =
-        " Zielvertrag: targetPath als absoluter, existierender Pfad einer .sln- oder .slnx-Datei. " +
-        "Die Quelle wird aus der Dateiendung bestimmt; Assembly-Ziele sind fuer dieses Tool unsupported.";
+        " Ziel: absolute .sln/.slnx (Source).";
 
     private const string ProjectAssemblyTargetContract =
-        " Zielvertrag: targetPath als absoluter, existierender Pfad einer .sln-, .slnx-, .dll- oder .exe-Datei. " +
-        "Source- oder Assembly-Route wird aus targetPath bestimmt; Antworten weisen Herkunft, Snapshotbindung, " +
-        "Status und Vollstaendigkeit aus.";
+        " Ziel: absolute .sln/.slnx (Source) oder .dll/.exe (Assembly).";
 
     private const string AssemblyTargetContract =
-        " Zielvertrag: targetPath als absoluter, existierender .dll- oder .exe-Pfad.";
+        " Ziel: absolute .dll/.exe.";
 
     private static readonly AnnotationValues ReadOnlyValues = new(
         ReadOnly: true,
@@ -111,12 +109,45 @@ internal static class TargetPathToolRegistrationOptions
         new()
         {
             Name = name,
-            Description = description,
+            Description = CompactDescription(description),
             ReadOnly = annotations.ReadOnly,
             Destructive = annotations.Destructive,
             Idempotent = annotations.Idempotent,
             OpenWorld = annotations.OpenWorld,
         };
+
+    private static string CompactDescription(string description)
+    {
+        var sentences = description.Split(". ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (sentences.Length == 0)
+        {
+            return description;
+        }
+
+        var compact = new StringBuilder(sentences[0]);
+        foreach (var sentence in sentences.Skip(1))
+        {
+            if (!ContainsDecisionDetail(sentence))
+            {
+                continue;
+            }
+
+            compact.Append(". ").Append(sentence);
+        }
+
+        return compact.ToString();
+    }
+
+    private static bool ContainsDecisionDetail(string sentence) =>
+        sentence.Contains("Default", StringComparison.OrdinalIgnoreCase)
+        || sentence.Contains("Cap", StringComparison.OrdinalIgnoreCase)
+        || sentence.Contains("hard", StringComparison.OrdinalIgnoreCase)
+        || sentence.Contains("mindestens", StringComparison.OrdinalIgnoreCase)
+        || sentence.Contains("nur ", StringComparison.OrdinalIgnoreCase)
+        || sentence.Contains("Assembly", StringComparison.OrdinalIgnoreCase)
+        || sentence.Contains("unsupported", StringComparison.OrdinalIgnoreCase)
+        || sentence.Contains("Ziel:", StringComparison.Ordinal)
+        || sentence.Contains("0 oder", StringComparison.OrdinalIgnoreCase);
 
     private readonly record struct AnnotationValues(
         bool ReadOnly,

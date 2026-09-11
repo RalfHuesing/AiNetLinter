@@ -3,6 +3,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
@@ -30,7 +32,11 @@ public sealed class McpServerCommandJsonRpcFramingTests
 {
     private const string ProtocolVersion = "2024-11-05";
     private const string ModernProtocolVersion = "2026-07-28";
-    private const int AnnotationPayloadBaselineUtf8Bytes = 20836;
+    private const int PreSlice20InstructionsUtf8Bytes = 1872;
+    private const int PreSlice20ToolsListUtf8Bytes = 52694;
+    private const int PreSlice20ToolDescriptionsUtf8Bytes = 32242;
+    private const int PreSlice20InputSchemasUtf8Bytes = 13809;
+    private const string InputSchemaFingerprint = "3062E4D76629034A473F8C32F9E92F08FB725F8EA6A4ADC1A652D82B2C90F9A2";
     private const string ClientName = "FramingTestClient";
     private const string ClientVersion = "1.0.0";
     private readonly ITestOutputHelper output;
@@ -371,8 +377,8 @@ public sealed class McpServerCommandJsonRpcFramingTests
 
         Assert.False(string.IsNullOrEmpty(instructions));
         Assert.Contains("search_pattern", instructions, StringComparison.Ordinal);
-        Assert.Contains("Sufficiency", instructions, StringComparison.Ordinal);
-        Assert.Contains("isError-Policy", instructions, StringComparison.Ordinal);
+        Assert.Contains("structuredContent.navigation", instructions, StringComparison.Ordinal);
+        Assert.Contains("tools/list", instructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -394,17 +400,29 @@ public sealed class McpServerCommandJsonRpcFramingTests
            $"ServerInstructions: {initialize.InstructionsSize.Utf8Bytes} Bytes, " +
            $"Budget: {ServerInstructions.MaxUtf8Bytes} Bytes.");
         Assert.True(modern.InstructionsSize.Utf8Bytes <= ServerInstructions.MaxUtf8Bytes);
+        Assert.True(
+            modern.InstructionsSize.Utf8Bytes <= 1_200,
+            $"Instructions: {modern.InstructionsSize.Utf8Bytes} Bytes.");
+        Assert.True(
+            modern.ToolsListPayload.Utf8Bytes <= PreSlice20ToolsListUtf8Bytes * 80 / 100,
+            $"tools/list wurde nicht um mindestens 20 % reduziert: {modern.ToolsListPayload.Utf8Bytes} > {PreSlice20ToolsListUtf8Bytes * 80 / 100}.");
+        Assert.True(
+            initialize.ToolDescriptionsSize.Utf8Bytes <= PreSlice20ToolDescriptionsUtf8Bytes * 70 / 100,
+            $"Toolbeschreibungen wurden nicht um mindestens 30 % reduziert: {initialize.ToolDescriptionsSize.Utf8Bytes} > {PreSlice20ToolDescriptionsUtf8Bytes * 70 / 100}.");
+        Assert.Equal(PreSlice20InputSchemasUtf8Bytes, initialize.InputSchemasSize.Utf8Bytes);
+        Assert.Equal(InputSchemaFingerprint, initialize.InputSchemaFingerprint);
 
         output.WriteLine($"initialize discovery: {initialize.DiscoveryPayload}");
         output.WriteLine($"initialize tools/list: {initialize.ToolsListPayload}");
         output.WriteLine($"Modern discovery: {modern.DiscoveryPayload}");
         output.WriteLine($"Modern tools/list: {modern.ToolsListPayload}");
         output.WriteLine($"Instructions: {initialize.InstructionsSize}");
+        output.WriteLine($"Toolbeschreibungen: {initialize.ToolDescriptionsSize}; Inputschemas: {initialize.InputSchemasSize}; Schemafingerprint: {initialize.InputSchemaFingerprint}");
         output.WriteLine(
-            $"Annotation payload delta (initialize tools/list): " +
-            $"{initialize.ToolsListPayload.Utf8Bytes - AnnotationPayloadBaselineUtf8Bytes:+#;-#;0} UTF-8-Bytes " +
-            $"({AnnotationPayloadBaselineUtf8Bytes} -> {initialize.ToolsListPayload.Utf8Bytes}; " +
-            "Baseline 2026-08-20)");
+            $"Slice-20-Messung: Instructions {PreSlice20InstructionsUtf8Bytes} -> {initialize.InstructionsSize.Utf8Bytes}; " +
+            $"Beschreibungen {PreSlice20ToolDescriptionsUtf8Bytes} -> {initialize.ToolDescriptionsSize.Utf8Bytes}; " +
+            $"Inputschemas {PreSlice20InputSchemasUtf8Bytes} -> {initialize.InputSchemasSize.Utf8Bytes}; " +
+            $"tools/list {PreSlice20ToolsListUtf8Bytes} -> {initialize.ToolsListPayload.Utf8Bytes} UTF-8-Bytes.");
     }
 
     private static async Task<McpWireDiscoverySnapshot> ReadDiscoverySnapshotAsync(
@@ -445,13 +463,24 @@ public sealed class McpServerCommandJsonRpcFramingTests
             .Select(tool => tool.GetProperty("name").GetString()!)
             .ToArray();
         Assert.Equal(toolNames.Length, toolNames.Distinct(StringComparer.Ordinal).Count());
+        var tools = toolsResult.GetProperty("tools").EnumerateArray().ToArray();
+        var descriptions = string.Concat(tools.Select(tool => tool.GetProperty("description").GetString()));
+        var inputSchemas = string.Concat(tools.Select(tool => tool.GetProperty("inputSchema").GetRawText()));
+        var schemaFingerprintInput = string.Join(
+            "\n",
+            tools.OrderBy(tool => tool.GetProperty("name").GetString(), StringComparer.Ordinal)
+                .Select(tool => $"{tool.GetProperty("name").GetString()}:{tool.GetProperty("inputSchema").GetRawText()}"));
+        var inputSchemaFingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(schemaFingerprintInput)));
 
         return new McpWireDiscoverySnapshot(
             instructions!,
             toolNames.ToHashSet(StringComparer.Ordinal),
             instructionSize,
             McpPayloadMeasurement.MeasureJson(discoveryResponse),
-            McpPayloadMeasurement.MeasureJson(toolsResponse));
+            McpPayloadMeasurement.MeasureJson(toolsResponse),
+            McpPayloadMeasurement.Measure(descriptions),
+            McpPayloadMeasurement.Measure(inputSchemas),
+            inputSchemaFingerprint);
     }
 
     private static async Task<IReadOnlySet<string>> GetRegisteredToolNames()
@@ -471,5 +500,8 @@ public sealed class McpServerCommandJsonRpcFramingTests
         IReadOnlySet<string> ToolNames,
         McpPayloadSize InstructionsSize,
         McpPayloadSize DiscoveryPayload,
-        McpPayloadSize ToolsListPayload);
+        McpPayloadSize ToolsListPayload,
+        McpPayloadSize ToolDescriptionsSize,
+        McpPayloadSize InputSchemasSize,
+        string InputSchemaFingerprint);
 }

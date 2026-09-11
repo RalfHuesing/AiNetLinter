@@ -90,16 +90,9 @@ public sealed class WiringProjectContractTests
         Assert.Contains("targetPath", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("ainetlinter://agent-guide", ServerInstructions.Text, StringComparison.Ordinal);
         Assert.Contains("get_server_health", ServerInstructions.Text, StringComparison.Ordinal);
-        var assemblyCapabilityMatrix = new[]
-        {
-            "dependency_graph", "find_references", "find_symbol", "get_call_tree", "get_class_structure",
-            "get_file_skeleton", "get_file_tree", "get_impact", "get_namespace_tree", "get_symbol_body",
-            "get_type_hierarchy", "resolve_type_origin", "find_implementations", "metrics_lookup", "metrics_tree",
-        };
-        Assert.Equal(15, assemblyCapabilityMatrix.Length);
-        Assert.All(assemblyCapabilityMatrix, toolName => Assert.Contains(toolName, ServerInstructions.Text, StringComparison.Ordinal));
-        Assert.Contains("Assembly-only: inspect_assembly, find_assembly_extensions, search_assembly, get_assembly_context", ServerInstructions.Text, StringComparison.Ordinal);
-        Assert.Contains("get_impact akzeptiert fuer Assemblys nur symbolIdentifier", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains(".dll/.exe", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("structuredContent.navigation", ServerInstructions.Text, StringComparison.Ordinal);
+        Assert.Contains("tools/list", ServerInstructions.Text, StringComparison.Ordinal);
     }
 
     [Fact]

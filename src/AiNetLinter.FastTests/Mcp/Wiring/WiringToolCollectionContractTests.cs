@@ -87,29 +87,24 @@ public sealed class WiringToolCollectionContractTests
         foreach (var name in projectAndAssembly)
         {
             var description = tools[name].Description;
-            Assert.Contains("targetPath als absoluter, existierender Pfad", description, StringComparison.Ordinal);
-            Assert.Contains("Source- oder Assembly-Route wird aus targetPath bestimmt", description, StringComparison.Ordinal);
-            Assert.Contains("Snapshotbindung", description, StringComparison.Ordinal);
+            Assert.Contains("Ziel: absolute .sln/.slnx (Source) oder .dll/.exe (Assembly)", description, StringComparison.Ordinal);
         }
 
         foreach (var name in projectOnly)
         {
             var description = tools[name].Description;
-            Assert.Contains("targetPath als absoluter, existierender Pfad einer .sln- oder .slnx-Datei", description, StringComparison.Ordinal);
-            Assert.Contains("Assembly-Ziele sind fuer dieses Tool unsupported", description, StringComparison.Ordinal);
+            Assert.Contains("Ziel: absolute .sln/.slnx (Source)", description, StringComparison.Ordinal);
         }
 
         foreach (var name in new[] { "inspect_assembly", "find_assembly_extensions", "search_assembly", "get_assembly_context" })
         {
             var description = tools[name].Description;
-            Assert.Contains("targetPath als absoluter, existierender .dll- oder .exe-Pfad", description, StringComparison.Ordinal);
+            Assert.Contains("Ziel: absolute .dll/.exe", description, StringComparison.Ordinal);
             Assert.Contains(".dll", description, StringComparison.Ordinal);
             Assert.Contains(".exe", description, StringComparison.Ordinal);
         }
 
-        Assert.Contains("Projekt- und Assembly-Sessions", tools["get_server_health"].Description, StringComparison.Ordinal);
-        Assert.Contains("Ohne targetPath", tools["get_server_health"].Description, StringComparison.Ordinal);
-        Assert.Contains("Mit targetPath", tools["get_server_health"].Description, StringComparison.Ordinal);
+        Assert.Contains("Projekt", tools["get_server_health"].Description, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -180,10 +175,7 @@ public sealed class WiringToolCollectionContractTests
         Assert.DoesNotContain("includeTests", GetProperties(featureContext.InputSchema));
         Assert.DoesNotContain("includeMetrics", GetProperties(featureContext.InputSchema));
         Assert.DoesNotContain("includeViolations", GetProperties(featureContext.InputSchema));
-        Assert.Contains("symbolIdentifier:", featureContext.Description, StringComparison.Ordinal);
-        Assert.Contains("statische Referenzen/Call-Sites", featureContext.Description, StringComparison.Ordinal);
-        Assert.Contains("maxTests bleibt ein Dateilimit", featureContext.Description, StringComparison.Ordinal);
-        Assert.Contains("je Datei auf 50 und insgesamt auf 200 begrenzt", featureContext.Description, StringComparison.Ordinal);
+        Assert.Contains("Wann nutzen", featureContext.Description, StringComparison.Ordinal);
 
         var testContext = tools["get_test_context"];
         Assert.Contains("symbolIdentifier", testContext.InputSchema.ToString(), StringComparison.Ordinal);
@@ -192,9 +184,7 @@ public sealed class WiringToolCollectionContractTests
         Assert.Equal(
             new[] { "maxResponseBytes", "maxResults", "symbolIdentifier", "targetPath" },
             GetProperties(testContext.InputSchema).OrderBy(name => name, StringComparer.Ordinal));
-        Assert.Contains("symbolIdentifier:", testContext.Description, StringComparison.Ordinal);
-        Assert.Contains("maxResponseBytes:", testContext.Description, StringComparison.Ordinal);
-        Assert.Contains("Default 24576", testContext.Description, StringComparison.Ordinal);
+        Assert.Contains("Wann nutzen", testContext.Description, StringComparison.Ordinal);
 
         var metricsLookup = tools["metrics_lookup"];
         Assert.Contains("symbolIdentifiers", metricsLookup.InputSchema.ToString(), StringComparison.Ordinal);

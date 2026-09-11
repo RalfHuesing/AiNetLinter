@@ -11,35 +11,12 @@ namespace AiNetLinter.Mcp;
 /// </summary>
 internal static class ServerInstructions
 {
-    internal const int MaxUtf8Bytes = 2_557;
+    internal const int MaxUtf8Bytes = 1_200;
 
     /// <summary>Globale Regeln fuer MCP-Discovery; tool-spezifische Details stehen in <c>tools/list</c>.</summary>
     internal const string Text =
-        "AiNetLinter analysiert .NET-Solutions mit Roslyn. JEDEM zielgebundenen Tool-Aufruf " +
-        "ist targetPath beizufuegen: ein absoluter Pfad zu einer vorhandenen .sln/.slnx-Datei " +
-        "fuer Source oder .dll/.exe-Datei fuer Assembly; Source-vs-Assembly wird ausschliesslich " +
-        "aus der Dateiendung bestimmt. get_server_health darf ohne Ziel aggregieren oder optional " +
-        "targetPath pruefen, report_observability_feedback bleibt " +
-        "nicht zielgebunden.\n\n" +
-        "Neue Integration nur bei ausdruecklichem Auftrag: ainetlinter://agent-guide lesen; " +
-        "den Projektstatus danach ueber ainetlinter://overview?targetPath=<url-encoded> pruefen. " +
-        "PROJECT_NOT_INITIALIZED und RULES_INVALID bleiben deterministische Fehler.\n\n" +
-        "C#-Symbolgraph-Grenze: C#-Symbole ueber die semantischen Tools abfragen; fuer " +
-        "Text/Namen ausserhalb von .cs (z. B. .js, .razor, .cshtml, .xaml, .html, .css) " +
-        "search_pattern verwenden. enrichCSharp=true reichert sichtbare Treffer geladener " +
-        "C#-Dokumente opt-in an; ambiguous/unavailable bleiben sichtbar.\n\n" +
-        "Assembly-Capability-Matrix (15 Cross-Target-Tools): dependency_graph, find_references, " +
-        "find_symbol, get_call_tree, get_class_structure, get_file_skeleton, get_file_tree, " +
-        "get_impact, get_namespace_tree, get_symbol_body, get_type_hierarchy, " +
-        "resolve_type_origin, find_implementations, metrics_lookup und metrics_tree. " +
-        "get_impact akzeptiert fuer Assemblys nur symbolIdentifier. " +
-        "Assembly-only: inspect_assembly, find_assembly_extensions, search_assembly, get_assembly_context; " +
-        "alle akzeptieren .dll/.exe.\n\n" +
-        "Schemas und Toolzwecke: tools/list.\n\n" +
-        "Sufficiency: Vollstaendige Ergebnisse nicht redundant per Read/Grep pruefen; bei " +
-        "truncated Limits oder Scope verfeinern.\n\n" +
-        "isError-Policy: isError=true ist nicht initialisierten Projekten, Sicherheitsverweigerung " +
-        "oder Malfunction vorbehalten.\n\n" +
-        "Start: get_feature_context -> get_symbol_body; find_symbol -> find_references/get_impact; " +
-        "safeguard -> get_violations.";
+        "Zielgebundene Aufrufe brauchen targetPath: absoluter .sln/.slnx-Pfad fuer Source oder .dll/.exe fuer Assembly; die Endung bestimmt die Route. get_server_health darf ohne Ziel laufen, report_observability_feedback nie mit Ziel.\n\n" +
+        "C#-Symbole, Referenzen und Graphen mit den semantischen Tools abfragen; fuer Text und Nicht-C# search_pattern verwenden. Schemas, Defaults und Toolgrenzen stehen in tools/list.\n\n" +
+        "structuredContent.navigation beschreibt Status, Scope, Completeness und naechsten Schritt; bei partial oder truncated Scope bzw. Limit gezielt verfeinern.\n\n" +
+        "Den Integrationsleitfaden nur bei ausdruecklichem Auftrag unter ainetlinter://agent-guide lesen; die Agent-API-Resource ergaenzt Discovery-Details.";
 }
