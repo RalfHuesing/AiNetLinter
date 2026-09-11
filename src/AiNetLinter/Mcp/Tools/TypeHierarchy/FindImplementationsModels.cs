@@ -45,4 +45,5 @@ internal sealed record FindImplementationsRequest(
     int MaxResults,
     McpScopeType ScopeType,
     bool IncludeGenerated,
-    CancellationToken CancellationToken);
+    CancellationToken CancellationToken,
+    int MaxResponseBytes = FindImplementationsTool.DefaultMaxResponseBytes);

@@ -2,6 +2,9 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using AiNetLinter.FastTests.Fixtures;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Tools;
@@ -359,6 +362,62 @@ public sealed class GetSymbolBodyToolTests
         var entry = result.StructuredContent!.Value.GetProperty("results")[0];
         Assert.StartsWith("s:", entry.GetProperty("id").GetString(), System.StringComparison.Ordinal);
         Assert.Equal("member", entry.GetProperty("handoffKind").GetString());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ResponseBudget_SelectsWholeSymbolBodyUnitsOrReturnsMinimumError()
+    {
+        var state = _fixture.CreateServer();
+        var identifiers = new[] { "Greeter.Greet", "Caller.Run" };
+
+        var constrained = await GetSymbolBodyTool.ExecuteAsync(
+            state,
+            new GetSymbolBodyRequest(identifiers, MaxResponseBytes: 512),
+            CancellationToken.None);
+        var expanded = await GetSymbolBodyTool.ExecuteAsync(
+            state,
+            new GetSymbolBodyRequest(identifiers, MaxResponseBytes: 4_096),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, expanded.IsError);
+        var expandedResults = expanded.StructuredContent!.Value.GetProperty("results").GetArrayLength();
+        if (constrained.IsError == true)
+        {
+            Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", Assert.IsType<TextContentBlock>(Assert.Single(constrained.Content)).Text, StringComparison.Ordinal);
+        }
+        else
+        {
+            var constrainedText = Assert.IsType<TextContentBlock>(Assert.Single(constrained.Content)).Text;
+            var constrainedStructured = constrained.StructuredContent!.Value.GetRawText();
+            Assert.True(
+                Encoding.UTF8.GetByteCount(constrainedText) + Encoding.UTF8.GetByteCount(constrainedStructured) <= 512,
+                "Symbol-Body-Text und StructuredContent muessen gemeinsam ins Budget passen.");
+            Assert.True(constrained.StructuredContent!.Value.GetProperty("results").GetArrayLength() <= expandedResults);
+        }
+
+        Assert.Equal(identifiers.Length, expanded.StructuredContent!.Value.GetProperty("requestedCount").GetInt32());
+    }
+
+    [Fact]
+    public void ApplyFinalResponseBudget_NavigationOverflowDropsWholeUnitsBeforeMinimumError()
+    {
+        var entries = Enumerable.Range(1, 3).Select(index => new SymbolBodyEntry(
+            $"M:Demo.Work{index}", $"M:Demo.Work{index}", "member", "Demo.cs", index,
+            new string('x', 220), "available", "source", false)).ToList();
+        var root = JsonSerializer.SerializeToNode(new SymbolBodyBatchDto(entries, entries.Count), McpJsonOptions.Default)!.AsObject();
+        root["navigation"] = new JsonObject { ["status"] = new JsonObject { ["operation"] = new string('n', 180) } };
+        var original = McpToolResults.Text("original", root);
+
+        var projected = GetSymbolBodyTool.ApplyFinalResponseBudget(original, 1_024);
+        if (projected.StructuredContent!.Value.TryGetProperty("code", out var code))
+        {
+            Assert.Equal("RESPONSE_BUDGET_TOO_SMALL", code.GetString());
+            return;
+        }
+
+        Assert.True(projected.StructuredContent!.Value.GetProperty("results").GetArrayLength() < entries.Count);
+        Assert.True(Encoding.UTF8.GetByteCount(Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text)
+            + Encoding.UTF8.GetByteCount(projected.StructuredContent!.Value.GetRawText()) <= 1_024);
     }
 }
 

@@ -261,17 +261,19 @@ internal static class McpArgumentValidationFilter
         JsonElement value)
     {
         if (argumentName != "maxResponseBytes"
-            || toolName is not ("get_namespace_tree" or "get_class_structure")
+            || toolName is not ("find_symbol" or "find_references" or "get_call_tree"
+                or "find_implementations" or "get_type_hierarchy" or "dependency_graph"
+                or "get_feature_context" or "get_test_context" or "get_file_skeleton"
+                or "get_symbol_body")
             || !TryGetInt32Number(value, out var responseBudget)
-            || responseBudget <= 0
-            || responseBudget >= McpResponseBudgetLimits.MinimumStructuredBytes)
+            || McpResponseBudgetLimits.IsPublicBudget(responseBudget))
         {
             return null;
         }
 
         return McpToolResults.InvalidArgument(
-            $"{argumentName} muss fuer eine markierte strukturierte Antwort mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} Bytes betragen.",
-            $"'{argumentName}' weglassen, 0 verwenden oder mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} setzen.",
+            $"{argumentName} muss zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} Bytes liegen.",
+            $"'{argumentName}' weglassen oder einen Wert zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} setzen.",
             $"$.{argumentName}");
     }
 

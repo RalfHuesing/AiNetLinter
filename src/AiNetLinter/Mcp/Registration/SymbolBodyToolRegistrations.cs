@@ -33,18 +33,21 @@ internal static class SymbolBodyToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? symbolIdentifiers = null, int maxBodyLines = 80, int startLine = 1, int? endLine = null, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? symbolIdentifiers = null, int maxBodyLines = 80, int startLine = 1, int? endLine = null, int maxResponseBytes = GetSymbolBodyTool.DefaultMaxResponseBytes, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
-                var request = new GetSymbolBodyRequest(symbolIdentifiers, maxBodyLines, startLine, endLine);
+                var request = new GetSymbolBodyRequest(symbolIdentifiers, maxBodyLines, startLine, endLine, maxResponseBytes);
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => GetSymbolBodyTool.ExecuteAsync(lease.Server, request, ct),
-                            AssemblySessionCall: lease => GetSymbolBodyTool.ExecuteAsync(lease, request, ct)),
+                            AssemblySessionCall: lease => GetSymbolBodyTool.ExecuteAsync(lease, request, ct),
+                            MaxResponseBytes: maxResponseBytes,
+                            PostNavigationResponseBudget: GetSymbolBodyTool.ApplyFinalResponseBudget,
+                            ApplyAssemblyWireBudget: false),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_symbol_body", GetSymbolBodyDescription)));

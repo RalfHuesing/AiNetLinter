@@ -119,7 +119,7 @@ internal static class FileStructureToolRegistrations
                 bool includeTypes = true,
                 string? kind = "all",
                 int maxResults = GetNamespaceTreeTool.DefaultMaxResults,
-                int maxResponseBytes = 0,
+                int maxResponseBytes = McpResponseBudgetLimits.DefaultBytes,
                 CancellationToken ct = default) =>
                 await ExecuteWithUnknownArgumentGuardAsync(
                     context,
@@ -149,7 +149,7 @@ internal static class FileStructureToolRegistrations
         "Drilldown. depth: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), 1-3 Namespace-Ebenen (Default 1). includeTypes: Typen ausgeben (Default true) " +
         "oder nur Sub-Namespaces. kind: class/interface/record/struct/enum/all (Default all). " +
         "maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Obergrenze der Eintraege (Default 50, Cap 200). " +
-        "maxResponseBytes: optionale Begrenzung der kombinierten UTF-8-Wire-Nutzlast aus finalem Text, StructuredContent, Navigation und Trunkierungsfooter (Default 0 = kein zusätzlicher Budget-Trim, Maximum 65536; positive Werte unter 512 liefern INVALID_ARGUMENT). Text und StructuredContent werden aus derselben Teilmenge erzeugt; das Budget wird nach Navigation nochmals geprüft.";
+        "maxResponseBytes: kombinierte UTF-8-Grenze für finalen Text, StructuredContent, Navigation und Trunkierungsfooter (Default 16384, Minimum 512, Maximum 65536). Text und StructuredContent werden aus derselben Teilmenge erzeugt; das Budget wird nach Navigation nochmals geprüft.";
 
     private static void AddGetClassStructure(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -161,7 +161,7 @@ internal static class FileStructureToolRegistrations
                 int maxMembers = GetClassStructureTool.DefaultMaxMembers,
                 string? kindFilter = null,
                 string? nameFilter = null,
-                int maxResponseBytes = 0,
+                int maxResponseBytes = McpResponseBudgetLimits.DefaultBytes,
                 CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
@@ -189,7 +189,7 @@ internal static class FileStructureToolRegistrations
         "nameFilter: optionaler Substring-Filter nach Member-Namen. maxMembers: Begrenzung der sichtbaren Member " +
         "(mindestens 1; 0 oder negative Werte liefern INVALID_ARGUMENT; Default 50, Cap " + GetClassStructureTool.MaxMembersCap + "); bei Ueberschreitung " +
         "Truncation-Meta-Zeile und TotalMemberCount vs. ShownMemberCount im structuredContent. " +
-        "maxResponseBytes: optionale Begrenzung der kombinierten UTF-8-Wire-Nutzlast aus finalem Text, StructuredContent, Navigation und Trunkierungsfooter (Default 0 = kein zusätzlicher Budget-Trim, Maximum 65536; positive Werte unter 512 liefern INVALID_ARGUMENT). Text und StructuredContent werden aus derselben Member-Teilmenge erzeugt; das Budget wird nach Navigation nochmals geprüft.";
+        "maxResponseBytes: kombinierte UTF-8-Grenze für finalen Text, StructuredContent, Navigation und Trunkierungsfooter (Default 16384, Minimum 512, Maximum 65536). Text und StructuredContent werden aus derselben Member-Teilmenge erzeugt; das Budget wird nach Navigation nochmals geprüft.";
 
     private static void AddGetFileSkeleton(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -197,7 +197,7 @@ internal static class FileStructureToolRegistrations
         AnalysisToolRoute? targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? filePaths = null, int maxResponseBytes = 0, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? filePaths = null, int maxResponseBytes = GetFileSkeletonTool.DefaultMaxResponseBytes, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
@@ -209,8 +209,8 @@ internal static class FileStructureToolRegistrations
                             // The final budget is applied after the fixed navigation envelope is projected.
                             // Passing the wire limit into the legacy skeleton pre-trim would spend the
                             // 2,048-byte budget before navigation exists and can yield INVALID_ARGUMENT.
-                            ProjectCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, 0, ct),
-                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteAsync(lease.Server, filePaths, 0, ct),
+                            ProjectCall: lease => GetFileSkeletonTool.ExecuteBeforeNavigationAsync(lease.Server, filePaths, ct),
+                            AssemblySessionCall: lease => GetFileSkeletonTool.ExecuteBeforeNavigationAsync(lease.Server, filePaths, ct),
                             MaxResponseBytes: maxResponseBytes,
                             PostNavigationResponseBudget: GetFileSkeletonTool.ApplyFinalResponseBudget),
                         ct));
@@ -223,7 +223,7 @@ internal static class FileStructureToolRegistrations
         "ohne die Bodies zu lesen — StructuredContent.files[].types[].members[] enthält dieselben Einheiten " +
         "mit stabilen IDs fuer direkte Folge-Calls an get_symbol_body; das Markdown bleibt menschenlesbar. " +
         "filePaths: Array von Dateipfaden (auch fuer genau eine Datei), relativ oder absolut. " +
-        "maxResponseBytes: optionale UTF-8-Begrenzung der finalen Wire-Nutzlast (Text inklusive Navigation und Trunkierungsfooter; Default 0 = kein zusätzlicher Budget-Trim, Maximum 65536); bei Trunkierung wird ein nächster Schritt genannt und nur an vollständigen Skeleton-Einheiten gekürzt.";
+        "maxResponseBytes: kombinierte UTF-8-Grenze der finalen Wire-Nutzlast (Default 24576, Minimum 512, Maximum 65536); bei Trunkierung wird ein nächster Schritt genannt und nur an vollständigen Skeleton-Einheiten gekürzt.";
 
     private static void AddGetIndexScope(
         McpServerPrimitiveCollection<McpServerTool> tools,

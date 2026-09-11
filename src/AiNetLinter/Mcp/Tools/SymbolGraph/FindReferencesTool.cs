@@ -3,6 +3,9 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
@@ -29,6 +32,7 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// </summary>
 internal static class FindReferencesTool
 {
+    internal const int DefaultMaxResponseBytes = 24 * 1024;
     /// <summary>
     /// Tool-Einstiegspunkt: prueft, ob eine Solution geladen ist, loest den Identifikator zu einem
     /// Symbol auf und liefert dessen Aufrufstellen als Text. Ein defensiver try/catch-Wrapper
@@ -51,6 +55,10 @@ internal static class FindReferencesTool
         FindReferencesRequest request,
         CancellationToken ct)
     {
+        if (!McpResponseBudgetLimits.IsPublicBudget(request.MaxResponseBytes))
+        {
+            return InvalidResponseBudget();
+        }
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
@@ -93,11 +101,12 @@ internal static class FindReferencesTool
                     McpScopeValues.ToWireValue(request.ScopeType),
                     request.IncludeGenerated),
             };
-            var formatted = TransitiveCallGraphFormatter.FormatResponse(
+            var formatted = ProjectResponseBudget(
                 traversal,
-                traversal.Completeness.TotalCallSiteCount == 0
-                    ? $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"
-                    : null);
+                request.MaxResponseBytes,
+                symbolIdentifier);
+
+            if (CombinedBytes(formatted) > request.MaxResponseBytes) return BudgetTooSmall(request.MaxResponseBytes);
 
             return McpToolResults.Text(formatted.Text, formatted.StructuredPayload);
         }
@@ -107,6 +116,88 @@ internal static class FindReferencesTool
                 $"Unerwarteter Fehler in find_references: {ex.Message}",
                 context: symbolIdentifier);
         }
+    }
+
+    private static TransitiveCallGraphFormatResult ProjectResponseBudget(
+        ReferenceTraversalResult traversal,
+        int maxResponseBytes,
+        string symbolIdentifier)
+    {
+        var current = traversal;
+        var formatted = Format(current, symbolIdentifier);
+        while (CombinedBytes(formatted) > maxResponseBytes && current.CallSites.Count > 0)
+        {
+            var callSites = current.CallSites.Take(current.CallSites.Count - 1).ToList();
+            current = current with
+            {
+                CallSites = callSites,
+                Completeness = current.Completeness with
+                {
+                    ShownCallSiteCount = callSites.Count,
+                    TruncatedByResponseBudget = true,
+                },
+            };
+            formatted = Format(current, symbolIdentifier);
+        }
+        return formatted;
+    }
+
+    private static TransitiveCallGraphFormatResult Format(
+        ReferenceTraversalResult result,
+        string symbolIdentifier) =>
+        TransitiveCallGraphFormatter.FormatResponse(
+            result,
+            result.Completeness.TotalCallSiteCount == 0
+                ? $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"
+                : null);
+
+    private static int CombinedBytes(TransitiveCallGraphFormatResult formatted) =>
+        Encoding.UTF8.GetByteCount(formatted.Text)
+        + JsonSerializer.SerializeToUtf8Bytes(formatted.StructuredPayload, McpJsonOptions.Default).Length;
+
+    private static CallToolResult InvalidResponseBudget() =>
+        McpToolResults.InvalidArgument(
+            $"maxResponseBytes muss zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} Bytes liegen.",
+            "maxResponseBytes weglassen oder einen Wert innerhalb dieses Bereichs setzen.",
+            "$.maxResponseBytes");
+
+    private static CallToolResult BudgetTooSmall(int budget) => McpToolResults.Recoverable(
+        LinterErrorCodes.ResponseBudgetTooSmall,
+        $"maxResponseBytes={budget} ist zu klein für die vollständige minimale Referenzprojektion.",
+        new McpErrorParameters(Hint: "maxResponseBytes erhöhen; Referenzen werden nur vollständig gekürzt.", FieldPath: "$.maxResponseBytes"));
+
+    internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
+    {
+        if (result.StructuredContent is not { } structured
+            || result.Content.OfType<TextContentBlock>().FirstOrDefault() is not { } content) return result;
+        var payload = JsonSerializer.Deserialize<FindReferencesResultPayload>(structured.GetRawText(), McpJsonOptions.Default);
+        if (payload is null) return result;
+        var original = TransitiveCallGraphFormatter.FormatPayload(payload);
+        var current = payload;
+        var formatted = original;
+        while (CombinedBytes(formatted) > maxResponseBytes && current.CallSites.Count > 0)
+        {
+            var sites = current.CallSites.Take(current.CallSites.Count - 1).ToList();
+            current = current with
+            {
+                CallSites = sites,
+                Completeness = current.Completeness with { ShownCallSiteCount = sites.Count, TruncatedByResponseBudget = true },
+            };
+            formatted = TransitiveCallGraphFormatter.FormatPayload(current);
+        }
+        var root = JsonNode.Parse(JsonSerializer.Serialize(current, McpJsonOptions.Default))!.AsObject();
+        var oldRoot = JsonNode.Parse(structured.GetRawText())!.AsObject();
+        if (oldRoot["navigation"] is { } navigation) root["navigation"] = navigation.DeepClone();
+        var suffix = content.Text.StartsWith(original.Text, System.StringComparison.Ordinal)
+            ? content.Text[original.Text.Length..] : string.Empty;
+        var projected = new CallToolResult
+        {
+            Content = [new TextContentBlock { Text = formatted.Text + suffix }],
+            StructuredContent = JsonSerializer.SerializeToElement(root, McpJsonOptions.Default),
+        };
+        return Mcp.Wire.McpResponseSize.From(projected).TotalBytes <= maxResponseBytes
+            ? projected
+            : BudgetTooSmall(maxResponseBytes);
     }
 
     /// <summary>

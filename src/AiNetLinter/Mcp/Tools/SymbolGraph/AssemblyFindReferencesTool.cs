@@ -19,7 +19,8 @@ internal sealed record AssemblyFindReferencesRequest(
     bool IncludeReferences,
     McpScopeType ScopeType = McpScopeType.All,
     bool IncludeGenerated = false,
-    McpScopeClassifier? ScopeClassifier = null);
+    McpScopeClassifier? ScopeClassifier = null,
+    int MaxResponseBytes = FindReferencesTool.DefaultMaxResponseBytes);
 
 internal static class AssemblyFindReferencesTool
 {
@@ -47,7 +48,8 @@ internal static class AssemblyFindReferencesTool
                 request.Depth,
                 request.ScopeType,
                 request.IncludeGenerated,
-                request.ScopeClassifier),
+                request.ScopeClassifier,
+                request.MaxResponseBytes),
             cancellationToken).ConfigureAwait(false);
     }
 

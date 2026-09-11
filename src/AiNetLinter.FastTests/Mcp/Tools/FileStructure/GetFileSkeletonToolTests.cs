@@ -106,11 +106,11 @@ public sealed class GetFileSkeletonToolTests
     public async Task ExecuteAsync_MaxResponseBytes_TruncatesVisibleText()
     {
         var result = await GetFileSkeletonTool.ExecuteAsync(
-            _fixture.CreateServer(), ["src/SymbolGraphMini/Greeter.cs", "src/SymbolGraphMini/Hierarchy.cs"], 180, CancellationToken.None);
+            _fixture.CreateServer(), ["src/SymbolGraphMini/Greeter.cs", "src/SymbolGraphMini/Hierarchy.cs"], 512, CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.True(System.Text.Encoding.UTF8.GetByteCount(text) <= 180);
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(text) <= 512);
         Assert.Contains("maxResponseBytes", text, StringComparison.Ordinal);
     }
 

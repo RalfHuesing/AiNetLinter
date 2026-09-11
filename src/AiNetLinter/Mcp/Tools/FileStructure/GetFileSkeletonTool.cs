@@ -28,11 +28,32 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 /// </summary>
 internal static class GetFileSkeletonTool
 {
+    internal const int DefaultMaxResponseBytes = 24 * 1024;
     internal static Task<CallToolResult> ExecuteAsync(
         ISolutionStateProvider state, string[]? filePaths, CancellationToken ct) =>
-        ExecuteAsync(state, filePaths, 0, ct);
+        ExecuteAsync(state, filePaths, DefaultMaxResponseBytes, ct);
 
     internal static async Task<CallToolResult> ExecuteAsync(
+        ISolutionStateProvider state, string[]? filePaths, int maxResponseBytes, CancellationToken ct)
+    {
+        if (!McpResponseBudgetLimits.IsPublicBudget(maxResponseBytes))
+        {
+            return McpToolResults.InvalidArgument(
+                $"maxResponseBytes muss zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} Bytes liegen.",
+                $"maxResponseBytes weglassen oder einen Wert zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} setzen.",
+                "$.maxResponseBytes");
+        }
+
+        return await ExecuteCoreAsync(state, filePaths, maxResponseBytes, ct);
+    }
+
+    // The final navigation envelope owns the public budget. This pre-navigation route
+    // deliberately avoids a second, premature trim while preserving the public contract.
+    internal static Task<CallToolResult> ExecuteBeforeNavigationAsync(
+        ISolutionStateProvider state, string[]? filePaths, CancellationToken ct) =>
+        ExecuteCoreAsync(state, filePaths, 0, ct);
+
+    private static async Task<CallToolResult> ExecuteCoreAsync(
         ISolutionStateProvider state, string[]? filePaths, int maxResponseBytes, CancellationToken ct)
     {
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
@@ -46,21 +67,6 @@ internal static class GetFileSkeletonTool
                 LinterErrorCodes.InvalidArgument,
                 "Pflichtparameter 'filePaths' fehlt oder ist leer.",
                 hint: McpToolResults.FilePathsBatchHint);
-        }
-
-        if (maxResponseBytes < 0)
-        {
-            return McpToolResults.InvalidArgument(
-                "maxResponseBytes darf nicht negativ sein.",
-                "maxResponseBytes weglassen, 0 verwenden oder einen positiven Wert setzen.",
-                "$.maxResponseBytes");
-        }
-        if (maxResponseBytes > McpResponseBudgetLimits.MaxBytes)
-        {
-            return McpToolResults.InvalidArgument(
-                $"maxResponseBytes darf höchstens {McpResponseBudgetLimits.MaxBytes} sein.",
-                $"maxResponseBytes auf höchstens {McpResponseBudgetLimits.MaxBytes} setzen.",
-                "$.maxResponseBytes");
         }
 
         try

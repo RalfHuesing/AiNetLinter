@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using AiNetLinter.Mcp.Tools.Common;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.FileStructure;
@@ -43,7 +44,7 @@ public sealed record GetNamespaceTreeInput(
     bool IncludeTypes = true,
     string? Kind = "all",
     int MaxResults = 50,
-    int MaxResponseBytes = 0);
+    int MaxResponseBytes = McpResponseBudgetLimits.DefaultBytes);
 
 public sealed record NamespaceTreeScanParameters(
     Project Project,

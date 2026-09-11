@@ -12,4 +12,5 @@ internal sealed record GetTypeHierarchyRequest(
     int MaxResults,
     McpScopeType ScopeType,
     bool IncludeGenerated,
-    CancellationToken CancellationToken);
+    CancellationToken CancellationToken,
+    int MaxResponseBytes = GetTypeHierarchyTool.DefaultMaxResponseBytes);

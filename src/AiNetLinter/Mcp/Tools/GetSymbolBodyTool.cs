@@ -4,6 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
@@ -27,6 +30,7 @@ namespace AiNetLinter.Mcp.Tools;
 internal static class GetSymbolBodyTool
 {
     internal const int DefaultMaxBodyLines = 80;
+    internal const int DefaultMaxResponseBytes = 32 * 1024;
 
     /// <summary>Textmarker, den <see cref="ExtractSymbolBody"/> nur bei tatsaechlicher
     /// maxBodyLines-Kappung anhaengt — Grundlage fuer die Sufficiency-Hinweis-Entscheidung in
@@ -38,6 +42,10 @@ internal static class GetSymbolBodyTool
         GetSymbolBodyRequest request,
         CancellationToken ct)
     {
+        if (!McpResponseBudgetLimits.IsPublicBudget(request.MaxResponseBytes))
+        {
+            return InvalidResponseBudget();
+        }
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
@@ -53,7 +61,7 @@ internal static class GetSymbolBodyTool
 
         try
         {
-            return await RenderSymbolBodiesAsync(solution, identifiers, request.EffectiveMaxBodyLines, request.StartLine, state.HandoffSymbolIdentity, null, ct);
+            return await RenderSymbolBodiesAsync(solution, identifiers, request.EffectiveMaxBodyLines, request.StartLine, request.MaxResponseBytes, state.HandoffSymbolIdentity, null, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -76,6 +84,10 @@ internal static class GetSymbolBodyTool
         CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(lease);
+        if (!McpResponseBudgetLimits.IsPublicBudget(request.MaxResponseBytes))
+        {
+            return InvalidResponseBudget();
+        }
         var solution = lease.Solution;
         if (solution is null) return McpToolResults.SolutionNotLoaded();
         var identifiers = McpBatchArguments.Normalize(request.SymbolIdentifiers, StringComparer.Ordinal);
@@ -88,7 +100,7 @@ internal static class GetSymbolBodyTool
         }
 
         var result = await RenderSymbolBodiesAsync(
-            solution, identifiers, request.EffectiveMaxBodyLines, request.StartLine, lease.AssemblySymbolIdentity, lease.Origin, ct)
+            solution, identifiers, request.EffectiveMaxBodyLines, request.StartLine, request.MaxResponseBytes, lease.AssemblySymbolIdentity, lease.Origin, ct)
             .ConfigureAwait(false);
         return AssemblyPublicContract.Project(result);
     }
@@ -106,32 +118,29 @@ internal static class GetSymbolBodyTool
         IReadOnlyList<string> identifiers,
         int maxBodyLines,
         int startLine,
+        int maxResponseBytes,
         AnalysisSymbolIdentity? assemblyIdentity,
         AssemblyOrigin? assemblyOrigin,
         CancellationToken ct)
     {
         var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
-        var mb = new MarkdownBuilder();
-        var entries = new List<SymbolBodyEntry>();
+        var units = new List<SymbolBodyRenderUnit>();
 
         for (var i = 0; i < identifiers.Count; i++)
         {
-            if (i > 0) mb.Divider();
-
-            var earlyError = await RenderSingleSymbolAsync(
+            var rendered = await RenderSingleSymbolAsync(
                 new RenderSingleSymbolRequest(
-                    solution, identifiers[i], identifiers.Count, maxBodyLines, startLine, outputRoot, mb, assemblyIdentity, assemblyOrigin, entries),
+                    solution, identifiers[i], identifiers.Count, maxBodyLines, startLine, outputRoot, assemblyIdentity, assemblyOrigin),
                 ct);
 
-            if (earlyError != null) return earlyError;
+            if (rendered.EarlyError is not null) return rendered.EarlyError;
+            units.Add(rendered.Unit!);
         }
 
-        var markdown = mb.Build().TrimEnd();
-        var final = markdown;
-        return McpToolResults.Text(final, new SymbolBodyBatchDto(entries, identifiers.Count));
+        return CreateBudgetedResult(units, identifiers.Count, maxResponseBytes);
     }
 
-    private static async Task<CallToolResult?> RenderSingleSymbolAsync(
+    private static async Task<RenderSingleSymbolResult> RenderSingleSymbolAsync(
         RenderSingleSymbolRequest request,
         CancellationToken ct)
     {
@@ -181,26 +190,28 @@ internal static class GetSymbolBodyTool
         return SymbolIdentifierResolver.TryFindEnclosingMember(root, lineSpan, sm);
     }
 
-    private static CallToolResult? RenderResolutionError(
+    private static RenderSingleSymbolResult RenderResolutionError(
         RenderSingleSymbolRequest request,
         CallToolResult error)
     {
-        if (request.TotalCount == 1) return error;
-        request.Markdown.Heading(3, $"Symbol `{request.Identifier}` nicht aufgeloest");
-        request.Markdown.BlankLine();
+        if (request.TotalCount == 1) return new(error, null);
+        var markdown = new MarkdownBuilder();
+        markdown.Heading(3, $"Symbol `{request.Identifier}` nicht aufgeloest");
+        markdown.BlankLine();
         var errorText = error.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? "Fehler beim Aufloesen.";
-        request.Markdown.Line(errorText.Trim());
-        return null;
+        markdown.Line(errorText.Trim());
+        return new(null, new SymbolBodyRenderUnit(null, markdown.Build().TrimEnd()));
     }
 
-    private static CallToolResult? RenderMissingSymbol(RenderSingleSymbolRequest request)
+    private static RenderSingleSymbolResult RenderMissingSymbol(RenderSingleSymbolRequest request)
     {
-        if (request.TotalCount == 1) return McpToolResults.SymbolNotFound(request.Identifier);
-        request.Markdown.Heading(3, $"Symbol nicht gefunden: `{request.Identifier}`");
-        return null;
+        if (request.TotalCount == 1) return new(McpToolResults.SymbolNotFound(request.Identifier), null);
+        var markdown = new MarkdownBuilder();
+        markdown.Heading(3, $"Symbol nicht gefunden: `{request.Identifier}`");
+        return new(null, new SymbolBodyRenderUnit(null, markdown.Build().TrimEnd()));
     }
 
-    private static CallToolResult? RenderResolvedSymbol(
+    private static RenderSingleSymbolResult RenderResolvedSymbol(
         RenderSingleSymbolRequest request,
         ISymbol symbol)
     {
@@ -208,24 +219,25 @@ internal static class GetSymbolBodyTool
             ?? symbol.TryGetDocCommentId();
         var bodyResolution = SourceSymbolBodyResolver.Resolve(symbol, request.MaxBodyLines, request.AssemblyOrigin, request.StartLine);
 
-        request.Markdown.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{FormatLocation(request, symbol)}`");
-        request.Markdown.BlankLine();
+        var markdown = new MarkdownBuilder();
+        markdown.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{FormatLocation(request, symbol)}`");
+        markdown.BlankLine();
         if (!string.Equals(request.Identifier, idSuffix, StringComparison.Ordinal)
             && !SymbolHandoffIdentifier.TryParse(request.Identifier, out _))
         {
-            request.Markdown.Line($"angefordert: `{request.Identifier}`");
+            markdown.Line($"angefordert: `{request.Identifier}`");
         }
-        request.Markdown.Line($"bodyAvailability: `{bodyResolution.BodyAvailability}`; contentMode: `{bodyResolution.ContentMode}`");
+        markdown.Line($"bodyAvailability: `{bodyResolution.BodyAvailability}`; contentMode: `{bodyResolution.ContentMode}`");
         if (bodyResolution.TotalBodyLines > 0)
         {
-            request.Markdown.Line($"Zeilen: {bodyResolution.DisplayedStartLine}-{bodyResolution.DisplayedEndLine} von {bodyResolution.TotalBodyLines}");
+            markdown.Line($"Zeilen: {bodyResolution.DisplayedStartLine}-{bodyResolution.DisplayedEndLine} von {bodyResolution.TotalBodyLines}");
         }
-        if (!string.IsNullOrWhiteSpace(bodyResolution.Hint)) request.Markdown.Line($"Hinweis: {bodyResolution.Hint}");
-        request.Markdown.BlankLine();
-        request.Markdown.CodeBlock("csharp", bodyResolution.Body ?? "// Für dieses Symbol ist kein dekompilierbarer Body verfügbar.");
+        if (!string.IsNullOrWhiteSpace(bodyResolution.Hint)) markdown.Line($"Hinweis: {bodyResolution.Hint}");
+        markdown.BlankLine();
+        markdown.CodeBlock("csharp", bodyResolution.Body ?? "// Für dieses Symbol ist kein dekompilierbarer Body verfügbar.");
         var location = symbol.Locations.FirstOrDefault(candidate => candidate.IsInSource);
         var lineSpan = location?.GetLineSpan();
-        request.Entries.Add(new SymbolBodyEntry(
+        var entry = new SymbolBodyEntry(
             request.Identifier,
             idSuffix,
             idSuffix is null ? null : "member",
@@ -238,8 +250,8 @@ internal static class GetSymbolBodyTool
             bodyResolution.TotalBodyLines,
             bodyResolution.DisplayedStartLine,
             bodyResolution.DisplayedEndLine,
-            bodyResolution.HasMoreLines));
-        return null;
+            bodyResolution.HasMoreLines);
+        return new(null, new SymbolBodyRenderUnit(entry, markdown.Build().TrimEnd()));
     }
 
     private sealed record RenderSingleSymbolRequest(
@@ -249,10 +261,121 @@ internal static class GetSymbolBodyTool
         int MaxBodyLines,
         int StartLine,
         string OutputRoot,
-        MarkdownBuilder Markdown,
         AnalysisSymbolIdentity? AssemblyIdentity,
-        AssemblyOrigin? AssemblyOrigin,
-        List<SymbolBodyEntry> Entries);
+        AssemblyOrigin? AssemblyOrigin);
+
+    private static CallToolResult CreateBudgetedResult(
+        IReadOnlyList<SymbolBodyRenderUnit> units,
+        int requestedCount,
+        int maxResponseBytes)
+    {
+        var kept = units.ToList();
+        var truncated = false;
+        while (CombinedBytes(kept, requestedCount, truncated) > maxResponseBytes && kept.Count > 0)
+        {
+            kept.RemoveAt(kept.Count - 1);
+            truncated = true;
+        }
+
+        if (CombinedBytes(kept, requestedCount, truncated) > maxResponseBytes)
+        {
+            return BudgetTooSmall(maxResponseBytes);
+        }
+
+        return CreateResult(kept, requestedCount, truncated);
+    }
+
+    internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
+    {
+        if (maxResponseBytes <= 0 || Mcp.Wire.McpResponseSize.From(result).TotalBytes <= maxResponseBytes)
+        {
+            return result;
+        }
+
+        if (result.StructuredContent is not { } structured)
+        {
+            return BudgetTooSmall(maxResponseBytes);
+        }
+
+        var payload = JsonSerializer.Deserialize<SymbolBodyBatchDto>(structured.GetRawText(), McpJsonOptions.Default);
+        if (payload is null) return BudgetTooSmall(maxResponseBytes);
+
+        var units = payload.Results.Select(entry => new SymbolBodyRenderUnit(entry, RenderEntryMarkdown(entry))).ToList();
+        while (units.Count > 0)
+        {
+            var projected = CreateBudgetedResult(units, payload.RequestedCount, maxResponseBytes);
+            if (projected.IsError == true) break;
+            var root = JsonNode.Parse(projected.StructuredContent!.Value.GetRawText())!.AsObject();
+            var originalRoot = JsonNode.Parse(structured.GetRawText())!.AsObject();
+            if (originalRoot["navigation"] is { } navigation) root["navigation"] = navigation.DeepClone();
+            var final = new CallToolResult
+            {
+                Content = projected.Content,
+                StructuredContent = JsonSerializer.SerializeToElement(root, McpJsonOptions.Default),
+            };
+            if (Mcp.Wire.McpResponseSize.From(final).TotalBytes <= maxResponseBytes) return final;
+            units.RemoveAt(units.Count - 1);
+        }
+
+        return BudgetTooSmall(maxResponseBytes);
+    }
+
+    private static CallToolResult CreateResult(
+        IReadOnlyList<SymbolBodyRenderUnit> units,
+        int requestedCount,
+        bool truncated)
+    {
+        var markdown = string.Join("\n\n---\n\n", units.Select(unit => unit.Markdown));
+        if (truncated)
+        {
+            markdown += (markdown.Length == 0 ? string.Empty : "\n\n")
+                + "[Antwort wegen maxResponseBytes begrenzt — vollständige Symbol-Body-Einheiten ausgelassen; maxResponseBytes erhöhen oder symbolIdentifiers verfeinern]";
+        }
+
+        return McpToolResults.Text(
+            markdown,
+            new SymbolBodyBatchDto(units.Where(unit => unit.Entry is not null).Select(unit => unit.Entry!).ToList(), requestedCount));
+    }
+
+    private static int CombinedBytes(
+        IReadOnlyList<SymbolBodyRenderUnit> units,
+        int requestedCount,
+        bool truncated)
+    {
+        var result = CreateResult(units, requestedCount, truncated);
+        var text = result.Content.OfType<TextContentBlock>().Single().Text;
+        return Encoding.UTF8.GetByteCount(text)
+            + JsonSerializer.SerializeToUtf8Bytes(result.StructuredContent!.Value, McpJsonOptions.Default).Length;
+    }
+
+    private static string RenderEntryMarkdown(SymbolBodyEntry entry)
+    {
+        var markdown = new MarkdownBuilder();
+        markdown.Heading(3, $"Symbol-Body: `{entry.Id ?? entry.RequestedIdentifier}` — `{entry.FilePath}`");
+        markdown.BlankLine();
+        markdown.Line($"bodyAvailability: `{entry.BodyAvailability}`; contentMode: `{entry.ContentMode}`");
+        if (entry.TotalBodyLines > 0)
+        {
+            markdown.Line($"Zeilen: {entry.DisplayedStartLine}-{entry.DisplayedEndLine} von {entry.TotalBodyLines}");
+        }
+        markdown.BlankLine();
+        markdown.CodeBlock("csharp", entry.Body ?? "// Für dieses Symbol ist kein dekompilierbarer Body verfügbar.");
+        return markdown.Build().TrimEnd();
+    }
+
+    private static CallToolResult BudgetTooSmall(int budget) =>
+        McpToolResults.Recoverable(
+            LinterErrorCodes.ResponseBudgetTooSmall,
+            $"maxResponseBytes={budget} ist zu klein für die vollständige minimale Symbol-Body-Projektion.",
+            new McpErrorParameters(
+                Hint: "maxResponseBytes erhöhen; Symbol-Bodies werden nur als vollständige Einheiten gekürzt.",
+                FieldPath: "$.maxResponseBytes"));
+
+    private static CallToolResult InvalidResponseBudget() =>
+        McpToolResults.InvalidArgument(
+            $"maxResponseBytes muss zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} Bytes liegen.",
+            $"maxResponseBytes weglassen oder einen Wert zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} setzen.",
+            "$.maxResponseBytes");
 
     private static string ToRelative(string outputRoot, ISymbol symbol)
     {
@@ -271,6 +394,10 @@ internal static class GetSymbolBodyTool
     }
 
 }
+
+internal sealed record SymbolBodyRenderUnit(SymbolBodyEntry? Entry, string Markdown);
+
+internal sealed record RenderSingleSymbolResult(CallToolResult? EarlyError, SymbolBodyRenderUnit? Unit);
 
 internal sealed record SymbolBodyBatchDto(
     IReadOnlyList<SymbolBodyEntry> Results,
@@ -295,7 +422,8 @@ internal sealed record GetSymbolBodyRequest(
     string[]? SymbolIdentifiers = null,
     int MaxBodyLines = GetSymbolBodyTool.DefaultMaxBodyLines,
     int StartLine = 1,
-    int? EndLine = null)
+    int? EndLine = null,
+    int MaxResponseBytes = GetSymbolBodyTool.DefaultMaxResponseBytes)
 {
     internal int EffectiveMaxBodyLines =>
         EndLine.HasValue

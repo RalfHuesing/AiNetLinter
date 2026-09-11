@@ -42,18 +42,11 @@ internal static class GetNamespaceTreeTool
                 hint: "Gueltige Werte: class/klasse, interface, record, struct, enum, all.");
         }
 
-        if (input.MaxResponseBytes < 0)
+        if (!McpResponseBudgetLimits.IsPublicBudget(input.MaxResponseBytes))
         {
             return McpToolResults.InvalidArgument(
-                "maxResponseBytes darf nicht negativ sein.",
-                "maxResponseBytes weglassen, 0 verwenden oder einen positiven Wert setzen.",
-                "$.maxResponseBytes");
-        }
-        if (input.MaxResponseBytes > McpResponseBudgetLimits.MaxBytes)
-        {
-            return McpToolResults.InvalidArgument(
-                $"maxResponseBytes darf höchstens {McpResponseBudgetLimits.MaxBytes} sein.",
-                $"maxResponseBytes auf höchstens {McpResponseBudgetLimits.MaxBytes} setzen.",
+                $"maxResponseBytes muss zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} Bytes liegen.",
+                $"maxResponseBytes weglassen oder einen Wert zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} setzen.",
                 "$.maxResponseBytes");
         }
 

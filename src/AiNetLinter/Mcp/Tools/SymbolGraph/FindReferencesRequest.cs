@@ -10,7 +10,8 @@ internal sealed record FindReferencesRequest(
     int Depth,
     McpScopeType ScopeType = McpScopeType.All,
     bool IncludeGenerated = false,
-    McpScopeClassifier? ScopeClassifier = null)
+    McpScopeClassifier? ScopeClassifier = null,
+    int MaxResponseBytes = FindReferencesTool.DefaultMaxResponseBytes)
 {
     public string? EffectiveSymbolIdentifier =>
         string.IsNullOrWhiteSpace(SymbolIdentifier) ? null : SymbolIdentifier;

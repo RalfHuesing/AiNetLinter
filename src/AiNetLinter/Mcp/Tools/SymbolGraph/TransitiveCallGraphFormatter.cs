@@ -88,6 +88,15 @@ internal static class TransitiveCallGraphFormatter
             CreateHandoffPayload(result.CallSites),
             result.Scope);
 
+    internal static TransitiveCallGraphFormatResult FormatPayload(FindReferencesResultPayload payload)
+    {
+        var callSites = payload.CallSites.Select(entry => new TransitiveCallSiteEntry(
+            entry.FilePath, entry.Line, entry.SymbolName, entry.ProjectName, entry.Depth,
+            entry.ReachedFromSymbolId, entry.Origin, entry.Id, entry.HandoffKind,
+            entry.ScopeType, entry.SourceKind)).ToList();
+        return FormatResponse(new ReferenceTraversalResult(callSites, payload.Completeness, payload.Navigation, payload.Scope));
+    }
+
     private static SymbolHandoffPayload? CreateHandoffPayload(
         IReadOnlyList<TransitiveCallSiteEntry> callSites)
     {
@@ -260,6 +269,11 @@ internal static class TransitiveCallGraphFormatter
         if (completeness.TruncatedByMaxResults)
         {
             lines.Add(CreateMaxResultsMessage(completeness));
+        }
+
+        if (completeness.TruncatedByResponseBudget)
+        {
+            lines.Add("[Antwort wegen maxResponseBytes begrenzt — weitere vollständige Referenzen nicht enthalten]");
         }
 
         if (completeness.TruncatedByNodeLimit)

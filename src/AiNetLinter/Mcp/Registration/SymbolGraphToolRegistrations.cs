@@ -120,7 +120,7 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, bool includeReferences = false, string scopeType = "all", bool includeGenerated = false, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = 50, int depth = 1, bool includeReferences = false, string scopeType = "all", bool includeGenerated = false, int maxResponseBytes = FindReferencesTool.DefaultMaxResponseBytes, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
@@ -138,7 +138,8 @@ internal static class SymbolGraphToolRegistrations
                                     maxResults,
                                     depth,
                                     scopeValidation.ScopeType,
-                                    includeGenerated),
+                                    includeGenerated,
+                                    MaxResponseBytes: maxResponseBytes),
                                 ct),
                             AssemblySessionCall: lease => AssemblyFindReferencesTool.ExecuteAsync(
                                 lease,
@@ -148,9 +149,13 @@ internal static class SymbolGraphToolRegistrations
                                     depth,
                                     includeReferences,
                                     scopeValidation.ScopeType,
-                                    includeGenerated),
+                                    includeGenerated,
+                                    MaxResponseBytes: maxResponseBytes),
                                 ct),
-                            ExpandAssemblyReferences: includeReferences),
+                            ExpandAssemblyReferences: includeReferences,
+                            MaxResponseBytes: maxResponseBytes,
+                            PostNavigationResponseBudget: FindReferencesTool.ApplyFinalResponseBudget,
+                            ApplyAssemblyWireBudget: false),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("find_references", FindReferencesDescription)));
@@ -266,7 +271,7 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, string scopeType = "all", bool includeGenerated = false, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = GetTypeHierarchyTool.DefaultMaxResults, string scopeType = "all", bool includeGenerated = false, int maxResponseBytes = GetTypeHierarchyTool.DefaultMaxResponseBytes, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
@@ -284,7 +289,8 @@ internal static class SymbolGraphToolRegistrations
                                     maxResults,
                                     scopeValidation.ScopeType,
                                     includeGenerated,
-                                    ct)),
+                                    ct,
+                                    maxResponseBytes)),
                             AssemblySessionCall: lease => GetTypeHierarchyTool.ExecuteAsync(
                                 new GetTypeHierarchyRequest(
                                     lease.Server,
@@ -292,7 +298,11 @@ internal static class SymbolGraphToolRegistrations
                                     maxResults,
                                     scopeValidation.ScopeType,
                                     includeGenerated,
-                                    ct))),
+                                    ct,
+                                    maxResponseBytes)),
+                            MaxResponseBytes: maxResponseBytes,
+                            PostNavigationResponseBudget: GetTypeHierarchyTool.ApplyFinalResponseBudget,
+                            ApplyAssemblyWireBudget: false),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_type_hierarchy", GetTypeHierarchyDescription)));
@@ -376,7 +386,7 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = FindImplementationsTool.DefaultMaxResults, string scopeType = "all", bool includeGenerated = false, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int maxResults = FindImplementationsTool.DefaultMaxResults, string scopeType = "all", bool includeGenerated = false, int maxResponseBytes = FindImplementationsTool.DefaultMaxResponseBytes, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
@@ -394,7 +404,8 @@ internal static class SymbolGraphToolRegistrations
                                     maxResults,
                                     scopeValidation.ScopeType,
                                     includeGenerated,
-                                    ct)),
+                                    ct,
+                                    maxResponseBytes)),
                             AssemblySessionCall: lease => FindImplementationsTool.ExecuteAsync(
                                 new FindImplementationsRequest(
                                     lease.Server,
@@ -402,7 +413,11 @@ internal static class SymbolGraphToolRegistrations
                                     maxResults,
                                     scopeValidation.ScopeType,
                                     includeGenerated,
-                                    ct))),
+                                    ct,
+                                    maxResponseBytes)),
+                            MaxResponseBytes: maxResponseBytes,
+                            PostNavigationResponseBudget: FindImplementationsTool.ApplyFinalResponseBudget,
+                            ApplyAssemblyWireBudget: false),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("find_implementations", FindImplementationsDescription)));

@@ -25,7 +25,7 @@ internal sealed record GetClassStructureArgs(
     int MaxMembers = GetClassStructureTool.DefaultMaxMembers,
     string? KindFilter = null,
     string? NameFilter = null,
-    int MaxResponseBytes = 0)
+    int MaxResponseBytes = McpResponseBudgetLimits.DefaultBytes)
 {
     internal string? EffectiveSymbolIdentifier =>
         string.IsNullOrWhiteSpace(SymbolIdentifier) ? null : SymbolIdentifier;
@@ -106,25 +106,11 @@ internal static partial class GetClassStructureTool
                 hint: "symbolIdentifier angeben: z. B. 'MyClass', 'Namespace.MyClass' oder 'Datei.cs:42:10'.");
         }
 
-        if (args.MaxResponseBytes < 0)
+        if (!McpResponseBudgetLimits.IsPublicBudget(args.MaxResponseBytes))
         {
             return McpToolResults.InvalidArgument(
-                "maxResponseBytes darf nicht negativ sein.",
-                "maxResponseBytes weglassen, 0 verwenden oder einen positiven Wert setzen.",
-                "$.maxResponseBytes");
-        }
-        if (args.MaxResponseBytes > McpResponseBudgetLimits.MaxBytes)
-        {
-            return McpToolResults.InvalidArgument(
-                $"maxResponseBytes darf höchstens {McpResponseBudgetLimits.MaxBytes} sein.",
-                $"maxResponseBytes auf höchstens {McpResponseBudgetLimits.MaxBytes} setzen.",
-                "$.maxResponseBytes");
-        }
-        if (args.MaxResponseBytes > 0 && args.MaxResponseBytes < McpResponseBudgetLimits.MinimumStructuredBytes)
-        {
-            return McpToolResults.InvalidArgument(
-                $"maxResponseBytes muss fuer eine markierte strukturierte Antwort mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} Bytes betragen.",
-                $"maxResponseBytes weglassen, 0 verwenden oder mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} setzen.",
+                $"maxResponseBytes muss zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} Bytes liegen.",
+                $"maxResponseBytes weglassen oder einen Wert zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} setzen.",
                 "$.maxResponseBytes");
         }
         return null;

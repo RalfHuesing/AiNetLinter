@@ -58,7 +58,8 @@ internal sealed record TraversalCompleteness(
     int DiagnosticTotalCount = 0,
     int DiagnosticShownCount = 0,
     bool DiagnosticsTruncated = false,
-    IReadOnlyList<string>? DiagnosticsTruncatedBy = null);
+    IReadOnlyList<string>? DiagnosticsTruncatedBy = null,
+    bool TruncatedByResponseBudget = false);
 
 
 internal sealed record ReferenceTraversalResult(

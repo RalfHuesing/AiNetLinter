@@ -5,12 +5,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
+using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
@@ -25,6 +28,7 @@ namespace AiNetLinter.Mcp.Tools.TypeHierarchy;
 internal static class FindImplementationsTool
 {
     internal const int DefaultMaxResults = 50;
+    internal const int DefaultMaxResponseBytes = 16 * 1024;
 
     internal static async Task<CallToolResult> ExecuteAsync(
         ISolutionStateProvider state,
@@ -48,6 +52,10 @@ internal static class FindImplementationsTool
         var scopeType = request.ScopeType;
         var includeGenerated = request.IncludeGenerated;
         var ct = request.CancellationToken;
+        if (!McpResponseBudgetLimits.IsPublicBudget(request.MaxResponseBytes))
+        {
+            return InvalidResponseBudget();
+        }
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
@@ -84,10 +92,7 @@ internal static class FindImplementationsTool
                 includeGenerated,
                 new McpScopeClassifier()),
             ct).ConfigureAwait(false);
-        var text = FormatResultText(resultDto);
-        var finalText = text;
-
-        return McpToolResults.Text(finalText, resultDto);
+        return ApplyResponseBudget(resultDto, request.MaxResponseBytes);
     }
 
     private static async Task<(IReadOnlyList<ISymbol>? Symbols, string? ErrorMessage)> FindRawImplementationsAsync(
@@ -320,7 +325,71 @@ internal static class FindImplementationsTool
         return $"{filePath}:{line}:{column}";
     }
 
-    private static string FormatResultText(FindImplementationsResultDto dto)
+    internal static CallToolResult ApplyResponseBudget(FindImplementationsResultDto dto, int maxResponseBytes)
+    {
+        var current = dto;
+        while (CombinedBytes(current) > maxResponseBytes && current.Implementations.Count > 0)
+        {
+            var implementations = current.Implementations.Take(current.Implementations.Count - 1).ToList();
+            var reasons = current.TruncationReasons.Contains("maxResponseBytes", StringComparer.Ordinal)
+                ? current.TruncationReasons
+                : current.TruncationReasons.Append("maxResponseBytes").ToList();
+            current = current with
+            {
+                Implementations = implementations,
+                ShownCount = implementations.Count,
+                IsTruncated = true,
+                TruncationReasons = reasons,
+            };
+        }
+        if (CombinedBytes(current) > maxResponseBytes)
+        {
+            return BudgetTooSmall(maxResponseBytes);
+        }
+        return McpToolResults.Text(FormatResultText(current), current);
+    }
+
+    private static CallToolResult InvalidResponseBudget() =>
+        McpToolResults.InvalidArgument(
+            $"maxResponseBytes muss zwischen {McpResponseBudgetLimits.MinimumStructuredBytes} und {McpResponseBudgetLimits.MaxBytes} Bytes liegen.",
+            "maxResponseBytes weglassen oder einen Wert innerhalb dieses Bereichs setzen.",
+            "$.maxResponseBytes");
+
+    private static CallToolResult BudgetTooSmall(int budget) => McpToolResults.Recoverable(
+        LinterErrorCodes.ResponseBudgetTooSmall,
+        $"maxResponseBytes={budget} ist zu klein für die vollständige minimale Implementierungsprojektion.",
+        new McpErrorParameters(Hint: "maxResponseBytes erhöhen; Implementierungen werden nur vollständig gekürzt.", FieldPath: "$.maxResponseBytes"));
+
+    internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
+    {
+        if (result.StructuredContent is not { } structured
+            || result.Content.OfType<TextContentBlock>().FirstOrDefault() is not { } content) return result;
+        var payload = JsonSerializer.Deserialize<FindImplementationsResultDto>(structured.GetRawText(), McpJsonOptions.Default);
+        if (payload is null) return result;
+        var originalText = FormatResultText(payload);
+        var projected = ApplyResponseBudget(payload, maxResponseBytes);
+        if (projected.IsError == true || projected.StructuredContent is not { } projectedStructured) return projected;
+        var root = JsonNode.Parse(projectedStructured.GetRawText())!.AsObject();
+        var oldRoot = JsonNode.Parse(structured.GetRawText())!.AsObject();
+        if (oldRoot["navigation"] is { } navigation) root["navigation"] = navigation.DeepClone();
+        var projectedText = projected.Content.OfType<TextContentBlock>().First().Text;
+        var suffix = content.Text.StartsWith(originalText, StringComparison.Ordinal)
+            ? content.Text[originalText.Length..] : string.Empty;
+        var finalResult = new CallToolResult
+        {
+            Content = [new TextContentBlock { Text = projectedText + suffix }],
+            StructuredContent = JsonSerializer.SerializeToElement(root, McpJsonOptions.Default),
+        };
+        return Mcp.Wire.McpResponseSize.From(finalResult).TotalBytes <= maxResponseBytes
+            ? finalResult
+            : BudgetTooSmall(maxResponseBytes);
+    }
+
+    private static int CombinedBytes(FindImplementationsResultDto dto) =>
+        Encoding.UTF8.GetByteCount(FormatResultText(dto))
+        + JsonSerializer.SerializeToUtf8Bytes(dto, McpJsonOptions.Default).Length;
+
+    internal static string FormatResultText(FindImplementationsResultDto dto)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"Implementierungen / Overrides für '{dto.TargetSymbol}' ({dto.TargetKind}):");
