@@ -1,6 +1,10 @@
 #nullable enable
 
+using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using AiNetLinter.Mcp.Scope;
 
 namespace AiNetLinter.Mcp.Tools.DependencyGraph;
 
@@ -20,7 +24,10 @@ internal sealed record DependencyGraphInput(
     string? SymbolIdentifier,
     string? Direction,
     int Depth,
-    int MaxResults);
+    int MaxResults,
+    string ScopeType = "all",
+    bool IncludeGenerated = false,
+    int MaxResponseBytes = DependencyGraphTool.DefaultMaxResponseBytes);
 
 /// <summary>
 /// Buendelt die Scan-Konfiguration fuer <see cref="DependencyGraphScanner.ScanFileAsync"/> /
@@ -33,7 +40,10 @@ internal sealed record DependencyGraphScanRequest(
     bool IncludeOutgoing,
     bool IncludeIncoming,
     int Depth,
-    int MaxResults);
+    int MaxResults,
+    McpScopeType ScopeType = McpScopeType.All,
+    bool IncludeGenerated = false,
+    McpScopeClassifier? ScopeClassifier = null);
 
 /// <summary>
 /// Auflösungsziel von <c>dependency_graph</c>: entweder eine ganze Datei (<c>Kind == "file"</c>,
@@ -56,6 +66,13 @@ internal sealed record DependencyEdge(
     string Direction,
     IReadOnlyList<string> TypeNames,
     int ReferenceCount);
+
+/// <summary>Ein eindeutiger Graphknoten mit gemeinsamer MCP-Scope-Klassifikation.</summary>
+internal sealed record DependencyGraphNode(
+    string Path,
+    string ScopeType,
+    string SourceKind,
+    bool IsBridge);
 
 /// <summary>
 /// Ausgehende Projekt-Referenzen (<c>Project.ProjectReferences</c>) des Projekts, das die
@@ -81,4 +98,72 @@ internal sealed record DependencyGraphResult(
     int ClampedDepth,
     bool DepthWasClamped,
     bool NodeCapReached,
-    bool Truncated);
+    bool Truncated,
+    IReadOnlyList<DependencyGraphNode>? Nodes = null,
+    int TotalNodeCount = 0,
+    int ShownNodeCount = 0,
+    int ExcludedNodeCount = 0,
+    int ExcludedEdgeCount = 0,
+    McpScopeMetadata? Scope = null,
+    IReadOnlyList<string>? TruncatedBy = null);
+
+internal sealed record DependencyGraphWirePayload(
+    DependencyGraphTarget Target,
+    string Direction,
+    IReadOnlyList<DependencyGraphNode> Nodes,
+    IReadOnlyList<DependencyEdge> Edges,
+    IReadOnlyList<ProjectReferenceEntry> ProjectReferences,
+    int RequestedDepth,
+    int EffectiveDepth,
+    bool DepthWasClamped,
+    bool Truncated,
+    int TotalEdgeCount,
+    int ShownEdgeCount,
+    int TotalNodeCount,
+    int ShownNodeCount,
+    int ExcludedNodeCount,
+    int ExcludedEdgeCount,
+    McpScopeMetadata Scope,
+    IReadOnlyList<string> TruncatedBy);
+
+internal sealed record DependencyGraphScopeState(
+    McpScopeClassifier Classifier,
+    Dictionary<string, McpDocumentScope> NodeScopes,
+    HashSet<string> ExcludedNodes,
+    HashSet<(string From, string To, string Direction)> ExcludedEdges);
+
+internal sealed record DependencyGraphTraversalState(
+    DependencyGraphScanRequest Request,
+    List<string> Frontier,
+    HashSet<string> Visited,
+    Dictionary<(string From, string To, string Direction), DependencyGraphEdgeAccumulator> EdgeMap,
+    DependencyGraphScopeState ScopeState);
+
+internal sealed record DependencyGraphFirstHopRequest(
+    string TargetFile,
+    Func<CancellationToken, Task<Dictionary<string, DependencyGraphEdgeAccumulator>>>? Outgoing,
+    Func<CancellationToken, Task<Dictionary<string, DependencyGraphEdgeAccumulator>>>? Incoming,
+    DependencyGraphTraversalState State);
+
+internal sealed record DependencyGraphFilterRequest(
+    DependencyGraphScanRequest Request,
+    string AnchorFile,
+    string Direction,
+    Dictionary<string, DependencyGraphEdgeAccumulator> Discovered,
+    DependencyGraphScopeState ScopeState);
+
+internal sealed record DependencyGraphBuildRequest(
+    DependencyGraphScanRequest Request,
+    string TargetFile,
+    Dictionary<(string From, string To, string Direction), DependencyGraphEdgeAccumulator> EdgeMap,
+    Dictionary<string, McpDocumentScope> NodeScopes,
+    HashSet<string> ExcludedNodes,
+    HashSet<(string From, string To, string Direction)> ExcludedEdges,
+    int ClampedDepth,
+    bool NodeCapReached);
+
+internal sealed class DependencyGraphEdgeAccumulator
+{
+    internal HashSet<string> TypeNames { get; } = new(StringComparer.Ordinal);
+    internal int ReferenceCount { get; set; }
+}

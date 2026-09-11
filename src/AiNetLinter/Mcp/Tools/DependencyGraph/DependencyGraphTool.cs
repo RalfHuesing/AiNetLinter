@@ -5,12 +5,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
 using AiNetLinter.Core.Documents;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Scope;
+using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -30,6 +33,8 @@ namespace AiNetLinter.Mcp.Tools.DependencyGraph;
 /// </summary>
 internal static class DependencyGraphTool
 {
+    internal const int DefaultMaxResponseBytes = 24 * 1024;
+
     internal static async Task<CallToolResult> ExecuteAsync(
         ISolutionStateProvider state, DependencyGraphInput input, CancellationToken ct)
     {
@@ -48,6 +53,13 @@ internal static class DependencyGraphTool
 
         var (includeOutgoing, includeIncoming, directionError) = ParseDirection(input.Direction);
         if (directionError is not null) return directionError;
+        if (!McpScopeTypeValidator.TryParse(input.ScopeType, out var scopeType, out var fieldPath))
+        {
+            return McpToolResults.InvalidArgument(
+                $"Ungueltiger scopeType-Wert '{input.ScopeType}' — gueltig sind 'all', 'production' und 'tests'.",
+                hint: "scopeType='all', 'production' oder 'tests' angeben (Default: 'all').",
+                fieldPath: fieldPath);
+        }
 
         try
         {
@@ -58,8 +70,9 @@ internal static class DependencyGraphTool
                     includeOutgoing,
                     includeIncoming,
                     state.AssemblySymbolIdentity is not null,
+                    scopeType,
                     ct)
-                : await ExecuteTypeScopeAsync(solution, input, includeOutgoing, includeIncoming, state.HandoffSymbolIdentity, ct);
+                : await ExecuteTypeScopeAsync(solution, input, includeOutgoing, includeIncoming, state.HandoffSymbolIdentity, scopeType, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -90,6 +103,7 @@ internal static class DependencyGraphTool
         bool includeOutgoing,
         bool includeIncoming,
         bool absolutePaths,
+        McpScopeType scopeType,
         CancellationToken ct)
     {
         var solutionDir = SolutionDocumentPathResolver.GetSolutionDirectory(solution) ?? "";
@@ -97,7 +111,15 @@ internal static class DependencyGraphTool
         var document = DiffImpactAnalyzer.FindDocumentByPath(solution, input.FilePath!);
         if (document is null) return McpToolResults.FileNotFound(input.FilePath!);
 
-        var request = new DependencyGraphScanRequest(solution, includeOutgoing, includeIncoming, input.Depth, input.MaxResults);
+        var request = new DependencyGraphScanRequest(
+            solution,
+            includeOutgoing,
+            includeIncoming,
+            input.Depth,
+            input.MaxResults,
+            scopeType,
+            input.IncludeGenerated,
+            new McpScopeClassifier());
         var result = await DependencyGraphScanner.ScanFileAsync(document, request, ct);
         var relativePath = PathNormalizer.ToRelative(solutionDir, document.FilePath ?? absolutePath);
         var target = new DependencyGraphTarget(
@@ -113,6 +135,7 @@ internal static class DependencyGraphTool
         bool includeOutgoing,
         bool includeIncoming,
         AnalysisSymbolIdentity? assemblyIdentity,
+        McpScopeType scopeType,
         CancellationToken ct)
     {
         var symbolIdentifier = input.SymbolIdentifier!;
@@ -129,7 +152,15 @@ internal static class DependencyGraphTool
                 hint: "symbolIdentifier muss auf einen Typen oder Typ-Member verweisen.");
         }
 
-        var request = new DependencyGraphScanRequest(solution, includeOutgoing, includeIncoming, input.Depth, input.MaxResults);
+        var request = new DependencyGraphScanRequest(
+            solution,
+            includeOutgoing,
+            includeIncoming,
+            input.Depth,
+            input.MaxResults,
+            scopeType,
+            input.IncludeGenerated,
+            new McpScopeClassifier());
         var result = await DependencyGraphScanner.ScanTypeAsync(resolvedTypeSymbol, request, ct);
         var declaringPath = FormatDeclaringPath(solution, resolvedTypeSymbol, assemblyIdentity is not null);
         var target = new DependencyGraphTarget("type", declaringPath, resolvedTypeSymbol.Name);
@@ -177,21 +208,127 @@ internal static class DependencyGraphTool
         // Sufficiency-Hinweis nur fuer nicht-trunkierte Ergebnisse — trunkiert durch
         // maxResults ODER durch den Traversierungs-Hard-Cap (NodeCapReached), beides zaehlt.
         var finalBody = body;
-        var payload = new
-        {
-            Target = target,
-            Direction = DirectionLabel(result),
-            Edges = result.Edges,
-            ProjectReferences = result.ProjectReferences,
-            RequestedDepth = result.RequestedDepth,
-            EffectiveDepth = result.ClampedDepth,
-            DepthWasClamped = result.DepthWasClamped,
-            Truncated = result.Truncated,
-        };
+        var payload = new DependencyGraphWirePayload(
+            target,
+            DirectionLabel(result),
+            result.Nodes ?? Array.Empty<DependencyGraphNode>(),
+            result.Edges,
+            result.ProjectReferences,
+            result.RequestedDepth,
+            result.ClampedDepth,
+            result.DepthWasClamped,
+            result.Truncated,
+            result.TotalEdgeCount,
+            result.Edges.Count,
+            result.TotalNodeCount,
+            result.ShownNodeCount,
+            result.ExcludedNodeCount,
+            result.ExcludedEdgeCount,
+            result.Scope ?? new McpScopeMetadata("all", false),
+            result.TruncatedBy ?? Array.Empty<string>());
         // In ein Objekt gewrappt statt eines nackten Arrays — MCP-Clients validieren structuredContent
         // schema-seitig als JSON-Objekt (siehe McpToolResults.Text``1-Doc-Kommentar).
         return McpToolResults.Text(finalBody, payload);
     }
+
+    internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes)
+    {
+        if (maxResponseBytes <= 0 || result.StructuredContent is not { ValueKind: JsonValueKind.Object } structured)
+        {
+            return result;
+        }
+
+        var payload = JsonSerializer.Deserialize<DependencyGraphWirePayload>(
+            structured.GetRawText(), McpJsonOptions.Default);
+        var originalText = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text;
+        if (payload is null || originalText is null) return result;
+
+        var edges = payload.Edges.ToList();
+        while (CombinedResponseBytes(RenderText(payload.Target, ToResult(payload, edges)), payload with { Edges = edges }) > maxResponseBytes
+            && edges.Count > 0)
+        {
+            edges.RemoveAt(edges.Count - 1);
+        }
+
+        var budgetedResult = ToResult(payload, edges);
+        var finalPayload = payload with
+        {
+            Edges = edges,
+            Nodes = NodesForEdges(payload, edges),
+            ShownEdgeCount = edges.Count,
+            ShownNodeCount = NodesForEdges(payload, edges).Count,
+            Truncated = payload.Truncated || edges.Count < payload.Edges.Count,
+            TruncatedBy = AddTruncationReason(payload.TruncatedBy, edges.Count < payload.Edges.Count),
+        };
+        var finalText = RenderText(finalPayload.Target, budgetedResult);
+        if (CombinedResponseBytes(finalText, finalPayload) > maxResponseBytes)
+        {
+            return McpToolResults.InvalidArgument(
+                "maxResponseBytes ist zu klein, um den festen Dependency-Graph-Envelope vollständig auszugeben.",
+                "maxResponseBytes erhöhen oder filePath/symbolIdentifier verfeinern.",
+                "$.maxResponseBytes");
+        }
+
+        return new CallToolResult
+        {
+            IsError = result.IsError,
+            Content = new List<ContentBlock> { new TextContentBlock { Text = finalText } },
+            StructuredContent = JsonSerializer.SerializeToElement(finalPayload, McpJsonOptions.Default),
+        };
+    }
+
+    private static DependencyGraphResult ToResult(
+        DependencyGraphWirePayload payload,
+        IReadOnlyList<DependencyEdge> edges) =>
+        new(
+            edges,
+            payload.TotalEdgeCount,
+            payload.ProjectReferences,
+            payload.Direction is "outgoing" or "both",
+            payload.Direction is "incoming" or "both",
+            payload.RequestedDepth,
+            payload.EffectiveDepth,
+            payload.DepthWasClamped,
+            payload.TruncatedBy.Contains("nodeLimit", StringComparer.Ordinal),
+            payload.Truncated,
+            payload.Nodes,
+            payload.TotalNodeCount,
+            payload.ShownNodeCount,
+            payload.ExcludedNodeCount,
+            payload.ExcludedEdgeCount,
+            payload.Scope,
+            payload.TruncatedBy);
+
+    private static IReadOnlyList<DependencyGraphNode> NodesForEdges(
+        DependencyGraphWirePayload payload,
+        IReadOnlyList<DependencyEdge> edges)
+    {
+        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { payload.Target.Path };
+        foreach (var edge in edges)
+        {
+            paths.Add(edge.From);
+            paths.Add(edge.To);
+        }
+
+        return payload.Nodes.Where(node => paths.Contains(node.Path)).ToList();
+    }
+
+    private static IReadOnlyList<string> AddTruncationReason(
+        IReadOnlyList<string> existing,
+        bool budgetTruncated)
+    {
+        var reasons = existing.ToList();
+        if (budgetTruncated && !reasons.Contains("maxResponseBytes", StringComparer.Ordinal))
+        {
+            reasons.Add("maxResponseBytes");
+        }
+
+        return reasons;
+    }
+
+    private static int CombinedResponseBytes(string text, DependencyGraphWirePayload payload) =>
+        Encoding.UTF8.GetByteCount(text)
+        + JsonSerializer.SerializeToUtf8Bytes(payload, McpJsonOptions.Default).Length;
 
     private static string DirectionLabel(DependencyGraphResult result) =>
         (result.IncludeOutgoing, result.IncludeIncoming) switch

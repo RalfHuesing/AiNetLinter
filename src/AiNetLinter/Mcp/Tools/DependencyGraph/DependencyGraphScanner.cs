@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
 using AiNetLinter.Core.Documents;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -81,66 +82,130 @@ internal static class DependencyGraphScanner
     /// </summary>
     private static async Task<DependencyGraphResult> ScanCoreAsync(
         string targetFile,
-        Func<CancellationToken, Task<Dictionary<string, EdgeAccumulator>>>? hop1Outgoing,
-        Func<CancellationToken, Task<Dictionary<string, EdgeAccumulator>>>? hop1Incoming,
+        Func<CancellationToken, Task<Dictionary<string, DependencyGraphEdgeAccumulator>>>? hop1Outgoing,
+        Func<CancellationToken, Task<Dictionary<string, DependencyGraphEdgeAccumulator>>>? hop1Incoming,
         DependencyGraphScanRequest request,
         CancellationToken ct)
     {
         var clampedDepth = Math.Clamp(request.Depth, 1, MaxDepth);
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { targetFile };
-        var edgeMap = new Dictionary<(string From, string To, string Direction), EdgeAccumulator>();
-        var nodeCapReached = false;
+        var edgeMap = new Dictionary<(string From, string To, string Direction), DependencyGraphEdgeAccumulator>();
+        var scopeClassifier = request.ScopeClassifier ?? new McpScopeClassifier();
+        var nodeScopes = new Dictionary<string, McpDocumentScope>(StringComparer.OrdinalIgnoreCase);
+        var excludedNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var excludedEdges = new HashSet<(string From, string To, string Direction)>();
+        var scopeState = new DependencyGraphScopeState(
+            scopeClassifier,
+            nodeScopes,
+            excludedNodes,
+            excludedEdges);
+        await DependencyGraphScopeProjection.ClassifyNodeAsync(
+            request.Solution, targetFile, scopeClassifier, nodeScopes, ct);
         var frontier = new List<string>();
-
-        if (hop1Outgoing is not null)
-        {
-            var discovered = await hop1Outgoing(ct);
-            MergeHopEdges(edgeMap, targetFile, "outgoing", discovered, isOutgoing: true);
-            nodeCapReached |= TryEnqueueFrontier(discovered.Keys, visited, frontier);
-        }
-        if (hop1Incoming is not null)
-        {
-            var discovered = await hop1Incoming(ct);
-            MergeHopEdges(edgeMap, targetFile, "incoming", discovered, isOutgoing: false);
-            nodeCapReached |= TryEnqueueFrontier(discovered.Keys, visited, frontier);
-        }
+        var nodeCapReached = await ScanFirstHopAsync(
+            new DependencyGraphFirstHopRequest(
+                targetFile,
+                hop1Outgoing,
+                hop1Incoming,
+                new DependencyGraphTraversalState(request, frontier, visited, edgeMap, scopeState)),
+            ct);
 
         for (var level = 2; level <= clampedDepth && frontier.Count > 0 && !nodeCapReached; level++)
         {
-            frontier = await ExpandFrontierAsync(request, frontier, visited, edgeMap, ct);
+            frontier = await ExpandFrontierAsync(
+                new DependencyGraphTraversalState(
+                    request,
+                    frontier,
+                    visited,
+                    edgeMap,
+                    scopeState),
+                ct);
             nodeCapReached |= visited.Count >= MaxVisitedFiles && frontier.Count == 0;
         }
 
-        return BuildResult(request, targetFile, edgeMap, clampedDepth, nodeCapReached);
+        return DependencyGraphScopeProjection.BuildResult(
+            new DependencyGraphBuildRequest(
+                request,
+                targetFile,
+                edgeMap,
+                nodeScopes,
+                excludedNodes,
+                excludedEdges,
+                clampedDepth,
+                nodeCapReached));
+    }
+
+    private static async Task<bool> ScanFirstHopAsync(
+        DependencyGraphFirstHopRequest firstHop,
+        CancellationToken ct)
+    {
+        var nodeCapReached = false;
+        nodeCapReached |= await ScanHopAsync(firstHop, firstHop.Outgoing, "outgoing", true, ct);
+        nodeCapReached |= await ScanHopAsync(firstHop, firstHop.Incoming, "incoming", false, ct);
+        return nodeCapReached;
+    }
+
+    private static async Task<bool> ScanHopAsync(
+        DependencyGraphFirstHopRequest firstHop,
+        Func<CancellationToken, Task<Dictionary<string, DependencyGraphEdgeAccumulator>>>? scan,
+        string direction,
+        bool isOutgoing,
+        CancellationToken ct)
+    {
+        if (scan is null) return false;
+        var discovered = await scan(ct);
+        var filtered = await DependencyGraphScopeProjection.FilterDiscoveredEdgesAsync(
+            new DependencyGraphFilterRequest(
+                firstHop.State.Request,
+                firstHop.TargetFile,
+                direction,
+                discovered,
+                firstHop.State.ScopeState),
+            ct);
+        MergeHopEdges(firstHop.State.EdgeMap, firstHop.TargetFile, direction, filtered, isOutgoing);
+        return TryEnqueueFrontier(filtered.Keys, firstHop.State.Visited, firstHop.State.Frontier);
     }
 
     private static async Task<List<string>> ExpandFrontierAsync(
-        DependencyGraphScanRequest request,
-        List<string> frontier,
-        HashSet<string> visited,
-        Dictionary<(string From, string To, string Direction), EdgeAccumulator> edgeMap,
+        DependencyGraphTraversalState state,
         CancellationToken ct)
     {
         var nextFrontier = new List<string>();
         var capReached = false;
-        foreach (var file in frontier)
+        foreach (var file in state.Frontier)
         {
             ct.ThrowIfCancellationRequested();
             if (capReached) break;
-            var document = ResolveDocumentByRelativePath(request.Solution, file);
+            var document = ResolveDocumentByRelativePath(state.Request.Solution, file);
             if (document is null) continue;
 
-            if (request.IncludeOutgoing)
+            if (state.Request.IncludeOutgoing)
             {
-                var discovered = await ScanFileOutgoingAsync(request.Solution, document, ct);
-                MergeHopEdges(edgeMap, file, "outgoing", discovered, isOutgoing: true);
-                capReached |= TryEnqueueFrontier(discovered.Keys, visited, nextFrontier);
+                var discovered = await ScanFileOutgoingAsync(state.Request.Solution, document, ct);
+                var filtered = await DependencyGraphScopeProjection.FilterDiscoveredEdgesAsync(
+                    new DependencyGraphFilterRequest(
+                        state.Request,
+                        file,
+                        "outgoing",
+                        discovered,
+                        state.ScopeState),
+                    ct);
+                MergeHopEdges(state.EdgeMap, file, "outgoing", filtered, isOutgoing: true);
+                capReached |= TryEnqueueFrontier(filtered.Keys, state.Visited, nextFrontier);
             }
-            if (request.IncludeIncoming)
+            if (state.Request.IncludeIncoming)
             {
-                var discovered = await ScanFileIncomingAsync(request.Solution, document, ct);
-                MergeHopEdges(edgeMap, file, "incoming", discovered, isOutgoing: false);
-                capReached |= TryEnqueueFrontier(discovered.Keys, visited, nextFrontier);
+                var discovered = await ScanFileIncomingAsync(state.Request.Solution, document, ct);
+                var filtered = await DependencyGraphScopeProjection.FilterDiscoveredEdgesAsync(
+                    new DependencyGraphFilterRequest(
+                        state.Request,
+                        file,
+                        "incoming",
+                        discovered,
+                        state.ScopeState),
+                    ct);
+                MergeHopEdges(state.EdgeMap, file, "incoming", filtered, isOutgoing: false);
+                capReached |= TryEnqueueFrontier(filtered.Keys, state.Visited, nextFrontier);
             }
         }
         return capReached ? new List<string>() : nextFrontier;
@@ -149,10 +214,10 @@ internal static class DependencyGraphScanner
     // --- Hop 1, Typ-Scope: nur die Deklarationsknoten des Zieltyps selbst (partial-faehig ueber
     // alle DeclaringSyntaxReferences), enger als eine ganze Datei. ---
 
-    private static async Task<Dictionary<string, EdgeAccumulator>> ScanTypeOutgoingAsync(
+    private static async Task<Dictionary<string, DependencyGraphEdgeAccumulator>> ScanTypeOutgoingAsync(
         Solution solution, INamedTypeSymbol resolvedTypeSymbol, CancellationToken ct)
     {
-        var edges = new Dictionary<string, EdgeAccumulator>(StringComparer.OrdinalIgnoreCase);
+        var edges = new Dictionary<string, DependencyGraphEdgeAccumulator>(StringComparer.OrdinalIgnoreCase);
         foreach (var syntaxRef in resolvedTypeSymbol.DeclaringSyntaxReferences)
         {
             var document = solution.GetDocument(syntaxRef.SyntaxTree);
@@ -172,7 +237,7 @@ internal static class DependencyGraphScanner
     /// <see cref="ScanTypeOutgoingAsync"/> unter <c>MaxCognitiveComplexity</c> bleibt (sonst zwei
     /// verschachtelte Ebenen).</summary>
     private static void AddOutgoingTypeEdgeIfEligible(
-        Solution solution, Dictionary<string, EdgeAccumulator> edges, INamedTypeSymbol resolvedTypeSymbol, INamedTypeSymbol referencedType)
+        Solution solution, Dictionary<string, DependencyGraphEdgeAccumulator> edges, INamedTypeSymbol resolvedTypeSymbol, INamedTypeSymbol referencedType)
     {
         if (SymbolEqualityComparer.Default.Equals(referencedType, resolvedTypeSymbol)) return;
         if (!IsDeclaredInSource(referencedType)) return;
@@ -181,10 +246,10 @@ internal static class DependencyGraphScanner
         AddEdge(edges, declFile, referencedType.Name);
     }
 
-    private static async Task<Dictionary<string, EdgeAccumulator>> ScanTypeIncomingAsync(
+    private static async Task<Dictionary<string, DependencyGraphEdgeAccumulator>> ScanTypeIncomingAsync(
         Solution solution, INamedTypeSymbol resolvedTypeSymbol, CancellationToken ct)
     {
-        var edges = new Dictionary<string, EdgeAccumulator>(StringComparer.OrdinalIgnoreCase);
+        var edges = new Dictionary<string, DependencyGraphEdgeAccumulator>(StringComparer.OrdinalIgnoreCase);
         var ownSpans = resolvedTypeSymbol.DeclaringSyntaxReferences
             .Select(r => (r.SyntaxTree, r.Span))
             .ToList();
@@ -211,10 +276,10 @@ internal static class DependencyGraphScanner
     // --- Datei-Scope: Union aller im Dokument deklarierten Typen. Wird sowohl fuer Hop 1 im
     // Datei-Scope als auch fuer jeden weiteren BFS-Hop (beide Scopes) genutzt. ---
 
-    private static async Task<Dictionary<string, EdgeAccumulator>> ScanFileOutgoingAsync(
+    private static async Task<Dictionary<string, DependencyGraphEdgeAccumulator>> ScanFileOutgoingAsync(
         Solution solution, Document document, CancellationToken ct)
     {
-        var edges = new Dictionary<string, EdgeAccumulator>(StringComparer.OrdinalIgnoreCase);
+        var edges = new Dictionary<string, DependencyGraphEdgeAccumulator>(StringComparer.OrdinalIgnoreCase);
         var semanticModel = await document.GetSemanticModelAsync(ct);
         var root = await document.GetSyntaxRootAsync(ct);
         if (semanticModel is null || root is null) return edges;
@@ -230,10 +295,10 @@ internal static class DependencyGraphScanner
         return edges;
     }
 
-    private static async Task<Dictionary<string, EdgeAccumulator>> ScanFileIncomingAsync(
+    private static async Task<Dictionary<string, DependencyGraphEdgeAccumulator>> ScanFileIncomingAsync(
         Solution solution, Document document, CancellationToken ct)
     {
-        var edges = new Dictionary<string, EdgeAccumulator>(StringComparer.OrdinalIgnoreCase);
+        var edges = new Dictionary<string, DependencyGraphEdgeAccumulator>(StringComparer.OrdinalIgnoreCase);
         var selfFile = ToRelativePath(solution, document.FilePath ?? "");
         var types = await GetTypesDeclaredInDocumentAsync(document, ct);
 
@@ -249,7 +314,7 @@ internal static class DependencyGraphScanner
     /// <see cref="ScanFileIncomingAsync"/> unter <c>MaxCognitiveComplexity</c> bleibt (drei
     /// verschachtelte Schleifen statt zwei).</summary>
     private static void AddIncomingTypeEdges(
-        Solution solution, Dictionary<string, EdgeAccumulator> edges, INamedTypeSymbol type,
+        Solution solution, Dictionary<string, DependencyGraphEdgeAccumulator> edges, INamedTypeSymbol type,
         IEnumerable<ReferencedSymbol> refs, string selfFile)
     {
         foreach (var reference in refs)
@@ -304,11 +369,6 @@ internal static class DependencyGraphScanner
 
     private static bool IsDeclaredInSource(INamedTypeSymbol type) => type.Locations.Any(l => l.IsInSource);
 
-    /// <summary>Heuristik ueber den Solution-relativen Pfad (delegiert an <see cref="PathNormalizer.IsTestFile"/>).
-    /// Nur fuer die Truncation-Sortierreihenfolge relevant, siehe <see cref="BuildResult"/>.</summary>
-    private static bool IsTestProjectFile(string relativePath) =>
-        PathNormalizer.IsTestFile(relativePath);
-
     /// <summary>
     /// Liefert den Solution-relativen Pfad der primaeren Deklaration von <paramref name="type"/>.
     /// Bei partiellen Typen (mehrere Quell-Locations) wird deterministisch die erste nach
@@ -335,11 +395,11 @@ internal static class DependencyGraphScanner
     private static Document? ResolveDocumentByRelativePath(Solution solution, string relativePath)
         => DiffImpactAnalyzer.FindDocumentByPath(solution, relativePath);
 
-    private static void AddEdge(Dictionary<string, EdgeAccumulator> edges, string file, string typeName)
+    private static void AddEdge(Dictionary<string, DependencyGraphEdgeAccumulator> edges, string file, string typeName)
     {
         if (!edges.TryGetValue(file, out var acc))
         {
-            acc = new EdgeAccumulator();
+            acc = new DependencyGraphEdgeAccumulator();
             edges[file] = acc;
         }
         acc.TypeNames.Add(typeName);
@@ -347,10 +407,10 @@ internal static class DependencyGraphScanner
     }
 
     private static void MergeHopEdges(
-        Dictionary<(string From, string To, string Direction), EdgeAccumulator> edgeMap,
+        Dictionary<(string From, string To, string Direction), DependencyGraphEdgeAccumulator> edgeMap,
         string anchorFile,
         string direction,
-        Dictionary<string, EdgeAccumulator> discovered,
+        Dictionary<string, DependencyGraphEdgeAccumulator> discovered,
         bool isOutgoing)
     {
         foreach (var (otherFile, acc) in discovered)
@@ -358,7 +418,7 @@ internal static class DependencyGraphScanner
             var key = isOutgoing ? (anchorFile, otherFile, direction) : (otherFile, anchorFile, direction);
             if (!edgeMap.TryGetValue(key, out var existing))
             {
-                existing = new EdgeAccumulator();
+                existing = new DependencyGraphEdgeAccumulator();
                 edgeMap[key] = existing;
             }
             foreach (var typeName in acc.TypeNames) existing.TypeNames.Add(typeName);
@@ -388,81 +448,4 @@ internal static class DependencyGraphScanner
         return capHit;
     }
 
-    private static DependencyGraphResult BuildResult(
-        DependencyGraphScanRequest request,
-        string targetFile,
-        Dictionary<(string From, string To, string Direction), EdgeAccumulator> edgeMap,
-        int clampedDepth,
-        bool nodeCapReached)
-    {
-        var effectiveMax = request.MaxResults < 1 ? 1 : request.MaxResults;
-        // Test-Projekt-Kanten NACH Produktionscode-Kanten einsortieren (nicht rein alphabetisch):
-        // "src/AiNetLinter.Tests/..." sortiert ordinal VOR "src/AiNetLinter/..." ('.' < '/'), weil
-        // .Tests alphabetisch zufaellig zuerst kommt. Bei einer stark referenzierten Datei (z. B.
-        // McpCodeGraphServer.cs: 30 Test- + 38 Produktions-Kanten) fraesste die reine
-        // Ordinal-Sortierung sonst zuerst ALLE Test-Kanten in die maxResults-Kappung, bevor
-        // ueberhaupt Produktionscode-Kanten drankommen — genau umgekehrt zur eigentlichen
-        // Blast-Radius-Frage, bei der Produktionscode-Kopplung die relevantere ist. Test-Kopplung
-        // ist erwartet/risikoarm, Produktionscode-Kopplung ist das, was beim Aendern der Zieldatei
-        // tatsaechlich bricht.
-        var allEdges = edgeMap
-            .OrderBy(kv => kv.Key.Direction == "outgoing" ? 0 : 1)
-            .ThenBy(kv => IsTestProjectFile(kv.Key.Direction == "outgoing" ? kv.Key.To : kv.Key.From) ? 1 : 0)
-            .ThenBy(kv => kv.Key.From, StringComparer.Ordinal)
-            .ThenBy(kv => kv.Key.To, StringComparer.Ordinal)
-            .Select(kv => new DependencyEdge(
-                kv.Key.From,
-                kv.Key.To,
-                kv.Key.Direction,
-                kv.Value.TypeNames.OrderBy(n => n, StringComparer.Ordinal).ToList(),
-                kv.Value.ReferenceCount))
-            .ToList();
-
-        var totalEdgeCount = allEdges.Count;
-        var shown = totalEdgeCount <= effectiveMax ? allEdges : allEdges.Take(effectiveMax).ToList();
-        var truncated = totalEdgeCount > effectiveMax || nodeCapReached;
-
-        return new DependencyGraphResult(
-            Edges: shown,
-            TotalEdgeCount: totalEdgeCount,
-            ProjectReferences: BuildProjectReferences(request.Solution, targetFile),
-            IncludeOutgoing: request.IncludeOutgoing,
-            IncludeIncoming: request.IncludeIncoming,
-            RequestedDepth: request.Depth,
-            ClampedDepth: clampedDepth,
-            DepthWasClamped: request.Depth != clampedDepth,
-            NodeCapReached: nodeCapReached,
-            Truncated: truncated);
-    }
-
-    /// <summary>
-    /// Optionale Projekt-Ebene: guenstig zu ermitteln
-    /// (<c>Project.ProjectReferences</c>, keine NuGet-Aufrufe), daher immer mitgeliefert, wenn das
-    /// Zielprojekt aufloest. Liefert genau einen Eintrag (das Zielprojekt selbst mit seinen
-    /// direkten Projekt-Referenzen) statt eines vollstaendigen Projektgraphen — das waere ausserhalb
-    /// des Scopes dieses Tools.
-    /// </summary>
-    private static IReadOnlyList<ProjectReferenceEntry> BuildProjectReferences(Solution solution, string targetFile)
-    {
-        var document = ResolveDocumentByRelativePath(solution, targetFile);
-        var project = document?.Project;
-        if (project is null) return Array.Empty<ProjectReferenceEntry>();
-
-        var refs = project.ProjectReferences
-            .Select(pr => solution.GetProject(pr.ProjectId)?.Name)
-            .Where(name => name is not null)
-            .Select(name => name!)
-            .OrderBy(n => n, StringComparer.Ordinal)
-            .ToList();
-
-        return refs.Count == 0
-            ? Array.Empty<ProjectReferenceEntry>()
-            : new[] { new ProjectReferenceEntry(project.Name, refs) };
-    }
-
-    private sealed class EdgeAccumulator
-    {
-        internal HashSet<string> TypeNames { get; } = new(StringComparer.Ordinal);
-        internal int ReferenceCount { get; set; }
-    }
 }

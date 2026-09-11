@@ -304,7 +304,8 @@ internal static class SymbolGraphToolRegistrations
     {
         tools.Add(McpServerTool.Create(
             async (RequestContext<CallToolRequestParams> context, string targetPath, string? filePath = null, string? symbolIdentifier = null, string? direction = null,
-                int depth = 1, int maxResults = 50, CancellationToken ct = default) =>
+                int depth = 1, int maxResults = 50, string scopeType = "all", bool includeGenerated = false,
+                int maxResponseBytes = DependencyGraphTool.DefaultMaxResponseBytes, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
@@ -313,8 +314,16 @@ internal static class SymbolGraphToolRegistrations
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => DependencyGraphTool.ExecuteAsync(lease.Server, new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults), ct),
-                            AssemblySessionCall: lease => DependencyGraphTool.ExecuteAsync(lease.Server, new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults), ct)),
+                            ProjectCall: lease => DependencyGraphTool.ExecuteAsync(
+                                lease.Server,
+                                new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults, scopeType, includeGenerated, maxResponseBytes),
+                                ct),
+                            AssemblySessionCall: lease => DependencyGraphTool.ExecuteAsync(
+                                lease.Server,
+                                new DependencyGraphInput(filePath, symbolIdentifier, direction, depth, maxResults, scopeType, includeGenerated, maxResponseBytes),
+                                ct),
+                            MaxResponseBytes: maxResponseBytes,
+                            PostNavigationResponseBudget: DependencyGraphTool.ApplyFinalResponseBudget),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("dependency_graph", DependencyGraphDescription)));
@@ -328,7 +337,10 @@ internal static class SymbolGraphToolRegistrations
         "find_references. direction: \"incoming\", \"outgoing\" oder \"both\" (Default). depth: " +
         "depth: mindestens 1, Traversierungstiefe (Default 1, hard cap 3, max. 150 besuchte Dateien); " +
         "0 oder negative Werte liefern INVALID_ARGUMENT. maxResults: mindestens 1, Begrenzung der " +
-        "angezeigten Kanten (Default 50); 0 oder negative Werte liefern INVALID_ARGUMENT.";
+        "angezeigten Kanten (Default 50); 0 oder negative Werte liefern INVALID_ARGUMENT. " +
+        "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default), " +
+        "generierte Knoten nur als notwendige markierte Bruecken. maxResponseBytes: kombiniertes " +
+        "UTF-8-Wirebudget (Default 24 KiB, Maximum 64 KiB), kuerzt nur ganze Knoten/Kanten.";
 
     private static void AddResolveTypeOrigin(
         McpServerPrimitiveCollection<McpServerTool> tools,

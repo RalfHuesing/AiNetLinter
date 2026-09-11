@@ -76,6 +76,29 @@ public sealed class SymbolGraphToolRegistrationsTests
     }
 
     [Fact]
+    public void DependencyGraphSchema_AdvertisesScopeGeneratedAndBudgetControls()
+    {
+        var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        var options = McpServerOptionsFactory.Create(
+            McpServerToolCollectionFactory.Build(
+                registry,
+                AnalysisToolCall.CreateTargetRoute(
+                    ProjectAnalysisDispatcher.CreateRoute(registry),
+                    AssemblyAnalysisDispatcher.CreateRoute(null))),
+            McpServerResourceCollectionFactory.Build(registry));
+
+        var tool = options.ToolCollection!.Single(item => item.ProtocolTool.Name == "dependency_graph").ProtocolTool;
+        var properties = tool.InputSchema.GetProperty("properties");
+
+        Assert.True(properties.TryGetProperty("scopeType", out _));
+        Assert.True(properties.TryGetProperty("includeGenerated", out _));
+        Assert.True(properties.TryGetProperty("maxResponseBytes", out _));
+        Assert.Contains("24", tool.Description, StringComparison.Ordinal);
+        Assert.Contains("scopeType", tool.Description, StringComparison.Ordinal);
+        Assert.Contains("includeGenerated", tool.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ToolDescriptions_FindReferencesAndGetImpact_MentionNodeHardCap()
     {
         var registry = ProjectRegistryFixture.CreateInspectionRegistry();
