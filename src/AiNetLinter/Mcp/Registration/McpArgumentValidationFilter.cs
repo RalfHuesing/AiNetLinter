@@ -52,6 +52,7 @@ internal static class McpArgumentValidationFilter
     private static readonly IReadOnlyDictionary<string, IReadOnlySet<string>> NonNegativeLimitArgumentsByTool =
         new Dictionary<string, IReadOnlySet<string>>(StringComparer.Ordinal)
         {
+            ["find_symbol"] = Set("maxResponseBytes"),
             ["get_impact"] = Set("maxChangedSymbols", "maxTestsPerSymbol"),
             ["get_file_tree"] = Set("maxDepth", "treeDepth", "maxResponseBytes"),
             ["get_file_skeleton"] = Set("maxResponseBytes"),
@@ -68,6 +69,7 @@ internal static class McpArgumentValidationFilter
     private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> MaximumLimitArgumentsByTool =
         new Dictionary<string, IReadOnlyDictionary<string, int>>(StringComparer.Ordinal)
         {
+            ["find_symbol"] = Limits(("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["get_file_tree"] = Limits(("maxResults", 2_000), ("maxDepth", 32), ("treeDepth", 32), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["get_class_structure"] = Limits(("maxMembers", 200), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["get_file_skeleton"] = Limits(("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),

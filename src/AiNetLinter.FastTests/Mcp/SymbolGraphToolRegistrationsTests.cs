@@ -22,6 +22,35 @@ namespace AiNetLinter.FastTests.Mcp;
 public sealed class SymbolGraphToolRegistrationsTests
 {
     [Fact]
+    public void FindSymbolSchema_AdvertisesScopeAndGeneratedControls()
+    {
+        var registry = ProjectRegistryFixture.CreateInspectionRegistry();
+        var options = McpServerOptionsFactory.Create(
+            McpServerToolCollectionFactory.Build(
+                registry,
+                AnalysisToolCall.CreateTargetRoute(
+                    ProjectAnalysisDispatcher.CreateRoute(registry),
+                    AssemblyAnalysisDispatcher.CreateRoute(null))),
+            McpServerResourceCollectionFactory.Build(registry));
+
+        var tool = options.ToolCollection!.Single(item => item.ProtocolTool.Name == "find_symbol").ProtocolTool;
+        var properties = tool.InputSchema.GetProperty("properties");
+
+        Assert.True(properties.TryGetProperty("scopeType", out var scopeType));
+        Assert.Contains(
+            "string",
+            scopeType.GetProperty("type").ValueKind == System.Text.Json.JsonValueKind.Array
+                ? scopeType.GetProperty("type").EnumerateArray().Select(item => item.GetString())
+                : [scopeType.GetProperty("type").GetString()],
+            StringComparer.Ordinal);
+        Assert.True(properties.TryGetProperty("includeGenerated", out var includeGenerated));
+        Assert.Equal("boolean", includeGenerated.GetProperty("type").GetString());
+        Assert.Contains("scopeType", tool.Description, StringComparison.Ordinal);
+        Assert.Contains("includeGenerated", tool.Description, StringComparison.Ordinal);
+        Assert.Contains("16", tool.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ToolDescriptions_FindReferencesAndGetImpact_MentionNodeHardCap()
     {
         var registry = ProjectRegistryFixture.CreateInspectionRegistry();

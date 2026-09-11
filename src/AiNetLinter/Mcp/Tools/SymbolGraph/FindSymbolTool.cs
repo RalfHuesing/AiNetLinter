@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.Output;
@@ -24,7 +25,10 @@ internal sealed record FindSymbolRequest(
     string? Kind,
     int MaxResults,
     CancellationToken CancellationToken,
-    string? Pattern = null)
+    string? Pattern = null,
+    McpScopeType ScopeType = McpScopeType.All,
+    bool IncludeGenerated = false,
+    McpScopeClassifier? ScopeClassifier = null)
 {
     internal FindSymbolPatternOptions ToPatternOptions() =>
         new(NamePatterns, Pattern);
@@ -51,6 +55,10 @@ internal static class FindSymbolTool
     };
 
     internal const int MaxPatternsPerCall = 10;
+    internal const int DefaultMaxResponseBytes = 16 * 1024;
+
+    internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes) =>
+        FindSymbolResponseBudget.Apply(result, maxResponseBytes);
 
     internal static IReadOnlyList<string> NormalizeNamePatterns(FindSymbolPatternOptions options)
     {
@@ -133,18 +141,30 @@ internal static class FindSymbolTool
                 fieldPath: "$.maxResults")
             : null;
 
+    internal static (CallToolResult? Error, McpScopeType ScopeType) ValidateScopeType(string? value)
+    {
+        if (McpScopeTypeValidator.TryParse(value, out var scopeType, out var fieldPath)) return (null, scopeType);
+
+        return (
+            McpToolResults.InvalidArgument(
+                $"Ungueltiger scopeType-Wert '{value}'.",
+                "scopeType='all', 'production' oder 'tests' angeben.",
+                fieldPath),
+            McpScopeType.All);
+    }
+
     /// <summary>
     /// Tool-Einstiegspunkt: prueft, ob eine Solution geladen ist, und delegiert an den Scanner.
     /// Ein defensiver try/catch-Wrapper faengt unerwartete Roslyn-Exceptions ab und liefert
     /// einen strukturierten [ERROR]-Antwort statt eines Server-Crashs.
     /// </summary>
-    internal static async Task<CallToolResult> ExecuteAsync(
+    internal static Task<CallToolResult> ExecuteAsync(
         ISolutionStateProvider state,
         string[]? namePatterns,
         string? kind,
         int maxResults,
         CancellationToken ct) =>
-        await ExecuteAsync(new FindSymbolRequest(state, namePatterns, kind, maxResults, ct));
+        ExecuteAsync(new FindSymbolRequest(state, namePatterns, kind, maxResults, ct));
 
     internal static async Task<CallToolResult> ExecuteAsync(FindSymbolRequest request)
     {
@@ -226,7 +246,16 @@ internal static class FindSymbolTool
                 symbol.ToDisplayString(),
                 qualifiedId,
                 HandoffKind: qualifiedId is null ? null : symbol is INamedTypeSymbol ? "type" : "member",
-                Origin: null);
+                Origin: null,
+                Locations:
+                [
+                    new SymbolSourceLocation(
+                        displayPath,
+                        line,
+                        lineSpan.StartLinePosition.Character + 1,
+                        "all",
+                        "editable"),
+                ]);
         }
     }
 
@@ -238,18 +267,20 @@ internal static class FindSymbolTool
     {
         var results = new List<FindSymbolPatternResultDto>(patterns.Count);
         var markdown = new MarkdownBuilder();
+        var scopeClassifier = request.ScopeClassifier ?? new McpScopeClassifier();
+        var scopedRequest = request with { ScopeClassifier = scopeClassifier };
 
         for (var i = 0; i < patterns.Count; i++)
         {
             request.CancellationToken.ThrowIfCancellationRequested();
             if (i > 0) markdown.Divider();
             var pattern = patterns[i];
-            var scan = await FindPatternAsync(request, solution, pattern, maxResults);
+            var scan = await FindPatternAsync(scopedRequest, solution, pattern, maxResults);
             results.Add(CreatePatternResult(pattern, scan));
             AppendPatternMarkdown(markdown, pattern, scan.Text);
         }
 
-        return CreateBatchResponse(markdown, results);
+        return CreateBatchResponse(markdown, results, request.ScopeType, request.IncludeGenerated);
     }
 
     private static Task<FindSymbolScanResult> FindPatternAsync(
@@ -263,7 +294,10 @@ internal static class FindSymbolTool
                 pattern,
                 request.Kind,
                 maxResults,
-                request.State.HandoffSymbolIdentity),
+                request.State.HandoffSymbolIdentity,
+                request.ScopeType,
+                request.IncludeGenerated,
+                request.ScopeClassifier),
             request.CancellationToken);
 
     private static FindSymbolPatternResultDto CreatePatternResult(
@@ -275,7 +309,8 @@ internal static class FindSymbolTool
             scan.TotalCount,
             scan.ReturnedCount,
             scan.IsTruncated,
-            scan.TruncatedBy);
+            scan.TruncatedBy,
+            scan.KindAlternatives);
 
     private static void AppendPatternMarkdown(MarkdownBuilder markdown, string pattern, string text)
     {
@@ -285,7 +320,9 @@ internal static class FindSymbolTool
 
     private static CallToolResult CreateBatchResponse(
         MarkdownBuilder markdown,
-        IReadOnlyList<FindSymbolPatternResultDto> results)
+        IReadOnlyList<FindSymbolPatternResultDto> results,
+        McpScopeType scopeType,
+        bool includeGenerated)
     {
         var truncatedBy = results
             .SelectMany(result => result.TruncatedBy ?? [])
@@ -298,8 +335,16 @@ internal static class FindSymbolTool
                 TotalCount: results.Sum(result => result.TotalCount),
                 ReturnedCount: results.Sum(result => result.ReturnedCount),
                 IsTruncated: truncatedBy.Count > 0,
-                TruncatedBy: truncatedBy));
+                TruncatedBy: truncatedBy,
+                Scope: new FindSymbolScopeDto(ToWireValue(scopeType), includeGenerated)));
     }
+
+    internal static string ToWireValue(McpScopeType scopeType) => scopeType switch
+    {
+        McpScopeType.Production => "production",
+        McpScopeType.Tests => "tests",
+        _ => "all",
+    };
 
     internal static string FormatEntry(SymbolLocationEntry entry)
     {
@@ -320,7 +365,8 @@ internal sealed record FindSymbolBatchDto(
     int TotalCount = 0,
     int ReturnedCount = 0,
     bool IsTruncated = false,
-    IReadOnlyList<string>? TruncatedBy = null);
+    IReadOnlyList<string>? TruncatedBy = null,
+    FindSymbolScopeDto? Scope = null);
 
 /// <summary>
 /// Ein Einzelergebnis für ein angefragtes Namens-Muster in <c>find_symbol</c>.
@@ -331,13 +377,23 @@ internal sealed record FindSymbolPatternResultDto(
     int TotalCount = 0,
     int ReturnedCount = 0,
     bool IsTruncated = false,
-    IReadOnlyList<string>? TruncatedBy = null);
+    IReadOnlyList<string>? TruncatedBy = null,
+    IReadOnlyList<string>? KindAlternatives = null);
+
+internal sealed record FindSymbolScopeDto(string RequestedType, bool IncludeGenerated);
+
+internal sealed record SymbolSourceLocation(
+    string FilePath,
+    int Line,
+    int Column,
+    string ScopeType,
+    string SourceKind,
+    string? Project = null);
 
 /// <summary>
-/// StructuredContent-Eintrag fuer <c>find_symbol</c> — eine Quell-Fundstelle eines Symbols
-/// (Pfad, Zeile, Kind, voll qualifizierter Name). Ein Symbol mit mehreren Deklarationen (z. B.
-/// <c>partial class</c>) liefert einen Eintrag je Fundstelle, konsistent zu
-/// <see cref="FindSymbolTool.FormatSymbolLocations"/>s Text-Zeilen.
+/// StructuredContent-Eintrag fuer <c>find_symbol</c>. Ein Symbol mit mehreren Deklarationen
+/// (z. B. <c>partial class</c>) bleibt ein Eintrag; <see cref="Locations"/> enthaelt alle
+/// sichtbaren, klassifizierten Fundstellen.
 /// </summary>
 internal sealed record SymbolLocationEntry(
     string FilePath,
@@ -346,4 +402,5 @@ internal sealed record SymbolLocationEntry(
     string Name,
     string? Id = null,
     string? HandoffKind = null,
-    AssemblyNavigationOrigin? Origin = null);
+    AssemblyNavigationOrigin? Origin = null,
+    IReadOnlyList<SymbolSourceLocation>? Locations = null);

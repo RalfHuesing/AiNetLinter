@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
@@ -16,7 +17,9 @@ internal sealed record AssemblyFindSymbolRequest(
     string[]? NamePatterns,
     string? Kind,
     int MaxResults,
-    bool IncludeReferences);
+    bool IncludeReferences,
+    McpScopeType ScopeType = McpScopeType.All,
+    bool IncludeGenerated = false);
 
 internal static class AssemblyFindSymbolTool
 {
@@ -26,12 +29,14 @@ internal static class AssemblyFindSymbolTool
         CancellationToken cancellationToken) =>
         request.IncludeReferences
             ? ExecuteWithReferencesAsync(lease, request, cancellationToken)
-            : FindSymbolTool.ExecuteAsync(
+            : FindSymbolTool.ExecuteAsync(new FindSymbolRequest(
                 lease.Server,
                 request.NamePatterns,
                 request.Kind,
                 request.MaxResults,
-                cancellationToken);
+                cancellationToken,
+                ScopeType: request.ScopeType,
+                IncludeGenerated: request.IncludeGenerated));
 
     private static async Task<CallToolResult> ExecuteWithReferencesAsync(
         AssemblyAnalysisLease lease,
@@ -51,6 +56,8 @@ internal static class AssemblyFindSymbolTool
                 patterns,
                 request.Kind,
                 request.MaxResults,
+                request.ScopeType,
+                request.IncludeGenerated,
                 cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -66,6 +73,8 @@ internal static class AssemblyFindSymbolTool
         IReadOnlyList<string> patterns,
         string? kind,
         int maxResults,
+        McpScopeType scopeType,
+        bool includeGenerated,
         CancellationToken cancellationToken)
     {
         var results = new List<FindSymbolPatternResultDto>(patterns.Count);
@@ -75,7 +84,14 @@ internal static class AssemblyFindSymbolTool
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (results.Count > 0) markdown.Divider();
-            var search = await SearchPatternAsync(lease, pattern, kind, maxResults, cancellationToken).ConfigureAwait(false);
+            var search = await SearchPatternAsync(
+                lease,
+                pattern,
+                kind,
+                maxResults,
+                requestScopeType: scopeType,
+                includeGenerated: includeGenerated,
+                cancellationToken).ConfigureAwait(false);
             navigation = navigation is null
                 ? search.Navigation
                 : AssemblyNavigationSupport.MergeSummaries(navigation, search.Navigation);
@@ -86,7 +102,7 @@ internal static class AssemblyFindSymbolTool
         var summary = navigation ?? new AssemblyNavigationSummary(true, 1, 0, false, "partial", []);
         AppendSummary(markdown, summary);
         AppendDiagnostics(markdown, summary.Diagnostics);
-        return CreateResponse(markdown, results, summary);
+        return CreateResponse(markdown, results, summary, scopeType, includeGenerated);
     }
 
     private static Task<AssemblySymbolSearchResult> SearchPatternAsync(
@@ -94,13 +110,17 @@ internal static class AssemblyFindSymbolTool
         string pattern,
         string? kind,
         int maxResults,
+        McpScopeType requestScopeType,
+        bool includeGenerated,
         CancellationToken cancellationToken) =>
-        AssemblySymbolSearch.FindMatchesAsync(
+        AssemblySymbolSearch.FindMatchesAsync(new AssemblySymbolSearchRequest(
             lease,
             pattern,
             kind,
             Math.Max(maxResults, 1),
-            cancellationToken);
+            cancellationToken,
+            requestScopeType,
+            includeGenerated));
 
     private static FindSymbolPatternResultDto CreatePatternResult(
         string pattern,
@@ -149,7 +169,9 @@ internal static class AssemblyFindSymbolTool
     private static CallToolResult CreateResponse(
         MarkdownBuilder markdown,
         IReadOnlyList<FindSymbolPatternResultDto> results,
-        AssemblyNavigationSummary summary)
+        AssemblyNavigationSummary summary,
+        McpScopeType scopeType,
+        bool includeGenerated)
     {
         var truncatedBy = results
             .SelectMany(result => result.TruncatedBy ?? [])
@@ -163,6 +185,7 @@ internal static class AssemblyFindSymbolTool
                 results.Sum(result => result.TotalCount),
                 results.Sum(result => result.ReturnedCount),
                 truncatedBy.Count > 0,
-                truncatedBy));
+                truncatedBy,
+                new FindSymbolScopeDto(FindSymbolTool.ToWireValue(scopeType), includeGenerated)));
     }
 }

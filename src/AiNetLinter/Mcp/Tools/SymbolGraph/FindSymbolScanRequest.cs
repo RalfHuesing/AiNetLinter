@@ -1,6 +1,7 @@
 #nullable enable
 
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Scope;
 using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.SymbolGraph;
@@ -14,4 +15,7 @@ internal sealed record FindSymbolScanRequest(
     string NamePattern,
     string? Kind,
     int MaxResults,
-    AnalysisSymbolIdentity? AssemblyIdentity = null);
+    AnalysisSymbolIdentity? AssemblyIdentity = null,
+    McpScopeType ScopeType = McpScopeType.All,
+    bool IncludeGenerated = false,
+    McpScopeClassifier? ScopeClassifier = null);

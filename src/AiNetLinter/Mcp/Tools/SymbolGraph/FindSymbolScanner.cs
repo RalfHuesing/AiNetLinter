@@ -8,6 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.Analysis;
 using AiNetLinter.Mcp.Tools.FileStructure;
+using AiNetLinter.Mcp.Scope;
+using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
 
@@ -63,17 +65,34 @@ internal static class FindSymbolScanner
             .ToList();
 
         var filtered = FilterByKind(nameMatches, request.Kind).ToList();
+        var kindAlternatives = CreateKindAlternatives(nameMatches, request.Kind);
 
         if (filtered.Count == 0)
         {
             var missMessage = await FormatMissMessageAsync(request, nameMatches, ct).ConfigureAwait(false);
-            return new FindSymbolScanResult(missMessage, Array.Empty<SymbolLocationEntry>(), 0, 0, false, []);
+            return new FindSymbolScanResult(missMessage, Array.Empty<SymbolLocationEntry>(), 0, 0, false, [], kindAlternatives);
         }
 
         var outputRoot = Path.GetDirectoryName(request.Solution.FilePath) ?? string.Empty;
-        var allEntries = filtered
-            .SelectMany(symbol => FindSymbolTool.FormatSymbolLocationEntries(symbol, outputRoot, request.AssemblyIdentity))
+        var allEntries = (await BuildVisibleEntriesAsync(request, filtered, outputRoot, ct).ConfigureAwait(false))
+            .OrderBy(entry => GetMatchRank(entry, request.NamePattern))
+            .ThenBy(entry => GetProjectRank(entry))
+            .ThenBy(entry => GetSourceRank(entry))
+            .ThenBy(entry => entry.Locations?.FirstOrDefault()?.FilePath ?? entry.FilePath, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(entry => entry.Locations?.FirstOrDefault()?.Line ?? entry.Line)
+            .ThenBy(entry => entry.Name, StringComparer.Ordinal)
             .ToList();
+        if (allEntries.Count == 0)
+        {
+            return new FindSymbolScanResult(
+                $"Keine Treffer fuer '{request.NamePattern}' im angeforderten Scope '{FindSymbolTool.ToWireValue(request.ScopeType)}'.",
+                [],
+                0,
+                0,
+                false,
+                [],
+                kindAlternatives);
+        }
         var collectedEntries = allEntries.Take(Math.Max(request.MaxResults, 1)).ToList();
         var isTruncated = allEntries.Count > collectedEntries.Count;
         var text = McpTruncation.TruncateLines(
@@ -86,7 +105,173 @@ internal static class FindSymbolScanner
             allEntries.Count,
             collectedEntries.Count,
             isTruncated,
-            isTruncated ? ["maxResults"] : []);
+            isTruncated ? ["maxResults"] : [],
+            kindAlternatives);
+    }
+
+    internal static async Task<IReadOnlyList<SymbolLocationEntry>> BuildVisibleEntriesAsync(
+        FindSymbolScanRequest request,
+        IReadOnlyList<ISymbol> symbols,
+        string outputRoot,
+        CancellationToken cancellationToken)
+    {
+        var grouped = GroupSymbols(symbols);
+        var entries = new List<SymbolLocationEntry>(grouped.Count);
+        foreach (var (symbol, declarations) in grouped)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var locations = await CollectVisibleLocationsAsync(
+                request,
+                declarations,
+                outputRoot,
+                cancellationToken).ConfigureAwait(false);
+            if (locations.Count == 0) continue;
+            locations.Sort(CompareLocations);
+            entries.Add(CreateEntry(symbol, locations, request.AssemblyIdentity));
+        }
+
+        return entries;
+    }
+
+    private static Dictionary<ISymbol, List<ISymbol>> GroupSymbols(IReadOnlyList<ISymbol> symbols)
+    {
+        var grouped = new Dictionary<ISymbol, List<ISymbol>>(SymbolEqualityComparer.Default);
+        foreach (var symbol in symbols)
+        {
+            var key = symbol.OriginalDefinition;
+            if (!grouped.TryGetValue(key, out var declarations))
+            {
+                declarations = [];
+                grouped.Add(key, declarations);
+            }
+
+            if (!declarations.Contains(symbol, SymbolEqualityComparer.Default)) declarations.Add(symbol);
+        }
+
+        return grouped;
+    }
+
+    private static async Task<List<SymbolSourceLocation>> CollectVisibleLocationsAsync(
+        FindSymbolScanRequest request,
+        IReadOnlyList<ISymbol> declarations,
+        string outputRoot,
+        CancellationToken cancellationToken)
+    {
+        var classifier = request.ScopeClassifier ?? new McpScopeClassifier();
+        var locations = new List<SymbolSourceLocation>();
+        var seenLocations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var declaration in declarations)
+        {
+            foreach (var location in declaration.Locations.Where(candidate => candidate.IsInSource))
+            {
+                var visible = await TryCreateVisibleLocationAsync(
+                    request,
+                    location,
+                    outputRoot,
+                    classifier,
+                    cancellationToken).ConfigureAwait(false);
+                if (visible.Location is null || !seenLocations.Add(visible.Key)) continue;
+                locations.Add(visible.Location);
+            }
+        }
+
+        return locations;
+    }
+
+    private static async Task<(string Key, SymbolSourceLocation? Location)> TryCreateVisibleLocationAsync(
+        FindSymbolScanRequest request,
+        Location location,
+        string outputRoot,
+        McpScopeClassifier classifier,
+        CancellationToken cancellationToken)
+    {
+        var document = request.Solution.GetDocument(location.SourceTree!);
+        if (document is null) return (string.Empty, null);
+
+        var scope = await classifier.ClassifyAsync(document, cancellationToken).ConfigureAwait(false);
+        if (!classifier.MatchesScope(scope, request.ScopeType)
+            || (scope.SourceKind == McpSourceKind.Generated && !request.IncludeGenerated))
+        {
+            return (string.Empty, null);
+        }
+
+        var lineSpan = location.GetLineSpan();
+        var sourcePath = location.SourceTree!.FilePath;
+        var displayPath = !string.IsNullOrWhiteSpace(outputRoot)
+            ? PathNormalizer.ToRelative(outputRoot, sourcePath)
+            : Path.GetFullPath(sourcePath);
+        var key = $"{document.Id}|{lineSpan.StartLinePosition.Line}|{lineSpan.StartLinePosition.Character}";
+        var scopeType = scope.ProjectKind == McpProjectKind.Tests
+            ? "tests"
+            : scope.ProjectKind == McpProjectKind.Production
+                ? "production"
+                : "all";
+        var sourceKind = scope.SourceKind == McpSourceKind.Generated ? "generated" : "editable";
+        return (key, new SymbolSourceLocation(
+            displayPath,
+            lineSpan.StartLinePosition.Line + 1,
+            lineSpan.StartLinePosition.Character + 1,
+            scopeType,
+            sourceKind,
+            document.Project.Name));
+    }
+
+    private static SymbolLocationEntry CreateEntry(
+        ISymbol symbol,
+        IReadOnlyList<SymbolSourceLocation> locations,
+        AnalysisSymbolIdentity? assemblyIdentity)
+    {
+        var handoffId = assemblyIdentity?.FormatHandoff(symbol);
+        var first = locations[0];
+        return new SymbolLocationEntry(
+            first.FilePath,
+            first.Line,
+            SymbolKindClassifier.DescribeSymbolKind(symbol),
+            symbol.ToDisplayString(),
+            handoffId,
+            HandoffKind: handoffId is null ? null : symbol is INamedTypeSymbol ? "type" : "member",
+            Locations: locations);
+    }
+
+    private static IReadOnlyList<string>? CreateKindAlternatives(
+        IReadOnlyList<ISymbol> symbols,
+        string? requestedKind) =>
+        requestedKind is null
+            ? null
+            : symbols
+                .Select(SymbolKindClassifier.DescribeSymbolKind)
+                .Where(kind => !string.Equals(kind, requestedKind, StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(kind => kind, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+    private static int CompareLocations(SymbolSourceLocation left, SymbolSourceLocation right)
+    {
+        var path = StringComparer.OrdinalIgnoreCase.Compare(left.FilePath, right.FilePath);
+        return path != 0 ? path : left.Line != right.Line ? left.Line.CompareTo(right.Line) : left.Column.CompareTo(right.Column);
+    }
+
+    private static int GetProjectRank(SymbolLocationEntry entry) =>
+        entry.Locations?.Any(location => location.ScopeType == "production") == true ? 0
+            : entry.Locations?.Any(location => location.ScopeType == "tests") == true ? 1 : 2;
+
+    private static int GetSourceRank(SymbolLocationEntry entry) =>
+        entry.Locations?.Any(location => location.SourceKind == "editable") == true ? 0 : 1;
+
+    private static int GetMatchRank(SymbolLocationEntry entry, string pattern)
+    {
+        var clean = SymbolNameMatcher.CleanPattern(pattern);
+        var name = entry.Name;
+        if (name.Equals(clean, StringComparison.OrdinalIgnoreCase)
+            || name.EndsWith($".{clean}", StringComparison.OrdinalIgnoreCase)
+            || name.EndsWith($".{clean}()", StringComparison.OrdinalIgnoreCase)
+            || name.EndsWith($".{clean}(", StringComparison.OrdinalIgnoreCase)) return 0;
+        if (clean.Contains('.')
+            && (name.EndsWith($".{clean}", StringComparison.OrdinalIgnoreCase)
+                || name.Contains($".{clean}(", StringComparison.OrdinalIgnoreCase))) return 1;
+        if (name.StartsWith(clean, StringComparison.OrdinalIgnoreCase)) return 2;
+        if (name.Contains(clean, StringComparison.OrdinalIgnoreCase)) return 3;
+        return 4;
     }
 
     private static async Task<string> AppendMissHintAsync(
@@ -168,4 +353,5 @@ internal sealed record FindSymbolScanResult(
     int TotalCount,
     int ReturnedCount,
     bool IsTruncated,
-    IReadOnlyList<string> TruncatedBy);
+    IReadOnlyList<string> TruncatedBy,
+    IReadOnlyList<string>? KindAlternatives = null);

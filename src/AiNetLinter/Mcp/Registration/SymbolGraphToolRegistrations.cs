@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.DependencyGraph;
@@ -52,7 +53,7 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? namePatterns = null, string? pattern = null, string? kind = null, int maxResults = 50, bool includeReferences = false, int maxResponseBytes = 0, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string[]? namePatterns = null, string? pattern = null, string? kind = null, string scopeType = "all", bool includeGenerated = false, int maxResults = 50, bool includeReferences = false, int maxResponseBytes = FindSymbolTool.DefaultMaxResponseBytes, CancellationToken ct = default) =>
             {
                 var patternError = FindSymbolTool.ValidatePatternArguments(
                     new FindSymbolPatternOptions(namePatterns, pattern));
@@ -61,23 +62,37 @@ internal static class SymbolGraphToolRegistrations
                 var maxResultsError = FindSymbolTool.ValidateMaxResults(maxResults);
                 if (maxResultsError is not null) return maxResultsError;
 
+                var scopeValidation = FindSymbolTool.ValidateScopeType(scopeType);
+                if (scopeValidation.Error is not null) return scopeValidation.Error;
+
                 return await TargetPathToolRegistrationOptions.ExecuteWithUnknownArgumentGuardAsync(context, () => AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
                             ProjectCall: lease => FindSymbolTool.ExecuteAsync(
-                                new FindSymbolRequest(lease.Server, namePatterns, kind, maxResults, ct, pattern)),
+                                new FindSymbolRequest(
+                                    lease.Server,
+                                    namePatterns,
+                                    kind,
+                                    maxResults,
+                                    ct,
+                                    pattern,
+                                    scopeValidation.ScopeType,
+                                    includeGenerated)),
                             AssemblySessionCall: lease => AssemblyFindSymbolTool.ExecuteAsync(
                                 lease,
                                 new AssemblyFindSymbolRequest(
                                     FindSymbolTool.NormalizeNamePatterns(new FindSymbolPatternOptions(namePatterns, pattern)).ToArray(),
                                     kind,
                                     maxResults,
-                                    includeReferences),
+                                    includeReferences,
+                                    scopeValidation.ScopeType,
+                                    includeGenerated),
                                 ct),
                             ExpandAssemblyReferences: includeReferences,
-                            MaxResponseBytes: maxResponseBytes),
+                            MaxResponseBytes: maxResponseBytes,
+                            PostNavigationResponseBudget: FindSymbolTool.ApplyFinalResponseBudget),
                         ct)));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("find_symbol", FindSymbolDescription)));
@@ -90,8 +105,11 @@ internal static class SymbolGraphToolRegistrations
         "Batch loest N sequentielle Calls ab, max. 10 pro Call, z. B. namePatterns: [\"Greeter\"] " +
         "oder pattern: \"Greeter\". " +
         "kind: optionaler Typfilter (Class, Record, Method, Property, Interface, Struct, Enum; " +
-        "deutsche und englische Werte). maxResults: mindestens 1, Begrenzung der Trefferliste (Default 50); " +
+        "deutsche und englische Werte). scopeType: 'all' (Default), 'production' oder 'tests'; " +
+        "includeGenerated: false (Default), nur bei true generierte Dokumente einbeziehen. " +
+        "maxResults: mindestens 1, Begrenzung der Trefferliste (Default 50); " +
         "0 oder negative Werte liefern INVALID_ARGUMENT. " +
+        "maxResponseBytes: Wirebudget (Default 16 KiB, Cap 64 KiB). " +
         "includeReferences (Default false): bei Assembly-Zielen auch die bounded Referenz-Assemblies " +
         "durchsuchen und Herkunft/Completeness in structuredContent ausgeben. " +
         "Bei 0 C#-Treffern Hinweis auf Textfunde in Nicht-C#-Dateien (Fallback search_pattern). " +
