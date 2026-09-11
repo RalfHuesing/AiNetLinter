@@ -22,6 +22,36 @@ namespace AiNetLinter.IntegrationTests.Mcp.Tools.SymbolGraph;
 [Trait("Category", "Integration")]
 public sealed class GetImpactToolIntegrationTests
 {
+    [Theory]
+    [InlineData("clean_worktree")]
+    [InlineData("diff_without_callsite_impact")]
+    [InlineData("impact_found")]
+    public async Task ExecuteAsync_GitStates_ExposeConsistentTextAndStructuredStatus(string expectedStatus)
+    {
+        using var fixture = new GitImpactMiniFixtureWorkspace();
+        if (expectedStatus == "diff_without_callsite_impact") fixture.ChangeCalculatorNormalizeBodyWithoutCommitting();
+        if (expectedStatus == "impact_found") fixture.ChangeCalculatorAddBodyWithoutCommitting();
+        using var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+
+        var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput(null, null, 50, 1), CancellationToken.None);
+
+        Assert.Equal(expectedStatus, result.StructuredContent!.Value.GetProperty("impactStatus").GetString());
+        Assert.Contains("Impact", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_InvalidRef_ExposesStructuredStatus()
+    {
+        using var fixture = new GitImpactMiniFixtureWorkspace();
+        using var catalog = await SourceFileCatalog.LoadAsync(fixture.RootPath);
+        using var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(new McpCodeGraphServerOptionsFromParameters(catalog)));
+
+        var result = await GetImpactTool.ExecuteAsync(state, new GetImpactInput("does-not-exist-xyz", null, 50, 1), CancellationToken.None);
+
+        Assert.Equal("invalid_ref", result.StructuredContent!.Value.GetProperty("impactStatus").GetString());
+        Assert.Contains("ANALYSIS_FAILED", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
+    }
     [Fact]
     public async Task ExecuteAsync_GitRefUncommittedChange_StructuredContentDeserializesToCallSiteEntries()
     {

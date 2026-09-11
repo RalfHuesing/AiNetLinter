@@ -17,21 +17,22 @@ namespace AiNetLinter.Mcp.Tools.FileStructure;
 /// </summary>
 internal static class GetIndexScopeTool
 {
-    internal static Task<CallToolResult> ExecuteAsync(McpCodeGraphServer state, CancellationToken ct)
+    internal static async Task<CallToolResult> ExecuteAsync(McpCodeGraphServer state, CancellationToken ct)
     {
-        if (state.LoadState == ServerLoadState.Loading) return Task.FromResult(McpToolResults.Loading());
+        if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
-        if (solution is null) return Task.FromResult(McpToolResults.SolutionNotLoaded());
+        if (solution is null) return McpToolResults.SolutionNotLoaded();
 
-        var (text, entries) = GetIndexScopeScanner.BuildBreakdown(solution);
+        var (text, entries, population) = await GetIndexScopeScanner.BuildBreakdownAsync(solution, ct);
         // In ein Objekt gewrappt statt des nackten Arrays — MCP-Clients validieren structuredContent
         // schema-seitig als JSON-Objekt, ein Top-Level-Array liess den Tool-Call fehlschlagen.
         var payload = new IndexScopePayload(
             entries,
+            population,
             Status: "ok",
             Routing: new IndexScopeRouting(
                 new IndexScopeRoute("find_symbol", "pattern", null, null),
                 new IndexScopeRoute("search_pattern", "pattern", "all", "**/*{extension}")));
-        return Task.FromResult(McpToolResults.Text(text, payload));
+        return McpToolResults.Text(text, payload);
     }
 }

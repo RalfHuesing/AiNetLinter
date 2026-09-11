@@ -140,7 +140,8 @@ public sealed class GetImpactToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("Keine betroffenen Aufrufstellen gefunden", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("kein Git-Repository", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("not_git_repository", result.StructuredContent!.Value.GetProperty("impactStatus").GetString());
     }
 
     [Fact]
@@ -289,7 +290,7 @@ public sealed class GetImpactToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("Keine betroffenen Aufrufstellen gefunden", textContent.Text, StringComparison.Ordinal);
+        Assert.Contains("kein Git-Repository", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]

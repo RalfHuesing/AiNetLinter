@@ -53,7 +53,10 @@ public sealed class Foo
             Assert.NotEmpty(entry.Scope);
             Assert.Contains(entry.EvidenceBoundary, result.Text, StringComparison.Ordinal);
             Assert.Contains(entry.Scope, result.Text, StringComparison.Ordinal);
-            Assert.Contains(entry.Recommendation, result.Text, StringComparison.Ordinal);
+            if (entry.Recommendation is not null)
+            {
+                Assert.Contains(entry.Recommendation, result.Text, StringComparison.Ordinal);
+            }
         });
     }
 }

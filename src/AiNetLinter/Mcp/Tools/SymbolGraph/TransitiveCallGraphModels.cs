@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using System.Threading;
+using AiNetLinter.Core;
 using AiNetLinter.Mcp.Scope;
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Mcp;
@@ -82,9 +83,17 @@ internal sealed record SymbolImpactPayload(
     IReadOnlyList<TransitiveCallSiteEntry> CallSites,
     TraversalCompleteness Completeness,
     IReadOnlyList<string> AffectedProjects,
+    string ImpactStatus,
     SymbolTestImpactDto? TestImpact = null,
     AssemblyNavigationSummary? Navigation = null,
     SymbolHandoffPayload? Handoff = null);
+
+/// <summary>Schlanker Git-Diff-Vertrag für den callers-Zweig von <c>get_impact</c>.</summary>
+internal sealed record GitImpactPayload(
+    string ImpactStatus,
+    IReadOnlyList<CallSiteEntry> CallSites,
+    int TotalCount,
+    int ShownCount);
 
 internal sealed record SymbolTestImpactDto(
     int TotalMatchingTests,

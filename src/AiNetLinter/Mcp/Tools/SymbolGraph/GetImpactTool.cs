@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Core;
+using AiNetLinter.Core.Git;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools.Analysis;
@@ -219,6 +220,7 @@ internal static class GetImpactTool
             traversal.CallSites,
             traversal.Completeness,
             affectedProjects,
+            DetermineImpactStatus(traversal.CallSites.Count),
             new SymbolTestImpactDto(testCoverage.TotalMatchingTests, testCoverage.TestFiles.Count, testCoverage.TestFiles),
             traversal.Navigation,
             formatted.StructuredPayload.Handoff);
@@ -259,10 +261,15 @@ internal static class GetImpactTool
     private static async Task<CallToolResult> ExecuteGitRefBranchAsync(Solution solution, GetImpactInput input, CancellationToken ct)
     {
         var targetPath = Path.GetDirectoryName(solution.FilePath) ?? "";
-        List<CallSiteEntry> callSiteEntries;
+        DiffImpactAnalysis? analysis;
         try
         {
-            callSiteEntries = await DiffImpactAnalyzer.AnalyzeEntriesAsync(
+            if (GitRepositoryLocator.FindRoot(targetPath) is null)
+            {
+                return FormatGitImpact("not_git_repository", [], 0, 0);
+            }
+
+            analysis = await DiffImpactAnalyzer.AnalyzeDiffAsync(
                 solution, targetPath, input.GitRef, verbose: false);
         }
         catch (GitDiffFailedException ex)
@@ -270,26 +277,60 @@ internal static class GetImpactTool
             // Recoverable statt Error: eine nicht aufloesende gitRef ist ein behebbarer
             // Nutzereingabe-Fehler (Tippfehler, falscher Branch-Name), kein Tool-Malfunction —
             // siehe IsErrorPolicy.md.
-            return McpToolResults.Recoverable(
-                LinterErrorCodes.AnalysisFailed,
-                $"Git-Diff fuer gitRef '{ex.GitRef}' fehlgeschlagen — Ref loest nicht auf.",
-                context: ex.Message,
-                hint: GitRefUnresolvableHint);
+            return FormatGitImpact("invalid_ref", [], 0, 0, ex.Message, GitRefUnresolvableHint);
         }
         var effectiveMax = input.MaxResults < 1 ? 1 : input.MaxResults;
 
-        if (callSiteEntries.Count == 0)
+        if (analysis is null)
         {
-            var refLabel = string.IsNullOrEmpty(input.GitRef) ? "uncommittete Aenderungen" : input.GitRef;
-            return McpToolResults.Text($"Keine betroffenen Aufrufstellen gefunden fuer '{refLabel}'");
+            return FormatGitImpact("clean_worktree", [], 0, 0);
         }
 
+        var callSiteEntries = DiffImpactAnalyzer.ToCallSiteEntries(analysis.References);
+        if (callSiteEntries.Count == 0)
+        {
+            return FormatGitImpact("diff_without_callsite_impact", [], 0, 0);
+        }
         var callSites = callSiteEntries.Select(DiffImpactAnalyzer.FormatCallSite).ToList();
         var finalText = McpTruncation.TruncateLines(callSites, callSiteEntries.Count, effectiveMax);
         var shownEntries = callSiteEntries.Count <= effectiveMax
             ? callSiteEntries
             : callSiteEntries.Take(effectiveMax).ToList();
-        return McpToolResults.Text(finalText, new { CallSites = shownEntries });
+        return McpToolResults.Text(
+            $"Impact: statische Aufrufstellen gefunden.\n{finalText}",
+            new GitImpactPayload("impact_found", shownEntries, callSiteEntries.Count, shownEntries.Count));
+    }
+
+    private static string DetermineImpactStatus(int callSiteCount) =>
+        callSiteCount == 0 ? "diff_without_callsite_impact" : "impact_found";
+
+    internal static CallToolResult FormatGitImpact(
+        string impactStatus,
+        IReadOnlyList<CallSiteEntry> callSites,
+        int totalCount,
+        int shownCount,
+        string? context = null,
+        string? hint = null)
+    {
+        var text = impactStatus switch
+        {
+            "not_git_repository" => "Impact: kein Git-Repository am targetPath.",
+            "invalid_ref" => "Impact: gitRef konnte nicht aufgeloest werden.",
+            "clean_worktree" => "Impact: keine ungecommitten Aenderungen.",
+            "diff_without_callsite_impact" => "Impact: Diff ohne statische Aufrufstellen-Auswirkung.",
+            _ => "Impact: statische Aufrufstellen gefunden.",
+        };
+        var payload = new GitImpactPayload(impactStatus, callSites, totalCount, shownCount);
+        if (impactStatus != "invalid_ref") return McpToolResults.Text(text, payload);
+
+        var recoverable = McpToolResults.Recoverable(
+            LinterErrorCodes.AnalysisFailed, text, context: context, hint: hint);
+        return new CallToolResult
+        {
+            IsError = recoverable.IsError,
+            Content = recoverable.Content,
+            StructuredContent = System.Text.Json.JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
+        };
     }
 
     /// <summary>
@@ -311,6 +352,10 @@ internal static class GetImpactTool
         DiffImpactAnalysis? analysis;
         try
         {
+            if (GitRepositoryLocator.FindRoot(Path.GetDirectoryName(solution.FilePath) ?? "") is null)
+            {
+                return FormatChangeContextEmpty("not_git_repository");
+            }
             analysis = await DiffImpactAnalyzer.RunAnalysisAsync(new DiffAnalysisRequest(
                 solution,
                 Path.GetDirectoryName(solution.FilePath) ?? "",
@@ -324,18 +369,12 @@ internal static class GetImpactTool
         {
             // Dasselbe Recoverable-Muster wie der callers-Zweig: nicht aufloesende gitRef ist
             // behebbarer Nutzereingabe-Fehler, kein Tool-Malfunction (siehe IsErrorPolicy.md).
-            return McpToolResults.Recoverable(
-                LinterErrorCodes.AnalysisFailed,
-                $"Git-Diff fuer gitRef '{ex.GitRef}' fehlgeschlagen — Ref loest nicht auf.",
-                context: ex.Message,
-                hint: GitRefUnresolvableHint);
+            return FormatChangeContextEmpty("invalid_ref", ex.Message, GitRefUnresolvableHint);
         }
 
         if (analysis is null)
         {
-            return McpToolResults.Text(
-                "Kein Git-Repository oder leerer Diff — keine geaenderten Dateien/Symbole.",
-                ChangeContextResponseMapper.BuildEmptyPayload());
+            return FormatChangeContextEmpty("clean_worktree");
         }
 
         var batch = await TestCoverageScanner.FindTestsForSymbolsCoreAsync(
@@ -353,6 +392,25 @@ internal static class GetImpactTool
         var payload = ChangeContextResponseMapper.BuildPayload(new ChangeContextResponseInput(
             analysis, batch, violationsStage.Violations, maxTestsPerSymbol));
         return McpToolResults.Text(BuildChangeContextText(payload, input.MaxResults), payload);
+    }
+
+    internal static CallToolResult FormatChangeContextEmpty(string impactStatus, string? context = null, string? hint = null)
+    {
+        var payload = ChangeContextResponseMapper.BuildEmptyPayload(impactStatus);
+        var text = impactStatus switch
+        {
+            "not_git_repository" => "Impact: kein Git-Repository am targetPath.",
+            "invalid_ref" => "Impact: gitRef konnte nicht aufgeloest werden.",
+            _ => "Impact: keine ungecommitten Aenderungen.",
+        };
+        if (impactStatus != "invalid_ref") return McpToolResults.Text(text, payload);
+        var recoverable = McpToolResults.Recoverable(LinterErrorCodes.AnalysisFailed, text, context, hint);
+        return new CallToolResult
+        {
+            IsError = recoverable.IsError,
+            Content = recoverable.Content,
+            StructuredContent = System.Text.Json.JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
+        };
     }
 
     /// <summary>Eine solutionweite Violations-Stufe pro Aufruf — Config/Console beschafft der

@@ -90,6 +90,7 @@ internal sealed class FileTreeAccumulator
     private readonly List<string> _warnings = [];
     private int _scannedFileCount;
     private int _scannedDirectoryCount;
+    private int _excludedByRequestCount;
 
     internal FileTreeAccumulator(string analysisRoot, string effectiveRoot, GetFileTreeInput input, int displayTreeDepth)
     {
@@ -113,13 +114,15 @@ internal sealed class FileTreeAccumulator
         _scannedFileCount++;
         var relativePath = ToProjectRelativePath(filePath);
         var extension = NormalizeExtension(Path.GetExtension(filePath));
-        if (!FileTreeFilter.Matches(new FileTreeMatchCriteria(
+        var criteria = new FileTreeMatchCriteria(
             relativePath,
             extension,
             _extensions,
             _input.FileFilter,
-            _input.ExcludePatterns ?? [])))
+            _input.ExcludePatterns ?? []);
+        if (!FileTreeFilter.Matches(criteria))
         {
+            if (FileTreeFilter.IsExcluded(relativePath, criteria.ExcludePatterns)) _excludedByRequestCount++;
             return;
         }
 
@@ -212,6 +215,14 @@ internal sealed class FileTreeAccumulator
                 _directories.Values.Count(directory => directory.MatchedFileCount > 0),
                 sortedMatches.Sum(match => match.SizeBytes),
                 BuildExtensionSummary(sortedMatches)),
+            Population: new FileTreePopulation(
+                _scannedFileCount,
+                _excludedByRequestCount,
+                shownMatches.Count),
+            Exclusions: new FileTreeExclusions(
+                _input.ExcludePatterns ?? [],
+                _input.ExcludePatterns ?? [],
+                _excludedByRequestCount),
             Directories: directories,
             Files: shownMatches.Select(ToFileEntry).ToArray(),
             Completeness: new FileTreeCompleteness(

@@ -78,6 +78,13 @@ public sealed class GetIndexScopeToolTests
         var routing = result.StructuredContent.Value.GetProperty("routing");
         Assert.Equal("find_symbol", routing.GetProperty("cSharp").GetProperty("tool").GetString());
         Assert.Equal("search_pattern", routing.GetProperty("nonCSharp").GetProperty("tool").GetString());
+
+        var population = result.StructuredContent.Value.GetProperty("population");
+        Assert.True(population.GetProperty("physicalFileCount").GetInt32() >= entries.Sum(entry => entry.Count));
+        Assert.True(population.GetProperty("roslynDocumentCount").GetInt32() >= 5);
+        Assert.True(population.GetProperty("testDocumentCount").GetInt32() >= 0);
+        Assert.True(population.GetProperty("generatedDocumentCount").GetInt32() >= 0);
+        Assert.Equal(entries.Sum(entry => entry.Count), population.GetProperty("shownCount").GetInt32());
     }
 
     [Fact]

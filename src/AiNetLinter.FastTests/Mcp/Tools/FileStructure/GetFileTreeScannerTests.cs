@@ -53,6 +53,22 @@ public sealed class GetFileTreeScannerTests
     }
 
     [Fact]
+    public void Scan_RequestedExclusionsAreStructuredAndCounted()
+    {
+        using var tempDir = TestTempDirectory.Create("file-tree-exclusions-");
+        var root = CreateFixture(tempDir.DirectoryPath);
+        var input = GetFileTreeTestData.Input() with { ExcludePatterns = ["*.md"] };
+
+        var result = GetFileTreeScanner.Scan(root, input, CancellationToken.None).Payload;
+
+        Assert.Equal(["*.md"], result.Exclusions.RequestedPatterns);
+        Assert.Equal(["*.md"], result.Exclusions.AppliedPatterns);
+        Assert.Equal(2, result.Exclusions.ExcludedCount);
+        Assert.Equal(2, result.Population.ExcludedCount);
+        Assert.Equal(result.Files.Count, result.Population.ShownCount);
+    }
+
+    [Fact]
     public void Scan_SortsBySizeAndCanOmitPerFileMetadata()
     {
         using var tempDir = TestTempDirectory.Create("file-tree-sort-");

@@ -353,8 +353,13 @@ internal static partial class FindMagicValuesScanner
         FindMagicValuesPayload payload,
         int maxResults)
     {
-        var sb = new StringBuilder();
         var summary = payload.Summary;
+        if (summary.Status == "empty")
+        {
+            return $"Magic-Value-Audit: 0 Kandidaten in {summary.FilesInScope} Dateien im angeforderten Scope.";
+        }
+
+        var sb = new StringBuilder();
         sb.AppendLine($"Magic-Value-Audit: {summary.TotalOccurrences} Treffer gesamt in {summary.Total} eindeutigen Einträgen " +
             $"über {summary.FilesInScope} Dateien im Scope");
         sb.AppendLine($"Status: {summary.Status}; resultType={summary.ResultType}; Confidence: {summary.Confidence}");
@@ -378,7 +383,10 @@ internal static partial class FindMagicValuesScanner
             sb.AppendLine($"  Evidence: {category.EvidenceBoundary}");
             sb.AppendLine($"  Scope: {category.Scope}");
             sb.AppendLine($"  Empfehlung: {category.Recommendation}");
-            sb.AppendLine($"  Naechster Schritt: {category.Next.Action} — {category.Next.Reason}");
+            if (category.Next is not null)
+            {
+                sb.AppendLine($"  Naechster Schritt: {category.Next.Action} — {category.Next.Reason}");
+            }
         }
 
         sb.AppendLine();

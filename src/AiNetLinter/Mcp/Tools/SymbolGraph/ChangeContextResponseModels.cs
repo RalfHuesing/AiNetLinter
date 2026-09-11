@@ -45,6 +45,7 @@ internal static class ChangeContextContract
 internal sealed record ChangeContextPayload(
     string Mode,
     string DetailLevel,
+    string ImpactStatus,
     IReadOnlyList<ChangedFilePayload> ChangedFiles,
     IReadOnlyList<ChangedSymbolPayload> ChangedSymbols,
     IReadOnlyList<TransitiveCallSiteEntry> CallSites,
@@ -119,9 +120,10 @@ internal sealed record ChangeContextResponseInput(
 internal static class ChangeContextResponseMapper
 {
     /// <summary>Leere, aber vertragsgueltige Struktur fuer "kein Repo / leerer Diff".</summary>
-    internal static ChangeContextPayload BuildEmptyPayload() => new(
+    internal static ChangeContextPayload BuildEmptyPayload(string impactStatus = "clean_worktree") => new(
         Mode: ChangeContextContract.ModeGitDiff,
         DetailLevel: ChangeContextContract.DetailLevelChangeContext,
+        ImpactStatus: impactStatus,
         ChangedFiles: [],
         ChangedSymbols: [],
         CallSites: [],
@@ -137,6 +139,7 @@ internal static class ChangeContextResponseMapper
         return new ChangeContextPayload(
             ChangeContextContract.ModeGitDiff,
             ChangeContextContract.DetailLevelChangeContext,
+            analysis.References.CallSites.Count == 0 ? "diff_without_callsite_impact" : "impact_found",
             analysis.ChangedFiles.Select(MapChangedFile).ToList(),
             analysis.ChangedSymbols.Select(MapChangedSymbol).ToList(),
             analysis.References.CallSites,

@@ -187,12 +187,12 @@ internal static class PatternDetectScanner
     private static string DetermineConfidence(string configurationStatus, bool isTruncated) =>
         configurationStatus != "configured" ? "low" : isTruncated ? "medium" : "high";
 
-    private static PatternNextAction BuildNextAction(string status) => status switch
+    private static PatternNextAction? BuildNextAction(string status) => status switch
     {
         "truncated" => new PatternNextAction("continue", "maxResultsPerPattern erhoehen oder scopeFilter verfeinern."),
         "not_configured" => new PatternNextAction("configure", "Zugeordnete Regel aktivieren oder Regelkonfiguration pruefen."),
         "not_decidable" => new PatternNextAction("inspect", "Effektive Projekt-/Pfad-Konfiguration und Scope pruefen."),
-        "empty" => new PatternNextAction("refine_scope", "Bei Bedarf scopeFilter oder die Regelkonfiguration aendern."),
+        "empty" => null,
         _ => new PatternNextAction("inspect", "Treffer im Detail pruefen; keine automatische Aenderung ableiten."),
     };
 
@@ -243,6 +243,11 @@ internal static class PatternDetectScanner
         var patternsWithHits = reports.Count(r => r.Entry.Occurrences > 0);
         var totalOccurrences = reports.Sum(r => r.Entry.Occurrences);
 
+        if (reports.All(report => report.Entry.Status == "empty"))
+        {
+            return $"Pattern-Detect: 0 Treffer in {matchingFileCount} Dateien im angeforderten Scope.";
+        }
+
         var sb = new StringBuilder();
         sb.AppendLine(
             $"Pattern-Detect: {patternsWithHits} von {reports.Count} Patterns mit Treffern, " +
@@ -263,7 +268,10 @@ internal static class PatternDetectScanner
         {
             sb.AppendLine($"## {report.Entry.Id} — {report.Entry.Description} [{report.Entry.Status}, confidence={report.Entry.Confidence}]");
             sb.AppendLine($"Ursache: {report.Entry.Cause}");
-            sb.AppendLine($"Naechster Schritt: {report.Entry.Next.Action} — {report.Entry.Next.Reason}");
+            if (report.Entry.Next is not null)
+            {
+                sb.AppendLine($"Naechster Schritt: {report.Entry.Next.Action} — {report.Entry.Next.Reason}");
+            }
             sb.AppendLine();
             sb.AppendLine(report.Entry.Occurrences == 0
                 ? "Keine Treffer in diesem Scope; daraus folgt kein globaler Clean-Claim."
@@ -311,7 +319,7 @@ internal sealed record PatternDetectPayload(IReadOnlyList<PatternResultEntry> Pa
 /// Text-Trunkierung via <see cref="McpTruncation"/>).</summary>
 internal sealed record PatternResultEntry(
     string Id, string Description, int Occurrences, IReadOnlyList<PatternItemEntry> Items,
-    string Status, string Cause, string Confidence, PatternNextAction Next, int TruncatedBy);
+    string Status, string Cause, string Confidence, PatternNextAction? Next, int TruncatedBy);
 
 internal sealed record PatternNextAction(string Action, string Reason);
 

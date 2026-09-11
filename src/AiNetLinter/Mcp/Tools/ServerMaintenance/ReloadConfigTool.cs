@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Configuration;
@@ -67,26 +68,21 @@ internal static class ReloadConfigTool
         // (siehe McpCodeGraphServer.GetConfigSnapshot).
         var (oldConfig, oldResolvedConfigPath) = state.GetConfigSnapshot();
         var oldDescription = oldResolvedConfigPath ?? "not_configured";
-        var oldEnabledRules = oldConfig is null ? 0 : CountEnabledRules(oldConfig.Global);
-        var newEnabledRules = CountEnabledRules(newConfig.Global);
+        var enabledRuleCheckCount = CountEnabledRules(newConfig.Global);
+        var effectiveMetricThresholdCount = CountEffectiveMetricThresholds(newConfig.Metrics);
         return new ReloadConfigPayload(
             oldDescription,
             newPath,
-            oldEnabledRules,
-            newEnabledRules,
-            newEnabledRules - oldEnabledRules);
+            enabledRuleCheckCount,
+            effectiveMetricThresholdCount,
+            ConfigSnapshotChanged(oldConfig, newConfig, oldResolvedConfigPath, newPath));
     }
 
     private static string BuildSummary(ReloadConfigPayload payload)
     {
-        var deltaText = payload.EnabledRuleDelta == 0
-            ? "unveraendert"
-            : payload.EnabledRuleDelta > 0
-                ? $"+{payload.EnabledRuleDelta}"
-                : payload.EnabledRuleDelta.ToString();
-        return "Config neu geladen.\n" +
-               $"- Vorher: {payload.PreviousConfig} ({payload.PreviousEnabledRuleCount} aktivierte Regeln)\n" +
-               $"- Nachher: {payload.ConfigPath} ({payload.EnabledRuleCount} aktivierte Regeln, {deltaText})";
+        return $"Config neu geladen: {payload.EnabledRuleCheckCount} aktivierte Regelchecks, " +
+               $"{payload.EffectiveMetricThresholdCount} wirksame Metrikgrenzwerte, " +
+               $"Snapshot {(payload.SnapshotChanged ? "geändert" : "unverändert")}.";
     }
 
     /// <summary>
@@ -110,4 +106,21 @@ internal static class ReloadConfigTool
         }
         return count;
     }
+
+    private static int CountEffectiveMetricThresholds(MetricsConfig metrics) =>
+        typeof(MetricsConfig).GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(property => property.PropertyType == typeof(int))
+            .Count(property => (int)property.GetValue(metrics)! > 0);
+
+    private static bool ConfigSnapshotChanged(
+        ILinterEngineConfig? oldConfig,
+        Config newConfig,
+        string? oldResolvedConfigPath,
+        string newPath) =>
+        !string.Equals(oldResolvedConfigPath, newPath, StringComparison.Ordinal)
+        || oldConfig is null
+        || !string.Equals(
+            JsonSerializer.Serialize(oldConfig, oldConfig.GetType(), McpJsonOptions.Default),
+            JsonSerializer.Serialize(newConfig, newConfig.GetType(), McpJsonOptions.Default),
+            StringComparison.Ordinal);
 }

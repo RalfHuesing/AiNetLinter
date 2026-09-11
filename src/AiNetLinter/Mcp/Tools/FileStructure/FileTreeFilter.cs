@@ -47,6 +47,9 @@ internal static class FileTreeFilter
             MatchesPathOrFileName(criteria.RelativePath, pattern));
     }
 
+    internal static bool IsExcluded(string relativePath, IReadOnlyList<string> patterns) =>
+        patterns.Any(pattern => MatchesPathOrFileName(relativePath, pattern));
+
     private static bool MatchesPathOrFileName(string relativePath, string pattern)
     {
         var trimmed = pattern.Trim();

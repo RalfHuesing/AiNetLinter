@@ -35,7 +35,7 @@ internal static partial class FindMagicValuesScanner
             .ToList();
         var summarySemantics = ("Statische Syntax-/Semantik-Heuristik über C#-Literale im angeforderten Scope; " +
             "keine Laufzeit-, externen Consumer- oder globale Abwesenheitsaussage.",
-            "Kandidaten manuell prüfen; keine automatische Änderung aus dem Audit ableiten.");
+            status == "empty" ? null : "Kandidaten manuell prüfen; keine automatische Änderung aus dem Audit ableiten.");
         return new FindMagicValuesPayload(
             MagicValues: shown.Select(g => new MagicValueEntry(
                 FilePath: g.FilePath,
@@ -99,7 +99,7 @@ internal static partial class FindMagicValuesScanner
             TruncatedBy: total - returned,
             EvidenceBoundary: semantics.EvidenceBoundary,
             Scope: context.Scope,
-            Recommendation: semantics.Recommendation);
+            Recommendation: status == "empty" ? null : semantics.Recommendation);
     }
 
     private sealed record CategoryBuildContext(
@@ -131,10 +131,10 @@ internal static partial class FindMagicValuesScanner
         _ => "low",
     };
 
-    private static MagicValueNextAction BuildNextAction(string status) => status switch
+    private static MagicValueNextAction? BuildNextAction(string status) => status switch
     {
         "not_decidable" => new("inspect_scope", "Scope-Filter, IncludeTests und changedOnly prüfen; danach den Scan wiederholen."),
-        "empty" => new("refine_scope", "Bei Bedarf Scope oder Heuristikfilter anpassen; kein globaler Clean-Claim."),
+        "empty" => null,
         "truncated" => new("continue", "maxResults erhöhen oder den Scope beziehungsweise categoryFilter verfeinern."),
         _ => new("review_candidates", "Kandidaten und Evidenz prüfen; keine automatische Änderung ableiten."),
     };

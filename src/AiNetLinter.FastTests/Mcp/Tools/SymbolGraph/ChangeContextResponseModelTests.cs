@@ -68,7 +68,7 @@ public sealed class ChangeContextResponseModelTests
         Assert.Equal(
             new[]
             {
-                "mode", "detailLevel", "changedFiles", "changedSymbols", "callSites",
+                "mode", "detailLevel", "impactStatus", "changedFiles", "changedSymbols", "callSites",
                 "testAssociations", "violations", "recommendedTestCommands", "completeness"
             },
             json.EnumerateObject().Select(property => property.Name).ToArray());

@@ -82,7 +82,7 @@ internal sealed record MagicValueEntry(
     string ValueType,
     string Value,
     string Category,
-    string Recommendation,
+    string? Recommendation,
     string ContextHint,
     int Occurrences,
     string EvidenceBoundary = "",
@@ -97,11 +97,11 @@ internal sealed record MagicValueCategorySummary(
     string Status,
     string Cause,
     string Confidence,
-    MagicValueNextAction Next,
+    MagicValueNextAction? Next,
     int TruncatedBy,
     string EvidenceBoundary,
     string Scope,
-    string Recommendation,
+    string? Recommendation,
     string ResultType = "candidate");
 
 /// <summary>Explizite, maschinenlesbare Folgeaktion fuer leere, begrenzte oder gepruefte
@@ -132,7 +132,7 @@ internal sealed record MagicValuesSummary(
     int TruncatedBy = 0,
     string EvidenceBoundary = "",
     string Scope = "",
-    string Recommendation = "",
+    string? Recommendation = null,
     string ResultType = "candidate");
 
 /// <summary>

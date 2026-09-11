@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using AiNetLinter.Baseline;
+using AiNetLinter.Core;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Web;
 using Microsoft.CodeAnalysis;
 
@@ -25,7 +27,7 @@ internal static class GetIndexScopeScanner
     /// Baut die vollstaendige Dateityp-Aufschluesselung fuer <paramref name="solution"/> — Text
     /// plus <see cref="FileTypeBreakdownEntry"/>-Liste fuer <c>StructuredContent</c>.
     /// </summary>
-    internal static (string Text, IReadOnlyList<FileTypeBreakdownEntry> Entries) BuildBreakdown(Solution solution)
+    internal static async System.Threading.Tasks.Task<(string Text, IReadOnlyList<FileTypeBreakdownEntry> Entries, IndexScopePopulation Population)> BuildBreakdownAsync(Solution solution, System.Threading.CancellationToken cancellationToken)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var csCount = CountCsFiles(solution, solutionDir);
@@ -54,7 +56,18 @@ internal static class GetIndexScopeScanner
                 FileFilter: $"**/*{pair.Key}")));
 
         var text = FormatBreakdown(entries);
-        return (text, entries);
+        var documents = solution.Projects.SelectMany(project => project.Documents).ToList();
+        var classifier = new McpScopeClassifier();
+        var scopes = await System.Threading.Tasks.Task.WhenAll(documents.Select(document => classifier.ClassifyAsync(document, cancellationToken)));
+        var generatedDocumentCount = scopes.Count(scope => scope.SourceKind == McpSourceKind.Generated);
+        var testDocumentCount = scopes.Count(scope => scope.ProjectKind == McpProjectKind.Tests);
+        return (text, entries, new IndexScopePopulation(
+            csCount + nonCSharpCounts.Values.Sum(),
+            documents.Count,
+            generatedDocumentCount,
+            testDocumentCount,
+            documents.Count - csCount,
+            entries.Sum(entry => entry.Count)));
     }
 
     private static int CountCsFiles(Solution solution, string solutionDir)
@@ -122,6 +135,7 @@ internal static class GetIndexScopeScanner
         var fileLabel = count == 1 ? "Datei" : "Dateien";
         return $"{extension}: {count} {fileLabel}{suffix} | {route}";
     }
+
 }
 
 /// <summary>
@@ -140,6 +154,7 @@ internal sealed record FileTypeBreakdownEntry(
 
 internal sealed record IndexScopePayload(
     IReadOnlyList<FileTypeBreakdownEntry> Breakdown,
+    IndexScopePopulation Population,
     string Status,
     IndexScopeRouting Routing);
 
@@ -152,3 +167,11 @@ internal sealed record IndexScopeRoute(
     string QueryField,
     string? ScopeType,
     string? FileFilter);
+
+internal sealed record IndexScopePopulation(
+    int PhysicalFileCount,
+    int RoslynDocumentCount,
+    int GeneratedDocumentCount,
+    int TestDocumentCount,
+    int ExcludedCount,
+    int ShownCount);

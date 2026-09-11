@@ -110,9 +110,9 @@ public sealed class ReloadConfigToolTests
             result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
         Assert.NotNull(payload);
         Assert.Equal(newPath, payload!.ConfigPath);
-        Assert.Equal(17, payload.PreviousEnabledRuleCount);
-        Assert.Equal(16, payload.EnabledRuleCount);
-        Assert.Equal(-1, payload.EnabledRuleDelta);
+        Assert.Equal(16, payload.EnabledRuleCheckCount);
+        Assert.True(payload.EffectiveMetricThresholdCount > 0);
+        Assert.True(payload.SnapshotChanged);
         Assert.Equal(newPath, state.ResolvedConfigPath);
         Assert.False(state.Config!.Global.BanAsyncVoid);
     }
@@ -137,6 +137,24 @@ public sealed class ReloadConfigToolTests
         Assert.NotEqual(true, result.IsError);
         Assert.False(state.Config!.Global.BanAsyncVoid);
         Assert.Equal(existingPath, state.ResolvedConfigPath);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_UnchangedConfig_ReportsUnchangedSnapshot()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var catalog = await LoadedFixture.LoadCatalogAsync(fixture.RootPath);
+        var rulesPath = Path.Combine(fixture.RootPath, "ainetlinter-rules.json");
+        await File.WriteAllTextAsync(rulesPath, "{ \"Global\": {}, \"Metrics\": {} }");
+        var state = new McpCodeGraphServer(McpCodeGraphServerOptions.From(
+            new McpCodeGraphServerOptionsFromParameters(catalog, Config: CreateConfig(), ResolvedConfigPath: rulesPath)));
+
+        var result = await ReloadConfigTool.ExecuteAsync(state, rulesPath, CancellationToken.None);
+
+        var payload = JsonSerializer.Deserialize<ReloadConfigPayload>(
+            result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
+        Assert.NotNull(payload);
+        Assert.False(payload!.SnapshotChanged);
     }
 
     [Fact]
