@@ -159,7 +159,7 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string MetricsTreeDescription =
-        "Aggregierte Verzeichnis-Metriken zur schrittweisen Codebase-Erkundung; root, depth, topN und fileFilter begrenzen den Teilbaum.";
+        "Wann nutzen: Verzeichnis-Metriken; mode (Default code_size), depth, topN, fileFilter begrenzen Teilbaum.";
 
     private static void AddMetricsLookup(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -245,7 +245,7 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string FindMagicValuesDescription =
-        "Magic-Value-Audit fuer wiederholte C#-Literale; type, Kategorie, Scope, Tests und Git-Diff filterbar. Keine automatische Remediation.";
+        "Wann nutzen: C#-Literal-Audit; Git-Diff und '// ainetlinter-disable MagicValues' filterbar. Keine Remediation.";
 
     private static void AddFindDeadCode(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -316,7 +316,7 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string GetFeatureContextDescription =
-        "Kompakter One-Shot-Kontext fuer ein C#-Symbol: Deklaration, Metriken, statische Caller, Testkandidaten und Violations. Antwortbudget wahrt ganze Evidenzeinheiten.";
+        "Wann nutzen: One-Shot-Kontext fuer C#-Symbol: Deklaration, Metriken, Caller, Tests, Violations. Antwortbudget wahrt Einheiten.";
 
     private static void AddGetTestContext(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -345,5 +345,5 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string GetTestContextDescription =
-        "Statische Testkandidaten fuer ein Produktionssymbol mit Zuordnungsgrund und Kategorie; Antwortbudget wahrt ganze Kandidaten.";
+        "Wann nutzen: Statische Testkandidaten fuer C#-Symbol mit Zuordnung und Kategorie; Budget wahrt Kandidaten.";
 }
