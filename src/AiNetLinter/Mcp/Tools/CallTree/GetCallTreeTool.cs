@@ -1,12 +1,16 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.Common;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
@@ -28,6 +32,13 @@ namespace AiNetLinter.Mcp.Tools.CallTree;
 internal static class GetCallTreeTool
 {
     private const string MermaidFormat = "mermaid";
+    internal const int DefaultMaxResponseBytes = 32 * 1024;
+
+    private sealed record CallTreeValidation(
+        CallTreeDirection Direction,
+        McpScopeType ScopeType,
+        int MaxResponseBytes,
+        CallToolResult? Error = null);
 
     /// <summary>
     /// Tool-Einstiegspunkt: prueft Solution-Ladezustand, loest den Identifikator auf, baut den
@@ -39,83 +50,49 @@ internal static class GetCallTreeTool
     internal static async Task<CallToolResult> ExecuteAsync(
         ISolutionStateProvider state, GetCallTreeInput input, CancellationToken ct)
     {
+        var validation = ValidateInput(input);
+        if (validation.Error is not null) return validation.Error;
         if (state.LoadState == ServerLoadState.Loading) return McpToolResults.Loading();
         var solution = state.GetCurrentSolution();
         if (solution is null) return McpToolResults.SolutionNotLoaded();
 
         var symbolIdentifier = input.SymbolIdentifier;
-        if (string.IsNullOrEmpty(symbolIdentifier))
-        {
-            return McpToolResults.Recoverable(
-                LinterErrorCodes.InvalidArgument,
-                "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
-                hint: McpToolResults.SymbolIdentifierHint);
-        }
-
-        if (!TryParseDirection(input.Direction, out var direction))
-        {
-            return McpToolResults.Recoverable(
-                LinterErrorCodes.InvalidArgument,
-                $"Ungueltiger Wert fuer 'direction': '{input.Direction}'.",
-                hint: "direction muss 'incoming', 'outgoing' oder 'both' sein.");
-        }
-
-        if (!TryParseFormat(input.Format, out _))
-        {
-            return McpToolResults.InvalidArgument(
-                $"Ungueltiger Wert fuer 'format': '{input.Format}'.",
-                "format muss 'ascii' oder 'mermaid' sein (Default: 'ascii').",
-                "$.format");
-        }
 
         try
         {
             var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
                 solution,
-                symbolIdentifier,
+                symbolIdentifier!,
                 ct,
                 state.HandoffSymbolIdentity);
             if (error is not null) return error;
 
             var effectiveDepth = Math.Clamp(input.Depth, 1, CallGraphTreeBuilder.MaxCallTreeDepth);
             var topN = input.TopN < 1 ? 1 : input.TopN;
-            var (root, truncated) = await CallGraphTreeBuilder.BuildTreeAsync(
+            var graph = await CallGraphTreeBuilder.BuildGraphAsync(
                 new CallTreeBuildRequest(
                     solution,
                     symbol!,
                     input.Depth,
                     topN,
-                    direction,
+                    validation.Direction,
                     state.AssemblySymbolIdentity is not null,
                     input.IncludeBcl,
-                    state.HandoffSymbolIdentity),
+                    state.HandoffSymbolIdentity,
+                    validation.ScopeType,
+                    input.IncludeGenerated),
                 ct);
-
-            var body = RenderTree(root, input.Format, topN);
-            // "truncated" deckt nur den 250-Knoten-Hardcap von BuildTreeAsync ab. Der Renderer
-            // kappt zusaetzlich pro Ebene auf topN und haengt bei Ueberschuss eine eigene
-            // "... und N weitere"-Zeile an (MetricsTreeRenderer/CallTreeMermaidRenderer) — ohne
-            // diesen Fall zeigte der Sufficiency-Hinweis faelschlich "vollstaendig" an, obwohl der
-            // Baum sichtbar gekappt war. Marker-String-Erkennung analog zum "hard-cap"-Muster in
-            // FindReferencesTool.
-            var topNTruncated = HasTreeOverflow(root, topN);
-            var finalBody = truncated
-                ? body + "\n\n" + BuildTruncationMeta()
-                : topNTruncated
-                    ? body + "\n\n" + BuildTopNTruncationMeta()
-                    : body;
-
-            return McpToolResults.Text(
-                finalBody,
-                new CallTreePayload(
-                    root,
-                    CallTreeDirectionNames.For(direction),
+            return CallGraphResponseBudget.CreateResult(
+                new CallGraphResponseBudget.CallGraphResponseRequest(
+                    graph,
+                    input.Format,
+                    CallTreeDirectionNames.For(validation.Direction),
                     input.Depth,
                     effectiveDepth,
-                    input.Depth != effectiveDepth,
                     topN,
-                    truncated || topNTruncated,
-                    topNTruncated));
+                    validation.ScopeType,
+                    input.IncludeGenerated,
+                    validation.MaxResponseBytes));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -124,6 +101,72 @@ internal static class GetCallTreeTool
                 context: symbolIdentifier);
         }
     }
+
+    private static CallTreeValidation ValidateInput(GetCallTreeInput input)
+    {
+        if (string.IsNullOrEmpty(input.SymbolIdentifier))
+        {
+            return new(
+                default,
+                McpScopeType.All,
+                DefaultMaxResponseBytes,
+                McpToolResults.Recoverable(
+                    LinterErrorCodes.InvalidArgument,
+                    "Pflichtparameter 'symbolIdentifier' fehlt oder ist leer.",
+                    hint: McpToolResults.SymbolIdentifierHint));
+        }
+
+        if (!TryParseDirection(input.Direction, out var direction))
+        {
+            return new(
+                default,
+                McpScopeType.All,
+                DefaultMaxResponseBytes,
+                McpToolResults.Recoverable(
+                    LinterErrorCodes.InvalidArgument,
+                    $"Ungueltiger Wert fuer 'direction': '{input.Direction}'.",
+                    hint: "direction muss 'incoming', 'outgoing' oder 'both' sein."));
+        }
+
+        if (!TryParseFormat(input.Format, out _))
+        {
+            return new(
+                direction,
+                McpScopeType.All,
+                DefaultMaxResponseBytes,
+                McpToolResults.InvalidArgument(
+                    $"Ungueltiger Wert fuer 'format': '{input.Format}'.",
+                    "format muss 'ascii' oder 'mermaid' sein (Default: 'ascii').",
+                    "$.format"));
+        }
+
+        var scope = FindSymbolTool.ValidateScopeType(input.ScopeType);
+        if (scope.Error is not null)
+        {
+            return new(direction, default, DefaultMaxResponseBytes, scope.Error);
+        }
+
+        var budgetError = ValidateMaxResponseBytes(input.MaxResponseBytes);
+        return budgetError is not null
+            ? new(direction, scope.ScopeType, DefaultMaxResponseBytes, budgetError)
+            : new(
+                direction,
+                scope.ScopeType,
+                input.MaxResponseBytes <= 0 ? DefaultMaxResponseBytes : input.MaxResponseBytes);
+    }
+
+    private static CallToolResult? ValidateMaxResponseBytes(int value) =>
+        value > McpResponseBudgetLimits.MaxBytes
+            ? McpToolResults.InvalidArgument(
+                $"maxResponseBytes darf höchstens {McpResponseBudgetLimits.MaxBytes} sein.",
+                "maxResponseBytes auf höchstens 65536 setzen.",
+                "$.maxResponseBytes")
+            : value > 0 && value < McpResponseBudgetLimits.MinimumStructuredBytes
+                ? McpToolResults.InvalidArgument(
+                    $"maxResponseBytes muss mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} Bytes betragen.",
+                    "maxResponseBytes weglassen oder mindestens 512 setzen.",
+                    "$.maxResponseBytes")
+                : null;
 
     internal static bool TryParseDirection(string? value, out CallTreeDirection direction)
     {
@@ -150,10 +193,24 @@ internal static class GetCallTreeTool
         return false;
     }
 
-    internal static string RenderTree(MetricsTreeNode root, string? format, int topN) =>
-        TryParseFormat(format, out var parsedFormat) && parsedFormat == MermaidFormat
+    internal static string RenderTree(
+        MetricsTreeNode root,
+        string? format,
+        int topN,
+        bool includeHandoffMetadata = true)
+    {
+        var rendered = TryParseFormat(format, out var parsedFormat) && parsedFormat == MermaidFormat
             ? CallTreeMermaidRenderer.Render(root, topN)
             : MetricsTreeRenderer.Render(root, topN, sortDescending: false);
+        return includeHandoffMetadata
+            ? rendered
+            : Regex.Replace(rendered, @"\s+\[handoff=(?:true|false);[^\]]*\]", string.Empty);
+    }
+
+    internal static string RenderGraph(CallGraphPayload graph, string? format) =>
+        TryParseFormat(format, out var parsedFormat) && parsedFormat == MermaidFormat
+            ? CallTreeMermaidRenderer.Render(graph, 0)
+            : CallGraphTextRenderer.RenderAscii(graph);
 
     internal static bool TryParseFormat(string? value, out string format)
     {
@@ -177,11 +234,4 @@ internal static class GetCallTreeTool
     internal static bool HasTreeOverflow(MetricsTreeNode root, int topN) =>
         root.Children.Count > topN || root.Children.Any(child => HasTreeOverflow(child, topN));
 
-    private static string BuildTruncationMeta() =>
-        $"[Baum trunkiert — hard-cap {CallGraphTreeBuilder.MaxCallTreeNodes} Knoten erreicht, " +
-        "depth oder topN reduzieren fuer einen vollstaendigeren Teilbaum]";
-
-    private static string BuildTopNTruncationMeta() =>
-        "[Baum trunkiert — mindestens eine Ebene hat mehr Kinder als topN, siehe " +
-        "\"... und N weitere\"-Zeilen; topN erhoehen fuer einen vollstaendigeren Teilbaum]";
 }

@@ -81,6 +81,14 @@ internal static class AssemblyReferenceNavigator
     }
 
     // ainetlinter-disable MaxMethodLineCount — Referenz- und Call-Tree-Metadaten müssen gemeinsam begrenzt werden.
+    internal static Task<AssemblyCallGraphResult> BuildCallGraphAsync(
+        IReadOnlyList<AssemblyNavigationSource> sources,
+        ISymbol targetSymbol,
+        GetCallTreeInput input,
+        CancellationToken cancellationToken) =>
+        AssemblyCallGraphBuilder.BuildAsync(sources, targetSymbol, input, cancellationToken);
+
+    // ainetlinter-disable MaxMethodLineCount — Referenz- und Call-Tree-Metadaten müssen gemeinsam begrenzt werden.
     internal static async Task<(MetricsTreeNode Root, bool Truncated, IReadOnlyList<string> Diagnostics)> BuildCallTreeAsync(
         IReadOnlyList<AssemblyNavigationSource> sources,
         ISymbol targetSymbol,
@@ -102,7 +110,9 @@ internal static class AssemblyReferenceNavigator
                         Math.Max(input.TopN, 1),
                         AssemblyNavigationSupport.ParseDirection(input.Direction),
                         AbsolutePaths: true,
-                        HandoffIdentity: source.Identity),
+                        HandoffIdentity: source.Identity,
+                        ScopeType: FindSymbolTool.ValidateScopeType(input.ScopeType).ScopeType,
+                        IncludeGenerated: input.IncludeGenerated),
                     cancellationToken).ConfigureAwait(false);
                 trees.Add((source, AssemblyNavigationSupport.AddOrigin(tree, source.Origin)));
                 if (truncated)

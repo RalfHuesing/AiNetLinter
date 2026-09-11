@@ -87,7 +87,8 @@ internal sealed record AnalysisToolDispatch(
     int MaxResponseBytes = 0,
     Func<CallToolResult, int, CallToolResult>? PostNavigationResponseBudget = null,
     string? DetailLevel = null,
-    string? Cursor = null);
+    string? Cursor = null,
+    bool ApplyAssemblyWireBudget = true);
 
 internal sealed record AssemblyAnalysisExecutionOptions(
     bool ExpandAssemblyReferences = false,
@@ -95,7 +96,8 @@ internal sealed record AssemblyAnalysisExecutionOptions(
     int MaxResponseBytes = 0,
     string? DetailLevel = null,
     string? Cursor = null,
-    Func<CallToolResult, int, CallToolResult>? PostNavigationResponseBudget = null);
+    Func<CallToolResult, int, CallToolResult>? PostNavigationResponseBudget = null,
+    bool ApplyAssemblyWireBudget = true);
 
 internal sealed record ProjectAnalysisExecutionOptions(
     int MaxResponseBytes = 0,

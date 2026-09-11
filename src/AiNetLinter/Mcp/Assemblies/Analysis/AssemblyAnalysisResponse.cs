@@ -18,7 +18,8 @@ namespace AiNetLinter.Mcp.Assemblies.Analysis;
 internal sealed record AssemblyAnalysisResponseRequest(
     int MaxResponseBytes = 0,
     string? DetailLevel = null,
-    string? Cursor = null);
+    string? Cursor = null,
+    bool ApplyWireBudget = true);
 
 internal static partial class AssemblyAnalysisResponse
 {
@@ -48,6 +49,11 @@ internal static partial class AssemblyAnalysisResponse
             request.MaxResponseBytes,
             request.DetailLevel,
             lease.Context.ResponseBudgetBytes);
+        if (!request.ApplyWireBudget)
+        {
+            return AssemblyPublicContract.Project(enriched);
+        }
+
         return AssemblyPublicContract.Project(
             ApplyWireBudget(enriched, budget, AssemblyPaging.ReadOffset(request.Cursor)));
     }

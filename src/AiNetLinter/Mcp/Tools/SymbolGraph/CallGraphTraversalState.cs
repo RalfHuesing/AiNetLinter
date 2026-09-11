@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using Microsoft.CodeAnalysis;
@@ -63,6 +64,9 @@ internal sealed class TreeBuildState
         Direction = request.Direction;
         IncludeBcl = request.IncludeBcl;
         HandoffIdentity = request.HandoffIdentity;
+        ScopeType = request.ScopeType;
+        IncludeGenerated = request.IncludeGenerated;
+        ScopeClassifier = request.ScopeClassifier ?? new McpScopeClassifier();
         Root = new CallTreeBuilderNode(request.SeedSymbol, CallGraphTraversal.FormatSymbolName(request.SeedSymbol), CallGraphTreeBuilder.FormatRootDisplay(request.SeedSymbol, request.Solution));
         _visited = new HashSet<(ISymbol Symbol, CallTreeDirection Direction)>(
             new DirectionAwareSymbolComparer())
@@ -79,10 +83,14 @@ internal sealed class TreeBuildState
     internal CallTreeDirection Direction { get; }
     internal bool IncludeBcl { get; }
     internal AnalysisSymbolIdentity? HandoffIdentity { get; }
+    internal McpScopeType ScopeType { get; }
+    internal bool IncludeGenerated { get; }
+    internal McpScopeClassifier ScopeClassifier { get; }
     internal bool AbsolutePaths { get; private set; }
     internal CallTreeBuilderNode Root { get; private set; }
     internal int NodeCount { get; set; }
     internal bool Truncated { get; set; }
+    internal bool ScopeFiltered { get; private set; }
     internal bool HasQueuedNodes => _queue.Count > 0;
 
     internal void SetPathDisplayMode(bool absolutePaths)
@@ -95,6 +103,8 @@ internal sealed class TreeBuildState
     internal void Enqueue(CallTreeBuilderNode node, int level) => _queue.Enqueue((node, level));
     internal bool MarkVisited(ISymbol symbol, CallTreeDirection direction) =>
         _visited.Add((symbol, direction));
+
+    internal void MarkScopeFiltered() => ScopeFiltered = true;
 
     private sealed class DirectionAwareSymbolComparer : IEqualityComparer<(ISymbol Symbol, CallTreeDirection Direction)>
     {

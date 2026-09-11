@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Output;
@@ -37,20 +38,33 @@ internal static class CallGraphTreeBuilder
         CancellationToken ct)
     {
         var state = new GraphBuildState(request, Math.Clamp(request.RequestedDepth, 1, MaxCallTreeDepth));
-        while (state.HasQueuedNodes)
+        if (request.SeedSymbol is INamedTypeSymbol namedType)
+        {
+            return state.CreateTypeSeedPayload(namedType);
+        }
+
+        while (state.HasQueuedNodes && !state.HardCapTruncated)
         {
             ct.ThrowIfCancellationRequested();
             var (symbol, level) = state.Dequeue();
             if (level > state.Depth) continue;
 
             var groups = await BuildGraphGroupsAsync(state, symbol, ct).ConfigureAwait(false);
-            foreach (var group in groups)
+            if (groups.Count > state.TopN)
+            {
+                state.MarkTopNTruncated(groups.Count - state.TopN);
+            }
+            foreach (var group in groups.Take(state.TopN))
             {
                 ct.ThrowIfCancellationRequested();
                 var fromSymbol = group.Direction == CallTreeDirection.Incoming ? group.Symbol : symbol;
                 var toSymbol = group.Direction == CallTreeDirection.Incoming ? symbol : group.Symbol;
-                state.GetOrAddNode(fromSymbol);
-                var targetNode = state.GetOrAddNode(toSymbol);
+                if (!state.TryGetOrAddNode(fromSymbol, out _)
+                    || !state.TryGetOrAddNode(toSymbol, out var targetNode))
+                {
+                    state.MarkHardCapTruncated();
+                    break;
+                }
                 state.AddEdge(fromSymbol, targetNode, group);
                 if (level < state.Depth)
                 {
@@ -118,13 +132,51 @@ internal static class CallGraphTreeBuilder
                 ClassifyDispatchKind(group.Symbol))));
         }
 
-        return groups
+        var scoped = new List<GraphExpansion>(groups.Count);
+        foreach (var group in groups)
+        {
+            var locations = await FilterLocationsAsync(state, group.Locations, ct).ConfigureAwait(false);
+            if (locations.Count > 0)
+            {
+                scoped.Add(group with { Locations = locations });
+            }
+        }
+
+        if (scoped.Count < groups.Count)
+        {
+            state.MarkScopeFiltered();
+        }
+
+        return scoped
             .OrderBy(group => group.Direction)
             .ThenBy(group => CallGraphTraversal.GetStableSymbolId(group.Symbol), StringComparer.Ordinal)
             .ThenBy(group => CallGraphTraversal.FormatSymbolName(group.Symbol, CallTreeDirection.Outgoing), StringComparer.Ordinal)
             .ThenBy(group => FirstLocationPath(group.Locations, state.Solution), StringComparer.Ordinal)
             .ThenBy(group => FirstLocationLine(group.Locations))
             .ToList();
+    }
+
+    private static async Task<IReadOnlyList<Location>> FilterLocationsAsync(
+        GraphBuildState state,
+        IReadOnlyList<Location> locations,
+        CancellationToken ct)
+    {
+        var visible = new List<Location>(locations.Count);
+        foreach (var location in locations)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (location.SourceTree is null) continue;
+            var document = state.Solution.GetDocument(location.SourceTree);
+            if (document is null) continue;
+            var scope = await state.ScopeClassifier.ClassifyAsync(document, ct).ConfigureAwait(false);
+            if (state.ScopeClassifier.MatchesScope(scope, state.ScopeType)
+                && (state.IncludeGenerated || scope.SourceKind != McpSourceKind.Generated))
+            {
+                visible.Add(location);
+            }
+        }
+
+        return visible;
     }
 
     private static string? ClassifyDispatchKind(ISymbol symbol) => symbol switch
@@ -205,9 +257,47 @@ internal static class CallGraphTreeBuilder
             outgoing = await BuildSortedOutgoingGroupsAsync(symbol, state.Solution, state.IncludeBcl, ct);
         }
 
-        return state.Direction == CallTreeDirection.Both
+        var directionalGroups = state.Direction == CallTreeDirection.Both
             ? InterleaveDirections(incoming, outgoing)
             : CreateDirectionalGroups(incoming, outgoing, state.Direction);
+        return await FilterGroupsByScopeAsync(state, directionalGroups, ct).ConfigureAwait(false);
+    }
+
+    private static async Task<List<(CallerGroup Group, CallTreeDirection Direction)>> FilterGroupsByScopeAsync(
+        TreeBuildState state,
+        IReadOnlyList<(CallerGroup Group, CallTreeDirection Direction)> groups,
+        CancellationToken ct)
+    {
+        var filtered = new List<(CallerGroup Group, CallTreeDirection Direction)>(groups.Count);
+        foreach (var (group, direction) in groups)
+        {
+            var locations = new List<Location>(group.Locations.Count);
+            foreach (var location in group.Locations)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (location.SourceTree is null) continue;
+                var document = state.Solution.GetDocument(location.SourceTree);
+                if (document is null) continue;
+                var scope = await state.ScopeClassifier.ClassifyAsync(document, ct).ConfigureAwait(false);
+                if (state.ScopeClassifier.MatchesScope(scope, state.ScopeType)
+                    && (state.IncludeGenerated || scope.SourceKind != McpSourceKind.Generated))
+                {
+                    locations.Add(location);
+                }
+            }
+
+            if (locations.Count != group.Locations.Count)
+            {
+                state.MarkScopeFiltered();
+            }
+
+            if (locations.Count > 0)
+            {
+                filtered.Add((new CallerGroup(group.CallerSymbol, locations), direction));
+            }
+        }
+
+        return filtered;
     }
 
     private static List<(CallerGroup Group, CallTreeDirection Direction)> InterleaveDirections(
@@ -368,6 +458,14 @@ internal static class CallGraphTreeBuilder
         return $"{path}:{line}";
     }
 
+    private static string FormatSymbolDisplayLine(ISymbol symbol, Solution solution, bool absolutePaths)
+    {
+        var location = symbol.Locations.FirstOrDefault(candidate => candidate.IsInSource);
+        return location is null
+            ? string.Empty
+            : $"{FormatPath(location, solution, absolutePaths)}:{location.GetLineSpan().StartLinePosition.Line + 1}";
+    }
+
     private static string FirstLocationPath(CallerGroup group, Solution solution) =>
         FormatPath(group.Locations[0], solution);
 
@@ -423,7 +521,13 @@ internal static class CallGraphTreeBuilder
             Solution = request.Solution;
             Depth = depth;
             Direction = request.Direction;
+            TopN = Math.Max(request.TopN, 1);
             IncludeBcl = request.IncludeBcl;
+            ScopeType = request.ScopeType;
+            IncludeGenerated = request.IncludeGenerated;
+            ScopeClassifier = request.ScopeClassifier ?? new McpScopeClassifier();
+            AbsolutePaths = request.AbsolutePaths;
+            HandoffIdentity = request.HandoffIdentity;
             RootNodeId = GetOrAddNode(request.SeedSymbol).NodeId;
             _queue.Enqueue((request.SeedSymbol, 1));
             _queued.Add(request.SeedSymbol);
@@ -432,9 +536,18 @@ internal static class CallGraphTreeBuilder
         internal Solution Solution { get; }
         internal int Depth { get; }
         internal CallTreeDirection Direction { get; }
+        internal int TopN { get; }
         internal bool IncludeBcl { get; }
+        internal McpScopeType ScopeType { get; }
+        internal bool IncludeGenerated { get; }
+        internal McpScopeClassifier ScopeClassifier { get; }
+        internal bool AbsolutePaths { get; }
+        internal AnalysisSymbolIdentity? HandoffIdentity { get; }
         internal string RootNodeId { get; }
         internal bool HasQueuedNodes => _queue.Count > 0;
+        internal bool ScopeFiltered { get; private set; }
+        internal bool TopNTruncated { get; private set; }
+        internal bool HardCapTruncated { get; private set; }
 
         internal (ISymbol Symbol, int Level) Dequeue() => _queue.Dequeue();
 
@@ -445,10 +558,25 @@ internal static class CallGraphTreeBuilder
             var node = new CallGraphNode(
                 $"n{_nodes.Count + 1}",
                 symbol,
-                CallGraphTraversal.GetStableSymbolId(symbol));
+                CallGraphTraversal.GetStableSymbolId(symbol, HandoffIdentity),
+                CallGraphTraversal.FormatSymbolName(symbol, CallTreeDirection.Outgoing),
+                FormatSymbolDisplayLine(symbol, Solution, AbsolutePaths));
             _nodesBySymbol[symbol] = node;
             _nodes.Add(node);
             return node;
+        }
+
+        internal bool TryGetOrAddNode(ISymbol symbol, out CallGraphNode node)
+        {
+            if (_nodesBySymbol.TryGetValue(symbol, out node!)) return true;
+            if (_nodes.Count >= MaxCallTreeNodes)
+            {
+                node = null!;
+                return false;
+            }
+
+            node = GetOrAddNode(symbol);
+            return true;
         }
 
         internal void EnqueueIfNew(ISymbol symbol, int level)
@@ -477,8 +605,52 @@ internal static class CallGraphTreeBuilder
                 .ThenBy(edge => edge.ToNodeId, StringComparer.Ordinal)
                 .Select(edge => edge.ToModel())
                 .ToList();
-            return new CallGraphPayload(RootNodeId, _nodes, edges);
+            return new CallGraphPayload(
+                RootNodeId,
+                _nodes,
+                edges,
+                MethodHints: [],
+                TopNTruncated: TopNTruncated,
+                ScopeFiltered: ScopeFiltered,
+                HiddenEdgeCount: HiddenEdgeCount,
+                HardCapTruncated: HardCapTruncated);
         }
+
+        internal CallGraphPayload CreateTypeSeedPayload(INamedTypeSymbol namedType)
+        {
+                var hints = namedType.GetMembers()
+                .OfType<IMethodSymbol>()
+                .Where(method => method.MethodKind == MethodKind.Ordinary)
+                .Select(method => new CallGraphMethodHint(
+                    CallGraphTraversal.FormatSymbolName(method, CallTreeDirection.Outgoing),
+                    CallGraphTraversal.GetStableSymbolId(method, HandoffIdentity),
+                    FormatSymbolDisplayLine(method, Solution, AbsolutePaths)))
+                .OrderBy(hint => hint.Name, StringComparer.Ordinal)
+                .ThenBy(hint => hint.SymbolId, StringComparer.Ordinal)
+                .Take(5)
+                .ToList();
+            return new CallGraphPayload(
+                RootNodeId,
+                _nodes,
+                [],
+                hints,
+                TopNTruncated: false,
+                ScopeFiltered: ScopeFiltered,
+                HiddenEdgeCount: 0,
+                HardCapTruncated: false);
+        }
+
+        internal void MarkScopeFiltered() => ScopeFiltered = true;
+
+        internal int HiddenEdgeCount { get; private set; }
+
+        internal void MarkTopNTruncated(int hiddenCount)
+        {
+            TopNTruncated = true;
+            HiddenEdgeCount += hiddenCount;
+        }
+
+        internal void MarkHardCapTruncated() => HardCapTruncated = true;
     }
 
     private sealed class GraphEdgeAccumulator

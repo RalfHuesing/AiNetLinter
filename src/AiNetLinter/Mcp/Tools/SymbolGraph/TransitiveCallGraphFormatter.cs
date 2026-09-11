@@ -3,9 +3,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Scope;
+using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
@@ -141,6 +145,84 @@ internal static class TransitiveCallGraphFormatter
                 request.RequestedDepth,
                 request.EffectiveDepth,
                 request.DepthWasClamped));
+    }
+
+    internal static CallToolResult FormatAssemblyCallGraphResponse(
+        AssemblyCallGraphResponseRequest request)
+    {
+        var projection = CreateDiagnosticProjection(
+            request.Navigation.Diagnostics.Concat(request.Diagnostics));
+        var graphTruncated = request.Truncated
+            || request.Graph.TopNTruncated
+            || request.Graph.HardCapTruncated;
+        var effectiveNavigation = request.Navigation with
+        {
+            Completeness = request.Navigation.Completeness == "complete" &&
+                           !graphTruncated &&
+                           projection.TotalCount == 0
+                ? "complete"
+                : "partial",
+            Diagnostics = projection.Samples,
+            DiagnosticTotalCount = projection.TotalCount,
+            DiagnosticShownCount = projection.Samples.Count,
+            DiagnosticsTruncated = projection.Truncated,
+            DiagnosticsTruncatedBy = projection.TruncatedBy,
+        };
+
+        var result = CallGraphResponseBudget.CreateResult(
+            new CallGraphResponseBudget.CallGraphResponseRequest(
+                request.Graph,
+                request.Format,
+                CallTreeDirectionNames.For(request.Direction),
+                request.RequestedDepth,
+                request.EffectiveDepth,
+                request.TopN,
+                request.ScopeType,
+                request.IncludeGenerated,
+                request.MaxResponseBytes,
+                effectiveNavigation));
+        result = AddAssemblyNavigationCompatibility(result, effectiveNavigation);
+        var metadata = new List<string>();
+        if (request.DepthWasClamped)
+        {
+            metadata.Add(
+                $"[depth auf {request.EffectiveDepth} begrenzt — requestedDepth={request.RequestedDepth}]");
+        }
+        if (request.Graph.TopNTruncated)
+        {
+            metadata.Add("[Graph trunkiert — topN erhoehen fuer einen vollstaendigeren Graphen]");
+        }
+        if (request.Graph.HardCapTruncated)
+        {
+            metadata.Add(
+                $"[Graph trunkiert — hard-cap {CallGraphTreeBuilder.MaxCallTreeNodes} Knoten erreicht]");
+        }
+        AppendDiagnosticMetadata(metadata, projection);
+        if (metadata.Count == 0) return result;
+
+        var text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text ?? string.Empty;
+        return McpToolResults.ReplaceText(
+            result,
+            text + "\n\n" + string.Join("\n", metadata));
+    }
+
+    private static CallToolResult AddAssemblyNavigationCompatibility(
+        CallToolResult result,
+        AssemblyNavigationSummary navigation)
+    {
+        if (result.StructuredContent is not { ValueKind: System.Text.Json.JsonValueKind.Object } structured)
+        {
+            return result;
+        }
+
+        var payload = JsonNode.Parse(structured.GetRawText()) as JsonObject ?? new JsonObject();
+        payload["navigation"] = JsonSerializer.SerializeToNode(navigation, McpJsonOptions.Default);
+        return new CallToolResult
+        {
+            IsError = result.IsError,
+            Content = result.Content,
+            StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
+        };
     }
 
     internal static DiagnosticProjection CreateDiagnosticProjection(IEnumerable<string>? diagnostics)
@@ -308,6 +390,21 @@ internal sealed record AssemblyCallTreeResponseRequest(
     int RequestedDepth = 1,
     int EffectiveDepth = 1,
     bool DepthWasClamped = false);
+
+internal sealed record AssemblyCallGraphResponseRequest(
+    CallGraphPayload Graph,
+    CallTreeDirection Direction,
+    string? Format,
+    AssemblyNavigationSummary Navigation,
+    IReadOnlyList<string> Diagnostics,
+    bool Truncated,
+    int RequestedDepth,
+    int EffectiveDepth,
+    bool DepthWasClamped,
+    int TopN,
+    McpScopeType ScopeType,
+    bool IncludeGenerated,
+    int MaxResponseBytes);
 
 internal sealed record TransitiveCallGraphFormatResult(
     ReferenceTraversalResult Traversal,

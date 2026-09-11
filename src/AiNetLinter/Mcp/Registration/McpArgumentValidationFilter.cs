@@ -54,6 +54,7 @@ internal static class McpArgumentValidationFilter
         {
             ["find_symbol"] = Set("maxResponseBytes"),
             ["dependency_graph"] = Set("maxResponseBytes"),
+            ["get_call_tree"] = Set("maxResponseBytes"),
             ["get_impact"] = Set("maxChangedSymbols", "maxTestsPerSymbol"),
             ["get_file_tree"] = Set("maxDepth", "treeDepth", "maxResponseBytes"),
             ["get_file_skeleton"] = Set("maxResponseBytes"),
@@ -72,6 +73,7 @@ internal static class McpArgumentValidationFilter
         {
             ["find_symbol"] = Limits(("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["dependency_graph"] = Limits(("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
+            ["get_call_tree"] = Limits(("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["get_file_tree"] = Limits(("maxResults", 2_000), ("maxDepth", 32), ("treeDepth", 32), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["get_class_structure"] = Limits(("maxMembers", 200), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["get_file_skeleton"] = Limits(("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),

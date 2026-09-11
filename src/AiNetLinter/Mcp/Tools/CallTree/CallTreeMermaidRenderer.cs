@@ -17,6 +17,9 @@ namespace AiNetLinter.Mcp.Tools.CallTree;
 /// </summary>
 internal static class CallTreeMermaidRenderer
 {
+    internal static string Render(CallGraphPayload graph, int topN) =>
+        CallGraphTextRenderer.RenderMermaid(graph);
+
     internal static string Render(MetricsTreeNode root, int topN)
     {
         var state = new RenderState(topN);

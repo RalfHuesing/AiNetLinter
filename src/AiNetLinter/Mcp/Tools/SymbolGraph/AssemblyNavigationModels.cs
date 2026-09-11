@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using Microsoft.CodeAnalysis;
 
@@ -66,3 +67,8 @@ internal sealed record AssemblyCallTreeResult(
     int RequestedDepth = 1,
     int EffectiveDepth = 1,
     bool DepthWasClamped = false);
+
+internal sealed record AssemblyCallGraphResult(
+    CallGraphPayload Graph,
+    bool Truncated,
+    IReadOnlyList<string> Diagnostics);

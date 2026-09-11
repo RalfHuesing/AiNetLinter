@@ -172,7 +172,8 @@ internal static class AssemblyAnalysisDispatcher
                     request.Dispatch.MaxResponseBytes,
                     request.Dispatch.DetailLevel,
                     request.Dispatch.Cursor,
-                    request.Dispatch.PostNavigationResponseBudget));
+                    request.Dispatch.PostNavigationResponseBudget,
+                    request.Dispatch.ApplyAssemblyWireBudget));
 
     private static Task<CallToolResult> UnsupportedRouteAsync(AnalysisToolCallRequest request)
     {
@@ -240,7 +241,8 @@ internal static class AssemblyAnalysisDispatcher
                 new AssemblyAnalysisResponseRequest(
                     options.MaxResponseBytes,
                     options.DetailLevel,
-                    options.Cursor));
+                    options.Cursor,
+                    options.ApplyAssemblyWireBudget));
             return options.PostNavigationResponseBudget is null || options.MaxResponseBytes <= 0
                 ? enriched
                 : options.PostNavigationResponseBudget(enriched, options.MaxResponseBytes);

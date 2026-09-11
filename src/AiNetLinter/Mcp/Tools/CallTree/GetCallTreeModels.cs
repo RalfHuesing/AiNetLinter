@@ -4,7 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
+using AiNetLinter.Mcp.Scope;
 using AiNetLinter.Mcp.Tools.MetricsTree;
+using AiNetLinter.Mcp.Tools.SymbolGraph;
 
 namespace AiNetLinter.Mcp.Tools.CallTree;
 
@@ -36,7 +38,10 @@ internal sealed record GetCallTreeInput(
     string? Format,
     int TopN,
     string? Direction = null,
-    bool IncludeBcl = false)
+    bool IncludeBcl = false,
+    string ScopeType = "all",
+    bool IncludeGenerated = false,
+    int MaxResponseBytes = GetCallTreeTool.DefaultMaxResponseBytes)
 ;
 
 internal sealed record CallTreeBuildRequest(
@@ -47,17 +52,27 @@ internal sealed record CallTreeBuildRequest(
     CallTreeDirection Direction,
     bool AbsolutePaths = false,
     bool IncludeBcl = false,
-    AnalysisSymbolIdentity? HandoffIdentity = null);
+    AnalysisSymbolIdentity? HandoffIdentity = null,
+    McpScopeType ScopeType = McpScopeType.All,
+    bool IncludeGenerated = false,
+    McpScopeClassifier? ScopeClassifier = null);
 
 internal sealed record CallTreePayload(
-    MetricsTreeNode Root,
+    CallGraphPayload Graph,
     string Direction,
     int RequestedDepth,
     int EffectiveDepth,
     bool DepthWasClamped,
     int TopN,
     bool Truncated,
-    bool TopNTruncated);
+    bool TopNTruncated,
+    int TotalNodeCount = 0,
+    int TotalEdgeCount = 0,
+    int ReturnedNodeCount = 0,
+    int ReturnedEdgeCount = 0,
+    IReadOnlyList<string>? TruncatedBy = null,
+    McpScopeMetadata? Scope = null,
+    AssemblyNavigationSummary? AssemblyNavigation = null);
 
 /// <summary>
 /// Kompakte, graphbasierte Darstellung des Aufrufgraphen. Die lokalen IDs sind nur fuer diese
@@ -66,22 +81,48 @@ internal sealed record CallTreePayload(
 internal sealed record CallGraphPayload(
     string RootNodeId,
     IReadOnlyList<CallGraphNode> Nodes,
-    IReadOnlyList<CallGraphEdge> Edges);
+    IReadOnlyList<CallGraphEdge> Edges,
+    IReadOnlyList<CallGraphMethodHint>? MethodHints = null,
+    bool TopNTruncated = false,
+    bool ScopeFiltered = false,
+    int HiddenEdgeCount = 0,
+    bool HardCapTruncated = false);
 
 internal sealed class CallGraphNode : IEquatable<CallGraphNode>
 {
-    internal CallGraphNode(string nodeId, ISymbol symbol, string symbolId)
+    [System.Text.Json.Serialization.JsonConstructor]
+    public CallGraphNode(string nodeId, string symbolId, string name, string displayLine, string kind)
+    {
+        NodeId = nodeId;
+        Symbol = null!;
+        SymbolId = symbolId;
+        Name = name;
+        DisplayLine = displayLine;
+        Kind = kind;
+    }
+
+    public string NodeId { get; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    internal ISymbol Symbol { get; }
+    public string SymbolId { get; }
+    public string Name { get; }
+    public string DisplayLine { get; }
+    public string Kind { get; }
+
+    internal CallGraphNode(
+        string nodeId,
+        ISymbol symbol,
+        string symbolId,
+        string? name = null,
+        string? displayLine = null)
     {
         NodeId = nodeId;
         Symbol = symbol;
         SymbolId = symbolId;
-        Name = symbol.Name;
+        Name = name ?? symbol.Name;
+        DisplayLine = displayLine ?? string.Empty;
+        Kind = symbol.Kind.ToString().ToLowerInvariant();
     }
-
-    internal string NodeId { get; }
-    internal ISymbol Symbol { get; }
-    internal string SymbolId { get; }
-    internal string Name { get; }
 
     public bool Equals(CallGraphNode? other) =>
         other is not null
@@ -95,7 +136,8 @@ internal sealed class CallGraphNode : IEquatable<CallGraphNode>
 
 internal sealed class CallGraphEdge : IEquatable<CallGraphEdge>
 {
-    internal CallGraphEdge(
+    [System.Text.Json.Serialization.JsonConstructor]
+    public CallGraphEdge(
         string fromNodeId,
         string toNodeId,
         IReadOnlyList<CallGraphCallSite> callSites,
@@ -107,10 +149,10 @@ internal sealed class CallGraphEdge : IEquatable<CallGraphEdge>
         DispatchKind = dispatchKind;
     }
 
-    internal string FromNodeId { get; }
-    internal string ToNodeId { get; }
-    internal IReadOnlyList<CallGraphCallSite> CallSites { get; }
-    internal string? DispatchKind { get; }
+    public string FromNodeId { get; }
+    public string ToNodeId { get; }
+    public IReadOnlyList<CallGraphCallSite> CallSites { get; }
+    public string? DispatchKind { get; }
 
     public bool Equals(CallGraphEdge? other) =>
         other is not null
@@ -133,3 +175,8 @@ internal sealed record CallGraphCallSite(
     int Line,
     int Column,
     string ProjectName);
+
+internal sealed record CallGraphMethodHint(
+    string Name,
+    string SymbolId,
+    string DisplayLine);

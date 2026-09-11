@@ -1,10 +1,13 @@
 #nullable enable
 
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Scope;
+using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
@@ -60,7 +63,7 @@ internal static class AssemblyGetCallTreeTool
 
         return GetCallTreeTool.TryParseDirection(input.Direction, out _)
             ? GetCallTreeTool.TryParseFormat(input.Format, out _)
-                ? null
+                ? ValidateScopeAndBudget(input)
                 : McpToolResults.InvalidArgument(
                     $"Ungueltiger Wert fuer 'format': '{input.Format}'.",
                     "format muss 'ascii' oder 'mermaid' sein (Default: 'ascii').",
@@ -69,6 +72,27 @@ internal static class AssemblyGetCallTreeTool
                 LinterErrorCodes.InvalidArgument,
                 $"Ungueltiger Wert fuer 'direction': '{input.Direction}'.",
                 hint: "direction muss 'incoming', 'outgoing' oder 'both' sein.");
+    }
+
+    private static CallToolResult? ValidateScopeAndBudget(GetCallTreeInput input)
+    {
+        var scope = FindSymbolTool.ValidateScopeType(input.ScopeType);
+        if (scope.Error is not null) return scope.Error;
+        if (input.MaxResponseBytes > McpResponseBudgetLimits.MaxBytes)
+        {
+            return McpToolResults.InvalidArgument(
+                $"maxResponseBytes darf höchstens {McpResponseBudgetLimits.MaxBytes} sein.",
+                "maxResponseBytes auf höchstens 65536 setzen.",
+                "$.maxResponseBytes");
+        }
+
+        return input.MaxResponseBytes > 0
+            && input.MaxResponseBytes < McpResponseBudgetLimits.MinimumStructuredBytes
+            ? McpToolResults.InvalidArgument(
+                $"maxResponseBytes muss mindestens {McpResponseBudgetLimits.MinimumStructuredBytes} Bytes betragen.",
+                "maxResponseBytes weglassen oder mindestens 512 setzen.",
+                "$.maxResponseBytes")
+            : null;
     }
 
     private static async Task<CallToolResult> BuildResponseAsync(
@@ -82,39 +106,33 @@ internal static class AssemblyGetCallTreeTool
             cancellationToken).ConfigureAwait(false);
         if (error is not null) return error;
 
-        var (root, truncated, diagnostics) = await AssemblyReferenceNavigator.BuildCallTreeAsync(
+        var graphResult = await AssemblyReferenceNavigator.BuildCallGraphAsync(
             AssemblyNavigationSourceFactory.CreateSources(lease, target!),
             target!.Symbol,
             input,
             cancellationToken).ConfigureAwait(false);
+        var diagnostics = graphResult.Diagnostics
+            .Concat(lease.Context.Diagnostics)
+            .Concat(AssemblyNavigationSupport.CreateExpansionDiagnostics(
+                AssemblyNavigationLeaseAccess.CreateView(lease)))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
         var topN = input.TopN < 1 ? 1 : input.TopN;
         var effectiveDepth = Math.Clamp(input.Depth, 1, CallGraphTreeBuilder.MaxCallTreeDepth);
-        var body = GetCallTreeTool.RenderTree(root, input.Format, topN);
-        var topNTruncated = GetCallTreeTool.HasTreeOverflow(root, topN);
-        var treeTruncationMessage = truncated
-            ? BuildTruncationMeta()
-            : topNTruncated
-                ? BuildTopNTruncationMeta()
-                : null;
-        return TransitiveCallGraphFormatter.FormatAssemblyCallTreeResponse(
-            new AssemblyCallTreeResponseRequest(
-                root,
-                body,
+        return TransitiveCallGraphFormatter.FormatAssemblyCallGraphResponse(
+            new AssemblyCallGraphResponseRequest(
+                graphResult.Graph,
+                AssemblyNavigationSupport.ParseDirection(input.Direction),
+                input.Format,
                 navigation,
                 diagnostics,
-                truncated,
-                topNTruncated,
-                treeTruncationMessage,
+                graphResult.Truncated,
                 input.Depth,
                 effectiveDepth,
-                input.Depth != effectiveDepth));
+                input.Depth != effectiveDepth,
+                input.TopN < 1 ? 1 : input.TopN,
+                FindSymbolTool.ValidateScopeType(input.ScopeType).ScopeType,
+                input.IncludeGenerated,
+                input.MaxResponseBytes));
     }
-
-    private static string BuildTruncationMeta() =>
-        $"[Baum trunkiert — hard-cap {CallGraphTreeBuilder.MaxCallTreeNodes} Knoten erreicht, " +
-        "depth oder topN reduzieren fuer einen vollstaendigeren Teilbaum]";
-
-    private static string BuildTopNTruncationMeta() =>
-        "[Baum trunkiert — mindestens eine Ebene hat mehr Kinder als topN, siehe " +
-        "\"... und N weitere\"-Zeilen; topN erhoehen fuer einen vollstaendigeren Teilbaum]";
 }

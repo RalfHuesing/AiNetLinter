@@ -174,23 +174,28 @@ internal static class SymbolGraphToolRegistrations
         AnalysisToolRoute targetRoute)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, bool includeReferences = false, bool includeBcl = false, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath, string? symbolIdentifier = null, int depth = 2, string? format = null, int topN = 10, string? direction = null, bool includeReferences = false, bool includeBcl = false, string scopeType = "all", bool includeGenerated = false, int maxResponseBytes = GetCallTreeTool.DefaultMaxResponseBytes, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return unknownError;
+                var scopeValidation = FindSymbolTool.ValidateScopeType(scopeType);
+                if (scopeValidation.Error is not null) return scopeValidation.Error;
                 return await AnalysisToolCall.ExecuteRouted(
                     targetRoute,
                     new AnalysisToolCallRequest(
                         new AnalysisTargetRequest(targetPath),
                         new AnalysisToolDispatch(
-                            ProjectCall: lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction, IncludeBcl: includeBcl), ct),
+                            ProjectCall: lease => GetCallTreeTool.ExecuteAsync(lease.Server, new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction, IncludeBcl: includeBcl, ScopeType: scopeType, IncludeGenerated: includeGenerated, MaxResponseBytes: maxResponseBytes), ct),
                             AssemblySessionCall: lease => AssemblyGetCallTreeTool.ExecuteAsync(
                                 lease,
                                 new AssemblyGetCallTreeRequest(
-                                    new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction, IncludeBcl: includeBcl),
+                                    new GetCallTreeInput(symbolIdentifier, depth, format, topN, direction, IncludeBcl: includeBcl, ScopeType: scopeType, IncludeGenerated: includeGenerated, MaxResponseBytes: maxResponseBytes),
                                     includeReferences),
                                 ct),
-                            ExpandAssemblyReferences: includeReferences),
+                            MaxResponseBytes: maxResponseBytes,
+                            PostNavigationResponseBudget: CallGraphResponseBudget.ApplyFinalResponseBudget,
+                            ExpandAssemblyReferences: includeReferences,
+                            ApplyAssemblyWireBudget: false),
                         ct));
             },
             TargetPathToolRegistrationOptions.TargetPathReadOnlyTool("get_call_tree", GetCallTreeDescription)));
@@ -206,7 +211,9 @@ internal static class SymbolGraphToolRegistrations
         "topN: mindestens 1, Fan-Out-Begrenzung pro Ebene (Default 10; 0 oder negative Werte liefern INVALID_ARGUMENT). Traversierung ist hart auf 250 Knoten begrenzt. " +
         "includeReferences (Default false): bei Assembly-Zielen bounded Referenz-Assemblies " +
         "einbeziehen und Herkunft/partielle Diagnosen im Ergebnis ausgeben. " +
-        "includeBcl (Default false): bei direction=outgoing auch BCL-/Framework-Symbole (z. B. System.*) als Leaves einbeziehen.";
+        "includeBcl (Default false): bei direction=outgoing auch BCL-/Framework-Symbole (z. B. System.*) als Leaves einbeziehen. " +
+        "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
+        "maxResponseBytes: kombiniertes UTF-8-Wirebudget für Text und StructuredContent (Default 32768, Maximum 65536); gekürzt werden ganze Graph-Kanten.";
 
     private static void AddGetImpact(
         McpServerPrimitiveCollection<McpServerTool> tools,

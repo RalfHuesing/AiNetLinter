@@ -175,6 +175,67 @@ public sealed class AssemblyAnalysisRouteTests
         Assert.Contains("assembly=", Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(treeResult.Content)).Text, StringComparison.Ordinal);
         var treePayload = treeResult.StructuredContent!.Value;
         Assert.True(treePayload.GetProperty("navigation").GetProperty("includeReferences").GetBoolean());
+        var graph = treePayload.GetProperty("graph");
+        Assert.NotEmpty(graph.GetProperty("nodes").EnumerateArray());
+        Assert.NotEmpty(graph.GetProperty("edges").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task AssemblyRoute_CallTreeSkipsGeneralWireTrimAndRefreshesFinalBudget()
+    {
+        using var temp = TestTempDirectory.Create("assembly-route-call-tree-wire-budget-");
+        var dependencyPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "CallTreeBudgetDependency",
+            "namespace Probe; public sealed class DependencyType { public int Read() => 1; }");
+        var callers = Enumerable.Range(0, 48)
+            .Select(index =>
+                $"public sealed class Caller{index:D2} {{ public int Call() => new DependencyType().Read(); }}")
+            .ToArray();
+        var rootPath = AssemblyTestHelper.EmitAssembly(
+            temp,
+            "CallTreeBudgetRoot",
+            $"namespace Probe; {string.Join(Environment.NewLine, callers)}",
+            dependencyPath);
+        await using var registry = new AssemblyAnalysisRegistry();
+
+        var result = await AnalysisToolCall.ExecuteRouted(
+            AssemblyAnalysisDispatcher.CreateRoute(registry),
+            new AnalysisToolCallRequest(
+                new AnalysisTargetRequest(rootPath),
+                new AnalysisToolDispatch(
+                    AssemblySessionCall: lease => AssemblyGetCallTreeTool.ExecuteAsync(
+                        lease,
+                        new AssemblyGetCallTreeRequest(
+                            new GetCallTreeInput(
+                                "Probe.DependencyType.Read",
+                                9,
+                                "ascii",
+                                50,
+                                "incoming",
+                                MaxResponseBytes: 8_192),
+                            true),
+                        CancellationToken.None),
+                    ExpandAssemblyReferences: true,
+                    MaxResponseBytes: 8_192,
+                    PostNavigationResponseBudget: CallGraphResponseBudget.ApplyFinalResponseBudget,
+                    ApplyAssemblyWireBudget: false),
+                CancellationToken.None));
+
+        Assert.NotEqual(true, result.IsError);
+        var text = Text(result);
+        Assert.Contains("[ASSEMBLY]", text, StringComparison.Ordinal);
+        Assert.Contains("[depth auf 5 begrenzt", text, StringComparison.Ordinal);
+
+        var payload = result.StructuredContent!.Value;
+        var wireBudget = payload.GetProperty("wireBudget");
+        var textBytes = System.Text.Encoding.UTF8.GetByteCount(text);
+        var structuredBytes = System.Text.Encoding.UTF8.GetByteCount(payload.GetRawText());
+        Assert.Equal(textBytes, wireBudget.GetProperty("textBytes").GetInt32());
+        Assert.Equal(structuredBytes, wireBudget.GetProperty("structuredBytes").GetInt32());
+        Assert.Equal(textBytes + structuredBytes, wireBudget.GetProperty("totalBytes").GetInt32());
+        Assert.True(wireBudget.GetProperty("truncated").GetBoolean(), payload.GetRawText());
+        Assert.True(wireBudget.GetProperty("totalBytes").GetInt32() <= 8_192, payload.GetRawText());
     }
 
     [Fact]
