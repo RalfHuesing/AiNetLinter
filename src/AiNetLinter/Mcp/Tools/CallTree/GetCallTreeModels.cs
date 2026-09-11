@@ -1,5 +1,8 @@
 #nullable enable
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 
@@ -55,3 +58,78 @@ internal sealed record CallTreePayload(
     int TopN,
     bool Truncated,
     bool TopNTruncated);
+
+/// <summary>
+/// Kompakte, graphbasierte Darstellung des Aufrufgraphen. Die lokalen IDs sind nur fuer diese
+/// Nutzlast gueltig; stabile Symbolidentitaet bleibt separat auf dem Knoten erhalten.
+/// </summary>
+internal sealed record CallGraphPayload(
+    string RootNodeId,
+    IReadOnlyList<CallGraphNode> Nodes,
+    IReadOnlyList<CallGraphEdge> Edges);
+
+internal sealed class CallGraphNode : IEquatable<CallGraphNode>
+{
+    internal CallGraphNode(string nodeId, ISymbol symbol, string symbolId)
+    {
+        NodeId = nodeId;
+        Symbol = symbol;
+        SymbolId = symbolId;
+        Name = symbol.Name;
+    }
+
+    internal string NodeId { get; }
+    internal ISymbol Symbol { get; }
+    internal string SymbolId { get; }
+    internal string Name { get; }
+
+    public bool Equals(CallGraphNode? other) =>
+        other is not null
+        && string.Equals(NodeId, other.NodeId, StringComparison.Ordinal)
+        && string.Equals(SymbolId, other.SymbolId, StringComparison.Ordinal);
+
+    public override bool Equals(object? obj) => Equals(obj as CallGraphNode);
+
+    public override int GetHashCode() => HashCode.Combine(NodeId, SymbolId);
+}
+
+internal sealed class CallGraphEdge : IEquatable<CallGraphEdge>
+{
+    internal CallGraphEdge(
+        string fromNodeId,
+        string toNodeId,
+        IReadOnlyList<CallGraphCallSite> callSites,
+        string? dispatchKind = null)
+    {
+        FromNodeId = fromNodeId;
+        ToNodeId = toNodeId;
+        CallSites = callSites;
+        DispatchKind = dispatchKind;
+    }
+
+    internal string FromNodeId { get; }
+    internal string ToNodeId { get; }
+    internal IReadOnlyList<CallGraphCallSite> CallSites { get; }
+    internal string? DispatchKind { get; }
+
+    public bool Equals(CallGraphEdge? other) =>
+        other is not null
+        && string.Equals(FromNodeId, other.FromNodeId, StringComparison.Ordinal)
+        && string.Equals(ToNodeId, other.ToNodeId, StringComparison.Ordinal)
+        && string.Equals(DispatchKind, other.DispatchKind, StringComparison.Ordinal)
+        && CallSites.SequenceEqual(other.CallSites);
+
+    public override bool Equals(object? obj) => Equals(obj as CallGraphEdge);
+
+    public override int GetHashCode() => HashCode.Combine(
+        FromNodeId,
+        ToNodeId,
+        DispatchKind,
+        CallSites.Count);
+}
+
+internal sealed record CallGraphCallSite(
+    string FilePath,
+    int Line,
+    int Column,
+    string ProjectName);

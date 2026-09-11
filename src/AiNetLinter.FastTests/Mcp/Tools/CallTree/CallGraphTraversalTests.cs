@@ -322,4 +322,133 @@ public sealed class CallGraphTraversalTests
         Assert.False(truncated);
         Assert.Contains(root.Children, child => child.Name.Contains("Callee.Work", System.StringComparison.Ordinal));
     }
+
+    [Fact]
+    public async Task BuildGraphAsync_Diamond_UsesEachNodeOnceAndKeepsBothEdges()
+    {
+        using var scenario = McpInMemoryTestContext.CreateScenario(new ProjectSpec("DiamondProbe", [
+            ("Calls.cs", """
+                namespace DiamondProbe;
+                public class Graph
+                {
+                    public void Root() { Left(); Right(); }
+                    public void Left() { Leaf(); }
+                    public void Right() { Leaf(); }
+                    public void Leaf() { }
+                }
+                """)
+        ]));
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
+            scenario.Solution, "DiamondProbe.Graph.Root", CancellationToken.None);
+        Assert.NotNull(symbol);
+
+        var graph = await CallGraphTreeBuilder.BuildGraphAsync(
+            new CallTreeBuildRequest(scenario.Solution, symbol!, 3, 10, CallTreeDirection.Outgoing),
+            CancellationToken.None);
+
+        Assert.Equal("n1", graph.RootNodeId);
+        Assert.Equal(graph.Nodes.Count, graph.Nodes.Select(node => node.NodeId).Distinct().Count());
+        Assert.Equal(4, graph.Nodes.Count);
+        Assert.Equal(4, graph.Edges.Count);
+        Assert.Equal(2, graph.Edges.Count(edge =>
+            graph.Nodes.Single(node => node.NodeId == edge.ToNodeId).Symbol.Name == "Leaf"));
+    }
+
+    [Fact]
+    public async Task BuildGraphAsync_CycleAndSelfCall_DoNotDuplicateNodesOrEdges()
+    {
+        using var scenario = McpInMemoryTestContext.CreateScenario(new ProjectSpec("CycleProbe", [
+            ("Calls.cs", """
+                namespace CycleProbe;
+                public class Graph
+                {
+                    public void A() { A(); B(); }
+                    public void B() { A(); }
+                }
+                """)
+        ]));
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
+            scenario.Solution, "CycleProbe.Graph.A", CancellationToken.None);
+        Assert.NotNull(symbol);
+
+        var graph = await CallGraphTreeBuilder.BuildGraphAsync(
+            new CallTreeBuildRequest(scenario.Solution, symbol!, 5, 10, CallTreeDirection.Outgoing),
+            CancellationToken.None);
+
+        Assert.Equal(2, graph.Nodes.Count);
+        Assert.Equal(3, graph.Edges.Count);
+        Assert.Equal(3, graph.Edges.Select(edge => (edge.FromNodeId, edge.ToNodeId)).Distinct().Count());
+    }
+
+    [Fact]
+    public async Task BuildGraphAsync_MultipleCallSites_GroupOnOneEdge()
+    {
+        using var scenario = McpInMemoryTestContext.CreateScenario(new ProjectSpec("GroupedProbe", [
+            ("Calls.cs", """
+                namespace GroupedProbe;
+                public class Graph
+                {
+                    public void Caller() { Callee(); Callee(); }
+                    public void Callee() { }
+                }
+                """)
+        ]));
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
+            scenario.Solution, "GroupedProbe.Graph.Caller", CancellationToken.None);
+        Assert.NotNull(symbol);
+
+        var graph = await CallGraphTreeBuilder.BuildGraphAsync(
+            new CallTreeBuildRequest(scenario.Solution, symbol!, 1, 10, CallTreeDirection.Outgoing),
+            CancellationToken.None);
+
+        var edge = Assert.Single(graph.Edges);
+        Assert.Equal(2, edge.CallSites.Count);
+    }
+
+    [Fact]
+    public async Task BuildGraphAsync_DispatchKind_DistinguishesVirtualAndInterfaceCalls()
+    {
+        using var scenario = McpInMemoryTestContext.CreateScenario(new ProjectSpec("DispatchProbe", [
+            ("Calls.cs", """
+                namespace DispatchProbe;
+                public interface IRunner { void Run(); }
+                public class Base { public virtual void Run() { } }
+                public class Caller
+                {
+                    public void Start(Base baseRunner, IRunner interfaceRunner)
+                    {
+                        baseRunner.Run();
+                        interfaceRunner.Run();
+                    }
+                }
+                """)
+        ]));
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
+            scenario.Solution, "DispatchProbe.Caller.Start", CancellationToken.None);
+        Assert.NotNull(symbol);
+
+        var graph = await CallGraphTreeBuilder.BuildGraphAsync(
+            new CallTreeBuildRequest(scenario.Solution, symbol!, 1, 10, CallTreeDirection.Outgoing),
+            CancellationToken.None);
+
+        Assert.Contains(graph.Edges, edge => edge.DispatchKind == "virtual");
+        Assert.Contains(graph.Edges, edge => edge.DispatchKind == "interface");
+    }
+
+    [Fact]
+    public async Task BuildGraphAsync_SameInputProducesSameLocalNodeIdsAndOrder()
+    {
+        var (symbol, _) = await FindReferencesTool.ResolveSymbolAsync(
+            _fixture.Solution, "SymbolGraphMini.Caller.Run", CancellationToken.None);
+        Assert.NotNull(symbol);
+
+        var request = new CallTreeBuildRequest(
+            _fixture.Solution, symbol!, 2, 10, CallTreeDirection.Outgoing);
+        var first = await CallGraphTreeBuilder.BuildGraphAsync(request, CancellationToken.None);
+        var second = await CallGraphTreeBuilder.BuildGraphAsync(request, CancellationToken.None);
+
+        Assert.Equal(first.RootNodeId, second.RootNodeId);
+        Assert.Equal(first.Nodes, second.Nodes);
+        Assert.Equal(first.Edges, second.Edges);
+    }
 }
