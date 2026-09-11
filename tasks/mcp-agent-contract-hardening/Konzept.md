@@ -906,3 +906,51 @@ Der Task ist erst abgeschlossen, wenn alle zehn Slices seriell beendet, alle
 vollständig entfernt, Dogfood und Auditor ohne offene Findings sowie Build und
 beide Nicht-Stress-Suiten grün sind. Ein einzelner korrigierter Auditfall, eine
 kompatible Parallelform oder ein dokumentierter Restfehler genügt nicht.
+
+## Unterbrechungsstand – 2026-09-11
+
+Die Umsetzung wurde auf ausdrücklichen Nutzerwunsch unterbrochen. Dieser
+Abschnitt ist eine Fortsetzungsnotiz, keine Änderung des Zielvertrags oder der
+Abschlussbedingung.
+
+### Erledigt und committed
+
+- **Slice 01 – Status- und Analysevertrag:** Contract v2 mit getrennten
+  Completeness-/Analysequalitätsachsen, atomarer Fehlerprojektion und
+  Regressionstests ist in `e8f5d619` (`feat: Vereinheitliche
+  MCP-Statusvertrag`) committed.
+- **Slice 02 – Vor-Dispatch-Validierung:** zentrale Enumwerte, feldgenaue
+  Fehlerpfade, Validierung vor Assemblyanalyse und Route-übergreifende Tests
+  sind in `a87e7f23` (`fix: Validiere MCP-Anfragen vor Analyse`) committed.
+- **Slice 03 – Scope und Generated:** gemeinsamer Scopeinput,
+  Generated-/Unknown-Markierung, konsistente Partial-Projektionen und die
+  fachliche Zerlegung der betroffenen großen Dateien sind in `e306387b`
+  (`feat: Vereinheitliche MCP-Scopeprojektion`) committed. Der letzte
+  Nicht-Stress-Fastlauf dieses Slices war mit 2490/2490 Tests grün.
+
+### Aktueller, noch nicht commiteter Slice
+
+- **Slice 04 – Namespace-Drilldown und Counts:** Die Implementierung liegt im
+  Working Tree. Sie löst exakte Namespacepräfixe vor der Projektion auf,
+  zählt direkte Typen und Child-Namespaces gemeinsam und macht Empty sowie
+  Truncated disjunkt. Die registrierte Route berechnet das Mindestbudget nach
+  der Navigation; ein Retry mit exakt `minimumResponseBytes` ist in einer
+  Integrationstestregression abgedeckt.
+- Nachweise des Implementers: fokussierte FastTests 35/35 grün,
+  Integrationstest der registrierten Route 1/1 grün und `git diff --check`
+  grün. Der unabhängige Re-Review wurde vom Nutzer unterbrochen und muss vor
+  der fachlichen Freigabe von Slice 04 nachgeholt werden.
+
+### Fortsetzung
+
+1. Den read-only Re-Review von Slice 04 gegen den aktuellen Diff abschließen;
+   bei Freigabe ausschließlich dessen Dateien zusammen mit dieser Notiz
+   committen.
+2. Danach die noch offenen Slices 05 bis 10 strikt seriell umsetzen und jeweils
+   implementieren, prüfen, unabhängig reviewen und committen:
+   Budgetarchitektur, Assembly-Referenzrouting, Text-/ID-Signalqualität,
+   Discovery-Populationen, Architekturhärtung und die Endzustandsdokumentation.
+3. Nach allen Slices den verpflichtenden Auditor einsetzen, alle belastbaren
+   Findings beheben und erst dann Dogfood, `dotnet build`, beide vollständigen
+   Nicht-Stress-Tests, scope-passende `get_violations` und `safeguard` bis
+   10/10 ausführen.

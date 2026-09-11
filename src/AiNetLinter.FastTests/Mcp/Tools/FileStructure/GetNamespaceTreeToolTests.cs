@@ -239,14 +239,14 @@ public sealed class GetNamespaceTreeToolTests
             new ProjectSpec("BudgetProject", [("Budget.cs", source)])));
         var result = await GetNamespaceTreeTool.ExecuteAsync(
             context.CreateServer(),
-            new GetNamespaceTreeInput(Project: "BudgetProject", NamespacePrefix: "BudgetNs", MaxResponseBytes: 700),
+            new GetNamespaceTreeInput(Project: "BudgetProject", NamespacePrefix: "BudgetNs", MaxResponseBytes: 1024),
             CancellationToken.None);
 
         Assert.NotEqual(true, result.IsError);
         var payload = result.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default);
         Assert.NotNull(payload);
         Assert.True(payload!.Truncated, result.StructuredContent!.Value.GetRawText());
-        Assert.True(System.Text.Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText()) <= 700);
+        Assert.True(System.Text.Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText()) <= 1024);
         Assert.Contains("maxResponseBytes", payload.TruncatedBy!);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Equal(payload.ShownCount, payload.Types!.Count);
@@ -288,5 +288,113 @@ public sealed class GetNamespaceTreeToolTests
         Assert.Null(projectedPayload.Next);
         Assert.DoesNotContain("maxResponseBytes", projectedPayload.TruncatedBy ?? [], StringComparer.Ordinal);
         Assert.DoesNotContain("maxResponseBytes", Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(16 * 1024)]
+    [InlineData(64 * 1024)]
+    public async Task ExecuteAsync_ExactLeafNamespace_ProjectsRootAndDirectTypeAtPublishedBudgets(int maxResponseBytes)
+    {
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\LeafNamespace.slnx",
+            new ProjectSpec("LeafProject", [("Leaf.cs", "namespace Contract.Leaf; public class DirectLeafType {}")])));
+
+        var result = await GetNamespaceTreeTool.ExecuteAsync(
+            context.CreateServer(),
+            new GetNamespaceTreeInput("LeafProject", "Contract.Leaf", MaxResponseBytes: maxResponseBytes),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default)!;
+        Assert.Equal(1, payload.TotalCount);
+        Assert.Equal(1, payload.ShownCount);
+        Assert.False(payload.Truncated);
+        Assert.Equal("Contract.Leaf", Assert.Single(payload.Namespaces!).Namespace);
+        Assert.Equal("DirectLeafType", Assert.Single(payload.Types!).Name);
+        Assert.Null(payload.Next);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NonexistentNamespace_IsEmptyAndNeverTruncated()
+    {
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\MissingNamespace.slnx",
+            new ProjectSpec("NamespaceProject", [("Existing.cs", "namespace Contract.Existing; public class ExistingType {}")])));
+
+        var result = await GetNamespaceTreeTool.ExecuteAsync(
+            context.CreateServer(),
+            new GetNamespaceTreeInput("NamespaceProject", "Contract.Missing"),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default)!;
+        Assert.Equal(0, payload.TotalCount);
+        Assert.Equal(0, payload.ShownCount);
+        Assert.False(payload.Truncated);
+        Assert.Null(payload.Next);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ExactNamespaceWithChildren_PreservesRootTypesAndCompleteChildCount()
+    {
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\NamespaceChildren.slnx",
+            new ProjectSpec(
+                "NamespaceProject",
+                [
+                    ("Root.cs", "namespace Contract.Root; public class DirectRootType {}"),
+                    ("Child.cs", "namespace Contract.Root.Child; public class ChildType {}"),
+                ])));
+
+        var result = await GetNamespaceTreeTool.ExecuteAsync(
+            context.CreateServer(),
+            new GetNamespaceTreeInput("NamespaceProject", "Contract.Root", Depth: 2, IncludeTypes: true),
+            CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var payload = result.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default)!;
+        var root = Assert.Single(payload.Namespaces!);
+        Assert.Equal("DirectRootType", Assert.Single(root.Types!).Name);
+        Assert.Equal("Contract.Root.Child", Assert.Single(root.SubNamespaces!).Namespace);
+        Assert.Equal(2, payload.TotalCount);
+        Assert.Equal(2, payload.ShownCount);
+        Assert.False(payload.Truncated);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_BudgetBelowLeafMinimum_ReturnsExactRetryableBudgetError()
+    {
+        const string namespaceName = "Contract.NamespaceWithAnIntentionallyLongNameForTheMinimumProjection";
+        const string typeName = "DirectTypeWithAnIntentionallyLongNameForTheMinimumProjection";
+        using var context = new McpInMemoryTestContext(RoslynTestSolutionFactory.CreateSolution(
+            @"C:\virtual\MinimumNamespaceBudget.slnx",
+            new ProjectSpec(
+                "ProjectWithAnIntentionallyLongNameForTheMinimumProjection",
+                [("FileWithAnIntentionallyLongNameForTheMinimumProjection.cs", $"namespace {namespaceName}; public class {typeName} {{ }}")])));
+        var server = context.CreateServer();
+        var input = new GetNamespaceTreeInput(
+            "ProjectWithAnIntentionallyLongNameForTheMinimumProjection",
+            namespaceName,
+            MaxResponseBytes: 512);
+
+        var constrained = await GetNamespaceTreeTool.ExecuteAsync(server, input, CancellationToken.None);
+
+        Assert.True(constrained.IsError);
+        Assert.Equal("RESPONSE_BUDGET_TOO_SMALL", constrained.StructuredContent!.Value.GetProperty("code").GetString());
+        Assert.Equal("$.maxResponseBytes", constrained.StructuredContent!.Value.GetProperty("fieldPath").GetString());
+        Assert.Equal(512, constrained.StructuredContent!.Value.GetProperty("requestedBytes").GetInt32());
+        var minimumResponseBytes = constrained.StructuredContent!.Value.GetProperty("minimumResponseBytes").GetInt32();
+        Assert.True(minimumResponseBytes > 512);
+
+        var retry = await GetNamespaceTreeTool.ExecuteAsync(
+            server,
+            input with { MaxResponseBytes = minimumResponseBytes },
+            CancellationToken.None);
+
+        Assert.NotEqual(true, retry.IsError);
+        var retryPayload = retry.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default)!;
+        Assert.Equal(1, retryPayload.TotalCount);
+        Assert.Equal(1, retryPayload.ShownCount);
+        Assert.Equal(typeName, Assert.Single(retryPayload.Types!).Name);
     }
 }

@@ -44,7 +44,8 @@ public sealed record GetNamespaceTreeInput(
     bool IncludeTypes = true,
     string? Kind = "all",
     int MaxResults = 50,
-    int MaxResponseBytes = McpResponseBudgetLimits.DefaultBytes);
+    int MaxResponseBytes = McpResponseBudgetLimits.DefaultBytes,
+    bool DeferResponseBudgetToNavigation = false);
 
 public sealed record NamespaceTreeScanParameters(
     Project Project,

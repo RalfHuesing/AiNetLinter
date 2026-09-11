@@ -132,11 +132,11 @@ internal static class FileStructureToolRegistrations
                         new AnalysisToolDispatch(
                             ProjectCall: lease => GetNamespaceTreeTool.ExecuteAsync(
                                 lease.Server,
-                                new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults, maxResponseBytes),
+                                new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults, maxResponseBytes, DeferResponseBudgetToNavigation: true),
                                 ct),
                             AssemblySessionCall: lease => GetNamespaceTreeTool.ExecuteAsync(
                                 lease.Server,
-                                new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults, maxResponseBytes),
+                                new GetNamespaceTreeInput(project, namespacePrefix, depth, includeTypes, kind, maxResults, maxResponseBytes, DeferResponseBudgetToNavigation: true),
                                 ct),
                             MaxResponseBytes: maxResponseBytes,
                             PostNavigationResponseBudget: GetNamespaceTreeTool.ApplyFinalResponseBudget),

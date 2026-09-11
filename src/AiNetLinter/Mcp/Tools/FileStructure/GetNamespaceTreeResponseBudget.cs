@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AiNetLinter.Mcp.Tools.Common;
+using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
 namespace AiNetLinter.Mcp.Tools.FileStructure;
@@ -52,10 +53,23 @@ internal static class GetNamespaceTreeResponseBudget
 
     private static NamespaceTreePayload PrepareCandidate(NamespaceTreePayload payload)
     {
+        var visibleCount = NamespaceTreeProjection.VisibleEntryCount(payload);
         if (payload.Namespaces is not { Count: > 0 }
-            || payload.ShownCount >= NamespaceTreeProjection.CountVisibleEntries(payload))
+            || payload.ShownCount >= visibleCount)
         {
             return payload;
+        }
+
+        if (!string.IsNullOrWhiteSpace(payload.NamespacePrefix)
+            && payload.Namespaces is [var exactRoot])
+        {
+            var children = exactRoot.SubNamespaces is null
+                ? (IReadOnlyList<NamespaceTreeNode>)[]
+                : NamespaceTreeProjection.Take(exactRoot.SubNamespaces, payload.ShownCount).Nodes;
+            return payload with
+            {
+                Namespaces = [exactRoot with { SubNamespaces = children.Count > 0 ? children : null }],
+            };
         }
 
         return payload with
@@ -70,13 +84,20 @@ internal static class GetNamespaceTreeResponseBudget
         int maxResponseBytes,
         List<string> truncatedBy)
     {
-        var initialVisibleCount = NamespaceTreeProjection.CountVisibleEntries(candidate);
-        while (HasVisibleEntries(candidate))
+        var initialVisibleCount = NamespaceTreeProjection.VisibleEntryCount(candidate);
+        if (initialVisibleCount == 0 && !candidate.Truncated)
+        {
+            return candidate;
+        }
+
+        var minimum = MinimumProjection(candidate, initialVisibleCount, truncatedBy);
+        var minimumVisibleCount = NamespaceTreeProjection.VisibleEntryCount(minimum);
+        while (NamespaceTreeProjection.VisibleEntryCount(candidate) > minimumVisibleCount)
         {
             var budgetCandidate = MarkTruncated(candidate, truncatedBy);
             if (CombinedResponseBytes(RenderVisibleText(budgetCandidate, originalText), budgetCandidate) <= maxResponseBytes)
             {
-                return NamespaceTreeProjection.CountVisibleEntries(candidate) == initialVisibleCount
+                return NamespaceTreeProjection.VisibleEntryCount(candidate) == initialVisibleCount
                     ? candidate
                     : budgetCandidate;
             }
@@ -84,7 +105,12 @@ internal static class GetNamespaceTreeResponseBudget
             candidate = RemoveLastVisibleEntry(candidate);
         }
 
-        return MarkTruncated(candidate, truncatedBy);
+        var minimumCandidate = initialVisibleCount > minimumVisibleCount
+            ? MarkTruncated(candidate, truncatedBy)
+            : candidate;
+        return CombinedResponseBytes(RenderVisibleText(minimumCandidate, originalText), minimumCandidate) <= maxResponseBytes
+            ? minimumCandidate
+            : minimum;
     }
 
     private static CallToolResult CreateBudgetedResult(
@@ -95,10 +121,7 @@ internal static class GetNamespaceTreeResponseBudget
     {
         var text = RenderVisibleText(candidate, originalText);
         return CombinedResponseBytes(text, candidate) > maxResponseBytes
-            ? McpToolResults.InvalidArgument(
-                "maxResponseBytes ist zu klein, um den festen Navigation-/Trunkierungs-Envelope vollständig auszugeben.",
-                "maxResponseBytes erhöhen; die Antwort wird nur an vollständigen Namespace-/Typ-Einheiten gekürzt.",
-                "$.maxResponseBytes")
+            ? BudgetTooSmall(maxResponseBytes, candidate, originalText)
             : McpToolResults.Text(text, candidate);
     }
 
@@ -113,7 +136,7 @@ internal static class GetNamespaceTreeResponseBudget
 
         return candidate with
         {
-            ShownCount = NamespaceTreeProjection.CountVisibleEntries(candidate),
+            ShownCount = NamespaceTreeProjection.VisibleEntryCount(candidate),
             Truncated = true,
             TruncatedBy = truncatedBy,
             Next = BudgetNext(),
@@ -173,11 +196,18 @@ internal static class GetNamespaceTreeResponseBudget
 
         var truncatedBy = (payload.TruncatedBy ?? Array.Empty<string>()).ToList();
         var candidate = payload;
-        var initialVisibleCount = NamespaceTreeProjection.CountVisibleEntries(candidate);
-        while (HasVisibleEntries(candidate))
+        var initialVisibleCount = NamespaceTreeProjection.VisibleEntryCount(candidate);
+        if (initialVisibleCount == 0 && !candidate.Truncated)
+        {
+            return original;
+        }
+
+        var minimum = MinimumProjection(candidate, initialVisibleCount, truncatedBy);
+        var minimumVisibleCount = NamespaceTreeProjection.VisibleEntryCount(minimum);
+        while (NamespaceTreeProjection.VisibleEntryCount(candidate) > minimumVisibleCount)
         {
             var hasVisibleReduction =
-                NamespaceTreeProjection.CountVisibleEntries(candidate) < initialVisibleCount;
+                NamespaceTreeProjection.VisibleEntryCount(candidate) < initialVisibleCount;
             var budgetCandidate = hasVisibleReduction
                 ? MarkTruncated(candidate, truncatedBy)
                 : candidate;
@@ -196,10 +226,85 @@ internal static class GetNamespaceTreeResponseBudget
             candidate = RemoveLastVisibleEntry(candidate);
         }
 
-        return McpToolResults.InvalidArgument(
-            "maxResponseBytes ist zu klein, um den festen Navigation-/Trunkierungs-Envelope vollständig auszugeben.",
-            "maxResponseBytes erhöhen; die Antwort wird nur an vollständigen Namespace-/Typ-Einheiten gekürzt.",
-            "$.maxResponseBytes");
+        var minimumCandidate = initialVisibleCount > minimumVisibleCount
+            ? MarkTruncated(candidate, truncatedBy)
+            : candidate;
+        var minimumEnvelope = ProjectEnvelope(envelope, minimumCandidate);
+        var minimumText = RenderVisibleText(minimumCandidate, originalText);
+        if (CombinedResponseBytes(minimumText, minimumEnvelope) <= maxResponseBytes)
+        {
+            return new CallToolResult
+            {
+                IsError = original.IsError,
+                Content = new List<ContentBlock> { new TextContentBlock { Text = minimumText } },
+                StructuredContent = JsonSerializer.SerializeToElement(minimumEnvelope, McpJsonOptions.Default),
+            };
+        }
+
+        return BudgetTooSmall(maxResponseBytes, minimumCandidate, minimumText, minimumEnvelope);
+    }
+
+    private static NamespaceTreePayload MinimumProjection(
+        NamespaceTreePayload payload,
+        int initialVisibleCount,
+        List<string> truncatedBy)
+    {
+        if (initialVisibleCount == 0) return payload;
+
+        var minimum = payload.Projects is { Count: > 0 } projects
+            ? payload with { Projects = projects.Take(1).ToList() }
+            : payload.Types is { Count: > 0 } types
+                ? payload with
+                {
+                    Types = types.Take(1).ToList(),
+                    Namespaces = ProjectTypeNamespace(payload.Namespaces, types.Take(1).ToList()),
+                }
+                : MinimumNamespaceProjection(payload);
+
+        return NamespaceTreeProjection.VisibleEntryCount(minimum) < initialVisibleCount
+            ? MarkTruncated(minimum, truncatedBy)
+            : minimum;
+    }
+
+    private static NamespaceTreePayload MinimumNamespaceProjection(NamespaceTreePayload payload)
+    {
+        if (!string.IsNullOrWhiteSpace(payload.NamespacePrefix)
+            && payload.Namespaces is [var exactRoot])
+        {
+            var children = exactRoot.SubNamespaces is { Count: > 0 }
+                ? NamespaceTreeProjection.Take(exactRoot.SubNamespaces, 1).Nodes
+                : null;
+            return payload with
+            {
+                Namespaces = [exactRoot with { SubNamespaces = children }],
+            };
+        }
+
+        return payload with
+        {
+            Namespaces = payload.Namespaces is { Count: > 0 } namespaces
+                ? NamespaceTreeProjection.Take(namespaces, 1).Nodes
+                : null,
+        };
+    }
+
+    private static CallToolResult BudgetTooSmall(
+        int requestedBytes,
+        NamespaceTreePayload minimum,
+        string originalText,
+        JsonObject? envelope = null)
+    {
+        var minimumBytes = envelope is null
+            ? CombinedResponseBytes(RenderVisibleText(minimum, originalText), minimum)
+            : CombinedResponseBytes(originalText, envelope);
+        return McpToolResults.Error(
+            LinterErrorCodes.ResponseBudgetTooSmall,
+            $"maxResponseBytes={requestedBytes} ist zu klein für die fachliche Namespace-Mindestprojektion; Mindestwert: {minimumBytes} Bytes.",
+            new McpErrorParameters(
+                Hint: $"maxResponseBytes auf mindestens {minimumBytes} setzen; die Antwort wird nur an vollständigen Namespace-/Typ-Einheiten gekürzt.",
+                FieldPath: "$.maxResponseBytes",
+                RequestedBytes: requestedBytes,
+                MinimumResponseBytes: minimumBytes));
     }
 
     private static JsonObject ProjectEnvelope(JsonObject original, NamespaceTreePayload payload)
@@ -230,7 +335,7 @@ internal static class GetNamespaceTreeResponseBudget
         Encoding.UTF8.GetByteCount(text) + JsonSerializer.SerializeToUtf8Bytes(envelope, McpJsonOptions.Default).Length;
 
     private static bool HasVisibleEntries(NamespaceTreePayload payload) =>
-        NamespaceTreeProjection.CountVisibleEntries(payload) > 0;
+        NamespaceTreeProjection.VisibleEntryCount(payload) > 0;
 
     private static NamespaceTreePayload RemoveLastVisibleEntry(NamespaceTreePayload payload)
     {
@@ -249,11 +354,28 @@ internal static class GetNamespaceTreeResponseBudget
         }
         if (payload.Namespaces is { Count: > 0 } namespaces)
         {
+            if (!string.IsNullOrWhiteSpace(payload.NamespacePrefix) && namespaces is [var exactRoot])
+            {
+                var children = exactRoot.SubNamespaces;
+                return payload with
+                {
+                    Namespaces =
+                    [
+                        exactRoot with
+                        {
+                            SubNamespaces = children is { Count: > 0 }
+                                ? NamespaceTreeProjection.RemoveLast(children, children.Sum(NamespaceTreeProjection.CountEntries))
+                                : null,
+                        },
+                    ],
+                };
+            }
+
             return payload with
             {
                 Namespaces = NamespaceTreeProjection.RemoveLast(
                     namespaces,
-                    NamespaceTreeProjection.CountVisibleEntries(payload)),
+                    NamespaceTreeProjection.VisibleEntryCount(payload)),
             };
         }
 

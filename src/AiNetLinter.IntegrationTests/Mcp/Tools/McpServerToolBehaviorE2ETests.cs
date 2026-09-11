@@ -159,6 +159,45 @@ public sealed partial class McpServerToolBehaviorE2ETests
     }
 
     [Fact]
+    public async Task NamespaceTree_RegisteredRoute_UsesNavigationInclusiveMinimumBudgetForExactRetry()
+    {
+        var constrained = await _fixture.Client.CallToolAsync(
+            "get_namespace_tree",
+            new Dictionary<string, object?>
+            {
+                ["project"] = "SymbolGraphMini",
+                ["namespacePrefix"] = "SymbolGraphMini",
+                ["maxResponseBytes"] = 512,
+            });
+
+        Assert.True(constrained.IsError);
+        var constrainedPayload = constrained.StructuredContent!.Value;
+        Assert.Equal("RESPONSE_BUDGET_TOO_SMALL", constrainedPayload.GetProperty("code").GetString());
+        Assert.Equal("$.maxResponseBytes", constrainedPayload.GetProperty("fieldPath").GetString());
+        Assert.Equal(512, constrainedPayload.GetProperty("requestedBytes").GetInt32());
+        var minimumResponseBytes = constrainedPayload.GetProperty("minimumResponseBytes").GetInt32();
+        Assert.True(minimumResponseBytes > 512);
+        Assert.True(constrainedPayload.TryGetProperty("navigation", out _));
+
+        var retry = await _fixture.Client.CallToolAsync(
+            "get_namespace_tree",
+            new Dictionary<string, object?>
+            {
+                ["project"] = "SymbolGraphMini",
+                ["namespacePrefix"] = "SymbolGraphMini",
+                ["maxResponseBytes"] = minimumResponseBytes,
+            });
+
+        Assert.False(retry.IsError == true, retry.ToString());
+        var retryPayload = retry.StructuredContent!.Value;
+        var retryText = Assert.IsType<TextContentBlock>(Assert.Single(retry.Content)).Text;
+        Assert.True(
+            Encoding.UTF8.GetByteCount(retryText) + Encoding.UTF8.GetByteCount(retryPayload.GetRawText()) <= minimumResponseBytes,
+            "Der exakte Mindestwert muss die finale Navigation einschließen.");
+        Assert.True(retryPayload.GetProperty("shownCount").GetInt32() > 0);
+    }
+
+    [Fact]
     public async Task ClassStructure_ResponseBudgetIncludesNavigationAndStructuredContent()
     {
         const int budget = 4096;

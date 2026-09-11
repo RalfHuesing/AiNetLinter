@@ -37,12 +37,16 @@ internal static partial class GetNamespaceTreeScanner
         // The requested namespace is context, not an additional result.  Its root
         // node is still retained in the structured tree so exact queries are
         // navigable even when it is a leaf.
-        var totalCount = flatListForOutput.Count - (hasExactRoot ? 1 : 0);
+        var directExactRootTypes = hasExactRoot
+            ? CollectMatchingSourceTypes(startNs, parameters, projectTrees).Count
+            : 0;
+        var totalCount = flatListForOutput.Count - (hasExactRoot ? 1 : 0) + directExactRootTypes;
         var shownList = flatListForOutput.Take(parameters.MaxResults + (hasExactRoot ? 1 : 0)).ToList();
         var shownProjection = hasExactRoot
             ? TakeExactRootProjection(rootNodes, parameters.MaxResults)
             : NamespaceTreeProjection.Take(rootNodes, parameters.MaxResults);
-        var truncated = totalCount > parameters.MaxResults;
+        var shownCount = shownProjection.Count + directExactRootTypes;
+        var truncated = totalCount > shownCount;
 
         var sb = RenderNamespaceText(parameters, shownList);
         AppendNamespaceTreeSummary(sb, parameters, shownList, totalCount, truncated);
@@ -55,7 +59,7 @@ internal static partial class GetNamespaceTreeScanner
             Depth: parameters.Depth,
             IncludeTypes: parameters.IncludeTypes,
             TotalCount: totalCount,
-            ShownCount: shownProjection.Count,
+            ShownCount: shownCount,
             Truncated: truncated,
             Namespaces: shownProjection.Nodes,
             TruncatedBy: truncated ? ["maxResults"] : null,

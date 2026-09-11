@@ -139,7 +139,7 @@ internal static class GetNamespaceTreeTool
             EffectiveDepth = effectiveDepth,
             DepthWasClamped = input.Depth != effectiveDepth,
         };
-        return ApplyResponseBudget(overviewText, overviewPayload, input.MaxResponseBytes);
+        return ApplyResponseBudget(overviewText, overviewPayload, input.MaxResponseBytes, input.DeferResponseBudgetToNavigation);
     }
 
     private static async Task<CallToolResult> ExecuteAutoProjectDrilldownAsync(
@@ -276,14 +276,17 @@ internal static class GetNamespaceTreeTool
             DepthWasClamped = input.Depth != clampedDepth,
         };
         var finalText = treeText;
-        return ApplyResponseBudget(finalText, treePayload, input.MaxResponseBytes);
+        return ApplyResponseBudget(finalText, treePayload, input.MaxResponseBytes, input.DeferResponseBudgetToNavigation);
     }
 
     private static CallToolResult ApplyResponseBudget(
         string originalText,
         NamespaceTreePayload payload,
-        int maxResponseBytes) =>
-        GetNamespaceTreeResponseBudget.Apply(originalText, payload, maxResponseBytes);
+        int maxResponseBytes,
+        bool deferToNavigation) =>
+        deferToNavigation
+            ? McpToolResults.Text(originalText, payload)
+            : GetNamespaceTreeResponseBudget.Apply(originalText, payload, maxResponseBytes);
 
     internal static CallToolResult ApplyFinalResponseBudget(CallToolResult result, int maxResponseBytes) =>
         GetNamespaceTreeResponseBudget.ApplyFinal(result, maxResponseBytes);
