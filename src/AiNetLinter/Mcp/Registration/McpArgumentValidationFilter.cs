@@ -5,7 +5,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using AiNetLinter.Mcp;
+using AiNetLinter.Mcp.Tools.Analysis;
+using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 using AiNetLinter.Mcp.Tools.Common;
+using AiNetLinter.Mcp.Tools.FeatureContext;
+using AiNetLinter.Mcp.Tools.FileStructure;
+using AiNetLinter.Mcp.Tools.MetricsTree;
+using AiNetLinter.Mcp.Tools.TestContext;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -70,32 +76,56 @@ internal static class McpArgumentValidationFilter
             ["get_test_context"] = Set("maxResponseBytes"),
         };
 
-    private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> MaximumLimitArgumentsByTool =
+    internal static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, int>> MaximumLimitArgumentsByTool =
         new Dictionary<string, IReadOnlyDictionary<string, int>>(StringComparer.Ordinal)
         {
             ["find_symbol"] = Limits(("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["dependency_graph"] = Limits(("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["get_call_tree"] = Limits(("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
-            ["get_file_tree"] = Limits(("maxResults", 2_000), ("maxDepth", 32), ("treeDepth", 32), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
-            ["get_class_structure"] = Limits(("maxMembers", 200), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
+            ["get_file_tree"] = Limits(
+                ("maxResults", GetFileTreeTool.MaxResultsCap),
+                ("maxDepth", GetFileTreeTool.MaxDepthCap),
+                ("treeDepth", GetFileTreeTool.MaxDepthCap),
+                ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
+            ["get_class_structure"] = Limits(
+                ("maxMembers", GetClassStructureTool.MaxMembersCap),
+                ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["get_file_skeleton"] = Limits(("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
-            ["get_namespace_tree"] = Limits(("maxResults", 200), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
-            ["get_hotspots"] = Limits(("maxResults", 200)),
-            ["search_pattern"] = Limits(("maxResults", 2_000), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
-            ["metrics_tree"] = Limits(("depth", 5)),
-            ["get_feature_context"] = Limits(("maxCallers", 50), ("maxTests", 50), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
-            ["get_test_context"] = Limits(("maxResults", 100), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
-            ["get_violations"] = Limits(("contextLines", 5)),
-            ["search_assembly"] = Limits(("maxResults", 1_000), ("maxFiles", 2_000), ("contextLines", 5), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
-            ["inspect_assembly"] = Limits(("maxResults", 1_000), ("maxMembers", 1_000), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
-            ["find_assembly_extensions"] = Limits(("maxResults", 1_000), ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
+            ["get_namespace_tree"] = Limits(
+                ("maxResults", GetNamespaceTreeTool.MaxResultsCap),
+                ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
+            ["get_hotspots"] = Limits(("maxResults", GetHotspotsScanner.MaxResultsCap)),
+            ["search_pattern"] = Limits(
+                ("maxResults", SearchPatternTool.MaxResultsCap),
+                ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
+            ["metrics_tree"] = Limits(("depth", MetricsTreeTool.MaxDepthCap)),
+            ["get_feature_context"] = Limits(
+                ("maxCallers", FeatureContextScanner.MaxCallersLimit),
+                ("maxTests", FeatureContextScanner.MaxTestFilesLimit),
+                ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
+            ["get_test_context"] = Limits(
+                ("maxResults", GetTestContextTool.MaxResultsCap),
+                ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
+            ["get_violations"] = Limits(("contextLines", GetViolationsScanner.MaxContextLines)),
+            ["search_assembly"] = Limits(
+                ("maxResults", AssemblySearchTool.MaxResultsCap),
+                ("maxFiles", GetFileTreeTool.MaxResultsCap),
+                ("contextLines", AssemblySearchTool.MaxContextLines),
+                ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
+            ["inspect_assembly"] = Limits(
+                ("maxResults", AssemblyAnalysisService.MaxResults),
+                ("maxMembers", AssemblyAnalysisService.MaxMembers),
+                ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
+            ["find_assembly_extensions"] = Limits(
+                ("maxResults", AssemblyAnalysisService.MaxResults),
+                ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes)),
             ["get_assembly_context"] = Limits(
-                ("maxResults", 1_000),
+                ("maxResults", AssemblyAnalysisService.MaxResults),
                 ("maxResponseBytes", McpResponseBudgetLimits.MaxBytes),
-                ("maxBodyLines", 1_000),
-                ("maxCallers", 200),
-                ("depth", 3),
-                ("topN", 200)),
+                ("maxBodyLines", AssemblyAnalysisContextTool.MaxBodyLinesCap),
+                ("maxCallers", AssemblyAnalysisContextTool.MaxCallersCap),
+                ("depth", AssemblyAnalysisContextTool.MaxDepthCap),
+                ("topN", AssemblyAnalysisContextTool.MaxTopNCap)),
         };
 
     private static IReadOnlySet<string> Set(params string[] names) => names.ToHashSet(StringComparer.Ordinal);

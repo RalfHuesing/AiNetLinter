@@ -41,6 +41,7 @@ internal static class GetViolationsScanner
     /// Fix, siehe Commit-Historie).
     /// </summary>
     internal const int DefaultMaxResults = 50;
+    internal const int MaxContextLines = 5;
 
     /// <summary>
     /// Baut den Lint-Violations-Report fuer <paramref name="solution"/>, trunkiert auf
@@ -89,7 +90,7 @@ internal static class GetViolationsScanner
         IReadOnlyList<RuleViolation> finalViolations;
         if (p.IncludeSnippet)
         {
-            var contextLines = Math.Clamp(p.ContextLines, 0, 5);
+            var contextLines = Math.Clamp(p.ContextLines, 0, MaxContextLines);
             var enriched = new List<RuleViolation>(filtered.Count);
             foreach (var v in filtered)
             {

@@ -22,8 +22,8 @@ namespace AiNetLinter.Mcp.Tools.FeatureContext;
 /// </summary>
 internal static class FeatureContextScanner
 {
-    private const int MaxCallersLimit = 50;
-    private const int MaxTestFilesLimit = 50;
+    internal const int MaxCallersLimit = 50;
+    internal const int MaxTestFilesLimit = 50;
     private const int MaxTestMethodsPerFile = 50;
     private const int MaxTestMethodsTotal = 200;
     private const int MaxViolations = 50;

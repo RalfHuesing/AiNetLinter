@@ -37,6 +37,11 @@ internal sealed record AssemblyAnalysisContextArguments(
 
 internal static class AssemblyAnalysisContextTool
 {
+    internal const int MaxBodyLinesCap = 1_000;
+    internal const int MaxCallersCap = 200;
+    internal const int MaxDepthCap = 3;
+    internal const int MaxTopNCap = 200;
+
     internal static async Task<CallToolResult> ExecuteAsync(
         AssemblyAnalysisLease lease,
         AssemblyAnalysisContextArguments arguments,
@@ -118,7 +123,7 @@ internal static class AssemblyAnalysisContextTool
         if (arguments.IncludeBody)
         {
             var result = await GetSymbolBodyTool.ExecuteAsync(
-                lease, [arguments.SymbolIdentifier], Math.Clamp(arguments.MaxBodyLines, 1, 1000), cancellationToken).ConfigureAwait(false);
+                lease, [arguments.SymbolIdentifier], Math.Clamp(arguments.MaxBodyLines, 1, MaxBodyLinesCap), cancellationToken).ConfigureAwait(false);
             root["body"] = Serialize(result.StructuredContent);
             RecordText(sectionTexts, "body", result);
         }
@@ -135,7 +140,7 @@ internal static class AssemblyAnalysisContextTool
         {
             var result = await AssemblyFindReferencesTool.ExecuteAsync(
                 lease,
-                new AssemblyFindReferencesRequest(arguments.SymbolIdentifier, SelectionLimit(arguments), Math.Clamp(arguments.Depth, 1, 3), true),
+                new AssemblyFindReferencesRequest(arguments.SymbolIdentifier, SelectionLimit(arguments), Math.Clamp(arguments.Depth, 1, MaxDepthCap), true),
                 cancellationToken).ConfigureAwait(false);
             root["callers"] = Serialize(result.StructuredContent);
             RecordText(sectionTexts, "callers", result);
@@ -144,7 +149,7 @@ internal static class AssemblyAnalysisContextTool
         {
             var result = await GetImpactTool.ExecuteAsync(
                 lease,
-                new GetImpactInput(null, arguments.SymbolIdentifier, SelectionLimit(arguments), Math.Clamp(arguments.Depth, 1, 3)),
+                new GetImpactInput(null, arguments.SymbolIdentifier, SelectionLimit(arguments), Math.Clamp(arguments.Depth, 1, MaxDepthCap)),
                 cancellationToken).ConfigureAwait(false);
             root["impact"] = Serialize(result.StructuredContent);
             RecordText(sectionTexts, "impact", result);
@@ -162,7 +167,7 @@ internal static class AssemblyAnalysisContextTool
 
     private static int SelectionLimit(AssemblyAnalysisContextArguments arguments) =>
         Math.Min(
-            Math.Clamp(arguments.MaxCallers, 1, 200),
+            Math.Clamp(arguments.MaxCallers, 1, MaxCallersCap),
             Math.Max(arguments.TopN, 1));
 
     private static void AddEnvelope(JsonObject root)

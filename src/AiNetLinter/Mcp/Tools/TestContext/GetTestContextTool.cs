@@ -21,6 +21,8 @@ namespace AiNetLinter.Mcp.Tools.TestContext;
 /// </summary>
 internal static class GetTestContextTool
 {
+    internal const int MaxResultsCap = 100;
+
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer state,
         TestContextOptions options,
@@ -69,7 +71,7 @@ internal static class GetTestContextTool
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
         var targetFilePath = ExtractFilePath(symbol, solutionDir);
-        var maxResults = Math.Clamp(requestedMaxResults, 1, 100);
+        var maxResults = Math.Clamp(requestedMaxResults, 1, MaxResultsCap);
         var isTruncated = testResults.TestFiles.Count > maxResults;
         var testFiles = isTruncated ? testResults.TestFiles.Take(maxResults).ToList() : testResults.TestFiles;
         var isUntested = testResults.TotalMatchingTests == 0 || testResults.TestFiles.Count == 0;

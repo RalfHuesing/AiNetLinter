@@ -28,6 +28,8 @@ internal sealed record MetricsTreeToolArgs(
 /// </summary>
 internal static class MetricsTreeTool
 {
+    internal const int MaxDepthCap = 5;
+
     internal static async Task<CallToolResult> ExecuteAsync(
         ISolutionStateProvider state, MetricsTreeToolArgs args, CancellationToken ct)
     {
@@ -100,7 +102,7 @@ internal static class MetricsTreeTool
     {
         var mode = MetricsTreeModeParser.TryParse(args.Mode ?? "code_size");
         if (mode is null) return (null, McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument, $"Unbekannter mode '{args.Mode}'.", hint: "Gueltige Werte: code_size, comment_density, violation_density, complexity."));
-        if (args.Depth is < 1 or > 5) return (null, McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument, "depth muss zwischen 1 und 5 liegen.", hint: "depth anpassen."));
+        if (args.Depth is < 1 or > MaxDepthCap) return (null, McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument, $"depth muss zwischen 1 und {MaxDepthCap} liegen.", hint: "depth anpassen."));
         if (args.TopN < 1) return (null, McpToolResults.Recoverable(LinterErrorCodes.InvalidArgument, "top_n muss mindestens 1 sein.", hint: "top_n anpassen."));
         var filter = TryBuildFileFilter(args.FileFilter);
         return filter.Error is not null ? (null, filter.Error) : (new MetricsTreeQuery(args.Root, mode.Value, args.Depth, args.TopN, filter.Regex), null);
