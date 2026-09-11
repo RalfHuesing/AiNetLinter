@@ -26,7 +26,6 @@ Nutzeranweisungen haben Vorrang. Kontextabhängige Workflows gehören in Skills 
 ## Windows und Dateien
 
 - Windows/PowerShell 7 verwenden. Git-Befehle immer mit `--no-pager` ausführen. Für Textsuche zuerst `rg` verwenden.
-- Dateien punktuell und minimal ändern. Keine breiten/destruktiven Befehle; bestehende Nutzer- und Parallel-Agentenänderungen erhalten.
 - Keine externen Source-Repositories oder analysierten Ziel-Assemblies modifizieren.
 - Credentials gehören niemals in Diagnosen, Logs oder Toolantworten.
 - Bei unklaren oder abgeschnittenen Testausgaben eine TRX-Datei zur Diagnose nutzen, statt denselben Lauf ungezielt zu wiederholen.
