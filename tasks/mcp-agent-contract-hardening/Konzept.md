@@ -67,11 +67,17 @@ revalidiert; dieser Commit ist kein Grund, Slice 03 neu umzusetzen.
   Working-Tree-Änderungen werden weder übernommen noch bereinigt oder
   mitcommittet. Bei Überschneidungen mit dem Rest-Scope wird zuerst der
   tatsächlich gewünschte Baseline-Commit geklärt.
-- Vor Live-Dogfood wird AiNetLinter aus dem dann aktuellen Source-Stand gebaut
-  und der verwendete MCP-Host neu gestartet. Beim Konzeptabgleich lieferte der
-  laufende Host noch `contractVersion=1` und ältere Toolschemas, während der
-  Source-Stand bereits Contract v2 und die neuen Scopeparameter enthält. Ein
-  solcher Prozess-/Binary-Drift ist ein Betriebszustand, kein Produktbefund.
+- Der aktuell mit dieser Agentensitzung verbundene AiNetLinter-MCP-Server basiert
+  ausdrücklich auf dem Code-Stand **vor Beginn der Konzeptumsetzung**. Seine
+  Wireantworten, `tools/list`-Schemas, Versionsfelder und Laufzeiteffekte dürfen
+  weder als aktueller Produktbefund noch als Verifikationsnachweis dieses Tasks
+  gewertet werden. Er darf während der Planung und Umsetzung ausschließlich als
+  semantisches Read-only-Werkzeug zur Analyse des aktuellen Source-Standes
+  dienen.
+- Sämtliche Runtime-, Wire-, Schema- und Dogfood-Nachweise laufen über die
+  vorhandene C#-Testinfrastruktur gegen In-Process- oder Prozesshosts, die aus
+  dem jeweils aktuellen Taskstand gebaut werden. Ein formales Release ist dafür
+  nicht erforderlich.
 - Historische Tasktexte, alte Rohantworten und externe Assemblyfälle sind keine
   Source of Truth. Jeder Restbefund erhält am Start einen aktuellen Red-Test;
   ist er gegen den frischen Build nicht reproduzierbar, wird kein Ersatzproblem
@@ -98,7 +104,8 @@ Fachliche Wahrheit liefern in dieser Reihenfolge:
    `src/AiNetLinter/Mcp/`;
 3. toolnahe Domänenergebnisse und Budgetprojektoren für Auswahl, Reihenfolge und
    Counts;
-4. die tatsächlich per `tools/list` publizierten Schemas;
+4. die per C#-Contracttest beziehungsweise taskaktuellem Prozesshost
+   publizierten `tools/list`-Schemas;
 5. Contract-, Fast-, Integration- und Dogfood-Tests.
 
 Dokumentation beschreibt den implementierten Vertrag, ersetzt ihn aber nicht.
@@ -216,9 +223,10 @@ gespiegelt.
 
 ### Baseline und Budget
 
-1. Ein frischer Build und frisch gestarteter MCP-Host veröffentlichen Contract
-   v2 sowie die erwarteten Scopeparameter; Source, `tools/list` und Runtime
-   stimmen überein.
+1. Ein aus dem aktuellen Taskstand gebauter In-Process- oder Prozesshost
+   veröffentlicht Contract v2 sowie die erwarteten Scopeparameter; Source,
+   `tools/list` und Runtime stimmen überein. Der bereits verbundene alte
+   MCP-Server ist von diesem Nachweis ausgeschlossen.
 2. Bestehende Contract-, Validation-, Scope- und Namespace-Regressionen bleiben
    grün; eine Negativsuche findet keinen v1-Producer, -Parser oder Beispielpfad.
 3. Default, 512 Bytes, exakt gemeldetes Minimum, Werte dazwischen und Maximum
@@ -291,6 +299,9 @@ gespiegelt.
 - Keine unbounded Referenzanalyse, kein Ausführen und kein dynamisches Laden
   untersuchter Assemblies.
 - Keine externen Auditfälle als Fixtures und kein Publish/Deployment.
+- Kein Zwischenrelease, nur um den alten verbundenen MCP-Server für diesen Task
+  zu aktualisieren. Ein Release kommt erst nach abgeschlossenem Release-Gate
+  und auf ausdrücklichen Nutzerwunsch infrage.
 - Keine automatischen Stressläufe.
 
 ## Serieller Umsetzungsplan
@@ -301,10 +312,12 @@ umsetzen, fokussierte Tests grün ausführen, ersetzte Pfade löschen, Diff und
 `git diff --check` prüfen, read-only reviewen und ausschließlich eigene Dateien
 committen. Keine zwei Rollen, Builds, Tests oder MCP-Prüfungen laufen parallel.
 
-### Slice 01 – Baseline und Runtime synchronisieren
+### Slice 01 – Baseline und testlokale Runtime synchronisieren
 
-- Frischen Build/Host für Liveverträge verwenden und Source, `tools/list` und
-  Runtime gegeneinander prüfen.
+- In-Process- und bei Wire-/Lifecycle-Fragen den vorhandenen C#-Prozesshost aus
+  dem aktuellen Taskstand bauen; Source, `tools/list` und Runtime damit
+  gegeneinander prüfen. Den bereits verbundenen alten MCP-Server nicht für
+  Verhaltens-, Schema- oder Versionsprüfungen aufrufen.
 - Die vier erledigten Bereiche fokussiert revalidieren, insbesondere die durch
   `93fa150a` berührten Scopepfade.
 - R1 bis R6 mit aktuellen Red-Tests beziehungsweise belastbaren Negativsuchen
@@ -362,18 +375,22 @@ und Owner.
 
 - Dokumentation, Guides, Server-Instructions und Schemas ausschließlich auf den
   implementierten Endzustand synchronisieren.
-- Dogfoodmatrix gegen den frischen Build ausführen.
+- Dogfoodmatrix ausschließlich in der vorhandenen C#-Testinfrastruktur gegen
+  den frischen Build beziehungsweise deren Prozesshost ausführen.
 - Den projektspezifischen Auditor genau einmal seriell auf vollständigen
   Änderungsscope anwenden; belastbare Findings beheben und gezielt nachprüfen.
 - Abschlussgates ausführen und vollständigen Diff sowie Git-Status prüfen.
 
 **Exit:** AK 19–21, alle Muss-Kriterien und das Release-Gate sind grün; kein
-auftragsbezogenes Finding und kein ersetzter Vertragspfad verbleiben.
+auftragsbezogenes Finding und kein ersetzter Vertragspfad verbleiben. Ein
+anschließendes echtes Release ist ein separater, ausdrücklich beauftragter
+Schritt und kein Bestandteil dieses Tasks.
 
 ## Verifikation und Release-Gate
 
-Fokussierte Tests richten sich nach dem jeweiligen Slice. Vor Taskabschluss
-laufen strikt seriell:
+Fokussierte Tests richten sich nach dem jeweiligen Slice und verwenden nur aus
+dem Taskstand gebaute Test-/Prozesshosts. Vor Taskabschluss laufen strikt
+seriell:
 
 ```powershell
 dotnet build
@@ -390,6 +407,10 @@ Danach folgen gegen den finalen Source-Scope:
 - Negativsuchen nach Contract v1, alten Aliasfeldern, generischen Trimmern und
   ersetzten DTO-/Formatterpfaden;
 - Prüfung aller 9 Muss- und 21 Akzeptanzkriterien.
+
+Die Bezeichnung Release-Gate meint die Freigabereife des Repository-Standes,
+nicht das Publizieren eines Releases. Der bereits verbundene alte MCP-Server
+wird auch hier nicht als Runtime-Orakel verwendet.
 
 Stress-Tests laufen nur auf ausdrückliche Anforderung. Unklare oder
 abgebrochene Testläufe werden per TRX diagnostiziert, nicht blind wiederholt.
@@ -408,8 +429,9 @@ abgebrochene Testläufe werden per TRX diagnostiziert, nicht blind wiederholt.
 
 ## Risiken und Gegenmaßnahmen
 
-- **Staler MCP-Prozess verfälscht Befunde:** Build-/Host-Fingerprint im
-  Preflight abgleichen und Live-Dogfood nur gegen die frische Runtime werten.
+- **Alter verbundener MCP-Prozess verfälscht Befunde:** Seine Toolantworten nur
+  zur semantischen Source-Navigation verwenden; alle Vertragsbelege aus
+  taskaktuell gebauten C#-Test-/Prozesshosts gewinnen.
 - **Budgetfix verliert Evidenz:** ganze Facheinheiten, monotone Tests und exakter
   Retry am finalen Wirepayload.
 - **`false` bricht referenzierte Handoffs:** expliziten Owner-only-Modus statt
