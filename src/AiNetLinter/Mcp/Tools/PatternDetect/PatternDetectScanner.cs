@@ -291,7 +291,7 @@ internal static class PatternDetectScanner
 /// <summary>
 /// Parameter-Record fuer <see cref="PatternDetectScanner.BuildReportAsync"/>. Kapselt 6
 /// Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c> (siehe
-/// <c>AiNetLinter.mdc</c>) eingehalten wird (Pattern 1:1 von <c>GetViolationsScannerParameters</c>).
+/// Linter-Regel <c>MaxMethodParameterCount</c>) eingehalten wird (Pattern 1:1 von <c>GetViolationsScannerParameters</c>).
 /// </summary>
 internal sealed record PatternDetectScannerParameters(
     Solution Solution,

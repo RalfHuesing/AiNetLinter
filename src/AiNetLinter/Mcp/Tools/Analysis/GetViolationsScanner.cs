@@ -19,7 +19,7 @@ namespace AiNetLinter.Mcp.Tools.Analysis;
 /// <summary>
 /// Reine Formatierungs-/Filter-Logik fuer <see cref="GetViolationsTool"/> — in eine eigene Datei
 /// ausgelagert, damit <see cref="GetViolationsTool"/>s eigener <c>AIContextFootprint</c> (siehe
-/// <c>AiNetLinter.mdc</c>) klein bleibt.
+/// Linter-Regel <c>AIContextFootprint</c>) klein bleibt.
 /// Delegiert die eigentliche Lint-Arbeit an <see cref="LinterEngine.RunAsync(Solution, bool, int, CancellationToken)"/>
 /// mit <c>noCache: true</c> — bewusst KEIN Neubau einer eigenen Lint-Loop, weil
 /// vorsieht und der Disk-Cache fuer den resident laufenden Server irrelevant ist
@@ -289,7 +289,7 @@ internal static class GetViolationsScanner
 /// <summary>
 /// Parameter-Record fuer <see cref="GetViolationsScanner.BuildViolationsTextAsync"/>. Kapselt
 /// 9 Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c>
-/// (siehe <c>AiNetLinter.mdc</c>) eingehalten wird.
+/// (siehe Linter-Regel <c>MaxMethodParameterCount</c>) eingehalten wird.
 /// </summary>
 internal sealed record GetViolationsScannerParameters(
     Solution Solution,

@@ -75,20 +75,6 @@ internal static class CliOptionFactory
         Description = "Automatische Behebung einfacher Verstoesse (z. B. sealed, readonly, #nullable enable) direkt ueber die CLI",
     };
 
-    internal static Option<bool> CreateSyncAgentRulesOption() => new("--sync-agent-rules", "-sar")
-    {
-        Description = "Synchronisiert die ainetlinter-rules.json Konfiguration als .agents/rules/AiNetLinter.mdc Datei",
-    };
-
-    internal static Option<bool> CreateSyncAgentRulesOnlyOption() => new("--sync-agent-rules-only", "-saro")
-    {
-        Description = "Synchronisiert die ainetlinter-rules.json Konfiguration als .agents/rules/AiNetLinter.mdc Datei und beendet das Programm (schneller Pfad ohne Lint-Lauf)",
-    };
-
-    internal static Option<string?> CreateAgentRulesPathOption() => new("--agent-rules-path", "-arp")
-    {
-        Description = "Benutzerdefinierter Pfad (Verzeichnis oder .mdc-Datei) fuer die Synchronisation der Agent-Regeln (Optional)",
-    };
 
     internal static Option<string?> CreateDocsOption() => new("--docs", "-d")
     {

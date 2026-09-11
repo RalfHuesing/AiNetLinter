@@ -10,7 +10,7 @@ namespace AiNetLinter.FastTests.Mcp;
 /// Strukturelle A3-Sicherung fuer den Konstruktor von <see cref="McpCodeGraphServer"/>:
 /// Er nimmt genau einen Parameter vom Typ <see cref="McpCodeGraphServerOptions"/>. Eingefuehrt,
 /// weil der Konstruktor am projektweiten <c>MaxConstructorDependencies: 5</c>-Limit
-/// (siehe <c>AiNetLinter.mdc</c>) angelangt war und ein weiterer Parameter den Build gebrochen haette.
+/// (siehe Linter-Regel <c>MaxConstructorDependencies</c>) angelangt war und ein weiterer Parameter den Build gebrochen haette.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class McpCodeGraphServerConstructorTests

@@ -1156,9 +1156,6 @@ ainetlinter --config <Pfad-zur-ainetlinter-rules.json> --path <Pfad-zur-slnx-ode
 - `--wave-ready` (Flag): Nur Verstöße in Dateien ohne `// ainetlinter-disable all` (Optional).
 - `--only-changed` (Flag): Nur geänderte Dateien — erfordert `--baseline` (Optional).
 - `--fix` (Flag): Automatische Behebung einfacher Verstöße (z. B. `sealed`, `readonly`, `#nullable enable`) direkt über die CLI (Optional).
-- `-sar`, `--sync-agent-rules` (Flag): Synchronisiert die `ainetlinter-rules.json` Konfiguration als Regeldatei im Rahmen eines Linter-Laufs (Optional).
-- `-saro`, `--sync-agent-rules-only` (Flag): Synchronisiert die `ainetlinter-rules.json` Konfiguration als Regeldatei und beendet das Programm sofort (schneller Pfad ohne Lint-Lauf) (Optional). Ohne `--config` wird `ainetlinter-rules.json` per Auto-Discovery im `--path`-Verzeichnis (Fallback: aktuelles Arbeitsverzeichnis) gesucht.
-- `-arp`, `--agent-rules-path` (Pfad): Benutzerdefinierter Pfad (Verzeichnis oder `.mdc`-Datei) für die Synchronisation der Agent-Regeln (Optional).
 - `--parent-pid <pid>` (MCP-Modus): Der ThinClient überwacht die angegebene Parent-Prozess-ID und beendet sich bei deren Ende sauber.
 - `--mcp-project-ttl-minutes <minuten>` (MCP-Modus): Idle-TTL der Projektregistry in Minuten (Standard: `45`).
 - `--mcp-max-projects <anzahl>` (MCP-Modus): Maximale Anzahl residenter Projekt-Keys (Standard: `4`).
@@ -1383,7 +1380,6 @@ Dieser Abschnitt beschreibt, wie ein autonomer AI-Agent `AiNetLinter` selbständ
 
    ```
    ainetlinter://overview?targetPath=<url-encoded-absolute-solution-path> — Live-Targetstatus
-   .agents/rules/AiNetLinter.mdc                    — Aktive Regeln und Limits
    ```
 
    Zielgebundene MCP-Aufrufe verwenden ausschließlich den absoluten Pfad einer
@@ -1420,18 +1416,6 @@ Dieser Abschnitt beschreibt, wie ein autonomer AI-Agent `AiNetLinter` selbständ
 | `platform-default`   | Produktiv — Agenten beheben Verstöße direkt | Regulärer Entwicklungsbetrieb    |
 | `platform-ai-strict` | Zielrichtung — zeigt was sein sollte        | Code-Reviews, Architektur-Audits |
 
-### Agent-Regeln synchronisieren
-
-Nach jeder `ainetlinter-rules.json`-Änderung muss `.agents/rules/AiNetLinter.mdc` neu generiert werden.
-
-```
-
-**Kombinierter Lauf (Lint + Synchronisation in einem Schritt):**
-
-```powershell
-AiNetLinter.exe --path . --config ainetlinter-rules.json --sync-agent-rules
-```
-
 ---
 
 ## 9. Consumer-Setup & Pragmatic Defaults
@@ -1442,9 +1426,8 @@ Für die produktive Integration von `AiNetLinter` in ein bestehendes Projekt emp
 
 1. **Konfiguration anlegen:** Erstelle eine `ainetlinter-rules.json` mit den gewünschten Abweichungen von den Standardwerten. Fehlende Keys werden beim nächsten Lauf automatisch mit Standardwerten ergänzt (Auto-Sync, s. u.). Entfernte oder umbenannte Keys werden ebenfalls automatisch bereinigt.
 2. **Projekt-Overrides für Tests:** Definiere unter `ProjectOverrides` (z. B. für `*.Tests`) pragmatischere Schwellenwerte. So dürfen im Testcode Literale (Magic Values) verwendet werden und das Sealing konkreter Klassen kann deaktiviert werden.
-3. **Synchronisation der MDC-Dateien:** Nutze `--sync-agent-rules` im Pre-Commit- oder CI-Schritt, um die `.agents/rules/AiNetLinter.mdc` automatisch aktuell zu halten. Workflow-Richtlinien und organisatorische Regeln sollten getrennt in einer separaten, manuell gepflegten Datei wie `.agents/rules/CodeQualitaet.mdc` verwaltet werden.
-4. **Integrationstests statt Blockade:** Binde die Linter-Prüfung in die Unit-Test-Suite ein (siehe Sektion 7). Es empfiehlt sich in der Migrationsphase, den Test bei Verstößen nicht zwingend fehlschlagen zu lassen (Exit 0/1 als Information), sondern den Report als Orientierung für Entwickler zu nutzen.
-5. **MSBuild BuildHost-Verzeichnis:** Stelle sicher, dass bei der Distribution des Linters im CI-Build/Publish-Prozess die Verzeichnisse `BuildHost-netcore/` und `BuildHost-net472/` stets direkt neben der ausführbaren `AiNetLinter.exe` liegen.
+3. **Integrationstests statt Blockade:** Binde die Linter-Prüfung in die Unit-Test-Suite ein (siehe Sektion 7). Es empfiehlt sich in der Migrationsphase, den Test bei Verstößen nicht zwingend fehlschlagen zu lassen (Exit 0/1 als Information), sondern den Report als Orientierung für Entwickler zu nutzen.
+4. **MSBuild BuildHost-Verzeichnis:** Stelle sicher, dass bei der Distribution des Linters im CI-Build/Publish-Prozess die Verzeichnisse `BuildHost-netcore/` und `BuildHost-net472/` stets direkt neben der ausführbaren `AiNetLinter.exe` liegen.
 
 ### Pragmatic Agent Defaults
 

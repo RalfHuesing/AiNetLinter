@@ -122,9 +122,6 @@ public static class Program
             RemoveDisableAll = parsed.Maintenance.RemoveDisableAll,
             WaveReady = parsed.Scope.WaveReady,
             Fix = parsed.Fix,
-            SyncAgentRules = parsed.SyncAgentRules,
-            SyncAgentRulesOnly = parsed.SyncAgentRulesOnly,
-            AgentRulesPath = parsed.AgentRulesPath,
             NoCache = parsed.NoCache,
             CacheTtlMinutes = parsed.CacheTtlMinutes,
             Docs = parsed.Docs,
@@ -154,8 +151,6 @@ public static class Program
         var validationError = ValidateArgs(args);
         if (validationError.HasValue) return validationError.Value;
 
-        // Schneller Pfad: --sync-agent-rules-only.
-        if (args.SyncAgentRulesOnly) return SyncAgentRulesCommand.Run(args);
 
         var maintenanceResult = await MaintenanceCommand.TryRunAsync(args, ct);
         if (maintenanceResult.HasValue) return maintenanceResult.Value;

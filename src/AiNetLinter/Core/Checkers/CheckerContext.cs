@@ -107,7 +107,7 @@ internal sealed record ViolationDescription(
 /// <summary>
 /// Buendelt die beiden Lade-Zustands-Flags eines Dokuments (Test-Datei? Projekt mit Lade-Problemen?)
 /// in einem Parameter-Object — haelt den <see cref="CheckerContext"/>-Konstruktor unter dem
-/// projektweiten Bool-Parameter-Limit (siehe AiNetLinter.mdc), statt zwei rohe bool-Parameter
+/// projektweiten Bool-Parameter-Limit (siehe ainetlinter-rules.json), statt zwei rohe bool-Parameter
 /// nebeneinander zu fuehren.
 /// </summary>
 internal sealed record DocumentLoadState(bool IsTestFile, bool ProjectHasLoadDiagnostics);

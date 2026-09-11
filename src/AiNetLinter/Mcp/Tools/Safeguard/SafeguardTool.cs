@@ -90,7 +90,7 @@ internal static class SafeguardTool
 
 /// <summary>
 /// Parameter-Record fuer <see cref="SafeguardTool.ExecuteAsync"/>. Kapselt 5 Konfigurations-Eingaenge
-/// in einem Record, damit <c>MaxMethodParameterCount: 4</c> (siehe <c>AiNetLinter.mdc</c>) eingehalten
+/// in einem Record, damit <c>MaxMethodParameterCount: 4</c> (siehe Linter-Regel <c>MaxMethodParameterCount</c>) eingehalten
 /// wird (Pattern 1:1 von <see cref="SafeguardScannerParameters"/>).
 /// </summary>
 internal sealed record SafeguardToolParameters(

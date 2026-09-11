@@ -47,20 +47,6 @@ public sealed class LinterArgs
     /// </summary>
     public bool Fix { get; init; }
 
-    /// <summary>
-    /// Holt oder setzt einen Wert, der angibt, ob Agent-Regeldateien (.mdc) automatisch synchronisiert werden sollen.
-    /// </summary>
-    public bool SyncAgentRules { get; init; }
-
-    /// <summary>
-    /// Holt oder setzt einen Wert, der angibt, ob nur Agent-Regeldateien (.mdc) synchronisiert werden sollen (Fast-Path ohne Audit).
-    /// </summary>
-    public bool SyncAgentRulesOnly { get; init; }
-
-    /// <summary>
-    /// Holt oder setzt den benutzerdefinierten Pfad fuer die Agent-Regeln (.mdc-Datei oder Verzeichnis).
-    /// </summary>
-    public string? AgentRulesPath { get; init; }
 
     /// <summary>
     /// Deaktiviert den Analyse-Cache (erzwingt vollständige Neu-Analyse aller Dateien).
@@ -280,7 +266,7 @@ public sealed class LinterArgs
     }
 
     private bool HasStandaloneCommand() =>
-        Docs != null || ListRules || DescribeRule != null || SearchRules != null || McpServer || DaemonStart || SyncAgentRulesOnly;
+        Docs != null || ListRules || DescribeRule != null || SearchRules != null || McpServer || DaemonStart;
 
     private bool HasConflictingModeOptions()
     {

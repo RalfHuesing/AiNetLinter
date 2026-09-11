@@ -12,7 +12,7 @@ namespace AiNetLinter.Mcp;
 /// und durch <see cref="McpServerOptionsBuilder"/> in eine schlanke Factory + Builder
 /// aufgeteilt: ohne diese Auslagerung waechst der AIContextFootprint von
 /// <see cref="McpCodeGraphServer"/> durch die Tool-Registrierungs-Abhaengigkeiten
-/// ueber das projektweite Limit (siehe <c>AiNetLinter.mdc</c>).
+/// ueber das projektweite Limit (siehe Linter-Regel <c>AIContextFootprint</c>).
 /// </summary>
 internal static class McpServerOptionsFactory
 {

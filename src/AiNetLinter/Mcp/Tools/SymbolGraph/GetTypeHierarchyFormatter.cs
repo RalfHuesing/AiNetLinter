@@ -16,7 +16,7 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// <summary>
 /// Reine Traversierungs-/Formatierungslogik fuer <see cref="GetTypeHierarchyTool"/> — in eine eigene
 /// Datei ausgelagert, damit <see cref="GetTypeHierarchyTool"/>s eigener <c>AIContextFootprint</c>
-/// (siehe <c>AiNetLinter.mdc</c>) klein bleibt, analog zu
+/// (siehe Linter-Regel <c>AIContextFootprint</c>) klein bleibt, analog zu
 /// <see cref="SymbolIdentifierResolver"/> fuer <see cref="FindReferencesTool"/>. Keine Abhaengigkeit
 /// von <see cref="McpCodeGraphServer"/> — direkt unit-testbar.
 /// </summary>

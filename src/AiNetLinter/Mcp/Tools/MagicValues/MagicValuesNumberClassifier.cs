@@ -13,7 +13,7 @@ namespace AiNetLinter.Mcp.Tools.MagicValues;
 /// HTTP-Statuscodes, Timeout-Parameter-Kontext (via <see cref="SemanticModel"/>) und
 /// Schwellenwert-Konstanten in <c>const</c>/<c>readonly</c>/<c>static</c>-Feldern.
 /// Aus der Hauptklasse in eine eigene Datei extrahiert, damit <see cref="MagicValuesClassifier"/>
-/// unter dem <c>MaxLineCount: 500</c>-Limit bleibt (siehe <c>AiNetLinter.mdc</c>).
+/// unter dem <c>MaxLineCount: 500</c>-Limit bleibt (siehe Linter-Regel <c>MaxLineCount</c>).
 /// </summary>
 internal static class MagicValuesNumberClassifier
 {

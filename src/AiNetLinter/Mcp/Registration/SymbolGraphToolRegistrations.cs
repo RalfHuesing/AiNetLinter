@@ -24,7 +24,7 @@ namespace AiNetLinter.Mcp.Registration;
 /// <c>get_impact</c>, <c>get_type_hierarchy</c>, <c>get_call_tree</c>, <c>dependency_graph</c>) an
 /// der von <see cref="McpServerOptionsFactory"/> aufgebauten Tool-Collection. Aus
 /// <see cref="McpServerOptionsFactory"/> ausgelagert, damit dessen eigener <c>AIContextFootprint</c>
-/// (siehe <c>AiNetLinter.mdc</c>) nicht mit jedem neu registrierten Tool waechst. Jedes Lambda ist
+/// (siehe Linter-Regel <c>AIContextFootprint</c>) nicht mit jedem neu registrierten Tool waechst. Jedes Lambda ist
 /// zielgebunden: <c>targetPath</c> ist Pflicht und wird am gemeinsamen
 /// <see cref="AnalysisToolCall"/> validiert; die Route wird aus der Dateiendung bestimmt.
 /// </summary>

@@ -62,16 +62,12 @@ internal static class AuditCommand
             var violations = await engine.RunAsync(currentCatalog2, args.NoCache, args.CacheTtlMinutes, ct);
             profiler.StopPhase("DocumentAnalysis");
 
-            profiler.StartPhase("OptionalOutputs");
-            var optionalExitCode = GenerateOptionalOutputs(ctx);
-            profiler.StopPhase("OptionalOutputs");
-
             var outputRoot = OutputRootResolver.Resolve(args.TargetPath);
             var scoped = ApplyScopeFilters(violations, args, outputRoot, onlyChangedFiles: []);
             var exitCode = WriteViolationsAndExit(scoped, outputRoot, ctx);
 
             profiler.WriteReport(args.TargetPath, currentCatalog2.Solution.FilePath, args.ConfigPath);
-            return exitCode != 0 || optionalExitCode != 0 ? 1 : 0;
+            return exitCode;
         }
         finally
         {
@@ -82,10 +78,6 @@ internal static class AuditCommand
     private static async Task<int> RunAuditWithBaselineAsync(AuditRunContext ctx, SourceFileCatalog catalog, CancellationToken ct)
     {
         var profiler = ctx.Profiler;
-        profiler.StartPhase("OptionalOutputs");
-        var optionalExitCode = GenerateOptionalOutputs(ctx);
-        profiler.StopPhase("OptionalOutputs");
-
         profiler.StartPhase("AutoFix");
         var (currentCatalog, needsDispose) = await ApplyAutoFixIfNeededAsync(catalog, ctx, ct);
         profiler.StopPhase("AutoFix");
@@ -93,7 +85,7 @@ internal static class AuditCommand
         {
             var exitCode = await AuditWithBaselineAsync(ctx, currentCatalog, ct);
             profiler.WriteReport(ctx.Args.TargetPath, currentCatalog.Solution.FilePath, ctx.Args.ConfigPath);
-            return exitCode != 0 || optionalExitCode != 0 ? 1 : 0;
+            return exitCode;
         }
         finally
         {
@@ -139,30 +131,6 @@ internal static class AuditCommand
         return WriteViolationsAndExit(scoped, outputRoot, ctx);
     }
 
-    private static int GenerateOptionalOutputs(AuditRunContext ctx)
-    {
-        var (args, _, _, c) = ctx;
-        int exitCode = 0;
-
-        if (args.SyncAgentRules)
-        {
-            try
-            {
-                var syncResult = SyncAgentRulesCommand.Run(args, c);
-                if (syncResult != 0)
-                {
-                    exitCode = syncResult;
-                }
-            }
-            catch (Exception ex)
-            {
-                c.WriteError($"[ERROR]: Fehler beim Synchronisieren der Agent-Regeln: {ex.Message}");
-                exitCode = 1;
-            }
-        }
-
-        return exitCode;
-    }
 
     private static async Task<(SourceFileCatalog Catalog, bool NeedsDispose)> ApplyAutoFixIfNeededAsync(
         SourceFileCatalog catalog, AuditRunContext ctx, CancellationToken ct)

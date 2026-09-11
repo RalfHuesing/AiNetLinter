@@ -15,7 +15,7 @@ namespace AiNetLinter.Mcp.Tools.MagicValues;
 /// die <c>standard_candidates</c>-Erweiterung um nicht-HTTP Magic Numbers. Aus den
 /// Hauptdateien in eine eigene Datei extrahiert, damit <see cref="MagicValuesClassifier"/>
 /// und <see cref="MagicValuesNumberClassifier"/> unter dem <c>MaxLineCount: 500</c>-Limit
-/// bleiben (siehe <c>AiNetLinter.mdc</c>).
+/// bleiben (siehe Linter-Regel <c>MaxLineCount</c>).
 /// </summary>
 internal static class MagicValuesStringHeuristics
 {

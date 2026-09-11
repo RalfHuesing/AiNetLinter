@@ -19,7 +19,7 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// <summary>
 /// Kleine, reine Parsing-/Aufloesungs-Helfer fuer <see cref="FindReferencesTool.ResolveSymbolAsync"/>
 /// — in eine eigene Datei ausgelagert, damit <see cref="FindReferencesTool"/>s eigener
-/// <c>AIContextFootprint</c> (siehe <c>AiNetLinter.mdc</c>) nicht durch reine Hilfslogik unnoetig
+/// <c>AIContextFootprint</c> (siehe Linter-Regel <c>AIContextFootprint</c>) nicht durch reine Hilfslogik unnoetig
 /// waechst, waehrend <see cref="McpCodeGraphServer"/> (Parameter von
 /// <see cref="FindReferencesTool.ExecuteAsync"/>) bereits allein einen erheblichen transitiven
 /// Anteil beitraegt. Da <see cref="FindReferencesTool.ResolveSymbolAsync"/> der gemeinsame

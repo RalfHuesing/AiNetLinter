@@ -15,7 +15,7 @@ namespace AiNetLinter.Mcp.Tools.DependencyGraph;
 /// <summary>
 /// Parameter-Record fuer <see cref="DependencyGraphTool.ExecuteAsync"/>. Kapselt 5
 /// Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c>
-/// (siehe <c>AiNetLinter.mdc</c>) eingehalten wird — Records sind von diesem Limit ausgenommen.
+/// (siehe Linter-Regel <c>MaxMethodParameterCount</c>) eingehalten wird — Records sind von diesem Limit ausgenommen.
 /// Genau eines von <see cref="FilePath"/>/<see cref="SymbolIdentifier"/> muss gesetzt sein (siehe
 /// <see cref="DependencyGraphTool.ExecuteAsync"/>).
 /// </summary>

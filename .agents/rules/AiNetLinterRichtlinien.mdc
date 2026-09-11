@@ -31,6 +31,7 @@ Nutzeranweisungen haben Vorrang.
 
 ## Code und Tests
 
+- **C#-Coding-Prinzipien**: Konkrete Klassen standardmäßig `sealed` deklarieren; `#nullable enable` am Dateianfang; Methoden flach halten und ab 4 Parametern Parameter-Records nutzen; kein `async void`, keine blockierenden Task-Aufrufe (`.Result`, `.Wait()`), keine leeren `catch`-Blöcke.
 - **Red-Test-First bei Bugs**: Bei Fehlern oder unerwartetem Verhalten zuerst einen isolierten fehlschlagenden xUnit-v3-Test (Rot-Test / Reproduktionstest) schreiben. Erst danach gezielt beheben, bis der Test grün ist (dauerhafter Regressionsschutz).
 - Jede Logikänderung erhält xUnit-v3-Tests, die Verhalten statt Implementierungsdetails prüfen.
 - Ein grüner, scope-passender Testlauf bleibt gültiger Nachweis bis zur nächsten Code- oder Konfigurationsänderung; nicht blind wiederholen.
@@ -39,7 +40,7 @@ Nutzeranweisungen haben Vorrang.
 - MCP- und Dogfood-Verifikation ausschließlich über die vorhandene C#-Testinfrastruktur (keine Ad-hoc-Skripte committen).
 - Keine Compilerwarnungen einführen (`TreatWarningsAsErrors`). Tests niemals abschwächen oder auskommentieren; stets Ursache beheben.
 - Erwartete Fehler als `Result<T>` modellieren; Exceptions bleiben echten exogenen Fehlern (z. B. IO/Netzwerk) vorbehalten.
-- DRY, Magic Values und Dead Code im Scope fachlich bewerten. Bereinigungen nur bei klarem Nutzen; indirekte Nutzung über Reflection, Serialisierung, DI, APIs und Tests beachten.
+- **MCP-Quality-Gate**: Vor Abschluss von C#-Änderungen sichern MCP-Aufrufe die Codebase ab: `safeguard` muss 10,0/10 erreichen (`minScore: 10`), `get_violations` 0 Verstöße im Scope liefern. `find_dead_code` (keinen ungenutzten Code hinterlassen; Reflection/DI beachten) und `find_magic_values` (Schwellwerte und Literale fachlich sinnvoll als Konstanten/Enums kapseln) gezielt prüfen.
 - Kommentare erklären nur nicht offensichtliches „Why“; keine Ticket-, Prompt- oder Refactoring-Historie im Produktionscode.
 
 ## Git und parallele Agenten

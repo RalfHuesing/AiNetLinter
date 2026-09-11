@@ -86,17 +86,15 @@ TEST "LintReport wird erzeugt und ist grün":
        — nicht fehlschlagen, damit CI ohne lokales Tool grün bleibt
 
   3. Argumente zusammensetzen:
-       --config  <Pfad zur ainetlinter-rules.json>
-       --path    <Solution-Root>
+       --config   <Pfad zur ainetlinter-rules.json>
+       --path     <Solution-Root>
        --baseline <Pfad zur Baseline-JSON>   ← nach Schritt 6 verfügbar
-       --sync-agent-rules                   ← synchronisiert .agents/rules/AiNetLinter.mdc (Pfad anpassbar über --agent-rules-path)
 
    4. Prozess starten, stdout + stderr lesen, auf Exit warten
 
    5. Report in output/<stem>.md schreiben (UTF-8)
 
    6. WENN exitCode != 0: Test fehlschlagen mit Hinweis auf Report-Pfad
-      WENN exitCode == 0: sicherstellen dass .agents/rules/AiNetLinter.mdc existiert
 ```
 
 **Hinweis Schritt 2 (Tool nicht vorhanden):** In xUnit heisst das `Assert.SkipUnless`, in NUnit `Assume.That(condition)`, in MSTest `Assert.Inconclusive()`. Wähle die für das Projekt passende Variante — das Ziel ist dasselbe: Test wird als "übersprungen" markiert, nicht als Fehler.
@@ -128,36 +126,7 @@ Die erzeugte `<projektname>-baseline.json` **in git einchecken**. Sie ist der Ra
 
 ---
 
-## Schritt 7: Agent Rules (.agents / .cursor) synchronisieren
-
-`--sync-agent-rules` (bereits im Test-Aufruf aus Schritt 5 enthalten) erzeugt automatisch:
-
-- `.agents/rules/AiNetLinter.mdc` (Default-Pfad) — Metriken und aktive Regeln aus der `ainetlinter-rules.json`
-
-Diese Datei macht die konfigurierten Grenzwerte für AI-Agenten direkt sichtbar, ohne dass der Agent eine extra Datei lesen muss. **Versioniere diese Datei.**
-
-Für andere Agent-Hosts (z. B. Cursor: `.cursor/rules/AiNetLinter.mdc`) den Zielpfad über `--agent-rules-path <Verzeichnis-oder-Datei>` setzen — Default ist ausschliesslich `.agents/rules/AiNetLinter.mdc`, es wird kein zweiter Pfad automatisch mitgeschrieben.
-
-Agent-Regeln synchronisieren:
-
-- Nur Agent-Regeln aktualisieren (schneller Pfad ohne Lint-Lauf):
-  ```cmd
-  AiNetLinter.exe --config <ainetlinter-rules.json> --path <solution-root> --sync-agent-rules-only
-  ```
-  Ohne `--config` wird `ainetlinter-rules.json` per Auto-Discovery im `--path`-Verzeichnis gesucht.
-- Kombinierter Lauf (Linter-Prüfung + Agent-Regeln aktualisieren):
-  ```cmd
-  AiNetLinter.exe --config <ainetlinter-rules.json> --path <solution-root> --sync-agent-rules
-  ```
-
-> [!NOTE]
-> Die generierte Regeldatei enthält bewusst **keinen Versionsstempel** — sie beschreibt die aktiven
-> Regeln, nicht die Generator-Version. Damit entsteht keine Drift durch Release-Bumps (das
-> AiNetLinter-Repository sichert dies zusätzlich über einen Dogfood-Integrationstest ab).
-
----
-
-## Schritt 8: ainetlinter-rules.json an das Projekt anpassen
+## Schritt 7: ainetlinter-rules.json an das Projekt anpassen
 
 Nach dem ersten Lauf gibt es typischerweise **False Positives** — Verstösse die strukturell korrekt sind, aber gegen eine Standardregel verstossen. Diese Phase erfordert Abstimmung mit dem Projektverantwortlichen.
 
@@ -200,7 +169,6 @@ Nach dem ersten Lauf gibt es typischerweise **False Positives** — Verstösse d
 | Projektkonfiguration | `ainetlinter-rules.json` | Ja |
 | Baseline (Ratchet) | `AiNetLinter/<projektname>-baseline.json` | Ja |
 | Tool-Dokumentation | `AiNetLinter/docs/*.md` | Ja |
-| Agent-Regeln | `.agents/rules/AiNetLinter.mdc` | Ja |
 | Lint-Reports | `AiNetLinter/output/` | **Nein** (gitignored) |
 
 ---

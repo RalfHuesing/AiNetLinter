@@ -9,7 +9,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using AiNetLinter.Configuration;
 using AiNetLinter.Core;
-using AiNetLinter.Generators;
 using AiNetLinter.Metrics;
 using AiNetLinter.Models;
 using Xunit;
@@ -21,7 +20,6 @@ namespace AiNetLinter.IntegrationTests.Configuration;
 // @covers ConfigLoader
 // @covers PostAnalysisChecks
 // @covers TestDetector
-// @covers AgentRulesGenerator
 
 /// <summary>
 /// Tests für Project Overrides und den AI-Context-Footprint.
@@ -182,100 +180,5 @@ public sealed class DeveloperExperienceTests
         Assert.NotNull(result);
         Assert.True(result.Global.EnforceSealedClasses);
         Assert.Contains("Base", result.Global.SealedClassExemptSuffixes);
-    }
-
-    [Fact]
-    public void SyncAgentRules_GeneratesMdcFile_WritesSuccessfully()
-    {
-        using var tempDir = TestTempDirectory.Create("sync-rules-");
-
-        var config = TestHelper.CreateDefaultConfig() with
-        {
-            Global = new GlobalConfig
-            {
-                EnforceSealedClasses = true,
-                EnforceNoSilentCatch = true,
-                EnforceResultPatternOverExceptions = true
-            },
-            Metrics = new MetricsConfig
-            {
-                MaxLineCount = 500,
-                MaxMethodLineCount = 42
-            },
-            ProjectOverrides = new Dictionary<string, ProjectOverrideEntry>
-            {
-                ["*Tests"] = new()
-                {
-                    Global = new GlobalConfigOverride
-                    {
-                        EnforceExplicitStateImmutability = false
-                    }
-                },
-                ["AiNetLinter.TestKit"] = new()
-                {
-                    Metrics = new MetricsConfigOverride
-                    {
-                        MaxMethodLineCount = 100
-                    }
-                }
-            }
-        };
-
-        AgentRulesGenerator.Sync(tempDir.DirectoryPath, config, verbose: false);
-
-        var mdcPath = Path.Combine(tempDir.DirectoryPath, ".agents", "rules", "AiNetLinter.mdc");
-        Assert.True(File.Exists(mdcPath));
-
-        var content = File.ReadAllText(mdcPath);
-        Assert.Contains("description: C#-Codequalität", content);
-        Assert.Contains("MaxLineCount", content);
-        Assert.Contains("EnforceSealedClasses", content);
-        Assert.Contains("*Tests", content);
-        Assert.Contains("AiNetLinter.TestKit", content);
-    }
-
-    [Fact]
-    public void GuidanceD_AgentRulesContainsCompoundSuppressionsTable()
-    {
-        var config = TestHelper.CreateDefaultConfig() with
-        {
-            Metrics = new MetricsConfig
-            {
-                CompoundSuppressions = new List<CompoundSuppression>
-                {
-                    new()
-                    {
-                        TargetRule = "MaxMethodLineCount",
-                        WhenAllOf = new List<MetricCondition>
-                        {
-                            new() { Metric = "CyclomaticComplexity", AtMost = 3 }
-                        },
-                        RelaxedLimit = 150,
-                        Reason = "Test reason here"
-                    }
-                }
-            }
-        };
-
-        var content = AgentRulesGenerator.GenerateContent(config, "ainetlinter-rules.json");
-
-        Assert.Contains("## Compound Suppressions (kontextabhängige Limiten)", content);
-        Assert.Contains("| `MaxMethodLineCount` | CyclomaticComplexity ≤ 3 | **150** | — | Test reason here |", content);
-    }
-
-    [Fact]
-    public void GuidanceE_AgentRulesContainsNoCompoundSuppressionsTable()
-    {
-        var config = TestHelper.CreateDefaultConfig() with
-        {
-            Metrics = new MetricsConfig
-            {
-                CompoundSuppressions = new List<CompoundSuppression>()
-            }
-        };
-
-        var content = AgentRulesGenerator.GenerateContent(config, "ainetlinter-rules.json");
-
-        Assert.DoesNotContain("## Compound Suppressions (kontextabhängige Limiten)", content);
     }
 }

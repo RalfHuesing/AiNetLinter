@@ -34,7 +34,7 @@ internal sealed record GroupedMagicValue(
 /// <summary>
 /// Parameter-Record fuer <see cref="FindMagicValuesScanner.ScanAsync"/>. Kapselt 9
 /// Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c> (siehe
-/// <c>AiNetLinter.mdc</c>) eingehalten wird (Pattern 1:1 von
+/// Linter-Regel <c>MaxMethodParameterCount</c>) eingehalten wird (Pattern 1:1 von
 /// <c>GetViolationsScannerParameters</c>). <see cref="ValueType"/> ist nullable: <see langword="null"/>
 /// = "all" (Strings UND Numbers akzeptieren).
 /// </summary>

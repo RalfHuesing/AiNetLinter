@@ -13,7 +13,7 @@ namespace AiNetLinter.Mcp.Tools.MagicValues;
 /// (filePath/model/valueTypeFilter/categoryFilter/ignoreNumbers/includeSuppressed/
 /// changedFiles/isTestPath/sink) zu einem <c>WalkerContext</c>-Record zusammen. Records mit
 /// ≥ 6 Feldern sind explizit von <c>MaxConstructorDependencies: 5</c> ausgenommen (gilt nur
-/// fuer Klassen-Konstruktoren, siehe <c>AiNetLinter.mdc</c>).
+/// fuer Klassen-Konstruktoren, siehe Linter-Regel <c>MaxConstructorDependencies</c>).
 /// <see cref="ChangedFiles"/> ist <see langword="null"/>, wenn kein Git-Diff-Filter aktiv ist.
 /// </summary>
 internal sealed record MagicValueWalkerContext(

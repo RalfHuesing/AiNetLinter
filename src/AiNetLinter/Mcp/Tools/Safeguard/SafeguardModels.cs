@@ -45,7 +45,7 @@ internal sealed record BuildSafeguardSummaryParameters(
 /// <summary>
 /// Parameter-Record fuer <see cref="SafeguardScanner.ComputeScoreAsync"/>. Kapselt 7
 /// Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c>
-/// (siehe <c>AiNetLinter.mdc</c>) eingehalten wird. <see cref="MinScoreThreshold"/> und
+/// (siehe Linter-Regel <c>MaxMethodParameterCount</c>) eingehalten wird. <see cref="MinScoreThreshold"/> und
 /// <see cref="MaxRemediationEntries"/> haben Defaults aus <see cref="SafeguardScanner.DefaultMinScoreThreshold"/>
 /// / <see cref="SafeguardScanner.DefaultMaxRemediationEntries"/>.
 /// </summary>

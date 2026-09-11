@@ -61,7 +61,7 @@ internal sealed record McpCodeGraphServerOptions
 
     /// <summary>
     /// Factory-Methode, die die Konfigurations-Eingaenge in einem Parameter-Record bündelt,
-    /// damit <c>MaxMethodParameterCount: 4</c> (siehe <c>AiNetLinter.mdc</c>) eingehalten wird
+    /// damit <c>MaxMethodParameterCount: 4</c> (siehe Linter-Regel <c>MaxMethodParameterCount</c>) eingehalten wird
     /// und kuenftige Properties additiv am Options-Record wachsen koennen, ohne die
     /// Factory-Signatur zu aendern. Existierende Call-Sites koennen
     /// <see cref="McpCodeGraphServerOptions"/> auch direkt via
@@ -86,7 +86,7 @@ internal sealed record McpCodeGraphServerOptions
 /// <summary>
 /// Parameter-Record fuer <see cref="McpCodeGraphServerOptions.From"/>. Bündelt die
 /// Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c>
-/// (siehe <c>AiNetLinter.mdc</c>) fuer die Factory eingehalten wird und kuenftige
+/// (siehe Linter-Regel <c>MaxMethodParameterCount</c>) fuer die Factory eingehalten wird und kuenftige
 /// Properties additiv wachsen koennen.
 /// </summary>
 internal sealed record McpCodeGraphServerOptionsFromParameters(

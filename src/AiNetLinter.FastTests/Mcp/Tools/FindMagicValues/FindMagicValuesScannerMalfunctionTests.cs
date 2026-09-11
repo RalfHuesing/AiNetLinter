@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,8 +13,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;
 /// unleserliches Document korrekt als echte Malfunction (IsMalfunction=true mit
 /// Context) gemeldet wird, statt stillschweigend ein leeres Ergebnis zu liefern.
 /// Aus <see cref="FindMagicValuesScannerTests"/> in eine eigene Datei extrahiert, damit
-/// die Haupt-Testklasse unter dem <c>MaxLineCount: 500</c>-Limit bleibt (siehe
-/// <c>AiNetLinter.mdc</c>).
+/// die Haupt-Testklasse unter dem <c>MaxLineCount: 500</c>-Limit bleibt (siehe Linter-Regel <c>MaxLineCount</c>).
 /// </summary>
 [Trait("Category", "Component")]
 public sealed class FindMagicValuesScannerMalfunctionTests
