@@ -6,7 +6,7 @@ using System.Text;
 using AiNetLinter.Mcp;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.Mcp.Assemblies.Analysis;
+namespace AiNetLinter.Mcp.Assemblies.Analysis.Responses;
 
 internal static partial class AssemblyAnalysisResponse
 {

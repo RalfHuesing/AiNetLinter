@@ -174,7 +174,7 @@ public sealed class ThinClientMcpProcessContractTests
             Assert.Contains(project.GetProperty("loadState").GetString(), new[] { "Loaded", "Loading" });
             Assert.False(string.IsNullOrWhiteSpace(project.GetProperty("solutionPath").GetString()));
             var navigation = structured.GetProperty("navigation");
-            Assert.Equal("source-files", navigation.GetProperty("snapshot").GetProperty("kind").GetString());
+            Assert.Equal("source", navigation.GetProperty("snapshot").GetProperty("kind").GetString());
             Assert.True(navigation.GetProperty("snapshot").GetProperty("fresh").GetBoolean());
             Assert.False(string.IsNullOrWhiteSpace(navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString()));
 

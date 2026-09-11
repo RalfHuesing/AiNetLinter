@@ -8,7 +8,7 @@ using AiNetLinter.Configuration;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp;
+namespace AiNetLinter.Mcp.Server;
 
 /// <summary>
 /// Input-Parametersatz fuer <see cref="McpCodeGraphServer"/>. Kapselt die Optionen in einem

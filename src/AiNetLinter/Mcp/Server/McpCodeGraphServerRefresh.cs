@@ -9,7 +9,7 @@ using AiNetLinter.Baseline;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 
-namespace AiNetLinter.Mcp;
+namespace AiNetLinter.Mcp.Server;
 
 /// <summary>
 /// Lazy Solution-Refresh fuer den MCP-Server: pro Aufruf wird die resident gehaltene

@@ -292,7 +292,6 @@ internal static partial class McpToolResults
     };
 
     /// <summary>
-    /// Ergaenzt eine zielgebundene Antwort um den gemeinsamen Navigation-Kern.
     /// Ergaenzt eine zielgebundene Antwort um den gemeinsamen Navigation-Kern. Die vorhandene
     /// tool-spezifische StructuredContent-Nutzlast bleibt dabei unveraendert am Root; der
     /// normalisierte Envelope wird atomar unter <c>navigation</c> geschrieben.
@@ -307,9 +306,29 @@ internal static partial class McpToolResults
         ArgumentNullException.ThrowIfNull(target);
 
         var navigation = McpNavigationProjection.Create(result, target);
-        var payload = result.StructuredContent is { ValueKind: JsonValueKind.Object } structured
-            ? JsonNode.Parse(structured.GetRawText()) as JsonObject ?? new JsonObject()
+        var payload = CreateNavigationPayload(result.StructuredContent);
+        MergeNavigation(payload, CreateNavigationNode(navigation));
+        var navigationText = target.Origin == AnalysisTargetOrigin.Decompiled
+            ? McpNavigationText.FormatAssembly(navigation)
+            : McpNavigationText.Format(navigation, result.StructuredContent);
+        var navigated = new CallToolResult
+        {
+            IsError = result.IsError,
+            Content = AppendNavigationText(result.Content, navigationText),
+            StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
+        };
+        return postNavigationResponseBudget is null || maxResponseBytes <= 0
+            ? navigated
+            : postNavigationResponseBudget(navigated, maxResponseBytes);
+    }
+
+    private static JsonObject CreateNavigationPayload(JsonElement? structured) =>
+        structured is { ValueKind: JsonValueKind.Object } value
+            ? JsonNode.Parse(value.GetRawText()) as JsonObject ?? new JsonObject()
             : new JsonObject();
+
+    private static JsonObject CreateNavigationNode(McpNavigationPayload navigation)
+    {
         var navigationNode = JsonSerializer.SerializeToNode(navigation, McpJsonOptions.Default) as JsonObject
             ?? new JsonObject();
         // McpJsonOptions omits nulls globally.  The v1 wire contract deliberately requires
@@ -323,7 +342,11 @@ internal static partial class McpToolResults
         {
             navigationNode["next"] = null;
         }
+        return navigationNode;
+    }
 
+    private static void MergeNavigation(JsonObject payload, JsonObject navigationNode)
+    {
         if (payload["navigation"] is JsonObject existingNavigation)
         {
             foreach (var propertyName in new[]
@@ -344,9 +367,11 @@ internal static partial class McpToolResults
         {
             payload["navigation"] = navigationNode;
         }
+    }
 
-        var navigationText = McpNavigationText.Format(navigation, result.StructuredContent);
-        var text = result.Content
+    private static List<ContentBlock> AppendNavigationText(
+        IEnumerable<ContentBlock> content,
+        string navigationText) => content
             .Select(block => block is TextContentBlock textBlock
                 ? new TextContentBlock
                 {
@@ -358,17 +383,6 @@ internal static partial class McpToolResults
                 }
                 : block)
             .ToList();
-
-        var navigated = new CallToolResult
-        {
-            IsError = result.IsError,
-            Content = text,
-            StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
-        };
-        return postNavigationResponseBudget is null || maxResponseBytes <= 0
-            ? navigated
-            : postNavigationResponseBudget(navigated, maxResponseBytes);
-    }
 
     /// <summary>
     /// Kurzform fuer eine echte Malfunction: ein unerwarteter Roslyn-/Laufzeit-Fehler wurde in

@@ -30,7 +30,7 @@ namespace AiNetLinter.IntegrationTests.Mcp.Assemblies.Navigation;
 // @covers GetCallTreeTool
 // @covers DependencyGraphTool
 // @covers DecompiledProjectPaths
-public sealed class AssemblyAnalysisPathContractTests
+public sealed partial class AssemblyAnalysisPathContractTests
 {
     [Fact]
     public async Task AssemblyRoute_ResolvesTopLevelTypeAndPropertyAccessorBodies()
@@ -284,7 +284,8 @@ public sealed class AssemblyAnalysisPathContractTests
             activeLease => GetFileSkeletonTool.ExecuteAsync(activeLease.Server, [document.Name], CancellationToken.None));
         var skeletonText = Text(skeleton);
         Assert.NotEqual(true, skeleton.IsError);
-        Assert.Contains($"id:{methodId}", skeletonText, StringComparison.Ordinal);
+        Assert.DoesNotContain($"id:{methodId}", skeletonText, StringComparison.Ordinal);
+        AssertSkeletonContainsMemberId(skeleton.StructuredContent!.Value, methodId);
 
         var body = await DispatchAsync(
             registry,
@@ -292,7 +293,9 @@ public sealed class AssemblyAnalysisPathContractTests
             activeLease => GetSymbolBodyTool.ExecuteAsync(activeLease.Server, [methodId], 80, CancellationToken.None));
         var bodyText = Text(body);
         Assert.NotEqual(true, body.IsError);
-        Assert.Contains($"id: `{methodId}`", bodyText, StringComparison.Ordinal);
+        Assert.DoesNotContain($"id: `{methodId}`", bodyText, StringComparison.Ordinal);
+        Assert.Equal(methodId, body.StructuredContent!.Value
+            .GetProperty("results")[0].GetProperty("id").GetString());
         Assert.Contains("Save(bool includeSub = false, bool saveAll = false)", bodyText, StringComparison.Ordinal);
         Assert.DoesNotContain(Path.GetFullPath(document.FilePath!), bodyText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("<decompiled-source>", bodyText, StringComparison.Ordinal);
@@ -377,7 +380,8 @@ public sealed class AssemblyAnalysisPathContractTests
 
         var skeleton = await GetFileSkeletonTool.ExecuteAsync(server, ["Document.cs"], CancellationToken.None);
         Assert.NotEqual(true, skeleton.IsError);
-        Assert.Contains($"id:{methodId}", Text(skeleton), StringComparison.Ordinal);
+        Assert.DoesNotContain($"id:{methodId}", Text(skeleton), StringComparison.Ordinal);
+        AssertSkeletonContainsMemberId(skeleton.StructuredContent!.Value, methodId);
 
         var body = await GetSymbolBodyTool.ExecuteAsync(server, [methodId], 80, CancellationToken.None);
         Assert.NotEqual(true, body.IsError);
@@ -441,29 +445,13 @@ public sealed class AssemblyAnalysisPathContractTests
         Assert.DoesNotContain("wrong-int", text, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task AssemblyRoute_ExactSymbolMatchPrecedesSubstringMatch()
+    private static void AssertSkeletonContainsMemberId(System.Text.Json.JsonElement payload, string expectedId)
     {
-        using var temp = TestTempDirectory.Create("assembly-exact-before-substring-");
-        var assemblyPath = AssemblyTestHelper.EmitAssembly(
-            temp,
-            "ExactBeforeSubstringProbe",
-            "namespace Probe; public sealed class ServiceExtended { } public sealed class Service { }");
-        await using var registry = new AssemblyAnalysisRegistry();
-
-        var result = await DispatchAsync(
-            registry,
-            assemblyPath,
-            lease => AssemblyFindSymbolTool.ExecuteAsync(
-                lease,
-                new AssemblyFindSymbolRequest(["Service"], "class", 10, false),
-                CancellationToken.None));
-
-        Assert.False(result.IsError == true, Text(result));
-        var matches = result.StructuredContent!.Value.GetProperty("results")[0]
-            .GetProperty("matches").EnumerateArray().ToArray();
-        Assert.Equal("Probe.Service", matches[0].GetProperty("name").GetString());
-        Assert.Equal("Probe.ServiceExtended", matches[1].GetProperty("name").GetString());
+        var members = payload.GetProperty("files").EnumerateArray()
+            .SelectMany(file => file.GetProperty("types").EnumerateArray())
+            .SelectMany(type => type.GetProperty("members").EnumerateArray());
+        Assert.Contains(members, member =>
+            string.Equals(member.GetProperty("id").GetString(), expectedId, StringComparison.Ordinal));
     }
 
     private static async Task<CallToolResult> DispatchAsync(

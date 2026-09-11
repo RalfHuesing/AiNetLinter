@@ -4,6 +4,7 @@ using System;
 using AiNetLinter.Configuration;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Server;
 
 namespace AiNetLinter.TestKit;
 

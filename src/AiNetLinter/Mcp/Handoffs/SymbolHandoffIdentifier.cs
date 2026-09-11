@@ -25,21 +25,18 @@ internal readonly record struct SymbolHandoffIdentifier(
         $"{(Origin == SymbolHandoffOrigin.Source ? SourcePrefix : AssemblyPrefix)}{TargetToken}:{ContentToken}:{DocumentationCommentId}";
 
     internal static bool TryCreate(
-        SymbolHandoffOrigin origin,
-        string canonicalPath,
-        string contentHash,
-        string documentationCommentId,
+        SymbolHandoffCreationRequest request,
         out SymbolHandoffIdentifier identifier)
     {
         identifier = default;
-        if (!IsCanonicalDocumentationCommentId(documentationCommentId)
-            || !SymbolHandoffToken.TryCreateTarget(canonicalPath, out var targetToken)
-            || !SymbolHandoffToken.TryCreateContent(contentHash, out var contentToken))
+        if (!IsCanonicalDocumentationCommentId(request.DocumentationCommentId)
+            || !SymbolHandoffToken.TryCreateTarget(request.CanonicalPath, out var targetToken)
+            || !SymbolHandoffToken.TryCreateContent(request.ContentHash, out var contentToken))
         {
             return false;
         }
 
-        identifier = new(origin, targetToken, contentToken, documentationCommentId);
+        identifier = new(request.Origin, targetToken, contentToken, request.DocumentationCommentId);
         return true;
     }
 
@@ -129,3 +126,9 @@ internal readonly record struct SymbolHandoffIdentifier(
         return false;
     }
 }
+
+internal sealed record SymbolHandoffCreationRequest(
+    SymbolHandoffOrigin Origin,
+    string CanonicalPath,
+    string ContentHash,
+    string DocumentationCommentId);

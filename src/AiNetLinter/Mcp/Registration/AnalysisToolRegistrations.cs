@@ -67,11 +67,7 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string GetViolationsDescription =
-        "Wann nutzen: aktuelle Lint-Regelverstoesse der Solution abfragen — nach jedem Edit " +
-        "erneut aufrufbar, kein Disk-Cache. scopeFilter: Projekt-Name oder Pfad-Substring zur " +
-        "Eingrenzung. ruleId: Filter auf bestimmte Regel (z. B. 'ANL0021'). minSeverity: 'info', 'warning' oder 'error'. " +
-        "maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Begrenzung der Trefferliste (Default 50). " +
-        "includeSnippet=true gibt den Quellcode-Ausschnitt mit (contextLines 0-5, Default 2; Werte außerhalb dieses Bereichs liefern INVALID_ARGUMENT).";
+        "Lint-Verstoesse der Source-Solution; optional nach Scope, Regel und Severity filtern. Snippets sind opt-in.";
 
     private static void AddSafeguard(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -91,11 +87,7 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string SafeguardDescription =
-        "Wann nutzen: Quality-Gate-Wert vor CI-Merge pruefen — deterministischer " +
-        "0-10-Score + Pass/Fail-Threshold + Top-Violations + Remediation-Hints fuer " +
-        "die geladene Solution. scopeFilter: Projekt-Name oder Pfad-Substring zur " +
-        "Eingrenzung, minScore: Schwellwert (Default 8.0), maxViolations: Begrenzung " +
-        "der Top-Violations-Liste (0 = Liste abschalten; negative Werte werden aus Rueckwaertskompatibilitaet auf 0 gekappt; Default 20).";
+        "Deterministisches Quality-Gate mit Score, Schwellwert und priorisierten Verstoessen fuer die Source-Solution.";
 
     private static void AddSearchPattern(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -145,15 +137,8 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string SearchPatternDescription =
-        "Wann nutzen: Fallback fuer Namen/Strings ausserhalb des C#-Symbolgraphs (z. B. " +
-        "JS-Funktionen, Razor-Komponenten, WPF-Elemente, Config-Eintraege) oder allgemeine Textsuche. " +
-        "pattern: Suchtext oder Regex. isRegex: optional (Default null = 'auto' mit automatischer Regex-Erkennung " +
-        "und Promotion bei 0 Treffern; true = explizit Regex, false = explizit Plain-Substring). " +
-        "scopeType: 'all' (Default), 'production' (schliesst Tests aus) oder 'tests'. " +
-        "maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Treffer-Limit (Default 20, Cap 2000). maxFiles, contextLines und maxResponseBytes " +
-        "(Default 8192, Cap 65536) begrenzen " +
-        "die strukturierte Nutzlast. scope, includePatterns und excludePatterns steuern den Scope. " +
-        "enrichCSharp=true reichert sichtbare C#-Treffer opt-in semantisch an (semantic-Feld; resolution: resolved, not_applicable, unknown, ambiguous, unavailable).";
+        "Text/Regex-Suche ausserhalb Symbolgraph; Default 20. enrichCSharp=true opt-in (ambiguous/unavailable). " +
+        "Default 8192, Cap 65536.";
 
     private static void AddMetricsTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -174,11 +159,7 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string MetricsTreeDescription =
-        "Wann nutzen: Verzeichnishierarchie einer unbekannten/grossen Codebase Ebene fuer Ebene " +
-        "erkunden statt Komplett-Dump zu lesen — aggregierte Werte pro Knoten + sortierte " +
-        "Top-N-Kinder. mode: code_size [Default], comment_density, violation_density, complexity. " +
-        "root: Teilbaum-Eingrenzung (Default: Root), depth: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT; 1-5, Default 1), " +
-        "topN: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), sichtbare Kinder pro Ebene (Default 10), fileFilter: Regex-Filter auf den Pfad.";
+        "Aggregierte Verzeichnis-Metriken zur schrittweisen Codebase-Erkundung; root, depth, topN und fileFilter begrenzen den Teilbaum.";
 
     private static void AddMetricsLookup(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -199,12 +180,7 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string MetricsLookupDescription =
-        "Wann nutzen: punktgenaue Metriken (LOC, zyklomatische/kognitive Komplexitaet, " +
-        "Parameteranzahl, AI-Context-Footprint, Member-Statistiken) und Schwellwert-Abgleich " +
-        "fuer ein oder mehrere C#-Symbole (Batch-Support in 1 Turn) abrufen. " +
-        "symbolIdentifiers: Array von Symbol-IDs: " +
-        "DocCommentId (\"M:Namespace.Class.Method\"), \"Datei.cs:Zeile:Spalte\", " +
-        "\"Datei.cs:Zeile\" oder qualifizierter Name. Liefert MetricsLookupBatchDto in structuredContent.";
+        "Metriken und Schwellwert-Abgleich fuer ein oder mehrere C#-Symbole; akzeptiert Handoff, Doc-ID, Position oder qualifizierten Namen.";
 
     private static void AddPatternDetect(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -224,12 +200,7 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string PatternDetectDescription =
-        "Wann nutzen: Solution-weite Audit-Suche nach Code-Patterns (God-Classes, async-void, " +
-        "lange Methoden, Public-API ohne Doc, leere Catch-Bloecke, Feature-Envy/Middle-Man) " +
-        "statt der flachen Datei-Liste von get_violations — nach Pattern-Kategorie gruppiert. " +
-        "patterns: Pattern-IDs (Default alle 6: god-class, async-void, long-method, public-without-doc, " +
-        "empty-catch, feature-envy). scopeFilter: Projekt-Name oder Pfad-Substring zur Eingrenzung, " +
-        "maxResultsPerPattern: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Begrenzung der Trefferliste je Pattern (Default 20).";
+        "Solution-weite, nach Pattern gruppierte Heuristiken wie God-Class, async-void oder lange Methoden; kein Ersatz fuer Regelverstosse.";
 
     private static void AddFindMagicValues(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -274,16 +245,7 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string FindMagicValuesDescription =
-        "Wann nutzen: On-Demand-Audit nach Magic Values (Strings, Zahlen, URLs, Pfaden, " +
-        "Timeouts, Format-Strings, Schwellwerten, HTTP-Statuscodes) in C#-Quellcode. " +
-        "valueType: Literal-Filter ('all' [Default], 'strings', 'numbers'). " +
-        "categoryFilter: Refactoring-Kategorie ('all' [Default], 'config_candidates', 'constant_candidates', " +
-        "'enum_candidates', 'nameof_candidates', 'localization_candidates', 'standard_candidates', 'security_candidates'). " +
-        "minOccurrences: Mindestvorkommen (Default 2), maxResults: Begrenzung (Default 50; 0 oder negative Werte werden aus Rueckwaertskompatibilitaet auf 1 gekappt). " +
-        "ignoreNumbers: projektspezifische Ignorier-Zahlen. includeTests: Tests einbeziehen (Default false). " +
-        "includeSuppressed: Fundstellen mit '// ainetlinter-disable MagicValues' einbeziehen (Default false). " +
-        "changedOnly: Git-Diff-Einschraenkung auf geaenderte Dateien (Default false). " +
-        "scopeFilter: Projekt-Name oder Pfad-Substring zur Eingrenzung.";
+        "Magic-Value-Audit fuer wiederholte C#-Literale; type, Kategorie, Scope, Tests und Git-Diff filterbar. Keine automatische Remediation.";
 
     private static void AddFindDeadCode(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -324,13 +286,7 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string FindDeadCodeDescription =
-        "Wann nutzen: Solution nach unreferenziertem/totem Code durchleuchten — findet ungenutzte " +
-        "Typen, Methoden, Properties, Felder und Events mit Vertrauensstufen (high fuer direkt " +
-        "entfernbaren privaten/internen Code, low fuer Public-API/Framework-Kandidaten). " +
-        "accessibility: 'private_internal' [Default], 'all', 'private', 'internal', 'public'. " +
-        "confidence: 'both' [Default], 'high', 'low'. kind: 'all' [Default], 'type', 'class', 'method', " +
-        "'field', 'property', 'event', 'delegate'. scopeFilter: Projekt-Name oder Pfad-Substring. " +
-        "includeTests: Tests einbeziehen (Default false). mode: 'members' [Default], 'locals', 'both'. maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Begrenzung (Default 50).";
+        "Kandidaten fuer unreferenzierten Code nach Sichtbarkeit, Confidence, Symbolart und Scope; Public- oder Framework-Code bleibt nur heuristisch.";
 
     private static void AddGetFeatureContext(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -360,13 +316,7 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string GetFeatureContextDescription =
-        "Wann nutzen: Composite One-Shot-Exploration fuer ein beliebiges C#-Symbol vor Edits oder Refactorings — " +
-        "buendelt 5 Dimensionen (Deklaration, Metriken & Budget, statische Referenzen/Call-Sites, statische Test-Zuordnung und Linter-Violations) " +
-        "in einem einzigen residenten Aufruf. symbolIdentifier: 'Namespace.Klasse.Methode', 'Datei.cs:Zeile' oder DocCommentId. " +
-        "Der Caller-Bereich basiert auf statischen Referenzen/Call-Sites; jede Call-Site enthält in StructuredContent " +
-        "additiv callerId und callerLocation fuer direkte Folge-Tools; der Testbereich basiert auf statischen Testkandidaten. " +
-        "maxCallers: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Limit (Default 10, Cap 50). maxTests: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), maxTests bleibt ein Dateilimit (Default 10, Cap 50); " +
-        "Testmethoden sind zusaetzlich je Datei auf 50 und insgesamt auf 200 begrenzt. maxResponseBytes: gemeinsames UTF-8-Budget fuer Text, StructuredContent und Navigation (Default 32768, Cap 65536); kuerzt nur vollstaendige Feature-/Caller-/Test-/Violation-Einheiten und meldet ein zu kleines Mindestbudget.";
+        "Kompakter One-Shot-Kontext fuer ein C#-Symbol: Deklaration, Metriken, statische Caller, Testkandidaten und Violations. Antwortbudget wahrt ganze Evidenzeinheiten.";
 
     private static void AddGetTestContext(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -395,8 +345,5 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string GetTestContextDescription =
-        "Wann nutzen: Test-Dateien, Test-Klassen und Test-Methoden fuer ein gegebenes Produktions-Symbol " +
-        "(Klasse, Methode, Datei.cs:Zeile oder DocCommentId) abfragen. symbolIdentifier: Ziel-Symbol, " +
-        "maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Begrenzung der Testdateien (Default 30, Cap 100; Werte über 100 liefern INVALID_ARGUMENT). maxResponseBytes: gemeinsames UTF-8-Budget fuer Text, StructuredContent und Navigation (Default 24576, Cap 65536); es kuerzt nur vollstaendige Testkandidaten und meldet ein zu kleines Mindestbudget. Liefert statische Zuordnungsgruende, Test-Kategorien " +
-        "(Unit/Integration), kopierbare dotnet test Filterbefehle und Hinweis bei fehlender Zuordnung.";
+        "Statische Testkandidaten fuer ein Produktionssymbol mit Zuordnungsgrund und Kategorie; Antwortbudget wahrt ganze Kandidaten.";
 }

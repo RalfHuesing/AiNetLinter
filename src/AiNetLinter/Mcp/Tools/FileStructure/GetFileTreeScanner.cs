@@ -163,7 +163,10 @@ internal sealed class FileTreeAccumulator
         if (_input.MaxResponseBytes > 0)
         {
             var responseTrimmed = false;
-            while (SerializedSize(payload) > _input.MaxResponseBytes && shownMatches.Count > 0)
+            // Keep one representative file whenever matches exist. Directory summaries are
+            // reduced below; an empty file list would otherwise hide a materialized assembly
+            // source root behind response-budget metadata only.
+            while (SerializedSize(payload) > _input.MaxResponseBytes && shownMatches.Count > 1)
             {
                 shownMatches.RemoveAt(shownMatches.Count - 1);
                 responseTrimmed = true;

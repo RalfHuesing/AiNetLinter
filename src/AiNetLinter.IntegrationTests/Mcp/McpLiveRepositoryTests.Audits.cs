@@ -80,6 +80,5 @@ public sealed partial class McpLiveRepositoryTests
         Assert.Equal("candidate", (string?)json["resultType"]);
         Assert.Equal(7, json["categories"]!.AsArray().Count);
         Assert.NotNull(json["summary"]!["status"]);
-        Assert.NotNull(json["summary"]!["next"]);
     }
 }

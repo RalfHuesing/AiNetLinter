@@ -61,7 +61,9 @@ internal static class GetSymbolBodyTool
 
         try
         {
-            return await RenderSymbolBodiesAsync(solution, identifiers, request.EffectiveMaxBodyLines, request.StartLine, request.MaxResponseBytes, state.HandoffSymbolIdentity, null, ct);
+            return await RenderSymbolBodiesAsync(
+                new RenderSymbolBodiesRequest(solution, identifiers, request.EffectiveMaxBodyLines, request.StartLine,
+                    request.MaxResponseBytes, state.HandoffSymbolIdentity, null), ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -100,7 +102,8 @@ internal static class GetSymbolBodyTool
         }
 
         var result = await RenderSymbolBodiesAsync(
-            solution, identifiers, request.EffectiveMaxBodyLines, request.StartLine, request.MaxResponseBytes, lease.AssemblySymbolIdentity, lease.Origin, ct)
+            new RenderSymbolBodiesRequest(solution, identifiers, request.EffectiveMaxBodyLines, request.StartLine,
+                request.MaxResponseBytes, lease.AssemblySymbolIdentity, lease.Origin), ct)
             .ConfigureAwait(false);
         return AssemblyPublicContract.Project(result);
     }
@@ -114,30 +117,25 @@ internal static class GetSymbolBodyTool
 
 
     private static async Task<CallToolResult> RenderSymbolBodiesAsync(
-        Solution solution,
-        IReadOnlyList<string> identifiers,
-        int maxBodyLines,
-        int startLine,
-        int maxResponseBytes,
-        AnalysisSymbolIdentity? assemblyIdentity,
-        AssemblyOrigin? assemblyOrigin,
+        RenderSymbolBodiesRequest request,
         CancellationToken ct)
     {
-        var outputRoot = Path.GetDirectoryName(solution.FilePath) ?? "";
+        var outputRoot = Path.GetDirectoryName(request.Solution.FilePath) ?? "";
         var units = new List<SymbolBodyRenderUnit>();
 
-        for (var i = 0; i < identifiers.Count; i++)
+        for (var i = 0; i < request.Identifiers.Count; i++)
         {
             var rendered = await RenderSingleSymbolAsync(
                 new RenderSingleSymbolRequest(
-                    solution, identifiers[i], identifiers.Count, maxBodyLines, startLine, outputRoot, assemblyIdentity, assemblyOrigin),
+                    request.Solution, request.Identifiers[i], request.Identifiers.Count, request.MaxBodyLines,
+                    request.StartLine, outputRoot, request.AssemblyIdentity, request.AssemblyOrigin),
                 ct);
 
             if (rendered.EarlyError is not null) return rendered.EarlyError;
             units.Add(rendered.Unit!);
         }
 
-        return CreateBudgetedResult(units, identifiers.Count, maxResponseBytes);
+        return CreateBudgetedResult(units, request.Identifiers.Count, request.MaxResponseBytes);
     }
 
     private static async Task<RenderSingleSymbolResult> RenderSingleSymbolAsync(
@@ -396,6 +394,15 @@ internal static class GetSymbolBodyTool
 }
 
 internal sealed record SymbolBodyRenderUnit(SymbolBodyEntry? Entry, string Markdown);
+
+internal sealed record RenderSymbolBodiesRequest(
+    Solution Solution,
+    IReadOnlyList<string> Identifiers,
+    int MaxBodyLines,
+    int StartLine,
+    int MaxResponseBytes,
+    AnalysisSymbolIdentity? AssemblyIdentity,
+    AssemblyOrigin? AssemblyOrigin);
 
 internal sealed record RenderSingleSymbolResult(CallToolResult? EarlyError, SymbolBodyRenderUnit? Unit);
 

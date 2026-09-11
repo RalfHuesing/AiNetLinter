@@ -20,7 +20,7 @@ internal static class AssemblyAnalysisSearchEnvelope
             return;
         }
 
-        AiNetLinter.Mcp.Assemblies.Analysis.AssemblyAnalysisResponseEnvelope.AddReason(obj, "responseBudget");
+        AiNetLinter.Mcp.Assemblies.Analysis.Responses.AssemblyAnalysisResponseEnvelope.AddReason(obj, "responseBudget");
         // A search maxFiles truncation is a scope limit, not another page.
         obj["continuationToken"] = update.Returned < update.Total || obj["searchKind"] is null
             ? AssemblyPaging.CreateToken(Math.Max(0, update.Offset) + update.Returned)

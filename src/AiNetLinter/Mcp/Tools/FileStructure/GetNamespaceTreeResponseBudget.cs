@@ -240,7 +240,12 @@ internal static class GetNamespaceTreeResponseBudget
         }
         if (payload.Types is { Count: > 0 } types)
         {
-            return payload with { Types = types.Take(types.Count - 1).ToList() };
+            var remainingTypes = types.Take(types.Count - 1).ToList();
+            return payload with
+            {
+                Types = remainingTypes,
+                Namespaces = ProjectTypeNamespace(payload.Namespaces, remainingTypes),
+            };
         }
         if (payload.Namespaces is { Count: > 0 } namespaces)
         {
@@ -253,6 +258,17 @@ internal static class GetNamespaceTreeResponseBudget
         }
 
         return payload;
+    }
+
+    private static IReadOnlyList<NamespaceTreeNode>? ProjectTypeNamespace(
+        IReadOnlyList<NamespaceTreeNode>? namespaces,
+        IReadOnlyList<TypeNodeEntry> types)
+    {
+        if (namespaces is not { Count: > 0 }) return namespaces;
+
+        return namespaces
+            .Select((node, index) => index == 0 ? node with { Types = types } : node)
+            .ToList();
     }
 
     private static string RenderVisibleText(NamespaceTreePayload payload, string fallbackText)

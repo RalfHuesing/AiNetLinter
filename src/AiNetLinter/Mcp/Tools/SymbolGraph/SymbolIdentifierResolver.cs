@@ -146,64 +146,30 @@ internal static class SymbolIdentifierResolver
         CancellationToken ct,
         AnalysisSymbolIdentity? expectedAssemblyIdentity = null)
     {
-        if (string.IsNullOrEmpty(stableId))
-        {
-            return (null, null);
-        }
+        var preparation = PrepareStableId(stableId, expectedAssemblyIdentity);
+        if (preparation.Error is not null || preparation.NormalizedId is null) return (null, preparation.Error);
+        stableId = preparation.NormalizedId;
 
-        if (!TryNormalizeHandoffId(
-                stableId,
-                expectedAssemblyIdentity,
-                out var normalizedId,
-                out var isAssemblyId,
-                out var isHandoff,
-                out var assemblyError))
-        {
-            return (null, assemblyError);
-        }
-
-        stableId = normalizedId;
-
-        if (!HasKnownDocumentationCommentIdPrefix(stableId))
-        {
-            return (null, null);
-        }
-
-        var assemblyCandidates = isAssemblyId ? new List<ISymbol>() : null;
+        var assemblyCandidates = preparation.IsAssemblyId ? new List<ISymbol>() : null;
         var exactMatches = await FindExactStableIdAsync(solution, stableId, ct, assemblyCandidates);
-        if (exactMatches.Count == 1) return (exactMatches[0], null);
+        return ResolveExactMatches(exactMatches, assemblyCandidates, stableId, preparation.IsAssemblyId, preparation.IsHandoff);
+    }
 
-        // Die Assembly-Route behält ihre bestehende Kandidatenpriorität; die Source-Route darf
-        // bei mehreren Roslyn-Deklarationen dagegen nie von der Iterationsreihenfolge abhängen.
-        if (isAssemblyId && exactMatches.Count > 0)
-        {
-            return (exactMatches[0], null);
-        }
+    private static (string? NormalizedId, bool IsAssemblyId, bool IsHandoff, CallToolResult? Error) PrepareStableId(string stableId, AnalysisSymbolIdentity? expectedIdentity)
+    {
+        if (string.IsNullOrEmpty(stableId)) return (null, false, false, null);
+        if (!TryNormalizeHandoffId(stableId, expectedIdentity, out var normalizedId, out var isAssemblyId, out var isHandoff, out var error)) return (null, false, false, error);
+        return HasKnownDocumentationCommentIdPrefix(normalizedId) ? (normalizedId, isAssemblyId, isHandoff, null) : (null, false, false, null);
+    }
 
-        if (!isAssemblyId && exactMatches.Count > 1)
-        {
-            return (
-                null,
-                McpToolResults.AmbiguousSymbol(
-                    SymbolHandoffIdentifier.ForError(stableId),
-                    FormatStableIdCandidates(exactMatches)));
-        }
-
-        if (!isAssemblyId && isHandoff)
-        {
-            return (null, McpToolResults.SymbolNotFound(SymbolHandoffIdentifier.ForError(stableId)));
-        }
-
-        if (assemblyCandidates is not null)
-        {
-            var matches = assemblyCandidates
-                .Where(symbol => MatchesAssemblyStableId(symbol, stableId))
-                .Distinct(SymbolEqualityComparer.Default)
-                .ToList();
-            if (matches.Count == 1) return (matches[0], null);
-        }
-
-        return (null, null);
+    private static (ISymbol? Symbol, CallToolResult? Error) ResolveExactMatches(
+        IReadOnlyList<ISymbol> exactMatches, ICollection<ISymbol>? assemblyCandidates, string stableId, bool isAssemblyId, bool isHandoff)
+    {
+        if (exactMatches.Count == 1 || isAssemblyId && exactMatches.Count > 0) return (exactMatches[0], null);
+        if (!isAssemblyId && exactMatches.Count > 1) return (null, McpToolResults.AmbiguousSymbol(SymbolHandoffIdentifier.ForError(stableId), FormatStableIdCandidates(exactMatches)));
+        if (!isAssemblyId && isHandoff) return (null, McpToolResults.SymbolNotFound(SymbolHandoffIdentifier.ForError(stableId)));
+        var matches = assemblyCandidates?.Where(symbol => MatchesAssemblyStableId(symbol, stableId)).Distinct(SymbolEqualityComparer.Default).ToList();
+        return matches?.Count == 1 ? (matches[0], null) : (null, null);
     }
 
     internal static string NormalizeDocCommentId(string id)

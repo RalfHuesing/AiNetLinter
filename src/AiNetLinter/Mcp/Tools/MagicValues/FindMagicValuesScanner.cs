@@ -354,40 +354,11 @@ internal static partial class FindMagicValuesScanner
         int maxResults)
     {
         var summary = payload.Summary;
-        if (summary.Status == "empty")
-        {
-            return $"Magic-Value-Audit: 0 Kandidaten in {summary.FilesInScope} Dateien im angeforderten Scope.";
-        }
+        if (summary.Status == "empty") return FormatEmptyReport(summary);
 
         var sb = new StringBuilder();
-        sb.AppendLine($"Magic-Value-Audit: {summary.TotalOccurrences} Treffer gesamt in {summary.Total} eindeutigen Einträgen " +
-            $"über {summary.FilesInScope} Dateien im Scope");
-        sb.AppendLine($"Status: {summary.Status}; resultType={summary.ResultType}; Confidence: {summary.Confidence}");
-        sb.AppendLine($"Scope: {summary.Scope}");
-        sb.AppendLine($"Ursache: {summary.Cause}");
-        if (summary.Next is not null)
-        {
-            sb.AppendLine($"Naechster Schritt: {summary.Next.Action} — {summary.Next.Reason}");
-        }
-        sb.AppendLine($"Truncation: total={summary.Total}, returnedCount={summary.ReturnedCount}, " +
-            $"truncatedBy={summary.TruncatedBy}");
-        sb.AppendLine();
-
-        sb.AppendLine("Kategorien:");
-        foreach (var category in payload.Categories)
-        {
-            sb.AppendLine($"- {category.Category}: status={category.Status}, total={category.Total}, " +
-                $"returnedCount={category.ReturnedCount}, truncatedBy={category.TruncatedBy}, " +
-                $"confidence={category.Confidence}");
-            sb.AppendLine($"  Ursache: {category.Cause}");
-            sb.AppendLine($"  Evidence: {category.EvidenceBoundary}");
-            sb.AppendLine($"  Scope: {category.Scope}");
-            sb.AppendLine($"  Empfehlung: {category.Recommendation}");
-            if (category.Next is not null)
-            {
-                sb.AppendLine($"  Naechster Schritt: {category.Next.Action} — {category.Next.Reason}");
-            }
-        }
+        AppendReportSummary(sb, summary);
+        AppendCategorySummary(sb, payload);
 
         sb.AppendLine();
         if (grouped.Count == 0)
@@ -398,15 +369,7 @@ internal static partial class FindMagicValuesScanner
             return sb.ToString().TrimEnd();
         }
 
-        var lines = grouped
-            .Take(maxResults)
-            .Select(g => $"{g.FilePath}:{g.FirstLine} - {g.Category.ToStringValue()}: " +
-                         $"{(g.ValueType == MagicValueValueType.Number ? g.Value : $"\"{g.Value}\"")} " +
-                         $"({g.Occurrences}x, Empfehlung: {g.Recommendation}; " +
-                         $"Evidenz: {g.Category.Semantics().EvidenceBoundary}; Scope: {summary.Scope})")
-            .ToList();
-
-        sb.AppendLine(string.Join("\n", lines));
+        AppendMagicValueLines(sb, grouped, maxResults, summary.Scope);
         if (summary.TruncatedBy > 0)
         {
             sb.AppendLine($"[{summary.Total} Einträge gesamt, {summary.ReturnedCount} gezeigt — " +
@@ -414,5 +377,38 @@ internal static partial class FindMagicValuesScanner
         }
         return sb.ToString().TrimEnd();
     }
+
+    private static string FormatEmptyReport(MagicValuesSummary summary)
+    {
+        var next = summary.Next is null
+            ? string.Empty
+            : $" Naechster Schritt: {summary.Next.Action} — {summary.Next.Reason}";
+        return $"Magic-Value-Audit: 0 Kandidaten in {summary.FilesInScope} Dateien im angeforderten Scope. " +
+            $"Status: {summary.Status}; resultType={summary.ResultType}; Confidence: {summary.Confidence}. " +
+            $"Scope: {summary.Scope}. Ursache: {summary.Cause}.{next}";
+    }
+
+    private static void AppendReportSummary(StringBuilder sb, MagicValuesSummary summary)
+    {
+        sb.AppendLine($"Magic-Value-Audit: {summary.TotalOccurrences} Treffer gesamt in {summary.Total} eindeutigen Einträgen über {summary.FilesInScope} Dateien im Scope");
+        sb.AppendLine($"Status: {summary.Status}; resultType={summary.ResultType}; Confidence: {summary.Confidence}");
+        sb.AppendLine($"Scope: {summary.Scope}"); sb.AppendLine($"Ursache: {summary.Cause}");
+        if (summary.Next is not null) sb.AppendLine($"Naechster Schritt: {summary.Next.Action} — {summary.Next.Reason}");
+        sb.AppendLine($"Truncation: total={summary.Total}, returnedCount={summary.ReturnedCount}, truncatedBy={summary.TruncatedBy}"); sb.AppendLine();
+    }
+
+    private static void AppendCategorySummary(StringBuilder sb, FindMagicValuesPayload payload)
+    {
+        sb.AppendLine("Kategorien:");
+        foreach (var category in payload.Categories)
+        {
+            sb.AppendLine($"- {category.Category}: status={category.Status}, total={category.Total}, returnedCount={category.ReturnedCount}, truncatedBy={category.TruncatedBy}, confidence={category.Confidence}");
+            sb.AppendLine($"  Ursache: {category.Cause}"); sb.AppendLine($"  Evidence: {category.EvidenceBoundary}"); sb.AppendLine($"  Scope: {category.Scope}"); sb.AppendLine($"  Empfehlung: {category.Recommendation}");
+            if (category.Next is not null) sb.AppendLine($"  Naechster Schritt: {category.Next.Action} — {category.Next.Reason}");
+        }
+    }
+
+    private static void AppendMagicValueLines(StringBuilder sb, IReadOnlyList<GroupedMagicValue> grouped, int maxResults, string scope) =>
+        sb.AppendLine(string.Join("\n", grouped.Take(maxResults).Select(g => $"{g.FilePath}:{g.FirstLine} - {g.Category.ToStringValue()}: {(g.ValueType == MagicValueValueType.Number ? g.Value : $"\"{g.Value}\"")} ({g.Occurrences}x, Empfehlung: {g.Recommendation}; Evidenz: {g.Category.Semantics().EvidenceBoundary}; Scope: {scope})")));
 
 }

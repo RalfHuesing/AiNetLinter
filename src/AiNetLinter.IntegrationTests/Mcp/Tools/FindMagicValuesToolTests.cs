@@ -154,6 +154,7 @@ public sealed class FindMagicValuesToolTests
         Assert.Equal("candidate", payload.GetProperty("resultType").GetString());
         Assert.Equal(7, payload.GetProperty("categories").GetArrayLength());
         Assert.True(summary.TryGetProperty("status", out _));
+        Assert.Equal("empty", summary.GetProperty("status").GetString());
         Assert.False(summary.TryGetProperty("next", out _));
     }
 

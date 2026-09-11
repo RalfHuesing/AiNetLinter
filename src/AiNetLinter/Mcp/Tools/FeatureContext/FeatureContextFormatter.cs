@@ -138,11 +138,21 @@ internal static class FeatureContextFormatter
     {
         if (tests == null) return;
 
-        var header = $"## 4. Test-Kontext (statische Testkandidaten: {tests.TotalTestFiles} Testdateien, {tests.TotalMatchingTests} Testkandidaten, Status: {tests.Completeness})";
-        sb.AppendLine(header);
+        AppendTestsHeader(sb, tests);
+        AppendTestCandidates(sb, tests);
+        AppendTestsFollowUp(sb, tests);
+        sb.AppendLine();
+    }
+
+    private static void AppendTestsHeader(StringBuilder sb, StaticTestContextReportDto tests)
+    {
+        sb.AppendLine($"## 4. Test-Kontext (statische Testkandidaten: {tests.TotalTestFiles} Testdateien, {tests.TotalMatchingTests} Testkandidaten, Status: {tests.Completeness})");
         sb.AppendLine($"- **Evidenzgrenze:** `{tests.EvidenceBoundary}`");
         sb.AppendLine($"- **Counts:** {tests.TestFiles.Count} von {tests.TotalTestFiles} Testdateien zurückgegeben; {tests.DisplayedTestMethods} konkrete Testmethoden sichtbar. Insgesamt {tests.TotalMatchingTests} Testkandidaten gefunden.");
+    }
 
+    private static void AppendTestCandidates(StringBuilder sb, StaticTestContextReportDto tests)
+    {
         if (tests.TestFiles.Count == 0)
         {
             sb.AppendLine("- Keine statischen Testkandidaten zugeordnet.");
@@ -163,9 +173,11 @@ internal static class FeatureContextFormatter
                     sb.AppendLine($"  - `{method}()`");
                 }
             }
-
         }
+    }
 
+    private static void AppendTestsFollowUp(StringBuilder sb, StaticTestContextReportDto tests)
+    {
         if (tests.IsTruncated)
         {
             sb.AppendLine($"- **TruncatedBy:** `{string.Join(", ", tests.TruncatedBy ?? [])}`");

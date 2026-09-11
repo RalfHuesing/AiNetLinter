@@ -245,7 +245,7 @@ public sealed class GetNamespaceTreeToolTests
         Assert.NotEqual(true, result.IsError);
         var payload = result.StructuredContent!.Value.Deserialize<NamespaceTreePayload>(McpJsonOptions.Default);
         Assert.NotNull(payload);
-        Assert.True(payload!.Truncated);
+        Assert.True(payload!.Truncated, result.StructuredContent!.Value.GetRawText());
         Assert.True(System.Text.Encoding.UTF8.GetByteCount(result.StructuredContent!.Value.GetRawText()) <= 700);
         Assert.Contains("maxResponseBytes", payload.TruncatedBy!);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
@@ -290,4 +290,3 @@ public sealed class GetNamespaceTreeToolTests
         Assert.DoesNotContain("maxResponseBytes", Assert.IsType<TextContentBlock>(Assert.Single(projected.Content)).Text, StringComparison.Ordinal);
     }
 }
-

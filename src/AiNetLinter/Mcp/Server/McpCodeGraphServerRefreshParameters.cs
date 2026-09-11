@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace AiNetLinter.Mcp;
+namespace AiNetLinter.Mcp.Server;
 
 /// <summary>
 /// Parameter-Record fuer <see cref="McpCodeGraphServerRefresh.Run"/>. Buendelt die drei

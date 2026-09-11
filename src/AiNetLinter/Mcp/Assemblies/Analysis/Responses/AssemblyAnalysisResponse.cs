@@ -13,7 +13,7 @@ using AiNetLinter.Mcp.Wire;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.Mcp.Assemblies.Analysis;
+namespace AiNetLinter.Mcp.Assemblies.Analysis.Responses;
 
 internal sealed record AssemblyAnalysisResponseRequest(
     int MaxResponseBytes = 0,

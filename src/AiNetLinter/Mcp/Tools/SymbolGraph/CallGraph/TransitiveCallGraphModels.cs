@@ -7,7 +7,7 @@ using AiNetLinter.Mcp.Scope;
 using Microsoft.CodeAnalysis;
 using AiNetLinter.Mcp;
 
-namespace AiNetLinter.Mcp.Tools.SymbolGraph;
+namespace AiNetLinter.Mcp.Tools.SymbolGraph.CallGraph;
 
 internal sealed record TransitiveCallSiteEntry(
     string FilePath,
@@ -98,4 +98,4 @@ internal sealed record GitImpactPayload(
 internal sealed record SymbolTestImpactDto(
     int TotalMatchingTests,
     int TotalTestFiles,
-    IReadOnlyList<AiNetLinter.Core.TestFileCoverageResult> TestFiles);
+    IReadOnlyList<AiNetLinter.Core.TestCoverage.TestFileCoverageResult> TestFiles);

@@ -146,11 +146,30 @@ internal static partial class GetClassStructureTool
             rendered = fallbackText[..originalHeading].TrimEnd() + "\n\n" + rendered;
         }
         var navigationIndex = fallbackText.IndexOf("## Navigation", StringComparison.Ordinal);
-        return navigationIndex < 0
-            ? rendered
-            : rendered.TrimEnd() + "\n\n" + SynchronizeNavigationText(
+        if (navigationIndex < 0)
+        {
+            return AppendRequiredNavigationText(rendered, finalEnvelope);
+        }
+
+        return rendered.TrimEnd() + "\n\n" + SynchronizeNavigationText(
                 fallbackText[navigationIndex..].Trim(),
                 finalEnvelope);
+    }
+
+    private static string AppendRequiredNavigationText(string rendered, JsonObject? envelope)
+    {
+        var navigation = envelope?["navigation"] as JsonObject;
+        var status = navigation?["status"] as JsonObject;
+        var completeness = status is null ? null : ReadString(status, "completeness");
+        if (string.IsNullOrWhiteSpace(completeness) || completeness == "complete") return rendered;
+
+        var operation = ReadString(status!, "operation") ?? "ok";
+        var next = navigation?["next"] as JsonObject;
+        var action = next is null ? null : ReadString(next, "action");
+        var suffix = $"Status: operation={operation}, completeness={completeness}";
+        return string.IsNullOrWhiteSpace(action)
+            ? rendered + "\n\n" + suffix
+            : rendered + "\n\n" + suffix + "; Aktion: " + action;
     }
 
     private static string SynchronizeNavigationText(string navigationText, JsonObject? envelope)

@@ -10,7 +10,7 @@ using AiNetLinter.Mcp.Tools.Common;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.FindSymbols;
 
-namespace AiNetLinter.Mcp.Tools.SymbolGraph;
+namespace AiNetLinter.Mcp.Tools.SymbolGraph.CallGraph;
 
 /// <summary>
 /// Zentraler Name-Matcher fuer Symbol-Suchen (unterstuetzt Substrings, Wildcards *, ?,

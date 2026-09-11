@@ -10,7 +10,7 @@ using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Core;
+namespace AiNetLinter.Core.TestCoverage;
 
 /// <summary>
 /// Gebatchte Haelfte des <see cref="TestCoverageScanner"/>: Projekte und Dokumente werden

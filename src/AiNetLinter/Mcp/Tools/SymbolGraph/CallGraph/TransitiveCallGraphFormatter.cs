@@ -15,7 +15,7 @@ using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
 
-namespace AiNetLinter.Mcp.Tools.SymbolGraph;
+namespace AiNetLinter.Mcp.Tools.SymbolGraph.CallGraph;
 
 internal static class TransitiveCallGraphFormatter
 {
@@ -179,7 +179,7 @@ internal static class TransitiveCallGraphFormatter
         };
 
         var result = CallGraphResponseBudget.CreateResult(
-            new CallGraphResponseBudget.CallGraphResponseRequest(
+            new CallGraphResponseRequest(
                 request.Graph,
                 request.Format,
                 CallTreeDirectionNames.For(request.Direction),
@@ -190,7 +190,7 @@ internal static class TransitiveCallGraphFormatter
                 request.IncludeGenerated,
                 request.MaxResponseBytes,
                 effectiveNavigation));
-        result = AddAssemblyNavigationCompatibility(result, effectiveNavigation);
+        result = AddAssemblyNavigationSummary(result, effectiveNavigation);
         var metadata = new List<string>();
         if (request.DepthWasClamped)
         {
@@ -215,7 +215,7 @@ internal static class TransitiveCallGraphFormatter
             text + "\n\n" + string.Join("\n", metadata));
     }
 
-    private static CallToolResult AddAssemblyNavigationCompatibility(
+    private static CallToolResult AddAssemblyNavigationSummary(
         CallToolResult result,
         AssemblyNavigationSummary navigation)
     {

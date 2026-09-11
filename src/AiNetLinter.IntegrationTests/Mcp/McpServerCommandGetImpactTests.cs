@@ -40,7 +40,7 @@ public sealed class McpServerCommandGetImpactTests
             "get_impact",
             new Dictionary<string, object?>
             {
-                ["targetPath"] = typeof(AiNetLinter.Mcp.McpCodeGraphServer).Assembly.Location,
+                ["targetPath"] = typeof(AiNetLinter.Mcp.Server.McpCodeGraphServer).Assembly.Location,
                 ["symbolIdentifier"] = "McpCodeGraphServer.GetCurrentSolution",
                 ["maxResults"] = 10,
             });
@@ -63,7 +63,7 @@ public sealed class McpServerCommandGetImpactTests
             "get_impact",
             new Dictionary<string, object?>
             {
-                ["targetPath"] = typeof(AiNetLinter.Mcp.McpCodeGraphServer).Assembly.Location,
+                ["targetPath"] = typeof(AiNetLinter.Mcp.Server.McpCodeGraphServer).Assembly.Location,
             });
 
         Assert.NotEqual(true, result.IsError);

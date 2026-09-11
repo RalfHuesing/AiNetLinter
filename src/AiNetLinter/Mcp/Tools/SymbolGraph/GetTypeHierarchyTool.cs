@@ -99,6 +99,10 @@ internal static class GetTypeHierarchyTool
     {
         if (result.StructuredContent is not { } structured
             || result.Content.OfType<TextContentBlock>().FirstOrDefault() is not { } textBlock) return result;
+        // Navigation is added to recoverable errors too.  They are already compact
+        // and do not have the hierarchy shape required by this projector.
+        if (!structured.TryGetProperty("baseTypes", out _)
+            || !structured.TryGetProperty("subtypes", out _)) return result;
         var payload = JsonSerializer.Deserialize<TypeHierarchyPayload>(structured.GetRawText(), McpJsonOptions.Default);
         if (payload is null) return result;
         var originalBody = GetTypeHierarchyFormatter.FormatText(payload);

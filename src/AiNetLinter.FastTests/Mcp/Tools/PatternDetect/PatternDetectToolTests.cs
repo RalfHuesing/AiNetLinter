@@ -54,7 +54,14 @@ public sealed class PatternDetectToolTests
             Assert.NotNull(pattern!["status"]);
             Assert.NotNull(pattern["cause"]);
             Assert.NotNull(pattern["confidence"]);
-            Assert.NotNull(pattern["next"]);
+            if (string.Equals((string?)pattern["status"], "empty", StringComparison.Ordinal))
+            {
+                Assert.Null(pattern["next"]);
+            }
+            else
+            {
+                Assert.NotNull(pattern["next"]);
+            }
         });
     }
 

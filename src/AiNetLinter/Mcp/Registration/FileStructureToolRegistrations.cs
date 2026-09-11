@@ -86,12 +86,13 @@ internal static class FileStructureToolRegistrations
         CancellationToken cancellationToken) =>
         AnalysisToolCall.ExecuteRouted(
             targetRoute!,
-            new AnalysisToolCallRequest(
-                new AnalysisTargetRequest(targetPath),
-                new AnalysisToolDispatch(
-                    ProjectCall: lease => GetFileTreeTool.ExecuteAsync(lease.RootPath, input, cancellationToken),
-                    AssemblySessionCall: lease => AssemblyGetFileTreeTool.ExecuteAsync(lease, input, cancellationToken)),
-                cancellationToken));
+                    new AnalysisToolCallRequest(
+                        new AnalysisTargetRequest(targetPath),
+                        new AnalysisToolDispatch(
+                            ProjectCall: lease => GetFileTreeTool.ExecuteAsync(lease.RootPath, input, cancellationToken),
+                            AssemblySessionCall: lease => AssemblyGetFileTreeTool.ExecuteAsync(lease, input, cancellationToken),
+                            ApplyAssemblyWireBudget: false),
+                        cancellationToken));
 
 
     private const string GetFileTreeDescription =

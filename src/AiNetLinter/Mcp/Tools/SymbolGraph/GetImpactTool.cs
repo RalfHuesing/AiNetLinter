@@ -34,7 +34,7 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 /// keine Git-Referenz oder einen leeren Aufruf. Bewusst duenner Dispatch ohne eigene Analyse-/
 /// Parsing-Logik.
 /// </summary>
-internal static class GetImpactTool
+internal static partial class GetImpactTool
 {
     private const string GitRefUnresolvableHint =
         "gitRef pruefen (z. B. via 'git log'/'git branch') oder ohne gitRef aufrufen fuer uncommittete Aenderungen.";
@@ -266,7 +266,7 @@ internal static class GetImpactTool
         {
             if (GitRepositoryLocator.FindRoot(targetPath) is null)
             {
-                return FormatGitImpact("not_git_repository", [], 0, 0);
+                return FormatGitImpact(new GitImpactFormatRequest("not_git_repository", [], 0, 0));
             }
 
             analysis = await DiffImpactAnalyzer.AnalyzeDiffAsync(
@@ -277,19 +277,19 @@ internal static class GetImpactTool
             // Recoverable statt Error: eine nicht aufloesende gitRef ist ein behebbarer
             // Nutzereingabe-Fehler (Tippfehler, falscher Branch-Name), kein Tool-Malfunction —
             // siehe IsErrorPolicy.md.
-            return FormatGitImpact("invalid_ref", [], 0, 0, ex.Message, GitRefUnresolvableHint);
+            return FormatGitImpact(new GitImpactFormatRequest("invalid_ref", [], 0, 0, ex.Message, GitRefUnresolvableHint));
         }
         var effectiveMax = input.MaxResults < 1 ? 1 : input.MaxResults;
 
         if (analysis is null)
         {
-            return FormatGitImpact("clean_worktree", [], 0, 0);
+            return FormatGitImpact(new GitImpactFormatRequest("clean_worktree", [], 0, 0));
         }
 
         var callSiteEntries = DiffImpactAnalyzer.ToCallSiteEntries(analysis.References);
         if (callSiteEntries.Count == 0)
         {
-            return FormatGitImpact("diff_without_callsite_impact", [], 0, 0);
+            return FormatGitImpact(new GitImpactFormatRequest("diff_without_callsite_impact", [], 0, 0));
         }
         var callSites = callSiteEntries.Select(DiffImpactAnalyzer.FormatCallSite).ToList();
         var finalText = McpTruncation.TruncateLines(callSites, callSiteEntries.Count, effectiveMax);
@@ -304,15 +304,9 @@ internal static class GetImpactTool
     private static string DetermineImpactStatus(int callSiteCount) =>
         callSiteCount == 0 ? "diff_without_callsite_impact" : "impact_found";
 
-    internal static CallToolResult FormatGitImpact(
-        string impactStatus,
-        IReadOnlyList<CallSiteEntry> callSites,
-        int totalCount,
-        int shownCount,
-        string? context = null,
-        string? hint = null)
+    internal static CallToolResult FormatGitImpact(GitImpactFormatRequest request)
     {
-        var text = impactStatus switch
+        var text = request.ImpactStatus switch
         {
             "not_git_repository" => "Impact: kein Git-Repository am targetPath.",
             "invalid_ref" => "Impact: gitRef konnte nicht aufgeloest werden.",
@@ -320,11 +314,11 @@ internal static class GetImpactTool
             "diff_without_callsite_impact" => "Impact: Diff ohne statische Aufrufstellen-Auswirkung.",
             _ => "Impact: statische Aufrufstellen gefunden.",
         };
-        var payload = new GitImpactPayload(impactStatus, callSites, totalCount, shownCount);
-        if (impactStatus != "invalid_ref") return McpToolResults.Text(text, payload);
+        var payload = new GitImpactPayload(request.ImpactStatus, request.CallSites, request.TotalCount, request.ShownCount);
+        if (request.ImpactStatus != "invalid_ref") return McpToolResults.Text(text, payload);
 
         var recoverable = McpToolResults.Recoverable(
-            LinterErrorCodes.AnalysisFailed, text, context: context, hint: hint);
+            LinterErrorCodes.AnalysisFailed, text, context: request.Context, hint: request.Hint);
         return new CallToolResult
         {
             IsError = recoverable.IsError,
@@ -340,181 +334,12 @@ internal static class GetImpactTool
     /// Zaehler-Kanal. Die Antwort ist immer ein strukturiertes Objekt — auch "kein Repo / leerer
     /// Diff" liefert eine leere, aber vertragsgueltige Struktur samt Sufficiency-Hinweis.
     /// </summary>
-    private static async Task<CallToolResult> ExecuteChangeContextBranchAsync(
-        ISolutionStateProvider state,
-        Solution solution,
-        GetImpactInput input,
-        CancellationToken ct,
-        DiffImpactCounters? counters)
-    {
-        var (maxChangedSymbols, maxTestsPerSymbol) =
-            ChangeContextContract.NormalizeCaps(input.MaxChangedSymbols, input.MaxTestsPerSymbol);
-        DiffImpactAnalysis? analysis;
-        try
-        {
-            if (GitRepositoryLocator.FindRoot(Path.GetDirectoryName(solution.FilePath) ?? "") is null)
-            {
-                return FormatChangeContextEmpty("not_git_repository");
-            }
-            analysis = await DiffImpactAnalyzer.RunAnalysisAsync(new DiffAnalysisRequest(
-                solution,
-                Path.GetDirectoryName(solution.FilePath) ?? "",
-                input.GitRef,
-                Verbose: false,
-                DiffSymbolScope.ChangeContext,
-                Counters: counters,
-                ChangedSymbolCap: maxChangedSymbols));
-        }
-        catch (GitDiffFailedException ex)
-        {
-            // Dasselbe Recoverable-Muster wie der callers-Zweig: nicht aufloesende gitRef ist
-            // behebbarer Nutzereingabe-Fehler, kein Tool-Malfunction (siehe IsErrorPolicy.md).
-            return FormatChangeContextEmpty("invalid_ref", ex.Message, GitRefUnresolvableHint);
-        }
-
-        if (analysis is null)
-        {
-            return FormatChangeContextEmpty("clean_worktree");
-        }
-
-        var batch = await TestCoverageScanner.FindTestsForSymbolsCoreAsync(
-            analysis.ShownSymbolHandles ?? [], solution, counters, ct);
-        var violationsStage = await CollectDiffViolationsAsync(state, solution, analysis, counters, ct);
-        if (violationsStage.IsMalfunction)
-        {
-            return McpToolResults.Error(
-                LinterErrorCodes.AnalysisFailed,
-                "Unerwarteter Fehler bei der Violations-Analyse.",
-                context: violationsStage.Context,
-                hint: "Einmal erneut versuchen — bleibt der Fehler bestehen, LinterEngine-Log pruefen.");
-        }
-
-        var payload = ChangeContextResponseMapper.BuildPayload(new ChangeContextResponseInput(
-            analysis, batch, violationsStage.Violations, maxTestsPerSymbol));
-        return McpToolResults.Text(BuildChangeContextText(payload, input.MaxResults), payload);
-    }
-
-    internal static CallToolResult FormatChangeContextEmpty(string impactStatus, string? context = null, string? hint = null)
-    {
-        var payload = ChangeContextResponseMapper.BuildEmptyPayload(impactStatus);
-        var text = impactStatus switch
-        {
-            "not_git_repository" => "Impact: kein Git-Repository am targetPath.",
-            "invalid_ref" => "Impact: gitRef konnte nicht aufgeloest werden.",
-            _ => "Impact: keine ungecommitten Aenderungen.",
-        };
-        if (impactStatus != "invalid_ref") return McpToolResults.Text(text, payload);
-        var recoverable = McpToolResults.Recoverable(LinterErrorCodes.AnalysisFailed, text, context, hint);
-        return new CallToolResult
-        {
-            IsError = recoverable.IsError,
-            Content = recoverable.Content,
-            StructuredContent = System.Text.Json.JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
-        };
-    }
-
-    /// <summary>Eine solutionweite Violations-Stufe pro Aufruf — Config/Console beschafft der
-    /// Tool-Zweig wie <c>get_violations</c> (atomarer Config-Schnappschuss, Server-Konsolen-Kanal).</summary>
-    private static Task<DiffViolationScanResult> CollectDiffViolationsAsync(
-        ISolutionStateProvider state,
-        Solution solution,
-        DiffImpactAnalysis analysis,
-        DiffImpactCounters? counters,
-        CancellationToken ct)
-    {
-        var configSnapshot = state.GetConfigSnapshot();
-        return DiffViolationScanner.CollectAsync(new DiffViolationScanRequest(
-            solution,
-            state.GetConfigSnapshot().Config!,
-            state.Console,
-            analysis.RepositoryRoot,
-            analysis.ChangedFiles,
-            analysis.ChangedSymbols,
-            counters,
-            ct));
-    }
-
-    private static string BuildChangeContextText(ChangeContextPayload payload, int maxResults)
-    {
-        var effectiveMax = Math.Max(maxResults, 1);
-        var completeness = payload.Completeness;
-        var lines = new List<string>
-        {
-            $"Change-Context: {payload.ChangedFiles.Count} geaenderte Dateien, " +
-            $"{completeness.ChangedSymbolsShown}/{completeness.ChangedSymbolsTotal} geaenderte Symbole, " +
-            $"{payload.CallSites.Count} Aufrufstellen, {payload.TestAssociations.Count} Test-Treffer, " +
-            $"{payload.Violations.Count} Violations."
-        };
-        if (payload.ChangedSymbols.Count > 0)
-        {
-            lines.Add(string.Empty);
-            lines.Add("Geaenderte Symbole:");
-            lines.AddRange(payload.ChangedSymbols.Take(effectiveMax).Select(FormatSymbolLine));
-        }
-
-        if (payload.Violations.Count > 0)
-        {
-            lines.Add(string.Empty);
-            lines.Add("Violations:");
-            lines.AddRange(payload.Violations.Take(effectiveMax).Select(FormatViolationLine));
-        }
-
-        lines.AddRange(payload.RecommendedTestCommands.Select(command => $"Empfohlen: {command}"));
-        var text = string.Join("\n", lines);
-        return IsComplete(payload, effectiveMax)
-            ? text
-            : $"{text}\n{BuildTruncationMeta(completeness, effectiveMax, payload.ChangedSymbols.Count)}";
-    }
-
-    private static string FormatSymbolLine(ChangedSymbolPayload symbol) =>
-        $"- {symbol.DisplayName} ({symbol.Kind}, {symbol.Accessibility}) {symbol.FilePath}:{symbol.StartLine}-{symbol.EndLine}";
-
-    private static string FormatViolationLine(ViolationPayload violation) =>
-        $"- {violation.FilePath}:{violation.LineNumber} {violation.RuleName} ({violation.Severity})";
-
-    private static bool IsComplete(ChangeContextPayload payload, int effectiveMax) =>
-        !payload.Completeness.SymbolsTruncated &&
-        !payload.Completeness.CallSitesTruncated &&
-        !payload.Completeness.TestsTruncated &&
-        payload.ChangedSymbols.Count <= effectiveMax;
-
-    private static string BuildTruncationMeta(CompletenessPayload completeness, int effectiveMax, int symbolCount)
-    {
-        var parts = new List<string>(3);
-        if (completeness.SymbolsTruncated || symbolCount > effectiveMax)
-        {
-            parts.Add($"Symbole {Math.Min(symbolCount, effectiveMax)} von {completeness.ChangedSymbolsShown} gezeigt");
-        }
-
-        if (completeness.CallSitesTruncated)
-        {
-            parts.Add("Aufrufstellen trunkiert");
-        }
-
-        if (completeness.TestsTruncated)
-        {
-            parts.Add("Testtreffer gekappt");
-        }
-
-        return $"[Teilergebnis: {string.Join(", ", parts)} — maxChangedSymbols/maxTestsPerSymbol/maxResults erhoehen]";
-    }
 }
 
-/// <summary>
-/// Parameter-Record fuer <see cref="GetImpactTool.ExecuteAsync"/>. Kapselt die
-/// Konfigurations-Eingaenge in einem Record (additiv gewachsen um die drei change-context-Optionen
-/// mit Defaults), damit <c>MaxMethodParameterCount: 4</c> fuer Methoden eingehalten wird. Solution
-/// und Zaehler werden separat uebergeben, weil der Linter keine internal nested types erlaubt.
-/// </summary>
-internal sealed record GetImpactInput(
-    string? GitRef,
-    string? SymbolIdentifier,
-    int MaxResults,
-    int Depth,
-    string? DetailLevel = null,
-    int MaxChangedSymbols = ChangeContextContract.DefaultMaxChangedSymbols,
-    int MaxTestsPerSymbol = ChangeContextContract.DefaultMaxTestsPerSymbol)
-{
-    public string? EffectiveSymbolIdentifier =>
-        string.IsNullOrWhiteSpace(SymbolIdentifier) ? null : SymbolIdentifier;
-}
+internal sealed record GitImpactFormatRequest(
+    string ImpactStatus,
+    IReadOnlyList<CallSiteEntry> CallSites,
+    int TotalCount,
+    int ShownCount,
+    string? Context = null,
+    string? Hint = null);

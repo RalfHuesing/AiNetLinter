@@ -7,7 +7,7 @@ using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Tools.SymbolGraph;
+namespace AiNetLinter.Mcp.Tools.SymbolGraph.CallGraph;
 
 /// <summary>
 /// Ein Aufrufer-Knoten während des Baum-Aufbaus (mutable, wird nach Abschluss in einen

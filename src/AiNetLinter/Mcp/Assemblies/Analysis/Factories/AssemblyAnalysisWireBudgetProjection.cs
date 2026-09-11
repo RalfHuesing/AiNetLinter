@@ -158,6 +158,17 @@ internal static class AssemblyAnalysisWireBudgetProjection
             {
                 minimalPayload["analysis"] = analysis.DeepClone();
             }
+
+            if (original["body"] is not null)
+            {
+                minimalPayload["body"] = new JsonObject
+                {
+                    ["results"] = new JsonArray
+                    {
+                        new JsonObject { ["body"] = CreateBodyBudgetPlaceholder() },
+                    },
+                };
+            }
         }
 
         var minimal = ReplaceStructured(
@@ -210,6 +221,14 @@ internal static class AssemblyAnalysisWireBudgetProjection
 
         return candidate;
     }
+
+    private static JsonObject CreateBodyBudgetPlaceholder() => new()
+    {
+        ["status"] = "truncated",
+        ["truncated"] = true,
+        ["truncatedBy"] = new JsonArray("responseBudget"),
+        ["detailHint"] = "Body wegen des Antwortbudgets gekürzt; maxResponseBytes erhöhen oder den Body gezielt mit kleinerem Zeilenbereich anfordern.",
+    };
 
     private static JsonElement TrimStructured(JsonElement structured, int budget, int cursorOffset)
     {
@@ -300,10 +319,7 @@ internal static class AssemblyAnalysisWireBudgetProjection
                 obj[property.Key] = McpUtf8BudgetTrimmer.TrimWithoutEllipsis(text, 256);
                 if (property.Key == "body")
                 {
-                    obj["isTruncated"] = true;
-                    obj["truncated"] = true;
-                    AssemblyAnalysisResponseEnvelope.AddReason(obj, "responseBudget");
-                    obj["detailHint"] = "Body wegen des Antwortbudgets gekürzt; maxResponseBytes erhöhen oder den Body gezielt mit kleinerem Zeilenbereich anfordern.";
+                    obj[property.Key] = CreateBodyBudgetPlaceholder();
                 }
                 return true;
             }

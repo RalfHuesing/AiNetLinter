@@ -3,10 +3,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp.Wire;
+using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.MetricsLookup;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
@@ -19,7 +21,7 @@ namespace AiNetLinter.Mcp.Tools.FeatureContext;
 /// </summary>
 internal static class FeatureContextResponseBudget
 {
-    internal const int DefaultMaxResponseBytes = 32 * 1024;
+    internal const int DefaultMaxResponseBytes = 64 * 1024;
 
     private const string BudgetReason = "responseBudget";
     private const int MinimumCallerCount = 1;
@@ -61,10 +63,8 @@ internal static class FeatureContextResponseBudget
     internal static CallToolResult ApplyFinal(CallToolResult result, int maxResponseBytes)
     {
         if (result.StructuredContent is not { ValueKind: JsonValueKind.Object } structured
-            || result.Content.OfType<TextContentBlock>().FirstOrDefault() is not { } textBlock)
-        {
-            return result;
-        }
+            || !structured.TryGetProperty("declaration", out _)
+            || result.Content.OfType<TextContentBlock>().FirstOrDefault() is not { } textBlock) return result;
 
         FeatureContextPayload? payload;
         try
@@ -84,28 +84,32 @@ internal static class FeatureContextResponseBudget
         var navigation = structuredNode?["navigation"]?.DeepClone();
         var navigationText = ExtractNavigationText(textBlock.Text);
         var candidate = Prepare(payload);
-        if (Fits(candidate, budget, navigation, navigationText)) return result;
+        if (FitsFinal(candidate, budget, navigation, navigationText))
+        {
+            return WithWireBudget(result, budget, candidate);
+        }
 
         var minimum = ReduceToMinimum(candidate);
         var truncated = MarkTruncated(minimum, candidate);
-        if (!Fits(truncated, budget, navigation, navigationText))
+        if (!FitsFinal(truncated, budget, navigation, navigationText))
         {
-            return BudgetTooSmall(budget, MinimumBytes(truncated, navigation, navigationText));
+            return BudgetTooSmall(budget, MinimumBytesFinal(truncated, navigation, navigationText));
         }
 
         var current = candidate;
-        while (!Fits(MarkTruncated(current, candidate), budget, navigation, navigationText))
+        while (!FitsFinal(MarkTruncated(current, candidate), budget, navigation, navigationText))
         {
             var next = RemoveLowestPriorityUnit(current, candidate);
             if (ReferenceEquals(next, current))
             {
-                return BudgetTooSmall(budget, MinimumBytes(truncated, navigation, navigationText));
+                return BudgetTooSmall(budget, MinimumBytesFinal(truncated, navigation, navigationText));
             }
 
             current = next;
         }
 
-        return CreateResult(MarkTruncated(current, candidate), navigation, navigationText);
+        var projected = MarkTruncated(current, candidate);
+        return WithWireBudget(CreateResult(projected, navigation, navigationText), budget, projected);
     }
 
     private static int NormalizeBudget(int maxResponseBytes) =>
@@ -131,7 +135,7 @@ internal static class FeatureContextResponseBudget
             : payload.Tests with
             {
                 TestFiles = payload.Tests.TestFiles
-                    .OrderBy(file => TestEvidencePriority(file.EvidenceKind))
+                    .OrderBy(file => TestEvidencePriorities.For(file.EvidenceKind))
                     .ThenBy(file => file.FilePath, StringComparer.OrdinalIgnoreCase)
                     .ThenBy(file => file.TestClassName, StringComparer.Ordinal)
                     .ToList(),
@@ -203,69 +207,39 @@ internal static class FeatureContextResponseBudget
         FeatureContextPayload current,
         FeatureContextPayload original)
     {
-        if (current.Callers is { CallSites.Count: > MinimumCallerCount } callers
-            && original.Callers is { CallSites.Count: > MinimumCallerCount })
-        {
-            return current with { Callers = callers with { CallSites = callers.CallSites.Take(callers.CallSites.Count - 1).ToList() } };
-        }
-
-        if (current.Tests is { TestFiles.Count: > MinimumTestCount } tests
-            && original.Tests is { TestFiles.Count: > MinimumTestCount })
-        {
-            var files = tests.TestFiles.Take(tests.TestFiles.Count - 1).ToList();
-            return current with
-            {
-                Tests = tests with
-                {
-                    TestFiles = files,
-                    DisplayedTestMethods = files.Sum(file => file.TestMethods.Count),
-                },
-            };
-        }
-
-        if (current.Violations is { Violations.Count: > MinimumViolationCount } violations
-            && original.Violations is { Violations.Count: > MinimumViolationCount })
-        {
-            return current with { Violations = violations with { Violations = violations.Violations.Take(violations.Violations.Count - 1).ToList() } };
-        }
-
-        if (current.Metrics is { ThresholdChecks.Count: > MinimumMetricCount } metrics
-            && original.Metrics is { ThresholdChecks.Count: > MinimumMetricCount })
-        {
-            return current with { Metrics = metrics with { ThresholdChecks = metrics.ThresholdChecks.Take(metrics.ThresholdChecks.Count - 1).ToList() } };
-        }
-
-        if (current.Declaration.Members is { Count: > 0 } members)
-        {
-            return current with { Declaration = current.Declaration with { Members = members.Take(members.Count - 1).ToList() } };
-        }
-
-        if (current.Declaration.BaseTypes is { Count: > 0 } baseTypes)
-        {
-            return current with { Declaration = current.Declaration with { BaseTypes = baseTypes.Take(baseTypes.Count - 1).ToList() } };
-        }
-
-        if (current.Declaration.Parameters.Count > 0)
-        {
-            return current with { Declaration = current.Declaration with { Parameters = current.Declaration.Parameters.Take(current.Declaration.Parameters.Count - 1).ToList() } };
-        }
-
-        if (current.Metrics?.TypeMetrics is { TopDependencies.Count: > 0 } typeMetrics)
-        {
-            return current with
-            {
-                Metrics = current.Metrics with
-                {
-                    TypeMetrics = typeMetrics with
-                    {
-                        TopDependencies = typeMetrics.TopDependencies.Take(typeMetrics.TopDependencies.Count - 1).ToList(),
-                    },
-                },
-            };
-        }
-
-        return current;
+        return RemoveCaller(current, original)
+            ?? RemoveTestFile(current, original)
+            ?? RemoveViolation(current, original)
+            ?? RemoveMetric(current, original)
+            ?? RemoveDeclarationDetail(current)
+            ?? RemoveTypeDependency(current)
+            ?? current;
     }
+
+    private static FeatureContextPayload? RemoveCaller(FeatureContextPayload current, FeatureContextPayload original) =>
+        current.Callers is { CallSites.Count: > MinimumCallerCount } callers && original.Callers is { CallSites.Count: > MinimumCallerCount }
+            ? current with { Callers = callers with { CallSites = callers.CallSites.Take(callers.CallSites.Count - 1).ToList() } } : null;
+    private static FeatureContextPayload? RemoveTestFile(FeatureContextPayload current, FeatureContextPayload original)
+    {
+        if (current.Tests is not { TestFiles.Count: > MinimumTestCount } tests || original.Tests is not { TestFiles.Count: > MinimumTestCount }) return null;
+        var files = tests.TestFiles.Take(tests.TestFiles.Count - 1).ToList();
+        return current with { Tests = tests with { TestFiles = files, DisplayedTestMethods = files.Sum(file => file.TestMethods.Count) } };
+    }
+    private static FeatureContextPayload? RemoveViolation(FeatureContextPayload current, FeatureContextPayload original) =>
+        current.Violations is { Violations.Count: > MinimumViolationCount } violations && original.Violations is { Violations.Count: > MinimumViolationCount }
+            ? current with { Violations = violations with { Violations = violations.Violations.Take(violations.Violations.Count - 1).ToList() } } : null;
+    private static FeatureContextPayload? RemoveMetric(FeatureContextPayload current, FeatureContextPayload original) =>
+        current.Metrics is { ThresholdChecks.Count: > MinimumMetricCount } metrics && original.Metrics is { ThresholdChecks.Count: > MinimumMetricCount }
+            ? current with { Metrics = metrics with { ThresholdChecks = metrics.ThresholdChecks.Take(metrics.ThresholdChecks.Count - 1).ToList() } } : null;
+    private static FeatureContextPayload? RemoveDeclarationDetail(FeatureContextPayload current)
+    {
+        if (current.Declaration.Members is { Count: > 0 } members) return current with { Declaration = current.Declaration with { Members = members.Take(members.Count - 1).ToList() } };
+        if (current.Declaration.BaseTypes is { Count: > 0 } baseTypes) return current with { Declaration = current.Declaration with { BaseTypes = baseTypes.Take(baseTypes.Count - 1).ToList() } };
+        return current.Declaration.Parameters.Count > 0 ? current with { Declaration = current.Declaration with { Parameters = current.Declaration.Parameters.Take(current.Declaration.Parameters.Count - 1).ToList() } } : null;
+    }
+    private static FeatureContextPayload? RemoveTypeDependency(FeatureContextPayload current) =>
+        current.Metrics?.TypeMetrics is { TopDependencies.Count: > 0 } typeMetrics
+            ? current with { Metrics = current.Metrics with { TypeMetrics = typeMetrics with { TopDependencies = typeMetrics.TopDependencies.Take(typeMetrics.TopDependencies.Count - 1).ToList() } } } : null;
 
     private static FeatureContextPayload MarkTruncated(
         FeatureContextPayload candidate,
@@ -338,6 +312,19 @@ internal static class FeatureContextResponseBudget
         string? navigationText) =>
         McpResponseSize.From(CreateResult(payload, navigation, navigationText)).TotalBytes;
 
+    private static bool FitsFinal(
+        FeatureContextPayload payload,
+        int budget,
+        JsonNode? navigation,
+        string? navigationText) =>
+        McpResponseSize.From(WithWireBudget(CreateResult(payload, navigation, navigationText), budget, payload)).TotalBytes <= budget;
+
+    private static int MinimumBytesFinal(
+        FeatureContextPayload payload,
+        JsonNode? navigation,
+        string? navigationText) =>
+        McpResponseSize.From(WithWireBudget(CreateResult(payload, navigation, navigationText), 0, payload)).TotalBytes;
+
     private static CallToolResult CreateResult(
         FeatureContextPayload payload,
         JsonNode? navigation,
@@ -364,6 +351,48 @@ internal static class FeatureContextResponseBudget
                 Hint: $"maxResponseBytes auf mindestens {minimumBytes} setzen; die Antwort wird nur an vollständigen Feature-/Caller-/Test-/Violation-Einheiten gekürzt.",
                 FieldPath: "$.maxResponseBytes"));
 
+    private static CallToolResult WithWireBudget(
+        CallToolResult result,
+        int budget,
+        FeatureContextPayload payload)
+    {
+        var node = JsonNode.Parse(result.StructuredContent!.Value.GetRawText())!.AsObject();
+        var textBytes = Encoding.UTF8.GetByteCount(result.Content.OfType<TextContentBlock>().First().Text);
+        var truncated = HasResponseBudgetTruncation(payload);
+        for (var attempt = 0; attempt < 8; attempt++)
+        {
+            node["wireBudget"] = new JsonObject
+            {
+                ["limitBytes"] = budget,
+                ["textBytes"] = textBytes,
+                ["structuredBytes"] = 0,
+                ["totalBytes"] = 0,
+                ["truncated"] = truncated,
+            };
+            var structuredBytes = Encoding.UTF8.GetByteCount(node.ToJsonString(McpJsonOptions.Default));
+            var wireBudget = node["wireBudget"]!.AsObject();
+            wireBudget["structuredBytes"] = structuredBytes;
+            wireBudget["totalBytes"] = textBytes + structuredBytes;
+            var projected = JsonSerializer.SerializeToElement(node, McpJsonOptions.Default);
+            var candidate = ReplaceStructuredContent(result, projected);
+            if (McpResponseSize.From(candidate).StructuredBytes == structuredBytes) return candidate;
+        }
+
+        return ReplaceStructuredContent(result, JsonSerializer.SerializeToElement(node, McpJsonOptions.Default));
+    }
+
+    private static CallToolResult ReplaceStructuredContent(CallToolResult result, JsonElement structuredContent) => new()
+    {
+        IsError = result.IsError,
+        Content = result.Content,
+        StructuredContent = structuredContent,
+    };
+
+    private static bool HasResponseBudgetTruncation(FeatureContextPayload payload) =>
+        payload.Callers?.TruncatedBy?.Contains(BudgetReason, StringComparer.Ordinal) == true
+        || payload.Tests?.TruncatedBy?.Contains(BudgetReason, StringComparer.Ordinal) == true
+        || payload.Violations?.TruncatedBy?.Contains(BudgetReason, StringComparer.Ordinal) == true;
+
     private static string? ExtractNavigationText(string text)
     {
         var index = text.IndexOf("## Navigation", StringComparison.Ordinal);
@@ -379,14 +408,4 @@ internal static class FeatureContextResponseBudget
         TestDetector.IsTestFile(call.FilePath)
         || call.ProjectName.Contains("test", StringComparison.OrdinalIgnoreCase);
 
-    private static int TestEvidencePriority(string evidenceKind) => evidenceKind switch
-    {
-        "directInvocation" => 0,
-        "explicitMemberCoverage" => 1,
-        "memberNameMatch" => 2,
-        "directTypeUse" => 3,
-        "explicitTypeCoverage" => 4,
-        "typeNamingConvention" => 5,
-        _ => 6,
-    };
 }

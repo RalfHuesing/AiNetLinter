@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using AiNetLinter.Core;
 using AiNetLinter.Mcp.Wire;
+using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
@@ -97,7 +98,7 @@ internal static class TestContextResponseBudget
     private static TestContextPayload Prepare(TestContextPayload payload) => payload with
     {
         TestFiles = payload.TestFiles
-            .OrderBy(file => EvidencePriority(file.EvidenceKind))
+            .OrderBy(file => TestEvidencePriorities.For(file.EvidenceKind))
             .ThenBy(file => file.FilePath, StringComparer.OrdinalIgnoreCase)
             .ThenBy(file => file.TestClassName, StringComparer.Ordinal)
             .ToList(),
@@ -187,17 +188,6 @@ internal static class TestContextResponseBudget
         file.Confidence,
         file.TotalTestCount,
         file.TestClassNames!);
-
-    private static int EvidencePriority(string evidenceKind) => evidenceKind switch
-    {
-        "directInvocation" => 0,
-        "explicitMemberCoverage" => 1,
-        "memberNameMatch" => 2,
-        "directTypeUse" => 3,
-        "explicitTypeCoverage" => 4,
-        "typeNamingConvention" => 5,
-        _ => 6,
-    };
 
     private static TestEvidenceKind ToEvidenceKind(string evidenceKind) => evidenceKind switch
     {

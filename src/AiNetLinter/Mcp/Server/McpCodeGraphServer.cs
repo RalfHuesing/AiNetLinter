@@ -11,7 +11,7 @@ using AiNetLinter.Mcp.Assemblies.Analysis.References;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp;
+namespace AiNetLinter.Mcp.Server;
 
 /// <summary>
 /// Haelt die geladene Solution ueber die Laufzeit des MCP-Servers resident und prueft lazy

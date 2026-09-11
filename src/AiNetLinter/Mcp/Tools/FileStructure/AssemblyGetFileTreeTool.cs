@@ -27,7 +27,13 @@ internal static class AssemblyGetFileTreeTool
                 hint: "Source-Zuordnung oder dekompilierte Projektpfade bereitstellen; alternativ get_class_structure verwenden."));
         }
 
-        return GetFileTreeTool.ExecutePhysicalAsync(root, input, cancellationToken);
+        // The assembly route has its own configured wire budget. Apply it while the file-tree
+        // scanner still owns the collection so it can retain a usable prefix instead of letting
+        // the generic assembly envelope projection discard every file entry.
+        var effectiveInput = input.MaxResponseBytes > 0
+            ? input
+            : input with { MaxResponseBytes = lease.Context.ResponseBudgetBytes };
+        return GetFileTreeTool.ExecutePhysicalAsync(root, effectiveInput, cancellationToken);
     }
 
     internal static string? ResolveRoot(AssemblyAnalysisLease lease)

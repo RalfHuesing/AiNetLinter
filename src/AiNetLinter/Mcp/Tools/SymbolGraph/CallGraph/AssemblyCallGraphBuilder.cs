@@ -9,7 +9,7 @@ using AiNetLinter.Mcp.Tools.CallTree;
 using AiNetLinter.Mcp.Scope;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Tools.SymbolGraph;
+namespace AiNetLinter.Mcp.Tools.SymbolGraph.CallGraph;
 
 internal static class AssemblyCallGraphBuilder
 {
@@ -83,6 +83,16 @@ internal static class AssemblyCallGraphBuilder
                 []);
         }
 
+        var nodeIndex = CreateNodeIndex(graphs);
+        var nodes = nodeIndex.Nodes;
+        var nodeIds = nodeIndex.NodeIds;
+        var root = nodeIds[(graphs[0].Source.CanonicalPath, graphs[0].Payload.RootNodeId)];
+        var mergedEdges = MergeEdges(graphs, nodeIds);
+        return ApplyGlobalHardCap(CreateMergedPayload(graphs, root, nodes, mergedEdges));
+    }
+
+    private static MergedNodeIndex CreateNodeIndex(IReadOnlyList<AssemblySourceGraph> graphs)
+    {
         var nodes = new List<CallGraphNode>();
         var nodeIds = new Dictionary<(string Source, string LocalId), string>();
         foreach (var graph in graphs)
@@ -91,39 +101,29 @@ internal static class AssemblyCallGraphBuilder
             {
                 var globalId = $"n{nodes.Count + 1}";
                 nodeIds[(graph.Source.CanonicalPath, node.NodeId)] = globalId;
-                nodes.Add(new CallGraphNode(
-                    globalId,
-                    node.SymbolId,
-                    node.Name,
-                    node.DisplayLine,
-                    node.Kind));
+                nodes.Add(new CallGraphNode(globalId, node.SymbolId, node.Name, node.DisplayLine, node.Kind));
             }
         }
 
-        var root = nodeIds[(graphs[0].Source.CanonicalPath, graphs[0].Payload.RootNodeId)];
+        return new(nodes, nodeIds);
+    }
+
+    private static List<CallGraphEdge> MergeEdges(
+        IReadOnlyList<AssemblySourceGraph> graphs,
+        IReadOnlyDictionary<(string Source, string LocalId), string> nodeIds)
+    {
         var edges = new Dictionary<(string From, string To, string? Dispatch), List<CallGraphCallSite>>();
         foreach (var graph in graphs)
+        foreach (var edge in graph.Payload.Edges)
         {
-            foreach (var edge in graph.Payload.Edges)
-            {
-                if (!nodeIds.TryGetValue((graph.Source.CanonicalPath, edge.FromNodeId), out var from)
-                    || !nodeIds.TryGetValue((graph.Source.CanonicalPath, edge.ToNodeId), out var to))
-                {
-                    continue;
-                }
-
-                var key = (from, to, edge.DispatchKind);
-                if (!edges.TryGetValue(key, out var callSites))
-                {
-                    callSites = [];
-                    edges[key] = callSites;
-                }
-
-                callSites.AddRange(edge.CallSites);
-            }
+            if (!nodeIds.TryGetValue((graph.Source.CanonicalPath, edge.FromNodeId), out var from)
+                || !nodeIds.TryGetValue((graph.Source.CanonicalPath, edge.ToNodeId), out var to)) continue;
+            var key = (from, to, edge.DispatchKind);
+            if (!edges.TryGetValue(key, out var callSites)) edges[key] = callSites = [];
+            callSites.AddRange(edge.CallSites);
         }
 
-        var mergedEdges = edges
+        return edges
             .OrderBy(pair => pair.Key.From, StringComparer.Ordinal)
             .ThenBy(pair => pair.Key.To, StringComparer.Ordinal)
             .ThenBy(pair => pair.Key.Dispatch, StringComparer.Ordinal)
@@ -137,10 +137,16 @@ internal static class AssemblyCallGraphBuilder
                     .ToList(),
                 pair.Key.Dispatch))
             .ToList();
-        return ApplyGlobalHardCap(new(
+    }
+
+    private static CallGraphPayload CreateMergedPayload(
+        IReadOnlyList<AssemblySourceGraph> graphs,
+        string root,
+        IReadOnlyList<CallGraphNode> nodes,
+        IReadOnlyList<CallGraphEdge> edges) => new(
             root,
             nodes,
-            mergedEdges,
+            edges,
             graphs.SelectMany(item => item.Payload.MethodHints ?? [])
                 .GroupBy(hint => hint.SymbolId, StringComparer.Ordinal)
                 .Select(group => group.First())
@@ -151,8 +157,7 @@ internal static class AssemblyCallGraphBuilder
             graphs.Any(item => item.Payload.TopNTruncated),
             graphs.Any(item => item.Payload.ScopeFiltered),
             graphs.Sum(item => item.Payload.HiddenEdgeCount),
-            graphs.Any(item => item.Payload.HardCapTruncated)));
-    }
+            graphs.Any(item => item.Payload.HardCapTruncated));
 
     /// <summary>Begrenzt den bereits zusammengeführten Assembly-Graphen auf den globalen Hardcap.</summary>
     internal static CallGraphPayload ApplyGlobalHardCap(CallGraphPayload graph)
@@ -203,4 +208,8 @@ internal static class AssemblyCallGraphBuilder
     private sealed record AssemblySourceGraph(
         AssemblyNavigationSource Source,
         CallGraphPayload Payload);
+
+    private sealed record MergedNodeIndex(
+        List<CallGraphNode> Nodes,
+        Dictionary<(string Source, string LocalId), string> NodeIds);
 }

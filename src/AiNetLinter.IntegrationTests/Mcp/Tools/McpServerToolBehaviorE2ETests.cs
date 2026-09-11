@@ -176,7 +176,7 @@ public sealed partial class McpServerToolBehaviorE2ETests
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         var totalBytes = Encoding.UTF8.GetByteCount(text) + Encoding.UTF8.GetByteCount(payload.GetRawText());
         Assert.True(totalBytes <= budget, $"Finale kombinierte Wire-Nutzlast überschreitet maxResponseBytes: {totalBytes} > {budget}.");
-        Assert.Contains("## Navigation", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("## Navigation", text, StringComparison.Ordinal);
         Assert.Equal("source", payload.GetProperty("navigation").GetProperty("target").GetProperty("origin").GetString());
     }
 
@@ -194,16 +194,13 @@ public sealed partial class McpServerToolBehaviorE2ETests
         Assert.False(baseline.IsError == true, baseline.ToString());
         var baselinePayload = baseline.StructuredContent!.Value;
         var baselineText = Assert.IsType<TextContentBlock>(Assert.Single(baseline.Content)).Text;
-        var navigationMarker = baselineText.IndexOf("## Navigation", StringComparison.Ordinal);
-        Assert.True(navigationMarker > 0, baselineText);
         var sourcePayload = JsonNode.Parse(baselinePayload.GetRawText())!.AsObject();
         sourcePayload.Remove("navigation");
-        var sourceText = baselineText[..navigationMarker].TrimEnd();
-        var sourceBytes = Encoding.UTF8.GetByteCount(sourceText)
+        var sourceBytes = Encoding.UTF8.GetByteCount(baselineText)
             + Encoding.UTF8.GetByteCount(sourcePayload.ToJsonString());
         var unboundedBytes = Encoding.UTF8.GetByteCount(baselineText)
             + Encoding.UTF8.GetByteCount(baselinePayload.GetRawText());
-        var budget = Math.Max(2_048, sourceBytes);
+        var budget = Math.Max(512, (sourceBytes + unboundedBytes) / 2);
         Assert.True(sourceBytes <= budget, $"Source-Nutzlast muss vor Navigation ins Budget passen: {sourceBytes} > {budget}.");
         Assert.True(unboundedBytes > budget, $"Navigation muss den finalen Trim auslösen: {unboundedBytes} <= {budget}.");
 
@@ -226,8 +223,8 @@ public sealed partial class McpServerToolBehaviorE2ETests
         Assert.Contains("maxResponseBytes", payload.GetProperty("truncatedBy").ToString(), StringComparison.Ordinal);
         Assert.Equal("truncated", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal("request_detail", next.GetProperty("kind").GetString());
-        Assert.Contains("completeness=`truncated`", text, StringComparison.Ordinal);
-        Assert.Contains("- next: `request_detail`", text, StringComparison.Ordinal);
+        Assert.Contains("Status: operation=ok, completeness=truncated", text, StringComparison.Ordinal);
+        Assert.Contains("Aktion:", text, StringComparison.Ordinal);
         Assert.True(
             Encoding.UTF8.GetByteCount(text) + Encoding.UTF8.GetByteCount(payload.GetRawText()) <= budget,
             $"Finale Source-Wire-Nutzlast überschreitet maxResponseBytes: {Encoding.UTF8.GetByteCount(text) + Encoding.UTF8.GetByteCount(payload.GetRawText())} > {budget}.");

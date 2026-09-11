@@ -110,7 +110,7 @@ public sealed class McpServerCommandTests
             definition,
             LinterConsole.Instance,
             static _ => Task.FromResult<SourceFileCatalog?>(null));
-        using var server = Assert.IsType<AiNetLinter.Mcp.McpCodeGraphServer>(creation.Server);
+        using var server = Assert.IsType<AiNetLinter.Mcp.Server.McpCodeGraphServer>(creation.Server);
         await server.LoadTask!.WaitAsync(TimeSpan.FromSeconds(30));
 
         Assert.Null(server.ResolvedConfigPath);
@@ -130,7 +130,7 @@ public sealed class McpServerCommandTests
             definition,
             LinterConsole.Instance,
             static _ => Task.FromResult<SourceFileCatalog?>(null));
-        using var server = Assert.IsType<AiNetLinter.Mcp.McpCodeGraphServer>(creation.Server);
+        using var server = Assert.IsType<AiNetLinter.Mcp.Server.McpCodeGraphServer>(creation.Server);
         await server.LoadTask!.WaitAsync(TimeSpan.FromSeconds(30));
 
         Assert.Equal(rulesPath, server.ResolvedConfigPath);

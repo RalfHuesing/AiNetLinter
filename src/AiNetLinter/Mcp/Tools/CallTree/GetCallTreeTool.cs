@@ -83,7 +83,7 @@ internal static class GetCallTreeTool
                     input.IncludeGenerated),
                 ct);
             return CallGraphResponseBudget.CreateResult(
-                new CallGraphResponseBudget.CallGraphResponseRequest(
+                new CallGraphResponseRequest(
                     graph,
                     input.Format,
                     CallTreeDirectionNames.For(validation.Direction),

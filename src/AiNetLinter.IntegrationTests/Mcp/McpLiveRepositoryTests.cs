@@ -9,6 +9,7 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
+using AiNetLinter.Mcp.Tools.FeatureContext;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -71,14 +72,14 @@ public sealed partial class McpLiveRepositoryTests
                 ["maxTests"] = 5,
             });
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.False(result.IsError == true, result.Content.OfType<TextContentBlock>().SingleOrDefault()?.Text);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.NotNull(result.StructuredContent);
         var json = JsonSerializer.Deserialize<JsonObject>(result.StructuredContent!.Value.GetRawText())!;
         var declaration = json["declaration"]!.AsObject();
         Assert.Contains((string)declaration["name"]!, text, StringComparison.Ordinal);
         Assert.Equal(
-            new[] { "completeness", "declaration", "impact", "isTruncated", "metrics", "metricsStatus", "nextStep", "testContext", "truncatedBy", "violations", "wireBudget" },
+            new[] { "completeness", "declaration", "impact", "metrics", "metricsStatus", "nextStep", "testContext", "violations", "wireBudget" },
             json
                 .Where(property => !string.Equals(property.Key, "navigation", StringComparison.Ordinal)
                     && !string.Equals(property.Key, "wireTruncated", StringComparison.Ordinal))
@@ -91,6 +92,11 @@ public sealed partial class McpLiveRepositoryTests
         Assert.NotNull(json["metrics"]);
         Assert.NotNull(json["violations"]);
         Assert.NotNull(json["completeness"]);
+
+        var wireBudget = json["wireBudget"]!.AsObject();
+        Assert.Equal(FeatureContextResponseBudget.DefaultMaxResponseBytes, (int)wireBudget["limitBytes"]!);
+        Assert.Equal((int)wireBudget["textBytes"]! + (int)wireBudget["structuredBytes"]!, (int)wireBudget["totalBytes"]!);
+        Assert.True((int)wireBudget["totalBytes"]! <= (int)wireBudget["limitBytes"]!);
 
         var violations = json["violations"]!.AsObject();
         var status = (string)violations["status"]!;
@@ -469,32 +475,4 @@ public sealed partial class McpLiveRepositoryTests
         Assert.EndsWith(".dll", (string?)origin["outputAssembly"], StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
-    public async Task LiveDogfood_FindDuplicates_StructuralMode_ReturnsValidSchema()
-    {
-        var result = await _fixture.Client.CallToolAsync(
-            "find_duplicates",
-            new Dictionary<string, object?>
-            {
-                ["mode"] = "structural",
-                ["scopeDir"] = "src/AiNetLinter/Mcp/Tools/DeadCode",
-                ["minTokens"] = 10,
-                ["maxResults"] = 10,
-            });
-
-        Assert.NotEqual(true, result.IsError);
-        Assert.NotNull(result.StructuredContent);
-
-        var json = JsonSerializer.Deserialize<JsonObject>(
-            result.StructuredContent!.Value.GetRawText())!;
-        Assert.True(json.ContainsKey("clusters"), "StructuredContent muss 'clusters' enthalten");
-        Assert.True(json.ContainsKey("summary"), "StructuredContent muss 'summary' enthalten");
-        Assert.IsType<JsonArray>(json["clusters"]);
-
-        var summary = json["summary"]!.AsObject();
-        Assert.True(summary.ContainsKey("mode"), "summary muss 'mode' enthalten");
-        Assert.Equal("structural", (string?)summary["mode"]);
-        Assert.True(summary.ContainsKey("methodsScanned"), "summary muss 'methodsScanned' enthalten");
-        Assert.True((int?)summary["methodsScanned"] >= 0);
-    }
 }

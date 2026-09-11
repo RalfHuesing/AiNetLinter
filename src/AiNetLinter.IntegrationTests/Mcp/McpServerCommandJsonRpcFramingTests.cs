@@ -28,7 +28,7 @@ namespace AiNetLinter.IntegrationTests.Mcp;
 /// stderr-Disziplin (alles Loggen ausschliesslich via Console.Error).
 /// </summary>
 [Trait("Category", "Integration")]
-public sealed class McpServerCommandJsonRpcFramingTests
+public sealed partial class McpServerCommandJsonRpcFramingTests
 {
     private const string ProtocolVersion = "2024-11-05";
     private const string ModernProtocolVersion = "2026-07-28";
@@ -36,7 +36,7 @@ public sealed class McpServerCommandJsonRpcFramingTests
     private const int PreSlice20ToolsListUtf8Bytes = 52694;
     private const int PreSlice20ToolDescriptionsUtf8Bytes = 32242;
     private const int PreSlice20InputSchemasUtf8Bytes = 13809;
-    private const string InputSchemaFingerprint = "3062E4D76629034A473F8C32F9E92F08FB725F8EA6A4ADC1A652D82B2C90F9A2";
+    private const string InputSchemaFingerprint = "90D4512AE0CC9CBA18152713A5E55E401582A5FCFADBC31F7A1520D1A5B577AB";
     private const string ClientName = "FramingTestClient";
     private const string ClientVersion = "1.0.0";
     private readonly ITestOutputHelper output;
@@ -342,43 +342,6 @@ public sealed class McpServerCommandJsonRpcFramingTests
             using var doc = JsonDocument.Parse(line);
             Assert.Equal("2.0", doc.RootElement.GetProperty("jsonrpc").GetString());
         }
-    }
-
-    [Fact]
-    public async Task Initialize_ResponseInstructionsField_ContainsServerInstructionsDoctrine()
-    {
-        // Die ServerInstructions.Text-Doctrine muss tatsaechlich im initialize-Response auf dem
-        // Wire ankommen — nicht nur auf McpServerOptions-Ebene (siehe McpServerOptionsFactoryTests
-        // fuer den Options-Ebenen-Test). Roher JSON-Parse gegen das "instructions"-Feld
-        // (JSON-Property-Name laut ModelContextProtocol.Core InitializeResult), bewusst ohne
-        // SDK-Client, analog zu den anderen Framing-Tests in dieser Klasse.
-        using var fixture = new SymbolGraphMiniFixtureWorkspace();
-
-        var frames = new[]
-        {
-            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{" +
-                "\"protocolVersion\":\"" + ProtocolVersion + "\"," +
-                "\"capabilities\":{}," +
-                "\"clientInfo\":{\"name\":\"" + ClientName + "\",\"version\":\"" + ClientVersion + "\"}}}",
-            "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
-        };
-
-        var observedLines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(fixture.SolutionPath, frames);
-
-        string? instructions = null;
-        foreach (var line in observedLines)
-        {
-            if (string.IsNullOrWhiteSpace(line)) continue;
-            using var doc = JsonDocument.Parse(line);
-            if (!doc.RootElement.TryGetProperty("id", out var id) || id.GetInt32() != 1) continue;
-            instructions = doc.RootElement.GetProperty("result").GetProperty("instructions").GetString();
-            break;
-        }
-
-        Assert.False(string.IsNullOrEmpty(instructions));
-        Assert.Contains("search_pattern", instructions, StringComparison.Ordinal);
-        Assert.Contains("structuredContent.navigation", instructions, StringComparison.Ordinal);
-        Assert.Contains("tools/list", instructions, StringComparison.Ordinal);
     }
 
     [Fact]

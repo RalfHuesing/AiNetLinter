@@ -8,7 +8,7 @@ using AiNetLinter.Core.DuplicateDetection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace AiNetLinter.Mcp.Tools.SymbolGraph;
+namespace AiNetLinter.Mcp.Tools.SymbolGraph.CallGraph;
 
 internal static class OutgoingCallScanner
 {

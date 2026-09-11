@@ -20,10 +20,11 @@ internal sealed record AnalysisSymbolIdentity(string ContentHash, long Generatio
     internal string? Format(string? symbolId) =>
         symbolId is not null
         && SymbolHandoffIdentifier.TryCreate(
-            IsAssembly ? SymbolHandoffOrigin.Assembly : SymbolHandoffOrigin.Source,
-            CanonicalPath,
-            ContentHash,
-            symbolId,
+            new SymbolHandoffCreationRequest(
+                IsAssembly ? SymbolHandoffOrigin.Assembly : SymbolHandoffOrigin.Source,
+                CanonicalPath,
+                ContentHash,
+                symbolId),
             out var identifier)
             ? identifier.Format()
             : null;

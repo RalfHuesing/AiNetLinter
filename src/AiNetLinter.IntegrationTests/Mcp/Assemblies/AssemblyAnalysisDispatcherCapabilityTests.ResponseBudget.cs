@@ -130,7 +130,11 @@ public sealed partial class AssemblyAnalysisDispatcherCapabilityTests
         Assert.True(textBytes + structuredBytes <= 4096);
         Assert.Equal(4096, payload.GetProperty("wireBudget").GetProperty("limitBytes").GetInt32());
         Assert.Equal(textBytes + structuredBytes, payload.GetProperty("wireBudget").GetProperty("totalBytes").GetInt32());
-        Assert.Equal("truncated", bodyResult.GetProperty("body").GetProperty("status").GetString());
+        Assert.True(
+            bodyResult.TryGetProperty("body", out var body)
+            && body.TryGetProperty("status", out var bodyStatus)
+            && bodyStatus.GetString() == "truncated",
+            payload.GetRawText());
         Assert.True(bodyResult.GetProperty("body").GetProperty("truncated").GetBoolean());
         Assert.Contains("maxResponseBytes", bodyResult.GetProperty("body").GetProperty("detailHint").GetString(), StringComparison.Ordinal);
     }

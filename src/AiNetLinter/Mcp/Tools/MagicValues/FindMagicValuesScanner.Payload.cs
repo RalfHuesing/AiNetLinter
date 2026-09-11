@@ -136,7 +136,7 @@ internal static partial class FindMagicValuesScanner
         "not_decidable" => new("inspect_scope", "Scope-Filter, IncludeTests und changedOnly prüfen; danach den Scan wiederholen."),
         "empty" => null,
         "truncated" => new("continue", "maxResults erhöhen oder den Scope beziehungsweise categoryFilter verfeinern."),
-        _ => new("review_candidates", "Kandidaten und Evidenz prüfen; keine automatische Änderung ableiten."),
+        _ => null,
     };
 
     private static string BuildScopeDescription(FindMagicValuesScannerParameters p, int matchingFileCount)
