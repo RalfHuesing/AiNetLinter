@@ -1,5 +1,5 @@
 ---
-status: draft
+status: ready
 execution_mode: autonomous
 open_questions: []
 ---
