@@ -87,7 +87,7 @@ internal static class FindReferencesTool
                     ? $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"
                     : null);
 
-            return McpToolResults.Text(formatted.Text, formatted.Traversal);
+            return McpToolResults.Text(formatted.Text, formatted.StructuredPayload);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

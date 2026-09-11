@@ -61,7 +61,42 @@ internal static class TransitiveCallGraphFormatter
         }
 
         AppendLimitMessages(lines, completeness);
-        return new(projected, string.Join("\n", lines));
+        var payload = ToFindReferencesPayload(projected);
+        return new(projected, string.Join("\n", lines), payload);
+    }
+
+    internal static FindReferencesResultPayload ToFindReferencesPayload(ReferenceTraversalResult result) =>
+        new(
+            result.CallSites.Select(entry => new FindReferencesCallSiteEntry(
+                entry.FilePath,
+                entry.Line,
+                entry.SymbolName,
+                entry.ProjectName,
+                entry.Depth,
+                entry.ReachedFromSymbolId,
+                entry.Id,
+                entry.HandoffKind,
+                entry.Origin)).ToList(),
+            result.Completeness,
+            result.Navigation,
+            CreateHandoffPayload(result.CallSites));
+
+    private static SymbolHandoffPayload? CreateHandoffPayload(
+        IReadOnlyList<TransitiveCallSiteEntry> callSites)
+    {
+        var kinds = callSites
+            .Where(entry => entry.Id is not null && entry.HandoffKind is not null)
+            .Select(entry => entry.HandoffKind!)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(kind => kind, StringComparer.Ordinal)
+            .ToList();
+        if (kinds.Count == 0) return null;
+
+        var followUpsByKind = kinds.ToDictionary(
+            kind => kind,
+            HandoffFollowUpTools.ForKind,
+            StringComparer.Ordinal);
+        return new("symbolIdentifier", followUpsByKind);
     }
 
     internal static CallToolResult FormatAssemblyCallTreeResponse(
@@ -127,13 +162,10 @@ internal static class TransitiveCallGraphFormatter
         var text = transitive
             ? $"{entry.FilePath}:{entry.Line} - transitiver Aufrufer"
             : $"{entry.FilePath}:{entry.Line} - Aufruf von '{entry.SymbolName}' in Projekt '{entry.ProjectName}'";
-        var handoff = entry.Handoff && entry.Id is not null
-            ? $"handoff=true; id=`{entry.Id}`"
-            : "handoff=false; followUpTools=[]";
         var origin = entry.Origin is null
             ? string.Empty
             : $" [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
-        return $"{text} [{handoff}]{origin}";
+        return $"{text}{origin}";
     }
 
     private static void AppendLimitMessages(
@@ -276,4 +308,5 @@ internal sealed record AssemblyCallTreeResponseRequest(
 
 internal sealed record TransitiveCallGraphFormatResult(
     ReferenceTraversalResult Traversal,
-    string Text);
+    string Text,
+    FindReferencesResultPayload StructuredPayload);

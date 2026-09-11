@@ -15,7 +15,8 @@ internal sealed record AssemblyReferenceTraversalRequest(
     IReadOnlyList<AssemblyNavigationSource> Sources,
     int MaxResults,
     int RequestedDepth,
-    AssemblyNavigationSummary Navigation);
+    AssemblyNavigationSummary Navigation,
+    string? RootCanonicalPath = null);
 
 internal static class AssemblyReferenceNavigator
 {
@@ -40,10 +41,15 @@ internal static class AssemblyReferenceNavigator
                         AssemblySymbolIdentity: source.Identity)).ConfigureAwait(false);
                 results.Add(traversal with
                 {
-                    CallSites = traversal.CallSites
+                        CallSites = traversal.CallSites
                         .Select(entry => entry with
                         {
-                            Origin = source.Origin,
+                            Origin = string.Equals(
+                                source.CanonicalPath,
+                                request.RootCanonicalPath,
+                                StringComparison.OrdinalIgnoreCase)
+                                ? null
+                                : source.Origin,
                         })
                         .ToList(),
                 });

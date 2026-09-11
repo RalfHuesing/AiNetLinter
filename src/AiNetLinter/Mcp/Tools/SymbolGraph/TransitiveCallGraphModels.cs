@@ -15,11 +15,29 @@ internal sealed record TransitiveCallSiteEntry(
     int Depth,
     string ReachedFromSymbolId,
     AssemblyNavigationOrigin? Origin = null,
-    bool Handoff = false,
     string? Id = null,
-    string? TargetPath = null,
-    string? Snapshot = null,
-    IReadOnlyList<string>? AllowedFollowUpTools = null);
+    string? HandoffKind = null);
+
+internal sealed record FindReferencesCallSiteEntry(
+    string FilePath,
+    int Line,
+    string SymbolName,
+    string ProjectName,
+    int Depth,
+    string ReachedFromSymbolId,
+    string? Id = null,
+    string? HandoffKind = null,
+    AssemblyNavigationOrigin? Origin = null);
+
+internal sealed record FindReferencesResultPayload(
+    IReadOnlyList<FindReferencesCallSiteEntry> CallSites,
+    TraversalCompleteness Completeness,
+    AssemblyNavigationSummary? Navigation = null,
+    SymbolHandoffPayload? Handoff = null);
+
+internal sealed record SymbolHandoffPayload(
+    string AcceptedAs,
+    IReadOnlyDictionary<string, IReadOnlyList<string>> FollowUpsByKind);
 
 internal sealed record TraversalCompleteness(
     int RequestedDepth,
@@ -56,7 +74,8 @@ internal sealed record SymbolImpactPayload(
     TraversalCompleteness Completeness,
     IReadOnlyList<string> AffectedProjects,
     SymbolTestImpactDto? TestImpact = null,
-    AssemblyNavigationSummary? Navigation = null);
+    AssemblyNavigationSummary? Navigation = null,
+    SymbolHandoffPayload? Handoff = null);
 
 internal sealed record SymbolTestImpactDto(
     int TotalMatchingTests,

@@ -11,6 +11,7 @@ using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Projects;
 using AiNetLinter.Mcp.Tools;
+using AiNetLinter.Mcp.Tools.TypeHierarchy;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.TestKit;
 using static AiNetLinter.TestKit.McpTestResultText;
@@ -89,13 +90,55 @@ public sealed class GetTypeHierarchyToolTests
             result.StructuredContent!.Value.GetRawText(), McpJsonOptions.Default);
         Assert.NotNull(payload);
         Assert.Equal("SymbolGraphMini.BaseGreeting", payload!.TypeName);
-        Assert.Contains(payload.Interfaces, value => value.Contains("IGreeting", StringComparison.Ordinal));
+        Assert.Contains(payload.Interfaces, value => value.Name.Contains("IGreeting", StringComparison.Ordinal));
         var subtype = Assert.Single(payload.Subtypes);
-        Assert.Contains("SpecialGreeting", subtype, StringComparison.Ordinal);
+        Assert.Contains("SpecialGreeting", subtype.Name, StringComparison.Ordinal);
         Assert.Equal(1, payload.ShownSubtypeCount);
         Assert.Equal(1, payload.TotalSubtypeCount);
         Assert.False(payload.SubtypesTruncated);
         Assert.Empty(payload.SubtypesTruncatedBy);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_HandoffIsStructuredOnly_AndHierarchyEntriesAreSelectable()
+    {
+        var result = await GetTypeHierarchyTool.ExecuteAsync(
+            _fixture.CreateServer(), "BaseGreeting", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.DoesNotContain("handoff=", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("id: `s:", text, StringComparison.Ordinal);
+
+        var payload = result.StructuredContent!.Value;
+        var interfaceEntry = Assert.Single(payload.GetProperty("interfaces").EnumerateArray());
+        Assert.StartsWith("s:", interfaceEntry.GetProperty("id").GetString(), StringComparison.Ordinal);
+        Assert.Equal("type", interfaceEntry.GetProperty("handoffKind").GetString());
+        Assert.False(interfaceEntry.TryGetProperty("targetPath", out _));
+        Assert.False(interfaceEntry.TryGetProperty("snapshot", out _));
+        Assert.False(interfaceEntry.TryGetProperty("allowedFollowUpTools", out _));
+
+        var subtypeEntry = Assert.Single(payload.GetProperty("subtypes").EnumerateArray());
+        Assert.StartsWith("s:", subtypeEntry.GetProperty("id").GetString(), StringComparison.Ordinal);
+        Assert.Equal("type", subtypeEntry.GetProperty("handoffKind").GetString());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_StructuredHierarchyIdCanBeUsedForImplementationsFollowUp()
+    {
+        var state = _fixture.CreateServer();
+        var hierarchy = await GetTypeHierarchyTool.ExecuteAsync(
+            state, "BaseGreeting", GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
+        var id = hierarchy.StructuredContent!.Value.GetProperty("interfaces")[0]
+            .GetProperty("id").GetString();
+
+        var implementations = await FindImplementationsTool.ExecuteAsync(
+            state, id, FindImplementationsTool.DefaultMaxResults, CancellationToken.None);
+
+        Assert.NotEqual(true, implementations.IsError);
+        Assert.Contains(
+            "BaseGreeting",
+            Assert.IsType<TextContentBlock>(Assert.Single(implementations.Content)).Text,
+            StringComparison.Ordinal);
     }
 
     [Fact]

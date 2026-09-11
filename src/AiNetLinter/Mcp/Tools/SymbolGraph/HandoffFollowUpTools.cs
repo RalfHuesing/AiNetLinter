@@ -9,7 +9,10 @@ namespace AiNetLinter.Mcp.Tools.SymbolGraph;
 internal static class HandoffFollowUpTools
 {
     internal static IReadOnlyList<string> For(ISymbol symbol) =>
-        symbol is INamedTypeSymbol
+        ForKind(symbol is INamedTypeSymbol ? "type" : "member");
+
+    internal static IReadOnlyList<string> ForKind(string kind) =>
+        kind == "type"
             ? ["get_symbol_body", "get_class_structure", "get_type_hierarchy", "find_implementations", "find_references", "get_call_tree"]
             : ["get_symbol_body", "find_references", "get_call_tree", "get_impact", "get_test_context"];
 }

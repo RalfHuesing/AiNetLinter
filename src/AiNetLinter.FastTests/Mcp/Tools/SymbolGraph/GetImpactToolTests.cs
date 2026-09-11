@@ -66,7 +66,20 @@ public sealed class GetImpactToolTests
 
         Assert.NotEqual(true, result.IsError);
         Assert.NotNull(result.StructuredContent);
-        var entries = result.StructuredContent!.Value.GetProperty("callSites")
+        var payload = result.StructuredContent!.Value;
+        var callSites = payload.GetProperty("callSites");
+        var handoff = payload.GetProperty("handoff");
+        Assert.Equal("symbolIdentifier", handoff.GetProperty("acceptedAs").GetString());
+        Assert.NotEqual(JsonValueKind.Undefined, handoff.GetProperty("followUpsByKind").GetProperty("member").ValueKind);
+        foreach (var callSite in callSites.EnumerateArray())
+        {
+            Assert.False(callSite.TryGetProperty("handoff", out _));
+            Assert.False(callSite.TryGetProperty("targetPath", out _));
+            Assert.False(callSite.TryGetProperty("snapshot", out _));
+            Assert.False(callSite.TryGetProperty("allowedFollowUpTools", out _));
+        }
+
+        var entries = callSites
             .Deserialize<List<TransitiveCallSiteEntry>>(McpJsonOptions.Default);
         Assert.NotNull(entries);
         Assert.Contains(entries!, e => e.FilePath.Contains("Caller.cs", StringComparison.Ordinal));
@@ -198,8 +211,8 @@ public sealed class GetImpactToolTests
         var level2 = entries!.Single(entry => entry.Depth == 2);
         Assert.Equal("Runner.MethodB", level2.SymbolName);
         Assert.StartsWith("s:", level2.ReachedFromSymbolId, StringComparison.Ordinal);
-        Assert.True(level2.Handoff);
         Assert.NotNull(level2.Id);
+        Assert.Equal("member", level2.HandoffKind);
     }
 
     [Fact]

@@ -76,14 +76,15 @@ internal static class AssemblyFindReferencesTool
                     AssemblyNavigationSourceFactory.CreateSources(lease, target!),
                     request.MaxResults,
                     request.Depth,
-                    navigation),
+                    navigation,
+                    lease.CanonicalPath),
                 cancellationToken).ConfigureAwait(false);
             var formatted = TransitiveCallGraphFormatter.FormatResponse(
                 traversal,
                 traversal.Completeness.TotalCallSiteCount == 0
                     ? $"Keine Aufrufstellen gefunden fuer '{request.SymbolIdentifier}'"
                     : null);
-            return McpToolResults.Text(formatted.Text, formatted.Traversal);
+            return McpToolResults.Text(formatted.Text, formatted.StructuredPayload);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

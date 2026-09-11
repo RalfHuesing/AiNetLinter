@@ -177,8 +177,7 @@ internal static class FindImplementationsTool
         var status = DetermineStatus(symbol);
         var displayLoc = FormatLocation(symbol, solution, absolutePaths, out var filePath, out var line, out var column);
         var id = handoffIdentity is null ? null : CallGraphTraversal.GetStableSymbolId(symbol, handoffIdentity);
-        var handoff = id is not null;
-        displayLoc += handoff ? $" [handoff=true; id=`{id}`]" : " [handoff=false; followUpTools=[]]";
+        var handoffKind = id is null ? null : symbol is INamedTypeSymbol ? "type" : "member";
 
         return new ImplementationItemDto(
             typeName,
@@ -189,11 +188,8 @@ internal static class FindImplementationsTool
             line,
             column,
             displayLoc,
-            handoff,
             id,
-            handoffIdentity?.CanonicalPath,
-            handoffIdentity?.ContentHash,
-            handoff ? HandoffFollowUpTools.For(symbol) : []);
+            handoffKind);
     }
 
     private static (string TypeName, string? MemberName, string Kind) DescribeSymbol(ISymbol symbol)

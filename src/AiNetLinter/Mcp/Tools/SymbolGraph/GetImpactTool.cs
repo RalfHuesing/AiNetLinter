@@ -220,7 +220,8 @@ internal static class GetImpactTool
             traversal.Completeness,
             affectedProjects,
             new SymbolTestImpactDto(testCoverage.TotalMatchingTests, testCoverage.TestFiles.Count, testCoverage.TestFiles),
-            traversal.Navigation);
+            traversal.Navigation,
+            formatted.StructuredPayload.Handoff);
 
         return McpToolResults.Text(finalBody, payload);
     }
@@ -242,7 +243,8 @@ internal static class GetImpactTool
                 AssemblyNavigationSourceFactory.CreateSources(lease, target!),
                 input.MaxResults,
                 input.Depth,
-                navigation),
+                navigation,
+                lease.CanonicalPath),
             ct).ConfigureAwait(false);
 
         var formatted = TransitiveCallGraphFormatter.FormatResponse(
@@ -251,7 +253,7 @@ internal static class GetImpactTool
                 ? $"Keine Aufrufstellen gefunden fuer '{symbolIdentifier}'"
                 : null);
 
-        return McpToolResults.Text(formatted.Text, formatted.Traversal);
+        return McpToolResults.Text(formatted.Text, formatted.StructuredPayload);
     }
 
     private static async Task<CallToolResult> ExecuteGitRefBranchAsync(Solution solution, GetImpactInput input, CancellationToken ct)

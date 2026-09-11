@@ -146,6 +146,16 @@ public sealed class AssemblyAnalysisRouteTests
         Assert.True(referencePayload.GetProperty("navigation").GetProperty("includeReferences").GetBoolean());
         Assert.Equal("partial", referencePayload.GetProperty("navigation").GetProperty("status").GetProperty("completeness").GetString());
         Assert.True(referencePayload.TryGetProperty("callSites", out _));
+        var referenceText = Text(referenceResult);
+        Assert.DoesNotContain("handoff=", referenceText, StringComparison.Ordinal);
+        Assert.DoesNotContain("id: `a:", referenceText, StringComparison.Ordinal);
+        var referenceCallSite = referencePayload.GetProperty("callSites")[0];
+        Assert.StartsWith("a:", referenceCallSite.GetProperty("id").GetString(), StringComparison.Ordinal);
+        Assert.Equal("member", referenceCallSite.GetProperty("handoffKind").GetString());
+        Assert.False(referenceCallSite.TryGetProperty("targetPath", out _));
+        Assert.False(referenceCallSite.TryGetProperty("snapshot", out _));
+        Assert.False(referenceCallSite.TryGetProperty("allowedFollowUpTools", out _));
+        Assert.False(referenceCallSite.TryGetProperty("origin", out _));
 
         var treeResult = await AnalysisToolCall.ExecuteRouted(
             route,

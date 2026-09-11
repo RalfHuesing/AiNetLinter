@@ -44,6 +44,46 @@ public sealed class FindImplementationsTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_HandoffIsStructuredOnly_AndEntriesDoNotRepeatRootMetadata()
+    {
+        using var fixture = new McpInMemoryTestContext(TransitiveSymbolGraphMiniSolutionSpec.Create());
+        var result = await FindImplementationsTool.ExecuteAsync(
+            fixture.CreateServer(), "IProcessor", maxResults: 50, ct: CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.DoesNotContain("handoff=", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("id: `s:", text, StringComparison.Ordinal);
+
+        var entry = result.StructuredContent!.Value.GetProperty("implementations")[0];
+        Assert.StartsWith("s:", entry.GetProperty("id").GetString(), StringComparison.Ordinal);
+        Assert.Equal("type", entry.GetProperty("handoffKind").GetString());
+        Assert.False(entry.TryGetProperty("handoff", out _));
+        Assert.False(entry.TryGetProperty("targetPath", out _));
+        Assert.False(entry.TryGetProperty("snapshot", out _));
+        Assert.False(entry.TryGetProperty("allowedFollowUpTools", out _));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_StructuredImplementationIdCanBeUsedForHierarchyFollowUp()
+    {
+        using var fixture = new McpInMemoryTestContext(TransitiveSymbolGraphMiniSolutionSpec.Create());
+        var state = fixture.CreateServer();
+        var implementations = await FindImplementationsTool.ExecuteAsync(
+            state, "IProcessor", maxResults: 50, ct: CancellationToken.None);
+        var id = implementations.StructuredContent!.Value.GetProperty("implementations")[0]
+            .GetProperty("id").GetString();
+
+        var hierarchy = await GetTypeHierarchyTool.ExecuteAsync(
+            state, id, GetTypeHierarchyTool.DefaultMaxResults, CancellationToken.None);
+
+        Assert.NotEqual(true, hierarchy.IsError);
+        Assert.Contains(
+            "IProcessor",
+            Assert.IsType<TextContentBlock>(Assert.Single(hierarchy.Content)).Text,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_SourceHandoffIdFromFindSymbol_ReturnsImplementations()
     {
         using var fixture = new McpInMemoryTestContext(TransitiveSymbolGraphMiniSolutionSpec.Create());

@@ -91,7 +91,7 @@ internal static class GetTypeHierarchyFormatter
         return $"{header}\n{string.Join("\n", hits)}";
     }
 
-    private static IEnumerable<string> FormatBaseTypes(
+    private static IEnumerable<TypeHierarchyEntryDto> FormatBaseTypes(
         INamedTypeSymbol type,
         string outputRoot,
         bool absolutePaths,
@@ -100,16 +100,16 @@ internal static class GetTypeHierarchyFormatter
         var current = type.BaseType;
         while (current is not null)
         {
-            foreach (var line in FormatHierarchyTypeReference(current, outputRoot, absolutePaths, handoffIdentity))
+            foreach (var entry in FormatHierarchyTypeReference(current, outputRoot, absolutePaths, handoffIdentity))
             {
-                yield return line;
+                yield return entry;
             }
 
             current = current.BaseType;
         }
     }
 
-    private static IEnumerable<string> FormatInterfaces(
+    private static IEnumerable<TypeHierarchyEntryDto> FormatInterfaces(
         INamedTypeSymbol type,
         string outputRoot,
         bool absolutePaths,
@@ -126,24 +126,40 @@ internal static class GetTypeHierarchyFormatter
     /// sind hier der Normalfall, kein Sonderfall, und muessen sichtbar bleiben statt spurlos zu
     /// verschwinden.
     /// </summary>
-    private static IEnumerable<string> FormatHierarchyTypeReference(
+    private static IEnumerable<TypeHierarchyEntryDto> FormatHierarchyTypeReference(
         INamedTypeSymbol symbol,
         string outputRoot,
         bool absolutePaths,
         AnalysisSymbolIdentity? handoffIdentity)
     {
-        var sourceLines = FindSymbolTool.FormatSymbolLocations(
+        var sourceEntries = FindSymbolTool.FormatSymbolLocationEntries(
             symbol,
             outputRoot,
             handoffIdentity,
-            absolutePaths: absolutePaths).ToList();
-        if (sourceLines.Count > 0)
+            absolutePaths: absolutePaths)
+            .Select(entry => new TypeHierarchyEntryDto(
+                entry.Name,
+                entry.Kind,
+                entry.FilePath,
+                entry.Line,
+                entry.Id,
+                entry.HandoffKind,
+                entry.Origin))
+            .ToList();
+        if (sourceEntries.Count > 0)
         {
-            return sourceLines;
+            return sourceEntries;
         }
 
         var kindLabel = SymbolKindClassifier.DescribeNamedTypeKind(symbol);
-        return new[] { $"{kindLabel}: {symbol.ToDisplayString()} (extern, keine Datei im Repo) [handoff=false; followUpTools=[]]" };
+        return new[] { new TypeHierarchyEntryDto(
+            symbol.ToDisplayString(),
+            kindLabel,
+            null,
+            null,
+            null,
+            null,
+            null) };
     }
 
     private static async Task<SubtypeProjection> ProjectSubtypesAsync(
@@ -181,34 +197,60 @@ internal static class GetTypeHierarchyFormatter
     {
         var isTruncated = types.Count > maxResults;
         var shown = isTruncated ? types.Take(maxResults).ToList() : types;
-        var lines = shown.SelectMany(s => FindSymbolTool.FormatSymbolLocations(
+        var entries = shown.SelectMany(s => FindSymbolTool.FormatSymbolLocationEntries(
             s,
             outputRoot,
             handoffIdentity,
-            absolutePaths: absolutePaths));
-        return new(types.Count, shown.Count, isTruncated, lines.ToList());
+            absolutePaths: absolutePaths)
+            .Select(entry => new TypeHierarchyEntryDto(
+                entry.Name,
+                entry.Kind,
+                entry.FilePath,
+                entry.Line,
+                entry.Id,
+                entry.HandoffKind,
+                entry.Origin)));
+        return new(types.Count, shown.Count, isTruncated, entries.ToList());
     }
 
     private static string FormatSubtypesSection(TypeHierarchyPayload payload)
     {
         var body = payload.Subtypes.Count == 0
             ? "Keine abgeleiteten Typen."
-            : string.Join("\n", payload.Subtypes);
+            : string.Join("\n", payload.Subtypes.Select(FormatEntry));
         return payload.SubtypesTruncated
             ? $"{payload.SubtypeHeading}\n{body}\n[{payload.TotalSubtypeCount} Typen gesamt, {payload.ShownSubtypeCount} gezeigt — maxResults erhoehen]"
             : $"{payload.SubtypeHeading}\n{body}";
     }
 
-    private static string FormatSection(string heading, IEnumerable<string> lines, string emptyMessage)
+    private static string FormatSection(
+        string heading,
+        IEnumerable<TypeHierarchyEntryDto> entries,
+        string emptyMessage)
     {
-        var materialized = lines.ToList();
-        var body = materialized.Count == 0 ? emptyMessage : string.Join("\n", materialized);
+        var materialized = entries.ToList();
+        var body = materialized.Count == 0
+            ? emptyMessage
+            : string.Join("\n", materialized.Select(FormatEntry));
         return $"{heading}\n{body}";
+    }
+
+    private static string FormatEntry(TypeHierarchyEntryDto entry)
+    {
+        if (entry.FilePath is null || entry.Line is null)
+        {
+            return $"{entry.Kind}: {entry.Name} (extern, keine Datei im Repo)";
+        }
+
+        var origin = entry.Origin is null
+            ? string.Empty
+            : $" [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
+        return $"{entry.Kind} {entry.Name} — {entry.FilePath}:{entry.Line}{origin}";
     }
 
     private sealed record SubtypeProjection(
         int TotalCount,
         int ShownCount,
         bool IsTruncated,
-        IReadOnlyList<string> ShownLines);
+        IReadOnlyList<TypeHierarchyEntryDto> ShownLines);
 }

@@ -114,7 +114,6 @@ internal static class CallGraphTraversal
             : Path.GetFullPath(location.SourceTree!.FilePath);
         var line = location.GetLineSpan().StartLinePosition.Line + 1;
         var handoffId = assemblyIdentity?.FormatHandoff(reference.Definition);
-        var handoff = handoffId is not null;
         return new TransitiveCallSiteEntry(
             filePath,
             line,
@@ -122,11 +121,8 @@ internal static class CallGraphTraversal
             referenceLocation.Document.Project.Name,
             depth,
             FormatReachedFromSymbolId(reachedFromSymbol, assemblyIdentity),
-            Handoff: handoff,
             Id: handoffId,
-            TargetPath: handoff ? assemblyIdentity!.CanonicalPath : null,
-            Snapshot: handoff ? assemblyIdentity!.ContentHash : null,
-            AllowedFollowUpTools: handoff ? HandoffFollowUpTools.For(reference.Definition) : []);
+            HandoffKind: handoffId is null ? null : reference.Definition is INamedTypeSymbol ? "type" : "member");
     }
 
     /// <summary>
