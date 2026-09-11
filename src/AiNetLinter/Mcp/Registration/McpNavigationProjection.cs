@@ -22,16 +22,20 @@ internal static partial class McpNavigationProjection
     internal static McpNavigationPayload Create(CallToolResult response, AnalysisTarget target)
     {
         var code = ReadString(response.StructuredContent, "code");
-        var operationStatus = ResolveOperationStatus(code, response);
-        if (operationStatus == "ok" && HasFeatureContextSectionFailure(response.StructuredContent))
-        {
-            operationStatus = "error";
-        }
+        var operationStatus = code is null && !HasFeatureContextSectionFailure(response.StructuredContent)
+            ? "ok"
+            : "error";
+        code = operationStatus == "ok" ? null : code ?? LinterErrorCodes.AnalysisFailed;
         var completeness = ResolveCompleteness(response.StructuredContent, code, operationStatus);
+        var analysis = CreateAnalysis(target, operationStatus, response.StructuredContent);
+        if (operationStatus == "ok" && analysis.Quality == "partial" && completeness == "complete")
+        {
+            completeness = "partial";
+        }
         var hint = ReadString(response.StructuredContent, "hint")
             ?? ReadString(response.StructuredContent, "nextStep")
             ?? ReadNestedNextStep(response.StructuredContent);
-        return Create(target, operationStatus, completeness, hint, code, response.StructuredContent);
+        return Create(target, operationStatus, completeness, hint, code, response.StructuredContent, analysis);
     }
 
     // ainetlinter-disable MaxMethodParameterCount — die Projektion wird nur intern mit dem bereits normalisierten Status aufgerufen.
@@ -41,7 +45,8 @@ internal static partial class McpNavigationProjection
         string completeness,
         string? hint = null,
         string? code = null,
-        JsonElement? structured = null)
+        JsonElement? structured = null,
+        McpNavigationAnalysis? analysis = null)
     {
         var next = CreateNext(operationStatus, completeness, hint, structured);
         var snapshotFingerprint = target.AnalysisSnapshotFingerprint ?? string.Empty;
@@ -50,7 +55,7 @@ internal static partial class McpNavigationProjection
             : NormalizeSnapshotKind(target.AnalysisSnapshotKind);
 
         return new McpNavigationPayload(
-            ContractVersion: 1,
+            ContractVersion: 2,
             new McpNavigationTarget(
                 target.CanonicalPath,
                 target.AnalysisRoot,
@@ -60,6 +65,7 @@ internal static partial class McpNavigationProjection
                 snapshotKind,
                 target.AnalysisSnapshotFingerprint is not null && target.AnalysisSnapshotFresh),
             new McpNavigationStatus(operationStatus, completeness, code),
+            analysis ?? CreateAnalysis(target, operationStatus, structured),
             ReadOptionalObject(structured, "scope"),
             next,
             ReadOptionalObject(structured, "handoff"));
@@ -78,45 +84,49 @@ internal static partial class McpNavigationProjection
             };
     }
 
-    private static string ResolveOperationStatus(string? code, CallToolResult response)
+    private static McpNavigationAnalysis CreateAnalysis(
+        AnalysisTarget target,
+        string operationStatus,
+        JsonElement? structured)
     {
-        if (code is null) return IsLoading(response) ? "loading" : "ok";
-        if (FixedStatuses.TryGetValue(code, out var status)) return status;
-        return ResolveDynamicStatus(code, response.IsError == true);
+        if (operationStatus == "error") return new("not_applicable", "not_applicable", []);
+        if (target.Origin == AnalysisTargetOrigin.Source) return new("source", "complete", []);
+
+        var hasDiagnostics = HasAssemblyDiagnostics(structured);
+        var isPartial = hasDiagnostics || HasAssemblyPartialStatus(structured);
+        return new(
+            "decompiled",
+            isPartial ? "partial" : "complete",
+            hasDiagnostics ? ["ASSEMBLY_DIAGNOSTICS"] : isPartial ? ["ASSEMBLY_ANALYSIS_PARTIAL"] : []);
     }
 
-    private static readonly IReadOnlyDictionary<string, string> FixedStatuses =
-        new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            [LinterErrorCodes.InvalidArgument] = "invalid_argument",
-            [LinterErrorCodes.SymbolNotFound] = "symbol_not_found",
-            [LinterErrorCodes.AmbiguousSymbol] = "ambiguous_symbol",
-            [McpHandoffErrorCodes.TargetMismatch] = "target_mismatch",
-            [McpHandoffErrorCodes.StaleSnapshot] = "stale_snapshot",
-            [LinterErrorCodes.NotConfigured] = "not_configured",
-            [LinterErrorCodes.AssemblyTargetUnsupported] = "unsupported",
-            [LinterErrorCodes.ProjectTargetUnsupported] = "unsupported",
-            [LinterErrorCodes.InvalidAssembly] = "invalid_assembly",
-            [LinterErrorCodes.TargetUnreadable] = "target_unreadable",
-            [ProjectErrorCodes.RulesInvalid] = "error",
-            [LinterErrorCodes.ConfigInvalid] = "error",
-            [LinterErrorCodes.ConfigNotFound] = "error",
-            [LinterErrorCodes.ResourceNotFound] = "resource_not_found",
-            [ProjectErrorCodes.ProjectNotInitialized] = "target_mismatch",
-            [ProjectErrorCodes.ProjectLoadFailed] = "target_mismatch",
-        };
+    private static bool HasAssemblyDiagnostics(JsonElement? structured) =>
+        structured is { } value && HasNonEmptyProperty(value, "diagnostics")
+        || structured is { } diagnostics && HasPositiveIntegerProperty(diagnostics, "diagnosticTotalCount");
 
-    private static string ResolveDynamicStatus(string code, bool isError) =>
-        code.Contains("STALE", StringComparison.OrdinalIgnoreCase)
-            ? "stale_snapshot"
-            : code.Contains("MISMATCH", StringComparison.OrdinalIgnoreCase)
-                ? "target_mismatch"
-                : isError ? "error" : "ok";
+    private static bool HasAssemblyPartialStatus(JsonElement? structured) =>
+        structured is { } value && HasStringValue(value, "analysisQuality", "partial")
+        || structured is { } status && HasStringValue(status, "status", "partial")
+        || structured is { } completeness && HasStringValue(completeness, "completeness", "partial");
 
-    private static bool IsLoading(CallToolResult response) =>
-        response.Content is [{ } block]
-        && block is TextContentBlock text
-        && text.Text.Contains("Server laedt die Solution", StringComparison.OrdinalIgnoreCase);
+    private static bool HasNonEmptyProperty(JsonElement element, string propertyName) =>
+        element.ValueKind == JsonValueKind.Object
+        && element.TryGetProperty(propertyName, out var property)
+        && property.ValueKind == JsonValueKind.Array
+        && property.GetArrayLength() > 0;
+
+    private static bool HasPositiveIntegerProperty(JsonElement element, string propertyName) =>
+        element.ValueKind == JsonValueKind.Object
+        && element.TryGetProperty(propertyName, out var property)
+        && property.ValueKind == JsonValueKind.Number
+        && property.TryGetInt32(out var value)
+        && value > 0;
+
+    private static bool HasStringValue(JsonElement element, string propertyName, string expected) =>
+        element.ValueKind == JsonValueKind.Object
+        && element.TryGetProperty(propertyName, out var property)
+        && property.ValueKind == JsonValueKind.String
+        && string.Equals(property.GetString(), expected, StringComparison.OrdinalIgnoreCase);
 
     private static string ResolveCompleteness(
         JsonElement? structured,
@@ -132,8 +142,6 @@ internal static partial class McpNavigationProjection
 
         var terminal = ResolveTerminalCompleteness(structured, operationStatus);
         if (terminal is not null) return terminal;
-        if (TryReadToolOwnedNavigationCompleteness(structured, out var navigationCompleteness))
-            return navigationCompleteness;
         if (TryResolveAssemblyResultCompleteness(structured, out var assemblyCompleteness))
             return assemblyCompleteness;
         if (HasTruncation(structured)) return "truncated";
@@ -166,6 +174,7 @@ internal sealed record McpNavigationPayload(
     McpNavigationTarget Target,
     McpNavigationSnapshot Snapshot,
     McpNavigationStatus Status,
+    McpNavigationAnalysis Analysis,
     JsonObject? Scope,
     McpNavigationNext? Next,
     JsonObject? Handoff);
@@ -175,5 +184,10 @@ internal sealed record McpNavigationTarget(string TargetPath, string AnalysisRoo
 internal sealed record McpNavigationSnapshot(string Fingerprint, string Kind, bool Fresh);
 
 internal sealed record McpNavigationStatus(string Operation, string Completeness, string? Code);
+
+internal sealed record McpNavigationAnalysis(
+    string Mode,
+    string Quality,
+    IReadOnlyList<string> LimitationCodes);
 
 internal sealed record McpNavigationNext(string Kind, string Action);

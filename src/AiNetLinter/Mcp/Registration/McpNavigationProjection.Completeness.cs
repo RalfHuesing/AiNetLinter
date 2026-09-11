@@ -7,17 +7,6 @@ namespace AiNetLinter.Mcp.Registration;
 
 internal static partial class McpNavigationProjection
 {
-    private static bool TryReadToolOwnedNavigationCompleteness(JsonElement? structured, out string value)
-    {
-        value = string.Empty;
-        return structured is { ValueKind: JsonValueKind.Object } payload
-            && payload.TryGetProperty("navigation", out var navigation)
-            && navigation.ValueKind == JsonValueKind.Object
-            && navigation.TryGetProperty("status", out var status)
-            && status.ValueKind == JsonValueKind.Object
-            && TryReadStringProperty(status, "completeness", out value);
-    }
-
     private static bool TryResolveAssemblyResultCompleteness(JsonElement? structured, out string value)
     {
         value = string.Empty;
@@ -55,7 +44,7 @@ internal static partial class McpNavigationProjection
             "not_configured" => "not_configured",
             "unsupported" => "unsupported",
             "configuration_error" => "configuration_error",
-            "error" => HasFeatureContextSectionFailure(structured) ? "partial" : "not_applicable",
+            "error" => "not_applicable",
             "invalid_argument" or "target_mismatch" or "stale_snapshot" or
                 "symbol_not_found" or "ambiguous_symbol" or "invalid_assembly" or
                 "target_unreadable" or "resource_not_found" => "not_applicable",
@@ -72,7 +61,11 @@ internal static partial class McpNavigationProjection
             return nestedValue;
         }
         var normalized = explicitValue == "error" ? "partial" : explicitValue;
-        return normalized;
+        return normalized switch
+        {
+            "complete" or "empty" or "partial" or "truncated" or "not_applicable" => normalized,
+            _ => "partial",
+        };
     }
 
     private static bool TryFindCompleteness(JsonElement? element, out string value)
@@ -82,7 +75,6 @@ internal static partial class McpNavigationProjection
 
         return TryReadSummaryCompleteness(objectValue, out value)
             || TryReadNestedCompleteness(objectValue, "analysis", out value)
-            || TryReadNestedCompleteness(objectValue, "navigation", out value)
             || TryReadCompletenessProperty(objectValue, out value);
     }
 
@@ -356,15 +348,8 @@ internal static partial class McpNavigationProjection
 
         if (TryReadNextObject(payload, "next", out next)) return true;
 
-        if (payload.TryGetProperty("navigation", out var nav)
-            && nav.ValueKind == JsonValueKind.Object
-            && nav.TryGetProperty("status", out var status)
-            && status.ValueKind == JsonValueKind.Object
-            && TryReadNextObject(nav, "next", out next)) return true;
-
         foreach (var property in payload.EnumerateObject())
         {
-            if (property.NameEquals("navigation")) continue;
             if (property.Value.ValueKind == JsonValueKind.Object
                 && TryReadNextObject(property.Value, "next", out next))
             {

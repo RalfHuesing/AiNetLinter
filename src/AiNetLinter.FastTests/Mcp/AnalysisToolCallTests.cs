@@ -88,7 +88,7 @@ public sealed class AnalysisToolCallTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_AssemblyTargetReturnsRecoverableUnsupportedWithoutProjectLease()
+    public async Task ExecuteAsync_AssemblyTargetReturnsErrorUnsupportedWithoutProjectLease()
     {
         using var tempDir = TestTempDirectory.Create("analysis-dispatch-assembly-");
         var assemblyPath = Path.Combine(tempDir.DirectoryPath, "sample.dll");
@@ -106,7 +106,7 @@ public sealed class AnalysisToolCallTests
             })).ProjectCall!);
 
         Assert.False(projectCalled);
-        Assert.False(result.IsError ?? false);
+        Assert.True(result.IsError);
         Assert.Contains("ASSEMBLY_TARGET_UNSUPPORTED", TextOf(result), StringComparison.Ordinal);
         Assert.Empty(registry.Snapshots());
     }
@@ -180,7 +180,7 @@ public sealed class AnalysisToolCallTests
                 MaxResponseBytes: 512,
                 PostNavigationResponseBudget: TestContextResponseBudget.ApplyFinal));
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         Assert.Equal(
             LinterErrorCodes.ResponseBudgetTooSmall,
             result.StructuredContent!.Value.GetProperty("code").GetString());

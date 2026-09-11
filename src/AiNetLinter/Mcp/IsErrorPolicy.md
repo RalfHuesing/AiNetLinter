@@ -7,6 +7,12 @@ ein Agent ein Tool aufgibt, selbst wenn die Bedingung trivial behebbar wäre
 der Text-Inhalt. Diese Policy legt fest, wann `IsError=true` gerechtfertigt ist und wann eine
 erwartbare Bedingung stattdessen `IsError=false` mit einer Handlungsanleitung im Text liefert.
 
+Für zielgebundene Contract-v2-Antworten gilt zusätzlich und vorrangig: Die gemeinsame
+Navigationprojektion macht jeden strukturierten Fehlercode atomar zu
+`operation=error`, `completeness=not_applicable` und `isError=true`. Die Tabelle beschreibt
+die interne Vorprojektion der Toolhelfer; ein `Recoverable(...)`-Zwischenergebnis darf nicht
+ohne diese v2-Projektion an einen Ziel-Client gelangen.
+
 ## Policy-Tabelle
 
 | Bedingung | isError | Begruendung |
@@ -68,9 +74,8 @@ korrigiert auf `Error(...)` mit Retry-once-Hinweis, siehe `GetViolationsScanner.
 ## Verwendung
 
 - `McpToolResults.Error(...)` — nur fuer die drei `isError=true`-Kategorien oben.
-- `McpToolResults.Recoverable(...)` — fuer alle anderen strukturierten `[ERROR]:`-Texte einschließlich
-  korrigierbarer `ExternalSources`-Konfigurationsfehler; identisches Format wie `Error(...)`, aber
-  `IsError=false`.
+- `McpToolResults.Recoverable(...)` — interner Vorprojektionstyp für korrigierbare Bedingungen.
+  Nach `WithNavigation(...)` ist auch er ein Contract-v2-Fehler mit `IsError=true`.
 - `McpToolResults.SolutionNotLoaded()`, `SymbolNotFound(...)`, `AmbiguousSymbol(...)`,
   `InvalidArgument(...)`, `FileNotFound(...)`, `CompilationError(...)` — vordefinierte Kurzformen,
   die die richtige Wahl bereits treffen (siehe XML-Doc auf der jeweiligen Methode in

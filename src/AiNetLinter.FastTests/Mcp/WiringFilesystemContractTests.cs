@@ -49,7 +49,7 @@ public sealed class WiringFilesystemContractTests
             new AnalysisTargetRequest(assemblyPath),
             ThrowingFilesystemCallback);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var text = TextOf(result);
         Assert.Contains("ASSEMBLY_TARGET_UNSUPPORTED", text, StringComparison.Ordinal);
         Assert.Contains(canonicalPath, text, StringComparison.OrdinalIgnoreCase);

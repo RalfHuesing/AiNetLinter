@@ -139,9 +139,11 @@ internal static partial class McpToolResults
                     message,
                     parameters.Context,
                     parameters.Hint,
-                    Recoverable: !isError,
-                    parameters.TargetPath,
-                    parameters.FieldPath),
+                Recoverable: !isError,
+                parameters.TargetPath,
+                parameters.FieldPath,
+                parameters.RequestedBytes,
+                parameters.MinimumResponseBytes),
                 McpJsonOptions.Default),
         };
     }
@@ -305,22 +307,33 @@ internal static partial class McpToolResults
         ArgumentNullException.ThrowIfNull(result);
         ArgumentNullException.ThrowIfNull(target);
 
+        var navigated = ProjectNavigation(result, target);
+        if (postNavigationResponseBudget is null || maxResponseBytes <= 0) return navigated;
+
+        var budgeted = postNavigationResponseBudget(navigated, maxResponseBytes);
+        return HasErrorCode(budgeted) ? ProjectNavigation(budgeted, target) : budgeted;
+    }
+
+    private static CallToolResult ProjectNavigation(CallToolResult result, AnalysisTarget target)
+    {
         var navigation = McpNavigationProjection.Create(result, target);
         var payload = CreateNavigationPayload(result.StructuredContent);
+        if (navigation.Status.Operation == "error") payload["recoverable"] = false;
         MergeNavigation(payload, CreateNavigationNode(navigation));
-        var navigationText = target.Origin == AnalysisTargetOrigin.Decompiled
-            ? McpNavigationText.FormatAssembly(navigation)
-            : McpNavigationText.Format(navigation, result.StructuredContent);
-        var navigated = new CallToolResult
+        var navigationText = McpNavigationText.Format(navigation, result.StructuredContent);
+        return new CallToolResult
         {
-            IsError = result.IsError,
+            IsError = navigation.Status.Operation == "error",
             Content = AppendNavigationText(result.Content, navigationText),
             StructuredContent = JsonSerializer.SerializeToElement(payload, McpJsonOptions.Default),
         };
-        return postNavigationResponseBudget is null || maxResponseBytes <= 0
-            ? navigated
-            : postNavigationResponseBudget(navigated, maxResponseBytes);
     }
+
+    private static bool HasErrorCode(CallToolResult result) =>
+        result.StructuredContent is { ValueKind: JsonValueKind.Object } structured
+        && structured.TryGetProperty("code", out var code)
+        && code.ValueKind == JsonValueKind.String
+        && !string.IsNullOrWhiteSpace(code.GetString());
 
     private static JsonObject CreateNavigationPayload(JsonElement? structured) =>
         structured is { ValueKind: JsonValueKind.Object } value
@@ -331,8 +344,8 @@ internal static partial class McpToolResults
     {
         var navigationNode = JsonSerializer.SerializeToNode(navigation, McpJsonOptions.Default) as JsonObject
             ?? new JsonObject();
-        // McpJsonOptions omits nulls globally.  The v1 wire contract deliberately requires
-        // status.code and next to be present as null when no code/follow-up applies.
+        // McpJsonOptions omits nulls globally. The contract keeps code and next explicit so
+        // consumers never need to infer a missing status field.
         if (navigationNode["status"] is JsonObject statusNode && !statusNode.ContainsKey("code"))
         {
             statusNode["code"] = null;
@@ -347,26 +360,7 @@ internal static partial class McpToolResults
 
     private static void MergeNavigation(JsonObject payload, JsonObject navigationNode)
     {
-        if (payload["navigation"] is JsonObject existingNavigation)
-        {
-            foreach (var propertyName in new[]
-            {
-                "contractVersion", "target", "snapshot", "status", "scope", "next", "handoff",
-                "origin", "capabilities", "operationStatus", "result", "completeness",
-            })
-            {
-                existingNavigation.Remove(propertyName);
-            }
-
-            foreach (var property in navigationNode)
-            {
-                existingNavigation[property.Key] = property.Value?.DeepClone();
-            }
-        }
-        else
-        {
-            payload["navigation"] = navigationNode;
-        }
+        payload["navigation"] = navigationNode;
     }
 
     private static List<ContentBlock> AppendNavigationText(
@@ -444,7 +438,9 @@ internal readonly record struct McpErrorParameters(
     string? Context = null,
     string? Hint = null,
     string? TargetPath = null,
-    string? FieldPath = null);
+    string? FieldPath = null,
+    int? RequestedBytes = null,
+    int? MinimumResponseBytes = null);
 
 /// <summary>
 /// Typisierter Fehlervertrag fuer MCP-Antworten. Die Payload wird fuer harte und recoverable
@@ -458,7 +454,9 @@ internal sealed record McpErrorPayload(
     string? Hint,
     bool Recoverable,
     string? TargetPath = null,
-    string? FieldPath = null);
+    string? FieldPath = null,
+    int? RequestedBytes = null,
+    int? MinimumResponseBytes = null);
 
 internal static class McpHandoffErrorCodes
 {

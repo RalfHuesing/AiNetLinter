@@ -362,7 +362,7 @@ internal static class GetSymbolBodyTool
     }
 
     private static CallToolResult BudgetTooSmall(int budget) =>
-        McpToolResults.Recoverable(
+        McpToolResults.Error(
             LinterErrorCodes.ResponseBudgetTooSmall,
             $"maxResponseBytes={budget} ist zu klein für die vollständige minimale Symbol-Body-Projektion.",
             new McpErrorParameters(

@@ -121,17 +121,18 @@ public sealed partial class McpToolResultsTests
             target);
 
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.Contains("invalid_argument", text, StringComparison.Ordinal);
+        Assert.Contains("operation=error", text, StringComparison.Ordinal);
         Assert.Contains("Scope verfeinern", text, StringComparison.Ordinal);
         Assert.DoesNotContain(target.CanonicalPath, text, StringComparison.Ordinal);
         Assert.DoesNotContain("snapshot", text, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal("invalid_argument", result.StructuredContent!.Value.GetProperty("navigation").GetProperty("status").GetProperty("operation").GetString());
+        Assert.True(result.IsError);
+        Assert.Equal("error", result.StructuredContent!.Value.GetProperty("navigation").GetProperty("status").GetProperty("operation").GetString());
     }
 
     [Fact]
-    public void WithNavigation_ProjectsVersionedEnvelopeAndRemovesLegacyNavigationFields()
+    public void WithNavigation_ProjectsOnlyTheV2Envelope()
     {
-        using var tempDir = TestTempDirectory.Create("mcp-navigation-envelope-v1-");
+        using var tempDir = TestTempDirectory.Create("mcp-navigation-envelope-");
         var solutionPath = Path.Combine(tempDir.DirectoryPath, "workspace.slnx");
         File.WriteAllText(solutionPath, string.Empty);
         var target = Assert.IsType<AnalysisTarget>(AnalysisTargetResolver.Resolve(
@@ -148,29 +149,16 @@ public sealed partial class McpToolResultsTests
                 new
                 {
                     completeness = "complete",
-                    navigation = new
-                    {
-                        origin = "legacy",
-                        capabilities = new { navigation = "supported", lint = "supported" },
-                        operationStatus = "ok",
-                        result = new { available = true },
-                        next = new { kind = "none", action = "legacy" },
-                    },
                 }),
             target);
 
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
-        Assert.Equal(1, navigation.GetProperty("contractVersion").GetInt32());
+        Assert.Equal(2, navigation.GetProperty("contractVersion").GetInt32());
         Assert.Equal("source", navigation.GetProperty("target").GetProperty("origin").GetString());
         Assert.Equal(target.CanonicalPath, navigation.GetProperty("target").GetProperty("targetPath").GetString());
         Assert.Equal("ok", navigation.GetProperty("status").GetProperty("operation").GetString());
         Assert.Equal("complete", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal(JsonValueKind.Null, navigation.GetProperty("next").ValueKind);
-        Assert.DoesNotContain("origin", navigation.EnumerateObject().Select(property => property.Name));
-        Assert.DoesNotContain("capabilities", navigation.EnumerateObject().Select(property => property.Name));
-        Assert.DoesNotContain("operationStatus", navigation.EnumerateObject().Select(property => property.Name));
-        Assert.DoesNotContain("result", navigation.EnumerateObject().Select(property => property.Name));
-        Assert.DoesNotContain("completeness", navigation.EnumerateObject().Select(property => property.Name));
     }
 
     [Fact]
@@ -260,7 +248,7 @@ public sealed partial class McpToolResultsTests
     }
 
     [Theory]
-    [InlineData("not_decidable")]
+    [InlineData("partial")]
     [InlineData("truncated")]
     public void WithNavigation_PromotesSummaryCompleteness(string expectedCompleteness)
     {
@@ -362,7 +350,7 @@ public sealed partial class McpToolResultsTests
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
 
         Assert.Equal("error", navigation.GetProperty("status").GetProperty("operation").GetString());
-        Assert.Equal("partial", navigation.GetProperty("status").GetProperty("completeness").GetString());
+        Assert.Equal("not_applicable", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
         Assert.Equal(
             "Abschnitt violations: erneut anfordern.",
@@ -383,9 +371,10 @@ public sealed partial class McpToolResultsTests
             target);
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
 
-        Assert.Equal("symbol_not_found", navigation.GetProperty("status").GetProperty("operation").GetString());
+        Assert.True(result.IsError);
+        Assert.Equal("error", navigation.GetProperty("status").GetProperty("operation").GetString());
         Assert.Equal("not_applicable", navigation.GetProperty("status").GetProperty("completeness").GetString());
-        Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
+        Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
     }
 
     [Fact]
@@ -402,8 +391,8 @@ public sealed partial class McpToolResultsTests
             target);
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
 
-        Assert.Equal("invalid_assembly", navigation.GetProperty("status").GetProperty("operation").GetString());
-        Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
+        Assert.Equal("error", navigation.GetProperty("status").GetProperty("operation").GetString());
+        Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
         Assert.StartsWith("Keine Wiederholung nötig", navigation.GetProperty("next").GetProperty("action").GetString());
     }
 
@@ -461,9 +450,9 @@ public sealed partial class McpToolResultsTests
             target);
         var navigation = result.StructuredContent!.Value.GetProperty("navigation");
 
-        Assert.Equal("unsupported", navigation.GetProperty("status").GetProperty("operation").GetString());
-        Assert.Equal("unsupported", navigation.GetProperty("status").GetProperty("completeness").GetString());
+        Assert.Equal("error", navigation.GetProperty("status").GetProperty("operation").GetString());
+        Assert.Equal("not_applicable", navigation.GetProperty("status").GetProperty("completeness").GetString());
         Assert.Equal(AiNetLinter.Output.LinterErrorCodes.ProjectTargetUnsupported, navigation.GetProperty("status").GetProperty("code").GetString());
-        Assert.Equal("refine_scope", navigation.GetProperty("next").GetProperty("kind").GetString());
+        Assert.Equal("request_detail", navigation.GetProperty("next").GetProperty("kind").GetString());
     }
 }

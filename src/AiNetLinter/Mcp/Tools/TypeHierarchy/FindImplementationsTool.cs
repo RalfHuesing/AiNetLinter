@@ -355,7 +355,7 @@ internal static class FindImplementationsTool
             "maxResponseBytes weglassen oder einen Wert innerhalb dieses Bereichs setzen.",
             "$.maxResponseBytes");
 
-    private static CallToolResult BudgetTooSmall(int budget) => McpToolResults.Recoverable(
+    private static CallToolResult BudgetTooSmall(int budget) => McpToolResults.Error(
         LinterErrorCodes.ResponseBudgetTooSmall,
         $"maxResponseBytes={budget} ist zu klein für die vollständige minimale Implementierungsprojektion.",
         new McpErrorParameters(Hint: "maxResponseBytes erhöhen; Implementierungen werden nur vollständig gekürzt.", FieldPath: "$.maxResponseBytes"));

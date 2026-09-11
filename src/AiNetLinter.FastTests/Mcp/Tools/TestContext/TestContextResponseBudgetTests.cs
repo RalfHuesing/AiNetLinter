@@ -37,14 +37,16 @@ public sealed class TestContextResponseBudgetTests
     }
 
     [Fact]
-    public void Apply_TooSmallForProtectedCandidatesReturnsRecoverableMinimumError()
+    public void Apply_TooSmallForProtectedCandidatesReturnsErrorMinimumResult()
     {
         var result = TestContextResponseBudget.Apply(CreatePayload(), 512);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("RESPONSE_BUDGET_TOO_SMALL", text, System.StringComparison.Ordinal);
         Assert.Contains("fieldPath: $.maxResponseBytes", text, System.StringComparison.Ordinal);
+        Assert.Equal(512, result.StructuredContent!.Value.GetProperty("requestedBytes").GetInt32());
+        Assert.True(result.StructuredContent.Value.GetProperty("minimumResponseBytes").GetInt32() > 512);
     }
 
     [Fact]

@@ -119,7 +119,7 @@ public sealed partial class McpToolResultsTests
         Assert.NotEqual(target.Fingerprint, navigation.GetProperty("snapshot").GetProperty("fingerprint").GetString());
         Assert.Equal("source", navigation.GetProperty("snapshot").GetProperty("kind").GetString());
         Assert.True(navigation.GetProperty("snapshot").GetProperty("fresh").GetBoolean());
-        Assert.Equal(1, navigation.GetProperty("contractVersion").GetInt32());
+        Assert.Equal(2, navigation.GetProperty("contractVersion").GetInt32());
         Assert.Equal("source", navigation.GetProperty("target").GetProperty("origin").GetString());
         Assert.Equal("ok", navigation.GetProperty("status").GetProperty("operation").GetString());
         Assert.Equal("empty", navigation.GetProperty("status").GetProperty("completeness").GetString());

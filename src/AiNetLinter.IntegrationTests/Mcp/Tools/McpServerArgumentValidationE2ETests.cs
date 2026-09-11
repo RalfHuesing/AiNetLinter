@@ -341,13 +341,13 @@ public sealed class McpServerArgumentValidationE2ETests
     }
 
     [Fact]
-    public async Task NamespaceTree_TinyPositiveResponseBudgetIsRejectedBeforeDispatch()
+    public async Task NamespaceTree_TinyPositiveResponseBudgetReturnsErrorBeforeDispatch()
     {
         var result = await _fixture.Client.CallToolAsync(
             "get_namespace_tree",
             new Dictionary<string, object?> { ["maxResponseBytes"] = 511 });
 
-        Assert.False(result.IsError == true, result.ToString());
+        Assert.True(result.IsError, result.ToString());
         Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
         Assert.Equal("$.maxResponseBytes", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
     }

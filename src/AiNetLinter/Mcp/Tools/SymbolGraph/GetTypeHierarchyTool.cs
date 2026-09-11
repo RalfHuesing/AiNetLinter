@@ -166,7 +166,7 @@ internal static class GetTypeHierarchyTool
             "maxResponseBytes weglassen oder einen Wert innerhalb dieses Bereichs setzen.",
             "$.maxResponseBytes");
 
-    private static CallToolResult BudgetTooSmall(int budget) => McpToolResults.Recoverable(
+    private static CallToolResult BudgetTooSmall(int budget) => McpToolResults.Error(
         LinterErrorCodes.ResponseBudgetTooSmall,
         $"maxResponseBytes={budget} ist zu klein für die vollständige minimale Typ-Hierarchie.",
         new McpErrorParameters(Hint: "maxResponseBytes erhöhen; Hierarchie-Einträge werden nur vollständig gekürzt.", FieldPath: "$.maxResponseBytes"));

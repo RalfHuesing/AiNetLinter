@@ -75,7 +75,7 @@ public sealed partial class AssemblyAnalysisToolTests
             "assembly",
             new
             {
-                navigation = new { contractVersion = 1, status = new { operation = "ok", completeness = "complete" } },
+                navigation = new { contractVersion = 2, status = new { operation = "ok", completeness = "complete" } },
                 types = Enumerable.Range(0, 200)
                     .Select(index => new { id = $"item-{index:D3}", value = new string('x', 80) }),
             });
@@ -97,7 +97,7 @@ public sealed partial class AssemblyAnalysisToolTests
             new string('x', 8_000),
             new
             {
-                navigation = new { contractVersion = 1, status = new { operation = "ok", completeness = "complete" } },
+                navigation = new { contractVersion = 2, status = new { operation = "ok", completeness = "complete" } },
             });
 
         var projected = AssemblyAnalysisResponse.ApplyWireBudget(result, 4096, 0);

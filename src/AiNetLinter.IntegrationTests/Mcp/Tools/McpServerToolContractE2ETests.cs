@@ -58,13 +58,13 @@ public sealed class McpServerToolContractE2ETests
     }
 
     [Fact]
-    public async Task MetricsLookup_UnknownSymbol_ReturnsRecoverableSymbolNotFound()
+    public async Task MetricsLookup_UnknownSymbol_ReturnsContractError()
     {
         var result = await _fixture.Client.CallToolAsync(
             "metrics_lookup",
             new Dictionary<string, object?> { ["symbolIdentifiers"] = new[] { "UnknownClass123" } });
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError);
         var textContent = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
     }

@@ -344,12 +344,14 @@ internal static class FeatureContextResponseBudget
     }
 
     private static CallToolResult BudgetTooSmall(int budget, int minimumBytes) =>
-        McpToolResults.Recoverable(
+        McpToolResults.Error(
             LinterErrorCodes.ResponseBudgetTooSmall,
             $"maxResponseBytes={budget} ist zu klein für die fachliche Mindestprojektion; Mindestwert: {minimumBytes} Bytes.",
             new McpErrorParameters(
                 Hint: $"maxResponseBytes auf mindestens {minimumBytes} setzen; die Antwort wird nur an vollständigen Feature-/Caller-/Test-/Violation-Einheiten gekürzt.",
-                FieldPath: "$.maxResponseBytes"));
+                FieldPath: "$.maxResponseBytes",
+                RequestedBytes: budget,
+                MinimumResponseBytes: minimumBytes));
 
     private static CallToolResult WithWireBudget(
         CallToolResult result,

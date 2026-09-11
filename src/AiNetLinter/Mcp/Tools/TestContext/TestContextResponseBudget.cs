@@ -159,12 +159,14 @@ internal static class TestContextResponseBudget
         McpResponseSize.From(CreateResult(payload, navigation, navigationText)).TotalBytes;
 
     private static CallToolResult BudgetTooSmall(int budget, int minimumBytes) =>
-        McpToolResults.Recoverable(
+        McpToolResults.Error(
             LinterErrorCodes.ResponseBudgetTooSmall,
             $"maxResponseBytes={budget} ist zu klein für bis zu drei konkrete Testkandidaten; Mindestwert: {minimumBytes} Bytes.",
             new McpErrorParameters(
                 Hint: $"maxResponseBytes auf mindestens {minimumBytes} setzen; die Antwort wird nur an vollständigen Testkandidaten gekürzt.",
-                FieldPath: "$.maxResponseBytes"));
+                FieldPath: "$.maxResponseBytes",
+                RequestedBytes: budget,
+                MinimumResponseBytes: minimumBytes));
 
     private static int NormalizeBudget(int requested) => requested <= 0 ? DefaultMaxResponseBytes : requested;
 

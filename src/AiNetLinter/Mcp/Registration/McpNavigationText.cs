@@ -13,32 +13,13 @@ internal static class McpNavigationText
 {
     internal static string Format(McpNavigationPayload navigation) => Format(navigation, null);
 
-    /// <summary>
-    /// Assembly tools expose their navigation metadata as a durable Markdown footer. Unlike the
-    /// compact generic suffix this remains present for complete responses too, because an
-    /// assembly result can be followed by source-backed or decompiled navigation.
-    /// </summary>
-    internal static string FormatAssembly(McpNavigationPayload navigation)
-    {
-        var action = navigation.Next?.Action;
-        var lines = new[]
-        {
-            "## Navigation",
-            $"- status: operation=`{navigation.Status.Operation}`, completeness=`{navigation.Status.Completeness}`",
-            $"- completeness: `{navigation.Status.Completeness}`",
-        };
-        return string.IsNullOrWhiteSpace(action)
-            ? string.Join("\n", lines)
-            : string.Join("\n", lines) + $"\n- next: `{navigation.Next!.Kind}` — {NormalizeSingleLine(action)}";
-    }
-
     internal static string Format(McpNavigationPayload navigation, JsonElement? structured)
     {
         var operation = navigation.Status.Operation;
         var completeness = navigation.Status.Completeness;
         if (operation == "ok" && completeness == "complete") return string.Empty;
 
-        var status = $"Status: operation={operation}, completeness={completeness}";
+        var status = $"Status: operation={operation}, completeness={completeness}, analysisQuality={navigation.Analysis.Quality}";
         if (completeness == "empty")
         {
             return $"{status}; {FormatEmptyScope(navigation.Scope, structured)}";
