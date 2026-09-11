@@ -386,19 +386,23 @@ internal sealed record FileSkeletonTypeDto(
     string? BaseTypes,
     string RelativePath,
     string? Id,
-    IReadOnlyList<FileSkeletonMemberDto> Members)
+    IReadOnlyList<FileSkeletonMemberDto> Members,
+    string? HandoffKind = null)
 {
     internal static FileSkeletonTypeDto From(SkeletonTypeInfo type) => new(
         type.Namespace, type.TypeKind, type.Modifiers, type.Name, type.BaseTypes,
-        type.RelativePath, type.Id, type.Members.Select(FileSkeletonMemberDto.From).ToList());
+        type.RelativePath, type.Id, type.Members.Select(FileSkeletonMemberDto.From).ToList(),
+        type.Id is null ? null : "type");
 }
 
 internal sealed record FileSkeletonMemberDto(
     string Kind,
     string Signature,
     string? MetaComment,
-    string? Id)
+    string? Id,
+    string? HandoffKind = null)
 {
     internal static FileSkeletonMemberDto From(SkeletonMemberInfo member) => new(
-        member.Kind.ToString(), member.Signature, member.MetaComment, member.Id);
+        member.Kind.ToString(), member.Signature, member.MetaComment, member.Id,
+        member.Id is null ? null : "member");
 }

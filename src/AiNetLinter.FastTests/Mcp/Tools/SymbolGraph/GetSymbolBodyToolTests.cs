@@ -68,7 +68,7 @@ public sealed class GetSymbolBodyToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Contains("id:", textContent.Text, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("id:", textContent.Text, System.StringComparison.Ordinal);
         Assert.True(result.StructuredContent.HasValue);
         var structured = result.StructuredContent!.Value;
         var entry = Assert.Single(structured.GetProperty("results").EnumerateArray());
@@ -148,7 +148,7 @@ public sealed class GetSymbolBodyToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("id: `s:", textContent.Text, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("id: `s:", textContent.Text, System.StringComparison.Ordinal);
         Assert.DoesNotContain("get_Prefix", textContent.Text, System.StringComparison.Ordinal);
     }
 
@@ -175,12 +175,12 @@ public sealed class GetSymbolBodyToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("Prefix", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Equal(2, textContent.Text.Split("id: `s:", System.StringSplitOptions.None).Length - 1);
+        Assert.Equal(2, textContent.Text.Split("### ", System.StringSplitOptions.None).Length - 1);
         Assert.Contains("---", textContent.Text, System.StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ExecuteAsync_MultipleNamedIdentifiers_EmitsBothRequestedAndResolvedId()
+    public async Task ExecuteAsync_MultipleNamedIdentifiers_EmitsBothRequestedWithoutResolvedId()
     {
         var state = _fixture.CreateServer();
 
@@ -194,7 +194,8 @@ public sealed class GetSymbolBodyToolTests
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("angefordert: `Greeter.Greet`", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("angefordert: `Greeter.Prefix`", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Equal(2, textContent.Text.Split("id: `s:", System.StringSplitOptions.None).Length - 1);
+        Assert.DoesNotContain("id: `s:", textContent.Text, System.StringComparison.Ordinal);
+        Assert.Equal(2, result.StructuredContent!.Value.GetProperty("results").GetArrayLength());
     }
 
     [Fact]
@@ -214,7 +215,7 @@ public sealed class GetSymbolBodyToolTests
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("Greet", textContent.Text, System.StringComparison.Ordinal);
-        Assert.Contains("id: `s:", textContent.Text, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("id: `s:", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("DoesNotExistXyz", textContent.Text, System.StringComparison.Ordinal);
         Assert.Contains("nicht aufgeloest", textContent.Text, System.StringComparison.Ordinal);
     }
@@ -338,6 +339,26 @@ public sealed class GetSymbolBodyToolTests
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.Contains("Greet", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_HandoffIdIsStructuredOnly_AndBodyRemainsComplete()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await GetSymbolBodyTool.ExecuteAsync(
+            state,
+            ["Greeter.Greet"],
+            80,
+            CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.DoesNotContain("id:", text, System.StringComparison.Ordinal);
+        Assert.Contains("Hello", text, System.StringComparison.Ordinal);
+
+        var entry = result.StructuredContent!.Value.GetProperty("results")[0];
+        Assert.StartsWith("s:", entry.GetProperty("id").GetString(), System.StringComparison.Ordinal);
+        Assert.Equal("member", entry.GetProperty("handoffKind").GetString());
     }
 }
 

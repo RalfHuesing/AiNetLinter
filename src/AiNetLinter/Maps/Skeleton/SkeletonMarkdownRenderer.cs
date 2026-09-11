@@ -60,8 +60,7 @@ internal static class SkeletonMarkdownRenderer
         sb.AppendLine();
         var modifierTag = BuildModifierTag(type.Modifiers);
         var basePart = type.BaseTypes != null ? $" {type.BaseTypes}" : "";
-        var typeIdSuffix = type.Id is null ? "" : $" `id:{type.Id}`";
-        sb.AppendLine($"### {type.Name}{basePart}{modifierTag} — `{type.RelativePath}`{typeIdSuffix}");
+        sb.AppendLine($"### {type.Name}{basePart}{modifierTag} — `{type.RelativePath}`");
 
         if (type.Members.Count > 0)
         {
@@ -98,10 +97,9 @@ internal static class SkeletonMarkdownRenderer
 
         foreach (var m in filtered)
         {
-            var idSuffix = m.Id is null ? "" : $" /* id:{m.Id} */";
             var line = m.MetaComment != null
-                ? $"{m.Signature}{idSuffix} /* {m.MetaComment} */"
-                : $"{m.Signature}{idSuffix}";
+                ? $"{m.Signature} /* {m.MetaComment} */"
+                : m.Signature;
             sb.AppendLine(line);
         }
 

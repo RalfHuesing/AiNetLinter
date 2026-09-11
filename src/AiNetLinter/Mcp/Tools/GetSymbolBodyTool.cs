@@ -12,6 +12,7 @@ using AiNetLinter.Mcp.Tools.Common;
 using AiNetLinter.Mcp.Tools.SymbolGraph;
 using AiNetLinter.Mcp.Assemblies.Analysis;
 using AiNetLinter.Mcp.Assemblies.Analysis.References;
+using AiNetLinter.Mcp.Handoffs;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 using ModelContextProtocol.Protocol;
@@ -209,13 +210,10 @@ internal static class GetSymbolBodyTool
 
         request.Markdown.Heading(3, $"{symbol.Kind}: {symbol.ToDisplayString()} — `{FormatLocation(request, symbol)}`");
         request.Markdown.BlankLine();
-        if (!string.Equals(request.Identifier, idSuffix, StringComparison.Ordinal))
+        if (!string.Equals(request.Identifier, idSuffix, StringComparison.Ordinal)
+            && !SymbolHandoffIdentifier.TryParse(request.Identifier, out _))
         {
             request.Markdown.Line($"angefordert: `{request.Identifier}`");
-        }
-        if (idSuffix is not null)
-        {
-            request.Markdown.Line($"id: `{idSuffix}`");
         }
         request.Markdown.Line($"bodyAvailability: `{bodyResolution.BodyAvailability}`; contentMode: `{bodyResolution.ContentMode}`");
         if (bodyResolution.TotalBodyLines > 0)
@@ -230,6 +228,7 @@ internal static class GetSymbolBodyTool
         request.Entries.Add(new SymbolBodyEntry(
             request.Identifier,
             idSuffix,
+            idSuffix is null ? null : "member",
             PathNormalizer.ToRelative(request.OutputRoot, location?.SourceTree?.FilePath ?? ""),
             lineSpan is null ? 0 : lineSpan.Value.StartLinePosition.Line + 1,
             bodyResolution.Body,
@@ -280,6 +279,7 @@ internal sealed record SymbolBodyBatchDto(
 internal sealed record SymbolBodyEntry(
     string RequestedIdentifier,
     string? Id,
+    string? HandoffKind,
     string FilePath,
     int StartLine,
     string? Body,

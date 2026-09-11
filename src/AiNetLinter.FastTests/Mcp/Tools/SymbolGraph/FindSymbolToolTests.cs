@@ -422,5 +422,48 @@ public sealed class FindSymbolToolTests
         var absEntry = Assert.Single(absoluteEntries);
         Assert.True(System.IO.Path.IsPathRooted(absEntry.FilePath));
     }
+
+    [Fact]
+    public async Task ExecuteAsync_HandoffIdIsStructuredOnly_AndEntryDoesNotRepeatRootMetadata()
+    {
+        using var fixture = new McpInMemoryTestContext();
+
+        var result = await FindSymbolTool.ExecuteAsync(
+            fixture.CreateServer(), ["Greeter"], kind: "class", maxResults: 50, CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.DoesNotContain("id:", text, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("handoff=", text, System.StringComparison.Ordinal);
+
+        var match = result.StructuredContent!.Value
+            .GetProperty("results")[0]
+            .GetProperty("matches")[0];
+        Assert.StartsWith("s:", match.GetProperty("id").GetString(), System.StringComparison.Ordinal);
+        Assert.Equal("type", match.GetProperty("handoffKind").GetString());
+        Assert.False(match.TryGetProperty("targetPath", out _));
+        Assert.False(match.TryGetProperty("snapshot", out _));
+        Assert.False(match.TryGetProperty("handoff", out _));
+        Assert.False(match.TryGetProperty("allowedFollowUpTools", out _));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_AmbiguousMatchesStayDistinctWithoutTextIds()
+    {
+        using var fixture = new McpInMemoryTestContext();
+
+        var result = await FindSymbolTool.ExecuteAsync(
+            fixture.CreateServer(), ["Run"], kind: "method", maxResults: 50, CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.DoesNotContain("id: `s:", text, System.StringComparison.Ordinal);
+        Assert.Contains("Caller.cs", text, System.StringComparison.Ordinal);
+        Assert.Contains("OtherCaller.cs", text, System.StringComparison.Ordinal);
+
+        var matches = result.StructuredContent!.Value.GetProperty("results")[0]
+            .GetProperty("matches").EnumerateArray().ToList();
+        Assert.True(matches.Count >= 2);
+        Assert.Equal(matches.Count, matches.Select(match => match.GetProperty("id").GetString()).Distinct().Count());
+        Assert.All(matches, match => Assert.Equal("member", match.GetProperty("handoffKind").GetString()));
+    }
 }
 

@@ -225,10 +225,8 @@ internal static class FindSymbolTool
                 kindLabel,
                 symbol.ToDisplayString(),
                 qualifiedId,
-                Handoff: qualifiedId is not null,
-                TargetPath: assemblyIdentity?.CanonicalPath,
-                Snapshot: assemblyIdentity?.ContentHash,
-                AllowedFollowUpTools: qualifiedId is null ? [] : HandoffFollowUpTools.For(symbol));
+                HandoffKind: qualifiedId is null ? null : symbol is INamedTypeSymbol ? "type" : "member",
+                Origin: null);
         }
     }
 
@@ -308,8 +306,7 @@ internal static class FindSymbolTool
         var origin = entry.Origin is null
             ? string.Empty
             : $" [assembly={entry.Origin.CanonicalPath}; origin={entry.Origin.OriginKind}]";
-        var id = entry.Handoff && entry.Id is not null ? $" id: `{entry.Id}`" : " handoff=false";
-        return $"{entry.FilePath}:{entry.Line} - {entry.Kind}: {entry.Name}{id}{origin}";
+        return $"{entry.Kind} {entry.Name} — {entry.FilePath}:{entry.Line}{origin}";
     }
 
 }
@@ -348,8 +345,5 @@ internal sealed record SymbolLocationEntry(
     string Kind,
     string Name,
     string? Id = null,
-    AssemblyNavigationOrigin? Origin = null,
-    bool Handoff = false,
-    string? TargetPath = null,
-    string? Snapshot = null,
-    IReadOnlyList<string>? AllowedFollowUpTools = null);
+    string? HandoffKind = null,
+    AssemblyNavigationOrigin? Origin = null);

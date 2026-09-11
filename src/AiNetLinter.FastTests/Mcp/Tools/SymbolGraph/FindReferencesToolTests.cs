@@ -87,7 +87,7 @@ public sealed class FindReferencesToolTests
     }
 
     [Fact]
-    public async Task ResolveSymbolAsync_AmbiguousNameWithAssemblyIdentity_FormatsCurrentAssemblyIds()
+    public async Task ResolveSymbolAsync_AmbiguousNameWithAssemblyIdentity_FormatsSelectableLocationsWithoutIds()
     {
         using var context = new McpInMemoryTestContext();
         var identity = AnalysisSymbolIdentity.ForAssembly(
@@ -103,7 +103,7 @@ public sealed class FindReferencesToolTests
 
         Assert.Null(symbol);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(error!.Content)).Text;
-        Assert.Contains("a:", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("a:", text, StringComparison.Ordinal);
         Assert.DoesNotContain(identity.ContentHash, text, StringComparison.Ordinal);
         Assert.DoesNotContain($":{identity.Generation}:M:", text, StringComparison.Ordinal);
         Assert.DoesNotContain("id: `M:", text, StringComparison.Ordinal);

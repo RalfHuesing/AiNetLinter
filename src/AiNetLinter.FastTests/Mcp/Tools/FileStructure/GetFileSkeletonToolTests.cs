@@ -231,4 +231,27 @@ public sealed class GetFileSkeletonToolTests
         var common = AiNetLinter.Core.Documents.SolutionDocumentPathResolver.FindCommonDirectory(paths);
         Assert.Equal(@"C:\Workspace\Decompiled", common);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_HandoffIdsAreStructuredOnly_AndKindsRemainSelectable()
+    {
+        var result = await GetFileSkeletonTool.ExecuteAsync(
+            _fixture.CreateServer(), ["src/SymbolGraphMini/Greeter.cs"], CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.DoesNotContain("id:", text, StringComparison.Ordinal);
+
+        var type = result.StructuredContent!.Value.GetProperty("files")[0]
+            .GetProperty("types")[0];
+        Assert.StartsWith("s:", type.GetProperty("id").GetString(), StringComparison.Ordinal);
+        Assert.Equal("type", type.GetProperty("handoffKind").GetString());
+
+        var members = type.GetProperty("members").EnumerateArray().ToList();
+        Assert.NotEmpty(members);
+        Assert.All(members, member =>
+        {
+            Assert.StartsWith("s:", member.GetProperty("id").GetString(), StringComparison.Ordinal);
+            Assert.Equal("member", member.GetProperty("handoffKind").GetString());
+        });
+    }
 }
