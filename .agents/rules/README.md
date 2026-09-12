@@ -1,3 +1,7 @@
+---
+trigger: manual
+---
+
 # Pflege der Regeln
 
 Diese Datei ist Governance, keine operative Agentenanweisung und wird nicht für die tägliche Arbeit geladen.
