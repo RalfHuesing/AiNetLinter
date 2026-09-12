@@ -46,19 +46,17 @@ bewusst Kandidaten. Ein Agent muss diese im betroffenen Feature-Kontext
 beurteilen; sie dürfen weder eine harte Freigabe sperren noch ungefragt einen
 solutionweiten Bericht über eine lokale Feature-Arbeit legen.
 
-`verify` trennt deshalb zwei fachliche Absichten mit einer einzigen,
-kleinen Auswahl statt mit vielen Detektor-Schaltern:
+`verify` bildet deshalb nur die zwei echten Agentenabsichten ab, nicht die
+technischen Scanner:
 
-| Modus | Zweck | Ergebniswirkung |
+| Aufruf | Agentenabsicht | Ergebniswirkung |
 |---|---|---|
-| `gate` (Default) | Verbindliche Qualitätsentscheidung für den adressierten Scope. | Score `10.0` und `0` Lint-Verstöße sind zwingend für `pass`. |
-| `review` | Kontextgebundene, priorisierte Prüfkandidaten zusätzlich zum festen Gate. | Kandidaten sind explizit nicht blockierend und erfordern Agentenurteil. |
+| `verify(targetPath)` | „Sind meine aktuellen Arbeitsänderungen in Ordnung?“ | Fester Gatekern für den automatisch bestimmten Änderungskontext; ergänzende Dead-Code-/Magic-Value-Kandidaten nur dort und nur advisory. |
+| `verify(targetPath, scope: "solution")` | „Ist die gesamte Solution bereit zum Abschluss?“ | Fester Gatekern solutionweit; keine kontextlosen Heuristik-Kandidaten. |
 
-Der Agent gibt im Regelfall nur `targetPath` und gegebenenfalls den konkreten
-Arbeits-`scope` an. Es gibt weder `minScore`, `maxViolations` noch einzelne
-`includeDeadCode`- oder `includeMagicValues`-Flags. Die Auswahl der Scanner
-ist eine stabile Serverentscheidung pro Modus, nicht eine zur Laufzeit neu
-zusammensetzbare Client-Pipeline.
+Der Agent muss weder Pfade, Filter, Detektoren, Schwellwerte, Profile noch
+Antwortlimits erraten. Die Auswahl der Scanner, der betrachtete Kontext und
+die Antwortprojektion sind stabile Serverentscheidungen.
 
 ## Öffentlicher Vertrag von `verify`
 
@@ -67,10 +65,7 @@ zusammensetzbare Client-Pipeline.
 ```text
 verify(
   targetPath,
-  scope?,
-  mode = "gate",
-  continuationToken?,
-  maxResponseBytes?
+  scope = "changes" | "solution"
 )
 ```
 
@@ -79,26 +74,22 @@ verify(
   `.dll`-, `.exe`- und andere Assembly-Ziele werden vor Lease, Decompilation
   oder fachlicher Analyse als klarer, strukturierter
   `ASSEMBLY_TARGET_UNSUPPORTED`-Fehler zurückgewiesen, nicht still leer.
-- `scope` bezeichnet optional einen einzelnen, solution-relativen
-  Arbeitskontext (Projekt, Verzeichnis, Datei oder kanonische Identität nach
-  dem dann gültigen gemeinsamen Scopevertrag). Ohne `scope` gilt die gesamte
-  Solution. Die Scopeauflösung läuft vor Analyse, Limit und Budget; die
-  effektive Menge wird maschinenlesbar ausgewiesen.
-- `mode` besitzt ausschließlich die Werte `gate` und `review`; ungültige
-  Werte liefern einen Contract-v2-`INVALID_ARGUMENT`-Fehler mit Feldpfad und
-  gültigen Werten.
-- `continuationToken` dient ausschließlich zum Abrufen weiterer bereits
-  deterministisch gerankter Evidenz eines unveränderten Snapshots. Er verändert
-  weder Scope noch Urteil noch Scannerwahl.
-- `maxResponseBytes` ist der gemeinsame Wirebudget-Vertrag. Passt mindestens
-  die feste Mindestprojektion nicht, lautet der Fehler
-  `RESPONSE_BUDGET_TOO_SMALL` und enthält `$.maxResponseBytes`,
-  `requestedBytes` und ein beim identischen Snapshot erfolgreiches
-  `minimumResponseBytes`.
-
-Es gibt keine weitere öffentliche Option. Insbesondere werden Ergebnismenge,
-Schwellwerte, Kandidatenarten und Scanner nicht über optionale Parameter
-gesteuert.
+- `scope` hat genau zwei Enum-Werte. Fehlt der Parameter, gilt `changes`.
+  `solution` ist die bewusste vollständige Abschlussprüfung. Andere Werte
+  liefern vor Analyse einen Contract-v2-`INVALID_ARGUMENT`-Fehler mit
+  Feldpfad und den beiden gültigen Werten.
+- `changes` bedeutet den Git-Working-Tree-Diff gegenüber `HEAD`: gestagte,
+  ungestagte und relevante neue Source-Dateien. Die Solution wird weiterhin
+  vollständig als semantischer Kontext geladen; Evidenz und Kandidaten werden
+  auf die Änderungen und ihren notwendigen Impact begrenzt.
+- Bei leerem oder nicht bestimmbaren Änderungskontext ist `changes` immer
+  `incomplete`, nie `pass`. Die einzige Recovery ist der explizite Aufruf mit
+  `scope: "solution"`.
+- Der Server verwendet ein festes, dokumentiertes Antwortbudget und gibt eine
+  deterministisch gerankte, kleine Menge ganzer Evidenzeinheiten aus. Es gibt
+  keinen clientseitigen Budget-, Paging- oder Detektorparameter. Vollständige
+  Counts bleiben sichtbar; nach einer Korrektur ruft der Agent denselben
+  einfachen Aufruf erneut auf.
 
 ### Ausgang und Entscheidungslogik
 
@@ -118,7 +109,7 @@ gate:
   requiredViolationCount: 0
   decisionReason: machine-readable enum
 evidence:
-  totalCount, returnedCount, entries[], continuationToken?
+  totalCount, returnedCount, entries[]
 scope:
   requested, effective, populations, exclusions
 ```
@@ -138,30 +129,29 @@ scope:
 Evidenz zeigt pro Eintrag Regel/Kategorie, Severity, zuverlässige
 Quellzuordnung, kurze fachliche Begründung und einen kanonischen Handoff.
 Keine Volltext-Snippets, Betriebsdaten oder redundante Navigationszeilen sind
-Defaultinhalt. Größere Budgets und Folgeseiten erweitern die zuvor sichtbare
-Evidenz monoton um ganze Einträge.
+Defaultinhalt. Die feste Projektion liefert stets ganze Evidenzeinheiten und
+nennt vollständige Counts statt die Antwort durch clientseitige Optionen
+aufzublähen.
 
-### Semantik von `gate` und `review`
+### Semantik von `changes` und `solution`
 
-`gate` führt ausschließlich die verbindliche Lint-/Scoreentscheidung aus und
-gibt bei Fehlern genug Evidenz für die erste Bearbeitung aus. Die beiden
-unveränderlichen Akzeptanzbedingungen bleiben immer sichtbar: `10.0` und
-`0`.
+Beide Scopes führen immer die verbindliche Lint-/Scoreentscheidung aus und
+zeigen die beiden unveränderlichen Akzeptanzbedingungen `10.0` und `0`.
 
-`review` führt denselben Gate-Kern aus und ergänzt nur für einen explizit
-adressierten Arbeitskontext priorisierte advisory-Kandidaten aus den heutigen
-Dead-Code- und Magic-Value-Analysen. Jeder solche Eintrag trägt mindestens:
+Nur `changes` ergänzt für den automatisch bestimmten Änderungskontext
+priorisierte advisory-Kandidaten aus den heutigen Dead-Code- und
+Magic-Value-Analysen. Jeder solche Eintrag trägt mindestens:
 
 - `kind: advisory_candidate`;
 - Confidence, Evidenzgrenze und bekannte Gegenindikatoren;
 - `requiresAgentJudgment: true`;
 - keine Lösch- oder Änderungsbehauptung und keine Wirkung auf `verdict`.
 
-Ein ungescopter `review` wird nicht als stiller Solution-Vollscan ausgeführt.
-Er liefert stattdessen einen feldgenauen, recoverable Hinweis auf einen
-einzugrenzenden Scope. Das bewahrt Signal-Rausch-Verhältnis und verhindert,
-dass ein Agent bei Feature X mit nicht zuordenbaren Kandidaten der ganzen
-Codebasis überflutet wird.
+`solution` führt diese Heuristiken nicht ungefragt aus. Ohne
+Änderungskontext wären sie ein großer, schlecht zuordenbarer Kandidatenreport
+und keine belastbare Abschlussentscheidung. Das bewahrt Signal-Rausch-
+Verhältnis und verhindert, dass ein Agent bei Feature X mit Kandidaten der
+ganzen Codebasis überflutet wird.
 
 ## Harter Entfall und klare Grenzen
 
@@ -178,7 +168,7 @@ Domänenlogik weiterverwendet werden, wenn `verify` sie benötigt. Alte
 Safeguard-/Violation-spezifische öffentliche DTOs, Formatter,
 Registrierungen und Adapter dürfen jedoch nicht als zweite Vertrags- oder
 Antwortschicht fortleben. Eine bestehende Analyse ist nur zu behalten, wenn
-sie eine klar abgegrenzte Eingabe für den neuen Gate- oder Review-Projektor
+sie eine klar abgegrenzte Eingabe für den neuen Gate- oder Kandidatenprojektor
 liefert.
 
 Unberührt bleiben in diesem Task `pattern_detect`, `get_hotspots`,
@@ -225,23 +215,24 @@ aus der vorhandenen C#-Testinfrastruktur mit einem frischen Taskstand-Host.
 2. Ohne frei konfigurierbaren Grenzwert bedeutet ein entscheidbares `pass`
    stets Score `10.0` und `violationCount=0`; kein anderer Status darf diese
    Freigabe suggerieren.
-3. `gate` bleibt knapp, deterministisch und für einen Feature-Scope
-   handlungsfähig. `review` ergänzt Kandidaten nur für einen expliziten Scope
-   und markiert sie klar als nicht blockierende Agentenentscheidung.
-4. Jeder valide Default liefert mindestens Gate-Summary plus eine vollständige
-   fachliche Evidenzeinheit. Kleine Budgets liefern einen exakt ausführbaren
-   `RESPONSE_BUDGET_TOO_SMALL`-Retry, nie einen erfolgreichen leeren oder das
-   Budget überschreitenden Report.
-5. Die Antwort nutzt Contract v2 atomar: Frühe Validierung, Budgetfehler,
+3. `verify(targetPath)` bestimmt seinen Änderungskontext ohne weiteren
+   Agentenparameter. Es prüft den festen Gatekern und ergänzt nur dort
+   handlungsfähige, nicht blockierende Dead-Code-/Magic-Value-Kandidaten.
+4. `verify(targetPath, scope: "solution")` ist die vollständige
+   Abschlussprüfung und führt keine kontextlosen Heuristik-Kandidaten aus.
+5. Jeder valide Aufruf liefert mindestens Gate-Summary plus eine vollständige
+   fachliche Evidenzeinheit innerhalb des festen Serverbudgets, nie einen
+   erfolgreichen leeren oder ein unkontrolliert großes Report.
+6. Die Antwort nutzt Contract v2 atomar: Frühe Validierung,
    Source-only-Assemblyfehler und fachliche Fehler haben einheitlich
    `isError=true`, `operation=error`, `completeness=not_applicable`, Code,
    Feldpfad und genau eine Recovery.
-6. Scope, Generated-/Test-Ausschlüsse, Counts und Trunkierungsgründe werden
+7. Scope, Generated-/Test-Ausschlüsse, Counts und Trunkierungsgründe werden
    vor Analyse- und Antwortlimits bestimmt, klar benannt und zwischen Text und
    StructuredContent nicht widersprüchlich dargestellt.
-7. Evidenz-Handoffs sind kanonisch, nur strukturiert vorhanden und mit den
+8. Evidenz-Handoffs sind kanonisch, nur strukturiert vorhanden und mit den
    weiter bestehenden semantischen Folgewerkzeugen direkt verwendbar.
-8. Die interne Wiederverwendung erzeugt keine zweite Status-, Fehler-, Scope-
+9. Die interne Wiederverwendung erzeugt keine zweite Status-, Fehler-, Scope-
    oder Budgethierarchie und keine Legacytypen mit alter öffentlicher
    Semantik.
 
@@ -251,56 +242,65 @@ aus der vorhandenen C#-Testinfrastruktur mit einem frischen Taskstand-Host.
    Eingaben, vollständigen Beschreibungen und korrekten Defaults; keiner der
    vier entfernten Toolnamen ist dort registriert. Die vier unberührten
    Pattern-, Hotspot- und Metrikwerkzeuge bleiben im Inventar erhalten.
-2. `verify(gate)` für einen vollständig sauberen Scope liefert `pass`, Score
-   `10.0`, `violationCount=0`, vollständige Navigation und keine überflüssige
-   Kandidatenliste.
-3. Ein Scope mit Regelverstoß oder Score kleiner `10.0` liefert `failed`,
+2. `verify(targetPath)` für einen vollständig sauberen Änderungskontext liefert
+   `pass`, Score `10.0`, `violationCount=0`, vollständige Navigation und nur
+   die kontextbezogenen advisory-Kandidaten.
+3. `verify(targetPath, scope: "solution")` für eine vollständig saubere
+   Solution liefert `pass`, Score `10.0`, `violationCount=0` und keine
+   Heuristik-Kandidatenliste.
+4. Ein Änderungskontext oder eine Solution mit Regelverstoß oder Score kleiner
+   `10.0` liefert `failed`,
    vollständige Counts und mindestens einen ausführbaren Evidenz-Handoff;
    `pass` ist ausgeschlossen.
-4. Ein unkonfigurierter, unlesbarer oder fachlich nicht entscheidbarer Scope
-   liefert `incomplete` statt Score `0`, `pass` oder Silent-Empty.
-5. `review` ohne konkreten Scope wird feldgenau zurückgewiesen; mit einem
-   Feature-Scope erscheinen nur deterministisch gerankte,
+5. Ein leerer oder nicht bestimmbarer Working-Tree-Diff, ein unkonfigurierter,
+   unlesbarer oder fachlich nicht entscheidbarer Kontext liefert `incomplete`
+   statt Score `0`, `pass` oder Silent-Empty. Der leere Diff verweist allein
+   auf `scope: "solution"`.
+6. Nur im Änderungskontext erscheinen deterministisch gerankte,
    `requiresAgentJudgment=true`-Kandidaten. Sie verändern ein sonst
    erfolgreiches Gateurteil nicht.
-6. Reflection-/DI-/Generator- und ähnliche Gegenindikatoren werden bei
+7. Reflection-/DI-/Generator- und ähnliche Gegenindikatoren werden bei
    Dead-Code-Kandidaten explizit sichtbar; Magic-Value-Kandidaten enthalten
    Kategorie und Evidenzgrenze. Kein Kandidat behauptet eigenständig eine
    sichere Lösch- oder Änderungsaktion.
-7. Fehlerfälle für fehlendes/falsches `targetPath`, ungültigen Modus,
-   leeren/ungültigen Scope, fremden Continuation-Token und zu kleines Budget
-   sind vollständig Contract-v2-konform und lassen einen anschließenden
-   gültigen Aufruf unverändert funktionieren.
-8. Kleinster akzeptierter Budgetretry, Werte dazwischen und größere Budgets
-   liefern monotone vollständige Einheiten und messen Text sowie
-   StructuredContent inklusive Navigation in UTF-8.
-9. `verify` akzeptiert ausschließlich `.sln`-/`.slnx`-Source-Ziele. Ein
+8. Fehlerfälle für fehlendes/falsches `targetPath`, ungültigen Scopewert und
+   Assemblyziel sind vollständig Contract-v2-konform und lassen einen
+   anschließenden gültigen Aufruf unverändert funktionieren.
+9. Die feste Projektion ist deterministisch, enthält nur vollständige
+   Evidenzeinheiten und misst Text sowie StructuredContent inklusive
+   Navigation in UTF-8.
+10. `verify` akzeptiert ausschließlich `.sln`-/`.slnx`-Source-Ziele. Ein
    Assembly-Ziel wird vor jeder Decompilation oder Analyse mit einem klaren,
    datensparsamen `ASSEMBLY_TARGET_UNSUPPORTED`-Fehler zurückgewiesen. Keine
    Zielpfade, PIDs, Daemon- oder andere fremde Betriebsidentitäten erscheinen
    unnötig im Text.
-10. Dogfood prüft reale Agentenabläufe: Feature-Patch-Gate, fokussiertes
-    Kandidatenreview, fehlgeschlagenes Gate mit Handoff, Budgetretry sowie
-    Legacy-Tool-Abwesenheit gegen einen frischen Host.
-11. Endzustandsdokumentation, Runtime-Schema, Agent-Guide, Workflowregel und
+11. Dogfood prüft reale Agentenabläufe: Working-Tree-Änderungsprüfung,
+    vollständige Solution-Abschlussprüfung, fehlgeschlagenes Gate mit Handoff,
+    leerer Diff, Assemblyfehler sowie Legacy-Tool-Abwesenheit gegen einen
+    frischen Host.
+12. Endzustandsdokumentation, Runtime-Schema, Agent-Guide, Workflowregel und
     Testnamen enthalten nur den neuen Vertrag und keine
     Migrations-/Historientexte.
 
 ## Architektur- und Betriebssemantik
 
 `verify` ist ein dünner öffentlicher Source-Code-Orchestrator, kein zweiter
-Linter, keine Assemblyanalyse und kein allgemeiner Query-Interpreter. Er nimmt
-einen bereits normalisierten Scope entgegen, ruft die festen Gate-
-beziehungsweise Reviewquellen auf und projiziert ihre Ergebnisse in eine
-gemeinsame, unveränderliche Entscheidungsantwort. Scanner behalten
-vollständige Domänenresultate; toolnahe Projektoren wählen deterministisch
-ganze Evidenzeinheiten.
+Linter, keine Assemblyanalyse und kein allgemeiner Query-Interpreter. Er
+bestimmt für `changes` den Working-Tree-Kontext selbst oder nutzt für
+`solution` die gesamte Solution, ruft die festen Gatequellen auf und
+projiziert ihre Ergebnisse in eine gemeinsame, unveränderliche
+Entscheidungsantwort. Nur im Änderungskontext ergänzt er die beiden
+Kandidatenquellen. Scanner behalten vollständige Domänenresultate; toolnahe
+Projektoren wählen deterministisch ganze Evidenzeinheiten.
 
 Die Gateentscheidung besitzt genau einen Owner. Advisory-Evidenz kann niemals
 den Gatezustand übersteuern. Bei konkurrierender oder fehlender Analyse
-gewinnt konservativ `incomplete`, nicht ein gemittelter Score. Ein
-Continuation-Token ist snapshot- und requestgebunden; veraltet, fremd oder
-manipuliert wird er präzise abgelehnt und öffnet keinen anderen Scope.
+gewinnt konservativ `incomplete`, nicht ein gemittelter Score. Git-Diff,
+Staging und relevante neue Dateien sind Teil der dokumentierten
+`changes`-Bestimmung. Änderungen an Solution-, Projekt-, Regel- oder
+Generator-Konfiguration erweitern den effektiven Analysekontext konservativ;
+ein nicht sicher bestimmbarer Kontext wird nicht geraten, sondern als
+`incomplete` ausgewiesen.
 
 Keine Analyse führt Zielcode aus, lädt untersuchte Assemblies dynamisch oder
 ändert Source, Konfiguration oder Git-Zustand. `verify` ist read-only und
@@ -310,9 +310,9 @@ Source-only; Assemblyanalyse bleibt bei den dafür vorgesehenen Tools.
 
 ### Slice 01 – Öffentlichen `verify`-Vertrag festlegen und rot absichern
 
-- Gemeinsame Request-/Responsemodelle, feste Modi, Verdicts, Scope- und
-  Evidenzsemantik definieren.
-- Contracttests für `pass`, `failed`, `incomplete`, `error`, Budgetretry,
+- Gemeinsame Request-/Responsemodelle, die beiden Scopewerte, Verdicts,
+  Working-Tree-Bestimmung und Evidenzsemantik definieren.
+- Contracttests für `pass`, `failed`, `incomplete`, `error`, leeren Diff,
   frühe Validierung, Scope und Handoff zuerst rot schreiben.
 - Den extern sichtbaren Toolinventar-Sollzustand festlegen: `verify` vorhanden,
   alle vier Altnamen abwesend; die unberührten Tools bleiben nachweisbar
@@ -327,23 +327,24 @@ referenziert einen Legacy-Adapter.
 - Scoring- und Violationergebnis gemeinsam, aber ohne Vermischung ihrer
   Aussagegrenzen ausgeben.
 - `pass` nur bei beiden festen Bedingungen und ausreichender
-  Entscheidbarkeit erlauben; Fehler, Budget und Navigation contractweit
-  vereinheitlichen.
+  Entscheidbarkeit erlauben; Fehler, feste Antwortprojektion und Navigation
+  contractweit vereinheitlichen.
 
-**Exit:** Gatefälle, Fehlerhüllen, Scope-Counts und Budgets sind gegen einen
-frischen Host grün und handlungsfähig.
+**Exit:** Gatefälle, Fehlerhüllen, Scope-Counts und die feste Projektion sind
+gegen einen frischen Host grün und handlungsfähig.
 
-### Slice 03 – Kontextgebundenen Review-Modus integrieren
+### Slice 03 – Kontextgebundene Kandidaten in `changes` integrieren
 
 - Dead-Code- und Magic-Value-Quellen fachlich als advisory-Projektionen
   anbinden, nicht als versteckte Gatebedingungen.
-- Scopepflicht, Confidence, Gegenindikatoren, Ranking, Paging und
-  Datensparsamkeit ausschließlich für Dead Code und Magic Values umsetzen.
-- Reihenfolge, Budgetmonotonie und Nichtbeeinflussung des Gateurteils mit
-  fokussierten Tests absichern.
+- Working-Tree-Diff, semantischen Änderungskontext, Confidence,
+  Gegenindikatoren, Ranking und Datensparsamkeit für Dead Code und Magic
+  Values umsetzen.
+- Reihenfolge, feste Projektion, Ausschluss bei `solution` und
+  Nichtbeeinflussung des Gateurteils mit fokussierten Tests absichern.
 
-**Exit:** Feature-scoped Review liefert begrenzte, ehrlich unsichere Evidenz;
-der Default-Gate bleibt frei von Kandidatenrauschen.
+**Exit:** `changes` liefert begrenzte, ehrlich unsichere Evidenz; `solution`
+bleibt frei von kontextlosem Kandidatenrauschen.
 
 ### Slice 04 – Harter Schnitt durch Registrierung, Produktion und Tests
 
@@ -364,7 +365,9 @@ Qualitätsoberfläche.
 - API-, Integrations-, Guide-, Server-Instructions-, Konfigurations- und
   Agentenregeltexte auf den Endvertrag umstellen.
 - Den bisherigen verpflichtenden Qualitätsgate in Regeln und Workflow durch
-  `verify(gate)` mit `pass`, `10.0` und `0` ersetzen.
+  `verify(targetPath)` während der Arbeit und
+  `verify(targetPath, scope: "solution")` für den Abschluss ersetzen; beide
+  verlangen `pass`, `10.0` und `0`.
 - Veraltete Toolnamen und Migrationssprache gezielt negativ suchen; keinen
   historischen Übergangstext publizieren.
 
@@ -386,8 +389,9 @@ git diff --check
 Zusätzlich sind gegen einen frischen In-Process- oder Prozesshost verpflichtend:
 
 - `tools/list`-Inventar- und Schemavergleich;
-- vollständige `verify`-Dogfoodmatrix für Gate, Review, Budget, Scope,
-  Handoff, Validation, Continuation und Source-only-Assemblyfehler;
+- vollständige `verify`-Dogfoodmatrix für Working-Tree-Änderungen,
+  Solution-Abschluss, festen Antwortumfang, Scope, Handoff, Validation,
+  leeren oder unsicheren Diff und Source-only-Assemblyfehler;
 - Negativsuche nach allen vier entfernten Namen in Produktionsregistrierung,
   öffentlicher Dokumentation, Agentenregeln und Server-Instructions;
 - gezielte Architekturprüfung auf tote Adapter, doppelte Vertragsmodelle,
@@ -397,16 +401,18 @@ Zusätzlich sind gegen einen frischen In-Process- oder Prozesshost verpflichtend
 
 Der frühere Gateaufruf `safeguard`/`get_violations` wird in diesem Release-Gate
 nicht mehr verwendet, weil seine Existenz nach dem harten Schnitt selbst ein
-Fehler wäre. Der Nachweis erfolgt über `verify(mode="gate")`: `verdict=pass`,
-`score=10.0`, `violationCount=0` und ausreichende Vollständigkeit.
+Fehler wäre. Der Abschlussnachweis erfolgt über
+`verify(targetPath, scope="solution")`: `verdict=pass`, `score=10.0`,
+`violationCount=0` und ausreichende Vollständigkeit.
 
 ## Dokumentationsbedarf
 
-- `Docs/agent-api.md`: ein kompakter Vertrag für Eingang, Verdicts,
-  Gate-/Review-Semantik, Evidenz, Budget und Continuation; keine frühere
-  Toolliste als Übergang darstellen.
+- `Docs/agent-api.md`: ein kompakter Vertrag für die beiden Scopewerte,
+  Working-Tree-Bestimmung, Verdicts, Gate-/Kandidatensemantik und die feste
+  Evidenzprojektion; keine frühere Toolliste als Übergang darstellen.
 - `Docs/integration.md` und der Runtime-Agent-Guide: einen Agentenfluss
-  `Feature-Scope → verify(gate) → optional verify(review)` beschreiben.
+  `Arbeitsänderungen → verify(targetPath) → Abschluss → verify(targetPath,
+  scope: "solution")` beschreiben.
 - `.agents/rules/AiNetLinterRichtlinien.mdc` und
   `.agents/rules/AiNetLinter-McpWorkflow.mdc`: alte Pflichtaufrufe,
   Tabellen und Scopehinweise konsistent durch `verify` ersetzen.
@@ -419,11 +425,12 @@ Fehler wäre. Der Nachweis erfolgt über `verify(mode="gate")`: `verdict=pass`,
 
 | Risiko | Gegenmaßnahme |
 |---|---|
-| `verify` wird ein schwer verständliches Mega-Tool. | Nur `scope`, zwei Modi, Continuation und Budget; keine Detektor- und Schwellenwertflags. |
+| `verify` wird ein schwer verständliches Mega-Tool. | Nur `targetPath` und die zwei Scopewerte; keine Modi, Detektor-, Paging-, Budget- oder Schwellenwertflags. |
 | Kandidaten werden fälschlich als Gateblocker gelesen. | Getrennte `verdict`-Ownership, `advisory_candidate`, `requiresAgentJudgment` und keine Kandidatenwirkung auf den Gateentscheid. |
 | Der feste Score verdeckt unvollständige Analyse. | `pass` setzt Entscheidbarkeit und ausreichende Completeness voraus; sonst konservativ `incomplete`. |
 | Das Entfernen öffentlicher Tools löscht nützliche Fachlogik. | Scanner nur nach klarer Ownership weiterverwenden; öffentliche DTO-/Formatterpfade trotzdem vollständig löschen. |
-| Breiter Review erzeugt hohe Kosten und Rauschen. | Expliziter konkreter Scope, stabile Top-Evidenz, Paging und kombiniertes UTF-8-Budget. |
+| Breite Kandidatensuche erzeugt hohe Kosten und Rauschen. | Kandidaten nur im automatisch bestimmten Änderungskontext, stabile Top-Evidenz und feste Antwortprojektion. |
+| Ein leerer oder unklarer Git-Diff wird fälschlich als sauber gelesen. | Konservativ `incomplete` und eine einzige Recovery: `scope: "solution"`. |
 | Alte Runtime verfälscht Nachweise. | Ausschließlich frischen Taskstand-Host für Wire- und Schema-Verifikation verwenden. |
 | Dokumentation oder Regeln behalten alte Quality-Gates. | Negativsuche plus Inventar-Contracttests und abschließende manuelle Diffprüfung. |
 
@@ -432,21 +439,22 @@ Fehler wäre. Der Nachweis erfolgt über `verify(mode="gate")`: `verdict=pass`,
 - **Bestehende Tools behalten und nur `verify` ergänzen:** Erhält
   Kontextkosten, Mehrdeutigkeit und Cross-Tool-Contractflächen; widerspricht
   dem harten Schnitt.
-- **Alle bisherigen Scanner über zahlreiche `verify`-Booleans schaltbar
-  machen:** Reduziert nur Toolnamen, nicht die agentische
+- **Alle bisherigen Scanner über zahlreiche `verify`-Booleans oder Profile
+  schaltbar machen:** Reduziert nur Toolnamen, nicht die agentische
   Entscheidungskomplexität.
 - **Dead Code und Magic Values stets in den Gateentscheid einrechnen:**
   Verwandelt bewusst heuristische Hinweise in False-Positive-Blocker und
   ignoriert Featurekontext.
-- **Review immer solutionweit ausführen:** Liefert bei lokaler Arbeit hohes
-  Rauschen und unvorhersehbare Kosten.
+- **Kandidaten immer solutionweit ausführen:** Liefert bei lokaler Arbeit hohes
+  Rauschen und keine zuordenbare Entscheidung.
 - **Sofort die gesamte MCP-Oberfläche auf vier Universalschnittstellen
   reduzieren:** Vermischt diesen begrenzten Quality-Schnitt mit einer zweiten,
   größeren Produktentscheidung und erhöht unnötig das Risiko.
 
 ## Offene Entscheidungen
 
-Keine. Die Parameteroberfläche ist bewusst auf Scope, Modus, Continuation und
-Budget begrenzt; fachliche Detailauswahl liegt beim Server. Der Draft bleibt
-bis zur ausdrücklichen Nutzerfreigabe `draft`; danach kann ein Orchestrator
-innerhalb dieses vollständig beschriebenen Scopes autonom umsetzen.
+Keine. Die Parameteroberfläche ist bewusst auf `targetPath` und zwei
+Scopewerte begrenzt; fachliche Detailauswahl liegt beim Server. Der Draft
+bleibt bis zur ausdrücklichen Nutzerfreigabe `draft`; danach kann ein
+Orchestrator innerhalb dieses vollständig beschriebenen Scopes autonom
+umsetzen.
