@@ -380,8 +380,6 @@ internal static partial class McpToolResults
 
 internal readonly record struct McpErrorParameters(string? Context = null, string? Hint = null, string? TargetPath = null, string? FieldPath = null, int? RequestedBytes = null, int? MinimumResponseBytes = null);
 
-internal sealed record McpErrorPayload(string Code, string Message, string? Context, string? Hint, bool Recoverable, string? TargetPath = null, string? FieldPath = null, int? RequestedBytes = null, int? MinimumResponseBytes = null);
-
 internal static class McpHandoffErrorCodes
 {
     internal const string TargetMismatch = "TARGET_MISMATCH";
