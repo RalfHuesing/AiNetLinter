@@ -63,7 +63,8 @@ internal sealed record FindDeadCodeArgs(
     string? ScopeFilter = null,
     bool IncludeTests = false,
     DeadCodeMode Mode = DeadCodeMode.Members,
-    int MaxResults = 50)
+    int MaxResults = 50,
+    IReadOnlySet<string>? ScopeFiles = null)
 {
     public static bool IsKnownAccessibility(string? value) => value?.ToLowerInvariant() is "all" or "private" or "internal" or "public" or "private_internal";
     public static bool IsKnownConfidence(string? value) => value?.ToLowerInvariant() is "both" or "high" or "low";

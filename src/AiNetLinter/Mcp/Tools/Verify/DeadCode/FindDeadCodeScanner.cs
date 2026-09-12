@@ -453,6 +453,8 @@ internal static class FindDeadCodeScanner
             foreach (var doc in project.Documents)
             {
                 if (!SourceFileCatalog.IsValidDocument(doc, solutionDir)) continue;
+                if (args.ScopeFiles is not null
+                    && (doc.FilePath is null || !args.ScopeFiles.Contains(Path.GetFullPath(doc.FilePath)))) continue;
                 if (!ViolationScopeFilter.MatchesScope(doc.FilePath ?? "", project.Name, solutionDir, args.ScopeFilter)) continue;
 
                 docs.Add(doc);

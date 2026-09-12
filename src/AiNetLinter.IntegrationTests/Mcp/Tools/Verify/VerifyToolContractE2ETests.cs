@@ -207,6 +207,22 @@ public sealed class VerifyToolContractE2ETests
     }
 
     [Fact]
+    public async Task Verify_MultipleChangedSources_AggregatesAdvisoryCandidatesAcrossTheFullPopulation()
+    {
+        using var fixture = CreateGitFixture();
+        File.WriteAllText(Path.Combine(fixture.RootPath, "src", "BaselineMini", "FirstAdvisoryProbe.cs"), AdvisoryProbeSource("FirstAdvisoryProbe", "first"));
+        File.WriteAllText(Path.Combine(fixture.RootPath, "src", "BaselineMini", "SecondAdvisoryProbe.cs"), AdvisoryProbeSource("SecondAdvisoryProbe", "second"));
+        await using var host = await McpProcessHost.StartAsync(fixture, TimeSpan.FromSeconds(60));
+
+        var result = await host.CallToolAsync("verify");
+
+        AssertVerifyResult(result, expectedError: false,
+            "verdict: pass",
+            "advisoryTotalCount: 4",
+            "advisoryCompleteness: complete");
+    }
+
+    [Fact]
     public async Task ToolsList_ContainsVerifyAndRetainsOnlyUnaffectedInspectionTools()
     {
         using var fixture = CreateGitFixture();
@@ -237,6 +253,19 @@ public sealed class VerifyToolContractE2ETests
         FixtureGit.Run(fixture.RootPath, "commit -m initial");
         return fixture;
     }
+
+    private static string AdvisoryProbeSource(string typeName, string route) => $$"""
+        namespace BaselineMini;
+
+        public sealed class {{typeName}}
+        {
+            private static void Unused() { }
+
+            public string Primary => "https://example.invalid/{{route}}";
+
+            public string Secondary => "https://example.invalid/{{route}}";
+        }
+        """;
 
     private static void AssertVerifyResult(CallToolResult result, bool expectedError, params string[] expectedContent)
     {

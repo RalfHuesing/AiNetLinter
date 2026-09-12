@@ -8,7 +8,7 @@
 - [X] Gesamtaudit – gesamten Scope prüfen und Findings beheben
 - [X] Abschlussgate – Build, Non-Stress-Tests und Diff-Prüfung
 - [X] Folgeaudit 01 – feste UTF-8-Budgetprojektion mit vollständigen Evidenzeinheiten
-- [ ] Folgeaudit 02 – Advisory-Scans für Mehrdatei-Änderungen bündeln
+- [X] Folgeaudit 02 – Advisory-Scans für Mehrdatei-Änderungen bündeln
 - [ ] Folgeaudit 03 – Fehlervertrag und Legacy-Namensreste bereinigen
 - [ ] Folgeaudit – Scope erneut prüfen und Abschlussgate ausführen
 
@@ -67,6 +67,12 @@
 - Finale `verify`-Projektion misst den UTF-8-Content gegen ein festes 4-KiB-Budget und behält nur ganze Evidenzeinheiten.
 - Counts, Trunkierungsgrund und `failed`-Evidenzschutz sind per Fast- und frischem Hosttest abgesichert.
 - Commit: `487babd11cc7c646a2613ca7d0d8611b132e506b`.
+
+### Folgeaudit 02
+
+- Advisory-Scanner verarbeiten die gesamte geänderte Dateimenge jeweils einmal statt pro Datei erneut zu traversieren.
+- Mehrdatei-Regression sichert aggregierte Counts, deterministische Reihenfolge und Gate-Isolation.
+- Commit: ausstehend.
 
 ### Vorbereitung
 

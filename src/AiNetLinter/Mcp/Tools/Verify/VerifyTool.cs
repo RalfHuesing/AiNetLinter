@@ -393,6 +393,8 @@ internal static class VerifyAdvisoryProjector
     private const string DeadCodeCategory = "dead_code";
     private const string MagicValueCategoryPrefix = "magic_value:";
     private const string MagicValueConfidence = "medium";
+    // Der Projektor rankt global; ein Scanner-Limit vorher würde Kandidaten abhängig von der Dokumentreihenfolge ausblenden.
+    private const int UnboundedCandidateLimit = int.MaxValue;
 
     internal static async Task<VerifyAdvisoryProjection> CollectAsync(
         Microsoft.CodeAnalysis.Solution solution,
@@ -403,50 +405,31 @@ internal static class VerifyAdvisoryProjector
 
         try
         {
-            var solutionRoot = Path.GetDirectoryName(solution.FilePath);
-            if (string.IsNullOrWhiteSpace(solutionRoot)) return new(0, [], "unavailable");
+            var deadCode = await FindDeadCodeScanner.ScanAsync(
+                solution,
+                new FindDeadCodeArgs(MaxResults: UnboundedCandidateLimit, ScopeFiles: scopeFiles),
+                cancellationToken);
+            var deadCodeEntries = deadCode.DeadSymbols.Select(ToDeadCodeEvidence);
 
-            var deadCodeEntries = new List<VerifyEvidenceEntry>();
-            var magicValueEntries = new List<VerifyEvidenceEntry>();
-            var totalDeadCode = 0;
-            var totalMagicValues = 0;
-            var magicValuesComplete = true;
-            foreach (var scopeFile in scopeFiles.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
-            {
-                var scopeFilter = Path.GetRelativePath(solutionRoot, scopeFile).Replace('\\', '/');
-                var deadCode = await FindDeadCodeScanner.ScanAsync(
-                    solution,
-                    new FindDeadCodeArgs(ScopeFilter: scopeFilter, MaxResults: VerifyTool.EvidenceLimit),
-                    cancellationToken);
-                totalDeadCode += deadCode.Summary.TotalDead;
-                deadCodeEntries.AddRange(deadCode.DeadSymbols.Select(ToDeadCodeEvidence));
+            var magicValues = await FindMagicValuesScanner.ScanAsync(new FindMagicValuesScannerParameters(
+                solution,
+                null,
+                null,
+                null,
+                MinOccurrences: 2,
+                MaxResults: UnboundedCandidateLimit,
+                IgnoreNumbers: null,
+                IncludeTests: false,
+                IncludeSuppressed: false,
+                ChangedOnly: false,
+                cancellationToken,
+                ScopeFiles: scopeFiles));
+            if (magicValues.IsMalfunction) return new(deadCode.Summary.TotalDead, Rank(deadCodeEntries), "partial");
 
-                var magicValues = await FindMagicValuesScanner.ScanAsync(new FindMagicValuesScannerParameters(
-                    solution,
-                    scopeFilter,
-                    null,
-                    null,
-                    MinOccurrences: 2,
-                    MaxResults: VerifyTool.EvidenceLimit,
-                    IgnoreNumbers: null,
-                    IncludeTests: false,
-                    IncludeSuppressed: false,
-                    ChangedOnly: false,
-                    cancellationToken));
-                if (magicValues.IsMalfunction)
-                {
-                    magicValuesComplete = false;
-                    continue;
-                }
-                totalMagicValues += magicValues.Payload!.Summary.Total;
-                magicValueEntries.AddRange(magicValues.Payload!.MagicValues.Select(ToMagicValueEvidence));
-            }
-
-            if (!magicValuesComplete) return new(totalDeadCode, Rank(deadCodeEntries), "partial");
-
+            var magicValueEntries = magicValues.Payload!.MagicValues.Select(ToMagicValueEvidence);
             var entries = deadCodeEntries.Concat(magicValueEntries);
             return new(
-                totalDeadCode + totalMagicValues,
+                deadCode.Summary.TotalDead + magicValues.Payload!.Summary.Total,
                 Rank(entries),
                 "complete");
         }

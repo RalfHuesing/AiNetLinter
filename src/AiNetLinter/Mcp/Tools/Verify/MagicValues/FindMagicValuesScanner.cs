@@ -48,7 +48,7 @@ internal static partial class FindMagicValuesScanner
             changedFiles = await ResolveChangedFilesAsync(p.Solution, p.CancellationToken);
         }
 
-        var matchingDocuments = SelectDocuments(p.Solution, p.ScopeFilter, p.IncludeTests, changedFiles);
+        var matchingDocuments = SelectDocuments(p.Solution, p.ScopeFilter, p.IncludeTests, changedFiles, p.ScopeFiles);
 
         if (matchingDocuments.Count == 0)
         {
@@ -244,7 +244,8 @@ internal static partial class FindMagicValuesScanner
         Solution solution,
         string? scopeFilter,
         bool includeTests,
-        IReadOnlySet<string>? changedFiles)
+        IReadOnlySet<string>? changedFiles,
+        IReadOnlySet<string>? scopeFiles)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? string.Empty;
         var result = new List<(Document, string)>();
@@ -257,7 +258,7 @@ internal static partial class FindMagicValuesScanner
 
             foreach (var document in project.Documents)
             {
-                if (TrySelectDocument(document, solutionDir, scopeFilter, includeTests, changedFiles, out var entry))
+                if (TrySelectDocument(document, solutionDir, scopeFilter, includeTests, changedFiles, scopeFiles, out var entry))
                 {
                     result.Add(entry);
                 }
@@ -276,6 +277,7 @@ internal static partial class FindMagicValuesScanner
         string? scopeFilter,
         bool includeTests,
         IReadOnlySet<string>? changedFiles,
+        IReadOnlySet<string>? scopeFiles,
         out (Document Document, string FilePath) entry)
     {
         entry = default;
@@ -283,6 +285,7 @@ internal static partial class FindMagicValuesScanner
         if (document.FilePath is null) return false;
         if (!document.FilePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)) return false;
         if (FileSystemExclusionHelpers.IsGeneratedPath(document.FilePath)) return false;
+        if (scopeFiles is not null && !scopeFiles.Contains(Path.GetFullPath(document.FilePath))) return false;
 
         var relativePath = solutionDir.Length == 0
             ? document.FilePath

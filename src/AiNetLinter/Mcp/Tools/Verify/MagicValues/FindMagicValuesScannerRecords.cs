@@ -49,7 +49,8 @@ internal sealed record FindMagicValuesScannerParameters(
     bool IncludeTests,
     bool IncludeSuppressed,
     bool ChangedOnly,
-    CancellationToken CancellationToken);
+    CancellationToken CancellationToken,
+    IReadOnlySet<string>? ScopeFiles = null);
 
 /// <summary>
 /// Ergebnis-Record fuer <see cref="FindMagicValuesScanner.ScanAsync"/>. <see cref="IsMalfunction"/>
