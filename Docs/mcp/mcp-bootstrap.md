@@ -1,5 +1,7 @@
 # AiNetLinter MCP-Bootstrap
 
+→ [MCP-Tools & Verträge](tools.md) | [MCP-Server & Daemon](server.md) | [MCP-Host-Integration](integration.md) | [README](../../README.md)
+
 Diese Anleitung wird einmalig pro Integration gelesen. Sie beschreibt den
 aktiven, dateibasierten MCP-Vertrag; sie benötigt keine Projektdefinitionsdatei
 und keine Suche im Arbeitsverzeichnis.
@@ -75,6 +77,7 @@ Navigation bleibt `ok`, Lint wird nicht als scheinbar leerer oder sauberer Lauf
 dargestellt. Eine ungültige oder nicht lesbare Datei ist ein
 Konfigurationsfehler; es gibt keinen Default- oder Elternpfad-Fallback.
 Assembly-Ziele haben `origin=decompiled` und Lint ist `unsupported`.
+Details zum Zielvertrag siehe [MCP-Server & Daemon](server.md#6-mcp-zielvertrag-targetpath).
 
 Die Resource-Templates verwenden den URL-kodierten Query-Parameter
 `targetPath`:

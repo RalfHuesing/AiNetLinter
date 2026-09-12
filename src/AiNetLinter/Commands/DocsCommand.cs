@@ -17,13 +17,25 @@ internal static class DocsCommand
 
     private static readonly Dictionary<string, string> DocResources = new(StringComparer.OrdinalIgnoreCase)
     {
-        { "integration", "Docs/integration.md" },
+        // Linter
+        { "configuration", "Docs/linter/configuration.md" },
+        { "linter-config", "Docs/linter/configuration.md" },
+        { "cli", "Docs/linter/cli.md" },
+        { "linter-cli", "Docs/linter/cli.md" },
+        { "integration", "Docs/linter/integration.md" },
+        { "linter-integration", "Docs/linter/integration.md" },
+
+        // MCP
+        { "agent-api", "Docs/mcp/tools.md" },
+        { "mcp-tools", "Docs/mcp/tools.md" },
+        { "mcp-server", "Docs/mcp/server.md" },
+        { "mcp-integration", "Docs/mcp/integration.md" },
+        { McpBootstrapDocument, "Docs/mcp/mcp-bootstrap.md" },
+
+        // Allgemein & Regeln
         { "readme", "README.md" },
-        { "agent-api", "Docs/agent-api.md" },
-        { "configuration", "Docs/configuration.md" },
         { "rationale", "Docs/rationale.md" },
         { "ainetlinter-rules-json", ConfigLoader.FileName },
-        { McpBootstrapDocument, "Docs/mcp-bootstrap.md" },
         { "mcp-rule", "AgentRules/AiNetLinter-McpWorkflow.mdc" }
     };
 

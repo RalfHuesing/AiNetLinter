@@ -260,7 +260,7 @@ internal static partial class SafeguardScanner
             Remediation: new RemediationHint(
                 TopIssue: "Kein entscheidbarer Quality-Gate-Score.",
                 ActionableSteps: Array.Empty<string>(),
-                DocumentationHint: "Docs/configuration.md"),
+                DocumentationHint: "Docs/linter/configuration.md"),
             Summary: $"Safeguard-Score: nicht entscheidbar. Quality-Gate, kein Scope-Vollständigkeitsbeweis " +
                 $"(scoreIsNotScope=true). Scope: '{assessment.Scope}'; " +
                 $"Vollständigkeit: {assessment.Completeness}; Status: {assessment.Status}. " +
@@ -356,7 +356,7 @@ internal static partial class SafeguardScanner
             return new RemediationHint(
                 TopIssue: "Keine Lint-Verstoesse im Scope.",
                 ActionableSteps: Array.Empty<string>(),
-                DocumentationHint: "Docs/configuration.md");
+                DocumentationHint: "Docs/linter/configuration.md");
         }
 
         var grouped = topViolations
@@ -374,7 +374,7 @@ internal static partial class SafeguardScanner
         return new RemediationHint(
             TopIssue: topIssue,
             ActionableSteps: steps,
-            DocumentationHint: "Docs/configuration.md");
+            DocumentationHint: "Docs/linter/configuration.md");
     }
 
     private static double ComputeViolationPenalty(IReadOnlyCollection<RuleViolation> violations)

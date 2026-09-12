@@ -21,11 +21,14 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\..\README.md" LogicalName="README.md" />
-    <EmbeddedResource Include="..\..\Docs\integration.md" LogicalName="Docs/integration.md" />
-    <EmbeddedResource Include="..\..\Docs\agent-api.md" LogicalName="Docs/agent-api.md" />
-    <EmbeddedResource Include="..\..\Docs\configuration.md" LogicalName="Docs/configuration.md" />
+    <EmbeddedResource Include="..\..\Docs\linter\configuration.md" LogicalName="Docs/linter/configuration.md" />
+    <EmbeddedResource Include="..\..\Docs\linter\cli.md" LogicalName="Docs/linter/cli.md" />
+    <EmbeddedResource Include="..\..\Docs\linter\integration.md" LogicalName="Docs/linter/integration.md" />
+    <EmbeddedResource Include="..\..\Docs\mcp\tools.md" LogicalName="Docs/mcp/tools.md" />
+    <EmbeddedResource Include="..\..\Docs\mcp\server.md" LogicalName="Docs/mcp/server.md" />
+    <EmbeddedResource Include="..\..\Docs\mcp\integration.md" LogicalName="Docs/mcp/integration.md" />
+    <EmbeddedResource Include="..\..\Docs\mcp\mcp-bootstrap.md" LogicalName="Docs/mcp/mcp-bootstrap.md" />
     <EmbeddedResource Include="..\..\Docs\rationale.md" LogicalName="Docs/rationale.md" />
-    <EmbeddedResource Include="..\..\Docs\mcp-bootstrap.md" LogicalName="Docs/mcp-bootstrap.md" />
     <EmbeddedResource Include="..\..\ainetlinter-rules.json" LogicalName="ainetlinter-rules.json" />
     <EmbeddedResource Include="..\..\.agents\rules\AiNetLinter-McpWorkflow.mdc" LogicalName="AgentRules/AiNetLinter-McpWorkflow.mdc" />
   </ItemGroup>

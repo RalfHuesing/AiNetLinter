@@ -322,7 +322,7 @@ public class Greeter { public string Hello() => ""hi""; }";
         Assert.Equal("DefinitelyUnknownRuleName_9999", hint.TopIssue);
         Assert.NotEmpty(hint.ActionableSteps);
         Assert.Contains(hint.ActionableSteps, s => s.Contains("DefinitelyUnknownRuleName_9999", StringComparison.Ordinal));
-        Assert.Contains(hint.ActionableSteps, s => s.Contains("Docs/configuration.md", StringComparison.Ordinal));
+        Assert.Contains(hint.ActionableSteps, s => s.Contains("Docs/linter/configuration.md", StringComparison.Ordinal));
     }
 
     [Fact]

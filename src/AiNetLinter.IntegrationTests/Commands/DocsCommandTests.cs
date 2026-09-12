@@ -22,6 +22,10 @@ public sealed class DocsCommandTests
     [InlineData("readme")]
     [InlineData("agent-api")]
     [InlineData("configuration")]
+    [InlineData("cli")]
+    [InlineData("mcp-tools")]
+    [InlineData("mcp-server")]
+    [InlineData("mcp-integration")]
     [InlineData("rationale")]
     [InlineData("ainetlinter-rules-json")]
     [InlineData("mcp-bootstrap")]
@@ -135,6 +139,10 @@ public sealed class DocsCommandTests
             Assert.Contains("- ainetlinter-rules-json", output);
             Assert.Contains("- mcp-bootstrap", output);
             Assert.Contains("- mcp-rule", output);
+            Assert.Contains("- cli", output);
+            Assert.Contains("- mcp-tools", output);
+            Assert.Contains("- mcp-server", output);
+            Assert.Contains("- mcp-integration", output);
             Assert.DoesNotContain("- mcp-workflow", output);
         }
         finally

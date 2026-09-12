@@ -52,7 +52,7 @@ internal static partial class SafeguardScanner
     private static string ResolveHintForRule(string ruleName, Config config)
         => RuleHints.TryGetValue(ruleName, out var hint)
             ? hint
-            : $"Regel-Verstoss '{ruleName}' pruefen — Details in Docs/configuration.md.";
+            : $"Regel-Verstoss '{ruleName}' pruefen — Details in Docs/linter/configuration.md.";
 
     private static async Task<IReadOnlyList<ScannedClass>> EnumerateConcreteClassesAsync(
         Solution solution, string? scopeFilter, Config config, string solutionDir, CancellationToken ct)

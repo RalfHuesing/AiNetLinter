@@ -65,7 +65,7 @@ public sealed class McpDocumentationSmokeTests
     [Fact]
     public void AgentApi_DescribesCsharpOnlyToolScopeWithoutHardcodedCounts()
     {
-        var docPath = Path.Combine(SolutionRootLocator.Find(), "Docs", "agent-api.md");
+        var docPath = Path.Combine(SolutionRootLocator.Find(), "Docs", "mcp", "tools.md");
 
         Assert.True(File.Exists(docPath),
             $"Doku-Datei nicht gefunden unter '{docPath}'. Bitte Pfad-Aufloesung pruefen.");
@@ -159,7 +159,7 @@ public sealed class McpDocumentationSmokeTests
     [Fact]
     public void IntegrationGuide_SeparatesFindReferencesAndGetImpactAssemblyOptions()
     {
-        var docPath = Path.Combine(SolutionRootLocator.Find(), "Docs", "integration.md");
+        var docPath = Path.Combine(SolutionRootLocator.Find(), "Docs", "mcp", "integration.md");
 
         Assert.True(File.Exists(docPath),
             $"Doku-Datei nicht gefunden unter '{docPath}'. Bitte Pfad-Aufloesung pruefen.");
@@ -195,7 +195,7 @@ public sealed class McpDocumentationSmokeTests
     [Fact]
     public void IntegrationGuide_UsesPublishedToolsAndFinalDiscoveryContract()
     {
-        var docPath = Path.Combine(SolutionRootLocator.Find(), "Docs", "integration.md");
+        var docPath = Path.Combine(SolutionRootLocator.Find(), "Docs", "mcp", "integration.md");
         var docText = File.ReadAllText(docPath);
 
         Assert.Contains("`get_file_tree(view: \"summary\")`", docText, StringComparison.Ordinal);

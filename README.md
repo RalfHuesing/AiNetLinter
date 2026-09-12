@@ -69,13 +69,25 @@ AiNetLinter.exe --config .\ainetlinter-rules.json --path .\src\MeinProjekt.slnx
 
 ## Dokumentation
 
+### Linter & CLI
 | Dokument | Inhalt |
 | :--- | :--- |
-| [MCP-Bootstrap](Docs/mcp-bootstrap.md) | Einmalige Einrichtung eines Projekts für MCP-Hosts und Agents. |
-| [MCP- und CLI-Referenz](Docs/agent-api.md) | Aktuelle CLI-Optionen, Toolverträge, Antworten, Fehler und Capability-Matrix. |
-| [Projektintegration](Docs/integration.md) | Regeldatei, Baseline, CI und MCP-Registrierung. |
-| [Konfiguration](Docs/configuration.md) | `ainetlinter-rules.json`, Regeln, Defaults, Profile und External-Source-Mapping. |
-| [Rationale](Docs/rationale.md) | Grundlagen der Regelprinzipien. |
+| [Konfiguration](Docs/linter/configuration.md) | `ainetlinter-rules.json`, Regeln, Defaults, Profile und Schwellenwerte. |
+| [CLI-Referenz & Workflows](Docs/linter/cli.md) | CLI-Optionen, Workflows (Lint+Fix, Baseline/Ratchet), Exit-Codes und Fehlerformate. |
+| [Projektintegration](Docs/linter/integration.md) | Einbindung in C#/.NET-Projekte, Architektur-Unit-Tests, CI und lokale Suppressions. |
+
+### MCP-Server (Coding-Agenten)
+| Dokument | Inhalt |
+| :--- | :--- |
+| [MCP-Tools & Verträge](Docs/mcp/tools.md) | 32 MCP-Tools, Eingaben, Ausgaben, Capability-Matrix und Assembly-Verträge. |
+| [MCP-Server & Daemon](Docs/mcp/server.md) | Architektur, ThinClient, Daemon-Transport, 3-Zustands-Lifecycle und System-Logging. |
+| [MCP-Host-Integration](Docs/mcp/integration.md) | Registrierung in Cursor / Claude Code, Start-Sequenzen und Tool-vs-`rg`-Leitfaden. |
+| [MCP-Bootstrap](Docs/mcp/mcp-bootstrap.md) | Einmalige Ersteinrichtung eines Projekts für MCP-Hosts und Agents. |
+
+### Architektur & Grundlagen
+| Dokument | Inhalt |
+| :--- | :--- |
+| [Rationale](Docs/rationale.md) | Wissenschaftliche Grundlagen und Design-Prinzipien der Linter-Regeln. |
 
 Die eingebettete Kurzreferenz ist auch über `AiNetLinter.exe --docs <name>`
 verfügbar; die gültigen Namen stehen in `AiNetLinter.exe --help`.

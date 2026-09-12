@@ -2,7 +2,7 @@
 
 Dieser Abschnitt erklärt, *warum* `AiNetLinter` bestimmte syntaktische Einschränkungen erzwingt. Die Regeln sind keine rein ästhetischen Konventionen, sondern so weit wie möglich auf empirische Erkenntnisse aus der LLM-Forschung und der Praxis agentischer Tools gestützt. Das ist nicht bei jeder Regel gleich gut möglich: Manche Quellen belegen nur das allgemeine Phänomen, nicht den konkreten Schwellenwert; Engineering-Kalibrierungen sind deshalb ausdrücklich als solche gekennzeichnet.
 
-→ [README](../README.md) | [Konfigurationsreferenz](configuration.md)
+→ [README](../README.md) | [Linter-Konfigurationsreferenz](linter/configuration.md) | [Linter-CLI](linter/cli.md)
 
 ---
 

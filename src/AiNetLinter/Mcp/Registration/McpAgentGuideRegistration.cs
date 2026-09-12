@@ -16,7 +16,7 @@ namespace AiNetLinter.Mcp.Registration;
 internal static class McpAgentGuideRegistration
 {
     internal const string Uri = "ainetlinter://agent-guide";
-    internal const string BootstrapResourceName = "Docs/mcp-bootstrap.md";
+    internal const string BootstrapResourceName = "Docs/mcp/mcp-bootstrap.md";
     internal const string WorkflowResourceName = "AgentRules/AiNetLinter-McpWorkflow.mdc";
 
     private static readonly Lazy<string> GuideText = new(

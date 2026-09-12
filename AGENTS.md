@@ -48,5 +48,5 @@ Roslyn-basierte C#/.NET 10 Statische-Code-Analyse- & Linter-Engine zur Durchsetz
 
 ## 3. Dokumentation & Commits
 
-- **Doku-Synchronisation**: Bei Änderungen an CLI-Optionen, Schemata oder Regeln `Docs/configuration.md` und `ainetlinter-rules.json` synchronisieren.
+- **Doku-Synchronisation**: Bei Änderungen an CLI-Optionen, Schemata oder Regeln `Docs/linter/configuration.md`, `Docs/linter/cli.md` und `ainetlinter-rules.json` synchronisieren.
 - **Commits**: Deutsche Conventional Commits im Imperativ (`feat:`, `fix:`, `docs:`, `chore:`). Nur eigene auftragsbezogene Änderungen stagen; fremde Änderungen niemals mitcommitten (Details siehe `.agents/rules/AiNetLinter-Richtlinien.mdc`).

@@ -1,189 +1,12 @@
-# AiNetLinter — Agent-API Referenz
+# AiNetLinter — MCP-Tool-Referenz & Verträge
 
-Kompakte Referenz für AI-Agenten. Alle CLI-Flags, Workflows und das strukturierte Error-Format.
+→ [MCP-Server & Daemon](server.md) | [MCP-Host-Integration](integration.md) | [MCP-Bootstrap](mcp-bootstrap.md) | [Linter-CLI](../linter/cli.md) | [README](../../README.md)
 
----
-
-## Discovery-Commands
-
-Regeln entdecken ohne Lint-Lauf (kein `--path` nötig):
-
-```bash
-# Alle Regeln als Markdown-Tabelle:
-ainetlinter --list-rules
-
-# Eine Regel vollständig beschreiben (Warum, Alternativen, Auto-Fix):
-ainetlinter --describe-rule <RuleId>
-# Beispiel:
-ainetlinter --describe-rule EnforceSealedClasses
-
-# Regeln nach Begriff durchsuchen (RuleId, Beschreibung, Intent):
-ainetlinter --search-rules <Begriff>
-# Beispiele:
-ainetlinter --search-rules "komplexitaet"
-ainetlinter --search-rules "sealed"
-ainetlinter --search-rules "agent"
-
-# Integrierte Dokumentation als Markdown ausgeben (z. B. Konfigurationsreferenz):
-ainetlinter --docs configuration
-```
+AiNetLinter stellt als **stdio-basierter MCP-Server** 32 spezialisierte Werkzeuge für AI-Coding-Agenten bereit. Diese Referenz beschreibt alle Tools, Eingabeparameter, Antwortstrukturen, Capability-Matrizen und vertraglichen Garantien.
 
 ---
 
-## Lint-Workflows
-
-### Schritt 1: Startkonfiguration holen
-```bash
-ainetlinter --docs ainetlinter-rules-json > ainetlinter-rules.json
-```
-Dumpt die eingebettete Default-Konfiguration — sofort einsatzbereit, lokal anpassbar.
-
-### Workflow 1 — Lint + Fix
-
-```bash
-# Schritt 1: Lint-Lauf
-ainetlinter --config ainetlinter-rules.json --path ./src/MeinProjekt.slnx
-
-# Schritt 2: Fix anwenden
-ainetlinter --config ainetlinter-rules.json --path ./src/MeinProjekt.slnx --fix
-```
-
-Auto-fixbare Regeln: `EnforceSealedClasses`, `EnforcePascalCase`, `EnforceNullableEnable`
-
-### Workflow 2 — Baseline (Ratchet-Modus)
-
-Friert bestehende Verstösse ein; nur neue/geänderte Dateien werden geprüft.
-
-```bash
-# Schritt 1: Baseline anlegen
-ainetlinter --config ainetlinter-rules.json --path ./src/ --create-baseline baseline.json
-
-# Schritt 2: Lint mit Baseline (nur Neu-Verstösse)
-ainetlinter --config ainetlinter-rules.json --path ./src/ --baseline baseline.json
-```
-
-Bei Checksum-Abweichungen (z. B. nach Behebungen) schreibt derselbe Aufruf die `baseline.json` automatisch neu — kein separater Update-Befehl nötig.
-
----
-
-## Alle CLI-Flags
-
-| Flag | Typ | Beschreibung |
-| :--- | :--- | :--- |
-| `--config <pfad>` | string | Pfad zur `ainetlinter-rules.json` (erforderlich für Audit) |
-| `--path <pfad>` | string | Pfad zur `.slnx`/`.sln`/Verzeichnis |
-| `--fix` | bool | Auto-Fixer aktivieren |
-| `--baseline <pfad>` | string | Baseline-Datei für Ratchet-Modus. Bei erkannter Checksum-Abweichung wird die Datei automatisch neu geschrieben (kein separater Update-Befehl nötig) |
-| `--create-baseline <pfad>` | string | Neue Baseline anlegen |
-| `--verbose` | bool | Detaillierte Ausgabe aktivieren |
-| `--add-disable-all` | bool | Fügt `// ainetlinter-disable all` in allen Dateien mit Verstößen ein |
-| `--remove-disable-all` | bool | Entfernt alle `// ainetlinter-disable all`-Zeilen unter `--path` |
-| `--wave-ready` | bool | Zeigt nur Verstöße in Dateien ohne `// ainetlinter-disable all` |
-| `--only-changed` | bool | Nur Verstöße in gegenüber der Baseline geänderten Dateien (erfordert `--baseline`) |
-| `--no-cache` | bool | Deaktiviert den Analyse-Cache für diesen Lauf |
-| `--cache-ttl <minuten>` | int | TTL für Cache-Bereinigung beim Programmstart (Standard 60, `0` = unbegrenzt) |
-| `--mcp-server` | bool | Startet den stdio-basierten MCP-Server statt eines Lint-Laufs |
-| `--parent-pid <pid>` | int | Überwacht die Parent-PID im MCP-Modus; ohne Angabe automatische Ermittlung |
-| `--mcp-project-ttl-minutes <minuten>` | decimal | Idle-TTL der Projektregistry (InvariantCulture, Standard 45 Minuten) |
-| `--mcp-max-projects <anzahl>` | int | Maximale Zahl residenter Projekt-Keys (Standard 4) |
-| `--mcp-external-max-disk-bytes <bytes>` | long | Maximale externe Diskbelegung für Assembly-/Snapshot-Ressourcen |
-| `--mcp-external-max-memory-bytes <bytes>` | long | Maximale externe Speicherbelegung für Assembly-/Snapshot-Ressourcen |
-| `--mcp-external-max-parallel-operations <anzahl>` | int | Maximale parallele externe Creation-/Materialisierungsoperationen |
-| `--mcp-external-max-resident-resources <anzahl>` | int | Maximale Anzahl residenter externer Assembly-/Snapshot-Ressourcen |
-| `--mcp-external-idle-ttl-minutes <minuten>` | decimal | Idle-TTL externer Ressourcen (InvariantCulture) |
-| `--daemon-start` | bool | Startet den internen Named-Pipe-Daemonpfad (nicht für externe Client-Registrierungen) |
-| `--daemon-instance <id>` | string | Isoliert Named-Pipe-Endpunkt, Startup-Gate und MRU-State pro Daemon-Instanz; nur im MCP-/Daemon-Modus, sichere ASCII-ID mit maximal 32 Zeichen, invariant lowercase normalisiert |
-| `--mcp-daemon-idle-exit-minutes <minuten>` | decimal | Idle-Exit des internen DaemonHosts (Standard 10 Minuten) |
-| `--list-rules` | bool | Alle Regeln auflisten (kein `--path` nötig) |
-| `--describe-rule <RuleId>` | string | Eine Regel vollständig beschreiben |
-| `--search-rules <Begriff>` | string | Regeln durchsuchen |
-| `--docs <name>` / `-d <name>` | string | Integrierte Dokumentation ausgeben (Optionen: readme, agent-api, configuration, rationale, ainetlinter-rules-json, mcp-bootstrap, mcp-rule; case-insensitive) |
-
-## Strukturiertes Error-Format (L9)
-
-Fehlermeldungen sind maschinenlesbar:
-
-```
-[ERROR]: <CODE>: <Kurzmeldung>
-  context: <Datei oder Schritt>
-  hint:    <umsetzbare Empfehlung>
-```
-
-### Error-Codes
-
-| Code | Bedeutung |
-| :--- | :--- |
-| `CONFIG_REQUIRED` | `--config` fehlt (für Audit-Lauf) |
-| `CONFIG_NOT_FOUND` | `ainetlinter-rules.json` nicht gefunden |
-| `CONFIG_INVALID` | `ainetlinter-rules.json` nicht parsebar |
-| `CONFIG_SMELL` | Konfigurationsgeruch (z. B. zu breite Ausnahmen) |
-| `BASELINE_NOT_FOUND` | Baseline-Datei nicht gefunden |
-| `BASELINE_INVALID` | Baseline-Datei nicht parsebar |
-| `WORKSPACE_DIAGNOSTIC` | MSBuild-Fehler beim Laden des Workspaces |
-| `PROJECT_NOT_RESTORED` | Projekt ohne frischen `dotnet restore` (`obj/project.assets.json` fehlt/veraltet) — einmal pro betroffenem Projekt statt tausender Phantom-Dependency-Folgefehler, siehe `rationale.md` §13 |
-| `ANALYSIS_FAILED` | Analyse-Laufzeit-Fehler |
-| `RESOURCE_NOT_FOUND` | Referenzierte Datei nicht gefunden |
-| `DRIFT_DETECTED` | Generierter Inhalt weicht von gespeicherter Datei ab |
-
-### Beispiel
-
-```
-[ERROR]: BASELINE_NOT_FOUND: Object reference not set
-  context: baseline.json
-  hint:    Baseline-Datei mit --create-baseline neu erzeugen.
-```
-
----
-
-## Violations-Output-Format
-
-```markdown
-# AiNetLinter - 3 violations
-
-| Regel | Gesamt | Prod | Tests | Struktur |
-|---|---:|---:|---:|:---:|
-| EnforceSealedClasses | 2 | 2 | 0 | |
-| MaxPartialClassFiles | 1 | 1 | 0 | ⚠ |
-
-## Handlungsanweisung
-...
-**Auto-Fix verfuegbar** fuer markierte Violations [auto-fix]:
-  `ainetlinter --path <pfad> --fix`
-
-## Regellegende
-### EnforceSealedClasses (2×)
-**Warum:** ...
-**Fix-Alternativen:** ...
-
-## Violations nach Datei
-
-### Produktion (1 Datei)
-
-#### src/MyClass.cs
-- Z.5 EnforceSealedClasses [auto-fix] — Klasse 'Foo' ist nicht sealed.
-- Z.10 MaxPartialClassFiles [→ strukturell] — Auf 5 Dateien verteilt.
-```
-
-- `[auto-fix]` = automatisch mit `--fix` behebbar
-- `[→ strukturell]` = struktureller Verstoß, Details im Abschnitt "Strukturelle Verstöße" gekürzt
-- Violations nach Datei sortiert (alphabetisch), innerhalb nach Zeilennummer, aufgeteilt in Produktion und Tests
-- Strukturelle Violations (MaxPartialClassFiles, AIContextFootprint) erscheinen zusätzlich im Abschnitt "Strukturelle Verstösse" mit mehrzeiligen Details
-
----
-
-## MCP-Server-Modus
-
-Neben dem CLI-Batch-Modus kann AiNetLinter auch als **stdio-basierter MCP-Server** gestartet werden, der die Roslyn-basierte Solution-Analyse über granular abfragbare Tools für AI-Coding-Agenten bereitstellt. Server-Start, Tool-Verhalten, Trunkierungs-Format und Error-Reporting werden hier beschrieben. Setup- und Registrierungs-Anleitung: [Docs/integration.md#mcp-server-registrieren](integration.md#mcp-server-registrieren).
-
-### Server-Lifecycle
-
-Der Server läuft als stdio-Transport, gesteuert vom MCP-Host (Claude Code, Cursor, eigene Agent-Loops). Start:
-
-```bash
-ainetlinter --mcp-server                         # targetPath kommt je Tool-Aufruf
-ainetlinter --mcp-server --parent-pid <pid>       # optionale explizite Parent-PID
-ainetlinter --mcp-server --daemon-instance beta   # isolierter MCP-Daemon-Endpunkt
-```
+## 1. Vertragsgrundlagen (Contract v2)
 
 Bei MCP-`initialize` (Handshake) hält der Daemon mehrere Projekt-Keys
 resident. Der registrierte `--mcp-server`-Prozess arbeitet dabei als ThinClient:
@@ -249,74 +72,9 @@ Diagnostics, Generationen und Lease-Details bleiben ausgeblendet.
 `includeSessions` ist kein öffentlicher Input. Ein zielgebundener Aufruf bleibt
 auf das angefragte Target begrenzt.
 
-MCP `2026-07-28` verwendet stattdessen `server/discover`: Der Request enthält unter `params._meta` die Protokollversion sowie Client-Info und Client-Capabilities. Nach der Discovery müssen auch Folge-Requests wie `tools/list` diese Metadaten mitsenden. Beide Pfade liefern denselben globalen Instructions-Text.
 
-Der ThinClient ermittelt ohne zusätzliche Konfiguration unter Windows die PID des aufrufenden Prozesses über `NtQueryInformationProcess` und überwacht dessen Lebenszeichen. Auf anderen Betriebssystemen ist keine automatische Parent-PID-Ermittlung implementiert. Sobald eine automatisch ermittelte oder per `--parent-pid <pid>` vorgegebene Parent-PID beendet oder nicht mehr erreichbar ist, wird der Server-CancellationToken ausgelöst und der Server beendet sich mit Exit-Code `0`. Ein `--idle-timeout` ist nicht Teil dieser Funktion.
 
-Der interne Start `--daemon-start` startet den `DaemonHost` mit Named-Pipe-
-Handshake, geteilter Projektregistry und einer MCP-Session je Pipe-Verbindung.
-Nach standardmäßig 10 Minuten ohne Verbindungen, aktive Loads oder Warmups
-beendet sich der Host; bis zu zwei zuletzt verwendete Projekte werden aus dem
-MRU-Zustand vorgeladen. Ein einzelner unterbrochener, read-only Wire-Abschnitt
-kann roh replayed werden; ein zweiter Fehler beendet die Session ohne Schleife.
-Readiness und Pipe-Pump besitzen Hänger-Zeitlimits. `AINETLINTER_NO_DAEMON=1`
-schaltet ausschließlich für Debugging auf den direkten In-Proc-Stdio-Pfad um.
-
-### System-Log für MCP-Tool-Calls
-
-Der tatsächliche MCP-SDK-Server schreibt standardmäßig genau ein abgeschlossenes
-Tool-Call-Event in das bestehende Serilog-System-Log. Das Event enthält `ToolName`,
-`DurationMs` und `IsError`; bei einem Fehler kommt `ErrorCode` hinzu. Im Daemon-Modus
-trägt das Event zusätzlich `ConnectionId`. Argumente und Response-Payloads werden nicht
-geloggt. Der ThinClient reicht die Wire-Frames nur durch und schreibt kein zusätzliches
-Tool-Call-Event. Die Funktion kann in `appsettings.json` über `Logging:McpCallLogging`
-deaktiviert werden; fehlt der Schlüssel, ist sie aktiviert. Ein anderer JSON-Typ als
-Boolean ist ein harter Startfehler.
-
-### Daemon-Pipe-Vertrag (Transport-Grundlage)
-
-Die Pipe-/Handshake-Grundlage liegt unter `Mcp/Daemon/` und wird vom internen
-`--daemon-start`-Pfad für den `DaemonHost` verwendet. Der MCP-SDK-Handshake
-über `--mcp-server`/stdio bleibt nach außen unverändert; der ThinClient
-verdrahtet Connect-or-Start und reicht die Nutzdaten nach dem Pipe-Handshake
-opak weiter.
-
-- Der Named-Pipe-Endpunkt lautet ausschließlich
-  `ainetlinter.analyzer.v1.<username>` für den aktuellen Windows-Benutzer.
-  Mit `--daemon-instance <id>` wird `.<id>` angefügt; die ID wird invariant
-  in Kleinbuchstaben normalisiert, sodass `BETA` und `beta` dieselbe Instanz
-  adressieren. Der Server erstellt ihn mit `PipeOptions.CurrentUserOnly`;
-  dadurch ist der Pipe-Zugriff auf den aktuellen Benutzer begrenzt.
-- Jede Pipe-Nachricht ist genau ein JSON-Objekt in einer einzelnen
-  newline-delimited-Zeile. Leere, mehrzeilige, ungültige oder nicht-objektartige
-  Frames werden abgewiesen. Nach dem Pipe-Level-Handshake werden die MCP-/JSON-
-  RPC-Nutzdaten als validierte, aber nicht umgeschriebene Bytes weitergereicht.
-- Die Pipe-Level-Nachrichten `hello`, `welcome` und `shutdown` verwenden
-  Protokollversion `1`. `welcome` enthält `daemonVersion`,
-  `executableVersion`, `processId` und die effektive `configuration` mit
-  `maxProjects` und `idleExitMinutes`. Ein `targetPath` gehört nicht
-  in diesen Handshake.
-- Eine nicht unterstützte Protokollversion wird mit
-  `PROTOCOL_VERSION_UNSUPPORTED` abgewiesen. Bei abweichender
-  `executableVersion` darf die Zustandslogik bei null weiteren Verbindungen
-  genau eine `shutdown`-Entscheidung erzeugen; bei konkurrierenden oder danach
-  folgenden Verbindungen lautet der Fehler `VERSION_CONFLICT`. Damit löst ein
-  Versionskonflikt keinen Ping-Pong-Neustart aus.
-- Weicht die vom Client gemeldete Konfiguration von der effektiven
-  Daemon-Konfiguration ab, wird ein strukturiertes
-  `CONFIGURATION_DIVERGENCE`-Warnereignis höchstens einmal je
-  Handshake-State-Machine ausgelöst. Es ändert weder Target-Auflösung noch die
-  Registry-Semantik.
-- Jede `DaemonPipeConnection` besitzt ein eigenes Cancellation-Token.
-  Disconnect bricht nur die in-flight Lese-/Schreibarbeit dieser Verbindung
-  ab; andere Verbindungen und ihr gemeinsamer Warm-State werden vom Transport
-  nicht verändert.
-
-Vor jedem Tool-Aufruf prüft der Server per Datei-`mtime` + SHA-256-Hash, ob bekannte Quelldateien seit dem letzten Zugriff geändert wurden, und aktualisiert betroffene Dokumente **inkrementell** über `WithDocumentText` statt eines kompletten Workspace-Reloads.
-
-Wenn ein Projekt-Key nicht geladen werden kann (Solution-Datei fehlt, MSBuild-
-Fehler), bleibt der Server trotzdem verfügbar — der adressierte Tool-Call liefert
-`PROJECT_LOAD_FAILED` mit Ursprungsmeldung und Restore-Hinweis statt eines Crashs.
+---
 
 ### Scope-Hinweis (C#-only)
 
@@ -780,7 +538,7 @@ Vertragsregeln:
   "remediation": {
     "topIssue": "...",
     "actionableSteps": ["..."],
-    "documentationHint": "Docs/configuration.md"
+    "documentationHint": "Docs/linter/configuration.md"
   },
   "summary": "Safeguard-Score: 10.00/10 (Threshold 8.00) — PASS. 1 Verstoß, 178 Klassen analysiert."
 }
@@ -995,7 +753,7 @@ Wenn `find_symbol` mit einem Pattern ohne C#-Treffer aufgerufen wird, liefert da
 
 Für eine neue Integration ist die direkte Resource `ainetlinter://agent-guide`
 der erste Einstieg. Sie ist ohne Target lesbar. Ihr Inhalt entspricht der eingebetteten
-Bootstrap-Dokumentation `Docs/mcp-bootstrap.md` und enthält anschließend die
+Bootstrap-Dokumentation `Docs/mcp/mcp-bootstrap.md` und enthält anschließend die
 separat eingebettete dauerhafte `AiNetLinter-McpWorkflow.mdc`. Sie beschreibt
 die Auswahl eines absoluten vorhandenen Targets, die optionale benachbarte
 `ainetlinter-rules.json`, MCP-Registrierung und das Kopieren der Regeldatei nach
@@ -1225,18 +983,6 @@ eine Handoff-ID. Diese IDs können direkt als
 (`filePath`, `startLine`, `endLine`). `callerId` ist die stabile Handoff-ID des
 aufrufenden Symbols und kann direkt an symbolbezogene Folge-Tools übergeben werden.
 
-## Vollständige Rule-ID-Tabelle
-
-Aktuelle Regel-Liste abrufen:
-
-```bash
-ainetlinter --list-rules
-```
-
-Auto-fixbare Regeln (`--fix`):
-- `EnforceSealedClasses` — `sealed` für konkrete Klassen
-- `EnforcePascalCase` — PascalCase für öffentliche Bezeichner
-- `EnforceNullableEnable` — `#nullable enable` am Dateianfang
 
 ---
 
