@@ -4,9 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using AiNetLinter.IntegrationTests.Fixtures;
 using AiNetLinter.IntegrationTests.Mcp.Platform;
+using AiNetLinter.Mcp.Tools.Verify;
 using ModelContextProtocol.Protocol;
 using Xunit;
 
@@ -91,6 +93,26 @@ public sealed class VerifyToolContractE2ETests
         var result = await host.CallToolAsync("verify");
 
         AssertVerifyResult(result, expectedError: false, "verdict: failed", "violationCount:", "entries:", "handoffId:", "operation:", "completeness:");
+    }
+
+    [Fact]
+    public async Task Verify_ContentUsesTheFixedServerSideUtf8Budget()
+    {
+        using var fixture = CreateGitFixture();
+        File.WriteAllText(Path.Combine(fixture.RootPath, "src", "BaselineMini", "BudgetProbe.cs"), """
+            namespace BaselineMini;
+
+            public class BudgetProbe
+            {
+            }
+            """);
+        await using var host = await McpProcessHost.StartAsync(fixture, TimeSpan.FromSeconds(60));
+
+        var result = await host.CallToolAsync("verify");
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.True(Encoding.UTF8.GetByteCount(text) <= VerifyTool.ResponseBudgetBytes);
+        Assert.Contains("truncationReason: none", text, StringComparison.Ordinal);
     }
 
     [Fact]

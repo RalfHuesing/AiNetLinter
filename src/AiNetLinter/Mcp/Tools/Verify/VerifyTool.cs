@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
@@ -21,6 +22,7 @@ namespace AiNetLinter.Mcp.Tools.Verify;
 internal static class VerifyTool
 {
     internal const int EvidenceLimit = 20;
+    internal const int ResponseBudgetBytes = 4 * 1024;
 
     internal static async Task<CallToolResult> ExecuteAsync(
         McpCodeGraphServer server,
@@ -202,38 +204,74 @@ internal static class VerifyResponseFormatter
             ? VerifyVerdict.Pass
             : VerifyVerdict.Failed;
         var reason = count > 0 ? VerifyDecisionReason.ViolationsPresent : VerifyDecisionReason.ScoreBelowRequired;
-        var gateEvidence = score.Violations.Select(ToEvidence).ToList();
+        var gateEvidence = score.Violations
+            .Select(ToEvidence)
+            .OrderBy(entry => GateRank(entry.Severity))
+            .ThenBy(entry => entry.SourcePath, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(entry => entry.Line)
+            .ThenBy(entry => entry.RuleOrCategory, StringComparer.Ordinal)
+            .ToList();
         if (verdict == VerifyVerdict.Failed && gateEvidence.Count == 0) return Incomplete(
             requested, VerifyDecisionReason.GateEvidenceIncomplete, "Den identischen verify-Aufruf erneut ausführen.");
-        var evidence = gateEvidence
-            .Concat(advisory.Entries)
-            .Take(VerifyTool.EvidenceLimit)
-            .ToList();
-
+        var candidates = gateEvidence.Concat(advisory.Entries).ToList();
+        var sourceTruncated = gateEvidence.Count < count
+            || advisory.Entries.Count < advisory.TotalCount
+            || candidates.Count > VerifyTool.EvidenceLimit;
+        var limitedCandidates = candidates.Take(VerifyTool.EvidenceLimit).ToList();
         var response = new VerifyResponse(
             verdict,
             VerifyCompleteness.Complete,
             new VerifyGateSummary(score.Score, count, verdict == VerifyVerdict.Pass ? VerifyDecisionReason.RequirementsMet : reason),
             scope,
             count + advisory.TotalCount,
-            evidence);
-        return Text(Render(response, parameters.Exclusions, count, advisory));
+            limitedCandidates);
+        var unbounded = RenderWithinBudget(response, parameters.Exclusions, count, advisory, TruncationReason(sourceTruncated, false));
+        if (unbounded.Text is not null && !unbounded.ScopeProjected) return Text(unbounded.Text);
+
+        var projected = new List<VerifyEvidenceEntry>();
+        var truncationReason = TruncationReason(sourceTruncated, true);
+        foreach (var candidate in limitedCandidates)
+        {
+            var candidateResponse = response with { Evidence = projected.Append(candidate).ToList() };
+            if (RenderWithinBudget(candidateResponse, parameters.Exclusions, count, advisory, truncationReason).Text is null) break;
+            projected.Add(candidate);
+        }
+
+        if (verdict == VerifyVerdict.Failed && projected.All(entry => entry.Kind != "gate_violation")) return Incomplete(
+            requested, VerifyDecisionReason.GateEvidenceIncomplete, "Die vollständige Gate-Evidenz überschreitet das feste Antwortbudget; Scope präzisieren und erneut ausführen.");
+
+        var budgeted = RenderWithinBudget(
+            response with { Evidence = projected }, parameters.Exclusions, count, advisory, truncationReason);
+        return budgeted.Text is not null
+            ? Text(budgeted.Text)
+            : Incomplete(requested, VerifyDecisionReason.GateEvidenceIncomplete, "Die Verify-Antwort überschreitet das feste Antwortbudget; Scope präzisieren und erneut ausführen.");
     }
 
     internal static CallToolResult Incomplete(VerifyScope scope, VerifyDecisionReason reason, string? recovery) =>
         Text($"verdict: incomplete\nstatus:\n  operation: verify\n  completeness: incomplete\ngate:\n  score: null\n  requiredScore: 10.0\n  violationCount: null\n  requiredViolationCount: 0\n  decisionReason: {ToWire(reason)}\nevidence:\n  totalCount: 0\n  returnedCount: 0\n  entries: []\nscope:\n  requested: {ToWire(scope)}\n  effective: {ToWire(scope)}\n  populations: []\n  exclusions: []\nrecovery: {recovery ?? "scope: solution verwenden."}");
 
     internal static CallToolResult Error(string code, string message, string recovery, string? fieldPath = null) =>
-        new()
-        {
-            IsError = true,
-            Content = [new TextContentBlock { Text = $"verdict: error\nstatus: operation=error, completeness=not_applicable\ncode: {code}\nmessage: {message}{(fieldPath is null ? string.Empty : $"\nfieldPath: {fieldPath}")}\nrecovery: {recovery}" }],
-        };
+        Text(
+            $"verdict: error\nstatus: operation=error, completeness=not_applicable\ncode: {code}\nmessage: {message}{(fieldPath is null ? string.Empty : $"\nfieldPath: {fieldPath}")}\nrecovery: {recovery}",
+            isError: true);
 
-    private static CallToolResult Text(string text) => new()
+    private static CallToolResult Text(string text, bool isError = false)
     {
-        Content = [new TextContentBlock { Text = text }],
-    };
+        var result = new CallToolResult
+        {
+            Content = [new TextContentBlock { Text = BoundContent(text, isError) }],
+        };
+        if (isError) result.IsError = true;
+        return result;
+    }
+
+    private static string BoundContent(string text, bool isError)
+    {
+        if (Encoding.UTF8.GetByteCount(text) <= VerifyTool.ResponseBudgetBytes) return text;
+        return isError
+            ? "verdict: error\nstatus: operation=error, completeness=not_applicable\ncode: RESPONSE_BUDGET_EXCEEDED\nmessage: Die Verify-Fehlerantwort überschreitet das feste Antwortbudget.\nrecovery: Scope präzisieren und erneut ausführen."
+            : "verdict: incomplete\nstatus:\n  operation: verify\n  completeness: incomplete\ngate:\n  score: null\n  requiredScore: 10.0\n  violationCount: null\n  requiredViolationCount: 0\n  decisionReason: gateevidenceincomplete\nevidence:\n  totalCount: 0\n  returnedCount: 0\n  entries: []\nscope:\n  requested: changes\n  effective: changes\n  populations: []\n  exclusions: []\nrecovery: Die Verify-Antwort überschreitet das feste Antwortbudget; Scope präzisieren und erneut ausführen.";
+    }
 
     private static VerifyEvidenceEntry ToEvidence(ViolationEntry violation) => new(
         "gate_violation",
@@ -244,11 +282,46 @@ internal static class VerifyResponseFormatter
         violation.Details,
         $"{violation.FilePath}:{violation.LineNumber}");
 
+    private static int GateRank(string severity) => severity switch
+    {
+        "error" => 0,
+        "warning" => 1,
+        _ => 2,
+    };
+
+    private static string TruncationReason(bool sourceTruncated, bool budgetTruncated) =>
+        sourceTruncated
+            ? budgetTruncated ? "evidence_limit, response_budget" : "evidence_limit"
+            : budgetTruncated ? "response_budget" : "none";
+
+    private static VerifyRenderAttempt RenderWithinBudget(
+        VerifyResponse response,
+        IReadOnlyList<string> exclusions,
+        int gateTotalCount,
+        VerifyAdvisoryProjection advisory,
+        string truncationReason)
+    {
+        var text = Render(response, exclusions, gateTotalCount, advisory, truncationReason);
+        if (Encoding.UTF8.GetByteCount(text) <= VerifyTool.ResponseBudgetBytes) return new(text, ScopeProjected: false);
+
+        var compactScope = response.Scope with
+        {
+            Populations = [response.Scope.Effective == VerifyScope.Solution
+                ? "solution"
+                : $"changed_source_files:{response.Scope.Populations.Count}"],
+        };
+        text = Render(response with { Scope = compactScope }, exclusions, gateTotalCount, advisory, truncationReason);
+        return Encoding.UTF8.GetByteCount(text) <= VerifyTool.ResponseBudgetBytes
+            ? new(text, ScopeProjected: true)
+            : new(null, ScopeProjected: true);
+    }
+
     private static string Render(
         VerifyResponse response,
         IReadOnlyList<string> exclusions,
         int gateTotalCount,
-        VerifyAdvisoryProjection advisory)
+        VerifyAdvisoryProjection advisory,
+        string truncationReason)
     {
         var gate = response.Gate;
         var advisoryReturnedCount = response.Evidence.Count(entry => entry.Kind == "advisory_candidate");
@@ -268,9 +341,11 @@ internal static class VerifyResponseFormatter
             $"  totalCount: {response.EvidenceTotalCount}",
             $"  returnedCount: {response.Evidence.Count}",
             $"  gateTotalCount: {gateTotalCount}",
+            $"  gateReturnedCount: {response.Evidence.Count(entry => entry.Kind == "gate_violation")}",
             $"  advisoryTotalCount: {advisory.TotalCount}",
             $"  advisoryReturnedCount: {advisoryReturnedCount}",
             $"  advisoryCompleteness: {advisory.Completeness}",
+            $"  truncationReason: {truncationReason}",
             "  entries:",
         };
         foreach (var entry in response.Evidence)
@@ -300,6 +375,8 @@ internal static class VerifyResponseFormatter
 
     private static string ToWire(object value) => value.ToString()!.ToLowerInvariant();
 }
+
+internal sealed record VerifyRenderAttempt(string? Text, bool ScopeProjected);
 
 internal sealed record VerifyAdvisoryProjection(
     int TotalCount,

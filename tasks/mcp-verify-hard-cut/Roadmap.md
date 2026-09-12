@@ -7,7 +7,7 @@
 - [X] Slice 05 – Dokumentation, Regeln und Endverifikation synchronisieren
 - [X] Gesamtaudit – gesamten Scope prüfen und Findings beheben
 - [X] Abschlussgate – Build, Non-Stress-Tests und Diff-Prüfung
-- [ ] Folgeaudit 01 – feste UTF-8-Budgetprojektion mit vollständigen Evidenzeinheiten
+- [X] Folgeaudit 01 – feste UTF-8-Budgetprojektion mit vollständigen Evidenzeinheiten
 - [ ] Folgeaudit 02 – Advisory-Scans für Mehrdatei-Änderungen bündeln
 - [ ] Folgeaudit 03 – Fehlervertrag und Legacy-Namensreste bereinigen
 - [ ] Folgeaudit – Scope erneut prüfen und Abschlussgate ausführen
@@ -60,6 +60,12 @@
 
 - Read-only-Audit identifizierte fehlende finale UTF-8-Budgetmessung und wiederholte Advisory-Scans pro Datei.
 - Öffentliche Legacytools bleiben entfernt; keine Rückkehr zu granularen Legacy-Einstiegspunkten.
+- Commit: ausstehend.
+
+### Folgeaudit 01
+
+- Finale `verify`-Projektion misst den UTF-8-Content gegen ein festes 4-KiB-Budget und behält nur ganze Evidenzeinheiten.
+- Counts, Trunkierungsgrund und `failed`-Evidenzschutz sind per Fast- und frischem Hosttest abgesichert.
 - Commit: ausstehend.
 
 ### Vorbereitung
