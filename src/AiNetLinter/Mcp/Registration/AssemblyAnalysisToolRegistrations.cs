@@ -79,21 +79,12 @@ internal static class AssemblyAnalysisToolRegistrations
     }
 
     private const string SearchAssemblyDescription =
-        "Wann nutzen: read-only Text-/Mustersuche im verifizierten Source- oder dekompilierten " +
-        "Root einer lokalen Assembly. targetPath ist ein absoluter .dll- oder .exe-Pfad; " +
-        "searchKind: 'text' fuer ein eigenes pattern, " +
-        "'data_access' fuer typische Datenbank-/Datei-/Transaktionsaufrufe oder 'external_calls' " +
-        "fuer typische HTTP-/RPC-/Socket-/Prozessaufrufe; die beiden Fachmodi verwenden ohne pattern " +
-        "ein eingebautes, sichtbares Regex. isRegex gilt fuer ein eigenes pattern (Default null = 'auto' mit automatischer " +
-        "Regex-Erkennung und Promotion; true = explizit Regex, false = explizit Plain-Substring). " +
-        "declarationOnly: schliesst Treffer in Kommentaren, Strings und XML-Docs aus. " +
-        "kind: schraenkt Treffer auf eine bestimmte Symbolart ein ('method', 'type', 'property'). " +
-        "maxResults (0 = Default 50, Cap 1000), maxFiles (0 = unbegrenzt), contextLines (0 = keine Kontextzeilen, Cap 5), fileFilter als Glob (z. B. '*.cs', '!*Designer*') oder Regex, " +
-        "maxResponseBytes und continuationToken begrenzen die Antwort. Der Content liefert " +
-        "relative Trefferpfade, stabile IDs, Matchbereiche, totalCount/returnedCount, " +
-        "completeness, truncatedBy und continuationToken; analysis enthaelt Origin und " +
-        "die statische Source-Policy. Ohne verfügbaren SourceRoot ist die Capability explizit unsupported. " +
-        "Die Assembly wird weder geladen noch ausgefuehrt.";
+        "Read-only Text-/Mustersuche im dekompilierten Root einer lokalen Assembly (.dll/.exe). " +
+        "searchKind: 'text' [eigenes pattern], 'data_access' [DB/Datei], 'external_calls' [HTTP/RPC/Prozess]. " +
+        "pattern: Suchbegriff (isRegex: auto/true/false). " +
+        "declarationOnly: schliesst Kommentare/Strings/XML-Docs aus. " +
+        "kind: 'method', 'type', 'property'. fileFilter: Glob oder Regex. " +
+        "maxResults (Default 50, Cap 1000), contextLines (0-5), maxResponseBytes, continuationToken.";
 
     private static void AddInspectAssembly(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -197,25 +188,12 @@ internal static class AssemblyAnalysisToolRegistrations
         CancellationToken CancellationToken);
 
     private static readonly string InspectAssemblyDescription =
-        "Wann nutzen: oeffentliche API einer exakt angegebenen lokalen .NET-Assembly metadata-only " +
-        "ueber Roslyn untersuchen. targetPath mit absolutem .dll- oder .exe-Pfad ist Pflicht; " +
-        "Ein Consumer-Projekt " +
-        "wird in diesem Dispatch-Schritt nicht verwendet. " +
-        "namespace, typeName und memberName filtern, publicOnly ist standardmaessig true, " +
-        "exactTypeName schaltet fuer typeName von Teiltext- auf Exaktsuche um, memberNames " +
-        "ergaenzt den Teiltextfilter memberName um eine exakte OR-Auswahl, " +
-        "includeReferences (wenn weggelassen: bei Type-/Member-Filter false, sonst true; " +
-        "true/false wird explizit respektiert) steuert " +
-        "Referenzlisten und Referenz-Sessions; ohne Detailflag bleiben nur Summen sichtbar, " +
-        $"detailLevel ({McpEnumValues.AssemblyDetailLevelsHint}) steuert das Antwortbudget; " +
-        "maxResults begrenzt Typen (0 = Default 100, Maximum 1000), " +
-        "maxMembers begrenzt Member je Typ (0 = Default 100, Maximum 1000). Identitaet, " +
-        "Referenzen, Typen, Methoden, Properties, Felder, Events, Attribute und Diagnosen " +
-        "werden ausgegeben; Methoden und Indexer liefern zusaetzlich strukturierte " +
-        "Parameterdaten. Eine verfuegbare explizite Source-Zuordnung wird source-backed " +
-        "genutzt; ohne Zuordnung oder verfuegbaren Provider greift die statische Decompilation. Bei " +
-        "fehlenden Abhaengigkeiten lautet completeness partial. " +
-        "Die Assembly wird weder geladen noch ausgefuehrt.";
+        "Oeffentliche API einer lokalen .NET-Assembly (.dll/.exe) metadata-only ueber Roslyn untersuchen. " +
+        "namespace, typeName, memberName / memberNames filtern. exactTypeName: Exaktsuche fuer typeName. " +
+        "publicOnly: Default true. " +
+        "includeReferences: Referenzlisten/Sessions einbeziehen (Default: true ohne Type-/Member-Filter, sonst false). " +
+        $"detailLevel: {McpEnumValues.AssemblyDetailLevelsHint}. " +
+        "maxResults: Typen (Default 100, Max 1000). maxMembers: Member je Typ (Default 100, Max 1000).";
 
     private static void AddFindAssemblyExtensions(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -267,22 +245,11 @@ internal static class AssemblyAnalysisToolRegistrations
     }
 
     private static readonly string FindAssemblyExtensionsDescription =
-        "Wann nutzen: klassische C#-Extension-Methoden einer exakt angegebenen lokalen .NET-Assembly " +
-        "metadata-only ueber Roslyn finden. targetPath mit absolutem .dll- oder .exe-Pfad ist Pflicht; " +
-        "Ein Consumer-Projekt " +
-        "wird in diesem Dispatch-Schritt nicht verwendet. " +
-        "receiverType grenzt den gewuenschten Empfaenger-Typ ein; ohne Consumer-Projekt " +
-        "wird seine Roslyn-Anwendbarkeit als not_decidable ausgewiesen. extensionName und namespace filtern, " +
-        "includeReferences (Default false) steuert, ob bounded Referenz-Assemblies und Reference-Sessions " +
-        "einbezogen werden. " +
-        "Generics, Constraints und Konvertierungen werden dabei metadata-only beruecksichtigt. " +
-        "Eine verfuegbare explizite Source-Zuordnung wird source-backed genutzt; sonst greift " +
-        "die statische Decompilation. " +
-        "maxResults begrenzt (0 = Default 100, Maximum 1000). Die Antwort trennt " +
-        $"detailLevel ({McpEnumValues.AssemblyDetailLevelsHint}) steuert das Antwortbudget. " +
-        "applicable, not_applicable und not_decidable und markiert fehlende Abhaengigkeiten " +
-        "mit completeness partial. Methoden liefern zusaetzlich strukturierte Parameterdaten. " +
-        "Die Assembly wird weder geladen noch ausgefuehrt.";
+        "C#-Extension-Methoden einer lokalen .NET-Assembly (.dll/.exe) metadata-only ueber Roslyn finden. " +
+        "receiverType: Empfaengertyp. extensionName, namespace: Filter. " +
+        "includeReferences (Default false): Referenz-Assemblies einbeziehen. " +
+        $"detailLevel: {McpEnumValues.AssemblyDetailLevelsHint}. " +
+        "maxResults: Default 100, Max 1000.";
 
     private static void AddGetAssemblyContext(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -390,16 +357,10 @@ internal static class AssemblyAnalysisToolRegistrations
         CancellationToken CancellationToken);
 
     private static readonly string GetAssemblyContextDescription =
-        "Wann nutzen: kompakter Assembly-spezifischer Composite-Einstieg fuer Agenten. " +
-        "Liefert Identitaet, Scope, Vollstaendigkeit und auf Wunsch Metriken, Referenzen, " +
-        "Caller/Impact, Body und Klassenstruktur in einer strukturierten Antwort. " +
-        "targetPath ist ein absoluter .dll- oder .exe-Pfad; symbolIdentifier ist optional und " +
-        "akzeptiert DocCommentId, Typname oder Datei:Zeile:Spalte. " +
-        "includeReferences (Default false) bestimmt die effektive Suchbreite aller Composite-Abschnitte: " +
-        "false bleibt root-only, true verwendet die bounded Referenz-Closure. " +
-        "maxBodyLines, maxCallers, depth und topN sind Abschnitts-Limits und müssen jeweils mindestens 1 sein; " +
-        "0 oder negative Werte liefern INVALID_ARGUMENT (Caps: 1000, 200, 3 bzw. 200). " +
-        $"maxResponseBytes, detailLevel ({McpEnumValues.AssemblyDetailLevelsHint}) und continuationToken steuern Budget und Paging; " +
-        "unsupported/partial/complete sowie totalCount, returnedCount und continuationToken " +
-        "bleiben maschinenlesbar sichtbar. Die Assembly wird weder geladen noch ausgefuehrt.";
+        "Composite-Einstieg fuer lokale .NET-Assemblies (.dll/.exe): Identitaet, Scope, optional Metriken, Referenzen, Caller/Impact, Body und Klassenstruktur. " +
+        "symbolIdentifier: DocCommentId, Typname oder Datei:Zeile:Spalte. " +
+        "includeReferences (Default false): Referenz-Closure einbeziehen. " +
+        "Flags: includeMetrics, includeReferences, includeCallers, includeImpact, includeBody, includeClassStructure. " +
+        $"detailLevel: {McpEnumValues.AssemblyDetailLevelsHint}. " +
+        "maxBodyLines (Cap 1000), maxCallers (Cap 200), depth (Cap 3), topN (Cap 200), maxResponseBytes, continuationToken.";
 }

@@ -63,10 +63,7 @@ internal static class ServerMaintenanceToolRegistrations
     }
 
     private const string ReloadConfigDescription =
-        "Wann nutzen: ainetlinter-rules.json wurde waehrend des Server-Laufs geaendert und get_violations " +
-        "soll die neuen Regeln sofort respektieren, ohne den Server neu zu starten. Gelesen wird " +
-        "ausschliesslich die optionale ainetlinter-rules.json neben der adressierten Solution. " +
-        "Bei ungueltigem Pfad/JSON bleibt die bisherige Konfiguration aktiv.";
+        "Laedt ainetlinter-rules.json der adressierten Solution neu, um geaenderte Regeln ohne Server-Neustart sofort zu aktivieren.";
 
     private static void AddGetServerHealth(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -181,10 +178,7 @@ internal static class ServerMaintenanceToolRegistrations
         CancellationToken CancellationToken);
 
     private static readonly string GetServerHealthDescription =
-        "Wann nutzen: pruefen, ob der Server laeuft und welche Projekt- und Assembly-Sessions " +
-        "resident sind. Ohne targetPath: globaler Status fuer alle Projekt-Keys und Assembly-Sessions. " +
-        "Mit targetPath as .sln/.slnx wird der Projekt-Key, mit .dll/.exe die Assembly-Session gezielt geprueft. " +
-         "Global werden ausschließlich Aggregat-, Status- und begrenzte Fehlerzähler geliefert; " +
-         "includeDiagnostics=true fordert nur für ein konkretes targetPath begrenzte Diagnose-Samples an. " +
-         "Zielgebundene Antworten bleiben auf das angefragte Target begrenzt.";
+        "Prueft Server-Status und residente Projekt- und Assembly-Sessions. " +
+        "Ohne targetPath: globaler Status. Mit targetPath (.sln/.slnx oder .dll/.exe): gezielte Pruefung. " +
+        "includeDiagnostics (Default false): Diagnose-Samples fuer targetPath anfordern (maxDiagnostics: Default 50).";
 }

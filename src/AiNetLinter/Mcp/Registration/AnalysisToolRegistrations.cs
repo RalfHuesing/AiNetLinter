@@ -138,8 +138,11 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string SearchPatternDescription =
-        "Text/Regex-Suche ausserhalb Symbolgraph; Default 20. enrichCSharp=true opt-in (ambiguous/unavailable). " +
-        "Default 8192, Cap 65536.";
+        "Text- und Regex-Suche in Quell- und Nicht-C#-Dateien. " +
+        "pattern: Suchbegriff (isRegex: auto/true/false). " +
+        "scope: Relativer Pfad. includePatterns/excludePatterns: Globs. " +
+        "maxResults (Default 20), contextLines (Default 0), maxResponseBytes (Default 8192, Cap 65536). " +
+        "enrichCSharp: ergaenzt C#-Symbolevidenz (Default false).";
 
     private static void AddMetricsTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -160,7 +163,9 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string MetricsTreeDescription =
-        "Wann nutzen: Verzeichnis-Metriken; mode (Default code_size), depth, topN, fileFilter begrenzen Teilbaum.";
+        "Aggregierte Verzeichnis- und Dateimetriken. " +
+        "mode: 'code_size' [Default], 'complexity'. depth: Teilbaumtiefe (Default 1). " +
+        "topN: Top-Eintraege je Ebene (Default 10). fileFilter: Pfad-Glob.";
 
     private static void AddMetricsLookup(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -246,7 +251,9 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string FindMagicValuesDescription =
-        "Wann nutzen: C#-Literal-Audit; Git-Diff und '// ainetlinter-disable MagicValues' filterbar. Keine Remediation.";
+        "Audit fuer Magic-Values (wiederholte literale Zahlen/Strings). " +
+        "Unterstuetzt Git-Diff (changedOnly) und Respektierung von '// ainetlinter-disable MagicValues'. " +
+        "categoryFilter: 'all', 'number', 'string' etc. valueType: 'all', 'numbers', 'strings'.";
 
     private static void AddFindDeadCode(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -322,7 +329,10 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string GetFeatureContextDescription =
-        "Wann nutzen: One-Shot-Kontext fuer C#-Symbol: Deklaration, Metriken, Caller, Tests, Violations. scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). Die Deklaration bleibt als markierter Seed sichtbar. Antwortbudget wahrt Einheiten.";
+        "Wann nutzen: One-Shot-Kontext fuer C#-Symbol (Deklaration, Metriken, Caller, Tests, Violations). " +
+        "symbolIdentifier: Typ oder Member ('M:Namespace.Klasse.Methode', 'Klasse.Methode'). " +
+        "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
+        "maxCallers (Default 10), maxTests (Default 10), maxResponseBytes.";
 
     private static void AddGetTestContext(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -356,5 +366,8 @@ internal static class AnalysisToolRegistrations
     }
 
     private const string GetTestContextDescription =
-        "Wann nutzen: Statische Testkandidaten fuer C#-Symbol mit Zuordnung und Kategorie. scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). production liefert ohne definierte Production-Testevidenz eine echte leere Menge. Budget wahrt Kandidaten.";
+        "Wann nutzen: Statische Testkandidaten fuer ein C#-Symbol mit Zuordnung und Testkategorie. " +
+        "symbolIdentifier: Typ oder Member ('M:Namespace.Klasse.Methode', 'Klasse.Methode'). " +
+        "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
+        "maxResults (Default 30), maxResponseBytes.";
 }

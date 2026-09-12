@@ -107,21 +107,13 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private static readonly string FindSymbolDescription =
-        "Wann nutzen: Fundstelle(n) von C#-Symbolen per Namens-Substring finden, wenn der " +
-        "exakte Ort unbekannt ist. namePatterns: Array von Namens-Mustern oder pattern als " +
-        "String fuer genau ein Muster. " +
-        "Batch loest N sequentielle Calls ab, max. 10 pro Call, z. B. namePatterns: [\"Greeter\"] " +
-        "oder pattern: \"Greeter\". " +
-        $"kind: optionaler Typfilter ({McpEnumValues.FindSymbolKindsHint}; " +
-        "C#/Roslyn-Werte). scopeType: 'all' (Default), 'production' oder 'tests'; " +
-        "includeGenerated: false (Default), nur bei true generierte Dokumente einbeziehen. " +
-        "maxResults: mindestens 1, Begrenzung der Trefferliste (Default 50); " +
-        "0 oder negative Werte liefern INVALID_ARGUMENT. " +
-        "maxResponseBytes: Wirebudget (Default 16 KiB, Cap 64 KiB). " +
-        "includeReferences (Default false): bei Assembly-Zielen auch die bounded Referenz-Assemblies " +
-        "durchsuchen und Herkunft/Vollständigkeit im Content ausgeben. " +
-        "Bei 0 C#-Treffern Hinweis auf Textfunde in Nicht-C#-Dateien (Fallback search_pattern). " +
-        "Liefert vollständige, direkt nutzbare Symbol-Evidenz im Content.";
+        "Fundstellen von C#-Symbolen per Namens-Substring finden. " +
+        "namePatterns: Array von Mustern (max. 10) oder pattern fuer Einzelsuche. " +
+        $"kind: optionaler Typfilter ({McpEnumValues.FindSymbolKindsHint}). " +
+        "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
+        "maxResults: Trefferbegrenzung (Default 50). " +
+        "maxResponseBytes: Default 16 KiB, Cap 64 KiB. " +
+        "includeReferences (Default false): bei Assemblies auch Referenzen durchsuchen.";
 
     private static void AddFindReferences(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -170,19 +162,12 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string FindReferencesDescription =
-        "Wann nutzen: alle Aufrufstellen eines C#-Symbols finden, optional transitiv. " +
-        "symbolIdentifier: \"M:Namespace.Klasse.Methode\" oder \"Datei.cs:42:10\" oder " +
-        "\"Datei.cs:42\" (Zeile ohne Spalte — bei mehreren Symbolen auf der Zeile liefert das " +
-        "Ergebnis eine Kandidatenliste statt eines Treffers) oder \"Klasse.Methode\". " +
-        "maxResults: mindestens 1, Begrenzung der Trefferliste (Default 50); 0 oder negative Werte liefern INVALID_ARGUMENT. " +
-        "completeness mit Tiefe, Herkunft und getrennten Trunkierungsgruenden; die " +
-        "depth: mindestens 1 (Default 1, hard cap 3; 0 oder negative Werte liefern INVALID_ARGUMENT) liefert Call-Sites mit " +
-        "Vollständigkeit, Tiefe, Herkunft und getrennten Trunkierungsgründen im Content; die " +
-        "completeness mit Tiefe, Herkunft und getrennten Trunkierungsgruenden; die " +
-        "Traversierung ist hart auf 200 besuchte Knoten begrenzt. includeReferences (Default false): " +
-        "bei Assembly-Zielen bounded Referenz-Assemblies einbeziehen und partielle Diagnosen " +
-        "sowie Herkunft im Content ausgeben. scopeType: 'all' (Default), 'production' oder 'tests'; " +
-        "includeGenerated: false (Default), generierte Dokumente nur bei true einbeziehen.";
+        "Findet alle Aufrufstellen eines C#-Symbols, optional transitiv. " +
+        "symbolIdentifier: \"M:Namespace.Klasse.Methode\", \"Datei.cs:Zeile:Spalte\", \"Datei.cs:Zeile\" oder \"Klasse.Methode\". " +
+        "depth: Traversierungstiefe (Default 1, Cap 3, max. 200 Knoten). " +
+        "maxResults: Trefferbegrenzung (Default 50). " +
+        "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
+        "includeReferences (Default false): bei Assemblies Referenzen einbeziehen.";
 
     private static void AddGetCallTree(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -217,18 +202,15 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string GetCallTreeDescription =
-        "Wann nutzen: echten Aufrufer- oder Aufgerufene-Baum eines C#-Symbols sehen (wer ruft " +
-        "dieses Symbol auf bzw. wen ruft es auf), transitiv als Eltern-Kind-Struktur. " +
-        "symbolIdentifier: Format wie find_references (\"M:Namespace.Klasse.Methode\", \"Datei.cs:Zeile:Spalte\", \"Klasse.Methode\"). " +
-        "depth: mindestens 1, Traversierungstiefe (Default 2, hard cap 5; 0 oder negative Werte liefern INVALID_ARGUMENT). format: \"ascii\" (Default) oder " +
-        "\"mermaid\" (flowchart TD). direction: \"incoming\" (Default: wer ruft das Symbol auf), " +
-        "\"outgoing\" (wen ruft das Symbol auf) oder \"both\" (beide Richtungen abwechselnd). " +
-        "topN: mindestens 1, Fan-Out-Begrenzung pro Ebene (Default 10; 0 oder negative Werte liefern INVALID_ARGUMENT). Traversierung ist hart auf 250 Knoten begrenzt. " +
-        "includeReferences (Default false): bei Assembly-Zielen bounded Referenz-Assemblies " +
-        "einbeziehen und Herkunft/partielle Diagnosen im Ergebnis ausgeben. " +
-        "includeBcl (Default false): bei direction=outgoing auch BCL-/Framework-Symbole (z. B. System.*) als Leaves einbeziehen. " +
+        "Transitiver Aufrufer-/Aufgerufenen-Baum eines C#-Symbols als Eltern-Kind-Struktur. " +
+        "symbolIdentifier: \"M:Namespace.Klasse.Methode\", \"Datei.cs:Zeile:Spalte\" oder \"Klasse.Methode\". " +
+        "direction: 'incoming' [Default: wer ruft auf], 'outgoing' [wen ruft es auf], 'both'. " +
+        "depth: Tiefe (Default 2, Cap 5). topN: Fan-Out je Ebene (Default 10, max. 250 Knoten). " +
+        "format: 'ascii' [Default] oder 'mermaid'. " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
-        "maxResponseBytes: UTF-8-Budget für den Content (Default 32768, Maximum 65536); gekürzt werden ganze Graph-Kanten.";
+        "includeBcl: Framework-Symbole bei outgoing (Default false). " +
+        "includeReferences (Default false): bei Assemblies Referenzen einbeziehen. " +
+        "maxResponseBytes (Default 32768, Maximum 65536).";
 
     private static void AddGetImpact(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -263,21 +245,13 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string GetImpactDescription =
-        "Wann nutzen: pruefen, was eine geplante oder bereits gemachte Aenderung betrifft. " +
-        "Ohne gitRef/symbolIdentifier: uncommittete lokale Aenderungen (Default). Sonst gitRef (Commit-Ref) " +
-        "ODER symbolIdentifier (Format wie find_references) angeben, nie beide. " +
-        "Bei Assembly-Zielen ist nur symbolIdentifier zulaessig; gitRef und leerer Aufruf " +
-        "werden als recoverable InvalidArgument beantwortet. " +
-        "detailLevel: 'callers' [Default] oder 'change-context' (nur im Git-Diff-Modus zulaessig: " +
-        "liefert geaenderte Symbole, Call-Sites, zugeordnete Tests, diffbezogene Violations und dotnet test Filter). " +
-        "maxResults: mindestens 1, Limit der Trefferliste (Default 50); 0 oder negative Werte liefern INVALID_ARGUMENT. " +
-        "includeReferences (Default false) erweitert Assembly-Suchen nur auf ausdrücklichen Wunsch zur bounded Closure; " +
-        "eine Assembly-Handoff-ID bleibt bei false auf ihren verifizierten Owner begrenzt. " +
-        "depth: im Symbol-Branch mindestens 1 (Default 1, hard cap 3, hart begrenzt auf 200 besuchte Knoten); " +
-        "0 oder negative Werte liefern dort INVALID_ARGUMENT. Im gesamten Git-Diff-Branch (callers und " +
-        "change-context) ist depth wirkungslos und wird auch bei 0 nicht abgelehnt. " +
-        "maxChangedSymbols: Begrenzung geaenderter Symbole im change-context (0 = Default 20, Default 20, Cap 100). " +
-        "maxTestsPerSymbol: Begrenzung der Tests je Symbol (0 = Default 10, Default 10, Cap 50).";
+        "Analysiert die Auswirkung von Aenderungen (Git-Diff oder Einzelsymbol). " +
+        "Ohne Parameter: uncommittete Aenderungen. Alternativ gitRef ODER symbolIdentifier angeben (nicht beide; Assemblies nur symbolIdentifier). " +
+        "detailLevel: 'callers' [Default] oder 'change-context' (Git-Diff-Modus: geaenderte Symbole, Call-Sites, Tests, Violations, dotnet-test-Filter). " +
+        "depth: Tiefe im Symbol-Modus (Default 1, Cap 3, max. 200 Knoten). " +
+        "maxResults: Trefferlimit (Default 50). " +
+        "maxChangedSymbols (Default 20, Cap 100), maxTestsPerSymbol (Default 10, Cap 50). " +
+        "includeReferences (Default false): bei Assemblies Referenzen einbeziehen.";
 
     private static void AddGetTypeHierarchy(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -322,11 +296,10 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string GetTypeHierarchyDescription =
-        "Wann nutzen: Vererbungs- und Interface-Hierarchie eines C#-Typs analysieren (Basisklassen, " +
-        "implementierte Interfaces, abgeleitete/implementierende Typen, heuristische DI-Registrierungen). " +
-        "symbolIdentifier: \"T:Namespace.Klasse\", \"Datei.cs:10:5\", \"Datei.cs:10\" " +
-        "(Zeile ohne Spalte) oder \"Klasse\". maxResults: mindestens 1 (0 oder negative Werte liefern INVALID_ARGUMENT), Begrenzung der abgeleiteten/implementierenden " +
-        "Typen (Default 50). scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default).";
+        "Vererbungs- und Interface-Hierarchie eines Typs (Basisklassen, Interfaces, Subtypen, DI-Registrierungen). " +
+        "symbolIdentifier: 'T:Namespace.Typ', 'Datei.cs:Zeile:Spalte' oder Typname. " +
+        "maxResults: Limit abgeleiteter Typen (Default 50). " +
+        "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default).";
 
     private static void AddDependencyGraph(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -360,17 +333,13 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string DependencyGraphDescription =
-        "Wann nutzen: Ermitteln, welche Dateien/Typen von einer Datei oder einem Typ abhaengen " +
-        "(echte SemanticModel-Typreferenzen, nicht nur using-Direktiven) — beantwortet 'wer haengt von X " +
-        "ab' direkt statt mehrerer find_references-Umwege. filePath (ganze Datei) ODER " +
-        "symbolIdentifier (ein Typ, engerer Scope) angeben, nie beide — symbolIdentifier-Format wie " +
-        "find_references. direction: \"incoming\", \"outgoing\" oder \"both\" (Default). depth: " +
-        "depth: mindestens 1, Traversierungstiefe (Default 1, hard cap 3, max. 150 besuchte Dateien); " +
-        "0 oder negative Werte liefern INVALID_ARGUMENT. maxResults: mindestens 1, Begrenzung der " +
-        "angezeigten Kanten (Default 50); 0 oder negative Werte liefern INVALID_ARGUMENT. " +
-        "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default), " +
-        "generierte Knoten nur als notwendige markierte Bruecken. maxResponseBytes: kombiniertes " +
-        "UTF-8-Wirebudget (Default 24 KiB, Maximum 64 KiB), kuerzt nur ganze Knoten/Kanten.";
+        "Semantischer Abhaengigkeitsgraph fuer Datei oder Typ (SemanticModel-Typreferenzen). " +
+        "filePath (ganze Datei) ODER symbolIdentifier (Typ) angeben (nicht beide). " +
+        "direction: 'incoming', 'outgoing', 'both' (Default). " +
+        "depth: Traversierungstiefe (Default 1, Cap 3, max. 150 Dateien). " +
+        "maxResults: Begrenzung der Kanten (Default 50). " +
+        "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default). " +
+        "maxResponseBytes (Default 24 KiB, Maximum 64 KiB).";
 
     private static void AddResolveTypeOrigin(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -390,9 +359,7 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string ResolveTypeOriginDescription =
-        "Wann nutzen: Ermittelt zu einem angegebenen Typnamen (z. B. 'IDataProvider' oder 'Vendor.Data.BaseCommand') " +
-        "sofort die definierende Assembly (Name und Festplatten-Dateipfad der DLL) sowie den vollqualifizierten Typnamen " +
-        "und Symbol-Kind ueber Roslyn-Metadatenreferenzen. Unterstuetzt Source- und Assembly-Ziele; die Route wird aus targetPath bestimmt.";
+        "Ermittelt zu einem Typnamen die definierende Assembly (Name und Dateipfad der DLL), vollqualifizierten Namen und Symbol-Kind ueber Roslyn-Metadatenreferenzen.";
 
     private static void AddFindImplementations(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -437,11 +404,8 @@ internal static class SymbolGraphToolRegistrations
     }
 
     private const string FindImplementationsDescription =
-        "Wann nutzen: Findet konkrete Implementierungen und Overrides von Interfaces, abstrakten Klassen, " +
-        "virtuellen Methoden oder Properties in Quellcode-Projekten oder dekompilierten Assemblies. Liefert Typ, Member, " +
-        "Status (concrete/abstract/virtual) und Zeilenposition. " +
-        "symbolIdentifier: Format wie find_references (\"M:Namespace.Klasse.Methode\", \"IInterface\", \"BaseClass.Method\"). " +
-        "maxResults: mindestens 1, Begrenzung der Trefferliste (Default 50); 0 oder negative Werte liefern INVALID_ARGUMENT. " +
+        "Findet konkrete Implementierungen und Overrides von Interfaces, abstrakten Klassen, virtuellen Methoden oder Properties. " +
+        "symbolIdentifier: 'IInterface', 'BaseClass.Method' oder 'M:Namespace.Klasse.Methode'. " +
+        "maxResults: Trefferlimit (Default 50). " +
         "scopeType: 'all' (Default), 'production' oder 'tests'; includeGenerated: false (Default).";
 }
-
