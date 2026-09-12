@@ -318,12 +318,11 @@ internal static partial class McpToolResults
     /// </summary>
     internal static CallToolResult WithNavigation(
         CallToolResult result,
-        AnalysisTarget target,
+        AnalysisTarget? target = null,
         int maxResponseBytes = 0,
         Func<CallToolResult, int, CallToolResult>? postNavigationResponseBudget = null)
     {
         ArgumentNullException.ThrowIfNull(result);
-        ArgumentNullException.ThrowIfNull(target);
 
         var navigated = ProjectNavigation(result, target);
         if (postNavigationResponseBudget is null || maxResponseBytes <= 0) return navigated;
@@ -332,9 +331,20 @@ internal static partial class McpToolResults
         return HasErrorCode(budgeted) ? ProjectNavigation(budgeted, target) : budgeted;
     }
 
-    private static CallToolResult ProjectNavigation(CallToolResult result, AnalysisTarget target)
+    internal static CallToolResult WithNavigation(
+        CallToolResult result,
+        string? targetPath)
     {
-        var navigation = McpNavigationProjection.Create(result, target);
+        ArgumentNullException.ThrowIfNull(result);
+        return ProjectNavigation(result, null, targetPath);
+    }
+
+    private static CallToolResult ProjectNavigation(
+        CallToolResult result,
+        AnalysisTarget? target,
+        string? targetPath = null)
+    {
+        var navigation = McpNavigationProjection.Create(result, target, targetPath);
         var payload = CreateNavigationPayload(result.StructuredContent);
         if (navigation.Status.Operation == "error") payload["recoverable"] = false;
         MergeNavigation(payload, CreateNavigationNode(navigation));

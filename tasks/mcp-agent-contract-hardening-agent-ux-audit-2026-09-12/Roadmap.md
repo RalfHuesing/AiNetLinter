@@ -49,7 +49,7 @@ Die Umsetzung erfolgt strikt nach den [AiNetLinter-Richtlinien](../../.agents/ru
 
 ### Paket 1: Schema- & Envelope-Härtung (Critical Fixes)
 - [x] **1. B-01**: `get_index_scope` Non-C#-Routing von `fileFilter` auf `includePatterns` (Array) korrigieren
-- [ ] **2. D-01**: `McpArgumentValidationFilter` Envelope auf `isError=true` mit Contract-v2 Statusowner umstellen
+- [x] **2. D-01**: `McpArgumentValidationFilter` Envelope auf `isError=true` mit Contract-v2 Statusowner umstellen
 
 ### Paket 2: Budget- & Recovery-Härtung (R1)
 - [ ] **3. D-02**: `get_class_structure` Budgetfehler auf `RESPONSE_BUDGET_TOO_SMALL` mit `minimumResponseBytes` umstellen

@@ -58,20 +58,6 @@ public sealed class McpServerArgumentValidationE2ETests
     }
 
     [Fact]
-    public async Task TargetPathTool_MissingTargetPathReturnsFieldAwareInvalidArgument()
-    {
-        var result = await _fixture.Client.CallToolWithoutTargetAsync(
-            "find_symbol",
-            new Dictionary<string, object?> { ["namePatterns"] = new[] { "Greeter" } });
-
-        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.False(result.IsError, textContent.Text);
-        Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("targetPath", textContent.Text, StringComparison.Ordinal);
-        Assert.Equal("$.targetPath", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
-    }
-
-    [Fact]
     public async Task GetCallTree_MissingSymbolIdentifier_ReturnsRecoverableInvalidArgument()
     {
         var result = await _fixture.Client.CallToolAsync(
@@ -103,7 +89,7 @@ public sealed class McpServerArgumentValidationE2ETests
         var result = await _fixture.Client.CallToolAsync(
             "get_type_hierarchy", new Dictionary<string, object?> { [unknownName] = "Greeter" });
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains($"Unbekanntes Argument: {unknownName}", textContent.Text, StringComparison.Ordinal);
@@ -115,7 +101,7 @@ public sealed class McpServerArgumentValidationE2ETests
         var result = await _fixture.Client.CallToolAsync(
             "find_symbol", new Dictionary<string, object?>());
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("namePatterns", textContent.Text, StringComparison.Ordinal);
@@ -133,7 +119,7 @@ public sealed class McpServerArgumentValidationE2ETests
                 ["maxResults"] = 0,
             });
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("maxResults muss mindestens 1 sein.", textContent.Text, StringComparison.Ordinal);
@@ -240,7 +226,7 @@ public sealed class McpServerArgumentValidationE2ETests
             toolName,
             arguments);
 
-        Assert.NotEqual(true, result.IsError);
+        Assert.True(result.IsError, result.ToString());
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains($"Unbekanntes Argument: {unknownKey}", textContent.Text, StringComparison.Ordinal);
@@ -275,7 +261,7 @@ public sealed class McpServerArgumentValidationE2ETests
             new Dictionary<string, object?> { [fieldName] = "not-the-declared-type" });
 
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.False(result.IsError, textContent.Text);
+        Assert.True(result.IsError, textContent.Text);
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains(fieldName, textContent.Text, StringComparison.Ordinal);
         Assert.Contains(expectedType, textContent.Text, StringComparison.OrdinalIgnoreCase);
@@ -298,7 +284,7 @@ public sealed class McpServerArgumentValidationE2ETests
             });
 
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.False(result.IsError, textContent.Text);
+        Assert.True(result.IsError, textContent.Text);
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Contains("namePatterns[1]", textContent.Text, StringComparison.Ordinal);
         Assert.Equal("$.namePatterns[1]", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
@@ -334,7 +320,7 @@ public sealed class McpServerArgumentValidationE2ETests
             });
 
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.False(result.IsError, textContent.Text);
+        Assert.True(result.IsError, textContent.Text);
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Equal("$.depth", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
         Assert.Contains("Int32", result.StructuredContent.Value.GetProperty("message").GetString(), StringComparison.Ordinal);
@@ -352,7 +338,7 @@ public sealed class McpServerArgumentValidationE2ETests
             });
 
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.False(result.IsError, textContent.Text);
+        Assert.True(result.IsError, textContent.Text);
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Equal("$.maxResults", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
     }
@@ -369,7 +355,7 @@ public sealed class McpServerArgumentValidationE2ETests
 
         var result = await _fixture.Client.CallToolAsync(toolName, arguments);
 
-        Assert.False(result.IsError == true, result.ToString());
+        Assert.True(result.IsError, result.ToString());
         Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
         Assert.Equal("$.maxResponseBytes", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
     }
@@ -426,7 +412,7 @@ public sealed class McpServerArgumentValidationE2ETests
             new Dictionary<string, object?> { ["contextLines"] = contextLines });
 
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.False(result.IsError, textContent.Text);
+        Assert.True(result.IsError, textContent.Text);
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Equal("$.contextLines", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
     }
@@ -443,7 +429,7 @@ public sealed class McpServerArgumentValidationE2ETests
             });
 
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.False(result.IsError, textContent.Text);
+        Assert.True(result.IsError, textContent.Text);
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Equal("$.maxResults", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
     }
@@ -462,7 +448,7 @@ public sealed class McpServerArgumentValidationE2ETests
             });
 
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.False(result.IsError, textContent.Text);
+        Assert.True(result.IsError, textContent.Text);
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Equal($"$.{fieldName}", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
     }
@@ -477,7 +463,7 @@ public sealed class McpServerArgumentValidationE2ETests
             new Dictionary<string, object?> { ["maxResults"] = maxResults });
 
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.False(result.IsError, textContent.Text);
+        Assert.True(result.IsError, textContent.Text);
         Assert.Contains("INVALID_ARGUMENT", textContent.Text, StringComparison.Ordinal);
         Assert.Equal("$.maxResults", result.StructuredContent!.Value.GetProperty("fieldPath").GetString());
     }

@@ -175,7 +175,7 @@ public sealed class McpServerCommandContractTests
 
 
     [Theory]
-    [InlineData("find_symbol", "namePatterns", false)]
+    [InlineData("find_symbol", "namePatterns", true)]
     [InlineData("get_file_skeleton", "filePaths", true)]
     [InlineData("get_symbol_body", "symbolIdentifiers", true)]
     [InlineData("metrics_lookup", "symbolIdentifiers", true)]

@@ -43,7 +43,7 @@ public sealed class McpAgentGuideRegistrationTests
         Assert.Contains("report_observability_feedback", workflow, StringComparison.Ordinal);
         Assert.Contains(".dll", workflow, StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier", workflow, StringComparison.Ordinal);
-        Assert.Contains("safeguard", workflow, StringComparison.Ordinal);
+        Assert.Contains("get_feature_context", workflow, StringComparison.Ordinal);
         Assert.Contains("get_symbol_body", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("assemblyPath", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("`view_file`", workflow, StringComparison.Ordinal);

@@ -43,7 +43,7 @@ public sealed partial class McpServerAssemblyHealthE2ETests
                 [fieldName] = 0,
             });
 
-        Assert.False(result.IsError == true, result.ToString());
+        Assert.True(result.IsError, result.ToString());
         Assert.NotNull(result.StructuredContent);
         Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
         Assert.Equal($"$.{fieldName}", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
@@ -65,7 +65,7 @@ public sealed partial class McpServerAssemblyHealthE2ETests
                 [fieldName] = value,
             });
 
-        Assert.False(result.IsError == true, result.ToString());
+        Assert.True(result.IsError, result.ToString());
         Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
         Assert.Equal($"$.{fieldName}", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
         Assert.Contains("höchstens", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text, StringComparison.Ordinal);
@@ -99,7 +99,7 @@ public sealed partial class McpServerAssemblyHealthE2ETests
                 ["maxResponseBytes"] = -1,
             });
 
-        Assert.False(result.IsError == true, result.ToString());
+        Assert.True(result.IsError, result.ToString());
         Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
         Assert.Equal("$.maxResponseBytes", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
     }
@@ -187,7 +187,7 @@ public sealed partial class McpServerAssemblyHealthE2ETests
                 ["memberNames"] = new object?[] { "Dispose", 42 },
             });
 
-        Assert.False(result.IsError == true, result.ToString());
+        Assert.True(result.IsError, result.ToString());
         Assert.Equal("INVALID_ARGUMENT", result.StructuredContent!.Value.GetProperty("code").GetString());
         Assert.Equal("$.memberNames[1]", result.StructuredContent.Value.GetProperty("fieldPath").GetString());
     }

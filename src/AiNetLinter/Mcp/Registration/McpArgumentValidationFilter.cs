@@ -141,8 +141,53 @@ internal static class McpArgumentValidationFilter
             async (context, cancellationToken) =>
             {
                 var validationError = Validate(context);
-                return validationError ?? await next(context, cancellationToken).ConfigureAwait(false);
+                if (validationError is not null)
+                {
+                    return ProjectFilterError(context, validationError);
+                }
+                var result = await next(context, cancellationToken).ConfigureAwait(false);
+                return EnsureNavigationEnvelope(context, result);
             }));
+    }
+
+    private static CallToolResult EnsureNavigationEnvelope(
+        RequestContext<CallToolRequestParams> context,
+        CallToolResult result)
+    {
+        if (result.StructuredContent is { ValueKind: JsonValueKind.Object } structured
+            && structured.TryGetProperty("code", out var code)
+            && code.ValueKind == JsonValueKind.String
+            && !string.IsNullOrWhiteSpace(code.GetString())
+            && !structured.TryGetProperty("navigation", out _))
+        {
+            return ProjectFilterError(context, result);
+        }
+
+        return result;
+    }
+
+    private static CallToolResult ProjectFilterError(
+        RequestContext<CallToolRequestParams> context,
+        CallToolResult validationError)
+    {
+        string? targetPath = null;
+        if (context.Params?.Arguments is not null
+            && context.Params.Arguments.TryGetValue("targetPath", out var targetPathElement)
+            && targetPathElement.ValueKind == JsonValueKind.String)
+        {
+            targetPath = targetPathElement.GetString();
+        }
+
+        AnalysisTarget? target = null;
+        if (!string.IsNullOrWhiteSpace(targetPath))
+        {
+            var resolution = AnalysisTargetResolver.ResolveOptional(new AnalysisTargetRequest(targetPath));
+            target = resolution.Target;
+        }
+
+        return target is not null
+            ? McpToolResults.WithNavigation(validationError, target)
+            : McpToolResults.WithNavigation(validationError, targetPath);
     }
 
     internal static CallToolResult? Validate(RequestContext<CallToolRequestParams> context)

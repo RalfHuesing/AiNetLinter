@@ -238,7 +238,7 @@ public sealed class ThinClientMcpProcessContractTests
         Assert.Equal(0, result.ExitCode);
         var response = McpRawWireTestHarness.FindResponse(result.StdoutLines, 3);
         var payload = response.GetProperty("result");
-        Assert.False(payload.TryGetProperty("isError", out var isError) && isError.GetBoolean(), response.ToString());
+        Assert.True(payload.TryGetProperty("isError", out var isError) && isError.GetBoolean(), response.ToString());
         Assert.Equal("INVALID_ARGUMENT", payload.GetProperty("structuredContent").GetProperty("code").GetString());
         Assert.Equal("$.maxDiagnostics", payload.GetProperty("structuredContent").GetProperty("fieldPath").GetString());
         Assert.Contains(

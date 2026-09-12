@@ -19,7 +19,10 @@ namespace AiNetLinter.Mcp.Registration;
 /// </summary>
 internal static partial class McpNavigationProjection
 {
-    internal static McpNavigationPayload Create(CallToolResult response, AnalysisTarget target)
+    internal static McpNavigationPayload Create(
+        CallToolResult response,
+        AnalysisTarget? target,
+        string? targetPath = null)
     {
         var code = ReadString(response.StructuredContent, "code");
         var operationStatus = code is null && !HasFeatureContextSectionFailure(response.StructuredContent)
@@ -27,7 +30,9 @@ internal static partial class McpNavigationProjection
             : "error";
         code = operationStatus == "ok" ? null : code ?? LinterErrorCodes.AnalysisFailed;
         var completeness = ResolveCompleteness(response.StructuredContent, code, operationStatus);
-        var analysis = CreateAnalysis(target, operationStatus, response.StructuredContent);
+        var analysis = target is null
+            ? new McpNavigationAnalysis("not_applicable", "not_applicable", [])
+            : CreateAnalysis(target, operationStatus, response.StructuredContent);
         if (operationStatus == "ok" && analysis.Quality == "partial" && completeness == "complete")
         {
             completeness = "partial";
@@ -35,37 +40,45 @@ internal static partial class McpNavigationProjection
         var hint = ReadString(response.StructuredContent, "hint")
             ?? ReadString(response.StructuredContent, "nextStep")
             ?? ReadNestedNextStep(response.StructuredContent);
-        return Create(target, operationStatus, completeness, hint, code, response.StructuredContent, analysis);
+        return Create(target, operationStatus, completeness, hint, code, response.StructuredContent, analysis, targetPath);
     }
 
     // ainetlinter-disable MaxMethodParameterCount — die Projektion wird nur intern mit dem bereits normalisierten Status aufgerufen.
     internal static McpNavigationPayload Create(
-        AnalysisTarget target,
+        AnalysisTarget? target,
         string operationStatus,
         string completeness,
         string? hint = null,
         string? code = null,
         JsonElement? structured = null,
-        McpNavigationAnalysis? analysis = null)
+        McpNavigationAnalysis? analysis = null,
+        string? targetPath = null)
     {
         var next = CreateNext(operationStatus, completeness, hint, structured);
-        var snapshotFingerprint = target.AnalysisSnapshotFingerprint ?? string.Empty;
-        var snapshotKind = target.AnalysisSnapshotFingerprint is null
+        var snapshotFingerprint = target?.AnalysisSnapshotFingerprint ?? string.Empty;
+        var snapshotKind = target?.AnalysisSnapshotFingerprint is null
             ? "unavailable"
             : NormalizeSnapshotKind(target.AnalysisSnapshotKind);
 
-        return new McpNavigationPayload(
-            ContractVersion: 2,
-            new McpNavigationTarget(
+        var navigationTarget = target is not null
+            ? new McpNavigationTarget(
                 target.CanonicalPath,
                 target.AnalysisRoot,
-                target.Origin == AnalysisTargetOrigin.Source ? "source" : "assembly"),
+                target.Origin == AnalysisTargetOrigin.Source ? "source" : "assembly")
+            : new McpNavigationTarget(
+                targetPath ?? string.Empty,
+                string.Empty,
+                "none");
+
+        return new McpNavigationPayload(
+            ContractVersion: 2,
+            navigationTarget,
             new McpNavigationSnapshot(
                 snapshotFingerprint,
                 snapshotKind,
-                target.AnalysisSnapshotFingerprint is not null && target.AnalysisSnapshotFresh),
+                target?.AnalysisSnapshotFingerprint is not null && target.AnalysisSnapshotFresh),
             new McpNavigationStatus(operationStatus, completeness, code),
-            analysis ?? CreateAnalysis(target, operationStatus, structured),
+            analysis ?? (target is not null ? CreateAnalysis(target, operationStatus, structured) : new("not_applicable", "not_applicable", [])),
             ReadOptionalObject(structured, "scope"),
             next,
             ReadOptionalObject(structured, "handoff"));
