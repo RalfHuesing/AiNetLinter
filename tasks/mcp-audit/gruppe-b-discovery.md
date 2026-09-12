@@ -1,0 +1,127 @@
+# MCP-Audit – Gruppe B: Discovery, Scope & Assembly-Inspektion
+
+> **Zuständigkeit:** Subagent B
+> **Tools:** `get_file_tree`, `get_namespace_tree`, `get_index_scope`, `inspect_assembly`, `search_assembly`, `find_assembly_extensions`, `get_assembly_context`
+> **Regeln:** Nur negative Befunde protokollieren. Keine echten Produktnamen/Pfade, nur Ziel-Labels (`SOURCE-01`, `LOCAL-01`, etc.)!
+
+---
+
+## 1. Übersicht & Testergebnis
+
+- **Geprüfte Tools:** `get_file_tree`, `get_namespace_tree`, `get_index_scope`, `inspect_assembly`, `search_assembly`, `find_assembly_extensions`, `get_assembly_context`
+- **Geprüfte Prüffälle:** TC-B01 bis TC-B10 aus `FlightPlan.md`
+- **Gefundene Befunde:** 0 Critical, 7 Major, 1 Minor
+
+---
+
+## 2. Negative Befunde
+
+### [Major] B-01: `get_file_tree` hält `maxResponseBytes=200` nicht ein
+
+- **Betroffenes Tool / Schema**: `get_file_tree` (Parameter: `maxResponseBytes`)
+- **Ziel-Label**: `SOURCE-01` (Modus: Source)
+- **Konkreter Aufruf**: `get_file_tree(targetPath="<SOURCE-01>", view="summary", maxResponseBytes=200)` sowie `get_file_tree(targetPath="<SOURCE-01>", view="tree", treeDepth=2, maxResponseBytes=200)`
+- **Beobachtung / Ist-Verhalten**:
+  - Kein `RESPONSE_BUDGET_TOO_SMALL`, kein `minimumResponseBytes`.
+  - `view=summary`: vollständige Extension-Zählung aller gescannten Dateien plus WARN/HINWEIS/NEXT; nur die Verzeichnisliste entfällt. Nutzlast klar über 200 Bytes (allein die Extensions-Zeile liegt bereits darüber).
+  - `view=tree`: ebenfalls vollständige Extensions-Zeile; der Baum wird auf den Root-Knoten `.` reduziert. Gesamtnutzlast bleibt weit über 200 Bytes.
+- **Soll-Verhalten / Problem aus Agentensicht**:
+  - Wire-Budget muss eingehalten werden oder der Aufruf muss mit `RESPONSE_BUDGET_TOO_SMALL` und deterministischem `minimumResponseBytes` abbrechen. Stilles Überziehen macht Token-Budgets unkalkulierbar.
+- **Empfehlung**:
+  - Header/Extension-Census in das Budget einrechnen. Bei Unterschreitung: `RESPONSE_BUDGET_TOO_SMALL` mit `minimumResponseBytes`, das nach Retry mindestens eine Nutz-Einheit liefert.
+
+### [Major] B-02: Assembly-Antworten leaken volle Systempfade
+
+- **Betroffenes Tool / Schema**: `inspect_assembly` (Felder: Envelope-`targetPath`, `Pfad`, Referenzpfade); gleiches Envelope auch bei `get_file_tree`, `get_namespace_tree`, `search_assembly`, `find_assembly_extensions`, `get_assembly_context`; Fehlerfeld `context` bei `inspect_assembly` auf `FALSE-01`
+- **Ziel-Label**: `LOCAL-01` (Modus: Assembly); Stichprobe `LOCAL-03`; Negativfall `FALSE-01`
+- **Konkreter Aufruf**: `inspect_assembly(targetPath="<LOCAL-01>", detailLevel="compact", publicOnly=true)` / `inspect_assembly(targetPath="<FALSE-01>")`
+- **Beobachtung / Ist-Verhalten**:
+  - Assembly-Präfix enthält den ungekürzten absoluten `targetPath`.
+  - `inspect_assembly` wiederholt denselben Installationspfad als `Pfad:` und listet aufgelöste Referenzassemblies mit vollen Dateisystempfaden (Zielordner und Runtime-Ordner).
+  - `find_assembly_extensions` spiegelt Diagnosen mit vollen Prüfpfaden, obwohl die Treffermenge `0 von 0` ist.
+  - `FALSE-01`: strukturiertes `INVALID_ASSEMBLY`, aber `context` trägt den vollen Systempfad der Datei.
+- **Soll-Verhalten / Problem aus Agentensicht**:
+  - Datensparsamkeit: Agenten und Logs dürfen keine Installations- oder Runtime-Pfade Dritter persistieren. Labels bzw. Dateiname ohne Verzeichnis reichen zur Identifikation.
+- **Empfehlung**:
+  - Envelope auf Dateiname/Label kürzen; Referenzzeilen nur Assembly-Identität + Auflösungsstatus; Fehler-`context` ohne Verzeichniskette.
+
+### [Major] B-03: `inspect_assembly` meldet Budget-Untergrenze als `INVALID_ARGUMENT`
+
+- **Betroffenes Tool / Schema**: `inspect_assembly` (Parameter: `maxResponseBytes`)
+- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
+- **Konkreter Aufruf**: `inspect_assembly(targetPath="<LOCAL-01>", maxResponseBytes=200)`
+- **Beobachtung / Ist-Verhalten**:
+  - Antwort: `INVALID_ARGUMENT: maxResponseBytes muss mindestens 2048 Bytes betragen …`; Hinweis auf Default-Budget 16384.
+  - Kein Fehlercode `RESPONSE_BUDGET_TOO_SMALL`, kein maschinenlesbares `minimumResponseBytes`.
+  - Folgeaufruf mit `maxResponseBytes=2048` liefert Nutzinhalt (1 Typ) plus `continuationToken`.
+- **Soll-Verhalten / Problem aus Agentensicht**:
+  - Der dokumentierte Retry-Vertrag (`RESPONSE_BUDGET_TOO_SMALL` + `minimumResponseBytes`) greift nicht. Ein Agent muss deutschen Fließtext parsen, um 2048 zu erraten.
+- **Empfehlung**:
+  - Unter der Mindestgröße denselben Budget-Envelope wie bei Overflow nutzen: Code `RESPONSE_BUDGET_TOO_SMALL`, Feld `minimumResponseBytes=2048` (oder den tatsächlich benötigten Wert).
+
+### [Major] B-04: `get_assembly_context` liefert Übersicht ohne Verweise und Zielframework
+
+- **Betroffenes Tool / Schema**: `get_assembly_context` (Parameter: `includeReferences`, Default-Übersicht ohne `symbolIdentifier`)
+- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
+- **Konkreter Aufruf**: `get_assembly_context(targetPath="<LOCAL-01>", includeReferences=true, includeMetrics=true)` sowie Varianten mit `includeMetrics=false`, `detailLevel="compact"|"standard"`, `maxResponseBytes=2048|8192|16384`
+- **Beobachtung / Ist-Verhalten**:
+  - Nutzlast faktisch nur: Envelope plus `Assembly-Kontext: 48 von 48` / `Scope: root+references; Vollständigkeit: partial`.
+  - Keine Assembly-Identität, kein Zielframework/TFM, keine Referenzliste, keine Typübersicht – trotz `includeReferences=true` und ausreichendem Budget.
+  - Mit `includeBody=true` und `includeClassStructure=true` plus `symbolIdentifier` erscheinen Body/Struktur; die Übersichts-Metadaten (Verweise, TFM) fehlen weiterhin.
+- **Soll-Verhalten / Problem aus Agentensicht**:
+  - Composite-Einstieg soll Verweise, Zielframework und Metadaten strukturiert liefern. `48 von 48` ohne Einträge ist ein leeres Erfolgs-Envelope und zwingt zum Ausweichen auf `inspect_assembly`.
+- **Empfehlung**:
+  - Ohne Symbol mindestens Identität, TFM, Public-Namespaces und Referenzliste (gekürzt + Continuation) serialisieren; Zähler nur zusammen mit den zugehörigen Einträgen.
+
+### [Major] B-05: `includeMetrics` auf Assembly ergibt irreführendes Solution-`NOT_CONFIGURED`
+
+- **Betroffenes Tool / Schema**: `get_assembly_context` (Parameter: `includeMetrics`)
+- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
+- **Konkreter Aufruf**: `get_assembly_context(targetPath="<LOCAL-01>", symbolIdentifier="<Handoff-ID>", includeMetrics=true, includeReferences=true)`
+- **Beobachtung / Ist-Verhalten**:
+  - Abschnitt `metrics`: `NOT_CONFIGURED: Diese Operation ist fuer die Solution nicht konfiguriert: neben der Solution wurde keine ainetlinter-rules.json gefunden.`
+  - Hint fordert, `ainetlinter-rules.json` neben der adressierten Solution anzulegen – Ziel ist jedoch eine Assembly, keine Solution.
+- **Soll-Verhalten / Problem aus Agentensicht**:
+  - Irreführender Fehler: Agent sucht eine nicht existente Solution/Rules-Datei am falschen Artefakt. Metriken sind im Decompiled-Modus erwartbar `unsupported`, nicht „fehlende Solution-Konfiguration“.
+- **Empfehlung**:
+  - Assembly-Modus: `unsupported` / `origin=decompiled` für Metriken; kein Solution-Rules-Hint.
+
+### [Major] B-06: `search_assembly`-Treffer ohne Handoff-IDs
+
+- **Betroffenes Tool / Schema**: `search_assembly` (Parameter: `pattern`, `kind`)
+- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
+- **Konkreter Aufruf**: `search_assembly(targetPath="<LOCAL-01>", pattern="<MyClass>", kind="type", declarationOnly=true)` und `search_assembly(targetPath="<LOCAL-01>", pattern="<MyMethod>", kind="method")`
+- **Beobachtung / Ist-Verhalten**:
+  - Pattern stammt aus `inspect_assembly`-Handoff (nicht geraten). Treffer strukturiert als `MyNamespace/MyClass.cs:<Zeile>: <Snippet>`.
+  - Keine `handoffId` / keine kanonische Symbol-ID am Match. Status `Assembly-Suche: text; n von n`, `completeness=complete`.
+- **Soll-Verhalten / Problem aus Agentensicht**:
+  - TC-B08 und die Kette Suche → `get_symbol_body` verlangen konsumierbare Handoff-IDs. Ohne ID muss der Agent Pfad/Zeile oder Typnamen selbst zusammenbauen.
+- **Empfehlung**:
+  - Pro Match dieselbe `handoffId` wie bei `inspect_assembly` ausgeben (Typ- bzw. Member-ID), nicht nur Datei:Zeile.
+
+### [Major] B-07: `get_namespace_tree` listet unter `includeTypes=true` keine Source-Typen
+
+- **Betroffenes Tool / Schema**: `get_namespace_tree` (Parameter: `includeTypes`, `namespacePrefix`)
+- **Ziel-Label**: `SOURCE-01` (Modus: Source)
+- **Konkreter Aufruf**: `get_namespace_tree(targetPath="<SOURCE-01>", namespacePrefix="MyCompany.MyProduct.Auth", includeTypes=true, depth=2)` sowie mit `project=…`, `depth=3`, `kind="class"`
+- **Beobachtung / Ist-Verhalten**:
+  - `namespacePrefix` schränkt korrekt ein (nur der adressierte Namespace).
+  - Ausgabe: `MyCompany.MyProduct.Auth (2 Typen)` bzw. mit `kind="class"` `(1 Typen)` – **ohne Typnamen**.
+  - Tipp wiederholt denselben Aufruf (`project` + `namespacePrefix`) „fuer die Typen“ → No-Op-Schleife.
+  - Gegenprobe `LOCAL-01` mit Prefix listet Typnamen; das Fehlen ist Source-spezifisch, kein generelles Limit.
+- **Soll-Verhalten / Problem aus Agentensicht**:
+  - Schema: `includeTypes` zeigt Typen. Ein Agent kann den Namespace-Drilldown auf Source nicht abschließen und erhält einen Tipp, der denselben Call fordert.
+- **Empfehlung**:
+  - Bei `includeTypes=true` Typnamen (plus Handoff-ID) ausgeben; Tipp nur mit tatsächlich fehlendem Parameter oder auf `find_symbol`/`get_class_structure` verweisen.
+
+### [Minor] B-08: Assembly-Namespace-Fehler spricht von „Solution“
+
+- **Betroffenes Tool / Schema**: `get_namespace_tree` (Parameter: `namespacePrefix`)
+- **Ziel-Label**: `LOCAL-01` (Modus: Assembly)
+- **Konkreter Aufruf**: `get_namespace_tree(targetPath="<LOCAL-01>", namespacePrefix="DoesNotExist.NoSuchPrefix")`
+- **Beobachtung / Ist-Verhalten**:
+  - Prefix filtert (kein stilles Voll-Listing). Fehler: `INVALID_ARGUMENT: Namespace '…' wurde in keinem Projekt der Solution gefunden.` Hint nennt das eine verfügbare „Projekt“.
+- **Soll-Verhalten / Problem aus Agentensicht**:
+  - Recoverable, aber der Solution-Wortlaut im Assembly-Modus legt ein falsches Target-Modell nahe.
+- **Empfehlung**:
+  - Formulierung auf Assembly/Projekt-Snapshot umstellen; verfügbare Namespace-Präfixe statt Solution-Sprache nennen.
