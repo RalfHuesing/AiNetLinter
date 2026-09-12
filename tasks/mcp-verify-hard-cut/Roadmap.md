@@ -20,7 +20,7 @@
 
 - `verify` führt den festen Score-/Violation-Gatekern inklusive Contract-v2-Content-Projektion aus.
 - Build und sechs fokussierte E2E-Verträge grün; Legacy-Inventar bleibt bis Slice 04 absichtlich rot.
-- Commit: ausstehend.
+- Commit: `d8194926043b7e4742b667728be417eed2dacf63`.
 
 ### Vorbereitung
 
