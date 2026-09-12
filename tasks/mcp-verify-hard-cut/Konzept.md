@@ -413,7 +413,7 @@ Fehler wäre. Der Abschlussnachweis erfolgt über
 - `Docs/integration.md` und der Runtime-Agent-Guide: einen Agentenfluss
   `Arbeitsänderungen → verify(targetPath) → Abschluss → verify(targetPath,
   scope: "solution")` beschreiben.
-- `.agents/rules/AiNetLinterRichtlinien.mdc` und
+- `.agents/rules/AiNetLinter-Richtlinien.mdc` und
   `.agents/rules/AiNetLinter-McpWorkflow.mdc`: alte Pflichtaufrufe,
   Tabellen und Scopehinweise konsistent durch `verify` ersetzen.
 - `ainetlinter-rules.json` und weitere Konfigurationsdokumentation nur dort

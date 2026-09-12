@@ -6,7 +6,7 @@ Roslyn-basierte C#/.NET 10 Statische-Code-Analyse- & Linter-Engine zur Durchsetz
 
 ## 1. Regeln, MCP & Skills
 
-- **Verbindliche Regeln (`.agents/rules/`)**: Alle Architektur-, Qualitäts-, Clean-Code-, Test- und Git-Regeln liegen zentral in `.agents/rules/AiNetLinterRichtlinien.mdc`.
+- **Verbindliche Regeln (`.agents/rules/`)**: Projektregeln stehen in `AiNetLinter-Richtlinien.mdc`, testbezogene Regeln in `AiNetLinter-TestRichtlinien.mdc` und der projektübergreifende C#-Semantik-Workflow in `AiNetLinter-McpWorkflow.mdc`. `README.md` beschreibt nur deren Pflege und ist keine tägliche Arbeitsanweisung.
 - **Semantische C#-Analyse via MCP**: Server `ainetlinter` mit `targetPath: "AiNetLinter.slnx"` (absoluter Pfad im Workspace) nutzen. Für Symbole, Referenzen, Aufrufketten, Impact und Verstöße die semantischen MCP-Tools bevorzugen (siehe `.agents/rules/AiNetLinter-McpWorkflow.mdc`); Textsuche via `rg`.
 - **Orchestrierung & Skills (`.agents/skills/`)**: Größere Features, Konzepte oder Refactorings über spezialisierte Skills steuern (`concept-planner`, `project-orchestrator`, `mcp-ux-audit`).
 
@@ -50,4 +50,4 @@ Roslyn-basierte C#/.NET 10 Statische-Code-Analyse- & Linter-Engine zur Durchsetz
 ## 3. Dokumentation & Commits
 
 - **Doku-Synchronisation**: Bei Änderungen an CLI-Optionen, Schemata oder Regeln `Docs/configuration.md` und `ainetlinter-rules.json` synchronisieren.
-- **Commits**: Deutsche Conventional Commits im Imperativ (`feat:`, `fix:`, `docs:`, `chore:`). Nur eigene auftragsbezogene Änderungen stagen; fremde Änderungen niemals mitcommitten (Details siehe `.agents/rules/AiNetLinterRichtlinien.mdc`).
+- **Commits**: Deutsche Conventional Commits im Imperativ (`feat:`, `fix:`, `docs:`, `chore:`). Nur eigene auftragsbezogene Änderungen stagen; fremde Änderungen niemals mitcommitten (Details siehe `.agents/rules/AiNetLinter-Richtlinien.mdc`).

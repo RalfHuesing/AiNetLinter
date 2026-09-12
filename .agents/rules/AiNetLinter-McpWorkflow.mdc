@@ -6,7 +6,7 @@ alwaysApply: true
 
 # AiNetLinter MCP-First Workflow (C# Semantik)
 
-Bei C#-Aufgaben (Symbole, Methoden, Aufrufer, Hierarchien, Impact, Linter) standardmäßig die semantischen MCP-Tools des Servers `AiNetLinter` anstelle manueller Textsuch-Kaskaden (`rg` + seitenweises Dateilesen) verwenden. Sie liefern präzisen AST-Kontext in 1 Turn.
+Bei C#-Aufgaben (Symbole, Methoden, Aufrufer, Hierarchien, Impact, Linter) standardmäßig die semantischen MCP-Tools des für das aktuelle Projekt konfigurierten AiNetLinter-Servers anstelle manueller Textsuch-Kaskaden (`rg` + seitenweises Dateilesen) verwenden. Sie liefern präzisen AST-Kontext in 1 Turn.
 
 ## 🎯 Werkzeug-Wahl & Fallback-Strategie
 
@@ -39,6 +39,5 @@ Bei C#-Aufgaben (Symbole, Methoden, Aufrufer, Hierarchien, Impact, Linter) stand
 | **Referenzen** | `find_references` | `symbolIdentifier: "..."` |
 | **Projektstruktur** | `get_file_tree` | `fileFilter: "*.cs"`, `view: "summary"` (*nie `view="files"` auf Root!*) |
 | **Assemblies (.dll)** | `inspect_assembly` | `targetPath: "<pfad.dll>"` (Metadaten & API dekompilieren) |
-| **Quality-Gate (Pflicht)** | `safeguard` & `get_violations` | `safeguard(minScore: 10)` (Ziel: 10.0/10 PASS), `get_violations()` (0 Fehler) |
 | **Clean-Code-Audit** | `find_dead_code` / `find_magic_values` | Standard mit `scopeFilter: "..."`; ungescopt nur bei explizitem Voll-Audit |
 | **Status & Feedback** | `get_server_health` / `report_observability_feedback` | Health prüfen oder Tool-Probleme melden |

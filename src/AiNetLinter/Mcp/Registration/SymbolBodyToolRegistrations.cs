@@ -17,7 +17,7 @@ namespace AiNetLinter.Mcp.Registration;
 /// verbleibende Sicherheits-Polster gegen weitere Erweiterungen aufgebraucht haette. Bewusst
 /// duenner Dispatch auf <see cref="GetSymbolBodyTool.ExecuteAsync"/> ueber den
 /// zielgebundenen Dispatch-Weg (<see cref="AnalysisToolCall"/>). Kein DI-Container
-/// (Architektur-Verbot, siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
+/// (Architektur-Verbot, siehe <c>AiNetLinter-Richtlinien.mdc</c> §2).
 /// </summary>
 internal static class SymbolBodyToolRegistrations
 {

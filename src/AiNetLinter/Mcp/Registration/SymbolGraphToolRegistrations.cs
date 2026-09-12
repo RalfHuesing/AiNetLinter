@@ -33,7 +33,7 @@ internal static class SymbolGraphToolRegistrations
     /// <summary>
     /// Fuegt <paramref name="tools"/> die sechs Symbolgraph-Tools hinzu. Tools erreichen die
     /// residente Instanz ihres Keys per Lease-Closure - kein DI-Container
-    /// (siehe <c>AiNetLinterRichtlinien.mdc</c> §2).
+    /// (siehe <c>AiNetLinter-Richtlinien.mdc</c> §2).
     /// </summary>
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,

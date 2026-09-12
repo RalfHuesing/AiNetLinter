@@ -28,7 +28,7 @@ internal static class ServerMaintenanceToolRegistrations
     /// <summary>
     /// Fuegt <paramref name="tools"/> die Wartungs-Tools hinzu. Tools erreichen die residente
     /// Instanz ihres Keys per Lease-Closure - kein DI-Container (siehe
-    /// <c>AiNetLinterRichtlinien.mdc</c> §2). Einzige Pflicht-Ausnahme: <c>get_server_health</c>
+    /// <c>AiNetLinter-Richtlinien.mdc</c> §2). Einzige Pflicht-Ausnahme: <c>get_server_health</c>
     /// nimmt ein optionales, paarweise zu validierendes Target und aggregiert ohne Target ueber alle Keys.
     /// </summary>
     internal static void Register(

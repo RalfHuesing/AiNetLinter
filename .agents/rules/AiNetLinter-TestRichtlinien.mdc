@@ -1,0 +1,13 @@
+---
+description: Testebenen und effiziente Testgestaltung für AiNetLinter.
+globs: src/**/*Tests/**/*.cs
+alwaysApply: false
+---
+
+# AiNetLinter-TestRichtlinien
+
+- FastTests sind Standard für deterministische Fachlogik, `Result`-Inhalte, Mapping sowie String- und Formatierungsergebnisse; sie starten keinen Server und keine vollständige Infrastruktur.
+- Integrationstests belegen ausschließlich reale Grenzen oder Zusammensetzung: MCP-/CLI-Transport, Prozess- oder Serverlebenszyklus, Dateisystem, Roslyn-Laden und Konfigurationsbindung.
+- Einen fachlichen Fall nicht zusätzlich über vollständigen Serverstart testen. Pro Boundary genügen repräsentative Vertragstests; Varianten und Edge-Cases gehören in FastTests.
+- Die Behauptung eines Tests bestimmt seine Ebene, nicht der Ordner des Produktionscodes. Ein echter End-to-End-Vertrag bleibt ein Integrationstest.
+- Während der Entwicklung den kleinsten passenden Testlauf ausführen; die vollständigen Non-Stress-Gates aus `AGENTS.md` bleiben Abschlussnachweis.

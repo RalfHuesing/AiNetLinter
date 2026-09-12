@@ -29,11 +29,11 @@ Nutzeranweisungen haben Vorrang.
 - Credentials gehören niemals in Diagnosen, Logs oder Toolantworten.
 - Bei unklaren oder abgeschnittenen Testausgaben eine TRX-Datei zur Diagnose nutzen, statt denselben Lauf ungezielt zu wiederholen.
 
-## Code und Tests
+## Code und Teststrategie
 
 - **C#-Coding-Prinzipien**: Konkrete Klassen standardmäßig `sealed` deklarieren; `#nullable enable` am Dateianfang; Methoden flach halten und ab 4 Parametern Parameter-Records nutzen; kein `async void`, keine blockierenden Task-Aufrufe (`.Result`, `.Wait()`), keine leeren `catch`-Blöcke.
 - **Red-Test-First bei Bugs**: Bei Fehlern oder unerwartetem Verhalten zuerst einen isolierten fehlschlagenden xUnit-v3-Test (Rot-Test / Reproduktionstest) schreiben. Erst danach gezielt beheben, bis der Test grün ist (dauerhafter Regressionsschutz).
-- Jede Logikänderung erhält xUnit-v3-Tests, die Verhalten statt Implementierungsdetails prüfen.
+- Jede Logikänderung erhält xUnit-v3-Tests, die Verhalten statt Implementierungsdetails prüfen. Die kleinste Testebene wählen, die das Verhalten real belegt: fachliche Logik, Ergebnisobjekte, Mapping sowie String-/Formatierungsergebnisse in FastTests; Integrationstests nur für reale Systemgrenzen, Verdrahtung oder Lebenszyklus.
 - Ein grüner, scope-passender Testlauf bleibt gültiger Nachweis bis zur nächsten Code- oder Konfigurationsänderung; nicht blind wiederholen.
 - Tests parallelisierbar halten (globale Serialisierung nur bei belegtem Bedarf; gemeinsame Zustände via Lock, Fixture oder Semaphore sichern).
 - Testtemporärdateien ausschließlich über `AiNetLinter.TestKit.TestTempDirectory` im ignorierten Repo-Temp anlegen (nie im System-Temp).
