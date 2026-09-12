@@ -289,13 +289,14 @@ Integration verlor gegenüber der Baseline 130 Testfälle; die FastTests gewanne
 58 Testfälle. Die weiterhin längsten Integrationsklassen sind bewusst erhaltene
 Dogfood-, Raw-Wire- und Assembly-Boundary-Verträge.
 
-Der Diff-Audit gegen die Ausgangsbasis `9217dcc` erfasste 106 entfernte
+Der Diff-Audit gegen die Ausgangsbasis `9217dcc` erfasste 101 entfernte
 Integrationstestmethoden in den neun geänderten Klassen. Jede Methode ist einer
 konkreten Zeile der Umzugstabellen aus Schritt 1 bis 4 zugeordnet: 10
-Builder-/Diagnose-Fälle, 27 Argumentvarianten, 35 Tool-/Assembly-Varianten und
-34 geladene-Solution-/Toolfälle. Die 27 in diesen Klassen behaltenen Methoden
-sind die jeweils dokumentierten Boundary-Verträge. Die sieben neu angelegten
-FastTest-Klassen und die in den Tabellen benannten bestehenden FastTest-Klassen
+Builder-/Diagnose-Fälle, 26 Argumentvarianten, 33 Tool-/Assembly-Varianten und
+32 geladene-Solution-/Toolfälle. Die 32 in diesen Klassen behaltenen Methoden
+sind die jeweils dokumentierten Boundary-Verträge. Die sechs neu angelegten
+FastTest-Klassen, die erweiterte `McpArgumentValidationFilterTests`-Klasse und
+die in den Tabellen benannten bestehenden FastTest-Klassen
 prüfen die ursprünglichen Aussagen; bei den verschobenen Response-,
 Validierungs- und Vertragstests einschließlich Fehlercode, `fieldPath`,
 Text-/`StructuredContent`-Projektion und Navigation. Damit blieb kein
