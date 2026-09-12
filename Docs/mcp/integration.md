@@ -106,7 +106,8 @@ Konkret:
 - Konfigwert in `.json` finden → `search_pattern(pattern: "MySetting")` (oder direkt `rg`, das ist hier äquivalent)
 - TODO-Kommentare listen → `search_pattern(pattern: "TODO", isRegex: false)` (oder `rg "TODO"`)
 - Text in einer externen Assembly suchen → `search_assembly(targetPath: "C:/libs/Library.dll", searchKind: "text", pattern: "Repository", maxResults: 20)`; für typische Persistenz-/Datenzugriffe `searchKind: "data_access"`, für HTTP/RPC/Socket/Prozessaufrufe `searchKind: "external_calls"`
-- Lint-Stand einer Datei → `get_violations(scopeFilter: "src/MeinProjekt/Service.cs")`
+- Arbeitsänderungen prüfen → `verify(targetPath)`; `pass` bedeutet ausschließlich Score `10.0` und `violationCount=0`. Ein `incomplete`-Änderungskontext wird mit `verify(targetPath, scope: "solution")` vollständig geprüft.
+- `get_feature_context` und `get_impact` können Violations als kontextuelle Arbeitsevidenz zeigen, liefern aber weder Gate-Verdict noch Abschlussnachweis.
 - Produktions-Hotspots isolieren → `get_hotspots(scopeType: "production")`; `tests` und `all` sind ebenfalls möglich. Für Dateitypen und Pfade dient `get_file_tree(view: "summary")`.
 
 ---
@@ -121,4 +122,4 @@ Für eine neue Integration `ainetlinter://agent-guide` genau einmal ohne Target 
 
 Mehrere Daemon-Instanzen sind mit einem gemeinsamen Cache grundsätzlich unterstützt. Der konfigurierte Cache-Stamm wird mit einem stabilen Daemon-Profil deterministisch als Suffix versehen, etwa `cache.codex`. Gleiche Profile verwenden denselben prozesssicher gelockten Cache; Generationen werden über Writer-/Reader-Leases und Retention geschützt. Unterschiedliche Profile, etwa `codex-a` und `codex-b`, erzeugen getrennte Cache-Stämme und sind für bewusst isolierte Instanzen zu verwenden. Prozess-IDs sind keine Cache-Identität. Health und Assembly-Antworten zeigen keine Profil-, Generations-, Lock-, Lease- oder Cleanup-Details; private Repository-URLs und Credentials werden nicht ausgegeben. Bei stale oder nicht löschbaren Artefakten bleibt der Zustand als Quarantäne mit Ursache, Besitzer und TTL sichtbar und wird nicht als gültiger Checkout wiederverwendet.
 
-Ein gleichzeitiger CLI-Lint-Lauf auf derselben Solution kollidiert nicht mit dem MCP-Server-Cache, weil `get_violations` den Disk-Cache umgeht. Assembly-Suche und die anschließenden Assembly-Navigationstools bleiben read-only.
+Ein gleichzeitiger CLI-Lint-Lauf auf derselben Solution kollidiert nicht mit dem MCP-Server-Cache. Assembly-Suche und die anschließenden Assembly-Navigationstools bleiben read-only.

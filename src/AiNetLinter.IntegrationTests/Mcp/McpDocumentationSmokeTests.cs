@@ -121,8 +121,8 @@ public sealed class McpDocumentationSmokeTests
             "find_symbol", "find_references", "get_call_tree", "get_impact", "get_type_hierarchy",
             "dependency_graph", "get_file_skeleton", "get_class_structure", "get_index_scope",
             "get_hotspots", "metrics_tree", "metrics_lookup", "get_feature_context", "get_test_context",
-            "get_violations", "safeguard", "pattern_detect", "find_magic_values", "find_dead_code",
-            "get_symbol_body", "search_pattern", "reload_config", "find_duplicates",
+            "verify", "pattern_detect", "get_symbol_body", "search_pattern", "reload_config",
+            "find_duplicates",
         };
 
         foreach (var toolName in targetBoundTools)

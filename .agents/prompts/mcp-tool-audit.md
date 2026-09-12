@@ -21,13 +21,13 @@ Verwende **KEINE** Skills (.agents/skills/*).
 Beachte strikt AGENTS.md sowie .agents/rules/*.mdc (insbesondere AiNetLinter-Richtlinien.mdc und AiNetLinter-McpWorkflow.mdc).
 Nutze für alle zielgebundenen Aufrufe targetPath: "c:\\Daten\\Entwicklung\\Ralf\\AiNetLinter\\AiNetLinter.slnx" (bzw. für Assembly-Tools den absoluten Pfad zur kompilierten DLL).
 
-Du bist Audit-Spezialist für MCP-Agenten-Ergonomie und Codeanalyse. Führe den vollständigen Output-, Effizienz- und Chaining-Audit für alle 32 MCP-Tools des AiNetLinter-Servers durch.
+Du bist Audit-Spezialist für MCP-Agenten-Ergonomie und Codeanalyse. Führe den vollständigen Output-, Effizienz- und Chaining-Audit für alle 29 MCP-Tools des AiNetLinter-Servers durch.
 
 ### 1. Verzeichnisstruktur anlegen
 - Lege unter `tasks/` ein neues Verzeichnis an: `tasks/mcp-tool-output-evaluation-<YYYY-MM-DD>/` (mit aktuellem Tagesdatum; bei Mehrfachläufen am selben Tag Suffix `-2`, `-3` anhängen).
 
-### 2. Die 32 Tools nach Priorität (01 bis 32)
-Arbeite alle 32 Tools systematisch und autonom ab:
+### 2. Die 29 Tools nach Priorität (01 bis 29)
+Arbeite alle 29 Tools systematisch und autonom ab:
 
 [Semantik & Navigation]
 01: find_symbol
@@ -49,27 +49,24 @@ Arbeite alle 32 Tools systematisch und autonom ab:
 15: search_pattern
 
 [Linter, Metriken & Qualität]
-16: get_violations
-17: safeguard
-18: find_dead_code
-19: find_magic_values
-20: find_duplicates
-21: pattern_detect
-22: metrics_lookup
-23: metrics_tree
-24: get_hotspots
-25: get_test_context
+16: verify
+17: find_duplicates
+18: pattern_detect
+19: metrics_lookup
+20: metrics_tree
+21: get_hotspots
+22: get_test_context
 
 [Assembly & Decompiler]
-26: inspect_assembly
-27: get_assembly_context
-28: search_assembly
-29: find_assembly_extensions
+23: inspect_assembly
+24: get_assembly_context
+25: search_assembly
+26: find_assembly_extensions
 
 [Server & Lifecycle]
-30: get_server_health
-31: get_index_scope
-32: reload_config
+27: get_server_health
+28: get_index_scope
+29: reload_config
 
 ### 3. Vorgehen pro Tool & Markdown-Schema
 Für jedes Tool wird eine eigene Markdown-Datei erstellt mit folgendem Inhalt:
@@ -80,7 +77,7 @@ Für jedes Tool wird eine eigene Markdown-Datei erstellt mit folgendem Inhalt:
 - **5. Fazit & Optimierungsempfehlungen:** Prädikat und konkrete Handlungsempfehlungen.
 
 ### 4. Synthetischer Code bei Null-Treffern (WICHTIG)
-Liefert ein Tool auf der sauberen Codebase 0 Treffer (z. B. `get_violations`, `safeguard`, `find_dead_code`):
+Liefert ein Tool auf der sauberen Codebase keine sichtbare Evidenz (z. B. `verify` mit `verdict=pass`):
 - Erzeuge temporär eine isolierte C#-Datei (z. B. `src/AiNetLinter/TempAuditViolation.cs`) mit absichtlichen Regelverstößen.
 - Führe den Toolcall aus und sichere die echten Rohdaten.
 - Lösche die temporäre Datei UNMITTELBAR wieder und verifiziere `git status` (keine Arbeitskopie-Verunreinigung!).
@@ -92,11 +89,11 @@ Damit der Nutzer im Dateibaum sofort sieht, welche Tools sauber sind und wo Hand
   `01_find_symbol_okay.md`, `02_get_feature_context_okay.md`, `03_get_symbol_body_okay.md`.
 - **Prüfung mit Befund / Handlungsbedarf:** Wenn ein Tool Mängel aufweist (fehlende Handoff-IDs, gebrochene Ketten, übermäßige Boilerplate, Pfadasymmetrien):
   $\rightarrow$ Behalte den Dateinamen OHNE `_okay`, z. B.:
-  `04_get_file_skeleton.md`, `19_find_magic_values.md`.
+  `04_get_file_skeleton.md`, `16_verify.md`.
 
 ### 6. Zentrales README.md
 Erstelle im Task-Verzeichnis eine zentrale `README.md` mit:
-- Gesamt-Matrix aller 32 Tools (Prio, Name, Kategorie, SNR, Chaining-Status, Dateilink).
+- Gesamt-Matrix aller 29 Tools (Prio, Name, Kategorie, SNR, Chaining-Status, Dateilink).
 - Validierungsnachweis der Kern-Chaining-Ketten.
 - Priorisierte Top-Findings für Entwickler.
 ```

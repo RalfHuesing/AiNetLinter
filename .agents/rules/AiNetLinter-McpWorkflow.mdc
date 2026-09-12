@@ -22,7 +22,7 @@ Bei C#-Aufgaben (Symbole, Methoden, Aufrufer, Hierarchien, Impact, Linter) stand
 - **`targetPath` (Pflicht)**: Absoluter Pfad zur `.sln`- oder `.slnx`-Datei des aktuellen Projekts (einmalig im Workspace ermitteln und für alle Aufrufe wiederverwenden).
 - **Folgeaufrufe & Handoff**: Ausschließlich die im Content als Handoff-ID ausgewiesenen kanonischen IDs (z. B. von `find_symbol`, `get_file_skeleton`, `get_feature_context`) verwenden – niemals Anzeigenamen erraten oder aus freien Beschreibungen ableiten. Status und Vollständigkeitsmarker ebenfalls ausschließlich aus dem Content übernehmen.
 - **Budget-Limit**: Bei Fehler `RESPONSE_BUDGET_TOO_SMALL` denselben Aufruf mit `maxResponseBytes = minimumResponseBytes` wiederholen.
-- **Scoping vor Vollscan**: Analyse- & Audit-Tools (`find_magic_values`, `find_dead_code`, `metrics_tree`, `pattern_detect`) standardmäßig per `scopeFilter: "<pfad>"` auf den relevanten Bereich eingrenzen. Solution-weite Scans ohne Filter nur bei explizitem Gesamtaudit-Auftrag.
+- **Qualitätsprüfung**: Während Änderungen `verify(targetPath)` ohne zusätzliche Scope-, Filter-, Schwellenwert- oder Detektorparameter aufrufen. Für den vollständigen Abschluss ausschließlich `verify(targetPath, scope: "solution")` verwenden; ein Gate ist nur bei `verdict=pass`, `score=10.0` und `violationCount=0` erfüllt.
 
 ---
 
@@ -39,5 +39,6 @@ Bei C#-Aufgaben (Symbole, Methoden, Aufrufer, Hierarchien, Impact, Linter) stand
 | **Referenzen** | `find_references` | `symbolIdentifier: "..."` |
 | **Projektstruktur** | `get_file_tree` | `fileFilter: "*.cs"`, `view: "summary"` (*nie `view="files"` auf Root!*) |
 | **Assemblies (.dll)** | `inspect_assembly` | `targetPath: "<pfad.dll>"` (Metadaten & API dekompilieren) |
-| **Clean-Code-Audit** | `find_dead_code` / `find_magic_values` | Standard mit `scopeFilter: "..."`; ungescopt nur bei explizitem Voll-Audit |
+| **Qualitätsprüfung** | `verify` | `changes` (Default) bewertet die Arbeitsänderungen und kann advisory-Kandidaten zeigen; `solution` ist der vollständige Abschluss. Kandidaten sind kein Gate. |
+| **Kontextuelle Violations** | `get_feature_context` / `get_impact` | Arbeitsevidenz am Symbol oder Änderungsumfeld; kein Verdict und kein Abschlussnachweis. |
 | **Status & Health** | `get_server_health` | Health und Server-Zustand prüfen |

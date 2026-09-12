@@ -4,7 +4,7 @@
 - [X] Slice 02 – Gate-Kern mit festen `10.0`/`0`-Invarianten implementieren
 - [X] Slice 03 – Kontextgebundene Kandidaten in `changes` integrieren
 - [X] Slice 04 – Harter Schnitt durch Registrierung, Produktion und Tests
-- [ ] Slice 05 – Dokumentation, Regeln und Endverifikation synchronisieren
+- [X] Slice 05 – Dokumentation, Regeln und Endverifikation synchronisieren
 - [ ] Gesamtaudit – gesamten Scope prüfen und Findings beheben
 - [ ] Abschlussgate – Build, Non-Stress-Tests und Diff-Prüfung
 
@@ -33,6 +33,12 @@
 - Vier öffentliche Legacy-Tools samt Registrierungen, Adaptern und positiven Tooltests entfernt; Scanner gehören nun `verify`.
 - Inventar- und Runtime-Negativtests grün; Explorations- und Metrikwerkzeuge bleiben erhalten.
 - Commit: `7a10be9054ca454a800c745fb27e92c7e07d5b7a`.
+
+### Slice 05
+
+- MCP-Referenz, Integrationsguide, Laufzeithinweise, Agentenregeln und Audit-Prompt auf den Endvertrag umgestellt.
+- Doku-Smoke und Legacy-Negativsuche grün; vollständiges Gate folgt nach Gesamtaudit.
+- Commit: ausstehend.
 
 ### Vorbereitung
 

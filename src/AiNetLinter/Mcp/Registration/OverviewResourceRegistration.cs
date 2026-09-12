@@ -127,7 +127,8 @@ internal static class OverviewResourceRegistration
         sb.AppendLine();
         sb.AppendLine("- Erstkontakt und Integration: `ainetlinter://agent-guide`");
         sb.AppendLine("- Vollständige Tool- und Parameterschemas: `tools/list`");
-        sb.AppendLine("- Nach Änderungen: `get_impact` und `get_violations`");
+        sb.AppendLine("- Nach Änderungen: `verify(targetPath)`; zum Abschluss `verify(targetPath, scope: solution)`");
+        sb.AppendLine("- `get_impact` liefert Kontext, aber kein Gate-Verdict");
         return sb.ToString().TrimEnd();
     }
 

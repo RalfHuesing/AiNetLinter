@@ -2,7 +2,7 @@
 
 → [MCP-Server & Daemon](server.md) | [MCP-Host-Integration](integration.md) | [MCP-Bootstrap](mcp-bootstrap.md) | [Linter-CLI](../linter/cli.md) | [README](../../README.md)
 
-AiNetLinter stellt als **stdio-basierter MCP-Server** 32 spezialisierte Werkzeuge für AI-Coding-Agenten bereit. Diese Referenz beschreibt alle Tools, Eingabeparameter, Antwortstrukturen, Capability-Matrizen und vertraglichen Garantien.
+AiNetLinter stellt als **stdio-basierter MCP-Server** 29 spezialisierte Werkzeuge für AI-Coding-Agenten bereit. Diese Referenz beschreibt alle Tools, Eingabeparameter, Antwortstrukturen, Capability-Matrizen und vertraglichen Garantien.
 
 ---
 
@@ -134,7 +134,7 @@ Jede Tool-Antwort enthält genau einen nichtleeren Text-Content-Block und option
 | `search_assembly` | n/a | supported | Assembly-Target-only; durchsucht den Decompiler-Root, ohne Root explizit `unsupported` |
 | `get_file_tree` | supported | supported | physischer Projekt- oder dekompilierter SourceRoot-Dateibestand; bei Assembly ohne Root explizit `unsupported` |
 | `get_index_scope`, `get_hotspots` | supported | unsupported | physischer Projekt-Dateibestand |
-| `get_violations`, `safeguard`, `pattern_detect`, `find_magic_values`, `find_dead_code` | supported | unsupported | Regeln/Audits gelten nur für den Projekt-Key |
+| `verify`, `pattern_detect` | supported | unsupported | `verify` ist das feste Source-Gate; Pattern bleiben Einordnungswerkzeuge |
 | `get_feature_context`, `get_test_context` | supported | unsupported | unsupported | Testbezug ist statische Zuordnung; keine Testausführung |
 | `get_impact` | supported | supported | supported | Assembly: nur `symbolIdentifier`; kein Git-Diff/`gitRef` |
 | `find_duplicates`, `search_pattern` | supported | unsupported | unsupported | Audit-/Dateisuche bleibt projektgebunden |
@@ -142,8 +142,8 @@ Jede Tool-Antwort enthält genau einen nichtleeren Text-Content-Block und option
 | `get_server_health` | supported | supported | supported | ohne Target nur serverweite Aggregate; zielgebunden ausschließlich das angefragte Target |
 
 `unsupported` ist ein expliziter Capability-Status und keine leere erfolgreiche
-Antwort. `get_violations`/`safeguard` führen weder fremde Regeln noch Tests aus;
-`get_test_context` und der Git-Diff-Zweig von `get_impact` liefern statische bzw.
+Antwort. `verify` führt weder fremde Regeln noch Tests aus; `get_test_context`
+und der Git-Diff-Zweig von `get_impact` liefern statische bzw.
 Git-basierte Hinweise, während der Assembly-Zweig den Symbol-Impact im Snapshot liefert.
 Source-backed Checkout-/Snapshot-Erzeugung und Decompilation bleiben read-only.
 
@@ -160,7 +160,7 @@ Source-backed Checkout-/Snapshot-Erzeugung und Decompilation bleiben read-only.
 | `find_symbol` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `namePatterns` (Array von Namens-Mustern), max. 10 Patterns pro Call; unterstützt Substrings, Wildcards `*` und `?`, punktseparierte Pfade wie `Type.Member` sowie `Method()`; `kind?` (`class`/`method`/`property`/`interface`/`record`/`struct`/`enum`/`delegate`), `maxResults?` (Default 50), `scopeType?`, `includeGenerated?`, `includeReferences?` (Default `false`; bei einem Assembly-Target bounded Referenz-Assemblies durchsuchen), `maxResponseBytes?` | Fundstellen und strukturierte Treffer. Scope, Generated-Opt-in und Budget begrenzen die sichtbare Menge; `status.completeness` und `next` beschreiben Trunkierung. | ja | ja |
 | `find_references` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifier` (Content-Handoff-ID), `maxResults?` (Default 50), `depth?` (Default 1, hard cap 3), `scopeType?`, `includeGenerated?`, `includeReferences?` (Default `false`), `maxResponseBytes?` | Statische Aufrufstellen mit kopierbaren Handoff-IDs. Scope, Tiefe und Budget bestimmen die sichtbaren Einträge; der Content-Marker `completeness` nennt Trunkierungsgründe. | ja | ja |
 | `get_call_tree` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifier` (Content-Handoff-ID), `depth?` (Default 2, hard cap 5), `format?` (`ascii` Default oder `mermaid`), `topN?` (Default 10), `direction?`, `scopeType?`, `includeGenerated?`, `includeReferences?`, `includeBcl?`, `maxResponseBytes?` | Statischer Graph mit `nodes` und `edges`. Scope, Generated-Opt-in, Tiefe, Fan-out und Budget bestimmen die sichtbaren ganzen Kanten; die Content-Marker `completeness` und `next` zeigen Begrenzungen. | ja | ja |
-| `get_impact` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `gitRef?` (Git-Commit-Ref; ohne jeden Parameter aufgerufen = Standardfall: uncommittete Änderungen) **oder** `symbolIdentifier?` (exklusiv!), `maxResults?` (mindestens 1; `0` oder negative Werte = recoverable `INVALID_ARGUMENT`, Default 50), `depth?` (Symbol-Branch: mindestens 1; `0` oder negative Werte = recoverable `INVALID_ARGUMENT`, Default 1, hard cap 3; im gesamten Git-Branch (callers UND change-context) wirkungslos und auch bei `0` zulässig), `detailLevel?` (`"callers"` Default oder `"change-context"`, case-insensitive; nur im Git-Diff-Modus, nie zusammen mit `symbolIdentifier`), `maxChangedSymbols?` (Default 20, Cap 100; `0` = keine explizite Begrenzung, intern Default), `maxTestsPerSymbol?` (Default 10, Cap 50; `0` = keine explizite Begrenzung, intern Default), `includeReferences?` (Default `false`; bei Assembly bounded Closure). Bei einem Assembly-Target ausschließlich `symbolIdentifier`. | `callers` (Default): betroffene Call-Sites; der Symbol-Branch verwendet für jede Tiefe dieselbe `callSites`/`completeness`-Struktur wie `find_references`. Bei Assembly-Zielen ergänzt der gemeinsame Wrapper ein `analysis`-Objekt mit Target, Herkunft, Snapshot, Status und Vollständigkeit; `navigation`/`origin` werden nicht als `get_impact`-eigene Call-Site-Struktur ausgegeben. `change-context`: strukturiertes Objekt mit geänderten Dateien und Symbolen, Call-Sites, statisch zugeordneten Tests, diffbezogenen Violations, empfohlenen `dotnet test`-Befehlen und Completeness-Metadaten (siehe Detailabschnitt unten) | ja | ja |
+| `get_impact` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `gitRef?` (Git-Commit-Ref; ohne jeden Parameter aufgerufen = Standardfall: uncommittete Änderungen) **oder** `symbolIdentifier?` (exklusiv!), `maxResults?` (mindestens 1; `0` oder negative Werte = recoverable `INVALID_ARGUMENT`, Default 50), `depth?` (Symbol-Branch: mindestens 1; `0` oder negative Werte = recoverable `INVALID_ARGUMENT`, Default 1, hard cap 3; im gesamten Git-Branch (callers UND change-context) wirkungslos und auch bei `0` zulässig), `detailLevel?` (`"callers"` Default oder `"change-context"`, case-insensitive; nur im Git-Diff-Modus, nie zusammen mit `symbolIdentifier`), `maxChangedSymbols?` (Default 20, Cap 100; `0` = keine explizite Begrenzung, intern Default), `maxTestsPerSymbol?` (Default 10, Cap 50; `0` = keine explizite Begrenzung, intern Default), `includeReferences?` (Default `false`; bei Assembly bounded Closure). Bei einem Assembly-Target ausschließlich `symbolIdentifier`. | `callers` (Default): betroffene Call-Sites; der Symbol-Branch verwendet für jede Tiefe dieselbe `callSites`/`completeness`-Struktur wie `find_references`. Bei Assembly-Zielen ergänzt der gemeinsame Wrapper ein `analysis`-Objekt mit Target, Herkunft, Snapshot, Status und Vollständigkeit; `navigation`/`origin` werden nicht als `get_impact`-eigene Call-Site-Struktur ausgegeben. `change-context` zeigt geänderte Dateien und Symbole, Call-Sites, statisch zugeordnete Tests sowie kontextuelle Violations. Diese Evidenz ist kein Gate, kein Verdict und kein Abschlussnachweis. | ja | ja |
 | `get_type_hierarchy` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifier` (Content-Handoff-ID), `maxResults?` (Default 50), `scopeType?`, `includeGenerated?`, `maxResponseBytes?` | Basisklassen, Interfaces sowie abgeleitete und implementierende Typen; sichtbare Einträge enthalten kopierbare Handoff-IDs. | ja | ja |
 | `dependency_graph` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `filePath?` (ganze Datei) **oder** `symbolIdentifier?` (ein Typ, engerer Scope, exklusiv!), `direction?` (`incoming`/`outgoing`/`both`, Default `both`), `depth?` (Default 1, hard cap 3, transitiv auf Datei-Ebene, hart begrenzt auf 150 besuchte Dateien), `maxResults?` (Default 50) | Datei-zu-Datei-Abhängigkeitskanten (annotiert mit den zugrunde liegenden Typnamen und Referenzzahl), abgeleitet aus echten `SemanticModel`-Typreferenzen statt `using`-Direktiven; optional Projekt-Referenzen des Zielprojekts | ja | ja |
 | `get_file_skeleton` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `filePaths` (Array von Pfaden fuer Batch in 1 Turn), `maxResponseBytes?` (Default 0, Cap 65.536) | Struktur-Skelett (Typen, Signaturen ohne Bodies). Der Content enthält stabile Handoff-IDs für `get_symbol_body.symbolIdentifiers`; das Budget hält nur vollständige sichtbare Evidenzeinheiten. | ja | ja |
@@ -169,13 +169,10 @@ Source-backed Checkout-/Snapshot-Erzeugung und Decompilation bleiben read-only.
 | `get_hotspots` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `maxResults?` (Default 50, Cap 200), `minLinePercentage?` (Default 80, Bereich 0–100), `scopeType?` (`production` Default, `tests` oder `all`) | `.cs`-Dateien des gewählten Scopes ab der angeforderten Auslastungsschwelle; der Content zeigt nur `critical`/`warning`-Dateien (kein `ok`-Eintrag pro Datei), bleibt nach absteigender Zeilenzahl und Pfad deterministisch sortiert und nennt `totalHotspots`, `shownHotspots`, Trunkierung, effektive Parameter sowie Einträge. | nein | ja |
 | `metrics_tree` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `root?` (Teilbaum, Default Solution-Root), `mode?` (`code_size` [Default], `comment_density`, `violation_density`, `complexity`; fehlend/null wird zu `code_size`), `depth?` (1-5, Default 1), `topN?` (Default 10), `fileFilter?` (Regex auf den Pfad) | ASCII-Baum mit `totalCount`, `returnedCount`, `completeness` (Status, Counts, Trunkierungsgründe) und nächstem Schritt im Content; bei Trunkierung nennt er die Anzahl der ausgelassenen Knoten. | nein (zwei der vier Modi sind reiner Datei-Walk) | ja (Top-N pro Ebene) |
 | `metrics_lookup` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifiers` (Array von Symbol-IDs/Namen fuer Batch in 1 Turn; auch fuer genau ein Symbol) | Punktgenaue Metriken (Netto-LOC, zyklomatische/kognitive Komplexität, effektive Parameteranzahl, AI-Context-Footprint, Member-Counts) und Schwellwert-Abgleich gegen aktive `ainetlinter-rules.json` für ein oder mehrere C#-Symbole; liefert lesbares Markdown mit Status-Badges (`[OK]`, `[WARN]`, `[VIOLATION]`). | ja | nein |
-| `get_feature_context` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `symbolIdentifier` (Pflicht), `maxCallers?`, `maxTests?`, `maxResponseBytes?` | Composite-Kontext für Deklaration, Metriken, statischen Impact, Testevidenz und Violations. Der Content weist `callerId` und `callerLocation` für direkte Folgeaufrufe aus; Budget und Status benennen unvollständige Abschnitte. | ja | ja |
+| `get_feature_context` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `symbolIdentifier` (Pflicht), `maxCallers?`, `maxTests?`, `maxResponseBytes?` | Composite-Kontext für Deklaration, Metriken, statischen Impact, Testevidenz und kontextuelle Violations. Der Content weist `callerId` und `callerLocation` für direkte Folgeaufrufe aus; Budget und Status benennen unvollständige Abschnitte. Diese Evidenz ist kein Gate, kein Verdict und kein Abschlussnachweis. | ja | ja |
 | `get_test_context` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `symbolIdentifier` (Pflicht: Typname, Methode, Datei:Zeile oder DocCommentId), `maxResults?` (Default 30, Cap 100; mindestens 1, Werte über 100 liefern vor dem Dispatch feldgenau `INVALID_ARGUMENT`) | Statische Test-Zuordnung für ein C#-Symbol: ermittelt zielgerichtet alle zugeordneten Testdateien, Testklassen, Testmethoden, Test-Kategorien (Unit/Integration), Zuordnungsgründe und direkt ausführbare `dotnet test` Filterbefehle im Content. | ja | ja |
-| `get_violations` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `scopeFilter?`, `maxResults?` (Default 50), `contextLines?` (0-5, Default 2; Werte außerhalb des Bereichs liefern vor dem Dispatch feldgenau `INVALID_ARGUMENT`), `includeSnippet?` (Default `false`) | Aktuelle Lint-Verstöße für die adressierte Solution inkl. Regel-ID und optionalen Quellcode-Snippets; ohne benachbarte Regeln `not_configured`, nicht „0 Violations“ | ja | ja |
-| `safeguard` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `minScore?` (Default 8.0), `maxViolations?` (Default 20; `0` schaltet nur Remediation-/Top-Violation-Einträge aus; negative Werte werden rückwärtskompatibel auf `0` gekappt, nicht als `INVALID_ARGUMENT` abgelehnt) | Structured JSON (siehe unten): deterministischer Quality-Gate-Score für den geprüften Scope, Pass/Fail gegen `minScore`, Top-Violations, strukturierter Remediation-Hint. Konfigurierte `FileFilters` definieren den effektiven Scope: bewusst ausgeschlossene Dokumente werden nicht bewertet, aber in `excludedDocumentCount` ausgewiesen und machen einen ansonsten entscheidbaren Scope nicht unentscheidbar. `scoreIsNotScope=true` verhindert, dass der Score als Vollständigkeitsbeweis gelesen wird; bei nicht entscheidbarem/unkonfiguriertem Scope fehlen `score` und `passed` statt einer falschen 0-/PASS-Aussage. | ja | nein |
+| `verify` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `scope?` (`changes` Default oder `solution`) | Der einzige feste Source-Gate-Einstieg. `changes` prüft die vollständigen aktuellen geänderten Source-Dateien und kann nur nicht blockierende advisory-Kandidaten ergänzen; `solution` prüft vollständig ohne solche Kandidaten. Ein `pass` bedeutet immer `score=10.0` und `violationCount=0`. | ja | feste, serverseitige Projektion |
 | `pattern_detect` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `patterns?` (Default: alle 6 — god-class, async-void, long-method, public-without-doc, empty-catch, feature-envy), `scopeFilter?` (Projekt-Name oder solution-relativer Pfad), `maxResultsPerPattern?` (Default 20) | Lint-Kandidaten nach Pattern-Kategorie. Leere Pattern werden als eine kompakte `Ohne Treffer`-Zeile zusammengefasst; `not_configured` und `not_decidable` bleiben mit ihrem konkreten nächsten Schritt sichtbar. Bewusst durch `FileFilters` ausgeschlossene Dokumente liegen außerhalb des effektiven Scopes und machen die verbleibenden Pattern-Kategorien nicht automatisch `not_decidable`. | ja | ja (je Pattern) |
-| `find_magic_values` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `scopeFilter?` (Projekt-Name oder Pfad-Substring), `valueType?` (`all` Default / `strings` / `numbers`), `categoryFilter?` (`all` Default / `config_candidates` / `constant_candidates` / `enum_candidates` / `nameof_candidates` / `localization_candidates` / `standard_candidates` / `security_candidates`), `minOccurrences?` (Default 2, Mindestvorkommen; 1 für Einzelvorkommen), `maxResults?` (Default 50; 0 und negative Werte werden rückwärtskompatibel auf 1 gekappt), `ignoreNumbers?` (optional), `includeTests?` (Default false; filtert `/Tests/`, `/FastTests/` aus dem relativen Pfad), `includeSuppressed?` (Default false; wirksam via `SyntaxTrivia`-Auswertung am Literal), `changedOnly?` (Default false; nutzt `DiffImpactAnalyzer.RunGitDiff` + `ParseGitDiffHunks`, leere Diffs → 0 Dateien) | Kompakter Content mit aggregierten Kandidaten, deren Fundstelle, Kategorie, Literal, Häufigkeit und Empfehlung. Nur Kategorien mit sichtbaren Befunden werden ausgegeben; ein spezifischer `categoryFilter` zeigt ausschließlich diese Kategorie. Befunde sind priorisiert (Security, Config, Enum, Standard, Constant, `nameof`, Localization), danach nach Häufigkeit und Quellposition. Ein Scope ohne analysierbare Datei ist `status=not_decidable` und kein globaler Clean-Claim; `empty` bedeutet nur: der geprüfte Scope enthält keinen Kandidaten. | ja | ja |
-| `find_dead_code` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `accessibility?` (`private_internal` Default / `all` / `private` / `internal` / `public`), `confidence?` (`both` Default / `high` / `low`), `kind?` (`all` / `type` / `class` / `method` / `field` / `property` / `event` / `delegate`), `scopeFilter?`, `includeTests?` (Default `false`), `mode?` (`members` Default / `locals` / `both`), `maxResults?` (Default 50; kleiner als 1 ist `invalid_argument`) | Statische Kandidaten für unreferenzierte Typen, Member, Felder, Events oder Locals. Ohne Kandidaten: `dead_code: 0 candidates`; ohne analysierbare Dokumente: `dead_code: no analyzable documents`. Kandidaten enthalten Fundstelle, Confidence, Symbolart, Grund und individuelle Limits; bei Kürzung nennt der Header Gesamt- und angezeigte Anzahl. Die Heuristik ist kein Löschbeweis. Eine symbolgenaue Ausnahme steht direkt vor der Deklaration: `// ainetlinter-disable DeadCode — Begründung` oder `// ainetlinter-disable DeadCode -- Begründung`; ohne Begründung ist sie unwirksam. | ja | ja |
 | `get_symbol_body` | `targetPath` (Pflicht, absoluter vorhandener Solution- oder Assembly-Dateipfad), `symbolIdentifiers` (Array stabiler IDs/Namen/Dateizeilen fuer Batch in 1 Turn), `maxBodyLines?` (Default 80) | Markdown-Block mit Symbol-Body bzw. -Bodies, getrennt durch Divider, hart gekappt bei `maxBodyLines` mit Ellipse-Indikator; der Content nennt pro Eintrag `requestedIdentifier`, stabile Handoff-ID, relativen `filePath`, `startLine`, `bodyAvailability`, `contentMode`, Body und Trunkierungs-/Vollständigkeitsangaben. Bei dekompilierten Assembly-Targets stammen verfügbare Bodies aus dem eager WholeProjectDecompiler-Projekt-Snapshot; interne Materialisatpfade werden nicht projiziert. Interface- sowie abstract-/extern-Member bleiben `bodyAvailability=unavailable`. | ja | nein (Body) |
 | `search_pattern` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `pattern` (Text oder Regex), `isRegex?` (Default `null` = Auto-Erkennung und Promotion bei 0 Treffern; `true` = explizit Regex, `false` = Plain-Substring), `scopeType?` (`all` [Default], `production` schliesst Tests aus, `tests`), `maxResults?` (Default 20, Cap 2.000), `maxFiles?`, `contextLines?`, `maxResponseBytes?` (Default 8.192, Cap 65.536), `scope?`, `includePatterns?`, `excludePatterns?`, `enrichCSharp?` (Default `false`) | Begrenzte, deterministisch sortierte Treffer im Produktions-/Test-/All-Korpus (alle Dateitypen) mit Match-Bereichen, optionalem Kontext und `completeness` (`totalCount`, `returnedCount`, getrennte Produktions-/Test-Counts, `truncatedBy`) sowie genau einem `next`-Hinweis. `pattern` und die Include-/Exclude-Globfelder sind die kanonischen Suchfelder; Aliasfelder wie `query`, `searchPattern`, `fileFilter` oder `includePattern` werden nicht akzeptiert. Bei `isRegex=null` automatische Regex-Erkennung und Promotion bei 0 Plain-Treffern; bei `enrichCSharp=true` zusätzlich `semantic` für sichtbare Treffer geladener C#-Dokumente | nein (Fallback) | ja |
 | `reload_config` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad) | Liest ausschließlich die optionale `ainetlinter-rules.json` neben der adressierten Solution neu. Fehlt sie, bleibt der Status `not_configured`; ein Konfigurationspfad-Override ist nicht vorgesehen. Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
@@ -197,20 +194,18 @@ guten Solution-Stand beruhen, behalten den bestehenden `[WARN]`-Textkopf. Zusät
 nennt ihr Content die Hinweise `degraded=true`, `freshness="stale"`,
 `degradedReason="refresh-failed"` und `freshnessWarning`.
 
-### Structured Output
+### Content-Projektionen
 
-Die Assembly-Tools liefern zusätzlich strukturierte Payloads: `inspect_assembly` verwendet
-`InspectAssemblyPayload`, `find_assembly_extensions` verwendet
-`FindAssemblyExtensionsPayload`. Beide enthalten `completeness`, Diagnosen und die
-Trunkierungsmetadaten; die Extension-Payload kennzeichnet die Roslyn-Anwendbarkeit als
+Alle Tools veröffentlichen ausschließlich einen nichtleeren Text-`content`-Block.
+Assembly-Antworten markieren darin
+Vollständigkeit, Diagnosen und Trunkierung. Die Roslyn-Anwendbarkeit lautet
 `applicable`, `not_applicable` oder `not_decidable`.
 
-`search_assembly` verwendet `AssemblySearchPayload`. Die Treffer verwenden relative
-Pfade zum effektiven Analyse-Root; Herkunft, Revision und Source-Policy
-stehen einmalig im gemeinsamen `analysis`-Block. Für weitere Seiten wird der
-`continuationToken` mit derselben Anfrage wiederverwendet. Bei `truncatedBy=maxFiles`
-ist zusätzlich `maxFiles` zu erhöhen, weil der Token nur innerhalb des gewählten
-Dateiscope fortsetzt.
+Assembly-Suchtreffer verwenden relative Pfade zum effektiven Analyse-Root;
+Herkunft, Revision und Source-Policy stehen einmalig im `analysis`-Abschnitt des
+Contents. Für weitere Seiten wird der `continuationToken` mit derselben Anfrage
+wiederverwendet. Bei `truncatedBy=maxFiles` ist zusätzlich `maxFiles` zu erhöhen,
+weil der Token nur innerhalb des gewählten Dateiscope fortsetzt.
 
 ```json
 {
@@ -325,9 +320,7 @@ Feld auf den Default von 20 bzw. 10. Werte über den Caps 100 bzw. 50 werden
 gekappt. Außerdem ist `depth` im gesamten Git-Diff-Branch wirkungslos; `0`
 oder negative Werte werden dort deshalb nicht vorab als ungültig abgelehnt.
 Im Symbol-Branch bleibt `depth` dagegen positiv und `0`/negative Werte liefern
-feldgenau `INVALID_ARGUMENT`. `find_magic_values` verwendet eine abweichende
-Clampsemantik: `maxResults=0` und negative Werte werden auf 1 gekappt, nicht als
-`INVALID_ARGUMENT` abgelehnt. Diese Ausnahmen gehören deshalb nicht zur
+feldgenau `INVALID_ARGUMENT`. Diese Ausnahmen gehören deshalb nicht zur
 allgemeinen Positivgrenze.
 Für die Composite-Assembly-Abfrage `get_assembly_context` sind dagegen
 `maxBodyLines`, `maxCallers`, `depth` und `topN` echte positive Abschnitts-
@@ -516,42 +509,28 @@ Vertragsregeln:
 - **Die Testinformationen sind eine statische Zuordnung** (siehe Notiz unter der Tool-Tabelle) — keine Laufzeit-Coverage, keine Coverage-Dateien.
 - **Multi-Hunk-Container-Regel:** Die innerste Deklaration wird dateiweit ueber alle Hunks entschieden. Trifft ein Hunk einen Member und ein zweiter Hunk derselben Datei die Deklarationszeile des enthaltenen Typs, erscheint nur der Member.
 
-**`safeguard` — Content im Detail:** Der Score aggregiert deterministisch aus dem aktuellen Solution-Zustand Lint-Violations (gewichtet nach Severity), durchschnittliche Cognitive Complexity und AI-Context-Footprint über alle konkreten Klassen im Scope (relativ zu den `Metrics`-Limits aus `ainetlinter-rules.json`) sowie einen Sealed-Klassen-Bonus (falls `EnforceSealedClasses` aktiv ist). Die Top-Einträge in `violations` enthalten jeweils Datei, Zeile, Regel, Severity, Details als Problemtext und konkrete Guidance. `totalViolationCount` zählt alle Violations vor der `maxViolations`-Auswahl; `shownViolationCount` zählt die ausgegebenen Top-Einträge; `violationsTruncated` ist `true`, wenn die Ausgabe wegen `maxViolations` gekürzt wurde. `maxViolations=0` ist eine bewusste Sondersemantik: Es werden keine Remediation-/Top-Violation-Einträge ausgegeben, der Score und die übrigen Status-/Completeness-Felder bleiben jedoch erhalten. Negative Werte werden auf 0 gekappt. Der Content nennt:
+**`verify` — Content im Detail:** `verify(targetPath)` bewertet den automatisch
+bestimmten Working-Tree-Änderungskontext; `verify(targetPath, scope: "solution")`
+ist die vollständige Abschlussprüfung. Beide führen denselben festen Gatekern aus:
+nur `score=10.0` und `violationCount=0` ergeben bei vollständiger Analyse
+`verdict=pass`. `changes` umfasst vollständige aktuelle geänderte Source-Dateien;
+Impact-Dateien dienen ausschließlich der Einordnung. Änderungen an Solution-,
+Projekt-, Regel- oder Generator-Konfiguration erweitern die Population konservativ.
+Ein leerer oder nicht sicher bestimmbarer Änderungskontext ist `incomplete` und
+verweist auf `scope: "solution"`.
 
-```json
-{
-  "passed": true,
-  "score": 10.0,
-  "threshold": 8.0,
-  "violations": [
-    { "filePath": "...", "lineNumber": 42, "ruleName": "...", "details": "...", "severity": "warning", "guidance": "..." }
-  ],
-  "totalViolationCount": 1,
-  "shownViolationCount": 1,
-  "violationsTruncated": false,
-  "scope": "solution",
-  "excludedDocumentCount": 0,
-  "scoreIsNotScope": true,
-  "completeness": "complete",
-  "status": "passed",
-  "statusCause": "Der Score ist ein Quality-Gate; die analysierten Dokumente und Regeln sind im Scope entscheidbar.",
-  "remediation": {
-    "topIssue": "...",
-    "actionableSteps": ["..."],
-    "documentationHint": "Docs/linter/configuration.md"
-  },
-  "summary": "Safeguard-Score: 10.00/10 (Threshold 8.00) — PASS. 1 Verstoß, 178 Klassen analysiert."
-}
-```
+Der einzige Content-Block markiert `verdict`, `gate` (Score, feste Anforderungen,
+Violation-Count und Entscheidungsgrund), `evidence` (vollständige und sichtbare
+Counts) sowie den angeforderten und effektiven `scope`. `failed` enthält mindestens
+eine vollständige Evidenzeinheit mit kopierbarer Handoff-ID; andernfalls ist das
+Ergebnis `incomplete`. Ungültige Requests, Assembly-Ziele und exogene Fehler sind
+`verdict=error` mit `isError=true`, Fehlercode, Feldpfad und genau einer Recovery.
 
-`scope` und `completeness` beziehen sich auf die tatsächlich analysierten Dokumente und die Regelkonfiguration. `excludedDocumentCount` weist Dokumente aus, die durch die bewusste `FileFilters`-Konfiguration außerhalb des effektiven Scores liegen; solche Ausschlüsse vergiften das Quality-Gate nicht. `scoreIsNotScope=true` bleibt immer gesetzt: Ein hoher oder niedriger Score ist kein Beweis, dass außerhalb dieses Scopes keine Verstöße existieren. Fehlen analysierbare Dokumente oder aktivierte Regeln, liefert das Tool `status=not_decidable` bzw. `status=not_configured` ohne numerischen `score` oder `passed`-Wert.
-
-Die Text-Antwort wiederholt die Top-Auswahl als `Top-Befunde` mit den Labels
-`Problem`, `Datei`, `Zeile`, `Regel`, `Severity` und `Guidance`. Bei einer
-Kürzung nennt die Summary zusätzlich `Top-Auswahl wegen maxViolations` und fordert
-für die vollständige Liste zum Aufruf von `get_violations` auf.
-
-`IsError` ist ausschließlich bei einer echten Malfunction `true` (LinterEngine-Fehler oder ein Projekt, das trotz `SupportsCompilation == true` auch nach internen Retries keine Compilation liefert) — ein normaler Score-Output mit `passed: false` ist kein Fehler, sondern das erwartete Quality-Gate-Ergebnis.
+Nur bei `changes` können zusätzlich begrenzte Einträge mit
+`kind=advisory_candidate` und `requiresAgentJudgment=true` erscheinen. Sie nennen
+Confidence, Evidenzgrenze und Gegenindikatoren; sie sind weder Lösch- oder
+Änderungsanweisungen noch Teil des Gate-Entscheids. `solution` enthält diese
+Heuristik-Kandidaten nicht.
 
 **`pattern_detect` — Content im Detail:** Reine Aggregation bereits von der `LinterEngine` erzeugter Lint-Verstöße nach 6 Pattern-Kategorien — kein neuer Detection-Code. Unterstützte Patterns: `god-class` (`AIContextFootprint`/`MaxPublicMembersPerType`/`MaxLineCount`), `async-void` (`BanAsyncVoid`), `long-method` (`MaxMethodLineCount`/`MaxCyclomaticComplexity`/`MaxCognitiveComplexity`), `public-without-doc` (`EnforceXmlDocumentation`), `empty-catch` (`EnforceNoSilentCatch`) und `feature-envy` (`AvoidExcessiveMiddleMen`). Der Content nennt:
 
@@ -576,7 +555,7 @@ für die vollständige Liste zum Aufruf von `get_violations` auf.
 }
 ```
 
-Eine Violation gehört immer zu genau einem Pattern (die 6 RuleId-Gruppen überschneiden sich nicht); trifft bei `god-class` mehr als eine Regel auf dieselbe Klasse zu, sind das separate Items (keine Dedupe-Logik, identisch zu `get_violations`). `items` ist je Pattern auf `maxResultsPerPattern` gekappt (Default 20), `occurrences` bleibt die volle Trefferzahl. Leere Pattern erscheinen im Content nur gesammelt als `Ohne Treffer`-Zeile. Ist eine zugrunde liegende Regel (z. B. `BanAsyncVoid`) deaktiviert oder im Scope nicht vollständig entscheidbar, wird das ausdrücklich als `not_configured` bzw. `not_decidable` mit dem nächsten Schritt ausgegeben — nie als globaler Clean-Claim.
+Eine Violation gehört immer zu genau einem Pattern (die 6 RuleId-Gruppen überschneiden sich nicht); trifft bei `god-class` mehr als eine Regel auf dieselbe Klasse zu, sind das separate Items. `items` ist je Pattern auf `maxResultsPerPattern` gekappt (Default 20), `occurrences` bleibt die volle Trefferzahl. Leere Pattern erscheinen im Content nur gesammelt als `Ohne Treffer`-Zeile. Ist eine zugrunde liegende Regel (z. B. `BanAsyncVoid`) deaktiviert oder im Scope nicht vollständig entscheidbar, wird das ausdrücklich als `not_configured` bzw. `not_decidable` mit dem nächsten Schritt ausgegeben — nie als globaler Clean-Claim.
 
 **`dependency_graph` — Content im Detail:** Knoten sind Dateien (Solution-relative Pfade), Kanten sind Datei-zu-Datei, annotiert mit den Typnamen, die den Übergang ausgelöst haben — abgeleitet aus echten `SemanticModel`-Typreferenzen (nicht nur `using`-Direktiven), gefiltert auf Typen, die in der geladenen Solution deklariert sind (BCL-/NuGet-Rauschen ausgeschlossen). `filePath` scannt die ganze Datei (Union aller darin deklarierten Typen), `typeIdentifier` scannt nur die Deklaration dieses einen Typs — enger als die ganze Datei. Ab `depth > 1` traversiert die BFS ausschließlich auf Datei-Ebene (kein Typ-Scope mehr ab Hop 2), zyklische Abhängigkeiten werden über ein Visited-Set abgefangen: eine bereits besuchte Datei wird nicht erneut expandiert, die schließende Kante bleibt aber im Ergebnis sichtbar. Der Content nennt:
 
@@ -614,7 +593,7 @@ Eine Violation gehört immer zu genau einem Pattern (die 6 RuleId-Gruppen übers
 }
 ```
 
-`minTokens` filtert triviale Methoden (leere `Dispose`/`ToString`-Overrides) heraus; generierte, nicht zum Solution-Quellbereich gehörende sowie vom zentralen Source-Katalog ausgeschlossene Dateien werden nicht fingerprinted. Bei `mode=refactoring-drift` nennt ein abgelehnter Helper den tatsächlich ermittelten Grund (etwa Tokenzahl, Scope oder GeneratedCode) statt einer Liste möglicher Ausschlüsse. `normalizeIdentifiers` (Default `false`) schaltet die Erkennung umbenannter Klone (Type-2) an, indem Identifier-/Literal-Tokens vor dem Vergleich normalisiert werden. `scopeDir` grenzt auf einen Teilbereich ein (case-insensitiver Substring-Abgleich auf den Dateipfad, wie `scopeFilter` bei `get_violations`). `maxResults` kappt die gezeigten Cluster (Default 20, aus `ainetlinter-rules.json` überschreibbar); bei `truncated: true` weist `summary.next` explizit auf `continue` mit größerem `maxResults` oder engerem `scopeDir` hin. Cluster und Mitglieder sind Kandidaten (`resultType=candidate`, `deletionClaim=false`) mit Evidenzgrenze und Countercheck.
+`minTokens` filtert triviale Methoden (leere `Dispose`/`ToString`-Overrides) heraus; generierte, nicht zum Solution-Quellbereich gehörende sowie vom zentralen Source-Katalog ausgeschlossene Dateien werden nicht fingerprinted. Bei `mode=refactoring-drift` nennt ein abgelehnter Helper den tatsächlich ermittelten Grund (etwa Tokenzahl, Scope oder GeneratedCode) statt einer Liste möglicher Ausschlüsse. `normalizeIdentifiers` (Default `false`) schaltet die Erkennung umbenannter Klone (Type-2) an, indem Identifier-/Literal-Tokens vor dem Vergleich normalisiert werden. `scopeDir` grenzt auf einen Teilbereich ein (case-insensitiver Substring-Abgleich auf den Dateipfad). `maxResults` kappt die gezeigten Cluster (Default 20, aus `ainetlinter-rules.json` überschreibbar); bei `truncated: true` weist `summary.next` explizit auf `continue` mit größerem `maxResults` oder engerem `scopeDir` hin. Cluster und Mitglieder sind Kandidaten (`resultType=candidate`, `deletionClaim=false`) mit Evidenzgrenze und Countercheck.
 
 **`find_duplicates mode=structural` — Content im Detail:** Deterministisches Roslyn-Strukturprofil und Cosine-Similarity (keine Embeddings/Netzwerkzugriffe) zur Erkennung semantisch ähnlicher Hilfsmethoden mit unterschiedlichen Namen und Literalen (Typ-4/Intended Duplication). Das Profil enthält normalisierte Rückgabe-/Parametertypen, Kontrollfluss-Form, aufgelöste Zieltypen bei `switch`/Pattern-Interaktionen sowie grobe Verhaltensmarker (Purity, Literal-Klassen). `similarityThreshold` filtert über eigene Cosine-Schwellwerte aus `ainetlinter-rules.json` (`StructuralDuplicateExactThreshold`/`NearThreshold`/`FuzzyThreshold`, Standard 0.90/0.80/0.70) — unabhängig von den Jaccard-`DuplicateCode*Threshold`-Werten. Ergebnisse sind manuell zu prüfende Kandidatencluster, keine automatischen Verstöße. `helperSymbol` wird ignoriert. Kleiner Helper oft nur mit `minTokens` unter dem Lint-Default 30 sichtbar. Der Content nennt dasselbe Schema wie `mode=clone`, ergänzt um `structureProfile` je Mitglied:
 
@@ -634,7 +613,7 @@ Eine Violation gehört immer zu genau einem Pattern (die 6 RuleId-Gruppen übers
 }
 ```
 
-Ergebnisse sind Prüfempfehlungen, keine automatischen Verstöße — `DuplicateCodeChecker`/`safeguard` bleiben auf dem tokenbasierten Verhalten; die höhere False-Positive-Unsicherheit semantischer Ähnlichkeit fließt nicht als Lint-Gate-Verletzung ein.
+Ergebnisse sind Prüfempfehlungen, keine automatischen Verstöße; die höhere False-Positive-Unsicherheit semantischer Ähnlichkeit fließt nicht in das feste Gate ein.
 
 **`find_duplicates mode=refactoring-drift` — Content im Detail:** Eigenes Antwortschema (nicht `clusters`/`bucket`) — findet Methoden, die strukturell einem per `helperSymbol` benannten Helfer `H` ähneln (Jaccard-Score ≥ `near`-Schwellwert aus `ainetlinter-rules.json`, `DuplicateCodeNearThreshold`), ihn aber nachweislich nicht aufrufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005). `helperSymbol` wird wie bei `find_references` aufgelöst (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte, stabile DocumentationCommentId oder qualifizierter Name); löst der Identifikator nicht auf ein Symbol oder mehrdeutig auf, liefert das Tool denselben `SYMBOL_NOT_FOUND`/`AMBIGUOUS_SYMBOL`-Fehler wie `find_references`. Nur gewöhnliche Methoden/lokale Funktionen sind als Helfer zulässig (Konstruktoren/Properties/Felder werden von der zugrunde liegenden Engine nicht fingerprinted) — `similarityThreshold` wird in diesem Modus ignoriert. Der Content nennt:
 
@@ -649,11 +628,7 @@ Ergebnisse sind Prüfempfehlungen, keine automatischen Verstöße — `Duplicate
 }
 ```
 
-Feldname bewusst `candidates`, nicht `violations` — False-Positive-Budget ist höher als bei `mode=clone` (Ziel < 25 %), weil strukturelle Ähnlichkeit nicht zwingend Refactoring-Drift bedeutet (z. B. mehrere legitime, ähnlich aufgebaute `Dispose()`-Implementierungen). Der Content benennt das Ergebnis konsistent als Kandidaten zur manuellen Prüfung, nie als automatisch gemeldete Verstöße — anders als `mode=clone` fließt dieser Modus **nicht** in `DuplicateCodeChecker`/`safeguard` ein (On-Demand-only, kein Lint-Gate).
-
-**`find_magic_values` — Content im Detail:** On-Demand-Audit ueber alle `.cs`-Dokumente der Solution. Klassifiziert Literale nach fachlichen Refactoring-Zielen (`config_candidates` fuer URLs/Pfade/Connection-Strings/Timeouts, `constant_candidates` fuer Format-Strings/Schwellenwerte und duplizierte `const`-Felder, `enum_candidates` fuer if-else-/switch-Kaskaden mit ≥ 3 Vergleichen gegen denselben Identifier, `nameof_candidates` fuer String-Literale, die exakt einem Symbol-Namen im Scope entsprechen, `localization_candidates` fuer User-Facing Exception-Messages > 15 Zeichen, `standard_candidates` fuer HTTP-Statuscodes + kontextgebundene Buffer-Konstanten, `security_candidates` fuer hartcodierte Secrets/Credentials via Name- oder Praefix-Heuristik). Jede Fundstelle gehoert genau einer Kategorie; `categoryFilter` zeigt ausschließlich die gewählte Kategorie. Der Content zeigt nur Kategorien mit sichtbaren Befunden und bleibt bei 0 Treffern kompakt. Befunde sind in der Reihenfolge Security, Config, Enum, Standard, Constant, `nameof`, Localization und anschließend nach Häufigkeit, Pfad und Quellposition sortiert. Jede Fundzeile enthält direkt verwendbar Pfad und Zeile, Kategorie, Literal, Häufigkeit und Empfehlung. Trivial-/Attribut-/Index-/Loop-/GetHashCode-Filter verhindern false positives; `ignoreNumbers` ergaenzt die Trivial-Liste um projektspezifische Zahlen (z. B. 24/60/360/1000). Ein `not_decidable`-Scope enthält eine Scope-Warnung und keinen globalen Clean-Claim.
-
-**Suppression-Sonderfall (bewusste Ausnahme):** `find_magic_values` unterstuetzt Suppression ueber `// ainetlinter-disable MagicValues` (oder `/* ainetlinter-disable MagicValues */`), allerdings bewusst pro Fundstelle via `SyntaxTrivia` (Leading + Trailing) statt ueber den dateiweiten `SuppressionScanner`. Abweichung von der sonst projektweiten Suppression-Semantik ist gewollt: bei dutzenden Magic-Value-Funden pro Datei waere ein dateiweiter Disable-Kommentar nutzlos (ein einzelner Kommentar wuerde alle Funde der Datei stumm schalten). Diese feinere Granularitaet ist eine bewusste Ausnahme und nicht als Inkonsistenz misszuverstehen — die Knoten-Auswertung am `LiteralExpressionSyntax` laesst sich performant im selben AST-Walk miterledigen. Implementierte Granularitaet: `SingleLineCommentTrivia` und `MultiLineCommentTrivia` mit exaktem Substring `ainetlinter-disable MagicValues` (Block-Kommentare werden ebenfalls ausgewertet, solange der Heuristik-Pfad sauber bleibt). `includeSuppressed: false` ist der wirksame Default; `includeSuppressed: true` zeigt auch stummgeschaltete Funde (kein Heuristik-Unterschied). Andere Regel-Namen (z. B. `// ainetlinter-disable SomeOtherRule`) und dateiweite `// ainetlinter-disable all`-Semantik werden nicht ausgewertet.
+Feldname bewusst `candidates`, nicht `violations` — False-Positive-Budget ist höher als bei `mode=clone` (Ziel < 25 %), weil strukturelle Ähnlichkeit nicht zwingend Refactoring-Drift bedeutet (z. B. mehrere legitime, ähnlich aufgebaute `Dispose()`-Implementierungen). Der Content benennt das Ergebnis konsistent als Kandidaten zur manuellen Prüfung, nie als automatisch gemeldete Verstöße.
 
 Beispiel-Aufruf (JSON-RPC über stdio):
 
@@ -867,7 +842,7 @@ Fehlermeldungen folgen dem bestehenden strukturierten Format auf `stderr` und im
 | `BASELINE_NOT_FOUND` | Baseline-Datei nicht gefunden |
 | `BASELINE_INVALID` | Baseline-Datei nicht parsebar |
 | `WORKSPACE_DIAGNOSTIC` | Roslyn/MSBuild-Compile-Fehler (auch Defensiv-Wrapper der Tools) |
-| `PROJECT_NOT_RESTORED` | Projekt ohne frischen `dotnet restore` — `get_violations`/`safeguard`/`pattern_detect`/`metrics_tree` melden dafür eine Diagnose pro Projekt statt tausender Phantom-Dependency-Folgefehler (`DetectAndBanPhantomDependencies` wird für dieses Projekt unterdrückt), siehe `rationale.md` §13 |
+| `PROJECT_NOT_RESTORED` | Projekt ohne frischen `dotnet restore` — `verify`, `pattern_detect` und `metrics_tree` melden dafür eine Diagnose pro Projekt statt tausender Phantom-Dependency-Folgefehler (`DetectAndBanPhantomDependencies` wird für dieses Projekt unterdrückt), siehe `rationale.md` §13 |
 | `ANALYSIS_FAILED` | Analyse-Laufzeit-Fehler |
 | `RESOURCE_NOT_FOUND` | Datei/Solution-Pfad nicht gefunden (Server-Start oder `get_file_skeleton`) |
 | `DRIFT_DETECTED` | Generierter Inhalt weicht von gespeicherter Datei ab |
