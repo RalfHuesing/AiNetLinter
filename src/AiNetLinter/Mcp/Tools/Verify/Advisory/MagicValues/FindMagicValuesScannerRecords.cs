@@ -64,8 +64,7 @@ internal sealed record FindMagicValuesResult(
     bool IsTruncated = false,
     string? Context = null);
 
-/// <summary>Structured-Content-Wurzel fuer <c>find_magic_values</c>: gefundene Magic-Value-
-/// Eintraege plus Aggregat-Summary.</summary>
+/// <summary>Interne Wurzel für gefundene Magic-Value-Einträge plus Aggregat-Summary.</summary>
 internal sealed record FindMagicValuesPayload(
     IReadOnlyList<MagicValueEntry> MagicValues,
     IReadOnlyList<MagicValueCategorySummary> Categories,

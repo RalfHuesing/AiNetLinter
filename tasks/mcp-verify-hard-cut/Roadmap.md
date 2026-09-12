@@ -5,7 +5,7 @@
 - [X] Slice 03 – Kontextgebundene Kandidaten in `changes` integrieren
 - [X] Slice 04 – Harter Schnitt durch Registrierung, Produktion und Tests
 - [X] Slice 05 – Dokumentation, Regeln und Endverifikation synchronisieren
-- [ ] Gesamtaudit – gesamten Scope prüfen und Findings beheben
+- [X] Gesamtaudit – gesamten Scope prüfen und Findings beheben
 - [ ] Abschlussgate – Build, Non-Stress-Tests und Diff-Prüfung
 
 ## Durchführungsprotokoll
@@ -39,6 +39,12 @@
 - MCP-Referenz, Integrationsguide, Laufzeithinweise, Agentenregeln und Audit-Prompt auf den Endvertrag umgestellt.
 - Doku-Smoke und Legacy-Negativsuche grün; vollständiges Gate folgt nach Gesamtaudit.
 - Commit: `10af0ca5367d210370f74a6029ef2ff6da35397b`.
+
+### Gesamtaudit
+
+- Frischer Audit korrigierte Mehrdatei-/Git-Population, konservative Konfigurationserweiterung und verbleibende Content-only-Texte.
+- Frische Hosttests bestätigen Inventar, Scope, Advisory und Content-only; vollständiges Gate steht noch aus.
+- Commit: ausstehend.
 
 ### Vorbereitung
 

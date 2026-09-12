@@ -55,7 +55,7 @@ internal static partial class SafeguardScanner
             : $"Regel-Verstoss '{ruleName}' pruefen — Details in Docs/linter/configuration.md.";
 
     private static async Task<IReadOnlyList<ScannedClass>> EnumerateConcreteClassesAsync(
-        Solution solution, string? scopeFilter, Config config, string solutionDir, CancellationToken ct)
+        Solution solution, string? scopeFilter, IReadOnlySet<string>? scopeFiles, Config config, string solutionDir, CancellationToken ct)
     {
         var collected = new List<ScannedClass>();
         foreach (var project in solution.Projects)
@@ -66,8 +66,7 @@ internal static partial class SafeguardScanner
             foreach (var document in project.Documents)
             {
                 if (!SourceFileCatalog.IsValidDocument(document, solutionDir)
-                    || !ViolationScopeFilter.MatchesScope(
-                        document.FilePath ?? document.Name, project.Name, solutionDir, scopeFilter)
+                    || !MatchesScope(document, solutionDir, scopeFilter, scopeFiles)
                     || FileFilterEvaluator.IsExcluded(document.FilePath ?? document.Name, config.FileFilters))
                 {
                     continue;

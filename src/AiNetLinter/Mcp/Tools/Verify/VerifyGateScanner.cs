@@ -111,6 +111,7 @@ internal static partial class SafeguardScanner
         var config = p.Config;
         var console = p.Console;
         var scopeFilter = p.ScopeFilter;
+        var scopeFiles = p.ScopeFiles;
         var ct = p.CancellationToken;
 
         // LinterEngine verlangt den konkreten Config-Typ (Record-Semantik fuer `with {...}`
@@ -120,8 +121,8 @@ internal static partial class SafeguardScanner
         var solutionDir = string.IsNullOrEmpty(solution.FilePath)
             ? ""
             : Path.GetDirectoryName(solution.FilePath) ?? "";
-        var scope = string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!;
-        var assessment = AssessScope(solution, solutionDir, scopeFilter, concreteConfig);
+        var scope = scopeFiles is { Count: > 0 } ? "changes" : string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!;
+        var assessment = AssessScope(solution, solutionDir, scopeFilter, scopeFiles, concreteConfig);
         if (assessment.Status is not "configured")
         {
             return new SafeguardScoreResult(
@@ -140,15 +141,16 @@ internal static partial class SafeguardScanner
                 console: console);
             violations = await engine.RunAsync(solution, noCache: true, cacheTtlMinutes: 0, ct);
             var fileToProject = ViolationScopeFilter.BuildFileToProjectMap(solution, solutionDir, concreteConfig.FileFilters);
-            violations = ViolationScopeFilter.FilterAndSortViolations(
-                solutionDir, fileToProject, violations, scopeFilter);
+            violations = scopeFiles is { Count: > 0 }
+                ? violations.Where(violation => IsInScopeFiles(violation.FilePath, scopeFiles)).ToList()
+                : ViolationScopeFilter.FilterAndSortViolations(solutionDir, fileToProject, violations, scopeFilter);
 
             // Im selben try/catch wie die LinterEngine: ein kompilierbares Projekt, das auch nach
             // Retries (siehe TryGetCompilationAsync) keine Compilation liefert, ist genauso eine
             // echte Malfunction wie eine LinterEngine-Exception — beides wuerde sonst entweder den
             // Score verfaelschen (stilles Ueberspringen) oder inkonsistent behandelt werden.
             classes = await EnumerateConcreteClassesAsync(
-                solution, scopeFilter, concreteConfig, solutionDir, ct);
+                solution, scopeFilter, scopeFiles, concreteConfig, solutionDir, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -173,18 +175,17 @@ internal static partial class SafeguardScanner
     }
 
     private static SafeguardScopeAssessment AssessScope(
-        Solution solution, string solutionDir, string? scopeFilter, Config config)
+        Solution solution, string solutionDir, string? scopeFilter, IReadOnlySet<string>? scopeFiles, Config config)
     {
         var scope = string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!;
         var matchingDocuments = solution.Projects
             .Where(project => project.SupportsCompilation)
             .SelectMany(project => project.Documents)
             .Where(document => SourceFileCatalog.IsValidDocument(document, solutionDir)
-                && ViolationScopeFilter.MatchesScope(
-                    document.FilePath ?? document.Name, document.Project.Name, solutionDir, scopeFilter))
+                && MatchesScope(document, solutionDir, scopeFilter, scopeFiles))
             .ToList();
 
-        if (matchingDocuments.Count == 0) return AssessEmptyScope(solution, scopeFilter, scope);
+        if (matchingDocuments.Count == 0) return AssessEmptyScope(solution, scopeFilter, scopeFiles, scope);
 
         var analyzableDocuments = matchingDocuments
             .Where(document => !FileFilterEvaluator.IsExcluded(document.FilePath ?? document.Name, config.FileFilters))
@@ -206,9 +207,10 @@ internal static partial class SafeguardScanner
     }
 
     private static SafeguardScopeAssessment AssessEmptyScope(
-        Solution solution, string? scopeFilter, string scope)
+        Solution solution, string? scopeFilter, IReadOnlySet<string>? scopeFiles, string scope)
     {
-        if (string.IsNullOrWhiteSpace(scopeFilter)
+        if (scopeFiles is null
+            && string.IsNullOrWhiteSpace(scopeFilter)
             && solution.Projects.Any(project => project.SupportsCompilation && project.Documents.Any()))
         {
             return new SafeguardScopeAssessment(
@@ -249,6 +251,19 @@ internal static partial class SafeguardScanner
     private static SafeguardScopeAssessment UndecidableScope(
         string scope, string cause, int excludedDocumentCount = 0) =>
         new(scope, "not_decidable", "not_decidable", cause, excludedDocumentCount);
+
+    private static bool MatchesScope(
+        Document document,
+        string solutionDir,
+        string? scopeFilter,
+        IReadOnlySet<string>? scopeFiles) =>
+        scopeFiles is { Count: > 0 }
+            ? document.FilePath is not null && IsInScopeFiles(document.FilePath, scopeFiles)
+            : ViolationScopeFilter.MatchesScope(
+                document.FilePath ?? document.Name, document.Project.Name, solutionDir, scopeFilter);
+
+    private static bool IsInScopeFiles(string filePath, IReadOnlySet<string> scopeFiles) =>
+        scopeFiles.Contains(Path.GetFullPath(filePath));
 
     private static ScoreResult BuildUndecidableResult(
         SafeguardScopeAssessment assessment, double threshold) =>

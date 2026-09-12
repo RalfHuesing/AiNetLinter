@@ -56,7 +56,8 @@ internal sealed record SafeguardScannerParameters(
     string? ScopeFilter,
     CancellationToken CancellationToken,
     double MinScoreThreshold = SafeguardScanner.DefaultMinScoreThreshold,
-    int MaxRemediationEntries = SafeguardScanner.DefaultMaxRemediationEntries);
+    int MaxRemediationEntries = SafeguardScanner.DefaultMaxRemediationEntries,
+    IReadOnlySet<string>? ScopeFiles = null);
 
 /// <summary>
 /// Ergebnis-Container fuer <see cref="SafeguardScanner.ComputeScoreAsync"/>. <see cref="IsMalfunction"/>

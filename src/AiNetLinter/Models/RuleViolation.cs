@@ -16,7 +16,7 @@ public sealed record RuleViolation
     /// </summary>
     public string? EffectiveSeverity { get; init; }
     /// <summary>
-    /// Optionales Code-Snippet um den Verstoß (für get_violations mit includeSnippet: true).
+    /// Optionales Code-Snippet um den Verstoß für interne Analyse-Projektionen.
     /// </summary>
     public string? Snippet { get; init; }
 }

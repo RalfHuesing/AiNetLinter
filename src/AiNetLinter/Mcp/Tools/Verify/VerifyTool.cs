@@ -49,12 +49,13 @@ internal static class VerifyTool
             projection.ScopeFilter,
             cancellationToken,
             VerifyGateSummary.RequiredScore,
-            EvidenceLimit));
+            EvidenceLimit,
+            projection.ScopeFiles));
         if (scoreResult.IsMalfunction || scoreResult.Score is null) return VerifyResponseFormatter.Error(
             "ANALYSIS_FAILURE", "Der Verify-Gatekern konnte nicht vollständig bestimmt werden.", "Den identischen verify-Aufruf einmal erneut ausführen.");
 
         var advisory = scope == VerifyScope.Changes
-            ? await VerifyAdvisoryProjector.CollectAsync(solution, projection.ScopeFilter, cancellationToken)
+            ? await VerifyAdvisoryProjector.CollectAsync(solution, projection.ScopeFiles, cancellationToken)
             : VerifyAdvisoryProjection.Empty;
 
         return VerifyResponseFormatter.Success(new VerifySuccessParameters(
@@ -69,6 +70,7 @@ internal static class VerifyTool
 internal sealed record VerifyScopeResolution(
     VerifyScopeProjection Scope,
     string? ScopeFilter,
+    IReadOnlySet<string>? ScopeFiles,
     VerifyDecisionReason? IncompleteReason,
     string? Recovery,
     IReadOnlyList<string> Exclusions);
@@ -88,6 +90,7 @@ internal static class VerifyScopeProjector
             null,
             null,
             null,
+            null,
             []);
 
     internal static VerifyScopeResolution ForChanges(Microsoft.CodeAnalysis.Solution solution)
@@ -97,32 +100,57 @@ internal static class VerifyScopeProjector
 
         try
         {
-            var diff = GitDiffParser.RunGitDiff(root, null);
-            var untracked = GitDiffParser.RunGitUntrackedFiles(root);
-            var changed = GitDiffParser.ParseGitDiffHunkRanges(diff ?? string.Empty).Keys
+            var (diffExitCode, diff, _) = GitDiffParser.RunGitProcess(root, "diff --name-only HEAD");
+            var (untrackedExitCode, untracked, _) = GitDiffParser.RunGitProcess(root, "ls-files --others --exclude-standard");
+            if (diffExitCode != 0 || untrackedExitCode != 0) return Indeterminate("Der Git-Änderungs-Scope konnte nicht zuverlässig bestimmt werden.");
+
+            var changedPaths = SplitPaths(diff)
                 .Concat(SplitPaths(untracked))
-                .Select(path => Path.GetFullPath(Path.Combine(root, path)))
-                .Where(File.Exists)
-                .Where(path => solution.Projects
-                    .SelectMany(project => project.Documents)
-                    .Any(document => SourceFileCatalog.IsValidDocument(document, root)
-                        && string.Equals(document.FilePath, path, StringComparison.OrdinalIgnoreCase)))
+                .Select(path => path.Replace('/', Path.DirectorySeparatorChar))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
                 .ToList();
+            if (HasConservativeScopeExpansion(changedPaths, solution, root)) return new(
+                new VerifyScopeProjection(VerifyScope.Changes, VerifyScope.Solution, ["solution"], []),
+                null,
+                null,
+                null,
+                null,
+                []);
+
+            var sourceDocuments = solution.Projects
+                .SelectMany(project => project.Documents)
+                .Where(document => SourceFileCatalog.IsValidDocument(document, root) && document.FilePath is not null)
+                .Select(document => Path.GetFullPath(document.FilePath!))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var changedSourcePaths = changedPaths
+                .Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+                .Select(path => Path.GetFullPath(Path.Combine(root, path)))
+                .Where(path => !SourceFileCatalog.IsGeneratedPath(path))
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            if (changedSourcePaths.Any(path => !sourceDocuments.Contains(path))) return new(
+                new VerifyScopeProjection(VerifyScope.Changes, VerifyScope.Solution, ["solution"], []),
+                null,
+                null,
+                null,
+                null,
+                []);
+
+            var changed = changedSourcePaths;
             if (changed.Count == 0) return new(
                 new VerifyScopeProjection(VerifyScope.Changes, VerifyScope.Changes, [], []),
+                null,
                 null,
                 VerifyDecisionReason.EmptyChangeContext,
                 "scope: solution verwenden.",
                 []);
 
-            if (changed.Count != 1) return Indeterminate("Mehrere geänderte Source-Dateien benötigen die vollständige Populationsprojektion.");
-
-            var relative = Path.GetRelativePath(root, changed[0]).Replace('\\', '/');
+            var relative = changed.Select(path => Path.GetRelativePath(root, path).Replace('\\', '/')).ToList();
             return new(
-                new VerifyScopeProjection(VerifyScope.Changes, VerifyScope.Changes, [relative], []),
-                relative,
+                new VerifyScopeProjection(VerifyScope.Changes, VerifyScope.Changes, relative, []),
+                null,
+                changed.ToHashSet(StringComparer.OrdinalIgnoreCase),
                 null,
                 null,
                 []);
@@ -137,6 +165,7 @@ internal static class VerifyScopeProjector
         new(
             new VerifyScopeProjection(VerifyScope.Changes, VerifyScope.Changes, [], []),
             null,
+            null,
             VerifyDecisionReason.ChangeContextIndeterminate,
             recovery,
             []);
@@ -145,6 +174,22 @@ internal static class VerifyScopeProjector
         string.IsNullOrWhiteSpace(value)
             ? []
             : value.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private static bool HasConservativeScopeExpansion(
+        IReadOnlyList<string> changedPaths,
+        Microsoft.CodeAnalysis.Solution solution,
+        string solutionRoot)
+    {
+        var structuralPaths = solution.Projects
+            .Select(project => project.FilePath)
+            .Append(solution.FilePath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => Path.GetRelativePath(solutionRoot, path!).Replace('\\', '/'))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return changedPaths.Any(path =>
+            structuralPaths.Contains(path.Replace('\\', '/'))
+            || string.Equals(Path.GetFileName(path), "ainetlinter-rules.json", StringComparison.OrdinalIgnoreCase));
+    }
 }
 
 internal static class VerifyResponseFormatter
@@ -277,40 +322,57 @@ internal static class VerifyAdvisoryProjector
 
     internal static async Task<VerifyAdvisoryProjection> CollectAsync(
         Microsoft.CodeAnalysis.Solution solution,
-        string? scopeFilter,
+        IReadOnlySet<string>? scopeFiles,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(scopeFilter)) return VerifyAdvisoryProjection.Empty;
+        if (scopeFiles is not { Count: > 0 }) return VerifyAdvisoryProjection.Empty;
 
         try
         {
-            var deadCode = await FindDeadCodeScanner.ScanAsync(
-                solution,
-                new FindDeadCodeArgs(ScopeFilter: scopeFilter, MaxResults: VerifyTool.EvidenceLimit),
-                cancellationToken);
-            var magicValues = await FindMagicValuesScanner.ScanAsync(new FindMagicValuesScannerParameters(
-                solution,
-                scopeFilter,
-                null,
-                null,
-                MinOccurrences: 2,
-                MaxResults: VerifyTool.EvidenceLimit,
-                IgnoreNumbers: null,
-                IncludeTests: false,
-                IncludeSuppressed: false,
-                ChangedOnly: false,
-                cancellationToken));
+            var solutionRoot = Path.GetDirectoryName(solution.FilePath);
+            if (string.IsNullOrWhiteSpace(solutionRoot)) return new(0, [], "unavailable");
 
-            if (magicValues.IsMalfunction) return new(
-                deadCode.Summary.TotalDead,
-                Rank(deadCode.DeadSymbols.Select(ToDeadCodeEvidence)),
-                "partial");
+            var deadCodeEntries = new List<VerifyEvidenceEntry>();
+            var magicValueEntries = new List<VerifyEvidenceEntry>();
+            var totalDeadCode = 0;
+            var totalMagicValues = 0;
+            var magicValuesComplete = true;
+            foreach (var scopeFile in scopeFiles.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+            {
+                var scopeFilter = Path.GetRelativePath(solutionRoot, scopeFile).Replace('\\', '/');
+                var deadCode = await FindDeadCodeScanner.ScanAsync(
+                    solution,
+                    new FindDeadCodeArgs(ScopeFilter: scopeFilter, MaxResults: VerifyTool.EvidenceLimit),
+                    cancellationToken);
+                totalDeadCode += deadCode.Summary.TotalDead;
+                deadCodeEntries.AddRange(deadCode.DeadSymbols.Select(ToDeadCodeEvidence));
 
-            var entries = deadCode.DeadSymbols
-                .Select(ToDeadCodeEvidence)
-                .Concat(magicValues.Payload!.MagicValues.Select(ToMagicValueEvidence));
+                var magicValues = await FindMagicValuesScanner.ScanAsync(new FindMagicValuesScannerParameters(
+                    solution,
+                    scopeFilter,
+                    null,
+                    null,
+                    MinOccurrences: 2,
+                    MaxResults: VerifyTool.EvidenceLimit,
+                    IgnoreNumbers: null,
+                    IncludeTests: false,
+                    IncludeSuppressed: false,
+                    ChangedOnly: false,
+                    cancellationToken));
+                if (magicValues.IsMalfunction)
+                {
+                    magicValuesComplete = false;
+                    continue;
+                }
+                totalMagicValues += magicValues.Payload!.Summary.Total;
+                magicValueEntries.AddRange(magicValues.Payload!.MagicValues.Select(ToMagicValueEvidence));
+            }
+
+            if (!magicValuesComplete) return new(totalDeadCode, Rank(deadCodeEntries), "partial");
+
+            var entries = deadCodeEntries.Concat(magicValueEntries);
             return new(
-                deadCode.Summary.TotalDead + magicValues.Payload!.Summary.Total,
+                totalDeadCode + totalMagicValues,
                 Rank(entries),
                 "complete");
         }

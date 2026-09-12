@@ -35,6 +35,47 @@ public sealed class VerifyToolContractE2ETests
     }
 
     [Fact]
+    public async Task Verify_MultipleChangedCleanSources_UsesTheirCompletePopulation()
+    {
+        using var fixture = CreateGitFixture();
+        File.WriteAllText(Path.Combine(fixture.RootPath, "src", "BaselineMini", "FirstProbe.cs"), """
+            namespace BaselineMini;
+
+            public sealed class FirstProbe
+            {
+                public int Value => 1;
+            }
+            """);
+        File.WriteAllText(Path.Combine(fixture.RootPath, "src", "BaselineMini", "SecondProbe.cs"), """
+            namespace BaselineMini;
+
+            public sealed class SecondProbe
+            {
+                public int Value => 2;
+            }
+            """);
+        FixtureGit.Run(fixture.RootPath, "add src/BaselineMini/FirstProbe.cs");
+        File.AppendAllText(Path.Combine(fixture.RootPath, "src", "BaselineMini", "FirstProbe.cs"), "\n// staged and unstaged coverage\n");
+        await using var host = await McpProcessHost.StartAsync(fixture, TimeSpan.FromSeconds(60));
+
+        var result = await host.CallToolAsync("verify");
+
+        AssertVerifyResult(result, expectedError: false, "verdict: pass", "populations: [src/BaselineMini/FirstProbe.cs, src/BaselineMini/SecondProbe.cs]");
+    }
+
+    [Fact]
+    public async Task Verify_RuleConfigurationChange_ExpandsTheGatePopulationConservatively()
+    {
+        using var fixture = CreateGitFixture();
+        File.AppendAllText(fixture.ConfigPath, "\n");
+        await using var host = await McpProcessHost.StartAsync(fixture, TimeSpan.FromSeconds(60));
+
+        var result = await host.CallToolAsync("verify");
+
+        AssertVerifyResult(result, expectedError: false, "verdict: failed", "requested: changes", "effective: solution", "populations: [solution]");
+    }
+
+    [Fact]
     public async Task Verify_ChangedViolation_ReturnsFailedWithCanonicalEvidenceHandoff()
     {
         using var fixture = CreateGitFixture();
