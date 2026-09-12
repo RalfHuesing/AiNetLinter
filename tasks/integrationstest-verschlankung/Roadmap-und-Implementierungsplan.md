@@ -265,12 +265,56 @@ Abnahme: Die Gate-Policy ist explizit, die zugehörigen Befehle sind dokumentier
 
 ### 7. Vollständige Verifikation und Abschluss
 
-- [ ] Alle verschobenen Tests gegen die Umzugstabelle prüfen: keine alte Integrationstestmethode ohne Ersatz, kein Ersatz ohne ursprüngliche Behauptung.
-- [ ] `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` erfolgreich ausführen.
-- [ ] `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` erfolgreich ausführen.
-- [ ] `dotnet build` erfolgreich und warnungsfrei ausführen.
-- [ ] TRX-Daten vor/nach der Umstellung vergleichen: Gesamtdauer, Anzahl Tests und auffällige Klassen. Das Ergebnis als Messwert dokumentieren, ohne aus einer einzelnen Messung eine Garantie abzuleiten.
-- [ ] `git diff --check` und eine auftragsbezogene Diff-Prüfung durchführen; ausschließlich eigene Pfade stagen und gemäß Projektregel committen.
+- [X] Alle verschobenen Tests gegen die Umzugstabelle prüfen: keine alte Integrationstestmethode ohne Ersatz, kein Ersatz ohne ursprüngliche Behauptung.
+- [X] `dotnet test src/AiNetLinter.FastTests --filter Category!=Stress` erfolgreich ausführen.
+- [X] `dotnet test src/AiNetLinter.IntegrationTests --filter Category!=Stress` erfolgreich ausführen.
+- [X] `dotnet build` erfolgreich und warnungsfrei ausführen.
+- [X] TRX-Daten vor/nach der Umstellung vergleichen: Gesamtdauer, Anzahl Tests und auffällige Klassen. Das Ergebnis als Messwert dokumentieren, ohne aus einer einzelnen Messung eine Garantie abzuleiten.
+- [X] `git diff --check` und eine auftragsbezogene Diff-Prüfung durchführen; ausschließlich eigene Pfade stagen und gemäß Projektregel committen.
+
+#### Verifikationsnachweis (2026-09-12)
+
+Der Abschlusslauf verwendet die finalen TRX-Dateien unter
+`TestResults/integrationstest-verschlankung-final/`. Sie wurden gegen die
+Baseline unter `TestResults/integrationstest-verschlankung-baseline/`
+ausgewertet:
+
+| Projekt | Baseline | Final | TRX-Wandzeit Baseline → Final | Auffällige Klassen im Final-Lauf |
+| --- | --- | --- | --- | --- |
+| `AiNetLinter.FastTests` | 2.478 bestanden | 2.536 bestanden | 9,298 s → 8,714 s | `AssemblyAnalysisToolTests` (27 Tests, 6,011 s), `AssemblyAnalysisRegistryTests` (15 Tests, 5,004 s) |
+| `AiNetLinter.IntegrationTests` | 499 bestanden, 2 Infrastrukturfehler (501 gesamt) | 371 bestanden, 0 Fehler | 240,862 s → 187,794 s (−53,068 s; rund 22,0 %) | `McpLiveRepositoryTests` (26 Tests, 170,369 s), `McpServerCommandJsonRpcFramingTests` (8 Tests, 137,994 s), `AssemblyAnalysisRouteTests` (12 Tests, 55,716 s) |
+
+Die Zeiten sind einzelne Beobachtungswerte, keine Laufzeitgarantie. Die
+Integration verlor gegenüber der Baseline 130 Testfälle; die FastTests gewannen
+58 Testfälle. Die weiterhin längsten Integrationsklassen sind bewusst erhaltene
+Dogfood-, Raw-Wire- und Assembly-Boundary-Verträge.
+
+Der Diff-Audit gegen die Ausgangsbasis `9217dcc` erfasste 106 entfernte
+Integrationstestmethoden in den neun geänderten Klassen. Jede Methode ist einer
+konkreten Zeile der Umzugstabellen aus Schritt 1 bis 4 zugeordnet: 10
+Builder-/Diagnose-Fälle, 27 Argumentvarianten, 35 Tool-/Assembly-Varianten und
+34 geladene-Solution-/Toolfälle. Die 27 in diesen Klassen behaltenen Methoden
+sind die jeweils dokumentierten Boundary-Verträge. Die sieben neu angelegten
+FastTest-Klassen und die in den Tabellen benannten bestehenden FastTest-Klassen
+prüfen die ursprünglichen Aussagen; bei den verschobenen Response-,
+Validierungs- und Vertragstests einschließlich Fehlercode, `fieldPath`,
+Text-/`StructuredContent`-Projektion und Navigation. Damit blieb kein
+entfernter Test ohne spezifischen Nachweis und kein neu hinzugefügter Ersatz
+ohne dokumentierte Ursprungsaussage.
+
+Der finale Abschlussnachweis lautet: `FastTests` 2.536/2.536 bestanden,
+`IntegrationTests` 371/371 bestanden und `dotnet build` mit 0 Warnungen sowie
+0 Fehlern. Der FastTests-Dependency-Guard lief als Teil des vollständigen
+FastTest-Gates mit.
+
+Das finale MCP-Quality-Gate erreichte in allen geänderten C#-Scopes 10,00/10
+bei 0 Verstößen: `src/AiNetLinter.FastTests` (301 Klassen),
+`src/AiNetLinter.IntegrationTests` (153 Klassen) und
+`src/AiNetLinter/Mcp/Registration` (18 Klassen). Die zugehörigen
+`get_violations`-Aufrufe lieferten jeweils 0 Verstöße. Die scoped
+Dead-Code-/Magic-Value-Audits enthielten keine neue blockierende Feststellung;
+ihre Heuristik-Kandidaten außerhalb der geänderten Dateien wurden nicht als
+Teil dieser Verschlankung verändert.
 
 Abnahme: Beide Non-Stress-Gates und der Build sind grün, die FastTests-Guards bestehen, die Umzugstabelle ist vollständig und die Integrationslaufzeit ist anhand der TRX-Vergleiche nachvollziehbar reduziert.
 
