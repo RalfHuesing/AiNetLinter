@@ -10,8 +10,8 @@ open_questions: []
 
 AiNetLinter veröffentlicht für die agentische Qualitätsentscheidung künftig
 genau ein MCP-Tool: `verify`. Es ersetzt die bisher getrennten öffentlichen
-Qualitäts-, Score-, Lint-, Pattern-, Metrik-, Hotspot- und
-Kandidaten-Auditwerkzeuge vollständig. Der Schnitt ist absichtlich hart:
+Gate-, Score-, Lint- und kontextgebundenen Kandidatenwerkzeuge vollständig.
+Der Schnitt ist absichtlich hart:
 Nach der Umsetzung sind die ersetzten Toolnamen, deren Registrierungen,
 Schema-Varianten, DTOs, Formatter, Testpfade, Beispiele und Dokumentation
 nicht mehr vorhanden. Es gibt keine Aliase, Feature Flags, Legacy-Adapter,
@@ -35,7 +35,7 @@ entscheidbarer, partieller, gekürzter oder fehlerhafter Lauf darf niemals als
 
 Die bisherige Toolfläche zwingt Agenten, mehrere technisch geschnittene
 Teilantworten zu kombinieren: Score über `safeguard`, Regelverstöße über
-`get_violations`, Pattern, Metriken und Kandidatensuchen über weitere Tools.
+`get_violations` und kontextgebundene Kandidatensuchen über weitere Tools.
 Das wiederholt Schemas und Navigation, erhöht Kontextkosten und schafft
 Cross-Tool-Handoffs, deren Vertrag leicht auseinanderläuft.
 
@@ -56,9 +56,9 @@ kleinen Auswahl statt mit vielen Detektor-Schaltern:
 
 Der Agent gibt im Regelfall nur `targetPath` und gegebenenfalls den konkreten
 Arbeits-`scope` an. Es gibt weder `minScore`, `maxViolations` noch einzelne
-`includeDeadCode`-, `includeMagicValues`-, Pattern- oder Metrik-Flags. Die
-Auswahl der Scanner ist eine stabile Serverentscheidung pro Modus, nicht
-eine zur Laufzeit neu zusammensetzbare Client-Pipeline.
+`includeDeadCode`- oder `includeMagicValues`-Flags. Die Auswahl der Scanner
+ist eine stabile Serverentscheidung pro Modus, nicht eine zur Laufzeit neu
+zusammensetzbare Client-Pipeline.
 
 ## Öffentlicher Vertrag von `verify`
 
@@ -74,9 +74,11 @@ verify(
 )
 ```
 
-- `targetPath` ist wie bei allen zielgebundenen Tools absolut und bezeichnet
-  eine Source-Solution beziehungsweise -Solution-Datei. Assembly-Ziele sind
-  klar als nicht unterstützt zu behandeln, nicht still leer.
+- `targetPath` ist absolut und akzeptiert ausschließlich eine
+  Source-Solution (`.sln` oder `.slnx`). `verify` ist explizit **Source-only**:
+  `.dll`-, `.exe`- und andere Assembly-Ziele werden vor Lease, Decompilation
+  oder fachlicher Analyse als klarer, strukturierter
+  `ASSEMBLY_TARGET_UNSUPPORTED`-Fehler zurückgewiesen, nicht still leer.
 - `scope` bezeichnet optional einen einzelnen, solution-relativen
   Arbeitskontext (Projekt, Verzeichnis, Datei oder kanonische Identität nach
   dem dann gültigen gemeinsamen Scopevertrag). Ohne `scope` gilt die gesamte
@@ -147,10 +149,8 @@ unveränderlichen Akzeptanzbedingungen bleiben immer sichtbar: `10.0` und
 `0`.
 
 `review` führt denselben Gate-Kern aus und ergänzt nur für einen explizit
-adressierten Arbeitskontext priorisierte advisory-Kandidaten. Dazu zählen die
-heutigen Quellen für Dead-Code-, Magic-Value-, Pattern-, Hotspot- und
-Metrik-Signale, soweit sie für diesen Scope fachlich sinnvoll und
-entscheidbar sind. Jeder solche Eintrag trägt mindestens:
+adressierten Arbeitskontext priorisierte advisory-Kandidaten aus den heutigen
+Dead-Code- und Magic-Value-Analysen. Jeder solche Eintrag trägt mindestens:
 
 - `kind: advisory_candidate`;
 - Confidence, Evidenzgrenze und bekannte Gegenindikatoren;
@@ -165,31 +165,28 @@ Codebasis überflutet wird.
 
 ## Harter Entfall und klare Grenzen
 
-Folgende MCP-Tools entfallen als öffentliche Qualitätsoberfläche und werden
-vollständig entfernt:
+Folgende MCP-Tools entfallen als öffentliche Gate- und
+Kandidatenprüfungsoberfläche und werden vollständig entfernt:
 
 - `safeguard`
 - `get_violations`
-- `pattern_detect`
 - `find_magic_values`
 - `find_dead_code`
-- `get_hotspots`
-- `metrics_tree`
-- `metrics_lookup`
 
 Die zugrundeliegende belegbare Analyse kann als interne, eindeutig besessene
 Domänenlogik weiterverwendet werden, wenn `verify` sie benötigt. Alte
-Safeguard-/Violation-/Pattern-spezifische öffentliche DTOs, Formatter,
+Safeguard-/Violation-spezifische öffentliche DTOs, Formatter,
 Registrierungen und Adapter dürfen jedoch nicht als zweite Vertrags- oder
 Antwortschicht fortleben. Eine bestehende Analyse ist nur zu behalten, wenn
 sie eine klar abgegrenzte Eingabe für den neuen Gate- oder Review-Projektor
 liefert.
 
-Unberührt bleibt in diesem Task die übrige semantische Erkundungsoberfläche
-(Suche, Symbol-, Feature-, Referenz-, Impact-, Datei- und Assemblytools).
-Auch eine spätere, weitergehende Konsolidierung zu `explore`/`inspect` ist
-eine eigene Produktentscheidung. Dieser Task darf sie weder vorwegnehmen noch
-ein universelles Mega-Tool bauen.
+Unberührt bleiben in diesem Task `pattern_detect`, `get_hotspots`,
+`metrics_tree` und `metrics_lookup` sowie die übrige semantische
+Erkundungsoberfläche (Suche, Symbol-, Feature-, Referenz-, Impact-, Datei- und
+Assemblytools). Auch eine spätere, weitergehende Konsolidierung zu
+`explore`/`inspect` ist eine eigene Produktentscheidung. Dieser Task darf sie
+weder vorwegnehmen noch ein universelles Mega-Tool bauen.
 
 ## Source of Truth und voraussichtlich betroffene Bereiche
 
@@ -205,8 +202,8 @@ Fachliche Wahrheit liefern in dieser Reihenfolge:
 5. die Endzustandsdokumentation und Agentenregeln.
 
 Voraussichtlich betroffen sind die Analyse-Toolregistrierung, deren
-Argumentvalidierung und Capability-Matrix, Safeguard-/Violation-/Pattern-/
-Metric-/Candidate-Toolpfade, gemeinsame Navigation- und Budgetprojektoren,
+Argumentvalidierung und Capability-Matrix, Safeguard-/Violation-/Dead-Code-/
+Magic-Value-Toolpfade, gemeinsame Navigation- und Budgetprojektoren,
 Health-Capabilities, Fast- und Integrationstests sowie die Dogfood- und
 Server-Contracttests. Dokumentation und Arbeitsregeln umfassen insbesondere
 `Docs/agent-api.md`, `Docs/integration.md`, relevante Rationale-/Guide- und
@@ -221,9 +218,10 @@ aus der vorhandenen C#-Testinfrastruktur mit einem frischen Taskstand-Host.
 ## Muss-Kriterien
 
 1. `verify` ist das einzige registrierte öffentliche MCP-Tool für die oben
-   genannten Quality-Gate-, Violation-, Pattern-, Metrik-, Hotspot-,
-   Dead-Code- und Magic-Value-Anliegen; alle acht ersetzten Namen fehlen aus
-   Runtime, Schema, Tests, Guides und Beispielen.
+   genannten Quality-Gate-, Violation-, Dead-Code- und Magic-Value-Anliegen;
+   alle vier ersetzten Namen fehlen aus Runtime, Schema, Tests, Guides und
+   Beispielen. Die ausdrücklich unberührten Pattern-, Hotspot- und
+   Metrikwerkzeuge bleiben unverändert registriert.
 2. Ohne frei konfigurierbaren Grenzwert bedeutet ein entscheidbares `pass`
    stets Score `10.0` und `violationCount=0`; kein anderer Status darf diese
    Freigabe suggerieren.
@@ -251,7 +249,8 @@ aus der vorhandenen C#-Testinfrastruktur mit einem frischen Taskstand-Host.
 
 1. `tools/list` veröffentlicht `verify` mit ausschließlich den beschriebenen
    Eingaben, vollständigen Beschreibungen und korrekten Defaults; keiner der
-   acht entfernten Toolnamen ist dort registriert.
+   vier entfernten Toolnamen ist dort registriert. Die vier unberührten
+   Pattern-, Hotspot- und Metrikwerkzeuge bleiben im Inventar erhalten.
 2. `verify(gate)` für einen vollständig sauberen Scope liefert `pass`, Score
    `10.0`, `violationCount=0`, vollständige Navigation und keine überflüssige
    Kandidatenliste.
@@ -275,10 +274,11 @@ aus der vorhandenen C#-Testinfrastruktur mit einem frischen Taskstand-Host.
 8. Kleinster akzeptierter Budgetretry, Werte dazwischen und größere Budgets
    liefern monotone vollständige Einheiten und messen Text sowie
    StructuredContent inklusive Navigation in UTF-8.
-9. Source-Scope funktioniert; ein Assembly-Ziel liefert einen klaren,
-   datensparsamen `ASSEMBLY_TARGET_UNSUPPORTED`-Fehler. Keine Zielpfade,
-   PIDs, Daemon- oder andere fremde Betriebsidentitäten erscheinen unnötig im
-   Text.
+9. `verify` akzeptiert ausschließlich `.sln`-/`.slnx`-Source-Ziele. Ein
+   Assembly-Ziel wird vor jeder Decompilation oder Analyse mit einem klaren,
+   datensparsamen `ASSEMBLY_TARGET_UNSUPPORTED`-Fehler zurückgewiesen. Keine
+   Zielpfade, PIDs, Daemon- oder andere fremde Betriebsidentitäten erscheinen
+   unnötig im Text.
 10. Dogfood prüft reale Agentenabläufe: Feature-Patch-Gate, fokussiertes
     Kandidatenreview, fehlgeschlagenes Gate mit Handoff, Budgetretry sowie
     Legacy-Tool-Abwesenheit gegen einen frischen Host.
@@ -288,12 +288,13 @@ aus der vorhandenen C#-Testinfrastruktur mit einem frischen Taskstand-Host.
 
 ## Architektur- und Betriebssemantik
 
-`verify` ist ein dünner öffentlicher Orchestrator, kein zweiter Linter und
-kein allgemeiner Query-Interpreter. Er nimmt einen bereits normalisierten
-Scope entgegen, ruft die festen Gate- beziehungsweise Reviewquellen auf und
-projiziert ihre Ergebnisse in eine gemeinsame, unveränderliche
-Entscheidungsantwort. Scanner behalten vollständige Domänenresultate;
-Toolnahe Projektoren wählen deterministisch ganze Evidenzeinheiten.
+`verify` ist ein dünner öffentlicher Source-Code-Orchestrator, kein zweiter
+Linter, keine Assemblyanalyse und kein allgemeiner Query-Interpreter. Er nimmt
+einen bereits normalisierten Scope entgegen, ruft die festen Gate-
+beziehungsweise Reviewquellen auf und projiziert ihre Ergebnisse in eine
+gemeinsame, unveränderliche Entscheidungsantwort. Scanner behalten
+vollständige Domänenresultate; toolnahe Projektoren wählen deterministisch
+ganze Evidenzeinheiten.
 
 Die Gateentscheidung besitzt genau einen Owner. Advisory-Evidenz kann niemals
 den Gatezustand übersteuern. Bei konkurrierender oder fehlender Analyse
@@ -314,7 +315,8 @@ Source-only; Assemblyanalyse bleibt bei den dafür vorgesehenen Tools.
 - Contracttests für `pass`, `failed`, `incomplete`, `error`, Budgetretry,
   frühe Validierung, Scope und Handoff zuerst rot schreiben.
 - Den extern sichtbaren Toolinventar-Sollzustand festlegen: `verify` vorhanden,
-  alle acht Altnamen abwesend.
+  alle vier Altnamen abwesend; die unberührten Tools bleiben nachweisbar
+  registriert.
 
 **Exit:** Der neue Vertrag ist als Testsprache eindeutig; keine Testannahme
 referenziert einen Legacy-Adapter.
@@ -333,11 +335,10 @@ frischen Host grün und handlungsfähig.
 
 ### Slice 03 – Kontextgebundenen Review-Modus integrieren
 
-- Kandidatenquellen fachlich als advisory-Projektionen anbinden, nicht als
-  versteckte Gatebedingungen.
+- Dead-Code- und Magic-Value-Quellen fachlich als advisory-Projektionen
+  anbinden, nicht als versteckte Gatebedingungen.
 - Scopepflicht, Confidence, Gegenindikatoren, Ranking, Paging und
-  Datensparsamkeit für Dead Code, Magic Values, Patterns, Hotspots und
-  Metriksignale umsetzen.
+  Datensparsamkeit ausschließlich für Dead Code und Magic Values umsetzen.
 - Reihenfolge, Budgetmonotonie und Nichtbeeinflussung des Gateurteils mit
   fokussierten Tests absichern.
 
@@ -347,8 +348,8 @@ der Default-Gate bleibt frei von Kandidatenrauschen.
 ### Slice 04 – Harter Schnitt durch Registrierung, Produktion und Tests
 
 - Alte Toolregistrierungen, Argumentlimits, Capabilities, DTOs, Formatter,
-  Adapter, obsolete Projektoren und ausschließlich zugehörige Tests entfernen
-  oder auf `verify` umstellen.
+  Adapter, obsolete Projektoren und ausschließlich zugehörige Tests der vier
+  ersetzten Tools entfernen oder auf `verify` umstellen.
 - Nur fachlich verwendete interne Scanner in klarer neuer Ownership behalten;
   keine Safeguard-/Violation-spezifische öffentliche Zwischenabstraktion
   zurücklassen.
@@ -387,7 +388,7 @@ Zusätzlich sind gegen einen frischen In-Process- oder Prozesshost verpflichtend
 - `tools/list`-Inventar- und Schemavergleich;
 - vollständige `verify`-Dogfoodmatrix für Gate, Review, Budget, Scope,
   Handoff, Validation, Continuation und Source-only-Assemblyfehler;
-- Negativsuche nach allen acht entfernten Namen in Produktionsregistrierung,
+- Negativsuche nach allen vier entfernten Namen in Produktionsregistrierung,
   öffentlicher Dokumentation, Agentenregeln und Server-Instructions;
 - gezielte Architekturprüfung auf tote Adapter, doppelte Vertragsmodelle,
   Magic-Values und nicht verwendete Legacybestandteile;
