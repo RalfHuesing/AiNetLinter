@@ -78,7 +78,7 @@
 
 - Fehlende, ungültige und nicht vorhandene `targetPath`-Ziele liefern vor dem Lease Contract-v2-Fehler; ein Folgeaufruf bleibt nutzbar.
 - Interne Scanner tragen Verify-/Advisory-Namen; frühere Toolnamen erscheinen nur noch in Negativinventaren.
-- Commit: ausstehend.
+- Commit: `a986e74bcf21e7fb80c4ab3a5acd94249f048494`.
 
 ### Vorbereitung
 
