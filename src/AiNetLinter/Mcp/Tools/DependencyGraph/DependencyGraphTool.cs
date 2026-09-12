@@ -62,6 +62,7 @@ internal static class DependencyGraphTool
                 fieldPath: fieldPath);
         }
 
+        var absolutePaths = state.AssemblySymbolIdentity is not null;
         try
         {
             return hasFilePath
@@ -70,10 +71,19 @@ internal static class DependencyGraphTool
                     input,
                     includeOutgoing,
                     includeIncoming,
-                    state.AssemblySymbolIdentity is not null,
+                    absolutePaths,
                     scopeType,
                     ct)
-                : await ExecuteTypeScopeAsync(solution, input, includeOutgoing, includeIncoming, state.HandoffSymbolIdentity, scopeType, ct);
+                : await ExecuteTypeScopeAsync(
+                    solution,
+                    input,
+                    new TypeScopeExecutionRequest(
+                        includeOutgoing,
+                        includeIncoming,
+                        state.HandoffSymbolIdentity,
+                        absolutePaths,
+                        scopeType),
+                    ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -133,14 +143,15 @@ internal static class DependencyGraphTool
     private static async Task<CallToolResult> ExecuteTypeScopeAsync(
         Solution solution,
         DependencyGraphInput input,
-        bool includeOutgoing,
-        bool includeIncoming,
-        AnalysisSymbolIdentity? assemblyIdentity,
-        McpScopeType scopeType,
+        TypeScopeExecutionRequest request,
         CancellationToken ct)
     {
         var symbolIdentifier = input.SymbolIdentifier!;
-        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(solution, symbolIdentifier, ct, assemblyIdentity);
+        var (symbol, error) = await FindReferencesTool.ResolveSymbolAsync(
+            solution,
+            symbolIdentifier,
+            ct,
+            request.HandoffSymbolIdentity);
         if (error is not null) return error;
 
         // Nicht-Typ-Symbole (Methode/Property/Feld) auf den einschliessenden Typ normalisieren —
@@ -153,22 +164,29 @@ internal static class DependencyGraphTool
                 hint: "symbolIdentifier muss auf einen Typen oder Typ-Member verweisen.");
         }
 
-        var request = new DependencyGraphScanRequest(
+        var scanRequest = new DependencyGraphScanRequest(
             solution,
-            includeOutgoing,
-            includeIncoming,
+            request.IncludeOutgoing,
+            request.IncludeIncoming,
             input.Depth,
             input.MaxResults,
-            scopeType,
+            request.ScopeType,
             input.IncludeGenerated,
             new McpScopeClassifier());
-        var result = await DependencyGraphScanner.ScanTypeAsync(resolvedTypeSymbol, request, ct);
-        var declaringPath = FormatDeclaringPath(solution, resolvedTypeSymbol, assemblyIdentity is not null);
+        var result = await DependencyGraphScanner.ScanTypeAsync(resolvedTypeSymbol, scanRequest, ct);
+        var declaringPath = FormatDeclaringPath(solution, resolvedTypeSymbol, request.AbsolutePaths);
         var target = new DependencyGraphTarget("type", declaringPath, resolvedTypeSymbol.Name);
         return BuildResponse(
             target,
-            assemblyIdentity is null ? result : ToAbsolutePaths(result, solution));
+            request.AbsolutePaths ? ToAbsolutePaths(result, solution) : result);
     }
+
+    private sealed record TypeScopeExecutionRequest(
+        bool IncludeOutgoing,
+        bool IncludeIncoming,
+        AnalysisSymbolIdentity? HandoffSymbolIdentity,
+        bool AbsolutePaths,
+        McpScopeType ScopeType);
 
     private static string FormatDeclaringPath(Solution solution, INamedTypeSymbol type, bool absolutePath)
     {

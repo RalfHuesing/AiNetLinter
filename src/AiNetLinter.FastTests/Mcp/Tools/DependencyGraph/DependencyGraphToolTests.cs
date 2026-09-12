@@ -139,6 +139,18 @@ public sealed class DependencyGraphToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_SourceTypeIdentifier_UsesRelativePaths()
+    {
+        var state = _fixture.CreateServer();
+
+        var result = await DependencyGraphTool.ExecuteAsync(
+            state, new DependencyGraphInput(null, "Greeter", "incoming", 1, 50), CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Contains("- src/SymbolGraphMini/Caller.cs", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_RendersGraphEdgesInContent()
     {
         var state = _fixture.CreateServer();
