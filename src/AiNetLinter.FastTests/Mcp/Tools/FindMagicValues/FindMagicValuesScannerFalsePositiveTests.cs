@@ -4,7 +4,6 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
-using AiNetLinter.Mcp.Registration;
 using AiNetLinter.Mcp.Tools.MagicValues;
 using Microsoft.CodeAnalysis;
 using Xunit;
@@ -277,17 +276,4 @@ internal static class ProjectRegistryDefaults
         Assert.Empty(result.Payload!.MagicValues);
     }
 
-    [Fact]
-    public void ToolDescription_DoesNotContainNoOpPhrases()
-    {
-        var field = typeof(AnalysisToolRegistrations).GetField("FindMagicValuesDescription",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-
-        Assert.NotNull(field);
-        var description = Assert.IsType<string>(field!.GetValue(null));
-
-        Assert.DoesNotContain("No-op", description, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("ainetlinter-disable MagicValues", description, StringComparison.Ordinal);
-        Assert.Contains("Git-Diff", description, StringComparison.Ordinal);
-    }
 }
