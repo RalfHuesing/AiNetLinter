@@ -41,24 +41,18 @@ public sealed class McpAgentGuideRegistrationTests
         Assert.Contains("targetPath", workflow, StringComparison.Ordinal);
         Assert.Contains("get_server_health", workflow, StringComparison.Ordinal);
         Assert.Contains("report_observability_feedback", workflow, StringComparison.Ordinal);
-        Assert.Contains("ungebunden", workflow, StringComparison.Ordinal);
         Assert.Contains(".dll", workflow, StringComparison.Ordinal);
-        Assert.Contains("metadata-only", workflow, StringComparison.Ordinal);
-        Assert.Contains("not_decidable", workflow, StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier", workflow, StringComparison.Ordinal);
-        Assert.Contains("lokaler Datei-/Zeilenleser", workflow, StringComparison.Ordinal);
+        Assert.Contains("safeguard", workflow, StringComparison.Ordinal);
+        Assert.Contains("get_symbol_body", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("assemblyPath", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("`view_file`", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("`list_dir`", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("deutlich weniger Kontext", workflow, StringComparison.Ordinal);
-        Assert.Contains("`contractVersion`, `target`,", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("operationStatus", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("`capabilities`", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("Consumer-Kontext", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("optionalen Consumer-Typ", workflow, StringComparison.Ordinal);
-
-        Assert.Contains("ainetlinter://overview{?targetPath}", workflow, StringComparison.Ordinal);
-        Assert.Contains("ainetlinter://rules{?targetPath}", workflow, StringComparison.Ordinal);
 
         var embeddedWorkflow = EmbeddedResourceReader
             .ReadRequired(McpAgentGuideRegistration.WorkflowResourceName)

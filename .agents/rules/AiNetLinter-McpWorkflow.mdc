@@ -1,108 +1,40 @@
 ---
-description: Verbindlicher MCP-First Workflow für semantische C#/.NET-Codeanalyse mit AiNetLinter.
+description: Verbindlicher MCP-First Workflow für C#/.NET-Codeanalyse mit AiNetLinter.
 globs: *
 alwaysApply: true
 ---
 
-# AiNetLinter MCP-First Workflow
+# AiNetLinter MCP-First Workflow (C# Semantik)
 
-Bei jeder C#-Aufgabe (Symbole, Typen, Aufrufketten, Referenzen, Impact, Regelverstöße) MÜSSEN die semantischen MCP-Tools des Servers `AiNetLinter` anstelle manueller Textsuch-Kaskaden (`rg` + seitenweises Dateilesen) verwendet werden. Sie liefern in 1 Turn präzisen Kontext statt vieler teurer Datei-Leseoperationen.
+Für ALLE semantischen C#-Aufgaben (Symbole, Methoden, Aufrufer, Hierarchien, Impact, Linter) MÜSSEN die MCP-Tools des Servers `AiNetLinter` verwendet werden.
+Sie liefern präzisen AST-Kontext in 1 Turn statt teurer Textsuch- und Datei-Lese-Kaskaden.
 
-## Standard-Parameter & Zielbindung
+## ⛔ Strikte Werkzeug-Trennung
 
-- **`targetPath` (Pflicht)**: Immer der absolute Pfad zur Solution (`.sln`/`.slnx`) oder dekompilierten Assembly (`.dll`/`.exe`).
-  - Im Repository AiNetLinter: `C:/Daten/Entwicklung/Ralf/AiNetLinter/AiNetLinter.slnx`.
-- **ServerName**: `AiNetLinter` (via `call_mcp_tool`).
+- ❌ **VERBOTEN für C#-Code:** Kein `rg`, `grep`, `find_in_files` oder seitenweises Dateilesen für C#-Symbole, Aufrufer oder Methoden.
+- ✅ **NUR für Nicht-C#:** `rg` / lokale Tools ausschließlich für JSON, Markdown, `.csproj`, Scripts, Konfigurationen oder Logs.
 
-## Antwortvertrag und sichere Folgeaufrufe
+## Standard-Parameter & Handoff
 
-- Zielgebundene Antworten folgen Contract v2: `navigation.status.operation`
-  (Ausführung) und `navigation.status.completeness` (Antwortvollständigkeit)
-  sind getrennte Achsen; Analysequalität bleibt fachlich im Payload.
-- Bei `RESPONSE_BUDGET_TOO_SMALL` `minimumResponseBytes` mit identischem Request
-  und Snapshot als `maxResponseBytes` wiederholen. Der Wert umfasst finalen Text,
-  Structured Content und Navigation in UTF-8.
-- Ausschließlich die kanonische Handoff-ID aus `structuredContent.id` für
-  Folgeaufrufe verwenden. Markdown, `docCommentId` und Anzeigenamen nicht parsen.
-- Für Assembly-Routen bedeutet `includeReferences=false`: Root-ID nur Root,
-  Referenz-Handoff-ID nur deren Owner. Erst `true` erlaubt die bounded Closure;
-  `requestedIncludeReferences` und effektiven Suchmodus prüfen.
-- Zielgebundenes `get_server_health` enthält nur das adressierte Target;
-  Daemonaggregate gibt es ausschließlich ohne `targetPath`. Bei File-/Index-Scopes
-  physische Dateien und Roslyn-Dokumente sowie Ausschlussursachen nicht vermischen.
-
-## MCP-Grenzen und Resources
-
-- `report_observability_feedback` ist ungebunden und akzeptiert keinen Target-Block.
-  `get_server_health` arbeitet ohne `targetPath` global, mit Target ausschließlich
-  für dieses Target.
-- Assembly-Targets (`.dll`/`.exe`) werden metadata-only und ohne Ausführung
-  analysiert. Fehlt eine Consumer-Basis für Anwendbarkeit, ist `not_decidable`
-  ein fachlicher Status, kein leerer Erfolg.
-- `ainetlinter://overview{?targetPath}` und
-  `ainetlinter://rules{?targetPath}` ergänzen den Targetstatus beziehungsweise
-  die Regelquelle. Sie ersetzen weder Tool-Schemas noch den Toolaufruf.
-- Zielgebundenes `structuredContent.navigation` enthält mindestens
-  `contractVersion`, `target`, `snapshot`, `status`, `scope` und `next`.
-- Falls ein semantischer MCP-Aufruf nicht passt oder präzise Text-/Dateiarbeit
-  nötig ist, ist ein lokaler Datei-/Zeilenleser zulässig; für Semantik bleibt
-  der MCP-Aufruf erste Wahl.
+- **`targetPath` (Pflicht)**: Absoluter Pfad zur `.sln`- oder `.slnx`-Datei des aktuellen Projekts (einmalig im Workspace ermitteln und für alle Aufrufe wiederverwenden).
+- **Folgeaufrufe & Handoff**: Ausschließlich kanonische IDs aus `structuredContent` (z. B. von `find_symbol`, `get_file_skeleton`, `get_feature_context`) verwenden – niemals Markdown oder Anzeigenamen parsen.
+- **Budget-Limit**: Bei Fehler `RESPONSE_BUDGET_TOO_SMALL` denselben Aufruf mit `maxResponseBytes = minimumResponseBytes` wiederholen.
 
 ---
 
-## Die 4 Phasen des Agenten-Workflows
+## Workflow & Tool-Referenz
 
-### 1. Orientieren & Verstehen (Einstieg)
-*Nicht blind 10 Dateien öffnen – semantische Tools bündeln den Kontext:*
-- **Feature / Symbol verstehen**: `get_feature_context(symbolIdentifier: "...")`
-  -> Liefert in 1 Aufruf: Signatur, Members, Aufrufer und zugehörige Testdateien (<500 Tokens).
-- **Symbol oder Klasse suchen**: `find_symbol(pattern: "...")`
-  -> Findet Klassen, Interfaces, Methoden tolerant per Name/Glob (`kind` filtert z. B. auf `class`, `method`, `interface`).
-- **Dateistruktur überblicken**: `get_file_tree(fileFilter: "*.cs", view: "summary")`
-  -> *Schutzregel:* Auf Projekt-Root niemals ungefiltert mit `view="files"` aufrufen (Token-Schutz).
-
-### 2. Tiefenanalyse & Aufrufketten
-- **Methodenrumpf gezielt lesen**: `get_symbol_body(symbolIdentifiers: ["..."])`
-  -> Liest exakt den Rumpf des Zielsymbols ohne Datei-Overhead.
-- **Aufrufbaum verfolgen**: `get_call_tree(symbolIdentifier: "...", direction: "incoming"|"outgoing")`
-- **Implementierungen finden**: `find_implementations(symbolIdentifier: "...")`
-- **Hierarchie / Typen**: `get_type_hierarchy(symbolIdentifier: "...")`
-
-### 3. Impact & Vorbereitung vor Änderungen
-- **Auswirkungen vor Änderung prüfen**: `get_impact(symbolIdentifier: "...")`
-  -> Zeigt direkt betroffene Aufrufer und zu prüfende Tests.
-- **Referenzen finden**: `find_references(symbolIdentifier: "...")`
-
-### 4. Abschluss & Quality-Gate (Pflicht vor Task-Ende)
-- **Quality-Gate prüfen**: `safeguard(minScore: 10)` -> Ziel: **10,0/10 PASS**.
-- **Regelverstöße prüfen**: `get_violations()` -> Ziel: **0 Verstöße**.
-- **Dead Code aufspüren**: `find_dead_code()` -> Keine ungenutzten Reste hinterlassen (Reflection/DI beachten).
-- **Magic Values prüfen**: `find_magic_values()` -> Schwellwerte und Literale sinnvoll als Konstanten/Enums kapseln.
-
----
-
-## Wann Text-Tools (`rg`, Datei-Tools) sinnvoll sind
-
-| Fall | Bevorzugtes Werkzeug |
-|---|---|
-| C#-Symbole, Aufrufer, Hierarchien, Impact, Linter, Quality-Gate | **MCP-Tools** (`AiNetLinter`) |
-| Nicht-C#-Dateien (JSON, Markdown, CSPROJ, Scripts) | `rg` / lokaler Reader |
-| Exakter Zeilenbereich für minimalen Edit bereits bekannt | Lokales File-Edit-Tool |
-| Suche nach spezifischen Textstrings/Fehlermeldungen in Logs | `rg` |
-
----
-
-## Kompakte Schnellreferenz (Cheatsheet)
-
-| Ziel | MCP-Tool | Wichtigste Parameter |
+| Ziel | MCP-Tool (`AiNetLinter`) | Wichtigste Parameter & Hinweise |
 |---|---|---|
-| Feature / Symbol verstehen | `get_feature_context` | `symbolIdentifier` |
-| Symbol suchen | `find_symbol` | `pattern`, `kind` (`class`, `method`, ...) |
-| Methode gezielt lesen | `get_symbol_body` | `symbolIdentifiers: ["..."]` |
-| Aufrufbaum analysieren | `get_call_tree` | `symbolIdentifier`, `direction` (`incoming`/`outgoing`) |
-| Impact vor Änderung | `get_impact` | `symbolIdentifier` |
-| Quality-Gate (10/10) | `safeguard` | `minScore: 10` |
-| Violations (0) | `get_violations` | `minSeverity: "info"`, `scopeFilter` |
-| Dead Code auditieren | `find_dead_code` | `accessibility: "private_internal"` |
-| Literale / Magic Values | `find_magic_values` | `minOccurrences: 2` |
-| Assemblies (.dll) untersuchen | `inspect_assembly` / `search_assembly` | `targetPath: "<pfad.dll>"` |
+| **Einstieg / Kontext** | `get_feature_context` | `symbolIdentifier: "..."` (Signatur, Members, Aufrufer, Tests in 1 Call) |
+| **Symbol finden** | `find_symbol` | `pattern: "..."`, optional `kind: "class"\|"method"\|...` |
+| **Code lesen** | `get_symbol_body` | `symbolIdentifiers: ["..."]` (exakter Rumpf ohne Datei-Overhead) |
+| **Aufrufbaum** | `get_call_tree` | `symbolIdentifier: "..."`, `direction: "incoming"\|"outgoing"` |
+| **Hierarchie / Impl.** | `get_type_hierarchy` / `find_implementations` | `symbolIdentifier: "..."` |
+| **Impact vor Änderung** | `get_impact` | `symbolIdentifier: "..."` (betroffene Aufrufer & relevante Tests) |
+| **Referenzen** | `find_references` | `symbolIdentifier: "..."` |
+| **Projektstruktur** | `get_file_tree` | `fileFilter: "*.cs"`, `view: "summary"` (*nie `view="files"` auf Root!*) |
+| **Assemblies (.dll)** | `inspect_assembly` | `targetPath: "<pfad.dll>"` (Metadaten & API dekompilieren) |
+| **Quality-Gate (Pflicht)** | `safeguard` & `get_violations` | `safeguard(minScore: 10)` (Ziel: 10.0/10 PASS), `get_violations()` (0 Fehler) |
+| **Clean-Code-Audit** | `find_dead_code` / `find_magic_values` | Ungenutzten Code & unbenannte Literale vor Task-Abschluss auditieren |
+| **Status & Feedback** | `get_server_health` / `report_observability_feedback` | Health prüfen oder Tool-Probleme melden |
