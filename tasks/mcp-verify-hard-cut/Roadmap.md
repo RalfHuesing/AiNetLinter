@@ -60,13 +60,13 @@
 
 - Read-only-Audit identifizierte fehlende finale UTF-8-Budgetmessung und wiederholte Advisory-Scans pro Datei.
 - Öffentliche Legacytools bleiben entfernt; keine Rückkehr zu granularen Legacy-Einstiegspunkten.
-- Commit: ausstehend.
+- Commit: `2b3eac32bcf61c5df4cb1abedd6ea3dcce2f00f7`.
 
 ### Folgeaudit 01
 
 - Finale `verify`-Projektion misst den UTF-8-Content gegen ein festes 4-KiB-Budget und behält nur ganze Evidenzeinheiten.
 - Counts, Trunkierungsgrund und `failed`-Evidenzschutz sind per Fast- und frischem Hosttest abgesichert.
-- Commit: ausstehend.
+- Commit: `487babd11cc7c646a2613ca7d0d8611b132e506b`.
 
 ### Vorbereitung
 
