@@ -222,9 +222,44 @@ Abnahme: Für jeden nicht verschobenen Bereich ist die Boundary-Begründung in d
 
 Die Kategorien `Dogfood` und `Performance` sind aktuell nicht `Stress`; damit laufen sie im Standardfilter `Category!=Stress` mit.
 
-- [ ] Laufzeiten und Aussage der Dogfood-/Performance-Klassen separat erfassen.
-- [ ] Entscheiden und dokumentieren, ob sie absichtlich Teil des Non-Stress-Gates bleiben oder als explizites manuelles/nächtliches Gate geführt werden sollen.
-- [ ] Diese Kategorieentscheidung nur mit ausdrücklicher fachlicher Freigabe umsetzen; sie ist keine automatische Folge der FastTest-Migration.
+- [X] Laufzeiten und Aussage der Dogfood-/Performance-Klassen separat erfassen.
+- [X] Entscheiden und dokumentieren, ob sie absichtlich Teil des Non-Stress-Gates bleiben oder als explizites manuelles/nächtliches Gate geführt werden sollen.
+- [X] Diese Kategorieentscheidung nur mit ausdrücklicher fachlicher Freigabe umsetzen; sie ist keine automatische Folge der FastTest-Migration.
+
+#### Policy-Nachweis (2026-09-12)
+
+Die Kategorien bleiben **bewusst im Non-Stress-Gate**. Es gibt keine fachliche
+Freigabe, sie in ein manuelles oder nächtliches Gate zu verschieben; daher wurden
+keine Traits geändert und keine Tests entfernt. Der verpflichtende
+Integrations-Gate bleibt unverändert:
+
+```powershell
+dotnet test src/AiNetLinter.FastTests --filter "Category!=Stress"
+dotnet test src/AiNetLinter.IntegrationTests --filter "Category!=Stress"
+```
+
+Für eine getrennte, reproduzierbare Messung der beiden Kategorien werden die
+folgenden Befehle verwendet (die Messung ist kein Ersatz für das Non-Stress-Gate):
+
+```powershell
+dotnet test src/AiNetLinter.IntegrationTests --filter "Category=Dogfood" --logger "trx;LogFileName=integrationstest-verschlankung-dogfood-policy.trx" --results-directory TestResults/integrationstest-verschlankung-policy
+dotnet test src/AiNetLinter.IntegrationTests --filter "Category=Performance" --logger "trx;LogFileName=integrationstest-verschlankung-performance-policy.trx" --results-directory TestResults/integrationstest-verschlankung-policy
+```
+
+| Kategorie | Klasse | Aussage | TRX-Ergebnis und Klassenzeit |
+| --- | --- | --- | --- |
+| Dogfood | `CliRepositoryDogfoodTests` | Führt die CLI gegen die vollständige eigene Solution aus und erwartet Erfolg. | 1/1 bestanden, 20,153 s |
+| Dogfood | `McpLiveRepositoryTests` | Prüft 26 MCP-Tool-, Handoff-, Audit- und Scope-Verträge gegen das echte Repository. | 26/26 bestanden, 2 min 18,875 s |
+| Dogfood | `McpLiveRepositoryResourceTests` | Prüft Resource-URIs, Discovery und Inhalte gegen den kodierten Repository-Pfad. | 1/1 bestanden, 1,108 s |
+| Dogfood | `McpDocumentationSmokeTests` | Prüft Live-Toolaufrufe sowie die veröffentlichte Agent- und Integrationsdokumentation. | 6/6 bestanden, 45,870 s |
+| Dogfood | `McpServerToolBehaviorE001E2ETests` | Prüft die übereinstimmende Folgeaktion eines leeren `search_pattern`-Ergebnisses über den echten MCP-Host. | 1/1 bestanden, 1,576 s |
+| Dogfood | `McpServerToolBehaviorD002E2ETests` | Prüft den navigierbaren `RESOURCE_NOT_FOUND`-Vertrag für einen fehlenden Dateibaum-Root über den echten MCP-Host. | 1/1 bestanden, 2,674 s |
+| Performance | `LoadFixtureMeasurementsTests` | Misst Cold-Start bei ca. 1.000 LOC sowie zehn `GetCurrentSolution`-Proben bei ca. 10.000 LOC; behauptet nur endliche, nichtnegative Messwerte. | 2/2 bestanden; 0,698 s und 2,038 s |
+
+Die Dogfood-Messung benötigte für 36 bestandene Tests 2 min 36,347 s TRX-Wandzeit
+(Summe der Testzeiten wegen Parallelität 3 min 30,257 s). Die Performance-Messung
+benötigte für zwei bestandene Tests 7,473 s TRX-Wandzeit. Diese Einzelmessung
+ist ein Beobachtungswert, keine Laufzeitgarantie.
 
 Abnahme: Die Gate-Policy ist explizit, die zugehörigen Befehle sind dokumentiert und die Tests bleiben erhalten.
 
