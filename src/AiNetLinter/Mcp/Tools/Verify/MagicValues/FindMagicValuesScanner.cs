@@ -16,7 +16,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace AiNetLinter.Mcp.Tools.MagicValues;
+namespace AiNetLinter.Mcp.Tools.Verify.MagicValues;
 
 /// <summary>
 /// Scanner fuer das On-Demand-Audit-Tool <c>find_magic_values</c>: iteriert ueber alle

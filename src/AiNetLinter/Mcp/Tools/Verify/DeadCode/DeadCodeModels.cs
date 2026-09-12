@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace AiNetLinter.Mcp.Tools.DeadCode;
+namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 
 /// <summary>
 /// Filter fuer Deklarations-Sichtbarkeit bei find_dead_code.

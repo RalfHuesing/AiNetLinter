@@ -3,7 +3,7 @@
 using AiNetLinter.Mcp.Tools.FileStructure;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Tools.DeadCode;
+namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 
 /// <summary>
 /// Hilfsfunktionen fuer Filter- und Formatierungs-Logik von Symbolen bei find_dead_code.

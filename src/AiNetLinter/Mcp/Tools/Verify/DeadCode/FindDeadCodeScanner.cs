@@ -15,7 +15,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.FindSymbols;
 
-namespace AiNetLinter.Mcp.Tools.DeadCode;
+namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 
 /// <summary>
 /// Statische Scan-Pipeline fuer das Auffinden von unreferenziertem/totem Code in einer Roslyn-Solution.

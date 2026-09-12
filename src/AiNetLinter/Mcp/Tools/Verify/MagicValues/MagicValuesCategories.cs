@@ -1,6 +1,6 @@
 #nullable enable
 
-namespace AiNetLinter.Mcp.Tools.MagicValues;
+namespace AiNetLinter.Mcp.Tools.Verify.MagicValues;
 
 /// <summary>
 /// Fachliche Kategorien fuer <c>find_magic_values</c>-Funde. Stabile, in JSON-RPC-Aufrufen

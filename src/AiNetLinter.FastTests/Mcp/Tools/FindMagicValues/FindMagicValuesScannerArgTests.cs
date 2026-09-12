@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AiNetLinter.Mcp.Tools.MagicValues;
+using AiNetLinter.Mcp.Tools.Verify.MagicValues;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;

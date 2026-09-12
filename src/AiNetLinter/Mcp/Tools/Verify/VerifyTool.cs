@@ -9,8 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.Baseline;
 using AiNetLinter.Core.Git;
-using AiNetLinter.Mcp.Tools.DeadCode;
-using AiNetLinter.Mcp.Tools.MagicValues;
+using AiNetLinter.Mcp.Tools.Verify.DeadCode;
+using AiNetLinter.Mcp.Tools.Verify.MagicValues;
 using AiNetLinter.Models;
 using AiNetLinter.Output;
 using ModelContextProtocol.Protocol;
@@ -110,13 +110,7 @@ internal static class VerifyScopeProjector
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
                 .ToList();
-            if (HasConservativeScopeExpansion(changedPaths, solution, root)) return new(
-                new VerifyScopeProjection(VerifyScope.Changes, VerifyScope.Solution, ["solution"], []),
-                null,
-                null,
-                null,
-                null,
-                []);
+            if (HasConservativeScopeExpansion(changedPaths, solution, root)) return FullSolution();
 
             var sourceDocuments = solution.Projects
                 .SelectMany(project => project.Documents)
@@ -129,13 +123,7 @@ internal static class VerifyScopeProjector
                 .Where(path => !SourceFileCatalog.IsGeneratedPath(path))
                 .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
                 .ToList();
-            if (changedSourcePaths.Any(path => !sourceDocuments.Contains(path))) return new(
-                new VerifyScopeProjection(VerifyScope.Changes, VerifyScope.Solution, ["solution"], []),
-                null,
-                null,
-                null,
-                null,
-                []);
+            if (changedSourcePaths.Any(path => !sourceDocuments.Contains(path))) return FullSolution();
 
             var changed = changedSourcePaths;
             if (changed.Count == 0) return new(
@@ -168,6 +156,15 @@ internal static class VerifyScopeProjector
             null,
             VerifyDecisionReason.ChangeContextIndeterminate,
             recovery,
+            []);
+
+    private static VerifyScopeResolution FullSolution() =>
+        new(
+            new VerifyScopeProjection(VerifyScope.Changes, VerifyScope.Solution, ["solution"], []),
+            null,
+            null,
+            null,
+            null,
             []);
 
     private static IEnumerable<string> SplitPaths(string? value) =>

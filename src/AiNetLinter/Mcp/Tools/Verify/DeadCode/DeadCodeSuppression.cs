@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace AiNetLinter.Mcp.Tools.DeadCode;
+namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 
 /// <summary>
 /// Erkennt symbolgenaue Suppressions für bewusst indirekt verwendeten Code.

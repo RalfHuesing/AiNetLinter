@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using AiNetLinter.Output;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Tools.DeadCode;
+namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 
 /// <summary>
 /// Extrahiert Compiler- und Analyzer-Diagnosen (CS0169, CS0414, IDE0051, IDE0052) fuer ungenutzte private Member und Felder.

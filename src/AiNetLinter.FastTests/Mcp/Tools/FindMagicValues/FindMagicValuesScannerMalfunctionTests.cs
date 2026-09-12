@@ -3,7 +3,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using AiNetLinter.FastTests.Fixtures;
-using AiNetLinter.Mcp.Tools.MagicValues;
+using AiNetLinter.Mcp.Tools.Verify.MagicValues;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;

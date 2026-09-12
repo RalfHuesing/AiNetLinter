@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace AiNetLinter.Mcp.Tools.MagicValues;
+namespace AiNetLinter.Mcp.Tools.Verify.MagicValues;
 
 /// <summary>
 /// Parameter-Bundel fuer <see cref="MagicValueSyntaxWalker"/>. Fasst die acht Walker-Felder

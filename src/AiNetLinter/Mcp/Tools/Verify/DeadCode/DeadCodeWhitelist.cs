@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Tools.DeadCode;
+namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 
 /// <summary>
 /// Beherbergt Whitelist-Pruefungen fuer Symbole, die von find_dead_code grundsaetzlich nicht als Dead Code gemeldet werden.

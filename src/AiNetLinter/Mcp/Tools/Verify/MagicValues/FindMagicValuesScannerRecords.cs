@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.Mcp.Tools.MagicValues;
+namespace AiNetLinter.Mcp.Tools.Verify.MagicValues;
 
 internal enum MagicValueValueType
 {

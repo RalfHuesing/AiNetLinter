@@ -3,7 +3,7 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using AiNetLinter.Mcp.Tools.DeadCode;
+using AiNetLinter.Mcp.Tools.Verify.DeadCode;
 using AiNetLinter.TestKit;
 using Xunit;
 

@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace AiNetLinter.Mcp.Tools.MagicValues;
+namespace AiNetLinter.Mcp.Tools.Verify.MagicValues;
 
 /// <summary>
 /// Number-spezifische Heuristik-Sub-Routinen fuer <see cref="MagicValuesClassifier"/>:

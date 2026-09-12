@@ -2,7 +2,7 @@
 
 using System;
 using System.Threading.Tasks;
-using AiNetLinter.Mcp.Tools.MagicValues;
+using AiNetLinter.Mcp.Tools.Verify.MagicValues;
 using Xunit;
 
 namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;
