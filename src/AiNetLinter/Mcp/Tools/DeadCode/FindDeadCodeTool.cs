@@ -71,100 +71,39 @@ internal static class FindDeadCodeTool
                 hint: "Einmal erneut versuchen.");
         }
 
-        var reportText = FormatTextReport(result, args);
+        var reportText = FormatTextReport(result);
         var finalText = reportText;
 
         return McpToolResults.Text(finalText);
     }
 
-    private static string FormatTextReport(DeadCodeScanResult result, FindDeadCodeArgs args)
+    private static string FormatTextReport(DeadCodeScanResult result)
     {
-        var sb = new StringBuilder();
-        sb.AppendLine("# Dead-Code-Analyse: Kandidaten (Heuristik-Audit)");
-        sb.AppendLine("Ergebnisart: candidate; deletionClaim=false. Statische Referenzsuche beweist keine Loeschbarkeit. Reflection, DI, Generatoren und dynamic koennen ausserhalb der Evidenz liegen.");
-        sb.AppendLine();
+        if (result.Summary.DocumentsInScope == 0) return "dead_code: no analyzable documents";
+        if (result.DeadSymbols.Count == 0) return "dead_code: 0 candidates";
 
-        AppendResultDetails(sb, result, args);
-        AppendSummary(sb, result, args);
+        var sb = new StringBuilder();
+        sb.Append($"dead_code: candidates={result.Summary.TotalDead}");
+        if (result.IsTruncated)
+        {
+            sb.Append($"; shown={result.DeadSymbols.Count}; truncated=maxResults");
+        }
+        sb.AppendLine();
+        AppendDeadSymbols(sb, result);
 
         return sb.ToString().TrimEnd();
     }
 
-    private static void AppendResultDetails(StringBuilder sb, DeadCodeScanResult result, FindDeadCodeArgs args)
-    {
-        if (result.Summary.DocumentsInScope == 0)
-        {
-            AppendEmptyScopeDetails(sb, args);
-            return;
-        }
-
-        if (result.DeadSymbols.Count == 0)
-        {
-            AppendNoDeadCodeDetails(sb, result.Summary.DocumentsInScope, args.Mode);
-            return;
-        }
-
-        AppendDeadSymbols(sb, result);
-    }
-
-    private static void AppendEmptyScopeDetails(StringBuilder sb, FindDeadCodeArgs args)
-    {
-        var scopeSuffix = string.IsNullOrWhiteSpace(args.ScopeFilter)
-            ? ""
-            : $" (Filter: '{args.ScopeFilter}')";
-        sb.AppendLine($"Keine Symbole im Scope gescannt{scopeSuffix}.");
-        sb.AppendLine("Der scopeFilter matcht keine Datei, oder der Scope besteht ausschliesslich aus Testprojekten (includeTests=false).");
-        sb.AppendLine("includeTests=true setzen oder den scopeFilter (Projekt-Name oder Pfad-Substring) anpassen.");
-    }
-
-    private static void AppendNoDeadCodeDetails(StringBuilder sb, int documentsInScope, DeadCodeMode mode)
-    {
-        if (mode == DeadCodeMode.Locals)
-        {
-            sb.AppendLine($"Alle {documentsInScope} Zieldokumente im Scope wurden auf ungenutzte Locals und Felder geprueft; keine Compiler-Diagnose gefunden.");
-        }
-        else
-        {
-            sb.AppendLine("Kein unreferenzierter Code im angegebenen Scope gefunden.");
-        }
-    }
-
     private static void AppendDeadSymbols(StringBuilder sb, DeadCodeScanResult result)
     {
-        sb.AppendLine($"## Kandidaten ({result.DeadSymbols.Count}{(result.IsTruncated ? " gezeigt" : "")})");
-        sb.AppendLine();
-
         foreach (var sym in result.DeadSymbols)
         {
-            sb.AppendLine($"- {sym.File}:{sym.Line}:{sym.Column} [{sym.Confidence.ToUpperInvariant()}] ({sym.Kind}, {sym.Accessibility}) - {sym.SymbolName} in '{sym.ContainerType}'");
-            sb.AppendLine($"  Grund: {sym.Reason}");
-            sb.AppendLine($"  Evidenzgrenze: {sym.EvidenceBoundary}");
-            sb.AppendLine("  Countercheck: Reflection, DI, Generatoren, dynamic und externe Consumer pruefen.");
+            sb.Append($"- {sym.File}:{sym.Line}:{sym.Column} [{sym.Confidence.ToUpperInvariant()}] {sym.Kind} {sym.Accessibility} {sym.SymbolName} in {sym.ContainerType}; {sym.Reason}");
             if (sym.LimitsApplies.Count > 0)
             {
-                sb.AppendLine($"  Limits: {string.Join(", ", sym.LimitsApplies)}");
+                sb.Append($"; limits={string.Join(",", sym.LimitsApplies)}");
             }
-        }
-    }
-
-    private static void AppendSummary(StringBuilder sb, DeadCodeScanResult result, FindDeadCodeArgs args)
-    {
-        sb.AppendLine();
-        sb.AppendLine("## Zusammenfassung");
-        sb.AppendLine($"- Zieldokumente im Scope: {result.Summary.DocumentsInScope}");
-        sb.AppendLine($"- Gescannt: {result.Summary.ScannedSymbols} Symbole");
-        sb.AppendLine($"- Kandidaten: {result.Summary.TotalDead} ({result.Summary.High} high, {result.Summary.Low} low)");
-        if (result.Summary.ByKind.Count > 0)
-        {
-            var kinds = string.Join(", ", result.Summary.ByKind.Select(kv => $"{kv.Key}: {kv.Value}"));
-            sb.AppendLine($"- Nach Art: {kinds}");
-        }
-        sb.AppendLine($"- Empfohlene Aktion: {result.RecommendedNextAction.Action} ({result.RecommendedNextAction.Reason})");
-
-        if (result.IsTruncated)
-        {
             sb.AppendLine();
-            sb.AppendLine($"[HINWEIS]: Ergebnis wurde auf {args.MaxResults} Eintraege gekappt — maxResults erhoehen oder scopeFilter verfeinern.");
         }
     }
 }

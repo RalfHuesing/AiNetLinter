@@ -12,6 +12,7 @@ using AiNetLinter.Mcp.Tools.FeatureContext;
 using AiNetLinter.Mcp.Tools.FileStructure;
 using AiNetLinter.Mcp.Tools.MetricsTree;
 using AiNetLinter.Mcp.Tools.TestContext;
+using AiNetLinter.Mcp.Wire;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -143,10 +144,10 @@ internal static partial class McpArgumentValidationFilter
                 var validationError = Validate(context);
                 if (validationError is not null)
                 {
-                    return ProjectFilterError(context, validationError);
+                    return McpToolResponsePipeline.Apply(ProjectFilterError(context, validationError));
                 }
                 var result = await next(context, cancellationToken).ConfigureAwait(false);
-                return result;
+                return McpToolResponsePipeline.Apply(result);
             }));
     }
 

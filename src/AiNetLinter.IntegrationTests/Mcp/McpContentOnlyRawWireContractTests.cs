@@ -34,6 +34,29 @@ public sealed class McpContentOnlyRawWireContractTests
         AssertSmallerThanFormerDualPayload(responses);
     }
 
+    [Fact]
+    public async Task ToolResponses_NormalizeLineEndingsOnTheRawWire()
+    {
+        using var fixture = new SymbolGraphMiniFixtureWorkspace();
+        var frames = new[]
+        {
+            "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{" +
+                "\"protocolVersion\":\"2024-11-05\",\"capabilities\":{}," +
+                "\"clientInfo\":{\"name\":\"LineEndingContract\",\"version\":\"1.0\"}}}",
+            "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}",
+            ToolCall(2, "get_server_health", new { }),
+        };
+
+        var lines = await McpRawWireTestHarness.RunAndCollectStdoutAsync(
+            fixture.SolutionPath,
+            frames,
+            new McpRawWireRunOptions { InterFrameDelay = TimeSpan.FromSeconds(2) });
+        var response = ReadResponse(lines, 2, "get_server_health");
+        var text = response.Result.GetProperty("content")[0].GetProperty("text").GetString();
+
+        Assert.DoesNotContain("\r", text, StringComparison.Ordinal);
+    }
+
     private static string[] BuildFrames()
     {
         var frames = new List<string>

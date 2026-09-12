@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using AiNetLinter.Mcp;
 using AiNetLinter.Mcp.Projects;
+using AiNetLinter.Mcp.Wire;
 using AiNetLinter.Output;
 using AiNetLinter.TestKit;
 using ModelContextProtocol.Protocol;
@@ -22,6 +23,19 @@ public sealed class McpToolResultsContentTests
             .Where(method => method.Name == nameof(McpToolResults.Text));
 
         Assert.DoesNotContain(textOverloads, method => method.IsGenericMethodDefinition);
+    }
+
+    [Fact]
+    public void ResponsePipeline_NormalizesAllLineEndingVariants()
+    {
+        var result = new CallToolResult
+        {
+            Content = [new TextContentBlock { Text = "first\r\nsecond\rthird\nfourth" }],
+        };
+
+        var filtered = McpToolResponsePipeline.Apply(result);
+
+        Assert.Equal("first\nsecond\nthird\nfourth", TextOf(filtered));
     }
 
     [Fact]

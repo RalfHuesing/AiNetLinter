@@ -32,7 +32,7 @@ public sealed class FindDeadCodeToolTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_LoadedSolution_ReturnsFormattedContent()
+    public async Task ExecuteAsync_LoadedSolution_ReturnsCompactCandidateSummary()
     {
         var state = _fixture.CreateServer();
 
@@ -47,10 +47,9 @@ public sealed class FindDeadCodeToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("Dead-Code-Analyse", textContent.Text);
-        Assert.Contains("Zusammenfassung", textContent.Text);
-        Assert.Contains("Kandidaten", textContent.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("automatisch löschen", textContent.Text, StringComparison.OrdinalIgnoreCase);
+        Assert.StartsWith("dead_code: candidates=", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Zusammenfassung", textContent.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Countercheck", textContent.Text, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -70,18 +69,11 @@ public sealed class FindDeadCodeToolTests
 
         Assert.NotEqual(true, result.IsError);
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        // Leerer Scope ist kein vollstaendiges Analyseergebnis: expliziter Hinweis statt
-        // irrefuehrendem "kein toter Code" plus Sufficiency-Hint.
-        Assert.Contains("Keine Symbole im Scope gescannt", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("includeTests", textContent.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain(
-            "vollstaendig fuer den angefragten Scope",
-            textContent.Text,
-            StringComparison.Ordinal);
+        Assert.Equal("dead_code: no analyzable documents", textContent.Text);
     }
 
     [Fact]
-    public async Task ExecuteAsync_LocalsModeWithoutDiagnostics_ReportsCompletedDocumentScan()
+    public async Task ExecuteAsync_LocalsModeWithoutDiagnostics_ReportsNoCandidates()
     {
         using var context = new McpInMemoryTestContext(McpInMemoryTestContext.CreateScenario(
             new ProjectSpec("CleanProject", [("Clean.cs", """
@@ -96,8 +88,6 @@ public sealed class FindDeadCodeToolTests
             state, new FindDeadCodeToolArgs(Mode: "locals"), CancellationToken.None);
 
         var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content));
-        Assert.Contains("Alle 1 Zieldokumente", textContent.Text, StringComparison.Ordinal);
-        Assert.Contains("keine Compiler-Diagnose", textContent.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("Keine Symbole im Scope gescannt", textContent.Text, StringComparison.Ordinal);
+        Assert.Equal("dead_code: 0 candidates", textContent.Text);
     }
 }
