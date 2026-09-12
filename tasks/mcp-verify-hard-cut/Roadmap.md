@@ -9,7 +9,7 @@
 - [X] Abschlussgate – Build, Non-Stress-Tests und Diff-Prüfung
 - [X] Folgeaudit 01 – feste UTF-8-Budgetprojektion mit vollständigen Evidenzeinheiten
 - [X] Folgeaudit 02 – Advisory-Scans für Mehrdatei-Änderungen bündeln
-- [ ] Folgeaudit 03 – Fehlervertrag und Legacy-Namensreste bereinigen
+- [X] Folgeaudit 03 – Fehlervertrag und Legacy-Namensreste bereinigen
 - [ ] Folgeaudit – Scope erneut prüfen und Abschlussgate ausführen
 
 ## Durchführungsprotokoll
@@ -73,6 +73,12 @@
 - Advisory-Scanner verarbeiten die gesamte geänderte Dateimenge jeweils einmal statt pro Datei erneut zu traversieren.
 - Mehrdatei-Regression sichert aggregierte Counts, deterministische Reihenfolge und Gate-Isolation.
 - Commit: `ab0b342c5d5488449600e88c937782364d3dc622`.
+
+### Folgeaudit 03
+
+- Fehlende, ungültige und nicht vorhandene `targetPath`-Ziele liefern vor dem Lease Contract-v2-Fehler; ein Folgeaufruf bleibt nutzbar.
+- Interne Scanner tragen Verify-/Advisory-Namen; frühere Toolnamen erscheinen nur noch in Negativinventaren.
+- Commit: ausstehend.
 
 ### Vorbereitung
 

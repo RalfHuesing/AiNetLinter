@@ -17,7 +17,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace AiNetLinter.Mcp.Tools.Verify;
 
-internal static partial class SafeguardScanner
+internal static partial class VerifyGateScanner
 {
     /// <summary>Lookup-Tabelle pro bekannter Regel-ID; vermeidet <c>MaxSwitchArms</c>-Verstoss
     /// und ermoeglicht das Hinzufuegen weiterer Regeln ohne Steuerungslogik-Aenderung.
@@ -85,7 +85,7 @@ internal static partial class SafeguardScanner
     /// (<c>SupportsCompilation == false</c> — legitimer, erwartbarer Fall, z. B. echtes
     /// Nicht-C#-Projekt). Fuer kompilierbare Projekte wird <see cref="GetCompilationWithRetryAsync"/>
     /// aufgerufen, die transiente Fehlschlaege per Retry abfaengt und einen dauerhaften Fehlschlag
-    /// als <see cref="SafeguardCompilationException"/> wirft (von <see cref="ComputeScoreAsync"/>
+    /// als <see cref="VerifyGateCompilationException"/> wirft (von <see cref="ComputeScoreAsync"/>
     /// als Malfunction behandelt).
     /// </summary>
     private static Task<Compilation?> TryGetCompilationAsync(Project project, CancellationToken ct)
@@ -101,7 +101,7 @@ internal static partial class SafeguardScanner
     /// Compile-Problemen zu unterscheiden. <paramref name="getCompilation"/> statt direkt
     /// <c>Project.GetCompilationAsync</c>, damit die Retry-/Backoff-Logik isoliert von einer echten
     /// Roslyn-<c>Project</c>-Instanz testbar ist (Pattern konsistent mit <see cref="BuildScoreResult"/>).
-    /// Wirft nach dem letzten erfolglosen Versuch eine <see cref="SafeguardCompilationException"/>
+    /// Wirft nach dem letzten erfolglosen Versuch eine <see cref="VerifyGateCompilationException"/>
     /// statt still <c>null</c> zurueckzugeben — ein kompilierbares Projekt, das dauerhaft nicht
     /// kompiliert, darf nicht lautlos aus der Klassen-Aggregation fallen (siehe Determinismus-Hinweis
     /// an <see cref="TryGetCompilationAsync"/>).
@@ -131,7 +131,7 @@ internal static partial class SafeguardScanner
             }
         }
 
-        throw new SafeguardCompilationException(
+        throw new VerifyGateCompilationException(
             $"Compilation fuer Projekt '{projectName}' schlug nach {CompilationRetryAttempts} " +
             "Versuchen fehl (SupportsCompilation=true, aber GetCompilationAsync lieferte wiederholt " +
             "keine Compilation).",

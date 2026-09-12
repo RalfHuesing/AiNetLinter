@@ -10,12 +10,12 @@ using Microsoft.CodeAnalysis;
 
 namespace AiNetLinter.Mcp.Tools.Verify;
 
-// Parameter- und Ergebnis-Records sowie die Malfunction-Exception fuer SafeguardScanner — aus der
+// Parameter- und Ergebnis-Records sowie die Malfunction-Exception fuer VerifyGateScanner — aus der
 // Scanner-Datei ausgelagert, damit die eigentliche Score-Berechnungslogik unter dem
 // MaxLineCount-Limit bleibt. Reine Datentraeger ohne eigenes Verhalten.
 
-/// <summary>Parameter-Record fuer <see cref="SafeguardScanner.BuildScoreResult"/> — Pattern
-/// konsistent mit <see cref="SafeguardScannerParameters"/>. Records sind vom
+/// <summary>Parameter-Record fuer <see cref="VerifyGateScanner.BuildScoreResult"/> — Pattern
+/// konsistent mit <see cref="VerifyGateScannerParameters"/>. Records sind vom
 /// <c>MaxMethodParameterCount: 4</c>-Limit ausgenommen.</summary>
 internal sealed record BuildScoreResultParameters(
     IReadOnlyCollection<RuleViolation> Violations,
@@ -30,7 +30,7 @@ internal sealed record BuildScoreResultParameters(
     string? StatusCause = null,
     int ExcludedDocumentCount = 0);
 
-internal sealed record BuildSafeguardSummaryParameters(
+internal sealed record BuildVerifyGateSummaryParameters(
     double Score,
     double Threshold,
     bool Passed,
@@ -43,33 +43,33 @@ internal sealed record BuildSafeguardSummaryParameters(
     int ExcludedDocumentCount = 0);
 
 /// <summary>
-/// Parameter-Record fuer <see cref="SafeguardScanner.ComputeScoreAsync"/>. Kapselt 7
+/// Parameter-Record fuer <see cref="VerifyGateScanner.ComputeScoreAsync"/>. Kapselt 7
 /// Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c>
 /// (siehe Linter-Regel <c>MaxMethodParameterCount</c>) eingehalten wird. <see cref="MinScoreThreshold"/> und
-/// <see cref="MaxRemediationEntries"/> haben Defaults aus <see cref="SafeguardScanner.DefaultMinScoreThreshold"/>
-/// / <see cref="SafeguardScanner.DefaultMaxRemediationEntries"/>.
+/// <see cref="MaxRemediationEntries"/> haben Defaults aus <see cref="VerifyGateScanner.DefaultMinScoreThreshold"/>
+/// / <see cref="VerifyGateScanner.DefaultMaxRemediationEntries"/>.
 /// </summary>
-internal sealed record SafeguardScannerParameters(
+internal sealed record VerifyGateScannerParameters(
     Solution Solution,
     ILinterEngineConfig Config,
     ILintConsole Console,
     string? ScopeFilter,
     CancellationToken CancellationToken,
-    double MinScoreThreshold = SafeguardScanner.DefaultMinScoreThreshold,
-    int MaxRemediationEntries = SafeguardScanner.DefaultMaxRemediationEntries,
+    double MinScoreThreshold = VerifyGateScanner.DefaultMinScoreThreshold,
+    int MaxRemediationEntries = VerifyGateScanner.DefaultMaxRemediationEntries,
     IReadOnlySet<string>? ScopeFiles = null);
 
 /// <summary>
-/// Ergebnis-Container fuer <see cref="SafeguardScanner.ComputeScoreAsync"/>. <see cref="IsMalfunction"/>
+/// Ergebnis-Container fuer <see cref="VerifyGateScanner.ComputeScoreAsync"/>. <see cref="IsMalfunction"/>
 /// unterscheidet eine echte LinterEngine-Malfunction (<see cref="Context"/> non-null) von einem
 /// normal berechneten Score (selbst bei 0 Verstoessen kein Malfunction).
 /// </summary>
-internal sealed record SafeguardScoreResult(
+internal sealed record VerifyGateScoreResult(
     ScoreResult? Score,
     bool IsMalfunction,
     string? Context = null);
 
-internal sealed record SafeguardScopeAssessment(
+internal sealed record VerifyGateScopeAssessment(
     string Scope,
     string Completeness,
     string Status,
@@ -124,9 +124,9 @@ internal sealed record RemediationHint(
     string DocumentationHint);
 
 /// <summary>
-/// Interner Daten-Container fuer die von <c>SafeguardScanner.EnumerateConcreteClassesAsync</c>
-/// gesammelten Klassen-Metriken. Wird intern zwischen Scanner und <see cref="SafeguardScanner.BuildScoreResult"/>
-/// weitergereicht; bewusst kein <c>INamedTypeSymbol</c>, damit <see cref="SafeguardScanner.BuildScoreResult"/>
+/// Interner Daten-Container fuer die von <c>VerifyGateScanner.EnumerateConcreteClassesAsync</c>
+/// gesammelten Klassen-Metriken. Wird intern zwischen Scanner und <see cref="VerifyGateScanner.BuildScoreResult"/>
+/// weitergereicht; bewusst kein <c>INamedTypeSymbol</c>, damit <see cref="VerifyGateScanner.BuildScoreResult"/>
 /// ohne Roslyn-Symbols testbar bleibt.
 /// </summary>
 internal sealed record ScannedClass(
@@ -137,16 +137,16 @@ internal sealed record ScannedClass(
 
 /// <summary>
 /// Wird geworfen, wenn ein grundsaetzlich kompilierbares Projekt (<c>Project.SupportsCompilation ==
-/// true</c>) auch nach <see cref="SafeguardScanner.CompilationRetryAttempts"/> Versuchen keine
-/// <see cref="Compilation"/> liefert. <see cref="SafeguardScanner.ComputeScoreAsync"/> faengt diese
+/// true</c>) auch nach <see cref="VerifyGateScanner.CompilationRetryAttempts"/> Versuchen keine
+/// <see cref="Compilation"/> liefert. <see cref="VerifyGateScanner.ComputeScoreAsync"/> faengt diese
 /// Exception im selben <c>try/catch</c> wie LinterEngine-Malfunctions ab und meldet
-/// <see cref="SafeguardScoreResult.IsMalfunction"/>=true — lieber ehrlich "konnte nicht zuverlaessig
+/// <see cref="VerifyGateScoreResult.IsMalfunction"/>=true — lieber ehrlich "konnte nicht zuverlaessig
 /// scoren" melden als einen nicht-deterministischen Score auf einer unvollstaendigen, zufaellig
 /// zusammengesetzten Teilmenge der Klassen zu liefern (Determinismus-Vertrag der Klasse).
 /// </summary>
-internal sealed class SafeguardCompilationException : Exception
+internal sealed class VerifyGateCompilationException : Exception
 {
-    public SafeguardCompilationException(string message, Exception? innerException)
+    public VerifyGateCompilationException(string message, Exception? innerException)
         : base(message, innerException)
     {
     }

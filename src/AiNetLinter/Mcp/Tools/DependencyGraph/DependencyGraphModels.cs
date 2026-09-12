@@ -10,7 +10,7 @@ namespace AiNetLinter.Mcp.Tools.DependencyGraph;
 
 // Parameter- und Ergebnis-Records fuer DependencyGraphTool/DependencyGraphScanner — aus den
 // beiden Verhaltens-Dateien ausgelagert, damit deren AIContextFootprint/MaxLineCount nicht durch
-// reine Datentraeger aufgeblaeht wird (Pattern konsistent mit SafeguardModels.cs).
+// reine Datentraeger aufgeblaeht wird (Pattern konsistent mit VerifyGateModels.cs).
 
 /// <summary>
 /// Parameter-Record fuer <see cref="DependencyGraphTool.ExecuteAsync"/>. Kapselt 5

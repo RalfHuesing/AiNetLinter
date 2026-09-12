@@ -19,7 +19,7 @@ namespace AiNetLinter.Mcp.Registration;
 /// <c>get_file_skeleton</c>, <c>get_index_scope</c>, <c>get_hotspots</c>) an der von <see cref="McpServerOptionsFactory"/>
 /// aufgebauten Tool-Collection. Aus <see cref="McpServerOptionsFactory"/> ausgelagert, damit dessen
 /// eigener <c>AIContextFootprint</c> nicht mit jedem neu registrierten Tool waechst.
-/// <c>get_violations</c>, <c>search_pattern</c> und <c>metrics_tree</c> sind in eine
+/// <c>kontextuelle Violation-Ausgabe</c>, <c>search_pattern</c> und <c>metrics_tree</c> sind in eine
 /// eigene <see cref="AnalysisToolRegistrations"/>-Klasse ausgelagert, weil ihr <c>LinterEngine</c>-
 /// bzw. Roslyn-Syntax-Pull-in den Footprint dieser Klasse ueber das 2500-Limit getrieben hat/haette.
 /// Alle Lambdas sind zielgebunden: <c>targetPath</c> ist Pflicht und

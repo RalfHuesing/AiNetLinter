@@ -14,7 +14,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.PatternDetect;
 /// <summary>
 /// Tool-Layer-Tests fuer <see cref="PatternDetectTool"/>: Validierung (unbekannte pattern-IDs,
 /// leerer Filter = alle Patterns), IsError-Policy (SOLUTION_NOT_LOADED, recoverable
-/// INVALID_ARGUMENT) sowie fachlicher Content-Ausgabe. Pattern 1:1 von <c>GetViolationsToolTests</c>
+/// INVALID_ARGUMENT) sowie fachlicher Content-Ausgabe. Pattern 1:1 von <c>ViolationAnalysisToolTests</c>
 /// uebernommen.
 /// </summary>
 [Trait("Category", "Component")]

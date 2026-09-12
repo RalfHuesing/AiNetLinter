@@ -8,29 +8,29 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.Verify.MagicValues;
 using Microsoft.CodeAnalysis;
 
-namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;
+namespace AiNetLinter.FastTests.Mcp.Tools.MagicValueAdvisory;
 
 /// <summary>
-/// Geteilte Helpers fuer <see cref="FindMagicValuesScannerTests"/> und
-/// <see cref="FindMagicValuesScannerHeuristicTests"/> â€” einheitliches
+/// Geteilte Helpers fuer <see cref="MagicValueAdvisoryScannerTests"/> und
+/// <see cref="MagicValueAdvisoryScannerHeuristicTests"/> â€” einheitliches
 /// <c>RunAsync</c>-Setup fuer die komponentenweise Scanner-Verifikation, ausgelagert in
 /// eine eigene Datei, damit beide Test-Klassen unter dem <c>MaxLineCount: 500</c>-Limit
 /// bleiben. <c>internal static</c>, weil Test-Klassen selbst projekt-intern sind.
 /// </summary>
-internal static class FindMagicValuesTestHelpers
+internal static class MagicValueAdvisoryTestHelpers
 {
     // ainetlinter-disable MaxMethodParameterCount â€” Test-Helper mit bequemer positional-API
     // (je ein optionales Argument pro Filter); Aufrufer uebergeben typischerweise 1-2 Filter,
     // die uebrigen Defaults sind unkritisch. Direkter Pfad ohne ScanAsyncParams-Record wuerde
     // die Aufrufstellen der Tests kuenstlich aufblahen (alle Defaults muessten benannt werden).
-    internal static async Task<FindMagicValuesResult> RunAsync(
+    internal static async Task<MagicValueAdvisoryResult> RunAsync(
         (string FileName, string Source) file,
         MagicValueValueType? valueType = null,
         MagicValueCategory? category = null,
         int minOccurrences = 1,
         int maxResults = 50,
         HashSet<int>? ignoreNumbers = null,
-        FindMagicValuesRunOptions? options = null)
+        MagicValueAdvisoryRunOptions? options = null)
     {
         using var testSolution = CreateSolution(file);
         return await RunAsync(testSolution.Solution, new ScanAsyncParams(
@@ -43,14 +43,14 @@ internal static class FindMagicValuesTestHelpers
     }
 
     // ainetlinter-disable MaxMethodParameterCount â€” siehe oben (Aufrufstellen-Komfort).
-    internal static Task<FindMagicValuesResult> RunAsync(
+    internal static Task<MagicValueAdvisoryResult> RunAsync(
         Solution solution,
         MagicValueValueType? valueType = null,
         MagicValueCategory? category = null,
         int minOccurrences = 1,
         int maxResults = 50,
         HashSet<int>? ignoreNumbers = null,
-        FindMagicValuesRunOptions? options = null)
+        MagicValueAdvisoryRunOptions? options = null)
     {
         return RunAsync(solution, new ScanAsyncParams(
             ValueType: valueType,
@@ -61,12 +61,12 @@ internal static class FindMagicValuesTestHelpers
             Options: options));
     }
 
-    internal static async Task<FindMagicValuesResult> RunAsync(
+    internal static async Task<MagicValueAdvisoryResult> RunAsync(
         Solution solution,
         ScanAsyncParams p)
     {
-        var options = p.Options ?? new FindMagicValuesRunOptions();
-        return await FindMagicValuesScanner.ScanAsync(new FindMagicValuesScannerParameters(
+        var options = p.Options ?? new MagicValueAdvisoryRunOptions();
+        return await MagicValueAdvisoryScanner.ScanAsync(new MagicValueAdvisoryScannerParameters(
             Solution: solution,
             ScopeFilter: p.ScopeFilter,
             ValueType: p.ValueType,
@@ -82,16 +82,16 @@ internal static class FindMagicValuesTestHelpers
 
     internal static RoslynTestSolution CreateSolution(params (string fileName, string content)[] files) =>
         RoslynTestSolutionFactory.CreateSolution(
-            @"C:\ainetlinter-virtual\FindMagicValuesScannerTests.slnx",
+            @"C:\ainetlinter-virtual\MagicValueAdvisoryScannerTests.slnx",
             new ProjectSpec("TestProject", files, VirtualProjectDirectory: "."));
 }
 
-/// <summary>Bool-Parameter-Object fuer <see cref="FindMagicValuesTestHelpers.RunAsync"/> â€”
+/// <summary>Bool-Parameter-Object fuer <see cref="MagicValueAdvisoryTestHelpers.RunAsync"/> â€”
 /// buendelt die drei Bool-Flags (includeSuppressed/includeTests/changedOnly) in einem
 /// Record, damit die Helper-Methoden das <c>MaxBoolParameterCount: 1</c>-Limit (siehe
 /// Linter-Regel <c>MaxBoolParameterCount</c>) einhalten. <see langword="null"/> und <c>default</c> bedeuten
 /// "alle drei Flags aus".</summary>
-internal sealed record FindMagicValuesRunOptions(
+internal sealed record MagicValueAdvisoryRunOptions(
     bool IncludeSuppressed = false,
     bool IncludeTests = false,
     bool ChangedOnly = false)
@@ -101,20 +101,20 @@ internal sealed record FindMagicValuesRunOptions(
     /// Aufrufer-kompatible Uebergaenge, ohne den neuen Stil zu erzwingen â€” die bestehenden
     /// Tests koennen weiterhin <c>includeSuppressed: true</c> schreiben, der Wert landet
     /// automatisch in <see cref="IncludeSuppressed"/>.</summary>
-    public static implicit operator FindMagicValuesRunOptions(bool includeSuppressed) =>
+    public static implicit operator MagicValueAdvisoryRunOptions(bool includeSuppressed) =>
         new(IncludeSuppressed: includeSuppressed);
 }
 
-/// <summary>Hilfs-Record fuer <see cref="FindMagicValuesTestHelpers.RunAsync(Solution, ScanAsyncParams)"/>
+/// <summary>Hilfs-Record fuer <see cref="MagicValueAdvisoryTestHelpers.RunAsync(Solution, ScanAsyncParams)"/>
 /// â€” buendelt die Konfigurations-Felder in einem Parameter-Object, damit die Methoden-Signatur
 /// das <c>MaxMethodParameterCount: 4</c>-Limit (siehe Linter-Regel <c>MaxMethodParameterCount</c>) einhaelt. Bewusst
 /// auf Top-Level statt nested, weil <c>BanPublicNestedTypes</c> auch <c>internal</c> nested Typen
 /// verbietet (Ausnahme nur fuer <c>private</c>) â€” und der Record <c>internal</c> sein muss, damit
 /// die Test-Klassen ihn ueber ihre <c>RunAsync(... ScanAsyncParams)</c>-Aufrufe konstruieren koennen.
 /// <para><c>Options</c> ersetzt die drei bool-Felder am
-/// <see cref="FindMagicValuesTestHelpers.RunAsync"/>-Helper. Aufrufer koennen weiterhin
+/// <see cref="MagicValueAdvisoryTestHelpers.RunAsync"/>-Helper. Aufrufer koennen weiterhin
 /// <c>includeSuppressed: true</c> schreiben â€” der Wert wird via impliziter Konvertierung in
-/// <see cref="FindMagicValuesRunOptions"/> ueberfuehrt.</para></summary>
+/// <see cref="MagicValueAdvisoryRunOptions"/> ueberfuehrt.</para></summary>
 internal sealed record ScanAsyncParams(
     string? ScopeFilter = null,
     MagicValueValueType? ValueType = null,
@@ -122,5 +122,5 @@ internal sealed record ScanAsyncParams(
     int MinOccurrences = 1,
     int MaxResults = 50,
     HashSet<int>? IgnoreNumbers = null,
-    FindMagicValuesRunOptions? Options = null);
+    MagicValueAdvisoryRunOptions? Options = null);
 

@@ -8,7 +8,7 @@ using Microsoft.CodeAnalysis;
 namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 
 /// <summary>
-/// Beherbergt Whitelist-Pruefungen fuer Symbole, die von find_dead_code grundsaetzlich nicht als Dead Code gemeldet werden.
+/// Beherbergt Whitelist-Pruefungen fuer Symbole, die von Dead-Code-Hinweisprojektion grundsaetzlich nicht als Dead Code gemeldet werden.
 /// </summary>
 internal static class DeadCodeWhitelist
 {

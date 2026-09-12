@@ -33,7 +33,7 @@ internal sealed record MagicValueClassifierOptions(
 
 /// <summary>
 /// Reine, deterministische Heuristik-Funktion: bestimmt, ob ein Literal ein "Magic Value" im
-/// Sinn von <c>find_magic_values</c> ist. Bewusst konservativ (mehr False Negatives als False
+/// Sinn von <c>Magic-Value-Hinweisprojektion</c> ist. Bewusst konservativ (mehr False Negatives als False
 /// Positives). Syntaktische Pruefungen dominieren; ein
 /// optionaler <see cref="SemanticModel"/> wird nur fuer Aufruf-Argument-Kontext (z. B.
 /// <c>Thread.Sleep(5000)</c> → <c>millisecondsTimeout</c>-Parameter) herangezogen, sonst reiner

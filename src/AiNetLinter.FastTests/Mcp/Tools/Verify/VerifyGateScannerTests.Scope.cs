@@ -17,12 +17,12 @@ public sealed partial class VerifyGateScannerTests
     public async Task ComputeScoreAsync_ConfiguredGeneratedFileExclusion_DoesNotPoisonSolutionScore()
     {
         using var testSolution = RoslynTestSolutionFactory.CreateSolution(
-            @"C:\ainetlinter-virtual\SafeguardGeneratedFileTests.slnx",
+            @"C:\ainetlinter-virtual\VerifyGateGeneratedFileTests.slnx",
             new ProjectSpec("InScope", [
                 ("Generated.designer.cs", "namespace Generated; public sealed class GeneratedType { }"),
                 ("Clean.cs", "namespace InScope; public sealed class Clean { public int Value() => 1; }") ]));
 
-        var result = await SafeguardScanner.ComputeScoreAsync(new SafeguardScannerParameters(
+        var result = await VerifyGateScanner.ComputeScoreAsync(new VerifyGateScannerParameters(
             Solution: testSolution.Solution,
             Config: TestHelper.CreateDefaultConfig() with
             {
@@ -49,13 +49,13 @@ public sealed partial class VerifyGateScannerTests
     public async Task ComputeScoreAsync_ScopeFilter_FiltersViolationsAndClassMetricsTogether()
     {
         using var testSolution = RoslynTestSolutionFactory.CreateSolution(
-            @"C:\ainetlinter-virtual\SafeguardScopeTests.slnx",
+            @"C:\ainetlinter-virtual\VerifyGateScopeTests.slnx",
             new ProjectSpec("InScope", [
                 ("InScope.cs", "namespace InScope; public sealed class Clean { public int Value() => 1; }")]),
             new ProjectSpec("OutsideScope", [
                 ("Outside.cs", "namespace OutsideScope; public class Dirty { public int Value() => 1; }")]));
 
-        var result = await SafeguardScanner.ComputeScoreAsync(new SafeguardScannerParameters(
+        var result = await VerifyGateScanner.ComputeScoreAsync(new VerifyGateScannerParameters(
             Solution: testSolution.Solution,
             Config: CreateConfig(),
             Console: NullConsole.Instance,
@@ -80,7 +80,7 @@ public sealed partial class VerifyGateScannerTests
     {
         using var testSolution = CreateSolution(("Only.cs", "namespace Only; public sealed class Clean { }"));
 
-        var result = await SafeguardScanner.ComputeScoreAsync(new SafeguardScannerParameters(
+        var result = await VerifyGateScanner.ComputeScoreAsync(new VerifyGateScannerParameters(
             Solution: testSolution.Solution,
             Config: CreateConfig(),
             Console: NullConsole.Instance,

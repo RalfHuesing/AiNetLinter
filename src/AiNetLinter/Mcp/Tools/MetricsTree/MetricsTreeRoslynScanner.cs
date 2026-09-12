@@ -19,7 +19,7 @@ namespace AiNetLinter.Mcp.Tools.MetricsTree;
 
 /// <summary>
 /// Gebuendelte, bereits validierte Parameter fuer <see cref="MetricsTreeRoslynScanner.BuildTreeAsync"/>
-/// (analog <see cref="GetViolationsScannerParameters"/>, wegen <c>MaxMethodParameterCount: 4</c>).
+/// (analog <see cref="ViolationCollectorParameters"/>, wegen <c>MaxMethodParameterCount: 4</c>).
 /// </summary>
 internal sealed record MetricsTreeRoslynScanParameters(
     Solution Solution, ILinterEngineConfig Config, ILintConsole Console, CancellationToken CancellationToken);
@@ -30,7 +30,7 @@ internal sealed record MetricsTreeRoslynScanParameters(
 /// dateibasierter Pfad (<c>code_size</c>/<c>comment_density</c>, synchron, kein
 /// <see cref="Solution"/>-Overhead) nicht zusaetzlich zum <c>LinterEngine</c>-/Roslyn-Syntax-Pull-in
 /// dieser Datei beitraegt (analoges Splitting-Prinzip wie <see cref="GetHotspotsScanner"/>/
-/// <see cref="GetViolationsScanner"/> fuer zwei getrennte Datenquellen). Baut aus den pro-Datei-Werten
+/// <see cref="ViolationCollector"/> fuer zwei getrennte Datenquellen). Baut aus den pro-Datei-Werten
 /// dieselben <see cref="FileMetric"/>/<see cref="BuilderNode"/>
 /// wie die Datei-Modi und ruft deren (dafuer <c>internal</c> gemachten) Aggregations-Kern
 /// (<see cref="MetricsTreeScanner.BuildNode"/>/<see cref="MetricsTreeScanner.ToMetricsTreeNode"/>)
@@ -78,7 +78,7 @@ internal static class MetricsTreeRoslynScanner
     private static async Task<List<FileMetric>> ComputeViolationDensityMetricsAsync(
         MetricsTreeRoslynScanParameters scan, List<WalkedFile> scoped)
     {
-        // Konstruktion identisch zu GetViolationsScanner.BuildViolationsTextAsync: LinterEngine
+        // Konstruktion identisch zu ViolationCollector.BuildViolationsTextAsync: LinterEngine
         // verlangt den konkreten Config-Typ (Record-Semantik fuer `with {...}`); ILinterEngineConfig
         // wird projektweit ausschliesslich von Config implementiert, der Downcast ist nicht spekulativ.
         var concreteConfig = (Config)scan.Config;

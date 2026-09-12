@@ -19,22 +19,22 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace AiNetLinter.Mcp.Tools.Verify;
 
 /// <summary>
-/// Reine Score-Berechnungs- und Remediation-Logik fuer die Safeguard-Auswertung — eigene Datei,
+/// Reine Score-Berechnungs- und Remediation-Logik fuer die VerifyGate-Auswertung — eigene Datei,
 /// damit der Tool-Wrapper ein duenner Dispatch bleibt. Delegiert die Lint-Arbeit an
 /// <see cref="LinterEngine.RunAsync(Solution, bool, int, CancellationToken)"/>
-/// (mit <c>noCache: true</c> analog zu <see cref="GetViolationsScanner"/>), sammelt zusaetzlich
+/// (mit <c>noCache: true</c> analog zu <see cref="ViolationCollector"/>), sammelt zusaetzlich
 /// Klassenmetriken (Cognitive Complexity, AI-Context-Footprint, Sealed-Quote) ueber einen direkten
 /// Roslyn-Walk und aggregiert alles zu einem deterministischen 0-10-Score.
 ///
 /// Determinismus: keine Zeit-/Zufalls-/Externer-IO-Operatoren, Sortierung der Top-Violations nach
 /// (Severity, FilePath, LineNumber, RuleName), symmetrische Rundung der Komponenten-Scores. Ein
 /// defensiver <c>try/catch</c> faengt LinterEngine-Malfunctions ab und liefert
-/// <see cref="SafeguardScoreResult.IsMalfunction"/>=true mit <see cref="SafeguardScoreResult.Context"/>
-/// (Pattern analog <see cref="GetViolationsScanner"/>). Score-Gewichte sind benannte Konstanten, damit
+/// <see cref="VerifyGateScoreResult.IsMalfunction"/>=true mit <see cref="VerifyGateScoreResult.Context"/>
+/// (Pattern analog <see cref="ViolationCollector"/>). Score-Gewichte sind benannte Konstanten, damit
 /// Tests und Dokumentation dieselben Werte sehen — Anpassung nur bei offensichtlich unplausiblen
 /// Test-Scores; die unten dokumentierten Gewichte sind die aktuell gueltigen.
 /// </summary>
-internal static partial class SafeguardScanner
+internal static partial class VerifyGateScanner
 {
     /// <summary>Standard-Mindest-Score fuer <c>Passed</c>.</summary>
     internal const double DefaultMinScoreThreshold = 8.0;
@@ -96,7 +96,7 @@ internal static partial class SafeguardScanner
     internal const int CompilationRetryBaseDelayMs = 200;
 
     /// <summary>
-    /// Berechnet den deterministischen Safeguard-Score fuer die uebergebene Solution.
+    /// Berechnet den deterministischen VerifyGate-Score fuer die uebergebene Solution.
     /// Defensive <c>try/catch</c> um LinterEngine-Lauf UND Klassen-Aggregation: beides sind echte
     /// Malfunctions, wenn sie fehlschlagen. Projekte mit <c>SupportsCompilation == false</c> (z. B.
     /// echte Nicht-C#-Projekte) werden weiterhin normal uebersprungen — das ist kein Fehler. Ein
@@ -105,7 +105,7 @@ internal static partial class SafeguardScanner
     /// stillschweigend uebersprungen, sondern als Malfunction gemeldet — lieber ehrlich "konnte
     /// nicht zuverlaessig scoren" als ein Score aus einer zufaelligen Teilmenge der Klassen.
     /// </summary>
-    internal static async Task<SafeguardScoreResult> ComputeScoreAsync(SafeguardScannerParameters p)
+    internal static async Task<VerifyGateScoreResult> ComputeScoreAsync(VerifyGateScannerParameters p)
     {
         var solution = p.Solution;
         var config = p.Config;
@@ -125,7 +125,7 @@ internal static partial class SafeguardScanner
         var assessment = AssessScope(solution, solutionDir, scopeFilter, scopeFiles, concreteConfig);
         if (assessment.Status is not "configured")
         {
-            return new SafeguardScoreResult(
+            return new VerifyGateScoreResult(
                 Score: BuildUndecidableResult(assessment, p.MinScoreThreshold),
                 IsMalfunction: false);
         }
@@ -154,7 +154,7 @@ internal static partial class SafeguardScanner
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return new SafeguardScoreResult(
+            return new VerifyGateScoreResult(
                 Score: null, IsMalfunction: true, Context: ex.Message);
         }
 
@@ -171,10 +171,10 @@ internal static partial class SafeguardScanner
             StatusCause: assessment.StatusCause,
             ExcludedDocumentCount: assessment.ExcludedDocumentCount));
         score = score with { Status = score.Passed == true ? "passed" : "failed" };
-        return new SafeguardScoreResult(Score: score, IsMalfunction: false);
+        return new VerifyGateScoreResult(Score: score, IsMalfunction: false);
     }
 
-    private static SafeguardScopeAssessment AssessScope(
+    private static VerifyGateScopeAssessment AssessScope(
         Solution solution, string solutionDir, string? scopeFilter, IReadOnlySet<string>? scopeFiles, Config config)
     {
         var scope = string.IsNullOrWhiteSpace(scopeFilter) ? "solution" : scopeFilter!;
@@ -206,14 +206,14 @@ internal static partial class SafeguardScanner
         return AssessRuleConfiguration(scope, enabledStates, excludedDocumentCount);
     }
 
-    private static SafeguardScopeAssessment AssessEmptyScope(
+    private static VerifyGateScopeAssessment AssessEmptyScope(
         Solution solution, string? scopeFilter, IReadOnlySet<string>? scopeFiles, string scope)
     {
         if (scopeFiles is null
             && string.IsNullOrWhiteSpace(scopeFilter)
             && solution.Projects.Any(project => project.SupportsCompilation && project.Documents.Any()))
         {
-            return new SafeguardScopeAssessment(
+            return new VerifyGateScopeAssessment(
                 scope,
                 "complete",
                 "configured",
@@ -222,12 +222,12 @@ internal static partial class SafeguardScanner
         return UndecidableScope(scope, "Keine analysierbaren Dokumente im angeforderten Scope.");
     }
 
-    private static SafeguardScopeAssessment AssessRuleConfiguration(
+    private static VerifyGateScopeAssessment AssessRuleConfiguration(
         string scope, IReadOnlyList<bool> enabledStates, int excludedDocumentCount)
     {
         if (enabledStates.All(enabled => !enabled))
         {
-            return new SafeguardScopeAssessment(
+            return new VerifyGateScopeAssessment(
                 scope, "not_configured", "not_configured", "Im angeforderten Scope ist keine Regel aktiviert.", excludedDocumentCount);
         }
         if (enabledStates.Any(enabled => !enabled))
@@ -240,7 +240,7 @@ internal static partial class SafeguardScanner
         var exclusionNote = excludedDocumentCount == 0
             ? ""
             : $" {excludedDocumentCount} Dokumente sind durch konfigurierte Dateiausschlüsse bewusst außerhalb des Scores.";
-        return new SafeguardScopeAssessment(
+        return new VerifyGateScopeAssessment(
             scope,
             "complete",
             "configured",
@@ -248,7 +248,7 @@ internal static partial class SafeguardScanner
             excludedDocumentCount);
     }
 
-    private static SafeguardScopeAssessment UndecidableScope(
+    private static VerifyGateScopeAssessment UndecidableScope(
         string scope, string cause, int excludedDocumentCount = 0) =>
         new(scope, "not_decidable", "not_decidable", cause, excludedDocumentCount);
 
@@ -266,7 +266,7 @@ internal static partial class SafeguardScanner
         scopeFiles.Contains(Path.GetFullPath(filePath));
 
     private static ScoreResult BuildUndecidableResult(
-        SafeguardScopeAssessment assessment, double threshold) =>
+        VerifyGateScopeAssessment assessment, double threshold) =>
         new(
             Passed: null,
             Score: null,
@@ -276,7 +276,7 @@ internal static partial class SafeguardScanner
                 TopIssue: "Kein entscheidbarer Quality-Gate-Score.",
                 ActionableSteps: Array.Empty<string>(),
                 DocumentationHint: "Docs/linter/configuration.md"),
-            Summary: $"Safeguard-Score: nicht entscheidbar. Quality-Gate, kein Scope-Vollständigkeitsbeweis " +
+            Summary: $"VerifyGate-Score: nicht entscheidbar. Quality-Gate, kein Scope-Vollständigkeitsbeweis " +
                 $"(scoreIsNotScope=true). Scope: '{assessment.Scope}'; " +
                 $"Vollständigkeit: {assessment.Completeness}; Status: {assessment.Status}. " +
                 assessment.StatusCause,
@@ -326,7 +326,7 @@ internal static partial class SafeguardScanner
             .ToList();
 
         var remediation = BuildRemediation(sortedViolations, p.Config);
-        var summary = BuildSummary(new BuildSafeguardSummaryParameters(
+        var summary = BuildSummary(new BuildVerifyGateSummaryParameters(
             Score: score,
             Threshold: p.Threshold,
             Passed: passed,
@@ -449,12 +449,12 @@ internal static partial class SafeguardScanner
         return 2;
     }
 
-    private static string BuildSummary(BuildSafeguardSummaryParameters p)
+    private static string BuildSummary(BuildVerifyGateSummaryParameters p)
     {
         var violationSummary = p.TotalViolationCount == p.ShownViolationCount
             ? FormatViolationCount(p.TotalViolationCount)
             : $"{p.ShownViolationCount} von {p.TotalViolationCount} Verstößen (Top-Auswahl wegen maxViolations)";
-        return $"Safeguard-Score: {p.Score:F2}/10 (Threshold {p.Threshold:F2}) — {(p.Passed ? "PASS" : "FAIL")}. " +
+        return $"VerifyGate-Score: {p.Score:F2}/10 (Threshold {p.Threshold:F2}) — {(p.Passed ? "PASS" : "FAIL")}. " +
                $"{violationSummary}, {p.Classes.Count} Klassen analysiert. " +
                (p.ExcludedDocumentCount == 0
                    ? ""

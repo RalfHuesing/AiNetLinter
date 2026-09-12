@@ -8,15 +8,15 @@ using AiNetLinter.Mcp.Tools.Verify.MagicValues;
 using Microsoft.CodeAnalysis;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;
+namespace AiNetLinter.FastTests.Mcp.Tools.MagicValueAdvisory;
 
 /// <summary>
 /// Verifikationstests für die False-Positive-Reduktion und das Holder-Bewusstsein in
-/// <see cref="FindMagicValuesScanner"/> (Maßnahmen M1 bis M6). Deckt den 12-Punkte-Testkatalog
+/// <see cref="MagicValueAdvisoryScanner"/> (Maßnahmen M1 bis M6). Deckt den 12-Punkte-Testkatalog
 /// aus dem Konzept isoliert und deterministisch ab.
 /// </summary>
 [Trait("Category", "Component")]
-public sealed class FindMagicValuesScannerFalsePositiveTests
+public sealed class MagicValueAdvisoryScannerFalsePositiveTests
 {
     [Fact]
     public async Task Classify_DateFormatString_OrdinaryWordsWithSubstrings_AreNotReported()
@@ -29,7 +29,7 @@ public sealed class Foo
     public const string Msg = ""Message"";
     public const string Dll = ""System.Collections.Immutable.dll"";
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.ConstantCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.ConstantCandidates);
 
         Assert.Empty(result.Payload!.MagicValues);
     }
@@ -46,7 +46,7 @@ public sealed class Foo
     public const string F3 = ""ddd, dd MMM yyyy HH:mm:ss"";
     public const string F4 = ""{0:F2}"";
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.ConstantCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.ConstantCandidates);
 
         Assert.Equal(4, result.Payload!.MagicValues.Count);
         Assert.All(result.Payload!.MagicValues, e => Assert.Equal("constant_candidates", e.Category));
@@ -63,7 +63,7 @@ public sealed class Foo
     public const string T2 = ""CancellationToken"";
     public const string T3 = ""AuthenticationStateProvider"";
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.SecurityCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.SecurityCandidates);
 
         Assert.Empty(result.Payload!.MagicValues);
     }
@@ -82,7 +82,7 @@ public sealed class Foo
     }
     private void Connect(string secret) { }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.SecurityCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.SecurityCandidates);
 
         Assert.Equal(2, result.Payload!.MagicValues.Count);
         Assert.All(result.Payload!.MagicValues, e => Assert.Equal("security_candidates", e.Category));
@@ -98,7 +98,7 @@ public sealed class Foo
     public const int PageSize = 200;
     public const int MaxTimeoutSeconds = 300;
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source));
 
         Assert.Empty(result.Payload!.MagicValues);
     }
@@ -123,7 +123,7 @@ public sealed class Foo
         }
     }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.StandardCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.StandardCandidates);
 
         Assert.Equal(2, result.Payload!.MagicValues.Count);
         Assert.Contains(result.Payload!.MagicValues, e => e.Value == "404" && e.Recommendation == "StatusCodes.Status404NotFound");
@@ -139,7 +139,7 @@ public sealed class Foo
 {
     public int M(int status) => status + 404;
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.StandardCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.StandardCandidates);
 
         Assert.Empty(result.Payload!.MagicValues);
     }
@@ -153,7 +153,7 @@ public sealed class Foo
 {
     public int StatusCode { get; } = 404;
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.StandardCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.StandardCandidates);
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("StatusCodes.Status404NotFound", entry.Recommendation);
@@ -173,7 +173,7 @@ public sealed class Foo
         var span = TimeSpan.FromMinutes(60);
     }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source));
 
         Assert.Empty(result.Payload!.MagicValues);
     }
@@ -193,7 +193,7 @@ public sealed class Foo
         Thread.Sleep(1000);
     }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source));
 
         Assert.Equal(3, result.Payload!.MagicValues.Count);
         Assert.Contains(result.Payload!.MagicValues, e => e.Value == "1000" && e.Category == "config_candidates");
@@ -218,11 +218,11 @@ public sealed class Service
 {
     public const int MaxProjects = 4;
 }";
-        using var testSolution = FindMagicValuesTestHelpers.CreateSolution(
+        using var testSolution = MagicValueAdvisoryTestHelpers.CreateSolution(
             ("Defaults.cs", holderSource),
             ("Service.cs", otherSource));
 
-        var result = await FindMagicValuesTestHelpers.RunAsync(testSolution.Solution);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(testSolution.Solution);
 
         Assert.Empty(result.Payload!.MagicValues);
     }
@@ -244,11 +244,11 @@ public sealed class ServiceB
     private const int MaxRetries = 3;
     private const int NgramSize = 3;
 }";
-        using var testSolution = FindMagicValuesTestHelpers.CreateSolution(
+        using var testSolution = MagicValueAdvisoryTestHelpers.CreateSolution(
             ("ServiceA.cs", source1),
             ("ServiceB.cs", source2));
 
-        var result = await FindMagicValuesTestHelpers.RunAsync(testSolution.Solution, category: MagicValueCategory.ConstantCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(testSolution.Solution, category: MagicValueCategory.ConstantCandidates);
 
         // MaxRetries matcht in beiden Dateien -> 2 Funde. RetriesMax vs NgramSize matcht nicht -> keine Funde.
         Assert.Equal(2, result.Payload!.MagicValues.Count);
@@ -271,7 +271,7 @@ internal static class ProjectRegistryDefaults
     public static readonly TimeSpan IdleTtl = TimeSpan.FromMinutes(45);
     public static readonly TimeSpan TickInterval = TimeSpan.FromMinutes(5);
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("ProjectRegistryDefaults.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("ProjectRegistryDefaults.cs", source));
 
         Assert.Empty(result.Payload!.MagicValues);
     }

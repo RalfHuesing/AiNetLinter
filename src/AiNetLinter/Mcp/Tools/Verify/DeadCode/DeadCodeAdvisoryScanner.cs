@@ -20,7 +20,7 @@ namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 /// <summary>
 /// Statische Scan-Pipeline fuer das Auffinden von unreferenziertem/totem Code in einer Roslyn-Solution.
 /// </summary>
-internal static class FindDeadCodeScanner
+internal static class DeadCodeAdvisoryScanner
 {
     public const int DefaultMaxResults = 50;
 
@@ -29,7 +29,7 @@ internal static class FindDeadCodeScanner
     /// </summary>
     public static async Task<DeadCodeScanResult> ScanAsync(
         Solution solution,
-        FindDeadCodeArgs args,
+        DeadCodeAdvisoryOptions args,
         CancellationToken ct = default)
     {
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
@@ -68,7 +68,7 @@ internal static class FindDeadCodeScanner
 
         if (context.Args.Mode is DeadCodeMode.Locals or DeadCodeMode.Both)
         {
-            await FindDeadCodeDiagnosticsScanner.ScanProjectDiagnosticsAsync(documents, compilation, context, ct);
+            await DeadCodeAdvisoryDiagnosticsScanner.ScanProjectDiagnosticsAsync(documents, compilation, context, ct);
         }
     }
 
@@ -442,7 +442,7 @@ internal static class FindDeadCodeScanner
             a.AttributeClass?.Name.Equals("InternalsVisibleToAttribute", StringComparison.OrdinalIgnoreCase) == true);
     }
 
-    private static List<Document> CollectCandidateDocuments(Solution solution, string solutionDir, FindDeadCodeArgs args)
+    private static List<Document> CollectCandidateDocuments(Solution solution, string solutionDir, DeadCodeAdvisoryOptions args)
     {
         var docs = new List<Document>();
         foreach (var project in solution.Projects)
@@ -463,7 +463,7 @@ internal static class FindDeadCodeScanner
         return docs;
     }
 
-    private static bool ShouldCheckSymbol(INamedTypeSymbol symbol, FindDeadCodeArgs args) =>
+    private static bool ShouldCheckSymbol(INamedTypeSymbol symbol, DeadCodeAdvisoryOptions args) =>
         DeadCodeFilters.ShouldCheckSymbol(symbol, args);
 
     private static bool ShouldCheckMemberKind(ISymbol member, DeadCodeKindFilter kindFilter) =>

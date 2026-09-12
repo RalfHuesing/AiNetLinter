@@ -101,6 +101,26 @@ internal sealed class McpProcessHost : IAsyncDisposable
         CancellationToken cancellationToken = default)
     {
         var effectiveArguments = BuildEffectiveArguments(toolName, arguments);
+        return await CallToolCoreAsync(toolName, effectiveArguments, timeout, cancellationToken).ConfigureAwait(false);
+    }
+
+    internal Task<CallToolResult> CallToolWithoutDefaultTargetAsync(
+        string toolName,
+        IReadOnlyDictionary<string, object?>? arguments = null,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default) =>
+        CallToolCoreAsync(
+            toolName,
+            arguments is null ? new Dictionary<string, object?>() : new Dictionary<string, object?>(arguments),
+            timeout,
+            cancellationToken);
+
+    private async Task<CallToolResult> CallToolCoreAsync(
+        string toolName,
+        IReadOnlyDictionary<string, object?> effectiveArguments,
+        TimeSpan? timeout,
+        CancellationToken cancellationToken)
+    {
 
         for (var attempt = 0; attempt < LoadingRetryCount; attempt++)
         {

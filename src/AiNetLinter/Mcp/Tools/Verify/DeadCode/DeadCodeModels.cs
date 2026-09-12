@@ -7,7 +7,7 @@ using System.Text.Json.Serialization;
 namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 
 /// <summary>
-/// Filter fuer Deklarations-Sichtbarkeit bei find_dead_code.
+/// Filter fuer Deklarations-Sichtbarkeit bei Dead-Code-Hinweisprojektion.
 /// </summary>
 internal enum DeadCodeAccessibilityFilter
 {
@@ -19,7 +19,7 @@ internal enum DeadCodeAccessibilityFilter
 }
 
 /// <summary>
-/// Filter fuer Vertrauensstufe bei find_dead_code.
+/// Filter fuer Vertrauensstufe bei Dead-Code-Hinweisprojektion.
 /// </summary>
 internal enum DeadCodeConfidenceFilter
 {
@@ -29,7 +29,7 @@ internal enum DeadCodeConfidenceFilter
 }
 
 /// <summary>
-/// Filter fuer Symbol-Art bei find_dead_code.
+/// Filter fuer Symbol-Art bei Dead-Code-Hinweisprojektion.
 /// </summary>
 internal enum DeadCodeKindFilter
 {
@@ -44,7 +44,7 @@ internal enum DeadCodeKindFilter
 }
 
 /// <summary>
-/// Modus fuer find_dead_code (Symbol-Graph, Compiler-Diagnosen oder beides).
+/// Modus fuer Dead-Code-Hinweisprojektion (Symbol-Graph, Compiler-Diagnosen oder beides).
 /// </summary>
 internal enum DeadCodeMode
 {
@@ -54,9 +54,9 @@ internal enum DeadCodeMode
 }
 
 /// <summary>
-/// Ausfuehrungs-Argumente fuer find_dead_code.
+/// Ausfuehrungs-Argumente fuer Dead-Code-Hinweisprojektion.
 /// </summary>
-internal sealed record FindDeadCodeArgs(
+internal sealed record DeadCodeAdvisoryOptions(
     DeadCodeAccessibilityFilter Accessibility = DeadCodeAccessibilityFilter.PrivateInternal,
     DeadCodeConfidenceFilter Confidence = DeadCodeConfidenceFilter.Both,
     DeadCodeKindFilter Kind = DeadCodeKindFilter.All,
@@ -116,7 +116,7 @@ internal sealed record FindDeadCodeArgs(
 }
 
 /// <summary>
-/// Einzelner toter Code-Fund im Structured Output von find_dead_code.
+/// Einzelner toter Code-Fund im Structured Output von Dead-Code-Hinweisprojektion.
 /// </summary>
 internal sealed record DeadCodeEntry(
     [property: JsonPropertyName("id")] string Id,
@@ -191,12 +191,12 @@ internal static class DeadCodeLimits
 internal sealed class DeadCodeScanContext(
     Microsoft.CodeAnalysis.Solution solution,
     string solutionDir,
-    FindDeadCodeArgs args,
+    DeadCodeAdvisoryOptions args,
     int documentsInScope)
 {
     public Microsoft.CodeAnalysis.Solution Solution { get; } = solution;
     public string SolutionDir { get; } = solutionDir;
-    public FindDeadCodeArgs Args { get; } = args;
+    public DeadCodeAdvisoryOptions Args { get; } = args;
     public int DocumentsInScope { get; } = documentsInScope;
     public List<DeadCodeEntry> DeadSymbols { get; } = [];
     public Dictionary<string, int> ByKind { get; } = new(StringComparer.OrdinalIgnoreCase);

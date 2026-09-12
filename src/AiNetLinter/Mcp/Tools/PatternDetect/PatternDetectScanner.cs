@@ -21,7 +21,7 @@ namespace AiNetLinter.Mcp.Tools.PatternDetect;
 /// Baut den <c>pattern_detect</c>-Report: gruppiert die von der bereits laufenden
 /// <see cref="LinterEngine"/> erzeugten <see cref="RuleViolation"/>-Objekte nach
 /// <see cref="PatternCatalog"/>-Eintrag statt der flachen Datei-für-Datei-Liste von
-/// <c>get_violations</c>. Scope-Filter-/Sortierlogik gemeinsam mit <c>GetViolationsScanner</c>
+/// <c>kontextuelle Violation-Ausgabe</c>. Scope-Filter-/Sortierlogik gemeinsam mit <c>ViolationCollector</c>
 /// über <see cref="ViolationScopeFilter"/> — nur die Pattern-Gruppierung selbst ist
 /// <c>pattern_detect</c>-spezifisch.
 /// </summary>
@@ -36,7 +36,7 @@ internal static class PatternDetectScanner
         var scopeFilter = p.ScopeFilter;
         var ct = p.CancellationToken;
         // LinterEngine verlangt den konkreten Config-Typ (Record-Semantik) — ILinterEngineConfig
-        // wird projektweit ausschliesslich von Config implementiert (siehe GetViolationsScanner).
+        // wird projektweit ausschliesslich von Config implementiert (siehe ViolationCollector).
         var concreteConfig = (Config)p.Config;
 
         var solutionDir = Path.GetDirectoryName(solution.FilePath) ?? "";
@@ -303,7 +303,7 @@ internal static class PatternDetectScanner
 /// <summary>
 /// Parameter-Record fuer <see cref="PatternDetectScanner.BuildReportAsync"/>. Kapselt 6
 /// Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c> (siehe
-/// Linter-Regel <c>MaxMethodParameterCount</c>) eingehalten wird (Pattern 1:1 von <c>GetViolationsScannerParameters</c>).
+/// Linter-Regel <c>MaxMethodParameterCount</c>) eingehalten wird (Pattern 1:1 von <c>ViolationCollectorParameters</c>).
 /// </summary>
 internal sealed record PatternDetectScannerParameters(
     Solution Solution,
@@ -323,7 +323,7 @@ internal sealed record PatternDetectScannerParameters(
 internal sealed record PatternDetectResult(string? Text, PatternDetectPayload? Payload, bool IsMalfunction, string? Context = null);
 
 /// <summary>Structured-Content-Wurzel fuer <c>pattern_detect</c> (Praezedenzfall, siehe
-/// <c>SafeguardTool</c>): ein Eintrag je <see cref="PatternCatalog"/>-Pattern plus Gesamt-Summary.</summary>
+/// <c>VerifyGateTool</c>): ein Eintrag je <see cref="PatternCatalog"/>-Pattern plus Gesamt-Summary.</summary>
 internal sealed record PatternDetectPayload(IReadOnlyList<PatternResultEntry> Patterns, PatternDetectSummary Summary);
 
 /// <summary>Ein Pattern-Treffer-Block: <see cref="Occurrences"/> ist die volle (ungekappte)

@@ -10,7 +10,7 @@ using Xunit;
 namespace AiNetLinter.FastTests.Mcp.Tools.DeadCode;
 
 [Trait("Category", "Component")]
-public sealed class FindDeadCodeScannerTests
+public sealed class DeadCodeAdvisoryScannerTests
 {
     [Fact]
     public async Task ScanAsync_PrivateUnusedMethod_ReturnsHighConfidenceDeadCode()
@@ -24,12 +24,12 @@ public sealed class FindDeadCodeScannerTests
             }
             """));
 
-        var args = new FindDeadCodeArgs(
+        var args = new DeadCodeAdvisoryOptions(
             Accessibility: DeadCodeAccessibilityFilter.All,
             Confidence: DeadCodeConfidenceFilter.High,
             Kind: DeadCodeKindFilter.All);
 
-        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         var dead = Assert.Single(result.DeadSymbols);
         Assert.Equal("UnusedHelper", dead.SymbolName);
@@ -50,12 +50,12 @@ public sealed class FindDeadCodeScannerTests
             }
             """));
 
-        var args = new FindDeadCodeArgs(
+        var args = new DeadCodeAdvisoryOptions(
             Accessibility: DeadCodeAccessibilityFilter.Private,
             Confidence: DeadCodeConfidenceFilter.Both,
             Kind: DeadCodeKindFilter.Method);
 
-        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         Assert.Empty(result.DeadSymbols);
     }
@@ -77,9 +77,9 @@ public sealed class FindDeadCodeScannerTests
             }
             """));
 
-        var result = await FindDeadCodeScanner.ScanAsync(
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(
             testSolution.Solution,
-            new FindDeadCodeArgs(
+            new DeadCodeAdvisoryOptions(
                 Accessibility: DeadCodeAccessibilityFilter.Private,
                 Confidence: DeadCodeConfidenceFilter.High,
                 Kind: DeadCodeKindFilter.Method),
@@ -103,9 +103,9 @@ public sealed class FindDeadCodeScannerTests
             }
             """));
 
-        var result = await FindDeadCodeScanner.ScanAsync(
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(
             testSolution.Solution,
-            new FindDeadCodeArgs(Mode: DeadCodeMode.Both),
+            new DeadCodeAdvisoryOptions(Mode: DeadCodeMode.Both),
             CancellationToken.None);
 
         Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.SymbolName == "_serializedValue");
@@ -123,9 +123,9 @@ public sealed class FindDeadCodeScannerTests
             internal class UnusedContract {}
             """));
 
-        var result = await FindDeadCodeScanner.ScanAsync(
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(
             testSolution.Solution,
-            new FindDeadCodeArgs(
+            new DeadCodeAdvisoryOptions(
                 Accessibility: DeadCodeAccessibilityFilter.Internal,
                 Confidence: DeadCodeConfidenceFilter.High,
                 Kind: DeadCodeKindFilter.Class),
@@ -158,12 +158,12 @@ public sealed class FindDeadCodeScannerTests
             }
             """));
 
-        var args = new FindDeadCodeArgs(
+        var args = new DeadCodeAdvisoryOptions(
             Accessibility: DeadCodeAccessibilityFilter.All,
             Confidence: DeadCodeConfidenceFilter.Both,
             Kind: DeadCodeKindFilter.Method);
 
-        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         Assert.DoesNotContain(result.DeadSymbols, d => d.SymbolName == "Execute" && d.ContainerType.Contains("Service"));
     }
@@ -186,12 +186,12 @@ public sealed class FindDeadCodeScannerTests
             }
             """));
 
-        var args = new FindDeadCodeArgs(
+        var args = new DeadCodeAdvisoryOptions(
             Accessibility: DeadCodeAccessibilityFilter.All,
             Confidence: DeadCodeConfidenceFilter.Both,
             Kind: DeadCodeKindFilter.All);
 
-        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         Assert.DoesNotContain(result.DeadSymbols, d => d.Kind == "constructor" && d.ContainerType.Contains("CustomUtils"));
     }
@@ -213,12 +213,12 @@ public sealed class FindDeadCodeScannerTests
             }
             """));
 
-        var args = new FindDeadCodeArgs(
+        var args = new DeadCodeAdvisoryOptions(
             Accessibility: DeadCodeAccessibilityFilter.Private,
             Confidence: DeadCodeConfidenceFilter.High,
             Kind: DeadCodeKindFilter.All);
 
-        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         var dead = Assert.Single(result.DeadSymbols);
         Assert.Equal("DeadNested", dead.SymbolName);
@@ -238,12 +238,12 @@ public sealed class FindDeadCodeScannerTests
             }
             """));
 
-        var args = new FindDeadCodeArgs(
+        var args = new DeadCodeAdvisoryOptions(
             Accessibility: DeadCodeAccessibilityFilter.Private,
             Confidence: DeadCodeConfidenceFilter.Both,
             Kind: DeadCodeKindFilter.Method);
 
-        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         var dead = Assert.Single(result.DeadSymbols);
         Assert.Equal("DeadPrivate", dead.SymbolName);
@@ -261,13 +261,13 @@ public sealed class FindDeadCodeScannerTests
             }
             """));
 
-        var args = new FindDeadCodeArgs(
+        var args = new DeadCodeAdvisoryOptions(
             Mode: DeadCodeMode.Locals,
             Accessibility: DeadCodeAccessibilityFilter.All,
             Confidence: DeadCodeConfidenceFilter.Both,
             Kind: DeadCodeKindFilter.All);
 
-        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         var dead = Assert.Single(result.DeadSymbols);
         Assert.Equal("_unusedValue", dead.SymbolName);
@@ -289,13 +289,13 @@ public sealed class FindDeadCodeScannerTests
             }
             """));
 
-        var args = new FindDeadCodeArgs(
+        var args = new DeadCodeAdvisoryOptions(
             Mode: DeadCodeMode.Both,
             Accessibility: DeadCodeAccessibilityFilter.Private,
             Confidence: DeadCodeConfidenceFilter.High,
             Kind: DeadCodeKindFilter.All);
 
-        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         Assert.Contains(result.DeadSymbols, d => d.SymbolName == "_unusedValue");
         Assert.Contains(result.DeadSymbols, d => d.SymbolName == "DeadMethod");
@@ -314,13 +314,13 @@ public sealed class FindDeadCodeScannerTests
             }
             """));
 
-        var args = new FindDeadCodeArgs(
+        var args = new DeadCodeAdvisoryOptions(
             Accessibility: DeadCodeAccessibilityFilter.Private,
             Confidence: DeadCodeConfidenceFilter.Both,
             Kind: DeadCodeKindFilter.Method,
             MaxResults: 2);
 
-        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         Assert.True(result.IsTruncated);
         Assert.Equal(2, result.DeadSymbols.Count);
@@ -344,13 +344,13 @@ public sealed class FindDeadCodeScannerTests
             }
             """));
 
-        var args = new FindDeadCodeArgs(
+        var args = new DeadCodeAdvisoryOptions(
             ScopeFilter: "Included",
             Accessibility: DeadCodeAccessibilityFilter.Private,
             Confidence: DeadCodeConfidenceFilter.Both,
             Kind: DeadCodeKindFilter.Method);
 
-        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         var dead = Assert.Single(result.DeadSymbols);
         Assert.Equal("DeadIncluded", dead.SymbolName);
@@ -374,12 +374,12 @@ public sealed class FindDeadCodeScannerTests
             }
             """));
 
-        var args = new FindDeadCodeArgs(
+        var args = new DeadCodeAdvisoryOptions(
             Accessibility: DeadCodeAccessibilityFilter.All,
             Confidence: DeadCodeConfidenceFilter.Both,
             Kind: DeadCodeKindFilter.All);
 
-        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         Assert.DoesNotContain(result.DeadSymbols, d => d.Kind == "constructor" && d.ContainerType.Contains("Model"));
     }
@@ -397,12 +397,12 @@ public sealed class FindDeadCodeScannerTests
             }
             """));
 
-        var args = new FindDeadCodeArgs(
+        var args = new DeadCodeAdvisoryOptions(
             Accessibility: DeadCodeAccessibilityFilter.Private,
             Confidence: DeadCodeConfidenceFilter.Both,
             Kind: DeadCodeKindFilter.All);
 
-        var result = await FindDeadCodeScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
+        var result = await DeadCodeAdvisoryScanner.ScanAsync(testSolution.Solution, args, CancellationToken.None);
 
         Assert.Contains(result.DeadSymbols, d => d.SymbolName == "DeadCallback" && d.Kind == "delegate");
         Assert.Contains(result.DeadSymbols, d => d.SymbolName == "DeadEvent" && d.Kind == "event");
@@ -410,6 +410,6 @@ public sealed class FindDeadCodeScannerTests
 
     private static RoslynTestSolution CreateSolution(params (string fileName, string content)[] files) =>
         RoslynTestSolutionFactory.CreateSolution(
-            @"C:\ainetlinter-virtual\FindDeadCodeScannerTests.slnx",
+            @"C:\ainetlinter-virtual\DeadCodeAdvisoryScannerTests.slnx",
             new ProjectSpec("TestApp", files, VirtualProjectDirectory: "."));
 }

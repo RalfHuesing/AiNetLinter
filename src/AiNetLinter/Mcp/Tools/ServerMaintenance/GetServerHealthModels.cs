@@ -8,7 +8,7 @@ using AiNetLinter.Mcp.Tools.AssemblyAnalysis;
 namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 
 // Ergebnis-Records für GetServerHealthTools. Pattern 1:1 von
-// SafeguardModels.cs. Reine Datentraeger ohne eigenes Verhalten.
+// VerifyGateModels.cs. Reine Datentraeger ohne eigenes Verhalten.
 
 /// <summary>
 /// Zustand eines einzelnen Projekt-Keys in <see cref="ServerHealthAggregatePayload"/>:

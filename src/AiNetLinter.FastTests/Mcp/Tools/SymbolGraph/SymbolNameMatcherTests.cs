@@ -19,7 +19,7 @@ public sealed class SymbolNameMatcherTests
 
     [Theory]
     [InlineData("*MagicValues*", "MagicValuesStringHeuristics", true)]
-    [InlineData("*MagicValues*", "FindMagicValuesTool", true)]
+    [InlineData("*MagicValues*", "MagicValueAdvisoryTool", true)]
     [InlineData("*MagicValues*", "OtherClass", false)]
     [InlineData("Inspect*Tests", "InspectAssemblyToolTests", true)]
     [InlineData("Inspect*Tests", "InspectTests", true)]

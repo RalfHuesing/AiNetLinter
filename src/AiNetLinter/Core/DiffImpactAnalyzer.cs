@@ -147,7 +147,7 @@ public sealed class DiffImpactAnalyzer
         }
     }
 
-    // find_magic_values/changedOnly ruft RunGitDiff direkt auf, damit die
+    // Magic-Value-Hinweisprojektion/changedOnly ruft RunGitDiff direkt auf, damit die
     // git-diff-Mechanik nicht dupliziert wird. Delegiert an GitDiffParser.
     internal static string? RunGitDiff(string repoRoot, string? gitSinceRef) =>
         GitDiffParser.RunGitDiff(repoRoot, gitSinceRef);

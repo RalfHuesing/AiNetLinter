@@ -3,7 +3,7 @@
 namespace AiNetLinter.Mcp.Tools.Verify.MagicValues;
 
 /// <summary>
-/// Fachliche Kategorien fuer <c>find_magic_values</c>-Funde. Stabile, in JSON-RPC-Aufrufen
+/// Fachliche Kategorien fuer <c>Magic-Value-Hinweisprojektion</c>-Funde. Stabile, in JSON-RPC-Aufrufen
 /// verwendete String-Repraesentation ueber <see cref="ToStringValue"/> — die Strings landen
 /// im Content und im Tool-Argument <c>categoryFilter</c>.
 /// </summary>

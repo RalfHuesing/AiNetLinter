@@ -19,8 +19,8 @@ using Xunit;
 namespace AiNetLinter.FastTests.Mcp.Tools.Verify;
 
 /// <summary>
-/// Tests fuer <see cref="SafeguardScanner"/>. Etabliert ein neues Scanner-Test-Pattern (es
-/// existiert keine dedizierte Test-Datei fuer <c>GetViolationsScanner</c>) und deckt den
+/// Tests fuer <see cref="VerifyGateScanner"/>. Etabliert ein neues Scanner-Test-Pattern (es
+/// existiert keine dedizierte Test-Datei fuer <c>ViolationCollector</c>) und deckt den
 /// deterministischen Score-Pfad, Threshold-Logik, Edge-Cases und den Malfunction-Pfad ab.
 /// </summary>
 [Trait("Category", "Component")]
@@ -38,7 +38,7 @@ public sealed partial class VerifyGateScannerTests
         var config = CreateConfig();
         var parameters = CreateParameters(solution, config);
 
-        var result = await SafeguardScanner.ComputeScoreAsync(parameters);
+        var result = await VerifyGateScanner.ComputeScoreAsync(parameters);
 
         Assert.False(result.IsMalfunction);
         Assert.NotNull(result.Score);
@@ -64,7 +64,7 @@ public class Greeter
         var config = CreateConfig();
         var parameters = CreateParameters(solution, config);
 
-        var result = await SafeguardScanner.ComputeScoreAsync(parameters);
+        var result = await VerifyGateScanner.ComputeScoreAsync(parameters);
 
         Assert.False(result.IsMalfunction);
         Assert.NotNull(result.Score);
@@ -80,7 +80,7 @@ public class Greeter
         var config = CreateConfig();
         var parameters = CreateParameters(solution, config);
 
-        var result = await SafeguardScanner.ComputeScoreAsync(parameters);
+        var result = await VerifyGateScanner.ComputeScoreAsync(parameters);
 
         Assert.False(result.IsMalfunction);
         Assert.NotNull(result.Score);
@@ -105,7 +105,7 @@ public sealed class D { public int W() => 4; }";
         var config = CreateConfig();
         var parameters = CreateParameters(solution, config);
 
-        var result = await SafeguardScanner.ComputeScoreAsync(parameters);
+        var result = await VerifyGateScanner.ComputeScoreAsync(parameters);
 
         Assert.False(result.IsMalfunction);
         Assert.NotNull(result.Score);
@@ -143,7 +143,7 @@ public class Giant
         };
         var parameters = CreateParameters(solution, config);
 
-        var result = await SafeguardScanner.ComputeScoreAsync(parameters);
+        var result = await VerifyGateScanner.ComputeScoreAsync(parameters);
 
         Assert.False(result.IsMalfunction);
         Assert.NotNull(result.Score);
@@ -164,12 +164,12 @@ public class Greeter { public string Hello() => ""hi""; }";
         using var testSolution = CreateSolution(("Greeter.cs", source));
         var solution = testSolution.Solution;
         var config = CreateConfig();
-        var parameters = new SafeguardScannerParameters(
+        var parameters = new VerifyGateScannerParameters(
             Solution: solution, Config: config, Console: NullConsole.Instance,
             ScopeFilter: null, CancellationToken: CancellationToken.None,
             MinScoreThreshold: 0.0);
 
-        var result = await SafeguardScanner.ComputeScoreAsync(parameters);
+        var result = await VerifyGateScanner.ComputeScoreAsync(parameters);
 
         Assert.False(result.IsMalfunction);
         Assert.NotNull(result.Score);
@@ -186,8 +186,8 @@ public class Greeter { public string Hello() => ""hi""; }";
         var parameters1 = CreateParameters(solution, config);
         var parameters2 = CreateParameters(solution, config);
 
-        var first = await SafeguardScanner.ComputeScoreAsync(parameters1);
-        var second = await SafeguardScanner.ComputeScoreAsync(parameters2);
+        var first = await VerifyGateScanner.ComputeScoreAsync(parameters1);
+        var second = await VerifyGateScanner.ComputeScoreAsync(parameters2);
 
         Assert.False(first.IsMalfunction);
         Assert.False(second.IsMalfunction);
@@ -204,8 +204,8 @@ public class Greeter { public string Hello() => ""hi""; }";
     [Fact]
     public async Task ComputeScoreAsync_LinterEngineThrows_ReturnsMalfunctionWithContext()
     {
-        // Regressionstest analog GetViolationsToolTests: ein ThrowingTextLoader deterministisch
-        // simuliert eine LinterEngine-Malfunction. SafeguardScanner faengt die Exception ab
+        // Regressionstest analog ViolationAnalysisToolTests: ein ThrowingTextLoader deterministisch
+        // simuliert eine LinterEngine-Malfunction. VerifyGateScanner faengt die Exception ab
         // und liefert IsMalfunction=true mit der rohen Exception-Message im Context-Feld.
         using var faulty = new FaultingSolutionFixture();
         var solution = faulty.Solution;
@@ -213,7 +213,7 @@ public class Greeter { public string Hello() => ""hi""; }";
         var config = CreateConfig();
         var parameters = CreateParameters(solution, config);
 
-        var result = await SafeguardScanner.ComputeScoreAsync(parameters);
+        var result = await VerifyGateScanner.ComputeScoreAsync(parameters);
 
         Assert.True(result.IsMalfunction);
         Assert.Null(result.Score);
@@ -233,21 +233,21 @@ public class Greeter { public string Hello() => ""hi""; }";
         Func<CancellationToken, Task<Compilation?>> flaky = _ =>
         {
             callCount++;
-            if (callCount < SafeguardScanner.CompilationRetryAttempts)
+            if (callCount < VerifyGateScanner.CompilationRetryAttempts)
             {
                 throw new InvalidOperationException($"Simulierter transienter Fehlschlag #{callCount}.");
             }
             return Task.FromResult<Compilation?>(expected);
         };
 
-        var result = await SafeguardScanner.GetCompilationWithRetryAsync(flaky, "FlakyProject", CancellationToken.None);
+        var result = await VerifyGateScanner.GetCompilationWithRetryAsync(flaky, "FlakyProject", CancellationToken.None);
 
         Assert.Same(expected, result);
-        Assert.Equal(SafeguardScanner.CompilationRetryAttempts, callCount);
+        Assert.Equal(VerifyGateScanner.CompilationRetryAttempts, callCount);
     }
 
     [Fact]
-    public async Task GetCompilationWithRetryAsync_AlwaysThrows_ThrowsSafeguardCompilationExceptionWithInnerException()
+    public async Task GetCompilationWithRetryAsync_AlwaysThrows_ThrowsVerifyGateCompilationExceptionWithInnerException()
     {
         // Dauerhafter Fehlschlag (kein transientes Problem) muss NICHT mehr lautlos null liefern
         // (das wuerde die Klasse still aus der Score-Aggregation ausschliessen), sondern als echte
@@ -261,17 +261,17 @@ public class Greeter { public string Hello() => ""hi""; }";
             throw innerException;
         };
 
-        var ex = await Assert.ThrowsAsync<SafeguardCompilationException>(
-            () => SafeguardScanner.GetCompilationWithRetryAsync(alwaysFails, "PermanentlyBrokenProject", CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<VerifyGateCompilationException>(
+            () => VerifyGateScanner.GetCompilationWithRetryAsync(alwaysFails, "PermanentlyBrokenProject", CancellationToken.None));
 
-        Assert.Equal(SafeguardScanner.CompilationRetryAttempts, callCount);
+        Assert.Equal(VerifyGateScanner.CompilationRetryAttempts, callCount);
         Assert.Same(innerException, ex.InnerException);
         Assert.Contains("PermanentlyBrokenProject", ex.Message, StringComparison.Ordinal);
-        Assert.Contains(SafeguardScanner.CompilationRetryAttempts.ToString(), ex.Message, StringComparison.Ordinal);
+        Assert.Contains(VerifyGateScanner.CompilationRetryAttempts.ToString(), ex.Message, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task GetCompilationWithRetryAsync_AlwaysReturnsNullWithoutException_ThrowsSafeguardCompilationException()
+    public async Task GetCompilationWithRetryAsync_AlwaysReturnsNullWithoutException_ThrowsVerifyGateCompilationException()
     {
         // Laut Roslyn-Vertrag liefert GetCompilationAsync bei SupportsCompilation == true nie null,
         // aber die Retry-Logik behandelt diesen theoretischen Fall defensiv genauso wie eine Exception
@@ -283,10 +283,10 @@ public class Greeter { public string Hello() => ""hi""; }";
             return Task.FromResult<Compilation?>(null);
         };
 
-        var ex = await Assert.ThrowsAsync<SafeguardCompilationException>(
-            () => SafeguardScanner.GetCompilationWithRetryAsync(alwaysNull, "NullReturningProject", CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<VerifyGateCompilationException>(
+            () => VerifyGateScanner.GetCompilationWithRetryAsync(alwaysNull, "NullReturningProject", CancellationToken.None));
 
-        Assert.Equal(SafeguardScanner.CompilationRetryAttempts, callCount);
+        Assert.Equal(VerifyGateScanner.CompilationRetryAttempts, callCount);
         Assert.Null(ex.InnerException);
     }
 
@@ -294,7 +294,7 @@ public class Greeter { public string Hello() => ""hi""; }";
     public async Task GetCompilationWithRetryAsync_CancellationRequested_ThrowsOperationCanceledExceptionNotMalfunction()
     {
         // Cancellation ist kein Malfunction-Fall — muss durchgereicht werden, nicht in eine
-        // SafeguardCompilationException uebersetzt werden (Konsistenz mit dem bestehenden
+        // VerifyGateCompilationException uebersetzt werden (Konsistenz mit dem bestehenden
         // OperationCanceledException-Passthrough in ComputeScoreAsync).
         using var cts = new CancellationTokenSource();
         cts.Cancel();
@@ -302,7 +302,7 @@ public class Greeter { public string Hello() => ""hi""; }";
             throw new InvalidOperationException("Sollte wegen Cancellation nicht aufgerufen werden.");
 
         await Assert.ThrowsAsync<OperationCanceledException>(
-            () => SafeguardScanner.GetCompilationWithRetryAsync(neverCalled, "CancelledProject", cts.Token));
+            () => VerifyGateScanner.GetCompilationWithRetryAsync(neverCalled, "CancelledProject", cts.Token));
     }
 
     [Fact]
@@ -317,7 +317,7 @@ public class Greeter { public string Hello() => ""hi""; }";
             Guidance: "irrelevant");
         var config = CreateConfig();
 
-        var hint = SafeguardScanner.BuildRemediation(new[] { unknown }, config);
+        var hint = VerifyGateScanner.BuildRemediation(new[] { unknown }, config);
 
         Assert.Equal("DefinitelyUnknownRuleName_9999", hint.TopIssue);
         Assert.NotEmpty(hint.ActionableSteps);
@@ -330,7 +330,7 @@ public class Greeter { public string Hello() => ""hi""; }";
     {
         var config = CreateConfig();
 
-        var hint = SafeguardScanner.BuildRemediation(Array.Empty<ViolationEntry>(), config);
+        var hint = VerifyGateScanner.BuildRemediation(Array.Empty<ViolationEntry>(), config);
 
         Assert.Contains("Keine Lint-Verstoesse", hint.TopIssue, StringComparison.Ordinal);
         Assert.Empty(hint.ActionableSteps);
@@ -348,7 +348,7 @@ public class Greeter { public string Hello() => ""hi""; }";
         var manySealed = Enumerable.Range(0, 50)
             .Select(i => new ScannedClass($"C{i}", MaxCognitiveComplexity: 1, AIContextFootprint: 1, IsSealed: true))
             .ToList();
-        var highRaw = SafeguardScanner.BuildScoreResult(new BuildScoreResultParameters(
+        var highRaw = VerifyGateScanner.BuildScoreResult(new BuildScoreResultParameters(
             Violations: Array.Empty<RuleViolation>(),
             Classes: manySealed,
             Config: config,
@@ -369,7 +369,7 @@ public class Greeter { public string Hello() => ""hi""; }";
                 EffectiveSeverity = "error",
             })
             .ToList();
-        var lowRaw = SafeguardScanner.BuildScoreResult(new BuildScoreResultParameters(
+        var lowRaw = VerifyGateScanner.BuildScoreResult(new BuildScoreResultParameters(
             Violations: manyErrors,
             Classes: Array.Empty<ScannedClass>(),
             Config: config,
@@ -406,7 +406,7 @@ public class Greeter { public string Hello() => ""hi""; }";
             },
         };
 
-        var result = SafeguardScanner.BuildScoreResult(new BuildScoreResultParameters(
+        var result = VerifyGateScanner.BuildScoreResult(new BuildScoreResultParameters(
             Violations: violations,
             Classes: Array.Empty<ScannedClass>(),
             Config: config,
@@ -423,27 +423,27 @@ public class Greeter { public string Hello() => ""hi""; }";
     }
 
     [Fact]
-    public void SafeguardScannerParameters_DefaultThreshold_Is8()
+    public void VerifyGateScannerParameters_DefaultThreshold_Is8()
     {
         using var testSolution = CreateSolution();
         var solution = testSolution.Solution;
         var config = CreateConfig();
-        var parameters = new SafeguardScannerParameters(
+        var parameters = new VerifyGateScannerParameters(
             Solution: solution, Config: config, Console: NullConsole.Instance,
             ScopeFilter: null, CancellationToken: CancellationToken.None);
 
-        Assert.Equal(SafeguardScanner.DefaultMinScoreThreshold, parameters.MinScoreThreshold);
+        Assert.Equal(VerifyGateScanner.DefaultMinScoreThreshold, parameters.MinScoreThreshold);
         Assert.Equal(8.0, parameters.MinScoreThreshold);
-        Assert.Equal(SafeguardScanner.DefaultMaxRemediationEntries, parameters.MaxRemediationEntries);
+        Assert.Equal(VerifyGateScanner.DefaultMaxRemediationEntries, parameters.MaxRemediationEntries);
     }
 
     [Fact]
-    public void SafeguardScannerParameters_ExplicitOverrides_AreRespected()
+    public void VerifyGateScannerParameters_ExplicitOverrides_AreRespected()
     {
         using var testSolution = CreateSolution();
         var solution = testSolution.Solution;
         var config = CreateConfig();
-        var parameters = new SafeguardScannerParameters(
+        var parameters = new VerifyGateScannerParameters(
             Solution: solution, Config: config, Console: NullConsole.Instance,
             ScopeFilter: null, CancellationToken: CancellationToken.None,
             MinScoreThreshold: 5.5, MaxRemediationEntries: 7);
@@ -454,7 +454,7 @@ public class Greeter { public string Hello() => ""hi""; }";
 
     private static Config CreateConfig() => TestHelper.CreateDefaultConfig();
 
-    private static SafeguardScannerParameters CreateParameters(Solution solution, Config config)
+    private static VerifyGateScannerParameters CreateParameters(Solution solution, Config config)
         => new(Solution: solution, Config: config, Console: NullConsole.Instance,
                ScopeFilter: null, CancellationToken: CancellationToken.None);
 
@@ -466,7 +466,7 @@ public class Greeter { public string Hello() => ""hi""; }";
     /// <summary>
     /// Stiller Konsolen-Stub fuer Scanner-Tests. Verhindert, dass ein realer LinterEngine-Lauf
     /// in den Test-Output schreibt; gleichzeitig nimmt die Scanner-Signatur weiterhin einen
-    /// <c>ILintConsole</c>-Parameter (Pattern-Konsistenz mit <c>GetViolationsScanner</c>).
+    /// <c>ILintConsole</c>-Parameter (Pattern-Konsistenz mit <c>ViolationCollector</c>).
     /// </summary>
     private sealed class NullConsole : AiNetLinter.Output.ILintConsole
     {

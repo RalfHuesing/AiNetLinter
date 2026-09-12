@@ -141,6 +141,41 @@ public sealed class VerifyToolContractE2ETests
         AssertVerifyResult(validResult, expectedError: false, "verdict: failed", "scope:", "requested: solution");
     }
 
+    [Theory]
+    [InlineData(null, "INVALID_ARGUMENT")]
+    [InlineData("missing-source.slnx", "SOLUTION_NOT_FOUND")]
+    [InlineData("wrong-source.cs", "INVALID_ARGUMENT")]
+    public async Task Verify_InvalidSourceTarget_UsesContractV2ErrorAndAllowsAValidFollowUp(
+        string? relativeTargetPath,
+        string expectedCode)
+    {
+        using var fixture = CreateGitFixture();
+        await using var host = await McpProcessHost.StartAsync(fixture, TimeSpan.FromSeconds(60));
+
+        var result = relativeTargetPath is null
+            ? await host.CallToolWithoutDefaultTargetAsync("verify")
+            : await host.CallToolAsync(
+                "verify",
+                new Dictionary<string, object?>
+                {
+                    ["targetPath"] = Path.Combine(fixture.RootPath, relativeTargetPath),
+                });
+
+        AssertVerifyResult(
+            result,
+            expectedError: true,
+            "verdict: error",
+            "operation=error",
+            "completeness=not_applicable",
+            expectedCode,
+            "fieldPath: $.targetPath",
+            "recovery:");
+
+        var validResult = await host.CallToolAsync("verify", new Dictionary<string, object?> { ["scope"] = "solution" });
+
+        AssertVerifyResult(validResult, expectedError: false, "verdict: failed", "requested: solution");
+    }
+
     [Fact]
     public async Task Verify_AssemblyTarget_IsRejectedBeforeLeaseOrAnalysis()
     {

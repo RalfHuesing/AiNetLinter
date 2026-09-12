@@ -30,7 +30,7 @@ internal static class GetTypeHierarchyFormatter
     /// Typs begrenzt sind; abgeleitete/implementierende Typen sind dagegen transitiv ueber die
     /// GESAMTE Solution aufgeloest — z. B. bei einem weit implementierten Marker-Interface wie
     /// <c>IDisposable</c> potenziell hunderte Treffer, die ohne Limit den Client-Token-Guard
-    /// sprengen koennten, dieselbe Bug-Klasse wie bei <c>get_violations</c>/<c>get_hotspots</c>).
+    /// sprengen koennten, dieselbe Bug-Klasse wie bei <c>kontextuelle Violation-Ausgabe</c>/<c>get_hotspots</c>).
     /// Anhaengend eine 4. Sektion mit heuristischen DI-Registrierungs-Funden via
     /// <see cref="DiRegistrationHeuristics"/> (nur wenn Treffer vorhanden — bei 0 Treffern wird die
     /// Sektion weggelassen, um die uebliche Antwort nicht zu verlangern).

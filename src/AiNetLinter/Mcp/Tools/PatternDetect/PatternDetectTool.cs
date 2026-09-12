@@ -15,7 +15,7 @@ namespace AiNetLinter.Mcp.Tools.PatternDetect;
 /// <summary>
 /// MCP-Tool <c>pattern_detect</c>: gruppiert die aktuellen Lint-Regelverstoesse der resident
 /// gehaltenen Solution nach Pattern-Kategorie (<see cref="PatternCatalog"/>) statt der flachen
-/// Datei-für-Datei-Liste von <c>get_violations</c> — Solution-weite Audit-Sicht ("finde alle
+/// Datei-für-Datei-Liste von <c>kontextuelle Violation-Ausgabe</c> — Solution-weite Audit-Sicht ("finde alle
 /// God-Classes/async-void/..."). Bewusst duenner Dispatch auf
 /// <see cref="PatternDetectScanner.BuildReportAsync"/>: Parameter-Validierung (unbekannte
 /// pattern-IDs) hier (analog <see cref="MetricsTree.MetricsTreeTool.ExecuteAsync"/>), Scan-/
@@ -55,7 +55,7 @@ internal static class PatternDetectTool
             MaxResultsPerPattern: maxResultsPerPattern));
 
         // Echte Malfunction (unerwartete Exception in der LinterEngine) -> IsError=true mit
-        // Retry-once-Hinweis, siehe IsErrorPolicy.md — Pattern 1:1 von GetViolationsTool.
+        // Retry-once-Hinweis, siehe IsErrorPolicy.md — Pattern 1:1 von ViolationAnalysisTool.
         if (result.IsMalfunction)
         {
             return McpToolResults.Error(

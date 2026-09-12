@@ -14,7 +14,7 @@ namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 /// <summary>
 /// Extrahiert Compiler- und Analyzer-Diagnosen (CS0169, CS0414, IDE0051, IDE0052) fuer ungenutzte private Member und Felder.
 /// </summary>
-internal static class FindDeadCodeDiagnosticsScanner
+internal static class DeadCodeAdvisoryDiagnosticsScanner
 {
     private static readonly HashSet<string> LocalDiagnosticIds = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -108,7 +108,7 @@ internal static class FindDeadCodeDiagnosticsScanner
 
         var symbolName = symbol?.Name ?? (node?.ToString() ?? diag.Id);
         var containerType = symbol?.ContainingType?.ToDisplayString() ?? symbol?.ContainingNamespace?.ToDisplayString() ?? "";
-        var kind = symbol != null ? FindDeadCodeScanner.GetSymbolKindString(symbol) : "field";
+        var kind = symbol != null ? DeadCodeAdvisoryScanner.GetSymbolKindString(symbol) : "field";
         var id = symbol?.ToDisplayString() ?? $"{containerType}.{symbolName}";
 
         return (symbol, symbolName, containerType, kind, id);

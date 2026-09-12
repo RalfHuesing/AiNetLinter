@@ -44,7 +44,7 @@ internal static class VerifyTool
         if (projection.IncompleteReason is not null) return VerifyResponseFormatter.Incomplete(
             scope, projection.IncompleteReason.Value, projection.Recovery);
 
-        var scoreResult = await SafeguardScanner.ComputeScoreAsync(new SafeguardScannerParameters(
+        var scoreResult = await VerifyGateScanner.ComputeScoreAsync(new VerifyGateScannerParameters(
             solution,
             configSnapshot.Config,
             server.Console,
@@ -405,13 +405,13 @@ internal static class VerifyAdvisoryProjector
 
         try
         {
-            var deadCode = await FindDeadCodeScanner.ScanAsync(
+            var deadCode = await DeadCodeAdvisoryScanner.ScanAsync(
                 solution,
-                new FindDeadCodeArgs(MaxResults: UnboundedCandidateLimit, ScopeFiles: scopeFiles),
+                new DeadCodeAdvisoryOptions(MaxResults: UnboundedCandidateLimit, ScopeFiles: scopeFiles),
                 cancellationToken);
             var deadCodeEntries = deadCode.DeadSymbols.Select(ToDeadCodeEvidence);
 
-            var magicValues = await FindMagicValuesScanner.ScanAsync(new FindMagicValuesScannerParameters(
+            var magicValues = await MagicValueAdvisoryScanner.ScanAsync(new MagicValueAdvisoryScannerParameters(
                 solution,
                 null,
                 null,

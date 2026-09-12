@@ -4,21 +4,21 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.Verify.MagicValues;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;
+namespace AiNetLinter.FastTests.Mcp.Tools.MagicValueAdvisory;
 
 /// <summary>
-/// Erweiterte Heuristik-Tests fuer <see cref="FindMagicValuesScanner"/>: <c>nameof_candidates</c>
+/// Erweiterte Heuristik-Tests fuer <see cref="MagicValueAdvisoryScanner"/>: <c>nameof_candidates</c>
 /// (Symbol-Scope-Walk inkl. Parameter-, Variablen-, Property-, Methoden-, Typ- und
 /// Enum-Member-Bezeichner), <c>security_candidates</c> (Symbol-Name- und Praefix-Heuristik),
 /// <c>standard_candidates</c>-Erweiterung (Buffer-Konstanten), duplizierte
 /// <c>const</c>-Felder, <c>enum_candidates</c> (if/switch-Kaskaden) und
 /// <c>localization_candidates</c> (Exception-Konstruktor-Argument). Aus
-/// <see cref="FindMagicValuesScannerHeuristicTests"/> in eine eigene Datei extrahiert, damit
+/// <see cref="MagicValueAdvisoryScannerHeuristicTests"/> in eine eigene Datei extrahiert, damit
 /// beide Heuristik-Test-Klassen unter dem <c>MaxPublicMembersPerType: 15</c>-Limit bleiben.
-/// Geteilte Helpers ueber <see cref="FindMagicValuesTestHelpers"/>.
+/// Geteilte Helpers ueber <see cref="MagicValueAdvisoryTestHelpers"/>.
 /// </summary>
 [Trait("Category", "Component")]
-public sealed class FindMagicValuesScannerAdvancedHeuristicTests
+public sealed class MagicValueAdvisoryScannerAdvancedHeuristicTests
 {
     [Fact]
     public async Task Classify_NameofCandidate_StringMatchesParameterName()
@@ -34,7 +34,7 @@ public sealed class Foo
         throw new ArgumentNullException(""foo"");
     }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.NameofCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.NameofCandidates);
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("nameof_candidates", entry.Category);
@@ -60,7 +60,7 @@ public sealed class Foo
     private int Compute() => 0;
     private void Validate(int v, string name) { }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.NameofCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.NameofCandidates);
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("nameof_candidates", entry.Category);
@@ -81,7 +81,7 @@ public sealed class Foo
         throw new ArgumentNullException(""bar"");
     }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.NameofCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.NameofCandidates);
 
         Assert.Empty(result.Payload!.MagicValues);
     }
@@ -102,7 +102,7 @@ public sealed class Foo
     }
     private void Connect(string secret) { }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.SecurityCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.SecurityCandidates);
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("security_candidates", entry.Category);
@@ -122,7 +122,7 @@ public sealed class Foo
         var key = ""AKIAIOSFODNN7EXAMPLE"";
     }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.SecurityCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.SecurityCandidates);
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("security_candidates", entry.Category);
@@ -141,7 +141,7 @@ public sealed class Foo
 {
     public const int BufSize = 1024;
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.StandardCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.StandardCandidates);
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("standard_candidates", entry.Category);
@@ -159,7 +159,7 @@ public sealed class Foo
 {
     public const int MillisecondsPerSecond = 1000;
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.StandardCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.StandardCandidates);
 
         Assert.Empty(result.Payload!.MagicValues);
     }
@@ -186,11 +186,11 @@ public sealed class B
 {
     private const int SharedConstant = 12345;
 }";
-        using var testSolution = FindMagicValuesTestHelpers.CreateSolution(
+        using var testSolution = MagicValueAdvisoryTestHelpers.CreateSolution(
             ("A.cs", source1),
             ("B.cs", source2));
 
-        var result = await FindMagicValuesTestHelpers.RunAsync(testSolution.Solution, category: MagicValueCategory.ConstantCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(testSolution.Solution, category: MagicValueCategory.ConstantCandidates);
 
         Assert.Equal(2, result.Payload!.MagicValues.Count);
         Assert.All(result.Payload!.MagicValues, e => Assert.Contains("Hochstufung", e.Recommendation, StringComparison.Ordinal));
@@ -214,11 +214,11 @@ public sealed class B
 {
     private const string DefaultRole = ""Admin"";
 }";
-        using var testSolution = FindMagicValuesTestHelpers.CreateSolution(
+        using var testSolution = MagicValueAdvisoryTestHelpers.CreateSolution(
             ("A.cs", source1),
             ("B.cs", source2));
 
-        var result = await FindMagicValuesTestHelpers.RunAsync(testSolution.Solution, category: MagicValueCategory.ConstantCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(testSolution.Solution, category: MagicValueCategory.ConstantCandidates);
 
         Assert.Equal(2, result.Payload!.MagicValues.Count);
         Assert.All(result.Payload!.MagicValues, e => Assert.Equal("string", e.ValueType));
@@ -241,16 +241,16 @@ public sealed class B
     // ainetlinter-disable MagicValues
     private const string ApiUrl = ""https://api.example.test/v1"";
 }";
-        using var testSolution = FindMagicValuesTestHelpers.CreateSolution(
+        using var testSolution = MagicValueAdvisoryTestHelpers.CreateSolution(
             ("A.cs", source1),
             ("B.cs", source2));
 
-        var suppressed = await FindMagicValuesTestHelpers.RunAsync(testSolution.Solution);
+        var suppressed = await MagicValueAdvisoryTestHelpers.RunAsync(testSolution.Solution);
         Assert.Empty(suppressed.Payload!.MagicValues);
 
-        var included = await FindMagicValuesTestHelpers.RunAsync(
+        var included = await MagicValueAdvisoryTestHelpers.RunAsync(
             testSolution.Solution,
-            options: new FindMagicValuesRunOptions(IncludeSuppressed: true));
+            options: new MagicValueAdvisoryRunOptions(IncludeSuppressed: true));
 
         Assert.Equal(2, included.Payload!.MagicValues.Count);
         Assert.All(included.Payload.MagicValues, entry =>
@@ -273,7 +273,7 @@ public sealed class A
 {
     private const int SharedConstant = 12345;
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("A.cs", source), category: MagicValueCategory.ConstantCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("A.cs", source), category: MagicValueCategory.ConstantCandidates);
 
         Assert.Empty(result.Payload!.MagicValues);
     }
@@ -298,10 +298,10 @@ public sealed class BTests
             new ProjectSpec("App.Core", [("A.cs", source1)], VirtualProjectDirectory: "src/App.Core"),
             new ProjectSpec("App.Tests", [("BTests.cs", source2)], VirtualProjectDirectory: "tests/App.Tests"));
 
-        var result = await FindMagicValuesTestHelpers.RunAsync(
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(
             testSolution.Solution,
             category: MagicValueCategory.ConstantCandidates,
-            options: new FindMagicValuesRunOptions(IncludeTests: false));
+            options: new MagicValueAdvisoryRunOptions(IncludeTests: false));
 
         Assert.Empty(result.Payload!.MagicValues);
     }
@@ -322,7 +322,7 @@ public sealed class Foo
         else if (status == ""Failed"") { }
     }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.EnumCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.EnumCandidates);
 
         Assert.Equal(3, result.Payload!.MagicValues.Count);
         Assert.All(result.Payload!.MagicValues, e =>
@@ -348,7 +348,7 @@ public sealed class Foo
     }
 }";
 
-        var result = await FindMagicValuesTestHelpers.RunAsync(
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(
             ("Foo.cs", source),
             valueType: MagicValueValueType.Number,
             category: MagicValueCategory.EnumCandidates,
@@ -373,7 +373,7 @@ public sealed class Foo
         else if (status == ""Active"") { }
     }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.EnumCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.EnumCandidates);
 
         Assert.Empty(result.Payload!.MagicValues);
     }
@@ -392,7 +392,7 @@ public sealed class Foo
         throw new InvalidOperationException(""Connection refused from server"");
     }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.LocalizationCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.LocalizationCandidates);
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("localization_candidates", entry.Category);
@@ -413,7 +413,7 @@ public sealed class Foo
         throw new InvalidOperationException(""oops"");
     }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.LocalizationCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.LocalizationCandidates);
 
         Assert.Empty(result.Payload!.MagicValues);
     }
@@ -434,7 +434,7 @@ public sealed class Foo
         var jsonToken = ""json-prop"";
     }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.SecurityCandidates);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), category: MagicValueCategory.SecurityCandidates);
 
         Assert.Empty(result.Payload!.MagicValues);
     }

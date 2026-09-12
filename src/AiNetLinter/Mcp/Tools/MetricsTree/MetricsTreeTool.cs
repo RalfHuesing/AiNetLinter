@@ -74,7 +74,7 @@ internal static class MetricsTreeTool
     /// <summary>Dispatcht auf den passenden Scanner: die zwei Datei-Modi laufen synchron ohne
     /// Config/Console-Overhead, die zwei Roslyn-Modi brauchen <see cref="ISolutionStateProvider.GetConfigSnapshot"/>
     /// (fuer <c>LinterEngine</c>) und <see cref="ISolutionStateProvider.Console"/> (damit <c>LinterEngine</c>
-    /// auf demselben Kanal loggt wie der MCP-Server selbst, analog <see cref="GetViolationsTool"/>).</summary>
+    /// auf demselben Kanal loggt wie der MCP-Server selbst, analog <see cref="ViolationAnalysisTool"/>).</summary>
     private static async Task<MetricsTreeScanResult> BuildTreeResultAsync(
         ISolutionStateProvider state, Solution solution, MetricsTreeQuery query, CancellationToken ct)
     {

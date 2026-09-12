@@ -92,11 +92,11 @@ public sealed class VerifyAdvisoryProjectorTests
         foreach (var scopeFile in scopeFiles)
         {
             var fileScope = new HashSet<string>([scopeFile], StringComparer.OrdinalIgnoreCase);
-            var deadCode = await FindDeadCodeScanner.ScanAsync(
+            var deadCode = await DeadCodeAdvisoryScanner.ScanAsync(
                 solution,
-                new FindDeadCodeArgs(MaxResults: int.MaxValue, ScopeFiles: fileScope),
+                new DeadCodeAdvisoryOptions(MaxResults: int.MaxValue, ScopeFiles: fileScope),
                 CancellationToken.None);
-            var magicValues = await FindMagicValuesScanner.ScanAsync(new FindMagicValuesScannerParameters(
+            var magicValues = await MagicValueAdvisoryScanner.ScanAsync(new MagicValueAdvisoryScannerParameters(
                 solution,
                 null,
                 null,

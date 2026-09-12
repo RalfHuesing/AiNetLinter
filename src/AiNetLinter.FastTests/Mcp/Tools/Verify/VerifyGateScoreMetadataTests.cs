@@ -36,7 +36,7 @@ public sealed class VerifyGateScoreMetadataTests
             },
         };
 
-        var result = SafeguardScanner.BuildScoreResult(new BuildScoreResultParameters(
+        var result = VerifyGateScanner.BuildScoreResult(new BuildScoreResultParameters(
             Violations: violations,
             Classes: Array.Empty<ScannedClass>(),
             Config: TestHelper.CreateDefaultConfig(),

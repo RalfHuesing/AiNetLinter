@@ -109,7 +109,7 @@ internal static partial class GetImpactTool
     }
 
     /// <summary>Eine solutionweite Violations-Stufe pro Aufruf — Config/Console beschafft der
-    /// Tool-Zweig wie <c>get_violations</c> (atomarer Config-Schnappschuss, Server-Konsolen-Kanal).</summary>
+    /// Tool-Zweig wie <c>kontextuelle Violation-Ausgabe</c> (atomarer Config-Schnappschuss, Server-Konsolen-Kanal).</summary>
     private static Task<DiffViolationScanResult> CollectDiffViolationsAsync(
         ISolutionStateProvider state,
         Solution solution,

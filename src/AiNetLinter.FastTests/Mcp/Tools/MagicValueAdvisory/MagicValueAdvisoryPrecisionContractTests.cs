@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.Verify.MagicValues;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;
+namespace AiNetLinter.FastTests.Mcp.Tools.MagicValueAdvisory;
 
 [Trait("Category", "Component")]
-public sealed class FindMagicValuesPrecisionContractTests
+public sealed class MagicValueAdvisoryPrecisionContractTests
 {
     [Fact]
     public async Task ScanAsync_CategoryEvidenceScopeAndRecommendationStayDisjoint()
@@ -26,7 +26,7 @@ public sealed class Foo
     }
 }";
 
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source));
 
         Assert.False(result.IsMalfunction);
         Assert.NotNull(result.Payload);
@@ -74,7 +74,7 @@ public sealed class Foo
     }
 }";
 
-        var result = await FindMagicValuesTestHelpers.RunAsync(
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(
             ("Foo.cs", source), category: MagicValueCategory.ConfigCandidates);
 
         Assert.Contains("- config_candidates:", result.Text, StringComparison.Ordinal);
@@ -95,7 +95,7 @@ public sealed class Foo
     }
 }";
 
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source));
 
         var securityPosition = result.Text.IndexOf("- security_candidates:", StringComparison.Ordinal);
         var configPosition = result.Text.IndexOf("- config_candidates:", StringComparison.Ordinal);
@@ -118,7 +118,7 @@ public sealed class Foo
     }
 }";
 
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), maxResults: 1);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), maxResults: 1);
 
         Assert.Contains("- security_candidates:", result.Text, StringComparison.Ordinal);
         Assert.DoesNotContain("- config_candidates:", result.Text, StringComparison.Ordinal);

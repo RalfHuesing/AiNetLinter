@@ -19,25 +19,25 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace AiNetLinter.Mcp.Tools.Verify.MagicValues;
 
 /// <summary>
-/// Scanner fuer das On-Demand-Audit-Tool <c>find_magic_values</c>: iteriert ueber alle
+/// Scanner fuer das On-Demand-Audit-Tool <c>Magic-Value-Hinweisprojektion</c>: iteriert ueber alle
 /// <c>.cs</c>-Dokumente der Solution, klassifiziert jedes Literal via
 /// <see cref="MagicValuesClassifier"/>, aggregiert identische Funde (gleiches
 /// <c>(category, value, filePath)</c>-Tupel) und kuerzt das Ergebnis via
 /// <see cref="McpTruncation.TruncateLines"/>. Reine Daten-Schicht ohne
 /// <c>McpCodeGraphServer</c>-Abhaengigkeit, direkt unit-testbar (Pattern 1:1 von
-/// <see cref="Mcp.Tools.Analysis.GetViolationsScanner"/>).
+/// <see cref="Mcp.Tools.Analysis.ViolationCollector"/>).
 /// </summary>
-internal static partial class FindMagicValuesScanner
+internal static partial class MagicValueAdvisoryScanner
 {
     /// <summary>
     /// Default-Obergrenze fuer die Anzahl gezeigter Magic-Value-Funde in Text-Report
-    /// und agentischem Content — analog <see cref="Mcp.Tools.Analysis.GetViolationsScanner.DefaultMaxResults"/>
+    /// und agentischem Content — analog <see cref="Mcp.Tools.Analysis.ViolationCollector.DefaultMaxResults"/>
     /// und <see cref="Mcp.Tools.Analysis.SearchPatternScanner.DefaultMaxResults"/>. Schuetzt
     /// das Agent-Token-Budget.
     /// </summary>
     internal const int DefaultMaxResults = 50;
 
-    internal static async Task<FindMagicValuesResult> ScanAsync(FindMagicValuesScannerParameters p)
+    internal static async Task<MagicValueAdvisoryResult> ScanAsync(MagicValueAdvisoryScannerParameters p)
     {
         // changedOnly: git diff im Solution-Root aufrufen, die geaenderten Dateien als Set
         // materialisieren. Forward-Slash normalisiert, weil ParseGitDiffHunks relative Pfade
@@ -77,12 +77,12 @@ internal static partial class FindMagicValuesScanner
         }
 
         // Wenn kein einziges Dokument erfolgreich war UND wir einen Fehler gesehen haben, ist
-        // das eine echte Malfunction (Pattern 1:1 von GetViolationsScanner — derselbe
+        // das eine echte Malfunction (Pattern 1:1 von ViolationCollector — derselbe
         // 'LinterEngine hat global geworfen'-Fall, nur hier per Document). Bei Teilerfolg
         // liefern wir die aggregierten Funde ohne Malfunction-Flag.
         if (raw.Count == 0 && malfunctionContext is not null)
         {
-            return new FindMagicValuesResult(
+            return new MagicValueAdvisoryResult(
                 Text: "Unerwarteter Fehler beim Magic-Value-Scan.",
                 Payload: null,
                 IsMalfunction: true,
@@ -157,7 +157,7 @@ internal static partial class FindMagicValuesScanner
         changed.Add(normalized);
     }
 
-    private static string BuildEmptyScopeCause(FindMagicValuesScannerParameters p)
+    private static string BuildEmptyScopeCause(MagicValueAdvisoryScannerParameters p)
     {
         var reasons = new List<string>();
         if (!string.IsNullOrWhiteSpace(p.ScopeFilter)) reasons.Add($"Scope-Filter '{p.ScopeFilter}'");
@@ -173,7 +173,7 @@ internal static partial class FindMagicValuesScanner
     /// Code-Zeilen unter dem <c>MaxMethodLineCount: 60</c>-Limit zu halten.</summary>
     private static async Task<(List<RawMagicValue> Raw, string? MalfunctionContext)> WalkDocumentsAsync(
         IReadOnlyList<(Document Document, string FilePath)> matchingDocuments,
-        FindMagicValuesScannerParameters p,
+        MagicValueAdvisoryScannerParameters p,
         IReadOnlySet<int> ignoreNumbers,
         IReadOnlySet<string>? changedFiles)
     {
@@ -213,11 +213,11 @@ internal static partial class FindMagicValuesScanner
     }
 
     /// <summary>Aggregiert Roh-Funde und baut den agentischen Report
-    /// liefert den finalen <see cref="FindMagicValuesResult"/>. Aus <see cref="ScanAsync"/>
+    /// liefert den finalen <see cref="MagicValueAdvisoryResult"/>. Aus <see cref="ScanAsync"/>
     /// extrahiert, um dessen Code-Zeilen unter dem 60-Limit zu halten.</summary>
-    private static FindMagicValuesResult BuildResult(
+    private static MagicValueAdvisoryResult BuildResult(
         List<RawMagicValue> raw,
-        FindMagicValuesScannerParameters p,
+        MagicValueAdvisoryScannerParameters p,
         int matchingFileCount,
         string? scopeStatus = null,
         string? scopeCause = null)
@@ -232,7 +232,7 @@ internal static partial class FindMagicValuesScanner
             scopeCause);
         var report = FormatReport(grouped, payload, p.MaxResults);
 
-        return new FindMagicValuesResult(
+        return new MagicValueAdvisoryResult(
             Text: report,
             Payload: payload,
             IsMalfunction: false,
@@ -354,7 +354,7 @@ internal static partial class FindMagicValuesScanner
 
     private static string FormatReport(
         IReadOnlyList<GroupedMagicValue> grouped,
-        FindMagicValuesPayload payload,
+        MagicValueAdvisoryPayload payload,
         int maxResults)
     {
         var summary = payload.Summary;
@@ -403,7 +403,7 @@ internal static partial class FindMagicValuesScanner
 
     private static void AppendCategorySummary(
         StringBuilder sb,
-        FindMagicValuesPayload payload,
+        MagicValueAdvisoryPayload payload,
         IReadOnlyList<GroupedMagicValue> grouped)
     {
         sb.AppendLine("Kategorien:");

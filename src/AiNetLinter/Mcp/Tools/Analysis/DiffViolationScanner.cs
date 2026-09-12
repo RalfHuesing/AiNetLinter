@@ -18,7 +18,7 @@ namespace AiNetLinter.Mcp.Tools.Analysis;
 
 /// <summary>
 /// Interne Violations-Stufe des diff-bezogenen Analysepfads: ein Aufruf fuehrt den Linter GENAU EINMAL
-/// solutionweit aus (<see cref="GetViolationsScanner.RunSolutionLintAsync"/>) und filtert das Ergebnis
+/// solutionweit aus (<see cref="ViolationCollector.RunSolutionLintAsync"/>) und filtert das Ergebnis
 /// rein diffbezogen — eine Violation bleibt, wenn ihre Datei+Zeile in einem geaenderten Hunk ODER in der
 /// Deklarationsspanne eines gezeigten geaenderten Symbols liegt; alle anderen Violations derselben
 /// Datei bleiben außen vor. Bei leerem Input (keine Hunks UND keine gezeigten Symbole) entfaellt der
@@ -31,7 +31,7 @@ internal static class DiffViolationScanner
     /// Trunkierung). Der optionale Zaehler wird unmittelbar vor dem Lauf inkrementiert — er misst
     /// ausgefuehrte Stufen, auch wenn der Lauf fehlschlaegt. Eine unerwartete non-OCE-Exception des
     /// Laufs liefert <see cref="DiffViolationScanResult.IsMalfunction"/> mit roher Exception-Message
-    /// statt einer Teil-Violation-Liste (Muster <see cref="GetViolationsResult"/>).
+    /// statt einer Teil-Violation-Liste (Muster <see cref="ViolationAnalysisResult"/>).
     /// </summary>
     internal static async Task<DiffViolationScanResult> CollectAsync(DiffViolationScanRequest request)
     {

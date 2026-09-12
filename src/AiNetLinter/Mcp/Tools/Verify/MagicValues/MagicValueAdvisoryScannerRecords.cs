@@ -32,13 +32,13 @@ internal sealed record GroupedMagicValue(
     int FirstColumn);
 
 /// <summary>
-/// Parameter-Record fuer <see cref="FindMagicValuesScanner.ScanAsync"/>. Kapselt 9
+/// Parameter-Record fuer <see cref="MagicValueAdvisoryScanner.ScanAsync"/>. Kapselt 9
 /// Konfigurations-Eingaenge in einem Record, damit <c>MaxMethodParameterCount: 4</c> (siehe
 /// Linter-Regel <c>MaxMethodParameterCount</c>) eingehalten wird (Pattern 1:1 von
-/// <c>GetViolationsScannerParameters</c>). <see cref="ValueType"/> ist nullable: <see langword="null"/>
+/// <c>ViolationCollectorParameters</c>). <see cref="ValueType"/> ist nullable: <see langword="null"/>
 /// = "all" (Strings UND Numbers akzeptieren).
 /// </summary>
-internal sealed record FindMagicValuesScannerParameters(
+internal sealed record MagicValueAdvisoryScannerParameters(
     Solution Solution,
     string? ScopeFilter,
     MagicValueValueType? ValueType,
@@ -53,20 +53,20 @@ internal sealed record FindMagicValuesScannerParameters(
     IReadOnlySet<string>? ScopeFiles = null);
 
 /// <summary>
-/// Ergebnis-Record fuer <see cref="FindMagicValuesScanner.ScanAsync"/>. <see cref="IsMalfunction"/>
+/// Ergebnis-Record fuer <see cref="MagicValueAdvisoryScanner.ScanAsync"/>. <see cref="IsMalfunction"/>
 /// unterscheidet eine echte Malfunction (unerwartete Roslyn-/Laufzeit-Exception im defensiven
 /// try/catch — <see cref="Context"/> non-null, <see cref="Payload"/> null) von einem normalen
 /// Report (auch "Keine Dateien im Scope" oder 0 Treffer zaehlen als normal).
 /// </summary>
-internal sealed record FindMagicValuesResult(
+internal sealed record MagicValueAdvisoryResult(
     string Text,
-    FindMagicValuesPayload? Payload,
+    MagicValueAdvisoryPayload? Payload,
     bool IsMalfunction,
     bool IsTruncated = false,
     string? Context = null);
 
 /// <summary>Interne Wurzel für gefundene Magic-Value-Einträge plus Aggregat-Summary.</summary>
-internal sealed record FindMagicValuesPayload(
+internal sealed record MagicValueAdvisoryPayload(
     IReadOnlyList<MagicValueEntry> MagicValues,
     IReadOnlyList<MagicValueCategorySummary> Categories,
     MagicValuesSummary Summary,

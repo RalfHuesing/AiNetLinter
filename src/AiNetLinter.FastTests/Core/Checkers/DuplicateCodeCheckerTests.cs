@@ -75,7 +75,7 @@ public sealed class DuplicateCodeCheckerTests : IDisposable
         // Ein Duplikat-Fund ist EIN Befund (repraesentatives Cluster-Mitglied, analog
         // PostAnalysisChecks.RunMaxPartialClassFilesCheck), nicht eine Violation pro Mitglied —
         // siehe Klassen-Doc-Kommentar von DuplicateCodeChecker (Live-Dogfood-Befund 2026-08-11:
-        // eine Violation pro Mitglied blies den Safeguard-Score auf dem eigenen Repo auf 0).
+        // eine Violation pro Mitglied blies den VerifyGate-Score auf dem eigenen Repo auf 0).
         var solution = CreateAdhocSolution(_tempDir,
             ("A.cs", BuildMethod("A", "ComputeOne")),
             ("B.cs", BuildMethod("B", "ComputeTwo")));

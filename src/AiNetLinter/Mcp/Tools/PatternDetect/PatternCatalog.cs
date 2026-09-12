@@ -12,8 +12,8 @@ namespace AiNetLinter.Mcp.Tools.PatternDetect;
 /// und würden komplett neue Roslyn-Syntax-Walker mit eigenem False-Positive-Risiko erfordern
 /// — bewusst zurückgestellt (analog zum <c>method_count</c>-Präzedenzfall bei <c>metrics_tree</c>).
 /// Magic-Value-Funde sind nicht Teil von <c>pattern_detect</c> — sie werden vom separaten
-/// On-Demand-Audit-Tool <c>find_magic_values</c>
-/// (<see cref="Mcp.Tools.MagicValues.FindMagicValuesTool"/>) abgedeckt, das dieselbe Domäne
+/// On-Demand-Audit-Tool <c>Magic-Value-Hinweisprojektion</c>
+/// (<see cref="Mcp.Tools.MagicValues.MagicValueAdvisoryTool"/>) abgedeckt, das dieselbe Domäne
 /// (Literale/Schwellenwerte/URLs/...) ohne Bindung an die <see cref="LinterEngine"/>-Checker
 /// klassifiziert. Reine Aggregation über bereits von der <see cref="LinterEngine"/> erzeugte
 /// <see cref="AiNetLinter.Models.RuleViolation"/>-Objekte — kein neuer Detection-Code.
@@ -21,7 +21,7 @@ namespace AiNetLinter.Mcp.Tools.PatternDetect;
 /// Jede Violation gehört zu genau einem Pattern (die 6 RuleId-Gruppen überschneiden sich nicht).
 /// Bei <c>god-class</c> können mehrere Regeln (AIContextFootprint/MaxPublicMembersPerType/
 /// MaxLineCount) auf derselben Klasse gleichzeitig treffen — das sind trotzdem separate Items
-/// in der Trefferliste, keine Dedupe-Logik (identisch zu <c>get_violations</c>).
+/// in der Trefferliste, keine Dedupe-Logik (identisch zu <c>kontextuelle Violation-Ausgabe</c>).
 /// </summary>
 internal static class PatternCatalog
 {

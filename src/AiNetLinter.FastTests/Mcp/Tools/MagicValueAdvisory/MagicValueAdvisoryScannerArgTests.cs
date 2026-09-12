@@ -7,18 +7,18 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.Verify.MagicValues;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;
+namespace AiNetLinter.FastTests.Mcp.Tools.MagicValueAdvisory;
 
 /// <summary>
-/// Argument-Aktivierungs-Tests fuer <see cref="FindMagicValuesScanner"/>: <c>includeSuppressed</c>
+/// Argument-Aktivierungs-Tests fuer <see cref="MagicValueAdvisoryScanner"/>: <c>includeSuppressed</c>
 /// (wirksam via <c>HasDisableComment</c>), <c>includeTests</c> (Pfad-Match <c>/Tests/</c>)
 /// und <c>changedOnly</c> (Git-Diff-Filter via <c>DiffImpactAnalyzer</c>). Aus
-/// <see cref="FindMagicValuesScannerTests"/> in eine eigene Datei extrahiert, damit die
+/// <see cref="MagicValueAdvisoryScannerTests"/> in eine eigene Datei extrahiert, damit die
 /// Haupt-Testklasse unter dem <c>MaxPublicMembersPerType: 15</c>-Limit bleibt. Geteilte
-/// Helpers ueber <see cref="FindMagicValuesTestHelpers"/>.
+/// Helpers ueber <see cref="MagicValueAdvisoryTestHelpers"/>.
 /// </summary>
 [Trait("Category", "Component")]
-public sealed class FindMagicValuesScannerArgTests
+public sealed class MagicValueAdvisoryScannerArgTests
 {
     [Fact]
     public async Task ScanAsync_DefaultValueType_IsAll()
@@ -33,7 +33,7 @@ public sealed class Foo
     public const string Url = ""https://api.example.com"";
     public const double Tolerance = 0.19;
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source));
 
         // Beide Literale muessen gefunden werden (String + Number).
         Assert.Equal(2, result.Payload!.MagicValues.Count);
@@ -55,7 +55,7 @@ public sealed class Foo
     // ainetlinter-disable MagicValues
     public const string Url = ""https://api.example.com"";
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), options: new FindMagicValuesRunOptions(IncludeSuppressed: false));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), options: new MagicValueAdvisoryRunOptions(IncludeSuppressed: false));
 
         Assert.Empty(result.Payload!.MagicValues);
     }
@@ -72,7 +72,7 @@ public sealed class Foo
     // ainetlinter-disable MagicValues
     public const string Url = ""https://api.example.com"";
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), options: new FindMagicValuesRunOptions(IncludeSuppressed: true));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), options: new MagicValueAdvisoryRunOptions(IncludeSuppressed: true));
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("https://api.example.com", entry.Value);
@@ -101,12 +101,12 @@ public sealed class Baz
 {
     public const string Url = ""https://api.integration.com"";
 }";
-        using var testSolution = FindMagicValuesTestHelpers.CreateSolution(
+        using var testSolution = MagicValueAdvisoryTestHelpers.CreateSolution(
             ("src/Production/Foo.cs", productionSource),
             ("tests/UnitTests/BarTests.cs", testSource1),
             ("tests/IntegrationTests/BazTests.cs", testSource2));
 
-        var result = await FindMagicValuesTestHelpers.RunAsync(testSolution.Solution, options: new FindMagicValuesRunOptions(IncludeTests: false));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(testSolution.Solution, options: new MagicValueAdvisoryRunOptions(IncludeTests: false));
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("https://api.example.com", entry.Value);
@@ -129,11 +129,11 @@ public sealed class Bar
 {
     public const string Url = ""https://api.test.com"";
 }";
-        using var testSolution = FindMagicValuesTestHelpers.CreateSolution(
+        using var testSolution = MagicValueAdvisoryTestHelpers.CreateSolution(
             ("src/Production/Foo.cs", productionSource),
             ("tests/FastTests/Bar.cs", testSource));
 
-        var result = await FindMagicValuesTestHelpers.RunAsync(testSolution.Solution, options: new FindMagicValuesRunOptions(IncludeTests: true));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(testSolution.Solution, options: new MagicValueAdvisoryRunOptions(IncludeTests: true));
 
         Assert.Equal(2, result.Payload!.MagicValues.Count);
         Assert.Contains(result.Payload!.MagicValues, e => e.Value == "https://api.example.com");
@@ -151,7 +151,7 @@ public sealed class Foo
 {
     public const string Url = ""https://api.example.com"";
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), options: new FindMagicValuesRunOptions(ChangedOnly: true));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), options: new MagicValueAdvisoryRunOptions(ChangedOnly: true));
 
         // Kein Git-Repo, also 0 Funde â€” gewuenschte Semantik.
         Assert.False(result.IsMalfunction);
@@ -167,7 +167,7 @@ public sealed class Foo
 {
     public const string Url = ""https://api.example.com"";
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), options: new FindMagicValuesRunOptions(ChangedOnly: false));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), options: new MagicValueAdvisoryRunOptions(ChangedOnly: false));
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("https://api.example.com", entry.Value);

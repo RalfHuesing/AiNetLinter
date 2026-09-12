@@ -6,11 +6,11 @@ using Microsoft.CodeAnalysis;
 namespace AiNetLinter.Mcp.Tools.Verify.DeadCode;
 
 /// <summary>
-/// Hilfsfunktionen fuer Filter- und Formatierungs-Logik von Symbolen bei find_dead_code.
+/// Hilfsfunktionen fuer Filter- und Formatierungs-Logik von Symbolen bei Dead-Code-Hinweisprojektion.
 /// </summary>
 internal static class DeadCodeFilters
 {
-    internal static bool ShouldCheckSymbol(INamedTypeSymbol symbol, FindDeadCodeArgs args)
+    internal static bool ShouldCheckSymbol(INamedTypeSymbol symbol, DeadCodeAdvisoryOptions args)
     {
         if (!MatchesKindFilter(symbol, args.Kind)) return false;
         if (!MatchesAccessibilityFilter(symbol.DeclaredAccessibility, args.Accessibility)) return false;

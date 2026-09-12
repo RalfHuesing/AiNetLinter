@@ -49,15 +49,15 @@ internal static class AnalysisToolRegistrations
         ProjectRegistry registry)
     {
         tools.Add(McpServerTool.Create(
-            async (RequestContext<CallToolRequestParams> context, string targetPath, [Description("changes (Default) oder solution")] string? scope = null, CancellationToken ct = default) =>
+            async (RequestContext<CallToolRequestParams> context, string targetPath = "", [Description("changes (Default) oder solution")] string? scope = null, CancellationToken ct = default) =>
             {
                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
                 if (unknownError is not null) return VerifyResponseFormatter.Error(
                     "INVALID_ARGUMENT", "Der Request enthält ein unbekanntes Argument.", "Nur targetPath und scope verwenden.");
                 if (!VerifyContract.TryParseScope(scope, out var parsedScope)) return VerifyResponseFormatter.Error(
                     "INVALID_ARGUMENT", "scope muss changes oder solution sein.", "scope auf changes oder solution setzen.", "$.scope");
-                if (!VerifyContract.IsSourceSolutionTarget(targetPath)) return VerifyResponseFormatter.Error(
-                    "ASSEMBLY_TARGET_UNSUPPORTED", "verify akzeptiert ausschließlich .sln- oder .slnx-Source-Ziele.", "targetPath auf eine .sln oder .slnx setzen.", "$.targetPath");
+                if (!VerifyContract.TryValidateSourceSolutionTarget(targetPath, out var targetError)) return VerifyResponseFormatter.Error(
+                    targetError!.Code, targetError.Message, targetError.Recovery, "$.targetPath");
                 return await ProjectToolCall.ExecuteAsync(registry, targetPath, lease =>
                     VerifyTool.ExecuteAsync(lease.Server, parsedScope, ct));
             },

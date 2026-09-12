@@ -16,7 +16,7 @@ namespace AiNetLinter.Mcp.Tools.ServerMaintenance;
 /// <summary>
 /// MCP-Tool <c>reload_config</c>: liest die <c>ainetlinter-rules.json</c> zur Laufzeit neu ein und ersetzt
 /// die in <see cref="McpCodeGraphServer"/> resident gehaltene Config-Instanz, die
-/// <c>get_violations</c> nutzt — und laedt die Solution/Workspace-Kompilierung (inkl.
+/// <c>kontextuelle Violation-Ausgabe</c> nutzt — und laedt die Solution/Workspace-Kompilierung (inkl.
 /// wiederhergestellter NuGet-Metadatenreferenzen) neu ein, ohne Server-Neustart.
 /// </summary>
 internal static class ReloadConfigTool

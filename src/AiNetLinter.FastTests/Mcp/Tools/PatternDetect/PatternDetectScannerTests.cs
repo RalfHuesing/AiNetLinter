@@ -20,7 +20,7 @@ namespace AiNetLinter.FastTests.Mcp.Tools.PatternDetect;
 /// Pattern, siehe <see cref="PatternCatalog"/>) sowie Edge-Cases (0 Treffer, Scope ohne Treffer,
 /// Trunkierung, Malfunction) ab. Kleine, gezielte virtuelle Solutions statt der geteilten
 /// Live-Fixture — pro Test genau der Code, der die jeweilige Regel
-/// deterministisch ausloest (Pattern 1:1 von <c>SafeguardScannerTests</c> uebernommen).
+/// deterministisch ausloest (Pattern 1:1 von <c>VerifyGateScannerTests</c> uebernommen).
 /// </summary>
 [Trait("Category", "Component")]
 public sealed class PatternDetectScannerTests

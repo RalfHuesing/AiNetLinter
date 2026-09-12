@@ -5,21 +5,21 @@ using System.Threading.Tasks;
 using AiNetLinter.Mcp.Tools.Verify.MagicValues;
 using Xunit;
 
-namespace AiNetLinter.FastTests.Mcp.Tools.FindMagicValues;
+namespace AiNetLinter.FastTests.Mcp.Tools.MagicValueAdvisory;
 
 /// <summary>
-/// Basis-Heuristik-Tests fuer <see cref="FindMagicValuesScanner"/> â€” prueft die einzelnen
+/// Basis-Heuristik-Tests fuer <see cref="MagicValueAdvisoryScanner"/> â€” prueft die einzelnen
 /// Literal-Klassifizierungs-Heuristiken (URL, Windows-Pfad, Format-String, HTTP-Statuscode,
 /// Schwellenwert-Doppel, Connection-String, NonHttpStatus) und die interpolierten
 /// String-Segmente jeweils isoliert auf kleinen Quell-Texten. Die erweiterten Heuristiken
 /// (<c>nameof</c>/<c>security</c>/<c>standard</c>/<c>duplicate const</c>/<c>enum</c>/
-/// <c>localization</c>) liegen in <see cref="FindMagicValuesScannerAdvancedHeuristicTests"/>;
-/// Arg-Aktivierungen in <see cref="FindMagicValuesScannerArgTests"/>. Aufteilung dient der
+/// <c>localization</c>) liegen in <see cref="MagicValueAdvisoryScannerAdvancedHeuristicTests"/>;
+/// Arg-Aktivierungen in <see cref="MagicValueAdvisoryScannerArgTests"/>. Aufteilung dient der
 /// Einhaltung des <c>MaxPublicMembersPerType: 15</c>-Limits pro Test-Klasse. Geteilte
-/// Helpers ueber <see cref="FindMagicValuesTestHelpers"/>.
+/// Helpers ueber <see cref="MagicValueAdvisoryTestHelpers"/>.
 /// </summary>
 [Trait("Category", "Component")]
-public sealed class FindMagicValuesScannerHeuristicTests
+public sealed class MagicValueAdvisoryScannerHeuristicTests
 {
     [Fact]
     public async Task ScanAsync_UrlLiteral_ReportedAsConfigCandidate()
@@ -30,7 +30,7 @@ public sealed class Foo
 {
     public const string ApiBaseUrl = ""https://api.example.com/v1"";
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source));
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("config_candidates", entry.Category);
@@ -47,7 +47,7 @@ public sealed class Foo
 {
     public const string DataDir = @""C:\Data\Production\Input"";
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source));
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("config_candidates", entry.Category);
@@ -63,7 +63,7 @@ public sealed class Foo
 {
     public const string DateFormat = ""yyyy-MM-dd"";
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source));
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("constant_candidates", entry.Category);
@@ -82,7 +82,7 @@ public sealed class Foo
         if (status == 404) { }
     }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source));
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("standard_candidates", entry.Category);
@@ -99,7 +99,7 @@ public sealed class Foo
 {
     private const double Tolerance = 0.19;
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source));
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("constant_candidates", entry.Category);
@@ -115,7 +115,7 @@ public sealed class Foo
 {
     public const string ConnString = ""Server=prod;Database=mydb;Trusted_Connection=True;"";
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source));
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("config_candidates", entry.Category);
@@ -134,7 +134,7 @@ public sealed class Foo
         if (status == 7) { }
     }
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source), valueType: MagicValueValueType.Number);
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source), valueType: MagicValueValueType.Number);
 
         // 7 ist kein HTTP-Statuscode â€” keine Meldung.
         Assert.Empty(result.Payload!.MagicValues);
@@ -155,7 +155,7 @@ public sealed class Foo
 {
     public string M(int env) => $""Server=prod;Database=mydb; for env {env}"";
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source));
 
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("config_candidates", entry.Category);
@@ -174,7 +174,7 @@ public sealed class Foo
     public const string Opt2 = ""-sar"";
     public const string Opt3 = ""--daemon-start"";
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source));
         Assert.Empty(result.Payload!.MagicValues);
     }
 
@@ -187,7 +187,7 @@ public sealed class Foo
 {
     public const string Header = ""X-Correlation-ID"";
 }";
-        var result = await FindMagicValuesTestHelpers.RunAsync(("Foo.cs", source));
+        var result = await MagicValueAdvisoryTestHelpers.RunAsync(("Foo.cs", source));
         var entry = Assert.Single(result.Payload!.MagicValues);
         Assert.Equal("constant_candidates", entry.Category);
         Assert.Equal("X-Correlation-ID", entry.Value);

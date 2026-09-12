@@ -6,7 +6,7 @@ namespace AiNetLinter.Core.DuplicateDetection;
 
 // Parameter-, Options- und Ergebnis-Records fuer DuplicateDetectionEngine — aus der
 // Verhaltens-Datei ausgelagert, damit deren AIContextFootprint/MaxLineCount nicht durch reine
-// Datentraeger aufgeblaeht wird (Pattern konsistent mit DependencyGraphModels.cs/SafeguardModels.cs).
+// Datentraeger aufgeblaeht wird (Pattern konsistent mit DependencyGraphModels.cs/VerifyGateModels.cs).
 
 /// <summary>
 /// Gestaffelte Aehnlichkeits-Klassifikation eines <see cref="DuplicateCluster"/> (jscpd-Pattern).

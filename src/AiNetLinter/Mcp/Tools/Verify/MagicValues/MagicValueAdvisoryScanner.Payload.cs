@@ -11,12 +11,12 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace AiNetLinter.Mcp.Tools.Verify.MagicValues;
 
-internal static partial class FindMagicValuesScanner
+internal static partial class MagicValueAdvisoryScanner
 {
-    private static FindMagicValuesPayload BuildPayload(
+    private static MagicValueAdvisoryPayload BuildPayload(
         IReadOnlyList<GroupedMagicValue> grouped,
         int maxResults,
-        FindMagicValuesScannerParameters p,
+        MagicValueAdvisoryScannerParameters p,
         int matchingFileCount,
         string? scopeStatus,
         string? scopeCause)
@@ -36,7 +36,7 @@ internal static partial class FindMagicValuesScanner
         var summarySemantics = ("Statische Syntax-/Semantik-Heuristik über C#-Literale im angeforderten Scope; " +
             "keine Laufzeit-, externen Consumer- oder globale Abwesenheitsaussage.",
             status == "empty" ? null : "Kandidaten manuell prüfen; keine automatische Änderung aus dem Audit ableiten.");
-        return new FindMagicValuesPayload(
+        return new MagicValueAdvisoryPayload(
             MagicValues: shown.Select(g => new MagicValueEntry(
                 FilePath: g.FilePath,
                 Line: g.FirstLine,
@@ -139,7 +139,7 @@ internal static partial class FindMagicValuesScanner
         _ => null,
     };
 
-    private static string BuildScopeDescription(FindMagicValuesScannerParameters p, int matchingFileCount)
+    private static string BuildScopeDescription(MagicValueAdvisoryScannerParameters p, int matchingFileCount)
     {
         var filter = string.IsNullOrWhiteSpace(p.ScopeFilter) ? "ohne scopeFilter" : $"scopeFilter='{p.ScopeFilter}'";
         var tests = p.IncludeTests ? "Tests eingeschlossen" : "Tests ausgeschlossen";

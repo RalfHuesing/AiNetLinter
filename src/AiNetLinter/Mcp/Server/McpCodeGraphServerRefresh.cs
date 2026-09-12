@@ -111,7 +111,7 @@ internal static class McpCodeGraphServerRefresh
 
             // Ohne eindeutige Projektzuordnung bleibt die Datei unsichtbar fuer den
             // projektbezogenen Snapshot. Eine Zuordnung zu einem beliebigen Projekt
-            // wuerde Lint- und Safeguard-Ergebnisse nicht-deterministisch machen.
+            // wuerde Lint- und VerifyGate-Ergebnisse nicht-deterministisch machen.
             // (Directory-mtime-Aenderungen irgendwo im Repo) auslöste. Ohne Praefix-Treffer wird
             // die Datei jetzt uebersprungen statt willkuerlich zugeordnet.
             var projectId = PickProjectForNewFile(updated, path);
