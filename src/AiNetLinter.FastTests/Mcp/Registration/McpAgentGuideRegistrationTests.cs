@@ -31,7 +31,7 @@ public sealed class McpAgentGuideRegistrationTests
         Assert.Contains("Dauerhafte Agentenregel", content.Text, StringComparison.Ordinal);
         Assert.Contains("alwaysApply: true", content.Text, StringComparison.Ordinal);
         Assert.Contains("MUSS zuerst das passende", content.Text, StringComparison.Ordinal);
-        Assert.Contains("report_observability_feedback", content.Text, StringComparison.Ordinal);
+        Assert.DoesNotContain("report_observability_feedback", content.Text, StringComparison.Ordinal);
 
         const string workflowMarker = "## Dauerhafte Agentenregel\n\n";
         var workflowStart = content.Text.IndexOf(workflowMarker, StringComparison.Ordinal);
@@ -40,7 +40,7 @@ public sealed class McpAgentGuideRegistrationTests
         Assert.DoesNotContain("## Ablauf", workflow, StringComparison.Ordinal);
         Assert.Contains("targetPath", workflow, StringComparison.Ordinal);
         Assert.Contains("get_server_health", workflow, StringComparison.Ordinal);
-        Assert.Contains("report_observability_feedback", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("report_observability_feedback", workflow, StringComparison.Ordinal);
         Assert.Contains(".dll", workflow, StringComparison.Ordinal);
         Assert.Contains("symbolIdentifier", workflow, StringComparison.Ordinal);
         Assert.Contains("get_feature_context", workflow, StringComparison.Ordinal);

@@ -46,14 +46,14 @@ public sealed class McpLiveRepositoryResourceTests
             new[] { "get_namespace_tree", "get_class_structure", "get_file_tree", "get_file_skeleton", "get_index_scope", "get_hotspots" },
             new[] { "get_violations", "safeguard", "search_pattern", "metrics_tree", "metrics_lookup", "pattern_detect", "find_magic_values", "find_dead_code", "get_feature_context", "get_test_context" },
             new[] { "find_duplicates", "inspect_assembly", "find_assembly_extensions", "search_assembly", "get_assembly_context" },
-            new[] { "reload_config", "get_server_health", "report_observability_feedback" }
+            new[] { "reload_config", "get_server_health" }
         };
 
         Assert.Contains(templates, template => template.UriTemplate == "ainetlinter://overview{?targetPath}");
         Assert.Contains(templates, template => template.UriTemplate == "ainetlinter://rules{?targetPath}");
         var guideResource = Assert.Single(resources);
         Assert.Equal("ainetlinter://agent-guide", guideResource.Uri);
-        Assert.Equal(33, tools.Count);
+        Assert.Equal(32, tools.Count);
         Assert.Equal(expectedToolGroups.SelectMany(group => group).ToHashSet(StringComparer.Ordinal), tools.Select(tool => tool.Name).ToHashSet(StringComparer.Ordinal));
         Assert.Equal(resourceUri, textContent.Uri);
         Assert.Equal("text/markdown", textContent.MimeType);

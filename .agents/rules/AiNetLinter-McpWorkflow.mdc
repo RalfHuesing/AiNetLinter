@@ -40,4 +40,4 @@ Bei C#-Aufgaben (Symbole, Methoden, Aufrufer, Hierarchien, Impact, Linter) stand
 | **Projektstruktur** | `get_file_tree` | `fileFilter: "*.cs"`, `view: "summary"` (*nie `view="files"` auf Root!*) |
 | **Assemblies (.dll)** | `inspect_assembly` | `targetPath: "<pfad.dll>"` (Metadaten & API dekompilieren) |
 | **Clean-Code-Audit** | `find_dead_code` / `find_magic_values` | Standard mit `scopeFilter: "..."`; ungescopt nur bei explizitem Voll-Audit |
-| **Status & Feedback** | `get_server_health` / `report_observability_feedback` | Health prüfen oder Tool-Probleme melden |
+| **Status & Health** | `get_server_health` | Health und Server-Zustand prüfen |

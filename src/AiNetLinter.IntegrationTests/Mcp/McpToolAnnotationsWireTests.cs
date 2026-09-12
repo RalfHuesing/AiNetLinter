@@ -33,7 +33,6 @@ public sealed class McpToolAnnotationsWireTests
 
         AssertAnnotation(initialize, "find_symbol", readOnly: true, destructive: false, idempotent: true, openWorld: false);
         AssertAnnotation(initialize, "reload_config", readOnly: false, destructive: false, idempotent: true, openWorld: false);
-        AssertAnnotation(initialize, "report_observability_feedback", readOnly: false, destructive: false, idempotent: false, openWorld: false);
     }
 
     private static async Task<IReadOnlyDictionary<string, JsonElement>> ReadToolAnnotationsAsync(

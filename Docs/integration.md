@@ -297,7 +297,6 @@ gilt über Stdio sowie den Thin-Client-/Daemon-Transport. Bei einem
 zielgebundenen Aufruf nennt der Content zum Snapshot die Felder `kind`, `fresh`
 und `fingerprint`. Der Fingerprint ist mit dem Snapshot des nachfolgenden
 passenden Analyseaufrufs korrelierbar.
-`report_observability_feedback` bleibt ungebunden.
 
 Assembly-Targets sind verwaltete `.dll` oder `.exe`; die Analyse bleibt metadata-only
 und führt keine Assembly aus. `inspect_assembly` nutzt `publicOnly`, `exactTypeName`,
@@ -344,9 +343,8 @@ Für den MCP-Transport wird der Server über `initialize` ausgehandelt. Clients 
 
 Jedes Tool trägt in `tools/list` explizite MCP-Annotations. Die Analyse-, Symbol-,
 Metrik- und Health-Abfragen sind als `readOnlyHint=true`,
-`destructiveHint=false`, `idempotentHint=true` und `openWorldHint=false` markiert.
-`reload_config` ist `false/false/true/false`,
-`report_observability_feedback` `false/false/false/false` (Reihenfolge wie oben).
+`destructiveHint=false`, `idempotentHint=true` und `openWorldHint=false` markiert,
+`reload_config` als `false/false/true/false` (Reihenfolge wie oben).
 `get_impact` bleibt closed-world, weil Git nur lokal gegen das geladene Repository
 gelesen wird; auch `search_pattern` und `reload_config` bleiben durch ihre
 Solution-/Sicherheitsgrenzen closed-world.

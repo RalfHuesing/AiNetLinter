@@ -55,7 +55,7 @@ public sealed class WiringToolCollectionContractTests
                     AssemblyAnalysisDispatcher.CreateRoute(composition.Sessions))),
             McpServerResourceCollectionFactory.Build(registry));
         var tools = options.ToolCollection!.ToDictionary(t => t.ProtocolTool.Name, t => t.ProtocolTool);
-        Assert.Equal(33, tools.Count);
+        Assert.Equal(32, tools.Count);
         foreach (var tool in tools.Values)
         {
             var required = GetRequiredProperties(tool.InputSchema);
@@ -63,11 +63,7 @@ public sealed class WiringToolCollectionContractTests
             Assert.DoesNotContain("targetType", properties);
             Assert.DoesNotContain("projectRoot", properties);
             Assert.DoesNotContain("configPath", properties);
-            if (tool.Name == "report_observability_feedback")
-            {
-                Assert.DoesNotContain("targetPath", properties);
-            }
-            else if (tool.Name == "get_server_health")
+            if (tool.Name == "get_server_health")
             {
                 Assert.DoesNotContain("targetPath", required);
                 Assert.Contains("targetPath", properties);
@@ -277,7 +273,6 @@ public sealed class WiringToolCollectionContractTests
             ["metrics_tree"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["pattern_detect"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["reload_config"] = new(false, false, true, false),
-            ["report_observability_feedback"] = new(false, false, false, false),
             ["safeguard"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["search_pattern"] = ToolAnnotationExpectation.ReadOnlyProfile,
             ["inspect_assembly"] = ToolAnnotationExpectation.ReadOnlyProfile,

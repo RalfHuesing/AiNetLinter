@@ -247,7 +247,7 @@ Konfigurationsfehler, kein Fallback auf Default- oder Elternpfade.
 Zähler, Kapazitätszustand und begrenzte Fehlerzähler; Targetpfade, Hashes,
 Diagnostics, Generationen und Lease-Details bleiben ausgeblendet.
 `includeSessions` ist kein öffentlicher Input. Ein zielgebundener Aufruf bleibt
-auf das angefragte Target begrenzt. `report_observability_feedback` ist ungebunden.
+auf das angefragte Target begrenzt.
 
 MCP `2026-07-28` verwendet stattdessen `server/discover`: Der Request enthält unter `params._meta` die Protokollversion sowie Client-Info und Client-Capabilities. Nach der Discovery müssen auch Folge-Requests wie `tools/list` diese Metadaten mitsenden. Beide Pfade liefern denselben globalen Instructions-Text.
 
@@ -330,9 +330,8 @@ Parameter, Defaults und Grenzen sind deshalb ausschließlich dem aktuellen
 
 `tools/list` enthält für jedes registrierte Tool die vier MCP-Hinweise
 `readOnlyHint`, `destructiveHint`, `idempotentHint` und `openWorldHint`. Analyse-,
-Symbol-, Metrik- und Health-Abfragen liefern `true/false/true/false`,
-`reload_config` `false/false/true/false` und
-`report_observability_feedback` `false/false/false/false` (jeweils in der genannten
+Symbol-, Metrik- und Health-Abfragen liefern `true/false/true/false` und
+`reload_config` `false/false/true/false` (jeweils in der genannten
 Reihenfolge). Die Hints beschreiben erwartete Seiteneffekte und die geschlossene
 Systemgrenze; sie sind keine Zugriffssteuerung und keine Sicherheitsgarantie und
 ersetzen keine Berechtigungs- oder Pfadprüfung. `initialize` und modernes `server/discover` übertragen für
@@ -383,7 +382,6 @@ Jede Tool-Antwort enthält genau einen nichtleeren Text-Content-Block und option
 | `find_duplicates`, `search_pattern` | supported | unsupported | unsupported | Audit-/Dateisuche bleibt projektgebunden |
 | `reload_config` | supported | unsupported | unsupported | lädt nur die Projekt-Regelkonfiguration neu |
 | `get_server_health` | supported | supported | supported | ohne Target nur serverweite Aggregate; zielgebunden ausschließlich das angefragte Target |
-| `report_observability_feedback` | unbound | unbound | unbound | kein Target-Vertrag und kein Projektkontext |
 
 `unsupported` ist ein expliziter Capability-Status und keine leere erfolgreiche
 Antwort. `get_violations`/`safeguard` führen weder fremde Regeln noch Tests aus;
@@ -424,7 +422,6 @@ Source-backed Checkout-/Snapshot-Erzeugung und Decompilation bleiben read-only.
 | `search_pattern` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `pattern` (Text oder Regex), `isRegex?` (Default `null` = Auto-Erkennung und Promotion bei 0 Treffern; `true` = explizit Regex, `false` = Plain-Substring), `scopeType?` (`all` [Default], `production` schliesst Tests aus, `tests`), `maxResults?` (Default 20, Cap 2.000), `maxFiles?`, `contextLines?`, `maxResponseBytes?` (Default 8.192, Cap 65.536), `scope?`, `includePatterns?`, `excludePatterns?`, `enrichCSharp?` (Default `false`) | Begrenzte, deterministisch sortierte Treffer im Produktions-/Test-/All-Korpus (alle Dateitypen) mit Match-Bereichen, optionalem Kontext und `completeness` (`totalCount`, `returnedCount`, getrennte Produktions-/Test-Counts, `truncatedBy`) sowie genau einem `next`-Hinweis. `pattern` und die Include-/Exclude-Globfelder sind die kanonischen Suchfelder; Aliasfelder wie `query`, `searchPattern`, `fileFilter` oder `includePattern` werden nicht akzeptiert. Bei `isRegex=null` automatische Regex-Erkennung und Promotion bei 0 Plain-Treffern; bei `enrichCSharp=true` zusätzlich `semantic` für sichtbare Treffer geladener C#-Dokumente | nein (Fallback) | ja |
 | `reload_config` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad) | Liest ausschließlich die optionale `ainetlinter-rules.json` neben der adressierten Solution neu. Fehlt sie, bleibt der Status `not_configured`; ein Konfigurationspfad-Override ist nicht vorgesehen. Vorher/Nachher-Zusammenfassung inkl. Delta bei aktivierten Regeln | nein | nein |
 | `get_server_health` | kein Target (globale Aggregation) oder `targetPath?` (absoluter vorhandener `.sln`/`.slnx`/`.dll`/`.exe`-Pfad), `includeDiagnostics?` (Default `false`, nur zielgebunden), `maxDiagnostics?` (Default 20, Cap 50; muss mindestens 1 sein) | ohne Target ausschließlich serverweite Aggregate, Kapazitätszustand und begrenzte Fehlerzähler; keine Targetpfade, Hashes, Diagnostics, Generationen oder Lease-Details. Mit `targetPath` bleibt der Aufruf auf dieses Target begrenzt; `includeDiagnostics=true` begrenzt dort Diagnosesamples über `maxDiagnostics`. `maxDiagnostics <= 0` ist auf Global-, Source-, Assembly-, Stdio- und Daemon-/Thin-Client-Routen ein recoverable `INVALID_ARGUMENT` mit `fieldPath=$.maxDiagnostics` | nein | ja |
-| `report_observability_feedback` | `feedbackType` (Pflicht), `title` (Pflicht), `description` (Pflicht), `relatedTool?`, `severity?` (Default `medium`), `expectedBehavior?`, `actualBehavior?`, `additionalContext?` | Schreibt Fehlerberichte, unerwartete Ausgaben, False Positives oder Feature-Wünsche von KI-Agenten unbeschränkt ins System-Log zur Analyse (nicht für normale Leermengen wie nicht existierende Symbole); liefert Bestätigung und typisiertes DTO. Das Tool ist ungebunden und akzeptiert keinen Target-/Projektparameter | ja | nein |
 | `find_duplicates` | `targetPath` (Pflicht, absoluter vorhandener `.sln`- oder `.slnx`-Pfad), `mode?` (`clone` Default, `refactoring-drift` oder `structural`), `scopeType?` (`production` Default, `all`, `tests`), `minTokens?` (Default aus `ainetlinter-rules.json`, 30), `similarityThreshold?` (`exact`/`near`/`fuzzy`, Default `fuzzy` — niedrigste noch angezeigte Stufe, bei `mode=clone` und `mode=structural`), `normalizeIdentifiers?` (Default `false`, nur `mode=clone`), `scopeDir?` (Default Solution-Root), `maxResults?` (Default 20; mindestens 1), `helperSymbol?` (Datei:Zeile:Spalte, Datei:Zeile ohne Spalte, stabile DocumentationCommentId oder qualifizierter Name wie bei `find_references`; Pflicht bei `mode=refactoring-drift`, bei `mode=structural` ignoriert) | `mode=clone`: Token-basierte Code-Clone-Detection (Jaccard-N-Gram, Method-Granularität) als transitiv gruppierte Cluster (nicht isolierte Paare), gestaffelt nach exact/near/fuzzy-Ähnlichkeit (inkl. Top-Cluster-Übersicht bei >20 Treffern). `mode=refactoring-drift`: Methoden, die den per `helperSymbol` angegebenen Helper strukturell nachbauen statt ihn aufzurufen ("absence-of-calls"-Heuristik, Murphy-Hill 2005) — als Kandidaten (nicht Verstöße) gelistet, siehe Detail-Abschnitt unten. `mode=structural`: Erkennt semantisch ähnliche Hilfsmethoden anhand eines Roslyn-Strukturprofils und Cosine-Similarity (Typ-4/Intended Duplication), liefert manuell zu prüfende Kandidatencluster mit Strukturprofil-Kurzfassung — keine automatische `DuplicateCode`-Violation, eigene Cosine-Schwellwerte aus `ainetlinter-rules.json` (`StructuralDuplicate*Threshold`) | ja | ja |
 
 Die Testinformationen von `get_feature_context`, `get_test_context` und `get_impact` mit `detailLevel="change-context"` (`testAssociations`) sind eine **statische Test-Zuordnung**. Der Scanner führt keine instrumentierte Laufzeit-Coverage durch und liest keine Coverage-Dateien. Der Testbezug sagt daher nicht aus, ob ein Test den Zielpfad tatsächlich ausführt oder Assertions für diesen Pfad enthält.

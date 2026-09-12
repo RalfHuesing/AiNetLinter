@@ -68,23 +68,5 @@ public sealed class McpServerToolContractE2ETests
         var textContent = Assert.IsType<ModelContextProtocol.Protocol.TextContentBlock>(Assert.Single(result.Content));
         Assert.Contains("SYMBOL_NOT_FOUND", textContent.Text, StringComparison.Ordinal);
     }
-
-    [Fact]
-    public async Task ReportObservabilityFeedback_ValidCall_ReturnsConfirmation()
-    {
-        var text = await _fixture.Client.CallToolGetTextAsync(
-            "report_observability_feedback",
-            new Dictionary<string, object?>
-            {
-                ["feedbackType"] = "issue",
-                ["title"] = "E2E Test Feedback",
-                ["description"] = "Test description from E2E suite.",
-                ["relatedTool"] = "find_symbol",
-                ["severity"] = "low"
-            });
-
-        Assert.Contains("[INFO]: Feedback 'E2E Test Feedback' (issue) erfolgreich protokolliert.", text, StringComparison.Ordinal);
-        Assert.Contains("Workaround fortfahren", text, StringComparison.Ordinal);
-    }
 }
 

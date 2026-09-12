@@ -154,7 +154,7 @@ internal sealed class McpProcessHost : IAsyncDisposable
         string toolName,
         IReadOnlyDictionary<string, object?>? arguments)
     {
-        if (toolName is "get_server_health" or "report_observability_feedback")
+        if (toolName is "get_server_health")
         {
             return arguments is null
                 ? new Dictionary<string, object?>()

@@ -37,12 +37,6 @@ internal static class TargetPathToolRegistrationOptions
         Idempotent: true,
         OpenWorld: false);
 
-    private static readonly AnnotationValues FeedbackValues = new(
-        ReadOnly: false,
-        Destructive: false,
-        Idempotent: false,
-        OpenWorld: false);
-
     internal static McpServerToolCreateOptions SourceReadOnlyTool(string name, string description) =>
         Create(name, description + SourceTargetContract, ReadOnlyValues);
 
@@ -57,9 +51,6 @@ internal static class TargetPathToolRegistrationOptions
 
     internal static McpServerToolCreateOptions ServerHealthTool(string name, string description) =>
         Create(name, description, ReadOnlyValues);
-
-    internal static McpServerToolCreateOptions FeedbackTool(string name, string description) =>
-        Create(name, description, FeedbackValues);
 
     internal static CallToolResult? RejectUnknownArguments(
         RequestContext<CallToolRequestParams> context)

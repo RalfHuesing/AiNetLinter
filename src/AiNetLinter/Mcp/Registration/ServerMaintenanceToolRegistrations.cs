@@ -30,6 +30,7 @@ internal static class ServerMaintenanceToolRegistrations
     /// Instanz ihres Keys per Lease-Closure - kein DI-Container (siehe
     /// <c>AiNetLinter-Richtlinien.mdc</c> §2). Einzige Pflicht-Ausnahme: <c>get_server_health</c>
     /// nimmt ein optionales, paarweise zu validierendes Target und aggregiert ohne Target ueber alle Keys.
+    /// nimmt ein optionales, paarweise zu validierendes Target und aggregiert ohne Target ueber alle Keys.
     /// </summary>
     internal static void Register(
         McpServerPrimitiveCollection<McpServerTool> tools,
@@ -39,7 +40,6 @@ internal static class ServerMaintenanceToolRegistrations
     {
         AddReloadConfig(tools, registry);
         AddGetServerHealth(tools, registry, runtimeContext, assemblyRegistry);
-        AddReportObservabilityFeedback(tools);
     }
 
     private static void AddReloadConfig(
@@ -183,46 +183,8 @@ internal static class ServerMaintenanceToolRegistrations
     private static readonly string GetServerHealthDescription =
         "Wann nutzen: pruefen, ob der Server laeuft und welche Projekt- und Assembly-Sessions " +
         "resident sind. Ohne targetPath: globaler Status fuer alle Projekt-Keys und Assembly-Sessions. " +
-        "Mit targetPath als .sln/.slnx wird der Projekt-Key, mit .dll/.exe die Assembly-Session gezielt geprueft. " +
+        "Mit targetPath as .sln/.slnx wird der Projekt-Key, mit .dll/.exe die Assembly-Session gezielt geprueft. " +
          "Global werden ausschließlich Aggregat-, Status- und begrenzte Fehlerzähler geliefert; " +
          "includeDiagnostics=true fordert nur für ein konkretes targetPath begrenzte Diagnose-Samples an. " +
          "Zielgebundene Antworten bleiben auf das angefragte Target begrenzt.";
-
-    private static void AddReportObservabilityFeedback(McpServerPrimitiveCollection<McpServerTool> tools)
-    {
-        tools.Add(McpServerTool.Create(
-             (RequestContext<CallToolRequestParams> context,
-             string feedbackType,
-             string title,
-             string description,
-             string? relatedTool = null,
-             string? severity = "medium",
-             string? expectedBehavior = null,
-             string? actualBehavior = null,
-             string? additionalContext = null,
-             CancellationToken ct = default) =>
-            {
-                 var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
-                  if (unknownError is not null) return Task.FromResult(unknownError);
-                  return ReportObservabilityFeedbackTool.ExecuteAsync(
-                    new ReportObservabilityFeedbackParameters(
-                        feedbackType,
-                        title,
-                        description,
-                        relatedTool,
-                        severity,
-                        expectedBehavior,
-                        actualBehavior,
-                         additionalContext,
-                          ProjectRoot: null));
-            },
-            TargetPathToolRegistrationOptions.FeedbackTool("report_observability_feedback", ReportObservabilityFeedbackDescription)));
-    }
-
-    private const string ReportObservabilityFeedbackDescription =
-        "Wann nutzen: Ein MCP-Tool meldet einen unerwarteten internen Fehler, liefert verwirrende " +
-        "Ausgaben, einen False Positive oder ein Feature fehlt. NICHT nutzen fuer normale " +
-        "Leermengen (z. B. Symbol/Datei existiert im Code nicht). feedbackType: bug, false_positive, " +
-        "confusing_output, feature_request, performance. title, description Pflicht. severity (Default 'medium'). " +
-        "Protokolliert das Feedback direkt in das System-Log zur Auswertung. Nach dem Absenden mit dem besten Workaround fortfahren.";
 }

@@ -139,9 +139,6 @@ public sealed class McpDocumentationSmokeTests
         var globalHealthRow = matrix.Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Single(candidate => candidate.StartsWith("| `get_server_health` |", StringComparison.Ordinal));
         Assert.Contains("targetPath?", globalHealthRow, StringComparison.Ordinal);
-        var feedbackRow = matrix.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-            .Single(candidate => candidate.StartsWith("| `report_observability_feedback` |", StringComparison.Ordinal));
-        Assert.DoesNotContain("targetPath", feedbackRow, StringComparison.Ordinal);
 
         var getImpactStart = docText.IndexOf(
             "**`get_impact` (Symbol-Branch) — Assembly-Vertrag:**", StringComparison.Ordinal);

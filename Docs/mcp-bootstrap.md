@@ -85,10 +85,9 @@ ainetlinter://rules{?targetPath}
 ```
 
 `get_server_health` akzeptiert global keinen Target-Block oder optional einen
-`targetPath`. `report_observability_feedback` bleibt ungebunden und erhält
-keinen Target- oder Projektkontextparameter. Unbekannte Properties werden nicht
-still ignoriert, sondern gegen das aktuelle `tools/list`-Schema geprüft und als
-`invalid_argument` mit Feldnamen abgelehnt.
+`targetPath`. Unbekannte Properties werden nicht still ignoriert, sondern gegen
+das aktuelle `tools/list`-Schema geprüft und als `invalid_argument` mit
+Feldnamen abgelehnt.
 
 ## Antwort- und Folgeaufrufvertrag
 

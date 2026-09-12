@@ -257,7 +257,7 @@ internal static class McpRawWireTestHarness
 
             var parameters = root["params"]?.AsObject();
             var toolName = parameters?["name"]?.GetValue<string>();
-            if (toolName is "get_server_health" or "report_observability_feedback")
+            if (toolName is "get_server_health")
                 return frame;
 
             var arguments = parameters?["arguments"]?.AsObject();

@@ -38,9 +38,7 @@
   - *Erwartung*: `origin=decompiled`, `lint=unsupported`, keine widersprüchlichen Completeness-Signale zwischen Fach- und Envelope-Ebene.
 - [ ] **TC-A04 (`get_server_health` auf `FALSE-01`)**: Negativfall (unmanaged Binary).
   - *Erwartung*: Saubere recoverable Diagnose, kein Prozessabsturz, kein interner Stacktrace.
-- [ ] **TC-A05 (`report_observability_feedback`)**: Feedback-Kanal.
-  - *Erwartung*: Nimmt Feedback entgegen, liefert strukturierte Quittung, kein Crash bei leeren/großen Payloads.
-- [ ] **TC-A06 (`reload_config`)**: Konfigurations-Reload.
+- [ ] **TC-A05 (`reload_config`)**: Konfigurations-Reload.
   - *Erwartung*: Lädt Konfiguration neu, bestätigt Status strukturiert.
 
 ---
