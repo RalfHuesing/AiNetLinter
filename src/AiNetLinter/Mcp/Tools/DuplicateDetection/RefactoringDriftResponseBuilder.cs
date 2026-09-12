@@ -37,7 +37,9 @@ internal static class RefactoringDriftResponseBuilder
                   $"Helper '{result.HelperSymbolDisplayName}' ({result.MethodsScanned} Methoden gescannt). " +
                   "Kandidaten, keine Verstoesse — strukturelle Aehnlichkeit ist nicht zwingend Drift " +
                   "(z. B. mehrere legitime, aehnlich aufgebaute Dispose()-Implementierungen). Pruefe jeden " +
-                  "Kandidaten manuell, bevor du ihn auf den Helper umstellst:");
+                  "Kandidaten manuell, bevor du ihn auf den Helper umstellst:\n" +
+                  "Evidenzgrenze: statische strukturelle Aehnlichkeit; kein Laufzeitbeweis.\n" +
+                  "Countercheck: Reflection, DI, Generatoren, dynamic und manuelle Semantikpruefung.");
 
         var index = 0;
         foreach (var candidate in result.ShownCandidates)
@@ -45,9 +47,7 @@ internal static class RefactoringDriftResponseBuilder
             index++;
             var relativePath = PathNormalizer.ToRelative(solutionDir, candidate.FilePath);
             sb.Append($"\n{index}. {candidate.SignatureName} ({relativePath}:{candidate.LineNumber}, " +
-                      $"{candidate.TokenCount} Tokens, Score {candidate.Score:F2}) ruft '{result.HelperSymbolDisplayName}' nicht auf. " +
-                      "Evidenzgrenze: statische strukturelle Aehnlichkeit; kein Laufzeitbeweis. " +
-                      "Countercheck: Reflection, DI, Generatoren, dynamic und manuelle Semantikpruefung.");
+                      $"{candidate.TokenCount} Tokens, Score {candidate.Score:F2}) ruft '{result.HelperSymbolDisplayName}' nicht auf.");
         }
 
         if (result.Truncated)

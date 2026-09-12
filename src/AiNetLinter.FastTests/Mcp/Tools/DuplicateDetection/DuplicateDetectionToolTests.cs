@@ -121,6 +121,23 @@ public sealed class DuplicateDetectionToolTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_MultipleMembersInCluster_EvidenzgrenzeAppearsOnlyOnceInHeader()
+    {
+        using var context = CreateContext(("A.cs", BuildMethod("A", "One")), ("B.cs", BuildMethod("B", "Two")));
+        var state = context.CreateServer();
+
+        var result = await DuplicateDetectionTool.ExecuteAsync(
+            state, new DuplicateDetectionInput(null, null, null, null, null), CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        var textContent = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        var evidenzCount = System.Text.RegularExpressions.Regex.Matches(textContent, "Evidenzgrenze").Count;
+        Assert.Equal(1, evidenzCount);
+        var countercheckCount = System.Text.RegularExpressions.Regex.Matches(textContent, "Countercheck").Count;
+        Assert.Equal(1, countercheckCount);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_EmptySolution_ReturnsNoDuplicatesMessageWithoutError()
     {
         using var context = CreateContext();

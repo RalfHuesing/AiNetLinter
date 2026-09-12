@@ -175,6 +175,22 @@ public sealed class DuplicateDetectionToolRefactoringDriftTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_RefactoringDrift_CandidateFound_EvidenzgrenzeAppearsOnlyOnceInHeader()
+    {
+        using var context = CreateContext(("Stubs.cs", StubTypes), ("Helper.cs", Helper), ("DriftedA.cs", DriftedA));
+        var state = context.CreateServer();
+
+        var result = await DuplicateDetectionTool.ExecuteAsync(
+            state,
+            new DuplicateDetectionInput(null, null, null, null, null, "refactoring-drift", "OptionsHelper.BuildDefault"),
+            CancellationToken.None);
+
+        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(text, "Evidenzgrenze").Count);
+        Assert.Equal(1, System.Text.RegularExpressions.Regex.Matches(text, "Countercheck").Count);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_RefactoringDrift_NoCandidates_TextSaysNoCandidatesFound()
     {
         using var context = CreateContext(("Stubs.cs", StubTypes), ("Helper.cs", Helper));

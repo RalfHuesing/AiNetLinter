@@ -160,11 +160,15 @@ internal static class DuplicateDetectionTool
         if (isStructural)
         {
             sb.Append($"{result.ShownClusters.Count} von {result.TotalClusters} strukturelle(n) Kandidatencluster(n) ({result.MethodsScanned} Methoden gescannt). ");
-            sb.Append("Pruefempfehlungen, keine Verstoesse — semantische Aehnlichkeit ist nicht zwingend Duplikation:");
+            sb.Append("Pruefempfehlungen, keine Verstoesse — semantische Aehnlichkeit ist nicht zwingend Duplikation:\n");
+            sb.Append("Evidenzgrenze: statische Aehnlichkeit innerhalb des angeforderten Source-Scopes; keine semantische oder Laufzeitgleichheit.\n");
+            sb.Append("Countercheck: Reflection, DI, Generatoren, dynamic und manuelle Semantikpruefung.");
         }
         else
         {
-            sb.Append($"{result.ShownClusters.Count} von {result.TotalClusters} Duplikat-Kandidatencluster(n) ({result.MethodsScanned} Methoden gescannt):");
+            sb.Append($"{result.ShownClusters.Count} von {result.TotalClusters} Duplikat-Kandidatencluster(n) ({result.MethodsScanned} Methoden gescannt):\n");
+            sb.Append("Evidenzgrenze: statische Aehnlichkeit innerhalb des angeforderten Source-Scopes; keine semantische oder Laufzeitgleichheit.\n");
+            sb.Append("Countercheck: Reflection, DI, Generatoren, dynamic und manuelle Semantikpruefung.");
         }
 
         if (result.TotalClusters > 20 || result.ShownClusters.Count > 20)
@@ -202,8 +206,6 @@ internal static class DuplicateDetectionTool
         {
             var relativePath = PathNormalizer.ToRelative(solutionDir, member.FilePath);
             sb.Append($"\n- {member.SignatureName} ({relativePath}:{member.LineNumber}, {member.TokenCount} Tokens) — candidate, confidence={ConfidenceFor(member)}");
-            sb.Append("\n  Evidenzgrenze: statische Aehnlichkeit innerhalb des angeforderten Source-Scopes; keine semantische oder Laufzeitgleichheit.");
-            sb.Append("\n  Countercheck: Reflection, DI, Generatoren, dynamic und manuelle Semantikpruefung.");
             if (!string.IsNullOrEmpty(member.StructureProfile))
             {
                 sb.Append($"\n  Profil: {member.StructureProfile}");
