@@ -50,10 +50,10 @@
 
 - Nachlauf entfernte einen obsoleten Legacy-Tooltest (`47223793`) und verflachte Verify-Hinweisquellen (`6b98b410`).
 - `dotnet build`: 0 Warnungen/Fehler; FastTests: 2473/2473; IntegrationTests: 230/230 (ohne `Stress`).
-- `git diff --check` und Working Tree sauber; Commit: ausstehend.
+- `git diff --check` und Working Tree sauber; Commit: `d4c145a290353932eebb7586b53824dc9560d42e`.
 
 ### Vorbereitung
 
 - Roadmap aus dem freigegebenen Konzept angelegt.
 - Baseline: `72ac838c1e9aab6fe68ba6295f86d21206269dd5`; Working Tree war sauber.
-- Commit: ausstehend.
+- Commit: `ca037a1b742ec4b2c8479c949f1a5836a247197a`.
