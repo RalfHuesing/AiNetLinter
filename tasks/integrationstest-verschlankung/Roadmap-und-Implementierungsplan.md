@@ -188,9 +188,33 @@ Abnahme: Real geladene Lösungen beweisen weiterhin die Laden-Grenze; die Fallma
 
 ### 5. Bewusst unverändert lassen: echte Boundary-Tests
 
-- [ ] Die Daemon-, Thin-Client-, Lifecycle- und JSON-RPC-Frame-Tests in `IntegrationTests/Mcp/Daemon`, `McpServerCommandJsonRpcFramingTests` und `McpToolAnnotationsWireTests` gegen die Umzugstabelle prüfen und als Integration bestätigen.
-- [ ] CLI-Prozess-Tests, echte Dateisystemeffekte, `MsBuildFixtureHost` sowie Tests mit synthetisch kompilierten Assemblies als Integration bestätigen, sofern ihre jeweilige Aussage die reale Grenze betrifft.
-- [ ] Bei gemischten Klassen nur die reinen Helper-/Formattermethoden extrahieren; den echten Boundary-Fall nie in FastTests nachbilden.
+#### Boundary-Nachweis Schritt 5 (2026-09-12)
+
+Die folgenden Bereiche wurden gegen die Umzugstabelle und ihre tatsächlichen
+Abhängigkeiten geprüft. Sie bleiben bewusst im Integrationstestprojekt: Die
+jeweilige Behauptung kann nicht mit einem In-Memory-Snapshot oder einem
+Formatter-/Validator-FastTest belegt werden.
+
+| Nicht verschobener Bereich | Geprüfte Tests bzw. Testhilfe | Reale Boundary-Begründung |
+| --- | --- | --- |
+| Daemon-Host und benannte Pipes | `Mcp/Daemon/DaemonHostProcessContractTests`, `DaemonHostMcpProcessContractTests`, `DaemonProcessContractHarness` | Start, Exklusivität und Freigabe zweier realer Daemon-Prozesse sowie der Welcome-Handshake über den betriebssystemweiten Pipe-Endpunkt sind Prozess- und IPC-Verträge. Der MCP-Host-Test ergänzt dies um die Zusammensetzung einer laufenden Session mit registrierten Tools. |
+| Thin-Client-Lifecycle | `Mcp/Daemon/ThinClientMcpProcessContractTests`, `ThinClientDiscoveryContractTests`, `ThinClientsSharedWarmthProcessContractTests`, `DaemonEndpointJanitor` | Diese Fälle prüfen den tatsächlich gestarteten Thin-Client/Daemon, die Discovery-Datei, PID- und Resident-Project-Zustand sowie die Wiederverwendung eines warmen Prozessschlüssels. Das sind keine isolierbaren Argument- oder Payloadvarianten. |
+| Thin-Client-Proxy-Fehlerpfade | `Mcp/Daemon/ThinClientProxySessionContractTests` | Die Skript-Pipes steuern den Fehler deterministisch, aber behauptet werden Lebenszyklus-Eigenschaften der Pipe-Session: genau ein Replay, Timeout-Verhalten und dass ein identifizierter fremder Prozess nicht beendet wird. Die Verwendung von `StandInProcess` belegt dabei die Prozessgrenze. |
+| JSON-RPC-Frames und Discovery-Wire-Format | `McpServerCommandJsonRpcFramingTests` (einschließlich `.Instructions.cs`), `McpToolAnnotationsWireTests`, `McpRawWireTestHarness` | Ein separat gestarteter CLI-Prozess erhält rohe JSON-RPC-Eingaben über stdin; dessen stdout wird als einzelne Frames geparst. Init-/Tools-Listen-Varianten, Annotations und `structuredContent` sind hier Transportverträge, nicht bloße Renderer-Ausgaben. |
+| Weitere MCP-/CLI-Prozessverträge | `McpProcessHost`, `McpProcessRunner`, `McpServerLifetimeTests`, `McpServerCommandAmbiguityE2ETests`, `McpTestClientParallelTests`, `McpTestClientRetryTests` sowie die CLI-Runner-Verwender | Diese Tests beobachten Exit-Code, Start, Stdio, Retry und Parallelität eines externen Prozesses. Ein Ersatz mit einer direkten Tool-Instanz würde gerade den behaupteten Prozessvertrag umgehen. Dogfood-spezifische CLI-Tests bleiben zusätzlich von Schritt 6 erfasst. |
+| Echte Dateisystemwirkung | Die nicht verlagerten Datei- und Cache-Verträge in `Baseline`, `Cache`, `Suppression`, `Core`, `Configuration`, `Fixtures`, `Metrics`, `Maps`, `Output` und `Diagnostics` | Soweit diese Tests erhalten bleiben, prüfen sie erzeugte, gelöschte, gefilterte oder erneut geladene Dateien/Verzeichnisse in einem isolierten `TestTempDirectory`. Reine Scanner-, Filter- und Renderer-Matrizen wurden bereits in den Schritten 1 bis 4 nach FastTests verlagert; ein verbliebener Test muss die persistente Wirkung selbst beobachten. |
+| Einmaliges MSBuild-/Roslyn-Laden | `Platform/MsBuildFixtureHost`, `MsBuildFixtureHostAssemblyFixture`, `MsBuildFixtureHostTests` | Die Assembly-Fixture lädt eine isolierte `BaselineMini`-Kopie mit `LoadedFixture` und damit echtem `MSBuildWorkspace`/`SourceFileCatalog.LoadAsync`. Die Tests belegen außerdem Katalog, Projektpräsenz und die geteilte `Solution`-Instanz über Testklassen hinweg. Dies ist genau die ausgeschlossene FastTests-Abhängigkeit. |
+| Synthetisch kompilierte Assemblies und Metadaten | Alle Verwendungen von `AssemblyTestHelper.EmitAssembly` in `Mcp/Assemblies/**` sowie `Mcp/Daemon/DaemonHostMcpContractTests` | Die Tests kompilieren IL in eine echte temporäre DLL und prüfen anschließend Decompilation, PE-Fehler, Referenzauflösung, Assembly-Session-, Routing- und Handoff-Lebenszyklus. Ein `Solution`-Snapshot kann weder Metadatenroute noch native PE-Fehler oder Session-Provenienz ersetzen. |
+
+Gemischte Klassen wurden ebenfalls geprüft. Die privaten Hilfen in den genannten
+Wire-/Lifecycle-Klassen erzeugen oder lesen ausschließlich Frames, Prozesse,
+Pipes und Assemblies für den jeweiligen Boundary-Fall; keine testbare
+Helper-/Formatterbehauptung ist davon unabhängig. Deshalb wurde nichts nach
+FastTests extrahiert und kein Boundary-Fall nachgebildet.
+
+- [X] Die Daemon-, Thin-Client-, Lifecycle- und JSON-RPC-Frame-Tests in `IntegrationTests/Mcp/Daemon`, `McpServerCommandJsonRpcFramingTests` und `McpToolAnnotationsWireTests` gegen die Umzugstabelle prüfen und als Integration bestätigen.
+- [X] CLI-Prozess-Tests, echte Dateisystemeffekte, `MsBuildFixtureHost` sowie Tests mit synthetisch kompilierten Assemblies als Integration bestätigen, sofern ihre jeweilige Aussage die reale Grenze betrifft.
+- [X] Bei gemischten Klassen nur die reinen Helper-/Formattermethoden extrahieren; den echten Boundary-Fall nie in FastTests nachbilden.
 
 Abnahme: Für jeden nicht verschobenen Bereich ist die Boundary-Begründung in der Umzugstabelle festgehalten.
 
