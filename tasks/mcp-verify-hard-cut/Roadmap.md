@@ -44,7 +44,7 @@
 
 - Frischer Audit korrigierte Mehrdatei-/Git-Population, konservative Konfigurationserweiterung und verbleibende Content-only-Texte.
 - Frische Hosttests bestätigen Inventar, Scope, Advisory und Content-only; vollständiges Gate steht noch aus.
-- Commit: ausstehend.
+- Commit: `5b95b8be7f190a6d70ac2b1b6cf8c4f4dfc0c6b2`.
 
 ### Vorbereitung
 
