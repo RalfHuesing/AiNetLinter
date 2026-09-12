@@ -23,7 +23,7 @@ namespace AiNetLinter.Mcp.Registration;
 /// erwartbare Bindefehler als recoverable <c>INVALID_ARGUMENT</c> mit Feldpfad
 /// ausgegeben statt als generischer SDK-Toolfehler.
 /// </summary>
-internal static class McpArgumentValidationFilter
+internal static partial class McpArgumentValidationFilter
 {
     // Limits are intentionally scoped by tool.  A name-only rule is incorrect:
     // several assembly tools and the change-context branch use 0 as "use the
@@ -185,9 +185,7 @@ internal static class McpArgumentValidationFilter
             target = resolution.Target;
         }
 
-        return target is not null
-            ? McpToolResults.WithNavigation(validationError, target)
-            : McpToolResults.WithNavigation(validationError, targetPath);
+        return ProjectFilterError(validationError, target, targetPath);
     }
 
     internal static CallToolResult? Validate(RequestContext<CallToolRequestParams> context)
@@ -208,30 +206,14 @@ internal static class McpArgumentValidationFilter
         var arguments = context.Params?.Arguments
             ?? new Dictionary<string, JsonElement>(StringComparer.Ordinal);
 
-        var unknownError = TargetPathToolRegistrationOptions.RejectUnknownArguments(context);
-        if (unknownError is not null) return unknownError;
-
-        var requiredError = ValidateRequiredArguments(tool, arguments);
-        if (requiredError is not null) return requiredError;
-
-        foreach (var argument in arguments.OrderBy(pair => pair.Key, StringComparer.Ordinal))
-        {
-            var argumentError = ValidateArgument(
-                tool.ProtocolTool.Name, properties, argument, arguments);
-            if (argumentError is not null)
-            {
-                return argumentError;
-            }
-        }
-
-        return null;
+        return ValidateArguments(tool.ProtocolTool.Name, tool.ProtocolTool.InputSchema, arguments);
     }
 
     private static CallToolResult? ValidateRequiredArguments(
-        McpServerTool tool,
+        JsonElement inputSchema,
         IDictionary<string, JsonElement> arguments)
     {
-        if (!tool.ProtocolTool.InputSchema.TryGetProperty("required", out var required)
+        if (!inputSchema.TryGetProperty("required", out var required)
             || required.ValueKind != JsonValueKind.Array)
         {
             return null;

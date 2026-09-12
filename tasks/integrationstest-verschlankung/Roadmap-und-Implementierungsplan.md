@@ -112,12 +112,26 @@ Abnahme: Keine reine Builder-/Validator-/Projektionslogik aus dieser Scheibe ble
 
 `McpServerArgumentValidationE2ETests` enthält rund 30 Varianten über den gemeinsam gestarteten `ReadOnlyMcpHostFixture`. Der Prozessvertrag ist real, die Mehrzahl der Variationen jedoch nicht.
 
-- [ ] Für jedes Tool die gegenwärtigen Fehlervarianten aus `McpServerArgumentValidationE2ETests` in der Umzugstabelle den verantwortlichen FastTest-Zielen zuordnen: `McpArgumentValidationFilterTests`, `McpBatchArgumentsTests` sowie die jeweiligen Tool-Validator-/Tool-Tests.
-- [ ] Fehlende FastTests für Pflichtfelder, unbekannte Argumente, falsche Typen, Array-Elementtypen, nicht positive Limits, Obergrenzen und exakte `fieldPath`-Werte ergänzen.
-- [ ] Die FastTests müssen sowohl Fehlercode als auch `fieldPath` und, wo bisher behauptet, die Navigation prüfen; nur den Text zu prüfen reicht nicht.
-- [ ] Im Integrationstest genau drei repräsentative Fälle belassen: ein fehlendes Pflichtfeld mit Navigation, ein falsch typisiertes Feld mit indexiertem `fieldPath` und ein unbekanntes Tool mit Protokollfehler.
-- [ ] Alle übrigen Varianten nach bestandenen FastTests aus `McpServerArgumentValidationE2ETests` entfernen und die Klasse auf die drei Wire-Verträge reduzieren.
-- [ ] Den fokussierten FastTest- und den fokussierten Integrationstestlauf ausführen.
+#### Detailzuordnung Schritt 2
+
+| Bisherige E2E-Varianten | FastTest-Nachweis |
+| --- | --- |
+| fehlende Pflichtfelder (`GetCallTree`, `GetTypeHierarchy`, `GetSymbolBody`, `GetFileSkeleton`, `SearchPattern`, `FindReferences`) | `McpArgumentValidationFilterTests.ValidateArguments_MissingRequiredField_ReturnsPreciseErrorWithNavigation`; verantwortliche Tooltests behalten die fachliche Fehlermeldung. |
+| unbekannte Argumente (`GetTypeHierarchy`, `TargetPathTools`) | `McpArgumentValidationFilterTests.ValidateArguments_UnknownArgument_ReturnsPreciseFieldPath`. |
+| falsche JSON-Typen und `FindSymbol`-Arrayelement | `McpArgumentValidationFilterTests.ValidateArguments_WrongJsonType_ReturnsPreciseFieldPath` und `ValidateArguments_WrongArrayElementType_ReturnsIndexedFieldPath`. |
+| positive/nicht-negative Limits, Caps, Budgetuntergrenze und `GetTestContext`-Cap | `McpArgumentValidationFilterTests.ValidateArguments_LimitOutsideContract_ReturnsPreciseFieldPath` und `ValidateArguments_ResponseBudgetBelowPublicMinimum_ReturnsPreciseFieldPath`. |
+| `GetImpact`-Exklusivität, `FindSymbol`-Kind/Batch, `MetricsTree`-Default, `FindDuplicates`-Helper, CallTree-Format | bestehende `GetImpactToolTests`, `FindSymbolToolTests`/`FindSymbolValidationToolTests`, `MetricsTreeToolTests`, `DuplicateDetectionToolRefactoringDriftTests` und `GetCallTreeToolTests`. |
+| `GetViolations`-Enum/Range und `FindMagicValues`-Clamp-Kompatibilität | verantwortliche `GetViolationsToolTests` bzw. `FindMagicValues`-FastTests. |
+| `Safeguard`-Kompatibilität für `maxViolations <= 0` | `McpArgumentValidationFilterTests.ValidateArguments_SafeguardNonPositiveMaxViolations_PreservesToolCompatibility`. |
+
+Die drei verbliebenen Wire-Tests sind absichtlich `UnknownTool_Call_ThrowsMcpProtocolException`, `FindReferences_MissingSymbolIdentifier_ReturnsRecoverableInvalidArgumentWithNavigation` und `WrongArrayElementType_ReturnsIndexedFieldAwareInvalidArgument`.
+
+- [X] Für jedes Tool die gegenwärtigen Fehlervarianten aus `McpServerArgumentValidationE2ETests` in der Umzugstabelle den verantwortlichen FastTest-Zielen zuordnen: `McpArgumentValidationFilterTests`, `McpBatchArgumentsTests` sowie die jeweiligen Tool-Validator-/Tool-Tests.
+- [X] Fehlende FastTests für Pflichtfelder, unbekannte Argumente, falsche Typen, Array-Elementtypen, nicht positive Limits, Obergrenzen und exakte `fieldPath`-Werte ergänzen.
+- [X] Die FastTests müssen sowohl Fehlercode als auch `fieldPath` und, wo bisher behauptet, die Navigation prüfen; nur den Text zu prüfen reicht nicht.
+- [X] Im Integrationstest genau drei repräsentative Fälle belassen: ein fehlendes Pflichtfeld mit Navigation, ein falsch typisiertes Feld mit indexiertem `fieldPath` und ein unbekanntes Tool mit Protokollfehler.
+- [X] Alle übrigen Varianten nach bestandenen FastTests aus `McpServerArgumentValidationE2ETests` entfernen und die Klasse auf die drei Wire-Verträge reduzieren.
+- [X] Den fokussierten FastTest- und den fokussierten Integrationstestlauf ausführen.
 
 Abnahme: Jede entfernte E2E-Argumentvariante besitzt einen spezifischen FastTest; der verbleibende Integrationstest beweist weiterhin die komplette Fehlerhülle über echten MCP-Transport.
 

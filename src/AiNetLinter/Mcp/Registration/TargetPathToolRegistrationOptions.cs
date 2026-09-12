@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using AiNetLinter.Mcp;
 using ModelContextProtocol.Protocol;
@@ -78,6 +79,13 @@ internal static class TargetPathToolRegistrationOptions
                 "Nur Argumente aus dem von tools/list gelieferten Schema verwenden.");
         }
 
+        return RejectUnknownArguments(properties, arguments);
+    }
+
+    internal static CallToolResult? RejectUnknownArguments(
+        JsonElement properties,
+        IDictionary<string, JsonElement> arguments)
+    {
         var allowedNames = properties.EnumerateObject()
             .Select(property => property.Name)
             .ToHashSet(StringComparer.Ordinal);
