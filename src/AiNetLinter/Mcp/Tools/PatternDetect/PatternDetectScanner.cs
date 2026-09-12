@@ -265,7 +265,17 @@ internal static class PatternDetectScanner
         }}");
         sb.AppendLine();
 
-        foreach (var report in reports)
+        var emptyPatternIds = reports
+            .Where(report => report.Entry.Status == "empty")
+            .Select(report => report.Entry.Id)
+            .ToList();
+        if (emptyPatternIds.Count > 0)
+        {
+            sb.AppendLine($"Ohne Treffer: {string.Join(", ", emptyPatternIds)}; kein globaler Clean-Claim.");
+            sb.AppendLine();
+        }
+
+        foreach (var report in reports.Where(report => report.Entry.Status != "empty"))
         {
             sb.AppendLine($"## {report.Entry.Id} — {report.Entry.Description} [{report.Entry.Status}, confidence={report.Entry.Confidence}]");
             sb.AppendLine($"Ursache: {report.Entry.Cause}");
@@ -274,9 +284,10 @@ internal static class PatternDetectScanner
                 sb.AppendLine($"Naechster Schritt: {report.Entry.Next.Action} — {report.Entry.Next.Reason}");
             }
             sb.AppendLine();
-            sb.AppendLine(report.Entry.Occurrences == 0
-                ? "Keine Treffer in diesem Scope; daraus folgt kein globaler Clean-Claim."
-                : McpTruncation.TruncateLines(report.Lines, report.Entry.Occurrences, maxResultsPerPattern));
+            sb.AppendLine(McpTruncation.TruncateLines(
+                report.Lines,
+                report.Entry.Occurrences,
+                maxResultsPerPattern));
             sb.AppendLine();
         }
 

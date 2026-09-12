@@ -191,12 +191,16 @@ public class MiddleManClass
         Assert.All(result.Payload!.Patterns, p => Assert.Equal(0, p.Occurrences));
         Assert.Equal(0, result.Payload.Summary.PatternsWithHits);
         Assert.Equal(0, result.Payload.Summary.TotalOccurrences);
-        Assert.Contains("Vollstaendigkeitsstatus", result.Text!, StringComparison.Ordinal);
-        Assert.All(result.Payload!.Patterns, pattern => Assert.Contains($"## {pattern.Id}", result.Text!, StringComparison.Ordinal));
+        Assert.All(
+            result.Payload!.Patterns.Where(pattern => pattern.Status != "empty"),
+            pattern => Assert.Contains($"## {pattern.Id}", result.Text!, StringComparison.Ordinal));
+        Assert.All(
+            result.Payload.Patterns.Where(pattern => pattern.Status == "empty"),
+            pattern => Assert.DoesNotContain($"## {pattern.Id}", result.Text!, StringComparison.Ordinal));
     }
 
     [Fact]
-    public async Task BuildReportAsync_SinglePatternWithoutHits_KeepsDetailedPatternSection()
+    public async Task BuildReportAsync_SingleNotDecidablePattern_KeepsInspectionGuidance()
     {
         using var testSolution = CreateSolution();
         var result = await RunAsync(
@@ -205,7 +209,8 @@ public class MiddleManClass
             PatternCatalog.Patterns.Where(p => p.Id == "async-void").ToList());
 
         Assert.Contains("## async-void", result.Text!, StringComparison.Ordinal);
-        Assert.Contains("Keine Treffer in diesem Scope", result.Text!, StringComparison.Ordinal);
+        Assert.Contains("not_decidable", result.Text!, StringComparison.Ordinal);
+        Assert.Contains("Naechster Schritt: inspect", result.Text!, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -258,7 +263,8 @@ public sealed class Foo{i}
         Assert.Equal(2, asyncVoid.Items.Count);
         Assert.Contains("Treffer gesamt", result.Text!, StringComparison.Ordinal);
         Assert.Contains("gezeigt", result.Text!, StringComparison.Ordinal);
-        Assert.Contains("## empty-catch", result.Text!, StringComparison.Ordinal);
+        Assert.Contains("Ohne Treffer:", result.Text!, StringComparison.Ordinal);
+        Assert.DoesNotContain("## empty-catch", result.Text!, StringComparison.Ordinal);
     }
 
     [Fact]
