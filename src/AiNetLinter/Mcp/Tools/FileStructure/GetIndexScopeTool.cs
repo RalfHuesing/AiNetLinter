@@ -32,7 +32,7 @@ internal static class GetIndexScopeTool
             Status: "ok",
             Routing: new IndexScopeRouting(
                 new IndexScopeRoute("find_symbol", "pattern", null, null),
-                new IndexScopeRoute("search_pattern", "pattern", "all", "**/*{extension}")));
+                new IndexScopeRoute("search_pattern", "pattern", "all", ["**/*{extension}"])));
         return McpToolResults.Text(text, payload);
     }
 }

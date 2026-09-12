@@ -42,7 +42,7 @@ internal static class GetIndexScopeScanner
                 RoutingTool: "find_symbol",
                 QueryField: "pattern",
                 ScopeType: null,
-                FileFilter: null));
+                IncludePatterns: null));
         }
         entries.AddRange(nonCSharpCounts
             .OrderBy(pair => pair.Key, StringComparer.Ordinal)
@@ -53,7 +53,7 @@ internal static class GetIndexScopeScanner
                 RoutingTool: "search_pattern",
                 QueryField: "pattern",
                 ScopeType: "all",
-                FileFilter: $"**/*{pair.Key}")));
+                IncludePatterns: [$"**/*{pair.Key}"])));
 
         var documents = solution.Projects.SelectMany(project => project.Documents).ToList();
         var classifier = new McpScopeClassifier();
@@ -133,9 +133,10 @@ internal static class GetIndexScopeScanner
         var suffix = entry.SymbolGraphCovered
             ? " (voll vom Symbolgraph abgedeckt)"
             : " (nicht vom Symbolgraph abgedeckt)";
+        var patterns = entry.IncludePatterns is not null ? string.Join(", ", entry.IncludePatterns) : "";
         var route = entry.RoutingTool == "find_symbol"
             ? "routing=find_symbol(pattern)"
-            : $"routing=search_pattern(pattern, scopeType={entry.ScopeType}, includePatterns={entry.FileFilter})";
+            : $"routing=search_pattern(pattern, scopeType={entry.ScopeType}, includePatterns={patterns})";
         return FormatFileCountLine(entry.Count, entry.Extension, suffix, route);
     }
 
@@ -159,7 +160,7 @@ internal sealed record FileTypeBreakdownEntry(
     string RoutingTool,
     string QueryField,
     string? ScopeType,
-    string? FileFilter);
+    IReadOnlyList<string>? IncludePatterns);
 
 internal sealed record IndexScopePayload(
     IReadOnlyList<FileTypeBreakdownEntry> Breakdown,
@@ -175,7 +176,7 @@ internal sealed record IndexScopeRoute(
     string Tool,
     string QueryField,
     string? ScopeType,
-    string? FileFilter);
+    IReadOnlyList<string>? IncludePatterns);
 
 internal sealed record IndexScopePopulation(
     int PhysicalFileCount,

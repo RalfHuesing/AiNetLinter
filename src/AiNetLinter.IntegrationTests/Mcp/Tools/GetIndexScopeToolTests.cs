@@ -75,7 +75,8 @@ public sealed class GetIndexScopeToolTests
         Assert.Equal("search_pattern", cssEntry.RoutingTool);
         Assert.Equal("pattern", cssEntry.QueryField);
         Assert.Equal("all", cssEntry.ScopeType);
-        Assert.Equal("**/*.css", cssEntry.FileFilter);
+        Assert.NotNull(cssEntry.IncludePatterns);
+        Assert.Contains("**/*.css", cssEntry.IncludePatterns);
 
         var routing = result.StructuredContent.Value.GetProperty("routing");
         Assert.Equal("find_symbol", routing.GetProperty("cSharp").GetProperty("tool").GetString());
@@ -170,6 +171,23 @@ public sealed class GetIndexScopeToolTests
         Assert.NotEqual(true, result.IsError);
         var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
         Assert.DoesNotContain("Compile-Fehler", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MixedFixture_StructuredContentNonCSharpRoutingIncludesPatternArray()
+    {
+        using var state = _fixture.CreateReadOnlyServer();
+
+        var result = await GetIndexScopeTool.ExecuteAsync(state, CancellationToken.None);
+
+        Assert.NotEqual(true, result.IsError);
+        Assert.NotNull(result.StructuredContent);
+        var routing = result.StructuredContent!.Value.GetProperty("routing");
+        var nonCSharp = routing.GetProperty("nonCSharp");
+        Assert.Equal("search_pattern", nonCSharp.GetProperty("tool").GetString());
+        Assert.True(nonCSharp.TryGetProperty("includePatterns", out var includePatternsProp), "nonCSharp muss includePatterns als Array enthalten.");
+        Assert.Equal(JsonValueKind.Array, includePatternsProp.ValueKind);
+        Assert.False(nonCSharp.TryGetProperty("fileFilter", out _), "nonCSharp darf kein nicht existentes fileFilter-Feld mehr enthalten.");
     }
 
     private static string BuildBreakdownLine(string extension, int count, string suffix)
