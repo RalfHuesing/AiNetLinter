@@ -63,7 +63,7 @@ public sealed class WiringToolCollectionContractTests
             Assert.DoesNotContain("targetType", properties);
             Assert.DoesNotContain("projectRoot", properties);
             Assert.DoesNotContain("configPath", properties);
-            if (tool.Name == "get_server_health")
+            if (tool.Name is "get_server_health" or "verify")
             {
                 Assert.DoesNotContain("targetPath", required);
                 Assert.Contains("targetPath", properties);
