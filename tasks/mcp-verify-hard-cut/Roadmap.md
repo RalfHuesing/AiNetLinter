@@ -32,7 +32,7 @@
 
 - Vier öffentliche Legacy-Tools samt Registrierungen, Adaptern und positiven Tooltests entfernt; Scanner gehören nun `verify`.
 - Inventar- und Runtime-Negativtests grün; Explorations- und Metrikwerkzeuge bleiben erhalten.
-- Commit: ausstehend.
+- Commit: `7a10be9054ca454a800c745fb27e92c7e07d5b7a`.
 
 ### Vorbereitung
 
