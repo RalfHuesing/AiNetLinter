@@ -46,6 +46,18 @@ public sealed class VerifyContractModelsTests
     public void IsSourceSolutionTarget_NonSolutionTargetIsRejectedBeforeAnalysis(string targetPath) =>
         Assert.False(VerifyContract.IsSourceSolutionTarget(targetPath));
 
+    [Theory]
+    [InlineData(@"C:\\repo\\App.DLL")]
+    [InlineData(@"C:\\repo\\App.EXE")]
+    public void TryValidateSourceSolutionTarget_UppercaseAssemblyTargetUsesAssemblyError(string targetPath)
+    {
+        var valid = VerifyContract.TryValidateSourceSolutionTarget(targetPath, out var error);
+
+        Assert.False(valid);
+        Assert.NotNull(error);
+        Assert.Equal("ASSEMBLY_TARGET_UNSUPPORTED", error.Code);
+    }
+
     [Fact]
     public void GateSummary_ExposesFixedAcceptanceThresholds()
     {

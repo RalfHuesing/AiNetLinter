@@ -183,7 +183,8 @@ internal static class VerifyContract
         }
 
         var extension = Path.GetExtension(targetPath);
-        if (extension is ".dll" or ".exe")
+        if (string.Equals(extension, ".dll", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(extension, ".exe", StringComparison.OrdinalIgnoreCase))
         {
             error = new(
                 "ASSEMBLY_TARGET_UNSUPPORTED",
