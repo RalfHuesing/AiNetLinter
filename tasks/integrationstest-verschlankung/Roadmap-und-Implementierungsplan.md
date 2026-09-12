@@ -168,11 +168,21 @@ Abnahme: Der echte MCP-Prozess deckt Verträge und Zusammensetzung ab; Toolvaria
 
 `SearchPatternToolTests`, `FindMagicValuesToolTests`, `GetIndexScopeToolTests` und verwandte Klassen verwenden einen geladenen MSBuild-/Roslyn-Snapshot. Das macht ihre gegenwärtige Fixture legitim als Integration, aber nicht jede einzelne Variante.
 
-- [ ] Für `SearchPatternToolTests` zwei bis drei reale Laden-/Ausführungsverträge festlegen: ein normaler Treffer, ein semantisch angereicherter Treffer und ein repräsentativer Fehler-/Completeness-Vertrag.
-- [ ] Regex-, Filter-, Scope-, Exclusion-, Range- und Budgetvarianten in die bestehenden SearchPattern-Scanner-/Tool-FastTests mit In-Memory-Solution verlagern.
-- [ ] Für FindMagicValues und GetIndexScope jeweils einen echten geladenen-Solution-Vertrag behalten; Heuristiken, Filter, Limits, Renderer und Payloadvarianten in die vorhandenen FastTest-Suiten überführen.
-- [ ] Keine der FastTest-Fixtures darf `LoadedFixture`, `SourceFileCatalog.LoadAsync`, `MSBuildWorkspace` oder einen Prozess indirekt referenzieren.
-- [ ] Nach jeder Klasse zuerst die neuen FastTests, dann den verbleibenden Integrationsvertrag ausführen.
+- [X] Für `SearchPatternToolTests` zwei bis drei reale Laden-/Ausführungsverträge festlegen: ein normaler Treffer, ein semantisch angereicherter Treffer und ein repräsentativer Fehler-/Completeness-Vertrag.
+- [X] Regex-, Filter-, Scope-, Exclusion-, Range- und Budgetvarianten in die bestehenden SearchPattern-Scanner-/Tool-FastTests mit In-Memory-Solution verlagern.
+- [X] Für FindMagicValues und GetIndexScope jeweils einen echten geladenen-Solution-Vertrag behalten; Heuristiken, Filter, Limits, Renderer und Payloadvarianten in die vorhandenen FastTest-Suiten überführen.
+- [X] Keine der FastTest-Fixtures darf `LoadedFixture`, `SourceFileCatalog.LoadAsync`, `MSBuildWorkspace` oder einen Prozess indirekt referenzieren.
+- [X] Nach jeder Klasse zuerst die neuen FastTests, dann den verbleibenden Integrationsvertrag ausführen.
+
+#### Konkrete Umzugstabelle Schritt 4 (2026-09-12)
+
+| Bisherige Integrationstestmethoden | FastTest-Nachweis | Verbleibender Integrationsvertrag |
+| --- | --- | --- |
+| `SearchPatternToolTests`: Regex, NoMatch, Trunkierung, obj/bin- und Worktree-Ausschluss, leeres Pattern, Compile-Error, StructuredContent, Mehrfachtreffer/Context, Limits, Scope/Filter, Budgets, Caps, ScopeType und Default | `SearchPatternScannerTests`, `SearchPatternScannerEvaluationTests`, `SearchPatternPromotionTests` sowie `SearchPatternToolContractTests` (Text-/StructuredContent-/Fehler-Parität) | `ExecuteAsync_PlainTextSubstring_FindsExpectedHitsInFixture`, `ExecuteAsync_EnrichCSharp_ReturnsSemanticObjectAndKeepsTextPayload`, `ExecuteAsync_InvalidRegex_ReturnsRecoverableInvalidArgument` |
+| `FindMagicValuesToolTests`: Loading, Filter-Validierung, Clamp, StructuredContent, Scope-Renderer, Registrierung und Default-Payload | `FindMagicValuesScanner*` sowie `FindMagicValuesToolContractTests` (Text, Objekt-Payload und Registrierung) | `ExecuteAsync_NoSolutionLoaded_ReturnsIsErrorTrueWithSolutionNotLoadedCode`, `ExecuteAsync_LoadedSolution_ReturnsStructuredCandidatePayload` |
+| `GetIndexScopeToolTests`: Mixed-File-Matrix, Generated-Ausschluss, Compile-Error und Routing-/Payloadvarianten | `GetIndexScopeToolContractTests` (Text, `breakdown`, Population und Routing) | `ExecuteAsync_NoSolutionLoaded_ReturnsErrorWithSolutionNotLoadedCode`, `ExecuteAsync_LoadedSolution_ReturnsRealCatalogBreakdown` |
+
+Die neuen FastTests verwenden ausschließlich `RoslynTestSolutionFactory`-Snapshots und `TestTempDirectory`; sie referenzieren weder die geladenen Integration-Fixtures noch `SourceFileCatalog.LoadAsync`, `MSBuildWorkspace` oder Prozesse.
 
 Abnahme: Real geladene Lösungen beweisen weiterhin die Laden-Grenze; die Fallmatrix läuft ohne MSBuild im FastTestprojekt.
 
