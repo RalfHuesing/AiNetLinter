@@ -61,6 +61,81 @@ public sealed class FindDeadCodeScannerTests
     }
 
     [Fact]
+    public async Task ScanAsync_DeadCodeSuppressionWithReason_HidesOnlyTheFollowingMember()
+    {
+        using var testSolution = CreateSolution(
+            ("Service.cs", """
+            public class Service
+            {
+                // ainetlinter-disable DeadCode — wird durch Reflection als Callback aufgerufen
+                private void ReflectionCallback() {}
+
+                // ainetlinter-disable DeadCode
+                private void MissingReason() {}
+
+                private void UnusedHelper() {}
+            }
+            """));
+
+        var result = await FindDeadCodeScanner.ScanAsync(
+            testSolution.Solution,
+            new FindDeadCodeArgs(
+                Accessibility: DeadCodeAccessibilityFilter.Private,
+                Confidence: DeadCodeConfidenceFilter.High,
+                Kind: DeadCodeKindFilter.Method),
+            CancellationToken.None);
+
+        Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.SymbolName == "ReflectionCallback");
+        Assert.Contains(result.DeadSymbols, symbol => symbol.SymbolName == "MissingReason");
+        Assert.Contains(result.DeadSymbols, symbol => symbol.SymbolName == "UnusedHelper");
+    }
+
+    [Fact]
+    public async Task ScanAsync_DeadCodeSuppressionWithReason_HidesCompilerDiagnosticCandidate()
+    {
+        using var testSolution = CreateSolution(
+            ("Service.cs", """
+            public class Service
+            {
+                // ainetlinter-disable DeadCode -- über Serialisierung indirekt verwendet
+                private int _serializedValue;
+                private int _unusedValue;
+            }
+            """));
+
+        var result = await FindDeadCodeScanner.ScanAsync(
+            testSolution.Solution,
+            new FindDeadCodeArgs(Mode: DeadCodeMode.Both),
+            CancellationToken.None);
+
+        Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.SymbolName == "_serializedValue");
+        Assert.Contains(result.DeadSymbols, symbol => symbol.SymbolName == "_unusedValue");
+    }
+
+    [Fact]
+    public async Task ScanAsync_DeadCodeSuppressionWithReason_HidesOnlyTheFollowingType()
+    {
+        using var testSolution = CreateSolution(
+            ("Types.cs", """
+            // ainetlinter-disable DeadCode — wird über den Serializer aktiviert
+            internal class SerializedContract {}
+
+            internal class UnusedContract {}
+            """));
+
+        var result = await FindDeadCodeScanner.ScanAsync(
+            testSolution.Solution,
+            new FindDeadCodeArgs(
+                Accessibility: DeadCodeAccessibilityFilter.Internal,
+                Confidence: DeadCodeConfidenceFilter.High,
+                Kind: DeadCodeKindFilter.Class),
+            CancellationToken.None);
+
+        Assert.DoesNotContain(result.DeadSymbols, symbol => symbol.SymbolName == "SerializedContract");
+        Assert.Contains(result.DeadSymbols, symbol => symbol.SymbolName == "UnusedContract");
+    }
+
+    [Fact]
     public async Task ScanAsync_InterfaceImplementation_WithInterfaceCall_NotDeadCode()
     {
         using var testSolution = CreateSolution(

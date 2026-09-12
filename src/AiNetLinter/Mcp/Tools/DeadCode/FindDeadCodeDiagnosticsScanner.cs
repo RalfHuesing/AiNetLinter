@@ -65,7 +65,8 @@ internal static class FindDeadCodeDiagnosticsScanner
             return;
         }
 
-        var (symbolName, containerType, kind, id) = await ResolveDiagnosticSymbolAsync(diag, document, ct);
+        var (symbol, symbolName, containerType, kind, id) = await ResolveDiagnosticSymbolAsync(diag, document, ct);
+        if (symbol is not null && DeadCodeSuppression.IsSuppressed(symbol)) return;
 
         var entry = new DeadCodeEntry(
             Id: id,
@@ -90,7 +91,7 @@ internal static class FindDeadCodeDiagnosticsScanner
             context.ByKind[kind] = 1;
     }
 
-    private static async Task<(string SymbolName, string ContainerType, string Kind, string Id)> ResolveDiagnosticSymbolAsync(
+    private static async Task<(ISymbol? Symbol, string SymbolName, string ContainerType, string Kind, string Id)> ResolveDiagnosticSymbolAsync(
         Diagnostic diag,
         Document document,
         CancellationToken ct)
@@ -110,6 +111,6 @@ internal static class FindDeadCodeDiagnosticsScanner
         var kind = symbol != null ? FindDeadCodeScanner.GetSymbolKindString(symbol) : "field";
         var id = symbol?.ToDisplayString() ?? $"{containerType}.{symbolName}";
 
-        return (symbolName, containerType, kind, id);
+        return (symbol, symbolName, containerType, kind, id);
     }
 }

@@ -139,7 +139,9 @@ public static class FindDeadCodeScanner
         DeadCodeScanContext context,
         CancellationToken ct)
     {
-        if (!ShouldCheckSymbol(typeSymbol, context.Args) || DeadCodeWhitelist.IsWhitelisted(typeSymbol, entryPoint))
+        if (!ShouldCheckSymbol(typeSymbol, context.Args)
+            || DeadCodeWhitelist.IsWhitelisted(typeSymbol, entryPoint)
+            || DeadCodeSuppression.IsSuppressed(typeSymbol))
         {
             return false;
         }
@@ -198,6 +200,7 @@ public static class FindDeadCodeScanner
         if (member.IsImplicitlyDeclared) return;
         if (!member.DeclaringSyntaxReferences.Any(r => typeNode.Span.Contains(r.Span))) return;
         if (DeadCodeWhitelist.IsWhitelisted(member, entryPoint)) return;
+        if (DeadCodeSuppression.IsSuppressed(member)) return;
         if (!ShouldCheckMemberKind(member, context.Args.Kind)) return;
         if (!MatchesAccessibilityFilter(member.DeclaredAccessibility, context.Args.Accessibility)) return;
 
