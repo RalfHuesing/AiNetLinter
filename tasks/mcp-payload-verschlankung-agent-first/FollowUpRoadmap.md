@@ -31,7 +31,10 @@ Jeder Schritt wird strikt seriell durch einen frischen Agenten umgesetzt, nach d
   - Gates: Build grün (0 Warnungen/Fehler); Fast Non-Stress 2509/2509 grün; Integration Non-Stress 216/216 grün (TRX `TestResults/FollowUpStep04Integration.trx`).
   - MCP-Quality: Globales `safeguard(minScore: 10)` 10,00/10 mit 0 Verstößen; globales `get_violations` 0. `find_dead_code` im Registration-Scope 0 Kandidaten und `find_magic_values` im präzisen `McpNavigationProjection`-Scope 0 Kandidaten. `git diff --check` grün.
 
-- [ ] 05 – Abschlussprüfung: `dotnet build`, beide Non-Stress-Testprojekte, `safeguard(minScore: 10)`, scoped `get_violations`, `find_dead_code`, `find_magic_values` sowie `git diff --check` prüfen; keine offenen auftragsbezogenen Änderungen hinterlassen.
+- [X] 05 – Abschlussprüfung: `dotnet build`, beide Non-Stress-Testprojekte, `safeguard(minScore: 10)`, scoped `get_violations`, `find_dead_code`, `find_magic_values` sowie `git diff --check` prüfen; keine offenen auftragsbezogenen Änderungen hinterlassen.
+  - Vertragscheck F-01 bis F-07: Die sechs betroffenen Budgetprojektionen rechnen ausschließlich die UTF-8-Größe des finalen Textes; alle sieben Budget-Fehler liefern `RESPONSE_BUDGET_TOO_SMALL` mit `minimumResponseBytes`. Der Assembly-Composite enthält keine `JsonObject`-Reprojektion, Navigation keinen Structured-Fallback, `McpErrorPayload` und die F-06-JSON-Usings fehlen, und das Konzept steht auf `status: completed`.
+  - Gates: Build grün (0 Warnungen/Fehler); Fast Non-Stress 2509/2509 grün; Integration Non-Stress 216/216 grün (TRX `TestResults/FollowUpStep05Integration.trx`); `git diff --check` grün.
+  - MCP-Quality: globales `safeguard(minScore: 10)` 10,00/10 mit 0 Verstößen; `get_violations` global 0 und im Scope `src/AiNetLinter/Mcp` 0. Die scoped Dead-Code- und Magic-Value-Scans lieferten ausschließlich heuristische Bestandskandidaten, aber keinen belastbaren auftragsbezogenen Befund.
 
 ## Ausklammerungen
 
