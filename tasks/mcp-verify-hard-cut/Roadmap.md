@@ -6,7 +6,7 @@
 - [X] Slice 04 – Harter Schnitt durch Registrierung, Produktion und Tests
 - [X] Slice 05 – Dokumentation, Regeln und Endverifikation synchronisieren
 - [X] Gesamtaudit – gesamten Scope prüfen und Findings beheben
-- [ ] Abschlussgate – Build, Non-Stress-Tests und Diff-Prüfung
+- [X] Abschlussgate – Build, Non-Stress-Tests und Diff-Prüfung
 
 ## Durchführungsprotokoll
 
@@ -45,6 +45,12 @@
 - Frischer Audit korrigierte Mehrdatei-/Git-Population, konservative Konfigurationserweiterung und verbleibende Content-only-Texte.
 - Frische Hosttests bestätigen Inventar, Scope, Advisory und Content-only; vollständiges Gate steht noch aus.
 - Commit: `5b95b8be7f190a6d70ac2b1b6cf8c4f4dfc0c6b2`.
+
+### Abschlussgate
+
+- Nachlauf entfernte einen obsoleten Legacy-Tooltest (`47223793`) und verflachte Verify-Hinweisquellen (`6b98b410`).
+- `dotnet build`: 0 Warnungen/Fehler; FastTests: 2473/2473; IntegrationTests: 230/230 (ohne `Stress`).
+- `git diff --check` und Working Tree sauber; Commit: ausstehend.
 
 ### Vorbereitung
 
